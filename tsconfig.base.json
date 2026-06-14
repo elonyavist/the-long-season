@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@game/domain": ["packages/domain/src/index.ts"],
+      "@game/shared": ["packages/shared/src/index.ts"],
+      "@game/engine": ["packages/engine/src/index.ts"],
+      "@game/content": ["packages/content/src/index.ts"],
+      "@game/storage": ["packages/storage/src/index.ts"]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@game/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cli": "node --eval \"console.log('The Long Season CLI skeleton')\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@game/content": "workspace:*",
+    "@game/domain": "workspace:*",
+    "@game/engine": "workspace:*",
+    "@game/shared": "workspace:*",
+    "@game/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
