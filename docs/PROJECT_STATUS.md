@@ -4,9 +4,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; ready for Phase 1 match-engine steps.
-- Active implementation step: `docs/steps/01-match-engine/03-step-match.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, and serializable match context/config contracts exist; no match simulation code exists yet.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine steps in progress.
+- Active implementation step: `docs/steps/01-match-engine/04-simulate-match.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, and deterministic one-minute match stepping exist; no full match driver exists yet.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/01-match-engine/03-step-match.md`
+- Step: `docs/steps/01-match-engine/04-simulate-match.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/match-context.test.ts`, `pnpm check`, engine forbidden import/API scan, and engine JSDoc scan passed for match context.
-- Next action: Implement one-minute deterministic match step only.
+- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`, `pnpm check`, engine forbidden API/order-sensitive iteration scan, and engine JSDoc scan passed for step match.
+- Next action: Implement the batch `simulateMatch` driver over `stepMatch` only.
 
 ## How To Read The Project
 
@@ -38,7 +38,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/00-foundation/04-enforcement.md` | Done | Executable enforcement and the first real CLI doctor command were created. | Dependency Cruiser enforces package boundaries, ESLint bans forbidden runtime APIs inside `engine`, Vitest runs package tests, `pnpm check` is the single gate, and `pnpm cli doctor` exits `0`. | `pnpm lint`; `pnpm depcruise`; `pnpm test`; `pnpm typecheck`; `pnpm check`; `pnpm cli doctor`; negative dependency fixture; negative engine runtime API fixture |
 | `docs/steps/01-match-engine/01-team-strength.md` | Done | Pure role-weight-based `TeamStrength` derivation was created. | `engine` derives department and overall strength from explicit ordered lineup slots, caller-supplied role weight profiles, player abilities, and optional caller-supplied dynamic-state multiplier curves; missing players/roles fail with typed `TeamStrengthError`. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
 | `docs/steps/01-match-engine/02-match-context.md` | Done | Serializable match context and engine config contracts were created. | `MatchContext` carries fixture ID, seed, explicit home/away team contexts, precomputed strengths, tactical distribution inputs, and `MatchEngineConfig`; `buildMatchRngKey` defines the stable `seed + "match" + fixtureId` derivation data without consuming RNG. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/match-context.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
-| `docs/steps/01-match-engine/03-step-match.md` | Not started | None yet | Planned one-minute deterministic match step | Pending |
+| `docs/steps/01-match-engine/03-step-match.md` | Done | Deterministic one-minute match stepping was created. | `MatchSimulationState` keeps match-local minute, score, stats, and marker flags; `stepMatch` advances one minute, randomizes home/away processing order through the match RNG, generates Bernoulli opportunities from aggregate team strengths, and resolves them through `OccasionResolver` with `AggregateOccasionResolver`; step events remain engine-local until the later domain `MatchReport` step. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan |
 | `docs/steps/01-match-engine/04-simulate-match.md` | Not started | None yet | Planned batch driver over `stepMatch` | Pending |
 | `docs/steps/01-match-engine/05-match-report.md` | Not started | None yet | Planned structured language-agnostic match report | Pending |
 | `docs/steps/02-season-simulation/01-calendar-generation.md` | Not started | None yet | Planned deterministic double round-robin calendar | Pending |
@@ -81,6 +81,7 @@ Status values:
 - Team strength calculation is pure and data-driven: role weights and dynamic-state multiplier curves are passed by the caller, not hardcoded in engine.
 - Match context is serializable and self-contained: future match simulation should consume `MatchContext` without reading `GameState`, content files, storage, or UI preferences.
 - Match RNG derivation data is standardized as `seed + "match" + fixtureId`; the context step defines the key but does not create or consume an RNG stream.
+- Match stepping is local and serializable: `MatchSimulationState` owns minute, score, stats, and marker flags; durable domain `MatchEvent`/`MatchReport` types are still deferred to their documented step.
 
 ## Open Decisions And Follow-Up
 
@@ -93,6 +94,14 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` because the CLI imports local `.ts` command modules directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md`
+
+- Status: Done
+- Outcome: Created deterministic one-minute match stepping with local simulation state, aggregate chance generation, and resolver-backed opportunity resolution.
+- Adopted solution: `stepMatch` advances one minute without mutating input state, randomizes home/away processing order from the match RNG, generates per-team Bernoulli opportunities from aggregate strengths, and resolves shot outcomes through `AggregateOccasionResolver` behind `OccasionResolver`; sparse step events are engine-local until the future `MatchReport` contract exists.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan.
+- Follow-up: Start `docs/steps/01-match-engine/04-simulate-match.md`; add the batch driver over `stepMatch` without CLI, fixture updates, reports, or narration.
 
 ### 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`
 

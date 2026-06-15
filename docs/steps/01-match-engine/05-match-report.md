@@ -17,6 +17,10 @@ Formalize the serializable `MatchReport` contract that can later be applied to f
 - Conversion from `simulateMatch` output to `MatchReport`.
 - Minimal type tests or compile tests to prevent report drift.
 
+## Scope lesson from `03-step-match`
+
+`docs/steps/01-match-engine/03-step-match.md` intentionally emitted only engine-local step events because the domain `MatchEvent` contract did not exist yet. This step is where that durable contract must be introduced: convert or map the existing step-level events into serializable domain `MatchEvent`/`MatchReport` data, without adding prose narration, UI behavior, storage schemas, or extra simulation logic.
+
 ## What NOT to implement
 
 - Do not implement Zod storage schemas in domain.
