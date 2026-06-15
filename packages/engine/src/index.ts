@@ -5,3 +5,4 @@
  * intentionally limited to pure deterministic simulation helpers.
  */
 export * from "./match-engine/index.ts";
+export { createMatchReport } from "./match-engine/create-match-report.ts";

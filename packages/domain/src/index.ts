@@ -6,6 +6,8 @@
  * concepts.
  */
 export * from "./entities/club.entity.ts";
+export * from "./entities/match.entity.ts";
+export * from "./entities/match-event.entity.ts";
 export * from "./entities/player.entity.ts";
 export * from "./state/game-state.ts";
 export * from "./types/brand.ts";
