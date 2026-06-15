@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; Phase 1 match-engine steps in progress.
-- Active implementation step: `docs/steps/01-match-engine/04-simulate-match.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, and deterministic one-minute match stepping exist; no full match driver exists yet.
+- Active implementation step: `docs/steps/01-match-engine/05-match-report.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, and batch full-match simulation exist; no durable domain match report exists yet.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/01-match-engine/04-simulate-match.md`
+- Step: `docs/steps/01-match-engine/05-match-report.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`, `pnpm check`, engine forbidden API/order-sensitive iteration scan, and engine JSDoc scan passed for step match.
-- Next action: Implement the batch `simulateMatch` driver over `stepMatch` only.
+- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/simulate-match.test.ts`, `pnpm check`, engine forbidden API/order-sensitive iteration scan, and engine JSDoc scan passed for simulate match.
+- Next action: Formalize durable domain `MatchEvent`/`MatchReport` contracts from the existing simulation output.
 
 ## How To Read The Project
 
@@ -39,7 +39,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/01-match-engine/01-team-strength.md` | Done | Pure role-weight-based `TeamStrength` derivation was created. | `engine` derives department and overall strength from explicit ordered lineup slots, caller-supplied role weight profiles, player abilities, and optional caller-supplied dynamic-state multiplier curves; missing players/roles fail with typed `TeamStrengthError`. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
 | `docs/steps/01-match-engine/02-match-context.md` | Done | Serializable match context and engine config contracts were created. | `MatchContext` carries fixture ID, seed, explicit home/away team contexts, precomputed strengths, tactical distribution inputs, and `MatchEngineConfig`; `buildMatchRngKey` defines the stable `seed + "match" + fixtureId` derivation data without consuming RNG. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/match-context.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
 | `docs/steps/01-match-engine/03-step-match.md` | Done | Deterministic one-minute match stepping was created. | `MatchSimulationState` keeps match-local minute, score, stats, and marker flags; `stepMatch` advances one minute, randomizes home/away processing order through the match RNG, generates Bernoulli opportunities from aggregate team strengths, and resolves them through `OccasionResolver` with `AggregateOccasionResolver`; step events remain engine-local until the later domain `MatchReport` step. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan |
-| `docs/steps/01-match-engine/04-simulate-match.md` | Not started | None yet | Planned batch driver over `stepMatch` | Pending |
+| `docs/steps/01-match-engine/04-simulate-match.md` | Done | Batch full-match simulation over `stepMatch` was created. | `simulateMatch(context)` derives one match RNG stream from `seed + "match" + fixtureId`, initializes local `MatchSimulationState`, loops over `stepMatch` until full time, returns serializable fixture ID, final minute, score, stats, and sparse step events, and fails with typed `SimulateMatchError` if the safety guard is exceeded; golden-output tests now lock full-match reproducibility. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/simulate-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan |
 | `docs/steps/01-match-engine/05-match-report.md` | Not started | None yet | Planned structured language-agnostic match report | Pending |
 | `docs/steps/02-season-simulation/01-calendar-generation.md` | Not started | None yet | Planned deterministic double round-robin calendar | Pending |
 | `docs/steps/02-season-simulation/02-fixtures-and-results.md` | Not started | None yet | Planned fixture result application as source of truth | Pending |
@@ -82,6 +82,7 @@ Status values:
 - Match context is serializable and self-contained: future match simulation should consume `MatchContext` without reading `GameState`, content files, storage, or UI preferences.
 - Match RNG derivation data is standardized as `seed + "match" + fixtureId`; the context step defines the key but does not create or consume an RNG stream.
 - Match stepping is local and serializable: `MatchSimulationState` owns minute, score, stats, and marker flags; durable domain `MatchEvent`/`MatchReport` types are still deferred to their documented step.
+- Batch match simulation is reproducible end-to-end: `simulateMatch` derives the match RNG internally and the fixed golden output test locks the complete result shape and event sequence.
 
 ## Open Decisions And Follow-Up
 
@@ -94,6 +95,14 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` because the CLI imports local `.ts` command modules directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — `docs/steps/01-match-engine/04-simulate-match.md`
+
+- Status: Done
+- Outcome: Created deterministic batch full-match simulation over the existing one-minute `stepMatch` loop.
+- Adopted solution: `simulateMatch(context)` derives the match RNG from `seed + "match" + fixtureId`, initializes local match state, loops until full time with a safety guard, and returns serializable final minute, score, stats, and sparse engine-local step events; golden-output and JSON equality tests close the full-match reproducibility gap.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/simulate-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan.
+- Follow-up: Start `docs/steps/01-match-engine/05-match-report.md`; convert existing step/simulation output into durable domain `MatchEvent`/`MatchReport` data without narration, storage schemas, fixture updates, or new simulation logic.
 
 ### 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md`
 

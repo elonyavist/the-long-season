@@ -17,6 +17,16 @@ The CLI and balance tools need complete matches before interactive match-day exi
 - Include safety guard against infinite loops.
 - Keep output serializable and independent from mutable domain objects.
 
+## Determinism guardrails from review
+
+The current core logic is stable, but full-match reproducibility cannot be proven until this step exists. Do not create a parallel pre-step for that work. Instead, this step must close the reproducibility gap by testing the complete `simulateMatch` output.
+
+- Add a golden output fixture/assertion for one fixed context, seed, and fixture ID.
+- Prove that simulating the same context twice returns deeply identical JSON-serializable output.
+- Prove that a different fixture ID with the same seed is allowed to produce different output.
+- Keep RNG consumption local to the match stream derived from `seed + "match" + fixtureId`.
+- Do not use global RNG state, real clock APIs, or order-sensitive object enumeration.
+
 ## What NOT to implement
 
 - Do not update fixtures or league tables.
@@ -39,10 +49,13 @@ The CLI and balance tools need complete matches before interactive match-day exi
 ## Required tests
 
 - Same seed and fixture ID produce identical match output.
+- Same fixed context produces the expected golden output.
+- Serializing two identical match outputs to JSON produces identical strings.
 - Different fixture IDs can produce different output with the same seed.
 - A match reaches full time.
 - Final score equals the goal events emitted.
 - 1000 deterministic matches complete without crash.
+- No forbidden engine runtime APIs or package-boundary violations are introduced.
 
 ## Definition of Done
 
