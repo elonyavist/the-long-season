@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; ready for Phase 1 match-engine steps.
-- Active implementation step: `docs/steps/01-match-engine/01-team-strength.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, and `pnpm cli doctor` exist; no gameplay implementation code exists yet.
+- Active implementation step: `docs/steps/01-match-engine/02-match-context.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, and pure team-strength derivation exist; no match simulation code exists yet.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/01-match-engine/01-team-strength.md`
+- Step: `docs/steps/01-match-engine/02-match-context.md`
 - Status: Not started
-- Last verification: `pnpm lint`, `pnpm depcruise`, `pnpm test`, `pnpm typecheck`, `pnpm check`, `pnpm cli doctor`, negative dependency fixture, negative engine runtime API fixture, and JSDoc scan passed for enforcement.
-- Next action: Implement role-weight-based team strength only.
+- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`, `pnpm check`, engine forbidden import/API scan, and engine JSDoc scan passed for team strength.
+- Next action: Implement serializable match context only.
 
 ## How To Read The Project
 
@@ -36,7 +36,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/00-foundation/02-shared-rng-and-date.md` | Done | Deterministic shared RNG streams and pure Gregorian epoch-day utilities were created. | `shared` exposes `deriveRng(seed, streamName, ...keyParts)` over `sfc32` seeded by stable `cyrb128` hash words; date conversion uses pure Gregorian arithmetic with no JavaScript `Date`; all new shared files and functions are documented with TSDoc/JSDoc. | `pnpm --filter @game/shared run typecheck`; `node --test packages/shared/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; forbidden API scan; JSDoc scan |
 | `docs/steps/00-foundation/03-storage-json.md` | Done | JSON-backed save storage boundary was created for full `GameState` snapshots. | `storage` exposes `GameStorage`, `JsonGameStorage`, save metadata, schema version `1`, identity migration for v1 saves, and typed storage errors; metadata listing is sorted deterministically by save ID. | `pnpm --filter @game/storage run typecheck`; `node --test packages/storage/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; storage forbidden dependency scan; JSDoc scan |
 | `docs/steps/00-foundation/04-enforcement.md` | Done | Executable enforcement and the first real CLI doctor command were created. | Dependency Cruiser enforces package boundaries, ESLint bans forbidden runtime APIs inside `engine`, Vitest runs package tests, `pnpm check` is the single gate, and `pnpm cli doctor` exits `0`. | `pnpm lint`; `pnpm depcruise`; `pnpm test`; `pnpm typecheck`; `pnpm check`; `pnpm cli doctor`; negative dependency fixture; negative engine runtime API fixture |
-| `docs/steps/01-match-engine/01-team-strength.md` | Not started | None yet | Planned role-weight-based team strength | Pending |
+| `docs/steps/01-match-engine/01-team-strength.md` | Done | Pure role-weight-based `TeamStrength` derivation was created. | `engine` derives department and overall strength from explicit ordered lineup slots, caller-supplied role weight profiles, player abilities, and optional caller-supplied dynamic-state multiplier curves; missing players/roles fail with typed `TeamStrengthError`. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
 | `docs/steps/01-match-engine/02-match-context.md` | Not started | None yet | Planned serializable match input contract | Pending |
 | `docs/steps/01-match-engine/03-step-match.md` | Not started | None yet | Planned one-minute deterministic match step | Pending |
 | `docs/steps/01-match-engine/04-simulate-match.md` | Not started | None yet | Planned batch driver over `stepMatch` | Pending |
@@ -78,6 +78,7 @@ Status values:
 - ESLint currently focuses on engine determinism bans; Dependency Cruiser currently enforces source-import package boundaries.
 - Existing package tests were migrated from Node native `node:test` registration to Vitest `test` registration while keeping Node `assert/strict`.
 - `pnpm cli doctor` is the first real CLI command and prints a stable success line without gameplay side effects.
+- Team strength calculation is pure and data-driven: role weights and dynamic-state multiplier curves are passed by the caller, not hardcoded in engine.
 
 ## Open Decisions And Follow-Up
 
@@ -86,9 +87,18 @@ Status values:
 - `packages/domain/tsconfig.json` enables `allowImportingTsExtensions` so Node 24 can execute TypeScript tests directly.
 - `packages/shared/tsconfig.json` also enables `allowImportingTsExtensions`, matching `domain`, because the workspace currently runs `.ts` files directly under Node 24.
 - `packages/storage/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because it typechecks against workspace source imports from `domain`.
+- `packages/engine/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because it typechecks against workspace source imports from `domain`.
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` because the CLI imports local `.ts` command modules directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`
+
+- Status: Done
+- Outcome: Created pure deterministic team-strength calculation in `engine` with focused tests.
+- Adopted solution: `deriveTeamStrength` walks explicit ordered lineup slots, reads caller-supplied `RoleWeightProfile` data, averages slot scores into attack/midfield/defense/goalkeeper departments, computes overall from lineup slots, and applies optional dynamic-state curves only when caller data supplies them.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`; `pnpm check`; engine forbidden import/API scan; engine JSDoc scan.
+- Follow-up: Start `docs/steps/01-match-engine/02-match-context.md`; do not add match events, shots, goals, or simulation driver before their active steps.
 
 ### 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`
 

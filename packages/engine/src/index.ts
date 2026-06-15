@@ -2,7 +2,18 @@
  * Public entrypoint for deterministic simulation rules.
  *
  * Engine code may import only `@game/domain` and `@game/shared`. This file is
- * empty until the first engine step introduces pure use-cases or simulation
- * functions.
+ * intentionally limited to pure deterministic simulation helpers.
  */
-export {};
+export {
+  deriveTeamStrength,
+  TeamStrengthError,
+  type AbilityWeightKey,
+  type DeriveTeamStrengthInput,
+  type LineupSlot,
+  type PlayerStateMultiplierCurves,
+  type RoleWeightProfile,
+  type StateMultiplierCurve,
+  type TeamStrength,
+  type TeamStrengthDepartment,
+  type TeamStrengthErrorCode,
+} from "./match-engine/team-strength.ts";
