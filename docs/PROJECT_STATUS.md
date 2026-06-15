@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; ready for Phase 1 match-engine steps.
-- Active implementation step: `docs/steps/01-match-engine/02-match-context.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, and pure team-strength derivation exist; no match simulation code exists yet.
+- Active implementation step: `docs/steps/01-match-engine/03-step-match.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, and serializable match context/config contracts exist; no match simulation code exists yet.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/01-match-engine/02-match-context.md`
+- Step: `docs/steps/01-match-engine/03-step-match.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`, `pnpm check`, engine forbidden import/API scan, and engine JSDoc scan passed for team strength.
-- Next action: Implement serializable match context only.
+- Last verification: `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/match-context.test.ts`, `pnpm check`, engine forbidden import/API scan, and engine JSDoc scan passed for match context.
+- Next action: Implement one-minute deterministic match step only.
 
 ## How To Read The Project
 
@@ -37,7 +37,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/00-foundation/03-storage-json.md` | Done | JSON-backed save storage boundary was created for full `GameState` snapshots. | `storage` exposes `GameStorage`, `JsonGameStorage`, save metadata, schema version `1`, identity migration for v1 saves, and typed storage errors; metadata listing is sorted deterministically by save ID. | `pnpm --filter @game/storage run typecheck`; `node --test packages/storage/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; storage forbidden dependency scan; JSDoc scan |
 | `docs/steps/00-foundation/04-enforcement.md` | Done | Executable enforcement and the first real CLI doctor command were created. | Dependency Cruiser enforces package boundaries, ESLint bans forbidden runtime APIs inside `engine`, Vitest runs package tests, `pnpm check` is the single gate, and `pnpm cli doctor` exits `0`. | `pnpm lint`; `pnpm depcruise`; `pnpm test`; `pnpm typecheck`; `pnpm check`; `pnpm cli doctor`; negative dependency fixture; negative engine runtime API fixture |
 | `docs/steps/01-match-engine/01-team-strength.md` | Done | Pure role-weight-based `TeamStrength` derivation was created. | `engine` derives department and overall strength from explicit ordered lineup slots, caller-supplied role weight profiles, player abilities, and optional caller-supplied dynamic-state multiplier curves; missing players/roles fail with typed `TeamStrengthError`. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
-| `docs/steps/01-match-engine/02-match-context.md` | Not started | None yet | Planned serializable match input contract | Pending |
+| `docs/steps/01-match-engine/02-match-context.md` | Done | Serializable match context and engine config contracts were created. | `MatchContext` carries fixture ID, seed, explicit home/away team contexts, precomputed strengths, tactical distribution inputs, and `MatchEngineConfig`; `buildMatchRngKey` defines the stable `seed + "match" + fixtureId` derivation data without consuming RNG. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/match-context.test.ts`; `pnpm check`; engine forbidden import/API scan; JSDoc scan |
 | `docs/steps/01-match-engine/03-step-match.md` | Not started | None yet | Planned one-minute deterministic match step | Pending |
 | `docs/steps/01-match-engine/04-simulate-match.md` | Not started | None yet | Planned batch driver over `stepMatch` | Pending |
 | `docs/steps/01-match-engine/05-match-report.md` | Not started | None yet | Planned structured language-agnostic match report | Pending |
@@ -79,6 +79,8 @@ Status values:
 - Existing package tests were migrated from Node native `node:test` registration to Vitest `test` registration while keeping Node `assert/strict`.
 - `pnpm cli doctor` is the first real CLI command and prints a stable success line without gameplay side effects.
 - Team strength calculation is pure and data-driven: role weights and dynamic-state multiplier curves are passed by the caller, not hardcoded in engine.
+- Match context is serializable and self-contained: future match simulation should consume `MatchContext` without reading `GameState`, content files, storage, or UI preferences.
+- Match RNG derivation data is standardized as `seed + "match" + fixtureId`; the context step defines the key but does not create or consume an RNG stream.
 
 ## Open Decisions And Follow-Up
 
@@ -91,6 +93,14 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` because the CLI imports local `.ts` command modules directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`
+
+- Status: Done
+- Outcome: Created serializable match context and match engine config contracts with focused validation tests.
+- Adopted solution: `MatchContext` describes fixture ID, seed, explicit home/away team contexts, precomputed `TeamStrength`, tactical distribution inputs, and `MatchEngineConfig`; validation is done with typed `MatchContextError`; `buildMatchRngKey` returns stable derivation data for future `deriveRng(seed, "match", fixtureId)` use.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/match-context.test.ts`; `pnpm check`; engine forbidden import/API scan; engine JSDoc scan.
+- Follow-up: Start `docs/steps/01-match-engine/03-step-match.md`; do not add full match simulation, reports, or drivers outside that step.
 
 ### 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`
 
