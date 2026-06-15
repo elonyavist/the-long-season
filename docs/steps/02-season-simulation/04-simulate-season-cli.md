@@ -12,6 +12,7 @@ Create the first gameplay milestone command: `pnpm cli simulate-season --seed=de
 
 - Minimal generated 18-team league in `content`.
 - Minimal generated players and lineups if needed by match simulation.
+- Generated player, club, competition, fixture, season, and save IDs must use domain constructors and the `type:value` convention.
 - Engine use-case `simulateSeason(state, input)` or equivalent.
 - CLI command `simulate-season`.
 - `--seed` option with default fixed seed.
@@ -59,6 +60,7 @@ Create the first gameplay milestone command: `pnpm cli simulate-season --seed=de
 - Output includes a final table.
 - Same seed gives same output.
 - No real data is used.
+- Generated IDs use the domain namespace convention (`player:...`, `club:...`, `competition:...`, `fixture:...`, `season:...`).
 - No future-scope systems are introduced.
 
 ## Claude Code task prompt

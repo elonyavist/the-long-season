@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE: docs/steps/00-foundation/00-monorepo-skeleton.md
+STEP_PATH_TO_EXECUTE: docs/steps/00-foundation/01-domain-core-types.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 
@@ -15,6 +15,7 @@ Follow the mandatory execution loop:
    - the next relevant step document, only if a lesson learned changes future work.
 6. Run the required tests/checks for this step.
 7. If something fails, fix the current step before moving on.
+8. Comments with JSDoc every file and function
 8. Update `docs/PROJECT_STATUS.md` with:
    - current active step
    - step status

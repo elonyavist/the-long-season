@@ -13,7 +13,7 @@ Define the serializable input needed to simulate one match: fixture identity, te
 - `MatchContext` type.
 - `MatchEngineConfig` type for rates, conversion bands, home factor, minute count, and capped tactical distribution knobs.
 - `MatchTeamContext` for club ID, lineup, and `TeamStrength`.
-- Fixture IDs and stable seed fields needed to derive `deriveRng(seed, "match", fixtureId)`.
+- Fixture IDs (`fixture:...`) and stable seed fields needed to derive `deriveRng(seed, "match", fixtureId)`.
 - Validation helpers that check context completeness without importing content schemas.
 
 ## What NOT to implement
@@ -42,6 +42,7 @@ Define the serializable input needed to simulate one match: fixture identity, te
 - Missing team strength fails.
 - The match RNG key is stable for the same seed and fixture ID.
 - Home and away team order is explicit.
+- Fixture IDs follow the domain `fixture:` namespace.
 
 ## Definition of Done
 

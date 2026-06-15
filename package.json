@@ -8,7 +8,7 @@
     "node": "24.16.0"
   },
   "scripts": {
-    "test": "node -e \"console.log('No tests configured yet')\"",
+    "test": "node --test $(find packages -name '*.test.ts' -not -path '*/node_modules/*')",
     "lint": "node -e \"console.log('No lint configured yet')\"",
     "depcruise": "node -e \"console.log('No dependency rules configured yet')\"",
     "check": "pnpm lint && pnpm depcruise && pnpm test",

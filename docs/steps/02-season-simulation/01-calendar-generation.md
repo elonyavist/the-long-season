@@ -16,7 +16,7 @@ The global game clock is date-first. `requirements.md` requires fixtures to have
 - Berger circle method for first half.
 - Mirrored return fixtures with home/away inverted.
 - Round dates starting from `seasonStartDate` and adding seven days.
-- Explicit fixture ID generation that is stable and non integer-like.
+- Explicit fixture ID generation that is stable, non integer-like, and follows the domain namespace convention (`fixture:000001`).
 
 ## What NOT to implement
 
@@ -53,6 +53,7 @@ The global game clock is date-first. `requirements.md` requires fixtures to have
 
 - Calendar is deterministic.
 - Fixture order uses explicit arrays.
+- Generated fixture IDs use the `fixture:` namespace.
 - `roundNumber` and `date` both exist.
 - No match simulation or table logic exists in this step.
 

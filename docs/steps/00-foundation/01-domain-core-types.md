@@ -2,15 +2,17 @@
 
 ## Goal
 
-Create the stable domain data contracts that future engine code will consume: branded IDs, `GameDate`, `Money`, `BasisPoints`, `AbilityValue`, minimal `Player`, minimal `Club`, dynamic player state, and `GameState`.
+Create the stable domain data contracts that future engine code will consume: branded namespaced IDs, `GameDate`, `Money`, `BasisPoints`, `AbilityValue`, minimal `Player`, minimal `Club`, dynamic player state, and `GameState`.
 
 ## Why we implement it this way
 
-`domain` describes what exists in the game and imports nothing. Keeping core data stable early avoids migrations when the match engine grows from aggregate simulation to nominal duels. Runtime order must be explicit through ID arrays, and game time must be `GameDate`, not JavaScript `Date`.
+`domain` describes what exists in the game and imports nothing. Keeping core data stable early avoids migrations when the match engine grows from aggregate simulation to nominal duels. Runtime order must be explicit through ID arrays, game time must be `GameDate`, not JavaScript `Date`, and IDs must be readable/stable in saves and logs.
 
 ## What to implement
 
 - Branded string IDs for players, clubs, competitions, fixtures, seasons, and saves.
+- Enforce one ID namespace convention through constructors only: `player:000001`, `club:perugia`, `competition:ita-3`, `fixture:000001`, `season:2026`, `save:demo-001`.
+- Do not expose a partial public ID validator; callers must use specific constructors such as `playerId`, `clubId`, and `fixtureId`.
 - `GameDate` as branded epoch-day number.
 - `Money` as safe integer minor units with explicit constructors and operations.
 - `BasisPoints` as branded integer percent representation.
@@ -51,11 +53,13 @@ Create the stable domain data contracts that future engine code will consume: br
 - `money()` rejects non-safe integers.
 - `basisPoints()` rejects floats and out-of-range values.
 - `abilityValue()` rejects values below `0` and above `20`.
+- ID constructors reject empty values, integer-like values, wrong prefixes, and namespace-only values like `club:`.
 - `GameState` fixture in a test uses ordered ID arrays, not record iteration.
 
 ## Definition of Done
 
 - `domain` imports no local package.
+- Domain IDs follow the `type:value` convention and are created through specific constructors.
 - All core value-object constructors validate inputs.
 - `GameState` separates lookup records from ordered ID arrays.
 - Player abilities cover the full launch attribute set from `requirements.md`.

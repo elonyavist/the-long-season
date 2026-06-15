@@ -14,6 +14,7 @@ Define the Phase 0 implementation path that creates the monorepo skeleton, deter
 - Keep packages physically minimal until a step requires files.
 - Create only `apps/cli`, `packages/domain`, `packages/shared`, `packages/engine`, `packages/content`, and `packages/storage`.
 - Use `@game/*` workspace package names.
+- Keep domain IDs on the `type:value` namespace convention from the first domain step.
 - Make `pnpm check` the single local gate once enforcement exists.
 
 ## What NOT to implement

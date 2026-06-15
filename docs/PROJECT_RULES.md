@@ -36,6 +36,7 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Do not use `Object.values()`, `Object.keys()`, or `Object.entries()` for order-sensitive simulation.
 - Every sort must have a deterministic final tie-breaker.
 - Generated IDs must be stable and non integer-like.
+- All domain IDs must use the `type:value` namespace convention and must be created through specific domain constructors (`playerId`, `clubId`, `competitionId`, `fixtureId`, `seasonId`, `saveId`).
 
 ## Step Discipline Rules
 

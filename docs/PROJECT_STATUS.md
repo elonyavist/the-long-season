@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: documentation and planning for Phase 0/1.
-- Active implementation step: `docs/steps/00-foundation/01-domain-core-types.md`.
-- Code status: monorepo skeleton exists; no gameplay implementation code exists yet.
+- Active implementation step: `docs/steps/00-foundation/02-shared-rng-and-date.md`.
+- Code status: monorepo skeleton and dependency-free domain core contracts exist; no gameplay implementation code exists yet.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/00-foundation/01-domain-core-types.md`
+- Step: `docs/steps/00-foundation/02-shared-rng-and-date.md`
 - Status: Not started
-- Last verification: `pnpm install`, `pnpm test`, `pnpm -r run typecheck`, `pnpm cli`, `pnpm check`, and TypeScript path alias inspection passed for the monorepo skeleton.
-- Next action: Implement dependency-free domain core types only.
+- Last verification: `pnpm --filter @game/domain run typecheck`, `pnpm test`, `pnpm -r run typecheck`, `pnpm check`, and a domain import scan passed for domain core types.
+- Next action: Implement deterministic shared RNG and pure date utilities only.
 
 ## How To Read The Project
 
@@ -32,7 +32,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | Step | Status | Outcome | Adopted solution | Verification |
 |---|---|---|---|---|
 | `docs/steps/00-foundation/00-monorepo-skeleton.md` | Done | Minimal pnpm workspace and empty package entrypoints were created. | Root pnpm workspace with `apps/cli`, `packages/domain`, `packages/shared`, `packages/engine`, `packages/content`, and `packages/storage`; placeholder scripts stay non-gameplay until enforcement. | `pnpm install`; `pnpm test`; `pnpm -r run typecheck`; `pnpm cli`; `pnpm check`; `tsc --showConfig` alias check |
-| `docs/steps/00-foundation/01-domain-core-types.md` | Not started | None yet | Planned dependency-free domain contracts | Pending |
+| `docs/steps/00-foundation/01-domain-core-types.md` | Done | Dependency-free core domain contracts, value objects, entities, state, and tests were created. | Branded IDs and value objects live in `domain`; `Player` stores the full 25-attribute shape plus potential; dynamic state is separated in `PlayerDynamicState`; `GameState` uses lookup records plus explicit ordered ID arrays. | `pnpm --filter @game/domain run typecheck`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; domain import scan |
 | `docs/steps/00-foundation/02-shared-rng-and-date.md` | Not started | None yet | Planned deterministic RNG and pure date utilities | Pending |
 | `docs/steps/00-foundation/03-storage-json.md` | Not started | None yet | Planned JSON storage behind `GameStorage` | Pending |
 | `docs/steps/00-foundation/04-enforcement.md` | Not started | None yet | Planned dependency-cruiser, ESLint, Vitest, `pnpm check`, `pnpm cli doctor` | Pending |
@@ -68,14 +68,52 @@ Status values:
 - The Step Ledger tracks individual step files, not only broad phase groups.
 - Every step prompt tells the implementer to read and update `docs/PROJECT_STATUS.md`.
 - `pnpm` is exposed through Corepack under Node `v24.16.0`; this shell required `source ~/.nvm/nvm.sh && nvm use` before running pnpm commands.
+- Domain IDs use one namespace convention for every entity type: `type:value` (`player:000001`, `club:perugia`, `competition:ita-3`, `fixture:000001`, `season:2026`, `save:demo-001`).
+- Domain ID validation is intentionally not exposed as a partial public helper; callers must use specific constructors like `playerId`, `clubId`, and `fixtureId`.
+- TypeScript source files written so far carry TSDoc/JSDoc comments for public contracts, package entrypoints, and test fixture intent.
 
 ## Open Decisions And Follow-Up
 
 - The monorepo skeleton uses placeholder `lint`, `depcruise`, and `test` scripts until the enforcement step replaces them with real tooling.
 - `pnpm-lock.yaml` was created by the required `pnpm install` verification even though it was not listed in the step `Expected files`; keep it as the workspace lockfile.
 - `pnpm install` resolved TypeScript `^5.8.3` to `5.9.3`; keep this acceptable unless a later step needs a pinned compiler version.
+- Domain tests currently use Node 24 native test execution for `.ts` files; formal Vitest setup still belongs to `04-enforcement`.
+- Root `pnpm test` now runs existing package tests through `node --test $(find packages -name '*.test.ts' -not -path '*/node_modules/*')` so required tests are not hidden behind placeholders.
+- `packages/domain/tsconfig.json` enables `allowImportingTsExtensions` so Node 24 can execute TypeScript tests directly.
 - After `04-enforcement`, record the exact lint and dependency-cruiser rules adopted.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — Domain ID namespace refinement
+
+- Status: Done
+- Outcome: Reworked domain ID constructors to enforce a common `type:value` namespace convention.
+- Adopted solution: All domain ID constructors now validate their own prefix through a private `namespacedId` helper instead of exposing a partial `stableId` validator.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm test`; `pnpm check`; `pnpm -r run typecheck`.
+- Follow-up: Keep future generated IDs on the same convention, e.g. `player:000001` and `fixture:000001`.
+
+### 2026-06-15 — TypeScript JSDoc documentation pass
+
+- Status: Done
+- Outcome: Added TSDoc/JSDoc coverage to all TypeScript files written so far.
+- Adopted solution: Public domain contracts and package entrypoints document their intent and examples; tests document the behavior protected by their fixtures.
+- Verification: no TypeScript file without a `/** ... */` block; `pnpm -r run typecheck`; `pnpm test`; `pnpm check`.
+- Follow-up: Keep future public exports documented as they are introduced.
+
+### 2026-06-15 — Domain ID decision documentation propagation
+
+- Status: Done
+- Outcome: Propagated the `type:value` ID convention to `requirements.md`, project rules, README guidance, and future ID-producing steps.
+- Adopted solution: Requirements and step docs now treat `player:...`, `club:...`, `competition:...`, `fixture:...`, `season:...`, and `save:...` as the canonical ID format.
+- Verification: documentation section-count check for all step files; search for old ID examples shows them only as negative test examples or explicitly forbidden legacy forms.
+- Follow-up: Future content and season generation must create IDs through domain constructors, not raw strings.
+
+### 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`
+
+- Status: Done
+- Outcome: Created dependency-free domain IDs, value objects, core entities, `GameState`, and focused tests.
+- Adopted solution: Domain uses branded primitive types with runtime constructors for values that need validation; runtime order is represented by explicit ID arrays beside lookup records.
+- Verification: `pnpm --filter @game/domain run typecheck`; `node --test packages/domain/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; domain import scan.
+- Follow-up: Start `docs/steps/00-foundation/02-shared-rng-and-date.md`; keep Vitest and stricter enforcement for `04-enforcement`.
 
 ### 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`
 

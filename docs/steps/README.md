@@ -19,6 +19,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   6. Update `docs/PROJECT_STATUS.md` in a short entry with result, adopted solution, verification, and next action.
   7. Move to the next documented step only when the Definition of Done is satisfied.
 - When the current sequence is complete, add the next numbered step group under `docs/steps/`.
+- Whenever a step creates or generates domain IDs, use the shared `type:value` namespace convention and the specific domain constructor for that ID type.
 
 ## What NOT to implement
 
@@ -49,6 +50,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - The project still identifies exactly one active step at a time.
 - The project has an explicit implement-test-learn-adjust loop.
 - The mandatory execution loop is documented and short enough to follow during every step.
+- Future steps know that domain IDs use the `type:value` namespace convention.
 - `docs/PROJECT_STATUS.md` explains the current active step and project state to a new LLM or junior developer.
 - Future phases can start without changing `docs/PROJECT_RULES.md`.
 
