@@ -1,7 +1,5 @@
-// @ts-ignore Node test types are introduced with the formal test runner step.
 import assert from "node:assert/strict";
-// @ts-ignore Node test types are introduced with the formal test runner step.
-import test from "node:test";
+import { test } from "vitest";
 
 import { addDays, diffDays, fromISO, toISO } from "./date-utils.ts";
 

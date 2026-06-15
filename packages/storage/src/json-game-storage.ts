@@ -1,6 +1,4 @@
-// @ts-ignore Node filesystem types are introduced with the formal tooling step.
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
-// @ts-ignore Node path types are introduced with the formal tooling step.
 import { join } from "node:path";
 
 import type { GameState, SaveId } from "@game/domain";

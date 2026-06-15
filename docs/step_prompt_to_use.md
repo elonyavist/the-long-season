@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE: docs/steps/00-foundation/03-storage-json.md
+STEP_PATH_TO_EXECUTE: docs/steps/00-foundation/04-enforcement.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 

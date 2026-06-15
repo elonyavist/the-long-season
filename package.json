@@ -8,13 +8,20 @@
     "node": "24.16.0"
   },
   "scripts": {
-    "test": "node --test $(find packages -name '*.test.ts' -not -path '*/node_modules/*')",
-    "lint": "node -e \"console.log('No lint configured yet')\"",
-    "depcruise": "node -e \"console.log('No dependency rules configured yet')\"",
-    "check": "pnpm lint && pnpm depcruise && pnpm test",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "depcruise": "depcruise --config .dependency-cruiser.cjs --output-type err packages apps",
+    "typecheck": "pnpm -r run typecheck",
+    "check": "pnpm lint && pnpm depcruise && pnpm test && pnpm typecheck",
     "cli": "pnpm --filter @game/cli run cli --"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.9.3",
+    "dependency-cruiser": "^17.4.3",
+    "eslint": "^10.5.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.1.8"
   }
 }

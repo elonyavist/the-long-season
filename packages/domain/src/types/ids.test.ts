@@ -1,6 +1,4 @@
-// @ts-ignore Node test types are introduced with the formal test runner step.
-import test from "node:test";
-// @ts-ignore Node assert types are introduced with the formal test runner step.
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { clubId, competitionId, fixtureId, playerId, saveId, seasonId } from "./ids.ts";

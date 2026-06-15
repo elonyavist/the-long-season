@@ -80,3 +80,26 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Step-specific Definition of Done is satisfied.
 - Lessons learned that affect future work are captured in the next step document, not hidden in code or chat.
 - `docs/PROJECT_STATUS.md` reflects the current active step, step status, adopted solution, verification result, and next action.
+
+## Executable Enforcement
+
+- `pnpm check` is the single local gate and runs `pnpm lint`, `pnpm depcruise`, `pnpm test`, and `pnpm typecheck`.
+- `pnpm lint` uses ESLint and rejects forbidden runtime APIs inside `packages/engine`.
+- `pnpm depcruise` uses Dependency Cruiser and rejects package-boundary violations from this file.
+- `pnpm test` uses Vitest for `packages/**/*.test.ts`.
+- `pnpm cli doctor` is the first real CLI command and must exit `0`.
+- Negative dependency proof command:
+
+```sh
+printf 'import "@game/engine";\nexport {};\n' > packages/storage/src/__forbidden-import.fixture.ts
+pnpm depcruise
+rm packages/storage/src/__forbidden-import.fixture.ts
+```
+
+- Negative engine determinism proof command:
+
+```sh
+printf '/** Temporary lint fixture. */\nexport function forbiddenRandomForLintFixture(): number {\n  return Math.random();\n}\n' > packages/engine/src/__forbidden-runtime.fixture.ts
+pnpm lint
+rm packages/engine/src/__forbidden-runtime.fixture.ts
+```

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "cli": "node --eval \"console.log('The Long Season CLI skeleton')\"",
+    "cli": "node src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,13 +1,8 @@
-// @ts-ignore Node test types are introduced with the formal test runner step.
 import assert from "node:assert/strict";
-// @ts-ignore Node filesystem types are introduced with the formal tooling step.
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
-// @ts-ignore Node os types are introduced with the formal tooling step.
 import { tmpdir } from "node:os";
-// @ts-ignore Node path types are introduced with the formal tooling step.
 import { join } from "node:path";
-// @ts-ignore Node test types are introduced with the formal test runner step.
-import test from "node:test";
+import { test } from "vitest";
 
 import { gameDate, saveId, seasonId, type GameState } from "@game/domain";
 
