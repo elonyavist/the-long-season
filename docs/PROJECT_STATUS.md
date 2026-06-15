@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: documentation and planning for Phase 0/1.
-- Active implementation step: `docs/steps/00-foundation/03-storage-json.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, and deterministic shared RNG/date utilities exist; no gameplay implementation code exists yet.
+- Active implementation step: `docs/steps/00-foundation/04-enforcement.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, and JSON save storage boundary exist; no gameplay implementation code exists yet.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/00-foundation/03-storage-json.md`
+- Step: `docs/steps/00-foundation/04-enforcement.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/shared run typecheck`, `node --test packages/shared/src/**/*.test.ts`, `pnpm test`, `pnpm -r run typecheck`, `pnpm check`, shared forbidden API scan, and shared JSDoc scan passed for shared RNG/date utilities.
-- Next action: Implement JSON storage behind `GameStorage` only.
+- Last verification: `pnpm --filter @game/storage run typecheck`, `node --test packages/storage/src/**/*.test.ts`, `pnpm test`, `pnpm -r run typecheck`, `pnpm check`, storage forbidden dependency scan, and storage JSDoc scan passed for JSON storage.
+- Next action: Implement enforcement tooling only.
 
 ## How To Read The Project
 
@@ -34,7 +34,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/00-foundation/00-monorepo-skeleton.md` | Done | Minimal pnpm workspace and empty package entrypoints were created. | Root pnpm workspace with `apps/cli`, `packages/domain`, `packages/shared`, `packages/engine`, `packages/content`, and `packages/storage`; placeholder scripts stay non-gameplay until enforcement. | `pnpm install`; `pnpm test`; `pnpm -r run typecheck`; `pnpm cli`; `pnpm check`; `tsc --showConfig` alias check |
 | `docs/steps/00-foundation/01-domain-core-types.md` | Done | Dependency-free core domain contracts, value objects, entities, state, and tests were created. | Branded IDs and value objects live in `domain`; `Player` stores the full 25-attribute shape plus potential; dynamic state is separated in `PlayerDynamicState`; `GameState` uses lookup records plus explicit ordered ID arrays. | `pnpm --filter @game/domain run typecheck`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; domain import scan |
 | `docs/steps/00-foundation/02-shared-rng-and-date.md` | Done | Deterministic shared RNG streams and pure Gregorian epoch-day utilities were created. | `shared` exposes `deriveRng(seed, streamName, ...keyParts)` over `sfc32` seeded by stable `cyrb128` hash words; date conversion uses pure Gregorian arithmetic with no JavaScript `Date`; all new shared files and functions are documented with TSDoc/JSDoc. | `pnpm --filter @game/shared run typecheck`; `node --test packages/shared/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; forbidden API scan; JSDoc scan |
-| `docs/steps/00-foundation/03-storage-json.md` | Not started | None yet | Planned JSON storage behind `GameStorage` | Pending |
+| `docs/steps/00-foundation/03-storage-json.md` | Done | JSON-backed save storage boundary was created for full `GameState` snapshots. | `storage` exposes `GameStorage`, `JsonGameStorage`, save metadata, schema version `1`, identity migration for v1 saves, and typed storage errors; metadata listing is sorted deterministically by save ID. | `pnpm --filter @game/storage run typecheck`; `node --test packages/storage/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; storage forbidden dependency scan; JSDoc scan |
 | `docs/steps/00-foundation/04-enforcement.md` | Not started | None yet | Planned dependency-cruiser, ESLint, Vitest, `pnpm check`, `pnpm cli doctor` | Pending |
 | `docs/steps/01-match-engine/01-team-strength.md` | Not started | None yet | Planned role-weight-based team strength | Pending |
 | `docs/steps/01-match-engine/02-match-context.md` | Not started | None yet | Planned serializable match input contract | Pending |
@@ -73,6 +73,7 @@ Status values:
 - TypeScript source files written so far carry TSDoc/JSDoc comments for public contracts, package entrypoints, and test fixture intent.
 - Shared deterministic RNG uses local streams only: callers derive streams from `seed + streamName + stable key parts`; no global RNG state exists.
 - Shared date utilities convert `YYYY-MM-DD` to epoch-day and back with pure Gregorian arithmetic; JavaScript `Date` and timezone APIs are not used.
+- JSON storage persists full `GameState` snapshots behind `GameStorage`; storage metadata uses real ISO timestamps, while game time remains `GameDate` in domain/engine.
 
 ## Open Decisions And Follow-Up
 
@@ -83,9 +84,18 @@ Status values:
 - Root `pnpm test` now runs existing package tests through `node --test $(find packages -name '*.test.ts' -not -path '*/node_modules/*')` so required tests are not hidden behind placeholders.
 - `packages/domain/tsconfig.json` enables `allowImportingTsExtensions` so Node 24 can execute TypeScript tests directly.
 - `packages/shared/tsconfig.json` also enables `allowImportingTsExtensions`, matching `domain`, because the workspace currently runs `.ts` files directly under Node 24.
+- `packages/storage/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because it typechecks against workspace source imports from `domain`.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After `04-enforcement`, record the exact lint and dependency-cruiser rules adopted.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`
+
+- Status: Done
+- Outcome: Created the Phase 0/1 storage boundary and Node JSON implementation for full `GameState` snapshots.
+- Adopted solution: `GameStorage` defines save/load/list/delete; `JsonGameStorage` writes one encoded save-ID JSON file per save, stores metadata plus snapshot, preserves `createdAtISO` across overwrites, and routes persisted files through `migrateSave` schema version `1`.
+- Verification: `pnpm --filter @game/storage run typecheck`; `node --test packages/storage/src/**/*.test.ts`; `pnpm test`; `pnpm -r run typecheck`; `pnpm check`; storage forbidden dependency scan; storage JSDoc scan.
+- Follow-up: Start `docs/steps/00-foundation/04-enforcement.md`; replace placeholder lint/dependency checks with real tooling.
 
 ### 2026-06-15 — TypeScript `.ts` import config fix
 
