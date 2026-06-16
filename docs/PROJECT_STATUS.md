@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; Phase 2 season-simulation steps in progress.
-- Active implementation step: `docs/steps/02-season-simulation/03-league-table.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, and copy-on-write fixture result application exist.
+- Active implementation step: `docs/steps/02-season-simulation/04-simulate-season-cli.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, and deterministic derived league-table computation exist.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/02-season-simulation/03-league-table.md`
+- Step: `docs/steps/02-season-simulation/04-simulate-season-cli.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/domain run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/use-cases/apply-match-report-to-fixture.test.ts`, `pnpm check`, forbidden API/dependency scans, and JSDoc scan passed for fixture result application.
-- Next action: Implement deterministic league table derivation only.
+- Last verification: `pnpm --filter @game/domain run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/season-engine/league-table.test.ts`, `pnpm check`, forbidden API/dependency scans, and JSDoc scan passed for league-table computation.
+- Next action: Implement the first deterministic simulate-season CLI milestone only.
 
 ## How To Read The Project
 
@@ -43,7 +43,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/01-match-engine/05-match-report.md` | Done | Durable domain match report and event contracts were created. | `domain` owns `MatchReport`, `MatchStats`, `MatchScore`, `MATCH_EVENT_SCHEMA_VERSION`, and sparse language-agnostic `MatchEvent` variants; `engine` maps local simulation events to report events through `createMatchReport` without prose, storage schemas, fixture updates, or new simulation logic. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/create-match-report.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/01-calendar-generation.md` | Done | Deterministic double round-robin calendar generation was created. | `domain` owns minimal `Competition`, `Fixture`, and `Round` contracts; `engine` generates an even-club double round-robin calendar by shuffling explicit club IDs with `deriveRng(seed, "schedule", seasonId, competitionId)`, applying the Berger circle method, mirroring return fixtures, assigning weekly `GameDate`s, and generating sequential `fixture:` IDs. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/calendar.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/02-fixtures-and-results.md` | Done | Completed match reports can now be applied to fixture results without mutating original state. | `domain` owns compact `FixtureResult` as the table source of truth; `engine` exposes `applyMatchReportToFixture` with typed errors, fixture/report ID validation, default overwrite guard, optional debug overwrite, and copy-on-write replacement of the fixture lookup. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/apply-match-report-to-fixture.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
-| `docs/steps/02-season-simulation/03-league-table.md` | Not started | None yet | Planned derived deterministic league table | Pending |
+| `docs/steps/02-season-simulation/03-league-table.md` | Done | League tables are now derived deterministically from played fixture results. | `domain` owns `LeagueTableRow` and simple point `LeagueTableRules`; `engine` exposes `computeLeagueTable` over explicit club IDs, fixture lookup, fixture ID order, and rules, ignoring unplayed fixtures and sorting by points, goal difference, goals for, then stable club ID. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/league-table.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/04-simulate-season-cli.md` | Not started | None yet | Planned first gameplay milestone CLI command | Pending |
 | `docs/steps/02-season-simulation/05-season-balance-report.md` | Not started | None yet | Planned aggregate deterministic calibration report | Pending |
 
@@ -87,6 +87,7 @@ Status values:
 - Calendar generation is deterministic and date-first: fixtures carry both `roundNumber` and `GameDate`; the first implementation supports even-club double round-robin leagues, one round every seven days, no cups/breaks/rescheduling.
 - Fixture results are the source of truth for future standings: `FixtureResult` stores `played`, `homeGoals`, and `awayGoals`; the rich `MatchReport` is only an optional reference.
 - Fixture result application is copy-on-write over `GameState & FixtureStateSlice`; `game-state.ts` was not modified because it was not listed in the active step's expected files.
+- League tables are derived, not persisted: `computeLeagueTable` reads only compact fixture results in explicit fixture order and uses stable club ID ordering as the final tie-breaker.
 
 ## Open Decisions And Follow-Up
 
@@ -100,6 +101,14 @@ Status values:
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-16 — `docs/steps/02-season-simulation/03-league-table.md`
+
+- Status: Done
+- Outcome: Added deterministic derived league-table contracts and computation from played fixture results.
+- Adopted solution: `LeagueTableRules` defines the point system, `LeagueTableRow` stores derived standings data, and `computeLeagueTable` accumulates wins/draws/losses/goals/points from played fixtures only, then sorts by points, goal difference, goals for, and stable club ID.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/league-table.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan.
+- Follow-up: Start `docs/steps/02-season-simulation/04-simulate-season-cli.md`; wire the first CLI season milestone without adding playoffs, promotions, persistence, or UI.
 
 ### 2026-06-16 — `docs/steps/02-season-simulation/02-fixtures-and-results.md`
 

@@ -22,3 +22,4 @@ export {
   type GenerateRoundRobinCalendarInput,
   type RoundRobinCalendar,
 } from "./season-engine/calendar.ts";
+export { computeLeagueTable, type ComputeLeagueTableInput } from "./season-engine/league-table.ts";
