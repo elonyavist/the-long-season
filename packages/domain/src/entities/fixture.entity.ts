@@ -1,11 +1,37 @@
 import type { ClubId, CompetitionId, FixtureId, SeasonId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
+import type { MatchReport } from "./match.entity.ts";
+
+/**
+ * Result applied to one played fixture.
+ *
+ * Tables and other competition summaries must read goals from this compact
+ * value. The optional report can keep the richer match memory available without
+ * making event history required for standings.
+ *
+ * @example
+ * const result: FixtureResult = {
+ *   played: true,
+ *   homeGoals: 2,
+ *   awayGoals: 1,
+ * };
+ */
+export interface FixtureResult {
+  /** Explicit completion flag so unplayed fixtures can omit the whole result. */
+  readonly played: true;
+  /** Goals scored by the home club. */
+  readonly homeGoals: number;
+  /** Goals scored by the away club. */
+  readonly awayGoals: number;
+  /** Optional rich match report reference for narration and audit views. */
+  readonly report?: MatchReport;
+}
 
 /**
  * One scheduled match fixture.
  *
- * Result data is intentionally absent in the calendar step. A later fixture
- * application step adds the played result as the source of truth for tables.
+ * A fixture becomes authoritative for standings only after `result` is applied.
+ * Before that point, the fixture is just a scheduled game.
  */
 export interface Fixture {
   /** Stable namespaced fixture ID, for example `fixture:000001`. */
@@ -22,6 +48,8 @@ export interface Fixture {
   readonly homeClubId: ClubId;
   /** Away club ID. */
   readonly awayClubId: ClubId;
+  /** Played result, absent while the fixture is still unplayed. */
+  readonly result?: FixtureResult;
 }
 
 /**

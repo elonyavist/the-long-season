@@ -7,6 +7,15 @@
 export * from "./match-engine/index.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
+  ApplyMatchReportToFixtureError,
+  applyMatchReportToFixture,
+  type ApplyMatchReportToFixtureErrorCode,
+  type ApplyMatchReportToFixtureInput,
+  type ApplyMatchReportToFixtureOptions,
+  type ApplyMatchReportToFixtureState,
+  type FixtureStateSlice,
+} from "./use-cases/apply-match-report-to-fixture.ts";
+export {
   CalendarGenerationError,
   generateRoundRobinCalendar,
   type CalendarGenerationErrorCode,
