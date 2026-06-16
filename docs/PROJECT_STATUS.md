@@ -4,9 +4,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; ready for season-simulation steps.
-- Active implementation step: `docs/steps/02-season-simulation/01-calendar-generation.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, and durable domain match reports exist.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; Phase 2 season-simulation steps in progress.
+- Active implementation step: `docs/steps/02-season-simulation/02-fixtures-and-results.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, and deterministic double round-robin calendar generation exist.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
@@ -14,10 +14,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/02-season-simulation/01-calendar-generation.md`
+- Step: `docs/steps/02-season-simulation/02-fixtures-and-results.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/domain run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/match-engine/create-match-report.test.ts`, `pnpm check`, forbidden API/dependency scans, and JSDoc scan passed for match reports.
-- Next action: Implement deterministic calendar generation only.
+- Last verification: `pnpm --filter @game/domain run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/season-engine/calendar.test.ts`, `pnpm check`, forbidden API/dependency scans, and JSDoc scan passed for calendar generation.
+- Next action: Implement fixture result application only.
 
 ## How To Read The Project
 
@@ -41,7 +41,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/01-match-engine/03-step-match.md` | Done | Deterministic one-minute match stepping was created. | `MatchSimulationState` keeps match-local minute, score, stats, and marker flags; `stepMatch` advances one minute, randomizes home/away processing order through the match RNG, generates Bernoulli opportunities from aggregate team strengths, and resolves them through `OccasionResolver` with `AggregateOccasionResolver`; step events remain engine-local until the later domain `MatchReport` step. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan |
 | `docs/steps/01-match-engine/04-simulate-match.md` | Done | Batch full-match simulation over `stepMatch` was created. | `simulateMatch(context)` derives one match RNG stream from `seed + "match" + fixtureId`, initializes local `MatchSimulationState`, loops over `stepMatch` until full time, returns serializable fixture ID, final minute, score, stats, and sparse step events, and fails with typed `SimulateMatchError` if the safety guard is exceeded; golden-output tests now lock full-match reproducibility. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/simulate-match.test.ts`; `pnpm check`; engine forbidden API/order-sensitive iteration scan; engine JSDoc scan |
 | `docs/steps/01-match-engine/05-match-report.md` | Done | Durable domain match report and event contracts were created. | `domain` owns `MatchReport`, `MatchStats`, `MatchScore`, `MATCH_EVENT_SCHEMA_VERSION`, and sparse language-agnostic `MatchEvent` variants; `engine` maps local simulation events to report events through `createMatchReport` without prose, storage schemas, fixture updates, or new simulation logic. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/create-match-report.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
-| `docs/steps/02-season-simulation/01-calendar-generation.md` | Not started | None yet | Planned deterministic double round-robin calendar | Pending |
+| `docs/steps/02-season-simulation/01-calendar-generation.md` | Done | Deterministic double round-robin calendar generation was created. | `domain` owns minimal `Competition`, `Fixture`, and `Round` contracts; `engine` generates an even-club double round-robin calendar by shuffling explicit club IDs with `deriveRng(seed, "schedule", seasonId, competitionId)`, applying the Berger circle method, mirroring return fixtures, assigning weekly `GameDate`s, and generating sequential `fixture:` IDs. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/calendar.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/02-fixtures-and-results.md` | Not started | None yet | Planned fixture result application as source of truth | Pending |
 | `docs/steps/02-season-simulation/03-league-table.md` | Not started | None yet | Planned derived deterministic league table | Pending |
 | `docs/steps/02-season-simulation/04-simulate-season-cli.md` | Not started | None yet | Planned first gameplay milestone CLI command | Pending |
@@ -84,6 +84,7 @@ Status values:
 - Match stepping is local and serializable: `MatchSimulationState` owns minute, score, stats, and marker flags; durable domain `MatchEvent`/`MatchReport` types are still deferred to their documented step.
 - Batch match simulation is reproducible end-to-end: `simulateMatch` derives the match RNG internally and the fixed golden output test locks the complete result shape and event sequence.
 - Match reports are durable domain data: `MatchReport` stores schema version, fixture ID, final minute, score, stats, and sparse structured events; narration, fixture application, storage schemas, and retention remain separate future steps.
+- Calendar generation is deterministic and date-first: fixtures carry both `roundNumber` and `GameDate`; the first implementation supports even-club double round-robin leagues, one round every seven days, no cups/breaks/rescheduling.
 
 ## Open Decisions And Follow-Up
 
@@ -96,6 +97,14 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` because the CLI imports local `.ts` command modules directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
+
+### 2026-06-15 — `docs/steps/02-season-simulation/01-calendar-generation.md`
+
+- Status: Done
+- Outcome: Created deterministic double round-robin calendar generation for one competition.
+- Adopted solution: `generateRoundRobinCalendar` validates an even explicit club list, derives a `schedule` RNG stream from seed, season ID, and competition ID, shuffles clubs with Fisher-Yates, builds Berger first-half pairings, mirrors the return half with home/away inverted, assigns seven-day-spaced `GameDate`s, and emits stable sequential `fixture:` IDs.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/calendar.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan.
+- Follow-up: Start `docs/steps/02-season-simulation/02-fixtures-and-results.md`; add fixture result application without simulating matches, computing tables, persistence, or mutation in place.
 
 ### 2026-06-15 — `docs/steps/01-match-engine/05-match-report.md`
 

@@ -6,3 +6,10 @@
  */
 export * from "./match-engine/index.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
+export {
+  CalendarGenerationError,
+  generateRoundRobinCalendar,
+  type CalendarGenerationErrorCode,
+  type GenerateRoundRobinCalendarInput,
+  type RoundRobinCalendar,
+} from "./season-engine/calendar.ts";
