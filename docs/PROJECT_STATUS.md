@@ -5,19 +5,19 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; Phase 2 season-simulation steps in progress.
-- Active implementation step: `docs/steps/02-season-simulation/04-simulate-season-cli.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, and deterministic derived league-table computation exist.
+- Active implementation step: `docs/steps/02-season-simulation/05-season-balance-report.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, and `pnpm cli simulate-season --seed=demo-001` exist.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
-- First gameplay milestone: `pnpm cli simulate-season --seed=demo-001`.
+- First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
 - Source of truth: `requirements.md`.
 
 ## Current Active Step
 
-- Step: `docs/steps/02-season-simulation/04-simulate-season-cli.md`
+- Step: `docs/steps/02-season-simulation/05-season-balance-report.md`
 - Status: Not started
-- Last verification: `pnpm --filter @game/domain run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm exec vitest run packages/engine/src/season-engine/league-table.test.ts`, `pnpm check`, forbidden API/dependency scans, and JSDoc scan passed for league-table computation.
-- Next action: Implement the first deterministic simulate-season CLI milestone only.
+- Last verification: `pnpm --filter @game/content run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm --filter @game/cli run typecheck`, `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`, `pnpm check`, `pnpm cli simulate-season --seed=demo-001`, invalid-arg CLI check, forbidden API/dependency scans, and JSDoc scan passed for simulate-season CLI.
+- Next action: Implement aggregate deterministic season balance reporting only.
 
 ## How To Read The Project
 
@@ -44,7 +44,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/02-season-simulation/01-calendar-generation.md` | Done | Deterministic double round-robin calendar generation was created. | `domain` owns minimal `Competition`, `Fixture`, and `Round` contracts; `engine` generates an even-club double round-robin calendar by shuffling explicit club IDs with `deriveRng(seed, "schedule", seasonId, competitionId)`, applying the Berger circle method, mirroring return fixtures, assigning weekly `GameDate`s, and generating sequential `fixture:` IDs. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/calendar.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/02-fixtures-and-results.md` | Done | Completed match reports can now be applied to fixture results without mutating original state. | `domain` owns compact `FixtureResult` as the table source of truth; `engine` exposes `applyMatchReportToFixture` with typed errors, fixture/report ID validation, default overwrite guard, optional debug overwrite, and copy-on-write replacement of the fixture lookup. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/apply-match-report-to-fixture.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/03-league-table.md` | Done | League tables are now derived deterministically from played fixture results. | `domain` owns `LeagueTableRow` and simple point `LeagueTableRules`; `engine` exposes `computeLeagueTable` over explicit club IDs, fixture lookup, fixture ID order, and rules, ignoring unplayed fixtures and sorting by points, goal difference, goals for, then stable club ID. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/league-table.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
-| `docs/steps/02-season-simulation/04-simulate-season-cli.md` | Not started | None yet | Planned first gameplay milestone CLI command | Pending |
+| `docs/steps/02-season-simulation/04-simulate-season-cli.md` | Done | The first gameplay milestone command now simulates one deterministic fake 18-team season and prints the final table. | `content` generates fictional clubs, players, lineups, role weights, table rules, and match config; `engine` owns a tested `simulateSeason` use-case; `apps/cli` exposes `simulate-season --seed` and composes exported engine primitives to print table, top-scorer availability, best defense, and worst attack. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; invalid-arg CLI check; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/05-season-balance-report.md` | Not started | None yet | Planned aggregate deterministic calibration report | Pending |
 
 Status values:
@@ -88,6 +88,9 @@ Status values:
 - Fixture results are the source of truth for future standings: `FixtureResult` stores `played`, `homeGoals`, and `awayGoals`; the rich `MatchReport` is only an optional reference.
 - Fixture result application is copy-on-write over `GameState & FixtureStateSlice`; `game-state.ts` was not modified because it was not listed in the active step's expected files.
 - League tables are derived, not persisted: `computeLeagueTable` reads only compact fixture results in explicit fixture order and uses stable club ID ordering as the final tie-breaker.
+- The first season CLI milestone uses fictional generated content only: 18 fake clubs, generated players, fixed 4-4-2 lineups, content-provided role weights, and no real football data.
+- `simulate-season` is deterministic by seed and prints a final table plus best defense and worst attack; player-level top scorer is explicitly unavailable until the match engine attributes goals to players.
+- Because `packages/engine/src/index.ts` was not listed in the active step's expected files, the CLI composes existing exported engine primitives instead of importing the new internal `simulateSeason` use-case directly.
 
 ## Open Decisions And Follow-Up
 
@@ -97,10 +100,20 @@ Status values:
 - `packages/shared/tsconfig.json` also enables `allowImportingTsExtensions`, matching `domain`, because the workspace currently runs `.ts` files directly under Node 24.
 - `packages/storage/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because it typechecks against workspace source imports from `domain`.
 - `packages/engine/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because it typechecks against workspace source imports from `domain`.
-- `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` because the CLI imports local `.ts` command modules directly under Node 24.
+- `packages/content/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because generated content now imports workspace source packages directly.
+- `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
+- `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
 - After the first match simulation steps, record the first statistical behavior that tests expose.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-16 — `docs/steps/02-season-simulation/04-simulate-season-cli.md`
+
+- Status: Done
+- Outcome: Created `pnpm cli simulate-season --seed=demo-001`, producing a deterministic fake 18-team season table.
+- Adopted solution: Fictional content generates clubs, players, lineups, role weights, table rules, and match config; engine has a tested `simulateSeason` flow; CLI parses `--seed`, composes exported engine primitives, and prints final table, top-scorer availability, best defense, and worst attack.
+- Verification: `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`; `pnpm check` (17 files, 88 tests); `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --unknown` exited nonzero; forbidden API/dependency scans; JSDoc scan.
+- Follow-up: Start `docs/steps/02-season-simulation/05-season-balance-report.md`; aggregate deterministic balance data without adding persistence, UI, real data, or future management systems.
 
 ### 2026-06-16 — `docs/steps/02-season-simulation/03-league-table.md`
 

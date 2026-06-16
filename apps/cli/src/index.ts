@@ -5,6 +5,7 @@
  * matching command module, and set a non-zero exit code for unknown commands.
  */
 import { runDoctorCommand } from "./commands/doctor.ts";
+import { runSimulateSeasonCommand } from "./commands/simulate-season.ts";
 
 /**
  * Dispatches the CLI command requested by the user.
@@ -14,15 +15,25 @@ import { runDoctorCommand } from "./commands/doctor.ts";
  */
 export async function runCli(args: readonly string[]): Promise<void> {
   const normalizedArgs = args[0] === "--" ? args.slice(1) : args;
-  const [command] = normalizedArgs;
+  const [command, ...commandArgs] = normalizedArgs;
 
   if (command === "doctor") {
     await runDoctorCommand();
     return;
   }
 
+  if (command === "simulate-season") {
+    const exitCode = await runSimulateSeasonCommand(commandArgs);
+
+    if (exitCode !== 0) {
+      process.exitCode = exitCode;
+    }
+
+    return;
+  }
+
   console.error(`Unknown command: ${command ?? "<none>"}`);
-  console.error("Available commands: doctor");
+  console.error("Available commands: doctor, simulate-season");
   process.exitCode = 1;
 }
 
