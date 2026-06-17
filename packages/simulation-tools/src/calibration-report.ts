@@ -11,6 +11,7 @@ export type CalibrationMetricKey =
   | "goals_per_match"
   | "home_win_rate"
   | "last_place_points"
+  | "table_points_spread"
   | "upset_rate";
 
 /**
@@ -152,6 +153,7 @@ function emptyTotals(): CalibrationTotals {
     awayWins: 0,
     firstPlacePointsTotal: 0,
     lastPlacePointsTotal: 0,
+    tablePointsSpreadTotal: 0,
     upsetMatches: 0,
     upsetEligibleMatches: 0,
   };
@@ -193,6 +195,7 @@ function accumulateSeasonTotals(
 
   totals.firstPlacePointsTotal += firstPlace.points;
   totals.lastPlacePointsTotal += lastPlace.points;
+  totals.tablePointsSpreadTotal += firstPlace.points - lastPlace.points;
 
   for (const fixture of result.fixtures) {
     accumulateFixtureTotals(totals, input, fixture);
@@ -292,6 +295,11 @@ function metricResultsFromTotals(
       value: safeDivide(totals.lastPlacePointsTotal, seasonCount),
     },
     {
+      metric: "table_points_spread",
+      label: "Table points spread",
+      value: safeDivide(totals.tablePointsSpreadTotal, seasonCount),
+    },
+    {
       metric: "upset_rate",
       label: "Upset proxy rate",
       value: safeDivide(totals.upsetMatches, totals.upsetEligibleMatches),
@@ -369,6 +377,7 @@ interface CalibrationTotals {
   awayWins: number;
   firstPlacePointsTotal: number;
   lastPlacePointsTotal: number;
+  tablePointsSpreadTotal: number;
   upsetMatches: number;
   upsetEligibleMatches: number;
 }

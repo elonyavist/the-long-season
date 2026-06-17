@@ -56,6 +56,7 @@ test("report includes all required metrics", () => {
     "away_win_rate",
     "first_place_points",
     "last_place_points",
+    "table_points_spread",
     "upset_rate",
   ]);
 });
@@ -196,6 +197,7 @@ const broadTargets: readonly CalibrationTarget[] = [
   target("away_win_rate", 0, 1),
   target("first_place_points", 0, 102),
   target("last_place_points", 0, 102),
+  target("table_points_spread", 0, 102),
   target("upset_rate", 0, 1),
 ];
 

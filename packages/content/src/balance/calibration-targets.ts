@@ -8,6 +8,7 @@ export type ContentCalibrationMetricKey =
   | "goals_per_match"
   | "home_win_rate"
   | "last_place_points"
+  | "table_points_spread"
   | "upset_rate";
 
 /**
@@ -68,6 +69,12 @@ export const defaultSeasonCalibrationTargets: readonly ContentCalibrationTarget[
     maxInclusive: 50,
   },
   {
+    metric: "table_points_spread",
+    label: "Table points spread",
+    minInclusive: 15,
+    maxInclusive: 80,
+  },
+  {
     metric: "upset_rate",
     label: "Upset proxy rate",
     minInclusive: 0.02,
@@ -118,6 +125,12 @@ export const calibrationV1SeasonCalibrationTargets: readonly ContentCalibrationT
     label: "Last-place points",
     minInclusive: 15,
     maxInclusive: 38,
+  },
+  {
+    metric: "table_points_spread",
+    label: "Table points spread",
+    minInclusive: 36,
+    maxInclusive: 60,
   },
   {
     metric: "upset_rate",

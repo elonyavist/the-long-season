@@ -4,9 +4,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration documented.
-- Active implementation step: `docs/steps/03-balance-calibration/03-table-spread-review.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete.
+- Active implementation step: None; choose or document the next step before implementing.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/03-balance-calibration/03-table-spread-review.md`
-- Status: Not started
-- Last verification: `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` completed; content/CLI typecheck, focused CLI balance report tests, `pnpm check`, `calibration-v1` strict 20-season report, and default strict smoke report passed.
-- Next action: Review table spread separately from raw scoring; goals now pass but sit near the upper `calibration-v1` bound.
+- Step: None
+- Status: Phase 3 complete
+- Last verification: `docs/steps/03-balance-calibration/03-table-spread-review.md` completed; content/simulation-tools/CLI typecheck, focused calibration/CLI tests, `pnpm check`, and `calibration-v1` strict 20-season report passed.
+- Next action: Choose or write the next numbered step document before implementing more gameplay scope.
 
 ## How To Read The Project
 
@@ -49,7 +49,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/02-season-simulation/05-season-balance-report.md` | Done | Added deterministic aggregate season balance reporting and a strict CLI gate mode. | `simulation-tools` owns content-free aggregate calibration; `content` owns broad hand-authored targets; `engine` publicly exports `simulateSeason`; CLI wires fake content into the report without importing `domain` directly. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts`; `pnpm check`; default and strict-fail CLI smoke checks; forbidden API/dependency scans |
 | `docs/steps/03-balance-calibration/01-calibration-target-profile.md` | Done | Added stricter `calibration-v1` target profile and CLI support without changing simulation behavior. | `default` remains the broad smoke profile; `calibration-v1` exposes the current under-scoring/draw-heavy gap; `strict-fail-smoke` remains the intentional failure profile for CLI tests. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run apps/cli/src/commands/balance-report.test.ts packages/simulation-tools/src/calibration-report.test.ts`; `pnpm check`; default strict CLI report passed; `calibration-v1` strict CLI report failed as expected |
 | `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` | Done | Tuned fake match-engine rates and conversion bands so the 20-season `calibration-v1` sample passes. | Config-only tuning doubled base opportunity rate, raised the opportunity cap, increased conversion probabilities, and raised home advantage slightly; no engine algorithms changed. | Baseline `calibration-v1` 20-season report failed; after tuning, `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` passed; `pnpm check` passed |
-| `docs/steps/03-balance-calibration/03-table-spread-review.md` | Planned | Future Phase 3 step. | Review table spread separately from raw scoring after rate tuning. | Pending |
+| `docs/steps/03-balance-calibration/03-table-spread-review.md` | Done | Added explicit average table points spread to balance reporting and confirmed the tuned 20-season sample remains plausible. | `simulation-tools` now reports `table_points_spread` as average first-place minus last-place points; content target profiles include broad/default and stricter `calibration-v1` bands. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm --filter @game/cli run typecheck`; focused calibration/CLI tests; `pnpm check`; `calibration-v1` strict 20-season report passed |
 
 Status values:
 
@@ -100,7 +100,8 @@ Status values:
 - Phase 3 balance calibration starts with target/profile separation before tuning: `default` remains a broad smoke profile, while `calibration-v1` is the stricter gate used to expose under-scoring and draw-heavy output.
 - Current `calibration-v1` baseline for `seed-prefix=balance-demo`, `seasons=3`: goals per match `1.127` fails `2.000..3.200`; home win rate `0.296` fails `0.330..0.550`; draw rate `0.444` fails `0.180..0.330`; first-place points `57.000` fails `66.000..90.000`.
 - Match rate tuning is config-only so far: fake content now uses base opportunity rate `0.09`, max opportunity rate `0.24`, conversion probabilities `0.12/0.23/0.40`, and home advantage `1.10`.
-- Current tuned `calibration-v1` sample for `seed-prefix=test-balance`, `seasons=20`: goals per match `3.197`, home win rate `0.430`, draw rate `0.222`, away win rate `0.348`, first-place points `68.050`, last-place points `27.650`, upset rate `0.375`; all pass, with goals near the upper bound.
+- Current tuned `calibration-v1` sample for `seed-prefix=test-balance`, `seasons=20`: goals per match `3.197`, home win rate `0.430`, draw rate `0.222`, away win rate `0.348`, first-place points `68.050`, last-place points `27.650`, table points spread `40.400`, upset rate `0.375`; all pass, with goals near the upper bound.
+- Table spread review is an explicit report metric now: `table_points_spread` means average first-place points minus last-place points across the simulated season batch.
 
 ## Open Decisions And Follow-Up
 
@@ -114,8 +115,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 3's next implementation step is `docs/steps/03-balance-calibration/03-table-spread-review.md`; review table spread before opening a new gameplay phase.
+- Phase 3 is complete; the next implementation requires selecting or writing a new numbered step document first.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-17 — `docs/steps/03-balance-calibration/03-table-spread-review.md`
+
+- Status: Done
+- Outcome: Reviewed table spread as a first-class calibration signal instead of inferring it from separate first/last-place point rows.
+- Adopted solution: Added `table_points_spread` to `simulation-tools` and content target profiles; `calibration-v1` accepts `36..60`, and the tuned `test-balance` 20-season sample reports `40.400`.
+- Verification: `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts` (11 tests); `pnpm check` (19 files, 99 tests); `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Stop here; choose or write the next numbered step before implementing anything beyond Phase 3.
 
 ### 2026-06-17 — `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md`
 

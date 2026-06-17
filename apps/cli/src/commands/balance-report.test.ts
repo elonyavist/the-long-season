@@ -43,6 +43,7 @@ test("balance-report emits all required metrics", async () => {
   assert.equal(hasLineStartingWith(io.stdoutLines, "Away win rate"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "First-place points"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "Last-place points"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "Table points spread"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "Upset proxy rate"), true);
 });
 
