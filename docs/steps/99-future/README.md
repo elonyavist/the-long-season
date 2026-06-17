@@ -27,6 +27,7 @@ Keep future work visible as an incremental queue without implementing it before 
 
 Future candidates:
 
+- Promoted on 2026-06-17: balance calibration now lives in `docs/steps/03-balance-calibration/`.
 - React and Vite shell.
 - SQLite, OPFS, IndexedDB, and save migrations.
 - Web Worker and Comlink.
