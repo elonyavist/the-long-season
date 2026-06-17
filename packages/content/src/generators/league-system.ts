@@ -140,30 +140,30 @@ function fakeMatchEngineConfig(): FakeMatchEngineConfig {
   return {
     minuteCount: 90,
     rates: {
-      baseOpportunityRatePerMinute: 0.045,
-      maxOpportunityRatePerMinute: 0.16,
+      baseOpportunityRatePerMinute: 0.09,
+      maxOpportunityRatePerMinute: 0.24,
     },
     conversionBands: [
       {
         bandKey: "low",
         minQualityInclusive: 0,
         maxQualityExclusive: 0.45,
-        goalProbability: 0.08,
+        goalProbability: 0.12,
       },
       {
         bandKey: "medium",
         minQualityInclusive: 0.45,
         maxQualityExclusive: 0.65,
-        goalProbability: 0.17,
+        goalProbability: 0.23,
       },
       {
         bandKey: "high",
         minQualityInclusive: 0.65,
         maxQualityExclusive: 1.01,
-        goalProbability: 0.32,
+        goalProbability: 0.4,
       },
     ],
-    homeAdvantageFactor: 1.06,
+    homeAdvantageFactor: 1.1,
     tacticalDistributionCaps: {
       directness: { minInclusive: 0, maxInclusive: 1 },
       pressing: { minInclusive: 0, maxInclusive: 1 },

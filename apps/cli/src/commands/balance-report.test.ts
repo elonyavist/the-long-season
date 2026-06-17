@@ -74,6 +74,19 @@ test("calibration-v1 profile is accepted and exposes the current balance gap", a
   assert.equal(hasLineEndingWith(io.stdoutLines, "FAIL"), true);
 });
 
+test("calibration-v1 passes the tuned twenty-season calibration sample", async () => {
+  const io = captureIo();
+  const exitCode = await runBalanceReportCommand(
+    ["--seed-prefix=test-balance", "--seasons=20", "--target-profile=calibration-v1", "--strict"],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes("Target profile: calibration-v1"), true);
+  assert.equal(io.stdoutLines.includes("Status: PASS"), true);
+});
+
 test("balance-report exits nonzero on invalid args", async () => {
   const io = captureIo();
   const exitCode = await runBalanceReportCommand(["--seasons=0"], io);

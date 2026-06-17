@@ -8,6 +8,18 @@ Review whether tuned season results produce a plausible table spread, not only p
 
 Goals and draw rate can improve while standings remain compressed or chaotic. The requirements emphasize credible long-season outcomes, so after rate tuning the project should inspect first-place points, last-place points, and upset proxy as a separate step.
 
+Post-tuning sample from `02-match-engine-rate-tuning` with `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`:
+
+- `goals_per_match`: `3.197` vs target `2.000..3.200` — pass, but very close to the upper bound.
+- `home_win_rate`: `0.430` vs target `0.330..0.550` — pass.
+- `draw_rate`: `0.222` vs target `0.180..0.330` — pass.
+- `away_win_rate`: `0.348` vs target `0.170..0.380` — pass.
+- `first_place_points`: `68.050` vs target `66.000..90.000` — pass.
+- `last_place_points`: `27.650` vs target `15.000..38.000` — pass.
+- `upset_rate`: `0.375` vs target `0.150..0.450` — pass.
+
+The next review should look beyond pass/fail: goals are near the upper target edge, and the table spread now passes but still needs a separate plausibility check.
+
 ## What to implement
 
 - Run deterministic batch reports after rate tuning.
