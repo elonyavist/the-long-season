@@ -59,6 +59,21 @@ test("strict mode exits nonzero when report is outside targets", async () => {
   assert.equal(hasLineEndingWith(io.stdoutLines, "FAIL"), true);
 });
 
+test("calibration-v1 profile is accepted and exposes the current balance gap", async () => {
+  const io = captureIo();
+  const exitCode = await runBalanceReportCommand(
+    ["--seed-prefix=balance-demo", "--seasons=3", "--target-profile=calibration-v1", "--strict"],
+    io,
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes("Target profile: calibration-v1"), true);
+  assert.equal(io.stdoutLines.includes("Status: FAIL"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "Goals per match"), true);
+  assert.equal(hasLineEndingWith(io.stdoutLines, "FAIL"), true);
+});
+
 test("balance-report exits nonzero on invalid args", async () => {
   const io = captureIo();
   const exitCode = await runBalanceReportCommand(["--seasons=0"], io);

@@ -76,6 +76,58 @@ export const defaultSeasonCalibrationTargets: readonly ContentCalibrationTarget[
 ];
 
 /**
+ * Stricter football-like aggregate targets for the first calibration loop.
+ *
+ * This profile is expected to expose the current under-scoring and draw-heavy
+ * engine before rate tuning. It should not replace the broad default smoke
+ * profile.
+ */
+export const calibrationV1SeasonCalibrationTargets: readonly ContentCalibrationTarget[] = [
+  {
+    metric: "goals_per_match",
+    label: "Goals per match",
+    minInclusive: 2.0,
+    maxInclusive: 3.2,
+  },
+  {
+    metric: "home_win_rate",
+    label: "Home win rate",
+    minInclusive: 0.33,
+    maxInclusive: 0.55,
+  },
+  {
+    metric: "draw_rate",
+    label: "Draw rate",
+    minInclusive: 0.18,
+    maxInclusive: 0.33,
+  },
+  {
+    metric: "away_win_rate",
+    label: "Away win rate",
+    minInclusive: 0.17,
+    maxInclusive: 0.38,
+  },
+  {
+    metric: "first_place_points",
+    label: "First-place points",
+    minInclusive: 66,
+    maxInclusive: 90,
+  },
+  {
+    metric: "last_place_points",
+    label: "Last-place points",
+    minInclusive: 15,
+    maxInclusive: 38,
+  },
+  {
+    metric: "upset_rate",
+    label: "Upset proxy rate",
+    minInclusive: 0.15,
+    maxInclusive: 0.45,
+  },
+];
+
+/**
  * Intentionally impossible target profile used to smoke-test strict failures.
  */
 export const strictFailureSmokeTargets: readonly ContentCalibrationTarget[] = [

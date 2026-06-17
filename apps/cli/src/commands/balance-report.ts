@@ -1,4 +1,5 @@
 import {
+  calibrationV1SeasonCalibrationTargets,
   createFakeLeagueSystem,
   defaultSeasonCalibrationTargets,
   strictFailureSmokeTargets,
@@ -49,7 +50,7 @@ export async function runBalanceReportCommand(
   if (!parsed.ok) {
     io.stderr(parsed.message);
     io.stderr(
-      "Usage: pnpm cli balance-report [--seed-prefix=<seed>] [--seasons=<count>] [--target-profile=default|strict-fail-smoke] [--strict]",
+      "Usage: pnpm cli balance-report [--seed-prefix=<seed>] [--seasons=<count>] [--target-profile=default|calibration-v1|strict-fail-smoke] [--strict]",
     );
     return 1;
   }
@@ -201,7 +202,7 @@ function parseSeasonCount(value: string): number | undefined {
  * Parses a supported target profile.
  */
 function parseTargetProfile(value: string | undefined): TargetProfile | undefined {
-  if (value === "default" || value === "strict-fail-smoke") {
+  if (value === "default" || value === "calibration-v1" || value === "strict-fail-smoke") {
     return value;
   }
 
@@ -212,6 +213,10 @@ function parseTargetProfile(value: string | undefined): TargetProfile | undefine
  * Selects hand-authored targets for a named profile.
  */
 function targetsForProfile(profile: TargetProfile): readonly CalibrationTarget[] {
+  if (profile === "calibration-v1") {
+    return calibrationV1SeasonCalibrationTargets;
+  }
+
   if (profile === "strict-fail-smoke") {
     return strictFailureSmokeTargets;
   }
@@ -329,7 +334,7 @@ function formatTarget(target: CalibrationTarget | undefined): string {
 /**
  * Supported target profile names.
  */
-type TargetProfile = "default" | "strict-fail-smoke";
+type TargetProfile = "calibration-v1" | "default" | "strict-fail-smoke";
 
 /**
  * Parsed command arguments.

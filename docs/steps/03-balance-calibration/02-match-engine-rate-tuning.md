@@ -10,6 +10,16 @@ The first balance samples are stable but under-scoring and draw-heavy. Before ad
 
 This step should tune only existing data/configuration first. Engine algorithm changes are allowed only if config-only tuning cannot move the metrics without breaking determinism or producing obviously artificial output.
 
+Baseline from `01-calibration-target-profile` with `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3 --target-profile=calibration-v1 --strict`:
+
+- `goals_per_match`: `1.127` vs target `2.000..3.200` — fail.
+- `home_win_rate`: `0.296` vs target `0.330..0.550` — fail.
+- `draw_rate`: `0.444` vs target `0.180..0.330` — fail.
+- `away_win_rate`: `0.259` vs target `0.170..0.380` — pass.
+- `first_place_points`: `57.000` vs target `66.000..90.000` — fail.
+- `last_place_points`: `31.333` vs target `15.000..38.000` — pass.
+- `upset_rate`: `0.431` vs target `0.150..0.450` — pass.
+
 ## What to implement
 
 - Run the `calibration-v1` report before changing values and record the baseline.
