@@ -35,15 +35,15 @@ importers:
       '@game/content':
         specifier: workspace:*
         version: link:../../packages/content
-      '@game/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
       '@game/engine':
         specifier: workspace:*
         version: link:../../packages/engine
       '@game/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@game/simulation-tools':
+        specifier: workspace:*
+        version: link:../../packages/simulation-tools
       '@game/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -85,6 +85,22 @@ importers:
         version: 5.9.3
 
   packages/shared:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/simulation-tools:
+    dependencies:
+      '@game/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@game/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@game/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.8.3

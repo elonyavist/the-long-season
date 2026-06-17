@@ -4,20 +4,21 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; Phase 2 season-simulation steps in progress.
-- Active implementation step: `docs/steps/02-season-simulation/05-season-balance-report.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, and `pnpm cli simulate-season --seed=demo-001` exist.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete.
+- Active implementation step: none; create the next numbered step document before implementing new scope.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
+- First balance milestone: `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` achieved.
 - Source of truth: `requirements.md`.
 
 ## Current Active Step
 
-- Step: `docs/steps/02-season-simulation/05-season-balance-report.md`
-- Status: Not started
-- Last verification: `pnpm --filter @game/content run typecheck`, `pnpm --filter @game/engine run typecheck`, `pnpm --filter @game/cli run typecheck`, `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`, `pnpm check`, `pnpm cli simulate-season --seed=demo-001`, invalid-arg CLI check, forbidden API/dependency scans, and JSDoc scan passed for simulate-season CLI.
-- Next action: Implement aggregate deterministic season balance reporting only.
+- Step: none
+- Status: No active implementation step
+- Last verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts`; `pnpm check`; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3`; strict-fail smoke CLI exited nonzero as expected; forbidden API/dependency scans passed.
+- Next action: Create the next numbered step document before implementing the next feature.
 
 ## How To Read The Project
 
@@ -45,7 +46,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/02-season-simulation/02-fixtures-and-results.md` | Done | Completed match reports can now be applied to fixture results without mutating original state. | `domain` owns compact `FixtureResult` as the table source of truth; `engine` exposes `applyMatchReportToFixture` with typed errors, fixture/report ID validation, default overwrite guard, optional debug overwrite, and copy-on-write replacement of the fixture lookup. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/apply-match-report-to-fixture.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/03-league-table.md` | Done | League tables are now derived deterministically from played fixture results. | `domain` owns `LeagueTableRow` and simple point `LeagueTableRules`; `engine` exposes `computeLeagueTable` over explicit club IDs, fixture lookup, fixture ID order, and rules, ignoring unplayed fixtures and sorting by points, goal difference, goals for, then stable club ID. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/league-table.test.ts`; `pnpm check`; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/04-simulate-season-cli.md` | Done | The first gameplay milestone command now simulates one deterministic fake 18-team season and prints the final table. | `content` generates fictional clubs, players, lineups, role weights, table rules, and match config; `engine` owns a tested `simulateSeason` use-case; `apps/cli` exposes `simulate-season --seed` and composes exported engine primitives to print table, top-scorer availability, best defense, and worst attack. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; invalid-arg CLI check; forbidden API/dependency scans; JSDoc scan |
-| `docs/steps/02-season-simulation/05-season-balance-report.md` | Not started | None yet | Planned aggregate deterministic calibration report | Pending |
+| `docs/steps/02-season-simulation/05-season-balance-report.md` | Done | Added deterministic aggregate season balance reporting and a strict CLI gate mode. | `simulation-tools` owns content-free aggregate calibration; `content` owns broad hand-authored targets; `engine` publicly exports `simulateSeason`; CLI wires fake content into the report without importing `domain` directly. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts`; `pnpm check`; default and strict-fail CLI smoke checks; forbidden API/dependency scans |
 
 Status values:
 
@@ -90,7 +91,9 @@ Status values:
 - League tables are derived, not persisted: `computeLeagueTable` reads only compact fixture results in explicit fixture order and uses stable club ID ordering as the final tie-breaker.
 - The first season CLI milestone uses fictional generated content only: 18 fake clubs, generated players, fixed 4-4-2 lineups, content-provided role weights, and no real football data.
 - `simulate-season` is deterministic by seed and prints a final table plus best defense and worst attack; player-level top scorer is explicitly unavailable until the match engine attributes goals to players.
-- Because `packages/engine/src/index.ts` was not listed in the active step's expected files, the CLI composes existing exported engine primitives instead of importing the new internal `simulateSeason` use-case directly.
+- `simulateSeason` is now exported from `@game/engine` because balance tooling needs the season use-case through the package boundary.
+- `packages/simulation-tools` is the content-free place for deterministic aggregate reports; it may use `domain`, `engine`, and `shared`, while apps supply concrete content and target profiles.
+- `balance-report` uses broad hand-authored calibration targets from content, reports goals per match, result rates, table points, and upset proxy, and exits nonzero only when `--strict` is enabled and a metric fails.
 
 ## Open Decisions And Follow-Up
 
@@ -104,8 +107,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- After the first match simulation steps, record the first statistical behavior that tests expose.
+- The next implementation must start by creating or selecting a new numbered step file; Phase 2's documented step sequence is complete.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-16 — `docs/steps/02-season-simulation/05-season-balance-report.md`
+
+- Status: Done
+- Outcome: Created `packages/simulation-tools` and `pnpm cli balance-report`, producing deterministic aggregate season metrics with PASS/FAIL target evaluation.
+- Adopted solution: `simulation-tools` runs content-free calibration batches over the public engine `simulateSeason`; content provides broad fictional target profiles; CLI supplies fake league input and supports strict nonzero failure mode without importing `domain` directly.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts` (9 tests); `pnpm check` (19 files, 97 tests); `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3`; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=1 --target-profile=strict-fail-smoke --strict` exited nonzero as expected; forbidden API/dependency scans.
+- Follow-up: Do not implement more features until the next numbered step document exists and is selected as active.
 
 ### 2026-06-16 — `docs/steps/02-season-simulation/04-simulate-season-cli.md`
 

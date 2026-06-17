@@ -16,6 +16,14 @@ export {
   type FixtureStateSlice,
 } from "./use-cases/apply-match-report-to-fixture.ts";
 export {
+  SimulateSeasonError,
+  simulateSeason,
+  type SimulateSeasonErrorCode,
+  type SimulateSeasonInput,
+  type SimulateSeasonResult,
+  type SimulateSeasonTeamInput,
+} from "./use-cases/simulate-season.ts";
+export {
   CalendarGenerationError,
   generateRoundRobinCalendar,
   type CalendarGenerationErrorCode,

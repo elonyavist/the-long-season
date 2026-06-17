@@ -13,6 +13,7 @@ The project promise is statistical truth, but early targets must be broad and pr
 - `packages/simulation-tools` package when this step starts.
 - `CalibrationTarget` type or content file for broad targets.
 - Batch runner for N seasons with a seed prefix.
+- Public `simulateSeason` export from `@game/engine` so `simulation-tools` can reuse the season use-case through the package boundary.
 - Metrics: goals per match, home/draw/away rates, first-place points, last-place points, and upset proxy if team strengths exist.
 - `balance-report` CLI command or `simulate-season --report` only if that keeps scope smaller.
 - PASS/FAIL with wide tolerance bands.
@@ -38,9 +39,15 @@ The project promise is statistical truth, but early targets must be broad and pr
 - `packages/simulation-tools/src/calibration-report.ts`
 - `packages/simulation-tools/src/calibration-report.test.ts`
 - `packages/simulation-tools/src/index.ts`
+- `packages/engine/src/index.ts`
 - `packages/content/src/balance/calibration-targets.ts` or `packages/content/src/balance/calibration-targets.json`
+- `packages/content/src/index.ts`
 - `apps/cli/src/commands/balance-report.ts`
+- `apps/cli/src/commands/balance-report.test.ts`
 - `apps/cli/src/index.ts`
+- `apps/cli/package.json`
+- `tsconfig.base.json`
+- `.dependency-cruiser.cjs`
 
 ## Required tests
 
