@@ -480,7 +480,7 @@ function isBlockStepEvent(event: unknown): event is MatchShotOutcomeStepEvent & 
 }
 
 /**
- * Builds a multi-role team context used by assist-attribution integration tests.
+ * Builds a multi-role team context used by causal actor integration tests.
  */
 function assistTeam(side: MatchSide): MatchTeamContext {
   return {
