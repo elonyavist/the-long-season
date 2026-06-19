@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete after strength-spread tuning.
-- Active implementation step: None; choose or document the next step before implementing.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail documented.
+- Active implementation step: `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: None
-- Status: Phase 3 complete
-- Last verification: `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md` completed; content typecheck, focused content/CLI tests, `pnpm check`, `simulate-season`, and `calibration-v1` strict 20-season report passed.
-- Next action: Choose or document the next numbered step before implementing more gameplay scope.
+- Step: `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md`
+- Status: Not started
+- Last verification: Phase 4 documentation was created after `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md` completed; no code checks required for the documentation-only step.
+- Next action: Implement deterministic goal attribution only; do not add assists, UI, storage, full duel chains, or season player-stat aggregation in the same step.
 
 ## How To Read The Project
 
@@ -51,6 +51,11 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` | Done | Tuned fake match-engine rates and reworked conversion bands so the 20-season `calibration-v1` sample passes near 2.8 goals per match. | Config-only tuning uses base opportunity rate `0.09`, cap `0.24`, conversion probabilities `0.105/0.20/0.35`, and home advantage `1.10`; no engine algorithms changed. | Baseline `calibration-v1` 20-season report failed; first tuning reached goals `3.197`; rework reached goals `2.773` with strict report PASS; `pnpm check` passed |
 | `docs/steps/03-balance-calibration/03-table-spread-review.md` | Done | Added explicit average table points spread to balance reporting and confirmed the tuned 20-season sample remains plausible. | `simulation-tools` now reports `table_points_spread` as average first-place minus last-place points; content target profiles include broad/default and stricter `calibration-v1` bands. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm --filter @game/cli run typecheck`; focused calibration/CLI tests; `pnpm check`; `calibration-v1` strict 20-season report passed |
 | `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md` | Done | Fake content now produces a stronger top-to-bottom hierarchy while preserving current scoring calibration. | Widened generated player base ability gradient from roughly `7.2..12.5` to roughly `6.6..13.3` and reduced slot noise from `0.5` to `0.35`; no engine algorithms or scoring probabilities changed. | `pnpm --filter @game/content run typecheck`; focused content/CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md` | Not started | Future Phase 4 step. | Attribute every simulated goal to one player from the scoring side lineup without changing aggregate scoring calibration. | Pending |
+| `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md` | Planned | Future Phase 4 step. | Promote scorer IDs from engine-local goal events into durable domain `MatchReport` goal events. | Pending |
+| `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md` | Planned | Future Phase 4 step. | Aggregate minimum season player goal statistics from structured match reports. | Pending |
+| `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md` | Planned | Future Phase 4 step. | Replace the CLI top-scorer placeholder with deterministic top-scorer output. | Pending |
+| `docs/steps/04-player-stats-and-match-detail/05-cli-fixture-results.md` | Planned | Future Phase 4 step. | Add minimal CLI fixture result/detail inspection after scorer data exists. | Pending |
 
 Status values:
 
@@ -104,6 +109,8 @@ Status values:
 - Current tuned `calibration-v1` sample for `seed-prefix=test-balance`, `seasons=20`: goals per match `2.853`, home win rate `0.416`, draw rate `0.235`, away win rate `0.350`, first-place points `71.450`, last-place points `23.500`, table points spread `47.950`, upset rate `0.331`; all pass.
 - Table spread review is an explicit report metric now: `table_points_spread` means average first-place points minus last-place points across the simulated season batch.
 - Fake content strength spread is now wider and less noisy by slot: the top generated clubs should separate more reliably from bottom generated clubs before future richer match mechanics exist.
+- Phase 4 focuses on player-visible match detail: goal attribution, durable scorer events, season player goal stats, CLI top scorers, and minimal fixture detail.
+- Phase 4 is intentionally not the full duel engine, match-day UI, storage migration, market, growth, staff, youth, facilities, or economy phase.
 
 ## Open Decisions And Follow-Up
 
@@ -117,8 +124,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 3 is complete again; the next implementation requires selecting or writing a new numbered step document first.
+- Phase 4's active implementation step is `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/04-player-stats-and-match-detail/README.md`
+
+- Status: Done
+- Outcome: Created Phase 4 documentation and five implementation step documents for player stats and match detail.
+- Adopted solution: Phase 4 starts with deterministic goal attribution, then durable scorer events, season player stats, CLI top scorers, and minimal fixture detail; UI, storage, full duels, assists, cards, injuries, substitutions, market, growth, staff, youth, facilities, and economy remain out of scope.
+- Verification: Documentation-only update; no code checks required.
+- Follow-up: Implement only `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md` next.
 
 ### 2026-06-19 — `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md`
 
