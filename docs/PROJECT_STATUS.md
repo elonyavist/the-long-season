@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete.
-- Active implementation step: none; create the next documented step group before implementing more code.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 documented.
+- Active implementation step: `docs/steps/07-match-engine-causal-v1/01-causality-baseline-review.md`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, optional assist attribution, goalkeeper save attribution, structured shot context, deterministic shot-taker attribution for non-goal shot events, and complete current derived player match stats, batch full-match simulation, durable domain match reports with scorer IDs, optional assist IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, and clean `--fixture=<fixtureId>` structured match detail with all-starter player stats, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/06-cli-inspection-and-stat-completeness/05-season-assists-and-saves-summary.md`
-- Status: Done
-- Last verification: Step 05 completed with engine and CLI typecheck, focused engine/CLI tests, `pnpm check`, base and fixture `simulate-season` smoke checks, and `calibration-v1` strict balance report.
-- Next action: Create the next numbered step group under `docs/steps/` before implementing more code.
+- Step: `docs/steps/07-match-engine-causal-v1/01-causality-baseline-review.md`
+- Status: Not started
+- Last verification: Phase 7 documentation created after Phase 6 completed with engine and CLI typecheck, focused engine/CLI tests, `pnpm check`, base and fixture `simulate-season` smoke checks, and `calibration-v1` strict balance report.
+- Next action: Run the Phase 7 causality baseline review before implementing causal actor code.
 
 ## How To Read The Project
 
@@ -68,6 +68,12 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/06-cli-inspection-and-stat-completeness/03-complete-player-match-stats.md` | Done | `computePlayerMatchStats` now counts complete current shot stats from durable report events. | Goals credit `scorerPlayerId`; generated save/miss/block events credit `shooterPlayerId` when present; shots on target follow durable `shot.isShotOnTarget`; saves remain credited to the defending goalkeeper. | `pnpm --filter @game/engine run typecheck`; focused engine and CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/06-cli-inspection-and-stat-completeness/04-cli-fixture-player-stats-v2.md` | Done | Fixture detail now renders a clearer all-starter player-stat table. | The CLI passes home/away lineup registrations into `computePlayerMatchStats`, keeps contribution sorting for active players, and includes zero-stat starters as deterministic rows. | `pnpm --filter @game/cli run typecheck`; focused CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/06-cli-inspection-and-stat-completeness/05-season-assists-and-saves-summary.md` | Done | Season output now includes top assist and top goalkeeper-save summaries. | Added engine `computeSeasonPlayerSummaryStats` for goals, assists, and saves from durable reports; `simulateSeason` returns `playerSummaryStats`; CLI selects top assist/save rows from engine-derived stats without parsing rendered text. | `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; focused player-stat/simulate-season/CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/07-match-engine-causal-v1/README.md` | Done | Created the Phase 7 documentation path for causal match-event work. | Phase 7 starts with a baseline review, then chance actor selection, step-match integration, durable causal event context, and CLI causal fixture review. | Documentation-only update; no code checks required |
+| `docs/steps/07-match-engine-causal-v1/01-causality-baseline-review.md` | Not started | Active next step. | Review Phase 6 CLI outputs and strict balance before adding causal actor code. | Pending |
+| `docs/steps/07-match-engine-causal-v1/02-chance-actor-selection.md` | Planned | Future Phase 7 step. | Add an engine-local deterministic `ChanceActors` selector for creator, shooter, primary defender, and goalkeeper. | Pending |
+| `docs/steps/07-match-engine-causal-v1/03-step-match-causal-actors.md` | Planned | Future Phase 7 step. | Wire chance actors into current `stepMatch` attribution without changing match outcomes. | Pending |
+| `docs/steps/07-match-engine-causal-v1/04-durable-causal-event-context.md` | Planned | Future Phase 7 step. | Persist the smallest useful causal actor context in durable match reports. | Pending |
+| `docs/steps/07-match-engine-causal-v1/05-cli-causal-match-review.md` | Planned | Future Phase 7 step. | Render durable causal context in fixture detail and verify strict balance remains safe. | Pending |
 
 Status values:
 
@@ -89,6 +95,7 @@ Status values:
 - The first implementation target remains a CLI-first deterministic monorepo, not UI or persistence.
 - The Step Ledger tracks individual step files, not only broad phase groups.
 - Every step prompt tells the implementer to read and update `docs/PROJECT_STATUS.md`.
+- Phase 7 follows the roadmap gate rule: review current output before adding causal actor code.
 - `pnpm` is exposed through Corepack under Node `v24.16.0`; this shell required `source ~/.nvm/nvm.sh && nvm use` before running pnpm commands.
 - Domain IDs use one namespace convention for every entity type: `type:value` (`player:000001`, `club:perugia`, `competition:ita-3`, `fixture:000001`, `season:2026`, `save:demo-001`).
 - Domain ID validation is intentionally not exposed as a partial public helper; callers must use specific constructors like `playerId`, `clubId`, and `fixtureId`.
@@ -160,8 +167,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 6 implementation is complete; the next code change must start by creating or selecting the next documented step group.
+- Phase 7 documentation exists; the active implementation step is `docs/steps/07-match-engine-causal-v1/01-causality-baseline-review.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/07-match-engine-causal-v1/README.md`
+
+- Status: Done
+- Outcome: Created Phase 7 documentation and five implementation step documents for match engine causal v1 work.
+- Adopted solution: Phase 7 will first review current Phase 6 output, then introduce engine-local chance actors, wire them into `stepMatch`, promote minimal durable causal context, and render that context in CLI fixture detail; UI, storage, tactics, player states, live match-day, and management systems remain out of scope.
+- Verification: Documentation-only update; no code checks required.
+- Follow-up: Implement only `docs/steps/07-match-engine-causal-v1/01-causality-baseline-review.md` next; do not add causal actor code before the baseline review is recorded.
 
 ### 2026-06-19 — `docs/steps/06-cli-inspection-and-stat-completeness/05-season-assists-and-saves-summary.md`
 

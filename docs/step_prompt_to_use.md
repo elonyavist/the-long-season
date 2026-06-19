@@ -1,11 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE IN ORDER: 
-- docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md
-- docs/steps/06-cli-inspection-and-stat-completeness/02-shot-taker-attribution.md
-- docs/steps/06-cli-inspection-and-stat-completeness/03-complete-player-match-stats.md
-- docs/steps/06-cli-inspection-and-stat-completeness/04-cli-fixture-player-stats-v2.md
-- docs/steps/06-cli-inspection-and-stat-completeness/05-season-assists-and-saves-summary.md
+STEP_PATH_TO_EXECUTE: docs/steps/07-match-engine-causal-v1/01-causality-baseline-review.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 
