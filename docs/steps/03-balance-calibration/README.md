@@ -39,6 +39,7 @@ This phase must stay empirical: measure first, change one narrow surface, rerun 
 - `docs/steps/03-balance-calibration/01-calibration-target-profile.md`
 - `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md`
 - `docs/steps/03-balance-calibration/03-table-spread-review.md`
+- `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md`
 
 ## Required tests
 

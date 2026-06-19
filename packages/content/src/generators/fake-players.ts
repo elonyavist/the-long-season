@@ -94,7 +94,7 @@ export function generateFakePlayersForClubs(clubIds: readonly ClubId[]): FakePla
  * Builds one generated player with a deterministic ability profile.
  */
 function fakePlayer(id: PlayerId, clubNumber: number, slotNumber: number): Player {
-  const base = 7 + ((19 - clubNumber) / 18) * 4 + ((slotNumber * 7 + clubNumber) % 4) * 0.5;
+  const base = 6.25 + ((19 - clubNumber) / 18) * 6 + ((slotNumber * 7 + clubNumber) % 4) * 0.35;
   const position = positionForSlot(slotNumber);
 
   return {
