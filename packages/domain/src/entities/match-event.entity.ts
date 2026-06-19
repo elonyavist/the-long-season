@@ -7,6 +7,16 @@ import type { PlayerId } from "../types/ids.ts";
 export type MatchEventSide = "home" | "away";
 
 /**
+ * Structured shot execution type used by persisted shot events.
+ */
+export type ShotType = "normal" | "header" | "set_piece";
+
+/**
+ * Structured chance source used by persisted shot events.
+ */
+export type ShotChanceType = "open_play" | "counter" | "cross" | "dead_ball";
+
+/**
  * Shared context carried by persisted shot-outcome events.
  *
  * The context contains only primitives and stable side markers. Future nominal
@@ -21,6 +31,10 @@ export interface ShotContext {
   readonly quality: number;
   /** Whether the shot counted as on target. */
   readonly isShotOnTarget: boolean;
+  /** Structured execution type for the shot. */
+  readonly shotType: ShotType;
+  /** Structured source type for the chance. */
+  readonly chanceType: ShotChanceType;
 }
 
 /**

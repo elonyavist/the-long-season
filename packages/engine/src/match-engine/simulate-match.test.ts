@@ -222,6 +222,8 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       outcome: "miss",
       quality: 0.5105017347726971,
       isShotOnTarget: false,
+      shotType: "normal",
+      chanceType: "open_play",
     },
     {
       type: "shot_outcome",
@@ -230,6 +232,8 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       outcome: "miss",
       quality: 0.5862922383565455,
       isShotOnTarget: false,
+      shotType: "normal",
+      chanceType: "open_play",
     },
     {
       type: "half_time",

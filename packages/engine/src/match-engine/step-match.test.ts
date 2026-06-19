@@ -92,6 +92,40 @@ test("goal step events include a scorer from the scoring side lineup", () => {
   }
 });
 
+test("shot step events include deterministic structured shot context", () => {
+  const context = validContext({
+    baseOpportunityRatePerMinute: 1,
+    maxOpportunityRatePerMinute: 1,
+    homeTacticalDistribution: { directness: 0, pressing: 0, width: 1, risk: 0 },
+    awayTacticalDistribution: { directness: 1, pressing: 0, width: 0, risk: 1 },
+  });
+  const first = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "save", quality: 0.802, isShotOnTarget: true }),
+  });
+  const second = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "save", quality: 0.802, isShotOnTarget: true }),
+  });
+  const firstShotEvents = first.events.filter((event) => event.type === "shot_outcome");
+  const secondShotEvents = second.events.filter((event) => event.type === "shot_outcome");
+
+  assert.deepEqual(firstShotEvents, secondShotEvents);
+  assert.deepEqual(
+    firstShotEvents.map((event) => ({
+      side: event.side,
+      shotType: event.shotType,
+      chanceType: event.chanceType,
+    })),
+    [
+      { side: "home", shotType: "header", chanceType: "cross" },
+      { side: "away", shotType: "normal", chanceType: "counter" },
+    ],
+  );
+});
+
 test("non-goal step events do not include scorer attribution", () => {
   const context = validContext({
     baseOpportunityRatePerMinute: 1,
@@ -158,13 +192,15 @@ function validContext(
     readonly minuteCount?: number;
     readonly baseOpportunityRatePerMinute?: number;
     readonly maxOpportunityRatePerMinute?: number;
+    readonly homeTacticalDistribution?: MatchTeamContext["tacticalDistribution"];
+    readonly awayTacticalDistribution?: MatchTeamContext["tacticalDistribution"];
   } = {},
 ): MatchContext {
   return {
     fixtureId: fixtureId(options.fixtureValue ?? "fixture:000001"),
     seed: "demo-001",
-    home: validTeam("home", options.homeStrength ?? 12),
-    away: validTeam("away", options.awayStrength ?? 10),
+    home: validTeam("home", options.homeStrength ?? 12, options.homeTacticalDistribution),
+    away: validTeam("away", options.awayStrength ?? 10, options.awayTacticalDistribution),
     engineConfig: validConfig({
       minuteCount: options.minuteCount ?? 90,
       baseOpportunityRatePerMinute: options.baseOpportunityRatePerMinute ?? 0.08,
@@ -176,7 +212,16 @@ function validContext(
 /**
  * Builds one side context fixture at a given aggregate strength.
  */
-function validTeam(side: MatchSide, strength: number): MatchTeamContext {
+function validTeam(
+  side: MatchSide,
+  strength: number,
+  tacticalDistribution: MatchTeamContext["tacticalDistribution"] = {
+    directness: 0,
+    pressing: 0,
+    width: 0,
+    risk: 0,
+  },
+): MatchTeamContext {
   return {
     clubId: clubId(`club:${side}`),
     lineup: [{ slotId: `slot:${side}:one`, playerId: playerId(`player:${side}-000001`), roleKey: "balanced" }],
@@ -187,12 +232,7 @@ function validTeam(side: MatchSide, strength: number): MatchTeamContext {
       goalkeeper: strength,
       overall: strength,
     },
-    tacticalDistribution: {
-      directness: 0,
-      pressing: 0,
-      width: 0,
-      risk: 0,
-    },
+    tacticalDistribution,
   };
 }
 

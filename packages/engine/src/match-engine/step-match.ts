@@ -1,4 +1,4 @@
-import type { PlayerId } from "@game/domain";
+import type { PlayerId, ShotChanceType, ShotType } from "@game/domain";
 import type { Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
@@ -57,6 +57,10 @@ export interface MatchGoalStepEvent {
   readonly quality: number;
   /** Whether the shot counted as on target. */
   readonly isShotOnTarget: boolean;
+  /** Structured execution type for the shot. */
+  readonly shotType: ShotType;
+  /** Structured source type for the chance. */
+  readonly chanceType: ShotChanceType;
   /** Player from the scoring side lineup credited with the goal. */
   readonly scorerPlayerId: PlayerId;
 }
@@ -77,6 +81,10 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly quality: number;
   /** Whether the shot counted as on target. */
   readonly isShotOnTarget: boolean;
+  /** Structured execution type for the shot. */
+  readonly shotType: ShotType;
+  /** Structured source type for the chance. */
+  readonly chanceType: ShotChanceType;
 }
 
 /**
@@ -192,7 +200,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
       nextScore = applyGoalToScore(nextScore, attackingSide);
     }
 
-    events.push(createShotOutcomeEvent(currentMinute, attackingSide, resolution, scorerPlayerId));
+    events.push(createShotOutcomeEvent(input.simulation, currentMinute, attackingSide, resolution, scorerPlayerId));
   }
 
   const isComplete = currentMinute >= input.simulation.context.engineConfig.minuteCount;
@@ -307,11 +315,15 @@ function applyOccasionToStats(
  * Builds a typed shot-outcome event from one aggregate resolution.
  */
 function createShotOutcomeEvent(
+  simulation: MatchSimulationState,
   minute: number,
   side: MatchSide,
   resolution: OccasionResolution,
   scorerPlayerId: PlayerId | undefined,
 ): MatchShotOutcomeStepEvent {
+  const chanceType = deriveChanceType(simulation, minute, side, resolution.quality);
+  const shotType = deriveShotType(chanceType, resolution.quality);
+
   if (resolution.outcome === "goal") {
     if (scorerPlayerId === undefined) {
       throw new Error("Goal step event requires scorerPlayerId");
@@ -324,6 +336,8 @@ function createShotOutcomeEvent(
       outcome: "goal",
       quality: resolution.quality,
       isShotOnTarget: resolution.isShotOnTarget,
+      shotType,
+      chanceType,
       scorerPlayerId,
     };
   }
@@ -335,7 +349,51 @@ function createShotOutcomeEvent(
     outcome: resolution.outcome,
     quality: resolution.quality,
     isShotOnTarget: resolution.isShotOnTarget,
+    shotType,
+    chanceType,
   };
+}
+
+/**
+ * Derives a stable chance type from existing aggregate match inputs.
+ */
+function deriveChanceType(
+  simulation: MatchSimulationState,
+  minute: number,
+  side: MatchSide,
+  quality: number,
+): ShotChanceType {
+  const team = teamBySide(simulation, side);
+  const texture = deterministicShotTexture(minute, side, quality);
+
+  if (team.tacticalDistribution.width > 0.25 && texture % 3 === 0) {
+    return "cross";
+  }
+
+  if ((team.tacticalDistribution.directness > 0.35 || team.tacticalDistribution.risk > 0.35) && texture % 2 === 0) {
+    return "counter";
+  }
+
+  return "open_play";
+}
+
+/**
+ * Derives a stable shot type from the structured chance type.
+ */
+function deriveShotType(chanceType: ShotChanceType, quality: number): ShotType {
+  if (chanceType === "cross" && quality >= 0.45) {
+    return "header";
+  }
+
+  return "normal";
+}
+
+/**
+ * Produces deterministic non-RNG texture for event context labels.
+ */
+function deterministicShotTexture(minute: number, side: MatchSide, quality: number): number {
+  const sideOffset = side === "home" ? 7 : 13;
+  return (minute * 31 + Math.floor(quality * 1_000) + sideOffset) % 6;
 }
 
 /**

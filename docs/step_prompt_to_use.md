@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE: docs/steps/04-player-stats-and-match-detail/05-cli-fixture-results.md
+STEP_PATH_TO_EXECUTE: docs/steps/05-match-event-detail/01-shot-event-contract.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 

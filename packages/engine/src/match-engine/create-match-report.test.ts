@@ -35,8 +35,8 @@ test("report contains event schema version", () => {
   assert.equal(report.eventSchemaVersion, MATCH_EVENT_SCHEMA_VERSION);
 });
 
-test("match event schema version is bumped for durable scorer IDs", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 2);
+test("match event schema version is bumped for structured shot context", () => {
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 3);
 });
 
 test("report preserves goal scorer IDs", () => {
@@ -46,6 +46,59 @@ test("report preserves goal scorer IDs", () => {
   assert.deepEqual(
     goalEvents.map((event) => event.scorerPlayerId),
     [playerId("player:home-scorer"), playerId("player:away-scorer")],
+  );
+});
+
+test("report preserves structured shot context for every shot outcome", () => {
+  const report = createMatchReport(simulatedResultWithGoals());
+  const shotEvents = report.events.filter((event) =>
+    event.type === "goal" || event.type === "save" || event.type === "miss" || event.type === "block"
+  );
+
+  assert.deepEqual(
+    shotEvents.map((event) => event.shot),
+    [
+      {
+        minute: 8,
+        side: "home",
+        quality: 0.74,
+        isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "open_play",
+      },
+      {
+        minute: 12,
+        side: "away",
+        quality: 0.63,
+        isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "counter",
+      },
+      {
+        minute: 25,
+        side: "home",
+        quality: 0.48,
+        isShotOnTarget: false,
+        shotType: "normal",
+        chanceType: "open_play",
+      },
+      {
+        minute: 52,
+        side: "home",
+        quality: 0.36,
+        isShotOnTarget: false,
+        shotType: "header",
+        chanceType: "cross",
+      },
+      {
+        minute: 77,
+        side: "away",
+        quality: 0.81,
+        isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "open_play",
+      },
+    ],
   );
 });
 
@@ -134,6 +187,8 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "goal",
         quality: 0.74,
         isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "open_play",
         scorerPlayerId: playerId("player:home-scorer"),
       },
       {
@@ -143,6 +198,8 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "save",
         quality: 0.63,
         isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "counter",
       },
       {
         type: "shot_outcome",
@@ -151,6 +208,8 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "miss",
         quality: 0.48,
         isShotOnTarget: false,
+        shotType: "normal",
+        chanceType: "open_play",
       },
       {
         type: "half_time",
@@ -167,6 +226,8 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "block",
         quality: 0.36,
         isShotOnTarget: false,
+        shotType: "header",
+        chanceType: "cross",
       },
       {
         type: "shot_outcome",
@@ -175,6 +236,8 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "goal",
         quality: 0.81,
         isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "open_play",
         scorerPlayerId: playerId("player:away-scorer"),
       },
       {

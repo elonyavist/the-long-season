@@ -160,6 +160,8 @@ function goalEvents(side: "home" | "away", scorers: readonly ReturnType<typeof p
       side,
       quality: 0.8,
       isShotOnTarget: true,
+      shotType: "normal",
+      chanceType: "open_play",
     },
     scorerPlayerId,
   }));

@@ -70,6 +70,8 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
     side: event.side,
     quality: event.quality,
     isShotOnTarget: event.isShotOnTarget,
+    shotType: event.shotType,
+    chanceType: event.chanceType,
   };
 
   switch (event.outcome) {

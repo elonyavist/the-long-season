@@ -14,6 +14,7 @@ This step adds one player reference to goal events when the generated event cont
 
 - Add optional assist data to engine-local goal events.
 - Add optional assist data to durable domain goal events.
+- Use the existing Phase 05 structured shot context for eligibility: `chanceType` and `shotType` should influence whether an assist is plausible, but must not create a possession-chain model.
 - Use deterministic attribution from the scoring side lineup:
   - scorer cannot assist their own goal;
   - attackers and midfielders are more likely creators than defenders;
