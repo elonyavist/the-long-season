@@ -13,6 +13,7 @@ The output can be simple and CLI-first. It is a diagnostic and gameplay proof, n
 ## What to implement
 
 - Add a minimal way to inspect fixture results from a deterministic simulated season.
+- Reuse the existing `simulate-season` command flow, which now calls engine `simulateSeason`; do not restore the old manual CLI simulation loop.
 - Prefer extending `simulate-season` with a narrow option only if the CLI shape stays simple, for example:
   - print all fixture results after the final table;
   - or print details for one fixture ID;

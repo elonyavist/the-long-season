@@ -3,13 +3,8 @@ import {
   type FakeLeagueSystem,
 } from "@game/content";
 import {
-  applyMatchReportToFixture,
-  computeLeagueTable,
-  createMatchReport,
   deriveTeamStrength,
-  generateRoundRobinCalendar,
-  simulateMatch,
-  type ApplyMatchReportToFixtureState,
+  simulateSeason,
   type LineupSlot,
   type MatchTacticalDistributionInput,
   type RoleWeightProfile,
@@ -113,46 +108,22 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
  * Simulates the fake league season using currently exported engine primitives.
  */
 function simulateSeasonForCli(league: FakeLeagueSystem, seed: string): CliSeasonResult {
-  const calendar = generateRoundRobinCalendar({
+  const result = simulateSeason({
     seed,
     seasonId: league.seasonId,
     competitionId: league.competition.id,
     clubIds: league.clubIds,
     seasonStartDate: league.seasonStartDate,
-  });
-  let state = createFixtureState(league, seed, fixturesById(calendar.fixtures), calendar.fixtureIds);
-  const teamsByClubId = createTeamsByClubId(league);
-
-  for (const fixtureId of calendar.fixtureIds) {
-    const fixture = state.fixtures[fixtureId];
-
-    if (fixture === undefined) {
-      throw new Error(`Missing generated fixture: ${fixtureId}`);
-    }
-
-    const report = createMatchReport(
-      simulateMatch({
-        fixtureId: fixture.id,
-        seed,
-        home: matchTeamContext(teamsByClubId, fixture.homeClubId),
-        away: matchTeamContext(teamsByClubId, fixture.awayClubId),
-        engineConfig: league.matchEngineConfig,
-      }),
-    );
-    state = applyMatchReportToFixture({ state, fixtureId, report });
-  }
-
-  const table = computeLeagueTable({
-    clubIds: league.clubIds,
-    fixtures: state.fixtures,
-    fixtureIds: state.fixtureIds,
-    rules: league.tableRules,
+    teamsByClubId: createTeamsByClubId(league),
+    matchEngineConfig: league.matchEngineConfig,
+    tableRules: league.tableRules,
   });
 
   return {
-    table,
-    bestDefense: bestDefense(table),
-    worstAttack: worstAttack(table),
+    table: result.table,
+    bestDefense: result.bestDefense,
+    worstAttack: result.worstAttack,
+    playerGoalStats: result.playerGoalStats,
   };
 }
 
@@ -193,64 +164,6 @@ function createTeamsByClubId(league: FakeLeagueSystem): Readonly<Record<ClubId, 
 }
 
 /**
- * Creates the temporary fixture state used while applying reports.
- */
-function createFixtureState(
-  league: FakeLeagueSystem,
-  seed: string,
-  fixtures: Readonly<Record<FixtureId, Fixture>>,
-  fixtureIds: readonly FixtureId[],
-): ApplyMatchReportToFixtureState {
-  return {
-    meta: {
-      seed,
-      rngAlgorithmVersion: "sfc32-v1",
-      saveSchemaVersion: 1,
-    },
-    calendar: {
-      currentDate: league.seasonStartDate,
-      currentSeasonId: league.seasonId,
-    },
-    players: league.players,
-    playerIds: league.playerIds,
-    playerStates: league.playerStates,
-    clubs: league.clubsById,
-    clubIds: league.clubIds,
-    fixtures,
-    fixtureIds,
-  };
-}
-
-/**
- * Builds a fixture lookup by ID without relying on object-key order.
- */
-function fixturesById(fixtures: readonly Fixture[]): Readonly<Record<FixtureId, Fixture>> {
-  const lookup: Record<FixtureId, Fixture> = {};
-
-  for (const fixture of fixtures) {
-    lookup[fixture.id] = fixture;
-  }
-
-  return lookup;
-}
-
-/**
- * Reads one generated CLI team context by club ID.
- */
-function matchTeamContext(
-  teamsByClubId: Readonly<Record<ClubId, CliTeamContext>>,
-  clubId: ClubId,
-): CliTeamContext {
-  const team = teamsByClubId[clubId];
-
-  if (team === undefined) {
-    throw new Error(`Missing team context for club: ${clubId}`);
-  }
-
-  return team;
-}
-
-/**
  * Formats the complete deterministic command output.
  */
 function formatSeasonOutput(league: FakeLeagueSystem, result: CliSeasonResult, seed: string): readonly string[] {
@@ -268,7 +181,7 @@ function formatSeasonOutput(league: FakeLeagueSystem, result: CliSeasonResult, s
   }
 
   lines.push("");
-  lines.push("Top scorer: unavailable in aggregate engine v1");
+  lines.push(`Top scorer: ${formatTopScorer(result.playerGoalStats[0], league.players, league.clubsById)}`);
   lines.push(`Best defense: ${formatSummaryRow(result.bestDefense, league.clubsById, "GA")}`);
   lines.push(`Worst attack: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF")}`);
 
@@ -297,6 +210,41 @@ function formatTableRow(row: LeagueTableRow, clubsById: Readonly<Record<ClubId, 
 }
 
 /**
+ * Formats the top scorer summary from engine-derived player goal stats.
+ */
+function formatTopScorer(
+  row: SeasonPlayerGoalStatRow | undefined,
+  players: FakeLeagueSystem["players"],
+  clubsById: Readonly<Record<ClubId, Club>>,
+): string {
+  if (row === undefined) {
+    return "unavailable";
+  }
+
+  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatGoalCount(row.goals)}`;
+}
+
+/**
+ * Formats a generated player display name for CLI output.
+ */
+function playerLabel(playerId: PlayerId, players: FakeLeagueSystem["players"]): string {
+  const player = players[playerId];
+
+  if (player === undefined) {
+    return String(playerId);
+  }
+
+  return `${player.firstName} ${player.lastName}`;
+}
+
+/**
+ * Formats a goal count with a stable singular/plural suffix.
+ */
+function formatGoalCount(goals: number): string {
+  return `${goals} ${goals === 1 ? "goal" : "goals"}`;
+}
+
+/**
  * Formats one best/worst summary row.
  */
 function formatSummaryRow(
@@ -316,36 +264,6 @@ function formatSummaryRow(
  */
 function clubLabel(clubId: ClubId, clubsById: Readonly<Record<ClubId, Club>>): string {
   return clubsById[clubId]?.shortName ?? String(clubId);
-}
-
-/**
- * Finds the best defense by goals against.
- */
-function bestDefense(table: readonly LeagueTableRow[]): LeagueTableRow | undefined {
-  let best: LeagueTableRow | undefined;
-
-  for (const row of table) {
-    if (best === undefined || row.goalsAgainst < best.goalsAgainst) {
-      best = row;
-    }
-  }
-
-  return best;
-}
-
-/**
- * Finds the worst attack by goals for.
- */
-function worstAttack(table: readonly LeagueTableRow[]): LeagueTableRow | undefined {
-  let worst: LeagueTableRow | undefined;
-
-  for (const row of table) {
-    if (worst === undefined || row.goalsFor < worst.goalsFor) {
-      worst = row;
-    }
-  }
-
-  return worst;
 }
 
 /**
@@ -378,19 +296,20 @@ interface CliSeasonResult {
   readonly table: readonly LeagueTableRow[];
   readonly bestDefense: LeagueTableRow | undefined;
   readonly worstAttack: LeagueTableRow | undefined;
+  readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
 }
 
 /** Club ID type derived from fake content without importing domain directly. */
 type ClubId = FakeLeagueSystem["clubIds"][number];
 
+/** Player ID type derived from fake content without importing domain directly. */
+type PlayerId = FakeLeagueSystem["playerIds"][number];
+
 /** Club type derived from fake content without importing domain directly. */
 type Club = FakeLeagueSystem["clubs"][number];
 
-/** Fixture type derived from the exported calendar generator. */
-type Fixture = ReturnType<typeof generateRoundRobinCalendar>["fixtures"][number];
+/** League table row type derived from the exported season simulation. */
+type LeagueTableRow = ReturnType<typeof simulateSeason>["table"][number];
 
-/** Fixture ID type derived from the exported calendar generator. */
-type FixtureId = ReturnType<typeof generateRoundRobinCalendar>["fixtureIds"][number];
-
-/** League table row type derived from the exported table computation. */
-type LeagueTableRow = ReturnType<typeof computeLeagueTable>[number];
+/** Player goal stat row type derived from the exported season simulation. */
+type SeasonPlayerGoalStatRow = ReturnType<typeof simulateSeason>["playerGoalStats"][number];

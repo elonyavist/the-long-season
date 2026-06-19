@@ -43,6 +43,17 @@ test("same seed produces same CLI output", async () => {
   assert.deepEqual(first.stdoutLines, second.stdoutLines);
 });
 
+test("simulate-season prints a real top scorer", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001"], io);
+  const topScorerLine = io.stdoutLines.find((line) => line.startsWith("Top scorer: "));
+
+  assert.equal(exitCode, 0);
+  assert.notEqual(topScorerLine, undefined);
+  assert.notEqual(topScorerLine, "Top scorer: unavailable in aggregate engine v1");
+  assert.match(topScorerLine ?? "", /^Top scorer: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ goals$/);
+});
+
 test("simulate-season exits nonzero on invalid args", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(["--unknown"], io);
