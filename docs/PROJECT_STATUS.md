@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete.
-- Active implementation step: none; review Phase 7 output and create Phase 8 docs before implementing more code.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP documented.
+- Active implementation step: `docs/steps/08-tactic-and-lineup-mvp/01-phase-7-output-review.md`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, and clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: None. Phase 7 is complete.
-- Status: Waiting for next documented phase
-- Last verification: Phase 7 CLI causal match review passed CLI typecheck, focused CLI tests, `pnpm check`, base and fixture `simulate-season` smoke checks, and `calibration-v1` strict balance report.
-- Next action: Review the current CLI output, decide whether Phase 7 needs rework, then create Phase 8 docs before implementing more code.
+- Step: `docs/steps/08-tactic-and-lineup-mvp/01-phase-7-output-review.md`
+- Status: Not started
+- Last verification: Phase 8 documentation-only creation; no code or test files changed by the phase docs.
+- Next action: Run the Phase 8 review checks, decide whether Phase 7 output is good enough for tactic/lineup work, then move to `02-tactic-domain-contracts.md` only if there is no blocker.
 
 ## How To Read The Project
 
@@ -74,6 +74,12 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/07-match-engine-causal-v1/03-step-match-causal-actors.md` | Done | `stepMatch` now uses one coherent chance actor set for current player attribution. | `selectChanceActors` is called once per generated opportunity after aggregate outcome resolution; goals use selected shooter as scorer, optional assists use selected creator when credited, non-goal shots use selected shooter, saves use selected goalkeeper, blocked shots keep selected primary defender engine-local for the durable-context step, and obsolete standalone attribution helpers/tests were removed. | `pnpm --filter @game/engine run typecheck`; focused match-engine and player-stat Vitest tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/07-match-engine-causal-v1/04-durable-causal-event-context.md` | Done | Durable match reports now preserve minimal causal actor context. | `MATCH_EVENT_SCHEMA_VERSION` is `7`; goal events may carry `creatorPlayerId` only when it is not already represented by scorer/assist, and block events may carry `primaryDefenderPlayerId`; `createMatchReport` copies these fields from engine-local events without recalculating. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-engine/player-stat Vitest tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/07-match-engine-causal-v1/05-cli-causal-match-review.md` | Done | CLI fixture detail now renders durable causal context for goals and blocks. | Goal rows append compact `creator=<player>` when durable reports expose a non-duplicated creator; block rows append `defender=<player>` when durable reports expose the primary defender; base season output and fixture-only shape remain otherwise unchanged. | `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/08-tactic-and-lineup-mvp/README.md` | Done | Created the Phase 8 documentation path for the first managerial lever. | Phase 8 starts with a Phase 7 output review, then domain contracts, engine builder, season setup overrides, and CLI tactic/lineup inspection; UI, live match-day, player states, persistence, and management systems remain out of scope. | Documentation-only update; no code checks required |
+| `docs/steps/08-tactic-and-lineup-mvp/01-phase-7-output-review.md` | Not started | Active next step. | Review current Phase 7 output before adding tactic/lineup contracts. | Pending |
+| `docs/steps/08-tactic-and-lineup-mvp/02-tactic-domain-contracts.md` | Planned | Future Phase 8 step. | Add dependency-free selected-lineup and tactic setup contracts in domain. | Pending |
+| `docs/steps/08-tactic-and-lineup-mvp/03-lineup-and-tactic-builder.md` | Planned | Future Phase 8 step. | Build engine match team context data from selected lineup/tactic inputs. | Pending |
+| `docs/steps/08-tactic-and-lineup-mvp/04-season-simulation-setup-overrides.md` | Planned | Future Phase 8 step. | Allow `simulateSeason` to use explicit setup overrides while preserving default behavior. | Pending |
+| `docs/steps/08-tactic-and-lineup-mvp/05-cli-tactic-lineup-inspection.md` | Planned | Future Phase 8 step. | Expose a minimal CLI path to compare default output against selected lineup/tactic output. | Pending |
 
 Status values:
 
@@ -160,6 +166,7 @@ Status values:
 - The old standalone match-engine attribution helpers for scorer, assist, shot taker, and goalkeeper saves have been retired after `stepMatch` integration because they no longer had production callers; current attribution lives in `chance-actors.ts` plus the small assist-credit decision inside `step-match.ts`.
 - Current `pnpm cli simulate-season --seed=demo-001` season summaries after causal actor integration: top scorer `Player05 No10 (PRO05) - 23 goals`; top assist `Player01 No06 (PRO01) - 11 assists`; top goalkeeper saves `Player02 No01 (PRO02) - 94 saves`.
 - Phase 7 CLI fixture review is complete: `fixture:000001` shows creator context on unassisted goals, and `fixture:000002` shows defender context on a blocked shot.
+- Phase 8 is documented as tactic and lineup MVP: review Phase 7 output first, then add selected-lineup/tactic contracts, engine setup builder, season setup overrides, and a minimal CLI inspection path.
 
 ## Open Decisions And Follow-Up
 
@@ -173,8 +180,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 7 match engine causal v1 is complete; before implementing Phase 8, review current CLI output and create the Phase 8 step documents.
+- Phase 8 tactic and lineup MVP docs are created; the active implementation step is `docs/steps/08-tactic-and-lineup-mvp/01-phase-7-output-review.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/08-tactic-and-lineup-mvp/README.md`
+
+- Status: Done
+- Outcome: Created Phase 8 documentation and five implementation step documents for tactic and lineup MVP work.
+- Adopted solution: Phase 8 will first review the completed Phase 7 output, then add dependency-free selected-lineup/tactic contracts, an engine setup builder, season setup overrides, and a minimal CLI inspection path. The phase intentionally excludes UI, live match sessions, substitutions, player dynamic states, persistence, market/economy, and broader management systems.
+- Verification: Documentation-only update; no code checks required.
+- Follow-up: Implement only `docs/steps/08-tactic-and-lineup-mvp/01-phase-7-output-review.md` next; do not add tactic or lineup code before the review is recorded.
 
 ### 2026-06-19 — `docs/steps/07-match-engine-causal-v1/05-cli-causal-match-review.md`
 
