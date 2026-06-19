@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail in progress.
-- Active implementation step: `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, batch full-match simulation, durable domain match reports with scorer IDs on goal events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
+- Active implementation step: `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, batch full-match simulation, durable domain match reports with scorer IDs on goal events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal-stat aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`
+- Step: `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md`
 - Status: Not started
-- Last verification: `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md` completed with domain/engine typechecks, focused match-report tests, `pnpm check`, and `pnpm cli simulate-season --seed=demo-001`.
-- Next action: Aggregate minimum season player goal statistics from durable `MatchReport` goal events; do not add CLI top-scorer display, assists, UI, storage, or full duel chains in the same step.
+- Last verification: `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md` completed with engine typecheck, focused player-stat/simulate-season tests, `pnpm check`, and `pnpm cli simulate-season --seed=demo-001`.
+- Next action: Replace the CLI top-scorer placeholder with output from `simulateSeason(...).playerGoalStats`; do not add fixture detail, assists, UI, storage, or full duel chains in the same step.
 
 ## How To Read The Project
 
@@ -53,8 +53,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md` | Done | Fake content now produces a stronger top-to-bottom hierarchy while preserving current scoring calibration. | Widened generated player base ability gradient from roughly `7.2..12.5` to roughly `6.6..13.3` and reduced slot noise from `0.5` to `0.35`; no engine algorithms or scoring probabilities changed. | `pnpm --filter @game/content run typecheck`; focused content/CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md` | Done | Every engine-local goal step event now carries a deterministic scorer from the scoring side lineup. | `attributeGoal` derives an independent `goal-attribution` RNG stream from seed, fixture, minute, side, and pre-goal score, then picks a weighted scorer by lineup role; this avoids consuming the main match RNG and preserves aggregate match outcomes/calibration. | `pnpm --filter @game/engine run typecheck`; focused match-engine Vitest files; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md` | Done | Durable domain goal events now preserve the scorer ID from engine-local goal step events. | `GoalMatchEvent` includes `scorerPlayerId`; `createMatchReport` copies it exactly from the engine event; `MATCH_EVENT_SCHEMA_VERSION` was bumped from `1` to `2` because the durable event schema changed. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-report/fixture tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001` |
-| `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md` | Not started | Future Phase 4 step. | Aggregate minimum season player goal statistics from structured match reports. | Pending |
-| `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md` | Planned | Future Phase 4 step. | Replace the CLI top-scorer placeholder with deterministic top-scorer output. | Pending |
+| `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md` | Done | Simulated seasons now expose deterministic player goal totals derived from durable match reports. | `computeSeasonPlayerGoalStats` reads `MatchReport` schema v2 goal events, maps `home/away` sides to fixture clubs, includes fixed-lineup registered players with zero goals, and sorts by goals descending then stable player ID; `simulateSeason` returns `playerGoalStats`. | `pnpm --filter @game/engine run typecheck`; focused player-stat/simulate-season tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001` |
+| `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md` | Not started | Future Phase 4 step. | Replace the CLI top-scorer placeholder with deterministic top-scorer output. | Pending |
 | `docs/steps/04-player-stats-and-match-detail/05-cli-fixture-results.md` | Planned | Future Phase 4 step. | Add minimal CLI fixture result/detail inspection after scorer data exists. | Pending |
 
 Status values:
@@ -113,6 +113,7 @@ Status values:
 - Goal attribution is engine-local in step 04/01: goal step events include `scorerPlayerId`, but durable domain `MatchReport` goal events and CLI output still do not expose scorers until later Phase 4 steps.
 - Goal attribution uses an independent deterministic `goal-attribution` RNG stream, not the main match RNG, so adding scorer IDs does not change match results, league tables, or balance metrics.
 - Match event schema version `2` adds durable `scorerPlayerId` to goal events; season/player-stat code should read this field from `MatchReport` goal events instead of engine-local step events.
+- `simulateSeason` now returns `playerGoalStats`, derived from durable report goal events and fixed-lineup registrations; CLI still shows the top-scorer placeholder until step 04/04 consumes this result.
 - Phase 4 is intentionally not the full duel engine, match-day UI, storage migration, market, growth, staff, youth, facilities, or economy phase.
 
 ## Open Decisions And Follow-Up
@@ -127,8 +128,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 4's active implementation step is `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`.
+- Phase 4's active implementation step is `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`
+
+- Status: Done
+- Outcome: Added deterministic season player goal-stat aggregation from durable `MatchReport` goal events.
+- Adopted solution: Created `computeSeasonPlayerGoalStats` in `engine/season-engine`; it reads report schema v2 goal events, maps event side to fixture club, includes explicit player registrations for zero-goal players, sorts by goals descending then stable player ID, and is exposed through `simulateSeason(...).playerGoalStats`.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/player-stats.test.ts packages/engine/src/use-cases/simulate-season.test.ts` (8 tests); `pnpm check` (22 files, 113 tests); `pnpm cli simulate-season --seed=demo-001`.
+- Follow-up: Start `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md`; consume `playerGoalStats` in CLI output instead of recomputing stats or reading reports there.
 
 ### 2026-06-19 — `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md`
 

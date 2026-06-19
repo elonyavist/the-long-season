@@ -13,6 +13,7 @@ The CLI should remain a thin shell over engine/content primitives. It should not
 ## What to implement
 
 - Read season player goal totals from the existing season simulation result or a documented engine helper.
+- Use `simulateSeason(...).playerGoalStats` as the source of truth; do not re-read match reports or recompute scorer totals inside the CLI.
 - Format at least the top scorer line with:
   - player display name;
   - club short name;

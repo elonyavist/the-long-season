@@ -23,6 +23,11 @@ import { simulateMatch } from "../match-engine/simulate-match.ts";
 import { generateRoundRobinCalendar } from "../season-engine/calendar.ts";
 import { computeLeagueTable } from "../season-engine/league-table.ts";
 import {
+  computeSeasonPlayerGoalStats,
+  type SeasonPlayerGoalStatRow,
+  type SeasonPlayerStatRegistration,
+} from "../season-engine/player-stats.ts";
+import {
   applyMatchReportToFixture,
   type ApplyMatchReportToFixtureState,
 } from "./apply-match-report-to-fixture.ts";
@@ -77,6 +82,8 @@ export interface SimulateSeasonResult {
   readonly bestDefense: LeagueTableRow | undefined;
   /** Worst attack by goals for, using table order as tie-breaker. */
   readonly worstAttack: LeagueTableRow | undefined;
+  /** Derived player goal statistics for the simulated season. */
+  readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
 }
 
 /** Error categories exposed by season simulation. */
@@ -140,6 +147,11 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     table,
     bestDefense: bestDefense(table),
     worstAttack: worstAttack(table),
+    playerGoalStats: computeSeasonPlayerGoalStats({
+      fixtures: state.fixtures,
+      fixtureIds: state.fixtureIds,
+      playerRegistrations: playerRegistrations(input),
+    }),
   };
 }
 
@@ -204,6 +216,30 @@ function matchTeamContext(input: SimulateSeasonInput, clubId: ClubId): MatchTeam
     strength: team.strength,
     tacticalDistribution: team.tacticalDistribution,
   };
+}
+
+/**
+ * Builds explicit player registrations from fixed season lineups.
+ */
+function playerRegistrations(input: SimulateSeasonInput): readonly SeasonPlayerStatRegistration[] {
+  const registrations: SeasonPlayerStatRegistration[] = [];
+
+  for (const clubId of input.clubIds) {
+    const team = input.teamsByClubId[clubId];
+
+    if (team === undefined) {
+      throw new SimulateSeasonError("missing_team", `Missing season team input: ${clubId}`);
+    }
+
+    for (const slot of team.lineup) {
+      registrations.push({
+        playerId: slot.playerId,
+        clubId,
+      });
+    }
+  }
+
+  return registrations;
 }
 
 /**

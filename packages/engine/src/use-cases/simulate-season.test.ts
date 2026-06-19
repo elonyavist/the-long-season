@@ -72,6 +72,15 @@ test("final table contains every club once", () => {
   }
 });
 
+test("season player goal stats match table goals", () => {
+  const result = simulateSeason(seasonInput("player-stats-seed"));
+  const totalTableGoals = result.table.reduce((total, row) => total + row.goalsFor, 0);
+  const totalPlayerGoals = result.playerGoalStats.reduce((total, row) => total + row.goals, 0);
+
+  assert.equal(totalPlayerGoals, totalTableGoals);
+  assert.equal(result.playerGoalStats.length, 18);
+});
+
 /**
  * Builds deterministic season input with 18 synthetic team contexts.
  */

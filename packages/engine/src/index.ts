@@ -31,3 +31,9 @@ export {
   type RoundRobinCalendar,
 } from "./season-engine/calendar.ts";
 export { computeLeagueTable, type ComputeLeagueTableInput } from "./season-engine/league-table.ts";
+export {
+  computeSeasonPlayerGoalStats,
+  type ComputeSeasonPlayerGoalStatsInput,
+  type SeasonPlayerGoalStatRow,
+  type SeasonPlayerStatRegistration,
+} from "./season-engine/player-stats.ts";
