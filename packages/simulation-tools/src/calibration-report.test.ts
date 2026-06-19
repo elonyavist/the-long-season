@@ -167,6 +167,11 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
         {
           slotId: "slot:01",
           playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-01`),
+          roleKey: "gk",
+        },
+        {
+          slotId: "slot:02",
+          playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-02`),
           roleKey: "synthetic",
         },
       ],

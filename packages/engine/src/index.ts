@@ -37,3 +37,10 @@ export {
   type SeasonPlayerGoalStatRow,
   type SeasonPlayerStatRegistration,
 } from "./season-engine/player-stats.ts";
+export {
+  computePlayerMatchStats,
+  type ComputePlayerMatchStatsInput,
+  type PlayerMatchStatRegistration,
+  type PlayerMatchStatRow,
+  type PlayerMatchStatsSortMode,
+} from "./season-engine/player-match-stats.ts";

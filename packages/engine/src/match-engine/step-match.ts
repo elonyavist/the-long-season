@@ -4,6 +4,7 @@ import type { Rng } from "@game/shared";
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
 import { attributeAssist } from "./assist-attribution.ts";
 import { attributeGoal } from "./goal-attribution.ts";
+import { attributeGoalkeeperSave } from "./goalkeeper-attribution.ts";
 import type { MatchTeamContext } from "./match-context.ts";
 import {
   isMatchSimulationComplete,
@@ -88,6 +89,8 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /** Defending goalkeeper credited with the save, only for save outcomes. */
+  readonly goalkeeperPlayerId?: PlayerId;
 }
 
 /**
@@ -191,6 +194,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     const scoreBeforeGoal = nextScore;
     let scorerPlayerId: PlayerId | undefined;
     let assistPlayerId: PlayerId | undefined;
+    let goalkeeperPlayerId: PlayerId | undefined;
 
     if (resolution.outcome === "goal") {
       const team = teamBySide(input.simulation, attackingSide);
@@ -217,7 +221,23 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
       nextScore = applyGoalToScore(nextScore, attackingSide);
     }
 
-    events.push(createShotOutcomeEvent(input.simulation, currentMinute, attackingSide, resolution, scorerPlayerId, assistPlayerId));
+    if (resolution.outcome === "save") {
+      goalkeeperPlayerId = attributeGoalkeeperSave({
+        defendingTeam: teamBySide(input.simulation, defendingSide),
+      }).goalkeeperPlayerId;
+    }
+
+    events.push(
+      createShotOutcomeEvent(
+        input.simulation,
+        currentMinute,
+        attackingSide,
+        resolution,
+        scorerPlayerId,
+        assistPlayerId,
+        goalkeeperPlayerId,
+      ),
+    );
   }
 
   const isComplete = currentMinute >= input.simulation.context.engineConfig.minuteCount;
@@ -338,6 +358,7 @@ function createShotOutcomeEvent(
   resolution: OccasionResolution,
   scorerPlayerId: PlayerId | undefined,
   assistPlayerId: PlayerId | undefined,
+  goalkeeperPlayerId: PlayerId | undefined,
 ): MatchShotOutcomeStepEvent {
   const shotContext = deriveShotContext(simulation, minute, side, resolution.quality);
 
@@ -369,6 +390,7 @@ function createShotOutcomeEvent(
     isShotOnTarget: resolution.isShotOnTarget,
     shotType: shotContext.shotType,
     chanceType: shotContext.chanceType,
+    ...(goalkeeperPlayerId === undefined ? {} : { goalkeeperPlayerId }),
   };
 }
 

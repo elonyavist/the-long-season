@@ -128,7 +128,18 @@ function validContext(
 function validTeam(side: MatchSide, strength: number): MatchTeamContext {
   return {
     clubId: clubId(`club:${side}`),
-    lineup: [{ slotId: `slot:${side}:one`, playerId: playerId(`player:${side}-000001`), roleKey: "balanced" }],
+    lineup: [
+      {
+        slotId: `slot:${side}:gk`,
+        playerId: playerId(`player:${side}-gk`),
+        roleKey: "gk",
+      },
+      {
+        slotId: `slot:${side}:field`,
+        playerId: playerId(`player:${side}-000001`),
+        roleKey: "balanced",
+      },
+    ],
     strength: {
       attack: strength,
       midfield: strength,

@@ -8,7 +8,7 @@ import type { MatchEngineConfig } from "./match-engine-config.ts";
 import { buildMatchRngKey, matchRngKeyParts, type MatchContext, type MatchTeamContext } from "./match-context.ts";
 import { createInitialMatchSimulationState, type MatchSide, type MatchSimulationState } from "./match-simulation-state.ts";
 import type { OccasionResolver, OccasionResolution, ResolveOccasionInput } from "./occasion-resolver.ts";
-import { stepMatch } from "./step-match.ts";
+import { stepMatch, type MatchShotOutcomeStepEvent } from "./step-match.ts";
 
 /**
  * Step-match tests prove that the minute loop is deterministic, local, and
@@ -36,18 +36,18 @@ test("same seed and context produce the same events and state", () => {
 });
 
 test("stronger teams produce more shots or goals over a deterministic sample", () => {
-  const strongContext = validContext({
+  const strongContext = withGoalkeeperTeams(validContext({
     homeStrength: 18,
     awayStrength: 5,
     fixtureValue: "fixture:strong-sample",
     minuteCount: 4_000,
-  });
-  const weakContext = validContext({
+  }));
+  const weakContext = withGoalkeeperTeams(validContext({
     homeStrength: 5,
     awayStrength: 18,
     fixtureValue: "fixture:weak-sample",
     minuteCount: 4_000,
-  });
+  }));
   const strongSample = runSteps(strongContext, 4_000);
   const weakSample = runSteps(weakContext, 4_000);
   const strongOutput = strongSample.stats.home.shots + strongSample.stats.home.goals;
@@ -93,12 +93,14 @@ test("goal step events include a scorer from the scoring side lineup", () => {
 });
 
 test("shot step events include deterministic structured shot context", () => {
-  const context = validContext({
-    baseOpportunityRatePerMinute: 1,
-    maxOpportunityRatePerMinute: 1,
-    homeTacticalDistribution: { directness: 0, pressing: 0, width: 1, risk: 0 },
-    awayTacticalDistribution: { directness: 1, pressing: 0, width: 0, risk: 1 },
-  });
+  const context = {
+    ...validContext({
+      baseOpportunityRatePerMinute: 1,
+      maxOpportunityRatePerMinute: 1,
+    }),
+    home: goalkeeperTeam("home", { directness: 0, pressing: 0, width: 1, risk: 0 }),
+    away: goalkeeperTeam("away", { directness: 1, pressing: 0, width: 0, risk: 1 }),
+  };
   const first = stepMatch({
     simulation: createInitialMatchSimulationState(context),
     rng: rngFor(context),
@@ -123,6 +125,47 @@ test("shot step events include deterministic structured shot context", () => {
       { side: "home", shotType: "header", chanceType: "cross" },
       { side: "away", shotType: "normal", chanceType: "counter" },
     ],
+  );
+});
+
+test("save step events include the defending goalkeeper", () => {
+  const context = {
+    ...validContext({
+      baseOpportunityRatePerMinute: 1,
+      maxOpportunityRatePerMinute: 1,
+    }),
+    home: goalkeeperTeam("home"),
+    away: goalkeeperTeam("away"),
+  };
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "save", quality: 0.8, isShotOnTarget: true }),
+  });
+  const saveEvents = result.events.filter(isSaveStepEvent);
+
+  assert.equal(saveEvents.length, 2);
+
+  for (const event of saveEvents) {
+    const expectedGoalkeeperId = event.side === "home" ? playerId("player:away-gk") : playerId("player:home-gk");
+    assert.equal(event.goalkeeperPlayerId, expectedGoalkeeperId);
+  }
+});
+
+test("save step events fail clearly when the defending team has no goalkeeper", () => {
+  const context = validContext({
+    baseOpportunityRatePerMinute: 1,
+    maxOpportunityRatePerMinute: 1,
+  });
+
+  assert.throws(
+    () =>
+      stepMatch({
+        simulation: createInitialMatchSimulationState(context),
+        rng: rngFor(context),
+        occasionResolver: fixedResolver({ outcome: "save", quality: 0.8, isShotOnTarget: true }),
+      }),
+    /without a goalkeeper slot/,
   );
 });
 
@@ -172,7 +215,7 @@ test("non-goal step events do not include scorer attribution", () => {
   const result = stepMatch({
     simulation: createInitialMatchSimulationState(context),
     rng: rngFor(context),
-    occasionResolver: fixedResolver({ outcome: "save", quality: 0.8, isShotOnTarget: true }),
+    occasionResolver: fixedResolver({ outcome: "miss", quality: 0.8, isShotOnTarget: false }),
   });
   const shotEvents = result.events.filter((event) => event.type === "shot_outcome");
 
@@ -272,6 +315,69 @@ function validTeam(
     },
     tacticalDistribution,
   };
+}
+
+/**
+ * Replaces both sides with goalkeeper-bearing lineups while preserving strengths.
+ */
+function withGoalkeeperTeams(context: MatchContext): MatchContext {
+  return {
+    ...context,
+    home: goalkeeperTeam("home", context.home.tacticalDistribution, context.home.strength.overall),
+    away: goalkeeperTeam("away", context.away.tacticalDistribution, context.away.strength.overall),
+  };
+}
+
+/**
+ * Builds a team context with a goalkeeper slot for save-attribution tests.
+ */
+function goalkeeperTeam(
+  side: MatchSide,
+  tacticalDistribution: MatchTeamContext["tacticalDistribution"] = {
+    directness: 0,
+    pressing: 0,
+    width: 0,
+    risk: 0,
+  },
+  strength = 10,
+): MatchTeamContext {
+  return {
+    clubId: clubId(`club:${side}`),
+    lineup: [
+      {
+        slotId: `slot:${side}:gk`,
+        playerId: playerId(`player:${side}-gk`),
+        roleKey: "gk",
+      },
+      {
+        slotId: `slot:${side}:field`,
+        playerId: playerId(`player:${side}-field`),
+        roleKey: "balanced",
+      },
+    ],
+    strength: {
+      attack: strength,
+      midfield: strength,
+      defense: strength,
+      goalkeeper: strength,
+      overall: strength,
+    },
+    tacticalDistribution,
+  };
+}
+
+/**
+ * Narrows a step event to a saved-shot event.
+ */
+function isSaveStepEvent(event: unknown): event is MatchShotOutcomeStepEvent & { readonly outcome: "save" } {
+  return (
+    typeof event === "object" &&
+    event !== null &&
+    "type" in event &&
+    event.type === "shot_outcome" &&
+    "outcome" in event &&
+    event.outcome === "save"
+  );
 }
 
 /**

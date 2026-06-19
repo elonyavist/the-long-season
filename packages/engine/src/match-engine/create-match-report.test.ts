@@ -35,8 +35,8 @@ test("report contains event schema version", () => {
   assert.equal(report.eventSchemaVersion, MATCH_EVENT_SCHEMA_VERSION);
 });
 
-test("match event schema version is bumped for assist IDs", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 4);
+test("match event schema version is bumped for goalkeeper save IDs", () => {
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 5);
 });
 
 test("report preserves goal scorer IDs", () => {
@@ -56,6 +56,16 @@ test("report preserves optional goal assist IDs", () => {
   assert.deepEqual(
     goalEvents.map((event) => event.assistPlayerId),
     [playerId("player:home-assist"), undefined],
+  );
+});
+
+test("report preserves save goalkeeper IDs", () => {
+  const report = createMatchReport(simulatedResultWithGoals());
+  const saveEvents = report.events.filter((event) => event.type === "save");
+
+  assert.deepEqual(
+    saveEvents.map((event) => event.goalkeeperPlayerId),
+    [playerId("player:home-gk")],
   );
 });
 
@@ -211,6 +221,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "counter",
+        goalkeeperPlayerId: playerId("player:home-gk"),
       },
       {
         type: "shot_outcome",

@@ -82,8 +82,13 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
         scorerPlayerId: event.scorerPlayerId,
         ...(event.assistPlayerId === undefined ? {} : { assistPlayerId: event.assistPlayerId }),
       };
-    case "save":
-      return { type: "save", shot };
+    case "save": {
+      if (event.goalkeeperPlayerId === undefined) {
+        throw new Error("Save match event requires goalkeeperPlayerId");
+      }
+
+      return { type: "save", shot, goalkeeperPlayerId: event.goalkeeperPlayerId };
+    }
     case "miss":
       return { type: "miss", shot };
     case "block":

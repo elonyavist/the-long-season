@@ -1,6 +1,9 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE: docs/steps/05-match-event-detail/02-assist-attribution.md
+STEP_PATH_TO_EXECUTE IN ORDER: 
+- docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md
+- docs/steps/05-match-event-detail/04-player-match-stats.md
+- docs/steps/05-match-event-detail/05-cli-match-detail-v2.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 

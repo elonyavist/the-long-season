@@ -78,7 +78,7 @@ test("season player goal stats match table goals", () => {
   const totalPlayerGoals = result.playerGoalStats.reduce((total, row) => total + row.goals, 0);
 
   assert.equal(totalPlayerGoals, totalTableGoals);
-  assert.equal(result.playerGoalStats.length, 18);
+  assert.equal(result.playerGoalStats.length, 36);
 });
 
 /**
@@ -159,6 +159,11 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
         {
           slotId: "slot:01",
           playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-01`),
+          roleKey: "gk",
+        },
+        {
+          slotId: "slot:02",
+          playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-02`),
           roleKey: "synthetic",
         },
       ],

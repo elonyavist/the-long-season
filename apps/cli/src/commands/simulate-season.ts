@@ -3,10 +3,12 @@ import {
   type FakeLeagueSystem,
 } from "@game/content";
 import {
+  computePlayerMatchStats,
   deriveTeamStrength,
   simulateSeason,
   type LineupSlot,
   type MatchTacticalDistributionInput,
+  type PlayerMatchStatRow,
   type RoleWeightProfile,
   type TeamStrength,
 } from "@game/engine";
@@ -38,7 +40,7 @@ export async function runSimulateSeasonCommand(
 
   if (!parsed.ok) {
     io.stderr(parsed.message);
-    io.stderr("Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>]");
+    io.stderr("Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>]");
     return 1;
   }
 
@@ -50,12 +52,23 @@ export async function runSimulateSeasonCommand(
     return 1;
   }
 
+  if (parsed.fixtureId !== undefined && findFixtureByValue(result.fixtures, parsed.fixtureId) === undefined) {
+    io.stderr(`Fixture not found: ${parsed.fixtureId}`);
+    return 1;
+  }
+
   for (const line of formatSeasonOutput(league, result, parsed.seed)) {
     io.stdout(line);
   }
 
   if (parsed.roundNumber !== undefined) {
     for (const line of formatRoundOutput(league, result, parsed.roundNumber)) {
+      io.stdout(line);
+    }
+  }
+
+  if (parsed.fixtureId !== undefined) {
+    for (const line of formatFixtureDetailOutput(league, result, parsed.fixtureId)) {
       io.stdout(line);
     }
   }
@@ -79,6 +92,7 @@ function defaultIo(): SimulateSeasonCommandIo {
 function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let seed = DEFAULT_SIMULATE_SEASON_SEED;
   let roundNumber: number | undefined;
+  let fixtureId: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -134,10 +148,34 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--fixture") {
+      const value = args[index + 1];
+      const parsedFixture = parseFixtureId(value);
+
+      if (!parsedFixture.ok) {
+        return parsedFixture;
+      }
+
+      fixtureId = parsedFixture.fixtureId;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--fixture=")) {
+      const parsedFixture = parseFixtureId(arg.slice("--fixture=".length));
+
+      if (!parsedFixture.ok) {
+        return parsedFixture;
+      }
+
+      fixtureId = parsedFixture.fixtureId;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed, roundNumber };
+  return { ok: true, seed, roundNumber, fixtureId };
 }
 
 /**
@@ -153,6 +191,21 @@ function parseRoundNumber(value: string | undefined): ParsedRoundNumber {
   }
 
   return { ok: true, roundNumber: Number(value) };
+}
+
+/**
+ * Parses one stable fixture ID argument.
+ */
+function parseFixtureId(value: string | undefined): ParsedFixtureId {
+  if (value === undefined || value.length === 0) {
+    return { ok: false, message: "--fixture requires a non-empty fixture ID" };
+  }
+
+  if (!/^fixture:[A-Za-z0-9:_-]+$/.test(value)) {
+    return { ok: false, message: "--fixture requires a namespaced fixture ID" };
+  }
+
+  return { ok: true, fixtureId: value };
 }
 
 /**
@@ -210,6 +263,47 @@ function formatRoundOutput(league: FakeLeagueSystem, result: CliSeasonResult, ro
 }
 
 /**
+ * Formats rich structured detail for one requested fixture.
+ */
+function formatFixtureDetailOutput(league: FakeLeagueSystem, result: CliSeasonResult, fixtureValue: string): readonly string[] {
+  const fixture = findFixtureByValue(result.fixtures, fixtureValue);
+
+  if (fixture === undefined) {
+    return ["", `Fixture ${fixtureValue}: unavailable`];
+  }
+
+  const report = fixture.result?.report;
+  const lines = ["", `Fixture detail:`, formatFixtureResult(fixture, league)];
+
+  if (report === undefined) {
+    lines.push("Events: unavailable");
+    lines.push("Player stats: unavailable");
+    return lines;
+  }
+
+  lines.push("Events:");
+
+  const eventLines = formatFixtureEvents(fixture, league);
+  if (eventLines.length === 0) {
+    lines.push("  none");
+  } else {
+    lines.push(...eventLines);
+  }
+
+  lines.push("Player stats:");
+
+  const statLines = formatFixturePlayerStats(fixture, league);
+  if (statLines.length === 0) {
+    lines.push("  none");
+  } else {
+    lines.push("  Player              Club  G A Sh SoT Sv");
+    lines.push(...statLines);
+  }
+
+  return lines;
+}
+
+/**
  * Formats one fixture result line.
  */
 function formatFixtureResult(fixture: Fixture, league: FakeLeagueSystem): string {
@@ -248,6 +342,95 @@ function formatFixtureScorers(fixture: Fixture, league: FakeLeagueSystem): reado
 }
 
 /**
+ * Formats structured goal, save, miss, and block events for one fixture.
+ */
+function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readonly string[] {
+  const report = fixture.result?.report;
+  const events: string[] = [];
+
+  if (report === undefined) {
+    return events;
+  }
+
+  for (const event of report.events) {
+    switch (event.type) {
+      case "goal": {
+        const clubId = sideClubId(fixture, event.shot.side);
+        const assist = event.assistPlayerId === undefined ? "" : ` assist=${playerLabel(event.assistPlayerId, league.players)}`;
+        events.push(
+          `  ${event.shot.minute}' GOAL ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+        );
+        break;
+      }
+
+      case "save": {
+        const defendingClubId = sideClubId(fixture, oppositeSide(event.shot.side));
+        const attackingClubId = sideClubId(fixture, event.shot.side);
+        events.push(
+          `  ${event.shot.minute}' SAVE ${clubLabel(defendingClubId, league.clubsById)} ${playerLabel(event.goalkeeperPlayerId, league.players)} vs ${clubLabel(attackingClubId, league.clubsById)} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+        );
+        break;
+      }
+
+      case "miss": {
+        const clubId = sideClubId(fixture, event.shot.side);
+        events.push(
+          `  ${event.shot.minute}' MISS ${clubLabel(clubId, league.clubsById)} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+        );
+        break;
+      }
+
+      case "block": {
+        const clubId = sideClubId(fixture, event.shot.side);
+        events.push(
+          `  ${event.shot.minute}' BLOCK ${clubLabel(clubId, league.clubsById)} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+        );
+        break;
+      }
+
+      case "full_time":
+      case "half_time":
+      case "kickoff":
+        break;
+    }
+  }
+
+  return events;
+}
+
+/**
+ * Formats compact engine-derived player match stats for one fixture.
+ */
+function formatFixturePlayerStats(fixture: Fixture, league: FakeLeagueSystem): readonly string[] {
+  const report = fixture.result?.report;
+
+  if (report === undefined) {
+    return [];
+  }
+
+  return computePlayerMatchStats({ report, sortBy: "contribution" }).map((row) => formatPlayerMatchStatRow(row, fixture, league));
+}
+
+/**
+ * Formats one compact player match-stat row.
+ */
+function formatPlayerMatchStatRow(row: PlayerMatchStatRow, fixture: Fixture, league: FakeLeagueSystem): string {
+  const playerName = playerLabel(row.playerId, league.players).padEnd(19, " ");
+  const clubName = clubLabel(sideClubId(fixture, row.side), league.clubsById).padEnd(5, " ");
+
+  return [
+    " ",
+    playerName,
+    clubName,
+    String(row.goals).padStart(1, " "),
+    String(row.assists).padStart(1, " "),
+    String(row.shots).padStart(2, " "),
+    String(row.shotsOnTarget).padStart(3, " "),
+    String(row.saves).padStart(2, " "),
+  ].join(" ");
+}
+
+/**
  * Finds one round by round number.
  */
 function findRound(rounds: readonly Round[], roundNumber: number): Round | undefined {
@@ -271,6 +454,33 @@ function findFixture(fixtures: readonly Fixture[], fixtureId: FixtureId): Fixtur
   }
 
   return undefined;
+}
+
+/**
+ * Finds one fixture by its string ID value.
+ */
+function findFixtureByValue(fixtures: readonly Fixture[], fixtureValue: string): Fixture | undefined {
+  for (const fixture of fixtures) {
+    if (String(fixture.id) === fixtureValue) {
+      return fixture;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Returns the fixture club ID for one match side.
+ */
+function sideClubId(fixture: Fixture, side: MatchEventSide): ClubId {
+  return side === "home" ? fixture.homeClubId : fixture.awayClubId;
+}
+
+/**
+ * Returns the other side of one match event.
+ */
+function oppositeSide(side: MatchEventSide): MatchEventSide {
+  return side === "home" ? "away" : "home";
 }
 
 /**
@@ -420,6 +630,7 @@ type ParsedSimulateSeasonArgs =
       readonly ok: true;
       readonly seed: string;
       readonly roundNumber: number | undefined;
+      readonly fixtureId: string | undefined;
     }
   | {
       readonly ok: false;
@@ -431,6 +642,17 @@ type ParsedRoundNumber =
   | {
       readonly ok: true;
       readonly roundNumber: number;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+/** Parsed fixture ID argument result. */
+type ParsedFixtureId =
+  | {
+      readonly ok: true;
+      readonly fixtureId: string;
     }
   | {
       readonly ok: false;
@@ -482,3 +704,6 @@ type Fixture = ReturnType<typeof simulateSeason>["fixtures"][number];
 
 /** Fixture ID type derived from the exported season simulation. */
 type FixtureId = ReturnType<typeof simulateSeason>["fixtureIds"][number];
+
+/** Match event side marker used by durable fixture report events. */
+type MatchEventSide = "home" | "away";

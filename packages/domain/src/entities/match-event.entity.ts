@@ -69,6 +69,8 @@ export interface SaveMatchEvent {
   readonly type: "save";
   /** Shared shot context. */
   readonly shot: ShotContext;
+  /** Defending goalkeeper credited with the save. */
+  readonly goalkeeperPlayerId: PlayerId;
 }
 
 /**

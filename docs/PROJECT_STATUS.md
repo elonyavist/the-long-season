@@ -4,9 +4,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail documented.
-- Active implementation step: `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, optional assist attribution, and structured shot context, batch full-match simulation, durable domain match reports with scorer IDs, optional assist IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal-stat aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001` with real top-scorer output and optional round fixture detail, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete.
+- Active implementation step: none; create the next numbered step document before implementing more code.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, optional assist attribution, goalkeeper save attribution, structured shot context, and derived player match stats, batch full-match simulation, durable domain match reports with scorer IDs, optional assist IDs, goalkeeper save IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal-stat aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001` with real top-scorer output, optional round fixture detail, and `--fixture=<fixtureId>` structured match detail, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md`
-- Status: Not started
-- Last verification: `docs/steps/05-match-event-detail/02-assist-attribution.md` completed with domain/engine typechecks, focused match-engine tests, `pnpm check`, base and round-detail `simulate-season` smoke checks, and `calibration-v1` strict balance report.
-- Next action: Implement only deterministic goalkeeper attribution for saved-shot events from `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md`.
+- Step: None active
+- Status: Phase 5 complete
+- Last verification: `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` completed with CLI/engine typechecks, focused CLI tests, `pnpm check`, base, round-detail, fixture-detail `simulate-season` smoke checks, and `calibration-v1` strict balance report.
+- Next action: Create the next numbered step group under `docs/steps/` before implementing more gameplay scope.
 
 ## How To Read The Project
 
@@ -59,9 +59,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/05-match-event-detail/README.md` | Done | Created the Phase 5 documentation path for richer structured match-event detail. | Phase 5 starts with a shot-event contract, then optional assists, goalkeeper save attribution, player match stats, and CLI match detail v2; it stays deterministic, CLI-first, and avoids full duel chains or UI. | Documentation-only update; no code checks required |
 | `docs/steps/05-match-event-detail/01-shot-event-contract.md` | Done | Durable and engine-local shot outcome events now carry structured shot context. | Added `shotType` and `chanceType` to `ShotContext` and engine-local shot events; values are derived deterministically from existing minute, side, quality, and tactical distribution data without consuming extra RNG or changing outcomes; `MATCH_EVENT_SCHEMA_VERSION` is now `3`. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-engine/player-stat tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/05-match-event-detail/02-assist-attribution.md` | Done | Goal events can now carry deterministic optional assist IDs. | Added `attributeAssist` with a separate `assist-attribution` RNG stream keyed by seed, fixture, minute, side, pre-goal score, scorer, `shotType`, and `chanceType`; assists are optional, exclude the scorer and goalkeepers, favor midfield creators, and are copied into durable reports without changing match outcomes. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-engine tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
-| `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md` | Not started | Active next step. | Attribute saved-shot events to the defending goalkeeper after assist work is complete. | Pending |
-| `docs/steps/05-match-event-detail/04-player-match-stats.md` | Planned | Future Phase 5 step. | Derive minimal per-player match stats from durable match reports after goal/assist/save event data exists. | Pending |
-| `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` | Planned | Future Phase 5 step. | Expose richer structured match detail through the CLI without UI or duplicate simulation paths. | Pending |
+| `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md` | Done | Saved-shot events now carry the defending goalkeeper ID. | Added `attributeGoalkeeperSave`, required `goalkeeperPlayerId` on durable save events, bumped `MATCH_EVENT_SCHEMA_VERSION` to `5`, and made missing goalkeeper slots fail clearly. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-engine tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/05-match-event-detail/04-player-match-stats.md` | Done | Engine can derive compact per-player match stats from durable reports. | Added public `computePlayerMatchStats` with goals, assists, known player shots, shots on target, and saves; explicit registrations include zero-stat players and output sorts deterministically. | `pnpm --filter @game/engine run typecheck`; focused engine tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` | Done | CLI can now inspect one fixture with structured match-event detail and compact player stats. | Added `simulate-season --fixture=<fixtureId>` rendering from existing season results and engine `computePlayerMatchStats`; output includes event order, goals with optional assists, stable shot/chance keys, saves, misses, blocks, and compact player stats. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/engine run typecheck`; focused CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 
 Status values:
 
@@ -129,6 +129,11 @@ Status values:
 - Current structured shot context derivation is intentionally aggregate and minimal: it uses minute, side, opportunity quality, and attacking tactical distribution to label `open_play`, `counter`, or `cross`, and `normal` or `header`; it does not create set-piece systems, assists, goalkeeper attribution, or full duels.
 - Match event schema version `4` adds optional `assistPlayerId` to durable goal events; current CLI output does not render assists yet, so `simulate-season --round=<number>` remains visually unchanged until `05-cli-match-detail-v2`.
 - Assist attribution is optional and independent from the main match RNG; it uses `shotType`/`chanceType` for eligibility, excludes the scorer and goalkeepers, and does not change goals, scores, tables, or balance metrics.
+- Match event schema version `5` adds `goalkeeperPlayerId` to durable save events; save attribution uses the defending side's explicit `roleKey: "gk"` lineup slot.
+- Save attribution does not change shot outcomes, scores, tables, or balance metrics; it only enriches saved-shot events and fails clearly if a simulated team has no goalkeeper slot.
+- `computePlayerMatchStats` derives match player stats only from durable `MatchReport` events; current per-player shots and shots on target are credited only for goals because non-goal shot events do not yet identify the shooter.
+- Player match stats are exported from `@game/engine` so the CLI can render match detail without duplicating report parsing.
+- `simulate-season --fixture=<fixtureId>` is the first structured match inspection command; use `--round=<number>` to discover fixture IDs, then `--fixture` to inspect one match's events and compact player stats.
 
 ## Open Decisions And Follow-Up
 
@@ -142,8 +147,32 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 5 documentation exists; the active implementation step is `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md`.
+- Phase 5 is complete; create the next numbered step group under `docs/steps/` before implementing more gameplay scope.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md`
+
+- Status: Done
+- Outcome: Added CLI structured match detail for one fixture.
+- Adopted solution: Extended `simulate-season` with `--fixture=<fixtureId>`; the command reuses the existing single season simulation, renders durable report events in event order, includes optional assists, stable `shot`/`chance` keys, goalkeeper saves, misses, blocks, and compact player stats from `computePlayerMatchStats`.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts` (14 tests); `pnpm check` (25 files, 141 tests); `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Stop here; create the next numbered step group before implementing more code.
+
+### 2026-06-19 — `docs/steps/05-match-event-detail/04-player-match-stats.md`
+
+- Status: Done
+- Outcome: Added deterministic per-player match-stat derivation from durable `MatchReport` events.
+- Adopted solution: Created `computePlayerMatchStats` in `season-engine/player-match-stats.ts` and exported it from `@game/engine`; rows include goals, assists, known player shots, shots on target, and saves, support explicit zero-stat registrations, and sort by side/order or contribution with stable player ID tie-breakers.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/season-engine/player-match-stats.test.ts packages/engine/src/season-engine/player-stats.test.ts packages/engine/src/use-cases/simulate-season.test.ts` (12 tests); `pnpm check` (25 files, 137 tests); `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Implement only `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` next; use `computePlayerMatchStats` from `@game/engine` instead of reparsing events in CLI.
+
+### 2026-06-19 — `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md`
+
+- Status: Done
+- Outcome: Added deterministic goalkeeper attribution for saved-shot events.
+- Adopted solution: Created `goalkeeper-attribution.ts` to pick the defending side's explicit `gk` lineup slot, copied `goalkeeperPlayerId` into engine-local save events and durable report save events, bumped `MATCH_EVENT_SCHEMA_VERSION` to `5`, and made missing goalkeeper slots fail with a clear error.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/goalkeeper-attribution.test.ts packages/engine/src/match-engine/step-match.test.ts packages/engine/src/match-engine/create-match-report.test.ts packages/engine/src/match-engine/simulate-match.test.ts` (33 tests); `pnpm check` (24 files, 133 tests); `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Implement only `docs/steps/05-match-event-detail/04-player-match-stats.md` next; save goalkeeper data exists in reports, but current CLI output does not render save details until the later CLI match-detail step.
 
 ### 2026-06-19 — `docs/steps/05-match-event-detail/02-assist-attribution.md`
 
