@@ -17,7 +17,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 - Step: None
 - Status: Phase 3 complete
-- Last verification: `docs/steps/03-balance-calibration/03-table-spread-review.md` completed; content/simulation-tools/CLI typecheck, focused calibration/CLI tests, `pnpm check`, and `calibration-v1` strict 20-season report passed.
+- Last verification: `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` reworked; content/CLI typecheck, focused CLI/report tests, `pnpm check`, default strict smoke report, and `calibration-v1` strict 20-season report passed.
 - Next action: Choose or write the next numbered step document before implementing more gameplay scope.
 
 ## How To Read The Project
@@ -48,7 +48,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/02-season-simulation/04-simulate-season-cli.md` | Done | The first gameplay milestone command now simulates one deterministic fake 18-team season and prints the final table. | `content` generates fictional clubs, players, lineups, role weights, table rules, and match config; `engine` owns a tested `simulateSeason` use-case; `apps/cli` exposes `simulate-season --seed` and composes exported engine primitives to print table, top-scorer availability, best defense, and worst attack. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; invalid-arg CLI check; forbidden API/dependency scans; JSDoc scan |
 | `docs/steps/02-season-simulation/05-season-balance-report.md` | Done | Added deterministic aggregate season balance reporting and a strict CLI gate mode. | `simulation-tools` owns content-free aggregate calibration; `content` owns broad hand-authored targets; `engine` publicly exports `simulateSeason`; CLI wires fake content into the report without importing `domain` directly. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts`; `pnpm check`; default and strict-fail CLI smoke checks; forbidden API/dependency scans |
 | `docs/steps/03-balance-calibration/01-calibration-target-profile.md` | Done | Added stricter `calibration-v1` target profile and CLI support without changing simulation behavior. | `default` remains the broad smoke profile; `calibration-v1` exposes the current under-scoring/draw-heavy gap; `strict-fail-smoke` remains the intentional failure profile for CLI tests. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run apps/cli/src/commands/balance-report.test.ts packages/simulation-tools/src/calibration-report.test.ts`; `pnpm check`; default strict CLI report passed; `calibration-v1` strict CLI report failed as expected |
-| `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` | Done | Tuned fake match-engine rates and conversion bands so the 20-season `calibration-v1` sample passes. | Config-only tuning doubled base opportunity rate, raised the opportunity cap, increased conversion probabilities, and raised home advantage slightly; no engine algorithms changed. | Baseline `calibration-v1` 20-season report failed; after tuning, `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` passed; `pnpm check` passed |
+| `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` | Done | Tuned fake match-engine rates and reworked conversion bands so the 20-season `calibration-v1` sample passes near 2.8 goals per match. | Config-only tuning uses base opportunity rate `0.09`, cap `0.24`, conversion probabilities `0.105/0.20/0.35`, and home advantage `1.10`; no engine algorithms changed. | Baseline `calibration-v1` 20-season report failed; first tuning reached goals `3.197`; rework reached goals `2.773` with strict report PASS; `pnpm check` passed |
 | `docs/steps/03-balance-calibration/03-table-spread-review.md` | Done | Added explicit average table points spread to balance reporting and confirmed the tuned 20-season sample remains plausible. | `simulation-tools` now reports `table_points_spread` as average first-place minus last-place points; content target profiles include broad/default and stricter `calibration-v1` bands. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm --filter @game/cli run typecheck`; focused calibration/CLI tests; `pnpm check`; `calibration-v1` strict 20-season report passed |
 
 Status values:
@@ -99,8 +99,8 @@ Status values:
 - `balance-report` uses broad hand-authored calibration targets from content, reports goals per match, result rates, table points, and upset proxy, and exits nonzero only when `--strict` is enabled and a metric fails.
 - Phase 3 balance calibration starts with target/profile separation before tuning: `default` remains a broad smoke profile, while `calibration-v1` is the stricter gate used to expose under-scoring and draw-heavy output.
 - Current `calibration-v1` baseline for `seed-prefix=balance-demo`, `seasons=3`: goals per match `1.127` fails `2.000..3.200`; home win rate `0.296` fails `0.330..0.550`; draw rate `0.444` fails `0.180..0.330`; first-place points `57.000` fails `66.000..90.000`.
-- Match rate tuning is config-only so far: fake content now uses base opportunity rate `0.09`, max opportunity rate `0.24`, conversion probabilities `0.12/0.23/0.40`, and home advantage `1.10`.
-- Current tuned `calibration-v1` sample for `seed-prefix=test-balance`, `seasons=20`: goals per match `3.197`, home win rate `0.430`, draw rate `0.222`, away win rate `0.348`, first-place points `68.050`, last-place points `27.650`, table points spread `40.400`, upset rate `0.375`; all pass, with goals near the upper bound.
+- Match rate tuning is config-only so far: fake content now uses base opportunity rate `0.09`, max opportunity rate `0.24`, conversion probabilities `0.105/0.20/0.35`, and home advantage `1.10`.
+- Current tuned `calibration-v1` sample for `seed-prefix=test-balance`, `seasons=20`: goals per match `2.773`, home win rate `0.409`, draw rate `0.250`, away win rate `0.341`, first-place points `66.500`, last-place points `27.450`, table points spread `39.050`, upset rate `0.383`; all pass.
 - Table spread review is an explicit report metric now: `table_points_spread` means average first-place points minus last-place points across the simulated season batch.
 
 ## Open Decisions And Follow-Up
@@ -125,6 +125,14 @@ Status values:
 - Adopted solution: Added `table_points_spread` to `simulation-tools` and content target profiles; `calibration-v1` accepts `36..60`, and the tuned `test-balance` 20-season sample reports `40.400`.
 - Verification: `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/simulation-tools/src/calibration-report.test.ts apps/cli/src/commands/balance-report.test.ts` (11 tests); `pnpm check` (19 files, 99 tests); `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
 - Follow-up: Stop here; choose or write the next numbered step before implementing anything beyond Phase 3.
+
+### 2026-06-17 — `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md` rework
+
+- Status: Done
+- Outcome: Moved goals per match from the upper-bound `3.197` sample toward the requested `~2.8` target while keeping `calibration-v1` strict mode passing.
+- Adopted solution: Reduced only fake content conversion probabilities from `0.12/0.23/0.40` to `0.105/0.20/0.35`; opportunity rates, home advantage, engine algorithms, targets, and CLI shape were left unchanged.
+- Verification: Before rework, `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` passed with goals `3.197`; after rework it passed with goals `2.773`, draw rate `0.250`, first-place points `66.500`, and table spread `39.050`; `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/cli run typecheck`; focused CLI/report tests; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts`; `pnpm check`; default strict smoke report passed.
+- Follow-up: Stop here; next implementation still requires choosing or writing a new numbered step.
 
 ### 2026-06-17 — `docs/steps/03-balance-calibration/02-match-engine-rate-tuning.md`
 
