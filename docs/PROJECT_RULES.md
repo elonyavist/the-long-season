@@ -47,6 +47,9 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - The next relevant step document may be modified to capture lessons learned before that step starts.
 - `What NOT to implement` is scoped to the active step, not a permanent project ban.
 - The workflow is incremental and iterative: implement the smallest useful slice, run its checks, fix what fails, update the next step if reality changed, then advance.
+- Do not knowingly leave dead code, obsolete helpers, duplicated logic, or clearly improvable local code behind after a step.
+- When a step makes an old helper, test fixture, branch, or abstraction redundant, either remove/refactor it in the same step if it is inside the step scope, or explicitly document the reason and the next cleanup step in `docs/PROJECT_STATUS.md` or the next relevant step document.
+- Compatibility is not a blanket excuse to keep unused code: preserved code must have an active caller, a tested migration reason, or a documented short-term removal path.
 - Mandatory execution loop:
   1. Read `docs/PROJECT_STATUS.md`.
   2. Choose the active step.
@@ -77,6 +80,7 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Determinism tests pass.
 - No forbidden imports exist.
 - No forbidden runtime APIs are used inside engine.
+- No known dead code, obsolete helper, unnecessary duplication, or obviously local cleanup is left undocumented.
 - Step-specific Definition of Done is satisfied.
 - Lessons learned that affect future work are captured in the next step document, not hidden in code or chat.
 - `docs/PROJECT_STATUS.md` reflects the current active step, step status, adopted solution, verification result, and next action.

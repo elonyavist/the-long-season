@@ -73,10 +73,10 @@ test("home and away processing order does not always favor the same side", () =>
 });
 
 test("goal step events include a scorer from the scoring side lineup", () => {
-  const context = validContext({
+  const context = withGoalkeeperTeams(validContext({
     baseOpportunityRatePerMinute: 1,
     maxOpportunityRatePerMinute: 1,
-  });
+  }));
   const result = stepMatch({
     simulation: createInitialMatchSimulationState(context),
     rng: rngFor(context),
@@ -87,7 +87,7 @@ test("goal step events include a scorer from the scoring side lineup", () => {
   assert.equal(goalEvents.length, 2);
 
   for (const event of goalEvents) {
-    const expectedPlayerId = playerId(`player:${event.side}-000001`);
+    const expectedPlayerId = playerId(`player:${event.side}-field`);
     assert.equal(event.scorerPlayerId, expectedPlayerId);
   }
 });
@@ -225,17 +225,43 @@ test("goal step events can include deterministic assist attribution", () => {
       {
         side: "home",
         scorerPlayerId: playerId("player:home-att"),
-        assistPlayerId: playerId("player:home-mid"),
+        assistPlayerId: undefined,
       },
     ],
   );
 });
 
+test("goal assists remain optional and never equal the scorer", () => {
+  const context = {
+    ...validContext({
+      fixtureValue: "fixture:assist-optional-000001",
+      baseOpportunityRatePerMinute: 1,
+      maxOpportunityRatePerMinute: 1,
+    }),
+    home: assistTeam("home"),
+    away: assistTeam("away"),
+  };
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "goal", quality: 0.802, isShotOnTarget: true }),
+  });
+  const goalEvents = result.events.filter((event) => event.type === "shot_outcome" && event.outcome === "goal");
+
+  assert.equal(goalEvents.length, 2);
+
+  for (const event of goalEvents) {
+    if (event.assistPlayerId !== undefined) {
+      assert.notEqual(event.assistPlayerId, event.scorerPlayerId);
+    }
+  }
+});
+
 test("non-goal step events include shooter attribution without scorer attribution", () => {
-  const context = validContext({
+  const context = withGoalkeeperTeams(validContext({
     baseOpportunityRatePerMinute: 1,
     maxOpportunityRatePerMinute: 1,
-  });
+  }));
   const result = stepMatch({
     simulation: createInitialMatchSimulationState(context),
     rng: rngFor(context),
@@ -249,6 +275,40 @@ test("non-goal step events include shooter attribution without scorer attributio
     assert.equal("scorerPlayerId" in event, false);
     assert.equal("shooterPlayerId" in event, true);
   }
+});
+
+test("block step events keep the selected primary defender engine-local", () => {
+  const context = {
+    ...validContext({
+      baseOpportunityRatePerMinute: 1,
+      maxOpportunityRatePerMinute: 1,
+    }),
+    home: assistTeam("home"),
+    away: assistTeam("away"),
+  };
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "block", quality: 0.8, isShotOnTarget: false }),
+  });
+  const blockEvents = result.events.filter(isBlockStepEvent);
+
+  assert.deepEqual(
+    blockEvents.map((event) => ({
+      side: event.side,
+      primaryDefenderPlayerId: event.primaryDefenderPlayerId,
+    })),
+    [
+      {
+        side: "home",
+        primaryDefenderPlayerId: playerId("player:away-mid"),
+      },
+      {
+        side: "away",
+        primaryDefenderPlayerId: playerId("player:home-def"),
+      },
+    ],
+  );
 });
 
 test("stepMatch does not mutate the input simulation state", () => {
@@ -402,6 +462,20 @@ function isSaveStepEvent(event: unknown): event is MatchShotOutcomeStepEvent & {
     event.type === "shot_outcome" &&
     "outcome" in event &&
     event.outcome === "save"
+  );
+}
+
+/**
+ * Narrows a step event to a blocked-shot event.
+ */
+function isBlockStepEvent(event: unknown): event is MatchShotOutcomeStepEvent & { readonly outcome: "block" } {
+  return (
+    typeof event === "object" &&
+    event !== null &&
+    "type" in event &&
+    event.type === "shot_outcome" &&
+    "outcome" in event &&
+    event.outcome === "block"
   );
 }
 

@@ -102,8 +102,8 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.includes("  Player              Club  G A Sh SoT Sv"), true);
   assert.equal(io.stdoutLines.some((line) => /^  Player[0-9]{2} No[0-9]{2}\s+PRO[0-9]{2}\s+/.test(line)), true);
   assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
-  assert.equal(io.stdoutLines.includes("  Player04 No09       PRO04 1 1  2   1  0"), true);
-  assert.equal(io.stdoutLines.includes("  Player04 No05       PRO04 0 0  0   0  0"), true);
+  assert.equal(io.stdoutLines.includes("  Player04 No10       PRO04 3 0  5   4  0"), true);
+  assert.equal(io.stdoutLines.includes("  Player04 No05       PRO04 0 0  1   0  0"), true);
   assert.equal(io.stdoutLines.includes("  Player18 No05       PRO18 0 0  0   0  0"), true);
 });
 

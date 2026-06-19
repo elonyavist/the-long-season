@@ -1,10 +1,8 @@
-import type { PlayerId, ShotChanceType, ShotType } from "@game/domain";
-import type { Rng } from "@game/shared";
+import type { FixtureId, PlayerId, ShotChanceType, ShotType } from "@game/domain";
+import { deriveRng, type Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
-import { attributeAssist } from "./assist-attribution.ts";
-import { attributeGoal } from "./goal-attribution.ts";
-import { attributeGoalkeeperSave } from "./goalkeeper-attribution.ts";
+import { selectChanceActors, type ChanceActors } from "./chance-actors.ts";
 import type { MatchTeamContext } from "./match-context.ts";
 import {
   isMatchSimulationComplete,
@@ -15,7 +13,6 @@ import {
   type MatchSimulationStats,
 } from "./match-simulation-state.ts";
 import type { OccasionOutcome, OccasionResolver, OccasionResolution } from "./occasion-resolver.ts";
-import { attributeShotTaker } from "./shot-attribution.ts";
 
 /**
  * Sparse event emitted by one `stepMatch` call.
@@ -94,6 +91,8 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly shooterPlayerId: PlayerId;
   /** Defending goalkeeper credited with the save, only for save outcomes. */
   readonly goalkeeperPlayerId?: PlayerId;
+  /** Defending outfield player credited as the primary blocker, only for block outcomes. */
+  readonly primaryDefenderPlayerId?: PlayerId;
 }
 
 /**
@@ -196,51 +195,46 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
     const scoreBeforeGoal = nextScore;
     const shotContext = deriveShotContext(input.simulation, currentMinute, attackingSide, resolution.quality);
+    const chanceActors = selectChanceActors({
+      seed: input.simulation.context.seed,
+      fixtureId: input.simulation.context.fixtureId,
+      minute: currentMinute,
+      attackingSide,
+      scoreBeforeChance: scoreBeforeGoal,
+      attackingTeam: teamBySide(input.simulation, attackingSide),
+      defendingTeam: teamBySide(input.simulation, defendingSide),
+      shotType: shotContext.shotType,
+      chanceType: shotContext.chanceType,
+    });
     let scorerPlayerId: PlayerId | undefined;
     let assistPlayerId: PlayerId | undefined;
     let shooterPlayerId: PlayerId | undefined;
     let goalkeeperPlayerId: PlayerId | undefined;
+    let primaryDefenderPlayerId: PlayerId | undefined;
 
     if (resolution.outcome === "goal") {
-      const team = teamBySide(input.simulation, attackingSide);
-      scorerPlayerId = attributeGoal({
+      scorerPlayerId = chanceActors.shooterPlayerId;
+      assistPlayerId = selectAssistFromChanceActors({
         seed: input.simulation.context.seed,
         fixtureId: input.simulation.context.fixtureId,
         minute: currentMinute,
-        side: attackingSide,
-        scoreBeforeGoal,
-        team,
-      }).scorerPlayerId;
-      assistPlayerId = attributeAssist({
-        seed: input.simulation.context.seed,
-        fixtureId: input.simulation.context.fixtureId,
-        minute: currentMinute,
-        side: attackingSide,
-        scoreBeforeGoal,
-        team,
-        scorerPlayerId,
+        attackingSide,
+        scoreBeforeChance: scoreBeforeGoal,
+        actors: chanceActors,
         shotType: shotContext.shotType,
         chanceType: shotContext.chanceType,
-      }).assistPlayerId;
+      });
       nextScore = applyGoalToScore(nextScore, attackingSide);
     } else {
-      shooterPlayerId = attributeShotTaker({
-        seed: input.simulation.context.seed,
-        fixtureId: input.simulation.context.fixtureId,
-        minute: currentMinute,
-        side: attackingSide,
-        scoreBeforeShot: scoreBeforeGoal,
-        team: teamBySide(input.simulation, attackingSide),
-        outcome: resolution.outcome,
-        shotType: shotContext.shotType,
-        chanceType: shotContext.chanceType,
-      }).shooterPlayerId;
+      shooterPlayerId = chanceActors.shooterPlayerId;
     }
 
     if (resolution.outcome === "save") {
-      goalkeeperPlayerId = attributeGoalkeeperSave({
-        defendingTeam: teamBySide(input.simulation, defendingSide),
-      }).goalkeeperPlayerId;
+      goalkeeperPlayerId = chanceActors.goalkeeperPlayerId;
+    }
+
+    if (resolution.outcome === "block") {
+      primaryDefenderPlayerId = chanceActors.primaryDefenderPlayerId;
     }
 
     events.push(
@@ -253,6 +247,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
         assistPlayerId,
         shooterPlayerId,
         goalkeeperPlayerId,
+        primaryDefenderPlayerId,
       ),
     );
   }
@@ -377,6 +372,7 @@ function createShotOutcomeEvent(
   assistPlayerId: PlayerId | undefined,
   shooterPlayerId: PlayerId | undefined,
   goalkeeperPlayerId: PlayerId | undefined,
+  primaryDefenderPlayerId: PlayerId | undefined,
 ): MatchShotOutcomeStepEvent {
   if (resolution.outcome === "goal") {
     if (scorerPlayerId === undefined) {
@@ -412,7 +408,83 @@ function createShotOutcomeEvent(
     chanceType: shotContext.chanceType,
     shooterPlayerId,
     ...(goalkeeperPlayerId === undefined ? {} : { goalkeeperPlayerId }),
+    ...(primaryDefenderPlayerId === undefined ? {} : { primaryDefenderPlayerId }),
   };
+}
+
+/**
+ * Input needed to decide whether the selected creator receives assist credit.
+ */
+interface SelectAssistFromChanceActorsInput {
+  /** Run seed used by the match context. */
+  readonly seed: string;
+  /** Stable fixture identifier for the match. */
+  readonly fixtureId: FixtureId;
+  /** Simulated minute of the chance. */
+  readonly minute: number;
+  /** Side that produced the chance. */
+  readonly attackingSide: MatchSide;
+  /** Score before resolving this chance. */
+  readonly scoreBeforeChance: MatchScore;
+  /** Coherent opportunity actors selected for this chance. */
+  readonly actors: ChanceActors;
+  /** Structured execution type for the shot. */
+  readonly shotType: ShotType;
+  /** Structured source type for the chance. */
+  readonly chanceType: ShotChanceType;
+}
+
+/** Stable RNG stream name used only for optional selected-creator assist credit. */
+const CHANCE_ACTOR_ASSIST_STREAM = "chance-actor-assist";
+
+/**
+ * Credits the selected creator as assister when the chance is assist-eligible.
+ */
+function selectAssistFromChanceActors(input: SelectAssistFromChanceActorsInput): PlayerId | undefined {
+  if (input.actors.creatorPlayerId === input.actors.shooterPlayerId) {
+    return undefined;
+  }
+
+  const rng = deriveRng(
+    input.seed,
+    CHANCE_ACTOR_ASSIST_STREAM,
+    input.fixtureId,
+    input.minute,
+    input.attackingSide,
+    input.scoreBeforeChance.home,
+    input.scoreBeforeChance.away,
+    input.actors.creatorPlayerId,
+    input.actors.shooterPlayerId,
+    input.shotType,
+    input.chanceType,
+  );
+
+  return rng.nextFloat() < assistProbabilityForShot(input.shotType, input.chanceType)
+    ? input.actors.creatorPlayerId
+    : undefined;
+}
+
+/**
+ * Derives the probability that a goal credits the selected creator as assister.
+ */
+function assistProbabilityForShot(shotType: ShotType, chanceType: ShotChanceType): number {
+  if (chanceType === "dead_ball" || shotType === "set_piece") {
+    return 0.25;
+  }
+
+  if (chanceType === "cross" && shotType === "header") {
+    return 0.85;
+  }
+
+  if (chanceType === "cross") {
+    return 0.75;
+  }
+
+  if (chanceType === "counter") {
+    return 0.6;
+  }
+
+  return 0.5;
 }
 
 /**
