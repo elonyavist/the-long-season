@@ -81,6 +81,7 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
         shot,
         scorerPlayerId: event.scorerPlayerId,
         ...(event.assistPlayerId === undefined ? {} : { assistPlayerId: event.assistPlayerId }),
+        ...(event.creatorPlayerId === undefined ? {} : { creatorPlayerId: event.creatorPlayerId }),
       };
     case "save": {
       if (event.goalkeeperPlayerId === undefined) {
@@ -92,7 +93,14 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
     case "miss":
       return { type: "miss", shot, shooterPlayerId: event.shooterPlayerId };
     case "block":
-      return { type: "block", shot, shooterPlayerId: event.shooterPlayerId };
+      return {
+        type: "block",
+        shot,
+        shooterPlayerId: event.shooterPlayerId,
+        ...(event.primaryDefenderPlayerId === undefined
+          ? {}
+          : { primaryDefenderPlayerId: event.primaryDefenderPlayerId }),
+      };
   }
 }
 

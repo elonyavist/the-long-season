@@ -65,6 +65,8 @@ export interface MatchGoalStepEvent {
   readonly scorerPlayerId: PlayerId;
   /** Player from the scoring side lineup credited with the assist, when any. */
   readonly assistPlayerId?: PlayerId;
+  /** Selected chance creator when not already represented by the assist or scorer. */
+  readonly creatorPlayerId?: PlayerId;
 }
 
 /**
@@ -208,6 +210,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     });
     let scorerPlayerId: PlayerId | undefined;
     let assistPlayerId: PlayerId | undefined;
+    let creatorPlayerId: PlayerId | undefined;
     let shooterPlayerId: PlayerId | undefined;
     let goalkeeperPlayerId: PlayerId | undefined;
     let primaryDefenderPlayerId: PlayerId | undefined;
@@ -224,6 +227,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
         shotType: shotContext.shotType,
         chanceType: shotContext.chanceType,
       });
+      creatorPlayerId = selectDurableGoalCreator(chanceActors, assistPlayerId);
       nextScore = applyGoalToScore(nextScore, attackingSide);
     } else {
       shooterPlayerId = chanceActors.shooterPlayerId;
@@ -245,6 +249,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
         shotContext,
         scorerPlayerId,
         assistPlayerId,
+        creatorPlayerId,
         shooterPlayerId,
         goalkeeperPlayerId,
         primaryDefenderPlayerId,
@@ -370,6 +375,7 @@ function createShotOutcomeEvent(
   shotContext: { readonly shotType: ShotType; readonly chanceType: ShotChanceType },
   scorerPlayerId: PlayerId | undefined,
   assistPlayerId: PlayerId | undefined,
+  creatorPlayerId: PlayerId | undefined,
   shooterPlayerId: PlayerId | undefined,
   goalkeeperPlayerId: PlayerId | undefined,
   primaryDefenderPlayerId: PlayerId | undefined,
@@ -390,6 +396,7 @@ function createShotOutcomeEvent(
       chanceType: shotContext.chanceType,
       scorerPlayerId,
       ...(assistPlayerId === undefined ? {} : { assistPlayerId }),
+      ...(creatorPlayerId === undefined ? {} : { creatorPlayerId }),
     };
   }
 
@@ -462,6 +469,21 @@ function selectAssistFromChanceActors(input: SelectAssistFromChanceActorsInput):
   return rng.nextFloat() < assistProbabilityForShot(input.shotType, input.chanceType)
     ? input.actors.creatorPlayerId
     : undefined;
+}
+
+/**
+ * Keeps only creator context that adds durable information beyond scorer/assist.
+ */
+function selectDurableGoalCreator(actors: ChanceActors, assistPlayerId: PlayerId | undefined): PlayerId | undefined {
+  if (actors.creatorPlayerId === actors.shooterPlayerId) {
+    return undefined;
+  }
+
+  if (assistPlayerId === actors.creatorPlayerId) {
+    return undefined;
+  }
+
+  return actors.creatorPlayerId;
 }
 
 /**

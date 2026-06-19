@@ -380,8 +380,9 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
       case "goal": {
         const clubId = sideClubId(fixture, event.shot.side);
         const assist = event.assistPlayerId === undefined ? "" : ` assist=${playerLabel(event.assistPlayerId, league.players)}`;
+        const creator = event.creatorPlayerId === undefined ? "" : ` creator=${playerLabel(event.creatorPlayerId, league.players)}`;
         events.push(
-          `  ${event.shot.minute}' GOAL ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' GOAL ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist}${creator} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
         );
         break;
       }
@@ -405,8 +406,11 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
 
       case "block": {
         const clubId = sideClubId(fixture, event.shot.side);
+        const defender = event.primaryDefenderPlayerId === undefined
+          ? ""
+          : ` defender=${playerLabel(event.primaryDefenderPlayerId, league.players)}`;
         events.push(
-          `  ${event.shot.minute}' BLOCK ${clubLabel(clubId, league.clubsById)} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' BLOCK ${clubLabel(clubId, league.clubsById)}${defender} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
         );
         break;
       }

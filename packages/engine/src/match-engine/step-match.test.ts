@@ -215,17 +215,20 @@ test("goal step events can include deterministic assist attribution", () => {
       side: event.side,
       scorerPlayerId: event.scorerPlayerId,
       assistPlayerId: event.assistPlayerId,
+      creatorPlayerId: event.creatorPlayerId,
     })),
     [
       {
         side: "away",
         scorerPlayerId: playerId("player:away-att"),
         assistPlayerId: playerId("player:away-mid"),
+        creatorPlayerId: undefined,
       },
       {
         side: "home",
         scorerPlayerId: playerId("player:home-att"),
         assistPlayerId: undefined,
+        creatorPlayerId: playerId("player:home-mid"),
       },
     ],
   );

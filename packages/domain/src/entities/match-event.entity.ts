@@ -59,6 +59,8 @@ export interface GoalMatchEvent {
   readonly scorerPlayerId: PlayerId;
   /** Player credited with the assist, when the goal has one. */
   readonly assistPlayerId?: PlayerId;
+  /** Chance creator when not already represented by the assist or scorer. */
+  readonly creatorPlayerId?: PlayerId;
 }
 
 /**
@@ -69,7 +71,7 @@ export interface SaveMatchEvent {
   readonly type: "save";
   /** Shared shot context. */
   readonly shot: ShotContext;
-  /** Attacking player credited with taking the saved shot in schema v6 reports. */
+  /** Attacking player credited with taking the saved shot. */
   readonly shooterPlayerId?: PlayerId;
   /** Defending goalkeeper credited with the save. */
   readonly goalkeeperPlayerId: PlayerId;
@@ -83,7 +85,7 @@ export interface MissMatchEvent {
   readonly type: "miss";
   /** Shared shot context. */
   readonly shot: ShotContext;
-  /** Attacking player credited with taking the missed shot in schema v6 reports. */
+  /** Attacking player credited with taking the missed shot. */
   readonly shooterPlayerId?: PlayerId;
 }
 
@@ -95,8 +97,10 @@ export interface BlockMatchEvent {
   readonly type: "block";
   /** Shared shot context. */
   readonly shot: ShotContext;
-  /** Attacking player credited with taking the blocked shot in schema v6 reports. */
+  /** Attacking player credited with taking the blocked shot. */
   readonly shooterPlayerId?: PlayerId;
+  /** Defending outfield player credited as the primary blocker. */
+  readonly primaryDefenderPlayerId?: PlayerId;
 }
 
 /**

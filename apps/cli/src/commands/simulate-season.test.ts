@@ -97,6 +97,7 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.includes("fixture:000001 PRO04 5-0 PRO18"), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.some((line) => / GOAL PRO[0-9]{2} Player[0-9]{2} No[0-9]{2}.* shot=[a-z_]+ chance=[a-z_]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => / GOAL .* creator=Player[0-9]{2} No[0-9]{2} /.test(line)), true);
   assert.equal(io.stdoutLines.some((line) => / SAVE PRO[0-9]{2} Player[0-9]{2} No[0-9]{2} vs PRO[0-9]{2} shot=[a-z_]+ chance=[a-z_]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
   assert.equal(io.stdoutLines.includes("  Player              Club  G A Sh SoT Sv"), true);
@@ -105,6 +106,20 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.includes("  Player04 No10       PRO04 3 0  5   4  0"), true);
   assert.equal(io.stdoutLines.includes("  Player04 No05       PRO04 0 0  1   0  0"), true);
   assert.equal(io.stdoutLines.includes("  Player18 No05       PRO18 0 0  0   0  0"), true);
+});
+
+test("simulate-season fixture detail prints durable causal defender context for blocks", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000002"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(
+    io.stdoutLines.some((line) =>
+      / BLOCK PRO[0-9]{2} defender=Player[0-9]{2} No[0-9]{2} shot=[a-z_]+ chance=[a-z_]+$/.test(line)
+    ),
+    true,
+  );
 });
 
 test("simulate-season keeps the round output as the season view", async () => {

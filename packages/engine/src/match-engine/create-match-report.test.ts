@@ -35,8 +35,8 @@ test("report contains event schema version", () => {
   assert.equal(report.eventSchemaVersion, MATCH_EVENT_SCHEMA_VERSION);
 });
 
-test("match event schema version is bumped for non-goal shooter IDs", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 6);
+test("match event schema version is bumped for durable causal context", () => {
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 7);
 });
 
 test("report preserves goal scorer IDs", () => {
@@ -56,6 +56,16 @@ test("report preserves optional goal assist IDs", () => {
   assert.deepEqual(
     goalEvents.map((event) => event.assistPlayerId),
     [playerId("player:home-assist"), undefined],
+  );
+});
+
+test("report preserves optional goal creator IDs when not duplicated by assist", () => {
+  const report = createMatchReport(simulatedResultWithGoals());
+  const goalEvents = report.events.filter((event) => event.type === "goal");
+
+  assert.deepEqual(
+    goalEvents.map((event) => event.creatorPlayerId),
+    [undefined, playerId("player:away-creator")],
   );
 });
 
@@ -82,6 +92,16 @@ test("report preserves non-goal shot shooter IDs", () => {
       playerId("player:home-shooter"),
       playerId("player:home-blocked-shooter"),
     ],
+  );
+});
+
+test("report preserves block primary defender IDs", () => {
+  const report = createMatchReport(simulatedResultWithGoals());
+  const blockEvents = report.events.filter((event) => event.type === "block");
+
+  assert.deepEqual(
+    blockEvents.map((event) => event.primaryDefenderPlayerId),
+    [playerId("player:away-blocker")],
   );
 });
 
@@ -269,6 +289,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         shotType: "header",
         chanceType: "cross",
         shooterPlayerId: playerId("player:home-blocked-shooter"),
+        primaryDefenderPlayerId: playerId("player:away-blocker"),
       },
       {
         type: "shot_outcome",
@@ -280,6 +301,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         shotType: "normal",
         chanceType: "open_play",
         scorerPlayerId: playerId("player:away-scorer"),
+        creatorPlayerId: playerId("player:away-creator"),
       },
       {
         type: "full_time",
