@@ -42,6 +42,24 @@ test("derives goals, assists, known shots, shots on target, and saves from durab
       saves: 0,
     },
     {
+      playerId: playerId("player:home-miss-shooter"),
+      side: "home",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 0,
+      saves: 0,
+    },
+    {
+      playerId: playerId("player:home-saved-shooter"),
+      side: "home",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 1,
+      saves: 0,
+    },
+    {
       playerId: playerId("player:away-scorer"),
       side: "away",
       goals: 1,
@@ -58,6 +76,15 @@ test("derives goals, assists, known shots, shots on target, and saves from durab
       shots: 0,
       shotsOnTarget: 0,
       saves: 1,
+    },
+    {
+      playerId: playerId("player:away-blocked-shooter"),
+      side: "away",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 0,
+      saves: 0,
     },
   ]);
 });
@@ -91,6 +118,24 @@ test("registered zero-stat players stay in side and registration order", () => {
       saves: 0,
     },
     {
+      playerId: playerId("player:home-miss-shooter"),
+      side: "home",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 0,
+      saves: 0,
+    },
+    {
+      playerId: playerId("player:home-saved-shooter"),
+      side: "home",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 1,
+      saves: 0,
+    },
+    {
       playerId: playerId("player:home-scorer"),
       side: "home",
       goals: 1,
@@ -105,6 +150,15 @@ test("registered zero-stat players stay in side and registration order", () => {
       goals: 0,
       assists: 0,
       shots: 0,
+      shotsOnTarget: 0,
+      saves: 0,
+    },
+    {
+      playerId: playerId("player:away-blocked-shooter"),
+      side: "away",
+      goals: 0,
+      assists: 0,
+      shots: 1,
       shotsOnTarget: 0,
       saves: 0,
     },
@@ -148,11 +202,55 @@ test("contribution sort ranks meaningful stats before side order", () => {
       playerId("player:away-scorer"),
       playerId("player:home-assist"),
       playerId("player:away-gk"),
+      playerId("player:home-saved-shooter"),
+      playerId("player:home-miss-shooter"),
+      playerId("player:away-blocked-shooter"),
     ],
   );
 });
 
-test("misses and blocks do not invent player shot stats without shooter IDs", () => {
+test("misses and blocks credit player shot stats when shooter IDs exist", () => {
+  const rows = computePlayerMatchStats({
+    report: {
+      ...reportWithEvents(),
+      events: [
+        {
+          type: "miss",
+          shot: shot("home", 7, false),
+          shooterPlayerId: playerId("player:home-miss-shooter"),
+        },
+        {
+          type: "block",
+          shot: shot("away", 8, false),
+          shooterPlayerId: playerId("player:away-blocked-shooter"),
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(rows, [
+    {
+      playerId: playerId("player:home-miss-shooter"),
+      side: "home",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 0,
+      saves: 0,
+    },
+    {
+      playerId: playerId("player:away-blocked-shooter"),
+      side: "away",
+      goals: 0,
+      assists: 0,
+      shots: 1,
+      shotsOnTarget: 0,
+      saves: 0,
+    },
+  ]);
+});
+
+test("non-goal shot events without shooter IDs stay ignored for shot stats", () => {
   const rows = computePlayerMatchStats({
     report: {
       ...reportWithEvents(),
@@ -218,6 +316,7 @@ function reportWithEvents(): MatchReport {
       {
         type: "save",
         shot: shot("home", 33, true),
+        shooterPlayerId: playerId("player:home-saved-shooter"),
         goalkeeperPlayerId: playerId("player:away-gk"),
       },
       {
@@ -228,10 +327,12 @@ function reportWithEvents(): MatchReport {
       {
         type: "miss",
         shot: shot("home", 70, false),
+        shooterPlayerId: playerId("player:home-miss-shooter"),
       },
       {
         type: "block",
         shot: shot("away", 76, false),
+        shooterPlayerId: playerId("player:away-blocked-shooter"),
       },
     ],
   };

@@ -43,15 +43,22 @@ test("same seed produces same CLI output", async () => {
   assert.deepEqual(first.stdoutLines, second.stdoutLines);
 });
 
-test("simulate-season prints a real top scorer", async () => {
+test("simulate-season prints real season player summaries", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(["--seed=demo-001"], io);
   const topScorerLine = io.stdoutLines.find((line) => line.startsWith("Top scorer: "));
+  const topAssistLine = io.stdoutLines.find((line) => line.startsWith("Top assist: "));
+  const topGoalkeeperSavesLine = io.stdoutLines.find((line) => line.startsWith("Top goalkeeper saves: "));
 
   assert.equal(exitCode, 0);
   assert.notEqual(topScorerLine, undefined);
   assert.notEqual(topScorerLine, "Top scorer: unavailable in aggregate engine v1");
   assert.match(topScorerLine ?? "", /^Top scorer: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ goals$/);
+  assert.match(topAssistLine ?? "", /^Top assist: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ assists?$/);
+  assert.match(
+    topGoalkeeperSavesLine ?? "",
+    /^Top goalkeeper saves: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ saves?$/,
+  );
 });
 
 test("simulate-season can print one round's fixture results", async () => {
@@ -79,14 +86,36 @@ test("simulate-season can print one fixture's structured match detail", async ()
 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
-  assert.equal(io.stdoutLines.includes("Fixture detail:"), true);
+  assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
+  assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
+  assert.equal(io.stdoutLines.includes("Fixture: fixture:000001"), true);
+  assert.equal(io.stdoutLines.includes("Competition: Demo Third Division"), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), false);
+  assert.equal(io.stdoutLines.some((line) => line.startsWith("Top scorer: ")), false);
+  assert.equal(io.stdoutLines.some((line) => line.startsWith("Top assist: ")), false);
+  assert.equal(io.stdoutLines.some((line) => line.startsWith("Top goalkeeper saves: ")), false);
   assert.equal(io.stdoutLines.includes("fixture:000001 PRO04 5-0 PRO18"), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.some((line) => / GOAL PRO[0-9]{2} Player[0-9]{2} No[0-9]{2}.* shot=[a-z_]+ chance=[a-z_]+$/.test(line)), true);
   assert.equal(io.stdoutLines.some((line) => / SAVE PRO[0-9]{2} Player[0-9]{2} No[0-9]{2} vs PRO[0-9]{2} shot=[a-z_]+ chance=[a-z_]+$/.test(line)), true);
-  assert.equal(io.stdoutLines.includes("Player stats:"), true);
+  assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
   assert.equal(io.stdoutLines.includes("  Player              Club  G A Sh SoT Sv"), true);
   assert.equal(io.stdoutLines.some((line) => /^  Player[0-9]{2} No[0-9]{2}\s+PRO[0-9]{2}\s+/.test(line)), true);
+  assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
+  assert.equal(io.stdoutLines.includes("  Player04 No09       PRO04 1 1  2   1  0"), true);
+  assert.equal(io.stdoutLines.includes("  Player04 No05       PRO04 0 0  0   0  0"), true);
+  assert.equal(io.stdoutLines.includes("  Player18 No05       PRO18 0 0  0   0  0"), true);
+});
+
+test("simulate-season keeps the round output as the season view", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--round=1"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stdoutLines.includes("The Long Season simulated season"), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), true);
+  assert.equal(io.stdoutLines.includes("Round 1 fixtures:"), true);
+  assert.equal(io.stdoutLines.includes("The Long Season fixture detail"), false);
 });
 
 test("same seed and fixture produce same structured match detail output", async () => {
@@ -160,4 +189,11 @@ function captureIo() {
       stderrLines.push(line);
     },
   };
+}
+
+/**
+ * Extracts rendered player-stat rows from fixture detail command output.
+ */
+function fixturePlayerStatLines(lines: readonly string[]): readonly string[] {
+  return lines.filter((line) => /^  Player[0-9]{2} No[0-9]{2}\s+PRO[0-9]{2}\s+[0-9]/.test(line));
 }

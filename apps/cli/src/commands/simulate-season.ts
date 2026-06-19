@@ -8,6 +8,7 @@ import {
   simulateSeason,
   type LineupSlot,
   type MatchTacticalDistributionInput,
+  type PlayerMatchStatRegistration,
   type PlayerMatchStatRow,
   type RoleWeightProfile,
   type TeamStrength,
@@ -57,18 +58,20 @@ export async function runSimulateSeasonCommand(
     return 1;
   }
 
+  if (parsed.fixtureId !== undefined) {
+    for (const line of formatFixtureOnlyOutput(league, result, parsed.seed, parsed.fixtureId)) {
+      io.stdout(line);
+    }
+
+    return 0;
+  }
+
   for (const line of formatSeasonOutput(league, result, parsed.seed)) {
     io.stdout(line);
   }
 
   if (parsed.roundNumber !== undefined) {
     for (const line of formatRoundOutput(league, result, parsed.roundNumber)) {
-      io.stdout(line);
-    }
-  }
-
-  if (parsed.fixtureId !== undefined) {
-    for (const line of formatFixtureDetailOutput(league, result, parsed.fixtureId)) {
       io.stdout(line);
     }
   }
@@ -230,6 +233,7 @@ function simulateSeasonForCli(league: FakeLeagueSystem, seed: string): CliSeason
     bestDefense: result.bestDefense,
     worstAttack: result.worstAttack,
     playerGoalStats: result.playerGoalStats,
+    playerSummaryStats: result.playerSummaryStats,
   };
 }
 
@@ -263,6 +267,25 @@ function formatRoundOutput(league: FakeLeagueSystem, result: CliSeasonResult, ro
 }
 
 /**
+ * Formats a fixture-focused command output without the full season table.
+ */
+function formatFixtureOnlyOutput(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  seed: string,
+  fixtureValue: string,
+): readonly string[] {
+  return [
+    "The Long Season fixture detail",
+    `Seed: ${seed}`,
+    `Fixture: ${fixtureValue}`,
+    `Competition: ${league.competition.name}`,
+    "",
+    ...formatFixtureDetailOutput(league, result, fixtureValue),
+  ];
+}
+
+/**
  * Formats rich structured detail for one requested fixture.
  */
 function formatFixtureDetailOutput(league: FakeLeagueSystem, result: CliSeasonResult, fixtureValue: string): readonly string[] {
@@ -273,7 +296,7 @@ function formatFixtureDetailOutput(league: FakeLeagueSystem, result: CliSeasonRe
   }
 
   const report = fixture.result?.report;
-  const lines = ["", `Fixture detail:`, formatFixtureResult(fixture, league)];
+  const lines = [formatFixtureResult(fixture, league)];
 
   if (report === undefined) {
     lines.push("Events: unavailable");
@@ -290,7 +313,7 @@ function formatFixtureDetailOutput(league: FakeLeagueSystem, result: CliSeasonRe
     lines.push(...eventLines);
   }
 
-  lines.push("Player stats:");
+  lines.push("Player stats (all starters):");
 
   const statLines = formatFixturePlayerStats(fixture, league);
   if (statLines.length === 0) {
@@ -408,7 +431,43 @@ function formatFixturePlayerStats(fixture: Fixture, league: FakeLeagueSystem): r
     return [];
   }
 
-  return computePlayerMatchStats({ report, sortBy: "contribution" }).map((row) => formatPlayerMatchStatRow(row, fixture, league));
+  return computePlayerMatchStats({
+    report,
+    playerRegistrations: fixturePlayerRegistrations(fixture, league),
+    sortBy: "contribution",
+  }).map((row) => formatPlayerMatchStatRow(row, fixture, league));
+}
+
+/**
+ * Builds explicit fixture player registrations from the fake home and away lineups.
+ */
+function fixturePlayerRegistrations(fixture: Fixture, league: FakeLeagueSystem): readonly PlayerMatchStatRegistration[] {
+  const registrations: PlayerMatchStatRegistration[] = [];
+
+  appendLineupRegistrations(registrations, league.lineupsByClubId[fixture.homeClubId], "home");
+  appendLineupRegistrations(registrations, league.lineupsByClubId[fixture.awayClubId], "away");
+
+  return registrations;
+}
+
+/**
+ * Appends one side's lineup to the explicit player-registration list.
+ */
+function appendLineupRegistrations(
+  registrations: PlayerMatchStatRegistration[],
+  lineup: readonly LineupSlot[] | undefined,
+  side: MatchEventSide,
+): void {
+  if (lineup === undefined) {
+    return;
+  }
+
+  for (const slot of lineup) {
+    registrations.push({
+      playerId: slot.playerId,
+      side,
+    });
+  }
 }
 
 /**
@@ -538,6 +597,14 @@ function formatSeasonOutput(league: FakeLeagueSystem, result: CliSeasonResult, s
 
   lines.push("");
   lines.push(`Top scorer: ${formatTopScorer(result.playerGoalStats[0], league.players, league.clubsById)}`);
+  lines.push(`Top assist: ${formatTopAssist(topPlayerByMetric(result.playerSummaryStats, "assists"), league.players, league.clubsById)}`);
+  lines.push(
+    `Top goalkeeper saves: ${formatTopGoalkeeperSaves(
+      topPlayerByMetric(result.playerSummaryStats, "saves"),
+      league.players,
+      league.clubsById,
+    )}`,
+  );
   lines.push(`Best defense: ${formatSummaryRow(result.bestDefense, league.clubsById, "GA")}`);
   lines.push(`Worst attack: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF")}`);
 
@@ -566,6 +633,32 @@ function formatTableRow(row: LeagueTableRow, clubsById: Readonly<Record<ClubId, 
 }
 
 /**
+ * Finds the top season player row for one current player-counted metric.
+ */
+function topPlayerByMetric(
+  rows: readonly SeasonPlayerSummaryStatRow[],
+  metric: "assists" | "saves",
+): SeasonPlayerSummaryStatRow | undefined {
+  let best: SeasonPlayerSummaryStatRow | undefined;
+
+  for (const row of rows) {
+    if (row[metric] === 0) {
+      continue;
+    }
+
+    if (
+      best === undefined ||
+      row[metric] > best[metric] ||
+      (row[metric] === best[metric] && comparePlayerIdsAscending(row.playerId, best.playerId) < 0)
+    ) {
+      best = row;
+    }
+  }
+
+  return best;
+}
+
+/**
  * Formats the top scorer summary from engine-derived player goal stats.
  */
 function formatTopScorer(
@@ -578,6 +671,36 @@ function formatTopScorer(
   }
 
   return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatGoalCount(row.goals)}`;
+}
+
+/**
+ * Formats the top assist-provider summary from engine-derived season stats.
+ */
+function formatTopAssist(
+  row: SeasonPlayerSummaryStatRow | undefined,
+  players: FakeLeagueSystem["players"],
+  clubsById: Readonly<Record<ClubId, Club>>,
+): string {
+  if (row === undefined) {
+    return "unavailable";
+  }
+
+  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatAssistCount(row.assists)}`;
+}
+
+/**
+ * Formats the top goalkeeper-save summary from engine-derived season stats.
+ */
+function formatTopGoalkeeperSaves(
+  row: SeasonPlayerSummaryStatRow | undefined,
+  players: FakeLeagueSystem["players"],
+  clubsById: Readonly<Record<ClubId, Club>>,
+): string {
+  if (row === undefined) {
+    return "unavailable";
+  }
+
+  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatSaveCount(row.saves)}`;
 }
 
 /**
@@ -594,10 +717,42 @@ function playerLabel(playerId: PlayerId, players: FakeLeagueSystem["players"]): 
 }
 
 /**
+ * Compares player IDs by stable ASCII/code-unit order.
+ */
+function comparePlayerIdsAscending(first: PlayerId, second: PlayerId): number {
+  const firstValue = String(first);
+  const secondValue = String(second);
+
+  if (firstValue < secondValue) {
+    return -1;
+  }
+
+  if (firstValue > secondValue) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
  * Formats a goal count with a stable singular/plural suffix.
  */
 function formatGoalCount(goals: number): string {
   return `${goals} ${goals === 1 ? "goal" : "goals"}`;
+}
+
+/**
+ * Formats an assist count with a stable singular/plural suffix.
+ */
+function formatAssistCount(assists: number): string {
+  return `${assists} ${assists === 1 ? "assist" : "assists"}`;
+}
+
+/**
+ * Formats a goalkeeper-save count with a stable singular/plural suffix.
+ */
+function formatSaveCount(saves: number): string {
+  return `${saves} ${saves === 1 ? "save" : "saves"}`;
 }
 
 /**
@@ -679,6 +834,7 @@ interface CliSeasonResult {
   readonly bestDefense: LeagueTableRow | undefined;
   readonly worstAttack: LeagueTableRow | undefined;
   readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
+  readonly playerSummaryStats: readonly SeasonPlayerSummaryStatRow[];
 }
 
 /** Club ID type derived from fake content without importing domain directly. */
@@ -695,6 +851,9 @@ type LeagueTableRow = ReturnType<typeof simulateSeason>["table"][number];
 
 /** Player goal stat row type derived from the exported season simulation. */
 type SeasonPlayerGoalStatRow = ReturnType<typeof simulateSeason>["playerGoalStats"][number];
+
+/** Player summary stat row type derived from the exported season simulation. */
+type SeasonPlayerSummaryStatRow = ReturnType<typeof simulateSeason>["playerSummaryStats"][number];
 
 /** Round type derived from the exported season simulation. */
 type Round = ReturnType<typeof simulateSeason>["rounds"][number];

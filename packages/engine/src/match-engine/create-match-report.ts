@@ -87,12 +87,12 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
         throw new Error("Save match event requires goalkeeperPlayerId");
       }
 
-      return { type: "save", shot, goalkeeperPlayerId: event.goalkeeperPlayerId };
+      return { type: "save", shot, shooterPlayerId: event.shooterPlayerId, goalkeeperPlayerId: event.goalkeeperPlayerId };
     }
     case "miss":
-      return { type: "miss", shot };
+      return { type: "miss", shot, shooterPlayerId: event.shooterPlayerId };
     case "block":
-      return { type: "block", shot };
+      return { type: "block", shot, shooterPlayerId: event.shooterPlayerId };
   }
 }
 

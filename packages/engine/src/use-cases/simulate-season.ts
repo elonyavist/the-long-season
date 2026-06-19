@@ -24,7 +24,9 @@ import { generateRoundRobinCalendar } from "../season-engine/calendar.ts";
 import { computeLeagueTable } from "../season-engine/league-table.ts";
 import {
   computeSeasonPlayerGoalStats,
+  computeSeasonPlayerSummaryStats,
   type SeasonPlayerGoalStatRow,
+  type SeasonPlayerSummaryStatRow,
   type SeasonPlayerStatRegistration,
 } from "../season-engine/player-stats.ts";
 import {
@@ -84,6 +86,8 @@ export interface SimulateSeasonResult {
   readonly worstAttack: LeagueTableRow | undefined;
   /** Derived player goal statistics for the simulated season. */
   readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
+  /** Derived player summary statistics for currently supported season facts. */
+  readonly playerSummaryStats: readonly SeasonPlayerSummaryStatRow[];
 }
 
 /** Error categories exposed by season simulation. */
@@ -140,6 +144,8 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     rules: input.tableRules,
   });
 
+  const registeredPlayers = playerRegistrations(input);
+
   return {
     rounds: calendar.rounds,
     fixtureIds: state.fixtureIds,
@@ -150,7 +156,12 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     playerGoalStats: computeSeasonPlayerGoalStats({
       fixtures: state.fixtures,
       fixtureIds: state.fixtureIds,
-      playerRegistrations: playerRegistrations(input),
+      playerRegistrations: registeredPlayers,
+    }),
+    playerSummaryStats: computeSeasonPlayerSummaryStats({
+      fixtures: state.fixtures,
+      fixtureIds: state.fixtureIds,
+      playerRegistrations: registeredPlayers,
     }),
   };
 }

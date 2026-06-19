@@ -35,8 +35,8 @@ test("report contains event schema version", () => {
   assert.equal(report.eventSchemaVersion, MATCH_EVENT_SCHEMA_VERSION);
 });
 
-test("match event schema version is bumped for goalkeeper save IDs", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 5);
+test("match event schema version is bumped for non-goal shooter IDs", () => {
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 6);
 });
 
 test("report preserves goal scorer IDs", () => {
@@ -66,6 +66,22 @@ test("report preserves save goalkeeper IDs", () => {
   assert.deepEqual(
     saveEvents.map((event) => event.goalkeeperPlayerId),
     [playerId("player:home-gk")],
+  );
+});
+
+test("report preserves non-goal shot shooter IDs", () => {
+  const report = createMatchReport(simulatedResultWithGoals());
+  const shotEvents = report.events.filter((event) =>
+    event.type === "save" || event.type === "miss" || event.type === "block"
+  );
+
+  assert.deepEqual(
+    shotEvents.map((event) => event.shooterPlayerId),
+    [
+      playerId("player:away-shooter"),
+      playerId("player:home-shooter"),
+      playerId("player:home-blocked-shooter"),
+    ],
   );
 });
 
@@ -221,6 +237,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "counter",
+        shooterPlayerId: playerId("player:away-shooter"),
         goalkeeperPlayerId: playerId("player:home-gk"),
       },
       {
@@ -232,6 +249,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: false,
         shotType: "normal",
         chanceType: "open_play",
+        shooterPlayerId: playerId("player:home-shooter"),
       },
       {
         type: "half_time",
@@ -250,6 +268,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: false,
         shotType: "header",
         chanceType: "cross",
+        shooterPlayerId: playerId("player:home-blocked-shooter"),
       },
       {
         type: "shot_outcome",

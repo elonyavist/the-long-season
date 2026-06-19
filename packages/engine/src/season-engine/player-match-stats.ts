@@ -73,16 +73,21 @@ export function computePlayerMatchStats(input: ComputePlayerMatchStatsInput): re
       }
 
       case "save": {
+        creditShot(rows, event.shooterPlayerId, event.shot.side, event.shot.isShotOnTarget);
+
         const goalkeeper = findOrCreateRow(rows, event.goalkeeperPlayerId, oppositeSide(event.shot.side));
         goalkeeper.saves += 1;
         break;
       }
 
       case "block":
+      case "miss":
+        creditShot(rows, event.shooterPlayerId, event.shot.side, event.shot.isShotOnTarget);
+        break;
+
       case "full_time":
       case "half_time":
       case "kickoff":
-      case "miss":
         break;
     }
   }
@@ -90,6 +95,24 @@ export function computePlayerMatchStats(input: ComputePlayerMatchStatsInput): re
   rows.sort(input.sortBy === "contribution" ? compareMutableRowsByContribution : compareMutableRowsBySideOrder);
 
   return rows.map(freezeRow);
+}
+
+/**
+ * Credits one shot to a player when the durable event identifies a shooter.
+ */
+function creditShot(
+  rows: MutablePlayerMatchStatRow[],
+  shooterPlayerId: PlayerId | undefined,
+  side: MatchEventSide,
+  isShotOnTarget: boolean,
+): void {
+  if (shooterPlayerId === undefined) {
+    return;
+  }
+
+  const shooter = findOrCreateRow(rows, shooterPlayerId, side);
+  shooter.shots += 1;
+  shooter.shotsOnTarget += isShotOnTarget ? 1 : 0;
 }
 
 /**

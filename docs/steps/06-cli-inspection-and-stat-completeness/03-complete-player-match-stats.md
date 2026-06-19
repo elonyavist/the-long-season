@@ -19,6 +19,8 @@ The stat helper should remain pure and report-derived. CLI, UI, and future save 
   - shots on target;
   - saves.
 - Count shots from all durable shot outcome events that identify a shooter.
+- Treat `scorerPlayerId` as the shooter for goal events in the current aggregate model.
+- Treat `shooterPlayerId` as the shooter for generated non-goal shot events.
 - Count shots on target from goals and saves, using durable event data.
 - Keep saves credited to the defending goalkeeper.
 - Preserve explicit zero-stat player registration behavior.

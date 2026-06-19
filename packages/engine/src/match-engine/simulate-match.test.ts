@@ -235,6 +235,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       isShotOnTarget: false,
       shotType: "normal",
       chanceType: "open_play",
+      shooterPlayerId: playerId("player:away-000001"),
     },
     {
       type: "shot_outcome",
@@ -245,6 +246,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       isShotOnTarget: false,
       shotType: "normal",
       chanceType: "open_play",
+      shooterPlayerId: playerId("player:home-000001"),
     },
     {
       type: "half_time",

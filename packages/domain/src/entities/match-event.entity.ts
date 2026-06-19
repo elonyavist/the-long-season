@@ -69,6 +69,8 @@ export interface SaveMatchEvent {
   readonly type: "save";
   /** Shared shot context. */
   readonly shot: ShotContext;
+  /** Attacking player credited with taking the saved shot in schema v6 reports. */
+  readonly shooterPlayerId?: PlayerId;
   /** Defending goalkeeper credited with the save. */
   readonly goalkeeperPlayerId: PlayerId;
 }
@@ -81,6 +83,8 @@ export interface MissMatchEvent {
   readonly type: "miss";
   /** Shared shot context. */
   readonly shot: ShotContext;
+  /** Attacking player credited with taking the missed shot in schema v6 reports. */
+  readonly shooterPlayerId?: PlayerId;
 }
 
 /**
@@ -91,6 +95,8 @@ export interface BlockMatchEvent {
   readonly type: "block";
   /** Shared shot context. */
   readonly shot: ShotContext;
+  /** Attacking player credited with taking the blocked shot in schema v6 reports. */
+  readonly shooterPlayerId?: PlayerId;
 }
 
 /**

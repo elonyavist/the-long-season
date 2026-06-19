@@ -81,6 +81,16 @@ test("season player goal stats match table goals", () => {
   assert.equal(result.playerGoalStats.length, 36);
 });
 
+test("season player summary stats match durable assist and save events", () => {
+  const result = simulateSeason(seasonInput("player-summary-seed"));
+  const totalSummaryAssists = result.playerSummaryStats.reduce((total, row) => total + row.assists, 0);
+  const totalSummarySaves = result.playerSummaryStats.reduce((total, row) => total + row.saves, 0);
+
+  assert.equal(result.playerSummaryStats.length, 36);
+  assert.equal(totalSummaryAssists, countAssists(result.fixtures));
+  assert.equal(totalSummarySaves, countSaves(result.fixtures));
+});
+
 /**
  * Builds deterministic season input with 18 synthetic team contexts.
  */
@@ -197,4 +207,50 @@ function findFixture(fixtures: readonly Fixture[], fixtureId: FixtureId): Fixtur
   }
 
   return undefined;
+}
+
+/**
+ * Counts durable assist IDs across simulated fixture reports.
+ */
+function countAssists(fixtures: readonly Fixture[]): number {
+  let total = 0;
+
+  for (const fixture of fixtures) {
+    const events = fixture.result?.report?.events;
+
+    if (events === undefined) {
+      continue;
+    }
+
+    for (const event of events) {
+      if (event.type === "goal" && event.assistPlayerId !== undefined) {
+        total += 1;
+      }
+    }
+  }
+
+  return total;
+}
+
+/**
+ * Counts durable goalkeeper-save IDs across simulated fixture reports.
+ */
+function countSaves(fixtures: readonly Fixture[]): number {
+  let total = 0;
+
+  for (const fixture of fixtures) {
+    const events = fixture.result?.report?.events;
+
+    if (events === undefined) {
+      continue;
+    }
+
+    for (const event of events) {
+      if (event.type === "save") {
+        total += 1;
+      }
+    }
+  }
+
+  return total;
 }

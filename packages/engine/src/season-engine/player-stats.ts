@@ -1,14 +1,20 @@
-import type { ClubId, Fixture, FixtureId, PlayerId } from "@game/domain";
+import type { ClubId, Fixture, FixtureId, MatchEventSide, PlayerId } from "@game/domain";
 
 /**
- * Minimum season-level player goal statistics.
+ * Minimum season-level player statistics.
  *
  * These rows are derived data, not persisted state. They intentionally include
- * only player ID, club ID, and goals until later steps add richer match detail.
+ * only the current durable match-event facts that have season-level meaning.
  */
 
 /** Minimum durable match-event schema version that carries scorer IDs. */
 const MIN_SCORER_MATCH_EVENT_SCHEMA_VERSION = 2;
+
+/** Minimum durable match-event schema version that carries assist IDs. */
+const MIN_ASSIST_MATCH_EVENT_SCHEMA_VERSION = 4;
+
+/** Minimum durable match-event schema version that carries goalkeeper save IDs. */
+const MIN_GOALKEEPER_SAVE_MATCH_EVENT_SCHEMA_VERSION = 5;
 
 /**
  * Explicit registration for one player in a season-stat table.
@@ -33,6 +39,22 @@ export interface SeasonPlayerGoalStatRow {
 }
 
 /**
+ * One season player summary row for current durable player-counted stats.
+ */
+export interface SeasonPlayerSummaryStatRow {
+  /** Player whose season events are counted. */
+  readonly playerId: PlayerId;
+  /** Club associated with this player's current fixed-lineup season. */
+  readonly clubId: ClubId;
+  /** Goals scored by this player across structured match reports. */
+  readonly goals: number;
+  /** Assists credited to this player across structured match reports. */
+  readonly assists: number;
+  /** Goalkeeper saves credited to this player across structured match reports. */
+  readonly saves: number;
+}
+
+/**
  * Input for deterministic season player-goal aggregation.
  */
 export interface ComputeSeasonPlayerGoalStatsInput {
@@ -45,12 +67,42 @@ export interface ComputeSeasonPlayerGoalStatsInput {
 }
 
 /**
+ * Input for deterministic season player-summary aggregation.
+ */
+export interface ComputeSeasonPlayerSummaryStatsInput {
+  /** Fixture lookup table keyed by fixture ID. */
+  readonly fixtures: Readonly<Record<FixtureId, Fixture>>;
+  /** Explicit ordered fixture IDs to read. */
+  readonly fixtureIds: readonly FixtureId[];
+  /** Optional explicit players to include even when their totals are zero. */
+  readonly playerRegistrations?: readonly SeasonPlayerStatRegistration[];
+}
+
+/**
  * Aggregates player goals from durable `MatchReport` goal events.
  *
  * @example
  * const rows = computeSeasonPlayerGoalStats({ fixtures, fixtureIds, playerRegistrations });
  */
 export function computeSeasonPlayerGoalStats(input: ComputeSeasonPlayerGoalStatsInput): readonly SeasonPlayerGoalStatRow[] {
+  const rows = computeSeasonPlayerSummaryStats(input).map(({ playerId, clubId, goals }) => ({
+    playerId,
+    clubId,
+    goals,
+  }));
+
+  return [...rows].sort(compareGoalRows);
+}
+
+/**
+ * Aggregates current player-counted season stats from durable `MatchReport` events.
+ *
+ * @example
+ * const rows = computeSeasonPlayerSummaryStats({ fixtures, fixtureIds, playerRegistrations });
+ */
+export function computeSeasonPlayerSummaryStats(
+  input: ComputeSeasonPlayerSummaryStatsInput,
+): readonly SeasonPlayerSummaryStatRow[] {
   const rows = initialRows(input.playerRegistrations ?? []);
 
   for (const fixtureId of input.fixtureIds) {
@@ -62,26 +114,48 @@ export function computeSeasonPlayerGoalStats(input: ComputeSeasonPlayerGoalStats
     }
 
     for (const event of report.events) {
-      if (event.type !== "goal") {
-        continue;
-      }
+      switch (event.type) {
+        case "goal": {
+          const scoringClubId = sideClubId(fixture, event.shot.side);
+          findOrCreateRow(rows, event.scorerPlayerId, scoringClubId).goals += 1;
 
-      const scoringClubId = event.shot.side === "home" ? fixture.homeClubId : fixture.awayClubId;
-      const row = findOrCreateRow(rows, event.scorerPlayerId, scoringClubId);
-      row.goals += 1;
+          if (report.eventSchemaVersion >= MIN_ASSIST_MATCH_EVENT_SCHEMA_VERSION && event.assistPlayerId !== undefined) {
+            findOrCreateRow(rows, event.assistPlayerId, scoringClubId).assists += 1;
+          }
+
+          break;
+        }
+
+        case "save": {
+          if (report.eventSchemaVersion < MIN_GOALKEEPER_SAVE_MATCH_EVENT_SCHEMA_VERSION) {
+            break;
+          }
+
+          const defendingClubId = sideClubId(fixture, oppositeSide(event.shot.side));
+          findOrCreateRow(rows, event.goalkeeperPlayerId, defendingClubId).saves += 1;
+          break;
+        }
+
+        case "block":
+        case "full_time":
+        case "half_time":
+        case "kickoff":
+        case "miss":
+          break;
+      }
     }
   }
 
-  rows.sort(compareMutableRows);
+  rows.sort(compareSummaryRows);
 
-  return rows.map(freezeRow);
+  return rows.map(freezeSummaryRow);
 }
 
 /**
  * Creates mutable rows from explicit player registrations.
  */
-function initialRows(registrations: readonly SeasonPlayerStatRegistration[]): MutableSeasonPlayerGoalStatRow[] {
-  const rows: MutableSeasonPlayerGoalStatRow[] = [];
+function initialRows(registrations: readonly SeasonPlayerStatRegistration[]): MutableSeasonPlayerSummaryStatRow[] {
+  const rows: MutableSeasonPlayerSummaryStatRow[] = [];
 
   for (const registration of registrations) {
     if (findRow(rows, registration.playerId) !== undefined) {
@@ -92,6 +166,8 @@ function initialRows(registrations: readonly SeasonPlayerStatRegistration[]): Mu
       playerId: registration.playerId,
       clubId: registration.clubId,
       goals: 0,
+      assists: 0,
+      saves: 0,
     });
   }
 
@@ -102,10 +178,10 @@ function initialRows(registrations: readonly SeasonPlayerStatRegistration[]): Mu
  * Finds an existing row or creates one for an unregistered scorer.
  */
 function findOrCreateRow(
-  rows: MutableSeasonPlayerGoalStatRow[],
+  rows: MutableSeasonPlayerSummaryStatRow[],
   playerId: PlayerId,
   clubId: ClubId,
-): MutableSeasonPlayerGoalStatRow {
+): MutableSeasonPlayerSummaryStatRow {
   const existing = findRow(rows, playerId);
 
   if (existing !== undefined) {
@@ -116,6 +192,8 @@ function findOrCreateRow(
     playerId,
     clubId,
     goals: 0,
+    assists: 0,
+    saves: 0,
   };
   rows.push(created);
 
@@ -126,9 +204,9 @@ function findOrCreateRow(
  * Finds one mutable player-stat row by player ID.
  */
 function findRow(
-  rows: readonly MutableSeasonPlayerGoalStatRow[],
+  rows: readonly MutableSeasonPlayerSummaryStatRow[],
   playerId: PlayerId,
-): MutableSeasonPlayerGoalStatRow | undefined {
+): MutableSeasonPlayerSummaryStatRow | undefined {
   for (const row of rows) {
     if (row.playerId === playerId) {
       return row;
@@ -139,12 +217,24 @@ function findRow(
 }
 
 /**
- * Compares player goal rows with a deterministic final tie-breaker.
+ * Compares player summary rows with a deterministic final tie-breaker.
  */
-function compareMutableRows(
-  first: MutableSeasonPlayerGoalStatRow,
-  second: MutableSeasonPlayerGoalStatRow,
+function compareSummaryRows(
+  first: MutableSeasonPlayerSummaryStatRow,
+  second: MutableSeasonPlayerSummaryStatRow,
 ): number {
+  return (
+    compareDescending(first.goals, second.goals) ||
+    compareDescending(first.assists, second.assists) ||
+    compareDescending(first.saves, second.saves) ||
+    comparePlayerIdsAscending(first.playerId, second.playerId)
+  );
+}
+
+/**
+ * Compares public goal rows with a deterministic final tie-breaker.
+ */
+function compareGoalRows(first: SeasonPlayerGoalStatRow, second: SeasonPlayerGoalStatRow): number {
   return compareDescending(first.goals, second.goals) || comparePlayerIdsAscending(first.playerId, second.playerId);
 }
 
@@ -174,19 +264,37 @@ function comparePlayerIdsAscending(first: PlayerId, second: PlayerId): number {
 }
 
 /**
- * Freezes one mutable accumulator into the public row shape.
+ * Returns the fixture club ID for one match side.
  */
-function freezeRow(row: MutableSeasonPlayerGoalStatRow): SeasonPlayerGoalStatRow {
+function sideClubId(fixture: Fixture, side: MatchEventSide): ClubId {
+  return side === "home" ? fixture.homeClubId : fixture.awayClubId;
+}
+
+/**
+ * Returns the opposite side of a persisted match event.
+ */
+function oppositeSide(side: MatchEventSide): MatchEventSide {
+  return side === "home" ? "away" : "home";
+}
+
+/**
+ * Freezes one mutable accumulator into the public summary row shape.
+ */
+function freezeSummaryRow(row: MutableSeasonPlayerSummaryStatRow): SeasonPlayerSummaryStatRow {
   return {
     playerId: row.playerId,
     clubId: row.clubId,
     goals: row.goals,
+    assists: row.assists,
+    saves: row.saves,
   };
 }
 
 /**
- * Mutable accumulator used internally while aggregating player goals.
+ * Mutable accumulator used internally while aggregating player season summaries.
  */
-interface MutableSeasonPlayerGoalStatRow extends SeasonPlayerGoalStatRow {
+interface MutableSeasonPlayerSummaryStatRow extends SeasonPlayerSummaryStatRow {
   goals: number;
+  assists: number;
+  saves: number;
 }

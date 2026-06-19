@@ -152,6 +152,30 @@ test("save step events include the defending goalkeeper", () => {
   }
 });
 
+test("non-goal step events include a shooter from the attacking side lineup", () => {
+  const context = {
+    ...validContext({
+      baseOpportunityRatePerMinute: 1,
+      maxOpportunityRatePerMinute: 1,
+    }),
+    home: goalkeeperTeam("home"),
+    away: goalkeeperTeam("away"),
+  };
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "miss", quality: 0.8, isShotOnTarget: false }),
+  });
+  const shotEvents = result.events.filter((event) => event.type === "shot_outcome" && event.outcome !== "goal");
+
+  assert.equal(shotEvents.length, 2);
+
+  for (const event of shotEvents) {
+    const expectedShooterId = event.side === "home" ? playerId("player:home-field") : playerId("player:away-field");
+    assert.equal(event.shooterPlayerId, expectedShooterId);
+  }
+});
+
 test("save step events fail clearly when the defending team has no goalkeeper", () => {
   const context = validContext({
     baseOpportunityRatePerMinute: 1,
@@ -207,7 +231,7 @@ test("goal step events can include deterministic assist attribution", () => {
   );
 });
 
-test("non-goal step events do not include scorer attribution", () => {
+test("non-goal step events include shooter attribution without scorer attribution", () => {
   const context = validContext({
     baseOpportunityRatePerMinute: 1,
     maxOpportunityRatePerMinute: 1,
@@ -223,6 +247,7 @@ test("non-goal step events do not include scorer attribution", () => {
 
   for (const event of shotEvents) {
     assert.equal("scorerPlayerId" in event, false);
+    assert.equal("shooterPlayerId" in event, true);
   }
 });
 

@@ -15,6 +15,7 @@ import {
   type MatchSimulationStats,
 } from "./match-simulation-state.ts";
 import type { OccasionOutcome, OccasionResolver, OccasionResolution } from "./occasion-resolver.ts";
+import { attributeShotTaker } from "./shot-attribution.ts";
 
 /**
  * Sparse event emitted by one `stepMatch` call.
@@ -89,6 +90,8 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /** Player from the attacking side lineup credited with taking this shot. */
+  readonly shooterPlayerId: PlayerId;
   /** Defending goalkeeper credited with the save, only for save outcomes. */
   readonly goalkeeperPlayerId?: PlayerId;
 }
@@ -192,13 +195,14 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
 
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
     const scoreBeforeGoal = nextScore;
+    const shotContext = deriveShotContext(input.simulation, currentMinute, attackingSide, resolution.quality);
     let scorerPlayerId: PlayerId | undefined;
     let assistPlayerId: PlayerId | undefined;
+    let shooterPlayerId: PlayerId | undefined;
     let goalkeeperPlayerId: PlayerId | undefined;
 
     if (resolution.outcome === "goal") {
       const team = teamBySide(input.simulation, attackingSide);
-      const shotContext = deriveShotContext(input.simulation, currentMinute, attackingSide, resolution.quality);
       scorerPlayerId = attributeGoal({
         seed: input.simulation.context.seed,
         fixtureId: input.simulation.context.fixtureId,
@@ -219,6 +223,18 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
         chanceType: shotContext.chanceType,
       }).assistPlayerId;
       nextScore = applyGoalToScore(nextScore, attackingSide);
+    } else {
+      shooterPlayerId = attributeShotTaker({
+        seed: input.simulation.context.seed,
+        fixtureId: input.simulation.context.fixtureId,
+        minute: currentMinute,
+        side: attackingSide,
+        scoreBeforeShot: scoreBeforeGoal,
+        team: teamBySide(input.simulation, attackingSide),
+        outcome: resolution.outcome,
+        shotType: shotContext.shotType,
+        chanceType: shotContext.chanceType,
+      }).shooterPlayerId;
     }
 
     if (resolution.outcome === "save") {
@@ -229,12 +245,13 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
 
     events.push(
       createShotOutcomeEvent(
-        input.simulation,
         currentMinute,
         attackingSide,
         resolution,
+        shotContext,
         scorerPlayerId,
         assistPlayerId,
+        shooterPlayerId,
         goalkeeperPlayerId,
       ),
     );
@@ -352,16 +369,15 @@ function applyOccasionToStats(
  * Builds a typed shot-outcome event from one aggregate resolution.
  */
 function createShotOutcomeEvent(
-  simulation: MatchSimulationState,
   minute: number,
   side: MatchSide,
   resolution: OccasionResolution,
+  shotContext: { readonly shotType: ShotType; readonly chanceType: ShotChanceType },
   scorerPlayerId: PlayerId | undefined,
   assistPlayerId: PlayerId | undefined,
+  shooterPlayerId: PlayerId | undefined,
   goalkeeperPlayerId: PlayerId | undefined,
 ): MatchShotOutcomeStepEvent {
-  const shotContext = deriveShotContext(simulation, minute, side, resolution.quality);
-
   if (resolution.outcome === "goal") {
     if (scorerPlayerId === undefined) {
       throw new Error("Goal step event requires scorerPlayerId");
@@ -381,6 +397,10 @@ function createShotOutcomeEvent(
     };
   }
 
+  if (shooterPlayerId === undefined) {
+    throw new Error("Non-goal shot step event requires shooterPlayerId");
+  }
+
   return {
     type: "shot_outcome",
     minute,
@@ -390,6 +410,7 @@ function createShotOutcomeEvent(
     isShotOnTarget: resolution.isShotOnTarget,
     shotType: shotContext.shotType,
     chanceType: shotContext.chanceType,
+    shooterPlayerId,
     ...(goalkeeperPlayerId === undefined ? {} : { goalkeeperPlayerId }),
   };
 }
