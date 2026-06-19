@@ -54,6 +54,43 @@ test("simulate-season prints a real top scorer", async () => {
   assert.match(topScorerLine ?? "", /^Top scorer: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ goals$/);
 });
 
+test("simulate-season can print one round's fixture results", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--round=1"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stdoutLines.includes("Round 1 fixtures:"), true);
+  assert.equal(io.stdoutLines.some((line) => /^fixture:[0-9]{6} PRO[0-9]{2} [0-9]+-[0-9]+ PRO[0-9]{2}$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => line.startsWith("  Scorers: ")), true);
+});
+
+test("same seed and round produce same fixture detail output", async () => {
+  const first = captureIo();
+  const second = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--seed=repeatable-round", "--round=2"], first), 0);
+  assert.equal(await runSimulateSeasonCommand(["--seed=repeatable-round", "--round=2"], second), 0);
+  assert.deepEqual(first.stdoutLines, second.stdoutLines);
+});
+
+test("simulate-season rejects invalid round arguments", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--round=abc"], io);
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0], "--round requires a positive integer value");
+});
+
+test("simulate-season exits nonzero for a missing round", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--round=999"], io);
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0], "Round not found: 999");
+});
+
 test("simulate-season exits nonzero on invalid args", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(["--unknown"], io);

@@ -38,15 +38,26 @@ export async function runSimulateSeasonCommand(
 
   if (!parsed.ok) {
     io.stderr(parsed.message);
-    io.stderr("Usage: pnpm cli simulate-season [--seed=<seed>]");
+    io.stderr("Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>]");
     return 1;
   }
 
   const league = createFakeLeagueSystem();
   const result = simulateSeasonForCli(league, parsed.seed);
 
+  if (parsed.roundNumber !== undefined && findRound(result.rounds, parsed.roundNumber) === undefined) {
+    io.stderr(`Round not found: ${parsed.roundNumber}`);
+    return 1;
+  }
+
   for (const line of formatSeasonOutput(league, result, parsed.seed)) {
     io.stdout(line);
+  }
+
+  if (parsed.roundNumber !== undefined) {
+    for (const line of formatRoundOutput(league, result, parsed.roundNumber)) {
+      io.stdout(line);
+    }
   }
 
   return 0;
@@ -67,6 +78,7 @@ function defaultIo(): SimulateSeasonCommandIo {
  */
 function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let seed = DEFAULT_SIMULATE_SEASON_SEED;
+  let roundNumber: number | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -98,10 +110,49 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--round") {
+      const value = args[index + 1];
+      const parsedRound = parseRoundNumber(value);
+
+      if (!parsedRound.ok) {
+        return parsedRound;
+      }
+
+      roundNumber = parsedRound.roundNumber;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--round=")) {
+      const parsedRound = parseRoundNumber(arg.slice("--round=".length));
+
+      if (!parsedRound.ok) {
+        return parsedRound;
+      }
+
+      roundNumber = parsedRound.roundNumber;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed };
+  return { ok: true, seed, roundNumber };
+}
+
+/**
+ * Parses one positive round number argument.
+ */
+function parseRoundNumber(value: string | undefined): ParsedRoundNumber {
+  if (value === undefined || value.length === 0) {
+    return { ok: false, message: "--round requires a positive integer value" };
+  }
+
+  if (!/^[1-9][0-9]*$/.test(value)) {
+    return { ok: false, message: "--round requires a positive integer value" };
+  }
+
+  return { ok: true, roundNumber: Number(value) };
 }
 
 /**
@@ -120,11 +171,106 @@ function simulateSeasonForCli(league: FakeLeagueSystem, seed: string): CliSeason
   });
 
   return {
+    rounds: result.rounds,
+    fixtures: result.fixtures,
     table: result.table,
     bestDefense: result.bestDefense,
     worstAttack: result.worstAttack,
     playerGoalStats: result.playerGoalStats,
   };
+}
+
+/**
+ * Formats fixture result details for one requested round.
+ */
+function formatRoundOutput(league: FakeLeagueSystem, result: CliSeasonResult, roundNumber: number): readonly string[] {
+  const round = findRound(result.rounds, roundNumber);
+
+  if (round === undefined) {
+    return ["", `Round ${roundNumber} fixtures: unavailable`];
+  }
+
+  const lines = ["", `Round ${round.roundNumber} fixtures:`];
+
+  for (const fixtureId of round.fixtureIds) {
+    const fixture = findFixture(result.fixtures, fixtureId);
+
+    if (fixture === undefined) {
+      lines.push(`${fixtureId} unavailable`);
+      continue;
+    }
+
+    lines.push(formatFixtureResult(fixture, league));
+
+    const scorers = formatFixtureScorers(fixture, league);
+    lines.push(`  Scorers: ${scorers.length === 0 ? "none" : scorers.join("; ")}`);
+  }
+
+  return lines;
+}
+
+/**
+ * Formats one fixture result line.
+ */
+function formatFixtureResult(fixture: Fixture, league: FakeLeagueSystem): string {
+  const result = fixture.result;
+  const score = result === undefined ? "vs" : `${result.homeGoals}-${result.awayGoals}`;
+
+  return [
+    String(fixture.id),
+    clubLabel(fixture.homeClubId, league.clubsById),
+    score,
+    clubLabel(fixture.awayClubId, league.clubsById),
+  ].join(" ");
+}
+
+/**
+ * Formats available goal scorers from one fixture report.
+ */
+function formatFixtureScorers(fixture: Fixture, league: FakeLeagueSystem): readonly string[] {
+  const report = fixture.result?.report;
+  const scorers: string[] = [];
+
+  if (report === undefined) {
+    return scorers;
+  }
+
+  for (const event of report.events) {
+    if (event.type !== "goal") {
+      continue;
+    }
+
+    const clubId = event.shot.side === "home" ? fixture.homeClubId : fixture.awayClubId;
+    scorers.push(`${event.shot.minute}' ${playerLabel(event.scorerPlayerId, league.players)} (${clubLabel(clubId, league.clubsById)})`);
+  }
+
+  return scorers;
+}
+
+/**
+ * Finds one round by round number.
+ */
+function findRound(rounds: readonly Round[], roundNumber: number): Round | undefined {
+  for (const round of rounds) {
+    if (round.roundNumber === roundNumber) {
+      return round;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Finds one fixture by ID in explicit fixture result order.
+ */
+function findFixture(fixtures: readonly Fixture[], fixtureId: FixtureId): Fixture | undefined {
+  for (const fixture of fixtures) {
+    if (fixture.id === fixtureId) {
+      return fixture;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -273,6 +419,18 @@ type ParsedSimulateSeasonArgs =
   | {
       readonly ok: true;
       readonly seed: string;
+      readonly roundNumber: number | undefined;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+/** Parsed round-number argument result. */
+type ParsedRoundNumber =
+  | {
+      readonly ok: true;
+      readonly roundNumber: number;
     }
   | {
       readonly ok: false;
@@ -293,6 +451,8 @@ interface CliTeamContext {
  * Minimal season result needed for CLI output.
  */
 interface CliSeasonResult {
+  readonly rounds: readonly Round[];
+  readonly fixtures: readonly Fixture[];
   readonly table: readonly LeagueTableRow[];
   readonly bestDefense: LeagueTableRow | undefined;
   readonly worstAttack: LeagueTableRow | undefined;
@@ -313,3 +473,12 @@ type LeagueTableRow = ReturnType<typeof simulateSeason>["table"][number];
 
 /** Player goal stat row type derived from the exported season simulation. */
 type SeasonPlayerGoalStatRow = ReturnType<typeof simulateSeason>["playerGoalStats"][number];
+
+/** Round type derived from the exported season simulation. */
+type Round = ReturnType<typeof simulateSeason>["rounds"][number];
+
+/** Fixture type derived from the exported season simulation. */
+type Fixture = ReturnType<typeof simulateSeason>["fixtures"][number];
+
+/** Fixture ID type derived from the exported season simulation. */
+type FixtureId = ReturnType<typeof simulateSeason>["fixtureIds"][number];
