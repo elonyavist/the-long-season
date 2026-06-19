@@ -35,8 +35,8 @@ test("report contains event schema version", () => {
   assert.equal(report.eventSchemaVersion, MATCH_EVENT_SCHEMA_VERSION);
 });
 
-test("match event schema version is bumped for structured shot context", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 3);
+test("match event schema version is bumped for assist IDs", () => {
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 4);
 });
 
 test("report preserves goal scorer IDs", () => {
@@ -46,6 +46,16 @@ test("report preserves goal scorer IDs", () => {
   assert.deepEqual(
     goalEvents.map((event) => event.scorerPlayerId),
     [playerId("player:home-scorer"), playerId("player:away-scorer")],
+  );
+});
+
+test("report preserves optional goal assist IDs", () => {
+  const report = createMatchReport(simulatedResultWithGoals());
+  const goalEvents = report.events.filter((event) => event.type === "goal");
+
+  assert.deepEqual(
+    goalEvents.map((event) => event.assistPlayerId),
+    [playerId("player:home-assist"), undefined],
   );
 });
 
@@ -190,6 +200,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         shotType: "normal",
         chanceType: "open_play",
         scorerPlayerId: playerId("player:home-scorer"),
+        assistPlayerId: playerId("player:home-assist"),
       },
       {
         type: "shot_outcome",

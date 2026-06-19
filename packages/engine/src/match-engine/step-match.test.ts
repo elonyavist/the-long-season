@@ -126,6 +126,44 @@ test("shot step events include deterministic structured shot context", () => {
   );
 });
 
+test("goal step events can include deterministic assist attribution", () => {
+  const context = {
+    ...validContext({
+      fixtureValue: "fixture:assist-step-000001",
+      baseOpportunityRatePerMinute: 1,
+      maxOpportunityRatePerMinute: 1,
+    }),
+    home: assistTeam("home"),
+    away: assistTeam("away"),
+  };
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "goal", quality: 0.802, isShotOnTarget: true }),
+  });
+  const goalEvents = result.events.filter((event) => event.type === "shot_outcome" && event.outcome === "goal");
+
+  assert.deepEqual(
+    goalEvents.map((event) => ({
+      side: event.side,
+      scorerPlayerId: event.scorerPlayerId,
+      assistPlayerId: event.assistPlayerId,
+    })),
+    [
+      {
+        side: "away",
+        scorerPlayerId: playerId("player:away-att"),
+        assistPlayerId: playerId("player:away-mid"),
+      },
+      {
+        side: "home",
+        scorerPlayerId: playerId("player:home-att"),
+        assistPlayerId: playerId("player:home-mid"),
+      },
+    ],
+  );
+});
+
 test("non-goal step events do not include scorer attribution", () => {
   const context = validContext({
     baseOpportunityRatePerMinute: 1,
@@ -233,6 +271,50 @@ function validTeam(
       overall: strength,
     },
     tacticalDistribution,
+  };
+}
+
+/**
+ * Builds a multi-role team context used by assist-attribution integration tests.
+ */
+function assistTeam(side: MatchSide): MatchTeamContext {
+  return {
+    clubId: clubId(`club:${side}`),
+    lineup: [
+      {
+        slotId: `slot:${side}:gk`,
+        playerId: playerId(`player:${side}-gk`),
+        roleKey: "gk",
+      },
+      {
+        slotId: `slot:${side}:def`,
+        playerId: playerId(`player:${side}-def`),
+        roleKey: "defender",
+      },
+      {
+        slotId: `slot:${side}:mid`,
+        playerId: playerId(`player:${side}-mid`),
+        roleKey: "midfielder",
+      },
+      {
+        slotId: `slot:${side}:att`,
+        playerId: playerId(`player:${side}-att`),
+        roleKey: "attacker",
+      },
+    ],
+    strength: {
+      attack: 10,
+      midfield: 10,
+      defense: 10,
+      goalkeeper: 10,
+      overall: 10,
+    },
+    tacticalDistribution: {
+      directness: 1,
+      pressing: 0,
+      width: 0,
+      risk: 1,
+    },
   };
 }
 

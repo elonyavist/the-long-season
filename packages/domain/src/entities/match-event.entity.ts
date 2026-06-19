@@ -57,6 +57,8 @@ export interface GoalMatchEvent {
   readonly shot: ShotContext;
   /** Player credited with the goal. */
   readonly scorerPlayerId: PlayerId;
+  /** Player credited with the assist, when the goal has one. */
+  readonly assistPlayerId?: PlayerId;
 }
 
 /**

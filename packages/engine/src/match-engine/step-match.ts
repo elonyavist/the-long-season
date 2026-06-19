@@ -2,6 +2,7 @@ import type { PlayerId, ShotChanceType, ShotType } from "@game/domain";
 import type { Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
+import { attributeAssist } from "./assist-attribution.ts";
 import { attributeGoal } from "./goal-attribution.ts";
 import type { MatchTeamContext } from "./match-context.ts";
 import {
@@ -63,6 +64,8 @@ export interface MatchGoalStepEvent {
   readonly chanceType: ShotChanceType;
   /** Player from the scoring side lineup credited with the goal. */
   readonly scorerPlayerId: PlayerId;
+  /** Player from the scoring side lineup credited with the assist, when any. */
+  readonly assistPlayerId?: PlayerId;
 }
 
 /**
@@ -187,20 +190,34 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
     const scoreBeforeGoal = nextScore;
     let scorerPlayerId: PlayerId | undefined;
+    let assistPlayerId: PlayerId | undefined;
 
     if (resolution.outcome === "goal") {
+      const team = teamBySide(input.simulation, attackingSide);
+      const shotContext = deriveShotContext(input.simulation, currentMinute, attackingSide, resolution.quality);
       scorerPlayerId = attributeGoal({
         seed: input.simulation.context.seed,
         fixtureId: input.simulation.context.fixtureId,
         minute: currentMinute,
         side: attackingSide,
         scoreBeforeGoal,
-        team: teamBySide(input.simulation, attackingSide),
+        team,
       }).scorerPlayerId;
+      assistPlayerId = attributeAssist({
+        seed: input.simulation.context.seed,
+        fixtureId: input.simulation.context.fixtureId,
+        minute: currentMinute,
+        side: attackingSide,
+        scoreBeforeGoal,
+        team,
+        scorerPlayerId,
+        shotType: shotContext.shotType,
+        chanceType: shotContext.chanceType,
+      }).assistPlayerId;
       nextScore = applyGoalToScore(nextScore, attackingSide);
     }
 
-    events.push(createShotOutcomeEvent(input.simulation, currentMinute, attackingSide, resolution, scorerPlayerId));
+    events.push(createShotOutcomeEvent(input.simulation, currentMinute, attackingSide, resolution, scorerPlayerId, assistPlayerId));
   }
 
   const isComplete = currentMinute >= input.simulation.context.engineConfig.minuteCount;
@@ -320,9 +337,9 @@ function createShotOutcomeEvent(
   side: MatchSide,
   resolution: OccasionResolution,
   scorerPlayerId: PlayerId | undefined,
+  assistPlayerId: PlayerId | undefined,
 ): MatchShotOutcomeStepEvent {
-  const chanceType = deriveChanceType(simulation, minute, side, resolution.quality);
-  const shotType = deriveShotType(chanceType, resolution.quality);
+  const shotContext = deriveShotContext(simulation, minute, side, resolution.quality);
 
   if (resolution.outcome === "goal") {
     if (scorerPlayerId === undefined) {
@@ -336,9 +353,10 @@ function createShotOutcomeEvent(
       outcome: "goal",
       quality: resolution.quality,
       isShotOnTarget: resolution.isShotOnTarget,
-      shotType,
-      chanceType,
+      shotType: shotContext.shotType,
+      chanceType: shotContext.chanceType,
       scorerPlayerId,
+      ...(assistPlayerId === undefined ? {} : { assistPlayerId }),
     };
   }
 
@@ -349,7 +367,24 @@ function createShotOutcomeEvent(
     outcome: resolution.outcome,
     quality: resolution.quality,
     isShotOnTarget: resolution.isShotOnTarget,
-    shotType,
+    shotType: shotContext.shotType,
+    chanceType: shotContext.chanceType,
+  };
+}
+
+/**
+ * Derives stable structured shot context from existing aggregate match inputs.
+ */
+function deriveShotContext(
+  simulation: MatchSimulationState,
+  minute: number,
+  side: MatchSide,
+  quality: number,
+): { readonly shotType: ShotType; readonly chanceType: ShotChanceType } {
+  const chanceType = deriveChanceType(simulation, minute, side, quality);
+
+  return {
+    shotType: deriveShotType(chanceType, quality),
     chanceType,
   };
 }
