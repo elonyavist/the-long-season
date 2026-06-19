@@ -14,6 +14,7 @@ This step should evolve the structured event contract narrowly: goal events gain
 
 - Extend the domain goal event shape to include scorer player ID.
 - Update `createMatchReport` to copy scorer IDs from engine-local goal events into domain `MatchEvent` goal events.
+- Treat the engine-local `scorerPlayerId` as the source of truth; do not recalculate or re-randomize goal attribution in this step.
 - Keep `MATCH_EVENT_SCHEMA_VERSION` behavior explicit:
   - update the version if the durable event schema changes;
   - document why in `docs/PROJECT_STATUS.md`.

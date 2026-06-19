@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
   fixtureId,
   MATCH_EVENT_SCHEMA_VERSION,
+  playerId,
   type MatchEvent,
   type MatchReport,
 } from "@game/domain";
@@ -119,6 +120,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "goal",
         quality: 0.74,
         isShotOnTarget: true,
+        scorerPlayerId: playerId("player:home-scorer"),
       },
       {
         type: "shot_outcome",
@@ -159,6 +161,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         outcome: "goal",
         quality: 0.81,
         isShotOnTarget: true,
+        scorerPlayerId: playerId("player:away-scorer"),
       },
       {
         type: "full_time",

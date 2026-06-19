@@ -1,6 +1,8 @@
+import type { PlayerId } from "@game/domain";
 import type { Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
+import { attributeGoal } from "./goal-attribution.ts";
 import type { MatchTeamContext } from "./match-context.ts";
 import {
   isMatchSimulationComplete,
@@ -37,15 +39,40 @@ export interface MatchKickoffStepEvent {
 /**
  * Aggregate shot outcome event.
  */
-export interface MatchShotOutcomeStepEvent {
+export type MatchShotOutcomeStepEvent = MatchGoalStepEvent | MatchNonGoalShotOutcomeStepEvent;
+
+/**
+ * Goal outcome event with the engine-local scorer attribution.
+ */
+export interface MatchGoalStepEvent {
   /** Discriminant for the shot outcome. */
   readonly type: "shot_outcome";
   /** Simulated minute of the shot outcome. */
   readonly minute: number;
   /** Team that produced the opportunity. */
   readonly side: MatchSide;
-  /** Final aggregate shot outcome. */
-  readonly outcome: OccasionOutcome;
+  /** Goal outcome discriminant. */
+  readonly outcome: "goal";
+  /** Normalized opportunity quality in the `[0, 1]` range. */
+  readonly quality: number;
+  /** Whether the shot counted as on target. */
+  readonly isShotOnTarget: boolean;
+  /** Player from the scoring side lineup credited with the goal. */
+  readonly scorerPlayerId: PlayerId;
+}
+
+/**
+ * Non-goal aggregate shot outcome event.
+ */
+export interface MatchNonGoalShotOutcomeStepEvent {
+  /** Discriminant for the shot outcome. */
+  readonly type: "shot_outcome";
+  /** Simulated minute of the shot outcome. */
+  readonly minute: number;
+  /** Team that produced the opportunity. */
+  readonly side: MatchSide;
+  /** Final aggregate non-goal shot outcome. */
+  readonly outcome: Exclude<OccasionOutcome, "goal">;
   /** Normalized opportunity quality in the `[0, 1]` range. */
   readonly quality: number;
   /** Whether the shot counted as on target. */
@@ -150,18 +177,22 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     );
 
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
+    const scoreBeforeGoal = nextScore;
+    let scorerPlayerId: PlayerId | undefined;
+
     if (resolution.outcome === "goal") {
+      scorerPlayerId = attributeGoal({
+        seed: input.simulation.context.seed,
+        fixtureId: input.simulation.context.fixtureId,
+        minute: currentMinute,
+        side: attackingSide,
+        scoreBeforeGoal,
+        team: teamBySide(input.simulation, attackingSide),
+      }).scorerPlayerId;
       nextScore = applyGoalToScore(nextScore, attackingSide);
     }
 
-    events.push({
-      type: "shot_outcome",
-      minute: currentMinute,
-      side: attackingSide,
-      outcome: resolution.outcome,
-      quality: resolution.quality,
-      isShotOnTarget: resolution.isShotOnTarget,
-    });
+    events.push(createShotOutcomeEvent(currentMinute, attackingSide, resolution, scorerPlayerId));
   }
 
   const isComplete = currentMinute >= input.simulation.context.engineConfig.minuteCount;
@@ -270,6 +301,41 @@ function applyOccasionToStats(
         home: stats.home,
         away: nextSideStats,
       };
+}
+
+/**
+ * Builds a typed shot-outcome event from one aggregate resolution.
+ */
+function createShotOutcomeEvent(
+  minute: number,
+  side: MatchSide,
+  resolution: OccasionResolution,
+  scorerPlayerId: PlayerId | undefined,
+): MatchShotOutcomeStepEvent {
+  if (resolution.outcome === "goal") {
+    if (scorerPlayerId === undefined) {
+      throw new Error("Goal step event requires scorerPlayerId");
+    }
+
+    return {
+      type: "shot_outcome",
+      minute,
+      side,
+      outcome: "goal",
+      quality: resolution.quality,
+      isShotOnTarget: resolution.isShotOnTarget,
+      scorerPlayerId,
+    };
+  }
+
+  return {
+    type: "shot_outcome",
+    minute,
+    side,
+    outcome: resolution.outcome,
+    quality: resolution.quality,
+    isShotOnTarget: resolution.isShotOnTarget,
+  };
 }
 
 /**

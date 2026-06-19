@@ -7,6 +7,7 @@ import { deriveRng } from "@game/shared";
 import type { MatchEngineConfig } from "./match-engine-config.ts";
 import { buildMatchRngKey, matchRngKeyParts, type MatchContext, type MatchTeamContext } from "./match-context.ts";
 import { createInitialMatchSimulationState, type MatchSide, type MatchSimulationState } from "./match-simulation-state.ts";
+import type { OccasionResolver, OccasionResolution, ResolveOccasionInput } from "./occasion-resolver.ts";
 import { stepMatch } from "./step-match.ts";
 
 /**
@@ -71,6 +72,45 @@ test("home and away processing order does not always favor the same side", () =>
   assert.ok(firstSides.includes("away"));
 });
 
+test("goal step events include a scorer from the scoring side lineup", () => {
+  const context = validContext({
+    baseOpportunityRatePerMinute: 1,
+    maxOpportunityRatePerMinute: 1,
+  });
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "goal", quality: 0.8, isShotOnTarget: true }),
+  });
+  const goalEvents = result.events.filter((event) => event.type === "shot_outcome" && event.outcome === "goal");
+
+  assert.equal(goalEvents.length, 2);
+
+  for (const event of goalEvents) {
+    const expectedPlayerId = playerId(`player:${event.side}-000001`);
+    assert.equal(event.scorerPlayerId, expectedPlayerId);
+  }
+});
+
+test("non-goal step events do not include scorer attribution", () => {
+  const context = validContext({
+    baseOpportunityRatePerMinute: 1,
+    maxOpportunityRatePerMinute: 1,
+  });
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({ outcome: "save", quality: 0.8, isShotOnTarget: true }),
+  });
+  const shotEvents = result.events.filter((event) => event.type === "shot_outcome");
+
+  assert.equal(shotEvents.length, 2);
+
+  for (const event of shotEvents) {
+    assert.equal("scorerPlayerId" in event, false);
+  }
+});
+
 test("stepMatch does not mutate the input simulation state", () => {
   const context = validContext();
   const simulation = createInitialMatchSimulationState(context);
@@ -117,6 +157,7 @@ function validContext(
     readonly fixtureValue?: string;
     readonly minuteCount?: number;
     readonly baseOpportunityRatePerMinute?: number;
+    readonly maxOpportunityRatePerMinute?: number;
   } = {},
 ): MatchContext {
   return {
@@ -127,6 +168,7 @@ function validContext(
     engineConfig: validConfig({
       minuteCount: options.minuteCount ?? 90,
       baseOpportunityRatePerMinute: options.baseOpportunityRatePerMinute ?? 0.08,
+      maxOpportunityRatePerMinute: options.maxOpportunityRatePerMinute ?? 0.4,
     }),
   };
 }
@@ -157,12 +199,16 @@ function validTeam(side: MatchSide, strength: number): MatchTeamContext {
 /**
  * Builds a valid match-engine config fixture.
  */
-function validConfig(options: { readonly minuteCount: number; readonly baseOpportunityRatePerMinute: number }): MatchEngineConfig {
+function validConfig(options: {
+  readonly minuteCount: number;
+  readonly baseOpportunityRatePerMinute: number;
+  readonly maxOpportunityRatePerMinute: number;
+}): MatchEngineConfig {
   return {
     minuteCount: options.minuteCount,
     rates: {
       baseOpportunityRatePerMinute: options.baseOpportunityRatePerMinute,
-      maxOpportunityRatePerMinute: 0.4,
+      maxOpportunityRatePerMinute: options.maxOpportunityRatePerMinute,
     },
     conversionBands: [
       {
@@ -190,6 +236,17 @@ function validConfig(options: { readonly minuteCount: number; readonly baseOppor
       pressing: { minInclusive: -1, maxInclusive: 1 },
       width: { minInclusive: -1, maxInclusive: 1 },
       risk: { minInclusive: -1, maxInclusive: 1 },
+    },
+  };
+}
+
+/**
+ * Builds a deterministic test resolver that always emits the same outcome.
+ */
+function fixedResolver(resolution: OccasionResolution): OccasionResolver {
+  return {
+    resolveOccasion(_input: ResolveOccasionInput): OccasionResolution {
+      return resolution;
     },
   };
 }
