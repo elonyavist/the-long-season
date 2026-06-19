@@ -13,7 +13,8 @@ This step should aggregate from match reports or report-derived data, not from r
 ## What to implement
 
 - Add a season player-stat data shape in the appropriate package.
-- Aggregate goals by player ID from goal events in simulated match reports.
+- Aggregate goals by player ID from durable `MatchReport` goal events using their `scorerPlayerId` field.
+- Treat `MATCH_EVENT_SCHEMA_VERSION >= 2` reports as the supported scorer source; do not read engine-local step events or recalculate scorer attribution.
 - Include enough context for CLI display:
   - player ID;
   - club ID;

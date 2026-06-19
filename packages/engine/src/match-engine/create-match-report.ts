@@ -74,7 +74,7 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
 
   switch (event.outcome) {
     case "goal":
-      return { type: "goal", shot };
+      return { type: "goal", shot, scorerPlayerId: event.scorerPlayerId };
     case "save":
       return { type: "save", shot };
     case "miss":

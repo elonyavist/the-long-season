@@ -5,8 +5,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current State
 
 - Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail in progress.
-- Active implementation step: `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md`.
-- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, batch full-match simulation, durable domain match reports, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
+- Active implementation step: `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`.
+- Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, batch full-match simulation, durable domain match reports with scorer IDs on goal events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md`
+- Step: `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`
 - Status: Not started
-- Last verification: `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md` completed with `pnpm --filter @game/engine run typecheck`, focused match-engine tests, `pnpm check`, `pnpm cli simulate-season --seed=demo-001`, and `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
-- Next action: Promote engine-local goal scorer IDs into durable domain match report events only; do not add assists, season player-stat aggregation, CLI top scorers, UI, storage, or full duel chains in the same step.
+- Last verification: `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md` completed with domain/engine typechecks, focused match-report tests, `pnpm check`, and `pnpm cli simulate-season --seed=demo-001`.
+- Next action: Aggregate minimum season player goal statistics from durable `MatchReport` goal events; do not add CLI top-scorer display, assists, UI, storage, or full duel chains in the same step.
 
 ## How To Read The Project
 
@@ -52,8 +52,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/03-balance-calibration/03-table-spread-review.md` | Done | Added explicit average table points spread to balance reporting and confirmed the tuned 20-season sample remains plausible. | `simulation-tools` now reports `table_points_spread` as average first-place minus last-place points; content target profiles include broad/default and stricter `calibration-v1` bands. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/simulation-tools run typecheck`; `pnpm --filter @game/cli run typecheck`; focused calibration/CLI tests; `pnpm check`; `calibration-v1` strict 20-season report passed |
 | `docs/steps/03-balance-calibration/04-team-strength-spread-tuning.md` | Done | Fake content now produces a stronger top-to-bottom hierarchy while preserving current scoring calibration. | Widened generated player base ability gradient from roughly `7.2..12.5` to roughly `6.6..13.3` and reduced slot noise from `0.5` to `0.35`; no engine algorithms or scoring probabilities changed. | `pnpm --filter @game/content run typecheck`; focused content/CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md` | Done | Every engine-local goal step event now carries a deterministic scorer from the scoring side lineup. | `attributeGoal` derives an independent `goal-attribution` RNG stream from seed, fixture, minute, side, and pre-goal score, then picks a weighted scorer by lineup role; this avoids consuming the main match RNG and preserves aggregate match outcomes/calibration. | `pnpm --filter @game/engine run typecheck`; focused match-engine Vitest files; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
-| `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md` | Planned | Future Phase 4 step. | Promote scorer IDs from engine-local goal events into durable domain `MatchReport` goal events. | Pending |
-| `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md` | Planned | Future Phase 4 step. | Aggregate minimum season player goal statistics from structured match reports. | Pending |
+| `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md` | Done | Durable domain goal events now preserve the scorer ID from engine-local goal step events. | `GoalMatchEvent` includes `scorerPlayerId`; `createMatchReport` copies it exactly from the engine event; `MATCH_EVENT_SCHEMA_VERSION` was bumped from `1` to `2` because the durable event schema changed. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-report/fixture tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001` |
+| `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md` | Not started | Future Phase 4 step. | Aggregate minimum season player goal statistics from structured match reports. | Pending |
 | `docs/steps/04-player-stats-and-match-detail/04-cli-top-scorers.md` | Planned | Future Phase 4 step. | Replace the CLI top-scorer placeholder with deterministic top-scorer output. | Pending |
 | `docs/steps/04-player-stats-and-match-detail/05-cli-fixture-results.md` | Planned | Future Phase 4 step. | Add minimal CLI fixture result/detail inspection after scorer data exists. | Pending |
 
@@ -112,6 +112,7 @@ Status values:
 - Phase 4 focuses on player-visible match detail: goal attribution, durable scorer events, season player goal stats, CLI top scorers, and minimal fixture detail.
 - Goal attribution is engine-local in step 04/01: goal step events include `scorerPlayerId`, but durable domain `MatchReport` goal events and CLI output still do not expose scorers until later Phase 4 steps.
 - Goal attribution uses an independent deterministic `goal-attribution` RNG stream, not the main match RNG, so adding scorer IDs does not change match results, league tables, or balance metrics.
+- Match event schema version `2` adds durable `scorerPlayerId` to goal events; season/player-stat code should read this field from `MatchReport` goal events instead of engine-local step events.
 - Phase 4 is intentionally not the full duel engine, match-day UI, storage migration, market, growth, staff, youth, facilities, or economy phase.
 
 ## Open Decisions And Follow-Up
@@ -126,8 +127,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 4's active implementation step is `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md`.
+- Phase 4's active implementation step is `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md`
+
+- Status: Done
+- Outcome: Promoted goal scorer IDs from engine-local events into the durable domain `MatchReport` event contract.
+- Adopted solution: `GoalMatchEvent` now carries `scorerPlayerId`; `createMatchReport` copies the field from goal `shot_outcome` events without recalculating attribution; `MATCH_EVENT_SCHEMA_VERSION` is now `2` to mark the durable schema change.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/match-engine/create-match-report.test.ts packages/engine/src/match-engine/simulate-match.test.ts packages/engine/src/use-cases/apply-match-report-to-fixture.test.ts` (22 tests); `pnpm check` (21 files, 109 tests); `pnpm cli simulate-season --seed=demo-001`.
+- Follow-up: Start `docs/steps/04-player-stats-and-match-detail/03-season-player-stats.md`; aggregate goals from durable `MatchReport` goal events with `scorerPlayerId`, not from engine-local events or prose.
 
 ### 2026-06-19 — `docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md`
 

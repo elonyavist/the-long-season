@@ -1,4 +1,5 @@
 import type { MatchScore } from "./match.entity.ts";
+import type { PlayerId } from "../types/ids.ts";
 
 /**
  * Side marker used by persisted match events.
@@ -40,6 +41,8 @@ export interface GoalMatchEvent {
   readonly type: "goal";
   /** Shared shot context. */
   readonly shot: ShotContext;
+  /** Player credited with the goal. */
+  readonly scorerPlayerId: PlayerId;
 }
 
 /**

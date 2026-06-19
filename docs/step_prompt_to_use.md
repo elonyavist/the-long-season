@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE: docs/steps/04-player-stats-and-match-detail/01-goal-attribution.md
+STEP_PATH_TO_EXECUTE: docs/steps/04-player-stats-and-match-detail/02-match-report-player-events.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 

@@ -4,7 +4,7 @@ import type { MatchEvent } from "./match-event.entity.ts";
 /**
  * Current persisted match-event schema version.
  */
-export const MATCH_EVENT_SCHEMA_VERSION = 1;
+export const MATCH_EVENT_SCHEMA_VERSION = 2;
 
 /**
  * Score for one completed or in-progress match.
