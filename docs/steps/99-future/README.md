@@ -28,6 +28,7 @@ Keep future work visible as an incremental queue without implementing it before 
 Future candidates:
 
 - Promoted on 2026-06-17: balance calibration now lives in `docs/steps/03-balance-calibration/`.
+- Promoted on 2026-06-19: CLI inspection and stat completeness now lives in `docs/steps/06-cli-inspection-and-stat-completeness/`.
 - React and Vite shell.
 - SQLite, OPFS, IndexedDB, and save migrations.
 - Web Worker and Comlink.

@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete.
-- Active implementation step: none; create the next numbered step document before implementing more code.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness documented.
+- Active implementation step: `docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, serializable match context/config contracts, deterministic one-minute match stepping with engine-local goal scorer attribution, optional assist attribution, goalkeeper save attribution, structured shot context, and derived player match stats, batch full-match simulation, durable domain match reports with scorer IDs, optional assist IDs, goalkeeper save IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal-stat aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001` with real top-scorer output, optional round fixture detail, and `--fixture=<fixtureId>` structured match detail, and `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exist; balance report now includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: None active
-- Status: Phase 5 complete
-- Last verification: `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` completed with CLI/engine typechecks, focused CLI tests, `pnpm check`, base, round-detail, fixture-detail `simulate-season` smoke checks, and `calibration-v1` strict balance report.
-- Next action: Create the next numbered step group under `docs/steps/` before implementing more gameplay scope.
+- Step: `docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md`
+- Status: Not started
+- Last verification: Phase 6 documentation created after `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` completed with CLI/engine typechecks, focused CLI tests, `pnpm check`, base, round-detail, fixture-detail `simulate-season` smoke checks, and `calibration-v1` strict balance report.
+- Next action: Implement only clean fixture-only CLI output from `docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md`.
 
 ## How To Read The Project
 
@@ -62,6 +62,12 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/05-match-event-detail/03-goalkeeper-save-attribution.md` | Done | Saved-shot events now carry the defending goalkeeper ID. | Added `attributeGoalkeeperSave`, required `goalkeeperPlayerId` on durable save events, bumped `MATCH_EVENT_SCHEMA_VERSION` to `5`, and made missing goalkeeper slots fail clearly. | `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; focused match-engine tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/05-match-event-detail/04-player-match-stats.md` | Done | Engine can derive compact per-player match stats from durable reports. | Added public `computePlayerMatchStats` with goals, assists, known player shots, shots on target, and saves; explicit registrations include zero-stat players and output sorts deterministically. | `pnpm --filter @game/engine run typecheck`; focused engine tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md` | Done | CLI can now inspect one fixture with structured match-event detail and compact player stats. | Added `simulate-season --fixture=<fixtureId>` rendering from existing season results and engine `computePlayerMatchStats`; output includes event order, goals with optional assists, stable shot/chance keys, saves, misses, blocks, and compact player stats. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/engine run typecheck`; focused CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --round=1`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/06-cli-inspection-and-stat-completeness/README.md` | Done | Created the Phase 6 documentation path for cleaner CLI inspection and complete current player stats. | Phase 6 starts with fixture-only CLI output, then shot taker attribution, complete player match stats, fixture player-stat rendering v2, and season assist/save summaries. | Documentation-only update; no code checks required |
+| `docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md` | Not started | Active next step. | Make `simulate-season --fixture=<fixtureId>` print a clean fixture-detail view without the full final table. | Pending |
+| `docs/steps/06-cli-inspection-and-stat-completeness/02-shot-taker-attribution.md` | Planned | Future Phase 6 step. | Attribute all durable shot outcomes to a shooter so player shot stats can become complete. | Pending |
+| `docs/steps/06-cli-inspection-and-stat-completeness/03-complete-player-match-stats.md` | Planned | Future Phase 6 step. | Count per-player shots and shots on target from all durable shot events once shooter IDs exist. | Pending |
+| `docs/steps/06-cli-inspection-and-stat-completeness/04-cli-fixture-player-stats-v2.md` | Planned | Future Phase 6 step. | Improve fixture-detail player-stat rendering after match stats are complete. | Pending |
+| `docs/steps/06-cli-inspection-and-stat-completeness/05-season-assists-and-saves-summary.md` | Planned | Future Phase 6 step. | Add minimal season top assist and goalkeeper-save summaries after the data is complete. | Pending |
 
 Status values:
 
@@ -134,6 +140,7 @@ Status values:
 - `computePlayerMatchStats` derives match player stats only from durable `MatchReport` events; current per-player shots and shots on target are credited only for goals because non-goal shot events do not yet identify the shooter.
 - Player match stats are exported from `@game/engine` so the CLI can render match detail without duplicating report parsing.
 - `simulate-season --fixture=<fixtureId>` is the first structured match inspection command; use `--round=<number>` to discover fixture IDs, then `--fixture` to inspect one match's events and compact player stats.
+- Phase 6 is a CLI/stat completeness phase: clean fixture-only output first, then shot taker attribution, complete current player match stats, clearer fixture player-stat rendering, and minimal season assist/save summaries.
 
 ## Open Decisions And Follow-Up
 
@@ -147,8 +154,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 5 is complete; create the next numbered step group under `docs/steps/` before implementing more gameplay scope.
+- Phase 6 documentation exists; the active implementation step is `docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-19 — `docs/steps/06-cli-inspection-and-stat-completeness/README.md`
+
+- Status: Done
+- Outcome: Created Phase 6 documentation and five implementation step documents for cleaner CLI inspection and complete current stat derivation.
+- Adopted solution: Phase 6 will proceed from `--fixture` output cleanup to shot taker attribution, complete player match stats, fixture player-stat rendering v2, and minimal season assist/save summaries; UI, storage browsing, live match-day, ratings, injuries, cards, and management systems remain out of scope.
+- Verification: Documentation-only update; no code checks required.
+- Follow-up: Implement only `docs/steps/06-cli-inspection-and-stat-completeness/01-fixture-only-output.md` next.
 
 ### 2026-06-19 — `docs/steps/05-match-event-detail/05-cli-match-detail-v2.md`
 
