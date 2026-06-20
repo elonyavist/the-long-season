@@ -4,10 +4,16 @@ import {
 } from "@game/content";
 import {
   computePlayerMatchStats,
+  createMatchReport,
+  buildTacticTeamContext,
   deriveTeamStrength,
   simulateSeason,
+  simulateMatchWithManualTactics,
+  TacticTeamContextError,
+  type BuildTacticTeamContextInput,
   type LineupSlot,
   type MatchTacticalDistributionInput,
+  type MatchTeamContext,
   type PlayerMatchStatRegistration,
   type PlayerMatchStatRow,
   type RoleWeightProfile,
@@ -18,8 +24,21 @@ import {
 /** Fixed seed used when the user does not pass `--seed`. */
 export const DEFAULT_SIMULATE_SEASON_SEED = "demo-001";
 
-/** Deterministic tactic/lineup demo profile supported by the CLI MVP. */
+/** Balanced deterministic PRO01 setup-demo profile. */
+export const DEMO_SETUP_PROFILE_PRO01_BALANCED = "pro01-balanced";
+
+/** Attacking deterministic PRO01 setup-demo profile. */
 export const DEMO_SETUP_PROFILE_PRO01_ATTACKING = "pro01-attacking";
+
+/** Defensive deterministic PRO01 setup-demo profile. */
+export const DEMO_SETUP_PROFILE_PRO01_DEFENSIVE = "pro01-defensive";
+
+/** Ordered deterministic setup-demo profiles supported by the CLI MVP. */
+export const SUPPORTED_DEMO_SETUP_PROFILES = [
+  DEMO_SETUP_PROFILE_PRO01_BALANCED,
+  DEMO_SETUP_PROFILE_PRO01_ATTACKING,
+  DEMO_SETUP_PROFILE_PRO01_DEFENSIVE,
+] as const;
 
 /**
  * Minimal IO adapter used by command tests.
@@ -46,13 +65,38 @@ export async function runSimulateSeasonCommand(
   if (!parsed.ok) {
     io.stderr(parsed.message);
     io.stderr(
-      "Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=pro01-attacking]",
+      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>]`,
     );
     return 1;
   }
 
   const league = createFakeLeagueSystem();
   const setupDemo = parsed.setupDemo === undefined ? undefined : buildSetupDemo(league, parsed.setupDemo);
+  const manualTacticSwitch =
+    parsed.manualTacticSwitch === undefined
+      ? undefined
+      : {
+          minute: parsed.manualTacticSwitch.minute,
+          targetSetupDemo: buildSetupDemo(league, parsed.manualTacticSwitch.profileKey),
+        };
+
+  if (manualTacticSwitch !== undefined && parsed.fixtureId === undefined) {
+    io.stderr("--manual-tactic-switch requires --fixture=<fixtureId>");
+    return 1;
+  }
+
+  if (manualTacticSwitch !== undefined && setupDemo === undefined) {
+    io.stderr("--manual-tactic-switch requires --setup-demo=<initialProfile>");
+    return 1;
+  }
+
+  if (manualTacticSwitch !== undefined && manualTacticSwitch.minute > league.matchEngineConfig.minuteCount) {
+    io.stderr(
+      `--manual-tactic-switch minute must be between 1 and ${league.matchEngineConfig.minuteCount}: ${manualTacticSwitch.minute}`,
+    );
+    return 1;
+  }
+
   const result = simulateSeasonForCli(league, parsed.seed, setupDemo);
 
   if (parsed.roundNumber !== undefined && findRound(result.rounds, parsed.roundNumber) === undefined) {
@@ -66,7 +110,7 @@ export async function runSimulateSeasonCommand(
   }
 
   if (parsed.fixtureId !== undefined) {
-    for (const line of formatFixtureOnlyOutput(league, result, parsed.seed, parsed.fixtureId, setupDemo)) {
+    for (const line of formatFixtureOnlyOutput(league, result, parsed.seed, parsed.fixtureId, setupDemo, manualTacticSwitch)) {
       io.stdout(line);
     }
 
@@ -104,6 +148,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let roundNumber: number | undefined;
   let fixtureId: string | undefined;
   let setupDemo: SetupDemoProfileKey | undefined;
+  let manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -207,10 +252,34 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--manual-tactic-switch") {
+      const value = args[index + 1];
+      const parsedManualTacticSwitch = parseManualTacticSwitch(value);
+
+      if (!parsedManualTacticSwitch.ok) {
+        return parsedManualTacticSwitch;
+      }
+
+      manualTacticSwitch = parsedManualTacticSwitch.manualTacticSwitch;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--manual-tactic-switch=")) {
+      const parsedManualTacticSwitch = parseManualTacticSwitch(arg.slice("--manual-tactic-switch=".length));
+
+      if (!parsedManualTacticSwitch.ok) {
+        return parsedManualTacticSwitch;
+      }
+
+      manualTacticSwitch = parsedManualTacticSwitch.manualTacticSwitch;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId, setupDemo };
+  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch };
 }
 
 /**
@@ -248,14 +317,80 @@ function parseFixtureId(value: string | undefined): ParsedFixtureId {
  */
 function parseSetupDemo(value: string | undefined): ParsedSetupDemo {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: "--setup-demo requires a supported value: pro01-attacking" };
+    return { ok: false, message: `--setup-demo requires a supported value: ${formatSupportedSetupDemoProfiles()}` };
   }
 
-  if (value !== DEMO_SETUP_PROFILE_PRO01_ATTACKING) {
-    return { ok: false, message: `Unsupported --setup-demo value: ${value}. Supported values: pro01-attacking` };
+  if (!isSetupDemoProfileKey(value)) {
+    return {
+      ok: false,
+      message: `Unsupported --setup-demo value: ${value}. Supported values: ${formatSupportedSetupDemoProfiles()}`,
+    };
   }
 
   return { ok: true, setupDemo: value };
+}
+
+/**
+ * Parses one manual tactic-switch declaration in `<minute>:<profile>` form.
+ */
+function parseManualTacticSwitch(value: string | undefined): ParsedManualTacticSwitch {
+  if (value === undefined || value.length === 0) {
+    return {
+      ok: false,
+      message: `--manual-tactic-switch requires <minute>:<profile>, for example 46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
+    };
+  }
+
+  const separatorIndex = value.indexOf(":");
+
+  if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+    return {
+      ok: false,
+      message: `--manual-tactic-switch requires <minute>:<profile>, for example 46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
+    };
+  }
+
+  const minuteValue = value.slice(0, separatorIndex);
+  const profileValue = value.slice(separatorIndex + 1);
+
+  if (!/^[1-9][0-9]*$/.test(minuteValue)) {
+    return { ok: false, message: "--manual-tactic-switch minute must be a positive integer" };
+  }
+
+  if (!isSetupDemoProfileKey(profileValue)) {
+    return {
+      ok: false,
+      message: `Unsupported --manual-tactic-switch profile: ${profileValue}. Supported values: ${formatSupportedSetupDemoProfiles()}`,
+    };
+  }
+
+  return {
+    ok: true,
+    manualTacticSwitch: {
+      minute: Number(minuteValue),
+      profileKey: profileValue,
+    },
+  };
+}
+
+/**
+ * Checks whether a string is one of the supported setup-demo profiles.
+ */
+function isSetupDemoProfileKey(value: string): value is SetupDemoProfileKey {
+  for (const profileKey of SUPPORTED_DEMO_SETUP_PROFILES) {
+    if (value === profileKey) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Formats supported setup-demo profiles for usage and error messages.
+ */
+function formatSupportedSetupDemoProfiles(): string {
+  return SUPPORTED_DEMO_SETUP_PROFILES.join("|");
 }
 
 /**
@@ -327,6 +462,7 @@ function formatFixtureOnlyOutput(
   seed: string,
   fixtureValue: string,
   setupDemo: CliSetupDemo | undefined,
+  manualTacticSwitch: CliManualTacticSwitch | undefined,
 ): readonly string[] {
   const lines = [
     "The Long Season fixture detail",
@@ -339,8 +475,16 @@ function formatFixtureOnlyOutput(
     lines.push(...formatSetupDemoLines(league, setupDemo));
   }
 
+  const manualFixture = manualTacticSwitch === undefined || setupDemo === undefined
+    ? undefined
+    : buildManualTacticFixture(league, result, seed, fixtureValue, setupDemo, manualTacticSwitch);
+
+  if (manualFixture !== undefined && setupDemo !== undefined && manualTacticSwitch !== undefined) {
+    lines.push(...formatManualTacticSwitchLines(league, setupDemo, manualTacticSwitch, manualFixture));
+  }
+
   lines.push("");
-  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue));
+  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue, manualFixture?.fixture));
 
   return lines;
 }
@@ -348,8 +492,13 @@ function formatFixtureOnlyOutput(
 /**
  * Formats rich structured detail for one requested fixture.
  */
-function formatFixtureDetailOutput(league: FakeLeagueSystem, result: CliSeasonResult, fixtureValue: string): readonly string[] {
-  const fixture = findFixtureByValue(result.fixtures, fixtureValue);
+function formatFixtureDetailOutput(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  fixtureValue: string,
+  overrideFixture: Fixture | undefined = undefined,
+): readonly string[] {
+  const fixture = overrideFixture ?? findFixtureByValue(result.fixtures, fixtureValue);
 
   if (fixture === undefined) {
     return ["", `Fixture ${fixtureValue}: unavailable`];
@@ -382,6 +531,162 @@ function formatFixtureDetailOutput(league: FakeLeagueSystem, result: CliSeasonRe
     lines.push("  Player              Club  G A Sh SoT Sv");
     lines.push(...statLines);
   }
+
+  return lines;
+}
+
+/**
+ * Builds a single fixture result with an explicit manual tactic switch when it applies.
+ */
+function buildManualTacticFixture(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  seed: string,
+  fixtureValue: string,
+  initialSetupDemo: CliSetupDemo,
+  manualTacticSwitch: CliManualTacticSwitch,
+): CliManualTacticFixture {
+  const fixture = findFixtureByValue(result.fixtures, fixtureValue);
+
+  if (fixture === undefined) {
+    throw new Error(`Cannot build manual tactic fixture for missing fixture: ${fixtureValue}`);
+  }
+
+  const side = selectedSetupSideForFixture(fixture, initialSetupDemo.clubId);
+
+  if (side === undefined) {
+    return {
+      fixture,
+      appliesToFixture: false,
+    };
+  }
+
+  const teamsByClubId = createTeamsByClubId(league);
+  const initialTeam = buildSetupOverrideContextForCli(initialSetupDemo.override);
+  const targetTeam = buildSetupOverrideContextForCli(manualTacticSwitch.targetSetupDemo.override);
+  const simulated = simulateMatchWithManualTactics(
+    {
+      fixtureId: fixture.id,
+      seed,
+      home: fixture.homeClubId === initialSetupDemo.clubId ? initialTeam : matchTeamContextForCli(teamsByClubId, fixture.homeClubId),
+      away: fixture.awayClubId === initialSetupDemo.clubId ? initialTeam : matchTeamContextForCli(teamsByClubId, fixture.awayClubId),
+      engineConfig: league.matchEngineConfig,
+    },
+    {
+      manualTacticChanges: [
+        {
+          side,
+          minute: manualTacticSwitch.minute,
+          team: targetTeam,
+        },
+      ],
+    },
+  );
+  const report = createMatchReport(simulated);
+
+  return {
+    fixture: {
+      ...fixture,
+      result: {
+        played: true,
+        homeGoals: report.score.home,
+        awayGoals: report.score.away,
+        report,
+      },
+    },
+    appliesToFixture: true,
+  };
+}
+
+/**
+ * Finds the side where the selected demo club participates in a fixture.
+ */
+function selectedSetupSideForFixture(fixture: Fixture, selectedClubId: ClubId): MatchEventSide | undefined {
+  if (fixture.homeClubId === selectedClubId) {
+    return "home";
+  }
+
+  if (fixture.awayClubId === selectedClubId) {
+    return "away";
+  }
+
+  return undefined;
+}
+
+/**
+ * Converts one selected setup override into a match-team context for CLI inspection.
+ */
+function buildSetupOverrideContextForCli(override: SimulateSeasonSetupOverride): MatchTeamContext {
+  const builderInput: BuildTacticTeamContextInput = {
+    lineup: override.lineup,
+    tactic: override.tactic,
+    requiredLineupSize: override.requiredLineupSize,
+    players: override.players,
+    roleWeights: override.roleWeights,
+    ...(override.playerStates === undefined ? {} : { playerStates: override.playerStates }),
+    ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
+  };
+
+  try {
+    return buildTacticTeamContext(builderInput);
+  } catch (error) {
+    if (error instanceof TacticTeamContextError) {
+      throw new Error(`Invalid CLI setup demo for club ${override.clubId}: ${error.message}`);
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Reads one already-built base team context for a club.
+ */
+function matchTeamContextForCli(
+  teamsByClubId: Readonly<Record<ClubId, CliTeamContext>>,
+  clubId: ClubId,
+): MatchTeamContext {
+  const team = teamsByClubId[clubId];
+
+  if (team === undefined) {
+    throw new Error(`Missing CLI team context: ${clubId}`);
+  }
+
+  return team;
+}
+
+/**
+ * Formats manual switch inspection metadata for fixture-focused output.
+ */
+function formatManualTacticSwitchLines(
+  league: FakeLeagueSystem,
+  setupDemo: CliSetupDemo,
+  manualTacticSwitch: CliManualTacticSwitch,
+  manualFixture: CliManualTacticFixture,
+): readonly string[] {
+  const lines = [
+    "Manual tactic switch:",
+    `  Selected club: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
+    `  Initial profile: ${setupDemo.profileKey}`,
+    `  Switch: ${manualTacticSwitch.minute}' -> ${manualTacticSwitch.targetSetupDemo.profileKey}`,
+    `  Applies to fixture: ${manualFixture.appliesToFixture ? "yes" : "no"}`,
+  ];
+
+  if (!manualFixture.appliesToFixture) {
+    lines.push(
+      `  Reason: ${clubLabel(setupDemo.clubId, league.clubsById)} is not playing this fixture`,
+      "Profile timeline:",
+      `  unchanged: ${formatFixtureResult(manualFixture.fixture, league)}`,
+    );
+    return lines;
+  }
+
+  lines.push("Profile timeline:");
+
+  if (manualTacticSwitch.minute > 1) {
+    lines.push(`  1'-${manualTacticSwitch.minute - 1}': ${setupDemo.profileKey}`);
+  }
+
+  lines.push(`  ${manualTacticSwitch.minute}'-${league.matchEngineConfig.minuteCount}': ${manualTacticSwitch.targetSetupDemo.profileKey}`);
 
   return lines;
 }
@@ -686,19 +991,55 @@ function formatSeasonOutput(
 }
 
 /**
- * Builds the single deterministic selected setup used for CLI inspection.
+ * Builds one deterministic selected setup used for CLI inspection.
  */
 function buildSetupDemo(league: FakeLeagueSystem, profileKey: SetupDemoProfileKey): CliSetupDemo {
   switch (profileKey) {
+    case DEMO_SETUP_PROFILE_PRO01_BALANCED:
+      return buildPro01SetupDemo(league, {
+        profileKey,
+        tactic: {
+          mentality: "balanced",
+          pressing: 0.5,
+          directness: 0.5,
+          width: 0.5,
+          risk: 0.5,
+        },
+        selectedRoleKey: pro01BalancedRoleKey,
+      });
+
     case DEMO_SETUP_PROFILE_PRO01_ATTACKING:
-      return buildPro01AttackingSetupDemo(league);
+      return buildPro01SetupDemo(league, {
+        profileKey,
+        tactic: {
+          mentality: "attacking",
+          pressing: 0.85,
+          directness: 0.75,
+          width: 0.8,
+          risk: 0.7,
+        },
+        selectedRoleKey: pro01AttackingRoleKey,
+      });
+
+    case DEMO_SETUP_PROFILE_PRO01_DEFENSIVE:
+      return buildPro01SetupDemo(league, {
+        profileKey,
+        tactic: {
+          mentality: "defensive",
+          pressing: 0.35,
+          directness: 0.3,
+          width: 0.4,
+          risk: 0.2,
+        },
+        selectedRoleKey: pro01DefensiveRoleKey,
+      });
   }
 }
 
 /**
- * Builds an attacking PRO01 demo setup from generated fake content.
+ * Builds a PRO01 demo setup from generated fake content.
  */
-function buildPro01AttackingSetupDemo(league: FakeLeagueSystem): CliSetupDemo {
+function buildPro01SetupDemo(league: FakeLeagueSystem, definition: CliSetupDemoDefinition): CliSetupDemo {
   const clubId = league.clubIds[0];
 
   if (clubId === undefined) {
@@ -713,7 +1054,7 @@ function buildPro01AttackingSetupDemo(league: FakeLeagueSystem): CliSetupDemo {
 
   const roleChanges: CliSetupDemoRoleChange[] = [];
   const selectedSlots = baseLineup.map((slot) => {
-    const roleKey = setupDemoRoleKey(slot);
+    const roleKey = definition.selectedRoleKey(slot);
 
     if (slot.roleKey !== roleKey) {
       roleChanges.push({
@@ -731,18 +1072,10 @@ function buildPro01AttackingSetupDemo(league: FakeLeagueSystem): CliSetupDemo {
     };
   });
 
-  const tactic: SimulateSeasonSetupOverride["tactic"] = {
-    mentality: "attacking",
-    pressing: 0.85,
-    directness: 0.75,
-    width: 0.8,
-    risk: 0.7,
-  };
-
   return {
-    profileKey: DEMO_SETUP_PROFILE_PRO01_ATTACKING,
+    profileKey: definition.profileKey,
     clubId,
-    tactic,
+    tactic: definition.tactic,
     roleChanges,
     override: {
       clubId,
@@ -750,7 +1083,7 @@ function buildPro01AttackingSetupDemo(league: FakeLeagueSystem): CliSetupDemo {
         clubId,
         slots: selectedSlots,
       },
-      tactic,
+      tactic: definition.tactic,
       requiredLineupSize: baseLineup.length,
       players: league.players,
       roleWeights: league.roleWeights,
@@ -760,11 +1093,29 @@ function buildPro01AttackingSetupDemo(league: FakeLeagueSystem): CliSetupDemo {
 }
 
 /**
- * Returns the selected role key for the PRO01 attacking demo.
+ * Keeps the generated PRO01 lineup roles unchanged for the balanced demo.
  */
-function setupDemoRoleKey(slot: FakeLeagueSystem["lineupsByClubId"][ClubId][number]): string {
+function pro01BalancedRoleKey(slot: FakeLineupSlotForCli): string {
+  return slot.roleKey;
+}
+
+/**
+ * Pushes two wide midfield slots into attacking roles for the attacking demo.
+ */
+function pro01AttackingRoleKey(slot: FakeLineupSlotForCli): string {
   if (slot.slotId === "slot:08" || slot.slotId === "slot:09") {
     return "attacker";
+  }
+
+  return slot.roleKey;
+}
+
+/**
+ * Pulls both striker slots into midfield roles for the defensive demo.
+ */
+function pro01DefensiveRoleKey(slot: FakeLineupSlotForCli): string {
+  if (slot.slotId === "slot:10" || slot.slotId === "slot:11") {
+    return "midfielder";
   }
 
   return slot.roleKey;
@@ -978,6 +1329,7 @@ type ParsedSimulateSeasonArgs =
       readonly roundNumber: number | undefined;
       readonly fixtureId: string | undefined;
       readonly setupDemo: SetupDemoProfileKey | undefined;
+      readonly manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
     }
   | {
       readonly ok: false;
@@ -1017,8 +1369,39 @@ type ParsedSetupDemo =
       readonly message: string;
     };
 
+/** Parsed manual tactic-switch argument result. */
+type ParsedManualTacticSwitch =
+  | {
+      readonly ok: true;
+      readonly manualTacticSwitch: ParsedManualTacticSwitchValue;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+/** Parsed value for a manual tactic-switch declaration. */
+interface ParsedManualTacticSwitchValue {
+  /** First minute where the target profile should apply. */
+  readonly minute: number;
+  /** Target saved demo profile key. */
+  readonly profileKey: SetupDemoProfileKey;
+}
+
 /** Supported deterministic setup-demo profile keys. */
-type SetupDemoProfileKey = typeof DEMO_SETUP_PROFILE_PRO01_ATTACKING;
+type SetupDemoProfileKey = (typeof SUPPORTED_DEMO_SETUP_PROFILES)[number];
+
+/**
+ * Definition used to build one deterministic CLI setup-demo profile.
+ */
+interface CliSetupDemoDefinition {
+  /** Stable profile key requested by the user. */
+  readonly profileKey: SetupDemoProfileKey;
+  /** Tactic setup applied by this profile. */
+  readonly tactic: SimulateSeasonSetupOverride["tactic"];
+  /** Resolves the selected role key for a generated fake lineup slot. */
+  readonly selectedRoleKey: (slot: FakeLineupSlotForCli) => string;
+}
 
 /**
  * CLI-owned description of the deterministic selected setup demo.
@@ -1034,6 +1417,26 @@ interface CliSetupDemo {
   readonly roleChanges: readonly CliSetupDemoRoleChange[];
   /** Engine input passed through `simulateSeason.setupOverrides`. */
   readonly override: SimulateSeasonSetupOverride;
+}
+
+/**
+ * CLI-owned manual tactic switch from one setup demo profile to another.
+ */
+interface CliManualTacticSwitch {
+  /** First minute where the target profile should apply. */
+  readonly minute: number;
+  /** Target setup demo selected by the caller. */
+  readonly targetSetupDemo: CliSetupDemo;
+}
+
+/**
+ * Fixture detail built for manual tactic-switch inspection.
+ */
+interface CliManualTacticFixture {
+  /** Fixture to render, either unchanged or manually re-simulated. */
+  readonly fixture: Fixture;
+  /** Whether the selected setup club actually played this fixture. */
+  readonly appliesToFixture: boolean;
 }
 
 /**
@@ -1102,3 +1505,6 @@ type FixtureId = ReturnType<typeof simulateSeason>["fixtureIds"][number];
 
 /** Match event side marker used by durable fixture report events. */
 type MatchEventSide = "home" | "away";
+
+/** Fake lineup slot type derived from generated content. */
+type FakeLineupSlotForCli = FakeLeagueSystem["lineupsByClubId"][ClubId][number];

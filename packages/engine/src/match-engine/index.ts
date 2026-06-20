@@ -31,6 +31,16 @@ export {
 } from "./match-context.ts";
 
 export {
+  buildManualTacticChangeSchedule,
+  isValidManualTacticChangeSchedule,
+  ManualTacticChangeError,
+  type BuildManualTacticChangeScheduleInput,
+  type ManualTacticChange,
+  type ManualTacticChangeErrorCode,
+  type ManualTacticChangeSchedule,
+} from "./manual-tactic-change.ts";
+
+export {
   createInitialMatchSimulationState,
   isMatchSimulationComplete,
   type MatchLocalState,
@@ -55,6 +65,11 @@ export {
   type SimulateMatchOptions,
   type SimulateMatchResult,
 } from "./simulate-match.ts";
+
+export {
+  simulateMatchWithManualTactics,
+  type SimulateMatchWithManualTacticsOptions,
+} from "./simulate-match-with-manual-tactics.ts";
 
 export {
   stepMatch,

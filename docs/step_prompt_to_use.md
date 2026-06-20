@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
 
-STEP_PATH_TO_EXECUTE: docs/steps/08-tactic-and-lineup-mvp/05-cli-tactic-lineup-inspection.md
+STEP_PATH_TO_EXECUTE: docs/steps/09-manual-tactical-changes-v1/05-cli-manual-tactic-switch-inspection.md
 
 If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 
