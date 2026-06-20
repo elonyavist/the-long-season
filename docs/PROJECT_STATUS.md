@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete.
-- Active implementation step: None; Phase 11 is complete and Phase 12 has not been selected.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete.
+- Active implementation step: none; review Phase 12 output before documenting or starting Phase 13.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with default 11-player lineups plus reserve players, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, and `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: None
-- Status: Phase 11 complete
-- Last verification: Step 11/05 passed CLI typecheck, focused CLI tests, full `pnpm check`, default season smoke, condition-demo smoke, new fixture lineup inspection smoke, and strict `calibration-v1` balance report.
-- Next action: Manually inspect `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated`; then decide whether Phase 11 needs rework or Phase 12 should be documented.
+- Step: none
+- Status: Phase 12 complete
+- Last verification: `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; focused engine/CLI Vitest tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`.
+- Next action: Manually inspect the Phase 12 formation-fit CLI output, then decide whether to rework Phase 12 or document Phase 13.
 
 ## How To Read The Project
 
@@ -98,6 +98,13 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/11-manual-lineup-rotation-v1/03-fixture-lineup-override-contract.md` | Done | Engine now accepts and validates explicit fixture lineup override input. | `SimulateSeasonFixtureLineupOverride` identifies fixture, club, ordered lineup slots, required size, player lookup, role weights, and optional state curves; `simulateSeason` validates duplicate overrides, missing fixtures/teams, wrong fixture club, and invalid lineup data without applying overrides yet. | Engine typecheck; focused `simulate-season` tests; `pnpm check`; default season smoke; strict `calibration-v1` balance report |
 | `docs/steps/11-manual-lineup-rotation-v1/04-season-lineup-overrides.md` | Done | `simulateSeason` now applies explicit fixture lineup overrides. | Overrides are indexed by fixture/club, apply only to the matching participant, preserve the club's existing tactic, rebuild strength from the selected lineup and current fitness states, include override players in season registrations, and spend fitness for the actual selected starters. | Engine typecheck; focused `simulate-season` tests; `pnpm check`; default season smoke; condition-demo smoke; strict `calibration-v1` balance report |
 | `docs/steps/11-manual-lineup-rotation-v1/05-cli-lineup-condition-inspection.md` | Done | CLI can inspect one explicit user-selected lineup override for one fixture. | `--lineup-demo=<profile>` remains available for profile-only inspection and, when combined with `--fixture=<fixtureId>`, applies the selected PRO01 lineup only if PRO01 plays that fixture; output shows applicability, selected starters, rested first-team players, expected fixture fitness impact, fixture events, and player stats for the actual starters. | CLI typecheck; focused CLI tests; `pnpm check`; default season smoke; condition-demo smoke; `--fixture=fixture:000006 --lineup-demo=pro01-rotated` smoke; strict `calibration-v1` balance report |
+| `docs/steps/12-squad-selection-and-formation-core/README.md` | Done | Created the Phase 12 documentation path for squad selection and formation core. | Phase 12 consolidates Phases 08-11 into a real manager-facing squad/formation model: broad curated formation catalog, squad depth, position suitability, formation fit reporting, and CLI inspection of squad gaps and future market needs. | Documentation-only update; no code checks required |
+| `docs/steps/12-squad-selection-and-formation-core/01-phase-11-output-review.md` | Done | Phase 11 outputs were reviewed and accepted before formation work. | CLI season output, PRO01 rotated fixture inspection, and `calibration-v1` strict balance still pass; Phase 12 can build on manual lineup rotation without code rework. | `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
+| `docs/steps/12-squad-selection-and-formation-core/02-formation-catalog-contract.md` | Done | Curated domain formation catalog was added. | `domain/tactics` exposes 22 stable formation keys, structured formation slots, recognized position families, `FORMATION_CATALOG`, deterministic ordered `FORMATIONS`, and lookup/narrowing helpers; no player assignment or squad-fit logic was added. | `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/tactics/formations.test.ts`; `pnpm check` |
+| `docs/steps/12-squad-selection-and-formation-core/03-squad-depth-contract.md` | Done | Squad-depth domain contract was added. | `domain/squad` exposes explicit squad, starter, and bench/reserve player groups plus validation for duplicates, membership, overlap, and match starter count; it preserves user choice and does not select players automatically. | `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/squad/squad-depth.test.ts`; `pnpm check` |
+| `docs/steps/12-squad-selection-and-formation-core/04-position-role-suitability.md` | Done | Player-position to formation-slot suitability was added. | `domain/tactics` exposes strict `natural`, `adapted`, `weak`, and `invalid` suitability evaluation from `PlayerPosition[]` to formation position families; weak fits do not count as real coverage, so squad gaps remain visible. | `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/tactics/position-suitability.test.ts`; `pnpm check` |
+| `docs/steps/12-squad-selection-and-formation-core/05-formation-squad-fit-report.md` | Done | Engine formation squad-fit reporting was added. | `engine/squad` reports slot coverage, uncovered/weak/adapted slots, natural fits, likely out-of-position players, family depth, broad surplus groups, and stable market-need hint keys without assigning players or creating market actions. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/squad/formation-squad-fit.test.ts`; `pnpm check` |
+| `docs/steps/12-squad-selection-and-formation-core/06-cli-formation-fit-inspection.md` | Done | CLI formation-fit inspection was added. | `simulate-season --formation-fit=<formationKey>` renders a standalone inspection for the selected fake club squad, including formation slots, covered/adapted/weak/missing slots, surplus groups, and market-need hint keys; fake clubs now generate 22 senior players while fixed default lineups stay 11 players. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts packages/content/src/generators/fake-players.test.ts packages/content/src/generators/league-system.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 
 Status values:
 
@@ -216,7 +223,66 @@ Status values:
 - Step 11/03 intentionally validated fixture lineup override input without applying it; Step 11/04 is responsible for using that contract during match context creation and fitness spend.
 - Step 11/04 applies fixture lineup overrides inside `simulateSeason`; the default CLI season and condition-demo outputs remained unchanged because no CLI command passes fixture lineup overrides yet.
 - Phase 11 manual lineup rotation v1 is complete. Manual lineup override inspection command to review: `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated`.
+- Phase 12 is now selected as squad selection and formation core before career persistence. It must make formation choice reveal squad gaps and future market needs without auto-selecting players or executing transfers.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+- Phase 12 squad selection and formation core is complete. Review command: `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`.
+- Phase 12 formation-fit report was reworked after manual inspection: CLI slot rows now separate `natural`, `adapted`, and `weak` counts instead of a vague `candidates` total, and adapted-only DM/AM coverage now appears as `weak_depth:*` plus `consider:*` hint keys.
+
+### 2026-06-20 — Phase 12 formation-fit report readability rework
+
+- Status: Done
+- Outcome: Improved the Phase 12 formation-fit CLI output so a user can distinguish true natural depth from adapted or weak cover.
+- Adopted solution: Slot rows now render `best`, `natural`, `adapted`, and `weak` counts; engine market-planning hints now include `consider:defensive_midfielder` and `consider:attacking_midfielder` when those families are covered only by adapted players; the CLI renders those as `weak_depth:*` warnings.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/engine/src/squad/formation-squad-fit.test.ts apps/cli/src/commands/simulate-season.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`.
+- Follow-up: Re-run `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1` and verify that `rb` no longer looks like it has 10 natural candidates, while DM/AM adapted-only coverage is clearly visible.
+
+### 2026-06-20 — `docs/steps/12-squad-selection-and-formation-core/06-cli-formation-fit-inspection.md`
+
+- Status: Done
+- Outcome: Added a standalone CLI formation-fit inspection path and expanded fake senior squads to 22 players per club without changing the default fixed 11-player lineup.
+- Adopted solution: `simulate-season --formation-fit=<formationKey>` builds a squad-depth snapshot for the selected generated club, runs the engine formation-fit report, and prints formation slots, covered slots, adapted/weak slots, missing slots, surplus groups, and market-need hint keys. The CLI explicitly states that no lineup is auto-selected and no transfer action is created.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts packages/content/src/generators/fake-players.test.ts packages/content/src/generators/league-system.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Manually inspect `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`; verify that adapted DM/AM slots and surplus wide/center-back hints are understandable before deciding Phase 13.
+
+### 2026-06-20 — `docs/steps/12-squad-selection-and-formation-core/05-formation-squad-fit-report.md`
+
+- Status: Done
+- Outcome: Added deterministic engine reporting for how a squad fits a selected formation.
+- Adopted solution: `packages/engine/src/squad/formation-squad-fit.ts` consumes domain formation catalog data, squad depth, and player natural positions to report covered, adapted, weak, and uncovered slots plus family depth, likely out-of-position players, surplus groups, and stable future market-need hints. It does not assign players to slots or recommend transfers.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/squad/formation-squad-fit.test.ts`; `pnpm check`.
+- Follow-up: Implement only `docs/steps/12-squad-selection-and-formation-core/06-cli-formation-fit-inspection.md` next; keep default season simulation output unchanged.
+
+### 2026-06-20 — `docs/steps/12-squad-selection-and-formation-core/04-position-role-suitability.md`
+
+- Status: Done
+- Outcome: Added strict deterministic suitability between player natural positions and formation slot requirements.
+- Adopted solution: `packages/domain/src/tactics/position-suitability.ts` classifies fit as `natural`, `adapted`, `weak`, or `invalid`; full backs/wing backs, central midfield bands, wide players, and strikers have explicit non-equivalent adaptation rules so formation gaps remain visible.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/tactics/position-suitability.test.ts`; `pnpm check`.
+- Follow-up: Implement only `docs/steps/12-squad-selection-and-formation-core/05-formation-squad-fit-report.md` next; do not auto-select lineups.
+
+### 2026-06-20 — `docs/steps/12-squad-selection-and-formation-core/03-squad-depth-contract.md`
+
+- Status: Done
+- Outcome: Added a dependency-free squad-depth contract for explicit user-selected starters and bench/reserves.
+- Adopted solution: `packages/domain/src/squad/squad-depth.ts` validates ordered squad, starter, and bench/reserve player IDs, rejects duplicates, membership errors, and starter/bench overlap, and keeps the exact eleven-starter rule in `validateMatchSquadDepth` so non-match squad inspection stays flexible.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/squad/squad-depth.test.ts`; `pnpm check`.
+- Follow-up: Implement only `docs/steps/12-squad-selection-and-formation-core/04-position-role-suitability.md` next; do not build formation-fit reports yet.
+
+### 2026-06-20 — `docs/steps/12-squad-selection-and-formation-core/02-formation-catalog-contract.md`
+
+- Status: Done
+- Outcome: Added a dependency-free domain formation catalog for the major professional shapes planned in Phase 12.
+- Adopted solution: Formation data lives in `packages/domain/src/tactics/formations.ts` as stable keys, structured slots, broad departments, tactical lines, side/channel metadata, and recognized position-family requirements. The catalog is exported through `packages/domain/src/tactics/index.ts` and the root domain surface.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/tactics/formations.test.ts`; `pnpm check`.
+- Follow-up: Implement only `docs/steps/12-squad-selection-and-formation-core/03-squad-depth-contract.md` next; do not compute formation fit or assign players automatically.
+
+### 2026-06-20 — `docs/steps/12-squad-selection-and-formation-core/README.md`
+
+- Status: Done
+- Outcome: Created Phase 12 documentation and six implementation step documents for squad selection and formation core.
+- Adopted solution: Phase 12 pauses career persistence work to consolidate the core manager loop around formation choice, squad depth, player-slot suitability, and squad-fit reporting. The formation catalog should cover common major-league shapes, while reports should expose missing full backs, weak central roles, surplus wide players, and other future market needs as structured data.
+- Verification: Documentation-only update; no source or test files changed.
+- Follow-up: Implement only `docs/steps/12-squad-selection-and-formation-core/01-phase-11-output-review.md` next; do not add formation code before reviewing Phase 11 output.
 
 ### 2026-06-20 — `docs/steps/11-manual-lineup-rotation-v1/README.md`
 

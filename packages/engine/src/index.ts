@@ -6,6 +6,7 @@
  */
 export * from "./match-engine/index.ts";
 export * from "./player-state/index.ts";
+export * from "./squad/index.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
   ApplyMatchReportToFixtureError,

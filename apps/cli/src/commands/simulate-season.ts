@@ -3,15 +3,23 @@ import {
   type FakeLeagueSystem,
 } from "@game/content";
 import {
+  FORMATION_CATALOG,
+  FORMATION_KEYS,
+  buildFormationSquadFitReport,
   computePlayerMatchStats,
   createMatchReport,
+  createSquadDepth,
   buildTacticTeamContext,
   DEFAULT_FITNESS_RULES,
   deriveTeamStrength,
+  isFormationKey,
   simulateSeason,
   simulateMatchWithManualTactics,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
+  type FormationKey,
+  type FormationSlotFit,
+  type FormationSquadFitReport,
   type LineupSlot,
   type MatchTacticalDistributionInput,
   type MatchTeamContext,
@@ -86,7 +94,7 @@ export async function runSimulateSeasonCommand(
   if (!parsed.ok) {
     io.stderr(parsed.message);
     io.stderr(
-      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>] [--condition-demo=${formatSupportedConditionDemoProfiles()}] [--lineup-demo=${formatSupportedLineupDemoProfiles()}]`,
+      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>] [--condition-demo=${formatSupportedConditionDemoProfiles()}] [--lineup-demo=${formatSupportedLineupDemoProfiles()}] [--formation-fit=<formationKey>]`,
     );
     return 1;
   }
@@ -112,6 +120,27 @@ export async function runSimulateSeasonCommand(
   if (manualTacticSwitch !== undefined && setupDemo === undefined) {
     io.stderr("--manual-tactic-switch requires --setup-demo=<initialProfile>");
     return 1;
+  }
+
+  if (
+    parsed.formationFit !== undefined &&
+    (parsed.fixtureId !== undefined ||
+      parsed.roundNumber !== undefined ||
+      setupDemo !== undefined ||
+      manualTacticSwitch !== undefined ||
+      conditionDemo !== undefined ||
+      lineupDemo !== undefined)
+  ) {
+    io.stderr("--formation-fit cannot be combined with --round, --fixture, --setup-demo, --manual-tactic-switch, --condition-demo, or --lineup-demo");
+    return 1;
+  }
+
+  if (parsed.formationFit !== undefined) {
+    for (const line of formatFormationFitOutput(league, parsed.seed, parsed.formationFit)) {
+      io.stdout(line);
+    }
+
+    return 0;
   }
 
   if (manualTacticSwitch !== undefined && manualTacticSwitch.minute > league.matchEngineConfig.minuteCount) {
@@ -217,6 +246,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
   let conditionDemo: ConditionDemoProfileKey | undefined;
   let lineupDemo: LineupDemoProfileKey | undefined;
+  let formationFit: FormationKey | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -392,10 +422,34 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--formation-fit") {
+      const value = args[index + 1];
+      const parsedFormationFit = parseFormationFit(value);
+
+      if (!parsedFormationFit.ok) {
+        return parsedFormationFit;
+      }
+
+      formationFit = parsedFormationFit.formationFit;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--formation-fit=")) {
+      const parsedFormationFit = parseFormationFit(arg.slice("--formation-fit=".length));
+
+      if (!parsedFormationFit.ok) {
+        return parsedFormationFit;
+      }
+
+      formationFit = parsedFormationFit.formationFit;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo, lineupDemo };
+  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo, lineupDemo, formationFit };
 }
 
 /**
@@ -526,6 +580,24 @@ function parseLineupDemo(value: string | undefined): ParsedLineupDemo {
 }
 
 /**
+ * Parses one supported formation key for squad-fit inspection.
+ */
+function parseFormationFit(value: string | undefined): ParsedFormationFit {
+  if (value === undefined || value.length === 0) {
+    return { ok: false, message: `--formation-fit requires a supported value: ${formatSupportedFormationKeys()}` };
+  }
+
+  if (!isFormationKey(value)) {
+    return {
+      ok: false,
+      message: `Unsupported --formation-fit value: ${value}. Supported values: ${formatSupportedFormationKeys()}`,
+    };
+  }
+
+  return { ok: true, formationFit: value };
+}
+
+/**
  * Checks whether a string is one of the supported setup-demo profiles.
  */
 function isSetupDemoProfileKey(value: string): value is SetupDemoProfileKey {
@@ -583,6 +655,13 @@ function formatSupportedConditionDemoProfiles(): string {
  */
 function formatSupportedLineupDemoProfiles(): string {
   return SUPPORTED_LINEUP_DEMO_PROFILES.join("|");
+}
+
+/**
+ * Formats supported formation keys for usage and error messages.
+ */
+function formatSupportedFormationKeys(): string {
+  return FORMATION_KEYS.join("|");
 }
 
 /**
@@ -1221,6 +1300,126 @@ function formatSeasonOutput(
   lines.push(`Worst attack: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF")}`);
 
   return lines;
+}
+
+/**
+ * Formats a standalone formation-fit inspection report.
+ */
+function formatFormationFitOutput(
+  league: FakeLeagueSystem,
+  seed: string,
+  formationKey: FormationKey,
+): readonly string[] {
+  const clubId = firstGeneratedClubId(league, "formation-fit inspection");
+  const club = league.clubsById[clubId];
+  const report = buildFormationFitReportForCli(league, clubId, formationKey);
+  const formation = FORMATION_CATALOG[formationKey];
+  const lines = [
+    "The Long Season formation fit",
+    `Seed: ${seed}`,
+    `Competition: ${league.competition.name}`,
+    `Selected club: ${clubLabel(clubId, league.clubsById)}`,
+    `Squad size: ${club?.playerIds.length ?? 0}`,
+    `Selected formation: ${formationKey}`,
+    "Inspection only: no lineup is auto-selected and no transfer action is created.",
+    "",
+    "Formation slots:",
+  ];
+
+  for (const slot of formation.slots) {
+    lines.push(
+      `  ${slot.slotKey} ${slot.positionFamily} department=${slot.department}${slot.side === undefined ? "" : ` side=${slot.side}`}`,
+    );
+  }
+
+  lines.push("Covered slots:");
+  lines.push(...formatFormationSlotFitRows(report.coveredSlots));
+  lines.push("Adapted/weak slots:");
+  lines.push(...formatFormationSlotFitRows([...report.adaptedSlots, ...report.weakSlots]));
+  lines.push("Missing slots:");
+  lines.push(...formatFormationSlotFitRows(report.uncoveredSlots));
+  lines.push("Surplus groups:");
+
+  if (report.surplusGroups.length === 0) {
+    lines.push("  none");
+  } else {
+    for (const group of report.surplusGroups) {
+      lines.push(`  ${group.key} players=${group.playerCount} slots=${group.slotCount}`);
+    }
+  }
+
+  lines.push("Fit warnings:");
+  lines.push(...formatFormationFitWarningRows(report));
+  lines.push("Market-need hints:");
+  lines.push(`  ${report.marketNeedHints.length === 0 ? "none" : report.marketNeedHints.join(", ")}`);
+
+  return lines;
+}
+
+/**
+ * Builds the first CLI-visible formation-fit report from generated fake content.
+ */
+function buildFormationFitReportForCli(
+  league: FakeLeagueSystem,
+  clubId: ClubId,
+  formationKey: FormationKey,
+): FormationSquadFitReport {
+  const club = league.clubsById[clubId];
+  const lineup = league.lineupsByClubId[clubId];
+
+  if (club === undefined) {
+    throw new Error(`Cannot build formation-fit report without club: ${clubId}`);
+  }
+
+  if (lineup === undefined) {
+    throw new Error(`Cannot build formation-fit report without lineup: ${clubId}`);
+  }
+
+  const starterPlayerIds = lineup.map((slot) => slot.playerId);
+  const starterPlayerSet = new Set<PlayerId>(starterPlayerIds);
+
+  return buildFormationSquadFitReport({
+    formation: FORMATION_CATALOG[formationKey],
+    squadDepth: createSquadDepth({
+      clubId,
+      squadPlayerIds: club.playerIds,
+      starterPlayerIds,
+      benchReservePlayerIds: club.playerIds.filter((playerId) => !starterPlayerSet.has(playerId)),
+    }),
+    players: league.players,
+  });
+}
+
+/**
+ * Formats compact slot-fit rows or a stable `none` marker.
+ */
+function formatFormationSlotFitRows(slots: readonly FormationSlotFit[]): readonly string[] {
+  if (slots.length === 0) {
+    return ["  none"];
+  }
+
+  return slots.map(
+    (slot) =>
+      `  ${slot.slotKey} ${slot.positionFamily} best=${slot.bestSuitability} natural=${countSlotCandidates(slot, "natural")} adapted=${countSlotCandidates(slot, "adapted")} weak=${countSlotCandidates(slot, "weak")}`,
+  );
+}
+
+/**
+ * Formats role-depth warnings for slots covered only through adaptation.
+ */
+function formatFormationFitWarningRows(report: FormationSquadFitReport): readonly string[] {
+  const warnings = report.marketNeedHints
+    .filter((hint) => hint.startsWith("consider:"))
+    .map((hint) => `  weak_depth:${hint.slice("consider:".length)}`);
+
+  return warnings.length === 0 ? ["  none"] : warnings;
+}
+
+/**
+ * Counts slot candidates by suitability for clearer CLI inspection.
+ */
+function countSlotCandidates(slot: FormationSlotFit, suitability: FormationSlotFit["bestSuitability"]): number {
+  return slot.candidates.filter((candidate) => candidate.suitability === suitability).length;
 }
 
 /**
@@ -1975,6 +2174,7 @@ type ParsedSimulateSeasonArgs =
       readonly manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
       readonly conditionDemo: ConditionDemoProfileKey | undefined;
       readonly lineupDemo: LineupDemoProfileKey | undefined;
+      readonly formationFit: FormationKey | undefined;
     }
   | {
       readonly ok: false;
@@ -2030,6 +2230,17 @@ type ParsedLineupDemo =
   | {
       readonly ok: true;
       readonly lineupDemo: LineupDemoProfileKey;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+/** Parsed formation-fit argument result. */
+type ParsedFormationFit =
+  | {
+      readonly ok: true;
+      readonly formationFit: FormationKey;
     }
   | {
       readonly ok: false;

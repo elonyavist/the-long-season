@@ -4,7 +4,7 @@ import { clubId, playerId, type Club, type ClubId, type PlayerId } from "@game/d
 export const FAKE_CLUB_COUNT = 18;
 
 /** Number of generated senior players per fake club, including reserves. */
-export const FAKE_PLAYERS_PER_CLUB = 16;
+export const FAKE_PLAYERS_PER_CLUB = 22;
 
 /** Number of players selected by the default fixed fake lineup. */
 export const FAKE_LINEUP_SIZE = 11;

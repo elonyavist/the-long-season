@@ -14,6 +14,8 @@ export * from "./entities/match-event.entity.ts";
 export * from "./entities/player.entity.ts";
 export * from "./entities/tactic.entity.ts";
 export * from "./state/game-state.ts";
+export * from "./squad/index.ts";
+export * from "./tactics/index.ts";
 export * from "./types/brand.ts";
 export * from "./types/ids.ts";
 export * from "./value-objects/game-date.ts";

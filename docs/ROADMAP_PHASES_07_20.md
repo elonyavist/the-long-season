@@ -24,7 +24,7 @@ Each phase must answer:
 
 ## Current Position
 
-Phases 00-09 established:
+Phases 00-11 established:
 
 - deterministic foundation and package boundaries;
 - aggregate match simulation;
@@ -36,11 +36,13 @@ Phases 00-09 established:
 - season setup overrides;
 - saved tactic demo profiles;
 - explicit user-declared manual tactic switching for one inspected fixture;
-- CLI output good enough to inspect one season, one fixture, one deterministic tactic/lineup setup, and one manual tactical profile timeline.
+- player fitness consequences;
+- explicit manual lineup rotation for one fixture;
+- CLI output good enough to inspect one season, one fixture, one deterministic tactic/lineup setup, one manual tactical profile timeline, condition impact, and one manual lineup override.
 
 The project is still not a playable career. It is a deterministic football simulation core with useful CLI inspection.
 
-The next broad objective is to turn the simulator into a rough but playable career loop before investing in UI, SQLite, Tauri, localization, or launch work. Phase 10 starts that transition by introducing the first cross-match consequence: player fitness. This keeps the project grounded in manager choice without jumping directly to career persistence, economy, or UI.
+The next broad objective is to turn the simulator into a rough but playable manager game before investing in UI, SQLite, Tauri, localization, or launch work. Phase 12 deliberately pauses career persistence work to consolidate the tactical/squad core: formations, squad depth, positional fit, and the squad-building needs that will later drive the market.
 
 ## Phase 07 — Match Engine Causal V1
 
@@ -136,7 +138,57 @@ Phase gate question:
 
 - Does repeated selection now have a meaningful cost without making the simulator unstable?
 
-## Phase 11 — Career Loop CLI MVP
+## Phase 11 — Manual Lineup Rotation V1
+
+Goal: let the manager manually choose different lineups for selected fixtures and inspect fitness/result consequences.
+
+Completed scope:
+
+- review Phase 10 condition output;
+- add deterministic PRO01 first-team and rotated lineup profiles;
+- extend fake content with real reserve players while preserving default 11-player lineups;
+- define and apply explicit fixture lineup overrides in `simulateSeason`;
+- expose CLI fixture lineup inspection through `--fixture=<fixtureId> --lineup-demo=<profile>`;
+- keep the user in control and avoid automatic rotation.
+
+Do not include:
+
+- UI;
+- market;
+- automatic rotation;
+- free-form lineup editor;
+- substitutions, injuries, form, morale, tactical familiarity, or career saves.
+
+Phase gate question:
+
+- Can a user/developer verify that selected starters and rested players change one fixture deterministically?
+
+## Phase 12 — Squad Selection And Formation Core
+
+Goal: make formation choice and squad shape a core manager decision.
+
+Possible scope:
+
+- add a broad curated formation catalog for common major-league shapes;
+- define squad-depth contracts for roughly 22-player senior squads;
+- define starters, bench/reserve groups, and validation;
+- classify player-to-slot suitability as natural/adapted/weak/invalid;
+- report formation fit, missing positions, weak depth, surplus groups, and future market-need hints;
+- expose CLI inspection that shows whether a squad fits `4-4-2`, `4-3-3`, `3-5-2`, `3-4-3`, narrow shapes, and other catalog formations.
+
+Do not include:
+
+- transfer execution;
+- contracts, agents, wages, scouting, staff, youth, UI, persistence, or career saves;
+- automatic best-XI selection;
+- free-form formation editor;
+- tactical familiarity, form, morale, injuries, or substitutions.
+
+Phase gate question:
+
+- Does changing formation expose believable squad gaps and future recruitment needs?
+
+## Phase 13 — Career Loop CLI MVP
 
 Goal: turn one-off season simulation into a rough playable run.
 
@@ -145,7 +197,7 @@ Possible scope:
 - start a new career with one selected club;
 - persist current date, current season, fixtures, table source data, and club context;
 - add `continue` or `advance` behavior;
-- expose next fixture, current table, recent results, and season summary;
+- expose next fixture, current table, recent results, squad fit, and season summary;
 - simulate one matchday at a time;
 - end a season and start the next one in a minimal deterministic way.
 
@@ -153,16 +205,16 @@ Do not include:
 
 - UI;
 - SQLite;
-- market;
-- economy;
+- full market;
+- economy beyond what is explicitly documented for the phase;
 - promotion/relegation beyond what is explicitly documented for the phase;
 - long-term career profile.
 
 Phase gate question:
 
-- Can someone play through a rough season from CLI without using only batch simulation?
+- Can someone play through a rough season from CLI while making explicit lineup/formation decisions?
 
-## Phase 12 — Mature JSON Run Persistence
+## Phase 14 — Mature JSON Run Persistence
 
 Goal: make the CLI career loop saveable and reloadable.
 
@@ -185,7 +237,7 @@ Phase gate question:
 
 - Can a run be saved, closed, loaded, and continued deterministically?
 
-## Phase 13 — Contracts And Economy Base
+## Phase 15 — Contracts And Economy Base
 
 Goal: make the club financially real enough for the "poverty as design" pillar to start existing.
 
@@ -210,9 +262,9 @@ Phase gate question:
 
 - Does the player have to think about money before making squad decisions?
 
-## Phase 14 — Minimal Market
+## Phase 16 — Minimal Market
 
-Goal: allow basic squad change.
+Goal: allow basic squad change driven by squad/formation needs.
 
 Possible scope:
 
@@ -222,6 +274,7 @@ Possible scope:
 - add transfer windows;
 - create minimal AI acceptance rules;
 - add deterministic market CLI commands.
+- use Phase 12 squad-fit reports to explain why a transfer is useful, without auto-buying players.
 
 Do not include:
 
@@ -236,7 +289,7 @@ Phase gate question:
 
 - Can the user improve a weak squad with limited money, and does every deal feel like a trade-off?
 
-## Phase 15 — Board, Objectives, And Run Failure
+## Phase 17 — Board, Objectives, And Run Failure
 
 Goal: create real stakes.
 
@@ -259,7 +312,7 @@ Phase gate question:
 
 - Can the run now be lost for sporting or financial reasons?
 
-## Phase 16 — Multi-Division And Promotion/Relegation
+## Phase 18 — Multi-Division And Promotion/Relegation
 
 Goal: make "the climb" mechanically real.
 
@@ -282,7 +335,7 @@ Phase gate question:
 
 - Can the user's club climb or fall between divisions across seasons?
 
-## Phase 17 — Player Growth And Aging V1
+## Phase 19 — Player Growth And Aging V1
 
 Goal: make multi-season squad building matter.
 
@@ -306,7 +359,7 @@ Phase gate question:
 
 - Do young and old players create meaningful long-term roster decisions?
 
-## Phase 18 — Scouting And Fog Minimum
+## Phase 20 — Scouting And Fog Minimum
 
 Goal: make player information imperfect.
 
@@ -329,7 +382,7 @@ Phase gate question:
 
 - Does imperfect information make recruitment more interesting without becoming tedious?
 
-## Phase 19 — Match Day Session CLI
+## Later Candidate — Match Day Session CLI
 
 Goal: create a resumable, interactive match driver over the same match engine.
 
@@ -352,7 +405,7 @@ Phase gate question:
 
 - Is watching and stepping through a match more tense than only seeing final output?
 
-## Phase 20 — UI Contract And Selectors
+## Later Candidate — UI Contract And Selectors
 
 Goal: prepare the browser app boundary without building a full UI too early.
 
@@ -376,14 +429,14 @@ Phase gate question:
 
 ## Strategic Reading
 
-Phases 07-09 should make match output player-readable and tactically controllable from CLI.
+Phases 07-09 made match output player-readable and tactically controllable from CLI.
 
-Phases 10-12 should make the CLI prototype playable and persistent.
+Phases 10-12 should make manager choices around fitness, lineup, formation, and squad shape meaningful before persistence.
 
-Phases 13-16 should make the prototype risky and recognizable as a climb.
+Phases 13-16 should make the prototype playable, persistent, and economically risky.
 
-Phases 17-19 should add long-term attachment, imperfect information, and match-day tension.
+Phases 17-20 should add run failure, promotion/relegation, growth, and imperfect information.
 
-Phase 20 should prepare the UI boundary only after the gameplay loop is already worth presenting. A Web Shell MVP should come after Phase 20 unless the roadmap is explicitly revised.
+UI and match-day session work should come only after the gameplay loop is already worth presenting. A Web Shell MVP should come after the core manager loop unless the roadmap is explicitly revised.
 
 This roadmap should be revised after every completed phase. It is better to rework a weak phase than to add a new system on top of it.

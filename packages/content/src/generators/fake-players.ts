@@ -118,11 +118,11 @@ function roleKeyForSlot(slotNumber: number): string {
     return "gk";
   }
 
-  if (slotNumber <= 5 || slotNumber === 13 || slotNumber === 14) {
+  if (slotNumber <= 5 || slotNumber === 13 || slotNumber === 14 || slotNumber === 17 || slotNumber === 18) {
     return "defender";
   }
 
-  if (slotNumber <= 9 || slotNumber === 15) {
+  if (slotNumber <= 9 || slotNumber === 15 || slotNumber === 19 || slotNumber === 20) {
     return "midfielder";
   }
 
@@ -143,6 +143,8 @@ function positionForSlot(slotNumber: number): PlayerPosition {
     case 4:
     case 13:
     case 14:
+    case 17:
+    case 18:
       return "cb";
     case 5:
       return "lb";
@@ -154,6 +156,10 @@ function positionForSlot(slotNumber: number): PlayerPosition {
       return "rw";
     case 9:
       return "lw";
+    case 19:
+      return "rwb";
+    case 20:
+      return "lwb";
     default:
       return "st";
   }
@@ -164,8 +170,9 @@ function positionForSlot(slotNumber: number): PlayerPosition {
  */
 function abilitiesForPosition(base: number, position: PlayerPosition): PlayerAbilities {
   const isGoalkeeper = position === "gk";
-  const isDefender = position === "rb" || position === "cb" || position === "lb";
-  const isMidfielder = position === "cm" || position === "rw" || position === "lw";
+  const isDefender =
+    position === "rb" || position === "cb" || position === "lb" || position === "rwb" || position === "lwb";
+  const isMidfielder = position === "cm" || position === "rw" || position === "lw" || position === "rwb" || position === "lwb";
   const isAttacker = position === "st";
 
   return {

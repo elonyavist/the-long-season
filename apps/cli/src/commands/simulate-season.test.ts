@@ -70,6 +70,56 @@ test("simulate-season prints real season player summaries", async () => {
   );
 });
 
+test("simulate-season can inspect formation fit without printing the season table", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--formation-fit=4-2-3-1"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season formation fit");
+  assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
+  assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("Squad size: 22"), true);
+  assert.equal(io.stdoutLines.includes("Selected formation: 4-2-3-1"), true);
+  assert.equal(io.stdoutLines.includes("Inspection only: no lineup is auto-selected and no transfer action is created."), true);
+  assert.equal(io.stdoutLines.includes("Formation slots:"), true);
+  assert.equal(io.stdoutLines.includes("Covered slots:"), true);
+  assert.equal(io.stdoutLines.includes("Adapted/weak slots:"), true);
+  assert.equal(io.stdoutLines.includes("Missing slots:"), true);
+  assert.equal(io.stdoutLines.includes("Surplus groups:"), true);
+  assert.equal(io.stdoutLines.includes("Fit warnings:"), true);
+  assert.equal(io.stdoutLines.includes("Market-need hints:"), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), false);
+  assert.equal(io.stdoutLines.includes("  rb right_full_back best=natural natural=1 adapted=1 weak=8"), true);
+  assert.equal(io.stdoutLines.includes("  am attacking_midfielder best=adapted natural=0 adapted=3 weak=7"), true);
+  assert.equal(io.stdoutLines.includes("  weak_depth:defensive_midfielder"), true);
+  assert.equal(io.stdoutLines.includes("  weak_depth:attacking_midfielder"), true);
+  assert.equal(
+    io.stdoutLines.includes(
+      "  consider:defensive_midfielder, consider:attacking_midfielder, surplus:wide_players, surplus:center_backs",
+    ),
+    true,
+  );
+});
+
+test("same seed and formation fit produce same inspection output", async () => {
+  const first = captureIo();
+  const second = captureIo();
+  const args = ["--seed=repeatable-formation-fit", "--formation-fit=4-4-2"];
+
+  assert.equal(await runSimulateSeasonCommand(args, first), 0);
+  assert.equal(await runSimulateSeasonCommand(args, second), 0);
+  assert.deepEqual(first.stdoutLines, second.stdoutLines);
+});
+
+test("simulate-season rejects unsupported formation fit keys", async () => {
+  const io = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--formation-fit=2-3-5"], io), 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0]?.startsWith("Unsupported --formation-fit value: 2-3-5."), true);
+});
+
 test("simulate-season can print a deterministic condition demo", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(
@@ -205,6 +255,7 @@ test("simulate-season default output does not include lineup demo inspection", a
 
   assert.equal(await runSimulateSeasonCommand(["--seed=demo-001"], io), 0);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Lineup demo: ")), false);
+  assert.equal(io.stdoutLines.includes("The Long Season formation fit"), false);
 });
 
 test("same seed and condition demo produce same output", async () => {
