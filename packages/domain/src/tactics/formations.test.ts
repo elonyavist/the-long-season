@@ -13,7 +13,7 @@ import {
 
 /**
  * Formation catalog tests protect the curated shape data used by later lineup,
- * squad-fit, and market-need reporting.
+ * squad-fit and manager-facing formation reporting.
  */
 test("catalog exposes every supported formation key in stable order", () => {
   assert.deepEqual(Object.keys(FORMATION_CATALOG), [...FORMATION_KEYS]);

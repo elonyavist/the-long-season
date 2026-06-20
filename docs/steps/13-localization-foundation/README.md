@@ -14,9 +14,9 @@ The long-term goal is that every user-facing label, heading, event word, report 
 
 ## Why we implement it this way
 
-The project is starting to produce many user-visible strings: command output, season reports, league-table headings, balance metrics, fixture events, player-stat headings, tactics, lineups, condition reports, formations, squad-fit warnings, market-need hints, and CLI validation errors.
+The project is starting to produce many user-visible strings: command output, season reports, league-table headings, balance metrics, fixture events, player-stat headings, tactics, lineups, condition reports, formations, squad-fit warnings, factual squad-fit notes, and CLI validation errors.
 
-Those strings must not be hardcoded in presentation paths. Domain and engine should keep stable language-agnostic keys such as `goal`, `save`, `right_full_back`, `weak_depth:defensive_midfielder`, and `consider:attacking_midfielder`. Presentation layers should turn those stable keys and structured data into localized text.
+Those strings must not be hardcoded in presentation paths. Domain and engine should keep stable language-agnostic keys such as `goal`, `save`, `right_full_back`, `adapted_only:defensive_midfielder`, and `extra_depth:wide_players`. Presentation layers should turn those stable keys and structured data into localized text, without rendering them as market instructions.
 
 This phase deliberately separates inventory, contract, catalog, CLI integration, five-language completion, hardcoded-text enforcement, and source-of-truth policy alignment:
 
@@ -61,7 +61,7 @@ Not every string literal is a localization target. IDs, schema versions, package
   - fixture and event labels;
   - player stat labels;
   - tactic, lineup, condition, and manual-switch labels;
-  - formation, squad-fit, warning, and market-need labels.
+  - formation, squad-fit, warning, and factual squad-fit note labels.
 - Implement `it` and `en` first.
 - Add CLI language selection, likely `--lang=it|en|de|es|fr`.
 - Localize current CLI presentation output without changing domain/engine keys or simulation data.

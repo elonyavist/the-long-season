@@ -39,7 +39,7 @@ test("reports a back-three squad as weak in full backs for a back-four formation
     report.weakSlots.map((slot) => slot.slotKey),
     ["rb", "lb"],
   );
-  assert.deepEqual(report.marketNeedHints, ["need:left_full_back", "need:right_full_back"]);
+  assert.deepEqual(report.squadFitHints, ["gap:left_full_back", "gap:right_full_back"]);
 });
 
 test("reports a wide-heavy squad as weak in central attacking midfield", () => {
@@ -64,7 +64,7 @@ test("reports a wide-heavy squad as weak in central attacking midfield", () => {
     report.weakSlots.map((slot) => slot.slotKey),
     ["am"],
   );
-  assert.deepEqual(report.marketNeedHints, ["need:attacking_midfielder", "surplus:wide_players"]);
+  assert.deepEqual(report.squadFitHints, ["gap:attacking_midfielder", "extra_depth:wide_players"]);
 });
 
 test("reports a narrow squad as weak in wide roles", () => {
@@ -86,7 +86,7 @@ test("reports a narrow squad as weak in wide roles", () => {
   );
 
   assert.deepEqual(report.weakSlots.map((slot) => slot.slotKey), ["rm", "lm"]);
-  assert.deepEqual(report.marketNeedHints, ["need:wide_midfielder"]);
+  assert.deepEqual(report.squadFitHints, ["gap:wide_midfielder"]);
 });
 
 test("reports a balanced squad as covering a basic formation", () => {
@@ -110,10 +110,10 @@ test("reports a balanced squad as covering a basic formation", () => {
   assert.equal(report.coveredSlots.length, 11);
   assert.equal(report.weakSlots.length, 0);
   assert.equal(report.uncoveredSlots.length, 0);
-  assert.deepEqual(report.marketNeedHints, []);
+  assert.deepEqual(report.squadFitHints, []);
 });
 
-test("reports consider hints when key roles are covered only by adapted players", () => {
+test("reports adapted-only hints when key roles are covered only by adapted players", () => {
   const report = buildFormationSquadFitReport(
     fitInput("4-2-3-1", [
       ["01", "gk"],
@@ -132,7 +132,7 @@ test("reports consider hints when key roles are covered only by adapted players"
   );
 
   assert.equal(report.uncoveredSlots.length, 0);
-  assert.deepEqual(report.marketNeedHints, ["consider:defensive_midfielder", "consider:attacking_midfielder"]);
+  assert.deepEqual(report.squadFitHints, ["adapted_only:defensive_midfielder", "adapted_only:attacking_midfielder"]);
 });
 
 function fitInput(

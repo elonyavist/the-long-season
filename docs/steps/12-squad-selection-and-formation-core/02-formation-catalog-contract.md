@@ -6,9 +6,9 @@ Define a broad, curated, deterministic formation catalog with explicit slot requ
 
 ## Why we implement it this way
 
-The user should choose recognizable formations from professional football, not drag players freely on a canvas. The catalog keeps the simulation balanced, makes the CLI/UI easier to explain, and lets the game report meaningful squad needs.
+The user should choose recognizable formations from professional football, not drag players freely on a canvas. The catalog keeps the simulation balanced, makes the CLI/UI easier to explain, and lets the game report meaningful squad-fit facts.
 
-The important part is not only the formation name. A `4-4-2` must require full backs, wide midfielders, and two forwards. A `3-5-2` must represent a back three and wide channels. A `4-2-3-1` must need a lone striker and attacking midfield structure. Those slot requirements are what make squad building and future market decisions meaningful.
+The important part is not only the formation name. A `4-4-2` must require full backs, wide midfielders, and two forwards. A `3-5-2` must represent a back three and wide channels. A `4-2-3-1` must require a lone striker and attacking midfield structure. Those slot requirements are what make squad building and future manager decisions meaningful.
 
 ## What to implement
 
@@ -55,7 +55,7 @@ The important part is not only the formation name. A `4-4-2` must require full b
 ## What NOT to implement
 
 - Do not assign players to formations in this step.
-- Do not compute squad fit, suitability, or market needs yet.
+- Do not compute squad fit, suitability, or market recommendations yet.
 - Do not add free-form formation editing.
 - Do not add tactical familiarity, instructions, training, morale, form, market, UI, persistence, or career saves.
 - Do not change match engine algorithms or balance.

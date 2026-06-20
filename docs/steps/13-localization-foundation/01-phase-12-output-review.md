@@ -6,7 +6,7 @@ Review the current user-facing output created across Phases 00-12 and identify w
 
 ## Why we implement it this way
 
-Before adding a localization layer, we need to know what text currently leaks into CLI output. Phase 12 exposed obvious technical keys such as `right_full_back`, `adapted`, `weak_depth:defensive_midfielder`, and `surplus:center_backs`, but the earlier phases also added many hardcoded user-facing strings: season headings, table columns, event names, balance metrics, player-stat labels, tactic/lineup/condition labels, and CLI validation errors.
+Before adding a localization layer, we need to know what text currently leaks into CLI output. Phase 12 exposed obvious technical keys such as `right_full_back`, `adapted`, `adapted_only:defensive_midfielder`, and `extra_depth:center_backs`, but the earlier phases also added many hardcoded user-facing strings: season headings, table columns, event names, balance metrics, player-stat labels, tactic/lineup/condition labels, and CLI validation errors.
 
 This review protects the next steps from translating random strings ad hoc.
 
@@ -33,7 +33,7 @@ This review protects the next steps from translating random strings ad hoc.
   - tactic/setup/manual-switch labels;
   - fitness/condition labels;
   - lineup override and rotation labels;
-  - formation slots, position families, departments, suitability values, fit warnings, market-need hint keys, and repeated words such as `best`, `natural`, `adapted`, `weak`, `slots`, and `players`.
+  - formation slots, position families, departments, suitability values, fit warnings, factual squad-fit note keys, and repeated words such as `best`, `natural`, `adapted`, `weak`, `slots`, and `players`.
 - Decide which strings belong in the localization catalog and which can remain technical:
   - user-facing presentation text must be localized;
   - stable IDs, schema versions, machine keys, package names, and non-surfaced developer errors can stay technical;

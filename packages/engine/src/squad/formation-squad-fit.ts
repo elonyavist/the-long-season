@@ -11,19 +11,19 @@ import {
   type SquadDepth,
 } from "@game/domain";
 
-/** Stable market-planning hint keys produced by formation squad-fit reports. */
+/** Stable factual fit-note keys produced by formation squad-fit reports. */
 export type FormationSquadFitHint =
-  | "need:left_full_back"
-  | "need:right_full_back"
-  | "need:center_back_depth"
-  | "need:defensive_midfielder"
-  | "need:attacking_midfielder"
-  | "need:wide_midfielder"
-  | "need:striker_depth"
-  | "consider:defensive_midfielder"
-  | "consider:attacking_midfielder"
-  | "surplus:wide_players"
-  | "surplus:center_backs";
+  | "gap:left_full_back"
+  | "gap:right_full_back"
+  | "gap:center_back_depth"
+  | "gap:defensive_midfielder"
+  | "gap:attacking_midfielder"
+  | "gap:wide_midfielder"
+  | "gap:striker_depth"
+  | "adapted_only:defensive_midfielder"
+  | "adapted_only:attacking_midfielder"
+  | "extra_depth:wide_players"
+  | "extra_depth:center_backs";
 
 /** Minimal player data required by the fit report. */
 export type FormationFitPlayer = Pick<Player, "id" | "naturalPositions">;
@@ -104,10 +104,10 @@ export interface FormationSquadFitReport {
   readonly forcedOutOfPositionPlayerIds: readonly PlayerId[];
   /** Depth counts by required position family. */
   readonly depthByPositionFamily: readonly FormationPositionFamilyDepth[];
-  /** Broad surplus groups that future market logic can inspect. */
+  /** Broad extra-depth groups that callers can inspect. */
   readonly surplusGroups: readonly FormationSurplusGroup[];
-  /** Stable future-facing market-planning hints. */
-  readonly marketNeedHints: readonly FormationSquadFitHint[];
+  /** Stable factual fit notes; they are not transfer advice. */
+  readonly squadFitHints: readonly FormationSquadFitHint[];
 }
 
 /** Builds a deterministic report for one user-selected squad against one formation. */
@@ -116,7 +116,7 @@ export function buildFormationSquadFitReport(input: BuildFormationSquadFitReport
   const slotFits = input.formation.slots.map((slot) => buildSlotFit(slot, squadPlayers));
   const depthByPositionFamily = buildDepthByPositionFamily(input.formation.slots, squadPlayers);
   const surplusGroups = buildSurplusGroups(input.formation.slots, squadPlayers);
-  const marketNeedHints = buildMarketNeedHints(depthByPositionFamily, surplusGroups);
+  const squadFitHints = buildSquadFitHints(depthByPositionFamily, surplusGroups);
 
   return {
     formationKey: input.formation.key,
@@ -128,7 +128,7 @@ export function buildFormationSquadFitReport(input: BuildFormationSquadFitReport
     forcedOutOfPositionPlayerIds: playerIdsForcedOutOfPosition(squadPlayers, input.formation.slots),
     depthByPositionFamily,
     surplusGroups,
-    marketNeedHints,
+    squadFitHints,
   };
 }
 
@@ -202,7 +202,7 @@ function buildSurplusGroups(
   return surplusGroups;
 }
 
-function buildMarketNeedHints(
+function buildSquadFitHints(
   depthRows: readonly FormationPositionFamilyDepth[],
   surplusGroups: readonly FormationSurplusGroup[],
 ): readonly FormationSquadFitHint[] {
@@ -211,39 +211,39 @@ function buildMarketNeedHints(
   for (const row of depthRows) {
     if (row.coveringPlayerCount >= row.requiredSlots) {
       if (row.naturalPlayerCount < row.requiredSlots && row.adaptedPlayerCount > 0) {
-        if (row.positionFamily === "defensive_midfielder") hints.add("consider:defensive_midfielder");
-        if (row.positionFamily === "attacking_midfielder") hints.add("consider:attacking_midfielder");
+        if (row.positionFamily === "defensive_midfielder") hints.add("adapted_only:defensive_midfielder");
+        if (row.positionFamily === "attacking_midfielder") hints.add("adapted_only:attacking_midfielder");
       }
 
       continue;
     }
 
-    if (row.positionFamily === "left_full_back") hints.add("need:left_full_back");
-    if (row.positionFamily === "right_full_back") hints.add("need:right_full_back");
-    if (row.positionFamily === "center_back") hints.add("need:center_back_depth");
-    if (row.positionFamily === "defensive_midfielder") hints.add("need:defensive_midfielder");
-    if (row.positionFamily === "attacking_midfielder") hints.add("need:attacking_midfielder");
-    if (row.positionFamily === "left_midfielder" || row.positionFamily === "right_midfielder") hints.add("need:wide_midfielder");
-    if (row.positionFamily === "striker") hints.add("need:striker_depth");
+    if (row.positionFamily === "left_full_back") hints.add("gap:left_full_back");
+    if (row.positionFamily === "right_full_back") hints.add("gap:right_full_back");
+    if (row.positionFamily === "center_back") hints.add("gap:center_back_depth");
+    if (row.positionFamily === "defensive_midfielder") hints.add("gap:defensive_midfielder");
+    if (row.positionFamily === "attacking_midfielder") hints.add("gap:attacking_midfielder");
+    if (row.positionFamily === "left_midfielder" || row.positionFamily === "right_midfielder") hints.add("gap:wide_midfielder");
+    if (row.positionFamily === "striker") hints.add("gap:striker_depth");
   }
 
   for (const group of surplusGroups) {
-    if (group.key === "wide_players") hints.add("surplus:wide_players");
-    if (group.key === "center_backs") hints.add("surplus:center_backs");
+    if (group.key === "wide_players") hints.add("extra_depth:wide_players");
+    if (group.key === "center_backs") hints.add("extra_depth:center_backs");
   }
 
   const orderedHints: readonly FormationSquadFitHint[] = [
-    "need:left_full_back",
-    "need:right_full_back",
-    "need:center_back_depth",
-    "need:defensive_midfielder",
-    "need:attacking_midfielder",
-    "need:wide_midfielder",
-    "need:striker_depth",
-    "consider:defensive_midfielder",
-    "consider:attacking_midfielder",
-    "surplus:wide_players",
-    "surplus:center_backs",
+    "gap:left_full_back",
+    "gap:right_full_back",
+    "gap:center_back_depth",
+    "gap:defensive_midfielder",
+    "gap:attacking_midfielder",
+    "gap:wide_midfielder",
+    "gap:striker_depth",
+    "adapted_only:defensive_midfielder",
+    "adapted_only:attacking_midfielder",
+    "extra_depth:wide_players",
+    "extra_depth:center_backs",
   ];
 
   return orderedHints.filter((hint) => hints.has(hint));

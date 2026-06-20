@@ -2,7 +2,7 @@
  * Supported user-facing formation keys.
  *
  * These are curated football shapes, not free-form board coordinates. Keeping
- * the list explicit makes future squad-fit, market-need, and UI flows stable.
+ * the list explicit makes future squad-fit, manager interpretation, and UI flows stable.
  */
 export const FORMATION_KEYS = [
   "4-4-2",

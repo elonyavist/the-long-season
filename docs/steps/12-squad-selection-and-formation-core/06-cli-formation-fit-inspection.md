@@ -34,8 +34,8 @@ This is still inspection, not recommendation. The output can show fit and gaps, 
   - covered slots;
   - weak/adapted slots;
   - missing slots;
-  - surplus groups;
-  - market-need hint keys;
+  - extra-depth groups;
+  - factual squad-fit note keys;
   - a short note that this is an inspection report, not automatic selection.
 - Add focused CLI tests for:
   - output shape;
@@ -83,7 +83,7 @@ This is still inspection, not recommendation. The output can show fit and gaps, 
 ## Definition of Done
 
 - CLI can inspect at least one selected formation against one fake club squad.
-- Output clearly shows fit, gaps, surplus groups, and market-need hint keys.
+- Output clearly shows fit, gaps, extra-depth groups, and factual squad-fit notes.
 - Default season output remains unchanged.
 - The command does not auto-select players or perform market actions.
 - Phase 12 can be closed or explicitly reworked before Phase 13 is documented.

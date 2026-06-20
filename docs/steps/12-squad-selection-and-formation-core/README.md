@@ -37,7 +37,7 @@ This phase is a consolidation phase. It should create the structural model that 
   - weak depth;
   - surplus players;
   - players forced out of position;
-  - likely future market needs.
+  - factual squad-fit notes the manager can interpret.
 - Add CLI inspection for one fake club and several formations.
 - Keep the user in control: the system can validate, explain, and report needs, but it must not auto-pick the lineup or auto-buy players.
 - Keep code minimal, deterministic, typed, and documented with TSDoc/JSDoc where useful for a junior developer.

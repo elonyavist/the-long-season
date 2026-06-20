@@ -25,7 +25,7 @@ English remains the fallback language. Italian is required because the project i
   - tactic/setup/manual-switch labels;
   - condition/fitness labels;
   - lineup override and rotation labels;
-  - formation position families, departments, suitability values, warning keys, surplus groups, and market-need hint keys.
+  - formation position families, departments, suitability values, warning keys, extra-depth groups, and factual squad-fit note keys.
 - Add English labels for every key.
 - Add Italian labels for every key.
 - Add tests proving:

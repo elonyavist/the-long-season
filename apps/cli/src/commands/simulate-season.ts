@@ -1123,7 +1123,7 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem, text: T
         const assist = event.assistPlayerId === undefined ? "" : ` ${text("event.assist")}=${playerLabel(event.assistPlayerId, league.players)}`;
         const creator = event.creatorPlayerId === undefined ? "" : ` ${text("event.creator")}=${playerLabel(event.creatorPlayerId, league.players)}`;
         events.push(
-          `  ${event.shot.minute}' ${text("event.goal")} ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist}${creator} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.goal")} ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist}${creator} ${text("event.shot")}=${formatShotType(event.shot.shotType, text)} ${text("event.chance")}=${formatChanceType(event.shot.chanceType, text)}`,
         );
         break;
       }
@@ -1132,7 +1132,7 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem, text: T
         const defendingClubId = sideClubId(fixture, oppositeSide(event.shot.side));
         const attackingClubId = sideClubId(fixture, event.shot.side);
         events.push(
-          `  ${event.shot.minute}' ${text("event.save")} ${clubLabel(defendingClubId, league.clubsById)} ${playerLabel(event.goalkeeperPlayerId, league.players)} ${text("event.vs")} ${clubLabel(attackingClubId, league.clubsById)} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.save")} ${clubLabel(defendingClubId, league.clubsById)} ${playerLabel(event.goalkeeperPlayerId, league.players)} ${text("event.vs")} ${clubLabel(attackingClubId, league.clubsById)} ${text("event.shot")}=${formatShotType(event.shot.shotType, text)} ${text("event.chance")}=${formatChanceType(event.shot.chanceType, text)}`,
         );
         break;
       }
@@ -1140,7 +1140,7 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem, text: T
       case "miss": {
         const clubId = sideClubId(fixture, event.shot.side);
         events.push(
-          `  ${event.shot.minute}' ${text("event.miss")} ${clubLabel(clubId, league.clubsById)} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.miss")} ${clubLabel(clubId, league.clubsById)} ${text("event.shot")}=${formatShotType(event.shot.shotType, text)} ${text("event.chance")}=${formatChanceType(event.shot.chanceType, text)}`,
         );
         break;
       }
@@ -1151,7 +1151,7 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem, text: T
           ? ""
           : ` ${text("event.defender")}=${playerLabel(event.primaryDefenderPlayerId, league.players)}`;
         events.push(
-          `  ${event.shot.minute}' ${text("event.block")} ${clubLabel(clubId, league.clubsById)}${defender} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.block")} ${clubLabel(clubId, league.clubsById)}${defender} ${text("event.shot")}=${formatShotType(event.shot.shotType, text)} ${text("event.chance")}=${formatChanceType(event.shot.chanceType, text)}`,
         );
         break;
       }
@@ -1441,11 +1441,11 @@ function formatFormationFitOutput(
 
   lines.push(`${text("formation.fitWarnings")}:`);
   lines.push(...formatFormationFitWarningRows(report, text));
-  lines.push(`${text("formation.marketNeedHints")}:`);
+  lines.push(`${text("formation.squadFitNotes")}:`);
   lines.push(
-    `  ${report.marketNeedHints.length === 0
+    `  ${report.squadFitHints.length === 0
       ? text("common.none")
-      : report.marketNeedHints.map((hint) => formatFormationMarketHint(hint, text)).join(", ")}`,
+      : report.squadFitHints.map((hint) => formatFormationFitNote(hint, text)).join(", ")}`,
   );
 
   return lines;
@@ -1503,11 +1503,11 @@ function formatFormationSlotFitRows(slots: readonly FormationSlotFit[], text: Tr
  * Formats role-depth warnings for slots covered only through adaptation.
  */
 function formatFormationFitWarningRows(report: FormationSquadFitReport, text: Translator): readonly string[] {
-  const warnings = report.marketNeedHints
-    .filter((hint) => hint.startsWith("consider:"))
+  const warnings = report.squadFitHints
+    .filter((hint) => hint.startsWith("adapted_only:"))
     .map((hint) =>
       `  ${text("formation.warning.weakDepth", {
-        position: formatFormationPositionFamily(hint.slice("consider:".length), text),
+        position: formatFormationPositionFamily(hint.slice("adapted_only:".length), text),
       })}`,
     );
 
@@ -1518,53 +1518,53 @@ function formatFormationFitWarningRows(report: FormationSquadFitReport, text: Tr
  * Formats a stable formation department key for presentation output.
  */
 function formatFormationDepartment(department: string, text: Translator): string {
-  return text(formationMessageKey("formation.department", department));
+  return text(presentationMessageKey("formation.department", department));
 }
 
 /**
  * Formats a stable formation side key for presentation output.
  */
 function formatFormationSide(side: string, text: Translator): string {
-  return text(formationMessageKey("formation.side", side));
+  return text(presentationMessageKey("formation.side", side));
 }
 
 /**
  * Formats a stable position-family key for presentation output.
  */
 function formatFormationPositionFamily(positionFamily: string, text: Translator): string {
-  return text(formationMessageKey("formation.position", positionFamily));
+  return text(presentationMessageKey("formation.position", positionFamily));
 }
 
 /**
  * Formats a stable slot suitability key for presentation output.
  */
 function formatFormationSuitability(suitability: string, text: Translator): string {
-  return text(formationMessageKey("formation.suitability", suitability));
+  return text(presentationMessageKey("formation.suitability", suitability));
 }
 
 /**
  * Formats a stable surplus-group key for presentation output.
  */
 function formatFormationSurplusGroup(group: string, text: Translator): string {
-  return text(formationMessageKey("formation.surplus", group));
+  return text(presentationMessageKey("formation.surplus", group));
 }
 
 /**
  * Formats a stable market hint by localizing its prefix and target key.
  */
-function formatFormationMarketHint(hint: string, text: Translator): string {
+function formatFormationFitNote(hint: string, text: Translator): string {
   const [kind, value] = hint.split(":");
 
-  if (kind === "need" && value !== undefined) {
-    return text("formation.market.need", { position: formatFormationMarketTarget(value, text) });
+  if (kind === "gap" && value !== undefined) {
+    return text("formation.fitNote.coverageGap", { position: formatFormationFitTarget(value, text) });
   }
 
-  if (kind === "consider" && value !== undefined) {
-    return text("formation.market.consider", { position: formatFormationPositionFamily(value, text) });
+  if (kind === "adapted_only" && value !== undefined) {
+    return text("formation.fitNote.adaptedOnly", { position: formatFormationPositionFamily(value, text) });
   }
 
-  if (kind === "surplus" && value !== undefined) {
-    return text("formation.market.surplus", { group: formatFormationSurplusGroup(value, text) });
+  if (kind === "extra_depth" && value !== undefined) {
+    return text("formation.fitNote.extraGroup", { group: formatFormationSurplusGroup(value, text) });
   }
 
   return hint;
@@ -1573,9 +1573,9 @@ function formatFormationMarketHint(hint: string, text: Translator): string {
 /**
  * Formats either a position-family target or a broader market-depth target.
  */
-function formatFormationMarketTarget(value: string, text: Translator): string {
+function formatFormationFitTarget(value: string, text: Translator): string {
   if (value === "center_back_depth" || value === "wide_midfielder" || value === "striker_depth") {
-    return text(formationMessageKey("formation.marketTarget", value));
+    return text(presentationMessageKey("formation.fitTarget", value));
   }
 
   return formatFormationPositionFamily(value, text);
@@ -1584,7 +1584,7 @@ function formatFormationMarketTarget(value: string, text: Translator): string {
 /**
  * Builds a typed localization key for curated formation vocabulary.
  */
-function formationMessageKey(prefix: string, value: string): MessageKey {
+function presentationMessageKey(prefix: string, value: string): MessageKey {
   return `${prefix}.${value}` as MessageKey;
 }
 
@@ -1656,14 +1656,14 @@ function formatLineupDemoOutput(league: FakeLeagueSystem, lineupDemo: CliLineupD
     lines.push(`  ${text("common.none")}`);
   } else {
     for (const change of lineupDemo.playerChanges) {
-      lines.push(formatLineupDemoChange(change, league));
+      lines.push(formatLineupDemoChange(change, league, text));
     }
   }
 
   lines.push(`  ${text("lineup.selectedStarters")}:`);
 
   for (const slot of lineupDemo.lineup) {
-    lines.push(formatLineupDemoStarter(slot, league));
+    lines.push(formatLineupDemoStarter(slot, league, text));
   }
 
   return lines;
@@ -1694,7 +1694,7 @@ function formatLineupFixtureInspectionLines(
   lines.push(`  ${text("lineup.selectedStarters")}:`);
 
   for (const slot of inspection.lineup) {
-    lines.push(formatLineupDemoStarter(slot, league));
+    lines.push(formatLineupDemoStarter(slot, league, text));
   }
 
   lines.push(`  ${text("lineup.restedFromFirstTeam")}:`);
@@ -1761,18 +1761,18 @@ function formatLineupConditionImpactLines(
 /**
  * Formats one player change relative to PRO01's first-team lineup.
  */
-function formatLineupDemoChange(change: CliLineupDemoPlayerChange, league: FakeLeagueSystem): string {
+function formatLineupDemoChange(change: CliLineupDemoPlayerChange, league: FakeLeagueSystem, text: Translator): string {
   return `  ${change.slotId}: ${playerLabel(change.fromPlayerId, league.players)} -> ${playerLabel(
     change.toPlayerId,
     league.players,
-  )} (${change.roleKey})`;
+  )} (${formatLineupRole(change.roleKey, text)})`;
 }
 
 /**
  * Formats one selected starter row for the lineup-demo inspection block.
  */
-function formatLineupDemoStarter(slot: LineupSlot, league: FakeLeagueSystem): string {
-  return `  ${slot.slotId} ${playerLabel(slot.playerId, league.players)} ${slot.roleKey}`;
+function formatLineupDemoStarter(slot: LineupSlot, league: FakeLeagueSystem, text: Translator): string {
+  return `  ${slot.slotId} ${playerLabel(slot.playerId, league.players)} ${formatLineupRole(slot.roleKey, text)}`;
 }
 
 /**
@@ -2091,7 +2091,7 @@ function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSetupDemo,
   const lines = [
     `${text("setup.demo")}: ${setupDemo.profileKey}`,
     `${text("setup.selectedClub")}: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
-    `${text("setup.tactic")}: ${text("setup.mentality")}=${setupDemo.tactic.mentality} ${text("setup.pressing")}=${formatTacticKnob(setupDemo.tactic.pressing)} ${text("setup.directness")}=${formatTacticKnob(setupDemo.tactic.directness)} ${text("setup.width")}=${formatTacticKnob(setupDemo.tactic.width)} ${text("setup.risk")}=${formatTacticKnob(setupDemo.tactic.risk)}`,
+    `${text("setup.tactic")}: ${text("setup.mentality")}=${formatMentality(setupDemo.tactic.mentality, text)} ${text("setup.pressing")}=${formatTacticKnob(setupDemo.tactic.pressing)} ${text("setup.directness")}=${formatTacticKnob(setupDemo.tactic.directness)} ${text("setup.width")}=${formatTacticKnob(setupDemo.tactic.width)} ${text("setup.risk")}=${formatTacticKnob(setupDemo.tactic.risk)}`,
     `${text("setup.lineupRoleChanges")}:`,
   ];
 
@@ -2102,7 +2102,7 @@ function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSetupDemo,
 
   for (const change of setupDemo.roleChanges) {
     lines.push(
-      `  ${change.slotKey}: ${playerLabel(change.playerId, league.players)} ${change.fromRoleKey} -> ${change.toRoleKey}`,
+      `  ${change.slotKey}: ${playerLabel(change.playerId, league.players)} ${formatLineupRole(change.fromRoleKey, text)} -> ${formatLineupRole(change.toRoleKey, text)}`,
     );
   }
 
@@ -2114,6 +2114,34 @@ function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSetupDemo,
  */
 function formatTacticKnob(value: number): string {
   return value.toFixed(2);
+}
+
+/**
+ * Formats a stable shot-type key for presentation output.
+ */
+function formatShotType(shotType: string, text: Translator): string {
+  return text(presentationMessageKey("event.shotType", shotType));
+}
+
+/**
+ * Formats a stable chance-type key for presentation output.
+ */
+function formatChanceType(chanceType: string, text: Translator): string {
+  return text(presentationMessageKey("event.chanceType", chanceType));
+}
+
+/**
+ * Formats a stable lineup role key for presentation output.
+ */
+function formatLineupRole(roleKey: string, text: Translator): string {
+  return text(presentationMessageKey("lineup.role", roleKey));
+}
+
+/**
+ * Formats a stable tactic mentality key for presentation output.
+ */
+function formatMentality(mentality: string, text: Translator): string {
+  return text(presentationMessageKey("setup.mentalityValue", mentality));
 }
 
 /**

@@ -173,7 +173,7 @@ Possible scope:
 - define squad-depth contracts for roughly 22-player senior squads;
 - define starters, bench/reserve groups, and validation;
 - classify player-to-slot suitability as natural/adapted/weak/invalid;
-- report formation fit, missing positions, weak depth, surplus groups, and future market-need hints;
+- report formation fit, coverage gaps, weak depth, extra-depth groups, and factual squad-fit notes;
 - expose CLI inspection that shows whether a squad fits `4-4-2`, `4-3-3`, `3-5-2`, `3-4-3`, narrow shapes, and other catalog formations.
 
 Do not include:
@@ -186,7 +186,7 @@ Do not include:
 
 Phase gate question:
 
-- Does changing formation expose believable squad gaps and future recruitment needs?
+- Does changing formation expose believable squad-fit trade-offs without telling the manager what market action to take?
 
 ## Phase 13 — Localization Foundation
 
@@ -218,17 +218,17 @@ Phase gate question:
 
 - Can current CLI output, including game events and reports, be shown in the supported languages from stable message keys while simulation data remains unchanged?
 
-## Phase 14 — Market Planning / Squad Needs V1
+## Phase 14 — Squad Assessment And Selection V1
 
-Goal: turn Phase 12 squad-fit hints into clear planning information before transfer execution exists.
+Goal: give the manager clearer squad-assessment tools before transfer execution exists.
 
 Possible scope:
 
-- aggregate `need:*`, `consider:*`, and `surplus:*` into a squad-needs report;
-- rank needs by severity without auto-buying players;
+- aggregate `gap:*`, `adapted_only:*`, and `extra_depth:*` into factual squad-fit views;
+- show role/position coverage by natural, adapted, weak, and invalid fit;
 - localize planning labels through Phase 13;
-- expose CLI inspection for squad-building priorities;
-- keep all output as advice/planning, not market action.
+- expose CLI inspection for squad understanding and lineup/formation comparison;
+- keep all output descriptive, not market advice or market action.
 
 Do not include:
 
@@ -238,18 +238,18 @@ Do not include:
 
 Phase gate question:
 
-- Can the user understand what the squad needs before any market command exists?
+- Can the user understand the squad's fit trade-offs before any market command exists?
 
 ## Phase 15 — Minimal Transfer Market MVP
 
-Goal: allow basic squad change driven by explicit user action and squad needs.
+Goal: allow basic squad change driven by explicit user action and the manager's own interpretation of squad fit.
 
 Possible scope:
 
 - create a deterministic free-agent or transfer pool;
 - allow simple signings with explicit user confirmation;
 - add basic player value or wage cost only if needed for trade-offs;
-- use Phase 14 needs to explain why a signing might help, without auto-signing;
+- use Phase 14 squad-fit facts to let the manager judge why a signing might help, without auto-signing;
 - update squad-depth and formation-fit reports after manual squad changes.
 
 Do not include:
@@ -270,7 +270,7 @@ Possible scope:
 
 - add a small deterministic youth/prospect pool;
 - tag prospects by role/position family;
-- expose youth candidates against squad needs;
+- expose youth candidates against selected formations and squad-fit facts;
 - allow manual promotion to senior squad only if scoped;
 - keep development/growth minimal or defer it to a later growth phase.
 

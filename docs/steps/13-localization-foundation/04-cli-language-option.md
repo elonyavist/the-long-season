@@ -26,7 +26,7 @@ This step should add `--lang=<code>` and make current CLI output render through 
   - tactic/setup/manual-switch inspection labels;
   - condition demo labels;
   - lineup demo/override labels;
-  - formation-fit headings, position-family labels, department labels, suitability labels, warning labels, and market-need hint labels.
+  - formation-fit headings, position-family labels, department labels, suitability labels, warning labels, and factual squad-fit note labels.
 - Keep stable technical keys available in tests or internal data, but do not rely on them as user-facing labels for localized output.
 - Add tests proving:
   - default output is English;
