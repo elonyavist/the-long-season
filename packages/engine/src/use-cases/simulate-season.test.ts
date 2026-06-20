@@ -8,11 +8,13 @@ import {
   gameDate,
   playerId,
   seasonId,
+  stateValue,
   type ClubId,
   type Fixture,
   type FixtureId,
   type Player,
   type PlayerAbilities,
+  type PlayerDynamicState,
   type PlayerId,
   type SelectedLineup,
   type TacticSetup,
@@ -26,7 +28,7 @@ import {
   type SimulateSeasonSetupOverride,
   type SimulateSeasonTeamInput,
 } from "./simulate-season.ts";
-import type { RoleWeightProfile } from "../match-engine/index.ts";
+import type { PlayerStateMultiplierCurves, RoleWeightProfile } from "../match-engine/index.ts";
 
 /**
  * Season simulation tests prove the first full-season use-case without content,
@@ -176,6 +178,67 @@ test("invalid setup overrides fail clearly", () => {
   );
 });
 
+test("omitted fitness lifecycle keeps final player states absent", () => {
+  const result = simulateSeason(seasonInput("no-fitness-lifecycle-seed"));
+
+  assert.equal(result.finalPlayerStates, undefined);
+});
+
+test("inactive fitness-ready team data preserves default output", () => {
+  const input = seasonInput("inactive-fitness-data-seed");
+
+  assert.deepEqual(simulateSeason({ ...input, teamsByClubId: fitnessReadyTeams(input) }), simulateSeason(input));
+});
+
+test("fitness lifecycle spends match fitness and recovers between fixture dates", () => {
+  const input = seasonInputWithFitnessLifecycle("fitness-lifecycle-seed", 100);
+  const result = simulateSeason(input);
+  const lifecycle = input.fitnessLifecycle;
+  assert.ok(lifecycle !== undefined);
+  assert.ok(result.finalPlayerStates !== undefined);
+  const finalPlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> = result.finalPlayerStates;
+
+  for (const playerId of lifecycle.playerIds) {
+    const playerState = finalPlayerStates[playerId];
+    assert.ok(playerState !== undefined);
+    assert.equal(Number(playerState.fitness), 92);
+    assert.equal(Number(playerState.form), 50);
+    assert.equal(Number(playerState.morale), 50);
+  }
+});
+
+test("fitness lifecycle can recover tired starters over a season", () => {
+  const input = seasonInputWithFitnessLifecycle("fitness-recovery-seed", 50);
+  const result = simulateSeason(input);
+  const lifecycle = input.fitnessLifecycle;
+  assert.ok(lifecycle !== undefined);
+  assert.ok(result.finalPlayerStates !== undefined);
+  const finalPlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> = result.finalPlayerStates;
+
+  for (const playerId of lifecycle.playerIds) {
+    const playerState = finalPlayerStates[playerId];
+    assert.ok(playerState !== undefined);
+    assert.equal(Number(playerState.fitness), 92);
+  }
+});
+
+test("fitness lifecycle fails clearly when team data cannot rebuild strength", () => {
+  const input = seasonInput("missing-fitness-team-data-seed");
+  const { playerStates, playerIds } = initialPlayerStates(input, 100);
+
+  assertSimulateSeasonError(
+    () =>
+      simulateSeason({
+        ...input,
+        fitnessLifecycle: {
+          playerStates,
+          playerIds,
+        },
+      }),
+    "invalid_fitness_lifecycle",
+  );
+});
+
 /**
  * Builds deterministic season input with 18 synthetic team contexts.
  */
@@ -222,6 +285,91 @@ function seasonInput(seed: string): SimulateSeasonInput {
       pointsForDraw: 1,
       pointsForLoss: 0,
     },
+  };
+}
+
+/**
+ * Builds season input with explicit dynamic fitness lifecycle enabled.
+ */
+function seasonInputWithFitnessLifecycle(seed: string, initialFitness: number): SimulateSeasonInput {
+  const input = seasonInput(seed);
+  const { playerStates, playerIds } = initialPlayerStates(input, initialFitness);
+
+  return {
+    ...input,
+    teamsByClubId: fitnessReadyTeams(input),
+    fitnessLifecycle: {
+      playerStates,
+      playerIds,
+    },
+  };
+}
+
+/**
+ * Adds optional player, role, and state-curve data needed only by lifecycle simulations.
+ */
+function fitnessReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, SimulateSeasonTeamInput>> {
+  const teams: Record<ClubId, SimulateSeasonTeamInput> = {};
+
+  for (const clubId of input.clubIds) {
+    const team = input.teamsByClubId[clubId];
+    assert.ok(team !== undefined);
+
+    const players: Record<PlayerId, Player> = {};
+    for (const slot of team.lineup) {
+      players[slot.playerId] = makePlayer(slot.playerId, team.strength.overall);
+    }
+
+    teams[clubId] = {
+      ...team,
+      players,
+      roleWeights: overrideRoleWeights(),
+      stateMultiplierCurves: testFitnessCurves(),
+    };
+  }
+
+  return teams;
+}
+
+/**
+ * Builds initial dynamic states for every fixed lineup player in deterministic order.
+ */
+function initialPlayerStates(
+  input: SimulateSeasonInput,
+  fitness: number,
+): {
+  readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  readonly playerIds: readonly PlayerId[];
+} {
+  const playerStates: Record<PlayerId, PlayerDynamicState> = {};
+  const playerIds: PlayerId[] = [];
+
+  for (const clubId of input.clubIds) {
+    const team = input.teamsByClubId[clubId];
+    assert.ok(team !== undefined);
+
+    for (const slot of team.lineup) {
+      playerIds.push(slot.playerId);
+      playerStates[slot.playerId] = {
+        fitness: stateValue(fitness),
+        form: stateValue(50),
+        morale: stateValue(50),
+      };
+    }
+  }
+
+  return { playerStates, playerIds };
+}
+
+/**
+ * Test curve that makes low fitness affect rebuilt team strength.
+ */
+function testFitnessCurves(): PlayerStateMultiplierCurves {
+  return {
+    fitness: [
+      { maxValueInclusive: 59, multiplier: 0.9 },
+      { maxValueInclusive: 100, multiplier: 1 },
+    ],
   };
 }
 

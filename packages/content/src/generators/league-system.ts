@@ -60,6 +60,24 @@ export interface FakeRoleWeightProfile {
 }
 
 /**
+ * State multiplier curve point emitted by content without importing engine code.
+ */
+export interface FakeStateMultiplierCurve {
+  /** Upper inclusive state value bound, normally in the 0-100 range. */
+  readonly maxValueInclusive: number;
+  /** Multiplier applied when the state value is inside this point. */
+  readonly multiplier: number;
+}
+
+/**
+ * Player-state multiplier curves emitted by fake content.
+ */
+export interface FakePlayerStateMultiplierCurves {
+  /** Fitness curve used by engine team-strength derivation. */
+  readonly fitness?: readonly FakeStateMultiplierCurve[];
+}
+
+/**
  * Match-engine config shape emitted by content without importing engine code.
  */
 export interface FakeMatchEngineConfig {
@@ -99,6 +117,8 @@ export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
   readonly matchEngineConfig: FakeMatchEngineConfig;
   /** Role weights consumed structurally by engine team-strength derivation. */
   readonly roleWeights: Readonly<Record<string, FakeRoleWeightProfile>>;
+  /** Dynamic-state multiplier curves consumed structurally by engine strength derivation. */
+  readonly stateMultiplierCurves: FakePlayerStateMultiplierCurves;
 }
 
 /**
@@ -130,6 +150,7 @@ export function createFakeLeagueSystem(): FakeLeagueSystem {
     },
     matchEngineConfig: fakeMatchEngineConfig(),
     roleWeights: fakeRoleWeights(),
+    stateMultiplierCurves: fakeStateMultiplierCurves(),
   };
 }
 
@@ -221,5 +242,19 @@ function fakeRoleWeights(): Readonly<Record<string, FakeRoleWeightProfile>> {
         "physical.heading": 1,
       },
     },
+  };
+}
+
+/**
+ * Builds bounded dynamic-state multiplier curves for fake content.
+ */
+function fakeStateMultiplierCurves(): FakePlayerStateMultiplierCurves {
+  return {
+    fitness: [
+      { maxValueInclusive: 39, multiplier: 0.88 },
+      { maxValueInclusive: 59, multiplier: 0.94 },
+      { maxValueInclusive: 79, multiplier: 0.98 },
+      { maxValueInclusive: 100, multiplier: 1 },
+    ],
   };
 }

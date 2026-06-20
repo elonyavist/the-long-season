@@ -262,6 +262,7 @@ function createTeamsByClubId(league: FakeLeagueSystem): Readonly<Record<ClubId, 
         players: league.players,
         playerStates: league.playerStates,
         roleWeights,
+        stateMultiplierCurves: league.stateMultiplierCurves,
       }),
       tacticalDistribution: {
         directness: 0.5,

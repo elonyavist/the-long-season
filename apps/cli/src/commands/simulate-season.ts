@@ -6,6 +6,7 @@ import {
   computePlayerMatchStats,
   createMatchReport,
   buildTacticTeamContext,
+  DEFAULT_FITNESS_RULES,
   deriveTeamStrength,
   simulateSeason,
   simulateMatchWithManualTactics,
@@ -16,6 +17,7 @@ import {
   type MatchTeamContext,
   type PlayerMatchStatRegistration,
   type PlayerMatchStatRow,
+  type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
   type SimulateSeasonSetupOverride,
   type TeamStrength,
@@ -33,12 +35,18 @@ export const DEMO_SETUP_PROFILE_PRO01_ATTACKING = "pro01-attacking";
 /** Defensive deterministic PRO01 setup-demo profile. */
 export const DEMO_SETUP_PROFILE_PRO01_DEFENSIVE = "pro01-defensive";
 
+/** Deterministic condition demo for the first generated club's fixed season. */
+export const CONDITION_DEMO_PROFILE_PRO01_SEASON = "pro01-season";
+
 /** Ordered deterministic setup-demo profiles supported by the CLI MVP. */
 export const SUPPORTED_DEMO_SETUP_PROFILES = [
   DEMO_SETUP_PROFILE_PRO01_BALANCED,
   DEMO_SETUP_PROFILE_PRO01_ATTACKING,
   DEMO_SETUP_PROFILE_PRO01_DEFENSIVE,
 ] as const;
+
+/** Ordered deterministic condition-demo profiles supported by the CLI MVP. */
+export const SUPPORTED_CONDITION_DEMO_PROFILES = [CONDITION_DEMO_PROFILE_PRO01_SEASON] as const;
 
 /**
  * Minimal IO adapter used by command tests.
@@ -65,13 +73,15 @@ export async function runSimulateSeasonCommand(
   if (!parsed.ok) {
     io.stderr(parsed.message);
     io.stderr(
-      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>]`,
+      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>] [--condition-demo=${formatSupportedConditionDemoProfiles()}]`,
     );
     return 1;
   }
 
   const league = createFakeLeagueSystem();
   const setupDemo = parsed.setupDemo === undefined ? undefined : buildSetupDemo(league, parsed.setupDemo);
+  const conditionDemo =
+    parsed.conditionDemo === undefined ? undefined : buildConditionDemo(league, parsed.conditionDemo);
   const manualTacticSwitch =
     parsed.manualTacticSwitch === undefined
       ? undefined
@@ -97,7 +107,12 @@ export async function runSimulateSeasonCommand(
     return 1;
   }
 
-  const result = simulateSeasonForCli(league, parsed.seed, setupDemo);
+  if (conditionDemo !== undefined && (parsed.fixtureId !== undefined || parsed.roundNumber !== undefined)) {
+    io.stderr("--condition-demo cannot be combined with --round or --fixture");
+    return 1;
+  }
+
+  const result = simulateSeasonForCli(league, parsed.seed, setupDemo, conditionDemo);
 
   if (parsed.roundNumber !== undefined && findRound(result.rounds, parsed.roundNumber) === undefined) {
     io.stderr(`Round not found: ${parsed.roundNumber}`);
@@ -119,6 +134,12 @@ export async function runSimulateSeasonCommand(
 
   for (const line of formatSeasonOutput(league, result, parsed.seed, setupDemo)) {
     io.stdout(line);
+  }
+
+  if (conditionDemo !== undefined) {
+    for (const line of formatConditionDemoOutput(league, result, conditionDemo)) {
+      io.stdout(line);
+    }
   }
 
   if (parsed.roundNumber !== undefined) {
@@ -149,6 +170,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let fixtureId: string | undefined;
   let setupDemo: SetupDemoProfileKey | undefined;
   let manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
+  let conditionDemo: ConditionDemoProfileKey | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -276,10 +298,34 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--condition-demo") {
+      const value = args[index + 1];
+      const parsedConditionDemo = parseConditionDemo(value);
+
+      if (!parsedConditionDemo.ok) {
+        return parsedConditionDemo;
+      }
+
+      conditionDemo = parsedConditionDemo.conditionDemo;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--condition-demo=")) {
+      const parsedConditionDemo = parseConditionDemo(arg.slice("--condition-demo=".length));
+
+      if (!parsedConditionDemo.ok) {
+        return parsedConditionDemo;
+      }
+
+      conditionDemo = parsedConditionDemo.conditionDemo;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch };
+  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo };
 }
 
 /**
@@ -374,10 +420,41 @@ function parseManualTacticSwitch(value: string | undefined): ParsedManualTacticS
 }
 
 /**
+ * Parses the deterministic condition-demo profile key.
+ */
+function parseConditionDemo(value: string | undefined): ParsedConditionDemo {
+  if (value === undefined || value.length === 0) {
+    return { ok: false, message: `--condition-demo requires a supported value: ${formatSupportedConditionDemoProfiles()}` };
+  }
+
+  if (!isConditionDemoProfileKey(value)) {
+    return {
+      ok: false,
+      message: `Unsupported --condition-demo value: ${value}. Supported values: ${formatSupportedConditionDemoProfiles()}`,
+    };
+  }
+
+  return { ok: true, conditionDemo: value };
+}
+
+/**
  * Checks whether a string is one of the supported setup-demo profiles.
  */
 function isSetupDemoProfileKey(value: string): value is SetupDemoProfileKey {
   for (const profileKey of SUPPORTED_DEMO_SETUP_PROFILES) {
+    if (value === profileKey) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks whether a string is one of the supported condition-demo profiles.
+ */
+function isConditionDemoProfileKey(value: string): value is ConditionDemoProfileKey {
+  for (const profileKey of SUPPORTED_CONDITION_DEMO_PROFILES) {
     if (value === profileKey) {
       return true;
     }
@@ -394,12 +471,20 @@ function formatSupportedSetupDemoProfiles(): string {
 }
 
 /**
+ * Formats supported condition-demo profiles for usage and error messages.
+ */
+function formatSupportedConditionDemoProfiles(): string {
+  return SUPPORTED_CONDITION_DEMO_PROFILES.join("|");
+}
+
+/**
  * Simulates the fake league season using currently exported engine primitives.
  */
 function simulateSeasonForCli(
   league: FakeLeagueSystem,
   seed: string,
   setupDemo: CliSetupDemo | undefined,
+  conditionDemo: CliConditionDemo | undefined,
 ): CliSeasonResult {
   const result = simulateSeason({
     seed,
@@ -409,6 +494,15 @@ function simulateSeasonForCli(
     seasonStartDate: league.seasonStartDate,
     teamsByClubId: createTeamsByClubId(league),
     ...(setupDemo === undefined ? {} : { setupOverrides: [setupDemo.override] }),
+    ...(conditionDemo === undefined
+      ? {}
+      : {
+          fitnessLifecycle: {
+            playerStates: league.playerStates,
+            playerIds: league.playerIds,
+            rules: DEFAULT_FITNESS_RULES,
+          },
+        }),
     matchEngineConfig: league.matchEngineConfig,
     tableRules: league.tableRules,
   });
@@ -421,6 +515,7 @@ function simulateSeasonForCli(
     worstAttack: result.worstAttack,
     playerGoalStats: result.playerGoalStats,
     playerSummaryStats: result.playerSummaryStats,
+    finalPlayerStates: result.finalPlayerStates,
   };
 }
 
@@ -929,11 +1024,15 @@ function createTeamsByClubId(league: FakeLeagueSystem): Readonly<Record<ClubId, 
     teamsByClubId[clubId] = {
       clubId,
       lineup: typedLineup,
+      players: league.players,
+      roleWeights,
+      stateMultiplierCurves: league.stateMultiplierCurves,
       strength: deriveTeamStrength({
         lineup: typedLineup,
         players: league.players,
         playerStates: league.playerStates,
         roleWeights,
+        stateMultiplierCurves: league.stateMultiplierCurves,
       }),
       tacticalDistribution: {
         directness: 0.5,
@@ -988,6 +1087,77 @@ function formatSeasonOutput(
   lines.push(`Worst attack: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF")}`);
 
   return lines;
+}
+
+/**
+ * Formats deterministic fitness lifecycle inspection for one condition demo.
+ */
+function formatConditionDemoOutput(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  conditionDemo: CliConditionDemo,
+): readonly string[] {
+  const selectedFixtures = clubFixtures(result.fixtures, conditionDemo.clubId);
+  const firstFixture = selectedFixtures[0];
+  const secondFixture = selectedFixtures[1];
+  const firstFixtureLabel = firstFixture === undefined ? "unavailable" : formatFixtureResult(firstFixture, league);
+  const recoveryDays = firstFixture === undefined || secondFixture === undefined
+    ? undefined
+    : Number(secondFixture.date) - Number(firstFixture.date);
+  const firstMatchFitness = DEFAULT_FITNESS_RULES.maxFitness - DEFAULT_FITNESS_RULES.matchFitnessCost;
+  const recoveredFitness = recoveryDays === undefined
+    ? undefined
+    : Math.min(
+        DEFAULT_FITNESS_RULES.maxFitness,
+        firstMatchFitness + DEFAULT_FITNESS_RULES.dailyRecovery * recoveryDays,
+      );
+  const tableRow = findTableRow(result.table, conditionDemo.clubId);
+  const lines = [
+    "",
+    `Condition demo: ${conditionDemo.profileKey}`,
+    `  Selected club: ${clubLabel(conditionDemo.clubId, league.clubsById)}`,
+    "  Season fitness lifecycle: enabled",
+    `  Rules: match cost=${DEFAULT_FITNESS_RULES.matchFitnessCost} daily recovery=${DEFAULT_FITNESS_RULES.dailyRecovery} clamp=${DEFAULT_FITNESS_RULES.minFitness}..${DEFAULT_FITNESS_RULES.maxFitness}`,
+    `  First selected club fixture: ${firstFixtureLabel}`,
+    `  After first match selected starters fitness: ${firstMatchFitness}`,
+    `  Before next selected fixture fitness after ${recoveryDays ?? "unknown"} days recovery: ${recoveredFitness ?? "unavailable"}`,
+    `  Selected club final table: ${formatConditionTableImpact(tableRow, league)}`,
+    "  Final selected club condition:",
+    "  Player              Start Final Delta",
+  ];
+
+  for (const slot of conditionDemo.lineup) {
+    lines.push(formatConditionPlayerRow(slot.playerId, league, result));
+  }
+
+  return lines;
+}
+
+/**
+ * Builds one deterministic condition demo from generated fake content.
+ */
+function buildConditionDemo(league: FakeLeagueSystem, profileKey: ConditionDemoProfileKey): CliConditionDemo {
+  switch (profileKey) {
+    case CONDITION_DEMO_PROFILE_PRO01_SEASON: {
+      const clubId = league.clubIds[0];
+
+      if (clubId === undefined) {
+        throw new Error("Cannot build condition demo without a generated club");
+      }
+
+      const lineup = league.lineupsByClubId[clubId];
+
+      if (lineup === undefined) {
+        throw new Error(`Cannot build condition demo without a lineup for club: ${clubId}`);
+      }
+
+      return {
+        profileKey,
+        clubId,
+        lineup,
+      };
+    }
+  }
 }
 
 /**
@@ -1088,6 +1258,7 @@ function buildPro01SetupDemo(league: FakeLeagueSystem, definition: CliSetupDemoD
       players: league.players,
       roleWeights: league.roleWeights,
       playerStates: league.playerStates,
+      stateMultiplierCurves: league.stateMultiplierCurves,
     },
   };
 }
@@ -1172,6 +1343,70 @@ function formatTableRow(row: LeagueTableRow, clubsById: Readonly<Record<ClubId, 
     goalDifference.padStart(3, " "),
     String(row.points).padStart(3, " "),
   ].join(" ");
+}
+
+/**
+ * Formats one final condition row for a selected club player.
+ */
+function formatConditionPlayerRow(playerId: PlayerId, league: FakeLeagueSystem, result: CliSeasonResult): string {
+  const playerName = playerLabel(playerId, league.players).padEnd(19, " ");
+  const startFitness = Number(league.playerStates[playerId]?.fitness ?? 0);
+  const finalFitness = Number(result.finalPlayerStates?.[playerId]?.fitness ?? 0);
+  const delta = finalFitness - startFitness;
+
+  return [
+    " ",
+    playerName,
+    String(startFitness).padStart(5, " "),
+    String(finalFitness).padStart(5, " "),
+    formatSignedNumber(delta).padStart(5, " "),
+  ].join(" ");
+}
+
+/**
+ * Formats selected-club table impact for the condition demo.
+ */
+function formatConditionTableImpact(row: LeagueTableRow | undefined, league: FakeLeagueSystem): string {
+  if (row === undefined) {
+    return "unavailable";
+  }
+
+  return `${clubLabel(row.clubId, league.clubsById)} position ${row.position}, ${row.points} pts, GD ${formatSignedNumber(row.goalDifference)}`;
+}
+
+/**
+ * Formats a number with an explicit sign for compact inspection output.
+ */
+function formatSignedNumber(value: number): string {
+  return value >= 0 ? `+${value}` : String(value);
+}
+
+/**
+ * Finds all played fixtures involving one club in season order.
+ */
+function clubFixtures(fixtures: readonly Fixture[], clubId: ClubId): readonly Fixture[] {
+  const matching: Fixture[] = [];
+
+  for (const fixture of fixtures) {
+    if (fixture.homeClubId === clubId || fixture.awayClubId === clubId) {
+      matching.push(fixture);
+    }
+  }
+
+  return matching;
+}
+
+/**
+ * Finds one final table row by club ID.
+ */
+function findTableRow(table: readonly LeagueTableRow[], clubId: ClubId): LeagueTableRow | undefined {
+  for (const row of table) {
+    if (row.clubId === clubId) {
+      return row;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -1330,6 +1565,7 @@ type ParsedSimulateSeasonArgs =
       readonly fixtureId: string | undefined;
       readonly setupDemo: SetupDemoProfileKey | undefined;
       readonly manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
+      readonly conditionDemo: ConditionDemoProfileKey | undefined;
     }
   | {
       readonly ok: false;
@@ -1369,6 +1605,17 @@ type ParsedSetupDemo =
       readonly message: string;
     };
 
+/** Parsed condition-demo argument result. */
+type ParsedConditionDemo =
+  | {
+      readonly ok: true;
+      readonly conditionDemo: ConditionDemoProfileKey;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
 /** Parsed manual tactic-switch argument result. */
 type ParsedManualTacticSwitch =
   | {
@@ -1390,6 +1637,9 @@ interface ParsedManualTacticSwitchValue {
 
 /** Supported deterministic setup-demo profile keys. */
 type SetupDemoProfileKey = (typeof SUPPORTED_DEMO_SETUP_PROFILES)[number];
+
+/** Supported deterministic condition-demo profile keys. */
+type ConditionDemoProfileKey = (typeof SUPPORTED_CONDITION_DEMO_PROFILES)[number];
 
 /**
  * Definition used to build one deterministic CLI setup-demo profile.
@@ -1440,6 +1690,18 @@ interface CliManualTacticFixture {
 }
 
 /**
+ * CLI-owned condition demo for one selected club's season fitness lifecycle.
+ */
+interface CliConditionDemo {
+  /** Stable profile key requested by the user. */
+  readonly profileKey: ConditionDemoProfileKey;
+  /** Club whose player condition should be inspected. */
+  readonly clubId: ClubId;
+  /** Generated fixed lineup inspected by the condition demo. */
+  readonly lineup: readonly LineupSlot[];
+}
+
+/**
  * One selected-lineup role change rendered by the CLI inspection output.
  */
 interface CliSetupDemoRoleChange {
@@ -1459,6 +1721,9 @@ interface CliSetupDemoRoleChange {
 interface CliTeamContext {
   readonly clubId: ClubId;
   readonly lineup: readonly LineupSlot[];
+  readonly players: FakeLeagueSystem["players"];
+  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
+  readonly stateMultiplierCurves: PlayerStateMultiplierCurves;
   readonly strength: TeamStrength;
   readonly tacticalDistribution: MatchTacticalDistributionInput;
 }
@@ -1474,6 +1739,7 @@ interface CliSeasonResult {
   readonly worstAttack: LeagueTableRow | undefined;
   readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
   readonly playerSummaryStats: readonly SeasonPlayerSummaryStatRow[];
+  readonly finalPlayerStates: ReturnType<typeof simulateSeason>["finalPlayerStates"];
 }
 
 /** Club ID type derived from fake content without importing domain directly. */

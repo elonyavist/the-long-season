@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  CONDITION_DEMO_PROFILE_PRO01_SEASON,
   DEFAULT_SIMULATE_SEASON_SEED,
   DEMO_SETUP_PROFILE_PRO01_ATTACKING,
   DEMO_SETUP_PROFILE_PRO01_BALANCED,
@@ -65,6 +66,39 @@ test("simulate-season prints real season player summaries", async () => {
     topGoalkeeperSavesLine ?? "",
     /^Top goalkeeper saves: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ saves?$/,
   );
+});
+
+test("simulate-season can print a deterministic condition demo", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes(`Condition demo: ${CONDITION_DEMO_PROFILE_PRO01_SEASON}`), true);
+  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("  Season fitness lifecycle: enabled"), true);
+  assert.equal(io.stdoutLines.includes("  Rules: match cost=8 daily recovery=5 clamp=0..100"), true);
+  assert.equal(io.stdoutLines.includes("  First selected club fixture: fixture:000006 PRO17 0-2 PRO01"), true);
+  assert.equal(io.stdoutLines.includes("  After first match selected starters fitness: 92"), true);
+  assert.equal(io.stdoutLines.includes("  Before next selected fixture fitness after 7 days recovery: 100"), true);
+  assert.equal(io.stdoutLines.includes("  Selected club final table: PRO01 position 1, 65 pts, GD +31"), true);
+  assert.equal(io.stdoutLines.includes("  Final selected club condition:"), true);
+  assert.equal(io.stdoutLines.includes("  Player              Start Final Delta"), true);
+  assert.equal(conditionPlayerRows(io.stdoutLines).length, 11);
+  assert.equal(io.stdoutLines.includes("  Player01 No01         100    92    -8"), true);
+});
+
+test("same seed and condition demo produce same output", async () => {
+  const first = captureIo();
+  const second = captureIo();
+  const args = ["--seed=repeatable-condition", `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`];
+
+  assert.equal(await runSimulateSeasonCommand(args, first), 0);
+  assert.equal(await runSimulateSeasonCommand(args, second), 0);
+  assert.deepEqual(first.stdoutLines, second.stdoutLines);
 });
 
 test("simulate-season can print one round's fixture results", async () => {
@@ -334,6 +368,41 @@ test("simulate-season rejects invalid setup demo arguments", async () => {
   );
 });
 
+test("simulate-season rejects invalid condition demo arguments", async () => {
+  const missing = captureIo();
+  const unsupported = captureIo();
+  const withRound = captureIo();
+  const withFixture = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--condition-demo="], missing), 1);
+  assert.equal(missing.stdoutLines.length, 0);
+  assert.equal(missing.stderrLines[0], "--condition-demo requires a supported value: pro01-season");
+
+  assert.equal(await runSimulateSeasonCommand(["--condition-demo=pro02-season"], unsupported), 1);
+  assert.equal(unsupported.stdoutLines.length, 0);
+  assert.equal(
+    unsupported.stderrLines[0],
+    "Unsupported --condition-demo value: pro02-season. Supported values: pro01-season",
+  );
+
+  assert.equal(
+    await runSimulateSeasonCommand(["--round=1", `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`], withRound),
+    1,
+  );
+  assert.equal(withRound.stdoutLines.length, 0);
+  assert.equal(withRound.stderrLines[0], "--condition-demo cannot be combined with --round or --fixture");
+
+  assert.equal(
+    await runSimulateSeasonCommand(
+      ["--fixture=fixture:000001", `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`],
+      withFixture,
+    ),
+    1,
+  );
+  assert.equal(withFixture.stdoutLines.length, 0);
+  assert.equal(withFixture.stderrLines[0], "--condition-demo cannot be combined with --round or --fixture");
+});
+
 test("simulate-season rejects invalid manual tactic switch arguments", async () => {
   const withoutFixture = captureIo();
   const withoutSetupDemo = captureIo();
@@ -439,4 +508,11 @@ function captureIo() {
  */
 function fixturePlayerStatLines(lines: readonly string[]): readonly string[] {
   return lines.filter((line) => /^  Player[0-9]{2} No[0-9]{2}\s+PRO[0-9]{2}\s+[0-9]/.test(line));
+}
+
+/**
+ * Extracts rendered condition rows from condition-demo command output.
+ */
+function conditionPlayerRows(lines: readonly string[]): readonly string[] {
+  return lines.filter((line) => /^  Player01 No[0-9]{2}\s+100\s+92\s+-8$/.test(line));
 }

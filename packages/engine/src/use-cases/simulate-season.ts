@@ -15,6 +15,7 @@ import {
   type Round,
   type SeasonId,
 } from "@game/domain";
+import { diffDays } from "@game/shared";
 
 import { createMatchReport } from "../match-engine/create-match-report.ts";
 import {
@@ -28,8 +29,15 @@ import {
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
   type TeamStrength,
+  deriveTeamStrength,
+  TeamStrengthError,
 } from "../match-engine/index.ts";
 import { simulateMatch } from "../match-engine/simulate-match.ts";
+import {
+  recoverFitnessForPlayers,
+  spendFitnessForPlayers,
+  type FitnessRules,
+} from "../player-state/index.ts";
 import { generateRoundRobinCalendar } from "../season-engine/calendar.ts";
 import { computeLeagueTable } from "../season-engine/league-table.ts";
 import {
@@ -54,6 +62,12 @@ export interface SimulateSeasonTeamInput {
   readonly strength: TeamStrength;
   /** Tactical distribution input for every match in this first milestone. */
   readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /** Optional player lookup used only when season fitness lifecycle is enabled. */
+  readonly players?: Readonly<Record<PlayerId, Player>>;
+  /** Optional role profiles used only when season fitness lifecycle is enabled. */
+  readonly roleWeights?: Readonly<Record<string, RoleWeightProfile>>;
+  /** Optional state curves used only when season fitness lifecycle is enabled. */
+  readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
 }
 
 /**
@@ -84,6 +98,23 @@ export interface SimulateSeasonSetupOverride {
 }
 
 /**
+ * Optional dynamic fitness lifecycle for one simulated season.
+ *
+ * The lifecycle is explicit and opt-in. Existing callers that omit it keep using
+ * precomputed team strength, while callers that provide it get deterministic
+ * recovery before each new fixture date and fitness spend after each played
+ * fixture.
+ */
+export interface SimulateSeasonFitnessLifecycle {
+  /** Current player-state lookup at season start. The use-case never mutates it. */
+  readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  /** Explicit ordered players who recover between match dates. */
+  readonly playerIds: readonly PlayerId[];
+  /** Optional fitness rules; defaults are used when omitted. */
+  readonly rules?: FitnessRules;
+}
+
+/**
  * Input for deterministic one-season simulation.
  */
 export interface SimulateSeasonInput {
@@ -101,6 +132,8 @@ export interface SimulateSeasonInput {
   readonly teamsByClubId: Readonly<Record<ClubId, SimulateSeasonTeamInput>>;
   /** Ordered selected setup overrides for clubs that should not use base team input. */
   readonly setupOverrides?: readonly SimulateSeasonSetupOverride[];
+  /** Optional dynamic fitness lifecycle applied across the simulated season. */
+  readonly fitnessLifecycle?: SimulateSeasonFitnessLifecycle;
   /** Match engine config reused for each fixture. */
   readonly matchEngineConfig: MatchEngineConfig;
   /** Competition point rules for the final derived table. */
@@ -127,6 +160,8 @@ export interface SimulateSeasonResult {
   readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
   /** Derived player summary statistics for currently supported season facts. */
   readonly playerSummaryStats: readonly SeasonPlayerSummaryStatRow[];
+  /** Final dynamic player states when a fitness lifecycle was supplied. */
+  readonly finalPlayerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
 }
 
 /** Error categories exposed by season simulation. */
@@ -134,7 +169,8 @@ export type SimulateSeasonErrorCode =
   | "missing_fixture"
   | "missing_team"
   | "duplicate_setup_override"
-  | "invalid_setup_override";
+  | "invalid_setup_override"
+  | "invalid_fitness_lifecycle";
 
 /**
  * Typed error thrown when a season cannot be simulated from its input.
@@ -167,7 +203,8 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     clubIds: input.clubIds,
     seasonStartDate: input.seasonStartDate,
   });
-  const setupOverrides = setupOverrideContexts(input);
+  const setupOverrides = setupOverridesByClubId(input);
+  let fitnessRuntime = initialFitnessRuntime(input);
   let state = createFixtureState(input, fixturesById(calendar.fixtures), calendar.fixtureIds);
 
   for (const fixtureId of calendar.fixtureIds) {
@@ -177,8 +214,12 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       throw new SimulateSeasonError("missing_fixture", `Missing generated fixture: ${fixtureId}`);
     }
 
-    const report = createMatchReport(simulateMatch(matchContextForFixture(input, fixture, setupOverrides)));
+    fitnessRuntime = recoverFitnessBeforeFixture(input, fixture, fitnessRuntime);
+
+    const matchContext = matchContextForFixture(input, fixture, setupOverrides, fitnessRuntime?.playerStates);
+    const report = createMatchReport(simulateMatch(matchContext));
     state = applyMatchReportToFixture({ state, fixtureId, report });
+    fitnessRuntime = spendFitnessAfterFixture(input, fixture, matchContext, fitnessRuntime);
   }
 
   const table = computeLeagueTable({
@@ -207,6 +248,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       fixtureIds: state.fixtureIds,
       playerRegistrations: registeredPlayers,
     }),
+    ...(fitnessRuntime === undefined ? {} : { finalPlayerStates: fitnessRuntime.playerStates }),
   };
 }
 
@@ -248,15 +290,24 @@ function createFixtureState(
 function matchContextForFixture(
   input: SimulateSeasonInput,
   fixture: Fixture,
-  setupOverrides: Readonly<Record<ClubId, MatchTeamContext>>,
+  setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
+  playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ) {
   return {
     fixtureId: fixture.id,
     seed: input.seed,
-    home: matchTeamContext(input, fixture.homeClubId, setupOverrides),
-    away: matchTeamContext(input, fixture.awayClubId, setupOverrides),
+    home: matchTeamContext(input, fixture.homeClubId, setupOverrides, playerStates),
+    away: matchTeamContext(input, fixture.awayClubId, setupOverrides, playerStates),
     engineConfig: input.matchEngineConfig,
   };
+}
+
+/** Runtime fitness state carried while the season loop walks fixture dates. */
+interface SeasonFitnessRuntime {
+  /** Latest player states after recovery/spend. */
+  readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  /** Last fixture date already processed, used to compute deterministic rest days. */
+  readonly previousFixtureDate?: GameDate;
 }
 
 /**
@@ -265,18 +316,23 @@ function matchContextForFixture(
 function matchTeamContext(
   input: SimulateSeasonInput,
   clubId: ClubId,
-  setupOverrides: Readonly<Record<ClubId, MatchTeamContext>>,
+  setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
+  playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   const setupOverride = setupOverrides[clubId];
 
   if (setupOverride !== undefined) {
-    return setupOverride;
+    return buildSetupOverrideContext(setupOverride, playerStates ?? setupOverride.playerStates);
   }
 
   const team = input.teamsByClubId[clubId];
 
   if (team === undefined) {
     throw new SimulateSeasonError("missing_team", `Missing season team input: ${clubId}`);
+  }
+
+  if (playerStates !== undefined) {
+    return fitnessAwareMatchTeamContext(clubId, team, playerStates);
   }
 
   return {
@@ -292,7 +348,7 @@ function matchTeamContext(
  */
 function playerRegistrations(
   input: SimulateSeasonInput,
-  setupOverrides: Readonly<Record<ClubId, MatchTeamContext>>,
+  setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
 ): readonly SeasonPlayerStatRegistration[] {
   const registrations: SeasonPlayerStatRegistration[] = [];
 
@@ -311,10 +367,10 @@ function playerRegistrations(
 }
 
 /**
- * Builds replacement team contexts for all explicit setup overrides.
+ * Indexes explicit setup overrides by club while validating duplicates.
  */
-function setupOverrideContexts(input: SimulateSeasonInput): Readonly<Record<ClubId, MatchTeamContext>> {
-  const contexts: Record<ClubId, MatchTeamContext> = {};
+function setupOverridesByClubId(input: SimulateSeasonInput): Readonly<Record<ClubId, SimulateSeasonSetupOverride>> {
+  const overrides: Record<ClubId, SimulateSeasonSetupOverride> = {};
   const seenClubIds = new Set<ClubId>();
 
   for (const override of input.setupOverrides ?? []) {
@@ -328,23 +384,26 @@ function setupOverrideContexts(input: SimulateSeasonInput): Readonly<Record<Club
     }
 
     seenClubIds.add(override.clubId);
-    contexts[override.clubId] = buildSetupOverrideContext(override);
+    overrides[override.clubId] = override;
   }
 
-  return contexts;
+  return overrides;
 }
 
 /**
  * Converts one selected setup override into a match-team context.
  */
-function buildSetupOverrideContext(override: SimulateSeasonSetupOverride): MatchTeamContext {
+function buildSetupOverrideContext(
+  override: SimulateSeasonSetupOverride,
+  playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
+): MatchTeamContext {
   const builderInput: BuildTacticTeamContextInput = {
     lineup: override.lineup,
     tactic: override.tactic,
     requiredLineupSize: override.requiredLineupSize,
     players: override.players,
     roleWeights: override.roleWeights,
-    ...(override.playerStates === undefined ? {} : { playerStates: override.playerStates }),
+    ...(playerStates === undefined ? {} : { playerStates }),
     ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
   };
 
@@ -360,6 +419,128 @@ function buildSetupOverrideContext(override: SimulateSeasonSetupOverride): Match
 
     throw error;
   }
+}
+
+/**
+ * Builds a match-team context whose strength reflects the latest fitness state.
+ */
+function fitnessAwareMatchTeamContext(
+  clubId: ClubId,
+  team: SimulateSeasonTeamInput,
+  playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>,
+): MatchTeamContext {
+  if (team.players === undefined || team.roleWeights === undefined || team.stateMultiplierCurves === undefined) {
+    throw new SimulateSeasonError(
+      "invalid_fitness_lifecycle",
+      `Fitness lifecycle requires players, role weights, and state curves for team: ${clubId}`,
+    );
+  }
+
+  try {
+    return {
+      clubId,
+      lineup: team.lineup,
+      strength: deriveTeamStrength({
+        lineup: team.lineup,
+        players: team.players,
+        playerStates,
+        roleWeights: team.roleWeights,
+        stateMultiplierCurves: team.stateMultiplierCurves,
+      }),
+      tacticalDistribution: team.tacticalDistribution,
+    };
+  } catch (error) {
+    if (error instanceof TeamStrengthError) {
+      throw new SimulateSeasonError(
+        "invalid_fitness_lifecycle",
+        `Invalid fitness lifecycle strength input for club ${clubId}: ${error.message}`,
+      );
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Creates runtime state only when the caller explicitly enables fitness lifecycle.
+ */
+function initialFitnessRuntime(input: SimulateSeasonInput): SeasonFitnessRuntime | undefined {
+  if (input.fitnessLifecycle === undefined) {
+    return undefined;
+  }
+
+  return {
+    playerStates: input.fitnessLifecycle.playerStates,
+  };
+}
+
+/**
+ * Recovers all lifecycle-tracked players once for each new fixture date.
+ */
+function recoverFitnessBeforeFixture(
+  input: SimulateSeasonInput,
+  fixture: Fixture,
+  runtime: SeasonFitnessRuntime | undefined,
+): SeasonFitnessRuntime | undefined {
+  if (runtime === undefined || input.fitnessLifecycle === undefined) {
+    return runtime;
+  }
+
+  const previousFixtureDate = runtime.previousFixtureDate;
+  if (previousFixtureDate === undefined) {
+    return {
+      ...runtime,
+      previousFixtureDate: fixture.date,
+    };
+  }
+
+  const dayCount = diffDays(Number(fixture.date), Number(previousFixtureDate));
+  if (dayCount <= 0) {
+    return runtime;
+  }
+
+  return {
+    playerStates: recoverFitnessForPlayers({
+      playerStates: runtime.playerStates,
+      playerIds: input.fitnessLifecycle.playerIds,
+      dayCount,
+      ...(input.fitnessLifecycle.rules === undefined ? {} : { rules: input.fitnessLifecycle.rules }),
+    }),
+    previousFixtureDate: fixture.date,
+  };
+}
+
+/**
+ * Spends match fitness for the two selected starting lineups after one fixture.
+ */
+function spendFitnessAfterFixture(
+  input: SimulateSeasonInput,
+  fixture: Fixture,
+  matchContext: ReturnType<typeof matchContextForFixture>,
+  runtime: SeasonFitnessRuntime | undefined,
+): SeasonFitnessRuntime | undefined {
+  if (runtime === undefined || input.fitnessLifecycle === undefined) {
+    return runtime;
+  }
+
+  return {
+    playerStates: spendFitnessForPlayers({
+      playerStates: runtime.playerStates,
+      playerIds: fixturePlayerIds(matchContext),
+      ...(input.fitnessLifecycle.rules === undefined ? {} : { rules: input.fitnessLifecycle.rules }),
+    }),
+    previousFixtureDate: fixture.date,
+  };
+}
+
+/**
+ * Returns ordered player IDs that appeared in one simulated fixture.
+ */
+function fixturePlayerIds(matchContext: ReturnType<typeof matchContextForFixture>): readonly PlayerId[] {
+  return [
+    ...matchContext.home.lineup.map((slot) => slot.playerId),
+    ...matchContext.away.lineup.map((slot) => slot.playerId),
+  ];
 }
 
 /**

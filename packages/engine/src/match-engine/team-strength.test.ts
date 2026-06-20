@@ -133,6 +133,50 @@ test("dynamic state multipliers apply only when curve data is supplied", () => {
   );
 });
 
+test("full fitness keeps strength unchanged when a fitness curve is supplied", () => {
+  const id = playerId("player:000001");
+  const input = onePlayerInput(makePlayer(id, 10));
+  const playerStates: Readonly<Record<PlayerId, PlayerDynamicState>> = {
+    [id]: {
+      fitness: stateValue(100),
+      form: stateValue(50),
+      morale: stateValue(50),
+    },
+  };
+
+  assert.equal(
+    deriveTeamStrength({
+      ...input,
+      playerStates,
+      stateMultiplierCurves: {
+        fitness: [
+          { maxValueInclusive: 59, multiplier: 0.94 },
+          { maxValueInclusive: 100, multiplier: 1 },
+        ],
+      },
+    }).overall,
+    10,
+  );
+});
+
+test("missing player state fails when multiplier curves are supplied", () => {
+  const id = playerId("player:000001");
+  const input = onePlayerInput(makePlayer(id, 10));
+
+  assert.throws(
+    () =>
+      deriveTeamStrength({
+        ...input,
+        stateMultiplierCurves: {
+          fitness: [
+            { maxValueInclusive: 100, multiplier: 1 },
+          ],
+        },
+      }),
+    (error: unknown) => error instanceof TeamStrengthError && error.code === "missing_player_state",
+  );
+});
+
 /**
  * Builds the smallest valid one-player input for role-score tests.
  */
