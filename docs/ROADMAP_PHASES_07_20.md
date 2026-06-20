@@ -42,7 +42,7 @@ Phases 00-11 established:
 
 The project is still not a playable career. It is a deterministic football simulation core with useful CLI inspection.
 
-The next broad objective is to turn the simulator into a rough but playable manager game before investing in UI, SQLite, Tauri, localization, or launch work. Phase 12 deliberately pauses career persistence work to consolidate the tactical/squad core: formations, squad depth, positional fit, and the squad-building needs that will later drive the market.
+The next broad objective is to turn the simulator into a rough but playable manager game without hardcoding presentation text into the simulation core. Phase 12 consolidated the tactical/squad core: formations, squad depth, positional fit, and the squad-building needs that will later drive the market. Phase 13 now adds localization foundations for all current user-facing output before market/youth work multiplies the amount of text.
 
 ## Phase 07 — Match Engine Causal V1
 
@@ -188,106 +188,103 @@ Phase gate question:
 
 - Does changing formation expose believable squad gaps and future recruitment needs?
 
-## Phase 13 — Career Loop CLI MVP
+## Phase 13 — Localization Foundation
 
-Goal: turn one-off season simulation into a rough playable run.
-
-Possible scope:
-
-- start a new career with one selected club;
-- persist current date, current season, fixtures, table source data, and club context;
-- add `continue` or `advance` behavior;
-- expose next fixture, current table, recent results, squad fit, and season summary;
-- simulate one matchday at a time;
-- end a season and start the next one in a minimal deterministic way.
-
-Do not include:
-
-- UI;
-- SQLite;
-- full market;
-- economy beyond what is explicitly documented for the phase;
-- promotion/relegation beyond what is explicitly documented for the phase;
-- long-term career profile.
-
-Phase gate question:
-
-- Can someone play through a rough season from CLI while making explicit lineup/formation decisions?
-
-## Phase 14 — Mature JSON Run Persistence
-
-Goal: make the CLI career loop saveable and reloadable.
+Goal: introduce deterministic localization for the five supported languages before more user-facing systems are added.
 
 Possible scope:
 
-- formalize the run save shape;
-- use the existing `GameStorage` boundary more completely;
-- add save/load/list/delete CLI commands for career saves;
-- add minimal save schema migration tests;
-- keep JSON storage as the only implementation.
+- define `it`, `en`, `de`, `es`, and `fr` as supported languages;
+- set English as the deterministic fallback;
+- keep domain/engine keys language-agnostic and untranslated;
+- create a localization package/layer for presentation text;
+- review all current CLI-visible output from Phases 00-12, including season reports, balance reports, fixture events, player stats, tactic/lineup/condition output, formation-fit output, and user-facing errors;
+- add the current user-facing message surface to the catalog;
+- implement `it/en` first if needed for momentum;
+- expose CLI `--lang=<code>` for current CLI output;
+- complete `de/es/fr` for the same message catalog before closing the phase;
+- add enforcement so new presentation code does not introduce hardcoded user-facing strings;
+- align `requirements.md` and `docs/PROJECT_RULES.md` so labels useful to CLI or UI remain localization keys in future phases.
 
 Do not include:
 
-- SQLite, OPFS, IndexedDB, or Tauri filesystem APIs;
-- web save browser;
-- cloud saves;
-- full compatibility policy beyond the current major prototype.
+- UI or visual design;
+- market, youth, economy, contracts, scouting, staff, persistence, or career saves;
+- runtime machine translation or network dependencies;
+- translating domain/engine keys or storing prose in simulation reports;
+- converting structured event output into long narrative commentary.
 
 Phase gate question:
 
-- Can a run be saved, closed, loaded, and continued deterministically?
+- Can current CLI output, including game events and reports, be shown in the supported languages from stable message keys while simulation data remains unchanged?
 
-## Phase 15 — Contracts And Economy Base
+## Phase 14 — Market Planning / Squad Needs V1
 
-Goal: make the club financially real enough for the "poverty as design" pillar to start existing.
+Goal: turn Phase 12 squad-fit hints into clear planning information before transfer execution exists.
 
 Possible scope:
 
-- add player contracts with wage, expiry, and basic status;
-- add club balance and wage budget;
-- apply simple monthly wages;
-- add basic matchday revenue;
-- add simple sponsor income;
-- expose finance summary from CLI.
+- aggregate `need:*`, `consider:*`, and `surplus:*` into a squad-needs report;
+- rank needs by severity without auto-buying players;
+- localize planning labels through Phase 13;
+- expose CLI inspection for squad-building priorities;
+- keep all output as advice/planning, not market action.
 
 Do not include:
 
-- advanced clauses;
-- agent negotiations;
-- transfer installments;
-- facilities;
-- financial crisis full cascade unless split into a later step.
+- signing, selling, loans, contracts, wages, transfer windows, agents, scouting, UI, persistence, or career saves;
+- automatic AI squad planning;
+- hidden recommendations that choose a player for the user.
 
 Phase gate question:
 
-- Does the player have to think about money before making squad decisions?
+- Can the user understand what the squad needs before any market command exists?
 
-## Phase 16 — Minimal Market
+## Phase 15 — Minimal Transfer Market MVP
 
-Goal: allow basic squad change driven by squad/formation needs.
+Goal: allow basic squad change driven by explicit user action and squad needs.
 
 Possible scope:
 
-- create a free-agent pool;
-- allow simple signings with wage cost;
-- allow simple cash transfers;
-- add transfer windows;
-- create minimal AI acceptance rules;
-- add deterministic market CLI commands.
-- use Phase 12 squad-fit reports to explain why a transfer is useful, without auto-buying players.
+- create a deterministic free-agent or transfer pool;
+- allow simple signings with explicit user confirmation;
+- add basic player value or wage cost only if needed for trade-offs;
+- use Phase 14 needs to explain why a signing might help, without auto-signing;
+- update squad-depth and formation-fit reports after manual squad changes.
 
 Do not include:
 
-- loans;
-- sell-on clauses;
-- agent personas;
-- deadline day;
-- player exchange anti-exploit beyond a minimal guard;
-- scouting-driven perceived value unless Phase 18 is pulled earlier.
+- complex contracts, agents, loans, installments, sell-on clauses, deadline day, scouting fog, staff, UI, or persistence beyond the active step;
+- automatic buying/selling;
+- economy simulation larger than the market MVP requires.
 
 Phase gate question:
 
-- Can the user improve a weak squad with limited money, and does every deal feel like a trade-off?
+- Can the user manually improve a weak squad with a visible trade-off?
+
+## Phase 16 — Youth / Prospects Pipeline
+
+Goal: introduce young players as a long-term squad-building alternative to market spending.
+
+Possible scope:
+
+- add a small deterministic youth/prospect pool;
+- tag prospects by role/position family;
+- expose youth candidates against squad needs;
+- allow manual promotion to senior squad only if scoped;
+- keep development/growth minimal or defer it to a later growth phase.
+
+Do not include:
+
+- full academy management;
+- complex growth curves;
+- staff/facility modifiers;
+- scouting fog;
+- loans or youth contracts unless a step explicitly opens them.
+
+Phase gate question:
+
+- Can young players become a meaningful answer to squad gaps without replacing the market?
 
 ## Phase 17 — Board, Objectives, And Run Failure
 
@@ -431,9 +428,9 @@ Phase gate question:
 
 Phases 07-09 made match output player-readable and tactically controllable from CLI.
 
-Phases 10-12 should make manager choices around fitness, lineup, formation, and squad shape meaningful before persistence.
+Phases 10-12 made manager choices around fitness, lineup, formation, and squad shape meaningful before persistence.
 
-Phases 13-16 should make the prototype playable, persistent, and economically risky.
+Phases 13-16 should protect presentation quality with localization, then make squad planning, market action, and youth options meaningful.
 
 Phases 17-20 should add run failure, promotion/relegation, growth, and imperfect information.
 

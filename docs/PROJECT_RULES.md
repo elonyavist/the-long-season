@@ -38,6 +38,16 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Generated IDs must be stable and non integer-like.
 - All domain IDs must use the `type:value` namespace convention and must be created through specific domain constructors (`playerId`, `clubId`, `competitionId`, `fixtureId`, `seasonId`, `saveId`).
 
+## Presentation And Localization Rules
+
+- User-facing text must be rendered through the localization layer once Phase 13 introduces it.
+- New produced code must not introduce hardcoded labels when those labels are visible or useful to the CLI, future UI, ticker/event rendering, reports, statuses, warnings, hints, or user-facing errors.
+- Presentation code must not hardcode user-facing headings, labels, event words, report metric names, statuses, warnings, hints, or user-facing errors when a localization key should exist.
+- Domain and engine code must keep structured, language-agnostic keys and data; they must not store rendered prose for reports, events, tactics, formations, or squad-fit messages.
+- Stable IDs, schema versions, machine-readable keys, package names, and non-surfaced developer diagnostics are not localization targets unless they are rendered to the user as prose.
+- English is the deterministic fallback language for missing translations.
+- Supported game languages are Italian (`it`), English (`en`), German (`de`), Spanish (`es`), and French (`fr`).
+
 ## Step Discipline Rules
 
 - Work on exactly one documented step at a time.

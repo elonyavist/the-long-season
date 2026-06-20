@@ -207,6 +207,7 @@ Ultimo aggiornamento: 14 giugno 2026 — **fondazione tecnica sviscerata** in se
 ### 20. Localizzazione ✅
 **Decisioni:**
 - 5 lingue al lancio a livello UI + ticker: italiano, inglese, spagnolo, tedesco, francese. Architettura predisposta per N lingue (lingua = content pack).
+- Tutte le label, intestazioni, stati, metriche, warning, hint, parole-evento e messaggi d'errore destinati a UI o CLI devono passare da chiavi di localizzazione. Il codice prodotto non deve introdurre label hardcoded quando quelle label sono visibili o utili alla UI, alla CLI o a un futuro layer di presentazione.
 - Match day al lancio = Livello 1 (ticker strutturato): eventi mostrati come dati con etichette tradotte (marcatore, assist, cartellini, minuto, statistiche, pagelle live). Localizzazione = dizionario di etichette per locale.
 - Telecronaca ampia (corpus di frasi) = evoluzione predisposta ma non al lancio. Quando arriverà: file additivo per locale, nessuna migrazione.
 - Corpus grande (micro-eventi, schede-storia, news): IT+EN al lancio, fallback EN per le altre lingue, completamento via pack community.
@@ -215,6 +216,7 @@ Ultimo aggiornamento: 14 giugno 2026 — **fondazione tecnica sviscerata** in se
 - Il motore emette eventi strutturati, mai testo. Strato "narratore" separato traduce gli eventi in output: al lancio una sola implementazione (ticker); in futuro una seconda (telecronista da corpus) sullo stesso flusso di eventi, senza toccare il motore.
 - Gli eventi registrano tutto il contesto (zona, contropiede, peso in classifica, minuto) anche se il ticker ne mostra una parte: abilita la cronaca ricca futura senza rifare il motore.
 - I salvataggi registrano gli eventi, non il testo renderizzato: una partita vecchia si ri-racconta nello stile/lingua installati al momento della rilettura.
+- Domain e engine conservano chiavi e dati strutturati language-agnostic; CLI, UI e qualunque presentation adapter trasformano quelle chiavi in testo localizzato. ID, versioni schema e chiavi macchina restano tecniche, ma appena sono presentate all'utente come testo devono avere una label localizzata.
 
 ## F. Fuori dal gioco
 
