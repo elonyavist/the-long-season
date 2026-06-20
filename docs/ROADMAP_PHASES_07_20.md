@@ -24,7 +24,7 @@ Each phase must answer:
 
 ## Current Position
 
-Phases 00-08 established:
+Phases 00-09 established:
 
 - deterministic foundation and package boundaries;
 - aggregate match simulation;
@@ -34,11 +34,13 @@ Phases 00-08 established:
 - causal player context for creators and defenders where the current engine supports it;
 - selected lineup and tactic setup contracts;
 - season setup overrides;
-- CLI output good enough to inspect one season, one fixture, and one deterministic tactic/lineup setup.
+- saved tactic demo profiles;
+- explicit user-declared manual tactic switching for one inspected fixture;
+- CLI output good enough to inspect one season, one fixture, one deterministic tactic/lineup setup, and one manual tactical profile timeline.
 
 The project is still not a playable career. It is a deterministic football simulation core with useful CLI inspection.
 
-The next broad objective is to turn the simulator into a rough but playable career loop before investing in UI, SQLite, Tauri, localization, or launch work. Phase 09 specifically keeps this grounded in manager choice: tactical changes should be explicit user commands, not hidden automatic behavior.
+The next broad objective is to turn the simulator into a rough but playable career loop before investing in UI, SQLite, Tauri, localization, or launch work. Phase 10 starts that transition by introducing the first cross-match consequence: player fitness. This keeps the project grounded in manager choice without jumping directly to career persistence, economy, or UI.
 
 ## Phase 07 — Match Engine Causal V1
 

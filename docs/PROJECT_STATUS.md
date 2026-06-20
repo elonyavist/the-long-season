@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete.
-- Active implementation step: None selected; review Phase 9 output before creating Phase 10 documentation.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states documented.
+- Active implementation step: `docs/steps/10-player-dynamic-states/01-phase-9-output-review.md`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, `simulateSeason` selected setup overrides, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, and `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: None selected; last completed step was `docs/steps/09-manual-tactical-changes-v1/05-cli-manual-tactic-switch-inspection.md`.
-- Status: Phase 9 complete
-- Last verification: `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000001 --setup-demo=pro01-balanced --manual-tactic-switch=46:pro01-attacking`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --setup-demo=pro01-balanced --manual-tactic-switch=46:pro01-attacking`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
-- Next action: Review Phase 9 output manually, decide whether it needs a narrow rework, then create Phase 10 documentation before new implementation.
+- Step: `docs/steps/10-player-dynamic-states/01-phase-9-output-review.md`
+- Status: Not started
+- Last verification: Phase 10 documentation-only creation; no source or test files changed by the phase docs.
+- Next action: Run the Phase 10 review checks, decide whether Phase 9 output is good enough for player fitness consequences, then move to `02-fitness-state-rules.md` only if there is no blocker.
 
 ## How To Read The Project
 
@@ -86,6 +86,12 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/09-manual-tactical-changes-v1/03-manual-tactic-change-contract.md` | Done | Engine now has a deterministic contract for explicit manual tactic changes by minute. | `buildManualTacticChangeSchedule` validates caller-declared side/minute/team-context changes, sorts by minute then home/away, rejects invalid minutes, missing team contexts, invalid sides, and duplicate side+minute pairs, and performs no simulation or automatic tactical decisions. | Engine typecheck; focused manual-tactic-change tests; `pnpm check`; default season smoke; strict `calibration-v1` balance report |
 | `docs/steps/09-manual-tactical-changes-v1/04-segmented-fixture-simulation.md` | Done | Engine can simulate one fixture with caller-declared manual tactic changes. | `simulateMatchWithManualTactics` delegates to `simulateMatch` when no changes are supplied, otherwise validates `ManualTacticChangeSchedule`, applies side contexts before their declared minute, reuses the same match RNG and `stepMatch`, and keeps report/player-stat compatibility. | Engine typecheck; focused manual-tactic/simulate-with-manual-tactics tests; `pnpm check`; default season smoke; fixture smoke; strict `calibration-v1` balance report |
 | `docs/steps/09-manual-tactical-changes-v1/05-cli-manual-tactic-switch-inspection.md` | Done | CLI can inspect one user-declared manual tactic switch for a requested fixture. | Added `--manual-tactic-switch=<minute>:<profile>` for fixture detail only. The CLI requires `--fixture` and `--setup-demo`, builds the target saved profile, re-simulates the requested fixture through `simulateMatchWithManualTactics` when PRO01 is involved, and prints an explicit profile timeline; if PRO01 is not playing, it reports that the switch does not apply and leaves the fixture unchanged. | CLI typecheck; focused CLI tests; `pnpm check`; default season smoke; fixture smoke; manual-switch smoke for non-applicable and applicable fixtures; strict `calibration-v1` balance report |
+| `docs/steps/10-player-dynamic-states/README.md` | Done | Created the Phase 10 documentation path for the first cross-match player state. | Phase 10 starts by reviewing Phase 9 output, then adds pure fitness spend/recovery rules, bounded fitness strength impact, optional season fitness lifecycle, and CLI condition inspection. Form, morale, injuries, staff, training, and automatic rotation remain out of scope. | Documentation-only update; no code checks required |
+| `docs/steps/10-player-dynamic-states/01-phase-9-output-review.md` | Not started | Active next step. | Review Phase 9 manual tactic-switch output before adding player fitness consequences. | Pending |
+| `docs/steps/10-player-dynamic-states/02-fitness-state-rules.md` | Planned | Future Phase 10 step. | Add pure deterministic engine helpers for spending and recovering existing `PlayerDynamicState.fitness`. | Pending |
+| `docs/steps/10-player-dynamic-states/03-fitness-strength-impact.md` | Planned | Future Phase 10 step. | Use explicit fitness multiplier curves to make low fitness lightly reduce team strength. | Pending |
+| `docs/steps/10-player-dynamic-states/04-season-fitness-lifecycle.md` | Planned | Future Phase 10 step. | Optionally carry fitness spend/recovery across season fixtures without automatic rotation. | Pending |
+| `docs/steps/10-player-dynamic-states/05-cli-condition-inspection.md` | Planned | Future Phase 10 step. | Expose a CLI view that shows deterministic fitness consequences for one selected club or demo scenario. | Pending |
 
 Status values:
 
@@ -183,6 +189,8 @@ Status values:
 - Phase 9 manual tactic-change contract is engine-only and uses already-built `MatchTeamContext` values, so future segmented simulation can apply caller intent without importing content, CLI, or saved profile registries.
 - Phase 9 segmented fixture simulation is wired to CLI fixture inspection only: `simulateMatchWithManualTactics` applies explicit scheduled team contexts by minute, delegates to `simulateMatch` for no-change compatibility, and remains caller-declared rather than automatic.
 - `simulate-season --fixture=<fixtureId> --setup-demo=<initialProfile> --manual-tactic-switch=<minute>:<targetProfile>` is now the manual tactic switch inspection path. It shows the selected club inside the manual switch block, whether that club is actually playing the fixture, and the profile timeline.
+- Phase 10 is documented around player fitness as the first dynamic cross-match state: pure spend/recovery rules first, bounded strength impact second, optional season lifecycle third, CLI condition inspection last.
+- Phase 10 intentionally uses existing `PlayerDynamicState.fitness`; `form` and `morale` remain future systems even though the domain shape already includes them.
 
 ## Open Decisions And Follow-Up
 
@@ -196,8 +204,16 @@ Status values:
 - `apps/cli/tsconfig.json` enables `allowImportingTsExtensions` and omits `rootDir` because the CLI imports local `.ts` command modules and workspace source packages directly under Node 24.
 - `tsconfig.base.json` sets `noEmit: true`, because current packages are typechecked and executed directly from `.ts` files; this satisfies TypeScript's `allowImportingTsExtensions` requirement without producing unresolved emitted JavaScript imports.
 - `vitest.config.ts` includes both `packages/**/*.test.ts` and `apps/**/*.test.ts` so CLI command tests are part of `pnpm check`.
-- Phase 9 is complete; before Phase 10, review the manual tactic-switch CLI output and decide whether it needs a narrow rework or whether Phase 10 documentation can be created.
+- Phase 10 player dynamic states v1 is documented; the active implementation step is `docs/steps/10-player-dynamic-states/01-phase-9-output-review.md`.
 - When a future documented step lists `packages/domain/src/state/game-state.ts`, consolidate `fixtures` and `fixtureIds` into the base `GameState` contract instead of keeping them only as a use-case slice.
+
+### 2026-06-20 — `docs/steps/10-player-dynamic-states/README.md`
+
+- Status: Done
+- Outcome: Created Phase 10 documentation and five implementation step documents for player dynamic states v1.
+- Adopted solution: Phase 10 will first review the completed Phase 9 output, then add pure deterministic fitness spend/recovery helpers, bounded fitness strength impact through explicit multiplier curves, optional season fitness lifecycle, and a CLI condition inspection view. The phase uses existing `PlayerDynamicState.fitness` and explicitly excludes injuries, form, morale, staff, training, growth, automatic rotation, and career persistence.
+- Verification: Documentation-only update; no source or test files changed.
+- Follow-up: Implement only `docs/steps/10-player-dynamic-states/01-phase-9-output-review.md` next; do not add fitness rules before the Phase 9 output review is recorded.
 
 ### 2026-06-20 — `docs/steps/09-manual-tactical-changes-v1/05-cli-manual-tactic-switch-inspection.md`
 

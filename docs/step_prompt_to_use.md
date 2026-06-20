@@ -1,30 +1,60 @@
-Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the active step document:
+Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-STEP_PATH_TO_EXECUTE: docs/steps/09-manual-tactical-changes-v1/05-cli-manual-tactic-switch-inspection.md
+PHASE_DIR_TO_EXECUTE: docs/steps/10-player-dynamic-states
 
-If STEP_PATH_TO_EXECUTE does not exist, stop and report the missing file. Do not infer or create an implementation step unless explicitly asked.
 
-Follow the mandatory execution loop:
+If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.
+If the phase README does not exist, stop and report the missing file.
+Do not infer or create implementation steps unless explicitly asked.
+
+Goal:
+Execute the whole documented phase, one step at a time, without waiting for user approval between steps.
+
+Follow the mandatory phase execution loop:
 
 1. Read project status.
-2. Confirm that STEP_PATH_TO_EXECUTE is the active step, or update `docs/PROJECT_STATUS.md` if this step is now active.
-3. Implement only this step.
-4. Do not implement anything listed under “What NOT to implement”.
-5. Do not create or modify files outside “Expected files”, except:
-   - `docs/PROJECT_STATUS.md`
-   - the next relevant step document, only if a lesson learned changes future work.
-6. Run the required tests/checks for this step.
-7. If something fails, fix the current step before moving on.
-8. Comments with JSDoc every file and function
-8. Update `docs/PROJECT_STATUS.md` with:
+2. Read the phase README and identify the ordered step documents for this phase.
+3. Confirm the current active step:
+   - if `docs/PROJECT_STATUS.md` already points to a step inside this phase, start from that step;
+   - otherwise start from the first step in the phase that is not marked `Done`;
+   - if all phase steps are already `Done`, stop and report that the phase is complete.
+4. For each step, in order:
+   - read the active step document fully;
+   - if the step document does not exist, stop and report the missing file;
+   - update `docs/PROJECT_STATUS.md` if this step is now active;
+   - implement only this step;
+   - do not implement anything listed under “What NOT to implement”;
+   - do not create or modify files outside this step’s “Expected files”, except:
+     - `docs/PROJECT_STATUS.md`
+     - the next relevant step document, only if a lesson learned changes future work.
+5. Run the required tests/checks for the current step.
+6. If something fails:
+   - fix the current step before moving on;
+   - rerun the required checks;
+   - if the failure cannot be fixed without breaking scope, stop and update `docs/PROJECT_STATUS.md` with the blocker.
+7. Comment with JSDoc/TSDoc every new or modified file and every exported function/type where useful for a junior developer.
+8. After each completed step, update `docs/PROJECT_STATUS.md` with:
    - current active step
    - step status
    - adopted solution
    - verification result
    - next action
    - any blocker, if the step could not be completed
-9. Stop after this step. Do not start the next step.
+   - any lesson learned that affects future steps.
+9. Continue automatically to the next documented step in the same phase.
+10. Stop only when:
+   - every documented step in the phase is complete;
+   - a step file is missing;
+   - a blocker cannot be fixed inside the current step scope;
+   - the project rules would be violated;
+   - the implementation requires a product/design decision that cannot be resolved from the docs.
+11. At the end of the phase:
+   - run the phase-level checks if listed;
+   - run `pnpm check` unless the phase explicitly says not to;
+   - update `docs/PROJECT_STATUS.md` marking the phase complete or blocked;
+   - report what changed, what was verified, and what I should manually inspect.
 
-Use the project rules as binding constraints. Keep the implementation minimal, deterministic, and consistent with the existing architecture.
-
-When a step is completed, you have to check if I have to do something in order to check the output of the current step. For example, if the step requires to run a command, you have to tell me what command to run and with what arguments. If the step requires to check the output of a previous step, you have to tell me what to check and where to look for the output. If the step requires to review some output, you have to tell me what to review and where to look for the output. 
+Use the project rules as binding constraints.
+Keep every implementation minimal, deterministic, and consistent with the existing architecture.
+Do not add dead code, compatibility leftovers, unused helpers, or deferred cleanup unless explicitly documented as a blocker or future step.
+Do not start the next phase.
