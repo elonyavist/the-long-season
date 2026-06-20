@@ -90,13 +90,13 @@ test("simulate-season can inspect formation fit without printing the season tabl
   assert.equal(io.stdoutLines.includes("Fit warnings:"), true);
   assert.equal(io.stdoutLines.includes("Market-need hints:"), true);
   assert.equal(io.stdoutLines.includes("Final table:"), false);
-  assert.equal(io.stdoutLines.includes("  rb right_full_back best=natural natural=1 adapted=1 weak=8"), true);
-  assert.equal(io.stdoutLines.includes("  am attacking_midfielder best=adapted natural=0 adapted=3 weak=7"), true);
-  assert.equal(io.stdoutLines.includes("  weak_depth:defensive_midfielder"), true);
-  assert.equal(io.stdoutLines.includes("  weak_depth:attacking_midfielder"), true);
+  assert.equal(io.stdoutLines.includes("  rb right full back best=natural natural=1 adapted=1 weak=8"), true);
+  assert.equal(io.stdoutLines.includes("  am attacking midfielder best=adapted natural=0 adapted=3 weak=7"), true);
+  assert.equal(io.stdoutLines.includes("  weak depth: defensive midfielder"), true);
+  assert.equal(io.stdoutLines.includes("  weak depth: attacking midfielder"), true);
   assert.equal(
     io.stdoutLines.includes(
-      "  consider:defensive_midfielder, consider:attacking_midfielder, surplus:wide_players, surplus:center_backs",
+      "  consider: defensive midfielder, consider: attacking midfielder, surplus: wide players, surplus: center backs",
     ),
     true,
   );

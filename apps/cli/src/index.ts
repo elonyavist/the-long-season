@@ -7,6 +7,7 @@
 import { runDoctorCommand } from "./commands/doctor.ts";
 import { runBalanceReportCommand } from "./commands/balance-report.ts";
 import { runSimulateSeasonCommand } from "./commands/simulate-season.ts";
+import { createTranslator } from "@game/i18n";
 
 /**
  * Dispatches the CLI command requested by the user.
@@ -17,9 +18,10 @@ import { runSimulateSeasonCommand } from "./commands/simulate-season.ts";
 export async function runCli(args: readonly string[]): Promise<void> {
   const normalizedArgs = args[0] === "--" ? args.slice(1) : args;
   const [command, ...commandArgs] = normalizedArgs;
+  const text = createTranslator("en");
 
   if (command === "doctor") {
-    await runDoctorCommand();
+    await runDoctorCommand(commandArgs);
     return;
   }
 
@@ -43,8 +45,8 @@ export async function runCli(args: readonly string[]): Promise<void> {
     return;
   }
 
-  console.error(`Unknown command: ${command ?? "<none>"}`);
-  console.error("Available commands: doctor, simulate-season, balance-report");
+  console.error(text("cli.error.unknownCommand", { command: command ?? "<none>" }));
+  console.error(text("cli.availableCommands"));
   process.exitCode = 1;
 }
 

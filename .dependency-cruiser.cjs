@@ -26,7 +26,7 @@ module.exports = {
       severity: "error",
       comment: "Engine must not depend on content, storage, UI, apps, or future outer layers.",
       from: { path: "^packages/engine/src" },
-      to: { path: "^(packages/(content|storage|simulation-tools)|apps/|@game/(content|storage|simulation-tools)$)" },
+      to: { path: "^(packages/(content|i18n|storage|simulation-tools)|apps/|@game/(content|i18n|storage|simulation-tools)$)" },
     },
     {
       name: "content-must-not-import-engine-or-storage",
@@ -48,6 +48,13 @@ module.exports = {
       comment: "Simulation tools aggregate deterministic metrics but must not depend on content, storage, or apps.",
       from: { path: "^packages/simulation-tools/src" },
       to: { path: "^(packages/(content|storage)|apps/|@game/(content|storage)$)" },
+    },
+    {
+      name: "i18n-must-stay-presentation-data-only",
+      severity: "error",
+      comment: "Localization must not depend on simulation, content, storage, or apps.",
+      from: { path: "^packages/i18n/src" },
+      to: { path: "^(packages/(?!i18n)|apps/|@game/(?!i18n$))" },
     },
     {
       name: "packages-must-not-import-apps",

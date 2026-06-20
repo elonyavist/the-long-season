@@ -13,6 +13,14 @@ import {
   type SimulateSeasonTeamInput,
 } from "@game/engine";
 import {
+  createTranslator,
+  formatSupportedLanguages,
+  parseLanguageCode,
+  type MessageKey,
+  type SupportedLanguage,
+  type Translator,
+} from "@game/i18n";
+import {
   createCalibrationReport,
   type CalibrationMetricResult,
   type CalibrationReport,
@@ -46,12 +54,11 @@ export async function runBalanceReportCommand(
   io: BalanceReportCommandIo = defaultIo(),
 ): Promise<number> {
   const parsed = parseArgs(args);
+  const text = createTranslator(parsed.language);
 
   if (!parsed.ok) {
     io.stderr(parsed.message);
-    io.stderr(
-      "Usage: pnpm cli balance-report [--seed-prefix=<seed>] [--seasons=<count>] [--target-profile=default|calibration-v1|strict-fail-smoke] [--strict]",
-    );
+    io.stderr(text("balance.usage"));
     return 1;
   }
 
@@ -63,7 +70,7 @@ export async function runBalanceReportCommand(
     createSeasonInput: (seed) => seasonInputForCli(league, seed),
   });
 
-  for (const line of formatBalanceReportOutput(report, parsed.targetProfile, parsed.strict)) {
+  for (const line of formatBalanceReportOutput(report, parsed.targetProfile, parsed.strict, text)) {
     io.stdout(line);
   }
 
@@ -88,6 +95,7 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
   let seasonCount = DEFAULT_BALANCE_REPORT_SEASON_COUNT;
   let strict = false;
   let targetProfile: TargetProfile = "default";
+  let language: SupportedLanguage = "en";
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -101,11 +109,53 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
       continue;
     }
 
+    if (arg === "--lang") {
+      const value = args[index + 1];
+      const parsedLanguage = parseLanguageCode(value);
+
+      if (parsedLanguage === undefined) {
+        return {
+          ok: false,
+          language,
+          message:
+            value === undefined || value.length === 0
+              ? createTranslator(language)("cli.error.langRequiresValue", { supported: formatSupportedLanguages() })
+              : createTranslator(language)("cli.error.unsupportedLanguage", {
+                  value,
+                  supported: formatSupportedLanguages(),
+                }),
+        };
+      }
+
+      language = parsedLanguage;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--lang=")) {
+      const value = arg.slice("--lang=".length);
+      const parsedLanguage = parseLanguageCode(value);
+
+      if (parsedLanguage === undefined) {
+        return {
+          ok: false,
+          language,
+          message: createTranslator(language)("cli.error.unsupportedLanguage", {
+            value,
+            supported: formatSupportedLanguages(),
+          }),
+        };
+      }
+
+      language = parsedLanguage;
+      continue;
+    }
+
     if (arg === "--seed-prefix") {
       const value = args[index + 1];
 
       if (value === undefined || value.length === 0) {
-        return { ok: false, message: "--seed-prefix requires a non-empty value" };
+        return { ok: false, language, message: createTranslator(language)("balance.error.seedPrefixRequired") };
       }
 
       seedPrefix = value;
@@ -117,7 +167,7 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
       const value = arg.slice("--seed-prefix=".length);
 
       if (value.length === 0) {
-        return { ok: false, message: "--seed-prefix requires a non-empty value" };
+        return { ok: false, language, message: createTranslator(language)("balance.error.seedPrefixRequired") };
       }
 
       seedPrefix = value;
@@ -128,13 +178,17 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
       const value = args[index + 1];
 
       if (value === undefined) {
-        return { ok: false, message: "--seasons requires a positive integer" };
+        return { ok: false, language, message: createTranslator(language)("balance.error.seasonsRequired") };
       }
 
       const parsedSeasonCount = parseSeasonCount(value);
 
       if (parsedSeasonCount === undefined) {
-        return { ok: false, message: `--seasons requires a positive integer: ${value}` };
+        return {
+          ok: false,
+          language,
+          message: createTranslator(language)("balance.error.seasonsInvalid", { value }),
+        };
       }
 
       seasonCount = parsedSeasonCount;
@@ -147,7 +201,11 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
       const parsedSeasonCount = parseSeasonCount(value);
 
       if (parsedSeasonCount === undefined) {
-        return { ok: false, message: `--seasons requires a positive integer: ${value}` };
+        return {
+          ok: false,
+          language,
+          message: createTranslator(language)("balance.error.seasonsInvalid", { value }),
+        };
       }
 
       seasonCount = parsedSeasonCount;
@@ -159,7 +217,11 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
       const parsedTargetProfile = parseTargetProfile(value);
 
       if (parsedTargetProfile === undefined) {
-        return { ok: false, message: `Unknown target profile: ${value ?? "<none>"}` };
+        return {
+          ok: false,
+          language,
+          message: createTranslator(language)("balance.error.unknownTargetProfile", { value: value ?? "<none>" }),
+        };
       }
 
       targetProfile = parsedTargetProfile;
@@ -172,17 +234,21 @@ function parseArgs(args: readonly string[]): ParsedBalanceReportArgs {
       const parsedTargetProfile = parseTargetProfile(value);
 
       if (parsedTargetProfile === undefined) {
-        return { ok: false, message: `Unknown target profile: ${value}` };
+        return {
+          ok: false,
+          language,
+          message: createTranslator(language)("balance.error.unknownTargetProfile", { value }),
+        };
       }
 
       targetProfile = parsedTargetProfile;
       continue;
     }
 
-    return { ok: false, message: `Unknown argument: ${arg}` };
+    return { ok: false, language, message: createTranslator(language)("cli.error.unknownArgument", { arg }) };
   }
 
-  return { ok: true, seedPrefix, seasonCount, strict, targetProfile };
+  return { ok: true, seedPrefix, seasonCount, strict, targetProfile, language };
 }
 
 /**
@@ -283,20 +349,21 @@ function formatBalanceReportOutput(
   report: CalibrationReport,
   targetProfile: TargetProfile,
   strict: boolean,
+  text: Translator,
 ): readonly string[] {
   const lines: string[] = [
-    "The Long Season balance report",
-    `Seed prefix: ${report.seedPrefix}`,
-    `Seasons: ${report.seasonCount}`,
-    `Target profile: ${targetProfile}`,
-    `Strict mode: ${strict ? "on" : "off"}`,
-    `Status: ${report.status.toUpperCase()}`,
+    text("balance.title"),
+    `${text("balance.seedPrefix")}: ${report.seedPrefix}`,
+    `${text("balance.seasons")}: ${report.seasonCount}`,
+    `${text("balance.targetProfile")}: ${targetProfile}`,
+    `${text("balance.strictMode")}: ${strict ? text("common.true") : text("common.false")}`,
+    `${text("balance.status")}: ${text(statusMessageKey(report.status))}`,
     "",
-    "Metric                 Value    Target        Status",
+    `${text("balance.header.metric").padEnd(22, " ")} ${text("balance.header.value").padStart(7, " ")} ${text("balance.header.target").padEnd(13, " ")} ${text("balance.status")}`,
   ];
 
   for (const metric of report.metrics) {
-    lines.push(formatMetricRow(metric));
+    lines.push(formatMetricRow(metric, text));
   }
 
   return lines;
@@ -305,13 +372,46 @@ function formatBalanceReportOutput(
 /**
  * Formats one metric row with a deterministic fixed precision.
  */
-function formatMetricRow(metric: CalibrationMetricResult): string {
+function formatMetricRow(metric: CalibrationMetricResult, text: Translator): string {
   return [
-    metric.label.padEnd(22, " "),
+    text(balanceMetricMessageKey(metric.label)).padEnd(22, " "),
     formatNumber(metric.value).padStart(7, " "),
     formatTarget(metric.target).padEnd(13, " "),
-    metric.status.toUpperCase(),
+    text(statusMessageKey(metric.status)),
   ].join(" ");
+}
+
+/**
+ * Maps current simulation-tools metric labels to presentation message keys.
+ */
+function balanceMetricMessageKey(label: string): MessageKey {
+  switch (label) {
+    case "Goals per match":
+      return "balance.metric.goals_per_match";
+    case "Home win rate":
+      return "balance.metric.home_win_rate";
+    case "Draw rate":
+      return "balance.metric.draw_rate";
+    case "Away win rate":
+      return "balance.metric.away_win_rate";
+    case "First-place points":
+      return "balance.metric.first_place_points";
+    case "Last-place points":
+      return "balance.metric.last_place_points";
+    case "Table points spread":
+      return "balance.metric.table_points_spread";
+    case "Upset proxy rate":
+      return "balance.metric.upset_proxy_rate";
+    default:
+      throw new Error(`Unknown balance metric label: ${label}`);
+  }
+}
+
+/**
+ * Maps report status keys to localized presentation keys.
+ */
+function statusMessageKey(status: "fail" | "pass"): MessageKey {
+  return status === "pass" ? "common.pass" : "common.fail";
 }
 
 /**
@@ -347,10 +447,12 @@ type ParsedBalanceReportArgs =
       readonly seasonCount: number;
       readonly strict: boolean;
       readonly targetProfile: TargetProfile;
+      readonly language: SupportedLanguage;
     }
   | {
       readonly ok: false;
       readonly message: string;
+      readonly language: SupportedLanguage;
     };
 
 /** Club ID type derived from fake content without importing domain directly. */

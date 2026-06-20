@@ -38,6 +38,9 @@ importers:
       '@game/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@game/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@game/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -79,6 +82,12 @@ importers:
       '@game/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/i18n:
     devDependencies:
       typescript:
         specifier: ^5.8.3

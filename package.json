@@ -11,8 +11,9 @@
     "test": "vitest run",
     "lint": "eslint .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs --output-type err packages apps",
+    "check:localized-text": "node scripts/check-localized-presentation-text.ts",
     "typecheck": "pnpm -r run typecheck",
-    "check": "pnpm lint && pnpm depcruise && pnpm test && pnpm typecheck",
+    "check": "pnpm lint && pnpm depcruise && pnpm check:localized-text && pnpm test && pnpm typecheck",
     "cli": "pnpm --filter @game/cli run cli --"
   },
   "devDependencies": {

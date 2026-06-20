@@ -31,6 +31,14 @@ import {
   type SimulateSeasonSetupOverride,
   type TeamStrength,
 } from "@game/engine";
+import {
+  createTranslator,
+  formatSupportedLanguages,
+  parseLanguageCode,
+  type MessageKey,
+  type SupportedLanguage,
+  type Translator,
+} from "@game/i18n";
 
 /** Fixed seed used when the user does not pass `--seed`. */
 export const DEFAULT_SIMULATE_SEASON_SEED = "demo-001";
@@ -90,11 +98,16 @@ export async function runSimulateSeasonCommand(
   io: SimulateSeasonCommandIo = defaultIo(),
 ): Promise<number> {
   const parsed = parseArgs(args);
+  const text = createTranslator(parsed.language);
 
   if (!parsed.ok) {
     io.stderr(parsed.message);
     io.stderr(
-      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>] [--condition-demo=${formatSupportedConditionDemoProfiles()}] [--lineup-demo=${formatSupportedLineupDemoProfiles()}] [--formation-fit=<formationKey>]`,
+      text("season.usage", {
+        setupProfiles: formatSupportedSetupDemoProfiles(),
+        conditionProfiles: formatSupportedConditionDemoProfiles(),
+        lineupProfiles: formatSupportedLineupDemoProfiles(),
+      }),
     );
     return 1;
   }
@@ -113,12 +126,12 @@ export async function runSimulateSeasonCommand(
         };
 
   if (manualTacticSwitch !== undefined && parsed.fixtureId === undefined) {
-    io.stderr("--manual-tactic-switch requires --fixture=<fixtureId>");
+    io.stderr(text("manualSwitch.error.requiresFixture"));
     return 1;
   }
 
   if (manualTacticSwitch !== undefined && setupDemo === undefined) {
-    io.stderr("--manual-tactic-switch requires --setup-demo=<initialProfile>");
+    io.stderr(text("manualSwitch.error.requiresSetupDemo"));
     return 1;
   }
 
@@ -131,12 +144,12 @@ export async function runSimulateSeasonCommand(
       conditionDemo !== undefined ||
       lineupDemo !== undefined)
   ) {
-    io.stderr("--formation-fit cannot be combined with --round, --fixture, --setup-demo, --manual-tactic-switch, --condition-demo, or --lineup-demo");
+    io.stderr(text("formation.error.cannotCombine"));
     return 1;
   }
 
   if (parsed.formationFit !== undefined) {
-    for (const line of formatFormationFitOutput(league, parsed.seed, parsed.formationFit)) {
+    for (const line of formatFormationFitOutput(league, parsed.seed, parsed.formationFit, text)) {
       io.stdout(line);
     }
 
@@ -145,13 +158,16 @@ export async function runSimulateSeasonCommand(
 
   if (manualTacticSwitch !== undefined && manualTacticSwitch.minute > league.matchEngineConfig.minuteCount) {
     io.stderr(
-      `--manual-tactic-switch minute must be between 1 and ${league.matchEngineConfig.minuteCount}: ${manualTacticSwitch.minute}`,
+      text("manualSwitch.error.minuteRange", {
+        max: league.matchEngineConfig.minuteCount,
+        value: manualTacticSwitch.minute,
+      }),
     );
     return 1;
   }
 
   if (conditionDemo !== undefined && (parsed.fixtureId !== undefined || parsed.roundNumber !== undefined)) {
-    io.stderr("--condition-demo cannot be combined with --round or --fixture");
+    io.stderr(text("condition.error.cannotCombine"));
     return 1;
   }
 
@@ -159,19 +175,19 @@ export async function runSimulateSeasonCommand(
     lineupDemo !== undefined &&
     (parsed.roundNumber !== undefined || conditionDemo !== undefined || manualTacticSwitch !== undefined)
   ) {
-    io.stderr("--lineup-demo cannot be combined with --round, --condition-demo, or --manual-tactic-switch");
+    io.stderr(text("lineup.error.cannotCombine"));
     return 1;
   }
 
   const baseResult = simulateSeasonForCli(league, parsed.seed, setupDemo, conditionDemo);
 
   if (parsed.roundNumber !== undefined && findRound(baseResult.rounds, parsed.roundNumber) === undefined) {
-    io.stderr(`Round not found: ${parsed.roundNumber}`);
+    io.stderr(text("fixture.roundNotFound", { round: parsed.roundNumber }));
     return 1;
   }
 
   if (parsed.fixtureId !== undefined && findFixtureByValue(baseResult.fixtures, parsed.fixtureId) === undefined) {
-    io.stderr(`Fixture not found: ${parsed.fixtureId}`);
+    io.stderr(text("fixture.notFound", { fixture: parsed.fixtureId }));
     return 1;
   }
 
@@ -190,6 +206,7 @@ export async function runSimulateSeasonCommand(
       result,
       parsed.seed,
       parsed.fixtureId,
+      text,
       setupDemo,
       manualTacticSwitch,
       lineupFixtureInspection,
@@ -200,24 +217,24 @@ export async function runSimulateSeasonCommand(
     return 0;
   }
 
-  for (const line of formatSeasonOutput(league, result, parsed.seed, setupDemo)) {
+  for (const line of formatSeasonOutput(league, result, parsed.seed, text, setupDemo)) {
     io.stdout(line);
   }
 
   if (conditionDemo !== undefined) {
-    for (const line of formatConditionDemoOutput(league, result, conditionDemo)) {
+    for (const line of formatConditionDemoOutput(league, result, conditionDemo, text)) {
       io.stdout(line);
     }
   }
 
   if (lineupDemo !== undefined) {
-    for (const line of formatLineupDemoOutput(league, lineupDemo)) {
+    for (const line of formatLineupDemoOutput(league, lineupDemo, text)) {
       io.stdout(line);
     }
   }
 
   if (parsed.roundNumber !== undefined) {
-    for (const line of formatRoundOutput(league, result, parsed.roundNumber)) {
+    for (const line of formatRoundOutput(league, result, parsed.roundNumber, text)) {
       io.stdout(line);
     }
   }
@@ -247,6 +264,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let conditionDemo: ConditionDemoProfileKey | undefined;
   let lineupDemo: LineupDemoProfileKey | undefined;
   let formationFit: FormationKey | undefined;
+  let language: SupportedLanguage = "en";
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -255,11 +273,53 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--lang") {
+      const value = args[index + 1];
+      const parsedLanguage = parseLanguageCode(value);
+
+      if (parsedLanguage === undefined) {
+        return {
+          ok: false,
+          language,
+          message:
+            value === undefined || value.length === 0
+              ? createTranslator(language)("cli.error.langRequiresValue", { supported: formatSupportedLanguages() })
+              : createTranslator(language)("cli.error.unsupportedLanguage", {
+                  value,
+                  supported: formatSupportedLanguages(),
+                }),
+        };
+      }
+
+      language = parsedLanguage;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--lang=")) {
+      const value = arg.slice("--lang=".length);
+      const parsedLanguage = parseLanguageCode(value);
+
+      if (parsedLanguage === undefined) {
+        return {
+          ok: false,
+          language,
+          message: createTranslator(language)("cli.error.unsupportedLanguage", {
+            value,
+            supported: formatSupportedLanguages(),
+          }),
+        };
+      }
+
+      language = parsedLanguage;
+      continue;
+    }
+
     if (arg === "--seed") {
       const value = args[index + 1];
 
       if (value === undefined || value.length === 0) {
-        return { ok: false, message: "--seed requires a non-empty value" };
+        return { ok: false, language, message: createTranslator(language)("season.error.seedRequired") };
       }
 
       seed = value;
@@ -271,7 +331,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       const value = arg.slice("--seed=".length);
 
       if (value.length === 0) {
-        return { ok: false, message: "--seed requires a non-empty value" };
+        return { ok: false, language, message: createTranslator(language)("season.error.seedRequired") };
       }
 
       seed = value;
@@ -280,10 +340,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--round") {
       const value = args[index + 1];
-      const parsedRound = parseRoundNumber(value);
+      const parsedRound = parseRoundNumber(value, createTranslator(language));
 
       if (!parsedRound.ok) {
-        return parsedRound;
+        return { ...parsedRound, language };
       }
 
       roundNumber = parsedRound.roundNumber;
@@ -292,10 +352,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--round=")) {
-      const parsedRound = parseRoundNumber(arg.slice("--round=".length));
+      const parsedRound = parseRoundNumber(arg.slice("--round=".length), createTranslator(language));
 
       if (!parsedRound.ok) {
-        return parsedRound;
+        return { ...parsedRound, language };
       }
 
       roundNumber = parsedRound.roundNumber;
@@ -304,10 +364,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--fixture") {
       const value = args[index + 1];
-      const parsedFixture = parseFixtureId(value);
+      const parsedFixture = parseFixtureId(value, createTranslator(language));
 
       if (!parsedFixture.ok) {
-        return parsedFixture;
+        return { ...parsedFixture, language };
       }
 
       fixtureId = parsedFixture.fixtureId;
@@ -316,10 +376,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--fixture=")) {
-      const parsedFixture = parseFixtureId(arg.slice("--fixture=".length));
+      const parsedFixture = parseFixtureId(arg.slice("--fixture=".length), createTranslator(language));
 
       if (!parsedFixture.ok) {
-        return parsedFixture;
+        return { ...parsedFixture, language };
       }
 
       fixtureId = parsedFixture.fixtureId;
@@ -328,10 +388,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--setup-demo") {
       const value = args[index + 1];
-      const parsedSetupDemo = parseSetupDemo(value);
+      const parsedSetupDemo = parseSetupDemo(value, createTranslator(language));
 
       if (!parsedSetupDemo.ok) {
-        return parsedSetupDemo;
+        return { ...parsedSetupDemo, language };
       }
 
       setupDemo = parsedSetupDemo.setupDemo;
@@ -340,10 +400,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--setup-demo=")) {
-      const parsedSetupDemo = parseSetupDemo(arg.slice("--setup-demo=".length));
+      const parsedSetupDemo = parseSetupDemo(arg.slice("--setup-demo=".length), createTranslator(language));
 
       if (!parsedSetupDemo.ok) {
-        return parsedSetupDemo;
+        return { ...parsedSetupDemo, language };
       }
 
       setupDemo = parsedSetupDemo.setupDemo;
@@ -352,10 +412,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--manual-tactic-switch") {
       const value = args[index + 1];
-      const parsedManualTacticSwitch = parseManualTacticSwitch(value);
+      const parsedManualTacticSwitch = parseManualTacticSwitch(value, createTranslator(language));
 
       if (!parsedManualTacticSwitch.ok) {
-        return parsedManualTacticSwitch;
+        return { ...parsedManualTacticSwitch, language };
       }
 
       manualTacticSwitch = parsedManualTacticSwitch.manualTacticSwitch;
@@ -364,10 +424,13 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--manual-tactic-switch=")) {
-      const parsedManualTacticSwitch = parseManualTacticSwitch(arg.slice("--manual-tactic-switch=".length));
+      const parsedManualTacticSwitch = parseManualTacticSwitch(
+        arg.slice("--manual-tactic-switch=".length),
+        createTranslator(language),
+      );
 
       if (!parsedManualTacticSwitch.ok) {
-        return parsedManualTacticSwitch;
+        return { ...parsedManualTacticSwitch, language };
       }
 
       manualTacticSwitch = parsedManualTacticSwitch.manualTacticSwitch;
@@ -376,10 +439,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--condition-demo") {
       const value = args[index + 1];
-      const parsedConditionDemo = parseConditionDemo(value);
+      const parsedConditionDemo = parseConditionDemo(value, createTranslator(language));
 
       if (!parsedConditionDemo.ok) {
-        return parsedConditionDemo;
+        return { ...parsedConditionDemo, language };
       }
 
       conditionDemo = parsedConditionDemo.conditionDemo;
@@ -388,10 +451,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--condition-demo=")) {
-      const parsedConditionDemo = parseConditionDemo(arg.slice("--condition-demo=".length));
+      const parsedConditionDemo = parseConditionDemo(arg.slice("--condition-demo=".length), createTranslator(language));
 
       if (!parsedConditionDemo.ok) {
-        return parsedConditionDemo;
+        return { ...parsedConditionDemo, language };
       }
 
       conditionDemo = parsedConditionDemo.conditionDemo;
@@ -400,10 +463,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--lineup-demo") {
       const value = args[index + 1];
-      const parsedLineupDemo = parseLineupDemo(value);
+      const parsedLineupDemo = parseLineupDemo(value, createTranslator(language));
 
       if (!parsedLineupDemo.ok) {
-        return parsedLineupDemo;
+        return { ...parsedLineupDemo, language };
       }
 
       lineupDemo = parsedLineupDemo.lineupDemo;
@@ -412,10 +475,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--lineup-demo=")) {
-      const parsedLineupDemo = parseLineupDemo(arg.slice("--lineup-demo=".length));
+      const parsedLineupDemo = parseLineupDemo(arg.slice("--lineup-demo=".length), createTranslator(language));
 
       if (!parsedLineupDemo.ok) {
-        return parsedLineupDemo;
+        return { ...parsedLineupDemo, language };
       }
 
       lineupDemo = parsedLineupDemo.lineupDemo;
@@ -424,10 +487,10 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
 
     if (arg === "--formation-fit") {
       const value = args[index + 1];
-      const parsedFormationFit = parseFormationFit(value);
+      const parsedFormationFit = parseFormationFit(value, createTranslator(language));
 
       if (!parsedFormationFit.ok) {
-        return parsedFormationFit;
+        return { ...parsedFormationFit, language };
       }
 
       formationFit = parsedFormationFit.formationFit;
@@ -436,32 +499,32 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     }
 
     if (arg.startsWith("--formation-fit=")) {
-      const parsedFormationFit = parseFormationFit(arg.slice("--formation-fit=".length));
+      const parsedFormationFit = parseFormationFit(arg.slice("--formation-fit=".length), createTranslator(language));
 
       if (!parsedFormationFit.ok) {
-        return parsedFormationFit;
+        return { ...parsedFormationFit, language };
       }
 
       formationFit = parsedFormationFit.formationFit;
       continue;
     }
 
-    return { ok: false, message: `Unknown argument: ${arg}` };
+    return { ok: false, language, message: createTranslator(language)("cli.error.unknownArgument", { arg }) };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo, lineupDemo, formationFit };
+  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo, lineupDemo, formationFit, language };
 }
 
 /**
  * Parses one positive round number argument.
  */
-function parseRoundNumber(value: string | undefined): ParsedRoundNumber {
+function parseRoundNumber(value: string | undefined, text: Translator): ParsedRoundNumber {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: "--round requires a positive integer value" };
+    return { ok: false, message: text("round.error.requiresPositive") };
   }
 
   if (!/^[1-9][0-9]*$/.test(value)) {
-    return { ok: false, message: "--round requires a positive integer value" };
+    return { ok: false, message: text("round.error.requiresPositive") };
   }
 
   return { ok: true, roundNumber: Number(value) };
@@ -470,13 +533,13 @@ function parseRoundNumber(value: string | undefined): ParsedRoundNumber {
 /**
  * Parses one stable fixture ID argument.
  */
-function parseFixtureId(value: string | undefined): ParsedFixtureId {
+function parseFixtureId(value: string | undefined, text: Translator): ParsedFixtureId {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: "--fixture requires a non-empty fixture ID" };
+    return { ok: false, message: text("fixture.error.requiresNonEmpty") };
   }
 
   if (!/^fixture:[A-Za-z0-9:_-]+$/.test(value)) {
-    return { ok: false, message: "--fixture requires a namespaced fixture ID" };
+    return { ok: false, message: text("fixture.error.requiresNamespaced") };
   }
 
   return { ok: true, fixtureId: value };
@@ -485,15 +548,15 @@ function parseFixtureId(value: string | undefined): ParsedFixtureId {
 /**
  * Parses the deterministic setup-demo profile key.
  */
-function parseSetupDemo(value: string | undefined): ParsedSetupDemo {
+function parseSetupDemo(value: string | undefined, text: Translator): ParsedSetupDemo {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: `--setup-demo requires a supported value: ${formatSupportedSetupDemoProfiles()}` };
+    return { ok: false, message: text("setup.error.requiresValue", { supported: formatSupportedSetupDemoProfiles() }) };
   }
 
   if (!isSetupDemoProfileKey(value)) {
     return {
       ok: false,
-      message: `Unsupported --setup-demo value: ${value}. Supported values: ${formatSupportedSetupDemoProfiles()}`,
+      message: text("setup.error.unsupportedValue", { value, supported: formatSupportedSetupDemoProfiles() }),
     };
   }
 
@@ -503,11 +566,11 @@ function parseSetupDemo(value: string | undefined): ParsedSetupDemo {
 /**
  * Parses one manual tactic-switch declaration in `<minute>:<profile>` form.
  */
-function parseManualTacticSwitch(value: string | undefined): ParsedManualTacticSwitch {
+function parseManualTacticSwitch(value: string | undefined, text: Translator): ParsedManualTacticSwitch {
   if (value === undefined || value.length === 0) {
     return {
       ok: false,
-      message: `--manual-tactic-switch requires <minute>:<profile>, for example 46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
+      message: text("manualSwitch.error.requiresValue", { profile: DEMO_SETUP_PROFILE_PRO01_ATTACKING }),
     };
   }
 
@@ -516,7 +579,7 @@ function parseManualTacticSwitch(value: string | undefined): ParsedManualTacticS
   if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
     return {
       ok: false,
-      message: `--manual-tactic-switch requires <minute>:<profile>, for example 46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
+      message: text("manualSwitch.error.requiresValue", { profile: DEMO_SETUP_PROFILE_PRO01_ATTACKING }),
     };
   }
 
@@ -524,13 +587,16 @@ function parseManualTacticSwitch(value: string | undefined): ParsedManualTacticS
   const profileValue = value.slice(separatorIndex + 1);
 
   if (!/^[1-9][0-9]*$/.test(minuteValue)) {
-    return { ok: false, message: "--manual-tactic-switch minute must be a positive integer" };
+    return { ok: false, message: text("manualSwitch.error.minutePositive") };
   }
 
   if (!isSetupDemoProfileKey(profileValue)) {
     return {
       ok: false,
-      message: `Unsupported --manual-tactic-switch profile: ${profileValue}. Supported values: ${formatSupportedSetupDemoProfiles()}`,
+      message: text("manualSwitch.error.unsupportedProfile", {
+        value: profileValue,
+        supported: formatSupportedSetupDemoProfiles(),
+      }),
     };
   }
 
@@ -546,15 +612,21 @@ function parseManualTacticSwitch(value: string | undefined): ParsedManualTacticS
 /**
  * Parses the deterministic condition-demo profile key.
  */
-function parseConditionDemo(value: string | undefined): ParsedConditionDemo {
+function parseConditionDemo(value: string | undefined, text: Translator): ParsedConditionDemo {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: `--condition-demo requires a supported value: ${formatSupportedConditionDemoProfiles()}` };
+    return {
+      ok: false,
+      message: text("condition.error.requiresValue", { supported: formatSupportedConditionDemoProfiles() }),
+    };
   }
 
   if (!isConditionDemoProfileKey(value)) {
     return {
       ok: false,
-      message: `Unsupported --condition-demo value: ${value}. Supported values: ${formatSupportedConditionDemoProfiles()}`,
+      message: text("condition.error.unsupportedValue", {
+        value,
+        supported: formatSupportedConditionDemoProfiles(),
+      }),
     };
   }
 
@@ -564,15 +636,21 @@ function parseConditionDemo(value: string | undefined): ParsedConditionDemo {
 /**
  * Parses the deterministic lineup-demo profile key.
  */
-function parseLineupDemo(value: string | undefined): ParsedLineupDemo {
+function parseLineupDemo(value: string | undefined, text: Translator): ParsedLineupDemo {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: `--lineup-demo requires a supported value: ${formatSupportedLineupDemoProfiles()}` };
+    return {
+      ok: false,
+      message: text("lineup.error.requiresValue", { supported: formatSupportedLineupDemoProfiles() }),
+    };
   }
 
   if (!isLineupDemoProfileKey(value)) {
     return {
       ok: false,
-      message: `Unsupported --lineup-demo value: ${value}. Supported values: ${formatSupportedLineupDemoProfiles()}`,
+      message: text("lineup.error.unsupportedValue", {
+        value,
+        supported: formatSupportedLineupDemoProfiles(),
+      }),
     };
   }
 
@@ -582,15 +660,15 @@ function parseLineupDemo(value: string | undefined): ParsedLineupDemo {
 /**
  * Parses one supported formation key for squad-fit inspection.
  */
-function parseFormationFit(value: string | undefined): ParsedFormationFit {
+function parseFormationFit(value: string | undefined, text: Translator): ParsedFormationFit {
   if (value === undefined || value.length === 0) {
-    return { ok: false, message: `--formation-fit requires a supported value: ${formatSupportedFormationKeys()}` };
+    return { ok: false, message: text("formation.error.requiresValue", { supported: formatSupportedFormationKeys() }) };
   }
 
   if (!isFormationKey(value)) {
     return {
       ok: false,
-      message: `Unsupported --formation-fit value: ${value}. Supported values: ${formatSupportedFormationKeys()}`,
+      message: text("formation.error.unsupportedValue", { value, supported: formatSupportedFormationKeys() }),
     };
   }
 
@@ -711,27 +789,32 @@ function simulateSeasonForCli(
 /**
  * Formats fixture result details for one requested round.
  */
-function formatRoundOutput(league: FakeLeagueSystem, result: CliSeasonResult, roundNumber: number): readonly string[] {
+function formatRoundOutput(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  roundNumber: number,
+  text: Translator,
+): readonly string[] {
   const round = findRound(result.rounds, roundNumber);
 
   if (round === undefined) {
-    return ["", `Round ${roundNumber} fixtures: unavailable`];
+    return ["", text("round.fixturesUnavailable", { round: roundNumber })];
   }
 
-  const lines = ["", `Round ${round.roundNumber} fixtures:`];
+  const lines = ["", `${text("round.fixtures", { round: round.roundNumber })}:`];
 
   for (const fixtureId of round.fixtureIds) {
     const fixture = findFixture(result.fixtures, fixtureId);
 
     if (fixture === undefined) {
-      lines.push(`${fixtureId} unavailable`);
+      lines.push(text("fixture.unavailable", { fixture: String(fixtureId) }));
       continue;
     }
 
     lines.push(formatFixtureResult(fixture, league));
 
     const scorers = formatFixtureScorers(fixture, league);
-    lines.push(`  Scorers: ${scorers.length === 0 ? "none" : scorers.join("; ")}`);
+    lines.push(`  ${text("fixture.scorers")}: ${scorers.length === 0 ? text("common.none") : scorers.join("; ")}`);
   }
 
   return lines;
@@ -745,23 +828,24 @@ function formatFixtureOnlyOutput(
   result: CliSeasonResult,
   seed: string,
   fixtureValue: string,
+  text: Translator,
   setupDemo: CliSetupDemo | undefined,
   manualTacticSwitch: CliManualTacticSwitch | undefined,
   lineupFixtureInspection: CliLineupFixtureInspection | undefined,
 ): readonly string[] {
   const lines = [
-    "The Long Season fixture detail",
-    `Seed: ${seed}`,
-    `Fixture: ${fixtureValue}`,
-    `Competition: ${league.competition.name}`,
+    text("fixture.title"),
+    `${text("season.seed")}: ${seed}`,
+    `${text("fixture.fixture")}: ${fixtureValue}`,
+    `${text("season.competition")}: ${league.competition.name}`,
   ];
 
   if (setupDemo !== undefined) {
-    lines.push(...formatSetupDemoLines(league, setupDemo));
+    lines.push(...formatSetupDemoLines(league, setupDemo, text));
   }
 
   if (lineupFixtureInspection !== undefined) {
-    lines.push(...formatLineupFixtureInspectionLines(league, result, lineupFixtureInspection));
+    lines.push(...formatLineupFixtureInspectionLines(league, result, lineupFixtureInspection, text));
   }
 
   const manualFixture = manualTacticSwitch === undefined || setupDemo === undefined
@@ -769,11 +853,11 @@ function formatFixtureOnlyOutput(
     : buildManualTacticFixture(league, result, seed, fixtureValue, setupDemo, manualTacticSwitch);
 
   if (manualFixture !== undefined && setupDemo !== undefined && manualTacticSwitch !== undefined) {
-    lines.push(...formatManualTacticSwitchLines(league, setupDemo, manualTacticSwitch, manualFixture));
+    lines.push(...formatManualTacticSwitchLines(league, setupDemo, manualTacticSwitch, manualFixture, text));
   }
 
   lines.push("");
-  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue, manualFixture?.fixture, lineupFixtureInspection));
+  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue, text, manualFixture?.fixture, lineupFixtureInspection));
 
   return lines;
 }
@@ -785,40 +869,41 @@ function formatFixtureDetailOutput(
   league: FakeLeagueSystem,
   result: CliSeasonResult,
   fixtureValue: string,
+  text: Translator,
   overrideFixture: Fixture | undefined = undefined,
   lineupFixtureInspection: CliLineupFixtureInspection | undefined = undefined,
 ): readonly string[] {
   const fixture = overrideFixture ?? findFixtureByValue(result.fixtures, fixtureValue);
 
   if (fixture === undefined) {
-    return ["", `Fixture ${fixtureValue}: unavailable`];
+    return ["", `${text("fixture.fixture")} ${fixtureValue}: ${text("common.unavailable")}`];
   }
 
   const report = fixture.result?.report;
   const lines = [formatFixtureResult(fixture, league)];
 
   if (report === undefined) {
-    lines.push("Events: unavailable");
-    lines.push("Player stats: unavailable");
+    lines.push(text("fixture.eventsUnavailable"));
+    lines.push(text("fixture.playerStatsUnavailable"));
     return lines;
   }
 
-  lines.push("Events:");
+  lines.push(`${text("fixture.events")}:`);
 
-  const eventLines = formatFixtureEvents(fixture, league);
+  const eventLines = formatFixtureEvents(fixture, league, text);
   if (eventLines.length === 0) {
-    lines.push("  none");
+    lines.push(`  ${text("common.none")}`);
   } else {
     lines.push(...eventLines);
   }
 
-  lines.push("Player stats (all starters):");
+  lines.push(`${text("fixture.playerStatsAllStarters")}:`);
 
   const statLines = formatFixturePlayerStats(fixture, league, lineupFixtureInspection);
   if (statLines.length === 0) {
-    lines.push("  none");
+    lines.push(`  ${text("common.none")}`);
   } else {
-    lines.push("  Player              Club  G A Sh SoT Sv");
+    lines.push(text("fixture.playerStatsHeader"));
     lines.push(...statLines);
   }
 
@@ -952,25 +1037,26 @@ function formatManualTacticSwitchLines(
   setupDemo: CliSetupDemo,
   manualTacticSwitch: CliManualTacticSwitch,
   manualFixture: CliManualTacticFixture,
+  text: Translator,
 ): readonly string[] {
   const lines = [
-    "Manual tactic switch:",
-    `  Selected club: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
-    `  Initial profile: ${setupDemo.profileKey}`,
-    `  Switch: ${manualTacticSwitch.minute}' -> ${manualTacticSwitch.targetSetupDemo.profileKey}`,
-    `  Applies to fixture: ${manualFixture.appliesToFixture ? "yes" : "no"}`,
+    `${text("manualSwitch.title")}:`,
+    `  ${text("setup.selectedClub")}: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
+    `  ${text("manualSwitch.initialProfile")}: ${setupDemo.profileKey}`,
+    `  ${text("manualSwitch.switch")}: ${manualTacticSwitch.minute}' -> ${manualTacticSwitch.targetSetupDemo.profileKey}`,
+    `  ${text("manualSwitch.appliesToFixture")}: ${manualFixture.appliesToFixture ? text("common.yes") : text("common.no")}`,
   ];
 
   if (!manualFixture.appliesToFixture) {
     lines.push(
-      `  Reason: ${clubLabel(setupDemo.clubId, league.clubsById)} is not playing this fixture`,
-      "Profile timeline:",
-      `  unchanged: ${formatFixtureResult(manualFixture.fixture, league)}`,
+      `  ${text("manualSwitch.reason")}: ${text("common.notPlayingReason", { club: clubLabel(setupDemo.clubId, league.clubsById) })}`,
+      `${text("manualSwitch.profileTimeline")}:`,
+      `  ${text("manualSwitch.unchanged")}: ${formatFixtureResult(manualFixture.fixture, league)}`,
     );
     return lines;
   }
 
-  lines.push("Profile timeline:");
+  lines.push(`${text("manualSwitch.profileTimeline")}:`);
 
   if (manualTacticSwitch.minute > 1) {
     lines.push(`  1'-${manualTacticSwitch.minute - 1}': ${setupDemo.profileKey}`);
@@ -1022,7 +1108,7 @@ function formatFixtureScorers(fixture: Fixture, league: FakeLeagueSystem): reado
 /**
  * Formats structured goal, save, miss, and block events for one fixture.
  */
-function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readonly string[] {
+function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem, text: Translator): readonly string[] {
   const report = fixture.result?.report;
   const events: string[] = [];
 
@@ -1034,10 +1120,10 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
     switch (event.type) {
       case "goal": {
         const clubId = sideClubId(fixture, event.shot.side);
-        const assist = event.assistPlayerId === undefined ? "" : ` assist=${playerLabel(event.assistPlayerId, league.players)}`;
-        const creator = event.creatorPlayerId === undefined ? "" : ` creator=${playerLabel(event.creatorPlayerId, league.players)}`;
+        const assist = event.assistPlayerId === undefined ? "" : ` ${text("event.assist")}=${playerLabel(event.assistPlayerId, league.players)}`;
+        const creator = event.creatorPlayerId === undefined ? "" : ` ${text("event.creator")}=${playerLabel(event.creatorPlayerId, league.players)}`;
         events.push(
-          `  ${event.shot.minute}' GOAL ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist}${creator} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.goal")} ${clubLabel(clubId, league.clubsById)} ${playerLabel(event.scorerPlayerId, league.players)}${assist}${creator} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
         );
         break;
       }
@@ -1046,7 +1132,7 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
         const defendingClubId = sideClubId(fixture, oppositeSide(event.shot.side));
         const attackingClubId = sideClubId(fixture, event.shot.side);
         events.push(
-          `  ${event.shot.minute}' SAVE ${clubLabel(defendingClubId, league.clubsById)} ${playerLabel(event.goalkeeperPlayerId, league.players)} vs ${clubLabel(attackingClubId, league.clubsById)} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.save")} ${clubLabel(defendingClubId, league.clubsById)} ${playerLabel(event.goalkeeperPlayerId, league.players)} ${text("event.vs")} ${clubLabel(attackingClubId, league.clubsById)} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
         );
         break;
       }
@@ -1054,7 +1140,7 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
       case "miss": {
         const clubId = sideClubId(fixture, event.shot.side);
         events.push(
-          `  ${event.shot.minute}' MISS ${clubLabel(clubId, league.clubsById)} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.miss")} ${clubLabel(clubId, league.clubsById)} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
         );
         break;
       }
@@ -1063,9 +1149,9 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
         const clubId = sideClubId(fixture, event.shot.side);
         const defender = event.primaryDefenderPlayerId === undefined
           ? ""
-          : ` defender=${playerLabel(event.primaryDefenderPlayerId, league.players)}`;
+          : ` ${text("event.defender")}=${playerLabel(event.primaryDefenderPlayerId, league.players)}`;
         events.push(
-          `  ${event.shot.minute}' BLOCK ${clubLabel(clubId, league.clubsById)}${defender} shot=${event.shot.shotType} chance=${event.shot.chanceType}`,
+          `  ${event.shot.minute}' ${text("event.block")} ${clubLabel(clubId, league.clubsById)}${defender} ${text("event.shot")}=${event.shot.shotType} ${text("event.chance")}=${event.shot.chanceType}`,
         );
         break;
       }
@@ -1266,38 +1352,40 @@ function formatSeasonOutput(
   league: FakeLeagueSystem,
   result: CliSeasonResult,
   seed: string,
+  text: Translator,
   setupDemo: CliSetupDemo | undefined,
 ): readonly string[] {
   const lines: string[] = [
-    "The Long Season simulated season",
-    `Seed: ${seed}`,
-    `Competition: ${league.competition.name}`,
+    text("season.title"),
+    `${text("season.seed")}: ${seed}`,
+    `${text("season.competition")}: ${league.competition.name}`,
   ];
 
   if (setupDemo !== undefined) {
-    lines.push(...formatSetupDemoLines(league, setupDemo));
+    lines.push(...formatSetupDemoLines(league, setupDemo, text));
   }
 
   lines.push("");
-  lines.push("Final table:");
-  lines.push("Pos Club          P  W  D  L  GF GA GD  Pts");
+  lines.push(`${text("season.finalTable")}:`);
+  lines.push(text("season.tableHeader"));
 
   for (const row of result.table) {
     lines.push(formatTableRow(row, league.clubsById));
   }
 
   lines.push("");
-  lines.push(`Top scorer: ${formatTopScorer(result.playerGoalStats[0], league.players, league.clubsById)}`);
-  lines.push(`Top assist: ${formatTopAssist(topPlayerByMetric(result.playerSummaryStats, "assists"), league.players, league.clubsById)}`);
+  lines.push(`${text("season.topScorer")}: ${formatTopScorer(result.playerGoalStats[0], league.players, league.clubsById, text)}`);
+  lines.push(`${text("season.topAssist")}: ${formatTopAssist(topPlayerByMetric(result.playerSummaryStats, "assists"), league.players, league.clubsById, text)}`);
   lines.push(
-    `Top goalkeeper saves: ${formatTopGoalkeeperSaves(
+    `${text("season.topGoalkeeperSaves")}: ${formatTopGoalkeeperSaves(
       topPlayerByMetric(result.playerSummaryStats, "saves"),
       league.players,
       league.clubsById,
+      text,
     )}`,
   );
-  lines.push(`Best defense: ${formatSummaryRow(result.bestDefense, league.clubsById, "GA")}`);
-  lines.push(`Worst attack: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF")}`);
+  lines.push(`${text("season.bestDefense")}: ${formatSummaryRow(result.bestDefense, league.clubsById, "GA", text)}`);
+  lines.push(`${text("season.worstAttack")}: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF", text)}`);
 
   return lines;
 }
@@ -1309,49 +1397,56 @@ function formatFormationFitOutput(
   league: FakeLeagueSystem,
   seed: string,
   formationKey: FormationKey,
+  text: Translator,
 ): readonly string[] {
   const clubId = firstGeneratedClubId(league, "formation-fit inspection");
   const club = league.clubsById[clubId];
   const report = buildFormationFitReportForCli(league, clubId, formationKey);
   const formation = FORMATION_CATALOG[formationKey];
   const lines = [
-    "The Long Season formation fit",
-    `Seed: ${seed}`,
-    `Competition: ${league.competition.name}`,
-    `Selected club: ${clubLabel(clubId, league.clubsById)}`,
-    `Squad size: ${club?.playerIds.length ?? 0}`,
-    `Selected formation: ${formationKey}`,
-    "Inspection only: no lineup is auto-selected and no transfer action is created.",
+    text("formation.title"),
+    `${text("season.seed")}: ${seed}`,
+    `${text("season.competition")}: ${league.competition.name}`,
+    `${text("setup.selectedClub")}: ${clubLabel(clubId, league.clubsById)}`,
+    `${text("formation.squadSize")}: ${club?.playerIds.length ?? 0}`,
+    `${text("formation.selectedFormation")}: ${formationKey}`,
+    text("formation.inspectionOnly"),
     "",
-    "Formation slots:",
+    `${text("formation.slots")}:`,
   ];
 
   for (const slot of formation.slots) {
     lines.push(
-      `  ${slot.slotKey} ${slot.positionFamily} department=${slot.department}${slot.side === undefined ? "" : ` side=${slot.side}`}`,
+      `  ${slot.slotKey} ${formatFormationPositionFamily(slot.positionFamily, text)} ${text("formation.department")}=${formatFormationDepartment(slot.department, text)}${slot.side === undefined ? "" : ` ${text("formation.side")}=${formatFormationSide(slot.side, text)}`}`,
     );
   }
 
-  lines.push("Covered slots:");
-  lines.push(...formatFormationSlotFitRows(report.coveredSlots));
-  lines.push("Adapted/weak slots:");
-  lines.push(...formatFormationSlotFitRows([...report.adaptedSlots, ...report.weakSlots]));
-  lines.push("Missing slots:");
-  lines.push(...formatFormationSlotFitRows(report.uncoveredSlots));
-  lines.push("Surplus groups:");
+  lines.push(`${text("formation.coveredSlots")}:`);
+  lines.push(...formatFormationSlotFitRows(report.coveredSlots, text));
+  lines.push(`${text("formation.adaptedWeakSlots")}:`);
+  lines.push(...formatFormationSlotFitRows([...report.adaptedSlots, ...report.weakSlots], text));
+  lines.push(`${text("formation.missingSlots")}:`);
+  lines.push(...formatFormationSlotFitRows(report.uncoveredSlots, text));
+  lines.push(`${text("formation.surplusGroups")}:`);
 
   if (report.surplusGroups.length === 0) {
-    lines.push("  none");
+    lines.push(`  ${text("common.none")}`);
   } else {
     for (const group of report.surplusGroups) {
-      lines.push(`  ${group.key} players=${group.playerCount} slots=${group.slotCount}`);
+      lines.push(
+        `  ${formatFormationSurplusGroup(group.key, text)} ${text("formation.players")}=${group.playerCount} ${text("formation.slotCount")}=${group.slotCount}`,
+      );
     }
   }
 
-  lines.push("Fit warnings:");
-  lines.push(...formatFormationFitWarningRows(report));
-  lines.push("Market-need hints:");
-  lines.push(`  ${report.marketNeedHints.length === 0 ? "none" : report.marketNeedHints.join(", ")}`);
+  lines.push(`${text("formation.fitWarnings")}:`);
+  lines.push(...formatFormationFitWarningRows(report, text));
+  lines.push(`${text("formation.marketNeedHints")}:`);
+  lines.push(
+    `  ${report.marketNeedHints.length === 0
+      ? text("common.none")
+      : report.marketNeedHints.map((hint) => formatFormationMarketHint(hint, text)).join(", ")}`,
+  );
 
   return lines;
 }
@@ -1393,26 +1488,104 @@ function buildFormationFitReportForCli(
 /**
  * Formats compact slot-fit rows or a stable `none` marker.
  */
-function formatFormationSlotFitRows(slots: readonly FormationSlotFit[]): readonly string[] {
+function formatFormationSlotFitRows(slots: readonly FormationSlotFit[], text: Translator): readonly string[] {
   if (slots.length === 0) {
-    return ["  none"];
+    return [`  ${text("common.none")}`];
   }
 
   return slots.map(
     (slot) =>
-      `  ${slot.slotKey} ${slot.positionFamily} best=${slot.bestSuitability} natural=${countSlotCandidates(slot, "natural")} adapted=${countSlotCandidates(slot, "adapted")} weak=${countSlotCandidates(slot, "weak")}`,
+      `  ${slot.slotKey} ${formatFormationPositionFamily(slot.positionFamily, text)} ${text("formation.best")}=${formatFormationSuitability(slot.bestSuitability, text)} ${text("formation.natural")}=${countSlotCandidates(slot, "natural")} ${text("formation.adapted")}=${countSlotCandidates(slot, "adapted")} ${text("formation.weak")}=${countSlotCandidates(slot, "weak")}`,
   );
 }
 
 /**
  * Formats role-depth warnings for slots covered only through adaptation.
  */
-function formatFormationFitWarningRows(report: FormationSquadFitReport): readonly string[] {
+function formatFormationFitWarningRows(report: FormationSquadFitReport, text: Translator): readonly string[] {
   const warnings = report.marketNeedHints
     .filter((hint) => hint.startsWith("consider:"))
-    .map((hint) => `  weak_depth:${hint.slice("consider:".length)}`);
+    .map((hint) =>
+      `  ${text("formation.warning.weakDepth", {
+        position: formatFormationPositionFamily(hint.slice("consider:".length), text),
+      })}`,
+    );
 
-  return warnings.length === 0 ? ["  none"] : warnings;
+  return warnings.length === 0 ? [`  ${text("common.none")}`] : warnings;
+}
+
+/**
+ * Formats a stable formation department key for presentation output.
+ */
+function formatFormationDepartment(department: string, text: Translator): string {
+  return text(formationMessageKey("formation.department", department));
+}
+
+/**
+ * Formats a stable formation side key for presentation output.
+ */
+function formatFormationSide(side: string, text: Translator): string {
+  return text(formationMessageKey("formation.side", side));
+}
+
+/**
+ * Formats a stable position-family key for presentation output.
+ */
+function formatFormationPositionFamily(positionFamily: string, text: Translator): string {
+  return text(formationMessageKey("formation.position", positionFamily));
+}
+
+/**
+ * Formats a stable slot suitability key for presentation output.
+ */
+function formatFormationSuitability(suitability: string, text: Translator): string {
+  return text(formationMessageKey("formation.suitability", suitability));
+}
+
+/**
+ * Formats a stable surplus-group key for presentation output.
+ */
+function formatFormationSurplusGroup(group: string, text: Translator): string {
+  return text(formationMessageKey("formation.surplus", group));
+}
+
+/**
+ * Formats a stable market hint by localizing its prefix and target key.
+ */
+function formatFormationMarketHint(hint: string, text: Translator): string {
+  const [kind, value] = hint.split(":");
+
+  if (kind === "need" && value !== undefined) {
+    return text("formation.market.need", { position: formatFormationMarketTarget(value, text) });
+  }
+
+  if (kind === "consider" && value !== undefined) {
+    return text("formation.market.consider", { position: formatFormationPositionFamily(value, text) });
+  }
+
+  if (kind === "surplus" && value !== undefined) {
+    return text("formation.market.surplus", { group: formatFormationSurplusGroup(value, text) });
+  }
+
+  return hint;
+}
+
+/**
+ * Formats either a position-family target or a broader market-depth target.
+ */
+function formatFormationMarketTarget(value: string, text: Translator): string {
+  if (value === "center_back_depth" || value === "wide_midfielder" || value === "striker_depth") {
+    return text(formationMessageKey("formation.marketTarget", value));
+  }
+
+  return formatFormationPositionFamily(value, text);
+}
+
+/**
+ * Builds a typed localization key for curated formation vocabulary.
+ */
+function formationMessageKey(prefix: string, value: string): MessageKey {
+  return `${prefix}.${value}` as MessageKey;
 }
 
 /**
@@ -1429,6 +1602,7 @@ function formatConditionDemoOutput(
   league: FakeLeagueSystem,
   result: CliSeasonResult,
   conditionDemo: CliConditionDemo,
+  text: Translator,
 ): readonly string[] {
   const selectedFixtures = clubFixtures(result.fixtures, conditionDemo.clubId);
   const firstFixture = selectedFixtures[0];
@@ -1447,16 +1621,16 @@ function formatConditionDemoOutput(
   const tableRow = findTableRow(result.table, conditionDemo.clubId);
   const lines = [
     "",
-    `Condition demo: ${conditionDemo.profileKey}`,
-    `  Selected club: ${clubLabel(conditionDemo.clubId, league.clubsById)}`,
-    "  Season fitness lifecycle: enabled",
-    `  Rules: match cost=${DEFAULT_FITNESS_RULES.matchFitnessCost} daily recovery=${DEFAULT_FITNESS_RULES.dailyRecovery} clamp=${DEFAULT_FITNESS_RULES.minFitness}..${DEFAULT_FITNESS_RULES.maxFitness}`,
-    `  First selected club fixture: ${firstFixtureLabel}`,
-    `  After first match selected starters fitness: ${firstMatchFitness}`,
-    `  Before next selected fixture fitness after ${recoveryDays ?? "unknown"} days recovery: ${recoveredFitness ?? "unavailable"}`,
-    `  Selected club final table: ${formatConditionTableImpact(tableRow, league)}`,
-    "  Final selected club condition:",
-    "  Player              Start Final Delta",
+    `${text("condition.demo")}: ${conditionDemo.profileKey}`,
+    `  ${text("setup.selectedClub")}: ${clubLabel(conditionDemo.clubId, league.clubsById)}`,
+    `  ${text("condition.lifecycle")}: ${text("common.enabled")}`,
+    `  ${text("condition.rules")}: ${text("condition.matchCost")}=${DEFAULT_FITNESS_RULES.matchFitnessCost} ${text("condition.dailyRecovery")}=${DEFAULT_FITNESS_RULES.dailyRecovery} ${text("condition.clamp")}=${DEFAULT_FITNESS_RULES.minFitness}..${DEFAULT_FITNESS_RULES.maxFitness}`,
+    `  ${text("condition.firstFixture")}: ${firstFixtureLabel}`,
+    `  ${text("condition.afterFirstMatch")}: ${firstMatchFitness}`,
+    `  ${text("condition.beforeNextFixture", { days: recoveryDays ?? text("common.unknown") })}: ${recoveredFitness ?? text("common.unavailable")}`,
+    `  ${text("condition.finalTable")}: ${formatConditionTableImpact(tableRow, league, text)}`,
+    `  ${text("condition.finalCondition")}:`,
+    text("condition.playerHeader"),
   ];
 
   for (const slot of conditionDemo.lineup) {
@@ -1469,24 +1643,24 @@ function formatConditionDemoOutput(
 /**
  * Formats a selected-lineup profile without applying it to fixtures or seasons.
  */
-function formatLineupDemoOutput(league: FakeLeagueSystem, lineupDemo: CliLineupDemo): readonly string[] {
+function formatLineupDemoOutput(league: FakeLeagueSystem, lineupDemo: CliLineupDemo, text: Translator): readonly string[] {
   const lines = [
     "",
-    `Lineup demo: ${lineupDemo.profileKey}`,
-    `  Selected club: ${clubLabel(lineupDemo.clubId, league.clubsById)}`,
-    "  Applied to fixtures: no (profile inspection only)",
-    "  Changes from first team:",
+    `${text("lineup.demo")}: ${lineupDemo.profileKey}`,
+    `  ${text("setup.selectedClub")}: ${clubLabel(lineupDemo.clubId, league.clubsById)}`,
+    `  ${text("lineup.appliedToFixtures")}: ${text("lineup.profileInspectionOnly")}`,
+    `  ${text("lineup.changesFromFirstTeam")}:`,
   ];
 
   if (lineupDemo.playerChanges.length === 0) {
-    lines.push("  none");
+    lines.push(`  ${text("common.none")}`);
   } else {
     for (const change of lineupDemo.playerChanges) {
       lines.push(formatLineupDemoChange(change, league));
     }
   }
 
-  lines.push("  Selected starters:");
+  lines.push(`  ${text("lineup.selectedStarters")}:`);
 
   for (const slot of lineupDemo.lineup) {
     lines.push(formatLineupDemoStarter(slot, league));
@@ -1502,37 +1676,41 @@ function formatLineupFixtureInspectionLines(
   league: FakeLeagueSystem,
   result: CliSeasonResult,
   inspection: CliLineupFixtureInspection,
+  text: Translator,
 ): readonly string[] {
   const fixture = findFixtureByValue(result.fixtures, inspection.fixtureValue);
   const fixtureLabel = fixture === undefined ? inspection.fixtureValue : formatFixtureResult(fixture, league);
   const lines = [
-    `Lineup override: ${inspection.profileKey}`,
-    `  Selected club: ${clubLabel(inspection.clubId, league.clubsById)}`,
-    `  Fixture: ${fixtureLabel}`,
-    `  Applies to fixture: ${inspection.appliesToFixture ? "yes" : "no"}`,
+    `${text("lineup.override")}: ${inspection.profileKey}`,
+    `  ${text("setup.selectedClub")}: ${clubLabel(inspection.clubId, league.clubsById)}`,
+    `  ${text("fixture.fixture")}: ${fixtureLabel}`,
+    `  ${text("manualSwitch.appliesToFixture")}: ${inspection.appliesToFixture ? text("common.yes") : text("common.no")}`,
   ];
 
   if (!inspection.appliesToFixture) {
-    lines.push(`  Reason: ${clubLabel(inspection.clubId, league.clubsById)} is not playing this fixture`);
+    lines.push(`  ${text("manualSwitch.reason")}: ${text("common.notPlayingReason", { club: clubLabel(inspection.clubId, league.clubsById) })}`);
   }
 
-  lines.push("  Selected starters:");
+  lines.push(`  ${text("lineup.selectedStarters")}:`);
 
   for (const slot of inspection.lineup) {
     lines.push(formatLineupDemoStarter(slot, league));
   }
 
-  lines.push("  Rested from first team:");
+  lines.push(`  ${text("lineup.restedFromFirstTeam")}:`);
 
   if (inspection.playerChanges.length === 0) {
-    lines.push("  none");
+    lines.push(`  ${text("common.none")}`);
   } else {
     for (const change of inspection.playerChanges) {
-      lines.push(`  ${playerLabel(change.fromPlayerId, league.players)} replaced by ${playerLabel(change.toPlayerId, league.players)}`);
+      lines.push(`  ${text("lineup.replacedBy", {
+        from: playerLabel(change.fromPlayerId, league.players),
+        to: playerLabel(change.toPlayerId, league.players),
+      })}`);
     }
   }
 
-  lines.push(...formatLineupConditionImpactLines(league, inspection));
+  lines.push(...formatLineupConditionImpactLines(league, inspection, text));
 
   return lines;
 }
@@ -1543,31 +1721,38 @@ function formatLineupFixtureInspectionLines(
 function formatLineupConditionImpactLines(
   league: FakeLeagueSystem,
   inspection: CliLineupFixtureInspection,
+  text: Translator,
 ): readonly string[] {
-  const lines = ["  Condition impact for this fixture:"];
+  const lines = [`  ${text("lineup.conditionImpact")}:`];
 
   if (!inspection.appliesToFixture) {
-    lines.push("  Selected starters spend 0 fitness because the selected club is not playing");
+    lines.push(`  ${text("lineup.selectedStartersSpendZero")}`);
     return lines;
   }
 
-  lines.push(`  Selected starters spend ${DEFAULT_FITNESS_RULES.matchFitnessCost} fitness`);
+  lines.push(`  ${text("lineup.selectedStartersSpend", { fitness: DEFAULT_FITNESS_RULES.matchFitnessCost })}`);
 
   if (inspection.playerChanges.length === 0) {
-    lines.push("  Rested first-team players: none");
+    lines.push(`  ${text("lineup.restedFirstTeamPlayers")}: ${text("common.none")}`);
     return lines;
   }
 
-  lines.push("  Selected replacements after fixture:");
+  lines.push(`  ${text("lineup.selectedReplacementsAfterFixture")}:`);
   for (const change of inspection.playerChanges) {
     lines.push(
-      `  ${playerLabel(change.toPlayerId, league.players)} expected fitness ${DEFAULT_FITNESS_RULES.maxFitness - DEFAULT_FITNESS_RULES.matchFitnessCost}`,
+      `  ${text("lineup.expectedFitness", {
+        player: playerLabel(change.toPlayerId, league.players),
+        fitness: DEFAULT_FITNESS_RULES.maxFitness - DEFAULT_FITNESS_RULES.matchFitnessCost,
+      })}`,
     );
   }
 
-  lines.push("  Rested first-team players after fixture:");
+  lines.push(`  ${text("lineup.restedFirstTeamAfterFixture")}:`);
   for (const change of inspection.playerChanges) {
-    lines.push(`  ${playerLabel(change.fromPlayerId, league.players)} expected fitness ${DEFAULT_FITNESS_RULES.maxFitness}`);
+    lines.push(`  ${text("lineup.expectedFitness", {
+      player: playerLabel(change.fromPlayerId, league.players),
+      fitness: DEFAULT_FITNESS_RULES.maxFitness,
+    })}`);
   }
 
   return lines;
@@ -1902,16 +2087,16 @@ function pro01DefensiveRoleKey(slot: FakeLineupSlotForCli): string {
 /**
  * Formats the applied setup demo context for season and fixture outputs.
  */
-function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSetupDemo): readonly string[] {
+function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSetupDemo, text: Translator): readonly string[] {
   const lines = [
-    `Setup demo: ${setupDemo.profileKey}`,
-    `Selected club: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
-    `Tactic: mentality=${setupDemo.tactic.mentality} pressing=${formatTacticKnob(setupDemo.tactic.pressing)} directness=${formatTacticKnob(setupDemo.tactic.directness)} width=${formatTacticKnob(setupDemo.tactic.width)} risk=${formatTacticKnob(setupDemo.tactic.risk)}`,
-    "Lineup role changes:",
+    `${text("setup.demo")}: ${setupDemo.profileKey}`,
+    `${text("setup.selectedClub")}: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
+    `${text("setup.tactic")}: ${text("setup.mentality")}=${setupDemo.tactic.mentality} ${text("setup.pressing")}=${formatTacticKnob(setupDemo.tactic.pressing)} ${text("setup.directness")}=${formatTacticKnob(setupDemo.tactic.directness)} ${text("setup.width")}=${formatTacticKnob(setupDemo.tactic.width)} ${text("setup.risk")}=${formatTacticKnob(setupDemo.tactic.risk)}`,
+    `${text("setup.lineupRoleChanges")}:`,
   ];
 
   if (setupDemo.roleChanges.length === 0) {
-    lines.push("  none");
+    lines.push(`  ${text("common.none")}`);
     return lines;
   }
 
@@ -1973,12 +2158,17 @@ function formatConditionPlayerRow(playerId: PlayerId, league: FakeLeagueSystem, 
 /**
  * Formats selected-club table impact for the condition demo.
  */
-function formatConditionTableImpact(row: LeagueTableRow | undefined, league: FakeLeagueSystem): string {
+function formatConditionTableImpact(row: LeagueTableRow | undefined, league: FakeLeagueSystem, text: Translator): string {
   if (row === undefined) {
-    return "unavailable";
+    return text("common.unavailable");
   }
 
-  return `${clubLabel(row.clubId, league.clubsById)} position ${row.position}, ${row.points} pts, GD ${formatSignedNumber(row.goalDifference)}`;
+  return text("condition.tableImpact", {
+    club: clubLabel(row.clubId, league.clubsById),
+    position: row.position,
+    points: row.points,
+    goalDifference: formatSignedNumber(row.goalDifference),
+  });
 }
 
 /**
@@ -2049,12 +2239,13 @@ function formatTopScorer(
   row: SeasonPlayerGoalStatRow | undefined,
   players: FakeLeagueSystem["players"],
   clubsById: Readonly<Record<ClubId, Club>>,
+  text: Translator,
 ): string {
   if (row === undefined) {
-    return "unavailable";
+    return text("common.unavailable");
   }
 
-  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatGoalCount(row.goals)}`;
+  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatGoalCount(row.goals, text)}`;
 }
 
 /**
@@ -2064,12 +2255,13 @@ function formatTopAssist(
   row: SeasonPlayerSummaryStatRow | undefined,
   players: FakeLeagueSystem["players"],
   clubsById: Readonly<Record<ClubId, Club>>,
+  text: Translator,
 ): string {
   if (row === undefined) {
-    return "unavailable";
+    return text("common.unavailable");
   }
 
-  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatAssistCount(row.assists)}`;
+  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatAssistCount(row.assists, text)}`;
 }
 
 /**
@@ -2079,12 +2271,13 @@ function formatTopGoalkeeperSaves(
   row: SeasonPlayerSummaryStatRow | undefined,
   players: FakeLeagueSystem["players"],
   clubsById: Readonly<Record<ClubId, Club>>,
+  text: Translator,
 ): string {
   if (row === undefined) {
-    return "unavailable";
+    return text("common.unavailable");
   }
 
-  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatSaveCount(row.saves)}`;
+  return `${playerLabel(row.playerId, players)} (${clubLabel(row.clubId, clubsById)}) - ${formatSaveCount(row.saves, text)}`;
 }
 
 /**
@@ -2121,22 +2314,22 @@ function comparePlayerIdsAscending(first: PlayerId, second: PlayerId): number {
 /**
  * Formats a goal count with a stable singular/plural suffix.
  */
-function formatGoalCount(goals: number): string {
-  return `${goals} ${goals === 1 ? "goal" : "goals"}`;
+function formatGoalCount(goals: number, text: Translator): string {
+  return `${goals} ${goals === 1 ? text("season.unit.goal.one") : text("season.unit.goal.many")}`;
 }
 
 /**
  * Formats an assist count with a stable singular/plural suffix.
  */
-function formatAssistCount(assists: number): string {
-  return `${assists} ${assists === 1 ? "assist" : "assists"}`;
+function formatAssistCount(assists: number, text: Translator): string {
+  return `${assists} ${assists === 1 ? text("season.unit.assist.one") : text("season.unit.assist.many")}`;
 }
 
 /**
  * Formats a goalkeeper-save count with a stable singular/plural suffix.
  */
-function formatSaveCount(saves: number): string {
-  return `${saves} ${saves === 1 ? "save" : "saves"}`;
+function formatSaveCount(saves: number, text: Translator): string {
+  return `${saves} ${saves === 1 ? text("season.unit.save.one") : text("season.unit.save.many")}`;
 }
 
 /**
@@ -2146,12 +2339,16 @@ function formatSummaryRow(
   row: LeagueTableRow | undefined,
   clubsById: Readonly<Record<ClubId, Club>>,
   metric: "GA" | "GF",
+  text: Translator,
 ): string {
   if (row === undefined) {
-    return "unavailable";
+    return text("common.unavailable");
   }
 
-  return `${clubLabel(row.clubId, clubsById)} (${metric} ${metric === "GA" ? row.goalsAgainst : row.goalsFor})`;
+  const metricLabel = metric === "GA" ? text("season.metric.goalsAgainst") : text("season.metric.goalsFor");
+  const metricValue = metric === "GA" ? row.goalsAgainst : row.goalsFor;
+
+  return `${clubLabel(row.clubId, clubsById)} (${metricLabel} ${metricValue})`;
 }
 
 /**
@@ -2175,10 +2372,12 @@ type ParsedSimulateSeasonArgs =
       readonly conditionDemo: ConditionDemoProfileKey | undefined;
       readonly lineupDemo: LineupDemoProfileKey | undefined;
       readonly formationFit: FormationKey | undefined;
+      readonly language: SupportedLanguage;
     }
   | {
       readonly ok: false;
       readonly message: string;
+      readonly language: SupportedLanguage;
     };
 
 /** Parsed round-number argument result. */
