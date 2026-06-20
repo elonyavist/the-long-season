@@ -1,25 +1,6 @@
 import type { Fixture, FixtureId, FixtureResult, GameState, MatchReport } from "@game/domain";
 
 /**
- * Fixture slice required by the fixture-result application use-case.
- *
- * The base `GameState` contract has not yet been expanded in a documented step
- * that lists `game-state.ts` as an expected file. This slice keeps the current
- * use-case explicit and copy-on-write without changing unrelated domain state.
- */
-export interface FixtureStateSlice {
-  /** Fixture lookup table by stable fixture ID. */
-  readonly fixtures: Readonly<Record<FixtureId, Fixture>>;
-  /** Deterministic fixture traversal order. */
-  readonly fixtureIds: readonly FixtureId[];
-}
-
-/**
- * Game state shape accepted by fixture result application.
- */
-export type ApplyMatchReportToFixtureState = GameState & FixtureStateSlice;
-
-/**
  * Debug options for applying a match report to fixture state.
  */
 export interface ApplyMatchReportToFixtureOptions {
@@ -32,7 +13,7 @@ export interface ApplyMatchReportToFixtureOptions {
  */
 export interface ApplyMatchReportToFixtureInput {
   /** Current immutable game state. */
-  readonly state: ApplyMatchReportToFixtureState;
+  readonly state: GameState;
   /** Fixture ID selected by the caller. */
   readonly fixtureId: FixtureId;
   /** Completed report whose score should become the fixture result. */
@@ -75,7 +56,7 @@ export class ApplyMatchReportToFixtureError extends Error {
  */
 export function applyMatchReportToFixture(
   input: ApplyMatchReportToFixtureInput,
-): ApplyMatchReportToFixtureState {
+): GameState {
   const fixture = input.state.fixtures[input.fixtureId];
 
   if (fixture === undefined) {

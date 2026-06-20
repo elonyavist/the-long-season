@@ -14,8 +14,6 @@ export {
   type ApplyMatchReportToFixtureErrorCode,
   type ApplyMatchReportToFixtureInput,
   type ApplyMatchReportToFixtureOptions,
-  type ApplyMatchReportToFixtureState,
-  type FixtureStateSlice,
 } from "./use-cases/apply-match-report-to-fixture.ts";
 export {
   SimulateSeasonError,

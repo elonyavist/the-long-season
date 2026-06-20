@@ -116,6 +116,8 @@ function minimalGameState(seedSuffix = "demo"): GameState {
     playerStates: {},
     clubs: {},
     clubIds: [],
+    fixtures: {},
+    fixtureIds: [],
   };
 }
 

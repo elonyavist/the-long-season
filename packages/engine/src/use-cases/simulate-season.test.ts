@@ -165,6 +165,29 @@ test("same seed plus same fixture lineup override is deterministic", () => {
   assert.deepEqual(simulateSeason(withFixtureLineupOverride), simulateSeason(withFixtureLineupOverride));
 });
 
+test("fixture lineup override registrations follow explicit override input order", () => {
+  const input = seasonInput("ordered-fixture-lineup-overrides-seed");
+  const firstFixture = generatedFixtureById(input, fixtureId("fixture:000001"));
+  const secondFixture = generatedFixtureById(input, fixtureId("fixture:000002"));
+  const firstOverride = fixtureLineupOverrideWithReserve(input, firstFixture, firstFixture.homeClubId);
+  const secondOverride = fixtureLineupOverrideWithReserve(input, secondFixture, secondFixture.homeClubId);
+  const withFixtureLineupOverrides: SimulateSeasonInput = {
+    ...input,
+    fixtureLineupOverrides: [secondOverride, firstOverride],
+  };
+  const result = simulateSeason(withFixtureLineupOverrides);
+
+  assert.deepEqual(result, simulateSeason(withFixtureLineupOverrides));
+  assert.equal(
+    result.playerSummaryStats.some((row) => row.playerId === fixtureReservePlayerId(secondFixture.homeClubId)),
+    true,
+  );
+  assert.equal(
+    result.playerSummaryStats.some((row) => row.playerId === fixtureReservePlayerId(firstFixture.homeClubId)),
+    true,
+  );
+});
+
 test("setup override changes the selected club setup without mutating base input", () => {
   const input = seasonInput("setup-override-seed");
   const overriddenClubId = input.clubIds[0];
@@ -703,7 +726,7 @@ function fixtureLineupOverrideWithReserve(
   clubId: ClubId,
 ): SimulateSeasonFixtureLineupOverride {
   const baseOverride = fixtureLineupOverride(input, fixture, clubId);
-  const reservePlayerId = playerId(`player:reserve-${String(clubId).slice("club:".length)}`);
+  const reservePlayerId = fixtureReservePlayerId(clubId);
   const lineup = baseOverride.lineup.map((slot, index) =>
     index === 1
       ? {
@@ -721,6 +744,13 @@ function fixtureLineupOverrideWithReserve(
       [reservePlayerId]: makePlayer(reservePlayerId, 20),
     },
   };
+}
+
+/**
+ * Builds the deterministic reserve player ID used by fixture override tests.
+ */
+function fixtureReservePlayerId(clubId: ClubId): PlayerId {
+  return playerId(`player:reserve-${String(clubId).slice("club:".length)}`);
 }
 
 /**

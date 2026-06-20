@@ -2,8 +2,9 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import type { Club } from "../entities/club.entity.ts";
+import type { Fixture } from "../entities/fixture.entity.ts";
 import type { Player, PlayerAbilities, PlayerDynamicState } from "../entities/player.entity.ts";
-import { clubId, playerId, seasonId } from "../types/ids.ts";
+import { clubId, competitionId, fixtureId, playerId, seasonId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import { abilityValue, stateValue } from "../value-objects/rating.ts";
 import type { GameState } from "./game-state.ts";
@@ -59,6 +60,7 @@ test("GameState fixture keeps lookup records separate from ordered ID arrays", (
   const secondPlayerId = playerId("player:000002");
   const firstClubId = clubId("club:first");
   const secondClubId = clubId("club:second");
+  const firstFixtureId = fixtureId("fixture:000001");
 
   const firstPlayer: Player = {
     id: firstPlayerId,
@@ -104,6 +106,16 @@ test("GameState fixture keeps lookup records separate from ordered ID arrays", (
     playerIds: [],
   };
 
+  const firstFixture: Fixture = {
+    id: firstFixtureId,
+    competitionId: competitionId("competition:0001"),
+    seasonId: seasonId("season:0001"),
+    roundNumber: 1,
+    date: gameDate(20_000),
+    homeClubId: firstClubId,
+    awayClubId: secondClubId,
+  };
+
   const state: GameState = {
     meta: {
       seed: "demo-001",
@@ -128,9 +140,14 @@ test("GameState fixture keeps lookup records separate from ordered ID arrays", (
       [secondClubId]: secondClub,
     },
     clubIds: [secondClubId, firstClubId],
+    fixtures: {
+      [firstFixtureId]: firstFixture,
+    },
+    fixtureIds: [firstFixtureId],
   };
 
   assert.deepEqual(state.playerIds, [secondPlayerId, firstPlayerId]);
   assert.deepEqual(state.clubIds, [secondClubId, firstClubId]);
+  assert.deepEqual(state.fixtureIds, [firstFixtureId]);
   assert.deepEqual(state.clubs[firstClubId]?.playerIds, [secondPlayerId, firstPlayerId]);
 });

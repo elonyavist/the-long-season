@@ -1,6 +1,7 @@
 import type { Club } from "../entities/club.entity.ts";
+import type { Fixture } from "../entities/fixture.entity.ts";
 import type { Player, PlayerDynamicState } from "../entities/player.entity.ts";
-import type { ClubId, PlayerId, SeasonId } from "../types/ids.ts";
+import type { ClubId, FixtureId, PlayerId, SeasonId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 
 /**
@@ -53,4 +54,8 @@ export interface GameState {
   readonly clubs: Readonly<Record<ClubId, Club>>;
   /** Deterministic club traversal order. */
   readonly clubIds: readonly ClubId[];
+  /** Fixture lookup table by ID. */
+  readonly fixtures: Readonly<Record<FixtureId, Fixture>>;
+  /** Deterministic fixture traversal order. */
+  readonly fixtureIds: readonly FixtureId[];
 }

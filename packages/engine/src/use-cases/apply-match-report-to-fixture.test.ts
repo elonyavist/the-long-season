@@ -10,14 +10,11 @@ import {
   seasonId,
   type Fixture,
   type FixtureId,
+  type GameState,
   type MatchReport,
 } from "@game/domain";
 
-import {
-  ApplyMatchReportToFixtureError,
-  applyMatchReportToFixture,
-  type ApplyMatchReportToFixtureState,
-} from "../index.ts";
+import { ApplyMatchReportToFixtureError, applyMatchReportToFixture } from "../index.ts";
 
 /**
  * Fixture-result tests prove that completed match reports update fixture state
@@ -124,7 +121,7 @@ test("fixture result is enough to compute goals without reading events", () => {
 /**
  * Builds a minimal state with one scheduled fixture.
  */
-function stateWithFixture(id: FixtureId): ApplyMatchReportToFixtureState {
+function stateWithFixture(id: FixtureId): GameState {
   const fixture: Fixture = {
     id,
     competitionId: competitionId("competition:result-test"),
@@ -190,7 +187,7 @@ function matchReport(
 /**
  * Reads one fixture from state and fails loudly if the fixture is absent.
  */
-function fixtureFromState(state: ApplyMatchReportToFixtureState, id: FixtureId): Fixture {
+function fixtureFromState(state: GameState, id: FixtureId): Fixture {
   const fixture = state.fixtures[id];
 
   if (fixture === undefined) {

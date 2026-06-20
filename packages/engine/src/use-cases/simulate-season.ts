@@ -47,10 +47,7 @@ import {
   type SeasonPlayerSummaryStatRow,
   type SeasonPlayerStatRegistration,
 } from "../season-engine/player-stats.ts";
-import {
-  applyMatchReportToFixture,
-  type ApplyMatchReportToFixtureState,
-} from "./apply-match-report-to-fixture.ts";
+import { applyMatchReportToFixture } from "./apply-match-report-to-fixture.ts";
 
 /**
  * Team data required to simulate all fixtures for one club.
@@ -220,6 +217,19 @@ export class SimulateSeasonError extends Error {
 }
 
 /**
+ * Validated fixture-lineup overrides in both lookup and caller order.
+ *
+ * The lookup keeps match-context selection local and cheap, while `ordered`
+ * preserves the caller-provided simulation order for player registrations.
+ */
+interface OrderedFixtureLineupOverrides {
+  /** Override lookup keyed by fixture ID plus club ID. */
+  readonly byKey: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>;
+  /** Explicit override order supplied by the caller. */
+  readonly ordered: readonly SimulateSeasonFixtureLineupOverride[];
+}
+
+/**
  * Simulates one deterministic double round-robin season and derives its table.
  *
  * The use-case does not persist state. It generates fixtures, simulates each
@@ -296,8 +306,8 @@ function createFixtureState(
   input: SimulateSeasonInput,
   fixtures: Readonly<Record<FixtureId, Fixture>>,
   fixtureIds: readonly FixtureId[],
-): ApplyMatchReportToFixtureState {
-  const state: GameState = {
+): GameState {
+  return {
     meta: {
       seed: input.seed,
       rngAlgorithmVersion: "sfc32-v1",
@@ -312,10 +322,6 @@ function createFixtureState(
     playerStates: {},
     clubs: {},
     clubIds: input.clubIds,
-  };
-
-  return {
-    ...state,
     fixtures,
     fixtureIds,
   };
@@ -328,7 +334,7 @@ function matchContextForFixture(
   input: SimulateSeasonInput,
   fixture: Fixture,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
-  fixtureLineupOverrides: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>,
+  fixtureLineupOverrides: OrderedFixtureLineupOverrides,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ) {
   return {
@@ -356,11 +362,11 @@ function matchTeamContext(
   fixtureId: FixtureId,
   clubId: ClubId,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
-  fixtureLineupOverrides: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>,
+  fixtureLineupOverrides: OrderedFixtureLineupOverrides,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   const setupOverride = setupOverrides[clubId];
-  const fixtureLineupOverride = fixtureLineupOverrides[fixtureLineupOverrideKey(fixtureId, clubId)];
+  const fixtureLineupOverride = fixtureLineupOverrides.byKey[fixtureLineupOverrideKey(fixtureId, clubId)];
 
   if (fixtureLineupOverride !== undefined) {
     const tacticalDistribution = setupOverride === undefined
@@ -399,7 +405,7 @@ function matchTeamContext(
 function playerRegistrations(
   input: SimulateSeasonInput,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
-  fixtureLineupOverrides: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>,
+  fixtureLineupOverrides: OrderedFixtureLineupOverrides,
 ): readonly SeasonPlayerStatRegistration[] {
   const registrations: SeasonPlayerStatRegistration[] = [];
 
@@ -414,7 +420,7 @@ function playerRegistrations(
     }
   }
 
-  for (const override of Object.values(fixtureLineupOverrides)) {
+  for (const override of fixtureLineupOverrides.ordered) {
     for (const slot of override.lineup) {
       registrations.push({
         playerId: slot.playerId,
@@ -473,8 +479,9 @@ function setupOverridesByClubId(input: SimulateSeasonInput): Readonly<Record<Clu
 function fixtureLineupOverridesByKey(
   input: SimulateSeasonInput,
   fixtures: Readonly<Record<FixtureId, Fixture>>,
-): Readonly<Record<string, SimulateSeasonFixtureLineupOverride>> {
+): OrderedFixtureLineupOverrides {
   const overrides: Record<string, SimulateSeasonFixtureLineupOverride> = {};
+  const orderedOverrides: SimulateSeasonFixtureLineupOverride[] = [];
   const seenOverrideKeys = new Set<string>();
 
   for (const override of input.fixtureLineupOverrides ?? []) {
@@ -490,9 +497,13 @@ function fixtureLineupOverridesByKey(
     seenOverrideKeys.add(overrideKey);
     validateFixtureLineupOverride(input, fixtures, override);
     overrides[overrideKey] = override;
+    orderedOverrides.push(override);
   }
 
-  return overrides;
+  return {
+    byKey: overrides,
+    ordered: orderedOverrides,
+  };
 }
 
 /**

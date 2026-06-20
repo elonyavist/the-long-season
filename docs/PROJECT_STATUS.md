@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete.
-- Active implementation step: none. Decide and document Phase 14 before implementation.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete.
+- Active implementation step: none. Recommended next action is to create Phase 16 market MVP documentation if approved.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with default 11-player lineups plus reserve players, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, and `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: Phase 13 complete
-- Status: Done
-- Last verification: focused i18n/CLI tests, CLI localized smokes, localized-text enforcement, and `pnpm check`.
-- Next action: Review Phase 13 output manually, then decide and document Phase 14 before starting new implementation.
+- Step: none
+- Status: Phase 15 complete
+- Last verification: Phase 15 final checks passed, including `pnpm check`, required CLI smokes, and `calibration-v1` strict balance report.
+- Next action: If approved, create Phase 16 market MVP documentation. Do not start implementation before Phase 16 docs exist.
 
 ## How To Read The Project
 
@@ -106,13 +106,28 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/12-squad-selection-and-formation-core/05-formation-squad-fit-report.md` | Done | Engine formation squad-fit reporting was added and later reworked to avoid market-prescriptive wording. | `engine/squad` reports slot coverage, uncovered/weak/adapted slots, natural fits, likely out-of-position players, family depth, broad extra-depth groups, and stable factual `squadFitHints` keys such as `gap:*`, `adapted_only:*`, and `extra_depth:*`; it does not assign players or recommend transfers. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/squad/formation-squad-fit.test.ts`; `pnpm check` |
 | `docs/steps/12-squad-selection-and-formation-core/06-cli-formation-fit-inspection.md` | Done | CLI formation-fit inspection was added and later reworded as factual squad assessment. | `simulate-season --formation-fit=<formationKey>` renders a standalone inspection for the selected fake club squad, including formation slots, covered/adapted/weak/missing slots, extra-depth groups, and localized squad-fit notes; fake clubs now generate 22 senior players while fixed default lineups stay 11 players. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts packages/content/src/generators/fake-players.test.ts packages/content/src/generators/league-system.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict` |
 | `docs/steps/13-localization-foundation/README.md` | Done | Created and broadened the Phase 13 documentation path for localization foundation. | Phase 13 supports `it`, `en`, `de`, `es`, and `fr`, keeps English as fallback, covers all current CLI-visible game text rather than only formation-fit labels, adds enforcement against hardcoded presentation strings, and closes with project-wide policy alignment in requirements/rules. | Documentation-only update; no code checks required |
-| `docs/steps/13-localization-foundation/01-phase-12-output-review.md` | Done | Current Phases 00-12 user-facing CLI text was inventoried before localization. | Localization scope covers command errors, doctor output, balance reports, season summaries, round/fixture detail, event words, player stats, tactic/setup/manual-switch output, condition/lineup output, formation-fit labels, warnings, and market hints; domain/engine keys remain structured data. | Source scan; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1` |
+| `docs/steps/13-localization-foundation/01-phase-12-output-review.md` | Done | Current Phases 00-12 user-facing CLI text was inventoried before localization. | Localization scope covers command errors, doctor output, balance reports, season summaries, round/fixture detail, event words, player stats, tactic/setup/manual-switch output, condition/lineup output, formation-fit labels, warnings, and factual squad-fit notes; domain/engine keys remain structured data. | Source scan; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1` |
 | `docs/steps/13-localization-foundation/02-language-contract-and-fallback.md` | Done | Added isolated localization package and supported-language contract. | `@game/i18n` defines supported languages `it/en/de/es/fr`, English fallback, parsing helpers, typed message keys, interpolation, and dependency isolation from simulation packages. | `pnpm --filter @game/i18n run typecheck`; focused i18n tests |
-| `docs/steps/13-localization-foundation/03-label-catalog-it-en.md` | Done | Added the first English and Italian catalog for current CLI-visible presentation text. | The catalog covers common labels, CLI errors, doctor, balance report, season summary, fixture detail, event words, tactic/setup/manual-switch, condition, lineup, formation-fit, warnings, and market hints. | focused i18n tests |
+| `docs/steps/13-localization-foundation/03-label-catalog-it-en.md` | Done | Added the first English and Italian catalog for current CLI-visible presentation text. | The catalog covers common labels, CLI errors, doctor, balance report, season summary, fixture detail, event words, tactic/setup/manual-switch, condition, lineup, formation-fit, warnings, and factual squad-fit notes. | focused i18n tests |
 | `docs/steps/13-localization-foundation/04-cli-language-option.md` | Done | Exposed CLI `--lang` and migrated current CLI presentation output through localization. | `simulate-season`, `balance-report`, `doctor`, and unknown-command output now render headings, labels, statuses, user-facing errors, event words, and formation-fit vocabulary through `@game/i18n`; simulation data and deterministic results stay unchanged. | CLI typecheck; focused CLI tests; localized CLI smokes |
 | `docs/steps/13-localization-foundation/05-five-language-label-completion.md` | Done | Completed German, Spanish, and French labels for the current catalog. | All current message keys now have concrete `it`, `en`, `de`, `es`, and `fr` translations; English fallback remains available for future missing catalog entries. | focused i18n tests verify zero missing translations for all five languages |
 | `docs/steps/13-localization-foundation/06-hardcoded-presentation-text-enforcement.md` | Done | Added a deterministic guard against new hardcoded CLI presentation text. | `scripts/check-localized-presentation-text.ts` scans current CLI output/error boundaries for direct user-facing string literals and `pnpm check` now runs `pnpm check:localized-text`. | `pnpm check:localized-text`; `pnpm check` |
 | `docs/steps/13-localization-foundation/07-project-policy-localization-alignment.md` | Done | Requirements and project rules were verified as the binding localization policy. | `requirements.md` and `docs/PROJECT_RULES.md` state that labels useful to CLI/UI/event rendering/reports/statuses/warnings/hints/errors must be localization keys, while domain/engine keep language-agnostic structured data. | `rg -n "hardcoded|localizzazione|localization|user-facing|UI|CLI" requirements.md docs/PROJECT_RULES.md docs/PROJECT_STATUS.md`; `pnpm check` |
+| `docs/steps/14-engine-audit-and-core-quality-review/README.md` | Done | Created the Phase 14 documentation path for complete engine/core audit before market or youth work. | Phase 14 is a non-feature audit gate with seven points: architecture boundaries, determinism, match engine, season engine, tactic/lineup/formation, code quality/dead code/naming, and final report/next-phase decision. | Documentation-only update; no source checks required |
+| `docs/steps/14-engine-audit-and-core-quality-review/01-architecture-boundary-audit.md` | Done | Package seams were audited. | Dependency Cruiser and import scans found no package-boundary violations; CLI remains the presentation/composition adapter and domain/engine remain language-agnostic. | `pnpm depcruise`; `pnpm lint`; forbidden import scans |
+| `docs/steps/14-engine-audit-and-core-quality-review/02-determinism-audit.md` | Done | Determinism was audited. | Representative CLI outputs reproduce by seed and forbidden runtime scans found only acceptable storage metadata clock usage; engine has one cleanup finding for `Object.values()` in `simulateSeason`. | focused tests; CLI smokes; repeatability diff; forbidden runtime scan |
+| `docs/steps/14-engine-audit-and-core-quality-review/03-match-engine-audit.md` | Done | Match engine was audited. | Current aggregate match engine, chance actors, durable reports, manual tactic segmentation, and player match stats are coherent for current scope; full possession chains remain accepted future scope. | domain/engine typecheck; focused match/player-stat tests; fixture smokes |
+| `docs/steps/14-engine-audit-and-core-quality-review/04-season-engine-audit.md` | Done | Season engine was audited. | Calendar, fixture application, table derivation, player summaries, fitness lifecycle, setup overrides, lineup overrides, and balance reporting are connected; `GameState` fixture consolidation remains a pre-persistence cleanup. | engine/simulation-tools typecheck; focused season/use-case tests; season/condition/lineup/balance smokes |
+| `docs/steps/14-engine-audit-and-core-quality-review/05-tactic-lineup-formation-audit.md` | Done | Manager-choice boundary was audited. | Tactics, lineups, formation catalog, position suitability, squad fit, setup demos, manual switches, and lineup rotation preserve explicit manager choice and avoid automatic lineup/tactic/market recommendations. | domain/engine/content/CLI typecheck; focused tactics/squad/CLI tests; Italian formation/setup/lineup smokes |
+| `docs/steps/14-engine-audit-and-core-quality-review/06-code-quality-dead-code-naming-audit.md` | Done | Code quality, naming, and dead-code risks were audited. | No dead attribution helpers or old hint keys remain; cleanup findings are stale CLI comments, large `simulate-season.ts` locality risk, and the engine `Object.values()` rule violation. | `pnpm lint`; `pnpm check:localized-text`; `pnpm typecheck`; text scans |
+| `docs/steps/14-engine-audit-and-core-quality-review/07-audit-report-and-next-phase-decision.md` | Done | Final audit report was created. | `docs/audits/ENGINE_CORE_AUDIT.md` gives score `86/100`, no critical blockers, one high finding, medium/low findings, verified strengths, and recommends a narrow Phase 15 core cleanup before market/youth. | `pnpm check`; final CLI smokes; audit report review |
+| `docs/steps/15-core-cleanup-before-career-systems/README.md` | Done | Created the Phase 15 documentation path for narrow cleanup before market/youth/career work. | Phase 15 closes Phase 14 findings: explicit fixture-lineup override order, factual squad-fit naming cleanup, CLI module split, fixture-state decision, and final cleanup report. | Documentation-only update; no source checks required |
+| `docs/steps/15-core-cleanup-before-career-systems/01-phase-14-findings-review.md` | Done | Confirmed all Phase 14 cleanup findings still exist before source cleanup starts. | Phase 15 remains scoped to cleanup: ordered fixture-lineup overrides, factual squad-fit naming, CLI module locality, fixture-state decision, and final report. | `rg` scans for object iteration, market wording, fixture state; `wc -l apps/cli/src/commands/simulate-season.ts` |
+| `docs/steps/15-core-cleanup-before-career-systems/02-ordered-fixture-lineup-overrides.md` | Done | Removed the engine `Object.values()` order risk from fixture lineup overrides. | `simulateSeason` now validates fixture lineup overrides into an internal `OrderedFixtureLineupOverrides` Module with `byKey` lookup plus caller-ordered `ordered` array; player registrations use the ordered array. | engine/CLI typecheck; focused engine/CLI tests; object-iteration scan; lineup override CLI smoke; `pnpm check` |
+| `docs/steps/15-core-cleanup-before-career-systems/03-squad-fit-naming-cleanup.md` | Done | Removed stale market/recommendation wording from current squad-fit implementation comments. | Runtime output stays factual and unchanged; internal comments now describe formation-fit notes and factual coverage targets instead of market hints. | CLI typecheck; focused CLI tests; localized-text check; stale-wording scan; Italian formation-fit smoke; `pnpm check` |
+| `docs/steps/15-core-cleanup-before-career-systems/04-cli-simulate-season-module-split.md` | Done | Split the large CLI `simulate-season` implementation into private modules. | `runSimulateSeasonCommand` remains the public command Interface; profile keys, argument parsing, and formation-fit formatting moved behind private CLI Modules to improve locality without behavior changes. | CLI typecheck; focused CLI tests; required season/fixture/formation/manual-switch smokes; `pnpm check` |
+| `docs/steps/15-core-cleanup-before-career-systems/05-game-state-fixture-slice-decision.md` | Done | Consolidated fixture state into the canonical `GameState` contract. | `GameState` now owns `fixtures` and `fixtureIds`; `applyMatchReportToFixture` accepts and returns `GameState` directly, and the obsolete fixture-slice/alias types were removed. | domain/engine/storage typecheck; focused domain/use-case/storage tests; required season and fixture CLI smokes; `pnpm check` |
+| `docs/steps/15-core-cleanup-before-career-systems/06-cleanup-report-and-next-phase-decision.md` | Done | Created the Phase 15 cleanup report and next-phase recommendation. | `docs/audits/CORE_CLEANUP_REPORT.md` scores the cleaned core at `92/100`, records all fixed findings, accepts the aggregate-match limitation, and recommends Phase 16 market MVP next. | `pnpm check`; required season/fixture/formation/manual-switch CLI smokes; `calibration-v1` strict balance report |
 
 Status values:
 
@@ -238,6 +253,83 @@ Status values:
 - Phase 13 is documented as localization foundation. The game supports five language codes (`it`, `en`, `de`, `es`, `fr`) with English fallback; domain/engine keys remain stable and language-agnostic, while CLI/UI presentation layers localize all user-facing text.
 - `docs/PROJECT_RULES.md` now includes binding presentation/localization rules: user-facing headings, labels, event words, report metrics, statuses, warnings, hints, and user-facing errors must go through localization once Phase 13 introduces the layer.
 - `requirements.md` Area 20 now states the same product rule: labels useful to UI or CLI must not be hardcoded in produced code and must pass through localization keys.
+- Phase 14 is documented as a complete engine/core audit before market or youth. It has seven points: architecture boundaries, determinism, match engine, season engine, tactic/lineup/formation, code quality/dead code/naming, and audit report/next-phase decision.
+- Phase 14 audit result: score `86/100`, no critical blockers. The current core is healthy, but Phase 15 should be a narrow cleanup/rework phase before market/youth: remove `Object.values()` from engine simulation order, rename stale market-hint comments, split the large CLI `simulate-season` module, and decide whether to consolidate fixtures into `GameState` before persistence/career state.
+- Phase 15 is documented as `docs/steps/15-core-cleanup-before-career-systems/`: it closes the Phase 14 findings before market/youth and must end with `docs/audits/CORE_CLEANUP_REPORT.md`.
+- Phase 15 core cleanup is complete. The cleaned core score is `92/100`; no critical or high cleanup blockers remain. Recommended next phase: Phase 16 market MVP, starting with documentation only.
+
+### 2026-06-20 — Phase 15 core cleanup before career systems docs
+
+- Step: `docs/steps/15-core-cleanup-before-career-systems/README.md`
+- Status: Done
+- Outcome: Created the Phase 15 cleanup specification and six executable step documents.
+- Adopted solution: Phase 15 is a non-feature cleanup phase that fixes or documents Phase 14 risks before market/youth: ordered fixture-lineup overrides, factual squad-fit naming, CLI `simulate-season` module split, fixture-state decision, and final cleanup report.
+- Verification: Documentation-only update; no source checks required.
+- Next action: Execute `docs/steps/15-core-cleanup-before-career-systems/01-phase-14-findings-review.md`.
+
+### 2026-06-20 — `docs/steps/15-core-cleanup-before-career-systems/01-phase-14-findings-review.md`
+
+- Status: Done
+- Outcome: Confirmed the Phase 14 findings are still current before changing source code.
+- Adopted solution: Keep Phase 15 scoped as cleanup. The confirmed items are engine `Object.values()` in `simulateSeason`, stale CLI market wording around squad-fit notes, a 2685-line `simulate-season.ts` CLI module, and fixture state still living as a slice around `GameState`.
+- Verification: `rg -n "Object\\.values\\(|Object\\.keys\\(|Object\\.entries\\(" packages/engine/src`; `rg -n "market|need|recommend|auto-select|automatic|best XI|best-XI" apps/cli/src packages apps docs/audits/ENGINE_CORE_AUDIT.md`; `wc -l apps/cli/src/commands/simulate-season.ts`; `rg -n "FixtureStateSlice|fixtureIds|fixturesById|fixtures" packages/domain/src packages/engine/src/use-cases`.
+- Next action: Execute `docs/steps/15-core-cleanup-before-career-systems/02-ordered-fixture-lineup-overrides.md`.
+
+### 2026-06-20 — `docs/steps/15-core-cleanup-before-career-systems/02-ordered-fixture-lineup-overrides.md`
+
+- Status: Done
+- Outcome: Removed the Phase 14 high finding from `simulateSeason`.
+- Adopted solution: Fixture lineup overrides keep the public ordered-array caller interface, then become an internal `OrderedFixtureLineupOverrides` Module with `byKey` for fixture lookup and `ordered` for caller-order registration. No unordered object enumeration remains in the touched engine path.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts apps/cli/src/commands/simulate-season.test.ts`; `rg -n "Object\\.values\\(|Object\\.keys\\(|Object\\.entries\\(" packages/engine/src/use-cases/simulate-season.ts`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated`; `pnpm check`.
+- Next action: Execute `docs/steps/15-core-cleanup-before-career-systems/03-squad-fit-naming-cleanup.md`.
+
+### 2026-06-20 — `docs/steps/15-core-cleanup-before-career-systems/03-squad-fit-naming-cleanup.md`
+
+- Status: Done
+- Outcome: Removed stale market/recommendation wording from current formation-fit implementation comments.
+- Adopted solution: Kept the runtime CLI output unchanged and factual; internal comments now describe stable formation-fit notes and factual coverage targets.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts`; `pnpm check:localized-text`; `rg -n "market hint|market-depth|market need|marketNeed|need:|consider:|surplus:" apps/cli/src packages/i18n/src`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1 --lang=it`; `pnpm check`.
+- Next action: Execute `docs/steps/15-core-cleanup-before-career-systems/04-cli-simulate-season-module-split.md`.
+
+### 2026-06-20 — `docs/steps/15-core-cleanup-before-career-systems/04-cli-simulate-season-module-split.md`
+
+- Status: Done
+- Outcome: Improved CLI Module locality without changing command behavior.
+- Adopted solution: `runSimulateSeasonCommand` stays as the public Interface in `apps/cli/src/commands/simulate-season.ts`; profile keys live in `simulate-season/profile-keys.ts`, argument parsing/validation in `simulate-season/parse-args.ts`, and formation-fit output in `simulate-season/formation-fit-output.ts`.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated --lang=it`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1 --lang=it`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --setup-demo=pro01-balanced --manual-tactic-switch=46:pro01-attacking`; `pnpm check`.
+- Next action: Execute `docs/steps/15-core-cleanup-before-career-systems/05-game-state-fixture-slice-decision.md`.
+
+### 2026-06-20 — `docs/steps/15-core-cleanup-before-career-systems/05-game-state-fixture-slice-decision.md`
+
+- Status: Done
+- Outcome: Removed the temporary fixture-state slice before career persistence work.
+- Adopted solution: `GameState` now owns fixture lookup and deterministic fixture ID order; `applyMatchReportToFixture` accepts and returns canonical `GameState`; the obsolete `FixtureStateSlice` and `ApplyMatchReportToFixtureState` exports were removed instead of kept as compatibility leftovers.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/engine run typecheck`; `pnpm --filter @game/storage run typecheck`; `pnpm exec vitest run packages/domain/src packages/engine/src/use-cases packages/storage/src`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated`; `pnpm check`.
+- Next action: Execute `docs/steps/15-core-cleanup-before-career-systems/06-cleanup-report-and-next-phase-decision.md`.
+
+### 2026-06-20 — `docs/steps/15-core-cleanup-before-career-systems/06-cleanup-report-and-next-phase-decision.md`
+
+- Status: Done
+- Outcome: Completed Phase 15 and created the durable cleanup handoff report.
+- Adopted solution: `docs/audits/CORE_CLEANUP_REPORT.md` records the Phase 15 fixes, scores the cleaned core at `92/100`, keeps the aggregate-match engine as an accepted limitation, and recommends Phase 16 market MVP before youth.
+- Verification: `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated --lang=it`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1 --lang=it`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --setup-demo=pro01-balanced --manual-tactic-switch=46:pro01-attacking`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Next action: Create Phase 16 market MVP documentation if approved. Do not start implementation before Phase 16 docs exist.
+
+### 2026-06-20 — Phase 14 engine audit and core quality review
+
+- Status: Done
+- Outcome: Completed the seven-point engine/core audit and created `docs/audits/ENGINE_CORE_AUDIT.md`.
+- Adopted solution: The project can continue after one focused cleanup phase. The audit found no critical blockers, one high determinism-discipline finding in `simulateSeason`, medium maintainability/state-model findings, and low naming/documentation issues.
+- Verification: `pnpm depcruise`; `pnpm lint`; `pnpm check:localized-text`; `pnpm typecheck`; `pnpm test`; focused match/season/tactic/CLI tests; CLI smoke commands; deterministic repeatability diff; `pnpm check`.
+- Next action: Create Phase 15 documentation for core cleanup before implementing market or youth.
+
+### 2026-06-20 — Phase 14 engine audit and core quality review docs
+
+- Status: Done
+- Outcome: Created the Phase 14 audit documentation and made architecture boundary audit the active next step.
+- Adopted solution: Phase 14 is a stop-and-review phase, not a feature phase. It will write `docs/audits/ENGINE_CORE_AUDIT.md`, score the current engine/core from `0` to `100`, classify findings, and decide whether to proceed to market, youth, or a focused core rework phase.
+- Verification: Documentation-only update; no source checks required.
+- Next action: Execute `docs/steps/14-engine-audit-and-core-quality-review/01-architecture-boundary-audit.md`.
 
 ### 2026-06-20 — Phase 13 localization foundation
 
@@ -245,7 +337,7 @@ Status values:
 - Outcome: Added `@game/i18n`, CLI `--lang` support, five-language current label coverage, localized current CLI presentation output, and a localized-text enforcement check.
 - Adopted solution: Domain/engine continue emitting stable structured keys; CLI presentation maps those keys to localized labels in `it`, `en`, `de`, `es`, and `fr` with English fallback for future missing keys.
 - Verification: `pnpm --filter @game/i18n run typecheck`; `pnpm --filter @game/cli run typecheck`; focused i18n/CLI Vitest files; localized CLI smokes for Italian/German/French; `pnpm check:localized-text`; `pnpm check`.
-- Next action: Manually inspect localized CLI output, then decide/document Phase 14 before implementation.
+- Next action: Phase 14 is now documented as engine audit and core quality review; execute the architecture boundary audit next.
 
 ### 2026-06-20 — Phase 12/13 squad-fit language rework
 
@@ -253,7 +345,7 @@ Status values:
 - Outcome: Removed market-prescriptive wording from formation-fit output and localized additional enum-like values that were visible in CLI output.
 - Adopted solution: Engine formation-fit report now exposes factual `squadFitHints` using `gap:*`, `adapted_only:*`, and `extra_depth:*`; CLI renders these as localized squad-fit notes, not market advice. Fixture event `shotType`/`chanceType`, setup mentality values, and lineup role keys now render through localization.
 - Verification: focused engine/CLI/i18n tests; `pnpm check`; localized smoke commands for Italian fixture detail, Italian formation-fit, and Italian setup-demo output.
-- Next action: Use Phase 14 for manager-facing squad assessment/selection views, not automatic recommendations or market instructions.
+- Next action: Use Phase 14 for the complete engine/core audit before deciding market, youth, or focused rework.
 
 ### 2026-06-20 — `docs/steps/13-localization-foundation/README.md`
 

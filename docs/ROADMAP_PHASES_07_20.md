@@ -42,7 +42,7 @@ Phases 00-11 established:
 
 The project is still not a playable career. It is a deterministic football simulation core with useful CLI inspection.
 
-The next broad objective is to turn the simulator into a rough but playable manager game without hardcoding presentation text into the simulation core. Phase 12 consolidated the tactical/squad core: formations, squad depth, positional fit, and the squad-building needs that will later drive the market. Phase 13 now adds localization foundations for all current user-facing output before market/youth work multiplies the amount of text.
+The next broad objective is to turn the simulator into a rough but playable manager game without hardcoding presentation text into the simulation core. Phase 12 consolidated the tactical/squad core: formations, squad depth, positional fit, and factual squad-fit notes. Phase 13 added localization foundations for all current user-facing output before market/youth work multiplies the amount of text. Phase 14 completed the audit gate and recommended a narrow Phase 15 cleanup before adding larger career systems.
 
 ## Phase 07 — Match Engine Causal V1
 
@@ -218,29 +218,56 @@ Phase gate question:
 
 - Can current CLI output, including game events and reports, be shown in the supported languages from stable message keys while simulation data remains unchanged?
 
-## Phase 14 — Squad Assessment And Selection V1
+## Phase 14 — Engine Audit And Core Quality Review
 
-Goal: give the manager clearer squad-assessment tools before transfer execution exists.
+Goal: audit the current core before opening market, youth, economy, persistence, or career systems.
 
 Possible scope:
 
-- aggregate `gap:*`, `adapted_only:*`, and `extra_depth:*` into factual squad-fit views;
-- show role/position coverage by natural, adapted, weak, and invalid fit;
-- localize planning labels through Phase 13;
-- expose CLI inspection for squad understanding and lineup/formation comparison;
-- keep all output descriptive, not market advice or market action.
+- architecture boundary audit;
+- determinism audit;
+- match engine audit;
+- season engine audit;
+- tactic, lineup, and formation audit;
+- code quality, dead code, and naming audit;
+- final audit report with score, findings, blockers, strengths, and next-phase recommendation.
 
 Do not include:
 
-- signing, selling, loans, contracts, wages, transfer windows, agents, scouting, UI, persistence, or career saves;
-- automatic AI squad planning;
-- hidden recommendations that choose a player for the user.
+- feature implementation;
+- market, youth, scouting, economy, contracts, UI, persistence, or career saves;
+- balance tuning;
+- automatic lineup/tactic/market recommendations;
+- source refactors unless a documented blocker makes the audit impossible.
 
 Phase gate question:
 
-- Can the user understand the squad's fit trade-offs before any market command exists?
+- Is the current engine/core solid enough to support market or youth work, or does it need a focused rework phase first?
 
-## Phase 15 — Minimal Transfer Market MVP
+## Phase 15 — Core Cleanup Before Career Systems
+
+Goal: close the Phase 14 audit findings before market, youth, persistence, or career state expands the project.
+
+Possible scope:
+
+- remove the engine `Object.values()` order-risk in fixture-lineup overrides;
+- clean stale internal wording that still frames factual squad-fit notes as market advice;
+- split the large CLI `simulate-season` module into smaller private modules;
+- decide whether fixture state should move into `GameState` before career/persistence;
+- write a cleanup report with the next-phase recommendation.
+
+Do not include:
+
+- market, youth, scouting, economy, contracts, persistence UI, or career saves;
+- match balance tuning;
+- new manager-facing recommendations;
+- automatic best XI, automatic rotation, or automatic tactical switching.
+
+Phase gate question:
+
+- Is the current deterministic core clean enough to support market/youth work without carrying known audit findings forward?
+
+## Phase 16 — Minimal Transfer Market MVP
 
 Goal: allow basic squad change driven by explicit user action and the manager's own interpretation of squad fit.
 
@@ -249,7 +276,7 @@ Possible scope:
 - create a deterministic free-agent or transfer pool;
 - allow simple signings with explicit user confirmation;
 - add basic player value or wage cost only if needed for trade-offs;
-- use Phase 14 squad-fit facts to let the manager judge why a signing might help, without auto-signing;
+- use Phase 12 formation and squad-fit facts to let the manager judge why a signing might help, without auto-signing;
 - update squad-depth and formation-fit reports after manual squad changes.
 
 Do not include:
@@ -262,7 +289,7 @@ Phase gate question:
 
 - Can the user manually improve a weak squad with a visible trade-off?
 
-## Phase 16 — Youth / Prospects Pipeline
+## Phase 17 — Youth / Prospects Pipeline
 
 Goal: introduce young players as a long-term squad-building alternative to market spending.
 
@@ -286,7 +313,7 @@ Phase gate question:
 
 - Can young players become a meaningful answer to squad gaps without replacing the market?
 
-## Phase 17 — Board, Objectives, And Run Failure
+## Phase 18 — Board, Objectives, And Run Failure
 
 Goal: create real stakes.
 
@@ -309,7 +336,7 @@ Phase gate question:
 
 - Can the run now be lost for sporting or financial reasons?
 
-## Phase 18 — Multi-Division And Promotion/Relegation
+## Phase 19 — Multi-Division And Promotion/Relegation
 
 Goal: make "the climb" mechanically real.
 
@@ -332,7 +359,7 @@ Phase gate question:
 
 - Can the user's club climb or fall between divisions across seasons?
 
-## Phase 19 — Player Growth And Aging V1
+## Phase 20 — Player Growth And Aging V1
 
 Goal: make multi-season squad building matter.
 
@@ -356,7 +383,7 @@ Phase gate question:
 
 - Do young and old players create meaningful long-term roster decisions?
 
-## Phase 20 — Scouting And Fog Minimum
+## Beyond Phase 20 — Scouting And Fog Minimum
 
 Goal: make player information imperfect.
 
