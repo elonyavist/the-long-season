@@ -5,6 +5,7 @@ import {
   abilityValue,
   clubId,
   competitionId,
+  fixtureId,
   gameDate,
   playerId,
   seasonId,
@@ -24,6 +25,7 @@ import { fromISO } from "@game/shared";
 import {
   simulateSeason,
   SimulateSeasonError,
+  type SimulateSeasonFixtureLineupOverride,
   type SimulateSeasonInput,
   type SimulateSeasonSetupOverride,
   type SimulateSeasonTeamInput,
@@ -112,6 +114,57 @@ test("empty setup overrides preserve default output", () => {
   assert.deepEqual(simulateSeason({ ...input, setupOverrides: [] }), simulateSeason(input));
 });
 
+test("empty fixture lineup overrides preserve default output", () => {
+  const input = seasonInput("empty-fixture-lineup-override-seed");
+
+  assert.deepEqual(simulateSeason({ ...input, fixtureLineupOverrides: [] }), simulateSeason(input));
+});
+
+test("valid fixture lineup override shape is accepted", () => {
+  const input = seasonInput("fixture-lineup-override-seed");
+  const fixture = firstGeneratedFixture(input);
+  const withFixtureLineupOverride: SimulateSeasonInput = {
+    ...input,
+    fixtureLineupOverrides: [fixtureLineupOverride(input, fixture, fixture.homeClubId)],
+  };
+  const result = simulateSeason(withFixtureLineupOverride);
+
+  assert.equal(result.fixtures.length, 306);
+  assert.equal(result.fixtures.every((playedFixture) => playedFixture.result?.played === true), true);
+});
+
+test("fixture lineup override changes only the intended fixture result", () => {
+  const input = seasonInput("fixture-lineup-applied-seed");
+  const fixture = generatedFixtureById(input, fixtureId("fixture:000004"));
+  const overrideResult = simulateSeason({
+    ...input,
+    fixtureLineupOverrides: [fixtureLineupOverrideWithReserve(input, fixture, fixture.homeClubId)],
+  });
+  const defaultResult = simulateSeason(input);
+
+  for (const defaultFixture of defaultResult.fixtures) {
+    const overriddenFixture = findFixture(overrideResult.fixtures, defaultFixture.id);
+    assert.ok(overriddenFixture !== undefined);
+
+    if (defaultFixture.id === fixture.id) {
+      assert.notDeepEqual(overriddenFixture.result, defaultFixture.result);
+    } else {
+      assert.deepEqual(overriddenFixture.result, defaultFixture.result);
+    }
+  }
+});
+
+test("same seed plus same fixture lineup override is deterministic", () => {
+  const input = seasonInput("repeatable-fixture-lineup-override-seed");
+  const fixture = firstGeneratedFixture(input);
+  const withFixtureLineupOverride: SimulateSeasonInput = {
+    ...input,
+    fixtureLineupOverrides: [fixtureLineupOverrideWithReserve(input, fixture, fixture.homeClubId)],
+  };
+
+  assert.deepEqual(simulateSeason(withFixtureLineupOverride), simulateSeason(withFixtureLineupOverride));
+});
+
 test("setup override changes the selected club setup without mutating base input", () => {
   const input = seasonInput("setup-override-seed");
   const overriddenClubId = input.clubIds[0];
@@ -158,6 +211,49 @@ test("duplicate setup overrides fail clearly", () => {
   );
 });
 
+test("duplicate fixture lineup overrides fail clearly", () => {
+  const input = seasonInput("duplicate-fixture-lineup-override-seed");
+  const fixture = firstGeneratedFixture(input);
+  const override = fixtureLineupOverride(input, fixture, fixture.homeClubId);
+
+  assertSimulateSeasonError(
+    () =>
+      simulateSeason({
+        ...input,
+        fixtureLineupOverrides: [override, override],
+      }),
+    "duplicate_fixture_lineup_override",
+  );
+});
+
+test("fixture lineup override rejects missing fixture and wrong fixture club", () => {
+  const input = seasonInput("invalid-fixture-lineup-scope-seed");
+  const fixture = firstGeneratedFixture(input);
+  const missingFixtureOverride = {
+    ...fixtureLineupOverride(input, fixture, fixture.homeClubId),
+    fixtureId: fixtureId("fixture:999999"),
+  };
+  const wrongClubId = nonParticipantClubId(input, fixture);
+
+  assertSimulateSeasonError(
+    () =>
+      simulateSeason({
+        ...input,
+        fixtureLineupOverrides: [missingFixtureOverride],
+      }),
+    "missing_fixture",
+  );
+
+  assertSimulateSeasonError(
+    () =>
+      simulateSeason({
+        ...input,
+        fixtureLineupOverrides: [fixtureLineupOverride(input, fixture, wrongClubId)],
+      }),
+    "invalid_fixture_lineup_override",
+  );
+});
+
 test("invalid setup overrides fail clearly", () => {
   const input = seasonInput("invalid-override-seed");
   const overriddenClubId = input.clubIds[0];
@@ -175,6 +271,40 @@ test("invalid setup overrides fail clearly", () => {
         ],
       }),
     "invalid_setup_override",
+  );
+});
+
+test("invalid fixture lineup override data fails clearly", () => {
+  const input = seasonInput("invalid-fixture-lineup-data-seed");
+  const fixture = firstGeneratedFixture(input);
+  const validOverride = fixtureLineupOverride(input, fixture, fixture.homeClubId);
+
+  assertSimulateSeasonError(
+    () =>
+      simulateSeason({
+        ...input,
+        fixtureLineupOverrides: [
+          {
+            ...validOverride,
+            requiredLineupSize: 11,
+          },
+        ],
+      }),
+    "invalid_fixture_lineup_override",
+  );
+
+  assertSimulateSeasonError(
+    () =>
+      simulateSeason({
+        ...input,
+        fixtureLineupOverrides: [
+          {
+            ...validOverride,
+            players: {},
+          },
+        ],
+      }),
+    "invalid_fixture_lineup_override",
   );
 });
 
@@ -220,6 +350,30 @@ test("fitness lifecycle can recover tired starters over a season", () => {
     assert.ok(playerState !== undefined);
     assert.equal(Number(playerState.fitness), 92);
   }
+});
+
+test("fixture lineup override spends fitness for selected reserve and rests replaced starter", () => {
+  const baseInput = seasonInputWithFitnessLifecycle("fixture-lineup-fitness-seed", 100);
+  const selectedClubId = baseInput.clubIds[0];
+  assert.ok(selectedClubId !== undefined);
+  const fixture = lastFixtureForClub(baseInput, selectedClubId);
+  const override = fixtureLineupOverrideWithReserve(baseInput, fixture, selectedClubId);
+  const reservePlayerId = override.lineup[1]?.playerId;
+  const restedPlayerId = baseInput.teamsByClubId[selectedClubId]?.lineup[1]?.playerId;
+  const unchangedStarterId = baseInput.teamsByClubId[selectedClubId]?.lineup[0]?.playerId;
+  assert.ok(reservePlayerId !== undefined);
+  assert.ok(restedPlayerId !== undefined);
+  assert.ok(unchangedStarterId !== undefined);
+  const input = addLifecyclePlayers(baseInput, [reservePlayerId]);
+  const result = simulateSeason({
+    ...input,
+    fixtureLineupOverrides: [override],
+  });
+
+  assert.ok(result.finalPlayerStates !== undefined);
+  assert.equal(Number(result.finalPlayerStates[reservePlayerId]?.fitness), 92);
+  assert.equal(Number(result.finalPlayerStates[restedPlayerId]?.fitness), 100);
+  assert.equal(Number(result.finalPlayerStates[unchangedStarterId]?.fitness), 92);
 });
 
 test("fitness lifecycle fails clearly when team data cannot rebuild strength", () => {
@@ -362,6 +516,32 @@ function initialPlayerStates(
 }
 
 /**
+ * Extends one fitness lifecycle input with additional tracked players.
+ */
+function addLifecyclePlayers(input: SimulateSeasonInput, playerIds: readonly PlayerId[]): SimulateSeasonInput {
+  const lifecycle = input.fitnessLifecycle;
+  assert.ok(lifecycle !== undefined);
+  const playerStates: Record<PlayerId, PlayerDynamicState> = { ...lifecycle.playerStates };
+
+  for (const playerId of playerIds) {
+    playerStates[playerId] = {
+      fitness: stateValue(100),
+      form: stateValue(50),
+      morale: stateValue(50),
+    };
+  }
+
+  return {
+    ...input,
+    fitnessLifecycle: {
+      ...lifecycle,
+      playerStates,
+      playerIds: [...lifecycle.playerIds, ...playerIds],
+    },
+  };
+}
+
+/**
  * Test curve that makes low fitness affect rebuilt team strength.
  */
 function testFitnessCurves(): PlayerStateMultiplierCurves {
@@ -441,6 +621,119 @@ function setupOverrideFixture(clubId: ClubId): SimulateSeasonSetupOverride {
     players: overridePlayers(),
     roleWeights: overrideRoleWeights(),
   };
+}
+
+/**
+ * Finds the first generated fixture for one deterministic input.
+ */
+function firstGeneratedFixture(input: SimulateSeasonInput): Fixture {
+  const fixture = simulateSeason(input).fixtures[0];
+  assert.ok(fixture !== undefined);
+
+  return fixture;
+}
+
+/**
+ * Finds one generated fixture by ID for tests that need a stable target.
+ */
+function generatedFixtureById(input: SimulateSeasonInput, id: FixtureId): Fixture {
+  const fixture = findFixture(simulateSeason(input).fixtures, id);
+  assert.ok(fixture !== undefined);
+
+  return fixture;
+}
+
+/**
+ * Finds the final fixture involving one club in generated season order.
+ */
+function lastFixtureForClub(input: SimulateSeasonInput, clubId: ClubId): Fixture {
+  let lastFixture: Fixture | undefined;
+
+  for (const fixture of simulateSeason(input).fixtures) {
+    if (fixture.homeClubId === clubId || fixture.awayClubId === clubId) {
+      lastFixture = fixture;
+    }
+  }
+
+  assert.ok(lastFixture !== undefined);
+
+  return lastFixture;
+}
+
+/**
+ * Finds a club from the input that does not participate in one fixture.
+ */
+function nonParticipantClubId(input: SimulateSeasonInput, fixture: Fixture): ClubId {
+  for (const clubId of input.clubIds) {
+    if (clubId !== fixture.homeClubId && clubId !== fixture.awayClubId) {
+      return clubId;
+    }
+  }
+
+  throw new Error(`Cannot find non-participant club for fixture: ${fixture.id}`);
+}
+
+/**
+ * Builds a fixture-scoped lineup override for one club.
+ */
+function fixtureLineupOverride(
+  input: SimulateSeasonInput,
+  fixture: Fixture,
+  clubId: ClubId,
+): SimulateSeasonFixtureLineupOverride {
+  const team = input.teamsByClubId[clubId];
+  assert.ok(team !== undefined);
+
+  return {
+    fixtureId: fixture.id,
+    clubId,
+    lineup: team.lineup,
+    requiredLineupSize: team.lineup.length,
+    players: playersForLineup(team.lineup, team.strength.overall),
+    roleWeights: overrideRoleWeights(),
+  };
+}
+
+/**
+ * Builds a fixture-scoped lineup override that replaces the second starter.
+ */
+function fixtureLineupOverrideWithReserve(
+  input: SimulateSeasonInput,
+  fixture: Fixture,
+  clubId: ClubId,
+): SimulateSeasonFixtureLineupOverride {
+  const baseOverride = fixtureLineupOverride(input, fixture, clubId);
+  const reservePlayerId = playerId(`player:reserve-${String(clubId).slice("club:".length)}`);
+  const lineup = baseOverride.lineup.map((slot, index) =>
+    index === 1
+      ? {
+          ...slot,
+          playerId: reservePlayerId,
+        }
+      : slot,
+  );
+
+  return {
+    ...baseOverride,
+    lineup,
+    players: {
+      ...baseOverride.players,
+      [reservePlayerId]: makePlayer(reservePlayerId, 20),
+    },
+  };
+}
+
+/**
+ * Builds player lookup data for every player in one test lineup.
+ */
+function playersForLineup(lineup: SimulateSeasonTeamInput["lineup"], ability: number): Readonly<Record<PlayerId, Player>> {
+  const players: Record<PlayerId, Player> = {};
+
+  for (const slot of lineup) {
+    players[slot.playerId] = makePlayer(slot.playerId, ability);
+  }
+
+  return players;
 }
 
 /**

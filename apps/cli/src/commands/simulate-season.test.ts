@@ -7,6 +7,8 @@ import {
   DEMO_SETUP_PROFILE_PRO01_ATTACKING,
   DEMO_SETUP_PROFILE_PRO01_BALANCED,
   DEMO_SETUP_PROFILE_PRO01_DEFENSIVE,
+  LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM,
+  LINEUP_DEMO_PROFILE_PRO01_ROTATED,
   runSimulateSeasonCommand,
 } from "./simulate-season.ts";
 
@@ -89,6 +91,120 @@ test("simulate-season can print a deterministic condition demo", async () => {
   assert.equal(io.stdoutLines.includes("  Player              Start Final Delta"), true);
   assert.equal(conditionPlayerRows(io.stdoutLines).length, 11);
   assert.equal(io.stdoutLines.includes("  Player01 No01         100    92    -8"), true);
+});
+
+test("simulate-season can inspect the deterministic first-team lineup demo", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes(`Lineup demo: ${LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM}`), true);
+  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("  Applied to fixtures: no (profile inspection only)"), true);
+  assert.equal(io.stdoutLines.includes("  Changes from first team:"), true);
+  assert.equal(io.stdoutLines.includes("  none"), true);
+  assert.equal(io.stdoutLines.includes("  slot:01 Player01 No01 gk"), true);
+  assert.equal(io.stdoutLines.includes("  slot:11 Player01 No11 attacker"), true);
+  assert.equal(lineupStarterRows(io.stdoutLines).length, 11);
+});
+
+test("simulate-season can inspect the deterministic rotated lineup demo", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes(`Lineup demo: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
+  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("  slot:01: Player01 No01 -> Player01 No12 (gk)"), true);
+  assert.equal(io.stdoutLines.includes("  slot:05: Player01 No05 -> Player01 No13 (defender)"), true);
+  assert.equal(io.stdoutLines.includes("  slot:08: Player01 No08 -> Player01 No15 (midfielder)"), true);
+  assert.equal(io.stdoutLines.includes("  slot:11: Player01 No11 -> Player01 No16 (attacker)"), true);
+  assert.equal(io.stdoutLines.includes("  slot:01 Player01 No12 gk"), true);
+  assert.equal(io.stdoutLines.includes("  slot:05 Player01 No13 defender"), true);
+  assert.equal(io.stdoutLines.includes("  slot:08 Player01 No15 midfielder"), true);
+  assert.equal(io.stdoutLines.includes("  slot:11 Player01 No16 attacker"), true);
+  assert.equal(lineupStarterRows(io.stdoutLines).length, 11);
+});
+
+test("simulate-season fixture detail can apply a selected lineup demo", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", "--fixture=fixture:000006", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
+  assert.equal(io.stdoutLines.includes(`Lineup override: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
+  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  Fixture: fixture:000006 PRO17 [0-9]+-[0-9]+ PRO01$/.test(line)), true);
+  assert.equal(io.stdoutLines.includes("  Applies to fixture: yes"), true);
+  assert.equal(io.stdoutLines.includes("  slot:01 Player01 No12 gk"), true);
+  assert.equal(io.stdoutLines.includes("  slot:05 Player01 No13 defender"), true);
+  assert.equal(io.stdoutLines.includes("  Player01 No01 replaced by Player01 No12"), true);
+  assert.equal(io.stdoutLines.includes("  Player01 No11 replaced by Player01 No16"), true);
+  assert.equal(io.stdoutLines.includes("  Selected starters spend 8 fitness"), true);
+  assert.equal(io.stdoutLines.includes("  Player01 No12 expected fitness 92"), true);
+  assert.equal(io.stdoutLines.includes("  Player01 No01 expected fitness 100"), true);
+  assert.equal(io.stdoutLines.includes("Events:"), true);
+  assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
+  assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
+  assert.equal(io.stdoutLines.some((line) => /^  Player01 No12\s+PRO01\s+/.test(line)), true);
+});
+
+test("simulate-season fixture lineup demo reports non-applicable fixtures", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", "--fixture=fixture:000001", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes(`Lineup override: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
+  assert.equal(io.stdoutLines.includes("  Applies to fixture: no"), true);
+  assert.equal(io.stdoutLines.includes("  Reason: PRO01 is not playing this fixture"), true);
+  assert.equal(
+    io.stdoutLines.includes("  Selected starters spend 0 fitness because the selected club is not playing"),
+    true,
+  );
+  assert.equal(io.stdoutLines.includes("fixture:000001 PRO04 5-0 PRO18"), true);
+});
+
+test("same seed and lineup demo produce same inspection output", async () => {
+  const first = captureIo();
+  const second = captureIo();
+  const args = ["--seed=repeatable-lineup-demo", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`];
+
+  assert.equal(await runSimulateSeasonCommand(args, first), 0);
+  assert.equal(await runSimulateSeasonCommand(args, second), 0);
+  assert.deepEqual(first.stdoutLines, second.stdoutLines);
+});
+
+test("same seed and fixture lineup demo produce same fixture detail output", async () => {
+  const first = captureIo();
+  const second = captureIo();
+  const args = ["--seed=repeatable-fixture-lineup", "--fixture=fixture:000006", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`];
+
+  assert.equal(await runSimulateSeasonCommand(args, first), 0);
+  assert.equal(await runSimulateSeasonCommand(args, second), 0);
+  assert.deepEqual(first.stdoutLines, second.stdoutLines);
+});
+
+test("simulate-season default output does not include lineup demo inspection", async () => {
+  const io = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--seed=demo-001"], io), 0);
+  assert.equal(io.stdoutLines.some((line) => line.startsWith("Lineup demo: ")), false);
 });
 
 test("same seed and condition demo produce same output", async () => {
@@ -403,6 +519,67 @@ test("simulate-season rejects invalid condition demo arguments", async () => {
   assert.equal(withFixture.stderrLines[0], "--condition-demo cannot be combined with --round or --fixture");
 });
 
+test("simulate-season rejects invalid lineup demo arguments", async () => {
+  const missing = captureIo();
+  const unsupported = captureIo();
+  const withRound = captureIo();
+  const withConditionDemo = captureIo();
+  const withManualSwitch = captureIo();
+  const supportedValues = "pro01-first-team|pro01-rotated";
+
+  assert.equal(await runSimulateSeasonCommand(["--lineup-demo="], missing), 1);
+  assert.equal(missing.stdoutLines.length, 0);
+  assert.equal(missing.stderrLines[0], `--lineup-demo requires a supported value: ${supportedValues}`);
+
+  assert.equal(await runSimulateSeasonCommand(["--lineup-demo=pro01-random"], unsupported), 1);
+  assert.equal(unsupported.stdoutLines.length, 0);
+  assert.equal(
+    unsupported.stderrLines[0],
+    `Unsupported --lineup-demo value: pro01-random. Supported values: ${supportedValues}`,
+  );
+
+  assert.equal(await runSimulateSeasonCommand(["--round=1", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`], withRound), 1);
+  assert.equal(withRound.stdoutLines.length, 0);
+  assert.equal(
+    withRound.stderrLines[0],
+    "--lineup-demo cannot be combined with --round, --condition-demo, or --manual-tactic-switch",
+  );
+
+  assert.equal(
+    await runSimulateSeasonCommand(
+      [
+        `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`,
+        `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`,
+      ],
+      withConditionDemo,
+    ),
+    1,
+  );
+  assert.equal(withConditionDemo.stdoutLines.length, 0);
+  assert.equal(
+    withConditionDemo.stderrLines[0],
+    "--lineup-demo cannot be combined with --round, --condition-demo, or --manual-tactic-switch",
+  );
+
+  assert.equal(
+    await runSimulateSeasonCommand(
+      [
+        "--fixture=fixture:000006",
+        `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_BALANCED}`,
+        `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
+        `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`,
+      ],
+      withManualSwitch,
+    ),
+    1,
+  );
+  assert.equal(withManualSwitch.stdoutLines.length, 0);
+  assert.equal(
+    withManualSwitch.stderrLines[0],
+    "--lineup-demo cannot be combined with --round, --condition-demo, or --manual-tactic-switch",
+  );
+});
+
 test("simulate-season rejects invalid manual tactic switch arguments", async () => {
   const withoutFixture = captureIo();
   const withoutSetupDemo = captureIo();
@@ -515,4 +692,11 @@ function fixturePlayerStatLines(lines: readonly string[]): readonly string[] {
  */
 function conditionPlayerRows(lines: readonly string[]): readonly string[] {
   return lines.filter((line) => /^  Player01 No[0-9]{2}\s+100\s+92\s+-8$/.test(line));
+}
+
+/**
+ * Extracts rendered starter rows from lineup-demo command output.
+ */
+function lineupStarterRows(lines: readonly string[]): readonly string[] {
+  return lines.filter((line) => /^  slot:[0-9]{2} Player01 No[0-9]{2} (gk|defender|midfielder|attacker)$/.test(line));
 }

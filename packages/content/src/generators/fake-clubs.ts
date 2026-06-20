@@ -3,8 +3,11 @@ import { clubId, playerId, type Club, type ClubId, type PlayerId } from "@game/d
 /** Number of fake clubs in the first deterministic demo league. */
 export const FAKE_CLUB_COUNT = 18;
 
-/** Number of generated first-team players per fake club. */
-export const FAKE_PLAYERS_PER_CLUB = 11;
+/** Number of generated senior players per fake club, including reserves. */
+export const FAKE_PLAYERS_PER_CLUB = 16;
+
+/** Number of players selected by the default fixed fake lineup. */
+export const FAKE_LINEUP_SIZE = 11;
 
 /**
  * Generated fake club collection for the first CLI milestone.

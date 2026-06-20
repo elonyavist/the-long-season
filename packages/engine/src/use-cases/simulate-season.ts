@@ -98,6 +98,32 @@ export interface SimulateSeasonSetupOverride {
 }
 
 /**
+ * Explicit lineup override for one club in one generated fixture.
+ *
+ * This contract represents caller intent only: "use this ordered lineup for
+ * this club in this fixture." It deliberately contains no fatigue heuristics,
+ * recommendations, or automatic selection rules.
+ */
+export interface SimulateSeasonFixtureLineupOverride {
+  /** Fixture whose lineup should be overridden. */
+  readonly fixtureId: FixtureId;
+  /** Club whose lineup should be overridden inside the fixture. */
+  readonly clubId: ClubId;
+  /** Ordered selected match lineup. */
+  readonly lineup: readonly LineupSlot[];
+  /** Explicit lineup size expected by the caller for this fixture. */
+  readonly requiredLineupSize: number;
+  /** Player lookup available to the selected lineup. */
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  /** Role profiles available to the selected lineup. */
+  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
+  /** Optional dynamic states used only when multiplier curves are supplied. */
+  readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  /** Optional state multiplier curves for deriving team strength. */
+  readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
+}
+
+/**
  * Optional dynamic fitness lifecycle for one simulated season.
  *
  * The lifecycle is explicit and opt-in. Existing callers that omit it keep using
@@ -132,6 +158,8 @@ export interface SimulateSeasonInput {
   readonly teamsByClubId: Readonly<Record<ClubId, SimulateSeasonTeamInput>>;
   /** Ordered selected setup overrides for clubs that should not use base team input. */
   readonly setupOverrides?: readonly SimulateSeasonSetupOverride[];
+  /** Ordered explicit lineup overrides for individual generated fixtures. */
+  readonly fixtureLineupOverrides?: readonly SimulateSeasonFixtureLineupOverride[];
   /** Optional dynamic fitness lifecycle applied across the simulated season. */
   readonly fitnessLifecycle?: SimulateSeasonFitnessLifecycle;
   /** Match engine config reused for each fixture. */
@@ -169,7 +197,9 @@ export type SimulateSeasonErrorCode =
   | "missing_fixture"
   | "missing_team"
   | "duplicate_setup_override"
+  | "duplicate_fixture_lineup_override"
   | "invalid_setup_override"
+  | "invalid_fixture_lineup_override"
   | "invalid_fitness_lifecycle";
 
 /**
@@ -204,6 +234,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     seasonStartDate: input.seasonStartDate,
   });
   const setupOverrides = setupOverridesByClubId(input);
+  const fixtureLineupOverrides = fixtureLineupOverridesByKey(input, fixturesById(calendar.fixtures));
   let fitnessRuntime = initialFitnessRuntime(input);
   let state = createFixtureState(input, fixturesById(calendar.fixtures), calendar.fixtureIds);
 
@@ -216,7 +247,13 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
 
     fitnessRuntime = recoverFitnessBeforeFixture(input, fixture, fitnessRuntime);
 
-    const matchContext = matchContextForFixture(input, fixture, setupOverrides, fitnessRuntime?.playerStates);
+    const matchContext = matchContextForFixture(
+      input,
+      fixture,
+      setupOverrides,
+      fixtureLineupOverrides,
+      fitnessRuntime?.playerStates,
+    );
     const report = createMatchReport(simulateMatch(matchContext));
     state = applyMatchReportToFixture({ state, fixtureId, report });
     fitnessRuntime = spendFitnessAfterFixture(input, fixture, matchContext, fitnessRuntime);
@@ -229,7 +266,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     rules: input.tableRules,
   });
 
-  const registeredPlayers = playerRegistrations(input, setupOverrides);
+  const registeredPlayers = playerRegistrations(input, setupOverrides, fixtureLineupOverrides);
 
   return {
     rounds: calendar.rounds,
@@ -291,13 +328,14 @@ function matchContextForFixture(
   input: SimulateSeasonInput,
   fixture: Fixture,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
+  fixtureLineupOverrides: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ) {
   return {
     fixtureId: fixture.id,
     seed: input.seed,
-    home: matchTeamContext(input, fixture.homeClubId, setupOverrides, playerStates),
-    away: matchTeamContext(input, fixture.awayClubId, setupOverrides, playerStates),
+    home: matchTeamContext(input, fixture.id, fixture.homeClubId, setupOverrides, fixtureLineupOverrides, playerStates),
+    away: matchTeamContext(input, fixture.id, fixture.awayClubId, setupOverrides, fixtureLineupOverrides, playerStates),
     engineConfig: input.matchEngineConfig,
   };
 }
@@ -315,21 +353,33 @@ interface SeasonFitnessRuntime {
  */
 function matchTeamContext(
   input: SimulateSeasonInput,
+  fixtureId: FixtureId,
   clubId: ClubId,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
+  fixtureLineupOverrides: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   const setupOverride = setupOverrides[clubId];
+  const fixtureLineupOverride = fixtureLineupOverrides[fixtureLineupOverrideKey(fixtureId, clubId)];
+
+  if (fixtureLineupOverride !== undefined) {
+    const tacticalDistribution = setupOverride === undefined
+      ? baseTeamInput(input, clubId).tacticalDistribution
+      : buildSetupOverrideContext(setupOverride, playerStates ?? setupOverride.playerStates).tacticalDistribution;
+
+    return buildFixtureLineupOverrideContext(
+      fixtureLineupOverride,
+      clubId,
+      tacticalDistribution,
+      playerStates ?? fixtureLineupOverride.playerStates,
+    );
+  }
 
   if (setupOverride !== undefined) {
     return buildSetupOverrideContext(setupOverride, playerStates ?? setupOverride.playerStates);
   }
 
-  const team = input.teamsByClubId[clubId];
-
-  if (team === undefined) {
-    throw new SimulateSeasonError("missing_team", `Missing season team input: ${clubId}`);
-  }
+  const team = baseTeamInput(input, clubId);
 
   if (playerStates !== undefined) {
     return fitnessAwareMatchTeamContext(clubId, team, playerStates);
@@ -349,13 +399,14 @@ function matchTeamContext(
 function playerRegistrations(
   input: SimulateSeasonInput,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
+  fixtureLineupOverrides: Readonly<Record<string, SimulateSeasonFixtureLineupOverride>>,
 ): readonly SeasonPlayerStatRegistration[] {
   const registrations: SeasonPlayerStatRegistration[] = [];
 
   for (const clubId of input.clubIds) {
-    const team = matchTeamContext(input, clubId, setupOverrides);
+    const lineup = seasonLineupForRegistration(input, clubId, setupOverrides);
 
-    for (const slot of team.lineup) {
+    for (const slot of lineup) {
       registrations.push({
         playerId: slot.playerId,
         clubId,
@@ -363,7 +414,33 @@ function playerRegistrations(
     }
   }
 
+  for (const override of Object.values(fixtureLineupOverrides)) {
+    for (const slot of override.lineup) {
+      registrations.push({
+        playerId: slot.playerId,
+        clubId: override.clubId,
+      });
+    }
+  }
+
   return registrations;
+}
+
+/**
+ * Resolves the season-level lineup used for zero-row player registrations.
+ */
+function seasonLineupForRegistration(
+  input: SimulateSeasonInput,
+  clubId: ClubId,
+  setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
+): readonly LineupSlot[] {
+  const setupOverride = setupOverrides[clubId];
+
+  if (setupOverride !== undefined) {
+    return buildSetupOverrideContext(setupOverride, setupOverride.playerStates).lineup;
+  }
+
+  return baseTeamInput(input, clubId).lineup;
 }
 
 /**
@@ -388,6 +465,203 @@ function setupOverridesByClubId(input: SimulateSeasonInput): Readonly<Record<Clu
   }
 
   return overrides;
+}
+
+/**
+ * Indexes fixture lineup overrides by fixture/club while validating input.
+ */
+function fixtureLineupOverridesByKey(
+  input: SimulateSeasonInput,
+  fixtures: Readonly<Record<FixtureId, Fixture>>,
+): Readonly<Record<string, SimulateSeasonFixtureLineupOverride>> {
+  const overrides: Record<string, SimulateSeasonFixtureLineupOverride> = {};
+  const seenOverrideKeys = new Set<string>();
+
+  for (const override of input.fixtureLineupOverrides ?? []) {
+    const overrideKey = fixtureLineupOverrideKey(override.fixtureId, override.clubId);
+
+    if (seenOverrideKeys.has(overrideKey)) {
+      throw new SimulateSeasonError(
+        "duplicate_fixture_lineup_override",
+        `Duplicate fixture lineup override for fixture ${override.fixtureId} and club ${override.clubId}`,
+      );
+    }
+
+    seenOverrideKeys.add(overrideKey);
+    validateFixtureLineupOverride(input, fixtures, override);
+    overrides[overrideKey] = override;
+  }
+
+  return overrides;
+}
+
+/**
+ * Builds the stable lookup key for one fixture lineup override.
+ */
+function fixtureLineupOverrideKey(fixtureId: FixtureId, clubId: ClubId): string {
+  return `${fixtureId}|${clubId}`;
+}
+
+/**
+ * Validates one explicit fixture lineup override against generated fixtures.
+ */
+function validateFixtureLineupOverride(
+  input: SimulateSeasonInput,
+  fixtures: Readonly<Record<FixtureId, Fixture>>,
+  override: SimulateSeasonFixtureLineupOverride,
+): void {
+  const fixture = fixtures[override.fixtureId];
+
+  if (fixture === undefined) {
+    throw new SimulateSeasonError("missing_fixture", `Missing fixture for lineup override: ${override.fixtureId}`);
+  }
+
+  if (input.teamsByClubId[override.clubId] === undefined) {
+    throw new SimulateSeasonError("missing_team", `Missing base team input for lineup override: ${override.clubId}`);
+  }
+
+  if (fixture.homeClubId !== override.clubId && fixture.awayClubId !== override.clubId) {
+    throw new SimulateSeasonError(
+      "invalid_fixture_lineup_override",
+      `Fixture lineup override club ${override.clubId} is not part of fixture ${override.fixtureId}`,
+    );
+  }
+
+  validateFixtureLineupShape(override);
+
+  try {
+    const playerStates = fixtureLineupOverrideValidationStates(input, override);
+
+    deriveTeamStrength({
+      lineup: override.lineup,
+      players: override.players,
+      roleWeights: override.roleWeights,
+      ...(playerStates === undefined ? {} : { playerStates }),
+      ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
+    });
+  } catch (error) {
+    if (error instanceof TeamStrengthError) {
+      throw new SimulateSeasonError(
+        "invalid_fixture_lineup_override",
+        `Invalid fixture lineup override for fixture ${override.fixtureId} and club ${override.clubId}: ${error.message}`,
+      );
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Resolves player states available when validating one fixture lineup override.
+ */
+function fixtureLineupOverrideValidationStates(
+  input: SimulateSeasonInput,
+  override: SimulateSeasonFixtureLineupOverride,
+): Readonly<Record<PlayerId, PlayerDynamicState>> | undefined {
+  if (override.stateMultiplierCurves === undefined) {
+    return override.playerStates;
+  }
+
+  return override.playerStates ?? input.fitnessLifecycle?.playerStates;
+}
+
+/**
+ * Validates shape-level lineup constraints before deriving team strength.
+ */
+function validateFixtureLineupShape(override: SimulateSeasonFixtureLineupOverride): void {
+  if (!Number.isInteger(override.requiredLineupSize) || override.requiredLineupSize <= 0) {
+    throw new SimulateSeasonError(
+      "invalid_fixture_lineup_override",
+      `Fixture lineup override required size must be a positive integer: ${override.requiredLineupSize}`,
+    );
+  }
+
+  if (override.lineup.length !== override.requiredLineupSize) {
+    throw new SimulateSeasonError(
+      "invalid_fixture_lineup_override",
+      `Fixture lineup override must include exactly ${override.requiredLineupSize} slots: ${override.lineup.length}`,
+    );
+  }
+
+  const seenSlotIds = new Set<string>();
+  const seenPlayerIds = new Set<PlayerId>();
+
+  for (const slot of override.lineup) {
+    if (slot.slotId.length === 0) {
+      throw new SimulateSeasonError("invalid_fixture_lineup_override", "Fixture lineup override slot ID must not be empty");
+    }
+
+    if (slot.roleKey.length === 0) {
+      throw new SimulateSeasonError(
+        "invalid_fixture_lineup_override",
+        `Fixture lineup override role key must not be empty for slot ${slot.slotId}`,
+      );
+    }
+
+    if (seenSlotIds.has(slot.slotId)) {
+      throw new SimulateSeasonError(
+        "invalid_fixture_lineup_override",
+        `Duplicate fixture lineup override slot: ${slot.slotId}`,
+      );
+    }
+
+    if (seenPlayerIds.has(slot.playerId)) {
+      throw new SimulateSeasonError(
+        "invalid_fixture_lineup_override",
+        `Duplicate fixture lineup override player: ${slot.playerId}`,
+      );
+    }
+
+    seenSlotIds.add(slot.slotId);
+    seenPlayerIds.add(slot.playerId);
+  }
+}
+
+/**
+ * Builds a match-team context from one explicit fixture lineup override.
+ */
+function buildFixtureLineupOverrideContext(
+  override: SimulateSeasonFixtureLineupOverride,
+  clubId: ClubId,
+  tacticalDistribution: MatchTacticalDistributionInput,
+  playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
+): MatchTeamContext {
+  try {
+    return {
+      clubId,
+      lineup: override.lineup,
+      strength: deriveTeamStrength({
+        lineup: override.lineup,
+        players: override.players,
+        roleWeights: override.roleWeights,
+        ...(playerStates === undefined ? {} : { playerStates }),
+        ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
+      }),
+      tacticalDistribution,
+    };
+  } catch (error) {
+    if (error instanceof TeamStrengthError) {
+      throw new SimulateSeasonError(
+        "invalid_fixture_lineup_override",
+        `Invalid fixture lineup override for fixture ${override.fixtureId} and club ${override.clubId}: ${error.message}`,
+      );
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Reads required base team data for one club.
+ */
+function baseTeamInput(input: SimulateSeasonInput, clubId: ClubId): SimulateSeasonTeamInput {
+  const team = input.teamsByClubId[clubId];
+
+  if (team === undefined) {
+    throw new SimulateSeasonError("missing_team", `Missing season team input: ${clubId}`);
+  }
+
+  return team;
 }
 
 /**

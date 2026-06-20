@@ -10,7 +10,7 @@ import {
   type PlayerPosition,
 } from "@game/domain";
 
-import { FAKE_PLAYERS_PER_CLUB, fakePlayerId } from "./fake-clubs.ts";
+import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB, fakePlayerId } from "./fake-clubs.ts";
 
 /**
  * Lineup slot shape emitted by content without importing engine contracts.
@@ -72,11 +72,13 @@ export function generateFakePlayersForClubs(clubIds: readonly ClubId[]): FakePla
         form: stateValue(50),
         morale: stateValue(50),
       };
-      lineup.push({
-        slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
-        playerId: id,
-        roleKey: roleKeyForSlot(slotNumber),
-      });
+      if (slotNumber <= FAKE_LINEUP_SIZE) {
+        lineup.push({
+          slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
+          playerId: id,
+          roleKey: roleKeyForSlot(slotNumber),
+        });
+      }
     }
 
     lineupsByClubId[clubId] = lineup;
@@ -112,15 +114,15 @@ function fakePlayer(id: PlayerId, clubNumber: number, slotNumber: number): Playe
  * Resolves the early fixed 4-4-2 role key for one lineup slot.
  */
 function roleKeyForSlot(slotNumber: number): string {
-  if (slotNumber === 1) {
+  if (slotNumber === 1 || slotNumber === 12) {
     return "gk";
   }
 
-  if (slotNumber <= 5) {
+  if (slotNumber <= 5 || slotNumber === 13 || slotNumber === 14) {
     return "defender";
   }
 
-  if (slotNumber <= 9) {
+  if (slotNumber <= 9 || slotNumber === 15) {
     return "midfielder";
   }
 
@@ -133,16 +135,20 @@ function roleKeyForSlot(slotNumber: number): string {
 function positionForSlot(slotNumber: number): PlayerPosition {
   switch (slotNumber) {
     case 1:
+    case 12:
       return "gk";
     case 2:
       return "rb";
     case 3:
     case 4:
+    case 13:
+    case 14:
       return "cb";
     case 5:
       return "lb";
     case 6:
     case 7:
+    case 15:
       return "cm";
     case 8:
       return "rw";

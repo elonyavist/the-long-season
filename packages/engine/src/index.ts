@@ -20,6 +20,7 @@ export {
   SimulateSeasonError,
   simulateSeason,
   type SimulateSeasonErrorCode,
+  type SimulateSeasonFixtureLineupOverride,
   type SimulateSeasonInput,
   type SimulateSeasonResult,
   type SimulateSeasonSetupOverride,

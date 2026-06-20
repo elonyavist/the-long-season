@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { createFakeLeagueSystem } from "./league-system.ts";
+import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
 
 /**
  * Fake league-system tests lock content-owned configuration without importing
@@ -29,4 +30,24 @@ test("fake league keeps all generated players fully fit initially", () => {
     assert.notEqual(playerState, undefined);
     assert.equal(Number(playerState?.fitness), 100);
   }
+});
+
+test("fake league generates reserves without changing default lineup size", () => {
+  const league = createFakeLeagueSystem();
+  const firstClubId = league.clubIds[0];
+  assert.ok(firstClubId !== undefined);
+
+  const firstClub = league.clubsById[firstClubId];
+  const firstLineup = league.lineupsByClubId[firstClubId];
+
+  assert.ok(firstClub !== undefined);
+  assert.ok(firstLineup !== undefined);
+  const firstLineupSlot = firstLineup[0];
+  assert.ok(firstLineupSlot !== undefined);
+
+  assert.equal(firstClub.playerIds.length, FAKE_PLAYERS_PER_CLUB);
+  assert.equal(firstLineup.length, FAKE_LINEUP_SIZE);
+  assert.equal(firstClub.playerIds.includes(firstLineupSlot.playerId), true);
+  assert.equal(firstLineup.some((slot) => String(slot.playerId).endsWith("-12")), false);
+  assert.equal(firstClub.playerIds.some((playerId) => String(playerId).endsWith("-12")), true);
 });

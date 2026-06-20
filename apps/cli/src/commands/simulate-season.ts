@@ -19,6 +19,7 @@ import {
   type PlayerMatchStatRow,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
+  type SimulateSeasonFixtureLineupOverride,
   type SimulateSeasonSetupOverride,
   type TeamStrength,
 } from "@game/engine";
@@ -38,6 +39,12 @@ export const DEMO_SETUP_PROFILE_PRO01_DEFENSIVE = "pro01-defensive";
 /** Deterministic condition demo for the first generated club's fixed season. */
 export const CONDITION_DEMO_PROFILE_PRO01_SEASON = "pro01-season";
 
+/** First-team deterministic PRO01 lineup profile. */
+export const LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM = "pro01-first-team";
+
+/** Rotated deterministic PRO01 lineup profile with selected reserves. */
+export const LINEUP_DEMO_PROFILE_PRO01_ROTATED = "pro01-rotated";
+
 /** Ordered deterministic setup-demo profiles supported by the CLI MVP. */
 export const SUPPORTED_DEMO_SETUP_PROFILES = [
   DEMO_SETUP_PROFILE_PRO01_BALANCED,
@@ -47,6 +54,12 @@ export const SUPPORTED_DEMO_SETUP_PROFILES = [
 
 /** Ordered deterministic condition-demo profiles supported by the CLI MVP. */
 export const SUPPORTED_CONDITION_DEMO_PROFILES = [CONDITION_DEMO_PROFILE_PRO01_SEASON] as const;
+
+/** Ordered deterministic lineup-demo profiles supported by the CLI MVP. */
+export const SUPPORTED_LINEUP_DEMO_PROFILES = [
+  LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM,
+  LINEUP_DEMO_PROFILE_PRO01_ROTATED,
+] as const;
 
 /**
  * Minimal IO adapter used by command tests.
@@ -73,7 +86,7 @@ export async function runSimulateSeasonCommand(
   if (!parsed.ok) {
     io.stderr(parsed.message);
     io.stderr(
-      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>] [--condition-demo=${formatSupportedConditionDemoProfiles()}]`,
+      `Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=${formatSupportedSetupDemoProfiles()}] [--manual-tactic-switch=<minute>:<profile>] [--condition-demo=${formatSupportedConditionDemoProfiles()}] [--lineup-demo=${formatSupportedLineupDemoProfiles()}]`,
     );
     return 1;
   }
@@ -82,6 +95,7 @@ export async function runSimulateSeasonCommand(
   const setupDemo = parsed.setupDemo === undefined ? undefined : buildSetupDemo(league, parsed.setupDemo);
   const conditionDemo =
     parsed.conditionDemo === undefined ? undefined : buildConditionDemo(league, parsed.conditionDemo);
+  const lineupDemo = parsed.lineupDemo === undefined ? undefined : buildLineupDemo(league, parsed.lineupDemo);
   const manualTacticSwitch =
     parsed.manualTacticSwitch === undefined
       ? undefined
@@ -112,20 +126,45 @@ export async function runSimulateSeasonCommand(
     return 1;
   }
 
-  const result = simulateSeasonForCli(league, parsed.seed, setupDemo, conditionDemo);
+  if (
+    lineupDemo !== undefined &&
+    (parsed.roundNumber !== undefined || conditionDemo !== undefined || manualTacticSwitch !== undefined)
+  ) {
+    io.stderr("--lineup-demo cannot be combined with --round, --condition-demo, or --manual-tactic-switch");
+    return 1;
+  }
 
-  if (parsed.roundNumber !== undefined && findRound(result.rounds, parsed.roundNumber) === undefined) {
+  const baseResult = simulateSeasonForCli(league, parsed.seed, setupDemo, conditionDemo);
+
+  if (parsed.roundNumber !== undefined && findRound(baseResult.rounds, parsed.roundNumber) === undefined) {
     io.stderr(`Round not found: ${parsed.roundNumber}`);
     return 1;
   }
 
-  if (parsed.fixtureId !== undefined && findFixtureByValue(result.fixtures, parsed.fixtureId) === undefined) {
+  if (parsed.fixtureId !== undefined && findFixtureByValue(baseResult.fixtures, parsed.fixtureId) === undefined) {
     io.stderr(`Fixture not found: ${parsed.fixtureId}`);
     return 1;
   }
 
+  const lineupFixtureInspection =
+    parsed.fixtureId === undefined || lineupDemo === undefined
+      ? undefined
+      : buildLineupFixtureInspection(league, baseResult, parsed.fixtureId, lineupDemo);
+  const result =
+    lineupFixtureInspection?.fixtureLineupOverride === undefined
+      ? baseResult
+      : simulateSeasonForCli(league, parsed.seed, setupDemo, undefined, lineupFixtureInspection.fixtureLineupOverride);
+
   if (parsed.fixtureId !== undefined) {
-    for (const line of formatFixtureOnlyOutput(league, result, parsed.seed, parsed.fixtureId, setupDemo, manualTacticSwitch)) {
+    for (const line of formatFixtureOnlyOutput(
+      league,
+      result,
+      parsed.seed,
+      parsed.fixtureId,
+      setupDemo,
+      manualTacticSwitch,
+      lineupFixtureInspection,
+    )) {
       io.stdout(line);
     }
 
@@ -138,6 +177,12 @@ export async function runSimulateSeasonCommand(
 
   if (conditionDemo !== undefined) {
     for (const line of formatConditionDemoOutput(league, result, conditionDemo)) {
+      io.stdout(line);
+    }
+  }
+
+  if (lineupDemo !== undefined) {
+    for (const line of formatLineupDemoOutput(league, lineupDemo)) {
       io.stdout(line);
     }
   }
@@ -171,6 +216,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let setupDemo: SetupDemoProfileKey | undefined;
   let manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
   let conditionDemo: ConditionDemoProfileKey | undefined;
+  let lineupDemo: LineupDemoProfileKey | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -322,10 +368,34 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--lineup-demo") {
+      const value = args[index + 1];
+      const parsedLineupDemo = parseLineupDemo(value);
+
+      if (!parsedLineupDemo.ok) {
+        return parsedLineupDemo;
+      }
+
+      lineupDemo = parsedLineupDemo.lineupDemo;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--lineup-demo=")) {
+      const parsedLineupDemo = parseLineupDemo(arg.slice("--lineup-demo=".length));
+
+      if (!parsedLineupDemo.ok) {
+        return parsedLineupDemo;
+      }
+
+      lineupDemo = parsedLineupDemo.lineupDemo;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo };
+  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo, lineupDemo };
 }
 
 /**
@@ -438,6 +508,24 @@ function parseConditionDemo(value: string | undefined): ParsedConditionDemo {
 }
 
 /**
+ * Parses the deterministic lineup-demo profile key.
+ */
+function parseLineupDemo(value: string | undefined): ParsedLineupDemo {
+  if (value === undefined || value.length === 0) {
+    return { ok: false, message: `--lineup-demo requires a supported value: ${formatSupportedLineupDemoProfiles()}` };
+  }
+
+  if (!isLineupDemoProfileKey(value)) {
+    return {
+      ok: false,
+      message: `Unsupported --lineup-demo value: ${value}. Supported values: ${formatSupportedLineupDemoProfiles()}`,
+    };
+  }
+
+  return { ok: true, lineupDemo: value };
+}
+
+/**
  * Checks whether a string is one of the supported setup-demo profiles.
  */
 function isSetupDemoProfileKey(value: string): value is SetupDemoProfileKey {
@@ -464,6 +552,19 @@ function isConditionDemoProfileKey(value: string): value is ConditionDemoProfile
 }
 
 /**
+ * Checks whether a string is one of the supported lineup-demo profiles.
+ */
+function isLineupDemoProfileKey(value: string): value is LineupDemoProfileKey {
+  for (const profileKey of SUPPORTED_LINEUP_DEMO_PROFILES) {
+    if (value === profileKey) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Formats supported setup-demo profiles for usage and error messages.
  */
 function formatSupportedSetupDemoProfiles(): string {
@@ -478,6 +579,13 @@ function formatSupportedConditionDemoProfiles(): string {
 }
 
 /**
+ * Formats supported lineup-demo profiles for usage and error messages.
+ */
+function formatSupportedLineupDemoProfiles(): string {
+  return SUPPORTED_LINEUP_DEMO_PROFILES.join("|");
+}
+
+/**
  * Simulates the fake league season using currently exported engine primitives.
  */
 function simulateSeasonForCli(
@@ -485,6 +593,7 @@ function simulateSeasonForCli(
   seed: string,
   setupDemo: CliSetupDemo | undefined,
   conditionDemo: CliConditionDemo | undefined,
+  fixtureLineupOverride?: SimulateSeasonFixtureLineupOverride,
 ): CliSeasonResult {
   const result = simulateSeason({
     seed,
@@ -494,7 +603,8 @@ function simulateSeasonForCli(
     seasonStartDate: league.seasonStartDate,
     teamsByClubId: createTeamsByClubId(league),
     ...(setupDemo === undefined ? {} : { setupOverrides: [setupDemo.override] }),
-    ...(conditionDemo === undefined
+    ...(fixtureLineupOverride === undefined ? {} : { fixtureLineupOverrides: [fixtureLineupOverride] }),
+    ...(conditionDemo === undefined && fixtureLineupOverride === undefined
       ? {}
       : {
           fitnessLifecycle: {
@@ -558,6 +668,7 @@ function formatFixtureOnlyOutput(
   fixtureValue: string,
   setupDemo: CliSetupDemo | undefined,
   manualTacticSwitch: CliManualTacticSwitch | undefined,
+  lineupFixtureInspection: CliLineupFixtureInspection | undefined,
 ): readonly string[] {
   const lines = [
     "The Long Season fixture detail",
@@ -570,6 +681,10 @@ function formatFixtureOnlyOutput(
     lines.push(...formatSetupDemoLines(league, setupDemo));
   }
 
+  if (lineupFixtureInspection !== undefined) {
+    lines.push(...formatLineupFixtureInspectionLines(league, result, lineupFixtureInspection));
+  }
+
   const manualFixture = manualTacticSwitch === undefined || setupDemo === undefined
     ? undefined
     : buildManualTacticFixture(league, result, seed, fixtureValue, setupDemo, manualTacticSwitch);
@@ -579,7 +694,7 @@ function formatFixtureOnlyOutput(
   }
 
   lines.push("");
-  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue, manualFixture?.fixture));
+  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue, manualFixture?.fixture, lineupFixtureInspection));
 
   return lines;
 }
@@ -592,6 +707,7 @@ function formatFixtureDetailOutput(
   result: CliSeasonResult,
   fixtureValue: string,
   overrideFixture: Fixture | undefined = undefined,
+  lineupFixtureInspection: CliLineupFixtureInspection | undefined = undefined,
 ): readonly string[] {
   const fixture = overrideFixture ?? findFixtureByValue(result.fixtures, fixtureValue);
 
@@ -619,7 +735,7 @@ function formatFixtureDetailOutput(
 
   lines.push("Player stats (all starters):");
 
-  const statLines = formatFixturePlayerStats(fixture, league);
+  const statLines = formatFixturePlayerStats(fixture, league, lineupFixtureInspection);
   if (statLines.length === 0) {
     lines.push("  none");
   } else {
@@ -888,7 +1004,11 @@ function formatFixtureEvents(fixture: Fixture, league: FakeLeagueSystem): readon
 /**
  * Formats compact engine-derived player match stats for one fixture.
  */
-function formatFixturePlayerStats(fixture: Fixture, league: FakeLeagueSystem): readonly string[] {
+function formatFixturePlayerStats(
+  fixture: Fixture,
+  league: FakeLeagueSystem,
+  lineupFixtureInspection: CliLineupFixtureInspection | undefined,
+): readonly string[] {
   const report = fixture.result?.report;
 
   if (report === undefined) {
@@ -897,7 +1017,7 @@ function formatFixturePlayerStats(fixture: Fixture, league: FakeLeagueSystem): r
 
   return computePlayerMatchStats({
     report,
-    playerRegistrations: fixturePlayerRegistrations(fixture, league),
+    playerRegistrations: fixturePlayerRegistrations(fixture, league, lineupFixtureInspection),
     sortBy: "contribution",
   }).map((row) => formatPlayerMatchStatRow(row, fixture, league));
 }
@@ -905,11 +1025,25 @@ function formatFixturePlayerStats(fixture: Fixture, league: FakeLeagueSystem): r
 /**
  * Builds explicit fixture player registrations from the fake home and away lineups.
  */
-function fixturePlayerRegistrations(fixture: Fixture, league: FakeLeagueSystem): readonly PlayerMatchStatRegistration[] {
+function fixturePlayerRegistrations(
+  fixture: Fixture,
+  league: FakeLeagueSystem,
+  lineupFixtureInspection: CliLineupFixtureInspection | undefined,
+): readonly PlayerMatchStatRegistration[] {
   const registrations: PlayerMatchStatRegistration[] = [];
+  const overriddenLineup =
+    lineupFixtureInspection?.appliesToFixture === true ? lineupFixtureInspection.lineup : undefined;
+  const homeLineup =
+    fixture.homeClubId === lineupFixtureInspection?.clubId && overriddenLineup !== undefined
+      ? overriddenLineup
+      : league.lineupsByClubId[fixture.homeClubId];
+  const awayLineup =
+    fixture.awayClubId === lineupFixtureInspection?.clubId && overriddenLineup !== undefined
+      ? overriddenLineup
+      : league.lineupsByClubId[fixture.awayClubId];
 
-  appendLineupRegistrations(registrations, league.lineupsByClubId[fixture.homeClubId], "home");
-  appendLineupRegistrations(registrations, league.lineupsByClubId[fixture.awayClubId], "away");
+  appendLineupRegistrations(registrations, homeLineup, "home");
+  appendLineupRegistrations(registrations, awayLineup, "away");
 
   return registrations;
 }
@@ -1134,6 +1268,130 @@ function formatConditionDemoOutput(
 }
 
 /**
+ * Formats a selected-lineup profile without applying it to fixtures or seasons.
+ */
+function formatLineupDemoOutput(league: FakeLeagueSystem, lineupDemo: CliLineupDemo): readonly string[] {
+  const lines = [
+    "",
+    `Lineup demo: ${lineupDemo.profileKey}`,
+    `  Selected club: ${clubLabel(lineupDemo.clubId, league.clubsById)}`,
+    "  Applied to fixtures: no (profile inspection only)",
+    "  Changes from first team:",
+  ];
+
+  if (lineupDemo.playerChanges.length === 0) {
+    lines.push("  none");
+  } else {
+    for (const change of lineupDemo.playerChanges) {
+      lines.push(formatLineupDemoChange(change, league));
+    }
+  }
+
+  lines.push("  Selected starters:");
+
+  for (const slot of lineupDemo.lineup) {
+    lines.push(formatLineupDemoStarter(slot, league));
+  }
+
+  return lines;
+}
+
+/**
+ * Formats fixture-scoped manual lineup inspection metadata.
+ */
+function formatLineupFixtureInspectionLines(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  inspection: CliLineupFixtureInspection,
+): readonly string[] {
+  const fixture = findFixtureByValue(result.fixtures, inspection.fixtureValue);
+  const fixtureLabel = fixture === undefined ? inspection.fixtureValue : formatFixtureResult(fixture, league);
+  const lines = [
+    `Lineup override: ${inspection.profileKey}`,
+    `  Selected club: ${clubLabel(inspection.clubId, league.clubsById)}`,
+    `  Fixture: ${fixtureLabel}`,
+    `  Applies to fixture: ${inspection.appliesToFixture ? "yes" : "no"}`,
+  ];
+
+  if (!inspection.appliesToFixture) {
+    lines.push(`  Reason: ${clubLabel(inspection.clubId, league.clubsById)} is not playing this fixture`);
+  }
+
+  lines.push("  Selected starters:");
+
+  for (const slot of inspection.lineup) {
+    lines.push(formatLineupDemoStarter(slot, league));
+  }
+
+  lines.push("  Rested from first team:");
+
+  if (inspection.playerChanges.length === 0) {
+    lines.push("  none");
+  } else {
+    for (const change of inspection.playerChanges) {
+      lines.push(`  ${playerLabel(change.fromPlayerId, league.players)} replaced by ${playerLabel(change.toPlayerId, league.players)}`);
+    }
+  }
+
+  lines.push(...formatLineupConditionImpactLines(league, inspection));
+
+  return lines;
+}
+
+/**
+ * Formats the per-fixture fitness consequence of the selected lineup.
+ */
+function formatLineupConditionImpactLines(
+  league: FakeLeagueSystem,
+  inspection: CliLineupFixtureInspection,
+): readonly string[] {
+  const lines = ["  Condition impact for this fixture:"];
+
+  if (!inspection.appliesToFixture) {
+    lines.push("  Selected starters spend 0 fitness because the selected club is not playing");
+    return lines;
+  }
+
+  lines.push(`  Selected starters spend ${DEFAULT_FITNESS_RULES.matchFitnessCost} fitness`);
+
+  if (inspection.playerChanges.length === 0) {
+    lines.push("  Rested first-team players: none");
+    return lines;
+  }
+
+  lines.push("  Selected replacements after fixture:");
+  for (const change of inspection.playerChanges) {
+    lines.push(
+      `  ${playerLabel(change.toPlayerId, league.players)} expected fitness ${DEFAULT_FITNESS_RULES.maxFitness - DEFAULT_FITNESS_RULES.matchFitnessCost}`,
+    );
+  }
+
+  lines.push("  Rested first-team players after fixture:");
+  for (const change of inspection.playerChanges) {
+    lines.push(`  ${playerLabel(change.fromPlayerId, league.players)} expected fitness ${DEFAULT_FITNESS_RULES.maxFitness}`);
+  }
+
+  return lines;
+}
+
+/**
+ * Formats one player change relative to PRO01's first-team lineup.
+ */
+function formatLineupDemoChange(change: CliLineupDemoPlayerChange, league: FakeLeagueSystem): string {
+  return `  ${change.slotId}: ${playerLabel(change.fromPlayerId, league.players)} -> ${playerLabel(
+    change.toPlayerId,
+    league.players,
+  )} (${change.roleKey})`;
+}
+
+/**
+ * Formats one selected starter row for the lineup-demo inspection block.
+ */
+function formatLineupDemoStarter(slot: LineupSlot, league: FakeLeagueSystem): string {
+  return `  ${slot.slotId} ${playerLabel(slot.playerId, league.players)} ${slot.roleKey}`;
+}
+
+/**
  * Builds one deterministic condition demo from generated fake content.
  */
 function buildConditionDemo(league: FakeLeagueSystem, profileKey: ConditionDemoProfileKey): CliConditionDemo {
@@ -1158,6 +1416,165 @@ function buildConditionDemo(league: FakeLeagueSystem, profileKey: ConditionDemoP
       };
     }
   }
+}
+
+/**
+ * Builds one deterministic lineup demo from generated fake content.
+ */
+function buildLineupDemo(league: FakeLeagueSystem, profileKey: LineupDemoProfileKey): CliLineupDemo {
+  const clubId = firstGeneratedClubId(league, "lineup demo");
+  const firstTeamLineup = firstGeneratedClubLineup(league, clubId, "lineup demo");
+
+  switch (profileKey) {
+    case LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM:
+      return {
+        profileKey,
+        clubId,
+        lineup: firstTeamLineup,
+        playerChanges: [],
+      };
+
+    case LINEUP_DEMO_PROFILE_PRO01_ROTATED:
+      return buildRotatedPro01LineupDemo(league, clubId, firstTeamLineup);
+  }
+}
+
+/**
+ * Builds fixture-scoped inspection data for one manually selected lineup demo.
+ */
+function buildLineupFixtureInspection(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  fixtureValue: string,
+  lineupDemo: CliLineupDemo,
+): CliLineupFixtureInspection {
+  const fixture = findFixtureByValue(result.fixtures, fixtureValue);
+
+  if (fixture === undefined) {
+    throw new Error(`Cannot build lineup fixture inspection for missing fixture: ${fixtureValue}`);
+  }
+
+  const appliesToFixture = selectedSetupSideForFixture(fixture, lineupDemo.clubId) !== undefined;
+
+  return {
+    profileKey: lineupDemo.profileKey,
+    clubId: lineupDemo.clubId,
+    fixtureValue,
+    lineup: lineupDemo.lineup,
+    playerChanges: lineupDemo.playerChanges,
+    appliesToFixture,
+    ...(appliesToFixture
+      ? { fixtureLineupOverride: buildFixtureLineupOverrideForCli(league, fixture, lineupDemo) }
+      : {}),
+  };
+}
+
+/**
+ * Builds the engine fixture-lineup override for one applicable CLI inspection.
+ */
+function buildFixtureLineupOverrideForCli(
+  league: FakeLeagueSystem,
+  fixture: Fixture,
+  lineupDemo: CliLineupDemo,
+): SimulateSeasonFixtureLineupOverride {
+  return {
+    fixtureId: fixture.id,
+    clubId: lineupDemo.clubId,
+    lineup: lineupDemo.lineup,
+    requiredLineupSize: lineupDemo.lineup.length,
+    players: league.players,
+    roleWeights: league.roleWeights,
+    playerStates: league.playerStates,
+    stateMultiplierCurves: league.stateMultiplierCurves,
+  };
+}
+
+/**
+ * Builds the first rotated PRO01 demo lineup from deterministic reserve players.
+ */
+function buildRotatedPro01LineupDemo(
+  league: FakeLeagueSystem,
+  clubId: ClubId,
+  firstTeamLineup: readonly LineupSlot[],
+): CliLineupDemo {
+  const replacementBySlotId: Readonly<Record<string, PlayerId>> = {
+    "slot:01": reservePlayerId(league, clubId, "12"),
+    "slot:05": reservePlayerId(league, clubId, "13"),
+    "slot:08": reservePlayerId(league, clubId, "15"),
+    "slot:11": reservePlayerId(league, clubId, "16"),
+  };
+  const playerChanges: CliLineupDemoPlayerChange[] = [];
+  const lineup = firstTeamLineup.map((slot) => {
+    const replacementPlayerId = replacementBySlotId[slot.slotId];
+
+    if (replacementPlayerId === undefined) {
+      return slot;
+    }
+
+    playerChanges.push({
+      slotId: slot.slotId,
+      fromPlayerId: slot.playerId,
+      toPlayerId: replacementPlayerId,
+      roleKey: slot.roleKey,
+    });
+
+    return {
+      ...slot,
+      playerId: replacementPlayerId,
+    };
+  });
+
+  return {
+    profileKey: LINEUP_DEMO_PROFILE_PRO01_ROTATED,
+    clubId,
+    lineup,
+    playerChanges,
+  };
+}
+
+/**
+ * Reads the first generated club ID for deterministic PRO01 demo profiles.
+ */
+function firstGeneratedClubId(league: FakeLeagueSystem, label: string): ClubId {
+  const clubId = league.clubIds[0];
+
+  if (clubId === undefined) {
+    throw new Error(`Cannot build ${label} without a generated club`);
+  }
+
+  return clubId;
+}
+
+/**
+ * Reads the generated first-team lineup for one demo club.
+ */
+function firstGeneratedClubLineup(league: FakeLeagueSystem, clubId: ClubId, label: string): readonly LineupSlot[] {
+  const lineup = league.lineupsByClubId[clubId];
+
+  if (lineup === undefined) {
+    throw new Error(`Cannot build ${label} without a lineup for club: ${clubId}`);
+  }
+
+  return lineup;
+}
+
+/**
+ * Finds one deterministic reserve player by final generated ID suffix.
+ */
+function reservePlayerId(league: FakeLeagueSystem, clubId: ClubId, suffix: string): PlayerId {
+  const club = league.clubsById[clubId];
+
+  if (club === undefined) {
+    throw new Error(`Cannot find reserve player without a generated club: ${clubId}`);
+  }
+
+  for (const playerId of club.playerIds) {
+    if (String(playerId).endsWith(`-${suffix}`)) {
+      return playerId;
+    }
+  }
+
+  throw new Error(`Missing reserve player ${suffix} for club: ${clubId}`);
 }
 
 /**
@@ -1210,17 +1627,8 @@ function buildSetupDemo(league: FakeLeagueSystem, profileKey: SetupDemoProfileKe
  * Builds a PRO01 demo setup from generated fake content.
  */
 function buildPro01SetupDemo(league: FakeLeagueSystem, definition: CliSetupDemoDefinition): CliSetupDemo {
-  const clubId = league.clubIds[0];
-
-  if (clubId === undefined) {
-    throw new Error("Cannot build setup demo without a generated club");
-  }
-
-  const baseLineup = league.lineupsByClubId[clubId];
-
-  if (baseLineup === undefined) {
-    throw new Error(`Cannot build setup demo without a lineup for club: ${clubId}`);
-  }
+  const clubId = firstGeneratedClubId(league, "setup demo");
+  const baseLineup = firstGeneratedClubLineup(league, clubId, "setup demo");
 
   const roleChanges: CliSetupDemoRoleChange[] = [];
   const selectedSlots = baseLineup.map((slot) => {
@@ -1566,6 +1974,7 @@ type ParsedSimulateSeasonArgs =
       readonly setupDemo: SetupDemoProfileKey | undefined;
       readonly manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
       readonly conditionDemo: ConditionDemoProfileKey | undefined;
+      readonly lineupDemo: LineupDemoProfileKey | undefined;
     }
   | {
       readonly ok: false;
@@ -1616,6 +2025,17 @@ type ParsedConditionDemo =
       readonly message: string;
     };
 
+/** Parsed lineup-demo argument result. */
+type ParsedLineupDemo =
+  | {
+      readonly ok: true;
+      readonly lineupDemo: LineupDemoProfileKey;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
 /** Parsed manual tactic-switch argument result. */
 type ParsedManualTacticSwitch =
   | {
@@ -1640,6 +2060,9 @@ type SetupDemoProfileKey = (typeof SUPPORTED_DEMO_SETUP_PROFILES)[number];
 
 /** Supported deterministic condition-demo profile keys. */
 type ConditionDemoProfileKey = (typeof SUPPORTED_CONDITION_DEMO_PROFILES)[number];
+
+/** Supported deterministic lineup-demo profile keys. */
+type LineupDemoProfileKey = (typeof SUPPORTED_LINEUP_DEMO_PROFILES)[number];
 
 /**
  * Definition used to build one deterministic CLI setup-demo profile.
@@ -1699,6 +2122,54 @@ interface CliConditionDemo {
   readonly clubId: ClubId;
   /** Generated fixed lineup inspected by the condition demo. */
   readonly lineup: readonly LineupSlot[];
+}
+
+/**
+ * CLI-owned selected-lineup demo profile for manual inspection.
+ */
+interface CliLineupDemo {
+  /** Stable profile key requested by the user. */
+  readonly profileKey: LineupDemoProfileKey;
+  /** Club whose lineup is being inspected. */
+  readonly clubId: ClubId;
+  /** Ordered selected starters for this profile. */
+  readonly lineup: readonly LineupSlot[];
+  /** Differences from the generated first-team lineup. */
+  readonly playerChanges: readonly CliLineupDemoPlayerChange[];
+}
+
+/**
+ * CLI-owned inspection state for applying one lineup profile to one fixture.
+ */
+interface CliLineupFixtureInspection {
+  /** Selected lineup profile key requested by the user. */
+  readonly profileKey: LineupDemoProfileKey;
+  /** Selected club controlled by the lineup profile. */
+  readonly clubId: ClubId;
+  /** Fixture ID string requested by the user. */
+  readonly fixtureValue: string;
+  /** Ordered starters selected by this profile. */
+  readonly lineup: readonly LineupSlot[];
+  /** Player changes relative to the first-team lineup. */
+  readonly playerChanges: readonly CliLineupDemoPlayerChange[];
+  /** Whether the selected club participates in the requested fixture. */
+  readonly appliesToFixture: boolean;
+  /** Engine override passed only when the selected club plays the fixture. */
+  readonly fixtureLineupOverride?: SimulateSeasonFixtureLineupOverride;
+}
+
+/**
+ * One explicit player replacement rendered by the lineup-demo output.
+ */
+interface CliLineupDemoPlayerChange {
+  /** Slot changed by the profile. */
+  readonly slotId: string;
+  /** First-team player originally occupying this slot. */
+  readonly fromPlayerId: PlayerId;
+  /** Selected replacement player occupying this slot. */
+  readonly toPlayerId: PlayerId;
+  /** Role key preserved for the selected slot. */
+  readonly roleKey: string;
 }
 
 /**
