@@ -1,0 +1,223 @@
+import {
+  createSelectedLineup,
+  createTacticSetup,
+  TacticContractError,
+  type Player,
+  type PlayerDynamicState,
+  type PlayerId,
+  type SelectedLineup,
+  type TacticContractErrorCode,
+  type TacticSetup,
+} from "@game/domain";
+
+import type { MatchTacticalDistributionInput, MatchTeamContext } from "./match-context.ts";
+import {
+  deriveTeamStrength,
+  TeamStrengthError,
+  type LineupSlot,
+  type PlayerStateMultiplierCurves,
+  type RoleWeightProfile,
+} from "./team-strength.ts";
+
+/** Error categories exposed by selected tactic/team context building. */
+export type TacticTeamContextErrorCode =
+  | "invalid_required_lineup_size"
+  | "invalid_lineup_size"
+  | "empty_lineup"
+  | "missing_player"
+  | "unknown_player"
+  | "duplicate_player"
+  | "missing_slot_key"
+  | "duplicate_slot_key"
+  | "missing_role_key"
+  | "missing_role_weight"
+  | "invalid_mentality"
+  | "invalid_tactic_value"
+  | "team_strength_error";
+
+/**
+ * Input for building one engine match-team context from selected setup data.
+ */
+export interface BuildTacticTeamContextInput {
+  /** User/content selected lineup for one club. */
+  readonly lineup: SelectedLineup;
+  /** User/content tactical setup for one club. */
+  readonly tactic: TacticSetup;
+  /** Explicit expected lineup size for this match or competition context. */
+  readonly requiredLineupSize: number;
+  /** Player lookup available to this selected setup. */
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  /** Role profile lookup available to the selected lineup. */
+  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
+  /** Optional dynamic state lookup for future state multiplier curves. */
+  readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  /** Optional caller-supplied dynamic state multiplier curves. */
+  readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
+}
+
+/**
+ * Typed error thrown when selected lineup/tactic data cannot become a team context.
+ *
+ * @example
+ * if (error instanceof TacticTeamContextError && error.code === "unknown_player") {
+ *   // Caller can point to a selected player that is not available.
+ * }
+ */
+export class TacticTeamContextError extends Error {
+  /** Machine-readable failure reason. */
+  public readonly code: TacticTeamContextErrorCode;
+
+  /** Creates a selected tactic/team context error. */
+  public constructor(code: TacticTeamContextErrorCode, message: string) {
+    super(message);
+    this.name = "TacticTeamContextError";
+    this.code = code;
+  }
+}
+
+/**
+ * Builds one current engine `MatchTeamContext` from selected lineup and tactic data.
+ *
+ * The builder performs only interpretation needed by the existing match engine:
+ * selected slots become ordered `LineupSlot` values, four tactic knobs become
+ * `MatchTacticalDistributionInput`, and strength is derived with existing
+ * role-weight logic. The domain `mentality` key is validated but intentionally
+ * has no separate engine effect in this MVP.
+ *
+ * @example
+ * const team = buildTacticTeamContext({
+ *   lineup,
+ *   tactic,
+ *   requiredLineupSize: 11,
+ *   players,
+ *   roleWeights,
+ * });
+ */
+export function buildTacticTeamContext(input: BuildTacticTeamContextInput): MatchTeamContext {
+  assertValidRequiredLineupSize(input.requiredLineupSize);
+
+  const selectedLineup = createSelectedLineupOrThrow(input.lineup);
+  const tactic = createTacticSetupOrThrow(input.tactic);
+
+  if (selectedLineup.slots.length !== input.requiredLineupSize) {
+    throw new TacticTeamContextError(
+      "invalid_lineup_size",
+      `Selected lineup must include exactly ${input.requiredLineupSize} slots: ${selectedLineup.slots.length}`,
+    );
+  }
+
+  const lineup = selectedLineup.slots.map((slot): LineupSlot => {
+    if (input.players[slot.playerId] === undefined) {
+      throw new TacticTeamContextError("unknown_player", `Selected player is not available: ${slot.playerId}`);
+    }
+
+    if (input.roleWeights[slot.roleKey] === undefined) {
+      throw new TacticTeamContextError("missing_role_weight", `Missing role weight profile: ${slot.roleKey}`);
+    }
+
+    return {
+      slotId: slot.slotKey,
+      playerId: slot.playerId,
+      roleKey: slot.roleKey,
+    };
+  });
+
+  try {
+    const strengthInput = {
+      lineup,
+      players: input.players,
+      roleWeights: input.roleWeights,
+      ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
+      ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
+    };
+
+    return {
+      clubId: selectedLineup.clubId,
+      lineup,
+      strength: deriveTeamStrength(strengthInput),
+      tacticalDistribution: tacticToMatchDistribution(tactic),
+    };
+  } catch (error) {
+    if (error instanceof TeamStrengthError) {
+      throw new TacticTeamContextError("team_strength_error", error.message);
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Converts the MVP tactic setup into current match tactical distribution inputs.
+ *
+ * `mentality` is intentionally not mapped here. It remains validated setup data
+ * for a later explicit step.
+ */
+export function tacticToMatchDistribution(tactic: TacticSetup): MatchTacticalDistributionInput {
+  const validTactic = createTacticSetupOrThrow(tactic);
+
+  return {
+    directness: validTactic.directness,
+    pressing: validTactic.pressing,
+    width: validTactic.width,
+    risk: validTactic.risk,
+  };
+}
+
+/**
+ * Validates the explicit required lineup size used by the builder.
+ */
+function assertValidRequiredLineupSize(requiredLineupSize: number): void {
+  if (!Number.isInteger(requiredLineupSize) || requiredLineupSize <= 0) {
+    throw new TacticTeamContextError(
+      "invalid_required_lineup_size",
+      `Required lineup size must be a positive integer: ${requiredLineupSize}`,
+    );
+  }
+}
+
+/**
+ * Validates selected lineup data and maps domain contract errors to builder errors.
+ */
+function createSelectedLineupOrThrow(lineup: SelectedLineup): SelectedLineup {
+  try {
+    return createSelectedLineup(lineup);
+  } catch (error) {
+    if (error instanceof TacticContractError) {
+      throw new TacticTeamContextError(mapDomainContractErrorCode(error.code), error.message);
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Validates tactic setup data and maps domain contract errors to builder errors.
+ */
+function createTacticSetupOrThrow(tactic: TacticSetup): TacticSetup {
+  try {
+    return createTacticSetup(tactic);
+  } catch (error) {
+    if (error instanceof TacticContractError) {
+      throw new TacticTeamContextError(mapDomainContractErrorCode(error.code), error.message);
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Maps shared domain tactic-contract error codes onto builder error codes.
+ */
+function mapDomainContractErrorCode(code: TacticContractErrorCode): TacticTeamContextErrorCode {
+  switch (code) {
+    case "empty_lineup":
+    case "missing_player":
+    case "duplicate_player":
+    case "missing_slot_key":
+    case "duplicate_slot_key":
+    case "missing_role_key":
+    case "invalid_mentality":
+    case "invalid_tactic_value":
+      return code;
+  }
+}

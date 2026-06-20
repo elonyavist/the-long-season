@@ -13,6 +13,7 @@ The CLI should remain structured and terminal-friendly, like existing `simulate-
 ## What to implement
 
 - Add a minimal CLI mode or arguments that apply a deterministic demo setup override for one club.
+- Build that demo setup through `simulateSeason.setupOverrides`; do not add a parallel season simulation path in CLI.
 - Keep the option explicit and discoverable in command usage.
 - Print enough context to verify what changed:
   - selected club;

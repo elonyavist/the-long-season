@@ -99,6 +99,7 @@ Ultimo aggiornamento: 14 giugno 2026 — **fondazione tecnica sviscerata** in se
 - Moduli: lista curata di 12-15 classici (4-4-2, 4-3-3, 3-5-2, ecc.). Niente editor posizionale libero: bilanciamento controllato e cronaca che può raccontare i moduli come entità riconoscibili.
 - Livello individuale: ruoli, non istruzioni — 2-3 varianti per posizione (terzino bloccato/di spinta, mediano schermo/incursore, punta boa/in profondità). I tratti si agganciano ai ruoli.
 - Istruzioni di squadra: 5-6 interruttori chiari — mentalità (5 tacche), pressing (3), impostazione (palleggio/diretta/palla lunga), ampiezza, contropiede, fuorigioco. Ogni leva ha un effetto che la cronaca sa raccontare; sono anche le istruzioni rapide del match.
+- Tattiche salvate: il manager può preparare più setup e scegliere manualmente quale usare prima o durante la partita. Il motore applica comandi espliciti dell'utente a partire dal minuto indicato; non deve decidere da solo cambi tattici automatici in base a risultato, minuto o contesto, salvo una futura opzione documentata e disattivata di default.
 - Familiarità tattica: il modulo si impara (settimane a rendimento ridotto), una rosa ne padroneggia 2-3. L'identità di gioco è un investimento; il mercato si fa per il sistema.
 - Piazzati: incaricati (rigorista, punizioni, corner) + poche impostazioni essenziali.
 
@@ -147,6 +148,7 @@ Ultimo aggiornamento: 14 giugno 2026 — **fondazione tecnica sviscerata** in se
 - Pagelle live stile CM: il voto di ogni giocatore si aggiorna minuto per minuto — informazione tattica, non solo colore.
 - Auto-pause configurabili dal giocatore (default: gol, rigore con beat di suspense, espulsione, infortunio da cambio; attivabili: gialli ai diffidati, gol dagli altri campi rilevanti per la classifica).
 - Istruzioni rapide in partita: le 6 leve di squadra + sostituzioni senza aprire la lavagna; il cambio modulo richiede la lavagna.
+- I cambi tattici in partita sono decisioni del manager: il gioco deve supportare profili pronti e switch manuali, non un pilota automatico nascosto che sceglie quando passare a offensiva/difensiva.
 
 ### 13. Motore di simulazione ✅
 **Decisioni:**

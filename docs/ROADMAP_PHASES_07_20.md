@@ -24,18 +24,21 @@ Each phase must answer:
 
 ## Current Position
 
-Phases 00-06 established:
+Phases 00-08 established:
 
 - deterministic foundation and package boundaries;
 - aggregate match simulation;
 - season simulation and league table;
 - balance calibration;
 - player-visible goals, assists, saves, shots, and fixture inspection;
-- CLI output good enough to inspect one season and one fixture.
+- causal player context for creators and defenders where the current engine supports it;
+- selected lineup and tactic setup contracts;
+- season setup overrides;
+- CLI output good enough to inspect one season, one fixture, and one deterministic tactic/lineup setup.
 
 The project is still not a playable career. It is a deterministic football simulation core with useful CLI inspection.
 
-The next broad objective is to turn the simulator into a rough but playable career loop before investing in UI, SQLite, Tauri, localization, or launch work.
+The next broad objective is to turn the simulator into a rough but playable career loop before investing in UI, SQLite, Tauri, localization, or launch work. Phase 09 specifically keeps this grounded in manager choice: tactical changes should be explicit user commands, not hidden automatic behavior.
 
 ## Phase 07 — Match Engine Causal V1
 
@@ -83,7 +86,30 @@ Phase gate question:
 
 - If the user changes lineup or tactics, does the output change in a believable and testable way?
 
-## Phase 09 — Player Dynamic States
+## Phase 09 — Manual Tactical Changes V1
+
+Goal: model the manager's tactical arsenal: multiple prepared setups, with manual in-match switching chosen by the user.
+
+Possible scope:
+
+- review Phase 08 output and decide whether the first demo setup is only a proof of override or a believable tactic;
+- add a tiny set of deterministic saved tactic profiles, such as balanced, attacking, and defensive;
+- define a match-segment or manual tactic-change contract where the caller chooses the minute and profile;
+- allow fixture-level simulation to apply one manual switch at a declared minute;
+- expose CLI inspection that prints the selected profile timeline, such as `0-45 balanced`, `46-90 attacking`.
+
+Do not include:
+
+- automatic tactical AI that changes setup based on score, minute, or context;
+- live interactive match sessions;
+- substitutions, team talks, fatigue, morale, cards, injuries, or tactical familiarity;
+- React UI, persistence, career saves, market, economy, staff, youth, facilities, or media.
+
+Phase gate question:
+
+- Can a user/developer verify that a manager-chosen tactical switch changes one fixture deterministically without the system choosing for them?
+
+## Phase 10 — Player Dynamic States
 
 Goal: introduce consequences across matches.
 
@@ -108,7 +134,7 @@ Phase gate question:
 
 - Does repeated selection now have a meaningful cost without making the simulator unstable?
 
-## Phase 10 — Career Loop CLI MVP
+## Phase 11 — Career Loop CLI MVP
 
 Goal: turn one-off season simulation into a rough playable run.
 
@@ -134,7 +160,7 @@ Phase gate question:
 
 - Can someone play through a rough season from CLI without using only batch simulation?
 
-## Phase 11 — Mature JSON Run Persistence
+## Phase 12 — Mature JSON Run Persistence
 
 Goal: make the CLI career loop saveable and reloadable.
 
@@ -157,7 +183,7 @@ Phase gate question:
 
 - Can a run be saved, closed, loaded, and continued deterministically?
 
-## Phase 12 — Contracts And Economy Base
+## Phase 13 — Contracts And Economy Base
 
 Goal: make the club financially real enough for the "poverty as design" pillar to start existing.
 
@@ -182,7 +208,7 @@ Phase gate question:
 
 - Does the player have to think about money before making squad decisions?
 
-## Phase 13 — Minimal Market
+## Phase 14 — Minimal Market
 
 Goal: allow basic squad change.
 
@@ -202,13 +228,13 @@ Do not include:
 - agent personas;
 - deadline day;
 - player exchange anti-exploit beyond a minimal guard;
-- scouting-driven perceived value unless Phase 17 is pulled earlier.
+- scouting-driven perceived value unless Phase 18 is pulled earlier.
 
 Phase gate question:
 
 - Can the user improve a weak squad with limited money, and does every deal feel like a trade-off?
 
-## Phase 14 — Board, Objectives, And Run Failure
+## Phase 15 — Board, Objectives, And Run Failure
 
 Goal: create real stakes.
 
@@ -231,7 +257,7 @@ Phase gate question:
 
 - Can the run now be lost for sporting or financial reasons?
 
-## Phase 15 — Multi-Division And Promotion/Relegation
+## Phase 16 — Multi-Division And Promotion/Relegation
 
 Goal: make "the climb" mechanically real.
 
@@ -254,7 +280,7 @@ Phase gate question:
 
 - Can the user's club climb or fall between divisions across seasons?
 
-## Phase 16 — Player Growth And Aging V1
+## Phase 17 — Player Growth And Aging V1
 
 Goal: make multi-season squad building matter.
 
@@ -278,7 +304,7 @@ Phase gate question:
 
 - Do young and old players create meaningful long-term roster decisions?
 
-## Phase 17 — Scouting And Fog Minimum
+## Phase 18 — Scouting And Fog Minimum
 
 Goal: make player information imperfect.
 
@@ -301,7 +327,7 @@ Phase gate question:
 
 - Does imperfect information make recruitment more interesting without becoming tedious?
 
-## Phase 18 — Match Day Session CLI
+## Phase 19 — Match Day Session CLI
 
 Goal: create a resumable, interactive match driver over the same match engine.
 
@@ -310,7 +336,7 @@ Possible scope:
 - add `MatchSession`;
 - step through a match with auto-pause conditions;
 - expose live score, ticker events, and live stats;
-- allow a minimal tactical command if Phase 08 supports it;
+- allow manual tactical commands using the Phase 09 model;
 - serialize enough state to resume a match if required by the step.
 
 Do not include:
@@ -324,13 +350,13 @@ Phase gate question:
 
 - Is watching and stepping through a match more tense than only seeing final output?
 
-## Phase 19 — UI Contract And Selectors
+## Phase 20 — UI Contract And Selectors
 
 Goal: prepare the browser app boundary without building a full UI too early.
 
 Possible scope:
 
-- define engine selectors for squad, table, calendar, fixture, and finance views;
+- define engine selectors for squad, table, calendar, fixture, tactic, and finance views;
 - define command/query boundary for future UI and worker calls;
 - create snapshot types that avoid exposing full mutable `GameState`;
 - document worker/runtime responsibilities.
@@ -346,40 +372,16 @@ Phase gate question:
 
 - Is the engine ready to be driven by a UI without leaking internals or duplicating logic?
 
-## Phase 20 — Web Shell MVP
-
-Goal: create the first rough browser shell around an already playable loop.
-
-Possible scope:
-
-- create `apps/web` with React and Vite;
-- add simple navigation tabs;
-- display squad, table, calendar, and fixture detail from selectors;
-- add a `Continue` action;
-- keep styling minimal but consistent with the retro direction;
-- keep data in memory or JSON-backed development flow unless the active step explicitly adds persistence.
-
-Do not include:
-
-- full premium art pass;
-- SQLite/OPFS unless Phase 20 is explicitly re-scoped after review;
-- Tauri;
-- localization packs;
-- modding editor;
-- store/demo work.
-
-Phase gate question:
-
-- Does the same playable loop become clearer and more engaging when viewed through a minimal UI?
-
 ## Strategic Reading
 
-Phases 07-10 should make the CLI prototype playable.
+Phases 07-09 should make match output player-readable and tactically controllable from CLI.
 
-Phases 11-15 should make the prototype persistent, risky, and recognizable as a climb.
+Phases 10-12 should make the CLI prototype playable and persistent.
 
-Phases 16-18 should add long-term attachment and match-day tension.
+Phases 13-16 should make the prototype risky and recognizable as a climb.
 
-Phases 19-20 should move to UI only after the gameplay loop is already worth presenting.
+Phases 17-19 should add long-term attachment, imperfect information, and match-day tension.
+
+Phase 20 should prepare the UI boundary only after the gameplay loop is already worth presenting. A Web Shell MVP should come after Phase 20 unless the roadmap is explicitly revised.
 
 This roadmap should be revised after every completed phase. It is better to rework a weak phase than to add a new system on top of it.

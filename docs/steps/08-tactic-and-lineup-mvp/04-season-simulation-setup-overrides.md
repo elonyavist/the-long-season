@@ -13,7 +13,8 @@ This is the first point where output may change. The implementation should prove
 ## What to implement
 
 - Extend `simulateSeason` input with optional setup overrides keyed by stable club ID or explicit ordered override entries.
-- Apply overrides when building match team contexts for fixtures.
+- Apply overrides by calling `buildTacticTeamContext` when building match team contexts for fixtures.
+- Preserve the builder contract: `directness`, `pressing`, `width`, and `risk` map to current match-context tactical distribution inputs; `mentality` remains validated setup data with no separate effect in this step.
 - Keep default behavior unchanged when no override is provided.
 - Ensure setup override order is explicit and deterministic.
 - Add tests proving:

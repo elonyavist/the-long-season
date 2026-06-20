@@ -23,6 +23,7 @@ This keeps the first tactic implementation testable without adding new match mec
   - pressing;
   - width;
   - risk.
+- Accept the domain tactic `mentality` key as validated setup data, but do not invent a separate match effect for it in this MVP unless a later step explicitly documents that mapping.
 - Derive `TeamStrength` from the selected lineup using existing `deriveTeamStrength`.
 - Return an engine team context compatible with current `MatchContext`/season simulation inputs.
 - Add typed errors for invalid selected setup.

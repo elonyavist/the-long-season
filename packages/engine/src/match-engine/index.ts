@@ -80,3 +80,11 @@ export {
   type TeamStrengthDepartment,
   type TeamStrengthErrorCode,
 } from "./team-strength.ts";
+
+export {
+  buildTacticTeamContext,
+  tacticToMatchDistribution,
+  TacticTeamContextError,
+  type BuildTacticTeamContextInput,
+  type TacticTeamContextErrorCode,
+} from "./tactic-team-context.ts";

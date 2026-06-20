@@ -21,6 +21,7 @@ export {
   type SimulateSeasonErrorCode,
   type SimulateSeasonInput,
   type SimulateSeasonResult,
+  type SimulateSeasonSetupOverride,
   type SimulateSeasonTeamInput,
 } from "./use-cases/simulate-season.ts";
 export {

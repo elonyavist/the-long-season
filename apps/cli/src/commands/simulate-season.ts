@@ -11,11 +11,15 @@ import {
   type PlayerMatchStatRegistration,
   type PlayerMatchStatRow,
   type RoleWeightProfile,
+  type SimulateSeasonSetupOverride,
   type TeamStrength,
 } from "@game/engine";
 
 /** Fixed seed used when the user does not pass `--seed`. */
 export const DEFAULT_SIMULATE_SEASON_SEED = "demo-001";
+
+/** Deterministic tactic/lineup demo profile supported by the CLI MVP. */
+export const DEMO_SETUP_PROFILE_PRO01_ATTACKING = "pro01-attacking";
 
 /**
  * Minimal IO adapter used by command tests.
@@ -41,12 +45,15 @@ export async function runSimulateSeasonCommand(
 
   if (!parsed.ok) {
     io.stderr(parsed.message);
-    io.stderr("Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>]");
+    io.stderr(
+      "Usage: pnpm cli simulate-season [--seed=<seed>] [--round=<roundNumber>] [--fixture=<fixtureId>] [--setup-demo=pro01-attacking]",
+    );
     return 1;
   }
 
   const league = createFakeLeagueSystem();
-  const result = simulateSeasonForCli(league, parsed.seed);
+  const setupDemo = parsed.setupDemo === undefined ? undefined : buildSetupDemo(league, parsed.setupDemo);
+  const result = simulateSeasonForCli(league, parsed.seed, setupDemo);
 
   if (parsed.roundNumber !== undefined && findRound(result.rounds, parsed.roundNumber) === undefined) {
     io.stderr(`Round not found: ${parsed.roundNumber}`);
@@ -59,14 +66,14 @@ export async function runSimulateSeasonCommand(
   }
 
   if (parsed.fixtureId !== undefined) {
-    for (const line of formatFixtureOnlyOutput(league, result, parsed.seed, parsed.fixtureId)) {
+    for (const line of formatFixtureOnlyOutput(league, result, parsed.seed, parsed.fixtureId, setupDemo)) {
       io.stdout(line);
     }
 
     return 0;
   }
 
-  for (const line of formatSeasonOutput(league, result, parsed.seed)) {
+  for (const line of formatSeasonOutput(league, result, parsed.seed, setupDemo)) {
     io.stdout(line);
   }
 
@@ -96,6 +103,7 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let seed = DEFAULT_SIMULATE_SEASON_SEED;
   let roundNumber: number | undefined;
   let fixtureId: string | undefined;
+  let setupDemo: SetupDemoProfileKey | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -175,10 +183,34 @@ function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--setup-demo") {
+      const value = args[index + 1];
+      const parsedSetupDemo = parseSetupDemo(value);
+
+      if (!parsedSetupDemo.ok) {
+        return parsedSetupDemo;
+      }
+
+      setupDemo = parsedSetupDemo.setupDemo;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--setup-demo=")) {
+      const parsedSetupDemo = parseSetupDemo(arg.slice("--setup-demo=".length));
+
+      if (!parsedSetupDemo.ok) {
+        return parsedSetupDemo;
+      }
+
+      setupDemo = parsedSetupDemo.setupDemo;
+      continue;
+    }
+
     return { ok: false, message: `Unknown argument: ${arg}` };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId };
+  return { ok: true, seed, roundNumber, fixtureId, setupDemo };
 }
 
 /**
@@ -212,9 +244,28 @@ function parseFixtureId(value: string | undefined): ParsedFixtureId {
 }
 
 /**
+ * Parses the deterministic setup-demo profile key.
+ */
+function parseSetupDemo(value: string | undefined): ParsedSetupDemo {
+  if (value === undefined || value.length === 0) {
+    return { ok: false, message: "--setup-demo requires a supported value: pro01-attacking" };
+  }
+
+  if (value !== DEMO_SETUP_PROFILE_PRO01_ATTACKING) {
+    return { ok: false, message: `Unsupported --setup-demo value: ${value}. Supported values: pro01-attacking` };
+  }
+
+  return { ok: true, setupDemo: value };
+}
+
+/**
  * Simulates the fake league season using currently exported engine primitives.
  */
-function simulateSeasonForCli(league: FakeLeagueSystem, seed: string): CliSeasonResult {
+function simulateSeasonForCli(
+  league: FakeLeagueSystem,
+  seed: string,
+  setupDemo: CliSetupDemo | undefined,
+): CliSeasonResult {
   const result = simulateSeason({
     seed,
     seasonId: league.seasonId,
@@ -222,6 +273,7 @@ function simulateSeasonForCli(league: FakeLeagueSystem, seed: string): CliSeason
     clubIds: league.clubIds,
     seasonStartDate: league.seasonStartDate,
     teamsByClubId: createTeamsByClubId(league),
+    ...(setupDemo === undefined ? {} : { setupOverrides: [setupDemo.override] }),
     matchEngineConfig: league.matchEngineConfig,
     tableRules: league.tableRules,
   });
@@ -274,15 +326,23 @@ function formatFixtureOnlyOutput(
   result: CliSeasonResult,
   seed: string,
   fixtureValue: string,
+  setupDemo: CliSetupDemo | undefined,
 ): readonly string[] {
-  return [
+  const lines = [
     "The Long Season fixture detail",
     `Seed: ${seed}`,
     `Fixture: ${fixtureValue}`,
     `Competition: ${league.competition.name}`,
-    "",
-    ...formatFixtureDetailOutput(league, result, fixtureValue),
   ];
+
+  if (setupDemo !== undefined) {
+    lines.push(...formatSetupDemoLines(league, setupDemo));
+  }
+
+  lines.push("");
+  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue));
+
+  return lines;
 }
 
 /**
@@ -585,15 +645,25 @@ function createTeamsByClubId(league: FakeLeagueSystem): Readonly<Record<ClubId, 
 /**
  * Formats the complete deterministic command output.
  */
-function formatSeasonOutput(league: FakeLeagueSystem, result: CliSeasonResult, seed: string): readonly string[] {
+function formatSeasonOutput(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  seed: string,
+  setupDemo: CliSetupDemo | undefined,
+): readonly string[] {
   const lines: string[] = [
     "The Long Season simulated season",
     `Seed: ${seed}`,
     `Competition: ${league.competition.name}`,
-    "",
-    "Final table:",
-    "Pos Club          P  W  D  L  GF GA GD  Pts",
   ];
+
+  if (setupDemo !== undefined) {
+    lines.push(...formatSetupDemoLines(league, setupDemo));
+  }
+
+  lines.push("");
+  lines.push("Final table:");
+  lines.push("Pos Club          P  W  D  L  GF GA GD  Pts");
 
   for (const row of result.table) {
     lines.push(formatTableRow(row, league.clubsById));
@@ -613,6 +683,123 @@ function formatSeasonOutput(league: FakeLeagueSystem, result: CliSeasonResult, s
   lines.push(`Worst attack: ${formatSummaryRow(result.worstAttack, league.clubsById, "GF")}`);
 
   return lines;
+}
+
+/**
+ * Builds the single deterministic selected setup used for CLI inspection.
+ */
+function buildSetupDemo(league: FakeLeagueSystem, profileKey: SetupDemoProfileKey): CliSetupDemo {
+  switch (profileKey) {
+    case DEMO_SETUP_PROFILE_PRO01_ATTACKING:
+      return buildPro01AttackingSetupDemo(league);
+  }
+}
+
+/**
+ * Builds an attacking PRO01 demo setup from generated fake content.
+ */
+function buildPro01AttackingSetupDemo(league: FakeLeagueSystem): CliSetupDemo {
+  const clubId = league.clubIds[0];
+
+  if (clubId === undefined) {
+    throw new Error("Cannot build setup demo without a generated club");
+  }
+
+  const baseLineup = league.lineupsByClubId[clubId];
+
+  if (baseLineup === undefined) {
+    throw new Error(`Cannot build setup demo without a lineup for club: ${clubId}`);
+  }
+
+  const roleChanges: CliSetupDemoRoleChange[] = [];
+  const selectedSlots = baseLineup.map((slot) => {
+    const roleKey = setupDemoRoleKey(slot);
+
+    if (slot.roleKey !== roleKey) {
+      roleChanges.push({
+        slotKey: slot.slotId,
+        playerId: slot.playerId,
+        fromRoleKey: slot.roleKey,
+        toRoleKey: roleKey,
+      });
+    }
+
+    return {
+      slotKey: slot.slotId,
+      playerId: slot.playerId,
+      roleKey,
+    };
+  });
+
+  const tactic: SimulateSeasonSetupOverride["tactic"] = {
+    mentality: "attacking",
+    pressing: 0.85,
+    directness: 0.75,
+    width: 0.8,
+    risk: 0.7,
+  };
+
+  return {
+    profileKey: DEMO_SETUP_PROFILE_PRO01_ATTACKING,
+    clubId,
+    tactic,
+    roleChanges,
+    override: {
+      clubId,
+      lineup: {
+        clubId,
+        slots: selectedSlots,
+      },
+      tactic,
+      requiredLineupSize: baseLineup.length,
+      players: league.players,
+      roleWeights: league.roleWeights,
+      playerStates: league.playerStates,
+    },
+  };
+}
+
+/**
+ * Returns the selected role key for the PRO01 attacking demo.
+ */
+function setupDemoRoleKey(slot: FakeLeagueSystem["lineupsByClubId"][ClubId][number]): string {
+  if (slot.slotId === "slot:08" || slot.slotId === "slot:09") {
+    return "attacker";
+  }
+
+  return slot.roleKey;
+}
+
+/**
+ * Formats the applied setup demo context for season and fixture outputs.
+ */
+function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSetupDemo): readonly string[] {
+  const lines = [
+    `Setup demo: ${setupDemo.profileKey}`,
+    `Selected club: ${clubLabel(setupDemo.clubId, league.clubsById)}`,
+    `Tactic: mentality=${setupDemo.tactic.mentality} pressing=${formatTacticKnob(setupDemo.tactic.pressing)} directness=${formatTacticKnob(setupDemo.tactic.directness)} width=${formatTacticKnob(setupDemo.tactic.width)} risk=${formatTacticKnob(setupDemo.tactic.risk)}`,
+    "Lineup role changes:",
+  ];
+
+  if (setupDemo.roleChanges.length === 0) {
+    lines.push("  none");
+    return lines;
+  }
+
+  for (const change of setupDemo.roleChanges) {
+    lines.push(
+      `  ${change.slotKey}: ${playerLabel(change.playerId, league.players)} ${change.fromRoleKey} -> ${change.toRoleKey}`,
+    );
+  }
+
+  return lines;
+}
+
+/**
+ * Formats a tactic knob with a stable precision for CLI inspection.
+ */
+function formatTacticKnob(value: number): string {
+  return value.toFixed(2);
 }
 
 /**
@@ -790,6 +977,7 @@ type ParsedSimulateSeasonArgs =
       readonly seed: string;
       readonly roundNumber: number | undefined;
       readonly fixtureId: string | undefined;
+      readonly setupDemo: SetupDemoProfileKey | undefined;
     }
   | {
       readonly ok: false;
@@ -817,6 +1005,50 @@ type ParsedFixtureId =
       readonly ok: false;
       readonly message: string;
     };
+
+/** Parsed setup-demo argument result. */
+type ParsedSetupDemo =
+  | {
+      readonly ok: true;
+      readonly setupDemo: SetupDemoProfileKey;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+/** Supported deterministic setup-demo profile keys. */
+type SetupDemoProfileKey = typeof DEMO_SETUP_PROFILE_PRO01_ATTACKING;
+
+/**
+ * CLI-owned description of the deterministic selected setup demo.
+ */
+interface CliSetupDemo {
+  /** Stable profile key requested by the user. */
+  readonly profileKey: SetupDemoProfileKey;
+  /** Club whose setup is overridden. */
+  readonly clubId: ClubId;
+  /** Tactic setup applied to the selected club. */
+  readonly tactic: SimulateSeasonSetupOverride["tactic"];
+  /** Role changes applied relative to the generated fake lineup. */
+  readonly roleChanges: readonly CliSetupDemoRoleChange[];
+  /** Engine input passed through `simulateSeason.setupOverrides`. */
+  readonly override: SimulateSeasonSetupOverride;
+}
+
+/**
+ * One selected-lineup role change rendered by the CLI inspection output.
+ */
+interface CliSetupDemoRoleChange {
+  /** Slot key changed by the demo setup. */
+  readonly slotKey: string;
+  /** Player occupying the changed slot. */
+  readonly playerId: PlayerId;
+  /** Original fake-content role key. */
+  readonly fromRoleKey: string;
+  /** Selected demo role key. */
+  readonly toRoleKey: string;
+}
 
 /**
  * Aggregate team context used by the CLI command.

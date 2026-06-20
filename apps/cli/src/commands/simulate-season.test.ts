@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { DEFAULT_SIMULATE_SEASON_SEED, runSimulateSeasonCommand } from "./simulate-season.ts";
+import {
+  DEFAULT_SIMULATE_SEASON_SEED,
+  DEMO_SETUP_PROFILE_PRO01_ATTACKING,
+  runSimulateSeasonCommand,
+} from "./simulate-season.ts";
 
 /**
  * CLI simulate-season tests exercise argument parsing and deterministic output
@@ -108,6 +112,56 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.includes("  Player18 No05       PRO18 0 0  0   0  0"), true);
 });
 
+test("simulate-season applies the deterministic tactic and lineup setup demo", async () => {
+  const defaultIo = captureIo();
+  const demoIo = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--seed=demo-001"], defaultIo), 0);
+  assert.equal(
+    await runSimulateSeasonCommand(["--seed=demo-001", `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`], demoIo),
+    0,
+  );
+
+  assert.equal(demoIo.stderrLines.length, 0);
+  assert.equal(demoIo.stdoutLines.includes(`Setup demo: ${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`), true);
+  assert.equal(demoIo.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(
+    demoIo.stdoutLines.includes("Tactic: mentality=attacking pressing=0.85 directness=0.75 width=0.80 risk=0.70"),
+    true,
+  );
+  assert.equal(demoIo.stdoutLines.includes("Lineup role changes:"), true);
+  assert.equal(demoIo.stdoutLines.includes("  slot:08: Player01 No08 midfielder -> attacker"), true);
+  assert.equal(demoIo.stdoutLines.includes("  slot:09: Player01 No09 midfielder -> attacker"), true);
+  assert.equal(demoIo.stdoutLines.includes("Final table:"), true);
+  assert.notDeepEqual(demoIo.stdoutLines, defaultIo.stdoutLines);
+});
+
+test("same seed and setup demo produce same tactic inspection output", async () => {
+  const first = captureIo();
+  const second = captureIo();
+  const args = ["--seed=repeatable-setup-demo", "--setup-demo", DEMO_SETUP_PROFILE_PRO01_ATTACKING];
+
+  assert.equal(await runSimulateSeasonCommand(args, first), 0);
+  assert.equal(await runSimulateSeasonCommand(args, second), 0);
+  assert.deepEqual(first.stdoutLines, second.stdoutLines);
+});
+
+test("simulate-season fixture detail can include setup demo context", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", "--fixture=fixture:000001", `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
+  assert.equal(io.stdoutLines.includes(`Setup demo: ${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), false);
+  assert.equal(io.stdoutLines.includes("Events:"), true);
+  assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
+});
+
 test("simulate-season fixture detail prints durable causal defender context for blocks", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000002"], io);
@@ -158,6 +212,22 @@ test("simulate-season rejects invalid fixture arguments", async () => {
   assert.equal(exitCode, 1);
   assert.equal(io.stdoutLines.length, 0);
   assert.equal(io.stderrLines[0], "--fixture requires a namespaced fixture ID");
+});
+
+test("simulate-season rejects invalid setup demo arguments", async () => {
+  const missing = captureIo();
+  const unsupported = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--setup-demo="], missing), 1);
+  assert.equal(missing.stdoutLines.length, 0);
+  assert.equal(missing.stderrLines[0], "--setup-demo requires a supported value: pro01-attacking");
+
+  assert.equal(await runSimulateSeasonCommand(["--setup-demo=balanced-pro02"], unsupported), 1);
+  assert.equal(unsupported.stdoutLines.length, 0);
+  assert.equal(
+    unsupported.stderrLines[0],
+    "Unsupported --setup-demo value: balanced-pro02. Supported values: pro01-attacking",
+  );
 });
 
 test("simulate-season exits nonzero for a missing fixture", async () => {
