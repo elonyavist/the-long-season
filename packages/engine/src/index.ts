@@ -13,6 +13,23 @@ export {
   type ApplyCareerPermanentTransferInput,
   type ApplyCareerPermanentTransferResult,
 } from "./career/apply-career-transfer.ts";
+export {
+  findNextCareerFixture,
+  type NextCareerFixtureFound,
+  type NextCareerFixtureInvalid,
+  type NextCareerFixtureInvalidReason,
+  type NextCareerFixtureNone,
+  type NextCareerFixtureResult,
+} from "./career/next-fixture.ts";
+export {
+  progressNextCareerFixture,
+  type ProgressCareerFixtureAdvanced,
+  type ProgressCareerFixtureInvalid,
+  type ProgressCareerFixtureInvalidReason,
+  type ProgressCareerFixtureNone,
+  type ProgressCareerFixtureResult,
+  type ProgressNextCareerFixtureInput,
+} from "./career/progress-fixture.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
   ApplyMatchReportToFixtureError,

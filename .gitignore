@@ -39,4 +39,5 @@ target/
 
 # Local game/runtime data
 saves/
+apps/cli/saves/
 *.save.json
