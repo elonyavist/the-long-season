@@ -312,7 +312,7 @@ function playerLabel(playerId: PlayerId, gameState: CliGameState): string {
 }
 
 function clubLabel(clubId: ClubId, gameState: CliGameState): string {
-  return gameState.clubs[clubId]?.shortName ?? String(clubId);
+  return gameState.clubs[clubId]?.name ?? String(clubId);
 }
 
 function money(value: number): CliMoney {

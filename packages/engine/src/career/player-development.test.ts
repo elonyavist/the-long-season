@@ -1,0 +1,432 @@
+import assert from "node:assert/strict";
+import { test } from "vitest";
+
+import {
+  CAREER_STATE_SCHEMA_VERSION,
+  abilityValue,
+  clubId,
+  createCareerState,
+  createMarketState,
+  gameDate,
+  playerId,
+  saveId,
+  seasonId,
+  stateValue,
+  type CareerState,
+  type Club,
+  type ClubId,
+  type GameState,
+  type Player,
+  type PlayerAbilities,
+  type PlayerDynamicState,
+  type PlayerId,
+  type PlayerPosition,
+} from "@game/domain";
+
+import { developPlayersForSeason } from "./player-development.ts";
+
+/**
+ * Player-development tests protect the Phase 28 growth model before decline
+ * and long-run reporting are layered on top.
+ */
+
+test("developPlayersForSeason grows an ordinary young player deterministically", () => {
+  const young = playerId("player:young");
+  const careerState = careerStateFixture([
+    playerFixture(young, "st", 19, abilitySet(8), abilitySet(11)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "development-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const developed = requiredPlayer(result.careerState, young);
+
+  assert.equal(result.changes[0]?.playerId, young);
+  assert.equal(result.changes[0]?.age, 19);
+  assert.equal(result.changes[0]?.improvedAbilityCount > 0, true);
+  assert.equal(developed.abilities.technical.finishing > 8, true);
+  assert.equal(developed.abilities.technical.finishing <= 11, true);
+});
+
+test("developPlayersForSeason gives bigger growth to the same young player with more potential room", () => {
+  const player = playerId("player:room-test");
+  const ordinary = developPlayersForSeason({
+    careerState: careerStateFixture([playerFixture(player, "cm", 18, abilitySet(8), abilitySet(11))]),
+    worldSeed: "same-realization-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const seriousProspect = developPlayersForSeason({
+    careerState: careerStateFixture([playerFixture(player, "cm", 18, abilitySet(8), abilitySet(16))]),
+    worldSeed: "same-realization-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal((seriousProspect.changes[0]?.totalGrowth ?? 0) > (ordinary.changes[0]?.totalGrowth ?? 0), true);
+});
+
+test("developPlayersForSeason gives a rare prodigy upside without exceeding potential", () => {
+  const prodigy = playerId("player:rare-prodigy");
+  const careerState = careerStateFixture([
+    playerFixture(prodigy, "st", 17, abilitySet(6), abilitySet(18)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "rare-prodigy-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const developed = requiredPlayer(result.careerState, prodigy);
+
+  assert.equal((result.changes[0]?.totalGrowth ?? 0) > 1, true);
+  assert.equal(developed.abilities.technical.finishing <= 18, true);
+  assert.equal(developed.abilities.physical.pace <= 18, true);
+});
+
+test("developPlayersForSeason does not grow a peak-age senior attacker in the growth-only step", () => {
+  const senior = playerId("player:senior");
+  const careerState = careerStateFixture([
+    playerFixture(senior, "st", 28, abilitySet(12), abilitySet(16)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "senior-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal(result.changes[0]?.totalGrowth, 0);
+  assert.deepEqual(requiredPlayer(result.careerState, senior).abilities, requiredPlayer(careerState, senior).abilities);
+});
+
+test("developPlayersForSeason produces identical output for the same seed and season", () => {
+  const player = playerId("player:deterministic");
+  const careerState = careerStateFixture([
+    playerFixture(player, "rw", 20, abilitySet(8), abilitySet(14)),
+  ]);
+
+  const first = developPlayersForSeason({
+    careerState,
+    worldSeed: "deterministic-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const second = developPlayersForSeason({
+    careerState,
+    worldSeed: "deterministic-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.deepEqual(second, first);
+});
+
+test("developPlayersForSeason keeps growth role-relevant for an attacker", () => {
+  const attacker = playerId("player:role-relevant");
+  const careerState = careerStateFixture([
+    playerFixture(attacker, "st", 19, abilitySet(8), abilitySet(14)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "role-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const before = requiredPlayer(careerState, attacker);
+  const after = requiredPlayer(result.careerState, attacker);
+  const finishingGrowth = after.abilities.technical.finishing - before.abilities.technical.finishing;
+  const tacklingGrowth = after.abilities.technical.tackling - before.abilities.technical.tackling;
+
+  assert.equal(finishingGrowth > tacklingGrowth, true);
+});
+
+test("developPlayersForSeason declines old outfield physical ability before technical ability", () => {
+  const defender = playerId("player:old-defender");
+  const careerState = careerStateFixture([
+    playerFixture(defender, "cb", 34, abilitySet(12), abilitySet(12)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "decline-defender-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const before = requiredPlayer(careerState, defender);
+  const after = requiredPlayer(result.careerState, defender);
+  const paceDecline = before.abilities.physical.pace - after.abilities.physical.pace;
+  const passingDecline = before.abilities.technical.passing - after.abilities.technical.passing;
+
+  assert.equal((result.changes[0]?.totalDecline ?? 0) > 0, true);
+  assert.equal(paceDecline > passingDecline, true);
+});
+
+test("developPlayersForSeason uses later decline windows for goalkeepers", () => {
+  const earlyKeeper = playerId("player:early-keeper");
+  const decliningKeeper = playerId("player:declining-keeper");
+
+  const early = developPlayersForSeason({
+    careerState: careerStateFixture([playerFixture(earlyKeeper, "gk", 32, abilitySet(12), abilitySet(12))]),
+    worldSeed: "keeper-decline-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const declining = developPlayersForSeason({
+    careerState: careerStateFixture([playerFixture(decliningKeeper, "gk", 35, abilitySet(12), abilitySet(12))]),
+    worldSeed: "keeper-decline-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal(early.changes[0]?.totalDecline, 0);
+  assert.equal((declining.changes[0]?.totalDecline ?? 0) > 0, true);
+  assert.equal(requiredPlayer(declining.careerState, decliningKeeper).abilities.goalkeeping.footwork < 12, true);
+});
+
+test("developPlayersForSeason declines late-career attackers", () => {
+  const attacker = playerId("player:old-attacker");
+  const careerState = careerStateFixture([
+    playerFixture(attacker, "st", 33, abilitySet(13), abilitySet(13)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "decline-attacker-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const after = requiredPlayer(result.careerState, attacker);
+
+  assert.equal((result.changes[0]?.declinedAbilityCount ?? 0) > 0, true);
+  assert.equal(after.abilities.physical.pace < 13, true);
+});
+
+test("developPlayersForSeason does not decline young players", () => {
+  const young = playerId("player:no-decline-young");
+  const careerState = careerStateFixture([
+    playerFixture(young, "cb", 20, abilitySet(10), abilitySet(10)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "no-decline-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal(result.changes[0]?.totalDecline, 0);
+  assert.deepEqual(requiredPlayer(result.careerState, young).abilities, requiredPlayer(careerState, young).abilities);
+});
+
+test("developPlayersForSeason creates varied deterministic paths for similar prospects", () => {
+  const first = playerId("player:similar-01");
+  const second = playerId("player:similar-02");
+  const third = playerId("player:similar-03");
+  const careerState = careerStateFixture([
+    playerFixture(first, "cm", 18, abilitySet(8), abilitySet(15)),
+    playerFixture(second, "cm", 18, abilitySet(8), abilitySet(15)),
+    playerFixture(third, "cm", 18, abilitySet(8), abilitySet(15)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "varied-prospects-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const growthValues = result.changes.map((change) => change.totalGrowth);
+
+  assert.equal(new Set(growthValues).size > 1, true);
+});
+
+test("developPlayersForSeason never lets long-run growth exceed true potential", () => {
+  const prospect = playerId("player:bounded-prospect");
+  let careerState = careerStateFixture([
+    playerFixture(prospect, "st", 17, abilitySet(8), abilitySet(11)),
+  ]);
+
+  for (let seasonNumber = 1; seasonNumber <= 7; seasonNumber += 1) {
+    careerState = developPlayersForSeason({
+      careerState,
+      worldSeed: "bounded-world",
+      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+    }).careerState;
+    careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
+  }
+
+  const player = requiredPlayer(careerState, prospect);
+  assert.equal(player.abilities.technical.finishing <= 11, true);
+  assert.equal(player.abilities.physical.pace <= 11, true);
+});
+
+test("developPlayersForSeason does not turn every high-upside youth into a star", () => {
+  let careerState = careerStateFixture([
+    playerFixture(playerId("player:sample-01"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-02"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-03"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-04"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-05"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-06"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-07"), "st", 17, abilitySet(6), abilitySet(18)),
+    playerFixture(playerId("player:sample-08"), "st", 17, abilitySet(6), abilitySet(18)),
+  ]);
+
+  for (let seasonNumber = 1; seasonNumber <= 7; seasonNumber += 1) {
+    careerState = developPlayersForSeason({
+      careerState,
+      worldSeed: "not-all-stars-world",
+      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+    }).careerState;
+    careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
+  }
+
+  let firstDivisionReadyCount = 0;
+  for (const playerIdValue of careerState.gameState.playerIds) {
+    if (requiredPlayer(careerState, playerIdValue).abilities.technical.finishing >= 15) {
+      firstDivisionReadyCount += 1;
+    }
+  }
+
+  assert.equal(firstDivisionReadyCount < careerState.gameState.playerIds.length, true);
+});
+
+function careerStateFixture(players: readonly Player[]): CareerState {
+  const selectedClubId = clubId("club:selected");
+
+  return createCareerState({
+    saveId: saveId("save:player-development"),
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    selectedClubId,
+    gameState: gameStateFixture(selectedClubId, players),
+    marketState: createMarketState({
+      clubBudgets: {},
+      clubBudgetIds: [],
+    }),
+    transferHistory: [],
+  });
+}
+
+function careerStateWithCurrentDate(careerState: CareerState, currentDate: GameState["calendar"]["currentDate"]): CareerState {
+  return createCareerState({
+    ...careerState,
+    gameState: {
+      ...careerState.gameState,
+      calendar: {
+        ...careerState.gameState.calendar,
+        currentDate,
+      },
+    },
+  });
+}
+
+function gameStateFixture(selectedClubId: ClubId, players: readonly Player[]): GameState {
+  const playersById: Partial<Record<PlayerId, Player>> = {};
+  const playerIds: PlayerId[] = [];
+  const playerStates: Partial<Record<PlayerId, PlayerDynamicState>> = {};
+
+  for (const player of players) {
+    playersById[player.id] = player;
+    playerIds.push(player.id);
+    playerStates[player.id] = playerStateFixture();
+  }
+
+  return {
+    meta: {
+      seed: "player-development-test",
+      rngAlgorithmVersion: "test",
+      saveSchemaVersion: 1,
+    },
+    calendar: {
+      currentDate: gameDate(20_000),
+      currentSeasonId: seasonId("season:0001"),
+    },
+    players: playersById as GameState["players"],
+    playerIds,
+    playerStates: playerStates as GameState["playerStates"],
+    clubs: {
+      [selectedClubId]: clubFixture(selectedClubId, playerIds),
+    },
+    clubIds: [selectedClubId],
+    fixtures: {},
+    fixtureIds: [],
+  };
+}
+
+function clubFixture(id: ClubId, playerIds: readonly PlayerId[]): Club {
+  return {
+    id,
+    name: String(id),
+    shortName: String(id).slice("club:".length).toUpperCase(),
+    category: "third_division",
+    reputation: 5,
+    playerIds,
+  };
+}
+
+function playerFixture(
+  id: PlayerId,
+  primaryPosition: PlayerPosition,
+  ageYears: number,
+  abilities: PlayerAbilities,
+  potential: PlayerAbilities,
+): Player {
+  return {
+    id,
+    firstName: String(id),
+    lastName: "Development",
+    birthDate: gameDate(20_000 - ageYears * 365),
+    naturalPositions: [primaryPosition],
+    abilities,
+    potential,
+  };
+}
+
+function playerStateFixture(): PlayerDynamicState {
+  return {
+    fitness: stateValue(100),
+    form: stateValue(50),
+    morale: stateValue(50),
+  };
+}
+
+function abilitySet(value: number): PlayerAbilities {
+  const ability = abilityValue(value);
+
+  return {
+    technical: {
+      finishing: ability,
+      passing: ability,
+      longPassing: ability,
+      crossing: ability,
+      dribbling: ability,
+      technique: ability,
+      tackling: ability,
+      penalties: ability,
+      freeKicks: ability,
+    },
+    physical: {
+      pace: ability,
+      strength: ability,
+      stamina: ability,
+      agility: ability,
+      heading: ability,
+    },
+    mental: {
+      positioning: ability,
+      vision: ability,
+      anticipation: ability,
+      composure: ability,
+      determination: ability,
+      leadership: ability,
+    },
+    goalkeeping: {
+      reflexes: ability,
+      handling: ability,
+      rushingOut: ability,
+      goalkeeperPositioning: ability,
+      footwork: ability,
+    },
+  };
+}
+
+function requiredPlayer(careerState: CareerState, id: PlayerId): Player {
+  const player = careerState.gameState.players[id];
+  if (player === undefined) {
+    throw new Error(`Missing player fixture: ${id}`);
+  }
+
+  return player;
+}

@@ -22,6 +22,13 @@ export {
   type NextCareerFixtureResult,
 } from "./career/next-fixture.ts";
 export {
+  generateNextSeasonCalendar,
+  type NextSeasonCalendarGenerated,
+  type NextSeasonCalendarInvalid,
+  type NextSeasonCalendarInvalidReason,
+  type NextSeasonCalendarResult,
+} from "./career/next-season-calendar.ts";
+export {
   progressNextCareerFixture,
   type ProgressCareerFixtureAdvanced,
   type ProgressCareerFixtureInvalid,
@@ -30,6 +37,25 @@ export {
   type ProgressCareerFixtureResult,
   type ProgressNextCareerFixtureInput,
 } from "./career/progress-fixture.ts";
+export {
+  developPlayersForSeason,
+  type PlayerDevelopmentChange,
+  type PlayerDevelopmentInput,
+  type PlayerDevelopmentResult,
+} from "./career/player-development.ts";
+export {
+  rolloverPlayersForNextSeason,
+  type PlayerSeasonRolloverInput,
+  type PlayerSeasonRolloverResult,
+} from "./career/player-season-rollover.ts";
+export {
+  assessCareerSeasonCompletion,
+  type CareerSeasonComplete,
+  type CareerSeasonCompletionInvalid,
+  type CareerSeasonCompletionInvalidReason,
+  type CareerSeasonCompletionResult,
+  type CareerSeasonIncomplete,
+} from "./career/season-completion.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
   ApplyMatchReportToFixtureError,

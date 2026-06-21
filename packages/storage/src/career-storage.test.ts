@@ -119,6 +119,46 @@ test("save then load preserves career match preparation", async () => {
   }
 });
 
+test("save then load preserves compact season history", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const pro01 = "club:pro01" as CareerState["selectedClubId"];
+  const state = createCareerState({
+    ...minimalCareerState(),
+    seasonHistory: [
+      {
+        sequenceNumber: 1,
+        seasonId: seasonId("season:2026"),
+        competitionId: "competition:demo" as NonNullable<CareerState["seasonHistory"]>[number]["competitionId"],
+        finalTable: [leagueTableRowFixture(1, pro01, 3)],
+        championClubId: pro01,
+        selectedClubFinish: leagueTableRowFixture(1, pro01, 3),
+        aggregateGoals: {
+          fixtureCount: 1,
+          totalGoals: 2,
+        },
+      },
+    ],
+  });
+
+  try {
+    await storage.saveCareer({
+      saveId: saveId("save:career-history"),
+      name: "Career History",
+      state,
+    });
+
+    const loaded = await storage.loadCareer(saveId("save:career-history"));
+
+    assert.deepEqual(loaded.seasonHistory, state.seasonHistory);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
 test("loading a missing career save throws a typed storage error", async () => {
   const directoryPath = await createTempSaveDirectory();
   const storage = new JsonCareerStorage({ directoryPath });
@@ -292,6 +332,26 @@ function playerStateFixture(): PlayerDynamicState {
     fitness: 100 as PlayerDynamicState["fitness"],
     form: 50 as PlayerDynamicState["form"],
     morale: 50 as PlayerDynamicState["morale"],
+  };
+}
+
+/** Builds a final-table row for season-history storage round trips. */
+function leagueTableRowFixture(
+  position: number,
+  clubId: CareerState["selectedClubId"],
+  points: number,
+): NonNullable<CareerState["seasonHistory"]>[number]["finalTable"][number] {
+  return {
+    position,
+    clubId,
+    played: 1,
+    wins: points === 3 ? 1 : 0,
+    draws: 0,
+    losses: points === 0 ? 1 : 0,
+    goalsFor: points === 3 ? 2 : 0,
+    goalsAgainst: points === 0 ? 2 : 0,
+    goalDifference: points === 3 ? 2 : -2,
+    points,
   };
 }
 

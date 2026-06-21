@@ -8,7 +8,6 @@ import {
   createMatchReport,
   buildTacticTeamContext,
   DEFAULT_FITNESS_RULES,
-  deriveTeamStrength,
   simulateSeason,
   simulateMatchWithManualTactics,
   TacticTeamContextError,
@@ -18,11 +17,8 @@ import {
   type MatchTeamContext,
   type PlayerMatchStatRegistration,
   type PlayerMatchStatRow,
-  type PlayerStateMultiplierCurves,
-  type RoleWeightProfile,
   type SimulateSeasonFixtureLineupOverride,
   type SimulateSeasonSetupOverride,
-  type TeamStrength,
 } from "@game/engine";
 import {
   createTranslator,
@@ -30,6 +26,11 @@ import {
   type Translator,
 } from "@game/i18n";
 import { formatFormationFitOutput } from "./simulate-season/formation-fit-output.ts";
+import {
+  createFakeSeasonInput,
+  createFakeTeamsByClubId,
+  type FakeCliTeamContext,
+} from "./fake-season-input.ts";
 import { formatMarketDemoOutput } from "./simulate-season/market-demo-output.ts";
 import {
   formatSupportedConditionDemoProfiles,
@@ -319,13 +320,9 @@ function simulateSeasonForCli(
   conditionDemo: CliConditionDemo | undefined,
   fixtureLineupOverride?: SimulateSeasonFixtureLineupOverride,
 ): CliSeasonResult {
+  const seasonInput = createFakeSeasonInput(league, seed);
   const result = simulateSeason({
-    seed,
-    seasonId: league.seasonId,
-    competitionId: league.competition.id,
-    clubIds: league.clubIds,
-    seasonStartDate: league.seasonStartDate,
-    teamsByClubId: createTeamsByClubId(league),
+    ...seasonInput,
     ...(setupDemo === undefined ? {} : { setupOverrides: [setupDemo.override] }),
     ...(fixtureLineupOverride === undefined ? {} : { fixtureLineupOverrides: [fixtureLineupOverride] }),
     ...(conditionDemo === undefined && fixtureLineupOverride === undefined
@@ -807,7 +804,7 @@ function buildManualTacticFixture(
     };
   }
 
-  const teamsByClubId = createTeamsByClubId(league);
+  const teamsByClubId = createFakeTeamsByClubId(league);
   const initialTeam = buildSetupOverrideContextForCli(initialSetupDemo.override);
   const targetTeam = buildSetupOverrideContextForCli(manualTacticSwitch.targetSetupDemo.override);
   const simulated = simulateMatchWithManualTactics(
@@ -1109,7 +1106,7 @@ function appendLineupRegistrations(
  */
 function formatPlayerMatchStatRow(row: PlayerMatchStatRow, fixture: Fixture, league: FakeLeagueSystem): string {
   const playerName = playerLabel(row.playerId, league.players).padEnd(19, " ");
-  const clubName = clubLabel(sideClubId(fixture, row.side), league.clubsById).padEnd(5, " ");
+  const clubName = clubLabel(sideClubId(fixture, row.side), league.clubsById).padEnd(20, " ");
 
   return [
     " ",
@@ -1174,46 +1171,6 @@ function sideClubId(fixture: Fixture, side: MatchEventSide): ClubId {
  */
 function oppositeSide(side: MatchEventSide): MatchEventSide {
   return side === "home" ? "away" : "home";
-}
-
-/**
- * Builds aggregate team contexts for all fake clubs.
- */
-function createTeamsByClubId(league: FakeLeagueSystem): Readonly<Record<ClubId, CliTeamContext>> {
-  const teamsByClubId: Record<ClubId, CliTeamContext> = {};
-  const roleWeights: Readonly<Record<string, RoleWeightProfile>> = league.roleWeights;
-
-  for (const clubId of league.clubIds) {
-    const lineup = league.lineupsByClubId[clubId];
-
-    if (lineup === undefined) {
-      throw new Error(`Missing fake lineup for club: ${clubId}`);
-    }
-
-    const typedLineup: readonly LineupSlot[] = lineup;
-    teamsByClubId[clubId] = {
-      clubId,
-      lineup: typedLineup,
-      players: league.players,
-      roleWeights,
-      stateMultiplierCurves: league.stateMultiplierCurves,
-      strength: deriveTeamStrength({
-        lineup: typedLineup,
-        players: league.players,
-        playerStates: league.playerStates,
-        roleWeights,
-        stateMultiplierCurves: league.stateMultiplierCurves,
-      }),
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-      },
-    };
-  }
-
-  return teamsByClubId;
 }
 
 /**
@@ -1821,7 +1778,7 @@ function formatMentality(mentality: string, text: Translator): string {
  * Formats one final table row.
  */
 function formatTableRow(row: LeagueTableRow, clubsById: Readonly<Record<ClubId, Club>>): string {
-  const clubName = clubLabel(row.clubId, clubsById).padEnd(12, " ");
+  const clubName = clubLabel(row.clubId, clubsById).padEnd(22, " ");
   const goalDifference = row.goalDifference >= 0 ? `+${row.goalDifference}` : String(row.goalDifference);
 
   return [
@@ -2053,10 +2010,10 @@ function formatSummaryRow(
 }
 
 /**
- * Reads a compact club label for CLI output.
+ * Reads the visible generated club name for CLI output.
  */
 function clubLabel(clubId: ClubId, clubsById: Readonly<Record<ClubId, Club>>): string {
-  return clubsById[clubId]?.shortName ?? String(clubId);
+  return clubsById[clubId]?.name ?? String(clubId);
 }
 
 /**
@@ -2184,15 +2141,7 @@ interface CliSetupDemoRoleChange {
 /**
  * Aggregate team context used by the CLI command.
  */
-interface CliTeamContext {
-  readonly clubId: ClubId;
-  readonly lineup: readonly LineupSlot[];
-  readonly players: FakeLeagueSystem["players"];
-  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
-  readonly stateMultiplierCurves: PlayerStateMultiplierCurves;
-  readonly strength: TeamStrength;
-  readonly tacticalDistribution: MatchTacticalDistributionInput;
-}
+type CliTeamContext = FakeCliTeamContext;
 
 /**
  * Minimal season result needed for CLI output.

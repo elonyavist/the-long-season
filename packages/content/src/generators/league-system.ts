@@ -134,7 +134,7 @@ export interface FakeLeagueSystemOptions {
  * const league = createFakeLeagueSystem({ worldSeed: "career-001" });
  */
 export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): FakeLeagueSystem {
-  const clubs = generateFakeClubs();
+  const clubs = generateFakeClubs(options.worldSeed === undefined ? {} : { seed: options.worldSeed });
   const players = generateFakePlayersForClubs(
     clubs.clubIds,
     options.worldSeed === undefined ? {} : { seed: options.worldSeed },

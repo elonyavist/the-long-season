@@ -240,5 +240,5 @@ function firstGeneratedClubId(league: FakeLeagueSystem, label: string): ClubId {
  * Reads a compact club label for CLI output.
  */
 function clubLabel(clubId: ClubId, league: FakeLeagueSystem): string {
-  return league.clubsById[clubId]?.shortName ?? String(clubId);
+  return league.clubsById[clubId]?.name ?? String(clubId);
 }

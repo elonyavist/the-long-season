@@ -229,6 +229,116 @@ test("createCareerState preserves saved selected-club match preparation", () => 
   assert.equal(career.matchPreparation?.tactic?.mentality, "balanced");
 });
 
+test("createCareerState preserves compact completed-season history", () => {
+  const pro01 = clubId("club:pro01");
+  const pro18 = clubId("club:pro18");
+
+  const career = createCareerState({
+    ...careerStateFixture(),
+    seasonHistory: [
+      {
+        sequenceNumber: 1,
+        seasonId: seasonId("season:0001"),
+        competitionId: competitionId("competition:0001"),
+        finalTable: [
+          leagueTableRowFixture(1, pro01, 3),
+          leagueTableRowFixture(2, pro18, 0),
+        ],
+        championClubId: pro01,
+        selectedClubFinish: leagueTableRowFixture(1, pro01, 3),
+        aggregateGoals: {
+          fixtureCount: 1,
+          totalGoals: 2,
+        },
+      },
+    ],
+  });
+
+  assert.equal(career.seasonHistory?.[0]?.seasonId, "season:0001");
+  assert.equal(career.seasonHistory?.[0]?.championClubId, pro01);
+  assert.equal(career.seasonHistory?.[0]?.selectedClubFinish.clubId, pro01);
+  assert.deepEqual(career.seasonHistory?.[0]?.aggregateGoals, { fixtureCount: 1, totalGoals: 2 });
+});
+
+test("createCareerState keeps old saves without season history valid", () => {
+  const career = createCareerState(careerStateFixture());
+
+  assert.equal(career.seasonHistory, undefined);
+});
+
+test("createCareerState rejects invalid season history", () => {
+  const pro01 = clubId("club:pro01");
+  const pro18 = clubId("club:pro18");
+  const validEntry = {
+    sequenceNumber: 1,
+    seasonId: seasonId("season:0001"),
+    competitionId: competitionId("competition:0001"),
+    finalTable: [
+      leagueTableRowFixture(1, pro01, 3),
+      leagueTableRowFixture(2, pro18, 0),
+    ],
+    championClubId: pro01,
+    selectedClubFinish: leagueTableRowFixture(1, pro01, 3),
+    aggregateGoals: {
+      fixtureCount: 1,
+      totalGoals: 2,
+    },
+  };
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        seasonHistory: [{ ...validEntry, sequenceNumber: 0 }],
+      }),
+    "invalid_season_history_sequence",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        seasonHistory: [validEntry, validEntry],
+      }),
+    "duplicate_season_history_sequence",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        seasonHistory: [{ ...validEntry, finalTable: [] }],
+      }),
+    "season_history_final_table_empty",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        seasonHistory: [{ ...validEntry, championClubId: pro18 }],
+      }),
+    "season_history_champion_not_first",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        seasonHistory: [
+          {
+            ...validEntry,
+            aggregateGoals: {
+              fixtureCount: -1,
+              totalGoals: 2,
+            },
+          },
+        ],
+      }),
+    "season_history_invalid_aggregate_goals",
+  );
+});
+
 test("createCareerState rejects invalid match-preparation references", () => {
   assertCareerStateError(
     () =>
@@ -499,6 +609,26 @@ function playerStateFixture(): PlayerDynamicState {
     fitness: stateValue(100),
     form: stateValue(50),
     morale: stateValue(50),
+  };
+}
+
+/** Builds a compact final-table row for season-history tests. */
+function leagueTableRowFixture(
+  position: number,
+  tableClubId: Club["id"],
+  points: number,
+): NonNullable<CareerState["seasonHistory"]>[number]["finalTable"][number] {
+  return {
+    position,
+    clubId: tableClubId,
+    played: 1,
+    wins: points === 3 ? 1 : 0,
+    draws: 0,
+    losses: points === 0 ? 1 : 0,
+    goalsFor: points === 3 ? 2 : 0,
+    goalsAgainst: points === 0 ? 2 : 0,
+    goalDifference: points === 3 ? 2 : -2,
+    points,
   };
 }
 

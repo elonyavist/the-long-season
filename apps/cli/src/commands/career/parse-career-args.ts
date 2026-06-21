@@ -78,6 +78,20 @@ export type ParsedCareerArgs =
       readonly seed: string;
       readonly saveId: CliSaveId;
       readonly language: SupportedLanguage;
+      readonly mode: "rolloverSeason";
+    }
+  | {
+      readonly ok: true;
+      readonly seed: string;
+      readonly saveId: CliSaveId;
+      readonly language: SupportedLanguage;
+      readonly mode: "developmentReport";
+    }
+  | {
+      readonly ok: true;
+      readonly seed: string;
+      readonly saveId: CliSaveId;
+      readonly language: SupportedLanguage;
       readonly mode: "newWorldPreview";
     }
   | {
@@ -101,6 +115,8 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
   let lineupDemo: LineupDemoProfileKey | undefined;
   let tacticDemo: SetupDemoProfileKey | undefined;
   let advanceNextFixture = false;
+  let rolloverSeason = false;
+  let developmentReport = false;
   let newWorldPreview = false;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -165,7 +181,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--apply-market-demo") {
-      if (inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        inspect ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -180,7 +206,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg.startsWith("--apply-market-demo=")) {
-      if (inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        inspect ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -194,7 +230,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--inspect") {
-      if (marketDemo !== undefined || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -203,7 +249,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--summary") {
-      if (marketDemo !== undefined || inspect || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        squad ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -212,7 +268,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--squad") {
-      if (marketDemo !== undefined || inspect || summary || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -221,7 +287,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--set-lineup-demo") {
-      if (marketDemo !== undefined || inspect || summary || squad || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -236,7 +312,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg.startsWith("--set-lineup-demo=")) {
-      if (marketDemo !== undefined || inspect || summary || squad || tacticDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -250,7 +336,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--set-tactic-demo") {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -265,7 +361,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg.startsWith("--set-tactic-demo=")) {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || advanceNextFixture || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -279,7 +385,17 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--advance-next-fixture") {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || newWorldPreview) {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -287,8 +403,26 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       continue;
     }
 
+    if (arg === "--rollover-season") {
+      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || developmentReport || newWorldPreview) {
+        return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
+      }
+
+      rolloverSeason = true;
+      continue;
+    }
+
+    if (arg === "--development-report") {
+      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || newWorldPreview) {
+        return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
+      }
+
+      developmentReport = true;
+      continue;
+    }
+
     if (arg === "--new-world-preview") {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture) {
+      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || developmentReport) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -362,6 +496,26 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       saveId,
       language,
       mode: "advanceNextFixture",
+    };
+  }
+
+  if (rolloverSeason) {
+    return {
+      ok: true,
+      seed,
+      saveId,
+      language,
+      mode: "rolloverSeason",
+    };
+  }
+
+  if (developmentReport) {
+    return {
+      ok: true,
+      seed,
+      saveId,
+      language,
+      mode: "developmentReport",
     };
   }
 

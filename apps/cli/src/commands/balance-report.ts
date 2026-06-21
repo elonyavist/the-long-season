@@ -3,15 +3,7 @@ import {
   createFakeLeagueSystem,
   defaultSeasonCalibrationTargets,
   strictFailureSmokeTargets,
-  type FakeLeagueSystem,
 } from "@game/content";
-import {
-  deriveTeamStrength,
-  type LineupSlot,
-  type RoleWeightProfile,
-  type SimulateSeasonInput,
-  type SimulateSeasonTeamInput,
-} from "@game/engine";
 import {
   createTranslator,
   formatSupportedLanguages,
@@ -26,6 +18,7 @@ import {
   type CalibrationReport,
   type CalibrationTarget,
 } from "@game/simulation-tools";
+import { createFakeSeasonInput } from "./fake-season-input.ts";
 
 /** Fixed seed prefix used when the user does not pass `--seed-prefix`. */
 export const DEFAULT_BALANCE_REPORT_SEED_PREFIX = "balance-demo";
@@ -67,7 +60,7 @@ export async function runBalanceReportCommand(
     seedPrefix: parsed.seedPrefix,
     seasonCount: parsed.seasonCount,
     targets: targetsForProfile(parsed.targetProfile),
-    createSeasonInput: (seed) => seasonInputForCli(league, seed),
+    createSeasonInput: (seed) => createFakeSeasonInput(league, seed),
   });
 
   for (const line of formatBalanceReportOutput(report, parsed.targetProfile, parsed.strict, text)) {
@@ -291,58 +284,6 @@ function targetsForProfile(profile: TargetProfile): readonly CalibrationTarget[]
 }
 
 /**
- * Builds one season simulation input from fake content and exported engine contracts.
- */
-function seasonInputForCli(league: FakeLeagueSystem, seed: string): SimulateSeasonInput {
-  return {
-    seed,
-    seasonId: league.seasonId,
-    competitionId: league.competition.id,
-    clubIds: league.clubIds,
-    seasonStartDate: league.seasonStartDate,
-    teamsByClubId: createTeamsByClubId(league),
-    matchEngineConfig: league.matchEngineConfig,
-    tableRules: league.tableRules,
-  };
-}
-
-/**
- * Builds aggregate team contexts for all fake clubs.
- */
-function createTeamsByClubId(league: FakeLeagueSystem): Readonly<Record<ClubId, SimulateSeasonTeamInput>> {
-  const teamsByClubId: Record<ClubId, SimulateSeasonTeamInput> = {};
-  const roleWeights: Readonly<Record<string, RoleWeightProfile>> = league.roleWeights;
-
-  for (const clubId of league.clubIds) {
-    const lineup = league.lineupsByClubId[clubId];
-
-    if (lineup === undefined) {
-      throw new Error(`Missing fake lineup for club: ${clubId}`);
-    }
-
-    const typedLineup: readonly LineupSlot[] = lineup;
-    teamsByClubId[clubId] = {
-      lineup: typedLineup,
-      strength: deriveTeamStrength({
-        lineup: typedLineup,
-        players: league.players,
-        playerStates: league.playerStates,
-        roleWeights,
-        stateMultiplierCurves: league.stateMultiplierCurves,
-      }),
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-      },
-    };
-  }
-
-  return teamsByClubId;
-}
-
-/**
  * Formats the complete deterministic report output.
  */
 function formatBalanceReportOutput(
@@ -456,4 +397,3 @@ type ParsedBalanceReportArgs =
     };
 
 /** Club ID type derived from fake content without importing domain directly. */
-type ClubId = FakeLeagueSystem["clubIds"][number];

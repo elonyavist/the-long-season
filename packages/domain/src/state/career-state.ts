@@ -1,4 +1,5 @@
-import type { ClubId, FixtureId, PlayerId, SaveId } from "../types/ids.ts";
+import type { LeagueTableRow } from "../entities/league-table.entity.ts";
+import type { ClubId, CompetitionId, FixtureId, PlayerId, SaveId, SeasonId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 import type { Money } from "../value-objects/money.ts";
 import { createSelectedLineup, createTacticSetup, type SelectedLineup, type TacticSetup } from "../entities/tactic.entity.ts";
@@ -52,6 +53,43 @@ export interface CareerMatchPreparation {
 }
 
 /**
+ * Compact aggregate goal facts for one archived career season.
+ *
+ * The archive stores structured numbers only. Presentation adapters can render
+ * goals per match or labels later through localization.
+ */
+export interface CareerSeasonAggregateGoals {
+  /** Number of played fixtures included in the archived season. */
+  readonly fixtureCount: number;
+  /** Total goals scored in those fixtures. */
+  readonly totalGoals: number;
+}
+
+/**
+ * Durable compact history for one completed season.
+ *
+ * The archive intentionally stores the final table snapshot and key facts, not
+ * rendered report text. This keeps saves language-agnostic and small enough for
+ * multi-season reports.
+ */
+export interface CareerSeasonArchiveEntry {
+  /** Deterministic 1-based history order inside the career save. */
+  readonly sequenceNumber: number;
+  /** Completed season ID. */
+  readonly seasonId: SeasonId;
+  /** Competition summarized by this entry. */
+  readonly competitionId: CompetitionId;
+  /** Final table snapshot at season end. */
+  readonly finalTable: readonly LeagueTableRow[];
+  /** Champion club from the final table. */
+  readonly championClubId: ClubId;
+  /** Final table row for the manager's selected club. */
+  readonly selectedClubFinish: LeagueTableRow;
+  /** Aggregate goal facts for the archived season. */
+  readonly aggregateGoals: CareerSeasonAggregateGoals;
+}
+
+/**
  * Minimal durable state for one manager career.
  *
  * `CareerState` wraps the current `GameState` instead of duplicating world data.
@@ -75,6 +113,8 @@ export interface CareerState {
   readonly transferHistory: readonly PermanentTransferHistoryEntry[];
   /** Optional saved match-preparation choices for the selected club. */
   readonly matchPreparation?: CareerMatchPreparation;
+  /** Ordered compact completed-season history. */
+  readonly seasonHistory?: readonly CareerSeasonArchiveEntry[];
 }
 
 /** Machine-readable career-state validation failure. */
@@ -89,6 +129,14 @@ export type CareerStateContractErrorCode =
   | "history_buying_club_not_found"
   | "history_selling_club_not_found"
   | "history_player_not_found"
+  | "invalid_season_history_sequence"
+  | "duplicate_season_history_sequence"
+  | "season_history_final_table_empty"
+  | "season_history_final_table_club_not_found"
+  | "season_history_champion_club_not_found"
+  | "season_history_champion_not_first"
+  | "season_history_selected_club_mismatch"
+  | "season_history_invalid_aggregate_goals"
   | "match_preparation_selected_club_mismatch"
   | "match_preparation_fixture_not_found"
   | "match_preparation_fixture_selected_club_missing"
@@ -173,6 +221,8 @@ export function createCareerState(input: CareerState): CareerState {
     transferHistory.push({ ...entry });
   }
 
+  const seasonHistory = createSeasonHistory(input);
+
   return {
     saveId: input.saveId,
     schemaVersion: input.schemaVersion,
@@ -181,6 +231,7 @@ export function createCareerState(input: CareerState): CareerState {
     gameState: input.gameState,
     marketState,
     transferHistory,
+    ...(seasonHistory.length === 0 ? {} : { seasonHistory }),
     ...(input.matchPreparation === undefined
       ? {}
       : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation) }),
@@ -243,6 +294,68 @@ function createCareerMatchPreparation(
     ...(tactic === undefined ? {} : { tactic }),
     updatedAt: input.updatedAt,
   };
+}
+
+function createSeasonHistory(input: CareerState): CareerSeasonArchiveEntry[] {
+  const seenHistorySequences = new Set<number>();
+  const seasonHistory: CareerSeasonArchiveEntry[] = [];
+
+  for (const entry of input.seasonHistory ?? []) {
+    if (!Number.isSafeInteger(entry.sequenceNumber) || entry.sequenceNumber <= 0) {
+      throw new CareerStateContractError("invalid_season_history_sequence", `invalid season history sequence: ${entry.sequenceNumber}`);
+    }
+
+    if (seenHistorySequences.has(entry.sequenceNumber)) {
+      throw new CareerStateContractError("duplicate_season_history_sequence", `duplicate season history sequence: ${entry.sequenceNumber}`);
+    }
+
+    if (entry.finalTable.length === 0) {
+      throw new CareerStateContractError("season_history_final_table_empty", `season history final table must not be empty: ${entry.seasonId}`);
+    }
+
+    for (const row of entry.finalTable) {
+      assertClubExists(input.gameState, row.clubId, "season_history_final_table_club_not_found");
+    }
+
+    assertClubExists(input.gameState, entry.championClubId, "season_history_champion_club_not_found");
+
+    const championRow = entry.finalTable[0];
+    if (championRow === undefined || championRow.clubId !== entry.championClubId || championRow.position !== 1) {
+      throw new CareerStateContractError("season_history_champion_not_first", `season history champion must be first: ${entry.championClubId}`);
+    }
+
+    if (entry.selectedClubFinish.clubId !== input.selectedClubId) {
+      throw new CareerStateContractError(
+        "season_history_selected_club_mismatch",
+        `season history selected club finish must match selected club: ${entry.selectedClubFinish.clubId}`,
+      );
+    }
+
+    validateAggregateGoals(entry.aggregateGoals);
+    seenHistorySequences.add(entry.sequenceNumber);
+    seasonHistory.push({
+      ...entry,
+      finalTable: entry.finalTable.map((row) => ({ ...row })),
+      selectedClubFinish: { ...entry.selectedClubFinish },
+      aggregateGoals: { ...entry.aggregateGoals },
+    });
+  }
+
+  return seasonHistory;
+}
+
+function validateAggregateGoals(aggregateGoals: CareerSeasonAggregateGoals): void {
+  if (
+    !Number.isSafeInteger(aggregateGoals.fixtureCount) ||
+    aggregateGoals.fixtureCount < 0 ||
+    !Number.isSafeInteger(aggregateGoals.totalGoals) ||
+    aggregateGoals.totalGoals < 0
+  ) {
+    throw new CareerStateContractError(
+      "season_history_invalid_aggregate_goals",
+      `season history aggregate goals must be non-negative safe integers: ${aggregateGoals.fixtureCount}/${aggregateGoals.totalGoals}`,
+    );
+  }
 }
 
 function validatePreparationFixture(gameState: GameState, selectedClubId: ClubId, fixtureId: FixtureId | undefined): void {

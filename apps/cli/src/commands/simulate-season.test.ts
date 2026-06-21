@@ -19,6 +19,7 @@ import {
  * through injected IO rather than spawning a child process.
  */
 const PERSON_NAME_PATTERN = "[A-Za-z][A-Za-z']*(?: [A-Za-z][A-Za-z']*)*";
+const CLUB_NAME_PATTERN = "[A-Za-z.]+(?: [A-Za-z0-9.]+)*";
 
 test("simulate-season accepts --seed with equals syntax", async () => {
   const io = captureIo();
@@ -65,11 +66,11 @@ test("simulate-season prints real season player summaries", async () => {
   assert.equal(exitCode, 0);
   assert.notEqual(topScorerLine, undefined);
   assert.notEqual(topScorerLine, "Top scorer: unavailable in aggregate engine v1");
-  assert.match(topScorerLine ?? "", new RegExp(`^Top scorer: ${PERSON_NAME_PATTERN} \\(PRO[0-9]{2}\\) - [0-9]+ goals$`));
-  assert.match(topAssistLine ?? "", new RegExp(`^Top assist: ${PERSON_NAME_PATTERN} \\(PRO[0-9]{2}\\) - [0-9]+ assists?$`));
+  assert.match(topScorerLine ?? "", new RegExp(`^Top scorer: ${PERSON_NAME_PATTERN} \\(${CLUB_NAME_PATTERN}\\) - [0-9]+ goals$`));
+  assert.match(topAssistLine ?? "", new RegExp(`^Top assist: ${PERSON_NAME_PATTERN} \\(${CLUB_NAME_PATTERN}\\) - [0-9]+ assists?$`));
   assert.match(
     topGoalkeeperSavesLine ?? "",
-    new RegExp(`^Top goalkeeper saves: ${PERSON_NAME_PATTERN} \\(PRO[0-9]{2}\\) - [0-9]+ saves?$`),
+    new RegExp(`^Top goalkeeper saves: ${PERSON_NAME_PATTERN} \\(${CLUB_NAME_PATTERN}\\) - [0-9]+ saves?$`),
   );
   assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
 });
@@ -82,7 +83,7 @@ test("simulate-season can inspect formation fit without printing the season tabl
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season formation fit");
   assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
-  assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Squad size: 22"), true);
   assert.equal(io.stdoutLines.includes("Selected formation: 4-2-3-1"), true);
   assert.equal(io.stdoutLines.includes("Inspection only: no lineup is auto-selected and no transfer action is created."), true);
@@ -114,7 +115,7 @@ test("simulate-season can review generated player identities without printing th
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season identity review");
   assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
-  assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Squad size: 22"), true);
   assert.equal(io.stdoutLines.includes("Players:"), true);
   assert.equal(io.stdoutLines.includes("Nationality summary:"), true);
@@ -232,10 +233,10 @@ test("simulate-season can inspect an accepted permanent-transfer market demo", a
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season market inspection");
   assert.equal(io.stdoutLines.includes(`Market demo: ${MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT}`), true);
-  assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Transfer kind: permanent transfer"), true);
-  assert.equal(io.stdoutLines.includes("Buying club: PRO01"), true);
-  assert.equal(io.stdoutLines.includes("Selling club: PRO18"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^Buying club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^Selling club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(
     io.stdoutLines.some((line) => new RegExp(`^Target player: ${PERSON_NAME_PATTERN}$`).test(line) && !/Player[0-9]{2} No[0-9]{2}/.test(line)),
     true,
@@ -261,7 +262,7 @@ test("simulate-season can inspect a rejected permanent-transfer market demo", as
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Market demo: ${MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED}`), true);
-  assert.equal(io.stdoutLines.includes("Selling club: PRO02"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^Selling club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(
     io.stdoutLines.some((line) => new RegExp(`^Target player: ${PERSON_NAME_PATTERN}$`).test(line) && !/Player[0-9]{2} No[0-9]{2}/.test(line)),
     true,
@@ -342,13 +343,13 @@ test("simulate-season can print a deterministic condition demo", async () => {
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Condition demo: ${CONDITION_DEMO_PROFILE_PRO01_SEASON}`), true);
-  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Season fitness lifecycle: enabled"), true);
   assert.equal(io.stdoutLines.includes("  Rules: match cost=8 daily recovery=5 clamp=0..100"), true);
-  assert.equal(io.stdoutLines.some((line) => /^  First selected club fixture: fixture:000006 PRO17 [0-9]+-[0-9]+ PRO01$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  First selected club fixture: fixture:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  After first match selected starters fitness: 92"), true);
   assert.equal(io.stdoutLines.includes("  Before next selected fixture fitness after 7 days recovery: 100"), true);
-  assert.equal(io.stdoutLines.some((line) => /^  Selected club final table: PRO01 position [0-9]+, [0-9]+ pts, GD [+-][0-9]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club final table: ${CLUB_NAME_PATTERN} position [0-9]+, [0-9]+ pts, GD [+-][0-9]+$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Final selected club condition:"), true);
   assert.equal(io.stdoutLines.includes("  Player              Start Final Delta"), true);
   assert.equal(conditionPlayerRows(io.stdoutLines).length, 11);
@@ -365,7 +366,7 @@ test("simulate-season can inspect the deterministic first-team lineup demo", asy
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Lineup demo: ${LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM}`), true);
-  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Applied to fixtures: no (profile inspection only)"), true);
   assert.equal(io.stdoutLines.includes("  Changes from first team:"), true);
   assert.equal(io.stdoutLines.includes("  none"), true);
@@ -384,7 +385,7 @@ test("simulate-season can inspect the deterministic rotated lineup demo", async 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Lineup demo: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
-  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:01: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(goalkeeper\\)$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(defender\\)$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:08: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(midfielder\\)$`).test(line)), true);
@@ -407,8 +408,8 @@ test("simulate-season fixture detail can apply a selected lineup demo", async ()
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
   assert.equal(io.stdoutLines.includes(`Lineup override: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
-  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
-  assert.equal(io.stdoutLines.some((line) => /^  Fixture: fixture:000006 PRO17 [0-9]+-[0-9]+ PRO01$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Fixture: fixture:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: yes"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:01 ${PERSON_NAME_PATTERN} goalkeeper$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05 ${PERSON_NAME_PATTERN} defender$`).test(line)), true);
@@ -419,7 +420,7 @@ test("simulate-season fixture detail can apply a selected lineup demo", async ()
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
   assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+PRO01\\s+`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+`).test(line)), true);
 });
 
 test("simulate-season fixture lineup demo reports non-applicable fixtures", async () => {
@@ -433,12 +434,12 @@ test("simulate-season fixture lineup demo reports non-applicable fixtures", asyn
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Lineup override: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: no"), true);
-  assert.equal(io.stdoutLines.includes("  Reason: PRO01 is not playing this fixture"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Reason: ${CLUB_NAME_PATTERN} is not playing this fixture$`).test(line)), true);
   assert.equal(
     io.stdoutLines.includes("  Selected starters spend 0 fitness because the selected club is not playing"),
     true,
   );
-  assert.equal(io.stdoutLines.some((line) => /^fixture:000001 PRO04 [0-9]+-[0-9]+ PRO18$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
 });
 
 test("same seed and lineup demo produce same inspection output", async () => {
@@ -485,7 +486,7 @@ test("simulate-season can print one round's fixture results", async () => {
 
   assert.equal(exitCode, 0);
   assert.equal(io.stdoutLines.includes("Round 1 fixtures:"), true);
-  assert.equal(io.stdoutLines.some((line) => /^fixture:[0-9]{6} PRO[0-9]{2} [0-9]+-[0-9]+ PRO[0-9]{2}$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:[0-9]{6} ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("  Scorers: ")), true);
 });
 
@@ -512,26 +513,26 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top scorer: ")), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top assist: ")), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top goalkeeper saves: ")), false);
-  assert.equal(io.stdoutLines.some((line) => /^fixture:000001 PRO04 [0-9]+-[0-9]+ PRO18$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(` GOAL PRO[0-9]{2} ${PERSON_NAME_PATTERN}.* shot=[a-z ]+ chance=[a-z ]+$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(` GOAL ${CLUB_NAME_PATTERN} ${PERSON_NAME_PATTERN}.* shot=[a-z ]+ chance=[a-z ]+$`).test(line)), true);
   assert.equal(
     io.stdoutLines.some((line) => new RegExp(` GOAL .*(assist|creator)=${PERSON_NAME_PATTERN} `).test(line)),
     true,
   );
   assert.equal(
     io.stdoutLines.some((line) =>
-      new RegExp(` SAVE PRO[0-9]{2} ${PERSON_NAME_PATTERN} vs PRO[0-9]{2} shot=[a-z ]+ chance=[a-z ]+$`).test(line)
+      new RegExp(` SAVE ${CLUB_NAME_PATTERN} ${PERSON_NAME_PATTERN} vs ${CLUB_NAME_PATTERN} shot=[a-z ]+ chance=[a-z ]+$`).test(line)
     ),
     true,
   );
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
-  assert.equal(io.stdoutLines.includes("  Player              Club  G A Sh SoT Sv"), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+PRO[0-9]{2}\\s+`).test(line)), true);
+  assert.equal(io.stdoutLines.includes("  Player              Club                 G A Sh SoT Sv"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+`).test(line)), true);
   assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+PRO04 [1-9][0-9]* 0\\s+`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+PRO04 0 [1-9][0-9]*\\s+`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+PRO18 0 0  0   0  0$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+[1-9][0-9]* 0\\s+`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+0 [1-9][0-9]*\\s+`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+0 0  0   0  0$`).test(line)), true);
   assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
 });
 
@@ -560,7 +561,7 @@ test("simulate-season applies the deterministic tactic and lineup setup demo", a
 
   assert.equal(demoIo.stderrLines.length, 0);
   assert.equal(demoIo.stdoutLines.includes(`Setup demo: ${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`), true);
-  assert.equal(demoIo.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(demoIo.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(
     demoIo.stdoutLines.includes("Tactic: mentality=attacking pressing=0.85 directness=0.75 width=0.80 risk=0.70"),
     true,
@@ -645,13 +646,13 @@ test("simulate-season fixture detail can inspect a non-applicable manual tactic 
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
   assert.equal(io.stdoutLines.includes("Manual tactic switch:"), true);
-  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes(`  Initial profile: ${DEMO_SETUP_PROFILE_PRO01_BALANCED}`), true);
   assert.equal(io.stdoutLines.includes(`  Switch: 46' -> ${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: no"), true);
-  assert.equal(io.stdoutLines.includes("  Reason: PRO01 is not playing this fixture"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Reason: ${CLUB_NAME_PATTERN} is not playing this fixture$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Profile timeline:"), true);
-  assert.equal(io.stdoutLines.some((line) => /^  unchanged: fixture:000001 PRO04 [0-9]+-[0-9]+ PRO18$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  unchanged: fixture:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
 });
@@ -671,13 +672,13 @@ test("simulate-season fixture detail applies a manual tactic switch when the sel
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes("Manual tactic switch:"), true);
-  assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: yes"), true);
   assert.equal(io.stdoutLines.includes("Profile timeline:"), true);
   assert.equal(io.stdoutLines.includes(`  1'-45': ${DEMO_SETUP_PROFILE_PRO01_BALANCED}`), true);
   assert.equal(io.stdoutLines.includes(`  46'-90': ${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`), true);
   assert.equal(
-    io.stdoutLines.some((line) => /^fixture:000006 PRO17 [0-9]+-[0-9]+ PRO01$/.test(line)),
+    io.stdoutLines.some((line) => new RegExp(`^fixture:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)),
     true,
   );
   assert.equal(io.stdoutLines.includes("Events:"), true);
@@ -707,7 +708,7 @@ test("simulate-season fixture detail prints durable causal defender context for 
   assert.equal(io.stderrLines.length, 0);
   assert.equal(
     io.stdoutLines.some((line) =>
-      new RegExp(` BLOCK PRO[0-9]{2} defender=${PERSON_NAME_PATTERN} shot=[a-z ]+ chance=[a-z ]+$`).test(line)
+      new RegExp(` BLOCK ${CLUB_NAME_PATTERN} defender=${PERSON_NAME_PATTERN} shot=[a-z ]+ chance=[a-z ]+$`).test(line)
     ),
     true,
   );
@@ -968,7 +969,7 @@ function captureIo() {
  * Extracts rendered player-stat rows from fixture detail command output.
  */
 function fixturePlayerStatLines(lines: readonly string[]): readonly string[] {
-  return lines.filter((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+PRO[0-9]{2}\\s+[0-9]`).test(line));
+  return lines.filter((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+[0-9] [0-9] [ 0-9]{2} [ 0-9]{3} [ 0-9]{2}$`).test(line));
 }
 
 /**

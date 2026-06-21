@@ -12,6 +12,7 @@ export * from "./generators/player-generation-bands.ts";
 export * from "./generators/player-rarity-budget.ts";
 export * from "./generators/player-role-templates.ts";
 export * from "./generators/player-archetypes.ts";
+export * from "./clubs/club-identity-source-data.ts";
 export * from "./identity/name-cultures.ts";
 export * from "./identity/nationality-distribution.ts";
 export * from "./identity/flag-assets.ts";
