@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete.
-- Active implementation step: none. Recommended next action is to create Phase 16 market MVP documentation if approved.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete; Phase 16 career systems dependency map complete.
+- Active implementation step: None. Await explicit request to create Phase 17 docs for `Market MVP Permanent Transfers`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with default 11-player lineups plus reserve players, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, and `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: none
-- Status: Phase 15 complete
-- Last verification: Phase 15 final checks passed, including `pnpm check`, required CLI smokes, and `calibration-v1` strict balance report.
-- Next action: If approved, create Phase 16 market MVP documentation. Do not start implementation before Phase 16 docs exist.
+- Step: None
+- Status: Phase 16 complete
+- Last verification: Step 06 documentation checks passed; `docs/audits/CAREER_SYSTEMS_DEPENDENCY_MAP.md` now contains the final recommended phase order.
+- Next action: If approved, create Phase 17 docs for a constrained in-memory `Market MVP Permanent Transfers` phase.
 
 ## How To Read The Project
 
@@ -127,7 +127,14 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/15-core-cleanup-before-career-systems/03-squad-fit-naming-cleanup.md` | Done | Removed stale market/recommendation wording from current squad-fit implementation comments. | Runtime output stays factual and unchanged; internal comments now describe formation-fit notes and factual coverage targets instead of market hints. | CLI typecheck; focused CLI tests; localized-text check; stale-wording scan; Italian formation-fit smoke; `pnpm check` |
 | `docs/steps/15-core-cleanup-before-career-systems/04-cli-simulate-season-module-split.md` | Done | Split the large CLI `simulate-season` implementation into private modules. | `runSimulateSeasonCommand` remains the public command Interface; profile keys, argument parsing, and formation-fit formatting moved behind private CLI Modules to improve locality without behavior changes. | CLI typecheck; focused CLI tests; required season/fixture/formation/manual-switch smokes; `pnpm check` |
 | `docs/steps/15-core-cleanup-before-career-systems/05-game-state-fixture-slice-decision.md` | Done | Consolidated fixture state into the canonical `GameState` contract. | `GameState` now owns `fixtures` and `fixtureIds`; `applyMatchReportToFixture` accepts and returns `GameState` directly, and the obsolete fixture-slice/alias types were removed. | domain/engine/storage typecheck; focused domain/use-case/storage tests; required season and fixture CLI smokes; `pnpm check` |
-| `docs/steps/15-core-cleanup-before-career-systems/06-cleanup-report-and-next-phase-decision.md` | Done | Created the Phase 15 cleanup report and next-phase recommendation. | `docs/audits/CORE_CLEANUP_REPORT.md` scores the cleaned core at `92/100`, records all fixed findings, accepts the aggregate-match limitation, and recommends Phase 16 market MVP next. | `pnpm check`; required season/fixture/formation/manual-switch CLI smokes; `calibration-v1` strict balance report |
+| `docs/steps/15-core-cleanup-before-career-systems/06-cleanup-report-and-next-phase-decision.md` | Done | Created the Phase 15 cleanup report and next-phase recommendation. | `docs/audits/CORE_CLEANUP_REPORT.md` scores the cleaned core at `92/100`, records all fixed findings, accepts the aggregate-match limitation, and originally recommended market MVP next; Phase 16 now adds a dependency-map gate before implementation. | `pnpm check`; required season/fixture/formation/manual-switch CLI smokes; `calibration-v1` strict balance report |
+| `docs/steps/16-career-systems-dependency-map/README.md` | Done | Created the Phase 16 documentation path for mapping shared career-system dependencies before market implementation. | Phase 16 checks whether market can proceed linearly or needs shared career state, economy, calendar, scouting, or youth foundations first. | Documentation-only update; no source checks required |
+| `docs/steps/16-career-systems-dependency-map/01-market-roadmap-dependency-review.md` | Done | Market roadmap dependencies were classified before implementation. | `docs/audits/CAREER_SYSTEMS_DEPENDENCY_MAP.md` now marks which market phases can start now, which require career state/economy/calendar/scouting/prior market work, and where non-market shared phases should interrupt the roadmap. | `find docs/market-roadmap -type f | sort`; roadmap phase `rg`; dependency keyword `rg` |
+| `docs/steps/16-career-systems-dependency-map/02-shared-career-state-seams.md` | Done | Shared career-state seams were mapped before market implementation. | `GameState` and `GameStorage` are enough for future persistence, while durable market behavior still needs an explicit career slice, roster ownership evolution, selected-club context, transfer history, and season progression seams. | `GameState`/storage `rg`; squad/tactic/state `rg`; career/save `rg` |
+| `docs/steps/16-career-systems-dependency-map/03-economy-and-budget-dependencies.md` | Done | Economy and budget dependencies were mapped before market implementation. | `Money`/`BasisPoints` already exist; the first market MVP may use a narrow transfer-budget Interface, while wages, contracts, installments, future commitments, and full finances remain blocked for later phases. | Economy keyword `rg`; category/reputation `rg`; Money value-object scan |
+| `docs/steps/16-career-systems-dependency-map/04-calendar-and-season-transition-dependencies.md` | Done | Calendar and season-transition dependencies were mapped before loans/windows/contracts. | Current `GameDate`, calendar, and fixture dates are enough for a narrow transfer MVP, but loans, windows, registration, contract expiry, promotion/relegation, and multi-season processing require dedicated calendar/season-transition Modules. | Calendar primitive `rg`; loan/window/registration/promotion `rg` |
+| `docs/steps/16-career-systems-dependency-map/05-scouting-youth-and-market-overlap.md` | Done | Scouting, youth, and market information seams were mapped. | Market MVP may use true player data behind valuation/willingness Interfaces, but must not hardcode fog, visible potential ranges, youth ownership, loan development, ambition/personality, or presentation text. | Scouting/youth keyword `rg`; player truth data `rg` |
+| `docs/steps/16-career-systems-dependency-map/06-phase-order-decision.md` | Done | Finalized the dependency map and next implementation phase decision. | `docs/audits/CAREER_SYSTEMS_DEPENDENCY_MAP.md` recommends `Phase 17 — Market MVP Permanent Transfers` next, constrained to in-memory permanent transfers with temporary transfer budget, no windows, truth-based player willingness, and no persistence/contracts/loans/scouting fog. | report existence check; required report-section `rg`; project-status `rg`; Phase README documentation-scan rule reviewed |
 
 Status values:
 
@@ -256,7 +263,9 @@ Status values:
 - Phase 14 is documented as a complete engine/core audit before market or youth. It has seven points: architecture boundaries, determinism, match engine, season engine, tactic/lineup/formation, code quality/dead code/naming, and audit report/next-phase decision.
 - Phase 14 audit result: score `86/100`, no critical blockers. The current core is healthy, but Phase 15 should be a narrow cleanup/rework phase before market/youth: remove `Object.values()` from engine simulation order, rename stale market-hint comments, split the large CLI `simulate-season` module, and decide whether to consolidate fixtures into `GameState` before persistence/career state.
 - Phase 15 is documented as `docs/steps/15-core-cleanup-before-career-systems/`: it closes the Phase 14 findings before market/youth and must end with `docs/audits/CORE_CLEANUP_REPORT.md`.
-- Phase 15 core cleanup is complete. The cleaned core score is `92/100`; no critical or high cleanup blockers remain. Recommended next phase: Phase 16 market MVP, starting with documentation only.
+- Phase 15 core cleanup is complete. The cleaned core score is `92/100`; no critical or high cleanup blockers remain. Its original recommendation was market MVP next, but Phase 16 now inserts a dependency-map gate before market implementation.
+- Market roadmap is documented in `docs/market-roadmap/`. The agreed scope removes sell-on percentages, appearance/goal bonuses, complex loan buy options/obligations, multiple-player exchanges, and highly legalistic clauses; it keeps one-player exchange and simple installments for a later structured-deals phase.
+- Phase 16 is now a dependency-map phase, not market implementation. It exists to decide whether market MVP can proceed next or whether a shared career-state, economy, calendar, scouting, or youth foundation must come first.
 
 ### 2026-06-20 — Phase 15 core cleanup before career systems docs
 
@@ -311,9 +320,25 @@ Status values:
 
 - Status: Done
 - Outcome: Completed Phase 15 and created the durable cleanup handoff report.
-- Adopted solution: `docs/audits/CORE_CLEANUP_REPORT.md` records the Phase 15 fixes, scores the cleaned core at `92/100`, keeps the aggregate-match engine as an accepted limitation, and recommends Phase 16 market MVP before youth.
+- Adopted solution: `docs/audits/CORE_CLEANUP_REPORT.md` records the Phase 15 fixes, scores the cleaned core at `92/100`, keeps the aggregate-match engine as an accepted limitation, and originally recommended market MVP before youth; Phase 16 now refines this with a dependency-map gate.
 - Verification: `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated --lang=it`; `pnpm cli simulate-season --seed=demo-001 --formation-fit=4-2-3-1 --lang=it`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --setup-demo=pro01-balanced --manual-tactic-switch=46:pro01-attacking`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
-- Next action: Create Phase 16 market MVP documentation if approved. Do not start implementation before Phase 16 docs exist.
+- Next action: Superseded by Phase 16 dependency-map docs; execute `docs/steps/16-career-systems-dependency-map/01-market-roadmap-dependency-review.md`.
+
+### 2026-06-20 — Market roadmap planning
+
+- Status: Done
+- Outcome: Created the market-specific roadmap and individual phase overview documents.
+- Adopted solution: `docs/market-roadmap/` now defines candidate market phases for permanent transfers, career persistence, loans, contracts/wages, scouting quality, AI club behavior, negotiation, transfer windows, structured deals, and market balance review. The plan deliberately removes sell-on percentages, appearance/goal bonuses, complex loan buy options/obligations, multiple-player exchanges, and highly legalistic clauses.
+- Verification: Documentation-only update; no source checks required.
+- Next action: Superseded by Phase 16 dependency-map docs; execute `docs/steps/16-career-systems-dependency-map/01-market-roadmap-dependency-review.md`.
+
+### 2026-06-20 — Phase 16 career systems dependency map docs
+
+- Status: Done
+- Outcome: Created `docs/steps/16-career-systems-dependency-map/` before opening market implementation.
+- Adopted solution: Phase 16 is a dependency-map gate that will decide whether market MVP can proceed next or whether shared career state, economy, calendar, scouting, or youth foundations must be inserted first. This keeps `docs/steps/` linear instead of treating `docs/market-roadmap/` as a direct implementation order.
+- Verification: Documentation-only update; no source checks required.
+- Next action: Execute `docs/steps/16-career-systems-dependency-map/01-market-roadmap-dependency-review.md`.
 
 ### 2026-06-20 — Phase 14 engine audit and core quality review
 

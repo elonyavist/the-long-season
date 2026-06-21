@@ -267,144 +267,155 @@ Phase gate question:
 
 - Is the current deterministic core clean enough to support market/youth work without carrying known audit findings forward?
 
-## Phase 16 — Minimal Transfer Market MVP
+## Phase 16 — Career Systems Dependency Map
 
-Goal: allow basic squad change driven by explicit user action and the manager's own interpretation of squad fit.
-
-Possible scope:
-
-- create a deterministic free-agent or transfer pool;
-- allow simple signings with explicit user confirmation;
-- add basic player value or wage cost only if needed for trade-offs;
-- use Phase 12 formation and squad-fit facts to let the manager judge why a signing might help, without auto-signing;
-- update squad-depth and formation-fit reports after manual squad changes.
-
-Do not include:
-
-- complex contracts, agents, loans, installments, sell-on clauses, deadline day, scouting fog, staff, UI, or persistence beyond the active step;
-- automatic buying/selling;
-- economy simulation larger than the market MVP requires.
-
-Phase gate question:
-
-- Can the user manually improve a weak squad with a visible trade-off?
-
-## Phase 17 — Youth / Prospects Pipeline
-
-Goal: introduce young players as a long-term squad-building alternative to market spending.
+Goal: map the dependencies between market, career state, economy, calendar, scouting, youth, and persistence before implementing the next feature phase.
 
 Possible scope:
 
-- add a small deterministic youth/prospect pool;
-- tag prospects by role/position family;
-- expose youth candidates against selected formations and squad-fit facts;
-- allow manual promotion to senior squad only if scoped;
-- keep development/growth minimal or defer it to a later growth phase.
+- review `docs/market-roadmap/` against the current project state;
+- identify shared career-state seams needed by market, youth, economy, calendar, and persistence;
+- identify budget/economy dependencies before transfers, wages, and installments;
+- identify calendar/season-transition dependencies before loans, windows, registration, and contracts;
+- identify scouting/youth/market overlap around visible player data, potential, development, and loans;
+- produce `docs/audits/CAREER_SYSTEMS_DEPENDENCY_MAP.md`;
+- decide the next real implementation phase.
 
 Do not include:
 
-- full academy management;
-- complex growth curves;
-- staff/facility modifiers;
-- scouting fog;
-- loans or youth contracts unless a step explicitly opens them.
+- market implementation;
+- youth implementation;
+- persistence changes;
+- economy, contracts, wages, loans, scouting, UI, or source refactors;
+- converting the full market roadmap into `docs/steps/`.
 
 Phase gate question:
 
-- Can young players become a meaningful answer to squad gaps without replacing the market?
+- Can we name the next implementation phase without accidentally building market on missing shared career systems?
 
-## Phase 18 — Board, Objectives, And Run Failure
+## Phase 17 Candidate — Market MVP Permanent Transfers
 
-Goal: create real stakes.
+Goal: create the first manual transfer-market loop.
 
 Possible scope:
 
-- define season objectives;
-- track board confidence;
-- add basic sacking conditions;
-- add basic bankruptcy or financial failure condition if economy supports it;
-- record completed or failed run outcome in a minimal archive structure.
+- define market state, transfer intent, transfer feasibility, player valuation, and club budget contracts;
+- create a deterministic market/player pool;
+- validate permanent transfers through buying-club capacity, selling-side availability, and player willingness;
+- prevent unrealistic moves such as a first-division star striker accepting a normal third-division destination;
+- expose CLI market list/inspect and transfer preview/apply demo;
+- show updated squad and formation fit after a valid operation.
 
 Do not include:
 
-- full president persona;
-- event-card system;
-- media interaction;
-- cross-run career profile unless explicitly promoted.
+- loans, contracts, wages, installments, player exchanges, AI bids, scouting fog, transfer windows, or career persistence;
+- automatic signings, hidden best-buy suggestions, or squad-needs recommendations.
 
 Phase gate question:
 
-- Can the run now be lost for sporting or financial reasons?
+- Can the manager manually change the squad through a believable permanent transfer while the game explains affordability, seller acceptance, and player willingness?
 
-## Phase 19 — Multi-Division And Promotion/Relegation
+## Phase 18 Candidate — Career State And Transfer Persistence
 
-Goal: make "the climb" mechanically real.
+Goal: make market actions persist in a career state.
 
 Possible scope:
 
-- add at least two connected fake divisions;
-- move clubs between divisions at season end;
-- generate next-season calendars after promotion/relegation;
-- preserve club state across seasons;
-- show category changes in CLI.
+- define minimal career state or a documented career slice over current game state;
+- persist squads, budgets, market-modified player ownership, and transfer history;
+- save/load a market-modified demo career;
+- inspect changed squad, changed budget, and transfer history after reload.
 
 Do not include:
 
-- five countries;
-- cups;
-- playoffs unless needed for the chosen division model;
-- continental competitions.
+- loans, contracts, wages, future financial commitments, AI market behavior, transfer windows, or full UI.
 
 Phase gate question:
 
-- Can the user's club climb or fall between divisions across seasons?
+- Can a transfer change persist and be inspected later without recomputing or losing deterministic market state?
 
-## Phase 20 — Player Growth And Aging V1
+## Phase 19 Candidate — Loans MVP
 
-Goal: make multi-season squad building matter.
+Goal: add simple manual loans, especially for young players and lower-division squad building.
 
 Possible scope:
 
-- add age and growth profile usage if not already sufficient in domain;
-- apply monthly or season-end growth;
-- apply aging/decline;
-- use minutes or appearances as a growth input if available;
-- expose before/after player development in CLI.
+- add `TransferKind: "loan"`;
+- model owner club and temporary club;
+- validate player and parent-club willingness;
+- make young/fringe players more open to lower-division minutes;
+- return players to owner club at loan end;
+- expose CLI loan preview/apply inspection.
 
 Do not include:
 
-- youth intake;
-- training facilities;
-- staff modifiers;
-- loans;
-- complex potential scouting.
+- buy options, buy obligations, recall clauses, loan penalties, wage-share detail, or automatic loan placement.
 
 Phase gate question:
 
-- Do young and old players create meaningful long-term roster decisions?
+- Can a young first-division player plausibly accept a lower-division loan while a star senior player rejects an unrealistic loan destination?
 
-## Beyond Phase 20 — Scouting And Fog Minimum
+## Phase 20 Candidate — Contracts And Wages
 
-Goal: make player information imperfect.
+Goal: add the first economic layer that makes player willingness and squad building more realistic.
 
 Possible scope:
 
-- add scouting knowledge state;
-- expose visible ability ranges instead of true values for unknown players;
-- add a simple observe-player action;
-- make market decisions optionally depend on knowledge;
-- keep true values available only for tests/debug.
+- add wage, contract length/end, and owning-club contract data;
+- separate wage budget from transfer budget;
+- validate wage affordability;
+- let player willingness consider wage, sporting level, role/minutes, age, and ambition;
+- expose accepted/rejected transfer cases with structured reasons.
 
 Do not include:
 
-- full staff system;
-- scout travel regions;
-- opponent reports;
-- deep fog UI.
+- bonuses, agent fees, release clauses, sell-on clauses, appearance/goal bonuses, or deep negotiation.
 
 Phase gate question:
 
-- Does imperfect information make recruitment more interesting without becoming tedious?
+- Can a transfer fail for wage reasons even when the fee is affordable, and can player willingness feel credible without becoming too complex?
+
+## Beyond Phase 20 Candidate — Scouting And Information Quality
+
+Goal: make market information imperfect without making recruitment tedious.
+
+Possible scope:
+
+- add scouting knowledge for market players;
+- expose visible ability/potential ranges instead of exact values for unknown players;
+- add scouting confidence levels;
+- add a deterministic observe-player action;
+- keep true values testable while presentation uses visible ranges.
+
+Do not include:
+
+- full staff networks, geographic scout assignments, opponent reports, deep scouting UI, or hidden non-seeded randomness.
+
+Phase gate question:
+
+- Can the manager make recruitment decisions with partial information while deterministic tests still verify true values?
+
+## Later Candidate — Market Roadmap Continuation
+
+The detailed market roadmap lives in `docs/market-roadmap/`.
+
+Planned market continuation, if the dependency map confirms this order:
+
+- Phase 21: AI club market behavior.
+- Phase 22: negotiation v1.
+- Phase 23: transfer windows and registration.
+- Phase 24: structured transfer deals with only one-player exchange and simple installments.
+- Phase 25: market balance and economy review.
+
+Explicitly removed from the near-term market plan:
+
+- sell-on percentages;
+- appearance/goal bonuses;
+- complex loan buy options or obligations;
+- multiple-player exchanges;
+- highly legalistic clauses.
+
+Youth/prospects, board/run failure, promotion/relegation, and player growth should be reconsidered after the first market arc is stable enough to support long-term career play.
 
 ## Later Candidate — Match Day Session CLI
 
@@ -457,9 +468,13 @@ Phases 07-09 made match output player-readable and tactically controllable from 
 
 Phases 10-12 made manager choices around fitness, lineup, formation, and squad shape meaningful before persistence.
 
-Phases 13-16 should protect presentation quality with localization, then make squad planning, market action, and youth options meaningful.
+Phases 13-15 protected presentation quality and cleaned the core before career systems.
 
-Phases 17-20 should add run failure, promotion/relegation, growth, and imperfect information.
+Phase 16 should prevent false linearity by mapping shared career-system dependencies before the first market implementation.
+
+After Phase 16, the project should either build market MVP or insert a shared foundation phase first, depending on `docs/audits/CAREER_SYSTEMS_DEPENDENCY_MAP.md`.
+
+Youth/prospects should come after the first market arc is stable, because youth loans, promotion to senior squads, and development all depend on the market/career state being coherent.
 
 UI and match-day session work should come only after the gameplay loop is already worth presenting. A Web Shell MVP should come after the core manager loop unless the roadmap is explicitly revised.
 
