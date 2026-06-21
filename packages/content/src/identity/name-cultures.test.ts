@@ -25,6 +25,8 @@ test("every name culture pool has enough first and last names", () => {
     assert.equal(pool.firstNames.length >= 6, true, `${key} first names`);
     assert.equal(pool.lastNames.length >= 6, true, `${key} last names`);
   }
+
+  assert.equal(getNameCulturePool("italian").lastNames.length >= 180, true, "italian last names");
 });
 
 test("name pool entries are content names and not localization keys", () => {
@@ -37,5 +39,14 @@ test("name pool entries are content names and not localization keys", () => {
       assert.equal(name.includes("."), false, `${name} should not look like an i18n key`);
       assert.equal(name.includes("{"), false, `${name} should not look like an interpolation template`);
     }
+  }
+});
+
+test("name culture pools do not contain duplicate entries inside one pool", () => {
+  for (const key of NAME_CULTURE_POOL_KEYS) {
+    const pool = getNameCulturePool(key);
+
+    assert.equal(new Set(pool.firstNames).size, pool.firstNames.length, `${key} first names`);
+    assert.equal(new Set(pool.lastNames).size, pool.lastNames.length, `${key} last names`);
   }
 });

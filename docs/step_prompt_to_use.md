@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/19-fictional-people-identity-foundation
+PHASE_DIR_TO_EXECUTE: docs/steps/20-new-career-world-generation
 
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.

@@ -2,6 +2,7 @@ import type { ClubId, PlayerId, SaveId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 import type { Money } from "../value-objects/money.ts";
 import { createMarketState, type MarketState } from "../entities/transfer.entity.ts";
+import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
 
 /** Current schema version for durable career-state snapshots. */
@@ -41,6 +42,8 @@ export interface CareerState {
   readonly saveId: SaveId;
   /** Career snapshot schema version for future migrations. */
   readonly schemaVersion: number;
+  /** Optional durable metadata for the generated world used by this career. */
+  readonly careerWorld?: CareerWorldMetadata;
   /** Club controlled by the manager. */
   readonly selectedClubId: ClubId;
   /** Current playable world snapshot. */
@@ -144,6 +147,7 @@ export function createCareerState(input: CareerState): CareerState {
   return {
     saveId: input.saveId,
     schemaVersion: input.schemaVersion,
+    ...(input.careerWorld === undefined ? {} : { careerWorld: createCareerWorldMetadata(input.careerWorld) }),
     selectedClubId: input.selectedClubId,
     gameState: input.gameState,
     marketState,

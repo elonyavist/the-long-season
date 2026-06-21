@@ -32,6 +32,16 @@ test("fake league keeps all generated players fully fit initially", () => {
   }
 });
 
+test("fake league passes the world seed into generated squads", () => {
+  const first = createFakeLeagueSystem({ worldSeed: "career-world-a" });
+  const second = createFakeLeagueSystem({ worldSeed: "career-world-b" });
+  const firstPlayerId = first.playerIds[0];
+
+  assert.ok(firstPlayerId !== undefined);
+  assert.equal(second.playerIds[0], firstPlayerId);
+  assert.notDeepEqual(first.players[firstPlayerId], second.players[firstPlayerId]);
+});
+
 test("fake league generates reserves without changing default lineup size", () => {
   const league = createFakeLeagueSystem();
   const firstClubId = league.clubIds[0];

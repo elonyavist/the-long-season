@@ -121,15 +121,24 @@ export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
   readonly stateMultiplierCurves: FakePlayerStateMultiplierCurves;
 }
 
+/** Options for deterministic fake league creation. */
+export interface FakeLeagueSystemOptions {
+  /** World/content seed used by generated players, identities, and squads. */
+  readonly worldSeed?: string;
+}
+
 /**
  * Creates the deterministic fake league system for `simulate-season`.
  *
  * @example
- * const league = createFakeLeagueSystem();
+ * const league = createFakeLeagueSystem({ worldSeed: "career-001" });
  */
-export function createFakeLeagueSystem(): FakeLeagueSystem {
+export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): FakeLeagueSystem {
   const clubs = generateFakeClubs();
-  const players = generateFakePlayersForClubs(clubs.clubIds);
+  const players = generateFakePlayersForClubs(
+    clubs.clubIds,
+    options.worldSeed === undefined ? {} : { seed: options.worldSeed },
+  );
   const season = seasonId("season:demo-001");
   const competition: Competition = {
     id: competitionId("competition:demo-third-division"),

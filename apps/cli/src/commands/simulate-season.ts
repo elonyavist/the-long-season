@@ -99,7 +99,7 @@ export async function runSimulateSeasonCommand(
     return 1;
   }
 
-  const league = createFakeLeagueSystem();
+  const league = createFakeLeagueSystem({ worldSeed: parsed.seed });
   const setupDemo = parsed.setupDemo === undefined ? undefined : buildSetupDemo(league, parsed.setupDemo);
   const conditionDemo =
     parsed.conditionDemo === undefined ? undefined : buildConditionDemo(league, parsed.conditionDemo);

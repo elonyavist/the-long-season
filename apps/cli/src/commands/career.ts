@@ -1,4 +1,4 @@
-import { createFakeLeagueSystem, type FakeLeagueSystem } from "@game/content";
+import { createFakeLeagueSystem, getGeneratedPlayerArchetype, type FakeLeagueSystem } from "@game/content";
 import {
   applyCareerPermanentTransfer,
   type ApplyCareerPermanentTransferInput,
@@ -38,6 +38,8 @@ type CliMoney = CliMarketState["clubBudgets"][ClubId]["transferBudget"];
 type CliClubTransferBudget = CliMarketState["clubBudgets"][ClubId];
 type CliSaveId = SaveCareerInput["saveId"];
 
+const CLI_CAREER_WORLD_GENERATOR_VERSION = 1;
+
 /** Minimal IO adapter used by command tests. */
 export interface CareerCommandIo {
   /** Writes normal command output. */
@@ -67,6 +69,13 @@ type ParsedCareerArgs =
       readonly saveId: CliSaveId;
       readonly language: SupportedLanguage;
       readonly mode: "inspect";
+    }
+  | {
+      readonly ok: true;
+      readonly seed: string;
+      readonly saveId: CliSaveId;
+      readonly language: SupportedLanguage;
+      readonly mode: "newWorldPreview";
     }
   | {
       readonly ok: false;
@@ -125,6 +134,28 @@ export async function runCareerCommand(
     }
   }
 
+  if (parsed.mode === "newWorldPreview") {
+    const league = createFakeLeagueSystem({ worldSeed: parsed.seed });
+    const careerState = careerStateFromNewWorld(parsed.saveId, league, parsed.seed);
+
+    await storage.saveCareer({
+      saveId: parsed.saveId,
+      name: String(parsed.saveId),
+      state: careerState,
+    });
+
+    for (const line of formatNewCareerWorldOutput({
+      league,
+      careerState,
+      worldSeed: parsed.seed,
+      text,
+    })) {
+      io.stdout(line);
+    }
+
+    return 0;
+  }
+
   const league = createFakeLeagueSystem();
   const scenario = buildMarketDemoScenario(league, parsed.marketDemo);
   const careerState = careerStateFromScenario(parsed.saveId, scenario);
@@ -169,6 +200,7 @@ function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
   let marketDemo: MarketDemoProfileKey | undefined;
   let language: SupportedLanguage = "en";
   let inspect = false;
+  let newWorldPreview = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -232,7 +264,7 @@ function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--apply-market-demo") {
-      if (inspect) {
+      if (inspect || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -247,7 +279,7 @@ function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg.startsWith("--apply-market-demo=")) {
-      if (inspect) {
+      if (inspect || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -261,11 +293,20 @@ function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--inspect") {
-      if (marketDemo !== undefined) {
+      if (marketDemo !== undefined || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
       inspect = true;
+      continue;
+    }
+
+    if (arg === "--new-world-preview") {
+      if (marketDemo !== undefined || inspect) {
+        return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
+      }
+
+      newWorldPreview = true;
       continue;
     }
 
@@ -283,6 +324,16 @@ function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       saveId,
       language,
       mode: "inspect",
+    };
+  }
+
+  if (newWorldPreview) {
+    return {
+      ok: true,
+      seed,
+      saveId,
+      language,
+      mode: "newWorldPreview",
     };
   }
 
@@ -428,6 +479,24 @@ function careerStateFromScenario(saveId: CliSaveId, scenario: CareerMarketScenar
   };
 }
 
+function careerStateFromNewWorld(saveId: CliSaveId, league: FakeLeagueSystem, worldSeed: string): CliCareerState {
+  const selectedClubId = requiredClubId(league, 1);
+
+  return {
+    saveId,
+    schemaVersion: 1,
+    careerWorld: {
+      worldSeed,
+      generatorVersion: CLI_CAREER_WORLD_GENERATOR_VERSION,
+      creationSourceKey: "career:cli-new-world",
+    },
+    selectedClubId,
+    gameState: gameStateFromLeague(league, worldSeed),
+    marketState: marketStateFixture([[selectedClubId, money(6_000_000_00)]]),
+    transferHistory: [],
+  };
+}
+
 function buildMarketDemoScenario(league: FakeLeagueSystem, profileKey: MarketDemoProfileKey): CareerMarketScenario {
   if (profileKey === MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED) {
     return buildStarRejectedScenario(league);
@@ -497,10 +566,10 @@ function buildStarRejectedScenario(league: FakeLeagueSystem): CareerMarketScenar
   };
 }
 
-function gameStateFromLeague(league: FakeLeagueSystem): CliGameState {
+function gameStateFromLeague(league: FakeLeagueSystem, seed = "career-demo"): CliGameState {
   return {
     meta: {
-      seed: "career-demo",
+      seed,
       rngAlgorithmVersion: "career-demo",
       saveSchemaVersion: 1,
     },
@@ -624,6 +693,7 @@ function formatCareerInspectOutput(input: {
   const lines = [
     input.text("career.inspect.title"),
     `${input.text("career.save")}: ${input.careerState.saveId}`,
+    ...formatCareerWorldMetadataLines(input.careerState, input.text),
     `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
     `${input.text("career.selectedClubRosterSize")}: ${selectedClub?.playerIds.length ?? 0}`,
     `${input.text("career.selectedClubTransferFunds")}: ${formatMoney(selectedBudget?.transferBudget)}`,
@@ -634,6 +704,144 @@ function formatCareerInspectOutput(input: {
   ];
 
   return lines;
+}
+
+function formatNewCareerWorldOutput(input: {
+  readonly league: FakeLeagueSystem;
+  readonly careerState: CliCareerState;
+  readonly worldSeed: string;
+  readonly text: Translator;
+}): readonly string[] {
+  const selectedClub = input.careerState.gameState.clubs[input.careerState.selectedClubId];
+
+  return [
+    input.text("career.newWorld.title"),
+    `${input.text("season.seed")}: ${input.worldSeed}`,
+    `${input.text("career.worldSeed")}: ${input.worldSeed}`,
+    `${input.text("career.generatorVersion")}: ${CLI_CAREER_WORLD_GENERATOR_VERSION}`,
+    `${input.text("season.competition")}: ${input.league.competition.name}`,
+    `${input.text("career.save")}: ${input.careerState.saveId}`,
+    `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
+    `${input.text("career.generatedSquadSize")}: ${selectedClub?.playerIds.length ?? 0}`,
+    `${input.text("career.saveWritten")}: ${input.text("common.yes")}`,
+    `${input.text("identity.nationalitySummary")}:`,
+    ...formatCareerNationalitySummary(input.league, input.careerState, input.text),
+    `${input.text("career.ageSummary")}:`,
+    ...formatCareerAgeSummary(input.careerState, input.text),
+    `${input.text("career.prospectSummary")}:`,
+    ...formatCareerProspectSummary(input.league, input.careerState, input.text),
+  ];
+}
+
+function formatCareerWorldMetadataLines(careerState: CliCareerState, text: Translator): readonly string[] {
+  if (careerState.careerWorld === undefined) {
+    return [];
+  }
+
+  return [
+    `${text("career.worldSeed")}: ${careerState.careerWorld.worldSeed}`,
+    `${text("career.generatorVersion")}: ${careerState.careerWorld.generatorVersion}`,
+  ];
+}
+
+function formatCareerNationalitySummary(
+  league: FakeLeagueSystem,
+  careerState: CliCareerState,
+  text: Translator,
+): readonly string[] {
+  const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
+  if (selectedClub === undefined) {
+    return [`  ${text("common.none")}`];
+  }
+
+  const counts = new Map<string, number>();
+  for (const playerId of selectedClub.playerIds) {
+    const identity = league.playerIdentities[playerId];
+    const nationality = identity?.nationality ?? "unknown";
+    counts.set(nationality, (counts.get(nationality) ?? 0) + 1);
+  }
+
+  const lines: string[] = [];
+  for (const nationality of [...counts.keys()].sort()) {
+    const label = nationality === "unknown" ? text("common.unknown") : text(presentationMessageKey("identity.nationality", nationality));
+    lines.push(`  ${label}: ${counts.get(nationality) ?? 0}`);
+  }
+
+  return lines.length === 0 ? [`  ${text("common.none")}`] : lines;
+}
+
+function formatCareerAgeSummary(careerState: CliCareerState, text: Translator): readonly string[] {
+  const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
+  const counts = {
+    under21: 0,
+    prime: 0,
+    veteran: 0,
+  };
+
+  if (selectedClub !== undefined) {
+    for (const playerId of selectedClub.playerIds) {
+      const player = careerState.gameState.players[playerId];
+      if (player === undefined) {
+        continue;
+      }
+
+      const age = Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / 365);
+      if (age <= 21) {
+        counts.under21 += 1;
+      } else if (age <= 29) {
+        counts.prime += 1;
+      } else {
+        counts.veteran += 1;
+      }
+    }
+  }
+
+  return [
+    `  ${text("career.ageBand.under21")}: ${counts.under21}`,
+    `  ${text("career.ageBand.prime")}: ${counts.prime}`,
+    `  ${text("career.ageBand.veteran")}: ${counts.veteran}`,
+  ];
+}
+
+function formatCareerProspectSummary(
+  league: FakeLeagueSystem,
+  careerState: CliCareerState,
+  text: Translator,
+): readonly string[] {
+  const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
+  const counts = {
+    prospects: 0,
+    highPotential: 0,
+    rareWonderkid: 0,
+  };
+
+  if (selectedClub !== undefined) {
+    for (const playerId of selectedClub.playerIds) {
+      const archetypeKey = league.playerArchetypes[playerId];
+      if (archetypeKey === undefined) {
+        continue;
+      }
+
+      const archetype = getGeneratedPlayerArchetype(archetypeKey);
+      if (archetype.depthRole === "prospect") {
+        counts.prospects += 1;
+      }
+
+      if (archetypeKey === "high_potential_prospect") {
+        counts.highPotential += 1;
+      }
+
+      if (archetypeKey === "rare_wonderkid") {
+        counts.rareWonderkid += 1;
+      }
+    }
+  }
+
+  return [
+    `  ${text("career.prospect.prospects")}: ${counts.prospects}`,
+    `  ${text("career.prospect.highPotential")}: ${counts.highPotential}`,
+    `  ${text("career.prospect.rareWonderkid")}: ${counts.rareWonderkid}`,
+  ];
 }
 
 function formatTransferHistoryLines(careerState: CliCareerState, text: Translator): readonly string[] {

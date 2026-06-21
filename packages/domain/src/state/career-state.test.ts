@@ -9,6 +9,7 @@ import { clubId, competitionId, fixtureId, playerId, saveId, seasonId } from "..
 import { gameDate } from "../value-objects/game-date.ts";
 import { nonNegativeMoney } from "../value-objects/money.ts";
 import { abilityValue, stateValue } from "../value-objects/rating.ts";
+import { CAREER_WORLD_GENERATOR_VERSION } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
 import {
   CAREER_STATE_SCHEMA_VERSION,
@@ -33,6 +34,11 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
   const career = createCareerState({
     saveId: saveId("save:career-demo"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    careerWorld: {
+      worldSeed: " scalata-001 ",
+      generatorVersion: CAREER_WORLD_GENERATOR_VERSION,
+      creationSourceKey: " career:cli-new-world ",
+    },
     selectedClubId: pro01,
     gameState,
     marketState: marketStateFixture(),
@@ -51,6 +57,11 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
   assert.equal(career.saveId, "save:career-demo");
   assert.equal(career.selectedClubId, pro01);
   assert.equal(career.schemaVersion, CAREER_STATE_SCHEMA_VERSION);
+  assert.deepEqual(career.careerWorld, {
+    worldSeed: "scalata-001",
+    generatorVersion: CAREER_WORLD_GENERATOR_VERSION,
+    creationSourceKey: "career:cli-new-world",
+  });
   assert.deepEqual(career.marketState.clubBudgetIds, [pro01, pro18]);
   assert.equal(career.transferHistory[0]?.playerId, player18);
   assert.equal(nextTransferHistorySequence(career), 2);

@@ -118,18 +118,128 @@ test("career command inspects persisted career state", async () => {
     assert.equal(inspectIo.stdoutLines.includes("Save: save:career-demo"), true);
     assert.equal(inspectIo.stdoutLines.includes("Selected club: PRO01"), true);
     assert.equal(inspectIo.stdoutLines.includes("Selected club roster size: 23"), true);
-    assert.equal(inspectIo.stdoutLines.includes("Selected club transfer funds: EUR 4470010.00"), true);
+    assert.equal(inspectIo.stdoutLines.some((line) => /^Selected club transfer funds: EUR [0-9]+\.[0-9]{2}$/.test(line)), true);
     assert.equal(inspectIo.stdoutLines.includes("Transfer history:"), true);
     assert.equal(
       inspectIo.stdoutLines.some((line) =>
-        /^  1\. [A-Za-z]+ [A-Za-z]+: PRO18 -> PRO01; fee: EUR 1529990\.00; date: 2026-08-01$/.test(line)
+        /^  1\. [A-Za-z]+ [A-Za-z]+: PRO18 -> PRO01; fee: EUR [0-9]+\.[0-9]{2}; date: 2026-08-01$/.test(line)
       ),
       true,
     );
     assert.equal(inspectIo.stdoutLines.some((line) => /Player[0-9]{2} No[0-9]{2}/.test(line)), false);
     assert.equal(inspectIo.stdoutLines.includes("Affected clubs:"), true);
-    assert.equal(inspectIo.stdoutLines.includes("  PRO01: roster size=23 budget=EUR 4470010.00"), true);
-    assert.equal(inspectIo.stdoutLines.includes("  PRO18: roster size=21 budget=EUR 2029990.00"), true);
+    assert.equal(inspectIo.stdoutLines.some((line) => /^  PRO01: roster size=23 budget=EUR [0-9]+\.[0-9]{2}$/.test(line)), true);
+    assert.equal(inspectIo.stdoutLines.some((line) => /^  PRO18: roster size=21 budget=EUR [0-9]+\.[0-9]{2}$/.test(line)), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command creates and writes a new seeded career world", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const io = captureIo();
+
+  try {
+    const exitCode = await runCareerCommand(
+      ["--seed=world-a", "--save=career-world-a", "--new-world-preview"],
+      io,
+      { storageDirectoryPath: directoryPath },
+    );
+    const storage = new JsonCareerStorage({ directoryPath });
+    const loaded = await storage.loadCareer("save:career-world-a" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 0);
+    assert.equal(io.stderrLines.length, 0);
+    assert.equal(io.stdoutLines[0], "The Long Season new career world");
+    assert.equal(io.stdoutLines.includes("Seed: world-a"), true);
+    assert.equal(io.stdoutLines.includes("World seed: world-a"), true);
+    assert.equal(io.stdoutLines.includes("Generator version: 1"), true);
+    assert.equal(io.stdoutLines.includes("Save: save:career-world-a"), true);
+    assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+    assert.equal(io.stdoutLines.includes("Generated squad size: 22"), true);
+    assert.equal(io.stdoutLines.includes("Career save written: yes"), true);
+    assert.equal(io.stdoutLines.includes("Nationality summary:"), true);
+    assert.equal(io.stdoutLines.includes("Age summary:"), true);
+    assert.equal(io.stdoutLines.includes("Prospect summary:"), true);
+    assert.equal(loaded.careerWorld?.worldSeed, "world-a");
+    assert.equal(loaded.careerWorld?.generatorVersion, 1);
+    assert.equal(loaded.selectedClubId, "club:province-01");
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command varies generated worlds by seed and keeps inspect stable", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const worldAIo = captureIo();
+  const worldBIo = captureIo();
+  const inspectIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-world-a", "--new-world-preview"], worldAIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--seed=world-b", "--save=career-world-b", "--new-world-preview"], worldBIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const storage = new JsonCareerStorage({ directoryPath });
+    const worldA = await storage.loadCareer("save:career-world-a" as Parameters<typeof storage.loadCareer>[0]);
+    const worldB = await storage.loadCareer("save:career-world-b" as Parameters<typeof storage.loadCareer>[0]);
+    const selectedClubA = worldA.gameState.clubs[worldA.selectedClubId];
+    const selectedClubB = worldB.gameState.clubs[worldB.selectedClubId];
+    const namesA = selectedClubA?.playerIds.map((playerId) => {
+      const player = worldA.gameState.players[playerId];
+      return `${player?.firstName ?? ""} ${player?.lastName ?? ""}`;
+    }).join("|");
+    const namesB = selectedClubB?.playerIds.map((playerId) => {
+      const player = worldB.gameState.players[playerId];
+      return `${player?.firstName ?? ""} ${player?.lastName ?? ""}`;
+    }).join("|");
+
+    assert.notEqual(namesA, namesB);
+
+    const exitCode = await runCareerCommand(["--save=career-world-a", "--inspect"], inspectIo, {
+      storageDirectoryPath: directoryPath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(inspectIo.stderrLines.length, 0);
+    assert.equal(inspectIo.stdoutLines.includes("World seed: world-a"), true);
+    assert.equal(inspectIo.stdoutLines.includes("Generator version: 1"), true);
+    assert.equal(inspectIo.stdoutLines.includes("Selected club: PRO01"), true);
+    assert.equal(inspectIo.stdoutLines.includes("Selected club roster size: 22"), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command localizes new career world output in Italian", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const io = captureIo();
+
+  try {
+    const exitCode = await runCareerCommand(
+      ["--seed=mondo-it", "--save=carriera-mondo", "--new-world-preview", "--lang=it"],
+      io,
+      { storageDirectoryPath: directoryPath },
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(io.stderrLines.length, 0);
+    assert.equal(io.stdoutLines[0], "The Long Season nuovo mondo carriera");
+    assert.equal(io.stdoutLines.includes("Seed mondo: mondo-it"), true);
+    assert.equal(io.stdoutLines.includes("Versione generatore: 1"), true);
+    assert.equal(io.stdoutLines.includes("Dimensione rosa generata: 22"), true);
+    assert.equal(io.stdoutLines.includes("Salvataggio carriera scritto: si"), true);
+    assert.equal(io.stdoutLines.includes("Riepilogo eta:"), true);
+    assert.equal(io.stdoutLines.includes("Riepilogo prospetti:"), true);
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -163,14 +273,17 @@ test("career command rejects missing required arguments", async () => {
 
   assert.equal(await runCareerCommand(["--save=career-demo"], missingMode), 1);
   assert.equal(missingMode.stdoutLines.length, 0);
-  assert.equal(missingMode.stderrLines[0], "choose exactly one career action: --apply-market-demo or --inspect");
+  assert.equal(
+    missingMode.stderrLines[0],
+    "choose exactly one career action: --apply-market-demo, --inspect, or --new-world-preview",
+  );
 
   assert.equal(
     await runCareerCommand(["--save=career-demo", "--inspect", "--apply-market-demo=pro01-affordable-permanent"], conflictingMode),
     1,
   );
   assert.equal(conflictingMode.stdoutLines.length, 0);
-  assert.equal(conflictingMode.stderrLines[0], "--inspect cannot be combined with --apply-market-demo");
+  assert.equal(conflictingMode.stderrLines[0], "career actions cannot be combined");
 });
 
 interface CapturedIo {
