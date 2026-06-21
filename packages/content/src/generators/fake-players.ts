@@ -1,16 +1,22 @@
 import {
   abilityValue,
+  createPersonIdentity,
   gameDate,
   stateValue,
   type ClubId,
+  type ClubCategory,
+  type PersonIdentity,
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
 } from "@game/domain";
+import { deriveRng } from "@game/shared";
 
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB, fakePlayerId } from "./fake-clubs.ts";
+import { getNameCulturePool } from "../identity/name-cultures.ts";
+import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 
 /**
  * Lineup slot shape emitted by content without importing engine contracts.
@@ -34,10 +40,30 @@ export interface FakePlayers {
   readonly players: Readonly<Record<PlayerId, Player>>;
   /** Explicit deterministic player ID order. */
   readonly playerIds: readonly PlayerId[];
+  /** Generated identity metadata by player ID, including nationality. */
+  readonly playerIdentities: Readonly<Record<PlayerId, PersonIdentity>>;
   /** Initial dynamic state lookup by ID. */
   readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Deterministic 11-player lineups by club ID. */
   readonly lineupsByClubId: Readonly<Record<ClubId, readonly FakeLineupSlot[]>>;
+}
+
+/** Optional context for deterministic fake player identity generation. */
+export interface FakePlayerGenerationOptions {
+  /** Content seed used by identity generation. */
+  readonly seed?: string;
+  /** League nation used for domestic-vs-foreign distribution. */
+  readonly leagueNation?: LeagueNationCode;
+  /** Optional club context for category/reputation-aware identity distribution. */
+  readonly clubContexts?: Readonly<Record<ClubId, FakePlayerClubContext>>;
+}
+
+/** Club context consumed by fake identity generation. */
+export interface FakePlayerClubContext {
+  /** Generic tier used by nationality distribution profiles. */
+  readonly category: ClubCategory;
+  /** Club reputation used to distinguish stronger first-division clubs. */
+  readonly reputation: number;
 }
 
 /**
@@ -46,11 +72,17 @@ export interface FakePlayers {
  * @example
  * const players = generateFakePlayersForClubs(clubIds);
  */
-export function generateFakePlayersForClubs(clubIds: readonly ClubId[]): FakePlayers {
+export function generateFakePlayersForClubs(
+  clubIds: readonly ClubId[],
+  options: FakePlayerGenerationOptions = {},
+): FakePlayers {
   const players: Record<PlayerId, Player> = {};
   const playerIds: PlayerId[] = [];
+  const playerIdentities: Record<PlayerId, PersonIdentity> = {};
   const playerStates: Record<PlayerId, PlayerDynamicState> = {};
   const lineupsByClubId: Record<ClubId, readonly FakeLineupSlot[]> = {};
+  const seed = options.seed ?? "demo-001";
+  const leagueNation = options.leagueNation ?? "italian";
 
   for (let clubIndex = 0; clubIndex < clubIds.length; clubIndex += 1) {
     const clubId = clubIds[clubIndex];
@@ -60,13 +92,23 @@ export function generateFakePlayersForClubs(clubIds: readonly ClubId[]): FakePla
 
     const clubNumber = clubIndex + 1;
     const lineup: FakeLineupSlot[] = [];
+    const clubContext = options.clubContexts?.[clubId] ?? defaultClubContext(clubNumber);
 
     for (let slotNumber = 1; slotNumber <= FAKE_PLAYERS_PER_CLUB; slotNumber += 1) {
       const id = fakePlayerId(clubNumber, slotNumber);
-      const player = fakePlayer(id, clubNumber, slotNumber);
+      const identity = fakePlayerIdentity({
+        id,
+        clubNumber,
+        slotNumber,
+        seed,
+        leagueNation,
+        clubContext,
+      });
+      const player = fakePlayer(id, clubNumber, slotNumber, identity);
 
       players[id] = player;
       playerIds.push(id);
+      playerIdentities[id] = identity;
       playerStates[id] = {
         fitness: stateValue(100),
         form: stateValue(50),
@@ -87,6 +129,7 @@ export function generateFakePlayersForClubs(clubIds: readonly ClubId[]): FakePla
   return {
     players,
     playerIds,
+    playerIdentities,
     playerStates,
     lineupsByClubId,
   };
@@ -95,18 +138,70 @@ export function generateFakePlayersForClubs(clubIds: readonly ClubId[]): FakePla
 /**
  * Builds one generated player with a deterministic ability profile.
  */
-function fakePlayer(id: PlayerId, clubNumber: number, slotNumber: number): Player {
+function fakePlayer(id: PlayerId, clubNumber: number, slotNumber: number, identity: PersonIdentity): Player {
   const base = 6.25 + ((19 - clubNumber) / 18) * 6 + ((slotNumber * 7 + clubNumber) % 4) * 0.35;
   const position = positionForSlot(slotNumber);
 
   return {
     id,
-    firstName: `Player${String(clubNumber).padStart(2, "0")}`,
-    lastName: `No${String(slotNumber).padStart(2, "0")}`,
+    firstName: identity.firstName,
+    lastName: identity.lastName,
     birthDate: gameDate(10_500 + clubNumber * 30 + slotNumber),
     naturalPositions: [position],
     abilities: abilitiesForPosition(base, position),
     potential: abilitiesForPosition(Math.min(base + 2, 20), position),
+  };
+}
+
+/**
+ * Picks a deterministic fictional identity for one generated player.
+ *
+ * Nationality is selected first, then the name culture picks the matching
+ * first-name and last-name pool. This keeps display names stable for a seed
+ * while allowing future leagues to use different domestic nationality mixes.
+ */
+function fakePlayerIdentity(input: {
+  readonly id: PlayerId;
+  readonly clubNumber: number;
+  readonly slotNumber: number;
+  readonly seed: string;
+  readonly leagueNation: LeagueNationCode;
+  readonly clubContext: FakePlayerClubContext;
+}): PersonIdentity {
+  const nationality = selectNationality({
+    seed: input.seed,
+    leagueNation: input.leagueNation,
+    clubCategory: input.clubContext.category,
+    clubReputation: input.clubContext.reputation,
+    playerKey: input.id,
+  });
+  const pool = getNameCulturePool(nationality.nameCulture);
+  const rng = deriveRng(input.seed, "person-name", input.id, input.clubNumber, input.slotNumber, nationality.nameCulture);
+  const firstName = pool.firstNames[rng.nextInt(0, pool.firstNames.length)];
+  const lastName = pool.lastNames[rng.nextInt(0, pool.lastNames.length)];
+
+  if (firstName === undefined || lastName === undefined) {
+    throw new Error(`Missing generated name for culture: ${nationality.nameCulture}`);
+  }
+
+  return createPersonIdentity({
+    firstName,
+    lastName,
+    nationality: nationality.nationality,
+    ...(nationality.secondNationality === undefined ? {} : { secondNationality: nationality.secondNationality }),
+    birthCountry: nationality.birthCountry,
+    nameCulture: nationality.nameCulture,
+  });
+}
+
+/**
+ * Provides the default identity-distribution context for the current demo
+ * league, which represents a third-division competition.
+ */
+function defaultClubContext(clubNumber: number): FakePlayerClubContext {
+  return {
+    category: "third_division",
+    reputation: 4 + ((clubNumber - 1) % 6),
   };
 }
 

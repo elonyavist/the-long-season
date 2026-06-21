@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { Player } from "@game/domain";
+import type { ClubId, Player } from "@game/domain";
 
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
 import { generateFakePlayersForClubs } from "./fake-players.ts";
@@ -17,6 +17,46 @@ test("fake players are deterministic for the same club list", () => {
   const second = generateFakePlayersForClubs(clubs.clubIds);
 
   assert.deepEqual(first, second);
+});
+
+test("fake player IDs stay stable while display names become fictional names", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds);
+  const firstPlayer = requiredPlayer(generated.players[fakePlayerId(1, 1)]);
+  const firstIdentity = generated.playerIdentities[firstPlayer.id];
+
+  assert.equal(generated.playerIds[0], fakePlayerId(1, 1));
+  assert.equal(firstIdentity?.firstName, firstPlayer.firstName);
+  assert.equal(firstIdentity?.lastName, firstPlayer.lastName);
+  assert.doesNotMatch(`${firstPlayer.firstName} ${firstPlayer.lastName}`, /^Player[0-9]{2} No[0-9]{2}$/);
+});
+
+test("third-division fake content is mostly domestic but not entirely domestic", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds);
+  const identities = Object.values(generated.playerIdentities);
+  const domesticCount = identities.filter((identity) => identity.nationality === "italian").length;
+
+  assert.equal(domesticCount > identities.length * 0.65, true);
+  assert.equal(domesticCount < identities.length, true);
+});
+
+test("first-division top-club context creates a more international squad pool", () => {
+  const clubs = generateFakeClubs();
+  const clubContexts = Object.fromEntries(
+    clubs.clubIds.map((clubId) => [
+      clubId,
+      {
+        category: "first_division",
+        reputation: 9,
+      },
+    ]),
+  ) as Record<ClubId, { readonly category: "first_division"; readonly reputation: 9 }>;
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { clubContexts });
+  const identities = Object.values(generated.playerIdentities);
+  const foreignCount = identities.filter((identity) => identity.nationality !== "italian").length;
+
+  assert.equal(foreignCount > identities.length * 0.5, true);
 });
 
 test("fake player generation gives top clubs a visible role ability edge", () => {

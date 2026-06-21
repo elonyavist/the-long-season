@@ -39,6 +39,7 @@ export type ParsedSimulateSeasonArgs =
       readonly lineupDemo: LineupDemoProfileKey | undefined;
       readonly marketDemo: MarketDemoProfileKey | undefined;
       readonly formationFit: FormationKey | undefined;
+      readonly identityReview: boolean;
       readonly language: SupportedLanguage;
     }
   | {
@@ -156,6 +157,7 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let lineupDemo: LineupDemoProfileKey | undefined;
   let marketDemo: MarketDemoProfileKey | undefined;
   let formationFit: FormationKey | undefined;
+  let identityReview = false;
   let language: SupportedLanguage = "en";
 
   for (let index = 0; index < args.length; index += 1) {
@@ -425,6 +427,11 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--identity-review") {
+      identityReview = true;
+      continue;
+    }
+
     return { ok: false, language, message: createTranslator(language)("cli.error.unknownArgument", { arg }) };
   }
 
@@ -439,6 +446,7 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     lineupDemo,
     marketDemo,
     formationFit,
+    identityReview,
     language,
   };
 }

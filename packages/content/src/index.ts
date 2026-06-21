@@ -8,4 +8,6 @@
 export * from "./generators/fake-clubs.ts";
 export * from "./generators/fake-players.ts";
 export * from "./generators/league-system.ts";
+export * from "./identity/name-cultures.ts";
+export * from "./identity/nationality-distribution.ts";
 export * from "./balance/calibration-targets.ts";

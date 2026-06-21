@@ -4,9 +4,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete; Phase 16 career systems dependency map complete; Phase 17 market MVP permanent transfers complete.
-- Active implementation step: none; next action is to decide/document the next phase, recommended as career state and transfer persistence.
-- Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, in-memory permanent-transfer market contracts, deterministic true-data player valuation, player willingness, transfer feasibility/apply preview, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with default 11-player lineups plus reserve players, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection, and localized `--market-demo=pro01-affordable-permanent|pro01-star-rejected` permanent-transfer inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete; Phase 16 career systems dependency map complete; Phase 17 market MVP permanent transfers complete; Phase 18 career state and transfer persistence complete; Phase 19 fictional people identity foundation complete.
+- Active implementation step: none; Phase 19 is complete and the next phase is not selected.
+- Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, in-memory permanent-transfer market contracts, deterministic true-data player valuation, player willingness, transfer feasibility/apply preview, durable `CareerState`, JSON career save/load, persistent accepted permanent-transfer application, `pnpm cli career --save=<saveId> --apply-market-demo=<profile>`, `pnpm cli career --save=<saveId> --inspect`, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with generated fictional player identities, expanded nationality metadata, default 11-player lineups plus reserve players, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--identity-review` generated player identity inspection, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection, and localized `--market-demo=pro01-affordable-permanent|pro01-star-rejected` permanent-transfer inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
 - First gameplay milestone: `pnpm cli simulate-season --seed=demo-001` achieved.
@@ -16,9 +16,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current Active Step
 
 - Step: none
-- Status: Phase 17 complete
-- Last verification: `pnpm check`, season smoke, Italian formation-fit smoke, accepted/rejected/Italian market-demo smokes, strict calibration balance report, no-storage scan, and out-of-scope scan were run.
-- Next action: Decide and document the next phase; recommended target is career state and transfer persistence before loans, contracts/wages, transfer windows, scouting fog, AI market behavior, installments, or player exchanges.
+- Status: Phase 19 complete
+- Last verification: expanded nationality focused typechecks/tests; `pnpm check`; identity-review CLI smoke in English and Italian.
+- Next action: Decide the next phase. Recommended: address repeated generated full names before or inside the first playable career-loop phase.
 
 ## How To Read The Project
 
@@ -143,6 +143,22 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/17-market-mvp-permanent-transfers/05-transfer-feasibility-and-apply-preview.md` | Done | Combined ownership, temporary budget, valuation, and willingness into in-memory transfer feasibility and apply preview. | `engine/market` now exposes `evaluatePermanentTransfer` and `previewPermanentTransfer`, returning structured rejection reasons or copy-on-write `GameState`/`MarketState` previews without touching storage. | engine typecheck; focused transfer feasibility tests; no-storage scan; out-of-scope scan; `pnpm check` |
 | `docs/steps/17-market-mvp-permanent-transfers/06-cli-market-inspection.md` | Done | Added localized CLI inspection for accepted and rejected permanent-transfer demos. | `simulate-season --market-demo=pro01-affordable-permanent|pro01-star-rejected` renders standalone localized market previews with selected club, buyer/seller, target player, transfer value, buyer budget before/after, reasons, willingness details, and roster preview; no career save is written. | CLI/i18n typecheck; focused CLI/i18n tests; localization guard; `pnpm check`; accepted/rejected/Italian CLI smokes |
 | `docs/steps/17-market-mvp-permanent-transfers/07-phase-17-review-and-next-phase-decision.md` | Done | Finalized Phase 17 with a market MVP report and next-phase decision. | `docs/audits/MARKET_MVP_REPORT.md` documents implemented scope, demo outputs, kept boundaries, residual risks, and recommends career state and transfer persistence next. | `pnpm check`; season smoke; Italian formation-fit smoke; accepted/rejected/Italian market-demo smokes; strict calibration balance report; no-storage scan; out-of-scope scan |
+| `docs/steps/18-career-state-and-transfer-persistence/README.md` | Done | Created the Phase 18 documentation path for durable career state and transfer persistence. | Phase 18 turns accepted permanent-transfer decisions from inspection-only previews into persisted career state, while keeping loans, wages/contracts, windows, scouting fog, AI market behavior, installments, player exchanges, and UI out of scope. | Documentation-only update; no source checks required |
+| `docs/steps/18-career-state-and-transfer-persistence/01-phase-17-output-review.md` | Done | Confirmed the minimal durable career scope after Phase 17. | Phase 18 should persist selected club context, the current game snapshot, transfer funds, permanent-transfer roster changes, and transfer history; loans, contracts/wages, windows, scouting fog, AI market behavior, installments, player exchanges, and UI remain out of scope. | `test -f docs/audits/MARKET_MVP_REPORT.md`; `test -f docs/steps/18-career-state-and-transfer-persistence/02-career-state-contract.md`; required career/persistence roadmap `rg` |
+| `docs/steps/18-career-state-and-transfer-persistence/02-career-state-contract.md` | Done | Added the dependency-free durable career-state contract. | `CareerState` wraps `GameState` with `saveId`, schema version, selected club, durable `MarketState`, and ordered permanent-transfer history; `createCareerState` validates selected club order, budget club references, safe non-negative money, and transfer-history references. | `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/state/career-state.test.ts`; domain forbidden import scan; `pnpm check` |
+| `docs/steps/18-career-state-and-transfer-persistence/03-career-save-adapter.md` | Done | Added JSON-backed career save persistence. | `JsonCareerStorage` persists full `CareerState` snapshots in career-specific JSON envelopes, validates through `createCareerState` on save/load, preserves typed storage failures, and remains independent from engine/content/CLI/i18n. | `pnpm --filter @game/storage run typecheck`; `pnpm exec vitest run packages/storage/src/career-storage.test.ts`; storage forbidden import scan; `pnpm check` |
+| `docs/steps/18-career-state-and-transfer-persistence/04-persistent-transfer-application.md` | Done | Added engine use case for persistent permanent-transfer application. | `applyCareerPermanentTransfer` reuses existing market preview logic, returns original `CareerState` on rejection, and returns a copied `CareerState` with updated `GameState`, `MarketState`, and appended transfer-history entry when accepted. | `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/career/apply-career-transfer.test.ts`; engine forbidden import scan; `pnpm check` |
+| `docs/steps/18-career-state-and-transfer-persistence/05-cli-career-market-apply.md` | Done | Added deterministic CLI career market apply flow for supported market demos. | `pnpm cli career --save=<saveId> --apply-market-demo=<profile>` bootstraps deterministic fake career state, applies accepted permanent-transfer demos through `applyCareerPermanentTransfer`, writes accepted results through `JsonCareerStorage`, leaves rejected demos unsaved, and renders localized output without CLI-domain direct imports. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm exec vitest run apps/cli/src/commands/career.test.ts packages/i18n/src/labels.test.ts`; `pnpm check`; accepted/rejected CLI smokes |
+| `docs/steps/18-career-state-and-transfer-persistence/06-career-state-inspection.md` | Done | Added CLI inspection for reloaded career state, budget, roster, and transfer history. | `pnpm cli career --save=<saveId> --inspect` loads `JsonCareerStorage`, shows selected club roster size and transfer funds, lists permanent-transfer history, and prints affected clubs with persisted roster sizes and budgets. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm exec vitest run apps/cli/src/commands/career.test.ts packages/i18n/src/labels.test.ts`; `pnpm check`; career apply and inspect CLI smokes |
+| `docs/steps/18-career-state-and-transfer-persistence/07-playable-loop-readiness-review.md` | Done | Produced the first playable loop readiness report. | `docs/audits/PLAYABLE_LOOP_READINESS_REPORT.md` states that Phase 18 passes as a persistence bridge and recommends Phase 19 as a CLI-first playable career loop MVP before deeper market, youth, scouting, contracts, or UI work. | `pnpm check`; career apply/inspect CLI smokes; localized market inspection smoke; strict `calibration-v1` balance report |
+| `docs/steps/19-fictional-people-identity-foundation/README.md` | Done | Created the Phase 19 documentation path for fictional people identity. | Phase 19 moves before the first playable career loop so generated players stop looking like technical placeholders; it covers person identity, name cultures, nationality distribution by division/reputation, player identity generation, staff identity readiness, and a quality report. | Documentation-only update; no source checks required |
+| `docs/steps/19-fictional-people-identity-foundation/01-phase-18-output-and-identity-gap-review.md` | Done | Confirmed that current player-facing output still uses technical placeholder names. | Season, fixture-detail, and career-inspect outputs still show `PlayerXX NoYY`; source scan points to `packages/content/src/generators/fake-players.ts` as the placeholder generator, while names remain content data and not localization labels. | `test -f docs/audits/PLAYABLE_LOOP_READINESS_REPORT.md`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006`; `pnpm cli career --save=career-demo --inspect`; placeholder/name/staff `rg` scan |
+| `docs/steps/19-fictional-people-identity-foundation/02-person-identity-domain-contract.md` | Done | Added a reusable domain person-identity contract for players now and staff later. | `PersonIdentity` stores generated first/last name, primary nationality, optional second nationality, birth country, and name-culture key; constructors validate empty names, unsupported keys, duplicate second nationality, and unexpected rendered-prose fields while remaining language-agnostic. | `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/value-objects/person-identity.test.ts`; domain forbidden import scan; `pnpm check` |
+| `docs/steps/19-fictional-people-identity-foundation/03-name-culture-pools.md` | Done | Added content-owned fictional name culture pools. | `content/identity/name-cultures` now exposes explicit first/last-name pools for every supported `NameCultureKey`, with stable key order and no localization coupling. | `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run packages/content/src/identity/name-cultures.test.ts`; content forbidden import scan; `pnpm check` |
+| `docs/steps/19-fictional-people-identity-foundation/04-nationality-distribution-model.md` | Done | Added deterministic nationality distribution by league nation, division, and club strength/reputation. | `selectNationality` uses derived RNG and explicit weighted profiles: third division mostly domestic, second division more mixed, first division more international, and strong first-division clubs can become majority international; output remains structured identity metadata, not prose. | `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run packages/content/src/identity/nationality-distribution.test.ts`; deterministic runtime scan; `pnpm check` |
+| `docs/steps/19-fictional-people-identity-foundation/05-player-identity-generation.md` | Done | Replaced generated player placeholder display names with deterministic fictional identities. | Fake player generation now selects structured identity metadata from seeded nationality/name-culture content, keeps stable `player:` IDs, writes player display names from generated `PersonIdentity`, and updates CLI/career tests to assert behavior without old placeholder names. | `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/cli run typecheck`; focused fake-player/league-system/simulate-season/career tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006`; career apply+inspect smoke; strict `calibration-v1` balance report |
+| `docs/steps/19-fictional-people-identity-foundation/06-staff-identity-readiness.md` | Done | Confirmed that the identity foundation can support future staff without implementing staff gameplay. | `PersonIdentity` is sufficient as shared identity metadata for staff, scouts, presidents, agents/procuratori, and AI managers; future staff systems must keep role, rating, specialization, assignments, persona/tendencies, wages, and gameplay effects in separate contracts. | staff/scouting/persona `rg` review; `pnpm check` |
+| `docs/steps/19-fictional-people-identity-foundation/07-identity-cli-review-and-quality-report.md` | Done | Added identity review CLI output and produced the identity foundation quality report. | `simulate-season --identity-review` shows selected fake-club identity metadata and nationality summary with localized presentation labels; `docs/audits/IDENTITY_FOUNDATION_REPORT.md` records the adopted identity model, staff readiness, manual checks, and the known repeated-name limitation. | `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; focused CLI/i18n tests; `pnpm check`; season, fixture, identity-review, career apply/inspect, and strict balance CLI smokes |
 
 Status values:
 
@@ -161,7 +177,7 @@ Status values:
 - The mandatory execution loop is: read status, choose active step, implement, test, fix or adjust next step, update status briefly, advance.
 - Future scope is kept in `docs/steps/99-future/README.md` as a queue, not a ban list.
 - `docs/PROJECT_RULES.md` is stable across phases; moving forward should add step docs, not rewrite rules.
-- The first implementation target remains a CLI-first deterministic monorepo, not UI or persistence.
+- The implementation target remains CLI-first and deterministic; persistence is added only through documented storage/career phases, while UI remains out of scope until explicitly planned.
 - The Step Ledger tracks individual step files, not only broad phase groups.
 - Every step prompt tells the implementer to read and update `docs/PROJECT_STATUS.md`.
 - Phase 7 follows the roadmap gate rule: review current output before adding causal actor code.
@@ -202,7 +218,7 @@ Status values:
 - Goal attribution uses an independent deterministic `goal-attribution` RNG stream, not the main match RNG, so adding scorer IDs does not change match results, league tables, or balance metrics.
 - Match event schema version `2` adds durable `scorerPlayerId` to goal events; season/player-stat code should read this field from `MatchReport` goal events instead of engine-local step events.
 - `simulateSeason` now returns `playerGoalStats`, derived from durable report goal events and fixed-lineup registrations; CLI consumes this result for the top-scorer line without recomputing stats.
-- Current `pnpm cli simulate-season --seed=demo-001` top scorer: `Player01 No06 (PRO01) - 15 goals`.
+- Current `pnpm cli simulate-season --seed=demo-001` top scorer: `Matteo Ricciardi (PRO05) - 23 goals`.
 - `simulate-season --round=<number>` prints deterministic fixture-level results and scorer lines from existing simulated season reports; it does not run a separate match/season simulation path.
 - Phase 4 is intentionally not the full duel engine, match-day UI, storage migration, market, growth, staff, youth, facilities, or economy phase.
 - Phase 5 is documented as match event detail: richer shot context, optional assists, goalkeeper save attribution, player match stats, and CLI match detail v2.
@@ -223,11 +239,11 @@ Status values:
 - `computePlayerMatchStats` now derives complete current shot counts: goals count through `scorerPlayerId`, non-goal shot events count through `shooterPlayerId` when present, and save events also credit the defending goalkeeper.
 - `simulate-season --fixture=<fixtureId>` now registers all home and away starters when rendering player stats, so zero-stat starters appear after contribution rows.
 - `simulateSeason` now also returns `playerSummaryStats`, derived from durable reports and fixed-lineup registrations; current fields are goals, assists, and goalkeeper saves.
-- Current `pnpm cli simulate-season --seed=demo-001` season summaries: top scorer `Player01 No06 (PRO01) - 15 goals`; top assist `Player02 No09 (PRO02) - 12 assists`; top goalkeeper saves `Player02 No01 (PRO02) - 94 saves`.
+- Current `pnpm cli simulate-season --seed=demo-001` season summaries: top scorer `Matteo Ricciardi (PRO05) - 23 goals`; top assist `Enrico Ferri (PRO01) - 11 assists`; top goalkeeper saves `Marko Stanic (PRO02) - 94 saves`.
 - Phase 7 now has an engine-local causal actor building block: `selectChanceActors` selects creator, shooter, primary defender, and goalkeeper without consuming the main match RNG.
 - `stepMatch` now consumes that building block for player attribution only: scores, tables, opportunity counts, and balance metrics remain stable, while player-level goals/assists/shots can change for fixed seeds.
 - The old standalone match-engine attribution helpers for scorer, assist, shot taker, and goalkeeper saves have been retired after `stepMatch` integration because they no longer had production callers; current attribution lives in `chance-actors.ts` plus the small assist-credit decision inside `step-match.ts`.
-- Current `pnpm cli simulate-season --seed=demo-001` season summaries after causal actor integration: top scorer `Player05 No10 (PRO05) - 23 goals`; top assist `Player01 No06 (PRO01) - 11 assists`; top goalkeeper saves `Player02 No01 (PRO02) - 94 saves`.
+- Current `pnpm cli simulate-season --seed=demo-001` season summaries after identity generation: top scorer `Matteo Ricciardi (PRO05) - 23 goals`; top assist `Enrico Ferri (PRO01) - 11 assists`; top goalkeeper saves `Marko Stanic (PRO02) - 94 saves`.
 - Phase 7 CLI fixture review is complete: `fixture:000001` shows creator context on unassisted goals, and `fixture:000002` shows defender context on a blocked shot.
 - Phase 8 is documented as tactic and lineup MVP: review Phase 7 output first, then add selected-lineup/tactic contracts, engine setup builder, season setup overrides, and a minimal CLI inspection path.
 - Phase 8 output review accepted Phase 7 output as a stable baseline: `fixture:000001` shows `creator=` on unassisted goals without duplicating assists, `fixture:000002` shows `defender=` on a block, player stats align with event rows, and `calibration-v1` strict mode still passes.
@@ -275,6 +291,144 @@ Status values:
 - Market roadmap is documented in `docs/market-roadmap/`. The agreed scope removes sell-on percentages, appearance/goal bonuses, complex loan buy options/obligations, multiple-player exchanges, and highly legalistic clauses; it keeps one-player exchange and simple installments for a later structured-deals phase.
 - Phase 16 is now a dependency-map phase, not market implementation. It exists to decide whether market MVP can proceed next or whether a shared career-state, economy, calendar, scouting, or youth foundation must come first.
 - Phase 17 is documented as `docs/steps/17-market-mvp-permanent-transfers/`: a constrained in-memory permanent-transfer MVP. It must prove transfer contracts, valuation, willingness, feasibility/apply preview, and localized CLI inspection before any persistence, loans, contracts, wages, windows, scouting, AI, installments, or player exchanges.
+- Phase 18 is documented as `docs/steps/18-career-state-and-transfer-persistence/`: it must make selected-club career state, transfer funds, roster changes, and permanent-transfer history durable before deeper market systems or first-playable-loop work.
+- Phase 19 is documented as `docs/steps/19-fictional-people-identity-foundation/`: it intentionally moves before the first playable career loop so generated players stop using placeholder names and squads reflect credible domestic/international nationality distribution by division and club strength.
+
+### 2026-06-21 — Phase 19 fictional people identity foundation docs
+
+- Status: Done
+- Outcome: Created `docs/steps/19-fictional-people-identity-foundation/` with README and seven step documents.
+- Adopted solution: Phase 19 covers identity-gap review, reusable `PersonIdentity`, content-owned fictional name culture pools, deterministic nationality distribution by league/division/reputation, generated player identities, staff identity readiness without staff gameplay, and final CLI/review report.
+- Verification: Documentation-only update; no source checks required.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/01-phase-18-output-and-identity-gap-review.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/01-phase-18-output-and-identity-gap-review.md`
+
+- Status: Done
+- Outcome: Confirmed the identity gap in current Phase 18 outputs.
+- Adopted solution: Player and future staff names are treated as generated content, not i18n labels; current outputs still expose `PlayerXX NoYY` placeholders, so the next step remains a small language-agnostic identity contract before name pools and generation.
+- Verification: `test -f docs/audits/PLAYABLE_LOOP_READINESS_REPORT.md`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006`; `pnpm cli career --save=career-demo --inspect`; `rg -n "Player[0-9]+ No[0-9]+|firstName|lastName|nationality|Staff|staff" packages docs requirements.md`.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/02-person-identity-domain-contract.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/02-person-identity-domain-contract.md`
+
+- Status: Done
+- Outcome: Added the domain `PersonIdentity` contract.
+- Adopted solution: `PersonIdentity` is a language-agnostic value shape with generated first/last name, nationality, optional second nationality, birth country, and name culture; validation rejects empty names, unsupported keys, duplicate nationalities, and rendered-prose fields such as `displayName`.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/value-objects/person-identity.test.ts`; domain forbidden import scan; `pnpm check`.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/03-name-culture-pools.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/03-name-culture-pools.md`
+
+- Status: Done
+- Outcome: Added content-owned fictional name culture pools.
+- Adopted solution: `content/identity/name-cultures` maps every domain `NameCultureKey` to explicit first-name and last-name pools; names are content entries, not localization keys, and lookup uses stable culture keys rather than presentation text.
+- Verification: `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run packages/content/src/identity/name-cultures.test.ts`; content forbidden import scan; `pnpm check`.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/04-nationality-distribution-model.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/04-nationality-distribution-model.md`
+
+- Status: Done
+- Outcome: Added deterministic nationality distribution for generated people.
+- Adopted solution: `selectNationality` uses `deriveRng` with seed, league nation, club category, club reputation, and stable player key; weighted profiles keep third division mostly domestic, make second division more mixed, and allow strong first-division clubs to become majority international.
+- Verification: `pnpm --filter @game/content run typecheck`; `pnpm exec vitest run packages/content/src/identity/nationality-distribution.test.ts`; deterministic runtime scan; `pnpm check`.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/05-player-identity-generation.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/05-player-identity-generation.md`
+
+- Status: Done
+- Outcome: Generated player-facing names now use deterministic fictional identities instead of `PlayerXX NoYY` placeholders.
+- Adopted solution: `generateFakePlayersForClubs` derives nationality and name culture from content profiles, picks names from seeded culture pools, stores structured `playerIdentities`, keeps stable player IDs, and feeds generated first/last names into existing player display output without changing engine outcomes.
+- Verification: `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/cli run typecheck`; `pnpm exec vitest run packages/content/src/generators/fake-players.test.ts packages/content/src/generators/league-system.test.ts apps/cli/src/commands/simulate-season.test.ts apps/cli/src/commands/career.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006`; `pnpm cli career --seed=demo-001 --save=career-demo --apply-market-demo=pro01-affordable-permanent`; `pnpm cli career --save=career-demo --inspect`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/06-staff-identity-readiness.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/06-staff-identity-readiness.md`
+
+- Status: Done
+- Outcome: Confirmed staff identity readiness without adding staff gameplay.
+- Adopted solution: `PersonIdentity` remains a reusable, language-agnostic people identity value for future staff/scout/president/agent/AI-manager contracts; all staff-specific mechanics must stay separate as role, rating, specialization, assignment, persona/tendency, wage, and effect contracts.
+- Verification: `rg -n "staff|scout|medico|preparatore|DS|responsabile vivaio|presidente|agent|procurator" requirements.md docs/PROJECT_STATUS.md packages`; `pnpm check`.
+- Next action: Execute `docs/steps/19-fictional-people-identity-foundation/07-identity-cli-review-and-quality-report.md`.
+
+### 2026-06-21 — `docs/steps/19-fictional-people-identity-foundation/07-identity-cli-review-and-quality-report.md`
+
+- Status: Done
+- Outcome: Added the identity review CLI path and completed the Phase 19 quality report.
+- Adopted solution: `pnpm cli simulate-season --seed=<seed> --identity-review` renders the selected generated club's player names, nationality, optional second nationality, birth country, name culture, and nationality summary using localized labels; `docs/audits/IDENTITY_FOUNDATION_REPORT.md` records the model, staff limits, manual commands, and the repeated-name limitation from small pools.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm exec vitest run apps/cli/src/commands/simulate-season.test.ts packages/i18n/src/labels.test.ts`; `pnpm check`; `pnpm cli simulate-season --seed=demo-001`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006`; `pnpm cli simulate-season --seed=demo-001 --identity-review`; `pnpm cli career --seed=demo-001 --save=career-demo --apply-market-demo=pro01-affordable-permanent`; `pnpm cli career --save=career-demo --inspect`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Next action: Decide the next phase; recommended first action is handling repeated generated full names before or inside the first playable career-loop phase.
+
+### 2026-06-21 — Phase 19 expanded nationality rework
+
+- Status: Done
+- Outcome: Expanded fictional nationality coverage beyond the first compact set.
+- Adopted solution: Added Colombia, Mexico, Ivory Coast, Wales, Scotland, Russia, South Korea, Albania, and Turkey to domain nationality codes; Serbia remains present and USA continues to use the stable `american` key. Distribution buckets now include the expanded football-nationality set, with Turkish and Korean name-culture pools added and all nationality/name-culture labels localized in `it/en/de/es/fr`.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm --filter @game/content run typecheck`; `pnpm --filter @game/i18n run typecheck`; focused person-identity/name-culture/nationality/i18n/CLI tests; `pnpm check`; `pnpm cli simulate-season --seed=demo-001 --identity-review`; `pnpm cli simulate-season --seed=demo-001 --identity-review --lang=it`.
+- Next action: Decide the next phase; repeated generated full names remain the recommended identity-quality cleanup.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/07-playable-loop-readiness-review.md`
+
+- Status: Done
+- Outcome: Created `docs/audits/PLAYABLE_LOOP_READINESS_REPORT.md`.
+- Adopted solution: The report marks Phase 18 as a successful persistence bridge, lists what is playable/durable/inspection-only, records manual commands to inspect, and recommends Phase 19 as a CLI-first playable career loop MVP before deeper market, youth, scouting, contracts, or UI work.
+- Verification: `pnpm check`; `pnpm cli career --seed=demo-001 --save=career-demo --apply-market-demo=pro01-affordable-permanent`; `pnpm cli career --save=career-demo --inspect`; `pnpm cli simulate-season --seed=demo-001 --market-demo=pro01-affordable-permanent --lang=it`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Next action: Decide and document Phase 19. Recommended: first playable career loop MVP.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/06-career-state-inspection.md`
+
+- Status: Done
+- Outcome: Added CLI inspection for persisted career saves.
+- Adopted solution: `pnpm cli career --save=<saveId> --inspect` reloads `JsonCareerStorage`, displays the selected club roster size and transfer funds, lists permanent-transfer history, and shows affected clubs with persisted roster size and transfer budget.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm exec vitest run apps/cli/src/commands/career.test.ts packages/i18n/src/labels.test.ts`; `pnpm check`; `pnpm cli career --seed=demo-001 --save=career-demo --apply-market-demo=pro01-affordable-permanent`; `pnpm cli career --save=career-demo --inspect`.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/07-playable-loop-readiness-review.md`.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/05-cli-career-market-apply.md`
+
+- Status: Done
+- Outcome: Added the first deterministic CLI flow that turns an accepted market demo into a persisted career save.
+- Adopted solution: `pnpm cli career --save=<saveId> --apply-market-demo=<profile>` builds the same deterministic fake career context, applies permanent transfers through the engine career use case, writes accepted results through `JsonCareerStorage`, leaves rejected transfers unsaved, and renders output through i18n labels.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm exec vitest run apps/cli/src/commands/career.test.ts packages/i18n/src/labels.test.ts`; `pnpm check`; accepted/rejected `pnpm cli career` smoke checks.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/06-career-state-inspection.md`.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/04-persistent-transfer-application.md`
+
+- Status: Done
+- Outcome: Added an engine-only persistent permanent-transfer application use case.
+- Adopted solution: `applyCareerPermanentTransfer` wraps the existing market preview, appends durable transfer history only for accepted transfers, and preserves the original `CareerState` reference for rejected transfers; engine still does not import storage, CLI, or i18n.
+- Verification: `pnpm --filter @game/engine run typecheck`; `pnpm exec vitest run packages/engine/src/career/apply-career-transfer.test.ts`; engine forbidden import scan; `pnpm check`.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/05-cli-career-market-apply.md`.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/03-career-save-adapter.md`
+
+- Status: Done
+- Outcome: Added career-state save/load persistence through the storage package.
+- Adopted solution: `JsonCareerStorage` stores full `CareerState` snapshots in `*.career.json` envelopes, validates snapshots via the domain constructor, reports missing/malformed saves through `StorageError`, and does not import engine/content/CLI/i18n.
+- Verification: `pnpm --filter @game/storage run typecheck`; `pnpm exec vitest run packages/storage/src/career-storage.test.ts`; storage forbidden import scan; `pnpm check`.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/04-persistent-transfer-application.md`.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/02-career-state-contract.md`
+
+- Status: Done
+- Outcome: Added the minimal dependency-free domain `CareerState` contract and tests.
+- Adopted solution: `CareerState` is a versioned wrapper over `GameState` with explicit selected-club context, durable transfer funds via `MarketState`, and ordered permanent-transfer history; validation remains domain-only and does not apply transfers or perform storage.
+- Verification: `pnpm --filter @game/domain run typecheck`; `pnpm exec vitest run packages/domain/src/state/career-state.test.ts`; domain forbidden import scan; `pnpm check`.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/03-career-save-adapter.md`.
+
+### 2026-06-21 — `docs/steps/18-career-state-and-transfer-persistence/01-phase-17-output-review.md`
+
+- Status: Done
+- Outcome: Confirmed the Phase 18 persistence scope from Phase 17 output and existing career-system dependency notes.
+- Adopted solution: The first durable career slice must include save ID, selected club, current `GameState`, market transfer funds, and permanent-transfer history; no wider economy, loans, contracts, windows, scouting, AI market, or UI scope is opened.
+- Verification: `test -f docs/audits/MARKET_MVP_REPORT.md`; `test -f docs/steps/18-career-state-and-transfer-persistence/02-career-state-contract.md`; required career/persistence roadmap `rg`.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/02-career-state-contract.md`.
+
+### 2026-06-21 — Phase 18 career state and transfer persistence docs
+
+- Status: Done
+- Outcome: Created `docs/steps/18-career-state-and-transfer-persistence/` as the next phase after the in-memory market MVP.
+- Adopted solution: Phase 18 is the persistence bridge before fun/playability evaluation: accepted permanent transfers can become durable career state, rejected transfers must not mutate saves, and final review must decide whether the project is ready for the first playable career loop.
+- Verification: Documentation-only update; no source checks required.
+- Next action: Execute `docs/steps/18-career-state-and-transfer-persistence/01-phase-17-output-review.md`.
 
 ### 2026-06-20 — Phase 15 core cleanup before career systems docs
 

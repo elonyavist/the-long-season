@@ -10,6 +10,15 @@ export {
   StorageError,
   type StorageErrorCode,
 } from "./game-storage.interface.ts";
+export {
+  type CareerStorage,
+  JsonCareerStorage,
+  type JsonCareerStorageOptions,
+  migrateCareerSave,
+  type SaveCareerInput,
+  type StoredCareerSave,
+  type StoredCareerSaveV1,
+} from "./career-storage.ts";
 export { JsonGameStorage, type JsonGameStorageOptions } from "./json-game-storage.ts";
 export { migrateSave, type StoredSave, type StoredSaveV1 } from "./migrate-save.ts";
 export { CURRENT_SAVE_SCHEMA_VERSION, type SaveMetadata } from "./save-metadata.ts";

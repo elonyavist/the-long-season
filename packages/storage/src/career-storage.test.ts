@@ -1,0 +1,206 @@
+import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "vitest";
+
+import {
+  CAREER_STATE_SCHEMA_VERSION,
+  createCareerState,
+  createMarketState,
+  gameDate,
+  nonNegativeMoney,
+  saveId,
+  seasonId,
+  type CareerState,
+  type GameState,
+} from "@game/domain";
+
+import { JsonCareerStorage } from "./career-storage.ts";
+import { StorageError } from "./game-storage.interface.ts";
+
+/**
+ * JSON career storage tests protect durable career-state round trips.
+ */
+
+test("save then load returns the same CareerState snapshot", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const state = minimalCareerState();
+
+  try {
+    const metadata = await storage.saveCareer({
+      saveId: saveId("save:career-demo"),
+      name: "Career Demo",
+      state,
+    });
+    const loaded = await storage.loadCareer(saveId("save:career-demo"));
+
+    assert.deepEqual(loaded, state);
+    assert.equal(metadata.saveId, "save:career-demo");
+    assert.equal(metadata.name, "Career Demo");
+    assert.equal(metadata.createdAtISO, "2026-06-21T10:00:00.000Z");
+    assert.equal(metadata.updatedAtISO, "2026-06-21T10:00:00.000Z");
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("saving a career does not mutate the input object", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const state = minimalCareerState();
+  const beforeSave = JSON.stringify(state);
+
+  try {
+    await storage.saveCareer({
+      saveId: saveId("save:career-demo"),
+      name: "Career Demo",
+      state,
+    });
+
+    assert.equal(JSON.stringify(state), beforeSave);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("loading a missing career save throws a typed storage error", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({ directoryPath });
+
+  try {
+    await assert.rejects(
+      () => storage.loadCareer(saveId("save:missing")),
+      (error: unknown) => error instanceof StorageError && error.code === "save_not_found",
+    );
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("loading malformed career saves fails clearly", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({ directoryPath });
+  const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
+
+  try {
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 1, metadata: {}, state: {} }), "utf8");
+
+    await assert.rejects(
+      () => storage.loadCareer(saveId("save:bad")),
+      (error: unknown) => error instanceof StorageError && error.code === "save_unreadable",
+    );
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career storage writes a career-specific JSON envelope", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+
+  try {
+    await storage.saveCareer({
+      saveId: saveId("save:career-demo"),
+      name: "Career Demo",
+      state: minimalCareerState(),
+    });
+
+    const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
+    const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
+
+    assert.equal(raw.saveSchemaVersion, 1);
+    assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
+    assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+/** Builds the smallest valid durable career state needed for storage tests. */
+function minimalCareerState(): CareerState {
+  const pro01 = "club:pro01" as CareerState["selectedClubId"];
+
+  return createCareerState({
+    saveId: saveId("save:career-demo"),
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    selectedClubId: pro01,
+    gameState: minimalGameState(),
+    marketState: createMarketState({
+      clubBudgets: {
+        [pro01]: { clubId: pro01, transferBudget: nonNegativeMoney(6_000_000_00) },
+      },
+      clubBudgetIds: [pro01],
+    }),
+    transferHistory: [],
+  });
+}
+
+/** Builds the smallest valid game state with one selected club. */
+function minimalGameState(): GameState {
+  const pro01 = "club:pro01" as CareerState["selectedClubId"];
+
+  return {
+    meta: {
+      seed: "demo-001",
+      rngAlgorithmVersion: "sfc32-cyrb128-v1",
+      saveSchemaVersion: 1,
+    },
+    calendar: {
+      currentDate: gameDate(20_000),
+      currentSeasonId: seasonId("season:2026"),
+    },
+    players: {},
+    playerIds: [],
+    playerStates: {},
+    clubs: {
+      [pro01]: {
+        id: pro01,
+        name: "PRO01",
+        shortName: "PRO01",
+        category: "third_division",
+        reputation: 5,
+        playerIds: [],
+      },
+    },
+    clubIds: [pro01],
+    fixtures: {},
+    fixtureIds: [],
+  };
+}
+
+/**
+ * Creates a deterministic clock function for metadata assertions.
+ */
+function fixedClock(...timestamps: readonly string[]): () => string {
+  assert.notEqual(timestamps.length, 0);
+
+  let index = 0;
+
+  return () => {
+    const timestamp = timestamps[Math.min(index, timestamps.length - 1)]!;
+    index += 1;
+
+    return timestamp;
+  };
+}
+
+/** Creates an isolated temporary save directory for a test case. */
+async function createTempSaveDirectory(): Promise<string> {
+  return mkdtemp(join(tmpdir(), "the-long-season-career-saves-"));
+}
+
+/** Removes a temporary save directory after a test case. */
+async function removeTempSaveDirectory(directoryPath: string): Promise<void> {
+  await rm(directoryPath, { recursive: true, force: true });
+}

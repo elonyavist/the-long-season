@@ -136,6 +136,21 @@ export async function runSimulateSeasonCommand(
   }
 
   if (
+    parsed.identityReview &&
+    (parsed.fixtureId !== undefined ||
+      parsed.roundNumber !== undefined ||
+      setupDemo !== undefined ||
+      manualTacticSwitch !== undefined ||
+      conditionDemo !== undefined ||
+      lineupDemo !== undefined ||
+      parsed.marketDemo !== undefined ||
+      parsed.formationFit !== undefined)
+  ) {
+    io.stderr(text("identity.error.cannotCombine"));
+    return 1;
+  }
+
+  if (
     parsed.marketDemo !== undefined &&
     (parsed.fixtureId !== undefined ||
       parsed.roundNumber !== undefined ||
@@ -151,6 +166,14 @@ export async function runSimulateSeasonCommand(
 
   if (parsed.marketDemo !== undefined) {
     for (const line of formatMarketDemoOutput(league, parsed.seed, parsed.marketDemo, text)) {
+      io.stdout(line);
+    }
+
+    return 0;
+  }
+
+  if (parsed.identityReview) {
+    for (const line of formatIdentityReviewOutput(league, parsed.seed, text)) {
       io.stdout(line);
     }
 
@@ -303,6 +326,104 @@ function simulateSeasonForCli(
     playerSummaryStats: result.playerSummaryStats,
     finalPlayerStates: result.finalPlayerStates,
   };
+}
+
+/**
+ * Formats a read-only review of generated player identity metadata.
+ */
+function formatIdentityReviewOutput(league: FakeLeagueSystem, seed: string, text: Translator): readonly string[] {
+  const clubId = firstGeneratedClubId(league, "identity review");
+  const club = league.clubsById[clubId];
+
+  if (club === undefined) {
+    throw new Error(`Cannot build identity review without club: ${clubId}`);
+  }
+
+  const lines = [
+    text("identity.title"),
+    `${text("season.seed")}: ${seed}`,
+    `${text("season.competition")}: ${league.competition.name}`,
+    `${text("setup.selectedClub")}: ${clubLabel(clubId, league.clubsById)}`,
+    `${text("formation.squadSize")}: ${club.playerIds.length}`,
+    `${text("identity.scope")}: ${text("identity.scopeValue")}`,
+    "",
+    `${text("identity.players")}:`,
+    text("identity.playerHeader"),
+  ];
+
+  for (const playerId of club.playerIds) {
+    lines.push(formatIdentityPlayerRow(playerId, league, text));
+  }
+
+  lines.push("");
+  lines.push(`${text("identity.nationalitySummary")}:`);
+
+  for (const summaryLine of formatIdentityNationalitySummary(club.playerIds, league, text)) {
+    lines.push(summaryLine);
+  }
+
+  return lines;
+}
+
+/**
+ * Formats one player row for the generated identity review.
+ */
+function formatIdentityPlayerRow(playerId: PlayerId, league: FakeLeagueSystem, text: Translator): string {
+  const identity = league.playerIdentities[playerId];
+
+  if (identity === undefined) {
+    return `  ${playerLabel(playerId, league.players).padEnd(19, " ")} ${text("common.unavailable")}`;
+  }
+
+  const player = playerLabel(playerId, league.players).padEnd(19, " ");
+  const nationality = formatIdentityNationality(identity.nationality, text).padEnd(14, " ");
+  const secondNationality = (identity.secondNationality === undefined
+    ? text("common.none")
+    : formatIdentityNationality(identity.secondNationality, text)
+  ).padEnd(14, " ");
+  const birthCountry = formatIdentityNationality(identity.birthCountry, text).padEnd(14, " ");
+  const nameCulture = formatIdentityNameCulture(identity.nameCulture, text);
+
+  return `  ${player} ${nationality} ${secondNationality} ${birthCountry} ${nameCulture}`;
+}
+
+/**
+ * Formats the deterministic nationality mix for the reviewed club.
+ */
+function formatIdentityNationalitySummary(
+  playerIds: readonly PlayerId[],
+  league: FakeLeagueSystem,
+  text: Translator,
+): readonly string[] {
+  const counts: Record<string, number> = {};
+
+  for (const playerId of playerIds) {
+    const identity = league.playerIdentities[playerId];
+
+    if (identity === undefined) {
+      continue;
+    }
+
+    counts[identity.nationality] = (counts[identity.nationality] ?? 0) + 1;
+  }
+
+  return Object.keys(counts)
+    .sort()
+    .map((nationality) => `  ${formatIdentityNationality(nationality, text)}: ${counts[nationality] ?? 0}`);
+}
+
+/**
+ * Localizes a supported nationality code for CLI presentation.
+ */
+function formatIdentityNationality(nationality: string, text: Translator): string {
+  return text(presentationMessageKey("identity.nationality", nationality));
+}
+
+/**
+ * Localizes a supported name-culture code for CLI presentation.
+ */
+function formatIdentityNameCulture(nameCulture: string, text: Translator): string {
+  return text(presentationMessageKey("identity.nameCulture", nameCulture));
 }
 
 /**

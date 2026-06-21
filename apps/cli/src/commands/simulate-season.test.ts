@@ -64,12 +64,13 @@ test("simulate-season prints real season player summaries", async () => {
   assert.equal(exitCode, 0);
   assert.notEqual(topScorerLine, undefined);
   assert.notEqual(topScorerLine, "Top scorer: unavailable in aggregate engine v1");
-  assert.match(topScorerLine ?? "", /^Top scorer: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ goals$/);
-  assert.match(topAssistLine ?? "", /^Top assist: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ assists?$/);
+  assert.match(topScorerLine ?? "", /^Top scorer: [A-Za-z]+ [A-Za-z]+ \(PRO[0-9]{2}\) - [0-9]+ goals$/);
+  assert.match(topAssistLine ?? "", /^Top assist: [A-Za-z]+ [A-Za-z]+ \(PRO[0-9]{2}\) - [0-9]+ assists?$/);
   assert.match(
     topGoalkeeperSavesLine ?? "",
-    /^Top goalkeeper saves: Player[0-9]{2} No[0-9]{2} \(PRO[0-9]{2}\) - [0-9]+ saves?$/,
+    /^Top goalkeeper saves: [A-Za-z]+ [A-Za-z]+ \(PRO[0-9]{2}\) - [0-9]+ saves?$/,
   );
+  assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
 });
 
 test("simulate-season can inspect formation fit without printing the season table", async () => {
@@ -104,6 +105,46 @@ test("simulate-season can inspect formation fit without printing the season tabl
   );
 });
 
+test("simulate-season can review generated player identities without printing the season table", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--identity-review"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season identity review");
+  assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
+  assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("Squad size: 22"), true);
+  assert.equal(io.stdoutLines.includes("Players:"), true);
+  assert.equal(io.stdoutLines.includes("Nationality summary:"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+[A-Za-z]/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => line.includes("Italian")), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), false);
+  assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
+});
+
+test("simulate-season localizes identity review output", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--identity-review", "--lang=it"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season revisione identita");
+  assert.equal(io.stdoutLines.includes("Giocatori:"), true);
+  assert.equal(io.stdoutLines.includes("Riepilogo nazionalita:"), true);
+});
+
+test("simulate-season rejects combined identity review inspections", async () => {
+  const io = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--identity-review", "--round=1"], io), 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(
+    io.stderrLines[0],
+    "--identity-review cannot be combined with --round, --fixture, --setup-demo, --manual-tactic-switch, --condition-demo, --lineup-demo, --market-demo, or --formation-fit",
+  );
+});
+
 test("simulate-season can inspect an accepted permanent-transfer market demo", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(
@@ -119,7 +160,10 @@ test("simulate-season can inspect an accepted permanent-transfer market demo", a
   assert.equal(io.stdoutLines.includes("Transfer kind: permanent transfer"), true);
   assert.equal(io.stdoutLines.includes("Buying club: PRO01"), true);
   assert.equal(io.stdoutLines.includes("Selling club: PRO18"), true);
-  assert.equal(io.stdoutLines.includes("Target player: Player18 No10"), true);
+  assert.equal(
+    io.stdoutLines.some((line) => /^Target player: [A-Za-z]+ [A-Za-z]+$/.test(line) && !/Player[0-9]{2} No[0-9]{2}/.test(line)),
+    true,
+  );
   assert.equal(io.stdoutLines.includes("Status: accepted"), true);
   assert.equal(io.stdoutLines.includes("Transfer value: EUR 1529990.00"), true);
   assert.equal(io.stdoutLines.includes("Buyer budget before: EUR 6000000.00"), true);
@@ -142,7 +186,10 @@ test("simulate-season can inspect a rejected permanent-transfer market demo", as
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Market demo: ${MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED}`), true);
   assert.equal(io.stdoutLines.includes("Selling club: PRO02"), true);
-  assert.equal(io.stdoutLines.includes("Target player: Player02 No10"), true);
+  assert.equal(
+    io.stdoutLines.some((line) => /^Target player: [A-Za-z]+ [A-Za-z]+$/.test(line) && !/Player[0-9]{2} No[0-9]{2}/.test(line)),
+    true,
+  );
   assert.equal(io.stdoutLines.includes("Status: rejected"), true);
   assert.equal(io.stdoutLines.includes("Buyer budget after: EUR 100000000.00"), true);
   assert.equal(io.stdoutLines.includes("  player does not want this move"), true);
@@ -230,7 +277,7 @@ test("simulate-season can print a deterministic condition demo", async () => {
   assert.equal(io.stdoutLines.includes("  Final selected club condition:"), true);
   assert.equal(io.stdoutLines.includes("  Player              Start Final Delta"), true);
   assert.equal(conditionPlayerRows(io.stdoutLines).length, 11);
-  assert.equal(io.stdoutLines.includes("  Player01 No01         100    92    -8"), true);
+  assert.equal(hasPlaceholderPlayerNames(conditionPlayerRows(io.stdoutLines)), false);
 });
 
 test("simulate-season can inspect the deterministic first-team lineup demo", async () => {
@@ -247,8 +294,8 @@ test("simulate-season can inspect the deterministic first-team lineup demo", asy
   assert.equal(io.stdoutLines.includes("  Applied to fixtures: no (profile inspection only)"), true);
   assert.equal(io.stdoutLines.includes("  Changes from first team:"), true);
   assert.equal(io.stdoutLines.includes("  none"), true);
-  assert.equal(io.stdoutLines.includes("  slot:01 Player01 No01 goalkeeper"), true);
-  assert.equal(io.stdoutLines.includes("  slot:11 Player01 No11 attacker"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:01 [A-Za-z]+ [A-Za-z]+ goalkeeper$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:11 [A-Za-z]+ [A-Za-z]+ attacker$/.test(line)), true);
   assert.equal(lineupStarterRows(io.stdoutLines).length, 11);
 });
 
@@ -263,14 +310,14 @@ test("simulate-season can inspect the deterministic rotated lineup demo", async 
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Lineup demo: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
   assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
-  assert.equal(io.stdoutLines.includes("  slot:01: Player01 No01 -> Player01 No12 (goalkeeper)"), true);
-  assert.equal(io.stdoutLines.includes("  slot:05: Player01 No05 -> Player01 No13 (defender)"), true);
-  assert.equal(io.stdoutLines.includes("  slot:08: Player01 No08 -> Player01 No15 (midfielder)"), true);
-  assert.equal(io.stdoutLines.includes("  slot:11: Player01 No11 -> Player01 No16 (attacker)"), true);
-  assert.equal(io.stdoutLines.includes("  slot:01 Player01 No12 goalkeeper"), true);
-  assert.equal(io.stdoutLines.includes("  slot:05 Player01 No13 defender"), true);
-  assert.equal(io.stdoutLines.includes("  slot:08 Player01 No15 midfielder"), true);
-  assert.equal(io.stdoutLines.includes("  slot:11 Player01 No16 attacker"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:01: [A-Za-z]+ [A-Za-z]+ -> [A-Za-z]+ [A-Za-z]+ \(goalkeeper\)$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:05: [A-Za-z]+ [A-Za-z]+ -> [A-Za-z]+ [A-Za-z]+ \(defender\)$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:08: [A-Za-z]+ [A-Za-z]+ -> [A-Za-z]+ [A-Za-z]+ \(midfielder\)$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:11: [A-Za-z]+ [A-Za-z]+ -> [A-Za-z]+ [A-Za-z]+ \(attacker\)$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:01 [A-Za-z]+ [A-Za-z]+ goalkeeper$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:05 [A-Za-z]+ [A-Za-z]+ defender$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:08 [A-Za-z]+ [A-Za-z]+ midfielder$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:11 [A-Za-z]+ [A-Za-z]+ attacker$/.test(line)), true);
   assert.equal(lineupStarterRows(io.stdoutLines).length, 11);
 });
 
@@ -288,17 +335,16 @@ test("simulate-season fixture detail can apply a selected lineup demo", async ()
   assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
   assert.equal(io.stdoutLines.some((line) => /^  Fixture: fixture:000006 PRO17 [0-9]+-[0-9]+ PRO01$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: yes"), true);
-  assert.equal(io.stdoutLines.includes("  slot:01 Player01 No12 goalkeeper"), true);
-  assert.equal(io.stdoutLines.includes("  slot:05 Player01 No13 defender"), true);
-  assert.equal(io.stdoutLines.includes("  Player01 No01 replaced by Player01 No12"), true);
-  assert.equal(io.stdoutLines.includes("  Player01 No11 replaced by Player01 No16"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:01 [A-Za-z]+ [A-Za-z]+ goalkeeper$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  slot:05 [A-Za-z]+ [A-Za-z]+ defender$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+ replaced by [A-Za-z]+ [A-Za-z]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("  Selected starters spend 8 fitness"), true);
-  assert.equal(io.stdoutLines.includes("  Player01 No12 expected fitness 92"), true);
-  assert.equal(io.stdoutLines.includes("  Player01 No01 expected fitness 100"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+ expected fitness 92$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+ expected fitness 100$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
   assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
-  assert.equal(io.stdoutLines.some((line) => /^  Player01 No12\s+PRO01\s+/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+PRO01\s+/.test(line)), true);
 });
 
 test("simulate-season fixture lineup demo reports non-applicable fixtures", async () => {
@@ -393,16 +439,17 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top goalkeeper saves: ")), false);
   assert.equal(io.stdoutLines.includes("fixture:000001 PRO04 5-0 PRO18"), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
-  assert.equal(io.stdoutLines.some((line) => / GOAL PRO[0-9]{2} Player[0-9]{2} No[0-9]{2}.* shot=[a-z ]+ chance=[a-z ]+$/.test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => / GOAL .* creator=Player[0-9]{2} No[0-9]{2} /.test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => / SAVE PRO[0-9]{2} Player[0-9]{2} No[0-9]{2} vs PRO[0-9]{2} shot=[a-z ]+ chance=[a-z ]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => / GOAL PRO[0-9]{2} [A-Za-z]+ [A-Za-z]+.* shot=[a-z ]+ chance=[a-z ]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => / GOAL .* creator=[A-Za-z]+ [A-Za-z]+ /.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => / SAVE PRO[0-9]{2} [A-Za-z]+ [A-Za-z]+ vs PRO[0-9]{2} shot=[a-z ]+ chance=[a-z ]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
   assert.equal(io.stdoutLines.includes("  Player              Club  G A Sh SoT Sv"), true);
-  assert.equal(io.stdoutLines.some((line) => /^  Player[0-9]{2} No[0-9]{2}\s+PRO[0-9]{2}\s+/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+PRO[0-9]{2}\s+/.test(line)), true);
   assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
-  assert.equal(io.stdoutLines.includes("  Player04 No10       PRO04 3 0  5   4  0"), true);
-  assert.equal(io.stdoutLines.includes("  Player04 No05       PRO04 0 0  1   0  0"), true);
-  assert.equal(io.stdoutLines.includes("  Player18 No05       PRO18 0 0  0   0  0"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+PRO04 3 0  5   4  0$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+PRO04 0 0  1   0  0$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+PRO18 0 0  0   0  0$/.test(line)), true);
+  assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
 });
 
 test("simulate-season localizes fixture event enum values in Italian", async () => {
@@ -436,8 +483,8 @@ test("simulate-season applies the deterministic tactic and lineup setup demo", a
     true,
   );
   assert.equal(demoIo.stdoutLines.includes("Lineup role changes:"), true);
-  assert.equal(demoIo.stdoutLines.includes("  slot:08: Player01 No08 midfielder -> attacker"), true);
-  assert.equal(demoIo.stdoutLines.includes("  slot:09: Player01 No09 midfielder -> attacker"), true);
+  assert.equal(demoIo.stdoutLines.some((line) => /^  slot:08: [A-Za-z]+ [A-Za-z]+ midfielder -> attacker$/.test(line)), true);
+  assert.equal(demoIo.stdoutLines.some((line) => /^  slot:09: [A-Za-z]+ [A-Za-z]+ midfielder -> attacker$/.test(line)), true);
   assert.equal(demoIo.stdoutLines.includes("Final table:"), true);
   assert.notDeepEqual(demoIo.stdoutLines, defaultIo.stdoutLines);
 });
@@ -469,8 +516,8 @@ test("simulate-season supports balanced and defensive setup demo profiles", asyn
     defensive.stdoutLines.includes("Tactic: mentality=defensive pressing=0.35 directness=0.30 width=0.40 risk=0.20"),
     true,
   );
-  assert.equal(defensive.stdoutLines.includes("  slot:10: Player01 No10 attacker -> midfielder"), true);
-  assert.equal(defensive.stdoutLines.includes("  slot:11: Player01 No11 attacker -> midfielder"), true);
+  assert.equal(defensive.stdoutLines.some((line) => /^  slot:10: [A-Za-z]+ [A-Za-z]+ attacker -> midfielder$/.test(line)), true);
+  assert.equal(defensive.stdoutLines.some((line) => /^  slot:11: [A-Za-z]+ [A-Za-z]+ attacker -> midfielder$/.test(line)), true);
 });
 
 test("same seed and setup demo produce same tactic inspection output", async () => {
@@ -577,7 +624,7 @@ test("simulate-season fixture detail prints durable causal defender context for 
   assert.equal(io.stderrLines.length, 0);
   assert.equal(
     io.stdoutLines.some((line) =>
-      / BLOCK PRO[0-9]{2} defender=Player[0-9]{2} No[0-9]{2} shot=[a-z_]+ chance=[a-z_]+$/.test(line)
+      / BLOCK PRO[0-9]{2} defender=[A-Za-z]+ [A-Za-z]+ shot=[a-z_]+ chance=[a-z_]+$/.test(line)
     ),
     true,
   );
@@ -838,19 +885,26 @@ function captureIo() {
  * Extracts rendered player-stat rows from fixture detail command output.
  */
 function fixturePlayerStatLines(lines: readonly string[]): readonly string[] {
-  return lines.filter((line) => /^  Player[0-9]{2} No[0-9]{2}\s+PRO[0-9]{2}\s+[0-9]/.test(line));
+  return lines.filter((line) => /^  [A-Za-z]+ [A-Za-z]+\s+PRO[0-9]{2}\s+[0-9]/.test(line));
 }
 
 /**
  * Extracts rendered condition rows from condition-demo command output.
  */
 function conditionPlayerRows(lines: readonly string[]): readonly string[] {
-  return lines.filter((line) => /^  Player01 No[0-9]{2}\s+100\s+92\s+-8$/.test(line));
+  return lines.filter((line) => /^  [A-Za-z]+ [A-Za-z]+\s+100\s+92\s+-8$/.test(line));
 }
 
 /**
  * Extracts rendered starter rows from lineup-demo command output.
  */
 function lineupStarterRows(lines: readonly string[]): readonly string[] {
-  return lines.filter((line) => /^  slot:[0-9]{2} Player01 No[0-9]{2} (goalkeeper|defender|midfielder|attacker)$/.test(line));
+  return lines.filter((line) => /^  slot:[0-9]{2} [A-Za-z]+ [A-Za-z]+ (goalkeeper|defender|midfielder|attacker)$/.test(line));
+}
+
+/**
+ * Detects the old placeholder player-name format in rendered CLI output.
+ */
+function hasPlaceholderPlayerNames(lines: readonly string[]): boolean {
+  return lines.some((line) => /Player[0-9]{2} No[0-9]{2}/.test(line));
 }

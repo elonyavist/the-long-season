@@ -8,6 +8,11 @@ export * from "./match-engine/index.ts";
 export * from "./market/index.ts";
 export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
+export {
+  applyCareerPermanentTransfer,
+  type ApplyCareerPermanentTransferInput,
+  type ApplyCareerPermanentTransferResult,
+} from "./career/apply-career-transfer.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
   ApplyMatchReportToFixtureError,
