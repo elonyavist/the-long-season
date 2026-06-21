@@ -4,8 +4,18 @@ import type { MessageKey, Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 
 import { CLI_CAREER_WORLD_GENERATOR_VERSION, type CareerMarketScenario } from "./scenarios.ts";
+import type { SaveCareerLineupDemoResult, SaveCareerTacticDemoResult } from "./preparation.ts";
 import type { CareerAdvanceResult } from "./progression.ts";
-import type { CliCareerState, CliClubTransferBudget, CliGameState, CliMarketState, CliMoney, ClubId, PlayerId } from "./types.ts";
+import type {
+  CliCareerState,
+  CliClubTransferBudget,
+  CliGameState,
+  CliMarketState,
+  CliMoney,
+  CliPlayer,
+  ClubId,
+  PlayerId,
+} from "./types.ts";
 
 type CliFixtureId = CliGameState["fixtureIds"][number];
 type CliFixture = CliGameState["fixtures"][CliFixtureId];
@@ -70,6 +80,8 @@ export function formatCareerInspectOutput(input: {
     `${input.text("career.selectedClubPlayedFixtures")}: ${countPlayedSelectedClubFixtures(input.careerState)}`,
     `${input.text("career.transferHistory")}:`,
     ...formatTransferHistoryLines(input.careerState, input.text),
+    `${input.text("career.matchPreparation")}:`,
+    ...formatCareerMatchPreparationLines(input.careerState, input.text),
     `${input.text("career.affectedClubs")}:`,
     ...formatAffectedClubLines(input.careerState, input.text),
   ];
@@ -100,7 +112,7 @@ export function formatCareerAdvanceOutput(input: {
       `${input.text("career.save")}: ${input.saveId}`,
       `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
       `${input.text("career.advance.status")}: ${input.text("career.advance.status.invalid")}`,
-      `${input.text("career.advance.reason")}: ${input.result.reason}`,
+      `${input.text("career.advance.reason")}: ${formatCareerAdvanceInvalidReason(input.result.reason, input.text)}`,
       `${input.text("career.saveWritten")}: ${input.text("common.no")}`,
     ];
   }
@@ -126,6 +138,50 @@ export function formatCareerAdvanceOutput(input: {
   ];
 }
 
+/** Formats the output emitted after saving a lineup into a career save. */
+export function formatCareerLineupSaveOutput(input: {
+  readonly result: SaveCareerLineupDemoResult;
+  readonly saveId: string;
+  readonly saveDirectoryPath: string;
+  readonly text: Translator;
+}): readonly string[] {
+  return [
+    input.text("career.lineupSave.title"),
+    `${input.text("career.save")}: ${input.saveId}`,
+    `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
+    `${input.text("career.lineupSave.profile")}: ${input.result.profileKey}`,
+    `${input.text("setup.selectedClub")}: ${clubLabel(input.result.clubId, input.result.careerState.gameState)}`,
+    `${input.text("career.saveWritten")}: ${input.text("common.yes")}`,
+    `${input.text("career.lineupSave.appliesToNextFixture")}: ${input.result.nextFixture === undefined ? input.text("common.no") : input.text("common.yes")}`,
+    `${input.text("career.nextSelectedClubFixture")}:`,
+    ...formatNextSelectedClubFixtureLines(input.result.careerState, input.result.nextFixture, input.text),
+    `${input.text("lineup.selectedStarters")}:`,
+    ...formatSavedLineupSlotLines(input.result.selectedLineup.slots, input.result.careerState.gameState, input.text),
+    `${input.text("lineup.changesFromFirstTeam")}:`,
+    ...formatLineupChangeLines(input.result.playerChanges, input.result.careerState.gameState, input.text),
+  ];
+}
+
+/** Formats the output emitted after saving a tactic into a career save. */
+export function formatCareerTacticSaveOutput(input: {
+  readonly result: SaveCareerTacticDemoResult;
+  readonly saveId: string;
+  readonly saveDirectoryPath: string;
+  readonly text: Translator;
+}): readonly string[] {
+  return [
+    input.text("career.tacticSave.title"),
+    `${input.text("career.save")}: ${input.saveId}`,
+    `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
+    `${input.text("career.tacticSave.profile")}: ${input.result.profileKey}`,
+    `${input.text("setup.selectedClub")}: ${clubLabel(input.result.clubId, input.result.careerState.gameState)}`,
+    `${input.text("career.saveWritten")}: ${input.text("common.yes")}`,
+    `${input.text("career.nextSelectedClubFixture")}:`,
+    ...formatNextSelectedClubFixtureLines(input.result.careerState, input.result.nextFixture, input.text),
+    `${input.text("career.matchPreparation.savedTactic")}: ${formatTacticSetup(input.result.tactic, input.text)}`,
+  ];
+}
+
 /** Formats the compact save-driven summary used before advancing a career. */
 export function formatCareerSummaryOutput(input: {
   readonly careerState: CliCareerState;
@@ -148,6 +204,126 @@ export function formatCareerSummaryOutput(input: {
     `${input.text("career.selectedClubTransferFunds")}: ${formatMoney(selectedBudget?.transferBudget)}`,
     `${input.text("career.nextSelectedClubFixture")}:`,
     ...formatNextSelectedClubFixtureLines(input.careerState, nextFixture, input.text),
+    `${input.text("career.matchPreparation")}:`,
+    ...formatCareerMatchPreparationLines(input.careerState, input.text),
+  ];
+}
+
+function formatCareerMatchPreparationLines(careerState: CliCareerState, text: Translator): readonly string[] {
+  const preparation = careerState.matchPreparation;
+  if (preparation === undefined) {
+    return [`  ${text("career.matchPreparation.none")}`];
+  }
+
+  const lines = [
+    `  ${text("career.matchPreparation.updatedAt")}: ${toISO(preparation.updatedAt)}`,
+    `  ${text("career.matchPreparation.targetFixture")}: ${preparation.targetFixtureId ?? text("common.none")}`,
+    `  ${text("career.matchPreparation.savedLineup")}:`,
+  ];
+
+  if (preparation.selectedLineup === undefined) {
+    lines.push(`    ${text("common.none")}`);
+  } else {
+    lines.push(...formatSavedLineupSlotLines(preparation.selectedLineup.slots, careerState.gameState, text).map((line) => `  ${line}`));
+  }
+
+  lines.push(
+    `  ${text("career.matchPreparation.savedTactic")}: ${
+      preparation.tactic === undefined ? text("common.none") : formatTacticSetup(preparation.tactic, text)
+    }`,
+  );
+
+  return lines;
+}
+
+function formatSavedLineupSlotLines(
+  slots: readonly { readonly slotKey: string; readonly playerId: PlayerId; readonly roleKey: string }[],
+  gameState: CliGameState,
+  text: Translator,
+): readonly string[] {
+  return slots.map((slot) => `  ${slot.slotKey} ${playerLabel(slot.playerId, gameState)} ${formatLineupRole(slot.roleKey, text)}`);
+}
+
+function formatLineupChangeLines(
+  changes: readonly { readonly fromPlayerId: PlayerId; readonly toPlayerId: PlayerId }[],
+  gameState: CliGameState,
+  text: Translator,
+): readonly string[] {
+  if (changes.length === 0) {
+    return [`  ${text("common.none")}`];
+  }
+
+  return changes.map((change) =>
+    `  ${text("lineup.replacedBy", {
+      from: playerLabel(change.fromPlayerId, gameState),
+      to: playerLabel(change.toPlayerId, gameState),
+    })}`
+  );
+}
+
+function formatLineupRole(roleKey: string, text: Translator): string {
+  return text(presentationMessageKey("lineup.role", roleKey));
+}
+
+function formatCareerAdvanceInvalidReason(reason: string, text: Translator): string {
+  switch (reason) {
+    case "missing_match_preparation":
+      return text("career.advance.reason.missingMatchPreparation");
+    case "missing_saved_lineup":
+      return text("career.advance.reason.missingSavedLineup");
+    case "missing_saved_tactic":
+      return text("career.advance.reason.missingSavedTactic");
+    default:
+      return reason;
+  }
+}
+
+function formatTacticSetup(
+  tactic: { readonly mentality: string; readonly pressing: number; readonly directness: number; readonly width: number; readonly risk: number },
+  text: Translator,
+): string {
+  return `${text("setup.mentality")}=${formatMentality(tactic.mentality, text)} ${text("setup.pressing")}=${formatTacticKnob(
+    tactic.pressing,
+  )} ${text("setup.directness")}=${formatTacticKnob(tactic.directness)} ${text("setup.width")}=${formatTacticKnob(tactic.width)} ${text(
+    "setup.risk",
+  )}=${formatTacticKnob(tactic.risk)}`;
+}
+
+function formatMentality(mentality: string, text: Translator): string {
+  return text(presentationMessageKey("setup.mentalityValue", mentality));
+}
+
+function formatTacticKnob(value: number): string {
+  return value.toFixed(2);
+}
+
+/** Formats the selected club squad from a persisted career save. */
+export function formatCareerSquadOutput(input: {
+  readonly careerState: CliCareerState;
+  readonly saveDirectoryPath: string;
+  readonly text: Translator;
+}): readonly string[] {
+  const selectedClub = input.careerState.gameState.clubs[input.careerState.selectedClubId];
+  const lines = [
+    input.text("career.squad.title"),
+    `${input.text("career.save")}: ${input.careerState.saveId}`,
+    `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
+    ...formatCareerWorldMetadataLines(input.careerState, input.text),
+    `${input.text("career.currentDate")}: ${toISO(input.careerState.gameState.calendar.currentDate)}`,
+    `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
+    `${input.text("career.selectedClubRosterSize")}: ${selectedClub?.playerIds.length ?? 0}`,
+    `${input.text("career.squad.inspectionOnly")}`,
+    `${input.text("career.squad.players")}:`,
+    input.text("career.squad.tableHeader"),
+  ];
+
+  if (selectedClub === undefined || selectedClub.playerIds.length === 0) {
+    return [...lines, `  ${input.text("common.none")}`];
+  }
+
+  return [
+    ...lines,
+    ...selectedClub.playerIds.map((playerId) => formatCareerSquadPlayerLine(input.careerState, playerId, input.text)),
   ];
 }
 
@@ -179,6 +355,94 @@ export function formatNewCareerWorldOutput(input: {
     `${input.text("career.prospectSummary")}:`,
     ...formatCareerProspectSummary(input.league, input.careerState, input.text),
   ];
+}
+
+function formatCareerSquadPlayerLine(careerState: CliCareerState, playerId: PlayerId, text: Translator): string {
+  const player = careerState.gameState.players[playerId];
+  const playerState = careerState.gameState.playerStates[playerId];
+
+  if (player === undefined) {
+    return `  ${String(playerId).padEnd(28)} ${text("common.unknown")}`;
+  }
+
+  const age = Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / 365);
+  const position = formatPrimaryPosition(player);
+  const roleAbility = roleRelevantCurrentAbility(player);
+
+  return [
+    "  ",
+    playerLabel(playerId, careerState.gameState).padEnd(28),
+    String(age).padStart(3),
+    " ",
+    position.padEnd(4),
+    " ",
+    roleAbility.toFixed(1).padStart(4),
+    " ",
+    String(playerState?.fitness ?? "--").padStart(3),
+    " ",
+    String(playerState?.form ?? "--").padStart(4),
+    " ",
+    String(playerState?.morale ?? "--").padStart(3),
+  ].join("");
+}
+
+function formatPrimaryPosition(player: CliPlayer): string {
+  return (player.naturalPositions[0] ?? "n/a").toUpperCase();
+}
+
+function roleRelevantCurrentAbility(player: CliPlayer): number {
+  const primaryPosition = player.naturalPositions[0];
+
+  if (primaryPosition === "gk") {
+    return average([
+      player.abilities.goalkeeping.reflexes,
+      player.abilities.goalkeeping.handling,
+      player.abilities.goalkeeping.goalkeeperPositioning,
+      player.abilities.goalkeeping.rushingOut,
+      player.abilities.goalkeeping.footwork,
+    ]);
+  }
+
+  if (primaryPosition === "cb" || primaryPosition === "rb" || primaryPosition === "lb" || primaryPosition === "rwb" || primaryPosition === "lwb") {
+    return average([
+      player.abilities.technical.tackling,
+      player.abilities.mental.positioning,
+      player.abilities.mental.anticipation,
+      player.abilities.physical.strength,
+      player.abilities.physical.heading,
+    ]);
+  }
+
+  if (primaryPosition === "dm" || primaryPosition === "cm" || primaryPosition === "am") {
+    return average([
+      player.abilities.technical.passing,
+      player.abilities.technical.technique,
+      player.abilities.mental.vision,
+      player.abilities.mental.positioning,
+      player.abilities.physical.stamina,
+    ]);
+  }
+
+  return average([
+    player.abilities.technical.finishing,
+    player.abilities.technical.dribbling,
+    player.abilities.technical.technique,
+    player.abilities.mental.composure,
+    player.abilities.physical.pace,
+  ]);
+}
+
+function average(values: readonly number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  let total = 0;
+  for (const value of values) {
+    total += value;
+  }
+
+  return total / values.length;
 }
 
 function formatReasonLines(result: ApplyCareerPermanentTransferResult, text: Translator): readonly string[] {
@@ -367,11 +631,11 @@ function formatCareerProspectSummary(
         counts.prospects += 1;
       }
 
-      if (archetypeKey === "high_potential_prospect") {
+      if (archetype.potentialClass === "serious" || archetype.potentialClass === "elite") {
         counts.highPotential += 1;
       }
 
-      if (archetypeKey === "rare_wonderkid") {
+      if (archetypeKey === "rare_prodigy") {
         counts.rareWonderkid += 1;
       }
     }

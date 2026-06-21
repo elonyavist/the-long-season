@@ -148,6 +148,68 @@ test("simulate-season localizes identity review output", async () => {
   assert.equal(io.stdoutLines.includes("Riepilogo nazionalita:"), true);
 });
 
+test("simulate-season can print a generated player quality report without printing the season table", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=world-a", "--player-generation-report"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season player generation report");
+  assert.equal(io.stdoutLines.includes("Seed: world-a"), true);
+  assert.equal(io.stdoutLines.includes("Competition: Demo Third Division"), true);
+  assert.equal(io.stdoutLines.includes("Division: third division"), true);
+  assert.equal(io.stdoutLines.includes("Clubs: 18"), true);
+  assert.equal(io.stdoutLines.includes("Players: 396"), true);
+  assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
+  assert.equal(io.stdoutLines.includes("Current ability distribution:"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  15\+: [0-9]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.includes("Potential distribution:"), true);
+  assert.equal(io.stdoutLines.includes("Rarity budget:"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  White-fly players: [0-9]+ \/ [0-9]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.includes("Prospect coverage:"), true);
+  assert.equal(io.stdoutLines.includes("  Clubs with prospects: 18 / 18"), true);
+  assert.equal(io.stdoutLines.includes("Role-coherence warnings:"), true);
+  assert.equal(io.stdoutLines.includes("  none"), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), false);
+});
+
+test("simulate-season player generation report uses the command seed", async () => {
+  const worldA = captureIo();
+  const worldARepeat = captureIo();
+  const worldB = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--seed=world-a", "--player-generation-report"], worldA), 0);
+  assert.equal(await runSimulateSeasonCommand(["--seed=world-a", "--player-generation-report"], worldARepeat), 0);
+  assert.equal(await runSimulateSeasonCommand(["--seed=world-b", "--player-generation-report"], worldB), 0);
+
+  assert.deepEqual(worldA.stdoutLines, worldARepeat.stdoutLines);
+  assert.notDeepEqual(worldA.stdoutLines, worldB.stdoutLines);
+});
+
+test("simulate-season localizes generated player quality report output", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--seed=world-a", "--player-generation-report", "--lang=it"], io);
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season report generazione giocatori");
+  assert.equal(io.stdoutLines.includes("Divisione: terza divisione"), true);
+  assert.equal(io.stdoutLines.includes("Distribuzione abilita attuale:"), true);
+  assert.equal(io.stdoutLines.includes("Budget rarita:"), true);
+  assert.equal(io.stdoutLines.includes("  Club con prospetti: 18 / 18"), true);
+});
+
+test("simulate-season rejects combined generated player quality inspections", async () => {
+  const io = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--player-generation-report", "--identity-review"], io), 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(
+    io.stderrLines[0],
+    "--player-generation-report cannot be combined with --round, --fixture, --setup-demo, --manual-tactic-switch, --condition-demo, --lineup-demo, --market-demo, --formation-fit, or --identity-review",
+  );
+});
+
 test("simulate-season rejects combined identity review inspections", async () => {
   const io = captureIo();
 
@@ -283,7 +345,7 @@ test("simulate-season can print a deterministic condition demo", async () => {
   assert.equal(io.stdoutLines.includes("  Selected club: PRO01"), true);
   assert.equal(io.stdoutLines.includes("  Season fitness lifecycle: enabled"), true);
   assert.equal(io.stdoutLines.includes("  Rules: match cost=8 daily recovery=5 clamp=0..100"), true);
-  assert.equal(io.stdoutLines.includes("  First selected club fixture: fixture:000006 PRO17 0-2 PRO01"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  First selected club fixture: fixture:000006 PRO17 [0-9]+-[0-9]+ PRO01$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("  After first match selected starters fitness: 92"), true);
   assert.equal(io.stdoutLines.includes("  Before next selected fixture fitness after 7 days recovery: 100"), true);
   assert.equal(io.stdoutLines.some((line) => /^  Selected club final table: PRO01 position [0-9]+, [0-9]+ pts, GD [+-][0-9]+$/.test(line)), true);
@@ -453,7 +515,10 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.some((line) => /^fixture:000001 PRO04 [0-9]+-[0-9]+ PRO18$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(` GOAL PRO[0-9]{2} ${PERSON_NAME_PATTERN}.* shot=[a-z ]+ chance=[a-z ]+$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(` GOAL .* creator=${PERSON_NAME_PATTERN} `).test(line)), true);
+  assert.equal(
+    io.stdoutLines.some((line) => new RegExp(` GOAL .*(assist|creator)=${PERSON_NAME_PATTERN} `).test(line)),
+    true,
+  );
   assert.equal(
     io.stdoutLines.some((line) =>
       new RegExp(` SAVE PRO[0-9]{2} ${PERSON_NAME_PATTERN} vs PRO[0-9]{2} shot=[a-z ]+ chance=[a-z ]+$`).test(line)

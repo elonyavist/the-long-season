@@ -1,5 +1,6 @@
 import { createFakeLeagueSystem } from "@game/content";
 import {
+  buildTacticTeamContext,
   deriveTeamStrength,
   progressNextCareerFixture,
   type LineupSlot,
@@ -13,56 +14,108 @@ import type { CliCareerState, CliGameState, ClubId } from "./types.ts";
 
 const CAREER_DEFAULT_LINEUP_SIZE = 11;
 
+/** CLI-only invalid reasons that block selected-club career advancement. */
+export type CareerAdvancePreparationInvalidReason =
+  | "missing_match_preparation"
+  | "missing_saved_lineup"
+  | "missing_saved_tactic";
+
+/** Result returned when selected-club preparation is missing. */
+export interface CareerAdvancePreparationInvalid {
+  /** Discriminator matching engine invalid progression results. */
+  readonly status: "invalid";
+  /** Stable CLI-level invalid reason. */
+  readonly reason: CareerAdvancePreparationInvalidReason;
+  /** Original career state reference, unchanged. */
+  readonly careerState: CliCareerState;
+}
+
 /** Result of progressing one fixture from a loaded CLI career save. */
-export type CareerAdvanceResult = ProgressCareerFixtureResult;
+export type CareerAdvanceResult = ProgressCareerFixtureResult | CareerAdvancePreparationInvalid;
 
 /**
  * Advances one selected-club fixture from persisted career state.
  *
- * The current career MVP has no saved lineup/tactic screen yet. Until that
- * exists, this helper builds a deterministic default 4-4-2 lineup from the
- * saved roster order and saved player records. It uses content role/config data
- * as simulation configuration only; player identity, ownership, and fixture
- * state come from the save.
+ * The selected club must have explicit saved preparation. Opponent clubs still
+ * use deterministic MVP defaults until opponent preparation becomes a separate
+ * documented system.
  */
 export function advanceCareerNextFixture(careerState: CliCareerState): CareerAdvanceResult {
+  const preparationStatus = validateSelectedClubPreparation(careerState);
+  if (preparationStatus !== undefined) {
+    return {
+      status: "invalid",
+      reason: preparationStatus,
+      careerState,
+    };
+  }
+
   const contentConfig = createFakeLeagueSystem({
     worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
   });
 
-  return progressNextCareerFixture({
+  return retargetPreparationAfterAdvance(progressNextCareerFixture({
     careerState,
     teamsByClubId: careerTeamsByClubId({
-      gameState: careerState.gameState,
+      careerState,
       roleWeights: contentConfig.roleWeights,
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
     }),
     matchEngineConfig: contentConfig.matchEngineConfig,
-  });
+  }));
+}
+
+function validateSelectedClubPreparation(careerState: CliCareerState): CareerAdvancePreparationInvalidReason | undefined {
+  if (careerState.matchPreparation === undefined) {
+    return "missing_match_preparation";
+  }
+
+  if (careerState.matchPreparation.selectedLineup === undefined) {
+    return "missing_saved_lineup";
+  }
+
+  if (careerState.matchPreparation.tactic === undefined) {
+    return "missing_saved_tactic";
+  }
+
+  return undefined;
 }
 
 function careerTeamsByClubId(input: {
-  readonly gameState: CliGameState;
+  readonly careerState: CliCareerState;
   readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
   readonly stateMultiplierCurves: PlayerStateMultiplierCurves;
 }): Readonly<Record<ClubId, MatchTeamContext>> {
   const teamsByClubId: Partial<Record<ClubId, MatchTeamContext>> = {};
 
-  for (const clubId of input.gameState.clubIds) {
-    const club = input.gameState.clubs[clubId];
+  for (const clubId of input.careerState.gameState.clubIds) {
+    const club = input.careerState.gameState.clubs[clubId];
 
     if (club === undefined) {
       continue;
     }
 
-    const lineup = defaultLineupFromRoster(club.playerIds);
+    if (clubId === input.careerState.selectedClubId && input.careerState.matchPreparation?.selectedLineup !== undefined && input.careerState.matchPreparation.tactic !== undefined) {
+      teamsByClubId[clubId] = buildTacticTeamContext({
+        lineup: input.careerState.matchPreparation.selectedLineup,
+        tactic: input.careerState.matchPreparation.tactic,
+        requiredLineupSize: CAREER_DEFAULT_LINEUP_SIZE,
+        players: input.careerState.gameState.players,
+        roleWeights: input.roleWeights,
+        playerStates: input.careerState.gameState.playerStates,
+        stateMultiplierCurves: input.stateMultiplierCurves,
+      });
+      continue;
+    }
+
+    const lineup = defaultOpponentLineupFromRoster(club.playerIds);
     teamsByClubId[clubId] = {
       clubId,
       lineup,
       strength: deriveTeamStrength({
         lineup,
-        players: input.gameState.players,
-        playerStates: input.gameState.playerStates,
+        players: input.careerState.gameState.players,
+        playerStates: input.careerState.gameState.playerStates,
         roleWeights: input.roleWeights,
         stateMultiplierCurves: input.stateMultiplierCurves,
       }),
@@ -78,7 +131,43 @@ function careerTeamsByClubId(input: {
   return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
 }
 
-function defaultLineupFromRoster(playerIds: CliGameState["playerIds"]): readonly LineupSlot[] {
+function retargetPreparationAfterAdvance(result: ProgressCareerFixtureResult): CareerAdvanceResult {
+  if (result.status !== "advanced" || result.careerState.matchPreparation === undefined) {
+    return result;
+  }
+
+  const nextFixtureId = nextSelectedClubFixtureId(result.careerState);
+
+  return {
+    ...result,
+    careerState: {
+      ...result.careerState,
+      matchPreparation: {
+        ...result.careerState.matchPreparation,
+        ...(nextFixtureId === undefined ? {} : { targetFixtureId: nextFixtureId }),
+        updatedAt: result.careerState.gameState.calendar.currentDate,
+      },
+    },
+  };
+}
+
+function nextSelectedClubFixtureId(careerState: CliCareerState): CliGameState["fixtureIds"][number] | undefined {
+  for (const fixtureId of careerState.gameState.fixtureIds) {
+    const fixture = careerState.gameState.fixtures[fixtureId];
+
+    if (fixture === undefined || fixture.result?.played === true) {
+      continue;
+    }
+
+    if (fixture.homeClubId === careerState.selectedClubId || fixture.awayClubId === careerState.selectedClubId) {
+      return fixtureId;
+    }
+  }
+
+  return undefined;
+}
+
+function defaultOpponentLineupFromRoster(playerIds: CliGameState["playerIds"]): readonly LineupSlot[] {
   const lineup: LineupSlot[] = [];
 
   for (let index = 0; index < CAREER_DEFAULT_LINEUP_SIZE; index += 1) {

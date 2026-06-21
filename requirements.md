@@ -69,6 +69,7 @@ Ultimo aggiornamento: 14 giugno 2026 — **fondazione tecnica sviscerata** in se
 - Personalità: 3 assi come aggettivi — professionalità, ambizione, temperamento.
 - Fog of war a 4 livelli, range calcolati e non salvati, nebbia solo lato utente.
 - Tratti come schede dati: v1 condizione = ruolo schierato, effetto = bonus piatto a 2–3 attributi; 15–20 tratti al lancio, nascosti finché non scoperti.
+- Generazione giocatori: le abilità devono essere coerenti con divisione, forza del club, ruolo, età, abilità corrente e potenziale. La terza divisione deve avere un livello simile alla Serie C italiana: pochi giocatori devono poter restare utili dopo 6-7 stagioni di scalata, di solito come riserve o eccezioni narrative. Ogni rosa può avere giovani interessanti, ma solo una minoranza deve diventare forte per la prima divisione. Le "mosche bianche" di categoria inferiore sono ammesse, ma rare e budgettate a livello di lega. Gli attributi fuori ruolo devono essere cappati: un difensore con Finalizzazione alta, un attaccante con Contrasto alto o un portiere con profilo da giocatore di movimento devono essere eccezioni esplicite, non rumore casuale.
 
 ### 4. Club e leghe ✅ (dettaglio regole per paese: lavoro di config, fase contenuti)
 **Decisioni:**

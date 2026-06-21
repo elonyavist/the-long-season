@@ -7,10 +7,15 @@ import {
   formatCareerAdvanceOutput,
   formatCareerInspectOutput,
   formatCareerMarketApplyOutput,
+  formatCareerLineupSaveOutput,
+  formatCareerSquadOutput,
   formatCareerSummaryOutput,
+  formatCareerTacticSaveOutput,
   formatNewCareerWorldOutput,
 } from "./career/format.ts";
 import {
+  formatSupportedCareerLineupDemoProfiles,
+  formatSupportedCareerTacticDemoProfiles,
   formatSupportedMarketDemoProfiles,
   parseCareerArgs,
 } from "./career/parse-career-args.ts";
@@ -20,6 +25,7 @@ import {
   careerStateFromScenario,
 } from "./career/scenarios.ts";
 import { advanceCareerNextFixture } from "./career/progression.ts";
+import { saveCareerLineupDemo, saveCareerTacticDemo } from "./career/preparation.ts";
 import type { CliIntent } from "./career/types.ts";
 
 /** Minimal IO adapter used by command tests. */
@@ -56,7 +62,11 @@ export async function runCareerCommand(
 
   if (!parsed.ok) {
     io.stderr(parsed.message);
-    io.stderr(text("career.usage", { marketProfiles: formatSupportedMarketDemoProfiles() }));
+    io.stderr(text("career.usage", {
+      marketProfiles: formatSupportedMarketDemoProfiles(),
+      lineupProfiles: formatSupportedCareerLineupDemoProfiles(),
+      tacticProfiles: formatSupportedCareerTacticDemoProfiles(),
+    }));
     return 1;
   }
 
@@ -87,6 +97,86 @@ export async function runCareerCommand(
     try {
       const careerState = await storage.loadCareer(parsed.saveId);
       for (const line of formatCareerSummaryOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
+        io.stdout(line);
+      }
+
+      return 0;
+    } catch (error) {
+      if (error instanceof StorageError && error.code === "save_not_found") {
+        io.stderr(text("career.error.saveNotFound", { saveId: parsed.saveId }));
+        return 1;
+      }
+
+      throw error;
+    }
+  }
+
+  if (parsed.mode === "squad") {
+    try {
+      const careerState = await storage.loadCareer(parsed.saveId);
+      for (const line of formatCareerSquadOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
+        io.stdout(line);
+      }
+
+      return 0;
+    } catch (error) {
+      if (error instanceof StorageError && error.code === "save_not_found") {
+        io.stderr(text("career.error.saveNotFound", { saveId: parsed.saveId }));
+        return 1;
+      }
+
+      throw error;
+    }
+  }
+
+  if (parsed.mode === "setLineupDemo") {
+    try {
+      const careerState = await storage.loadCareer(parsed.saveId);
+      const result = saveCareerLineupDemo(careerState, parsed.lineupDemo);
+
+      await storage.saveCareer({
+        saveId: parsed.saveId,
+        name: String(parsed.saveId),
+        state: result.careerState,
+      });
+
+      for (const line of formatCareerLineupSaveOutput({
+        result,
+        saveId: parsed.saveId,
+        saveDirectoryPath: storageDirectoryPath,
+        text,
+      })) {
+        io.stdout(line);
+      }
+
+      return 0;
+    } catch (error) {
+      if (error instanceof StorageError && error.code === "save_not_found") {
+        io.stderr(text("career.error.saveNotFound", { saveId: parsed.saveId }));
+        return 1;
+      }
+
+      throw error;
+    }
+  }
+
+  if (parsed.mode === "setTacticDemo") {
+    try {
+      const careerState = await storage.loadCareer(parsed.saveId);
+      const result = saveCareerTacticDemo(careerState, parsed.tacticDemo);
+
+      await storage.saveCareer({
+        saveId: parsed.saveId,
+        name: String(parsed.saveId),
+        state: result.careerState,
+      });
+
+      for (const line of formatCareerTacticSaveOutput({
+        result,
+        saveId: parsed.saveId,
+        saveDirectoryPath: storageDirectoryPath,
+        text,
+      })) {
         io.stdout(line);
       }
 

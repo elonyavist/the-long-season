@@ -250,10 +250,185 @@ test("career command localizes summary output in Italian", async () => {
   }
 });
 
+test("career command prints selected club squad without mutating the save", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const squadIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-squad", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const storage = new JsonCareerStorage({ directoryPath });
+    const before = await storage.loadCareer("save:career-squad" as Parameters<typeof storage.loadCareer>[0]);
+    const exitCode = await runCareerCommand(["--save=career-squad", "--squad"], squadIo, {
+      storageDirectoryPath: directoryPath,
+    });
+    const after = await storage.loadCareer("save:career-squad" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 0);
+    assert.equal(squadIo.stderrLines.length, 0);
+    assert.equal(squadIo.stdoutLines[0], "The Long Season career squad");
+    assert.equal(squadIo.stdoutLines.includes("Save: save:career-squad"), true);
+    assert.equal(squadIo.stdoutLines.includes(`Save directory: ${directoryPath}`), true);
+    assert.equal(squadIo.stdoutLines.includes("World seed: world-a"), true);
+    assert.equal(squadIo.stdoutLines.includes("Current date: 2026-08-01"), true);
+    assert.equal(squadIo.stdoutLines.includes("Selected club: PRO01"), true);
+    assert.equal(squadIo.stdoutLines.includes("Selected club roster size: 22"), true);
+    assert.equal(squadIo.stdoutLines.includes("Inspection only: the career save is not changed."), true);
+    assert.equal(squadIo.stdoutLines.includes("Players:"), true);
+    assert.equal(squadIo.stdoutLines.includes("  Player                       Age Pos  Role Fit Form Mor"), true);
+    assert.equal(
+      squadIo.stdoutLines.some((line) => /^  [A-Za-z]+ [A-Za-z]+\s+[0-9]{2} [A-Z]{2,3}\s+[0-9]+\.[0-9]\s+100\s+50\s+50$/.test(line)),
+      true,
+    );
+    assert.equal(squadIo.stdoutLines.some((line) => /potential/i.test(line)), false);
+    assert.deepEqual(after, before);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command localizes selected club squad in Italian", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const squadIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=mondo-it", "--save=carriera-rosa", "--new-world-preview", "--lang=it"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=carriera-rosa", "--squad", "--lang=it"], squadIo, {
+      storageDirectoryPath: directoryPath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(squadIo.stderrLines.length, 0);
+    assert.equal(squadIo.stdoutLines[0], "The Long Season rosa carriera");
+    assert.equal(squadIo.stdoutLines.includes("Seed mondo: mondo-it"), true);
+    assert.equal(squadIo.stdoutLines.includes("Club selezionato: PRO01"), true);
+    assert.equal(squadIo.stdoutLines.includes("Solo ispezione: il salvataggio carriera non viene modificato."), true);
+    assert.equal(squadIo.stdoutLines.includes("Giocatori:"), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command saves selected lineup and exposes it after reload", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const lineupIo = captureIo();
+  const inspectIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-lineup", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=career-lineup", "--set-lineup-demo=pro01-rotated"], lineupIo, {
+      storageDirectoryPath: directoryPath,
+    });
+    const storage = new JsonCareerStorage({ directoryPath });
+    const loaded = await storage.loadCareer("save:career-lineup" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 0);
+    assert.equal(lineupIo.stderrLines.length, 0);
+    assert.equal(lineupIo.stdoutLines[0], "The Long Season career lineup saved");
+    assert.equal(lineupIo.stdoutLines.includes("Lineup profile: pro01-rotated"), true);
+    assert.equal(lineupIo.stdoutLines.includes("Career save written: yes"), true);
+    assert.equal(lineupIo.stdoutLines.includes("Applies to next selected-club fixture: yes"), true);
+    assert.equal(lineupIo.stdoutLines.includes("Selected starters:"), true);
+    assert.equal(lineupIo.stdoutLines.includes("Changes from first team:"), true);
+    assert.equal(loaded.matchPreparation?.selectedLineup?.slots.length, 11);
+    assert.equal(loaded.matchPreparation?.tactic, undefined);
+
+    assert.equal(
+      await runCareerCommand(["--save=career-lineup", "--inspect"], inspectIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(inspectIo.stdoutLines.includes("Match preparation:"), true);
+    assert.equal(inspectIo.stdoutLines.includes("  Saved lineup:"), true);
+    assert.equal(inspectIo.stdoutLines.some((line) => /^    slot:01 [A-Za-z]+ [A-Za-z]+ goalkeeper$/.test(line)), true);
+    assert.equal(inspectIo.stdoutLines.includes("  Saved tactic: none"), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command saves selected tactic and exposes it in summary", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const lineupIo = captureIo();
+  const tacticIo = captureIo();
+  const summaryIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-tactic", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-tactic", "--set-lineup-demo=pro01-first-team"], lineupIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=career-tactic", "--set-tactic-demo=pro01-balanced"], tacticIo, {
+      storageDirectoryPath: directoryPath,
+    });
+    const storage = new JsonCareerStorage({ directoryPath });
+    const loaded = await storage.loadCareer("save:career-tactic" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 0);
+    assert.equal(tacticIo.stderrLines.length, 0);
+    assert.equal(tacticIo.stdoutLines[0], "The Long Season career tactic saved");
+    assert.equal(tacticIo.stdoutLines.includes("Tactic profile: pro01-balanced"), true);
+    assert.equal(tacticIo.stdoutLines.includes("Career save written: yes"), true);
+    assert.equal(
+      tacticIo.stdoutLines.includes("Saved tactic: mentality=balanced pressing=0.50 directness=0.50 width=0.50 risk=0.50"),
+      true,
+    );
+    assert.equal(loaded.matchPreparation?.selectedLineup?.slots.length, 11);
+    assert.equal(loaded.matchPreparation?.tactic?.mentality, "balanced");
+
+    assert.equal(
+      await runCareerCommand(["--save=career-tactic", "--summary"], summaryIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(summaryIo.stdoutLines.includes("Match preparation:"), true);
+    assert.equal(
+      summaryIo.stdoutLines.includes("  Saved tactic: mentality=balanced pressing=0.50 directness=0.50 width=0.50 risk=0.50"),
+      true,
+    );
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
 test("career command advances and persists the next selected-club fixture", async () => {
   const directoryPath = await createTempSaveDirectory();
   const createIo = captureIo();
   const summaryIo = captureIo();
+  const lineupIo = captureIo();
+  const tacticIo = captureIo();
   const advanceIo = captureIo();
   const inspectIo = captureIo();
 
@@ -271,6 +446,18 @@ test("career command advances and persists the next selected-club fixture", asyn
       0,
     );
     assert.equal(summaryIo.stdoutLines.includes("Next selected-club fixture:"), true);
+    assert.equal(
+      await runCareerCommand(["--save=career-advance", "--set-lineup-demo=pro01-first-team"], lineupIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-advance", "--set-tactic-demo=pro01-balanced"], tacticIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
 
     const exitCode = await runCareerCommand(["--save=career-advance", "--advance-next-fixture"], advanceIo, {
       storageDirectoryPath: directoryPath,
@@ -299,10 +486,43 @@ test("career command advances and persists the next selected-club fixture", asyn
   }
 });
 
+test("career command blocks fixture advancement without saved preparation", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const advanceIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-missing-prep", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const storage = new JsonCareerStorage({ directoryPath });
+    const before = await storage.loadCareer("save:career-missing-prep" as Parameters<typeof storage.loadCareer>[0]);
+    const exitCode = await runCareerCommand(["--save=career-missing-prep", "--advance-next-fixture"], advanceIo, {
+      storageDirectoryPath: directoryPath,
+    });
+    const after = await storage.loadCareer("save:career-missing-prep" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 1);
+    assert.equal(advanceIo.stderrLines.length, 0);
+    assert.equal(advanceIo.stdoutLines.includes("Advance status: invalid state"), true);
+    assert.equal(advanceIo.stdoutLines.includes("Reason: saved match preparation is missing"), true);
+    assert.equal(advanceIo.stdoutLines.includes("Career save written: no"), true);
+    assert.deepEqual(after, before);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
 test("career command preserves an accepted transfer after fixture advancement", async () => {
   const directoryPath = await createTempSaveDirectory();
   const applyIo = captureIo();
   const beforeInspectIo = captureIo();
+  const lineupIo = captureIo();
+  const tacticIo = captureIo();
   const advanceIo = captureIo();
   const afterInspectIo = captureIo();
 
@@ -326,6 +546,18 @@ test("career command preserves an accepted transfer after fixture advancement", 
     );
     assert.equal(beforeInspectIo.stdoutLines.includes("Selected club roster size: 23"), true);
     const budgetBeforeAdvance = selectedClubTransferFundsLine(beforeInspectIo.stdoutLines);
+    assert.equal(
+      await runCareerCommand(["--save=career-continuity", "--set-lineup-demo=pro01-first-team"], lineupIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-continuity", "--set-tactic-demo=pro01-balanced"], tacticIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
 
     assert.equal(
       await runCareerCommand(["--save=career-continuity", "--advance-next-fixture"], advanceIo, {
@@ -536,7 +768,7 @@ test("career command rejects missing required arguments", async () => {
   assert.equal(missingMode.stdoutLines.length, 0);
   assert.equal(
     missingMode.stderrLines[0],
-    "choose exactly one career action: --apply-market-demo, --inspect, --summary, --advance-next-fixture, or --new-world-preview",
+    "choose exactly one career action: --apply-market-demo, --inspect, --summary, --squad, --set-lineup-demo, --set-tactic-demo, --advance-next-fixture, or --new-world-preview",
   );
 
   assert.equal(

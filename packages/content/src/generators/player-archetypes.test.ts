@@ -22,9 +22,10 @@ test("generated player archetypes have valid numeric ranges and weights", () => 
     const archetype = getGeneratedPlayerArchetype(key);
 
     assert.equal(archetype.key, key);
-    assertValidRange(archetype.ageYears);
-    assertValidRange(archetype.currentAbilityOffset);
-    assertValidRange(archetype.potentialUplift);
+    assertValidAgeRange(archetype.ageYears);
+    assertValidNumericRange(archetype.currentAbilityOffset);
+    assertValidNumericRange(archetype.potentialUplift);
+    assert.equal(["limited", "category", "interesting", "serious", "elite"].includes(archetype.potentialClass), true);
     assert.equal(Number.isSafeInteger(archetype.lineupWeight), true);
     assert.equal(Number.isSafeInteger(archetype.reserveWeight), true);
     assert.equal(archetype.lineupWeight >= 0, true);
@@ -33,29 +34,39 @@ test("generated player archetypes have valid numeric ranges and weights", () => 
 });
 
 test("prospect archetypes are younger and carry more upside than regulars", () => {
-  const regular = getGeneratedPlayerArchetype("first_team_regular");
-  const prospect = getGeneratedPlayerArchetype("prospect");
-  const highPotential = getGeneratedPlayerArchetype("high_potential_prospect");
-  const wonderkid = getGeneratedPlayerArchetype("rare_wonderkid");
+  const regular = getGeneratedPlayerArchetype("senior_regular");
+  const youth = getGeneratedPlayerArchetype("normal_youth");
+  const goodProspect = getGeneratedPlayerArchetype("good_prospect");
+  const seriousProspect = getGeneratedPlayerArchetype("serious_prospect");
+  const prodigy = getGeneratedPlayerArchetype("rare_prodigy");
 
-  assert.equal(prospect.ageYears.maxInclusive < regular.ageYears.minInclusive, true);
-  assert.equal(highPotential.potentialUplift.minInclusive > regular.potentialUplift.maxInclusive, true);
-  assert.equal(wonderkid.potentialUplift.minInclusive > highPotential.potentialUplift.minInclusive, true);
+  assert.equal(youth.ageYears.maxInclusive < regular.ageYears.minInclusive, true);
+  assert.equal(goodProspect.potentialUplift.minInclusive > regular.potentialUplift.maxInclusive, true);
+  assert.equal(seriousProspect.potentialUplift.minInclusive > goodProspect.potentialUplift.minInclusive, true);
+  assert.equal(prodigy.potentialUplift.minInclusive > seriousProspect.potentialUplift.minInclusive, true);
+  assert.equal(prodigy.potentialClass, "elite");
 });
 
-test("rare wonderkids are possible but uncommon in reserve generation", () => {
+test("rare prodigies are possible but uncommon in reserve generation", () => {
   const reserveWeightTotal = sumWeights(GENERATED_PLAYER_ARCHETYPE_KEYS.map((key) => getGeneratedPlayerArchetype(key)));
-  const wonderkid = getGeneratedPlayerArchetype("rare_wonderkid");
+  const prodigy = getGeneratedPlayerArchetype("rare_prodigy");
 
-  assert.equal(wonderkid.reserveWeight > 0, true);
-  assert.equal(wonderkid.reserveWeight / reserveWeightTotal < 0.02, true);
-  assert.equal(wonderkid.lineupWeight, 0);
+  assert.equal(prodigy.reserveWeight > 0, true);
+  assert.equal(prodigy.reserveWeight / reserveWeightTotal < 0.02, true);
+  assert.equal(prodigy.lineupWeight, 0);
 });
 
-/** Asserts an inclusive numeric range is deterministic-friendly. */
-function assertValidRange(range: GeneratedPlayerArchetype["ageYears"]): void {
+/** Asserts an age range is deterministic-friendly and integer-based. */
+function assertValidAgeRange(range: GeneratedPlayerArchetype["ageYears"]): void {
   assert.equal(Number.isSafeInteger(range.minInclusive), true);
   assert.equal(Number.isSafeInteger(range.maxInclusive), true);
+  assert.equal(range.minInclusive <= range.maxInclusive, true);
+}
+
+/** Asserts a numeric generation range is deterministic-friendly. */
+function assertValidNumericRange(range: GeneratedPlayerArchetype["currentAbilityOffset"]): void {
+  assert.equal(Number.isFinite(range.minInclusive), true);
+  assert.equal(Number.isFinite(range.maxInclusive), true);
   assert.equal(range.minInclusive <= range.maxInclusive, true);
 }
 

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import type { Club } from "../entities/club.entity.ts";
 import type { Fixture } from "../entities/fixture.entity.ts";
 import type { Player, PlayerAbilities, PlayerDynamicState } from "../entities/player.entity.ts";
+import { TacticContractError } from "../entities/tactic.entity.ts";
 import { createMarketState, type MarketState } from "../entities/transfer.entity.ts";
 import { clubId, competitionId, fixtureId, playerId, saveId, seasonId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
@@ -192,6 +193,142 @@ test("createCareerState rejects invalid transfer history references", () => {
         ],
       }),
     "history_player_not_found",
+  );
+});
+
+test("createCareerState preserves saved selected-club match preparation", () => {
+  const pro01 = clubId("club:pro01");
+  const player01 = playerId("player:010010");
+  const fixture = fixtureId("fixture:000001");
+
+  const career = createCareerState({
+    ...careerStateFixture(),
+    matchPreparation: {
+      selectedClubId: pro01,
+      targetFixtureId: fixture,
+      selectedLineup: {
+        clubId: pro01,
+        slots: [
+          { slotKey: "st", playerId: player01, roleKey: "attacker" },
+        ],
+      },
+      tactic: {
+        mentality: "balanced",
+        pressing: 0.5,
+        directness: 0.5,
+        width: 0.5,
+        risk: 0.5,
+      },
+      updatedAt: gameDate(20_000),
+    },
+  });
+
+  assert.equal(career.matchPreparation?.selectedClubId, pro01);
+  assert.equal(career.matchPreparation?.targetFixtureId, fixture);
+  assert.equal(career.matchPreparation?.selectedLineup?.slots[0]?.playerId, player01);
+  assert.equal(career.matchPreparation?.tactic?.mentality, "balanced");
+});
+
+test("createCareerState rejects invalid match-preparation references", () => {
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        matchPreparation: {
+          selectedClubId: clubId("club:pro18"),
+          updatedAt: gameDate(20_000),
+        },
+      }),
+    "match_preparation_selected_club_mismatch",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        matchPreparation: {
+          selectedClubId: clubId("club:pro01"),
+          targetFixtureId: fixtureId("fixture:missing"),
+          updatedAt: gameDate(20_000),
+        },
+      }),
+    "match_preparation_fixture_not_found",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        matchPreparation: {
+          selectedClubId: clubId("club:pro01"),
+          selectedLineup: {
+            clubId: clubId("club:pro01"),
+            slots: [
+              { slotKey: "st", playerId: playerId("player:missing"), roleKey: "attacker" },
+            ],
+          },
+          updatedAt: gameDate(20_000),
+        },
+      }),
+    "match_preparation_player_not_found",
+  );
+
+  assertCareerStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        matchPreparation: {
+          selectedClubId: clubId("club:pro01"),
+          selectedLineup: {
+            clubId: clubId("club:pro01"),
+            slots: [
+              { slotKey: "st", playerId: playerId("player:180010"), roleKey: "attacker" },
+            ],
+          },
+          updatedAt: gameDate(20_000),
+        },
+      }),
+    "match_preparation_player_not_owned",
+  );
+});
+
+test("createCareerState rejects ambiguous lineup and invalid tactic values", () => {
+  assert.throws(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        matchPreparation: {
+          selectedClubId: clubId("club:pro01"),
+          selectedLineup: {
+            clubId: clubId("club:pro01"),
+            slots: [
+              { slotKey: "st-left", playerId: playerId("player:010010"), roleKey: "attacker" },
+              { slotKey: "st-right", playerId: playerId("player:010010"), roleKey: "attacker" },
+            ],
+          },
+          updatedAt: gameDate(20_000),
+        },
+      }),
+    (error) => error instanceof TacticContractError && error.code === "duplicate_player",
+  );
+
+  assert.throws(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        matchPreparation: {
+          selectedClubId: clubId("club:pro01"),
+          tactic: {
+            mentality: "balanced",
+            pressing: 2,
+            directness: 0.5,
+            width: 0.5,
+            risk: 0.5,
+          },
+          updatedAt: gameDate(20_000),
+        },
+      }),
+    (error) => error instanceof TacticContractError && error.code === "invalid_tactic_value",
   );
 });
 

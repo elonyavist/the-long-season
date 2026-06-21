@@ -1,6 +1,7 @@
-import type { ClubId, PlayerId, SaveId } from "../types/ids.ts";
+import type { ClubId, FixtureId, PlayerId, SaveId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 import type { Money } from "../value-objects/money.ts";
+import { createSelectedLineup, createTacticSetup, type SelectedLineup, type TacticSetup } from "../entities/tactic.entity.ts";
 import { createMarketState, type MarketState } from "../entities/transfer.entity.ts";
 import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
@@ -31,6 +32,26 @@ export interface PermanentTransferHistoryEntry {
 }
 
 /**
+ * Durable manager preparation for the selected club's upcoming match work.
+ *
+ * The preparation slice stores explicit user choices only. It may be partial
+ * while the manager has saved a lineup but not a tactic, or vice versa. Match
+ * advancement can later require both pieces before simulating a fixture.
+ */
+export interface CareerMatchPreparation {
+  /** Club controlled by this preparation snapshot. */
+  readonly selectedClubId: ClubId;
+  /** Optional fixture this preparation is intended for. */
+  readonly targetFixtureId?: FixtureId;
+  /** Saved selected lineup, when the manager has chosen one. */
+  readonly selectedLineup?: SelectedLineup;
+  /** Saved tactic setup, when the manager has chosen one. */
+  readonly tactic?: TacticSetup;
+  /** In-world date when this preparation snapshot was last updated. */
+  readonly updatedAt: GameDate;
+}
+
+/**
  * Minimal durable state for one manager career.
  *
  * `CareerState` wraps the current `GameState` instead of duplicating world data.
@@ -52,6 +73,8 @@ export interface CareerState {
   readonly marketState: MarketState;
   /** Ordered permanent-transfer decisions already applied to this career. */
   readonly transferHistory: readonly PermanentTransferHistoryEntry[];
+  /** Optional saved match-preparation choices for the selected club. */
+  readonly matchPreparation?: CareerMatchPreparation;
 }
 
 /** Machine-readable career-state validation failure. */
@@ -65,7 +88,13 @@ export type CareerStateContractErrorCode =
   | "duplicate_history_sequence"
   | "history_buying_club_not_found"
   | "history_selling_club_not_found"
-  | "history_player_not_found";
+  | "history_player_not_found"
+  | "match_preparation_selected_club_mismatch"
+  | "match_preparation_fixture_not_found"
+  | "match_preparation_fixture_selected_club_missing"
+  | "match_preparation_lineup_club_mismatch"
+  | "match_preparation_player_not_found"
+  | "match_preparation_player_not_owned";
 
 /**
  * Typed error thrown when a career-state snapshot is inconsistent.
@@ -152,6 +181,9 @@ export function createCareerState(input: CareerState): CareerState {
     gameState: input.gameState,
     marketState,
     transferHistory,
+    ...(input.matchPreparation === undefined
+      ? {}
+      : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation) }),
   };
 }
 
@@ -186,6 +218,75 @@ function assertPlayerExists(gameState: GameState, playerId: PlayerId): void {
   if (gameState.players[playerId] === undefined) {
     throw new CareerStateContractError("history_player_not_found", `player does not exist in career game state: ${playerId}`);
   }
+}
+
+function createCareerMatchPreparation(
+  gameState: GameState,
+  selectedClubId: ClubId,
+  input: CareerMatchPreparation,
+): CareerMatchPreparation {
+  if (input.selectedClubId !== selectedClubId) {
+    throw new CareerStateContractError(
+      "match_preparation_selected_club_mismatch",
+      `match preparation club must match selected club: ${input.selectedClubId}`,
+    );
+  }
+
+  validatePreparationFixture(gameState, selectedClubId, input.targetFixtureId);
+  const selectedLineup = input.selectedLineup === undefined ? undefined : createValidatedPreparationLineup(gameState, selectedClubId, input.selectedLineup);
+  const tactic = input.tactic === undefined ? undefined : createTacticSetup(input.tactic);
+
+  return {
+    selectedClubId: input.selectedClubId,
+    ...(input.targetFixtureId === undefined ? {} : { targetFixtureId: input.targetFixtureId }),
+    ...(selectedLineup === undefined ? {} : { selectedLineup }),
+    ...(tactic === undefined ? {} : { tactic }),
+    updatedAt: input.updatedAt,
+  };
+}
+
+function validatePreparationFixture(gameState: GameState, selectedClubId: ClubId, fixtureId: FixtureId | undefined): void {
+  if (fixtureId === undefined) {
+    return;
+  }
+
+  const fixture = gameState.fixtures[fixtureId];
+  if (fixture === undefined) {
+    throw new CareerStateContractError("match_preparation_fixture_not_found", `match preparation fixture does not exist: ${fixtureId}`);
+  }
+
+  if (fixture.homeClubId !== selectedClubId && fixture.awayClubId !== selectedClubId) {
+    throw new CareerStateContractError(
+      "match_preparation_fixture_selected_club_missing",
+      `match preparation fixture does not include selected club: ${fixtureId}`,
+    );
+  }
+}
+
+function createValidatedPreparationLineup(
+  gameState: GameState,
+  selectedClubId: ClubId,
+  input: SelectedLineup,
+): SelectedLineup {
+  if (input.clubId !== selectedClubId) {
+    throw new CareerStateContractError("match_preparation_lineup_club_mismatch", `lineup club must match selected club: ${input.clubId}`);
+  }
+
+  const selectedLineup = createSelectedLineup(input);
+  const selectedClub = gameState.clubs[selectedClubId];
+  const selectedClubPlayerIds = new Set<PlayerId>(selectedClub?.playerIds ?? []);
+
+  for (const slot of selectedLineup.slots) {
+    if (gameState.players[slot.playerId] === undefined) {
+      throw new CareerStateContractError("match_preparation_player_not_found", `lineup player does not exist: ${slot.playerId}`);
+    }
+
+    if (!selectedClubPlayerIds.has(slot.playerId)) {
+      throw new CareerStateContractError("match_preparation_player_not_owned", `lineup player is not owned by selected club: ${slot.playerId}`);
+    }
+  }
+
+  return selectedLineup;
 }
 
 function hasClubInOrder(gameState: GameState, clubId: ClubId): boolean {

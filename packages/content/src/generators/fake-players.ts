@@ -1,5 +1,4 @@
 import {
-  abilityValue,
   createPersonIdentity,
   gameDate,
   stateValue,
@@ -7,7 +6,6 @@ import {
   type ClubCategory,
   type PersonIdentity,
   type Player,
-  type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
@@ -15,6 +13,15 @@ import {
 import { deriveRng, fromISO } from "@game/shared";
 
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB, fakePlayerId } from "./fake-clubs.ts";
+import { clubTierForGeneratedClubNumber, getPlayerGenerationBand } from "./player-generation-bands.ts";
+import {
+  buildPlayerRarityAllocation,
+  isBudgetedArchetype,
+  playerRaritySlotKey,
+  type PlayerRarityAssignment,
+  type PlayerRarityBudget,
+} from "./player-rarity-budget.ts";
+import { buildPlayerAbilitiesForPosition } from "./player-role-templates.ts";
 import {
   GENERATED_PLAYER_ARCHETYPE_KEYS,
   getGeneratedPlayerArchetype,
@@ -53,6 +60,10 @@ export interface FakePlayers {
   readonly playerIdentities: Readonly<Record<PlayerId, PersonIdentity>>;
   /** Generated squad archetype key by player ID. */
   readonly playerArchetypes: Readonly<Record<PlayerId, GeneratedPlayerArchetypeKey>>;
+  /** League-level rarity budget used by generated squads. */
+  readonly playerRarityBudget: PlayerRarityBudget;
+  /** Budgeted rarity assignments by player ID. */
+  readonly playerRarityAssignments: Readonly<Record<PlayerId, PlayerRarityAssignment>>;
   /** Initial dynamic state lookup by ID. */
   readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Deterministic 11-player lineups by club ID. */
@@ -91,11 +102,18 @@ export function generateFakePlayersForClubs(
   const playerIds: PlayerId[] = [];
   const playerIdentities: Record<PlayerId, PersonIdentity> = {};
   const playerArchetypes: Record<PlayerId, GeneratedPlayerArchetypeKey> = {};
+  const playerRarityAssignments: Record<PlayerId, PlayerRarityAssignment> = {};
   const playerStates: Record<PlayerId, PlayerDynamicState> = {};
   const lineupsByClubId: Record<ClubId, readonly FakeLineupSlot[]> = {};
   const seed = options.seed ?? "demo-001";
   const leagueNation = options.leagueNation ?? "italian";
   const leagueNameUsage = createLeagueNameUsage();
+  const rarityAllocation = buildPlayerRarityAllocation({
+    seed,
+    clubCount: clubIds.length,
+    playersPerClub: FAKE_PLAYERS_PER_CLUB,
+    lineupSize: FAKE_LINEUP_SIZE,
+  });
 
   for (let clubIndex = 0; clubIndex < clubIds.length; clubIndex += 1) {
     const clubId = clubIds[clubIndex];
@@ -120,13 +138,20 @@ export function generateFakePlayersForClubs(
         clubNameUsage,
         leagueNameUsage,
       });
-      const archetype = selectPlayerArchetype(seed, id, clubNumber, slotNumber, slotNumber <= FAKE_LINEUP_SIZE);
-      const player = fakePlayer(id, clubNumber, slotNumber, identity, seed, archetype);
+      const rarityAssignment = rarityAllocation.assignmentsBySlotKey[playerRaritySlotKey(clubNumber, slotNumber)];
+      const archetype =
+        rarityAssignment === undefined
+          ? selectPlayerArchetype(seed, id, clubNumber, slotNumber, slotNumber <= FAKE_LINEUP_SIZE)
+          : getGeneratedPlayerArchetype(rarityAssignment.archetypeKey);
+      const player = fakePlayer(id, clubNumber, slotNumber, identity, seed, archetype, clubContext);
 
       players[id] = player;
       playerIds.push(id);
       playerIdentities[id] = identity;
       playerArchetypes[id] = archetype.key;
+      if (rarityAssignment !== undefined) {
+        playerRarityAssignments[id] = rarityAssignment;
+      }
       playerStates[id] = {
         fitness: stateValue(100),
         form: stateValue(50),
@@ -149,6 +174,8 @@ export function generateFakePlayersForClubs(
     playerIds,
     playerIdentities,
     playerArchetypes,
+    playerRarityBudget: rarityAllocation.budget,
+    playerRarityAssignments,
     playerStates,
     lineupsByClubId,
   };
@@ -164,17 +191,24 @@ function fakePlayer(
   identity: PersonIdentity,
   seed: string,
   archetype: GeneratedPlayerArchetype,
+  clubContext: FakePlayerClubContext,
 ): Player {
+  const clubTier = clubTierForGeneratedClubNumber(clubNumber);
+  const band = getPlayerGenerationBand(clubContext.category, clubTier);
+  const currentAnchor = numberInFloatRange(band.currentAbility, seed, "player-current-band", id);
+  const potentialAnchor = numberInFloatRange(band.potentialCeiling, seed, "player-potential-band", id);
   const base =
-    6.25 +
-    ((19 - clubNumber) / 18) * 6 +
-    ((slotNumber * 7 + clubNumber) % 4) * 0.35 +
+    currentAnchor +
+    slotDepthOffset(slotNumber) +
     abilityVariance(seed, id, clubNumber, slotNumber) +
-    numberInRange(archetype.currentAbilityOffset, seed, "player-current-ability", id);
+    numberInFloatRange(archetype.currentAbilityOffset, seed, "player-current-ability", id);
   const position = positionForSlot(slotNumber);
   const ageYears = numberInRange(archetype.ageYears, seed, "player-age", id);
   const birthDateJitter = deriveRng(seed, "player-birth-date", id).nextInt(0, 365);
-  const potentialBase = Math.min(base + numberInRange(archetype.potentialUplift, seed, "player-potential", id), 20);
+  const potentialBase = Math.min(
+    Math.max(base, potentialAnchor, base + numberInFloatRange(archetype.potentialUplift, seed, "player-potential", id)),
+    20,
+  );
 
   return {
     id,
@@ -182,8 +216,8 @@ function fakePlayer(
     lastName: identity.lastName,
     birthDate: gameDate(FAKE_CAREER_START_EPOCH_DAY - ageYears * 365 - birthDateJitter),
     naturalPositions: [position],
-    abilities: abilitiesForPosition(base, position),
-    potential: abilitiesForPosition(potentialBase, position),
+    abilities: buildPlayerAbilitiesForPosition(base, position),
+    potential: buildPlayerAbilitiesForPosition(potentialBase, position),
   };
 }
 
@@ -390,6 +424,10 @@ function selectPlayerArchetype(
   let totalWeight = 0;
 
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
+    if (isBudgetedArchetype(key)) {
+      continue;
+    }
+
     const archetype = getGeneratedPlayerArchetype(key);
     totalWeight += isLineupSlot ? archetype.lineupWeight : archetype.reserveWeight;
   }
@@ -397,6 +435,10 @@ function selectPlayerArchetype(
   let cursor = rng.nextFloat() * totalWeight;
 
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
+    if (isBudgetedArchetype(key)) {
+      continue;
+    }
+
     const archetype = getGeneratedPlayerArchetype(key);
     cursor -= isLineupSlot ? archetype.lineupWeight : archetype.reserveWeight;
     if (cursor < 0) {
@@ -404,7 +446,7 @@ function selectPlayerArchetype(
     }
   }
 
-  return getGeneratedPlayerArchetype("rotation_player");
+  return getGeneratedPlayerArchetype("senior_regular");
 }
 
 /**
@@ -418,6 +460,35 @@ function numberInRange(
 ): number {
   const rng = deriveRng(seed, streamName, id);
   return rng.nextInt(range.minInclusive, range.maxInclusive + 1);
+}
+
+/**
+ * Selects a deterministic floating-point value inside an inclusive content
+ * range. Attribute values are allowed to remain fractional as true values.
+ */
+function numberInFloatRange(
+  range: { readonly minInclusive: number; readonly maxInclusive: number },
+  seed: string,
+  streamName: string,
+  id: PlayerId,
+): number {
+  const rng = deriveRng(seed, streamName, id);
+  return range.minInclusive + rng.nextFloat() * (range.maxInclusive - range.minInclusive);
+}
+
+/**
+ * Applies the early squad-depth shape before full role/potential tuning.
+ */
+function slotDepthOffset(slotNumber: number): number {
+  if (slotNumber <= FAKE_LINEUP_SIZE) {
+    return 0.35;
+  }
+
+  if (slotNumber <= 16) {
+    return -0.65;
+  }
+
+  return -1.15;
 }
 
 /**
@@ -484,58 +555,4 @@ function positionForSlot(slotNumber: number): PlayerPosition {
     default:
       return "st";
   }
-}
-
-/**
- * Builds a full 25-attribute ability shape around one base value.
- */
-function abilitiesForPosition(base: number, position: PlayerPosition): PlayerAbilities {
-  const isGoalkeeper = position === "gk";
-  const isDefender =
-    position === "rb" || position === "cb" || position === "lb" || position === "rwb" || position === "lwb";
-  const isMidfielder = position === "cm" || position === "rw" || position === "lw" || position === "rwb" || position === "lwb";
-  const isAttacker = position === "st";
-
-  return {
-    technical: {
-      finishing: rating(base + (isAttacker ? 2 : -1)),
-      passing: rating(base + (isMidfielder ? 2 : 0)),
-      longPassing: rating(base + (isMidfielder ? 1 : 0)),
-      crossing: rating(base + (position === "rw" || position === "lw" ? 2 : 0)),
-      dribbling: rating(base + (isMidfielder || isAttacker ? 1 : 0)),
-      technique: rating(base + (isMidfielder ? 1 : 0)),
-      tackling: rating(base + (isDefender ? 2 : -1)),
-      penalties: rating(base),
-      freeKicks: rating(base),
-    },
-    physical: {
-      pace: rating(base + (isAttacker ? 1 : 0)),
-      strength: rating(base + (isDefender ? 1 : 0)),
-      stamina: rating(base + (isMidfielder ? 1 : 0)),
-      agility: rating(base),
-      heading: rating(base + (isDefender || isAttacker ? 1 : 0)),
-    },
-    mental: {
-      positioning: rating(base + (isDefender ? 2 : 0)),
-      vision: rating(base + (isMidfielder ? 2 : 0)),
-      anticipation: rating(base + (isDefender ? 1 : 0)),
-      composure: rating(base + (isAttacker ? 1 : 0)),
-      determination: rating(base),
-      leadership: rating(base - 1),
-    },
-    goalkeeping: {
-      reflexes: rating(base + (isGoalkeeper ? 4 : -4)),
-      handling: rating(base + (isGoalkeeper ? 4 : -4)),
-      rushingOut: rating(base + (isGoalkeeper ? 3 : -4)),
-      goalkeeperPositioning: rating(base + (isGoalkeeper ? 4 : -4)),
-      footwork: rating(base + (isGoalkeeper ? 2 : -2)),
-    },
-  };
-}
-
-/**
- * Clamps and brands one ability rating on the 0-20 domain scale.
- */
-function rating(value: number) {
-  return abilityValue(Math.max(0, Math.min(20, value)));
 }

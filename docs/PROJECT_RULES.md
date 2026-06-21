@@ -48,6 +48,13 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - English is the deterministic fallback language for missing translations.
 - Supported game languages are Italian (`it`), English (`en`), German (`de`), Spanish (`es`), and French (`fr`).
 
+## Content Generation Quality Rules
+
+- Generated players must be deterministic, fictional, and credible by division, club tier, role, age, current ability, and potential.
+- Player generation must not create broadly overpowered lower-division squads; rare lower-division outliers must be controlled by explicit rarity budgets and tests.
+- Attribute generation must be role-coherent: ordinary defenders, attackers, midfielders, and goalkeepers must not receive high values in irrelevant attributes without an explicit archetype, cap exception, and test coverage.
+- Current ability and potential are separate concepts. A lower-division prospect may have high future potential without already being a first-division-ready player.
+
 ## Step Discipline Rules
 
 - Work on exactly one documented step at a time.

@@ -10,10 +10,14 @@ import {
   createMarketState,
   gameDate,
   nonNegativeMoney,
+  playerId,
   saveId,
   seasonId,
   type CareerState,
   type GameState,
+  type Player,
+  type PlayerAbilities,
+  type PlayerDynamicState,
 } from "@game/domain";
 
 import { JsonCareerStorage } from "./career-storage.ts";
@@ -66,6 +70,50 @@ test("saving a career does not mutate the input object", async () => {
     });
 
     assert.equal(JSON.stringify(state), beforeSave);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("save then load preserves career match preparation", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const pro01 = "club:pro01" as CareerState["selectedClubId"];
+  const player01 = playerId("player:pro01-01");
+  const state = createCareerState({
+    ...minimalCareerState(),
+    matchPreparation: {
+      selectedClubId: pro01,
+      selectedLineup: {
+        clubId: pro01,
+        slots: [
+          { slotKey: "gk", playerId: player01, roleKey: "gk" },
+        ],
+      },
+      tactic: {
+        mentality: "balanced",
+        pressing: 0.5,
+        directness: 0.5,
+        width: 0.5,
+        risk: 0.5,
+      },
+      updatedAt: gameDate(20_000),
+    },
+  });
+
+  try {
+    await storage.saveCareer({
+      saveId: saveId("save:career-prep"),
+      name: "Career Prep",
+      state,
+    });
+
+    const loaded = await storage.loadCareer(saveId("save:career-prep"));
+
+    assert.deepEqual(loaded.matchPreparation, state.matchPreparation);
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -149,6 +197,7 @@ function minimalCareerState(): CareerState {
 /** Builds the smallest valid game state with one selected club. */
 function minimalGameState(): GameState {
   const pro01 = "club:pro01" as CareerState["selectedClubId"];
+  const player01 = playerId("player:pro01-01");
 
   return {
     meta: {
@@ -160,9 +209,13 @@ function minimalGameState(): GameState {
       currentDate: gameDate(20_000),
       currentSeasonId: seasonId("season:2026"),
     },
-    players: {},
-    playerIds: [],
-    playerStates: {},
+    players: {
+      [player01]: playerFixture(player01),
+    },
+    playerIds: [player01],
+    playerStates: {
+      [player01]: playerStateFixture(),
+    },
     clubs: {
       [pro01]: {
         id: pro01,
@@ -170,12 +223,75 @@ function minimalGameState(): GameState {
         shortName: "PRO01",
         category: "third_division",
         reputation: 5,
-        playerIds: [],
+        playerIds: [player01],
       },
     },
     clubIds: [pro01],
     fixtures: {},
     fixtureIds: [],
+  };
+}
+
+/** Builds the compact player record needed for match-preparation storage tests. */
+function playerFixture(id: Player["id"]): Player {
+  return {
+    id,
+    firstName: "Player",
+    lastName: "One",
+    birthDate: gameDate(10_000),
+    naturalPositions: ["gk"],
+    abilities: abilitySet(10),
+    potential: abilitySet(12),
+  };
+}
+
+/** Builds a complete ability object with the same numeric value everywhere. */
+function abilitySet(value: number): PlayerAbilities {
+  const ability = value as PlayerAbilities["technical"]["finishing"];
+
+  return {
+    technical: {
+      finishing: ability,
+      passing: ability,
+      longPassing: ability,
+      crossing: ability,
+      dribbling: ability,
+      technique: ability,
+      tackling: ability,
+      penalties: ability,
+      freeKicks: ability,
+    },
+    physical: {
+      pace: ability,
+      strength: ability,
+      stamina: ability,
+      agility: ability,
+      heading: ability,
+    },
+    mental: {
+      positioning: ability,
+      vision: ability,
+      anticipation: ability,
+      composure: ability,
+      determination: ability,
+      leadership: ability,
+    },
+    goalkeeping: {
+      reflexes: ability,
+      handling: ability,
+      rushingOut: ability,
+      goalkeeperPositioning: ability,
+      footwork: ability,
+    },
+  };
+}
+
+/** Builds the default dynamic player state used by storage fixtures. */
+function playerStateFixture(): PlayerDynamicState {
+  return {
+    fitness: 100 as PlayerDynamicState["fitness"],
+    form: 50 as PlayerDynamicState["form"],
+    morale: 50 as PlayerDynamicState["morale"],
   };
 }
 

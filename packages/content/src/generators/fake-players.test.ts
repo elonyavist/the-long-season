@@ -112,20 +112,45 @@ test("fake player generation assigns archetypes with coherent age and potential"
   }
 });
 
-test("rare wonderkids are possible across generated career worlds but not guaranteed", () => {
-  let worldsWithWonderkid = 0;
+test("rare prodigies are possible across generated career worlds but not guaranteed", () => {
+  let worldsWithProdigy = 0;
 
   for (let index = 0; index < 80; index += 1) {
     const clubs = generateFakeClubs();
     const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: `wonderkid-sample-${index}` });
 
-    if (hasArchetype(generated.playerArchetypes, "rare_wonderkid")) {
-      worldsWithWonderkid += 1;
+    if (hasArchetype(generated.playerArchetypes, "rare_prodigy")) {
+      worldsWithProdigy += 1;
     }
   }
 
-  assert.equal(worldsWithWonderkid > 0, true);
-  assert.equal(worldsWithWonderkid < 80, true);
+  assert.equal(worldsWithProdigy > 0, true);
+  assert.equal(worldsWithProdigy < 80, true);
+});
+
+test("budgeted archetypes come only from league-level rarity assignments", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "rarity-budget-world" });
+  const assignments = Object.values(generated.playerRarityAssignments);
+  const assignedArchetypeCounts = new Map<GeneratedPlayerArchetypeKey, number>();
+
+  for (const assignment of assignments) {
+    assignedArchetypeCounts.set(assignment.archetypeKey, (assignedArchetypeCounts.get(assignment.archetypeKey) ?? 0) + 1);
+  }
+
+  assert.equal(assignments.length > 0, true);
+  assert.equal(assignments.length <= 8, true);
+
+  for (const playerId of generated.playerIds) {
+    const archetypeKey = generated.playerArchetypes[playerId];
+    assert.ok(archetypeKey !== undefined);
+    if (archetypeKey === "category_star" || archetypeKey === "veteran_drop_down" || archetypeKey === "serious_prospect" || archetypeKey === "rare_prodigy") {
+      assert.ok(generated.playerRarityAssignments[playerId] !== undefined, `${playerId} ${archetypeKey}`);
+    }
+  }
+
+  assert.equal((assignedArchetypeCounts.get("serious_prospect") ?? 0) >= 2, true);
+  assert.equal((assignedArchetypeCounts.get("rare_prodigy") ?? 0) <= 1, true);
 });
 
 test("first-division top-club context creates a more international squad pool", () => {
@@ -153,6 +178,37 @@ test("fake player generation gives top clubs a visible starting-lineup ability e
   const bottomAverage = lineupCurrentAbilityAverage(generated, 18);
 
   assert.equal(topAverage - bottomAverage >= 3, true);
+});
+
+test("third-division generated bands keep title contenders below first-division quality", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "band-world" });
+  const topAverage = lineupCurrentAbilityAverage(generated, 1);
+
+  assert.equal(topAverage < 13, true);
+});
+
+test("fake player generation keeps ordinary role attributes coherent", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "role-quality" });
+
+  for (const playerId of generated.playerIds) {
+    const player = requiredPlayer(generated.players[playerId]);
+    const position = player.naturalPositions[0];
+    assert.ok(position !== undefined);
+
+    if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") {
+      assert.equal(Number(player.abilities.technical.finishing) <= 8, true, playerId);
+    }
+
+    if (position === "st") {
+      assert.equal(Number(player.abilities.technical.tackling) <= 8, true, playerId);
+    }
+
+    if (position !== "gk") {
+      assert.equal(Number(player.abilities.goalkeeping.reflexes) <= 4, true, playerId);
+    }
+  }
 });
 
 /**
