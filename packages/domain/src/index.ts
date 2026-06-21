@@ -13,6 +13,7 @@ export * from "./entities/match.entity.ts";
 export * from "./entities/match-event.entity.ts";
 export * from "./entities/player.entity.ts";
 export * from "./entities/tactic.entity.ts";
+export * from "./entities/transfer.entity.ts";
 export * from "./state/game-state.ts";
 export * from "./squad/index.ts";
 export * from "./tactics/index.ts";

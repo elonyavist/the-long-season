@@ -26,6 +26,12 @@ export const LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM = "pro01-first-team";
 /** Rotated deterministic PRO01 lineup profile with selected reserves. */
 export const LINEUP_DEMO_PROFILE_PRO01_ROTATED = "pro01-rotated";
 
+/** Affordable deterministic PRO01 permanent-transfer market profile. */
+export const MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT = "pro01-affordable-permanent";
+
+/** Rejected deterministic PRO01 star-target permanent-transfer market profile. */
+export const MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED = "pro01-star-rejected";
+
 /** Ordered deterministic setup-demo profiles supported by the CLI MVP. */
 export const SUPPORTED_DEMO_SETUP_PROFILES = [
   DEMO_SETUP_PROFILE_PRO01_BALANCED,
@@ -42,6 +48,12 @@ export const SUPPORTED_LINEUP_DEMO_PROFILES = [
   LINEUP_DEMO_PROFILE_PRO01_ROTATED,
 ] as const;
 
+/** Ordered deterministic market-demo profiles supported by the CLI MVP. */
+export const SUPPORTED_MARKET_DEMO_PROFILES = [
+  MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT,
+  MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED,
+] as const;
+
 /** Supported deterministic setup-demo profile keys. */
 export type SetupDemoProfileKey = (typeof SUPPORTED_DEMO_SETUP_PROFILES)[number];
 
@@ -50,3 +62,6 @@ export type ConditionDemoProfileKey = (typeof SUPPORTED_CONDITION_DEMO_PROFILES)
 
 /** Supported deterministic lineup-demo profile keys. */
 export type LineupDemoProfileKey = (typeof SUPPORTED_LINEUP_DEMO_PROFILES)[number];
+
+/** Supported deterministic market-demo profile keys. */
+export type MarketDemoProfileKey = (typeof SUPPORTED_MARKET_DEMO_PROFILES)[number];

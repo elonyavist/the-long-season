@@ -9,6 +9,8 @@ import {
   DEMO_SETUP_PROFILE_PRO01_DEFENSIVE,
   LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM,
   LINEUP_DEMO_PROFILE_PRO01_ROTATED,
+  MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT,
+  MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED,
   runSimulateSeasonCommand,
 } from "./simulate-season.ts";
 
@@ -99,6 +101,94 @@ test("simulate-season can inspect formation fit without printing the season tabl
       "  natural cover missing: defensive midfielder, natural cover missing: attacking midfielder, extra depth group: wide players, extra depth group: center backs",
     ),
     true,
+  );
+});
+
+test("simulate-season can inspect an accepted permanent-transfer market demo", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", `--market-demo=${MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season market inspection");
+  assert.equal(io.stdoutLines.includes(`Market demo: ${MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT}`), true);
+  assert.equal(io.stdoutLines.includes("Selected club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("Transfer kind: permanent transfer"), true);
+  assert.equal(io.stdoutLines.includes("Buying club: PRO01"), true);
+  assert.equal(io.stdoutLines.includes("Selling club: PRO18"), true);
+  assert.equal(io.stdoutLines.includes("Target player: Player18 No10"), true);
+  assert.equal(io.stdoutLines.includes("Status: accepted"), true);
+  assert.equal(io.stdoutLines.includes("Transfer value: EUR 1529990.00"), true);
+  assert.equal(io.stdoutLines.includes("Buyer budget before: EUR 6000000.00"), true);
+  assert.equal(io.stdoutLines.includes("Buyer budget after: EUR 4470010.00"), true);
+  assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
+  assert.equal(io.stdoutLines.includes("  none"), true);
+  assert.equal(io.stdoutLines.includes("  Buying club: 22 -> 23"), true);
+  assert.equal(io.stdoutLines.includes("  Selling club: 22 -> 21"), true);
+  assert.equal(io.stdoutLines.includes("Final table:"), false);
+});
+
+test("simulate-season can inspect a rejected permanent-transfer market demo", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", `--market-demo=${MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED}`],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes(`Market demo: ${MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED}`), true);
+  assert.equal(io.stdoutLines.includes("Selling club: PRO02"), true);
+  assert.equal(io.stdoutLines.includes("Target player: Player02 No10"), true);
+  assert.equal(io.stdoutLines.includes("Status: rejected"), true);
+  assert.equal(io.stdoutLines.includes("Buyer budget after: EUR 100000000.00"), true);
+  assert.equal(io.stdoutLines.includes("  player does not want this move"), true);
+  assert.equal(io.stdoutLines.includes("  Player willingness:"), true);
+  assert.equal(io.stdoutLines.includes("    destination sporting level is too low"), true);
+  assert.equal(io.stdoutLines.includes("    destination reputation drop is too large"), true);
+  assert.equal(io.stdoutLines.includes("    prime player rejects this downward move"), true);
+  assert.equal(io.stdoutLines.includes("  not applied because the transfer is rejected"), true);
+});
+
+test("simulate-season localizes market-demo output", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", `--market-demo=${MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT}`, "--lang=it"],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines[0], "The Long Season ispezione mercato");
+  assert.equal(io.stdoutLines.includes("Demo mercato: pro01-affordable-permanent"), true);
+  assert.equal(io.stdoutLines.includes("Tipo trasferimento: trasferimento definitivo"), true);
+  assert.equal(io.stdoutLines.includes("Stato: accettato"), true);
+  assert.equal(io.stdoutLines.includes("Motivi:"), true);
+  assert.equal(io.stdoutLines.includes("  nessuno"), true);
+});
+
+test("simulate-season rejects unsupported or combined market demos", async () => {
+  const unsupported = captureIo();
+  const combined = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--market-demo=missing-profile"], unsupported), 1);
+  assert.equal(unsupported.stdoutLines.length, 0);
+  assert.equal(unsupported.stderrLines[0]?.startsWith("Unsupported --market-demo value: missing-profile."), true);
+
+  assert.equal(
+    await runSimulateSeasonCommand(
+      ["--market-demo=pro01-affordable-permanent", "--formation-fit=4-4-2"],
+      combined,
+    ),
+    1,
+  );
+  assert.equal(combined.stdoutLines.length, 0);
+  assert.equal(
+    combined.stderrLines[0],
+    "--market-demo cannot be combined with --round, --fixture, --setup-demo, --manual-tactic-switch, --condition-demo, --lineup-demo, or --formation-fit",
   );
 });
 

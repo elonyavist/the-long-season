@@ -29,9 +29,11 @@ import {
   type Translator,
 } from "@game/i18n";
 import { formatFormationFitOutput } from "./simulate-season/formation-fit-output.ts";
+import { formatMarketDemoOutput } from "./simulate-season/market-demo-output.ts";
 import {
   formatSupportedConditionDemoProfiles,
   formatSupportedLineupDemoProfiles,
+  formatSupportedMarketDemoProfiles,
   formatSupportedSetupDemoProfiles,
   parseArgs,
 } from "./simulate-season/parse-args.ts";
@@ -42,6 +44,8 @@ import {
   DEMO_SETUP_PROFILE_PRO01_DEFENSIVE,
   LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM,
   LINEUP_DEMO_PROFILE_PRO01_ROTATED,
+  MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT,
+  MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED,
   type ConditionDemoProfileKey,
   type LineupDemoProfileKey,
   type SetupDemoProfileKey,
@@ -55,6 +59,8 @@ export {
   DEMO_SETUP_PROFILE_PRO01_DEFENSIVE,
   LINEUP_DEMO_PROFILE_PRO01_FIRST_TEAM,
   LINEUP_DEMO_PROFILE_PRO01_ROTATED,
+  MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT,
+  MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED,
 } from "./simulate-season/profile-keys.ts";
 
 /**
@@ -87,6 +93,7 @@ export async function runSimulateSeasonCommand(
         setupProfiles: formatSupportedSetupDemoProfiles(),
         conditionProfiles: formatSupportedConditionDemoProfiles(),
         lineupProfiles: formatSupportedLineupDemoProfiles(),
+        marketProfiles: formatSupportedMarketDemoProfiles(),
       }),
     );
     return 1;
@@ -126,6 +133,28 @@ export async function runSimulateSeasonCommand(
   ) {
     io.stderr(text("formation.error.cannotCombine"));
     return 1;
+  }
+
+  if (
+    parsed.marketDemo !== undefined &&
+    (parsed.fixtureId !== undefined ||
+      parsed.roundNumber !== undefined ||
+      setupDemo !== undefined ||
+      manualTacticSwitch !== undefined ||
+      conditionDemo !== undefined ||
+      lineupDemo !== undefined ||
+      parsed.formationFit !== undefined)
+  ) {
+    io.stderr(text("market.error.cannotCombine"));
+    return 1;
+  }
+
+  if (parsed.marketDemo !== undefined) {
+    for (const line of formatMarketDemoOutput(league, parsed.seed, parsed.marketDemo, text)) {
+      io.stdout(line);
+    }
+
+    return 0;
   }
 
   if (parsed.formationFit !== undefined) {

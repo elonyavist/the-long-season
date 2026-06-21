@@ -17,8 +17,10 @@ import {
   SUPPORTED_CONDITION_DEMO_PROFILES,
   SUPPORTED_DEMO_SETUP_PROFILES,
   SUPPORTED_LINEUP_DEMO_PROFILES,
+  SUPPORTED_MARKET_DEMO_PROFILES,
   type ConditionDemoProfileKey,
   type LineupDemoProfileKey,
+  type MarketDemoProfileKey,
   type SetupDemoProfileKey,
 } from "./profile-keys.ts";
 
@@ -35,6 +37,7 @@ export type ParsedSimulateSeasonArgs =
       readonly manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
       readonly conditionDemo: ConditionDemoProfileKey | undefined;
       readonly lineupDemo: LineupDemoProfileKey | undefined;
+      readonly marketDemo: MarketDemoProfileKey | undefined;
       readonly formationFit: FormationKey | undefined;
       readonly language: SupportedLanguage;
     }
@@ -107,6 +110,17 @@ type ParsedLineupDemo =
       readonly message: string;
     };
 
+/** Parsed market-demo argument result. */
+type ParsedMarketDemo =
+  | {
+      readonly ok: true;
+      readonly marketDemo: MarketDemoProfileKey;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
 /** Parsed formation-fit argument result. */
 type ParsedFormationFit =
   | {
@@ -140,6 +154,7 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
   let conditionDemo: ConditionDemoProfileKey | undefined;
   let lineupDemo: LineupDemoProfileKey | undefined;
+  let marketDemo: MarketDemoProfileKey | undefined;
   let formationFit: FormationKey | undefined;
   let language: SupportedLanguage = "en";
 
@@ -362,6 +377,30 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       continue;
     }
 
+    if (arg === "--market-demo") {
+      const value = args[index + 1];
+      const parsedMarketDemo = parseMarketDemo(value, createTranslator(language));
+
+      if (!parsedMarketDemo.ok) {
+        return { ...parsedMarketDemo, language };
+      }
+
+      marketDemo = parsedMarketDemo.marketDemo;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--market-demo=")) {
+      const parsedMarketDemo = parseMarketDemo(arg.slice("--market-demo=".length), createTranslator(language));
+
+      if (!parsedMarketDemo.ok) {
+        return { ...parsedMarketDemo, language };
+      }
+
+      marketDemo = parsedMarketDemo.marketDemo;
+      continue;
+    }
+
     if (arg === "--formation-fit") {
       const value = args[index + 1];
       const parsedFormationFit = parseFormationFit(value, createTranslator(language));
@@ -389,7 +428,19 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     return { ok: false, language, message: createTranslator(language)("cli.error.unknownArgument", { arg }) };
   }
 
-  return { ok: true, seed, roundNumber, fixtureId, setupDemo, manualTacticSwitch, conditionDemo, lineupDemo, formationFit, language };
+  return {
+    ok: true,
+    seed,
+    roundNumber,
+    fixtureId,
+    setupDemo,
+    manualTacticSwitch,
+    conditionDemo,
+    lineupDemo,
+    marketDemo,
+    formationFit,
+    language,
+  };
 }
 
 /**
@@ -411,6 +462,13 @@ export function formatSupportedConditionDemoProfiles(): string {
  */
 export function formatSupportedLineupDemoProfiles(): string {
   return SUPPORTED_LINEUP_DEMO_PROFILES.join("|");
+}
+
+/**
+ * Formats supported market-demo profiles for usage and error messages.
+ */
+export function formatSupportedMarketDemoProfiles(): string {
+  return SUPPORTED_MARKET_DEMO_PROFILES.join("|");
 }
 
 /**
@@ -556,6 +614,30 @@ function parseLineupDemo(value: string | undefined, text: Translator): ParsedLin
 }
 
 /**
+ * Parses the deterministic market-demo profile key.
+ */
+function parseMarketDemo(value: string | undefined, text: Translator): ParsedMarketDemo {
+  if (value === undefined || value.length === 0) {
+    return {
+      ok: false,
+      message: text("market.error.requiresValue", { supported: formatSupportedMarketDemoProfiles() }),
+    };
+  }
+
+  if (!isMarketDemoProfileKey(value)) {
+    return {
+      ok: false,
+      message: text("market.error.unsupportedValue", {
+        value,
+        supported: formatSupportedMarketDemoProfiles(),
+      }),
+    };
+  }
+
+  return { ok: true, marketDemo: value };
+}
+
+/**
  * Parses one supported formation key for squad-fit inspection.
  */
 function parseFormationFit(value: string | undefined, text: Translator): ParsedFormationFit {
@@ -604,6 +686,19 @@ function isConditionDemoProfileKey(value: string): value is ConditionDemoProfile
  */
 function isLineupDemoProfileKey(value: string): value is LineupDemoProfileKey {
   for (const profileKey of SUPPORTED_LINEUP_DEMO_PROFILES) {
+    if (value === profileKey) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks whether a string is one of the supported market-demo profiles.
+ */
+function isMarketDemoProfileKey(value: string): value is MarketDemoProfileKey {
+  for (const profileKey of SUPPORTED_MARKET_DEMO_PROFILES) {
     if (value === profileKey) {
       return true;
     }
