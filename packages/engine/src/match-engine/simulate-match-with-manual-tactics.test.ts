@@ -38,6 +38,22 @@ test("manual tactic switch changes output deterministically", () => {
   assert.deepEqual(first.score, countGoalEvents(first.events));
 });
 
+test("optional explanation trace does not change segmented fixture output", () => {
+  const context = validContext({ fixtureValue: "fixture:manual-trace" });
+  const changes = [manualChange("home", 4, validTeam("home", 20, 0.9))];
+  const withoutTrace = simulateMatchWithManualTactics(context, { manualTacticChanges: changes });
+  const withTrace = simulateMatchWithManualTactics(context, {
+    manualTacticChanges: changes,
+    includeExplanationTrace: true,
+  });
+
+  assert.deepEqual(stripExplanationTrace(withTrace), withoutTrace);
+  assert.deepEqual(withTrace.score, withoutTrace.score);
+  assert.deepEqual(withTrace.events, withoutTrace.events);
+  assert.deepEqual(withTrace.stats, withoutTrace.stats);
+  assert.equal(withTrace.explanationTrace?.fixtureId, context.fixtureId);
+});
+
 test("manual tactic switch is applied from the declared minute onward", () => {
   const context = validContext({ fixtureValue: "fixture:minute-boundary" });
   const changedTeam = validTeam("home", 18, 0.8);
@@ -113,6 +129,18 @@ function countGoalEvents(events: ReturnType<typeof simulateMatchWithManualTactic
   }
 
   return score;
+}
+
+/**
+ * Removes optional trace data so trace-on output can be compared with the
+ * default segmented simulation result.
+ */
+function stripExplanationTrace(
+  result: ReturnType<typeof simulateMatchWithManualTactics>,
+): Omit<ReturnType<typeof simulateMatchWithManualTactics>, "explanationTrace"> {
+  const { explanationTrace, ...withoutTrace } = result;
+  void explanationTrace;
+  return withoutTrace;
 }
 
 /**

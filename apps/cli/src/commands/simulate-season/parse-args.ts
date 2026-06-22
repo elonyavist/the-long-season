@@ -33,6 +33,7 @@ export type ParsedSimulateSeasonArgs =
       readonly seed: string;
       readonly roundNumber: number | undefined;
       readonly fixtureId: string | undefined;
+      readonly fixtureExplanation: boolean;
       readonly setupDemo: SetupDemoProfileKey | undefined;
       readonly manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
       readonly conditionDemo: ConditionDemoProfileKey | undefined;
@@ -152,6 +153,7 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
   let seed = DEFAULT_SIMULATE_SEASON_SEED;
   let roundNumber: number | undefined;
   let fixtureId: string | undefined;
+  let fixtureExplanation = false;
   let setupDemo: SetupDemoProfileKey | undefined;
   let manualTacticSwitch: ParsedManualTacticSwitchValue | undefined;
   let conditionDemo: ConditionDemoProfileKey | undefined;
@@ -279,6 +281,11 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
       }
 
       fixtureId = parsedFixture.fixtureId;
+      continue;
+    }
+
+    if (arg === "--fixture-explanation") {
+      fixtureExplanation = true;
       continue;
     }
 
@@ -447,6 +454,7 @@ export function parseArgs(args: readonly string[]): ParsedSimulateSeasonArgs {
     seed,
     roundNumber,
     fixtureId,
+    fixtureExplanation,
     setupDemo,
     manualTacticSwitch,
     conditionDemo,

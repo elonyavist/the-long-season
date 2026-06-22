@@ -629,6 +629,7 @@ test("career command advances and persists the next selected-club fixture", asyn
   const lineupIo = captureIo();
   const tacticIo = captureIo();
   const advanceIo = captureIo();
+  const secondAdvanceIo = captureIo();
   const inspectIo = captureIo();
 
   try {
@@ -671,7 +672,36 @@ test("career command advances and persists the next selected-club fixture", asyn
     assert.equal(advanceIo.stdoutLines.some((line) => /^Advanced fixture: fixture:[0-9]{6}$/.test(line)), true);
     assert.equal(advanceIo.stdoutLines.some((line) => new RegExp(`^Result: ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
     assert.equal(advanceIo.stdoutLines.includes("Career save written: yes"), true);
+    assert.equal(advanceIo.stdoutLines.includes("Pre-match recovery:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Recovery days: 0"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Players improved: 0"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Fitness range: 100..100 -> 100..100"), true);
+    assert.equal(advanceIo.stdoutLines.includes("Post-match condition:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Selected starters:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Rested first-team players:"), true);
+    assert.equal(advanceIo.stdoutLines.some((line) => /100 -> 92 \(-8\)$/.test(line)), true);
     assert.equal(countPlayedSelectedClubFixtures(loaded), 1);
+    const selectedClub = loaded.gameState.clubs[loaded.selectedClubId];
+    const firstStarterId = selectedClub?.playerIds[0];
+    if (firstStarterId === undefined) {
+      throw new Error("Expected selected club first starter");
+    }
+    assert.equal(loaded.gameState.playerStates[firstStarterId]?.fitness, 92);
+    const savedLineupAfterFirstAdvance = loaded.matchPreparation?.selectedLineup;
+
+    assert.equal(
+      await runCareerCommand(["--save=career-advance", "--advance-next-fixture"], secondAdvanceIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(secondAdvanceIo.stdoutLines.includes("  Recovery days: 7"), true);
+    assert.equal(secondAdvanceIo.stdoutLines.includes("  Players improved: 11"), true);
+    assert.equal(secondAdvanceIo.stdoutLines.includes("  Fitness range: 92..100 -> 100..100"), true);
+    const loadedAfterSecondAdvance = await storage.loadCareer("save:career-advance" as Parameters<typeof storage.loadCareer>[0]);
+    assert.equal(countPlayedSelectedClubFixtures(loadedAfterSecondAdvance), 2);
+    assert.equal(loadedAfterSecondAdvance.gameState.playerStates[firstStarterId]?.fitness, 92);
+    assert.deepEqual(loadedAfterSecondAdvance.matchPreparation?.selectedLineup, savedLineupAfterFirstAdvance);
 
     assert.equal(
       await runCareerCommand(["--save=career-advance", "--inspect"], inspectIo, {
@@ -679,7 +709,169 @@ test("career command advances and persists the next selected-club fixture", asyn
       }),
       0,
     );
-    assert.equal(inspectIo.stdoutLines.includes("Selected club played fixtures: 1"), true);
+    assert.equal(inspectIo.stdoutLines.includes("Selected club played fixtures: 2"), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command applies partial recovery for short gaps before spending match condition", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const lineupIo = captureIo();
+  const tacticIo = captureIo();
+  const firstAdvanceIo = captureIo();
+  const shortGapAdvanceIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-short-gap", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-short-gap", "--set-lineup-demo=pro01-first-team"], lineupIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-short-gap", "--set-tactic-demo=pro01-balanced"], tacticIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-short-gap", "--advance-next-fixture"], firstAdvanceIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const storage = new JsonCareerStorage({ directoryPath });
+    const afterFirstAdvance = await storage.loadCareer("save:career-short-gap" as Parameters<typeof storage.loadCareer>[0]);
+    const selectedClub = afterFirstAdvance.gameState.clubs[afterFirstAdvance.selectedClubId];
+    const firstStarterId = selectedClub?.playerIds[0];
+    if (firstStarterId === undefined) {
+      throw new Error("Expected selected club first starter");
+    }
+    assert.equal(afterFirstAdvance.gameState.playerStates[firstStarterId]?.fitness, 92);
+
+    const shortGapCareerState = moveNextSelectedClubFixtureToDate(
+      afterFirstAdvance,
+      (afterFirstAdvance.gameState.calendar.currentDate + 1) as typeof afterFirstAdvance.gameState.calendar.currentDate,
+    );
+    await storage.saveCareer({
+      saveId: afterFirstAdvance.saveId,
+      name: "career-short-gap",
+      state: shortGapCareerState,
+    });
+
+    assert.equal(
+      await runCareerCommand(["--save=career-short-gap", "--advance-next-fixture"], shortGapAdvanceIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(shortGapAdvanceIo.stdoutLines.includes("  Recovery days: 1"), true);
+    assert.equal(shortGapAdvanceIo.stdoutLines.includes("  Players improved: 11"), true);
+    assert.equal(shortGapAdvanceIo.stdoutLines.includes("  Fitness range: 92..100 -> 97..100"), true);
+    const afterShortGapAdvance = await storage.loadCareer("save:career-short-gap" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(countPlayedSelectedClubFixtures(afterShortGapAdvance), 2);
+    assert.equal(afterShortGapAdvance.gameState.playerStates[firstStarterId]?.fitness, 89);
+    assert.deepEqual(afterShortGapAdvance.matchPreparation?.selectedLineup, shortGapCareerState.matchPreparation?.selectedLineup);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command localizes post-match condition output in Italian", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const lineupIo = captureIo();
+  const tacticIo = captureIo();
+  const advanceIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-advance-it", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-advance-it", "--set-lineup-demo=pro01-first-team"], lineupIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-advance-it", "--set-tactic-demo=pro01-balanced"], tacticIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=career-advance-it", "--advance-next-fixture", "--lang=it"], advanceIo, {
+      storageDirectoryPath: directoryPath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(advanceIo.stderrLines.length, 0);
+    assert.equal(advanceIo.stdoutLines.includes("Recupero pre-partita:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Giorni di recupero: 0"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Giocatori migliorati: 0"), true);
+    assert.equal(advanceIo.stdoutLines.includes("Condizione post-partita:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Titolari selezionati:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Giocatori della prima squadra a riposo:"), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command can explain an advanced selected-club fixture when requested", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const lineupIo = captureIo();
+  const tacticIo = captureIo();
+  const advanceIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-advance-explained", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-advance-explained", "--set-lineup-demo=pro01-first-team"], lineupIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+    assert.equal(
+      await runCareerCommand(["--save=career-advance-explained", "--set-tactic-demo=pro01-balanced"], tacticIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=career-advance-explained", "--advance-next-fixture", "--fixture-explanation"], advanceIo, {
+      storageDirectoryPath: directoryPath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(advanceIo.stderrLines.length, 0);
+    assert.equal(advanceIo.stdoutLines.includes("Advance status: advanced"), true);
+    assert.equal(advanceIo.stdoutLines.includes("Match explanation:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Team strength:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Tactic distribution:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Lineup roles:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Condition impact:"), true);
+    assert.equal(advanceIo.stdoutLines.includes("  Chance summary:"), true);
+    assert.equal(advanceIo.stdoutLines.some((line) => line.includes("Variance markers: ")), true);
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -1044,6 +1236,55 @@ function countPlayedSelectedClubFixtures(
   }
 
   return count;
+}
+
+function moveNextSelectedClubFixtureToDate(
+  careerState: Awaited<ReturnType<JsonCareerStorage["loadCareer"]>>,
+  date: Awaited<ReturnType<JsonCareerStorage["loadCareer"]>>["gameState"]["calendar"]["currentDate"],
+): Awaited<ReturnType<JsonCareerStorage["loadCareer"]>> {
+  const nextFixtureId = nextUnplayedSelectedClubFixtureId(careerState);
+
+  if (nextFixtureId === undefined) {
+    throw new Error("Expected next selected-club fixture");
+  }
+
+  const nextFixture = careerState.gameState.fixtures[nextFixtureId];
+
+  if (nextFixture === undefined) {
+    throw new Error("Expected next selected-club fixture data");
+  }
+
+  return {
+    ...careerState,
+    gameState: {
+      ...careerState.gameState,
+      fixtures: {
+        ...careerState.gameState.fixtures,
+        [nextFixtureId]: {
+          ...nextFixture,
+          date,
+        },
+      },
+    },
+  };
+}
+
+function nextUnplayedSelectedClubFixtureId(
+  careerState: Awaited<ReturnType<JsonCareerStorage["loadCareer"]>>,
+): Awaited<ReturnType<JsonCareerStorage["loadCareer"]>>["gameState"]["fixtureIds"][number] | undefined {
+  for (const fixtureId of careerState.gameState.fixtureIds) {
+    const fixture = careerState.gameState.fixtures[fixtureId];
+
+    if (fixture === undefined || fixture.result?.played === true) {
+      continue;
+    }
+
+    if (fixture.homeClubId === careerState.selectedClubId || fixture.awayClubId === careerState.selectedClubId) {
+      return fixtureId;
+    }
+  }
+
+  return undefined;
 }
 
 function completeCareerSeason(

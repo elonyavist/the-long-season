@@ -10,8 +10,10 @@ import {
 import type { MatchEngineConfig } from "../match-engine/match-engine-config.ts";
 import type { MatchTeamContext } from "../match-engine/match-context.ts";
 import { createMatchReport } from "../match-engine/create-match-report.ts";
+import type { MatchExplanationConditionSnapshot, MatchExplanationTrace } from "../match-engine/match-explanation-trace.ts";
 import { simulateMatch } from "../match-engine/simulate-match.ts";
 import { applyMatchReportToFixture } from "../use-cases/apply-match-report-to-fixture.ts";
+import { applyCareerFixtureConditionConsequences, type CareerFixtureConditionChange } from "./career-condition-consequences.ts";
 import { findNextCareerFixture, type NextCareerFixtureInvalidReason } from "./next-fixture.ts";
 
 /** Invalid-state reasons specific to career fixture progression. */
@@ -30,6 +32,8 @@ export interface ProgressNextCareerFixtureInput {
   readonly teamsByClubId: Readonly<Record<ClubId, MatchTeamContext>>;
   /** Match-engine tuning supplied by caller content/config. */
   readonly matchEngineConfig: MatchEngineConfig;
+  /** Whether to attach optional explanation data for the played fixture. */
+  readonly includeExplanationTrace?: boolean;
 }
 
 /** Result returned when one selected-club fixture was simulated and applied. */
@@ -44,6 +48,10 @@ export interface ProgressCareerFixtureAdvanced {
   readonly fixtureAfter: Fixture;
   /** Durable match report produced by the simulation. */
   readonly report: MatchReport;
+  /** Optional language-agnostic explanation trace for the played fixture. */
+  readonly explanationTrace?: MatchExplanationTrace;
+  /** Selected-club condition changes caused by this played fixture. */
+  readonly conditionChanges: readonly CareerFixtureConditionChange[];
   /** Copied career state with the fixture result applied. */
   readonly careerState: CareerState;
 }
@@ -119,29 +127,44 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     return invalidResult(input.careerState, "away_team_context_mismatch", nextFixture.fixtureId);
   }
 
+  const simulatedMatch = simulateMatch({
+    fixtureId: nextFixture.fixtureId,
+    seed: input.careerState.gameState.meta.seed,
+    home,
+    away,
+    engineConfig: input.matchEngineConfig,
+  }, {
+    includeExplanationTrace: input.includeExplanationTrace === true,
+  });
   const report = createMatchReport(
-    simulateMatch({
-      fixtureId: nextFixture.fixtureId,
-      seed: input.careerState.gameState.meta.seed,
-      home,
-      away,
-      engineConfig: input.matchEngineConfig,
-    }),
+    simulatedMatch,
   );
   const gameStateWithResult = applyMatchReportToFixture({
     state: input.careerState.gameState,
     fixtureId: nextFixture.fixtureId,
     report,
   });
+  const selectedClubContext = selectedClubTeamContext(input.careerState.selectedClubId, nextFixture.fixture, home, away);
+  const selectedStarterIds = selectedClubContext.lineup.map((slot) => slot.playerId);
+  const selectedClub = gameStateWithResult.clubs[input.careerState.selectedClubId];
+  const conditionConsequences = applyCareerFixtureConditionConsequences({
+    playerStates: gameStateWithResult.playerStates,
+    selectedStarterIds,
+    reportPlayerIds: selectedClub?.playerIds ?? selectedStarterIds,
+  });
+  const gameStateWithCondition = {
+    ...gameStateWithResult,
+    playerStates: conditionConsequences.playerStates,
+  };
   const progressedCareerState = createCareerState({
     ...input.careerState,
     gameState: {
-      ...gameStateWithResult,
+      ...gameStateWithCondition,
       calendar: {
-        ...gameStateWithResult.calendar,
-        currentDate: nextFixture.fixture.date > gameStateWithResult.calendar.currentDate
+        ...gameStateWithCondition.calendar,
+        currentDate: nextFixture.fixture.date > gameStateWithCondition.calendar.currentDate
           ? nextFixture.fixture.date
-          : gameStateWithResult.calendar.currentDate,
+          : gameStateWithCondition.calendar.currentDate,
       },
     },
   });
@@ -157,7 +180,77 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     fixtureBefore: nextFixture.fixture,
     fixtureAfter,
     report,
+    ...(simulatedMatch.explanationTrace === undefined
+      ? {}
+      : {
+          explanationTrace: withSelectedClubConditionTrace(
+            simulatedMatch.explanationTrace,
+            input.careerState.selectedClubId,
+            conditionConsequences.changes,
+          ),
+        }),
+    conditionChanges: conditionConsequences.changes,
     careerState: progressedCareerState,
+  };
+}
+
+/**
+ * Returns the match team context belonging to the selected club.
+ */
+function selectedClubTeamContext(
+  selectedClubId: ClubId,
+  fixture: Fixture,
+  home: MatchTeamContext,
+  away: MatchTeamContext,
+): MatchTeamContext {
+  return fixture.homeClubId === selectedClubId ? home : away;
+}
+
+/**
+ * Marks selected-club condition tracking inside an optional explanation trace.
+ */
+function withSelectedClubConditionTrace(
+  trace: MatchExplanationTrace,
+  selectedClubId: ClubId,
+  conditionChanges: readonly CareerFixtureConditionChange[],
+): MatchExplanationTrace {
+  const conditionImpact = conditionImpactFromChanges(conditionChanges);
+
+  if (trace.home.clubId === selectedClubId) {
+    return {
+      ...trace,
+      home: {
+        ...trace.home,
+        conditionImpact,
+      },
+    };
+  }
+
+  if (trace.away.clubId === selectedClubId) {
+    return {
+      ...trace,
+      away: {
+        ...trace.away,
+        conditionImpact,
+      },
+    };
+  }
+
+  return trace;
+}
+
+/**
+ * Converts pre-match starter fitness into a trace-level condition summary.
+ */
+function conditionImpactFromChanges(
+  conditionChanges: readonly CareerFixtureConditionChange[],
+): MatchExplanationConditionSnapshot {
+  const tiredStarterCount = conditionChanges.filter((change) => change.started && change.beforeFitness < 100).length;
+
+  return {
+    tracking: "tracked",
+    effectDirection: tiredStarterCount > 0 ? "negative" : "neutral",
+    affectedPlayerCount: tiredStarterCount,
   };
 }
 

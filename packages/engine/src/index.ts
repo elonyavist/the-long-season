@@ -9,6 +9,12 @@ export * from "./market/index.ts";
 export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
 export {
+  applyCareerWeeklyRecovery,
+  type ApplyCareerWeeklyRecoveryInput,
+  type ApplyCareerWeeklyRecoveryResult,
+  type CareerWeeklyRecoveryChange,
+} from "./career/career-weekly-recovery.ts";
+export {
   applyCareerPermanentTransfer,
   type ApplyCareerPermanentTransferInput,
   type ApplyCareerPermanentTransferResult,

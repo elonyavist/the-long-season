@@ -79,6 +79,7 @@ export type ParsedCareerArgs =
       readonly saveId: CliSaveId;
       readonly language: SupportedLanguage;
       readonly mode: "advanceNextFixture";
+      readonly includeFixtureExplanation: boolean;
     }
   | {
       readonly ok: true;
@@ -123,6 +124,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
   let lineupDemo: LineupDemoProfileKey | undefined;
   let tacticDemo: SetupDemoProfileKey | undefined;
   let advanceNextFixture = false;
+  let includeFixtureExplanation = false;
   let rolloverSeason = false;
   let developmentReport = false;
   let newWorldPreview = false;
@@ -142,6 +144,11 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
 
       language = languageResult.language;
       index += languageResult.consumedNext ? 1 : 0;
+      continue;
+    }
+
+    if (arg === "--fixture-explanation") {
+      includeFixtureExplanation = true;
       continue;
     }
 
@@ -475,6 +482,10 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     return { ok: false, language, message: createTranslator(language)("career.error.saveRequired") };
   }
 
+  if (includeFixtureExplanation && !advanceNextFixture) {
+    return { ok: false, language, message: createTranslator(language)("career.error.fixtureExplanationRequiresAdvance") };
+  }
+
   if (inspect) {
     return {
       ok: true,
@@ -544,6 +555,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       saveId,
       language,
       mode: "advanceNextFixture",
+      includeFixtureExplanation,
     };
   }
 

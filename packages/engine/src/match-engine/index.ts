@@ -18,6 +18,27 @@ export {
 } from "./match-engine-config.ts";
 
 export {
+  createMatchExplanationTrace,
+  MATCH_EXPLANATION_TRACE_SCHEMA_VERSION,
+  type CreateMatchExplanationTraceInput,
+  type MatchExplanationConditionSnapshot,
+  type MatchExplanationCountBucket,
+  type MatchExplanationEffectDirection,
+  type MatchExplanationFactorKey,
+  type MatchExplanationLineupSlotSnapshot,
+  type MatchExplanationLineupSnapshot,
+  type MatchExplanationOpportunitySideSummary,
+  type MatchExplanationOpportunitySummary,
+  type MatchExplanationSide,
+  type MatchExplanationStrengthSnapshot,
+  type MatchExplanationTacticSnapshot,
+  type MatchExplanationTeamSnapshot,
+  type MatchExplanationTrace,
+  type MatchExplanationVarianceMarker,
+  type MatchExplanationVarianceSnapshot,
+} from "./match-explanation-trace.ts";
+
+export {
   assertValidMatchContext,
   buildMatchRngKey,
   isValidMatchContext,

@@ -17,8 +17,9 @@ import type { OccasionOutcome, OccasionResolver, OccasionResolution } from "./oc
 /**
  * Sparse event emitted by one `stepMatch` call.
  *
- * This is an engine-local event shape for the minute loop. The durable domain
- * `MatchEvent` contract is intentionally left to the later match-report step.
+ * This is an engine-local event shape for the minute loop. Durable domain
+ * `MatchEvent` values are created later by mapping full match results through
+ * `createMatchReport`.
  */
 export type MatchStepEvent =
   | MatchKickoffStepEvent

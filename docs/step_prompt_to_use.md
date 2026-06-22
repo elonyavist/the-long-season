@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/38-match-engine-and-calculator-quality-review
+PHASE_DIR_TO_EXECUTE: docs/steps/42-career-weekly-recovery-and-matchday-readiness
 
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.

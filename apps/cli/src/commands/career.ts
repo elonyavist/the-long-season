@@ -225,7 +225,9 @@ export async function runCareerCommand(
   if (parsed.mode === "advanceNextFixture") {
     try {
       const careerState = await storage.loadCareer(parsed.saveId);
-      const result = advanceCareerNextFixture(careerState);
+      const result = advanceCareerNextFixture(careerState, {
+        includeExplanationTrace: parsed.includeFixtureExplanation,
+      });
 
       if (result.status === "advanced") {
         await storage.saveCareer({

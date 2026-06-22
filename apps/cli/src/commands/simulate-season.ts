@@ -9,11 +9,13 @@ import {
   createMatchReport,
   buildTacticTeamContext,
   DEFAULT_FITNESS_RULES,
+  deriveTeamStrength,
   simulateSeason,
   simulateMatchWithManualTactics,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
   type LineupSlot,
+  type MatchExplanationTrace,
   type MatchTacticalDistributionInput,
   type MatchTeamContext,
   type PlayerMatchStatRegistration,
@@ -117,6 +119,11 @@ export async function runSimulateSeasonCommand(
 
   if (manualTacticSwitch !== undefined && parsed.fixtureId === undefined) {
     io.stderr(text("manualSwitch.error.requiresFixture"));
+    return 1;
+  }
+
+  if (parsed.fixtureExplanation && parsed.fixtureId === undefined) {
+    io.stderr(text("fixture.explanation.error.requiresFixture"));
     return 1;
   }
 
@@ -269,6 +276,7 @@ export async function runSimulateSeasonCommand(
       setupDemo,
       manualTacticSwitch,
       lineupFixtureInspection,
+      parsed.fixtureExplanation,
     )) {
       io.stdout(line);
     }
@@ -850,6 +858,7 @@ function formatFixtureOnlyOutput(
   setupDemo: CliSetupDemo | undefined,
   manualTacticSwitch: CliManualTacticSwitch | undefined,
   lineupFixtureInspection: CliLineupFixtureInspection | undefined,
+  includeFixtureExplanation: boolean,
 ): readonly string[] {
   const lines = [
     text("fixture.title"),
@@ -868,14 +877,25 @@ function formatFixtureOnlyOutput(
 
   const manualFixture = manualTacticSwitch === undefined || setupDemo === undefined
     ? undefined
-    : buildManualTacticFixture(league, result, seed, fixtureValue, setupDemo, manualTacticSwitch);
+    : buildManualTacticFixture(league, result, seed, fixtureValue, setupDemo, manualTacticSwitch, includeFixtureExplanation);
 
   if (manualFixture !== undefined && setupDemo !== undefined && manualTacticSwitch !== undefined) {
     lines.push(...formatManualTacticSwitchLines(league, setupDemo, manualTacticSwitch, manualFixture, text));
   }
 
   lines.push("");
-  lines.push(...formatFixtureDetailOutput(league, result, fixtureValue, text, manualFixture?.fixture, lineupFixtureInspection));
+  const explanationTrace = includeFixtureExplanation
+    ? manualFixture?.explanationTrace ?? buildFixtureExplanationTrace(league, result, seed, fixtureValue, setupDemo, lineupFixtureInspection)
+    : undefined;
+  lines.push(...formatFixtureDetailOutput(
+    league,
+    result,
+    fixtureValue,
+    text,
+    manualFixture?.fixture,
+    lineupFixtureInspection,
+    explanationTrace,
+  ));
 
   return lines;
 }
@@ -890,6 +910,7 @@ function formatFixtureDetailOutput(
   text: Translator,
   overrideFixture: Fixture | undefined = undefined,
   lineupFixtureInspection: CliLineupFixtureInspection | undefined = undefined,
+  explanationTrace: MatchExplanationTrace | undefined = undefined,
 ): readonly string[] {
   const fixture = overrideFixture ?? findFixtureByValue(result.fixtures, fixtureValue);
 
@@ -925,7 +946,180 @@ function formatFixtureDetailOutput(
     lines.push(...statLines);
   }
 
+  if (explanationTrace !== undefined) {
+    lines.push(...formatFixtureExplanationTraceOutput(explanationTrace, league, text));
+  }
+
   return lines;
+}
+
+/**
+ * Rebuilds the requested fixture context and asks the engine for trace data.
+ */
+function buildFixtureExplanationTrace(
+  league: FakeLeagueSystem,
+  result: CliSeasonResult,
+  seed: string,
+  fixtureValue: string,
+  setupDemo: CliSetupDemo | undefined,
+  lineupFixtureInspection: CliLineupFixtureInspection | undefined,
+): MatchExplanationTrace | undefined {
+  const fixture = findFixtureByValue(result.fixtures, fixtureValue);
+
+  if (fixture === undefined) {
+    return undefined;
+  }
+
+  const teamsByClubId = createFakeTeamsByClubId(league);
+  const simulated = simulateMatchWithManualTactics(
+    {
+      fixtureId: fixture.id,
+      seed,
+      home: matchTeamContextForFixtureExplanation(
+        league,
+        teamsByClubId,
+        fixture.id,
+        fixture.homeClubId,
+        setupDemo,
+        lineupFixtureInspection,
+      ),
+      away: matchTeamContextForFixtureExplanation(
+        league,
+        teamsByClubId,
+        fixture.id,
+        fixture.awayClubId,
+        setupDemo,
+        lineupFixtureInspection,
+      ),
+      engineConfig: league.matchEngineConfig,
+    },
+    { includeExplanationTrace: true },
+  );
+
+  return simulated.explanationTrace;
+}
+
+/**
+ * Builds the team context used by the fixture explanation trace.
+ */
+function matchTeamContextForFixtureExplanation(
+  league: FakeLeagueSystem,
+  teamsByClubId: Readonly<Record<ClubId, CliTeamContext>>,
+  fixtureId: FixtureId,
+  clubId: ClubId,
+  setupDemo: CliSetupDemo | undefined,
+  lineupFixtureInspection: CliLineupFixtureInspection | undefined,
+): MatchTeamContext {
+  const baseTeam = matchTeamContextForCli(teamsByClubId, clubId);
+  const setupTeam = setupDemo?.clubId === clubId ? buildSetupOverrideContextForCli(setupDemo.override) : undefined;
+  const lineupOverride =
+    lineupFixtureInspection?.appliesToFixture === true &&
+    lineupFixtureInspection.clubId === clubId &&
+    lineupFixtureInspection.fixtureLineupOverride?.fixtureId === fixtureId
+      ? lineupFixtureInspection.fixtureLineupOverride
+      : undefined;
+
+  if (lineupOverride === undefined) {
+    return setupTeam ?? baseTeam;
+  }
+
+  return {
+    clubId,
+    lineup: lineupOverride.lineup,
+    strength: deriveTeamStrength({
+      lineup: lineupOverride.lineup,
+      players: lineupOverride.players,
+      roleWeights: lineupOverride.roleWeights,
+      ...(lineupOverride.playerStates === undefined ? {} : { playerStates: lineupOverride.playerStates }),
+      ...(lineupOverride.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: lineupOverride.stateMultiplierCurves }),
+    }),
+    tacticalDistribution: setupTeam?.tacticalDistribution ?? baseTeam.tacticalDistribution,
+  };
+}
+
+/**
+ * Formats compact localized explanation trace output for one fixture.
+ */
+function formatFixtureExplanationTraceOutput(
+  trace: MatchExplanationTrace,
+  league: FakeLeagueSystem,
+  text: Translator,
+): readonly string[] {
+  return [
+    `${text("fixture.explanation.title")}:`,
+    `  ${text("fixture.explanation.teamStrength")}:`,
+    formatExplanationStrengthLine(trace.home, league, text),
+    formatExplanationStrengthLine(trace.away, league, text),
+    `  ${text("fixture.explanation.tacticDistribution")}:`,
+    formatExplanationTacticLine(trace.home, league, text),
+    formatExplanationTacticLine(trace.away, league, text),
+    `  ${text("fixture.explanation.lineupRoles")}:`,
+    formatExplanationLineupLine(trace.home, league, text),
+    formatExplanationLineupLine(trace.away, league, text),
+    `  ${text("fixture.explanation.conditionImpact")}:`,
+    formatExplanationConditionLine(trace.home, league, text),
+    formatExplanationConditionLine(trace.away, league, text),
+    `  ${text("fixture.explanation.chanceSummary")}:`,
+    formatExplanationOpportunityLine(trace.home.clubId, trace.opportunitySummary.home, league, text),
+    formatExplanationOpportunityLine(trace.away.clubId, trace.opportunitySummary.away, league, text),
+    `  ${text("fixture.explanation.variance")}: ${trace.variance.markers.map((marker) => formatVarianceMarker(marker, text)).join(", ")}`,
+  ];
+}
+
+/**
+ * Formats one team's strength snapshot.
+ */
+function formatExplanationStrengthLine(
+  team: MatchExplanationTrace["home"],
+  league: FakeLeagueSystem,
+  text: Translator,
+): string {
+  return `    ${clubLabel(team.clubId, league.clubsById)}: ${text("fixture.explanation.attack")}=${formatDecimal(team.strength.attack)} ${text("fixture.explanation.midfield")}=${formatDecimal(team.strength.midfield)} ${text("fixture.explanation.defense")}=${formatDecimal(team.strength.defense)} ${text("fixture.explanation.goalkeeper")}=${formatDecimal(team.strength.goalkeeper)} ${text("fixture.explanation.overall")}=${formatDecimal(team.strength.overall)}`;
+}
+
+/**
+ * Formats one team's tactic snapshot.
+ */
+function formatExplanationTacticLine(
+  team: MatchExplanationTrace["home"],
+  league: FakeLeagueSystem,
+  text: Translator,
+): string {
+  return `    ${clubLabel(team.clubId, league.clubsById)}: ${text("setup.directness")}=${formatTacticKnob(team.tacticDistribution.directness)} ${text("setup.pressing")}=${formatTacticKnob(team.tacticDistribution.pressing)} ${text("setup.width")}=${formatTacticKnob(team.tacticDistribution.width)} ${text("setup.risk")}=${formatTacticKnob(team.tacticDistribution.risk)}`;
+}
+
+/**
+ * Formats one team's role-count snapshot.
+ */
+function formatExplanationLineupLine(
+  team: MatchExplanationTrace["home"],
+  league: FakeLeagueSystem,
+  text: Translator,
+): string {
+  return `    ${clubLabel(team.clubId, league.clubsById)}: ${formatRoleCounts(team, text)}`;
+}
+
+/**
+ * Formats one team's condition-impact snapshot.
+ */
+function formatExplanationConditionLine(
+  team: MatchExplanationTrace["home"],
+  league: FakeLeagueSystem,
+  text: Translator,
+): string {
+  return `    ${clubLabel(team.clubId, league.clubsById)}: ${formatConditionTracking(team.conditionImpact.tracking, text)} ${text("fixture.explanation.effect")}=${formatConditionEffect(team.conditionImpact.effectDirection, text)} ${text("fixture.explanation.affectedPlayers")}=${team.conditionImpact.affectedPlayerCount}`;
+}
+
+/**
+ * Formats one team's chance and shot summary.
+ */
+function formatExplanationOpportunityLine(
+  clubId: ClubId,
+  summary: MatchExplanationTrace["opportunitySummary"]["home"],
+  league: FakeLeagueSystem,
+  text: Translator,
+): string {
+  return `    ${clubLabel(clubId, league.clubsById)}: ${text("fixture.explanation.opportunities")}=${summary.opportunities} ${text("fixture.explanation.shots")}=${summary.shots} ${text("fixture.explanation.shotsOnTarget")}=${summary.shotsOnTarget} ${text("fixture.explanation.goals")}=${summary.goals} ${text("fixture.explanation.blocks")}=${summary.blockedShots} ${text("fixture.explanation.savedShots")}=${summary.savedShots} ${text("fixture.explanation.chanceTypes")}=${formatTraceBuckets(summary.chanceTypeCounts, (key) => formatChanceType(key, text), text)} ${text("fixture.explanation.shotTypes")}=${formatTraceBuckets(summary.shotTypeCounts, (key) => formatShotType(key, text), text)}`;
 }
 
 /**
@@ -938,6 +1132,7 @@ function buildManualTacticFixture(
   fixtureValue: string,
   initialSetupDemo: CliSetupDemo,
   manualTacticSwitch: CliManualTacticSwitch,
+  includeFixtureExplanation: boolean,
 ): CliManualTacticFixture {
   const fixture = findFixtureByValue(result.fixtures, fixtureValue);
 
@@ -973,6 +1168,7 @@ function buildManualTacticFixture(
           team: targetTeam,
         },
       ],
+      ...(includeFixtureExplanation ? { includeExplanationTrace: true } : {}),
     },
   );
   const report = createMatchReport(simulated);
@@ -988,6 +1184,7 @@ function buildManualTacticFixture(
       },
     },
     appliesToFixture: true,
+    ...(simulated.explanationTrace === undefined ? {} : { explanationTrace: simulated.explanationTrace }),
   };
 }
 
@@ -1897,6 +2094,13 @@ function formatTacticKnob(value: number): string {
 }
 
 /**
+ * Formats a numeric trace value with stable precision.
+ */
+function formatDecimal(value: number): string {
+  return value.toFixed(2);
+}
+
+/**
  * Formats a stable shot-type key for presentation output.
  */
 function formatShotType(shotType: string, text: Translator): string {
@@ -1918,10 +2122,90 @@ function formatLineupRole(roleKey: string, text: Translator): string {
 }
 
 /**
+ * Formats sorted role counts for one explanation snapshot.
+ */
+function formatRoleCounts(team: MatchExplanationTrace["home"], text: Translator): string {
+  const counts: { readonly roleKey: string; readonly count: number }[] = [];
+
+  for (const slot of team.lineup.slots) {
+    const existing = counts.find((candidate) => candidate.roleKey === slot.roleKey);
+
+    if (existing === undefined) {
+      counts.push({ roleKey: slot.roleKey, count: 1 });
+      continue;
+    }
+
+    counts.splice(counts.indexOf(existing), 1, { roleKey: existing.roleKey, count: existing.count + 1 });
+  }
+
+  return counts
+    .sort((left, right) => compareAscii(left.roleKey, right.roleKey))
+    .map((entry) => `${formatLineupRole(entry.roleKey, text)}=${entry.count}`)
+    .join(" ");
+}
+
+/**
+ * Formats trace buckets with stable machine-key order.
+ */
+function formatTraceBuckets(
+  buckets: readonly { readonly key: string; readonly count: number }[],
+  formatKey: (key: string) => string,
+  text: Translator,
+): string {
+  if (buckets.length === 0) {
+    return text("common.none");
+  }
+
+  return buckets.map((bucket) => `${formatKey(bucket.key)}=${bucket.count}`).join(",");
+}
+
+/**
+ * Formats condition tracking state.
+ */
+function formatConditionTracking(
+  tracking: MatchExplanationTrace["home"]["conditionImpact"]["tracking"],
+  text: Translator,
+): string {
+  return text(presentationMessageKey("fixture.explanation.conditionTracking", tracking));
+}
+
+/**
+ * Formats condition effect direction.
+ */
+function formatConditionEffect(
+  effect: MatchExplanationTrace["home"]["conditionImpact"]["effectDirection"],
+  text: Translator,
+): string {
+  return text(presentationMessageKey("fixture.explanation.effectDirection", effect));
+}
+
+/**
+ * Formats one variance marker.
+ */
+function formatVarianceMarker(marker: MatchExplanationTrace["variance"]["markers"][number], text: Translator): string {
+  return text(presentationMessageKey("fixture.explanation.varianceMarker", marker));
+}
+
+/**
  * Formats a stable tactic mentality key for presentation output.
  */
 function formatMentality(mentality: string, text: Translator): string {
   return text(presentationMessageKey("setup.mentalityValue", mentality));
+}
+
+/**
+ * Compares stable ASCII keys without locale-dependent ordering.
+ */
+function compareAscii(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
 }
 
 /**
@@ -2212,6 +2496,8 @@ interface CliManualTacticFixture {
   readonly fixture: Fixture;
   /** Whether the selected setup club actually played this fixture. */
   readonly appliesToFixture: boolean;
+  /** Optional explanation trace for a manually re-simulated fixture. */
+  readonly explanationTrace?: MatchExplanationTrace;
 }
 
 /**

@@ -39,6 +39,25 @@ test("serializing two identical match outputs to JSON produces identical strings
   assert.equal(first, second);
 });
 
+test("optional explanation trace does not change score, events, or stats", () => {
+  const withoutTrace = simulateMatch(validContext());
+  const withTrace = simulateMatch(validContext(), { includeExplanationTrace: true });
+
+  assert.deepEqual(stripExplanationTrace(withTrace), withoutTrace);
+  assert.deepEqual(withTrace.score, withoutTrace.score);
+  assert.deepEqual(withTrace.events, withoutTrace.events);
+  assert.deepEqual(withTrace.stats, withoutTrace.stats);
+  assert.notEqual(withTrace.explanationTrace, undefined);
+});
+
+test("optional explanation trace is deterministic for the same seed", () => {
+  const first = simulateMatch(validContext(), { includeExplanationTrace: true });
+  const second = simulateMatch(validContext(), { includeExplanationTrace: true });
+
+  assert.deepEqual(first.explanationTrace, second.explanationTrace);
+  assert.equal(JSON.stringify(first.explanationTrace), JSON.stringify(second.explanationTrace));
+});
+
 test("different fixture IDs can produce different output with the same seed", () => {
   const first = JSON.stringify(simulateMatch(validContext({ fixtureValue: "fixture:variance-a", minuteCount: 90 })));
   const second = JSON.stringify(simulateMatch(validContext({ fixtureValue: "fixture:variance-b", minuteCount: 90 })));
@@ -150,6 +169,16 @@ function countGoalEvents(events: readonly MatchStepEvent[]): SimulateMatchResult
   }
 
   return score;
+}
+
+/**
+ * Removes optional trace data so trace-on output can be compared with the
+ * default simulation result.
+ */
+function stripExplanationTrace(result: SimulateMatchResult): Omit<SimulateMatchResult, "explanationTrace"> {
+  const { explanationTrace, ...withoutTrace } = result;
+  void explanationTrace;
+  return withoutTrace;
 }
 
 /** Aggregate one side's match-flow output over deterministic fixture variants. */

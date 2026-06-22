@@ -4,8 +4,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current State
 
-- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete; Phase 16 career systems dependency map complete; Phase 17 market MVP permanent transfers complete; Phase 18 career state and transfer persistence complete; Phase 19 fictional people identity foundation complete; Phase 20 new career world generation complete, including surname-variety rework and simulate-season identity seed rework; Phase 21 project audit and roadmap reconciliation complete; Phase 22 pre playable loop hardening complete; Phase 23 playable career loop MVP complete; Phase 24 player generation quality rework complete; Phase 25 career match preparation persistence complete; Phase 26 project cleanup and long-run readiness complete; Phase 27 season rollover foundation complete; Phase 28 player development and aging v1 complete; Phase 29 club identity and world calendar v1 complete; Phase 30 ten-season simulation report complete; Phase 31 career squad refresh and transfer turnover simulation implemented through 250x30 gate and blocked only on the operational 10,000x50 runner runtime; Phase 32 youth academy and squad pipeline v1 implemented but later reworked by Phase 33 and Phase 34; Phase 33 player role and ability generation rework implemented; Phase 34 creator-concentration blocker cleared by Phase 34/35 evidence; Phase 35 table spread anomaly rework complete with 250x30 PASS; Phase 36 long-run warning semantics and fun audit complete; Phase 37 long-run gate semantics cleanup complete; Phase 38 match engine and calculator quality review complete.
-- Active implementation step: Not selected.
+- Phase: Phase 0 foundation complete; Phase 1 match-engine base complete; documented Phase 2 season-simulation sequence complete; Phase 3 balance calibration complete; Phase 4 player stats and match detail complete; Phase 5 match event detail complete; Phase 6 CLI inspection and stat completeness complete; Phase 7 match engine causal v1 complete; Phase 8 tactic and lineup MVP complete; Phase 9 manual tactical changes v1 complete; Phase 10 player dynamic states complete; Phase 11 manual lineup rotation v1 complete; Phase 12 squad selection and formation core complete; Phase 13 localization foundation complete; Phase 14 engine audit and core quality review complete; Phase 15 core cleanup before career systems complete; Phase 16 career systems dependency map complete; Phase 17 market MVP permanent transfers complete; Phase 18 career state and transfer persistence complete; Phase 19 fictional people identity foundation complete; Phase 20 new career world generation complete, including surname-variety rework and simulate-season identity seed rework; Phase 21 project audit and roadmap reconciliation complete; Phase 22 pre playable loop hardening complete; Phase 23 playable career loop MVP complete; Phase 24 player generation quality rework complete; Phase 25 career match preparation persistence complete; Phase 26 project cleanup and long-run readiness complete; Phase 27 season rollover foundation complete; Phase 28 player development and aging v1 complete; Phase 29 club identity and world calendar v1 complete; Phase 30 ten-season simulation report complete; Phase 31 career squad refresh and transfer turnover simulation implemented through 250x30 gate and blocked only on the operational 10,000x50 runner runtime; Phase 32 youth academy and squad pipeline v1 implemented but later reworked by Phase 33 and Phase 34; Phase 33 player role and ability generation rework implemented; Phase 34 creator-concentration blocker cleared by Phase 34/35 evidence; Phase 35 table spread anomaly rework complete with 250x30 PASS; Phase 36 long-run warning semantics and fun audit complete; Phase 37 long-run gate semantics cleanup complete; Phase 38 match engine and calculator quality review complete; Phase 39 engine quality hardening and match explanation trace complete; Phase 40 career loop playability audit and matchday slice complete; Phase 41 career matchday consequences and condition integration complete; Phase 42 career weekly recovery and matchday readiness complete.
+- Active implementation step: None. Choose the next phase explicitly before implementation.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, in-memory permanent-transfer market contracts, deterministic true-data player valuation, player willingness, transfer feasibility/apply preview, durable `CareerState`, JSON career save/load, persistent accepted permanent-transfer application, pure engine `findNextCareerFixture` and `progressNextCareerFixture`, pure engine `developPlayersForSeason` growth/decline with bounded potential realization, deterministic country-specific city-based fictional club naming patterns in content while preserving stable `club:` IDs, `pnpm cli career --save=<saveId> --apply-market-demo=<profile>`, `pnpm cli career --save=<saveId> --inspect`, `pnpm cli career --save=<saveId> --summary`, `pnpm cli career --save=<saveId> --advance-next-fixture`, `pnpm cli career --save=<saveId> --development-report`, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with generated fictional player identities, expanded nationality metadata, default 11-player lineups plus reserve players, division/tier player generation bands, role-based attribute templates, player archetypes with potential classes, rarity budgets for lower-division exceptions, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--identity-review` generated player identity inspection, `--player-generation-report` generated player quality inspection, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection, and localized `--market-demo=pro01-affordable-permanent|pro01-star-rejected` permanent-transfer inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -15,10 +15,10 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: Not selected.
-- Status: Phase 38 complete.
-- Last verification: Phase 38 final report completed; focused engine tests, `pnpm check`, 50x10 long-run report, strict balance report, and `git diff --check` passed.
-- Next action: Choose the next phase explicitly before implementation.
+- Step: None.
+- Status: Phase 42 complete.
+- Last verification: Step 06 final gate passed: `pnpm check`; career summary/squad smokes; strict `calibration-v1` balance report; `git diff --check`.
+- Next action: Choose the next phase explicitly; recommended direction is `43-career-matchday-ui-slice`.
 - Blocker: None.
 
 ## How To Read The Project
@@ -312,6 +312,35 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/38-match-engine-and-calculator-quality-review/05-tactic-lineup-and-condition-effect-audit.md` | Done | Tactic, lineup, and condition effects are visible and manager-driven, with no automatic tactical choice introduced. | No gameplay rework was applied; future work should separate pure tactic effects, lineup/role reshaping effects, and condition/fatigue effects more explicitly when diagnostics or UI need it. | `pnpm check`; `pnpm cli simulate-season --seed=demo-001 --setup-demo=pro01-balanced`; `pnpm cli simulate-season --seed=demo-001 --setup-demo=pro01-attacking`; `pnpm cli simulate-season --seed=demo-001 --setup-demo=pro01-defensive`; `pnpm cli simulate-season --seed=demo-001 --fixture=fixture:000006 --lineup-demo=pro01-rotated`; `pnpm cli simulate-season --seed=demo-001 --condition-demo=pro01-season`; `git diff --check` |
 | `docs/steps/38-match-engine-and-calculator-quality-review/06-performance-and-determinism-benchmark.md` | Done | Current runtime is acceptable and representative seeded output remains deterministic. | No optimization was applied; one-season and balance checks are fast enough, 50x10 is acceptable as an explicit batch report, and larger gates should remain explicit report jobs rather than interactive UI actions. | `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli ten-season-report --seed-prefix=phase35-table-spread --worlds=50 --seasons=10`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; repeated seeded `diff`; `git diff --check` |
 | `docs/steps/38-match-engine-and-calculator-quality-review/07-phase-report-and-next-decision.md` | Done | Phase 38 concluded that the match engine and calculator are acceptable for continued product work. | No broad optimization or balance tuning is justified now; if the next product goal is engine-focused, the recommended narrow direction is deterministic match-explanation traceability rather than mathematical tuning. | `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts packages/engine/src/match-engine/simulate-match.test.ts`; `pnpm check`; `pnpm cli ten-season-report --seed-prefix=phase35-table-spread --worlds=50 --seasons=10`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check` |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/README.md` | Done | Created the Phase 39 documentation path. | Phase 39 hardens engine code and adds deterministic match explanation traceability without changing gameplay behavior unless a narrow bug is proven. | Documentation-only update; `git diff --check` |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/01-phase-38-baseline-and-behavior-lock.md` | Done | Captured the Phase 38 baseline and fixed the behavior lock before cleanup or trace work. | `docs/audits/ENGINE_QUALITY_HARDENING_AND_TRACE_REPORT.md` records representative season, fixture, strict balance, and 50x10 long-run outputs plus the rule that cleanup/trace work must preserve fixed-seed behavior unless a narrow bug is proven. | `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; `pnpm cli ten-season-report --seed-prefix=phase35-table-spread --worlds=50 --seasons=10`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check` |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/02-engine-code-quality-audit.md` | Done | Audited engine code quality and selected a narrow cleanup scope. | Step 03 is approved only for extracting the duplicated match loop shared by `simulateMatch` and `simulateMatchWithManualTactics`, plus stale match-engine comment cleanup; calculator weights, CLI split, and large season-use-case split are explicitly out of scope. | Required `rg` scans; `pnpm check`; `git diff --check` |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/03-safe-engine-cleanup-pass.md` | Done | Extracted a shared full-match simulation runner and cleaned stale match-engine comments without changing fixed-seed behavior. | `simulateMatch` and `simulateMatchWithManualTactics` now reuse `match-simulation-runner.ts`; manual tactics use a deterministic pre-step context hook and public contracts remain stable. | focused match-engine tests; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; strict `calibration-v1` balance report |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/04-match-explanation-trace-contract.md` | Done | Added the engine-local structured explanation trace contract without emitting it from simulation. | `match-explanation-trace.ts` defines schema version, stable factor keys, team snapshots, lineup/tactic/condition snapshots, opportunity summaries, and data-only variance markers; no domain durability or presentation prose was added. | focused trace-contract test; `pnpm --filter @game/engine run typecheck`; `pnpm check` after rerunning an unrelated timed-out content test |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/05-trace-emission-without-outcome-change.md` | Done | Added optional match explanation trace emission without changing default simulation output or fixed-seed behavior. | `SimulateMatchOptions.includeExplanationTrace` adds `explanationTrace` only when requested; trace data is built from existing context, score, stats, and events without consuming RNG. | focused match-engine tests; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; strict `calibration-v1` balance report |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/06-cli-fixture-explanation-inspection.md` | Done | Added optional localized fixture explanation output for `simulate-season --fixture=<fixtureId> --fixture-explanation`. | The CLI appends factual trace sections for team strength, tactics, lineup roles, condition impact, chance summary, and variance markers only when requested; default fixture output remains unchanged. | CLI/i18n typechecks; focused CLI/i18n tests; `pnpm check`; default fixture command; fixture explanation command; strict `calibration-v1` balance report |
+| `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/07-regression-gate-and-phase-report.md` | Done | Closed Phase 39 with a passing regression gate and final report. | `docs/audits/ENGINE_QUALITY_HARDENING_AND_TRACE_REPORT.md` records cleanup, trace capability, aggregate limits, verification results, and the decision that no immediate match-engine tuning is needed. | focused tests; `pnpm check`; fixed-seed season/fixture/fixture-explanation; 50x10 long-run PASS; strict `calibration-v1` balance PASS; deterministic repeat check; `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/README.md` | Done | Created the Phase 40 documentation path. | Phase 40 audits the current career loop as a manager journey and uses one matchday slice to decide whether to move toward UI or fix one core blocker first. | Documentation-only update; `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/01-phase-39-output-review.md` | Done | Reviewed Phase 39 explanation output from a career playability perspective. | Existing trace data is useful enough to continue, but it must be connected to career save, preparation, condition, and post-match consequences before it is playable. | `test -f docs/audits/ENGINE_QUALITY_HARDENING_AND_TRACE_REPORT.md`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001 --fixture-explanation`; `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/02-career-loop-playability-spec.md` | Done | Defined the minimum playable career loop from new save through first post-match review. | The loop is judged by whether the manager can connect decision, match, consequence, and next decision without automatic advice. | `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/03-career-state-matchday-readiness-audit.md` | Done | Audited selected club, squad, condition, match preparation, and next fixture from one deterministic career save. | Career state is ready for first-match audit, but saved formation/tactic/lineup preparation is still missing from the summary and remains a future matchday ritual friction. | `pnpm cli career --save=phase40-check --seed=world-a --new-world-preview`; `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --squad`; `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/04-career-fixture-explanation-readiness.md` | Done | Added optional factual explanation for played career fixtures. | `career --advance-next-fixture --fixture-explanation` attaches structured match explanation to the played career fixture only when requested; default career advance output remains compact. | focused career/CLI tests; CLI/engine/i18n typechecks; `pnpm check`; `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --advance-next-fixture --fixture-explanation`; `pnpm cli career --save=phase40-check --advance-next-fixture`; `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/05-season-rollover-and-development-loop-smoke.md` | Done | Smoke-tested repeated fixture advancement, development report, youth academy report, and rollover invalid state from the same career viewpoint. | The career can be followed beyond one match; development/youth are readable inspections, while full rollover remains unavailable until the season is completed. | `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --advance-next-fixture`; `pnpm cli career --save=phase40-check --development-report`; `pnpm cli career --save=phase40-check --youth-academy`; `pnpm cli career --save=phase40-check --rollover-season` expected invalid; `pnpm check`; `git diff --check` |
+| `docs/steps/40-career-loop-playability-audit-and-matchday-slice/06-playability-friction-report-and-next-decision.md` | Done | Closed Phase 40 with a playability report and one next-phase recommendation. | The current career loop is close to playable, but the next best user-fun improvement is career matchday consequences and condition integration before serious UI work. | focused tests; `pnpm check`; `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --advance-next-fixture`; strict `calibration-v1` balance report; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/README.md` | Done | Created the Phase 41 documentation path. | Phase 41 integrates deterministic post-match condition consequences into career fixture advancement so the manager can see why rotation matters before UI work. | Documentation-only update; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/01-phase-40-output-review.md` | Done | Created the focused career matchday condition audit. | Phase 41 proceeds without a new product decision: played career fixtures should spend deterministic fitness for explicit selected starters and report that consequence without choosing for the manager. | `test -f docs/audits/CAREER_LOOP_PLAYABILITY_AUDIT.md`; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/02-career-condition-consequence-contract.md` | Done | Added a pure engine condition-consequence contract for one played career fixture. | `applyCareerFixtureConditionConsequences` spends fitness only for explicit selected starters, preserves non-starters, returns ordered structured changes, and leaves save writing/output to later steps. | focused condition-consequence test; engine typecheck; `pnpm check`; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/03-career-advance-condition-application.md` | Done | Wired career fixture advancement to persist selected-club condition consequences. | `progressNextCareerFixture` now applies starter fitness spend after match simulation/result application, returns structured condition changes, preserves non-starters, and marks selected-club explanation condition as tracked when requested. | focused progress-fixture test; engine typecheck; `pnpm check`; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/04-cli-post-match-condition-output.md` | Done | Added compact localized post-match condition output to career fixture advancement. | Successful `career --advance-next-fixture` now prints selected-starter condition deltas and rested first-team players when available; `career --squad` shows the persisted fitness state. | focused career CLI test; CLI/i18n typechecks; `pnpm check`; career advance smoke; career squad smoke; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/05-multi-fixture-condition-smoke.md` | Done | Repeated fixture advancement now shows accumulating selected-starter condition pressure. | The `phase41-check` smoke advanced three selected-club fixtures with the same lineup: starters moved from 100 to 76, reserves stayed at 100, and explained output marked selected-club condition as tracked/negative. | focused career/condition/progression tests; `pnpm check`; summary/advance/explained-advance/squad smokes; `git diff --check` |
+| `docs/steps/41-career-matchday-consequences-and-condition-integration/06-phase-report-and-next-decision.md` | Done | Closed Phase 41 with a final condition-consequence report and next-phase recommendation. | The career loop now has visible matchday condition consequences, but the next core blocker before serious UI is deterministic between-fixture recovery. | focused career/condition/progression tests; `pnpm check`; summary/advance/explained-advance/squad smokes; strict `calibration-v1` balance report; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/README.md` | Done | Created the Phase 42 documentation path. | Phase 42 adds deterministic between-fixture recovery to make career matchday readiness fair and inspectable before UI work. | Documentation-only update; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/01-phase-41-output-review.md` | Done | Created the focused career weekly recovery audit. | Phase 42 proceeds from the Phase 41 one-way condition drain: recovery must be date-based, applied before match simulation, and exposed as factual readiness without advice or auto-rotation. | `test -f docs/audits/CAREER_MATCHDAY_CONDITION_AUDIT.md`; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/02-career-recovery-contract.md` | Done | Added a pure career weekly recovery contract. | `applyCareerWeeklyRecovery` wraps the existing fitness recovery helper, returns ordered before/after/delta summaries, treats non-positive day gaps as no-op summaries, and does not advance fixtures, spend match fitness, choose players, or render text. | focused recovery test; engine typecheck; `pnpm check`; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/03-career-advance-recovery-application.md` | Done | Career fixture advancement from CLI now applies recovery before simulation. | `advanceCareerNextFixture` finds the next selected-club fixture, recovers the selected-club roster by calendar-day gap, builds match contexts from the recovered state, then lets `progressNextCareerFixture` simulate and spend condition; tests cover weekly full recovery, short-gap partial recovery, and unchanged saved lineup. | focused career CLI/progression tests; engine typecheck; `pnpm check`; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/04-cli-pre-match-readiness-output.md` | Done | Added compact localized pre-match recovery output to career advancement. | Successful `career --advance-next-fixture` now prints recovery days, improved-player count, and selected-club fitness range before post-match condition deltas; output is factual and non-advisory. | focused career CLI/i18n tests; CLI and i18n typechecks; `pnpm check`; career summary/advance/squad smokes; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/05-repeated-fixture-recovery-smoke.md` | Done | Repeated selected-club fixture smoke confirms weekly recovery prevents cumulative drain. | The `phase42-check` smoke advanced four selected-club fixtures with the same first-team lineup; after the opening same-day match, each seven-day gap restored starters from `92..100` to `100..100` before kickoff, then the match spend returned starters to `92`. Current demo calendar has no short-gap pressure, which is a future scheduling/cups finding rather than a Phase 42 blocker. | `pnpm check`; phase42-check create/prepare/four-advance/squad smokes; `git diff --check` |
+| `docs/steps/42-career-weekly-recovery-and-matchday-readiness/06-phase-report-and-next-decision.md` | Done | Closed Phase 42 with a complete recovery report and one next-phase recommendation. | The career loop now supports visible saved preparation, pre-match recovery, fixture result, post-match condition, persisted squad state, and optional explanation; the next recommended phase is a minimal career matchday UI slice, not more CLI-only systems. | `pnpm check`; career summary/squad smokes; strict `calibration-v1` balance report; `git diff --check` |
 
 Status values:
 
@@ -1842,6 +1871,238 @@ Status values:
 - Adopted solution: No broad optimization or balance tuning is justified now; if the next phase stays engine-focused, the best narrow direction is deterministic match-explanation traceability for manager understanding.
 - Verification: `pnpm exec vitest run packages/engine/src/match-engine/team-strength.test.ts packages/engine/src/match-engine/simulate-match.test.ts`; `pnpm check`; `pnpm cli ten-season-report --seed-prefix=phase35-table-spread --worlds=50 --seasons=10`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check`.
 - Follow-up: Choose the next phase explicitly before implementation.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/`
+
+- Status: Documented
+- Outcome: Created the Phase 39 engine quality hardening and match explanation trace path.
+- Adopted solution: Phase 39 starts with a behavior lock, then audits code quality, performs only safe cleanup, adds a structured language-agnostic trace contract, emits optional trace without outcome changes, exposes a CLI inspection view, and closes with a regression gate.
+- Verification: `git diff --check`.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/01-phase-38-baseline-and-behavior-lock.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/01-phase-38-baseline-and-behavior-lock.md`
+
+- Status: Done
+- Outcome: Captured fixed-seed season, fixture, strict balance, and 50x10 long-run baselines before cleanup or trace work.
+- Adopted solution: Phase 39 behavior changes are locked behind the rule that cleanup and trace work must preserve fixed-seed output unless a later step proves and documents a narrow bug with user-facing reason.
+- Verification: `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; `pnpm cli ten-season-report --seed-prefix=phase35-table-spread --worlds=50 --seasons=10`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check`.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/02-engine-code-quality-audit.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/02-engine-code-quality-audit.md`
+
+- Status: Done
+- Outcome: Audited engine code quality and identified one narrow fix-now cleanup.
+- Adopted solution: Step 03 may only extract the duplicated full-match loop shared by normal and manual-tactic match simulation and update stale match-engine comments; calculator weights, CLI split, and large season-use-case split stay out of scope.
+- Verification: Required `rg` scans; `pnpm check`; `git diff --check`.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/03-safe-engine-cleanup-pass.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/03-safe-engine-cleanup-pass.md`
+
+- Status: Done
+- Outcome: Extracted the duplicated normal/manual full-match loop into a shared match simulation runner and cleaned stale match-engine comments.
+- Adopted solution: `simulateMatch` and `simulateMatchWithManualTactics` now share `match-simulation-runner.ts`; manual tactics use a deterministic pre-step context hook, so future explanation trace work can attach to one loop without changing gameplay.
+- Verification: `pnpm exec vitest run packages/engine/src/match-engine/simulate-match.test.ts packages/engine/src/match-engine/simulate-match-with-manual-tactics.test.ts`; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/04-match-explanation-trace-contract.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/04-match-explanation-trace-contract.md`
+
+- Status: Done
+- Outcome: Added a structured engine-local explanation trace contract without emitting trace data from simulation.
+- Adopted solution: `match-explanation-trace.ts` defines language-agnostic machine-key data for team strength, tactic distribution, lineup roles, condition impact, opportunity context, and variance; the contract is not durable domain state yet.
+- Verification: `pnpm exec vitest run packages/engine/src/match-engine/match-explanation-trace.test.ts`; `pnpm --filter @game/engine run typecheck`; focused rerun of the unrelated timed-out content test; `pnpm check`.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/05-trace-emission-without-outcome-change.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/05-trace-emission-without-outcome-change.md`
+
+- Status: Done
+- Outcome: Added optional trace emission without changing default simulation output or fixed-seed results.
+- Adopted solution: `includeExplanationTrace` builds trace data from existing context, score, stats, and events after simulation completes; no extra RNG is consumed and manual-tactic simulation forwards the same option.
+- Verification: focused match-engine tests; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/06-cli-fixture-explanation-inspection.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/06-cli-fixture-explanation-inspection.md`
+
+- Status: Done
+- Outcome: Exposed optional localized fixture explanation output through `--fixture-explanation`.
+- Adopted solution: `simulate-season --fixture=<fixtureId> --fixture-explanation` appends factual trace sections after player stats; it requires `--fixture`, keeps default fixture output unchanged, and does not give tactical advice.
+- Verification: `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; focused CLI/i18n tests; `pnpm check`; default fixture command; fixture explanation command; strict `calibration-v1` balance report.
+- Follow-up: Execute `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/07-regression-gate-and-phase-report.md`.
+
+### 2026-06-22 — `docs/steps/39-engine-quality-hardening-and-match-explanation-trace/07-regression-gate-and-phase-report.md`
+
+- Status: Done
+- Outcome: Phase 39 is complete with cleaner match simulation code and deterministic fixture explanation traceability.
+- Adopted solution: Keep the current match engine behavior; use the new optional trace as a factual inspection surface while leaving full possession chains, tactical advice, and hidden scouting data out of scope.
+- Verification: focused tests; `pnpm check`; `pnpm cli simulate-season --seed=world-a`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001 --fixture-explanation`; `pnpm cli ten-season-report --seed-prefix=phase35-table-spread --worlds=50 --seasons=10`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; deterministic repeat check; `git diff --check`.
+- Follow-up: Choose the next phase explicitly before implementation.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/`
+
+- Status: Documented
+- Outcome: Created the Phase 40 career loop playability audit and matchday slice path.
+- Adopted solution: Phase 40 starts by reviewing Phase 39 explanation output, defines the minimum playable career loop, audits matchday readiness, checks career fixture explanation readiness, smokes post-match/rollover/development continuity, and closes with one next-phase decision.
+- Verification: `git diff --check`.
+- Follow-up: Execute `docs/steps/40-career-loop-playability-audit-and-matchday-slice/01-phase-39-output-review.md`.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/01-phase-39-output-review.md`
+
+- Status: Done
+- Outcome: Phase 39 fixture explanation is useful for match understanding but not yet connected to career playability.
+- Adopted solution: Continue Phase 40 with existing trace data while explicitly auditing the gap between fixture explanation and career save/preparation/condition/post-match consequences.
+- Verification: `test -f docs/audits/ENGINE_QUALITY_HARDENING_AND_TRACE_REPORT.md`; `pnpm cli simulate-season --seed=world-a --fixture=fixture:000001 --fixture-explanation`; `git diff --check`.
+- Follow-up: Execute `docs/steps/40-career-loop-playability-audit-and-matchday-slice/02-career-loop-playability-spec.md`.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/02-career-loop-playability-spec.md`
+
+- Status: Done
+- Outcome: Defined the minimum playable loop as a manager journey from career creation to first post-match review.
+- Adopted solution: Judge playability by whether the user can connect club, squad, preparation, next fixture, match result, consequences, and next decision without automatic advice.
+- Verification: `git diff --check`.
+- Follow-up: Execute `docs/steps/40-career-loop-playability-audit-and-matchday-slice/03-career-state-matchday-readiness-audit.md`.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/03-career-state-matchday-readiness-audit.md`
+
+- Status: Done
+- Outcome: Career save, selected club, squad, condition, and next fixture are readable, but saved match preparation is absent in the current save.
+- Adopted solution: Continue to fixture-explanation readiness; treat missing visible preparation as matchday friction, not as a Phase 40 blocker.
+- Verification: `pnpm cli career --save=phase40-check --seed=world-a --new-world-preview`; `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --squad`; `git diff --check`.
+- Follow-up: Execute `docs/steps/40-career-loop-playability-audit-and-matchday-slice/04-career-fixture-explanation-readiness.md`.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/04-career-fixture-explanation-readiness.md`
+
+- Status: Done
+- Outcome: Played career fixtures can now expose optional factual explanation.
+- Adopted solution: Added `career --advance-next-fixture --fixture-explanation`, backed by optional engine trace propagation; default career advance output stays compact and no save schema stores rendered text.
+- Verification: focused career/CLI tests; CLI/engine/i18n typechecks; `pnpm check`; `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --advance-next-fixture --fixture-explanation`; `pnpm cli career --save=phase40-check --advance-next-fixture`; `git diff --check`.
+- Follow-up: Execute `docs/steps/40-career-loop-playability-audit-and-matchday-slice/05-season-rollover-and-development-loop-smoke.md`.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/05-season-rollover-and-development-loop-smoke.md`
+
+- Status: Done
+- Outcome: The career save can be followed across multiple selected-club fixtures, and development/youth reports are readable inspection surfaces.
+- Adopted solution: Treat development/youth as useful inspection reports for now; full rollover remains correctly blocked until the current season is complete.
+- Verification: `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --advance-next-fixture`; `pnpm cli career --save=phase40-check --development-report`; `pnpm cli career --save=phase40-check --youth-academy`; `pnpm cli career --save=phase40-check --rollover-season` expected invalid; `pnpm check`; `git diff --check`.
+- Follow-up: Execute `docs/steps/40-career-loop-playability-audit-and-matchday-slice/06-playability-friction-report-and-next-decision.md`.
+
+### 2026-06-22 — `docs/steps/40-career-loop-playability-audit-and-matchday-slice/06-playability-friction-report-and-next-decision.md`
+
+- Status: Done
+- Outcome: Phase 40 is complete; the current career loop is close to playable but needs visible matchday condition consequences before serious UI work.
+- Adopted solution: Recommend exactly one next direction: `41-career-matchday-consequences-and-condition-integration`.
+- Verification: focused tests; `pnpm check`; `pnpm cli career --save=phase40-check --summary`; `pnpm cli career --save=phase40-check --advance-next-fixture`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check`.
+- Follow-up: Choose the next phase explicitly before implementation.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/`
+
+- Status: Documented
+- Outcome: Created the Phase 41 career matchday consequences and condition integration path.
+- Adopted solution: Phase 41 starts from the Phase 40 playability friction, audits the missing post-match condition consequence, adds a pure condition-consequence contract, wires it into career fixture advancement, exposes compact CLI output, smokes repeated fixtures, and closes with one next decision.
+- Verification: `git diff --check`.
+- Follow-up: Execute `docs/steps/41-career-matchday-consequences-and-condition-integration/01-phase-40-output-review.md`.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/01-phase-40-output-review.md`
+
+- Status: Done
+- Outcome: Created `docs/audits/CAREER_MATCHDAY_CONDITION_AUDIT.md` and locked the Phase 41 blocker in user-facing terms.
+- Adopted solution: Reuse existing player dynamic state and deterministic fitness helpers; keep the phase focused on explicit selected-starter condition spend after career fixtures, with no injuries, morale, training, tactical advice, UI, or auto-rotation.
+- Verification: `test -f docs/audits/CAREER_LOOP_PLAYABILITY_AUDIT.md`; `git diff --check`.
+- Follow-up: Execute `docs/steps/41-career-matchday-consequences-and-condition-integration/02-career-condition-consequence-contract.md`.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/02-career-condition-consequence-contract.md`
+
+- Status: Done
+- Outcome: Added the pure engine condition-consequence contract for one played career fixture.
+- Adopted solution: `applyCareerFixtureConditionConsequences` reuses deterministic fitness rules, spends condition only for explicit selected starters, preserves non-starters, returns ordered structured changes, and avoids save writes, output text, recovery, and player choice.
+- Verification: `pnpm exec vitest run packages/engine/src/career/career-condition-consequences.test.ts`; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `git diff --check`.
+- Follow-up: Execute `docs/steps/41-career-matchday-consequences-and-condition-integration/03-career-advance-condition-application.md`.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/03-career-advance-condition-application.md`
+
+- Status: Done
+- Outcome: Career fixture advancement now persists selected-club condition consequences.
+- Adopted solution: `progressNextCareerFixture` simulates the match from pre-match state, applies the result/report, then spends fitness for the actual selected-club starters and returns structured condition changes; optional explanation marks the selected-club condition side as tracked without changing match outcomes.
+- Verification: `pnpm exec vitest run packages/engine/src/career/progress-fixture.test.ts`; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `git diff --check`.
+- Follow-up: Execute `docs/steps/41-career-matchday-consequences-and-condition-integration/04-cli-post-match-condition-output.md`.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/04-cli-post-match-condition-output.md`
+
+- Status: Done
+- Outcome: Career advance output now shows compact post-match condition consequences.
+- Adopted solution: The CLI renders localized selected-starter deltas and rested first-team players from structured engine condition changes; `career --squad` remains the detailed follow-up inspection for persisted fitness.
+- Verification: `pnpm exec vitest run apps/cli/src/commands/career.test.ts`; `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm check`; `pnpm cli career --save=phase41-check --advance-next-fixture`; `pnpm cli career --save=phase41-check --squad`; `git diff --check`.
+- Follow-up: Execute `docs/steps/41-career-matchday-consequences-and-condition-integration/05-multi-fixture-condition-smoke.md`.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/05-multi-fixture-condition-smoke.md`
+
+- Status: Done
+- Outcome: Repeated fixture advancement makes selected-starter fatigue visible.
+- Adopted solution: The `phase41-check` smoke kept the same saved lineup over three selected-club fixtures; selected starters moved from `100` to `76`, reserves stayed at `100`, and explained output reported selected-club condition as `tracked effect=negative affected=11`.
+- Verification: focused career/condition/progression tests; `pnpm check`; `pnpm cli career --save=phase41-check --summary`; `pnpm cli career --save=phase41-check --advance-next-fixture`; `pnpm cli career --save=phase41-check --advance-next-fixture --fixture-explanation`; `pnpm cli career --save=phase41-check --squad`; `git diff --check`.
+- Follow-up: Execute `docs/steps/41-career-matchday-consequences-and-condition-integration/06-phase-report-and-next-decision.md`.
+
+### 2026-06-22 — `docs/steps/41-career-matchday-consequences-and-condition-integration/06-phase-report-and-next-decision.md`
+
+- Status: Done
+- Outcome: Phase 41 is complete; career match advancement now has visible selected-club condition consequences.
+- Adopted solution: Keep the new consequence layer factual and manager-driven: selected starters spend fitness, non-starters remain unchanged, post-match output shows deltas, and explanation marks selected-club condition as tracked when requested. The final report recommends one next core-loop phase for between-fixture recovery before serious UI work.
+- Verification: focused career/condition/progression tests; `pnpm check`; `pnpm cli career --save=phase41-check --summary`; `pnpm cli career --save=phase41-check --advance-next-fixture`; `pnpm cli career --save=phase41-check --advance-next-fixture --fixture-explanation`; `pnpm cli career --save=phase41-check --squad`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check`.
+- Follow-up: Choose the next phase explicitly; recommended direction is `42-career-weekly-recovery-and-matchday-readiness`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/`
+
+- Status: Done
+- Outcome: Created the Phase 42 career weekly recovery and matchday readiness documentation path.
+- Adopted solution: Phase 42 starts from the Phase 41 one-way condition drain, adds a pure day-based career recovery contract, applies recovery before selected-club fixture simulation, exposes compact readiness output, and verifies repeated fixture behavior without adding auto-rotation, advice, injuries, morale, training, staff, UI, or match-balance tuning.
+- Verification: Documentation-only update; `git diff --check`.
+- Follow-up: Execute `docs/steps/42-career-weekly-recovery-and-matchday-readiness/01-phase-41-output-review.md`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/01-phase-41-output-review.md`
+
+- Status: Done
+- Outcome: Created `docs/audits/CAREER_WEEKLY_RECOVERY_AUDIT.md` and documented the Phase 41 recovery blocker.
+- Adopted solution: Treat the Phase 41 one-way fitness drain as a missing recovery layer, not as a tuning problem; Phase 42 should recover selected-club players by fixture date before match simulation, then spend condition after the match while keeping the manager in control.
+- Verification: `test -f docs/audits/CAREER_MATCHDAY_CONDITION_AUDIT.md`; `git diff --check`.
+- Follow-up: Execute `docs/steps/42-career-weekly-recovery-and-matchday-readiness/02-career-recovery-contract.md`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/02-career-recovery-contract.md`
+
+- Status: Done
+- Outcome: Added a pure engine recovery contract for pre-fixture career readiness.
+- Adopted solution: `applyCareerWeeklyRecovery` reuses deterministic fitness recovery, returns structured before/after/delta summaries, treats non-positive day gaps as no-op summaries, and leaves fixture advancement, match spend, lineup choice, and presentation to later steps.
+- Verification: `pnpm exec vitest run packages/engine/src/career/career-weekly-recovery.test.ts`; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `git diff --check`.
+- Follow-up: Execute `docs/steps/42-career-weekly-recovery-and-matchday-readiness/03-career-advance-recovery-application.md`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/03-career-advance-recovery-application.md`
+
+- Status: Done
+- Outcome: Career advancement from a save now applies selected-club recovery before fixture simulation.
+- Adopted solution: The CLI composition layer computes the next fixture day gap, recovers the selected-club roster first, builds match contexts from the recovered state, and then calls `progressNextCareerFixture` so post-match condition spend persists from the recovered baseline. The saved lineup and tactic are preserved; `apps/cli/src/commands/career.test.ts` was touched as necessary coverage for the save-driven behavior.
+- Verification: `pnpm exec vitest run apps/cli/src/commands/career.test.ts packages/engine/src/career/progress-fixture.test.ts packages/engine/src/career/career-weekly-recovery.test.ts`; `pnpm --filter @game/engine run typecheck`; `pnpm check`; `git diff --check`.
+- Follow-up: Execute `docs/steps/42-career-weekly-recovery-and-matchday-readiness/04-cli-pre-match-readiness-output.md`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/04-cli-pre-match-readiness-output.md`
+
+- Status: Done
+- Outcome: Career advance output now exposes compact pre-match recovery facts.
+- Adopted solution: The CLI prints localized recovery days, improved-player count, and selected-club fitness range before post-match condition deltas; it remains factual inspection output and does not recommend rotation.
+- Verification: `pnpm exec vitest run apps/cli/src/commands/career.test.ts packages/i18n/src/labels.test.ts`; `pnpm --filter @game/cli run typecheck`; `pnpm --filter @game/i18n run typecheck`; `pnpm check`; `pnpm cli career --save=phase42-check --summary`; `pnpm cli career --save=phase42-check --advance-next-fixture`; `pnpm cli career --save=phase42-check --squad`; `git diff --check`.
+- Follow-up: Execute `docs/steps/42-career-weekly-recovery-and-matchday-readiness/05-repeated-fixture-recovery-smoke.md`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/05-repeated-fixture-recovery-smoke.md`
+
+- Status: Done
+- Outcome: Repeated fixture smoke confirmed weekly recovery prevents the Phase 41 one-way condition drain.
+- Adopted solution: Keep current recovery tuning: same-day first fixture spends `100 -> 92`; each following seven-day league gap recovers the selected-club roster from `92..100` to `100..100` before kickoff, then match spend returns starters to `92`. Current demo calendar has no short-gap pressure, which is a future scheduling/cups concern, not a recovery blocker.
+- Verification: `pnpm check`; `pnpm cli career --save=phase42-check --seed=world-a --new-world-preview`; `pnpm cli career --save=phase42-check --set-lineup-demo=pro01-first-team`; `pnpm cli career --save=phase42-check --set-tactic-demo=pro01-balanced`; four `--advance-next-fixture` smokes including one with `--fixture-explanation`; `pnpm cli career --save=phase42-check --squad`; `git diff --check`.
+- Follow-up: Execute `docs/steps/42-career-weekly-recovery-and-matchday-readiness/06-phase-report-and-next-decision.md`.
+
+### 2026-06-22 — `docs/steps/42-career-weekly-recovery-and-matchday-readiness/06-phase-report-and-next-decision.md`
+
+- Status: Done
+- Outcome: Phase 42 is complete; career matchday readiness now includes deterministic pre-match recovery and visible post-match condition.
+- Adopted solution: The save-driven loop now lets the manager inspect saved lineup, saved tactic, next fixture, pre-match recovery days/range, match result, post-match condition, persisted squad fitness, and optional condition explanation. No auto-rotation, advice, injuries, morale, training, or balance tuning was added.
+- Verification: `pnpm check`; `pnpm cli career --save=phase42-check --summary`; `pnpm cli career --save=phase42-check --squad`; `pnpm cli balance-report --seed-prefix=test-balance --seasons=20 --target-profile=calibration-v1 --strict`; `git diff --check`.
+- Follow-up: Choose the next phase explicitly; recommended direction is `43-career-matchday-ui-slice`.
 
 ## Update Protocol
 

@@ -1,11 +1,15 @@
 import { createFakeLeagueSystem } from "@game/content";
 import {
+  applyCareerWeeklyRecovery,
   buildTacticTeamContext,
   deriveTeamStrength,
+  findNextCareerFixture,
   progressNextCareerFixture,
+  type ApplyCareerWeeklyRecoveryResult,
   type LineupSlot,
   type MatchTeamContext,
   type PlayerStateMultiplierCurves,
+  type ProgressCareerFixtureAdvanced,
   type ProgressCareerFixtureResult,
   type RoleWeightProfile,
 } from "@game/engine";
@@ -30,8 +34,17 @@ export interface CareerAdvancePreparationInvalid {
   readonly careerState: CliCareerState;
 }
 
+/** Successful career advancement result with pre-match recovery details. */
+export interface CareerAdvanceAdvanced extends ProgressCareerFixtureAdvanced {
+  /** Structured recovery applied before the fixture was simulated. */
+  readonly preMatchRecovery: ApplyCareerWeeklyRecoveryResult;
+}
+
 /** Result of progressing one fixture from a loaded CLI career save. */
-export type CareerAdvanceResult = ProgressCareerFixtureResult | CareerAdvancePreparationInvalid;
+export type CareerAdvanceResult =
+  | CareerAdvanceAdvanced
+  | Exclude<ProgressCareerFixtureResult, ProgressCareerFixtureAdvanced>
+  | CareerAdvancePreparationInvalid;
 
 /**
  * Advances one selected-club fixture from persisted career state.
@@ -40,7 +53,10 @@ export type CareerAdvanceResult = ProgressCareerFixtureResult | CareerAdvancePre
  * use deterministic MVP defaults until opponent preparation becomes a separate
  * documented system.
  */
-export function advanceCareerNextFixture(careerState: CliCareerState): CareerAdvanceResult {
+export function advanceCareerNextFixture(
+  careerState: CliCareerState,
+  options: { readonly includeExplanationTrace?: boolean } = {},
+): CareerAdvanceResult {
   const preparationStatus = validateSelectedClubPreparation(careerState);
   if (preparationStatus !== undefined) {
     return {
@@ -53,16 +69,48 @@ export function advanceCareerNextFixture(careerState: CliCareerState): CareerAdv
   const contentConfig = createFakeLeagueSystem({
     worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
   });
+  const nextFixture = findNextCareerFixture(careerState);
 
-  return retargetPreparationAfterAdvance(progressNextCareerFixture({
-    careerState,
-    teamsByClubId: careerTeamsByClubId({
+  if (nextFixture.status === "none") {
+    return {
+      status: "none",
       careerState,
+    };
+  }
+
+  if (nextFixture.status === "invalid") {
+    return {
+      status: "invalid",
+      reason: nextFixture.reason,
+      ...(nextFixture.fixtureId === undefined ? {} : { fixtureId: nextFixture.fixtureId }),
+      careerState,
+    };
+  }
+
+  const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
+  const preMatchRecovery = applyCareerWeeklyRecovery({
+    playerStates: careerState.gameState.playerStates,
+    playerIds: selectedClub?.playerIds ?? [],
+    dayCount: nextFixture.fixture.date - careerState.gameState.calendar.currentDate,
+  });
+  const recoveredCareerState: CliCareerState = {
+    ...careerState,
+    gameState: {
+      ...careerState.gameState,
+      playerStates: preMatchRecovery.playerStates,
+    },
+  };
+
+  return retargetPreparationAfterAdvance(withPreMatchRecovery(progressNextCareerFixture({
+    careerState: recoveredCareerState,
+    teamsByClubId: careerTeamsByClubId({
+      careerState: recoveredCareerState,
       roleWeights: contentConfig.roleWeights,
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
     }),
     matchEngineConfig: contentConfig.matchEngineConfig,
-  }));
+    includeExplanationTrace: options.includeExplanationTrace === true,
+  }), preMatchRecovery));
 }
 
 function validateSelectedClubPreparation(careerState: CliCareerState): CareerAdvancePreparationInvalidReason | undefined {
@@ -131,7 +179,7 @@ function careerTeamsByClubId(input: {
   return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
 }
 
-function retargetPreparationAfterAdvance(result: ProgressCareerFixtureResult): CareerAdvanceResult {
+function retargetPreparationAfterAdvance(result: CareerAdvanceResult): CareerAdvanceResult {
   if (result.status !== "advanced" || result.careerState.matchPreparation === undefined) {
     return result;
   }
@@ -148,6 +196,20 @@ function retargetPreparationAfterAdvance(result: ProgressCareerFixtureResult): C
         updatedAt: result.careerState.gameState.calendar.currentDate,
       },
     },
+  };
+}
+
+function withPreMatchRecovery(
+  result: ProgressCareerFixtureResult,
+  preMatchRecovery: ApplyCareerWeeklyRecoveryResult,
+): CareerAdvanceResult {
+  if (result.status !== "advanced") {
+    return result;
+  }
+
+  return {
+    ...result,
+    preMatchRecovery,
   };
 }
 

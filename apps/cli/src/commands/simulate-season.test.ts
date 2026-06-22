@@ -545,6 +545,29 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
 });
 
+test("simulate-season can print optional fixture explanation without changing default detail output", async () => {
+  const defaultIo = captureIo();
+  const explanationIo = captureIo();
+
+  assert.equal(await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000001"], defaultIo), 0);
+  assert.equal(
+    await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000001", "--fixture-explanation"], explanationIo),
+    0,
+  );
+
+  const explanationStart = explanationIo.stdoutLines.indexOf("Match explanation:");
+
+  assert.notEqual(explanationStart, -1);
+  assert.deepEqual(explanationIo.stdoutLines.slice(0, explanationStart), defaultIo.stdoutLines);
+  assert.equal(explanationIo.stdoutLines.includes("  Team strength:"), true);
+  assert.equal(explanationIo.stdoutLines.includes("  Tactic distribution:"), true);
+  assert.equal(explanationIo.stdoutLines.includes("  Lineup roles:"), true);
+  assert.equal(explanationIo.stdoutLines.includes("  Condition impact:"), true);
+  assert.equal(explanationIo.stdoutLines.includes("  Chance summary:"), true);
+  assert.equal(explanationIo.stdoutLines.some((line) => line.includes("chance_types=")), true);
+  assert.equal(explanationIo.stdoutLines.some((line) => line.includes("Variance markers: ")), true);
+});
+
 test("simulate-season localizes fixture event enum values in Italian", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000006", "--lang=it"], io);
@@ -556,6 +579,22 @@ test("simulate-season localizes fixture event enum values in Italian", async () 
   assert.equal(io.stdoutLines.some((line) => line.includes("tiro=normale occasione=azione")), true);
   assert.equal(io.stdoutLines.some((line) => line.includes("tiro=header")), false);
   assert.equal(io.stdoutLines.some((line) => line.includes("occasione=open_play")), false);
+});
+
+test("simulate-season localizes fixture explanation labels in Italian", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(
+    ["--seed=demo-001", "--fixture=fixture:000001", "--fixture-explanation", "--lang=it"],
+    io,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(io.stderrLines.length, 0);
+  assert.equal(io.stdoutLines.includes("Spiegazione partita:"), true);
+  assert.equal(io.stdoutLines.includes("  Forza squadra:"), true);
+  assert.equal(io.stdoutLines.includes("  Distribuzione tattica:"), true);
+  assert.equal(io.stdoutLines.includes("  Ruoli formazione:"), true);
+  assert.equal(io.stdoutLines.includes("  Riepilogo occasioni:"), true);
 });
 
 test("simulate-season applies the deterministic tactic and lineup setup demo", async () => {
@@ -759,6 +798,15 @@ test("simulate-season rejects invalid fixture arguments", async () => {
   assert.equal(exitCode, 1);
   assert.equal(io.stdoutLines.length, 0);
   assert.equal(io.stderrLines[0], "--fixture requires a namespaced fixture ID");
+});
+
+test("simulate-season rejects fixture explanation without fixture", async () => {
+  const io = captureIo();
+  const exitCode = await runSimulateSeasonCommand(["--fixture-explanation"], io);
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0], "--fixture-explanation requires --fixture=<fixtureId>");
 });
 
 test("simulate-season rejects invalid setup demo arguments", async () => {
