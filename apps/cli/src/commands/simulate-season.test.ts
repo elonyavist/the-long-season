@@ -171,6 +171,13 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.includes("  Clubs with prospects: 18 / 18"), true);
   assert.equal(io.stdoutLines.includes("Role-coherence warnings:"), true);
   assert.equal(io.stdoutLines.includes("  none"), true);
+  assert.equal(io.stdoutLines.includes("Youth academy baseline:"), true);
+  assert.equal(io.stdoutLines.includes("  Players: 198"), true);
+  assert.equal(io.stdoutLines.includes("  Clubs at exactly 11 youth: 18 / 18"), true);
+  assert.equal(io.stdoutLines.includes("  Youth roster size min/max: 11 / 11"), true);
+  assert.equal(io.stdoutLines.includes("  Youth departments: GK=18 DEF=72 MID=72 ATT=36"), true);
+  assert.equal(io.stdoutLines.some((line) => /^  Youth ages: 15=[0-9]+ 16=[0-9]+ 17=[0-9]+ 18=[0-9]+ 19=[0-9]+ 20\+=0$/.test(line)), true);
+  assert.equal(io.stdoutLines.includes("  Youth role-coherence warnings:"), true);
   assert.equal(io.stdoutLines.includes("Final table:"), false);
 });
 
@@ -198,6 +205,8 @@ test("simulate-season localizes generated player quality report output", async (
   assert.equal(io.stdoutLines.includes("Distribuzione abilita attuale:"), true);
   assert.equal(io.stdoutLines.includes("Budget rarita:"), true);
   assert.equal(io.stdoutLines.includes("  Club con prospetti: 18 / 18"), true);
+  assert.equal(io.stdoutLines.includes("Baseline vivaio:"), true);
+  assert.equal(io.stdoutLines.includes("  Club con esattamente 11 giovani: 18 / 18"), true);
 });
 
 test("simulate-season rejects combined generated player quality inspections", async () => {

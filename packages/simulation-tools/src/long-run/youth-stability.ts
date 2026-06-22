@@ -92,10 +92,10 @@ export interface CreateLongRunYouthStabilityReportOptions {
   readonly activePlayerMaximum?: number;
 }
 
-const DEFAULT_YOUTH_ROSTER_TARGET_MAXIMUM = 12;
-const DEFAULT_YOUTH_ROSTER_MINIMUM = 8;
-const DEFAULT_ACTIVE_PLAYER_MINIMUM = 558;
-const DEFAULT_ACTIVE_PLAYER_MAXIMUM = 666;
+const DEFAULT_YOUTH_ROSTER_TARGET_MAXIMUM = 11;
+const DEFAULT_YOUTH_ROSTER_MINIMUM = 11;
+const DEFAULT_ACTIVE_PLAYER_MINIMUM = 612;
+const DEFAULT_ACTIVE_PLAYER_MAXIMUM = 648;
 
 /**
  * Creates aggregate youth-academy population metrics and anomaly checks.
@@ -157,11 +157,11 @@ function youthStabilityChecks(
     check("clubs_above_youth_target", clubsAboveYouthTarget, "pass 0; fail >0", () =>
       clubsAboveYouthTarget > 0 ? "fail" : "pass",
     ),
-    check("youth_roster_min_size", minimumYouthRosterSize, `pass >=${thresholds.youthRosterMinimum}; warn below`, () =>
-      minimumYouthRosterSize < thresholds.youthRosterMinimum ? "warn" : "pass",
+    check("youth_roster_min_size", minimumYouthRosterSize, `pass >=${thresholds.youthRosterMinimum}; fail below`, () =>
+      minimumYouthRosterSize < thresholds.youthRosterMinimum ? "fail" : "pass",
     ),
-    check("clubs_below_youth_minimum", clubsBelowYouthMinimum, "pass 0; warn >0", () =>
-      clubsBelowYouthMinimum > 0 ? "warn" : "pass",
+    check("clubs_below_youth_minimum", clubsBelowYouthMinimum, "pass 0; fail >0", () =>
+      clubsBelowYouthMinimum > 0 ? "fail" : "pass",
     ),
     check(
       "active_player_population",

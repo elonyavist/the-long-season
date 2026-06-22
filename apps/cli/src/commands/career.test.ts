@@ -172,7 +172,7 @@ test("career command creates and writes a new seeded career world", async () => 
     assert.equal(loaded.selectedClubId, "club:province-01");
     assert.equal(loaded.gameState.clubs[loaded.selectedClubId]?.playerIds.length, 22);
     assert.equal(loaded.youthAcademyState?.clubRosterIds.length, 18);
-    assert.equal(loaded.youthAcademyState?.clubRosters[loaded.selectedClubId]?.playerIds.length, 8);
+    assert.equal(loaded.youthAcademyState?.clubRosters[loaded.selectedClubId]?.playerIds.length, 11);
     assert.equal(loaded.youthAcademyState?.clubRosters[loaded.selectedClubId]?.playerIds.some((playerId) => (
       loaded.gameState.clubs[loaded.selectedClubId]?.playerIds.includes(playerId) ?? false
     )), false);
@@ -254,8 +254,8 @@ test("career command inspects selected youth academy without mutating the save",
     assert.equal(youthIo.stdoutLines[0], "The Long Season youth academy");
     assert.equal(youthIo.stdoutLines.includes("Save: save:career-youth"), true);
     assert.equal(youthIo.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
-    assert.equal(youthIo.stdoutLines.includes("Selected club youth count: 8"), true);
-    assert.equal(hasLineStartingWith(youthIo.stdoutLines, "Active players: senior=396 youth=144 total=540"), true);
+    assert.equal(youthIo.stdoutLines.includes("Selected club youth count: 11"), true);
+    assert.equal(hasLineStartingWith(youthIo.stdoutLines, "Active players: senior=396 youth=198 total=594"), true);
     assert.equal(youthIo.stdoutLines.includes("Inspection only: the career save is not changed."), true);
     assert.equal(youthIo.stdoutLines.includes("Youth players:"), true);
     assert.equal(youthIo.stdoutLines.includes("  Player                   Age Nationality    Pos  Ability     Development    Status"), true);
@@ -288,7 +288,7 @@ test("career command localizes youth academy inspection in Italian", async () =>
     assert.equal(exitCode, 0);
     assert.equal(youthIo.stderrLines.length, 0);
     assert.equal(youthIo.stdoutLines[0], "The Long Season vivaio");
-    assert.equal(youthIo.stdoutLines.includes("Giovani vivaio club selezionato: 8"), true);
+    assert.equal(youthIo.stdoutLines.includes("Giovani vivaio club selezionato: 11"), true);
     assert.equal(youthIo.stdoutLines.includes("Solo ispezione: il salvataggio carriera non viene modificato."), true);
     assert.equal(youthIo.stdoutLines.includes("Giovani:"), true);
   } finally {

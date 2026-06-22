@@ -1,6 +1,8 @@
+import type { ClubCategory } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import { potentialRarityBudgetForDivision } from "./player-potential-rarity.ts";
 
 /** Archetypes that are controlled by league-level rarity budgets. */
 export type BudgetedPlayerRarityKind = "white_fly" | "serious_prospect" | "rare_prodigy";
@@ -37,6 +39,10 @@ export interface PlayerRarityAllocation {
 export interface BuildPlayerRarityAllocationInput {
   /** World seed. */
   readonly seed: string;
+  /** Division where the generated pool plays. Defaults to the current third-division demo world. */
+  readonly division?: ClubCategory;
+  /** Season key used when the same world needs a new season budget. */
+  readonly seasonKey?: string;
   /** Number of generated clubs in the league. */
   readonly clubCount: number;
   /** Number of generated players per club. */
@@ -52,7 +58,7 @@ export interface BuildPlayerRarityAllocationInput {
  * lower-division exceptions possible without making them normal.
  */
 export function buildPlayerRarityAllocation(input: BuildPlayerRarityAllocationInput): PlayerRarityAllocation {
-  const budget = playerRarityBudgetForSeed(input.seed);
+  const budget = playerRarityBudgetForSeed(input.seed, input.division ?? "third_division", input.seasonKey ?? "initial");
   const usedSlotKeys = new Set<string>();
   const assignments: Record<string, PlayerRarityAssignment> = {};
 
@@ -97,13 +103,14 @@ export function isBudgetedArchetype(key: GeneratedPlayerArchetypeKey): boolean {
   return key === "category_star" || key === "veteran_drop_down" || key === "serious_prospect" || key === "rare_prodigy";
 }
 
-function playerRarityBudgetForSeed(seed: string): PlayerRarityBudget {
-  const rng = deriveRng(seed, "player-rarity-budget");
+function playerRarityBudgetForSeed(seed: string, division: ClubCategory, seasonKey: string): PlayerRarityBudget {
+  const rng = deriveRng(seed, "player-rarity-budget", division, seasonKey);
+  const budget = potentialRarityBudgetForDivision(division);
 
   return {
-    whiteFlyCount: rng.nextInt(1, 5),
-    seriousProspectCount: rng.nextInt(2, 4),
-    rareProdigyCount: rng.nextFloat() < 0.35 ? 1 : 0,
+    whiteFlyCount: rng.nextInt(budget.whiteFlyPerDivision.minInclusive, budget.whiteFlyPerDivision.maxInclusive + 1),
+    seriousProspectCount: rng.nextInt(budget.highPerDivision.minInclusive, budget.highPerDivision.maxInclusive + 1),
+    rareProdigyCount: rng.nextFloat() < budget.eliteChance ? budget.elitePerDivision.maxInclusive : budget.elitePerDivision.minInclusive,
   };
 }
 

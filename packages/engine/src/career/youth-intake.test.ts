@@ -31,7 +31,7 @@ import {
 
 test("applySeasonalYouthIntake adds candidates to youth rosters but not senior rosters", () => {
   const careerState = careerStateFixture({ initialYouthCount: 8 });
-  const candidates = candidateBatch("club:pro01", 4);
+  const candidates = candidateBatch("club:pro01", 3);
   const result = applySeasonalYouthIntake({
     careerState,
     seasonId: seasonId("season:0002"),
@@ -41,8 +41,8 @@ test("applySeasonalYouthIntake adds candidates to youth rosters but not senior r
   const selectedClub = result.careerState.gameState.clubs[clubId("club:pro01")];
 
   assert.equal(selectedClub?.playerIds.length, 1);
-  assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 12);
-  assert.equal(result.records[0]?.acceptedPlayerIds.length, 4);
+  assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 11);
+  assert.equal(result.records[0]?.acceptedPlayerIds.length, 3);
   assert.equal(result.records[0]?.skippedPlayerIds.length, 0);
 });
 
@@ -55,22 +55,22 @@ test("applySeasonalYouthIntake caps active academy size", () => {
     candidates: candidateBatch("club:pro01", 4),
   });
 
-  assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 12);
+  assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 11);
   assert.equal(result.records[0]?.acceptedPlayerIds.length, 1);
   assert.equal(result.records[0]?.skippedPlayerIds.length, 3);
 });
 
-test("applySeasonalYouthIntake initializes youth state for an old career save", () => {
+test("applySeasonalYouthIntake initializes youth state for an old career save when candidates fill the target", () => {
   const careerState = careerStateFixture({ initialYouthCount: 0, includeYouthState: false });
   const result = applySeasonalYouthIntake({
     careerState,
     seasonId: seasonId("season:0002"),
     intakeDate: gameDate(20_365),
-    candidates: candidateBatch("club:pro01", 2),
+    candidates: candidateBatch("club:pro01", YOUTH_ACADEMY_TARGET_MAX_SIZE),
   });
 
   assert.equal(result.careerState.youthAcademyState?.clubRosterIds.length, 1);
-  assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 2);
+  assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 11);
 });
 
 test("applySeasonalYouthIntake rejects unsafe candidate pools", () => {
@@ -101,6 +101,17 @@ test("applySeasonalYouthIntake rejects unsafe candidate pools", () => {
         candidates: [duplicateCandidate, duplicateCandidate],
       }),
     "duplicate_candidate_player",
+  );
+
+  assertYouthIntakeError(
+    () =>
+      applySeasonalYouthIntake({
+        careerState: careerStateFixture({ initialYouthCount: 0 }),
+        seasonId: seasonId("season:0002"),
+        intakeDate: gameDate(20_365),
+        candidates: candidateBatch("club:pro01", 2),
+      }),
+    "academy_underfilled_after_refill",
   );
 });
 

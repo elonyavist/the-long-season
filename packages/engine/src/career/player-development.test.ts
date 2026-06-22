@@ -139,6 +139,82 @@ test("developPlayersForSeason keeps growth role-relevant for an attacker", () =>
   assert.equal(finishingGrowth > tacklingGrowth, true);
 });
 
+test("developPlayersForSeason does not grow a center back past the finishing hard cap", () => {
+  const defender = playerId("player:defender-finishing-cap");
+  let careerState = careerStateFixture([
+    playerFixture(defender, "cb", 18, abilitySet(10), abilitySet(20)),
+  ]);
+
+  for (let seasonNumber = 1; seasonNumber <= 6; seasonNumber += 1) {
+    careerState = developPlayersForSeason({
+      careerState,
+      worldSeed: "defender-cap-world",
+      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+    }).careerState;
+    careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
+  }
+
+  const developed = requiredPlayer(careerState, defender);
+  assert.equal(Number(developed.abilities.technical.finishing), 10);
+  assert.equal(Number(developed.abilities.technical.tackling) > 10, true);
+});
+
+test("developPlayersForSeason does not grow a striker past the tackling hard cap", () => {
+  const striker = playerId("player:striker-tackling-cap");
+  let careerState = careerStateFixture([
+    playerFixture(striker, "st", 18, abilitySet(10), abilitySet(20)),
+  ]);
+
+  for (let seasonNumber = 1; seasonNumber <= 6; seasonNumber += 1) {
+    careerState = developPlayersForSeason({
+      careerState,
+      worldSeed: "striker-cap-world",
+      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+    }).careerState;
+    careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
+  }
+
+  const developed = requiredPlayer(careerState, striker);
+  assert.equal(Number(developed.abilities.technical.tackling), 10);
+  assert.equal(Number(developed.abilities.technical.finishing) > 10, true);
+});
+
+test("developPlayersForSeason keeps goalkeepers goalkeeper-shaped", () => {
+  const goalkeeper = playerId("player:keeper-shape");
+  const careerState = careerStateFixture([
+    playerFixture(goalkeeper, "gk", 19, abilitySet(5), abilitySet(18)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "goalkeeper-shape-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const developed = requiredPlayer(result.careerState, goalkeeper);
+
+  assert.equal(Number(developed.abilities.goalkeeping.reflexes) > 5, true);
+  assert.equal(Number(developed.abilities.technical.finishing), 5);
+  assert.equal(Number(developed.abilities.technical.tackling), 5);
+});
+
+test("developPlayersForSeason preserves explicit primary role while developing", () => {
+  const player = playerId("player:stable-primary-role");
+  const careerState = careerStateFixture([
+    {
+      ...playerFixture(player, "cm", 18, abilitySet(8), abilitySet(16)),
+      primaryRole: "defensive_midfielder",
+    },
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "stable-primary-role-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal(requiredPlayer(result.careerState, player).primaryRole, "defensive_midfielder");
+});
+
 test("developPlayersForSeason declines old outfield physical ability before technical ability", () => {
   const defender = playerId("player:old-defender");
   const careerState = careerStateFixture([

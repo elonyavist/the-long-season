@@ -1,5 +1,6 @@
 import {
   createFakeLeagueSystem,
+  YOUTH_ACADEMY_POSITION_PLAN,
   generateCareerIntakePlayers,
   generateSeasonalYouthIntakePlayers,
   type FakeLeagueSystem,
@@ -755,7 +756,7 @@ function advanceCareerForReport(
   });
   const youthPromotions = promoteYouthCandidatesToSeniorSquads({
     careerState: youthIntake.careerState,
-    allowSelectedClubPromotion: true,
+    allowSelectedClubPromotion: false,
   });
   const intakeCandidates = intakeCandidatesForCareer(league, youthPromotions.careerState, worldSeed, context.seasonNumber);
   const maintained = maintainCareerSquadShape({
@@ -861,6 +862,7 @@ function youthIntakeCandidatesForCareer(
         reputation: club.reputation,
       },
       referenceDate: careerState.gameState.calendar.currentDate,
+      targetPositions: youthRefillTargetPositions(careerState, clubId),
     });
 
     for (const player of generated.generatedPlayers) {
@@ -873,6 +875,45 @@ function youthIntakeCandidatesForCareer(
   }
 
   return candidates;
+}
+
+function youthRefillTargetPositions(
+  careerState: CliCareerState,
+  clubId: CliCareerState["gameState"]["clubIds"][number],
+): NonNullable<Parameters<typeof generateSeasonalYouthIntakePlayers>[0]["targetPositions"]> {
+  const missing = [...YOUTH_ACADEMY_POSITION_PLAN];
+  const roster = careerState.youthAcademyState?.clubRosters[clubId];
+
+  for (const playerId of roster?.playerIds ?? []) {
+    const position = careerState.gameState.players[playerId]?.naturalPositions[0];
+    if (position === undefined) {
+      continue;
+    }
+
+    const exactIndex = missing.findIndex((candidate) => candidate === position);
+    if (exactIndex >= 0) {
+      missing.splice(exactIndex, 1);
+      continue;
+    }
+
+    const departmentIndex = missing.findIndex((candidate) => sameYouthDepartment(candidate, position));
+    if (departmentIndex >= 0) {
+      missing.splice(departmentIndex, 1);
+    }
+  }
+
+  return missing;
+}
+
+function sameYouthDepartment(left: string, right: string): boolean {
+  return youthDepartment(left) === youthDepartment(right);
+}
+
+function youthDepartment(position: string): "attacker" | "defender" | "goalkeeper" | "midfielder" {
+  if (position === "gk") return "goalkeeper";
+  if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") return "defender";
+  if (position === "dm" || position === "cm" || position === "am") return "midfielder";
+  return "attacker";
 }
 
 function seniorPlayerIds(careerState: CliCareerState): readonly PlayerId[] {

@@ -20,6 +20,7 @@ import { selectNationality, type LeagueNationCode } from "../identity/nationalit
 import { getPlayerGenerationBand, type PlayerGenerationClubTier } from "./player-generation-bands.ts";
 import { buildPlayerAbilitiesForPosition } from "./player-role-templates.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import { generatedRoleIdentityForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -121,6 +122,7 @@ function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerInt
   const birthDateJitter = deriveRng(input.worldSeed, "career-intake-birth-date", input.seasonId, id).nextInt(0, 365);
   const referenceDate = input.referenceDate ?? CAREER_START_EPOCH_DAY;
   const identity = intakeIdentity(input, id);
+  const roleIdentity = generatedRoleIdentityForPosition(position);
 
   return {
     player: {
@@ -129,6 +131,7 @@ function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerInt
       lastName: identity.lastName,
       birthDate: gameDate(referenceDate - ageYears * 365 - birthDateJitter),
       naturalPositions: [position],
+      ...roleIdentity,
       abilities: buildPlayerAbilitiesForPosition(base, position),
       potential: buildPlayerAbilitiesForPosition(potentialBase, position),
     },

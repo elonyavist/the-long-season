@@ -12,8 +12,8 @@ import {
   type YouthPlayerLifecycle,
 } from "@game/domain";
 
-/** Phase 32 conservative maximum active academy size per club. */
-export const YOUTH_ACADEMY_TARGET_MAX_SIZE = 12;
+/** Phase 33 exact active academy size per club after refill. */
+export const YOUTH_ACADEMY_TARGET_MAX_SIZE = 11;
 
 /** One generated youth player prepared for annual intake application. */
 export interface YouthIntakeCandidate {
@@ -35,7 +35,7 @@ export interface ApplySeasonalYouthIntakeInput {
   readonly intakeDate: GameDate;
   /** Generated candidates in deterministic order. */
   readonly candidates: readonly YouthIntakeCandidate[];
-  /** Optional academy max size. Defaults to Phase 32 target `12`. */
+  /** Optional academy max size. Defaults to Phase 33 exact target `11`. */
   readonly maxYouthRosterSize?: number;
 }
 
@@ -67,7 +67,8 @@ export interface ApplySeasonalYouthIntakeResult {
 export type YouthIntakeErrorCode =
   | "candidate_target_club_not_found"
   | "duplicate_candidate_player"
-  | "candidate_player_already_active";
+  | "candidate_player_already_active"
+  | "academy_underfilled_after_refill";
 
 /** Error thrown when an annual youth intake candidate pool is unsafe. */
 export class YouthIntakeError extends Error {
@@ -130,6 +131,13 @@ export function applySeasonalYouthIntake(input: ApplySeasonalYouthIntakeInput): 
       };
       playerLifecycleIds.push(candidate.player.id);
       acceptedPlayerIds.push(candidate.player.id);
+    }
+
+    if (nextRosterPlayerIds.length < maxYouthRosterSize) {
+      throw new YouthIntakeError(
+        "academy_underfilled_after_refill",
+        `youth academy underfilled after refill for ${clubId}: ${nextRosterPlayerIds.length}/${maxYouthRosterSize}`,
+      );
     }
 
     clubRosters[clubId] = {

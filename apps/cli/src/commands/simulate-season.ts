@@ -1,5 +1,6 @@
 import {
   createFakeLeagueSystem,
+  generateInitialYouthAcademies,
   getGeneratedPlayerArchetype,
   type FakeLeagueSystem,
 } from "@game/content";
@@ -460,7 +461,7 @@ function formatPlayerGenerationReportOutput(
   seed: string,
   text: Translator,
 ): readonly string[] {
-  const report = buildPlayerGenerationQualityReport(league);
+  const report = buildPlayerGenerationQualityReport(league, seed);
 
   const lines = [
     text("playerGeneration.title"),
@@ -519,13 +520,43 @@ function formatPlayerGenerationReportOutput(
     );
   }
 
+  lines.push("");
+  lines.push(`${text("playerGeneration.youthAcademyBaseline")}:`);
+  lines.push(`  ${text("playerGeneration.players")}: ${report.youthAcademy.playerCount}`);
+  lines.push(
+    `  ${text("playerGeneration.youthExactSize")}: ${report.youthAcademy.clubsAtExactTarget} / ${report.clubCount}`,
+  );
+  lines.push(
+    `  ${text("playerGeneration.youthRosterSizeMinMax")}: ${report.youthAcademy.minRosterSize} / ${report.youthAcademy.maxRosterSize}`,
+  );
+  lines.push(
+    `  ${text("playerGeneration.youthDepartments")}: GK=${report.youthAcademy.departments.goalkeepers} DEF=${report.youthAcademy.departments.defenders} MID=${report.youthAcademy.departments.midfielders} ATT=${report.youthAcademy.departments.attackers}`,
+  );
+  lines.push(
+    `  ${text("playerGeneration.youthAges")}: 15=${report.youthAcademy.ages.fifteen} 16=${report.youthAcademy.ages.sixteen} 17=${report.youthAcademy.ages.seventeen} 18=${report.youthAcademy.ages.eighteen} 19=${report.youthAcademy.ages.nineteen} 20+=${report.youthAcademy.ages.overNineteen}`,
+  );
+  lines.push(`  ${text("playerGeneration.youthRoleCoherenceWarnings")}:`);
+  if (report.youthAcademy.roleCoherenceWarnings.total === 0) {
+    lines.push(`    ${text("common.none")}`);
+  } else {
+    lines.push(
+      `    ${text("playerGeneration.warning.defenderFinishing")}: ${report.youthAcademy.roleCoherenceWarnings.defenderFinishing}`,
+    );
+    lines.push(
+      `    ${text("playerGeneration.warning.strikerTackling")}: ${report.youthAcademy.roleCoherenceWarnings.strikerTackling}`,
+    );
+    lines.push(
+      `    ${text("playerGeneration.warning.outfieldGoalkeeping")}: ${report.youthAcademy.roleCoherenceWarnings.outfieldGoalkeeping}`,
+    );
+  }
+
   return lines;
 }
 
 /**
  * Builds aggregate quality metrics for generated player content.
  */
-function buildPlayerGenerationQualityReport(league: FakeLeagueSystem): PlayerGenerationQualityReport {
+function buildPlayerGenerationQualityReport(league: FakeLeagueSystem, seed: string): PlayerGenerationQualityReport {
   const currentAbilityDistribution = {
     low: 0,
     categoryDepth: 0,
@@ -585,18 +616,7 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem): PlayerGen
       rarityUsage.rareProdigy += 1;
     }
 
-    const position = player.naturalPositions[0];
-    if (position !== undefined && isDefensivePosition(position) && Number(player.abilities.technical.finishing) > 8) {
-      roleCoherenceWarnings.defenderFinishing += 1;
-    }
-
-    if (position === "st" && Number(player.abilities.technical.tackling) > 8) {
-      roleCoherenceWarnings.strikerTackling += 1;
-    }
-
-    if (position !== "gk" && Number(player.abilities.goalkeeping.reflexes) > 4) {
-      roleCoherenceWarnings.outfieldGoalkeeping += 1;
-    }
+    addRoleCoherenceWarnings(roleCoherenceWarnings, player);
   }
 
   for (const clubId of league.clubIds) {
@@ -631,7 +651,137 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem): PlayerGen
         roleCoherenceWarnings.strikerTackling +
         roleCoherenceWarnings.outfieldGoalkeeping,
     },
+    youthAcademy: buildYouthAcademyQualityReport(league, seed),
   };
+}
+
+/** Builds the youth-academy part of the generation report from the same world seed. */
+function buildYouthAcademyQualityReport(
+  league: FakeLeagueSystem,
+  seed: string,
+): PlayerGenerationQualityReport["youthAcademy"] {
+  const generated = generateInitialYouthAcademies({
+    worldSeed: seed,
+    seasonId: league.seasonId,
+    referenceDate: league.seasonStartDate,
+    clubIds: league.clubIds,
+    clubContexts: youthReportClubContexts(league),
+  });
+  const rosterSizes = league.clubIds.map((clubId) => generated.youthAcademyState.clubRosters[clubId]?.playerIds.length ?? 0);
+  const departments = {
+    goalkeepers: 0,
+    defenders: 0,
+    midfielders: 0,
+    attackers: 0,
+  };
+  const ages = {
+    fifteen: 0,
+    sixteen: 0,
+    seventeen: 0,
+    eighteen: 0,
+    nineteen: 0,
+    overNineteen: 0,
+  };
+  const roleCoherenceWarnings = {
+    defenderFinishing: 0,
+    strikerTackling: 0,
+    outfieldGoalkeeping: 0,
+    total: 0,
+  };
+
+  for (const playerId of generated.playerIds) {
+    const player = generated.players[playerId];
+    if (player === undefined) {
+      continue;
+    }
+
+    switch (positionDepartment(player.naturalPositions[0])) {
+      case "goalkeeper":
+        departments.goalkeepers += 1;
+        break;
+      case "defender":
+        departments.defenders += 1;
+        break;
+      case "midfielder":
+        departments.midfielders += 1;
+        break;
+      case "attacker":
+        departments.attackers += 1;
+        break;
+    }
+
+    const age = Math.floor((league.seasonStartDate - player.birthDate) / 365);
+    if (age <= 15) ages.fifteen += 1;
+    else if (age === 16) ages.sixteen += 1;
+    else if (age === 17) ages.seventeen += 1;
+    else if (age === 18) ages.eighteen += 1;
+    else if (age === 19) ages.nineteen += 1;
+    else ages.overNineteen += 1;
+
+    addRoleCoherenceWarnings(roleCoherenceWarnings, player);
+  }
+
+  return {
+    playerCount: generated.playerIds.length,
+    clubsAtExactTarget: rosterSizes.filter((size) => size === 11).length,
+    minRosterSize: Math.min(...rosterSizes),
+    maxRosterSize: Math.max(...rosterSizes),
+    departments,
+    ages,
+    roleCoherenceWarnings: {
+      ...roleCoherenceWarnings,
+      total:
+        roleCoherenceWarnings.defenderFinishing +
+        roleCoherenceWarnings.strikerTackling +
+        roleCoherenceWarnings.outfieldGoalkeeping,
+    },
+  };
+}
+
+function youthReportClubContexts(
+  league: FakeLeagueSystem,
+): Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"] {
+  type YouthClubContexts = Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"];
+  const contexts: Partial<Record<ClubId, YouthClubContexts[ClubId]>> = {};
+
+  for (const clubId of league.clubIds) {
+    const club = league.clubsById[clubId];
+    if (club === undefined) {
+      continue;
+    }
+
+    contexts[clubId] = {
+      category: club.category,
+      reputation: club.reputation,
+    };
+  }
+
+  return contexts as Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"];
+}
+
+function addRoleCoherenceWarnings(
+  warnings: { defenderFinishing: number; strikerTackling: number; outfieldGoalkeeping: number },
+  player: FakeLeagueSystem["players"][PlayerId],
+): void {
+  const position = player.naturalPositions[0];
+  if (position !== undefined && isDefensivePosition(position) && Number(player.abilities.technical.finishing) > 11) {
+    warnings.defenderFinishing += 1;
+  }
+
+  if (position === "st" && Number(player.abilities.technical.tackling) > 10) {
+    warnings.strikerTackling += 1;
+  }
+
+  if (position !== "gk" && Number(player.abilities.goalkeeping.reflexes) > 4) {
+    warnings.outfieldGoalkeeping += 1;
+  }
+}
+
+function positionDepartment(position: string | undefined): "goalkeeper" | "defender" | "midfielder" | "attacker" {
+  if (position === "gk") return "goalkeeper";
+  if (isDefensivePosition(position ?? "")) return "defender";
+  if (position === "dm" || position === "cm" || position === "am") return "midfielder";
+  return "attacker";
 }
 
 /**
@@ -2196,6 +2346,33 @@ interface PlayerGenerationQualityReport {
     readonly strikerTackling: number;
     readonly outfieldGoalkeeping: number;
     readonly total: number;
+  };
+  /** Initial academy/refill baseline generated from the same world seed. */
+  readonly youthAcademy: {
+    readonly playerCount: number;
+    readonly clubsAtExactTarget: number;
+    readonly minRosterSize: number;
+    readonly maxRosterSize: number;
+    readonly departments: {
+      readonly goalkeepers: number;
+      readonly defenders: number;
+      readonly midfielders: number;
+      readonly attackers: number;
+    };
+    readonly ages: {
+      readonly fifteen: number;
+      readonly sixteen: number;
+      readonly seventeen: number;
+      readonly eighteen: number;
+      readonly nineteen: number;
+      readonly overNineteen: number;
+    };
+    readonly roleCoherenceWarnings: {
+      readonly defenderFinishing: number;
+      readonly strikerTackling: number;
+      readonly outfieldGoalkeeping: number;
+      readonly total: number;
+    };
   };
 }
 

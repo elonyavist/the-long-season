@@ -9,22 +9,37 @@ import {
   generateSeasonalYouthIntakePlayers,
   INITIAL_YOUTH_PLAYERS_PER_CLUB,
   type InitialYouthAcademyClubContext,
-  YOUTH_INTAKE_MAX_PLAYERS_PER_CLUB,
-  YOUTH_INTAKE_MIN_PLAYERS_PER_CLUB,
+  YOUTH_ACADEMY_POSITION_PLAN,
 } from "./initial-youth-academies.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
 /** Tests for deterministic initial youth academy generation. */
 
-test("generateInitialYouthAcademies creates exactly eight youth players per club", () => {
+test("generateInitialYouthAcademies creates exactly eleven youth players per club", () => {
   const result = generateInitialYouthAcademies(input("academy-world"));
 
-  assert.equal(result.playerIds.length, 16);
+  assert.equal(result.playerIds.length, 22);
   assert.equal(result.youthAcademyState.clubRosterIds.length, 2);
 
   for (const rosterId of result.youthAcademyState.clubRosterIds) {
     assert.equal(result.youthAcademyState.clubRosters[rosterId]?.playerIds.length, INITIAL_YOUTH_PLAYERS_PER_CLUB);
+  }
+});
+
+test("generateInitialYouthAcademies creates the exact department structure", () => {
+  const result = generateInitialYouthAcademies(input("academy-shape"));
+
+  for (const rosterId of result.youthAcademyState.clubRosterIds) {
+    const roster = result.youthAcademyState.clubRosters[rosterId];
+    assert.ok(roster !== undefined);
+    assert.deepEqual(departmentCounts(roster.playerIds.map((playerId) => result.players[playerId]?.naturalPositions[0])), {
+      goalkeeper: 1,
+      defender: 4,
+      midfielder: 4,
+      attacker: 2,
+    });
   }
 });
 
@@ -86,6 +101,23 @@ test("generateInitialYouthAcademies creates role-coherent lower-division youth p
   }
 });
 
+test("generateInitialYouthAcademies writes explicit role identity fields", () => {
+  const result = generateInitialYouthAcademies(input("academy-role-identity"));
+
+  for (const playerId of result.playerIds) {
+    const player = result.players[playerId];
+    assert.ok(player !== undefined);
+    const position = player.naturalPositions[0];
+    assert.ok(position !== undefined);
+    const expectedRole = primaryRoleForPosition(position);
+
+    assert.equal(player.primaryRole, expectedRole);
+    assert.ok(player.archetype !== undefined);
+    assert.deepEqual(player.naturalRoles, [expectedRole]);
+    assert.equal(player.roleFamiliarity?.[expectedRole], "natural");
+  }
+});
+
 test("generateInitialYouthAcademies attaches lifecycle rows to active youth rosters", () => {
   const result = generateInitialYouthAcademies(input("lifecycle-academy"));
 
@@ -98,11 +130,15 @@ test("generateInitialYouthAcademies attaches lifecycle rows to active youth rost
   }
 });
 
-test("generateSeasonalYouthIntakePlayers creates a bounded annual intake", () => {
-  const result = generateSeasonalYouthIntakePlayers(seasonalInput("annual-intake"));
+test("generateSeasonalYouthIntakePlayers creates exactly the requested refill positions", () => {
+  const targetPositions = ["gk", "cb", "cm", "st"] as const;
+  const result = generateSeasonalYouthIntakePlayers({
+    ...seasonalInput("annual-intake"),
+    targetPositions,
+  });
 
-  assert.equal(result.generatedPlayers.length >= YOUTH_INTAKE_MIN_PLAYERS_PER_CLUB, true);
-  assert.equal(result.generatedPlayers.length <= YOUTH_INTAKE_MAX_PLAYERS_PER_CLUB, true);
+  assert.equal(result.generatedPlayers.length, targetPositions.length);
+  assert.deepEqual(result.generatedPlayers.map((generated) => generated.player.naturalPositions[0]), targetPositions);
 });
 
 test("generateSeasonalYouthIntakePlayers creates 15..17 year old players", () => {
@@ -122,6 +158,26 @@ test("generateSeasonalYouthIntakePlayers is deterministic and avoids routine rar
   assert.deepEqual(result, generateSeasonalYouthIntakePlayers(inputValue));
   assert.equal(result.generatedPlayers.some((generated) => generated.archetypeKey === "rare_prodigy"), false);
   assert.equal(new Set(result.generatedPlayers.map((generated) => generated.player.id)).size, result.generatedPlayers.length);
+});
+
+test("default seasonal youth intake candidate pool can refill a whole academy", () => {
+  const result = generateSeasonalYouthIntakePlayers(seasonalInput("full-refill-candidates"));
+
+  assert.equal(result.generatedPlayers.length, YOUTH_ACADEMY_POSITION_PLAN.length);
+});
+
+test("generateSeasonalYouthIntakePlayers writes explicit role identity fields", () => {
+  const result = generateSeasonalYouthIntakePlayers(seasonalInput("annual-role-identity"));
+
+  for (const generated of result.generatedPlayers) {
+    const position = generated.player.naturalPositions[0];
+    assert.ok(position !== undefined);
+    const expectedRole = primaryRoleForPosition(position);
+
+    assert.equal(generated.player.primaryRole, expectedRole);
+    assert.deepEqual(generated.player.naturalRoles, [expectedRole]);
+    assert.equal(generated.player.roleFamiliarity?.[expectedRole], "natural");
+  }
 });
 
 function input(worldSeed: string): Parameters<typeof generateInitialYouthAcademies>[0] {
@@ -161,4 +217,22 @@ function seasonalInput(worldSeed: string): Parameters<typeof generateSeasonalYou
       reputation: 8,
     },
   };
+}
+
+function departmentCounts(positions: readonly (string | undefined)[]): Record<string, number> {
+  const counts = {
+    goalkeeper: 0,
+    defender: 0,
+    midfielder: 0,
+    attacker: 0,
+  };
+
+  for (const position of positions) {
+    if (position === "gk") counts.goalkeeper += 1;
+    else if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") counts.defender += 1;
+    else if (position === "dm" || position === "cm" || position === "am") counts.midfielder += 1;
+    else counts.attacker += 1;
+  }
+
+  return counts;
 }

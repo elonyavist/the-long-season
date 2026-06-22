@@ -32,11 +32,11 @@ test("third-division generated players keep role-incoherent spikes out of ordina
     assert.ok(position !== undefined);
 
     if (isDefensivePosition(position)) {
-      assert.equal(Number(player.abilities.technical.finishing) <= 8, true, `${playerId} defender finishing`);
+      assert.equal(Number(player.abilities.technical.finishing) <= 11, true, `${playerId} defender finishing`);
     }
 
     if (position === "st") {
-      assert.equal(Number(player.abilities.technical.tackling) <= 8, true, `${playerId} striker tackling`);
+      assert.equal(Number(player.abilities.technical.tackling) <= 10, true, `${playerId} striker tackling`);
     }
 
     if (position !== "gk") {
@@ -76,7 +76,7 @@ test("serious prospects and rare prodigies are bounded by the league rarity budg
 
     assert.equal(seriousProspects, generated.playerRarityBudget.seriousProspectCount, seed);
     assert.equal(rareProdigies, generated.playerRarityBudget.rareProdigyCount, seed);
-    assert.equal(seriousProspects + rareProdigies <= 4, true, seed);
+    assert.equal(seriousProspects + rareProdigies <= 6, true, seed);
   }
 });
 

@@ -1,4 +1,5 @@
 import {
+  abilityValue,
   createPersonIdentity,
   gameDate,
   playerId,
@@ -22,16 +23,33 @@ import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
 import { getPlayerGenerationBand, type PlayerGenerationClubTier } from "./player-generation-bands.ts";
-import { buildPlayerAbilitiesForPosition } from "./player-role-templates.ts";
+import { generatedRoleIdentityForPosition } from "./player-role-identity.ts";
+import {
+  buildPlayerAbilitiesForPosition,
+  buildRoleAwarePlayerAbilities,
+  capPlayerAbilitiesForRole,
+} from "./player-role-templates.ts";
 
-/** Initial conservative academy size chosen by Phase 32. */
-export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 8;
+/** Exact academy size chosen by Phase 33. */
+export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
 
-/** Minimum annual youth intake size chosen by Phase 32. */
-export const YOUTH_INTAKE_MIN_PLAYERS_PER_CLUB = 2;
+/** Exact academy refill target chosen by Phase 33. */
+export const YOUTH_ACADEMY_REFILL_TARGET_PLAYERS_PER_CLUB = 11;
 
-/** Maximum annual youth intake size chosen by Phase 32. */
-export const YOUTH_INTAKE_MAX_PLAYERS_PER_CLUB = 4;
+/** Department-balanced youth position plan: 1 GK, 4 DEF, 4 MID, 2 ATT. */
+export const YOUTH_ACADEMY_POSITION_PLAN: readonly PlayerPosition[] = [
+  "gk",
+  "cb",
+  "cb",
+  "rb",
+  "lb",
+  "dm",
+  "cm",
+  "cm",
+  "am",
+  "st",
+  "rw",
+];
 
 /** Club context used by initial youth academy generation. */
 export interface InitialYouthAcademyClubContext {
@@ -89,6 +107,8 @@ export interface GenerateSeasonalYouthIntakePlayersInput {
   readonly clubContext: InitialYouthAcademyClubContext;
   /** Optional league nation, defaulting to the current Italian demo world. */
   readonly leagueNation?: LeagueNationCode;
+  /** Exact positions missing from the active academy after lifecycle exits. */
+  readonly targetPositions?: readonly PlayerPosition[];
 }
 
 /** One generated annual youth intake player and metadata. */
@@ -226,13 +246,13 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
 export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthIntakePlayersInput): GenerateSeasonalYouthIntakePlayersResult {
   const generatedPlayers: SeasonalYouthIntakeGeneratedPlayer[] = [];
   const clubNameUsage = createClubNameUsage();
-  const count = seasonalYouthIntakeCount(input.worldSeed, input.seasonId, input.clubId);
+  const targetPositions = input.targetPositions ?? YOUTH_ACADEMY_POSITION_PLAN;
   const leagueNation = input.leagueNation ?? "italian";
 
-  for (let index = 0; index < count; index += 1) {
+  for (let index = 0; index < targetPositions.length; index += 1) {
     const id = seasonalYouthPlayerId(input.clubId, input.seasonId, index + 1);
     const archetypeKey = selectSeasonalYouthArchetype(input.worldSeed, input.seasonId, input.clubId, id);
-    const position = positionForInitialYouthSlot(input.worldSeed, input.seasonId, id, index);
+    const position = targetPositions[index] ?? "cm";
     const identity = initialYouthIdentity({
       worldSeed: input.worldSeed,
       seasonId: input.seasonId,
@@ -295,6 +315,20 @@ function youthAcademyPlayer(input: {
     ),
   );
   const birthDateJitter = deriveRng(input.worldSeed, "initial-youth-birth-date", input.seasonId, input.id).nextInt(0, 365);
+  const roleIdentity = generatedRoleIdentityForPosition(input.position);
+  const abilities = buildRoleAwarePlayerAbilities({
+    seed: input.worldSeed,
+    playerKey: String(input.id),
+    division: input.clubContext.category,
+    clubTier,
+    role: roleIdentity.primaryRole,
+    ageYears: input.ageYears,
+    rarityLane: input.archetypeKey === "rare_prodigy" || input.archetypeKey === "serious_prospect" ? "rare" : "normal",
+  });
+  const potential = potentialAtLeastCurrent(
+    abilities,
+    capPlayerAbilitiesForRole(buildPlayerAbilitiesForPosition(potentialBase, input.position), roleIdentity.primaryRole),
+  );
 
   return {
     id: input.id,
@@ -302,8 +336,9 @@ function youthAcademyPlayer(input: {
     lastName: input.identity.lastName,
     birthDate: gameDate(input.referenceDate - input.ageYears * 365 - birthDateJitter),
     naturalPositions: [input.position],
-    abilities: buildPlayerAbilitiesForPosition(base, input.position),
-    potential: buildPlayerAbilitiesForPosition(potentialBase, input.position),
+    ...roleIdentity,
+    abilities,
+    potential,
   };
 }
 
@@ -402,14 +437,10 @@ function initialYouthAge(worldSeed: string, seasonId: SeasonId, id: PlayerId): n
 
 function seasonalYouthAge(worldSeed: string, seasonId: SeasonId, id: PlayerId): number {
   const roll = deriveRng(worldSeed, "seasonal-youth-age", seasonId, id).nextFloat();
-  if (roll < 0.25) return 15;
-  if (roll < 0.65) return 16;
-  return 17;
-}
-
-function seasonalYouthIntakeCount(worldSeed: string, seasonId: SeasonId, clubId: ClubId): number {
-  const rng = deriveRng(worldSeed, "seasonal-youth-intake-count", seasonId, clubId);
-  return rng.nextInt(YOUTH_INTAKE_MIN_PLAYERS_PER_CLUB, YOUTH_INTAKE_MAX_PLAYERS_PER_CLUB + 1);
+  if (roll < 0.32) return 15;
+  if (roll < 0.68) return 16;
+  if (roll < 0.96) return 17;
+  return 18;
 }
 
 function selectSeasonalYouthArchetype(
@@ -433,13 +464,57 @@ function selectSeasonalYouthArchetype(
 }
 
 function positionForInitialYouthSlot(worldSeed: string, seasonId: SeasonId, id: PlayerId, index: number): PlayerPosition {
-  if (index === 0) {
-    return "gk";
+  const planned = YOUTH_ACADEMY_POSITION_PLAN[index % YOUTH_ACADEMY_POSITION_PLAN.length];
+  if (planned === "rw") {
+    return deriveRng(worldSeed, "initial-youth-wide-side", seasonId, id).nextFloat() < 0.5 ? "rw" : "lw";
   }
 
-  const positions: readonly PlayerPosition[] = ["cb", "rb", "lb", "cm", "dm", "am", "rw", "lw", "st", "st"];
-  const rng = deriveRng(worldSeed, "initial-youth-position", seasonId, id);
-  return positions[rng.nextInt(0, positions.length)] ?? "cm";
+  return planned ?? "cm";
+}
+
+function potentialAtLeastCurrent(current: Player["abilities"], potential: Player["potential"]): Player["potential"] {
+  return {
+    technical: {
+      finishing: maxAbility(current.technical.finishing, potential.technical.finishing),
+      passing: maxAbility(current.technical.passing, potential.technical.passing),
+      longPassing: maxAbility(current.technical.longPassing, potential.technical.longPassing),
+      crossing: maxAbility(current.technical.crossing, potential.technical.crossing),
+      dribbling: maxAbility(current.technical.dribbling, potential.technical.dribbling),
+      technique: maxAbility(current.technical.technique, potential.technical.technique),
+      tackling: maxAbility(current.technical.tackling, potential.technical.tackling),
+      penalties: maxAbility(current.technical.penalties, potential.technical.penalties),
+      freeKicks: maxAbility(current.technical.freeKicks, potential.technical.freeKicks),
+    },
+    physical: {
+      pace: maxAbility(current.physical.pace, potential.physical.pace),
+      strength: maxAbility(current.physical.strength, potential.physical.strength),
+      stamina: maxAbility(current.physical.stamina, potential.physical.stamina),
+      agility: maxAbility(current.physical.agility, potential.physical.agility),
+      heading: maxAbility(current.physical.heading, potential.physical.heading),
+    },
+    mental: {
+      positioning: maxAbility(current.mental.positioning, potential.mental.positioning),
+      vision: maxAbility(current.mental.vision, potential.mental.vision),
+      anticipation: maxAbility(current.mental.anticipation, potential.mental.anticipation),
+      composure: maxAbility(current.mental.composure, potential.mental.composure),
+      determination: maxAbility(current.mental.determination, potential.mental.determination),
+      leadership: maxAbility(current.mental.leadership, potential.mental.leadership),
+    },
+    goalkeeping: {
+      reflexes: maxAbility(current.goalkeeping.reflexes, potential.goalkeeping.reflexes),
+      handling: maxAbility(current.goalkeeping.handling, potential.goalkeeping.handling),
+      rushingOut: maxAbility(current.goalkeeping.rushingOut, potential.goalkeeping.rushingOut),
+      goalkeeperPositioning: maxAbility(
+        current.goalkeeping.goalkeeperPositioning,
+        potential.goalkeeping.goalkeeperPositioning,
+      ),
+      footwork: maxAbility(current.goalkeeping.footwork, potential.goalkeeping.footwork),
+    },
+  };
+}
+
+function maxAbility(current: number, potential: number) {
+  return abilityValue(Math.max(current, potential));
 }
 
 function initialYouthPlayerId(clubId: ClubId, sequence: number): PlayerId {

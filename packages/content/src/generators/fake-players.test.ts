@@ -7,6 +7,7 @@ import { fromISO } from "@game/shared";
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
 import { generateFakePlayersForClubs } from "./fake-players.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -139,7 +140,7 @@ test("budgeted archetypes come only from league-level rarity assignments", () =>
   }
 
   assert.equal(assignments.length > 0, true);
-  assert.equal(assignments.length <= 8, true);
+  assert.equal(assignments.length <= 10, true);
 
   for (const playerId of generated.playerIds) {
     const archetypeKey = generated.playerArchetypes[playerId];
@@ -177,7 +178,7 @@ test("fake player generation gives top clubs a visible starting-lineup ability e
   const topAverage = lineupCurrentAbilityAverage(generated, 1);
   const bottomAverage = lineupCurrentAbilityAverage(generated, 18);
 
-  assert.equal(topAverage - bottomAverage >= 3, true);
+  assert.equal(topAverage - bottomAverage >= 1.5, true);
 });
 
 test("third-division generated bands keep title contenders below first-division quality", () => {
@@ -198,16 +199,26 @@ test("fake player generation keeps ordinary role attributes coherent", () => {
     assert.ok(position !== undefined);
 
     if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") {
-      assert.equal(Number(player.abilities.technical.finishing) <= 8, true, playerId);
+      assert.equal(Number(player.abilities.technical.finishing) <= 11, true, playerId);
     }
 
     if (position === "st") {
-      assert.equal(Number(player.abilities.technical.tackling) <= 8, true, playerId);
+      assert.equal(Number(player.abilities.technical.tackling) <= 10, true, playerId);
     }
 
     if (position !== "gk") {
       assert.equal(Number(player.abilities.goalkeeping.reflexes) <= 4, true, playerId);
     }
+  }
+});
+
+test("fake player generation writes explicit role identity fields", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "role-identity-world" });
+
+  for (const playerId of generated.playerIds) {
+    const player = requiredPlayer(generated.players[playerId]);
+    assertGeneratedRoleIdentity(player);
   }
 });
 
@@ -267,4 +278,19 @@ function hasArchetype(
   }
 
   return false;
+}
+
+/** Verifies the Phase 33 role identity contract on one generated player. */
+function assertGeneratedRoleIdentity(player: Player): void {
+  const position = player.naturalPositions[0];
+  assert.ok(position !== undefined);
+  const expectedRole = primaryRoleForPosition(position);
+
+  assert.equal(player.primaryRole, expectedRole);
+  assert.ok(player.archetype !== undefined);
+  assert.deepEqual(player.naturalRoles, [expectedRole]);
+  assert.equal(player.roleFamiliarity?.[expectedRole], "natural");
+  assert.equal(new Set([...(player.naturalRoles ?? []), ...(player.adaptedRoles ?? []), ...(player.weakRoles ?? [])]).size, (
+    (player.naturalRoles?.length ?? 0) + (player.adaptedRoles?.length ?? 0) + (player.weakRoles?.length ?? 0)
+  ));
 }

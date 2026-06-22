@@ -1,4 +1,12 @@
-import { abilityValue, type PlayerAbilities, type PlayerPosition } from "@game/domain";
+import { abilityValue, type ClubCategory, type PlayerAbilities, type PlayerPosition, type PlayerRole } from "@game/domain";
+
+import {
+  resolveEffectiveCurrentAbilityBandForRoleAbility,
+  sampleCurrentAbilityInBand,
+  type CurrentAbilityRarityLane,
+} from "./player-current-ability-bands.ts";
+import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
+import { hardCapForRoleAbility, type PlayerAbilityKey } from "./player-role-attribute-classification.ts";
 
 /** Role-template keys used by fictional player generation. */
 export type PlayerGenerationRoleTemplateKey =
@@ -31,6 +39,26 @@ export interface PlayerGenerationRoleTemplate {
   readonly mental: Readonly<Record<keyof PlayerAbilities["mental"], AttributeProfile>>;
   /** Goalkeeper ability profiles. */
   readonly goalkeeping: Readonly<Record<keyof PlayerAbilities["goalkeeping"], AttributeProfile>>;
+}
+
+/** Input for Phase 33 role-aware current-ability generation. */
+export interface BuildRoleAwarePlayerAbilitiesInput {
+  /** Stable seed controlling deterministic ability sampling. */
+  readonly seed: string;
+  /** Stable generated player key. */
+  readonly playerKey: string;
+  /** Division where the player's club plays. */
+  readonly division: ClubCategory;
+  /** Club tier inside the division. */
+  readonly clubTier: PlayerGenerationClubTier;
+  /** Stable role identity driving ability buckets and hard caps. */
+  readonly role: PlayerRole;
+  /** Player age in years. Youth ages use youth bands, senior ages use senior bands. */
+  readonly ageYears: number;
+  /** Current ability rarity lane for this player. */
+  readonly rarityLane: CurrentAbilityRarityLane;
+  /** Small squad-depth adjustment applied inside the resolved band. */
+  readonly slotDepthAdjustment?: number;
 }
 
 const OUT_OF_GOAL_CAP = 4;
@@ -331,6 +359,90 @@ export function buildPlayerAbilitiesForPosition(base: number, position: PlayerPo
   };
 }
 
+/**
+ * Builds current abilities from Phase 33 role classification and division bands.
+ *
+ * Every attribute is sampled from its role bucket, clamped inside the
+ * division/tier band, then clamped by role hard caps. This prevents a strong
+ * club or rare player from bypassing role logic.
+ */
+export function buildRoleAwarePlayerAbilities(input: BuildRoleAwarePlayerAbilitiesInput): PlayerAbilities {
+  return {
+    technical: {
+      finishing: roleAwareRating(input, "technical.finishing"),
+      passing: roleAwareRating(input, "technical.passing"),
+      longPassing: roleAwareRating(input, "technical.longPassing"),
+      crossing: roleAwareRating(input, "technical.crossing"),
+      dribbling: roleAwareRating(input, "technical.dribbling"),
+      technique: roleAwareRating(input, "technical.technique"),
+      tackling: roleAwareRating(input, "technical.tackling"),
+      penalties: roleAwareRating(input, "technical.penalties"),
+      freeKicks: roleAwareRating(input, "technical.freeKicks"),
+    },
+    physical: {
+      pace: roleAwareRating(input, "physical.pace"),
+      strength: roleAwareRating(input, "physical.strength"),
+      stamina: roleAwareRating(input, "physical.stamina"),
+      agility: roleAwareRating(input, "physical.agility"),
+      heading: roleAwareRating(input, "physical.heading"),
+    },
+    mental: {
+      positioning: roleAwareRating(input, "mental.positioning"),
+      vision: roleAwareRating(input, "mental.vision"),
+      anticipation: roleAwareRating(input, "mental.anticipation"),
+      composure: roleAwareRating(input, "mental.composure"),
+      determination: roleAwareRating(input, "mental.determination"),
+      leadership: roleAwareRating(input, "mental.leadership"),
+    },
+    goalkeeping: {
+      reflexes: roleAwareRating(input, "goalkeeping.reflexes"),
+      handling: roleAwareRating(input, "goalkeeping.handling"),
+      rushingOut: roleAwareRating(input, "goalkeeping.rushingOut"),
+      goalkeeperPositioning: roleAwareRating(input, "goalkeeping.goalkeeperPositioning"),
+      footwork: roleAwareRating(input, "goalkeeping.footwork"),
+    },
+  };
+}
+
+/** Applies Phase 33 role hard caps to an existing ability shape. */
+export function capPlayerAbilitiesForRole(abilities: PlayerAbilities, role: PlayerRole): PlayerAbilities {
+  return {
+    technical: {
+      finishing: capAbility(abilities.technical.finishing, role, "technical.finishing"),
+      passing: capAbility(abilities.technical.passing, role, "technical.passing"),
+      longPassing: capAbility(abilities.technical.longPassing, role, "technical.longPassing"),
+      crossing: capAbility(abilities.technical.crossing, role, "technical.crossing"),
+      dribbling: capAbility(abilities.technical.dribbling, role, "technical.dribbling"),
+      technique: capAbility(abilities.technical.technique, role, "technical.technique"),
+      tackling: capAbility(abilities.technical.tackling, role, "technical.tackling"),
+      penalties: capAbility(abilities.technical.penalties, role, "technical.penalties"),
+      freeKicks: capAbility(abilities.technical.freeKicks, role, "technical.freeKicks"),
+    },
+    physical: {
+      pace: capAbility(abilities.physical.pace, role, "physical.pace"),
+      strength: capAbility(abilities.physical.strength, role, "physical.strength"),
+      stamina: capAbility(abilities.physical.stamina, role, "physical.stamina"),
+      agility: capAbility(abilities.physical.agility, role, "physical.agility"),
+      heading: capAbility(abilities.physical.heading, role, "physical.heading"),
+    },
+    mental: {
+      positioning: capAbility(abilities.mental.positioning, role, "mental.positioning"),
+      vision: capAbility(abilities.mental.vision, role, "mental.vision"),
+      anticipation: capAbility(abilities.mental.anticipation, role, "mental.anticipation"),
+      composure: capAbility(abilities.mental.composure, role, "mental.composure"),
+      determination: capAbility(abilities.mental.determination, role, "mental.determination"),
+      leadership: capAbility(abilities.mental.leadership, role, "mental.leadership"),
+    },
+    goalkeeping: {
+      reflexes: capAbility(abilities.goalkeeping.reflexes, role, "goalkeeping.reflexes"),
+      handling: capAbility(abilities.goalkeeping.handling, role, "goalkeeping.handling"),
+      rushingOut: capAbility(abilities.goalkeeping.rushingOut, role, "goalkeeping.rushingOut"),
+      goalkeeperPositioning: capAbility(abilities.goalkeeping.goalkeeperPositioning, role, "goalkeeping.goalkeeperPositioning"),
+      footwork: capAbility(abilities.goalkeeping.footwork, role, "goalkeeping.footwork"),
+    },
+  };
+}
+
 /** Returns a compact cap set for outfield players' goalkeeper attributes. */
 function outfieldGoalkeepingCaps(): PlayerGenerationRoleTemplate["goalkeeping"] {
   return {
@@ -349,4 +461,33 @@ function rating(base: number, profile: AttributeProfile) {
   const max = profile.max ?? 20;
 
   return abilityValue(Math.max(min, Math.min(max, offsetValue)));
+}
+
+function roleAwareRating(input: BuildRoleAwarePlayerAbilitiesInput, abilityKey: PlayerAbilityKey) {
+  const range = resolveEffectiveCurrentAbilityBandForRoleAbility({
+    division: input.division,
+    clubTier: input.clubTier,
+    role: input.role,
+    abilityKey,
+    ageYears: input.ageYears,
+    rarityLane: input.rarityLane,
+  });
+  const sampled = sampleCurrentAbilityInBand({
+    seed: input.seed,
+    streamName: "player-role-aware-current-ability",
+    playerKey: `${input.playerKey}:${abilityKey}`,
+    range,
+  });
+  const adjusted = sampled + (input.slotDepthAdjustment ?? 0);
+
+  return abilityValue(clamp(adjusted, range.minInclusive, range.maxInclusive));
+}
+
+function capAbility(value: number, role: PlayerRole, abilityKey: PlayerAbilityKey) {
+  const cap = hardCapForRoleAbility(role, abilityKey);
+  return abilityValue(cap === undefined ? value : Math.min(value, cap));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

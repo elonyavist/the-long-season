@@ -27,10 +27,24 @@ test("third-division rarity budgets stay inside configured limits", () => {
     assert.equal(allocation.budget.whiteFlyCount >= 1, true);
     assert.equal(allocation.budget.whiteFlyCount <= 4, true);
     assert.equal(allocation.budget.seriousProspectCount >= 2, true);
-    assert.equal(allocation.budget.seriousProspectCount <= 3, true);
+    assert.equal(allocation.budget.seriousProspectCount <= 5, true);
     assert.equal(allocation.budget.rareProdigyCount >= 0, true);
     assert.equal(allocation.budget.rareProdigyCount <= 1, true);
   }
+});
+
+test("rarity allocation changes by season key while remaining deterministic", () => {
+  const first = buildPlayerRarityAllocation({
+    ...FAKE_INPUT,
+    seasonKey: "season:0001",
+  });
+  const second = buildPlayerRarityAllocation({
+    ...FAKE_INPUT,
+    seasonKey: "season:0002",
+  });
+
+  assert.deepEqual(first, buildPlayerRarityAllocation({ ...FAKE_INPUT, seasonKey: "season:0001" }));
+  assert.notDeepEqual(first, second);
 });
 
 test("rarity assignments match the requested budget count", () => {

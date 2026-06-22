@@ -1,4 +1,5 @@
 import {
+  abilityValue,
   createPersonIdentity,
   gameDate,
   stateValue,
@@ -21,15 +22,21 @@ import {
   type PlayerRarityAssignment,
   type PlayerRarityBudget,
 } from "./player-rarity-budget.ts";
-import { buildPlayerAbilitiesForPosition } from "./player-role-templates.ts";
+import {
+  buildPlayerAbilitiesForPosition,
+  buildRoleAwarePlayerAbilities,
+  capPlayerAbilitiesForRole,
+} from "./player-role-templates.ts";
 import {
   GENERATED_PLAYER_ARCHETYPE_KEYS,
   getGeneratedPlayerArchetype,
   type GeneratedPlayerArchetype,
   type GeneratedPlayerArchetypeKey,
 } from "./player-archetypes.ts";
+import type { CurrentAbilityRarityLane } from "./player-current-ability-bands.ts";
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
+import { generatedRoleIdentityForPosition } from "./player-role-identity.ts";
 
 const FAKE_CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 const MAX_LEAGUE_LAST_NAME_USES = 2;
@@ -200,7 +207,6 @@ function fakePlayer(
   const base =
     currentAnchor +
     slotDepthOffset(slotNumber) +
-    abilityVariance(seed, id, clubNumber, slotNumber) +
     numberInFloatRange(archetype.currentAbilityOffset, seed, "player-current-ability", id);
   const position = positionForSlot(slotNumber);
   const ageYears = numberInRange(archetype.ageYears, seed, "player-age", id);
@@ -209,6 +215,21 @@ function fakePlayer(
     Math.max(base, potentialAnchor, base + numberInFloatRange(archetype.potentialUplift, seed, "player-potential", id)),
     20,
   );
+  const roleIdentity = generatedRoleIdentityForPosition(position);
+  const abilities = buildRoleAwarePlayerAbilities({
+    seed,
+    playerKey: String(id),
+    division: clubContext.category,
+    clubTier,
+    role: roleIdentity.primaryRole,
+    ageYears,
+    rarityLane: currentAbilityRarityLaneForArchetype(archetype.key),
+    slotDepthAdjustment: slotDepthOffset(slotNumber),
+  });
+  const potential = potentialAtLeastCurrent(
+    abilities,
+    capPlayerAbilitiesForRole(buildPlayerAbilitiesForPosition(potentialBase, position), roleIdentity.primaryRole),
+  );
 
   return {
     id,
@@ -216,8 +237,9 @@ function fakePlayer(
     lastName: identity.lastName,
     birthDate: gameDate(FAKE_CAREER_START_EPOCH_DAY - ageYears * 365 - birthDateJitter),
     naturalPositions: [position],
-    abilities: buildPlayerAbilitiesForPosition(base, position),
-    potential: buildPlayerAbilitiesForPosition(potentialBase, position),
+    ...roleIdentity,
+    abilities,
+    potential,
   };
 }
 
@@ -402,15 +424,6 @@ function registerName(
 }
 
 /**
- * Adds a small world-seed-specific ability variation without changing the
- * top-to-bottom club hierarchy that balance currently depends on.
- */
-function abilityVariance(seed: string, id: PlayerId, clubNumber: number, slotNumber: number): number {
-  const rng = deriveRng(seed, "player-ability-variance", id, clubNumber, slotNumber);
-  return rng.nextFloat() * 0.3 - 0.15;
-}
-
-/**
  * Picks a deterministic archetype for one generated player slot.
  */
 function selectPlayerArchetype(
@@ -489,6 +502,66 @@ function slotDepthOffset(slotNumber: number): number {
   }
 
   return -1.15;
+}
+
+function currentAbilityRarityLaneForArchetype(archetypeKey: GeneratedPlayerArchetypeKey): CurrentAbilityRarityLane {
+  switch (archetypeKey) {
+    case "category_star":
+    case "veteran_drop_down":
+      return "rare";
+    case "category_starter":
+    case "senior_regular":
+    case "normal_youth":
+    case "good_prospect":
+    case "serious_prospect":
+    case "rare_prodigy":
+      return "normal";
+  }
+}
+
+function potentialAtLeastCurrent(current: Player["abilities"], potential: Player["potential"]): Player["potential"] {
+  return {
+    technical: {
+      finishing: maxAbility(current.technical.finishing, potential.technical.finishing),
+      passing: maxAbility(current.technical.passing, potential.technical.passing),
+      longPassing: maxAbility(current.technical.longPassing, potential.technical.longPassing),
+      crossing: maxAbility(current.technical.crossing, potential.technical.crossing),
+      dribbling: maxAbility(current.technical.dribbling, potential.technical.dribbling),
+      technique: maxAbility(current.technical.technique, potential.technical.technique),
+      tackling: maxAbility(current.technical.tackling, potential.technical.tackling),
+      penalties: maxAbility(current.technical.penalties, potential.technical.penalties),
+      freeKicks: maxAbility(current.technical.freeKicks, potential.technical.freeKicks),
+    },
+    physical: {
+      pace: maxAbility(current.physical.pace, potential.physical.pace),
+      strength: maxAbility(current.physical.strength, potential.physical.strength),
+      stamina: maxAbility(current.physical.stamina, potential.physical.stamina),
+      agility: maxAbility(current.physical.agility, potential.physical.agility),
+      heading: maxAbility(current.physical.heading, potential.physical.heading),
+    },
+    mental: {
+      positioning: maxAbility(current.mental.positioning, potential.mental.positioning),
+      vision: maxAbility(current.mental.vision, potential.mental.vision),
+      anticipation: maxAbility(current.mental.anticipation, potential.mental.anticipation),
+      composure: maxAbility(current.mental.composure, potential.mental.composure),
+      determination: maxAbility(current.mental.determination, potential.mental.determination),
+      leadership: maxAbility(current.mental.leadership, potential.mental.leadership),
+    },
+    goalkeeping: {
+      reflexes: maxAbility(current.goalkeeping.reflexes, potential.goalkeeping.reflexes),
+      handling: maxAbility(current.goalkeeping.handling, potential.goalkeeping.handling),
+      rushingOut: maxAbility(current.goalkeeping.rushingOut, potential.goalkeeping.rushingOut),
+      goalkeeperPositioning: maxAbility(
+        current.goalkeeping.goalkeeperPositioning,
+        potential.goalkeeping.goalkeeperPositioning,
+      ),
+      footwork: maxAbility(current.goalkeeping.footwork, potential.goalkeeping.footwork),
+    },
+  };
+}
+
+function maxAbility(current: number, potential: number) {
+  return abilityValue(Math.max(current, potential));
 }
 
 /**

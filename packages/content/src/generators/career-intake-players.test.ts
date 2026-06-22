@@ -5,6 +5,7 @@ import { clubId, gameDate, seasonId } from "@game/domain";
 import { fromISO } from "@game/shared";
 
 import { generateCareerIntakePlayers } from "./career-intake-players.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -65,6 +66,21 @@ test("generateCareerIntakePlayers keeps role templates coherent", () => {
     if (position === "cb" || position === "rb" || position === "lb") {
       assert.equal(Number(generated.player.abilities.technical.finishing) <= 8, true, generated.player.id);
     }
+  }
+});
+
+test("generateCareerIntakePlayers writes explicit role identity fields", () => {
+  const result = generateCareerIntakePlayers(intakeInput("career-role-identity"));
+
+  for (const generated of result.generatedPlayers) {
+    const position = generated.player.naturalPositions[0];
+    assert.ok(position !== undefined);
+    const expectedRole = primaryRoleForPosition(position);
+
+    assert.equal(generated.player.primaryRole, expectedRole);
+    assert.ok(generated.player.archetype !== undefined);
+    assert.deepEqual(generated.player.naturalRoles, [expectedRole]);
+    assert.equal(generated.player.roleFamiliarity?.[expectedRole], "natural");
   }
 });
 
