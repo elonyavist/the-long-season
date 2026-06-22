@@ -104,7 +104,7 @@ export async function runTenSeasonReportCommand(
     });
 
     if (parsed.reportOutputPath !== undefined) {
-      await writeTextFile(parsed.reportOutputPath, formatLongRunGateReportMarkdown(batchReport));
+      await writeTextFile(parsed.reportOutputPath, formatLongRunGateReportMarkdown(batchReport, parsed.reportOutputPath));
     }
 
     for (const line of formatLongRunGateReportOutput(batchReport, text, parsed.reportOutputPath)) {
@@ -123,6 +123,7 @@ export async function runTenSeasonReportCommand(
     singleReport.clubStabilityReport,
     singleReport.youthStabilityReport,
     singleReport.anomalyReport,
+    singleReport.strengthHierarchy,
     parsed.seed,
     parsed.seasonCount,
     text,
@@ -159,6 +160,8 @@ interface SingleWorldLongRunReport {
   readonly youthStabilityReport: LongRunYouthStabilityReport;
   /** Deterministic anomaly report. */
   readonly anomalyReport: LongRunAnomalyReport;
+  /** Initial/final club ability hierarchy snapshot. */
+  readonly strengthHierarchy: ClubAbilityHierarchySummary;
 }
 
 /** One world summary inside the explicit long-run regression gate. */
@@ -169,6 +172,36 @@ interface LongRunGateWorldSummary {
   readonly status: LongRunAnomalyReport["status"];
   /** Average goals per match across this world run. */
   readonly goalsPerMatchAverage: number;
+  /** Average draw rate across this world run. */
+  readonly drawRateAverage: number;
+  /** Highest draw rate observed in one season for this world. */
+  readonly drawRateMax: number;
+  /** Season number where the highest draw rate happened. */
+  readonly highestDrawRateSeasonNumber: number;
+  /** Initial top-to-bottom club current-ability spread. */
+  readonly initialClubAbilitySpread: number;
+  /** Final top-to-bottom club current-ability spread. */
+  readonly finalClubAbilitySpread: number;
+  /** Average first-place points across this world run. */
+  readonly firstPlacePointsAverage: number;
+  /** Average last-place points across this world run. */
+  readonly lastPlacePointsAverage: number;
+  /** Average first-minus-last points spread across this world run. */
+  readonly tablePointsSpreadAverage: number;
+  /** Lowest first-minus-last spread observed in this world run. */
+  readonly tablePointsSpreadMin: number;
+  /** Highest first-minus-last spread observed in this world run. */
+  readonly tablePointsSpreadMax: number;
+  /** Season number where the lowest table spread happened. */
+  readonly lowestTableSpreadSeasonNumber: number;
+  /** Lowest champion points total observed in this world run. */
+  readonly firstPlacePointsMin: number;
+  /** Highest champion points total observed in this world run. */
+  readonly firstPlacePointsMax: number;
+  /** Lowest last-place points total observed in this world run. */
+  readonly lastPlacePointsMin: number;
+  /** Highest last-place points total observed in this world run. */
+  readonly lastPlacePointsMax: number;
   /** Maximum top-assist count observed across this world run. */
   readonly topAssistMax: number;
   /** Season number where the strongest creator concentration happened. */
@@ -249,6 +282,14 @@ interface LongRunGateReport {
   readonly goalsPerMatchAverage: number;
   /** 95th percentile goals-per-match world average. */
   readonly goalsPerMatchP95: number;
+  /** Average table spread across world averages. */
+  readonly tablePointsSpreadAverage: number;
+  /** Lowest table spread average observed across worlds. */
+  readonly tablePointsSpreadMin: number;
+  /** Average draw rate across world averages. */
+  readonly drawRateAverage: number;
+  /** Highest average draw rate observed across worlds. */
+  readonly drawRateMax: number;
   /** 95th percentile top-assist maximum per world. */
   readonly topAssistMaxP95: number;
   /** 95th percentile final 30-plus player share per world. */
@@ -307,6 +348,7 @@ function createSingleWorldReport(seed: string, seasonCount: number, text: Transl
     clubStabilityReport,
     youthStabilityReport,
     anomalyReport,
+    strengthHierarchy: summarizeClubAbilityHierarchy(league, initialCareerState, report.finalCareerState as CliCareerState),
   };
 }
 
@@ -341,11 +383,29 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
     report.playerEvolutionReport.finalAge22To29 +
     report.playerEvolutionReport.finalAge30Plus;
   const concentration = topCreatorConcentrationProductionRow(report.playerEvolutionReport.production);
+  const balanceRows = balanceSeasonRows(report.seasons);
+  const tableSpreadSnapshot = summarizeTableSpread(balanceRows);
+  const drawSnapshot = summarizeDrawRates(report.seasons);
 
   return {
     seed: report.seed,
     status: worstReportStatus([report.anomalyReport.status, report.youthStabilityReport.status]),
-    goalsPerMatchAverage: roundReportNumber(average(balanceSeasonRows(report.seasons).map((season) => season.goalsPerMatch))),
+    goalsPerMatchAverage: roundReportNumber(average(balanceRows.map((season) => season.goalsPerMatch))),
+    drawRateAverage: drawSnapshot.average,
+    drawRateMax: drawSnapshot.max,
+    highestDrawRateSeasonNumber: drawSnapshot.highestSeasonNumber,
+    initialClubAbilitySpread: report.strengthHierarchy.initial.spread,
+    finalClubAbilitySpread: report.strengthHierarchy.final.spread,
+    firstPlacePointsAverage: tableSpreadSnapshot.firstPlacePointsAverage,
+    lastPlacePointsAverage: tableSpreadSnapshot.lastPlacePointsAverage,
+    tablePointsSpreadAverage: tableSpreadSnapshot.tablePointsSpreadAverage,
+    tablePointsSpreadMin: tableSpreadSnapshot.tablePointsSpreadMin,
+    tablePointsSpreadMax: tableSpreadSnapshot.tablePointsSpreadMax,
+    lowestTableSpreadSeasonNumber: tableSpreadSnapshot.lowestTableSpreadSeasonNumber,
+    firstPlacePointsMin: tableSpreadSnapshot.firstPlacePointsMin,
+    firstPlacePointsMax: tableSpreadSnapshot.firstPlacePointsMax,
+    lastPlacePointsMin: tableSpreadSnapshot.lastPlacePointsMin,
+    lastPlacePointsMax: tableSpreadSnapshot.lastPlacePointsMax,
     topAssistMax: Math.max(...report.playerEvolutionReport.production.map((row) => row.topAssists), 0),
     topCreatorSeasonNumber: concentration?.seasonNumber ?? 0,
     topCreatorClubName: concentration?.topCreatorClubName ?? "unavailable",
@@ -378,6 +438,182 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
       ...report.anomalyReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
       ...report.youthStabilityReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
     ],
+  };
+}
+
+/** Compact table-spread snapshot for one world in a long-run gate. */
+interface TableSpreadSnapshot {
+  /** Average first-place points. */
+  readonly firstPlacePointsAverage: number;
+  /** Average last-place points. */
+  readonly lastPlacePointsAverage: number;
+  /** Average first-minus-last spread. */
+  readonly tablePointsSpreadAverage: number;
+  /** Lowest season spread. */
+  readonly tablePointsSpreadMin: number;
+  /** Highest season spread. */
+  readonly tablePointsSpreadMax: number;
+  /** Season number where the lowest spread happened. */
+  readonly lowestTableSpreadSeasonNumber: number;
+  /** Lowest champion points. */
+  readonly firstPlacePointsMin: number;
+  /** Highest champion points. */
+  readonly firstPlacePointsMax: number;
+  /** Lowest last-place points. */
+  readonly lastPlacePointsMin: number;
+  /** Highest last-place points. */
+  readonly lastPlacePointsMax: number;
+}
+
+/** Compact draw-rate snapshot for one world in a long-run gate. */
+interface DrawRateSnapshot {
+  /** Average draw rate across the world run. */
+  readonly average: number;
+  /** Highest single-season draw rate. */
+  readonly max: number;
+  /** Season number where the highest draw rate happened. */
+  readonly highestSeasonNumber: number;
+}
+
+/** One side of a club current-ability hierarchy snapshot. */
+interface ClubAbilityHierarchyEdge {
+  /** Club name at the edge of the hierarchy. */
+  readonly clubName: string;
+  /** Average senior current ability for the club. */
+  readonly averageCurrentAbility: number;
+}
+
+/** One current-ability hierarchy snapshot for all senior club squads. */
+interface ClubAbilityHierarchySnapshot {
+  /** Strongest average senior squad. */
+  readonly top: ClubAbilityHierarchyEdge;
+  /** Weakest average senior squad. */
+  readonly bottom: ClubAbilityHierarchyEdge;
+  /** Top average minus bottom average. */
+  readonly spread: number;
+}
+
+/** Initial/final current-ability hierarchy snapshot for one long run. */
+interface ClubAbilityHierarchySummary {
+  /** Hierarchy before long-run seasons are simulated. */
+  readonly initial: ClubAbilityHierarchySnapshot;
+  /** Hierarchy after long-run refresh/development. */
+  readonly final: ClubAbilityHierarchySnapshot;
+}
+
+/**
+ * Summarizes table compression without changing anomaly thresholds.
+ */
+function summarizeTableSpread(rows: readonly LongRunBalanceSeasonRow[]): TableSpreadSnapshot {
+  let lowestSpreadRowIndex = 0;
+
+  for (let index = 1; index < rows.length; index += 1) {
+    const row = rows[index];
+    const currentLowest = rows[lowestSpreadRowIndex];
+
+    if (row !== undefined && currentLowest !== undefined && row.tablePointsSpread < currentLowest.tablePointsSpread) {
+      lowestSpreadRowIndex = index;
+    }
+  }
+
+  return {
+    firstPlacePointsAverage: roundReportNumber(average(rows.map((row) => row.firstPlacePoints))),
+    lastPlacePointsAverage: roundReportNumber(average(rows.map((row) => row.lastPlacePoints))),
+    tablePointsSpreadAverage: roundReportNumber(average(rows.map((row) => row.tablePointsSpread))),
+    tablePointsSpreadMin: Math.min(...rows.map((row) => row.tablePointsSpread)),
+    tablePointsSpreadMax: Math.max(...rows.map((row) => row.tablePointsSpread)),
+    lowestTableSpreadSeasonNumber: lowestSpreadRowIndex + 1,
+    firstPlacePointsMin: Math.min(...rows.map((row) => row.firstPlacePoints)),
+    firstPlacePointsMax: Math.max(...rows.map((row) => row.firstPlacePoints)),
+    lastPlacePointsMin: Math.min(...rows.map((row) => row.lastPlacePoints)),
+    lastPlacePointsMax: Math.max(...rows.map((row) => row.lastPlacePoints)),
+  };
+}
+
+/**
+ * Summarizes draw concentration because high draw rates can compress a table
+ * even when goals and squad structure look healthy.
+ */
+function summarizeDrawRates(seasons: readonly LongRunSeasonResult[]): DrawRateSnapshot {
+  let highestSeasonIndex = 0;
+  const rates = seasons.map((season) => drawRate(season));
+
+  for (let index = 1; index < rates.length; index += 1) {
+    if ((rates[index] ?? 0) > (rates[highestSeasonIndex] ?? 0)) {
+      highestSeasonIndex = index;
+    }
+  }
+
+  return {
+    average: roundReportNumber(average(rates)),
+    max: roundReportNumber(rates[highestSeasonIndex] ?? 0),
+    highestSeasonNumber: highestSeasonIndex + 1,
+  };
+}
+
+/**
+ * Summarizes whether senior squad current ability stays separated by club.
+ *
+ * This is diagnostic only: it reads existing players and does not alter
+ * development, transfers, lineups, or match simulation.
+ */
+function summarizeClubAbilityHierarchy(
+  league: FakeLeagueSystem,
+  initialCareerState: CliCareerState,
+  finalCareerState: CliCareerState,
+): ClubAbilityHierarchySummary {
+  return {
+    initial: summarizeClubAbilityHierarchySnapshot(league, initialCareerState),
+    final: summarizeClubAbilityHierarchySnapshot(league, finalCareerState),
+  };
+}
+
+/**
+ * Computes the top-to-bottom average current-ability spread for senior squads.
+ */
+function summarizeClubAbilityHierarchySnapshot(
+  league: FakeLeagueSystem,
+  careerState: CliCareerState,
+): ClubAbilityHierarchySnapshot {
+  const rows = careerState.gameState.clubIds.map((clubId) => {
+    const club = careerState.gameState.clubs[clubId];
+    const playerIds = club?.playerIds ?? [];
+    const averageCurrentAbility = roundReportNumber(
+      average(
+        playerIds.flatMap((playerId): readonly number[] => {
+          const player = careerState.gameState.players[playerId];
+          return player === undefined ? [] : [averageAbility(player.abilities)];
+        }),
+      ),
+    );
+
+    return {
+      clubId: String(clubId),
+      clubName: clubLabel(league, clubId),
+      averageCurrentAbility,
+    };
+  });
+
+  const ordered = rows.sort(
+    (left, right) => right.averageCurrentAbility - left.averageCurrentAbility || left.clubId.localeCompare(right.clubId),
+  );
+  const top = ordered[0];
+  const bottom = ordered[ordered.length - 1];
+
+  if (top === undefined || bottom === undefined) {
+    throw new Error("Cannot summarize club ability hierarchy without clubs");
+  }
+
+  return {
+    top: {
+      clubName: top.clubName,
+      averageCurrentAbility: top.averageCurrentAbility,
+    },
+    bottom: {
+      clubName: bottom.clubName,
+      averageCurrentAbility: bottom.averageCurrentAbility,
+    },
+    spread: roundReportNumber(top.averageCurrentAbility - bottom.averageCurrentAbility),
   };
 }
 
@@ -430,6 +666,10 @@ function summarizeGateWorlds(
     clubsBelowYouthMinimumCount: worlds.reduce((sum, world) => sum + world.clubsBelowYouthMinimumCount, 0),
     goalsPerMatchAverage: roundReportNumber(average(worlds.map((world) => world.goalsPerMatchAverage))),
     goalsPerMatchP95: percentile(worlds.map((world) => world.goalsPerMatchAverage), 0.95),
+    tablePointsSpreadAverage: roundReportNumber(average(worlds.map((world) => world.tablePointsSpreadAverage))),
+    tablePointsSpreadMin: Math.min(...worlds.map((world) => world.tablePointsSpreadAverage)),
+    drawRateAverage: roundReportNumber(average(worlds.map((world) => world.drawRateAverage))),
+    drawRateMax: Math.max(...worlds.map((world) => world.drawRateAverage)),
     topAssistMaxP95: percentile(worlds.map((world) => world.topAssistMax), 0.95),
     age30PlusShareP95: percentile(worlds.map((world) => world.age30PlusShare), 0.95),
     roleCoverageWarningP95: percentile(worlds.map((world) => world.roleCoverageWarningCount), 0.95),
@@ -523,6 +763,8 @@ function formatLongRunGateReportOutput(
     `${text("tenSeason.failedWorlds")}: ${report.failedWorldCount}`,
     `${text("tenSeason.warningWorlds")}: ${report.warningWorldCount}`,
     `${text("tenSeason.goalsPerMatchAvgP95")}: avg=${report.goalsPerMatchAverage.toFixed(3)} p95=${report.goalsPerMatchP95.toFixed(3)}`,
+    `${text("tenSeason.tableSpreadAvgMin")}: avg=${report.tablePointsSpreadAverage.toFixed(2)} min=${report.tablePointsSpreadMin.toFixed(2)}`,
+    `${text("tenSeason.drawRateAvgMax")}: avg=${report.drawRateAverage.toFixed(3)} max=${report.drawRateMax.toFixed(3)}`,
     `${text("tenSeason.topAssistP95")}: ${report.topAssistMaxP95}`,
     `${text("tenSeason.age30PlusP95")}: ${report.age30PlusShareP95.toFixed(2)}`,
     `${text("tenSeason.minimumSquadSizeObserved")}: ${report.minimumSquadSizeObserved}`,
@@ -543,7 +785,7 @@ function formatLongRunGateReportOutput(
 /**
  * Formats a deterministic Markdown artifact for audit storage.
  */
-function formatLongRunGateReportMarkdown(report: LongRunGateReport): string {
+function formatLongRunGateReportMarkdown(report: LongRunGateReport, reportOutputPath: string): string {
   const lines = [
     "# Career Squad Refresh Long-Run Gates Report",
     "",
@@ -560,6 +802,10 @@ function formatLongRunGateReportMarkdown(report: LongRunGateReport): string {
     `- Warning worlds: ${report.warningWorldCount}`,
     `- Goals per match average: ${report.goalsPerMatchAverage.toFixed(3)}`,
     `- Goals per match p95: ${report.goalsPerMatchP95.toFixed(3)}`,
+    `- Table spread average: ${report.tablePointsSpreadAverage.toFixed(2)}`,
+    `- Table spread minimum world average: ${report.tablePointsSpreadMin.toFixed(2)}`,
+    `- Draw rate average: ${report.drawRateAverage.toFixed(3)}`,
+    `- Draw rate maximum world average: ${report.drawRateMax.toFixed(3)}`,
     `- Top assist max p95: ${report.topAssistMaxP95}`,
     `- Age 30+ share p95: ${report.age30PlusShareP95.toFixed(2)}`,
     `- Minimum squad size observed: ${report.minimumSquadSizeObserved}`,
@@ -575,11 +821,11 @@ function formatLongRunGateReportMarkdown(report: LongRunGateReport): string {
     "",
     "## Worst Worlds",
     "",
-    "| Seed | Status | Min squad | Youth max | Below min | Youth above target | No GK | Top assist max | Creator snapshot | Warn checks | Fail checks |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
+    "| Seed | Status | Min squad | Youth max | Below min | Youth above target | No GK | Top assist max | Table spread snapshot | Creator snapshot | Warn checks | Fail checks |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|",
     ...report.worstWorlds.map(
       (world) =>
-        `| \`${world.seed}\` | ${world.status.toUpperCase()} | ${world.minimumSquadSizeObserved} | ${world.maximumYouthRosterSizeObserved} | ${world.clubsBelowMinimumSquadSizeCount} | ${world.clubsAboveYouthTargetCount} | ${world.clubsWithoutNaturalGoalkeeperCount} | ${world.topAssistMax} | season ${world.topCreatorSeasonNumber}; ${world.topCreatorClubName}; ${world.topCreatorName}; assists ${world.topCreatorAssists}; team goals ${world.topCreatorClubGoals}; top1 ${world.topCreatorGoalShareMax.toFixed(2)}; top3 ${world.topThreeCreatorGoalShareMax.toFixed(2)}; top assist ${world.topAssistName}; top scorer ${world.topScorerName}:${world.topScorerGoals} | ${world.warningCheckKeys.join(", ") || "none"} | ${world.failingCheckKeys.join(", ") || "none"} |`,
+      `| \`${world.seed}\` | ${world.status.toUpperCase()} | ${world.minimumSquadSizeObserved} | ${world.maximumYouthRosterSizeObserved} | ${world.clubsBelowMinimumSquadSizeCount} | ${world.clubsAboveYouthTargetCount} | ${world.clubsWithoutNaturalGoalkeeperCount} | ${world.topAssistMax} | avg ${world.tablePointsSpreadAverage.toFixed(2)}; min ${world.tablePointsSpreadMin}; max ${world.tablePointsSpreadMax}; low season ${world.lowestTableSpreadSeasonNumber}; champion pts ${world.firstPlacePointsMin}..${world.firstPlacePointsMax}; last pts ${world.lastPlacePointsMin}..${world.lastPlacePointsMax}; ability spread ${world.initialClubAbilitySpread.toFixed(2)}->${world.finalClubAbilitySpread.toFixed(2)}; draw rate avg/max ${world.drawRateAverage.toFixed(3)}/${world.drawRateMax.toFixed(3)} | season ${world.topCreatorSeasonNumber}; ${world.topCreatorClubName}; ${world.topCreatorName}; assists ${world.topCreatorAssists}; team goals ${world.topCreatorClubGoals}; top1 ${world.topCreatorGoalShareMax.toFixed(2)}; top3 ${world.topThreeCreatorGoalShareMax.toFixed(2)}; top assist ${world.topAssistName}; top scorer ${world.topScorerName}:${world.topScorerGoals} | ${world.warningCheckKeys.join(", ") || "none"} | ${world.failingCheckKeys.join(", ") || "none"} |`,
     ),
     "",
     "## Reproduction",
@@ -587,7 +833,7 @@ function formatLongRunGateReportMarkdown(report: LongRunGateReport): string {
     "Run the same gate with:",
     "",
     "```bash",
-    `pnpm cli ten-season-report --seed-prefix=${report.seedPrefix} --worlds=${report.worldCount} --seasons=${report.seasonCount} --report-output=docs/audits/CAREER_SQUAD_REFRESH_LONG_RUN_GATES_REPORT.md`,
+    `pnpm cli ten-season-report --seed-prefix=${report.seedPrefix} --worlds=${report.worldCount} --seasons=${report.seasonCount} --report-output=${reportOutputPath}`,
     "```",
     "",
   ];
@@ -605,7 +851,7 @@ function formatWorstGateWorldLines(worlds: readonly LongRunGateWorldSummary[]): 
 
   return worlds.map(
     (world) =>
-      `  ${world.seed} status=${world.status} min_squad=${world.minimumSquadSizeObserved} youth_max=${world.maximumYouthRosterSizeObserved} below_min=${world.clubsBelowMinimumSquadSizeCount} youth_above_target=${world.clubsAboveYouthTargetCount} youth_below_min=${world.clubsBelowYouthMinimumCount} no_gk=${world.clubsWithoutNaturalGoalkeeperCount} top_assist_max=${world.topAssistMax} creator_snapshot=season:${world.topCreatorSeasonNumber},club:${world.topCreatorClubName},creator:${world.topCreatorName},assists:${world.topCreatorAssists},team_goals:${world.topCreatorClubGoals},top1:${world.topCreatorGoalShareMax.toFixed(2)},top3:${world.topThreeCreatorGoalShareMax.toFixed(2)},top_assist:${world.topAssistName},top_scorer:${world.topScorerName}:${world.topScorerGoals} warn_checks=${world.warningCheckKeys.join(",") || "none"} fail_checks=${world.failingCheckKeys.join(",") || "none"}`,
+      `  ${world.seed} status=${world.status} min_squad=${world.minimumSquadSizeObserved} youth_max=${world.maximumYouthRosterSizeObserved} below_min=${world.clubsBelowMinimumSquadSizeCount} youth_above_target=${world.clubsAboveYouthTargetCount} youth_below_min=${world.clubsBelowYouthMinimumCount} no_gk=${world.clubsWithoutNaturalGoalkeeperCount} top_assist_max=${world.topAssistMax} table_spread=avg:${world.tablePointsSpreadAverage.toFixed(2)},min:${world.tablePointsSpreadMin},max:${world.tablePointsSpreadMax},low_season:${world.lowestTableSpreadSeasonNumber},champion_pts:${world.firstPlacePointsMin}..${world.firstPlacePointsMax},last_pts:${world.lastPlacePointsMin}..${world.lastPlacePointsMax},ability_spread:${world.initialClubAbilitySpread.toFixed(2)}..${world.finalClubAbilitySpread.toFixed(2)} draw_rate=avg:${world.drawRateAverage.toFixed(3)},max:${world.drawRateMax.toFixed(3)},high_season:${world.highestDrawRateSeasonNumber} creator_snapshot=season:${world.topCreatorSeasonNumber},club:${world.topCreatorClubName},creator:${world.topCreatorName},assists:${world.topCreatorAssists},team_goals:${world.topCreatorClubGoals},top1:${world.topCreatorGoalShareMax.toFixed(2)},top3:${world.topThreeCreatorGoalShareMax.toFixed(2)},top_assist:${world.topAssistName},top_scorer:${world.topScorerName}:${world.topScorerGoals} warn_checks=${world.warningCheckKeys.join(",") || "none"} fail_checks=${world.failingCheckKeys.join(",") || "none"}`,
   );
 }
 
@@ -673,6 +919,7 @@ function formatTenSeasonReportOutput(
   clubStability: LongRunClubStabilityReport,
   youthStability: LongRunYouthStabilityReport,
   anomalyReport: LongRunAnomalyReport,
+  strengthHierarchy: ClubAbilityHierarchySummary,
   seed: string,
   seasonCount: number,
   text: Translator,
@@ -698,11 +945,33 @@ function formatTenSeasonReportOutput(
   }
 
   lines.push("", ...formatPlayerEvolutionLines(playerEvolution, text));
+  lines.push("", ...formatStrengthHierarchyLines(strengthHierarchy, text));
   lines.push("", ...formatClubStabilityLines(clubStability, text));
   lines.push("", ...formatYouthStabilityLines(youthStability, text));
   lines.push("", ...formatAnomalyLines(anomalyReport, text));
 
   return lines;
+}
+
+/**
+ * Formats the initial/final senior squad ability hierarchy for source review.
+ */
+function formatStrengthHierarchyLines(
+  strengthHierarchy: ClubAbilityHierarchySummary,
+  text: Translator,
+): readonly string[] {
+  return [
+    `${text("tenSeason.strengthHierarchy")}:`,
+    `  ${text("tenSeason.initialAbilitySpread")}: ${formatAbilityHierarchySnapshot(strengthHierarchy.initial)}`,
+    `  ${text("tenSeason.finalAbilitySpread")}: ${formatAbilityHierarchySnapshot(strengthHierarchy.final)}`,
+  ];
+}
+
+/**
+ * Formats one ability hierarchy snapshot as compact diagnostic text.
+ */
+function formatAbilityHierarchySnapshot(snapshot: ClubAbilityHierarchySnapshot): string {
+  return `spread=${snapshot.spread.toFixed(2)} top=${snapshot.top.clubName}:${snapshot.top.averageCurrentAbility.toFixed(2)} bottom=${snapshot.bottom.clubName}:${snapshot.bottom.averageCurrentAbility.toFixed(2)}`;
 }
 
 /**
@@ -715,13 +984,14 @@ function formatSeasonSummaryLine(
   text: Translator,
 ): string {
   const champion = season.result.table[0];
+  const lastPlace = season.result.table[season.result.table.length - 1];
   const selectedIndex = season.result.table.findIndex((row) => row.clubId === selectedClubId);
 
-  if (champion === undefined || selectedIndex < 0) {
+  if (champion === undefined || lastPlace === undefined || selectedIndex < 0) {
     throw new Error(`Cannot summarize long-run season: ${season.seasonNumber}`);
   }
 
-  return `  ${season.seasonNumber}. ${season.seasonSeed} ${text("tenSeason.champion")}=${clubLabel(league, champion.clubId)} ${text("tenSeason.points")}=${champion.points} ${text("tenSeason.selectedPosition")}=${selectedIndex + 1} ${text("tenSeason.goalsPerMatch")}=${goalsPerMatch(season).toFixed(3)}`;
+  return `  ${season.seasonNumber}. ${season.seasonSeed} ${text("tenSeason.champion")}=${clubLabel(league, champion.clubId)} ${text("tenSeason.points")}=${champion.points} ${text("tenSeason.lastPlacePoints")}=${lastPlace.points} ${text("tenSeason.tablePointsSpread")}=${champion.points - lastPlace.points} ${text("tenSeason.selectedPosition")}=${selectedIndex + 1} ${text("tenSeason.goalsPerMatch")}=${goalsPerMatch(season).toFixed(3)} ${text("tenSeason.drawRate")}=${drawRate(season).toFixed(3)}`;
 }
 
 /**
@@ -731,6 +1001,17 @@ function goalsPerMatch(season: LongRunSeasonResult): number {
   const totalGoals = season.result.table.reduce((sum, row) => sum + row.goalsFor, 0);
 
   return totalGoals / season.result.fixtures.length;
+}
+
+/**
+ * Calculates the share of completed fixtures that ended in a draw.
+ */
+function drawRate(season: LongRunSeasonResult): number {
+  const draws = season.result.fixtures.filter(
+    (fixture) => fixture.result !== undefined && fixture.result.homeGoals === fixture.result.awayGoals,
+  ).length;
+
+  return draws / season.result.fixtures.length;
 }
 
 /**

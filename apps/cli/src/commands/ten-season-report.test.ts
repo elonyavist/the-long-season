@@ -18,10 +18,17 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(io.stdoutLines.includes(`Seed: ${DEFAULT_TEN_SEASON_REPORT_SEED}`), true);
   assert.equal(io.stdoutLines.includes("Seasons: 10"), true);
   assert.equal(countSeasonSummaryRows(io.stdoutLines), 10);
+  assert.equal(
+    io.stdoutLines.some((line) => line.includes("last_pts=") && line.includes("table_spread=") && line.includes("draw_rate=")),
+    true,
+  );
   assert.equal(io.stdoutLines.includes("Player evolution:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Current ability avg:"), true);
   assert.equal(io.stdoutLines.includes("Production leaders:"), true);
   assert.equal(io.stdoutLines.some((line) => line.includes("Top creator=") && line.includes("creator_club=")), true);
+  assert.equal(io.stdoutLines.includes("Strength hierarchy:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Initial ability spread:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Final ability spread:"), true);
   assert.equal(io.stdoutLines.includes("Club stability:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Unique champions:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Transfer turnover: enabled"), true);
@@ -83,16 +90,28 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(firstReport, secondReport);
     assert.equal(first.stdoutLines.includes("The Long Season long-run gate report"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Worlds: 2"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Table spread avg/min:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Draw rate avg/max:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Youth roster max observed:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Clubs above youth target:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Failing check counts:"), true);
     assert.equal(first.stdoutLines.some((line) => line.includes("creator_snapshot=season:")), true);
+    assert.equal(
+      first.stdoutLines.some(
+        (line) => line.includes("table_spread=avg:") && line.includes("ability_spread:") && line.includes("draw_rate=avg:"),
+      ),
+      true,
+    );
     assert.equal(firstReport.includes("Worlds: 2"), true);
+    assert.equal(firstReport.includes("Table spread average:"), true);
+    assert.equal(firstReport.includes("Draw rate average:"), true);
     assert.equal(firstReport.includes("Youth roster max observed:"), true);
     assert.equal(firstReport.includes("Warning check counts:"), true);
     assert.equal(firstReport.includes("Warn checks"), true);
     assert.equal(firstReport.includes("Creator snapshot"), true);
+    assert.equal(firstReport.includes("Table spread snapshot"), true);
+    assert.equal(firstReport.includes(`--report-output=${reportPath}`), true);
     assert.equal(firstReport.includes("phase31-test-world-00001"), true);
   } finally {
     await rm(directoryPath, { recursive: true, force: true });

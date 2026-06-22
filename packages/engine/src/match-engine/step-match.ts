@@ -331,12 +331,26 @@ function deriveOpportunityRate(
   const homeFactor = attackingSide === "home" ? simulation.context.engineConfig.homeAdvantageFactor : 1;
   const attackingPressure = (attackingTeam.strength.attack * 0.65 + attackingTeam.strength.midfield * 0.35) * homeFactor;
   const defensiveResistance = defendingTeam.strength.defense * 0.65 + defendingTeam.strength.midfield * 0.25 + defendingTeam.strength.goalkeeper * 0.1;
-  const strengthModifier = clamp((attackingPressure - defensiveResistance) / 50, -0.6, 1.5);
+  const strengthModifier = clamp(
+    (attackingPressure - defensiveResistance) / OPPORTUNITY_STRENGTH_SEPARATION_DIVISOR,
+    -0.6,
+    1.5,
+  );
   const baseRate = simulation.context.engineConfig.rates.baseOpportunityRatePerMinute;
   const rate = baseRate * (1 + strengthModifier);
 
   return clamp(rate, 0, simulation.context.engineConfig.rates.maxOpportunityRatePerMinute);
 }
+
+/**
+ * Converts aggregate team-strength delta into chance-volume separation.
+ *
+ * Lower-division player ratings sit in a compact range, so using a very large
+ * divisor makes strong and weak teams generate nearly the same number of
+ * chances. This value increases result separation without touching configured
+ * shot-to-goal conversion probabilities.
+ */
+const OPPORTUNITY_STRENGTH_SEPARATION_DIVISOR = 16;
 
 /**
  * Applies one resolved opportunity to accumulated stats.

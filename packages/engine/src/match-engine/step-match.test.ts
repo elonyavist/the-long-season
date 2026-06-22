@@ -54,6 +54,10 @@ test("stronger teams produce more shots or goals over a deterministic sample", (
   const weakOutput = weakSample.stats.home.shots + weakSample.stats.home.goals;
 
   assert.ok(strongOutput > weakOutput, `expected strong home output ${strongOutput} to beat weak home output ${weakOutput}`);
+  assert.ok(
+    strongOutput >= weakOutput * 1.3,
+    `expected strength separation to be material, got strong=${strongOutput} weak=${weakOutput}`,
+  );
 });
 
 test("home and away processing order does not always favor the same side", () => {

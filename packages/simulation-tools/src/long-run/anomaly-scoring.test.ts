@@ -68,6 +68,60 @@ test("createLongRunAnomalyReport scales rare production maxima on thirty-season 
   assert.equal(report.checks.find((check) => check.key === "champion_streak")?.status, "warn");
 });
 
+test("createLongRunAnomalyReport treats seven-title smoke streaks as warnings", () => {
+  const report = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.8, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 13, topShare: 0.24, topThreeShare: 0.45, seasonCount: 10 }),
+    clubStability: {
+      ...clubStability({ streak: 7, seasonCount: 10 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 40,
+      playerExitCount: 190,
+      squadMaintenanceAddedCount: 40,
+    },
+  });
+
+  assert.equal(report.status, "warn");
+  assert.equal(report.checks.find((check) => check.key === "champion_streak")?.status, "warn");
+});
+
+test("createLongRunAnomalyReport still fails extreme smoke champion streaks", () => {
+  const report = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.8, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 13, topShare: 0.24, topThreeShare: 0.45, seasonCount: 10 }),
+    clubStability: {
+      ...clubStability({ streak: 8, seasonCount: 10 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 40,
+      playerExitCount: 190,
+      squadMaintenanceAddedCount: 40,
+    },
+  });
+
+  assert.equal(report.status, "fail");
+  assert.equal(report.checks.find((check) => check.key === "champion_streak")?.status, "fail");
+});
+
+test("createLongRunAnomalyReport keeps thirty-season champion streak failure threshold unchanged", () => {
+  const report = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.8, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 13, topShare: 0.24, topThreeShare: 0.45, seasonCount: 30 }),
+    clubStability: {
+      ...clubStability({ streak: 9, seasonCount: 30 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 120,
+      playerExitCount: 700,
+      squadMaintenanceAddedCount: 700,
+    },
+  });
+
+  assert.equal(report.status, "fail");
+  assert.equal(report.checks.find((check) => check.key === "champion_streak")?.status, "fail");
+});
+
 test("createLongRunAnomalyReport fails structural squad collapse", () => {
   const report = createLongRunAnomalyReport({
     balance: [{ goalsPerMatch: 2.7, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],

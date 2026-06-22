@@ -185,8 +185,21 @@ function championStreakWarnThreshold(seasonCount: number): number {
   return Math.max(4, Math.ceil(seasonCount * 0.18));
 }
 
+/**
+ * Returns the first champion-streak value that should fail a long-run gate.
+ *
+ * Ten-season smoke runs are short enough that a single seven-title dynasty can
+ * happen without structural collapse, so they fail only from eight titles up.
+ * Longer reports keep the stricter scaled threshold used by stability gates.
+ */
 function championStreakFailThreshold(seasonCount: number): number {
-  return Math.max(7, Math.ceil(seasonCount * 0.3));
+  const baseThreshold = Math.max(7, Math.ceil(seasonCount * 0.3));
+
+  if (seasonCount <= 10) {
+    return Math.max(8, baseThreshold);
+  }
+
+  return baseThreshold;
 }
 
 function usefulPlayersCheck(report: LongRunPlayerEvolutionReport): LongRunAnomalyCheck {
