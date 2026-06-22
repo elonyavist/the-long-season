@@ -17,11 +17,31 @@ import type { LineupSlot } from "./team-strength.ts";
 const CHANCE_ACTORS_STREAM = "chance-actors";
 
 /** Role weights used when choosing the chance creator from the attacking lineup. */
-const CREATOR_ROLE_WEIGHTS: Readonly<Record<string, number>> = {
-  attacker: 3,
-  midfielder: 5,
-  defender: 1,
-  gk: 0,
+const CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE: Readonly<Record<ShotChanceType, Readonly<Record<string, number>>>> = {
+  open_play: {
+    attacker: 3,
+    midfielder: 4,
+    defender: 1,
+    gk: 0,
+  },
+  counter: {
+    attacker: 5,
+    midfielder: 2,
+    defender: 1,
+    gk: 0,
+  },
+  cross: {
+    attacker: 3,
+    midfielder: 2,
+    defender: 3,
+    gk: 0,
+  },
+  dead_ball: {
+    attacker: 2,
+    midfielder: 3,
+    defender: 2,
+    gk: 0,
+  },
 };
 
 /** Role weights used when choosing the shooter from the attacking lineup. */
@@ -103,7 +123,8 @@ export interface ChanceActors {
  * });
  */
 export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors {
-  const creatorCandidates = weightedCandidates(input.attackingTeam.lineup, chanceCreatorWeightForRole);
+  const creatorWeightForRole = (roleKey: string): number => chanceCreatorWeightForRole(roleKey, input.chanceType);
+  const creatorCandidates = weightedCandidates(input.attackingTeam.lineup, creatorWeightForRole);
   const shooterCandidates = weightedCandidates(input.attackingTeam.lineup, chanceShooterWeightForRole);
   const defenderCandidates = weightedCandidates(input.defendingTeam.lineup, primaryDefenderWeightForRole);
   const goalkeeperPlayerId = selectGoalkeeper(input.defendingTeam);
@@ -127,7 +148,7 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
     input.shotType,
     input.chanceType,
   );
-  const creatorPlayerId = pickWeightedPlayer(creatorCandidates, chanceCreatorWeightForRole, rng.nextFloat());
+  const creatorPlayerId = pickWeightedPlayer(creatorCandidates, creatorWeightForRole, rng.nextFloat());
   const shooterPool = excludePlayerWhenPossible(shooterCandidates, creatorPlayerId);
 
   return {
@@ -141,14 +162,16 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
 /**
  * Returns the creator weight for a role key.
  *
- * Midfielders are favored as creators, attackers remain common, defenders are
- * rare, and goalkeepers are excluded from attacking creation.
+ * Creator weights vary by chance type so goal creation does not always flow
+ * through the same broad midfield pool. Open play still favors midfielders;
+ * counters favor attackers; crosses give defenders and attackers more share;
+ * dead balls keep a mixed outfield pool. Goalkeepers are excluded.
  *
  * @example
- * const weight = chanceCreatorWeightForRole("midfielder");
+ * const weight = chanceCreatorWeightForRole("midfielder", "open_play");
  */
-export function chanceCreatorWeightForRole(roleKey: string): number {
-  return CREATOR_ROLE_WEIGHTS[roleKey] ?? DEFAULT_OUTFIELD_ROLE_WEIGHT;
+export function chanceCreatorWeightForRole(roleKey: string, chanceType: ShotChanceType = "open_play"): number {
+  return CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE[chanceType][roleKey] ?? DEFAULT_OUTFIELD_ROLE_WEIGHT;
 }
 
 /**

@@ -21,6 +21,7 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(io.stdoutLines.includes("Player evolution:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Current ability avg:"), true);
   assert.equal(io.stdoutLines.includes("Production leaders:"), true);
+  assert.equal(io.stdoutLines.some((line) => line.includes("Top creator=") && line.includes("creator_club=")), true);
   assert.equal(io.stdoutLines.includes("Club stability:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Unique champions:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Transfer turnover: enabled"), true);
@@ -86,10 +87,12 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(hasLineStartingWith(first.stdoutLines, "Clubs above youth target:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Failing check counts:"), true);
+    assert.equal(first.stdoutLines.some((line) => line.includes("creator_snapshot=season:")), true);
     assert.equal(firstReport.includes("Worlds: 2"), true);
     assert.equal(firstReport.includes("Youth roster max observed:"), true);
     assert.equal(firstReport.includes("Warning check counts:"), true);
     assert.equal(firstReport.includes("Warn checks"), true);
+    assert.equal(firstReport.includes("Creator snapshot"), true);
     assert.equal(firstReport.includes("phase31-test-world-00001"), true);
   } finally {
     await rm(directoryPath, { recursive: true, force: true });

@@ -171,6 +171,26 @@ interface LongRunGateWorldSummary {
   readonly goalsPerMatchAverage: number;
   /** Maximum top-assist count observed across this world run. */
   readonly topAssistMax: number;
+  /** Season number where the strongest creator concentration happened. */
+  readonly topCreatorSeasonNumber: number;
+  /** Creator-concentration club name for compact gate diagnostics. */
+  readonly topCreatorClubName: string;
+  /** Creator name for compact gate diagnostics. */
+  readonly topCreatorName: string;
+  /** Creator assists for the concentration snapshot. */
+  readonly topCreatorAssists: number;
+  /** Goals scored by the creator's club in the concentration snapshot. */
+  readonly topCreatorClubGoals: number;
+  /** Highest single-creator club-goal share observed in this world. */
+  readonly topCreatorGoalShareMax: number;
+  /** Highest top-three creator club-goal share observed in this world. */
+  readonly topThreeCreatorGoalShareMax: number;
+  /** Global top-assist player name in the creator-concentration season. */
+  readonly topAssistName: string;
+  /** Global top-scorer player name in the creator-concentration season. */
+  readonly topScorerName: string;
+  /** Global top-scorer goals in the creator-concentration season. */
+  readonly topScorerGoals: number;
   /** Final share of players aged 30 or older. */
   readonly age30PlusShare: number;
   /** Total transfer-turnover movements. */
@@ -320,12 +340,23 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
     report.playerEvolutionReport.finalAgeUnder22 +
     report.playerEvolutionReport.finalAge22To29 +
     report.playerEvolutionReport.finalAge30Plus;
+  const concentration = topCreatorConcentrationProductionRow(report.playerEvolutionReport.production);
 
   return {
     seed: report.seed,
     status: worstReportStatus([report.anomalyReport.status, report.youthStabilityReport.status]),
     goalsPerMatchAverage: roundReportNumber(average(balanceSeasonRows(report.seasons).map((season) => season.goalsPerMatch))),
     topAssistMax: Math.max(...report.playerEvolutionReport.production.map((row) => row.topAssists), 0),
+    topCreatorSeasonNumber: concentration?.seasonNumber ?? 0,
+    topCreatorClubName: concentration?.topCreatorClubName ?? "unavailable",
+    topCreatorName: concentration?.topCreatorName ?? "unavailable",
+    topCreatorAssists: concentration?.topCreatorAssists ?? 0,
+    topCreatorClubGoals: concentration?.topCreatorClubGoals ?? 0,
+    topCreatorGoalShareMax: concentration?.topAssistClubGoalShare ?? 0,
+    topThreeCreatorGoalShareMax: concentration?.topThreeAssistClubGoalShare ?? 0,
+    topAssistName: concentration?.topAssistName ?? "unavailable",
+    topScorerName: concentration?.topScorerName ?? "unavailable",
+    topScorerGoals: concentration?.topScorerGoals ?? 0,
     age30PlusShare: finalAgeTotal === 0 ? 0 : roundReportNumber(report.playerEvolutionReport.finalAge30Plus / finalAgeTotal),
     transferTurnoverCount: report.clubStabilityReport.transferTurnoverCount,
     squadTurnoverCount:
@@ -348,6 +379,30 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
       ...report.youthStabilityReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
     ],
   };
+}
+
+/**
+ * Finds the production row that drives the maximum single-creator share.
+ */
+function topCreatorConcentrationProductionRow(
+  rows: readonly LongRunPlayerProductionRow[],
+): LongRunPlayerProductionRow | undefined {
+  let best: LongRunPlayerProductionRow | undefined;
+
+  for (const row of rows) {
+    if (
+      best === undefined ||
+      row.topAssistClubGoalShare > best.topAssistClubGoalShare ||
+      (row.topAssistClubGoalShare === best.topAssistClubGoalShare && row.topCreatorAssists > best.topCreatorAssists) ||
+      (row.topAssistClubGoalShare === best.topAssistClubGoalShare &&
+        row.topCreatorAssists === best.topCreatorAssists &&
+        row.seasonNumber < best.seasonNumber)
+    ) {
+      best = row;
+    }
+  }
+
+  return best;
 }
 
 /**
@@ -520,11 +575,11 @@ function formatLongRunGateReportMarkdown(report: LongRunGateReport): string {
     "",
     "## Worst Worlds",
     "",
-    "| Seed | Status | Min squad | Youth max | Below min | Youth above target | No GK | Top assist max | Warn checks | Fail checks |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---|---|",
+    "| Seed | Status | Min squad | Youth max | Below min | Youth above target | No GK | Top assist max | Creator snapshot | Warn checks | Fail checks |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ...report.worstWorlds.map(
       (world) =>
-        `| \`${world.seed}\` | ${world.status.toUpperCase()} | ${world.minimumSquadSizeObserved} | ${world.maximumYouthRosterSizeObserved} | ${world.clubsBelowMinimumSquadSizeCount} | ${world.clubsAboveYouthTargetCount} | ${world.clubsWithoutNaturalGoalkeeperCount} | ${world.topAssistMax} | ${world.warningCheckKeys.join(", ") || "none"} | ${world.failingCheckKeys.join(", ") || "none"} |`,
+        `| \`${world.seed}\` | ${world.status.toUpperCase()} | ${world.minimumSquadSizeObserved} | ${world.maximumYouthRosterSizeObserved} | ${world.clubsBelowMinimumSquadSizeCount} | ${world.clubsAboveYouthTargetCount} | ${world.clubsWithoutNaturalGoalkeeperCount} | ${world.topAssistMax} | season ${world.topCreatorSeasonNumber}; ${world.topCreatorClubName}; ${world.topCreatorName}; assists ${world.topCreatorAssists}; team goals ${world.topCreatorClubGoals}; top1 ${world.topCreatorGoalShareMax.toFixed(2)}; top3 ${world.topThreeCreatorGoalShareMax.toFixed(2)}; top assist ${world.topAssistName}; top scorer ${world.topScorerName}:${world.topScorerGoals} | ${world.warningCheckKeys.join(", ") || "none"} | ${world.failingCheckKeys.join(", ") || "none"} |`,
     ),
     "",
     "## Reproduction",
@@ -550,7 +605,7 @@ function formatWorstGateWorldLines(worlds: readonly LongRunGateWorldSummary[]): 
 
   return worlds.map(
     (world) =>
-      `  ${world.seed} status=${world.status} min_squad=${world.minimumSquadSizeObserved} youth_max=${world.maximumYouthRosterSizeObserved} below_min=${world.clubsBelowMinimumSquadSizeCount} youth_above_target=${world.clubsAboveYouthTargetCount} youth_below_min=${world.clubsBelowYouthMinimumCount} no_gk=${world.clubsWithoutNaturalGoalkeeperCount} top_assist_max=${world.topAssistMax} warn_checks=${world.warningCheckKeys.join(",") || "none"} fail_checks=${world.failingCheckKeys.join(",") || "none"}`,
+      `  ${world.seed} status=${world.status} min_squad=${world.minimumSquadSizeObserved} youth_max=${world.maximumYouthRosterSizeObserved} below_min=${world.clubsBelowMinimumSquadSizeCount} youth_above_target=${world.clubsAboveYouthTargetCount} youth_below_min=${world.clubsBelowYouthMinimumCount} no_gk=${world.clubsWithoutNaturalGoalkeeperCount} top_assist_max=${world.topAssistMax} creator_snapshot=season:${world.topCreatorSeasonNumber},club:${world.topCreatorClubName},creator:${world.topCreatorName},assists:${world.topCreatorAssists},team_goals:${world.topCreatorClubGoals},top1:${world.topCreatorGoalShareMax.toFixed(2)},top3:${world.topThreeCreatorGoalShareMax.toFixed(2)},top_assist:${world.topAssistName},top_scorer:${world.topScorerName}:${world.topScorerGoals} warn_checks=${world.warningCheckKeys.join(",") || "none"} fail_checks=${world.failingCheckKeys.join(",") || "none"}`,
   );
 }
 
@@ -700,7 +755,7 @@ function formatPlayerEvolutionLines(report: LongRunPlayerEvolutionReport, text: 
 
   for (const production of report.production) {
     lines.push(
-      `  ${production.seasonNumber}. ${text("season.topScorer")}=${production.topScorerName} ${text("season.unit.goal.many")}=${production.topScorerGoals} ${text("season.topAssist")}=${production.topAssistName} ${text("season.unit.assist.many")}=${production.topAssists} 12+=${production.assistPlayersAtLeastTwelve} top1_share=${production.topAssistClubGoalShare.toFixed(2)} top3_share=${production.topThreeAssistClubGoalShare.toFixed(2)}`,
+      `  ${production.seasonNumber}. ${text("season.topScorer")}=${production.topScorerName} ${text("season.unit.goal.many")}=${production.topScorerGoals} ${text("season.topAssist")}=${production.topAssistName} ${text("season.unit.assist.many")}=${production.topAssists} ${text("tenSeason.topCreator")}=${production.topCreatorName} ${text("tenSeason.creatorClub")}=${production.topCreatorClubName} ${text("tenSeason.teamGoals")}=${production.topCreatorClubGoals} ${text("tenSeason.clubTopScorer")}=${production.topCreatorClubTopScorerName}:${production.topCreatorClubTopScorerGoals} 12+=${production.assistPlayersAtLeastTwelve} top1_share=${production.topAssistClubGoalShare.toFixed(2)} top3_share=${production.topThreeAssistClubGoalShare.toFixed(2)}`,
     );
   }
 
@@ -1059,6 +1114,8 @@ function productionRows(
   return seasons.map((season) => {
     const topScorer = season.result.playerGoalStats[0];
     const topAssist = topAssistRow(season);
+    const topCreator = topCreatorShareRow(season);
+    const topCreatorClubTopScorer = topCreatorClubScorerRow(season, topCreator?.clubId);
 
     return {
       seasonNumber: season.seasonNumber,
@@ -1066,6 +1123,13 @@ function productionRows(
       topScorerGoals: topScorer?.goals ?? 0,
       topAssistName: topAssist === undefined ? text("common.unavailable") : playerNameById(careerState, topAssist.playerId),
       topAssists: topAssist?.assists ?? 0,
+      topCreatorClubName: topCreator === undefined ? text("common.unavailable") : clubNameById(careerState, topCreator.clubId),
+      topCreatorName: topCreator === undefined ? text("common.unavailable") : playerNameById(careerState, topCreator.playerId),
+      topCreatorAssists: topCreator?.assists ?? 0,
+      topCreatorClubGoals: topCreator?.clubGoals ?? 0,
+      topCreatorClubTopScorerName:
+        topCreatorClubTopScorer === undefined ? text("common.unavailable") : playerNameById(careerState, topCreatorClubTopScorer.playerId),
+      topCreatorClubTopScorerGoals: topCreatorClubTopScorer?.goals ?? 0,
       assistPlayersAtLeastFive: assistDepth(season, 5),
       assistPlayersAtLeastEight: assistDepth(season, 8),
       assistPlayersAtLeastTen: assistDepth(season, 10),
@@ -1074,6 +1138,72 @@ function productionRows(
       topThreeAssistClubGoalShare: maxTopThreeAssistShare(season),
     };
   });
+}
+
+/**
+ * Finds the player with the highest share of their own club's goals created by
+ * assists. This is diagnostic output only; anomaly thresholds still live in
+ * simulation-tools.
+ */
+function topCreatorShareRow(
+  season: LongRunSeasonResult,
+): (LongRunSeasonResult["result"]["playerSummaryStats"][number] & { readonly clubGoals: number; readonly creatorShare: number }) | undefined {
+  let best:
+    | (LongRunSeasonResult["result"]["playerSummaryStats"][number] & { readonly clubGoals: number; readonly creatorShare: number })
+    | undefined;
+
+  for (const row of season.result.playerSummaryStats) {
+    const clubGoals = season.result.table.find((tableRow) => tableRow.clubId === row.clubId)?.goalsFor ?? 0;
+
+    if (clubGoals <= 0) {
+      continue;
+    }
+
+    const candidate = {
+      ...row,
+      clubGoals,
+      creatorShare: row.assists / clubGoals,
+    };
+
+    if (
+      best === undefined ||
+      candidate.creatorShare > best.creatorShare ||
+      (candidate.creatorShare === best.creatorShare && candidate.assists > best.assists) ||
+      (candidate.creatorShare === best.creatorShare &&
+        candidate.assists === best.assists &&
+        String(candidate.playerId) < String(best.playerId))
+    ) {
+      best = candidate;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Finds the top scorer in the same club as a creator-concentration row.
+ */
+function topCreatorClubScorerRow(
+  season: LongRunSeasonResult,
+  clubId: LongRunSeasonResult["result"]["playerSummaryStats"][number]["clubId"] | undefined,
+): LongRunSeasonResult["result"]["playerSummaryStats"][number] | undefined {
+  if (clubId === undefined) {
+    return undefined;
+  }
+
+  let best: LongRunSeasonResult["result"]["playerSummaryStats"][number] | undefined;
+
+  for (const row of season.result.playerSummaryStats) {
+    if (row.clubId !== clubId) {
+      continue;
+    }
+
+    if (best === undefined || row.goals > best.goals || (row.goals === best.goals && String(row.playerId) < String(best.playerId))) {
+      best = row;
+    }
+  }
+
+  return best;
 }
 
 /**
@@ -1089,6 +1219,13 @@ function topAssistRow(season: LongRunSeasonResult): LongRunSeasonResult["result"
   }
 
   return best;
+}
+
+/**
+ * Reads a club name from the report career state.
+ */
+function clubNameById(careerState: CliCareerState, clubId: CliCareerState["gameState"]["clubIds"][number]): string {
+  return careerState.gameState.clubs[clubId]?.name ?? String(clubId);
 }
 
 /**

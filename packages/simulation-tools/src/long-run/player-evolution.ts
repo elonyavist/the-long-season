@@ -24,6 +24,18 @@ export interface LongRunPlayerProductionRow {
   readonly topAssistName: string;
   /** Top assist count for this season. */
   readonly topAssists: number;
+  /** Club where the highest single creator share happened. */
+  readonly topCreatorClubName: string;
+  /** Player responsible for the highest single creator share. */
+  readonly topCreatorName: string;
+  /** Assists credited to the highest-share creator. */
+  readonly topCreatorAssists: number;
+  /** Goals scored by the highest-share creator's club. */
+  readonly topCreatorClubGoals: number;
+  /** Leading scorer from the same club as the highest-share creator. */
+  readonly topCreatorClubTopScorerName: string;
+  /** Goals scored by that same-club leading scorer. */
+  readonly topCreatorClubTopScorerGoals: number;
   /** Players with at least five assists. */
   readonly assistPlayersAtLeastFive: number;
   /** Players with at least eight assists. */

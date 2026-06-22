@@ -104,6 +104,13 @@ test("role weights favor expected outfield responsibilities and exclude goalkeep
   assert.equal(primaryDefenderWeightForRole("gk"), 0);
 });
 
+test("creator weights vary by chance type to avoid one fixed creator pool", () => {
+  assert.ok(chanceCreatorWeightForRole("attacker", "counter") > chanceCreatorWeightForRole("midfielder", "counter"));
+  assert.ok(chanceCreatorWeightForRole("defender", "cross") > chanceCreatorWeightForRole("midfielder", "cross"));
+  assert.ok(chanceCreatorWeightForRole("midfielder", "open_play") > chanceCreatorWeightForRole("defender", "open_play"));
+  assert.equal(chanceCreatorWeightForRole("gk", "dead_ball"), 0);
+});
+
 /**
  * Builds one deterministic chance-actor selection input.
  */
