@@ -40,6 +40,7 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Clubs without natural goalkeeper:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "Youth academy stability:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Active players senior/youth/total:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Active players min/max:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth roster min/avg/max:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth intake:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth exits:"), true);
@@ -92,9 +93,13 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(hasLineStartingWith(first.stdoutLines, "Worlds: 2"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Table spread avg/min:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Draw rate avg/max:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Champion streak max:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Production warning max:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Youth roster max observed:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Active players min/max:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Clubs above youth target:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Signal check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Failing check counts:"), true);
     assert.equal(first.stdoutLines.some((line) => line.includes("creator_snapshot=season:")), true);
     assert.equal(
@@ -106,8 +111,15 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(firstReport.includes("Worlds: 2"), true);
     assert.equal(firstReport.includes("Table spread average:"), true);
     assert.equal(firstReport.includes("Draw rate average:"), true);
+    assert.equal(firstReport.includes("Champion streak max observed:"), true);
+    assert.equal(firstReport.includes("Production warning max:"), true);
+    assert.equal(firstReport.includes("Production Warning Snapshots"), true);
+    assert.equal(firstReport.includes("Dynasty Warning Snapshots"), true);
+    assert.equal(firstReport.includes("Table Spread Warning Snapshots"), true);
     assert.equal(firstReport.includes("Youth roster max observed:"), true);
+    assert.equal(firstReport.includes("Active player count min/max:"), true);
     assert.equal(firstReport.includes("Warning check counts:"), true);
+    assert.equal(firstReport.includes("Signal check counts:"), true);
     assert.equal(firstReport.includes("Warn checks"), true);
     assert.equal(firstReport.includes("Creator snapshot"), true);
     assert.equal(firstReport.includes("Table spread snapshot"), true);

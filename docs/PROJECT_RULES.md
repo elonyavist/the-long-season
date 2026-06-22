@@ -55,6 +55,14 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Attribute generation must be role-coherent: ordinary defenders, attackers, midfielders, and goalkeepers must not receive high values in irrelevant attributes without an explicit archetype, cap exception, and test coverage.
 - Current ability and potential are separate concepts. A lower-division prospect may have high future potential without already being a first-division-ready player.
 
+## Gameplay Quality Rules
+
+- User fun, football credibility, readability, and emergent stories are the goal; math is a diagnostic tool, not the design objective.
+- A warning, anomaly, or outlier must be evaluated first as a player-facing experience: healthy narrative variance, useful monitoring signal, bad threshold semantics, missing diagnostics, or real engine/content/career logic issue.
+- Do not tune systems just to make reports greener. Change behavior only when the evidence shows that the current result hurts long-run credibility, user agency, or the quality of football stories.
+- Do not remove believable variance. Standout players, tight leagues, dynasties, collapses, and surprise seasons are desirable when they are rare, explainable, and football-plausible.
+- Any proposed fix must state the user-facing reason before the mathematical reason.
+
 ## Step Discipline Rules
 
 - Work on exactly one documented step at a time.

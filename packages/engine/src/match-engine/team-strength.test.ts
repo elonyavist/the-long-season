@@ -69,6 +69,101 @@ test("department weights affect the correct department", () => {
   assert.equal(strength.midfield, 0);
 });
 
+test("role-relevant improvements move the expected department only", () => {
+  const attackerId = playerId("player:000001");
+  const defenderId = playerId("player:000002");
+  const midfielderId = playerId("player:000003");
+  const goalkeeperId = playerId("player:000004");
+  const baseInput = departmentInput({
+    attacker: makePlayer(attackerId, 10),
+    defender: makePlayer(defenderId, 10),
+    midfielder: makePlayer(midfielderId, 10),
+    goalkeeper: makePlayer(goalkeeperId, 10),
+  });
+
+  const base = deriveTeamStrength(baseInput);
+  const strikerBoost = deriveTeamStrength(
+    departmentInput({
+      attacker: makePlayer(attackerId, 10, { finishing: 16, composure: 16, pace: 16 }),
+      defender: makePlayer(defenderId, 10),
+      midfielder: makePlayer(midfielderId, 10),
+      goalkeeper: makePlayer(goalkeeperId, 10),
+    }),
+  );
+  const defenderBoost = deriveTeamStrength(
+    departmentInput({
+      attacker: makePlayer(attackerId, 10),
+      defender: makePlayer(defenderId, 10, { tackling: 16, positioning: 16, anticipation: 16 }),
+      midfielder: makePlayer(midfielderId, 10),
+      goalkeeper: makePlayer(goalkeeperId, 10),
+    }),
+  );
+  const midfielderBoost = deriveTeamStrength(
+    departmentInput({
+      attacker: makePlayer(attackerId, 10),
+      defender: makePlayer(defenderId, 10),
+      midfielder: makePlayer(midfielderId, 10, { passing: 16, vision: 16, stamina: 16 }),
+      goalkeeper: makePlayer(goalkeeperId, 10),
+    }),
+  );
+  const goalkeeperBoost = deriveTeamStrength(
+    departmentInput({
+      attacker: makePlayer(attackerId, 10),
+      defender: makePlayer(defenderId, 10),
+      midfielder: makePlayer(midfielderId, 10),
+      goalkeeper: makePlayer(goalkeeperId, 10, {
+        goalkeeperPositioning: 16,
+        handling: 16,
+        reflexes: 16,
+      }),
+    }),
+  );
+
+  assert.equal(strikerBoost.attack > base.attack, true);
+  assert.equal(strikerBoost.defense, base.defense);
+  assert.equal(defenderBoost.defense > base.defense, true);
+  assert.equal(defenderBoost.attack, base.attack);
+  assert.equal(midfielderBoost.midfield > base.midfield, true);
+  assert.equal(midfielderBoost.goalkeeper, base.goalkeeper);
+  assert.equal(goalkeeperBoost.goalkeeper > base.goalkeeper, true);
+  assert.equal(goalkeeperBoost.midfield, base.midfield);
+});
+
+test("irrelevant cross-role attributes do not dominate role score", () => {
+  const attackerId = playerId("player:000001");
+  const defenderId = playerId("player:000002");
+  const midfielderId = playerId("player:000003");
+  const goalkeeperId = playerId("player:000004");
+  const baseInput = departmentInput({
+    attacker: makePlayer(attackerId, 10),
+    defender: makePlayer(defenderId, 10),
+    midfielder: makePlayer(midfielderId, 10),
+    goalkeeper: makePlayer(goalkeeperId, 10),
+  });
+
+  const base = deriveTeamStrength(baseInput);
+  const irrelevantOutfieldBoost = deriveTeamStrength(
+    departmentInput({
+      attacker: makePlayer(attackerId, 10, { tackling: 20 }),
+      defender: makePlayer(defenderId, 10, { finishing: 20 }),
+      midfielder: makePlayer(midfielderId, 10),
+      goalkeeper: makePlayer(goalkeeperId, 10),
+    }),
+  );
+  const irrelevantGoalkeeperBoost = deriveTeamStrength(
+    departmentInput({
+      attacker: makePlayer(attackerId, 10),
+      defender: makePlayer(defenderId, 10),
+      midfielder: makePlayer(midfielderId, 10),
+      goalkeeper: makePlayer(goalkeeperId, 10, { finishing: 20, tackling: 20 }),
+    }),
+  );
+
+  assert.equal(irrelevantOutfieldBoost.attack, base.attack);
+  assert.equal(irrelevantOutfieldBoost.defense, base.defense);
+  assert.equal(irrelevantGoalkeeperBoost.goalkeeper, base.goalkeeper);
+});
+
 test("input arrays are not mutated", () => {
   const input = onePlayerInput(makePlayer(playerId("player:000001"), 10));
   const lineupBefore = [...input.lineup];
@@ -204,11 +299,7 @@ function onePlayerInput(player: Player): DeriveTeamStrengthInput {
 /**
  * Builds a player with repeated abilities and optional targeted overrides.
  */
-function makePlayer(
-  id: PlayerId,
-  baseAbility: number,
-  overrides: { readonly finishing?: number; readonly tackling?: number } = {},
-): Player {
+function makePlayer(id: PlayerId, baseAbility: number, overrides: AbilityOverrides = {}): Player {
   const abilities = abilitySet(baseAbility, overrides);
 
   return {
@@ -222,12 +313,105 @@ function makePlayer(
   };
 }
 
+/** Targeted ability overrides used by sensitivity tests. */
+interface AbilityOverrides {
+  readonly anticipation?: number;
+  readonly composure?: number;
+  readonly finishing?: number;
+  readonly goalkeeperPositioning?: number;
+  readonly handling?: number;
+  readonly pace?: number;
+  readonly passing?: number;
+  readonly positioning?: number;
+  readonly reflexes?: number;
+  readonly stamina?: number;
+  readonly tackling?: number;
+  readonly vision?: number;
+}
+
+/**
+ * Builds a four-player input with content-like broad role weights.
+ */
+function departmentInput(players: {
+  readonly attacker: Player;
+  readonly defender: Player;
+  readonly midfielder: Player;
+  readonly goalkeeper: Player;
+}): DeriveTeamStrengthInput {
+  return {
+    lineup: [
+      { slotId: "slot:gk", playerId: players.goalkeeper.id, roleKey: "gk" },
+      { slotId: "slot:def", playerId: players.defender.id, roleKey: "defender" },
+      { slotId: "slot:mid", playerId: players.midfielder.id, roleKey: "midfielder" },
+      { slotId: "slot:att", playerId: players.attacker.id, roleKey: "attacker" },
+    ],
+    players: {
+      [players.attacker.id]: players.attacker,
+      [players.defender.id]: players.defender,
+      [players.midfielder.id]: players.midfielder,
+      [players.goalkeeper.id]: players.goalkeeper,
+    },
+    roleWeights: departmentRoleWeights(),
+  };
+}
+
+/**
+ * Returns content-like role weights without importing content into engine tests.
+ */
+function departmentRoleWeights(): Readonly<Record<string, RoleWeightProfile>> {
+  return {
+    gk: {
+      roleKey: "gk",
+      department: "goalkeeper",
+      abilityWeights: {
+        "goalkeeping.reflexes": 3,
+        "goalkeeping.handling": 2,
+        "goalkeeping.goalkeeperPositioning": 2,
+        "goalkeeping.footwork": 1,
+      },
+    },
+    defender: {
+      roleKey: "defender",
+      department: "defense",
+      abilityWeights: {
+        "technical.tackling": 2,
+        "physical.strength": 1,
+        "physical.heading": 1,
+        "mental.positioning": 2,
+        "mental.anticipation": 1,
+      },
+    },
+    midfielder: {
+      roleKey: "midfielder",
+      department: "midfield",
+      abilityWeights: {
+        "technical.passing": 2,
+        "technical.technique": 1,
+        "physical.stamina": 1,
+        "mental.vision": 2,
+        "mental.determination": 1,
+      },
+    },
+    attacker: {
+      roleKey: "attacker",
+      department: "attack",
+      abilityWeights: {
+        "technical.finishing": 3,
+        "technical.dribbling": 1,
+        "physical.pace": 1,
+        "mental.composure": 2,
+        "physical.heading": 1,
+      },
+    },
+  };
+}
+
 /**
  * Builds a complete 25-attribute ability object for test players.
  */
 function abilitySet(
   value: number,
-  overrides: { readonly finishing?: number; readonly tackling?: number } = {},
+  overrides: AbilityOverrides = {},
 ): PlayerAbilities {
   const ability = abilityValue(value);
 
@@ -244,25 +428,25 @@ function abilitySet(
       freeKicks: ability,
     },
     physical: {
-      pace: ability,
+      pace: abilityValue(overrides.pace ?? value),
       strength: ability,
-      stamina: ability,
+      stamina: abilityValue(overrides.stamina ?? value),
       agility: ability,
       heading: ability,
     },
     mental: {
-      positioning: ability,
-      vision: ability,
-      anticipation: ability,
-      composure: ability,
+      positioning: abilityValue(overrides.positioning ?? value),
+      vision: abilityValue(overrides.vision ?? value),
+      anticipation: abilityValue(overrides.anticipation ?? value),
+      composure: abilityValue(overrides.composure ?? value),
       determination: ability,
       leadership: ability,
     },
     goalkeeping: {
-      reflexes: ability,
-      handling: ability,
+      reflexes: abilityValue(overrides.reflexes ?? value),
+      handling: abilityValue(overrides.handling ?? value),
       rushingOut: ability,
-      goalkeeperPositioning: ability,
+      goalkeeperPositioning: abilityValue(overrides.goalkeeperPositioning ?? value),
       footwork: ability,
     },
   };

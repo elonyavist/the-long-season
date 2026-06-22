@@ -46,6 +46,14 @@ export interface LongRunYouthStabilityCheck {
 export interface LongRunYouthStabilityReport {
   /** Overall status, worst of all youth checks. */
   readonly status: LongRunAnomalyStatus;
+  /** Smallest active senior player count observed. */
+  readonly minimumSeniorPlayerCountObserved: number;
+  /** Largest active senior player count observed. */
+  readonly maximumSeniorPlayerCountObserved: number;
+  /** Smallest active academy player count observed. */
+  readonly minimumYouthPlayerCountObserved: number;
+  /** Largest active academy player count observed. */
+  readonly maximumYouthPlayerCountObserved: number;
   /** Smallest active academy roster size observed. */
   readonly minimumYouthRosterSizeObserved: number;
   /** Average active academy roster size observed. */
@@ -86,16 +94,28 @@ export interface CreateLongRunYouthStabilityReportOptions {
   readonly youthRosterTargetMaximum?: number;
   /** Minimum active youth players expected in one club academy. */
   readonly youthRosterMinimum?: number;
-  /** Lower bound for total active players in an 18-club, 23-senior plus 8-youth setup. */
+  /** Lower bound for active senior players in an 18-club, 22-senior setup. */
+  readonly seniorPlayerMinimum?: number;
+  /** Upper bound for active senior players after long-run squad refresh. */
+  readonly seniorPlayerMaximum?: number;
+  /** Lower bound for active youth players in an 18-club, 11-youth setup. */
+  readonly youthPlayerMinimum?: number;
+  /** Upper bound for active youth players in the current academy model. */
+  readonly youthPlayerMaximum?: number;
+  /** Lower bound for total active players using senior plus academy floors. */
   readonly activePlayerMinimum?: number;
-  /** Upper bound for total active players in an 18-club, 25-senior plus 12-youth setup. */
+  /** Upper bound for total active players using senior plus academy ceilings. */
   readonly activePlayerMaximum?: number;
 }
 
 const DEFAULT_YOUTH_ROSTER_TARGET_MAXIMUM = 11;
 const DEFAULT_YOUTH_ROSTER_MINIMUM = 11;
-const DEFAULT_ACTIVE_PLAYER_MINIMUM = 612;
-const DEFAULT_ACTIVE_PLAYER_MAXIMUM = 648;
+const DEFAULT_SENIOR_PLAYER_MINIMUM = 396;
+const DEFAULT_SENIOR_PLAYER_MAXIMUM = 450;
+const DEFAULT_YOUTH_PLAYER_MINIMUM = 198;
+const DEFAULT_YOUTH_PLAYER_MAXIMUM = 198;
+const DEFAULT_ACTIVE_PLAYER_MINIMUM = DEFAULT_SENIOR_PLAYER_MINIMUM + DEFAULT_YOUTH_PLAYER_MINIMUM;
+const DEFAULT_ACTIVE_PLAYER_MAXIMUM = DEFAULT_SENIOR_PLAYER_MAXIMUM + DEFAULT_YOUTH_PLAYER_MAXIMUM;
 
 /**
  * Creates aggregate youth-academy population metrics and anomaly checks.
@@ -109,17 +129,29 @@ export function createLongRunYouthStabilityReport(
 ): LongRunYouthStabilityReport {
   const youthRosterTargetMaximum = options.youthRosterTargetMaximum ?? DEFAULT_YOUTH_ROSTER_TARGET_MAXIMUM;
   const youthRosterMinimum = options.youthRosterMinimum ?? DEFAULT_YOUTH_ROSTER_MINIMUM;
+  const seniorPlayerMinimum = options.seniorPlayerMinimum ?? DEFAULT_SENIOR_PLAYER_MINIMUM;
+  const seniorPlayerMaximum = options.seniorPlayerMaximum ?? DEFAULT_SENIOR_PLAYER_MAXIMUM;
+  const youthPlayerMinimum = options.youthPlayerMinimum ?? DEFAULT_YOUTH_PLAYER_MINIMUM;
+  const youthPlayerMaximum = options.youthPlayerMaximum ?? DEFAULT_YOUTH_PLAYER_MAXIMUM;
   const activePlayerMinimum = options.activePlayerMinimum ?? DEFAULT_ACTIVE_PLAYER_MINIMUM;
   const activePlayerMaximum = options.activePlayerMaximum ?? DEFAULT_ACTIVE_PLAYER_MAXIMUM;
   const checks = youthStabilityChecks(seasons, {
     youthRosterTargetMaximum,
     youthRosterMinimum,
+    seniorPlayerMinimum,
+    seniorPlayerMaximum,
+    youthPlayerMinimum,
+    youthPlayerMaximum,
     activePlayerMinimum,
     activePlayerMaximum,
   });
 
   return {
     status: worstStatus(checks),
+    minimumSeniorPlayerCountObserved: Math.min(...seasons.map((season) => season.seniorPlayerCount)),
+    maximumSeniorPlayerCountObserved: Math.max(...seasons.map((season) => season.seniorPlayerCount)),
+    minimumYouthPlayerCountObserved: Math.min(...seasons.map((season) => season.youthPlayerCount)),
+    maximumYouthPlayerCountObserved: Math.max(...seasons.map((season) => season.youthPlayerCount)),
     minimumYouthRosterSizeObserved: Math.min(...seasons.map((season) => season.minimumYouthRosterSize)),
     averageYouthRosterSizeObserved: roundMetric(average(seasons.map((season) => season.averageYouthRosterSize))),
     maximumYouthRosterSizeObserved: Math.max(...seasons.map((season) => season.maximumYouthRosterSize)),
@@ -147,6 +179,10 @@ function youthStabilityChecks(
   const clubsAboveYouthTarget = seasons.reduce((sum, season) => sum + season.clubsAboveYouthTarget, 0);
   const minimumYouthRosterSize = Math.min(...seasons.map((season) => season.minimumYouthRosterSize));
   const clubsBelowYouthMinimum = seasons.reduce((sum, season) => sum + season.clubsBelowYouthMinimum, 0);
+  const minimumSeniorPlayerCount = Math.min(...seasons.map((season) => season.seniorPlayerCount));
+  const maximumSeniorPlayerCount = Math.max(...seasons.map((season) => season.seniorPlayerCount));
+  const minimumYouthPlayerCount = Math.min(...seasons.map((season) => season.youthPlayerCount));
+  const maximumYouthPlayerCount = Math.max(...seasons.map((season) => season.youthPlayerCount));
   const minimumActivePlayerCount = Math.min(...seasons.map((season) => season.activePlayerCount));
   const maximumActivePlayerCount = Math.max(...seasons.map((season) => season.activePlayerCount));
 
@@ -164,9 +200,23 @@ function youthStabilityChecks(
       clubsBelowYouthMinimum > 0 ? "fail" : "pass",
     ),
     check(
-      "active_player_population",
-      maximumActivePlayerCount,
-      `pass ${thresholds.activePlayerMinimum}..${thresholds.activePlayerMaximum}; warn outside`,
+      "senior_active_player_population",
+      minimumSeniorPlayerCount,
+      `pass ${thresholds.seniorPlayerMinimum}..${thresholds.seniorPlayerMaximum}; warn outside`,
+      () =>
+        minimumSeniorPlayerCount < thresholds.seniorPlayerMinimum || maximumSeniorPlayerCount > thresholds.seniorPlayerMaximum ? "warn" : "pass",
+    ),
+    check(
+      "youth_active_player_population",
+      minimumYouthPlayerCount,
+      `pass ${thresholds.youthPlayerMinimum}..${thresholds.youthPlayerMaximum}; warn outside`,
+      () =>
+        minimumYouthPlayerCount < thresholds.youthPlayerMinimum || maximumYouthPlayerCount > thresholds.youthPlayerMaximum ? "warn" : "pass",
+    ),
+    check(
+      "total_active_player_population",
+      minimumActivePlayerCount,
+      `pass ${thresholds.activePlayerMinimum}..${thresholds.activePlayerMaximum}; monitor total range`,
       () => (minimumActivePlayerCount < thresholds.activePlayerMinimum || maximumActivePlayerCount > thresholds.activePlayerMaximum ? "warn" : "pass"),
     ),
   ];

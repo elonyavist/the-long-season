@@ -77,6 +77,54 @@ test("1000 deterministic matches complete without crash", () => {
   }
 });
 
+test("controlled strength profiles produce directional match-flow separation", () => {
+  const equal = aggregateMatches(
+    "fixture:flow-equal",
+    profiledContext({
+      home: teamProfile("home", { attack: 10, midfield: 10, defense: 10, goalkeeper: 10 }),
+      away: teamProfile("away", { attack: 10, midfield: 10, defense: 10, goalkeeper: 10 }),
+    }),
+  );
+  const strongHome = aggregateMatches(
+    "fixture:flow-strong-home",
+    profiledContext({
+      home: teamProfile("home", { attack: 16, midfield: 15, defense: 14, goalkeeper: 14 }),
+      away: teamProfile("away", { attack: 8, midfield: 8, defense: 8, goalkeeper: 8 }),
+    }),
+  );
+  const strongAway = aggregateMatches(
+    "fixture:flow-strong-away",
+    profiledContext({
+      home: teamProfile("home", { attack: 8, midfield: 8, defense: 8, goalkeeper: 8 }),
+      away: teamProfile("away", { attack: 16, midfield: 15, defense: 14, goalkeeper: 14 }),
+    }),
+  );
+  const strongAttackWeakDefense = aggregateMatches(
+    "fixture:flow-strong-attack",
+    profiledContext({
+      home: teamProfile("home", { attack: 18, midfield: 13, defense: 10, goalkeeper: 10 }),
+      away: teamProfile("away", { attack: 10, midfield: 10, defense: 6, goalkeeper: 6 }),
+    }),
+  );
+  const weakAttackStrongDefense = aggregateMatches(
+    "fixture:flow-weak-attack",
+    profiledContext({
+      home: teamProfile("home", { attack: 6, midfield: 9, defense: 10, goalkeeper: 10 }),
+      away: teamProfile("away", { attack: 10, midfield: 10, defense: 18, goalkeeper: 18 }),
+    }),
+  );
+
+  assert.ok(equal.home.opportunities > 0);
+  assert.ok(equal.away.opportunities > 0);
+  assert.ok(strongHome.home.opportunities > equal.home.opportunities);
+  assert.ok(strongHome.home.goals > equal.home.goals);
+  assert.ok(strongHome.homeWins > strongHome.awayWins);
+  assert.ok(strongAway.away.opportunities > equal.away.opportunities);
+  assert.ok(strongAway.awayWins > strongAway.homeWins);
+  assert.ok(strongAttackWeakDefense.home.shotsOnTarget > weakAttackStrongDefense.home.shotsOnTarget);
+  assert.ok(strongAttackWeakDefense.home.goals > weakAttackStrongDefense.home.goals);
+});
+
 test("step limit prevents accidental infinite loops", () => {
   assert.throws(
     () => simulateMatch(validContext({ minuteCount: 90 }), { maxStepCount: 10 }),
@@ -102,6 +150,118 @@ function countGoalEvents(events: readonly MatchStepEvent[]): SimulateMatchResult
   }
 
   return score;
+}
+
+/** Aggregate one side's match-flow output over deterministic fixture variants. */
+interface MatchFlowAggregate {
+  readonly home: {
+    readonly opportunities: number;
+    readonly shotsOnTarget: number;
+    readonly goals: number;
+  };
+  readonly away: {
+    readonly opportunities: number;
+    readonly shotsOnTarget: number;
+    readonly goals: number;
+  };
+  readonly homeWins: number;
+  readonly awayWins: number;
+}
+
+/**
+ * Runs one controlled profile over multiple fixture IDs for stable flow evidence.
+ */
+function aggregateMatches(prefix: string, context: MatchContext): MatchFlowAggregate {
+  const aggregate = {
+    home: {
+      opportunities: 0,
+      shotsOnTarget: 0,
+      goals: 0,
+    },
+    away: {
+      opportunities: 0,
+      shotsOnTarget: 0,
+      goals: 0,
+    },
+    homeWins: 0,
+    awayWins: 0,
+  };
+
+  for (let index = 0; index < 200; index += 1) {
+    const result = simulateMatch({
+      ...context,
+      fixtureId: fixtureId(`${prefix}-${String(index).padStart(4, "0")}`),
+    });
+
+    aggregate.home.opportunities += result.stats.home.opportunities;
+    aggregate.home.shotsOnTarget += result.stats.home.shotsOnTarget;
+    aggregate.home.goals += result.score.home;
+    aggregate.away.opportunities += result.stats.away.opportunities;
+    aggregate.away.shotsOnTarget += result.stats.away.shotsOnTarget;
+    aggregate.away.goals += result.score.away;
+
+    if (result.score.home > result.score.away) {
+      aggregate.homeWins += 1;
+    }
+
+    if (result.score.away > result.score.home) {
+      aggregate.awayWins += 1;
+    }
+  }
+
+  return aggregate;
+}
+
+/**
+ * Builds a match context from explicit home and away strength profiles.
+ */
+function profiledContext(input: { readonly home: MatchTeamContext; readonly away: MatchTeamContext }): MatchContext {
+  return {
+    fixtureId: fixtureId("fixture:profiled-000001"),
+    seed: "demo-001",
+    home: input.home,
+    away: input.away,
+    engineConfig: validConfig(90),
+  };
+}
+
+/**
+ * Builds one side context with explicit department strengths.
+ */
+function teamProfile(
+  side: MatchSide,
+  strength: {
+    readonly attack: number;
+    readonly midfield: number;
+    readonly defense: number;
+    readonly goalkeeper: number;
+  },
+): MatchTeamContext {
+  return {
+    clubId: clubId(`club:${side}`),
+    lineup: [
+      {
+        slotId: `slot:${side}:gk`,
+        playerId: playerId(`player:${side}-gk`),
+        roleKey: "gk",
+      },
+      {
+        slotId: `slot:${side}:field`,
+        playerId: playerId(`player:${side}-000001`),
+        roleKey: "balanced",
+      },
+    ],
+    strength: {
+      ...strength,
+      overall: (strength.attack + strength.midfield + strength.defense + strength.goalkeeper) / 4,
+    },
+    tacticalDistribution: {
+      directness: 0,
+      pressing: 0,
+      width: 0,
+      risk: 0,
+    },
+  };
 }
 
 /**
