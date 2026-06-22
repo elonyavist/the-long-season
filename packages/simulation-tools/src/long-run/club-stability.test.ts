@@ -28,6 +28,32 @@ test("createLongRunClubStabilityReport marks unavailable systems explicitly", ()
 
   assert.equal(report.transferTurnoverAvailable, false);
   assert.equal(report.squadTurnoverAvailable, false);
+  assert.equal(report.clubsBelowMinimumSquadSizeCount, 0);
+  assert.equal(report.clubsWithoutNaturalGoalkeeperCount, 0);
+});
+
+test("createLongRunClubStabilityReport includes refresh health totals", () => {
+  const report = createLongRunClubStabilityReport([season(1, "club:a", "Alpha", 72, 2, 66)], {
+    transferTurnoverCount: 3,
+    playerExitCount: 2,
+    retirementExitCount: 1,
+    releasedExitCount: 1,
+    careerStepDownExitCount: 0,
+    playerIntakeCount: 8,
+    squadMaintenanceAddedCount: 2,
+    minimumSquadSizeObserved: 21,
+    maximumSquadSizeObserved: 23,
+    averageSquadSizeObserved: 22.1,
+    clubsBelowMinimumSquadSizeCount: 0,
+    clubsWithoutNaturalGoalkeeperCount: 0,
+    roleCoverageWarningCount: 4,
+  });
+
+  assert.equal(report.transferTurnoverCount, 3);
+  assert.equal(report.retirementExitCount, 1);
+  assert.equal(report.releasedExitCount, 1);
+  assert.equal(report.averageSquadSizeObserved, 22.1);
+  assert.equal(report.roleCoverageWarningCount, 4);
 });
 
 function season(

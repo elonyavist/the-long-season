@@ -170,6 +170,12 @@ test("career command creates and writes a new seeded career world", async () => 
     assert.equal(loaded.careerWorld?.worldSeed, "world-a");
     assert.equal(loaded.careerWorld?.generatorVersion, 1);
     assert.equal(loaded.selectedClubId, "club:province-01");
+    assert.equal(loaded.gameState.clubs[loaded.selectedClubId]?.playerIds.length, 22);
+    assert.equal(loaded.youthAcademyState?.clubRosterIds.length, 18);
+    assert.equal(loaded.youthAcademyState?.clubRosters[loaded.selectedClubId]?.playerIds.length, 8);
+    assert.equal(loaded.youthAcademyState?.clubRosters[loaded.selectedClubId]?.playerIds.some((playerId) => (
+      loaded.gameState.clubs[loaded.selectedClubId]?.playerIds.includes(playerId) ?? false
+    )), false);
     assert.equal(loaded.gameState.fixtureIds.length, 306);
     const firstFixtureId = loaded.gameState.fixtureIds[0];
     if (firstFixtureId === undefined) {
@@ -218,6 +224,73 @@ test("career command summarizes an existing career save without mutating it", as
       true,
     );
     assert.deepEqual(after, before);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command inspects selected youth academy without mutating the save", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const youthIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-youth", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const storage = new JsonCareerStorage({ directoryPath });
+    const before = await storage.loadCareer("save:career-youth" as Parameters<typeof storage.loadCareer>[0]);
+    const exitCode = await runCareerCommand(["--save=career-youth", "--youth-academy"], youthIo, {
+      storageDirectoryPath: directoryPath,
+    });
+    const after = await storage.loadCareer("save:career-youth" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 0);
+    assert.equal(youthIo.stderrLines.length, 0);
+    assert.equal(youthIo.stdoutLines[0], "The Long Season youth academy");
+    assert.equal(youthIo.stdoutLines.includes("Save: save:career-youth"), true);
+    assert.equal(youthIo.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
+    assert.equal(youthIo.stdoutLines.includes("Selected club youth count: 8"), true);
+    assert.equal(hasLineStartingWith(youthIo.stdoutLines, "Active players: senior=396 youth=144 total=540"), true);
+    assert.equal(youthIo.stdoutLines.includes("Inspection only: the career save is not changed."), true);
+    assert.equal(youthIo.stdoutLines.includes("Youth players:"), true);
+    assert.equal(youthIo.stdoutLines.includes("  Player                   Age Nationality    Pos  Ability     Development    Status"), true);
+    assert.equal(youthIo.stdoutLines.some((line) => /\bacademy$/.test(line)), true);
+    assert.equal(youthIo.stdoutLines.some((line) => /\bunknown\b/.test(line)), true);
+    assert.equal(youthIo.stdoutLines.some((line) => /potential/i.test(line)), false);
+    assert.deepEqual(after, before);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command localizes youth academy inspection in Italian", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const youthIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=mondo-youth", "--save=carriera-vivaio", "--new-world-preview", "--lang=it"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=carriera-vivaio", "--youth-academy", "--lang=it"], youthIo, {
+      storageDirectoryPath: directoryPath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(youthIo.stderrLines.length, 0);
+    assert.equal(youthIo.stdoutLines[0], "The Long Season vivaio");
+    assert.equal(youthIo.stdoutLines.includes("Giovani vivaio club selezionato: 8"), true);
+    assert.equal(youthIo.stdoutLines.includes("Solo ispezione: il salvataggio carriera non viene modificato."), true);
+    assert.equal(youthIo.stdoutLines.includes("Giovani:"), true);
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -894,7 +967,7 @@ test("career command rejects missing required arguments", async () => {
   assert.equal(missingMode.stdoutLines.length, 0);
   assert.equal(
     missingMode.stderrLines[0],
-    "choose exactly one career action: --apply-market-demo, --inspect, --summary, --squad, --set-lineup-demo, --set-tactic-demo, --advance-next-fixture, --rollover-season, --development-report, or --new-world-preview",
+    "choose exactly one career action: --apply-market-demo, --inspect, --summary, --squad, --youth-academy, --set-lineup-demo, --set-tactic-demo, --advance-next-fixture, --rollover-season, --development-report, or --new-world-preview",
   );
 
   assert.equal(
@@ -923,6 +996,16 @@ function captureIo(): CapturedIo & {
     stdout: (line) => stdoutLines.push(line),
     stderr: (line) => stderrLines.push(line),
   };
+}
+
+function hasLineStartingWith(lines: readonly string[], prefix: string): boolean {
+  for (const line of lines) {
+    if (line.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function selectedClubPlayerGolden(

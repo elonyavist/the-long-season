@@ -123,6 +123,8 @@ export interface PlayerDevelopmentInput {
   readonly worldSeed: string;
   /** Season ID that is being developed. */
   readonly seasonId: SeasonId;
+  /** Optional explicit player order to develop. Defaults to all active players. */
+  readonly playerIds?: readonly PlayerId[];
 }
 
 /** One player development summary for later reports and tests. */
@@ -160,10 +162,10 @@ export interface PlayerDevelopmentResult {
  * saves.
  */
 export function developPlayersForSeason(input: PlayerDevelopmentInput): PlayerDevelopmentResult {
-  const players: Partial<Record<PlayerId, Player>> = {};
+  const players: Partial<Record<PlayerId, Player>> = { ...input.careerState.gameState.players };
   const changes: PlayerDevelopmentChange[] = [];
 
-  for (const playerId of input.careerState.gameState.playerIds) {
+  for (const playerId of input.playerIds ?? input.careerState.gameState.playerIds) {
     const player = input.careerState.gameState.players[playerId];
     if (player === undefined) {
       continue;

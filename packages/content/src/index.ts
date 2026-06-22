@@ -7,6 +7,8 @@
  */
 export * from "./generators/fake-clubs.ts";
 export * from "./generators/fake-players.ts";
+export * from "./generators/career-intake-players.ts";
+export * from "./generators/initial-youth-academies.ts";
 export * from "./generators/league-system.ts";
 export * from "./generators/player-generation-bands.ts";
 export * from "./generators/player-rarity-budget.ts";

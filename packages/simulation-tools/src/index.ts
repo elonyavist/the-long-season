@@ -26,6 +26,17 @@ export {
 } from "./long-run/long-runner.ts";
 
 export {
+  runCareerLongRunSimulation,
+  type AdvanceCareerLongRunSeasonContext,
+  type AdvanceCareerLongRunSeasonResult,
+  type CareerLongRunRefreshSummary,
+  type CareerLongRunSeasonResult,
+  type CareerLongRunSimulationResult,
+  type CreateCareerLongRunSeasonInputContext,
+  type RunCareerLongRunSimulationInput,
+} from "./long-run/career-long-runner.ts";
+
+export {
   createLongRunPlayerEvolutionReport,
   type CreateLongRunPlayerEvolutionReportInput,
   type LongRunPlayerEvolutionReport,
@@ -38,6 +49,7 @@ export {
   createLongRunClubStabilityReport,
   type LongRunClubSeasonRow,
   type LongRunClubStabilityReport,
+  type LongRunRefreshTotals,
 } from "./long-run/club-stability.ts";
 
 export {
@@ -48,3 +60,11 @@ export {
   type LongRunAnomalyStatus,
   type LongRunBalanceSeasonRow,
 } from "./long-run/anomaly-scoring.ts";
+
+export {
+  createLongRunYouthStabilityReport,
+  type CreateLongRunYouthStabilityReportOptions,
+  type LongRunYouthSeasonRow,
+  type LongRunYouthStabilityCheck,
+  type LongRunYouthStabilityReport,
+} from "./long-run/youth-stability.ts";

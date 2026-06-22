@@ -12,6 +12,7 @@ import { nonNegativeMoney } from "../value-objects/money.ts";
 import { abilityValue, stateValue } from "../value-objects/rating.ts";
 import { CAREER_WORLD_GENERATOR_VERSION } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
+import { YouthAcademyStateError, type YouthAcademyState } from "./youth-academy-state.ts";
 import {
   CAREER_STATE_SCHEMA_VERSION,
   CareerStateContractError,
@@ -266,6 +267,71 @@ test("createCareerState keeps old saves without season history valid", () => {
   assert.equal(career.seasonHistory, undefined);
 });
 
+test("createCareerState preserves optional youth academy state", () => {
+  const career = createCareerState({
+    ...careerStateFixture(),
+    youthAcademyState: youthAcademyStateFixture(),
+  });
+
+  assert.equal(career.youthAcademyState?.clubRosterIds[0], "club:pro01");
+  assert.deepEqual(career.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds, [playerId("player:010099")]);
+  assert.equal(career.youthAcademyState?.playerLifecycle[playerId("player:010099")]?.status, "academy");
+});
+
+test("createCareerState keeps old saves without youth academy state valid", () => {
+  const career = createCareerState(careerStateFixture());
+
+  assert.equal(career.youthAcademyState, undefined);
+});
+
+test("createCareerState rejects invalid youth academy references", () => {
+  assertYouthAcademyStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        youthAcademyState: {
+          ...youthAcademyStateFixture(),
+          clubRosters: {
+            [clubId("club:pro01")]: {
+              clubId: clubId("club:pro01"),
+              playerIds: [playerId("player:010010")],
+            },
+          },
+        },
+      }),
+    "youth_player_already_senior",
+  );
+
+  assertYouthAcademyStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        youthAcademyState: {
+          ...youthAcademyStateFixture(),
+          playerLifecycle: {},
+        },
+      }),
+    "lifecycle_not_found",
+  );
+
+  assertYouthAcademyStateError(
+    () =>
+      createCareerState({
+        ...careerStateFixture(),
+        youthAcademyState: {
+          ...youthAcademyStateFixture(),
+          playerLifecycle: {
+            [playerId("player:010099")]: {
+              ...youthAcademyLifecycleFixture(playerId("player:010099"), clubId("club:pro01")),
+              status: "released",
+            },
+          },
+        },
+      }),
+    "lifecycle_inactive_player_still_rostered",
+  );
+});
+
 test("createCareerState rejects invalid season history", () => {
   const pro01 = clubId("club:pro01");
   const pro18 = clubId("club:pro18");
@@ -485,6 +551,7 @@ function gameStateFixture(): GameState {
   const pro01 = clubId("club:pro01");
   const pro18 = clubId("club:pro18");
   const player01 = playerId("player:010010");
+  const youth01 = playerId("player:010099");
   const player18 = playerId("player:180010");
   const fixture = fixtureId("fixture:000001");
 
@@ -509,11 +576,13 @@ function gameStateFixture(): GameState {
 
   const players: Record<Player["id"], Player> = {
     [player01]: playerFixture(player01, "Player01"),
+    [youth01]: playerFixture(youth01, "Youth01"),
     [player18]: playerFixture(player18, "Player18"),
   };
 
   const playerStates: Record<Player["id"], PlayerDynamicState> = {
     [player01]: playerStateFixture(),
+    [youth01]: playerStateFixture(),
     [player18]: playerStateFixture(),
   };
 
@@ -540,12 +609,43 @@ function gameStateFixture(): GameState {
       currentSeasonId: seasonId("season:0001"),
     },
     players,
-    playerIds: [player01, player18],
+    playerIds: [player01, youth01, player18],
     playerStates,
     clubs,
     clubIds: [pro01, pro18],
     fixtures,
     fixtureIds: [fixture],
+  };
+}
+
+/** Builds a minimal valid youth-academy state fixture. */
+function youthAcademyStateFixture(): YouthAcademyState {
+  const pro01 = clubId("club:pro01");
+  const youth01 = playerId("player:010099");
+
+  return {
+    clubRosters: {
+      [pro01]: {
+        clubId: pro01,
+        playerIds: [youth01],
+      },
+    },
+    clubRosterIds: [pro01],
+    playerLifecycle: {
+      [youth01]: youthAcademyLifecycleFixture(youth01, pro01),
+    },
+    playerLifecycleIds: [youth01],
+  };
+}
+
+/** Builds a compact youth lifecycle row for domain tests. */
+function youthAcademyLifecycleFixture(playerIdValue: Player["id"], clubIdValue: Club["id"]): YouthAcademyState["playerLifecycle"][Player["id"]] {
+  return {
+    playerId: playerIdValue,
+    clubId: clubIdValue,
+    status: "academy",
+    academyEntrySeasonId: seasonId("season:0001"),
+    academyEntryDate: gameDate(20_000),
   };
 }
 
@@ -640,5 +740,16 @@ function assertCareerStateError(
   assert.throws(
     action,
     (error) => error instanceof CareerStateContractError && error.code === code,
+  );
+}
+
+/** Asserts a typed youth-academy validation failure and its code. */
+function assertYouthAcademyStateError(
+  action: () => void,
+  code: YouthAcademyStateError["code"],
+): void {
+  assert.throws(
+    action,
+    (error) => error instanceof YouthAcademyStateError && error.code === code,
   );
 }

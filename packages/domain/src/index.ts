@@ -17,6 +17,7 @@ export * from "./entities/transfer.entity.ts";
 export * from "./state/career-state.ts";
 export * from "./state/career-world.ts";
 export * from "./state/game-state.ts";
+export * from "./state/youth-academy-state.ts";
 export * from "./squad/index.ts";
 export * from "./tactics/index.ts";
 export * from "./types/brand.ts";

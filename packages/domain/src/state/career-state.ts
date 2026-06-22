@@ -6,6 +6,7 @@ import { createSelectedLineup, createTacticSetup, type SelectedLineup, type Tact
 import { createMarketState, type MarketState } from "../entities/transfer.entity.ts";
 import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
+import { createYouthAcademyState, type YouthAcademyState } from "./youth-academy-state.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
@@ -94,7 +95,8 @@ export interface CareerSeasonArchiveEntry {
  *
  * `CareerState` wraps the current `GameState` instead of duplicating world data.
  * It adds only the manager-facing persistence slice needed after the market MVP:
- * selected club, transfer funds, and permanent-transfer history.
+ * selected club, transfer funds, permanent-transfer history, and optional
+ * career systems such as the youth academy.
  */
 export interface CareerState {
   /** Stable save/career identifier, for example `save:career-demo`. */
@@ -111,6 +113,8 @@ export interface CareerState {
   readonly marketState: MarketState;
   /** Ordered permanent-transfer decisions already applied to this career. */
   readonly transferHistory: readonly PermanentTransferHistoryEntry[];
+  /** Optional durable youth academy membership and lifecycle state. */
+  readonly youthAcademyState?: YouthAcademyState;
   /** Optional saved match-preparation choices for the selected club. */
   readonly matchPreparation?: CareerMatchPreparation;
   /** Ordered compact completed-season history. */
@@ -222,6 +226,9 @@ export function createCareerState(input: CareerState): CareerState {
   }
 
   const seasonHistory = createSeasonHistory(input);
+  const youthAcademyState = input.youthAcademyState === undefined
+    ? undefined
+    : createYouthAcademyState(input.gameState, input.youthAcademyState);
 
   return {
     saveId: input.saveId,
@@ -231,6 +238,7 @@ export function createCareerState(input: CareerState): CareerState {
     gameState: input.gameState,
     marketState,
     transferHistory,
+    ...(youthAcademyState === undefined ? {} : { youthAcademyState }),
     ...(seasonHistory.length === 0 ? {} : { seasonHistory }),
     ...(input.matchPreparation === undefined
       ? {}

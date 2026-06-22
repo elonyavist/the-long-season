@@ -64,6 +64,9 @@ export function createLongRunAnomalyReport(input: CreateLongRunAnomalyReportInpu
     ageDistributionCheck(input.playerEvolution),
     transferTurnoverCheck(input.clubStability),
     squadTurnoverCheck(input.clubStability),
+    minimumSquadSizeCheck(input.clubStability),
+    goalkeeperCoverageCheck(input.clubStability),
+    roleCoverageWarningCheck(input.clubStability),
   ];
 
   return {
@@ -104,8 +107,9 @@ function tableSpreadCheck(balance: readonly LongRunBalanceSeasonRow[]): LongRunA
 
 function topAssistCheck(report: LongRunPlayerEvolutionReport): LongRunAnomalyCheck {
   const value = Math.max(...report.production.map((row) => row.topAssists), 0);
-  return check("top_assist_max", value, "pass <=15; warn 16..18; fail >=19", () => {
-    if (value >= 19) {
+  const failAt = topAssistFailThreshold(report.production.length);
+  return check("top_assist_max", value, `pass <=15; warn 16..${failAt - 1}; fail >=${failAt}`, () => {
+    if (value >= failAt) {
       return "fail";
     }
 
@@ -115,6 +119,18 @@ function topAssistCheck(report: LongRunPlayerEvolutionReport): LongRunAnomalyChe
 
     return "pass";
   });
+}
+
+function topAssistFailThreshold(seasonCount: number): number {
+  if (seasonCount <= 10) {
+    return 21;
+  }
+
+  if (seasonCount <= 30) {
+    return 24;
+  }
+
+  return 25;
 }
 
 function topCreatorShareCheck(report: LongRunPlayerEvolutionReport): LongRunAnomalyCheck {
@@ -149,17 +165,28 @@ function topThreeCreatorShareCheck(report: LongRunPlayerEvolutionReport): LongRu
 
 function championDominanceCheck(report: LongRunClubStabilityReport): LongRunAnomalyCheck {
   const value = report.longestChampionStreak;
-  return check("champion_streak", value, "pass <=3; warn 4..6; fail >=7", () => {
-    if (value >= 7) {
+  const warnAt = championStreakWarnThreshold(report.seasons.length);
+  const failAt = championStreakFailThreshold(report.seasons.length);
+
+  return check("champion_streak", value, `pass <${warnAt}; warn ${warnAt}..${failAt - 1}; fail >=${failAt}`, () => {
+    if (value >= failAt) {
       return "fail";
     }
 
-    if (value >= 4) {
+    if (value >= warnAt) {
       return "warn";
     }
 
     return "pass";
   });
+}
+
+function championStreakWarnThreshold(seasonCount: number): number {
+  return Math.max(4, Math.ceil(seasonCount * 0.18));
+}
+
+function championStreakFailThreshold(seasonCount: number): number {
+  return Math.max(7, Math.ceil(seasonCount * 0.3));
 }
 
 function usefulPlayersCheck(report: LongRunPlayerEvolutionReport): LongRunAnomalyCheck {
@@ -196,19 +223,55 @@ function ageDistributionCheck(report: LongRunPlayerEvolutionReport): LongRunAnom
 function transferTurnoverCheck(report: LongRunClubStabilityReport): LongRunAnomalyCheck {
   return {
     key: "transfer_turnover_available",
-    status: report.transferTurnoverAvailable ? "pass" : "warn",
-    value: report.transferTurnoverAvailable ? 1 : "unavailable",
-    threshold: "warn while market turnover simulation is unavailable",
+    status: report.transferTurnoverAvailable && report.transferTurnoverCount > 0 ? "pass" : "warn",
+    value: report.transferTurnoverAvailable ? report.transferTurnoverCount : "unavailable",
+    threshold: "warn while transfer turnover is unavailable or zero",
   };
 }
 
 function squadTurnoverCheck(report: LongRunClubStabilityReport): LongRunAnomalyCheck {
+  const turnoverCount = report.playerExitCount + report.squadMaintenanceAddedCount + report.transferTurnoverCount;
   return {
     key: "squad_turnover_available",
-    status: report.squadTurnoverAvailable ? "pass" : "warn",
-    value: report.squadTurnoverAvailable ? 1 : "unavailable",
-    threshold: "warn while squad turnover simulation is unavailable",
+    status: report.squadTurnoverAvailable && turnoverCount > 0 ? "pass" : "warn",
+    value: report.squadTurnoverAvailable ? turnoverCount : "unavailable",
+    threshold: "warn while squad turnover is unavailable or zero",
   };
+}
+
+function minimumSquadSizeCheck(report: LongRunClubStabilityReport): LongRunAnomalyCheck {
+  const value = report.clubsBelowMinimumSquadSizeCount;
+  return check("clubs_below_minimum_squad_size", value, "pass 0; fail >0", () => {
+    if (value > 0) {
+      return "fail";
+    }
+
+    return "pass";
+  });
+}
+
+function goalkeeperCoverageCheck(report: LongRunClubStabilityReport): LongRunAnomalyCheck {
+  const value = report.clubsWithoutNaturalGoalkeeperCount;
+  return check("clubs_without_natural_goalkeeper", value, "pass 0; fail >0", () => {
+    if (value > 0) {
+      return "fail";
+    }
+
+    return "pass";
+  });
+}
+
+function roleCoverageWarningCheck(report: LongRunClubStabilityReport): LongRunAnomalyCheck {
+  const value = report.roleCoverageWarningCount;
+  const clubSeasonCount = Math.max(1, report.seasons.length * 18);
+
+  return check("role_coverage_warning_count", value, "pass <= one per club-season; warn above", () => {
+    if (value > clubSeasonCount) {
+      return "warn";
+    }
+
+    return "pass";
+  });
 }
 
 function check(

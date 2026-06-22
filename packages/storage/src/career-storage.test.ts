@@ -18,6 +18,7 @@ import {
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
+  type YouthAcademyState,
 } from "@game/domain";
 
 import { JsonCareerStorage } from "./career-storage.ts";
@@ -159,6 +160,29 @@ test("save then load preserves compact season history", async () => {
   }
 });
 
+test("save then load preserves optional youth academy state", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const state = careerStateWithYouthAcademy();
+
+  try {
+    await storage.saveCareer({
+      saveId: saveId("save:career-youth"),
+      name: "Career Youth",
+      state,
+    });
+
+    const loaded = await storage.loadCareer(saveId("save:career-youth"));
+
+    assert.deepEqual(loaded.youthAcademyState, state.youthAcademyState);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
 test("loading a missing career save throws a typed storage error", async () => {
   const directoryPath = await createTempSaveDirectory();
   const storage = new JsonCareerStorage({ directoryPath });
@@ -231,6 +255,54 @@ function minimalCareerState(): CareerState {
       clubBudgetIds: [pro01],
     }),
     transferHistory: [],
+  });
+}
+
+/** Builds a career state with one active youth player for storage round trips. */
+function careerStateWithYouthAcademy(): CareerState {
+  const pro01 = "club:pro01" as CareerState["selectedClubId"];
+  const youth01 = playerId("player:pro01-youth-01");
+  const base = minimalCareerState();
+  const gameState: GameState = {
+    ...base.gameState,
+    players: {
+      ...base.gameState.players,
+      [youth01]: {
+        ...playerFixture(youth01),
+        firstName: "Youth",
+        lastName: "One",
+      },
+    },
+    playerIds: [...base.gameState.playerIds, youth01],
+    playerStates: {
+      ...base.gameState.playerStates,
+      [youth01]: playerStateFixture(),
+    },
+  };
+  const youthAcademyState: YouthAcademyState = {
+    clubRosters: {
+      [pro01]: {
+        clubId: pro01,
+        playerIds: [youth01],
+      },
+    },
+    clubRosterIds: [pro01],
+    playerLifecycle: {
+      [youth01]: {
+        playerId: youth01,
+        clubId: pro01,
+        status: "academy",
+        academyEntrySeasonId: seasonId("season:2026"),
+        academyEntryDate: gameDate(20_000),
+      },
+    },
+    playerLifecycleIds: [youth01],
+  };
+
+  return createCareerState({
+    ...base,
+    gameState,
+    youthAcademyState,
   });
 }
 

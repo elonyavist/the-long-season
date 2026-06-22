@@ -44,6 +44,62 @@ export {
   type PlayerDevelopmentResult,
 } from "./career/player-development.ts";
 export {
+  applyEndOfSeasonPlayerExits,
+  type PlayerExitInput,
+  type PlayerExitReason,
+  type PlayerExitRecord,
+  type PlayerExitResult,
+} from "./career/player-exits.ts";
+export {
+  CareerIntakePoolError,
+  createCareerIntakePool,
+  type CareerIntakeCandidate,
+  type CareerIntakePoolErrorCode,
+  type CareerIntakeRecord,
+  type CreateCareerIntakePoolInput,
+  type CreateCareerIntakePoolResult,
+} from "./career/player-intake.ts";
+export {
+  applySeasonalYouthIntake,
+  YOUTH_ACADEMY_TARGET_MAX_SIZE,
+  YouthIntakeError,
+  type ApplySeasonalYouthIntakeInput,
+  type ApplySeasonalYouthIntakeResult,
+  type YouthIntakeCandidate,
+  type YouthIntakeErrorCode,
+  type YouthIntakeRecord,
+} from "./career/youth-intake.ts";
+export {
+  applyYouthAcademyLifecycle,
+  type YouthAcademyLifecycleInput,
+  type YouthAcademyLifecycleResult,
+  type YouthLifecycleOutcome,
+  type YouthLifecycleRecord,
+} from "./career/youth-lifecycle.ts";
+export {
+  promoteYouthCandidatesToSeniorSquads,
+  YOUTH_PROMOTION_SENIOR_TARGET_SIZE,
+  type PromoteYouthCandidatesInput,
+  type PromoteYouthCandidatesResult,
+  type YouthPromotionReason,
+  type YouthPromotionRecord,
+} from "./career/youth-promotion.ts";
+export {
+  maintainCareerSquadShape,
+  MINIMUM_CAREER_SQUAD_SIZE,
+  TARGET_CAREER_SQUAD_SIZE,
+  type MaintainCareerSquadShapeInput,
+  type MaintainCareerSquadShapeResult,
+  type SquadMaintenanceRecord,
+  type SquadMaintenanceWarning,
+} from "./career/squad-maintenance.ts";
+export {
+  simulateTransferTurnover,
+  type SimulateTransferTurnoverInput,
+  type SimulateTransferTurnoverResult,
+  type TransferTurnoverRecord,
+} from "./career/transfer-turnover.ts";
+export {
   rolloverPlayersForNextSeason,
   type PlayerSeasonRolloverInput,
   type PlayerSeasonRolloverResult,

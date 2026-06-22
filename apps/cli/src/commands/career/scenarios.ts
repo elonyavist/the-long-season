@@ -1,4 +1,4 @@
-import type { FakeLeagueSystem } from "@game/content";
+import { generateInitialYouthAcademies, type FakeLeagueSystem, type InitialYouthAcademyClubContext } from "@game/content";
 import { generateRoundRobinCalendar } from "@game/engine";
 
 import { MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED, type MarketDemoProfileKey } from "../simulate-season/profile-keys.ts";
@@ -51,6 +51,14 @@ export function careerStateFromScenario(saveId: CliSaveId, scenario: CareerMarke
 /** Builds and annotates a newly generated career world before persisting it. */
 export function careerStateFromNewWorld(saveId: CliSaveId, league: FakeLeagueSystem, worldSeed: string): CliCareerState {
   const selectedClubId = requiredClubId(league, 1);
+  const gameState = gameStateFromLeague(league, worldSeed);
+  const youthAcademies = generateInitialYouthAcademies({
+    worldSeed,
+    seasonId: league.seasonId,
+    referenceDate: league.seasonStartDate,
+    clubIds: league.clubIds,
+    clubContexts: youthClubContexts(league),
+  });
 
   return {
     saveId,
@@ -61,7 +69,19 @@ export function careerStateFromNewWorld(saveId: CliSaveId, league: FakeLeagueSys
       creationSourceKey: "career:cli-new-world",
     },
     selectedClubId,
-    gameState: gameStateFromLeague(league, worldSeed),
+    gameState: {
+      ...gameState,
+      players: {
+        ...gameState.players,
+        ...youthAcademies.players,
+      },
+      playerIds: [...gameState.playerIds, ...youthAcademies.playerIds],
+      playerStates: {
+        ...gameState.playerStates,
+        ...youthAcademies.playerStates,
+      },
+    },
+    youthAcademyState: youthAcademies.youthAcademyState,
     marketState: marketStateFixture([[selectedClubId, money(6_000_000_00)]]),
     transferHistory: [],
   };
@@ -164,6 +184,24 @@ function gameStateFromLeague(league: FakeLeagueSystem, seed = "career-demo"): Cl
     fixtures: fixturesById(calendar.fixtures),
     fixtureIds: calendar.fixtureIds,
   };
+}
+
+function youthClubContexts(league: FakeLeagueSystem): Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"] {
+  const contexts: Partial<Record<ClubId, InitialYouthAcademyClubContext>> = {};
+
+  for (const clubId of league.clubIds) {
+    const club = league.clubsById[clubId];
+    if (club === undefined) {
+      continue;
+    }
+
+    contexts[clubId] = {
+      category: club.category,
+      reputation: club.reputation,
+    };
+  }
+
+  return contexts as Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"];
 }
 
 /**

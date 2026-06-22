@@ -55,6 +55,13 @@ export type ParsedCareerArgs =
       readonly seed: string;
       readonly saveId: CliSaveId;
       readonly language: SupportedLanguage;
+      readonly mode: "youthAcademy";
+    }
+  | {
+      readonly ok: true;
+      readonly seed: string;
+      readonly saveId: CliSaveId;
+      readonly language: SupportedLanguage;
       readonly mode: "setLineupDemo";
       readonly lineupDemo: LineupDemoProfileKey;
     }
@@ -112,6 +119,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
   let inspect = false;
   let summary = false;
   let squad = false;
+  let youthAcademy = false;
   let lineupDemo: LineupDemoProfileKey | undefined;
   let tacticDemo: SetupDemoProfileKey | undefined;
   let advanceNextFixture = false;
@@ -185,6 +193,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
@@ -210,6 +219,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
@@ -234,6 +244,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         summary ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
@@ -253,6 +264,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
@@ -272,6 +284,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
@@ -286,12 +299,33 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       continue;
     }
 
+    if (arg === "--youth-academy") {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
+        return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
+      }
+
+      youthAcademy = true;
+      continue;
+    }
+
     if (arg === "--set-lineup-demo") {
       if (
         marketDemo !== undefined ||
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
         rolloverSeason ||
@@ -317,6 +351,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         tacticDemo !== undefined ||
         advanceNextFixture ||
         rolloverSeason ||
@@ -341,6 +376,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         advanceNextFixture ||
         rolloverSeason ||
@@ -366,6 +402,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         advanceNextFixture ||
         rolloverSeason ||
@@ -390,6 +427,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         inspect ||
         summary ||
         squad ||
+        youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
         rolloverSeason ||
@@ -404,7 +442,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--rollover-season") {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || developmentReport || newWorldPreview) {
+      if (marketDemo !== undefined || inspect || summary || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || developmentReport || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -413,7 +451,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--development-report") {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || newWorldPreview) {
+      if (marketDemo !== undefined || inspect || summary || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -422,7 +460,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--new-world-preview") {
-      if (marketDemo !== undefined || inspect || summary || squad || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || developmentReport) {
+      if (marketDemo !== undefined || inspect || summary || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || developmentReport) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -464,6 +502,16 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       saveId,
       language,
       mode: "squad",
+    };
+  }
+
+  if (youthAcademy) {
+    return {
+      ok: true,
+      seed,
+      saveId,
+      language,
+      mode: "youthAcademy",
     };
   }
 

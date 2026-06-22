@@ -20,6 +20,7 @@ import {
   formatCareerSquadOutput,
   formatCareerSummaryOutput,
   formatCareerTacticSaveOutput,
+  formatCareerYouthAcademyOutput,
   formatNewCareerWorldOutput,
 } from "./career/format.ts";
 import {
@@ -127,6 +128,24 @@ export async function runCareerCommand(
     try {
       const careerState = await storage.loadCareer(parsed.saveId);
       for (const line of formatCareerSquadOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
+        io.stdout(line);
+      }
+
+      return 0;
+    } catch (error) {
+      if (error instanceof StorageError && error.code === "save_not_found") {
+        io.stderr(text("career.error.saveNotFound", { saveId: parsed.saveId }));
+        return 1;
+      }
+
+      throw error;
+    }
+  }
+
+  if (parsed.mode === "youthAcademy") {
+    try {
+      const careerState = await storage.loadCareer(parsed.saveId);
+      for (const line of formatCareerYouthAcademyOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
 

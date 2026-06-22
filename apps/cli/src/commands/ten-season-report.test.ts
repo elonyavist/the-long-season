@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "vitest";
 
 import {
@@ -20,9 +23,25 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(io.stdoutLines.includes("Production leaders:"), true);
   assert.equal(io.stdoutLines.includes("Club stability:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Unique champions:"), true);
-  assert.equal(io.stdoutLines.includes("  Transfer turnover: unavailable"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Transfer turnover: enabled"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Squad turnover: enabled"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Player exits:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Exit reasons:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Squad size min/avg/max:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Clubs below minimum squad size:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Clubs without natural goalkeeper:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "Youth academy stability:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Active players senior/youth/total:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth roster min/avg/max:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth intake:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth exits:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth promotions:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Clubs above youth target:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "Youth checks:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "Anomaly scoring:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  top_assist_max:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  clubs_below_minimum_squad_size:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  youth_roster_max_size:"), true);
 });
 
 test("same seed and season count produce the same report output", async () => {
@@ -44,6 +63,39 @@ test("ten-season-report respects explicit season count", async () => {
   assert.equal(io.stdoutLines.some((line) => line.includes("world-b-season-003")), true);
 });
 
+test("ten-season-report writes deterministic multi-world gate reports", async () => {
+  const directoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-"));
+
+  try {
+    const first = captureIo();
+    const second = captureIo();
+    const reportPath = join(directoryPath, "gate.md");
+    const args = ["--seed-prefix=phase31-test", "--worlds=2", "--seasons=2", `--report-output=${reportPath}`];
+
+    const firstExitCode = await runTenSeasonReportCommand(args, first);
+    const firstReport = await readFile(reportPath, "utf8");
+    const secondExitCode = await runTenSeasonReportCommand(args, second);
+    const secondReport = await readFile(reportPath, "utf8");
+
+    assert.equal(firstExitCode, secondExitCode);
+    assert.deepEqual(first.stdoutLines, second.stdoutLines);
+    assert.equal(firstReport, secondReport);
+    assert.equal(first.stdoutLines.includes("The Long Season long-run gate report"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Worlds: 2"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Youth roster max observed:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Clubs above youth target:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Failing check counts:"), true);
+    assert.equal(firstReport.includes("Worlds: 2"), true);
+    assert.equal(firstReport.includes("Youth roster max observed:"), true);
+    assert.equal(firstReport.includes("Warning check counts:"), true);
+    assert.equal(firstReport.includes("Warn checks"), true);
+    assert.equal(firstReport.includes("phase31-test-world-00001"), true);
+  } finally {
+    await rm(directoryPath, { recursive: true, force: true });
+  }
+});
+
 test("ten-season-report exits nonzero on invalid season count", async () => {
   const io = captureIo();
   const exitCode = await runTenSeasonReportCommand(["--seasons=0"], io);
@@ -51,6 +103,15 @@ test("ten-season-report exits nonzero on invalid season count", async () => {
   assert.equal(exitCode, 1);
   assert.equal(io.stdoutLines.length, 0);
   assert.equal(io.stderrLines[0], "--seasons requires a positive integer: 0");
+});
+
+test("ten-season-report exits nonzero on invalid world count", async () => {
+  const io = captureIo();
+  const exitCode = await runTenSeasonReportCommand(["--worlds=0"], io);
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0], "--worlds requires a positive integer: 0");
 });
 
 /**

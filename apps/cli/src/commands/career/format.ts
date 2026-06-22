@@ -504,6 +504,47 @@ export function formatCareerSquadOutput(input: {
   ];
 }
 
+/** Formats a non-mutating inspection of the selected club youth academy. */
+export function formatCareerYouthAcademyOutput(input: {
+  readonly careerState: CliCareerState;
+  readonly saveDirectoryPath: string;
+  readonly text: Translator;
+}): readonly string[] {
+  const selectedClub = input.careerState.gameState.clubs[input.careerState.selectedClubId];
+  const selectedYouthIds = input.careerState.youthAcademyState?.clubRosters[input.careerState.selectedClubId]?.playerIds ?? [];
+  const seniorPlayerCount = input.careerState.gameState.clubIds.reduce(
+    (sum, clubId) => sum + (input.careerState.gameState.clubs[clubId]?.playerIds.length ?? 0),
+    0,
+  );
+  const youthPlayerCount = input.careerState.gameState.clubIds.reduce(
+    (sum, clubId) => sum + (input.careerState.youthAcademyState?.clubRosters[clubId]?.playerIds.length ?? 0),
+    0,
+  );
+  const lines = [
+    input.text("career.youth.title"),
+    `${input.text("career.save")}: ${input.careerState.saveId}`,
+    `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
+    ...formatCareerWorldMetadataLines(input.careerState, input.text),
+    `${input.text("career.currentDate")}: ${toISO(input.careerState.gameState.calendar.currentDate)}`,
+    `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
+    `${input.text("career.selectedClubRosterSize")}: ${selectedClub?.playerIds.length ?? 0}`,
+    `${input.text("career.youth.selectedClubYouthCount")}: ${selectedYouthIds.length}`,
+    `${input.text("career.youth.activePlayers")}: senior=${seniorPlayerCount} youth=${youthPlayerCount} total=${seniorPlayerCount + youthPlayerCount}`,
+    `${input.text("career.youth.inspectionOnly")}`,
+    `${input.text("career.youth.players")}:`,
+    input.text("career.youth.tableHeader"),
+  ];
+
+  if (selectedYouthIds.length === 0) {
+    return [...lines, `  ${input.text("common.none")}`];
+  }
+
+  return [
+    ...lines,
+    ...selectedYouthIds.map((playerId) => formatCareerYouthPlayerLine(input.careerState, playerId, input.text)),
+  ];
+}
+
 /** Formats the output shown after creating a new seeded career world. */
 export function formatNewCareerWorldOutput(input: {
   readonly league: FakeLeagueSystem;
@@ -561,6 +602,124 @@ function formatCareerSquadPlayerLine(careerState: CliCareerState, playerId: Play
     " ",
     String(playerState?.morale ?? "--").padStart(3),
   ].join("");
+}
+
+function formatCareerYouthPlayerLine(careerState: CliCareerState, playerId: PlayerId, text: Translator): string {
+  const player = careerState.gameState.players[playerId];
+  const lifecycle = careerState.youthAcademyState?.playerLifecycle[playerId];
+
+  if (player === undefined) {
+    return `  ${String(playerId).padEnd(24)} ${text("common.unknown")}`;
+  }
+
+  const age = Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / 365);
+  const position = formatPrimaryPosition(player);
+  const abilityBand = text(presentationMessageKey("career.youth.abilityBand", youthAbilityBand(player)));
+  const developmentCategory = text(presentationMessageKey("career.youth.developmentCategory", youthDevelopmentCategory(player)));
+  const status = lifecycle?.status ?? "academy";
+
+  return [
+    "  ",
+    playerLabel(playerId, careerState.gameState).padEnd(24),
+    String(age).padStart(3),
+    " ",
+    formatUnknownNationality(text).padEnd(14),
+    " ",
+    position.padEnd(4),
+    " ",
+    abilityBand.padEnd(11),
+    " ",
+    developmentCategory.padEnd(14),
+    " ",
+    text(presentationMessageKey("career.youth.status", status)),
+  ].join("");
+}
+
+function formatUnknownNationality(text: Translator): string {
+  return text("common.unknown");
+}
+
+function youthAbilityBand(player: CliPlayer): string {
+  const roleAbility = roleRelevantCurrentAbility(player);
+
+  if (roleAbility >= 11) {
+    return "strong";
+  }
+
+  if (roleAbility >= 9) {
+    return "good";
+  }
+
+  if (roleAbility >= 7) {
+    return "developing";
+  }
+
+  return "raw";
+}
+
+function youthDevelopmentCategory(player: CliPlayer): string {
+  const roleAbility = roleRelevantCurrentAbility(player);
+  const potentialRoom = averagePotentialRoom(player);
+
+  if (roleAbility >= 9) {
+    return "seniorReady";
+  }
+
+  if (potentialRoom >= 4.5) {
+    return "highCeiling";
+  }
+
+  if (roleAbility >= 7.5) {
+    return "promising";
+  }
+
+  if (potentialRoom >= 2.5) {
+    return "developing";
+  }
+
+  return "foundation";
+}
+
+function averagePotentialRoom(player: CliPlayer): number {
+  const current = abilityValues(player.abilities);
+  const potential = abilityValues(player.potential);
+  let totalRoom = 0;
+
+  for (let index = 0; index < current.length; index += 1) {
+    totalRoom += (potential[index] ?? 0) - (current[index] ?? 0);
+  }
+
+  return totalRoom / current.length;
+}
+
+function abilityValues(abilities: CliPlayer["abilities"]): readonly number[] {
+  return [
+    abilities.technical.finishing,
+    abilities.technical.passing,
+    abilities.technical.longPassing,
+    abilities.technical.crossing,
+    abilities.technical.dribbling,
+    abilities.technical.technique,
+    abilities.technical.tackling,
+    abilities.technical.penalties,
+    abilities.technical.freeKicks,
+    abilities.physical.pace,
+    abilities.physical.strength,
+    abilities.physical.stamina,
+    abilities.physical.agility,
+    abilities.physical.heading,
+    abilities.mental.positioning,
+    abilities.mental.vision,
+    abilities.mental.anticipation,
+    abilities.mental.composure,
+    abilities.mental.determination,
+    abilities.mental.leadership,
+    abilities.goalkeeping.reflexes,
+    abilities.goalkeeping.handling,
+    abilities.goalkeeping.rushingOut,
+    abilities.goalkeeping.goalkeeperPositioning,
+    abilities.goalkeeping.footwork,
+  ];
 }
 
 function formatPrimaryPosition(player: CliPlayer): string {

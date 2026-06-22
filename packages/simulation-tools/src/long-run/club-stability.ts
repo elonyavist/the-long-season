@@ -36,8 +36,64 @@ export interface LongRunClubStabilityReport {
   readonly transferTurnoverAvailable: boolean;
   /** Whether squad turnover metrics are available in the current simulation path. */
   readonly squadTurnoverAvailable: boolean;
+  /** Total transfer-turnover movements across the run, when available. */
+  readonly transferTurnoverCount: number;
+  /** Total player exits across the run, when available. */
+  readonly playerExitCount: number;
+  /** Total retirement exits across the run, when available. */
+  readonly retirementExitCount: number;
+  /** Total release exits across the run, when available. */
+  readonly releasedExitCount: number;
+  /** Total career step-down exits across the run, when available. */
+  readonly careerStepDownExitCount: number;
+  /** Total generated intake candidates across the run, when available. */
+  readonly playerIntakeCount: number;
+  /** Total intake players added to club rosters across the run, when available. */
+  readonly squadMaintenanceAddedCount: number;
+  /** Smallest club roster size observed after refresh across the run. */
+  readonly minimumSquadSizeObserved: number;
+  /** Largest club roster size observed after refresh across the run. */
+  readonly maximumSquadSizeObserved: number;
+  /** Average club roster size observed after refresh across the run. */
+  readonly averageSquadSizeObserved: number;
+  /** Total club-season observations below the minimum squad-size gate. */
+  readonly clubsBelowMinimumSquadSizeCount: number;
+  /** Total club-season observations without a natural goalkeeper. */
+  readonly clubsWithoutNaturalGoalkeeperCount: number;
+  /** Total role/depth warnings emitted by squad maintenance across the run. */
+  readonly roleCoverageWarningCount: number;
   /** Original season rows for report rendering and future scoring. */
   readonly seasons: readonly LongRunClubSeasonRow[];
+}
+
+/** Optional refresh totals attached to a long-run club-stability report. */
+export interface LongRunRefreshTotals {
+  /** Total transfer-turnover movements across the run. */
+  readonly transferTurnoverCount: number;
+  /** Total player exits across the run. */
+  readonly playerExitCount: number;
+  /** Total retirement exits across the run. */
+  readonly retirementExitCount?: number;
+  /** Total release exits across the run. */
+  readonly releasedExitCount?: number;
+  /** Total career step-down exits across the run. */
+  readonly careerStepDownExitCount?: number;
+  /** Total generated intake candidates across the run. */
+  readonly playerIntakeCount: number;
+  /** Total intake players added to club rosters across the run. */
+  readonly squadMaintenanceAddedCount: number;
+  /** Smallest club roster size observed after refresh across the run. */
+  readonly minimumSquadSizeObserved?: number;
+  /** Largest club roster size observed after refresh across the run. */
+  readonly maximumSquadSizeObserved?: number;
+  /** Average club roster size observed after refresh across the run. */
+  readonly averageSquadSizeObserved?: number;
+  /** Total club-season observations below the minimum squad-size gate. */
+  readonly clubsBelowMinimumSquadSizeCount?: number;
+  /** Total club-season observations without a natural goalkeeper. */
+  readonly clubsWithoutNaturalGoalkeeperCount?: number;
+  /** Total role/depth warnings emitted by squad maintenance across the run. */
+  readonly roleCoverageWarningCount?: number;
 }
 
 /**
@@ -45,6 +101,7 @@ export interface LongRunClubStabilityReport {
  */
 export function createLongRunClubStabilityReport(
   seasons: readonly LongRunClubSeasonRow[],
+  refreshTotals?: LongRunRefreshTotals,
 ): LongRunClubStabilityReport {
   const titleCounts = new Map<string, { clubName: string; titles: number }>();
 
@@ -70,8 +127,21 @@ export function createLongRunClubStabilityReport(
     selectedClubBestPosition: Math.min(...seasons.map((season) => season.selectedClubPosition)),
     selectedClubWorstPosition: Math.max(...seasons.map((season) => season.selectedClubPosition)),
     selectedClubAveragePoints: roundMetric(average(seasons.map((season) => season.selectedClubPoints))),
-    transferTurnoverAvailable: false,
-    squadTurnoverAvailable: false,
+    transferTurnoverAvailable: refreshTotals !== undefined,
+    squadTurnoverAvailable: refreshTotals !== undefined,
+    transferTurnoverCount: refreshTotals?.transferTurnoverCount ?? 0,
+    playerExitCount: refreshTotals?.playerExitCount ?? 0,
+    retirementExitCount: refreshTotals?.retirementExitCount ?? 0,
+    releasedExitCount: refreshTotals?.releasedExitCount ?? 0,
+    careerStepDownExitCount: refreshTotals?.careerStepDownExitCount ?? 0,
+    playerIntakeCount: refreshTotals?.playerIntakeCount ?? 0,
+    squadMaintenanceAddedCount: refreshTotals?.squadMaintenanceAddedCount ?? 0,
+    minimumSquadSizeObserved: refreshTotals?.minimumSquadSizeObserved ?? 0,
+    maximumSquadSizeObserved: refreshTotals?.maximumSquadSizeObserved ?? 0,
+    averageSquadSizeObserved: refreshTotals?.averageSquadSizeObserved ?? 0,
+    clubsBelowMinimumSquadSizeCount: refreshTotals?.clubsBelowMinimumSquadSizeCount ?? 0,
+    clubsWithoutNaturalGoalkeeperCount: refreshTotals?.clubsWithoutNaturalGoalkeeperCount ?? 0,
+    roleCoverageWarningCount: refreshTotals?.roleCoverageWarningCount ?? 0,
     seasons,
   };
 }

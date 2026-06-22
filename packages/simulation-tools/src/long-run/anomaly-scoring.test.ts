@@ -29,11 +29,74 @@ test("createLongRunAnomalyReport fails repeated impossible assist output", () =>
   assert.equal(report.checks.find((check) => check.key === "top_creator_goal_share_max")?.status, "fail");
 });
 
+test("createLongRunAnomalyReport warns on high but non-concentrated assist output", () => {
+  const report = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.7, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 19, topShare: 0.28, topThreeShare: 0.49 }),
+    clubStability: {
+      ...clubStability({ streak: 2 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 4,
+      playerExitCount: 12,
+      squadMaintenanceAddedCount: 8,
+    },
+  });
+
+  assert.equal(report.status, "warn");
+  assert.equal(report.checks.find((check) => check.key === "top_assist_max")?.status, "warn");
+  assert.equal(report.checks.find((check) => check.key === "top_creator_goal_share_max")?.status, "pass");
+  assert.equal(report.checks.find((check) => check.key === "top_three_creator_goal_share_max")?.status, "pass");
+});
+
+test("createLongRunAnomalyReport scales rare production maxima on thirty-season runs", () => {
+  const report = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.7, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 22, topShare: 0.34, topThreeShare: 0.55, seasonCount: 30 }),
+    clubStability: {
+      ...clubStability({ streak: 8, seasonCount: 30 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 120,
+      playerExitCount: 700,
+      squadMaintenanceAddedCount: 700,
+    },
+  });
+
+  assert.equal(report.status, "warn");
+  assert.equal(report.checks.find((check) => check.key === "top_assist_max")?.status, "warn");
+  assert.equal(report.checks.find((check) => check.key === "champion_streak")?.status, "warn");
+});
+
+test("createLongRunAnomalyReport fails structural squad collapse", () => {
+  const report = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.7, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 12, topShare: 0.22, topThreeShare: 0.5 }),
+    clubStability: {
+      ...clubStability({ streak: 2 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 3,
+      playerExitCount: 2,
+      squadMaintenanceAddedCount: 2,
+      clubsBelowMinimumSquadSizeCount: 1,
+      clubsWithoutNaturalGoalkeeperCount: 1,
+    },
+  });
+
+  assert.equal(report.status, "fail");
+  assert.equal(report.checks.find((check) => check.key === "clubs_below_minimum_squad_size")?.status, "fail");
+  assert.equal(report.checks.find((check) => check.key === "clubs_without_natural_goalkeeper")?.status, "fail");
+});
+
 function playerEvolution(input: {
   readonly topAssists: number;
   readonly topShare: number;
   readonly topThreeShare: number;
+  readonly seasonCount?: number;
 }): LongRunPlayerEvolutionReport {
+  const seasonCount = input.seasonCount ?? 1;
+
   return {
     startAverageCurrentAbility: 8,
     endAverageCurrentAbility: 8.4,
@@ -47,25 +110,23 @@ function playerEvolution(input: {
     finalAge30Plus: 4,
     topImprovers: [],
     biggestDecliners: [],
-    production: [
-      {
-        seasonNumber: 1,
-        topScorerName: "Scorer",
-        topScorerGoals: 18,
-        topAssistName: "Creator",
-        topAssists: input.topAssists,
-        assistPlayersAtLeastFive: 5,
-        assistPlayersAtLeastEight: 3,
-        assistPlayersAtLeastTen: 2,
-        assistPlayersAtLeastTwelve: 1,
-        topAssistClubGoalShare: input.topShare,
-        topThreeAssistClubGoalShare: input.topThreeShare,
-      },
-    ],
+    production: Array.from({ length: seasonCount }, (_, index) => ({
+      seasonNumber: index + 1,
+      topScorerName: "Scorer",
+      topScorerGoals: 18,
+      topAssistName: "Creator",
+      topAssists: index === seasonCount - 1 ? input.topAssists : 12,
+      assistPlayersAtLeastFive: 5,
+      assistPlayersAtLeastEight: 3,
+      assistPlayersAtLeastTen: 2,
+      assistPlayersAtLeastTwelve: 1,
+      topAssistClubGoalShare: index === seasonCount - 1 ? input.topShare : 0.22,
+      topThreeAssistClubGoalShare: index === seasonCount - 1 ? input.topThreeShare : 0.5,
+    })),
   };
 }
 
-function clubStability(input: { readonly streak: number }): LongRunClubStabilityReport {
+function clubStability(input: { readonly streak: number; readonly seasonCount?: number }): LongRunClubStabilityReport {
   return {
     uniqueChampionCount: 3,
     mostTitledClubName: "Alpha",
@@ -77,6 +138,26 @@ function clubStability(input: { readonly streak: number }): LongRunClubStability
     selectedClubAveragePoints: 58,
     transferTurnoverAvailable: false,
     squadTurnoverAvailable: false,
-    seasons: [],
+    transferTurnoverCount: 0,
+    playerExitCount: 0,
+    retirementExitCount: 0,
+    releasedExitCount: 0,
+    careerStepDownExitCount: 0,
+    playerIntakeCount: 0,
+    squadMaintenanceAddedCount: 0,
+    minimumSquadSizeObserved: 0,
+    maximumSquadSizeObserved: 0,
+    averageSquadSizeObserved: 0,
+    clubsBelowMinimumSquadSizeCount: 0,
+    clubsWithoutNaturalGoalkeeperCount: 0,
+    roleCoverageWarningCount: 0,
+    seasons: Array.from({ length: input.seasonCount ?? 0 }, (_, index) => ({
+      seasonNumber: index + 1,
+      championClubId: index < input.streak ? "club:alpha" : `club:${index}`,
+      championClubName: index < input.streak ? "Alpha" : `Club ${index}`,
+      championPoints: 70,
+      selectedClubPosition: 4,
+      selectedClubPoints: 58,
+    })),
   };
 }
