@@ -28,6 +28,13 @@ export {
   type NextCareerFixtureResult,
 } from "./career/next-fixture.ts";
 export {
+  continueCareerUntilAttention,
+  type CareerContinueStopReason,
+  type ContinueCareerPreparationInput,
+  type ContinueCareerUntilAttentionInput,
+  type ContinueCareerUntilAttentionResult,
+} from "./career/continue-career.ts";
+export {
   generateNextSeasonCalendar,
   type NextSeasonCalendarGenerated,
   type NextSeasonCalendarInvalid,

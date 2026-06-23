@@ -185,12 +185,14 @@ Ultimo aggiornamento: 14 giugno 2026 — **fondazione tecnica sviscerata** in se
 
 ### 17. UI/UX retro ✅
 **Decisioni:**
-- Navigazione a schede stile CM: barra orizzontale sempre visibile, bottone Continua come battito del gioco, News come scheda con badge di attenzione. Niente inbox-centrismo.
+- Navigazione stile manageriale desktop: menu globale orizzontale sempre visibile in alto, bottone Continua come battito del gioco, area centrale che cambia in base alla schermata selezionata.
+- Posta/Inbox come rail laterale sinistra persistente: è la superficie decisionale degli eventi che richiedono attenzione, non un full mail client e non un feed casuale di news. Deve mostrare priorità, messaggi azionabili e stato dell'avanzamento senza nascondere scelte al manager.
 - Scorciatoie da tastiera su tutto: il pubblico desktop gioca con una mano sulla tastiera.
+- Accessibilità web: target operativo WCAG 2.2 AA. La UI deve supportare navigazione da tastiera, focus visibile, landmark semantici, nomi accessibili per controlli e regioni, stato corrente della navigazione, contrasto sufficiente, stati non comunicati solo dal colore, target cliccabili comodi, e nessun contenuto essenziale tagliato o sovrapposto nei viewport supportati.
 - Carattere: font pixel d'epoca, purismo totale come default. Nelle impostazioni: opzione leggibilità (scala font + carattere pulito alternativo) per accessibilità.
 - Palette d'epoca: navy, crema, righe alternate, densità CM 01/02 (riferimento: mockup approvato).
-- Desktop-first al lancio; layout mobile/responsive come progetto post-lancio.
-- Mappa schermate: Club, Rosa, Tattica, Mercato, Finanze, Strutture, Vivaio, Staff & Scouting, Calendario/Classifiche, News, Archivio.
+- Desktop-first al lancio; layout stretto/narrow supportato almeno per non rompere navigazione, Posta e schermata centrale. Mobile completo può restare post-lancio.
+- Mappa schermate: Dashboard/Club, Rosa, Tattica, Calendario/Classifiche, Mercato, Finanze, Strutture, Vivaio, Staff & Scouting, Archivio. La Posta resta una rail trasversale, non una schermata isolata.
 
 ### 18. Onboarding e demo ✅
 **Decisioni:**

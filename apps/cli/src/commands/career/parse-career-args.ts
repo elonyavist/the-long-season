@@ -48,6 +48,13 @@ export type ParsedCareerArgs =
       readonly seed: string;
       readonly saveId: CliSaveId;
       readonly language: SupportedLanguage;
+      readonly mode: "dashboard";
+    }
+  | {
+      readonly ok: true;
+      readonly seed: string;
+      readonly saveId: CliSaveId;
+      readonly language: SupportedLanguage;
       readonly mode: "squad";
     }
   | {
@@ -119,6 +126,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
   let language: SupportedLanguage = "en";
   let inspect = false;
   let summary = false;
+  let dashboard = false;
   let squad = false;
   let youthAcademy = false;
   let lineupDemo: LineupDemoProfileKey | undefined;
@@ -199,6 +207,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       if (
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -225,6 +234,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       if (
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -250,6 +260,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       if (
         marketDemo !== undefined ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -270,6 +281,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       if (
         marketDemo !== undefined ||
         inspect ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -286,11 +298,33 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       continue;
     }
 
+    if (arg === "--dashboard") {
+      if (
+        marketDemo !== undefined ||
+        inspect ||
+        summary ||
+        squad ||
+        youthAcademy ||
+        lineupDemo !== undefined ||
+        tacticDemo !== undefined ||
+        advanceNextFixture ||
+        rolloverSeason ||
+        developmentReport ||
+        newWorldPreview
+      ) {
+        return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
+      }
+
+      dashboard = true;
+      continue;
+    }
+
     if (arg === "--squad") {
       if (
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         youthAcademy ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
@@ -311,6 +345,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         lineupDemo !== undefined ||
         tacticDemo !== undefined ||
@@ -331,6 +366,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         tacticDemo !== undefined ||
@@ -357,6 +393,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         tacticDemo !== undefined ||
@@ -382,6 +419,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -408,6 +446,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -433,6 +472,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
         marketDemo !== undefined ||
         inspect ||
         summary ||
+        dashboard ||
         squad ||
         youthAcademy ||
         lineupDemo !== undefined ||
@@ -449,7 +489,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--rollover-season") {
-      if (marketDemo !== undefined || inspect || summary || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || developmentReport || newWorldPreview) {
+      if (marketDemo !== undefined || inspect || summary || dashboard || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || developmentReport || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -458,7 +498,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--development-report") {
-      if (marketDemo !== undefined || inspect || summary || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || newWorldPreview) {
+      if (marketDemo !== undefined || inspect || summary || dashboard || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || newWorldPreview) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -467,7 +507,7 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
     }
 
     if (arg === "--new-world-preview") {
-      if (marketDemo !== undefined || inspect || summary || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || developmentReport) {
+      if (marketDemo !== undefined || inspect || summary || dashboard || squad || youthAcademy || lineupDemo !== undefined || tacticDemo !== undefined || advanceNextFixture || rolloverSeason || developmentReport) {
         return { ok: false, language, message: createTranslator(language)("career.error.inspectWithApply") };
       }
 
@@ -503,6 +543,16 @@ export function parseCareerArgs(args: readonly string[]): ParsedCareerArgs {
       saveId,
       language,
       mode: "summary",
+    };
+  }
+
+  if (dashboard) {
+    return {
+      ok: true,
+      seed,
+      saveId,
+      language,
+      mode: "dashboard",
     };
   }
 

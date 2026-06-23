@@ -10,8 +10,10 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - `content -> domain, shared`
 - `storage -> domain, shared`
 - `simulation-tools -> domain, engine, shared`
-- `apps/cli -> engine, content, storage, simulation-tools, shared`
-- `apps/web -> engine, content, storage, ui, shared`
+- `i18n -> nothing`
+- `ui -> nothing`
+- `apps/cli -> engine, content, storage, simulation-tools, i18n, ui, shared`
+- `apps/web -> engine, content, storage, i18n, ui, shared`
 - `apps/desktop -> web`
 
 ## Absolute Bans
@@ -63,6 +65,38 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Do not remove believable variance. Standout players, tight leagues, dynasties, collapses, and surprise seasons are desirable when they are rare, explainable, and football-plausible.
 - Any proposed fix must state the user-facing reason before the mathematical reason.
 
+## Local Runtime And Visual QA Rules
+
+- Use Node `24.16.0` for local work. Before running project commands in a new
+  shell, run `nvm use 24` from the repository root.
+- Web/UI phases must have Playwright available for screenshot-based visual QA.
+- Chromium is the default browser for automated visual inspection. Install or
+  refresh it with `pnpm playwright:install`.
+- Before closing a web/UI phase, run Playwright against the local app whenever a
+  browser-rendered screen exists. At minimum inspect desktop and narrow
+  viewport screenshots for blank pages, clipped text, overlapping content, and
+  broken navigation.
+- If Playwright cannot run, document the exact blocker in
+  `docs/PROJECT_STATUS.md` and the phase report instead of silently skipping
+  visual QA.
+
+## Web Accessibility Rules
+
+- Web UI work targets WCAG 2.2 AA unless a step documents a narrower temporary
+  prototype scope.
+- Browser-rendered screens must be usable by keyboard for primary flows.
+- Interactive controls must have visible focus states and accessible names.
+- Sticky or fixed regions must not hide focused controls.
+- Navigation must expose the current location with semantic state such as
+  `aria-current` when applicable.
+- Use semantic landmarks (`header`, `nav`, `aside`, `main`, `section`) where
+  they clarify page regions.
+- Do not communicate important state by color alone.
+- Do not knowingly ship clipped labels, overlapping content, unreachable
+  controls, or hover-only essential interactions.
+- Before closing a web/UI phase, document screenshot findings and keyboard/focus
+  findings in the phase audit or report.
+
 ## Step Discipline Rules
 
 - Work on exactly one documented step at a time.
@@ -112,7 +146,10 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 
 ## Executable Enforcement
 
+- Use `nvm use 24` before the commands below when starting from a fresh shell.
 - `pnpm check` is the single local gate and runs `pnpm lint`, `pnpm depcruise`, `pnpm test`, and `pnpm typecheck`.
+- `pnpm playwright:install` installs the Chromium browser used for local
+  Playwright screenshots and visual inspection.
 - `pnpm lint` uses ESLint and rejects forbidden runtime APIs inside `packages/engine`.
 - `pnpm depcruise` uses Dependency Cruiser and rejects package-boundary violations from this file.
 - `pnpm test` uses Vitest for `packages/**/*.test.ts`.

@@ -26,7 +26,7 @@ module.exports = {
       severity: "error",
       comment: "Engine must not depend on content, storage, UI, apps, or future outer layers.",
       from: { path: "^packages/engine/src" },
-      to: { path: "^(packages/(content|i18n|storage|simulation-tools)|apps/|@game/(content|i18n|storage|simulation-tools)$)" },
+      to: { path: "^(packages/(content|i18n|storage|simulation-tools|ui)|apps/|@game/(content|i18n|storage|simulation-tools|ui)$)" },
     },
     {
       name: "content-must-not-import-engine-or-storage",
@@ -57,6 +57,13 @@ module.exports = {
       to: { path: "^(packages/(?!i18n)|apps/|@game/(?!i18n$))" },
     },
     {
+      name: "ui-must-stay-read-model-only",
+      severity: "error",
+      comment: "UI read models must stay framework-free and language-agnostic.",
+      from: { path: "^packages/ui/src" },
+      to: { path: "^(packages/(?!ui)|apps/|@game/(?!ui$))" },
+    },
+    {
       name: "packages-must-not-import-apps",
       severity: "error",
       comment: "Packages are reusable inner layers and must not depend on app shells.",
@@ -68,6 +75,13 @@ module.exports = {
       severity: "error",
       comment: "The CLI should go through engine/content/storage/shared boundaries, not domain directly.",
       from: { path: "^apps/cli/src" },
+      to: { path: "^(packages/domain/src|@game/domain$)" },
+    },
+    {
+      name: "web-must-not-import-domain-directly",
+      severity: "error",
+      comment: "The web app should consume UI/read-model and app-level adapters, not raw domain contracts.",
+      from: { path: "^apps/web/src" },
       to: { path: "^(packages/domain/src|@game/domain$)" },
     },
   ],

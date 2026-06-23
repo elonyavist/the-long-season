@@ -22,6 +22,13 @@ apps/cli
   -> @game/simulation-tools
   -> @game/engine
   -> @game/i18n
+  -> @game/ui
+  -> @game/shared
+
+apps/web
+  -> @game/engine
+  -> @game/i18n
+  -> @game/ui
   -> @game/shared
 
 @game/simulation-tools -> @game/engine -> @game/domain
@@ -32,6 +39,7 @@ apps/cli
 @game/storage          -> @game/shared
 @game/domain           -> no project package
 @game/i18n             -> no project package
+@game/ui               -> no project package
 @game/shared           -> no project package
 ```
 
@@ -44,8 +52,13 @@ Why this matters:
 - `storage` persists data and must not simulate anything.
 - `simulation-tools` owns report models and diagnostic meaning, but not
   localized text or fake content.
+- `ui` owns language-agnostic app/career read models and action contracts. It
+  must not know React, browser APIs, storage, CLI, engine, content, or i18n.
 - `apps/cli` is the outer adapter. It can compose packages, parse commands,
-  persist saves, and render localized output.
+  persist saves, render localized output, and smoke-test UI read models.
+- `apps/web` is the first browser adapter. It renders localized React screens
+  from structured UI read models and web-owned demo adapters. It must not parse
+  CLI output or import raw domain contracts directly.
 
 `pnpm depcruise` enforces the package direction.
 
@@ -53,14 +66,16 @@ Why this matters:
 
 | Package | Owns | Must Not Own |
 |---|---|---|
-| `packages/domain` | IDs, entities, value objects, career/game/youth state, squad contracts, tactic contracts. | RNG, storage, rendering, generated content, engine decisions. |
+| `packages/domain` | IDs, entities, value objects, career/game/youth state, career Inbox/attention contracts, squad contracts, tactic contracts. | RNG, storage, rendering, generated content, engine decisions. |
 | `packages/shared` | Deterministic technical helpers: RNG, date conversion, assertions, errors, number utilities. | Football concepts or presentation text. |
-| `packages/engine` | Match simulation, season simulation, career fixture progression, development, squad/youth lifecycle, market rules, table calculation. | Content generation, JSON storage, CLI output, localized labels. |
+| `packages/engine` | Match simulation, season simulation, career fixture progression, Continue-until-attention logic, development, squad/youth lifecycle, market rules, table calculation. | Content generation, JSON storage, CLI output, localized labels. |
 | `packages/content` | Deterministic fake clubs, players, youth academies, identities, nationality data, generation bands, calibration targets. | Engine algorithms, save writes, UI/CLI rendering. |
 | `packages/storage` | JSON-backed save storage, schema metadata, migrations. | Gameplay decisions or generated content. |
 | `packages/simulation-tools` | Balance reports, long-run runners, player/club/youth stability reports, anomaly semantics. | Fake content, storage, localized prose, CLI formatting. |
 | `packages/i18n` | Supported languages, translation keys, fallback translation rendering. | Simulation logic or package imports. |
+| `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox view contracts, action availability/result contracts, pure dashboard and Inbox builders. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
 | `apps/cli` | Command parsing, package composition, save IO, localized console output, smoke/lab commands. | Core gameplay rules or reusable diagnostic semantics. |
+| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue adapters, reusable career shell, first dashboard screen, left Inbox/Posta rail, compact Inbox panel. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
 
 ## Main Entry Points
 
@@ -74,6 +89,7 @@ Why this matters:
 | Generated world facade | `packages/content/src/generators/league-system.ts` via `createFakeLeagueSystem` |
 | Season simulation use-case | `packages/engine/src/use-cases/simulate-season.ts` |
 | Career fixture progression | `packages/engine/src/career/progress-fixture.ts` via `progressNextCareerFixture` |
+| Career Continue loop | `packages/engine/src/career/continue-career.ts` via `continueCareerUntilAttention` |
 | Match simulation | `packages/engine/src/match-engine/simulate-match.ts` |
 | Manual tactic segments | `packages/engine/src/match-engine/simulate-match-with-manual-tactics.ts` |
 | Team strength | `packages/engine/src/match-engine/team-strength.ts` |
@@ -82,6 +98,21 @@ Why this matters:
 | Career storage | `packages/storage/src/career-storage.ts` |
 | Long-run anomaly semantics | `packages/simulation-tools/src/long-run/anomaly-scoring.ts` |
 | Localization labels | `packages/i18n/src/labels.ts` |
+| UI read-model package | `packages/ui/src/index.ts` |
+| App entry view contract | `packages/ui/src/app/app-entry-view.ts` |
+| Career dashboard view builder | `packages/ui/src/career/build-career-dashboard-view.ts` |
+| Career Inbox view builder | `packages/ui/src/career/career-inbox-view.ts` |
+| Career shell/navigation view builder | `packages/ui/src/career/career-shell-view.ts` |
+| Web app | `apps/web/src/main.tsx` |
+| Web React root | `apps/web/src/App.tsx` |
+| Web app-entry screen | `apps/web/src/screens/AppEntryScreen.tsx` |
+| Web dashboard screen | `apps/web/src/screens/CareerDashboardScreen.tsx` |
+| Web demo dashboard adapter | `apps/web/src/career/build-demo-career-dashboard.ts` |
+| Web demo Continue adapter | `apps/web/src/career/continue-demo-career.ts` |
+| Web career shell | `apps/web/src/components/CareerShell.tsx` |
+| Web Inbox panel | `apps/web/src/components/CareerInboxPanel.tsx` |
+| Web Continue/InBox visual QA | `apps/web/src/visual-qa/continue-inbox.spec.ts` |
+| Web shell accessibility visual QA | `apps/web/src/visual-qa/shell-accessibility.spec.ts` |
 
 ## Important Files By Area
 
@@ -92,6 +123,9 @@ Why this matters:
   reports. These files define shape, not behavior-heavy orchestration.
 - `packages/domain/src/state/*`
   Contains durable game/career/youth state contracts.
+- `packages/domain/src/career/*`
+  Contains durable language-agnostic career attention and Inbox/Posta contracts.
+  These are domain data contracts, not presentation text or UI behavior.
 - `packages/domain/src/value-objects/*`
   Contains branded IDs and values.
 - `packages/domain/src/index.ts`
@@ -126,6 +160,11 @@ Shared files must stay free from football concepts.
 - `packages/engine/src/career/progress-fixture.ts`
   Stable career matchday advancement entry point. Caller owns preparation and
   recovered state before calling this function.
+- `packages/engine/src/career/continue-career.ts`
+  Pure Continue-until-attention rule. It accepts explicit current date,
+  selected club, next fixture, preparation facts, and existing attention events,
+  then returns stop dates, attention events, and Inbox messages without playing
+  a fixture or writing a save.
 - `packages/engine/src/career/player-development.ts`
   Growth and aging model. Large but coherent.
 - `packages/engine/src/career/squad-maintenance.ts`,
@@ -197,6 +236,98 @@ Storage must not simulate matches or generate content.
 Simulation tools may define report models and thresholds. They must not render
 localized CLI text or import generated content.
 
+### UI Read Models
+
+- `packages/ui/src/index.ts`
+  Public UI read-model entry point. Future adapters should import from this
+  file instead of deep paths.
+- `packages/ui/src/app/app-entry-view.ts`
+  Main-menu/app-entry view contract: new career, continue career, settings,
+  selected language, supported languages, selected currency, supported
+  currencies, and app-entry actions.
+- `packages/ui/src/app/app-entry-actions.ts`
+  App-entry action availability and generic UI action result contracts.
+- `packages/ui/src/career/career-dashboard-view.ts`
+  First post-load career dashboard view contract. It stores IDs, status keys,
+  numeric facts, and display names already present in save/content data; it does
+  not store rendered sentences.
+- `packages/ui/src/career/career-dashboard-actions.ts`
+  Career-dashboard action availability and result contracts for inspect squad,
+  inspect lineup, inspect tactic, prepare match, advance fixture, and inspect
+  table.
+- `packages/ui/src/career/build-career-dashboard-view.ts`
+  Pure builder that maps already-loaded save facts into a dashboard view. It
+  owns preparation blockers, condition summary, table/recent-match presence,
+  alert keys, and action availability.
+- `packages/ui/src/career/career-inbox-view.ts`
+  Pure Inbox/Posta read-model builder. It orders messages, derives unread and
+  action-required counts, and keeps priority/status as keys for adapters to
+  localize.
+- `packages/ui/src/career/career-shell-view.ts`
+  Pure shell/navigation view builder. It defines stable career section keys,
+  current-section state, disabled future-section state, central content section,
+  and Inbox rail summary state without React or browser dependencies.
+
+UI read-model files are not the web UI. They exist so CLI smoke output and the
+future web adapter can consume the same structured facts without parsing console
+text or importing engine internals.
+
+### Web App
+
+- `apps/web/src/main.tsx`
+  Browser entry point. It mounts React and imports the global visual foundation.
+- `apps/web/src/App.tsx`
+  Small app-shell state machine. It owns in-memory screen choice, language and
+  currency preferences, and demo-career availability for the prototype.
+- `apps/web/src/app/preferences.ts`
+  Web-only preference model for language and display currency. Currency remains
+  a display preference, not an economics rule.
+- `apps/web/src/app/translation.ts`
+  Thin adapter over `@game/i18n` for React components.
+- `apps/web/src/app/app-entry-view-model.ts`
+  Builds the app-entry read model from `@game/ui` contracts.
+- `apps/web/src/screens/AppEntryScreen.tsx`
+  Localized main menu with New career, Continue career, and settings controls.
+- `apps/web/src/career/build-demo-career-dashboard.ts`
+  Deterministic read-only dashboard demo adapter. This is the replacement point
+  for a later real save adapter.
+- `apps/web/src/career/continue-demo-career.ts`
+  Deterministic Continue demo adapter. It delegates stop logic to
+  `continueCareerUntilAttention` and converts returned Inbox messages into
+  UI-facing message input. This is the replacement point for future real-save
+  continuation.
+- `apps/web/src/career/career-dashboard-presenter.ts`
+  Groups dashboard read-model facts for React rendering without duplicating
+  readiness logic.
+- `apps/web/src/components/CareerShell.tsx`
+  Reusable localized career shell. It owns the top global navigation, selected
+  club context, Main menu and Continue action group, left Inbox/Posta rail, and
+  central selected-content outlet.
+- `apps/web/src/components/CareerInboxPanel.tsx`
+  Compact localized Inbox/Posta panel for manager attention messages. It is not
+  a full mail client.
+- `apps/web/src/screens/CareerDashboardScreen.tsx`
+  Read-only dashboard/matchday hub prototype: context, selected club, next
+  fixture, preparation, condition, table context, recent match, actions, and
+  blockers. It now renders inside `CareerShell`; Continue and Inbox/Posta shell
+  placement live in the shell, while dashboard-specific facts remain central
+  content.
+- `apps/web/src/visual-qa/continue-inbox.spec.ts`
+  Playwright browser QA for main menu, new career, dashboard, Continue stop,
+  and Inbox/Posta on desktop and narrow viewports.
+- `apps/web/src/visual-qa/shell-accessibility.spec.ts`
+  Playwright browser QA for the Phase 51 shell: landmarks, current navigation
+  state, focus path, desktop left-rail geometry, narrow stacked geometry, and
+  screenshot capture under `/tmp/the-long-season-phase51`.
+- `apps/web/src/styles/*`
+  Premium retro visual foundation: tokens, base chrome, layout, and component
+  styles, including the top navigation shell, left Inbox/Posta rail, and central
+  dashboard outlet.
+
+The web app currently uses an in-memory demo career only. It can call the pure
+engine Continue rule through a demo adapter, but it does not load or write
+career saves, play fixtures, inspect squads in detail, or implement economics.
+
 ### CLI
 
 - `apps/cli/src/index.ts`
@@ -240,6 +371,10 @@ localized CLI text or import generated content.
   stable ordering, and compact player/club labels.
 - `apps/cli/src/commands/career/overview-output.ts`
   New-world preview, career summary, and career inspect output.
+- `apps/cli/src/commands/career/dashboard-output.ts`
+  Read-only career dashboard smoke output. It adapts a loaded career save into
+  `@game/ui` dashboard input, then renders the resulting view through i18n
+  labels. This is a CLI adapter, not the source of dashboard readiness logic.
 - `apps/cli/src/commands/career/preparation-output.ts`
   Saved lineup, saved tactic, and persisted match-preparation output.
 - `apps/cli/src/commands/career/matchday-output.ts`

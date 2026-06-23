@@ -229,6 +229,86 @@ test("career command summarizes an existing career save without mutating it", as
   }
 });
 
+test("career command prints a dashboard smoke view without mutating the save", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const dashboardIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=world-a", "--save=career-dashboard", "--new-world-preview"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const storage = new JsonCareerStorage({ directoryPath });
+    const before = await storage.loadCareer("save:career-dashboard" as Parameters<typeof storage.loadCareer>[0]);
+    const exitCode = await runCareerCommand(["--save=career-dashboard", "--dashboard"], dashboardIo, {
+      storageDirectoryPath: directoryPath,
+    });
+    const after = await storage.loadCareer("save:career-dashboard" as Parameters<typeof storage.loadCareer>[0]);
+
+    assert.equal(exitCode, 0);
+    assert.equal(dashboardIo.stderrLines.length, 0);
+    assert.equal(dashboardIo.stdoutLines[0], "The Long Season career dashboard");
+    assert.equal(dashboardIo.stdoutLines.includes("Save: save:career-dashboard"), true);
+    assert.equal(dashboardIo.stdoutLines.includes(`Save directory: ${directoryPath}`), true);
+    assert.equal(dashboardIo.stdoutLines.includes("World seed: world-a"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Current date: 2026-08-01"), true);
+    assert.equal(dashboardIo.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Next selected-club fixture:"), true);
+    assert.equal(
+      dashboardIo.stdoutLines.some((line) => new RegExp(`^  fixture:[0-9]{6} 2026-08-01 round 1: ${CLUB_NAME_PATTERN} vs ${CLUB_NAME_PATTERN} \\((home|away)\\)$`).test(line)),
+      true,
+    );
+    assert.equal(dashboardIo.stdoutLines.includes("Match preparation:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  Saved lineup: missing"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  Saved tactic: missing"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Condition summary:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  Players: 22"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Table context:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  unknown"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Actions:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  Advance next fixture: blocked (blocked by missing saved lineup, missing saved tactic)"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Blockers:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  missing saved lineup"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  missing saved tactic"), true);
+    assert.deepEqual(after, before);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("career command localizes dashboard smoke output in Italian", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const createIo = captureIo();
+  const dashboardIo = captureIo();
+
+  try {
+    assert.equal(
+      await runCareerCommand(["--seed=mondo-dashboard", "--save=carriera-dashboard", "--new-world-preview", "--lang=it"], createIo, {
+        storageDirectoryPath: directoryPath,
+      }),
+      0,
+    );
+
+    const exitCode = await runCareerCommand(["--save=carriera-dashboard", "--dashboard", "--lang=it"], dashboardIo, {
+      storageDirectoryPath: directoryPath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(dashboardIo.stderrLines.length, 0);
+    assert.equal(dashboardIo.stdoutLines[0], "The Long Season dashboard carriera");
+    assert.equal(dashboardIo.stdoutLines.includes("Preparazione partita:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("  Formazione salvata: mancante"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Azioni:"), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Blocchi:"), true);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
 test("career command inspects selected youth academy without mutating the save", async () => {
   const directoryPath = await createTempSaveDirectory();
   const createIo = captureIo();
@@ -1159,7 +1239,7 @@ test("career command rejects missing required arguments", async () => {
   assert.equal(missingMode.stdoutLines.length, 0);
   assert.equal(
     missingMode.stderrLines[0],
-    "choose exactly one career action: --apply-market-demo, --inspect, --summary, --squad, --youth-academy, --set-lineup-demo, --set-tactic-demo, --advance-next-fixture, --rollover-season, --development-report, or --new-world-preview",
+    "choose exactly one career action: --apply-market-demo, --inspect, --summary, --dashboard, --squad, --youth-academy, --set-lineup-demo, --set-tactic-demo, --advance-next-fixture, --rollover-season, --development-report, or --new-world-preview",
   );
 
   assert.equal(

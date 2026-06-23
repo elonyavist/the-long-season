@@ -13,7 +13,8 @@
     "@game/i18n": "workspace:*",
     "@game/simulation-tools": "workspace:*",
     "@game/shared": "workspace:*",
-    "@game/storage": "workspace:*"
+    "@game/storage": "workspace:*",
+    "@game/ui": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

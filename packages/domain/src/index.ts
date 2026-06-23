@@ -14,6 +14,7 @@ export * from "./entities/match-event.entity.ts";
 export * from "./entities/player.entity.ts";
 export * from "./entities/tactic.entity.ts";
 export * from "./entities/transfer.entity.ts";
+export * from "./career/index.ts";
 export * from "./state/career-state.ts";
 export * from "./state/career-world.ts";
 export * from "./state/game-state.ts";

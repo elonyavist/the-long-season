@@ -4,6 +4,7 @@ import { createTranslator } from "@game/i18n";
 import { JsonCareerStorage, StorageError } from "@game/storage";
 
 import { formatCareerDevelopmentReportOutput } from "./career/development-output.ts";
+import { formatCareerDashboardOutput } from "./career/dashboard-output.ts";
 import { formatCareerMarketApplyOutput } from "./career/market-output.ts";
 import { formatCareerAdvanceOutput } from "./career/matchday-output.ts";
 import {
@@ -105,6 +106,24 @@ export async function runCareerCommand(
     try {
       const careerState = await storage.loadCareer(parsed.saveId);
       for (const line of formatCareerSummaryOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
+        io.stdout(line);
+      }
+
+      return 0;
+    } catch (error) {
+      if (error instanceof StorageError && error.code === "save_not_found") {
+        io.stderr(text("career.error.saveNotFound", { saveId: parsed.saveId }));
+        return 1;
+      }
+
+      throw error;
+    }
+  }
+
+  if (parsed.mode === "dashboard") {
+    try {
+      const careerState = await storage.loadCareer(parsed.saveId);
+      for (const line of formatCareerDashboardOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
 
