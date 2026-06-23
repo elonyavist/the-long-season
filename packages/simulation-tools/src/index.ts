@@ -54,6 +54,7 @@ export {
 
 export {
   createLongRunAnomalyReport,
+  worstLongRunAnomalyStatus,
   type CreateLongRunAnomalyReportInput,
   type LongRunAnomalyCheck,
   type LongRunAnomalyReport,

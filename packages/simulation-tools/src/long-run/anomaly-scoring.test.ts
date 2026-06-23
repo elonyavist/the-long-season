@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { createLongRunAnomalyReport } from "./anomaly-scoring.ts";
+import { createLongRunAnomalyReport, worstLongRunAnomalyStatus } from "./anomaly-scoring.ts";
 import type { LongRunClubStabilityReport } from "./club-stability.ts";
 import type { LongRunPlayerEvolutionReport } from "./player-evolution.ts";
+
+test("worstLongRunAnomalyStatus combines independent report sections", () => {
+  assert.equal(worstLongRunAnomalyStatus(["pass", "pass"]), "pass");
+  assert.equal(worstLongRunAnomalyStatus(["pass", "warn"]), "warn");
+  assert.equal(worstLongRunAnomalyStatus(["warn", "fail"]), "fail");
+});
 
 test("createLongRunAnomalyReport warns when only missing market metrics are unavailable", () => {
   const report = createLongRunAnomalyReport({

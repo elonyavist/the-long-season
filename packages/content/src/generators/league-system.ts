@@ -102,7 +102,13 @@ export interface FakeMatchEngineConfig {
 }
 
 /**
- * Complete fake league system used by the first season CLI milestone.
+ * Complete generated league content bundle used by CLI season simulation,
+ * career creation, long-run diagnostics, and future UI bootstrapping.
+ *
+ * This is the content package facade: callers should prefer this bundle when
+ * they need a coherent world snapshot instead of manually composing clubs,
+ * players, lineups, tuning config, and season metadata from lower-level
+ * generators.
  */
 export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
   /** Generated season ID. */
@@ -128,7 +134,13 @@ export interface FakeLeagueSystemOptions {
 }
 
 /**
- * Creates the deterministic fake league system for `simulate-season`.
+ * Creates one deterministic generated league snapshot from a world seed.
+ *
+ * The function intentionally owns the top-level content composition order:
+ * club identities are generated first, generated squads are attached to those
+ * stable club IDs, and season-level metadata/configuration is added last. Keep
+ * lower-level generators available for focused tests, but use this function as
+ * the first entry point for career worlds and simulation reports.
  *
  * @example
  * const league = createFakeLeagueSystem({ worldSeed: "career-001" });

@@ -24,7 +24,13 @@ export type ProgressCareerFixtureInvalidReason =
   | "home_team_context_mismatch"
   | "away_team_context_mismatch";
 
-/** Input for simulating and applying exactly one next selected-club fixture. */
+/**
+ * Input for simulating and applying exactly one next selected-club fixture.
+ *
+ * Callers own pre-match preparation before this entry point runs: selected
+ * lineup, tactic, date-based recovery, and match-ready team contexts must
+ * already be reflected in `careerState` and `teamsByClubId`.
+ */
 export interface ProgressNextCareerFixtureInput {
   /** Current durable career state loaded by the caller. */
   readonly careerState: CareerState;
@@ -87,7 +93,14 @@ export type ProgressCareerFixtureResult =
  *
  * This function is deterministic for the same `CareerState`, team contexts,
  * and match config. It does not write storage, advance unrelated fixtures,
- * choose lineups, choose tactics, or run a full season.
+ * choose lineups, choose tactics, apply pre-match recovery, or run a full
+ * season. The flow is intentionally narrow:
+ *
+ * 1. find the next selected-club fixture;
+ * 2. validate caller-supplied home/away team contexts;
+ * 3. simulate the fixture and create a durable report;
+ * 4. apply the fixture result and selected-club condition spend;
+ * 5. return the copied career state plus structured facts for presentation.
  */
 export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput): ProgressCareerFixtureResult {
   const nextFixture = findNextCareerFixture(input.careerState);
@@ -108,43 +121,24 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     };
   }
 
-  const home = input.teamsByClubId[nextFixture.fixture.homeClubId];
-  const away = input.teamsByClubId[nextFixture.fixture.awayClubId];
+  const resolvedContexts = resolveFixtureTeamContexts(input.careerState, nextFixture.fixture, input.teamsByClubId);
 
-  if (home === undefined) {
-    return invalidResult(input.careerState, "missing_home_team_context", nextFixture.fixtureId);
+  if (resolvedContexts.status === "invalid") {
+    return resolvedContexts.result;
   }
 
-  if (away === undefined) {
-    return invalidResult(input.careerState, "missing_away_team_context", nextFixture.fixtureId);
-  }
-
-  if (home.clubId !== nextFixture.fixture.homeClubId) {
-    return invalidResult(input.careerState, "home_team_context_mismatch", nextFixture.fixtureId);
-  }
-
-  if (away.clubId !== nextFixture.fixture.awayClubId) {
-    return invalidResult(input.careerState, "away_team_context_mismatch", nextFixture.fixtureId);
-  }
-
-  const simulatedMatch = simulateMatch({
-    fixtureId: nextFixture.fixtureId,
-    seed: input.careerState.gameState.meta.seed,
-    home,
-    away,
-    engineConfig: input.matchEngineConfig,
-  }, {
-    includeExplanationTrace: input.includeExplanationTrace === true,
-  });
-  const report = createMatchReport(
-    simulatedMatch,
-  );
+  const simulatedFixture = simulateFixtureAndCreateReport(input, nextFixture.fixtureId, resolvedContexts.home, resolvedContexts.away);
   const gameStateWithResult = applyMatchReportToFixture({
     state: input.careerState.gameState,
     fixtureId: nextFixture.fixtureId,
-    report,
+    report: simulatedFixture.report,
   });
-  const selectedClubContext = selectedClubTeamContext(input.careerState.selectedClubId, nextFixture.fixture, home, away);
+  const selectedClubContext = selectedClubTeamContext(
+    input.careerState.selectedClubId,
+    nextFixture.fixture,
+    resolvedContexts.home,
+    resolvedContexts.away,
+  );
   const selectedStarterIds = selectedClubContext.lineup.map((slot) => slot.playerId);
   const selectedClub = gameStateWithResult.clubs[input.careerState.selectedClubId];
   const conditionConsequences = applyCareerFixtureConditionConsequences({
@@ -179,18 +173,93 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     fixtureId: nextFixture.fixtureId,
     fixtureBefore: nextFixture.fixture,
     fixtureAfter,
-    report,
-    ...(simulatedMatch.explanationTrace === undefined
+    report: simulatedFixture.report,
+    ...(simulatedFixture.explanationTrace === undefined
       ? {}
       : {
           explanationTrace: withSelectedClubConditionTrace(
-            simulatedMatch.explanationTrace,
+            simulatedFixture.explanationTrace,
             input.careerState.selectedClubId,
             conditionConsequences.changes,
           ),
         }),
     conditionChanges: conditionConsequences.changes,
     careerState: progressedCareerState,
+  };
+}
+
+type ResolvedFixtureTeamContexts =
+  | {
+      readonly status: "resolved";
+      readonly home: MatchTeamContext;
+      readonly away: MatchTeamContext;
+    }
+  | {
+      readonly status: "invalid";
+      readonly result: ProgressCareerFixtureInvalid;
+    };
+
+/**
+ * Validates the caller-supplied match contexts before the fixture can run.
+ */
+function resolveFixtureTeamContexts(
+  careerState: CareerState,
+  fixture: Fixture,
+  teamsByClubId: Readonly<Record<ClubId, MatchTeamContext>>,
+): ResolvedFixtureTeamContexts {
+  const home = teamsByClubId[fixture.homeClubId];
+  const away = teamsByClubId[fixture.awayClubId];
+
+  if (home === undefined) {
+    return { status: "invalid", result: invalidResult(careerState, "missing_home_team_context", fixture.id) };
+  }
+
+  if (away === undefined) {
+    return { status: "invalid", result: invalidResult(careerState, "missing_away_team_context", fixture.id) };
+  }
+
+  if (home.clubId !== fixture.homeClubId) {
+    return { status: "invalid", result: invalidResult(careerState, "home_team_context_mismatch", fixture.id) };
+  }
+
+  if (away.clubId !== fixture.awayClubId) {
+    return { status: "invalid", result: invalidResult(careerState, "away_team_context_mismatch", fixture.id) };
+  }
+
+  return {
+    status: "resolved",
+    home,
+    away,
+  };
+}
+
+interface SimulatedFixtureProgression {
+  readonly report: MatchReport;
+  readonly explanationTrace?: MatchExplanationTrace;
+}
+
+/**
+ * Runs the pure match simulation and converts it to the durable report shape.
+ */
+function simulateFixtureAndCreateReport(
+  input: ProgressNextCareerFixtureInput,
+  fixtureId: FixtureId,
+  home: MatchTeamContext,
+  away: MatchTeamContext,
+): SimulatedFixtureProgression {
+  const simulatedMatch = simulateMatch({
+    fixtureId,
+    seed: input.careerState.gameState.meta.seed,
+    home,
+    away,
+    engineConfig: input.matchEngineConfig,
+  }, {
+    includeExplanationTrace: input.includeExplanationTrace === true,
+  });
+
+  return {
+    report: createMatchReport(simulatedMatch),
+    ...(simulatedMatch.explanationTrace === undefined ? {} : { explanationTrace: simulatedMatch.explanationTrace }),
   };
 }
 

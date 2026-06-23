@@ -47,6 +47,24 @@ export interface LongRunAnomalyReport {
 }
 
 /**
+ * Returns the worst status across independent long-run report sections.
+ *
+ * Keep this helper in simulation tooling so CLI and future UI code can combine
+ * diagnostics without duplicating the PASS/WARN/FAIL severity order.
+ */
+export function worstLongRunAnomalyStatus(statuses: readonly LongRunAnomalyStatus[]): LongRunAnomalyStatus {
+  if (statuses.some((status) => status === "fail")) {
+    return "fail";
+  }
+
+  if (statuses.some((status) => status === "warn")) {
+    return "warn";
+  }
+
+  return "pass";
+}
+
+/**
  * Scores a long-run report for suspicious outcomes.
  *
  * Thresholds are intentionally explicit and narrow enough to surface issues;
@@ -302,15 +320,7 @@ function check(
 }
 
 function worstStatus(checks: readonly LongRunAnomalyCheck[]): LongRunAnomalyStatus {
-  if (checks.some((row) => row.status === "fail")) {
-    return "fail";
-  }
-
-  if (checks.some((row) => row.status === "warn")) {
-    return "warn";
-  }
-
-  return "pass";
+  return worstLongRunAnomalyStatus(checks.map((row) => row.status));
 }
 
 function average(values: readonly number[]): number {

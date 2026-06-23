@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
+import { toISO } from "@game/shared";
 
 import { createFakeLeagueSystem } from "./league-system.ts";
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
@@ -40,6 +41,20 @@ test("fake league passes the world seed into generated squads", () => {
   assert.ok(firstPlayerId !== undefined);
   assert.equal(second.playerIds[0], firstPlayerId);
   assert.notDeepEqual(first.players[firstPlayerId], second.players[firstPlayerId]);
+});
+
+test("fake league facade exposes a coherent generated world bundle", () => {
+  const league = createFakeLeagueSystem({ worldSeed: "career-world-a" });
+  const firstClubId = league.clubIds[0];
+
+  assert.ok(firstClubId !== undefined);
+  assert.equal(league.competition.clubIds, league.clubIds);
+  assert.equal(league.clubsById[firstClubId]?.playerIds.length, FAKE_PLAYERS_PER_CLUB);
+  assert.equal(league.lineupsByClubId[firstClubId]?.length, FAKE_LINEUP_SIZE);
+  assert.equal(toISO(league.seasonStartDate), "2026-08-01");
+  assert.equal(league.tableRules.pointsForWin, 3);
+  assert.equal(league.matchEngineConfig.minuteCount, 90);
+  assert.deepEqual(Object.keys(league.roleWeights).sort(), ["attacker", "defender", "gk", "midfielder"]);
 });
 
 test("fake league generates reserves without changing default lineup size", () => {

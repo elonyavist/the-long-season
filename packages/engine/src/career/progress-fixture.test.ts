@@ -171,6 +171,42 @@ test("progressNextCareerFixture reports negative selected-club condition impact 
   }
 });
 
+test("progressNextCareerFixture treats caller-supplied recovered state as the pre-match truth", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const recoveredFitness = 96;
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
+    fixtures: [fixtureFixture(fixtureId("fixture:000001"), selectedClubId, otherClubId)],
+    playerStateOverrides: {
+      [playerId("player:selected-01")]: playerStateFixture(recoveredFitness),
+    },
+  });
+
+  const result = progressNextCareerFixture({
+    careerState,
+    teamsByClubId: {
+      [selectedClubId]: teamContextFixture(selectedClubId, 12),
+      [otherClubId]: teamContextFixture(otherClubId, 10),
+    } as Record<ClubId, MatchTeamContext>,
+    matchEngineConfig: matchEngineConfigFixture(),
+  });
+
+  assert.equal(result.status, "advanced");
+  if (result.status === "advanced") {
+    const changedStarter = result.conditionChanges.find((change) => change.playerId === playerId("player:selected-01"));
+
+    assert.deepEqual(changedStarter, {
+      playerId: playerId("player:selected-01"),
+      beforeFitness: recoveredFitness,
+      afterFitness: 88,
+      delta: -8,
+      started: true,
+    });
+  }
+});
+
 test("progressNextCareerFixture returns none when there is no fixture to advance", () => {
   const selectedClubId = clubId("club:selected");
   const otherClubId = clubId("club:other");
