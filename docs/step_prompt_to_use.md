@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/51-web-layout-shell-navigation-and-accessible-inbox-placement
+PHASE_DIR_TO_EXECUTE: docs/steps/52-web-match-preparation-slice
 
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.
@@ -27,6 +27,7 @@ Follow the mandatory phase execution loop:
    - do not create or modify files outside this step’s “Expected files”, except:
      - `docs/PROJECT_STATUS.md`
      - the next relevant step document, only if a lesson learned changes future work.
+   - on every step you have to check the costraint in "docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md" and update the step as done
 5. Run the required tests/checks for the current step.
 6. If something fails:
    - fix the current step before moving on;

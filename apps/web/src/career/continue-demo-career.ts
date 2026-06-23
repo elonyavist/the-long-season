@@ -7,6 +7,8 @@ import { fromISO, toISO } from "@game/shared";
 import type { CareerInboxMessageInput } from "@game/ui";
 
 import { buildDemoCareerDashboardInput } from "./build-demo-career-dashboard";
+import type { DemoMatchPreparationState } from "./match-preparation-demo";
+import { buildDemoSavedPreparationInput } from "./match-preparation-demo";
 
 /** Presentation-safe result of pressing Continue in the deterministic demo career. */
 export interface DemoCareerContinueResult {
@@ -33,8 +35,10 @@ export interface DemoCareerContinueResult {
  * delegates the actual stop logic to `@game/engine` and keeps browser state
  * in-memory only.
  */
-export function continueDemoCareer(): DemoCareerContinueResult {
-  const dashboardInput = buildDemoCareerDashboardInput();
+export function continueDemoCareer(preparationState?: DemoMatchPreparationState): DemoCareerContinueResult {
+  const dashboardInput = buildDemoCareerDashboardInput(
+    preparationState === undefined ? undefined : buildDemoSavedPreparationInput(preparationState),
+  );
   const nextFixture = dashboardInput.nextFixture;
   const currentDate = fromISO(dashboardInput.currentDateIso);
   const engineInput = {

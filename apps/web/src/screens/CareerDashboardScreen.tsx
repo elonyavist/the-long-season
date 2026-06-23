@@ -18,6 +18,8 @@ export type CareerDashboardScreenProps = Readonly<{
   text: Translator;
   onBackToMenu: () => void;
   onContinueCareer: () => void;
+  onOpenMatchPreparation: () => void;
+  onInboxActionClick: (actionId: string) => void;
 }>;
 
 /** Renders the first career dashboard/matchday hub prototype. */
@@ -27,6 +29,8 @@ export function CareerDashboardScreen({
   text,
   onBackToMenu,
   onContinueCareer,
+  onOpenMatchPreparation,
+  onInboxActionClick,
 }: CareerDashboardScreenProps): React.JSX.Element {
   const { view } = presentation;
   const inboxView = buildCareerInboxView(continueResult?.inboxMessages ?? []);
@@ -42,6 +46,7 @@ export function CareerDashboardScreen({
       text={text}
       onBackToMenu={onBackToMenu}
       onContinueCareer={onContinueCareer}
+      onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-dashboard-panel" aria-labelledby="career-dashboard-title">
         <header className="tls-dashboard-header">
@@ -56,6 +61,19 @@ export function CareerDashboardScreen({
           <DashboardFact label={text("career.worldSeed")} value={view.context.worldSeed ?? text("common.unknown")} />
           <DashboardFact label={text("career.currentDate")} value={view.context.currentDateIso} />
           <DashboardFact label={text("career.currentSeason")} value={view.context.currentSeasonId} />
+        </section>
+
+        <section className="tls-dashboard-attention" aria-label={text("career.dashboard.blockers")}>
+          <h2>{text("career.dashboard.blockers")}</h2>
+          {presentation.primaryBlockers.length === 0 ? (
+            <p>{text("career.matchPreparation.noBlockers")}</p>
+          ) : (
+            <ul>
+              {presentation.primaryBlockers.map((blocker) => (
+                <li key={blocker}>{text(blockerLabelKey(blocker))}</li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <div className="tls-dashboard-grid">
@@ -110,6 +128,7 @@ export function CareerDashboardScreen({
                 className="tls-dashboard-action"
                 disabled={action.status !== "available"}
                 key={action.actionId}
+                onClick={action.actionId === "prepare_match" ? onOpenMatchPreparation : undefined}
                 type="button"
               >
                 <span>{text(action.labelKey as MessageKey)}</span>
@@ -139,18 +158,6 @@ export function CareerDashboardScreen({
           </section>
         )}
 
-        <section className="tls-dashboard-blockers" aria-label={text("career.dashboard.blockers")}>
-          <h2>{text("career.dashboard.blockers")}</h2>
-          {presentation.primaryBlockers.length === 0 ? (
-            <p>{text("common.none")}</p>
-          ) : (
-            <ul>
-              {presentation.primaryBlockers.map((blocker) => (
-                <li key={blocker}>{text(blockerLabelKey(blocker))}</li>
-              ))}
-            </ul>
-          )}
-        </section>
       </section>
     </CareerShell>
   );

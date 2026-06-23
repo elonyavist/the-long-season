@@ -30,6 +30,16 @@ test("all five supported languages cover the current catalog", () => {
   assert.equal(MESSAGE_KEYS.length > 0, true);
 });
 
+test("translates match preparation web labels in every supported language", () => {
+  assert.equal(translate("en", "career.matchPreparation.summary.blocked"), "Preparation incomplete");
+  assert.equal(translate("it", "career.matchPreparation.summary.blocked"), "Preparazione incompleta");
+  assert.equal(translate("de", "career.matchPreparation.summary.blocked"), "Vorbereitung unvollstandig");
+  assert.equal(translate("es", "career.matchPreparation.summary.blocked"), "Preparacion incompleta");
+  assert.equal(translate("fr", "career.matchPreparation.summary.blocked"), "Preparation incomplete");
+  assert.equal(translate("en", "career.matchPreparation.action.save"), "Save preparation");
+  assert.equal(translate("it", "career.matchPreparation.tactic.attacking"), "Offensiva");
+});
+
 test("unknown keys fail clearly at runtime", () => {
   assert.throws(
     () => translate("en", "missing.key" as never),

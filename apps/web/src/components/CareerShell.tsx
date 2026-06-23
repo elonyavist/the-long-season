@@ -10,6 +10,7 @@ export type CareerShellProps = Readonly<{
   text: Translator;
   onBackToMenu: () => void;
   onContinueCareer: () => void;
+  onInboxActionClick?: (actionId: string) => void;
   children: React.ReactNode;
 }>;
 
@@ -20,6 +21,7 @@ export function CareerShell({
   text,
   onBackToMenu,
   onContinueCareer,
+  onInboxActionClick,
   children,
 }: CareerShellProps): React.JSX.Element {
   return (
@@ -71,7 +73,11 @@ export function CareerShell({
           className="tls-career-shell-inbox-rail"
           data-action-required={shellView.inboxRail.hasActionRequiredMessages}
         >
-          <CareerInboxPanel view={shellView.inboxRail.inboxView} text={text} />
+          <CareerInboxPanel
+            view={shellView.inboxRail.inboxView}
+            text={text}
+            {...(onInboxActionClick === undefined ? {} : { onActionClick: onInboxActionClick })}
+          />
         </aside>
 
         <main

@@ -1,6 +1,7 @@
 import {
   buildCareerDashboardView,
   type BuildCareerDashboardViewInput,
+  type CareerDashboardPreparationInput,
   type CareerDashboardView,
 } from "@game/ui";
 
@@ -28,7 +29,9 @@ const NEXT_OPPONENT = {
  * adapter should return the same `BuildCareerDashboardViewInput` shape after
  * loading a career save.
  */
-export function buildDemoCareerDashboardInput(): BuildCareerDashboardViewInput {
+export function buildDemoCareerDashboardInput(
+  preparation?: CareerDashboardPreparationInput,
+): BuildCareerDashboardViewInput {
   return {
     saveId: WEB_DEMO_DASHBOARD_SAVE_ID,
     worldSeed: WEB_DEMO_DASHBOARD_SEED,
@@ -44,11 +47,12 @@ export function buildDemoCareerDashboardInput(): BuildCareerDashboardViewInput {
       awayClub: SELECTED_CLUB,
       selectedClubSide: "away",
     },
-    preparation: {
-      hasSavedLineup: false,
-      hasSavedTactic: false,
-      targetFixtureId: "fixture:000003",
-    },
+    preparation:
+      preparation ?? {
+        hasSavedLineup: false,
+        hasSavedTactic: false,
+        targetFixtureId: "fixture:000003",
+      },
     playerConditions: Array.from({ length: 22 }, (_, index) => ({
       playerId: `player:demo-${String(index + 1).padStart(2, "0")}`,
       fitness: 100,
@@ -57,6 +61,8 @@ export function buildDemoCareerDashboardInput(): BuildCareerDashboardViewInput {
 }
 
 /** Builds the deterministic read-only demo dashboard view for the web app. */
-export function buildDemoCareerDashboard(): CareerDashboardView {
-  return buildCareerDashboardView(buildDemoCareerDashboardInput());
+export function buildDemoCareerDashboard(
+  preparation?: CareerDashboardPreparationInput,
+): CareerDashboardView {
+  return buildCareerDashboardView(buildDemoCareerDashboardInput(preparation));
 }

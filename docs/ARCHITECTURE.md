@@ -73,9 +73,9 @@ Why this matters:
 | `packages/storage` | JSON-backed save storage, schema metadata, migrations. | Gameplay decisions or generated content. |
 | `packages/simulation-tools` | Balance reports, long-run runners, player/club/youth stability reports, anomaly semantics. | Fake content, storage, localized prose, CLI formatting. |
 | `packages/i18n` | Supported languages, translation keys, fallback translation rendering. | Simulation logic or package imports. |
-| `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox view contracts, action availability/result contracts, pure dashboard and Inbox builders. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
+| `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox/match-preparation view contracts, action availability/result contracts, pure dashboard, Inbox, shell, and match-preparation builders. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
 | `apps/cli` | Command parsing, package composition, save IO, localized console output, smoke/lab commands. | Core gameplay rules or reusable diagnostic semantics. |
-| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue adapters, reusable career shell, first dashboard screen, left Inbox/Posta rail, compact Inbox panel. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
+| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue/preparation adapters, reusable career shell, first dashboard screen, match-preparation screen, left Inbox/Posta rail, compact Inbox panel. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
 
 ## Main Entry Points
 
@@ -103,16 +103,20 @@ Why this matters:
 | Career dashboard view builder | `packages/ui/src/career/build-career-dashboard-view.ts` |
 | Career Inbox view builder | `packages/ui/src/career/career-inbox-view.ts` |
 | Career shell/navigation view builder | `packages/ui/src/career/career-shell-view.ts` |
+| Career match-preparation view builder | `packages/ui/src/career/career-match-preparation-view.ts` |
 | Web app | `apps/web/src/main.tsx` |
 | Web React root | `apps/web/src/App.tsx` |
 | Web app-entry screen | `apps/web/src/screens/AppEntryScreen.tsx` |
 | Web dashboard screen | `apps/web/src/screens/CareerDashboardScreen.tsx` |
+| Web match-preparation screen | `apps/web/src/screens/CareerMatchPreparationScreen.tsx` |
 | Web demo dashboard adapter | `apps/web/src/career/build-demo-career-dashboard.ts` |
 | Web demo Continue adapter | `apps/web/src/career/continue-demo-career.ts` |
+| Web demo match-preparation adapter | `apps/web/src/career/match-preparation-demo.ts` |
 | Web career shell | `apps/web/src/components/CareerShell.tsx` |
 | Web Inbox panel | `apps/web/src/components/CareerInboxPanel.tsx` |
 | Web Continue/InBox visual QA | `apps/web/src/visual-qa/continue-inbox.spec.ts` |
 | Web shell accessibility visual QA | `apps/web/src/visual-qa/shell-accessibility.spec.ts` |
+| Web match-preparation visual QA | `apps/web/src/visual-qa/match-preparation.spec.ts` |
 
 ## Important Files By Area
 
@@ -267,6 +271,12 @@ localized CLI text or import generated content.
   Pure shell/navigation view builder. It defines stable career section keys,
   current-section state, disabled future-section state, central content section,
   and Inbox rail summary state without React or browser dependencies.
+- `packages/ui/src/career/career-match-preparation-view.ts`
+  Pure match-preparation view builder. It accepts explicit fixture, selected
+  club, lineup slot, player option, tactic profile, and saved-state facts, then
+  derives missing-slot, duplicate-player, missing-tactic, blocker, status, and
+  save-action state. It does not choose players, recommend tactics, persist
+  state, localize prose, or run the engine.
 
 UI read-model files are not the web UI. They exist so CLI smoke output and the
 future web adapter can consume the same structured facts without parsing console
@@ -278,7 +288,8 @@ text or importing engine internals.
   Browser entry point. It mounts React and imports the global visual foundation.
 - `apps/web/src/App.tsx`
   Small app-shell state machine. It owns in-memory screen choice, language and
-  currency preferences, and demo-career availability for the prototype.
+  currency preferences, demo-career availability, and current in-memory
+  match-preparation state for the prototype.
 - `apps/web/src/app/preferences.ts`
   Web-only preference model for language and display currency. Currency remains
   a display preference, not an economics rule.
@@ -296,6 +307,11 @@ text or importing engine internals.
   `continueCareerUntilAttention` and converts returned Inbox messages into
   UI-facing message input. This is the replacement point for future real-save
   continuation.
+- `apps/web/src/career/match-preparation-demo.ts`
+  Deterministic match-preparation demo adapter. It owns prototype lineup slot
+  facts, player options, tactic profiles, in-memory selected lineup/tactic/save
+  state helpers, and conversion into `@game/ui` match-preparation input. This
+  is the replacement point for future real-save preparation facts.
 - `apps/web/src/career/career-dashboard-presenter.ts`
   Groups dashboard read-model facts for React rendering without duplicating
   readiness logic.
@@ -309,9 +325,15 @@ text or importing engine internals.
 - `apps/web/src/screens/CareerDashboardScreen.tsx`
   Read-only dashboard/matchday hub prototype: context, selected club, next
   fixture, preparation, condition, table context, recent match, actions, and
-  blockers. It now renders inside `CareerShell`; Continue and Inbox/Posta shell
-  placement live in the shell, while dashboard-specific facts remain central
-  content.
+  blockers. It renders critical blockers near the top of the first useful
+  viewport and can open match preparation from dashboard actions. It renders
+  inside `CareerShell`; Continue and Inbox/Posta shell placement live in the
+  shell, while dashboard-specific facts remain central content.
+- `apps/web/src/screens/CareerMatchPreparationScreen.tsx`
+  Editable match-preparation slice. It renders next-fixture context, selected
+  club context, visible blockers, stable lineup slot selects, tactic profile
+  radios, and an explicit Save preparation action from structured read-model
+  data.
 - `apps/web/src/visual-qa/continue-inbox.spec.ts`
   Playwright browser QA for main menu, new career, dashboard, Continue stop,
   and Inbox/Posta on desktop and narrow viewports.
@@ -319,10 +341,15 @@ text or importing engine internals.
   Playwright browser QA for the Phase 51 shell: landmarks, current navigation
   state, focus path, desktop left-rail geometry, narrow stacked geometry, and
   screenshot capture under `/tmp/the-long-season-phase51`.
+- `apps/web/src/visual-qa/match-preparation.spec.ts`
+  Playwright browser QA for the Phase 52 match-preparation slice: dashboard and
+  Inbox/Posta entry paths, lineup/tactic selection, save, dashboard blocker
+  clearance, Continue to matchday, keyboard focus, and desktop/narrow
+  screenshots under `/tmp/the-long-season-phase52`.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
-  styles, including the top navigation shell, left Inbox/Posta rail, and central
-  dashboard outlet.
+  styles, including the top navigation shell, left Inbox/Posta rail, dashboard,
+  and match-preparation central outlets.
 
 The web app currently uses an in-memory demo career only. It can call the pure
 engine Continue rule through a demo adapter, but it does not load or write

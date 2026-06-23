@@ -9,10 +9,11 @@ import type {
 export type CareerInboxPanelProps = Readonly<{
   view: CareerInboxView;
   text: Translator;
+  onActionClick?: (actionId: string) => void;
 }>;
 
 /** Renders manager attention messages without becoming a full mail client. */
-export function CareerInboxPanel({ view, text }: CareerInboxPanelProps): React.JSX.Element {
+export function CareerInboxPanel({ view, text, onActionClick }: CareerInboxPanelProps): React.JSX.Element {
   return (
     <section className="tls-dashboard-inbox" aria-label={text("career.inbox.title")} data-testid="career-inbox-panel">
       <header className="tls-dashboard-inbox-header">
@@ -45,7 +46,14 @@ export function CareerInboxPanel({ view, text }: CareerInboxPanelProps): React.J
               {message.actions.length === 0 ? null : (
                 <div className="tls-dashboard-inbox-actions">
                   {message.actions.map((action) => (
-                    <button className="tls-dashboard-inbox-action" key={action.actionId} type="button">
+                    <button
+                      className="tls-dashboard-inbox-action"
+                      key={action.actionId}
+                      type="button"
+                      onClick={() => {
+                        onActionClick?.(action.actionId);
+                      }}
+                    >
                       {text(action.labelKey as MessageKey)}
                     </button>
                   ))}

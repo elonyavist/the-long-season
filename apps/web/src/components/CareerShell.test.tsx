@@ -15,6 +15,7 @@ describe("CareerShell", () => {
       text: createWebTranslator("en"),
       onBackToMenu: () => undefined,
       onContinueCareer: () => undefined,
+      onInboxActionClick: () => undefined,
       children: "central",
     });
 
