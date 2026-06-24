@@ -18,15 +18,15 @@
 
   <!-- prato a strisce -->
   <g>
-    <rect x="0.00" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
-    <rect x="88.89" y="0" width="88.89" height="1170" fill="#356338"/>
-    <rect x="177.78" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
-    <rect x="266.67" y="0" width="88.89" height="1170" fill="#356338"/>
-    <rect x="355.56" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
-    <rect x="444.44" y="0" width="88.89" height="1170" fill="#356338"/>
-    <rect x="533.33" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
-    <rect x="622.22" y="0" width="88.89" height="1170" fill="#356338"/>
-    <rect x="711.11" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
+    <rect x="0.00" y="0" width="88.89" height="1170" fill="#6b834c"/>
+    <rect x="88.89" y="0" width="88.89" height="1170" fill="#637a44"/>
+    <rect x="177.78" y="0" width="88.89" height="1170" fill="#6b834c"/>
+    <rect x="266.67" y="0" width="88.89" height="1170" fill="#637a44"/>
+    <rect x="355.56" y="0" width="88.89" height="1170" fill="#6b834c"/>
+    <rect x="444.44" y="0" width="88.89" height="1170" fill="#637a44"/>
+    <rect x="533.33" y="0" width="88.89" height="1170" fill="#6b834c"/>
+    <rect x="622.22" y="0" width="88.89" height="1170" fill="#637a44"/>
+    <rect x="711.11" y="0" width="88.89" height="1170" fill="#6b834c"/>
   </g>
   <!-- texture erba sovrapposta -->
   <rect x="0" y="0" width="800" height="1170" filter="url(#grass)"/>

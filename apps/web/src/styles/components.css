@@ -126,7 +126,7 @@
 }
 
 .tls-tactical-board-token-face {
-  fill: var(--tls-color-paper);
+  fill: #ffffff;
   stroke: var(--tls-color-gold);
   stroke-width: 5;
 }

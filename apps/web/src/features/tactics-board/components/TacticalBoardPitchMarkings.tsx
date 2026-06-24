@@ -3,6 +3,10 @@ import type React from "react";
 import { TACTICAL_BOARD_PITCH } from "../tactical-board-geometry";
 
 const STRIPE_COUNT = 9;
+/** Premium olive grass tone sampled from the requested pitch reference. */
+const PITCH_GRASS_LIGHT = "#6b834c";
+/** Slightly darker olive stripe sampled from the requested pitch reference. */
+const PITCH_GRASS_DARK = "#637a44";
 
 /** Draws the shared vertical tactical-board pitch inside the fixed SVG viewBox. */
 export function TacticalBoardPitchMarkings(): React.JSX.Element {
@@ -28,7 +32,7 @@ export function TacticalBoardPitchMarkings(): React.JSX.Element {
 
       {Array.from({ length: STRIPE_COUNT }, (_, index) => (
         <rect
-          fill={index % 2 === 0 ? "var(--tls-color-pitch)" : "var(--tls-color-pitch-dark)"}
+          fill={index % 2 === 0 ? PITCH_GRASS_LIGHT : PITCH_GRASS_DARK}
           height={height}
           key={index}
           width={stripeWidth}

@@ -1470,8 +1470,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/PROJECT_STATUS.md": {
-    "mtime": 1782300696.5138698,
-    "ast_hash": "15a12beb50e492eab586895d507f4e54",
+    "mtime": 1782300937.5522437,
+    "ast_hash": "9152934a4875125083f9c563ae5431e5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/ARCHITECTURE.md": {
@@ -5830,8 +5830,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/assets/campo-calcio.svg": {
-    "mtime": 1782258907.997357,
-    "ast_hash": "6cf7cf249187a12448b9d2e2bc5b6b02",
+    "mtime": 1782304750.9824903,
+    "ast_hash": "c45e4e6db47ffbcb6c39715dec79f5e0",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-formations.test.ts": {
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardPitchMarkings.tsx": {
-    "mtime": 1782294782.7776232,
-    "ast_hash": "cd673f24a790e3a70dbeae459c95dfe6",
+    "mtime": 1782304721.0369,
+    "ast_hash": "cdd5501a8b659e22266b40a4237c46e6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardEmptySlot.tsx": {
