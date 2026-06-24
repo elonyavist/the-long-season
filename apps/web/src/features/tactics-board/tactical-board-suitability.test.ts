@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  sortTacticalBenchAssignmentCandidates,
   sortTacticalBoardAssignmentCandidates,
   suitFor,
   type TacticalBoardRoleSuitability,
@@ -45,6 +46,24 @@ describe("tactical-board-suitability", () => {
       "player:weak",
     ]);
   });
+
+  it("orders bench candidates by ability fitness position and stable identity", () => {
+    const ordered = sortTacticalBenchAssignmentCandidates([
+      benchCandidate("player:fit-cm-z", "Zani", "midfielder", "cm", 72, 96),
+      benchCandidate("player:best-tired", "Rossi", "defender", "cb", 80, 60),
+      benchCandidate("player:fit-cm-a", "Abate", "midfielder", "cm", 72, 96),
+      benchCandidate("player:gk", "Porta", "goalkeeper", "gk", 70, 100),
+      benchCandidate("player:weaker-fit", "Bianchi", "attacker", "st", 68, 100),
+    ]);
+
+    expect(ordered.map((playerOption) => playerOption.playerId)).toEqual([
+      "player:best-tired",
+      "player:fit-cm-a",
+      "player:fit-cm-z",
+      "player:gk",
+      "player:weaker-fit",
+    ]);
+  });
 });
 
 function candidate(
@@ -60,6 +79,24 @@ function candidate(
     currentAbility,
     fitness,
     suitabilityByRole: { CC: suitability },
+  };
+}
+
+function benchCandidate(
+  playerId: string,
+  surname: string,
+  roleKey: string,
+  positionKey: string,
+  currentAbility: number,
+  fitness: number,
+) {
+  return {
+    playerId,
+    surname,
+    roleKey,
+    positionKey,
+    currentAbility,
+    fitness,
   };
 }
 

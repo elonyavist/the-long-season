@@ -10,7 +10,7 @@ import type { Browser, Page } from "playwright";
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(CURRENT_DIR, "../../../..");
-const QA_OUTPUT_DIR = "/tmp/the-long-season-phase58";
+const QA_OUTPUT_DIR = "/tmp/the-long-season-phase59";
 const PORT = 5182;
 const URL = `http://127.0.0.1:${PORT}/`;
 
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     server.kill("SIGTERM");
   }
 
-  console.log(`Phase 58 tactical-workspace QA screenshots written to ${QA_OUTPUT_DIR}`);
+  console.log(`Phase 59 shared-bench-board QA screenshots written to ${QA_OUTPUT_DIR}`);
 }
 
 /** Verifies desktop board layout, drag, role change, remove, assignment, and keyboard access. */
@@ -52,17 +52,21 @@ async function inspectDesktopBoard(browser: Browser): Promise<void> {
     await openMatchPreparation(page);
     await expectPhase58WorkspaceChrome(page);
     await expectEmptyBoard(page);
-    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/tactical-workspace-empty-desktop.png` });
+    await expectEmptyBenchBoard(page);
+    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/shared-bench-empty-desktop.png` });
 
     await page.getByRole("button", { name: "Auto" }).click();
     await expectFilledBoard(page);
+    await expectFilledBenchBoard(page);
     await expectNoHorizontalOverflow(page, "desktop");
     await expectPitchVisible(page);
     await expectBoardColumnsDoNotOverlap(page);
-    await expectBenchPickerParity(page);
-    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/tactical-workspace-filled-desktop.png` });
+    await expectSharedBenchBoard(page);
+    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/shared-bench-filled-desktop.png` });
 
     await expectMenuDismissal(page);
+    await expectBenchMenuDismissal(page);
+    await expectBenchRemoveAssignAndGoalkeeperBlocker(page);
     await expectGoalkeeperLocked(page);
     await expectCenterMidfielderClamp(page);
     await expectWideRoleChangeUpdatesShape(page);
@@ -70,10 +74,12 @@ async function inspectDesktopBoard(browser: Browser): Promise<void> {
     await expectCandidateOrdering(page);
     await expectGoalkeeperReplacementMenu(page);
     await expectTripleCentralSpacing(page);
+    await expectHelperActionsFillAndClear(page);
     await page.getByRole("button", { name: "Auto" }).click();
+    await expectFilledBenchBoard(page);
     await page.getByLabel("Balanced").check();
     await expectKeyboardReachability(page);
-    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/tactical-workspace-after-interactions-desktop.png` });
+    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/shared-bench-after-interactions-desktop.png` });
   } finally {
     await page.close();
   }
@@ -87,8 +93,9 @@ async function inspectNarrowBoard(browser: Browser): Promise<void> {
     await openMatchPreparation(page);
     await page.getByRole("button", { name: "Auto" }).click();
     await expectFilledBoard(page);
+    await expectFilledBenchBoard(page);
     await expectNoHorizontalOverflow(page, "narrow");
-    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/tactical-workspace-narrow.png` });
+    await page.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/shared-bench-narrow.png` });
   } finally {
     await page.close();
   }
@@ -102,7 +109,7 @@ async function inspectTouchLongPress(browser: Browser): Promise<void> {
     await openMatchPreparation(openPage);
     await dispatchTouchLongPress(openPage, "gk", false);
     await expectMenuVisible(openPage);
-    await openPage.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/tactical-workspace-long-press-open.png` });
+    await openPage.screenshot({ fullPage: true, path: `${QA_OUTPUT_DIR}/shared-bench-long-press-open.png` });
   } finally {
     await openPage.close();
   }
@@ -147,6 +154,43 @@ async function expectFilledBoard(page: Page): Promise<void> {
 
   if (tokens !== 11) {
     throw new Error(`Expected 11 tactical-board tokens, got ${tokens}.`);
+  }
+}
+
+/** Checks the shared bench board starts with eight empty plus slots. */
+async function expectEmptyBenchBoard(page: Page): Promise<void> {
+  const benchBoard = page.locator(".tls-tactical-bench-board");
+  const slots = benchBoard.locator(".tls-tactical-bench-slot");
+  const pluses = benchBoard.locator(".tls-tactical-bench-empty-plus");
+
+  await benchBoard.waitFor({ state: "visible", timeout: 5_000 });
+
+  const slotCount = await slots.count();
+  const plusCount = await pluses.count();
+
+  if (slotCount !== 8 || plusCount !== 8) {
+    throw new Error(`Expected empty bench board 8 slots and 8 pluses, got slots=${slotCount} pluses=${plusCount}.`);
+  }
+}
+
+/** Checks the shared bench board has eight filled substitute slots. */
+async function expectFilledBenchBoard(page: Page): Promise<void> {
+  const benchBoard = page.locator(".tls-tactical-bench-board");
+  const slots = benchBoard.locator(".tls-tactical-bench-slot");
+  const pluses = benchBoard.locator(".tls-tactical-bench-empty-plus");
+  const players = benchBoard.locator(".tls-tactical-bench-player");
+
+  await benchBoard.waitFor({ state: "visible", timeout: 5_000 });
+
+  const slotCount = await slots.count();
+  const plusCount = await pluses.count();
+  const playerCount = await players.count();
+  const firstSlotText = (await slots.first().textContent()) ?? "";
+
+  if (slotCount !== 8 || plusCount !== 0 || playerCount !== 8 || !/\d/.test(firstSlotText) || !firstSlotText.includes("POR")) {
+    throw new Error(
+      `Expected filled bench board 8 slots/players with number surname role, got slots=${slotCount} pluses=${plusCount} players=${playerCount} first=${firstSlotText}.`,
+    );
   }
 }
 
@@ -225,29 +269,93 @@ async function expectBoardColumnsDoNotOverlap(page: Page): Promise<void> {
   }
 }
 
-/** Confirms bench pickers use the same dense candidate-row language as XI assignment. */
-async function expectBenchPickerParity(page: Page): Promise<void> {
-  const firstBenchSlot = page.locator(".tls-preparation-bench-slot").first();
+/** Confirms the shared bench board uses the tactical menu language and fixed-slot surface. */
+async function expectSharedBenchBoard(page: Page): Promise<void> {
+  await page.locator(".tls-tactical-bench-board").scrollIntoViewIfNeeded();
+  await expectFilledBenchBoard(page);
 
-  await firstBenchSlot.locator(".tls-preparation-bench-summary").click();
-  await firstBenchSlot.locator(".tls-preparation-bench-candidates").waitFor({ state: "visible", timeout: 5_000 });
+  const firstBenchSlot = page.locator('[data-bench-slot-id="bench:01"]');
+  await firstBenchSlot.click();
+  await expectMenuVisible(page);
 
-  const candidateRows = firstBenchSlot.locator(".tls-player-candidate-row");
+  const menuText = (await page.locator(".tls-tactical-board-menu").textContent()) ?? "";
+  if (!menuText.includes("Remove from bench")) {
+    throw new Error(`Expected filled bench slot to show remove-only menu, got ${menuText}.`);
+  }
+
+  await page.keyboard.press("Escape");
+  await expectNoMenu(page, "bench parity cleanup");
+}
+
+/** Confirms bench menus close on outside click, background click, and Escape. */
+async function expectBenchMenuDismissal(page: Page): Promise<void> {
+  const firstBenchSlot = page.locator('[data-bench-slot-id="bench:01"]');
+
+  await firstBenchSlot.click();
+  await page.locator(".tls-preparation-alert-strip").click();
+  await expectNoMenu(page, "bench outside click");
+
+  await firstBenchSlot.click();
+  await page.locator(".tls-tactical-board-svg").click({ position: { x: 16, y: 16 } });
+  await expectNoMenu(page, "bench-to-pitch background click");
+
+  await firstBenchSlot.click();
+  await page.keyboard.press("Escape");
+  await expectNoMenu(page, "bench Escape key");
+}
+
+/** Confirms bench add/remove, candidate exclusions, sorting, and goalkeeper validation. */
+async function expectBenchRemoveAssignAndGoalkeeperBlocker(page: Page): Promise<void> {
+  const firstBenchSlot = page.locator('[data-bench-slot-id="bench:01"]');
+
+  await firstBenchSlot.click();
+  await page.getByRole("button", { name: /Remove from bench/i }).click();
+  await expectNoMenu(page, "bench remove action");
+
+  let firstSlotText = (await firstBenchSlot.textContent()) ?? "";
+  if (!firstSlotText.includes("+")) {
+    throw new Error(`Expected removed bench slot to keep slot but become empty, got ${firstSlotText}.`);
+  }
+
+  await firstBenchSlot.click();
+  const menu = page.locator(".tls-tactical-board-menu");
+  await menu.waitFor({ state: "visible", timeout: 5_000 });
+  const candidateRows = menu.locator(".tls-player-candidate-row");
   const candidateRowCount = await candidateRows.count();
   const firstCandidateText = (await candidateRows.first().textContent()) ?? "";
   const firstSuitability = await candidateRows.first().getAttribute("data-suitability");
+  const menuText = (await menu.textContent()) ?? "";
 
   if (candidateRowCount === 0 || firstSuitability === null || !firstCandidateText.includes("%")) {
     throw new Error(
-      `Expected bench picker candidate rows with percent and suitability, got rows=${candidateRowCount} suitability=${firstSuitability} text=${firstCandidateText}.`,
+      `Expected bench assignment menu candidate rows with percent and suitability, got rows=${candidateRowCount} suitability=${firstSuitability} text=${firstCandidateText}.`,
     );
   }
 
-  await page.evaluate(() => {
-    document.querySelectorAll(".tls-preparation-bench-slot[open]").forEach((slot) => {
-      slot.removeAttribute("open");
-    });
-  });
+  if (menuText.includes("Valentini") || menuText.includes("Sala")) {
+    throw new Error(`Expected bench assignment candidates to exclude XI and already-selected bench players, got ${menuText}.`);
+  }
+
+  if (!firstCandidateText.includes("Esposito")) {
+    throw new Error(`Expected highest ability/form available bench candidate first, got ${firstCandidateText}.`);
+  }
+
+  const candidateButtons = menu.locator("button:has(.tls-player-candidate-row)");
+  const outfieldReplacementText = (await candidateButtons.nth(1).textContent()) ?? "";
+  if (outfieldReplacementText.includes("Esposito")) {
+    throw new Error(`Expected second available bench candidate to be an outfield player, got ${outfieldReplacementText}.`);
+  }
+
+  await candidateButtons.nth(1).click();
+  await visibleText(page, "bench needs a goalkeeper");
+
+  firstSlotText = (await firstBenchSlot.textContent()) ?? "";
+  if (firstSlotText.includes("Esposito") || firstSlotText.includes("+")) {
+    throw new Error(`Expected non-goalkeeper assignment to fill the bench slot, got ${firstSlotText}.`);
+  }
+
+  await page.getByRole("button", { name: "Auto" }).click();
+  await expectFilledBenchBoard(page);
 }
 
 /** Confirms the menu closes on outside click, pitch click, Escape, and completed actions. */
@@ -383,12 +491,25 @@ async function expectTripleCentralSpacing(page: Page): Promise<void> {
   await page.locator(".tls-preparation-formation-select select").selectOption("4-3-3");
   await page.getByRole("button", { name: "Auto" }).click();
   await expectFilledBoard(page);
+  await expectFilledBenchBoard(page);
   await expectSpread(page, ["cm-left", "cm-center", "cm-right"], "three CC");
 
   await page.locator(".tls-preparation-formation-select select").selectOption("3-5-2");
   await page.getByRole("button", { name: "Auto" }).click();
   await expectFilledBoard(page);
+  await expectFilledBenchBoard(page);
   await expectSpread(page, ["cb-left", "cb-center", "cb-right"], "three DC");
+}
+
+/** Confirms explicit helper actions affect both XI and bench without hidden side effects. */
+async function expectHelperActionsFillAndClear(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expectEmptyBoard(page);
+  await expectEmptyBenchBoard(page);
+
+  await page.getByRole("button", { name: "Fill gaps" }).click();
+  await expectFilledBoard(page);
+  await expectFilledBenchBoard(page);
 }
 
 /** Confirms a specific slot line uses enough horizontal spacing on the board. */
@@ -424,7 +545,7 @@ async function expectKeyboardReachability(page: Page): Promise<void> {
         formation: activeElement?.matches(".tls-preparation-formation-select select") ?? false,
         auto: activeElement?.textContent?.trim() === "Auto",
         boardSlot: activeElement?.matches("[data-slot-id]") ?? false,
-        bench: activeElement?.matches(".tls-preparation-bench-summary") ?? false,
+        bench: activeElement?.matches(".tls-tactical-bench-slot") ?? false,
         tactic: activeElement?.matches("input[name='match-preparation-tactic']") ?? false,
         save: activeElement?.matches(".tls-preparation-save button") ?? false,
       };
@@ -441,6 +562,27 @@ async function expectKeyboardReachability(page: Page): Promise<void> {
   if (!seen.formation || !seen.auto || !seen.boardSlot || !seen.bench || !seen.tactic || !seen.save) {
     throw new Error(`Keyboard path missed required controls: ${JSON.stringify(seen)}.`);
   }
+
+  await page.locator('[data-bench-slot-id="bench:01"]').focus();
+  await page.keyboard.press("Enter");
+  await expectMenuVisible(page);
+
+  let focusedMenuAction = false;
+  for (let index = 0; index < 16; index += 1) {
+    await page.keyboard.press("Tab");
+    focusedMenuAction = await page.evaluate(() => document.activeElement?.closest(".tls-tactical-board-menu") !== null);
+
+    if (focusedMenuAction) {
+      break;
+    }
+  }
+
+  if (!focusedMenuAction) {
+    throw new Error("Expected keyboard-opened bench menu to move focus to a menu action.");
+  }
+
+  await page.keyboard.press("Escape");
+  await expectNoMenu(page, "keyboard-opened bench menu cleanup");
 }
 
 /** Drags one slot to a normalized pitch coordinate and checks active-zone visibility. */

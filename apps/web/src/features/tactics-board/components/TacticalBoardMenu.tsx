@@ -34,6 +34,7 @@ export interface TacticalBoardMenuProps {
   readonly text: Translator;
   readonly roleOptions?: readonly TacticalBoardMenuRoleOption[];
   readonly candidates?: readonly TacticalBoardMenuCandidate[];
+  readonly removeLabelKey?: MessageKey;
   readonly onRoleChange?: (role: TacticalBoardRoleCode) => void;
   readonly onRemove?: () => void;
   readonly onAssign?: (playerId: string) => void;
@@ -44,6 +45,7 @@ export function TacticalBoardMenu({
   text,
   roleOptions = [],
   candidates = [],
+  removeLabelKey = "career.tacticalBoard.removeFromLineup",
   onRoleChange,
   onRemove,
   onAssign,
@@ -69,6 +71,14 @@ export function TacticalBoardMenu({
           </button>
         </section>
       ) : null}
+
+      {roleOptions.length > 0 || onRemove === undefined ? null : (
+        <section aria-label={text(removeLabelKey)}>
+          <button className="tls-tactical-board-menu-item" data-danger="true" onClick={onRemove} type="button">
+            {text(removeLabelKey)}
+          </button>
+        </section>
+      )}
 
       {candidates.length > 0 ? (
         <section aria-label={text("career.tacticalBoard.assignPlayer")}>

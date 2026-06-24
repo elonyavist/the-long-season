@@ -176,6 +176,31 @@ describe("demo match preparation adapter", () => {
     expect(completeView.blockerKeys).toEqual([]);
   });
 
+  it("blocks a full substitute bench without a goalkeeper", () => {
+    const benchSlotKeys = demoMatchPreparationBenchSlotKeys();
+    const outfieldBenchPlayerIds = [
+      "player:demo-13",
+      "player:demo-14",
+      "player:demo-15",
+      "player:demo-16",
+      "player:demo-17",
+      "player:demo-18",
+      "player:demo-19",
+      "player:demo-20",
+    ];
+    let state = createCompleteUnsavedDemoMatchPreparationState();
+
+    for (const [index, benchSlotKey] of benchSlotKeys.entries()) {
+      state = selectDemoMatchPreparationBenchPlayer(state, benchSlotKey, outfieldBenchPlayerIds[index]);
+    }
+
+    const view = buildDemoMatchPreparationView(state);
+
+    expect(view.bench.selectedSlotCount).toBe(8);
+    expect(view.blockerKeys).toEqual(["missing_bench_goalkeeper"]);
+    expect(view.saveAction.status).toBe("blocked");
+  });
+
   it("auto helper fills the starting XI and bench only after explicit manager action", () => {
     const initialState = createInitialDemoMatchPreparationState();
     const autoState = applyDemoMatchPreparationSelectionAction(initialState, "auto");

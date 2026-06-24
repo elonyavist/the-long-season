@@ -163,7 +163,7 @@ describe("buildCareerMatchPreparationView", () => {
       formations: CAREER_MATCH_PREPARATION_FORMATIONS,
       selectedFormationId: "4-3-3",
       benchSlots: [
-        benchSlot("bench:01", "player:003"),
+        benchSlot("bench:01", "player:005"),
         benchSlot("bench:02", "player:004"),
       ],
     });
@@ -236,6 +236,20 @@ describe("buildCareerMatchPreparationView", () => {
       "duplicate_player",
       "duplicate_player",
     ]);
+  });
+
+  it("blocks a complete bench without a goalkeeper", () => {
+    const view = buildCareerMatchPreparationView({
+      ...baseInput(),
+      benchSlots: [
+        benchSlot("bench:01", "player:003"),
+        benchSlot("bench:02", "player:004"),
+      ],
+    });
+
+    expect(view.status).toBe("blocked");
+    expect(view.blockerKeys).toEqual(["missing_bench_goalkeeper"]);
+    expect(view.bench.selectedSlotCount).toBe(2);
   });
 
   it("blocks missing selected formation", () => {
@@ -323,6 +337,13 @@ function slot(slotKey: string, selectedPlayerId: string | undefined) {
         fitness: 100,
       },
       {
+        playerId: "player:005",
+        name: "Andrea Verdi",
+        roleKey: "goalkeeper",
+        positionKey: "gk",
+        fitness: 94,
+      },
+      {
         playerId: "player:002",
         name: "Marco Rossi",
         roleKey: "defender",
@@ -345,6 +366,13 @@ function benchSlot(slotKey: string, selectedPlayerId: string | undefined) {
         roleKey: "goalkeeper",
         positionKey: "gk",
         fitness: 100,
+      },
+      {
+        playerId: "player:005",
+        name: "Andrea Verdi",
+        roleKey: "goalkeeper",
+        positionKey: "gk",
+        fitness: 94,
       },
       {
         playerId: "player:002",

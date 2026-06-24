@@ -5,7 +5,10 @@ import { describe, expect, it } from "vitest";
 import { createWebTranslator } from "../../app/translation";
 import {
   buildDemoMatchPreparationView,
+  createCompleteUnsavedDemoMatchPreparationState,
   createInitialDemoMatchPreparationState,
+  demoMatchPreparationBenchSlotKeys,
+  selectDemoMatchPreparationBenchPlayer,
 } from "./match-preparation-demo";
 import { CareerMatchPreparationScreen } from "./CareerMatchPreparationScreen";
 
@@ -47,10 +50,54 @@ describe("CareerMatchPreparationScreen", () => {
     expect(markup).toContain("Fill gaps");
     expect(markup).toContain("Clear");
     expect(markup).toContain("Substitutes");
-    expect(markup).toContain("tls-player-candidate-row");
-    expect(markup).toContain("tls-preparation-bench-candidate");
+    expect(markup).toContain("tls-tactical-bench-board");
+    expect(markup).toContain("tls-tactical-bench-empty-plus");
     expect(markup).toContain("lineup has empty slots");
     expect(markup).toContain("bench has empty slots");
     expect(markup).toContain("tactic missing");
+  });
+
+  it("shows a visible blocker when the full bench has no goalkeeper", () => {
+    const benchSlotKeys = demoMatchPreparationBenchSlotKeys();
+    const outfieldBenchPlayerIds = [
+      "player:demo-13",
+      "player:demo-14",
+      "player:demo-15",
+      "player:demo-16",
+      "player:demo-17",
+      "player:demo-18",
+      "player:demo-19",
+      "player:demo-20",
+    ];
+    let state = createCompleteUnsavedDemoMatchPreparationState();
+
+    for (const [index, benchSlotKey] of benchSlotKeys.entries()) {
+      state = selectDemoMatchPreparationBenchPlayer(state, benchSlotKey, outfieldBenchPlayerIds[index]);
+    }
+
+    const view = buildDemoMatchPreparationView(state);
+    const markup = renderToStaticMarkup(
+      React.createElement(CareerMatchPreparationScreen, {
+        tacticalBoardDraft: state.tacticalBoardDraft,
+        view,
+        text: createWebTranslator("en"),
+        onBackToMenu: () => undefined,
+        onBackToDashboard: () => undefined,
+        onContinueCareer: () => undefined,
+        onInboxActionClick: () => undefined,
+        onFormationChange: () => undefined,
+        onLineupPlayerChange: () => undefined,
+        onBenchPlayerChange: () => undefined,
+        onTacticProfileChange: () => undefined,
+        onSelectionAction: () => undefined,
+        onBoardSlotMove: () => undefined,
+        onBoardSlotRoleChange: () => undefined,
+        onBoardSlotClear: () => undefined,
+        onSavePreparation: () => undefined,
+      }),
+    );
+
+    expect(view.saveAction.status).toBe("blocked");
+    expect(markup).toContain("bench needs a goalkeeper");
   });
 });

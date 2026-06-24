@@ -35,4 +35,17 @@ describe("TacticalBoardMenu", () => {
     expect(markup).toContain("right");
     expect(markup).toContain("Natural");
   });
+
+  it("renders a caller-specific remove action without role options", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(TacticalBoardMenu, {
+        removeLabelKey: "career.tacticalBench.removeFromBench",
+        text: createWebTranslator("en"),
+        onRemove: () => {},
+      }),
+    );
+
+    expect(markup).toContain("Remove from bench");
+    expect(markup).not.toContain("Change role");
+  });
 });

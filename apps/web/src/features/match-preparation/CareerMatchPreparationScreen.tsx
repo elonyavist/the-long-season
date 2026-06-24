@@ -11,20 +11,18 @@ import type {
 
 import type { DemoCareerContinueResult } from "../dashboard/continue-demo-career";
 import { CareerShell } from "../career-shell/CareerShell";
-import { comparePlayerOptionsByPosition } from "../../shared/lib/player-position-ordering";
-import {
-  benchStatusLabelKey,
-  formatFitnessPercent,
-  formatFoot,
-  roleLabelKey,
-} from "../../shared/lib/match-preparation-labels";
-import { PlayerCandidateRow, type PlayerCandidateSuitabilityTone } from "../../shared/ui/PlayerCandidateRow";
 import { PlayerFactPanel } from "../../shared/ui/PlayerFactPanel";
 import { SquadSelectionTable, type SquadSelectionRow } from "../../shared/ui/SquadSelectionTable";
+import {
+  TacticalBenchBoard,
+  type TacticalBenchBoardCandidate,
+} from "../tactics-board/components/TacticalBenchBoard";
 import { TacticalBoardPitch } from "../tactics-board/components/TacticalBoardPitch";
 import { selectCurrentTacticalBoardShape } from "../tactics-board/tactical-board-formations";
+import { TACTICAL_BOARD_ROLE_CODES, TACTICAL_BOARD_ROLES } from "../tactics-board/tactical-board-roles";
 import type { TacticalBoardDraft } from "../tactics-board/tactical-board-state";
-import type { TacticalBoardRoleCode } from "../tactics-board/tactical-board-types";
+import type { TacticalBoardCanonicalRole, TacticalBoardRoleCode } from "../tactics-board/tactical-board-types";
+import type { TacticalBenchSlotId, TacticalBenchSlotView } from "../tactics-board/tactical-board-bench";
 import {
   buildDemoTacticalBoardSquadPlayers,
   getDemoMatchPreparationPlayerFact,
@@ -53,7 +51,6 @@ export type CareerMatchPreparationScreenProps = Readonly<{
 }>;
 
 type MatchPreparationPlayerOption = CareerMatchPreparationView["lineup"]["slots"][number]["playerOptions"][number];
-type MatchPreparationBenchSlot = CareerMatchPreparationView["bench"]["slots"][number];
 type DemoTacticalBoardPlayer = ReturnType<typeof buildDemoTacticalBoardSquadPlayers>[number];
 
 /** Renders the editable lineup slice for the next selected-club fixture. */
@@ -87,6 +84,15 @@ export function CareerMatchPreparationScreen({
     () => new Map(tacticalBoardPlayers.map((player) => [player.playerId, player])),
     [tacticalBoardPlayers],
   );
+  const tacticalBenchSlots = useMemo(
+    () => buildTacticalBenchSlots(view, tacticalBoardPlayerById),
+    [tacticalBoardPlayerById, view],
+  );
+  const tacticalBenchCandidates = useMemo(
+    () => buildTacticalBenchCandidates(tacticalBoardPlayers),
+    [tacticalBoardPlayers],
+  );
+  const lineupPlayerIds = useMemo(() => selectedLineupPlayerIds(view), [view]);
   const currentShape = useMemo(
     () => selectCurrentTacticalBoardShape(tacticalBoardDraft.slots),
     [tacticalBoardDraft.slots],
@@ -224,14 +230,27 @@ export function CareerMatchPreparationScreen({
                 }}
               />
 
-              <BenchSelectionGrid
-                playerById={tacticalBoardPlayerById}
-                slots={view.bench.slots}
-                selectedSlotCount={view.bench.selectedSlotCount}
+              <TacticalBenchBoard
+                availablePlayers={tacticalBenchCandidates}
+                excludedPlayerIds={lineupPlayerIds}
                 requiredSlotCount={view.bench.requiredSlotCount}
+                selectedSlotCount={view.bench.selectedSlotCount}
+                slots={tacticalBenchSlots}
                 text={text}
-                onBenchPlayerChange={onBenchPlayerChange}
-                onSelectedPlayerFocus={setSelectedDetailPlayerId}
+                onAssign={(slotKey, playerId) => {
+                  onBenchPlayerChange(slotKey, playerId);
+                  setSelectedDetailPlayerId(playerId);
+                }}
+                onRemove={(slotKey) => {
+                  onBenchPlayerChange(slotKey, undefined);
+                }}
+                onSlotOpen={(slotKey) => {
+                  const playerId = view.bench.slots.find((slot) => slot.slotKey === slotKey)?.selectedPlayerId;
+
+                  if (playerId !== undefined) {
+                    setSelectedDetailPlayerId(playerId);
+                  }
+                }}
               />
             </div>
 
@@ -321,148 +340,65 @@ function PreparationAlertStrip({
   );
 }
 
-/** Renders the 8 explicit reserve slots with the same candidate-row language as XI assignment. */
-function BenchSelectionGrid({
-  slots,
-  selectedSlotCount,
-  requiredSlotCount,
-  playerById,
-  text,
-  onBenchPlayerChange,
-  onSelectedPlayerFocus,
-}: Readonly<{
-  slots: readonly MatchPreparationBenchSlot[];
-  selectedSlotCount: number;
-  requiredSlotCount: number;
-  playerById: ReadonlyMap<string, DemoTacticalBoardPlayer>;
-  text: Translator;
-  onBenchPlayerChange: (slotKey: string, playerId: string | undefined) => void;
-  onSelectedPlayerFocus?: (playerId: string) => void;
-}>): React.JSX.Element {
-  return (
-    <section className="tls-preparation-bench" aria-labelledby="match-preparation-bench-title">
-      <div className="tls-preparation-bench-header">
-        <h3 id="match-preparation-bench-title">{text("career.matchPreparation.bench")}</h3>
-        <span>{text("career.matchPreparation.bench.selectedSlots")}: {selectedSlotCount}/{requiredSlotCount}</span>
-      </div>
-      <div className="tls-preparation-bench-grid">
-        {slots.map((slot) => (
-          <BenchSlotPicker
-            key={slot.slotKey}
-            playerById={playerById}
-            slot={slot}
-            text={text}
-            onBenchPlayerChange={onBenchPlayerChange}
-            {...(onSelectedPlayerFocus === undefined ? {} : { onSelectedPlayerFocus })}
-          />
-        ))}
-      </div>
-    </section>
-  );
+/** Maps read-model bench slots into the shared tactical bench-board slot shape. */
+function buildTacticalBenchSlots(
+  view: CareerMatchPreparationView,
+  playerById: ReadonlyMap<string, DemoTacticalBoardPlayer>,
+): readonly TacticalBenchSlotView[] {
+  return view.bench.slots.map((slot) => {
+    const selectedPlayer = slot.selectedPlayerId === undefined ? undefined : playerById.get(slot.selectedPlayerId);
+
+    return {
+      slotId: slot.slotKey as TacticalBenchSlotId,
+      labelKey: slot.labelKey as MessageKey,
+      status: slot.status,
+      ...(selectedPlayer === undefined ? {} : { player: tacticalBenchPlayerFromBoardPlayer(selectedPlayer) }),
+    };
+  });
 }
 
-/** Renders one manual reserve picker; this is not bench drag/drop or hidden auto-selection. */
-function BenchSlotPicker({
-  slot,
-  playerById,
-  text,
-  onBenchPlayerChange,
-  onSelectedPlayerFocus,
-}: Readonly<{
-  slot: MatchPreparationBenchSlot;
-  playerById: ReadonlyMap<string, DemoTacticalBoardPlayer>;
-  text: Translator;
-  onBenchPlayerChange: (slotKey: string, playerId: string | undefined) => void;
-  onSelectedPlayerFocus?: (playerId: string) => void;
-}>): React.JSX.Element {
-  const selectedPlayer = slot.selectedPlayerId === undefined ? undefined : playerById.get(slot.selectedPlayerId);
-
-  return (
-    <details className="tls-preparation-bench-slot" data-status={slot.status}>
-      <summary className="tls-preparation-bench-summary">
-        <span className="tls-preparation-bench-label">
-          <span>{text(slot.labelKey as MessageKey)}</span>
-          {slot.status === "valid" ? null : (
-            <span
-              aria-label={text(benchStatusLabelKey(slot.status))}
-              className="tls-preparation-slot-alert"
-              title={text(benchStatusLabelKey(slot.status))}
-            >
-              !
-            </span>
-          )}
-        </span>
-        {selectedPlayer === undefined ? (
-          <span className="tls-preparation-bench-empty">{text("career.matchPreparation.playerOptionEmpty")}</span>
-        ) : (
-          <BenchCandidateRow player={selectedPlayer} text={text} />
-        )}
-      </summary>
-      <div className="tls-preparation-bench-candidates">
-        <button
-          className="tls-preparation-bench-candidate"
-          type="button"
-          onClick={(event) => {
-            onBenchPlayerChange(slot.slotKey, undefined);
-            event.currentTarget.closest("details")?.removeAttribute("open");
-          }}
-        >
-          {text("career.matchPreparation.playerOptionEmpty")}
-        </button>
-        {[...slot.playerOptions].sort(comparePlayerOptionsByPosition).map((player) => {
-          const boardPlayer = playerById.get(player.playerId);
-
-          if (boardPlayer === undefined) {
-            return null;
-          }
-
-          return (
-            <button
-              className="tls-preparation-bench-candidate"
-              key={player.playerId}
-              type="button"
-              onClick={(event) => {
-                onBenchPlayerChange(slot.slotKey, player.playerId);
-                onSelectedPlayerFocus?.(player.playerId);
-                event.currentTarget.closest("details")?.removeAttribute("open");
-              }}
-            >
-              <BenchCandidateRow player={boardPlayer} text={text} />
-            </button>
-          );
-        })}
-      </div>
-    </details>
-  );
+/** Maps current squad facts into substitute candidates for the shared bench board. */
+function buildTacticalBenchCandidates(
+  players: readonly DemoTacticalBoardPlayer[],
+): readonly TacticalBenchBoardCandidate[] {
+  return players.map((player) => ({
+    playerId: player.playerId,
+    number: player.number,
+    surname: player.surname,
+    roleCode: roleCodeForCanonicalRole(player.primaryRole),
+    name: player.name,
+    roleKey: player.roleKey,
+    ...(player.positionKey === undefined ? {} : { positionKey: player.positionKey }),
+    ...(player.currentAbility === undefined ? {} : { currentAbility: player.currentAbility }),
+    ...(player.fitness === undefined ? {} : { fitness: player.fitness }),
+  }));
 }
 
-/** Renders one bench candidate using own-role suitability, not hidden squad-coverage logic. */
-function BenchCandidateRow({
-  player,
-  text,
-}: Readonly<{
-  player: DemoTacticalBoardPlayer;
-  text: Translator;
-}>): React.JSX.Element {
-  const fact = getDemoMatchPreparationPlayerFact(player.playerId);
-  const suitabilityTone = benchSuitabilityTone(player);
-
-  return (
-    <PlayerCandidateRow
-      fitnessText={formatFitnessPercent(player.fitness, text)}
-      number={player.number}
-      roleLabel={text(roleLabelKey(player.roleKey))}
-      surname={player.surname}
-      suitabilityLabel={text(`career.tacticalBoard.suit.${suitabilityTone}` as MessageKey)}
-      suitabilityTone={suitabilityTone}
-      {...(fact?.foot === undefined ? {} : { footLabel: formatFoot(fact.foot, text) })}
-    />
-  );
+/** Converts a selected board player into the compact substitute token facts. */
+function tacticalBenchPlayerFromBoardPlayer(player: DemoTacticalBoardPlayer): TacticalBenchBoardCandidate {
+  return {
+    playerId: player.playerId,
+    number: player.number,
+    surname: player.surname,
+    roleCode: roleCodeForCanonicalRole(player.primaryRole),
+    name: player.name,
+    roleKey: player.roleKey,
+    ...(player.positionKey === undefined ? {} : { positionKey: player.positionKey }),
+    ...(player.currentAbility === undefined ? {} : { currentAbility: player.currentAbility }),
+    ...(player.fitness === undefined ? {} : { fitness: player.fitness }),
+  };
 }
 
-/** Maps bench display suitability to the player's own current role facts. */
-function benchSuitabilityTone(player: DemoTacticalBoardPlayer): PlayerCandidateSuitabilityTone {
-  return player.positionKey === undefined ? "competent" : "natural";
+/** Returns the current selected XI ids so the bench board can filter candidates. */
+function selectedLineupPlayerIds(view: CareerMatchPreparationView): readonly string[] {
+  return view.lineup.slots.flatMap((slot) => (slot.selectedPlayerId === undefined ? [] : [slot.selectedPlayerId]));
+}
+
+/** Maps canonical tactical-board roles to the compact code shown on bench tokens. */
+function roleCodeForCanonicalRole(role: TacticalBoardCanonicalRole): TacticalBoardRoleCode {
+  const roleCode = TACTICAL_BOARD_ROLE_CODES.find((candidate) => TACTICAL_BOARD_ROLES[candidate].canonicalRole === role);
+
+  return roleCode ?? "CC";
 }
 
 /** Builds the current player status map for squad status display. */

@@ -14,7 +14,10 @@ import {
 } from "@game/ui";
 
 import { buildDemoCareerDashboardInput } from "../dashboard/build-demo-career-dashboard";
-import { orderPlayerOptionsForLineupSlot } from "../../shared/lib/player-position-ordering";
+import {
+  comparePlayerOptionsByPosition,
+  orderPlayerOptionsForLineupSlot,
+} from "../../shared/lib/player-position-ordering";
 import {
   assignTacticalBoardPlayer,
   changeTacticalBoardSlotRole,
@@ -561,7 +564,13 @@ function compareBenchPlayers(
     return abilityComparison;
   }
 
-  return left.name.localeCompare(right.name) || left.playerId.localeCompare(right.playerId);
+  const fitnessComparison = (right.fitness ?? 0) - (left.fitness ?? 0);
+
+  if (fitnessComparison !== 0) {
+    return fitnessComparison;
+  }
+
+  return comparePlayerOptionsByPosition(left, right);
 }
 
 /** Returns one formation from the shared UI catalog, falling back to the demo default. */

@@ -1,8 +1,8 @@
 # Career Web Section Roadmap
 
 Date: 2026-06-24
-Current baseline: Phase 58 match-preparation tactical workspace UX rework
-complete; Phase 59 Inbox/Posta Decision Center recommended next.
+Current baseline: Phase 59 shared bench board and substitute selection
+complete; Phase 60 Inbox/Posta Decision Center recommended next.
 
 ## Goal
 
@@ -520,14 +520,80 @@ Final result:
   compact blockers, board-local controls, dismissible context menus,
   suitability-ranked candidates, shared XI/bench candidate rows, explicit bench
   parity, central-line spacing coverage, and desktop/narrow Playwright QA.
-- Recommended next phase: `Phase 59 - Inbox/Posta Decision Center`.
+- Previous recommendation: `Phase 59 - Inbox/Posta Decision Center`.
+- Superseded recommendation: insert
+  `Phase 59 - Shared Bench Board And Substitute Selection` first, because the
+  bench is still a core match-preparation decision surface and Inbox/Posta
+  should route into a stronger section.
 
-### Phase 59 - Inbox/Posta Decision Center
+### Phase 59 - Shared Bench Board And Substitute Selection
+
+Primary dependency: Phase 57 shared tactical board foundation and Phase 58
+match-preparation tactical workspace UX rework.
+
+Purpose:
+
+- Make the bench feel like a real tactical selection surface instead of a
+  secondary picker.
+- Use the same add/remove contextual language as the XI board while keeping
+  bench behavior simpler and safer.
+
+Minimum useful scope:
+
+- 8 fixed substitute slots `S1` to `S8`;
+- compact green mini-board without pitch stripes;
+- empty slots with `+`;
+- filled slots with number, surname, and role;
+- add menu for empty slots;
+- remove action for filled slots;
+- candidate ordering by overall/current ability, form, position order, then
+  stable identity;
+- validation for max 8, all slots filled, no duplicates, no XI overlap, and at
+  least one goalkeeper;
+- `Auto` fills XI first, then bench;
+- `Riempi` fills XI and bench gaps;
+- `Svuota` clears XI and bench;
+- desktop/narrow Playwright screenshot QA and accessibility notes.
+
+What must not happen:
+
+- No Inbox/Posta Decision Center implementation.
+- No bench drag/drop.
+- No bench role changes.
+- No promote-to-XI shortcut.
+- No hidden automatic choices outside explicit helper actions.
+- No duplicate bench picker implementations.
+
+Why this is now:
+
+The panchina is part of the match-preparation core. If substitutes remain a
+separate weak picker, the section still feels unfinished. Completing the bench
+now gives the future Inbox/Posta flow a stronger destination when it stops the
+manager for match preparation.
+
+Current progress:
+
+- Phase 59 README and ordered step documents are ready.
+- Step 01 current bench flow audit and target contract complete.
+- Step 02 bench read-model validation and ordering complete.
+- Step 03 shared bench board component foundation complete.
+- Step 04 bench context menu and candidate picker complete.
+- Step 05 helper actions and save readiness integration complete.
+- Step 06 match-preparation replacement and dead-code cleanup complete.
+- Step 07 responsive accessibility and visual QA complete.
+- Step 08 phase report and next-phase decision complete.
+- Phase 59 is complete.
+
+Recommended next phase after completion:
+
+- `Phase 60 - Inbox/Posta Decision Center`.
+
+### Phase 60 - Inbox/Posta Decision Center
 
 Primary dependency: Phase 55 web architecture foundation, Phase 54 tactical
 workspace, Phase 56 canonical formation/role catalog, Phase 57 shared tactical
-board foundation, Phase 58 tactical workspace UX rework, and at least one
-resolvable attention event.
+board foundation, Phase 58 tactical workspace UX rework, Phase 59 shared bench
+board, and at least one resolvable attention event.
 
 Purpose:
 
@@ -558,7 +624,7 @@ What must not happen:
 - No prose-only mail system without structured event IDs.
 - No hidden automatic resolution.
 
-### Phase 60 - Squad Screen
+### Phase 61 - Squad Screen
 
 Primary dependency: match-preparation needs real player selection pressure.
 
@@ -590,7 +656,7 @@ What must not happen:
 - No hidden market needs.
 - No sortable table logic duplicated in multiple components.
 
-### Phase 61 - Calendar And Fixtures
+### Phase 62 - Calendar And Fixtures
 
 Primary dependency: Continue loop and fixture dates.
 
@@ -618,7 +684,7 @@ What must not happen:
 - No decorative calendar that cannot drive Continue.
 - No duplicate fixture computation in web.
 
-### Phase 62 - Matchday Flow
+### Phase 63 - Matchday Flow
 
 Primary dependency: match preparation plus fixture advancement.
 
@@ -648,7 +714,7 @@ What must not happen:
 - No full 2D/3D match viewer.
 - No animation-heavy match screen before the result loop is excellent.
 
-### Phase 63 - Market UI MVP
+### Phase 64 - Market UI MVP
 
 Primary dependency: squad screen and basic finances/budget visibility.
 
@@ -679,7 +745,7 @@ What must not happen:
 - No complex add-ons.
 - No scouting fog unless specifically designed.
 
-### Phase 64 - Finances Foundation
+### Phase 65 - Finances Foundation
 
 Primary dependency: market starts needing real budget context.
 
@@ -708,7 +774,7 @@ What must not happen:
 - No fake financial complexity just to fill a screen.
 - No economy values that do not affect decisions.
 
-### Phase 65 - Youth UI
+### Phase 66 - Youth UI
 
 Primary dependency: squad screen and youth lifecycle.
 
@@ -738,7 +804,7 @@ What must not happen:
 - No overpopulation of youth players.
 - No guaranteed wonderkid pipeline.
 
-### Phase 66 - Staff Foundation
+### Phase 67 - Staff Foundation
 
 Primary dependency: player development, youth, condition, and market need staff
 effects to matter.
@@ -760,7 +826,7 @@ What must not happen:
 - No staff screen made of names and no effects.
 - No staff attributes without engine usage.
 
-### Phase 67 - Archive And History
+### Phase 68 - Archive And History
 
 Primary dependency: at least one completed playable season loop.
 
@@ -789,7 +855,7 @@ What must not happen:
 - No static archive without persisted events.
 - No history screen that reconstructs unreliable facts from current state only.
 
-### Phase 68 - Main Dashboard Consolidation
+### Phase 69 - Main Dashboard Consolidation
 
 Primary dependency: enough real sections exist to summarize.
 
@@ -829,16 +895,17 @@ Recommended order:
 5. Phase 56 - Canonical Formation And Role Catalog
 6. Phase 57 - Shared Tactical Board And Tactics Screen Foundation
 7. Phase 58 - Match Preparation Tactical Workspace UX Rework
-8. Phase 59 - Inbox/Posta Decision Center
-9. Phase 60 - Squad Screen
-10. Phase 61 - Calendar And Fixtures
-11. Phase 62 - Matchday Flow
-12. Phase 63 - Market UI MVP
-13. Phase 64 - Finances Foundation
-14. Phase 65 - Youth UI
-15. Phase 66 - Staff Foundation
-16. Phase 67 - Archive And History
-17. Phase 68 - Main Dashboard Consolidation
+8. Phase 59 - Shared Bench Board And Substitute Selection
+9. Phase 60 - Inbox/Posta Decision Center
+10. Phase 61 - Squad Screen
+11. Phase 62 - Calendar And Fixtures
+12. Phase 63 - Matchday Flow
+13. Phase 64 - Market UI MVP
+14. Phase 65 - Finances Foundation
+15. Phase 66 - Youth UI
+16. Phase 67 - Staff Foundation
+17. Phase 68 - Archive And History
+18. Phase 69 - Main Dashboard Consolidation
 
 This order is intentionally linear:
 

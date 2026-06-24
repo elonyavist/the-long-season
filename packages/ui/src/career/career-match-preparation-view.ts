@@ -32,6 +32,7 @@ export type CareerMatchPreparationBlockerKey =
   | "missing_lineup_slot"
   | "duplicate_lineup_player"
   | "missing_bench_slot"
+  | "missing_bench_goalkeeper"
   | "duplicate_bench_player"
   | "player_in_lineup_and_bench"
   | "missing_tactic";
@@ -313,6 +314,7 @@ const BLOCKER_ORDER: readonly CareerMatchPreparationBlockerKey[] = [
   "missing_lineup_slot",
   "duplicate_lineup_player",
   "missing_bench_slot",
+  "missing_bench_goalkeeper",
   "duplicate_bench_player",
   "player_in_lineup_and_bench",
   "missing_tactic",
@@ -517,6 +519,10 @@ function buildBlockerKeys(
     blockers.push("missing_bench_slot");
   }
 
+  if (requiresBenchGoalkeeper(input.benchSlots ?? [])) {
+    blockers.push("missing_bench_goalkeeper");
+  }
+
   if (duplicateBenchPlayerIds.size > 0) {
     blockers.push("duplicate_bench_player");
   }
@@ -530,6 +536,33 @@ function buildBlockerKeys(
   }
 
   return sortBlockers(blockers);
+}
+
+/**
+ * Requires one goalkeeper only once every bench slot is filled.
+ *
+ * This keeps early incomplete states readable while still blocking a formally
+ * complete substitute bench that would be illegal and tactically useless.
+ */
+function requiresBenchGoalkeeper(slots: readonly CareerMatchPreparationBenchSlotInput[]): boolean {
+  if (slots.length === 0 || slots.some((slot) => normalizeOptionalId(slot.selectedPlayerId) === undefined)) {
+    return false;
+  }
+
+  return !slots.some((slot) => isSelectedBenchGoalkeeper(slot));
+}
+
+/** Returns whether the selected player in one bench slot is a goalkeeper. */
+function isSelectedBenchGoalkeeper(slot: CareerMatchPreparationBenchSlotInput): boolean {
+  const selectedPlayerId = normalizeOptionalId(slot.selectedPlayerId);
+
+  if (selectedPlayerId === undefined) {
+    return false;
+  }
+
+  const selectedPlayer = slot.playerOptions.find((player) => player.playerId === selectedPlayerId);
+
+  return selectedPlayer?.roleKey === "goalkeeper" || selectedPlayer?.positionKey === "gk";
 }
 
 /** Derives the top-level preparation status from blockers and saved state. */

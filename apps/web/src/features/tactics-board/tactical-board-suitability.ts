@@ -1,5 +1,6 @@
 import {
   playerPositionFitTierForPositionKey,
+  positionSortIndex,
   type WebPlayerPositionFitTier,
   type WebPlayerPositionOption,
 } from "../../shared/lib/player-position-ordering";
@@ -28,6 +29,12 @@ export interface TacticalBoardAssignmentCandidate {
   readonly suitabilityBySlotId?: Readonly<Record<string, TacticalBoardRoleSuitability>>;
   readonly suitabilityByRole?: Partial<Record<TacticalBoardRoleCode, TacticalBoardRoleSuitability>>;
   readonly fitness?: number;
+}
+
+/** Minimal candidate shape needed to rank bench assignment choices. */
+export interface TacticalBenchAssignmentCandidate extends TacticalBoardAssignmentCandidate {
+  readonly roleKey?: string;
+  readonly positionKey?: string;
 }
 
 const POSITION_KEY_BY_BOARD_ROLE: Readonly<Record<TacticalBoardRoleCode, string>> = {
@@ -135,6 +142,50 @@ export function compareTacticalBoardAssignmentCandidates(
   return candidateStableName(left).localeCompare(candidateStableName(right));
 }
 
+/**
+ * Orders substitute candidates by broad player value, not by squad-coverage advice.
+ *
+ * Bench selection is manager-owned: the list simply puts stronger and fitter
+ * players first, then falls back to football position order and stable identity.
+ */
+export function sortTacticalBenchAssignmentCandidates<TPlayer extends TacticalBenchAssignmentCandidate>(
+  players: readonly TPlayer[],
+): readonly TPlayer[] {
+  return [...players].sort(compareTacticalBenchAssignmentCandidates);
+}
+
+/** Compares two substitute candidates for deterministic bench-slot sorting. */
+export function compareTacticalBenchAssignmentCandidates(
+  left: TacticalBenchAssignmentCandidate,
+  right: TacticalBenchAssignmentCandidate,
+): number {
+  const abilityDelta = (right.currentAbility ?? Number.NEGATIVE_INFINITY) - (left.currentAbility ?? Number.NEGATIVE_INFINITY);
+  if (abilityDelta !== 0) {
+    return abilityDelta;
+  }
+
+  const fitnessDelta = (right.fitness ?? Number.NEGATIVE_INFINITY) - (left.fitness ?? Number.NEGATIVE_INFINITY);
+  if (fitnessDelta !== 0) {
+    return fitnessDelta;
+  }
+
+  const positionDelta = positionSortIndex(playerPositionSortFacts(left)) - positionSortIndex(playerPositionSortFacts(right));
+  if (positionDelta !== 0) {
+    return positionDelta;
+  }
+
+  return candidateStableName(left).localeCompare(candidateStableName(right));
+}
+
 function candidateStableName(player: TacticalBoardAssignmentCandidate): string {
   return (player.name ?? player.surname ?? player.playerId).toLocaleLowerCase("en");
+}
+
+function playerPositionSortFacts(player: TacticalBenchAssignmentCandidate): WebPlayerPositionOption {
+  return {
+    playerId: player.playerId,
+    name: player.name ?? player.surname ?? player.playerId,
+    roleKey: player.roleKey ?? "midfielder",
+    ...(player.positionKey === undefined ? {} : { positionKey: player.positionKey }),
+  };
 }

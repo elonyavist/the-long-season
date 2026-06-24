@@ -17,12 +17,12 @@ export function TacticalBoardPitchMarkings(): React.JSX.Element {
           <feColorMatrix
             in="noise"
             type="matrix"
-            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.10 0"
+            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0"
           />
         </filter>
         <radialGradient id="tls-tactical-board-vignette" cx="50%" cy="50%" r="62%">
           <stop offset="55%" stopColor="var(--tls-color-ink)" stopOpacity={0} />
-          <stop offset="100%" stopColor="var(--tls-color-ink)" stopOpacity={0.48} />
+          <stop offset="100%" stopColor="var(--tls-color-ink)" stopOpacity={0.26} />
         </radialGradient>
       </defs>
 
@@ -41,11 +41,11 @@ export function TacticalBoardPitchMarkings(): React.JSX.Element {
 
       <g
         fill="none"
-        stroke="var(--tls-color-paper)"
+        stroke="var(--tls-color-paper-muted)"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={0.72}
-        strokeWidth={3}
+        strokeOpacity={0.46}
+        strokeWidth={2.25}
       >
         <rect x={60} y={60} width={680} height={1050} />
         <line x1={60} y1={585} x2={740} y2={585} />
@@ -56,9 +56,9 @@ export function TacticalBoardPitchMarkings(): React.JSX.Element {
         <rect x={308.4} y={1055} width={183.2} height={55} />
         <path d="M 326.88 225 A 91.5 91.5 0 0 0 473.12 225" />
         <path d="M 326.88 945 A 91.5 91.5 0 0 1 473.12 945" />
-        <circle cx={400} cy={585} r={3} fill="var(--tls-color-paper)" stroke="none" />
-        <circle cx={400} cy={170} r={3} fill="var(--tls-color-paper)" stroke="none" />
-        <circle cx={400} cy={1000} r={3} fill="var(--tls-color-paper)" stroke="none" />
+        <circle cx={400} cy={585} r={3} fill="var(--tls-color-paper-muted)" fillOpacity={0.6} stroke="none" />
+        <circle cx={400} cy={170} r={3} fill="var(--tls-color-paper-muted)" fillOpacity={0.6} stroke="none" />
+        <circle cx={400} cy={1000} r={3} fill="var(--tls-color-paper-muted)" fillOpacity={0.6} stroke="none" />
       </g>
     </>
   );

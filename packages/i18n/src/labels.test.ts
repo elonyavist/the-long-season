@@ -47,10 +47,13 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("en", "career.matchPreparation.formation.5-2-2-1"), "5-2-2-1");
   assert.equal(translate("it", "career.matchPreparation.bench"), "Panchina");
   assert.equal(translate("de", "career.matchPreparation.blocker.missing_bench_slot"), "Ersatzbank hat leere Slots");
+  assert.equal(translate("it", "career.matchPreparation.blocker.missing_bench_goalkeeper"), "la panchina richiede un portiere");
   assert.equal(translate("es", "career.matchPreparation.benchStatus.lineup_player"), "en el once");
   assert.equal(translate("fr", "career.matchPreparation.playerStatus.bench"), "remplacant");
   assert.equal(translate("en", "career.tacticalBoard.title"), "Tactical board");
   assert.equal(translate("it", "career.tacticalBoard.currentShape"), "Modulo in campo");
+  assert.equal(translate("it", "career.tacticalBench.emptySlot"), "Slot riserva vuoto");
+  assert.equal(translate("it", "career.tacticalBench.removeFromBench"), "Togli dalla panchina");
   assert.equal(translate("de", "career.tacticalBoard.assignPlayer"), "Spieler zuweisen");
   assert.equal(translate("es", "career.tacticalBoard.suit.makeshift"), "Improvisado");
   assert.equal(translate("fr", "career.tacticalBoard.removeFromLineup"), "Retirer du onze");

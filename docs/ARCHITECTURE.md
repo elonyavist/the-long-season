@@ -295,11 +295,12 @@ localized CLI text or import generated content.
   Pure match-preparation view builder. It accepts explicit fixture, selected
   club, formation, lineup slot, bench slot, player option, tactic profile, and
   saved-state facts, then derives missing-slot, duplicate-player, bench-overlap,
-  missing-tactic, blocker, status, and save-action state. Its exposed formation
-  facts are adapted from the domain formation catalog, so UI and tactical engine
-  grammar cannot drift. It exposes manager-triggered selection helper actions
-  as action state only; it does not run those actions, choose players,
-  recommend tactics, persist state, localize prose, or run the engine.
+  missing-bench-goalkeeper, missing-tactic, blocker, status, and save-action
+  state. Its exposed formation facts are adapted from the domain formation
+  catalog, so UI and tactical engine grammar cannot drift. It exposes
+  manager-triggered selection helper actions as action state only; it does not
+  run those actions, choose players, recommend tactics, persist state, localize
+  prose, or run the engine.
 
 UI read-model files are not the web UI. They exist so CLI smoke output and the
 future web adapter can consume the same structured facts without parsing console
@@ -371,12 +372,22 @@ text or importing engine internals.
   ability, and suitability by role.
 - `apps/web/src/features/tactics-board/tactical-board-suitability.ts`
   Derives the five visual suitability levels from existing player-position fit
-  tiers. Suitability is computed when needed, not persisted as mutable state.
+  tiers and provides deterministic assignment ordering for XI and bench
+  pickers. Suitability is computed when needed, not persisted as mutable state.
+- `apps/web/src/features/tactics-board/tactical-board-bench.ts`
+  Fixed substitute-bench contract for the shared tactical workspace. It owns the
+  eight `bench:01` through `bench:08` slot ids and their label-key mapping.
 - `apps/web/src/features/tactics-board/components/TacticalBoardPitch.tsx`
   Controlled reusable tactical surface. It renders the vertical pitch, player
   tokens, empty slots, active drag zones, context menu, long-press menu, and
   delegates all state changes through callbacks. Context menus close on outside
   click, pitch-background click, `Esc`, and completed actions.
+- `apps/web/src/features/tactics-board/components/TacticalBenchBoard.tsx`
+  Controlled reusable substitute surface. It renders the compact green bench
+  board, fixed `S1`-`S8` slots, player/add tokens, bench-only add/remove menu,
+  available-player filtering, outside/Escape menu dismissal, and delegates
+  assignment/removal through callbacks. It is shared by match preparation and
+  the future Tactics screen.
 - `apps/web/src/features/tactics-board/components/TacticalBoardPitchMarkings.tsx`
   Game-owned SVG pitch markings adapted from the supplied reference feature.
   This is now the shared tactical-board pitch surface; it is separate from the
@@ -432,9 +443,9 @@ text or importing engine internals.
   Editable match-preparation tactical workspace. It orchestrates compact
   next-fixture context, selected club context, alert blockers, board-local
   formation/helper controls, reusable tactical pitch, reusable squad-selection
-  table, reusable selected-player detail panel, manual 8-player bench selection
-  with shared candidate rows, tactic profile radios, and an explicit Save
-  preparation action from structured read-model data.
+  table, reusable selected-player detail panel, shared tactical bench board,
+  tactic profile radios, and an explicit Save preparation action from structured
+  read-model data.
 - `apps/web/src/visual-qa/continue-inbox.spec.ts`
   Playwright browser QA for main menu, new career, dashboard, Continue stop,
   and Inbox/Posta on desktop and narrow viewports.
@@ -463,15 +474,16 @@ text or importing engine internals.
   button keyboard reachability, and screenshots under
   `/tmp/the-long-season-phase54`.
 - `apps/web/src/visual-qa/shared-tactical-board.spec.ts`
-  Playwright browser QA for the shared tactical board and Phase 58
-  match-preparation workspace: compact header/alert/toolbar visibility, empty
-  and filled board states, desktop/narrow overflow, active drag zones,
-  goalkeeper lock and replacement menu, midfield clamping, `ED -> AD` role
-  change with derived shape update, remove-player behavior, candidate filtering
-  and ordering, suitability color changes, bench candidate-row parity, three
-  central-slot spacing, keyboard reachability, context-menu dismissal, and
-  touch-style long-press open/cancel behavior. Current Phase 58 screenshots are
-  written under `/tmp/the-long-season-phase58`.
+  Playwright browser QA for the shared tactical board, Phase 58 compact
+  workspace, and Phase 59 shared bench board: compact header/alert/toolbar
+  visibility, empty and filled XI board states, fixed 8-slot bench states,
+  desktop/narrow overflow, active drag zones, goalkeeper lock and replacement
+  menu, midfield clamping, `ED -> AD` role change with derived shape update,
+  remove-player behavior, XI and bench candidate filtering/ordering,
+  suitability color changes, missing reserve-goalkeeper blocker, helper actions
+  across XI and bench, three central-slot spacing, keyboard reachability,
+  context-menu dismissal, and touch-style long-press open/cancel behavior.
+  Current Phase 59 screenshots are written under `/tmp/the-long-season-phase59`.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
   styles, including the top navigation shell, left Inbox/Posta rail, dashboard,
