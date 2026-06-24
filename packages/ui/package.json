@@ -9,6 +9,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@game/domain": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.8.3"
   }

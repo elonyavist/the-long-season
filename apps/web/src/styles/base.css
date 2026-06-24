@@ -21,15 +21,22 @@ body::before {
   z-index: -1;
   content: "";
   background:
-    linear-gradient(135deg, rgba(212, 166, 66, 0.08), transparent 36%),
+    linear-gradient(135deg, rgba(209, 161, 58, 0.12), transparent 34%),
     repeating-linear-gradient(
       0deg,
-      rgba(239, 229, 200, 0.025) 0,
-      rgba(239, 229, 200, 0.025) 1px,
+      rgba(240, 227, 189, 0.03) 0,
+      rgba(240, 227, 189, 0.03) 1px,
       transparent 1px,
-      transparent 8px
+      transparent 10px
     ),
-    radial-gradient(circle at top left, rgba(101, 166, 108, 0.16), transparent 32%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(240, 227, 189, 0.018) 0,
+      rgba(240, 227, 189, 0.018) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    radial-gradient(circle at top left, rgba(106, 174, 117, 0.18), transparent 32%),
     var(--tls-color-ink);
 }
 
@@ -46,12 +53,24 @@ select {
 
 select {
   color: var(--tls-color-text);
-  background: var(--tls-color-scoreboard);
+  background: var(--tls-surface-scoreboard);
   border: var(--tls-border-thin);
   border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-inset);
 }
 
 :focus-visible {
-  outline: 2px solid var(--tls-color-gold);
-  outline-offset: 2px;
+  outline: 0;
+  box-shadow: var(--tls-focus-ring);
+}
+
+.tls-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

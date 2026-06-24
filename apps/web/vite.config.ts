@@ -1,10 +1,13 @@
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 /**
- * Keeps the first web shell deliberately small: Vite handles TSX through
- * esbuild, so React can run without an extra framework plugin in this phase.
+ * Keeps the web shell deliberately small: Vite handles TSX through esbuild,
+ * while Tailwind is available as styling infrastructure without changing the
+ * current component layout.
  */
 export default defineConfig({
+  plugins: [tailwindcss()],
   server: {
     host: "127.0.0.1",
     port: 5173,

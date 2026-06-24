@@ -6,4 +6,5 @@
  * simple for consumers.
  */
 export * from "./formations.ts";
+export * from "./player-roles.ts";
 export * from "./position-suitability.ts";

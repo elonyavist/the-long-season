@@ -37,7 +37,59 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("es", "career.matchPreparation.summary.blocked"), "Preparacion incompleta");
   assert.equal(translate("fr", "career.matchPreparation.summary.blocked"), "Preparation incomplete");
   assert.equal(translate("en", "career.matchPreparation.action.save"), "Save preparation");
+  assert.equal(translate("en", "career.matchPreparation.action.auto"), "Auto");
+  assert.equal(translate("it", "career.matchPreparation.action.fillGaps"), "Riempi");
+  assert.equal(translate("de", "career.matchPreparation.action.clear"), "Leeren");
+  assert.equal(translate("es", "career.matchPreparation.action.fillGaps"), "Rellenar");
+  assert.equal(translate("fr", "career.matchPreparation.action.clear"), "Vider");
   assert.equal(translate("it", "career.matchPreparation.tactic.attacking"), "Offensiva");
+  assert.equal(translate("en", "career.matchPreparation.formation.4-2-3-1"), "4-2-3-1");
+  assert.equal(translate("en", "career.matchPreparation.formation.5-2-2-1"), "5-2-2-1");
+  assert.equal(translate("it", "career.matchPreparation.bench"), "Panchina");
+  assert.equal(translate("de", "career.matchPreparation.blocker.missing_bench_slot"), "Ersatzbank hat leere Slots");
+  assert.equal(translate("es", "career.matchPreparation.benchStatus.lineup_player"), "en el once");
+  assert.equal(translate("fr", "career.matchPreparation.playerStatus.bench"), "remplacant");
+  assert.equal(translate("en", "career.tacticalBoard.title"), "Tactical board");
+  assert.equal(translate("it", "career.tacticalBoard.currentShape"), "Modulo in campo");
+  assert.equal(translate("de", "career.tacticalBoard.assignPlayer"), "Spieler zuweisen");
+  assert.equal(translate("es", "career.tacticalBoard.suit.makeshift"), "Improvisado");
+  assert.equal(translate("fr", "career.tacticalBoard.removeFromLineup"), "Retirer du onze");
+});
+
+test("translates every documented match-preparation formation label in every supported language", () => {
+  const formationKeys = [
+    "4-4-2",
+    "4-4-1-1",
+    "4-3-3",
+    "4-2-3-1",
+    "4-1-4-1",
+    "4-1-2-1-2",
+    "4-3-1-2",
+    "4-3-2-1",
+    "4-5-1",
+    "4-2-2-2",
+    "4-2-4",
+    "3-5-2",
+    "3-4-3",
+    "3-4-1-2",
+    "3-4-2-1",
+    "3-1-4-2",
+    "3-6-1",
+    "3-3-3-1",
+    "5-3-2",
+    "5-4-1",
+    "5-2-3",
+    "5-2-1-2",
+    "5-2-2-1",
+  ] as const;
+
+  for (const formationKey of formationKeys) {
+    assert.equal(translate("en", `career.matchPreparation.formation.${formationKey}`), formationKey);
+    assert.equal(translate("it", `career.matchPreparation.formation.${formationKey}`), formationKey);
+    assert.equal(translate("de", `career.matchPreparation.formation.${formationKey}`), formationKey);
+    assert.equal(translate("es", `career.matchPreparation.formation.${formationKey}`), formationKey);
+    assert.equal(translate("fr", `career.matchPreparation.formation.${formationKey}`), formationKey);
+  }
 });
 
 test("unknown keys fail clearly at runtime", () => {

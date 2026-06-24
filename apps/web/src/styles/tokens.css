@@ -1,22 +1,40 @@
 :root {
   color-scheme: dark;
-  --tls-color-ink: #101619;
-  --tls-color-clubhouse: #17221d;
-  --tls-color-scoreboard: #20352c;
-  --tls-color-paper: #efe5c8;
-  --tls-color-paper-muted: #d6c9a8;
-  --tls-color-line: #6f7b62;
-  --tls-color-line-soft: rgba(239, 229, 200, 0.2);
-  --tls-color-gold: #d4a642;
-  --tls-color-red: #b85d42;
-  --tls-color-green: #65a66c;
-  --tls-color-blue: #547d9b;
-  --tls-color-text: #f4ecd9;
-  --tls-color-text-muted: #b9b093;
-  --tls-color-text-dark: #17221d;
-  --tls-shadow-panel: 0 18px 45px rgba(0, 0, 0, 0.28);
-  --tls-font-ui: "Trebuchet MS", "Aptos", "Segoe UI", sans-serif;
-  --tls-font-display: "Georgia", "Times New Roman", serif;
+  --tls-color-ink: #080f11;
+  --tls-color-office: #101a17;
+  --tls-color-clubhouse: #15241e;
+  --tls-color-scoreboard: #1e3027;
+  --tls-color-scoreboard-dark: #111d19;
+  --tls-color-pitch: #224330;
+  --tls-color-pitch-dark: #13281d;
+  --tls-color-paper: #f0e3bd;
+  --tls-color-paper-muted: #d7c99f;
+  --tls-color-line: #768066;
+  --tls-color-line-strong: rgba(240, 227, 189, 0.44);
+  --tls-color-line-soft: rgba(240, 227, 189, 0.18);
+  --tls-color-gold: #d1a13a;
+  --tls-color-gold-dark: #8d651b;
+  --tls-color-red: #c35f43;
+  --tls-color-green: #6aae75;
+  --tls-color-blue: #5d879f;
+  --tls-color-text: #f5edd7;
+  --tls-color-text-muted: #bdb392;
+  --tls-color-text-dark: #111914;
+  --tls-color-club-accent: var(--tls-color-gold);
+  --tls-surface-panel:
+    linear-gradient(180deg, rgba(240, 227, 189, 0.07), transparent 46%),
+    var(--tls-color-clubhouse);
+  --tls-surface-scoreboard:
+    linear-gradient(180deg, rgba(240, 227, 189, 0.06), rgba(8, 15, 17, 0.08)),
+    var(--tls-color-scoreboard);
+  --tls-surface-pitch:
+    linear-gradient(90deg, rgba(240, 227, 189, 0.055) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(240, 227, 189, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, var(--tls-color-pitch), var(--tls-color-pitch-dark));
+  --tls-shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.38);
+  --tls-shadow-inset: inset 0 1px 0 rgba(240, 227, 189, 0.1);
+  --tls-font-ui: "Trebuchet MS", "Verdana", "Segoe UI", sans-serif;
+  --tls-font-display: "Palatino Linotype", "Georgia", serif;
   --tls-font-mono: "SFMono-Regular", "Consolas", monospace;
   --tls-font-size-xs: 0.75rem;
   --tls-font-size-sm: 0.875rem;
@@ -32,4 +50,6 @@
   --tls-radius-sm: 3px;
   --tls-radius-md: 6px;
   --tls-border-thin: 1px solid var(--tls-color-line-soft);
+  --tls-border-strong: 1px solid var(--tls-color-line-strong);
+  --tls-focus-ring: 0 0 0 3px rgba(209, 161, 58, 0.38), 0 0 0 1px var(--tls-color-gold);
 }

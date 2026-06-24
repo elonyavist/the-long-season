@@ -11,7 +11,7 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - `storage -> domain, shared`
 - `simulation-tools -> domain, engine, shared`
 - `i18n -> nothing`
-- `ui -> nothing`
+- `ui -> domain`
 - `apps/cli -> engine, content, storage, simulation-tools, i18n, ui, shared`
 - `apps/web -> engine, content, storage, i18n, ui, shared`
 - `apps/desktop -> web`
@@ -22,6 +22,7 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Domain must not import engine, storage, content, shared, apps, or UI code.
 - Storage must never import engine.
 - Content must never import engine.
+- UI read models may import domain contracts/catalogs, but must not import engine, content, storage, i18n, apps, React, or browser APIs.
 - Packages must not import from `apps/*`.
 - Content packs must not contain executable scripts.
 - No `Math.random()` inside engine.
@@ -69,6 +70,9 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 
 - Use Node `24.16.0` for local work. Before running project commands in a new
   shell, run `nvm use 24` from the repository root.
+- Before installing, upgrading, or removing dependencies, or before changing
+  any `package.json`/`pnpm-lock.yaml` content, run `nvm use 24` from the
+  repository root and perform the dependency change with pnpm.
 - Web/UI phases must have Playwright available for screenshot-based visual QA.
 - Chromium is the default browser for automated visual inspection. Install or
   refresh it with `pnpm playwright:install`.

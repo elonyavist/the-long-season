@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  CANONICAL_PLAYER_ROLES,
   FORMATION_CATALOG,
   FORMATION_KEYS,
   FORMATION_POSITION_FAMILIES,
@@ -9,7 +10,7 @@ import {
   getFormation,
   isFormationKey,
   type FormationPositionFamily,
-} from "./formations.ts";
+} from "./index.ts";
 
 /**
  * Formation catalog tests protect the curated shape data used by later lineup,
@@ -43,10 +44,24 @@ test("every formation has unique slot keys", () => {
 
 test("every formation uses recognized position families", () => {
   const recognized = new Set<FormationPositionFamily>(FORMATION_POSITION_FAMILIES);
+  const canonicalRoles = new Set(CANONICAL_PLAYER_ROLES);
 
   for (const formation of FORMATIONS) {
     for (const slot of formation.slots) {
       assert.equal(recognized.has(slot.positionFamily), true, `${formation.key}:${slot.slotKey} uses an unknown family`);
+      assert.equal(canonicalRoles.has(slot.playerRole), true, `${formation.key}:${slot.slotKey} uses a non-canonical player role`);
+      assert.equal(slot.positionFamily, slot.playerRole, `${formation.key}:${slot.slotKey} should keep positionFamily as a canonical-role alias`);
+    }
+  }
+});
+
+test("formation slots do not use role variants as canonical player roles", () => {
+  const forbiddenRoles = new Set(["right_wing_back", "left_wing_back", "second_striker"]);
+
+  for (const formation of FORMATIONS) {
+    for (const slot of formation.slots) {
+      assert.equal(forbiddenRoles.has(slot.playerRole), false, `${formation.key}:${slot.slotKey} uses a role variant`);
+      assert.equal(forbiddenRoles.has(slot.positionFamily), false, `${formation.key}:${slot.slotKey} uses a role variant family`);
     }
   }
 });
@@ -55,4 +70,49 @@ test("formation helpers return stable catalog entries", () => {
   assert.equal(isFormationKey("4-4-2"), true);
   assert.equal(isFormationKey("2-3-5"), false);
   assert.equal(getFormation("3-4-2-1"), FORMATION_CATALOG["3-4-2-1"]);
+});
+
+test("three-six-one uses one defensive midfielder between defense and central midfield", () => {
+  const formation = getFormation("3-6-1");
+
+  assert.deepEqual(
+    formation.slots.map((slot) => `${slot.slotKey}:${slot.line}`),
+    [
+      "gk:goalkeeper",
+      "cb-right:defensive_line",
+      "cb-center:defensive_line",
+      "cb-left:defensive_line",
+      "dm:defensive_midfield",
+      "rm:midfield_line",
+      "cm-right:midfield_line",
+      "cm-left:midfield_line",
+      "lm:midfield_line",
+      "am:attacking_midfield",
+      "st:forward_line",
+    ],
+  );
+});
+
+test("two-forward formations keep both forwards as strikers", () => {
+  for (const formationKey of ["3-5-2", "5-3-2"] as const) {
+    const forwards = getFormation(formationKey).slots.filter((slot) => slot.line === "forward_line");
+
+    assert.deepEqual(
+      forwards.map((slot) => slot.playerRole),
+      ["striker", "striker"],
+      `${formationKey} should use two central strikers, not left/right wingers`,
+    );
+  }
+});
+
+test("three-forward formations use left winger, striker, and right winger", () => {
+  for (const formationKey of ["4-3-3", "3-4-3", "5-2-3"] as const) {
+    const forwards = getFormation(formationKey).slots.filter((slot) => slot.line === "forward_line");
+
+    assert.deepEqual(
+      forwards.map((slot) => slot.playerRole).sort(),
+      ["left_winger", "right_winger", "striker"],
+      `${formationKey} should use two wingers and one central striker`,
+    );
+  }
 });

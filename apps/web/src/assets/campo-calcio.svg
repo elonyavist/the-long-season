@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1170" width="800" height="1170" font-family="sans-serif">
+  <defs>
+    <!-- texture erba -->
+    <filter id="grass" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9 0.012" numOctaves="2" seed="7" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.10 0"/>
+    </filter>
+    <!-- vignettatura bordi scuri -->
+    <radialGradient id="vig" cx="50%" cy="50%" r="62%">
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+    <!-- porta: rete -->
+    <pattern id="net" width="7" height="7" patternUnits="userSpaceOnUse">
+      <path d="M0 0 L7 7 M7 0 L0 7" stroke="#ffffff" stroke-opacity="0.35" stroke-width="0.6"/>
+    </pattern>
+  </defs>
+
+  <!-- prato a strisce -->
+  <g>
+    <rect x="0.00" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
+    <rect x="88.89" y="0" width="88.89" height="1170" fill="#356338"/>
+    <rect x="177.78" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
+    <rect x="266.67" y="0" width="88.89" height="1170" fill="#356338"/>
+    <rect x="355.56" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
+    <rect x="444.44" y="0" width="88.89" height="1170" fill="#356338"/>
+    <rect x="533.33" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
+    <rect x="622.22" y="0" width="88.89" height="1170" fill="#356338"/>
+    <rect x="711.11" y="0" width="88.89" height="1170" fill="#3a6b3e"/>
+  </g>
+  <!-- texture erba sovrapposta -->
+  <rect x="0" y="0" width="800" height="1170" filter="url(#grass)"/>
+
+  <!-- porte -->
+  <g>
+    <rect x="363.4" y="38" width="73.2" height="22" fill="url(#net)" stroke="#f2f4ef" stroke-width="3"/>
+    <rect x="363.4" y="1110" width="73.2" height="22" fill="url(#net)" stroke="#f2f4ef" stroke-width="3"/>
+  </g>
+
+  <!-- segnaletica -->
+  <g fill="none" stroke="#f2f4ef" stroke-width="3" stroke-opacity="0.92" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="60" y="60" width="680" height="1050" />
+    <line x1="60" y1="585.0" x2="740" y2="585.0" />
+    <circle cx="400.0" cy="585.0" r="91.5" />
+    <circle cx="400.0" cy="585.0" r="3" fill="#f2f4ef" stroke="none" />
+    <rect x="198.4" y="60" width="403.2" height="165" />
+    <rect x="198.4" y="945" width="403.2" height="165" />
+    <rect x="308.4" y="60" width="183.2" height="55" />
+    <rect x="308.4" y="1055" width="183.2" height="55" />
+    <circle cx="400.0" cy="170" r="3" fill="#f2f4ef" stroke="none" />
+    <circle cx="400.0" cy="1000" r="3" fill="#f2f4ef" stroke="none" />
+    <path d="M 326.88 225.00 A 91.5 91.5 0 0 0 473.12 225.00" fill="none" />
+    <path d="M 326.88 945.00 A 91.5 91.5 0 0 1 473.12 945.00" fill="none" />
+    <path d="M 70.00 60.00 A 10 10 0 0 0 60.00 70.00" fill="none" />
+    <path d="M 740.00 70.00 A 10 10 0 0 0 730.00 60.00" fill="none" />
+    <path d="M 60.00 1100.00 A 10 10 0 0 0 70.00 1110.00" fill="none" />
+    <path d="M 730.00 1110.00 A 10 10 0 0 0 740.00 1100.00" fill="none" />
+  </g>
+
+  <!-- vignettatura -->
+  <rect x="0" y="0" width="800" height="1170" fill="url(#vig)"/>
+</svg>

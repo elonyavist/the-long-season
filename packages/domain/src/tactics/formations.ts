@@ -21,6 +21,7 @@ export const FORMATION_KEYS = [
   "3-4-1-2",
   "3-4-2-1",
   "3-1-4-2",
+  "3-6-1",
   "3-3-3-1",
   "5-3-2",
   "5-4-1",
@@ -97,6 +98,8 @@ export interface FormationSlot {
   readonly line: FormationLine;
   /** Broad football department. */
   readonly department: FormationDepartment;
+  /** Canonical player role required by this slot. */
+  readonly playerRole: CanonicalPlayerRole;
   /** Required position family for this slot. */
   readonly positionFamily: FormationPositionFamily;
   /** Optional horizontal side/channel. */
@@ -133,7 +136,7 @@ export const FORMATION_POSITION_FAMILIES = [
 /** Curated formation catalog keyed by stable formation key. */
 export const FORMATION_CATALOG: Readonly<Record<FormationKey, Formation>> = {
   "4-4-2": formation("4-4-2", [...gk(), ...backFour(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
-  "4-4-1-1": formation("4-4-1-1", [...gk(), ...backFour(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), secondStriker(), striker()]),
+  "4-4-1-1": formation("4-4-1-1", [...gk(), ...backFour(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), am(), striker()]),
   "4-3-3": formation("4-3-3", [...gk(), ...backFour(), cm("cm-right", "right_center"), cm("cm-center"), cm("cm-left", "left_center"), rw(), lw(), striker()]),
   "4-2-3-1": formation("4-2-3-1", [...gk(), ...backFour(), dm("dm-right", "right_center"), dm("dm-left", "left_center"), rw(), am(), lw(), striker()]),
   "4-1-4-1": formation("4-1-4-1", [...gk(), ...backFour(), dm(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), striker()]),
@@ -143,11 +146,12 @@ export const FORMATION_CATALOG: Readonly<Record<FormationKey, Formation>> = {
   "4-5-1": formation("4-5-1", [...gk(), ...backFour(), rm(), cm("cm-right", "right_center"), cm("cm-center"), cm("cm-left", "left_center"), lm(), striker()]),
   "4-2-2-2": formation("4-2-2-2", [...gk(), ...backFour(), dm("dm-right", "right_center"), dm("dm-left", "left_center"), am("am-right", "right_center"), am("am-left", "left_center"), striker("st-right", "right_center"), striker("st-left", "left_center")]),
   "4-2-4": formation("4-2-4", [...gk(), ...backFour(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), rw(), lw(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
-  "3-5-2": formation("3-5-2", [...gk(), ...backThree(), rwb(), dm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lwb(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
-  "3-4-3": formation("3-4-3", [...gk(), ...backThree(), rwb(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lwb(), rw(), lw(), striker()]),
-  "3-4-1-2": formation("3-4-1-2", [...gk(), ...backThree(), rwb(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lwb(), am(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
-  "3-4-2-1": formation("3-4-2-1", [...gk(), ...backThree(), rwb(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lwb(), am("am-right", "right_center"), am("am-left", "left_center"), striker()]),
+  "3-5-2": formation("3-5-2", [...gk(), ...backThree(), dm(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
+  "3-4-3": formation("3-4-3", [...gk(), ...backThree(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), rw(), lw(), striker()]),
+  "3-4-1-2": formation("3-4-1-2", [...gk(), ...backThree(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), am(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
+  "3-4-2-1": formation("3-4-2-1", [...gk(), ...backThree(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), am("am-right", "right_center"), am("am-left", "left_center"), striker()]),
   "3-1-4-2": formation("3-1-4-2", [...gk(), ...backThree(), dm(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), striker("st-right", "right_center"), striker("st-left", "left_center")]),
+  "3-6-1": formation("3-6-1", [...gk(), ...backThree(), dm(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), am(), striker()]),
   "3-3-3-1": formation("3-3-3-1", [...gk(), ...backThree(), dm("dm-right", "right_center"), dm("dm-center"), dm("dm-left", "left_center"), rw(), am(), lw(), striker()]),
   "5-3-2": formation("5-3-2", [...gk(), ...backFive(), cm("cm-right", "right_center"), cm("cm-center"), cm("cm-left", "left_center"), striker("st-right", "right_center"), striker("st-left", "left_center")]),
   "5-4-1": formation("5-4-1", [...gk(), ...backFive(), rm(), cm("cm-right", "right_center"), cm("cm-left", "left_center"), lm(), striker()]),
@@ -177,10 +181,12 @@ function slot(
   slotKey: string,
   line: FormationLine,
   department: FormationDepartment,
-  positionFamily: FormationPositionFamily,
+  playerRole: CanonicalPlayerRole,
   side?: FormationSide,
 ): FormationSlot {
-  return side === undefined ? { slotKey, line, department, positionFamily } : { slotKey, line, department, positionFamily, side };
+  const baseSlot = { slotKey, line, department, playerRole, positionFamily: playerRole };
+
+  return side === undefined ? baseSlot : { ...baseSlot, side };
 }
 
 function gk(): readonly FormationSlot[] {
@@ -206,20 +212,12 @@ function backThree(): readonly FormationSlot[] {
 
 function backFive(): readonly FormationSlot[] {
   return [
-    rwb(),
+    slot("rb", "defensive_line", "defense", "right_full_back", "right"),
     slot("cb-right", "defensive_line", "defense", "center_back", "right_center"),
     slot("cb-center", "defensive_line", "defense", "center_back", "center"),
     slot("cb-left", "defensive_line", "defense", "center_back", "left_center"),
-    lwb(),
+    slot("lb", "defensive_line", "defense", "left_full_back", "left"),
   ];
-}
-
-function rwb(): FormationSlot {
-  return slot("rwb", "defensive_line", "defense", "right_wing_back", "right");
-}
-
-function lwb(): FormationSlot {
-  return slot("lwb", "defensive_line", "defense", "left_wing_back", "left");
 }
 
 function dm(slotKey = "dm", side: FormationSide = "center"): FormationSlot {
@@ -250,10 +248,7 @@ function lw(): FormationSlot {
   return slot("lw", "forward_line", "attack", "left_winger", "left");
 }
 
-function secondStriker(): FormationSlot {
-  return slot("ss", "attacking_midfield", "attack", "second_striker", "center");
-}
-
 function striker(slotKey = "st", side: FormationSide = "center"): FormationSlot {
   return slot(slotKey, "forward_line", "attack", "striker", side);
 }
+import type { CanonicalPlayerRole } from "./player-roles.ts";

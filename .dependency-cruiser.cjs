@@ -59,9 +59,9 @@ module.exports = {
     {
       name: "ui-must-stay-read-model-only",
       severity: "error",
-      comment: "UI read models must stay framework-free and language-agnostic.",
+      comment: "UI read models may depend on domain contracts but must stay framework-free and language-agnostic.",
       from: { path: "^packages/ui/src" },
-      to: { path: "^(packages/(?!ui)|apps/|@game/(?!ui$))" },
+      to: { path: "^(packages/(?!ui|domain)|apps/|@game/(?!ui$|domain$))" },
     },
     {
       name: "packages-must-not-import-apps",

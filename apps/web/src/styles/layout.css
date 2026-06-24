@@ -1,17 +1,8 @@
-.tls-app-shell {
-  display: grid;
-  min-height: 100vh;
-  padding: var(--tls-space-5);
-  place-items: center;
-}
-
 .tls-shell-panel {
   width: min(100%, 46rem);
   padding: var(--tls-space-6);
-  background:
-    linear-gradient(180deg, rgba(239, 229, 200, 0.08), transparent 42%),
-    var(--tls-color-clubhouse);
-  border: 1px solid rgba(239, 229, 200, 0.24);
+  background: var(--tls-surface-panel);
+  border: var(--tls-border-strong);
   border-radius: var(--tls-radius-md);
   box-shadow: var(--tls-shadow-panel);
 }
@@ -42,24 +33,50 @@
 
 .tls-career-shell-header {
   display: grid;
-  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) minmax(14.5rem, auto);
-  gap: var(--tls-space-4);
+  grid-template-columns: minmax(18rem, 27rem) minmax(0, 1fr) minmax(15rem, auto);
+  gap: var(--tls-space-3);
   align-items: stretch;
   padding: var(--tls-space-3);
   background:
-    linear-gradient(180deg, rgba(239, 229, 200, 0.08), transparent 68%),
-    rgba(16, 22, 25, 0.84);
-  border: 1px solid rgba(239, 229, 200, 0.22);
+    linear-gradient(90deg, rgba(209, 161, 58, 0.16), transparent 24%),
+    var(--tls-surface-scoreboard);
+  border: var(--tls-border-strong);
   border-radius: var(--tls-radius-md);
-  box-shadow: var(--tls-shadow-panel);
+  box-shadow: var(--tls-shadow-panel), var(--tls-shadow-inset);
+}
+
+.tls-career-shell-operations {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  gap: var(--tls-space-3);
+  align-items: center;
+  min-width: 0;
+  padding-right: var(--tls-space-3);
+  border-right: 1px solid var(--tls-color-line-soft);
+}
+
+.tls-career-shell-crest {
+  display: grid;
+  width: 3.25rem;
+  aspect-ratio: 1;
+  place-items: center;
+  color: var(--tls-color-text-dark);
+  background:
+    linear-gradient(135deg, var(--tls-color-paper) 0 48%, var(--tls-color-gold) 48% 52%, var(--tls-color-pitch) 52%),
+    var(--tls-color-paper);
+  border: 1px solid rgba(240, 227, 189, 0.62);
+  border-radius: 50%;
+  box-shadow: var(--tls-shadow-inset);
+  font-family: var(--tls-font-mono);
+  font-size: var(--tls-font-size-sm);
+  font-weight: 800;
 }
 
 .tls-career-shell-brand {
   display: grid;
   align-content: center;
   gap: var(--tls-space-1);
-  padding: 0 var(--tls-space-3);
-  border-right: 1px solid rgba(239, 229, 200, 0.16);
+  min-width: 0;
 }
 
 .tls-career-shell-brand p {
@@ -68,19 +85,54 @@
   font-family: var(--tls-font-display);
   font-size: var(--tls-font-size-md);
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 .tls-career-shell-brand strong {
   color: var(--tls-color-paper);
+  font-size: var(--tls-font-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.tls-career-shell-context {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--tls-space-2);
+  margin: 0;
+}
+
+.tls-career-shell-context div {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: var(--tls-space-2);
+  background: rgba(8, 15, 17, 0.32);
+  border: 1px solid rgba(240, 227, 189, 0.12);
+  border-radius: var(--tls-radius-sm);
+}
+
+.tls-career-shell-context dt {
+  color: var(--tls-color-text-muted);
   font-size: var(--tls-font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
 }
 
+.tls-career-shell-context dd {
+  margin: 0;
+  color: var(--tls-color-paper);
+  font-family: var(--tls-font-mono);
+  font-size: var(--tls-font-size-xs);
+  overflow-wrap: anywhere;
+}
+
 .tls-career-shell-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--tls-space-1);
+  gap: 0.35rem;
   align-content: center;
   align-items: center;
 }
@@ -136,11 +188,6 @@
 }
 
 @media (max-width: 620px) {
-  .tls-app-shell {
-    align-items: stretch;
-    padding: var(--tls-space-3);
-  }
-
   .tls-shell-panel {
     padding: var(--tls-space-4);
   }
@@ -156,9 +203,13 @@
   }
 
   .tls-career-shell-brand {
+    padding: 0;
+  }
+
+  .tls-career-shell-operations {
     padding: 0 0 var(--tls-space-3);
     border-right: 0;
-    border-bottom: 1px solid rgba(239, 229, 200, 0.16);
+    border-bottom: 1px solid var(--tls-color-line-soft);
   }
 
   .tls-career-shell-actions {

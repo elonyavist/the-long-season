@@ -1,6 +1,6 @@
 # The Long Season Architecture
 
-Last updated: 2026-06-23
+Last updated: 2026-06-24
 
 ## Purpose
 
@@ -37,9 +37,9 @@ apps/web
 @game/engine           -> @game/shared
 @game/content          -> @game/shared
 @game/storage          -> @game/shared
-@game/domain           -> no project package
 @game/i18n             -> no project package
-@game/ui               -> no project package
+@game/ui               -> @game/domain
+@game/domain           -> no project package
 @game/shared           -> no project package
 ```
 
@@ -53,7 +53,8 @@ Why this matters:
 - `simulation-tools` owns report models and diagnostic meaning, but not
   localized text or fake content.
 - `ui` owns language-agnostic app/career read models and action contracts. It
-  must not know React, browser APIs, storage, CLI, engine, content, or i18n.
+  may import domain contracts/catalogs for shared football grammar, but must not
+  know React, browser APIs, storage, CLI, engine, content, or i18n.
 - `apps/cli` is the outer adapter. It can compose packages, parse commands,
   persist saves, render localized output, and smoke-test UI read models.
 - `apps/web` is the first browser adapter. It renders localized React screens
@@ -73,9 +74,9 @@ Why this matters:
 | `packages/storage` | JSON-backed save storage, schema metadata, migrations. | Gameplay decisions or generated content. |
 | `packages/simulation-tools` | Balance reports, long-run runners, player/club/youth stability reports, anomaly semantics. | Fake content, storage, localized prose, CLI formatting. |
 | `packages/i18n` | Supported languages, translation keys, fallback translation rendering. | Simulation logic or package imports. |
-| `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox/match-preparation view contracts, action availability/result contracts, pure dashboard, Inbox, shell, and match-preparation builders. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
+| `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox/match-preparation view contracts, action availability/result contracts, pure dashboard, Inbox, shell, and match-preparation builders. It may derive read-model formation facts from `packages/domain` catalogs. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
 | `apps/cli` | Command parsing, package composition, save IO, localized console output, smoke/lab commands. | Core gameplay rules or reusable diagnostic semantics. |
-| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue/preparation adapters, reusable career shell, first dashboard screen, match-preparation screen, left Inbox/Posta rail, compact Inbox panel. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
+| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue/preparation adapters, reusable career shell, first dashboard screen, retro-football match-preparation tactical workspace, left Inbox/Posta rail, compact Inbox panel, browser visual QA. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
 
 ## Main Entry Points
 
@@ -105,18 +106,22 @@ Why this matters:
 | Career shell/navigation view builder | `packages/ui/src/career/career-shell-view.ts` |
 | Career match-preparation view builder | `packages/ui/src/career/career-match-preparation-view.ts` |
 | Web app | `apps/web/src/main.tsx` |
-| Web React root | `apps/web/src/App.tsx` |
-| Web app-entry screen | `apps/web/src/screens/AppEntryScreen.tsx` |
-| Web dashboard screen | `apps/web/src/screens/CareerDashboardScreen.tsx` |
-| Web match-preparation screen | `apps/web/src/screens/CareerMatchPreparationScreen.tsx` |
-| Web demo dashboard adapter | `apps/web/src/career/build-demo-career-dashboard.ts` |
-| Web demo Continue adapter | `apps/web/src/career/continue-demo-career.ts` |
-| Web demo match-preparation adapter | `apps/web/src/career/match-preparation-demo.ts` |
-| Web career shell | `apps/web/src/components/CareerShell.tsx` |
-| Web Inbox panel | `apps/web/src/components/CareerInboxPanel.tsx` |
+| Web React root | `apps/web/src/app/App.tsx` |
+| Web career UI store | `apps/web/src/stores/career-ui-store.ts` |
+| Web app-entry screen | `apps/web/src/features/app-entry/AppEntryScreen.tsx` |
+| Web dashboard screen | `apps/web/src/features/dashboard/CareerDashboardScreen.tsx` |
+| Web match-preparation screen | `apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx` |
+| Web demo dashboard adapter | `apps/web/src/features/dashboard/build-demo-career-dashboard.ts` |
+| Web demo Continue adapter | `apps/web/src/features/dashboard/continue-demo-career.ts` |
+| Web demo match-preparation adapter | `apps/web/src/features/match-preparation/match-preparation-demo.ts` |
+| Web career shell | `apps/web/src/features/career-shell/CareerShell.tsx` |
+| Web Inbox panel | `apps/web/src/features/career-shell/CareerInboxPanel.tsx` |
 | Web Continue/InBox visual QA | `apps/web/src/visual-qa/continue-inbox.spec.ts` |
 | Web shell accessibility visual QA | `apps/web/src/visual-qa/shell-accessibility.spec.ts` |
 | Web match-preparation visual QA | `apps/web/src/visual-qa/match-preparation.spec.ts` |
+| Web retro-football identity visual QA | `apps/web/src/visual-qa/retro-football-identity.spec.ts` |
+| Web tactics workspace visual QA | `apps/web/src/visual-qa/tactics-workspace.spec.ts` |
+| Web shared tactical-board visual QA | `apps/web/src/visual-qa/shared-tactical-board.spec.ts` |
 
 ## Important Files By Area
 
@@ -130,6 +135,21 @@ Why this matters:
 - `packages/domain/src/career/*`
   Contains durable language-agnostic career attention and Inbox/Posta contracts.
   These are domain data contracts, not presentation text or UI behavior.
+- `packages/domain/src/tactics/player-roles.ts`
+  Canonical football role contract. It defines the 12 player roles supported by
+  the game: goalkeeper, full backs, center back, defensive midfielder, central
+  midfielder, wide midfielders, attacking midfielder, wingers, and striker.
+  Side/channel labels such as right/left/center belong to formation slots, not
+  to extra player-role names.
+- `packages/domain/src/tactics/formations.ts`
+  Canonical formation catalog. Each formation slot has a stable slot key, a
+  canonical `playerRole`, department, side/channel metadata, and a compatibility
+  `positionFamily` alias for current callers. This is the source of truth for
+  tactical shape; do not duplicate the formation slot arrays in UI or web code.
+- `packages/domain/src/tactics/position-suitability.ts`
+  Slot-fit scoring and suitability rules. Use these helpers when ranking player
+  options for a formation slot so a strong adapted player can beat a weak
+  natural fit without hiding real weak/invalid coverage.
 - `packages/domain/src/value-objects/*`
   Contains branded IDs and values.
 - `packages/domain/src/index.ts`
@@ -273,10 +293,13 @@ localized CLI text or import generated content.
   and Inbox rail summary state without React or browser dependencies.
 - `packages/ui/src/career/career-match-preparation-view.ts`
   Pure match-preparation view builder. It accepts explicit fixture, selected
-  club, lineup slot, player option, tactic profile, and saved-state facts, then
-  derives missing-slot, duplicate-player, missing-tactic, blocker, status, and
-  save-action state. It does not choose players, recommend tactics, persist
-  state, localize prose, or run the engine.
+  club, formation, lineup slot, bench slot, player option, tactic profile, and
+  saved-state facts, then derives missing-slot, duplicate-player, bench-overlap,
+  missing-tactic, blocker, status, and save-action state. Its exposed formation
+  facts are adapted from the domain formation catalog, so UI and tactical engine
+  grammar cannot drift. It exposes manager-triggered selection helper actions
+  as action state only; it does not run those actions, choose players,
+  recommend tactics, persist state, localize prose, or run the engine.
 
 UI read-model files are not the web UI. They exist so CLI smoke output and the
 future web adapter can consume the same structured facts without parsing console
@@ -286,54 +309,132 @@ text or importing engine internals.
 
 - `apps/web/src/main.tsx`
   Browser entry point. It mounts React and imports the global visual foundation.
-- `apps/web/src/App.tsx`
-  Small app-shell state machine. It owns in-memory screen choice, language and
-  currency preferences, demo-career availability, and current in-memory
-  match-preparation state for the prototype.
+- `apps/web/src/app/App.tsx`
+  Thin browser composition root. It reads from the career UI store, builds the
+  current view models, wires screen components, and resets browser scroll when
+  the selected screen changes so single-page navigation behaves like a real
+  section switch.
 - `apps/web/src/app/preferences.ts`
   Web-only preference model for language and display currency. Currency remains
   a display preference, not an economics rule.
 - `apps/web/src/app/translation.ts`
   Thin adapter over `@game/i18n` for React components.
-- `apps/web/src/app/app-entry-view-model.ts`
+- `apps/web/src/stores/career-ui-store.ts`
+  Focused Zustand store for browser UI state: current screen, language/currency
+  preferences, demo-career availability, last Continue result, and the current
+  match-preparation draft. It must not own engine rules or duplicate
+  `@game/ui` read-model calculations.
+- `apps/web/src/features/app-entry/app-entry-view-model.ts`
   Builds the app-entry read model from `@game/ui` contracts.
-- `apps/web/src/screens/AppEntryScreen.tsx`
+- `apps/web/src/features/app-entry/AppEntryScreen.tsx`
   Localized main menu with New career, Continue career, and settings controls.
-- `apps/web/src/career/build-demo-career-dashboard.ts`
+- `apps/web/src/features/dashboard/build-demo-career-dashboard.ts`
   Deterministic read-only dashboard demo adapter. This is the replacement point
   for a later real save adapter.
-- `apps/web/src/career/continue-demo-career.ts`
+- `apps/web/src/features/dashboard/continue-demo-career.ts`
   Deterministic Continue demo adapter. It delegates stop logic to
   `continueCareerUntilAttention` and converts returned Inbox messages into
   UI-facing message input. This is the replacement point for future real-save
   continuation.
-- `apps/web/src/career/match-preparation-demo.ts`
+- `apps/web/src/features/match-preparation/match-preparation-demo.ts`
   Deterministic match-preparation demo adapter. It owns prototype lineup slot
-  facts, player options, tactic profiles, in-memory selected lineup/tactic/save
-  state helpers, and conversion into `@game/ui` match-preparation input. This
-  is the replacement point for future real-save preparation facts.
-- `apps/web/src/career/career-dashboard-presenter.ts`
+  facts, selected formation state, ordered bench state, player options,
+  demo-only player age/foot facts, tactic profiles, in-memory selected
+  lineup/tactic/save state helpers, the current shared tactical-board draft, and
+  conversion into `@game/ui` match-preparation input. This is the replacement
+  point for future real-save preparation facts.
+- `apps/web/src/shared/lib/player-position-ordering.ts`
+  Web-side tactical ordering helper for selectable player options. It keeps
+  natural slot fits first, adapted fits next, weak/emergency fits last, and
+  sorts broad role views by football position order rather than localized role
+  text. It also exposes raw fit tiers used by tactical-board suitability.
+- `apps/web/src/features/tactics-board/tactical-board-types.ts`
+  Shared tactical-board contracts. Slots use normalized coordinates, display
+  role codes, canonical roles, lock state, and optional player assignment.
+- `apps/web/src/features/tactics-board/tactical-board-roles.ts`
+  Board display-role catalog, role movement zones, department metadata, and
+  position-based role-change options. It maps compact board codes such as `ED`
+  and `AD` back to the canonical role grammar.
+- `apps/web/src/features/tactics-board/tactical-board-geometry.ts`
+  The only place where normalized coordinates are projected into the SVG
+  `0 0 800 1170` viewBox. State must not store pixel coordinates.
+- `apps/web/src/features/tactics-board/tactical-board-formations.ts`
+  Adapts `@game/ui` formation facts into board presets and derives the current
+  shape from actual slot roles. It must not duplicate domain formation arrays or
+  import raw domain contracts in browser code.
+- `apps/web/src/features/tactics-board/tactical-board-state.ts`
+  Pure board draft operations: create, load base formation, move slot, change
+  role, clear assignment, assign player, and extract lineup selections.
+- `apps/web/src/features/tactics-board/tactical-board-squad.ts`
+  Maps current match-preparation player options into board-ready player facts:
+  id, number, surname, form trend, primary role, alternative roles, current
+  ability, and suitability by role.
+- `apps/web/src/features/tactics-board/tactical-board-suitability.ts`
+  Derives the five visual suitability levels from existing player-position fit
+  tiers. Suitability is computed when needed, not persisted as mutable state.
+- `apps/web/src/features/tactics-board/components/TacticalBoardPitch.tsx`
+  Controlled reusable tactical surface. It renders the vertical pitch, player
+  tokens, empty slots, active drag zones, context menu, long-press menu, and
+  delegates all state changes through callbacks. Context menus close on outside
+  click, pitch-background click, `Esc`, and completed actions.
+- `apps/web/src/features/tactics-board/components/TacticalBoardPitchMarkings.tsx`
+  Game-owned SVG pitch markings adapted from the supplied reference feature.
+  This is now the shared tactical-board pitch surface; it is separate from the
+  older static SVG-background pitch.
+- `apps/web/src/features/dashboard/career-dashboard-presenter.ts`
   Groups dashboard read-model facts for React rendering without duplicating
   readiness logic.
-- `apps/web/src/components/CareerShell.tsx`
+- `apps/web/src/features/career-shell/CareerShell.tsx`
   Reusable localized career shell. It owns the top global navigation, selected
   club context, Main menu and Continue action group, left Inbox/Posta rail, and
-  central selected-content outlet.
-- `apps/web/src/components/CareerInboxPanel.tsx`
-  Compact localized Inbox/Posta panel for manager attention messages. It is not
-  a full mail client.
-- `apps/web/src/screens/CareerDashboardScreen.tsx`
+  central selected-content outlet. The shell currently renders the Phase 53
+  club-operations header and crest placeholder.
+- `apps/web/src/features/career-shell/CareerInboxPanel.tsx`
+  Compact localized Inbox/Posta panel for manager attention messages. It shows
+  counts, action-required state, priority/status badges, related labels, and
+  message actions. It is not a full mail client.
+- `apps/web/src/features/match-preparation/TacticalPitchLineup.tsx`
+  Legacy reusable vertical tactical pitch/lavagna from the pre-Phase-57 match
+  preparation workspace. It remains in the codebase for historical tests and
+  comparison, but visible match preparation now uses the shared tactical board.
+  Do not build new tactical screens on this component.
+- `apps/web/src/assets/campo-calcio.svg`
+  Football-pitch background supplied by the user and owned by the web app at
+  runtime. Do not reference the user's Downloads folder from code. The SVG is a
+  visual asset for the legacy static pitch, not a source of tactical-board slot
+  coordinates.
+- `apps/web/src/features/match-preparation/tactical-pitch-layout.ts`
+  Legacy pitch-grid coordinate helper for the static pitch. New tactical-board
+  work should use normalized board coordinates from `tactical-board-geometry.ts`
+  instead.
+- `apps/web/src/shared/ui/SquadSelectionTable.tsx`
+  Reusable fixed-height, sortable squad-picking table. It owns table sort state
+  and sorts broad roles by tactical position order, not localized role text.
+  Match preparation uses it now; tactics and squad selection can reuse it.
+- `apps/web/src/shared/ui/PlayerCandidateRow.tsx`
+  Reusable dense player-candidate row for tactical assignment surfaces. It is
+  presentational only and renders shirt number, surname, role, compact fitness
+  percentage, optional foot, and suitability tone without importing feature
+  state or engine rules.
+- `apps/web/src/shared/ui/PlayerFactPanel.tsx`
+  Reusable compact selected-player fact panel for tactical squad surfaces.
+- `apps/web/src/shared/lib/match-preparation-labels.ts`
+  Shared label/format helpers for tactical player facts. It keeps localized
+  status, role, fitness, age, and foot formatting out of screen components.
+- `apps/web/src/features/dashboard/CareerDashboardScreen.tsx`
   Read-only dashboard/matchday hub prototype: context, selected club, next
   fixture, preparation, condition, table context, recent match, actions, and
   blockers. It renders critical blockers near the top of the first useful
   viewport and can open match preparation from dashboard actions. It renders
   inside `CareerShell`; Continue and Inbox/Posta shell placement live in the
   shell, while dashboard-specific facts remain central content.
-- `apps/web/src/screens/CareerMatchPreparationScreen.tsx`
-  Editable match-preparation slice. It renders next-fixture context, selected
-  club context, visible blockers, stable lineup slot selects, tactic profile
-  radios, and an explicit Save preparation action from structured read-model
-  data.
+- `apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx`
+  Editable match-preparation tactical workspace. It orchestrates compact
+  next-fixture context, selected club context, alert blockers, board-local
+  formation/helper controls, reusable tactical pitch, reusable squad-selection
+  table, reusable selected-player detail panel, manual 8-player bench selection
+  with shared candidate rows, tactic profile radios, and an explicit Save
+  preparation action from structured read-model data.
 - `apps/web/src/visual-qa/continue-inbox.spec.ts`
   Playwright browser QA for main menu, new career, dashboard, Continue stop,
   and Inbox/Posta on desktop and narrow viewports.
@@ -346,14 +447,78 @@ text or importing engine internals.
   Inbox/Posta entry paths, lineup/tactic selection, save, dashboard blocker
   clearance, Continue to matchday, keyboard focus, and desktop/narrow
   screenshots under `/tmp/the-long-season-phase52`.
+- `apps/web/src/visual-qa/retro-football-identity.spec.ts`
+  Playwright browser QA for the Phase 53 retro-football identity: main menu,
+  shell/top navigation, left Inbox/Posta rail, dashboard control room,
+  dashboard and Inbox/Posta paths into match preparation, tactical pitch, squad
+  list, tactic selection, save, dashboard blocker clearance, Continue to
+  matchday, no horizontal overflow, keyboard focus, and screenshots under
+  `/tmp/the-long-season-phase53`.
+- `apps/web/src/visual-qa/tactics-workspace.spec.ts`
+  Playwright browser QA for the Phase 54 tactical workspace: dashboard and
+  Inbox/Posta entry paths, formation switching, XI selection, 8-player bench
+  selection, tactic selection, save, blocker clearance, Continue readiness,
+  desktop/narrow overflow, pitch-slot overlap, fixed-height squad table
+  behavior, SVG pitch background usage, no legacy CSS pitch markings, helper
+  button keyboard reachability, and screenshots under
+  `/tmp/the-long-season-phase54`.
+- `apps/web/src/visual-qa/shared-tactical-board.spec.ts`
+  Playwright browser QA for the shared tactical board and Phase 58
+  match-preparation workspace: compact header/alert/toolbar visibility, empty
+  and filled board states, desktop/narrow overflow, active drag zones,
+  goalkeeper lock and replacement menu, midfield clamping, `ED -> AD` role
+  change with derived shape update, remove-player behavior, candidate filtering
+  and ordering, suitability color changes, bench candidate-row parity, three
+  central-slot spacing, keyboard reachability, context-menu dismissal, and
+  touch-style long-press open/cancel behavior. Current Phase 58 screenshots are
+  written under `/tmp/the-long-season-phase58`.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
   styles, including the top navigation shell, left Inbox/Posta rail, dashboard,
-  and match-preparation central outlets.
+  match-preparation tactical workspace, shared candidate rows, compact squad
+  list, and central outlets.
 
 The web app currently uses an in-memory demo career only. It can call the pure
 engine Continue rule through a demo adapter, but it does not load or write
 career saves, play fixtures, inspect squads in detail, or implement economics.
+
+### Formation-To-Pitch Flow
+
+Follow this path when debugging a tactical shape or shared board behavior:
+
+1. `packages/domain/src/tactics/player-roles.ts`
+   defines the only valid player roles.
+2. `packages/domain/src/tactics/formations.ts`
+   defines which canonical player role each formation slot requires and which
+   side/channel that slot occupies.
+3. `packages/domain/src/tactics/position-suitability.ts`
+   scores how well a player can cover a specific slot role.
+4. `packages/ui/src/career/career-match-preparation-view.ts`
+   adapts the domain formation catalog into language-agnostic view facts.
+5. `apps/web/src/features/tactics-board/tactical-board-formations.ts`
+   adapts the `@game/ui` formation facts into board presets and derives the
+   current shape from actual board slot roles.
+6. `apps/web/src/features/tactics-board/tactical-board-state.ts`
+   owns pure slot movement, role change, clearing, and assignment operations for
+   a persistence-ready board draft.
+7. `apps/web/src/features/match-preparation/match-preparation-demo.ts`
+   owns the current browser demo selections and executes explicit manager
+   helper actions: `Auto`, `Fill gaps`, and `Clear`, while carrying the shared
+   `TacticalBoardDraft`.
+8. `apps/web/src/shared/lib/player-position-ordering.ts`
+   orders player options by slot fit and current ability, not by localized role
+   text, and feeds tactical-board suitability tiers.
+9. `apps/web/src/features/tactics-board/tactical-board-squad.ts`
+   maps current match-preparation player facts into board players.
+10. `apps/web/src/features/tactics-board/components/TacticalBoardPitch.tsx`
+    renders the shared controlled tactical surface.
+11. `apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx`
+    mounts the board and wires callbacks to the current preparation store.
+
+If a future Tactics screen needs a tactical surface, reuse steps 5 through 10
+rather than creating a second formation catalog or second board component. If a
+future matchday screen needs tactical display only, mount `TacticalBoardPitch`
+in read-only mode with the same slot/player facts and omit mutation callbacks.
 
 ### CLI
 
