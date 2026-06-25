@@ -9,7 +9,7 @@
 
 .tls-shell-title {
   margin: 0;
-  color: var(--tls-color-paper);
+  color: var(--tls-color-text);
   font-family: var(--tls-font-display);
   font-size: var(--tls-font-size-xl);
   font-weight: 700;
@@ -38,7 +38,7 @@
   align-items: stretch;
   padding: var(--tls-space-3);
   background:
-    linear-gradient(90deg, rgba(209, 161, 58, 0.16), transparent 24%),
+    linear-gradient(90deg, color-mix(in srgb, var(--tls-theme-primary-action-surface) 10%, transparent), transparent 24%),
     var(--tls-surface-scoreboard);
   border: var(--tls-border-strong);
   border-radius: var(--tls-radius-md);
@@ -62,7 +62,7 @@
   place-items: center;
   color: var(--tls-color-text-dark);
   background:
-    linear-gradient(135deg, var(--tls-color-paper) 0 48%, var(--tls-color-gold) 48% 52%, var(--tls-color-pitch) 52%),
+    linear-gradient(135deg, var(--tls-color-paper) 0 48%, var(--tls-theme-accent) 48% 52%, var(--tls-color-pitch) 52%),
     var(--tls-color-paper);
   border: 1px solid rgba(240, 227, 189, 0.62);
   border-radius: 50%;
@@ -81,7 +81,7 @@
 
 .tls-career-shell-brand p {
   margin: 0;
-  color: var(--tls-color-gold);
+  color: var(--tls-theme-primary-action-surface);
   font-family: var(--tls-font-display);
   font-size: var(--tls-font-size-md);
   font-weight: 700;
@@ -89,7 +89,7 @@
 }
 
 .tls-career-shell-brand strong {
-  color: var(--tls-color-paper);
+  color: var(--tls-color-text);
   font-size: var(--tls-font-size-sm);
   font-weight: 700;
   text-transform: uppercase;
@@ -109,8 +109,8 @@
   gap: 0.1rem;
   min-width: 0;
   padding: var(--tls-space-2);
-  background: rgba(8, 15, 17, 0.32);
-  border: 1px solid rgba(240, 227, 189, 0.12);
+  background: var(--tls-theme-table-row-surface);
+  border: 1px solid var(--tls-theme-border);
   border-radius: var(--tls-radius-sm);
 }
 
@@ -123,7 +123,7 @@
 
 .tls-career-shell-context dd {
   margin: 0;
-  color: var(--tls-color-paper);
+  color: var(--tls-color-text);
   font-family: var(--tls-font-mono);
   font-size: var(--tls-font-size-xs);
   overflow-wrap: anywhere;

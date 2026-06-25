@@ -1,38 +1,81 @@
 :root {
   color-scheme: dark;
+  --tls-theme-app-background: #070b13;
+  --tls-theme-shell-surface: #101827;
+  --tls-theme-panel-surface: #162238;
+  --tls-theme-elevated-panel-surface: #20314b;
+  --tls-theme-table-header-surface: #0b1320;
+  --tls-theme-table-row-surface: #1a2940;
+  --tls-theme-table-alternate-row-surface: #20314a;
+  --tls-theme-selected-row-surface: #293c59;
+  --tls-theme-border: rgba(232, 224, 202, 0.17);
+  --tls-theme-strong-border: rgba(232, 224, 202, 0.4);
+  --tls-theme-text: #f2ead7;
+  --tls-theme-muted-text: #aeb8c8;
+  --tls-theme-heading-text: #f7edcf;
+  --tls-theme-primary-action-surface: #d9b95d;
+  --tls-theme-primary-action-hover: #e9ca75;
+  --tls-theme-primary-action-text: #10141b;
+  --tls-theme-secondary-action-surface: #243652;
+  --tls-theme-focus-ring: #d9b95d;
+  --tls-theme-shell-overlay: rgba(91, 126, 174, 0.15);
+
+  /* Compatibility aliases while component CSS moves to the hierarchy tokens. */
+  --tls-theme-raised-surface: var(--tls-theme-elevated-panel-surface);
+  --tls-theme-scoreboard-surface: var(--tls-theme-shell-surface);
+  --tls-theme-scoreboard-dark-surface: var(--tls-theme-table-header-surface);
+  --tls-theme-line: var(--tls-theme-border);
+  --tls-theme-line-strong: var(--tls-theme-strong-border);
+  --tls-theme-line-soft: color-mix(in srgb, var(--tls-theme-border) 64%, transparent);
+  --tls-theme-dark-text: var(--tls-theme-primary-action-text);
+  --tls-theme-accent: var(--tls-theme-primary-action-surface);
+  --tls-theme-accent-strong: var(--tls-theme-primary-action-hover);
+  --tls-theme-accent-text: var(--tls-theme-primary-action-text);
+  --tls-theme-button-surface: var(--tls-theme-secondary-action-surface);
+  --tls-theme-button-surface-hover: color-mix(
+    in srgb,
+    var(--tls-theme-secondary-action-surface) 78%,
+    var(--tls-theme-primary-action-surface)
+  );
+
   --tls-color-ink: #080f11;
-  --tls-color-office: #101a17;
-  --tls-color-clubhouse: #15241e;
-  --tls-color-scoreboard: #1e3027;
-  --tls-color-scoreboard-dark: #111d19;
+  --tls-color-office: var(--tls-theme-shell-surface);
+  --tls-color-clubhouse: var(--tls-theme-panel-surface);
+  --tls-color-scoreboard: var(--tls-theme-elevated-panel-surface);
+  --tls-color-scoreboard-dark: var(--tls-theme-table-header-surface);
   --tls-color-pitch: #2a6545;
   --tls-color-pitch-dark: #1d4b35;
-  --tls-color-paper: #f0e3bd;
-  --tls-color-paper-muted: #d7c99f;
-  --tls-color-line: #768066;
-  --tls-color-line-strong: rgba(240, 227, 189, 0.44);
-  --tls-color-line-soft: rgba(240, 227, 189, 0.18);
-  --tls-color-gold: #d1a13a;
-  --tls-color-gold-dark: #8d651b;
+  --tls-color-field-text: #ffffff;
+  --tls-color-field-text-muted: #f0e3bd;
+  --tls-color-paper: var(--tls-theme-heading-text);
+  --tls-color-paper-muted: var(--tls-theme-muted-text);
+  --tls-color-line: var(--tls-theme-border);
+  --tls-color-line-strong: var(--tls-theme-strong-border);
+  --tls-color-line-soft: color-mix(in srgb, var(--tls-theme-border) 64%, transparent);
+  --tls-color-gold: var(--tls-theme-primary-action-surface);
+  --tls-color-gold-dark: color-mix(in srgb, var(--tls-theme-primary-action-surface) 70%, #000);
   --tls-color-red: #c35f43;
   --tls-color-green: #6aae75;
   --tls-color-blue: #5d879f;
-  --tls-color-text: #f5edd7;
-  --tls-color-text-muted: #bdb392;
-  --tls-color-text-dark: #111914;
-  --tls-color-club-accent: var(--tls-color-gold);
+  --tls-color-text: var(--tls-theme-text);
+  --tls-color-text-muted: var(--tls-theme-muted-text);
+  --tls-color-text-dark: var(--tls-theme-primary-action-text);
+  --tls-color-club-accent: var(--tls-theme-primary-action-surface);
   --tls-surface-panel:
-    linear-gradient(180deg, rgba(240, 227, 189, 0.07), transparent 46%),
-    var(--tls-color-clubhouse);
+    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 6%, transparent), transparent 44%),
+    var(--tls-theme-panel-surface);
   --tls-surface-scoreboard:
-    linear-gradient(180deg, rgba(240, 227, 189, 0.06), rgba(8, 15, 17, 0.08)),
-    var(--tls-color-scoreboard);
+    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 5%, transparent), transparent 58%),
+    var(--tls-theme-shell-surface);
+  --tls-surface-table-row: var(--tls-theme-table-row-surface);
+  --tls-surface-table-row-alt: var(--tls-theme-table-alternate-row-surface);
+  --tls-surface-table-row-selected: var(--tls-theme-selected-row-surface);
   --tls-surface-pitch:
     linear-gradient(90deg, rgba(240, 227, 189, 0.055) 1px, transparent 1px),
     linear-gradient(0deg, rgba(240, 227, 189, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, var(--tls-color-pitch), var(--tls-color-pitch-dark));
   --tls-shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.38);
-  --tls-shadow-inset: inset 0 1px 0 rgba(240, 227, 189, 0.1);
+  --tls-shadow-inset: inset 0 1px 0 color-mix(in srgb, var(--tls-theme-heading-text) 10%, transparent);
   --tls-font-ui: "Trebuchet MS", "Verdana", "Segoe UI", sans-serif;
   --tls-font-display: "Palatino Linotype", "Georgia", serif;
   --tls-font-mono: "SFMono-Regular", "Consolas", monospace;
@@ -51,5 +94,73 @@
   --tls-radius-md: 6px;
   --tls-border-thin: 1px solid var(--tls-color-line-soft);
   --tls-border-strong: 1px solid var(--tls-color-line-strong);
-  --tls-focus-ring: 0 0 0 3px rgba(209, 161, 58, 0.38), 0 0 0 1px var(--tls-color-gold);
+  --tls-focus-ring:
+    0 0 0 3px color-mix(in srgb, var(--tls-theme-focus-ring) 34%, transparent),
+    0 0 0 1px var(--tls-theme-focus-ring);
+}
+
+html[data-theme-palette="floodlight-navy"] {
+  --tls-theme-app-background: #070b13;
+  --tls-theme-shell-surface: #101827;
+  --tls-theme-panel-surface: #162238;
+  --tls-theme-elevated-panel-surface: #20314b;
+  --tls-theme-table-header-surface: #0b1320;
+  --tls-theme-table-row-surface: #1a2940;
+  --tls-theme-table-alternate-row-surface: #20314a;
+  --tls-theme-selected-row-surface: #293c59;
+  --tls-theme-border: rgba(232, 224, 202, 0.17);
+  --tls-theme-strong-border: rgba(232, 224, 202, 0.4);
+  --tls-theme-text: #f2ead7;
+  --tls-theme-muted-text: #aeb8c8;
+  --tls-theme-heading-text: #f7edcf;
+  --tls-theme-primary-action-surface: #d9b95d;
+  --tls-theme-primary-action-hover: #e9ca75;
+  --tls-theme-primary-action-text: #10141b;
+  --tls-theme-secondary-action-surface: #243652;
+  --tls-theme-focus-ring: #d9b95d;
+  --tls-theme-shell-overlay: rgba(91, 126, 174, 0.15);
+}
+
+html[data-theme-palette="club-office"] {
+  --tls-theme-app-background: #121916;
+  --tls-theme-shell-surface: #202d25;
+  --tls-theme-panel-surface: #26362c;
+  --tls-theme-elevated-panel-surface: #32463a;
+  --tls-theme-table-header-surface: #172119;
+  --tls-theme-table-row-surface: #2b3d32;
+  --tls-theme-table-alternate-row-surface: #31473a;
+  --tls-theme-selected-row-surface: #3d5545;
+  --tls-theme-border: rgba(236, 226, 199, 0.18);
+  --tls-theme-strong-border: rgba(236, 226, 199, 0.38);
+  --tls-theme-text: #eee5cf;
+  --tls-theme-muted-text: #b9b29c;
+  --tls-theme-heading-text: #f4ebd2;
+  --tls-theme-primary-action-surface: #c7a24a;
+  --tls-theme-primary-action-hover: #d9b966;
+  --tls-theme-primary-action-text: #131812;
+  --tls-theme-secondary-action-surface: #34483c;
+  --tls-theme-focus-ring: #c7a24a;
+  --tls-theme-shell-overlay: rgba(199, 162, 74, 0.1);
+}
+
+html[data-theme-palette="press-room"] {
+  --tls-theme-app-background: #0d1013;
+  --tls-theme-shell-surface: #181d21;
+  --tls-theme-panel-surface: #222a2f;
+  --tls-theme-elevated-panel-surface: #2d373d;
+  --tls-theme-table-header-surface: #101519;
+  --tls-theme-table-row-surface: #273137;
+  --tls-theme-table-alternate-row-surface: #2e393f;
+  --tls-theme-selected-row-surface: #39464e;
+  --tls-theme-border: rgba(235, 229, 211, 0.17);
+  --tls-theme-strong-border: rgba(235, 229, 211, 0.39);
+  --tls-theme-text: #f1ead9;
+  --tls-theme-muted-text: #b5b4aa;
+  --tls-theme-heading-text: #f7efdc;
+  --tls-theme-primary-action-surface: #c9aa5a;
+  --tls-theme-primary-action-hover: #dac171;
+  --tls-theme-primary-action-text: #121416;
+  --tls-theme-secondary-action-surface: #333f46;
+  --tls-theme-focus-ring: #c9aa5a;
+  --tls-theme-shell-overlay: rgba(201, 170, 90, 0.1);
 }

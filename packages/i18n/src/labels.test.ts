@@ -95,6 +95,34 @@ test("translates every documented match-preparation formation label in every sup
   }
 });
 
+test("translates web theme palette settings in every supported language", () => {
+  assert.equal(translate("en", "web.preferences.themePalette"), "Color theme");
+  assert.equal(translate("it", "web.preferences.themePalette"), "Tema colori");
+  assert.equal(translate("de", "web.preferences.themePalette"), "Farbthema");
+  assert.equal(translate("es", "web.preferences.themePalette"), "Tema de color");
+  assert.equal(translate("fr", "web.preferences.themePalette"), "Theme couleur");
+  assert.equal(translate("en", "web.themePalette.floodlightNavy"), "Floodlight navy");
+  assert.equal(translate("it", "web.themePalette.floodlightNavy"), "Notte stadio");
+  assert.equal(translate("de", "web.themePalette.clubOffice"), "Clubbuero");
+  assert.equal(translate("es", "web.themePalette.clubOffice"), "Oficina club");
+  assert.equal(translate("fr", "web.themePalette.pressRoom"), "Salle presse");
+});
+
+test("translates every accepted web skin in every supported language", () => {
+  const skinKeys = [
+    "web.themePalette.floodlightNavy",
+    "web.themePalette.clubOffice",
+    "web.themePalette.pressRoom",
+  ] as const;
+  const languages = ["en", "it", "de", "es", "fr"] as const;
+
+  for (const language of languages) {
+    for (const skinKey of skinKeys) {
+      assert.notEqual(translate(language, skinKey), skinKey);
+    }
+  }
+});
+
 test("unknown keys fail clearly at runtime", () => {
   assert.throws(
     () => translate("en", "missing.key" as never),

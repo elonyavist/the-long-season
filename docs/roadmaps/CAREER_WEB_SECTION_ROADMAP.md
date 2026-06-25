@@ -1,8 +1,8 @@
 # Career Web Section Roadmap
 
 Date: 2026-06-24
-Current baseline: Phase 59 shared bench board and substitute selection
-complete; Phase 60 Inbox/Posta Decision Center recommended next.
+Current baseline: Phase 61 web visual identity system rework complete; the
+accepted six-skin system is ready for Inbox/Posta work.
 
 ## Goal
 
@@ -586,14 +586,140 @@ Current progress:
 
 Recommended next phase after completion:
 
-- `Phase 60 - Inbox/Posta Decision Center`.
+- `Phase 60 - Web Theme Palette And User Color Preferences`.
 
-### Phase 60 - Inbox/Posta Decision Center
+### Phase 60 - Web Theme Palette And User Color Preferences
+
+Primary dependency: Phase 55 web architecture foundation, Phase 53 retro
+football UI identity, Phase 57 shared tactical board, and Phase 59 shared bench
+board.
+
+Purpose:
+
+- Let the user choose from a controlled set of football-manager-friendly UI
+  color tones without turning the game into a generic skin system.
+- Keep field surfaces and semantic colors stable while making app chrome,
+  panels, tables, buttons, navigation, and non-semantic accents configurable.
+
+Minimum useful scope:
+
+- audit current color tokens and hardcoded colors;
+- define one typed theme-palette contract;
+- support nine palettes:
+  - `classic-green`;
+  - `nocturne-navy`;
+  - `dugout-navy`;
+  - `heritage-cream`;
+  - `azzurri-office`;
+  - `violet-director`;
+  - `programme-ivory`;
+  - `clubhouse-sage`;
+  - `touchline-stone`;
+- add theme choice to web display preferences;
+- expose a compact settings palette picker with swatches;
+- apply palettes through CSS variables;
+- keep tactical pitch grass, `campo-calcio.svg`, role suitability, blocker
+  severity, and fitness arrows non-themeable;
+- run desktop/narrow visual QA for all palettes.
+
+What must not happen:
+
+- No Inbox/Posta Decision Center implementation.
+- No arbitrary image skins, decorative backgrounds, or heavy gradients.
+- No field/pitch recoloring through user preferences.
+- No theming of semantic status colors.
+- No palettes that are too dark to read comfortably.
+
+Why this is now:
+
+The next web sections will multiply chrome, panels, tables, and action states.
+Adding a bounded palette system now prevents hardcoded visual drift before
+Inbox/Posta, Squad, Calendar, Market, and Finances screens expand the UI.
+
+Current progress:
+
+- Phase 60 README and ordered step documents are ready.
+- Step 01 current color token and hardcoded audit complete.
+- Step 02 theme palette contract and boundaries complete.
+- Step 03 theme preference state and read model complete.
+- Step 04 CSS variable theme application complete.
+- Step 05 settings palette picker UI complete.
+- Step 06 hardcoded color cleanup and non-theme exceptions complete.
+- Step 07 contrast visual QA and accessibility complete.
+- Step 08 phase report and next-phase decision complete.
+- Phase 60 is complete.
+
+Recommended next phase:
+
+- `Phase 61 - Web Visual Identity System Rework`.
+
+### Phase 61 - Web Visual Identity System Rework
+
+Primary dependency: Phase 60 theme palette preferences, Phase 53 retro football
+UI identity, Phase 55 styling foundation, and
+`docs/audits/WEB_PALETTE_ART_DIRECTION_AUDIT.md`.
+
+Purpose:
+
+- Replace the weak Phase 60 palette result with a coherent retro-premium
+  football-management visual identity system.
+- Reduce or replace decorative color variants with a small number of believable
+  skins.
+- Fix token taxonomy and component surface hierarchy before more web sections
+  inherit the current visual problems.
+
+Minimum useful scope:
+
+- current palette failure review and target lock;
+- skin contract and visual-token taxonomy;
+- palette reduction and deterministic preference fallback for removed ids;
+- dark-skin surface hierarchy rework;
+- light-skin surface hierarchy rework;
+- settings picker/i18n/test update;
+- screenshot QA plus manual art-direction acceptance;
+- architecture and roadmap update.
+
+What must not happen:
+
+- No Inbox/Posta Decision Center implementation.
+- No new gameplay systems.
+- No field/pitch recoloring through user preferences.
+- No changes to `apps/web/src/assets/campo-calcio.svg`.
+- No theming of role suitability, fitness, danger, success, or warning
+  semantics.
+- No palette kept just to preserve the old count of nine.
+
+Why this is now:
+
+The current palette system is technically wired, but the screens look
+amateurish and do not yet feel like a premium retro football-management game.
+Continuing with Inbox, Squad, Market, or Finance would spread that visual debt
+across every future screen.
+
+Current progress:
+
+- Phase 61 README and ordered step documents are ready.
+- Step 01 current palette failure review and target lock complete.
+- Step 02 skin contract and token taxonomy complete.
+- Step 03 palette reduction and preference migration complete.
+- Step 04 dark-skin surface hierarchy rework complete.
+- Step 05 light-skin surface hierarchy rework complete.
+- Step 06 settings picker localization and tests complete.
+- Step 07 visual QA and art-direction gate complete.
+- Step 08 phase report and next-phase decision complete.
+- Phase 61 is complete.
+
+Recommended next phase after completion:
+
+- `Phase 62 - Inbox/Posta Decision Center`.
+
+### Phase 62 - Inbox/Posta Decision Center
 
 Primary dependency: Phase 55 web architecture foundation, Phase 54 tactical
 workspace, Phase 56 canonical formation/role catalog, Phase 57 shared tactical
 board foundation, Phase 58 tactical workspace UX rework, Phase 59 shared bench
-board, and at least one resolvable attention event.
+board, Phase 60 theme palette preferences, Phase 61 visual identity system
+rework, and at least one resolvable attention event.
 
 Purpose:
 
@@ -624,7 +750,7 @@ What must not happen:
 - No prose-only mail system without structured event IDs.
 - No hidden automatic resolution.
 
-### Phase 61 - Squad Screen
+### Phase 63 - Squad Screen
 
 Primary dependency: match-preparation needs real player selection pressure.
 
@@ -656,7 +782,7 @@ What must not happen:
 - No hidden market needs.
 - No sortable table logic duplicated in multiple components.
 
-### Phase 62 - Calendar And Fixtures
+### Phase 64 - Calendar And Fixtures
 
 Primary dependency: Continue loop and fixture dates.
 
@@ -684,7 +810,7 @@ What must not happen:
 - No decorative calendar that cannot drive Continue.
 - No duplicate fixture computation in web.
 
-### Phase 63 - Matchday Flow
+### Phase 65 - Matchday Flow
 
 Primary dependency: match preparation plus fixture advancement.
 
@@ -714,7 +840,7 @@ What must not happen:
 - No full 2D/3D match viewer.
 - No animation-heavy match screen before the result loop is excellent.
 
-### Phase 64 - Market UI MVP
+### Phase 66 - Market UI MVP
 
 Primary dependency: squad screen and basic finances/budget visibility.
 
@@ -745,7 +871,7 @@ What must not happen:
 - No complex add-ons.
 - No scouting fog unless specifically designed.
 
-### Phase 65 - Finances Foundation
+### Phase 67 - Finances Foundation
 
 Primary dependency: market starts needing real budget context.
 
@@ -774,7 +900,7 @@ What must not happen:
 - No fake financial complexity just to fill a screen.
 - No economy values that do not affect decisions.
 
-### Phase 66 - Youth UI
+### Phase 68 - Youth UI
 
 Primary dependency: squad screen and youth lifecycle.
 
@@ -804,7 +930,7 @@ What must not happen:
 - No overpopulation of youth players.
 - No guaranteed wonderkid pipeline.
 
-### Phase 67 - Staff Foundation
+### Phase 69 - Staff Foundation
 
 Primary dependency: player development, youth, condition, and market need staff
 effects to matter.
@@ -826,7 +952,7 @@ What must not happen:
 - No staff screen made of names and no effects.
 - No staff attributes without engine usage.
 
-### Phase 68 - Archive And History
+### Phase 70 - Archive And History
 
 Primary dependency: at least one completed playable season loop.
 
@@ -855,7 +981,7 @@ What must not happen:
 - No static archive without persisted events.
 - No history screen that reconstructs unreliable facts from current state only.
 
-### Phase 69 - Main Dashboard Consolidation
+### Phase 71 - Main Dashboard Consolidation
 
 Primary dependency: enough real sections exist to summarize.
 
@@ -896,16 +1022,18 @@ Recommended order:
 6. Phase 57 - Shared Tactical Board And Tactics Screen Foundation
 7. Phase 58 - Match Preparation Tactical Workspace UX Rework
 8. Phase 59 - Shared Bench Board And Substitute Selection
-9. Phase 60 - Inbox/Posta Decision Center
-10. Phase 61 - Squad Screen
-11. Phase 62 - Calendar And Fixtures
-12. Phase 63 - Matchday Flow
-13. Phase 64 - Market UI MVP
-14. Phase 65 - Finances Foundation
-15. Phase 66 - Youth UI
-16. Phase 67 - Staff Foundation
-17. Phase 68 - Archive And History
-18. Phase 69 - Main Dashboard Consolidation
+9. Phase 60 - Web Theme Palette And User Color Preferences
+10. Phase 61 - Web Visual Identity System Rework
+11. Phase 62 - Inbox/Posta Decision Center
+12. Phase 63 - Squad Screen
+13. Phase 64 - Calendar And Fixtures
+14. Phase 65 - Matchday Flow
+15. Phase 66 - Market UI MVP
+16. Phase 67 - Finances Foundation
+17. Phase 68 - Youth UI
+18. Phase 69 - Staff Foundation
+19. Phase 70 - Archive And History
+20. Phase 71 - Main Dashboard Consolidation
 
 This order is intentionally linear:
 
@@ -918,8 +1046,12 @@ This order is intentionally linear:
   messages can route to a strong, reusable football decision screen.
 - Tactical workspace UX rework comes before Inbox because the manager must land
   on a dense, clear, consistent preparation screen when a message routes there.
-- Inbox becomes valuable once there are real decisions, a strong shell, and a
-  maintainable web foundation.
+- Theme palettes come before Inbox so the next UI sections inherit one bounded
+  color system instead of accumulating hardcoded visual variants.
+- Visual identity rework corrects Phase 60 before the next sections inherit bad
+  skin and token decisions.
+- Inbox becomes valuable once there are real decisions, a strong shell, a
+  maintainable web foundation, and a credible visual system.
 - Squad and tactics are needed before matchday feels like a user choice.
 - Calendar/fixtures make Continue understandable.
 - Matchday closes the first loop.

@@ -4,7 +4,7 @@
 
 html {
   min-width: 320px;
-  background: var(--tls-color-ink);
+  background: var(--tls-theme-app-background);
   color: var(--tls-color-text);
   font-family: var(--tls-font-ui);
   font-size: 16px;
@@ -21,23 +21,23 @@ body::before {
   z-index: -1;
   content: "";
   background:
-    linear-gradient(135deg, rgba(209, 161, 58, 0.12), transparent 34%),
+    linear-gradient(135deg, var(--tls-theme-shell-overlay), transparent 34%),
     repeating-linear-gradient(
       0deg,
-      rgba(240, 227, 189, 0.03) 0,
-      rgba(240, 227, 189, 0.03) 1px,
+      color-mix(in srgb, var(--tls-theme-border) 28%, transparent) 0,
+      color-mix(in srgb, var(--tls-theme-border) 28%, transparent) 1px,
       transparent 1px,
       transparent 10px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(240, 227, 189, 0.018) 0,
-      rgba(240, 227, 189, 0.018) 1px,
+      color-mix(in srgb, var(--tls-theme-border) 18%, transparent) 0,
+      color-mix(in srgb, var(--tls-theme-border) 18%, transparent) 1px,
       transparent 1px,
       transparent 28px
     ),
-    radial-gradient(circle at top left, rgba(106, 174, 117, 0.18), transparent 32%),
-    var(--tls-color-ink);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--tls-theme-primary-action-surface) 12%, transparent), transparent 32%),
+    var(--tls-theme-app-background);
 }
 
 button,
@@ -53,7 +53,7 @@ select {
 
 select {
   color: var(--tls-color-text);
-  background: var(--tls-surface-scoreboard);
+  background: var(--tls-theme-secondary-action-surface);
   border: var(--tls-border-thin);
   border-radius: var(--tls-radius-sm);
   box-shadow: var(--tls-shadow-inset);

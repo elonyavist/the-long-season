@@ -76,7 +76,7 @@ Why this matters:
 | `packages/i18n` | Supported languages, translation keys, fallback translation rendering. | Simulation logic or package imports. |
 | `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox/match-preparation view contracts, action availability/result contracts, pure dashboard, Inbox, shell, and match-preparation builders. It may derive read-model formation facts from `packages/domain` catalogs. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
 | `apps/cli` | Command parsing, package composition, save IO, localized console output, smoke/lab commands. | Core gameplay rules or reusable diagnostic semantics. |
-| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue/preparation adapters, reusable career shell, first dashboard screen, retro-football match-preparation tactical workspace, left Inbox/Posta rail, compact Inbox panel, browser visual QA. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
+| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, bounded visual-identity skin preferences, deterministic demo dashboard/continue/preparation adapters, reusable career shell, first dashboard screen, retro-football match-preparation tactical workspace, left Inbox/Posta rail, compact Inbox panel, browser visual QA. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
 
 ## Main Entry Points
 
@@ -107,6 +107,7 @@ Why this matters:
 | Career match-preparation view builder | `packages/ui/src/career/career-match-preparation-view.ts` |
 | Web app | `apps/web/src/main.tsx` |
 | Web React root | `apps/web/src/app/App.tsx` |
+| Web visual-identity skins | `apps/web/src/app/theme-palettes.ts` |
 | Web career UI store | `apps/web/src/stores/career-ui-store.ts` |
 | Web app-entry screen | `apps/web/src/features/app-entry/AppEntryScreen.tsx` |
 | Web dashboard screen | `apps/web/src/features/dashboard/CareerDashboardScreen.tsx` |
@@ -122,6 +123,7 @@ Why this matters:
 | Web retro-football identity visual QA | `apps/web/src/visual-qa/retro-football-identity.spec.ts` |
 | Web tactics workspace visual QA | `apps/web/src/visual-qa/tactics-workspace.spec.ts` |
 | Web shared tactical-board visual QA | `apps/web/src/visual-qa/shared-tactical-board.spec.ts` |
+| Web visual-identity skin QA | `apps/web/src/visual-qa/theme-palette.spec.ts` |
 
 ## Important Files By Area
 
@@ -314,21 +316,33 @@ text or importing engine internals.
   Thin browser composition root. It reads from the career UI store, builds the
   current view models, wires screen components, and resets browser scroll when
   the selected screen changes so single-page navigation behaves like a real
-  section switch.
+  section switch. It also applies the selected web visual-identity skin to the
+  document root through `data-theme-palette`.
 - `apps/web/src/app/preferences.ts`
-  Web-only preference model for language and display currency. Currency remains
-  a display preference, not an economics rule.
+  Web-only preference model for language, display currency, and selected visual
+  skin. Currency remains a display preference, not an economics rule; the skin
+  remains a browser display preference, not a football or engine rule.
+- `apps/web/src/app/theme-palettes.ts`
+  Typed bounded catalog for the three accepted web visual skins:
+  `floodlight-navy`, `club-office`, and `press-room`. It owns the stable skin
+  ids, deterministic fallback, legacy id migration, localized label keys,
+  swatches, and the UI-chrome hierarchy contract: app, shell, panel,
+  elevated panel, table header/row/alternate/selected row, borders, text,
+  muted text, heading text, primary action, secondary action, focus, and
+  overlay. It deliberately does not include tactical pitch, semantic blocker,
+  role-suitability, or form-arrow colors.
 - `apps/web/src/app/translation.ts`
   Thin adapter over `@game/i18n` for React components.
 - `apps/web/src/stores/career-ui-store.ts`
   Focused Zustand store for browser UI state: current screen, language/currency
-  preferences, demo-career availability, last Continue result, and the current
-  match-preparation draft. It must not own engine rules or duplicate
+  and theme preferences, demo-career availability, last Continue result, and the
+  current match-preparation draft. It must not own engine rules or duplicate
   `@game/ui` read-model calculations.
 - `apps/web/src/features/app-entry/app-entry-view-model.ts`
   Builds the app-entry read model from `@game/ui` contracts.
 - `apps/web/src/features/app-entry/AppEntryScreen.tsx`
-  Localized main menu with New career, Continue career, and settings controls.
+  Localized main menu with New career, Continue career, language/currency
+  settings, and the compact theme-palette radio picker.
 - `apps/web/src/features/dashboard/build-demo-career-dashboard.ts`
   Deterministic read-only dashboard demo adapter. This is the replacement point
   for a later real save adapter.
@@ -484,11 +498,22 @@ text or importing engine internals.
   across XI and bench, three central-slot spacing, keyboard reachability,
   context-menu dismissal, and touch-style long-press open/cancel behavior.
   Current Phase 59 screenshots are written under `/tmp/the-long-season-phase59`.
+- `apps/web/src/visual-qa/theme-palette.spec.ts`
+  Playwright browser QA for Phase 61 visual-identity skins. It cycles through
+  all three accepted skins on app entry, career dashboard, and match preparation
+  in desktop and narrow viewports, asserts no horizontal overflow, verifies the
+  selected root `data-theme-palette`, guards stable tactical/semantic colors,
+  and checks visible hierarchy for primary action, hover states, borders, table
+  header, table rows, and selected rows. Screenshots are written under
+  `/tmp/the-long-season-phase61`.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
   styles, including the top navigation shell, left Inbox/Posta rail, dashboard,
   match-preparation tactical workspace, shared candidate rows, compact squad
-  list, and central outlets.
+  list, central outlets, and the Phase 61 skin-token boundary. App chrome can
+  route through hierarchy skin variables; tactical pitch grass, football-surface
+  foreground text, semantic severity, suitability, and form colors remain
+  stable and non-themeable.
 
 The web app currently uses an in-memory demo career only. It can call the pure
 engine Continue rule through a demo adapter, but it does not load or write

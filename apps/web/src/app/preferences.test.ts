@@ -12,7 +12,11 @@ import {
 
 describe("web preferences", () => {
   it("uses deterministic defaults", () => {
-    expect(DEFAULT_WEB_PREFERENCES).toEqual({ language: "en", currency: "EUR" });
+    expect(DEFAULT_WEB_PREFERENCES).toEqual({
+      language: "en",
+      currency: "EUR",
+      themePaletteId: "floodlight-navy",
+    });
   });
 
   it("accepts only supported currency display codes", () => {
@@ -30,14 +34,16 @@ describe("web preferences", () => {
     const updated = updateWebPreferences(DEFAULT_WEB_PREFERENCES, {
       language: "fr",
       currency: "USD",
+      themePaletteId: "heritage-cream",
     });
     const ignored = updateWebPreferences(updated, {
       language: "pt",
       currency: "CHF",
+      themePaletteId: "neon-skin",
     });
 
-    expect(updated).toEqual({ language: "fr", currency: "USD" });
-    expect(ignored).toEqual(updated);
+    expect(updated).toEqual({ language: "fr", currency: "USD", themePaletteId: "club-office" });
+    expect(ignored).toEqual({ language: "fr", currency: "USD", themePaletteId: "floodlight-navy" });
   });
 
   it("maps option values to localization keys", () => {

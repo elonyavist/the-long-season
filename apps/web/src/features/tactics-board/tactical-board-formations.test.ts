@@ -44,7 +44,13 @@ describe("tactical board formations", () => {
     }
   });
 
-  it("adds horizontal separation only to three-player central lines", () => {
+  it("adds horizontal separation to dense central lines", () => {
+    const twoAttackers = tacticalBoardSlotsFromFormation("4-4-2")
+      .filter((slot) => slot.role === "ATT")
+      .map((slot) => slot.nx);
+    const twoCentralMidfielders = tacticalBoardSlotsFromFormation("4-4-2")
+      .filter((slot) => slot.role === "CC")
+      .map((slot) => slot.nx);
     const threeCentralMidfielders = tacticalBoardSlotsFromFormation("4-3-3")
       .filter((slot) => slot.role === "CC")
       .map((slot) => slot.nx);
@@ -55,8 +61,10 @@ describe("tactical board formations", () => {
       .filter((slot) => slot.role === "DC")
       .map((slot) => slot.nx);
 
-    expect(threeCentralMidfielders).toEqual([0.66, 0.5, 0.34]);
-    expect(threeCenterBacks).toEqual([0.66, 0.5, 0.34]);
+    expect(twoAttackers).toEqual([0.62, 0.38]);
+    expect(twoCentralMidfielders).toEqual([0.63, 0.37]);
+    expect(threeCentralMidfielders).toEqual([0.68, 0.5, 0.32]);
+    expect(threeCenterBacks).toEqual([0.68, 0.5, 0.32]);
     expect(twoCenterBacks).toEqual([0.62, 0.38]);
   });
 });

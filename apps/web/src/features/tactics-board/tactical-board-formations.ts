@@ -14,7 +14,7 @@ export const DEFAULT_TACTICAL_BOARD_FORMATION_ID: CareerMatchPreparationFormatio
 type BoardCoordinate = Readonly<{ nx: number; ny: number }>;
 
 const DEFAULT_COORDINATE: BoardCoordinate = { nx: 0.5, ny: 0.52 };
-const CENTRAL_TRIPLE_X_COORDINATES = [0.34, 0.5, 0.66] as const;
+const CENTRAL_TRIPLE_X_COORDINATES = [0.32, 0.5, 0.68] as const;
 
 const SLOT_COORDINATES: Readonly<Record<string, BoardCoordinate>> = {
   gk: { nx: 0.5, ny: 0.93 },
@@ -29,17 +29,17 @@ const SLOT_COORDINATES: Readonly<Record<string, BoardCoordinate>> = {
   "dm-right": { nx: 0.58, ny: 0.6 },
   "dm-center": { nx: 0.5, ny: 0.6 },
   "dm-left": { nx: 0.42, ny: 0.6 },
-  "cm-right": { nx: 0.6, ny: 0.48 },
+  "cm-right": { nx: 0.63, ny: 0.48 },
   "cm-center": { nx: 0.5, ny: 0.48 },
-  "cm-left": { nx: 0.4, ny: 0.48 },
+  "cm-left": { nx: 0.37, ny: 0.48 },
   am: { nx: 0.5, ny: 0.34 },
   "am-right": { nx: 0.58, ny: 0.34 },
   "am-left": { nx: 0.42, ny: 0.34 },
   rw: { nx: 0.86, ny: 0.22 },
   lw: { nx: 0.14, ny: 0.22 },
   st: { nx: 0.5, ny: 0.16 },
-  "st-right": { nx: 0.58, ny: 0.18 },
-  "st-left": { nx: 0.42, ny: 0.18 },
+  "st-right": { nx: 0.62, ny: 0.18 },
+  "st-left": { nx: 0.38, ny: 0.18 },
 };
 
 const BOARD_ROLE_BY_POSITION_KEY: Readonly<Record<string, TacticalBoardRoleCode>> = {

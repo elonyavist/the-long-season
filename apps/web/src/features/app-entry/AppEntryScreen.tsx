@@ -1,5 +1,4 @@
 import type { MessageKey, Translator } from "@game/i18n";
-import type { AppEntryView } from "@game/ui";
 
 import {
   currencyLabelKey,
@@ -8,11 +7,11 @@ import {
   updateWebPreferences,
   type WebPreferences,
 } from "../../app/preferences";
-import { getAppEntryAction } from "./app-entry-view-model";
+import { getAppEntryAction, type WebAppEntryView } from "./app-entry-view-model";
 
 /** Props for the localized app-entry screen. */
 export type AppEntryScreenProps = Readonly<{
-  view: AppEntryView;
+  view: WebAppEntryView;
   preferences: WebPreferences;
   text: Translator;
   onPreferencesChange: (preferences: WebPreferences) => void;
@@ -100,6 +99,42 @@ export function AppEntryScreen({
                 ))}
               </select>
             </div>
+
+            <fieldset className="col-span-full m-0 grid gap-[var(--tls-space-2)] border-0 p-0">
+              <legend className="mb-[var(--tls-space-1)] text-[length:var(--tls-font-size-xs)] font-bold uppercase [color:var(--tls-color-paper-muted)]">
+                {text("web.preferences.themePalette")}
+              </legend>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-[var(--tls-space-2)]">
+                {view.themePaletteOptions.map((palette) => (
+                  <label
+                    className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-[var(--tls-space-2)] rounded-[var(--tls-radius-sm)] border border-[var(--tls-color-line-soft)] bg-[var(--tls-theme-secondary-action-surface)] px-[var(--tls-space-2)] py-[var(--tls-space-2)] text-[length:var(--tls-font-size-xs)] font-bold [color:var(--tls-color-text)] has-[:checked]:border-[var(--tls-theme-primary-action-surface)] has-[:checked]:shadow-[inset_0_0_0_1px_var(--tls-theme-primary-action-surface)]"
+                    key={palette.id}
+                  >
+                    <input
+                      type="radio"
+                      name="web-theme-palette"
+                      value={palette.id}
+                      checked={preferences.themePaletteId === palette.id}
+                      onChange={(event) => {
+                        onPreferencesChange(updateWebPreferences(preferences, { themePaletteId: event.currentTarget.value }));
+                      }}
+                    />
+                    <span className="grid min-w-0 gap-[var(--tls-space-1)]">
+                      <span className="flex gap-1" aria-hidden="true">
+                        {palette.swatch.map((color) => (
+                          <span
+                            className="h-4 w-4 rounded-[2px] border border-[var(--tls-color-line-soft)]"
+                            key={`${palette.id}-${color}`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </span>
+                      <span className="truncate">{text(palette.labelKey as MessageKey)}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </form>
         </div>
       </section>
