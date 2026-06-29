@@ -63,6 +63,8 @@ export function formatCareerAdvanceOutput(input: {
     ...formatCareerAdvanceRecoveryLines(input.result, input.text),
     `${input.text("career.advance.conditionChanges")}:`,
     ...formatCareerAdvanceConditionLines(input.result, input.text),
+    `${input.text("career.advance.playerStateChanges")}:`,
+    ...formatCareerAdvancePlayerStateLines(input.result, input.text),
     `${input.text("career.nextSelectedClubFixture")}:`,
     ...formatNextSelectedClubFixtureLines(input.result.careerState, nextFixture, input.text),
   ];
@@ -100,6 +102,35 @@ function formatCareerAdvanceConditionLines(
     ...formatConditionChangeLines(startedChanges, result.careerState.gameState, text),
     `  ${text("career.advance.conditionRestedFirstTeam")}:`,
     ...formatConditionChangeLines(restedFirstTeamChanges, result.careerState.gameState, text),
+  ];
+}
+
+function formatCareerAdvancePlayerStateLines(
+  result: Extract<CareerAdvanceResult, { readonly status: "advanced" }>,
+  text: Translator,
+): readonly string[] {
+  if (result.playerStateConsequences.length === 0) {
+    return [`  ${text("common.none")}`];
+  }
+
+  return [
+    `  ${text("career.advance.playerStateSummary", {
+      players: String(result.playerStateConsequenceSummary.changedPlayerCount),
+      formDelta: formatSignedNumber(result.playerStateConsequenceSummary.totalFormDelta),
+      moraleDelta: formatSignedNumber(result.playerStateConsequenceSummary.totalMoraleDelta),
+    })}`,
+    ...result.playerStateConsequences.map((change) =>
+      `  ${text("career.advance.playerStateLine", {
+        player: playerLabel(change.playerId, result.careerState.gameState),
+        formBefore: String(change.beforeForm),
+        formAfter: String(change.afterForm),
+        formDelta: formatSignedNumber(change.formDelta),
+        moraleBefore: String(change.beforeMorale),
+        moraleAfter: String(change.afterMorale),
+        moraleDelta: formatSignedNumber(change.moraleDelta),
+        reasons: change.reasonKeys.map((reasonKey) => formatPlayerStateReason(reasonKey, text)).join(", "),
+      })}`
+    ),
   ];
 }
 
@@ -162,6 +193,10 @@ function formatCareerAdvanceInvalidReason(reason: string, text: Translator): str
     default:
       return reason;
   }
+}
+
+function formatPlayerStateReason(reasonKey: string, text: Translator): string {
+  return text(presentationMessageKey("career.advance.playerStateReason", reasonKey));
 }
 
 /**

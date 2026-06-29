@@ -9,6 +9,17 @@ export * from "./market/index.ts";
 export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
 export {
+  CareerMatchStateConsequenceError,
+  applyCareerMatchStateConsequences,
+  type ApplyCareerMatchStateConsequencesInput,
+  type ApplyCareerMatchStateConsequencesResult,
+  type CareerMatchPlayerStateConsequence,
+  type CareerMatchStateConsequenceErrorCode,
+  type CareerMatchStateConsequenceReasonKey,
+  type CareerMatchStateConsequenceSummary,
+  type CareerMatchStateParticipantRole,
+} from "./career/career-match-state-consequences.ts";
+export {
   applyCareerWeeklyRecovery,
   type ApplyCareerWeeklyRecoveryInput,
   type ApplyCareerWeeklyRecoveryResult,
@@ -125,6 +136,30 @@ export {
   type CareerSeasonCompletionResult,
   type CareerSeasonIncomplete,
 } from "./career/season-completion.ts";
+export {
+  advanceCareerOneSeason,
+  type AdvanceCareerCompletedSeasonMode,
+  type AdvanceCareerOneSeasonAdvanced,
+  type AdvanceCareerOneSeasonInput,
+  type AdvanceCareerOneSeasonInvalid,
+  type AdvanceCareerOneSeasonInvalidReason,
+  type AdvanceCareerOneSeasonMode,
+  type AdvanceCareerOneSeasonResult,
+  type AdvanceCareerReportRefreshMode,
+  type CareerPlayerDevelopmentFact,
+  type CareerPlayerExitFact,
+  type CareerSeasonAdvancementFacts,
+  type CareerSeasonAdvancementOperation,
+  type CareerSeasonAdvancementWarning,
+  type CareerSeasonArchiveFact,
+  type CareerSquadHealthFact,
+  type CareerSquadMaintenanceFact,
+  type CareerTransferTurnoverFact,
+  type CareerYouthHealthFact,
+  type CareerYouthIntakeFact,
+  type CareerYouthLifecycleFact,
+  type CareerYouthPromotionFact,
+} from "./career/advance-career-season.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
   ApplyMatchReportToFixtureError,

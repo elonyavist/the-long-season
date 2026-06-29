@@ -68,6 +68,26 @@ test("rolloverPlayersForNextSeason resets fitness and form for starters and rese
   assert.equal(result.careerState.gameState.playerStates[reserve]?.form, 50);
 });
 
+test("rolloverPlayersForNextSeason resets post-match reactive state at the season boundary", () => {
+  const affected = playerId("player:post-match-affected");
+  const careerState = careerStateFixture(
+    [playerFixture(affected)],
+    {
+      [affected]: playerStateFixture(92, 48, 47),
+    },
+  );
+
+  const result = rolloverPlayersForNextSeason({
+    careerState,
+    nextSeasonId: seasonId("season:0002"),
+    nextSeasonStartDate: gameDate(20_365),
+  });
+
+  assert.equal(result.careerState.gameState.playerStates[affected]?.fitness, 100);
+  assert.equal(result.careerState.gameState.playerStates[affected]?.form, 50);
+  assert.equal(result.careerState.gameState.playerStates[affected]?.morale, 50);
+});
+
 test("rolloverPlayersForNextSeason normalizes low and high morale toward neutral", () => {
   const lowMorale = playerId("player:low-morale");
   const highMorale = playerId("player:high-morale");

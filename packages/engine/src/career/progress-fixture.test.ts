@@ -59,7 +59,13 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
     assert.equal(result.fixtureAfter.result?.played, true);
     assert.equal(result.careerState.gameState.fixtures[selectedFixtureId]?.result?.played, true);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.fitness, 92);
+    assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.form, 50);
+    assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.morale, 50);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.fitness, 100);
+    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.form, 50);
+    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.morale, 50);
+    assert.equal(result.playerStateConsequences.length > 0, true);
+    assert.equal(result.playerStateConsequenceSummary.changedPlayerCount, result.playerStateConsequences.length);
     assert.deepEqual(result.conditionChanges.slice(0, 3), [
       {
         playerId: playerId("player:selected-01"),
@@ -105,6 +111,129 @@ test("progressNextCareerFixture is deterministic for the same state and team con
   };
 
   assert.deepEqual(progressNextCareerFixture(input), progressNextCareerFixture(input));
+});
+
+test("progressNextCareerFixture keeps a compact deterministic progression sentinel", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const selectedFixtureId = fixtureId("fixture:000001");
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
+    fixtures: [fixtureFixture(selectedFixtureId, selectedClubId, otherClubId)],
+  });
+
+  const result = progressNextCareerFixture({
+    careerState,
+    teamsByClubId: {
+      [selectedClubId]: teamContextFixture(selectedClubId, 12),
+      [otherClubId]: teamContextFixture(otherClubId, 10),
+    } as Record<ClubId, MatchTeamContext>,
+    matchEngineConfig: matchEngineConfigFixture(),
+  });
+
+  assert.equal(result.status, "advanced");
+  if (result.status === "advanced") {
+    // This sentinel protects the manager-facing fixture progression contract
+    // before future phases change season advancement orchestration.
+    assert.deepEqual(
+      {
+        fixtureId: result.fixtureId,
+        score: result.report.score,
+        eventCount: result.report.events.length,
+        stats: result.report.stats,
+        fixtureAfterResult: {
+          played: result.fixtureAfter.result?.played,
+          homeGoals: result.fixtureAfter.result?.homeGoals,
+          awayGoals: result.fixtureAfter.result?.awayGoals,
+        },
+        currentDate: result.careerState.gameState.calendar.currentDate,
+        conditionChanges: result.conditionChanges.slice(0, 3),
+        playerStateConsequences: result.playerStateConsequences,
+        playerStateConsequenceSummary: result.playerStateConsequenceSummary,
+      },
+      {
+        fixtureId: selectedFixtureId,
+        score: {
+          home: 1,
+          away: 3,
+        },
+        eventCount: 23,
+        stats: {
+          home: {
+            opportunities: 11,
+            shots: 11,
+            shotsOnTarget: 4,
+            goals: 1,
+          },
+          away: {
+            opportunities: 9,
+            shots: 9,
+            shotsOnTarget: 3,
+            goals: 3,
+          },
+        },
+        fixtureAfterResult: {
+          played: true,
+          homeGoals: 1,
+          awayGoals: 3,
+        },
+        currentDate: gameDate(20_000),
+        conditionChanges: [
+          {
+            playerId: playerId("player:selected-01"),
+            beforeFitness: 100,
+            afterFitness: 92,
+            delta: -8,
+            started: true,
+          },
+          {
+            playerId: playerId("player:selected-02"),
+            beforeFitness: 100,
+            afterFitness: 92,
+            delta: -8,
+            started: true,
+          },
+          {
+            playerId: playerId("player:selected-03"),
+            beforeFitness: 100,
+            afterFitness: 100,
+            delta: 0,
+            started: false,
+          },
+        ],
+        playerStateConsequences: [
+          {
+            playerId: playerId("player:selected-01"),
+            participantRole: "starter",
+            beforeForm: 50,
+            afterForm: 49,
+            formDelta: -1,
+            beforeMorale: 50,
+            afterMorale: 48,
+            moraleDelta: -2,
+            reasonKeys: ["result_loss"],
+          },
+          {
+            playerId: playerId("player:selected-02"),
+            participantRole: "starter",
+            beforeForm: 50,
+            afterForm: 52,
+            formDelta: 2,
+            beforeMorale: 50,
+            afterMorale: 50,
+            moraleDelta: 0,
+            reasonKeys: ["result_loss", "player_goal"],
+          },
+        ],
+        playerStateConsequenceSummary: {
+          changedPlayerCount: 2,
+          totalFormDelta: 1,
+          totalMoraleDelta: -2,
+        },
+      },
+    );
+  }
 });
 
 test("progressNextCareerFixture can include explanation trace without changing fixture progression", () => {

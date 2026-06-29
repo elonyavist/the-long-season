@@ -2,7 +2,29 @@
 
 Date: 2026-06-24
 Current baseline: Phase 61 web visual identity system rework complete; the
-accepted six-skin system is ready for Inbox/Posta work.
+accepted three-skin system is ready for future web sections.
+
+## Supersession Note - 2026-06-25
+
+From Phase 62 onward, the phase order in this web-section roadmap is superseded
+by `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md`.
+
+This document remains binding as the quality bar for web sections: no dead
+screens, no UI-only state, no CLI prose parsing, Playwright screenshot QA,
+accessibility notes, and section-level dependency/code-quality/architecture/
+UI-UX/fun review.
+
+The updated operational order is now engine and playability first:
+
+1. engine safety net;
+2. canonical career advancement use-case;
+3. player-state consequences;
+4. web matchday;
+5. web persistence;
+6. Inbox/Posta.
+
+The old Phase 62 Inbox/Posta recommendation is intentionally delayed until the
+web has real matchday and persistence events to route and resolve.
 
 ## Goal
 

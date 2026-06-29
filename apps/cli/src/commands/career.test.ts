@@ -760,6 +760,14 @@ test("career command advances and persists the next selected-club fixture", asyn
     assert.equal(advanceIo.stdoutLines.includes("  Selected starters:"), true);
     assert.equal(advanceIo.stdoutLines.includes("  Rested first-team players:"), true);
     assert.equal(advanceIo.stdoutLines.some((line) => /100 -> 92 \(-8\)$/.test(line)), true);
+    assert.equal(advanceIo.stdoutLines.includes("Post-match player state:"), true);
+    assert.equal(advanceIo.stdoutLines.some((line) => /^  Changed players: [0-9]+; form [+-][0-9]+; morale [+-][0-9]+$/.test(line)), true);
+    assert.equal(
+      advanceIo.stdoutLines.some((line) =>
+        /^  .+: form [0-9]+ -> [0-9]+ \([+-][0-9]+\), morale [0-9]+ -> [0-9]+ \([+-][0-9]+\); reasons: .+$/.test(line)
+      ),
+      true,
+    );
     assert.equal(countPlayedSelectedClubFixtures(loaded), 1);
     const selectedClub = loaded.gameState.clubs[loaded.selectedClubId];
     const firstStarterId = selectedClub?.playerIds[0];
@@ -767,6 +775,8 @@ test("career command advances and persists the next selected-club fixture", asyn
       throw new Error("Expected selected club first starter");
     }
     assert.equal(loaded.gameState.playerStates[firstStarterId]?.fitness, 92);
+    assert.notEqual(loaded.gameState.playerStates[firstStarterId]?.form, 50);
+    assert.notEqual(loaded.gameState.playerStates[firstStarterId]?.morale, 50);
     const savedLineupAfterFirstAdvance = loaded.matchPreparation?.selectedLineup;
 
     assert.equal(

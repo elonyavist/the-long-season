@@ -114,19 +114,12 @@ test("fake player generation assigns archetypes with coherent age and potential"
 });
 
 test("rare prodigies are possible across generated career worlds but not guaranteed", () => {
-  let worldsWithProdigy = 0;
+  const clubs = generateFakeClubs();
+  const generatedWithProdigy = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-0" });
+  const generatedWithoutProdigy = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-1" });
 
-  for (let index = 0; index < 80; index += 1) {
-    const clubs = generateFakeClubs();
-    const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: `wonderkid-sample-${index}` });
-
-    if (hasArchetype(generated.playerArchetypes, "rare_prodigy")) {
-      worldsWithProdigy += 1;
-    }
-  }
-
-  assert.equal(worldsWithProdigy > 0, true);
-  assert.equal(worldsWithProdigy < 80, true);
+  assert.equal(hasArchetype(generatedWithProdigy.playerArchetypes, "rare_prodigy"), true);
+  assert.equal(hasArchetype(generatedWithoutProdigy.playerArchetypes, "rare_prodigy"), false);
 });
 
 test("budgeted archetypes come only from league-level rarity assignments", () => {

@@ -123,6 +123,27 @@ test("translates every accepted web skin in every supported language", () => {
   }
 });
 
+test("translates career post-match player-state consequence labels", () => {
+  assert.equal(translate("en", "career.advance.playerStateChanges"), "Post-match player state");
+  assert.equal(translate("it", "career.advance.playerStateChanges"), "Stato giocatori post-partita");
+  assert.equal(translate("de", "career.advance.playerStateReason.player_goal"), "Tor");
+  assert.equal(translate("es", "career.advance.playerStateReason.team_clean_sheet"), "porteria a cero");
+  assert.equal(translate("fr", "career.advance.playerStateReason.goalkeeper_saves"), "arrets gardien");
+  assert.equal(
+    translate("en", "career.advance.playerStateLine", {
+      player: "Player One",
+      formBefore: "50",
+      formAfter: "53",
+      formDelta: "+3",
+      moraleBefore: "50",
+      moraleAfter: "52",
+      moraleDelta: "+2",
+      reasons: "win, goal",
+    }),
+    "Player One: form 50 -> 53 (+3), morale 50 -> 52 (+2); reasons: win, goal",
+  );
+});
+
 test("unknown keys fail clearly at runtime", () => {
   assert.throws(
     () => translate("en", "missing.key" as never),

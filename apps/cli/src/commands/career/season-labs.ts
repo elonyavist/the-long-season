@@ -1,16 +1,9 @@
 import { createFakeLeagueSystem } from "@game/content";
-import {
-  assessCareerSeasonCompletion,
-  computeLeagueTable,
-  developPlayersForSeason,
-  generateNextSeasonCalendar,
-  rolloverPlayersForNextSeason,
-} from "@game/engine";
+import { advanceCareerOneSeason, type AdvanceCareerReportRefreshMode } from "@game/engine";
 
-import type { CliCareerState, CliGameState, PlayerId } from "./types.ts";
+import type { CliCareerState, CliGameState, PlayerId, ClubId } from "./types.ts";
 
 type CliFixtureId = CliGameState["fixtureIds"][number];
-type CliFixture = CliGameState["fixtures"][CliFixtureId];
 
 const DEVELOPMENT_REPORT_SEASONS = 7;
 
@@ -55,24 +48,22 @@ export function buildCareerDevelopmentReport(careerState: CliCareerState): Caree
   const worldSeed = careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed;
 
   for (let seasonIndex = 1; seasonIndex <= DEVELOPMENT_REPORT_SEASONS; seasonIndex += 1) {
-    const developed = developPlayersForSeason({
+    const advanced = advanceCareerOneSeason({
       careerState: workingState,
       worldSeed,
-      seasonId: `${workingState.gameState.calendar.currentSeasonId}:development-${seasonIndex}` as Parameters<typeof developPlayersForSeason>[0]["seasonId"],
+      mode: {
+        kind: "reportRefresh",
+        nextSeasonId: `${workingState.gameState.calendar.currentSeasonId}:development-${seasonIndex}` as AdvanceCareerReportRefreshMode["nextSeasonId"],
+        nextSeasonStartDate: (workingState.gameState.calendar.currentDate + 365) as AdvanceCareerReportRefreshMode["nextSeasonStartDate"],
+      },
     });
 
-    for (const change of developed.changes) {
-      const aggregate = aggregates.get(change.playerId as PlayerId);
-      if (aggregate === undefined) {
-        continue;
-      }
-
-      aggregate.totalGrowth += change.totalGrowth;
-      aggregate.totalDecline += change.totalDecline;
-      aggregate.endAge = change.age;
+    if (advanced.status !== "advanced") {
+      break;
     }
 
-    workingState = careerStateWithAdvancedReportDate(developed.careerState, seasonIndex);
+    applyDevelopmentDeltas(aggregates, workingState, advanced.careerState);
+    workingState = advanced.careerState;
   }
 
   const selectedClubAggregates = selectedClubDevelopmentAggregates(careerState, aggregates);
@@ -113,7 +104,7 @@ export interface CareerSeasonRolloverRolledOver {
   readonly careerState: CliCareerState;
   readonly previousSeasonId: string;
   readonly nextSeasonId: string;
-  readonly championClubId: CliCareerState["selectedClubId"];
+  readonly championClubId: ClubId;
   readonly selectedClubFinish: NonNullable<CliCareerState["seasonHistory"]>[number]["selectedClubFinish"];
   readonly aggregateGoals: NonNullable<CliCareerState["seasonHistory"]>[number]["aggregateGoals"];
   readonly archivedSeasonCount: number;
@@ -134,51 +125,29 @@ export interface CareerSeasonRolloverInvalid {
  * whether a successful result should be written to disk.
  */
 export function rolloverCareerSeason(careerState: CliCareerState): CareerSeasonRolloverResult {
-  const completion = assessCareerSeasonCompletion(careerState);
-  if (completion.status === "invalid") {
-    const invalidResult: CareerSeasonRolloverInvalid = {
-      status: "invalid",
-      careerState,
-      reason: completion.reason,
-    };
-
-    if (completion.fixtureId !== undefined) {
-      return { ...invalidResult, fixtureId: completion.fixtureId as CliFixtureId };
-    }
-
-    return invalidResult;
-  }
-
-  if (completion.status === "incomplete") {
-    return {
-      status: "invalid",
-      careerState,
-      reason: "current_season_incomplete",
-      fixtureId: completion.firstUnplayedFixtureId as CliFixtureId,
-    };
-  }
-
-  const nextCalendar = generateNextSeasonCalendar(careerState);
-  if (nextCalendar.status === "invalid") {
-    return {
-      status: "invalid",
-      careerState,
-      reason: nextCalendar.reason,
-    };
-  }
-
-  const currentSeasonFixtureIds = findCurrentSeasonFixtureIds(careerState);
   const tableRules = createFakeLeagueSystem({
     worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
   }).tableRules;
-  const finalTable = computeLeagueTable({
-    clubIds: careerState.gameState.clubIds,
-    fixtures: careerState.gameState.fixtures,
-    fixtureIds: currentSeasonFixtureIds,
-    rules: tableRules,
+  const advanced = advanceCareerOneSeason({
+    careerState,
+    worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
+    mode: {
+      kind: "completedSeason",
+      tableRules,
+    },
   });
-  const champion = finalTable[0];
-  if (champion === undefined) {
+
+  if (advanced.status === "invalid") {
+    return {
+      status: "invalid",
+      careerState,
+      reason: advanced.reason,
+      ...(advanced.fixtureId === undefined ? {} : { fixtureId: advanced.fixtureId as CliFixtureId }),
+    };
+  }
+
+  const archivedSeason = advanced.careerState.seasonHistory?.[advanced.careerState.seasonHistory.length - 1];
+  if (archivedSeason === undefined) {
     return {
       status: "invalid",
       careerState,
@@ -186,112 +155,17 @@ export function rolloverCareerSeason(careerState: CliCareerState): CareerSeasonR
     };
   }
 
-  const selectedClubFinish = finalTable.find((row) => row.clubId === careerState.selectedClubId);
-  if (selectedClubFinish === undefined) {
-    return {
-      status: "invalid",
-      careerState,
-      reason: "selected_club_not_in_table",
-    };
-  }
-
-  const aggregateGoals = computeAggregateGoals(careerState, currentSeasonFixtureIds);
-  const nextFixtures = mergeNextSeasonFixtures(careerState, nextCalendar.fixtures as readonly CliFixture[]);
-  const archiveEntry: NonNullable<CliCareerState["seasonHistory"]>[number] = {
-    sequenceNumber: nextSeasonSequenceNumber(careerState),
-    seasonId: careerState.gameState.calendar.currentSeasonId,
-    competitionId: nextCalendar.competitionId as NonNullable<CliCareerState["seasonHistory"]>[number]["competitionId"],
-    finalTable,
-    championClubId: champion.clubId,
-    selectedClubFinish,
-    aggregateGoals,
-  };
-  const { matchPreparation: _matchPreparation, ...careerStateWithoutPreparation } = careerState;
-  const careerStateWithNextSeason: CliCareerState = {
-    ...careerStateWithoutPreparation,
-    gameState: {
-      ...careerState.gameState,
-      fixtures: nextFixtures.fixtures,
-      fixtureIds: nextFixtures.fixtureIds,
-    },
-    seasonHistory: [...(careerState.seasonHistory ?? []), archiveEntry],
-  };
-  const rolledOver = rolloverPlayersForNextSeason({
-    careerState: careerStateWithNextSeason,
-    nextSeasonId: nextCalendar.seasonId,
-    nextSeasonStartDate: nextCalendar.seasonStartDate,
-  });
-
   return {
     status: "rolledOver",
-    careerState: rolledOver.careerState,
-    previousSeasonId: careerState.gameState.calendar.currentSeasonId,
-    nextSeasonId: nextCalendar.seasonId,
-    championClubId: champion.clubId,
-    selectedClubFinish,
-    aggregateGoals,
-    archivedSeasonCount: rolledOver.careerState.seasonHistory?.length ?? 0,
-    newFixtureCount: nextCalendar.fixtureIds.length,
+    careerState: advanced.careerState,
+    previousSeasonId: advanced.facts.previousSeasonId,
+    nextSeasonId: advanced.facts.nextSeasonId,
+    championClubId: archivedSeason.championClubId as ClubId,
+    selectedClubFinish: archivedSeason.selectedClubFinish,
+    aggregateGoals: archivedSeason.aggregateGoals,
+    archivedSeasonCount: advanced.careerState.seasonHistory?.length ?? 0,
+    newFixtureCount: advanced.careerState.gameState.fixtureIds.length - careerState.gameState.fixtureIds.length,
   };
-}
-
-function findCurrentSeasonFixtureIds(careerState: CliCareerState): readonly CliFixtureId[] {
-  const fixtureIds: CliFixtureId[] = [];
-  const currentSeasonId = careerState.gameState.calendar.currentSeasonId;
-
-  for (const fixtureId of careerState.gameState.fixtureIds) {
-    const fixture = careerState.gameState.fixtures[fixtureId];
-    if (fixture?.seasonId === currentSeasonId) {
-      fixtureIds.push(fixtureId);
-    }
-  }
-
-  return fixtureIds;
-}
-
-function computeAggregateGoals(
-  careerState: CliCareerState,
-  fixtureIds: readonly CliFixtureId[],
-): NonNullable<CliCareerState["seasonHistory"]>[number]["aggregateGoals"] {
-  let fixtureCount = 0;
-  let totalGoals = 0;
-
-  for (const fixtureId of fixtureIds) {
-    const result = careerState.gameState.fixtures[fixtureId]?.result;
-    if (result === undefined) {
-      continue;
-    }
-
-    fixtureCount += 1;
-    totalGoals += result.homeGoals + result.awayGoals;
-  }
-
-  return { fixtureCount, totalGoals };
-}
-
-function mergeNextSeasonFixtures(
-  careerState: CliCareerState,
-  nextFixtures: readonly CliFixture[],
-): { readonly fixtures: CliCareerState["gameState"]["fixtures"]; readonly fixtureIds: CliCareerState["gameState"]["fixtureIds"] } {
-  const fixtures = { ...careerState.gameState.fixtures };
-  const fixtureIds = [...careerState.gameState.fixtureIds];
-
-  for (const fixture of nextFixtures) {
-    fixtures[fixture.id] = fixture;
-    fixtureIds.push(fixture.id);
-  }
-
-  return { fixtures, fixtureIds };
-}
-
-function nextSeasonSequenceNumber(careerState: CliCareerState): number {
-  let maxSequenceNumber = 0;
-
-  for (const entry of careerState.seasonHistory ?? []) {
-    maxSequenceNumber = Math.max(maxSequenceNumber, entry.sequenceNumber);
-  }
-
-  return maxSequenceNumber + 1;
 }
 
 function initialDevelopmentAggregates(careerState: CliCareerState): Map<PlayerId, MutableDevelopmentAggregate> {
@@ -333,18 +207,26 @@ function selectedClubDevelopmentAggregates(
   return rows;
 }
 
-function careerStateWithAdvancedReportDate(careerState: CliCareerState, seasonIndex: number): CliCareerState {
-  return {
-    ...careerState,
-    gameState: {
-      ...careerState.gameState,
-      calendar: {
-        ...careerState.gameState.calendar,
-        currentDate: (careerState.gameState.calendar.currentDate + 365) as CliCareerState["gameState"]["calendar"]["currentDate"],
-        currentSeasonId: `${careerState.gameState.calendar.currentSeasonId}:development-${seasonIndex}` as CliCareerState["gameState"]["calendar"]["currentSeasonId"],
-      },
-    },
-  };
+function applyDevelopmentDeltas(
+  aggregates: ReadonlyMap<PlayerId, MutableDevelopmentAggregate>,
+  beforeState: CliCareerState,
+  afterState: CliCareerState,
+): void {
+  for (const [playerId, aggregate] of aggregates) {
+    const beforePlayer = beforeState.gameState.players[playerId];
+    const afterPlayer = afterState.gameState.players[playerId];
+    if (beforePlayer === undefined || afterPlayer === undefined) {
+      continue;
+    }
+
+    const delta = totalAbilityDelta(beforePlayer.abilities, afterPlayer.abilities);
+    if (delta > 0) {
+      aggregate.totalGrowth += delta;
+    } else if (delta < 0) {
+      aggregate.totalDecline += Math.abs(delta);
+    }
+    aggregate.endAge = playerAgeYears(afterState, playerId);
+  }
 }
 
 function playerAgeYears(careerState: CliCareerState, playerId: PlayerId): number {
@@ -387,6 +269,46 @@ function averagePlayerPotentialRoom(player: CliCareerState["gameState"]["players
   }
 
   return total / abilityValues.length;
+}
+
+function totalAbilityDelta(
+  before: CliCareerState["gameState"]["players"][PlayerId]["abilities"],
+  after: CliCareerState["gameState"]["players"][PlayerId]["abilities"],
+): number {
+  const deltas = [
+    after.technical.finishing - before.technical.finishing,
+    after.technical.passing - before.technical.passing,
+    after.technical.longPassing - before.technical.longPassing,
+    after.technical.crossing - before.technical.crossing,
+    after.technical.dribbling - before.technical.dribbling,
+    after.technical.technique - before.technical.technique,
+    after.technical.tackling - before.technical.tackling,
+    after.technical.penalties - before.technical.penalties,
+    after.technical.freeKicks - before.technical.freeKicks,
+    after.physical.pace - before.physical.pace,
+    after.physical.strength - before.physical.strength,
+    after.physical.stamina - before.physical.stamina,
+    after.physical.agility - before.physical.agility,
+    after.physical.heading - before.physical.heading,
+    after.mental.positioning - before.mental.positioning,
+    after.mental.vision - before.mental.vision,
+    after.mental.anticipation - before.mental.anticipation,
+    after.mental.composure - before.mental.composure,
+    after.mental.determination - before.mental.determination,
+    after.mental.leadership - before.mental.leadership,
+    after.goalkeeping.reflexes - before.goalkeeping.reflexes,
+    after.goalkeeping.handling - before.goalkeeping.handling,
+    after.goalkeeping.rushingOut - before.goalkeeping.rushingOut,
+    after.goalkeeping.goalkeeperPositioning - before.goalkeeping.goalkeeperPositioning,
+    after.goalkeeping.footwork - before.goalkeeping.footwork,
+  ];
+  let total = 0;
+
+  for (const delta of deltas) {
+    total += delta;
+  }
+
+  return total;
 }
 
 function isStalledProspect(aggregate: MutableDevelopmentAggregate): boolean {

@@ -35,6 +35,53 @@ test("same seed and context produce the same events and state", () => {
   assert.deepEqual(first.processedSides, second.processedSides);
 });
 
+test("zero-opportunity minute advances deterministically without visible events", () => {
+  const context = validContext({
+    fixtureValue: "fixture:no-event-minute-000001",
+    baseOpportunityRatePerMinute: 0,
+    maxOpportunityRatePerMinute: 0,
+  });
+  const firstRunRng = rngFor(context);
+  const secondRunRng = rngFor(context);
+  const firstRunKickoff = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: firstRunRng,
+  });
+  const firstRunNoEvent = stepMatch({
+    simulation: firstRunKickoff.simulation,
+    rng: firstRunRng,
+  });
+  const secondRunKickoff = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: secondRunRng,
+  });
+  const secondRunNoEvent = stepMatch({
+    simulation: secondRunKickoff.simulation,
+    rng: secondRunRng,
+  });
+
+  assert.deepEqual(firstRunKickoff.events, [{ type: "kickoff", minute: 0 }]);
+  assert.deepEqual(firstRunNoEvent.events, []);
+  assert.equal(firstRunNoEvent.simulation.minute, 2);
+  assert.deepEqual(firstRunNoEvent.events, secondRunNoEvent.events);
+  assert.deepEqual(firstRunNoEvent.simulation, secondRunNoEvent.simulation);
+  assert.deepEqual(firstRunNoEvent.processedSides, secondRunNoEvent.processedSides);
+  assert.deepEqual(firstRunNoEvent.simulation.stats, {
+    home: {
+      opportunities: 0,
+      shots: 0,
+      shotsOnTarget: 0,
+      goals: 0,
+    },
+    away: {
+      opportunities: 0,
+      shots: 0,
+      shotsOnTarget: 0,
+      goals: 0,
+    },
+  });
+});
+
 test("stronger teams produce more shots or goals over a deterministic sample", () => {
   const strongContext = withGoalkeeperTeams(validContext({
     homeStrength: 18,

@@ -14,6 +14,11 @@ import type { MatchExplanationConditionSnapshot, MatchExplanationTrace } from ".
 import { simulateMatch } from "../match-engine/simulate-match.ts";
 import { applyMatchReportToFixture } from "../use-cases/apply-match-report-to-fixture.ts";
 import { applyCareerFixtureConditionConsequences, type CareerFixtureConditionChange } from "./career-condition-consequences.ts";
+import {
+  applyCareerMatchStateConsequences,
+  type CareerMatchPlayerStateConsequence,
+  type CareerMatchStateConsequenceSummary,
+} from "./career-match-state-consequences.ts";
 import { findNextCareerFixture, type NextCareerFixtureInvalidReason } from "./next-fixture.ts";
 
 /** Invalid-state reasons specific to career fixture progression. */
@@ -58,6 +63,10 @@ export interface ProgressCareerFixtureAdvanced {
   readonly explanationTrace?: MatchExplanationTrace;
   /** Selected-club condition changes caused by this played fixture. */
   readonly conditionChanges: readonly CareerFixtureConditionChange[];
+  /** Selected-club form/morale changes caused by this played fixture. */
+  readonly playerStateConsequences: readonly CareerMatchPlayerStateConsequence[];
+  /** Aggregate selected-club form/morale consequence facts. */
+  readonly playerStateConsequenceSummary: CareerMatchStateConsequenceSummary;
   /** Copied career state with the fixture result applied. */
   readonly careerState: CareerState;
 }
@@ -99,7 +108,7 @@ export type ProgressCareerFixtureResult =
  * 1. find the next selected-club fixture;
  * 2. validate caller-supplied home/away team contexts;
  * 3. simulate the fixture and create a durable report;
- * 4. apply the fixture result and selected-club condition spend;
+ * 4. apply the fixture result, selected-club condition spend, and post-match state consequences;
  * 5. return the copied career state plus structured facts for presentation.
  */
 export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput): ProgressCareerFixtureResult {
@@ -146,19 +155,26 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     selectedStarterIds,
     reportPlayerIds: selectedClub?.playerIds ?? selectedStarterIds,
   });
-  const gameStateWithCondition = {
-    ...gameStateWithResult,
+  const matchStateConsequences = applyCareerMatchStateConsequences({
     playerStates: conditionConsequences.playerStates,
+    selectedClubId: input.careerState.selectedClubId,
+    fixture: nextFixture.fixture,
+    report: simulatedFixture.report,
+    selectedStarterIds,
+  });
+  const gameStateWithConsequences = {
+    ...gameStateWithResult,
+    playerStates: matchStateConsequences.playerStates,
   };
   const progressedCareerState = createCareerState({
     ...input.careerState,
     gameState: {
-      ...gameStateWithCondition,
+      ...gameStateWithConsequences,
       calendar: {
-        ...gameStateWithCondition.calendar,
-        currentDate: nextFixture.fixture.date > gameStateWithCondition.calendar.currentDate
+        ...gameStateWithConsequences.calendar,
+        currentDate: nextFixture.fixture.date > gameStateWithConsequences.calendar.currentDate
           ? nextFixture.fixture.date
-          : gameStateWithCondition.calendar.currentDate,
+          : gameStateWithConsequences.calendar.currentDate,
       },
     },
   });
@@ -184,6 +200,8 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
           ),
         }),
     conditionChanges: conditionConsequences.changes,
+    playerStateConsequences: matchStateConsequences.changes,
+    playerStateConsequenceSummary: matchStateConsequences.summary,
     careerState: progressedCareerState,
   };
 }

@@ -56,6 +56,118 @@ test("same seed produces same final table", () => {
   assert.deepEqual(first.table, second.table);
 });
 
+test("stable season seed produces a compact golden sentinel", () => {
+  const result = simulateSeason(seasonInput("golden-season-seed"));
+  const firstFixture = result.fixtures[0];
+  const lastFixture = result.fixtures[result.fixtures.length - 1];
+  assert.ok(firstFixture !== undefined);
+  assert.ok(lastFixture !== undefined);
+  assert.ok(firstFixture.result?.report !== undefined);
+  assert.ok(lastFixture.result?.report !== undefined);
+
+  // This sentinel catches accidental engine drift without freezing every event
+  // in a full season. Update it only with an intentional gameplay rationale.
+  assert.deepEqual(
+    {
+      rounds: result.rounds.length,
+      fixtureCount: result.fixtures.length,
+      champion: result.table[0],
+      runnerUp: result.table[1],
+      bottom: result.table[result.table.length - 1],
+      firstFixture: {
+        id: firstFixture.id,
+        homeGoals: firstFixture.result?.homeGoals,
+        awayGoals: firstFixture.result?.awayGoals,
+        eventCount: firstFixture.result?.report.events.length,
+        homeShots: firstFixture.result?.report.stats.home.shots,
+        awayShots: firstFixture.result?.report.stats.away.shots,
+      },
+      lastFixture: {
+        id: lastFixture.id,
+        homeGoals: lastFixture.result?.homeGoals,
+        awayGoals: lastFixture.result?.awayGoals,
+        eventCount: lastFixture.result?.report.events.length,
+        homeShots: lastFixture.result?.report.stats.home.shots,
+        awayShots: lastFixture.result?.report.stats.away.shots,
+      },
+      topScorers: result.playerGoalStats.slice(0, 3),
+    },
+    {
+      rounds: 34,
+      fixtureCount: 306,
+      champion: {
+        position: 1,
+        clubId: clubId("club:test-02"),
+        played: 34,
+        wins: 8,
+        draws: 24,
+        losses: 2,
+        goalsFor: 11,
+        goalsAgainst: 3,
+        goalDifference: 8,
+        points: 48,
+      },
+      runnerUp: {
+        position: 2,
+        clubId: clubId("club:test-07"),
+        played: 34,
+        wins: 8,
+        draws: 22,
+        losses: 4,
+        goalsFor: 8,
+        goalsAgainst: 4,
+        goalDifference: 4,
+        points: 46,
+      },
+      bottom: {
+        position: 18,
+        clubId: clubId("club:test-17"),
+        played: 34,
+        wins: 0,
+        draws: 25,
+        losses: 9,
+        goalsFor: 0,
+        goalsAgainst: 9,
+        goalDifference: -9,
+        points: 25,
+      },
+      firstFixture: {
+        id: fixtureId("fixture:000001"),
+        homeGoals: 0,
+        awayGoals: 0,
+        eventCount: 5,
+        homeShots: 1,
+        awayShots: 1,
+      },
+      lastFixture: {
+        id: fixtureId("fixture:000306"),
+        homeGoals: 0,
+        awayGoals: 0,
+        eventCount: 4,
+        homeShots: 0,
+        awayShots: 1,
+      },
+      topScorers: [
+        {
+          playerId: playerId("player:test-02-02"),
+          clubId: clubId("club:test-02"),
+          goals: 11,
+        },
+        {
+          playerId: playerId("player:test-07-02"),
+          clubId: clubId("club:test-07"),
+          goals: 8,
+        },
+        {
+          playerId: playerId("player:test-06-02"),
+          clubId: clubId("club:test-06"),
+          goals: 7,
+        },
+      ],
+    },
+  );
+});
+
 test("no team plays twice in a round", () => {
   const result = simulateSeason(seasonInput("round-seed"));
 

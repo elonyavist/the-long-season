@@ -228,6 +228,35 @@ test("dynamic state multipliers apply only when curve data is supplied", () => {
   );
 });
 
+test("form and morale multipliers can make post-match state affect next-fixture strength", () => {
+  const id = playerId("player:000001");
+  const input = onePlayerInput(makePlayer(id, 10));
+  const playerStates: Readonly<Record<PlayerId, PlayerDynamicState>> = {
+    [id]: {
+      fitness: stateValue(100),
+      form: stateValue(48),
+      morale: stateValue(47),
+    },
+  };
+  const affected = deriveTeamStrength({
+    ...input,
+    playerStates,
+    stateMultiplierCurves: {
+      form: [
+        { maxValueInclusive: 49, multiplier: 0.95 },
+        { maxValueInclusive: 100, multiplier: 1 },
+      ],
+      morale: [
+        { maxValueInclusive: 49, multiplier: 0.96 },
+        { maxValueInclusive: 100, multiplier: 1 },
+      ],
+    },
+  });
+
+  assert.equal(Number(affected.overall.toFixed(2)), 9.12);
+  assert.equal(affected.overall < deriveTeamStrength({ ...input, playerStates }).overall, true);
+});
+
 test("full fitness keeps strength unchanged when a fitness curve is supplied", () => {
   const id = playerId("player:000001");
   const input = onePlayerInput(makePlayer(id, 10));

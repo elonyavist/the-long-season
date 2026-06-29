@@ -32,6 +32,42 @@ test("same fixed context produces the expected golden output", () => {
   assert.deepEqual(result, GOLDEN_MATCH_RESULT);
 });
 
+test("zero-opportunity match stays deterministic and low-event", () => {
+  const context = {
+    ...validContext({ fixtureValue: "fixture:zero-opportunity-000001", minuteCount: 12 }),
+    engineConfig: {
+      ...validConfig(12),
+      rates: {
+        baseOpportunityRatePerMinute: 0,
+        maxOpportunityRatePerMinute: 0,
+      },
+    },
+  };
+  const first = simulateMatch(context);
+  const second = simulateMatch(context);
+
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.score, { home: 0, away: 0 });
+  assert.deepEqual(first.stats, {
+    home: {
+      opportunities: 0,
+      shots: 0,
+      shotsOnTarget: 0,
+      goals: 0,
+    },
+    away: {
+      opportunities: 0,
+      shots: 0,
+      shotsOnTarget: 0,
+      goals: 0,
+    },
+  });
+  assert.deepEqual(
+    first.events.map((event) => event.type),
+    ["kickoff", "half_time", "full_time"],
+  );
+});
+
 test("serializing two identical match outputs to JSON produces identical strings", () => {
   const first = JSON.stringify(simulateMatch(validContext()));
   const second = JSON.stringify(simulateMatch(validContext()));

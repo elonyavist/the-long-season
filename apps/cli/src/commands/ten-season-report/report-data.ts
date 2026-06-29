@@ -6,17 +6,9 @@ import {
   type FakeLeagueSystem,
 } from "@game/content";
 import {
-  MINIMUM_CAREER_SQUAD_SIZE,
-  applyEndOfSeasonPlayerExits,
-  applySeasonalYouthIntake,
-  applyYouthAcademyLifecycle,
-  developPlayersForSeason,
-  maintainCareerSquadShape,
-  promoteYouthCandidatesToSeniorSquads,
-  simulateTransferTurnover,
+  advanceCareerOneSeason,
+  type AdvanceCareerReportRefreshMode,
   type CareerIntakeCandidate,
-  type PlayerExitRecord,
-  type SquadMaintenanceRecord,
   type YouthIntakeCandidate,
 } from "@game/engine";
 import type { Translator } from "@game/i18n";
@@ -39,7 +31,7 @@ import {
   type LongRunYouthStabilityReport,
 } from "@game/simulation-tools";
 import { careerStateFromNewWorld } from "../career/scenarios.ts";
-import type { CliCareerState, CliPlayer, CliSaveId, PlayerId } from "../career/types.ts";
+import type { CliCareerState, CliPlayer, CliSaveId } from "../career/types.ts";
 import { createCareerSeasonInput } from "../fake-season-input.ts";
 
 /** Candidate pool size per club for long-run squad maintenance stress tests. */
@@ -47,12 +39,6 @@ const LONG_RUN_INTAKE_CANDIDATES_PER_CLUB = 8;
 
 /** Minimum club goals needed before top-three creator share is treated as structurally meaningful. */
 const MIN_GOALS_FOR_TOP_THREE_CREATOR_SHARE = 40;
-
-/** Lower academy size target used by the long-run youth population gate. */
-const YOUTH_ROSTER_TARGET_MINIMUM = 8;
-
-/** Upper academy size target used by the long-run youth population gate. */
-const YOUTH_ROSTER_TARGET_MAXIMUM = 12;
 
 /** Complete report bundle for one deterministic career world. */
 export interface SingleWorldLongRunReport {
@@ -863,71 +849,57 @@ function advanceCareerForReport(
   worldSeed: string,
   context: Parameters<typeof runCareerLongRunSimulation>[0]["advanceCareerState"] extends (value: infer Context) => unknown ? Context : never,
 ): ReturnType<Parameters<typeof runCareerLongRunSimulation>[0]["advanceCareerState"]> {
-  const developmentSeasonId = `${context.careerState.gameState.calendar.currentSeasonId}:development-${context.seasonNumber}` as Parameters<
-    typeof developPlayersForSeason
-  >[0]["seasonId"];
-  const developed = developPlayersForSeason({
+  const nextSeasonId =
+    `${context.careerState.gameState.calendar.currentSeasonId}:long-run-${context.seasonNumber}` as AdvanceCareerReportRefreshMode["nextSeasonId"];
+  const nextSeasonStartDate = (context.careerState.gameState.calendar.currentDate + 365) as AdvanceCareerReportRefreshMode["nextSeasonStartDate"];
+  const advanced = advanceCareerOneSeason({
     careerState: context.careerState,
     worldSeed,
-    seasonId: developmentSeasonId,
-    playerIds: seniorPlayerIds(context.careerState),
-  });
-  const exits = applyEndOfSeasonPlayerExits({
-    careerState: developed.careerState,
-    worldSeed,
-    seasonId: developmentSeasonId,
-  });
-  const youthLifecycle = applyYouthAcademyLifecycle({
-    careerState: exits.careerState,
-    worldSeed,
-    seasonId: developmentSeasonId,
-  });
-  const youthIntake = applySeasonalYouthIntake({
-    careerState: youthLifecycle.careerState,
-    seasonId: developmentSeasonId,
-    intakeDate: youthLifecycle.careerState.gameState.calendar.currentDate,
-    candidates: youthIntakeCandidatesForCareer(youthLifecycle.careerState, worldSeed, context.seasonNumber),
-  });
-  const youthPromotions = promoteYouthCandidatesToSeniorSquads({
-    careerState: youthIntake.careerState,
-    allowSelectedClubPromotion: false,
-  });
-  const intakeCandidates = intakeCandidatesForCareer(league, youthPromotions.careerState, worldSeed, context.seasonNumber);
-  const maintained = maintainCareerSquadShape({
-    careerState: youthPromotions.careerState,
-    intakeCandidates,
-  });
-  const turnover = simulateTransferTurnover({
-    careerState: maintained.careerState,
-    worldSeed,
-    seasonId: developmentSeasonId,
-  });
-  const youthRefresh = youthRefreshSnapshot(turnover.careerState as CliCareerState);
-  const nextCareerState: CliCareerState = {
-    ...turnover.careerState,
-    gameState: {
-      ...turnover.careerState.gameState,
-      calendar: {
-        ...turnover.careerState.gameState.calendar,
-        currentDate: (turnover.careerState.gameState.calendar.currentDate + 365) as CliCareerState["gameState"]["calendar"]["currentDate"],
-        currentSeasonId: `${turnover.careerState.gameState.calendar.currentSeasonId}:long-run-${context.seasonNumber}` as CliCareerState["gameState"]["calendar"]["currentSeasonId"],
-      },
+    mode: {
+      kind: "reportRefresh",
+      nextSeasonId,
+      nextSeasonStartDate,
     },
-  } as CliCareerState;
+    createYouthIntakeCandidates: (candidateContext) =>
+      youthIntakeCandidatesForCareer(candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
+    createSeniorIntakeCandidates: (candidateContext) =>
+      intakeCandidatesForCareer(league, candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
+  });
+
+  if (advanced.status !== "advanced") {
+    throw new Error(`Cannot advance report career season ${context.seasonNumber}: ${advanced.reason}`);
+  }
 
   return {
-    careerState: nextCareerState,
+    careerState: advanced.careerState,
     refresh: {
-      exitCount: exits.exits.length,
-      exitReasons: exitReasonCounts(exits.exits),
-      intakeCount: intakeCandidates.length,
-      squadMaintenanceAddedCount: maintained.records.reduce((sum, record) => sum + record.addedPlayerIds.length, 0),
-      youthPromotionCount: youthPromotions.records.filter((record) => record.promoted).length,
-      youthIntakeCount: youthIntake.records.reduce((sum, record) => sum + record.acceptedPlayerIds.length, 0),
-      youthExitCount: youthLifecycle.records.length,
-      transferTurnoverCount: turnover.transfers.length,
-      ...squadRefreshSnapshot(turnover.careerState as CliCareerState, maintained.records),
-      ...youthRefresh,
+      exitCount: advanced.facts.playerExits.exitCount,
+      exitReasons: {
+        retirement: advanced.facts.playerExits.reasons.retirement,
+        released: advanced.facts.playerExits.reasons.released,
+        careerStepDown: advanced.facts.playerExits.reasons.career_step_down,
+      },
+      intakeCount: advanced.facts.squadMaintenance.candidateCount,
+      squadMaintenanceAddedCount: advanced.facts.squadMaintenance.addedPlayerCount,
+      youthPromotionCount: advanced.facts.youthPromotions.promotedCount,
+      youthIntakeCount: advanced.facts.youthIntake.acceptedPlayerCount,
+      youthExitCount: advanced.facts.youthLifecycle.recordCount,
+      transferTurnoverCount: advanced.facts.transferTurnover.transferCount,
+      seniorPlayerCount: advanced.facts.squadHealth.seniorPlayerCount,
+      youthPlayerCount: advanced.facts.youthHealth.youthPlayerCount,
+      activePlayerCount: advanced.facts.youthHealth.activePlayerCount,
+      minimumSquadSize: advanced.facts.squadHealth.minimumSquadSize,
+      averageSquadSize: advanced.facts.squadHealth.averageSquadSize,
+      maximumSquadSize: advanced.facts.squadHealth.maximumSquadSize,
+      clubsBelowMinimumSquadSize: advanced.facts.squadHealth.clubsBelowMinimumSquadSize,
+      clubsWithoutNaturalGoalkeeper: advanced.facts.squadHealth.clubsWithoutNaturalGoalkeeper,
+      roleCoverageWarningCount: advanced.facts.squadMaintenance.warningCount,
+      minimumYouthRosterSize: advanced.facts.youthHealth.minimumYouthRosterSize,
+      averageYouthRosterSize: advanced.facts.youthHealth.averageYouthRosterSize,
+      maximumYouthRosterSize: advanced.facts.youthHealth.maximumYouthRosterSize,
+      selectedClubYouthSize: advanced.facts.youthHealth.selectedClubYouthSize,
+      clubsAboveYouthTarget: advanced.facts.youthHealth.clubsAboveYouthTarget,
+      clubsBelowYouthMinimum: advanced.facts.youthHealth.clubsBelowYouthMinimum,
     },
   };
 }
@@ -1048,113 +1020,6 @@ function youthDepartment(position: string): "attacker" | "defender" | "goalkeepe
   if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") return "defender";
   if (position === "dm" || position === "cm" || position === "am") return "midfielder";
   return "attacker";
-}
-
-function seniorPlayerIds(careerState: CliCareerState): readonly PlayerId[] {
-  const playerIds: PlayerId[] = [];
-
-  for (const clubId of careerState.gameState.clubIds) {
-    const club = careerState.gameState.clubs[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    for (const playerId of club.playerIds) {
-      playerIds.push(playerId);
-    }
-  }
-
-  return playerIds;
-}
-
-/**
- * Captures post-refresh academy population health without exposing hidden
- * potential or changing selected-club roster decisions.
- */
-function youthRefreshSnapshot(
-  careerState: CliCareerState,
-): Pick<
-  LongRunSeasonResult["refresh"],
-  | "seniorPlayerCount"
-  | "youthPlayerCount"
-  | "activePlayerCount"
-  | "minimumYouthRosterSize"
-  | "averageYouthRosterSize"
-  | "maximumYouthRosterSize"
-  | "selectedClubYouthSize"
-  | "clubsAboveYouthTarget"
-  | "clubsBelowYouthMinimum"
-> {
-  const seniorPlayerCount = seniorPlayerIds(careerState).length;
-  const youthRosters = careerState.gameState.clubIds.map((clubId) => careerState.youthAcademyState?.clubRosters[clubId]?.playerIds.length ?? 0);
-  const youthPlayerCount = youthRosters.reduce((sum, size) => sum + size, 0);
-  const selectedClubYouthSize = careerState.youthAcademyState?.clubRosters[careerState.selectedClubId]?.playerIds.length ?? 0;
-
-  return {
-    seniorPlayerCount,
-    youthPlayerCount,
-    activePlayerCount: seniorPlayerCount + youthPlayerCount,
-    minimumYouthRosterSize: Math.min(...youthRosters),
-    averageYouthRosterSize: roundReportNumber(youthPlayerCount / youthRosters.length),
-    maximumYouthRosterSize: Math.max(...youthRosters),
-    selectedClubYouthSize,
-    clubsAboveYouthTarget: youthRosters.filter((size) => size > YOUTH_ROSTER_TARGET_MAXIMUM).length,
-    clubsBelowYouthMinimum: youthRosters.filter((size) => size < YOUTH_ROSTER_TARGET_MINIMUM).length,
-  };
-}
-
-/**
- * Groups post-season exits by reason so long-run reports can detect whether
- * refresh is mostly age driven, release driven, or step-down driven.
- */
-function exitReasonCounts(exits: readonly PlayerExitRecord[]): LongRunSeasonResult["refresh"]["exitReasons"] {
-  return {
-    retirement: exits.filter((exit) => exit.reason === "retirement").length,
-    released: exits.filter((exit) => exit.reason === "released").length,
-    careerStepDown: exits.filter((exit) => exit.reason === "career_step_down").length,
-  };
-}
-
-/**
- * Captures post-refresh squad health from the mutable career state without
- * changing lineups or repairing user-facing choices.
- */
-function squadRefreshSnapshot(
-  careerState: CliCareerState,
-  maintenanceRecords: readonly SquadMaintenanceRecord[],
-): Pick<
-  LongRunSeasonResult["refresh"],
-  | "minimumSquadSize"
-  | "averageSquadSize"
-  | "maximumSquadSize"
-  | "clubsBelowMinimumSquadSize"
-  | "clubsWithoutNaturalGoalkeeper"
-  | "roleCoverageWarningCount"
-> {
-  const squadSizes = careerState.gameState.clubIds.map((clubId) => careerState.gameState.clubs[clubId]?.playerIds.length ?? 0);
-
-  return {
-    minimumSquadSize: Math.min(...squadSizes),
-    averageSquadSize: roundReportNumber(squadSizes.reduce((sum, value) => sum + value, 0) / squadSizes.length),
-    maximumSquadSize: Math.max(...squadSizes),
-    clubsBelowMinimumSquadSize: squadSizes.filter((size) => size < MINIMUM_CAREER_SQUAD_SIZE).length,
-    clubsWithoutNaturalGoalkeeper: careerState.gameState.clubIds.filter((clubId) => !hasNaturalGoalkeeper(careerState, clubId)).length,
-    roleCoverageWarningCount: maintenanceRecords.reduce((sum, record) => sum + record.warnings.length, 0),
-  };
-}
-
-/**
- * Returns true when a club has at least one active player whose natural role is
- * goalkeeper. This is a hard structural gate for long-run career stability.
- */
-function hasNaturalGoalkeeper(careerState: CliCareerState, clubId: CliCareerState["gameState"]["clubIds"][number]): boolean {
-  const club = careerState.gameState.clubs[clubId];
-
-  if (club === undefined) {
-    return false;
-  }
-
-  return club.playerIds.some((playerId) => careerState.gameState.players[playerId]?.naturalPositions[0] === "gk");
 }
 
 /**

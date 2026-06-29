@@ -90,6 +90,7 @@ Why this matters:
 | Generated world facade | `packages/content/src/generators/league-system.ts` via `createFakeLeagueSystem` |
 | Season simulation use-case | `packages/engine/src/use-cases/simulate-season.ts` |
 | Career fixture progression | `packages/engine/src/career/progress-fixture.ts` via `progressNextCareerFixture` |
+| Post-match player-state consequences | `packages/engine/src/career/career-match-state-consequences.ts` via `applyCareerMatchStateConsequences` |
 | Career Continue loop | `packages/engine/src/career/continue-career.ts` via `continueCareerUntilAttention` |
 | Match simulation | `packages/engine/src/match-engine/simulate-match.ts` |
 | Manual tactic segments | `packages/engine/src/match-engine/simulate-match-with-manual-tactics.ts` |
@@ -186,6 +187,19 @@ Shared files must stay free from football concepts.
 - `packages/engine/src/career/progress-fixture.ts`
   Stable career matchday advancement entry point. Caller owns preparation and
   recovered state before calling this function.
+- `packages/engine/src/career/career-match-state-consequences.ts`
+  Pure selected-club post-match player-state Module. It applies bounded `form`
+  and `morale` consequences to ordered selected-club starters from durable
+  `MatchReport` facts such as result, clean sheet, heavy loss, goals, assists,
+  and goalkeeper saves. It returns copy-on-write player states plus structured
+  reason-key facts for CLI/web presentation. It does not spend fitness, render
+  labels, infer advice, model bench dissatisfaction, or tune match outcomes.
+- `packages/engine/src/career/advance-career-season.ts`
+  Canonical season-level career advancement entry point. It owns deterministic
+  season refresh order for completed-season rollover and report-only refresh:
+  validation/archive, development, exits, youth lifecycle, intake, promotion,
+  squad maintenance, transfer turnover, calendar merge, and player rollover.
+  Callers provide content-generated candidates and table/calendar inputs.
 - `packages/engine/src/career/continue-career.ts`
   Pure Continue-until-attention rule. It accepts explicit current date,
   selected club, next fixture, preparation facts, and existing attention events,
@@ -687,7 +701,9 @@ Simulation packages should not hardcode UI/CLI labels.
 3. It builds match-ready `MatchTeamContext`s.
 4. It calls `progressNextCareerFixture` in engine.
 5. Engine simulates exactly the next selected-club fixture, applies fixture
-   result, spends selected-starter condition, and returns a copied career state.
+   result, spends selected-starter condition, applies selected-starter
+   `form`/`morale` consequences, and returns a copied career state plus
+   structured consequence facts.
 6. CLI writes the save and renders output.
 
 ### Generate A World
@@ -704,10 +720,11 @@ Simulation packages should not hardcode UI/CLI labels.
 2. `ten-season-report.ts` parses args and creates the translator.
 3. `ten-season-report/report-data.ts` builds fake content, in-memory career
    state, and app/content-specific report refresh callbacks.
-4. `runCareerLongRunSimulation` in simulation-tools runs the season loop.
-5. Simulation-tools builds player, club, youth, and anomaly report models.
-6. `report-data.ts` summarizes single-world or multi-world report facts.
-7. `single-world-output.ts` or `gate-output.ts` renders localized console
+4. Those callbacks call `advanceCareerOneSeason` in `reportRefresh` mode.
+5. `runCareerLongRunSimulation` in simulation-tools runs the season loop.
+6. Simulation-tools builds player, club, youth, and anomaly report models.
+7. `report-data.ts` summarizes single-world or multi-world report facts.
+8. `single-world-output.ts` or `gate-output.ts` renders localized console
    output. `gate-output.ts` also renders optional Markdown.
 
 ### Render Localized CLI Output

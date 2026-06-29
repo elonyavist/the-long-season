@@ -51,6 +51,42 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - English is the deterministic fallback language for missing translations.
 - Supported game languages are Italian (`it`), English (`en`), German (`de`), Spanish (`es`), and French (`fr`).
 
+## LLM And Narrative Content Factory Rules
+
+- The distributed game must not call an LLM at runtime.
+- Normal project build, test, lint, typecheck, and release commands must not
+  call an LLM or require an LLM API key.
+- LLM usage is allowed only as an authoring-time content factory: manual,
+  occasional, reviewed, schema-validated, and committed as static content before
+  it can be used by the game.
+- Engine and domain Modules must emit structured, language-agnostic facts only:
+  match events, world events, attention events, consequence summaries, stable
+  IDs, tags, keys, numbers, and timestamps.
+- Engine and domain Modules must not select prose templates, store rendered
+  narrative text, call narrative generators, or depend on LLM/content-factory
+  output.
+- Narrative rendering must live behind a content/presentation/narrator seam
+  outside the engine. That Adapter may map structured facts to localized
+  templates, but it must not change gameplay state or simulation outcomes.
+- Runtime narrative selection must be deterministic: use seeded RNG, stable
+  template IDs, stable corpus versions, and deterministic tie-breakers.
+- If exact replay wording matters, persist the selected `templateId` or the
+  corpus version needed to reproduce the selection. Do not rely on mutable
+  corpus contents for exact replay.
+- LLM output must not define gameplay truth: no final player attributes,
+  balance numbers, match results, transfer decisions, market values, AI choices,
+  league rules, or save migrations.
+- LLM output may draft text variants, event copy, press/news templates,
+  commentary templates, names, and localization drafts, but only after human
+  review and schema validation.
+- Raw LLM output is not game content. Only curated files that pass content
+  schemas may enter `packages/content` or future official content packs.
+- Prompts used for official content should be versioned as authoring assets.
+  Raw generated output should not be treated as runtime content and should not
+  be shipped.
+- Non-English LLM localization is a draft only until reviewed by a competent
+  speaker or an explicitly documented localization QA process.
+
 ## Content Generation Quality Rules
 
 - Generated players must be deterministic, fictional, and credible by division, club tier, role, age, current ability, and potential.
