@@ -16,6 +16,9 @@ export type CareerShellSectionKey =
 /** Availability status for a top navigation section. */
 export type CareerShellNavigationStatus = "available" | "disabled";
 
+/** Shell mode controls global chrome around focused manager workspaces. */
+export type CareerShellMode = "standard" | "preparation" | "matchday";
+
 /** Input shape for one top navigation item in the career shell. */
 export interface CareerShellNavigationItemInput {
   /** Stable section key used by adapters to choose the central screen. */
@@ -32,6 +35,8 @@ export interface CareerShellNavigationItemInput {
 export interface CareerShellNavigationItemView extends CareerShellNavigationItemInput {
   /** Whether this item is the active selected section. */
   readonly isCurrent: boolean;
+  /** Whether the renderer should expose this item as an interactive control. */
+  readonly isInteractive: boolean;
 }
 
 /** Compact Inbox/Posta rail state for the career shell. */
@@ -58,6 +63,12 @@ export interface CareerShellView {
   readonly centralContentSectionKey: CareerShellSectionKey;
   /** Persistent left Inbox/Posta rail state. */
   readonly inboxRail: CareerShellInboxRailView;
+  /** Current shell mode used to hide unrelated global chrome. */
+  readonly mode: CareerShellMode;
+  /** Whether the Inbox/Posta rail should be rendered. */
+  readonly showInboxRail: boolean;
+  /** Whether the global Continue action should be rendered. */
+  readonly showGlobalContinue: boolean;
 }
 
 /** Input for building the framework-free career shell view. */
@@ -66,6 +77,8 @@ export interface BuildCareerShellViewInput {
   readonly activeSectionKey: CareerShellSectionKey;
   /** Inbox/Posta view already built from structured message input. */
   readonly inboxView: CareerInboxView;
+  /** Optional shell mode. Defaults to the normal career dashboard shell. */
+  readonly mode?: CareerShellMode;
   /** Optional custom navigation definition. Defaults to the current shell map. */
   readonly navigationItems?: readonly CareerShellNavigationItemInput[];
 }
@@ -92,12 +105,15 @@ const DEFAULT_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
  */
 export function buildCareerShellView(input: BuildCareerShellViewInput): CareerShellView {
   const navigationItems = input.navigationItems ?? DEFAULT_NAVIGATION_ITEMS;
+  const mode = input.mode ?? "standard";
+  const modeConfig = shellModeConfig(mode);
 
   return {
     viewKey: "career.shell",
     navigationItems: navigationItems.map((item) => ({
       ...item,
-      isCurrent: item.sectionKey === input.activeSectionKey,
+      isCurrent: item.status === "available" && item.sectionKey === input.activeSectionKey,
+      isInteractive: item.status === "available",
     })),
     activeSectionKey: input.activeSectionKey,
     centralContentSectionKey: input.activeSectionKey,
@@ -107,5 +123,23 @@ export function buildCareerShellView(input: BuildCareerShellViewInput): CareerSh
       inboxView: input.inboxView,
       hasActionRequiredMessages: input.inboxView.actionRequiredCount > 0,
     },
+    mode,
+    showInboxRail: modeConfig.showInboxRail,
+    showGlobalContinue: modeConfig.showGlobalContinue,
   };
+}
+
+function shellModeConfig(mode: CareerShellMode): Readonly<{
+  showInboxRail: boolean;
+  showGlobalContinue: boolean;
+}> {
+  if (mode === "matchday") {
+    return { showInboxRail: false, showGlobalContinue: false };
+  }
+
+  if (mode === "preparation") {
+    return { showInboxRail: true, showGlobalContinue: false };
+  }
+
+  return { showInboxRail: true, showGlobalContinue: true };
 }

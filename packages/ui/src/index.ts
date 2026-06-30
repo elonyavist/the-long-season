@@ -12,4 +12,6 @@ export * from "./career/career-dashboard-actions.ts";
 export * from "./career/career-dashboard-view.ts";
 export * from "./career/career-inbox-view.ts";
 export * from "./career/career-match-preparation-view.ts";
+export * from "./career/career-matchday-phase-view.ts";
+export * from "./career/career-matchday-view.ts";
 export * from "./career/career-shell-view.ts";

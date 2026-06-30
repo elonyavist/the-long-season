@@ -36,7 +36,7 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("de", "career.matchPreparation.summary.blocked"), "Vorbereitung unvollstandig");
   assert.equal(translate("es", "career.matchPreparation.summary.blocked"), "Preparacion incompleta");
   assert.equal(translate("fr", "career.matchPreparation.summary.blocked"), "Preparation incomplete");
-  assert.equal(translate("en", "career.matchPreparation.action.save"), "Save preparation");
+  assert.equal(translate("en", "career.matchPreparation.action.saveAndGoToMatch"), "Save and go to match");
   assert.equal(translate("en", "career.matchPreparation.action.auto"), "Auto");
   assert.equal(translate("it", "career.matchPreparation.action.fillGaps"), "Riempi");
   assert.equal(translate("de", "career.matchPreparation.action.clear"), "Leeren");
@@ -106,6 +106,50 @@ test("translates web theme palette settings in every supported language", () => 
   assert.equal(translate("de", "web.themePalette.clubOffice"), "Clubbuero");
   assert.equal(translate("es", "web.themePalette.clubOffice"), "Oficina club");
   assert.equal(translate("fr", "web.themePalette.pressRoom"), "Salle presse");
+});
+
+test("translates web matchday labels in every supported language", () => {
+  assert.equal(translate("en", "career.matchday.title"), "Matchday");
+  assert.equal(translate("it", "career.matchday.title"), "Giorno partita");
+  assert.equal(translate("it", "career.dashboard.action.go_to_matchday"), "Vai alla partita");
+  assert.equal(translate("de", "career.matchday.status.played"), "Abpfiff");
+  assert.equal(translate("es", "career.matchday.action.play_fixture"), "Jugar partido");
+  assert.equal(translate("fr", "career.matchday.blocker.missing_saved_tactic"), "tactique sauvegardee manquante");
+  assert.equal(translate("en", "career.matchday.phase.half_time"), "Half-time");
+  assert.equal(translate("it", "career.matchday.action.start_first_half"), "Inizia partita");
+  assert.equal(translate("it", "career.matchday.action.start_second_half"), "Inizia secondo tempo");
+  assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Continue");
+  assert.equal(translate("de", "career.matchday.table.rating"), "Note");
+  assert.equal(translate("es", "career.matchday.playerStatus.substituted_on"), "entro");
+  assert.equal(translate("fr", "career.matchday.scoreState.trailing"), "mene");
+  assert.equal(
+    translate("en", "career.matchday.eventLine", {
+      minute: "54",
+      kind: "Goal",
+      club: "S.S. Perugia",
+      player: " Nico Rinaldi",
+    }),
+    "54' Goal S.S. Perugia Nico Rinaldi",
+  );
+});
+
+test("translates half-time substitution labels in every supported language", () => {
+  assert.equal(translate("en", "career.matchday.halfTimeDecision"), "Half-time decisions");
+  assert.equal(translate("en", "career.matchday.halfTimeTacticalWorkspace"), "Half-time tactics");
+  assert.equal(translate("it", "career.matchday.halfTimeValidation.missing_lineup_slot"), "L'undici ha uno slot vuoto.");
+  assert.equal(translate("it", "career.matchday.substitution.apply"), "Applica cambio");
+  assert.equal(translate("de", "career.matchday.substitution.validation.incoming_already_on_pitch"), "Der einzuwechselnde Spieler ist bereits auf dem Feld.");
+  assert.equal(translate("de", "career.matchday.halfTimeValidation.missing_goalkeeper"), "Die Elf braucht einen Torwart.");
+  assert.equal(
+    translate("es", "career.matchday.substitution.count", {
+      count: "1",
+      max: "5",
+    }),
+    "1/5 cambios",
+  );
+  assert.equal(translate("es", "career.matchday.halfTimeTacticalWorkspace"), "Tactica del descanso");
+  assert.equal(translate("fr", "career.matchday.substitution.noneApplied"), "Aucun changement applique.");
+  assert.equal(translate("fr", "career.matchday.halfTimeValidation.player_in_lineup_and_bench"), "Un joueur ne peut pas etre dans le onze et sur le banc.");
 });
 
 test("translates every accepted web skin in every supported language", () => {

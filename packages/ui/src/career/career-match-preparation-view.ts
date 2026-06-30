@@ -375,7 +375,7 @@ export function buildCareerMatchPreparationView(
       actionId: "save_preparation",
       status: blockerKeys.length === 0 ? "available" : "blocked",
       blockerKeys,
-      labelKey: "career.matchPreparation.action.save",
+      labelKey: "career.matchPreparation.action.saveAndGoToMatch",
     },
     summaryKey: summaryKeyForStatus(status),
   };

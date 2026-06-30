@@ -47,6 +47,10 @@ describe("buildCareerDashboardView", () => {
     expect(view.preparation.tacticStatus).toBe("missing");
     expect(view.alertKeys).toEqual(["missing_saved_lineup", "missing_saved_tactic"]);
     expect(view.actions.find((action) => action.actionId === "advance_next_fixture")?.status).toBe("blocked");
+    expect(view.actions.map((action) => action.actionId)).toEqual(["prepare_match", "advance_next_fixture"]);
+    expect(view.actions.filter((action) => action.status === "available").map((action) => action.actionId)).toEqual([
+      "prepare_match",
+    ]);
   });
 
   it("builds a prepared dashboard with advance action available", () => {
@@ -62,6 +66,9 @@ describe("buildCareerDashboardView", () => {
     expect(view.preparation.blockerKeys).toEqual([]);
     expect(view.preparation.targetFixtureId).toBe("fixture:000003");
     expect(view.actions.find((action) => action.actionId === "advance_next_fixture")?.status).toBe("available");
+    expect(view.actions.filter((action) => action.status === "available").map((action) => action.actionId)).toEqual([
+      "advance_next_fixture",
+    ]);
   });
 
   it("blocks advance when there is no next selected-club fixture", () => {
@@ -77,6 +84,8 @@ describe("buildCareerDashboardView", () => {
     expect(view.nextFixture.status).toBe("none");
     expect(view.alertKeys).toEqual(["no_next_fixture"]);
     expect(view.actions.find((action) => action.actionId === "advance_next_fixture")?.blockerKeys).toEqual(["no_next_fixture"]);
+    expect(view.actions.map((action) => action.actionId)).toEqual(["prepare_match", "advance_next_fixture"]);
+    expect(view.actions.filter((action) => action.status === "available")).toEqual([]);
   });
 
   it("summarizes low-condition players without exposing recommendations", () => {

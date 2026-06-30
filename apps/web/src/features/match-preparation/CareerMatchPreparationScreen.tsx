@@ -77,6 +77,7 @@ export function CareerMatchPreparationScreen({
   const shellView = buildCareerShellView({
     activeSectionKey: "dashboard",
     inboxView,
+    mode: "preparation",
   });
   const playerStatusById = useMemo(() => buildPlayerStatusById(view), [view]);
   const tacticalBoardPlayers = useMemo(() => buildDemoTacticalBoardSquadPlayers(), []);
@@ -146,9 +147,19 @@ export function CareerMatchPreparationScreen({
             <h1 className="tls-shell-title" id="match-preparation-title">{text("career.matchPreparation")}</h1>
             <p className="tls-shell-status">{text(view.summaryKey as MessageKey)}</p>
           </div>
-          <button className="tls-menu-button tls-preparation-dashboard" type="button" onClick={onBackToDashboard}>
-            {text("career.shell.nav.dashboard")}
-          </button>
+          <div className="tls-preparation-header-actions">
+            <button className="tls-menu-button tls-preparation-dashboard" type="button" onClick={onBackToDashboard}>
+              {text("career.shell.nav.dashboard")}
+            </button>
+            <button
+              className="tls-menu-button tls-menu-button-primary"
+              disabled={view.saveAction.status !== "available"}
+              type="button"
+              onClick={onSavePreparation}
+            >
+              {text(view.saveAction.labelKey as MessageKey)}
+            </button>
+          </div>
         </header>
 
         <section className="tls-preparation-match-strip" aria-label={text("career.matchPreparation.context")}>
@@ -294,17 +305,6 @@ export function CareerMatchPreparationScreen({
           </div>
         </section>
 
-        <section className="tls-preparation-save" aria-label={text("career.matchPreparation.save")}>
-          <p className="tls-dashboard-line">{text(view.summaryKey as MessageKey)}</p>
-          <button
-            className="tls-menu-button tls-menu-button-primary"
-            disabled={view.saveAction.status !== "available"}
-            type="button"
-            onClick={onSavePreparation}
-          >
-            {text(view.saveAction.labelKey as MessageKey)}
-          </button>
-        </section>
       </section>
     </CareerShell>
   );

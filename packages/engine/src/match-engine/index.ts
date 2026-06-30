@@ -93,6 +93,42 @@ export {
 } from "./simulate-match-with-manual-tactics.ts";
 
 export {
+  buildPlayerMatchRatings,
+  playerRatingRegistrationsFromContext,
+  type BuildPlayerMatchRatingsInput,
+  type PlayerMatchInvolvementSummary,
+  type PlayerMatchRatingRegistration,
+  type PlayerMatchRatingRow,
+  type PlayerMatchRatingSortMode,
+} from "./player-match-rating.ts";
+
+export {
+  applyHalfTimeSubstitutions,
+  type ApplyHalfTimeSubstitutionsInput,
+  type ApplyHalfTimeSubstitutionsResult,
+  type HalfTimeSubstitutionInvalidReason,
+  type HalfTimeSubstitutionsApplied,
+  type HalfTimeSubstitutionsInvalid,
+} from "./half-time-substitutions.ts";
+
+export type { HalfTimeTacticalDecisionPlan, MatchSubstitutionDecision } from "@game/domain";
+
+export {
+  createInitialStagedMatchState,
+  phaseForMinute,
+  progressStagedMatchToFullTime,
+  progressStagedMatchToHalfTime,
+  progressStagedMatchToPhase,
+  StagedMatchProgressionError,
+  type StagedMatchProgressionErrorCode,
+  type StagedMatchProgressionOptions,
+  type StagedMatchProgressionResult,
+  type StagedMatchSnapshot,
+  type StagedMatchState,
+  type StagedMatchTargetPhase,
+} from "./staged-match-progression.ts";
+
+export {
   stepMatch,
   type MatchFullTimeStepEvent,
   type MatchHalfTimeStepEvent,

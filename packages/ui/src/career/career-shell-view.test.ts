@@ -27,7 +27,11 @@ test("buildCareerShellView exposes the default navigation order and active secti
     ],
   );
   assert.equal(view.navigationItems[0]?.isCurrent, true);
+  assert.equal(view.navigationItems[0]?.isInteractive, true);
   assert.equal(view.centralContentSectionKey, "dashboard");
+  assert.equal(view.mode, "standard");
+  assert.equal(view.showInboxRail, true);
+  assert.equal(view.showGlobalContinue, true);
 });
 
 test("buildCareerShellView preserves disabled future sections with label keys", () => {
@@ -39,8 +43,35 @@ test("buildCareerShellView preserves disabled future sections with label keys", 
   const squad = view.navigationItems.find((item) => item.sectionKey === "squad");
 
   assert.equal(squad?.status, "disabled");
+  assert.equal(squad?.isCurrent, false);
+  assert.equal(squad?.isInteractive, false);
   assert.equal(squad?.labelKey, "career.shell.nav.squad");
   assert.equal(squad?.disabledReasonKey, "career.shell.disabled.futurePhase");
+});
+
+test("buildCareerShellView hides global Continue during preparation while keeping Inbox visible", () => {
+  const view = buildCareerShellView({
+    activeSectionKey: "dashboard",
+    inboxView: buildCareerInboxView([]),
+    mode: "preparation",
+  });
+
+  assert.equal(view.mode, "preparation");
+  assert.equal(view.showInboxRail, true);
+  assert.equal(view.showGlobalContinue, false);
+});
+
+test("buildCareerShellView hides Inbox and global Continue during matchday", () => {
+  const view = buildCareerShellView({
+    activeSectionKey: "fixtures",
+    inboxView: buildCareerInboxView([]),
+    mode: "matchday",
+  });
+
+  assert.equal(view.mode, "matchday");
+  assert.equal(view.showInboxRail, false);
+  assert.equal(view.showGlobalContinue, false);
+  assert.equal(view.navigationItems.find((item) => item.sectionKey === "fixtures")?.isCurrent, false);
 });
 
 test("buildCareerShellView derives Inbox rail action-required state", () => {

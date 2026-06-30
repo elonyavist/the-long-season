@@ -296,46 +296,204 @@ Definition of Done:
 - A user can reach matchday, play the fixture, and return to a changed career
   dashboard without using the CLI.
 
-### Phase 66 - Web Career Persistence And Save Adapter
+Current progress:
 
-Primary dependency: Phase 65 playable matchday.
+- Complete. The web app now has the matchday audit, UI read model,
+  engine-backed in-memory web adapter, localized matchday screen,
+  dashboard/Inbox/Posta state update, Playwright desktop/narrow QA evidence,
+  and a final section quality report.
+- Superseded recommendation: persistence was initially recommended next, but
+  matchday UX review showed the current result screen still feels too much like
+  a log/report. Persistence should wait until the matchday experience is worth
+  preserving.
+
+### Phase 66 - Interactive Matchday Flow And Half-Time Decisions
+
+Primary dependency: Phase 65 playable matchday and Phase 64 player-state
+consequences.
 
 Purpose:
 
-- Make the web career survive refresh and separate "new career" from "continue
-  career".
+- Replace the result-only Phase 65 matchday with a real football-manager match
+  centre: pre-match, first half, half-time decisions, second half, and full
+  time.
 
 User-facing reason:
 
-- A manager game cannot feel real if every browser refresh deletes the run.
+- The match is the payoff for preparation. It must be beautiful, readable, and
+  fun before persistence makes the experience durable.
 
 Minimum useful scope:
 
-- audit storage contracts and current web demo adapters;
-- choose the first web persistence Adapter, likely localStorage backed by
-  existing JSON save contracts or a narrow browser save wrapper;
-- validate loaded save data before rendering;
-- implement new career, continue career, and missing-save states;
-- persist selected club, preparation, match results, player state, Inbox/Posta,
-  preferences, and current date as supported by current state;
-- migrate or remove demo-only constants that become obsolete.
+- audit the current log-like matchday UI and one-shot engine flow;
+- add deterministic staged engine progression to half-time and full time;
+- expose half-time snapshots and derived player ratings;
+- allow selected-club half-time substitutions;
+- add a phase-aware `@game/ui` matchday read model;
+- update the web demo adapter and Zustand store for staged matchday state;
+- redesign the match centre with compact scoreboard, phase panel, visual event
+  timeline, useful player table, and full-time-only consequences;
+- reduce clicks from Continue/dashboard to match centre;
+- run Playwright desktop/narrow QA and explicitly reject a log-table result.
 
 What must not happen:
 
-- No cloud sync.
-- No accounts.
-- No SQLite/Tauri.
-- No save editing UI.
-- No hidden reset of user choices.
+- No persistence/localStorage/save adapter.
+- No full animated 2D/3D match viewer.
+- No active extra time or penalties until cup rules exist.
+- No fake player ratings.
+- No team talks unless documented later.
+- No hidden automatic selected-club decisions.
+- No engine tuning just to make the UI prettier.
 
 Definition of Done:
 
-- A web career can be created, prepared, played, refreshed, and continued.
-- Demo-only adapters are either deleted or explicitly isolated as test fixtures.
+- The web user can enter a match centre, play to half-time, inspect score,
+  events, ratings, and condition, make half-time substitutions, play the second
+  half, inspect full-time result/consequences, and return to the dashboard.
+- The match centre feels like a football manager matchday, not a debug log.
 
-### Phase 67 - Inbox/Posta Decision Center
+Current progress:
 
-Primary dependency: Phase 65 matchday slice and Phase 66 persistence.
+- Complete. The engine now exposes deterministic staged regulation-time
+  progression, structured player ratings, and selected-club half-time
+  substitutions. The web app now has a phase-aware match centre, direct
+  dashboard/Continue routing into matchday, half-time decisions, full-time-only
+  consequences, desktop/narrow Playwright QA, and a final report at
+  `docs/audits/INTERACTIVE_MATCHDAY_FLOW_REPORT.md`.
+- Residual risks are documented and non-blocking: the global shell status is
+  not fully synced with active matchday phases, narrow matchday is still long,
+  and first-half progression is a direct jump to half-time rather than a live
+  minute-by-minute viewer.
+- Superseded recommendation: persistence was initially recommended next, but a
+  button/click-flow review showed that the matchday path still has duplicated
+  actions, dead dashboard affordances, and too much shell noise. Persistence
+  should wait until this flow is cleaned up.
+- Next recommendation: proceed to `Phase 67 - Web Matchday Flow
+  Simplification And Half-Time Tactical Decisions`.
+
+### Phase 67 - Web Matchday Flow Simplification And Half-Time Tactical Decisions
+
+Primary dependency: Phase 66 interactive matchday flow.
+
+Purpose:
+
+- Simplify the web matchday path before persistence: one primary action per
+  screen, no dead available buttons, no dashboard bounce after preparation, and
+  a useful half-time tactical workspace.
+
+User-facing reason:
+
+- The match is the emotional payoff. The user should not fight duplicate
+  buttons, inert actions, or bureaucratic routing to reach the important
+  football decisions.
+
+Minimum useful scope:
+
+- audit current buttons, click counts, dead actions, duplicates, and shell noise;
+- make shell actions contextual so matchday hides Inbox/Posta and ambiguous
+  global Continue;
+- keep future nav sections visible but not available-looking;
+- remove dashboard actions that have no useful handler;
+- make dashboard expose one primary next action;
+- replace the lower preparation save button with a top-level "Save and go to
+  match" action;
+- keep explicit pre-match "Start match";
+- make full-time use one final "Continue";
+- add half-time selected-club tactical decisions: substitutions, full formation
+  change, and tactical-board position/role changes before the second half;
+- prove the simplified flow with Playwright desktop/narrow screenshots and
+  click-count evidence.
+
+What must not happen:
+
+- No persistence/localStorage/save adapter.
+- No new career storage model.
+- No team talks.
+- No opponent tactical board.
+- No live minute-by-minute replay.
+- No hidden automatic selected-club decisions.
+- No decorative controls that are not backed by structured behavior.
+
+Definition of Done:
+
+- The accepted cold path is reduced to useful clicks:
+  `Prepare match -> Auto/manual -> tactic -> Save and go to match -> Start
+  match -> half-time decisions -> Start second half -> Continue`.
+- Dashboard has one primary next action and no dead available actions.
+- Matchday hides Inbox/Posta and unrelated global Continue.
+- Half-time allows substitutions and full tactical-board changes for the
+  selected club.
+- Playwright proves no horizontal overflow, no duplicated meaningless CTA, and
+  accessible primary actions.
+
+Result:
+
+- Complete. The web flow now exposes one meaningful primary action per
+  dashboard, preparation, pre-match, half-time, and full-time state. Matchday
+  hides Inbox/Posta and the global Continue, preparation saves directly into
+  pre-match, full time returns through one `Continue`, and half-time uses the
+  shared tactical-board plus fixed bench board for selected-club formation,
+  lineup, role, position, and bench decisions.
+- Browser QA passed on desktop and narrow viewports with a maximum of 8 clicks
+  from new career to dashboard after full time, no horizontal overflow, no
+  stale post-match attention, and keyboard-focusable primary actions.
+- Residual risk: web career state is still in-memory and disappears on refresh.
+  Superseded conclusion: persistence originally looked like the next risk, but
+  product review rejected the broader first-MVP UX language after Phase 67.
+- Next recommendation: proceed to `Phase 68 - MVP UX Language Reset Around
+  Tactical Board` without starting persistence.
+
+### Phase 68 - MVP UX Language Reset Around Tactical Board
+
+Primary dependency: Phase 67 matchday flow simplification.
+
+Purpose:
+
+- Reset the first MVP UX language before persistence or more sections are added.
+
+User-facing reason:
+
+- The tactical board is the only currently approved web surface. The rest of
+  the MVP must be redesigned around that football-manager quality before the
+  experience is made durable.
+
+Minimum useful scope:
+
+- audit current UX failure and lock the tactical board as visual anchor;
+- define MVP UX language, screen hierarchy, and first-MVP information
+  architecture;
+- create static screen direction and stop for approval before app-wide code
+  rework;
+- rework shared web layout, dashboard, Inbox/Posta, match preparation, and
+  matchday only after that direction is accepted;
+- keep the engine and current tactical-board behavior stable;
+- prove the result with Playwright desktop/narrow screenshots and accessibility
+  checks.
+
+What must not happen:
+
+- No web persistence/localStorage/save adapter.
+- No new gameplay systems.
+- No tactical-board replacement.
+- No live replay.
+- No new palette catalog explosion.
+- No source implementation after the static direction gate if the direction is
+  not approved.
+
+Definition of Done:
+
+- The current MVP UX failure is documented.
+- The tactical board is preserved as the approved anchor.
+- The first MVP UX language and information architecture are explicit.
+- Dashboard, Inbox/Posta, preparation, and matchday no longer feel like debug
+  tables or generic SaaS surfaces.
+- The final report says whether persistence can resume or whether another UX
+  pass is required.
+
+### Phase 69 - Inbox/Posta Decision Center
+
+Primary dependency: accepted MVP UX language and future web persistence.
 
 Purpose:
 
@@ -375,9 +533,9 @@ Definition of Done:
 - Every action-required message either links to a real screen or clearly
   explains the blocker.
 
-### Phase 68 - Squad Screen And Player Memory Foundation
+### Phase 69 - Squad Screen And Player Memory Foundation
 
-Primary dependency: Phase 64 player-state reactivity and Phase 66 persistence.
+Primary dependency: Phase 64 player-state reactivity and Phase 68 persistence.
 
 Purpose:
 
@@ -413,9 +571,10 @@ Definition of Done:
 - It exposes player stories already created by the engine instead of inventing
   decorative biography.
 
-### Phase 69 - Calendar, Fixtures, And Season Recap
+### Phase 70 - Calendar, Fixtures, And Season Recap
 
-Primary dependency: Phase 63 career advancement and Phase 65 matchday.
+Primary dependency: Phase 63 career advancement, Phase 66 interactive matchday,
+and Phase 68 persistence.
 
 Purpose:
 
@@ -448,9 +607,9 @@ Definition of Done:
 - The user can understand the season rhythm and can review the story of a
   completed season without running CLI reports.
 
-### Phase 70 - Match Engine Feel And Tactical Input Effect Review
+### Phase 71 - Match Engine Feel And Tactical Input Effect Review
 
-Primary dependency: Phase 62 safety net and Phase 65 web matchday.
+Primary dependency: Phase 62 safety net and Phase 66 interactive web matchday.
 
 Purpose:
 
@@ -483,7 +642,7 @@ Definition of Done:
 - Every exposed tactical control either has a documented bounded effect or is
   removed/deferred from user-facing surfaces.
 
-### Phase 71 - Player Generation And Model Consolidation Cleanup
+### Phase 72 - Player Generation And Model Consolidation Cleanup
 
 Primary dependency: Phase 62 safety net.
 
@@ -519,9 +678,9 @@ Definition of Done:
 - Player generation is easier for a junior developer to follow and harder to
   accidentally fork into parallel models.
 
-### Phase 72 - Market UI MVP With Budget Visibility
+### Phase 73 - Market UI MVP With Budget Visibility
 
-Primary dependency: Phase 68 squad screen and Phase 66 persistence.
+Primary dependency: Phase 69 squad screen and Phase 68 persistence.
 
 Purpose:
 
@@ -554,9 +713,9 @@ Definition of Done:
 - The user can make a permanent transfer decision that changes the save and
   creates a visible squad consequence.
 
-### Phase 73 - Finances Foundation And Poverty Loop MVP
+### Phase 74 - Finances Foundation And Poverty Loop MVP
 
-Primary dependency: Phase 72 market UI and existing budget state.
+Primary dependency: Phase 73 market UI and existing budget state.
 
 Purpose:
 
@@ -589,7 +748,7 @@ Definition of Done:
 - At least one manager decision is constrained by money in a visible,
   understandable way.
 
-### Phase 74 - Promotion Pyramid And La Scalata Foundation
+### Phase 75 - Promotion Pyramid And La Scalata Foundation
 
 Primary dependency: Phase 63 canonical season advancement and enough persistence
 to survive multiple seasons.
@@ -624,9 +783,9 @@ Definition of Done:
 - A deterministic career can move clubs between divisions and preserve coherent
   history.
 
-### Phase 75 - Youth, Staff, Facilities, And Archive Expansion Plan
+### Phase 76 - Youth, Staff, Facilities, And Archive Expansion Plan
 
-Primary dependency: Phases 68, 69, 73, and 74.
+Primary dependency: Phases 69, 70, 74, and 75.
 
 Purpose:
 
@@ -654,7 +813,7 @@ Definition of Done:
 
 - The next pillar is selected with evidence, not because it was next in a list.
 
-### Phase 76 - Narrative Content Factory And Corpus Foundation
+### Phase 77 - Narrative Content Factory And Corpus Foundation
 
 Primary dependency: a playable matchday loop, durable structured match/world
 events, and at least one surface where narrative variety would improve user
@@ -711,21 +870,28 @@ Definition of Done:
 
 ## Recommended Immediate Sequence
 
-The next three phases should be:
+Current status:
 
 1. `Phase 62 - Engine Safety Net And Deterministic Regression Gates` - complete
 2. `Phase 63 - Canonical Career Advancement Use-Case` - complete
-3. `Phase 64 - Match Consequences And Player State Reactivity`
+3. `Phase 64 - Match Consequences And Player State Reactivity` - complete
+4. `Phase 65 - Web Matchday Playable Slice` - complete
+5. `Phase 66 - Interactive Matchday Flow And Half-Time Decisions` - complete
+6. `Phase 67 - Web Matchday Flow Simplification And Half-Time Tactical Decisions` - complete
+
+Next recommendation:
+
+1. `Phase 68 - MVP UX Language Reset Around Tactical Board`
+2. `Future Web Persistence And Save Adapter`
+3. `Future Web Backlog - Inbox/Posta Decision Center`
 
 Reason:
 
-- Phase 62 protects the engine before behavior changes.
-- Phase 63 prevents CLI and web from forking career advancement.
-- Phase 64 makes match preparation, rotation, and results matter emotionally and
-  mechanically.
-
-Only after these should the project resume web expansion with real matchday and
-Inbox/Posta.
+- Phase 67 made the click path technically cleaner, but product review rejected
+  the broader first-MVP UX language.
+- Persistence would make a weak experience durable, so it must wait.
+- The tactical board is the approved anchor; the surrounding MVP language must
+  be rebuilt around it before save lifecycle work resumes.
 
 ## Relationship To Web Section Roadmap
 

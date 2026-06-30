@@ -6,6 +6,14 @@ import {
   buildDemoCareerDashboard,
   buildDemoCareerDashboardInput,
 } from "./build-demo-career-dashboard";
+import {
+  createCompleteUnsavedDemoMatchPreparationState,
+  saveDemoMatchPreparation,
+} from "../match-preparation/match-preparation-demo";
+import {
+  createInitialDemoMatchdayState,
+  playDemoMatchdayFixture,
+} from "../matchday/matchday-demo";
 
 describe("buildDemoCareerDashboard", () => {
   it("builds deterministic dashboard facts without writing a save", () => {
@@ -50,6 +58,23 @@ describe("buildDemoCareerDashboard", () => {
       hasSavedLineup: false,
       hasSavedTactic: false,
       targetFixtureId: "fixture:000003",
+    });
+  });
+
+  it("updates dashboard facts after the demo matchday is played", () => {
+    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
+    const matchdayState = playDemoMatchdayFixture(createInitialDemoMatchdayState(), savedPreparation);
+    const view = buildDemoCareerDashboard(undefined, matchdayState);
+
+    expect(view.nextFixture.status).toBe("none");
+    expect(view.alertKeys).toEqual(["no_next_fixture"]);
+    expect(view.preparation.blockerKeys).toEqual([]);
+    expect(view.conditionSummary.averageFitness).toBeLessThan(100);
+    expect(view.recentMatch).toMatchObject({
+      status: "available",
+      fixtureId: "fixture:000003",
+      homeClubName: "U.S. Pisa",
+      awayClubName: "S.S. Perugia",
     });
   });
 });

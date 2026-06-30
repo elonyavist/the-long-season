@@ -862,7 +862,213 @@ What must not happen:
 - No full 2D/3D match viewer.
 - No animation-heavy match screen before the result loop is excellent.
 
-### Phase 66 - Market UI MVP
+Current progress:
+
+- Complete through the superseding operational Phase 65
+  `web-matchday-playable-slice`.
+- The browser can prepare the selected club, Continue to matchday, open the
+  matchday screen from Inbox/Posta, play the fixture through the real engine
+  path, inspect result/consequence facts, and return to an updated dashboard.
+- Product rework decision: the Phase 65 result screen is technically playable
+  but still feels too much like a log/report. The operational next phase is now
+  `Phase 66 - Interactive Matchday Flow And Half-Time Decisions` from
+  `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md`, not the old Market
+  UI row below.
+- Persistence should wait until this interactive matchday experience is worth
+  preserving.
+- Phase 66 Step 01 audit is complete: the existing result screen should be
+  treated as evidence, not the target experience. The next implementation seam
+  is staged match-engine progression below `progressNextCareerFixture`.
+- Phase 66 Step 02 is complete: the engine now exposes a deterministic staged
+  regulation-time contract that can stop at half-time and continue to full time
+  without activating future extra-time or penalty behavior.
+- Phase 66 Step 03 is complete: staged snapshots now include deterministic
+  player ratings derived from structured events, with no random or prose-based
+  match evaluation.
+- Phase 66 Step 04 is complete: selected-club half-time substitutions are now
+  explicit manager-declared facts that update the second-half staged context.
+- Phase 66 Step 05 is complete: `@game/ui` now has a phase-aware matchday read
+  model for scoreboard, timeline, ratings, half-time actions, and full-time-only
+  consequences.
+- Phase 66 Step 06 is complete: the web demo adapter and Zustand store can now
+  progress matchday from pre-match to half-time, accept explicit substitutions,
+  continue to full time, and update dashboard-compatible career facts.
+- Phase 66 Step 07 is complete: the matchday screen now renders a phase-aware
+  match centre with dominant scoreboard, period rail, event cards, useful
+  player rating/condition/contribution rows, localized labels, and
+  full-time-only consequences instead of a raw log-like report.
+- Phase 66 Step 08 is complete: the half-time screen now exposes selected-club
+  substitution decisions from structured lineup/bench facts, shows rating and
+  condition context for the first-half decision, rejects invalid changes with
+  localized feedback, and records applied substitutions without adding team
+  talks, opponent choices, persistence, or full tactical-board editing.
+- Phase 66 Step 09 is complete: dashboard Continue now routes directly to the
+  match centre when matchday is reached, the dashboard exposes a clear "Go to
+  match" primary action, Inbox/Posta remains accurate as an attention record,
+  and the app shell passes phase-aware matchday facts plus half-time callbacks
+  into the browser match centre.
+- Phase 66 Step 10 is complete: Playwright QA now covers desktop and narrow
+  interactive matchday flow from dashboard/preparation to pre-match, half-time,
+  substitution, full time, and dashboard return. QA fixed narrow player rows,
+  removed a duplicate half-time no-op action, and documented that the match
+  centre no longer reads as a raw log table.
+- Phase 66 final report is complete, but the follow-up button/click-flow review
+  supersedes the immediate persistence recommendation. The operational next
+  web-product step is now `Phase 67 - Web Matchday Flow Simplification And
+  Half-Time Tactical Decisions`; persistence should wait until duplicated
+  buttons, dead dashboard actions, shell noise, and half-time tactical decisions
+  are cleaned up.
+
+### Phase 67 - Web Matchday Flow Simplification And Half-Time Tactical Decisions
+
+Primary dependency: Phase 66 interactive matchday flow.
+
+Purpose:
+
+- Reduce matchday friction and make the web match path feel like a focused
+  football-manager flow before persistence.
+
+Minimum useful scope:
+
+- audit current button surface and click count;
+- hide Inbox/Posta and ambiguous global Continue during matchday;
+- keep future navigation visible but non-clickable;
+- remove available dashboard actions that do not have real screens or handlers;
+- make dashboard expose exactly one primary next action;
+- replace bottom preparation save with top-level "Save and go to match";
+- keep explicit pre-match "Start match";
+- make half-time a required tactical decision stop with substitutions and full
+  formation/board changes;
+- make full-time use one final "Continue";
+- prove desktop/narrow flow with Playwright and record final click count.
+
+What must not happen:
+
+- No persistence.
+- No live replay.
+- No team talks.
+- No opponent tactical board.
+- No new market/finance/youth sections.
+
+Current progress:
+
+- Step 01 is complete: `MATCHDAY_FLOW_SIMPLIFICATION_AUDIT.md` records the
+  current cold/warm click paths, visible button surface, dead dashboard actions,
+  duplicate actions, shell noise, Inbox/Posta visibility during matchday, and
+  the accepted target flow. The target is one primary action per screen, no
+  available dead controls, `Save and go to match` from preparation, explicit
+  `Start match`, a useful half-time tactical stop, and final `Continue` back to
+  a clean dashboard.
+- Step 02 is complete: the shell read model now has focused modes for standard,
+  preparation, and matchday contexts. Matchday mode can render without
+  Inbox/Posta or global Continue, preparation mode can suppress global Continue,
+  and disabled future navigation items remain visible as non-interactive
+  navigation text rather than available-looking buttons.
+- Step 03 is complete: the dashboard read model now emits only real current
+  actions (`prepare_match` when it resolves preparation blockers and
+  `advance_next_fixture` when matchday can be opened), while the web dashboard
+  removes the duplicated lower action list so the user sees one primary next
+  action.
+- Step 04 is complete: match preparation now exposes a top-level `Save and go
+  to match` CTA, removes the old bottom `Save preparation` duplicate, suppresses
+  the shell global Continue in preparation mode, and routes a complete saved
+  setup directly into the explicit pre-match state without auto-starting the
+  match.
+- Step 05 is complete: the phase-aware matchday read model now exposes exactly
+  one primary action per phase, the matchday shell hides Inbox/Posta and global
+  Continue, the matchday header no longer shows a duplicate Dashboard route, and
+  full time returns through a single localized `Continue` action that clears
+  stale attention text before opening the dashboard.
+- Step 06 is complete: domain now owns a structured selected-club half-time
+  tactical decision plan with validation facts for invalid setup, empty XI
+  slots, duplicate players, missing goalkeeper, bench overlap, and substitution
+  limits. The staged engine can consume that validated plan for the second-half
+  selected-club lineup while preserving existing substitution-only behavior and
+  carrying the applied plan through full-time snapshots.
+- Step 07 is complete: half-time now uses the shared tactical board and fixed
+  bench board as the decision workspace. The web app passes the current
+  preparation draft into matchday, lets the manager adjust formation, XI,
+  player roles, slot positions, and bench assignments at the break, and feeds
+  those choices into the structured half-time tactical plan before starting the
+  second half. Validation issues are localized from structured fact keys, and
+  the old two-select substitution panel remains only as a fallback.
+- Step 08 is complete: browser QA drove the simplified dashboard-to-full-time
+  path on desktop and narrow viewports, generated screenshots for dashboard,
+  preparation, pre-match, half-time, full-time, and dashboard-after-match, and
+  recorded a maximum flow count of 8 clicks with no horizontal overflow,
+  no matchday Inbox/Posta rail, no global matchday Continue, and no dead
+  dashboard action buttons.
+- Step 09 is complete: `MATCHDAY_FLOW_SIMPLIFICATION_REPORT.md` closes the
+  phase with the final click-flow evidence, removed/renamed/contextual action
+  list, shell-mode explanation, dashboard/preparation/matchday entry points,
+  Playwright screenshot findings, residual UX risks, and the next-phase
+  decision.
+
+Final decision:
+
+- Phase 67 is complete.
+- Superseded decision: the original recommendation was `Phase 68 - Web Career
+  Persistence And Save Adapter`.
+- Product review rejected the broader first-MVP UX language after Phase 67.
+  Persistence is postponed again because it would make a weak experience
+  durable.
+- The next web phase is now `Phase 68 - MVP UX Language Reset Around Tactical
+  Board`.
+
+### Phase 68 - MVP UX Language Reset Around Tactical Board
+
+Primary dependency: Phase 67 matchday flow simplification.
+
+Purpose:
+
+- Reset the first MVP web UX language around the one approved surface: the
+  tactical board.
+
+User-facing reason:
+
+- The tactical board is the first screen element that feels close to the desired
+  football-manager quality. The rest of the MVP must be redesigned around that
+  anchor before more systems or persistence are added.
+
+Minimum useful scope:
+
+- audit why the current shell, dashboard, Inbox/Posta, preparation chrome, and
+  matchday UX are rejected;
+- formally lock the tactical board as the approved visual anchor;
+- define the first MVP UX language and screen hierarchy;
+- define first MVP information architecture and manager flow;
+- create static direction for main menu, dashboard, Inbox/Posta, match
+  preparation, and matchday before app-wide implementation;
+- rework shared layout/components only after the static direction is accepted;
+- rework dashboard and Inbox/Posta into a command centre;
+- rework match preparation around the approved board without replacing it;
+- rework matchday so it no longer feels like a log/debug report;
+- prove the result with Playwright desktop/narrow visual QA and accessibility
+  checks.
+
+What must not happen:
+
+- No persistence/localStorage/save adapter.
+- No new market, finance, youth, staff, archive, facilities, or squad feature
+  expansion.
+- No tactical-board replacement.
+- No live replay or new match-engine behavior.
+- No new palette explosion.
+- No app code after the static direction step unless the direction is accepted
+  or the blocker is documented.
+
+Definition of Done:
+
+- The current UX failure is documented honestly.
+- The tactical board is preserved as the visual anchor.
+- The first MVP UX language and information architecture are explicit.
+- Static direction is accepted before source rework continues.
+- Dashboard, Inbox/Posta, preparation, and matchday no longer feel like debug
+  tables or generic SaaS surfaces.
+- Final report states whether persistence can resume or another UX pass is
+  required.
+
+### Future Web Backlog - Market UI MVP
 
 Primary dependency: squad screen and basic finances/budget visibility.
 
@@ -893,7 +1099,7 @@ What must not happen:
 - No complex add-ons.
 - No scouting fog unless specifically designed.
 
-### Phase 67 - Finances Foundation
+### Future Web Backlog - Finances Foundation
 
 Primary dependency: market starts needing real budget context.
 
@@ -922,7 +1128,7 @@ What must not happen:
 - No fake financial complexity just to fill a screen.
 - No economy values that do not affect decisions.
 
-### Phase 68 - Youth UI
+### Future Web Backlog - Youth UI
 
 Primary dependency: squad screen and youth lifecycle.
 
@@ -952,7 +1158,7 @@ What must not happen:
 - No overpopulation of youth players.
 - No guaranteed wonderkid pipeline.
 
-### Phase 69 - Staff Foundation
+### Future Web Backlog - Staff Foundation
 
 Primary dependency: player development, youth, condition, and market need staff
 effects to matter.
@@ -974,7 +1180,7 @@ What must not happen:
 - No staff screen made of names and no effects.
 - No staff attributes without engine usage.
 
-### Phase 70 - Archive And History
+### Future Web Backlog - Archive And History
 
 Primary dependency: at least one completed playable season loop.
 
@@ -1003,7 +1209,7 @@ What must not happen:
 - No static archive without persisted events.
 - No history screen that reconstructs unreliable facts from current state only.
 
-### Phase 71 - Main Dashboard Consolidation
+### Future Web Backlog - Main Dashboard Consolidation
 
 Primary dependency: enough real sections exist to summarize.
 
@@ -1046,16 +1252,20 @@ Recommended order:
 8. Phase 59 - Shared Bench Board And Substitute Selection
 9. Phase 60 - Web Theme Palette And User Color Preferences
 10. Phase 61 - Web Visual Identity System Rework
-11. Phase 62 - Inbox/Posta Decision Center
-12. Phase 63 - Squad Screen
-13. Phase 64 - Calendar And Fixtures
-14. Phase 65 - Matchday Flow
-15. Phase 66 - Market UI MVP
-16. Phase 67 - Finances Foundation
-17. Phase 68 - Youth UI
-18. Phase 69 - Staff Foundation
-19. Phase 70 - Archive And History
-20. Phase 71 - Main Dashboard Consolidation
+11. Phase 62+ engine/playability safety and advancement phases, as documented
+    in `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md`
+12. Phase 67 - Web Matchday Flow Simplification And Half-Time Tactical Decisions
+13. Phase 68 - MVP UX Language Reset Around Tactical Board
+14. Future Web Persistence And Save Adapter
+15. Future Web Backlog - Inbox/Posta Decision Center
+16. Future Web Backlog - Squad Screen
+17. Future Web Backlog - Calendar And Fixtures
+18. Future Web Backlog - Market UI MVP
+19. Future Web Backlog - Finances Foundation
+18. Future Web Backlog - Youth UI
+19. Future Web Backlog - Staff Foundation
+20. Future Web Backlog - Archive And History
+21. Future Web Backlog - Main Dashboard Consolidation
 
 This order is intentionally linear:
 

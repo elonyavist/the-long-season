@@ -21,10 +21,19 @@ import {
   selectDemoMatchPreparationPlayer,
   selectDemoMatchPreparationTactic,
 } from "../features/match-preparation/match-preparation-demo";
+import {
+  applyDemoHalfTimeSubstitutions,
+  createInitialDemoMatchdayState,
+  playDemoMatchdayFirstHalf,
+  playDemoMatchdayFixture,
+  playDemoMatchdaySecondHalf,
+  type DemoHalfTimeSubstitutionDecision,
+  type DemoMatchdayState,
+} from "../features/matchday/matchday-demo";
 import type { TacticalBoardRoleCode } from "../features/tactics-board/tactical-board-types";
 
 /** Current top-level screen in the in-memory web career prototype. */
-export type CareerUiScreen = "app_entry" | "career_dashboard" | "match_preparation";
+export type CareerUiScreen = "app_entry" | "career_dashboard" | "match_preparation" | "matchday";
 
 /** Browser-owned career UI state that must not duplicate engine rules. */
 export interface CareerUiStoreState {
@@ -38,6 +47,8 @@ export interface CareerUiStoreState {
   readonly continueResult: DemoCareerContinueResult | undefined;
   /** Current unsaved or saved match-preparation draft. */
   readonly matchPreparationState: DemoMatchPreparationState;
+  /** Engine-backed in-memory matchday adapter state for the current demo career. */
+  readonly matchdayState: DemoMatchdayState;
   /** Replaces bounded web preferences from the settings controls. */
   readonly setPreferences: (preferences: WebPreferences) => void;
   /** Updates only the selected display palette, falling back on invalid ids. */
@@ -50,12 +61,24 @@ export interface CareerUiStoreState {
   readonly backToMenu: () => void;
   /** Opens the dashboard without mutating career facts. */
   readonly openDashboard: () => void;
+  /** Finishes matchday presentation and returns to a dashboard without stale attention text. */
+  readonly finishMatchdayAndOpenDashboard: () => void;
+  /** Opens the matchday centre without mutating career facts. */
+  readonly openMatchday: () => void;
   /** Opens the match-preparation workspace. */
   readonly openMatchPreparation: () => void;
   /** Handles action IDs coming from Inbox/Posta cards. */
   readonly handleInboxAction: (actionId: string) => void;
   /** Runs the current Continue prototype against the current preparation draft. */
   readonly continueCareer: () => void;
+  /** Plays the prepared selected-club fixture through the engine-backed web adapter. */
+  readonly playMatchdayFixture: () => void;
+  /** Progresses matchday to a real half-time stop. */
+  readonly playMatchdayFirstHalf: () => void;
+  /** Applies manager-declared half-time substitutions. */
+  readonly applyHalfTimeSubstitutions: (decisions: readonly DemoHalfTimeSubstitutionDecision[]) => void;
+  /** Progresses matchday from half-time to full time. */
+  readonly playMatchdaySecondHalf: () => void;
   /** Selects the formation for the current preparation draft. */
   readonly selectFormation: (formationId: CareerMatchPreparationFormationId) => void;
   /** Selects or clears one lineup player in the current preparation draft. */
@@ -74,12 +97,14 @@ export interface CareerUiStoreState {
   readonly clearBoardSlot: (slotKey: string) => void;
   /** Saves the current preparation draft only when the read model allows it. */
   readonly savePreparation: () => void;
+  /** Saves a complete preparation draft and opens the explicit pre-match state. */
+  readonly savePreparationAndOpenMatchday: () => void;
 }
 
 /** Builds the data portion of the store for app startup and deterministic reset. */
 function createInitialCareerUiState(): Pick<
   CareerUiStoreState,
-  "continueResult" | "hasDemoCareer" | "matchPreparationState" | "preferences" | "screen"
+  "continueResult" | "hasDemoCareer" | "matchPreparationState" | "matchdayState" | "preferences" | "screen"
 > {
   return {
     preferences: DEFAULT_WEB_PREFERENCES,
@@ -87,6 +112,7 @@ function createInitialCareerUiState(): Pick<
     screen: "app_entry",
     continueResult: undefined,
     matchPreparationState: createInitialDemoMatchPreparationState(),
+    matchdayState: createInitialDemoMatchdayState(),
   };
 }
 
@@ -115,6 +141,7 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       hasDemoCareer: true,
       screen: "career_dashboard",
       matchPreparationState: createInitialDemoMatchPreparationState(),
+      matchdayState: createInitialDemoMatchdayState(),
       continueResult: undefined,
     });
   },
@@ -129,6 +156,12 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
   openDashboard: () => {
     set({ screen: "career_dashboard" });
   },
+  finishMatchdayAndOpenDashboard: () => {
+    set({ screen: "career_dashboard", continueResult: undefined });
+  },
+  openMatchday: () => {
+    set({ screen: "matchday" });
+  },
   openMatchPreparation: () => {
     set({ screen: "match_preparation" });
   },
@@ -136,9 +169,55 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
     if (actionId === "prepare_match") {
       set({ screen: "match_preparation" });
     }
+
+    if (actionId === "open_matchday") {
+      set({ screen: "matchday" });
+    }
   },
   continueCareer: () => {
-    set({ continueResult: continueDemoCareer(get().matchPreparationState) });
+    const state = get();
+    const continueResult = continueDemoCareer(state.matchPreparationState, state.matchdayState);
+
+    set({
+      continueResult,
+      ...(continueResult.stopReason === "matchday_reached" ? { screen: "matchday" as const } : {}),
+    });
+  },
+  playMatchdayFixture: () => {
+    set((state) => {
+      const matchdayState = playDemoMatchdayFixture(state.matchdayState, state.matchPreparationState);
+
+      return {
+        matchdayState,
+        continueResult:
+          matchdayState.lastPlayAttempt.status === "advanced"
+            ? continueDemoCareer(state.matchPreparationState, matchdayState)
+            : state.continueResult,
+      };
+    });
+  },
+  playMatchdayFirstHalf: () => {
+    set((state) => ({
+      matchdayState: playDemoMatchdayFirstHalf(state.matchdayState, state.matchPreparationState),
+    }));
+  },
+  applyHalfTimeSubstitutions: (decisions) => {
+    set((state) => ({
+      matchdayState: applyDemoHalfTimeSubstitutions(state.matchdayState, decisions),
+    }));
+  },
+  playMatchdaySecondHalf: () => {
+    set((state) => {
+      const matchdayState = playDemoMatchdaySecondHalf(state.matchdayState, state.matchPreparationState);
+
+      return {
+        matchdayState,
+        continueResult:
+          matchdayState.lastStagedAttempt.status === "full_time"
+            ? continueDemoCareer(state.matchPreparationState, matchdayState)
+            : state.continueResult,
+      };
+    });
   },
   selectFormation: (formationId) => {
     set((state) => ({
@@ -186,6 +265,14 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
     set({
       matchPreparationState: result.state,
       ...(result.state.isSaved ? { continueResult: undefined } : {}),
+    });
+  },
+  savePreparationAndOpenMatchday: () => {
+    const result = saveDemoMatchPreparation(get().matchPreparationState);
+
+    set({
+      matchPreparationState: result.state,
+      ...(result.state.isSaved ? { continueResult: undefined, screen: "matchday" as const } : {}),
     });
   },
 }));

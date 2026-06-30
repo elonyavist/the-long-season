@@ -8,8 +8,14 @@ import {
   buildDemoMatchPreparationView,
   buildDemoSavedPreparationInput,
 } from "../features/match-preparation/match-preparation-demo";
+import {
+  buildDemoHalfTimeSubstitutionPanel,
+  buildDemoMatchdayPhaseView,
+  buildDemoMatchdayView,
+} from "../features/matchday/matchday-demo";
 import { AppEntryScreen } from "../features/app-entry/AppEntryScreen";
 import { CareerDashboardScreen } from "../features/dashboard/CareerDashboardScreen";
+import { CareerMatchdayScreen } from "../features/matchday/CareerMatchdayScreen";
 import { CareerMatchPreparationScreen } from "../features/match-preparation/CareerMatchPreparationScreen";
 import { useCareerUiStore } from "../stores/career-ui-store";
 
@@ -26,14 +32,20 @@ export function App(): React.JSX.Element {
   const screen = useCareerUiStore((state) => state.screen);
   const continueResult = useCareerUiStore((state) => state.continueResult);
   const matchPreparationState = useCareerUiStore((state) => state.matchPreparationState);
+  const matchdayState = useCareerUiStore((state) => state.matchdayState);
   const setPreferences = useCareerUiStore((state) => state.setPreferences);
   const startNewCareer = useCareerUiStore((state) => state.startNewCareer);
   const continueExistingCareer = useCareerUiStore((state) => state.continueExistingCareer);
   const backToMenu = useCareerUiStore((state) => state.backToMenu);
   const openDashboard = useCareerUiStore((state) => state.openDashboard);
+  const finishMatchdayAndOpenDashboard = useCareerUiStore((state) => state.finishMatchdayAndOpenDashboard);
+  const openMatchday = useCareerUiStore((state) => state.openMatchday);
   const openMatchPreparation = useCareerUiStore((state) => state.openMatchPreparation);
   const handleInboxAction = useCareerUiStore((state) => state.handleInboxAction);
   const continueCareer = useCareerUiStore((state) => state.continueCareer);
+  const playMatchdayFirstHalf = useCareerUiStore((state) => state.playMatchdayFirstHalf);
+  const applyHalfTimeSubstitutions = useCareerUiStore((state) => state.applyHalfTimeSubstitutions);
+  const playMatchdaySecondHalf = useCareerUiStore((state) => state.playMatchdaySecondHalf);
   const selectFormation = useCareerUiStore((state) => state.selectFormation);
   const selectLineupPlayer = useCareerUiStore((state) => state.selectLineupPlayer);
   const selectBenchPlayer = useCareerUiStore((state) => state.selectBenchPlayer);
@@ -42,19 +54,31 @@ export function App(): React.JSX.Element {
   const moveBoardSlot = useCareerUiStore((state) => state.moveBoardSlot);
   const changeBoardSlotRole = useCareerUiStore((state) => state.changeBoardSlotRole);
   const clearBoardSlot = useCareerUiStore((state) => state.clearBoardSlot);
-  const savePreparation = useCareerUiStore((state) => state.savePreparation);
+  const savePreparationAndOpenMatchday = useCareerUiStore((state) => state.savePreparationAndOpenMatchday);
   const text = useMemo(() => createWebTranslator(preferences.language), [preferences.language]);
   const appEntryView = useMemo(
     () => buildAppEntryViewModel({ preferences, hasDemoCareer }),
     [hasDemoCareer, preferences],
   );
   const dashboardPresentation = useMemo(
-    () => presentCareerDashboard(buildDemoCareerDashboard(buildDemoSavedPreparationInput(matchPreparationState))),
-    [matchPreparationState],
+    () => presentCareerDashboard(buildDemoCareerDashboard(buildDemoSavedPreparationInput(matchPreparationState), matchdayState)),
+    [matchPreparationState, matchdayState],
   );
   const matchPreparationView = useMemo(
     () => buildDemoMatchPreparationView(matchPreparationState),
     [matchPreparationState],
+  );
+  const matchdayView = useMemo(
+    () => buildDemoMatchdayView(matchdayState, matchPreparationState),
+    [matchPreparationState, matchdayState],
+  );
+  const matchdayPhaseView = useMemo(
+    () => buildDemoMatchdayPhaseView(matchdayState),
+    [matchdayState],
+  );
+  const halfTimeSubstitutions = useMemo(
+    () => buildDemoHalfTimeSubstitutionPanel(matchdayState),
+    [matchdayState],
   );
 
   useEffect(() => {
@@ -77,8 +101,37 @@ export function App(): React.JSX.Element {
         text={text}
         onBackToMenu={backToMenu}
         onContinueCareer={continueCareer}
+        onOpenMatchday={openMatchday}
         onOpenMatchPreparation={openMatchPreparation}
         onInboxActionClick={handleInboxAction}
+      />
+    );
+  }
+
+  if (screen === "matchday") {
+    return (
+      <CareerMatchdayScreen
+        view={matchdayView}
+        phaseView={matchdayPhaseView}
+        halfTimeSubstitutions={halfTimeSubstitutions}
+        matchPreparationView={matchPreparationView}
+        tacticalBoardDraft={matchPreparationState.tacticalBoardDraft}
+        {...(continueResult === undefined ? {} : { continueResult })}
+        text={text}
+        onBackToMenu={backToMenu}
+        onBackToDashboard={finishMatchdayAndOpenDashboard}
+        onContinueCareer={continueCareer}
+        onInboxActionClick={handleInboxAction}
+        onPrepareMatch={openMatchPreparation}
+        onPlayFixture={playMatchdayFirstHalf}
+        onApplyHalfTimeSubstitution={(decision) => applyHalfTimeSubstitutions([decision])}
+        onHalfTimeFormationChange={selectFormation}
+        onHalfTimeLineupPlayerChange={selectLineupPlayer}
+        onHalfTimeBenchPlayerChange={selectBenchPlayer}
+        onHalfTimeBoardSlotMove={moveBoardSlot}
+        onHalfTimeBoardSlotRoleChange={changeBoardSlotRole}
+        onHalfTimeBoardSlotClear={clearBoardSlot}
+        onStartSecondHalf={playMatchdaySecondHalf}
       />
     );
   }
@@ -102,7 +155,7 @@ export function App(): React.JSX.Element {
         onBoardSlotMove={moveBoardSlot}
         onBoardSlotRoleChange={changeBoardSlotRole}
         onBoardSlotClear={clearBoardSlot}
-        onSavePreparation={savePreparation}
+        onSavePreparation={savePreparationAndOpenMatchday}
       />
     );
   }

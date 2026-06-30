@@ -27,7 +27,7 @@ describe("buildCareerMatchPreparationView", () => {
       actionId: "save_preparation",
       status: "blocked",
       blockerKeys: ["missing_lineup_slot", "missing_tactic"],
-      labelKey: "career.matchPreparation.action.save",
+      labelKey: "career.matchPreparation.action.saveAndGoToMatch",
     });
   });
 

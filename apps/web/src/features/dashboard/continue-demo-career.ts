@@ -7,6 +7,7 @@ import { fromISO, toISO } from "@game/shared";
 import type { CareerInboxMessageInput } from "@game/ui";
 
 import { buildDemoCareerDashboardInput } from "./build-demo-career-dashboard";
+import type { DemoDashboardMatchdayState } from "./build-demo-career-dashboard";
 import type { DemoMatchPreparationState } from "../match-preparation/match-preparation-demo";
 import { buildDemoSavedPreparationInput } from "../match-preparation/match-preparation-demo";
 
@@ -35,9 +36,13 @@ export interface DemoCareerContinueResult {
  * delegates the actual stop logic to `@game/engine` and keeps browser state
  * in-memory only.
  */
-export function continueDemoCareer(preparationState?: DemoMatchPreparationState): DemoCareerContinueResult {
+export function continueDemoCareer(
+  preparationState?: DemoMatchPreparationState,
+  matchdayState?: DemoDashboardMatchdayState,
+): DemoCareerContinueResult {
   const dashboardInput = buildDemoCareerDashboardInput(
     preparationState === undefined ? undefined : buildDemoSavedPreparationInput(preparationState),
+    matchdayState,
   );
   const nextFixture = dashboardInput.nextFixture;
   const currentDate = fromISO(dashboardInput.currentDateIso);

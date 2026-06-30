@@ -236,14 +236,11 @@ function buildRecentMatchView(recentMatch: CareerDashboardRecentMatchInput | und
 
 function buildDashboardActions(blockerKeys: readonly CareerDashboardBlockerKey[]): readonly CareerDashboardActionAvailability[] {
   const advanceBlockers = blockerKeys.filter((key) => key !== "save_not_found" && key !== "invalid_career_state");
+  const canPrepareMatch = blockerKeys.includes("missing_saved_lineup") || blockerKeys.includes("missing_saved_tactic");
 
   return [
-    action("inspect_squad", "available", []),
-    action("inspect_lineup", "available", []),
-    action("inspect_tactic", "available", []),
-    action("prepare_match", "available", []),
+    action("prepare_match", canPrepareMatch ? "available" : "unavailable", []),
     action("advance_next_fixture", advanceBlockers.length === 0 ? "available" : "blocked", advanceBlockers),
-    action("inspect_table", "available", []),
   ];
 }
 

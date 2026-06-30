@@ -1,7 +1,6 @@
 import type { MessageKey, Translator } from "@game/i18n";
 import { buildCareerInboxView, buildCareerShellView } from "@game/ui";
 import type {
-  CareerDashboardActionAvailabilityStatus,
   CareerDashboardAvailabilityStatus,
   CareerDashboardBlockerKey,
   CareerDashboardFixtureSide,
@@ -18,6 +17,7 @@ export type CareerDashboardScreenProps = Readonly<{
   text: Translator;
   onBackToMenu: () => void;
   onContinueCareer: () => void;
+  onOpenMatchday: () => void;
   onOpenMatchPreparation: () => void;
   onInboxActionClick: (actionId: string) => void;
 }>;
@@ -29,10 +29,17 @@ export function CareerDashboardScreen({
   text,
   onBackToMenu,
   onContinueCareer,
+  onOpenMatchday,
   onOpenMatchPreparation,
   onInboxActionClick,
 }: CareerDashboardScreenProps): React.JSX.Element {
   const { view } = presentation;
+  const primaryAction = dashboardPrimaryAction({
+    presentation,
+    onContinueCareer,
+    onOpenMatchday,
+    onOpenMatchPreparation,
+  });
   const inboxView = buildCareerInboxView(continueResult?.inboxMessages ?? []);
   const shellView = buildCareerShellView({
     activeSectionKey: "dashboard",
@@ -58,6 +65,9 @@ export function CareerDashboardScreen({
             <h1 className="tls-shell-title" id="career-dashboard-title">{text("career.dashboard.title")}</h1>
             <p className="tls-shell-status">{view.selectedClub.name}</p>
           </div>
+          <button className="tls-menu-button tls-menu-button-primary" type="button" onClick={primaryAction.onClick}>
+            {text(primaryAction.labelKey)}
+          </button>
         </header>
 
         <section className="tls-dashboard-command-center" aria-label={text("career.dashboard.actions")}>
@@ -93,23 +103,6 @@ export function CareerDashboardScreen({
             </div>
           </section>
 
-          <section className="tls-dashboard-actions" aria-label={text("career.dashboard.actions")}>
-            <h2>{text("career.dashboard.actions")}</h2>
-            <div className="tls-dashboard-action-list">
-              {presentation.actions.map((action) => (
-                <button
-                  className="tls-dashboard-action"
-                  disabled={action.status !== "available"}
-                  key={action.actionId}
-                  onClick={action.actionId === "prepare_match" ? onOpenMatchPreparation : undefined}
-                  type="button"
-                >
-                  <span>{text(action.labelKey as MessageKey)}</span>
-                  <small>{text(actionStatusLabelKey(action.status))}</small>
-                </button>
-              ))}
-            </div>
-          </section>
         </section>
 
         <div className="tls-dashboard-grid">
@@ -171,6 +164,32 @@ export function CareerDashboardScreen({
       </section>
     </CareerShell>
   );
+}
+
+function dashboardPrimaryAction(input: Readonly<{
+  presentation: CareerDashboardPresentation;
+  onContinueCareer: () => void;
+  onOpenMatchday: () => void;
+  onOpenMatchPreparation: () => void;
+}>): Readonly<{ labelKey: MessageKey; onClick: () => void }> {
+  if (input.presentation.canAdvanceNextFixture) {
+    return {
+      labelKey: "career.dashboard.action.go_to_matchday",
+      onClick: input.onOpenMatchday,
+    };
+  }
+
+  if (input.presentation.view.preparation.blockerKeys.length > 0) {
+    return {
+      labelKey: "career.dashboard.action.prepare_match",
+      onClick: input.onOpenMatchPreparation,
+    };
+  }
+
+  return {
+    labelKey: "career.dashboard.continue",
+    onClick: input.onContinueCareer,
+  };
 }
 
 function DashboardCard({
@@ -251,10 +270,6 @@ function statusLabelKey(status: CareerDashboardAvailabilityStatus): MessageKey {
 
 function fixtureSideLabelKey(side: CareerDashboardFixtureSide | "unknown"): MessageKey {
   return `career.dashboard.fixtureSide.${side}`;
-}
-
-function actionStatusLabelKey(status: CareerDashboardActionAvailabilityStatus): MessageKey {
-  return `career.dashboard.actionStatus.${status}`;
 }
 
 function blockerLabelKey(blocker: CareerDashboardBlockerKey): MessageKey {

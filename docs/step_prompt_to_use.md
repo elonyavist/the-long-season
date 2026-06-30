@@ -1,7 +1,8 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/64-match-consequences-and-player-state-reactivity
+PHASE_DIR_TO_EXECUTE: docs/steps/68-mvp-ux-language-reset-around-tactical-board
 
+create a new branch before write code
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.
 If the phase README does not exist, stop and report the missing file.
