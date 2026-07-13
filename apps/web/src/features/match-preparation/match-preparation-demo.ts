@@ -25,6 +25,7 @@ import {
   createTacticalBoardDraft,
   loadTacticalBoardBaseFormation,
   moveTacticalBoardSlot,
+  removeTacticalBoardPlayer,
   tacticalBoardSelectedPlayerIdsBySlot,
   type TacticalBoardDraft,
 } from "../tactics-board/tactical-board-state";
@@ -211,11 +212,16 @@ export function selectDemoMatchPreparationPlayer(
   playerId: string | undefined,
 ): DemoMatchPreparationState {
   const tacticalBoardDraft = assignTacticalBoardPlayer(state.tacticalBoardDraft, slotKey, playerId);
+  const selectedBenchPlayerIdsBySlot = removePlayerFromBench(
+    state.selectedBenchPlayerIdsBySlot,
+    playerId,
+  );
 
   return {
     ...state,
     tacticalBoardDraft,
     selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
+    selectedBenchPlayerIdsBySlot,
     isSaved: false,
   };
 }
@@ -291,7 +297,11 @@ export function selectDemoMatchPreparationBenchPlayer(
   benchSlotKey: string,
   playerId: string | undefined,
 ): DemoMatchPreparationState {
-  const nextSelectedPlayerIds = { ...state.selectedBenchPlayerIdsBySlot };
+  const nextSelectedPlayerIds = removePlayerFromBench(state.selectedBenchPlayerIdsBySlot, playerId);
+  const tacticalBoardDraft =
+    playerId === undefined
+      ? state.tacticalBoardDraft
+      : removeTacticalBoardPlayer(state.tacticalBoardDraft, playerId);
 
   if (playerId === undefined || playerId.length === 0) {
     delete nextSelectedPlayerIds[benchSlotKey];
@@ -301,9 +311,25 @@ export function selectDemoMatchPreparationBenchPlayer(
 
   return {
     ...state,
+    tacticalBoardDraft,
+    selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
     selectedBenchPlayerIdsBySlot: nextSelectedPlayerIds,
     isSaved: false,
   };
+}
+
+/** Removes a player from every bench slot before a new exclusive assignment. */
+function removePlayerFromBench(
+  selectedPlayerIdsBySlot: Readonly<Record<string, string>>,
+  playerId: string | undefined,
+): Record<string, string> {
+  if (playerId === undefined || playerId.length === 0) {
+    return { ...selectedPlayerIdsBySlot };
+  }
+
+  return Object.fromEntries(
+    Object.entries(selectedPlayerIdsBySlot).filter(([, selectedPlayerId]) => selectedPlayerId !== playerId),
+  );
 }
 
 /** Selects or clears the tactic profile for the demo preparation. */

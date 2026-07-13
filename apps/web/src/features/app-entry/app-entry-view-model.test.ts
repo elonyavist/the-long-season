@@ -13,13 +13,6 @@ describe("app-entry view model", () => {
     expect(view.screenKey).toBe("app.entry");
     expect(view.selectedLanguageKey).toBe("en");
     expect(view.selectedCurrencyKey).toBe("EUR");
-    expect(view.selectedThemePaletteId).toBe("floodlight-navy");
-    expect(view.supportedThemePaletteIds).toEqual([
-      "floodlight-navy",
-      "club-office",
-      "press-room",
-    ]);
-    expect(view.themePaletteOptions).toHaveLength(3);
     expect(getAppEntryAction(view, "continue_career")).toEqual({
       actionId: "continue_career",
       status: "unavailable",

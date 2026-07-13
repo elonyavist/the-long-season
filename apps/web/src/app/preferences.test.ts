@@ -15,7 +15,6 @@ describe("web preferences", () => {
     expect(DEFAULT_WEB_PREFERENCES).toEqual({
       language: "en",
       currency: "EUR",
-      themePaletteId: "floodlight-navy",
     });
   });
 
@@ -34,16 +33,14 @@ describe("web preferences", () => {
     const updated = updateWebPreferences(DEFAULT_WEB_PREFERENCES, {
       language: "fr",
       currency: "USD",
-      themePaletteId: "heritage-cream",
     });
     const ignored = updateWebPreferences(updated, {
       language: "pt",
       currency: "CHF",
-      themePaletteId: "neon-skin",
     });
 
-    expect(updated).toEqual({ language: "fr", currency: "USD", themePaletteId: "club-office" });
-    expect(ignored).toEqual({ language: "fr", currency: "USD", themePaletteId: "floodlight-navy" });
+    expect(updated).toEqual({ language: "fr", currency: "USD" });
+    expect(ignored).toEqual({ language: "fr", currency: "USD" });
   });
 
   it("maps option values to localization keys", () => {

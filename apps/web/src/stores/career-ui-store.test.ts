@@ -25,16 +25,6 @@ describe("career UI store", () => {
     expect(getStoreState().matchdayState.lastPlayAttempt.status).toBe("idle");
   });
 
-  it("updates the theme palette preference with deterministic fallback", () => {
-    getStoreState().setThemePaletteId("programme-ivory");
-
-    expect(getStoreState().preferences.themePaletteId).toBe("club-office");
-
-    getStoreState().setThemePaletteId("neon-skin");
-
-    expect(getStoreState().preferences.themePaletteId).toBe("floodlight-navy");
-  });
-
   it("starts a fresh demo career from the main menu", () => {
     getStoreState().startNewCareer();
 

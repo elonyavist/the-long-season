@@ -15,6 +15,24 @@ export interface WebPlayerPositionOption {
 /** Numeric position-fit tier used by selection ordering and tactical-board suitability. */
 export type WebPlayerPositionFitTier = 0 | 1 | 2 | 3 | 4;
 
+/** Football departments used by compact squad filters. */
+export type WebPlayerDepartment = "goalkeeper" | "defender" | "midfielder" | "attacker";
+
+/** Canonical short position codes shared by web squad and tactical surfaces. */
+export type WebPlayerPositionCode =
+  | "POR"
+  | "TD"
+  | "DC"
+  | "TS"
+  | "MED"
+  | "CC"
+  | "ED"
+  | "ES"
+  | "TRQ"
+  | "AD"
+  | "AS"
+  | "ATT";
+
 const DEFAULT_PLAYER_SELECTION_STRENGTH = 50;
 
 const SLOT_FIT_SELECTION_BONUS: Readonly<Record<WebPlayerPositionFitTier, number>> = {
@@ -83,6 +101,58 @@ const FALLBACK_POSITION_BY_ROLE: Readonly<Record<string, string>> = {
   defender: "cb",
   midfielder: "cm",
   attacker: "st",
+};
+
+const DEPARTMENT_BY_POSITION: Readonly<Record<string, WebPlayerDepartment>> = {
+  gk: "goalkeeper",
+  rb: "defender",
+  rwb: "defender",
+  cb: "defender",
+  lb: "defender",
+  lwb: "defender",
+  dm: "midfielder",
+  cm: "midfielder",
+  rm: "midfielder",
+  lm: "midfielder",
+  wide: "midfielder",
+  am: "midfielder",
+  winger: "attacker",
+  rw: "attacker",
+  lw: "attacker",
+  st: "attacker",
+};
+
+const POSITION_CODE_BY_POSITION: Readonly<Record<string, WebPlayerPositionCode>> = {
+  gk: "POR",
+  rb: "TD",
+  rwb: "TD",
+  cb: "DC",
+  lb: "TS",
+  lwb: "TS",
+  dm: "MED",
+  cm: "CC",
+  rm: "ED",
+  lm: "ES",
+  wide: "ED",
+  am: "TRQ",
+  winger: "AD",
+  rw: "AD",
+  lw: "AS",
+  st: "ATT",
+};
+
+const FALLBACK_DEPARTMENT_BY_ROLE: Readonly<Record<string, WebPlayerDepartment>> = {
+  goalkeeper: "goalkeeper",
+  defender: "defender",
+  midfielder: "midfielder",
+  attacker: "attacker",
+};
+
+const FALLBACK_CODE_BY_ROLE: Readonly<Record<string, WebPlayerPositionCode>> = {
+  goalkeeper: "POR",
+  defender: "DC",
+  midfielder: "CC",
+  attacker: "ATT",
 };
 
 /**
@@ -173,6 +243,20 @@ export function positionSortIndex(player: WebPlayerPositionOption): number {
   const positionKey = player.positionKey ?? FALLBACK_POSITION_BY_ROLE[player.roleKey] ?? "";
 
   return POSITION_ORDER_INDEX.get(positionKey) ?? POSITION_ORDER.length;
+}
+
+/** Returns the football department used to filter one player in compact squad lists. */
+export function playerDepartment(player: WebPlayerPositionOption): WebPlayerDepartment {
+  const positionDepartment = player.positionKey === undefined ? undefined : DEPARTMENT_BY_POSITION[player.positionKey];
+
+  return positionDepartment ?? FALLBACK_DEPARTMENT_BY_ROLE[player.roleKey] ?? "midfielder";
+}
+
+/** Returns the canonical football position code shown in compact squad lists. */
+export function playerPositionCode(player: WebPlayerPositionOption): WebPlayerPositionCode {
+  const positionCode = player.positionKey === undefined ? undefined : POSITION_CODE_BY_POSITION[player.positionKey];
+
+  return positionCode ?? FALLBACK_CODE_BY_ROLE[player.roleKey] ?? "CC";
 }
 
 function compareNumbers(left: number, right: number): number {

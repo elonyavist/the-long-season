@@ -8,11 +8,15 @@ html {
   color: var(--tls-color-text);
   font-family: var(--tls-font-ui);
   font-size: 16px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
+  overflow-x: clip;
+  background: transparent;
 }
 
 body::before {
@@ -21,34 +25,42 @@ body::before {
   z-index: -1;
   content: "";
   background:
-    linear-gradient(135deg, var(--tls-theme-shell-overlay), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-shell-surface) 54%, transparent), transparent 36%),
     repeating-linear-gradient(
       0deg,
-      color-mix(in srgb, var(--tls-theme-border) 28%, transparent) 0,
-      color-mix(in srgb, var(--tls-theme-border) 28%, transparent) 1px,
+      var(--tls-theme-app-scanline) 0,
+      var(--tls-theme-app-scanline) 1px,
       transparent 1px,
-      transparent 10px
+      transparent 5px
     ),
     repeating-linear-gradient(
       90deg,
-      color-mix(in srgb, var(--tls-theme-border) 18%, transparent) 0,
-      color-mix(in srgb, var(--tls-theme-border) 18%, transparent) 1px,
+      var(--tls-theme-app-grid-line) 0,
+      var(--tls-theme-app-grid-line) 1px,
       transparent 1px,
-      transparent 28px
+      transparent 32px
     ),
-    radial-gradient(circle at top left, color-mix(in srgb, var(--tls-theme-primary-action-surface) 12%, transparent), transparent 32%),
     var(--tls-theme-app-background);
+}
+
+#root {
+  min-height: 100vh;
 }
 
 button,
 select,
-input {
+input,
+textarea {
   font: inherit;
 }
 
 button,
 select {
   min-height: 2.5rem;
+}
+
+button {
+  letter-spacing: 0;
 }
 
 select {
@@ -59,8 +71,18 @@ select {
   box-shadow: var(--tls-shadow-inset);
 }
 
-:focus-visible {
-  outline: 0;
+a {
+  color: inherit;
+}
+
+::selection {
+  color: var(--tls-theme-primary-action-text);
+  background: var(--tls-theme-primary-action-surface);
+}
+
+:where(button, [href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--tls-theme-focus-ring);
+  outline-offset: 3px;
   box-shadow: var(--tls-focus-ring);
 }
 

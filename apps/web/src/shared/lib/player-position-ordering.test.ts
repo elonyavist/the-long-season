@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   comparePlayerOptionsByPosition,
   orderPlayerOptionsForLineupSlot,
+  playerDepartment,
+  playerPositionCode,
   playerPositionFitTierForPositionKey,
   playerPositionFitTierForSlot,
   positionSortIndex,
@@ -94,6 +96,22 @@ describe("web player position ordering", () => {
     expect(positionSortIndex({ playerId: "player:2", name: "Forward", roleKey: "attacker" })).toBeGreaterThan(
       positionSortIndex({ playerId: "player:3", name: "Midfielder", roleKey: "midfielder" }),
     );
+  });
+
+  it("maps specific positions to canonical squad codes and departments", () => {
+    expect(playerPositionCode(player("gk", "Goalkeeper"))).toBe("POR");
+    expect(playerPositionCode(player("rb", "Right back"))).toBe("TD");
+    expect(playerPositionCode(player("dm", "Defensive midfielder"))).toBe("MED");
+    expect(playerPositionCode(player("am", "Attacking midfielder"))).toBe("TRQ");
+    expect(playerPositionCode(player("st", "Striker"))).toBe("ATT");
+    expect(playerDepartment(player("cb", "Center back"))).toBe("defender");
+    expect(playerDepartment(player("wide", "Wide midfielder"))).toBe("midfielder");
+    expect(playerDepartment(player("winger", "Winger"))).toBe("attacker");
+  });
+
+  it("uses the broad role only when a specific position is unavailable", () => {
+    expect(playerPositionCode({ playerId: "player:1", name: "Keeper", roleKey: "goalkeeper" })).toBe("POR");
+    expect(playerDepartment({ playerId: "player:2", name: "Forward", roleKey: "attacker" })).toBe("attacker");
   });
 });
 

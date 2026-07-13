@@ -138,6 +138,19 @@ export function assignTacticalBoardPlayer(
   };
 }
 
+/** Removes one player from the XI without changing tactical slots or roles. */
+export function removeTacticalBoardPlayer(
+  draft: TacticalBoardDraft,
+  playerId: string,
+): TacticalBoardDraft {
+  return {
+    ...draft,
+    slots: draft.slots.map((slot) =>
+      slot.playerId === playerId ? { ...slot, playerId: null } : slot,
+    ),
+  };
+}
+
 /** Returns selected player IDs keyed by slot ID for current read-model compatibility. */
 export function tacticalBoardSelectedPlayerIdsBySlot(draft: TacticalBoardDraft): Readonly<Record<string, string>> {
   return Object.fromEntries(

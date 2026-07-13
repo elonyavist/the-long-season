@@ -6,13 +6,6 @@ import {
   type SupportedLanguage,
 } from "@game/i18n";
 
-import {
-  DEFAULT_WEB_THEME_PALETTE_ID,
-  WEB_THEME_PALETTE_IDS,
-  resolveWebThemePaletteId,
-  type WebThemePaletteId,
-} from "./theme-palettes";
-
 /** Currency display choices supported by the first web prototype. */
 export const SUPPORTED_CURRENCIES = ["EUR", "GBP", "USD"] as const;
 
@@ -23,14 +16,12 @@ export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number];
 export type WebPreferences = Readonly<{
   language: SupportedLanguage;
   currency: CurrencyCode;
-  themePaletteId: WebThemePaletteId;
 }>;
 
 /** Deterministic defaults for a new web app session. */
 export const DEFAULT_WEB_PREFERENCES: WebPreferences = {
   language: DEFAULT_LANGUAGE,
   currency: "EUR",
-  themePaletteId: DEFAULT_WEB_THEME_PALETTE_ID,
 };
 
 /** Returns whether a raw value is a supported currency display code. */
@@ -65,12 +56,11 @@ export function parseWebLanguage(value: string | undefined): SupportedLanguage |
 /** Creates a new immutable preference object from raw UI control values. */
 export function updateWebPreferences(
   current: WebPreferences,
-  next: Partial<Readonly<{ language: string; currency: string; themePaletteId: string }>>,
+  next: Partial<Readonly<{ language: string; currency: string }>>,
 ): WebPreferences {
   return {
     language: parseWebLanguage(next.language) ?? current.language,
     currency: parseCurrencyCode(next.currency) ?? current.currency,
-    themePaletteId: resolveWebThemePaletteId(next.themePaletteId ?? current.themePaletteId),
   };
 }
 
@@ -86,6 +76,3 @@ export function currencyLabelKey(currency: CurrencyCode): MessageKey {
 
 /** Language choices exposed to the web settings controls. */
 export const WEB_LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES;
-
-/** Theme palette choices exposed to the web settings controls. */
-export const WEB_THEME_PALETTE_OPTIONS = WEB_THEME_PALETTE_IDS;

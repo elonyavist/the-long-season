@@ -26,7 +26,7 @@ export interface PlayerCandidateRowProps {
   readonly suitabilityTone: PlayerCandidateSuitabilityTone;
 }
 
-/** Renders one reusable candidate row for XI and bench player pickers. */
+/** Renders one reusable candidate row for XI, bench, and context-menu player pickers. */
 export function PlayerCandidateRow({
   number,
   surname,
@@ -48,8 +48,8 @@ export function PlayerCandidateRow({
         <span>{roleLabel}</span>
       </span>
       <span className="tls-player-candidate-meta">
-        <span>{fitnessText}</span>
-        {footLabel === undefined ? null : <span>{footLabel}</span>}
+        <span className="tls-player-candidate-fitness">{fitnessText}</span>
+        {footLabel === undefined ? null : <span className="tls-player-candidate-foot">{footLabel}</span>}
         <span className="tls-player-candidate-suitability">{suitabilityLabel}</span>
       </span>
     </span>

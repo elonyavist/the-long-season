@@ -8,7 +8,7 @@ import type {
 
 import type { CareerDashboardPresentation } from "./career-dashboard-presenter";
 import type { DemoCareerContinueResult } from "./continue-demo-career";
-import { CareerShell } from "../career-shell/CareerShell";
+import { AppShell } from "../app-shell/AppShell";
 
 /** Props for the first read-only web career dashboard screen. */
 export type CareerDashboardScreenProps = Readonly<{
@@ -22,7 +22,7 @@ export type CareerDashboardScreenProps = Readonly<{
   onInboxActionClick: (actionId: string) => void;
 }>;
 
-/** Renders the first career dashboard/matchday hub prototype. */
+/** Renders the career command centre with one clear next action. */
 export function CareerDashboardScreen({
   presentation,
   continueResult,
@@ -44,10 +44,11 @@ export function CareerDashboardScreen({
   const shellView = buildCareerShellView({
     activeSectionKey: "dashboard",
     inboxView,
+    mode: "preparation",
   });
 
   return (
-    <CareerShell
+    <AppShell
       shellView={shellView}
       selectedClubName={view.selectedClub.name}
       contextItems={[
@@ -61,34 +62,26 @@ export function CareerDashboardScreen({
     >
       <section className="tls-shell-panel tls-dashboard-panel" aria-labelledby="career-dashboard-title">
         <header className="tls-dashboard-header">
-          <div>
-            <h1 className="tls-shell-title" id="career-dashboard-title">{text("career.dashboard.title")}</h1>
+          <div className="tls-dashboard-heading">
+            <p className="tls-dashboard-kicker">{text("career.dashboard.commandCentre")}</p>
+            <h1 className="tls-shell-title" id="career-dashboard-title">{text("career.shell.nav.dashboard")}</h1>
             <p className="tls-shell-status">{view.selectedClub.name}</p>
           </div>
-          <button className="tls-menu-button tls-menu-button-primary" type="button" onClick={primaryAction.onClick}>
+          <button
+            className="tls-menu-button tls-menu-button-primary tls-dashboard-primary-action"
+            type="button"
+            onClick={primaryAction.onClick}
+          >
             {text(primaryAction.labelKey)}
           </button>
         </header>
 
-        <section className="tls-dashboard-command-center" aria-label={text("career.dashboard.actions")}>
-          <section className="tls-dashboard-attention" aria-label={text("career.dashboard.blockers")}>
-            <h2>{text("career.dashboard.blockers")}</h2>
-            {presentation.primaryBlockers.length === 0 ? (
-              <p>{text("career.matchPreparation.noBlockers")}</p>
-            ) : (
-              <ul>
-                {presentation.primaryBlockers.map((blocker) => (
-                  <li key={blocker}>{text(blockerLabelKey(blocker))}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-
+        <section className="tls-dashboard-command-deck" aria-label={text("career.dashboard.commandCentre")}>
           <section className="tls-dashboard-match-desk" aria-label={text("career.nextSelectedClubFixture")}>
             <div>
               <h2>{text("career.nextSelectedClubFixture")}</h2>
               <p className="tls-dashboard-line tls-dashboard-next-fixture">
-                {formatNextFixture(view.nextFixture, text)}
+                {formatNextFixtureCompact(view.nextFixture, text)}
               </p>
             </div>
             <div className="tls-dashboard-preparation-strip">
@@ -103,42 +96,48 @@ export function CareerDashboardScreen({
             </div>
           </section>
 
+          <section
+            className="tls-dashboard-attention"
+            data-has-blockers={presentation.primaryBlockers.length > 0}
+            aria-label={text("career.dashboard.blockers")}
+          >
+            <h2>{text("career.dashboard.blockers")}</h2>
+            {presentation.primaryBlockers.length === 0 ? (
+              <p>{text("career.matchPreparation.noBlockers")}</p>
+            ) : (
+              <ul>
+                {presentation.primaryBlockers.map((blocker) => (
+                  <li key={blocker}>{text(blockerLabelKey(blocker))}</li>
+                ))}
+              </ul>
+            )}
+          </section>
         </section>
 
-        <div className="tls-dashboard-grid">
-          <DashboardCard title={text("career.dashboard.selectedClub")}>
-            <DashboardFact label={text("setup.selectedClub")} value={view.selectedClub.name} />
-            <DashboardFact label={text("career.selectedClubRosterSize")} value={String(view.selectedClub.rosterSize)} />
-          </DashboardCard>
-
-          <DashboardCard title={text("career.dashboard.conditionSummary")}>
-            <DashboardFact
-              label={text("career.dashboard.conditionPlayerCount")}
-              value={String(view.conditionSummary.playerCount)}
-            />
-            <p className="tls-dashboard-line">
+        <section className="tls-dashboard-signal-grid" aria-label={text("career.dashboard.clubSnapshot")}>
+          <DashboardSignal
+            title={text("career.dashboard.conditionSummary")}
+            value={`${Math.round(view.conditionSummary.averageFitness)}%`}
+          >
+            <span>
               {text("career.dashboard.conditionFitnessLine", {
-                average: view.conditionSummary.averageFitness.toFixed(2),
+                average: view.conditionSummary.averageFitness.toFixed(0),
                 minimum: view.conditionSummary.lowestFitness,
                 low: view.conditionSummary.lowFitnessPlayerCount,
               })}
-            </p>
-          </DashboardCard>
+            </span>
+          </DashboardSignal>
 
-          <DashboardCard title={text("career.dashboard.tableContext")}>
-            <p className="tls-dashboard-line">{formatTableContext(view.tableContext, text)}</p>
-          </DashboardCard>
+          <DashboardSignal
+            title={text("career.dashboard.selectedClub")}
+            value={String(view.selectedClub.rosterSize)}
+          >
+            <span>{text("career.selectedClubRosterSize")}</span>
+          </DashboardSignal>
 
-          <DashboardCard title={text("career.dashboard.recentMatch")}>
-            <p className="tls-dashboard-line">{formatRecentMatch(view.recentMatch, text)}</p>
-          </DashboardCard>
-        </div>
+          <DashboardSignal title={text("career.dashboard.tableContext")} value={formatTableContext(view.tableContext, text)} />
 
-        <section className="tls-dashboard-strip" aria-label={text("career.save")}>
-          <DashboardFact label={text("career.save")} value={view.context.saveId} />
-          <DashboardFact label={text("career.worldSeed")} value={view.context.worldSeed ?? text("common.unknown")} />
-          <DashboardFact label={text("career.currentDate")} value={view.context.currentDateIso} />
-          <DashboardFact label={text("career.currentSeason")} value={view.context.currentSeasonId} />
+          <DashboardSignal title={text("career.dashboard.recentMatch")} value={formatRecentMatch(view.recentMatch, text)} />
         </section>
 
         {continueResult === undefined ? null : (
@@ -162,7 +161,7 @@ export function CareerDashboardScreen({
         )}
 
       </section>
-    </CareerShell>
+    </AppShell>
   );
 }
 
@@ -192,14 +191,16 @@ function dashboardPrimaryAction(input: Readonly<{
   };
 }
 
-function DashboardCard({
+function DashboardSignal({
   title,
+  value,
   children,
-}: Readonly<{ title: string; children: React.ReactNode }>): React.JSX.Element {
+}: Readonly<{ title: string; value: string; children?: React.ReactNode }>): React.JSX.Element {
   return (
-    <section className="tls-dashboard-card">
+    <section className="tls-dashboard-signal-card">
       <h2>{title}</h2>
-      {children}
+      <strong>{value}</strong>
+      {children === undefined ? null : <p>{children}</p>}
     </section>
   );
 }
@@ -213,7 +214,7 @@ function DashboardFact({ label, value }: Readonly<{ label: string; value: string
   );
 }
 
-function formatNextFixture(
+function formatNextFixtureCompact(
   fixture: CareerDashboardPresentation["view"]["nextFixture"],
   text: Translator,
 ): string {
@@ -221,9 +222,7 @@ function formatNextFixture(
     return text("career.noNextSelectedClubFixture");
   }
 
-  return text("career.dashboard.nextFixtureLine", {
-    fixture: fixture.fixtureId ?? "",
-    date: fixture.dateIso ?? "",
+  return text("career.dashboard.nextFixtureCompactLine", {
     round: fixture.round ?? "",
     home: fixture.homeClubName ?? "",
     away: fixture.awayClubName ?? "",

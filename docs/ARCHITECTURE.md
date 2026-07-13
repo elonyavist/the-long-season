@@ -1,6 +1,6 @@
 # The Long Season Architecture
 
-Last updated: 2026-06-24
+Last updated: 2026-07-06
 
 ## Purpose
 
@@ -76,7 +76,7 @@ Why this matters:
 | `packages/i18n` | Supported languages, translation keys, fallback translation rendering. | Simulation logic or package imports. |
 | `packages/ui` | UI-facing read-model contracts, app-entry/dashboard/Inbox/match-preparation/matchday view contracts, action availability/result contracts, pure dashboard, Inbox, shell, match-preparation, and matchday phase builders. It may derive read-model formation facts from `packages/domain` catalogs. | React, browser APIs, storage, CLI rendering, localization prose, engine/content simulation, save writes. |
 | `apps/cli` | Command parsing, package composition, save IO, localized console output, smoke/lab commands. | Core gameplay rules or reusable diagnostic semantics. |
-| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, bounded visual-identity skin preferences, deterministic demo dashboard/continue/preparation/matchday adapters, reusable career shell, dashboard screen, focused match-preparation tactical workspace, simplified staged match centre, half-time tactical workspace, left Inbox/Posta rail, compact Inbox panel, browser visual QA. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations. |
+| `apps/web` | Vite React app shell, localized main menu, in-memory prototype preferences, deterministic demo dashboard/continue/preparation/matchday adapters, rebuilt app shell, dashboard command centre, focused match-preparation tactical workspace, five-state matchday centre, half-time tactical workspace, right-side Posta/attention rail, browser visual QA. | Engine rules, save persistence, CLI parsing, economics, hidden recommendations, rejected visual-skin systems. |
 
 ## Main Entry Points
 
@@ -113,7 +113,6 @@ Why this matters:
 | Career matchday phase view builder | `packages/ui/src/career/career-matchday-phase-view.ts` |
 | Web app | `apps/web/src/main.tsx` |
 | Web React root | `apps/web/src/app/App.tsx` |
-| Web visual-identity skins | `apps/web/src/app/theme-palettes.ts` |
 | Web career UI store | `apps/web/src/stores/career-ui-store.ts` |
 | Web app-entry screen | `apps/web/src/features/app-entry/AppEntryScreen.tsx` |
 | Web dashboard screen | `apps/web/src/features/dashboard/CareerDashboardScreen.tsx` |
@@ -122,17 +121,19 @@ Why this matters:
 | Web demo Continue adapter | `apps/web/src/features/dashboard/continue-demo-career.ts` |
 | Web demo match-preparation adapter | `apps/web/src/features/match-preparation/match-preparation-demo.ts` |
 | Web demo matchday adapter | `apps/web/src/features/matchday/matchday-demo.ts` |
+| Web matchday presenter | `apps/web/src/features/matchday/career-matchday-presenter.ts` |
 | Web matchday screen | `apps/web/src/features/matchday/CareerMatchdayScreen.tsx` |
-| Web career shell | `apps/web/src/features/career-shell/CareerShell.tsx` |
-| Web Inbox panel | `apps/web/src/features/career-shell/CareerInboxPanel.tsx` |
+| Web app shell | `apps/web/src/features/app-shell/AppShell.tsx` |
+| Web Posta rail | `apps/web/src/features/app-shell/AppShellPostaRail.tsx` |
 | Web Continue/InBox visual QA | `apps/web/src/visual-qa/continue-inbox.spec.ts` |
 | Web shell accessibility visual QA | `apps/web/src/visual-qa/shell-accessibility.spec.ts` |
 | Web match-preparation visual QA | `apps/web/src/visual-qa/match-preparation.spec.ts` |
 | Web retro-football identity visual QA | `apps/web/src/visual-qa/retro-football-identity.spec.ts` |
 | Web tactics workspace visual QA | `apps/web/src/visual-qa/tactics-workspace.spec.ts` |
 | Web shared tactical-board visual QA | `apps/web/src/visual-qa/shared-tactical-board.spec.ts` |
-| Web visual-identity skin QA | `apps/web/src/visual-qa/theme-palette.spec.ts` |
 | Web matchday flow simplification QA | `apps/web/src/visual-qa/matchday-flow-simplification.spec.ts` |
+| Web full rebuild visual QA | `apps/web/src/visual-qa/web-ui-full-rebuild.spec.ts` |
+| Web matchday information architecture QA | `apps/web/src/visual-qa/matchday-information-architecture.spec.ts` |
 
 ## Important Files By Area
 
@@ -365,21 +366,11 @@ text or importing engine internals.
   Thin browser composition root. It reads from the career UI store, builds the
   current view models, wires screen components, and resets browser scroll when
   the selected screen changes so single-page navigation behaves like a real
-  section switch. It also applies the selected web visual-identity skin to the
-  document root through `data-theme-palette`.
+  section switch. It owns no engine logic and does not apply user-selectable
+  visual skins.
 - `apps/web/src/app/preferences.ts`
-  Web-only preference model for language, display currency, and selected visual
-  skin. Currency remains a display preference, not an economics rule; the skin
-  remains a browser display preference, not a football or engine rule.
-- `apps/web/src/app/theme-palettes.ts`
-  Typed bounded catalog for the three accepted web visual skins:
-  `floodlight-navy`, `club-office`, and `press-room`. It owns the stable skin
-  ids, deterministic fallback, legacy id migration, localized label keys,
-  swatches, and the UI-chrome hierarchy contract: app, shell, panel,
-  elevated panel, table header/row/alternate/selected row, borders, text,
-  muted text, heading text, primary action, secondary action, focus, and
-  overlay. It deliberately does not include tactical pitch, semantic blocker,
-  role-suitability, or form-arrow colors.
+  Web-only preference model for language and display currency. Currency remains
+  a display preference, not an economics rule.
 - `apps/web/src/app/translation.ts`
   Thin adapter over `@game/i18n` for React components.
 - `apps/web/src/stores/career-ui-store.ts`
@@ -391,7 +382,7 @@ text or importing engine internals.
   Builds the app-entry read model from `@game/ui` contracts.
 - `apps/web/src/features/app-entry/AppEntryScreen.tsx`
   Localized main menu with New career, Continue career, language/currency
-  settings, and the compact theme-palette radio picker.
+  settings, and the fixed first-MVP visual identity.
 - `apps/web/src/features/dashboard/build-demo-career-dashboard.ts`
   Deterministic read-only dashboard demo adapter. This is the replacement point
   for a later real save adapter.
@@ -458,14 +449,15 @@ text or importing engine internals.
 - `apps/web/src/features/dashboard/career-dashboard-presenter.ts`
   Groups dashboard read-model facts for React rendering without duplicating
   readiness logic.
-- `apps/web/src/features/career-shell/CareerShell.tsx`
-  Reusable localized career shell. It owns the top global navigation, selected
-  club context, Main menu and Continue action group, left Inbox/Posta rail, and
-  central selected-content outlet. The shell currently renders the Phase 53
-  club-operations header and crest placeholder.
-- `apps/web/src/features/career-shell/CareerInboxPanel.tsx`
-  Compact localized Inbox/Posta panel for manager attention messages. It shows
-  counts, action-required state, priority/status badges, related labels, and
+- `apps/web/src/features/app-shell/AppShell.tsx`
+  Rebuilt localized career shell. It owns the persistent left navigation,
+  central selected-content outlet, right action/context rail, Main menu command,
+  optional Continue command, current-section state, and selected-club identity
+  chrome. It is the direct shell used by dashboard, match preparation, and
+  matchday screens.
+- `apps/web/src/features/app-shell/AppShellPostaRail.tsx`
+  Compact localized Posta/attention rail for manager messages. It shows counts,
+  unread/action-required state, priority/status badges, related labels, and
   message actions. It is not a full mail client.
 - `apps/web/src/features/match-preparation/TacticalPitchLineup.tsx`
   Legacy reusable vertical tactical pitch/lavagna from the pre-Phase-57 match
@@ -500,8 +492,8 @@ text or importing engine internals.
   fixture, preparation, condition, table context, recent match, actions, and
   blockers. It renders critical blockers near the top of the first useful
   viewport and can open match preparation from dashboard actions. It renders
-  inside `CareerShell`; Continue and Inbox/Posta shell placement live in the
-  shell, while dashboard-specific facts remain central content.
+  inside `AppShell`; Continue and Posta shell placement live in the shell, while
+  dashboard-specific facts remain central content.
 - `apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx`
   Editable match-preparation tactical workspace. It orchestrates compact
   next-fixture context, selected club context, alert blockers, board-local
@@ -518,12 +510,18 @@ text or importing engine internals.
   time, stores the played result, prevents duplicate play, and returns
   phase-aware UI matchday read models. It remains an in-memory adapter until
   web persistence exists.
+- `apps/web/src/features/matchday/career-matchday-presenter.ts`
+  Pure browser-side presenter for matchday information architecture. It derives
+  compact score-header facts, passive phase progress, one primary command, and
+  ordered tabellino/live-feed event groups from existing structured matchday
+  facts. It does not simulate, localize prose, persist data, or invent match
+  events.
 - `apps/web/src/features/matchday/CareerMatchdayScreen.tsx`
-  Localized interactive match centre. It renders the phase-aware `@game/ui`
-  matchday read model as scoreboard, period rail, match context, action bar,
-  event cards, highlights, player ratings/condition/contribution rows,
-  half-time shared tactical-board decisions, validation feedback,
-  full-time-only consequences, and the single phase-primary action. It is not a
+  Localized five-state match centre. It renders pre-match confirmation,
+  first-half live review, half-time tactical decision, second-half live
+  pressure, and full-time review from the phase-aware `@game/ui` matchday read
+  model plus the web presenter. Full time is ordered as tabellino, ratings, then
+  consequences; half-time is the only editable tactical workspace. It is not a
   live animated match viewer and does not own engine rules.
 - `apps/web/src/visual-qa/continue-inbox.spec.ts`
   Playwright browser QA for main menu, new career, dashboard, Continue stop,
@@ -539,7 +537,7 @@ text or importing engine internals.
   screenshots under `/tmp/the-long-season-phase52`.
 - `apps/web/src/visual-qa/retro-football-identity.spec.ts`
   Playwright browser QA for the Phase 53 retro-football identity: main menu,
-  shell/top navigation, left Inbox/Posta rail, dashboard control room,
+  shell/navigation chrome, Inbox/Posta rail, dashboard control room,
   dashboard and Inbox/Posta paths into match preparation, tactical pitch, squad
   list, tactic selection, save, dashboard blocker clearance, Continue to
   matchday, no horizontal overflow, keyboard focus, and screenshots under
@@ -569,13 +567,6 @@ text or importing engine internals.
   across XI and bench, three central-slot spacing, keyboard reachability,
   context-menu dismissal, and touch-style long-press open/cancel behavior.
   Current Phase 59 screenshots are written under `/tmp/the-long-season-phase59`.
-- `apps/web/src/visual-qa/theme-palette.spec.ts`
-  Playwright browser QA for Phase 61 visual-identity skins. It cycles through
-  all three accepted skins on app entry, career dashboard, and match preparation
-  in desktop and narrow viewports, asserts no horizontal overflow, verifies the
-  selected root `data-theme-palette`, guards stable tactical/semantic colors,
-  and checks visible hierarchy for primary action, hover states, borders, table
-  styles.
 - `apps/web/src/visual-qa/matchday-playable-slice.spec.ts`
   Playwright browser QA for the Phase 65 playable web loop. It opens the app,
   creates a demo career, completes match preparation, uses Continue and
@@ -591,16 +582,29 @@ text or importing engine internals.
   proves the half-time tactical-board workspace replaces the old substitution
   form, checks keyboard focus for primary actions, and writes screenshots under
   `/tmp/the-long-season-phase67`.
-  header, table rows, and selected rows. Screenshots are written under
-  `/tmp/the-long-season-phase61`.
+- `apps/web/src/visual-qa/web-ui-full-rebuild.spec.ts`
+  Playwright browser QA for Phase 69. It drives app entry, dashboard, match
+  preparation, pre-match, half-time, and full time on desktop and narrow
+  viewports; captures screenshots under `/tmp/the-long-season-phase69`; checks
+  landmarks, current navigation, keyboard focus, horizontal overflow, absence
+  of rejected theme-palette UI, absence of deleted legacy shell/dashboard/report
+  surfaces, and preservation of the shared tactical-board plus fixed bench
+  board.
+- `apps/web/src/visual-qa/matchday-information-architecture.spec.ts`
+  Playwright browser QA for Phase 70. It drives the accepted matchday path on
+  desktop and narrow viewports through pre-match, first half, half-time, second
+  half, and full time; checks that phases use passive indicators, one primary
+  command, no empty pre-match panels, no live table-log layout, half-time-only
+  tactical decisions, full-time tabellino-before-ratings-before-consequences
+  order, accessible event/table labels, no horizontal overflow, and screenshots
+  under `/tmp/the-long-season-phase70`.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
-  styles, including the top navigation shell, left Inbox/Posta rail, dashboard,
+  styles, including the rebuilt app shell, Posta/attention rail, dashboard,
   match-preparation tactical workspace, shared candidate rows, compact squad
-  list, central outlets, and the Phase 61 skin-token boundary. App chrome can
-  route through hierarchy skin variables; tactical pitch grass, football-surface
-  foreground text, semantic severity, suitability, and form colors remain
-  stable and non-themeable.
+  list, central outlets, matchday centre, and the shared tactical board. Tactical
+  pitch grass, football-surface foreground text, semantic severity, suitability,
+  and form colors remain stable.
 
 The web app currently uses an in-memory demo career only. It can call the pure
 engine Continue rule through a demo adapter and play the selected fixture

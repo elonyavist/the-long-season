@@ -7,6 +7,7 @@ import {
   createTacticalBoardDraft,
   loadTacticalBoardBaseFormation,
   moveTacticalBoardSlot,
+  removeTacticalBoardPlayer,
   tacticalBoardSelectedPlayerIdsBySlot,
 } from "./tactical-board-state";
 
@@ -26,6 +27,20 @@ describe("tactical board state", () => {
 
     expect(tacticalBoardSelectedPlayerIdsBySlot(draft)).toEqual({
       "st-left": "player:one",
+    });
+  });
+
+  it("removes one player from the XI without changing the tactical structure", () => {
+    let draft = createTacticalBoardDraft("4-4-2");
+    draft = assignTacticalBoardPlayer(draft, "gk", "player:one");
+    draft = assignTacticalBoardPlayer(draft, "st-left", "player:two");
+
+    const nextDraft = removeTacticalBoardPlayer(draft, "player:one");
+
+    expect(nextDraft.baseFormationId).toBe("4-4-2");
+    expect(nextDraft.slots).toHaveLength(11);
+    expect(tacticalBoardSelectedPlayerIdsBySlot(nextDraft)).toEqual({
+      "st-left": "player:two",
     });
   });
 

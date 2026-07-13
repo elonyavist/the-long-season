@@ -7,25 +7,12 @@ import {
 
 import {
   SUPPORTED_CURRENCIES,
-  WEB_THEME_PALETTE_OPTIONS,
   WEB_LANGUAGE_OPTIONS,
   type WebPreferences,
 } from "../../app/preferences";
-import { WEB_THEME_PALETTES, type WebThemePaletteId } from "../../app/theme-palettes";
-
-/** One palette option exposed to the settings view. */
-export type AppEntryThemePaletteOption = Readonly<{
-  id: WebThemePaletteId;
-  labelKey: string;
-  swatch: readonly [string, string, string];
-}>;
 
 /** Web-specific extension of the shared app-entry view. */
-export type WebAppEntryView = AppEntryView & Readonly<{
-  selectedThemePaletteId: WebThemePaletteId;
-  supportedThemePaletteIds: readonly WebThemePaletteId[];
-  themePaletteOptions: readonly AppEntryThemePaletteOption[];
-}>;
+export type WebAppEntryView = AppEntryView;
 
 /** Input facts needed to build the app-entry read model for the web shell. */
 export type AppEntryViewModelInput = Readonly<{
@@ -39,15 +26,8 @@ export function buildAppEntryViewModel(input: AppEntryViewModelInput): WebAppEnt
     screenKey: "app.entry",
     selectedLanguageKey: input.preferences.language,
     selectedCurrencyKey: input.preferences.currency,
-    selectedThemePaletteId: input.preferences.themePaletteId,
     supportedLanguageKeys: WEB_LANGUAGE_OPTIONS,
     supportedCurrencyKeys: SUPPORTED_CURRENCIES,
-    supportedThemePaletteIds: WEB_THEME_PALETTE_OPTIONS,
-    themePaletteOptions: WEB_THEME_PALETTES.map((palette) => ({
-      id: palette.id,
-      labelKey: palette.labelKey,
-      swatch: palette.swatch,
-    })),
     actions: [
       appEntryActionAvailability({
         actionId: "start_new_career",

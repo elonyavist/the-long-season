@@ -1,0 +1,92 @@
+<h2>Schermata Preparazione / Tattica</h2>
+<p class="subtitle">Il campo SVG (verticale, ruoli trascinabili) resta il protagonista. Come gli sistemiamo attorno rosa, dettaglio giocatore, tattica e panchina? Due layout, pelle dark/ambra applicata. Clicca.</p>
+
+<style>
+  .pv { --ac:#d39a3c; --ac2:#a06f1f; background:#0a0e13; border-radius:10px; overflow:hidden; display:flex; height:330px; font-family:system-ui,sans-serif; box-shadow:0 14px 36px rgba(0,0,0,.5); color:#eef2f6; }
+  .pv .side { width:54px; background:#0d131a; border-right:1px solid #caa05a2e; display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:12px; }
+  .pv .ic { width:26px; height:26px; border-radius:5px; background:#16202b; }
+  .pv .ic.on { background:color-mix(in srgb,var(--ac) 22%,transparent); border:1px solid var(--ac); }
+  .pv .work { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .pv .top { padding:10px 14px; border-bottom:1px solid #1a2530; display:flex; justify-content:space-between; align-items:baseline; }
+  .pv .ttl { font-family:Georgia,serif; font-size:16px; font-weight:700; }
+  .pv .kick { font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--ac); }
+  .pv .save { background:linear-gradient(135deg,var(--ac),var(--ac2)); color:#11150c; font-size:10px; font-weight:800; padding:6px 12px; border-radius:4px; }
+  .pv .body { flex:1; display:flex; gap:10px; padding:12px; min-height:0; }
+  .pitch { background:linear-gradient(#22432f,#1c3727); border:1px solid #ffffff14; border-radius:6px; position:relative; }
+  .pitch::before { content:""; position:absolute; inset:8px; border:1px solid #ffffff22; border-radius:3px; }
+  .pitch .tok { position:absolute; width:18px; height:18px; border-radius:50%; background:var(--ac); transform:translate(-50%,-50%); box-shadow:0 1px 3px #0008; border:1px solid #fff6; }
+  .panel { background:#111922; border:1px solid #1d2935; border-radius:6px; padding:8px; display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .panel .ph { font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:#7f93a5; }
+  .panel .ln { height:7px; border-radius:3px; background:#1c2935; }
+  .tab { display:flex; gap:4px; }
+  .tab span { font-size:9px; padding:3px 6px; border-radius:3px; background:#16202b; color:#8a9bab; }
+  .tab span.on { background:color-mix(in srgb,var(--ac) 20%,transparent); color:var(--ac); }
+  .bench { display:flex; gap:5px; margin-top:6px; }
+  .bench .b { flex:1; height:22px; border-radius:4px; background:#16202b; border:1px solid #1d2935; }
+  .opt-block { display:block; margin-bottom:16px; }
+</style>
+
+<div class="options">
+
+  <div class="option opt-block" data-choice="board-left" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content" style="width:100%">
+      <h3>A · Campo a sinistra dominante + pannello a tab a destra</h3>
+      <p>Campo grande a sinistra, panchina come striscia sotto. A destra un solo pannello con <b>tab</b>: Rosa · Tattica · Dettaglio. Focus sul campo, meno affollato.</p>
+      <div class="pv">
+        <div class="side"><div class="ic"></div><div class="ic on"></div><div class="ic"></div><div class="ic"></div></div>
+        <div class="work">
+          <div class="top"><div><div class="kick">Giornata 7 · Aurora</div><div class="ttl">Preparazione</div></div><div class="save">SALVA ▸</div></div>
+          <div class="body">
+            <div style="flex:1.5; display:flex; flex-direction:column; gap:6px; min-width:0">
+              <div class="pitch" style="flex:1">
+                <div class="tok" style="left:50%;top:90%"></div>
+                <div class="tok" style="left:25%;top:70%"></div><div class="tok" style="left:50%;top:72%"></div><div class="tok" style="left:75%;top:70%"></div>
+                <div class="tok" style="left:30%;top:48%"></div><div class="tok" style="left:70%;top:48%"></div>
+                <div class="tok" style="left:50%;top:26%"></div><div class="tok" style="left:25%;top:24%"></div><div class="tok" style="left:75%;top:24%"></div>
+              </div>
+              <div class="bench"><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div></div>
+            </div>
+            <div class="panel" style="flex:1">
+              <div class="tab"><span class="on">Rosa</span><span>Tattica</span><span>Dettaglio</span></div>
+              <div class="ln" style="width:90%"></div><div class="ln" style="width:70%"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div><div class="ln" style="width:75%"></div><div class="ln" style="width:65%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option opt-block" data-choice="three-col" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content" style="width:100%">
+      <h3>B · Tre colonne — Rosa sempre visibile | Campo centro | Dettaglio + Tattica</h3>
+      <p>Rosa a sinistra sempre sott'occhio, campo al centro, a destra dettaglio giocatore + tattica impilati. Panchina sotto il campo. Più denso, molto "FM".</p>
+      <div class="pv">
+        <div class="side"><div class="ic"></div><div class="ic on"></div><div class="ic"></div><div class="ic"></div></div>
+        <div class="work">
+          <div class="top"><div><div class="kick">Giornata 7 · Aurora</div><div class="ttl">Preparazione</div></div><div class="save">SALVA ▸</div></div>
+          <div class="body">
+            <div class="panel" style="width:120px"><div class="ph">Rosa · 24</div><div class="ln" style="width:90%"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:85%"></div><div class="ln" style="width:70%"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:75%"></div><div class="ln" style="width:82%"></div></div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:6px; min-width:0">
+              <div class="pitch" style="flex:1">
+                <div class="tok" style="left:50%;top:90%"></div>
+                <div class="tok" style="left:25%;top:70%"></div><div class="tok" style="left:50%;top:72%"></div><div class="tok" style="left:75%;top:70%"></div>
+                <div class="tok" style="left:30%;top:48%"></div><div class="tok" style="left:70%;top:48%"></div>
+                <div class="tok" style="left:50%;top:26%"></div><div class="tok" style="left:25%;top:24%"></div><div class="tok" style="left:75%;top:24%"></div>
+              </div>
+              <div class="bench"><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div></div>
+            </div>
+            <div style="width:124px; display:flex; flex-direction:column; gap:8px">
+              <div class="panel" style="flex:1"><div class="ph">Dettaglio</div><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div><div class="ln" style="width:70%"></div></div>
+              <div class="panel" style="flex:1"><div class="ph">Tattica</div><div class="ln" style="width:75%"></div><div class="ln" style="width:65%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:6px">Su mobile/stretto entrambi collassano in: campo → rosa → tattica in verticale. Quale preferisci da desktop?</p>

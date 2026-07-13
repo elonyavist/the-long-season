@@ -85,14 +85,6 @@ export function App(): React.JSX.Element {
     window.scrollTo({ top: 0, left: 0 });
   }, [screen]);
 
-  useEffect(() => {
-    document.documentElement.dataset.themePalette = preferences.themePaletteId;
-
-    return () => {
-      delete document.documentElement.dataset.themePalette;
-    };
-  }, [preferences.themePaletteId]);
-
   if (screen === "career_dashboard") {
     return (
       <CareerDashboardScreen

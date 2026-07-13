@@ -50,6 +50,11 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("it", "career.matchPreparation.blocker.missing_bench_goalkeeper"), "la panchina richiede un portiere");
   assert.equal(translate("es", "career.matchPreparation.benchStatus.lineup_player"), "en el once");
   assert.equal(translate("fr", "career.matchPreparation.playerStatus.bench"), "remplacant");
+  assert.equal(translate("en", "career.matchPreparation.squadFilter.defender"), "DEF");
+  assert.equal(translate("it", "career.matchPreparation.squadFilter.goalkeeper"), "POR");
+  assert.equal(translate("de", "career.matchPreparation.squadFilter.midfielder"), "MIT");
+  assert.equal(translate("es", "career.matchPreparation.squadFilter.attacker"), "ATA");
+  assert.equal(translate("fr", "career.matchPreparation.column.fitness"), "Cond.");
   assert.equal(translate("en", "career.tacticalBoard.title"), "Tactical board");
   assert.equal(translate("it", "career.tacticalBoard.currentShape"), "Modulo in campo");
   assert.equal(translate("it", "career.tacticalBench.emptySlot"), "Slot riserva vuoto");
@@ -95,19 +100,6 @@ test("translates every documented match-preparation formation label in every sup
   }
 });
 
-test("translates web theme palette settings in every supported language", () => {
-  assert.equal(translate("en", "web.preferences.themePalette"), "Color theme");
-  assert.equal(translate("it", "web.preferences.themePalette"), "Tema colori");
-  assert.equal(translate("de", "web.preferences.themePalette"), "Farbthema");
-  assert.equal(translate("es", "web.preferences.themePalette"), "Tema de color");
-  assert.equal(translate("fr", "web.preferences.themePalette"), "Theme couleur");
-  assert.equal(translate("en", "web.themePalette.floodlightNavy"), "Floodlight navy");
-  assert.equal(translate("it", "web.themePalette.floodlightNavy"), "Notte stadio");
-  assert.equal(translate("de", "web.themePalette.clubOffice"), "Clubbuero");
-  assert.equal(translate("es", "web.themePalette.clubOffice"), "Oficina club");
-  assert.equal(translate("fr", "web.themePalette.pressRoom"), "Salle presse");
-});
-
 test("translates web matchday labels in every supported language", () => {
   assert.equal(translate("en", "career.matchday.title"), "Matchday");
   assert.equal(translate("it", "career.matchday.title"), "Giorno partita");
@@ -118,7 +110,11 @@ test("translates web matchday labels in every supported language", () => {
   assert.equal(translate("en", "career.matchday.phase.half_time"), "Half-time");
   assert.equal(translate("it", "career.matchday.action.start_first_half"), "Inizia partita");
   assert.equal(translate("it", "career.matchday.action.start_second_half"), "Inizia secondo tempo");
-  assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Continue");
+  assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Return to dashboard");
+  assert.equal(translate("it", "career.matchday.fixture"), "Partita");
+  assert.equal(translate("en", "career.matchday.scoreState.label"), "Your side");
+  assert.equal(translate("en", "career.matchday.phaseProgress"), "Match phase progress");
+  assert.equal(translate("fr", "career.matchday.playerRatingsTable"), "Tableau des notes joueurs");
   assert.equal(translate("de", "career.matchday.table.rating"), "Note");
   assert.equal(translate("es", "career.matchday.playerStatus.substituted_on"), "entro");
   assert.equal(translate("fr", "career.matchday.scoreState.trailing"), "mene");
@@ -127,7 +123,7 @@ test("translates web matchday labels in every supported language", () => {
       minute: "54",
       kind: "Goal",
       club: "S.S. Perugia",
-      player: " Nico Rinaldi",
+      player: "Nico Rinaldi",
     }),
     "54' Goal S.S. Perugia Nico Rinaldi",
   );
@@ -150,21 +146,6 @@ test("translates half-time substitution labels in every supported language", () 
   assert.equal(translate("es", "career.matchday.halfTimeTacticalWorkspace"), "Tactica del descanso");
   assert.equal(translate("fr", "career.matchday.substitution.noneApplied"), "Aucun changement applique.");
   assert.equal(translate("fr", "career.matchday.halfTimeValidation.player_in_lineup_and_bench"), "Un joueur ne peut pas etre dans le onze et sur le banc.");
-});
-
-test("translates every accepted web skin in every supported language", () => {
-  const skinKeys = [
-    "web.themePalette.floodlightNavy",
-    "web.themePalette.clubOffice",
-    "web.themePalette.pressRoom",
-  ] as const;
-  const languages = ["en", "it", "de", "es", "fr"] as const;
-
-  for (const language of languages) {
-    for (const skinKey of skinKeys) {
-      assert.notEqual(translate(language, skinKey), skinKey);
-    }
-  }
 });
 
 test("translates career post-match player-state consequence labels", () => {

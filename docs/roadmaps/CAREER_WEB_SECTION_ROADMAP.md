@@ -26,6 +26,231 @@ The updated operational order is now engine and playability first:
 The old Phase 62 Inbox/Posta recommendation is intentionally delayed until the
 web has real matchday and persistence events to route and resolve.
 
+## UX Rebuild Supersession Note - 2026-07-01
+
+Phase 68 reset the first-MVP UX language and identified the tactical board as
+the only approved visual anchor. The approved implementation direction is now
+`Phase 69 - Web UI Full Rebuild Around Tactical Board`, based on
+`docs/superpowers/specs/2026-06-30-web-ui-redesign-design.md`.
+
+Phase 69 temporarily takes priority over adding new career sections. Each Phase
+69 step must produce one browser-visible slice for user review before the next
+step starts. This is intentional: the product should not continue accumulating
+screens on top of a rejected UI language.
+
+Phase 69 keeps this roadmap's quality bar binding:
+
+- no dead screens;
+- no UI-only data;
+- no CLI prose parsing;
+- Playwright desktop/narrow screenshot QA;
+- accessibility notes;
+- dependency/code-quality/architecture/UI-UX/fun review before closeout.
+
+Phase 69 progress:
+
+- Step 01 complete: app entry now has a single fixed identity, no user-facing
+  theme picker, and retained language/currency preferences.
+- Step 01 browser evidence: `/tmp/the-long-season-phase69-step01/app-entry-desktop.png`
+  and `/tmp/the-long-season-phase69-step01/app-entry-narrow.png`.
+- Step 01 hover rework evidence:
+  `/tmp/the-long-season-phase69-step01/app-entry-new-career-hover.png`.
+- Step 02 complete: tactical-board and bench-board chrome CSS is isolated in
+  `apps/web/src/styles/tactical-board.css`; tactical-board logic and pitch
+  markings were not modified.
+- Step 02 browser evidence:
+  `/tmp/the-long-season-phase69-step02/tactical-board-desktop.png`,
+  `/tmp/the-long-season-phase69-step02/tactical-board-context-menu-desktop.png`,
+  and `/tmp/the-long-season-phase69-step02/tactical-board-narrow.png`.
+- Step 03 complete: base layout, typography hierarchy, global focus language,
+  subtle scanline/grid material, and app-entry spacing were tightened without
+  starting the shell/sidebar/dashboard rebuild.
+- Step 03 browser evidence:
+  `/tmp/the-long-season-phase69-step03/app-entry-desktop.png`,
+  `/tmp/the-long-season-phase69-step03/app-entry-narrow.png`,
+  `/tmp/the-long-season-phase69-step03/app-entry-focus-new-career.png`,
+  `/tmp/the-long-season-phase69-step03/career-screen-desktop.png`, and
+  `/tmp/the-long-season-phase69-step03/career-screen-narrow.png`.
+- Step 04 complete: shared player row, squad table, and player-detail primitives
+  were tightened in place without touching dashboard, shell, matchday, or
+  tactical-board logic.
+- Step 04 browser evidence:
+  `/tmp/the-long-season-phase69-step04/match-preparation-desktop.png`,
+  `/tmp/the-long-season-phase69-step04/match-preparation-narrow-after-table-min-width.png`,
+  `/tmp/the-long-season-phase69-step04/squad-table-desktop.png`, and
+  `/tmp/the-long-season-phase69-step04/player-detail-desktop.png`.
+- Step 05 complete: the career shell now uses a persistent left sidebar,
+  central content outlet, and attention/action rail. The old `CareerShell`
+  import path is a compatibility bridge to the new `features/app-shell`
+  implementation so existing screens can move incrementally without duplicated
+  chrome.
+- Step 05 browser evidence:
+  `/tmp/the-long-season-phase69-step05/shell-dashboard-desktop-v2.png`,
+  `/tmp/the-long-season-phase69-step05/shell-preparation-desktop-v2.png`, and
+  `/tmp/the-long-season-phase69-step05/shell-preparation-narrow-v2.png`.
+- Step 06 complete: the dashboard central panel is now a command centre with
+  one dominant primary action, compact next-fixture/preparation facts,
+  attention blockers near the top, and a short real-fact signal row. Technical
+  save/world-seed output and fixture ids were removed from the dashboard body.
+- Step 06 browser evidence:
+  `/tmp/the-long-season-phase69-step06/dashboard-command-centre-desktop.png`
+  and `/tmp/the-long-season-phase69-step06/dashboard-command-centre-narrow.png`.
+- Step 07 complete: the shell Posta/attention rail is now compact and backed
+  only by existing Inbox read-model facts, the separate next-action card was
+  removed, current navigation uses `aria-current` without being marked disabled,
+  and unavailable future sections have a calmer disabled state.
+- Step 07 browser evidence:
+  `/tmp/the-long-season-phase69-step07/posta-rail-dashboard-desktop.png`,
+  `/tmp/the-long-season-phase69-step07/posta-rail-preparation-desktop.png`, and
+  `/tmp/the-long-season-phase69-step07/posta-rail-preparation-narrow.png`.
+- Step 08 complete: match preparation now uses a board-first workspace. The
+  shared tactical board dominates the left column, the bench sits directly below
+  it, and squad/detail/tactic facts live together in a right-side decision
+  panel. Tactical-board and bench behavior were not changed.
+- Step 08 browser evidence:
+  `/tmp/the-long-season-phase69-step08/match-preparation-board-first-desktop.png`
+  and
+  `/tmp/the-long-season-phase69-step08/match-preparation-board-first-narrow.png`.
+- Step 09 complete: match preparation now keeps squad, tactic, and player
+  detail in localized right-panel tabs backed by existing read-model facts.
+  Blockers sit closer to the single primary save action, and focusing a player
+  opens the Detail tab instead of adding another stacked panel.
+- Step 09 browser evidence:
+  `/tmp/the-long-season-phase69-step09/desktop-squad.png`,
+  `/tmp/the-long-season-phase69-step09/desktop-tactic.png`,
+  `/tmp/the-long-season-phase69-step09/desktop-detail.png`,
+  `/tmp/the-long-season-phase69-step09/narrow-squad.png`,
+  `/tmp/the-long-season-phase69-step09/narrow-tactic.png`, and
+  `/tmp/the-long-season-phase69-step09/narrow-detail.png`.
+- Step 10 complete: matchday now opens on a broadcast-style pre-match centre
+  backed by the existing phase read model. The frame prioritizes phase, round,
+  dominant score, live line, one primary command, and the phase rail before
+  lower-priority event/player facts. Full-time consequences remain hidden before
+  full time.
+- Step 10 browser evidence:
+  `/tmp/the-long-season-phase69-step10/matchday-pre-match-desktop.png` and
+  `/tmp/the-long-season-phase69-step10/matchday-pre-match-narrow.png`.
+- Step 11 complete: matchday half-time now becomes a board-first decision
+  screen. The shared tactical board and bench remain the main workspace, first-
+  half highlights and player signals sit in compact side cards, the generic
+  Timeline/player-table report layout is suppressed during half-time, and the
+  broadcast frame keeps one primary `Start second half` command.
+- Step 11 browser evidence:
+  `/tmp/the-long-season-phase69-step11/matchday-half-time-desktop.png` and
+  `/tmp/the-long-season-phase69-step11/matchday-half-time-narrow.png`.
+- Step 12 complete: matchday full-time is now a compact result review. The
+  broadcast frame keeps the dominant score and one `Continue` command, while the
+  body separates the final summary, decisive-event cards, final ratings, and
+  post-match condition/form/morale consequences. The raw Timeline layout is not
+  used at full time.
+- Step 12 browser evidence:
+  `/tmp/the-long-season-phase69-step12/matchday-full-time-desktop.png` and
+  `/tmp/the-long-season-phase69-step12/matchday-full-time-narrow.png`.
+- Step 13 complete: removed legacy web UI code left behind by the rebuild. The
+  old `features/career-shell` bridge/inbox panel and stale tests are gone,
+  screens import `features/app-shell/AppShell` directly, rejected theme-palette
+  modules/specs/i18n keys are deleted, and unused legacy dashboard/report CSS
+  selectors were removed without touching tactical-board CSS or behavior.
+- Step 13 browser evidence:
+  `/tmp/the-long-season-phase69-step13/01-app-entry-desktop.png`,
+  `/tmp/the-long-season-phase69-step13/02-dashboard-desktop.png`,
+  `/tmp/the-long-season-phase69-step13/03-match-preparation-desktop.png`,
+  `/tmp/the-long-season-phase69-step13/04-pre-match-desktop.png`,
+  `/tmp/the-long-season-phase69-step13/05-half-time-desktop.png`,
+  `/tmp/the-long-season-phase69-step13/06-full-time-desktop.png`, and
+  `/tmp/the-long-season-phase69-step13/07-full-time-narrow.png`.
+- Step 14 complete: final visual QA, accessibility checks, architecture
+  reconciliation, phase report, and one next-phase recommendation are complete.
+- Step 14 browser evidence:
+  `/tmp/the-long-season-phase69/app-entry-desktop.png`,
+  `/tmp/the-long-season-phase69/dashboard-desktop.png`,
+  `/tmp/the-long-season-phase69/match-preparation-desktop.png`,
+  `/tmp/the-long-season-phase69/pre-match-desktop.png`,
+  `/tmp/the-long-season-phase69/half-time-desktop.png`,
+  `/tmp/the-long-season-phase69/full-time-desktop.png`,
+  `/tmp/the-long-season-phase69/app-entry-narrow.png`,
+  `/tmp/the-long-season-phase69/dashboard-narrow.png`,
+  `/tmp/the-long-season-phase69/match-preparation-narrow.png`,
+  `/tmp/the-long-season-phase69/pre-match-narrow.png`,
+  `/tmp/the-long-season-phase69/half-time-narrow.png`, and
+  `/tmp/the-long-season-phase69/full-time-narrow.png`.
+- Phase 69 is complete. Product review on 2026-07-07 rejected the current
+  matchday information architecture as too scattered and report-like.
+- The next recommended phase is now
+  `Phase 70 - Web Matchday Information Architecture And Live Flow Rework`.
+  Persistence remains important, but should wait until matchday has a coherent
+  live flow worth preserving.
+- Phase 70 documentation exists at
+  `docs/steps/70-web-matchday-information-architecture-and-live-flow-rework/`.
+- Phase 70 Step 01 complete: the current matchday IA failure is documented in
+  `docs/audits/MATCHDAY_INFORMATION_ARCHITECTURE_AUDIT.md`. The next step must
+  define event priority and tabellino/view-model contracts before changing the
+  React layout.
+- Phase 70 Step 02 complete: `apps/web/src/features/matchday/career-matchday-presenter.ts`
+  now derives compact score-header facts, passive phase markers, primary
+  commands, and tabellino/live-feed event priority groups from existing
+  structured matchday facts. The next step can consume this contract in the
+  compact score header and phase indicator without adding prose parsing or fake
+  event types.
+- Phase 70 Step 03 complete: the matchday top frame now consumes the presenter
+  through a compact score header, passive non-clickable phase indicators, and
+  one primary action slot. The separate bulky context strip and visible
+  technical labels `Live line` / `Next command` were removed so the next steps
+  can focus on each phase body.
+- Phase 70 Step 04 complete: ready pre-match is now a confirmation-only screen
+  with compact fixture context and one `Start match` command. Empty event,
+  highlight, player-stat, and tactical-board panels are suppressed before
+  kickoff.
+- Phase 70 Step 05 complete: kickoff now opens a first-half live review screen
+  before the half-time decision state. It reuses the structured staged
+  half-time facts, applies the presenter event hierarchy, shows goals before
+  lower-priority live-feed details, and exposes exactly one `Play to half-time`
+  command without adding fake engine facts or persistence.
+- Phase 70 Step 06 complete: half-time now starts with the first-half story
+  and tabellino, then places the tactical board and bench as the main decision
+  workspace with selected-club watch-list/key-contributor signals beside it.
+  Generic repeated context panels were removed; the only primary command
+  remains `Start second half`.
+- Phase 70 Step 07 complete: the second half is now a visible live-pressure
+  screen before full time. It reuses full-time structured facts through
+  browser-only playback, preserves prior first-half goals as context, shows
+  second-half events and selected-club pressure, and keeps exactly one
+  `Play to full time` command without tactical controls or early full-time
+  consequences.
+- Phase 70 Step 08 complete: full time is now ordered as match tabellino,
+  player ratings, then post-match consequences. Goals are visually stronger
+  than secondary structured facts, the primary action is explicitly
+  `Return to dashboard`, and live-only controls are absent from the final
+  review.
+- Phase 70 Step 09 complete: matchday copy and accessibility were tightened
+  around football-facing language. The local fixture label, passive phase
+  progress, player-ratings table, and event-card accessible names are localized
+  in all supported languages; phase indicators remain non-clickable status
+  markers, and event meaning is visible through text rather than color alone.
+- Phase 70 Step 10 complete: Playwright desktop/narrow visual QA now covers the
+  full five-state matchday flow and writes
+  `docs/audits/WEB_MATCHDAY_INFORMATION_ARCHITECTURE_VISUAL_QA.md` plus
+  screenshots under `/tmp/the-long-season-phase70`. The final report
+  `docs/audits/WEB_MATCHDAY_INFORMATION_ARCHITECTURE_REWORK_REPORT.md`
+  documents the accepted state, residual UX risks, and the single next
+  recommendation.
+- Phase 70 is complete. The next recommended phase is
+  `Future Phase - Web Career Persistence And Save Lifecycle Foundation`.
+  Matchday is now coherent enough to preserve; adding more web sections before
+  durable career saves would create demo-only UI and dead-code risk.
+- Product review after Phase 70 identified one contained pre-persistence UI
+  correction: the shared match-preparation squad list still forces horizontal
+  scrolling and gives secondary preferred-foot/status prose too much space.
+  `Phase 69 Step 04a - Responsive Squad List Information Rework` is documented
+  as a targeted follow-up. The step is implemented: the list now uses
+  number/name, canonical position, age, current condition, and compact
+  language-independent starting-XI/bench icons; preferred foot stays in player
+  detail, department filters and five
+  deterministic sorts are available, and desktop/narrow Playwright checks
+  prove vertical-only scrolling with no horizontal overflow. Product visual
+  acceptance is still required before the persistence phase; tactical-board
+  and matchday behavior remain unchanged.
+
 ## Goal
 
 Build the career web experience one section at a time without creating dead
@@ -1256,16 +1481,17 @@ Recommended order:
     in `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md`
 12. Phase 67 - Web Matchday Flow Simplification And Half-Time Tactical Decisions
 13. Phase 68 - MVP UX Language Reset Around Tactical Board
-14. Future Web Persistence And Save Adapter
-15. Future Web Backlog - Inbox/Posta Decision Center
-16. Future Web Backlog - Squad Screen
-17. Future Web Backlog - Calendar And Fixtures
-18. Future Web Backlog - Market UI MVP
-19. Future Web Backlog - Finances Foundation
-18. Future Web Backlog - Youth UI
-19. Future Web Backlog - Staff Foundation
-20. Future Web Backlog - Archive And History
-21. Future Web Backlog - Main Dashboard Consolidation
+14. Phase 70 - Web Matchday Information Architecture And Live Flow Rework
+15. Future Phase - Web Career Persistence And Save Lifecycle Foundation
+16. Future Web Backlog - Inbox/Posta Decision Center
+17. Future Web Backlog - Squad Screen
+18. Future Web Backlog - Calendar And Fixtures
+19. Future Web Backlog - Market UI MVP
+20. Future Web Backlog - Finances Foundation
+21. Future Web Backlog - Youth UI
+22. Future Web Backlog - Staff Foundation
+23. Future Web Backlog - Archive And History
+24. Future Web Backlog - Main Dashboard Consolidation
 
 This order is intentionally linear:
 

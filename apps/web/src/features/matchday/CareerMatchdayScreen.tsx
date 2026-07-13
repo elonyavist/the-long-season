@@ -20,13 +20,20 @@ import type {
 } from "@game/ui";
 
 import type { DemoCareerContinueResult } from "../dashboard/continue-demo-career";
+import {
+  buildCareerMatchdayPresentationView,
+  type CareerMatchdayPresentationView,
+  type MatchdayPresentedEventView,
+  type MatchdayPhaseIndicatorView,
+  type MatchdayScoreHeaderView,
+} from "./career-matchday-presenter";
 import type {
   DemoHalfTimeSubstitutionDecision,
   DemoHalfTimeSubstitutionPanel,
   DemoHalfTimeSubstitutionPlayerOption,
 } from "./matchday-demo";
 import { buildDemoTacticalBoardSquadPlayers } from "../match-preparation/match-preparation-demo";
-import { CareerShell } from "../career-shell/CareerShell";
+import { AppShell } from "../app-shell/AppShell";
 import { roleLabelKey } from "../../shared/lib/match-preparation-labels";
 import {
   TacticalBenchBoard,
@@ -97,7 +104,7 @@ export function CareerMatchdayScreen({
   });
 
   return (
-    <CareerShell
+    <AppShell
       shellView={shellView}
       selectedClubName={view.selectedClub.name}
       contextItems={[
@@ -113,7 +120,6 @@ export function CareerMatchdayScreen({
         <header className="tls-matchday-header">
           <div>
             <h1 className="tls-shell-title" id="career-matchday-title">{text("career.matchday.title")}</h1>
-            <p className="tls-shell-status">{activePhaseView === undefined ? text(matchdayStatusKey(view.status)) : text(activePhaseView.periodLabelKey as MessageKey)}</p>
           </div>
         </header>
 
@@ -141,7 +147,7 @@ export function CareerMatchdayScreen({
           />
         )}
       </section>
-    </CareerShell>
+    </AppShell>
   );
 }
 
@@ -182,98 +188,497 @@ function MatchCentre({
   onStartSecondHalf?: () => void;
   onBackToDashboard: () => void;
 }>): React.JSX.Element {
-  const primaryAction = matchCentrePrimaryAction(view, phaseView);
+  const [isFirstHalfPlaybackOpen, setFirstHalfPlaybackOpen] = useState(false);
+  const [isSecondHalfPlaybackOpen, setSecondHalfPlaybackOpen] = useState(false);
+  const visiblePhaseView = isFirstHalfPlaybackOpen && phaseView.phase === "half_time"
+    ? firstHalfViewFromHalfTime(phaseView)
+    : isSecondHalfPlaybackOpen && phaseView.phase === "full_time"
+      ? secondHalfViewFromFullTime(phaseView)
+    : phaseView;
+  const presentation = buildCareerMatchdayPresentationView(visiblePhaseView);
+  const primaryAction = matchCentrePrimaryAction(view, visiblePhaseView, presentation.primaryAction);
 
   return (
     <div className="tls-match-centre">
-      <section className="tls-match-centre-hero" aria-label={text("career.matchday.score")}>
-        <MatchdayScoreboard view={phaseView} text={text} />
-        <PhaseRail activePhase={phaseView.phase} text={text} />
-      </section>
-
-      <section className="tls-matchday-context-strip" aria-label={text("career.matchday.context")}>
-        <MatchdayFact label={text("career.matchday.period")} value={text(phaseView.periodLabelKey as MessageKey)} />
-        <MatchdayFact label={text("career.fixtureRound", { round: phaseView.fixture.round })} value={fixtureLine(phaseView)} />
-        <MatchdayFact label={text("career.matchday.minute")} value={phaseMinuteLabel(phaseView.currentMinute, text)} />
-        <MatchdayFact label={text("career.matchday.selectedSide")} value={text(`career.dashboard.fixtureSide.${phaseView.fixture.selectedClubSide}` as MessageKey)} />
-      </section>
+      <MatchdayBroadcastHeader
+        phaseView={visiblePhaseView}
+        presentation={presentation}
+        text={text}
+        onPrepareMatch={onPrepareMatch}
+        onPlayFixture={onPlayFixture}
+        onBackToDashboard={onBackToDashboard}
+        {...(primaryAction === undefined ? {} : { primaryAction })}
+        onStartFirstHalf={() => {
+          setFirstHalfPlaybackOpen(true);
+          onPlayFixture();
+        }}
+        onContinueToHalfTime={() => {
+          setFirstHalfPlaybackOpen(false);
+        }}
+        onStartSecondHalf={() => {
+          setSecondHalfPlaybackOpen(true);
+          onStartSecondHalf?.();
+        }}
+        onContinueToFullTime={() => {
+          setSecondHalfPlaybackOpen(false);
+        }}
+      />
 
       <MatchdayBlockers blockerKeys={view.blockerKeys} text={text} />
 
-      {primaryAction === undefined ? null : (
-        <section className="tls-match-centre-actions" aria-label={text("career.matchday.actions")}>
+      {visiblePhaseView.phase === "half_time" ? (
+        <section className="tls-match-centre-half-time-decision" aria-label={text("career.matchday.halfTimeDecision")}>
+          <HalfTimeStory phaseView={visiblePhaseView} presentation={presentation} text={text} {...(halfTimeSubstitutions === undefined ? {} : { panel: halfTimeSubstitutions })} />
+          <div className="tls-match-centre-half-time-layout">
+            <div className="tls-match-centre-half-time-primary">
+              {matchPreparationView !== undefined && tacticalBoardDraft !== undefined ? (
+                <HalfTimeTacticalWorkspace
+                  tacticalBoardDraft={tacticalBoardDraft}
+                  view={matchPreparationView}
+                  text={text}
+                  {...(halfTimeSubstitutions === undefined ? {} : { panel: halfTimeSubstitutions })}
+                  {...(onHalfTimeFormationChange === undefined ? {} : { onFormationChange: onHalfTimeFormationChange })}
+                  {...(onHalfTimeLineupPlayerChange === undefined ? {} : { onLineupPlayerChange: onHalfTimeLineupPlayerChange })}
+                  {...(onHalfTimeBenchPlayerChange === undefined ? {} : { onBenchPlayerChange: onHalfTimeBenchPlayerChange })}
+                  {...(onHalfTimeBoardSlotMove === undefined ? {} : { onBoardSlotMove: onHalfTimeBoardSlotMove })}
+                  {...(onHalfTimeBoardSlotRoleChange === undefined ? {} : { onBoardSlotRoleChange: onHalfTimeBoardSlotRoleChange })}
+                  {...(onHalfTimeBoardSlotClear === undefined ? {} : { onBoardSlotClear: onHalfTimeBoardSlotClear })}
+                />
+              ) : halfTimeSubstitutions?.status === "available" ? (
+                <HalfTimeSubstitutionPanel
+                  panel={halfTimeSubstitutions}
+                  text={text}
+                  {...(onApplyHalfTimeSubstitution === undefined ? {} : { onApplyHalfTimeSubstitution })}
+                />
+              ) : null}
+            </div>
+            <HalfTimeDecisionSignals phaseView={visiblePhaseView} text={text} {...(halfTimeSubstitutions === undefined ? {} : { panel: halfTimeSubstitutions })} />
+          </div>
+        </section>
+      ) : visiblePhaseView.phase === "full_time" ? (
+        <FullTimeResult
+          phaseView={visiblePhaseView}
+          presentation={presentation}
+          nextStop={view.nextStop}
+          text={text}
+        />
+      ) : visiblePhaseView.phase === "pre_match" ? (
+        view.blockerKeys.length === 0 ? <PreMatchConfirmation phaseView={visiblePhaseView} text={text} /> : null
+      ) : (
+        <LiveMatchPhase phaseView={visiblePhaseView} presentation={presentation} text={text} />
+      )}
+
+    </div>
+  );
+}
+
+function firstHalfViewFromHalfTime(phaseView: CareerMatchdayPhaseView): CareerMatchdayPhaseView {
+  return {
+    ...phaseView,
+    phase: "first_half",
+    status: "live",
+    periodLabelKey: "career.matchday.phase.first_half",
+    actions: [{
+      actionId: "continue_to_half_time",
+      status: "available",
+      labelKey: "career.matchday.action.continue_to_half_time",
+      blockerKeys: [],
+    }],
+    nextActionId: "continue_to_half_time",
+    conditionChanges: [],
+    playerStateChanges: [],
+  };
+}
+
+function secondHalfViewFromFullTime(phaseView: CareerMatchdayPhaseView): CareerMatchdayPhaseView {
+  const timelineEvents = secondHalfTimelineEvents(phaseView.timelineEvents);
+
+  return {
+    ...phaseView,
+    phase: "second_half",
+    status: "live",
+    periodLabelKey: "career.matchday.phase.second_half",
+    timelineEvents,
+    keyEventCards: timelineEvents.filter((event) => event.cardPriority === "major"),
+    actions: [{
+      actionId: "continue_to_full_time",
+      status: "available",
+      labelKey: "career.matchday.action.continue_to_full_time",
+      blockerKeys: [],
+    }],
+    nextActionId: "continue_to_full_time",
+    conditionChanges: [],
+    playerStateChanges: [],
+  };
+}
+
+function secondHalfTimelineEvents(
+  events: readonly CareerMatchdayPhaseEventView[],
+): readonly CareerMatchdayPhaseEventView[] {
+  const priorGoalContext = events.filter((event) => event.minute <= 45 && event.kind === "goal");
+  const secondHalfEvents = events.filter((event) => event.minute > 45);
+
+  return [...priorGoalContext, ...secondHalfEvents];
+}
+
+function PreMatchConfirmation({
+  phaseView,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  text: Translator;
+}>): React.JSX.Element {
+  return (
+    <section className="tls-matchday-card tls-match-centre-pre-match" aria-labelledby="matchday-pre-match-title">
+      <div className="tls-match-centre-card-heading">
+        <div>
+          <h2 id="matchday-pre-match-title">{text("career.matchday.status.ready_to_play")}</h2>
+          <p>{broadcastLine(phaseView, text)}</p>
+        </div>
+      </div>
+      <div className="tls-match-centre-pre-match-facts">
+        <MatchdayFact label={text("career.matchday.fixture")} value={fixtureLine(phaseView)} />
+        <MatchdayFact
+          label={text("career.matchday.selectedSide")}
+          value={text(`career.dashboard.fixtureSide.${phaseView.fixture.selectedClubSide}` as MessageKey)}
+        />
+      </div>
+    </section>
+  );
+}
+
+function MatchdayBroadcastHeader({
+  phaseView,
+  presentation,
+  primaryAction,
+  text,
+  onPrepareMatch,
+  onPlayFixture,
+  onBackToDashboard,
+  onStartFirstHalf,
+  onContinueToHalfTime,
+  onStartSecondHalf,
+  onContinueToFullTime,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  presentation: CareerMatchdayPresentationView;
+  primaryAction?: CareerMatchdayPhaseView["actions"][number];
+  text: Translator;
+  onPrepareMatch: () => void;
+  onPlayFixture: () => void;
+  onBackToDashboard: () => void;
+  onStartFirstHalf?: () => void;
+  onContinueToHalfTime?: () => void;
+  onStartSecondHalf?: () => void;
+  onContinueToFullTime?: () => void;
+}>): React.JSX.Element {
+  const header = presentation.scoreHeader;
+
+  return (
+    <section className="tls-match-broadcast-frame" aria-label={text("career.matchday.matchCentre")}>
+      <div className="tls-match-broadcast-meta" aria-label={text("career.matchday.context")}>
+        <span>{text(header.phaseLabelKey as MessageKey)}</span>
+        <span>{phaseMinuteLabel(header.minute, text)}</span>
+        <span>{text("career.fixtureRound", { round: header.round })}</span>
+        <span>{text(`career.dashboard.fixtureSide.${phaseView.fixture.selectedClubSide}` as MessageKey)}</span>
+      </div>
+
+      <div className="tls-match-broadcast-main">
+        <MatchdayScoreboard header={header} text={text} />
+
+        {primaryAction === undefined ? null : (
           <button
-            className="tls-menu-button tls-menu-button-primary"
+            className="tls-menu-button tls-menu-button-primary tls-match-broadcast-action"
             disabled={primaryAction.status !== "available"}
             type="button"
             onClick={handlerForPhaseAction(primaryAction.actionId, {
               onPrepareMatch,
               onPlayFixture,
               onBackToDashboard,
+              ...(onStartFirstHalf === undefined ? {} : { onStartFirstHalf }),
+              ...(onContinueToHalfTime === undefined ? {} : { onContinueToHalfTime }),
               ...(onStartSecondHalf === undefined ? {} : { onStartSecondHalf }),
+              ...(onContinueToFullTime === undefined ? {} : { onContinueToFullTime }),
             })}
           >
             {text(primaryAction.labelKey as MessageKey)}
           </button>
-        </section>
-      )}
-
-      {phaseView.phase === "half_time" && matchPreparationView !== undefined && tacticalBoardDraft !== undefined ? (
-        <HalfTimeTacticalWorkspace
-          tacticalBoardDraft={tacticalBoardDraft}
-          view={matchPreparationView}
-          text={text}
-          {...(halfTimeSubstitutions === undefined ? {} : { panel: halfTimeSubstitutions })}
-          {...(onHalfTimeFormationChange === undefined ? {} : { onFormationChange: onHalfTimeFormationChange })}
-          {...(onHalfTimeLineupPlayerChange === undefined ? {} : { onLineupPlayerChange: onHalfTimeLineupPlayerChange })}
-          {...(onHalfTimeBenchPlayerChange === undefined ? {} : { onBenchPlayerChange: onHalfTimeBenchPlayerChange })}
-          {...(onHalfTimeBoardSlotMove === undefined ? {} : { onBoardSlotMove: onHalfTimeBoardSlotMove })}
-          {...(onHalfTimeBoardSlotRoleChange === undefined ? {} : { onBoardSlotRoleChange: onHalfTimeBoardSlotRoleChange })}
-          {...(onHalfTimeBoardSlotClear === undefined ? {} : { onBoardSlotClear: onHalfTimeBoardSlotClear })}
-        />
-      ) : phaseView.phase === "half_time" && halfTimeSubstitutions?.status === "available" ? (
-        <HalfTimeSubstitutionPanel
-          panel={halfTimeSubstitutions}
-          text={text}
-          {...(onApplyHalfTimeSubstitution === undefined ? {} : { onApplyHalfTimeSubstitution })}
-        />
-      ) : null}
-
-      <div className="tls-match-centre-grid">
-        <section className="tls-matchday-card tls-match-centre-timeline" aria-labelledby="matchday-events-title">
-          <div className="tls-match-centre-card-heading">
-            <h2 id="matchday-events-title">{text("career.matchday.events")}</h2>
-            <span>{text("career.matchday.timeline")}</span>
-          </div>
-          <EventTimeline events={phaseView.timelineEvents} text={text} />
-        </section>
-
-        <section className="tls-matchday-card tls-match-centre-key-events" aria-labelledby="matchday-key-events-title">
-          <div className="tls-match-centre-card-heading">
-            <h2 id="matchday-key-events-title">{text("career.matchday.keyEvents")}</h2>
-            <span>{text(`career.matchday.scoreState.${phaseView.scoreboard.selectedClubScoreState}` as MessageKey)}</span>
-          </div>
-          <KeyEventCards events={phaseView.keyEventCards} text={text} />
-        </section>
+        )}
       </div>
 
-      <section className="tls-matchday-card" aria-labelledby="matchday-player-stats-title">
+      <p className="tls-match-broadcast-live-line">{broadcastLine(phaseView, text)}</p>
+
+      <PhaseRail indicators={presentation.phaseIndicators} text={text} />
+    </section>
+  );
+}
+
+function LiveMatchPhase({
+  phaseView,
+  presentation,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  presentation: CareerMatchdayPresentationView;
+  text: Translator;
+}>): React.JSX.Element {
+  const eventGroups = presentation.eventGroups;
+
+  return (
+    <section className="tls-matchday-card tls-match-centre-live-phase" aria-labelledby="matchday-live-title">
+      <div className="tls-match-centre-card-heading">
+        <div>
+          <h2 id="matchday-live-title">{text(phaseView.periodLabelKey as MessageKey)}</h2>
+          <p>{broadcastLine(phaseView, text)}</p>
+        </div>
+        <span>{phaseMinuteLabel(phaseView.currentMinute, text)}</span>
+      </div>
+
+      {phaseView.phase === "second_half" ? (
+        <MatchPressureStrip phaseView={phaseView} presentation={presentation} text={text} />
+      ) : null}
+
+      {eventGroups.hasTabellino || eventGroups.hasLiveFeed ? (
+        <div className="tls-match-centre-live-feed">
+          {eventGroups.tabellino.map((event) => (
+            <LiveEventCard event={event} key={event.event.eventId} text={text} />
+          ))}
+          {eventGroups.liveFeed.map((event) => (
+            <LiveEventCard event={event} key={event.event.eventId} text={text} />
+          ))}
+        </div>
+      ) : (
+        <p className="tls-matchday-empty">{text("career.matchday.noEvents")}</p>
+      )}
+    </section>
+  );
+}
+
+function MatchPressureStrip({
+  phaseView,
+  presentation,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  presentation: CareerMatchdayPresentationView;
+  text: Translator;
+}>): React.JSX.Element {
+  const tabellinoCount = presentation.eventGroups.tabellino.length;
+  const liveDetailCount = presentation.eventGroups.liveFeed.length;
+
+  return (
+    <section className="tls-match-centre-pressure-strip" aria-label={text("career.matchday.matchPressure")}>
+      <MatchdayFact
+        label={text("career.matchday.scoreState.label")}
+        value={text(`career.matchday.scoreState.${phaseView.scoreboard.selectedClubScoreState}` as MessageKey)}
+      />
+      <MatchdayFact label={text("career.matchday.halfTimeTabellino")} value={`${tabellinoCount}`} />
+      <MatchdayFact label={text("career.matchday.events")} value={`${liveDetailCount}`} />
+    </section>
+  );
+}
+
+function LiveEventCard({
+  event,
+  text,
+}: Readonly<{
+  event: MatchdayPresentedEventView;
+  text: Translator;
+}>): React.JSX.Element {
+  return (
+    <article
+      aria-label={matchEventAccessibleLabel(event.event, text)}
+      className={`tls-match-centre-live-event is-${event.visualPriority}`}
+    >
+      <span className="tls-match-centre-event-minute">{event.event.minute}'</span>
+      <span className="tls-match-centre-event-kind">{text(event.event.labelKey as MessageKey)}</span>
+      <strong>{event.event.club.name}</strong>
+      <p>{eventPlayerLine(event.event, text)}</p>
+    </article>
+  );
+}
+
+function FullTimeResult({
+  phaseView,
+  presentation,
+  nextStop,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  presentation: CareerMatchdayPresentationView;
+  nextStop: CareerMatchdayView["nextStop"];
+  text: Translator;
+}>): React.JSX.Element {
+  return (
+    <section className="tls-match-centre-full-time" aria-labelledby="matchday-full-time-title">
+      <section className="tls-matchday-card tls-match-centre-full-time-tabellino" aria-labelledby="matchday-full-time-title">
         <div className="tls-match-centre-card-heading">
-          <h2 id="matchday-player-stats-title">{text("career.matchday.playerStats")}</h2>
+          <div>
+            <h2 id="matchday-full-time-title">{text("career.matchday.fullMatchTabellino")}</h2>
+            <p>{text("career.matchday.fullMatchTabellinoHint")}</p>
+          </div>
+          <span>{`${phaseView.scoreboard.homeGoals}-${phaseView.scoreboard.awayGoals}`}</span>
+        </div>
+        <FullTimeTabellino events={presentation.eventGroups.tabellino} text={text} />
+      </section>
+
+      <section className="tls-matchday-card tls-match-centre-full-time-ratings" aria-labelledby="matchday-full-time-ratings-title">
+        <div className="tls-match-centre-card-heading">
+          <h2 id="matchday-full-time-ratings-title">{text("career.matchday.finalPlayerRatings")}</h2>
           <span>{text("career.matchday.playerStatsHint")}</span>
         </div>
         <PlayerPhaseTable rows={phaseView.playerRows} text={text} />
       </section>
 
-      {phaseView.phase === "full_time" ? (
-        <FullTimeConsequences
-          conditionChanges={phaseView.conditionChanges}
-          playerStateChanges={phaseView.playerStateChanges}
-          nextStop={view.nextStop}
-          text={text}
-        />
-      ) : null}
+      <FullTimeConsequences
+        conditionChanges={phaseView.conditionChanges}
+        playerStateChanges={phaseView.playerStateChanges}
+        nextStop={nextStop}
+        text={text}
+      />
+    </section>
+  );
+}
+
+function FullTimeTabellino({
+  events,
+  text,
+}: Readonly<{
+  events: readonly MatchdayPresentedEventView[];
+  text: Translator;
+}>): React.JSX.Element {
+  if (events.length === 0) {
+    return <p className="tls-matchday-empty">{text("career.matchday.noMajorEvents")}</p>;
+  }
+
+  return (
+    <div className="tls-match-centre-tabellino-list">
+      {events.map((event) => (
+        <article
+          aria-label={matchEventAccessibleLabel(event.event, text)}
+          className={`tls-match-centre-tabellino-event is-${event.visualPriority}`}
+          key={event.event.eventId}
+        >
+          <span className="tls-match-centre-event-minute">{event.event.minute}'</span>
+          <div>
+            <strong>{text(event.event.labelKey as MessageKey)}</strong>
+            <p>{event.event.club.name} - {eventPlayerLine(event.event, text)}</p>
+          </div>
+        </article>
+      ))}
     </div>
+  );
+}
+
+function HalfTimeStory({
+  phaseView,
+  presentation,
+  panel,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  presentation: CareerMatchdayPresentationView;
+  panel?: DemoHalfTimeSubstitutionPanel;
+  text: Translator;
+}>): React.JSX.Element {
+  const substitutionCount = text("career.matchday.substitution.count", {
+    count: panel?.appliedCount ?? 0,
+    max: panel?.maxCount ?? 5,
+  });
+
+  return (
+    <section className="tls-matchday-card tls-match-centre-half-time-story" aria-labelledby="matchday-half-time-story-title">
+      <div className="tls-match-centre-card-heading">
+        <div>
+          <h2 id="matchday-half-time-story-title">{text("career.matchday.halfTimeReview")}</h2>
+          <p>{text("career.matchday.halfTimeReviewHint")}</p>
+        </div>
+        <span>{phaseMinuteLabel(phaseView.currentMinute, text)}</span>
+      </div>
+
+      <div className="tls-match-centre-half-time-story-grid">
+        <MatchdayFact label={text("career.matchday.halfTimeScore")} value={`${phaseView.scoreboard.homeGoals}-${phaseView.scoreboard.awayGoals}`} />
+        <MatchdayFact
+          label={text("career.matchday.scoreState.label")}
+          value={text(`career.matchday.scoreState.${phaseView.scoreboard.selectedClubScoreState}` as MessageKey)}
+        />
+        <MatchdayFact label={text("career.matchday.substitution.applied")} value={substitutionCount} />
+      </div>
+
+      <section className="tls-match-centre-half-time-tabellino" aria-labelledby="matchday-half-time-events-title">
+        <div className="tls-match-centre-card-heading">
+          <h3 id="matchday-half-time-events-title">{text("career.matchday.halfTimeTabellino")}</h3>
+          <span>{text("career.matchday.fullTimeHighlightsHint")}</span>
+        </div>
+        <HalfTimeTabellinoEvents events={presentation.eventGroups.tabellino} text={text} />
+      </section>
+    </section>
+  );
+}
+
+function HalfTimeTabellinoEvents({
+  events,
+  text,
+}: Readonly<{
+  events: readonly MatchdayPresentedEventView[];
+  text: Translator;
+}>): React.JSX.Element {
+  if (events.length === 0) {
+    return <p className="tls-matchday-empty">{text("career.matchday.noMajorEvents")}</p>;
+  }
+
+  return (
+    <div className="tls-match-centre-half-time-event-strip">
+      {events.map((event) => (
+        <LiveEventCard event={event} key={event.event.eventId} text={text} />
+      ))}
+    </div>
+  );
+}
+
+function HalfTimeDecisionSignals({
+  phaseView,
+  panel,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  panel?: DemoHalfTimeSubstitutionPanel;
+  text: Translator;
+}>): React.JSX.Element {
+  const selectedClubId = phaseView.selectedClub.clubId;
+  const underperformers = selectHalfTimeUnderperformers(phaseView.playerRows, selectedClubId);
+  const contributors = selectHalfTimeContributors(phaseView.playerRows, selectedClubId);
+  const substitutionCount = text("career.matchday.substitution.count", {
+    count: panel?.appliedCount ?? 0,
+    max: panel?.maxCount ?? 5,
+  });
+
+  return (
+    <aside className="tls-matchday-card tls-match-centre-half-time-signals" aria-labelledby="matchday-half-time-signals-title">
+      <div className="tls-match-centre-card-heading">
+        <div>
+          <h2 id="matchday-half-time-signals-title">{text("career.matchday.halfTimeDecisionSignals")}</h2>
+          <p>{text("career.matchday.halfTimeDecisionSignalsHint")}</p>
+        </div>
+        <span>{substitutionCount}</span>
+      </div>
+
+      <section className="tls-match-centre-half-time-signal-block" aria-labelledby="matchday-half-time-underperformers-title">
+        <div className="tls-match-centre-card-heading">
+          <h3 id="matchday-half-time-underperformers-title">{text("career.matchday.halfTimeUnderperformers")}</h3>
+          <span>{text("career.matchday.table.rating")}</span>
+        </div>
+        <PlayerSignalCards rows={underperformers} text={text} />
+      </section>
+
+      <section className="tls-match-centre-half-time-signal-block" aria-labelledby="matchday-half-time-contributors-title">
+        <div className="tls-match-centre-card-heading">
+          <h3 id="matchday-half-time-contributors-title">{text("career.matchday.halfTimeKeyContributors")}</h3>
+          <span>{text("career.matchday.table.contribution")}</span>
+        </div>
+        <PlayerSignalCards rows={contributors} text={text} />
+      </section>
+    </aside>
   );
 }
 
@@ -401,10 +806,6 @@ function HalfTimeTacticalWorkspace({
     () => buildMatchdayTacticalBenchCandidates(tacticalBoardPlayers),
     [tacticalBoardPlayers],
   );
-  const lineupPlayerIds = useMemo(
-    () => tacticalBoardDraft.slots.flatMap((slot) => (slot.playerId === null ? [] : [slot.playerId])),
-    [tacticalBoardDraft.slots],
-  );
   const currentShape = useMemo(
     () => selectCurrentTacticalBoardShape(tacticalBoardDraft.slots),
     [tacticalBoardDraft.slots],
@@ -415,8 +816,8 @@ function HalfTimeTacticalWorkspace({
     <section className="tls-matchday-card tls-match-centre-half-time-workspace" aria-labelledby="matchday-half-time-tactical-title">
       <div className="tls-match-centre-card-heading">
         <div>
-          <h2 id="matchday-half-time-tactical-title">{text("career.matchday.halfTimeTacticalWorkspace")}</h2>
-          <p>{text("career.matchday.halfTimeTacticalWorkspaceHint")}</p>
+          <h2 id="matchday-half-time-tactical-title">{text("career.matchday.halfTimeBoardDecision")}</h2>
+          <p>{text("career.matchday.halfTimeBoardDecisionHint")}</p>
         </div>
         <span>{text("career.matchday.substitution.count", { count: panel?.appliedCount ?? 0, max: panel?.maxCount ?? 5 })}</span>
       </div>
@@ -473,7 +874,6 @@ function HalfTimeTacticalWorkspace({
 
         <TacticalBenchBoard
           availablePlayers={tacticalBenchCandidates}
-          excludedPlayerIds={lineupPlayerIds}
           requiredSlotCount={view.bench.requiredSlotCount}
           selectedSlotCount={view.bench.selectedSlotCount}
           slots={tacticalBenchSlots}
@@ -490,75 +890,71 @@ function HalfTimeTacticalWorkspace({
   );
 }
 
-function MatchdayScoreboard({ view, text }: Readonly<{ view: CareerMatchdayPhaseView; text: Translator }>): React.JSX.Element {
+function MatchdayScoreboard({ header, text }: Readonly<{ header: MatchdayScoreHeaderView; text: Translator }>): React.JSX.Element {
   return (
     <div className="tls-matchday-scoreboard">
-      <strong>{view.fixture.homeClub.name}</strong>
+      <strong>{header.homeClubName}</strong>
       <div className="tls-matchday-score">
-        <span>{view.scoreboard.homeGoals}</span>
+        <span>{header.homeGoals}</span>
         <span>-</span>
-        <span>{view.scoreboard.awayGoals}</span>
+        <span>{header.awayGoals}</span>
       </div>
-      <strong>{view.fixture.awayClub.name}</strong>
-      <small>{text(`career.matchday.scoreState.${view.scoreboard.selectedClubScoreState}` as MessageKey)}</small>
+      <strong>{header.awayClubName}</strong>
+      <small>{text(`career.matchday.scoreState.${header.selectedClubScoreState}` as MessageKey)}</small>
     </div>
   );
 }
 
-function PhaseRail({ activePhase, text }: Readonly<{ activePhase: CareerMatchdayPhaseView["phase"]; text: Translator }>): React.JSX.Element {
-  const phases = ["pre_match", "first_half", "half_time", "second_half", "full_time"] as const;
+function broadcastLine(view: CareerMatchdayPhaseView, text: Translator): string {
+  if (view.phase === "full_time") {
+    return text("career.matchday.broadcast.fullTimeLine", {
+      result: text(`career.matchday.scoreState.${view.scoreboard.selectedClubScoreState}` as MessageKey),
+    });
+  }
 
+  const latestEvent = view.timelineEvents.at(-1);
+
+  if (latestEvent !== undefined) {
+    return text("career.matchday.broadcast.eventLine", {
+      minute: latestEvent.minute,
+      kind: text(latestEvent.labelKey as MessageKey),
+      club: latestEvent.club.name,
+      player: eventPlayerLine(latestEvent, text),
+    });
+  }
+
+  if (view.phase === "pre_match") {
+    return text("career.matchday.broadcast.preMatchLine", {
+      home: view.fixture.homeClub.name,
+      away: view.fixture.awayClub.name,
+    });
+  }
+
+  if (view.phase === "half_time") {
+    return text("career.matchday.broadcast.halfTimeLine");
+  }
+
+  return text("career.matchday.broadcast.noLiveLine");
+}
+
+function PhaseRail({
+  indicators,
+  text,
+}: Readonly<{ indicators: readonly MatchdayPhaseIndicatorView[]; text: Translator }>): React.JSX.Element {
   return (
-    <ol className="tls-match-centre-phase-rail" aria-label={text("career.matchday.period")}>
-      {phases.map((phase) => (
-        <li className={phase === activePhase ? "is-active" : undefined} key={phase}>
-          {text(`career.matchday.phase.${phase}` as MessageKey)}
+    <ol className="tls-match-centre-phase-rail" aria-label={text("career.matchday.phaseProgress")}>
+      {indicators.map((indicator) => (
+        <li
+          aria-current={indicator.status === "current" ? "step" : undefined}
+          className={`is-${indicator.status}`}
+          data-phase={indicator.phase}
+          data-status={indicator.status}
+          key={indicator.phase}
+        >
+          {text(indicator.labelKey as MessageKey)}
         </li>
       ))}
     </ol>
-  );
-}
-
-function EventTimeline({
-  events,
-  text,
-}: Readonly<{ events: readonly CareerMatchdayPhaseEventView[]; text: Translator }>): React.JSX.Element {
-  if (events.length === 0) {
-    return <p className="tls-matchday-empty">{text("career.matchday.noEvents")}</p>;
-  }
-
-  return (
-    <div className="tls-match-centre-event-list">
-      {events.map((event) => (
-        <article className={`tls-match-centre-event-card is-${event.cardPriority}`} key={event.eventId}>
-          <span className="tls-match-centre-event-minute">{event.minute}'</span>
-          <span className="tls-match-centre-event-kind">{text(event.labelKey as MessageKey)}</span>
-          <strong>{event.club.name}</strong>
-          <p>{eventPlayerLine(event, text)}</p>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function KeyEventCards({
-  events,
-  text,
-}: Readonly<{ events: readonly CareerMatchdayPhaseEventView[]; text: Translator }>): React.JSX.Element {
-  if (events.length === 0) {
-    return <p className="tls-matchday-empty">{text("career.matchday.noMajorEvents")}</p>;
-  }
-
-  return (
-    <div className="tls-match-centre-key-event-list">
-      {events.map((event) => (
-        <article className="tls-match-centre-key-event" key={event.eventId}>
-          <span>{event.minute}'</span>
-          <strong>{text(event.labelKey as MessageKey)}</strong>
-          <p>{eventPlayerLine(event, text)}</p>
-        </article>
-      ))}
-    </div>
   );
 }
 
@@ -572,7 +968,10 @@ function PlayerPhaseTable({
 
   return (
     <div className="tls-matchday-table-wrap">
-      <table className="tls-matchday-table tls-match-centre-player-table">
+      <table
+        aria-label={text("career.matchday.playerRatingsTable")}
+        className="tls-matchday-table tls-match-centre-player-table"
+      >
         <thead>
           <tr>
             <th>{text("career.matchday.table.player")}</th>
@@ -602,6 +1001,91 @@ function PlayerPhaseTable({
   );
 }
 
+function PlayerSignalCards({
+  rows,
+  text,
+}: Readonly<{ rows: readonly CareerMatchdayPhasePlayerView[]; text: Translator }>): React.JSX.Element {
+  if (rows.length === 0) {
+    return <p className="tls-matchday-empty">{text("common.none")}</p>;
+  }
+
+  return (
+    <div className="tls-match-centre-player-signal-list">
+      {rows.map((row) => (
+        <article className="tls-match-centre-player-signal" key={row.playerId}>
+          <div>
+            <strong>{row.playerName}</strong>
+            <span>{row.club.name}</span>
+          </div>
+          <dl>
+            <div>
+              <dt>{text("career.matchday.table.rating")}</dt>
+              <dd>{row.rating === undefined ? text("common.unknown") : row.rating.toFixed(1)}</dd>
+            </div>
+            <div>
+              <dt>{text("career.matchday.table.condition")}</dt>
+              <dd>{row.condition === undefined ? text("common.unknown") : `${row.condition}%`}</dd>
+            </div>
+            <div>
+              <dt>{text("career.matchday.table.role")}</dt>
+              <dd>{row.roleKey === undefined ? text("common.unknown") : text(roleLabelKey(row.roleKey))}</dd>
+            </div>
+            <div>
+              <dt>{text("career.matchday.table.status")}</dt>
+              <dd>{text(`career.matchday.playerStatus.${row.status}` as MessageKey)}</dd>
+            </div>
+          </dl>
+          <p>{playerContribution(row, text)}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function selectHalfTimeUnderperformers(
+  rows: readonly CareerMatchdayPhasePlayerView[],
+  selectedClubId: string,
+): readonly CareerMatchdayPhasePlayerView[] {
+  return selectedClubOnPitchRows(rows, selectedClubId)
+    .toSorted((first, second) => {
+      const firstRating = first.rating ?? 10;
+      const secondRating = second.rating ?? 10;
+      const firstCondition = first.condition ?? 100;
+      const secondCondition = second.condition ?? 100;
+
+      return firstRating - secondRating
+        || firstCondition - secondCondition
+        || first.playerName.localeCompare(second.playerName);
+    })
+    .slice(0, 3);
+}
+
+function selectHalfTimeContributors(
+  rows: readonly CareerMatchdayPhasePlayerView[],
+  selectedClubId: string,
+): readonly CareerMatchdayPhasePlayerView[] {
+  return selectedClubOnPitchRows(rows, selectedClubId)
+    .toSorted((first, second) => halfTimeContributionScore(second) - halfTimeContributionScore(first)
+      || first.playerName.localeCompare(second.playerName))
+    .slice(0, 3);
+}
+
+function selectedClubOnPitchRows(
+  rows: readonly CareerMatchdayPhasePlayerView[],
+  selectedClubId: string,
+): readonly CareerMatchdayPhasePlayerView[] {
+  return rows.filter((row) => row.club.clubId === selectedClubId && row.status === "on_pitch");
+}
+
+function halfTimeContributionScore(row: CareerMatchdayPhasePlayerView): number {
+  return (row.rating ?? 0)
+    + row.goals * 4
+    + row.assists * 3
+    + row.saves * 0.8
+    + row.blocks
+    + row.shotsOnTarget * 0.5;
+}
+
 function FullTimeConsequences({
   conditionChanges,
   playerStateChanges,
@@ -615,15 +1099,21 @@ function FullTimeConsequences({
 }>): React.JSX.Element {
   return (
     <section className="tls-matchday-card tls-match-centre-consequences" aria-labelledby="matchday-consequences-title">
-      <h2 id="matchday-consequences-title">{text("career.matchday.consequences")}</h2>
-      <div className="tls-matchday-report-grid">
+      <div className="tls-match-centre-card-heading">
+        <div>
+          <h2 id="matchday-consequences-title">{text("career.matchday.postMatchConsequences")}</h2>
+          <p>{text("career.matchday.postMatchConsequencesHint")}</p>
+        </div>
+        <span>{text("career.matchday.nextStop")}</span>
+      </div>
+      <div className="tls-match-centre-consequence-grid">
         <section className="tls-matchday-consequence-group" aria-label={text("career.matchday.conditionChanges")}>
           <h3>{text("career.matchday.conditionChanges")}</h3>
-          <ConditionChangeList changes={conditionChanges} text={text} />
+          <ConditionChangeCards changes={conditionChanges} text={text} />
         </section>
         <section className="tls-matchday-consequence-group" aria-label={text("career.matchday.playerStateChanges")}>
           <h3>{text("career.matchday.playerStateChanges")}</h3>
-          <PlayerStateChangeList changes={playerStateChanges} text={text} />
+          <PlayerStateChangeCards changes={playerStateChanges} text={text} />
         </section>
       </div>
       <section className="tls-matchday-next" aria-label={text("career.matchday.nextStop")}>
@@ -640,6 +1130,7 @@ function FullTimeConsequences({
 function matchCentrePrimaryAction(
   view: CareerMatchdayView,
   phaseView: CareerMatchdayPhaseView,
+  presenterPrimaryAction: CareerMatchdayPhaseView["actions"][number] | undefined,
 ): CareerMatchdayPhaseView["actions"][number] | undefined {
   if (view.blockerKeys.length > 0) {
     return {
@@ -650,7 +1141,7 @@ function matchCentrePrimaryAction(
     };
   }
 
-  return phaseView.actions.find((action) => action.status !== "unavailable");
+  return presenterPrimaryAction ?? phaseView.actions.find((action) => action.status !== "unavailable");
 }
 
 function UnavailableMatchday({ view, text }: Readonly<{ view: CareerMatchdayView; text: Translator }>): React.JSX.Element {
@@ -682,7 +1173,7 @@ function MatchdayBlockers({
   );
 }
 
-function ConditionChangeList({
+function ConditionChangeCards({
   changes,
   text,
 }: Readonly<{ changes: readonly CareerMatchdayConditionChangeInput[]; text: Translator }>): React.JSX.Element {
@@ -691,22 +1182,19 @@ function ConditionChangeList({
   }
 
   return (
-    <ul className="tls-matchday-delta-list">
+    <div className="tls-match-centre-consequence-list">
       {changes.map((change) => (
-        <li key={change.playerId}>
-          {text("career.matchday.conditionLine", {
-            player: change.playerName,
-            before: change.before,
-            after: change.after,
-            delta: signed(change.delta),
-          })}
-        </li>
+        <article className="tls-match-centre-consequence-card" key={change.playerId}>
+          <strong>{change.playerName}</strong>
+          <span>{change.before} -&gt; {change.after}</span>
+          <em>{signed(change.delta)}</em>
+        </article>
       ))}
-    </ul>
+    </div>
   );
 }
 
-function PlayerStateChangeList({
+function PlayerStateChangeCards({
   changes,
   text,
 }: Readonly<{ changes: readonly CareerMatchdayPlayerStateChangeInput[]; text: Translator }>): React.JSX.Element {
@@ -715,22 +1203,24 @@ function PlayerStateChangeList({
   }
 
   return (
-    <ul className="tls-matchday-delta-list">
+    <div className="tls-match-centre-consequence-list">
       {changes.map((change) => (
-        <li key={change.playerId}>
-          {text("career.matchday.playerStateLine", {
-            player: change.playerName,
-            formBefore: change.formBefore,
-            formAfter: change.formAfter,
-            formDelta: signed(change.formDelta),
-            moraleBefore: change.moraleBefore,
-            moraleAfter: change.moraleAfter,
-            moraleDelta: signed(change.moraleDelta),
-            reasons: change.reasonKeys.map((reason) => text(`career.advance.playerStateReason.${reason}` as MessageKey)).join(", "),
-          })}
-        </li>
+        <article className="tls-match-centre-consequence-card is-state" key={change.playerId}>
+          <strong>{change.playerName}</strong>
+          <span>{text("career.matchday.formDelta", {
+            before: change.formBefore,
+            after: change.formAfter,
+            delta: signed(change.formDelta),
+          })}</span>
+          <span>{text("career.matchday.moraleDelta", {
+            before: change.moraleBefore,
+            after: change.moraleAfter,
+            delta: signed(change.moraleDelta),
+          })}</span>
+          <small>{change.reasonKeys.map((reason) => text(`career.advance.playerStateReason.${reason}` as MessageKey)).join(", ")}</small>
+        </article>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -748,7 +1238,10 @@ function handlerForPhaseAction(
   handlers: Readonly<{
     onPrepareMatch: () => void;
     onPlayFixture: () => void;
+    onStartFirstHalf?: () => void;
+    onContinueToHalfTime?: () => void;
     onStartSecondHalf?: () => void;
+    onContinueToFullTime?: () => void;
     onBackToDashboard: () => void;
   }>,
 ): () => void {
@@ -756,11 +1249,13 @@ function handlerForPhaseAction(
     case "prepare_match":
       return handlers.onPrepareMatch;
     case "start_first_half":
+      return handlers.onStartFirstHalf ?? handlers.onPlayFixture;
     case "continue_to_half_time":
-      return handlers.onPlayFixture;
+      return handlers.onContinueToHalfTime ?? handlers.onPlayFixture;
     case "start_second_half":
-    case "continue_to_full_time":
       return handlers.onStartSecondHalf ?? handlers.onPlayFixture;
+    case "continue_to_full_time":
+      return handlers.onContinueToFullTime ?? handlers.onStartSecondHalf ?? handlers.onPlayFixture;
     case "back_to_dashboard":
       return handlers.onBackToDashboard;
     case "apply_half_time_substitutions":
@@ -844,6 +1339,15 @@ function eventPlayerLine(event: CareerMatchdayPhaseEventView, text: Translator):
   }
 
   return `${event.playerName} (${event.secondaryPlayerName})`;
+}
+
+function matchEventAccessibleLabel(event: CareerMatchdayPhaseEventView, text: Translator): string {
+  return text("career.matchday.eventLine", {
+    minute: event.minute,
+    kind: text(event.labelKey as MessageKey),
+    club: event.club.name,
+    player: eventPlayerLine(event, text),
+  });
 }
 
 function playerContribution(row: CareerMatchdayPhasePlayerView, text: Translator): string {

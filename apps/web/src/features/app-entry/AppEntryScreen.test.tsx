@@ -7,11 +7,8 @@ import { buildAppEntryViewModel } from "./app-entry-view-model";
 import { AppEntryScreen } from "./AppEntryScreen";
 
 describe("AppEntryScreen", () => {
-  it("renders the compact theme palette picker with localized radio choices", () => {
-    const preferences = {
-      ...DEFAULT_WEB_PREFERENCES,
-      themePaletteId: "floodlight-navy" as const,
-    };
+  it("renders the main menu and settings without a theme picker", () => {
+    const preferences = DEFAULT_WEB_PREFERENCES;
     const markup = renderToStaticMarkup(
       <AppEntryScreen
         view={buildAppEntryViewModel({ preferences, hasDemoCareer: false })}
@@ -23,14 +20,12 @@ describe("AppEntryScreen", () => {
       />,
     );
 
-    expect(markup).toContain("Color theme");
-    expect(markup).toContain("Floodlight navy");
-    expect(markup).toContain("Club office");
-    expect(markup).toContain("Press room");
-    expect(markup).not.toContain("Classic manager");
-    expect(markup).not.toContain("Programme paper");
-    expect(markup).not.toContain("Archive sepia");
-    expect(markup).toContain("name=\"web-theme-palette\"");
-    expect(markup).toContain("checked=\"\"");
+    expect(markup).toContain("The Long Season");
+    expect(markup).toContain("New career");
+    expect(markup).toContain("Continue career");
+    expect(markup).toContain("Language");
+    expect(markup).toContain("Currency");
+    expect(markup).not.toContain("Color theme");
+    expect(markup).not.toContain("name=\"web-theme-palette\"");
   });
 });

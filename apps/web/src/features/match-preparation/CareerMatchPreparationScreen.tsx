@@ -10,7 +10,7 @@ import type {
 } from "@game/ui";
 
 import type { DemoCareerContinueResult } from "../dashboard/continue-demo-career";
-import { CareerShell } from "../career-shell/CareerShell";
+import { AppShell } from "../app-shell/AppShell";
 import { PlayerFactPanel } from "../../shared/ui/PlayerFactPanel";
 import { SquadSelectionTable, type SquadSelectionRow } from "../../shared/ui/SquadSelectionTable";
 import {
@@ -52,6 +52,16 @@ export type CareerMatchPreparationScreenProps = Readonly<{
 
 type MatchPreparationPlayerOption = CareerMatchPreparationView["lineup"]["slots"][number]["playerOptions"][number];
 type DemoTacticalBoardPlayer = ReturnType<typeof buildDemoTacticalBoardSquadPlayers>[number];
+type MatchPreparationPanelTab = "squad" | "tactic" | "detail";
+
+const MATCH_PREPARATION_PANEL_TABS: readonly {
+  readonly tabId: MatchPreparationPanelTab;
+  readonly labelKey: MessageKey;
+}[] = [
+  { tabId: "squad", labelKey: "career.matchPreparation.tab.squad" },
+  { tabId: "tactic", labelKey: "career.matchPreparation.tab.tactic" },
+  { tabId: "detail", labelKey: "career.matchPreparation.tab.detail" },
+];
 
 /** Renders the editable lineup slice for the next selected-club fixture. */
 export function CareerMatchPreparationScreen({
@@ -75,7 +85,7 @@ export function CareerMatchPreparationScreen({
 }: CareerMatchPreparationScreenProps): React.JSX.Element {
   const inboxView = buildCareerInboxView(continueResult?.inboxMessages ?? []);
   const shellView = buildCareerShellView({
-    activeSectionKey: "dashboard",
+    activeSectionKey: "tactics",
     inboxView,
     mode: "preparation",
   });
@@ -93,16 +103,19 @@ export function CareerMatchPreparationScreen({
     () => buildTacticalBenchCandidates(tacticalBoardPlayers),
     [tacticalBoardPlayers],
   );
-  const lineupPlayerIds = useMemo(() => selectedLineupPlayerIds(view), [view]);
   const currentShape = useMemo(
     () => selectCurrentTacticalBoardShape(tacticalBoardDraft.slots),
     [tacticalBoardDraft.slots],
   );
-  const squadRows = useMemo(() => buildSquadRows(view, playerStatusById), [playerStatusById, view]);
+  const squadRows = useMemo(
+    () => buildSquadRows(view, playerStatusById, tacticalBoardPlayerById),
+    [playerStatusById, tacticalBoardPlayerById, view],
+  );
   const firstSelectedPlayerId = firstPreparedPlayerId(view);
   const [selectedDetailPlayerId, setSelectedDetailPlayerId] = useState<string | undefined>(
     firstSelectedPlayerId ?? squadRows[0]?.player.playerId,
   );
+  const [activePanelTab, setActivePanelTab] = useState<MatchPreparationPanelTab>("squad");
   const selectedDetailRow =
     squadRows.find((row) => row.player.playerId === selectedDetailPlayerId) ??
     squadRows.find((row) => row.status === "selected") ??
@@ -117,9 +130,13 @@ export function CareerMatchPreparationScreen({
       value: `${view.bench.selectedSlotCount}/${view.bench.requiredSlotCount}`,
     },
   ] as const;
+  const focusPlayerDetail = (playerId: string): void => {
+    setSelectedDetailPlayerId(playerId);
+    setActivePanelTab("detail");
+  };
 
   return (
-    <CareerShell
+    <AppShell
       shellView={shellView}
       selectedClubName={view.selectedClub.name}
       contextItems={[
@@ -162,6 +179,8 @@ export function CareerMatchPreparationScreen({
           </div>
         </header>
 
+        <PreparationAlertStrip blockerKeys={view.blockerKeys} text={text} />
+
         <section className="tls-preparation-match-strip" aria-label={text("career.matchPreparation.context")}>
           <div className="tls-preparation-match-primary">
             <PreparationFact label={text("career.nextSelectedClubFixture")} value={formatFixture(view, text)} />
@@ -172,8 +191,6 @@ export function CareerMatchPreparationScreen({
             ))}
           </div>
         </section>
-
-        <PreparationAlertStrip blockerKeys={view.blockerKeys} text={text} />
 
         <section className="tls-preparation-lineup" aria-labelledby="match-preparation-lineup-title">
           <div className="tls-preparation-section-heading">
@@ -227,7 +244,7 @@ export function CareerMatchPreparationScreen({
                 text={text}
                 onAssign={(slotKey, playerId) => {
                   onLineupPlayerChange(slotKey, playerId);
-                  setSelectedDetailPlayerId(playerId);
+                  focusPlayerDetail(playerId);
                 }}
                 onRemove={onBoardSlotClear}
                 onRoleChange={onBoardSlotRoleChange}
@@ -236,21 +253,20 @@ export function CareerMatchPreparationScreen({
                   const playerId = tacticalBoardDraft.slots.find((slot) => slot.slotId === slotKey)?.playerId;
 
                   if (playerId !== undefined && playerId !== null) {
-                    setSelectedDetailPlayerId(playerId);
+                    focusPlayerDetail(playerId);
                   }
                 }}
               />
 
               <TacticalBenchBoard
                 availablePlayers={tacticalBenchCandidates}
-                excludedPlayerIds={lineupPlayerIds}
                 requiredSlotCount={view.bench.requiredSlotCount}
                 selectedSlotCount={view.bench.selectedSlotCount}
                 slots={tacticalBenchSlots}
                 text={text}
                 onAssign={(slotKey, playerId) => {
                   onBenchPlayerChange(slotKey, playerId);
-                  setSelectedDetailPlayerId(playerId);
+                  focusPlayerDetail(playerId);
                 }}
                 onRemove={(slotKey) => {
                   onBenchPlayerChange(slotKey, undefined);
@@ -259,54 +275,97 @@ export function CareerMatchPreparationScreen({
                   const playerId = view.bench.slots.find((slot) => slot.slotKey === slotKey)?.selectedPlayerId;
 
                   if (playerId !== undefined) {
-                    setSelectedDetailPlayerId(playerId);
+                    focusPlayerDetail(playerId);
                   }
                 }}
               />
             </div>
 
-            <aside className="tls-preparation-squad-panel" aria-labelledby="match-preparation-squad-title">
-              <SquadSelectionTable
-                rows={squadRows}
-                selectedPlayerId={selectedDetailRow?.player.playerId}
-                text={text}
-                onPlayerSelect={setSelectedDetailPlayerId}
-              />
+            <aside className="tls-preparation-squad-panel" aria-label={text("career.matchPreparation.panel")}>
+              <div className="tls-preparation-panel-tabs" role="tablist" aria-label={text("career.matchPreparation.tabs")}>
+                {MATCH_PREPARATION_PANEL_TABS.map((tab) => {
+                  const isSelected = activePanelTab === tab.tabId;
 
-              <PlayerFactPanel row={selectedDetailRow} text={text} />
+                  return (
+                    <button
+                      aria-controls={`match-preparation-panel-${tab.tabId}`}
+                      aria-selected={isSelected}
+                      className="tls-preparation-panel-tab"
+                      id={`match-preparation-tab-${tab.tabId}`}
+                      key={tab.tabId}
+                      role="tab"
+                      type="button"
+                      onClick={() => {
+                        setActivePanelTab(tab.tabId);
+                      }}
+                    >
+                      {text(tab.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                aria-labelledby="match-preparation-tab-squad"
+                hidden={activePanelTab !== "squad"}
+                id="match-preparation-panel-squad"
+                role="tabpanel"
+              >
+                <SquadSelectionTable
+                  rows={squadRows}
+                  selectedPlayerId={selectedDetailRow?.player.playerId}
+                  text={text}
+                  onPlayerSelect={focusPlayerDetail}
+                />
+              </div>
+
+              <div
+                aria-labelledby="match-preparation-tab-tactic"
+                hidden={activePanelTab !== "tactic"}
+                id="match-preparation-panel-tactic"
+                role="tabpanel"
+              >
+                <section className="tls-preparation-tactic" aria-labelledby="match-preparation-tactic-title">
+                  <h2 id="match-preparation-tactic-title">{text("career.matchPreparation.tactic")}</h2>
+                  <div className="tls-preparation-tactic-grid">
+                    {view.tactic.profiles.map((profile) => (
+                      <label className="tls-preparation-tactic-card" data-selected={profile.isSelected} key={profile.tacticProfileId}>
+                        <span className="tls-preparation-tactic-title">
+                          <input
+                            checked={profile.isSelected}
+                            name="match-preparation-tactic"
+                            type="radio"
+                            value={profile.tacticProfileId}
+                            onChange={(event) => {
+                              onTacticProfileChange(event.currentTarget.value);
+                            }}
+                          />
+                          {text(profile.labelKey as MessageKey)}
+                        </span>
+                        <span>{text("setup.mentality")}: {text(mentalityLabelKey(profile.values.mentality))}</span>
+                        <span>{text("career.matchPreparation.tacticValue.pressing")}: {formatTacticValue(profile.values.pressing)}</span>
+                        <span>{text("career.matchPreparation.tacticValue.directness")}: {formatTacticValue(profile.values.directness)}</span>
+                        <span>{text("career.matchPreparation.tacticValue.width")}: {formatTacticValue(profile.values.width)}</span>
+                        <span>{text("career.matchPreparation.tacticValue.risk")}: {formatTacticValue(profile.values.risk)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <div
+                aria-labelledby="match-preparation-tab-detail"
+                hidden={activePanelTab !== "detail"}
+                id="match-preparation-panel-detail"
+                role="tabpanel"
+              >
+                <PlayerFactPanel row={selectedDetailRow} text={text} />
+              </div>
             </aside>
           </div>
         </section>
-
-        <section className="tls-preparation-tactic" aria-labelledby="match-preparation-tactic-title">
-          <h2 id="match-preparation-tactic-title">{text("career.matchPreparation.tactic")}</h2>
-          <div className="tls-preparation-tactic-grid">
-            {view.tactic.profiles.map((profile) => (
-              <label className="tls-preparation-tactic-card" data-selected={profile.isSelected} key={profile.tacticProfileId}>
-                <span className="tls-preparation-tactic-title">
-                  <input
-                    checked={profile.isSelected}
-                    name="match-preparation-tactic"
-                    type="radio"
-                    value={profile.tacticProfileId}
-                    onChange={(event) => {
-                      onTacticProfileChange(event.currentTarget.value);
-                    }}
-                  />
-                  {text(profile.labelKey as MessageKey)}
-                </span>
-                <span>{text("setup.mentality")}: {text(mentalityLabelKey(profile.values.mentality))}</span>
-                <span>{text("career.matchPreparation.tacticValue.pressing")}: {formatTacticValue(profile.values.pressing)}</span>
-                <span>{text("career.matchPreparation.tacticValue.directness")}: {formatTacticValue(profile.values.directness)}</span>
-                <span>{text("career.matchPreparation.tacticValue.width")}: {formatTacticValue(profile.values.width)}</span>
-                <span>{text("career.matchPreparation.tacticValue.risk")}: {formatTacticValue(profile.values.risk)}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
       </section>
-    </CareerShell>
+    </AppShell>
   );
 }
 
@@ -389,11 +448,6 @@ function tacticalBenchPlayerFromBoardPlayer(player: DemoTacticalBoardPlayer): Ta
   };
 }
 
-/** Returns the current selected XI ids so the bench board can filter candidates. */
-function selectedLineupPlayerIds(view: CareerMatchPreparationView): readonly string[] {
-  return view.lineup.slots.flatMap((slot) => (slot.selectedPlayerId === undefined ? [] : [slot.selectedPlayerId]));
-}
-
 /** Maps canonical tactical-board roles to the compact code shown on bench tokens. */
 function roleCodeForCanonicalRole(role: TacticalBoardCanonicalRole): TacticalBoardRoleCode {
   const roleCode = TACTICAL_BOARD_ROLE_CODES.find((candidate) => TACTICAL_BOARD_ROLES[candidate].canonicalRole === role);
@@ -432,6 +486,7 @@ function firstPreparedPlayerId(view: CareerMatchPreparationView): string | undef
 function buildSquadRows(
   view: CareerMatchPreparationView,
   playerStatusById: ReadonlyMap<string, SquadSelectionRow["status"]>,
+  tacticalBoardPlayerById: ReadonlyMap<string, DemoTacticalBoardPlayer>,
 ): readonly SquadSelectionRow[] {
   const rowsByPlayerId = new Map<string, SquadSelectionRow>();
 
@@ -442,8 +497,12 @@ function buildSquadRows(
       }
 
       const fact = getDemoMatchPreparationPlayerFact(player.playerId);
+      const tacticalBoardPlayer = tacticalBoardPlayerById.get(player.playerId);
       rowsByPlayerId.set(player.playerId, {
-        player,
+        player: {
+          ...player,
+          ...(tacticalBoardPlayer === undefined ? {} : { number: tacticalBoardPlayer.number }),
+        },
         ...(fact === undefined ? {} : { age: fact.age, foot: fact.foot }),
         status: playerStatusById.get(player.playerId) ?? "available",
       });

@@ -1,0 +1,73 @@
+<h2>Broadcast night — ritoccato retrò</h2>
+<p class="subtitle">Base 2 (dark, dati densi, alta leggibilità) + tocchi retrò: titoli serif display, righe sottili, grana, angoli più squadrati, accento caldo invece del lime. Sotto scegli la <b>tinta dell'accento</b> per dosare quanto retrò.</p>
+
+<style>
+  .hero { position:relative; border-radius:10px; overflow:hidden; display:flex; height:300px; font-family:system-ui,sans-serif; box-shadow:0 14px 36px rgba(0,0,0,.5); background:#0a0e13; }
+  .hero::after { content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:repeating-linear-gradient(0deg, #ffffff05 0, #ffffff05 1px, transparent 1px, transparent 3px);
+    mix-blend-mode:overlay; opacity:.5; }
+  .hero .side { width:158px; padding:14px 12px; background:#0d131a; border-right:1px solid #caa05a2e; display:flex; flex-direction:column; gap:2px; }
+  .hero .crest { display:flex; align-items:center; gap:9px; margin-bottom:14px; }
+  .hero .crest .badge { width:30px; height:34px; flex:none; border-radius:4px 4px 8px 8px; background:linear-gradient(135deg,var(--ac),var(--ac2)); box-shadow:inset 0 0 0 1px #ffffff22; }
+  .hero .crest .nm { color:#f1ece0; font-family:Georgia,'Times New Roman',serif; font-size:14px; font-weight:700; line-height:1.05; }
+  .hero .nav { font-size:11px; padding:7px 9px; border-radius:4px; letter-spacing:.03em; color:#8a9bab; }
+  .hero .nav.on { background:color-mix(in srgb, var(--ac) 14%, transparent); color:var(--ac); border-left:2px solid var(--ac); }
+  .hero .main { flex:1; padding:16px 18px; display:flex; flex-direction:column; gap:13px; min-width:0; color:#eef2f6; }
+  .hero .kick { font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ac); }
+  .hero .title { font-family:Georgia,'Times New Roman',serif; font-size:24px; font-weight:700; line-height:1; letter-spacing:-.01em; }
+  .hero .cards { display:flex; gap:9px; }
+  .hero .c { flex:1; background:#111922; border:1px solid #1d2935; border-radius:4px; padding:9px 10px; }
+  .hero .c .k { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:#7f93a5; }
+  .hero .c .v { font-family:Georgia,serif; font-size:24px; font-weight:700; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .hero .tbl { font-size:10.5px; }
+  .hero .tr { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #ffffff0c; }
+  .hero .tr.me { color:var(--ac); font-weight:700; }
+  .hero .rail { width:128px; padding:14px 12px; background:#0d131a; border-left:1px solid #caa05a2e; color:#eef2f6; }
+  .hero .cta { border-radius:4px; padding:10px; font-size:12px; font-weight:800; text-align:center; letter-spacing:.04em; background:linear-gradient(135deg,var(--ac),var(--ac2)); color:#11150c; }
+  .hero .ticker { margin-top:13px; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#7f93a5; border-top:1px solid var(--ac); padding-top:7px; }
+  .ac-row { display:flex; gap:10px; margin-top:8px; }
+  .ac-opt { flex:1; cursor:pointer; border:1px solid #2a3744; border-radius:8px; padding:10px; text-align:center; transition:.15s; }
+  .ac-opt:hover { border-color:#46586a; }
+  .ac-opt .sw { height:26px; border-radius:5px; margin-bottom:7px; }
+  .ac-opt .lab { font-size:11px; color:var(--fg,#cfd9e2); }
+  .ac-opt.sel { border-color:#fff; box-shadow:0 0 0 2px #ffffff44; }
+</style>
+
+<div class="hero" style="--ac:#d39a3c; --ac2:#a06f1f;">
+  <div class="side">
+    <div class="crest"><div class="badge"></div><div class="nm">F.C.<br>Aurora</div></div>
+    <div class="nav on">Dashboard</div>
+    <div class="nav">Rosa</div>
+    <div class="nav">Tattica</div>
+    <div class="nav">Calendario</div>
+    <div class="nav">Posta</div>
+  </div>
+  <div class="main">
+    <div><div class="kick">Stagione 1 · Giornata 7</div><div class="title">Sala Comando</div></div>
+    <div class="cards">
+      <div class="c"><div class="k">Posizione</div><div class="v">4º</div></div>
+      <div class="c"><div class="k">Punti</div><div class="v">14</div></div>
+      <div class="c"><div class="k">Forma</div><div class="v" style="font-size:16px;color:var(--ac)">V V N</div></div>
+    </div>
+    <div class="tbl">
+      <div class="tr"><span>3 · Castelmonte</span><span>15</span></div>
+      <div class="tr me"><span>4 · Aurora</span><span>14</span></div>
+      <div class="tr"><span>5 · Vald. Reno</span><span>12</span></div>
+    </div>
+  </div>
+  <div class="rail">
+    <div class="cta">CONTINUA ▸</div>
+    <div class="ticker">Prossima · Sab 14:00<br>Aurora vs Vald. Reno</div>
+    <div class="ticker" style="border-color:#1d2935">Posta · 2 nuovi</div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:18px"><b>Tinta accento</b> — quanto retrò? (clicca)</p>
+<div class="ac-row">
+  <div class="ac-opt sel" data-choice="amber" onclick="toggleSelect(this)"><div class="sw" style="background:linear-gradient(135deg,#d39a3c,#a06f1f)"></div><div class="lab">Ambra / oro<br><span style="opacity:.6">caldo, almanacco</span></div></div>
+  <div class="ac-opt" data-choice="orange" onclick="toggleSelect(this)"><div class="sw" style="background:linear-gradient(135deg,#e2622f,#b23d18)"></div><div class="lab">Arancio bruciato<br><span style="opacity:.6">'70s, energico</span></div></div>
+  <div class="ac-opt" data-choice="teal" onclick="toggleSelect(this)"><div class="sw" style="background:linear-gradient(135deg,#2ea7a0,#14706c)"></div><div class="lab">Verde-acqua<br><span style="opacity:.6">retro-TV, fresco</span></div></div>
+  <div class="ac-opt" data-choice="cream" onclick="toggleSelect(this)"><div class="sw" style="background:linear-gradient(135deg,#e8dcc0,#c2b187)"></div><div class="lab">Crema/osso<br><span style="opacity:.6">sobrio, mono</span></div></div>
+</div>
+
+<p class="subtitle" style="margin-top:14px">Va nella direzione giusta? Dimmi sì + quale tinta, oppure cosa spingere ancora (più/meno grana, angoli, serif).</p>

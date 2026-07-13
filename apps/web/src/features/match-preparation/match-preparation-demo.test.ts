@@ -155,15 +155,42 @@ describe("demo match preparation adapter", () => {
     expect(afterTacticChange.isSaved).toBe(false);
   });
 
-  it("represents duplicate XI and bench selections through blockers", () => {
+  it("moves an XI player to the bench instead of duplicating him", () => {
     const benchSlotKeys = demoMatchPreparationBenchSlotKeys();
     let state = createCompleteUnsavedDemoMatchPreparationState();
     state = selectDemoMatchPreparationBenchPlayer(state, benchSlotKeys[0] ?? "", "player:demo-01");
 
     const view = buildDemoMatchPreparationView(state);
 
-    expect(view.blockerKeys).toContain("player_in_lineup_and_bench");
-    expect(view.bench.slots[0]?.status).toBe("lineup_player");
+    expect(state.selectedPlayerIdsBySlot.gk).toBeUndefined();
+    expect(state.selectedBenchPlayerIdsBySlot[benchSlotKeys[0] ?? ""]).toBe("player:demo-01");
+    expect(view.blockerKeys).not.toContain("player_in_lineup_and_bench");
+    expect(view.lineup.selectedSlotCount).toBe(10);
+  });
+
+  it("moves a bench player to the XI instead of duplicating him", () => {
+    const benchSlotKeys = demoMatchPreparationBenchSlotKeys();
+    let state = createCompleteUnsavedDemoMatchPreparationState();
+    state = selectDemoMatchPreparationPlayer(state, "gk", "player:demo-12");
+
+    const view = buildDemoMatchPreparationView(state);
+
+    expect(state.selectedPlayerIdsBySlot.gk).toBe("player:demo-12");
+    expect(state.selectedBenchPlayerIdsBySlot[benchSlotKeys[0] ?? ""]).toBeUndefined();
+    expect(view.blockerKeys).not.toContain("player_in_lineup_and_bench");
+    expect(view.bench.selectedSlotCount).toBe(7);
+  });
+
+  it("moves a player between bench slots instead of duplicating him", () => {
+    const benchSlotKeys = demoMatchPreparationBenchSlotKeys();
+    const firstSlotKey = benchSlotKeys[0] ?? "";
+    const secondSlotKey = benchSlotKeys[1] ?? "";
+    let state = createCompleteUnsavedDemoMatchPreparationState();
+    state = selectDemoMatchPreparationBenchPlayer(state, secondSlotKey, "player:demo-12");
+
+    expect(state.selectedBenchPlayerIdsBySlot[firstSlotKey]).toBeUndefined();
+    expect(state.selectedBenchPlayerIdsBySlot[secondSlotKey]).toBe("player:demo-12");
+    expect(buildDemoMatchPreparationView(state).bench.selectedSlotCount).toBe(7);
   });
 
   it("requires formation, XI, bench, and tactic before save is available", () => {

@@ -3,7 +3,7 @@ import type React from "react";
 import type { Translator } from "@game/i18n";
 
 import {
-  formatFitness,
+  formatFitnessPercent,
   formatFoot,
   formatOptionalNumber,
   roleLabelKey,
@@ -28,8 +28,11 @@ export function PlayerFactPanel({ row, text }: PlayerFactPanelProps): React.JSX.
         <p>{text("common.unknown")}</p>
       ) : (
         <>
-          <strong>{row.player.name}</strong>
-          <dl>
+          <div className="tls-preparation-player-detail-header">
+            <strong>{row.player.name}</strong>
+            <span data-status={row.status}>{text(squadStatusLabelKey(row.status))}</span>
+          </div>
+          <dl className="tls-preparation-player-detail-grid">
             <div>
               <dt>{text("career.matchPreparation.column.role")}</dt>
               <dd>{text(roleLabelKey(row.player.roleKey))}</dd>
@@ -40,15 +43,11 @@ export function PlayerFactPanel({ row, text }: PlayerFactPanelProps): React.JSX.
             </div>
             <div>
               <dt>{text("career.matchPreparation.column.fitness")}</dt>
-              <dd>{formatFitness(row.player.fitness, text)}</dd>
+              <dd>{formatFitnessPercent(row.player.fitness, text)}</dd>
             </div>
             <div>
               <dt>{text("career.matchPreparation.column.foot")}</dt>
               <dd>{formatFoot(row.foot, text)}</dd>
-            </div>
-            <div>
-              <dt>{text("career.matchPreparation.column.status")}</dt>
-              <dd>{text(squadStatusLabelKey(row.status))}</dd>
             </div>
           </dl>
         </>

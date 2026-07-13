@@ -1,0 +1,52 @@
+<h2>Matchday — Broadcast, corretto</h2>
+<p class="subtitle">Feed principale = <b>solo eventi chiave</b> (⚽ gol, ⊙ rigore, 🟨/🟥 cartellini, ✚ infortunio, ⇄ sostituzione). In basso un <b>ticker telecronaca</b> minuto-per-minuto stile GM che scorre. Va bene così?</p>
+
+<style>
+  .md { --ac:#d39a3c; --ac2:#a06f1f; background:#0a0e13; border-radius:10px; overflow:hidden; height:360px; font-family:system-ui,sans-serif; box-shadow:0 14px 36px rgba(0,0,0,.5); color:#eef2f6; display:flex; flex-direction:column; position:relative; }
+  .md::after { content:""; position:absolute; inset:0; pointer-events:none; background-image:repeating-linear-gradient(0deg,#ffffff05 0,#ffffff05 1px,transparent 1px,transparent 3px); opacity:.4; }
+  .scbd { display:flex; align-items:center; justify-content:center; gap:22px; padding:14px; background:#0d131a; border-bottom:1px solid #caa05a2e; }
+  .scbd .club { display:flex; align-items:center; gap:8px; font-family:Georgia,serif; font-size:15px; font-weight:700; }
+  .scbd .bdg { width:24px; height:28px; border-radius:4px 4px 7px 7px; background:linear-gradient(135deg,var(--ac),var(--ac2)); }
+  .scbd .score { font-family:Georgia,serif; font-size:36px; font-weight:700; letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+  .scbd .clk { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--ac); text-align:center; margin-top:2px; }
+  .feed-h { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:#7f93a5; padding:9px 16px 4px; }
+  .feed { flex:1; overflow:hidden; padding:0 16px; display:flex; flex-direction:column; gap:6px; }
+  .ev { display:flex; gap:10px; align-items:center; background:#111922; border:1px solid #1d2935; border-left:2px solid #2b3a48; border-radius:4px; padding:7px 10px; }
+  .ev .m { color:var(--ac); font-variant-numeric:tabular-nums; font-weight:700; width:24px; flex:none; font-family:Georgia,serif; font-size:13px; }
+  .ev .ico { width:18px; text-align:center; flex:none; }
+  .ev .d { font-size:11px; color:#dbe3eb; }
+  .ev.goal { border-left-color:var(--ac); background:#15110a; }
+  .ev.goal .d { color:#fff; font-weight:700; }
+  .ev.card { border-left-color:#d8c23a; }
+  .ev.inj { border-left-color:#e2622f; }
+  .ev.sub { border-left-color:#3b9ea5; }
+  .ticker { background:#06090d; border-top:1px solid #1a2530; padding:7px 0; overflow:hidden; white-space:nowrap; }
+  .ticker .run { display:inline-block; font-size:10.5px; font-style:italic; color:#9fb0bf; padding-left:100%; animation:scroll 16s linear infinite; }
+  .ticker .run b { color:#cdd8e2; font-style:normal; }
+  @keyframes scroll { to { transform:translateX(-100%); } }
+  .ctrl { padding:11px 16px; background:#0d131a; border-top:1px solid #1a2530; display:flex; gap:8px; align-items:center; justify-content:space-between; }
+  .ctrl .ph { font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:#7f93a5; }
+  .ctrl .btn { background:linear-gradient(135deg,var(--ac),var(--ac2)); color:#11150c; font-size:11px; font-weight:800; padding:10px 18px; border-radius:4px; letter-spacing:.03em; }
+</style>
+
+<div class="md">
+  <div class="scbd">
+    <div class="club"><div class="bdg"></div>Aurora</div>
+    <div style="text-align:center"><div class="score">1 – 0</div><div class="clk">38' · Primo tempo</div></div>
+    <div class="club">Vald. Reno<div class="bdg" style="background:linear-gradient(135deg,#3b6ea5,#274a72)"></div></div>
+  </div>
+
+  <div class="feed-h">Eventi chiave</div>
+  <div class="feed">
+    <div class="ev sub"><span class="m">36'</span><span class="ico">⇄</span><span class="d">Sostituzione Vald. Reno: esce n°9, entra n°17.</span></div>
+    <div class="ev card"><span class="m">34'</span><span class="ico">🟨</span><span class="d">Ammonito Marchetti (Vald. Reno) per fallo tattico.</span></div>
+    <div class="ev goal"><span class="m">31'</span><span class="ico">⚽</span><span class="d">GOL — Aurora! Ferrari insacca dal limite. 1–0.</span></div>
+    <div class="ev inj"><span class="m">19'</span><span class="ico">✚</span><span class="d">Problema muscolare per Bianchi (Aurora), gioca.</span></div>
+  </div>
+
+  <div class="ticker"><span class="run">23' — Aurora costruisce dal basso, palla che gira sulla trequarti…&nbsp;&nbsp;·&nbsp;&nbsp;25' — <b>cross dalla destra, allontana la difesa.</b>&nbsp;&nbsp;·&nbsp;&nbsp;27' — possesso a centrocampo, ritmo lento.&nbsp;&nbsp;·&nbsp;&nbsp;29' — <b>Aurora guadagna un corner.</b></span></div>
+
+  <div class="ctrl"><span class="ph">Primo tempo · 38'</span><span class="btn">INTERVALLO: SOSTITUZIONI ▸</span></div>
+</div>
+
+<p class="subtitle" style="margin-top:14px">Eventi chiave = card distinte con icona/colore. Telecronaca = riga che scorre sotto, secondaria. OK? Dopo passo a un paio di domande tecniche in terminale (test, CSS, confini codice) e poi scrivo lo spec.</p>

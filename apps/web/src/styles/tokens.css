@@ -1,15 +1,17 @@
 :root {
   color-scheme: dark;
   --tls-theme-app-background: #070b13;
-  --tls-theme-shell-surface: #101827;
-  --tls-theme-panel-surface: #162238;
-  --tls-theme-elevated-panel-surface: #20314b;
+  --tls-theme-app-grid-line: rgba(169, 187, 209, 0.055);
+  --tls-theme-app-scanline: rgba(244, 232, 199, 0.028);
+  --tls-theme-shell-surface: #0f1724;
+  --tls-theme-panel-surface: #151f30;
+  --tls-theme-elevated-panel-surface: #1d2c43;
   --tls-theme-table-header-surface: #0b1320;
   --tls-theme-table-row-surface: #1a2940;
   --tls-theme-table-alternate-row-surface: #20314a;
   --tls-theme-selected-row-surface: #293c59;
-  --tls-theme-border: rgba(232, 224, 202, 0.17);
-  --tls-theme-strong-border: rgba(232, 224, 202, 0.4);
+  --tls-theme-border: rgba(232, 224, 202, 0.2);
+  --tls-theme-strong-border: rgba(232, 224, 202, 0.46);
   --tls-theme-text: #f2ead7;
   --tls-theme-muted-text: #aeb8c8;
   --tls-theme-heading-text: #f7edcf;
@@ -62,7 +64,8 @@
   --tls-color-text-dark: var(--tls-theme-primary-action-text);
   --tls-color-club-accent: var(--tls-theme-primary-action-surface);
   --tls-surface-panel:
-    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 6%, transparent), transparent 44%),
+    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 7%, transparent), transparent 46%),
+    linear-gradient(90deg, color-mix(in srgb, var(--tls-theme-primary-action-surface) 6%, transparent), transparent 34%),
     var(--tls-theme-panel-surface);
   --tls-surface-scoreboard:
     linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 5%, transparent), transparent 58%),
@@ -99,68 +102,16 @@
     0 0 0 1px var(--tls-theme-focus-ring);
 }
 
-html[data-theme-palette="floodlight-navy"] {
-  --tls-theme-app-background: #070b13;
-  --tls-theme-shell-surface: #101827;
-  --tls-theme-panel-surface: #162238;
-  --tls-theme-elevated-panel-surface: #20314b;
-  --tls-theme-table-header-surface: #0b1320;
-  --tls-theme-table-row-surface: #1a2940;
-  --tls-theme-table-alternate-row-surface: #20314a;
-  --tls-theme-selected-row-surface: #293c59;
-  --tls-theme-border: rgba(232, 224, 202, 0.17);
-  --tls-theme-strong-border: rgba(232, 224, 202, 0.4);
-  --tls-theme-text: #f2ead7;
-  --tls-theme-muted-text: #aeb8c8;
-  --tls-theme-heading-text: #f7edcf;
-  --tls-theme-primary-action-surface: #d9b95d;
-  --tls-theme-primary-action-hover: #e9ca75;
-  --tls-theme-primary-action-text: #10141b;
-  --tls-theme-secondary-action-surface: #243652;
-  --tls-theme-focus-ring: #d9b95d;
-  --tls-theme-shell-overlay: rgba(91, 126, 174, 0.15);
-}
-
-html[data-theme-palette="club-office"] {
-  --tls-theme-app-background: #121916;
-  --tls-theme-shell-surface: #202d25;
-  --tls-theme-panel-surface: #26362c;
-  --tls-theme-elevated-panel-surface: #32463a;
-  --tls-theme-table-header-surface: #172119;
-  --tls-theme-table-row-surface: #2b3d32;
-  --tls-theme-table-alternate-row-surface: #31473a;
-  --tls-theme-selected-row-surface: #3d5545;
-  --tls-theme-border: rgba(236, 226, 199, 0.18);
-  --tls-theme-strong-border: rgba(236, 226, 199, 0.38);
-  --tls-theme-text: #eee5cf;
-  --tls-theme-muted-text: #b9b29c;
-  --tls-theme-heading-text: #f4ebd2;
-  --tls-theme-primary-action-surface: #c7a24a;
-  --tls-theme-primary-action-hover: #d9b966;
-  --tls-theme-primary-action-text: #131812;
-  --tls-theme-secondary-action-surface: #34483c;
-  --tls-theme-focus-ring: #c7a24a;
-  --tls-theme-shell-overlay: rgba(199, 162, 74, 0.1);
-}
-
-html[data-theme-palette="press-room"] {
-  --tls-theme-app-background: #0d1013;
-  --tls-theme-shell-surface: #181d21;
-  --tls-theme-panel-surface: #222a2f;
-  --tls-theme-elevated-panel-surface: #2d373d;
-  --tls-theme-table-header-surface: #101519;
-  --tls-theme-table-row-surface: #273137;
-  --tls-theme-table-alternate-row-surface: #2e393f;
-  --tls-theme-selected-row-surface: #39464e;
-  --tls-theme-border: rgba(235, 229, 211, 0.17);
-  --tls-theme-strong-border: rgba(235, 229, 211, 0.39);
-  --tls-theme-text: #f1ead9;
-  --tls-theme-muted-text: #b5b4aa;
-  --tls-theme-heading-text: #f7efdc;
-  --tls-theme-primary-action-surface: #c9aa5a;
-  --tls-theme-primary-action-hover: #dac171;
-  --tls-theme-primary-action-text: #121416;
-  --tls-theme-secondary-action-surface: #333f46;
-  --tls-theme-focus-ring: #c9aa5a;
-  --tls-theme-shell-overlay: rgba(201, 170, 90, 0.1);
+@theme {
+  --color-tls-app: var(--tls-theme-app-background);
+  --color-tls-surface: var(--tls-theme-panel-surface);
+  --color-tls-surface-raised: var(--tls-theme-elevated-panel-surface);
+  --color-tls-text: var(--tls-theme-text);
+  --color-tls-muted: var(--tls-theme-muted-text);
+  --color-tls-gold: var(--tls-theme-primary-action-surface);
+  --font-tls-ui: var(--tls-font-ui);
+  --font-tls-display: var(--tls-font-display);
+  --font-tls-mono: var(--tls-font-mono);
+  --radius-tls-sm: var(--tls-radius-sm);
+  --radius-tls-md: var(--tls-radius-md);
 }

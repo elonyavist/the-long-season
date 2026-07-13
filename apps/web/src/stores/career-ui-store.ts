@@ -5,7 +5,6 @@ import {
   DEFAULT_WEB_PREFERENCES,
   type WebPreferences,
 } from "../app/preferences";
-import { resolveWebThemePaletteId, type WebThemePaletteId } from "../app/theme-palettes";
 import { continueDemoCareer, type DemoCareerContinueResult } from "../features/dashboard/continue-demo-career";
 import {
   applyDemoMatchPreparationSelectionAction,
@@ -51,8 +50,6 @@ export interface CareerUiStoreState {
   readonly matchdayState: DemoMatchdayState;
   /** Replaces bounded web preferences from the settings controls. */
   readonly setPreferences: (preferences: WebPreferences) => void;
-  /** Updates only the selected display palette, falling back on invalid ids. */
-  readonly setThemePaletteId: (themePaletteId: string) => void;
   /** Starts a fresh deterministic demo career and opens the dashboard. */
   readonly startNewCareer: () => void;
   /** Opens the existing deterministic demo career when one is available. */
@@ -127,14 +124,6 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
   ...createInitialCareerUiState(),
   setPreferences: (preferences) => {
     set({ preferences });
-  },
-  setThemePaletteId: (themePaletteId) => {
-    set((state) => ({
-      preferences: {
-        ...state.preferences,
-        themePaletteId: resolveWebThemePaletteId(themePaletteId),
-      },
-    }));
   },
   startNewCareer: () => {
     set({

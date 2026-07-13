@@ -1,0 +1,115 @@
+<h2>Identità visiva — il look "premium"</h2>
+<p class="subtitle">Stessa shell con sidebar, tre pelli diverse. Tutte vie di mezzo FM moderno + retrò. Guarda quale ha il giusto sapore premium. Clicca per scegliere (puoi anche dirmi "mix di 1 e 3").</p>
+
+<style>
+  .skin { border-radius:12px; overflow:hidden; display:flex; height:230px; font-family:system-ui,sans-serif; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  .skin .side { width:150px; padding:14px 12px; display:flex; flex-direction:column; gap:3px; }
+  .skin .crest { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .skin .crest .badge { width:26px; height:26px; border-radius:6px; flex:none; }
+  .skin .nav { font-size:11px; padding:6px 8px; border-radius:6px; letter-spacing:.02em; }
+  .skin .main { flex:1; padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .skin .h { font-size:19px; font-weight:700; line-height:1; }
+  .skin .sub { font-size:10px; letter-spacing:.16em; text-transform:uppercase; opacity:.6; }
+  .skin .cards { display:flex; gap:10px; }
+  .skin .c { flex:1; border-radius:9px; padding:10px; }
+  .skin .c .k { font-size:9px; letter-spacing:.12em; text-transform:uppercase; opacity:.6; }
+  .skin .c .v { font-size:22px; font-weight:800; margin-top:4px; }
+  .skin .rail { width:120px; padding:14px 12px; }
+  .skin .cta { border-radius:8px; padding:9px; font-size:12px; font-weight:700; text-align:center; }
+  .skin-wrap { margin-bottom:16px; }
+</style>
+
+<div class="options">
+
+  <!-- 1 ALMANACCO -->
+  <div class="option skin-wrap" data-choice="almanacco" onclick="toggleSelect(this)" style="display:block">
+    <div class="content" style="width:100%">
+      <h3>1 · Almanacco — verde notte + crema, accenti oro, display serif</h3>
+      <p>Caldo, editoriale, "rivista calcio anni '80 stampata bene". Titoli serif, righe sottili oro, fondo verde-carbone profondo.</p>
+      <div class="skin" style="background:#13241c;">
+        <div class="side" style="background:#0e1c16; border-right:1px solid #c9a23433;">
+          <div class="crest"><div class="badge" style="background:linear-gradient(135deg,#c9a234,#8c6d1f)"></div><div style="font-family:Georgia,serif;color:#f3ead4;font-size:13px;font-weight:700">F.C.<br>Aurora</div></div>
+          <div class="nav" style="background:#c9a23422;color:#f3ead4">Dashboard</div>
+          <div class="nav" style="color:#c8d4c4">Rosa</div>
+          <div class="nav" style="color:#c8d4c4">Tattica</div>
+          <div class="nav" style="color:#c8d4c4">Calendario</div>
+          <div class="nav" style="color:#c8d4c4">Posta</div>
+        </div>
+        <div class="main" style="color:#f3ead4">
+          <div><div class="sub" style="color:#c9a234">Stagione 1 · Giornata 7</div><div class="h" style="font-family:Georgia,serif">Sala Tattica</div></div>
+          <div class="cards">
+            <div class="c" style="background:#1c3327;border:1px solid #ffffff10"><div class="k">Posizione</div><div class="v" style="font-family:Georgia,serif">4º</div></div>
+            <div class="c" style="background:#1c3327;border:1px solid #ffffff10"><div class="k">Forma</div><div class="v" style="font-family:Georgia,serif;color:#c9a234">V V N</div></div>
+          </div>
+          <div style="border-top:1px solid #c9a23433;padding-top:8px"><div class="sub">Prossima · Sab 14:00</div><div style="font-size:13px;margin-top:3px">Aurora <b>vs</b> Vald. Reno</div></div>
+        </div>
+        <div class="rail" style="background:#0e1c16;border-left:1px solid #c9a23433;color:#f3ead4">
+          <div class="cta" style="background:linear-gradient(135deg,#c9a234,#a6831e);color:#1a1208">Continua ▸</div>
+          <div class="sub" style="margin-top:12px">Posta · 2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 BROADCAST NIGHT -->
+  <div class="option skin-wrap" data-choice="broadcast" onclick="toggleSelect(this)" style="display:block">
+    <div class="content" style="width:100%">
+      <h3>2 · Broadcast night — nero/navy, accento lime elettrico, sans condensato</h3>
+      <p>Contemporaneo, denso di dati, alta leggibilità. "App sportiva premium / FM moderno". Numeri grandi, contrasto netto, accento vivo.</p>
+      <div class="skin" style="background:#0b0f14;">
+        <div class="side" style="background:#0f151c; border-right:1px solid #1e2a36;">
+          <div class="crest"><div class="badge" style="background:linear-gradient(135deg,#b6ff3a,#5fb800)"></div><div style="color:#fff;font-size:13px;font-weight:800;letter-spacing:.02em">AURORA<br>FC</div></div>
+          <div class="nav" style="background:#b6ff3a18;color:#b6ff3a;border-left:2px solid #b6ff3a">Dashboard</div>
+          <div class="nav" style="color:#8ea0b2">Rosa</div>
+          <div class="nav" style="color:#8ea0b2">Tattica</div>
+          <div class="nav" style="color:#8ea0b2">Calendario</div>
+          <div class="nav" style="color:#8ea0b2">Posta</div>
+        </div>
+        <div class="main" style="color:#eef3f8">
+          <div><div class="sub" style="color:#b6ff3a">S1 · GW7</div><div class="h">Command Centre</div></div>
+          <div class="cards">
+            <div class="c" style="background:#131b24;border:1px solid #1e2a36"><div class="k">Pos</div><div class="v">4<span style="font-size:11px;opacity:.5">th</span></div></div>
+            <div class="c" style="background:#131b24;border:1px solid #1e2a36"><div class="k">Pts</div><div class="v">14</div></div>
+            <div class="c" style="background:#131b24;border:1px solid #1e2a36"><div class="k">Forma</div><div class="v" style="color:#b6ff3a;font-size:15px">WWL</div></div>
+          </div>
+          <div style="background:#131b24;border:1px solid #1e2a36;border-radius:9px;padding:9px"><div class="sub">Next · Sat 14:00</div><div style="font-size:13px;margin-top:3px;font-weight:600">Aurora <span style="opacity:.4">vs</span> Vald. Reno</div></div>
+        </div>
+        <div class="rail" style="background:#0f151c;border-left:1px solid #1e2a36;color:#eef3f8">
+          <div class="cta" style="background:#b6ff3a;color:#0b0f14">CONTINUA ▸</div>
+          <div class="sub" style="margin-top:12px;color:#b6ff3a">Inbox · 2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 SLATE & BRASS -->
+  <div class="option skin-wrap" data-choice="slate" onclick="toggleSelect(this)" style="display:block">
+    <div class="content" style="width:100%">
+      <h3>3 · Slate &amp; brass — ardesia blu-grigia, ottone, serif display + sans pulito</h3>
+      <p>Sobrio, classy, "club storico ben curato". Toni desaturati, accento ottone caldo, mix serif/sans. Premium senza gridare.</p>
+      <div class="skin" style="background:#1a2128;">
+        <div class="side" style="background:#141a20; border-right:1px solid #b08d5722;">
+          <div class="crest"><div class="badge" style="background:linear-gradient(135deg,#c79a5b,#8a6a37)"></div><div style="font-family:Georgia,serif;color:#e9edf1;font-size:13px;font-weight:700">Aurora<br>1921</div></div>
+          <div class="nav" style="background:#c79a5b1f;color:#e9edf1">Dashboard</div>
+          <div class="nav" style="color:#9fb0bf">Rosa</div>
+          <div class="nav" style="color:#9fb0bf">Tattica</div>
+          <div class="nav" style="color:#9fb0bf">Calendario</div>
+          <div class="nav" style="color:#9fb0bf">Posta</div>
+        </div>
+        <div class="main" style="color:#e9edf1">
+          <div><div class="sub" style="color:#c79a5b">Stagione 1 · Giornata 7</div><div class="h" style="font-family:Georgia,serif;font-weight:600">Quartier Generale</div></div>
+          <div class="cards">
+            <div class="c" style="background:#222b34;border:1px solid #ffffff0d"><div class="k">Posizione</div><div class="v" style="font-family:Georgia,serif">4º</div></div>
+            <div class="c" style="background:#222b34;border:1px solid #ffffff0d"><div class="k">Punti</div><div class="v" style="font-family:Georgia,serif">14</div></div>
+          </div>
+          <div style="border-left:2px solid #c79a5b;padding-left:9px"><div class="sub">Prossima · Sab 14:00</div><div style="font-size:13px;margin-top:3px">Aurora <b>vs</b> Vald. Reno</div></div>
+        </div>
+        <div class="rail" style="background:#141a20;border-left:1px solid #b08d5722;color:#e9edf1">
+          <div class="cta" style="background:linear-gradient(135deg,#c79a5b,#a87f47);color:#1a1208">Continua ▸</div>
+          <div class="sub" style="margin-top:12px">Posta · 2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

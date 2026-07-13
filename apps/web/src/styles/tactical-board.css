@@ -1,0 +1,409 @@
+/* Isolated chrome for the preserved shared tactical board and bench board. */
+.tls-tactical-board {
+  display: grid;
+  gap: var(--tls-space-3);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tls-tactical-board-header {
+  display: flex;
+  gap: var(--tls-space-3);
+  align-items: end;
+  justify-content: space-between;
+}
+
+.tls-tactical-board-header h3 {
+  margin: 0;
+  color: var(--tls-color-text);
+  font-size: var(--tls-font-size-md);
+  text-transform: uppercase;
+}
+
+.tls-tactical-board-header dl {
+  display: flex;
+  gap: var(--tls-space-3);
+  margin: 0 var(--tls-space-4) 0 0;
+}
+
+.tls-tactical-board-header div {
+  display: grid;
+  gap: var(--tls-space-1);
+  min-width: 5rem;
+  text-align: right;
+}
+
+.tls-tactical-board-header dt {
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-xs);
+  text-transform: uppercase;
+}
+
+.tls-tactical-board-header dd {
+  margin: 0;
+  color: var(--tls-theme-primary-action-surface);
+  font-family: var(--tls-font-mono);
+  font-weight: 700;
+}
+
+.tls-tactical-board-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(78vh, 58rem);
+  background: var(--tls-color-pitch-dark);
+  border: var(--tls-border-strong);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-panel), var(--tls-shadow-inset);
+  touch-action: none;
+  user-select: none;
+}
+
+.tls-tactical-board-field {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tls-tactical-board-active-zone {
+  fill: rgba(209, 161, 58, 0.14);
+  stroke: var(--tls-color-gold);
+  stroke-dasharray: 12 10;
+  stroke-width: 2;
+}
+
+.tls-tactical-board-active-zone[data-department="defense"] {
+  fill: rgba(93, 155, 118, 0.14);
+}
+
+.tls-tactical-board-active-zone[data-department="midfield"] {
+  fill: rgba(209, 161, 58, 0.13);
+}
+
+.tls-tactical-board-active-zone[data-department="attack"] {
+  fill: rgba(199, 91, 61, 0.12);
+}
+
+.tls-tactical-board-token,
+.tls-tactical-board-empty-slot {
+  cursor: pointer;
+  outline: none;
+}
+
+.tls-tactical-board-token:focus-visible .tls-tactical-board-token-face,
+.tls-tactical-board-empty-slot:focus-visible .tls-tactical-board-empty-slot-ring {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--tls-theme-accent) 90%, transparent));
+  stroke: var(--tls-theme-accent);
+}
+
+.tls-tactical-board-token-face {
+  fill: #ffffff;
+  stroke: var(--tls-color-gold);
+  stroke-width: 5;
+}
+
+.tls-tactical-board-token[data-suitability="natural"] .tls-tactical-board-token-face {
+  stroke: var(--tls-color-green);
+}
+
+.tls-tactical-board-token[data-suitability="accomplished"] .tls-tactical-board-token-face {
+  stroke: #93bf64;
+}
+
+.tls-tactical-board-token[data-suitability="competent"] .tls-tactical-board-token-face {
+  stroke: var(--tls-color-gold);
+}
+
+.tls-tactical-board-token[data-suitability="unconvincing"] .tls-tactical-board-token-face {
+  stroke: #c8863b;
+}
+
+.tls-tactical-board-token[data-suitability="makeshift"] .tls-tactical-board-token-face {
+  stroke: var(--tls-color-red);
+}
+
+.tls-tactical-board-token-number {
+  fill: var(--tls-color-text-dark);
+  font-family: var(--tls-font-mono);
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.tls-tactical-board-form-dot {
+  fill: var(--tls-color-text-muted);
+  stroke: var(--tls-color-ink);
+  stroke-width: 1.5;
+}
+
+.tls-tactical-board-token[data-form="up"] .tls-tactical-board-form-dot {
+  fill: var(--tls-color-green);
+}
+
+.tls-tactical-board-token[data-form="down"] .tls-tactical-board-form-dot {
+  fill: var(--tls-color-red);
+}
+
+.tls-tactical-board-form-arrow {
+  fill: var(--tls-color-text);
+}
+
+.tls-tactical-board-token-name,
+.tls-tactical-board-token-role {
+  fill: var(--tls-color-field-text);
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: var(--tls-color-ink);
+}
+
+.tls-tactical-board-token-name {
+  font-size: 1.25rem;
+  stroke-width: 4.5;
+}
+
+.tls-tactical-board-token-role {
+  font-family: var(--tls-font-mono);
+  font-size: 1rem;
+  stroke-width: 3.5;
+}
+
+.tls-tactical-board-empty-slot-ring {
+  fill: rgba(8, 15, 17, 0.45);
+  stroke: var(--tls-color-paper);
+  stroke-dasharray: 5 5;
+  stroke-opacity: 0.75;
+  stroke-width: 3;
+}
+
+.tls-tactical-board-empty-slot-plus {
+  fill: var(--tls-color-paper);
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.tls-tactical-bench-board {
+  position: relative;
+  display: grid;
+  gap: var(--tls-space-2);
+  min-width: 0;
+  padding: var(--tls-space-2);
+  background: var(--tls-theme-elevated-panel-surface);
+  border: var(--tls-border-thin);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-inset);
+}
+
+.tls-tactical-bench-board-header {
+  display: flex;
+  gap: var(--tls-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tls-tactical-bench-board-header h3 {
+  margin: 0;
+  color: var(--tls-color-field-text-muted);
+  font-size: var(--tls-font-size-sm);
+  text-transform: uppercase;
+}
+
+.tls-tactical-bench-board-header span {
+  color: var(--tls-theme-primary-action-surface);
+  font-family: var(--tls-font-mono);
+  font-size: var(--tls-font-size-xs);
+  font-weight: 900;
+}
+
+.tls-tactical-bench-board-surface {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(3.65rem, 1fr));
+  gap: 0.45rem;
+  padding: 0.55rem;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(240, 227, 189, 0.05), transparent 34%),
+    linear-gradient(180deg, rgba(42, 89, 53, 0.86), rgba(20, 61, 38, 0.9));
+  border: 1px solid rgba(240, 227, 189, 0.24);
+  border-radius: var(--tls-radius-sm);
+}
+
+.tls-tactical-bench-menu-popover {
+  position: absolute;
+  z-index: 8;
+  right: var(--tls-space-2);
+  bottom: calc(var(--tls-space-2) + 0.25rem);
+  width: min(28rem, calc(100% - var(--tls-space-6)));
+}
+
+.tls-tactical-bench-board-item {
+  min-width: 0;
+}
+
+.tls-tactical-bench-slot {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 4.55rem;
+  padding: 0.45rem 0.24rem 0.32rem;
+  place-items: center;
+  color: var(--tls-color-text);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 54%),
+    rgba(8, 15, 17, 0.34);
+  border: 1px solid rgba(240, 227, 189, 0.2);
+  border-radius: var(--tls-radius-sm);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.tls-tactical-bench-slot:hover,
+.tls-tactical-bench-slot:focus-visible {
+  border-color: var(--tls-theme-accent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tls-theme-accent) 24%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--tls-theme-accent) 28%, transparent);
+  outline: none;
+}
+
+.tls-tactical-bench-slot[data-status="missing_player"],
+.tls-tactical-bench-slot[data-status="duplicate_player"],
+.tls-tactical-bench-slot[data-status="lineup_player"] {
+  border-color: rgba(218, 103, 75, 0.58);
+}
+
+.tls-tactical-bench-slot-label {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.35rem;
+  color: var(--tls-color-field-text-muted);
+  font-family: var(--tls-font-mono);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tls-tactical-bench-empty-plus {
+  display: grid;
+  align-self: center;
+  justify-self: center;
+  width: 1.72rem;
+  height: 1.72rem;
+  place-items: center;
+  color: var(--tls-color-field-text-muted);
+  border: 2px dashed rgba(240, 227, 189, 0.65);
+  border-radius: 50%;
+  font-size: var(--tls-font-size-sm);
+  font-weight: 900;
+}
+
+.tls-tactical-bench-player {
+  display: grid;
+  gap: 0.04rem;
+  align-self: center;
+  justify-items: center;
+  width: 100%;
+  min-width: 0;
+  padding-top: 0.12rem;
+}
+
+.tls-tactical-bench-player-number {
+  display: grid;
+  width: 1.78rem;
+  height: 1.78rem;
+  place-items: center;
+  color: var(--tls-color-text-dark);
+  background: #ffffff;
+  border: 2px solid var(--tls-color-gold);
+  border-radius: 50%;
+  font-family: var(--tls-font-mono);
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tls-tactical-bench-player-name {
+  width: 100%;
+  color: var(--tls-color-field-text);
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow:
+    1px 1px 0 var(--tls-color-ink),
+    -1px 1px 0 var(--tls-color-ink),
+    1px -1px 0 var(--tls-color-ink),
+    -1px -1px 0 var(--tls-color-ink);
+  white-space: nowrap;
+}
+
+.tls-tactical-bench-player-role {
+  color: var(--tls-color-field-text-muted);
+  font-family: var(--tls-font-mono);
+  font-size: 0.64rem;
+  font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+@media (max-width: 34rem) {
+  .tls-tactical-bench-board-surface {
+    grid-template-columns: repeat(2, minmax(4.25rem, 1fr));
+  }
+}
+
+.tls-tactical-board-menu {
+  display: grid;
+  gap: var(--tls-space-1);
+  min-width: 14rem;
+  max-height: 18rem;
+  padding: var(--tls-space-1);
+  overflow: auto;
+  color: var(--tls-color-text);
+  background: var(--tls-theme-elevated-panel-surface);
+  border: var(--tls-border-strong);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-panel);
+}
+
+.tls-tactical-board-menu-popover {
+  position: absolute;
+  z-index: 8;
+  top: min(calc(var(--tls-tactical-board-menu-top) + 0.5rem), calc(100% - 19rem));
+  left: min(calc(var(--tls-tactical-board-menu-left) + 0.5rem), calc(100% - 15rem));
+}
+
+.tls-tactical-board-menu section {
+  display: grid;
+  gap: var(--tls-space-1);
+}
+
+.tls-tactical-board-menu-item {
+  display: flex;
+  gap: var(--tls-space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.25rem;
+  padding: 0 var(--tls-space-2);
+  color: var(--tls-color-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--tls-radius-sm);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.tls-tactical-board-menu-item:hover,
+.tls-tactical-board-menu-item:focus-visible {
+  background: var(--tls-theme-selected-row-surface);
+  outline: none;
+}
+
+.tls-tactical-board-menu-item[data-current="true"] {
+  color: var(--tls-theme-primary-action-surface);
+}
+
+.tls-tactical-board-menu-item[data-danger="true"] {
+  color: var(--tls-color-red);
+}
