@@ -5,6 +5,7 @@ import {
   type Fixture,
   type FixtureId,
   type MatchReport,
+  type PlayerId,
 } from "@game/domain";
 
 import type { MatchEngineConfig } from "../match-engine/match-engine-config.ts";
@@ -24,6 +25,8 @@ import { findNextCareerFixture, type NextCareerFixtureInvalidReason } from "./ne
 /** Invalid-state reasons specific to career fixture progression. */
 export type ProgressCareerFixtureInvalidReason =
   | NextCareerFixtureInvalidReason
+  | "fixture_already_played"
+  | "fixture_report_mismatch"
   | "missing_home_team_context"
   | "missing_away_team_context"
   | "home_team_context_mismatch"
@@ -97,6 +100,48 @@ export type ProgressCareerFixtureResult =
   | ProgressCareerFixtureInvalid
   | ProgressCareerFixtureNone;
 
+/** Input for atomically committing a report already produced by staged progression. */
+export interface CommitStagedCareerFixtureInput {
+  /** Recovered durable career that owns the active match checkpoint. */
+  readonly careerState: CareerState;
+  /** Completed staged report to make authoritative. */
+  readonly report: MatchReport;
+  /** Selected-club starters whose existing v1 match consequences must apply. */
+  readonly selectedStarterIds: readonly PlayerId[];
+}
+
+/**
+ * Applies one already-simulated staged report without running the match again.
+ *
+ * The returned state applies the fixture result and player consequences and
+ * clears the active checkpoint in the same immutable domain transition. The
+ * storage adapter can therefore publish full time with one atomic save.
+ */
+export function commitStagedCareerFixture(
+  input: CommitStagedCareerFixtureInput,
+): ProgressCareerFixtureAdvanced | ProgressCareerFixtureInvalid {
+  const fixture = input.careerState.gameState.fixtures[input.report.fixtureId];
+
+  if (fixture === undefined) {
+    return invalidResult(input.careerState, "fixture_missing", input.report.fixtureId);
+  }
+
+  if (fixture.result?.played === true) {
+    return invalidResult(input.careerState, "fixture_already_played", fixture.id);
+  }
+
+  if (input.careerState.activeMatchCheckpoint?.fixtureId !== fixture.id) {
+    return invalidResult(input.careerState, "fixture_report_mismatch", fixture.id);
+  }
+
+  return applyCareerFixtureReport({
+    careerState: input.careerState,
+    fixture,
+    report: input.report,
+    selectedStarterIds: input.selectedStarterIds,
+  });
+}
+
 /**
  * Simulates and applies the selected club's next unplayed fixture.
  *
@@ -137,11 +182,6 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
   }
 
   const simulatedFixture = simulateFixtureAndCreateReport(input, nextFixture.fixtureId, resolvedContexts.home, resolvedContexts.away);
-  const gameStateWithResult = applyMatchReportToFixture({
-    state: input.careerState.gameState,
-    fixtureId: nextFixture.fixtureId,
-    report: simulatedFixture.report,
-  });
   const selectedClubContext = selectedClubTeamContext(
     input.careerState.selectedClubId,
     nextFixture.fixture,
@@ -149,56 +189,83 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     resolvedContexts.away,
   );
   const selectedStarterIds = selectedClubContext.lineup.map((slot) => slot.playerId);
-  const selectedClub = gameStateWithResult.clubs[input.careerState.selectedClubId];
-  const conditionConsequences = applyCareerFixtureConditionConsequences({
-    playerStates: gameStateWithResult.playerStates,
-    selectedStarterIds,
-    reportPlayerIds: selectedClub?.playerIds ?? selectedStarterIds,
-  });
-  const matchStateConsequences = applyCareerMatchStateConsequences({
-    playerStates: conditionConsequences.playerStates,
-    selectedClubId: input.careerState.selectedClubId,
+  const applied = applyCareerFixtureReport({
+    careerState: input.careerState,
     fixture: nextFixture.fixture,
     report: simulatedFixture.report,
     selectedStarterIds,
   });
-  const gameStateWithConsequences = {
-    ...gameStateWithResult,
-    playerStates: matchStateConsequences.playerStates,
-  };
-  const progressedCareerState = createCareerState({
-    ...input.careerState,
-    gameState: {
-      ...gameStateWithConsequences,
-      calendar: {
-        ...gameStateWithConsequences.calendar,
-        currentDate: nextFixture.fixture.date > gameStateWithConsequences.calendar.currentDate
-          ? nextFixture.fixture.date
-          : gameStateWithConsequences.calendar.currentDate,
-      },
-    },
-  });
-  const fixtureAfter = progressedCareerState.gameState.fixtures[nextFixture.fixtureId];
-
-  if (fixtureAfter === undefined) {
-    return invalidResult(input.careerState, "fixture_missing", nextFixture.fixtureId);
-  }
 
   return {
-    status: "advanced",
-    fixtureId: nextFixture.fixtureId,
-    fixtureBefore: nextFixture.fixture,
-    fixtureAfter,
-    report: simulatedFixture.report,
+    ...applied,
     ...(simulatedFixture.explanationTrace === undefined
       ? {}
       : {
           explanationTrace: withSelectedClubConditionTrace(
             simulatedFixture.explanationTrace,
             input.careerState.selectedClubId,
-            conditionConsequences.changes,
+            applied.conditionChanges,
           ),
         }),
+  };
+}
+
+interface ApplyCareerFixtureReportInput {
+  readonly careerState: CareerState;
+  readonly fixture: Fixture;
+  readonly report: MatchReport;
+  readonly selectedStarterIds: readonly PlayerId[];
+}
+
+/** Applies report, condition, form, morale, calendar, and checkpoint changes once. */
+function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): ProgressCareerFixtureAdvanced {
+  const gameStateWithResult = applyMatchReportToFixture({
+    state: input.careerState.gameState,
+    fixtureId: input.fixture.id,
+    report: input.report,
+  });
+  const selectedClub = gameStateWithResult.clubs[input.careerState.selectedClubId];
+  const conditionConsequences = applyCareerFixtureConditionConsequences({
+    playerStates: gameStateWithResult.playerStates,
+    selectedStarterIds: input.selectedStarterIds,
+    reportPlayerIds: selectedClub?.playerIds ?? input.selectedStarterIds,
+  });
+  const matchStateConsequences = applyCareerMatchStateConsequences({
+    playerStates: conditionConsequences.playerStates,
+    selectedClubId: input.careerState.selectedClubId,
+    fixture: input.fixture,
+    report: input.report,
+    selectedStarterIds: input.selectedStarterIds,
+  });
+  const gameStateWithConsequences = {
+    ...gameStateWithResult,
+    playerStates: matchStateConsequences.playerStates,
+  };
+  const { activeMatchCheckpoint: _completedCheckpoint, ...careerWithoutCheckpoint } = input.careerState;
+  const progressedCareerState = createCareerState({
+    ...careerWithoutCheckpoint,
+    gameState: {
+      ...gameStateWithConsequences,
+      calendar: {
+        ...gameStateWithConsequences.calendar,
+        currentDate: input.fixture.date > gameStateWithConsequences.calendar.currentDate
+          ? input.fixture.date
+          : gameStateWithConsequences.calendar.currentDate,
+      },
+    },
+  });
+  const fixtureAfter = progressedCareerState.gameState.fixtures[input.fixture.id];
+
+  if (fixtureAfter === undefined) {
+    throw new Error(`Committed fixture disappeared from career state: ${input.fixture.id}`);
+  }
+
+  return {
+    status: "advanced",
+    fixtureId: input.fixture.id,
+    fixtureBefore: input.fixture,
+    fixtureAfter,
+    report: input.report,
     conditionChanges: conditionConsequences.changes,
     playerStateConsequences: matchStateConsequences.changes,
     playerStateConsequenceSummary: matchStateConsequences.summary,

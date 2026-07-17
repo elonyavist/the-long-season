@@ -154,7 +154,7 @@ describe("buildCareerMatchdayView", () => {
       },
       result: playedResult,
       nextStop: {
-        reason: "match_preparation_required",
+        reason: "attention",
         dateIso: "2026-08-08",
         actionId: "prepare_match",
       },
@@ -176,7 +176,7 @@ describe("buildCareerMatchdayView", () => {
     expect(view.playerStateChanges.map((row) => row.playerId)).toEqual(["player:striker", "player:keeper"]);
     expect(view.nextStop).toMatchObject({
       status: "available",
-      reason: "match_preparation_required",
+      reason: "attention",
       actionId: "prepare_match",
     });
   });

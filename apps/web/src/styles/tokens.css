@@ -1,26 +1,54 @@
 :root {
   color-scheme: dark;
-  --tls-theme-app-background: #070b13;
-  --tls-theme-app-grid-line: rgba(169, 187, 209, 0.055);
-  --tls-theme-app-scanline: rgba(244, 232, 199, 0.028);
-  --tls-theme-shell-surface: #0f1724;
-  --tls-theme-panel-surface: #151f30;
-  --tls-theme-elevated-panel-surface: #1d2c43;
-  --tls-theme-table-header-surface: #0b1320;
-  --tls-theme-table-row-surface: #1a2940;
-  --tls-theme-table-alternate-row-surface: #20314a;
-  --tls-theme-selected-row-surface: #293c59;
-  --tls-theme-border: rgba(232, 224, 202, 0.2);
-  --tls-theme-strong-border: rgba(232, 224, 202, 0.46);
-  --tls-theme-text: #f2ead7;
-  --tls-theme-muted-text: #aeb8c8;
-  --tls-theme-heading-text: #f7edcf;
-  --tls-theme-primary-action-surface: #d9b95d;
-  --tls-theme-primary-action-hover: #e9ca75;
-  --tls-theme-primary-action-text: #10141b;
-  --tls-theme-secondary-action-surface: #243652;
-  --tls-theme-focus-ring: #d9b95d;
-  --tls-theme-shell-overlay: rgba(91, 126, 174, 0.15);
+  --tls-theme-app-background: #050a0c;
+  --tls-theme-app-grid-line: rgba(197, 209, 199, 0.035);
+  --tls-theme-app-scanline: rgba(238, 230, 207, 0.018);
+  --tls-theme-shell-surface: #0b1519;
+  --tls-theme-panel-surface: #101e24;
+  --tls-theme-elevated-panel-surface: #172a32;
+  --tls-theme-table-header-surface: #081216;
+  --tls-theme-table-row-surface: #13262d;
+  --tls-theme-table-alternate-row-surface: #172c33;
+  --tls-theme-selected-row-surface: #203b40;
+  --tls-theme-muted-surface: #0c181c;
+  --tls-theme-border: rgba(218, 218, 200, 0.16);
+  --tls-theme-strong-border: rgba(232, 226, 203, 0.34);
+  --tls-theme-text: #eee9dc;
+  --tls-theme-muted-text: #a9b7b3;
+  --tls-theme-heading-text: #f4edd9;
+  --tls-theme-primary-action-surface: #d4b253;
+  --tls-theme-primary-action-hover: #e1c36d;
+  --tls-theme-primary-action-text: #101512;
+  --tls-theme-secondary-action-surface: #1b3440;
+  --tls-theme-focus-ring: #e1c36d;
+  --tls-theme-shell-overlay: rgba(55, 104, 89, 0.14);
+  --tls-theme-club-green: #3d7657;
+  --tls-theme-club-green-strong: #57906c;
+  --tls-theme-chalk: #d9ddcf;
+
+  /* Product-state pairs stay separate from tactical-board suitability colors. */
+  --tls-state-danger-foreground: #df765d;
+  --tls-state-danger-surface: color-mix(in srgb, var(--tls-state-danger-foreground) 10%, var(--tls-theme-panel-surface));
+  --tls-state-danger-border: color-mix(in srgb, var(--tls-state-danger-foreground) 62%, var(--tls-theme-border));
+  --tls-state-warning-foreground: var(--tls-theme-primary-action-surface);
+  --tls-state-warning-surface: color-mix(in srgb, var(--tls-state-warning-foreground) 10%, var(--tls-theme-panel-surface));
+  --tls-state-warning-border: color-mix(in srgb, var(--tls-state-warning-foreground) 54%, var(--tls-theme-border));
+  --tls-state-success-foreground: #84c293;
+  --tls-state-success-surface: color-mix(in srgb, var(--tls-state-success-foreground) 9%, var(--tls-theme-panel-surface));
+  --tls-state-success-border: color-mix(in srgb, var(--tls-state-success-foreground) 56%, var(--tls-theme-border));
+  --tls-state-information-foreground: #82aeb5;
+  --tls-state-information-surface: color-mix(in srgb, var(--tls-state-information-foreground) 9%, var(--tls-theme-panel-surface));
+  --tls-state-information-border: color-mix(in srgb, var(--tls-state-information-foreground) 48%, var(--tls-theme-border));
+  --tls-state-selection-foreground: var(--tls-theme-primary-action-text);
+  --tls-state-selection-surface: var(--tls-theme-primary-action-surface);
+  --tls-state-selection-border: var(--tls-theme-primary-action-hover);
+  --tls-state-disabled-foreground: var(--tls-theme-muted-text);
+  --tls-state-disabled-surface: color-mix(in srgb, var(--tls-theme-muted-surface) 72%, transparent);
+  --tls-state-disabled-border: color-mix(in srgb, var(--tls-theme-border) 58%, transparent);
+  --tls-state-pending-foreground: var(--tls-theme-primary-action-text);
+  --tls-state-pending-surface: var(--tls-theme-primary-action-surface);
+  --tls-state-pending-border: var(--tls-theme-primary-action-hover);
+  --tls-state-focus-ring: var(--tls-theme-focus-ring);
 
   /* Compatibility aliases while component CSS moves to the hierarchy tokens. */
   --tls-theme-raised-surface: var(--tls-theme-elevated-panel-surface);
@@ -64,12 +92,11 @@
   --tls-color-text-dark: var(--tls-theme-primary-action-text);
   --tls-color-club-accent: var(--tls-theme-primary-action-surface);
   --tls-surface-panel:
-    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 7%, transparent), transparent 46%),
-    linear-gradient(90deg, color-mix(in srgb, var(--tls-theme-primary-action-surface) 6%, transparent), transparent 34%),
-    var(--tls-theme-panel-surface);
+    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-chalk) 4%, transparent), transparent 34%),
+    color-mix(in srgb, var(--tls-theme-panel-surface) 94%, transparent);
   --tls-surface-scoreboard:
-    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-heading-text) 5%, transparent), transparent 58%),
-    var(--tls-theme-shell-surface);
+    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-club-green) 9%, transparent), transparent 52%),
+    color-mix(in srgb, var(--tls-theme-shell-surface) 96%, transparent);
   --tls-surface-table-row: var(--tls-theme-table-row-surface);
   --tls-surface-table-row-alt: var(--tls-theme-table-alternate-row-surface);
   --tls-surface-table-row-selected: var(--tls-theme-selected-row-surface);
@@ -77,10 +104,10 @@
     linear-gradient(90deg, rgba(240, 227, 189, 0.055) 1px, transparent 1px),
     linear-gradient(0deg, rgba(240, 227, 189, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, var(--tls-color-pitch), var(--tls-color-pitch-dark));
-  --tls-shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.38);
-  --tls-shadow-inset: inset 0 1px 0 color-mix(in srgb, var(--tls-theme-heading-text) 10%, transparent);
-  --tls-font-ui: "Trebuchet MS", "Verdana", "Segoe UI", sans-serif;
-  --tls-font-display: "Palatino Linotype", "Georgia", serif;
+  --tls-shadow-panel: 0 1.25rem 3.25rem rgba(0, 0, 0, 0.34);
+  --tls-shadow-inset: inset 0 1px 0 color-mix(in srgb, var(--tls-theme-heading-text) 7%, transparent);
+  --tls-font-ui: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  --tls-font-display: "Rockwell", "Palatino Linotype", "Georgia", serif;
   --tls-font-mono: "SFMono-Regular", "Consolas", monospace;
   --tls-font-size-xs: 0.75rem;
   --tls-font-size-sm: 0.875rem;

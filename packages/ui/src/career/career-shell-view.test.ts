@@ -15,6 +15,7 @@ test("buildCareerShellView exposes the default navigation order and active secti
     view.navigationItems.map((item) => item.sectionKey),
     [
       "dashboard",
+      "inbox",
       "squad",
       "tactics",
       "fixtures",
@@ -32,6 +33,17 @@ test("buildCareerShellView exposes the default navigation order and active secti
   assert.equal(view.mode, "standard");
   assert.equal(view.showInboxRail, true);
   assert.equal(view.showGlobalContinue, true);
+});
+
+test("buildCareerShellView exposes Posta as a real central destination", () => {
+  const view = buildCareerShellView({
+    activeSectionKey: "inbox",
+    inboxView: buildCareerInboxView([]),
+  });
+
+  assert.equal(view.centralContentSectionKey, "inbox");
+  assert.equal(view.navigationItems.find((item) => item.sectionKey === "inbox")?.isCurrent, true);
+  assert.equal(view.navigationItems.find((item) => item.sectionKey === "inbox")?.isInteractive, true);
 });
 
 test("buildCareerShellView preserves disabled future sections with label keys", () => {
@@ -81,11 +93,11 @@ test("buildCareerShellView derives Inbox rail action-required state", () => {
       {
         messageId: "inbox:prep",
         dateIso: "2026-08-01",
-        category: "match_preparation_required",
+        category: "matchday",
         priority: "urgent",
         status: "unread",
-        titleKey: "career.inbox.title.matchPreparationRequired",
-        summaryKey: "career.inbox.summary.matchPreparationRequired",
+        titleKey: "career.inbox.subject.matchday",
+        summaryKey: "career.inbox.preview.matchdayPreparation",
         actionRequired: true,
       },
     ]),

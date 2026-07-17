@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/70-web-matchday-information-architecture-and-live-flow-rework
+PHASE_DIR_TO_EXECUTE: docs/steps/73b-current-web-product-premium-remediation-and-journey-hardening
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.
 If the phase README does not exist, stop and report the missing file.

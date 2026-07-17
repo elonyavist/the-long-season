@@ -3,6 +3,7 @@ import type { CareerInboxView } from "./career-inbox-view.ts";
 /** Stable section keys used by the top career navigation shell. */
 export type CareerShellSectionKey =
   | "dashboard"
+  | "inbox"
   | "squad"
   | "tactics"
   | "fixtures"
@@ -85,6 +86,7 @@ export interface BuildCareerShellViewInput {
 
 const DEFAULT_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
   { sectionKey: "dashboard", labelKey: "career.shell.nav.dashboard", status: "available" },
+  { sectionKey: "inbox", labelKey: "career.shell.nav.inbox", status: "available" },
   { sectionKey: "squad", labelKey: "career.shell.nav.squad", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
   { sectionKey: "tactics", labelKey: "career.shell.nav.tactics", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
   { sectionKey: "fixtures", labelKey: "career.shell.nav.fixtures", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },

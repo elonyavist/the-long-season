@@ -67,6 +67,7 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
       "transfer_turnover",
       "next_calendar_merge",
       "player_state_rollover",
+      "season_inbox_delivery",
     ]);
     assert.equal(result.facts.selectedClubId, "club:selected");
     assert.equal(result.facts.previousSeasonId, "season:0001");
@@ -88,6 +89,17 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
     assert.equal(result.careerState.gameState.calendar.currentDate, gameDate(addDays(gameDate(20_007), 70)));
     assert.equal(result.careerState.seasonHistory?.length, 1);
     assert.equal(result.careerState.matchPreparation, undefined);
+    assert.deepEqual(result.careerState.currentSeasonInbox, [{
+      id: "inbox:season-rollover:season:0002",
+      date: gameDate(addDays(gameDate(20_007), 70)),
+      category: "season_rollover",
+      source: "competition_office",
+      level: "important",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: { clubId: "club:selected" },
+      blockerKeys: [],
+      actionIds: [],
+    }]);
     assert.equal(result.careerState.gameState.fixtureIds.includes(fixtureId("fixture:000003")), true);
   }
 });

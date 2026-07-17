@@ -8,13 +8,18 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run src --exclude \"src/visual-qa/**\""
+    "test": "vitest run src --exclude \"src/visual-qa/**\"",
+    "visual:qa": "playwright test src/visual-qa/current-product.spec.ts src/visual-qa/sqlite-opfs-storage.spec.ts --workers=1 --reporter=line"
   },
   "dependencies": {
+    "@game/content": "workspace:*",
     "@game/engine": "workspace:*",
     "@game/i18n": "workspace:*",
     "@game/shared": "workspace:*",
+    "@game/storage": "workspace:*",
     "@game/ui": "workspace:*",
+    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "comlink": "^4.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.14"

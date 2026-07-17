@@ -1,89 +1,63 @@
 import { brand, type Brand } from "../types/brand.ts";
 import type { ClubId, FixtureId, PlayerId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
+import type { CareerAttentionBlockerKey, CareerAttentionLevel } from "./attention.ts";
 
-/** Stable identifier for one durable career Inbox / Posta message. */
+/** Stable identifier for one durable career Posta message. */
 export type CareerInboxMessageId = Brand<string, "CareerInboxMessageId">;
 
-/** Priority controls Inbox ordering and visual emphasis without rendering text. */
-export type CareerInboxPriority = "routine" | "important" | "urgent";
+/** Current message categories backed by complete production workflows. */
+export type CareerInboxCategory = "matchday" | "match_result" | "season_rollover";
 
-/** Read/resolution state for one career Inbox / Posta message. */
-export type CareerInboxMessageStatus = "unread" | "read" | "resolved" | "expired";
+/** Functional sender used by presentation without inventing a staff identity. */
+export type CareerInboxSource = "technical_staff" | "match_report" | "competition_office";
 
-/** Current career message categories implemented by the continue foundation. */
-export type CareerInboxCategory = "match_preparation_required" | "matchday_reached";
-
-/** Stable manager action exposed by an Inbox / Posta message. */
+/** Stable manager destinations exposed by current Posta messages. */
 export type CareerInboxActionId = "prepare_match" | "open_matchday";
 
-/** Related domain entities that can help adapters build useful labels. */
+/** Independent durable lifecycle facts for one message. */
+export interface CareerInboxMessageLifecycle {
+  readonly read: boolean;
+  readonly acknowledged: boolean;
+  readonly resolved: boolean;
+}
+
+/** Related domain entities used to rebuild football-specific details. */
 export interface CareerInboxRelatedEntities {
-  /** Fixture that caused or contextualizes the message. */
   readonly fixtureId?: FixtureId;
-  /** Club that owns the manager-facing decision. */
   readonly clubId?: ClubId;
-  /** Player related to the message when future systems need it. */
   readonly playerId?: PlayerId;
 }
 
-/** Input accepted by the Inbox message constructor. */
+/** Input accepted by the durable message constructor. */
 export interface CareerInboxMessageInput {
-  /** Stable namespaced message ID. */
   readonly id: CareerInboxMessageId;
-  /** In-world date when the message becomes visible. */
   readonly date: GameDate;
-  /** Structured message category. */
   readonly category: CareerInboxCategory;
-  /** Message priority used for sorting and visual emphasis. */
-  readonly priority: CareerInboxPriority;
-  /** Message lifecycle status. */
-  readonly status: CareerInboxMessageStatus;
-  /** Localization key for the visible title. */
-  readonly titleKey: string;
-  /** Localization key for the visible body or compact summary. */
-  readonly summaryKey: string;
-  /** Whether the manager must act before career advancement can continue. */
-  readonly actionRequired: boolean;
-  /** Optional related entities for adapters and future persistence. */
+  readonly source: CareerInboxSource;
+  readonly level: CareerAttentionLevel;
+  readonly lifecycle: CareerInboxMessageLifecycle;
   readonly related?: CareerInboxRelatedEntities;
-  /** Stable action IDs available from this message. */
+  readonly blockerKeys?: readonly CareerAttentionBlockerKey[];
   readonly actionIds?: readonly CareerInboxActionId[];
 }
 
-/** Durable language-agnostic message shown in the career Inbox / Posta. */
+/** Durable, language-agnostic Posta message facts. */
 export interface CareerInboxMessage {
-  /** Stable namespaced message ID. */
   readonly id: CareerInboxMessageId;
-  /** In-world date when the message becomes visible. */
   readonly date: GameDate;
-  /** Structured message category. */
   readonly category: CareerInboxCategory;
-  /** Message priority used for sorting and visual emphasis. */
-  readonly priority: CareerInboxPriority;
-  /** Message lifecycle status. */
-  readonly status: CareerInboxMessageStatus;
-  /** Localization key for the visible title. */
-  readonly titleKey: string;
-  /** Localization key for the visible body or compact summary. */
-  readonly summaryKey: string;
-  /** Whether the manager must act before career advancement can continue. */
-  readonly actionRequired: boolean;
-  /** Optional related entities for adapters and future persistence. */
+  readonly source: CareerInboxSource;
+  readonly level: CareerAttentionLevel;
+  readonly lifecycle: CareerInboxMessageLifecycle;
   readonly related: CareerInboxRelatedEntities;
-  /** Stable action IDs available from this message. */
+  readonly blockerKeys: readonly CareerAttentionBlockerKey[];
   readonly actionIds: readonly CareerInboxActionId[];
 }
 
 const INTEGER_LIKE_ID = /^(0|[1-9][0-9]*)$/;
 
-/**
- * Builds a stable career Inbox / Posta message ID.
- *
- * Message IDs follow the project-wide `type:value` convention and use the
- * `inbox:` namespace so they can be persisted later without colliding with
- * fixtures, players, or saves.
- */
+/** Builds a validated ID in the `inbox:` namespace. */
 export function careerInboxMessageId(value: string): CareerInboxMessageId {
   if (value.length === 0) {
     throw new Error("Career inbox message ID must not be empty");
@@ -104,40 +78,55 @@ export function careerInboxMessageId(value: string): CareerInboxMessageId {
   return brand<string, "CareerInboxMessageId">(value);
 }
 
-/**
- * Creates a validated language-agnostic Inbox / Posta message.
- *
- * The constructor deliberately accepts localization keys, not rendered prose.
- * Presentation adapters decide how those keys become visible text.
- */
+/** Creates a validated message and rejects impossible lifecycle combinations. */
 export function createCareerInboxMessage(input: CareerInboxMessageInput): CareerInboxMessage {
-  if (input.titleKey.trim().length === 0) {
-    throw new Error("Career inbox message titleKey must not be empty");
+  if (input.lifecycle.acknowledged && !input.lifecycle.read) {
+    throw new Error("Acknowledged inbox messages must also be read");
   }
 
-  if (input.summaryKey.trim().length === 0) {
-    throw new Error("Career inbox message summaryKey must not be empty");
+  if (input.level !== "important" && input.lifecycle.acknowledged) {
+    throw new Error("Only important inbox messages can be acknowledged");
   }
 
-  if (input.actionRequired && (input.actionIds?.length ?? 0) === 0) {
-    throw new Error("Action-required inbox messages must expose at least one action");
+  if (!input.lifecycle.resolved && input.level === "blocking" && (input.actionIds?.length ?? 0) === 0) {
+    throw new Error("Unresolved blocking inbox messages must expose an action");
+  }
+
+  if ((input.category === "matchday" || input.category === "match_result") && input.related?.fixtureId === undefined) {
+    throw new Error(`${input.category} inbox messages must reference a fixture`);
+  }
+
+  if (input.category === "season_rollover" && input.related?.clubId === undefined) {
+    throw new Error("Season rollover inbox messages must reference the selected club");
+  }
+
+  const expectedSource: CareerInboxSource = input.category === "matchday"
+    ? "technical_staff"
+    : input.category === "match_result"
+      ? "match_report"
+      : "competition_office";
+  if (input.source !== expectedSource) {
+    throw new Error(`${input.category} inbox messages must use source ${expectedSource}`);
   }
 
   return {
     id: input.id,
     date: input.date,
     category: input.category,
-    priority: input.priority,
-    status: input.status,
-    titleKey: input.titleKey,
-    summaryKey: input.summaryKey,
-    actionRequired: input.actionRequired,
+    source: input.source,
+    level: input.level,
+    lifecycle: { ...input.lifecycle },
     related: input.related ?? {},
-    actionIds: input.actionIds ?? [],
+    blockerKeys: [...new Set(input.blockerKeys ?? [])],
+    actionIds: [...new Set(input.actionIds ?? [])],
   };
 }
 
-/** Returns true when a message still blocks career continuation. */
-export function isActionRequiredInboxMessage(message: CareerInboxMessage): boolean {
-  return message.actionRequired && message.status !== "resolved" && message.status !== "expired";
+/** Returns whether this lifecycle state must stop career advancement. */
+export function doesCareerInboxMessageStopContinue(message: CareerInboxMessage): boolean {
+  if (message.level === "blocking") {
+    return !message.lifecycle.resolved;
+  }
+
+  return message.level === "important" && !message.lifecycle.acknowledged;
 }

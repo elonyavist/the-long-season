@@ -1,112 +1,151 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, competitionId, fixtureId, gameDate, seasonId, type ClubId, type Fixture } from "@game/domain";
+import {
+  careerInboxMessageId,
+  clubId,
+  createCareerInboxMessage,
+  fixtureId,
+  gameDate,
+  type CareerAttentionLevel,
+  type CareerInboxMessage,
+} from "@game/domain";
 
-import { continueCareerUntilAttention } from "./continue-career.ts";
+import { continueCareerUntilAttention, createMatchdayAttention } from "./continue-career.ts";
 
-test("continueCareerUntilAttention stops immediately on existing unresolved attention", () => {
-  const selectedClubId = clubId("club:perugia");
-  const firstResult = continueCareerUntilAttention({
-    currentDate: gameDate(20_000),
-    selectedClubId,
-    nextFixture: fixtureFixture(fixtureId("fixture:000003"), gameDate(20_006), selectedClubId),
-    preparation: {
-      hasSavedLineup: true,
-      hasSavedTactic: true,
-    },
-  });
-
-  const secondResult = continueCareerUntilAttention({
-    currentDate: gameDate(20_000),
-    selectedClubId,
-    nextFixture: fixtureFixture(fixtureId("fixture:000003"), gameDate(20_006), selectedClubId),
-    preparation: {
-      hasSavedLineup: true,
-      hasSavedTactic: true,
-    },
-    existingAttentionEvents: firstResult.attentionEvents,
-  });
-
-  assert.equal(secondResult.stopReason, "existing_attention");
-  assert.equal(secondResult.daysAdvanced, 0);
-  assert.deepEqual(secondResult.attentionEvents, firstResult.attentionEvents);
-});
-
-test("continueCareerUntilAttention stops on missing match preparation", () => {
-  const selectedClubId = clubId("club:perugia");
-  const result = continueCareerUntilAttention({
-    currentDate: gameDate(20_000),
-    selectedClubId,
-    nextFixture: fixtureFixture(fixtureId("fixture:000003"), gameDate(20_007), selectedClubId),
+test("prepared and incomplete fixtures produce one stable matchday stop identity", () => {
+  const base = {
+    fixtureId: fixtureId("fixture:000003"),
+    clubId: clubId("club:perugia"),
+    date: gameDate(20_007),
+  };
+  const incomplete = createMatchdayAttention({
+    ...base,
     preparation: {
       hasSavedLineup: false,
+      hasCompleteBench: false,
+      hasBenchGoalkeeper: false,
       hasSavedTactic: true,
     },
   });
-
-  assert.equal(result.stopReason, "match_preparation_required");
-  assert.equal(result.stopDate, gameDate(20_007));
-  assert.equal(result.daysAdvanced, 7);
-  assert.equal(result.attentionEvents[0]?.category, "match_preparation_required");
-  assert.deepEqual(result.attentionEvents[0]?.blockerKeys, ["missing_saved_lineup"]);
-  assert.equal(result.inboxMessages[0]?.titleKey, "career.inbox.title.matchPreparationRequired");
-  assert.deepEqual(result.inboxMessages[0]?.actionIds, ["prepare_match"]);
-});
-
-test("continueCareerUntilAttention stops on matchday when preparation exists", () => {
-  const selectedClubId = clubId("club:perugia");
-  const result = continueCareerUntilAttention({
-    currentDate: gameDate(20_000),
-    selectedClubId,
-    nextFixture: fixtureFixture(fixtureId("fixture:000003"), gameDate(20_001), selectedClubId),
+  const ready = createMatchdayAttention({
+    ...base,
     preparation: {
       hasSavedLineup: true,
+      hasCompleteBench: true,
+      hasBenchGoalkeeper: true,
       hasSavedTactic: true,
     },
   });
 
-  assert.equal(result.stopReason, "matchday_reached");
-  assert.equal(result.daysAdvanced, 1);
-  assert.equal(result.attentionEvents[0]?.category, "matchday_reached");
-  assert.equal(result.inboxMessages[0]?.summaryKey, "career.inbox.summary.matchdayReached");
-  assert.deepEqual(result.inboxMessages[0]?.actionIds, ["open_matchday"]);
-});
+  assert.equal(incomplete.event.id, ready.event.id);
+  assert.equal(incomplete.message.id, ready.message.id);
+  assert.deepEqual(incomplete.message.actionIds, ["prepare_match"]);
+  assert.deepEqual(ready.message.actionIds, ["open_matchday"]);
 
-test("continueCareerUntilAttention returns no attention without a next fixture", () => {
   const result = continueCareerUntilAttention({
     currentDate: gameDate(20_000),
-    selectedClubId: clubId("club:perugia"),
+    boundaryDate: base.date,
+    messages: [incomplete.message],
+  });
+  assert.equal(result.stopReason, "attention");
+  assert.equal(result.stopDate, base.date);
+  assert.equal(result.daysAdvanced, 7);
+});
+
+test("Continue delivers informational messages before stopping on a later day", () => {
+  const info = message("info", gameDate(20_001), "informational");
+  const important = message("important", gameDate(20_003), "important");
+  const result = continueCareerUntilAttention({
+    currentDate: gameDate(20_000),
+    boundaryDate: gameDate(20_010),
+    messages: [important, info],
+  });
+
+  assert.equal(result.stopDate, gameDate(20_003));
+  assert.deepEqual(result.inboxMessages.map((item) => item.id), [info.id, important.id]);
+  assert.deepEqual(result.stopDateMessages.map((item) => item.id), [important.id]);
+});
+
+test("same-date messages form one complete ordered stop batch", () => {
+  const info = message("c-info", gameDate(20_002), "informational");
+  const important = message("b-important", gameDate(20_002), "important");
+  const blocking = message("a-blocking", gameDate(20_002), "blocking");
+  const result = continueCareerUntilAttention({
+    currentDate: gameDate(20_000),
+    boundaryDate: gameDate(20_005),
+    messages: [info, important, blocking],
+  });
+
+  assert.deepEqual(result.stopDateMessages.map((item) => item.id), [blocking.id, important.id, info.id]);
+  assert.equal(result.selectedMessageId, blocking.id);
+  assert.equal(result.daysAdvanced, 2);
+});
+
+test("resolved blocking and acknowledged important messages do not stop Continue", () => {
+  const resolved = message("resolved", gameDate(20_001), "blocking", { resolved: true, read: true });
+  const acknowledged = message("acknowledged", gameDate(20_002), "important", {
+    acknowledged: true,
+    read: true,
+  });
+  const result = continueCareerUntilAttention({
+    currentDate: gameDate(20_000),
+    boundaryDate: gameDate(20_004),
+    messages: [acknowledged, resolved],
   });
 
   assert.equal(result.stopReason, "no_attention");
-  assert.equal(result.daysAdvanced, 0);
-  assert.deepEqual(result.attentionEvents, []);
-  assert.deepEqual(result.inboxMessages, []);
+  assert.equal(result.stopDate, gameDate(20_004));
+  assert.deepEqual(result.inboxMessages.map((item) => item.id), [resolved.id, acknowledged.id]);
 });
 
-test("continueCareerUntilAttention does not mutate input fixtures", () => {
-  const selectedClubId = clubId("club:perugia");
-  const fixture = fixtureFixture(fixtureId("fixture:000003"), gameDate(20_001), selectedClubId);
-  const before = JSON.stringify(fixture);
-
-  continueCareerUntilAttention({
+test("unresolved current-date attention is reused without advancement or duplication", () => {
+  const blocking = message("current", gameDate(20_000), "blocking");
+  const result = continueCareerUntilAttention({
     currentDate: gameDate(20_000),
-    selectedClubId,
-    nextFixture: fixture,
+    boundaryDate: gameDate(20_006),
+    messages: [blocking],
   });
 
-  assert.equal(JSON.stringify(fixture), before);
+  assert.equal(result.daysAdvanced, 0);
+  assert.deepEqual(result.stopDateMessages, [blocking]);
+  assert.throws(
+    () => continueCareerUntilAttention({
+      currentDate: gameDate(20_000),
+      boundaryDate: gameDate(20_006),
+      messages: [blocking, blocking],
+    }),
+    /Duplicate career inbox message ID/,
+  );
 });
 
-function fixtureFixture(id: Fixture["id"], date: Fixture["date"], selectedClubId: ClubId): Fixture {
-  return {
-    id,
-    competitionId: competitionId("competition:test"),
-    seasonId: seasonId("season:test"),
-    roundNumber: 1,
-    date,
-    homeClubId: clubId("club:pisa"),
-    awayClubId: selectedClubId,
+test("equal inputs produce equal ordering and stop output", () => {
+  const input = {
+    currentDate: gameDate(20_000),
+    boundaryDate: gameDate(20_003),
+    messages: [
+      message("z", gameDate(20_003), "blocking"),
+      message("a", gameDate(20_003), "blocking"),
+    ],
   };
+
+  assert.deepEqual(continueCareerUntilAttention(input), continueCareerUntilAttention(input));
+});
+
+function message(
+  suffix: string,
+  date: ReturnType<typeof gameDate>,
+  level: CareerAttentionLevel,
+  lifecycle: Partial<CareerInboxMessage["lifecycle"]> = {},
+): CareerInboxMessage {
+  return createCareerInboxMessage({
+    id: careerInboxMessageId(`inbox:matchday:fixture:${suffix}`),
+    date,
+    category: "matchday",
+    source: "technical_staff",
+    level,
+    lifecycle: { read: false, acknowledged: false, resolved: false, ...lifecycle },
+    related: { fixtureId: fixtureId(`fixture:${suffix}`) },
+    actionIds: level === "blocking" ? ["open_matchday"] : [],
+  });
 }

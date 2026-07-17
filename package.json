@@ -16,7 +16,8 @@
     "check": "pnpm lint && pnpm depcruise && pnpm check:localized-text && pnpm test && pnpm typecheck",
     "cli": "pnpm --filter @game/cli run cli --",
     "playwright:install": "playwright install chromium",
-    "playwright:version": "playwright --version"
+    "playwright:version": "playwright --version",
+    "web:visual:qa": "pnpm --filter @game/web run visual:qa"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

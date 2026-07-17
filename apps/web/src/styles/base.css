@@ -24,23 +24,17 @@ body::before {
   inset: 0;
   z-index: -1;
   content: "";
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--tls-theme-shell-surface) 54%, transparent), transparent 36%),
-    repeating-linear-gradient(
-      0deg,
-      var(--tls-theme-app-scanline) 0,
-      var(--tls-theme-app-scanline) 1px,
-      transparent 1px,
-      transparent 5px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      var(--tls-theme-app-grid-line) 0,
-      var(--tls-theme-app-grid-line) 1px,
-      transparent 1px,
-      transparent 32px
-    ),
-    var(--tls-theme-app-background);
+  background-image: url("../assets/stadium-night.webp");
+  background-position: center;
+  background-size: cover;
+}
+
+body::after {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
 }
 
 #root {
@@ -76,12 +70,12 @@ a {
 }
 
 ::selection {
-  color: var(--tls-theme-primary-action-text);
-  background: var(--tls-theme-primary-action-surface);
+  color: var(--tls-state-selection-foreground);
+  background: var(--tls-state-selection-surface);
 }
 
 :where(button, [href], input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--tls-theme-focus-ring);
+  outline: 2px solid var(--tls-state-focus-ring);
   outline-offset: 3px;
   box-shadow: var(--tls-focus-ring);
 }
@@ -95,4 +89,25 @@ a {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.tls-skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: var(--tls-space-3);
+  left: var(--tls-space-3);
+  max-width: calc(100vw - (2 * var(--tls-space-3)));
+  padding: 0.65rem 0.9rem;
+  color: var(--tls-theme-primary-action-text);
+  background: var(--tls-theme-primary-action-surface);
+  border: 2px solid var(--tls-state-focus-ring);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-panel);
+  font-weight: 700;
+  transform: translateY(calc(-100% - var(--tls-space-4)));
+  transition: transform 120ms ease-out;
+}
+
+.tls-skip-link:focus {
+  transform: translateY(0);
 }

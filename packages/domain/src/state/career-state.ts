@@ -7,6 +7,8 @@ import { createMarketState, type MarketState } from "../entities/transfer.entity
 import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
 import { createYouthAcademyState, type YouthAcademyState } from "./youth-academy-state.ts";
+import { createActiveMatchCheckpoint, type ActiveMatchCheckpoint } from "../career/active-match-checkpoint.ts";
+import { createCareerInboxMessage, type CareerInboxMessage } from "../career/inbox.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
@@ -49,8 +51,34 @@ export interface CareerMatchPreparation {
   readonly selectedLineup?: SelectedLineup;
   /** Saved tactic setup, when the manager has chosen one. */
   readonly tactic?: TacticSetup;
+  /** Base formation selected before any manual board-role adjustment. */
+  readonly baseFormationId?: string;
+  /** Ordered normalized board geometry and role facts for every XI slot. */
+  readonly boardSlots?: readonly CareerMatchPreparationBoardSlot[];
+  /** Ordered substitutes selected by the manager. */
+  readonly benchSlots?: readonly CareerMatchPreparationBenchSlot[];
   /** In-world date when this preparation snapshot was last updated. */
   readonly updatedAt: GameDate;
+}
+
+/** Durable normalized geometry for one tactical-board slot. */
+export interface CareerMatchPreparationBoardSlot {
+  /** Stable slot key shared with the selected lineup. */
+  readonly slotKey: string;
+  /** Normalized horizontal coordinate in the inclusive 0..1 range. */
+  readonly nx: number;
+  /** Normalized vertical coordinate in the inclusive 0..1 range. */
+  readonly ny: number;
+  /** Tactical-board role code, for example `DC` or `ATT`. */
+  readonly roleKey: string;
+}
+
+/** One ordered substitute slot in durable match preparation. */
+export interface CareerMatchPreparationBenchSlot {
+  /** Stable ordered bench key, for example `bench:01`. */
+  readonly slotKey: string;
+  /** Player selected for this substitute slot. */
+  readonly playerId: PlayerId;
 }
 
 /**
@@ -119,6 +147,10 @@ export interface CareerState {
   readonly matchPreparation?: CareerMatchPreparation;
   /** Ordered compact completed-season history. */
   readonly seasonHistory?: readonly CareerSeasonArchiveEntry[];
+  /** Ordered durable Posta messages for the current season only. */
+  readonly currentSeasonInbox?: readonly CareerInboxMessage[];
+  /** Optional durable checkpoint for the selected club's in-progress fixture. */
+  readonly activeMatchCheckpoint?: ActiveMatchCheckpoint;
 }
 
 /** Machine-readable career-state validation failure. */
@@ -141,12 +173,30 @@ export type CareerStateContractErrorCode =
   | "season_history_champion_not_first"
   | "season_history_selected_club_mismatch"
   | "season_history_invalid_aggregate_goals"
+  | "duplicate_inbox_message"
+  | "inbox_fixture_not_found"
+  | "inbox_club_not_found"
+  | "inbox_player_not_found"
   | "match_preparation_selected_club_mismatch"
   | "match_preparation_fixture_not_found"
   | "match_preparation_fixture_selected_club_missing"
   | "match_preparation_lineup_club_mismatch"
   | "match_preparation_player_not_found"
-  | "match_preparation_player_not_owned";
+  | "match_preparation_player_not_owned"
+  | "match_preparation_invalid_base_formation"
+  | "match_preparation_invalid_board_slot"
+  | "match_preparation_duplicate_board_slot"
+  | "match_preparation_invalid_board_coordinate"
+  | "match_preparation_board_lineup_mismatch"
+  | "match_preparation_invalid_bench_slot"
+  | "match_preparation_duplicate_bench_slot"
+  | "match_preparation_duplicate_bench_player"
+  | "match_preparation_bench_lineup_overlap"
+  | "active_match_fixture_not_found"
+  | "active_match_fixture_already_played"
+  | "active_match_fixture_club_mismatch"
+  | "active_match_selected_side_mismatch"
+  | "active_match_player_not_found";
 
 /**
  * Typed error thrown when a career-state snapshot is inconsistent.
@@ -229,6 +279,10 @@ export function createCareerState(input: CareerState): CareerState {
   const youthAcademyState = input.youthAcademyState === undefined
     ? undefined
     : createYouthAcademyState(input.gameState, input.youthAcademyState);
+  const activeMatchCheckpoint = input.activeMatchCheckpoint === undefined
+    ? undefined
+    : createCareerActiveMatchCheckpoint(input.gameState, input.selectedClubId, input.activeMatchCheckpoint);
+  const currentSeasonInbox = createCurrentSeasonInbox(input);
 
   return {
     saveId: input.saveId,
@@ -240,10 +294,37 @@ export function createCareerState(input: CareerState): CareerState {
     transferHistory,
     ...(youthAcademyState === undefined ? {} : { youthAcademyState }),
     ...(seasonHistory.length === 0 ? {} : { seasonHistory }),
+    currentSeasonInbox,
     ...(input.matchPreparation === undefined
       ? {}
       : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation) }),
+    ...(activeMatchCheckpoint === undefined ? {} : { activeMatchCheckpoint }),
   };
+}
+
+/** Validates ordered current-season message facts and related world entities. */
+function createCurrentSeasonInbox(input: CareerState): readonly CareerInboxMessage[] {
+  const seenIds = new Set<string>();
+
+  return (input.currentSeasonInbox ?? []).map((rawMessage) => {
+    const message = createCareerInboxMessage(rawMessage);
+    if (seenIds.has(message.id)) {
+      throw new CareerStateContractError("duplicate_inbox_message", `duplicate inbox message: ${message.id}`);
+    }
+    seenIds.add(message.id);
+
+    if (message.related.fixtureId !== undefined && input.gameState.fixtures[message.related.fixtureId] === undefined) {
+      throw new CareerStateContractError("inbox_fixture_not_found", `inbox fixture does not exist: ${message.related.fixtureId}`);
+    }
+    if (message.related.clubId !== undefined && input.gameState.clubs[message.related.clubId] === undefined) {
+      throw new CareerStateContractError("inbox_club_not_found", `inbox club does not exist: ${message.related.clubId}`);
+    }
+    if (message.related.playerId !== undefined && input.gameState.players[message.related.playerId] === undefined) {
+      throw new CareerStateContractError("inbox_player_not_found", `inbox player does not exist: ${message.related.playerId}`);
+    }
+
+    return message;
+  });
 }
 
 /**
@@ -294,14 +375,92 @@ function createCareerMatchPreparation(
   validatePreparationFixture(gameState, selectedClubId, input.targetFixtureId);
   const selectedLineup = input.selectedLineup === undefined ? undefined : createValidatedPreparationLineup(gameState, selectedClubId, input.selectedLineup);
   const tactic = input.tactic === undefined ? undefined : createTacticSetup(input.tactic);
+  const boardSlots = createPreparationBoardSlots(input.boardSlots, selectedLineup);
+  const benchSlots = createPreparationBenchSlots(gameState, selectedClubId, input.benchSlots, selectedLineup);
+
+  if (input.baseFormationId !== undefined && input.baseFormationId.trim().length === 0) {
+    throw new CareerStateContractError(
+      "match_preparation_invalid_base_formation",
+      "match preparation base formation must not be empty",
+    );
+  }
 
   return {
     selectedClubId: input.selectedClubId,
     ...(input.targetFixtureId === undefined ? {} : { targetFixtureId: input.targetFixtureId }),
     ...(selectedLineup === undefined ? {} : { selectedLineup }),
     ...(tactic === undefined ? {} : { tactic }),
+    ...(input.baseFormationId === undefined ? {} : { baseFormationId: input.baseFormationId }),
+    ...(boardSlots === undefined ? {} : { boardSlots }),
+    ...(benchSlots === undefined ? {} : { benchSlots }),
     updatedAt: input.updatedAt,
   };
+}
+
+/** Validates and copies normalized board geometry without depending on UI code. */
+function createPreparationBoardSlots(
+  input: readonly CareerMatchPreparationBoardSlot[] | undefined,
+  selectedLineup: SelectedLineup | undefined,
+): readonly CareerMatchPreparationBoardSlot[] | undefined {
+  if (input === undefined) return undefined;
+  const seenSlotKeys = new Set<string>();
+  const lineupSlotKeys = new Set(selectedLineup?.slots.map((slot) => slot.slotKey) ?? []);
+
+  return input.map((slot) => {
+    if (slot.slotKey.trim().length === 0 || slot.roleKey.trim().length === 0) {
+      throw new CareerStateContractError("match_preparation_invalid_board_slot", "match preparation board slot and role keys must not be empty");
+    }
+    if (seenSlotKeys.has(slot.slotKey)) {
+      throw new CareerStateContractError("match_preparation_duplicate_board_slot", `duplicate match preparation board slot: ${slot.slotKey}`);
+    }
+    if (!Number.isFinite(slot.nx) || !Number.isFinite(slot.ny) || slot.nx < 0 || slot.nx > 1 || slot.ny < 0 || slot.ny > 1) {
+      throw new CareerStateContractError("match_preparation_invalid_board_coordinate", `invalid normalized board coordinate: ${slot.slotKey}`);
+    }
+    if (selectedLineup !== undefined && !lineupSlotKeys.has(slot.slotKey)) {
+      throw new CareerStateContractError("match_preparation_board_lineup_mismatch", `board slot is not present in selected lineup: ${slot.slotKey}`);
+    }
+    seenSlotKeys.add(slot.slotKey);
+    return { ...slot };
+  });
+}
+
+/** Validates ordered substitutes against ownership and XI exclusivity. */
+function createPreparationBenchSlots(
+  gameState: GameState,
+  selectedClubId: ClubId,
+  input: readonly CareerMatchPreparationBenchSlot[] | undefined,
+  selectedLineup: SelectedLineup | undefined,
+): readonly CareerMatchPreparationBenchSlot[] | undefined {
+  if (input === undefined) return undefined;
+  const selectedClub = gameState.clubs[selectedClubId];
+  const ownedPlayerIds = new Set(selectedClub?.playerIds ?? []);
+  const lineupPlayerIds = new Set(selectedLineup?.slots.map((slot) => slot.playerId) ?? []);
+  const seenSlotKeys = new Set<string>();
+  const seenPlayerIds = new Set<PlayerId>();
+
+  return input.map((slot) => {
+    if (slot.slotKey.trim().length === 0) {
+      throw new CareerStateContractError("match_preparation_invalid_bench_slot", "match preparation bench slot key must not be empty");
+    }
+    if (seenSlotKeys.has(slot.slotKey)) {
+      throw new CareerStateContractError("match_preparation_duplicate_bench_slot", `duplicate match preparation bench slot: ${slot.slotKey}`);
+    }
+    if (seenPlayerIds.has(slot.playerId)) {
+      throw new CareerStateContractError("match_preparation_duplicate_bench_player", `duplicate match preparation bench player: ${slot.playerId}`);
+    }
+    if (lineupPlayerIds.has(slot.playerId)) {
+      throw new CareerStateContractError("match_preparation_bench_lineup_overlap", `match preparation player is selected in XI and bench: ${slot.playerId}`);
+    }
+    if (gameState.players[slot.playerId] === undefined) {
+      throw new CareerStateContractError("match_preparation_player_not_found", `match preparation bench player does not exist: ${slot.playerId}`);
+    }
+    if (!ownedPlayerIds.has(slot.playerId)) {
+      throw new CareerStateContractError("match_preparation_player_not_owned", `match preparation bench player is not owned by selected club: ${slot.playerId}`);
+    }
+    seenSlotKeys.add(slot.slotKey);
+    seenPlayerIds.add(slot.playerId);
+    return { ...slot };
+  });
 }
 
 function createSeasonHistory(input: CareerState): CareerSeasonArchiveEntry[] {
@@ -418,6 +577,60 @@ function hasClubInOrder(gameState: GameState, clubId: ClubId): boolean {
   }
 
   return false;
+}
+
+function createCareerActiveMatchCheckpoint(
+  gameState: GameState,
+  selectedClubId: ClubId,
+  input: ActiveMatchCheckpoint,
+): ActiveMatchCheckpoint {
+  const checkpoint = createActiveMatchCheckpoint(input);
+  const fixture = gameState.fixtures[checkpoint.fixtureId];
+
+  if (fixture === undefined) {
+    throw new CareerStateContractError("active_match_fixture_not_found", `active match fixture does not exist: ${checkpoint.fixtureId}`);
+  }
+
+  if (fixture.result !== undefined) {
+    throw new CareerStateContractError("active_match_fixture_already_played", `active match fixture is already played: ${checkpoint.fixtureId}`);
+  }
+
+  if (fixture.homeClubId !== checkpoint.initialContext.home.clubId || fixture.awayClubId !== checkpoint.initialContext.away.clubId) {
+    throw new CareerStateContractError("active_match_fixture_club_mismatch", `active match clubs do not match fixture: ${checkpoint.fixtureId}`);
+  }
+
+  if (checkpoint.initialContext[checkpoint.selectedClubSide].clubId !== selectedClubId) {
+    throw new CareerStateContractError("active_match_selected_side_mismatch", `active match selected side does not contain selected club: ${selectedClubId}`);
+  }
+
+  for (const player of activeCheckpointPlayerIds(checkpoint)) {
+    if (gameState.players[player] === undefined) {
+      throw new CareerStateContractError("active_match_player_not_found", `active match player does not exist: ${player}`);
+    }
+  }
+
+  return checkpoint;
+}
+
+function activeCheckpointPlayerIds(checkpoint: ActiveMatchCheckpoint): Set<PlayerId> {
+  const players = new Set<PlayerId>();
+
+  for (const team of [checkpoint.initialContext.home, checkpoint.initialContext.away]) {
+    for (const slot of team.lineup) {
+      players.add(slot.playerId);
+    }
+  }
+
+  for (const slot of checkpoint.selectedClubBenchSlots) {
+    if (slot.playerId !== null) players.add(slot.playerId);
+  }
+
+  for (const substitution of checkpoint.appliedSubstitutions) {
+    players.add(substitution.outgoingPlayerId);
+    players.add(substitution.incomingPlayerId);
+  }
+
+  return players;
 }
 
 function assertNonNegativeMoney(amount: Money | undefined): void {

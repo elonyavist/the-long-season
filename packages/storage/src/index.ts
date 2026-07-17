@@ -12,13 +12,23 @@ export {
 } from "./game-storage.interface.ts";
 export {
   type CareerStorage,
-  JsonCareerStorage,
-  type JsonCareerStorageOptions,
-  migrateCareerSave,
   type SaveCareerInput,
+} from "./career-storage.interface.ts";
+export {
+  migrateCareerSave,
   type StoredCareerSave,
   type StoredCareerSaveV1,
-} from "./career-storage.ts";
+} from "./career-save-envelope.ts";
+export { JsonCareerStorage, type JsonCareerStorageOptions } from "./json-career-storage.ts";
 export { JsonGameStorage, type JsonGameStorageOptions } from "./json-game-storage.ts";
 export { migrateSave, type StoredSave, type StoredSaveV1 } from "./migrate-save.ts";
-export { CURRENT_SAVE_SCHEMA_VERSION, type SaveMetadata } from "./save-metadata.ts";
+export {
+  CURRENT_CAREER_SAVE_SCHEMA_VERSION,
+  CURRENT_SAVE_SCHEMA_VERSION,
+  DEFAULT_CAREER_AUTOSAVE_INTERVAL_DAYS,
+  isCareerAutosaveIntervalDays,
+  type CareerAutosaveIntervalDays,
+  type CareerSaveMetadata,
+  type SaveMetadata,
+} from "./save-metadata.ts";
+export * from "./sqlite/index.ts";

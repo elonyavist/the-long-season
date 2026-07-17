@@ -9,6 +9,10 @@ export type StorageErrorCode =
   | "save_not_found"
   | "save_unreadable"
   | "save_unwritable"
+  | "storage_busy"
+  | "storage_initialization_failed"
+  | "storage_quota_exceeded"
+  | "storage_unavailable"
   | "unsupported_schema_version";
 
 /**

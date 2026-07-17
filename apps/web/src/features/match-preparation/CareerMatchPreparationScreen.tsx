@@ -9,7 +9,7 @@ import type {
   CareerMatchPreparationView,
 } from "@game/ui";
 
-import type { DemoCareerContinueResult } from "../dashboard/continue-demo-career";
+import type { WebCareerContinueResult } from "../../runtime/web-career-runtime";
 import { AppShell } from "../app-shell/AppShell";
 import { PlayerFactPanel } from "../../shared/ui/PlayerFactPanel";
 import { SquadSelectionTable, type SquadSelectionRow } from "../../shared/ui/SquadSelectionTable";
@@ -23,17 +23,23 @@ import { TACTICAL_BOARD_ROLE_CODES, TACTICAL_BOARD_ROLES } from "../tactics-boar
 import type { TacticalBoardDraft } from "../tactics-board/tactical-board-state";
 import type { TacticalBoardCanonicalRole, TacticalBoardRoleCode } from "../tactics-board/tactical-board-types";
 import type { TacticalBenchSlotId, TacticalBenchSlotView } from "../tactics-board/tactical-board-bench";
-import {
-  buildDemoTacticalBoardSquadPlayers,
-  getDemoMatchPreparationPlayerFact,
-  type DemoMatchPreparationSelectionAction,
-} from "./match-preparation-demo";
+import type { TacticalBoardSquadPlayer } from "../tactics-board/tactical-board-squad";
+import type {
+  MatchPreparationPlayerFact,
+  MatchPreparationSelectionAction,
+} from "./match-preparation-adapter";
+import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
+import { useCareerUiStore } from "../../stores/career-ui-store";
 
 /** Props for the first editable match-preparation screen. */
 export type CareerMatchPreparationScreenProps = Readonly<{
   view: CareerMatchPreparationView;
+  currentDateIso: string;
+  draftDirty: boolean;
   tacticalBoardDraft: TacticalBoardDraft;
-  continueResult?: DemoCareerContinueResult;
+  tacticalBoardPlayers: readonly TacticalBoardSquadPlayer[];
+  playerFactsById: ReadonlyMap<string, MatchPreparationPlayerFact>;
+  continueResult?: WebCareerContinueResult;
   text: Translator;
   onBackToMenu: () => void;
   onBackToDashboard: () => void;
@@ -43,7 +49,7 @@ export type CareerMatchPreparationScreenProps = Readonly<{
   onLineupPlayerChange: (slotKey: string, playerId: string | undefined) => void;
   onBenchPlayerChange: (slotKey: string, playerId: string | undefined) => void;
   onTacticProfileChange: (tacticProfileId: string | undefined) => void;
-  onSelectionAction: (action: DemoMatchPreparationSelectionAction) => void;
+  onSelectionAction: (action: MatchPreparationSelectionAction) => void;
   onBoardSlotMove: (slotKey: string, nx: number, ny: number) => void;
   onBoardSlotRoleChange: (slotKey: string, role: TacticalBoardRoleCode) => void;
   onBoardSlotClear: (slotKey: string) => void;
@@ -51,7 +57,6 @@ export type CareerMatchPreparationScreenProps = Readonly<{
 }>;
 
 type MatchPreparationPlayerOption = CareerMatchPreparationView["lineup"]["slots"][number]["playerOptions"][number];
-type DemoTacticalBoardPlayer = ReturnType<typeof buildDemoTacticalBoardSquadPlayers>[number];
 type MatchPreparationPanelTab = "squad" | "tactic" | "detail";
 
 const MATCH_PREPARATION_PANEL_TABS: readonly {
@@ -66,7 +71,11 @@ const MATCH_PREPARATION_PANEL_TABS: readonly {
 /** Renders the editable lineup slice for the next selected-club fixture. */
 export function CareerMatchPreparationScreen({
   view,
+  currentDateIso,
+  draftDirty,
   tacticalBoardDraft,
+  tacticalBoardPlayers,
+  playerFactsById,
   continueResult,
   text,
   onBackToMenu,
@@ -90,7 +99,6 @@ export function CareerMatchPreparationScreen({
     mode: "preparation",
   });
   const playerStatusById = useMemo(() => buildPlayerStatusById(view), [view]);
-  const tacticalBoardPlayers = useMemo(() => buildDemoTacticalBoardSquadPlayers(), []);
   const tacticalBoardPlayerById = useMemo(
     () => new Map(tacticalBoardPlayers.map((player) => [player.playerId, player])),
     [tacticalBoardPlayers],
@@ -108,8 +116,8 @@ export function CareerMatchPreparationScreen({
     [tacticalBoardDraft.slots],
   );
   const squadRows = useMemo(
-    () => buildSquadRows(view, playerStatusById, tacticalBoardPlayerById),
-    [playerStatusById, tacticalBoardPlayerById, view],
+    () => buildSquadRows(view, playerStatusById, tacticalBoardPlayerById, playerFactsById),
+    [playerFactsById, playerStatusById, tacticalBoardPlayerById, view],
   );
   const firstSelectedPlayerId = firstPreparedPlayerId(view);
   const [selectedDetailPlayerId, setSelectedDetailPlayerId] = useState<string | undefined>(
@@ -120,76 +128,58 @@ export function CareerMatchPreparationScreen({
     squadRows.find((row) => row.player.playerId === selectedDetailPlayerId) ??
     squadRows.find((row) => row.status === "selected") ??
     squadRows[0];
-  const preparationMetrics = [
-    {
-      label: text("career.matchPreparation.selectedSlots"),
-      value: `${view.lineup.selectedSlotCount}/${view.lineup.requiredSlotCount}`,
-    },
-    {
-      label: text("career.matchPreparation.bench.selectedSlots"),
-      value: `${view.bench.selectedSlotCount}/${view.bench.requiredSlotCount}`,
-    },
-  ] as const;
   const focusPlayerDetail = (playerId: string): void => {
     setSelectedDetailPlayerId(playerId);
     setActivePanelTab("detail");
   };
+  const commandActivity = useCareerUiStore((state) => state.commandActivity);
+  const commandPending = commandActivity?.status === "pending";
 
   return (
     <AppShell
       shellView={shellView}
       selectedClubName={view.selectedClub.name}
-      contextItems={[
-        {
-          label: text("career.currentDate"),
-          value: view.nextFixture?.dateIso ?? text("common.unknown"),
-        },
-        {
-          label: text("career.matchPreparation.selectedSlots"),
-          value: `${view.lineup.selectedSlotCount}/${view.lineup.requiredSlotCount}`,
-        },
-        {
-          label: text("career.matchPreparation.bench.selectedSlots"),
-          value: `${view.bench.selectedSlotCount}/${view.bench.requiredSlotCount}`,
-        },
-      ]}
+      currentDateIso={currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
       onContinueCareer={onContinueCareer}
       onInboxActionClick={onInboxActionClick}
     >
-      <section className="tls-shell-panel tls-preparation-panel" aria-labelledby="match-preparation-title">
+      <section className="tls-shell-panel tls-preparation-panel" data-state={commandPending ? "pending" : "idle"} aria-labelledby="match-preparation-title" aria-busy={commandPending}>
         <header className="tls-preparation-header">
           <div>
             <h1 className="tls-shell-title" id="match-preparation-title">{text("career.matchPreparation")}</h1>
-            <p className="tls-shell-status">{text(view.summaryKey as MessageKey)}</p>
+            <p className="tls-shell-status">{formatFixture(view, text)}</p>
+            {draftDirty ? (
+              <span className="tls-preparation-draft-state" data-state="unsaved" role="status">
+                {text("career.saveControl.unsaved")}
+              </span>
+            ) : null}
           </div>
           <div className="tls-preparation-header-actions">
-            <button className="tls-menu-button tls-preparation-dashboard" type="button" onClick={onBackToDashboard}>
+            <button className="tls-menu-button tls-preparation-dashboard" disabled={commandPending} type="button" onClick={onBackToDashboard}>
               {text("career.shell.nav.dashboard")}
-            </button>
-            <button
-              className="tls-menu-button tls-menu-button-primary"
-              disabled={view.saveAction.status !== "available"}
-              type="button"
-              onClick={onSavePreparation}
-            >
-              {text(view.saveAction.labelKey as MessageKey)}
             </button>
           </div>
         </header>
 
-        <PreparationAlertStrip blockerKeys={view.blockerKeys} text={text} />
-
-        <section className="tls-preparation-match-strip" aria-label={text("career.matchPreparation.context")}>
-          <div className="tls-preparation-match-primary">
-            <PreparationFact label={text("career.nextSelectedClubFixture")} value={formatFixture(view, text)} />
-          </div>
-          <div className="tls-preparation-match-metrics">
-            {preparationMetrics.map((metric) => (
-              <PreparationFact key={metric.label} label={metric.label} value={metric.value} />
-            ))}
-          </div>
+        <div className="tls-preparation-command-lock" inert={commandPending ? true : undefined}>
+        <section className="tls-preparation-decision-bar">
+          <PreparationAlertStrip blockerKeys={view.blockerKeys} text={text} />
+          <button
+            className="tls-menu-button tls-menu-button-primary tls-preparation-confirm"
+            data-state={commandPending ? "pending" : view.saveAction.status === "available" ? "idle" : "disabled"}
+            disabled={view.saveAction.status !== "available" || commandPending}
+            type="button"
+            onClick={onSavePreparation}
+          >
+            <CommandActivityIndicator
+              activity={commandActivity}
+              commandIds={["confirm_preparation"]}
+              idleLabel={text(view.saveAction.labelKey as MessageKey)}
+              text={text}
+            />
+          </button>
         </section>
 
         <section className="tls-preparation-lineup" aria-labelledby="match-preparation-lineup-title">
@@ -364,6 +354,7 @@ export function CareerMatchPreparationScreen({
             </aside>
           </div>
         </section>
+        </div>
       </section>
     </AppShell>
   );
@@ -383,6 +374,7 @@ function PreparationAlertStrip({
     <section
       aria-label={text("career.matchPreparation.blockers")}
       className="tls-preparation-alert-strip"
+      data-state={isReady ? "success" : "blocking"}
       data-status={isReady ? "ready" : "blocked"}
     >
       <strong>{isReady ? text("career.matchPreparation.noBlockers") : text("career.matchPreparation.blockers")}</strong>
@@ -402,7 +394,7 @@ function PreparationAlertStrip({
 /** Maps read-model bench slots into the shared tactical bench-board slot shape. */
 function buildTacticalBenchSlots(
   view: CareerMatchPreparationView,
-  playerById: ReadonlyMap<string, DemoTacticalBoardPlayer>,
+  playerById: ReadonlyMap<string, TacticalBoardSquadPlayer>,
 ): readonly TacticalBenchSlotView[] {
   return view.bench.slots.map((slot) => {
     const selectedPlayer = slot.selectedPlayerId === undefined ? undefined : playerById.get(slot.selectedPlayerId);
@@ -418,7 +410,7 @@ function buildTacticalBenchSlots(
 
 /** Maps current squad facts into substitute candidates for the shared bench board. */
 function buildTacticalBenchCandidates(
-  players: readonly DemoTacticalBoardPlayer[],
+  players: readonly TacticalBoardSquadPlayer[],
 ): readonly TacticalBenchBoardCandidate[] {
   return players.map((player) => ({
     playerId: player.playerId,
@@ -434,7 +426,7 @@ function buildTacticalBenchCandidates(
 }
 
 /** Converts a selected board player into the compact substitute token facts. */
-function tacticalBenchPlayerFromBoardPlayer(player: DemoTacticalBoardPlayer): TacticalBenchBoardCandidate {
+function tacticalBenchPlayerFromBoardPlayer(player: TacticalBoardSquadPlayer): TacticalBenchBoardCandidate {
   return {
     playerId: player.playerId,
     number: player.number,
@@ -486,7 +478,8 @@ function firstPreparedPlayerId(view: CareerMatchPreparationView): string | undef
 function buildSquadRows(
   view: CareerMatchPreparationView,
   playerStatusById: ReadonlyMap<string, SquadSelectionRow["status"]>,
-  tacticalBoardPlayerById: ReadonlyMap<string, DemoTacticalBoardPlayer>,
+  tacticalBoardPlayerById: ReadonlyMap<string, TacticalBoardSquadPlayer>,
+  playerFactsById: ReadonlyMap<string, MatchPreparationPlayerFact>,
 ): readonly SquadSelectionRow[] {
   const rowsByPlayerId = new Map<string, SquadSelectionRow>();
 
@@ -496,30 +489,20 @@ function buildSquadRows(
         continue;
       }
 
-      const fact = getDemoMatchPreparationPlayerFact(player.playerId);
+      const fact = playerFactsById.get(player.playerId);
       const tacticalBoardPlayer = tacticalBoardPlayerById.get(player.playerId);
       rowsByPlayerId.set(player.playerId, {
         player: {
           ...player,
           ...(tacticalBoardPlayer === undefined ? {} : { number: tacticalBoardPlayer.number }),
         },
-        ...(fact === undefined ? {} : { age: fact.age, foot: fact.foot }),
+        ...(fact === undefined ? {} : { age: fact.age }),
         status: playerStatusById.get(player.playerId) ?? "available",
       });
     }
   }
 
   return [...rowsByPlayerId.values()];
-}
-
-/** Renders one compact preparation fact row. */
-function PreparationFact({ label, value }: Readonly<{ label: string; value: string }>): React.JSX.Element {
-  return (
-    <div className="tls-dashboard-fact">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
 }
 
 /** Formats next-fixture context for the preparation header. */

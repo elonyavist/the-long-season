@@ -11,9 +11,21 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
+    headers: crossOriginIsolationHeaders(),
   },
   preview: {
     host: "127.0.0.1",
     port: 4173,
+    headers: crossOriginIsolationHeaders(),
+  },
+  optimizeDeps: {
+    exclude: ["@sqlite.org/sqlite-wasm"],
   },
 });
+
+function crossOriginIsolationHeaders(): Record<string, string> {
+  return {
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Embedder-Policy": "require-corp",
+  };
+}

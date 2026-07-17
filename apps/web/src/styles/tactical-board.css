@@ -150,14 +150,14 @@
 .tls-tactical-board-token-name,
 .tls-tactical-board-token-role {
   fill: var(--tls-color-field-text);
-  font-weight: 800;
+  font-weight: 600;
   paint-order: stroke;
   stroke: var(--tls-color-ink);
 }
 
 .tls-tactical-board-token-name {
   font-size: 1.25rem;
-  stroke-width: 4.5;
+  stroke-width: 3.5;
 }
 
 .tls-tactical-board-token-role {

@@ -110,6 +110,70 @@ export interface CareerDashboardRecentMatchView {
   readonly awayGoals?: number;
 }
 
+/** One contextual league row shown around the selected club. */
+export interface CareerDashboardLeagueTableRowView {
+  /** One-based sporting position. */
+  readonly position: number;
+  /** Stable club identifier. */
+  readonly clubId: string;
+  /** Compact club display name. */
+  readonly clubName: string;
+  /** Played matches. */
+  readonly played: number;
+  /** Won matches. */
+  readonly wins: number;
+  /** Drawn matches. */
+  readonly draws: number;
+  /** Lost matches. */
+  readonly losses: number;
+  /** Goals scored minus goals conceded. */
+  readonly goalDifference: number;
+  /** Competition points. */
+  readonly points: number;
+  /** Whether this row belongs to the manager's club. */
+  readonly isSelectedClub: boolean;
+}
+
+/** Small table window centred on the manager's club when results exist. */
+export interface CareerDashboardLeagueTableView {
+  /** `unstarted` avoids presenting arbitrary tie-break positions before match one. */
+  readonly status: "available" | "unstarted";
+  /** At most five consecutive rows in sporting order. */
+  readonly rows: readonly CareerDashboardLeagueTableRowView[];
+  /** Selected-club position when the table is available. */
+  readonly selectedClubPosition?: number;
+}
+
+/** One completed fixture from the latest league round. */
+export interface CareerDashboardLeagueResultView {
+  /** Stable fixture identifier. */
+  readonly fixtureId: string;
+  /** Stable home-club identifier. */
+  readonly homeClubId: string;
+  /** Home-club display name. */
+  readonly homeClubName: string;
+  /** Stable away-club identifier. */
+  readonly awayClubId: string;
+  /** Away-club display name. */
+  readonly awayClubName: string;
+  /** Home goals. */
+  readonly homeGoals: number;
+  /** Away goals. */
+  readonly awayGoals: number;
+  /** Whether this fixture involves the manager's club. */
+  readonly isSelectedClubFixture: boolean;
+}
+
+/** All completed fixtures from the newest played league round. */
+export interface CareerDashboardLeagueResultsView {
+  /** Whether a completed league round exists. */
+  readonly status: "available" | "none";
+  /** Competition round represented by the result list. */
+  readonly round?: number;
+  /** Completed fixtures in stable schedule order. */
+  readonly results: readonly CareerDashboardLeagueResultView[];
+}
+
 /** Structured first post-load career dashboard view. */
 export interface CareerDashboardView {
   /** Stable screen key for routing and tests. */
@@ -128,6 +192,10 @@ export interface CareerDashboardView {
   readonly tableContext: CareerDashboardTableContextView;
   /** Last selected-club result context. */
   readonly recentMatch: CareerDashboardRecentMatchView;
+  /** Contextual current-season league table. */
+  readonly leagueTable: CareerDashboardLeagueTableView;
+  /** Results from the newest completed league round. */
+  readonly leagueResults: CareerDashboardLeagueResultsView;
   /** Dashboard alert and blocker keys. */
   readonly alertKeys: readonly CareerDashboardBlockerKey[];
   /** Manager actions available from this screen. */

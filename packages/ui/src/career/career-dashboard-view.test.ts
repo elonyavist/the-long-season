@@ -57,6 +57,40 @@ describe("CareerDashboardView", () => {
         homeGoals: 2,
         awayGoals: 1,
       },
+      leagueTable: {
+        status: "available",
+        selectedClubPosition: 8,
+        rows: [
+          {
+            position: 8,
+            clubId: "club:pro01",
+            clubName: "A.C. Perugia",
+            played: 1,
+            wins: 1,
+            draws: 0,
+            losses: 0,
+            goalDifference: 1,
+            points: 3,
+            isSelectedClub: true,
+          },
+        ],
+      },
+      leagueResults: {
+        status: "available",
+        round: 1,
+        results: [
+          {
+            fixtureId: "fixture:000000",
+            homeClubId: "club:pro01",
+            homeClubName: "A.C. Perugia",
+            awayClubId: "club:pro02",
+            awayClubName: "F.C. Como",
+            homeGoals: 2,
+            awayGoals: 1,
+            isSelectedClubFixture: true,
+          },
+        ],
+      },
       alertKeys: ["missing_saved_lineup", "missing_saved_tactic"],
       actions: [
         {
@@ -77,6 +111,8 @@ describe("CareerDashboardView", () => {
     expect(view.screenKey).toBe("career.dashboard");
     expect(view.nextFixture.selectedClubSide).toBe("home");
     expect(view.recentMatch.homeGoals).toBe(2);
+    expect(view.leagueTable.rows[0]?.isSelectedClub).toBe(true);
+    expect(view.leagueResults.results[0]?.isSelectedClubFixture).toBe(true);
     expect(view.actions[1]?.status).toBe("blocked");
     expect(view.alertKeys).toEqual(["missing_saved_lineup", "missing_saved_tactic"]);
   });

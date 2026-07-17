@@ -56,6 +56,34 @@ export interface CareerDashboardRecentMatchInput {
   readonly awayGoals: number;
 }
 
+/** One full league row supplied in final sporting order. */
+export interface CareerDashboardLeagueTableRowInput {
+  /** One-based sporting position. */
+  readonly position: number;
+  /** Club represented by the row. */
+  readonly club: CareerDashboardClubInput;
+  /** Played matches. */
+  readonly played: number;
+  /** Won matches. */
+  readonly wins: number;
+  /** Drawn matches. */
+  readonly draws: number;
+  /** Lost matches. */
+  readonly losses: number;
+  /** Goals scored minus goals conceded. */
+  readonly goalDifference: number;
+  /** Competition points. */
+  readonly points: number;
+}
+
+/** One completed fixture from the newest played league round. */
+export interface CareerDashboardLeagueResultInput extends CareerDashboardRecentMatchInput {
+  /** Competition round number. */
+  readonly round: number;
+  /** Whether this fixture involves the manager's club. */
+  readonly isSelectedClubFixture: boolean;
+}
+
 /** Saved match-preparation input for the first career dashboard. */
 export interface CareerDashboardPreparationInput {
   /** Whether a lineup is saved for the current match flow. */
@@ -100,8 +128,12 @@ export interface BuildCareerDashboardViewInput {
   readonly playerConditions: readonly CareerDashboardPlayerConditionInput[];
   /** Selected-club compact table row when computable. */
   readonly tableRow?: CareerDashboardTableRowInput;
+  /** Full current-season league table in final sporting order. */
+  readonly leagueTableRows?: readonly CareerDashboardLeagueTableRowInput[];
   /** Last selected-club result when available. */
   readonly recentMatch?: CareerDashboardRecentMatchInput;
+  /** Completed fixtures from the newest played league round. */
+  readonly leagueResults?: readonly CareerDashboardLeagueResultInput[];
   /** Fitness threshold used to count low-condition players. */
   readonly lowFitnessThreshold?: number;
 }
@@ -132,6 +164,12 @@ export function buildCareerDashboardView(input: BuildCareerDashboardViewInput): 
     ...(input.nextFixture === undefined ? ["no_next_fixture" as const] : []),
   ]);
 
+  const leagueTable = buildLeagueTableView(input.leagueTableRows, input.selectedClub.clubId);
+  const leagueResults = buildLeagueResultsView(input.leagueResults);
+  const selectedTableRow = input.leagueTableRows?.find(
+    (row) => row.club.clubId === input.selectedClub.clubId,
+  ) ?? input.tableRow;
+
   return {
     screenKey: "career.dashboard",
     context: buildContextView(input),
@@ -149,18 +187,80 @@ export function buildCareerDashboardView(input: BuildCareerDashboardViewInput): 
     },
     conditionSummary: buildConditionSummary(input.playerConditions, input.lowFitnessThreshold ?? 70),
     tableContext:
-      input.tableRow === undefined
+      selectedTableRow === undefined
         ? { status: "unknown" }
         : {
             status: "available",
-            position: input.tableRow.position,
-            played: input.tableRow.played,
-            points: input.tableRow.points,
-            goalDifference: input.tableRow.goalDifference,
+            position: selectedTableRow.position,
+            played: selectedTableRow.played,
+            points: selectedTableRow.points,
+            goalDifference: selectedTableRow.goalDifference,
           },
     recentMatch: buildRecentMatchView(input.recentMatch),
+    leagueTable,
+    leagueResults,
     alertKeys: blockerKeys,
     actions: buildDashboardActions(blockerKeys),
+  };
+}
+
+/** Keeps the dashboard table short while ensuring the manager's club is visible. */
+function buildLeagueTableView(
+  rows: readonly CareerDashboardLeagueTableRowInput[] | undefined,
+  selectedClubId: string,
+): CareerDashboardView["leagueTable"] {
+  if (rows === undefined || rows.length === 0) {
+    return { status: "unstarted", rows: [] };
+  }
+
+  const selectedIndex = rows.findIndex((row) => row.club.clubId === selectedClubId);
+  if (selectedIndex < 0) {
+    return { status: "unstarted", rows: [] };
+  }
+
+  const visibleRowCount = Math.min(5, rows.length);
+  const startIndex = Math.max(0, Math.min(selectedIndex - 2, rows.length - visibleRowCount));
+  const contextualRows = rows.slice(startIndex, startIndex + visibleRowCount).map((row) => ({
+    position: row.position,
+    clubId: row.club.clubId,
+    clubName: row.club.name,
+    played: row.played,
+    wins: row.wins,
+    draws: row.draws,
+    losses: row.losses,
+    goalDifference: row.goalDifference,
+    points: row.points,
+    isSelectedClub: row.club.clubId === selectedClubId,
+  }));
+
+  return {
+    status: "available",
+    rows: contextualRows,
+    selectedClubPosition: rows[selectedIndex]!.position,
+  };
+}
+
+/** Preserves stable fixture order for the newest completed league round. */
+function buildLeagueResultsView(
+  results: readonly CareerDashboardLeagueResultInput[] | undefined,
+): CareerDashboardView["leagueResults"] {
+  if (results === undefined || results.length === 0) {
+    return { status: "none", results: [] };
+  }
+
+  return {
+    status: "available",
+    round: results[0]!.round,
+    results: results.map((result) => ({
+      fixtureId: result.fixtureId,
+      homeClubId: result.homeClub.clubId,
+      homeClubName: result.homeClub.name,
+      awayClubId: result.awayClub.clubId,
+      awayClubName: result.awayClub.name,
+      homeGoals: result.homeGoals,
+      awayGoals: result.awayGoals,
+      isSelectedClubFixture: result.isSelectedClubFixture,
+    })),
   };
 }
 

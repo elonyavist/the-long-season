@@ -14,6 +14,10 @@ import {
 } from "@game/domain";
 
 import { computeLeagueTable } from "../season-engine/league-table.ts";
+import {
+  createSeasonRolloverInboxMessage,
+  deliverCareerInboxMessages,
+} from "./career-inbox-lifecycle.ts";
 import { developPlayersForSeason, type PlayerDevelopmentChange } from "./player-development.ts";
 import {
   applyEndOfSeasonPlayerExits,
@@ -107,7 +111,8 @@ export type CareerSeasonAdvancementOperation =
   | "squad_maintenance"
   | "transfer_turnover"
   | "next_calendar_merge"
-  | "player_state_rollover";
+  | "player_state_rollover"
+  | "season_inbox_delivery";
 
 /** Compact fact for an archived completed season. */
 export interface CareerSeasonArchiveFact {
@@ -407,11 +412,19 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     nextSeasonId: seasonContext.nextSeasonId,
     nextSeasonStartDate: seasonContext.nextSeasonStartDate,
   });
+  const careerState = seasonContext.archive === undefined
+    ? rolledOver.careerState
+    : deliverCareerInboxMessages(rolledOver.careerState, [createSeasonRolloverInboxMessage({
+        nextSeasonId: seasonContext.nextSeasonId,
+        date: seasonContext.nextSeasonStartDate,
+        selectedClubId: input.careerState.selectedClubId,
+      })]);
+  if (seasonContext.archive !== undefined) operationOrder.push("season_inbox_delivery");
 
   const warnings = advancementWarnings(youthLifecycle.records, input.careerState.selectedClubId);
   return {
     status: "advanced",
-    careerState: rolledOver.careerState,
+    careerState,
     facts: {
       mode: input.mode.kind,
       selectedClubId: input.careerState.selectedClubId,
@@ -586,7 +599,11 @@ function applyCompletedSeasonChangesIfNeeded(
 
   operationOrder.push("next_calendar_merge");
   const mergedFixtures = mergeFixtures(careerState, seasonContext.nextSeasonFixtures);
-  const { matchPreparation: _matchPreparation, ...careerStateWithoutPreparation } = careerState;
+  const {
+    matchPreparation: _matchPreparation,
+    currentSeasonInbox: _previousSeasonInbox,
+    ...careerStateWithoutPreparation
+  } = careerState;
 
   return createCareerState({
     ...careerStateWithoutPreparation,
@@ -596,6 +613,7 @@ function applyCompletedSeasonChangesIfNeeded(
       fixtureIds: mergedFixtures.fixtureIds,
     },
     seasonHistory: [...(careerState.seasonHistory ?? []), seasonContext.archive.entry],
+    currentSeasonInbox: [],
   });
 }
 

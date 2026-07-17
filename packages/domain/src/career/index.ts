@@ -6,3 +6,4 @@
  */
 export * from "./inbox.ts";
 export * from "./attention.ts";
+export * from "./active-match-checkpoint.ts";

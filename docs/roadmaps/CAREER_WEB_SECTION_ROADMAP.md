@@ -1,8 +1,11 @@
 # Career Web Section Roadmap
 
 Date: 2026-06-24
-Current baseline: Phase 61 web visual identity system rework complete; the
-accepted three-skin system is ready for future web sections.
+Current baseline: Phase 73 Inbox/Posta decision centre, audit-only Phase 73A,
+and bounded Phase 73B premium remediation are complete.
+Phase 69's single fixed web identity supersedes the earlier three-skin
+experiment. Phase 73B is the bounded remediation required before the
+already-reserved Phase 74.
 
 ## Supersession Note - 2026-06-25
 
@@ -25,6 +28,125 @@ The updated operational order is now engine and playability first:
 
 The old Phase 62 Inbox/Posta recommendation is intentionally delayed until the
 web has real matchday and persistence events to route and resolve.
+
+## Product Quality Audit Interposition Note - 2026-07-15
+
+Completed Phase 73 provides enough real browser product to review the web app
+as one experience rather than as isolated feature slices. Before starting the
+already-roadmapped Phase 74, the user has scheduled:
+
+- `Phase 73A - Web Product UI/UX Quality Audit And Premium Design Baseline`.
+
+Phase 73A is audit-only. It inventories current surfaces and states, measures
+critical journeys, reviews information architecture and visual language,
+checks accessibility/responsive/interaction states, audits presentation/CSS
+ownership, and produces a Playwright-backed cross-screen scorecard plus one
+remediation decision.
+
+This interposition does not renumber or replace Phase 74. It must not change
+production React, TypeScript, CSS, SVG, localization, runtime, engine, storage,
+tests, or dependencies. Its final report may recommend exactly one bounded
+Phase 73B remediation sequence when evidence shows P0/P1 product debt, or may
+return directly to Phase 74.
+
+Detailed documentation:
+
+- `docs/steps/73a-web-product-ui-ux-quality-audit-and-premium-design-baseline/`
+
+Phase 73A result:
+
+- Step 01 complete: `WEB_PRODUCT_SURFACE_AND_STATE_INVENTORY.md` maps the five
+  reachable screen states, shared shell and tactical board, meaningful
+  substates, deterministic browser recipes, commands, owners, style
+  concentration signals, and existing QA evidence. Disabled future navigation
+  is kept separate from current defects.
+- Step 02 complete: `WEB_CRITICAL_JOURNEY_AND_ACTION_ECONOMY_AUDIT.md`
+  measures every current MVP journey, preserves the bounded outer career
+  rhythm, and records two P1 findings: silent preparation-draft loss and two
+  mandatory Matchday reveal clicks without manager decisions.
+- Step 03 complete: `WEB_INFORMATION_ARCHITECTURE_AND_CONTENT_HIERARCHY_AUDIT.md`
+  locks each screen purpose and first-viewport contract, records narrow shell
+  displacement and technical identity/fallback leaks as P1, and maps every
+  duplicate fact to a bounded keep/combine/move/remove disposition.
+- Step 04 complete: `WEB_PREMIUM_VISUAL_SYSTEM_AND_COMPONENT_LANGUAGE_AUDIT.md`
+  preserves the fixed navy/cream/gold identity and tactical board, but records
+  one P1 hierarchy defect plus undefined-token, component-state, typography,
+  spacing, and semantic-color P2 debt. It defines a minimum premium component
+  contract tied to comprehension rather than taste.
+- Step 05 complete: required desktop, wide, narrow, keyboard, focus, 200% text
+  zoom, loading, error, dialog, pointer/touch, contrast, and reduced-motion
+  evidence preserves the current no-overflow and async-feedback strengths while
+  recording four P1 and two P2 findings without changing production code.
+- Step 06 complete: `WEB_FRONTEND_PRESENTATION_ARCHITECTURE_AND_CSS_AUDIT.md`
+  confirms healthy package boundaries and maps current app, runtime, Zustand,
+  presenter, screen, shared UI, CSS, localization, and visual-QA ownership. It
+  records P1 remediation for App composition, phase-local Matchday ownership,
+  and one executable current visual gate; 43 production-unused selectors,
+  three test-preserved Modules, and store/CSS/documentation drift remain
+  bounded P2 work rather than grounds for a rewrite.
+- Step 07 complete: 56 manually reviewed screenshots cover every current
+  primary surface plus wide, narrow, focus, loading, error, menu, dialog,
+  `200%` text, and reduced-motion states. No horizontal page overflow was
+  measured. The cross-screen score is `3.59/5`: purpose and feedback are
+  strengths, while hierarchy, accessibility/responsive task priority, and
+  presentation maintainability prevent a premium readiness claim.
+- Step 08 complete: `WEB_PRODUCT_UI_UX_QUALITY_AUDIT.md` deduplicates the
+  evidence into 11 P1 findings, 10 P2 findings, and four Monitor items. The
+  dependency-ordered `WEB_UI_UX_PREMIUM_REMEDIATION_MAP.md` defines ten
+  browser-visible slices, each with a deletion boundary and regression gate.
+- Final decision: execute exactly `Phase 73B - Current Web Product Premium
+  Remediation And Journey Hardening` before Phase 74. There is no evidence for
+  a rewrite. Phase 74 remains reserved and unchanged.
+- Preserved baseline: structured facts, `@game/ui`, SQLite/OPFS, session/save
+  cadence, Dashboard/Continue/Posta rhythm, command feedback, staged matchday,
+  localization, and the complete tactical board/pitch contract.
+- Final gate: Node 24 web typecheck/test/build, dependency-cruiser, full
+  `pnpm check` (160 files, 946 tests), and `git diff --check` pass. The existing
+  large-chunk build warning remains a Monitor item pending measured user impact.
+
+Detailed remediation map:
+
+- `docs/roadmaps/WEB_UI_UX_PREMIUM_REMEDIATION_MAP.md`
+
+Phase 73B completion status:
+
+- The complete phase contract and ten ordered browser-visible steps are at
+  `docs/steps/73b-current-web-product-premium-remediation-and-journey-hardening/`.
+- All ten steps are complete. The canonical `pnpm web:visual:qa` gate covers the
+  real SQLite/OPFS App Entry -> Dashboard -> Posta -> Preparation -> Matchday
+  journey at desktop and narrow widths. The shell provides a localized skip
+  command, visible-heading focus only on top-level screen changes, compact
+  narrow navigation, zoom/reduced-motion checks, and first-viewport task proof.
+- Semantic state, Dashboard/App composition, and Posta now have one explicit
+  hierarchy and ownership contract. Preparation drafts are structurally
+  compared with the loaded baseline, participate in dirty-exit protection,
+  support exact Stay/Discard and valid explicit Save, and perform no per-action
+  persistence. One validation strip now sits beside one confirmation command;
+  the approved tactical board remains unchanged and reflows at 200% text.
+- Matchday now uses one shared bounded presentation policy from Start match to
+  half time and from the interval decision to full time. Both reveal-only
+  commands are absent, reduced motion reaches the same canonical facts, full
+  time remains a deliberate review, and refresh performs no hidden save.
+- Half-time now adds one presenter-derived review and one compact player-signal
+  hierarchy before the unchanged shared tactical workspace. Score, minute,
+  phase, shape, change count, validation, and resume action each have one owner;
+  event-light, narrow, reduced-motion, and 200% text states are browser-proven.
+- Full time now presents result, decisive structured tabellino, selected-club
+  ratings, and meaningful merged player consequences in that order. Routine
+  team-wide result reasons and normal match fatigue are not repeated per
+  player; one Return to Dashboard command closes the idempotent review.
+- Step 10 completed the shared-state finish, manually reviewed `87` product
+  screenshots plus three contact sheets, migrated every still-current browser
+  assertion, removed historical runners and three proven test-only tactical
+  paths, and found no unused production CSS class selector.
+- The authoritative gate now consists only of `current-product.spec.ts` and the
+  unique `sqlite-opfs-storage.spec.ts`; it passes `17/17` through real
+  SQLite/OPFS.
+- Every step preserves the tactical board and removes replaced presentation
+  code in the same bounded scope.
+- Exactly one next recommendation remains: document and then execute the
+  already-reserved `Phase 74 - Player Generation And Model Consolidation
+  Cleanup`. Phase 74 is not started here.
 
 ## UX Rebuild Supersession Note - 2026-07-01
 
@@ -235,7 +357,7 @@ Phase 69 progress:
   documents the accepted state, residual UX risks, and the single next
   recommendation.
 - Phase 70 is complete. The next recommended phase is
-  `Future Phase - Web Career Persistence And Save Lifecycle Foundation`.
+  `Phase 71 - Web Career Persistence And Save Lifecycle Foundation`.
   Matchday is now coherent enough to preserve; adding more web sections before
   durable career saves would create demo-only UI and dead-code risk.
 - Product review after Phase 70 identified one contained pre-persistence UI
@@ -248,8 +370,189 @@ Phase 69 progress:
   detail, department filters and five
   deterministic sorts are available, and desktop/narrow Playwright checks
   prove vertical-only scrolling with no horizontal overflow. Product visual
-  acceptance is still required before the persistence phase; tactical-board
+  acceptance is complete and the persistence phase may start; tactical-board
   and matchday behavior remain unchanged.
+- Phase 71 documentation exists at
+  `docs/steps/71-web-career-persistence-and-save-lifecycle-foundation/`.
+  Step 01 is complete: `WEB_CAREER_PERSISTENCE_ARCHITECTURE_AUDIT.md` keeps
+  `CareerStorage` as the canonical manager-career seam, adopts the official
+  `opfs` VFS in one custom worker with Comlink and COOP/COEP, defines the
+  relational schema and atomic lifecycle commit points, and names every demo
+  runtime Module to delete. Step 02 is active and first isolates the
+  browser-safe interface from the Node JSON adapter. IndexedDB, localStorage,
+  sessionStorage, silent memory fallback, and persisted rendered prose remain
+  excluded.
+- Step 02 complete: `CareerStorage` and save envelopes are browser-safe,
+  `JsonCareerStorage` alone owns Node imports, deterministic `listCareers` is
+  covered, and the obsolete combined module is deleted. Step 03 is active and
+  moves staged-match resume truth into a domain checkpoint.
+- Step 03 complete: `CareerState` can now own a validated unfinished
+  regulation-match checkpoint, while pure engine adapters capture, restore, and
+  finish it. A JSON-serialized half-time checkpoint produces the exact same
+  final report, ratings, and staged state as uninterrupted progression without
+  persisting an RNG object or activating extra time/penalties. Step 04 is active
+  and introduces the official SQLite WASM/OPFS worker boundary.
+- Step 04 complete: the web app now uses the official SQLite WASM package through
+  a dedicated Comlink worker and direct `OpfsDb`, with COOP/COEP headers, typed
+  failures, migration version 1, and a real-browser save/reopen/load/list/delete
+  proof. No IndexedDB, localStorage, sessionStorage, or memory fallback exists.
+  Step 05 is active and expands the immutable migration ledger plus one
+  worker-delegated package mapper to round-trip the ordered world state.
+- Step 05 complete: immutable migration version 2 and the package-owned world
+  mapper now preserve explicit player/club/fixture orders, player identities,
+  optional role facts, all current/potential attributes, dynamic state, roster
+  ownership, fixtures, and compact results. Focused tests and a real OPFS test
+  prove exact reconstruction, two-save isolation, and rollback after an
+  in-transaction constraint failure. Step 06 is active and completes every
+  remaining durable career system plus rich reports and active-match state.
+- Step 06 complete: immutable migration version 3 now stores career-world
+  metadata, market and transfer state, youth lifecycle, ordered season history,
+  match preparation, rich structured reports, and unfinished active-match
+  checkpoints in explicit relational tables. Shared lifecycle contract tests
+  and a real OPFS round trip prove deterministic ordering, transactional
+  replacement rollback, complete reconstruction, and identical full-time
+  completion from the source and restored half-time checkpoint. Step 07 is
+  active and replaces the production web demo lifecycle with durable
+  new/list/load commands.
+- Step 07 complete: `hasDemoCareer` is removed. A small application runtime
+  creates a seeded generated world from existing content and engine Modules,
+  writes and reloads it through canonical SQLite storage before opening the
+  dashboard, and lists/loads real saves asynchronously. The app entry exposes
+  loading, empty, selected-save, loading-career, and storage-error states in all
+  five languages; preferences remain outside career data. Chromium proved a
+  fresh create-write-open-return-list-Continue flow. Step 08 is active and
+  rehydrates dashboard, Continue, and Posta from the loaded state.
+- Step 08 complete: dashboard facts now derive from the loaded `CareerState`,
+  canonical Continue persists before publishing the next snapshot, and Posta
+  is deterministically reconstructed from durable attention facts. Focused
+  tests, build, dependency rules, and Chromium create/reload/list/load evidence
+  pass. Step 09 is active and moves the complete match-preparation workspace
+  from its final demo owner to the durable career command.
+- Step 09 complete: match preparation now uses the loaded career roster and
+  keeps its unsaved draft in Zustand, while an explicit runtime command writes
+  and reloads formation, normalized board slots, XI, bench, and tactic through
+  relational SQLite schema version 4. OPFS and Chromium refresh evidence prove
+  exact durable rehydration.
+- Step 10 complete: production matchday now derives club, fixture, roster, XI,
+  bench, tactic, and staged progress from the loaded durable career. Pre-match,
+  half-time, and manager decisions are transactional checkpoints; full time
+  commits the exact staged report once, clears the checkpoint atomically, and
+  remains reconstructable until the manager acknowledges the review. Step 11
+  is active and removes the replaced demo lifecycle Modules and wrappers.
+- Step 11 complete: obsolete dashboard, Continue, preparation, and matchday demo
+  lifecycle Modules are deleted. Production screens now follow one loaded-career
+  path, while deterministic setup builders are isolated under test fixtures.
+- Step 12 complete: storage and migration failures use stable typed codes and
+  localized recovery copy. Startup failures stay on app entry; failed writes
+  during a career preserve the active screen and unsaved manager draft. Retry
+  recreates the SQLite/OPFS runtime, and no raw browser/SQL prose, fallback
+  storage, or destructive automatic reset is exposed.
+- Step 13 and Phase 71 complete: Chromium desktop/narrow QA proves durable
+  create/list/load, explicit Continue after refresh, preparation, pre-match,
+  half-time tactical recovery, full-time review, dashboard return, non-empty
+  OPFS SQLite ownership, and focused unavailable-storage recovery. The final
+  architecture and quality reports originally recommended Inbox/Posta next.
+- Product review superseded that order after observing two lifecycle problems:
+  gameplay actions currently write through to SQLite too often, and meaningful
+  asynchronous commands do not expose observable loading feedback. Phase 72 is
+  therefore `Career Session Autosave And Command Feedback`; Inbox/Posta moves
+  to Phase 73. Detailed Phase 72 documentation exists at
+  `docs/steps/72-career-session-autosave-and-command-feedback/`. Step 01 is
+  complete: the audit records 7 writes and 12 loads in a complete journey,
+  defines safe stops and deletion targets, and makes Step 02 the active policy
+  and session contract. Step 02 is complete with JSON/SQLite migration,
+  policy-only persistence, runtime session ownership, and Zustand status
+  projection. Step 03 is complete: every gameplay command is session-owned,
+  a complete match journey writes zero times, and reload restores the durable
+  baseline. Step 04 is complete: manual save and due autosave share one
+  validated full-session commit, 7/15-day cadence uses game dates, manual-only
+  never schedules, live matchday postpones writes, safe return commits once,
+  and failures retain dirty work. Step 05 is complete: one compact shell control
+  exposes clean/dirty state, persisted game date, 7/15/manual policy, accurate
+  no-save matchday guidance, and dirty main-menu/browser exit guards; preparation
+  now confirms the plan instead of claiming an action save. Step 06 is complete:
+  one typed Zustand activity snapshot and one application runner publish pending
+  state synchronously, reject conflicting mutations, preserve bounded failures,
+  and replace hidden refs and repeated Promise orchestration across every real
+  asynchronous career command. Nested autosave remains part of its parent safe-
+  stop command and synchronous half-time edits do not receive dead command IDs.
+  Step 07 is complete: every real asynchronous action exposes specific visible
+  progress at its initiating surface, one polite live announcement, stable
+  control geometry, reduced-motion-safe feedback, and one global conflict lock
+  while retaining the current football context. Synchronous half-time edits
+  remain immediate and do not receive fake loading states. Step 08 and Phase 72
+  are complete: Chromium proves all save policies, dirty reload, manual save,
+  recoverable failure, every exit choice, active-match protection, command
+  feedback, reduced motion, narrow overflow safety, and exclusive SQLite/OPFS
+  ownership. Final QA also removed the duplicate runtime Promise queue and
+  fixed Strict Mode discovery ownership.
+- Phase 73 documentation is now complete at
+  `docs/steps/73-inbox-posta-decision-center-and-career-attention-workflow/`.
+  Its locked flow evaluates canonical days, stops only for blocking or
+  important attention, batches every message on the stop date, and opens the
+  highest-priority message. Matchday is one blocking item whose action changes
+  from `Prepare match` to `Go to match`; preparation is not a second stop.
+  Posta keeps a compact left rail and adds a dense two-column list/detail
+  outlet with narrow list-to-detail navigation. Read, acknowledged, and
+  resolved are separate durable states, current-season messages clear on
+  rollover, and the visible calendar transition is bounded, accelerates after
+  seven days, and respects reduced motion. All eleven steps are complete; final
+  production SQLite/OPFS evidence is recorded in
+  `docs/audits/WEB_INBOX_DECISION_CENTER_VISUAL_QA.md` and
+  `docs/audits/INBOX_POSTA_DECISION_CENTER_REPORT.md`.
+- The Phase 73 future-extension register must remain visible for market,
+  player contracts, finances, youth academy, and staff. None may produce Posta
+  content until its real workflow exposes structured facts, attention policy,
+  resolution condition, destination screen, and persistence owner. This is a
+  documentation obligation, not production scaffolding. Step 01 is complete:
+  `docs/audits/CAREER_ATTENTION_AND_POSTA_CURRENT_STATE_AUDIT.md` proves that
+  current messages are derived from the latest Continue result, that
+  preparation and match entry use two unstable identities, and that no durable
+  read/acknowledged/resolved owner exists. The audit names every deletion and
+  replacement step. Step 02 is complete: domain and engine now
+  expose one `matchday` identity per fixture, the canonical
+  blocking/important/informational levels, independent read/acknowledged/
+  resolved lifecycle facts, functional source data, structured readiness
+  blockers, and a readiness-derived primary destination. Step 03 is complete:
+  the pure use case now scans explicit `GameDate` values,
+  delivers informational messages without stopping, batches every message on
+  the first attention date, rejects duplicate IDs, and selects deterministically
+  by level and stable ID. The web runtime supplies the real matchday boundary
+  and readiness facts. Step 04 is complete: validated `CareerState` owns one
+  ordered current-season Inbox, SQLite schema v6 stores messages, blockers, and
+  actions relationally, legacy JSON defaults to an empty Inbox, and season
+  rollover clears prior messages. Step 05 is complete: one pure engine
+  lifecycle path deduplicates delivery, refreshes blockers and destinations
+  without resetting lifecycle, opens idempotently, acknowledges important
+  attention only after open, and resolves blocking matchday attention only
+  from a played linked fixture. The web runtime applies these operations to the
+  dirty working session with no immediate storage write. Step 06 is complete:
+  Posta now has a production route backed by the durable current-season Inbox,
+  framework-free list/detail read models, exact filters, deterministic
+  selection, central lifecycle opening, and shell/rail navigation that no
+  longer executes football actions directly. Step 07 is complete: the compact
+  left rail is awareness-only, the dedicated Posta route uses a dense
+  football-management list/detail hierarchy without a permanent third column,
+  and narrow screens use an explicit Back flow. Step 08 is complete: one
+  fixture-scoped matchday message now retains its identity while
+  real lineup, bench, and tactic readiness change the sole destination from
+  `Prepare match` to `Go to match`; opponent, competition, round, venue, and
+  readiness are structured detail facts; load and repeated Continue refresh in
+  place; and only the played fixture resolves the blocker. Step 09 is complete:
+  a committed played fixture creates at most one informational result summary,
+  a real season archive creates one important rollover review, and ordinary
+  player-state changes do not create notification noise. The binding future
+  workflow register is
+  `docs/audits/CAREER_INBOX_FUTURE_MESSAGE_EXTENSION_MATRIX.md`; market,
+  contracts, finances, youth, and staff remain documentation-only until their
+  real workflows exist. Step 10 is complete: one pure UTC date plan runs inside
+  the existing command lock, caps long presentation at 1.8 seconds, respects
+  reduced motion, updates the visible shell date, and delays destination
+  routing until the stop date. Step 11 is complete: browser accessibility,
+  persistence, no-dead-code cleanup, and phase evidence pass. The next global
+  phase is `Phase 73A - Web Product UI/UX Quality Audit And Premium Design
+  Baseline`; Phase 74 remains reserved and the unnumbered Squad Screen backlog
+  remains deferred.
 
 ## Goal
 
@@ -1482,16 +1785,19 @@ Recommended order:
 12. Phase 67 - Web Matchday Flow Simplification And Half-Time Tactical Decisions
 13. Phase 68 - MVP UX Language Reset Around Tactical Board
 14. Phase 70 - Web Matchday Information Architecture And Live Flow Rework
-15. Future Phase - Web Career Persistence And Save Lifecycle Foundation
-16. Future Web Backlog - Inbox/Posta Decision Center
-17. Future Web Backlog - Squad Screen
-18. Future Web Backlog - Calendar And Fixtures
-19. Future Web Backlog - Market UI MVP
-20. Future Web Backlog - Finances Foundation
-21. Future Web Backlog - Youth UI
-22. Future Web Backlog - Staff Foundation
-23. Future Web Backlog - Archive And History
-24. Future Web Backlog - Main Dashboard Consolidation
+15. Phase 71 - Web Career Persistence And Save Lifecycle Foundation - complete
+16. Phase 72 - Career Session Autosave And Command Feedback - complete
+17. Phase 73 - Inbox/Posta Decision Center And Career Attention Workflow - complete
+18. Phase 73A - Web Product UI/UX Quality Audit And Premium Design Baseline - complete
+19. Phase 73B - Current Web Product Premium Remediation And Journey Hardening - complete
+20. Future Web Backlog - Squad Screen And Player Memory Foundation - follows the globally scheduled Phase 74, not started
+21. Future Web Backlog - Calendar And Fixtures
+22. Future Web Backlog - Market UI MVP
+23. Future Web Backlog - Finances Foundation
+24. Future Web Backlog - Youth UI
+25. Future Web Backlog - Staff Foundation
+26. Future Web Backlog - Archive And History
+27. Future Web Backlog - Main Dashboard Consolidation
 
 This order is intentionally linear:
 
@@ -1508,8 +1814,16 @@ This order is intentionally linear:
   color system instead of accumulating hardcoded visual variants.
 - Visual identity rework corrects Phase 60 before the next sections inherit bad
   skin and token decisions.
+- Career session cadence and command feedback follow persistence so the manager
+  controls when progress is committed and never mistakes real asynchronous work
+  for a frozen interface.
+- Inbox/Posta follows the session correction so its future decisions mutate one
+  working career and stop at intentional save boundaries.
 - Inbox becomes valuable once there are real decisions, a strong shell, a
   maintainable web foundation, and a credible visual system.
+- Phase 73A audits the complete current loop before another feature is added;
+  Phase 73B resolves its evidence-backed trust, hierarchy, accessibility,
+  action-economy, and ownership findings without a rewrite.
 - Squad and tactics are needed before matchday feels like a user choice.
 - Calendar/fixtures make Continue understandable.
 - Matchday closes the first loop.

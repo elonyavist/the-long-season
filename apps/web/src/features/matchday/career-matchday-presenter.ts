@@ -1,6 +1,8 @@
 import type {
+  CareerMatchdayPhaseActionId,
   CareerMatchdayPhaseActionView,
   CareerMatchdayPhaseEventView,
+  CareerMatchdayPhasePlayerView,
   CareerMatchdayPhaseView,
 } from "@game/ui";
 
@@ -11,6 +13,16 @@ const PENALTY_EVENT_KINDS = new Set(["penalty", "penalty_goal", "penalty_miss", 
 const CARD_EVENT_KINDS = new Set(["yellow_card", "red_card", "second_yellow"]);
 const INJURY_EVENT_KINDS = new Set(["injury"]);
 const SUBSTITUTION_EVENT_KINDS = new Set(["substitution"]);
+const TEAM_RESULT_REASON_KEYS = new Set([
+  "result_win",
+  "result_draw",
+  "result_loss",
+  "team_clean_sheet",
+  "team_heavy_loss",
+]);
+const FULL_TIME_CONDITION_ATTENTION_THRESHOLD = 75;
+const FULL_TIME_CONDITION_DELTA_ATTENTION = 15;
+const FULL_TIME_STATE_DELTA_ATTENTION = 3;
 
 /** Five-state matchday phase shown as a passive visual indicator. */
 export type MatchdayPresenterPhase = (typeof MATCHDAY_PHASES)[number];
@@ -23,6 +35,17 @@ export type MatchdayEventVisualPriority = "goal" | "high" | "secondary" | "detai
 
 /** Stable event lane for the matchday screen. */
 export type MatchdayEventLane = "tabellino" | "live_feed";
+
+/** Manager decision exposed by the web matchday after reveal-only actions are removed. */
+export type MatchdayManagerActionId = Exclude<
+  CareerMatchdayPhaseActionId,
+  "continue_to_half_time" | "continue_to_full_time"
+>;
+
+/** Matchday action whose invocation changes manager-owned state or navigation. */
+export type MatchdayManagerActionView = Omit<CareerMatchdayPhaseActionView, "actionId"> & {
+  readonly actionId: MatchdayManagerActionId;
+};
 
 /** Passive phase marker for the compact matchday flow bar. */
 export interface MatchdayPhaseIndicatorView {
@@ -80,6 +103,40 @@ export interface MatchdayEventGroupsView {
   readonly hasLiveFeed: boolean;
 }
 
+/** Decision-grade first-half facts shown before the tactical workspace. */
+export interface MatchdayHalfTimeReviewView {
+  /** Decisive first-half events already classified for football-first rendering. */
+  readonly decisiveEvents: readonly MatchdayPresentedEventView[];
+  /** Selected-club players whose rating or condition warrants attention. */
+  readonly watchList: readonly CareerMatchdayPhasePlayerView[];
+  /** Selected-club players making a positive structured contribution. */
+  readonly contributors: readonly CareerMatchdayPhasePlayerView[];
+}
+
+/** One selected-club player whose durable post-match state actually changed. */
+export interface MatchdayFullTimeConsequenceView {
+  /** Stable player identifier used to merge structured consequence facts. */
+  readonly playerId: string;
+  /** Existing generated player name. */
+  readonly playerName: string;
+  /** Fitness consequence when the value changed. */
+  readonly condition?: CareerMatchdayPhaseView["conditionChanges"][number];
+  /** Form or morale consequence when either value changed or has a reason. */
+  readonly playerState?: CareerMatchdayPhaseView["playerStateChanges"][number];
+}
+
+/** Concise full-time facts for the selected club's final review. */
+export interface MatchdayFullTimeReviewView {
+  /** Existing selected-club identity for the ratings heading. */
+  readonly selectedClubName: string;
+  /** Prioritized structured incidents; no narrative events are added. */
+  readonly events: readonly MatchdayPresentedEventView[];
+  /** Final ratings for the selected club only. */
+  readonly ratings: readonly CareerMatchdayPhasePlayerView[];
+  /** Non-zero durable consequences merged by player. */
+  readonly consequences: readonly MatchdayFullTimeConsequenceView[];
+}
+
 /** Complete matchday presentation contract consumed by React screens. */
 export interface CareerMatchdayPresentationView {
   /** Compact score header for the active phase. */
@@ -87,9 +144,13 @@ export interface CareerMatchdayPresentationView {
   /** Passive visual phase markers. */
   readonly phaseIndicators: readonly MatchdayPhaseIndicatorView[];
   /** Main command for the current phase, if one exists. */
-  readonly primaryAction?: CareerMatchdayPhaseActionView;
+  readonly primaryAction?: MatchdayManagerActionView;
   /** Prioritized and grouped event facts. */
   readonly eventGroups: MatchdayEventGroupsView;
+  /** Half-time-only facts that support a manager decision without duplicating the scoreboard. */
+  readonly halfTimeReview?: MatchdayHalfTimeReviewView;
+  /** Full-time-only football and durable-state review facts. */
+  readonly fullTimeReview?: MatchdayFullTimeReviewView;
 }
 
 /**
@@ -101,12 +162,103 @@ export function buildCareerMatchdayPresentationView(
   phaseView: CareerMatchdayPhaseView,
 ): CareerMatchdayPresentationView {
   const primaryAction = selectMatchdayPrimaryAction(phaseView);
+  const eventGroups = buildMatchdayEventGroups(phaseView.timelineEvents);
 
   return {
     scoreHeader: buildMatchdayScoreHeader(phaseView),
     phaseIndicators: buildMatchdayPhaseIndicators(phaseView.phase),
     ...(primaryAction === undefined ? {} : { primaryAction }),
-    eventGroups: buildMatchdayEventGroups(phaseView.timelineEvents),
+    eventGroups,
+    ...(phaseView.phase === "half_time"
+      ? { halfTimeReview: buildMatchdayHalfTimeReviewView(phaseView, eventGroups) }
+      : {}),
+    ...(phaseView.phase === "full_time"
+      ? { fullTimeReview: buildMatchdayFullTimeReviewView(phaseView, eventGroups) }
+      : {}),
+  };
+}
+
+/**
+ * Selects only half-time facts that can reasonably change the manager's plan.
+ * Score, minute, phase, and substitution count stay with their existing owners.
+ */
+export function buildMatchdayHalfTimeReviewView(
+  phaseView: CareerMatchdayPhaseView,
+  eventGroups: MatchdayEventGroupsView = buildMatchdayEventGroups(phaseView.timelineEvents),
+): MatchdayHalfTimeReviewView {
+  const selectedPlayers = phaseView.playerRows.filter((row) =>
+    row.club.clubId === phaseView.selectedClub.clubId && row.status === "on_pitch"
+  );
+  const watchList = selectedPlayers
+    .filter(needsHalfTimeAttention)
+    .toSorted(compareHalfTimeAttention)
+    .slice(0, 3);
+  const watchedPlayerIds = new Set(watchList.map((row) => row.playerId));
+  const contributors = selectedPlayers
+    .filter((row) => !watchedPlayerIds.has(row.playerId) && isHalfTimeContributor(row))
+    .toSorted(compareHalfTimeContribution)
+    .slice(0, 3);
+
+  return {
+    decisiveEvents: eventGroups.tabellino,
+    watchList,
+    contributors,
+  };
+}
+
+/**
+ * Builds one full-time review from existing match and career consequences.
+ * Opponent ratings, unchanged state, and duplicate next-action facts are not
+ * part of this presentation contract.
+ */
+export function buildMatchdayFullTimeReviewView(
+  phaseView: CareerMatchdayPhaseView,
+  eventGroups: MatchdayEventGroupsView = buildMatchdayEventGroups(phaseView.timelineEvents),
+): MatchdayFullTimeReviewView {
+  const ratings = phaseView.playerRows
+    .filter((row) => row.club.clubId === phaseView.selectedClub.clubId)
+    .toSorted(compareFullTimeRatings);
+  const conditionByPlayerId = new Map(
+    phaseView.conditionChanges
+      .filter((change) => change.delta !== 0)
+      .map((change) => [change.playerId, change] as const),
+  );
+  const stateByPlayerId = new Map(
+    phaseView.playerStateChanges
+      .filter((change) => (
+        change.reasonKeys.some((reason) => !TEAM_RESULT_REASON_KEYS.has(reason))
+        || change.reasonKeys.length === 0 && (
+          Math.abs(change.formDelta) >= FULL_TIME_STATE_DELTA_ATTENTION
+          || Math.abs(change.moraleDelta) >= FULL_TIME_STATE_DELTA_ATTENTION
+        )
+      ))
+      .map((change) => [change.playerId, change] as const),
+  );
+  const notableConditionPlayerIds = [...conditionByPlayerId.values()]
+    .filter((change) => (
+      change.after < FULL_TIME_CONDITION_ATTENTION_THRESHOLD
+      || Math.abs(change.delta) >= FULL_TIME_CONDITION_DELTA_ATTENTION
+    ))
+    .map((change) => change.playerId);
+  const playerIds = new Set([...notableConditionPlayerIds, ...stateByPlayerId.keys()]);
+  const consequences = [...playerIds]
+    .map((playerId): MatchdayFullTimeConsequenceView => {
+      const condition = conditionByPlayerId.get(playerId);
+      const playerState = stateByPlayerId.get(playerId);
+      return {
+        playerId,
+        playerName: condition?.playerName ?? playerState?.playerName ?? playerId,
+        ...(condition === undefined ? {} : { condition }),
+        ...(playerState === undefined ? {} : { playerState }),
+      };
+    })
+    .toSorted(compareFullTimeConsequences);
+
+  return {
+    selectedClubName: phaseView.selectedClub.name,
+    events: eventGroups.tabellino,
+    ratings,
+    consequences,
   };
 }
 
@@ -150,14 +302,22 @@ export function buildMatchdayPhaseIndicators(
  */
 export function selectMatchdayPrimaryAction(
   phaseView: Pick<CareerMatchdayPhaseView, "actions" | "nextActionId">,
-): CareerMatchdayPhaseActionView | undefined {
+): MatchdayManagerActionView | undefined {
+  const managerActions = phaseView.actions.filter(isManagerMatchdayAction);
   const nextAction = phaseView.nextActionId === undefined
     ? undefined
-    : phaseView.actions.find((action) => action.actionId === phaseView.nextActionId && action.status !== "unavailable");
+    : managerActions.find((action) => action.actionId === phaseView.nextActionId && action.status !== "unavailable");
 
   return nextAction
-    ?? phaseView.actions.find((action) => action.status === "available")
-    ?? phaseView.actions.find((action) => action.status === "blocked");
+    ?? managerActions.find((action) => action.status === "available")
+    ?? managerActions.find((action) => action.status === "blocked");
+}
+
+function isManagerMatchdayAction(
+  action: CareerMatchdayPhaseActionView,
+): action is MatchdayManagerActionView {
+  return action.actionId !== "continue_to_half_time"
+    && action.actionId !== "continue_to_full_time";
 }
 
 /**
@@ -236,6 +396,67 @@ function phaseIndicatorStatus(index: number, activeIndex: number): MatchdayPhase
   }
 
   return "upcoming";
+}
+
+function needsHalfTimeAttention(row: CareerMatchdayPhasePlayerView): boolean {
+  return (row.rating ?? 10) < 6.5 || (row.condition ?? 100) < 75;
+}
+
+function compareHalfTimeAttention(
+  first: CareerMatchdayPhasePlayerView,
+  second: CareerMatchdayPhasePlayerView,
+): number {
+  return (first.rating ?? 10) - (second.rating ?? 10)
+    || (first.condition ?? 100) - (second.condition ?? 100)
+    || first.playerName.localeCompare(second.playerName);
+}
+
+function isHalfTimeContributor(row: CareerMatchdayPhasePlayerView): boolean {
+  return structuredContributionCount(row) > 0 || (row.rating ?? 0) >= 7;
+}
+
+function compareHalfTimeContribution(
+  first: CareerMatchdayPhasePlayerView,
+  second: CareerMatchdayPhasePlayerView,
+): number {
+  return halfTimeContributionScore(second) - halfTimeContributionScore(first)
+    || first.playerName.localeCompare(second.playerName);
+}
+
+function halfTimeContributionScore(row: CareerMatchdayPhasePlayerView): number {
+  return (row.rating ?? 0)
+    + row.goals * 4
+    + row.assists * 3
+    + row.saves * 0.8
+    + row.blocks
+    + row.shotsOnTarget * 0.5;
+}
+
+function structuredContributionCount(row: CareerMatchdayPhasePlayerView): number {
+  return row.goals + row.assists + row.saves + row.blocks + row.shotsOnTarget;
+}
+
+function compareFullTimeRatings(
+  first: CareerMatchdayPhasePlayerView,
+  second: CareerMatchdayPhasePlayerView,
+): number {
+  return (second.rating ?? -1) - (first.rating ?? -1)
+    || second.impactScore - first.impactScore
+    || first.playerName.localeCompare(second.playerName);
+}
+
+function compareFullTimeConsequences(
+  first: MatchdayFullTimeConsequenceView,
+  second: MatchdayFullTimeConsequenceView,
+): number {
+  return fullTimeConsequenceWeight(second) - fullTimeConsequenceWeight(first)
+    || first.playerName.localeCompare(second.playerName);
+}
+
+function fullTimeConsequenceWeight(change: MatchdayFullTimeConsequenceView): number {
+  return Math.abs(change.condition?.delta ?? 0)
+    + Math.abs(change.playerState?.formDelta ?? 0)
+    + Math.abs(change.playerState?.moraleDelta ?? 0);
 }
 
 function compareTabellinoEvents(first: MatchdayPresentedEventView, second: MatchdayPresentedEventView): number {

@@ -1,143 +1,156 @@
 import {
   careerInboxMessageId,
   createCareerInboxMessage,
-  createMatchPreparationRequiredEvent,
-  createMatchdayReachedEvent,
-  isUnresolvedCareerAttentionEvent,
+  createMatchdayAttentionEvent,
+  doesCareerInboxMessageStopContinue,
   type CareerAttentionBlockerKey,
   type CareerAttentionEvent,
   type CareerInboxMessage,
+  type CareerInboxMessageId,
   type ClubId,
-  type Fixture,
   type FixtureId,
   type GameDate,
 } from "@game/domain";
 
-/** Machine-readable reason why career continuation stopped. */
-export type CareerContinueStopReason =
-  | "existing_attention"
-  | "match_preparation_required"
-  | "matchday_reached"
-  | "no_attention";
+/** Machine-readable outcome of deterministic daily career evaluation. */
+export type CareerContinueStopReason = "attention" | "no_attention";
 
-/** Saved preparation facts for the next selected-club fixture. */
+/** Saved preparation facts used to describe one matchday decision. */
 export interface ContinueCareerPreparationInput {
-  /** Whether the manager has saved a lineup for the fixture. */
   readonly hasSavedLineup: boolean;
-  /** Whether the manager has saved a tactic for the fixture. */
   readonly hasSavedTactic: boolean;
-  /** Fixture targeted by the saved preparation when known. */
+  readonly hasCompleteBench?: boolean;
+  readonly hasBenchGoalkeeper?: boolean;
   readonly targetFixtureId?: FixtureId;
 }
 
-/** Explicit input facts used by the pure career continuation function. */
-export interface ContinueCareerUntilAttentionInput {
-  /** Current in-world date before pressing Continue. */
-  readonly currentDate: GameDate;
-  /** Club controlled by the manager. */
-  readonly selectedClubId: ClubId;
-  /** Next selected-club fixture when one exists. */
-  readonly nextFixture?: Fixture;
-  /** Saved preparation facts for the next selected-club fixture. */
-  readonly preparation?: ContinueCareerPreparationInput;
-  /** Existing unresolved stop events that should prevent any advancement. */
-  readonly existingAttentionEvents?: readonly CareerAttentionEvent[];
+/** One fixture-scoped attention fact and its durable-message projection. */
+export interface CareerMatchdayAttention {
+  readonly event: CareerAttentionEvent;
+  readonly message: CareerInboxMessage;
 }
 
-/** Result returned by career continuation without mutating career state. */
+/** Explicit dated facts consumed by the pure Continue use case. */
+export interface ContinueCareerUntilAttentionInput {
+  readonly currentDate: GameDate;
+  readonly boundaryDate: GameDate;
+  readonly messages: readonly CareerInboxMessage[];
+}
+
+/** Pure continuation result used by runtime and later persistence use cases. */
 export interface ContinueCareerUntilAttentionResult {
-  /** Date where the continuation attempt started. */
   readonly startDate: GameDate;
-  /** Date where the career stopped. */
   readonly stopDate: GameDate;
-  /** Number of days moved forward by this continuation attempt. */
   readonly daysAdvanced: number;
-  /** Machine-readable reason why the career stopped. */
   readonly stopReason: CareerContinueStopReason;
-  /** Attention events produced or reused by this attempt. */
-  readonly attentionEvents: readonly CareerAttentionEvent[];
-  /** Inbox / Posta messages produced for the returned attention events. */
+  /** Every message encountered from the start date through the stop date. */
   readonly inboxMessages: readonly CareerInboxMessage[];
+  /** Complete ordered batch on the date that stopped advancement. */
+  readonly stopDateMessages: readonly CareerInboxMessage[];
+  /** Deterministic default selection for the stop-date batch. */
+  readonly selectedMessageId?: CareerInboxMessageId;
 }
 
 /**
- * Advances career time conceptually until the next manager attention stop.
+ * Builds the single matchday event/message identity for one fixture.
  *
- * The function is pure: callers provide explicit fixture/preparation facts and
- * receive structured stop data. It does not simulate fixtures, write saves,
- * select lineups, resolve tactics, or use the real clock.
+ * Preparation changes blocker details and destination only. The identity,
+ * category, level, and source remain stable.
+ */
+export function createMatchdayAttention(input: {
+  readonly fixtureId: FixtureId;
+  readonly clubId: ClubId;
+  readonly date: GameDate;
+  readonly preparation: ContinueCareerPreparationInput;
+}): CareerMatchdayAttention {
+  const blockerKeys = missingPreparationBlockers(input.preparation);
+  const event = createMatchdayAttentionEvent({
+    fixtureId: input.fixtureId,
+    clubId: input.clubId,
+    date: input.date,
+    blockerKeys,
+  });
+  const message = createCareerInboxMessage({
+    id: careerInboxMessageId(`inbox:matchday:${input.fixtureId}`),
+    date: input.date,
+    category: "matchday",
+    source: "technical_staff",
+    level: "blocking",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    related: event.related,
+    blockerKeys,
+    actionIds: [blockerKeys.length > 0 ? "prepare_match" : "open_matchday"],
+  });
+
+  return { event, message };
+}
+
+/**
+ * Evaluates canonical game days and stops once for the first attention date.
+ *
+ * The function is deterministic and side-effect free. Informational messages
+ * are delivered while scanning but never stop advancement.
  */
 export function continueCareerUntilAttention(
   input: ContinueCareerUntilAttentionInput,
 ): ContinueCareerUntilAttentionResult {
-  const unresolvedEvents = (input.existingAttentionEvents ?? []).filter(isUnresolvedCareerAttentionEvent);
+  const boundaryDate = input.boundaryDate < input.currentDate ? input.currentDate : input.boundaryDate;
+  const orderedMessages = uniqueOrderedMessages(input.messages);
+  const delivered: CareerInboxMessage[] = [];
 
-  if (unresolvedEvents.length > 0) {
-    return result({
-      startDate: input.currentDate,
-      stopDate: input.currentDate,
-      stopReason: "existing_attention",
-      attentionEvents: unresolvedEvents,
-    });
+  for (let day = input.currentDate; day <= boundaryDate; day = (day + 1) as GameDate) {
+    const dueToday = orderedMessages.filter((message) =>
+      day === input.currentDate ? message.date <= day : message.date === day,
+    );
+    delivered.push(...dueToday);
+
+    if (dueToday.some(doesCareerInboxMessageStopContinue)) {
+      const selectedMessage = dueToday[0];
+      if (selectedMessage === undefined) {
+        throw new Error("Stopping attention date must contain at least one message");
+      }
+      return {
+        startDate: input.currentDate,
+        stopDate: day,
+        daysAdvanced: day - input.currentDate,
+        stopReason: "attention",
+        inboxMessages: delivered,
+        stopDateMessages: dueToday,
+        selectedMessageId: selectedMessage.id,
+      };
+    }
   }
 
-  if (input.nextFixture === undefined) {
-    return result({
-      startDate: input.currentDate,
-      stopDate: input.currentDate,
-      stopReason: "no_attention",
-      attentionEvents: [],
-    });
-  }
-
-  const stopDate = input.nextFixture.date < input.currentDate ? input.currentDate : input.nextFixture.date;
-  const preparation = input.preparation ?? { hasSavedLineup: false, hasSavedTactic: false };
-  const blockerKeys = missingPreparationBlockers(preparation);
-
-  if (blockerKeys.length > 0) {
-    const event = createMatchPreparationRequiredEvent({
-      fixtureId: input.nextFixture.id,
-      clubId: input.selectedClubId,
-      date: stopDate,
-      blockerKeys,
-    });
-
-    return result({
-      startDate: input.currentDate,
-      stopDate,
-      stopReason: "match_preparation_required",
-      attentionEvents: [event],
-    });
-  }
-
-  const event = createMatchdayReachedEvent({
-    fixtureId: input.nextFixture.id,
-    clubId: input.selectedClubId,
-    date: stopDate,
-  });
-
-  return result({
+  return {
     startDate: input.currentDate,
-    stopDate,
-    stopReason: "matchday_reached",
-    attentionEvents: [event],
-  });
+    stopDate: boundaryDate,
+    daysAdvanced: boundaryDate - input.currentDate,
+    stopReason: "no_attention",
+    inboxMessages: delivered,
+    stopDateMessages: [],
+  };
 }
 
-function result(input: {
-  readonly startDate: GameDate;
-  readonly stopDate: GameDate;
-  readonly stopReason: CareerContinueStopReason;
-  readonly attentionEvents: readonly CareerAttentionEvent[];
-}): ContinueCareerUntilAttentionResult {
-  return {
-    startDate: input.startDate,
-    stopDate: input.stopDate,
-    daysAdvanced: Math.max(0, input.stopDate - input.startDate),
-    stopReason: input.stopReason,
-    attentionEvents: input.attentionEvents,
-    inboxMessages: input.attentionEvents.map(createInboxMessageForAttentionEvent),
-  };
+function uniqueOrderedMessages(messages: readonly CareerInboxMessage[]): readonly CareerInboxMessage[] {
+  const ids = new Set<CareerInboxMessageId>();
+  for (const message of messages) {
+    if (ids.has(message.id)) {
+      throw new Error(`Duplicate career inbox message ID: ${message.id}`);
+    }
+    ids.add(message.id);
+  }
+
+  return [...messages].sort(compareMessages);
+}
+
+function compareMessages(left: CareerInboxMessage, right: CareerInboxMessage): number {
+  if (left.date !== right.date) return left.date - right.date;
+  const levelDifference = levelRank(left.level) - levelRank(right.level);
+  return levelDifference !== 0 ? levelDifference : String(left.id).localeCompare(String(right.id));
+}
+
+function levelRank(level: CareerInboxMessage["level"]): number {
+  return { blocking: 0, important: 1, informational: 2 }[level];
 }
 
 function missingPreparationBlockers(
@@ -145,36 +158,8 @@ function missingPreparationBlockers(
 ): readonly CareerAttentionBlockerKey[] {
   return [
     ...(preparation.hasSavedLineup ? [] : ["missing_saved_lineup" as const]),
+    ...(preparation.hasCompleteBench === false ? ["missing_bench_slot" as const] : []),
+    ...(preparation.hasBenchGoalkeeper === false ? ["missing_bench_goalkeeper" as const] : []),
     ...(preparation.hasSavedTactic ? [] : ["missing_saved_tactic" as const]),
   ];
-}
-
-function createInboxMessageForAttentionEvent(event: CareerAttentionEvent): CareerInboxMessage {
-  if (event.category === "match_preparation_required") {
-    return createCareerInboxMessage({
-      id: careerInboxMessageId(`inbox:${event.related.fixtureId}:preparation`),
-      date: event.date,
-      category: "match_preparation_required",
-      priority: event.priority,
-      status: "unread",
-      titleKey: "career.inbox.title.matchPreparationRequired",
-      summaryKey: "career.inbox.summary.matchPreparationRequired",
-      actionRequired: event.actionRequired,
-      related: event.related,
-      actionIds: ["prepare_match"],
-    });
-  }
-
-  return createCareerInboxMessage({
-    id: careerInboxMessageId(`inbox:${event.related.fixtureId}:matchday`),
-    date: event.date,
-    category: "matchday_reached",
-    priority: event.priority,
-    status: "unread",
-    titleKey: "career.inbox.title.matchdayReached",
-    summaryKey: "career.inbox.summary.matchdayReached",
-    actionRequired: event.actionRequired,
-    related: event.related,
-    actionIds: ["open_matchday"],
-  });
 }

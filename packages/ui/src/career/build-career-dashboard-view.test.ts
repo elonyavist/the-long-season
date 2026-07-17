@@ -107,6 +107,72 @@ describe("buildCareerDashboardView", () => {
     });
   });
 
+  it("builds a five-row table window around the selected club", () => {
+    const leagueTableRows = Array.from({ length: 8 }, (_, index) => ({
+      position: index + 1,
+      club: {
+        clubId: index === 5 ? selectedClub.clubId : `club:${index + 1}`,
+        name: index === 5 ? selectedClub.name : `Club ${index + 1}`,
+      },
+      played: 7,
+      wins: 7 - index,
+      draws: 0,
+      losses: index,
+      goalDifference: 8 - index,
+      points: 21 - index,
+    }));
+
+    const view = buildCareerDashboardView({ ...baseInput, leagueTableRows });
+
+    expect(view.leagueTable.status).toBe("available");
+    expect(view.leagueTable.selectedClubPosition).toBe(6);
+    expect(view.leagueTable.rows.map((row) => row.position)).toEqual([4, 5, 6, 7, 8]);
+    expect(view.leagueTable.rows.find((row) => row.isSelectedClub)?.clubName).toBe(selectedClub.name);
+    expect(view.tableContext).toMatchObject({ position: 6, played: 7 });
+  });
+
+  it("builds the newest league round without rendered prose", () => {
+    const view = buildCareerDashboardView({
+      ...baseInput,
+      leagueResults: [
+        {
+          fixtureId: "fixture:recent",
+          round: 2,
+          homeClub: { clubId: "club:como", name: "F.C. Como" },
+          awayClub: selectedClub,
+          isSelectedClubFixture: true,
+          homeGoals: 1,
+          awayGoals: 2,
+        },
+      ],
+      recentMatch: {
+        fixtureId: "fixture:recent",
+        homeClub: { clubId: "club:como", name: "F.C. Como" },
+        awayClub: selectedClub,
+        homeGoals: 1,
+        awayGoals: 2,
+      },
+    });
+
+    expect(view.leagueResults).toEqual({
+      status: "available",
+      round: 2,
+      results: [
+        {
+          fixtureId: "fixture:recent",
+          homeClubId: "club:como",
+          homeClubName: "F.C. Como",
+          awayClubId: selectedClub.clubId,
+          awayClubName: selectedClub.name,
+          homeGoals: 1,
+          awayGoals: 2,
+          isSelectedClubFixture: true,
+        },
+      ],
+    });
+    expect(view.recentMatch).toMatchObject({ fixtureId: "fixture:recent", homeGoals: 1, awayGoals: 2 });
+  });
+
   it("returns deterministic output for the same explicit input", () => {
     const first = buildCareerDashboardView(baseInput);
     const second = buildCareerDashboardView(baseInput);

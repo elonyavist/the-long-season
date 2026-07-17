@@ -4,34 +4,35 @@ import { buildCareerMatchdayPhaseView } from "@game/ui";
 import { describe, expect, it } from "vitest";
 
 import { createWebTranslator } from "../../app/translation";
+import { buildMatchPreparationView } from "../match-preparation/match-preparation-adapter";
 import {
-  buildDemoMatchPreparationView,
-  createCompleteUnsavedDemoMatchPreparationState,
-  createInitialDemoMatchPreparationState,
-  saveDemoMatchPreparation,
-} from "../match-preparation/match-preparation-demo";
+  createFullTimeTestFixture,
+  createHalfTimeTestFixture,
+  createPreMatchTestFixture,
+  createTestCareerFixture,
+  type TestCareerFixture,
+} from "../../test-fixtures/career-fixture";
 import {
-  applyDemoHalfTimeSubstitutions,
-  buildDemoHalfTimeSubstitutionPanel,
-  buildDemoMatchdayView,
-  buildDemoMatchdayPhaseView,
-  createInitialDemoMatchdayState,
-  playDemoMatchdayFirstHalf,
-  playDemoMatchdayFixture,
-  playDemoMatchdaySecondHalf,
-} from "./matchday-demo";
+  applyWebHalfTimeSubstitutions,
+  buildWebHalfTimeSubstitutionPanel,
+  buildWebMatchdayPhaseView,
+  buildWebMatchdayView,
+  createWebMatchdayState,
+} from "./matchday-adapter";
 import { CareerMatchdayScreen } from "./CareerMatchdayScreen";
 import { buildCareerMatchdayPresentationView } from "./career-matchday-presenter";
 
 describe("CareerMatchdayScreen", () => {
   it("renders a blocked matchday with preparation action", () => {
-    const markup = renderMatchday(buildDemoMatchdayView(
-      createInitialDemoMatchdayState(),
-      createInitialDemoMatchPreparationState(),
-    ));
+    const fixture = createTestCareerFixture("screen-blocked");
+    const state = createWebMatchdayState(fixture.career);
+    const markup = renderMatchday(
+      buildWebMatchdayView(state, fixture.draft),
+      buildWebMatchdayPhaseView(state),
+    );
 
     expect(markup).toContain("tls-matchday-panel");
-    expect(markup).toContain("Matchday blocked");
+    expect(markup).toContain("<span>Pre-match</span>");
     expect(markup).toContain("missing saved lineup");
     expect(markup).toContain("missing saved tactic");
     expect(markup).toContain("Prepare match");
@@ -40,19 +41,19 @@ describe("CareerMatchdayScreen", () => {
   });
 
   it("renders a ready matchday with play action", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
-    const markup = renderMatchday(buildDemoMatchdayView(createInitialDemoMatchdayState(), savedPreparation));
+    const fixture = createPreMatchTestFixture("screen-ready");
+    const markup = renderMatchday(fixture.view, fixture.phaseView);
 
     expect(markup).toContain("Ready to play");
     expect(markup).toContain("tls-match-broadcast-frame");
     expect(markup).toContain("Match centre");
     expect(markup).toContain("tls-matchday-scoreboard");
     expect(markup).toContain("tls-match-centre-phase-rail");
-    expect(markup).toContain("U.S. Pisa");
-    expect(markup).toContain("S.S. Perugia");
-    expect(markup).toContain("U.S. Pisa vs S.S. Perugia is ready");
+    expect(markup).toContain(fixture.phaseView.fixture.homeClub.name);
+    expect(markup).toContain(fixture.phaseView.fixture.awayClub.name);
     expect(markup).toContain("Fixture");
     expect(markup).toContain("Start match");
+    expect(markup).toContain('data-state="idle"');
     expect(markup.match(/Start match/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain("Live line");
     expect(markup).not.toContain("Next command");
@@ -66,8 +67,8 @@ describe("CareerMatchdayScreen", () => {
   });
 
   it("renders phase progress as passive indicators instead of controls", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
-    const markup = renderMatchday(buildDemoMatchdayView(createInitialDemoMatchdayState(), savedPreparation));
+    const fixture = createPreMatchTestFixture("screen-phase-rail");
+    const markup = renderMatchday(fixture.view, fixture.phaseView);
     const phaseRail = markup.slice(markup.indexOf("tls-match-centre-phase-rail"), markup.indexOf("</ol>") + 5);
 
     expect(phaseRail).toContain('aria-label="Match phase progress"');
@@ -78,10 +79,10 @@ describe("CareerMatchdayScreen", () => {
     expect(phaseRail).not.toContain("<a ");
   });
 
-  it("renders first-half facts as a live event screen with one advance command", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
+  it("renders first-half playback facts without a second reveal command", () => {
+    const fixture = createPreMatchTestFixture("screen-first-half");
     const markup = renderMatchday(
-      buildDemoMatchdayView(createInitialDemoMatchdayState(), savedPreparation),
+      fixture.view,
       buildPresenterPhaseView([
         { eventId: "event:first-half-goal", minute: 22, kind: "goal", club: presenterHomeClub, playerName: "Filippo Costa" },
         { eventId: "event:first-half-save", minute: 38, kind: "save", club: presenterAwayClub, playerName: "Davide Valentini" },
@@ -89,8 +90,7 @@ describe("CareerMatchdayScreen", () => {
     );
 
     expect(markup).toContain("First half");
-    expect(markup).toContain("Play to half-time");
-    expect(markup.match(/Play to half-time/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("Play to half-time");
     expect(markup).toContain("tls-match-centre-live-phase");
     expect(markup).toContain("tls-match-centre-live-event is-goal");
     expect(markup).toContain("tls-match-centre-live-event is-detail");
@@ -102,10 +102,10 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("Player stats");
   });
 
-  it("renders second-half facts as a live pressure screen with one full-time command", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
+  it("renders second-half facts as a live pressure screen without a reveal command", () => {
+    const fixture = createPreMatchTestFixture("screen-second-half");
     const markup = renderMatchday(
-      buildDemoMatchdayView(createInitialDemoMatchdayState(), savedPreparation),
+      fixture.view,
       buildPresenterPhaseView([
         { eventId: "event:first-half-context-goal", minute: 22, kind: "goal", club: presenterHomeClub, playerName: "Filippo Costa" },
         { eventId: "event:second-half-goal", minute: 63, kind: "goal", club: presenterHomeClub, playerName: "Tommaso Leoni" },
@@ -114,8 +114,7 @@ describe("CareerMatchdayScreen", () => {
     );
 
     expect(markup).toContain("Second half");
-    expect(markup).toContain("Play to full time");
-    expect(markup.match(/Play to full time/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("Play to full time");
     expect(markup).toContain("tls-match-centre-live-phase");
     expect(markup).toContain("tls-match-centre-pressure-strip");
     expect(markup).toContain("Match pressure");
@@ -130,20 +129,17 @@ describe("CareerMatchdayScreen", () => {
   });
 
   it("renders half-time as a decision phase without full-time consequences", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
-    const halfTimeState = playDemoMatchdayFirstHalf(createInitialDemoMatchdayState(), savedPreparation);
+    const fixture = createHalfTimeTestFixture("screen-half-time");
     const markup = renderMatchday(
-      buildDemoMatchdayView(halfTimeState, savedPreparation),
-      buildDemoMatchdayPhaseView(halfTimeState),
-      buildDemoHalfTimeSubstitutionPanel(halfTimeState),
-      savedPreparation,
+      fixture.view,
+      fixture.phaseView,
+      fixture.halfTimeSubstitutions,
+      fixture,
     );
 
     expect(markup).toContain("Half-time");
     expect(markup).toContain("Start second half");
     expect(markup.match(/Start second half/g) ?? []).toHaveLength(1);
-    expect(markup).toContain("Half-time score");
-    expect(markup).toContain("First-half tabellino");
     expect(markup).toContain("Decision signals");
     expect(markup).toContain("Watch list");
     expect(markup).toContain("Key contributors");
@@ -152,7 +148,10 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).toContain("Tactical board");
     expect(markup).toContain("tls-tactical-bench-board");
     expect(markup).toContain("Current shape");
-    expect(markup).toContain("Contribution");
+    expect(markup.match(/Current shape/g) ?? []).toHaveLength(1);
+    expect(markup.match(/0\/5 changes/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("Half-time score");
+    expect(markup).not.toContain("First-half tabellino");
     expect(markup).not.toContain("Player signals");
     expect(markup).not.toContain("Timeline");
     expect(markup).not.toContain("Form and morale");
@@ -161,8 +160,8 @@ describe("CareerMatchdayScreen", () => {
   });
 
   it("renders applied and invalid half-time substitution feedback", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
-    const halfTimeState = playDemoMatchdayFirstHalf(createInitialDemoMatchdayState(), savedPreparation);
+    const fixture = createHalfTimeTestFixture("screen-substitutions");
+    const halfTimeState = fixture.matchday;
     const outgoingPlayerId = halfTimeState.stagedProgress?.state.simulation.context.away.lineup[1]?.playerId;
     const incomingPlayerId = halfTimeState.stagedProgress?.selectedBenchPlayerIds[0];
 
@@ -170,7 +169,7 @@ describe("CareerMatchdayScreen", () => {
       throw new Error("Expected selected-club away lineup and bench for screen substitution feedback test");
     }
 
-    const substituted = applyDemoHalfTimeSubstitutions(halfTimeState, [{ outgoingPlayerId, incomingPlayerId }]);
+    const substituted = applyWebHalfTimeSubstitutions(halfTimeState, [{ outgoingPlayerId, incomingPlayerId }]);
     const nextOutgoingPlayerId = substituted.stagedProgress?.state.simulation.context.away.lineup
       .find((slot) => slot.playerId !== incomingPlayerId)
       ?.playerId;
@@ -179,14 +178,14 @@ describe("CareerMatchdayScreen", () => {
       throw new Error("Expected a remaining selected-club player for invalid screen substitution feedback test");
     }
 
-    const invalid = applyDemoHalfTimeSubstitutions(substituted, [{
+    const invalid = applyWebHalfTimeSubstitutions(substituted, [{
       outgoingPlayerId: nextOutgoingPlayerId,
       incomingPlayerId,
     }]);
     const markup = renderMatchday(
-      buildDemoMatchdayView(invalid, savedPreparation),
-      buildDemoMatchdayPhaseView(invalid),
-      buildDemoHalfTimeSubstitutionPanel(invalid),
+      buildWebMatchdayView(invalid, fixture.draft),
+      buildWebMatchdayPhaseView(invalid),
+      buildWebHalfTimeSubstitutionPanel(invalid),
     );
 
     expect(markup).toContain("Applied substitutions");
@@ -194,26 +193,30 @@ describe("CareerMatchdayScreen", () => {
   });
 
   it("renders played result as a post-match review ordered by tabellino, ratings, and consequences", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
-    const halfTimeState = playDemoMatchdayFirstHalf(createInitialDemoMatchdayState(), savedPreparation);
-    const playedState = playDemoMatchdaySecondHalf(halfTimeState, savedPreparation);
+    const fixture = createFullTimeTestFixture("screen-full-time");
     const markup = renderMatchday(
-      buildDemoMatchdayView(playedState, savedPreparation),
-      buildDemoMatchdayPhaseView(playedState),
+      fixture.view,
+      fixture.phaseView,
     );
 
     expect(markup).toContain("Full time");
     expect(markup).toContain("tls-matchday-scoreboard");
     expect(markup).toContain("tls-match-centre-full-time");
     expect(markup).toContain("Match tabellino");
-    expect(markup).toContain("tls-match-centre-tabellino-event is-goal");
-    expect(markup).toContain("Final ratings");
+    expect(markup).toContain(`${fixture.phaseView.selectedClub.name} ratings`);
     expect(markup).toContain('aria-label="Player ratings table"');
     expect(markup).toContain("Post-match state");
     expect(markup).toContain("Condition");
-    expect(markup).toContain("Form and morale");
+    expect(markup).toContain("Form");
     expect(markup).toContain("Return to dashboard");
+    expect(markup.match(/Return to dashboard/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain(">Continue</button>");
+    expect(markup).not.toContain("Final ratings");
+    expect(markup).not.toContain("Next action");
+    expect(markup).not.toContain(">unknown<");
+    expect(markup).not.toContain(">none<");
+    expect(markup).not.toContain("on pitch");
+    expect(markup).not.toContain("tls-matchday-table");
     expect(markup).not.toContain("Timeline");
     expect(markup).not.toContain("Play to full time");
     expect(markup).not.toContain("Start second half");
@@ -222,7 +225,7 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("tls-matchday-dashboard");
 
     const tabellinoIndex = markup.indexOf("Match tabellino");
-    const ratingsIndex = markup.indexOf("Final ratings");
+    const ratingsIndex = markup.indexOf(`${fixture.phaseView.selectedClub.name} ratings`);
     const consequencesIndex = markup.indexOf("Post-match state");
 
     expect(tabellinoIndex).toBeGreaterThan(-1);
@@ -232,15 +235,6 @@ describe("CareerMatchdayScreen", () => {
     expect(ratingsIndex).toBeLessThan(consequencesIndex);
   });
 
-  it("keeps the legacy full-time report compatible while the app wiring migrates", () => {
-    const savedPreparation = saveDemoMatchPreparation(createCompleteUnsavedDemoMatchPreparationState()).state;
-    const playedState = playDemoMatchdayFixture(createInitialDemoMatchdayState(), savedPreparation);
-    const markup = renderMatchday(buildDemoMatchdayView(playedState, savedPreparation));
-
-    expect(markup).toContain("Full time");
-    expect(markup).toContain("Match tabellino");
-    expect(markup).toContain("Post-match state");
-  });
 });
 
 describe("career matchday presentation contract", () => {
@@ -295,12 +289,15 @@ describe("career matchday presentation contract", () => {
       "second_half:upcoming",
       "full_time:upcoming",
     ]);
+    expect(presentation.halfTimeReview).toBeDefined();
+    expect(presentation.halfTimeReview?.watchList.map((row) => row.playerId)).toEqual(["player:valentini"]);
+    expect(presentation.halfTimeReview?.contributors).toEqual([]);
   });
 
-  it("selects full-time progression as the only second-half command", () => {
+  it("omits the obsolete second-half reveal command from the web presentation", () => {
     const presentation = buildCareerMatchdayPresentationView(buildPresenterPhaseView([], "second_half"));
 
-    expect(presentation.primaryAction?.actionId).toBe("continue_to_full_time");
+    expect(presentation.primaryAction).toBeUndefined();
     expect(presentation.phaseIndicators.map((phase) => `${phase.phase}:${phase.status}`)).toEqual([
       "pre_match:complete",
       "first_half:complete",
@@ -308,6 +305,13 @@ describe("career matchday presentation contract", () => {
       "second_half:current",
       "full_time:upcoming",
     ]);
+  });
+
+  it("omits the obsolete first-half reveal command from the web presentation", () => {
+    const presentation = buildCareerMatchdayPresentationView(buildPresenterPhaseView([], "first_half"));
+
+    expect(presentation.primaryAction).toBeUndefined();
+    expect(presentation.phaseIndicators.find((phase) => phase.phase === "first_half")?.status).toBe("current");
   });
 });
 
@@ -379,9 +383,9 @@ function minuteForPresenterPhase(phase: Parameters<typeof buildCareerMatchdayPha
 
 function renderMatchday(
   view: Parameters<typeof CareerMatchdayScreen>[0]["view"],
-  phaseView?: Parameters<typeof CareerMatchdayScreen>[0]["phaseView"],
+  phaseView: Parameters<typeof CareerMatchdayScreen>[0]["phaseView"],
   halfTimeSubstitutions?: Parameters<typeof CareerMatchdayScreen>[0]["halfTimeSubstitutions"],
-  matchPreparationState?: ReturnType<typeof saveDemoMatchPreparation>["state"],
+  matchPreparationFixture?: TestCareerFixture,
 ): string {
   return renderToStaticMarkup(
     React.createElement(CareerMatchdayScreen, {
@@ -393,13 +397,16 @@ function renderMatchday(
       onInboxActionClick: () => undefined,
       onPrepareMatch: () => undefined,
       onPlayFixture: () => undefined,
-      ...(phaseView === undefined ? {} : { phaseView }),
+      phaseView,
       ...(halfTimeSubstitutions === undefined ? {} : { halfTimeSubstitutions }),
-      ...(matchPreparationState === undefined
+      ...(matchPreparationFixture === undefined
         ? {}
         : {
-            matchPreparationView: buildDemoMatchPreparationView(matchPreparationState),
-            tacticalBoardDraft: matchPreparationState.tacticalBoardDraft,
+            matchPreparationView: buildMatchPreparationView(
+              matchPreparationFixture.career,
+              matchPreparationFixture.draft,
+            ),
+            tacticalBoardDraft: matchPreparationFixture.draft.tacticalBoardDraft,
           }),
       onApplyHalfTimeSubstitution: () => undefined,
     }),

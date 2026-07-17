@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  abilityValue,
   clubId,
   competitionId,
   createCareerState,
@@ -20,10 +21,18 @@ import {
   type GameState,
   type PlayerDynamicState,
   type PlayerId,
+  type Player,
 } from "@game/domain";
 
-import type { MatchEngineConfig, MatchTeamContext } from "../match-engine/index.ts";
-import { progressNextCareerFixture } from "./progress-fixture.ts";
+import {
+  createInitialStagedMatchState,
+  progressStagedMatchToFullTime,
+  progressStagedMatchToHalfTime,
+  type MatchEngineConfig,
+  type MatchTeamContext,
+} from "../match-engine/index.ts";
+import { createStagedMatchCheckpoint } from "./active-match-checkpoint.ts";
+import { commitStagedCareerFixture, progressNextCareerFixture } from "./progress-fixture.ts";
 
 /**
  * Career progression tests prove one selected-club fixture can be simulated and
@@ -111,6 +120,56 @@ test("progressNextCareerFixture is deterministic for the same state and team con
   };
 
   assert.deepEqual(progressNextCareerFixture(input), progressNextCareerFixture(input));
+});
+
+test("commitStagedCareerFixture applies the completed staged report once and clears its checkpoint", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const selectedFixtureId = fixtureId("fixture:000001");
+  const baseCareer = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
+    fixtures: [fixtureFixture(selectedFixtureId, selectedClubId, otherClubId)],
+  });
+  const selectedTeam = teamContextFixture(selectedClubId, 12);
+  const initial = createInitialStagedMatchState({
+    fixtureId: selectedFixtureId,
+    seed: baseCareer.gameState.meta.seed,
+    home: selectedTeam,
+    away: teamContextFixture(otherClubId, 10),
+    engineConfig: matchEngineConfigFixture(),
+  });
+  const halfTime = progressStagedMatchToHalfTime(initial);
+  const checkpoint = createStagedMatchCheckpoint({
+    state: halfTime.state,
+    selectedClubSide: "home",
+    selectedClubBenchSlots: [],
+  });
+  const career = createCareerState({ ...baseCareer, activeMatchCheckpoint: checkpoint });
+  const fullTime = progressStagedMatchToFullTime(halfTime.state);
+  const report = fullTime.snapshot.fullTimeReport;
+
+  assert.ok(report);
+  const committed = commitStagedCareerFixture({
+    careerState: career,
+    report,
+    selectedStarterIds: selectedTeam.lineup.map((slot) => slot.playerId),
+  });
+
+  assert.equal(committed.status, "advanced");
+  if (committed.status === "advanced") {
+    assert.deepEqual(committed.report, report);
+    assert.deepEqual(committed.fixtureAfter.result?.report, report);
+    assert.equal(committed.careerState.activeMatchCheckpoint, undefined);
+
+    const duplicate = commitStagedCareerFixture({
+      careerState: committed.careerState,
+      report,
+      selectedStarterIds: selectedTeam.lineup.map((slot) => slot.playerId),
+    });
+    assert.equal(duplicate.status, "invalid");
+    if (duplicate.status === "invalid") assert.equal(duplicate.reason, "fixture_already_played");
+  }
 });
 
 test("progressNextCareerFixture keeps a compact deterministic progression sentinel", () => {
@@ -415,6 +474,8 @@ function gameStateFixture(
   const fixturesById: Partial<Record<Fixture["id"], Fixture>> = {};
   const fixtureIds: Fixture["id"][] = [];
   const playerStates: Partial<Record<PlayerId, PlayerDynamicState>> = {};
+  const players: Partial<Record<PlayerId, Player>> = {};
+  const playerIds: PlayerId[] = [];
 
   for (const club of clubs) {
     clubsById[club.id] = club;
@@ -422,6 +483,8 @@ function gameStateFixture(
 
     for (const clubPlayerId of club.playerIds) {
       playerStates[clubPlayerId] = playerStateOverrides[clubPlayerId] ?? playerStateFixture(100);
+      players[clubPlayerId] = playerFixture(clubPlayerId);
+      playerIds.push(clubPlayerId);
     }
   }
 
@@ -440,13 +503,33 @@ function gameStateFixture(
       currentDate: gameDate(20_000),
       currentSeasonId: seasonId("season:test"),
     },
-    players: {},
-    playerIds: [],
+    players: players as GameState["players"],
+    playerIds,
     playerStates: playerStates as GameState["playerStates"],
     clubs: clubsById as GameState["clubs"],
     clubIds,
     fixtures: fixturesById as GameState["fixtures"],
     fixtureIds,
+  };
+}
+
+function playerFixture(id: PlayerId): Player {
+  const value = abilityValue(10);
+  const abilities: Player["abilities"] = {
+    technical: { finishing: value, passing: value, longPassing: value, crossing: value, dribbling: value, technique: value, tackling: value, penalties: value, freeKicks: value },
+    physical: { pace: value, strength: value, stamina: value, agility: value, heading: value },
+    mental: { positioning: value, vision: value, anticipation: value, composure: value, determination: value, leadership: value },
+    goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
+  };
+
+  return {
+    id,
+    firstName: "Test",
+    lastName: String(id),
+    birthDate: gameDate(10_000),
+    naturalPositions: [String(id).endsWith("-01") ? "gk" : "cm"],
+    abilities,
+    potential: abilities,
   };
 }
 

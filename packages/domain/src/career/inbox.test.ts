@@ -1,100 +1,133 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { fixtureId } from "../types/ids.ts";
+import { clubId, fixtureId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import {
   careerInboxMessageId,
   createCareerInboxMessage,
-  isActionRequiredInboxMessage,
+  doesCareerInboxMessageStopContinue,
+  type CareerInboxMessageInput,
 } from "./inbox.ts";
 
+const baseMessage: CareerInboxMessageInput = {
+  id: careerInboxMessageId("inbox:matchday:fixture:000003"),
+  date: gameDate(20_000),
+  category: "matchday",
+  source: "technical_staff",
+  level: "blocking",
+  lifecycle: { read: false, acknowledged: false, resolved: false },
+  related: { fixtureId: fixtureId("fixture:000003") },
+  blockerKeys: ["missing_saved_lineup"],
+  actionIds: ["prepare_match"],
+};
+
 test("careerInboxMessageId validates namespaced message IDs", () => {
-  assert.equal(careerInboxMessageId("inbox:fixture-000003-prep"), "inbox:fixture-000003-prep");
+  assert.equal(careerInboxMessageId("inbox:matchday:fixture:000003"), "inbox:matchday:fixture:000003");
   assert.throws(() => careerInboxMessageId(""), /must not be empty/);
   assert.throws(() => careerInboxMessageId("42"), /integer-like/);
   assert.throws(() => careerInboxMessageId("message:fixture-000003"), /inbox:/);
   assert.throws(() => careerInboxMessageId("inbox:"), /include a value/);
 });
 
-test("createCareerInboxMessage keeps messages structured and language agnostic", () => {
-  const message = createCareerInboxMessage({
-    id: careerInboxMessageId("inbox:fixture-000003-prep"),
-    date: gameDate(20_000),
-    category: "match_preparation_required",
-    priority: "urgent",
-    status: "unread",
-    titleKey: "career.inbox.title.matchPreparationRequired",
-    summaryKey: "career.inbox.summary.matchPreparationRequired",
-    actionRequired: true,
-    related: {
-      fixtureId: fixtureId("fixture:000003"),
-    },
-    actionIds: ["prepare_match"],
-  });
+test("message remains structured and keeps lifecycle facts independent", () => {
+  const message = createCareerInboxMessage(baseMessage);
 
-  assert.equal(message.id, "inbox:fixture-000003-prep");
-  assert.equal(message.category, "match_preparation_required");
-  assert.equal(message.related.fixtureId, "fixture:000003");
-  assert.deepEqual(message.actionIds, ["prepare_match"]);
+  assert.equal(message.category, "matchday");
+  assert.equal(message.source, "technical_staff");
+  assert.equal(message.level, "blocking");
+  assert.deepEqual(message.lifecycle, { read: false, acknowledged: false, resolved: false });
+  assert.deepEqual(message.blockerKeys, ["missing_saved_lineup"]);
 });
 
-test("createCareerInboxMessage rejects empty localization keys", () => {
-  const base = {
-    id: careerInboxMessageId("inbox:fixture-000003-prep"),
-    date: gameDate(20_000),
-    category: "match_preparation_required" as const,
-    priority: "urgent" as const,
-    status: "unread" as const,
-    actionRequired: true,
-    actionIds: ["prepare_match" as const],
-  };
-
-  assert.throws(
-    () => createCareerInboxMessage({ ...base, titleKey: "", summaryKey: "career.inbox.summary" }),
-    /titleKey/,
-  );
-  assert.throws(
-    () => createCareerInboxMessage({ ...base, titleKey: "career.inbox.title", summaryKey: " " }),
-    /summaryKey/,
-  );
-});
-
-test("action-required messages must expose a manager action", () => {
+test("acknowledgement requires a read important message", () => {
   assert.throws(
     () =>
       createCareerInboxMessage({
-        id: careerInboxMessageId("inbox:fixture-000003-prep"),
-        date: gameDate(20_000),
-        category: "match_preparation_required",
-        priority: "urgent",
-        status: "unread",
-        titleKey: "career.inbox.title.matchPreparationRequired",
-        summaryKey: "career.inbox.summary.matchPreparationRequired",
-        actionRequired: true,
+        ...baseMessage,
+        level: "important",
+        lifecycle: { read: false, acknowledged: true, resolved: false },
       }),
-    /at least one action/,
+    /must also be read/,
+  );
+  assert.throws(
+    () =>
+      createCareerInboxMessage({
+        ...baseMessage,
+        lifecycle: { read: true, acknowledged: true, resolved: false },
+      }),
+    /Only important/,
   );
 });
 
-test("isActionRequiredInboxMessage ignores resolved or expired messages", () => {
-  const unreadMessage = createCareerInboxMessage({
-    id: careerInboxMessageId("inbox:fixture-000003-prep"),
-    date: gameDate(20_000),
-    category: "match_preparation_required",
-    priority: "urgent",
-    status: "unread",
-    titleKey: "career.inbox.title.matchPreparationRequired",
-    summaryKey: "career.inbox.summary.matchPreparationRequired",
-    actionRequired: true,
-    actionIds: ["prepare_match"],
+test("unresolved blocking messages require an action and a fixture", () => {
+  assert.throws(() => createCareerInboxMessage({ ...baseMessage, actionIds: [] }), /must expose an action/);
+  assert.throws(() => createCareerInboxMessage({ ...baseMessage, related: {} }), /reference a fixture/);
+});
+
+test("workflow categories require their stable functional source and related facts", () => {
+  assert.throws(
+    () => createCareerInboxMessage({ ...baseMessage, category: "match_result" }),
+    /source match_report/,
+  );
+  assert.throws(
+    () => createCareerInboxMessage({
+      ...baseMessage,
+      category: "season_rollover",
+      source: "competition_office",
+      related: {},
+      level: "important",
+      actionIds: [],
+    }),
+    /selected club/,
+  );
+
+  const result = createCareerInboxMessage({
+    ...baseMessage,
+    category: "match_result",
+    source: "match_report",
+    level: "informational",
+    actionIds: [],
   });
-  const resolvedMessage = createCareerInboxMessage({
-    ...unreadMessage,
-    id: careerInboxMessageId("inbox:fixture-000003-prep-resolved"),
-    status: "resolved",
+  const rollover = createCareerInboxMessage({
+    ...baseMessage,
+    category: "season_rollover",
+    source: "competition_office",
+    level: "important",
+    related: { clubId: clubId("club:selected") },
+    actionIds: [],
   });
 
-  assert.equal(isActionRequiredInboxMessage(unreadMessage), true);
-  assert.equal(isActionRequiredInboxMessage(resolvedMessage), false);
+  assert.equal(result.category, "match_result");
+  assert.equal(rollover.category, "season_rollover");
+});
+
+test("Continue stops for unresolved blocking and unacknowledged important messages only", () => {
+  const blocking = createCareerInboxMessage(baseMessage);
+  const resolved = createCareerInboxMessage({
+    ...baseMessage,
+    lifecycle: { read: true, acknowledged: false, resolved: true },
+  });
+  const important = createCareerInboxMessage({
+    ...baseMessage,
+    level: "important",
+    lifecycle: { read: true, acknowledged: false, resolved: false },
+  });
+  const acknowledged = createCareerInboxMessage({
+    ...baseMessage,
+    level: "important",
+    lifecycle: { read: true, acknowledged: true, resolved: false },
+  });
+  const informational = createCareerInboxMessage({
+    ...baseMessage,
+    level: "informational",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    actionIds: [],
+  });
+
+  assert.equal(doesCareerInboxMessageStopContinue(blocking), true);
+  assert.equal(doesCareerInboxMessageStopContinue(resolved), false);
+  assert.equal(doesCareerInboxMessageStopContinue(important), true);
+  assert.equal(doesCareerInboxMessageStopContinue(acknowledged), false);
+  assert.equal(doesCareerInboxMessageStopContinue(informational), false);
 });

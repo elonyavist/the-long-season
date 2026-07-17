@@ -30,13 +30,30 @@ test("all five supported languages cover the current catalog", () => {
   assert.equal(MESSAGE_KEYS.length > 0, true);
 });
 
+test("translates the career skip command in every supported language", () => {
+  assert.equal(translate("en", "career.shell.skipToContent"), "Skip to current task");
+  assert.equal(translate("it", "career.shell.skipToContent"), "Vai al compito corrente");
+  assert.equal(translate("de", "career.shell.skipToContent"), "Zur aktuellen Aufgabe springen");
+  assert.equal(translate("es", "career.shell.skipToContent"), "Ir a la tarea actual");
+  assert.equal(translate("fr", "career.shell.skipToContent"), "Aller a la tache actuelle");
+});
+
+test("translates actionable storage recovery without technical exception prose", () => {
+  assert.equal(translate("en", "web.app.storage.retry"), "Try again");
+  assert.equal(translate("it", "web.app.storage.retry"), "Riprova");
+  assert.equal(translate("de", "web.app.storage.retry"), "Erneut versuchen");
+  assert.equal(translate("es", "web.app.storage.retry"), "Reintentar");
+  assert.equal(translate("fr", "web.app.storage.retry"), "Reessayer");
+  assert.match(translate("en", "web.app.storage.error.storage_quota_exceeded"), /last valid save is unchanged/);
+});
+
 test("translates match preparation web labels in every supported language", () => {
   assert.equal(translate("en", "career.matchPreparation.summary.blocked"), "Preparation incomplete");
   assert.equal(translate("it", "career.matchPreparation.summary.blocked"), "Preparazione incompleta");
   assert.equal(translate("de", "career.matchPreparation.summary.blocked"), "Vorbereitung unvollstandig");
   assert.equal(translate("es", "career.matchPreparation.summary.blocked"), "Preparacion incompleta");
   assert.equal(translate("fr", "career.matchPreparation.summary.blocked"), "Preparation incomplete");
-  assert.equal(translate("en", "career.matchPreparation.action.saveAndGoToMatch"), "Save and go to match");
+  assert.equal(translate("en", "career.matchPreparation.action.saveAndGoToMatch"), "Confirm and go to match");
   assert.equal(translate("en", "career.matchPreparation.action.auto"), "Auto");
   assert.equal(translate("it", "career.matchPreparation.action.fillGaps"), "Riempi");
   assert.equal(translate("de", "career.matchPreparation.action.clear"), "Leeren");
@@ -62,6 +79,11 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("de", "career.tacticalBoard.assignPlayer"), "Spieler zuweisen");
   assert.equal(translate("es", "career.tacticalBoard.suit.makeshift"), "Improvisado");
   assert.equal(translate("fr", "career.tacticalBoard.removeFromLineup"), "Retirer du onze");
+  assert.equal(translate("en", "career.preparationDraft.exit.stay"), "Stay");
+  assert.equal(translate("it", "career.preparationDraft.exit.discard"), "Scarta modifiche");
+  assert.equal(translate("de", "career.preparationDraft.exit.saveAndContinue"), "Speichern und weiter");
+  assert.equal(translate("es", "career.preparationDraft.exit.stay"), "Quedarse");
+  assert.equal(translate("fr", "career.preparationDraft.exit.discard"), "Supprimer les modifications");
 });
 
 test("translates every documented match-preparation formation label in every supported language", () => {
@@ -109,6 +131,10 @@ test("translates web matchday labels in every supported language", () => {
   assert.equal(translate("fr", "career.matchday.blocker.missing_saved_tactic"), "tactique sauvegardee manquante");
   assert.equal(translate("en", "career.matchday.phase.half_time"), "Half-time");
   assert.equal(translate("it", "career.matchday.action.start_first_half"), "Inizia partita");
+  assert.equal(translate("en", "career.matchday.broadcast.firstHalfUnderway"), "The first half is under way.");
+  assert.equal(translate("it", "career.matchday.broadcast.halfTimeApproaching"), "Il primo tempo e concluso. Ora arriva l'intervallo.");
+  assert.equal(translate("en", "career.matchday.broadcast.secondHalfUnderway"), "The second half is under way.");
+  assert.equal(translate("it", "career.matchday.broadcast.fullTimeApproaching"), "La partita e arrivata al 90'.");
   assert.equal(translate("it", "career.matchday.action.start_second_half"), "Inizia secondo tempo");
   assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Return to dashboard");
   assert.equal(translate("it", "career.matchday.fixture"), "Partita");
@@ -126,6 +152,23 @@ test("translates web matchday labels in every supported language", () => {
       player: "Nico Rinaldi",
     }),
     "54' Goal S.S. Perugia Nico Rinaldi",
+  );
+});
+
+test("translates dashboard task hierarchy without technical fallback copy", () => {
+  assert.equal(translate("en", "career.dashboard.task.attention"), "Decision required");
+  assert.equal(translate("it", "career.dashboard.readiness.missing_saved_lineup"), "Scegli gli undici titolari");
+  assert.equal(translate("de", "career.dashboard.task.ready"), "Bereit zum Fortfahren");
+  assert.equal(translate("es", "career.dashboard.task.post_match"), "Analisis del partido");
+  assert.equal(translate("fr", "career.dashboard.readiness.missing_saved_tactic"), "Choisis l'approche du match");
+  assert.equal(
+    translate("en", "career.dashboard.recentMatchCompactLine", {
+      home: "Pisa",
+      homeGoals: 1,
+      awayGoals: 2,
+      away: "Perugia",
+    }),
+    "Pisa 1-2 Perugia",
   );
 });
 
@@ -167,6 +210,22 @@ test("translates career post-match player-state consequence labels", () => {
     }),
     "Player One: form 50 -> 53 (+3), morale 50 -> 52 (+2); reasons: win, goal",
   );
+});
+
+test("translates match-result and season-rollover Posta facts in every supported language", () => {
+  assert.equal(translate("en", "career.inbox.subject.match_result"), "Match result");
+  assert.equal(translate("it", "career.inbox.subject.season_rollover"), "Riepilogo stagione");
+  assert.equal(translate("de", "career.inbox.source.match_report"), "Spielbericht");
+  assert.equal(translate("es", "career.inbox.fact.finalScore"), "Resultado final");
+  assert.equal(translate("fr", "career.inbox.source.competition_office"), "Bureau des competitions");
+});
+
+test("translates the bounded calendar advancement feedback", () => {
+  assert.equal(translate("en", "career.calendarAdvance.label"), "Calendar advancing");
+  assert.equal(translate("it", "career.calendarAdvance.complete", { date: "2026-08-08" }), "Carriera avanzata al 2026-08-08.");
+  assert.equal(translate("de", "career.calendarAdvance.label"), "Kalender laeuft weiter");
+  assert.equal(translate("es", "career.calendarAdvance.complete", { date: "2026-08-08" }), "Carrera avanzada hasta 2026-08-08.");
+  assert.equal(translate("fr", "career.calendarAdvance.label"), "Avancement du calendrier");
 });
 
 test("unknown keys fail clearly at runtime", () => {

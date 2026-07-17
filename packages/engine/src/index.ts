@@ -9,6 +9,12 @@ export * from "./market/index.ts";
 export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
 export {
+  completeStagedMatchCheckpoint,
+  createStagedMatchCheckpoint,
+  restoreStagedMatchCheckpoint,
+  type CreateStagedMatchCheckpointInput,
+} from "./career/active-match-checkpoint.ts";
+export {
   CareerMatchStateConsequenceError,
   applyCareerMatchStateConsequences,
   type ApplyCareerMatchStateConsequencesInput,
@@ -40,11 +46,21 @@ export {
 } from "./career/next-fixture.ts";
 export {
   continueCareerUntilAttention,
+  createMatchdayAttention,
+  type CareerMatchdayAttention,
   type CareerContinueStopReason,
   type ContinueCareerPreparationInput,
   type ContinueCareerUntilAttentionInput,
   type ContinueCareerUntilAttentionResult,
 } from "./career/continue-career.ts";
+export {
+  CareerInboxLifecycleError,
+  acknowledgeImportantCareerInboxMessage,
+  deliverCareerInboxMessages,
+  openCareerInboxMessage,
+  reconcileCareerInboxResolution,
+  type CareerInboxLifecycleErrorCode,
+} from "./career/career-inbox-lifecycle.ts";
 export {
   generateNextSeasonCalendar,
   type NextSeasonCalendarGenerated,
@@ -53,7 +69,9 @@ export {
   type NextSeasonCalendarResult,
 } from "./career/next-season-calendar.ts";
 export {
+  commitStagedCareerFixture,
   progressNextCareerFixture,
+  type CommitStagedCareerFixtureInput,
   type ProgressCareerFixtureAdvanced,
   type ProgressCareerFixtureInvalid,
   type ProgressCareerFixtureInvalidReason,
