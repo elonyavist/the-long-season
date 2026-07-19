@@ -244,6 +244,7 @@ function rehydrateReviewedResult(careerState: CareerState): WebMatchdayAdvancedR
       totalFormDelta: 0,
       totalMoraleDelta: 0,
     },
+    monthlyLifecycle: [],
     careerState,
   };
 }

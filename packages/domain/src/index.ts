@@ -18,6 +18,7 @@ export * from "./career/index.ts";
 export * from "./match/half-time-tactical-decision.ts";
 export * from "./match/match-phase.ts";
 export * from "./match/substitution.ts";
+export * from "./player/index.ts";
 export * from "./state/career-state.ts";
 export * from "./state/career-world.ts";
 export * from "./state/game-state.ts";

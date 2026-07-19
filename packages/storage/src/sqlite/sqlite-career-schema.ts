@@ -1,5 +1,5 @@
 /** Current relational browser-career schema version. */
-export const SQLITE_CAREER_SCHEMA_VERSION = 6;
+export const SQLITE_CAREER_SCHEMA_VERSION = 7;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
@@ -91,6 +91,56 @@ export const SQLITE_CAREER_SCHEMA_V6_STATEMENTS = [
     action_id TEXT NOT NULL,
     PRIMARY KEY (save_id, message_id, sort_order),
     FOREIGN KEY (save_id, message_id) REFERENCES career_inbox_messages(save_id, message_id) ON DELETE CASCADE
+  ) STRICT`,
+] as const;
+
+/** Version-7 monthly player-development participation facts. */
+export const SQLITE_CAREER_SCHEMA_V7_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS player_participation_ledgers (
+    save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS player_participation_rows (
+    save_id TEXT NOT NULL REFERENCES player_participation_ledgers(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    row_key TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    season_id TEXT NOT NULL,
+    month_key TEXT NOT NULL,
+    starts INTEGER NOT NULL CHECK (starts >= 0),
+    substitute_appearances INTEGER NOT NULL CHECK (substitute_appearances >= 0),
+    minutes INTEGER NOT NULL CHECK (minutes >= 0),
+    rating_total REAL NOT NULL CHECK (rating_total >= 0),
+    rating_samples INTEGER NOT NULL CHECK (rating_samples >= 0),
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, row_key),
+    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS player_participation_role_minutes (
+    save_id TEXT NOT NULL,
+    row_key TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    role_key TEXT NOT NULL,
+    minutes INTEGER NOT NULL CHECK (minutes >= 0),
+    PRIMARY KEY (save_id, row_key, sort_order),
+    UNIQUE (save_id, row_key, role_key),
+    FOREIGN KEY (save_id, row_key) REFERENCES player_participation_rows(save_id, row_key) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS player_participation_applied_fixtures (
+    save_id TEXT NOT NULL,
+    row_key TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    fixture_id TEXT NOT NULL,
+    PRIMARY KEY (save_id, row_key, sort_order),
+    UNIQUE (save_id, row_key, fixture_id),
+    FOREIGN KEY (save_id, row_key) REFERENCES player_participation_rows(save_id, row_key) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, fixture_id) REFERENCES fixtures(save_id, fixture_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS player_participation_closed_months (
+    save_id TEXT NOT NULL REFERENCES player_participation_ledgers(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    month_key TEXT NOT NULL,
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, month_key)
   ) STRICT`,
 ] as const;
 

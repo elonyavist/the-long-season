@@ -86,6 +86,22 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("fr", "career.preparationDraft.exit.discard"), "Supprimer les modifications");
 });
 
+test("translates player diagnostics report labels in every supported language", () => {
+  assert.equal(translate("en", "playerGeneration.potentialRoomByAge"), "Current-to-potential room by age");
+  assert.equal(translate("it", "playerGeneration.matureHighRoomWarnings"), "Avvisi margine alto 26+");
+  assert.equal(translate("de", "playerGeneration.ageBand.age26To29"), "26-29");
+  assert.equal(translate("es", "career.developmentReport.trajectorySamples"), "Muestras de trayectoria");
+  assert.equal(translate("fr", "career.developmentReport.trajectorySampleValue", {
+    targetAge: 26,
+    player: "Jean Test",
+    startAge: 26,
+    endAge: 33,
+    growth: "0.00",
+    decline: "1.00",
+    room: "0.50",
+  }), "age~26: Jean Test, age 26->33, croissance 0.00, declin 1.00, marge 0.50");
+});
+
 test("translates every documented match-preparation formation label in every supported language", () => {
   const formationKeys = [
     "4-4-2",
@@ -136,10 +152,38 @@ test("translates web matchday labels in every supported language", () => {
   assert.equal(translate("en", "career.matchday.broadcast.secondHalfUnderway"), "The second half is under way.");
   assert.equal(translate("it", "career.matchday.broadcast.fullTimeApproaching"), "La partita e arrivata al 90'.");
   assert.equal(translate("it", "career.matchday.action.start_second_half"), "Inizia secondo tempo");
+  assert.equal(translate("en", "career.matchday.halfTimeTabs"), "Half-time views");
+  assert.equal(translate("en", "career.matchday.fullTimeTabs"), "Full-time review views");
+  assert.equal(translate("it", "career.matchday.fullTimeTab.consequences"), "Conseguenze");
+  assert.equal(translate("it", "career.matchday.halfTimeTab.summary"), "Sintesi");
+  assert.equal(translate("de", "career.matchday.halfTimeTab.tactics"), "Taktik");
+  assert.equal(translate("es", "career.matchday.halfTimeTab.selectedTeam"), "Tu equipo");
+  assert.equal(translate("fr", "career.matchday.halfTimeTab.opponent"), "Adversaire");
+  assert.equal(translate("en", "career.matchday.teamRatings", { club: "S.S. Perugia" }), "S.S. Perugia ratings");
+  assert.equal(translate("it", "career.matchday.halfTimeSignal.watch"), "Occhio");
+  assert.equal(translate("de", "career.matchday.halfTimeSignal.contributor"), "Schlussel");
+  assert.equal(translate("es", "career.matchday.noPlayerRatings"), "Todavia no hay valoraciones disponibles.");
+  assert.equal(
+    translate("fr", "career.matchday.noPostMatchConsequences"),
+    "Aucun changement individuel notable apres ce match.",
+  );
+  assert.equal(
+    translate("fr", "career.matchday.halfTimeTacticsUnavailable"),
+    "La tactique de mi-temps n'est pas disponible pour ce match.",
+  );
   assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Return to dashboard");
-  assert.equal(translate("it", "career.matchday.fixture"), "Partita");
   assert.equal(translate("en", "career.matchday.scoreState.label"), "Your side");
   assert.equal(translate("en", "career.matchday.phaseProgress"), "Match phase progress");
+  assert.equal(translate("en", "career.matchday.playback.pause"), "Pause");
+  assert.equal(translate("it", "career.matchday.playback.resume"), "Riprendi");
+  assert.equal(translate("de", "career.matchday.playback.speedOption", { speed: 4 }), "Wiedergabegeschwindigkeit 4x");
+  assert.equal(translate("es", "career.matchday.playback.speed"), "Velocidad del partido");
+  assert.equal(translate("fr", "career.matchday.playback.controls"), "Commandes du match");
+  assert.equal(translate("en", "career.matchday.fullMatchTabellino"), "Match tabellino");
+  assert.equal(translate("it", "career.matchday.fullMatchTabellino"), "Tabellino partita");
+  assert.equal(translate("de", "career.matchday.fullMatchTabellino"), "Spiel-Tabellino");
+  assert.equal(translate("es", "career.matchday.fullMatchTabellino"), "Acta del partido");
+  assert.equal(translate("fr", "career.matchday.fullMatchTabellino"), "Feuille de match");
   assert.equal(translate("fr", "career.matchday.playerRatingsTable"), "Tableau des notes joueurs");
   assert.equal(translate("de", "career.matchday.table.rating"), "Note");
   assert.equal(translate("es", "career.matchday.playerStatus.substituted_on"), "entro");
@@ -176,7 +220,6 @@ test("translates half-time substitution labels in every supported language", () 
   assert.equal(translate("en", "career.matchday.halfTimeDecision"), "Half-time decisions");
   assert.equal(translate("en", "career.matchday.halfTimeTacticalWorkspace"), "Half-time tactics");
   assert.equal(translate("it", "career.matchday.halfTimeValidation.missing_lineup_slot"), "L'undici ha uno slot vuoto.");
-  assert.equal(translate("it", "career.matchday.substitution.apply"), "Applica cambio");
   assert.equal(translate("de", "career.matchday.substitution.validation.incoming_already_on_pitch"), "Der einzuwechselnde Spieler ist bereits auf dem Feld.");
   assert.equal(translate("de", "career.matchday.halfTimeValidation.missing_goalkeeper"), "Die Elf braucht einen Torwart.");
   assert.equal(

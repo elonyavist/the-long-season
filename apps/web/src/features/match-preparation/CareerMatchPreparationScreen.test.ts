@@ -51,6 +51,8 @@ describe("CareerMatchPreparationScreen", () => {
     expect(markup).toContain('data-state="blocking"');
     expect(markup).not.toContain("tls-preparation-blockers");
     expect(markup).toContain("tls-tactical-board");
+    expect(markup).toContain('data-formation-motion-key="4-4-2"');
+    expect(markup.match(/data-motion-slot-key=/g)).toHaveLength(19);
     expect(markup).not.toContain("tls-preparation-pitch");
     expect(markup).toContain("tls-preparation-squad-table");
     expect(markup).toContain("Current shape");

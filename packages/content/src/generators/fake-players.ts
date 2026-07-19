@@ -1,20 +1,19 @@
 import {
-  abilityValue,
   createPersonIdentity,
   gameDate,
-  stateValue,
   type ClubId,
   type ClubCategory,
+  type CreatedPlayer,
   type PersonIdentity,
-  type Player,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type RoleIdentifiedPlayer,
 } from "@game/domain";
 import { deriveRng, fromISO } from "@game/shared";
 
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB, fakePlayerId } from "./fake-clubs.ts";
-import { clubTierForGeneratedClubNumber, getPlayerGenerationBand } from "./player-generation-bands.ts";
+import { clubTierForGeneratedClubNumber } from "./player-generation-bands.ts";
 import {
   buildPlayerRarityAllocation,
   isBudgetedArchetype,
@@ -22,11 +21,7 @@ import {
   type PlayerRarityAssignment,
   type PlayerRarityBudget,
 } from "./player-rarity-budget.ts";
-import {
-  buildPlayerAbilitiesForPosition,
-  buildRoleAwarePlayerAbilities,
-  capPlayerAbilitiesForRole,
-} from "./player-role-templates.ts";
+import { buildRoleAwarePlayerAbilities } from "./player-role-templates.ts";
 import {
   GENERATED_PLAYER_ARCHETYPE_KEYS,
   getGeneratedPlayerArchetype,
@@ -34,9 +29,11 @@ import {
   type GeneratedPlayerArchetypeKey,
 } from "./player-archetypes.ts";
 import type { CurrentAbilityRarityLane } from "./player-current-ability-bands.ts";
+import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
+import { allocateReachablePotential } from "./player-potential-allocation.ts";
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
-import { generatedRoleIdentityForPosition } from "./player-role-identity.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const FAKE_CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 const MAX_LEAGUE_LAST_NAME_USES = 2;
@@ -60,7 +57,7 @@ export interface FakeLineupSlot {
  */
 export interface FakePlayers {
   /** Player lookup by ID. */
-  readonly players: Readonly<Record<PlayerId, Player>>;
+  readonly players: Readonly<Record<PlayerId, RoleIdentifiedPlayer>>;
   /** Explicit deterministic player ID order. */
   readonly playerIds: readonly PlayerId[];
   /** Generated identity metadata by player ID, including nationality. */
@@ -105,7 +102,7 @@ export function generateFakePlayersForClubs(
   clubIds: readonly ClubId[],
   options: FakePlayerGenerationOptions = {},
 ): FakePlayers {
-  const players: Record<PlayerId, Player> = {};
+  const players: Record<PlayerId, RoleIdentifiedPlayer> = {};
   const playerIds: PlayerId[] = [];
   const playerIdentities: Record<PlayerId, PersonIdentity> = {};
   const playerArchetypes: Record<PlayerId, GeneratedPlayerArchetypeKey> = {};
@@ -150,20 +147,16 @@ export function generateFakePlayersForClubs(
         rarityAssignment === undefined
           ? selectPlayerArchetype(seed, id, clubNumber, slotNumber, slotNumber <= FAKE_LINEUP_SIZE)
           : getGeneratedPlayerArchetype(rarityAssignment.archetypeKey);
-      const player = fakePlayer(id, clubNumber, slotNumber, identity, seed, archetype, clubContext);
+      const created = fakePlayer(id, clubNumber, slotNumber, identity, seed, archetype, clubContext);
 
-      players[id] = player;
+      players[id] = created.player;
       playerIds.push(id);
       playerIdentities[id] = identity;
       playerArchetypes[id] = archetype.key;
       if (rarityAssignment !== undefined) {
         playerRarityAssignments[id] = rarityAssignment;
       }
-      playerStates[id] = {
-        fitness: stateValue(100),
-        form: stateValue(50),
-        morale: stateValue(50),
-      };
+      playerStates[id] = created.dynamicState;
       if (slotNumber <= FAKE_LINEUP_SIZE) {
         lineup.push({
           slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
@@ -199,48 +192,43 @@ function fakePlayer(
   seed: string,
   archetype: GeneratedPlayerArchetype,
   clubContext: FakePlayerClubContext,
-): Player {
+): CreatedPlayer {
   const clubTier = clubTierForGeneratedClubNumber(clubNumber);
-  const band = getPlayerGenerationBand(clubContext.category, clubTier);
-  const currentAnchor = numberInFloatRange(band.currentAbility, seed, "player-current-band", id);
-  const potentialAnchor = numberInFloatRange(band.potentialCeiling, seed, "player-potential-band", id);
-  const base =
-    currentAnchor +
-    slotDepthOffset(slotNumber) +
-    numberInFloatRange(archetype.currentAbilityOffset, seed, "player-current-ability", id);
   const position = positionForSlot(slotNumber);
   const ageYears = numberInRange(archetype.ageYears, seed, "player-age", id);
   const birthDateJitter = deriveRng(seed, "player-birth-date", id).nextInt(0, 365);
-  const potentialBase = Math.min(
-    Math.max(base, potentialAnchor, base + numberInFloatRange(archetype.potentialUplift, seed, "player-potential", id)),
-    20,
-  );
-  const roleIdentity = generatedRoleIdentityForPosition(position);
+  const primaryRole = primaryRoleForPosition(position);
   const abilities = buildRoleAwarePlayerAbilities({
     seed,
     playerKey: String(id),
     division: clubContext.category,
     clubTier,
-    role: roleIdentity.primaryRole,
+    role: primaryRole,
     ageYears,
     rarityLane: currentAbilityRarityLaneForArchetype(archetype.key),
     slotDepthAdjustment: slotDepthOffset(slotNumber),
   });
-  const potential = potentialAtLeastCurrent(
+  const potential = allocateReachablePotential({
+    seed,
+    playerKey: String(id),
     abilities,
-    capPlayerAbilitiesForRole(buildPlayerAbilitiesForPosition(potentialBase, position), roleIdentity.primaryRole),
-  );
+    ageYears,
+    role: primaryRole,
+    division: clubContext.category,
+    clubTier,
+    potentialClass: archetype.potentialClass,
+  });
 
-  return {
+  return assembleGeneratedPlayer({
     id,
-    firstName: identity.firstName,
-    lastName: identity.lastName,
-    birthDate: gameDate(FAKE_CAREER_START_EPOCH_DAY - ageYears * 365 - birthDateJitter),
-    naturalPositions: [position],
-    ...roleIdentity,
+    identity,
+    referenceDate: gameDate(FAKE_CAREER_START_EPOCH_DAY),
+    ageYears,
+    birthDateJitterDays: birthDateJitter,
+    position,
     abilities,
     potential,
-  };
+  });
 }
 
 /**
@@ -476,20 +464,6 @@ function numberInRange(
 }
 
 /**
- * Selects a deterministic floating-point value inside an inclusive content
- * range. Attribute values are allowed to remain fractional as true values.
- */
-function numberInFloatRange(
-  range: { readonly minInclusive: number; readonly maxInclusive: number },
-  seed: string,
-  streamName: string,
-  id: PlayerId,
-): number {
-  const rng = deriveRng(seed, streamName, id);
-  return range.minInclusive + rng.nextFloat() * (range.maxInclusive - range.minInclusive);
-}
-
-/**
  * Applies the early squad-depth shape before full role/potential tuning.
  */
 function slotDepthOffset(slotNumber: number): number {
@@ -517,51 +491,6 @@ function currentAbilityRarityLaneForArchetype(archetypeKey: GeneratedPlayerArche
     case "rare_prodigy":
       return "normal";
   }
-}
-
-function potentialAtLeastCurrent(current: Player["abilities"], potential: Player["potential"]): Player["potential"] {
-  return {
-    technical: {
-      finishing: maxAbility(current.technical.finishing, potential.technical.finishing),
-      passing: maxAbility(current.technical.passing, potential.technical.passing),
-      longPassing: maxAbility(current.technical.longPassing, potential.technical.longPassing),
-      crossing: maxAbility(current.technical.crossing, potential.technical.crossing),
-      dribbling: maxAbility(current.technical.dribbling, potential.technical.dribbling),
-      technique: maxAbility(current.technical.technique, potential.technical.technique),
-      tackling: maxAbility(current.technical.tackling, potential.technical.tackling),
-      penalties: maxAbility(current.technical.penalties, potential.technical.penalties),
-      freeKicks: maxAbility(current.technical.freeKicks, potential.technical.freeKicks),
-    },
-    physical: {
-      pace: maxAbility(current.physical.pace, potential.physical.pace),
-      strength: maxAbility(current.physical.strength, potential.physical.strength),
-      stamina: maxAbility(current.physical.stamina, potential.physical.stamina),
-      agility: maxAbility(current.physical.agility, potential.physical.agility),
-      heading: maxAbility(current.physical.heading, potential.physical.heading),
-    },
-    mental: {
-      positioning: maxAbility(current.mental.positioning, potential.mental.positioning),
-      vision: maxAbility(current.mental.vision, potential.mental.vision),
-      anticipation: maxAbility(current.mental.anticipation, potential.mental.anticipation),
-      composure: maxAbility(current.mental.composure, potential.mental.composure),
-      determination: maxAbility(current.mental.determination, potential.mental.determination),
-      leadership: maxAbility(current.mental.leadership, potential.mental.leadership),
-    },
-    goalkeeping: {
-      reflexes: maxAbility(current.goalkeeping.reflexes, potential.goalkeeping.reflexes),
-      handling: maxAbility(current.goalkeeping.handling, potential.goalkeeping.handling),
-      rushingOut: maxAbility(current.goalkeeping.rushingOut, potential.goalkeeping.rushingOut),
-      goalkeeperPositioning: maxAbility(
-        current.goalkeeping.goalkeeperPositioning,
-        potential.goalkeeping.goalkeeperPositioning,
-      ),
-      footwork: maxAbility(current.goalkeeping.footwork, potential.goalkeeping.footwork),
-    },
-  };
-}
-
-function maxAbility(current: number, potential: number) {
-  return abilityValue(Math.max(current, potential));
 }
 
 /**

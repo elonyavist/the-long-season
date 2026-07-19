@@ -7,6 +7,7 @@ import {
 } from "./player-archetypes.ts";
 import {
   PLAYER_POTENTIAL_RARITY_BANDS,
+  currentAbilityRarityLaneForYouthProspect,
   potentialRarityBudgetForDivision,
   potentialRarityForArchetype,
   potentialRarityForPotentialClass,
@@ -31,4 +32,13 @@ test("third-division rarity budget keeps high and elite potential bounded", () =
   assert.equal(budget.elitePerDivision.minInclusive, 0);
   assert.equal(budget.elitePerDivision.maxInclusive, 1);
   assert.equal(budget.eliteChance > 0 && budget.eliteChance < 1, true);
+});
+
+test("youth current lane boost is limited to stronger prospects and academies", () => {
+  assert.equal(currentAbilityRarityLaneForYouthProspect("normal_youth", 5), "normal");
+  assert.equal(currentAbilityRarityLaneForYouthProspect("good_prospect", 4), "normal");
+  assert.equal(currentAbilityRarityLaneForYouthProspect("good_prospect", 5), "rare");
+  assert.equal(currentAbilityRarityLaneForYouthProspect("serious_prospect", 3), "normal");
+  assert.equal(currentAbilityRarityLaneForYouthProspect("serious_prospect", 4), "rare");
+  assert.equal(currentAbilityRarityLaneForYouthProspect("rare_prodigy", 5), "rare");
 });

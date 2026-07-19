@@ -12,7 +12,7 @@ import {
 } from "./MatchdayHalfTimePhase";
 
 describe("MatchdayHalfTimePhase", () => {
-  it("orders review, decision signals, validation, and the shared tactical workspace", () => {
+  it("opens a concise Summary and exposes four enabled half-time views", () => {
     const fixture = createHalfTimeTestFixture("half-time-phase-order");
     const presentation = buildCareerMatchdayPresentationView(fixture.phaseView);
     const review = presentation.halfTimeReview;
@@ -36,18 +36,27 @@ describe("MatchdayHalfTimePhase", () => {
       }),
     );
 
-    const reviewIndex = markup.indexOf("First-half review");
-    const signalsIndex = markup.indexOf("Decision signals");
-    const boardIndex = markup.indexOf("Half-time board");
-
-    expect(reviewIndex).toBeGreaterThan(-1);
-    expect(signalsIndex).toBeGreaterThan(reviewIndex);
-    expect(boardIndex).toBeGreaterThan(signalsIndex);
-    expect(markup).toContain("Tactical board");
-    expect(markup).toContain("tls-tactical-bench-board");
-    expect(markup.match(/Current shape/g) ?? []).toHaveLength(1);
+    const summaryIndex = markup.indexOf("Half-time decisions");
+    expect(summaryIndex).toBeGreaterThan(-1);
+    expect(markup).toContain('role="tablist"');
+    expect(markup).toContain('aria-label="Half-time views"');
+    expect(markup).toContain('data-motion-active="false"');
+    expect(markup).toContain('data-motion-checkpoint-panel="half_time"');
+    expect(markup).toContain('data-motion-tab-panel="summary"');
+    expect(markup.match(/role="tab"/g) ?? []).toHaveLength(4);
+    expect(markup).not.toContain('disabled=""');
+    expect(markup).toContain('aria-selected="true"');
+    expect(markup).toContain("Summary");
+    expect(markup).toContain("Tactics");
+    expect(markup).toContain("Your team");
+    expect(markup).toContain("Opponent");
+    expect(markup).not.toContain("Tactical board");
+    expect(markup).not.toContain("tls-tactical-bench-board");
     expect(markup.match(/0\/5 changes/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("Decision signals");
     expect(markup).not.toContain("Half-time score");
+    expect(markup).not.toContain("First-half review");
+    expect(markup).not.toContain("Match tabellino");
     expect(markup).not.toContain("Selected club");
   });
 
@@ -97,8 +106,8 @@ describe("MatchdayHalfTimePhase", () => {
       }),
     );
 
-    expect(markup).toContain("No major events yet");
     expect(markup).toContain("No urgent concerns.");
     expect(markup).toContain("No standout contribution yet.");
+    expect(markup).toContain('aria-selected="true"');
   });
 });

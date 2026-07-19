@@ -16,6 +16,7 @@ type CareerDevelopmentReportFormatResult = {
   readonly biggestDecline?: CareerDevelopmentReportPlayerExample;
   readonly stalledProspect?: CareerDevelopmentReportPlayerExample;
   readonly decliningVeteran?: CareerDevelopmentReportPlayerExample;
+  readonly trajectorySamples: readonly CareerDevelopmentTrajectorySample[];
 };
 
 type CareerDevelopmentReportPlayerExample = {
@@ -24,6 +25,16 @@ type CareerDevelopmentReportPlayerExample = {
   readonly endAge: number;
   readonly totalGrowth: number;
   readonly totalDecline: number;
+};
+
+type CareerDevelopmentTrajectorySample = {
+  readonly targetAge: number;
+  readonly playerId: PlayerId;
+  readonly startAge: number;
+  readonly endAge: number;
+  readonly totalGrowth: number;
+  readonly totalDecline: number;
+  readonly ceilingRoom: number;
 };
 
 /** Formats the in-memory lab report for multi-season player development. */
@@ -68,6 +79,8 @@ export function formatCareerDevelopmentReportOutput(input: {
       input.result.careerState,
       input.text,
     )}`,
+    `${input.text("career.developmentReport.trajectorySamples")}:`,
+    ...input.result.trajectorySamples.map((sample) => `  ${formatTrajectorySample(sample, input.result.careerState, input.text)}`),
   ];
 }
 
@@ -91,4 +104,20 @@ function formatDevelopmentExample(
 
 function formatDelta(value: number): string {
   return value.toFixed(2);
+}
+
+function formatTrajectorySample(
+  sample: CareerDevelopmentTrajectorySample,
+  careerState: CliCareerState,
+  text: Translator,
+): string {
+  return text("career.developmentReport.trajectorySampleValue", {
+    targetAge: String(sample.targetAge),
+    player: playerLabel(sample.playerId, careerState.gameState),
+    startAge: String(sample.startAge),
+    endAge: String(sample.endAge),
+    growth: formatDelta(sample.totalGrowth),
+    decline: formatDelta(sample.totalDecline),
+    room: formatDelta(sample.ceilingRoom),
+  });
 }

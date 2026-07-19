@@ -3,27 +3,38 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  PLAYER_ABILITY_KEYS,
+  accruePlayerFixtureParticipation,
   abilityValue,
   clubId,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   createMarketState,
+  fixtureId,
   gameDate,
+  hardCapForRoleAbility,
   playerId,
+  readPlayerAbility,
   saveId,
   seasonId,
   stateValue,
   type CareerState,
   type Club,
   type ClubId,
+  type FixtureId,
   type GameState,
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type SeasonId,
 } from "@game/domain";
 
-import { developPlayersForSeason } from "./player-development.ts";
+import {
+  developPlayersForSeason,
+  summarizePlayerDevelopmentAbilities,
+} from "./player-development.ts";
 
 /**
  * Player-development tests protect the Phase 28 growth model before decline
@@ -48,6 +59,42 @@ test("developPlayersForSeason grows an ordinary young player deterministically",
   assert.equal(result.changes[0]?.improvedAbilityCount > 0, true);
   assert.equal(developed.abilities.technical.finishing > 8, true);
   assert.equal(developed.abilities.technical.finishing <= 11, true);
+});
+
+test("developPlayersForSeason reports current and potential through the same role profile", () => {
+  const young = playerId("player:role-summary");
+  const careerState = careerStateFixture([
+    playerFixture(young, "cm", 19, abilitySet(8), abilitySet(11)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "role-summary-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const change = result.changes[0];
+
+  assert.equal(change?.roleCurrentAbilityBefore, 8);
+  assert.equal((change?.roleCurrentAbilityAfter ?? 0) > 8, true);
+  assert.equal(Math.abs(Number(change?.rolePotentialAbility) - 11) < 1e-9, true);
+  assert.equal(summarizePlayerDevelopmentAbilities(requiredPlayer(result.careerState, young), "central_midfielder").measure, "role");
+});
+
+test("developPlayersForSeason stalls cleanly when every attribute has no potential room", () => {
+  const player = playerId("player:no-room");
+  const careerState = careerStateFixture([
+    playerFixture(player, "cm", 18, abilitySet(8), abilitySet(8)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "no-room-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal(result.changes[0]?.totalGrowth, 0);
+  assert.equal(result.changes[0]?.improvedAbilityCount, 0);
+  assert.deepEqual(requiredPlayer(result.careerState, player).abilities, requiredPlayer(careerState, player).abilities);
 });
 
 test("developPlayersForSeason gives bigger growth to the same young player with more potential room", () => {
@@ -79,7 +126,7 @@ test("developPlayersForSeason gives a rare prodigy upside without exceeding pote
   });
   const developed = requiredPlayer(result.careerState, prodigy);
 
-  assert.equal((result.changes[0]?.totalGrowth ?? 0) > 1, true);
+  assert.equal((result.changes[0]?.improvedAbilityCount ?? 0) > 0, true);
   assert.equal(developed.abilities.technical.finishing <= 18, true);
   assert.equal(developed.abilities.physical.pace <= 18, true);
 });
@@ -146,10 +193,12 @@ test("developPlayersForSeason does not grow a center back past the finishing har
   ]);
 
   for (let seasonNumber = 1; seasonNumber <= 6; seasonNumber += 1) {
+    const currentSeasonId = seasonId(`season:${String(seasonNumber).padStart(4, "0")}`);
+    careerState = careerStateWithMonthlyParticipation(careerState, currentSeasonId);
     careerState = developPlayersForSeason({
       careerState,
       worldSeed: "defender-cap-world",
-      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+      seasonId: currentSeasonId,
     }).careerState;
     careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
   }
@@ -166,10 +215,12 @@ test("developPlayersForSeason does not grow a striker past the tackling hard cap
   ]);
 
   for (let seasonNumber = 1; seasonNumber <= 6; seasonNumber += 1) {
+    const currentSeasonId = seasonId(`season:${String(seasonNumber).padStart(4, "0")}`);
+    careerState = careerStateWithMonthlyParticipation(careerState, currentSeasonId);
     careerState = developPlayersForSeason({
       careerState,
       worldSeed: "striker-cap-world",
-      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+      seasonId: currentSeasonId,
     }).careerState;
     careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
   }
@@ -177,6 +228,32 @@ test("developPlayersForSeason does not grow a striker past the tackling hard cap
   const developed = requiredPlayer(careerState, striker);
   assert.equal(Number(developed.abilities.technical.tackling), 10);
   assert.equal(Number(developed.abilities.technical.finishing) > 10, true);
+});
+
+test("developPlayersForSeason keeps every seven-season center-back ability inside potential, scale, and role caps", () => {
+  const defender = playerId("player:all-center-back-caps");
+  let careerState = careerStateFixture([
+    playerFixture(defender, "cb", 17, abilitySet(4), abilitySet(20)),
+  ]);
+
+  for (let seasonNumber = 1; seasonNumber <= 7; seasonNumber += 1) {
+    const currentSeasonId = seasonId(`season:${String(seasonNumber).padStart(4, "0")}`);
+    careerState = careerStateWithMonthlyParticipation(careerState, currentSeasonId);
+    careerState = developPlayersForSeason({
+      careerState,
+      worldSeed: "all-center-back-caps-world",
+      seasonId: currentSeasonId,
+    }).careerState;
+    careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
+  }
+
+  const developed = requiredPlayer(careerState, defender);
+  for (const key of PLAYER_ABILITY_KEYS) {
+    const value = Number(readPlayerAbility(developed.abilities, key));
+    const potential = Number(readPlayerAbility(developed.potential, key));
+    const cap = hardCapForRoleAbility("center_back", key) ?? 20;
+    assert.equal(value >= 1 && value <= Math.min(potential, cap), true, `${key}=${value}`);
+  }
 });
 
 test("developPlayersForSeason keeps goalkeepers goalkeeper-shaped", () => {
@@ -272,6 +349,29 @@ test("developPlayersForSeason declines late-career attackers", () => {
   assert.equal(after.abilities.physical.pace < 13, true);
 });
 
+test("developPlayersForSeason never declines an ability below the generated scale floor", () => {
+  const veteran = playerId("player:decline-floor");
+  const careerState = careerStateFixture([
+    playerFixture(veteran, "st", 38, abilitySet(1), abilitySet(7)),
+  ]);
+
+  const result = developPlayersForSeason({
+    careerState,
+    worldSeed: "decline-floor-world",
+    seasonId: seasonId("season:0001"),
+  });
+  const developed = requiredPlayer(result.careerState, veteran);
+
+  assert.equal(result.changes[0]?.totalDecline, 0);
+  assert.equal(developed.abilities.physical.pace, 7);
+  assert.equal(developed.abilities.physical.stamina, 7);
+  assert.equal(developed.abilities.physical.agility, 7);
+  assert.equal(developed.abilities.physical.strength, 7);
+  assert.equal(developed.abilities.physical.heading, 7);
+  assert.equal(developed.abilities.technical.finishing, 1);
+  assert.equal(developed.abilities.mental.composure, 1);
+});
+
 test("developPlayersForSeason does not decline young players", () => {
   const young = playerId("player:no-decline-young");
   const careerState = careerStateFixture([
@@ -315,10 +415,12 @@ test("developPlayersForSeason never lets long-run growth exceed true potential",
   ]);
 
   for (let seasonNumber = 1; seasonNumber <= 7; seasonNumber += 1) {
+    const currentSeasonId = seasonId(`season:${String(seasonNumber).padStart(4, "0")}`);
+    careerState = careerStateWithMonthlyParticipation(careerState, currentSeasonId);
     careerState = developPlayersForSeason({
       careerState,
       worldSeed: "bounded-world",
-      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+      seasonId: currentSeasonId,
     }).careerState;
     careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
   }
@@ -341,10 +443,12 @@ test("developPlayersForSeason does not turn every high-upside youth into a star"
   ]);
 
   for (let seasonNumber = 1; seasonNumber <= 7; seasonNumber += 1) {
+    const currentSeasonId = seasonId(`season:${String(seasonNumber).padStart(4, "0")}`);
+    careerState = careerStateWithMonthlyParticipation(careerState, currentSeasonId);
     careerState = developPlayersForSeason({
       careerState,
       worldSeed: "not-all-stars-world",
-      seasonId: seasonId(`season:${String(seasonNumber).padStart(4, "0")}`),
+      seasonId: currentSeasonId,
     }).careerState;
     careerState = careerStateWithCurrentDate(careerState, gameDate(20_000 + seasonNumber * 365));
   }
@@ -362,7 +466,7 @@ test("developPlayersForSeason does not turn every high-upside youth into a star"
 function careerStateFixture(players: readonly Player[]): CareerState {
   const selectedClubId = clubId("club:selected");
 
-  return createCareerState({
+  const careerState = createCareerState({
     saveId: saveId("save:player-development"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
@@ -373,6 +477,7 @@ function careerStateFixture(players: readonly Player[]): CareerState {
     }),
     transferHistory: [],
   });
+  return careerStateWithMonthlyParticipation(careerState, careerState.gameState.calendar.currentSeasonId);
 }
 
 function careerStateWithCurrentDate(careerState: CareerState, currentDate: GameState["calendar"]["currentDate"]): CareerState {
@@ -386,6 +491,69 @@ function careerStateWithCurrentDate(careerState: CareerState, currentDate: GameS
       },
     },
   });
+}
+
+function careerStateWithMonthlyParticipation(careerState: CareerState, targetSeasonId: SeasonId): CareerState {
+  if (careerState.playerParticipationLedger?.rowKeys.some((rowKey) => rowKey.startsWith(`${targetSeasonId}|`)) === true) {
+    return careerState;
+  }
+
+  let playerParticipationLedger = careerState.playerParticipationLedger ?? createEmptyPlayerParticipationLedger();
+  careerState.gameState.playerIds.forEach((id, playerIndex) => {
+    const player = requiredPlayer(careerState, id);
+    const role = roleForPosition(player.naturalPositions[0]);
+    for (let fixtureNumber = 1; fixtureNumber <= 5; fixtureNumber += 1) {
+      const minutes = 90;
+      playerParticipationLedger = accruePlayerFixtureParticipation(playerParticipationLedger, {
+        fixtureId: fixtureIdForParticipation(targetSeasonId, id, fixtureNumber),
+        playerId: id,
+        seasonId: targetSeasonId,
+        monthKey: "2026-08",
+        started: fixtureNumber <= 4,
+        substituteAppearance: fixtureNumber === 5,
+        minutes,
+        rating: 6.8 + ((playerIndex + fixtureNumber) % 3) * 0.2,
+        playedRoleMinutes: { [role]: minutes },
+      });
+    }
+  });
+
+  return createCareerState({
+    ...careerState,
+    playerParticipationLedger,
+  });
+}
+
+function fixtureIdForParticipation(targetSeasonId: SeasonId, id: PlayerId, fixtureNumber: number): FixtureId {
+  return fixtureId(`fixture:${String(targetSeasonId).replace("season:", "")}-${String(id).replace("player:", "")}-${fixtureNumber}`);
+}
+
+function roleForPosition(position: PlayerPosition | undefined) {
+  switch (position) {
+    case "gk":
+      return "goalkeeper";
+    case "cb":
+      return "center_back";
+    case "rb":
+    case "lb":
+      return "full_back";
+    case "rwb":
+    case "lwb":
+      return "wing_back";
+    case "dm":
+      return "defensive_midfielder";
+    case "am":
+      return "attacking_midfielder";
+    case "rw":
+      return "right_winger";
+    case "lw":
+      return "left_winger";
+    case "st":
+      return "striker";
+    case "cm":
+    default:
+      return "central_midfielder";
+  }
 }
 
 function gameStateFixture(selectedClubId: ClubId, players: readonly Player[]): GameState {

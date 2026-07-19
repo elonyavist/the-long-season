@@ -9,9 +9,6 @@ import type {
 const MATCHDAY_PHASES = ["pre_match", "first_half", "half_time", "second_half", "full_time"] as const;
 
 const GOAL_EVENT_KINDS = new Set(["goal"]);
-const PENALTY_EVENT_KINDS = new Set(["penalty", "penalty_goal", "penalty_miss", "penalty_save"]);
-const CARD_EVENT_KINDS = new Set(["yellow_card", "red_card", "second_yellow"]);
-const INJURY_EVENT_KINDS = new Set(["injury"]);
 const SUBSTITUTION_EVENT_KINDS = new Set(["substitution"]);
 const TEAM_RESULT_REASON_KEYS = new Set([
   "result_win",
@@ -31,10 +28,7 @@ export type MatchdayPresenterPhase = (typeof MATCHDAY_PHASES)[number];
 export type MatchdayPhaseIndicatorStatus = "complete" | "current" | "upcoming";
 
 /** Football-first event priority used by the matchday screen. */
-export type MatchdayEventVisualPriority = "goal" | "high" | "secondary" | "detail";
-
-/** Stable event lane for the matchday screen. */
-export type MatchdayEventLane = "tabellino" | "live_feed";
+export type MatchdayEventVisualPriority = "goal" | "secondary" | "detail";
 
 /** Manager decision exposed by the web matchday after reveal-only actions are removed. */
 export type MatchdayManagerActionId = Exclude<
@@ -79,34 +73,55 @@ export interface MatchdayScoreHeaderView {
   readonly selectedClubScoreState: CareerMatchdayPhaseView["scoreboard"]["selectedClubScoreState"];
 }
 
-/** One event enriched with screen-only priority and lane metadata. */
+/** One event enriched with screen-only priority for the current live moment. */
 export interface MatchdayPresentedEventView {
   /** Original structured event from the shared read model. */
   readonly event: CareerMatchdayPhaseEventView;
   /** Visual hierarchy for rendering. */
   readonly visualPriority: MatchdayEventVisualPriority;
-  /** Screen lane where this fact belongs. */
-  readonly lane: MatchdayEventLane;
-  /** Whether this event deserves tabellino prominence. */
-  readonly isHeadline: boolean;
 }
 
-/** Grouped event facts for a live phase or full-time review. */
-export interface MatchdayEventGroupsView {
-  /** Football tabellino facts: goals first, then real high/secondary match facts. */
-  readonly tabellino: readonly MatchdayPresentedEventView[];
-  /** Live-detail facts such as misses, saves, blocks, and errors. */
-  readonly liveFeed: readonly MatchdayPresentedEventView[];
-  /** Convenience flag for empty-state rendering. */
-  readonly hasTabellino: boolean;
-  /** Convenience flag for empty-state rendering. */
-  readonly hasLiveFeed: boolean;
+/** One current structured incident used by the replace-in-place live line. */
+export interface MatchdayLiveMomentView {
+  /** Current event, absent during intentional opening and closing transitions. */
+  readonly event?: MatchdayPresentedEventView;
+  /** Visual hierarchy for the stable commentary region. */
+  readonly visualPriority: MatchdayEventVisualPriority | "transition";
+}
+
+/** Fixture side that owns one tabellino incident. */
+export type MatchdayTabellinoSide = "home" | "away";
+
+/** One real incident kept in the persistent compact match record. */
+export interface MatchdayTabellinoIncidentView {
+  /** Original structured event from the shared read model. */
+  readonly event: CareerMatchdayPhaseEventView;
+  /** Fixture side used to place the incident in the correct visual lane. */
+  readonly side: MatchdayTabellinoSide;
+  /** Goals dominate; other currently supported incidents stay quieter. */
+  readonly visualPriority: "goal" | "secondary";
+}
+
+/** One chronological compact record shared by live, half-time, and full-time. */
+export interface MatchdayTabellinoView {
+  /** Home club identity for the desktop lane heading. */
+  readonly homeClubName: string;
+  /** Away club identity for the desktop lane heading. */
+  readonly awayClubName: string;
+  /** Current real incidents in deterministic chronological order. */
+  readonly incidents: readonly MatchdayTabellinoIncidentView[];
 }
 
 /** Decision-grade first-half facts shown before the tactical workspace. */
 export interface MatchdayHalfTimeReviewView {
-  /** Decisive first-half events already classified for football-first rendering. */
-  readonly decisiveEvents: readonly MatchdayPresentedEventView[];
+  /** Existing selected-club identity for the team tab heading. */
+  readonly selectedClubName: string;
+  /** Existing opponent identity for the opponent tab heading. */
+  readonly opponentClubName: string;
+  /** Selected-club rows ordered for a live half-time review. */
+  readonly selectedTeamPlayers: readonly CareerMatchdayPhasePlayerView[];
+  /** Opponent rows containing only observed match facts. */
+  readonly opponentPlayers: readonly CareerMatchdayPhasePlayerView[];
   /** Selected-club players whose rating or condition warrants attention. */
   readonly watchList: readonly CareerMatchdayPhasePlayerView[];
   /** Selected-club players making a positive structured contribution. */
@@ -125,14 +140,16 @@ export interface MatchdayFullTimeConsequenceView {
   readonly playerState?: CareerMatchdayPhaseView["playerStateChanges"][number];
 }
 
-/** Concise full-time facts for the selected club's final review. */
+/** Concise full-time facts for both teams and the selected club's durable review. */
 export interface MatchdayFullTimeReviewView {
-  /** Existing selected-club identity for the ratings heading. */
+  /** Existing selected-club identity for the default ratings tab. */
   readonly selectedClubName: string;
-  /** Prioritized structured incidents; no narrative events are added. */
-  readonly events: readonly MatchdayPresentedEventView[];
-  /** Final ratings for the selected club only. */
-  readonly ratings: readonly CareerMatchdayPhasePlayerView[];
+  /** Existing opponent identity for the observed-facts ratings tab. */
+  readonly opponentClubName: string;
+  /** Final selected-club rows ordered for review. */
+  readonly selectedTeamPlayers: readonly CareerMatchdayPhasePlayerView[];
+  /** Final opponent rows containing only observed match facts. */
+  readonly opponentPlayers: readonly CareerMatchdayPhasePlayerView[];
   /** Non-zero durable consequences merged by player. */
   readonly consequences: readonly MatchdayFullTimeConsequenceView[];
 }
@@ -145,8 +162,8 @@ export interface CareerMatchdayPresentationView {
   readonly phaseIndicators: readonly MatchdayPhaseIndicatorView[];
   /** Main command for the current phase, if one exists. */
   readonly primaryAction?: MatchdayManagerActionView;
-  /** Prioritized and grouped event facts. */
-  readonly eventGroups: MatchdayEventGroupsView;
+  /** Persistent chronological match record. */
+  readonly tabellino: MatchdayTabellinoView;
   /** Half-time-only facts that support a manager decision without duplicating the scoreboard. */
   readonly halfTimeReview?: MatchdayHalfTimeReviewView;
   /** Full-time-only football and durable-state review facts. */
@@ -162,18 +179,17 @@ export function buildCareerMatchdayPresentationView(
   phaseView: CareerMatchdayPhaseView,
 ): CareerMatchdayPresentationView {
   const primaryAction = selectMatchdayPrimaryAction(phaseView);
-  const eventGroups = buildMatchdayEventGroups(phaseView.timelineEvents);
 
   return {
     scoreHeader: buildMatchdayScoreHeader(phaseView),
     phaseIndicators: buildMatchdayPhaseIndicators(phaseView.phase),
     ...(primaryAction === undefined ? {} : { primaryAction }),
-    eventGroups,
+    tabellino: buildMatchdayTabellinoView(phaseView),
     ...(phaseView.phase === "half_time"
-      ? { halfTimeReview: buildMatchdayHalfTimeReviewView(phaseView, eventGroups) }
+      ? { halfTimeReview: buildMatchdayHalfTimeReviewView(phaseView) }
       : {}),
     ...(phaseView.phase === "full_time"
-      ? { fullTimeReview: buildMatchdayFullTimeReviewView(phaseView, eventGroups) }
+      ? { fullTimeReview: buildMatchdayFullTimeReviewView(phaseView) }
       : {}),
   };
 }
@@ -184,23 +200,32 @@ export function buildCareerMatchdayPresentationView(
  */
 export function buildMatchdayHalfTimeReviewView(
   phaseView: CareerMatchdayPhaseView,
-  eventGroups: MatchdayEventGroupsView = buildMatchdayEventGroups(phaseView.timelineEvents),
 ): MatchdayHalfTimeReviewView {
-  const selectedPlayers = phaseView.playerRows.filter((row) =>
-    row.club.clubId === phaseView.selectedClub.clubId && row.status === "on_pitch"
-  );
-  const watchList = selectedPlayers
+  const opponentClub = phaseView.fixture.homeClub.clubId === phaseView.selectedClub.clubId
+    ? phaseView.fixture.awayClub
+    : phaseView.fixture.homeClub;
+  const selectedTeamPlayers = phaseView.playerRows
+    .filter((row) => row.club.clubId === phaseView.selectedClub.clubId)
+    .toSorted(compareHalfTimeTeamRows);
+  const opponentPlayers = phaseView.playerRows
+    .filter((row) => row.club.clubId === opponentClub.clubId)
+    .toSorted(compareHalfTimeTeamRows);
+  const selectedPlayersOnPitch = selectedTeamPlayers.filter((row) => isActivePlayerStatus(row.status));
+  const watchList = selectedPlayersOnPitch
     .filter(needsHalfTimeAttention)
     .toSorted(compareHalfTimeAttention)
     .slice(0, 3);
   const watchedPlayerIds = new Set(watchList.map((row) => row.playerId));
-  const contributors = selectedPlayers
+  const contributors = selectedPlayersOnPitch
     .filter((row) => !watchedPlayerIds.has(row.playerId) && isHalfTimeContributor(row))
     .toSorted(compareHalfTimeContribution)
     .slice(0, 3);
 
   return {
-    decisiveEvents: eventGroups.tabellino,
+    selectedClubName: phaseView.selectedClub.name,
+    opponentClubName: opponentClub.name,
+    selectedTeamPlayers,
+    opponentPlayers,
     watchList,
     contributors,
   };
@@ -208,15 +233,20 @@ export function buildMatchdayHalfTimeReviewView(
 
 /**
  * Builds one full-time review from existing match and career consequences.
- * Opponent ratings, unchanged state, and duplicate next-action facts are not
- * part of this presentation contract.
+ * Both teams expose the same observed match facts; unchanged state and
+ * duplicate next-action facts are not part of this presentation contract.
  */
 export function buildMatchdayFullTimeReviewView(
   phaseView: CareerMatchdayPhaseView,
-  eventGroups: MatchdayEventGroupsView = buildMatchdayEventGroups(phaseView.timelineEvents),
 ): MatchdayFullTimeReviewView {
-  const ratings = phaseView.playerRows
+  const opponentClub = phaseView.fixture.homeClub.clubId === phaseView.selectedClub.clubId
+    ? phaseView.fixture.awayClub
+    : phaseView.fixture.homeClub;
+  const selectedTeamPlayers = phaseView.playerRows
     .filter((row) => row.club.clubId === phaseView.selectedClub.clubId)
+    .toSorted(compareFullTimeRatings);
+  const opponentPlayers = phaseView.playerRows
+    .filter((row) => row.club.clubId === opponentClub.clubId)
     .toSorted(compareFullTimeRatings);
   const conditionByPlayerId = new Map(
     phaseView.conditionChanges
@@ -256,8 +286,9 @@ export function buildMatchdayFullTimeReviewView(
 
   return {
     selectedClubName: phaseView.selectedClub.name,
-    events: eventGroups.tabellino,
-    ratings,
+    opponentClubName: opponentClub.name,
+    selectedTeamPlayers,
+    opponentPlayers,
     consequences,
   };
 }
@@ -321,65 +352,75 @@ function isManagerMatchdayAction(
 }
 
 /**
- * Groups structured match events into a prominent tabellino lane and a quieter
- * live-feed lane. No unavailable event kinds are invented here.
+ * Builds the single persistent match record from event kinds produced by the
+ * current game. Unsupported future incident branches are intentionally absent.
  */
-export function buildMatchdayEventGroups(
-  events: readonly CareerMatchdayPhaseEventView[],
-): MatchdayEventGroupsView {
-  const presentedEvents = events.map(presentMatchdayEvent);
-  const tabellino = presentedEvents
-    .filter((event) => event.lane === "tabellino")
-    .toSorted(compareTabellinoEvents);
-  const liveFeed = presentedEvents
-    .filter((event) => event.lane === "live_feed")
-    .toSorted(compareChronologicalEvents);
+export function buildMatchdayTabellinoView(
+  phaseView: Pick<CareerMatchdayPhaseView, "fixture" | "timelineEvents">,
+): MatchdayTabellinoView {
+  const incidents = phaseView.timelineEvents
+    .flatMap((event): readonly MatchdayTabellinoIncidentView[] => {
+      const visualPriority = tabellinoPriority(event);
+      if (visualPriority === undefined) return [];
+
+      const side = event.club.clubId === phaseView.fixture.homeClub.clubId
+        ? "home"
+        : event.club.clubId === phaseView.fixture.awayClub.clubId
+          ? "away"
+          : undefined;
+      if (side === undefined) return [];
+
+      return [{ event, side, visualPriority }];
+    })
+    .toSorted(compareTabellinoIncidents);
 
   return {
-    tabellino,
-    liveFeed,
-    hasTabellino: tabellino.length > 0,
-    hasLiveFeed: liveFeed.length > 0,
+    homeClubName: phaseView.fixture.homeClub.name,
+    awayClubName: phaseView.fixture.awayClub.name,
+    incidents,
   };
 }
 
 /**
- * Classifies a single structured event for football-first rendering. Goals are
- * the strongest visual priority; misses, saves, blocks, and errors remain live
- * detail unless the shared read model marks them as major.
+ * Selects the event that owns the current live moment. A playback frame may
+ * reveal several chronological events, so callers can provide the event ID
+ * that determined the frame hold instead of assuming the last event is the
+ * decisive one.
  */
-export function presentMatchdayEvent(event: CareerMatchdayPhaseEventView): MatchdayPresentedEventView {
-  if (GOAL_EVENT_KINDS.has(event.kind)) {
-    return presentedEvent(event, "goal", "tabellino", true);
+export function buildMatchdayLiveMoment(
+  events: readonly CareerMatchdayPhaseEventView[],
+  currentEventId?: string,
+): MatchdayLiveMomentView {
+  const currentEvent = currentEventId === undefined
+    ? events.at(-1)
+    : events.find((event) => event.eventId === currentEventId);
+
+  if (currentEvent === undefined) {
+    return { visualPriority: "transition" };
   }
 
-  if (PENALTY_EVENT_KINDS.has(event.kind)) {
-    return presentedEvent(event, "high", "tabellino", true);
-  }
-
-  if (CARD_EVENT_KINDS.has(event.kind) || INJURY_EVENT_KINDS.has(event.kind) || SUBSTITUTION_EVENT_KINDS.has(event.kind)) {
-    return presentedEvent(event, "secondary", "tabellino", false);
-  }
-
-  if (event.cardPriority === "major") {
-    return presentedEvent(event, "secondary", "tabellino", false);
-  }
-
-  return presentedEvent(event, "detail", "live_feed", false);
+  const presentedEvent: MatchdayPresentedEventView = {
+    event: currentEvent,
+    visualPriority: liveEventPriority(currentEvent),
+  };
+  return {
+    event: presentedEvent,
+    visualPriority: presentedEvent.visualPriority,
+  };
 }
 
-function presentedEvent(
+function liveEventPriority(event: CareerMatchdayPhaseEventView): MatchdayEventVisualPriority {
+  if (GOAL_EVENT_KINDS.has(event.kind)) return "goal";
+  if (SUBSTITUTION_EVENT_KINDS.has(event.kind)) return "secondary";
+  return "detail";
+}
+
+function tabellinoPriority(
   event: CareerMatchdayPhaseEventView,
-  visualPriority: MatchdayEventVisualPriority,
-  lane: MatchdayEventLane,
-  isHeadline: boolean,
-): MatchdayPresentedEventView {
-  return {
-    event,
-    visualPriority,
-    lane,
-    isHeadline,
-  };
+): MatchdayTabellinoIncidentView["visualPriority"] | undefined {
+  if (GOAL_EVENT_KINDS.has(event.kind)) return "goal";
+  if (SUBSTITUTION_EVENT_KINDS.has(event.kind)) return "secondary";
+  return undefined;
 }
 
 function phaseIndicatorStatus(index: number, activeIndex: number): MatchdayPhaseIndicatorStatus {
@@ -400,6 +441,26 @@ function phaseIndicatorStatus(index: number, activeIndex: number): MatchdayPhase
 
 function needsHalfTimeAttention(row: CareerMatchdayPhasePlayerView): boolean {
   return (row.rating ?? 10) < 6.5 || (row.condition ?? 100) < 75;
+}
+
+function compareHalfTimeTeamRows(
+  first: CareerMatchdayPhasePlayerView,
+  second: CareerMatchdayPhasePlayerView,
+): number {
+  return halfTimeStatusRank(first.status) - halfTimeStatusRank(second.status)
+    || (second.rating ?? -1) - (first.rating ?? -1)
+    || second.impactScore - first.impactScore
+    || first.playerName.localeCompare(second.playerName);
+}
+
+function halfTimeStatusRank(status: CareerMatchdayPhasePlayerView["status"]): number {
+  if (isActivePlayerStatus(status)) return 0;
+  if (status === "substituted_off") return 1;
+  return 2;
+}
+
+function isActivePlayerStatus(status: CareerMatchdayPhasePlayerView["status"]): boolean {
+  return status === "on_pitch" || status === "substituted_on";
 }
 
 function compareHalfTimeAttention(
@@ -459,26 +520,11 @@ function fullTimeConsequenceWeight(change: MatchdayFullTimeConsequenceView): num
     + Math.abs(change.playerState?.moraleDelta ?? 0);
 }
 
-function compareTabellinoEvents(first: MatchdayPresentedEventView, second: MatchdayPresentedEventView): number {
-  return eventVisualRank(first.visualPriority) - eventVisualRank(second.visualPriority)
-    || compareChronologicalEvents(first, second);
-}
-
-function compareChronologicalEvents(first: MatchdayPresentedEventView, second: MatchdayPresentedEventView): number {
+function compareTabellinoIncidents(
+  first: MatchdayTabellinoIncidentView,
+  second: MatchdayTabellinoIncidentView,
+): number {
   return first.event.minute - second.event.minute
     || first.event.sequence - second.event.sequence
     || first.event.eventId.localeCompare(second.event.eventId);
-}
-
-function eventVisualRank(priority: MatchdayEventVisualPriority): number {
-  switch (priority) {
-    case "goal":
-      return 0;
-    case "high":
-      return 1;
-    case "secondary":
-      return 2;
-    case "detail":
-      return 3;
-  }
 }

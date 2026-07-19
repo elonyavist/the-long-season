@@ -3,7 +3,10 @@ import { join } from "node:path";
 
 import { createCareerState, type CareerState, type SaveId } from "@game/domain";
 
-import { migrateCareerSave, type StoredCareerSave } from "./career-save-envelope.ts";
+import {
+  migrateCareerSave,
+  type StoredCareerSave,
+} from "./career-save-envelope.ts";
 import type { CareerStorage, SaveCareerInput } from "./career-storage.interface.ts";
 import { StorageError } from "./game-storage.interface.ts";
 import {

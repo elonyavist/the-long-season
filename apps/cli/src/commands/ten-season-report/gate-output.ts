@@ -15,6 +15,7 @@ export function formatLongRunGateReportOutput(
     `${text("tenSeason.worlds")}: ${report.worldCount}`,
     `${text("balance.seasons")}: ${report.seasonCount}`,
     `${text("tenSeason.totalSeasons")}: ${report.totalSeasonCount}`,
+    `Execution: ${formatExecutionSummary(report)}`,
     `${text("balance.status")}: ${report.failedWorldCount === 0 ? text("common.pass") : text("common.fail")}`,
     `${text("tenSeason.failedWorlds")}: ${report.failedWorldCount}`,
     `${text("tenSeason.warningWorlds")}: ${report.warningWorldCount}`,
@@ -55,6 +56,7 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
     `Worlds: ${report.worldCount}`,
     `Seasons per world: ${report.seasonCount}`,
     `Total seasons: ${report.totalSeasonCount}`,
+    `Execution: ${formatExecutionSummary(report)}`,
     `Status: ${report.failedWorldCount === 0 ? "PASS" : "FAIL"}`,
     "",
     "## Aggregate Metrics",
@@ -132,6 +134,13 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
   ];
 
   return `${lines.join("\n")}`;
+}
+
+/**
+ * Formats deterministic execution metadata for reproducible large gates.
+ */
+function formatExecutionSummary(report: LongRunGateReport): string {
+  return `${report.execution.mode}; workers=${report.execution.workerCount}; partition_hashes=${report.execution.partitionHashes.join(",")}`;
 }
 
 /**

@@ -1,83 +1,46 @@
-import {
-  PLAYER_ARCHETYPES_BY_ROLE,
-  PLAYER_ROLES,
-  type PlayerArchetype,
-  type PlayerRole,
-} from "@game/domain";
+import { PLAYER_ROLES, type PlayerRole, type PlayerRoleFamiliarityLevel } from "../entities/player.entity.ts";
+import type { AbilityWeightProfile, PlayerAbilityKey } from "./player-abilities.ts";
 
-/** Stable path key for one visible player ability. */
-export type PlayerAbilityKey =
-  | "technical.finishing"
-  | "technical.passing"
-  | "technical.longPassing"
-  | "technical.crossing"
-  | "technical.dribbling"
-  | "technical.technique"
-  | "technical.tackling"
-  | "technical.penalties"
-  | "technical.freeKicks"
-  | "physical.pace"
-  | "physical.strength"
-  | "physical.stamina"
-  | "physical.agility"
-  | "physical.heading"
-  | "mental.positioning"
-  | "mental.vision"
-  | "mental.anticipation"
-  | "mental.composure"
-  | "mental.determination"
-  | "mental.leadership"
-  | "goalkeeping.reflexes"
-  | "goalkeeping.handling"
-  | "goalkeeping.rushingOut"
-  | "goalkeeping.goalkeeperPositioning"
-  | "goalkeeping.footwork";
+/** Attribute bucket shared by generation, role evaluation, and development. */
+export type RoleAttributeBucket =
+  | "coreForRole"
+  | "secondaryForRole"
+  | "allowedButLow"
+  | "cappedOutOfRole";
 
-/** Attribute bucket used by generation, development caps, and quality reports. */
-export type RoleAttributeBucket = "coreForRole" | "secondaryForRole" | "allowedButLow" | "cappedOutOfRole";
-
-/** Explicit deterministic ability-key order for classification tests and reports. */
-export const PLAYER_ABILITY_KEYS: readonly PlayerAbilityKey[] = [
-  "technical.finishing",
-  "technical.passing",
-  "technical.longPassing",
-  "technical.crossing",
-  "technical.dribbling",
-  "technical.technique",
-  "technical.tackling",
-  "technical.penalties",
-  "technical.freeKicks",
-  "physical.pace",
-  "physical.strength",
-  "physical.stamina",
-  "physical.agility",
-  "physical.heading",
-  "mental.positioning",
-  "mental.vision",
-  "mental.anticipation",
-  "mental.composure",
-  "mental.determination",
-  "mental.leadership",
-  "goalkeeping.reflexes",
-  "goalkeeping.handling",
-  "goalkeeping.rushingOut",
-  "goalkeeping.goalkeeperPositioning",
-  "goalkeeping.footwork",
-];
-
-/** Reusable classification and hard caps for one role profile. */
-export interface RoleAttributeClassification {
+/** Canonical role meaning, weighted attributes, and global hard caps. */
+export interface PlayerRoleProfile extends AbilityWeightProfile {
   /** Attributes that define excellence for this role. */
   readonly coreForRole: readonly PlayerAbilityKey[];
-  /** Attributes that can become good but should not dominate the role. */
+  /** Attributes that support the role without defining it. */
   readonly secondaryForRole: readonly PlayerAbilityKey[];
-  /** Attributes that may exist but should normally stay modest. */
+  /** Attributes that remain valid but deliberately low-impact. */
   readonly allowedButLow: readonly PlayerAbilityKey[];
-  /** Attributes that must stay capped because they are incoherent for the role. */
+  /** Attributes that are globally incoherent for the role. */
   readonly cappedOutOfRole: readonly PlayerAbilityKey[];
-  /** Upper bound for role-incoherent attributes on the 1..20 ability scale. */
+  /** Global upper bounds for role-incoherent attributes. */
   readonly hardCaps: Readonly<Partial<Record<PlayerAbilityKey, number>>>;
 }
+
+/** Maximum familiarity a player may reach through real exposure in a related role. */
+export type RelatedPlayerRoleExposureCeiling = Extract<PlayerRoleFamiliarityLevel, "adapted" | "natural">;
+
+/** One directional role-learning rule used by development and reports. */
+export interface RelatedPlayerRoleExposureRule {
+  /** Stable primary football identity that supplies the learning path. */
+  readonly fromRole: PlayerRole;
+  /** Related played role that can be learned through sustained minutes. */
+  readonly toRole: PlayerRole;
+  /** Highest familiarity reachable without rewriting the player's primary role. */
+  readonly ceiling: RelatedPlayerRoleExposureCeiling;
+}
+
+const ROLE_ATTRIBUTE_WEIGHTS: Readonly<Record<RoleAttributeBucket, number>> = {
+  coreForRole: 1,
+  secondaryForRole: 0.35,
+  allowedButLow: 0.08,
+  cappedOutOfRole: 0.02,
+};
 
 const OUTFIELD_GOALKEEPING_CAPS: Readonly<Partial<Record<PlayerAbilityKey, number>>> = {
   "goalkeeping.reflexes": 4,
@@ -88,8 +51,8 @@ const OUTFIELD_GOALKEEPING_CAPS: Readonly<Partial<Record<PlayerAbilityKey, numbe
 };
 
 /** Role-level Phase 33 classification data. */
-export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, RoleAttributeClassification>> = {
-  goalkeeper: classification({
+export const PLAYER_ROLE_PROFILES: Readonly<Record<PlayerRole, PlayerRoleProfile>> = {
+  goalkeeper: playerRoleProfile({
     coreForRole: ["goalkeeping.reflexes", "goalkeeping.handling", "goalkeeping.goalkeeperPositioning", "goalkeeping.rushingOut"],
     secondaryForRole: [
       "goalkeeping.footwork",
@@ -128,7 +91,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       "physical.heading": 6,
     },
   }),
-  center_back: classification({
+  center_back: playerRoleProfile({
     coreForRole: [
       "technical.tackling",
       "physical.strength",
@@ -160,7 +123,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       ...OUTFIELD_GOALKEEPING_CAPS,
     },
   }),
-  full_back: classification({
+  full_back: playerRoleProfile({
     coreForRole: [
       "technical.crossing",
       "technical.tackling",
@@ -192,7 +155,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       ...OUTFIELD_GOALKEEPING_CAPS,
     },
   }),
-  wing_back: classification({
+  wing_back: playerRoleProfile({
     coreForRole: [
       "technical.crossing",
       "technical.dribbling",
@@ -224,7 +187,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       ...OUTFIELD_GOALKEEPING_CAPS,
     },
   }),
-  defensive_midfielder: classification({
+  defensive_midfielder: playerRoleProfile({
     coreForRole: [
       "technical.tackling",
       "technical.passing",
@@ -256,7 +219,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       ...OUTFIELD_GOALKEEPING_CAPS,
     },
   }),
-  central_midfielder: classification({
+  central_midfielder: playerRoleProfile({
     coreForRole: [
       "technical.passing",
       "technical.longPassing",
@@ -286,7 +249,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
     cappedOutOfRole: goalkeeperKeys(),
     hardCaps: OUTFIELD_GOALKEEPING_CAPS,
   }),
-  attacking_midfielder: classification({
+  attacking_midfielder: playerRoleProfile({
     coreForRole: [
       "technical.passing",
       "technical.dribbling",
@@ -318,7 +281,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       ...OUTFIELD_GOALKEEPING_CAPS,
     },
   }),
-  wide_midfielder: classification({
+  wide_midfielder: playerRoleProfile({
     coreForRole: [
       "technical.crossing",
       "technical.dribbling",
@@ -348,7 +311,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
     cappedOutOfRole: goalkeeperKeys(),
     hardCaps: OUTFIELD_GOALKEEPING_CAPS,
   }),
-  winger: classification({
+  winger: playerRoleProfile({
     coreForRole: [
       "technical.crossing",
       "technical.dribbling",
@@ -380,7 +343,7 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
       ...OUTFIELD_GOALKEEPING_CAPS,
     },
   }),
-  striker: classification({
+  striker: playerRoleProfile({
     coreForRole: [
       "technical.finishing",
       "technical.technique",
@@ -414,40 +377,86 @@ export const PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerRole, 
   }),
 };
 
-/** Archetype-level lookup for future overrides; v1 maps each archetype to its parent role classification. */
-export const PLAYER_ARCHETYPE_ATTRIBUTE_CLASSIFICATIONS: Readonly<Record<PlayerArchetype, RoleAttributeClassification>> =
-  buildArchetypeClassifications();
+/** Directional role-learning graph grounded in plausible football adaptation. */
+export const RELATED_PLAYER_ROLE_EXPOSURE_RULES: readonly RelatedPlayerRoleExposureRule[] = [
+  { fromRole: "center_back", toRole: "full_back", ceiling: "adapted" },
+  { fromRole: "center_back", toRole: "defensive_midfielder", ceiling: "adapted" },
+  { fromRole: "full_back", toRole: "center_back", ceiling: "adapted" },
+  { fromRole: "full_back", toRole: "wing_back", ceiling: "natural" },
+  { fromRole: "full_back", toRole: "wide_midfielder", ceiling: "adapted" },
+  { fromRole: "wing_back", toRole: "full_back", ceiling: "natural" },
+  { fromRole: "wing_back", toRole: "wide_midfielder", ceiling: "adapted" },
+  { fromRole: "wing_back", toRole: "winger", ceiling: "adapted" },
+  { fromRole: "defensive_midfielder", toRole: "center_back", ceiling: "adapted" },
+  { fromRole: "defensive_midfielder", toRole: "central_midfielder", ceiling: "natural" },
+  { fromRole: "central_midfielder", toRole: "defensive_midfielder", ceiling: "natural" },
+  { fromRole: "central_midfielder", toRole: "attacking_midfielder", ceiling: "adapted" },
+  { fromRole: "central_midfielder", toRole: "wide_midfielder", ceiling: "adapted" },
+  { fromRole: "attacking_midfielder", toRole: "central_midfielder", ceiling: "adapted" },
+  { fromRole: "attacking_midfielder", toRole: "winger", ceiling: "adapted" },
+  { fromRole: "attacking_midfielder", toRole: "striker", ceiling: "adapted" },
+  { fromRole: "wide_midfielder", toRole: "wing_back", ceiling: "adapted" },
+  { fromRole: "wide_midfielder", toRole: "central_midfielder", ceiling: "adapted" },
+  { fromRole: "wide_midfielder", toRole: "winger", ceiling: "natural" },
+  { fromRole: "winger", toRole: "wide_midfielder", ceiling: "natural" },
+  { fromRole: "winger", toRole: "attacking_midfielder", ceiling: "adapted" },
+  { fromRole: "winger", toRole: "striker", ceiling: "adapted" },
+  { fromRole: "striker", toRole: "attacking_midfielder", ceiling: "adapted" },
+  { fromRole: "striker", toRole: "winger", ceiling: "adapted" },
+];
 
-/** Returns the attribute classification for one stable player role. */
-export function getRoleAttributeClassification(role: PlayerRole): RoleAttributeClassification {
-  return PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS[role];
+
+/** Returns the one canonical profile for a stable player role. */
+export function getPlayerRoleProfile(role: PlayerRole): PlayerRoleProfile {
+  return PLAYER_ROLE_PROFILES[role];
 }
 
-/** Returns the attribute classification for one stable player archetype. */
-export function getArchetypeAttributeClassification(archetype: PlayerArchetype): RoleAttributeClassification {
-  return PLAYER_ARCHETYPE_ATTRIBUTE_CLASSIFICATIONS[archetype];
+/** Returns the directional role-learning ceiling, if the roles are related. */
+export function relatedPlayerRoleExposureCeiling(
+  fromRole: PlayerRole,
+  toRole: PlayerRole,
+): RelatedPlayerRoleExposureCeiling | undefined {
+  if (fromRole === toRole) {
+    return "natural";
+  }
+
+  return RELATED_PLAYER_ROLE_EXPOSURE_RULES.find((rule) => rule.fromRole === fromRole && rule.toRole === toRole)?.ceiling;
 }
 
-/** Returns a hard cap for one role/ability pair, if the ability is role-capped. */
+/** Checks whether sustained minutes in `toRole` may improve familiarity. */
+export function canImprovePlayerRoleFamiliarity(fromRole: PlayerRole, toRole: PlayerRole): boolean {
+  return fromRole !== "goalkeeper" && fromRole !== toRole && relatedPlayerRoleExposureCeiling(fromRole, toRole) !== undefined;
+}
+
+/** Returns the deliberate classification bucket for one role ability. */
+export function roleAttributeBucket(role: PlayerRole, abilityKey: PlayerAbilityKey): RoleAttributeBucket {
+  const profile = getPlayerRoleProfile(role);
+  if (profile.coreForRole.includes(abilityKey)) return "coreForRole";
+  if (profile.secondaryForRole.includes(abilityKey)) return "secondaryForRole";
+  if (profile.allowedButLow.includes(abilityKey)) return "allowedButLow";
+  return "cappedOutOfRole";
+}
+
+/** Returns a global hard cap for one role/ability pair when one is defined. */
 export function hardCapForRoleAbility(role: PlayerRole, abilityKey: PlayerAbilityKey): number | undefined {
-  return PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS[role].hardCaps[abilityKey];
+  return getPlayerRoleProfile(role).hardCaps[abilityKey];
 }
 
-function classification(input: RoleAttributeClassification): RoleAttributeClassification {
-  return input;
-}
+function playerRoleProfile(
+  input: Omit<PlayerRoleProfile, "weights">,
+): PlayerRoleProfile {
+  const weights: Partial<Record<PlayerAbilityKey, number>> = {};
 
-function buildArchetypeClassifications(): Record<PlayerArchetype, RoleAttributeClassification> {
-  const result: Partial<Record<PlayerArchetype, RoleAttributeClassification>> = {};
-
-  for (const role of PLAYER_ROLES) {
-    const classificationForRole = PLAYER_ROLE_ATTRIBUTE_CLASSIFICATIONS[role];
-    for (const archetype of PLAYER_ARCHETYPES_BY_ROLE[role]) {
-      result[archetype] = classificationForRole;
+  for (const bucket of Object.keys(ROLE_ATTRIBUTE_WEIGHTS) as RoleAttributeBucket[]) {
+    for (const abilityKey of input[bucket]) {
+      weights[abilityKey] = ROLE_ATTRIBUTE_WEIGHTS[bucket];
     }
   }
 
-  return result as Record<PlayerArchetype, RoleAttributeClassification>;
+  return {
+    ...input,
+    weights,
+  };
 }
 
 function goalkeeperKeys(): readonly PlayerAbilityKey[] {

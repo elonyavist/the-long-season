@@ -18,7 +18,8 @@ import {
   createSeasonRolloverInboxMessage,
   deliverCareerInboxMessages,
 } from "./career-inbox-lifecycle.ts";
-import { developPlayersForSeason, type PlayerDevelopmentChange } from "./player-development.ts";
+import { advanceCareerMonths, type CareerMonthlyLifecycleSummary } from "./advance-career-month.ts";
+import type { PlayerDevelopmentChange } from "./player-development.ts";
 import {
   applyEndOfSeasonPlayerExits,
   type PlayerExitReason,
@@ -103,13 +104,14 @@ export interface AdvanceCareerOneSeasonInput {
 export type CareerSeasonAdvancementOperation =
   | "completed_season_validation"
   | "season_archive"
-  | "senior_development"
+  | "monthly_lifecycle"
   | "player_exits"
   | "youth_lifecycle"
   | "youth_intake"
   | "youth_promotion"
   | "squad_maintenance"
   | "transfer_turnover"
+  | "post_transfer_squad_maintenance"
   | "next_calendar_merge"
   | "player_state_rollover"
   | "season_inbox_delivery";
@@ -340,17 +342,19 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
   const operationOrder: CareerSeasonAdvancementOperation[] = [...seasonContext.operationOrder];
   const advancementSeasonId = seasonId(`${previousSeasonId}:advance:${seasonContext.nextSeasonId}`);
 
-  operationOrder.push("senior_development");
-  const developed = developPlayersForSeason({
+  operationOrder.push("monthly_lifecycle");
+  const monthlyLifecycle = advanceCareerMonths({
     careerState: input.careerState,
     worldSeed: input.worldSeed,
-    seasonId: advancementSeasonId,
+    fromDate: previousDate,
+    toDate: seasonContext.nextSeasonStartDate,
+    seasonId: previousSeasonId,
     playerIds: input.seniorDevelopmentPlayerIds ?? seniorPlayerIds(input.careerState),
   });
 
   operationOrder.push("player_exits");
   const exits = applyEndOfSeasonPlayerExits({
-    careerState: developed.careerState,
+    careerState: monthlyLifecycle.careerState,
     worldSeed: input.worldSeed,
     seasonId: advancementSeasonId,
   });
@@ -404,7 +408,14 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     seasonId: advancementSeasonId,
   });
 
-  const stateBeforePlayerRollover = applyCompletedSeasonChangesIfNeeded(turnover.careerState, seasonContext, operationOrder);
+  operationOrder.push("post_transfer_squad_maintenance");
+  const postTransferMaintained = maintainCareerSquadShape({
+    careerState: turnover.careerState,
+    intakeCandidates: intakeCandidatesNotYetActive(turnover.careerState, seniorIntakeCandidates),
+  });
+  const maintenanceRecords = [...maintained.records, ...postTransferMaintained.records];
+
+  const stateBeforePlayerRollover = applyCompletedSeasonChangesIfNeeded(postTransferMaintained.careerState, seasonContext, operationOrder);
 
   operationOrder.push("player_state_rollover");
   const rolledOver = rolloverPlayersForNextSeason({
@@ -434,7 +445,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
       nextSeasonStartDate: seasonContext.nextSeasonStartDate,
       operationOrder,
       ...(seasonContext.archive === undefined ? {} : { seasonArchive: seasonContext.archive.fact }),
-      playerDevelopment: playerDevelopmentFact(developed.changes),
+      playerDevelopment: monthlyPlayerDevelopmentFact(monthlyLifecycle.summaries),
       playerExits: playerExitFact(exits.exits),
       youthLifecycle: youthLifecycleFact(youthLifecycle.developmentChanges, youthLifecycle.records, input.careerState.selectedClubId),
       youthIntake: {
@@ -448,8 +459,8 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
       },
       squadMaintenance: {
         candidateCount: seniorIntakeCandidates.length,
-        addedPlayerCount: maintained.records.reduce((sum, record) => sum + record.addedPlayerIds.length, 0),
-        warningCount: maintained.records.reduce((sum, record) => sum + record.warnings.length, 0),
+        addedPlayerCount: maintenanceRecords.reduce((sum, record) => sum + record.addedPlayerIds.length, 0),
+        warningCount: maintenanceRecords.reduce((sum, record) => sum + record.warnings.length, 0),
       },
       transferTurnover: {
         transferCount: turnover.transfers.length,
@@ -588,6 +599,14 @@ function applyYouthIntakeIfCandidatesExist(input: {
   return applySeasonalYouthIntake(input);
 }
 
+function intakeCandidatesNotYetActive(
+  careerState: CareerState,
+  candidates: readonly CareerIntakeCandidate[],
+): readonly CareerIntakeCandidate[] {
+  const activePlayerIds = new Set(careerState.gameState.playerIds);
+  return candidates.filter((candidate) => !activePlayerIds.has(candidate.player.id));
+}
+
 function applyCompletedSeasonChangesIfNeeded(
   careerState: CareerState,
   seasonContext: PreparedSeasonContextValid,
@@ -690,13 +709,13 @@ function seniorPlayerIds(careerState: CareerState): readonly PlayerId[] {
   return playerIds;
 }
 
-function playerDevelopmentFact(changes: readonly PlayerDevelopmentChange[]): CareerPlayerDevelopmentFact {
+function monthlyPlayerDevelopmentFact(summaries: readonly CareerMonthlyLifecycleSummary[]): CareerPlayerDevelopmentFact {
   return {
-    changeCount: changes.length,
-    playersImproved: changes.filter((change) => change.totalGrowth > 0).length,
-    playersDeclined: changes.filter((change) => change.totalDecline > 0).length,
-    totalGrowth: roundFactNumber(changes.reduce((sum, change) => sum + change.totalGrowth, 0)),
-    totalDecline: roundFactNumber(changes.reduce((sum, change) => sum + change.totalDecline, 0)),
+    changeCount: summaries.reduce((sum, summary) => sum + summary.developmentChangeCount, 0),
+    playersImproved: summaries.reduce((sum, summary) => sum + summary.playersImproved, 0),
+    playersDeclined: summaries.reduce((sum, summary) => sum + summary.playersDeclined, 0),
+    totalGrowth: roundFactNumber(summaries.reduce((sum, summary) => sum + summary.totalGrowth, 0)),
+    totalDecline: roundFactNumber(summaries.reduce((sum, summary) => sum + summary.totalDecline, 0)),
   };
 }
 

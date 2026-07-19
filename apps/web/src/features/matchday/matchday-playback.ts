@@ -11,14 +11,28 @@ const FIRST_HALF_END_MINUTE = 45;
 const SECOND_HALF_START_MINUTE = 46;
 const SECOND_HALF_END_MINUTE = 90;
 const MAX_EVENT_FRAMES = 8;
-const MAX_PLAYBACK_DURATION_MS = 2_600;
-const OPENING_HOLD_MS = 350;
-const CLOSING_HOLD_MS = 450;
-const MIN_EVENT_HOLD_MS = 180;
-const MAX_EVENT_HOLD_MS = 420;
+const OPENING_HOLD_MS = 800;
+const CLOSING_HOLD_MS = 900;
+const ORDINARY_EVENT_HOLD_MS = 1_000;
+const SIGNIFICANT_EVENT_HOLD_MS = 2_200;
+const GOAL_EVENT_HOLD_MS = 4_500;
+const REDUCED_MOTION_CHECKPOINT_HOLD_MS = 900;
+
+/** Playback speeds available to the manager during a visual match reveal. */
+export const MATCHDAY_PLAYBACK_SPEEDS = [1, 2, 4] as const;
+
+/** Presentation speed multiplier. It never changes simulation time or facts. */
+export type MatchdayPlaybackSpeed = (typeof MATCHDAY_PLAYBACK_SPEEDS)[number];
 
 /** Stable visual stage shared by both bounded match-period playbacks. */
 export type MatchdayPlaybackStage = "opening" | "event" | "closing";
+
+/** Structured visual priority used by the event hold policy. */
+export type MatchdayPlaybackPriority =
+  | "transition"
+  | "ordinary"
+  | "significant"
+  | "goal";
 
 /** One immutable presentation frame derived from canonical checkpoint facts. */
 export interface MatchdayPlaybackFrame {
@@ -30,6 +44,10 @@ export interface MatchdayPlaybackFrame {
   readonly minute: number;
   /** Number of chronological events revealed by this frame. */
   readonly visibleEventCount: number;
+  /** Structured priority that determines the presentation hold. */
+  readonly priority: MatchdayPlaybackPriority;
+  /** Event responsible for this frame's priority, when the frame reveals facts. */
+  readonly currentEventId?: string;
   /** Bounded time this frame remains visible before advancing. */
   readonly holdMs: number;
 }
@@ -150,6 +168,19 @@ export function prefersReducedMatchdayMotion(): boolean {
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/**
+ * Scales one visual hold without allowing fast playback to flash past a fact.
+ * This calculation is presentation-only and intentionally accepts a frame,
+ * rather than any engine clock or match state.
+ */
+export function scaledMatchdayPlaybackHoldMs(
+  frame: MatchdayPlaybackFrame,
+  speed: MatchdayPlaybackSpeed,
+): number {
+  const minimumHoldMs = minimumReadableHoldMs(frame.priority);
+  return Math.max(minimumHoldMs, Math.round(frame.holdMs / speed));
+}
+
 function firstHalfEvents(
   events: readonly CareerMatchdayPhaseEventView[],
 ): readonly CareerMatchdayPhaseEventView[] {
@@ -176,42 +207,43 @@ function buildPlaybackPlan({
   reducedMotion: boolean;
 }>): MatchdayPlaybackPlan {
   if (reducedMotion) {
-    const frame = closingFrame(framePrefix, closingMinute, events.length, 0);
-    return { reducedMotion: true, frames: [frame], durationMs: 0 };
+    const frame = closingFrame(
+      framePrefix,
+      closingMinute,
+      events.length,
+      REDUCED_MOTION_CHECKPOINT_HOLD_MS,
+    );
+    return {
+      reducedMotion: true,
+      frames: [frame],
+      durationMs: REDUCED_MOTION_CHECKPOINT_HOLD_MS,
+    };
   }
 
   const visibleEventCounts = sampledEventCounts(events.length);
-  const eventHoldMs = visibleEventCounts.length === 0
-    ? 0
-    : Math.min(
-        MAX_EVENT_HOLD_MS,
-        Math.max(
-          MIN_EVENT_HOLD_MS,
-          Math.floor(
-            (MAX_PLAYBACK_DURATION_MS - OPENING_HOLD_MS - CLOSING_HOLD_MS)
-              / visibleEventCounts.length,
-          ),
-        ),
-      );
+  let previousVisibleEventCount = 0;
   const frames: MatchdayPlaybackFrame[] = [
     {
       frameId: `${framePrefix}:opening`,
       stage: "opening",
       minute: openingMinute,
       visibleEventCount: 0,
+      priority: "transition",
       holdMs: OPENING_HOLD_MS,
     },
     ...visibleEventCounts.map((visibleEventCount) => {
-      const event = events[visibleEventCount - 1];
-      if (event === undefined) {
-        throw new Error(`${framePrefix} playback frame is missing its event`);
-      }
+      const revealedEvents = events.slice(previousVisibleEventCount, visibleEventCount);
+      previousVisibleEventCount = visibleEventCount;
+      const currentEvent = selectPlaybackEvent(revealedEvents);
+      const priority = playbackPriorityForEvent(currentEvent);
       return {
-        frameId: `${framePrefix}:event:${event.eventId}`,
+        frameId: `${framePrefix}:event:${currentEvent.eventId}`,
         stage: "event" as const,
-        minute: event.minute,
+        minute: currentEvent.minute,
         visibleEventCount,
-        holdMs: eventHoldMs,
+        priority,
+        currentEventId: currentEvent.eventId,
+        holdMs: holdMsForPriority(priority),
       };
     }),
     closingFrame(framePrefix, closingMinute, events.length, CLOSING_HOLD_MS),
@@ -245,8 +277,79 @@ function closingFrame(
     stage: "closing",
     minute,
     visibleEventCount: eventCount,
+    priority: "transition",
     holdMs,
   };
+}
+
+function selectPlaybackEvent(
+  events: readonly CareerMatchdayPhaseEventView[],
+): CareerMatchdayPhaseEventView {
+  const firstEvent = events[0];
+  if (firstEvent === undefined) {
+    throw new Error("Matchday playback cannot select an incident from an empty frame");
+  }
+
+  let selectedEvent = firstEvent;
+  let selectedRank = playbackPriorityRank(playbackPriorityForEvent(firstEvent));
+
+  for (const event of events.slice(1)) {
+    const rank = playbackPriorityRank(playbackPriorityForEvent(event));
+    if (rank >= selectedRank) {
+      selectedEvent = event;
+      selectedRank = rank;
+    }
+  }
+
+  return selectedEvent;
+}
+
+function playbackPriorityForEvent(
+  event: CareerMatchdayPhaseEventView,
+): MatchdayPlaybackPriority {
+  if (event.kind === "goal") return "goal";
+  if (event.cardPriority === "major" || event.kind === "save" || event.kind === "block") {
+    return "significant";
+  }
+  return "ordinary";
+}
+
+function playbackPriorityRank(priority: MatchdayPlaybackPriority): number {
+  switch (priority) {
+    case "transition":
+      return 0;
+    case "ordinary":
+      return 1;
+    case "significant":
+      return 2;
+    case "goal":
+      return 3;
+  }
+}
+
+function holdMsForPriority(priority: MatchdayPlaybackPriority): number {
+  switch (priority) {
+    case "goal":
+      return GOAL_EVENT_HOLD_MS;
+    case "significant":
+      return SIGNIFICANT_EVENT_HOLD_MS;
+    case "ordinary":
+      return ORDINARY_EVENT_HOLD_MS;
+    case "transition":
+      return CLOSING_HOLD_MS;
+  }
+}
+
+function minimumReadableHoldMs(priority: MatchdayPlaybackPriority): number {
+  switch (priority) {
+    case "goal":
+      return 1_000;
+    case "significant":
+      return 500;
+    case "ordinary":
+    case "transition":
+      return 250;
+  }
 }
 
 function playbackScoreboard(

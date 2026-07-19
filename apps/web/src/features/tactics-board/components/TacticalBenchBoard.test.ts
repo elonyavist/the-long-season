@@ -18,6 +18,7 @@ describe("TacticalBenchBoard", () => {
 
     expect(markup).toContain("tls-tactical-bench-board");
     expect(markup.match(/class="tls-tactical-bench-slot"/g)?.length).toBe(8);
+    expect(markup.match(/data-motion-slot-key=/g)).toHaveLength(8);
     expect(markup.split("tls-tactical-bench-empty-plus").length - 1).toBe(8);
     expect(markup).toContain("Substitutes");
   });
@@ -28,6 +29,7 @@ describe("TacticalBenchBoard", () => {
     expect(markup).toContain("12");
     expect(markup).toContain("Esposito");
     expect(markup).toContain("POR");
+    expect(markup).toContain('data-motion-slot-key="bench:01:player:demo-12"');
     expect(markup).not.toContain("tls-player-candidate-row");
   });
 

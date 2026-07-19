@@ -6,6 +6,7 @@ import {
   type TacticSetup,
   type ClubId,
   type CompetitionId,
+  type Formation,
   type Fixture,
   type FixtureId,
   type GameDate,
@@ -47,7 +48,22 @@ import {
   type SeasonPlayerSummaryStatRow,
   type SeasonPlayerStatRegistration,
 } from "../season-engine/player-stats.ts";
+import { AiSquadSelectionError, buildAiSquadMatchTeamContext } from "../team-selection/index.ts";
 import { applyMatchReportToFixture } from "./apply-match-report-to-fixture.ts";
+
+/**
+ * Optional AI squad-selection rules for one simulated club.
+ *
+ * When omitted, the team keeps the fixed lineup supplied by the caller. When
+ * present, the season use-case can rebuild the AI lineup fixture by fixture
+ * from the current roster, formation, and dynamic player states.
+ */
+export interface SimulateSeasonAiSquadSelection {
+  /** Base formation used to select a valid match XI. */
+  readonly formation: Formation;
+  /** Maximum substitutes to include in diagnostics. */
+  readonly benchSize?: number;
+}
 
 /**
  * Team data required to simulate all fixtures for one club.
@@ -65,6 +81,8 @@ export interface SimulateSeasonTeamInput {
   readonly roleWeights?: Readonly<Record<string, RoleWeightProfile>>;
   /** Optional state curves used only when season fitness lifecycle is enabled. */
   readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
+  /** Optional AI selector for fixture-by-fixture lineups. */
+  readonly aiSelection?: SimulateSeasonAiSquadSelection;
 }
 
 /**
@@ -197,7 +215,8 @@ export type SimulateSeasonErrorCode =
   | "duplicate_fixture_lineup_override"
   | "invalid_setup_override"
   | "invalid_fixture_lineup_override"
-  | "invalid_fitness_lifecycle";
+  | "invalid_fitness_lifecycle"
+  | "invalid_ai_squad_selection";
 
 /**
  * Typed error thrown when a season cannot be simulated from its input.
@@ -340,8 +359,8 @@ function matchContextForFixture(
   return {
     fixtureId: fixture.id,
     seed: input.seed,
-    home: matchTeamContext(input, fixture.id, fixture.homeClubId, setupOverrides, fixtureLineupOverrides, playerStates),
-    away: matchTeamContext(input, fixture.id, fixture.awayClubId, setupOverrides, fixtureLineupOverrides, playerStates),
+    home: matchTeamContext(input, fixture, fixture.homeClubId, setupOverrides, fixtureLineupOverrides, playerStates),
+    away: matchTeamContext(input, fixture, fixture.awayClubId, setupOverrides, fixtureLineupOverrides, playerStates),
     engineConfig: input.matchEngineConfig,
   };
 }
@@ -359,14 +378,14 @@ interface SeasonFitnessRuntime {
  */
 function matchTeamContext(
   input: SimulateSeasonInput,
-  fixtureId: FixtureId,
+  fixture: Fixture,
   clubId: ClubId,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
   fixtureLineupOverrides: OrderedFixtureLineupOverrides,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   const setupOverride = setupOverrides[clubId];
-  const fixtureLineupOverride = fixtureLineupOverrides.byKey[fixtureLineupOverrideKey(fixtureId, clubId)];
+  const fixtureLineupOverride = fixtureLineupOverrides.byKey[fixtureLineupOverrideKey(fixture.id, clubId)];
 
   if (fixtureLineupOverride !== undefined) {
     const tacticalDistribution = setupOverride === undefined
@@ -386,6 +405,10 @@ function matchTeamContext(
   }
 
   const team = baseTeamInput(input, clubId);
+
+  if (team.aiSelection !== undefined) {
+    return aiSelectedMatchTeamContext(clubId, team, playerStates, fixture);
+  }
 
   if (playerStates !== undefined) {
     return fitnessAwareMatchTeamContext(clubId, team, playerStates);
@@ -410,11 +433,11 @@ function playerRegistrations(
   const registrations: SeasonPlayerStatRegistration[] = [];
 
   for (const clubId of input.clubIds) {
-    const lineup = seasonLineupForRegistration(input, clubId, setupOverrides);
+    const registrationPlayerIds = seasonPlayerIdsForRegistration(input, clubId, setupOverrides);
 
-    for (const slot of lineup) {
+    for (const playerId of registrationPlayerIds) {
       registrations.push({
-        playerId: slot.playerId,
+        playerId,
         clubId,
       });
     }
@@ -435,18 +458,23 @@ function playerRegistrations(
 /**
  * Resolves the season-level lineup used for zero-row player registrations.
  */
-function seasonLineupForRegistration(
+function seasonPlayerIdsForRegistration(
   input: SimulateSeasonInput,
   clubId: ClubId,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
-): readonly LineupSlot[] {
+): readonly PlayerId[] {
   const setupOverride = setupOverrides[clubId];
 
   if (setupOverride !== undefined) {
-    return buildSetupOverrideContext(setupOverride, setupOverride.playerStates).lineup;
+    return buildSetupOverrideContext(setupOverride, setupOverride.playerStates).lineup.map((slot) => slot.playerId);
   }
 
-  return baseTeamInput(input, clubId).lineup;
+  const team = baseTeamInput(input, clubId);
+  if (team.aiSelection !== undefined && team.players !== undefined) {
+    return Object.keys(team.players).sort() as PlayerId[];
+  }
+
+  return team.lineup.map((slot) => slot.playerId);
 }
 
 /**
@@ -739,6 +767,47 @@ function fitnessAwareMatchTeamContext(
       throw new SimulateSeasonError(
         "invalid_fitness_lifecycle",
         `Invalid fitness lifecycle strength input for club ${clubId}: ${error.message}`,
+      );
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Builds a fixture-specific AI match context without mutating the base team.
+ */
+function aiSelectedMatchTeamContext(
+  clubId: ClubId,
+  team: SimulateSeasonTeamInput,
+  playerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
+  fixture: Fixture,
+): MatchTeamContext {
+  if (team.aiSelection === undefined || team.players === undefined || team.roleWeights === undefined) {
+    throw new SimulateSeasonError(
+      "invalid_ai_squad_selection",
+      `AI selection requires formation, players, and role weights for team: ${clubId}`,
+    );
+  }
+
+  try {
+    return buildAiSquadMatchTeamContext({
+      clubId,
+      formation: team.aiSelection.formation,
+      playerIds: Object.keys(team.players).sort() as PlayerId[],
+      players: team.players,
+      roleWeights: team.roleWeights,
+      tacticalDistribution: team.tacticalDistribution,
+      currentDate: fixture.date,
+      ...(playerStates === undefined ? {} : { playerStates }),
+      ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
+      ...(team.aiSelection.benchSize === undefined ? {} : { benchSize: team.aiSelection.benchSize }),
+    }).teamContext;
+  } catch (error) {
+    if (error instanceof AiSquadSelectionError) {
+      throw new SimulateSeasonError(
+        "invalid_ai_squad_selection",
+        `Invalid AI selection for fixture ${fixture.id} and club ${clubId}: ${error.message}`,
       );
     }
 

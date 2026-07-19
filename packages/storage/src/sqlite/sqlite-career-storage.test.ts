@@ -11,14 +11,19 @@ import {
 
 describe("SQLite career storage failure boundaries", () => {
   it("keeps migrations ordered and plans every upgrade from schema one", () => {
-    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(planSqliteCareerMigrations(1).map((migration) => migration.version)).toEqual([2, 3, 4, 5, 6]);
-    expect(planSqliteCareerMigrations(4).map((migration) => migration.version)).toEqual([5, 6]);
-    expect(planSqliteCareerMigrations(6)).toEqual([]);
+    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(planSqliteCareerMigrations(7)).toEqual([]);
   });
 
-  it("rejects future and invalid schema versions without destructive recovery", () => {
-    expect(() => planSqliteCareerMigrations(7)).toThrowError(expect.objectContaining({
+  it("rejects older beta, future, and invalid schema versions without destructive recovery", () => {
+    expect(() => planSqliteCareerMigrations(1)).toThrowError(expect.objectContaining({
+      code: "unsupported_schema_version",
+    }));
+    expect(() => planSqliteCareerMigrations(6)).toThrowError(expect.objectContaining({
+      code: "unsupported_schema_version",
+    }));
+    expect(() => planSqliteCareerMigrations(8)).toThrowError(expect.objectContaining({
       code: "unsupported_schema_version",
     }));
     expect(() => planSqliteCareerMigrations(-1)).toThrowError(expect.objectContaining({
@@ -53,7 +58,7 @@ describe("SQLite career storage failure boundaries", () => {
 /** Creates one narrow fake worker while preserving typed method signatures. */
 function workerPort(overrides: Partial<SqliteCareerWorkerPort> = {}): SqliteCareerWorkerPort {
   return {
-    initialize: vi.fn().mockResolvedValue({ databasePath: "test.sqlite3", sqliteVersion: "test", schemaVersion: 6 }),
+    initialize: vi.fn().mockResolvedValue({ databasePath: "test.sqlite3", sqliteVersion: "test", schemaVersion: 7 }),
     saveCareer: vi.fn(),
     loadCareer: vi.fn(),
     listCareers: vi.fn().mockResolvedValue([]),

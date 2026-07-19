@@ -7,8 +7,10 @@
 export {
   DEFAULT_PLAYER_VALUATION_CONFIG,
   PlayerValuationError,
+  derivePlayerMarketAbility,
   derivePlayerValuation,
   type DerivePlayerValuationInput,
+  type PlayerMarketAbility,
   type PlayerValuation,
   type PlayerValuationAgeBand,
   type PlayerValuationConfig,

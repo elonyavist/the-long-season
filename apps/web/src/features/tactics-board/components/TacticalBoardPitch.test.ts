@@ -22,6 +22,7 @@ describe("TacticalBoardPitch", () => {
     expect(markup).toContain("tls-tactical-board-svg");
     expect(markup).toContain("tls-tactical-board-grass-texture");
     expect(markup.split("class=\"tls-tactical-board-empty-slot\"").length - 1).toBe(11);
+    expect(markup.match(/data-motion-slot-key=/g)).toHaveLength(11);
     expect(markup).toContain("Tactical board");
     expect(markup).toContain("Current shape");
     expect(markup).not.toContain("Base formation");
@@ -51,6 +52,7 @@ describe("TacticalBoardPitch", () => {
     expect(markup).toContain(">POR<");
     expect(markup).toContain("data-suitability=\"natural\"");
     expect(markup.split("class=\"tls-tactical-board-token\"").length - 1).toBe(1);
+    expect(markup).toContain('data-motion-slot-key="gk:player:gk:POR"');
   });
 
   it("renders the menu shell with localized actions and suitability labels", () => {

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import type { MessageKey, Translator } from "@game/i18n";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import type {
   CareerMatchPreparationBlockerKey,
   CareerMatchPreparationFormationId,
@@ -8,6 +10,7 @@ import type {
 } from "@game/ui";
 
 import { roleLabelKey } from "../../shared/lib/match-preparation-labels";
+import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 import {
   TacticalBenchBoard,
   type TacticalBenchBoardCandidate,
@@ -22,13 +25,15 @@ import {
   buildTacticalBoardSquadPlayers,
   type TacticalBoardSquadPlayer,
 } from "../tactics-board/tactical-board-squad";
-import type { MatchdayHalfTimeReviewView, MatchdayPresentedEventView } from "./career-matchday-presenter";
-import { MatchdayLiveEventCard } from "./MatchdayLivePhase";
+import type { MatchdayHalfTimeReviewView } from "./career-matchday-presenter";
 import type {
   WebHalfTimeSubstitutionDecision,
   WebHalfTimeSubstitutionPanel,
-  WebHalfTimeSubstitutionPlayerOption,
 } from "./matchday-adapter";
+import { MatchdayPhaseTabs, type MatchdayPhaseTabItem } from "./MatchdayPhaseTabs";
+import { MatchdayTeamRatings, type MatchdayTeamRatingSignal } from "./MatchdayTeamRatings";
+
+type HalfTimeTabId = "summary" | "tactics" | "selected_team" | "opponent";
 
 /** One localized issue that must be resolved before the second half can start. */
 export interface MatchdayHalfTimeValidationIssueView {
@@ -40,6 +45,8 @@ export interface MatchdayHalfTimeValidationIssueView {
 
 /** Props for the half-time composition; simulation and persistence remain outside. */
 export interface MatchdayHalfTimePhaseProps {
+  /** True only when the live screen has just reached half time in this session. */
+  readonly animateEntry?: boolean;
   readonly review: MatchdayHalfTimeReviewView;
   readonly text: Translator;
   readonly validationIssues: readonly MatchdayHalfTimeValidationIssueView[];
@@ -60,6 +67,7 @@ export interface MatchdayHalfTimePhaseProps {
  * order. Tactical rules continue to live in the shared board and adapters.
  */
 export function MatchdayHalfTimePhase({
+  animateEntry = false,
   review,
   text,
   validationIssues,
@@ -74,39 +82,95 @@ export function MatchdayHalfTimePhase({
   onBoardSlotRoleChange,
   onBoardSlotClear,
 }: MatchdayHalfTimePhaseProps): React.JSX.Element {
+  const reducedMotion = useReducedMotion();
+  const animateCheckpoint = animateEntry && !reducedMotion;
+  const [activeTabId, setActiveTabId] = useState<HalfTimeTabId>("summary");
+  const substitutionCount = text("career.matchday.substitution.count", {
+    count: substitutionPanel?.appliedCount ?? 0,
+    max: substitutionPanel?.maxCount ?? 5,
+  });
+  const selectedTeamSignals = useMemo<Readonly<Record<string, MatchdayTeamRatingSignal>>>(() => ({
+    ...Object.fromEntries(review.contributors.map((row) => [row.playerId, "contributor"] as const)),
+    ...Object.fromEntries(review.watchList.map((row) => [row.playerId, "watch"] as const)),
+  }), [review.contributors, review.watchList]);
+  const tacticalPanel = matchPreparationView !== undefined && tacticalBoardDraft !== undefined ? (
+    <HalfTimeTacticalWorkspace
+      tacticalBoardDraft={tacticalBoardDraft}
+      view={matchPreparationView}
+      text={text}
+      {...(substitutionPanel === undefined ? {} : { panel: substitutionPanel })}
+      {...(onApplyHalfTimeSubstitution === undefined ? {} : { onApplyHalfTimeSubstitution })}
+      {...(onFormationChange === undefined ? {} : { onFormationChange })}
+      {...(onLineupPlayerChange === undefined ? {} : { onLineupPlayerChange })}
+      {...(onBenchPlayerChange === undefined ? {} : { onBenchPlayerChange })}
+      {...(onBoardSlotMove === undefined ? {} : { onBoardSlotMove })}
+      {...(onBoardSlotRoleChange === undefined ? {} : { onBoardSlotRoleChange })}
+      {...(onBoardSlotClear === undefined ? {} : { onBoardSlotClear })}
+    />
+  ) : (
+    <p className="tls-matchday-empty">{text("career.matchday.halfTimeTacticsUnavailable")}</p>
+  );
+  const tabs: readonly MatchdayPhaseTabItem<HalfTimeTabId>[] = [
+    {
+      tabId: "summary",
+      label: text("career.matchday.halfTimeTab.summary"),
+      panel: (
+        <HalfTimeSummary
+          appliedSubstitutions={substitutionPanel?.appliedSubstitutions ?? []}
+          review={review}
+          substitutionCount={substitutionCount}
+          text={text}
+          validationIssues={validationIssues}
+        />
+      ),
+    },
+    {
+      tabId: "tactics",
+      label: text("career.matchday.halfTimeTab.tactics"),
+      panel: tacticalPanel,
+    },
+    {
+      tabId: "selected_team",
+      label: text("career.matchday.halfTimeTab.selectedTeam"),
+      panel: (
+        <MatchdayTeamRatings
+          clubName={review.selectedClubName}
+          rows={review.selectedTeamPlayers}
+          signalsByPlayerId={selectedTeamSignals}
+          text={text}
+        />
+      ),
+    },
+    {
+      tabId: "opponent",
+      label: text("career.matchday.halfTimeTab.opponent"),
+      panel: (
+        <MatchdayTeamRatings
+          clubName={review.opponentClubName}
+          rows={review.opponentPlayers}
+          text={text}
+        />
+      ),
+    },
+  ];
+
   return (
-    <section
+    <m.section
+      animate={webMotionTargets.rest}
       className="tls-match-centre-half-time-decision"
       aria-label={text("career.matchday.halfTimeDecision")}
+      data-motion-active={animateCheckpoint}
+      data-motion-checkpoint-panel="half_time"
+      initial={animateCheckpoint ? webMotionTargets.matchReviewEnter : false}
+      transition={webMotion.transition}
     >
-      <div className="tls-match-centre-half-time-review-layout">
-        <HalfTimeReview events={review.decisiveEvents} text={text} />
-        <HalfTimeDecisionSignals review={review} text={text} />
-      </div>
-
-      <HalfTimeValidation issues={validationIssues} text={text} />
-
-      {matchPreparationView !== undefined && tacticalBoardDraft !== undefined ? (
-        <HalfTimeTacticalWorkspace
-          tacticalBoardDraft={tacticalBoardDraft}
-          view={matchPreparationView}
-          text={text}
-          {...(substitutionPanel === undefined ? {} : { panel: substitutionPanel })}
-          {...(onFormationChange === undefined ? {} : { onFormationChange })}
-          {...(onLineupPlayerChange === undefined ? {} : { onLineupPlayerChange })}
-          {...(onBenchPlayerChange === undefined ? {} : { onBenchPlayerChange })}
-          {...(onBoardSlotMove === undefined ? {} : { onBoardSlotMove })}
-          {...(onBoardSlotRoleChange === undefined ? {} : { onBoardSlotRoleChange })}
-          {...(onBoardSlotClear === undefined ? {} : { onBoardSlotClear })}
-        />
-      ) : substitutionPanel?.status === "available" ? (
-        <HalfTimeSubstitutionPanel
-          panel={substitutionPanel}
-          text={text}
-          {...(onApplyHalfTimeSubstitution === undefined ? {} : { onApplyHalfTimeSubstitution })}
-        />
-      ) : null}
-    </section>
+      <MatchdayPhaseTabs
+        activeTabId={activeTabId}
+        ariaLabel={text("career.matchday.halfTimeTabs")}
+        tabs={tabs}
+        onActiveTabChange={setActiveTabId}
+      />
+    </m.section>
   );
 }
 
@@ -142,61 +206,27 @@ export function buildMatchdayHalfTimeValidationIssues(
   return [...new Map(issues.map((issue) => [issue.issueId, issue])).values()];
 }
 
-function HalfTimeReview({
-  events,
-  text,
-}: Readonly<{
-  events: readonly MatchdayPresentedEventView[];
-  text: Translator;
-}>): React.JSX.Element {
-  return (
-    <section className="tls-matchday-card tls-match-centre-half-time-review" aria-labelledby="matchday-half-time-review-title">
-      <div className="tls-match-centre-card-heading">
-        <div>
-          <h2 id="matchday-half-time-review-title">{text("career.matchday.halfTimeReview")}</h2>
-          <p>{text("career.matchday.halfTimeReviewHint")}</p>
-        </div>
-        <span>{text("career.matchday.fullTimeHighlightsHint")}</span>
-      </div>
-      <HalfTimeTabellinoEvents events={events} text={text} />
-    </section>
-  );
-}
-
-function HalfTimeTabellinoEvents({
-  events,
-  text,
-}: Readonly<{
-  events: readonly MatchdayPresentedEventView[];
-  text: Translator;
-}>): React.JSX.Element {
-  if (events.length === 0) {
-    return <p className="tls-matchday-empty">{text("career.matchday.noMajorEvents")}</p>;
-  }
-
-  return (
-    <div className="tls-match-centre-half-time-event-strip">
-      {events.map((event) => (
-        <MatchdayLiveEventCard event={event} key={event.event.eventId} text={text} />
-      ))}
-    </div>
-  );
-}
-
-function HalfTimeDecisionSignals({
+function HalfTimeSummary({
+  appliedSubstitutions,
   review,
+  substitutionCount,
   text,
+  validationIssues,
 }: Readonly<{
+  appliedSubstitutions: WebHalfTimeSubstitutionPanel["appliedSubstitutions"];
   review: MatchdayHalfTimeReviewView;
+  substitutionCount: string;
   text: Translator;
+  validationIssues: readonly MatchdayHalfTimeValidationIssueView[];
 }>): React.JSX.Element {
   return (
-    <aside className="tls-matchday-card tls-match-centre-half-time-signals" aria-labelledby="matchday-half-time-signals-title">
+    <section className="tls-match-centre-half-time-summary" aria-labelledby="matchday-half-time-summary-title">
       <div className="tls-match-centre-card-heading">
         <div>
-          <h2 id="matchday-half-time-signals-title">{text("career.matchday.halfTimeDecisionSignals")}</h2>
-          <p>{text("career.matchday.halfTimeDecisionSignalsHint")}</p>
+          <h2 id="matchday-half-time-summary-title">{text("career.matchday.halfTimeDecision")}</h2>
+          <p>{text("career.matchday.halfTimeDecisionHint")}</p>
         </div>
+        <span>{substitutionCount}</span>
       </div>
       <div className="tls-match-centre-half-time-signal-grid">
         <PlayerSignalGroup
@@ -214,7 +244,23 @@ function HalfTimeDecisionSignals({
           text={text}
         />
       </div>
-    </aside>
+      {appliedSubstitutions.length === 0 ? null : (
+        <section className="tls-match-centre-applied-subs" aria-labelledby="matchday-half-time-summary-subs-title">
+          <h3 id="matchday-half-time-summary-subs-title">{text("career.matchday.substitution.applied")}</h3>
+          <ul>
+            {appliedSubstitutions.map((substitution) => (
+              <li key={`${substitution.outgoingPlayerName}:${substitution.incomingPlayerName}`}>
+                {text("career.matchday.substitution.appliedLine", {
+                  incoming: substitution.incomingPlayerName,
+                  outgoing: substitution.outgoingPlayerName,
+                })}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <HalfTimeValidation issues={validationIssues} text={text} />
+    </section>
   );
 }
 
@@ -308,6 +354,7 @@ function HalfTimeTacticalWorkspace({
   onBoardSlotMove,
   onBoardSlotRoleChange,
   onBoardSlotClear,
+  onApplyHalfTimeSubstitution,
 }: Readonly<{
   view: CareerMatchPreparationView;
   tacticalBoardDraft: TacticalBoardDraft;
@@ -319,6 +366,7 @@ function HalfTimeTacticalWorkspace({
   onBoardSlotMove?: (slotKey: string, nx: number, ny: number) => void;
   onBoardSlotRoleChange?: (slotKey: string, role: TacticalBoardRoleCode) => void;
   onBoardSlotClear?: (slotKey: string) => void;
+  onApplyHalfTimeSubstitution?: (decision: WebHalfTimeSubstitutionDecision) => void;
 }>): React.JSX.Element {
   const tacticalBoardPlayers = useMemo(
     () => buildTacticalBoardSquadPlayers(
@@ -350,7 +398,6 @@ function HalfTimeTacticalWorkspace({
           <h2 id="matchday-half-time-tactical-title">{text("career.matchday.halfTimeBoardDecision")}</h2>
           <p>{text("career.matchday.halfTimeBoardDecisionHint")}</p>
         </div>
-        <span>{text("career.matchday.substitution.count", { count: panel?.appliedCount ?? 0, max: panel?.maxCount ?? 5 })}</span>
       </div>
 
       <div className="tls-match-centre-half-time-toolbar">
@@ -375,10 +422,30 @@ function HalfTimeTacticalWorkspace({
         <TacticalBoardPitch
           availablePlayers={tacticalBoardPlayers}
           currentShape={currentShape}
+          {...(view.formation.selectedFormationId === undefined
+            ? {}
+            : { formationMotionKey: view.formation.selectedFormationId })}
           players={tacticalBoardPlayers}
           slots={tacticalBoardDraft.slots}
           text={text}
           onAssign={(slotKey, playerId) => {
+            const outgoingPlayerId = tacticalBoardDraft.slots
+              .find((slot) => slot.slotId === slotKey)?.playerId;
+            const incomingPlayerIsOnBench = view.bench.slots
+              .some((slot) => slot.selectedPlayerId === playerId);
+            const substitutionAvailable = panel?.status === "available"
+              && panel.appliedCount < panel.maxCount;
+
+            if (
+              outgoingPlayerId !== undefined
+              && outgoingPlayerId !== null
+              && incomingPlayerIsOnBench
+              && substitutionAvailable
+              && onApplyHalfTimeSubstitution !== undefined
+            ) {
+              onApplyHalfTimeSubstitution({ outgoingPlayerId, incomingPlayerId: playerId });
+              return;
+            }
             onLineupPlayerChange?.(slotKey, playerId);
           }}
           onRemove={(slotKey) => {
@@ -406,80 +473,6 @@ function HalfTimeTacticalWorkspace({
   );
 }
 
-function HalfTimeSubstitutionPanel({
-  panel,
-  text,
-  onApplyHalfTimeSubstitution,
-}: Readonly<{
-  panel: WebHalfTimeSubstitutionPanel;
-  text: Translator;
-  onApplyHalfTimeSubstitution?: (decision: WebHalfTimeSubstitutionDecision) => void;
-}>): React.JSX.Element {
-  const [selectedOutgoingPlayerId, setSelectedOutgoingPlayerId] = useState("");
-  const [selectedIncomingPlayerId, setSelectedIncomingPlayerId] = useState("");
-  const outgoingPlayerId = selectedOutgoingPlayerId || (panel.lineup[0]?.playerId ?? "");
-  const incomingPlayerId = selectedIncomingPlayerId || (panel.bench[0]?.playerId ?? "");
-  const canApply = onApplyHalfTimeSubstitution !== undefined
-    && outgoingPlayerId.length > 0
-    && incomingPlayerId.length > 0
-    && panel.appliedCount < panel.maxCount;
-
-  return (
-    <section className="tls-matchday-card tls-match-centre-half-time" aria-labelledby="matchday-half-time-title">
-      <div className="tls-match-centre-card-heading">
-        <div>
-          <h2 id="matchday-half-time-title">{text("career.matchday.halfTimeDecision")}</h2>
-          <p>{text("career.matchday.halfTimeDecisionHint")}</p>
-        </div>
-        <span>{text("career.matchday.substitution.count", { count: panel.appliedCount, max: panel.maxCount })}</span>
-      </div>
-
-      <div className="tls-match-centre-substitution-grid">
-        <label className="tls-match-centre-substitution-field">
-          <span>{text("career.matchday.substitution.outgoing")}</span>
-          <select value={outgoingPlayerId} onChange={(event) => setSelectedOutgoingPlayerId(event.target.value)}>
-            {panel.lineup.map((player) => (
-              <option key={player.playerId} value={player.playerId}>{formatHalfTimePlayerOption(player, text)}</option>
-            ))}
-          </select>
-        </label>
-        <label className="tls-match-centre-substitution-field">
-          <span>{text("career.matchday.substitution.incoming")}</span>
-          <select value={incomingPlayerId} onChange={(event) => setSelectedIncomingPlayerId(event.target.value)}>
-            {panel.bench.map((player) => (
-              <option key={player.playerId} value={player.playerId}>{formatHalfTimePlayerOption(player, text)}</option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="tls-menu-button tls-menu-button-primary"
-          disabled={!canApply}
-          type="button"
-          onClick={() => onApplyHalfTimeSubstitution?.({ outgoingPlayerId, incomingPlayerId })}
-        >
-          {text("career.matchday.substitution.apply")}
-        </button>
-      </div>
-
-      {panel.appliedSubstitutions.length > 0 ? (
-        <section className="tls-match-centre-applied-subs" aria-labelledby="matchday-applied-substitutions-title">
-          <h3 id="matchday-applied-substitutions-title">{text("career.matchday.substitution.applied")}</h3>
-          <ul>
-            {panel.appliedSubstitutions.map((substitution) => (
-              <li key={`${substitution.outgoingPlayerName}:${substitution.incomingPlayerName}`}>
-                {text("career.matchday.substitution.appliedLine", {
-                  incoming: substitution.incomingPlayerName,
-                  outgoing: substitution.outgoingPlayerName,
-                })}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </section>
-  );
-}
-
 function playerContribution(row: CareerMatchdayPhasePlayerView, text: Translator): string {
   const parts = [
     row.goals > 0 ? `${text("career.matchday.table.goals")} ${row.goals}` : "",
@@ -490,19 +483,6 @@ function playerContribution(row: CareerMatchdayPhasePlayerView, text: Translator
   ].filter((part) => part.length > 0);
 
   return parts.length === 0 ? text("common.none") : parts.join(" · ");
-}
-
-function formatHalfTimePlayerOption(player: WebHalfTimeSubstitutionPlayerOption, text: Translator): string {
-  const role = player.roleKey === undefined ? text("common.unknown") : text(roleLabelKey(player.roleKey));
-  const rating = player.rating === undefined ? text("common.unknown") : player.rating.toFixed(1);
-  const condition = player.condition === undefined ? text("common.unknown") : `${player.condition}%`;
-
-  return text("career.matchday.substitution.playerOption", {
-    player: player.playerName,
-    role,
-    rating,
-    condition,
-  });
 }
 
 function preparationValidationIssue(

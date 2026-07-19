@@ -46,6 +46,14 @@ describe("buildCalendarAdvanceTransition", () => {
     });
   });
 
+  it("keeps its pacing bounded independently from rendered motion completion", () => {
+    const plan = buildCalendarAdvanceTransition("2026-08-01", "2027-08-01");
+
+    expect(plan.frames.at(-1)?.dateIso).toBe(plan.stopDateIso);
+    expect(plan.frames.every((frame) => frame.delayMs > 0)).toBe(true);
+    expect(plan.totalDurationMs).toBeLessThanOrEqual(1_800);
+  });
+
   it("rejects invalid or backwards dates", () => {
     expect(() => buildCalendarAdvanceTransition("2026-02-30", "2026-03-01")).toThrow(RangeError);
     expect(() => buildCalendarAdvanceTransition("2026-08-02", "2026-08-01")).toThrow(RangeError);

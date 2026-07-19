@@ -1,4 +1,7 @@
-import { findNextCareerFixture } from "@game/engine";
+import {
+  findNextCareerFixture,
+  summarizePlayerDevelopmentAbilities,
+} from "@game/engine";
 import { toISO } from "@game/shared";
 import {
   CAREER_MATCH_PREPARATION_FORMATIONS,
@@ -322,7 +325,7 @@ function buildCareerPlayerOptions(career: WebCareerState): readonly CareerMatchP
       roleKey: broadRole(player.primaryRole),
       ...(positionKey === undefined ? {} : { positionKey }),
       ...(dynamic === undefined ? {} : { fitness: dynamic.fitness }),
-      currentAbility: Math.round(averageAbilities(player.abilities) * 5),
+      currentAbility: currentRoleStrength(player),
       number: index + 1,
     } as CareerMatchPreparationPlayerOptionInput];
   });
@@ -425,7 +428,9 @@ function broadRole(role: string | undefined): string {
   return "midfielder";
 }
 
-function averageAbilities(abilities: WebCareerState["gameState"]["players"][keyof WebCareerState["gameState"]["players"]]["abilities"]): number {
-  const values = Object.values(abilities).flatMap((group) => Object.values(group)) as number[];
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+/** Projects canonical role ability onto the existing `0..100` web strength scale. */
+function currentRoleStrength(
+  player: WebCareerState["gameState"]["players"][keyof WebCareerState["gameState"]["players"]],
+): number {
+  return Math.round(summarizePlayerDevelopmentAbilities(player).currentAbility * 5);
 }

@@ -6,6 +6,8 @@ import {
   PLAYER_ARCHETYPES_BY_ROLE,
   PLAYER_ROLES,
   PlayerRoleIdentityError,
+  withPlayerRoleFamiliarity,
+  type Player,
 } from "./player.entity.ts";
 
 test("official role list contains the Phase 33 v1 roles once", () => {
@@ -82,6 +84,46 @@ test("createPlayerRoleIdentity keeps primary role stable and natural", () => {
   }), "primary_role_not_natural");
 });
 
+test("withPlayerRoleFamiliarity promotes a role bucket without changing identity", () => {
+  const player: Player = {
+    id: "player:role-learning" as Player["id"],
+    firstName: "Role",
+    lastName: "Learning",
+    birthDate: 10_000 as Player["birthDate"],
+    naturalPositions: ["cb"],
+    primaryRole: "center_back",
+    archetype: "center_back_stopper",
+    naturalRoles: ["center_back"],
+    adaptedRoles: [],
+    weakRoles: ["full_back"],
+    roleFamiliarity: { center_back: "natural", full_back: "weak" },
+    abilities: abilitySet(10),
+    potential: abilitySet(12),
+  };
+
+  const adapted = withPlayerRoleFamiliarity(player, "full_back", "adapted");
+  const natural = withPlayerRoleFamiliarity(adapted, "full_back", "natural");
+
+  assert.equal(adapted.primaryRole, "center_back");
+  assert.equal(adapted.archetype, "center_back_stopper");
+  assert.deepEqual(adapted.adaptedRoles, ["full_back"]);
+  assert.deepEqual(adapted.weakRoles, []);
+  assert.equal(adapted.roleFamiliarity?.full_back, "adapted");
+  assert.deepEqual(natural.naturalRoles, ["center_back", "full_back"]);
+  assert.deepEqual(natural.adaptedRoles, []);
+  assert.equal(natural.roleFamiliarity?.full_back, "natural");
+});
+
 function assertRoleIdentityError(fn: () => unknown, code: PlayerRoleIdentityError["code"]): void {
   assert.throws(fn, (error) => error instanceof PlayerRoleIdentityError && error.code === code);
+}
+
+function abilitySet(value: number): Player["abilities"] {
+  const ability = value as Player["abilities"]["technical"]["finishing"];
+  return {
+    technical: { finishing: ability, passing: ability, longPassing: ability, crossing: ability, dribbling: ability, technique: ability, tackling: ability, penalties: ability, freeKicks: ability },
+    physical: { pace: ability, strength: ability, stamina: ability, agility: ability, heading: ability },
+    mental: { positioning: ability, vision: ability, anticipation: ability, composure: ability, determination: ability, leadership: ability },
+    goalkeeping: { reflexes: ability, handling: ability, rushingOut: ability, goalkeeperPositioning: ability, footwork: ability },
+  };
 }

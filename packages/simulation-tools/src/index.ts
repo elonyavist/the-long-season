@@ -43,6 +43,9 @@ export {
   type LongRunPlayerMovementRow,
   type LongRunPlayerProductionRow,
   type LongRunPlayerSnapshotRow,
+  type LongRunPlayerTrajectoryCheck,
+  type LongRunPlayerTrajectoryDiagnostics,
+  type LongRunPlayerTrajectorySampleRow,
 } from "./long-run/player-evolution.ts";
 
 export {

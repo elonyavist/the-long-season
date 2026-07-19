@@ -11,7 +11,7 @@ const selectedClub = { clubId: "club:selected", name: "S.S. Perugia" };
 const opponentClub = { clubId: "club:opponent", name: "U.S. Pisa" };
 
 describe("MatchdayFullTimePhase", () => {
-  it("presents football incidents, selected-club ratings, and consequences in decision order", () => {
+  it("opens on selected-club ratings and exposes three focused review tabs", () => {
     const presentation = buildCareerMatchdayPresentationView(buildPhase());
     const review = presentation.fullTimeReview;
 
@@ -23,28 +23,25 @@ describe("MatchdayFullTimePhase", () => {
         text: createWebTranslator("en"),
       }),
     );
-    const storyIndex = markup.indexOf("Match tabellino");
-    const ratingsIndex = markup.indexOf("S.S. Perugia ratings");
-    const consequenceIndex = markup.indexOf("Post-match state");
-    const ratingsSection = markup.slice(ratingsIndex, consequenceIndex);
-
-    expect(markup).toContain("tls-match-centre-full-time-event is-goal");
-    expect(markup).toContain("tls-match-centre-full-time-event is-high");
-    expect(markup).toContain("tls-match-centre-full-time-event is-secondary");
+    expect(markup).toContain('aria-label="Full-time review views"');
+    expect(markup).toContain('data-motion-active="false"');
+    expect(markup).toContain('data-motion-checkpoint-panel="full_time"');
+    expect(markup).toContain('data-motion-tab-panel="selected_team"');
+    expect(markup.match(/role="tab"/g) ?? []).toHaveLength(3);
     expect(markup).toContain("Nico Rinaldi");
     expect(markup).toContain("Davide Valentini");
-    expect(ratingsSection).not.toContain("Lorenzo Marini");
-    expect(markup).toContain("Condition");
-    expect(markup).toContain("Form");
+    expect(markup).not.toContain("Lorenzo Marini");
+    expect(markup).toContain(">Fit<");
+    expect(markup).toContain("Final rating, condition, role, contribution, and match status.");
+    expect(markup).not.toContain("Post-match state");
     expect(markup).not.toContain("Next action");
     expect(markup).not.toContain("unknown");
-    expect(markup).not.toContain("none");
-    expect(storyIndex).toBeGreaterThan(-1);
-    expect(ratingsIndex).toBeGreaterThan(storyIndex);
-    expect(consequenceIndex).toBeGreaterThan(ratingsIndex);
+    expect(markup).not.toContain(">none<");
+    expect(markup).not.toContain("Match tabellino");
+    expect(markup).not.toContain("tls-match-centre-full-time-event");
   });
 
-  it("shows an honest empty incident state and omits absent consequences", () => {
+  it("keeps absent consequences out of the default team view", () => {
     const presentation = buildCareerMatchdayPresentationView({
       ...buildPhase(),
       timelineEvents: [],
@@ -63,8 +60,9 @@ describe("MatchdayFullTimePhase", () => {
       }),
     );
 
-    expect(markup).toContain("No goals, penalties, cards, injuries, or substitutions.");
+    expect(markup).not.toContain("Match tabellino");
     expect(markup).not.toContain("Post-match state");
+    expect(markup).toContain("Consequences");
   });
 });
 
@@ -86,8 +84,7 @@ function buildPhase() {
     scoreboard: { homeGoals: 2, awayGoals: 1 },
     events: [
       { eventId: "event:goal", minute: 52, kind: "goal", club: selectedClub, playerName: "Nico Rinaldi" },
-      { eventId: "event:penalty", minute: 61, kind: "penalty_goal", club: opponentClub, playerName: "Lorenzo Marini" },
-      { eventId: "event:card", minute: 78, kind: "yellow_card", club: opponentClub, playerName: "Lorenzo Marini" },
+      { eventId: "event:sub", minute: 78, kind: "substitution", club: opponentClub, playerName: "Lorenzo Marini" },
     ],
     players: [
       {

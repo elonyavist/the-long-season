@@ -3,37 +3,27 @@ import { createCareerState, type CareerState } from "@game/domain";
 import { StorageError } from "./game-storage.interface.ts";
 import {
   CURRENT_CAREER_SAVE_SCHEMA_VERSION,
-  DEFAULT_CAREER_AUTOSAVE_INTERVAL_DAYS,
   isCareerAutosaveIntervalDays,
   type CareerSaveMetadata,
   type SaveMetadata,
 } from "./save-metadata.ts";
 
-/** Persisted career save envelope for schema version 1. */
-export interface StoredCareerSaveV1 {
-  /** Envelope schema version used by storage migrations. */
-  readonly saveSchemaVersion: 1;
-  /** Metadata used for save selection and listing. */
-  readonly metadata: SaveMetadata;
-  /** Durable career state snapshot. */
-  readonly state: CareerState;
-}
-
-/** Persisted career save envelope with explicit save-cadence metadata. */
-export interface StoredCareerSaveV2 {
+/** Persisted career save envelope with explicit lifecycle-ledger support. */
+export interface StoredCareerSaveV3 {
   readonly saveSchemaVersion: typeof CURRENT_CAREER_SAVE_SCHEMA_VERSION;
   readonly metadata: CareerSaveMetadata;
   readonly state: CareerState;
 }
 
 /** Current persisted career save shape after migration. */
-export type StoredCareerSave = StoredCareerSaveV2;
+export type StoredCareerSave = StoredCareerSaveV3;
 
 /**
- * Migrates an unknown persisted career envelope to the current schema.
+ * Validates an unknown persisted career envelope against the current beta baseline.
  *
- * Version 1 gains the default seven-day policy. Football-state invariants stay
- * delegated to `createCareerState` in both versions.
+ * Earlier beta career files are intentionally rejected instead of migrated.
+ * The project is still in beta and old player-potential snapshots are no longer
+ * meaningful after the lifecycle rework.
  */
 export function migrateCareerSave(rawSave: unknown): StoredCareerSave {
   if (!isRecord(rawSave)) {
@@ -41,10 +31,10 @@ export function migrateCareerSave(rawSave: unknown): StoredCareerSave {
   }
 
   const version = rawSave.saveSchemaVersion;
-  if (version !== 1 && version !== CURRENT_CAREER_SAVE_SCHEMA_VERSION) {
+  if (version !== CURRENT_CAREER_SAVE_SCHEMA_VERSION) {
     throw new StorageError(
       "unsupported_schema_version",
-      `Unsupported career save schema version: ${String(version)}`,
+      `Unsupported beta career save schema version: ${String(version)}; reset the career save to continue.`,
     );
   }
 
@@ -57,9 +47,7 @@ export function migrateCareerSave(rawSave: unknown): StoredCareerSave {
   }
 
   const metadata = rawSave.metadata as Readonly<Record<string, unknown>>;
-  const autosaveIntervalDays = version === 1
-    ? DEFAULT_CAREER_AUTOSAVE_INTERVAL_DAYS
-    : metadata.autosaveIntervalDays;
+  const autosaveIntervalDays = metadata.autosaveIntervalDays;
   if (!isCareerAutosaveIntervalDays(autosaveIntervalDays)) {
     throw new StorageError("save_unreadable", "Career autosave policy is invalid");
   }

@@ -137,6 +137,51 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Before closing a web/UI phase, document screenshot findings and keyboard/focus
   findings in the phase audit or report.
 
+## Web Motion Rules
+
+- Motion for React is the canonical React dependency for state transitions,
+  enter/exit choreography, layout continuity, and football-event emphasis in
+  `apps/web`.
+- Motion is presentation only. Domain, engine, content, storage, simulation
+  tools, shared packages, UI read models, persistence, and career commands must
+  never depend on Motion or on animation completion.
+- Every new browser-visible feature must classify each proposed movement as
+  `none`, `micro`, `transition`, or `narrative`. Use the shared web motion system
+  when movement clarifies feedback, location, continuity, or a structured
+  football event; choose `none` when it would only decorate a static surface.
+- Shared durations, easing, springs, variants, and reduced-motion policy belong
+  to the web motion Module. Do not scatter arbitrary animation constants,
+  duplicate variants, or screen-local motion frameworks.
+- Mount one application-level `MotionConfig` with `reducedMotion="user"` and
+  prefer `LazyMotion` plus the smallest production-used feature bundle. A
+  reduced-motion path must preserve the same facts, commands, focus result,
+  readable event hold, and final screen state.
+- Components that render lazy motion elements must import `m` from
+  `motion/react-m`. Full `motion/react` imports are reserved for the provider,
+  hooks, and types that do not have a smaller public entrypoint.
+- CSS remains appropriate for simple hover, focus, color, and other
+  non-structural micro feedback. Do not replace stable CSS merely to increase
+  Motion usage, and do not add new hand-written keyframes for stateful React
+  enter/exit or orchestration when the shared motion system owns that concern.
+- Prefer opacity and transforms. Do not animate dimensions or positional
+  properties when they cause avoidable layout work, text reflow, horizontal
+  overflow, cumulative page growth, or movement of the primary action.
+- Animation may acknowledge a command but must not issue it. `onAnimationComplete`
+  must not simulate, navigate, persist, mutate career facts, advance a match, or
+  unlock correctness-critical state.
+- Product pacing and animation duration are separate. Matchday frame holds,
+  Continue date pacing, and command locks remain typed presentation policies;
+  they must not be inferred from a CSS/Motion transition callback.
+- Do not add infinite decorative loops. A bounded pending indicator may repeat
+  only while real work is active and must stop immediately when that state
+  ends.
+- Important state must never be communicated by movement alone. Motion must
+  preserve semantic markup, accessible names, visible focus, live-region
+  discipline, stable target sizes, and WCAG 2.2 AA contrast.
+- Browser-visible motion work requires Playwright evidence for normal and
+  reduced-motion modes at desktop and narrow viewports. Matchday narrative
+  motion also requires event-light and event-rich evidence.
+
 ## Step Discipline Rules
 
 - Work on exactly one documented step at a time.

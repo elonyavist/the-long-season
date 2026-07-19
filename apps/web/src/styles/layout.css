@@ -385,6 +385,16 @@
   max-width: none;
 }
 
+.tls-app-shell-screen-transition {
+  width: 100%;
+  min-width: 0;
+}
+
+.tls-app-shell[data-shell-mode="matchday"] .tls-app-shell-main {
+  width: 100%;
+  max-width: none;
+}
+
 .tls-app-shell-continue {
   width: 100%;
   min-height: 3.25rem;

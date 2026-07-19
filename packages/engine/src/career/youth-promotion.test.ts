@@ -3,21 +3,28 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  abilityValue,
   clubId,
   createCareerState,
   createMarketState,
   gameDate,
+  getPlayerRoleProfile,
+  mapPlayerAbilities,
   nonNegativeMoney,
   playerId,
   saveId,
   seasonId,
   stateValue,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
   type CareerState,
   type Club,
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
+  type PlayerPosition,
+  type PlayerRole,
 } from "@game/domain";
 
 import { promoteYouthCandidatesToSeniorSquads } from "./youth-promotion.ts";
@@ -84,11 +91,74 @@ test("promoteYouthCandidatesToSeniorSquads skips full senior squads", () => {
   assert.equal(result.records[0]?.reason, "senior_squad_full");
 });
 
+test("promoteYouthCandidatesToSeniorSquads promotes a goalkeeper specialist by role quality", () => {
+  const candidate = playerId("player:goalkeeper-specialist");
+  const abilities = roleShapedAbilities("goalkeeper", 14, 1);
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+    candidateAbilities: abilities,
+    candidatePotential: abilities,
+    candidatePosition: "gk",
+    candidateRole: "goalkeeper",
+  });
+
+  assert.equal(Number(rawDiagnosticAbilityAverage(abilities)) < 7.4, true);
+  assert.equal(Number(roleCurrentAbility(abilities, getPlayerRoleProfile("goalkeeper"))) >= 7.4, true);
+
+  const result = promoteYouthCandidatesToSeniorSquads({ careerState });
+
+  assert.equal(result.records[0]?.reason, "promoted");
+});
+
+test("promoteYouthCandidatesToSeniorSquads ignores inflated attributes outside the primary role", () => {
+  const candidate = playerId("player:irrelevant-attributes");
+  const abilities = roleCoreSuppressedAbilities("central_midfielder", 10, 1);
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+    candidateAbilities: abilities,
+    candidatePotential: abilities,
+  });
+
+  assert.equal(Number(rawDiagnosticAbilityAverage(abilities)) >= 7.4, true);
+  assert.equal(Number(roleCurrentAbility(abilities, getPlayerRoleProfile("central_midfielder"))) < 7.4, true);
+
+  const result = promoteYouthCandidatesToSeniorSquads({ careerState });
+
+  assert.equal(result.records[0]?.reason, "not_useful_enough");
+});
+
+test("promoteYouthCandidatesToSeniorSquads recognizes role-specific potential room", () => {
+  const candidate = playerId("player:role-potential-room");
+  const current = roleShapedAbilities("central_midfielder", 4, 1);
+  const potential = roleShapedAbilities("central_midfielder", 10, 1);
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+    candidateAbilities: current,
+    candidatePotential: potential,
+  });
+
+  assert.equal(Number(rawDiagnosticAbilityAverage(potential)) - Number(rawDiagnosticAbilityAverage(current)) < 3.5, true);
+
+  const result = promoteYouthCandidatesToSeniorSquads({ careerState });
+
+  assert.equal(result.records[0]?.reason, "promoted");
+});
+
 function careerStateFixture(input: {
   readonly selectedClubId: string;
   readonly candidateClubId: string;
   readonly candidate: PlayerId;
   readonly seniorCount?: number;
+  readonly candidateAbilities?: PlayerAbilities;
+  readonly candidatePotential?: PlayerAbilities;
+  readonly candidatePosition?: PlayerPosition;
+  readonly candidateRole?: PlayerRole;
 }): CareerState {
   const pro01 = clubId("club:pro01");
   const pro02 = clubId("club:pro02");
@@ -100,7 +170,13 @@ function careerStateFixture(input: {
     [pro02]: clubFixture(pro02, seniorPlayers("pro02", pro02 === candidateClubId ? seniorCount : 22)),
   };
   const players: Record<PlayerId, Player> = {
-    [input.candidate]: playerFixture(input.candidate, abilitySet(8), abilitySet(13)),
+    [input.candidate]: playerFixture(
+      input.candidate,
+      input.candidateAbilities ?? abilitySet(8),
+      input.candidatePotential ?? abilitySet(13),
+      input.candidatePosition ?? "cm",
+      input.candidateRole ?? "central_midfielder",
+    ),
   };
   const playerStates: Record<PlayerId, PlayerDynamicState> = {
     [input.candidate]: playerStateFixture(),
@@ -109,7 +185,13 @@ function careerStateFixture(input: {
 
   for (const clubIdValue of [pro01, pro02]) {
     for (const seniorId of clubs[clubIdValue]?.playerIds ?? []) {
-      players[seniorId] = playerFixture(seniorId, abilitySet(8), abilitySet(10));
+      players[seniorId] = playerFixture(
+        seniorId,
+        abilitySet(8),
+        abilitySet(10),
+        "cm",
+        "central_midfielder",
+      );
       playerStates[seniorId] = playerStateFixture();
       playerIds.push(seniorId);
     }
@@ -186,16 +268,40 @@ function seniorPlayers(prefix: string, count: number): readonly PlayerId[] {
   return playerIds;
 }
 
-function playerFixture(id: PlayerId, abilities: PlayerAbilities, potential: PlayerAbilities): Player {
+function playerFixture(
+  id: PlayerId,
+  abilities: PlayerAbilities,
+  potential: PlayerAbilities,
+  position: PlayerPosition,
+  primaryRole: PlayerRole,
+): Player {
   return {
     id,
     firstName: "Player",
     lastName: String(id),
     birthDate: gameDate(14_000),
-    naturalPositions: ["cm"],
+    naturalPositions: [position],
+    primaryRole,
     abilities,
     potential,
   };
+}
+
+function roleShapedAbilities(role: PlayerRole, relevantValue: number, baselineValue: number): PlayerAbilities {
+  const profile = getPlayerRoleProfile(role);
+  const relevantKeys = new Set([...profile.coreForRole, ...profile.secondaryForRole]);
+
+  return mapPlayerAbilities(abilitySet(baselineValue), (value, key) =>
+    relevantKeys.has(key) ? abilityValue(relevantValue) : value,
+  );
+}
+
+function roleCoreSuppressedAbilities(role: PlayerRole, baselineValue: number, coreValue: number): PlayerAbilities {
+  const coreKeys = new Set(getPlayerRoleProfile(role).coreForRole);
+
+  return mapPlayerAbilities(abilitySet(baselineValue), (value, key) =>
+    coreKeys.has(key) ? abilityValue(coreValue) : value,
+  );
 }
 
 function playerStateFixture(): PlayerDynamicState {

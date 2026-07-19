@@ -6,6 +6,7 @@ import {
   type Player,
   type PlayerDynamicState,
   type PlayerId,
+  type RoleIdentifiedPlayer,
   type SeasonId,
   type YouthAcademyClubRoster,
   type YouthAcademyState,
@@ -20,7 +21,7 @@ export interface YouthIntakeCandidate {
   /** Club receiving this intake candidate. */
   readonly targetClubId: ClubId;
   /** Generated youth player entity. */
-  readonly player: Player;
+  readonly player: RoleIdentifiedPlayer;
   /** Initial dynamic state for the generated youth player. */
   readonly playerState: PlayerDynamicState;
 }

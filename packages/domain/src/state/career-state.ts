@@ -9,6 +9,7 @@ import type { GameState } from "./game-state.ts";
 import { createYouthAcademyState, type YouthAcademyState } from "./youth-academy-state.ts";
 import { createActiveMatchCheckpoint, type ActiveMatchCheckpoint } from "../career/active-match-checkpoint.ts";
 import { createCareerInboxMessage, type CareerInboxMessage } from "../career/inbox.ts";
+import { createPlayerParticipationLedger, type PlayerParticipationLedger } from "../career/player-participation.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
@@ -151,6 +152,8 @@ export interface CareerState {
   readonly currentSeasonInbox?: readonly CareerInboxMessage[];
   /** Optional durable checkpoint for the selected club's in-progress fixture. */
   readonly activeMatchCheckpoint?: ActiveMatchCheckpoint;
+  /** Optional current-season/month participation ledger for future development. */
+  readonly playerParticipationLedger?: PlayerParticipationLedger;
 }
 
 /** Machine-readable career-state validation failure. */
@@ -196,7 +199,8 @@ export type CareerStateContractErrorCode =
   | "active_match_fixture_already_played"
   | "active_match_fixture_club_mismatch"
   | "active_match_selected_side_mismatch"
-  | "active_match_player_not_found";
+  | "active_match_player_not_found"
+  | "player_participation_player_not_found";
 
 /**
  * Typed error thrown when a career-state snapshot is inconsistent.
@@ -283,6 +287,7 @@ export function createCareerState(input: CareerState): CareerState {
     ? undefined
     : createCareerActiveMatchCheckpoint(input.gameState, input.selectedClubId, input.activeMatchCheckpoint);
   const currentSeasonInbox = createCurrentSeasonInbox(input);
+  const playerParticipationLedger = createCareerPlayerParticipationLedger(input);
 
   return {
     saveId: input.saveId,
@@ -299,7 +304,32 @@ export function createCareerState(input: CareerState): CareerState {
       ? {}
       : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation) }),
     ...(activeMatchCheckpoint === undefined ? {} : { activeMatchCheckpoint }),
+    ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
   };
+}
+
+/** Validates participation rows against the active career player lookup. */
+function createCareerPlayerParticipationLedger(input: CareerState): PlayerParticipationLedger | undefined {
+  if (input.playerParticipationLedger === undefined) {
+    return undefined;
+  }
+
+  const ledger = createPlayerParticipationLedger(input.playerParticipationLedger);
+  for (const rowKey of ledger.rowKeys) {
+    const row = ledger.rows[rowKey];
+    if (row === undefined) {
+      continue;
+    }
+
+    if (input.gameState.players[row.playerId] === undefined) {
+      throw new CareerStateContractError(
+        "player_participation_player_not_found",
+        `participation player does not exist in career game state: ${row.playerId}`,
+      );
+    }
+  }
+
+  return ledger;
 }
 
 /** Validates ordered current-season message facts and related world entities. */

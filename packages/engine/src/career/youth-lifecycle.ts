@@ -1,5 +1,9 @@
 import {
   createCareerState,
+  getPlayerRoleProfile,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
+  rolePotentialAbility,
   type CareerState,
   type ClubId,
   type Player,
@@ -230,15 +234,13 @@ function ageOutOutcome(input: {
   readonly age: number;
 }): YouthLifecycleOutcome {
   const rng = deriveRng(input.worldSeed, "youth-age-out", input.seasonId, input.player.id);
-  const currentAverage = averageAbilities(input.player.abilities);
-  const potentialAverage = averageAbilities(input.player.potential);
-  const potentialRoom = potentialAverage - currentAverage;
+  const ability = youthLifecycleAbility(input.player);
 
-  if (currentAverage >= 8.8 || potentialRoom >= 4.5) {
+  if (ability.current >= 8.8 || ability.potentialRoom >= 4.5) {
     return "promotion_candidate";
   }
 
-  if (currentAverage >= 7.4 && rng.nextFloat() < 0.35) {
+  if (ability.current >= 7.4 && rng.nextFloat() < 0.35) {
     return "external_move_candidate";
   }
 
@@ -249,34 +251,19 @@ function playerAgeYears(player: Player, careerState: CareerState): number {
   return Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / DAYS_PER_YEAR);
 }
 
-function averageAbilities(abilities: Player["abilities"]): number {
-  let total = 0;
+/** Returns the football measures needed only by academy age-out decisions. */
+function youthLifecycleAbility(player: Player): {
+  readonly current: number;
+  readonly potentialRoom: number;
+} {
+  if (player.primaryRole === undefined) {
+    const current = Number(rawDiagnosticAbilityAverage(player.abilities));
+    const potential = Number(rawDiagnosticAbilityAverage(player.potential));
+    return { current, potentialRoom: potential - current };
+  }
 
-  total += abilities.technical.finishing;
-  total += abilities.technical.passing;
-  total += abilities.technical.longPassing;
-  total += abilities.technical.crossing;
-  total += abilities.technical.dribbling;
-  total += abilities.technical.technique;
-  total += abilities.technical.tackling;
-  total += abilities.technical.penalties;
-  total += abilities.technical.freeKicks;
-  total += abilities.physical.pace;
-  total += abilities.physical.strength;
-  total += abilities.physical.stamina;
-  total += abilities.physical.agility;
-  total += abilities.physical.heading;
-  total += abilities.mental.positioning;
-  total += abilities.mental.vision;
-  total += abilities.mental.anticipation;
-  total += abilities.mental.composure;
-  total += abilities.mental.determination;
-  total += abilities.mental.leadership;
-  total += abilities.goalkeeping.reflexes;
-  total += abilities.goalkeeping.handling;
-  total += abilities.goalkeeping.rushingOut;
-  total += abilities.goalkeeping.goalkeeperPositioning;
-  total += abilities.goalkeeping.footwork;
-
-  return total / 25;
+  const profile = getPlayerRoleProfile(player.primaryRole);
+  const current = Number(roleCurrentAbility(player.abilities, profile));
+  const potential = Number(rolePotentialAbility(player.potential, profile));
+  return { current, potentialRoom: potential - current };
 }

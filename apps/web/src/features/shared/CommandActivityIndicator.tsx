@@ -1,5 +1,7 @@
 import type { Translator } from "@game/i18n";
+import * as m from "motion/react-m";
 
+import { webMotion } from "../../shared/motion/web-motion";
 import type {
   CareerCommandActivity,
   CareerCommandId,
@@ -11,6 +13,13 @@ export type CommandActivityIndicatorProps = Readonly<{
   commandIds: readonly CareerCommandId[];
   idleLabel: string;
   text: Translator;
+}>;
+
+/** Props for a stable command label with optional real pending feedback. */
+export type CommandFeedbackLabelProps = Readonly<{
+  pending: boolean;
+  idleLabel: string;
+  pendingLabel: string;
 }>;
 
 /**
@@ -26,15 +35,48 @@ export function CommandActivityIndicator({
   const pending = isMatchingPendingCommand(activity, commandIds);
 
   return (
+    <CommandFeedbackLabel
+      idleLabel={idleLabel}
+      pending={pending}
+      pendingLabel={pending && activity !== undefined ? text(activity.statusLabelKey) : idleLabel}
+    />
+  );
+}
+
+/**
+ * Gives a real asynchronous action immediate bounded feedback while reserving
+ * stable space for the progress mark in both idle and pending states.
+ */
+export function CommandFeedbackLabel({
+  pending,
+  idleLabel,
+  pendingLabel,
+}: CommandFeedbackLabelProps): React.JSX.Element {
+  const label = pending ? pendingLabel : idleLabel;
+
+  return (
     <span
       className="tls-command-activity-label"
       data-pending={pending}
       data-state={pending ? "pending" : "idle"}
     >
-      {pending ? <span className="tls-command-activity-spinner" aria-hidden="true" /> : null}
-      <span className="tls-command-activity-copy">
-        {pending && activity !== undefined ? text(activity.statusLabelKey) : idleLabel}
-      </span>
+      <m.span
+        animate={pending ? { opacity: 1, rotate: 360 } : { opacity: 0, rotate: 0 }}
+        aria-hidden="true"
+        className="tls-command-activity-spinner"
+        data-visible={pending}
+        initial={false}
+        transition={pending ? webMotion.commandPending : webMotion.micro}
+      />
+      <m.span
+        animate={{ opacity: 1, y: 0 }}
+        className="tls-command-activity-copy"
+        initial={{ opacity: 0.72, y: 1 }}
+        key={`${pending ? "pending" : "idle"}:${label}`}
+        transition={webMotion.micro}
+      >
+        {label}
+      </m.span>
     </span>
   );
 }

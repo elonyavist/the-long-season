@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { ClubId, Player } from "@game/domain";
+import {
+  isPotentialAtLeastCurrent,
+  PLAYER_ABILITY_KEYS,
+  readPlayerAbility,
+  type ClubId,
+  type Player,
+} from "@game/domain";
 import { fromISO } from "@game/shared";
 
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
@@ -212,6 +218,39 @@ test("fake player generation writes explicit role identity fields", () => {
   for (const playerId of generated.playerIds) {
     const player = requiredPlayer(generated.players[playerId]);
     assertGeneratedRoleIdentity(player);
+  }
+});
+
+test("fake player generation satisfies the canonical potential invariant", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "world-a" });
+
+  for (const playerId of generated.playerIds) {
+    const player = requiredPlayer(generated.players[playerId]);
+    assert.equal(isPotentialAtLeastCurrent(player.abilities, player.potential), true, playerId);
+  }
+});
+
+test("fake player generation emits only complete new-player construction values", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "construction-contract" });
+
+  for (const playerId of generated.playerIds) {
+    const player = requiredPlayer(generated.players[playerId]);
+    const dynamicState = generated.playerStates[playerId];
+    assert.ok(dynamicState !== undefined);
+    assertGeneratedRoleIdentity(player);
+
+    for (const key of PLAYER_ABILITY_KEYS) {
+      const current = Number(readPlayerAbility(player.abilities, key));
+      const potential = Number(readPlayerAbility(player.potential, key));
+      assert.equal(current >= 1 && current <= 20, true, `${playerId} current ${key}`);
+      assert.equal(potential >= current && potential <= 20, true, `${playerId} potential ${key}`);
+    }
+
+    assert.equal(Number(dynamicState.fitness), 100);
+    assert.equal(Number(dynamicState.form), 50);
+    assert.equal(Number(dynamicState.morale), 50);
   }
 });
 

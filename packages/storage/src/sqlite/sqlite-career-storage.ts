@@ -55,9 +55,12 @@ export interface SqliteCareerWorkerPort {
  * before writing and normalizes worker failures into stable storage errors.
  */
 export class SqliteCareerStorage implements CareerStorage {
+  private readonly worker: SqliteCareerWorkerPort;
   private initialized = false;
 
-  public constructor(private readonly worker: SqliteCareerWorkerPort) {}
+  public constructor(worker: SqliteCareerWorkerPort) {
+    this.worker = worker;
+  }
 
   /** Initializes SQLite and returns diagnostic facts for browser QA. */
   public async initialize(): Promise<SqliteCareerWorkerInfo> {

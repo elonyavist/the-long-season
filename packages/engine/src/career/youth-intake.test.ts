@@ -18,6 +18,8 @@ import {
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
+  type PlayerRole,
+  type RoleIdentifiedPlayer,
 } from "@game/domain";
 
 import {
@@ -227,13 +229,21 @@ function candidateFixture(targetClubId: string, playerIdValue: string): YouthInt
   };
 }
 
-function playerFixture(id: PlayerId): Player {
+function playerFixture(id: PlayerId): RoleIdentifiedPlayer {
+  const primaryRole: PlayerRole = "central_midfielder";
+
   return {
     id,
     firstName: "Youth",
     lastName: String(id),
     birthDate: gameDate(14_000),
     naturalPositions: ["cm"],
+    primaryRole,
+    archetype: "central_midfielder_playmaker",
+    naturalRoles: [primaryRole],
+    adaptedRoles: [],
+    weakRoles: [],
+    roleFamiliarity: { [primaryRole]: "natural" },
     abilities: abilitySet(7),
     potential: abilitySet(11),
   };

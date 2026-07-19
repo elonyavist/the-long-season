@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import * as m from "motion/react-m";
 
 import type { Translator } from "@game/i18n";
 
@@ -25,6 +26,7 @@ import {
   type TacticalBoardSuitabilityLevel,
   type TacticalBoardTokenPlayer,
 } from "./TacticalBoardPlayerToken";
+import { webMotion, webMotionTargets } from "../../../shared/motion/web-motion";
 
 export interface TacticalBoardPitchPlayer extends TacticalBoardTokenPlayer {
   readonly suitabilityBySlotId?: Readonly<Record<string, TacticalBoardSuitabilityLevel>>;
@@ -38,6 +40,8 @@ export interface TacticalBoardPitchProps {
   readonly availablePlayers?: readonly TacticalBoardPitchPlayer[];
   readonly text: Translator;
   readonly currentShape: string;
+  /** Stable base formation id used only to acknowledge completed slot remapping. */
+  readonly formationMotionKey?: string;
   readonly onSlotOpen?: (slotId: string) => void;
   readonly onSlotMove?: (slotId: string, nx: number, ny: number) => void;
   readonly onRoleChange?: (slotId: string, role: TacticalBoardRoleCode) => void;
@@ -69,6 +73,7 @@ export function TacticalBoardPitch({
   availablePlayers,
   text,
   currentShape,
+  formationMotionKey,
   onSlotOpen,
   onSlotMove,
   onRoleChange,
@@ -90,6 +95,15 @@ export function TacticalBoardPitch({
   const longPressTimerRef = useRef<number | undefined>(undefined);
   const longPressStateRef = useRef<TacticalBoardLongPressState | undefined>(undefined);
   const suppressClickRef = useRef(false);
+  const previousSlotFactsRef = useRef(tacticalBoardSlotFacts(slots));
+  const previousFormationMotionKeyRef = useRef(formationMotionKey);
+
+  const formationChanged = previousFormationMotionKeyRef.current !== formationMotionKey;
+
+  useEffect(() => {
+    previousSlotFactsRef.current = tacticalBoardSlotFacts(slots);
+    previousFormationMotionKeyRef.current = formationMotionKey;
+  }, [formationMotionKey, slots]);
 
   const activeDragSlot = drag === undefined ? undefined : slots.find((slot) => slot.slotId === drag.slotId);
   const activeMenuSlot = menu === undefined ? undefined : slots.find((slot) => slot.slotId === menu.slotId);
@@ -335,6 +349,7 @@ export function TacticalBoardPitch({
         <svg
           aria-label={text("career.tacticalBoard.title")}
           className="tls-tactical-board-svg"
+          data-formation-motion-key={formationMotionKey}
           onContextMenu={handleContextMenu}
           onKeyDown={handleKeyDown}
           onPointerCancel={handlePointerUp}
@@ -357,49 +372,74 @@ export function TacticalBoardPitch({
           )}
           {slots.map((slot) => {
             const player = slot.playerId === null ? undefined : playerById.get(slot.playerId);
+            const slotFact = tacticalBoardSlotFact(slot);
+            const slotChanged = previousSlotFactsRef.current.get(slot.slotId) !== slotFact;
 
-            return player === undefined ? (
-              <TacticalBoardEmptySlot
-                key={slot.slotId}
-                slot={slot}
-                text={text}
-                onOpen={openSlotFromClick}
-              />
-            ) : (
-              <TacticalBoardPlayerToken
-                key={slot.slotId}
-                player={player}
-                slot={slot}
-                suitability={suitabilityForTacticalBoardAssignment(player, slot.role, slot.slotId)}
-                text={text}
-                onOpen={openSlotFromClick}
-              />
+            return (
+              <m.g
+                key={`${formationMotionKey ?? "formation"}:${slot.slotId}:${slotFact}`}
+                data-motion-slot-key={`${slot.slotId}:${slotFact}`}
+                initial={formationChanged || slotChanged ? webMotionTargets.tacticalSelectionEnter : false}
+                animate={webMotionTargets.rest}
+                transition={webMotion.micro}
+              >
+                {player === undefined ? (
+                  <TacticalBoardEmptySlot
+                    slot={slot}
+                    text={text}
+                    onOpen={openSlotFromClick}
+                  />
+                ) : (
+                  <TacticalBoardPlayerToken
+                    player={player}
+                    slot={slot}
+                    suitability={suitabilityForTacticalBoardAssignment(player, slot.role, slot.slotId)}
+                    text={text}
+                    onOpen={openSlotFromClick}
+                  />
+                )}
+              </m.g>
             );
           })}
         </svg>
 
         {activeMenuSlot === undefined ? null : (
           <div className="tls-tactical-board-menu-popover" ref={menuRef} style={menuStyle}>
-            <TacticalBoardMenu
-              candidates={candidates}
-              roleOptions={roleOptions}
-              text={text}
-              onAssign={(playerId) => {
-                onAssign?.(activeMenuSlot.slotId, playerId);
-                setMenu(undefined);
-              }}
-              onRemove={() => {
-                onRemove?.(activeMenuSlot.slotId);
-                setMenu(undefined);
-              }}
-              onRoleChange={(role) => {
-                onRoleChange?.(activeMenuSlot.slotId, role);
-                setMenu(undefined);
-              }}
-            />
+            <m.div
+              key={activeMenuSlot.slotId}
+              initial={webMotionTargets.tacticalPopoverEnter}
+              animate={webMotionTargets.rest}
+              transition={webMotion.micro}
+            >
+              <TacticalBoardMenu
+                candidates={candidates}
+                roleOptions={roleOptions}
+                text={text}
+                onAssign={(playerId) => {
+                  onAssign?.(activeMenuSlot.slotId, playerId);
+                  setMenu(undefined);
+                }}
+                onRemove={() => {
+                  onRemove?.(activeMenuSlot.slotId);
+                  setMenu(undefined);
+                }}
+                onRoleChange={(role) => {
+                  onRoleChange?.(activeMenuSlot.slotId, role);
+                  setMenu(undefined);
+                }}
+              />
+            </m.div>
           </div>
         )}
       </div>
     </section>
   );
+}
+
+function tacticalBoardSlotFacts(slots: readonly TacticalBoardSlot[]): Map<string, string> {
+  return new Map(slots.map((slot) => [slot.slotId, tacticalBoardSlotFact(slot)]));
+}
+
+function tacticalBoardSlotFact(slot: TacticalBoardSlot): string {
+  return `${slot.playerId ?? "empty"}:${slot.role}`;
 }

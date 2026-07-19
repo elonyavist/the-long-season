@@ -22,6 +22,10 @@ import {
 } from "./career-state.ts";
 import { ACTIVE_MATCH_CHECKPOINT_SCHEMA_VERSION, type ActiveMatchCheckpoint } from "../career/active-match-checkpoint.ts";
 import { careerInboxMessageId, createCareerInboxMessage } from "../career/inbox.ts";
+import {
+  accruePlayerFixtureParticipation,
+  createEmptyPlayerParticipationLedger,
+} from "../career/player-participation.ts";
 
 /**
  * Career-state tests cover durable domain shape only.
@@ -389,6 +393,44 @@ test("createCareerState preserves ordered Inbox lifecycle and validates referenc
       }],
     }),
     "inbox_fixture_not_found",
+  );
+});
+
+test("createCareerState preserves a valid player participation ledger", () => {
+  const contribution = {
+    fixtureId: fixtureId("fixture:000001"),
+    playerId: playerId("player:010010"),
+    seasonId: seasonId("season:0001"),
+    monthKey: "2026-08",
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7.4,
+    playedRoleMinutes: { striker: 90 },
+  } as const;
+  const ledger = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), contribution);
+  const career = createCareerState({ ...careerStateFixture(), playerParticipationLedger: ledger });
+
+  assert.deepEqual(career.playerParticipationLedger, ledger);
+  assert.notEqual(career.playerParticipationLedger, ledger);
+});
+
+test("createCareerState rejects participation rows for unknown players", () => {
+  const ledger = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
+    fixtureId: fixtureId("fixture:000001"),
+    playerId: playerId("player:missing"),
+    seasonId: seasonId("season:0001"),
+    monthKey: "2026-08",
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7.4,
+    playedRoleMinutes: { striker: 90 },
+  });
+
+  assertCareerStateError(
+    () => createCareerState({ ...careerStateFixture(), playerParticipationLedger: ledger }),
+    "player_participation_player_not_found",
   );
 });
 

@@ -2,6 +2,7 @@ import {
   clubId,
   competitionId,
   createCareerState,
+  createPlayerParticipationLedger,
   careerInboxMessageId,
   createCareerInboxMessage,
   fixtureId,
@@ -24,6 +25,8 @@ import {
   type MatchEvent,
   type MatchReport,
   type MatchSideStats,
+  type PlayerParticipationLedger,
+  type PlayerParticipationRow,
   type PlayerId,
   type SaveId,
   type YouthAcademyState,
@@ -52,6 +55,7 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
   }
   insertYouthState(database, state);
   insertCurrentSeasonInbox(database, state);
+  insertPlayerParticipationLedger(database, state);
   insertSeasonHistory(database, state);
   insertMatchPreparation(database, state);
   insertFixtureReports(database, state);
@@ -68,11 +72,105 @@ export function loadCareerStateRows(database: SqliteWorldDatabase, requestedSave
     marketState: loadMarketState(database, requestedSaveId),
     transferHistory: loadTransferHistory(database, requestedSaveId),
     currentSeasonInbox: loadCurrentSeasonInbox(database, requestedSaveId),
+    ...(loadPlayerParticipationLedger(database, requestedSaveId) ?? {}),
     ...(loadYouthState(database, requestedSaveId, gameState) ?? {}),
     ...(loadSeasonHistory(database, requestedSaveId) ?? {}),
     ...(loadMatchPreparation(database, requestedSaveId) ?? {}),
     ...(loadActiveMatch(database, requestedSaveId) ?? {}),
   });
+}
+
+/** Writes monthly participation facts used by the player-development lifecycle. */
+function insertPlayerParticipationLedger(database: SqliteWorldDatabase, state: CareerState): void {
+  const ledger = state.playerParticipationLedger;
+  if (ledger === undefined) return;
+
+  database.run("INSERT INTO player_participation_ledgers (save_id) VALUES (?)", [state.saveId]);
+  ledger.rowKeys.forEach((rowKey, sortOrder) => {
+    const row = ledger.rows[rowKey];
+    if (row === undefined) throw mappingFailure(`ordered participation row is missing: ${rowKey}`);
+    database.run(`INSERT INTO player_participation_rows
+      (save_id, sort_order, row_key, player_id, season_id, month_key, starts, substitute_appearances,
+       minutes, rating_total, rating_samples)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId,
+      sortOrder,
+      row.rowKey,
+      row.playerId,
+      row.seasonId,
+      row.monthKey,
+      row.starts,
+      row.substituteAppearances,
+      row.minutes,
+      row.ratingTotal,
+      row.ratingSamples,
+    ]);
+    Object.entries(row.playedRoleMinutes).sort(([left], [right]) => left.localeCompare(right)).forEach(
+      ([roleKey, minutes], roleOrder) => {
+        if (minutes !== undefined) {
+          database.run(`INSERT INTO player_participation_role_minutes
+            (save_id, row_key, sort_order, role_key, minutes) VALUES (?, ?, ?, ?, ?)`,
+          [state.saveId, row.rowKey, roleOrder, roleKey, minutes]);
+        }
+      },
+    );
+    row.appliedFixtureIds.forEach((appliedFixtureId, fixtureOrder) => {
+      database.run(`INSERT INTO player_participation_applied_fixtures
+        (save_id, row_key, sort_order, fixture_id) VALUES (?, ?, ?, ?)`,
+      [state.saveId, row.rowKey, fixtureOrder, appliedFixtureId]);
+    });
+  });
+  ledger.closedMonthKeys.forEach((monthKey, sortOrder) => {
+    database.run(`INSERT INTO player_participation_closed_months
+      (save_id, sort_order, month_key) VALUES (?, ?, ?)`,
+    [state.saveId, sortOrder, monthKey]);
+  });
+}
+
+/** Reconstructs the optional player-development participation ledger. */
+function loadPlayerParticipationLedger(database: SqliteWorldDatabase, save: SaveId): Pick<CareerState, "playerParticipationLedger"> | undefined {
+  if (database.queryAll("SELECT save_id FROM player_participation_ledgers WHERE save_id = ?", [save]).length === 0) {
+    return undefined;
+  }
+
+  const rows: Record<string, PlayerParticipationRow> = {};
+  const rowKeys = database.queryAll("SELECT * FROM player_participation_rows WHERE save_id = ? ORDER BY sort_order", [save]).map((row) => {
+    const rowKey = text(row, "row_key");
+    const playedRoleMinutes = Object.fromEntries(
+      database.queryAll(
+        "SELECT role_key, minutes FROM player_participation_role_minutes WHERE save_id = ? AND row_key = ? ORDER BY sort_order",
+        [save, rowKey],
+      ).map((roleRow) => [text(roleRow, "role_key"), number(roleRow, "minutes")]),
+    ) as PlayerParticipationRow["playedRoleMinutes"];
+    rows[rowKey] = {
+      rowKey,
+      playerId: playerId(text(row, "player_id")),
+      seasonId: seasonId(text(row, "season_id")),
+      monthKey: text(row, "month_key"),
+      starts: number(row, "starts"),
+      substituteAppearances: number(row, "substitute_appearances"),
+      minutes: number(row, "minutes"),
+      ratingTotal: number(row, "rating_total"),
+      ratingSamples: number(row, "rating_samples"),
+      playedRoleMinutes,
+      appliedFixtureIds: database.queryAll(
+        "SELECT fixture_id FROM player_participation_applied_fixtures WHERE save_id = ? AND row_key = ? ORDER BY sort_order",
+        [save, rowKey],
+      ).map((fixture) => fixtureId(text(fixture, "fixture_id"))),
+    };
+    return rowKey;
+  });
+  const closedMonthKeys = database.queryAll(
+    "SELECT month_key FROM player_participation_closed_months WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => text(row, "month_key"));
+  const playerParticipationLedger: PlayerParticipationLedger = createPlayerParticipationLedger({
+    rows,
+    rowKeys,
+    closedMonthKeys,
+  });
+
+  return { playerParticipationLedger };
 }
 
 /** Writes ordered current-season message facts without rendered text or blobs. */

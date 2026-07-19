@@ -230,6 +230,15 @@ export interface Player {
   readonly potential: PlayerAbilities;
 }
 
+/**
+ * Complete player shape required from every new construction pipeline.
+ *
+ * The persisted `Player` contract keeps role fields optional so historical
+ * saves can be normalized at the storage boundary. New generators must return
+ * this stricter shape instead of relying on those compatibility omissions.
+ */
+export type RoleIdentifiedPlayer = Omit<Player, keyof PlayerRoleIdentity> & PlayerRoleIdentity;
+
 /** Machine-readable validation failure for player role identity. */
 export type PlayerRoleIdentityErrorCode =
   | "archetype_not_allowed_for_role"
@@ -297,6 +306,55 @@ export function createPlayerRoleIdentity(input: Omit<PlayerRoleIdentity, "roleFa
   };
 }
 
+/**
+ * Returns a copied player with one familiarity level promoted in the canonical
+ * role buckets while preserving primary role and archetype identity.
+ */
+export function withPlayerRoleFamiliarity(
+  player: Player,
+  role: PlayerRole,
+  familiarity: PlayerRoleFamiliarityLevel,
+): Player {
+  if (player.primaryRole === undefined || player.archetype === undefined) {
+    return {
+      ...player,
+      roleFamiliarity: {
+        ...(player.roleFamiliarity ?? {}),
+        [role]: familiarity,
+      },
+    };
+  }
+
+  const naturalRoles = removeRole(player.naturalRoles ?? [], role);
+  const adaptedRoles = removeRole(player.adaptedRoles ?? [], role);
+  const weakRoles = removeRole(player.weakRoles ?? [], role);
+
+  if (familiarity === "natural") {
+    naturalRoles.push(role);
+  } else if (familiarity === "adapted") {
+    adaptedRoles.push(role);
+  } else {
+    weakRoles.push(role);
+  }
+
+  const identity = createPlayerRoleIdentity({
+    primaryRole: player.primaryRole,
+    archetype: player.archetype,
+    naturalRoles,
+    adaptedRoles,
+    weakRoles,
+    roleFamiliarity: {
+      ...(player.roleFamiliarity ?? {}),
+      [role]: familiarity,
+    },
+  });
+
+  return {
+    ...player,
+    ...identity,
+  };
+}
+
 function assertDisjointRoles(
   naturalRoles: readonly PlayerRole[],
   adaptedRoles: readonly PlayerRole[],
@@ -311,6 +369,10 @@ function assertDisjointRoles(
 
     seen.add(role);
   }
+}
+
+function removeRole(roles: readonly PlayerRole[], role: PlayerRole): PlayerRole[] {
+  return roles.filter((candidate) => candidate !== role);
 }
 
 function familiarityEntries(

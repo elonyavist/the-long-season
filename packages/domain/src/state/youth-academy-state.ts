@@ -1,6 +1,28 @@
 import type { ClubId, PlayerId, SeasonId } from "../types/ids.ts";
+import { brand, type Brand } from "../types/brand.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 import type { GameState } from "./game-state.ts";
+
+/** Validated academy-development level on the explicit `1..5` scale. */
+export type YouthDevelopmentLevel = Brand<number, "YouthDevelopmentLevel">;
+
+/**
+ * Builds a validated youth-development level.
+ *
+ * The value is a factual academy quality signal. Content decides how to derive
+ * it from division and club reputation; domain only protects the `1..5` shape.
+ */
+export function youthDevelopmentLevel(value: number): YouthDevelopmentLevel {
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(`YouthDevelopmentLevel must be a safe integer: ${value}`);
+  }
+
+  if (value < 1 || value > 5) {
+    throw new Error(`YouthDevelopmentLevel must be between 1 and 5: ${value}`);
+  }
+
+  return brand<number, "YouthDevelopmentLevel">(value);
+}
 
 /** Active youth states that still occupy a club academy slot. */
 const ACTIVE_YOUTH_STATUSES: readonly YouthPlayerStatus[] = [

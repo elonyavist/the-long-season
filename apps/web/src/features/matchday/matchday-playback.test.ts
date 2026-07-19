@@ -6,6 +6,7 @@ import {
   buildSecondHalfPlaybackPlan,
   projectFirstHalfPlaybackFrame,
   projectSecondHalfPlaybackFrame,
+  scaledMatchdayPlaybackHoldMs,
 } from "./matchday-playback";
 
 describe("matchday playback", () => {
@@ -15,7 +16,7 @@ describe("matchday playback", () => {
     const second = buildFirstHalfPlaybackPlan(view, false);
 
     expect(first).toEqual(second);
-    expect(first.durationMs).toBeLessThanOrEqual(2_600);
+    expect(first.durationMs).toBe(9_400);
     expect(first.frames.map((frame) => frame.stage)).toEqual([
       "opening",
       "event",
@@ -23,7 +24,35 @@ describe("matchday playback", () => {
       "event",
       "closing",
     ]);
+    expect(first.frames.map((frame) => [frame.priority, frame.holdMs])).toEqual([
+      ["transition", 800],
+      ["goal", 4_500],
+      ["significant", 2_200],
+      ["ordinary", 1_000],
+      ["transition", 900],
+    ]);
+    expect(first.frames.map((frame) => frame.currentEventId)).toEqual([
+      undefined,
+      "event:goal",
+      "event:save",
+      "event:miss",
+      undefined,
+    ]);
     expect(first.frames.at(-1)).toMatchObject({ minute: 45, visibleEventCount: 3 });
+  });
+
+  it("scales visual holds without turning decisive facts into flashes", () => {
+    const plan = buildFirstHalfPlaybackPlan(halfTimeView(), false);
+    const goalFrame = plan.frames.find((frame) => frame.priority === "goal");
+    const saveFrame = plan.frames.find((frame) => frame.priority === "significant");
+    const ordinaryFrame = plan.frames.find((frame) => frame.priority === "ordinary");
+
+    expect(goalFrame).toBeDefined();
+    expect(saveFrame).toBeDefined();
+    expect(ordinaryFrame).toBeDefined();
+    expect(scaledMatchdayPlaybackHoldMs(goalFrame!, 4)).toBe(1_125);
+    expect(scaledMatchdayPlaybackHoldMs(saveFrame!, 4)).toBe(550);
+    expect(scaledMatchdayPlaybackHoldMs(ordinaryFrame!, 4)).toBe(250);
   });
 
   it("projects only revealed facts before restoring the exact checkpoint score", () => {
@@ -48,8 +77,9 @@ describe("matchday playback", () => {
     const plan = buildFirstHalfPlaybackPlan(view, true);
     const projected = projectFirstHalfPlaybackFrame(view, plan.frames[0]!);
 
-    expect(plan).toMatchObject({ reducedMotion: true, durationMs: 0 });
+    expect(plan).toMatchObject({ reducedMotion: true, durationMs: 900 });
     expect(plan.frames).toHaveLength(1);
+    expect(plan.frames[0]).toMatchObject({ priority: "transition", holdMs: 900 });
     expect(projected.currentMinute).toBe(45);
     expect(projected.scoreboard).toEqual(view.scoreboard);
     expect(projected.timelineEvents).toEqual(view.timelineEvents);
@@ -61,7 +91,12 @@ describe("matchday playback", () => {
 
     expect(plan.frames.filter((frame) => frame.stage === "event")).toHaveLength(8);
     expect(plan.frames.at(-1)?.visibleEventCount).toBe(20);
-    expect(plan.durationMs).toBeLessThanOrEqual(2_600);
+    expect(plan.durationMs).toBeGreaterThan(2_600);
+    expect(plan.frames[1]).toMatchObject({
+      priority: "goal",
+      currentEventId: "event:01",
+      visibleEventCount: 3,
+    });
   });
 
   it("reveals the second half from the half-time score and ends on exact full-time facts", () => {
@@ -73,7 +108,7 @@ describe("matchday playback", () => {
     const closing = projectSecondHalfPlaybackFrame(view, first.frames.at(-1)!);
 
     expect(first).toEqual(second);
-    expect(first.durationMs).toBeLessThanOrEqual(2_600);
+    expect(first.durationMs).toBe(11_700);
     expect(first.frames.map((frame) => frame.stage)).toEqual([
       "opening",
       "event",
@@ -103,7 +138,7 @@ describe("matchday playback", () => {
     const plan = buildSecondHalfPlaybackPlan(view, true);
     const projected = projectSecondHalfPlaybackFrame(view, plan.frames[0]!);
 
-    expect(plan).toMatchObject({ reducedMotion: true, durationMs: 0 });
+    expect(plan).toMatchObject({ reducedMotion: true, durationMs: 900 });
     expect(plan.frames).toHaveLength(1);
     expect(projected).toMatchObject({ phase: "second_half", currentMinute: 90 });
     expect(projected.scoreboard).toEqual(view.scoreboard);

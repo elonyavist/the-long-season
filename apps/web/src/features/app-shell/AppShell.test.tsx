@@ -64,6 +64,8 @@ describe("AppShell", () => {
     expect(html).toContain("Skip to current task");
     expect(html).toContain('id="tls-career-main"');
     expect(html).not.toContain('id="tls-career-main" tabindex="-1"');
+    expect(html).toContain('class="tls-app-shell-screen-transition"');
+    expect(html).toContain('data-screen-key="dashboard:standard"');
   });
 
   it("offers a compact navigation control without enabling future sections", () => {
@@ -128,10 +130,18 @@ describe("AppShell", () => {
     expect(html).not.toContain('class="tls-app-shell-right-rail"');
   });
 
+  it("gives focused Matchday content the complete shell outlet without adding another rail", () => {
+    const html = renderShell("matchday");
+
+    expect(html).toContain('data-shell-mode="matchday"');
+    expect(html).toContain('class="tls-app-shell-main" data-content-layout="full-width"');
+    expect(html).not.toContain('class="tls-app-shell-right-rail"');
+  });
+
 });
 
 function renderShell(
-  mode?: "standard" | "preparation",
+  mode?: "standard" | "preparation" | "matchday",
   withStorageFailure = false,
   activeSectionKey: "dashboard" | "inbox" = "dashboard",
 ): string {

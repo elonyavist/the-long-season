@@ -31,7 +31,25 @@ describe("UnsavedCareerDialog", () => {
     expect(matchHtml).toContain("Unsaved match summary");
     expect(matchHtml).not.toContain("Save and exit");
     expect(safeHtml).toContain('data-state="decision"');
+    expect(safeHtml).toContain('data-motion-state="open"');
     expect(safeHtml).toContain("tls-unsaved-dialog-mark");
+  });
+
+  it("keeps the closed native dialog mounted without presenting stale content", () => {
+    const html = renderToStaticMarkup(
+      <UnsavedCareerDialog
+        canSave
+        open={false}
+        pending={false}
+        text={text}
+        onCancel={vi.fn()}
+        onExitWithoutSaving={vi.fn()}
+        onSaveAndExit={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('data-motion-state="closed"');
+    expect(html).not.toContain(" open=");
   });
 
   it("exposes pending state while the save-and-exit command owns the lock", () => {

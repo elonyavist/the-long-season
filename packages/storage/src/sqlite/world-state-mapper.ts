@@ -5,7 +5,9 @@ import {
   createCareerState,
   fixtureId,
   gameDate,
+  PLAYER_ABILITY_KEYS,
   playerId,
+  readPlayerAbility,
   saveId,
   seasonId,
   stateValue,
@@ -13,6 +15,7 @@ import {
   type Fixture,
   type Player,
   type PlayerAbilities,
+  type PlayerAbilityKey,
   type PlayerDynamicState,
   type PlayerRole,
   type PlayerRoleFamiliarityLevel,
@@ -40,11 +43,14 @@ export interface SqliteWorldDatabase {
 
 /** Stable mapper error surfaced through the worker protocol. */
 export class SqliteWorldStateError extends Error {
+  public readonly code: "save_not_found" | "unsupported_bootstrap_state" | "sqlite_unavailable";
+
   public constructor(
-    public readonly code: "save_not_found" | "unsupported_bootstrap_state" | "sqlite_unavailable",
+    code: "save_not_found" | "unsupported_bootstrap_state" | "sqlite_unavailable",
     message: string,
   ) {
     super(message);
+    this.code = code;
     this.name = "SqliteWorldStateError";
   }
 }
@@ -52,13 +58,6 @@ export class SqliteWorldStateError extends Error {
 type AbilityScope = "current" | "potential";
 type AbilityGroup = keyof PlayerAbilities;
 type RoleKind = "natural" | "adapted" | "weak";
-
-const ABILITY_KEYS = {
-  technical: ["finishing", "passing", "longPassing", "crossing", "dribbling", "technique", "tackling", "penalties", "freeKicks"],
-  physical: ["pace", "strength", "stamina", "agility", "heading"],
-  mental: ["positioning", "vision", "anticipation", "composure", "determination", "leadership"],
-  goalkeeping: ["reflexes", "handling", "rushingOut", "goalkeeperPositioning", "footwork"],
-} as const satisfies Readonly<Record<AbilityGroup, readonly string[]>>;
 
 interface WorldRows {
   readonly save: Record<string, unknown>;
@@ -184,7 +183,7 @@ export function loadCareerWorld(database: SqliteWorldDatabase, requestedSaveId: 
 
 /** Maps a validated world into explicit relational rows for deterministic tests. */
 export function mapCareerWorldRows(input: SaveCareerInput, metadata: CareerSaveMetadata): WorldRows {
-  const { state } = input;
+  const state = createCareerState(input.state);
   assertOrderedLookup(state.gameState.playerIds, state.gameState.players, "player");
   assertOrderedLookup(state.gameState.clubIds, state.gameState.clubs, "club");
   assertOrderedLookup(state.gameState.fixtureIds, state.gameState.fixtures, "fixture");
@@ -447,25 +446,43 @@ function appendRoleRows(rows: Record<string, SqliteBindValue>[], id: string, kin
 }
 
 function appendAbilityRows(rows: Record<string, SqliteBindValue>[], player: Player, scope: AbilityScope, values: PlayerAbilities): void {
-  for (const [group, keys] of Object.entries(ABILITY_KEYS) as [AbilityGroup, readonly string[]][]) {
-    for (const key of keys) {
-      rows.push({ player_id: player.id, ability_scope: scope, ability_group: group, ability_key: key, ability_value: (values[group] as unknown as Record<string, number>)[key] ?? null });
-    }
+  for (const abilityKey of PLAYER_ABILITY_KEYS) {
+    const [group, key] = splitAbilityKey(abilityKey);
+    rows.push({
+      player_id: player.id,
+      ability_scope: scope,
+      ability_group: group,
+      ability_key: key,
+      ability_value: readPlayerAbility(values, abilityKey),
+    });
   }
 }
 
 function readAbilitySet(rows: readonly Record<string, unknown>[], scope: AbilityScope): PlayerAbilities {
-  const result: Record<string, Record<string, ReturnType<typeof abilityValue>>> = {};
-  for (const [group, keys] of Object.entries(ABILITY_KEYS) as [AbilityGroup, readonly string[]][]) {
-    const values: Record<string, ReturnType<typeof abilityValue>> = {};
-    for (const key of keys) {
-      const row = rows.find((candidate) => candidate.ability_scope === scope && candidate.ability_group === group && candidate.ability_key === key);
-      if (row === undefined) throw new SqliteWorldStateError("sqlite_unavailable", `missing ${scope} ability ${group}.${key}`);
-      values[key] = abilityValue(requiredNumber(row, "ability_value"));
+  const result: Record<AbilityGroup, Record<string, ReturnType<typeof abilityValue>>> = {
+    technical: {},
+    physical: {},
+    mental: {},
+    goalkeeping: {},
+  };
+  for (const abilityKey of PLAYER_ABILITY_KEYS) {
+    const [group, key] = splitAbilityKey(abilityKey);
+    const row = rows.find((candidate) =>
+      candidate.ability_scope === scope
+      && candidate.ability_group === group
+      && candidate.ability_key === key,
+    );
+    if (row === undefined) {
+      throw new SqliteWorldStateError("sqlite_unavailable", `missing ${scope} ability ${abilityKey}`);
     }
-    result[group] = values;
+    result[group][key] = abilityValue(requiredNumber(row, "ability_value"));
   }
   return result as unknown as PlayerAbilities;
+}
+
+function splitAbilityKey(key: PlayerAbilityKey): readonly [AbilityGroup, string] {
+  const separatorIndex = key.indexOf(".");
+  return [key.slice(0, separatorIndex) as AbilityGroup, key.slice(separatorIndex + 1)];
 }
 
 function readRoles(rows: readonly Record<string, unknown>[], kind: RoleKind): readonly PlayerRole[] {

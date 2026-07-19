@@ -58,13 +58,14 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
     assert.deepEqual(result.facts.operationOrder, [
       "completed_season_validation",
       "season_archive",
-      "senior_development",
+      "monthly_lifecycle",
       "player_exits",
       "youth_lifecycle",
       "youth_intake",
       "youth_promotion",
       "squad_maintenance",
       "transfer_turnover",
+      "post_transfer_squad_maintenance",
       "next_calendar_merge",
       "player_state_rollover",
       "season_inbox_delivery",
@@ -72,7 +73,7 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
     assert.equal(result.facts.selectedClubId, "club:selected");
     assert.equal(result.facts.previousSeasonId, "season:0001");
     assert.equal(result.facts.nextSeasonId, "season:0002");
-    assert.equal(result.facts.playerDevelopment.changeCount, 8);
+    assert.equal(result.facts.playerDevelopment.changeCount, 0);
     assert.equal(result.facts.playerExits.exitCount, 0);
     assert.equal(result.facts.youthLifecycle.recordCount, 0);
     assert.equal(result.facts.youthLifecycle.promotionCandidateCount, 0);
@@ -132,7 +133,7 @@ test("advanceCareerOneSeason facts are enough for an adapter report without reru
         totalGoals: 3,
       },
       activity: {
-        developmentRows: 8,
+        developmentRows: 0,
         playerExits: 0,
         youthLifecycleRows: 0,
         youthPromotionCandidates: 0,
@@ -211,13 +212,14 @@ test("advanceCareerOneSeason supports report refresh without completed-season ar
   assert.equal(result.status, "advanced");
   if (result.status === "advanced") {
     assert.deepEqual(result.facts.operationOrder, [
-      "senior_development",
+      "monthly_lifecycle",
       "player_exits",
       "youth_lifecycle",
       "youth_intake",
       "youth_promotion",
       "squad_maintenance",
       "transfer_turnover",
+      "post_transfer_squad_maintenance",
       "player_state_rollover",
     ]);
     assert.equal(result.facts.seasonArchive, undefined);

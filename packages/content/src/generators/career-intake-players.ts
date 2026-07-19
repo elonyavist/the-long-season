@@ -2,25 +2,26 @@ import {
   createPersonIdentity,
   gameDate,
   playerId,
-  stateValue,
   type ClubCategory,
   type ClubId,
   type GameDate,
   type PersonIdentity,
-  type Player,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type RoleIdentifiedPlayer,
   type SeasonId,
 } from "@game/domain";
 import { deriveRng, fromISO } from "@game/shared";
 
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
-import { getPlayerGenerationBand, type PlayerGenerationClubTier } from "./player-generation-bands.ts";
-import { buildPlayerAbilitiesForPosition } from "./player-role-templates.ts";
+import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
+import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
+import { buildCurrentPlayerProfile } from "./player-current-profile-policy.ts";
+import { allocateReachablePotential } from "./player-potential-allocation.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
-import { generatedRoleIdentityForPosition } from "./player-role-identity.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -35,7 +36,7 @@ export interface CareerIntakeClubContext {
 /** One generated intake player and report metadata. */
 export interface CareerIntakeGeneratedPlayer {
   /** Generated player entity. */
-  readonly player: Player;
+  readonly player: RoleIdentifiedPlayer;
   /** Initial dynamic state for the generated player. */
   readonly playerState: PlayerDynamicState;
   /** Generated identity metadata for presentation/reporting. */
@@ -106,43 +107,51 @@ function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerInt
   const archetype = getGeneratedPlayerArchetype(archetypeKey);
   const position = positionForIntakeSlot(input.worldSeed, input.seasonId, id, input.index);
   const clubTier = clubTierForReputation(input.clubContext.reputation);
-  const band = getPlayerGenerationBand(input.clubContext.category, clubTier);
-  const base =
-    numberInFloatRange(band.currentAbility, input.worldSeed, "career-intake-current-band", id) +
-    numberInFloatRange(archetype.currentAbilityOffset, input.worldSeed, "career-intake-current-offset", id);
-  const potentialBase = Math.min(
-    20,
-    Math.max(
-      base,
-      numberInFloatRange(band.potentialCeiling, input.worldSeed, "career-intake-potential-band", id),
-      base + numberInFloatRange(archetype.potentialUplift, input.worldSeed, "career-intake-potential-uplift", id),
-    ),
-  );
   const ageYears = numberInRange(archetype.ageYears, input.worldSeed, "career-intake-age", id);
   const birthDateJitter = deriveRng(input.worldSeed, "career-intake-birth-date", input.seasonId, id).nextInt(0, 365);
-  const referenceDate = input.referenceDate ?? CAREER_START_EPOCH_DAY;
+  const referenceDate = input.referenceDate ?? gameDate(CAREER_START_EPOCH_DAY);
   const identity = intakeIdentity(input, id);
-  const roleIdentity = generatedRoleIdentityForPosition(position);
+  const primaryRole = primaryRoleForPosition(position);
+  const abilities = buildCurrentPlayerProfile({
+    seed: input.worldSeed,
+    playerKey: String(id),
+    division: input.clubContext.category,
+    clubTier,
+    role: primaryRole,
+    ageYears,
+    rarityLane: rarityLaneForIntakeArchetype(archetypeKey),
+  });
+  const assembled = assembleGeneratedPlayer({
+    id,
+    identity,
+    referenceDate,
+    ageYears,
+    birthDateJitterDays: birthDateJitter,
+    position,
+    abilities,
+    potential: allocateReachablePotential({
+      seed: input.worldSeed,
+      playerKey: String(id),
+      abilities,
+      ageYears,
+      role: primaryRole,
+      division: input.clubContext.category,
+      clubTier,
+      potentialClass: archetype.potentialClass,
+    }),
+  });
 
   return {
-    player: {
-      id,
-      firstName: identity.firstName,
-      lastName: identity.lastName,
-      birthDate: gameDate(referenceDate - ageYears * 365 - birthDateJitter),
-      naturalPositions: [position],
-      ...roleIdentity,
-      abilities: buildPlayerAbilitiesForPosition(base, position),
-      potential: buildPlayerAbilitiesForPosition(potentialBase, position),
-    },
-    playerState: {
-      fitness: stateValue(100),
-      form: stateValue(50),
-      morale: stateValue(50),
-    },
+    player: assembled.player,
+    playerState: assembled.dynamicState,
     identity,
     archetypeKey,
   };
+}
+
+function rarityLaneForIntakeArchetype(archetypeKey: GeneratedPlayerArchetypeKey): "normal" | "rare" | "exceptional" {
+  if (archetypeKey === "serious_prospect") return "rare";
+  return "normal";
 }
 
 function intakeIdentity(input: GenerateOneIntakePlayerInput, id: PlayerId): PersonIdentity {
@@ -233,16 +242,6 @@ function numberInRange(
 ): number {
   const rng = deriveRng(seed, streamName, id);
   return rng.nextInt(range.minInclusive, range.maxInclusive + 1);
-}
-
-function numberInFloatRange(
-  range: { readonly minInclusive: number; readonly maxInclusive: number },
-  seed: string,
-  streamName: string,
-  id: PlayerId,
-): number {
-  const rng = deriveRng(seed, streamName, id);
-  return range.minInclusive + rng.nextFloat() * (range.maxInclusive - range.minInclusive);
 }
 
 interface BatchNameUsage {

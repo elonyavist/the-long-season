@@ -4,12 +4,15 @@ import { test } from "vitest";
 import {
   CAREER_STATE_SCHEMA_VERSION,
   abilityValue,
+  accruePlayerFixtureParticipation,
   clubId,
   competitionId,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   createMarketState,
   fixtureId,
   gameDate,
+  getFormation,
   playerId,
   saveId,
   seasonId,
@@ -19,6 +22,7 @@ import {
   type ClubId,
   type Fixture,
   type GameState,
+  type PlayerParticipationLedger,
   type PlayerDynamicState,
   type PlayerId,
   type Player,
@@ -32,6 +36,7 @@ import {
   type MatchTeamContext,
 } from "../match-engine/index.ts";
 import { createStagedMatchCheckpoint } from "./active-match-checkpoint.ts";
+import { monthKeyForCareerDate } from "./advance-career-month.ts";
 import { commitStagedCareerFixture, progressNextCareerFixture } from "./progress-fixture.ts";
 
 /**
@@ -67,6 +72,7 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
     assert.equal(result.fixtureBefore.result, undefined);
     assert.equal(result.fixtureAfter.result?.played, true);
     assert.equal(result.careerState.gameState.fixtures[selectedFixtureId]?.result?.played, true);
+    assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 4);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.fitness, 92);
     assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.form, 50);
     assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.morale, 50);
@@ -75,6 +81,7 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.morale, 50);
     assert.equal(result.playerStateConsequences.length > 0, true);
     assert.equal(result.playerStateConsequenceSummary.changedPlayerCount, result.playerStateConsequences.length);
+    assert.deepEqual(result.monthlyLifecycle, []);
     assert.deepEqual(result.conditionChanges.slice(0, 3), [
       {
         playerId: playerId("player:selected-01"),
@@ -99,6 +106,50 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
       },
     ]);
     assert.equal(result.careerState.gameState.calendar.currentDate, careerState.gameState.calendar.currentDate);
+  }
+});
+
+test("progressNextCareerFixture closes crossed monthly lifecycle before accruing the fixture", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const selectedFixtureId = fixtureId("fixture:000001");
+  const currentDate = gameDate(20_000);
+  const fixtureDate = gameDate(Number(currentDate) + 70);
+  const monthKey = monthKeyForCareerDate(currentDate);
+  let playerParticipationLedger = createEmptyPlayerParticipationLedger();
+  playerParticipationLedger = accruePlayerFixtureParticipation(playerParticipationLedger, {
+    fixtureId: fixtureId("fixture:previous-month"),
+    playerId: playerId("player:selected-01"),
+    seasonId: seasonId("season:test"),
+    monthKey,
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7,
+    playedRoleMinutes: { goalkeeper: 90 },
+  });
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
+    fixtures: [fixtureFixture(selectedFixtureId, selectedClubId, otherClubId, false, fixtureDate)],
+    currentDate,
+    playerParticipationLedger,
+  });
+
+  const result = progressNextCareerFixture({
+    careerState,
+    teamsByClubId: {
+      [selectedClubId]: teamContextFixture(selectedClubId, 12),
+      [otherClubId]: teamContextFixture(otherClubId, 10),
+    },
+    matchEngineConfig: matchEngineConfigFixture(),
+  });
+
+  assert.equal(result.status, "advanced");
+  if (result.status === "advanced") {
+    assert.deepEqual(result.monthlyLifecycle.map((summary) => summary.monthKey), [monthKey]);
+    assert.equal(result.careerState.playerParticipationLedger?.closedMonthKeys.includes(`season:test|${monthKey}`), true);
+    assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 5);
   }
 });
 
@@ -161,6 +212,7 @@ test("commitStagedCareerFixture applies the completed staged report once and cle
     assert.deepEqual(committed.report, report);
     assert.deepEqual(committed.fixtureAfter.result?.report, report);
     assert.equal(committed.careerState.activeMatchCheckpoint, undefined);
+    assert.equal(committed.careerState.playerParticipationLedger?.rowKeys.length, 4);
 
     const duplicate = commitStagedCareerFixture({
       careerState: committed.careerState,
@@ -210,6 +262,7 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
         conditionChanges: result.conditionChanges.slice(0, 3),
         playerStateConsequences: result.playerStateConsequences,
         playerStateConsequenceSummary: result.playerStateConsequenceSummary,
+        monthlyLifecycle: result.monthlyLifecycle,
       },
       {
         fixtureId: selectedFixtureId,
@@ -290,6 +343,7 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
           totalFormDelta: 1,
           totalMoraleDelta: -2,
         },
+        monthlyLifecycle: [],
       },
     );
   }
@@ -445,22 +499,102 @@ test("progressNextCareerFixture reports missing team context without simulating"
   });
 });
 
+test("progressNextCareerFixture can build the non-selected opponent context with AI selection", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const fixtureToPlayId = fixtureId("fixture:000001");
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), fullSquadClubFixture(otherClubId)],
+    fixtures: [fixtureFixture(fixtureToPlayId, selectedClubId, otherClubId)],
+  });
+
+  const result = progressNextCareerFixture({
+    careerState,
+    teamsByClubId: {
+      [selectedClubId]: teamContextFixture(selectedClubId, 12),
+    },
+    aiTeamSelectionByClubId: {
+      [otherClubId]: {
+        formation: getFormation("4-4-2"),
+        roleWeights: roleWeightsFixture(),
+        tacticalDistribution: {
+          directness: 0.5,
+          pressing: 0.5,
+          width: 0.5,
+          risk: 0.5,
+        },
+        benchSize: 8,
+      },
+    },
+    matchEngineConfig: matchEngineConfigFixture(),
+  });
+
+  assert.equal(result.status, "advanced");
+  if (result.status === "advanced") {
+    assert.equal(result.fixtureId, fixtureToPlayId);
+    assert.equal(result.fixtureAfter.result?.played, true);
+    assert.equal(result.report.fixtureId, fixtureToPlayId);
+  }
+});
+
+test("progressNextCareerFixture never auto-builds the selected club lineup", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const fixtureToPlayId = fixtureId("fixture:000001");
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [fullSquadClubFixture(selectedClubId), clubFixture(otherClubId)],
+    fixtures: [fixtureFixture(fixtureToPlayId, selectedClubId, otherClubId)],
+  });
+
+  const result = progressNextCareerFixture({
+    careerState,
+    teamsByClubId: {
+      [otherClubId]: teamContextFixture(otherClubId, 10),
+    },
+    aiTeamSelectionByClubId: {
+      [selectedClubId]: {
+        formation: getFormation("4-4-2"),
+        roleWeights: roleWeightsFixture(),
+        tacticalDistribution: {
+          directness: 0.5,
+          pressing: 0.5,
+          width: 0.5,
+          risk: 0.5,
+        },
+      },
+    },
+    matchEngineConfig: matchEngineConfigFixture(),
+  });
+
+  assert.deepEqual(result, {
+    status: "invalid",
+    reason: "missing_home_team_context",
+    fixtureId: fixtureToPlayId,
+    careerState,
+  });
+});
+
 function careerStateFixture(input: {
   readonly selectedClubId: ClubId;
   readonly clubs: readonly Club[];
   readonly fixtures: readonly Fixture[];
   readonly playerStateOverrides?: Partial<Record<PlayerId, PlayerDynamicState>>;
+  readonly currentDate?: ReturnType<typeof gameDate>;
+  readonly playerParticipationLedger?: PlayerParticipationLedger;
 }): CareerState {
   return createCareerState({
     saveId: saveId("save:career-progress-fixture"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: input.selectedClubId,
-    gameState: gameStateFixture(input.clubs, input.fixtures, input.playerStateOverrides ?? {}),
+    gameState: gameStateFixture(input.clubs, input.fixtures, input.playerStateOverrides ?? {}, input.currentDate ?? gameDate(20_000)),
     marketState: createMarketState({
       clubBudgets: {},
       clubBudgetIds: [],
     }),
     transferHistory: [],
+    ...(input.playerParticipationLedger === undefined ? {} : { playerParticipationLedger: input.playerParticipationLedger }),
   });
 }
 
@@ -468,6 +602,7 @@ function gameStateFixture(
   clubs: readonly Club[],
   fixtures: readonly Fixture[],
   playerStateOverrides: Partial<Record<PlayerId, PlayerDynamicState>>,
+  currentDate: ReturnType<typeof gameDate>,
 ): GameState {
   const clubsById: Partial<Record<ClubId, Club>> = {};
   const clubIds: ClubId[] = [];
@@ -483,7 +618,7 @@ function gameStateFixture(
 
     for (const clubPlayerId of club.playerIds) {
       playerStates[clubPlayerId] = playerStateOverrides[clubPlayerId] ?? playerStateFixture(100);
-      players[clubPlayerId] = playerFixture(clubPlayerId);
+      players[clubPlayerId] = positionedPlayerFixture(clubPlayerId);
       playerIds.push(clubPlayerId);
     }
   }
@@ -500,7 +635,7 @@ function gameStateFixture(
       saveSchemaVersion: 1,
     },
     calendar: {
-      currentDate: gameDate(20_000),
+      currentDate,
       currentSeasonId: seasonId("season:test"),
     },
     players: players as GameState["players"],
@@ -533,6 +668,25 @@ function playerFixture(id: PlayerId): Player {
   };
 }
 
+function positionedPlayerFixture(id: PlayerId): Player {
+  const key = String(id);
+  if (key.includes("-gk-")) return playerFixtureWithPositions(id, ["gk"]);
+  if (key.includes("-rb-")) return playerFixtureWithPositions(id, ["rb"]);
+  if (key.includes("-cb-")) return playerFixtureWithPositions(id, ["cb"]);
+  if (key.includes("-lb-")) return playerFixtureWithPositions(id, ["lb"]);
+  if (key.includes("-rm-")) return playerFixtureWithPositions(id, ["rw"]);
+  if (key.includes("-lm-")) return playerFixtureWithPositions(id, ["lw"]);
+  if (key.includes("-st-")) return playerFixtureWithPositions(id, ["st"]);
+  return playerFixture(id);
+}
+
+function playerFixtureWithPositions(id: PlayerId, naturalPositions: Player["naturalPositions"]): Player {
+  return {
+    ...playerFixture(id),
+    naturalPositions,
+  };
+}
+
 function clubFixture(id: ClubId): Club {
   const playerPrefix = String(id).slice("club:".length);
 
@@ -550,13 +704,44 @@ function clubFixture(id: ClubId): Club {
   };
 }
 
-function fixtureFixture(id: Fixture["id"], homeClubId: ClubId, awayClubId: ClubId, played = false): Fixture {
+function fullSquadClubFixture(id: ClubId): Club {
+  const playerPrefix = String(id).slice("club:".length);
+
+  return {
+    ...clubFixture(id),
+    playerIds: [
+      playerId(`player:${playerPrefix}-gk-01`),
+      playerId(`player:${playerPrefix}-gk-02`),
+      playerId(`player:${playerPrefix}-rb-01`),
+      playerId(`player:${playerPrefix}-cb-01`),
+      playerId(`player:${playerPrefix}-cb-02`),
+      playerId(`player:${playerPrefix}-cb-03`),
+      playerId(`player:${playerPrefix}-lb-01`),
+      playerId(`player:${playerPrefix}-rm-01`),
+      playerId(`player:${playerPrefix}-cm-01`),
+      playerId(`player:${playerPrefix}-cm-02`),
+      playerId(`player:${playerPrefix}-cm-03`),
+      playerId(`player:${playerPrefix}-lm-01`),
+      playerId(`player:${playerPrefix}-st-01`),
+      playerId(`player:${playerPrefix}-st-02`),
+      playerId(`player:${playerPrefix}-st-03`),
+    ],
+  };
+}
+
+function fixtureFixture(
+  id: Fixture["id"],
+  homeClubId: ClubId,
+  awayClubId: ClubId,
+  played = false,
+  date = gameDate(20_000),
+): Fixture {
   return {
     id,
     competitionId: competitionId("competition:test"),
     seasonId: seasonId("season:test"),
     roundNumber: 1,
-    date: gameDate(20_000),
+    date,
     homeClubId,
     awayClubId,
     ...(played
@@ -639,6 +824,47 @@ function matchEngineConfigFixture(): MatchEngineConfig {
       risk: { minInclusive: 0, maxInclusive: 1 },
     },
   };
+}
+
+function roleWeightsFixture() {
+  return {
+    gk: {
+      roleKey: "gk",
+      department: "goalkeeper",
+      abilityWeights: {
+        "goalkeeping.reflexes": 3,
+        "goalkeeping.handling": 2,
+        "goalkeeping.goalkeeperPositioning": 2,
+      },
+    },
+    defender: {
+      roleKey: "defender",
+      department: "defense",
+      abilityWeights: {
+        "technical.tackling": 2,
+        "mental.positioning": 2,
+        "physical.heading": 1,
+      },
+    },
+    midfielder: {
+      roleKey: "midfielder",
+      department: "midfield",
+      abilityWeights: {
+        "technical.passing": 2,
+        "mental.vision": 2,
+        "physical.stamina": 1,
+      },
+    },
+    attacker: {
+      roleKey: "attacker",
+      department: "attack",
+      abilityWeights: {
+        "technical.finishing": 3,
+        "mental.composure": 2,
+        "physical.heading": 1,
+      },
+    },
+  } as const;
 }
 
 function playerStateFixture(fitness: number): PlayerDynamicState {

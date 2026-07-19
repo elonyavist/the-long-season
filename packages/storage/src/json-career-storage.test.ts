@@ -6,8 +6,12 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  accruePlayerFixtureParticipation,
+  closePlayerParticipationMonth,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   createMarketState,
+  fixtureId,
   gameDate,
   nonNegativeMoney,
   playerId,
@@ -231,7 +235,7 @@ test("loading malformed career saves fails clearly", async () => {
   const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
 
   try {
-    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 1, metadata: {}, state: {} }), "utf8");
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 3, metadata: {}, state: {} }), "utf8");
 
     await assert.rejects(
       () => storage.loadCareer(saveId("save:bad")),
@@ -259,7 +263,7 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 2);
+    assert.equal(raw.saveSchemaVersion, 3);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
     assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
   } finally {
@@ -267,30 +271,33 @@ test("career storage writes a career-specific JSON envelope", async () => {
   }
 });
 
-test("version-one career envelopes migrate to the seven-day autosave default", async () => {
+test("old beta career envelopes fail with a typed reset boundary", async () => {
   const directoryPath = await createTempSaveDirectory();
   const storage = new JsonCareerStorage({ directoryPath });
   const state = minimalCareerState();
-  const storedPath = join(directoryPath, `${encodeURIComponent(state.saveId)}.career.json`);
+  const savePath = (id: ReturnType<typeof saveId>) => join(directoryPath, `${encodeURIComponent(id)}.career.json`);
 
   try {
-    await writeFile(storedPath, JSON.stringify({
-      saveSchemaVersion: 1,
-      metadata: {
-        saveId: state.saveId,
-        name: "Legacy career",
-        createdAtISO: "2026-07-13T10:00:00.000Z",
-        updatedAtISO: "2026-07-13T10:00:00.000Z",
-        saveSchemaVersion: 1,
-      },
-      state,
-    }), "utf8");
+    for (const version of [1, 2] as const) {
+      const id = saveId(`save:old-beta-${version}`);
+      await writeFile(savePath(id), JSON.stringify({
+        saveSchemaVersion: version,
+        metadata: {
+          saveId: id,
+          name: `Old beta ${version}`,
+          createdAtISO: "2026-07-13T09:00:00.000Z",
+          updatedAtISO: "2026-07-13T09:00:00.000Z",
+          saveSchemaVersion: 1,
+          autosaveIntervalDays: 7,
+        },
+        state: createCareerState({ ...state, saveId: id }),
+      }), "utf8");
 
-    const [metadata] = await storage.listCareers();
-
-    assert.equal(metadata?.autosaveIntervalDays, 7);
-    assert.equal(metadata?.saveSchemaVersion, 1);
-    assert.deepEqual(await storage.loadCareer(state.saveId), state);
+      await assert.rejects(
+        () => storage.loadCareer(id),
+        (error: unknown) => error instanceof StorageError && error.code === "unsupported_schema_version",
+      );
+    }
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -334,7 +341,27 @@ function minimalCareerState(): CareerState {
       clubBudgetIds: [pro01],
     }),
     transferHistory: [],
+    playerParticipationLedger: playerParticipationLedgerFixture(playerId("player:pro01-01")),
   });
+}
+
+/** Builds a closed monthly ledger so JSON saves prove lifecycle persistence. */
+function playerParticipationLedgerFixture(player: ReturnType<typeof playerId>) {
+  const season = seasonId("season:2026");
+  const monthKey = "2026-08";
+  const accrued = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
+    fixtureId: fixtureId("fixture:json-career-001"),
+    playerId: player,
+    seasonId: season,
+    monthKey,
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7.1,
+    playedRoleMinutes: { goalkeeper: 90 },
+  });
+
+  return closePlayerParticipationMonth(accrued, season, monthKey);
 }
 
 /** Builds a career state with one active youth player for storage round trips. */
@@ -431,6 +458,12 @@ function playerFixture(id: Player["id"]): Player {
     lastName: "One",
     birthDate: gameDate(10_000),
     naturalPositions: ["gk"],
+    primaryRole: "goalkeeper",
+    archetype: "goalkeeper_shot_stopper",
+    naturalRoles: ["goalkeeper"],
+    adaptedRoles: [],
+    weakRoles: [],
+    roleFamiliarity: { goalkeeper: "natural" },
     abilities: abilitySet(10),
     potential: abilitySet(12),
   };

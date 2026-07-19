@@ -1,5 +1,9 @@
 import type { Translator } from "@game/i18n";
+import * as m from "motion/react-m";
 import { useEffect, useRef } from "react";
+
+import { webMotion } from "../../shared/motion/web-motion";
+import { CommandFeedbackLabel } from "../shared/CommandActivityIndicator";
 
 /** Distinguishes leaving the career from leaving an edited team plan. */
 export type UnsavedCareerDialogMode = "career_exit" | "preparation_navigation";
@@ -53,10 +57,14 @@ export function UnsavedCareerDialog({
       : "career.exit.matchdaySummary";
 
   return (
-    <dialog
+    <m.dialog
+      animate={open ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
       className="tls-unsaved-dialog"
+      data-motion-state={open ? "open" : "closed"}
       data-state={pending ? "pending" : "decision"}
+      initial={false}
       ref={dialogRef}
+      transition={webMotion.transition}
       aria-labelledby="tls-unsaved-dialog-title"
       aria-describedby="tls-unsaved-dialog-summary"
       onCancel={(event) => {
@@ -82,14 +90,16 @@ export function UnsavedCareerDialog({
         </button>
         {canSave ? (
           <button className="tls-menu-button tls-menu-button-primary" disabled={pending} type="button" onClick={onSaveAndExit}>
-            {text(pending
-              ? "career.saveControl.saving"
-              : preparationNavigation
+            <CommandFeedbackLabel
+              idleLabel={text(preparationNavigation
                 ? "career.preparationDraft.exit.saveAndContinue"
                 : "career.exit.saveAndExit")}
+              pending={pending}
+              pendingLabel={text("career.saveControl.saving")}
+            />
           </button>
         ) : null}
       </div>
-    </dialog>
+    </m.dialog>
   );
 }

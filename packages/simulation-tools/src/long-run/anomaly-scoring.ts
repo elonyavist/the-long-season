@@ -208,13 +208,19 @@ function championStreakWarnThreshold(seasonCount: number): number {
  *
  * Ten-season smoke runs are short enough that a single seven-title dynasty can
  * happen without structural collapse, so they fail only from eight titles up.
- * Longer reports keep the stricter scaled threshold used by stability gates.
+ * Fifty-season release gates treat a fifteen- or sixteen-title dynasty as a
+ * football story unless other stability checks collapse; hard failure is
+ * reserved for more than one third of the simulated era.
  */
 function championStreakFailThreshold(seasonCount: number): number {
   const baseThreshold = Math.max(7, Math.ceil(seasonCount * 0.3));
 
   if (seasonCount <= 10) {
     return Math.max(8, baseThreshold);
+  }
+
+  if (seasonCount >= 50) {
+    return Math.max(baseThreshold, Math.floor(seasonCount / 3) + 1);
   }
 
   return baseThreshold;

@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { availableParallelism } from "node:os";
+import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 import {
   createFakeLeagueSystem,
   generateCareerIntakePlayers,
@@ -7,11 +10,12 @@ import {
 } from "@game/content";
 import {
   advanceCareerOneSeason,
+  summarizePlayerDevelopmentAbilities,
   type AdvanceCareerReportRefreshMode,
   type CareerIntakeCandidate,
   type YouthIntakeCandidate,
 } from "@game/engine";
-import type { Translator } from "@game/i18n";
+import { createTranslator, type SupportedLanguage, type Translator } from "@game/i18n";
 import {
   createLongRunAnomalyReport,
   createLongRunClubStabilityReport,
@@ -37,8 +41,14 @@ import { createCareerSeasonInput } from "../fake-season-input.ts";
 /** Candidate pool size per club for long-run squad maintenance stress tests. */
 const LONG_RUN_INTAKE_CANDIDATES_PER_CLUB = 8;
 
-/** Minimum club goals needed before top-three creator share is treated as structurally meaningful. */
-const MIN_GOALS_FOR_TOP_THREE_CREATOR_SHARE = 40;
+/** Minimum club goals needed before creator-share ratios are structurally meaningful. */
+const MIN_GOALS_FOR_CREATOR_SHARE = 40;
+
+/** Large gates use worker partitions by default so release checks remain practical. */
+const DEFAULT_PARALLEL_GATE_WORLD_THRESHOLD = 100;
+
+/** Hard cap that keeps release gates fast without starving the workstation. */
+const DEFAULT_MAX_LONG_RUN_WORKERS = 12;
 
 /** Complete report bundle for one deterministic career world. */
 export interface SingleWorldLongRunReport {
@@ -178,6 +188,8 @@ export interface LongRunGateReport {
   readonly worldCount: number;
   /** Number of seasons simulated per world. */
   readonly seasonCount: number;
+  /** Deterministic execution metadata for reproducing large gates. */
+  readonly execution: LongRunGateExecutionSummary;
   /** Total simulated seasons. */
   readonly totalSeasonCount: number;
   /** Number of worlds with failing anomaly checks. */
@@ -260,6 +272,71 @@ export interface LongRunGateCheckCount {
   readonly count: number;
 }
 
+/** Deterministic metadata for the way a long-run gate was executed. */
+export interface LongRunGateExecutionSummary {
+  /** `sequential` for small gates, `parallel` for partitioned gates. */
+  readonly mode: "sequential" | "parallel";
+  /** Number of worker partitions used to create world summaries. */
+  readonly workerCount: number;
+  /** Stable partition summary hashes in partition order. */
+  readonly partitionHashes: readonly string[];
+}
+
+/** Input for the explicit long-run gate report. */
+export interface CreateLongRunGateReportInput {
+  /** Seed prefix used to derive world seeds. */
+  readonly seedPrefix: string;
+  /** Number of worlds to simulate. */
+  readonly worldCount: number;
+  /** Number of seasons per world. */
+  readonly seasonCount: number;
+  /** Presentation translator used for fallback labels. */
+  readonly text: Translator;
+  /** Language used by worker partitions to recreate the translator. */
+  readonly language?: SupportedLanguage;
+  /** Optional deterministic override for tests and local performance tuning. */
+  readonly workerCount?: number;
+}
+
+/** A contiguous world-index partition for a long-run gate worker. */
+interface LongRunGateWorkerPartition {
+  /** First one-based world index in the partition. */
+  readonly startIndex: number;
+  /** Last one-based world index in the partition. */
+  readonly endIndex: number;
+}
+
+/** Serializable worker input for a long-run gate partition. */
+interface LongRunGateWorkerData extends LongRunGateWorkerPartition {
+  /** Seed prefix used to derive world seeds. */
+  readonly seedPrefix: string;
+  /** Number of seasons per world. */
+  readonly seasonCount: number;
+  /** Language used for fallback labels inside reports. */
+  readonly language: SupportedLanguage;
+}
+
+/** Successful worker response with compact deterministic summaries. */
+interface LongRunGateWorkerSuccess {
+  /** Worker success marker. */
+  readonly ok: true;
+  /** Completed partition. */
+  readonly partition: LongRunGateWorkerPartition;
+  /** Compact summaries for the partition worlds. */
+  readonly worlds: readonly LongRunGateWorldSummary[];
+}
+
+/** Failed worker response with a serializable message. */
+interface LongRunGateWorkerFailure {
+  /** Worker failure marker. */
+  readonly ok: false;
+  /** Error message emitted by the worker. */
+  readonly message: string;
+}
+
+/** Response sent from a long-run gate worker. */
+type LongRunGateWorkerMessage = LongRunGateWorkerSuccess | LongRunGateWorkerFailure;
+
 /**
  * Builds the full single-world report bundle used by both normal output and
  * long-run batch gates. Keeping one path avoids report drift.
@@ -310,16 +387,175 @@ export async function createLongRunGateReport(input: {
   readonly worldCount: number;
   readonly seasonCount: number;
   readonly text: Translator;
+  readonly language?: SupportedLanguage;
+  readonly workerCount?: number;
 }): Promise<LongRunGateReport> {
+  const workerCount = resolveLongRunGateWorkerCount(input);
+  const partitions = createLongRunGatePartitions(input.worldCount, workerCount);
+  const partitionWorlds =
+    workerCount === 1
+      ? [runLongRunGatePartition({
+          seedPrefix: input.seedPrefix,
+          seasonCount: input.seasonCount,
+          language: input.language ?? "en",
+          startIndex: 1,
+          endIndex: input.worldCount,
+        })]
+      : await runLongRunGatePartitions(partitions, {
+          seedPrefix: input.seedPrefix,
+          seasonCount: input.seasonCount,
+          language: input.language ?? "en",
+        });
+  const worlds = partitionWorlds.flatMap((partition) => partition.worlds).sort((left, right) => left.seed.localeCompare(right.seed));
+  const execution: LongRunGateExecutionSummary = {
+    mode: workerCount === 1 ? "sequential" : "parallel",
+    workerCount,
+    partitionHashes: partitionWorlds.map((partition) => hashGateWorldSummaries(partition.worlds)),
+  };
+
+  return summarizeGateWorlds(input.seedPrefix, input.worldCount, input.seasonCount, execution, worlds);
+}
+
+/**
+ * Resolves the worker count for a gate without changing the deterministic
+ * world seeds or result ordering.
+ */
+function resolveLongRunGateWorkerCount(input: CreateLongRunGateReportInput): number {
+  if (input.workerCount !== undefined) {
+    return clampWorkerCount(input.workerCount, input.worldCount);
+  }
+
+  const envWorkerCount = process.env.TLS_LONG_RUN_WORKERS;
+  if (envWorkerCount !== undefined) {
+    const parsed = Number(envWorkerCount);
+
+    if (Number.isSafeInteger(parsed) && parsed > 0) {
+      return clampWorkerCount(parsed, input.worldCount);
+    }
+  }
+
+  if (input.worldCount < DEFAULT_PARALLEL_GATE_WORLD_THRESHOLD) {
+    return 1;
+  }
+
+  return clampWorkerCount(Math.max(1, availableParallelism() - 1), input.worldCount);
+}
+
+/**
+ * Caps worker count so a gate never creates empty partitions.
+ */
+function clampWorkerCount(workerCount: number, worldCount: number): number {
+  return Math.max(1, Math.min(workerCount, worldCount, DEFAULT_MAX_LONG_RUN_WORKERS));
+}
+
+/**
+ * Splits one-based world indexes into stable contiguous partitions.
+ */
+function createLongRunGatePartitions(worldCount: number, workerCount: number): readonly LongRunGateWorkerPartition[] {
+  const partitions: LongRunGateWorkerPartition[] = [];
+  const baseSize = Math.floor(worldCount / workerCount);
+  const remainder = worldCount % workerCount;
+  let startIndex = 1;
+
+  for (let index = 0; index < workerCount; index += 1) {
+    const size = baseSize + (index < remainder ? 1 : 0);
+    const endIndex = startIndex + size - 1;
+    partitions.push({ startIndex, endIndex });
+    startIndex = endIndex + 1;
+  }
+
+  return partitions;
+}
+
+/**
+ * Runs all worker partitions and returns them in deterministic partition order.
+ */
+async function runLongRunGatePartitions(
+  partitions: readonly LongRunGateWorkerPartition[],
+  input: Pick<LongRunGateWorkerData, "language" | "seasonCount" | "seedPrefix">,
+): Promise<readonly LongRunGateWorkerSuccess[]> {
+  const results = await Promise.all(
+    partitions.map((partition) =>
+      runLongRunGateWorkerThread({
+        ...input,
+        ...partition,
+      }),
+    ),
+  );
+
+  return results.sort((left, right) => left.partition.startIndex - right.partition.startIndex);
+}
+
+/**
+ * Starts one Node worker for a long-run gate partition.
+ */
+function runLongRunGateWorkerThread(input: LongRunGateWorkerData): Promise<LongRunGateWorkerSuccess> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("./report-data.ts", import.meta.url), {
+      workerData: input,
+    });
+
+    worker.once("message", (message: LongRunGateWorkerMessage) => {
+      if (message.ok) {
+        resolve(message);
+        return;
+      }
+
+      reject(new Error(message.message));
+    });
+    worker.once("error", reject);
+    worker.once("exit", (code) => {
+      if (code !== 0) {
+        reject(new Error(`Long-run gate worker exited with code ${code}`));
+      }
+    });
+  });
+}
+
+/**
+ * Runs a partition in the current thread or inside a worker thread.
+ */
+function runLongRunGatePartition(input: LongRunGateWorkerData): LongRunGateWorkerSuccess {
+  const text = createTranslator(input.language);
   const worlds: LongRunGateWorldSummary[] = [];
 
-  for (let index = 1; index <= input.worldCount; index += 1) {
+  for (let index = input.startIndex; index <= input.endIndex; index += 1) {
     const seed = `${input.seedPrefix}-world-${String(index).padStart(5, "0")}`;
-    const report = createSingleWorldReport(seed, input.seasonCount, input.text);
+    const report = createSingleWorldReport(seed, input.seasonCount, text);
     worlds.push(summarizeGateWorld(report));
   }
 
-  return summarizeGateWorlds(input.seedPrefix, input.worldCount, input.seasonCount, worlds);
+  return {
+    ok: true,
+    partition: {
+      startIndex: input.startIndex,
+      endIndex: input.endIndex,
+    },
+    worlds,
+  };
+}
+
+/**
+ * Produces a compact stable hash for each gate partition.
+ */
+function hashGateWorldSummaries(worlds: readonly LongRunGateWorldSummary[]): string {
+  return createHash("sha256").update(JSON.stringify(worlds)).digest("hex").slice(0, 16);
+}
+
+/**
+ * Checks worker input before executing this module as a worker entry point.
+ */
+function isLongRunGateWorkerData(value: unknown): value is LongRunGateWorkerData {
+  const input = value as LongRunGateWorkerData | undefined;
+
+  return (
+    input !== undefined &&
+    typeof input.seedPrefix === "string" &&
+    Number.isSafeInteger(input.seasonCount) &&
+    Number.isSafeInteger(input.startIndex) &&
+    Number.isSafeInteger(input.endIndex) &&
+    typeof input.language === "string"
+  );
 }
 
 /**
@@ -604,7 +840,7 @@ function summarizeClubAbilityHierarchySnapshot(
       average(
         playerIds.flatMap((playerId): readonly number[] => {
           const player = careerState.gameState.players[playerId];
-          return player === undefined ? [] : [averageAbility(player.abilities)];
+          return player === undefined ? [] : [reportCurrentAbility(player)];
         }),
       ),
     );
@@ -670,12 +906,14 @@ function summarizeGateWorlds(
   seedPrefix: string,
   worldCount: number,
   seasonCount: number,
+  execution: LongRunGateExecutionSummary,
   worlds: readonly LongRunGateWorldSummary[],
 ): LongRunGateReport {
   return {
     seedPrefix,
     worldCount,
     seasonCount,
+    execution,
     totalSeasonCount: worldCount * seasonCount,
     failedWorldCount: worlds.filter((world) => world.status === "fail").length,
     warningWorldCount: worlds.filter((world) => world.status === "warn").length,
@@ -1039,8 +1277,8 @@ function snapshotPlayers(careerState: CliCareerState): readonly LongRunPlayerSna
       playerId: String(playerId),
       displayName: playerName(player),
       age: playerAgeYears(careerState, player),
-      currentAbility: averageAbility(player.abilities),
-      potentialRoom: averagePotentialRoom(player),
+      currentAbility: reportCurrentAbility(player),
+      potentialRoom: reportPotentialRoom(player),
     });
   }
 
@@ -1085,9 +1323,13 @@ function productionRows(
 }
 
 /**
- * Finds the player with the highest share of their own club's goals created by
- * assists. This is diagnostic output only; anomaly thresholds still live in
- * simulation-tools.
+ * Finds the player with the highest meaningful share of their own club's goals
+ * created by assists.
+ *
+ * Low-scoring clubs can produce misleading ratios such as `6 assists / 13
+ * goals`. That is a compact story, not structural creator dominance, so the
+ * gate ignores share ratios until a club scored enough goals for the denominator
+ * to be useful.
  */
 function topCreatorShareRow(
   season: LongRunSeasonResult,
@@ -1099,7 +1341,7 @@ function topCreatorShareRow(
   for (const row of season.result.playerSummaryStats) {
     const clubGoals = season.result.table.find((tableRow) => tableRow.clubId === row.clubId)?.goalsFor ?? 0;
 
-    if (clubGoals <= 0) {
+    if (clubGoals < MIN_GOALS_FOR_CREATOR_SHARE) {
       continue;
     }
 
@@ -1180,7 +1422,8 @@ function assistDepth(season: LongRunSeasonResult, threshold: number): number {
 }
 
 /**
- * Calculates the highest single-player assist share of his club's goals.
+ * Calculates the highest meaningful single-player assist share of his club's
+ * goals.
  */
 function maxSingleAssistShare(season: LongRunSeasonResult): number {
   let maxShare = 0;
@@ -1188,7 +1431,7 @@ function maxSingleAssistShare(season: LongRunSeasonResult): number {
   for (const row of season.result.playerSummaryStats) {
     const goalsFor = season.result.table.find((tableRow) => tableRow.clubId === row.clubId)?.goalsFor ?? 0;
 
-    if (goalsFor > 0) {
+    if (goalsFor >= MIN_GOALS_FOR_CREATOR_SHARE) {
       maxShare = Math.max(maxShare, row.assists / goalsFor);
     }
   }
@@ -1203,7 +1446,7 @@ function maxTopThreeAssistShare(season: LongRunSeasonResult): number {
   let maxShare = 0;
 
   for (const tableRow of season.result.table) {
-    if (tableRow.goalsFor < MIN_GOALS_FOR_TOP_THREE_CREATOR_SHARE) {
+    if (tableRow.goalsFor < MIN_GOALS_FOR_CREATOR_SHARE) {
       continue;
     }
 
@@ -1391,58 +1634,20 @@ function playerAgeYears(careerState: CliCareerState, player: Pick<CliPlayer, "bi
 }
 
 /**
- * Calculates the average true current ability across the complete 25-ability shape.
+ * Projects current football quality for the player's stable role.
+ *
+ * Historical players without role identity retain the explicit raw diagnostic
+ * measure used by reports before role metadata became durable.
  */
-function averageAbility(abilities: CliPlayer["abilities"]): number {
-  return roundReportNumber(abilityValues(abilities).reduce((sum, value) => sum + value, 0) / abilityValues(abilities).length);
+function reportCurrentAbility(player: CliPlayer): number {
+  return roundReportNumber(summarizePlayerDevelopmentAbilities(player).currentAbility);
 }
 
 /**
- * Calculates average potential room without exposing exact hidden potential in report text.
+ * Projects role-weighted potential room without exposing exact hidden potential.
  */
-function averagePotentialRoom(player: CliPlayer): number {
-  const current = abilityValues(player.abilities);
-  const potential = abilityValues(player.potential);
-  let totalRoom = 0;
-
-  for (let index = 0; index < current.length; index += 1) {
-    totalRoom += (potential[index] ?? 0) - (current[index] ?? 0);
-  }
-
-  return roundReportNumber(totalRoom / current.length);
-}
-
-/**
- * Flattens the current full ability object into stable presentation order.
- */
-function abilityValues(abilities: CliPlayer["abilities"]): readonly number[] {
-  return [
-    abilities.technical.finishing,
-    abilities.technical.passing,
-    abilities.technical.longPassing,
-    abilities.technical.crossing,
-    abilities.technical.dribbling,
-    abilities.technical.technique,
-    abilities.technical.tackling,
-    abilities.technical.penalties,
-    abilities.technical.freeKicks,
-    abilities.physical.pace,
-    abilities.physical.strength,
-    abilities.physical.stamina,
-    abilities.physical.agility,
-    abilities.physical.heading,
-    abilities.mental.positioning,
-    abilities.mental.vision,
-    abilities.mental.anticipation,
-    abilities.mental.composure,
-    abilities.mental.determination,
-    abilities.mental.leadership,
-    abilities.goalkeeping.reflexes,
-    abilities.goalkeeping.handling,
-    abilities.goalkeeping.rushingOut,
-    abilities.goalkeeping.goalkeeperPositioning,
-    abilities.goalkeeping.footwork,
-  ];
+function reportPotentialRoom(player: CliPlayer): number {
+  return roundReportNumber(summarizePlayerDevelopmentAbilities(player).potentialRoom);
 }
 
 /**
@@ -1475,4 +1680,15 @@ function percentile(values: readonly number[], rank: number): number {
   const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * rank) - 1));
 
   return roundReportNumber(sorted[index] ?? 0);
+}
+
+if (!isMainThread && isLongRunGateWorkerData(workerData)) {
+  try {
+    parentPort?.postMessage(runLongRunGatePartition(workerData));
+  } catch (error) {
+    parentPort?.postMessage({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error),
+    } satisfies LongRunGateWorkerFailure);
+  }
 }

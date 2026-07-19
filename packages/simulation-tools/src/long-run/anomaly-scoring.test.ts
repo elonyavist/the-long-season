@@ -128,6 +128,38 @@ test("createLongRunAnomalyReport keeps thirty-season champion streak failure thr
   assert.equal(report.checks.find((check) => check.key === "champion_streak")?.status, "fail");
 });
 
+test("createLongRunAnomalyReport treats rare fifty-season dynasties as warnings before structural failure", () => {
+  const warningReport = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.8, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 13, topShare: 0.24, topThreeShare: 0.45, seasonCount: 50 }),
+    clubStability: {
+      ...clubStability({ streak: 16, seasonCount: 50 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 200,
+      playerExitCount: 1_100,
+      squadMaintenanceAddedCount: 1_100,
+    },
+  });
+  const failureReport = createLongRunAnomalyReport({
+    balance: [{ goalsPerMatch: 2.8, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
+    playerEvolution: playerEvolution({ topAssists: 13, topShare: 0.24, topThreeShare: 0.45, seasonCount: 50 }),
+    clubStability: {
+      ...clubStability({ streak: 17, seasonCount: 50 }),
+      transferTurnoverAvailable: true,
+      squadTurnoverAvailable: true,
+      transferTurnoverCount: 200,
+      playerExitCount: 1_100,
+      squadMaintenanceAddedCount: 1_100,
+    },
+  });
+
+  assert.equal(warningReport.status, "warn");
+  assert.equal(warningReport.checks.find((check) => check.key === "champion_streak")?.status, "warn");
+  assert.equal(failureReport.status, "fail");
+  assert.equal(failureReport.checks.find((check) => check.key === "champion_streak")?.status, "fail");
+});
+
 test("createLongRunAnomalyReport fails structural squad collapse", () => {
   const report = createLongRunAnomalyReport({
     balance: [{ goalsPerMatch: 2.7, firstPlacePoints: 72, lastPlacePoints: 28, tablePointsSpread: 44 }],
@@ -165,6 +197,7 @@ function playerEvolution(input: {
     seriousProspects: 4,
     rareProdigies: 1,
     usefulAfterLongRun: 2,
+    playersWithCompressedPotentialRoom: 0,
     finalAgeUnder22: 2,
     finalAge22To29: 12,
     finalAge30Plus: 4,

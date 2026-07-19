@@ -72,8 +72,38 @@ describe("CareerInboxScreen", () => {
 
     expect(html).toContain('data-state="pending"');
     expect(html).toContain('aria-busy="true"');
-    expect(html).toContain('class="tls-inbox-workspace" data-narrow-detail="false" inert=""');
+    expect(html).toContain('class="tls-inbox-workspace"');
+    expect(html).toContain('data-narrow-detail="false"');
+    expect(html).toContain('data-motion-view="list"');
+    expect(html).toContain('inert=""');
     expect(html).toContain('disabled=""');
+  });
+
+  it("marks one newly delivered important decision for bounded presentation only", () => {
+    const career = careerWithMatchdayMessage();
+    const presentation = presentCareerInbox({ careerState: career, activeFilter: "all" });
+    const selectedMessageId = presentation.postaView.selectedMessageId;
+    if (selectedMessageId === undefined) throw new Error("Expected selected Posta message");
+
+    const html = renderToStaticMarkup(
+      <CareerInboxScreen
+        selectedClubName="S.S. Perugia"
+        currentDateIso="2026-08-01"
+        postaView={presentation.postaView}
+        railView={presentation.railView}
+        arrivalMessageId={selectedMessageId}
+        text={createWebTranslator("en")}
+        onBackToMenu={() => undefined}
+        onBackToDashboard={() => undefined}
+        onContinueCareer={() => undefined}
+        onFilterChange={() => undefined}
+        onMessageSelect={() => undefined}
+        onPrimaryAction={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('data-attention-arrival="true"');
+    expect(html).toContain('data-motion-view="list"');
   });
 
   it("renders an explicit empty detail when the active filter has no messages", () => {

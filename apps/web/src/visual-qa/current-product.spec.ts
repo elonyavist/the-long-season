@@ -9,7 +9,7 @@ import { expect, test, type Browser, type Locator, type Page } from "playwright/
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(CURRENT_DIR, "../../../..");
-const QA_OUTPUT_DIR = "/tmp/the-long-season-phase73b/step-10";
+const QA_OUTPUT_DIR = "/tmp/the-long-season-phase76";
 const PORT = 5197;
 const URL = `http://127.0.0.1:${PORT}/`;
 let server: ChildProcess;
@@ -82,7 +82,22 @@ test("desktop journey owns screen focus and preserves same-screen interaction fo
     await expectMainFocus(page);
     await assertNoPageOverflow(page, "desktop Dashboard");
     await assertNoTechnicalDashboardCopy(page, "desktop attention Dashboard");
+    await expect(page.locator(".tls-app-shell-screen-transition")).toHaveAttribute(
+      "data-screen-key",
+      /^dashboard:/,
+    );
+    const dashboardSidebarBounds = await page.locator(".tls-app-shell-sidebar").boundingBox();
+    expect(dashboardSidebarBounds).not.toBeNull();
     await capture(page, "02-dashboard-attention-desktop");
+
+    const saveMenuButton = page.getByRole("button", { name: "Save", exact: true });
+    await saveMenuButton.click();
+    const saveDialog = page.getByRole("dialog", { name: "Save", exact: true });
+    await expect(saveDialog).toBeVisible();
+    await capture(page, "02a-save-dialog-desktop");
+    await page.keyboard.press("Escape");
+    await expect(saveDialog).toBeHidden();
+    await expect(saveMenuButton).toBeFocused();
 
     await page.locator("body").click({ position: { x: 2, y: 2 } });
     await page.keyboard.press("Tab");
@@ -95,6 +110,11 @@ test("desktop journey owns screen focus and preserves same-screen interaction fo
     await page.getByRole("button", { name: "Inbox", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
     await expectMainFocus(page);
+    await expect(page.locator(".tls-app-shell-screen-transition")).toHaveAttribute(
+      "data-screen-key",
+      /^inbox:/,
+    );
+    expect(await page.locator(".tls-app-shell-sidebar").boundingBox()).toEqual(dashboardSidebarBounds);
     await capture(page, "03-inbox-desktop");
 
     const sameScreenFilter = page.getByRole("button", { name: "To handle", exact: true });
@@ -120,6 +140,7 @@ test("desktop journey owns screen focus and preserves same-screen interaction fo
     await expect(page.getByText("Pre-match", { exact: true }).first()).toBeVisible();
     await expectMainFocus(page);
     await assertNoPageOverflow(page, "desktop Matchday");
+    await assertFullWidthPreMatch(page, "desktop Matchday");
     await capture(page, "05-matchday-desktop");
   } finally {
     await page.close();
@@ -148,21 +169,24 @@ test("wide journey keeps every current football decision surface coherent", asyn
     await page.getByRole("tab", { name: "Tactic", exact: true }).click();
     await page.getByRole("radio", { name: /^Balanced / }).check();
     await page.getByRole("button", { name: "Confirm and go to match", exact: true }).click();
+    await assertFullWidthPreMatch(page, "wide Matchday");
     await capture(page, "19b-pre-match-wide");
 
     await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
     await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='first_half']"))
+      .toHaveAttribute("data-motion-active", "true");
     await capture(page, "19c-first-half-wide");
     await advanceClockUntilPlaybackStage(page, "closing");
-    await page.clock.runFor(500);
+    await page.clock.runFor(950);
     await capture(page, "19d-half-time-wide");
 
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
     await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
     await capture(page, "19e-second-half-wide");
     await advanceClockUntilPlaybackStage(page, "closing");
-    await page.clock.runFor(500);
+    await page.clock.runFor(950);
     await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
     await assertNoPageOverflow(page, "wide Full time");
     await capture(page, "19f-full-time-wide");
@@ -220,6 +244,39 @@ test("semantic states pass contrast and remain visibly distinct without tactical
   }
 });
 
+test("reduced motion keeps command feedback static and equally informative", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const modulePath = "/src/stores/career-ui-store.ts";
+          const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+          return useCareerUiStore.getState().commandActivity?.commandId ?? null;
+        }),
+      )
+      .toBeNull();
+    await setPendingCommand(page, true);
+
+    const primaryAction = page.locator(".tls-dashboard-primary-action");
+    const spinner = primaryAction.locator(".tls-command-activity-spinner");
+    await expect(primaryAction).toHaveAttribute("data-state", "pending");
+    await expect(primaryAction).toBeDisabled();
+    await expect(spinner).toHaveAttribute("data-visible", "true");
+
+    const restingTransform = await spinner.evaluate((element) => getComputedStyle(element).transform);
+    await page.waitForTimeout(250);
+    expect(await spinner.evaluate((element) => getComputedStyle(element).transform)).toBe(restingTransform);
+    await capture(page, "13a-dashboard-semantic-pending-reduced-motion");
+  } finally {
+    await page.close();
+  }
+});
+
 test("desktop dashboard keeps one decision hierarchy across every valid operational state", async ({ browser }) => {
   await captureDashboardStates(browser, { width: 1440, height: 900 }, "desktop");
 });
@@ -240,6 +297,7 @@ test("desktop Posta owns one dense decision workspace across current message sta
     await expect(page.locator(".tls-inbox-list-pane")).toBeVisible();
     await expect(page.locator(".tls-inbox-detail-pane")).toBeVisible();
     await expect(page.locator(".tls-inbox-message-detail[data-level='blocking']")).toBeVisible();
+    await expect(page.locator(".tls-inbox-workspace")).toHaveAttribute("data-motion-view", "list");
     await expect(page.locator(".tls-inbox-detail-action .tls-menu-button-primary")).toHaveCount(1);
     await capture(page, "30-inbox-blocking-desktop");
 
@@ -295,6 +353,7 @@ test("narrow Posta starts from the list and restores focus after detail", async 
 
     const selectedMessage = page.locator(".tls-inbox-message-row[aria-current='true']");
     await selectedMessage.click();
+    await expect(page.locator(".tls-inbox-workspace")).toHaveAttribute("data-motion-view", "detail");
     const detailTitle = page.locator("[data-inbox-detail-title]");
     await expect(detailTitle).toBeVisible();
     await expect(detailTitle).toBeFocused();
@@ -336,6 +395,7 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
     await page.locator(".tls-preparation-dashboard").click();
     const partialDialog = page.locator(".tls-unsaved-dialog");
     await expect(partialDialog.getByRole("heading", { name: "Leave team preparation?", exact: true })).toBeVisible();
+    await expect(partialDialog).toHaveAttribute("data-motion-state", "open");
     await expect(partialDialog.getByRole("button", { name: "Stay", exact: true })).toBeFocused();
     await expect(partialDialog.getByRole("button", { name: "Discard changes", exact: true })).toBeVisible();
     await expect(partialDialog.getByRole("button", { name: "Save and continue", exact: true })).toHaveCount(0);
@@ -437,6 +497,7 @@ test("approved tactical-board interactions remain intact inside the current prep
     await page.getByRole("button", { name: "Auto", exact: true }).click();
     await expect(page.locator(".tls-tactical-board-token")).toHaveCount(11);
     await expect(page.locator(".tls-tactical-bench-slot[data-status='valid']")).toHaveCount(8);
+    await assertTacticalMotionOwnership(page, "prepared lineup");
     expect(await selectedPreparationIds(page)).toMatchObject({ total: 19, unique: 19 });
 
     await rightClickTacticalSlot(page, "gk");
@@ -459,6 +520,7 @@ test("approved tactical-board interactions remain intact inside the current prep
     await page.locator(".tls-tactical-board-menu-item").filter({ hasText: "AD" }).first().click();
     await expect(page.locator("[data-slot-id='rm'][data-role='AD']")).toHaveCount(1);
     await expect(page.locator(".tls-tactical-board-header").getByText("4-3-3", { exact: true })).toBeVisible();
+    await assertTacticalMotionOwnership(page, "role-adjusted lineup");
     expect(await page.locator("[data-slot-id='rm']").first().getAttribute("data-suitability")).not.toBe(previousSuitability);
 
     await rightClickTacticalSlot(page, "rm");
@@ -521,7 +583,10 @@ test("tactical-board long press opens deliberately and cancels after touch movem
 });
 
 test("narrow task stays in the first useful viewport at zoom and reduced motion", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({
+    hasTouch: true,
+    viewport: { width: 390, height: 844 },
+  });
   try {
     await resetCareerStorage(page);
     await capture(page, "06-app-entry-narrow");
@@ -555,6 +620,7 @@ test("narrow task stays in the first useful viewport at zoom and reduced motion"
     await expect(page.getByText("Pre-match", { exact: true }).first()).toBeVisible();
     await expectMainFocus(page);
     await assertTaskInFirstViewport(page, "narrow Matchday");
+    await assertFullWidthPreMatch(page, "narrow Matchday");
     await capture(page, "10-matchday-narrow");
 
     await page.evaluate(() => {
@@ -564,13 +630,36 @@ test("narrow task stays in the first useful viewport at zoom and reduced motion"
     await expect(page.getByRole("combobox", { name: "Career navigation", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Start match", exact: true })).toBeVisible();
     await capture(page, "11-matchday-text-zoom-narrow");
+
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.clock.install();
+    await page.getByRole("button", { name: "Start match", exact: true }).tap();
+    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await page.getByRole("button", { name: "Pause", exact: true }).tap();
+    await page.getByRole("button", { name: "Playback speed 2x", exact: true }).tap();
+    await assertMatchdayInteractiveTargets(page, "narrow paused first-half playback");
+    await assertNoPageOverflow(page, "narrow paused first-half playback");
+    await capture(page, "11a-first-half-paused-narrow");
+
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await assertMatchdayInteractiveTargets(page, "narrow paused first-half playback at 200% text");
+    await assertNoPageOverflow(page, "narrow paused first-half playback at 200% text");
+    await capture(page, "11b-first-half-paused-text-zoom-narrow");
   } finally {
     await page.close();
   }
 });
 
 test("one explicit start command presents the first half and stops at the canonical checkpoint", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    hasTouch: true,
+    viewport: { width: 1440, height: 900 },
+  });
   try {
     await resetCareerStorage(page);
     await page.getByRole("button", { name: "New career", exact: true }).click();
@@ -589,28 +678,144 @@ test("one explicit start command presents the first half and stops at the canoni
     await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
     await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    const playbackControls = page.getByRole("region", { name: "Playback controls", exact: true });
+    await expect(playbackControls).toBeVisible();
+    await expect(page.getByRole("button", { name: "Playback speed 1x", exact: true })).toHaveAttribute("aria-pressed", "true");
+    const liveCommentary = page.locator(".tls-match-broadcast-live-line");
+    await expect(liveCommentary).toHaveCount(1);
+    await expect(liveCommentary).toHaveAttribute("role", "status");
+    await expect(liveCommentary).toHaveAttribute("aria-live", "polite");
+    await expect(liveCommentary).toHaveAttribute("aria-atomic", "true");
+    await expect(liveCommentary).toHaveAttribute("data-commentary-priority", "transition");
+    await expect(liveCommentary).toHaveAttribute("data-motion-commentary-key", /.+/);
+    await expect(liveCommentary).toHaveAttribute("data-motion-category", "transition");
+    await expect(page.locator(".tls-matchday-score [data-score-motion]")).toHaveCount(2);
+    await expect(page.locator(".tls-matchday-score [data-score-changed='true']")).toHaveCount(0);
+    await expect(playbackControls.locator("[data-motion-control]")).toHaveCount(4);
+    await expect(page.locator(".tls-match-centre-live-feed, .tls-match-centre-live-phase")).toHaveCount(0);
+    await assertMatchdayInteractiveTargets(page, "first-half playback");
+    const openingPageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
     await capture(page, "63-first-half-opening");
-    await advanceClockUntilPlaybackStage(page, "event");
-    await capture(page, "64-first-half-event");
+
+    await page.getByRole("button", { name: "Pause", exact: true }).tap();
+    await expect(playbackControls).toHaveAttribute("data-paused", "true");
+    await page.clock.runFor(5_000);
+    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await capture(page, "63a-first-half-paused");
+
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await page.getByRole("button", { name: "Playback speed 2x", exact: true }).click();
+    await expect(playbackControls).toHaveAttribute("data-speed", "2x");
+    await capture(page, "63b-first-half-speed-2x");
+
+    // Speed controls belong only to live playback. Prove every option before
+    // advancing the fake clock far enough to reach the half-time checkpoint.
+    await page.getByRole("button", { name: "Playback speed 4x", exact: true }).click();
+    await expect(playbackControls).toHaveAttribute("data-speed", "4x");
+    await capture(page, "64b-first-half-speed-4x");
+
+    let sawDetailMoment = false;
+    let sawGoalMoment = false;
+    for (let elapsed = 0; elapsed <= 60_000; elapsed += 50) {
+      const playbackStage = await liveCommentary.getAttribute("data-playback-stage");
+      if (playbackStage === "closing") break;
+      const priority = await page.locator(".tls-match-centre").getAttribute("data-playback-priority");
+      if ((priority === "ordinary" || priority === "significant") && !sawDetailMoment) {
+        sawDetailMoment = true;
+        await expect(liveCommentary).toHaveCount(1);
+        await expect(liveCommentary).toHaveAttribute("data-commentary-priority", "detail");
+        await expect(liveCommentary).toHaveAttribute("data-motion-category", "transition");
+        await expect(page.locator(".tls-matchday-score [data-score-changed='true']")).toHaveCount(0);
+        expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(openingPageHeight);
+        await capture(page, "64c-first-half-detail-moment");
+        await page.getByRole("button", { name: "Pause", exact: true }).click();
+        await page.clock.runFor(2_000);
+        await expect(page.locator(`.tls-match-centre[data-playback-priority='${priority}']`)).toBeVisible();
+        await page.getByRole("button", { name: "Resume", exact: true }).click();
+      }
+      const commentaryPriority = await liveCommentary.getAttribute("data-commentary-priority");
+      if (priority === "goal" && commentaryPriority === "goal") {
+        sawGoalMoment = true;
+        break;
+      }
+      await page.clock.runFor(50);
+    }
+    if (sawGoalMoment) {
+      await expect(liveCommentary).toHaveAttribute("data-commentary-priority", "goal");
+      await expect(liveCommentary).toHaveAttribute("data-motion-category", "narrative");
+      await expect(liveCommentary).toContainText("Goal");
+      expect(await page.locator(".tls-matchday-score [data-score-changed='true']").count()).toBeGreaterThan(0);
+      const currentGoalEventId = await liveCommentary.getAttribute("data-event-id");
+      expect(currentGoalEventId).not.toBeNull();
+      await expect(page.locator(`[data-motion-incident="${currentGoalEventId}"]`))
+        .toHaveAttribute("data-motion-category", "narrative");
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(openingPageHeight);
+      await capture(page, "64-first-half-goal-hold");
+      await page.getByRole("button", { name: "Pause", exact: true }).click();
+      await page.clock.runFor(5_000);
+      await expect(page.locator(".tls-match-centre[data-playback-priority='goal']")).toBeVisible();
+      await capture(page, "64a-first-half-goal-paused");
+      await page.getByRole("button", { name: "Resume", exact: true }).click();
+    }
+
+    if (!sawDetailMoment) {
+      for (let elapsed = 0; elapsed <= 60_000; elapsed += 50) {
+        const playbackStage = await liveCommentary.getAttribute("data-playback-stage");
+        if (playbackStage === "closing") break;
+        const priority = await page.locator(".tls-match-centre").getAttribute("data-playback-priority");
+        if (priority === "ordinary" || priority === "significant") {
+          sawDetailMoment = true;
+          await expect(liveCommentary).toHaveAttribute("data-commentary-priority", "detail");
+          await expect(liveCommentary).toHaveAttribute("data-motion-category", "transition");
+          await expect(page.locator(".tls-matchday-score [data-score-changed='true']")).toHaveCount(0);
+          expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(openingPageHeight);
+          await capture(page, "64c-first-half-detail-moment");
+          await page.getByRole("button", { name: "Pause", exact: true }).click();
+          await page.clock.runFor(2_000);
+          await expect(page.locator(`.tls-match-centre[data-playback-priority='${priority}']`)).toBeVisible();
+          await page.getByRole("button", { name: "Resume", exact: true }).click();
+          break;
+        }
+        await page.clock.runFor(50);
+      }
+    }
+    expect(sawDetailMoment).toBe(true);
     await advanceClockUntilPlaybackStage(page, "closing");
     await capture(page, "65-first-half-closing");
-    await page.clock.runFor(500);
+    await page.clock.runFor(950);
 
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='half_time']"))
+      .toHaveAttribute("data-motion-active", "true");
+    await expect(page.locator("[data-motion-checkpoint-panel='half_time']"))
+      .toHaveAttribute("data-motion-active", "true");
+    await expect(playbackControls).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Play to half-time", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "First-half review", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Decision signals", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Half-time board", exact: true })).toBeVisible();
-    await expect(page.getByText("Current shape", { exact: true })).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "First-half review", exact: true })).toHaveCount(0);
+    const halfTimeTabs = page.getByRole("tablist", { name: "Half-time views", exact: true });
+    await expect(halfTimeTabs).toBeVisible();
+    await expect(halfTimeTabs.getByRole("tab")).toHaveCount(4);
+    await expect(halfTimeTabs.getByRole("tab", { name: "Summary", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(halfTimeTabs.getByRole("tab", { name: "Tactics", exact: true })).toBeEnabled();
+    await expect(page.getByRole("heading", { name: "Decision signals", exact: true })).toHaveCount(0);
     await expect(page.getByText("0/5 changes", { exact: true })).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "Half-time board", exact: true })).toHaveCount(0);
     await expect(page.getByText("Half-time score", { exact: true })).toHaveCount(0);
     await expect.poll(() => activeMatchCheckpoint(page)).toMatchObject({ phase: "half_time" });
+    await expectMainFocus(page);
+    await assertSkipLinkRestingOffCanvas(page, "desktop half-time checkpoint");
+    await assertMatchdayTabsContained(page, halfTimeTabs, "desktop half-time checkpoint");
     await assertNoPageOverflow(page, "desktop half-time checkpoint");
+    await assertCompactTabellino(
+      page,
+      "desktop half-time checkpoint",
+      await page.locator(".tls-match-tabellino").count() > 0,
+    );
     await assertHalfTimeInteractiveTargets(page);
     await capture(page, "66-half-time-arrival");
 
     await setHalfTimeEventLight(page);
-    await expect(page.getByText("No major events yet.", { exact: true })).toBeVisible();
+    await expect(page.locator(".tls-match-tabellino")).toHaveCount(0);
     await assertNoPageOverflow(page, "desktop event-light half-time checkpoint");
     await capture(page, "66b-half-time-event-light");
 
@@ -627,7 +832,10 @@ test("one explicit start command presents the first half and stops at the canoni
 });
 
 test("reduced motion reaches the same half-time decision without interpolated clicks", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({
+    hasTouch: true,
+    viewport: { width: 390, height: 844 },
+  });
   try {
     await resetCareerStorage(page);
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -637,34 +845,127 @@ test("reduced motion reaches the same half-time decision without interpolated cl
     await page.getByRole("button", { name: "Start match", exact: true }).click();
 
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='half_time']"))
+      .toHaveAttribute("data-motion-active", "false");
+    await expect(page.locator("[data-motion-checkpoint-panel='half_time']"))
+      .toHaveAttribute("data-motion-active", "false");
     await expect(page.getByRole("button", { name: "Play to half-time", exact: true })).toHaveCount(0);
     await expect.poll(() => activeMatchCheckpoint(page)).toMatchObject({ phase: "half_time" });
+    await expectMainFocus(page);
+    await assertSkipLinkRestingOffCanvas(page, "reduced-motion half-time checkpoint");
     await assertNoPageOverflow(page, "reduced-motion half-time checkpoint");
     await assertHalfTimeInteractiveTargets(page);
     await capture(page, "67-half-time-reduced-motion-narrow");
+
+    const halfTimeTabs = page.getByRole("tablist", { name: "Half-time views", exact: true });
+    await assertMatchdayTabsContained(page, halfTimeTabs, "reduced-motion half-time checkpoint");
+    const halfTimeSummaryTab = halfTimeTabs.getByRole("tab", { name: "Summary", exact: true });
+    const halfTimeTacticsTab = halfTimeTabs.getByRole("tab", { name: "Tactics", exact: true });
+    const halfTimeSelectedTeamTab = halfTimeTabs.getByRole("tab", { name: "Your team", exact: true });
+    const halfTimeOpponentTab = halfTimeTabs.getByRole("tab", { name: "Opponent", exact: true });
+    await halfTimeSummaryTab.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(halfTimeTacticsTab).toBeFocused();
+    await expect(halfTimeTacticsTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("[data-motion-tab-panel='tactics']"))
+      .toHaveAttribute("data-motion-active", "false");
+    await expect(page.getByRole("heading", { name: "Half-time board", exact: true })).toBeVisible();
+    await assertTacticalMotionOwnership(page, "half-time tactics");
+    const formationSelect = page.locator(".tls-match-centre-half-time-toolbar select");
+    await expect(formationSelect).toHaveValue("4-4-2");
+    const rightMidfielderBefore = await tacticalSlotNorm(page, "rm");
+    await dragTacticalSlotToNorm(
+      page,
+      "rm",
+      Math.max(0, rightMidfielderBefore.nx - 0.02),
+      rightMidfielderBefore.ny,
+    );
+    const rightMidfielderAfter = await tacticalSlotNorm(page, "rm");
+    expect(rightMidfielderAfter.nx).not.toBe(rightMidfielderBefore.nx);
+    await assertNoPageOverflow(page, "reduced-motion half-time tactics tab");
+    await capture(page, "67a-half-time-tactics-narrow");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(halfTimeSelectedTeamTab).toBeFocused();
+    await expect(halfTimeSelectedTeamTab).toHaveAttribute("aria-selected", "true");
+    await expect.poll(() => page.locator(".tls-match-team-ratings .tls-match-centre-rating-row").count()).toBeGreaterThan(0);
+    await assertNoPageOverflow(page, "reduced-motion half-time selected-team tab");
+    await capture(page, "67aa-half-time-selected-team-narrow");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(halfTimeOpponentTab).toBeFocused();
+    await expect(halfTimeOpponentTab).toHaveAttribute("aria-selected", "true");
+    await expect.poll(() => page.locator(".tls-match-team-ratings .tls-match-centre-rating-row").count()).toBeGreaterThan(0);
+    await assertNoPageOverflow(page, "reduced-motion half-time opponent tab");
+    await capture(page, "67ab-half-time-opponent-narrow");
+
+    await halfTimeSummaryTab.tap();
+    await halfTimeTacticsTab.tap();
+    await expect(formationSelect).toHaveValue("4-4-2");
 
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
     await assertNoPageOverflow(page, "reduced-motion half-time checkpoint at 200% text");
+    await assertMatchdayTabsContained(page, halfTimeTabs, "reduced-motion half-time checkpoint at 200% text");
+    if (await page.locator(".tls-match-tabellino").count() > 0) {
+      await assertTabellinoFactsNotClipped(page, "reduced-motion half-time checkpoint at 200% text");
+    }
     await capture(page, "67b-half-time-text-zoom-narrow");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "";
     });
-
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
     await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='full_time']"))
+      .toHaveAttribute("data-motion-active", "false");
+    await expect(page.locator("[data-motion-checkpoint-panel='full_time']"))
+      .toHaveAttribute("data-motion-active", "false");
     await expect(page.getByRole("button", { name: "Play to full time", exact: true })).toHaveCount(0);
     await expect.poll(() => durableMatchFacts(page)).toEqual({ activeCheckpoint: false, playedFixtures: 1 });
+    await expectMainFocus(page);
+    await assertSkipLinkRestingOffCanvas(page, "reduced-motion full-time review");
     await assertFullTimeFootballReview(page, "reduced-motion full-time review");
+    await assertCompactTabellino(
+      page,
+      "reduced-motion full-time review",
+      await page.locator(".tls-match-tabellino").count() > 0,
+    );
     await assertNoPageOverflow(page, "reduced-motion full-time review");
     await capture(page, "68-full-time-reduced-motion-narrow");
+
+    const fullTimeTabs = page.getByRole("tablist", { name: "Full-time review views", exact: true });
+    await assertMatchdayTabsContained(page, fullTimeTabs, "reduced-motion full-time review");
+    const selectedTeamTab = fullTimeTabs.getByRole("tab", { name: "Your team", exact: true });
+    const opponentTab = fullTimeTabs.getByRole("tab", { name: "Opponent", exact: true });
+    const consequencesTab = fullTimeTabs.getByRole("tab", { name: "Consequences", exact: true });
+    await selectedTeamTab.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(opponentTab).toBeFocused();
+    await expect(opponentTab).toHaveAttribute("aria-selected", "true");
+    await assertNoPageOverflow(page, "reduced-motion opponent full-time review");
+    await capture(page, "68a-full-time-opponent-narrow");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(consequencesTab).toBeFocused();
+    await expect(consequencesTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".tls-match-centre-consequences")).toBeVisible();
+    await assertNoPageOverflow(page, "reduced-motion consequences full-time review");
+    await capture(page, "68aa-full-time-consequences-narrow");
+
+    await page.keyboard.press("Home");
+    await expect(selectedTeamTab).toBeFocused();
+    await expect(selectedTeamTab).toHaveAttribute("aria-selected", "true");
 
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
     await assertFullTimeFootballReview(page, "reduced-motion full-time review at 200% text");
     await assertNoPageOverflow(page, "reduced-motion full-time review at 200% text");
+    await assertMatchdayTabsContained(page, fullTimeTabs, "reduced-motion full-time review at 200% text");
+    if (await page.locator(".tls-match-tabellino").count() > 0) {
+      await assertTabellinoFactsNotClipped(page, "reduced-motion full-time review at 200% text");
+    }
     await capture(page, "68b-full-time-text-zoom-narrow");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "";
@@ -684,7 +985,7 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
     await advanceClockUntilPlaybackStage(page, "closing");
-    await page.clock.runFor(500);
+    await page.clock.runFor(950);
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
 
     await setMatchdayCommandActivity(page, "pending", "play_second_half");
@@ -695,20 +996,43 @@ test("one half-time confirmation presents the second half and arrives at full ti
 
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
     await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='second_half']"))
+      .toHaveAttribute("data-motion-active", "true");
+    await expect(page.locator(".tls-match-broadcast-live-line")).toHaveCount(1);
+    await expect(page.locator(".tls-match-broadcast-live-line"))
+      .toHaveAttribute("data-motion-commentary-key", /.+/);
     await expect(page.getByRole("button", { name: "Play to full time", exact: true })).toHaveCount(0);
     await capture(page, "71-second-half-opening");
     await advanceClockUntilPlaybackStage(page, "event");
     await capture(page, "72-second-half-event");
     await advanceClockUntilPlaybackStage(page, "closing");
     await capture(page, "73-second-half-closing");
-    await page.clock.runFor(500);
+    await page.clock.runFor(950);
 
     await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='full_time']"))
+      .toHaveAttribute("data-motion-active", "true");
+    await expect(page.locator("[data-motion-checkpoint-panel='full_time']"))
+      .toHaveAttribute("data-motion-active", "true");
     await expect(page.getByRole("button", { name: "Play to full time", exact: true })).toHaveCount(0);
     await expect.poll(() => durableMatchFacts(page)).toEqual({ activeCheckpoint: false, playedFixtures: 1 });
     await assertFullTimeFootballReview(page, "desktop full-time review");
+    await assertCompactTabellino(page, "desktop full-time review", true);
     await assertNoPageOverflow(page, "desktop full-time review");
     await capture(page, "74-full-time-event-rich");
+
+    await selectFullTimeReviewTab(page, "Opponent");
+    await expect(page.locator("[data-motion-tab-panel='opponent']"))
+      .toHaveAttribute("data-motion-active", "true");
+    await assertNoPageOverflow(page, "desktop opponent full-time review");
+    await capture(page, "74e-full-time-opponent");
+
+    await selectFullTimeReviewTab(page, "Consequences");
+    await expect(page.locator(".tls-match-centre-consequences")).toBeVisible();
+    await assertNoPageOverflow(page, "desktop consequences full-time review");
+    await capture(page, "74f-full-time-consequences");
+
+    await selectFullTimeReviewTab(page, "Your team");
 
     await setFullTimeVisualScenario(page, "loss");
     await expect(page.getByText("Defeat", { exact: true })).toBeVisible();
@@ -726,9 +1050,14 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await capture(page, "74c-full-time-draw");
 
     await setFullTimeVisualScenario(page, "event-light");
-    await expect(page.getByText("No goals, penalties, cards, injuries, or substitutions.", { exact: true })).toBeVisible();
+    await expect(page.locator(".tls-match-tabellino")).toHaveCount(0);
     await assertFullTimeFootballReview(page, "desktop event-light full-time review");
     await capture(page, "74d-full-time-event-light");
+
+    await selectFullTimeReviewTab(page, "Consequences");
+    await expect(page.getByText("No notable individual changes after this match.", { exact: true })).toBeVisible();
+    await assertNoPageOverflow(page, "desktop event-light consequences review");
+    await capture(page, "74g-full-time-event-light-consequences");
 
     await page.clock.resume();
     page.once("dialog", (dialog) => dialog.accept());
@@ -784,6 +1113,22 @@ test("the second fixture returns to preparation and starts without a false stora
     await page.close();
   }
 });
+
+/** Confirms that tactical continuity belongs to the fixed XI and bench slots only. */
+async function assertTacticalMotionOwnership(page: Page, context: string): Promise<void> {
+  const pitchSlots = page.locator(".tls-tactical-board-svg [data-motion-slot-key]");
+  const benchSlots = page.locator(".tls-tactical-bench-board [data-motion-slot-key]");
+
+  await expect(pitchSlots, `${context}: animated pitch slots`).toHaveCount(11);
+  await expect(benchSlots, `${context}: animated bench slots`).toHaveCount(8);
+  await expect(page.locator(".tls-tactical-board-svg"), `${context}: formation key`)
+    .toHaveAttribute("data-formation-motion-key", /.+/);
+
+  const motionSlotKeys = await page.locator("[data-motion-slot-key]").evaluateAll((slots) => (
+    slots.map((slot) => slot.getAttribute("data-motion-slot-key"))
+  ));
+  expect(new Set(motionSlotKeys).size, `${context}: unique animation owners`).toBe(19);
+}
 
 /** Reads the currently selected XI and bench identities without changing the draft. */
 async function selectedPreparationIds(page: Page): Promise<Readonly<{ total: number; unique: number }>> {
@@ -1097,7 +1442,7 @@ async function advanceClockUntilPlaybackStage(
   page: Page,
   stage: "event" | "closing",
 ): Promise<void> {
-  for (let elapsed = 0; elapsed <= 3_000; elapsed += 50) {
+  for (let elapsed = 0; elapsed <= 60_000; elapsed += 50) {
     if (await page.locator(`[data-playback-stage='${stage}']`).count() > 0) return;
     await page.clock.runFor(50);
   }
@@ -1246,10 +1591,12 @@ async function captureDashboardStates(
     await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
     await expect(page.locator(".tls-dashboard-priority")).toHaveAttribute("data-task-state", "attention");
     await assertDashboardPrimaryCommand(page, "Prepare match");
+    await expect(page.locator(".tls-dashboard-priority")).toHaveAttribute("data-motion-key", /^attention:/);
+    await expect(page.locator("[data-motion-key]")).toHaveCount(3);
     await expect(page.getByRole("heading", { level: 2, name: "League table", exact: true })).toBeVisible();
     await expect(page.getByText("Available after the first completed match.", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "League results", exact: true })).toBeVisible();
-    await expect(page.getByText("Available after the first completed round.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Available after the first completed league match.", { exact: true })).toBeVisible();
     await assertNoTechnicalDashboardCopy(page, `${suffix} attention Dashboard`);
     await capture(page, `20-dashboard-attention-${suffix}`);
 
@@ -1268,6 +1615,7 @@ async function captureDashboardStates(
     await capture(page, `22-dashboard-ready-${suffix}`);
 
     await page.getByRole("button", { name: "Go to match", exact: true }).click();
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Start match", exact: true }).click();
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
@@ -1405,6 +1753,110 @@ async function assertNoPageOverflow(page: Page, checkpoint: string): Promise<voi
   ).toBeLessThanOrEqual(overflow.clientWidth + 1);
 }
 
+/** Keeps the keyboard-only skip command off canvas until the user requests it. */
+async function assertSkipLinkRestingOffCanvas(page: Page, checkpoint: string): Promise<void> {
+  const skipLink = page.getByRole("link", { name: "Skip to current task", exact: true });
+  await expect(skipLink).not.toBeFocused();
+  const box = await skipLink.boundingBox();
+  expect(box, `${checkpoint} skip link has no layout box`).not.toBeNull();
+  if (box === null) return;
+  expect(
+    box.y + box.height,
+    `${checkpoint} leaves the resting skip link visible`,
+  ).toBeLessThanOrEqual(1);
+}
+
+/** Proves every phase tab reflows inside its list without clipping its label. */
+async function assertMatchdayTabsContained(
+  page: Page,
+  tabList: Locator,
+  checkpoint: string,
+): Promise<void> {
+  const layout = await tabList.evaluate((element) => {
+    const listBounds = element.getBoundingClientRect();
+    const tabs = Array.from(element.querySelectorAll<HTMLElement>("[role='tab']")).map((tab) => {
+      const bounds = tab.getBoundingClientRect();
+      return {
+        bottom: bounds.bottom,
+        clientHeight: tab.clientHeight,
+        clientWidth: tab.clientWidth,
+        label: tab.textContent?.trim() ?? "",
+        left: bounds.left,
+        right: bounds.right,
+        scrollHeight: tab.scrollHeight,
+        scrollWidth: tab.scrollWidth,
+        top: bounds.top,
+      };
+    });
+    return {
+      clientWidth: element.clientWidth,
+      listBounds: {
+        bottom: listBounds.bottom,
+        left: listBounds.left,
+        right: listBounds.right,
+        top: listBounds.top,
+      },
+      scrollWidth: element.scrollWidth,
+      tabs,
+    };
+  });
+
+  expect(layout.scrollWidth, `${checkpoint} tab list overflows horizontally`)
+    .toBeLessThanOrEqual(layout.clientWidth + 1);
+  const clipped = layout.tabs.filter((tab) => (
+    tab.left < layout.listBounds.left - 1
+    || tab.right > layout.listBounds.right + 1
+    || tab.top < layout.listBounds.top - 1
+    || tab.bottom > layout.listBounds.bottom + 1
+    || tab.scrollWidth > tab.clientWidth + 1
+    || tab.scrollHeight > tab.clientHeight + 1
+  ));
+  expect(clipped, `${checkpoint} contains clipped tabs`).toEqual([]);
+}
+
+/** Guards Matchday playback and primary commands against undersized targets. */
+async function assertMatchdayInteractiveTargets(page: Page, checkpoint: string): Promise<void> {
+  const undersized = await page.locator(
+    ".tls-matchday-playback-controls button, .tls-match-broadcast-action",
+  ).evaluateAll((elements) => elements
+    .filter((element) => {
+      const style = getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden";
+    })
+    .map((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        height: Math.round(bounds.height),
+        label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName,
+        width: Math.round(bounds.width),
+      };
+    })
+    .filter(({ height, width }) => height < 24 || width < 24));
+
+  expect(undersized, `${checkpoint} contains targets smaller than 24px`).toEqual([]);
+}
+
+/** Rejects visually truncated event facts in the narrow, reflowed tabellino. */
+async function assertTabellinoFactsNotClipped(page: Page, checkpoint: string): Promise<void> {
+  const clipped = await page.locator(
+    ".tls-match-tabellino-incident-copy strong, .tls-match-tabellino-incident-copy small",
+  ).evaluateAll((elements) => elements
+    .filter((element) => getComputedStyle(element).display !== "none")
+    .map((element) => ({
+      clientHeight: element.clientHeight,
+      clientWidth: element.clientWidth,
+      copy: element.textContent?.trim() ?? "",
+      scrollHeight: element.scrollHeight,
+      scrollWidth: element.scrollWidth,
+    }))
+    .filter((element) => (
+      element.scrollWidth > element.clientWidth + 1
+      || element.scrollHeight > element.clientHeight + 1
+    )));
+
+  expect(clipped, `${checkpoint} clips tabellino facts`).toEqual([]);
+}
+
 /** Guards the start screen's deliberate full-viewport centering. */
 async function assertViewportCentered(page: Page, selector: string): Promise<void> {
   const viewport = page.viewportSize();
@@ -1441,38 +1893,105 @@ async function assertHalfTimeInteractiveTargets(page: Page): Promise<void> {
 /** Guards the football-first full-time hierarchy and its single exit command. */
 async function assertFullTimeFootballReview(page: Page, checkpoint: string): Promise<void> {
   const review = page.locator(".tls-match-centre-full-time");
-  const story = review.locator(".tls-match-centre-full-time-story");
-  const ratings = review.locator(".tls-match-centre-full-time-ratings");
-  const consequences = review.locator(".tls-match-centre-consequences");
+  const tabs = review.getByRole("tablist", { name: "Full-time review views", exact: true });
+  const activePanel = review.getByRole("tabpanel");
 
   await expect(review).toBeVisible();
-  await expect(story).toBeVisible();
-  await expect(ratings).toBeVisible();
-  expect(await ratings.locator(".tls-match-centre-rating-row").count()).toBeGreaterThan(0);
+  await expect(tabs).toBeVisible();
+  await expect(tabs.getByRole("tab")).toHaveCount(3);
+  await expect(tabs.getByRole("tab", { name: "Your team", exact: true })).toBeEnabled();
+  await expect(tabs.getByRole("tab", { name: "Opponent", exact: true })).toBeEnabled();
+  await expect(tabs.getByRole("tab", { name: "Consequences", exact: true })).toBeEnabled();
+  await expect(activePanel).toBeVisible();
+  await expect(review.getByRole("tabpanel")).toHaveCount(1);
   await expect(review.locator(".tls-matchday-table")).toHaveCount(0);
   await expect(page.locator(".tls-app-shell-right-rail")).toBeHidden();
   await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toHaveCount(1);
 
   const copy = (await review.textContent())?.toLowerCase() ?? "";
-  expect(copy, `${checkpoint} exposes a technical fallback`).not.toMatch(/\b(?:fixture:|unknown|none)\b|next action/);
+  expect(copy, `${checkpoint} exposes a technical fallback`).not.toMatch(/\b(?:fixture:|unknown)\b|next action/);
 
-  const storyBox = await story.boundingBox();
-  const ratingsBox = await ratings.boundingBox();
-  expect(storyBox, `${checkpoint} story has no layout box`).not.toBeNull();
-  expect(ratingsBox, `${checkpoint} ratings have no layout box`).not.toBeNull();
-  expect(ratingsBox!.y, `${checkpoint} ratings must follow the tabellino`).toBeGreaterThan(storyBox!.y);
+  const reviewBox = await review.boundingBox();
+  expect(reviewBox, `${checkpoint} review has no layout box`).not.toBeNull();
 
-  if (await consequences.count() > 0) {
-    const consequenceBox = await consequences.boundingBox();
-    expect(consequenceBox, `${checkpoint} consequences have no layout box`).not.toBeNull();
-    expect(consequenceBox!.y, `${checkpoint} consequences must follow ratings`).toBeGreaterThan(ratingsBox!.y);
+  const tabellino = page.locator(".tls-match-tabellino");
+  if (await tabellino.count() > 0) {
+    const tabellinoBox = await tabellino.boundingBox();
+    expect(tabellinoBox, `${checkpoint} tabellino has no layout box`).not.toBeNull();
+    expect(reviewBox!.y, `${checkpoint} review must follow the tabellino`).toBeGreaterThan(tabellinoBox!.y);
   }
+}
+
+/** Opens one final-review tab and validates its single focused panel. */
+async function selectFullTimeReviewTab(
+  page: Page,
+  tabName: "Your team" | "Opponent" | "Consequences",
+): Promise<void> {
+  const review = page.locator(".tls-match-centre-full-time");
+  const tab = review.getByRole("tab", { name: tabName, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+
+  if (tabName !== "Consequences") {
+    const ratings = review.locator(".tls-match-team-ratings");
+    await expect(ratings).toBeVisible();
+    expect(await ratings.locator(".tls-match-centre-rating-row").count()).toBeGreaterThan(0);
+  }
+}
+
+/** Guards the single bounded match record shared by live and review states. */
+async function assertCompactTabellino(
+  page: Page,
+  checkpoint: string,
+  expected: boolean,
+): Promise<void> {
+  const tabellino = page.locator(".tls-match-tabellino");
+  await expect(tabellino).toHaveCount(expected ? 1 : 0);
+  if (!expected) return;
+
+  await expect(tabellino).toBeVisible();
+  expect(await tabellino.locator(".tls-match-tabellino-incident").count()).toBeGreaterThan(0);
+  const overflow = await tabellino.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(
+    overflow.scrollWidth,
+    `${checkpoint} tabellino has horizontal overflow`,
+  ).toBeLessThanOrEqual(overflow.clientWidth + 1);
 }
 
 /** Ensures the active football task begins within the first narrow viewport. */
 async function assertTaskInFirstViewport(page: Page, checkpoint: string): Promise<void> {
   const top = await page.locator("#tls-career-main").evaluate((element) => element.getBoundingClientRect().top);
   expect(top, `${checkpoint} begins below the first useful viewport`).toBeLessThan(844);
+}
+
+/** Proves pre-match owns the shell outlet without repeating fixture metadata. */
+async function assertFullWidthPreMatch(page: Page, checkpoint: string): Promise<void> {
+  const main = page.locator("#tls-career-main");
+  await expect(main).toHaveAttribute("data-content-layout", "full-width");
+  await expect(page.locator(".tls-match-centre-pre-match")).toHaveCount(0);
+  await expect(page.getByText("Ready to play", { exact: true })).toHaveCount(0);
+
+  const geometry = await page.locator(".tls-app-shell").evaluate((shell) => {
+    const mainElement = shell.querySelector<HTMLElement>("#tls-career-main");
+    if (mainElement === null) throw new Error("Expected Matchday main outlet");
+    const shellBox = shell.getBoundingClientRect();
+    const mainBox = mainElement.getBoundingClientRect();
+    const shellStyle = getComputedStyle(shell);
+    return {
+      actualRight: mainBox.right,
+      expectedRight: shellBox.right - Number.parseFloat(shellStyle.paddingRight),
+      mainWidth: mainBox.width,
+    };
+  });
+
+  expect(geometry.mainWidth, `${checkpoint} main outlet collapsed`).toBeGreaterThan(0);
+  expect(
+    Math.abs(geometry.actualRight - geometry.expectedRight),
+    `${checkpoint} leaves an unexplained column after Matchday`,
+  ).toBeLessThanOrEqual(1);
 }
 
 /** Captures one deterministic phase screenshot outside the repository. */

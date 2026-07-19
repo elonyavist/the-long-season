@@ -52,6 +52,7 @@ export async function runTenSeasonReportCommand(
       worldCount: parsed.worldCount,
       seasonCount: parsed.seasonCount,
       text,
+      language: parsed.language,
     });
 
     if (parsed.reportOutputPath !== undefined) {

@@ -39,6 +39,14 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
       mental: { positioning: value, vision: value, anticipation: value, composure: value, determination: value, leadership: value },
       goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
     });
+    const roleIdentity = (primaryRole: string, archetype: string) => ({
+      primaryRole,
+      archetype,
+      naturalRoles: [primaryRole],
+      adaptedRoles: [],
+      weakRoles: [],
+      roleFamiliarity: { [primaryRole]: "natural" },
+    });
     const state = {
       saveId: firstSaveId,
       schemaVersion: 1,
@@ -49,10 +57,12 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
         players: {
           "player:away-01": {
             id: "player:away-01", firstName: "Marco", lastName: "Bianchi", birthDate: 10_500,
+            ...roleIdentity("goalkeeper", "goalkeeper_shot_stopper"),
             naturalPositions: ["gk"], abilities: abilitySet(9), potential: abilitySet(12),
           },
           "player:away-02": {
             id: "player:away-02", firstName: "Andrea", lastName: "Neri", birthDate: 11_100,
+            ...roleIdentity("striker", "striker_poacher"),
             naturalPositions: ["st"], abilities: abilitySet(8), potential: abilitySet(11),
           },
           "player:home-01": {
@@ -64,10 +74,12 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
           },
           "player:home-02": {
             id: "player:home-02", firstName: "Davide", lastName: "Blu", birthDate: 10_900,
+            ...roleIdentity("goalkeeper", "goalkeeper_shot_stopper"),
             naturalPositions: ["gk"], abilities: abilitySet(10), potential: abilitySet(13),
           },
           "player:youth-01": {
             id: "player:youth-01", firstName: "Paolo", lastName: "Verdi", birthDate: 15_000,
+            ...roleIdentity("striker", "striker_poacher"),
             naturalPositions: ["st"], abilities: abilitySet(6), potential: abilitySet(14),
           },
         },
@@ -154,6 +166,25 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
         events: [{ type: "kickoff", minute: 0 }, { type: "half_time", minute: 45, score: { home: 0, away: 0 } }],
         selectedClubBenchSlots: [], appliedSubstitutions: [],
       },
+      playerParticipationLedger: {
+        rows: {
+          "season:2026|2026-08|player:home-01": {
+            rowKey: "season:2026|2026-08|player:home-01",
+            playerId: "player:home-01",
+            seasonId: "season:2026",
+            monthKey: "2026-08",
+            starts: 1,
+            substituteAppearances: 0,
+            minutes: 90,
+            ratingTotal: 7.3,
+            ratingSamples: 1,
+            playedRoleMinutes: { central_midfielder: 90 },
+            appliedFixtureIds: ["fixture:played"],
+          },
+        },
+        rowKeys: ["season:2026|2026-08|player:home-01"],
+        closedMonthKeys: ["season:2026|2026-08"],
+      },
     };
     const secondState = structuredClone(state);
     secondState.saveId = secondSaveId;
@@ -211,6 +242,13 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
       restoredCheckpoint: loaded.activeMatchCheckpoint,
       sourcePreparation: state.matchPreparation,
       restoredPreparation: loaded.matchPreparation,
+      restoredPlayerFacts: {
+        roleIdentity: loaded.gameState.players["player:home-01"],
+        dynamicState: loaded.gameState.playerStates["player:home-01"],
+        playerParticipationLedger: loaded.playerParticipationLedger,
+        youthPlayer: loaded.gameState.players["player:youth-01"],
+        youthAcademy: loaded.youthAcademyState,
+      },
       opfsDatabaseExists,
       indexedDbNames,
       localCareerKeys,
@@ -229,6 +267,14 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
     completeStagedMatchCheckpoint(result.sourceCheckpoint as never),
   );
   expect(result.restoredPreparation).toEqual(result.sourcePreparation);
+  expect(result.restoredPlayerFacts.roleIdentity.primaryRole).toBe("central_midfielder");
+  expect(result.restoredPlayerFacts.roleIdentity.abilities.technical.passing).toBe(11);
+  expect(result.restoredPlayerFacts.roleIdentity.potential.technical.passing).toBe(15);
+  expect(result.restoredPlayerFacts.dynamicState).toEqual({ fitness: 91, form: 64, morale: 72 });
+  expect(result.restoredPlayerFacts.playerParticipationLedger?.rowKeys).toEqual(["season:2026|2026-08|player:home-01"]);
+  expect(result.restoredPlayerFacts.playerParticipationLedger?.closedMonthKeys).toEqual(["season:2026|2026-08"]);
+  expect(result.restoredPlayerFacts.youthPlayer.primaryRole).toBe("striker");
+  expect(result.restoredPlayerFacts.youthAcademy.playerLifecycleIds).toEqual(["player:youth-01"]);
   expect(result.opfsDatabaseExists).toBe(true);
   expect(result.indexedDbNames.filter((name) => /career|save/i.test(name))).toEqual([]);
   expect(result.localCareerKeys).toEqual([]);

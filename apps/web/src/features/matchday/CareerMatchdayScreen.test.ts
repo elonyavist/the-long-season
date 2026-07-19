@@ -44,14 +44,16 @@ describe("CareerMatchdayScreen", () => {
     const fixture = createPreMatchTestFixture("screen-ready");
     const markup = renderMatchday(fixture.view, fixture.phaseView);
 
-    expect(markup).toContain("Ready to play");
     expect(markup).toContain("tls-match-broadcast-frame");
+    expect(markup).toContain('data-motion-active="false"');
+    expect(markup).toContain('data-motion-checkpoint="pre_match"');
     expect(markup).toContain("Match centre");
     expect(markup).toContain("tls-matchday-scoreboard");
+    expect(markup.match(/data-score-motion=/g) ?? []).toHaveLength(2);
+    expect(markup).not.toContain('data-score-changed="true"');
     expect(markup).toContain("tls-match-centre-phase-rail");
     expect(markup).toContain(fixture.phaseView.fixture.homeClub.name);
     expect(markup).toContain(fixture.phaseView.fixture.awayClub.name);
-    expect(markup).toContain("Fixture");
     expect(markup).toContain("Start match");
     expect(markup).toContain('data-state="idle"');
     expect(markup.match(/Start match/g) ?? []).toHaveLength(1);
@@ -64,6 +66,10 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("Tactical board");
     expect(markup).not.toContain("tls-matchday-dashboard");
     expect(markup).not.toContain("Form and morale");
+    expect(markup).not.toContain("tls-match-centre-pre-match");
+    expect(markup).not.toContain("Ready to play");
+    expect(markup).not.toContain(">Fixture<");
+    expect(markup).not.toContain(">Venue<");
   });
 
   it("renders phase progress as passive indicators instead of controls", () => {
@@ -91,12 +97,13 @@ describe("CareerMatchdayScreen", () => {
 
     expect(markup).toContain("First half");
     expect(markup).not.toContain("Play to half-time");
-    expect(markup).toContain("tls-match-centre-live-phase");
-    expect(markup).toContain("tls-match-centre-live-event is-goal");
-    expect(markup).toContain("tls-match-centre-live-event is-detail");
-    expect(markup).toContain("22&#x27; Goal U.S. Pisa Filippo Costa");
-    expect(markup).toContain("Filippo Costa");
+    expect(markup).not.toContain("tls-match-centre-live-phase");
+    expect(markup).not.toContain("tls-match-centre-live-event");
+    expect(markup).toContain('class="tls-match-broadcast-live-line"');
+    expect(markup.match(/data-motion-commentary-key=/g) ?? []).toHaveLength(1);
+    expect(markup).toContain("38&#x27; Save: S.S. Perugia - Davide Valentini");
     expect(markup).toContain("Davide Valentini");
+    expect(markup.match(/tls-match-broadcast-live-line/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain("Half-time board");
     expect(markup).not.toContain("Final ratings");
     expect(markup).not.toContain("Player stats");
@@ -115,14 +122,12 @@ describe("CareerMatchdayScreen", () => {
 
     expect(markup).toContain("Second half");
     expect(markup).not.toContain("Play to full time");
-    expect(markup).toContain("tls-match-centre-live-phase");
-    expect(markup).toContain("tls-match-centre-pressure-strip");
-    expect(markup).toContain("Match pressure");
-    expect(markup).toContain("Your side");
-    expect(markup).toContain("tls-match-centre-live-event is-goal");
-    expect(markup).toContain("tls-match-centre-live-event is-detail");
-    expect(markup).toContain("Tommaso Leoni");
+    expect(markup).not.toContain("tls-match-centre-live-phase");
+    expect(markup).not.toContain("tls-match-centre-pressure-strip");
+    expect(markup).not.toContain("tls-match-centre-live-event");
+    expect(markup).toContain("72&#x27; Save: S.S. Perugia - Davide Valentini");
     expect(markup).toContain("Davide Valentini");
+    expect(markup.match(/tls-match-broadcast-live-line/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain("Half-time board");
     expect(markup).not.toContain("Final ratings");
     expect(markup).not.toContain("Player stats");
@@ -138,17 +143,22 @@ describe("CareerMatchdayScreen", () => {
     );
 
     expect(markup).toContain("Half-time");
+    expect(markup).toContain('data-motion-checkpoint="half_time"');
+    expect(markup).toContain('data-motion-checkpoint-panel="half_time"');
     expect(markup).toContain("Start second half");
     expect(markup.match(/Start second half/g) ?? []).toHaveLength(1);
-    expect(markup).toContain("Decision signals");
+    expect(markup).toContain('aria-label="Half-time views"');
+    expect(markup).toContain("Summary");
+    expect(markup).toContain("Tactics");
+    expect(markup).toContain("Your team");
+    expect(markup).toContain("Opponent");
+    expect(markup).not.toContain("Decision signals");
     expect(markup).toContain("Watch list");
     expect(markup).toContain("Key contributors");
-    expect(markup).toContain("Half-time board");
-    expect(markup).toContain("First-half review");
-    expect(markup).toContain("Tactical board");
-    expect(markup).toContain("tls-tactical-bench-board");
-    expect(markup).toContain("Current shape");
-    expect(markup.match(/Current shape/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("Half-time board");
+    expect(markup).not.toContain("Tactical board");
+    expect(markup).not.toContain("tls-tactical-bench-board");
+    expect(markup).not.toContain("Current shape");
     expect(markup.match(/0\/5 changes/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain("Half-time score");
     expect(markup).not.toContain("First-half tabellino");
@@ -157,6 +167,24 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("Form and morale");
     expect(markup).not.toContain("Player off");
     expect(markup).not.toContain("Apply substitution");
+  });
+
+  it("uses half-time validation instead of stale pre-match blockers after a tactical edit", () => {
+    const fixture = createHalfTimeTestFixture("screen-half-time-tactical-edit");
+    const markup = renderMatchday(
+      {
+        ...fixture.view,
+        blockerKeys: ["missing_saved_lineup", "missing_saved_tactic"],
+      },
+      fixture.phaseView,
+      fixture.halfTimeSubstitutions,
+      fixture,
+    );
+
+    expect(markup).toContain("Start second half");
+    expect(markup).not.toContain("Prepare match");
+    expect(markup).not.toContain("missing saved lineup");
+    expect(markup).not.toContain("missing saved tactic");
   });
 
   it("renders applied and invalid half-time substitution feedback", () => {
@@ -192,29 +220,31 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).toContain("The incoming player is already on the pitch.");
   });
 
-  it("renders played result as a post-match review ordered by tabellino, ratings, and consequences", () => {
-    const fixture = createFullTimeTestFixture("screen-full-time");
+  it("renders played result as a stable score and tabellino above one tabbed post-match review", () => {
+    const fixture = createFullTimeTestFixture("screen-full-time-events");
     const markup = renderMatchday(
       fixture.view,
       fixture.phaseView,
     );
 
     expect(markup).toContain("Full time");
+    expect(markup).toContain('data-motion-checkpoint="full_time"');
+    expect(markup).toContain('data-motion-checkpoint-panel="full_time"');
     expect(markup).toContain("tls-matchday-scoreboard");
     expect(markup).toContain("tls-match-centre-full-time");
     expect(markup).toContain("Match tabellino");
     expect(markup).toContain(`${fixture.phaseView.selectedClub.name} ratings`);
+    expect(markup).toContain('aria-label="Full-time review views"');
+    expect(markup.match(/role="tab"/g) ?? []).toHaveLength(3);
     expect(markup).toContain('aria-label="Player ratings table"');
-    expect(markup).toContain("Post-match state");
-    expect(markup).toContain("Condition");
-    expect(markup).toContain("Form");
+    expect(markup).toContain(">Fit<");
+    expect(markup).not.toContain("Post-match state");
     expect(markup).toContain("Return to dashboard");
     expect(markup.match(/Return to dashboard/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain(">Continue</button>");
     expect(markup).not.toContain("Final ratings");
     expect(markup).not.toContain("Next action");
     expect(markup).not.toContain(">unknown<");
-    expect(markup).not.toContain(">none<");
     expect(markup).not.toContain("on pitch");
     expect(markup).not.toContain("tls-matchday-table");
     expect(markup).not.toContain("Timeline");
@@ -226,45 +256,33 @@ describe("CareerMatchdayScreen", () => {
 
     const tabellinoIndex = markup.indexOf("Match tabellino");
     const ratingsIndex = markup.indexOf(`${fixture.phaseView.selectedClub.name} ratings`);
-    const consequencesIndex = markup.indexOf("Post-match state");
 
     expect(tabellinoIndex).toBeGreaterThan(-1);
     expect(ratingsIndex).toBeGreaterThan(-1);
-    expect(consequencesIndex).toBeGreaterThan(-1);
     expect(tabellinoIndex).toBeLessThan(ratingsIndex);
-    expect(ratingsIndex).toBeLessThan(consequencesIndex);
   });
 
 });
 
 describe("career matchday presentation contract", () => {
-  it("groups goals, penalties, and real structured facts into the tabellino lane", () => {
+  it("keeps only current goal and substitution facts in the persistent tabellino", () => {
     const presentation = buildCareerMatchdayPresentationView(buildPresenterPhaseView([
       { eventId: "event:miss", minute: 6, kind: "miss", club: presenterHomeClub, playerName: "Filippo Costa" },
-      { eventId: "event:penalty", minute: 12, kind: "penalty_goal", club: presenterHomeClub, playerName: "Filippo Costa" },
-      { eventId: "event:card", minute: 20, kind: "yellow_card", club: presenterAwayClub, playerName: "Nico Rinaldi" },
       { eventId: "event:sub", minute: 46, kind: "substitution", club: presenterAwayClub, playerName: "Marco Esposito" },
       { eventId: "event:goal", minute: 82, kind: "goal", club: presenterHomeClub, playerName: "Tommaso Leoni" },
       { eventId: "event:save", minute: 88, kind: "save", club: presenterAwayClub, playerName: "Davide Valentini" },
     ]));
 
-    expect(presentation.eventGroups.hasTabellino).toBe(true);
-    expect(presentation.eventGroups.tabellino.map((event) => `${event.visualPriority}:${event.event.kind}`)).toEqual([
-      "goal:goal",
-      "high:penalty_goal",
-      "secondary:yellow_card",
-      "secondary:substitution",
+    expect(presentation.tabellino.incidents.map((incident) => `${incident.side}:${incident.visualPriority}:${incident.event.kind}`)).toEqual([
+      "away:secondary:substitution",
+      "home:goal:goal",
     ]);
-    expect(presentation.eventGroups.liveFeed.map((event) => event.event.kind)).toEqual(["miss", "save"]);
   });
 
   it("keeps empty event phases explicit without inventing fake match facts", () => {
     const presentation = buildCareerMatchdayPresentationView(buildPresenterPhaseView([]));
 
-    expect(presentation.eventGroups.hasTabellino).toBe(false);
-    expect(presentation.eventGroups.hasLiveFeed).toBe(false);
-    expect(presentation.eventGroups.tabellino).toEqual([]);
-    expect(presentation.eventGroups.liveFeed).toEqual([]);
+    expect(presentation.tabellino.incidents).toEqual([]);
   });
 
   it("builds compact score, phase markers, and primary command facts", () => {
@@ -370,9 +388,11 @@ function minuteForPresenterPhase(phase: Parameters<typeof buildCareerMatchdayPha
     case "pre_match":
       return 0;
     case "first_half":
+      return 38;
     case "half_time":
       return 45;
     case "second_half":
+      return 72;
     case "full_time":
       return 90;
     case "extra_time":

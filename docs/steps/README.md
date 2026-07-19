@@ -54,6 +54,11 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - `docs/PROJECT_STATUS.md` explains the current active step and project state to a new LLM or junior developer.
 - Future phases can start without changing `docs/PROJECT_RULES.md`.
 
+## Current Documented Phase
+
+- `docs/steps/76-web-motion-language-and-football-feedback-system/`
+- Status: Complete. Steps 01-09 are Done.
+
 ## Claude Code task prompt
 
 Read `docs/steps/README.md` and `docs/PROJECT_STATUS.md`, identify the single active step, implement only that step, run its checks, update `docs/PROJECT_STATUS.md`, and update the next step document with any lesson that changes future work. If all existing step groups are complete, create one next-step document before implementing new code.

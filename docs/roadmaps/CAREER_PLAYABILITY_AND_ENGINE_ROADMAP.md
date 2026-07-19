@@ -153,7 +153,8 @@ Completion note - 2026-06-25:
 
 ### Phase 63 - Canonical Career Advancement Use-Case
 
-Primary dependency: Phase 62 safety net.
+Primary dependency: Phase 62 safety net and the player-quality evidence from
+Phases 24, 28, 32, 33, and 47.
 
 Purpose:
 
@@ -957,6 +958,79 @@ Definition of Done:
 - Node 24 `pnpm check`, build, dependency rules, visual QA, `git diff --check`,
   and Graphify update pass.
 
+### Phase 73C - Matchday Broadcast Workspace And Tabbed Review Rework
+
+Primary dependency: completed Phase 73B and the existing staged deterministic
+Matchday checkpoints.
+
+Purpose:
+
+- Recompose the current Matchday into one stable football-broadcast hierarchy
+  without changing the match calculator or career truth.
+
+User-facing reason:
+
+- The manager should follow a match through score, current incident,
+  tabellino, interval decisions, and post-match review without reading a
+  growing log or scanning simultaneous report panels.
+
+Ordered scope:
+
+1. full-width Matchday content beside the unchanged persistent sidebar and a
+   simplified pre-match confirmation;
+2. presentation-only Pause/Resume and `1x`/`2x`/`4x` controls with event-priority
+   hold durations;
+3. one replace-in-place live commentary line and a restrained goal moment;
+4. one compact real-fact tabellino directly below the score;
+5. accessible half-time Summary tab and one decision hierarchy;
+6. half-time Tactics, selected-team, and opponent tabs around the unchanged
+   shared tactical board;
+7. full-time selected-team, opponent, and consequence tabs;
+8. responsive, keyboard, 200% text, live-region, and reduced-motion hardening;
+9. canonical browser gate, dead-path closeout, architecture reconciliation,
+   and final report.
+
+Locked constraints:
+
+- engine/domain continue to emit structured facts only;
+- playback timing, pause, speed, and active tabs remain ephemeral React state;
+- SQLite/OPFS, one CareerSession, save cadence, Posta, Continue, and command
+  locking remain unchanged;
+- no unsupported incident kind receives placeholder data or inert UI code;
+- `campo-calcio.svg`, normalized geometry, roles, formations, suitability,
+  player tokens, bench rules, and tactical interactions remain unchanged;
+- every step produces one browser-visible slice and removes the path it
+  replaces after replacement proof;
+- Phase 74 is not renumbered, replaced, or started.
+
+Detailed documentation:
+
+- `docs/steps/73c-matchday-broadcast-workspace-and-tabbed-review-rework/`
+
+Current status:
+
+- All nine ordered implementation steps are complete.
+- The final Node 24 repository gate, dependency rules, canonical real-browser
+  SQLite/OPFS journey, responsive/accessibility/motion matrix, diff check, and
+  Graphify update pass.
+- The closeout report is
+  `docs/audits/MATCHDAY_BROADCAST_WORKSPACE_REWORK_REPORT.md`.
+- The next recommendation is exactly the already-reserved Phase 74; it is not
+  started by this closeout.
+
+Definition of Done:
+
+- Matchday uses the full shell content outlet with one stable
+  score/commentary/tabellino hierarchy;
+- live playback is controllable, bounded, fact-preserving, and does not grow
+  the page;
+- half time and full time use accessible tabs around real current facts;
+- the shared tactical board is unchanged and fully operable;
+- current real-browser SQLite/OPFS, responsive, accessibility, persistence,
+  and deterministic gates pass;
+- no replaced Matchday path or unexplained compatibility branch remains;
+- the final report recommends exactly the already-reserved Phase 74.
+
 ### Future Web Backlog - Squad Screen And Player Memory Foundation
 
 Primary dependency: Phase 64 player-state reactivity and future web persistence.
@@ -1082,27 +1156,289 @@ User-facing reason:
 
 Minimum useful scope:
 
-- audit current generation paths for senior players, youth intake, and career
-  refresh;
-- consolidate duplicated ability/age/role helper logic into appropriate
-  domain/shared Modules;
-- ensure current ability and potential use compatible role-aware models;
-- add or strengthen domain construction/validation where useful;
-- preserve existing quality gates for lower-division plausibility and role
-  coherence.
+- audit every senior, initial-youth, seasonal-youth, and later-career producer,
+  plus development, lifecycle, market, report, adapter, and save consumers;
+- place stable football invariants in domain while keeping generation policy in
+  content, career decisions in engine, and migration in storage;
+- distinguish raw attribute average, role current ability, role potential
+  ability, and tactical suitability through explicit contracts;
+- consolidate role attribute profiles and hard caps so generation and
+  development consume one source of truth;
+- route every new player through one validated construction boundary;
+- consolidate senior, career-intake, and youth assembly without merging their
+  distinct division, age, academy, and rarity policies;
+- align development, lifecycle, valuation, reports, and web adapters to the
+  correct derived measure;
+- preserve or explicitly migrate JSON and SQLite/OPFS careers;
+- prove fixed-seed determinism, lower-division plausibility, exact academy
+  structure, role coherence, long-run squad health, and match-balance
+  non-regression.
 
 What must not happen:
 
 - No broad rebalance without long-run evidence.
 - No personality/staff/economy piggyback.
 - No breaking save compatibility without a documented migration path.
+- No football-domain rules moved into `@game/shared` merely to bypass package
+  dependencies.
+- No ambiguous `currentAbility` helper, second player model, compatibility
+  leftover, or threshold relaxation.
+- No Phase 75 implementation.
+
+Detailed documentation:
+
+- `docs/steps/74-player-generation-and-model-consolidation-cleanup/`
+
+Current status:
+
+- README and all eleven ordered step documents are complete.
+- Step 01 is complete. The authoritative audit maps all producers, mutators,
+  consumers, persistence paths, duplicate formulas, exact/distribution locks,
+  and the deterministic `world-a` / `world-b` baseline.
+- The durable player shape is unchanged: Step 10 owns compatibility proof, not
+  an artificial schema migration.
+- Step 02 is complete: domain owns the canonical ordered ability vocabulary,
+  traversal, potential invariant, and distinct raw/current-role/potential-role
+  measures; senior fixed-seed output remains exact.
+- Step 03 is complete: one exhaustive domain role profile now owns attribute
+  buckets, normalized weights, and hard caps; content and development consume
+  it without parallel football tables or changed rates.
+- Step 04 is complete: new players now pass through one pure typed domain
+  constructor that validates complete role identity, position agreement,
+  abilities, potential, caps, dates, IDs, and initial dynamic state without RNG
+  or mutation; the durable historical shape remains unchanged.
+- Step 05 is complete: initial seniors and later-career intake now share one
+  content-owned assembly seam while retaining distinct RNG, identity, age,
+  division, and archetype policies. Senior fixed-seed output remains exact;
+  intake now obeys the documented generated scale and canonical role caps.
+- Step 06 is complete: initial-academy and seasonal youth now share the strict
+  assembly seam while retaining distinct age and intake policy. Exact academy
+  quotas and age distributions remain stable, and one deterministic division
+  budget now limits youth rarity to 2-5 high and 0-1 elite prospects instead
+  of allowing independent rolls to overpopulate the division.
+- Step 07 is complete: development and its CLI report now use canonical
+  ability traversal, role current/potential measures, and domain-owned hard
+  caps. Age curves and rates remain engine policy; every mutation is bounded
+  to `1..20`, and the seven-season deterministic report remains coherent.
+- Step 08 is complete: historical exit thresholds use the canonical raw
+  diagnostic average, while academy age-out, promotion usefulness, and
+  transfer willingness use role current ability and role potential room.
+  Goalkeeper/specialist boundaries, selected-club protection, deterministic
+  order, and squad-size invariants pass without a universal score.
+- Step 09 is complete: market valuation and willingness share canonical
+  role-current and role-potential facts; CLI reports label and aggregate role
+  quality explicitly; the web preparation adapter projects role-current ability
+  onto its existing scale without changing tactical suitability or board
+  behavior.
+- Step 10 is complete: old/current JSON and SQLite/OPFS careers normalize
+  historical role identity deterministically, preserve all current facts,
+  round-trip without a schema bump, and remain loadable through preparation
+  and Matchday. The canonical visual gate now proves playback speeds while the
+  live phase owns the controls and no longer depends on prior generated-career
+  event order.
+- Step 11 is complete: focused and repository checks pass; fixed seeds,
+  strict balance, 50x10 diagnostics, and the 250x30 structural player gate are
+  green. The generated global long-run report remains honestly `FAIL` for two
+  named out-of-scope signals (`top_creator_goal_share_max` and
+  `champion_streak`), while player generation, development coherence, academy
+  bounds, goalkeeper coverage, and squad structure have zero failures. The
+  replaced role-classification bridge and remaining private CLI formulas are
+  deleted, architecture traces the complete lifecycle, and the final report
+  records the classification without changing thresholds.
 
 Definition of Done:
 
 - Player generation is easier for a junior developer to follow and harder to
   accidentally fork into parallel models.
+- One canonical ability algebra, role profile/cap source, and validated
+  construction boundary serve all current producers and consumers.
+- Current ability and potential are compatible role-aware measures while raw
+  average and tactical suitability retain explicit separate meanings.
+- Existing saves load or migrate deterministically through tested JSON and
+  SQLite/OPFS paths.
+- The 250-world x 30-season player gate and balance non-regression pass without
+  hidden seeds or relaxed thresholds.
+- Replaced helpers, tables, constructors, and compatibility branches are
+  deleted, and architecture documentation traces the whole lifecycle.
 
-### Phase 75 - Market UI MVP With Budget Visibility
+### Phase 75 - Player Generation, Potential And Development Lifecycle Rework
+
+Primary dependency: Phase 74 complete.
+
+Purpose:
+
+- Turn the consolidated player model into one credible lifelong football
+  system: generation, reachable potential, real participation, gradual
+  development, role exposure, aging, decline, exits, and replacement.
+
+User-facing reason:
+
+- Discoveries, minutes, patience, decline, and squad renewal must create the
+  long-term stories that make a football career enjoyable. A 26-year-old must
+  not carry physically impossible hidden growth merely because independent
+  potential rolls happened to be high.
+
+Minimum useful scope:
+
+- generate current profiles first and allocate one age-aware remaining-growth
+  budget into reachable attribute potential;
+- enforce role, division, club, age, rarity, and active-player physical-floor
+  constraints at construction;
+- add one durable participation ledger for starts, substitute minutes, ratings,
+  structured contributions, and played-role exposure;
+- give AI clubs deterministic selection, rotation, benches, and bounded
+  half-time substitutions so development is fed by real minutes;
+- replace seasonal growth jumps with slow deterministic monthly development,
+  primarily driven by minutes and only boundedly adjusted by performance;
+- support gradual related-role familiarity without silently changing the
+  player's primary role or archetype;
+- start outfield physical decline at age 32, keep a separate goalkeeper curve,
+  compress unreachable potential, and preserve coherent exits and replacement;
+- establish a clean Phase 75 beta-save baseline with no compatibility code for
+  discarded earlier beta careers;
+- provide trajectory diagnostics and staged `50 x 10`, `250 x 30`, then
+  operational `10000 x 50` evidence.
+
+Ownership decision:
+
+- Do not create one global balance package. Stable invariants remain in domain,
+  generation policy in content, career transitions in engine, persistence in
+  storage, and diagnostics in CLI/simulation-tools. Read-only coefficient
+  tables may be exported only from the package that owns their rule.
+
+What must not happen:
+
+- No exact hidden-potential display or player-detail UI.
+- No staff, training-session, personality, injury, contract, wage, economy, or
+  market feature piggyback.
+- No runtime LLM, duplicate development path, compatibility leftover, or
+  threshold relaxation to make a report pass.
+- No independent per-attribute future rolls that ignore age and current value.
+
+Detailed documentation:
+
+- `docs/steps/75-player-generation-potential-and-development-lifecycle-rework/`
+
+Current status:
+
+- Complete. Steps 01-15 are Done. Phase 76 is also complete.
+- Step 01 is recorded in
+  `docs/audits/PLAYER_LIFECYCLE_REWORK_BASELINE.md`. The fixed-seed baseline
+  keeps production behavior unchanged, passes `pnpm check`, passes
+  `phase75-baseline-a`/`phase75-baseline-b` player-generation reports with zero
+  role warnings, and passes the `50 x 10` long-run baseline with zero failed
+  worlds and hash
+  `7f979b773a3d0d96eb6035f3096c5a2353100f57b9b99387b1a149b8bad30c1b`.
+  The audit confirms the next implementation must start at current-profile
+  generation and active-player physical floors only; age-aware reachable
+  potential remains Step 03.
+- Step 02 is complete: one content-owned current-profile policy now controls
+  generated senior, career-intake, initial-youth, and seasonal-youth current
+  abilities. Numeric archetype current offsets are removed, generated physical
+  current attributes floor at `7`, role caps still hold, third-division
+  generation remains below first-division quality, and `phase75-current-a` plus
+  `phase75-current-b` reports pass with zero role warnings.
+- Step 03 is complete: one content-owned reachable-potential allocator now
+  derives potential from the completed current profile plus one age-aware
+  remaining-growth budget. Independent potential-ceiling bands and archetype
+  potential offsets are removed. Age-26/27 physical and technical jumps are
+  bounded, young upside is focused into role-relevant lanes, potential remains
+  ordered above current, and `phase75-potential-a` plus
+  `phase75-potential-b` reports pass with zero role warnings.
+- Step 04 is complete: every generated club now has one deterministic
+  youth-development level from `1..5`. The level is derived from division first
+  and reputation second, mildly affects routine interesting-prospect frequency,
+  current-profile lane, and high/elite candidate ordering, and remains bounded
+  by division-wide rarity budgets and third-division current-ability limits.
+  Initial academies and seasonal intake use the same policy and expose the
+  level as structured diagnostic data.
+- Step 05 is complete: domain now owns one durable player participation ledger
+  keyed by player, season, and month. The ledger tracks starts, substitute
+  appearances, minutes, sampled ratings, played-role minutes, closed months,
+  and fixture idempotency, and `CareerState` validates every referenced player.
+  Step 08 is the first supplier of real fixture facts and Step 09 is the first
+  development consumer; no growth, storage mapping, or UI behavior changed.
+- Step 06 is complete: JSON career saves now use envelope v3 and SQLite/OPFS
+  schema v7. Both adapters persist participation rows, played-role minutes,
+  applied fixture IDs, and closed month keys losslessly. Earlier beta JSON
+  v1/v2 saves and SQLite v1-v6 databases fail through one typed
+  unsupported-schema reset boundary; no migration, compatibility reader,
+  historical normalizer, localStorage mirror, or IndexedDB fallback remains.
+- Step 07 is complete: one deterministic engine-owned AI squad selector now
+  builds credible AI XIs and benches for season simulation and non-selected
+  career match contexts. Role coverage, role suitability, bounded fitness and
+  recent-use modifiers, prospect opportunity, and stable tie-breaking are
+  verified while the selected club's user lineup remains authoritative.
+- Step 12 is complete: one engine-owned monthly lifecycle checkpoint now closes
+  completed participation months exactly once across direct fixture progress
+  and season advancement. The checkpoint uses durable closed month keys instead
+  of an app-owned loop, returns structured monthly summaries, and keeps the
+  next fixture's participation open for its own month.
+- Step 13 is complete: player generation and development inspection now expose
+  developer-only trajectory evidence. Long-run diagnostics include
+  representative age samples and traceable checks; generation reports show
+  current-to-potential room by age and mature high-room warnings; career
+  development reports show selected-club trajectory samples without changing
+  normal game surfaces.
+- Step 14 is complete: staged `50 x 10` and `250 x 30` lifecycle gates pass
+  with zero hard failures. Remaining warnings are classified as football story
+  or monitor variance below locked fail thresholds, and both audit reports
+  record the frozen thresholds for Step 15.
+- Step 15 is complete: the operational `10000 x 50` release gate passes with
+  zero failed worlds. The closeout added deterministic parallel gate metadata,
+  post-transfer squad maintenance, low-denominator creator-share handling,
+  50-season champion-dynasty warning semantics, and the final lifecycle report.
+
+Definition of Done:
+
+- Current and potential profiles are role-, division-, club-, and age-credible.
+- Potential is reachable, monotone non-increasing, and never below current.
+- Monthly growth is slow and primarily explained by real participation.
+- AI squads distribute credible starts and substitute minutes.
+- Physical decline, role familiarity, youth rarity, exits, and replacement stay
+  coherent over 50 seasons.
+- The new beta persistence baseline is lossless and old beta paths are deleted.
+- The operational `10000 x 50` deterministic gate completes without structural
+  roster, age, potential, role, or development collapse.
+
+### Phase 76 - Web Motion Language And Football Feedback System
+
+Primary dependency: complete current web MVP journey through Phase 75.
+
+Purpose:
+
+- Add one accessible, web-only motion presentation system before the next major
+  product sections.
+- Make command feedback, navigation, Continue/Posta, tactics, and Matchday feel
+  responsive and football-specific without changing structured facts.
+
+Minimum useful scope:
+
+- Motion for React behind one shared bundle-conscious provider;
+- semantic `none`, `micro`, `transition`, and `narrative` classification;
+- normal and reduced-motion browser proof;
+- production-used command, shell, Inbox, Dashboard, tactical, and Matchday
+  consumers;
+- performance, dependency, accessibility, and dead-code closeout.
+
+What must not happen:
+
+- No engine/package dependency on Motion.
+- No gameplay command triggered by animation completion.
+- No decorative animation system or unsupported event choreography.
+
+Definition of Done:
+
+- Motion improves the complete current browser journey, remains optional to
+  correctness, and passes full desktop/narrow/reduced-motion QA.
+
+Completion:
+
+- Steps 01-09 are complete. The final implementation, bundle measurements,
+  accessibility proof, ownership inventory, and visual evidence are recorded
+  in `docs/audits/WEB_MOTION_SYSTEM_REPORT.md`.
+
+### Phase 77 - Market UI MVP With Budget Visibility
 
 Primary dependency: future Squad screen and future web persistence.
 
@@ -1137,9 +1473,9 @@ Definition of Done:
 - The user can make a permanent transfer decision that changes the save and
   creates a visible squad consequence.
 
-### Phase 76 - Finances Foundation And Poverty Loop MVP
+### Phase 78 - Finances Foundation And Poverty Loop MVP
 
-Primary dependency: Phase 73 market UI and existing budget state.
+Primary dependency: Phase 77 market UI and existing budget state.
 
 Purpose:
 
@@ -1172,7 +1508,7 @@ Definition of Done:
 - At least one manager decision is constrained by money in a visible,
   understandable way.
 
-### Phase 77 - Promotion Pyramid And La Scalata Foundation
+### Phase 79 - Promotion Pyramid And La Scalata Foundation
 
 Primary dependency: Phase 63 canonical season advancement and enough persistence
 to survive multiple seasons.
@@ -1200,16 +1536,16 @@ What must not happen:
 - No continental cups.
 - No all-five-nation full pyramid in the first slice.
 - No real-club licensing or real names.
-- No economy/facility requirements unless Phase 73 already supports them.
+- No economy/facility requirements unless Phase 78 already supports them.
 
 Definition of Done:
 
 - A deterministic career can move clubs between divisions and preserve coherent
   history.
 
-### Phase 78 - Youth, Staff, Facilities, And Archive Expansion Plan
+### Phase 80 - Youth, Staff, Facilities, And Archive Expansion Plan
 
-Primary dependency: Phases 69, 70, 74, and 75.
+Primary dependency: Phases 69, 70, 74, 75, and 76.
 
 Purpose:
 
@@ -1237,7 +1573,7 @@ Definition of Done:
 
 - The next pillar is selected with evidence, not because it was next in a list.
 
-### Phase 79 - Narrative Content Factory And Corpus Foundation
+### Phase 81 - Narrative Content Factory And Corpus Foundation
 
 Primary dependency: a playable matchday loop, durable structured match/world
 events, and at least one surface where narrative variety would improve user
@@ -1310,21 +1646,28 @@ Current status:
 12. `Phase 73 - Inbox/Posta Decision Center And Career Attention Workflow` - complete
 13. `Phase 73A - Web Product UI/UX Quality Audit And Premium Design Baseline` - complete
 14. `Phase 73B - Current Web Product Premium Remediation And Journey Hardening` - complete
+15. `Phase 73C - Matchday Broadcast Workspace And Tabbed Review Rework` - complete
+16. `Phase 74 - Player Generation And Model Consolidation Cleanup` - complete
+17. `Phase 75 - Player Generation, Potential And Development Lifecycle Rework`
+    - complete
+18. `Phase 76 - Web Motion Language And Football Feedback System`
+    - complete
 
 Next recommendation:
 
-1. Document and then execute `Phase 74 - Player Generation And Model
-   Consolidation Cleanup`.
+1. Document `Future Web Backlog - Squad Screen And Player Memory Foundation`
+   as the next bounded phase before Market UI work.
 
 Reason:
 
-- Phase 73B has closed all 11 evidence-backed P1 product findings without a
-  rewrite and established one authoritative real-browser release gate.
-- Deterministic engine facts, SQLite/OPFS, save cadence,
-  Dashboard/Continue/Posta behavior, staged Matchday, localization, and the
-  tactical board remain protected by current tests.
-- The already-reserved Phase 74 is therefore the next bounded product/engine
-  concern. This roadmap update does not start it.
+- Phase 76 has closed the shared motion and command-feedback foundation without
+  changing structured football facts, persistence, or tactical ownership.
+- The player lifecycle and SQLite/OPFS career baseline already exist, while a
+  useful Squad screen is still the dependency that lets the manager understand
+  players before entering the Market workflow.
+- Phase 75 is complete. Its `10000 x 50` gate passes with zero failed worlds and
+  zero structural roster, goalkeeper, youth, age, potential, or lifecycle
+  collapse.
 
 ## Relationship To Web Section Roadmap
 

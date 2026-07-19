@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, gameDate, seasonId } from "@game/domain";
+import { clubId, gameDate, PLAYER_ABILITY_KEYS, readPlayerAbility, seasonId } from "@game/domain";
 import { fromISO } from "@game/shared";
 
 import { generateCareerIntakePlayers } from "./career-intake-players.ts";
@@ -66,6 +66,54 @@ test("generateCareerIntakePlayers keeps role templates coherent", () => {
     if (position === "cb" || position === "rb" || position === "lb") {
       assert.equal(Number(generated.player.abilities.technical.finishing) <= 8, true, generated.player.id);
     }
+  }
+});
+
+test("generateCareerIntakePlayers keeps fixed-seed identity facts and uses current-profile policy", () => {
+  const result = generateCareerIntakePlayers({
+    ...intakeInput("phase74-intake-lock"),
+    count: 3,
+  });
+
+  assert.deepEqual(
+    result.generatedPlayers.map(({ player, archetypeKey }) => ({
+      id: player.id,
+      name: `${player.firstName} ${player.lastName}`,
+      birthDate: Number(player.birthDate),
+      position: player.naturalPositions[0],
+      archetypeKey,
+    })),
+    [
+      {
+        id: "player:intake-perugia-0002-001",
+        name: "Davide Trevisan",
+        birthDate: 12_892,
+        position: "gk",
+        archetypeKey: "normal_youth",
+      },
+      {
+        id: "player:intake-perugia-0002-002",
+        name: "Youssef Ziani",
+        birthDate: 12_752,
+        position: "cm",
+        archetypeKey: "normal_youth",
+      },
+      {
+        id: "player:intake-perugia-0002-003",
+        name: "Luca Bonacina",
+        birthDate: 14_333,
+        position: "rw",
+        archetypeKey: "normal_youth",
+      },
+    ],
+  );
+
+  for (const generated of result.generatedPlayers) {
+    for (const key of PLAYER_ABILITY_KEYS) {
+      assert.equal(Number(readPlayerAbility(generated.player.abilities, key)) >= 1, true, `${generated.player.id} ${key}`);
+    }
+    assert.equal(Number(generated.player.abilities.physical.pace) >= 7, true, generated.player.id);
+    assert.equal(Number(generated.player.abilities.physical.stamina) >= 7, true, generated.player.id);
   }
 });
 

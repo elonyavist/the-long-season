@@ -1,18 +1,22 @@
 import {
   createCareerState,
+  getPlayerRoleProfile,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
   type CareerState,
   type Club,
   type ClubId,
   type Player,
-  type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRole,
   type SeasonId,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
+const MINIMUM_POST_EXIT_SQUAD_SIZE = 18;
 
 /** Stable machine-readable reason for one end-of-season player exit. */
 export type PlayerExitReason = "retirement" | "released" | "career_step_down";
@@ -37,7 +41,7 @@ export interface PlayerExitRecord {
   readonly age: number;
   /** Broad role bucket used by the exit model. */
   readonly positionGroup: BroadPositionGroup;
-  /** Current ability average used by the exit model. */
+  /** Historical raw diagnostic average used by the exit threshold model. */
   readonly currentAbilityAverage: number;
   /** Machine-readable exit reason. */
   readonly reason: PlayerExitReason;
@@ -73,12 +77,14 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
     if (clubId === undefined) {
       continue;
     }
+    const club = input.careerState.gameState.clubs[clubId];
 
     const evaluation = evaluatePlayerExit({
       player,
       currentDate: input.careerState.gameState.calendar.currentDate,
       worldSeed: input.worldSeed,
       seasonId: input.seasonId,
+      clubPlayerCount: club?.playerIds.length ?? 0,
     });
     if (evaluation === undefined) {
       continue;
@@ -147,6 +153,7 @@ interface PlayerExitEvaluationInput {
   readonly currentDate: CareerState["gameState"]["calendar"]["currentDate"];
   readonly worldSeed: string;
   readonly seasonId: SeasonId;
+  readonly clubPlayerCount: number;
 }
 
 interface PlayerExitEvaluation {
@@ -159,9 +166,12 @@ interface PlayerExitEvaluation {
 function evaluatePlayerExit(input: PlayerExitEvaluationInput): PlayerExitEvaluation | undefined {
   const age = Math.floor((input.currentDate - input.player.birthDate) / 365);
   const positionGroup = broadPositionGroup(input.player.naturalPositions[0]);
-  const currentAbilityAverage = roundAverage(averageAbilities(input.player.abilities));
+  const currentAbilityAverage = playerExitAbility(input.player);
   const candidate = exitCandidateFor(positionGroup, age, currentAbilityAverage);
   if (candidate === undefined) {
+    return undefined;
+  }
+  if (candidate.reason !== "retirement" && input.clubPlayerCount <= MINIMUM_POST_EXIT_SQUAD_SIZE) {
     return undefined;
   }
 
@@ -186,15 +196,25 @@ function exitCandidateFor(
   if (positionGroup === "goalkeeper") {
     if (age >= 40) return { reason: "retirement", probability: 1 };
     if (age >= 38 && currentAbilityAverage <= 8.5) return { reason: "retirement", probability: 0.85 };
-    if (age >= 35 && currentAbilityAverage <= 7.5) return { reason: "career_step_down", probability: 0.5 };
+    if (age >= 36 && currentAbilityAverage <= 7.5) return { reason: "career_step_down", probability: 0.45 };
     return undefined;
   }
 
   if (age >= 37) return { reason: "retirement", probability: 1 };
   if (age >= 35 && currentAbilityAverage <= 8.5) return { reason: "retirement", probability: 0.8 };
   if (age >= 33 && currentAbilityAverage <= 7.5) return { reason: "career_step_down", probability: 0.6 };
-  if (age >= 30 && currentAbilityAverage <= 6.5) return { reason: "released", probability: 0.45 };
+  if (age >= 32 && currentAbilityAverage <= 6.5) return { reason: "released", probability: 0.45 };
   return undefined;
+}
+
+/** Returns the role-shaped active quality used for exit decisions. */
+function playerExitAbility(player: Player): number {
+  const role = player.primaryRole ?? roleForPosition(player.naturalPositions[0]);
+  if (role === undefined) {
+    return roundAverage(Number(rawDiagnosticAbilityAverage(player.abilities)));
+  }
+
+  return roundAverage(Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(role))));
 }
 
 function isMatchPreparationStillOwned(careerState: CareerState, exitedPlayerIds: ReadonlySet<PlayerId>): boolean {
@@ -249,34 +269,32 @@ function broadPositionGroup(position: PlayerPosition | undefined): BroadPosition
   }
 }
 
-function averageAbilities(abilities: PlayerAbilities): number {
-  return (
-    abilities.technical.finishing +
-    abilities.technical.passing +
-    abilities.technical.longPassing +
-    abilities.technical.crossing +
-    abilities.technical.dribbling +
-    abilities.technical.technique +
-    abilities.technical.tackling +
-    abilities.technical.penalties +
-    abilities.technical.freeKicks +
-    abilities.physical.pace +
-    abilities.physical.strength +
-    abilities.physical.stamina +
-    abilities.physical.agility +
-    abilities.physical.heading +
-    abilities.mental.positioning +
-    abilities.mental.vision +
-    abilities.mental.anticipation +
-    abilities.mental.composure +
-    abilities.mental.determination +
-    abilities.mental.leadership +
-    abilities.goalkeeping.reflexes +
-    abilities.goalkeeping.handling +
-    abilities.goalkeeping.rushingOut +
-    abilities.goalkeeping.goalkeeperPositioning +
-    abilities.goalkeeping.footwork
-  ) / 25;
+function roleForPosition(position: PlayerPosition | undefined): PlayerRole | undefined {
+  switch (position) {
+    case "gk":
+      return "goalkeeper";
+    case "cb":
+      return "center_back";
+    case "rb":
+    case "lb":
+      return "full_back";
+    case "rwb":
+    case "lwb":
+      return "wing_back";
+    case "dm":
+      return "defensive_midfielder";
+    case "cm":
+      return "central_midfielder";
+    case "am":
+      return "attacking_midfielder";
+    case "rw":
+    case "lw":
+      return "winger";
+    case "st":
+      return "striker";
+    default:
+      return undefined;
+  }
 }
 
 function roundAverage(value: number): number {

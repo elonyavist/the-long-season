@@ -27,6 +27,8 @@ describe("CareerDashboardScreen", () => {
     expect(html).toContain("Choose the starting XI");
     expect(html).toContain("Choose the match approach");
     expect(html).toContain('data-task-state="attention"');
+    expect(html).toContain('data-motion-key="attention:');
+    expect(html.match(/data-motion-key=/g)).toHaveLength(3);
     expect(html).not.toContain(String(dashboard.nextFixture.fixtureId));
     expect(html).not.toContain(String(career.saveId));
     expect(html).not.toContain(String(dashboard.context.currentSeasonId));
@@ -73,6 +75,8 @@ describe("CareerDashboardScreen", () => {
     expect(html).not.toContain("Table context");
     expect(html).not.toContain("Recent match");
     expect(html).toContain('data-task-state="ready"');
+    expect(html).toContain('data-motion-key="ready:');
+    expect(html.match(/data-motion-key=/g)).toHaveLength(3);
   });
 });
 

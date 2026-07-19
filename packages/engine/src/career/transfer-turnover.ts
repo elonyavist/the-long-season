@@ -1,4 +1,15 @@
-import { createCareerState, type CareerState, type Club, type Player, type PlayerAbilities, type PlayerId, type PlayerPosition, type SeasonId } from "@game/domain";
+import {
+  createCareerState,
+  getPlayerRoleProfile,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
+  type CareerState,
+  type Club,
+  type Player,
+  type PlayerId,
+  type PlayerPosition,
+  type SeasonId,
+} from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import { MINIMUM_CAREER_SQUAD_SIZE } from "./squad-maintenance.ts";
@@ -15,7 +26,7 @@ export interface TransferTurnoverRecord {
   readonly toClubId: Club["id"];
   /** Broad group used to match destination squad shape. */
   readonly positionGroup: BroadPositionGroup;
-  /** Current ability average used by willingness/suitability checks. */
+  /** Rounded role current ability used by willingness/suitability checks. */
   readonly currentAbilityAverage: number;
 }
 
@@ -103,7 +114,7 @@ export function simulateTransferTurnover(input: SimulateTransferTurnoverInput): 
       fromClubId: fromClub.id,
       toClubId: toClub.id,
       positionGroup: positionGroup(candidate.naturalPositions[0]),
-      currentAbilityAverage: roundAverage(averageAbilities(candidate.abilities)),
+      currentAbilityAverage: roundAverage(turnoverCurrentAbility(candidate)),
     });
   }
 
@@ -218,7 +229,7 @@ function canSourceClubLosePlayer(fromClub: Club, player: Player, careerState: Ca
 }
 
 function playerAcceptsMove(player: Player, fromClub: Club, toClub: Club): boolean {
-  const abilityAverage = averageAbilities(player.abilities);
+  const abilityAverage = turnoverCurrentAbility(player);
   const reputationDrop = fromClub.reputation - toClub.reputation;
   const categoryDrop = categoryLevel(fromClub.category) - categoryLevel(toClub.category);
 
@@ -286,34 +297,13 @@ function categoryLevel(category: Club["category"]): number {
   }
 }
 
-function averageAbilities(abilities: PlayerAbilities): number {
-  return (
-    abilities.technical.finishing +
-    abilities.technical.passing +
-    abilities.technical.longPassing +
-    abilities.technical.crossing +
-    abilities.technical.dribbling +
-    abilities.technical.technique +
-    abilities.technical.tackling +
-    abilities.technical.penalties +
-    abilities.technical.freeKicks +
-    abilities.physical.pace +
-    abilities.physical.strength +
-    abilities.physical.stamina +
-    abilities.physical.agility +
-    abilities.physical.heading +
-    abilities.mental.positioning +
-    abilities.mental.vision +
-    abilities.mental.anticipation +
-    abilities.mental.composure +
-    abilities.mental.determination +
-    abilities.mental.leadership +
-    abilities.goalkeeping.reflexes +
-    abilities.goalkeeping.handling +
-    abilities.goalkeeping.rushingOut +
-    abilities.goalkeeping.goalkeeperPositioning +
-    abilities.goalkeeping.footwork
-  ) / 25;
+/** Returns current football quality for turnover willingness decisions. */
+function turnoverCurrentAbility(player: Player): number {
+  if (player.primaryRole === undefined) {
+    return Number(rawDiagnosticAbilityAverage(player.abilities));
+  }
+
+  return Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(player.primaryRole)));
 }
 
 function roundAverage(value: number): number {

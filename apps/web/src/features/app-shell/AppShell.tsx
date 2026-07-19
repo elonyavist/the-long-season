@@ -1,5 +1,6 @@
 import type { MessageKey, Translator } from "@game/i18n";
 import type { CareerShellNavigationItemView, CareerShellView } from "@game/ui";
+import * as m from "motion/react-m";
 import {
   createContext,
   useContext,
@@ -21,6 +22,7 @@ import {
   CommandActivityLiveRegion,
 } from "../shared/CommandActivityIndicator";
 import { useCareerUiStore } from "../../stores/career-ui-store";
+import { webMotion } from "../../shared/motion/web-motion";
 
 type StorageRecoveryContextValue = Readonly<{
   failure: WebCareerPersistenceFailure | undefined;
@@ -247,6 +249,7 @@ export function AppShell({
 
       <main
         className="tls-app-shell-main"
+        data-content-layout={shellView.mode === "matchday" ? "full-width" : "standard"}
         id={CAREER_MAIN_FOCUS_ID}
         aria-label={text("career.shell.content")}
       >
@@ -265,7 +268,16 @@ export function AppShell({
             </button>
           </section>
         )}
-        {children}
+        <m.div
+          animate={{ opacity: 1, y: 0 }}
+          className="tls-app-shell-screen-transition"
+          data-screen-key={`${shellView.activeSectionKey}:${shellView.mode}`}
+          initial={{ opacity: 0.86, y: 4 }}
+          key={`${shellView.activeSectionKey}:${shellView.mode}`}
+          transition={webMotion.transition}
+        >
+          {children}
+        </m.div>
       </main>
 
       {saveLifecycle === undefined ? null : (

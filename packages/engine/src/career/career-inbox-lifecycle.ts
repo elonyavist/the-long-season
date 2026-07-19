@@ -19,11 +19,14 @@ export type CareerInboxLifecycleErrorCode =
 
 /** Domain-facing error that keeps lifecycle failures machine-readable. */
 export class CareerInboxLifecycleError extends Error {
+  public readonly code: CareerInboxLifecycleErrorCode;
+
   public constructor(
-    public readonly code: CareerInboxLifecycleErrorCode,
+    code: CareerInboxLifecycleErrorCode,
     message: string,
   ) {
     super(message);
+    this.code = code;
     this.name = "CareerInboxLifecycleError";
   }
 }

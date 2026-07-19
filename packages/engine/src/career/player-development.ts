@@ -1,383 +1,38 @@
 import {
   abilityValue,
+  closePlayerParticipationMonth,
   createCareerState,
+  foldPlayerAbilities,
+  getPlayerRoleProfile,
+  hardCapForRoleAbility,
+  mapPlayerAbilities,
+  rawDiagnosticAbilityAverage,
+  readPlayerAbility,
+  roleCurrentAbility,
+  rolePotentialAbility,
   type CareerState,
   type Player,
   type PlayerAbilities,
+  type PlayerAbilityKey,
   type PlayerId,
   type PlayerPosition,
   type PlayerRole,
+  type PlayerDevelopmentMonthKey,
+  type PlayerParticipationLedger,
+  type PlayerParticipationRow,
+  type RoleCurrentAbility,
+  type RolePotentialAbility,
   type SeasonId,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
-type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
-type DevelopmentAttributeBucket = "coreForRole" | "secondaryForRole" | "allowedButLow" | "cappedOutOfRole";
-type AbilityPath =
-  | "technical.finishing"
-  | "technical.passing"
-  | "technical.longPassing"
-  | "technical.crossing"
-  | "technical.dribbling"
-  | "technical.technique"
-  | "technical.tackling"
-  | "technical.penalties"
-  | "technical.freeKicks"
-  | "physical.pace"
-  | "physical.strength"
-  | "physical.stamina"
-  | "physical.agility"
-  | "physical.heading"
-  | "mental.positioning"
-  | "mental.vision"
-  | "mental.anticipation"
-  | "mental.composure"
-  | "mental.determination"
-  | "mental.leadership"
-  | "goalkeeping.reflexes"
-  | "goalkeeping.handling"
-  | "goalkeeping.rushingOut"
-  | "goalkeeping.goalkeeperPositioning"
-  | "goalkeeping.footwork";
+import { applyPlayerAgingPolicy } from "./player-aging-policy.ts";
+import { monthlyDevelopmentPolicy, type BroadPositionGroup } from "./player-development-policy.ts";
+import { adaptPlayerRolesFromParticipation } from "./player-role-adaptation.ts";
 
 const DAYS_PER_YEAR = 365;
 const MINIMUM_GROWTH_ROOM = 0.05;
-const MAX_SINGLE_SEASON_GROWTH = 0.65;
-const MAX_SINGLE_SEASON_DECLINE = 0.55;
-
-const ALL_ABILITY_PATHS: readonly AbilityPath[] = [
-  "technical.finishing",
-  "technical.passing",
-  "technical.longPassing",
-  "technical.crossing",
-  "technical.dribbling",
-  "technical.technique",
-  "technical.tackling",
-  "technical.penalties",
-  "technical.freeKicks",
-  "physical.pace",
-  "physical.strength",
-  "physical.stamina",
-  "physical.agility",
-  "physical.heading",
-  "mental.positioning",
-  "mental.vision",
-  "mental.anticipation",
-  "mental.composure",
-  "mental.determination",
-  "mental.leadership",
-  "goalkeeping.reflexes",
-  "goalkeeping.handling",
-  "goalkeeping.rushingOut",
-  "goalkeeping.goalkeeperPositioning",
-  "goalkeeping.footwork",
-];
-
-interface DevelopmentRoleProfile {
-  readonly coreForRole: ReadonlySet<AbilityPath>;
-  readonly secondaryForRole: ReadonlySet<AbilityPath>;
-  readonly allowedButLow: ReadonlySet<AbilityPath>;
-  readonly cappedOutOfRole: ReadonlySet<AbilityPath>;
-  readonly hardCaps: Readonly<Partial<Record<AbilityPath, number>>>;
-}
-
-const OUTFIELD_GOALKEEPING_CAPS: Readonly<Partial<Record<AbilityPath, number>>> = {
-  "goalkeeping.reflexes": 4,
-  "goalkeeping.handling": 4,
-  "goalkeeping.rushingOut": 4,
-  "goalkeeping.goalkeeperPositioning": 4,
-  "goalkeeping.footwork": 5,
-};
-
-const DEVELOPMENT_ROLE_PROFILES: Readonly<Record<PlayerRole, DevelopmentRoleProfile>> = {
-  goalkeeper: developmentProfile({
-    coreForRole: ["goalkeeping.reflexes", "goalkeeping.handling", "goalkeeping.goalkeeperPositioning", "goalkeeping.rushingOut"],
-    secondaryForRole: [
-      "goalkeeping.footwork",
-      "physical.agility",
-      "physical.strength",
-      "mental.positioning",
-      "mental.anticipation",
-      "mental.composure",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    allowedButLow: [
-      "technical.passing",
-      "technical.longPassing",
-      "technical.technique",
-      "physical.pace",
-      "physical.stamina",
-      "mental.vision",
-    ],
-    cappedOutOfRole: [
-      "technical.finishing",
-      "technical.crossing",
-      "technical.dribbling",
-      "technical.tackling",
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.heading",
-    ],
-    hardCaps: {
-      "technical.finishing": 5,
-      "technical.crossing": 5,
-      "technical.dribbling": 6,
-      "technical.tackling": 5,
-      "technical.penalties": 8,
-      "technical.freeKicks": 7,
-      "physical.heading": 6,
-    },
-  }),
-  center_back: developmentProfile({
-    coreForRole: ["technical.tackling", "physical.strength", "physical.heading", "mental.positioning", "mental.anticipation"],
-    secondaryForRole: [
-      "technical.passing",
-      "technical.longPassing",
-      "physical.pace",
-      "physical.stamina",
-      "mental.composure",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    allowedButLow: [
-      "technical.dribbling",
-      "technical.technique",
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.agility",
-      "mental.vision",
-    ],
-    cappedOutOfRole: ["technical.finishing", "technical.crossing", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.finishing": 10,
-      "technical.crossing": 9,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-  full_back: developmentProfile({
-    coreForRole: ["technical.crossing", "technical.tackling", "physical.pace", "physical.stamina", "mental.positioning"],
-    secondaryForRole: [
-      "technical.passing",
-      "technical.longPassing",
-      "technical.dribbling",
-      "technical.technique",
-      "physical.agility",
-      "mental.anticipation",
-      "mental.determination",
-    ],
-    allowedButLow: [
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.strength",
-      "physical.heading",
-      "mental.vision",
-      "mental.composure",
-      "mental.leadership",
-    ],
-    cappedOutOfRole: ["technical.finishing", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.finishing": 10,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-  wing_back: developmentProfile({
-    coreForRole: ["technical.crossing", "technical.dribbling", "technical.tackling", "physical.pace", "physical.stamina"],
-    secondaryForRole: [
-      "technical.passing",
-      "technical.technique",
-      "physical.agility",
-      "mental.positioning",
-      "mental.vision",
-      "mental.anticipation",
-      "mental.determination",
-    ],
-    allowedButLow: [
-      "technical.longPassing",
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.strength",
-      "physical.heading",
-      "mental.composure",
-      "mental.leadership",
-    ],
-    cappedOutOfRole: ["technical.finishing", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.finishing": 11,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-  defensive_midfielder: developmentProfile({
-    coreForRole: [
-      "technical.tackling",
-      "technical.passing",
-      "physical.strength",
-      "physical.stamina",
-      "mental.positioning",
-      "mental.anticipation",
-    ],
-    secondaryForRole: [
-      "technical.longPassing",
-      "technical.technique",
-      "physical.pace",
-      "physical.heading",
-      "mental.composure",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    allowedButLow: [
-      "technical.crossing",
-      "technical.dribbling",
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.agility",
-      "mental.vision",
-    ],
-    cappedOutOfRole: ["technical.finishing", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.finishing": 10,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-  central_midfielder: developmentProfile({
-    coreForRole: [
-      "technical.passing",
-      "technical.longPassing",
-      "technical.technique",
-      "physical.stamina",
-      "mental.vision",
-      "mental.anticipation",
-    ],
-    secondaryForRole: [
-      "technical.tackling",
-      "technical.dribbling",
-      "physical.agility",
-      "mental.positioning",
-      "mental.composure",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    allowedButLow: [
-      "technical.finishing",
-      "technical.crossing",
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.pace",
-      "physical.strength",
-      "physical.heading",
-    ],
-    cappedOutOfRole: goalkeeperAbilityPaths(),
-    hardCaps: OUTFIELD_GOALKEEPING_CAPS,
-  }),
-  attacking_midfielder: developmentProfile({
-    coreForRole: ["technical.passing", "technical.dribbling", "technical.technique", "mental.vision", "mental.composure"],
-    secondaryForRole: [
-      "technical.finishing",
-      "technical.longPassing",
-      "technical.freeKicks",
-      "physical.agility",
-      "mental.positioning",
-      "mental.anticipation",
-    ],
-    allowedButLow: [
-      "technical.crossing",
-      "technical.penalties",
-      "physical.pace",
-      "physical.stamina",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    cappedOutOfRole: ["technical.tackling", "physical.strength", "physical.heading", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.tackling": 11,
-      "physical.strength": 13,
-      "physical.heading": 12,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-  wide_midfielder: developmentProfile({
-    coreForRole: ["technical.crossing", "technical.dribbling", "technical.passing", "physical.pace", "physical.stamina"],
-    secondaryForRole: [
-      "technical.tackling",
-      "technical.technique",
-      "physical.agility",
-      "mental.positioning",
-      "mental.vision",
-      "mental.determination",
-    ],
-    allowedButLow: [
-      "technical.finishing",
-      "technical.longPassing",
-      "technical.penalties",
-      "technical.freeKicks",
-      "physical.strength",
-      "physical.heading",
-      "mental.anticipation",
-      "mental.composure",
-      "mental.leadership",
-    ],
-    cappedOutOfRole: goalkeeperAbilityPaths(),
-    hardCaps: OUTFIELD_GOALKEEPING_CAPS,
-  }),
-  winger: developmentProfile({
-    coreForRole: ["technical.crossing", "technical.dribbling", "technical.technique", "physical.pace", "physical.agility"],
-    secondaryForRole: [
-      "technical.finishing",
-      "technical.passing",
-      "technical.freeKicks",
-      "physical.stamina",
-      "mental.vision",
-      "mental.composure",
-    ],
-    allowedButLow: [
-      "technical.longPassing",
-      "technical.penalties",
-      "physical.strength",
-      "mental.anticipation",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    cappedOutOfRole: ["technical.tackling", "physical.heading", "mental.positioning", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.tackling": 10,
-      "physical.heading": 11,
-      "mental.positioning": 11,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-  striker: developmentProfile({
-    coreForRole: [
-      "technical.finishing",
-      "technical.technique",
-      "physical.heading",
-      "mental.anticipation",
-      "mental.composure",
-    ],
-    secondaryForRole: [
-      "technical.dribbling",
-      "technical.penalties",
-      "physical.pace",
-      "physical.strength",
-      "physical.agility",
-      "mental.positioning",
-    ],
-    allowedButLow: [
-      "technical.passing",
-      "technical.crossing",
-      "technical.freeKicks",
-      "physical.stamina",
-      "mental.vision",
-      "mental.determination",
-      "mental.leadership",
-    ],
-    cappedOutOfRole: ["technical.longPassing", "technical.tackling", ...goalkeeperAbilityPaths()],
-    hardCaps: {
-      "technical.longPassing": 11,
-      "technical.tackling": 10,
-      ...OUTFIELD_GOALKEEPING_CAPS,
-    },
-  }),
-};
+const MAX_SINGLE_MONTH_GROWTH = 0.08;
 
 /** Input for deterministic positive player development over one season boundary. */
 export interface PlayerDevelopmentInput {
@@ -407,6 +62,12 @@ export interface PlayerDevelopmentChange {
   readonly improvedAbilityCount: number;
   /** Number of individual abilities that declined. */
   readonly declinedAbilityCount: number;
+  /** Current role-weighted ability before this seasonal pass. */
+  readonly roleCurrentAbilityBefore: RoleCurrentAbility;
+  /** Current role-weighted ability after this seasonal pass. */
+  readonly roleCurrentAbilityAfter: RoleCurrentAbility;
+  /** Potential evaluated through the same role profile as current ability. */
+  readonly rolePotentialAbility: RolePotentialAbility;
 }
 
 /** Result of one pure player-development pass. */
@@ -417,17 +78,71 @@ export interface PlayerDevelopmentResult {
   readonly changes: readonly PlayerDevelopmentChange[];
 }
 
+/** Explicit scalar summary used by development decisions and reports. */
+export interface PlayerDevelopmentAbilitySummary {
+  /** Current football quality for the supplied role, or legacy raw average. */
+  readonly currentAbility: number;
+  /** Potential football quality measured through the same contract. */
+  readonly potentialAbility: number;
+  /** Non-negative scalar room between potential and current quality. */
+  readonly potentialRoom: number;
+  /** Identifies the compatibility fallback used only by pre-role players. */
+  readonly measure: "role" | "legacy_raw";
+}
+
 /**
- * Applies deterministic positive player growth for one season.
+ * Summarizes current and potential through one explicit development measure.
  *
- * This step intentionally contains no decline, staff, training, injuries, or
- * storage writes. Growth is bounded by each player's true potential and biased
- * toward role-relevant abilities so development remains credible over long
- * saves.
+ * New players always use their canonical role. The raw branch exists only so
+ * historical saves without role identity remain inspectable until migration.
+ */
+export function summarizePlayerDevelopmentAbilities(
+  player: Player,
+  role: PlayerRole | undefined = player.primaryRole,
+): PlayerDevelopmentAbilitySummary {
+  if (role === undefined) {
+    const currentAbility = Number(rawDiagnosticAbilityAverage(player.abilities));
+    const potentialAbility = Number(rawDiagnosticAbilityAverage(player.potential));
+    return {
+      currentAbility,
+      potentialAbility,
+      potentialRoom: Math.max(0, potentialAbility - currentAbility),
+      measure: "legacy_raw",
+    };
+  }
+
+  const profile = getPlayerRoleProfile(role);
+  const currentAbility = Number(roleCurrentAbility(player.abilities, profile));
+  const potentialAbility = Number(rolePotentialAbility(player.potential, profile));
+  return {
+    currentAbility,
+    potentialAbility,
+    potentialRoom: Math.max(0, potentialAbility - currentAbility),
+    measure: "role",
+  };
+}
+
+/** Returns the unweighted total attribute change in canonical traversal order. */
+export function totalPlayerAbilityDelta(before: PlayerAbilities, after: PlayerAbilities): number {
+  return foldPlayerAbilities(
+    after,
+    0,
+    (total, value, key) => total + Number(value) - Number(readPlayerAbility(before, key)),
+  );
+}
+
+/**
+ * Applies deterministic monthly player growth for open participation-ledger rows.
+ *
+ * Growth is available only from real unclosed monthly minutes. Aging is applied
+ * at the same monthly checkpoints so current ability and reachable potential
+ * evolve together instead of jumping once per season.
  */
 export function developPlayersForSeason(input: PlayerDevelopmentInput): PlayerDevelopmentResult {
   const players: Partial<Record<PlayerId, Player>> = { ...input.careerState.gameState.players };
   const changes: PlayerDevelopmentChange[] = [];
+  const participationRows = openParticipationRowsByPlayer(input);
+  let playerParticipationLedger = input.careerState.playerParticipationLedger;
 
   for (const playerId of input.playerIds ?? input.careerState.gameState.playerIds) {
     const player = input.careerState.gameState.players[playerId];
@@ -445,7 +160,9 @@ export function developPlayersForSeason(input: PlayerDevelopmentInput): PlayerDe
       developmentRole,
       worldSeed: input.worldSeed,
       seasonId: input.seasonId,
+      participationRows: participationRows.get(playerId) ?? [],
     });
+    const roleProfile = getPlayerRoleProfile(developmentRole);
 
     players[playerId] = developed.player;
     changes.push({
@@ -456,16 +173,35 @@ export function developPlayersForSeason(input: PlayerDevelopmentInput): PlayerDe
       totalDecline: roundDelta(developed.totalDecline),
       improvedAbilityCount: developed.improvedAbilityCount,
       declinedAbilityCount: developed.declinedAbilityCount,
+      roleCurrentAbilityBefore: roleCurrentAbility(player.abilities, roleProfile),
+      roleCurrentAbilityAfter: roleCurrentAbility(developed.player.abilities, roleProfile),
+      rolePotentialAbility: rolePotentialAbility(player.potential, roleProfile),
     });
   }
 
-  return {
+  const adapted = adaptPlayerRolesFromParticipation({
     careerState: createCareerState({
       ...input.careerState,
+      ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
       gameState: {
         ...input.careerState.gameState,
         players: players as CareerState["gameState"]["players"],
       },
+    }),
+    seasonId: input.seasonId,
+    ...(input.playerIds === undefined ? {} : { playerIds: input.playerIds }),
+  });
+
+  for (const monthKey of openParticipationMonthKeys(input)) {
+    if (playerParticipationLedger !== undefined) {
+      playerParticipationLedger = closePlayerParticipationMonth(playerParticipationLedger, input.seasonId, monthKey);
+    }
+  }
+
+  return {
+    careerState: createCareerState({
+      ...adapted.careerState,
+      ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
     }),
     changes,
   };
@@ -478,6 +214,7 @@ interface DevelopOnePlayerInput {
   readonly developmentRole: PlayerRole;
   readonly worldSeed: string;
   readonly seasonId: SeasonId;
+  readonly participationRows: readonly PlayerParticipationRow[];
 }
 
 function developOnePlayer(input: DevelopOnePlayerInput): {
@@ -487,68 +224,71 @@ function developOnePlayer(input: DevelopOnePlayerInput): {
   readonly improvedAbilityCount: number;
   readonly declinedAbilityCount: number;
 } {
-  const ageMultiplier = growthAgeMultiplier(input.positionGroup, input.age);
-  const growthRng = deriveRng(input.worldSeed, "player-development-growth", input.seasonId, input.player.id);
-  const declineRng = deriveRng(input.worldSeed, "player-development-decline", input.seasonId, input.player.id);
   const realizationModifier = playerRealizationModifier(input);
   let totalGrowth = 0;
   let totalDecline = 0;
   let improvedAbilityCount = 0;
   let declinedAbilityCount = 0;
   let abilities = input.player.abilities;
+  let potential = input.player.potential;
 
-  if (ageMultiplier > 0) {
-    for (const abilityPath of ALL_ABILITY_PATHS) {
-      const current = readAbility(abilities, abilityPath);
-      const potential = readAbility(input.player.potential, abilityPath);
-      const hardCap = hardCapForDevelopmentRole(input.developmentRole, abilityPath);
-      const effectivePotential = hardCap === undefined ? potential : Math.min(potential, hardCap);
-      const room = effectivePotential - current;
-      if (room <= MINIMUM_GROWTH_ROOM) {
-        continue;
-      }
+  for (const participationRow of input.participationRows) {
+    const policy = monthlyDevelopmentPolicy({
+      age: input.age,
+      positionGroup: input.positionGroup,
+      participation: participationRow,
+    });
+    if (policy.growthMultiplier > 0) {
+      const growthRng = deriveRng(input.worldSeed, "player-development-growth", input.seasonId, participationRow.monthKey, input.player.id);
+      abilities = mapPlayerAbilities(abilities, (currentValue, abilityPath) => {
+        const current = Number(currentValue);
+        const potentialValue = Number(readPlayerAbility(potential, abilityPath));
+        const hardCap = hardCapForRoleAbility(input.developmentRole, abilityPath);
+        const effectivePotential = hardCap === undefined ? potentialValue : Math.min(potentialValue, hardCap);
+        const room = effectivePotential - current;
+        if (room <= MINIMUM_GROWTH_ROOM) {
+          return currentValue;
+        }
 
-      const relevance = roleRelevance(input.developmentRole, abilityPath);
-      const seasonVariance = 0.65 + growthRng.nextFloat() * 0.7;
-      const roomMultiplier = Math.min(1, room / 5);
-      const dynamicDelta = MAX_SINGLE_SEASON_GROWTH * ageMultiplier * relevance * roomMultiplier * realizationModifier * seasonVariance;
-      const delta = Math.min(room, roundDelta(dynamicDelta));
-      if (delta <= 0) {
-        continue;
-      }
+        const relevance = roleRelevance(input.developmentRole, abilityPath);
+        const monthVariance = 0.65 + growthRng.nextFloat() * 0.7;
+        const roomMultiplier = Math.min(1, room / 5);
+        const dynamicDelta = MAX_SINGLE_MONTH_GROWTH * policy.growthMultiplier * relevance * roomMultiplier * realizationModifier * monthVariance;
+        const delta = Math.min(room, roundDelta(dynamicDelta));
+        if (delta <= 0) {
+          return currentValue;
+        }
 
-      abilities = writeAbility(abilities, abilityPath, current + delta);
-      totalGrowth += delta;
-      improvedAbilityCount += 1;
+        totalGrowth += delta;
+        improvedAbilityCount += 1;
+        return abilityValue(roundAbility(current + delta));
+      });
     }
-  }
 
-  const declineAgeMultiplier = declineAgeMultiplierFor(input.positionGroup, input.age);
-  if (declineAgeMultiplier > 0) {
-    for (const abilityPath of ALL_ABILITY_PATHS) {
-      const current = readAbility(abilities, abilityPath);
-      const relevance = declineRelevance(input.positionGroup, input.age, abilityPath);
-      if (relevance <= 0 || current <= 0) {
-        continue;
-      }
-
-      const realization = 0.65 + declineRng.nextFloat() * 0.7;
-      const dynamicDelta = MAX_SINGLE_SEASON_DECLINE * declineAgeMultiplier * relevance * realization;
-      const delta = Math.min(current, roundDelta(dynamicDelta));
-      if (delta <= 0) {
-        continue;
-      }
-
-      abilities = writeAbility(abilities, abilityPath, current - delta);
-      totalDecline += delta;
-      declinedAbilityCount += 1;
-    }
+    const aged = applyPlayerAgingPolicy({
+      player: {
+        ...input.player,
+        abilities,
+        potential,
+      },
+      age: input.age,
+      positionGroup: input.positionGroup,
+      developmentRole: input.developmentRole,
+      worldSeed: input.worldSeed,
+      seasonId: input.seasonId,
+      monthKey: participationRow.monthKey,
+    });
+    abilities = aged.player.abilities;
+    potential = aged.player.potential;
+    totalDecline += aged.totalDecline;
+    declinedAbilityCount += aged.declinedAbilityCount;
   }
 
   return {
     player: {
       ...input.player,
       abilities,
+      potential,
     },
     totalGrowth,
     totalDecline,
@@ -559,9 +299,7 @@ function developOnePlayer(input: DevelopOnePlayerInput): {
 
 function playerRealizationModifier(input: DevelopOnePlayerInput): number {
   const rng = deriveRng(input.worldSeed, "player-development-realization", input.player.id);
-  const currentAverage = averageAbilities(input.player.abilities);
-  const potentialAverage = averageAbilities(input.player.potential);
-  const roomAverage = Math.max(0, potentialAverage - currentAverage);
+  const roomAverage = summarizePlayerDevelopmentAbilities(input.player, input.developmentRole).potentialRoom;
   const roll = rng.nextFloat();
 
   if (roomAverage >= 7) {
@@ -581,42 +319,6 @@ function playerRealizationModifier(input: DevelopOnePlayerInput): number {
   }
 
   return 0.05 + roll * 0.25;
-}
-
-function averageAbilities(abilities: PlayerAbilities): number {
-  let total = 0;
-
-  for (const abilityPath of ALL_ABILITY_PATHS) {
-    total += readAbility(abilities, abilityPath);
-  }
-
-  return total / ALL_ABILITY_PATHS.length;
-}
-
-function developmentProfile(input: {
-  readonly coreForRole: readonly AbilityPath[];
-  readonly secondaryForRole: readonly AbilityPath[];
-  readonly allowedButLow: readonly AbilityPath[];
-  readonly cappedOutOfRole: readonly AbilityPath[];
-  readonly hardCaps: Readonly<Partial<Record<AbilityPath, number>>>;
-}): DevelopmentRoleProfile {
-  return {
-    coreForRole: new Set(input.coreForRole),
-    secondaryForRole: new Set(input.secondaryForRole),
-    allowedButLow: new Set(input.allowedButLow),
-    cappedOutOfRole: new Set(input.cappedOutOfRole),
-    hardCaps: input.hardCaps,
-  };
-}
-
-function goalkeeperAbilityPaths(): readonly AbilityPath[] {
-  return [
-    "goalkeeping.reflexes",
-    "goalkeeping.handling",
-    "goalkeeping.rushingOut",
-    "goalkeeping.goalkeeperPositioning",
-    "goalkeeping.footwork",
-  ];
 }
 
 function playerAgeYears(player: Player, currentDate: CareerState["gameState"]["calendar"]["currentDate"]): number {
@@ -672,245 +374,62 @@ function developmentRoleForPosition(position: PlayerPosition | undefined): Playe
   }
 }
 
-function growthAgeMultiplier(group: BroadPositionGroup, age: number): number {
-  if (group === "goalkeeper") {
-    if (age >= 18 && age <= 21) return 0.6;
-    if (age >= 22 && age <= 24) return 0.75;
-    if (age >= 25 && age <= 27) return 0.45;
-    if (age >= 16 && age <= 17) return 0.3;
-    return 0;
-  }
-
-  if (age >= 17 && age <= 20) return 0.85;
-  if (age >= 21 && age <= 23) return 0.65;
-  if (age >= 24 && age <= 25) return 0.35;
-  if (group === "midfielder" && age === 26) return 0.2;
-  if (age === 16) return 0.25;
-  return 0;
-}
-
-function declineAgeMultiplierFor(group: BroadPositionGroup, age: number): number {
-  switch (group) {
-    case "goalkeeper":
-      if (age >= 37) return 0.55;
-      if (age >= 34) return 0.25;
-      return 0;
-    case "defender":
-      if (age >= 34) return 0.55;
-      if (age >= 31) return 0.2;
-      return 0;
-    case "midfielder":
-      if (age >= 35) return 0.55;
-      if (age >= 32) return 0.2;
-      return 0;
-    case "attacker":
-      if (age >= 33) return 0.6;
-      if (age >= 30) return 0.25;
-      return 0;
-  }
-}
-
-function roleRelevance(role: PlayerRole, abilityPath: AbilityPath): number {
-  switch (attributeBucketForDevelopmentRole(role, abilityPath)) {
-    case "coreForRole":
-      return 1;
-    case "secondaryForRole":
-      return 0.35;
-    case "allowedButLow":
-      return 0.08;
-    case "cappedOutOfRole":
-      return 0.02;
-  }
-}
-
-function declineRelevance(group: BroadPositionGroup, age: number, abilityPath: AbilityPath): number {
-  if (group === "goalkeeper") {
-    return goalkeeperDeclineRelevance(age, abilityPath);
-  }
-
-  if (isPrimaryPhysicalDeclineAbility(abilityPath)) {
-    return 1;
-  }
-
-  if (abilityPath === "physical.heading") {
-    return 0.45;
-  }
-
-  if (age >= lateDeclineAge(group)) {
-    if (abilityPath.startsWith("technical.")) {
-      return 0.16;
-    }
-
-    if (abilityPath.startsWith("mental.")) {
-      return 0.08;
-    }
-  }
-
-  return 0;
-}
-
-function goalkeeperDeclineRelevance(age: number, abilityPath: AbilityPath): number {
-  if (abilityPath === "goalkeeping.rushingOut" || abilityPath === "goalkeeping.footwork") {
-    return 1;
-  }
-
-  if (age >= 37 && abilityPath === "goalkeeping.reflexes") {
-    return 0.75;
-  }
-
-  if (age >= 37 && (abilityPath === "goalkeeping.handling" || abilityPath === "goalkeeping.goalkeeperPositioning")) {
-    return 0.3;
-  }
-
-  return 0;
-}
-
-function isPrimaryPhysicalDeclineAbility(abilityPath: AbilityPath): boolean {
-  return abilityPath === "physical.pace" || abilityPath === "physical.stamina" || abilityPath === "physical.agility" || abilityPath === "physical.strength";
-}
-
-function lateDeclineAge(group: BroadPositionGroup): number {
-  switch (group) {
-    case "defender":
-      return 34;
-    case "midfielder":
-      return 35;
-    case "attacker":
-      return 33;
-    case "goalkeeper":
-      return 37;
-  }
-}
-
-function attributeBucketForDevelopmentRole(role: PlayerRole, abilityPath: AbilityPath): DevelopmentAttributeBucket {
-  const profile = DEVELOPMENT_ROLE_PROFILES[role];
-  if (profile.coreForRole.has(abilityPath)) return "coreForRole";
-  if (profile.secondaryForRole.has(abilityPath)) return "secondaryForRole";
-  if (profile.allowedButLow.has(abilityPath)) return "allowedButLow";
-  if (profile.cappedOutOfRole.has(abilityPath)) return "cappedOutOfRole";
-  return "allowedButLow";
-}
-
-function hardCapForDevelopmentRole(role: PlayerRole, abilityPath: AbilityPath): number | undefined {
-  return DEVELOPMENT_ROLE_PROFILES[role].hardCaps[abilityPath];
-}
-
-function readAbility(abilities: PlayerAbilities, abilityPath: AbilityPath): number {
-  switch (abilityPath) {
-    case "technical.finishing":
-      return abilities.technical.finishing;
-    case "technical.passing":
-      return abilities.technical.passing;
-    case "technical.longPassing":
-      return abilities.technical.longPassing;
-    case "technical.crossing":
-      return abilities.technical.crossing;
-    case "technical.dribbling":
-      return abilities.technical.dribbling;
-    case "technical.technique":
-      return abilities.technical.technique;
-    case "technical.tackling":
-      return abilities.technical.tackling;
-    case "technical.penalties":
-      return abilities.technical.penalties;
-    case "technical.freeKicks":
-      return abilities.technical.freeKicks;
-    case "physical.pace":
-      return abilities.physical.pace;
-    case "physical.strength":
-      return abilities.physical.strength;
-    case "physical.stamina":
-      return abilities.physical.stamina;
-    case "physical.agility":
-      return abilities.physical.agility;
-    case "physical.heading":
-      return abilities.physical.heading;
-    case "mental.positioning":
-      return abilities.mental.positioning;
-    case "mental.vision":
-      return abilities.mental.vision;
-    case "mental.anticipation":
-      return abilities.mental.anticipation;
-    case "mental.composure":
-      return abilities.mental.composure;
-    case "mental.determination":
-      return abilities.mental.determination;
-    case "mental.leadership":
-      return abilities.mental.leadership;
-    case "goalkeeping.reflexes":
-      return abilities.goalkeeping.reflexes;
-    case "goalkeeping.handling":
-      return abilities.goalkeeping.handling;
-    case "goalkeeping.rushingOut":
-      return abilities.goalkeeping.rushingOut;
-    case "goalkeeping.goalkeeperPositioning":
-      return abilities.goalkeeping.goalkeeperPositioning;
-    case "goalkeeping.footwork":
-      return abilities.goalkeeping.footwork;
-  }
-}
-
-function writeAbility(abilities: PlayerAbilities, abilityPath: AbilityPath, value: number): PlayerAbilities {
-  const nextValue = abilityValue(roundAbility(value));
-
-  switch (abilityPath) {
-    case "technical.finishing":
-      return { ...abilities, technical: { ...abilities.technical, finishing: nextValue } };
-    case "technical.passing":
-      return { ...abilities, technical: { ...abilities.technical, passing: nextValue } };
-    case "technical.longPassing":
-      return { ...abilities, technical: { ...abilities.technical, longPassing: nextValue } };
-    case "technical.crossing":
-      return { ...abilities, technical: { ...abilities.technical, crossing: nextValue } };
-    case "technical.dribbling":
-      return { ...abilities, technical: { ...abilities.technical, dribbling: nextValue } };
-    case "technical.technique":
-      return { ...abilities, technical: { ...abilities.technical, technique: nextValue } };
-    case "technical.tackling":
-      return { ...abilities, technical: { ...abilities.technical, tackling: nextValue } };
-    case "technical.penalties":
-      return { ...abilities, technical: { ...abilities.technical, penalties: nextValue } };
-    case "technical.freeKicks":
-      return { ...abilities, technical: { ...abilities.technical, freeKicks: nextValue } };
-    case "physical.pace":
-      return { ...abilities, physical: { ...abilities.physical, pace: nextValue } };
-    case "physical.strength":
-      return { ...abilities, physical: { ...abilities.physical, strength: nextValue } };
-    case "physical.stamina":
-      return { ...abilities, physical: { ...abilities.physical, stamina: nextValue } };
-    case "physical.agility":
-      return { ...abilities, physical: { ...abilities.physical, agility: nextValue } };
-    case "physical.heading":
-      return { ...abilities, physical: { ...abilities.physical, heading: nextValue } };
-    case "mental.positioning":
-      return { ...abilities, mental: { ...abilities.mental, positioning: nextValue } };
-    case "mental.vision":
-      return { ...abilities, mental: { ...abilities.mental, vision: nextValue } };
-    case "mental.anticipation":
-      return { ...abilities, mental: { ...abilities.mental, anticipation: nextValue } };
-    case "mental.composure":
-      return { ...abilities, mental: { ...abilities.mental, composure: nextValue } };
-    case "mental.determination":
-      return { ...abilities, mental: { ...abilities.mental, determination: nextValue } };
-    case "mental.leadership":
-      return { ...abilities, mental: { ...abilities.mental, leadership: nextValue } };
-    case "goalkeeping.reflexes":
-      return { ...abilities, goalkeeping: { ...abilities.goalkeeping, reflexes: nextValue } };
-    case "goalkeeping.handling":
-      return { ...abilities, goalkeeping: { ...abilities.goalkeeping, handling: nextValue } };
-    case "goalkeeping.rushingOut":
-      return { ...abilities, goalkeeping: { ...abilities.goalkeeping, rushingOut: nextValue } };
-    case "goalkeeping.goalkeeperPositioning":
-      return { ...abilities, goalkeeping: { ...abilities.goalkeeping, goalkeeperPositioning: nextValue } };
-    case "goalkeeping.footwork":
-      return { ...abilities, goalkeeping: { ...abilities.goalkeeping, footwork: nextValue } };
-  }
+function roleRelevance(role: PlayerRole, abilityPath: PlayerAbilityKey): number {
+  return getPlayerRoleProfile(role).weights[abilityPath] ?? 0;
 }
 
 function roundAbility(value: number): number {
-  return Math.max(0, Math.min(20, Math.round(value * 100) / 100));
+  return Math.max(1, Math.min(20, Math.round(value * 100) / 100));
 }
 
 function roundDelta(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function openParticipationRowsByPlayer(input: PlayerDevelopmentInput): ReadonlyMap<PlayerId, readonly PlayerParticipationRow[]> {
+  const rowsByPlayer = new Map<PlayerId, PlayerParticipationRow[]>();
+
+  for (const row of openParticipationRows(input.careerState.playerParticipationLedger, input.seasonId)) {
+    if (input.playerIds !== undefined && !input.playerIds.includes(row.playerId)) {
+      continue;
+    }
+
+    const rows = rowsByPlayer.get(row.playerId) ?? [];
+    rows.push(row);
+    rowsByPlayer.set(row.playerId, rows);
+  }
+
+  return rowsByPlayer;
+}
+
+function openParticipationMonthKeys(input: PlayerDevelopmentInput): readonly PlayerDevelopmentMonthKey[] {
+  const seen = new Set<PlayerDevelopmentMonthKey>();
+  const monthKeys: PlayerDevelopmentMonthKey[] = [];
+
+  for (const row of openParticipationRows(input.careerState.playerParticipationLedger, input.seasonId)) {
+    if (input.playerIds !== undefined && !input.playerIds.includes(row.playerId)) {
+      continue;
+    }
+
+    if (!seen.has(row.monthKey)) {
+      seen.add(row.monthKey);
+      monthKeys.push(row.monthKey);
+    }
+  }
+
+  return monthKeys;
+}
+
+function openParticipationRows(
+  ledger: PlayerParticipationLedger | undefined,
+  seasonId: SeasonId,
+): readonly PlayerParticipationRow[] {
+  if (ledger === undefined) {
+    return [];
+  }
+
+  const closed = new Set(ledger.closedMonthKeys);
+  return ledger.rowKeys
+    .map((rowKey) => ledger.rows[rowKey])
+    .filter((row): row is PlayerParticipationRow => row !== undefined && row.seasonId === seasonId && !closed.has(`${row.seasonId}|${row.monthKey}`));
 }

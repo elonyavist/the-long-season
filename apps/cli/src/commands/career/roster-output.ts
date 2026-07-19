@@ -1,3 +1,4 @@
+import { derivePlayerMarketAbility } from "@game/engine";
 import type { Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 
@@ -186,45 +187,8 @@ function youthDevelopmentCategory(player: CliPlayer): string {
 }
 
 function averagePotentialRoom(player: CliPlayer): number {
-  const current = abilityValues(player.abilities);
-  const potential = abilityValues(player.potential);
-  let totalRoom = 0;
-
-  for (let index = 0; index < current.length; index += 1) {
-    totalRoom += (potential[index] ?? 0) - (current[index] ?? 0);
-  }
-
-  return totalRoom / current.length;
-}
-
-function abilityValues(abilities: CliPlayer["abilities"]): readonly number[] {
-  return [
-    abilities.technical.finishing,
-    abilities.technical.passing,
-    abilities.technical.longPassing,
-    abilities.technical.crossing,
-    abilities.technical.dribbling,
-    abilities.technical.technique,
-    abilities.technical.tackling,
-    abilities.technical.penalties,
-    abilities.technical.freeKicks,
-    abilities.physical.pace,
-    abilities.physical.strength,
-    abilities.physical.stamina,
-    abilities.physical.agility,
-    abilities.physical.heading,
-    abilities.mental.positioning,
-    abilities.mental.vision,
-    abilities.mental.anticipation,
-    abilities.mental.composure,
-    abilities.mental.determination,
-    abilities.mental.leadership,
-    abilities.goalkeeping.reflexes,
-    abilities.goalkeeping.handling,
-    abilities.goalkeeping.rushingOut,
-    abilities.goalkeeping.goalkeeperPositioning,
-    abilities.goalkeeping.footwork,
-  ];
+  const ability = derivePlayerMarketAbility(player);
+  return ability.potentialAbility - ability.currentAbility;
 }
 
 function formatPrimaryPosition(player: CliPlayer): string {
@@ -232,56 +196,5 @@ function formatPrimaryPosition(player: CliPlayer): string {
 }
 
 function roleRelevantCurrentAbility(player: CliPlayer): number {
-  const primaryPosition = player.naturalPositions[0];
-
-  if (primaryPosition === "gk") {
-    return average([
-      player.abilities.goalkeeping.reflexes,
-      player.abilities.goalkeeping.handling,
-      player.abilities.goalkeeping.goalkeeperPositioning,
-      player.abilities.goalkeeping.rushingOut,
-      player.abilities.goalkeeping.footwork,
-    ]);
-  }
-
-  if (primaryPosition === "cb" || primaryPosition === "rb" || primaryPosition === "lb" || primaryPosition === "rwb" || primaryPosition === "lwb") {
-    return average([
-      player.abilities.technical.tackling,
-      player.abilities.mental.positioning,
-      player.abilities.mental.anticipation,
-      player.abilities.physical.strength,
-      player.abilities.physical.heading,
-    ]);
-  }
-
-  if (primaryPosition === "dm" || primaryPosition === "cm" || primaryPosition === "am") {
-    return average([
-      player.abilities.technical.passing,
-      player.abilities.technical.technique,
-      player.abilities.mental.vision,
-      player.abilities.mental.positioning,
-      player.abilities.physical.stamina,
-    ]);
-  }
-
-  return average([
-    player.abilities.technical.finishing,
-    player.abilities.technical.dribbling,
-    player.abilities.technical.technique,
-    player.abilities.mental.composure,
-    player.abilities.physical.pace,
-  ]);
-}
-
-function average(values: readonly number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-
-  let total = 0;
-  for (const value of values) {
-    total += value;
-  }
-
-  return total / values.length;
+  return derivePlayerMarketAbility(player).currentAbility;
 }

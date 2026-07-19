@@ -229,6 +229,9 @@ export function CareerMatchPreparationScreen({
               <TacticalBoardPitch
                 availablePlayers={tacticalBoardPlayers}
                 currentShape={currentShape}
+                {...(view.formation.selectedFormationId === undefined
+                  ? {}
+                  : { formationMotionKey: view.formation.selectedFormationId })}
                 players={tacticalBoardPlayers}
                 slots={tacticalBoardDraft.slots}
                 text={text}

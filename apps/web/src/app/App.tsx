@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import type { CareerAutosaveIntervalDays, SaveMetadata } from "@game/storage";
 import { toISO } from "@game/shared";
 
@@ -85,6 +86,8 @@ export function App(): React.JSX.Element {
   const [sessionStatusOverride, setSessionStatusOverride] = useState(careerSessionStatus);
   const [showUnsavedExitDialog, setShowUnsavedExitDialog] = useState(false);
   const [pendingPreparationNavigation, setPendingPreparationNavigation] = useState<PreparationNavigationIntent>();
+  const [arrivingInboxMessageId, setArrivingInboxMessageId] = useState<string>();
+  const reduceMotion = useReducedMotion();
   const text = useMemo(() => createWebTranslator(preferences.language), [preferences.language]);
   const appEntryView = useMemo(
     () => buildAppEntryViewModel({ preferences, lifecycleStatus: storageLifecycleStatus, saves: availableSaves, selectedSaveId, storageFailure }),
@@ -182,6 +185,7 @@ export function App(): React.JSX.Element {
         return (await handlePromise).runtime.createNewCareer();
       },
       onSuccess: ({ state, metadata }) => {
+        setArrivingInboxMessageId(undefined);
         openPersistedCareer(state, metadata, inspectWebCareerAttention(state));
       },
     });
@@ -201,7 +205,10 @@ export function App(): React.JSX.Element {
         if (handlePromise === undefined) throw { code: "storage_unavailable" };
         return (await handlePromise).runtime.loadCareer(metadata.saveId);
       },
-      onSuccess: (state) => openPersistedCareer(state, metadata, inspectWebCareerAttention(state)),
+      onSuccess: (state) => {
+        setArrivingInboxMessageId(undefined);
+        openPersistedCareer(state, metadata, inspectWebCareerAttention(state));
+      },
     });
   }, [availableSaves, beginCareerLoad, openPersistedCareer, runCareerCommand, selectedSaveId]);
 
@@ -220,7 +227,7 @@ export function App(): React.JSX.Element {
         const transition = buildCalendarAdvanceTransition(
           runtimeResult.continueResult.startDateIso,
           runtimeResult.continueResult.stopDateIso,
-          prefersReducedMotion(),
+          Boolean(reduceMotion),
         );
         beginCalendarAdvanceTransition(transition);
         for (const frame of transition.frames) {
@@ -230,6 +237,17 @@ export function App(): React.JSX.Element {
         return runtimeResult;
       },
       onSuccess: ({ state, metadata, continueResult: result, sessionStatus }) => {
+        const previousMessageIds = new Set(
+          (activeCareerState.currentSeasonInbox ?? []).map((message) => String(message.id)),
+        );
+        const arrivingAttentionIds = (state.currentSeasonInbox ?? [])
+          .filter((message) => message.level !== "informational" && !previousMessageIds.has(String(message.id)))
+          .map((message) => String(message.id));
+        const selectedArrivalId = result.selectedMessageId !== undefined
+          && arrivingAttentionIds.includes(result.selectedMessageId)
+          ? result.selectedMessageId
+          : arrivingAttentionIds[0];
+        setArrivingInboxMessageId(selectedArrivalId);
         receiveCareerSessionUpdate(state, metadata, result, sessionStatus);
       },
     });
@@ -238,6 +256,7 @@ export function App(): React.JSX.Element {
     beginCalendarAdvanceTransition,
     beginCareerLoad,
     receiveCareerSessionUpdate,
+    reduceMotion,
     runCareerCommand,
     showCalendarAdvanceDate,
     storageLifecycleStatus,
@@ -588,6 +607,14 @@ export function App(): React.JSX.Element {
           postaView={inboxPresentation.postaView}
           railView={inboxPresentation.railView}
           {...(commandActivity === undefined ? {} : { commandActivity })}
+          {...(arrivingInboxMessageId === undefined
+            ? {}
+            : {
+                arrivalMessageId: arrivingInboxMessageId,
+                onArrivalPresented: (messageId: string) => {
+                  setArrivingInboxMessageId((current) => current === messageId ? undefined : current);
+                },
+              })}
           text={text}
           onBackToMenu={requestBackToMenu}
           onBackToDashboard={openDashboard}
@@ -683,12 +710,6 @@ export function App(): React.JSX.Element {
       onRetryStorage={retryStorage}
     />
   );
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== "undefined"
-    && typeof window.matchMedia === "function"
-    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function waitForCalendarFrame(delayMs: number): Promise<void> {

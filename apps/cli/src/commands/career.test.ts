@@ -523,6 +523,8 @@ test("career command prints deterministic development report without mutating th
     assert.equal(firstReportIo.stdoutLines.includes("Career save written: no"), true);
     assert.equal(firstReportIo.stdoutLines.includes("Development aggregate:"), true);
     assert.equal(firstReportIo.stdoutLines.includes("Selected-club examples:"), true);
+    assert.equal(firstReportIo.stdoutLines.includes("Trajectory samples:"), true);
+    assert.equal(firstReportIo.stdoutLines.some((line) => /^  age~26: .+, age [0-9]+->[0-9]+, growth [0-9.]+, decline [0-9.]+, room [0-9.]+$/.test(line)), true);
     assert.equal(firstReportIo.stdoutLines.some((line) => line.toLowerCase().includes("potential")), false);
   } finally {
     await removeTempSaveDirectory(directoryPath);

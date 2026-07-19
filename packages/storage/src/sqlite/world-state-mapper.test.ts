@@ -34,16 +34,6 @@ test("world rows round-trip ordered players, clubs, states, roles, abilities, an
   deepStrictEqual(restored.gameState.clubs[clubId("club:home")]?.playerIds, [playerId("player:home-01")]);
 });
 
-test("world rows preserve absent optional role identity separately from present empty arrays", () => {
-  const state = worldFixture("save:optional-role-fields", "optional-role-fields");
-  const rows = mapCareerWorldRows({ saveId: state.saveId, name: "Optional roles", state }, metadataFixture(state));
-  const restored = reconstructCareerWorldRows(rows);
-
-  equal(restored.gameState.players[playerId("player:away-01")]?.primaryRole, undefined);
-  equal(restored.gameState.players[playerId("player:away-01")]?.naturalRoles, undefined);
-  deepStrictEqual(restored.gameState.players[playerId("player:home-01")]?.adaptedRoles, []);
-});
-
 test("world mapping rejects duplicate deterministic order before any SQL write", () => {
   const state = worldFixture("save:duplicate-order", "duplicate-order");
   const invalid = {
@@ -57,8 +47,8 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
   );
 });
 
-test("migration ledger keeps earlier versions immutable and adds current-season Inbox as version 6", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [1, 2, 3, 4, 5, 6]);
+test("migration ledger includes the participation baseline without historical-role compatibility", () => {
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [1, 2, 3, 4, 5, 6, 7]);
   equal(SQLITE_CAREER_MIGRATIONS[0]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), false);
   equal(SQLITE_CAREER_MIGRATIONS[1]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(SQLITE_CAREER_MIGRATIONS[1]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
@@ -67,6 +57,7 @@ test("migration ledger keeps earlier versions immutable and adds current-season 
   equal(SQLITE_CAREER_MIGRATIONS[3]?.statements.some((statement) => statement.includes("match_preparation_bench")), true);
   equal(SQLITE_CAREER_MIGRATIONS[4]?.statements.some((statement) => statement.includes("autosave_interval_days")), true);
   equal(SQLITE_CAREER_MIGRATIONS[5]?.statements.some((statement) => statement.includes("career_inbox_messages")), true);
+  equal(SQLITE_CAREER_MIGRATIONS[6]?.statements.some((statement) => statement.includes("player_participation_rows")), true);
 });
 
 function worldFixture(rawSaveId: string, seed: string): CareerState {
@@ -97,6 +88,12 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
     lastName: "Bianchi",
     birthDate: gameDate(10_500),
     naturalPositions: ["gk"],
+    primaryRole: "goalkeeper",
+    archetype: "goalkeeper_shot_stopper",
+    naturalRoles: ["goalkeeper"],
+    adaptedRoles: [],
+    weakRoles: [],
+    roleFamiliarity: { goalkeeper: "natural" },
     abilities: abilitySet(9),
     potential: abilitySet(12),
   };

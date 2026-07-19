@@ -5,6 +5,7 @@ import {
   SQLITE_CAREER_SCHEMA_V4_STATEMENTS,
   SQLITE_CAREER_SCHEMA_V5_STATEMENTS,
   SQLITE_CAREER_SCHEMA_V6_STATEMENTS,
+  SQLITE_CAREER_SCHEMA_V7_STATEMENTS,
 } from "./sqlite-career-schema.ts";
 import { StorageError } from "../game-storage.interface.ts";
 
@@ -40,6 +41,10 @@ export const SQLITE_CAREER_MIGRATIONS: readonly SqliteCareerMigration[] = [
     version: 6,
     statements: SQLITE_CAREER_SCHEMA_V6_STATEMENTS,
   },
+  {
+    version: 7,
+    statements: SQLITE_CAREER_SCHEMA_V7_STATEMENTS,
+  },
 ];
 
 /** Returns the ordered migrations required by an existing database version. */
@@ -53,6 +58,13 @@ export function planSqliteCareerMigrations(currentVersion: number): readonly Sql
     throw new StorageError(
       "unsupported_schema_version",
       `SQLite schema version ${currentVersion} is newer than supported version ${latestVersion}`,
+    );
+  }
+
+  if (currentVersion > 0 && currentVersion < latestVersion) {
+    throw new StorageError(
+      "unsupported_schema_version",
+      `SQLite beta schema version ${currentVersion} is no longer supported; reset browser career storage to continue.`,
     );
   }
 

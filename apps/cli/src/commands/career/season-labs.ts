@@ -1,11 +1,17 @@
 import { createFakeLeagueSystem } from "@game/content";
-import { advanceCareerOneSeason, type AdvanceCareerReportRefreshMode } from "@game/engine";
+import {
+  advanceCareerOneSeason,
+  summarizePlayerDevelopmentAbilities,
+  totalPlayerAbilityDelta,
+  type AdvanceCareerReportRefreshMode,
+} from "@game/engine";
 
 import type { CliCareerState, CliGameState, PlayerId, ClubId } from "./types.ts";
 
 type CliFixtureId = CliGameState["fixtureIds"][number];
 
 const DEVELOPMENT_REPORT_SEASONS = 7;
+const DEVELOPMENT_TRAJECTORY_SAMPLE_AGES = [16, 18, 21, 24, 26, 29, 32, 36, 40] as const;
 
 /** In-memory development report for one loaded career save. */
 export interface CareerDevelopmentReportResult {
@@ -21,6 +27,7 @@ export interface CareerDevelopmentReportResult {
   readonly biggestDecline?: CareerDevelopmentReportPlayerExample;
   readonly stalledProspect?: CareerDevelopmentReportPlayerExample;
   readonly decliningVeteran?: CareerDevelopmentReportPlayerExample;
+  readonly trajectorySamples: readonly CareerDevelopmentTrajectorySample[];
 }
 
 /** Compact player example surfaced by the development report. */
@@ -30,6 +37,17 @@ export interface CareerDevelopmentReportPlayerExample {
   readonly endAge: number;
   readonly totalGrowth: number;
   readonly totalDecline: number;
+}
+
+/** Representative selected-club player trajectory shown by the lab report. */
+export interface CareerDevelopmentTrajectorySample {
+  readonly targetAge: number;
+  readonly playerId: PlayerId;
+  readonly startAge: number;
+  readonly endAge: number;
+  readonly totalGrowth: number;
+  readonly totalDecline: number;
+  readonly ceilingRoom: number;
 }
 
 interface MutableDevelopmentAggregate {
@@ -80,6 +98,7 @@ export function buildCareerDevelopmentReport(careerState: CliCareerState): Caree
     stalledProspects,
     totalGrowth: roundReportDelta(sumGrowth(selectedClubAggregates)),
     totalDecline: roundReportDelta(sumDecline(selectedClubAggregates)),
+    trajectorySamples: buildTrajectorySamples(selectedClubAggregates),
   };
   const biggestImprover = toDevelopmentExample(maxBy(selectedClubAggregates, (aggregate) => aggregate.totalGrowth));
   const biggestDecline = toDevelopmentExample(maxBy(selectedClubAggregates, (aggregate) => aggregate.totalDecline));
@@ -183,7 +202,7 @@ function initialDevelopmentAggregates(careerState: CliCareerState): Map<PlayerId
       endAge: playerAgeYears(careerState, playerId as PlayerId),
       totalGrowth: 0,
       totalDecline: 0,
-      potentialRoom: averagePlayerPotentialRoom(player),
+      potentialRoom: playerPotentialRoom(player),
     });
   }
 
@@ -219,7 +238,7 @@ function applyDevelopmentDeltas(
       continue;
     }
 
-    const delta = totalAbilityDelta(beforePlayer.abilities, afterPlayer.abilities);
+    const delta = totalPlayerAbilityDelta(beforePlayer.abilities, afterPlayer.abilities);
     if (delta > 0) {
       aggregate.totalGrowth += delta;
     } else if (delta < 0) {
@@ -234,81 +253,8 @@ function playerAgeYears(careerState: CliCareerState, playerId: PlayerId): number
   return player === undefined ? 0 : Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / 365);
 }
 
-function averagePlayerPotentialRoom(player: CliCareerState["gameState"]["players"][PlayerId]): number {
-  const abilityValues = [
-    player.potential.technical.finishing - player.abilities.technical.finishing,
-    player.potential.technical.passing - player.abilities.technical.passing,
-    player.potential.technical.longPassing - player.abilities.technical.longPassing,
-    player.potential.technical.crossing - player.abilities.technical.crossing,
-    player.potential.technical.dribbling - player.abilities.technical.dribbling,
-    player.potential.technical.technique - player.abilities.technical.technique,
-    player.potential.technical.tackling - player.abilities.technical.tackling,
-    player.potential.technical.penalties - player.abilities.technical.penalties,
-    player.potential.technical.freeKicks - player.abilities.technical.freeKicks,
-    player.potential.physical.pace - player.abilities.physical.pace,
-    player.potential.physical.strength - player.abilities.physical.strength,
-    player.potential.physical.stamina - player.abilities.physical.stamina,
-    player.potential.physical.agility - player.abilities.physical.agility,
-    player.potential.physical.heading - player.abilities.physical.heading,
-    player.potential.mental.positioning - player.abilities.mental.positioning,
-    player.potential.mental.vision - player.abilities.mental.vision,
-    player.potential.mental.anticipation - player.abilities.mental.anticipation,
-    player.potential.mental.composure - player.abilities.mental.composure,
-    player.potential.mental.determination - player.abilities.mental.determination,
-    player.potential.mental.leadership - player.abilities.mental.leadership,
-    player.potential.goalkeeping.reflexes - player.abilities.goalkeeping.reflexes,
-    player.potential.goalkeeping.handling - player.abilities.goalkeeping.handling,
-    player.potential.goalkeeping.rushingOut - player.abilities.goalkeeping.rushingOut,
-    player.potential.goalkeeping.goalkeeperPositioning - player.abilities.goalkeeping.goalkeeperPositioning,
-    player.potential.goalkeeping.footwork - player.abilities.goalkeeping.footwork,
-  ];
-  let total = 0;
-
-  for (const value of abilityValues) {
-    total += value;
-  }
-
-  return total / abilityValues.length;
-}
-
-function totalAbilityDelta(
-  before: CliCareerState["gameState"]["players"][PlayerId]["abilities"],
-  after: CliCareerState["gameState"]["players"][PlayerId]["abilities"],
-): number {
-  const deltas = [
-    after.technical.finishing - before.technical.finishing,
-    after.technical.passing - before.technical.passing,
-    after.technical.longPassing - before.technical.longPassing,
-    after.technical.crossing - before.technical.crossing,
-    after.technical.dribbling - before.technical.dribbling,
-    after.technical.technique - before.technical.technique,
-    after.technical.tackling - before.technical.tackling,
-    after.technical.penalties - before.technical.penalties,
-    after.technical.freeKicks - before.technical.freeKicks,
-    after.physical.pace - before.physical.pace,
-    after.physical.strength - before.physical.strength,
-    after.physical.stamina - before.physical.stamina,
-    after.physical.agility - before.physical.agility,
-    after.physical.heading - before.physical.heading,
-    after.mental.positioning - before.mental.positioning,
-    after.mental.vision - before.mental.vision,
-    after.mental.anticipation - before.mental.anticipation,
-    after.mental.composure - before.mental.composure,
-    after.mental.determination - before.mental.determination,
-    after.mental.leadership - before.mental.leadership,
-    after.goalkeeping.reflexes - before.goalkeeping.reflexes,
-    after.goalkeeping.handling - before.goalkeeping.handling,
-    after.goalkeeping.rushingOut - before.goalkeeping.rushingOut,
-    after.goalkeeping.goalkeeperPositioning - before.goalkeeping.goalkeeperPositioning,
-    after.goalkeeping.footwork - before.goalkeeping.footwork,
-  ];
-  let total = 0;
-
-  for (const delta of deltas) {
-    total += delta;
-  }
-
-  return total;
+function playerPotentialRoom(player: CliCareerState["gameState"]["players"][PlayerId]): number {
+  return summarizePlayerDevelopmentAbilities(player).potentialRoom;
 }
 
 function isStalledProspect(aggregate: MutableDevelopmentAggregate): boolean {
@@ -363,6 +309,49 @@ function toDevelopmentExample(aggregate: MutableDevelopmentAggregate | undefined
     totalGrowth: roundReportDelta(aggregate.totalGrowth),
     totalDecline: roundReportDelta(aggregate.totalDecline),
   };
+}
+
+function buildTrajectorySamples(
+  aggregates: readonly MutableDevelopmentAggregate[],
+): readonly CareerDevelopmentTrajectorySample[] {
+  return DEVELOPMENT_TRAJECTORY_SAMPLE_AGES.flatMap((targetAge): readonly CareerDevelopmentTrajectorySample[] => {
+    const aggregate = nearestDevelopmentAggregate(aggregates, targetAge);
+
+    if (aggregate === undefined) {
+      return [];
+    }
+
+    return [
+      {
+        targetAge,
+        playerId: aggregate.playerId,
+        startAge: aggregate.startAge,
+        endAge: aggregate.endAge,
+        totalGrowth: roundReportDelta(aggregate.totalGrowth),
+        totalDecline: roundReportDelta(aggregate.totalDecline),
+        ceilingRoom: roundReportDelta(aggregate.potentialRoom),
+      },
+    ];
+  });
+}
+
+function nearestDevelopmentAggregate(
+  aggregates: readonly MutableDevelopmentAggregate[],
+  targetAge: number,
+): MutableDevelopmentAggregate | undefined {
+  return [...aggregates].sort((left, right) => {
+    const distance = Math.abs(left.startAge - targetAge) - Math.abs(right.startAge - targetAge);
+    if (distance !== 0) {
+      return distance;
+    }
+
+    const growth = right.totalGrowth - left.totalGrowth;
+    if (growth !== 0) {
+      return growth;
+    }
+
+    return String(left.playerId).localeCompare(String(right.playerId));
+  })[0];
 }
 
 function roundReportDelta(value: number): number {

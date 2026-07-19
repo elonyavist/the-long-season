@@ -3,9 +3,12 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  accruePlayerFixtureParticipation,
   clubId,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   createMarketState,
+  fixtureId,
   gameDate,
   playerId,
   saveId,
@@ -112,7 +115,7 @@ test("rolloverPlayersForNextSeason normalizes low and high morale toward neutral
   assert.equal(result.careerState.gameState.playerStates[neutralMorale]?.morale, 50);
 });
 
-test("rolloverPlayersForNextSeason does not change abilities, potential, or player ordering", () => {
+test("rolloverPlayersForNextSeason does not change abilities, potential, role identity, or player ordering", () => {
   const first = playerId("player:first");
   const second = playerId("player:second");
   const careerState = careerStateFixture([playerFixture(first), playerFixture(second)]);
@@ -125,7 +128,23 @@ test("rolloverPlayersForNextSeason does not change abilities, potential, or play
   });
 
   assert.equal(JSON.stringify(result.careerState.gameState.players), beforePlayers);
+  assert.equal(result.careerState.gameState.players[first]?.primaryRole, "striker");
   assert.deepEqual(result.careerState.gameState.playerIds, [first, second]);
+});
+
+test("rolloverPlayersForNextSeason removes completed-season participation rows", () => {
+  const player = playerId("player:participation-reset");
+  const careerState = careerStateWithParticipation(careerStateFixture([playerFixture(player)]), player);
+
+  const result = rolloverPlayersForNextSeason({
+    careerState,
+    nextSeasonId: seasonId("season:0002"),
+    nextSeasonStartDate: gameDate(20_365),
+  });
+
+  assert.equal(careerState.playerParticipationLedger?.rowKeys.length, 1);
+  assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 0);
+  assert.equal(result.careerState.playerParticipationLedger?.closedMonthKeys.length, 0);
 });
 
 function careerStateFixture(
@@ -202,6 +221,7 @@ function playerFixture(id: PlayerId, birthDate = gameDate(10_000)): Player {
     lastName: "Rollover",
     birthDate,
     naturalPositions: ["st"],
+    primaryRole: "striker",
     abilities: abilitySet(10),
     potential: abilitySet(12),
   };
@@ -213,6 +233,25 @@ function playerStateFixture(fitness: number, form: number, morale: number): Play
     form: stateValue(form),
     morale: stateValue(morale),
   };
+}
+
+function careerStateWithParticipation(careerState: CareerState, id: PlayerId): CareerState {
+  const playerParticipationLedger = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
+    fixtureId: fixtureId("fixture:participation-reset"),
+    playerId: id,
+    seasonId: careerState.gameState.calendar.currentSeasonId,
+    monthKey: "2026-08",
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7,
+    playedRoleMinutes: { striker: 90 },
+  });
+
+  return createCareerState({
+    ...careerState,
+    playerParticipationLedger,
+  });
 }
 
 function abilitySet(value: number): PlayerAbilities {

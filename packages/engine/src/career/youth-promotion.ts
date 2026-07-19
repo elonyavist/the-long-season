@@ -1,5 +1,9 @@
 import {
   createCareerState,
+  getPlayerRoleProfile,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
+  rolePotentialAbility,
   type CareerState,
   type Club,
   type ClubId,
@@ -205,40 +209,24 @@ function promotionReason(input: {
 }
 
 function isUsefulPromotionCandidate(player: Player): boolean {
-  const currentAverage = averageAbilities(player.abilities);
-  const potentialAverage = averageAbilities(player.potential);
+  const ability = youthPromotionAbility(player);
 
-  return currentAverage >= 7.4 || potentialAverage - currentAverage >= 3.5;
+  return ability.current >= 7.4 || ability.potentialRoom >= 3.5;
 }
 
-function averageAbilities(abilities: Player["abilities"]): number {
-  let total = 0;
+/** Returns the football measures needed only by senior-promotion decisions. */
+function youthPromotionAbility(player: Player): {
+  readonly current: number;
+  readonly potentialRoom: number;
+} {
+  if (player.primaryRole === undefined) {
+    const current = Number(rawDiagnosticAbilityAverage(player.abilities));
+    const potential = Number(rawDiagnosticAbilityAverage(player.potential));
+    return { current, potentialRoom: potential - current };
+  }
 
-  total += abilities.technical.finishing;
-  total += abilities.technical.passing;
-  total += abilities.technical.longPassing;
-  total += abilities.technical.crossing;
-  total += abilities.technical.dribbling;
-  total += abilities.technical.technique;
-  total += abilities.technical.tackling;
-  total += abilities.technical.penalties;
-  total += abilities.technical.freeKicks;
-  total += abilities.physical.pace;
-  total += abilities.physical.strength;
-  total += abilities.physical.stamina;
-  total += abilities.physical.agility;
-  total += abilities.physical.heading;
-  total += abilities.mental.positioning;
-  total += abilities.mental.vision;
-  total += abilities.mental.anticipation;
-  total += abilities.mental.composure;
-  total += abilities.mental.determination;
-  total += abilities.mental.leadership;
-  total += abilities.goalkeeping.reflexes;
-  total += abilities.goalkeeping.handling;
-  total += abilities.goalkeeping.rushingOut;
-  total += abilities.goalkeeping.goalkeeperPositioning;
-  total += abilities.goalkeeping.footwork;
-
-  return total / 25;
+  const profile = getPlayerRoleProfile(player.primaryRole);
+  const current = Number(roleCurrentAbility(player.abilities, profile));
+  const potential = Number(rolePotentialAbility(player.potential, profile));
+  return { current, potentialRoom: potential - current };
 }

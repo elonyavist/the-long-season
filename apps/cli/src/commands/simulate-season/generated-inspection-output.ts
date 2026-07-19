@@ -3,6 +3,7 @@ import {
   getGeneratedPlayerArchetype,
   type FakeLeagueSystem,
 } from "@game/content";
+import { summarizePlayerDevelopmentAbilities } from "@game/engine";
 import type {
   MessageKey,
   Translator,
@@ -90,6 +91,19 @@ export function formatPlayerGenerationReportOutput(
   }
 
   lines.push("");
+  lines.push(`${text("playerGeneration.potentialRoomByAge")}:`);
+  for (const ageBand of ["under18", "age18To21", "age22To25", "age26To29", "age30Plus"] as const) {
+    const row = report.potentialRoomByAge[ageBand];
+    lines.push(
+      `  ${text(presentationMessageKey("playerGeneration.ageBand", ageBand))}: avg=${formatReportNumber(row.average)} max=${formatReportNumber(row.max)} players=${row.players}`,
+    );
+  }
+  lines.push(`  ${text("playerGeneration.matureHighRoomWarnings")}: ${report.matureHighRoomWarnings.count}`);
+  if (report.matureHighRoomWarnings.examplePlayerId !== undefined) {
+    lines.push(`  ${text("playerGeneration.matureHighRoomExample")}: ${report.matureHighRoomWarnings.examplePlayerId}`);
+  }
+
+  lines.push("");
   lines.push(`${text("playerGeneration.rarityBudget")}:`);
   lines.push(
     `  ${text("playerGeneration.rarity.whiteFly")}: ${report.rarityUsage.whiteFly} / ${league.playerRarityBudget.whiteFlyCount}`,
@@ -165,7 +179,7 @@ interface PlayerGenerationQualityReport {
   readonly clubCount: number;
   /** Number of generated players inspected. */
   readonly playerCount: number;
-  /** Current-ability bands based on each player's broad role peak. */
+  /** Current-ability bands based on each player's canonical role quality. */
   readonly currentAbilityDistribution: {
     readonly low: number;
     readonly categoryDepth: number;
@@ -179,6 +193,20 @@ interface PlayerGenerationQualityReport {
     readonly interesting: number;
     readonly serious: number;
     readonly elite: number;
+  };
+  /** Average and maximum current-to-potential room by age band. */
+  readonly potentialRoomByAge: Record<
+    "under18" | "age18To21" | "age22To25" | "age26To29" | "age30Plus",
+    {
+      readonly players: number;
+      readonly average: number;
+      readonly max: number;
+    }
+  >;
+  /** Mature players whose remaining room should be inspected by developers. */
+  readonly matureHighRoomWarnings: {
+    readonly count: number;
+    readonly examplePlayerId?: string;
   };
   /** Actual usage of league-level rarity assignments. */
   readonly rarityUsage: {
@@ -299,6 +327,14 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem, seed: stri
     outfieldGoalkeeping: 0,
     total: 0,
   };
+  const potentialRoomsByAge: Record<keyof PlayerGenerationQualityReport["potentialRoomByAge"], number[]> = {
+    under18: [],
+    age18To21: [],
+    age22To25: [],
+    age26To29: [],
+    age30Plus: [],
+  };
+  const matureHighRoomPlayerIds: string[] = [];
   const clubsWithProspects = new Set<ClubId>();
   const firstClubId = league.clubIds[0];
   const firstClub = firstClubId === undefined ? undefined : league.clubsById[firstClubId];
@@ -311,12 +347,23 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem, seed: stri
       continue;
     }
 
-    const peak = currentRolePeak(player);
-    if (peak <= 8) {
+    if (player.primaryRole === undefined) {
+      throw new Error(`Generated player is missing canonical role identity: ${player.id}`);
+    }
+
+    const abilitySummary = summarizePlayerDevelopmentAbilities(player);
+    const currentAbility = abilitySummary.currentAbility;
+    const age = Math.floor((league.seasonStartDate - player.birthDate) / 365);
+    potentialRoomsByAge[playerGenerationAgeBand(age)].push(abilitySummary.potentialRoom);
+    if (age >= 26 && abilitySummary.potentialRoom > 2.5) {
+      matureHighRoomPlayerIds.push(String(playerId));
+    }
+
+    if (currentAbility <= 8) {
       currentAbilityDistribution.low += 1;
-    } else if (peak <= 11) {
+    } else if (currentAbility <= 11) {
       currentAbilityDistribution.categoryDepth += 1;
-    } else if (peak < 15) {
+    } else if (currentAbility < 15) {
       currentAbilityDistribution.categoryStrong += 1;
     } else {
       currentAbilityDistribution.highCurrent += 1;
@@ -360,6 +407,11 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem, seed: stri
     playerCount: league.playerIds.length,
     currentAbilityDistribution,
     potentialDistribution,
+    potentialRoomByAge: mapPotentialRoomByAge(potentialRoomsByAge),
+    matureHighRoomWarnings: {
+      count: matureHighRoomPlayerIds.length,
+      ...(matureHighRoomPlayerIds[0] === undefined ? {} : { examplePlayerId: matureHighRoomPlayerIds[0] }),
+    },
     rarityUsage,
     clubsWithProspects: clubsWithProspects.size,
     roleCoherenceWarnings: {
@@ -502,17 +554,40 @@ function positionDepartment(position: string | undefined): "goalkeeper" | "defen
   return "attacker";
 }
 
-/**
- * Returns the broad current-ability peak used by generation-quality reports.
- */
-function currentRolePeak(player: FakeLeagueSystem["players"][PlayerId]): number {
-  return Math.max(
-    Number(player.abilities.technical.finishing),
-    Number(player.abilities.technical.passing),
-    Number(player.abilities.technical.tackling),
-    Number(player.abilities.mental.positioning),
-    Number(player.abilities.goalkeeping.reflexes),
-  );
+function playerGenerationAgeBand(age: number): keyof PlayerGenerationQualityReport["potentialRoomByAge"] {
+  if (age < 18) return "under18";
+  if (age <= 21) return "age18To21";
+  if (age <= 25) return "age22To25";
+  if (age <= 29) return "age26To29";
+  return "age30Plus";
+}
+
+function mapPotentialRoomByAge(
+  valuesByBand: Record<keyof PlayerGenerationQualityReport["potentialRoomByAge"], number[]>,
+): PlayerGenerationQualityReport["potentialRoomByAge"] {
+  return {
+    under18: summarizeNumbers(valuesByBand.under18),
+    age18To21: summarizeNumbers(valuesByBand.age18To21),
+    age22To25: summarizeNumbers(valuesByBand.age22To25),
+    age26To29: summarizeNumbers(valuesByBand.age26To29),
+    age30Plus: summarizeNumbers(valuesByBand.age30Plus),
+  };
+}
+
+function summarizeNumbers(values: readonly number[]): { readonly players: number; readonly average: number; readonly max: number } {
+  if (values.length === 0) {
+    return { players: 0, average: 0, max: 0 };
+  }
+
+  return {
+    players: values.length,
+    average: values.reduce((sum, value) => sum + value, 0) / values.length,
+    max: Math.max(...values),
+  };
+}
+
+function formatReportNumber(value: number): string {
+  return value.toFixed(2);
 }
 
 /**

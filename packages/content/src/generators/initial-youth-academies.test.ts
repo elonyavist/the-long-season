@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, gameDate, seasonId, type ClubId } from "@game/domain";
+import {
+  PLAYER_ABILITY_KEYS,
+  clubId,
+  gameDate,
+  getPlayerRoleProfile,
+  isPotentialAtLeastCurrent,
+  readPlayerAbility,
+  roleCurrentAbility,
+  seasonId,
+  type ClubId,
+} from "@game/domain";
 import { fromISO } from "@game/shared";
 
 import {
@@ -12,6 +22,7 @@ import {
   YOUTH_ACADEMY_POSITION_PLAN,
 } from "./initial-youth-academies.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
+import { potentialRarityBudgetForDivision } from "./player-potential-rarity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -45,6 +56,16 @@ test("generateInitialYouthAcademies creates the exact department structure", () 
 
 test("generateInitialYouthAcademies is deterministic for the same seed", () => {
   assert.deepEqual(generateInitialYouthAcademies(input("stable-academy")), generateInitialYouthAcademies(input("stable-academy")));
+});
+
+test("generateInitialYouthAcademies exposes deterministic youth-development levels", () => {
+  const firstClub = clubId("club:province-01");
+  const secondClub = clubId("club:province-02");
+  const result = generateInitialYouthAcademies(input("academy-development-levels"));
+
+  assert.equal(result.clubYouthDevelopmentLevels[firstClub], 3);
+  assert.equal(result.clubYouthDevelopmentLevels[secondClub], 2);
+  assert.deepEqual(result.clubYouthDevelopmentLevels, generateInitialYouthAcademies(input("academy-development-levels")).clubYouthDevelopmentLevels);
 });
 
 test("generateInitialYouthAcademies changes player identities for different seeds", () => {
@@ -130,6 +151,90 @@ test("generateInitialYouthAcademies attaches lifecycle rows to active youth rost
   }
 });
 
+test("generateInitialYouthAcademies enforces generated scale and potential ordering", () => {
+  const result = generateInitialYouthAcademies(input("academy-construction-invariants"));
+
+  assert.equal(new Set(result.playerIds).size, result.playerIds.length);
+  for (const playerId of result.playerIds) {
+    const player = result.players[playerId];
+    assert.ok(player !== undefined);
+    assert.equal(isPotentialAtLeastCurrent(player.abilities, player.potential), true, player.id);
+
+    for (const key of PLAYER_ABILITY_KEYS) {
+      assert.equal(Number(readPlayerAbility(player.abilities, key)) >= 1, true, `${player.id} current ${key}`);
+      assert.equal(Number(readPlayerAbility(player.potential, key)) >= 1, true, `${player.id} potential ${key}`);
+    }
+  }
+});
+
+test("initial youth high and elite potential obey division-wide rarity caps across one hundred worlds", () => {
+  const configured = potentialRarityBudgetForDivision("third_division");
+
+  for (let index = 0; index < 100; index += 1) {
+    const result = generateInitialYouthAcademies(divisionInput(`academy-rarity-${index}`));
+    const archetypes = result.playerIds.map((playerId) => result.playerArchetypes[playerId]);
+    const seriousProspects = archetypes.filter((archetype) => archetype === "serious_prospect").length;
+    const rareProdigies = archetypes.filter((archetype) => archetype === "rare_prodigy").length;
+    const ordinaryYouth = archetypes.filter((archetype) => archetype === "normal_youth").length;
+
+    assert.equal(seriousProspects >= configured.highPerDivision.minInclusive, true);
+    assert.equal(seriousProspects <= configured.highPerDivision.maxInclusive, true);
+    assert.equal(rareProdigies >= configured.elitePerDivision.minInclusive, true);
+    assert.equal(rareProdigies <= configured.elitePerDivision.maxInclusive, true);
+    assert.equal(ordinaryYouth > result.playerIds.length / 2, true);
+  }
+}, 15_000);
+
+test("better academies create more interesting routine prospects without extra high or elite slots", () => {
+  let strongAcademyInterestingPlayers = 0;
+  let weakAcademyInterestingPlayers = 0;
+
+  for (let index = 0; index < 100; index += 1) {
+    const firstClub = clubId("club:province-01");
+    const secondClub = clubId("club:province-02");
+    const result = generateInitialYouthAcademies({
+      ...input(`academy-development-spread-${index}`),
+      clubIds: [firstClub, secondClub],
+      clubContexts: {
+        [firstClub]: { category: "third_division", reputation: 10 },
+        [secondClub]: { category: "third_division", reputation: 1 },
+      },
+    });
+
+    for (const playerId of result.youthAcademyState.clubRosters[firstClub]?.playerIds ?? []) {
+      if (result.playerArchetypes[playerId] === "good_prospect") strongAcademyInterestingPlayers += 1;
+    }
+
+    for (const playerId of result.youthAcademyState.clubRosters[secondClub]?.playerIds ?? []) {
+      if (result.playerArchetypes[playerId] === "good_prospect") weakAcademyInterestingPlayers += 1;
+    }
+  }
+
+  assert.equal(strongAcademyInterestingPlayers > weakAcademyInterestingPlayers, true);
+});
+
+test("third-division level-five academies still generate bounded current ability", () => {
+  const firstClub = clubId("club:province-01");
+  const result = generateInitialYouthAcademies({
+    ...input("bounded-level-five-third-division"),
+    clubIds: [firstClub],
+    clubContexts: {
+      [firstClub]: { category: "third_division", reputation: 10 },
+    },
+  });
+
+  assert.equal(result.clubYouthDevelopmentLevels[firstClub], 5);
+
+  for (const playerId of result.playerIds) {
+    const player = result.players[playerId];
+    assert.ok(player !== undefined);
+    const profile = getPlayerRoleProfile(player.primaryRole);
+    const current = roleCurrentAbility(player.abilities, profile);
+
+    assert.equal(Number(current) < 13.5, true, `${player.id} current role ability ${Number(current)}`);
+  }
+});
+
 test("generateSeasonalYouthIntakePlayers creates exactly the requested refill positions", () => {
   const targetPositions = ["gk", "cb", "cm", "st"] as const;
   const result = generateSeasonalYouthIntakePlayers({
@@ -138,6 +243,7 @@ test("generateSeasonalYouthIntakePlayers creates exactly the requested refill po
   });
 
   assert.equal(result.generatedPlayers.length, targetPositions.length);
+  assert.equal(result.youthDevelopmentLevel, 3);
   assert.deepEqual(result.generatedPlayers.map((generated) => generated.player.naturalPositions[0]), targetPositions);
 });
 
@@ -190,6 +296,20 @@ function input(worldSeed: string): Parameters<typeof generateInitialYouthAcademi
     referenceDate: gameDate(CAREER_START_EPOCH_DAY),
     clubIds: [firstClub, secondClub],
     clubContexts: clubContexts([firstClub, secondClub]),
+  };
+}
+
+function divisionInput(worldSeed: string): Parameters<typeof generateInitialYouthAcademies>[0] {
+  const clubIds = Array.from({ length: 18 }, (_, index) =>
+    clubId(`club:province-${String(index + 1).padStart(2, "0")}`),
+  );
+
+  return {
+    worldSeed,
+    seasonId: seasonId("season:demo-001"),
+    referenceDate: gameDate(CAREER_START_EPOCH_DAY),
+    clubIds,
+    clubContexts: clubContexts(clubIds),
   };
 }
 

@@ -23,8 +23,6 @@ test("generated player archetypes have valid numeric ranges and weights", () => 
 
     assert.equal(archetype.key, key);
     assertValidAgeRange(archetype.ageYears);
-    assertValidNumericRange(archetype.currentAbilityOffset);
-    assertValidNumericRange(archetype.potentialUplift);
     assert.equal(["limited", "category", "interesting", "serious", "elite"].includes(archetype.potentialClass), true);
     assert.equal(Number.isSafeInteger(archetype.lineupWeight), true);
     assert.equal(Number.isSafeInteger(archetype.reserveWeight), true);
@@ -41,9 +39,8 @@ test("prospect archetypes are younger and carry more upside than regulars", () =
   const prodigy = getGeneratedPlayerArchetype("rare_prodigy");
 
   assert.equal(youth.ageYears.maxInclusive < regular.ageYears.minInclusive, true);
-  assert.equal(goodProspect.potentialUplift.minInclusive > regular.potentialUplift.maxInclusive, true);
-  assert.equal(seriousProspect.potentialUplift.minInclusive > goodProspect.potentialUplift.minInclusive, true);
-  assert.equal(prodigy.potentialUplift.minInclusive > seriousProspect.potentialUplift.minInclusive, true);
+  assert.equal(goodProspect.potentialClass, "interesting");
+  assert.equal(seriousProspect.potentialClass, "serious");
   assert.equal(prodigy.potentialClass, "elite");
 });
 
@@ -60,13 +57,6 @@ test("rare prodigies are possible but uncommon in reserve generation", () => {
 function assertValidAgeRange(range: GeneratedPlayerArchetype["ageYears"]): void {
   assert.equal(Number.isSafeInteger(range.minInclusive), true);
   assert.equal(Number.isSafeInteger(range.maxInclusive), true);
-  assert.equal(range.minInclusive <= range.maxInclusive, true);
-}
-
-/** Asserts a numeric generation range is deterministic-friendly. */
-function assertValidNumericRange(range: GeneratedPlayerArchetype["currentAbilityOffset"]): void {
-  assert.equal(Number.isFinite(range.minInclusive), true);
-  assert.equal(Number.isFinite(range.maxInclusive), true);
   assert.equal(range.minInclusive <= range.maxInclusive, true);
 }
 

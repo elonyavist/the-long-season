@@ -1,4 +1,13 @@
-import { createCareerState, stateValue, type CareerState, type GameDate, type PlayerDynamicState, type PlayerId, type SeasonId } from "@game/domain";
+import {
+  createCareerState,
+  resetPlayerParticipationSeason,
+  stateValue,
+  type CareerState,
+  type GameDate,
+  type PlayerDynamicState,
+  type PlayerId,
+  type SeasonId,
+} from "@game/domain";
 
 const RESET_FITNESS = stateValue(100);
 const RESET_FORM = stateValue(50);
@@ -26,11 +35,15 @@ export interface PlayerSeasonRolloverResult {
  *
  * Player age is derived from `GameDate`, so this function advances the career
  * calendar to the next season start instead of mutating immutable birth dates.
- * Abilities and potential are intentionally unchanged; Phase 28 will layer
- * growth and decline on top of this baseline.
+ * Abilities, potential, and role identity are intentionally unchanged because
+ * their season development is owned by the dedicated development pass.
  */
 export function rolloverPlayersForNextSeason(input: PlayerSeasonRolloverInput): PlayerSeasonRolloverResult {
   const playerStates: Record<PlayerId, PlayerDynamicState> = {};
+  const previousSeasonId = input.careerState.gameState.calendar.currentSeasonId;
+  const playerParticipationLedger = input.careerState.playerParticipationLedger === undefined
+    ? undefined
+    : resetPlayerParticipationSeason(input.careerState.playerParticipationLedger, previousSeasonId);
 
   for (const playerId of input.careerState.gameState.playerIds) {
     const currentState = input.careerState.gameState.playerStates[playerId];
@@ -44,6 +57,7 @@ export function rolloverPlayersForNextSeason(input: PlayerSeasonRolloverInput): 
   return {
     careerState: createCareerState({
       ...input.careerState,
+      ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
       gameState: {
         ...input.careerState.gameState,
         calendar: {

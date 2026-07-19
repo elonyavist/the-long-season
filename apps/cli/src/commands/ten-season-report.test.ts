@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTranslator } from "@game/i18n";
 import { test } from "vitest";
 
 import {
   DEFAULT_TEN_SEASON_REPORT_SEED,
   runTenSeasonReportCommand,
 } from "./ten-season-report.ts";
+import { createLongRunGateReport } from "./ten-season-report/report-data.ts";
 
 test("ten-season-report uses deterministic default arguments", async () => {
   const io = captureIo();
@@ -72,6 +74,21 @@ test("ten-season-report respects explicit season count", async () => {
   assert.equal(io.stdoutLines.some((line) => line.includes("world-b-season-003")), true);
 });
 
+test("ten-season-report keeps role-weighted player quality diagnostics deterministic", async () => {
+  const io = captureIo();
+
+  assert.equal(await runTenSeasonReportCommand(["--seed=world-a", "--seasons=1"], io), 0);
+  assert.equal(io.stdoutLines.includes("  Current ability avg: 8.20 -> 8.20"), true);
+  assert.equal(
+    io.stdoutLines.includes("  Initial ability spread: spread=2.57 top=A.C. Lecco:10.07 bottom=U.S. Turin:7.50"),
+    true,
+  );
+  assert.equal(
+    io.stdoutLines.includes("  Final ability spread: spread=2.55 top=A.C. Lecco:10.07 bottom=A.S.D. Trieste:7.52"),
+    true,
+  );
+});
+
 test("ten-season-report writes deterministic multi-world gate reports", async () => {
   const directoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-"));
 
@@ -98,6 +115,7 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(hasLineStartingWith(first.stdoutLines, "Youth roster max observed:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Active players min/max:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Clubs above youth target:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Execution:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Signal check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Failing check counts:"), true);
@@ -118,6 +136,7 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(firstReport.includes("Table Spread Warning Snapshots"), true);
     assert.equal(firstReport.includes("Youth roster max observed:"), true);
     assert.equal(firstReport.includes("Active player count min/max:"), true);
+    assert.equal(firstReport.includes("Execution:"), true);
     assert.equal(firstReport.includes("Warning check counts:"), true);
     assert.equal(firstReport.includes("Signal check counts:"), true);
     assert.equal(firstReport.includes("Warn checks"), true);
@@ -128,6 +147,35 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
   } finally {
     await rm(directoryPath, { recursive: true, force: true });
   }
+});
+
+test("multi-world gate partitions produce the same world summaries as the sequential runner", async () => {
+  const text = createTranslator("en");
+  const sequential = await createLongRunGateReport({
+    seedPrefix: "phase75-partition-test",
+    worldCount: 3,
+    seasonCount: 1,
+    text,
+    language: "en",
+    workerCount: 1,
+  });
+  const partitioned = await createLongRunGateReport({
+    seedPrefix: "phase75-partition-test",
+    worldCount: 3,
+    seasonCount: 1,
+    text,
+    language: "en",
+    workerCount: 2,
+  });
+
+  assert.equal(partitioned.execution.mode, "parallel");
+  assert.equal(partitioned.execution.workerCount, 2);
+  assert.deepEqual(partitioned.worstWorlds, sequential.worstWorlds);
+  assert.deepEqual(partitioned.productionWarningWorlds, sequential.productionWarningWorlds);
+  assert.deepEqual(partitioned.dynastyWarningWorlds, sequential.dynastyWarningWorlds);
+  assert.deepEqual(partitioned.tableSpreadWarningWorlds, sequential.tableSpreadWarningWorlds);
+  assert.deepEqual(partitioned.warningCheckCounts, sequential.warningCheckCounts);
+  assert.deepEqual(partitioned.failingCheckCounts, sequential.failingCheckCounts);
 });
 
 test("ten-season-report exits nonzero on invalid season count", async () => {

@@ -8,6 +8,7 @@ export * from "./match-engine/index.ts";
 export * from "./market/index.ts";
 export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
+export * from "./team-selection/index.ts";
 export {
   completeStagedMatchCheckpoint,
   createStagedMatchCheckpoint,
@@ -77,14 +78,55 @@ export {
   type ProgressCareerFixtureInvalidReason,
   type ProgressCareerFixtureNone,
   type ProgressCareerFixtureResult,
+  type ProgressCareerAiTeamSelectionInput,
   type ProgressNextCareerFixtureInput,
 } from "./career/progress-fixture.ts";
 export {
+  advanceCareerMonths,
+  monthKeyForCareerDate,
+  type AdvanceCareerMonthsInput,
+  type AdvanceCareerMonthsResult,
+  type CareerMonthlyLifecycleSummary,
+} from "./career/advance-career-month.ts";
+export {
+  accrueCommittedFixtureParticipation,
+  buildFixtureParticipationContributions,
+  type AccrueCommittedFixtureParticipationInput,
+  type BuildFixtureParticipationContributionsInput,
+  type BuildFixtureParticipationContributionsResult,
+  type FixtureParticipationSideContext,
+} from "./career/player-participation.ts";
+export {
   developPlayersForSeason,
+  summarizePlayerDevelopmentAbilities,
+  totalPlayerAbilityDelta,
+  type PlayerDevelopmentAbilitySummary,
   type PlayerDevelopmentChange,
   type PlayerDevelopmentInput,
   type PlayerDevelopmentResult,
 } from "./career/player-development.ts";
+export {
+  applyPlayerAgingPolicy,
+  currentAbilityFloor,
+  monthlyDeclineFor,
+  type ApplyPlayerAgingPolicyInput,
+  type ApplyPlayerAgingPolicyResult,
+} from "./career/player-aging-policy.ts";
+export {
+  monthlyDevelopmentPolicy,
+  monthlyGrowthAgeMultiplier,
+  monthlyOpportunityMultiplier,
+  monthlyPerformanceModifier,
+  type BroadPositionGroup,
+  type MonthlyDevelopmentPolicy,
+  type MonthlyDevelopmentPolicyInput,
+} from "./career/player-development-policy.ts";
+export {
+  adaptPlayerRolesFromParticipation,
+  type PlayerRoleAdaptationChange,
+  type PlayerRoleAdaptationInput,
+  type PlayerRoleAdaptationResult,
+} from "./career/player-role-adaptation.ts";
 export {
   applyEndOfSeasonPlayerExits,
   type PlayerExitInput,
@@ -190,6 +232,7 @@ export {
   SimulateSeasonError,
   simulateSeason,
   type SimulateSeasonErrorCode,
+  type SimulateSeasonAiSquadSelection,
   type SimulateSeasonFixtureLineupOverride,
   type SimulateSeasonInput,
   type SimulateSeasonResult,

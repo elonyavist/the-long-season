@@ -1,11 +1,13 @@
 import type { MessageKey, Translator } from "@game/i18n";
 import { buildCareerShellView, type CareerInboxView, type CareerPostaFilter, type CareerPostaView } from "@game/ui";
 import { useEffect, useRef, useState } from "react";
+import * as m from "motion/react-m";
 
 import type { CareerCommandActivity } from "../../stores/career-ui-store";
 import { AppShell } from "../app-shell/AppShell";
 import { InboxMessageDetail } from "./InboxMessageDetail";
 import { InboxMessageList } from "./InboxMessageList";
+import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
 /** Props for the first production Posta list/detail destination. */
 export interface CareerInboxScreenProps {
@@ -14,6 +16,7 @@ export interface CareerInboxScreenProps {
   readonly postaView: CareerPostaView;
   readonly railView: CareerInboxView;
   readonly commandActivity?: CareerCommandActivity;
+  readonly arrivalMessageId?: string;
   readonly text: Translator;
   readonly onBackToMenu: () => void;
   readonly onBackToDashboard: () => void;
@@ -21,6 +24,7 @@ export interface CareerInboxScreenProps {
   readonly onFilterChange: (filter: CareerPostaFilter) => void;
   readonly onMessageSelect: (messageId: string) => void;
   readonly onPrimaryAction: (actionId: string) => void;
+  readonly onArrivalPresented?: (messageId: string) => void;
 }
 
 /** Renders the production Posta decision centre inside the shared career shell. */
@@ -30,6 +34,7 @@ export function CareerInboxScreen({
   postaView,
   railView,
   commandActivity,
+  arrivalMessageId,
   text,
   onBackToMenu,
   onBackToDashboard,
@@ -37,6 +42,7 @@ export function CareerInboxScreen({
   onFilterChange,
   onMessageSelect,
   onPrimaryAction,
+  onArrivalPresented,
 }: CareerInboxScreenProps): React.JSX.Element {
   const shellView = buildCareerShellView({ activeSectionKey: "inbox", inboxView: railView });
   const selectedMessage = postaView.selectedMessage;
@@ -45,6 +51,9 @@ export function CareerInboxScreen({
   const detailPaneRef = useRef<HTMLElement>(null);
   const detailWasOpenRef = useRef(false);
   const commandPending = commandActivity?.status === "pending";
+  const selectedMessageId = selectedMessage?.messageId;
+  const selectedMessageIsArrival = selectedMessageId !== undefined
+    && selectedMessageId === arrivalMessageId;
 
   useEffect(() => {
     if (showNarrowDetail) {
@@ -109,6 +118,7 @@ export function CareerInboxScreen({
         <div
           className="tls-inbox-workspace"
           data-narrow-detail={showNarrowDetail}
+          data-motion-view={showNarrowDetail ? "detail" : "list"}
           inert={commandPending ? true : undefined}
         >
           <section
@@ -129,10 +139,22 @@ export function CareerInboxScreen({
             />
           </section>
 
-          <section
+          <m.section
             className="tls-inbox-detail-pane"
             aria-live="polite"
+            data-attention-arrival={selectedMessageIsArrival}
+            key={`detail:${selectedMessageId ?? "empty"}:${showNarrowDetail ? "open" : "closed"}`}
             ref={detailPaneRef}
+            initial={selectedMessageIsArrival
+              ? webMotionTargets.attentionArrival
+              : webMotionTargets.inboxDetailEnter}
+            animate={webMotionTargets.rest}
+            transition={selectedMessageIsArrival ? webMotion.narrative : webMotion.transition}
+            onAnimationComplete={() => {
+              if (selectedMessageIsArrival && selectedMessageId !== undefined) {
+                onArrivalPresented?.(selectedMessageId);
+              }
+            }}
           >
             <InboxMessageDetail
               disabled={commandPending}
@@ -141,7 +163,7 @@ export function CareerInboxScreen({
               onBack={() => setShowNarrowDetail(false)}
               onPrimaryAction={onPrimaryAction}
             />
-          </section>
+          </m.section>
         </div>
       </section>
     </AppShell>

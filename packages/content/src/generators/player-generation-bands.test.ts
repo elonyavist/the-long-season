@@ -18,8 +18,6 @@ test("generation band data is ordered by division strength", () => {
 
     assert.equal(first.currentAbility.minInclusive > second.currentAbility.minInclusive, true, tier);
     assert.equal(second.currentAbility.minInclusive > third.currentAbility.minInclusive, true, tier);
-    assert.equal(first.potentialCeiling.maxInclusive > second.potentialCeiling.maxInclusive, true, tier);
-    assert.equal(second.potentialCeiling.maxInclusive > third.potentialCeiling.maxInclusive, true, tier);
   }
 });
 

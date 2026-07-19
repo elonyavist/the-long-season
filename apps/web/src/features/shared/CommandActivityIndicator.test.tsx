@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   CommandActivityIndicator,
   CommandActivityLiveRegion,
+  CommandFeedbackLabel,
   isMatchingPendingCommand,
 } from "./CommandActivityIndicator";
 
@@ -33,6 +34,7 @@ describe("CommandActivityIndicator", () => {
     expect(html).toContain("tls-command-activity-spinner");
     expect(html).toContain("tls-command-activity-copy");
     expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain('data-visible="true"');
     expect(html).toContain('data-state="pending"');
   });
 
@@ -48,8 +50,17 @@ describe("CommandActivityIndicator", () => {
 
     expect(html).toContain("Save game");
     expect(html).toContain('data-state="idle"');
-    expect(html).not.toContain("tls-command-activity-spinner");
+    expect(html).toContain('data-visible="false"');
     expect(isMatchingPendingCommand(activity, ["manual_save"])).toBe(false);
+  });
+
+  it("supports command owners that already expose a focused pending boolean", () => {
+    const html = renderToStaticMarkup(
+      <CommandFeedbackLabel idleLabel="Save game" pending pendingLabel="Saving..." />,
+    );
+
+    expect(html).toContain("Saving...");
+    expect(html).toContain('data-state="pending"');
   });
 
   it("publishes one polite atomic status message", () => {

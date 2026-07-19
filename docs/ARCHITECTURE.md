@@ -1,6 +1,6 @@
 # The Long Season Architecture
 
-Last updated: 2026-07-06
+Last updated: 2026-07-18
 
 ## Purpose
 
@@ -89,10 +89,17 @@ Why this matters:
 | Career command | `apps/cli/src/commands/career.ts` |
 | Long-run report command | `apps/cli/src/commands/ten-season-report.ts` |
 | Generated world facade | `packages/content/src/generators/league-system.ts` via `createFakeLeagueSystem` |
+| Validated player construction | `packages/domain/src/player/create-player.ts` via `createPlayer` |
+| Generated player assembly | `packages/content/src/generators/generated-player-factory.ts` via `createGeneratedPlayer` |
+| Monthly player lifecycle | `packages/engine/src/career/advance-career-month.ts` via `advanceCareerMonths` |
+| Player development consumer | `packages/engine/src/career/player-development.ts` via `developPlayersForSeason` |
+| Season rollover squad maintenance | `packages/engine/src/career/advance-career-season.ts` via `advanceCareerSeason` |
+| Player role quality | `packages/domain/src/player/player-abilities.ts` plus `player-role-profile.ts` |
 | Season simulation use-case | `packages/engine/src/use-cases/simulate-season.ts` |
 | Career fixture progression | `packages/engine/src/career/progress-fixture.ts` via `progressNextCareerFixture` |
 | Post-match player-state consequences | `packages/engine/src/career/career-match-state-consequences.ts` via `applyCareerMatchStateConsequences` |
 | Career Continue loop | `packages/engine/src/career/continue-career.ts` via `continueCareerUntilAttention` |
+| Player participation ledger | `packages/domain/src/career/player-participation.ts` |
 | Match simulation | `packages/engine/src/match-engine/simulate-match.ts` |
 | Staged matchday progression | `packages/engine/src/match-engine/staged-match-progression.ts` |
 | Player match ratings | `packages/engine/src/match-engine/player-match-rating.ts` |
@@ -132,6 +139,70 @@ Why this matters:
 | Web current-product visual and journey QA | `apps/web/src/visual-qa/current-product.spec.ts` |
 | Web SQLite/OPFS persistence QA | `apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts` |
 
+## Canonical Player Lifecycle
+
+Follow this path when a generated player looks implausible, develops
+incorrectly, disappears from a squad, receives an unexpected valuation, or
+fails to survive a save round trip:
+
+```text
+content producer
+  -> generated-player-factory.ts
+  -> domain createPlayer(...)
+  -> CareerState / GameState
+  -> player-participation.ts durable participation ledger
+  -> engine development and lifecycle use-cases
+  -> engine market decisions
+  -> storage normalization and mapping
+  -> CLI/web projection
+```
+
+The responsibilities inside that path are deliberately narrow:
+
+1. `fake-players.ts`, `initial-youth-academies.ts`, and
+   `career-intake-players.ts` choose source-specific identity, age, division,
+   club-tier, rarity, and random-stream policy.
+2. `generated-player-factory.ts` assembles those facts with complete role
+   identity, enforces the generated `1..20` scale and role caps, raises
+   potential below current, and crosses the domain constructor once.
+3. `create-player.ts` validates facts only. It contains no RNG, division
+   balance, development curve, persistence, or presentation behavior.
+4. `player-abilities.ts` owns the only ordered 25-attribute traversal and the
+   explicitly different raw diagnostic, role-current, and role-potential
+   measures. `player-role-profile.ts` owns the shared role weights, buckets,
+   and incoherent-attribute hard caps.
+5. `advance-career-month.ts` is the canonical career-calendar checkpoint for
+   completed participation months. It applies slow player development through
+   the participation ledger and uses closed month keys as the durable
+   idempotency guard for Continue, direct fixture progress, reload, and season
+   rollover routes.
+6. `advance-career-season.ts` orchestrates the season transition. Monthly
+   lifecycle, exits, youth lifecycle, promotion, squad maintenance, and
+   transfer turnover remain separate engine decisions and consume the canonical
+   player facts.
+7. `player-participation.ts` owns durable structured participation facts:
+   starts, substitute appearances, minutes, sampled ratings, played-role
+   minutes, closed development months, and fixture idempotency. Fixture
+   progression feeds these rows from real match participation; monthly
+   lifecycle consumes completed months for slow development.
+8. `player-valuation.ts` and `player-willingness.ts` evaluate football quality
+   for the player's primary role. `derivePlayerMarketAbility` is the public
+   engine projection reused by outer adapters that need current and potential
+   role quality; tactical-board suitability remains a separate formation-slot
+   decision.
+8. `career-save-envelope.ts` accepts only the current beta save envelope. JSON
+   and SQLite persist the same durable player facts without inventing gameplay
+   policy; discarded beta saves fail with a typed reset boundary instead of
+   migration or normalization.
+9. CLI reports and web adapters project canonical role measures. They may
+   format or scale those facts, but they must not enumerate abilities or define
+   private role averages.
+
+Debug the first owner of the incorrect fact. Do not compensate in a later
+consumer: generation defects belong to content, invariant defects to domain,
+state-transition defects to engine, round-trip defects to storage, and label or
+layout defects to an app adapter.
+
 ## Important Files By Area
 
 ### Domain
@@ -143,7 +214,27 @@ Why this matters:
   Contains durable game/career/youth state contracts.
 - `packages/domain/src/career/*`
   Contains durable language-agnostic career attention and Inbox/Posta contracts.
-  These are domain data contracts, not presentation text or UI behavior.
+  These are domain data contracts, not presentation text or UI behavior. The
+  same area now owns the participation ledger used by later development steps:
+  fixture idempotency, starts, substitute appearances, minutes, ratings, and
+  played-role minutes.
+- `packages/domain/src/player/player-abilities.ts`
+  Owns the ordered 25-attribute vocabulary, traversal helpers, potential
+  invariant, and explicitly distinct raw diagnostic, role-current, and
+  role-potential measures. Generators and engines must not recreate this
+  attribute algebra.
+- `packages/domain/src/player/player-role-profile.ts`
+  Owns stable role attribute buckets, evaluation weights, and global
+  role-incoherence hard caps. Content may decide generation ranges, but it must
+  consume these profiles instead of defining a parallel football table.
+- `packages/domain/src/player/create-player.ts`
+  Pure boundary for every newly produced player. It validates namespaced ID,
+  birth/reference dates, natural position and role agreement, complete role
+  identity, all current/potential abilities, role hard caps, the potential
+  invariant, and initial dynamic state. It accepts no RNG and returns a
+  `RoleIdentifiedPlayer`; historical-save normalization remains a separate
+  storage concern because persisted `Player` role fields stay optional for
+  compatibility.
 - `packages/domain/src/tactics/player-roles.ts`
   Canonical football role contract. It defines the 12 player roles supported by
   the game: goalkeeper, full backs, center back, defensive midfielder, central
@@ -231,7 +322,10 @@ Shared files must stay free from football concepts.
   resolution is derived from fixture facts, and played fixtures/season rollover
   create only the supported structured summaries.
 - `packages/engine/src/career/player-development.ts`
-  Growth and aging model. Large but coherent.
+  Deterministic growth and aging policy. It traverses abilities through the
+  domain API, evaluates progress against the player's primary-role profile,
+  and reapplies domain-owned hard caps. Age curves and rates remain engine
+  policy.
 - `packages/engine/src/career/squad-maintenance.ts`,
   `transfer-turnover.ts`, `youth-lifecycle.ts`, `youth-intake.ts`,
   `youth-promotion.ts`
@@ -256,10 +350,15 @@ Engine files must not import content, storage, CLI, or i18n.
   Initial youth academy generation for career saves.
 - `packages/content/src/generators/career-intake-players.ts`
   Later-career intake players used by long-run refresh.
+- `packages/content/src/generators/generated-player-factory.ts`
+  Shared strict assembly seam for senior, initial-youth, seasonal-youth, and
+  later-career producers. It does not own source-specific distribution policy.
+- `packages/content/src/generators/player-rarity-budget.ts`
+  Deterministic division-level youth rarity allocation. It keeps ordinary
+  prospects as the majority while bounding high and elite arrivals.
 - `packages/content/src/generators/player-role-templates.ts`
-  Role-based ability shaping rules.
-- `packages/content/src/generators/player-role-attribute-classification.ts`
-  Role/attribute classification rules.
+  Generation-specific role and division sampling ranges. Stable role meaning
+  and hard caps live in domain, not in this content policy file.
 - `packages/content/src/identity/*`
   Name cultures, nationality distribution, flag metadata.
 - `packages/content/src/index.ts`
@@ -275,8 +374,9 @@ adapt.
   adapters implement this interface; callers do not depend on filesystem,
   SQLite, OPFS, or worker details.
 - `packages/storage/src/career-save-envelope.ts`
-  Versioned JSON save envelope validation and migration used by the Node
-  adapter.
+  Current beta JSON save-envelope validation. Phase 75 intentionally supports
+  only envelope v3; earlier beta saves return a typed unsupported-schema reset
+  error and are not migrated, normalized, or dual-read.
 - `packages/storage/src/json-career-storage.ts`
   Node/CLI JSON career adapter. This is the only career adapter that imports
   Node filesystem and path APIs.
@@ -284,15 +384,20 @@ adapt.
   Browser-facing `CareerStorage` implementation over a narrow worker port. It
   owns typed error mapping and delegates SQL execution to the web worker.
 - `packages/storage/src/sqlite/sqlite-career-migrations.ts`
-  Ordered immutable relational migrations. Browser schema version 6 is the
-  current version and includes tactical preparation, match checkpoints, and
-  current-season Posta messages with ordered blockers and actions.
+  Ordered immutable relational migrations. Browser schema version 7 is the
+  current beta baseline and includes tactical preparation, match checkpoints,
+  current-season Posta messages, and the durable player participation ledger.
+  Existing beta databases below version 7 are intentionally unsupported and
+  route to the reset flow instead of being upgraded.
 - `packages/storage/src/sqlite/career-state-mapper.ts`
   Relational write/read mapping for career systems, match reports,
-  preparation, active match checkpoints, and durable Inbox lifecycle.
+  preparation, active match checkpoints, durable Inbox lifecycle, and the
+  participation ledger rows used by monthly development.
 - `packages/storage/src/sqlite/world-state-mapper.ts`
   Relational write/read mapping for ordered clubs, players, abilities, dynamic
-  state, rosters, fixtures, and fixture results.
+  state, rosters, fixtures, and fixture results. It traverses abilities through
+  the domain-owned canonical 25-key list and validates reconstructed career
+  world state through the same current beta construction boundary as JSON.
 - `packages/storage/src/json-game-storage.ts`
   Older game-state JSON storage.
 - `packages/storage/src/migrate-save.ts`
@@ -595,13 +700,14 @@ text or importing engine internals.
   fallback phase from the older summary view.
 - `apps/web/src/features/matchday/career-matchday-presenter.ts`
   Pure browser-side presenter for matchday information architecture. It derives
-  compact score-header facts, passive phase progress, one primary command, and
-  ordered tabellino/live-feed event groups from existing structured matchday
-  facts. At full time it also derives selected-club ratings, deterministic
-  outcome state, and presentation-relevant merged player consequences while
-  omitting routine duplicate team facts. Reveal-only phase actions are excluded
-  from its manager-action type, so the screen can expose only decisions or
-  navigation. It does not simulate, localize prose, persist data, or invent
+  compact score-header facts, passive phase progress, one primary command, one
+  current commentary moment, and a persistent compact tabellino from existing
+  structured matchday facts. At half time and full time it partitions real
+  player ratings by selected club and opponent; at full time it also derives
+  deterministic outcome state and presentation-relevant merged consequences
+  while omitting routine duplicate team facts. Reveal-only phase actions are
+  excluded from its manager-action type, so the screen exposes only decisions
+  or navigation. It does not simulate, localize prose, persist data, or invent
   match events.
 - `apps/web/src/features/matchday/matchday-playback.ts`
   Pure, bounded presentation policy over already-computed half-time and
@@ -611,21 +717,42 @@ text or importing engine internals.
   for reduced motion. It owns no engine mutation, save write, interval, or
   durable playback cursor.
 - `apps/web/src/features/matchday/MatchdayLivePhase.tsx`
-  Focused live-period composition shared by match playback. It renders the
-  current score context, structured event hierarchy, and polite live status
-  from presenter facts without adding football outcomes or technical IDs.
+  Focused live commentary primitive shared by both periods. It keeps one stable
+  polite live region under the score, replaces its current structured event
+  instead of appending a feed, and never adds football outcomes or technical
+  IDs.
+- `apps/web/src/features/matchday/MatchdayPlaybackControls.tsx`
+  Presentation-only pause and speed controls for already-computed frames. It
+  exposes one toggle and one segmented speed choice with stable accessible
+  names; reduced-motion mode bypasses interpolation before this component is
+  mounted.
+- `apps/web/src/features/matchday/MatchdayTabellino.tsx`
+  Compact two-sided match incident summary placed directly below the broadcast
+  header. Goals own the strongest hierarchy; substitutions and other supported
+  incidents remain secondary. Empty phases omit the component rather than
+  inventing filler.
+- `apps/web/src/features/matchday/MatchdayPhaseTabs.tsx`
+  Shared accessible tab primitive for interval and full-time review. It owns
+  roving keyboard focus, selected-panel linkage, narrow wrapping, and no match
+  facts or route state.
+- `apps/web/src/features/matchday/MatchdayTeamRatings.tsx`
+  Reusable selected-team/opponent ratings table driven only by presenter rows.
+  It keeps role, rating, condition, contribution, and decision signals in one
+  scan-friendly component without persisting a separate review model.
 - `apps/web/src/features/matchday/MatchdayHalfTimePhase.tsx`
-  Composition-only interval workspace. It orders presenter-derived decisive
-  events and selected-club player signals before the existing shared tactical
-  board and bench, owns one validation strip, and exposes the existing resume
-  callback only when the draft is valid. It does not own match simulation,
-  tactical rules, persistence, board geometry, or player suitability.
+  Composition-only interval workspace with Summary, Tactics, selected-team,
+  and opponent tabs. Summary owns concise decision signals and one validation
+  strip; Tactics reuses the approved board and bench. Assigning a bench player
+  to an occupied XI slot uses the current substitution command, while shape,
+  movement, role, and suitability remain shared board concerns. The obsolete
+  two-select substitution fallback is removed. The component does not own
+  simulation, persistence, geometry, or player suitability.
 - `apps/web/src/features/matchday/MatchdayFullTimePhase.tsx`
-  Composition-only full-time football review. It orders decisive structured
-  incidents, selected-club ratings, and meaningful durable player consequences
-  after the dominant result, omits unavailable optional facts, and exposes no
-  secondary exit or technical diagnostic table. It does not derive engine
-  outcomes, commit results, or persist review state.
+  Composition-only full-time review with selected-team, opponent, and
+  consequence tabs beneath the dominant result and tabellino. It omits
+  unavailable optional facts and exposes no secondary exit or technical
+  diagnostic table. It does not derive engine outcomes, commit results, or
+  persist review state.
 - `apps/web/src/features/matchday/CareerMatchdayScreen.tsx`
   Localized five-state match centre. It renders pre-match confirmation,
   bounded first-half playback after one explicit Start match command, the real
@@ -633,13 +760,13 @@ text or importing engine internals.
   and full-time review from the phase-aware `@game/ui` matchday read model plus
   the web presenter. One screen-level presentation controller keeps shell and
   centre on the same visible phase. Presentation timing uses one cleared timeout
-  per immutable frame, stops automatically at both canonical checkpoints, and
-  never checkpoints or persists separately. Half-time and full time delegate
-  their complete body compositions to `MatchdayHalfTimePhase` and
-  `MatchdayFullTimePhase`, while the screen header remains the single
-  score/minute/phase/action owner. Full time is ordered as tabellino, selected-
-  club ratings, then meaningful consequences; half-time is the only editable
-  tactical workspace. It does not own engine rules.
+  per immutable frame, supports bounded event-priority holds and presentation-
+  only pause/speed, stops automatically at both canonical checkpoints, and
+  never checkpoints or persists a playback cursor. The broadcast header is the
+  single score/minute/commentary/action owner; a compact tabellino follows it.
+  Half-time and full time delegate their tabbed bodies to
+  `MatchdayHalfTimePhase` and `MatchdayFullTimePhase`. Half time is the only
+  editable tactical workspace. It does not own engine rules.
 - `apps/web/src/visual-qa/current-product.spec.ts`
   Authoritative Playwright QA for the current browser product. It covers App
   Entry lifecycle states; Dashboard, Posta, preparation, staged Matchday, and
@@ -647,13 +774,17 @@ text or importing engine internals.
   narrow, focus, `200%` text, and reduced-motion behavior; and the approved
   tactical-board interactions including assignment order, duplicate prevention,
   goalkeeper lock, movement clamp, role change, menu dismissal, keyboard, and
-  touch long press. Step 10 evidence is written under
-  `/tmp/the-long-season-phase73b/step-10`.
+  touch long press. The Phase 73C release matrix additionally proves bounded
+  playback, event priority, compact tabellino, interval tactical change,
+  selected/opponent review tabs, focus, text zoom, and reduced motion. Current
+  Phase 73C evidence is written under
+  `/tmp/the-long-season-phase73c/step-08`.
 - `apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts`
   Focused Playwright proof for the unique browser persistence boundary. It
   round-trips isolated ordered career worlds through SQLite WASM on OPFS and
-  proves failed replacement rollback. Together with `current-product.spec.ts`
-  it forms the complete `pnpm web:visual:qa` release gate.
+  proves failed replacement rollback, including the Phase 75 participation
+  ledger. Together with `current-product.spec.ts` it forms the complete
+  `pnpm web:visual:qa` release gate.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
   styles, including the rebuilt app shell, Posta/attention rail, dashboard,
@@ -683,6 +814,62 @@ meaningful decision checkpoint: saved pre-match preparation, half-time state,
 or the completed full-time review. Full time is committed once in one storage
 transaction; subsequent loads derive presentation from the durable fixture
 report and do not apply football consequences again.
+
+### Web Motion System
+
+Phase 76 introduces one web-only motion Module for feedback, spatial
+continuity, and football-event emphasis. Its Interface is intentionally small:
+shared semantic motion categories, bounded timing/easing presets, an
+application provider, and reusable presentation variants. Its Implementation
+uses Motion for React inside `apps/web` only.
+
+The ownership flow is:
+
+```text
+structured engine/domain facts
+  -> pure UI/browser presenter
+  -> React screen state
+  -> semantic motion category
+  -> shared Motion-for-React Adapter
+```
+
+The motion Module may explain that a command started, a screen changed, an
+Inbox item arrived, a player moved between tactical selections, or a decisive
+match event occurred. It may not create the fact, choose the command, alter the
+career, persist a playback cursor, or determine when simulation is valid.
+
+Architectural constraints:
+
+- `apps/web` is the only package allowed to import Motion for React.
+- `MotionConfig reducedMotion="user"` defines the application accessibility
+  policy; reduced motion changes presentation, never facts or destinations.
+- `LazyMotion` and the smallest production-used feature bundle protect initial
+  load cost. Normal `motion.*` imports must not silently defeat this policy.
+- Renderers import the lazy `m` namespace from `motion/react-m`; only the
+  application provider, hooks, feature-bundle loader, and shared types use
+  `motion/react`. This keeps feature loading visible during review.
+- The shared motion Module owns durations, curves, springs, and variants. A
+  screen selects semantic intent rather than inventing local timing values.
+- CSS continues to own simple hover, focus, and color feedback. Motion owns
+  React enter/exit, bounded sequencing, and meaningful layout continuity.
+- Animation callbacks are not command or persistence seams. Navigation,
+  simulation, saving, match progression, and focus destinations remain correct
+  when animations are skipped.
+- The only completion callbacks clear one-shot local presentation cues. They
+  may not write Zustand or storage, invoke a command, or determine a football
+  checkpoint. Calendar-date replacement also uses the shared transition and no
+  longer has a parallel React-state CSS keyframe.
+- Matchday event holds remain in `matchday-playback.ts`; Motion presents each
+  immutable frame but does not control the underlying hold policy.
+- Tactical drag geometry remains in the tactical-board Modules. Motion may
+  present assignment, removal, substitution, and formation continuity, but it
+  must not replace normalized coordinates, clamp rules, or pointer ownership.
+- No static widget, table row, decorative background, or repeated badge moves
+  merely because Motion is available.
+
+Future browser features must document their motion category (`none`, `micro`,
+`transition`, or `narrative`) during step planning. This is a design decision,
+not a requirement that every element animate.
 
 ### Formation-To-Pitch Flow
 

@@ -5,12 +5,18 @@ import {
   abilityValue,
   clubId,
   gameDate,
+  getPlayerRoleProfile,
+  mapPlayerAbilities,
   nonNegativeMoney,
   playerId,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
+  rolePotentialAbility,
   type Club,
   type Player,
   type PlayerAbilities,
   type PlayerPosition,
+  type PlayerRole,
 } from "@game/domain";
 
 import {
@@ -86,6 +92,58 @@ test("category, reputation, and position multipliers affect value", () => {
   assert.ok(thirdDivision.value > goalkeeper.value);
 });
 
+test("role-shaped specialists are valued through football quality rather than diluted raw averages", () => {
+  const samples: readonly {
+    readonly role: PlayerRole;
+    readonly position: PlayerPosition;
+    readonly age: number;
+  }[] = [
+    { role: "goalkeeper", position: "gk", age: 19 },
+    { role: "center_back", position: "cb", age: 24 },
+    { role: "central_midfielder", position: "cm", age: 28 },
+    { role: "winger", position: "rw", age: 31 },
+    { role: "striker", position: "st", age: 35 },
+  ];
+
+  for (const [index, sample] of samples.entries()) {
+    const abilities = roleShapedAbilities(sample.role, 15, 11, 2);
+    const potential = roleShapedAbilities(sample.role, 17, 13, 3);
+    const player = {
+      ...playerFixture(String(index), sample.position, 1, 1, sample.age),
+      primaryRole: sample.role,
+      abilities,
+      potential,
+    };
+    const valuation = derivePlayerValuation({
+      player,
+      club: clubFixture("profile", "third_division", 5),
+      currentDate: gameDate(20_000),
+      config: DEFAULT_PLAYER_VALUATION_CONFIG,
+    });
+    const profile = getPlayerRoleProfile(sample.role);
+    const rawCurrent = Number(rawDiagnosticAbilityAverage(abilities));
+
+    assert.equal(valuation.currentAbilityAverage, Number(roleCurrentAbility(abilities, profile)));
+    assert.equal(valuation.potentialAbilityAverage, Number(rolePotentialAbility(potential, profile)));
+    assert.ok(valuation.currentAbilityAverage > rawCurrent);
+    assert.ok(valuation.value > 0);
+  }
+});
+
+test("historical players without role identity retain raw-average valuation compatibility", () => {
+  const rolePlayer = playerFixture("legacy", "st", 12, 14, 24);
+  const { primaryRole: _primaryRole, ...legacyPlayer } = rolePlayer;
+  const valuation = derivePlayerValuation({
+    player: legacyPlayer,
+    club: clubFixture("legacy", "third_division", 5),
+    currentDate: gameDate(20_000),
+    config: DEFAULT_PLAYER_VALUATION_CONFIG,
+  });
+
+  assert.equal(valuation.currentAbilityAverage, Number(rawDiagnosticAbilityAverage(legacyPlayer.abilities)));
+  assert.equal(valuation.potentialAbilityAverage, Number(rawDiagnosticAbilityAverage(legacyPlayer.potential)));
+});
+
 test("derivePlayerValuation clamps to configured value limits", () => {
   const config: PlayerValuationConfig = {
     ...DEFAULT_PLAYER_VALUATION_CONFIG,
@@ -150,9 +208,22 @@ function playerFixture(
     lastName: `Player${suffix}`,
     birthDate: gameDate(20_000 - age * 365),
     naturalPositions: [primaryPosition],
+    primaryRole: roleForPosition(primaryPosition),
     abilities: abilitiesFixture(currentAbility),
     potential: abilitiesFixture(potentialAbility),
   };
+}
+
+function roleForPosition(position: PlayerPosition): PlayerRole {
+  if (position === "gk") return "goalkeeper";
+  if (position === "cb") return "center_back";
+  if (position === "rb" || position === "lb") return "full_back";
+  if (position === "rwb" || position === "lwb") return "wing_back";
+  if (position === "dm") return "defensive_midfielder";
+  if (position === "cm") return "central_midfielder";
+  if (position === "am") return "attacking_midfielder";
+  if (position === "rw" || position === "lw") return "winger";
+  return "striker";
 }
 
 function clubFixture(suffix: string, category: Club["category"], reputation: number): Club {
@@ -204,6 +275,21 @@ function abilitiesFixture(value: number): PlayerAbilities {
       footwork: ability,
     },
   };
+}
+
+function roleShapedAbilities(
+  role: PlayerRole,
+  coreValue: number,
+  secondaryValue: number,
+  fallbackValue: number,
+): PlayerAbilities {
+  const profile = getPlayerRoleProfile(role);
+  const core = new Set(profile.coreForRole);
+  const secondary = new Set(profile.secondaryForRole);
+
+  return mapPlayerAbilities(abilitiesFixture(fallbackValue), (_value, key) =>
+    abilityValue(core.has(key) ? coreValue : secondary.has(key) ? secondaryValue : fallbackValue),
+  );
 }
 
 /** Asserts a typed player valuation failure and its stable machine code. */

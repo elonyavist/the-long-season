@@ -3,27 +3,34 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  abilityValue,
   clubId,
   createCareerState,
   createMarketState,
   gameDate,
+  getPlayerRoleProfile,
+  mapPlayerAbilities,
   nonNegativeMoney,
   playerId,
   saveId,
   seasonId,
   stateValue,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
   type CareerState,
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
+  type PlayerPosition,
+  type PlayerRole,
 } from "@game/domain";
 
 import { applyYouthAcademyLifecycle } from "./youth-lifecycle.ts";
 
 /** Tests for youth academy development and age-out lifecycle rules. */
 
-test("applyYouthAcademyLifecycle develops active youth without changing senior player abilities", () => {
+test("applyYouthAcademyLifecycle does not invent youth growth without real participation", () => {
   const senior = playerId("player:senior");
   const youth = playerId("player:youth-young");
   const careerState = careerStateFixture([
@@ -35,10 +42,12 @@ test("applyYouthAcademyLifecycle develops active youth without changing senior p
     worldSeed: "youth-lifecycle",
     seasonId: seasonId("season:0002"),
   });
+  const youthBefore = careerState.gameState.players[youth]?.abilities;
   const developedYouth = result.careerState.gameState.players[youth];
 
   assert.equal(result.developmentChanges.length, 1);
-  assert.equal(developedYouth !== undefined && developedYouth.abilities.technical.passing > 6, true);
+  assert.equal(result.developmentChanges[0]?.totalGrowth, 0);
+  assert.deepEqual(developedYouth?.abilities, youthBefore);
   assert.deepEqual(result.careerState.gameState.players[senior]?.abilities, seniorBefore);
   assert.equal(result.records.length, 0);
 });
@@ -75,6 +84,29 @@ test("applyYouthAcademyLifecycle keeps aged-out promotion candidates outside the
   assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 0);
   assert.equal(result.careerState.gameState.players[candidate] !== undefined, true);
   assert.equal(result.careerState.youthAcademyState?.playerLifecycle[candidate]?.status, "promotion_candidate");
+});
+
+test("applyYouthAcademyLifecycle evaluates goalkeeper age-out quality in the goalkeeper role", () => {
+  const candidate = playerId("player:youth-goalkeeper-specialist");
+  const abilities = roleShapedAbilities("goalkeeper", 14, 1);
+  const careerState = careerStateFixture([
+    youthPlayerFixture(candidate, 20, abilities, abilities, {
+      position: "gk",
+      primaryRole: "goalkeeper",
+    }),
+  ]);
+
+  assert.equal(Number(rawDiagnosticAbilityAverage(abilities)) < 8.8, true);
+  assert.equal(Number(roleCurrentAbility(abilities, getPlayerRoleProfile("goalkeeper"))) >= 8.8, true);
+
+  const result = applyYouthAcademyLifecycle({
+    careerState,
+    worldSeed: "goalkeeper-role-age-out",
+    seasonId: seasonId("season:0002"),
+  });
+
+  assert.equal(result.records[0]?.outcome, "promotion_candidate");
+  assert.equal(result.careerState.gameState.players[candidate] !== undefined, true);
 });
 
 test("applyYouthAcademyLifecycle returns unchanged state when no youth academy exists", () => {
@@ -182,21 +214,41 @@ function seniorPlayerFixture(id: PlayerId): Player {
     lastName: "One",
     birthDate: gameDate(9_000),
     naturalPositions: ["cm"],
+    primaryRole: "central_midfielder",
     abilities: abilitySet(10),
     potential: abilitySet(12),
   };
 }
 
-function youthPlayerFixture(id: PlayerId, age: number, abilities: PlayerAbilities, potential: PlayerAbilities): Player {
+function youthPlayerFixture(
+  id: PlayerId,
+  age: number,
+  abilities: PlayerAbilities,
+  potential: PlayerAbilities,
+  role: { readonly position: PlayerPosition; readonly primaryRole: PlayerRole } = {
+    position: "cm",
+    primaryRole: "central_midfielder",
+  },
+): Player {
   return {
     id,
     firstName: "Youth",
     lastName: String(id),
     birthDate: gameDate(20_000 - age * 365),
-    naturalPositions: ["cm"],
+    naturalPositions: [role.position],
+    primaryRole: role.primaryRole,
     abilities,
     potential,
   };
+}
+
+function roleShapedAbilities(role: PlayerRole, relevantValue: number, baselineValue: number): PlayerAbilities {
+  const profile = getPlayerRoleProfile(role);
+  const relevantKeys = new Set([...profile.coreForRole, ...profile.secondaryForRole]);
+
+  return mapPlayerAbilities(abilitySet(baselineValue), (value, key) =>
+    relevantKeys.has(key) ? abilityValue(relevantValue) : value,
+  );
 }
 
 function playerStateFixture(): PlayerDynamicState {

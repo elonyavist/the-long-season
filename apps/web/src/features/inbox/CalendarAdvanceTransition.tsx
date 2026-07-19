@@ -1,4 +1,7 @@
 import type { Translator } from "@game/i18n";
+import * as m from "motion/react-m";
+
+import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
 /** Minimal presentation state exposed by the career UI adapter. */
 export type CalendarAdvancePresentation = Readonly<{
@@ -27,9 +30,16 @@ export function CalendarAdvanceTransition({
     <div className="tls-calendar-advance-transition" data-status={transition.status} aria-hidden="true">
       <div className="tls-calendar-advance-visual">
         <span>{text("career.calendarAdvance.label")}</span>
-        <time dateTime={transition.visibleDateIso} key={transition.visibleDateIso}>
+        <m.time
+          animate={webMotionTargets.rest}
+          data-motion-calendar-date="true"
+          dateTime={transition.visibleDateIso}
+          initial={webMotionTargets.footballContextEnter}
+          key={transition.visibleDateIso}
+          transition={webMotion.transition}
+        >
           {transition.visibleDateIso}
-        </time>
+        </m.time>
       </div>
     </div>
   );

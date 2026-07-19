@@ -2,10 +2,11 @@
 
 Date: 2026-06-24
 Current baseline: Phase 73 Inbox/Posta decision centre, audit-only Phase 73A,
-and bounded Phase 73B premium remediation are complete.
+bounded Phase 73B premium remediation, and user-requested Phase 73C Matchday
+broadcast rework are complete.
 Phase 69's single fixed web identity supersedes the earlier three-skin
-experiment. Phase 73B is the bounded remediation required before the
-already-reserved Phase 74.
+experiment. Phase 74 documentation is complete after the bounded Phase 73C
+interposition; Steps 01-09 are complete and Step 10 is active.
 
 ## Supersession Note - 2026-06-25
 
@@ -144,9 +145,157 @@ Phase 73B completion status:
   SQLite/OPFS.
 - Every step preserves the tactical board and removes replaced presentation
   code in the same bounded scope.
-- Exactly one next recommendation remains: document and then execute the
-  already-reserved `Phase 74 - Player Generation And Model Consolidation
-  Cleanup`. Phase 74 is not started here.
+- At Phase 73B close, the single next recommendation was the already-reserved
+  `Phase 74 - Player Generation And Model Consolidation Cleanup`. The later
+  user-requested Phase 73C interposition below supersedes only that immediate
+  order. Phase 74 remains unchanged and not started.
+
+## Matchday Broadcast Interposition Note - 2026-07-17
+
+After Phase 73B completed, direct product review found that Matchday still
+behaved too much like a growing event report. The user explicitly scheduled:
+
+- `Phase 73C - Matchday Broadcast Workspace And Tabbed Review Rework`.
+
+Phase 73C is a browser-visible presentation interposition. It gives Matchday
+100% of the content space beside the existing persistent career menu, removes
+duplicated pre-match metadata, replaces the accumulating live event list with
+one stable commentary line, adds presentation-only playback controls and
+event-priority holds, places a compact tabellino under the score, and uses
+accessible tabs for half-time and full-time detail.
+
+Locked preservation:
+
+- no match-engine, rating, balance, or event-generation change;
+- no unsupported penalty/card/injury placeholder or inert future branch;
+- no persistence of playback, speed, pause, or tab state;
+- no global shell/sidebar redesign;
+- no tactical-board, pitch SVG, geometry, role, suitability, or interaction
+  change;
+- no Phase 74 implementation.
+
+Detailed documentation:
+
+- `docs/steps/73c-matchday-broadcast-workspace-and-tabbed-review-rework/`
+
+Progress:
+
+- Step 01 complete: Matchday explicitly owns the whole shell content outlet,
+  the sidebar contract is unchanged, and the redundant pre-match Ready,
+  Fixture, and Venue card and labels are deleted. The scoreboard now carries
+  the only fixture summary and one Start match command.
+- Step 02 complete: one pure structured-event policy now controls opening,
+  routine, significant, and goal holds for both halves. Pause/Resume and
+  `1x`/`2x`/`4x` are ephemeral, accessible presentation controls; timer
+  cancellation covers pause, speed, phase, command failure, and unmount.
+- Step 02 verification: Node 24.16.0; i18n/web tests (53 files / 223 tests),
+  web typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS,
+  desktop/narrow playback screenshots, diff check, and Graphify update all
+  pass.
+- Step 03 complete: one bounded localized commentary line now replaces the
+  accumulated live feed without changing page height. The sampled frame
+  exposes the structured event responsible for its highest hold priority;
+  goals use one restrained readable state, while routine incidents remain
+  quieter and Pause/Resume freezes the exact visible line.
+- Step 03 verification: Node 24.16.0; i18n/web tests (53 files / 225 tests),
+  web typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS, and
+  manually reviewed commentary screenshots all pass.
+- Step 04 complete: one presenter contract and one compact component now own
+  the chronological home/away tabellino beneath the commentary. It renders
+  only current goals and real applied substitutions, bounds keyboard-reachable
+  overflow, disappears for an event-free match, and replaces the old live,
+  half-time, and full-time incident lists without future placeholder branches.
+- Step 04 verification: Node 24.16.0; i18n tests, web tests (54 files / 229
+  tests), typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS,
+  screenshot review, diff check, and Graphify update all pass.
+- Step 05 complete: half time now opens on one concise Summary inside an
+  accessible four-tab shell. Existing player attention facts, validation, and
+  substitution count have one owner; the old signals card is deleted, tab
+  state remains ephemeral, and the shared tactical board is unchanged.
+- Step 05 verification: Node 24.16.0; i18n tests, web tests (55 files / 231
+  tests), typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS,
+  event-rich/event-light wide and narrow screenshot review, and diff check all
+  pass.
+- Step 06 complete: Tactics now owns the unchanged shared board and live draft;
+  Your team and Opponent reuse one responsive observed-facts rating
+  composition with deterministic active-first ordering. Tab changes preserve
+  unsaved tactical work and no horizontal page scroll is introduced.
+- Step 06 verification: Node 24.16.0; i18n/web tests (56 files / 233 tests),
+  web typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS,
+  dependency-cruiser, full `pnpm check` (168 files / 989 tests), screenshot
+  review, diff check, and Graphify update all pass.
+- Step 07 complete: full time keeps the final score, commentary, and tabellino
+  stable above Your team, Opponent, and Consequences tabs. Both clubs reuse
+  one final-rating composition, only meaningful durable changes appear, and
+  one Dashboard exit remains.
+- Step 07 verification: Node 24.16.0; i18n/web tests (56 files / 234 tests),
+  web typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS,
+  dependency-cruiser, full `pnpm check` (168 files / 990 tests), all required
+  final-review screenshots, diff check, and Graphify update pass.
+- Step 08 complete: the complete Matchday route now reflows at desktop, wide,
+  narrow, and useful 200% text; checkpoint focus follows the visible heading;
+  the resting skip link remains off canvas; touch, keyboard, reduced motion,
+  live commentary, tabs, playback controls, and tabellino facts pass the
+  canonical browser matrix without horizontal overflow or cumulative growth.
+- Step 08 verification: Node 24.16.0; i18n/web tests (56 files / 234 tests), web
+  typecheck/build, canonical Playwright 18/18 with real SQLite/OPFS,
+  dependency-cruiser, full `pnpm check` (168 files / 990 tests), desktop/wide/
+  narrow/200%-text/touch/keyboard/reduced-motion screenshots, diff check, and
+  Graphify update pass.
+- Step 09 complete: the canonical real SQLite/OPFS journey now proves the full
+  broadcast lifecycle, all interval/final tabs, one real half-time tactical
+  change, checkpoint refresh, command failure, responsive/accessibility/motion
+  states, and return to Dashboard. The obsolete two-select interval fallback,
+  formatter, styles, labels, and assertion were deleted; the current typed
+  substitution contract remains because the board, change history, validation,
+  store command, and persistence use it.
+- Step 09 verification: Node 24.16.0; i18n tests; web tests (56 files / 235
+  tests); web typecheck/build; dependency-cruiser (498 modules / 1,721
+  dependencies); full `pnpm check` (168 files / 991 tests); canonical
+  Playwright 18/18 with real SQLite/OPFS; desktop/wide/narrow/200%-text/
+  keyboard/touch/reduced-motion screenshot review; diff check; and Graphify
+  update all pass.
+- Final report:
+  `docs/audits/MATCHDAY_BROADCAST_WORKSPACE_REWORK_REPORT.md`.
+
+## Phase 74 Player-Model Consolidation Note - 2026-07-17
+
+Phase 74 is now fully documented at:
+
+- `docs/steps/74-player-generation-and-model-consolidation-cleanup/`.
+
+Its eleven ordered steps first lock a deterministic player baseline, then
+consolidate ability semantics, role profiles/caps, construction, senior and
+youth generation, development, lifecycle, market/report/web consumers, and
+save compatibility before a 250-world x 30-season release gate.
+
+The web boundary is explicit:
+
+- web adapters may consume canonical player facts but may not own a duplicate
+  ability or potential formula;
+- the tactical board, its suitability levels, geometry, interactions, and
+  current Matchday journey remain unchanged;
+- there is no Squad UI, player-detail UI, Market UI, or hidden-potential
+  exposure in Phase 74;
+- the future Squad screen follows only after the consolidated model and save
+  compatibility pass.
+
+Status: Complete. Canonical ability semantics and role profiles now
+exist in domain, every new senior player crosses one validated construction
+boundary, and initial senior plus later-career intake assembly share one
+content-owned seam without sharing generation policy. Initial and seasonal
+youth use that same assembly seam, and a deterministic division budget limits
+youth rarity to 2-5 high and 0-1 elite prospects while preserving exact academy
+structure. Development and lifecycle consumers now use explicit role measures,
+with raw averages retained only where documented compatibility requires them.
+Market, CLI reports, and the web preparation adapter now consume canonical role
+facts while tactical suitability and every board interaction remain separate
+and unchanged. JSON plus SQLite/OPFS compatibility normalize historical role
+identity deterministically without a schema bump, and the complete
+current-product browser gate is order-independent. Step 11 closes the phase
+with zero structural player-model failures over 250 worlds x 30 seasons,
+strict balance PASS, deleted duplicate formulas, an architecture trace, and an
+explicit classification of two retained out-of-scope global failures.
 
 ## UX Rebuild Supersession Note - 2026-07-01
 
@@ -1766,6 +1915,52 @@ What must not happen:
 - No "everything dashboard" that duplicates every section.
 - No decorative stat cards that do not drive decisions.
 
+### Phase 76 - Web Motion Language And Football Feedback System
+
+Primary dependency: the complete current browser journey through Phase 75.
+
+Purpose:
+
+- Introduce one shared Motion-for-React presentation seam before new sections
+  multiply screen-local transitions and loading feedback.
+- Improve responsiveness, spatial continuity, and football-event hierarchy
+  without changing engine facts, career commands, persistence, or the approved
+  tactical board.
+
+Minimum useful scope:
+
+- web-only bundle-conscious Motion provider and semantic presets;
+- immediate command feedback;
+- restrained shell, dialog, Continue, Posta, and Dashboard transitions;
+- tactical assignment and substitution continuity;
+- Matchday commentary, score, decisive-event, half-time, and full-time
+  choreography;
+- complete reduced-motion, keyboard, responsive, performance, and dead-code
+  QA.
+
+What must not happen:
+
+- No animation as gameplay logic or persistence state.
+- No movement without a feedback, orientation, continuity, or football-story
+  reason.
+- No animated background, broad visual redesign, tactical-board rewrite,
+  unsupported event animation, or second motion system.
+
+Definition of Done:
+
+- Every current browser journey uses one coherent motion language where useful,
+  remains correct with reduced motion, and passes the authoritative Playwright
+  gate without layout growth, overflow, focus loss, or dead animation code.
+
+Completion:
+
+- Steps 01-09 are complete. Motion remains web-only, all current presets have
+  production consumers, the canonical browser gate passes in normal and
+  reduced-motion modes, and the final evidence is recorded in
+  `docs/audits/WEB_MOTION_SYSTEM_REPORT.md`.
+- The single recommended next phase is `Future Web Backlog - Squad Screen And
+  Player Memory Foundation`; it is not started here.
+
 ## Dependency Summary
 
 Recommended order:
@@ -1790,14 +1985,18 @@ Recommended order:
 17. Phase 73 - Inbox/Posta Decision Center And Career Attention Workflow - complete
 18. Phase 73A - Web Product UI/UX Quality Audit And Premium Design Baseline - complete
 19. Phase 73B - Current Web Product Premium Remediation And Journey Hardening - complete
-20. Future Web Backlog - Squad Screen And Player Memory Foundation - follows the globally scheduled Phase 74, not started
-21. Future Web Backlog - Calendar And Fixtures
-22. Future Web Backlog - Market UI MVP
-23. Future Web Backlog - Finances Foundation
-24. Future Web Backlog - Youth UI
-25. Future Web Backlog - Staff Foundation
-26. Future Web Backlog - Archive And History
-27. Future Web Backlog - Main Dashboard Consolidation
+20. Phase 73C - Matchday Broadcast Workspace And Tabbed Review Rework - complete
+21. Phase 74 - Player Generation And Model Consolidation Cleanup - complete
+22. Phase 75 - Player Generation, Potential And Development Lifecycle Rework - complete; no web UI implementation in this phase
+23. Phase 76 - Web Motion Language And Football Feedback System - complete
+24. Future Web Backlog - Squad Screen And Player Memory Foundation - recommended next, not started
+25. Future Web Backlog - Calendar And Fixtures
+26. Future Web Backlog - Market UI MVP
+27. Future Web Backlog - Finances Foundation
+28. Future Web Backlog - Youth UI
+29. Future Web Backlog - Staff Foundation
+30. Future Web Backlog - Archive And History
+31. Future Web Backlog - Main Dashboard Consolidation
 
 This order is intentionally linear:
 
@@ -1824,6 +2023,15 @@ This order is intentionally linear:
 - Phase 73A audits the complete current loop before another feature is added;
   Phase 73B resolves its evidence-backed trust, hierarchy, accessibility,
   action-economy, and ownership findings without a rewrite.
+- Phase 73C completes the user-reviewed Matchday information hierarchy before
+  the roadmap returns to the reserved player-model cleanup.
+- Phase 75 follows the Phase 74 consolidation because future Squad, Youth, and
+  Market screens need one credible source for reachable potential, real-minute
+  development, role familiarity, decline, and lifecycle facts. It is now
+  complete and deliberately added no player-detail UI of its own.
+- Phase 76 establishes one accessible, bundle-conscious motion language before
+  new Squad, Calendar, Market, Finance, Youth, Staff, and Archive sections can
+  accumulate disconnected animation and command-feedback conventions.
 - Squad and tactics are needed before matchday feels like a user choice.
 - Calendar/fixtures make Continue understandable.
 - Matchday closes the first loop.

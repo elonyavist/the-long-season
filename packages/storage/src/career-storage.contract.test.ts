@@ -7,8 +7,12 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  accruePlayerFixtureParticipation,
+  closePlayerParticipationMonth,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   createMarketState,
+  fixtureId,
   gameDate,
   nonNegativeMoney,
   playerId,
@@ -74,6 +78,12 @@ function careerFixture(id: string, seed: string, currentDate: number): CareerSta
         lastName: "Player",
         birthDate: gameDate(10_000),
         naturalPositions: ["gk"],
+        primaryRole: "goalkeeper",
+        archetype: "goalkeeper_shot_stopper",
+        naturalRoles: ["goalkeeper"],
+        adaptedRoles: [],
+        weakRoles: [],
+        roleFamiliarity: { goalkeeper: "natural" },
         abilities: abilitySet(10),
         potential: abilitySet(12),
       },
@@ -98,7 +108,27 @@ function careerFixture(id: string, seed: string, currentDate: number): CareerSta
       clubBudgetIds: [club],
     }),
     transferHistory: [],
+    playerParticipationLedger: playerParticipationLedgerFixture(player),
   });
+}
+
+/** Builds one closed monthly participation ledger for save/load contracts. */
+function playerParticipationLedgerFixture(player: ReturnType<typeof playerId>) {
+  const season = seasonId("season:contract");
+  const monthKey = "2026-08";
+  const accrued = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
+    fixtureId: fixtureId("fixture:contract-001"),
+    playerId: player,
+    seasonId: season,
+    monthKey,
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7.2,
+    playedRoleMinutes: { goalkeeper: 90 },
+  });
+
+  return closePlayerParticipationMonth(accrued, season, monthKey);
 }
 
 /** Creates complete ability groups with one deterministic value. */

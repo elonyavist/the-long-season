@@ -1,12 +1,13 @@
-import type { ClubCategory, PlayerRole } from "@game/domain";
+import {
+  getPlayerRoleProfile,
+  hardCapForRoleAbility,
+  type ClubCategory,
+  type PlayerAbilityKey,
+  type PlayerRole,
+  type RoleAttributeBucket,
+} from "@game/domain";
 import { deriveRng } from "@game/shared";
 
-import {
-  getRoleAttributeClassification,
-  hardCapForRoleAbility,
-  type PlayerAbilityKey,
-  type RoleAttributeBucket,
-} from "./player-role-attribute-classification.ts";
 import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
 
 /** Rarity lane for current ability inside a division/age band. */
@@ -115,7 +116,7 @@ export function resolveSeniorCurrentAbilityBand(input: {
   readonly rarityLane?: CurrentAbilityRarityLane;
 }): CurrentAbilityBandRange {
   const rarityLane = input.rarityLane ?? "normal";
-  const laneBand = SENIOR_CURRENT_ABILITY_BANDS[input.division][input.bucket][rarityLane];
+  const laneBand = resolveLaneBand(SENIOR_CURRENT_ABILITY_BANDS[input.division][input.bucket], rarityLane);
 
   if (laneBand === undefined) {
     throw new Error(`Missing senior current ability band: ${input.division} ${input.bucket} ${rarityLane}`);
@@ -134,13 +135,32 @@ export function resolveYouthCurrentAbilityBand(input: {
 }): CurrentAbilityBandRange {
   const rarityLane = input.rarityLane ?? "normal";
   const ageGroup = youthCurrentAbilityAgeGroup(input.ageYears);
-  const laneBand = YOUTH_CURRENT_ABILITY_BANDS[input.division][ageGroup][input.bucket][rarityLane];
+  const laneBand = resolveLaneBand(YOUTH_CURRENT_ABILITY_BANDS[input.division][ageGroup][input.bucket], rarityLane);
 
   if (laneBand === undefined) {
     throw new Error(`Missing youth current ability band: ${input.division} ${ageGroup} ${input.bucket} ${rarityLane}`);
   }
 
   return applyTierModifier(laneBand, input.clubTier);
+}
+
+function resolveLaneBand(
+  bands: CurrentAbilityLaneBands,
+  rarityLane: CurrentAbilityRarityLane,
+): CurrentAbilityBandRange | undefined {
+  if (bands[rarityLane] !== undefined) {
+    return bands[rarityLane];
+  }
+
+  if (rarityLane === "exceptional") {
+    return bands.rare ?? bands.normal;
+  }
+
+  if (rarityLane === "rare") {
+    return bands.normal;
+  }
+
+  return undefined;
 }
 
 /** Resolves the effective ability range for one role-specific attribute after hard caps. */
@@ -180,7 +200,7 @@ export function sampleCurrentAbilityInBand(input: {
 }
 
 function bucketForRoleAbility(role: PlayerRole, abilityKey: PlayerAbilityKey): RoleAttributeBucket {
-  const classification = getRoleAttributeClassification(role);
+  const classification = getPlayerRoleProfile(role);
 
   if (classification.coreForRole.includes(abilityKey)) return "coreForRole";
   if (classification.secondaryForRole.includes(abilityKey)) return "secondaryForRole";

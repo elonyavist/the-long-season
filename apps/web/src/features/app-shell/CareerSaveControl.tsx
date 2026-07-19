@@ -4,6 +4,7 @@ import type { CareerAutosaveIntervalDays } from "@game/storage";
 import { createContext, useContext, type ReactNode } from "react";
 
 import type { CareerSessionStatus } from "../../runtime/career-session";
+import { CommandFeedbackLabel } from "../shared/CommandActivityIndicator";
 
 /** Commands and facts required by the persistent career save control. */
 export interface CareerSaveLifecycle {
@@ -71,7 +72,11 @@ export function CareerSaveControl({
         type="button"
         onClick={lifecycle.onSave}
       >
-        {text(lifecycle.pending ? "career.saveControl.saving" : "career.saveControl.saveGame")}
+        <CommandFeedbackLabel
+          idleLabel={text("career.saveControl.saveGame")}
+          pending={lifecycle.pending}
+          pendingLabel={text("career.saveControl.saving")}
+        />
       </button>
 
       {lifecycle.canSave ? (

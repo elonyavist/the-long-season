@@ -8,6 +8,8 @@ import {
   createCareerState,
   createMarketState,
   gameDate,
+  getPlayerRoleProfile,
+  mapPlayerAbilities,
   playerId,
   saveId,
   seasonId,
@@ -21,6 +23,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRole,
 } from "@game/domain";
 
 import { simulateTransferTurnover } from "./transfer-turnover.ts";
@@ -135,6 +138,52 @@ test("simulateTransferTurnover rejects casual downward moves for strong players"
   assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.includes(star), true);
 });
 
+test("simulateTransferTurnover protects a strong role specialist despite a low raw average", () => {
+  const buyer = clubId("club:buyer-specialist");
+  const seller = clubId("club:seller-specialist");
+  const specialist = playerId("player:center-back-specialist");
+  const careerState = careerStateFixture([
+    clubFixture(buyer, 3, playersForClub("buyer-specialist", ["gk", "gk", "cb", "cm", "st"])),
+    clubFixture(seller, 8, [
+      ...playersForClub("seller-specialist", ["gk", "gk", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st", "st", "st", "st"]),
+      playerFixture(specialist, "cb", 1, roleShapedAbilities("center_back", 14, 1)).id,
+    ]),
+  ]);
+
+  const result = simulateTransferTurnover({
+    careerState,
+    worldSeed: "specialist-downward-turnover",
+    seasonId: seasonId("season:0001"),
+    maxMoves: 1,
+  });
+
+  assert.deepEqual(result.transfers, []);
+  assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.includes(specialist), true);
+});
+
+test("simulateTransferTurnover evaluates goalkeeper suitability through goalkeeper attributes", () => {
+  const buyer = clubId("club:keeper-buyer");
+  const seller = clubId("club:keeper-seller");
+  const specialist = playerId("player:keeper-specialist");
+  const careerState = careerStateFixture([
+    clubFixture(buyer, 5, playersForClub("keeper-buyer", ["cb", "cb", "cm", "cm", "st"])),
+    clubFixture(seller, 6, [
+      playerFixture(specialist, "gk", 1, roleShapedAbilities("goalkeeper", 14, 1)).id,
+      ...playersForClub("keeper-seller", ["gk", "gk", "cb", "cb", "cb", "cb", "cb", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st"]),
+    ]),
+  ]);
+
+  const result = simulateTransferTurnover({
+    careerState,
+    worldSeed: "goalkeeper-turnover",
+    seasonId: seasonId("season:0001"),
+    maxMoves: 1,
+  });
+
+  assert.equal(result.transfers[0]?.playerId, specialist);
+  assert.equal((result.transfers[0]?.currentAbilityAverage ?? 0) >= 12, true);
+});
+
 function turnoverFixture(): CareerState {
   const buyer = clubId("club:buyer");
   const seller = clubId("club:seller");
@@ -213,18 +262,60 @@ function playersForClub(prefix: string, positions: readonly PlayerPosition[]): P
   return positions.map((position, index) => playerFixture(playerId(`player:${prefix}-${String(index + 1).padStart(2, "0")}`), position, 7).id);
 }
 
-function playerFixture(id: PlayerId, position: PlayerPosition, ability: number): Player {
+function playerFixture(
+  id: PlayerId,
+  position: PlayerPosition,
+  ability: number,
+  abilities = abilitySet(ability),
+): Player {
   const player: Player = {
     id,
     firstName: String(id),
     lastName: "Turnover",
     birthDate: gameDate(20_000 - 24 * 365),
     naturalPositions: [position],
-    abilities: abilitySet(ability),
-    potential: abilitySet(ability + 1),
+    primaryRole: primaryRoleForPosition(position),
+    abilities,
+    potential: mapPlayerAbilities(abilities, (value) => abilityValue(Math.min(20, Number(value) + 1))),
   };
   playerLookup.set(id, player);
   return player;
+}
+
+function primaryRoleForPosition(position: PlayerPosition): PlayerRole {
+  switch (position) {
+    case "gk":
+      return "goalkeeper";
+    case "rb":
+    case "lb":
+      return "full_back";
+    case "rwb":
+    case "lwb":
+      return "wing_back";
+    case "cb":
+      return "center_back";
+    case "dm":
+      return "defensive_midfielder";
+    case "am":
+      return "attacking_midfielder";
+    case "rw":
+    case "lw":
+      return "winger";
+    case "st":
+      return "striker";
+    case "cm":
+    default:
+      return "central_midfielder";
+  }
+}
+
+function roleShapedAbilities(role: PlayerRole, relevantValue: number, baselineValue: number): PlayerAbilities {
+  const profile = getPlayerRoleProfile(role);
+  const relevantKeys = new Set([...profile.coreForRole, ...profile.secondaryForRole]);
+
+  return mapPlayerAbilities(abilitySet(baselineValue), (value, key) =>
+    relevantKeys.has(key) ? abilityValue(relevantValue) : value,
+  );
 }
 
 function playerStateFixture(): PlayerDynamicState {

@@ -7,6 +7,7 @@ import {
   competitionId,
   fixtureId,
   gameDate,
+  getFormation,
   playerId,
   seasonId,
   stateValue,
@@ -17,6 +18,7 @@ import {
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
+  type PlayerPosition,
   type SelectedLineup,
   type TacticSetup,
 } from "@game/domain";
@@ -528,6 +530,17 @@ test("fitness lifecycle fails clearly when team data cannot rebuild strength", (
   );
 });
 
+test("AI squad selection can register full rosters for season simulations", () => {
+  const input = seasonInputWithAiSelection("ai-squad-selection-seed", 100);
+  const result = simulateSeason(input);
+  const firstClubReserve = playerId("player:test-01-st-03");
+
+  assert.equal(result.fixtures.length, 306);
+  assert.equal(result.playerSummaryStats.some((row) => row.playerId === firstClubReserve), true);
+  assert.ok(result.finalPlayerStates !== undefined);
+  assert.equal(result.finalPlayerStates[firstClubReserve]?.fitness !== undefined, true);
+});
+
 /**
  * Builds deterministic season input with 18 synthetic team contexts.
  */
@@ -595,6 +608,25 @@ function seasonInputWithFitnessLifecycle(seed: string, initialFitness: number): 
 }
 
 /**
+ * Builds season input whose base AI clubs can choose from full 20-player squads.
+ */
+function seasonInputWithAiSelection(seed: string, initialFitness: number): SimulateSeasonInput {
+  const input = {
+    ...seasonInput(seed),
+    teamsByClubId: aiSelectionReadyTeams(seasonInput(seed)),
+  };
+  const { playerStates, playerIds } = initialPlayerStates(input, initialFitness);
+
+  return {
+    ...input,
+    fitnessLifecycle: {
+      playerStates,
+      playerIds,
+    },
+  };
+}
+
+/**
  * Adds optional player, role, and state-curve data needed only by lifecycle simulations.
  */
 function fitnessReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, SimulateSeasonTeamInput>> {
@@ -621,6 +653,31 @@ function fitnessReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, 
 }
 
 /**
+ * Adds full-roster AI selection data to every synthetic club.
+ */
+function aiSelectionReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, SimulateSeasonTeamInput>> {
+  const teams: Record<ClubId, SimulateSeasonTeamInput> = {};
+
+  for (const clubId of input.clubIds) {
+    const team = input.teamsByClubId[clubId];
+    assert.ok(team !== undefined);
+
+    teams[clubId] = {
+      ...team,
+      players: aiSelectionPlayers(clubId, team.strength.overall),
+      roleWeights: overrideRoleWeights(),
+      stateMultiplierCurves: testFitnessCurves(),
+      aiSelection: {
+        formation: getFormation("4-4-2"),
+        benchSize: 8,
+      },
+    };
+  }
+
+  return teams;
+}
+
+/**
  * Builds initial dynamic states for every fixed lineup player in deterministic order.
  */
 function initialPlayerStates(
@@ -636,10 +693,13 @@ function initialPlayerStates(
   for (const clubId of input.clubIds) {
     const team = input.teamsByClubId[clubId];
     assert.ok(team !== undefined);
+    const trackedPlayerIds = team.players === undefined
+      ? team.lineup.map((slot) => slot.playerId)
+      : (Object.keys(team.players).sort() as PlayerId[]);
 
-    for (const slot of team.lineup) {
-      playerIds.push(slot.playerId);
-      playerStates[slot.playerId] = {
+    for (const trackedPlayerId of trackedPlayerIds) {
+      playerIds.push(trackedPlayerId);
+      playerStates[trackedPlayerId] = {
         fitness: stateValue(fitness),
         form: stateValue(50),
         morale: stateValue(50),
@@ -944,13 +1004,77 @@ function overrideRoleWeights(): Readonly<Record<string, RoleWeightProfile>> {
         "technical.finishing": 1,
       },
     },
+    defender: {
+      roleKey: "defender",
+      department: "defense",
+      abilityWeights: {
+        "technical.tackling": 2,
+        "mental.positioning": 2,
+        "physical.heading": 1,
+      },
+    },
+    midfielder: {
+      roleKey: "midfielder",
+      department: "midfield",
+      abilityWeights: {
+        "technical.passing": 2,
+        "mental.vision": 2,
+        "physical.stamina": 1,
+      },
+    },
+    attacker: {
+      roleKey: "attacker",
+      department: "attack",
+      abilityWeights: {
+        "technical.finishing": 3,
+        "mental.composure": 2,
+        "physical.heading": 1,
+      },
+    },
   };
+}
+
+/**
+ * Builds a compact but formation-complete roster for AI-selection tests.
+ */
+function aiSelectionPlayers(clubId: ClubId, ability: number): Readonly<Record<PlayerId, Player>> {
+  const clubKey = String(clubId).slice("club:".length);
+  const players: Record<PlayerId, Player> = {};
+  const specs: ReadonlyArray<readonly [string, readonly PlayerPosition[]]> = [
+    ["gk-01", ["gk"]],
+    ["gk-02", ["gk"]],
+    ["rb-01", ["rb"]],
+    ["cb-01", ["cb"]],
+    ["cb-02", ["cb"]],
+    ["cb-03", ["cb"]],
+    ["lb-01", ["lb"]],
+    ["rm-01", ["rw"]],
+    ["cm-01", ["cm"]],
+    ["cm-02", ["cm"]],
+    ["cm-03", ["cm"]],
+    ["lm-01", ["lw"]],
+    ["dm-01", ["dm"]],
+    ["am-01", ["am"]],
+    ["rw-01", ["rw"]],
+    ["lw-01", ["lw"]],
+    ["st-01", ["st"]],
+    ["st-02", ["st"]],
+    ["st-03", ["st"]],
+    ["fb-01", ["rb"]],
+  ];
+
+  for (const [suffix, positions] of specs) {
+    const id = playerId(`player:${clubKey}-${suffix}`);
+    players[id] = makePlayer(id, ability, positions);
+  }
+
+  return players;
 }
 
 /**
  * Builds a test player with all abilities set to the same value.
  */
-function makePlayer(id: PlayerId, ability: number): Player {
+function makePlayer(id: PlayerId, ability: number, positions: readonly PlayerPosition[] = ["cm"]): Player {
   const abilities = abilitySet(ability);
 
   return {
@@ -958,7 +1082,7 @@ function makePlayer(id: PlayerId, ability: number): Player {
     firstName: "Override",
     lastName: String(id),
     birthDate: gameDate(10_000),
-    naturalPositions: ["cm"],
+    naturalPositions: positions,
     abilities,
     potential: abilities,
   };

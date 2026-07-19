@@ -14,9 +14,9 @@ export interface PlayerGenerationBandRange {
 /**
  * Ability bands for one division and club tier.
  *
- * The current band controls starting ability. The potential band is separate so
- * future growth/scouting systems can reason about ceiling without inflating the
- * player's first-season ability.
+ * The current band controls starting ability only. Reachable potential is
+ * allocated later from the generated current profile, player age, role, and
+ * rarity class.
  */
 export interface PlayerGenerationBandProfile {
   /** Broad division/category where the club plays. */
@@ -25,8 +25,6 @@ export interface PlayerGenerationBandProfile {
   readonly clubTier: PlayerGenerationClubTier;
   /** Current-ability anchor before role templates and archetype offsets. */
   readonly currentAbility: PlayerGenerationBandRange;
-  /** Potential-ceiling anchor before role templates are applied. */
-  readonly potentialCeiling: PlayerGenerationBandRange;
 }
 
 /** Explicit deterministic tier order for tests and reports. */
@@ -49,22 +47,22 @@ export const PLAYER_GENERATION_BANDS: Readonly<
   Record<ClubCategory, Readonly<Record<PlayerGenerationClubTier, PlayerGenerationBandProfile>>>
 > = {
   first_division: {
-    title_contender: band("first_division", "title_contender", [15.4, 18.2], [16.4, 20]),
-    playoff_contender: band("first_division", "playoff_contender", [13.8, 16.2], [15, 19]),
-    mid_table: band("first_division", "mid_table", [12.4, 14.6], [13.4, 17.4]),
-    survival: band("first_division", "survival", [11, 13.2], [12.2, 16.2]),
+    title_contender: band("first_division", "title_contender", [15.4, 18.2]),
+    playoff_contender: band("first_division", "playoff_contender", [13.8, 16.2]),
+    mid_table: band("first_division", "mid_table", [12.4, 14.6]),
+    survival: band("first_division", "survival", [11, 13.2]),
   },
   second_division: {
-    title_contender: band("second_division", "title_contender", [12.4, 14.2], [13.4, 17]),
-    playoff_contender: band("second_division", "playoff_contender", [11.4, 13.1], [12.4, 16]),
-    mid_table: band("second_division", "mid_table", [10.3, 12], [11.3, 15]),
-    survival: band("second_division", "survival", [9.3, 10.8], [10.3, 14]),
+    title_contender: band("second_division", "title_contender", [12.4, 14.2]),
+    playoff_contender: band("second_division", "playoff_contender", [11.4, 13.1]),
+    mid_table: band("second_division", "mid_table", [10.3, 12]),
+    survival: band("second_division", "survival", [9.3, 10.8]),
   },
   third_division: {
-    title_contender: band("third_division", "title_contender", [9.7, 11], [10, 14]),
-    playoff_contender: band("third_division", "playoff_contender", [8.2, 9.7], [9, 13]),
-    mid_table: band("third_division", "mid_table", [6.7, 8.2], [8, 12]),
-    survival: band("third_division", "survival", [5.2, 6.7], [7, 11]),
+    title_contender: band("third_division", "title_contender", [9.7, 11]),
+    playoff_contender: band("third_division", "playoff_contender", [8.2, 9.7]),
+    mid_table: band("third_division", "mid_table", [6.7, 8.2]),
+    survival: band("third_division", "survival", [5.2, 6.7]),
   },
 };
 
@@ -106,12 +104,10 @@ function band(
   division: ClubCategory,
   clubTier: PlayerGenerationClubTier,
   currentAbility: readonly [number, number],
-  potentialCeiling: readonly [number, number],
 ): PlayerGenerationBandProfile {
   return {
     division,
     clubTier,
     currentAbility: { minInclusive: currentAbility[0], maxInclusive: currentAbility[1] },
-    potentialCeiling: { minInclusive: potentialCeiling[0], maxInclusive: potentialCeiling[1] },
   };
 }

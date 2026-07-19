@@ -1,6 +1,7 @@
 import type { ClubCategory } from "@game/domain";
 
 import type { GeneratedPlayerArchetypeKey, GeneratedPlayerPotentialClass } from "./player-archetypes.ts";
+import type { CurrentAbilityRarityLane } from "./player-current-ability-bands.ts";
 
 /** Product-facing potential rarity scale used by generation budgets and reports. */
 export type PlayerPotentialRarityBand = "ordinary" | "interesting" | "high" | "elite";
@@ -99,6 +100,30 @@ export function potentialRarityForPotentialClass(potentialClass: GeneratedPlayer
     case "elite":
       return "elite";
   }
+}
+
+/**
+ * Maps a youth archetype and academy level to the bounded current-profile lane.
+ *
+ * Youth development level can add a small current-quality nudge only for
+ * prospects that are already interesting or better. Ordinary academy players
+ * stay ordinary-current even at excellent academies.
+ */
+export function currentAbilityRarityLaneForYouthProspect(
+  archetypeKey: GeneratedPlayerArchetypeKey,
+  youthDevelopmentLevel: number,
+): CurrentAbilityRarityLane {
+  const rarity = potentialRarityForArchetype(archetypeKey);
+
+  if (rarity === "elite" || rarity === "high") {
+    return youthDevelopmentLevel >= 4 ? "rare" : "normal";
+  }
+
+  if (archetypeKey === "good_prospect" && rarity === "interesting") {
+    return youthDevelopmentLevel >= 5 ? "rare" : "normal";
+  }
+
+  return "normal";
 }
 
 /** Returns the budget profile for one division. */

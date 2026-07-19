@@ -21,6 +21,7 @@ describe("CalendarAdvanceTransition", () => {
 
     expect(html).toContain("Advancing calendar");
     expect(html).toContain('dateTime="2026-08-03"');
+    expect(html).toContain('data-motion-calendar-date="true"');
     expect(html).toContain('aria-hidden="true"');
     expect(html).not.toContain("Career advanced to");
   });

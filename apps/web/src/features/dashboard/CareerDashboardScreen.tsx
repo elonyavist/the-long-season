@@ -4,6 +4,7 @@ import type {
   CareerDashboardBlockerKey,
   CareerDashboardFixtureSide,
 } from "@game/ui";
+import * as m from "motion/react-m";
 
 import type {
   CareerDashboardPresentation,
@@ -12,6 +13,7 @@ import type {
 import type { CareerCommandActivity } from "../../stores/career-ui-store";
 import { AppShell } from "../app-shell/AppShell";
 import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
+import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
 /** Inputs for the operational Dashboard surface. */
 export type CareerDashboardScreenProps = Readonly<{
@@ -58,6 +60,7 @@ export function CareerDashboardScreen({
   const taskSummary = presentation.attention === undefined
     ? text(taskStateSummaryKey(presentation.taskState))
     : text(presentation.attention.summaryKey as MessageKey);
+  const taskMotionKey = buildTaskMotionKey(presentation);
 
   return (
     <AppShell
@@ -82,10 +85,15 @@ export function CareerDashboardScreen({
           </h1>
         </header>
 
-        <section
+        <m.section
+          key={taskMotionKey}
           className="tls-dashboard-priority"
+          data-motion-key={taskMotionKey}
           data-task-state={presentation.taskState}
           aria-labelledby="career-dashboard-task-title"
+          initial={webMotionTargets.dashboardTaskEnter}
+          animate={webMotionTargets.rest}
+          transition={webMotion.transition}
         >
           <div className="tls-dashboard-task-copy">
             <p className="tls-dashboard-task-state">
@@ -116,7 +124,7 @@ export function CareerDashboardScreen({
               text={text}
             />
           </button>
-        </section>
+        </m.section>
 
         <section className="tls-dashboard-overview" aria-label={text("career.dashboard.clubSnapshot")}>
           <LeagueTableWidget leagueTable={view.leagueTable} text={text} />
@@ -165,8 +173,18 @@ function LeagueTableWidget({
   leagueTable: CareerDashboardPresentation["view"]["leagueTable"];
   text: Translator;
 }>): React.JSX.Element {
+  const motionKey = buildLeagueTableMotionKey(leagueTable);
+
   return (
-    <section className="tls-dashboard-widget tls-dashboard-table-widget" aria-labelledby="dashboard-table-title">
+    <m.section
+      key={motionKey}
+      className="tls-dashboard-widget tls-dashboard-table-widget"
+      data-motion-key={motionKey}
+      aria-labelledby="dashboard-table-title"
+      initial={webMotionTargets.footballContextEnter}
+      animate={webMotionTargets.rest}
+      transition={webMotion.transition}
+    >
       <header className="tls-dashboard-widget-header">
         <div>
           <p>{text("career.dashboard.competition")}</p>
@@ -212,7 +230,7 @@ function LeagueTableWidget({
           </table>
         </div>
       )}
-    </section>
+    </m.section>
   );
 }
 
@@ -224,8 +242,18 @@ function LeagueResultsWidget({
   leagueResults: CareerDashboardPresentation["view"]["leagueResults"];
   text: Translator;
 }>): React.JSX.Element {
+  const motionKey = buildLeagueResultsMotionKey(leagueResults);
+
   return (
-    <section className="tls-dashboard-widget tls-dashboard-league-results-widget" aria-labelledby="dashboard-results-title">
+    <m.section
+      key={motionKey}
+      className="tls-dashboard-widget tls-dashboard-league-results-widget"
+      data-motion-key={motionKey}
+      aria-labelledby="dashboard-results-title"
+      initial={webMotionTargets.footballContextEnter}
+      animate={webMotionTargets.rest}
+      transition={webMotion.transition}
+    >
       <header className="tls-dashboard-widget-header">
         <div>
           <p>{text("career.dashboard.competition")}</p>
@@ -254,8 +282,55 @@ function LeagueResultsWidget({
           ))}
         </ul>
       )}
-    </section>
+    </m.section>
   );
+}
+
+/** Builds a remount key only when the manager's visible priority changes. */
+function buildTaskMotionKey(presentation: CareerDashboardPresentation): string {
+  const fixture = presentation.view.nextFixture;
+  const recentMatch = presentation.view.recentMatch;
+  const visibleFact = presentation.taskState === "post_match"
+    ? [
+        recentMatch.status,
+        recentMatch.homeClubName,
+        recentMatch.homeGoals,
+        recentMatch.awayGoals,
+        recentMatch.awayClubName,
+      ].join(":")
+    : [
+        fixture.status,
+        fixture.round,
+        fixture.homeClubName,
+        fixture.awayClubName,
+        fixture.selectedClubSide,
+      ].join(":");
+
+  return [
+    presentation.taskState,
+    visibleFact,
+    ...presentation.primaryBlockers,
+  ].join(":");
+}
+
+/** Builds a stable key from the league facts rendered by the table widget. */
+function buildLeagueTableMotionKey(
+  leagueTable: CareerDashboardPresentation["view"]["leagueTable"],
+): string {
+  const rows = leagueTable.rows
+    .map((row) => `${row.clubId}:${row.position}:${row.played}:${row.goalDifference}:${row.points}`)
+    .join("|");
+  return `table:${leagueTable.status}:${leagueTable.selectedClubPosition ?? "-"}:${rows}`;
+}
+
+/** Builds a stable key from the completed-round facts shown in the widget. */
+function buildLeagueResultsMotionKey(
+  leagueResults: CareerDashboardPresentation["view"]["leagueResults"],
+): string {
+  const results = leagueResults.results
+    .map((result) => `${result.fixtureId}:${result.homeGoals}:${result.awayGoals}`)
+    .join("|");
+  return `results:${leagueResults.status}:${leagueResults.round ?? "-"}:${results}`;
 }
 
 function DashboardEmptyState({ children }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {

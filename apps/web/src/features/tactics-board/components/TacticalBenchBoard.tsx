@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import * as m from "motion/react-m";
 
 import type { Translator } from "@game/i18n";
 
@@ -10,6 +11,7 @@ import type {
 import { sortTacticalBenchAssignmentCandidates } from "../tactical-board-suitability";
 import { TacticalBoardMenu, type TacticalBoardMenuCandidate } from "./TacticalBoardMenu";
 import { TacticalBenchSlotToken } from "./TacticalBenchSlotToken";
+import { webMotion, webMotionTargets } from "../../../shared/motion/web-motion";
 
 export interface TacticalBenchBoardCandidate extends TacticalBenchPlayer {
   /** Full display name used only as a stable fallback in sorting. */
@@ -65,6 +67,7 @@ export function TacticalBenchBoard({
 }: TacticalBenchBoardProps): React.JSX.Element {
   const [internalOpenSlotId, setInternalOpenSlotId] = useState<TacticalBenchSlotId | undefined>();
   const menuRef = useRef<HTMLDivElement>(null);
+  const previousSlotFactsRef = useRef(tacticalBenchSlotFacts(slots));
   const activeSlotId = openSlotId ?? internalOpenSlotId;
   const activeSlot = slots.find((slot) => slot.slotId === activeSlotId);
   const selectedPlayerIds = useMemo(
@@ -82,6 +85,10 @@ export function TacticalBenchBoard({
       ).map(toMenuCandidate),
     [availablePlayers, unavailablePlayerIds],
   );
+
+  useEffect(() => {
+    previousSlotFactsRef.current = tacticalBenchSlotFacts(slots);
+  }, [slots]);
 
   const closeMenu = (): void => {
     if (openSlotId === undefined) {
@@ -167,18 +174,38 @@ export function TacticalBenchBoard({
         }}
         role="list"
       >
-        {slots.map((slot) => (
-          <div className="tls-tactical-bench-board-item" key={slot.slotId} role="listitem">
-            <TacticalBenchSlotToken
-              slot={slot}
-              text={text}
-              onOpen={openSlot}
-            />
-          </div>
-        ))}
+        {slots.map((slot) => {
+          const slotFact = tacticalBenchSlotFact(slot);
+          const slotChanged = previousSlotFactsRef.current.get(slot.slotId) !== slotFact;
+
+          return (
+            <m.div
+              className="tls-tactical-bench-board-item"
+              data-motion-slot-key={`${slot.slotId}:${slotFact}`}
+              key={`${slot.slotId}:${slotFact}`}
+              role="listitem"
+              initial={slotChanged ? webMotionTargets.tacticalSelectionEnter : false}
+              animate={webMotionTargets.rest}
+              transition={webMotion.micro}
+            >
+              <TacticalBenchSlotToken
+                slot={slot}
+                text={text}
+                onOpen={openSlot}
+              />
+            </m.div>
+          );
+        })}
       </div>
       {activeSlot === undefined ? null : (
-        <div className="tls-tactical-bench-menu-popover" ref={menuRef}>
+        <m.div
+          key={activeSlot.slotId}
+          className="tls-tactical-bench-menu-popover"
+          ref={menuRef}
+          initial={webMotionTargets.tacticalPopoverEnter}
+          animate={webMotionTargets.rest}
+          transition={webMotion.micro}
+        >
           <TacticalBoardMenu
             candidates={activeSlot.player === undefined ? candidateRows : []}
             removeLabelKey="career.tacticalBench.removeFromBench"
@@ -186,10 +213,18 @@ export function TacticalBenchBoard({
             {...(activeSlot.player === undefined || onRemove === undefined ? {} : { onRemove: removePlayer })}
             {...(activeSlot.player === undefined && onAssign !== undefined ? { onAssign: assignPlayer } : {})}
           />
-        </div>
+        </m.div>
       )}
     </section>
   );
+}
+
+function tacticalBenchSlotFacts(slots: readonly TacticalBenchSlotView[]): Map<string, string> {
+  return new Map(slots.map((slot) => [slot.slotId, tacticalBenchSlotFact(slot)]));
+}
+
+function tacticalBenchSlotFact(slot: TacticalBenchSlotView): string {
+  return slot.player?.playerId ?? "empty";
 }
 
 function toMenuCandidate(player: TacticalBenchBoardCandidate): TacticalBoardMenuCandidate {

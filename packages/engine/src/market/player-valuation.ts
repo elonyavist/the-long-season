@@ -1,4 +1,16 @@
-import { nonNegativeMoney, type Club, type ClubCategory, type GameDate, type Money, type Player, type PlayerPosition } from "@game/domain";
+import {
+  getPlayerRoleProfile,
+  nonNegativeMoney,
+  rawDiagnosticAbilityAverage,
+  roleCurrentAbility,
+  rolePotentialAbility,
+  type Club,
+  type ClubCategory,
+  type GameDate,
+  type Money,
+  type Player,
+  type PlayerPosition,
+} from "@game/domain";
 
 /** Age multiplier for deterministic true-data player valuation. */
 export interface PlayerValuationAgeBand {
@@ -50,9 +62,9 @@ export interface PlayerValuation {
   readonly value: Money;
   /** Player age in whole years at the current date. */
   readonly age: number;
-  /** Current ability average on the 0-20 scale. */
+  /** Role current ability on the 0-20 scale; the name is retained for API compatibility. */
   readonly currentAbilityAverage: number;
-  /** Potential average on the 0-20 scale. */
+  /** Role potential ability on the 0-20 scale; the name is retained for API compatibility. */
   readonly potentialAbilityAverage: number;
   /** Ability and potential component before non-player multipliers. */
   readonly abilityScore: number;
@@ -64,6 +76,14 @@ export interface PlayerValuation {
   readonly reputationMultiplier: number;
   /** Position multiplier used for this player's primary position. */
   readonly positionMultiplier: number;
+}
+
+/** Canonical football-quality facts shared by market valuation and willingness. */
+export interface PlayerMarketAbility {
+  /** Current ability for the player's stable football role. */
+  readonly currentAbility: number;
+  /** Potential ability evaluated through the same role profile. */
+  readonly potentialAbility: number;
 }
 
 /** Error categories exposed by player valuation helpers. */
@@ -139,8 +159,9 @@ export function derivePlayerValuation(input: DerivePlayerValuationInput): Player
 
   const age = deriveAge(input.player.birthDate, input.currentDate);
   const ageMultiplier = findAgeMultiplier(input.config.ageBands, age);
-  const currentAbilityAverage = averagePlayerAbilities(input.player.abilities);
-  const potentialAbilityAverage = averagePlayerAbilities(input.player.potential);
+  const marketAbility = derivePlayerMarketAbility(input.player);
+  const currentAbilityAverage = marketAbility.currentAbility;
+  const potentialAbilityAverage = marketAbility.potentialAbility;
   const abilityScore =
     currentAbilityAverage * input.config.currentAbilityWeight + potentialAbilityAverage * input.config.potentialAbilityWeight;
   const categoryMultiplier = input.config.categoryMultipliers[input.club.category];
@@ -167,6 +188,27 @@ export function derivePlayerValuation(input: DerivePlayerValuationInput): Player
   };
 }
 
+/**
+ * Derives the role-aware ability facts used by market decisions.
+ *
+ * Historical saves without role identity retain the former raw diagnostic
+ * behavior until their durable player data is naturally replaced.
+ */
+export function derivePlayerMarketAbility(player: Player): PlayerMarketAbility {
+  if (player.primaryRole === undefined) {
+    return {
+      currentAbility: Number(rawDiagnosticAbilityAverage(player.abilities)),
+      potentialAbility: Number(rawDiagnosticAbilityAverage(player.potential)),
+    };
+  }
+
+  const profile = getPlayerRoleProfile(player.primaryRole);
+  return {
+    currentAbility: Number(roleCurrentAbility(player.abilities, profile)),
+    potentialAbility: Number(rolePotentialAbility(player.potential, profile)),
+  };
+}
+
 function validateConfig(config: PlayerValuationConfig): void {
   if (config.currentAbilityWeight < 0 || config.potentialAbilityWeight < 0) {
     throw new PlayerValuationError("invalid_config", "ability weights must not be negative");
@@ -189,38 +231,6 @@ function findAgeMultiplier(ageBands: readonly PlayerValuationAgeBand[], age: num
   }
 
   throw new PlayerValuationError("missing_age_band", `no age multiplier for age: ${age}`);
-}
-
-function averagePlayerAbilities(abilities: Player["abilities"]): number {
-  const values = [
-    abilities.technical.finishing,
-    abilities.technical.passing,
-    abilities.technical.longPassing,
-    abilities.technical.crossing,
-    abilities.technical.dribbling,
-    abilities.technical.technique,
-    abilities.technical.tackling,
-    abilities.technical.penalties,
-    abilities.technical.freeKicks,
-    abilities.physical.pace,
-    abilities.physical.strength,
-    abilities.physical.stamina,
-    abilities.physical.agility,
-    abilities.physical.heading,
-    abilities.mental.positioning,
-    abilities.mental.vision,
-    abilities.mental.anticipation,
-    abilities.mental.composure,
-    abilities.mental.determination,
-    abilities.mental.leadership,
-    abilities.goalkeeping.reflexes,
-    abilities.goalkeeping.handling,
-    abilities.goalkeeping.rushingOut,
-    abilities.goalkeeping.goalkeeperPositioning,
-    abilities.goalkeeping.footwork,
-  ];
-
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function clampSafeInteger(value: number, minValue: Money, maxValue: Money): number {

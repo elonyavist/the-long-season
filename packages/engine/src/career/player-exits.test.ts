@@ -8,7 +8,9 @@ import {
   createCareerState,
   createMarketState,
   gameDate,
+  mapPlayerAbilities,
   playerId,
+  rawDiagnosticAbilityAverage,
   saveId,
   seasonId,
   stateValue,
@@ -102,6 +104,40 @@ test("applyEndOfSeasonPlayerExits preserves explicit active player order", () =>
 
   assert.deepEqual(result.careerState.gameState.playerIds, [active]);
   assert.deepEqual(result.careerState.gameState.clubs[clubId("club:selected")]?.playerIds, [active]);
+});
+
+test("applyEndOfSeasonPlayerExits reports role-shaped quality for exit decisions", () => {
+  const retiring = playerId("player:raw-diagnostic-retiring");
+  const unevenAbilities = mapPlayerAbilities(abilitySet(1), (value, key) =>
+    key === "technical.finishing" ? abilityValue(20) : value,
+  );
+  const careerState = careerStateFixture([
+    playerFixture(retiring, "st", 37, unevenAbilities, unevenAbilities),
+  ]);
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "raw-diagnostic-exit",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal((result.exits[0]?.currentAbilityAverage ?? 0) > Number(rawDiagnosticAbilityAverage(unevenAbilities)), true);
+});
+
+test("applyEndOfSeasonPlayerExits does not release non-retiring players from already thin squads", () => {
+  const lowQualityVeteran = playerId("player:thin-squad-veteran");
+  const careerState = careerStateFixture([
+    playerFixture(lowQualityVeteran, "st", 33, abilitySet(6), abilitySet(6)),
+  ]);
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "thin-squad-exit",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.deepEqual(result.exits, []);
+  assert.deepEqual(result.careerState.gameState.playerIds, [lowQualityVeteran]);
 });
 
 function careerStateFixture(players: readonly Player[]): CareerState {

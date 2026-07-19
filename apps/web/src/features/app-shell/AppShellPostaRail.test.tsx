@@ -37,6 +37,7 @@ describe("AppShellPostaRail", () => {
     expect(html.match(/Action required/g)).toHaveLength(1);
     expect(html).not.toContain("Prepare match");
     expect(html).not.toContain("Save a lineup");
+    expect(html).toContain('data-attention-cue="false"');
   });
 
   it("renders an explicit calm empty state", () => {

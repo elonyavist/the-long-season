@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MessageKey, Translator } from "@game/i18n";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import {
   buildCareerInboxView,
   buildCareerShellView,
@@ -16,29 +18,34 @@ import type {
 import type { WebCareerContinueResult } from "../../runtime/web-career-runtime";
 import {
   buildCareerMatchdayPresentationView,
+  buildMatchdayLiveMoment,
   type CareerMatchdayPresentationView,
   type MatchdayManagerActionId,
   type MatchdayManagerActionView,
   type MatchdayPhaseIndicatorView,
   type MatchdayScoreHeaderView,
 } from "./career-matchday-presenter";
+import { MatchdayLiveCommentary } from "./MatchdayLivePhase";
 import {
   formatMatchdayEventPlayerLine,
-  MatchdayLivePhase,
-} from "./MatchdayLivePhase";
+  MatchdayTabellino,
+} from "./MatchdayTabellino";
 import {
   buildFirstHalfPlaybackPlan,
   buildSecondHalfPlaybackPlan,
   prefersReducedMatchdayMotion,
   projectFirstHalfPlaybackFrame,
   projectSecondHalfPlaybackFrame,
+  scaledMatchdayPlaybackHoldMs,
   type MatchdayPlaybackStage,
+  type MatchdayPlaybackPriority,
+  type MatchdayPlaybackSpeed,
 } from "./matchday-playback";
 import type {
   WebHalfTimeSubstitutionDecision,
   WebHalfTimeSubstitutionPanel,
 } from "./matchday-adapter";
-import { AppShell } from "../app-shell/AppShell";
+import { AppShell, focusCurrentCareerTask } from "../app-shell/AppShell";
 import type { TacticalBoardDraft } from "../tactics-board/tactical-board-state";
 import type { TacticalBoardRoleCode } from "../tactics-board/tactical-board-types";
 import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
@@ -51,6 +58,8 @@ import {
   MatchdayHalfTimePhase,
 } from "./MatchdayHalfTimePhase";
 import { MatchdayFullTimePhase } from "./MatchdayFullTimePhase";
+import { MatchdayPlaybackControls } from "./MatchdayPlaybackControls";
+import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
 const MATCHDAY_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
   {
@@ -153,6 +162,9 @@ export function CareerMatchdayScreen({
           view={view}
           phaseView={playback.visiblePhaseView}
           {...(playback.playbackStage === undefined ? {} : { playbackStage: playback.playbackStage })}
+          {...(playback.playbackPriority === undefined ? {} : { playbackPriority: playback.playbackPriority })}
+          {...(playback.currentEventId === undefined ? {} : { currentEventId: playback.currentEventId })}
+          {...(playback.controls === undefined ? {} : { playbackControls: playback.controls })}
           commandActivity={commandActivity}
           text={text}
           onPrepareMatch={onPrepareMatch}
@@ -193,99 +205,113 @@ function useMatchdayPlayback(
 ): Readonly<{
   visiblePhaseView: CareerMatchdayPhaseView;
   playbackStage?: MatchdayPlaybackStage;
+  playbackPriority?: MatchdayPlaybackPriority;
+  currentEventId?: string;
+  controls?: Readonly<{
+    paused: boolean;
+    speed: MatchdayPlaybackSpeed;
+    onPausedChange: (paused: boolean) => void;
+    onSpeedChange: (speed: MatchdayPlaybackSpeed) => void;
+  }>;
   requestFirstHalfPlayback: () => void;
   requestSecondHalfPlayback: () => void;
 }> {
-  const [firstHalfRequested, setFirstHalfRequested] = useState(false);
-  const [firstHalfFrameIndex, setFirstHalfFrameIndex] = useState(0);
-  const [secondHalfRequested, setSecondHalfRequested] = useState(false);
-  const [secondHalfFrameIndex, setSecondHalfFrameIndex] = useState(0);
-  const firstHalfPlan = useMemo(
-    () => firstHalfRequested && phaseView.phase === "half_time"
+  const [activePlayback, setActivePlayback] = useState<Readonly<{
+    period: "first_half" | "second_half";
+    frameIndex: number;
+  }>>();
+  const [paused, setPaused] = useState(false);
+  const [speed, setSpeed] = useState<MatchdayPlaybackSpeed>(1);
+  const playbackPlan = useMemo(
+    () => activePlayback?.period === "first_half" && phaseView.phase === "half_time"
       ? buildFirstHalfPlaybackPlan(phaseView, prefersReducedMatchdayMotion())
-      : undefined,
-    [firstHalfRequested, phaseView],
+      : activePlayback?.period === "second_half" && phaseView.phase === "full_time"
+        ? buildSecondHalfPlaybackPlan(phaseView, prefersReducedMatchdayMotion())
+        : undefined,
+    [activePlayback?.period, phaseView],
   );
-  const firstHalfFrame = firstHalfPlan?.frames[firstHalfFrameIndex];
-  const secondHalfPlan = useMemo(
-    () => secondHalfRequested && phaseView.phase === "full_time"
-      ? buildSecondHalfPlaybackPlan(phaseView, prefersReducedMatchdayMotion())
-      : undefined,
-    [phaseView, secondHalfRequested],
-  );
-  const secondHalfFrame = secondHalfPlan?.frames[secondHalfFrameIndex];
+  const playbackFrame = activePlayback === undefined
+    ? undefined
+    : playbackPlan?.frames[activePlayback.frameIndex];
+
+  useEffect(() => {
+    if (activePlayback === undefined || commandActivity?.status !== "failed") return;
+    const failedPeriod = commandActivity.commandId === "play_first_half"
+      ? "first_half"
+      : commandActivity.commandId === "play_second_half"
+        ? "second_half"
+        : undefined;
+    if (failedPeriod !== activePlayback.period) return;
+
+    setActivePlayback(undefined);
+    setPaused(false);
+    setSpeed(1);
+  }, [activePlayback, commandActivity]);
 
   useEffect(() => {
     if (
-      firstHalfRequested
-      && commandActivity?.commandId === "play_first_half"
-      && commandActivity.status === "failed"
-    ) {
-      setFirstHalfRequested(false);
-      setFirstHalfFrameIndex(0);
-    }
-  }, [commandActivity, firstHalfRequested]);
-
-  useEffect(() => {
-    if (
-      secondHalfRequested
-      && commandActivity?.commandId === "play_second_half"
-      && commandActivity.status === "failed"
-    ) {
-      setSecondHalfRequested(false);
-      setSecondHalfFrameIndex(0);
-    }
-  }, [commandActivity, secondHalfRequested]);
-
-  useEffect(() => {
-    if (firstHalfPlan === undefined || firstHalfFrame === undefined) return;
+      activePlayback === undefined
+      || playbackPlan === undefined
+      || playbackFrame === undefined
+      || paused
+    ) return;
 
     const timeout = window.setTimeout(() => {
-      const nextFrameIndex = firstHalfFrameIndex + 1;
-      if (nextFrameIndex < firstHalfPlan.frames.length) {
-        setFirstHalfFrameIndex(nextFrameIndex);
-        return;
-      }
-      setFirstHalfRequested(false);
-      setFirstHalfFrameIndex(0);
-    }, firstHalfFrame.holdMs);
+      setActivePlayback((current) => {
+        if (current === undefined || current.period !== activePlayback.period) return current;
+        const nextFrameIndex = current.frameIndex + 1;
+        return nextFrameIndex < playbackPlan.frames.length
+          ? { ...current, frameIndex: nextFrameIndex }
+          : undefined;
+      });
+    }, scaledMatchdayPlaybackHoldMs(playbackFrame, speed));
 
     return () => window.clearTimeout(timeout);
-  }, [firstHalfFrame, firstHalfFrameIndex, firstHalfPlan]);
+  }, [activePlayback, paused, playbackFrame, playbackPlan, speed]);
 
   useEffect(() => {
-    if (secondHalfPlan === undefined || secondHalfFrame === undefined) return;
+    if (activePlayback !== undefined) return;
+    setPaused(false);
+    setSpeed(1);
+  }, [activePlayback]);
 
-    const timeout = window.setTimeout(() => {
-      const nextFrameIndex = secondHalfFrameIndex + 1;
-      if (nextFrameIndex < secondHalfPlan.frames.length) {
-        setSecondHalfFrameIndex(nextFrameIndex);
-        return;
-      }
-      setSecondHalfRequested(false);
-      setSecondHalfFrameIndex(0);
-    }, secondHalfFrame.holdMs);
-
-    return () => window.clearTimeout(timeout);
-  }, [secondHalfFrame, secondHalfFrameIndex, secondHalfPlan]);
-
-  const visiblePhaseView = firstHalfFrame !== undefined && phaseView.phase === "half_time"
-    ? projectFirstHalfPlaybackFrame(phaseView, firstHalfFrame)
-    : secondHalfFrame !== undefined && phaseView.phase === "full_time"
-      ? projectSecondHalfPlaybackFrame(phaseView, secondHalfFrame)
+  const visiblePhaseView = playbackFrame !== undefined
+    && activePlayback?.period === "first_half"
+    && phaseView.phase === "half_time"
+    ? projectFirstHalfPlaybackFrame(phaseView, playbackFrame)
+    : playbackFrame !== undefined
+      && activePlayback?.period === "second_half"
+      && phaseView.phase === "full_time"
+      ? projectSecondHalfPlaybackFrame(phaseView, playbackFrame)
       : phaseView;
-  const playbackStage = firstHalfFrame?.stage ?? secondHalfFrame?.stage;
+  const playbackStage = playbackFrame?.stage;
+  const playbackPriority = playbackFrame?.priority;
+  const currentEventId = playbackFrame?.currentEventId;
 
   return {
     visiblePhaseView,
     ...(playbackStage === undefined ? {} : { playbackStage }),
+    ...(playbackPriority === undefined ? {} : { playbackPriority }),
+    ...(currentEventId === undefined ? {} : { currentEventId }),
+    ...(playbackFrame === undefined
+      ? {}
+      : {
+          controls: {
+            paused,
+            speed,
+            onPausedChange: setPaused,
+            onSpeedChange: setSpeed,
+          },
+        }),
     requestFirstHalfPlayback: () => {
-      setFirstHalfFrameIndex(0);
-      setFirstHalfRequested(true);
+      setPaused(false);
+      setSpeed(1);
+      setActivePlayback({ period: "first_half", frameIndex: 0 });
     },
     requestSecondHalfPlayback: () => {
-      setSecondHalfFrameIndex(0);
-      setSecondHalfRequested(true);
+      setPaused(false);
+      setSpeed(1);
+      setActivePlayback({ period: "second_half", frameIndex: 0 });
     },
   };
 }
@@ -294,6 +320,9 @@ function MatchCentre({
   view,
   phaseView,
   playbackStage,
+  playbackPriority,
+  currentEventId,
+  playbackControls,
   commandActivity,
   text,
   onPrepareMatch,
@@ -315,6 +344,14 @@ function MatchCentre({
   view: CareerMatchdayView;
   phaseView: CareerMatchdayPhaseView;
   playbackStage?: MatchdayPlaybackStage;
+  playbackPriority?: MatchdayPlaybackPriority;
+  currentEventId?: string;
+  playbackControls?: Readonly<{
+    paused: boolean;
+    speed: MatchdayPlaybackSpeed;
+    onPausedChange: (paused: boolean) => void;
+    onSpeedChange: (speed: MatchdayPlaybackSpeed) => void;
+  }>;
   commandActivity: CareerCommandActivity | undefined;
   text: Translator;
   onPrepareMatch: () => void;
@@ -341,19 +378,40 @@ function MatchCentre({
         halfTimeSubstitutions,
       )
     : [];
+  const preparationBlockerKeys = phaseView.phase === "pre_match" ? view.blockerKeys : [];
   const primaryAction = matchCentrePrimaryAction(
-    view,
+    preparationBlockerKeys,
     presentation.primaryAction,
     phaseView.phase === "half_time" && halfTimeValidationIssues.length > 0,
   );
   const commandPending = commandActivity?.status === "pending";
+  const liveMoment = buildMatchdayLiveMoment(phaseView.timelineEvents, currentEventId);
+  const liveLine = broadcastLine(phaseView, text, liveMoment.event?.event);
+  const previousPhase = useRef(phaseView.phase);
+  const phaseChanged = previousPhase.current !== phaseView.phase;
+  const [enteredPhase, setEnteredPhase] = useState<CareerMatchdayPhaseView["phase"]>();
+  const animatePhaseEntry = phaseChanged || enteredPhase === phaseView.phase;
+
+  useEffect(() => {
+    if (previousPhase.current === phaseView.phase) return;
+    previousPhase.current = phaseView.phase;
+    setEnteredPhase(phaseView.phase);
+    focusCurrentCareerTask(true);
+  }, [phaseView.phase]);
 
   return (
-    <div className="tls-match-centre">
+    <div
+      className="tls-match-centre"
+      data-playback-priority={playbackPriority}
+    >
       <MatchdayBroadcastHeader
         phaseView={phaseView}
         presentation={presentation}
         commandActivity={commandActivity}
+        liveLine={liveLine}
+        liveMoment={liveMoment}
+        phaseChanged={animatePhaseEntry}
+        {...(playbackStage === undefined ? {} : { playbackStage })}
         text={text}
         onPrepareMatch={onPrepareMatch}
         onPlayFixture={onPlayFixture}
@@ -363,12 +421,24 @@ function MatchCentre({
         {...(onStartSecondHalf === undefined ? {} : { onStartSecondHalf })}
       />
 
+      {playbackControls === undefined ? null : (
+        <MatchdayPlaybackControls
+          paused={playbackControls.paused}
+          speed={playbackControls.speed}
+          text={text}
+          onPausedChange={playbackControls.onPausedChange}
+          onSpeedChange={playbackControls.onSpeedChange}
+        />
+      )}
+
       <div className="tls-match-centre-command-lock" inert={commandPending ? true : undefined}>
-      <MatchdayBlockers blockerKeys={view.blockerKeys} text={text} />
+      <MatchdayBlockers blockerKeys={preparationBlockerKeys} text={text} />
 
       {phaseView.phase === "half_time" ? (
         presentation.halfTimeReview === undefined ? null : (
           <MatchdayHalfTimePhase
+            key={`half-time:${phaseView.fixture.fixtureId}`}
+            animateEntry={animatePhaseEntry}
             review={presentation.halfTimeReview}
             text={text}
             validationIssues={halfTimeValidationIssues}
@@ -386,47 +456,16 @@ function MatchCentre({
         )
       ) : phaseView.phase === "full_time" ? (
         presentation.fullTimeReview === undefined ? null : (
-          <MatchdayFullTimePhase review={presentation.fullTimeReview} text={text} />
+          <MatchdayFullTimePhase
+            key={`full-time:${phaseView.fixture.fixtureId}`}
+            animateEntry={animatePhaseEntry}
+            review={presentation.fullTimeReview}
+            text={text}
+          />
         )
-      ) : phaseView.phase === "pre_match" ? (
-        view.blockerKeys.length === 0 ? <PreMatchConfirmation phaseView={phaseView} text={text} /> : null
-      ) : (
-        <MatchdayLivePhase
-          phaseView={phaseView}
-          presentation={presentation}
-          liveLine={broadcastLine(phaseView, text)}
-          text={text}
-          {...(playbackStage === undefined ? {} : { playbackStage })}
-        />
-      )}
+      ) : null}
       </div>
     </div>
-  );
-}
-
-function PreMatchConfirmation({
-  phaseView,
-  text,
-}: Readonly<{
-  phaseView: CareerMatchdayPhaseView;
-  text: Translator;
-}>): React.JSX.Element {
-  return (
-    <section className="tls-matchday-card tls-match-centre-pre-match" aria-labelledby="matchday-pre-match-title">
-      <div className="tls-match-centre-card-heading">
-        <div>
-          <h2 id="matchday-pre-match-title">{text("career.matchday.status.ready_to_play")}</h2>
-          <p>{broadcastLine(phaseView, text)}</p>
-        </div>
-      </div>
-      <div className="tls-match-centre-pre-match-facts">
-        <MatchdayFact label={text("career.matchday.fixture")} value={fixtureLine(phaseView)} />
-        <MatchdayFact
-          label={text("career.matchday.selectedSide")}
-          value={text(`career.dashboard.fixtureSide.${phaseView.fixture.selectedClubSide}` as MessageKey)}
-        />
-      </div>
-    </section>
   );
 }
 
@@ -434,6 +473,10 @@ function MatchdayBroadcastHeader({
   phaseView,
   presentation,
   commandActivity,
+  liveLine,
+  liveMoment,
+  phaseChanged,
+  playbackStage,
   primaryAction,
   text,
   onPrepareMatch,
@@ -445,6 +488,10 @@ function MatchdayBroadcastHeader({
   phaseView: CareerMatchdayPhaseView;
   presentation: CareerMatchdayPresentationView;
   commandActivity: CareerCommandActivity | undefined;
+  liveLine: string;
+  liveMoment: ReturnType<typeof buildMatchdayLiveMoment>;
+  phaseChanged: boolean;
+  playbackStage?: MatchdayPlaybackStage;
   primaryAction?: MatchdayManagerActionView;
   text: Translator;
   onPrepareMatch: () => void;
@@ -454,9 +501,19 @@ function MatchdayBroadcastHeader({
   onStartSecondHalf?: () => void;
 }>): React.JSX.Element {
   const header = presentation.scoreHeader;
+  const reducedMotion = useReducedMotion();
+  const animateCheckpoint = phaseChanged && !reducedMotion;
 
   return (
-    <section className="tls-match-broadcast-frame" aria-label={text("career.matchday.matchCentre")}>
+    <m.section
+      animate={webMotionTargets.rest}
+      aria-label={text("career.matchday.matchCentre")}
+      className="tls-match-broadcast-frame"
+      data-motion-active={animateCheckpoint}
+      data-motion-checkpoint={phaseView.phase}
+      initial={animateCheckpoint ? webMotionTargets.matchCheckpointEnter : false}
+      transition={webMotion.transition}
+    >
       <div className="tls-match-broadcast-meta" aria-label={text("career.matchday.context")}>
         <span>{text(header.phaseLabelKey as MessageKey)}</span>
         <span>{phaseMinuteLabel(header.minute, text)}</span>
@@ -495,21 +552,59 @@ function MatchdayBroadcastHeader({
         )}
       </div>
 
-      <p className="tls-match-broadcast-live-line">{broadcastLine(phaseView, text)}</p>
+      <MatchdayLiveCommentary
+        line={liveLine}
+        moment={liveMoment}
+        {...(playbackStage === undefined ? {} : { playbackStage })}
+      />
+
+      <MatchdayTabellino view={presentation.tabellino} text={text} />
 
       <PhaseRail indicators={presentation.phaseIndicators} text={text} />
-    </section>
+    </m.section>
   );
 }
 
 function MatchdayScoreboard({ header, text }: Readonly<{ header: MatchdayScoreHeaderView; text: Translator }>): React.JSX.Element {
+  const reducedMotion = useReducedMotion();
+  const previousScore = useRef<Readonly<{ home: number; away: number }> | undefined>(undefined);
+  const homeChanged = previousScore.current !== undefined
+    && previousScore.current.home !== header.homeGoals;
+  const awayChanged = previousScore.current !== undefined
+    && previousScore.current.away !== header.awayGoals;
+
+  useEffect(() => {
+    previousScore.current = {
+      home: header.homeGoals,
+      away: header.awayGoals,
+    };
+  }, [header.awayGoals, header.homeGoals]);
+
   return (
     <div className="tls-matchday-scoreboard">
       <strong>{header.homeClubName}</strong>
       <div className="tls-matchday-score">
-        <span>{header.homeGoals}</span>
+        <m.span
+          data-score-changed={homeChanged}
+          data-score-motion="home"
+          initial={reducedMotion || !homeChanged ? false : webMotionTargets.matchScoreChangeEnter}
+          key={`home:${header.homeGoals}`}
+          transition={webMotion.narrative}
+          animate={webMotionTargets.rest}
+        >
+          {header.homeGoals}
+        </m.span>
         <span>-</span>
-        <span>{header.awayGoals}</span>
+        <m.span
+          data-score-changed={awayChanged}
+          data-score-motion="away"
+          initial={reducedMotion || !awayChanged ? false : webMotionTargets.matchScoreChangeEnter}
+          key={`away:${header.awayGoals}`}
+          transition={webMotion.narrative}
+          animate={webMotionTargets.rest}
+        >
+          {header.awayGoals}
+        </m.span>
       </div>
       <strong>{header.awayClubName}</strong>
       <small>{text(header.phase === "full_time"
@@ -519,7 +614,11 @@ function MatchdayScoreboard({ header, text }: Readonly<{ header: MatchdayScoreHe
   );
 }
 
-function broadcastLine(view: CareerMatchdayPhaseView, text: Translator): string {
+function broadcastLine(
+  view: CareerMatchdayPhaseView,
+  text: Translator,
+  currentEvent?: CareerMatchdayPhaseView["timelineEvents"][number],
+): string {
   if (view.phase === "full_time") {
     return text("career.matchday.broadcast.fullTimeLine", {
       result: text(`career.matchday.scoreState.${view.scoreboard.selectedClubScoreState}` as MessageKey),
@@ -534,14 +633,12 @@ function broadcastLine(view: CareerMatchdayPhaseView, text: Translator): string 
     return text("career.matchday.broadcast.fullTimeApproaching");
   }
 
-  const latestEvent = view.timelineEvents.at(-1);
-
-  if (latestEvent !== undefined) {
+  if (currentEvent !== undefined) {
     return text("career.matchday.broadcast.eventLine", {
-      minute: latestEvent.minute,
-      kind: text(latestEvent.labelKey as MessageKey),
-      club: latestEvent.club.name,
-      player: formatMatchdayEventPlayerLine(latestEvent, text),
+      minute: currentEvent.minute,
+      kind: text(currentEvent.labelKey as MessageKey),
+      club: currentEvent.club.name,
+      player: formatMatchdayEventPlayerLine(currentEvent, text),
     });
   }
 
@@ -590,11 +687,11 @@ function PhaseRail({
 
 /** Chooses exactly one primary matchday action for the current phase. */
 function matchCentrePrimaryAction(
-  view: CareerMatchdayView,
+  blockerKeys: readonly CareerMatchdayBlockerKey[],
   presenterPrimaryAction: MatchdayManagerActionView | undefined,
   halfTimeDecisionBlocked = false,
 ): MatchdayManagerActionView | undefined {
-  if (view.blockerKeys.length > 0) {
+  if (blockerKeys.length > 0) {
     return {
       actionId: "prepare_match",
       status: "available",
@@ -630,15 +727,6 @@ function MatchdayBlockers({
   );
 }
 
-function MatchdayFact({ label, value }: Readonly<{ label: string; value: string }>): React.JSX.Element {
-  return (
-    <div className="tls-matchday-fact">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
 function handlerForPhaseAction(
   actionId: MatchdayManagerActionId,
   handlers: Readonly<{
@@ -661,10 +749,6 @@ function handlerForPhaseAction(
     case "apply_half_time_substitutions":
       return () => undefined;
   }
-}
-
-function fixtureLine(view: CareerMatchdayPhaseView): string {
-  return `${view.fixture.homeClub.name} vs ${view.fixture.awayClub.name}`;
 }
 
 function phaseMinuteLabel(minute: number, text: Translator): string {
