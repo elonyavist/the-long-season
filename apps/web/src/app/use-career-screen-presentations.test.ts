@@ -37,7 +37,7 @@ describe("useCareerScreenPresentations", () => {
     expect(result?.matchPreparationPlayerFactsById.size).toBe(22);
     expect(result?.matchday).toBeDefined();
     expect(result?.matchdayPhase).toBeDefined();
-    expect(result?.halfTimeSubstitutions).toBeDefined();
+    expect(result?.teamControlPanel).toBeDefined();
   });
 
   it("returns only stable empty collections before a career is loaded", () => {

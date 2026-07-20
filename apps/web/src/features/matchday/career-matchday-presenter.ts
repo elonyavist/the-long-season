@@ -9,18 +9,43 @@ import type {
 const MATCHDAY_PHASES = ["pre_match", "first_half", "half_time", "second_half", "full_time"] as const;
 
 const GOAL_EVENT_KINDS = new Set(["goal"]);
-const SUBSTITUTION_EVENT_KINDS = new Set(["substitution"]);
-const TEAM_RESULT_REASON_KEYS = new Set([
-  "result_win",
-  "result_draw",
-  "result_loss",
-  "team_clean_sheet",
-  "team_heavy_loss",
+const LIVE_SECONDARY_INCIDENT_KINDS = new Set([
+  "penalty",
+  "penalty_goal",
+  "penalty_miss",
+  "penalty_save",
+  "yellow_card",
+  "red_card",
+  "second_yellow",
+  "injury",
+  "substitution",
 ]);
-const FULL_TIME_CONDITION_ATTENTION_THRESHOLD = 75;
-const FULL_TIME_CONDITION_DELTA_ATTENTION = 15;
-const FULL_TIME_STATE_DELTA_ATTENTION = 3;
-
+const TABELLINO_SECONDARY_INCIDENT_KINDS = new Set([
+  "penalty_miss",
+  "penalty_save",
+  "yellow_card",
+  "red_card",
+  "second_yellow",
+  "injury",
+  "substitution",
+]);
+const MATCHDAY_STATISTIC_METRICS = [
+  "possessionShare",
+  "shots",
+  "shotsOnTarget",
+  "expectedGoals",
+  "corners",
+  "fouls",
+  "yellowCards",
+  "redCards",
+  "saves",
+  "goals",
+] as const;
+const COMPACT_STATISTIC_METRICS = new Set<MatchdayStatisticMetricId>([
+  "possessionShare",
+  "shots",
+  "expectedGoals",
+]);
 /** Five-state matchday phase shown as a passive visual indicator. */
 export type MatchdayPresenterPhase = (typeof MATCHDAY_PHASES)[number];
 
@@ -94,7 +119,7 @@ export type MatchdayTabellinoSide = "home" | "away";
 
 /** One real incident kept in the persistent compact match record. */
 export interface MatchdayTabellinoIncidentView {
-  /** Original structured event from the shared read model. */
+  /** Structured event projected for the compact match record. */
   readonly event: CareerMatchdayPhaseEventView;
   /** Fixture side used to place the incident in the correct visual lane. */
   readonly side: MatchdayTabellinoSide;
@@ -102,14 +127,36 @@ export interface MatchdayTabellinoIncidentView {
   readonly visualPriority: "goal" | "secondary";
 }
 
-/** One chronological compact record shared by live, half-time, and full-time. */
+/** One newest-first compact record shared by live, half-time, and full-time. */
 export interface MatchdayTabellinoView {
   /** Home club identity for the desktop lane heading. */
   readonly homeClubName: string;
   /** Away club identity for the desktop lane heading. */
   readonly awayClubName: string;
-  /** Current real incidents in deterministic chronological order. */
+  /** Current real incidents in deterministic newest-first order. */
   readonly incidents: readonly MatchdayTabellinoIncidentView[];
+}
+
+/** Canonical cumulative metric exposed by the live comparison views. */
+export type MatchdayStatisticMetricId = (typeof MATCHDAY_STATISTIC_METRICS)[number];
+
+/** One presenter-owned row for compact or complete home/away comparison. */
+export interface MatchdayStatisticMetricView {
+  readonly metricId: MatchdayStatisticMetricId;
+  readonly labelKey: string;
+  readonly format: "integer" | "decimal" | "percent";
+  readonly homeValue: number;
+  readonly awayValue: number;
+  readonly homeBarPercent: number;
+  readonly awayBarPercent: number;
+  readonly compact: boolean;
+}
+
+/** Presentation-ready cumulative statistics for both fixture sides. */
+export interface MatchdayStatisticsView {
+  readonly homeClubName: string;
+  readonly awayClubName: string;
+  readonly metrics: readonly MatchdayStatisticMetricView[];
 }
 
 /** Decision-grade first-half facts shown before the tactical workspace. */
@@ -128,7 +175,7 @@ export interface MatchdayHalfTimeReviewView {
   readonly contributors: readonly CareerMatchdayPhasePlayerView[];
 }
 
-/** One selected-club player whose durable post-match state actually changed. */
+/** Full-time consequences attached to one player inside the relevant team tab. */
 export interface MatchdayFullTimeConsequenceView {
   /** Stable player identifier used to merge structured consequence facts. */
   readonly playerId: string;
@@ -138,6 +185,8 @@ export interface MatchdayFullTimeConsequenceView {
   readonly condition?: CareerMatchdayPhaseView["conditionChanges"][number];
   /** Form or morale consequence when either value changed or has a reason. */
   readonly playerState?: CareerMatchdayPhaseView["playerStateChanges"][number];
+  /** Public injuries and suspensions caused by this fixture. */
+  readonly availability: CareerMatchdayPhaseView["availabilityConsequences"];
 }
 
 /** Concise full-time facts for both teams and the selected club's durable review. */
@@ -150,8 +199,12 @@ export interface MatchdayFullTimeReviewView {
   readonly selectedTeamPlayers: readonly CareerMatchdayPhasePlayerView[];
   /** Final opponent rows containing only observed match facts. */
   readonly opponentPlayers: readonly CareerMatchdayPhasePlayerView[];
-  /** Non-zero durable consequences merged by player. */
-  readonly consequences: readonly MatchdayFullTimeConsequenceView[];
+  /** Final engine statistics used by the summary tab. */
+  readonly statistics?: MatchdayStatisticsView;
+  /** Selected-club consequences merged into the selected-team rows. */
+  readonly selectedTeamConsequences: readonly MatchdayFullTimeConsequenceView[];
+  /** Public opponent consequences merged into the opponent rows. */
+  readonly opponentConsequences: readonly MatchdayFullTimeConsequenceView[];
 }
 
 /** Complete matchday presentation contract consumed by React screens. */
@@ -164,6 +217,8 @@ export interface CareerMatchdayPresentationView {
   readonly primaryAction?: MatchdayManagerActionView;
   /** Persistent chronological match record. */
   readonly tabellino: MatchdayTabellinoView;
+  /** Engine-owned cumulative facts normalized only for visual comparison. */
+  readonly statistics?: MatchdayStatisticsView;
   /** Half-time-only facts that support a manager decision without duplicating the scoreboard. */
   readonly halfTimeReview?: MatchdayHalfTimeReviewView;
   /** Full-time-only football and durable-state review facts. */
@@ -185,12 +240,50 @@ export function buildCareerMatchdayPresentationView(
     phaseIndicators: buildMatchdayPhaseIndicators(phaseView.phase),
     ...(primaryAction === undefined ? {} : { primaryAction }),
     tabellino: buildMatchdayTabellinoView(phaseView),
+    ...(phaseView.statistics === undefined
+      ? {}
+      : { statistics: buildMatchdayStatisticsView(phaseView) }),
     ...(phaseView.phase === "half_time"
       ? { halfTimeReview: buildMatchdayHalfTimeReviewView(phaseView) }
       : {}),
     ...(phaseView.phase === "full_time"
       ? { fullTimeReview: buildMatchdayFullTimeReviewView(phaseView) }
       : {}),
+  };
+}
+
+/** Builds stable comparative rows without inventing or re-deriving match facts. */
+export function buildMatchdayStatisticsView(
+  phaseView: Pick<CareerMatchdayPhaseView, "fixture" | "statistics">,
+): MatchdayStatisticsView {
+  if (phaseView.statistics === undefined) {
+    throw new Error("Matchday statistics require an engine statistics snapshot");
+  }
+
+  return {
+    homeClubName: phaseView.fixture.homeClub.name,
+    awayClubName: phaseView.fixture.awayClub.name,
+    metrics: MATCHDAY_STATISTIC_METRICS.map((metricId) => {
+      const homeValue = phaseView.statistics!.home[metricId];
+      const awayValue = phaseView.statistics!.away[metricId];
+      const total = homeValue + awayValue;
+      const homeBarPercent = total === 0 ? 50 : homeValue / total * 100;
+
+      return {
+        metricId,
+        labelKey: `career.matchday.statistics.${metricId}`,
+        format: metricId === "possessionShare"
+          ? "percent"
+          : metricId === "expectedGoals"
+            ? "decimal"
+            : "integer",
+        homeValue,
+        awayValue,
+        homeBarPercent,
+        awayBarPercent: 100 - homeBarPercent,
+        compact: COMPACT_STATISTIC_METRICS.has(metricId),
+      };
+    }),
   };
 }
 
@@ -248,49 +341,77 @@ export function buildMatchdayFullTimeReviewView(
   const opponentPlayers = phaseView.playerRows
     .filter((row) => row.club.clubId === opponentClub.clubId)
     .toSorted(compareFullTimeRatings);
-  const conditionByPlayerId = new Map(
-    phaseView.conditionChanges
-      .filter((change) => change.delta !== 0)
-      .map((change) => [change.playerId, change] as const),
+  const conditionByPlayerId = new Map(phaseView.conditionChanges
+    .filter((change) => change.delta !== 0)
+    .map((change) => [change.playerId, change] as const));
+  const stateByPlayerId = new Map(phaseView.playerStateChanges
+    .filter((change) => change.formDelta !== 0 || change.moraleDelta !== 0)
+    .map((change) => [change.playerId, change] as const));
+  const availabilityByPlayerId = groupAvailabilityConsequences(phaseView.availabilityConsequences);
+  const selectedTeamConsequences = buildTeamConsequences(
+    selectedTeamPlayers,
+    conditionByPlayerId,
+    stateByPlayerId,
+    availabilityByPlayerId,
   );
-  const stateByPlayerId = new Map(
-    phaseView.playerStateChanges
-      .filter((change) => (
-        change.reasonKeys.some((reason) => !TEAM_RESULT_REASON_KEYS.has(reason))
-        || change.reasonKeys.length === 0 && (
-          Math.abs(change.formDelta) >= FULL_TIME_STATE_DELTA_ATTENTION
-          || Math.abs(change.moraleDelta) >= FULL_TIME_STATE_DELTA_ATTENTION
-        )
-      ))
-      .map((change) => [change.playerId, change] as const),
+  const opponentConsequences = buildTeamConsequences(
+    opponentPlayers,
+    new Map(),
+    new Map(),
+    availabilityByPlayerId,
   );
-  const notableConditionPlayerIds = [...conditionByPlayerId.values()]
-    .filter((change) => (
-      change.after < FULL_TIME_CONDITION_ATTENTION_THRESHOLD
-      || Math.abs(change.delta) >= FULL_TIME_CONDITION_DELTA_ATTENTION
-    ))
-    .map((change) => change.playerId);
-  const playerIds = new Set([...notableConditionPlayerIds, ...stateByPlayerId.keys()]);
-  const consequences = [...playerIds]
-    .map((playerId): MatchdayFullTimeConsequenceView => {
-      const condition = conditionByPlayerId.get(playerId);
-      const playerState = stateByPlayerId.get(playerId);
-      return {
-        playerId,
-        playerName: condition?.playerName ?? playerState?.playerName ?? playerId,
-        ...(condition === undefined ? {} : { condition }),
-        ...(playerState === undefined ? {} : { playerState }),
-      };
-    })
-    .toSorted(compareFullTimeConsequences);
 
   return {
     selectedClubName: phaseView.selectedClub.name,
     opponentClubName: opponentClub.name,
     selectedTeamPlayers,
     opponentPlayers,
-    consequences,
+    ...(phaseView.statistics === undefined
+      ? {}
+      : { statistics: buildMatchdayStatisticsView(phaseView) }),
+    selectedTeamConsequences,
+    opponentConsequences,
   };
+}
+
+function groupAvailabilityConsequences(
+  consequences: CareerMatchdayPhaseView["availabilityConsequences"],
+): ReadonlyMap<string, CareerMatchdayPhaseView["availabilityConsequences"]> {
+  const byPlayerId = new Map<string, CareerMatchdayPhaseView["availabilityConsequences"]>();
+
+  for (const consequence of consequences) {
+    byPlayerId.set(consequence.playerId, [
+      ...(byPlayerId.get(consequence.playerId) ?? []),
+      consequence,
+    ]);
+  }
+
+  return byPlayerId;
+}
+
+function buildTeamConsequences(
+  players: readonly CareerMatchdayPhasePlayerView[],
+  conditionByPlayerId: ReadonlyMap<string, CareerMatchdayPhaseView["conditionChanges"][number]>,
+  stateByPlayerId: ReadonlyMap<string, CareerMatchdayPhaseView["playerStateChanges"][number]>,
+  availabilityByPlayerId: ReadonlyMap<string, CareerMatchdayPhaseView["availabilityConsequences"]>,
+): readonly MatchdayFullTimeConsequenceView[] {
+  return players.flatMap((player): readonly MatchdayFullTimeConsequenceView[] => {
+    const condition = conditionByPlayerId.get(player.playerId);
+    const playerState = stateByPlayerId.get(player.playerId);
+    const availability = availabilityByPlayerId.get(player.playerId) ?? [];
+
+    if (condition === undefined && playerState === undefined && availability.length === 0) {
+      return [];
+    }
+
+    return [{
+      playerId: player.playerId,
+      playerName: player.playerName,
+      ...(condition === undefined ? {} : { condition }),
+      ...(playerState === undefined ? {} : { playerState }),
+      availability,
+    }];
+  }).toSorted(compareFullTimeConsequences);
 }
 
 /**
@@ -352,13 +473,13 @@ function isManagerMatchdayAction(
 }
 
 /**
- * Builds the single persistent match record from event kinds produced by the
- * current game. Unsupported future incident branches are intentionally absent.
+ * Builds the newest-first persistent match record from event kinds produced
+ * by the current game. Unsupported future incident branches remain absent.
  */
 export function buildMatchdayTabellinoView(
   phaseView: Pick<CareerMatchdayPhaseView, "fixture" | "timelineEvents">,
 ): MatchdayTabellinoView {
-  const incidents = phaseView.timelineEvents
+  const incidents = collapseTabellinoPenaltySequence(phaseView.timelineEvents)
     .flatMap((event): readonly MatchdayTabellinoIncidentView[] => {
       const visualPriority = tabellinoPriority(event);
       if (visualPriority === undefined) return [];
@@ -372,7 +493,8 @@ export function buildMatchdayTabellinoView(
 
       return [{ event, side, visualPriority }];
     })
-    .toSorted(compareTabellinoIncidents);
+    .toSorted(compareTabellinoIncidents)
+    .toReversed();
 
   return {
     homeClubName: phaseView.fixture.homeClub.name,
@@ -411,16 +533,71 @@ export function buildMatchdayLiveMoment(
 
 function liveEventPriority(event: CareerMatchdayPhaseEventView): MatchdayEventVisualPriority {
   if (GOAL_EVENT_KINDS.has(event.kind)) return "goal";
-  if (SUBSTITUTION_EVENT_KINDS.has(event.kind)) return "secondary";
+  if (LIVE_SECONDARY_INCIDENT_KINDS.has(event.kind)) return "secondary";
   return "detail";
 }
 
 function tabellinoPriority(
   event: CareerMatchdayPhaseEventView,
 ): MatchdayTabellinoIncidentView["visualPriority"] | undefined {
-  if (GOAL_EVENT_KINDS.has(event.kind)) return "goal";
-  if (SUBSTITUTION_EVENT_KINDS.has(event.kind)) return "secondary";
+  if (GOAL_EVENT_KINDS.has(event.kind) || event.kind === "penalty_goal") return "goal";
+  if (TABELLINO_SECONDARY_INCIDENT_KINDS.has(event.kind)) return "secondary";
   return undefined;
+}
+
+/**
+ * Collapses the live penalty narrative into the single settled fact expected
+ * in a match record while preserving the original events for live playback.
+ */
+function collapseTabellinoPenaltySequence(
+  events: readonly CareerMatchdayPhaseEventView[],
+): readonly CareerMatchdayPhaseEventView[] {
+  const penaltyGoalEventIds = matchingPenaltyGoalEventIds(events);
+
+  return events.flatMap((event): readonly CareerMatchdayPhaseEventView[] => {
+    if (event.kind === "penalty" || penaltyGoalEventIds.has(event.eventId)) return [];
+    if (event.kind !== "penalty_goal") return [event];
+
+    const { secondaryPlayerName: _secondaryPlayerName, ...penaltyGoal } = event;
+    return [{
+      ...penaltyGoal,
+      labelKey: "career.matchday.event.penalty_goal_record",
+    }];
+  });
+}
+
+/** Matches only the generated goal immediately following each scored penalty outcome. */
+function matchingPenaltyGoalEventIds(
+  events: readonly CareerMatchdayPhaseEventView[],
+): ReadonlySet<string> {
+  const goalEvents = events
+    .filter((event) => event.kind === "goal")
+    .toSorted(comparePhaseEvents);
+  const matchedGoalIds = new Set<string>();
+
+  for (const penaltyOutcome of events
+    .filter((event) => event.kind === "penalty_goal")
+    .toSorted(comparePhaseEvents)) {
+    const matchingGoal = goalEvents.find((goal) => (
+      !matchedGoalIds.has(goal.eventId)
+      && goal.minute === penaltyOutcome.minute
+      && goal.club.clubId === penaltyOutcome.club.clubId
+      && goal.playerName === penaltyOutcome.playerName
+      && goal.sequence > penaltyOutcome.sequence
+    ));
+    if (matchingGoal !== undefined) matchedGoalIds.add(matchingGoal.eventId);
+  }
+
+  return matchedGoalIds;
+}
+
+function comparePhaseEvents(
+  first: CareerMatchdayPhaseEventView,
+  second: CareerMatchdayPhaseEventView,
+): number {
+  return first.minute - second.minute
+    || first.sequence - second.sequence
+    || first.eventId.localeCompare(second.eventId);
 }
 
 function phaseIndicatorStatus(index: number, activeIndex: number): MatchdayPhaseIndicatorStatus {
@@ -515,7 +692,8 @@ function compareFullTimeConsequences(
 }
 
 function fullTimeConsequenceWeight(change: MatchdayFullTimeConsequenceView): number {
-  return Math.abs(change.condition?.delta ?? 0)
+  return change.availability.length * 100
+    + Math.abs(change.condition?.delta ?? 0)
     + Math.abs(change.playerState?.formDelta ?? 0)
     + Math.abs(change.playerState?.moraleDelta ?? 0);
 }

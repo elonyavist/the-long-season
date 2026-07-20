@@ -28,11 +28,13 @@ test("same seed and fixture ID produce identical match output", () => {
 
 test("same fixed context produces the expected golden output", () => {
   const result = simulateMatch(validContext());
+  const { telemetry, ...aggregateStats } = result.stats;
 
-  assert.deepEqual(result, GOLDEN_MATCH_RESULT);
+  assert.ok(telemetry !== undefined);
+  assert.deepEqual({ ...result, stats: aggregateStats }, GOLDEN_MATCH_RESULT);
 });
 
-test("zero-opportunity match stays deterministic and low-event", () => {
+test("zero-opportunity match stays deterministic without shot events", () => {
   const context = {
     ...validContext({ fixtureValue: "fixture:zero-opportunity-000001", minuteCount: 12 }),
     engineConfig: {
@@ -48,7 +50,7 @@ test("zero-opportunity match stays deterministic and low-event", () => {
 
   assert.deepEqual(first, second);
   assert.deepEqual(first.score, { home: 0, away: 0 });
-  assert.deepEqual(first.stats, {
+  assert.deepEqual({ home: first.stats.home, away: first.stats.away }, {
     home: {
       opportunities: 0,
       shots: 0,
@@ -64,7 +66,7 @@ test("zero-opportunity match stays deterministic and low-event", () => {
   });
   assert.deepEqual(
     first.events.map((event) => event.type),
-    ["kickoff", "half_time", "full_time"],
+    ["kickoff", "foul", "yellow_card", "foul", "half_time", "foul", "foul", "full_time"],
   );
 });
 
@@ -452,6 +454,22 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       minute: 0,
     },
     {
+      type: "foul",
+      minute: 2,
+      side: "home",
+      committedByPlayerId: playerId("player:home-000001"),
+      sufferedByPlayerId: playerId("player:away-000001"),
+      zoneDanger: 0.217,
+    },
+    {
+      type: "foul",
+      minute: 2,
+      side: "away",
+      committedByPlayerId: playerId("player:away-000001"),
+      sufferedByPlayerId: playerId("player:home-000001"),
+      zoneDanger: 0.451,
+    },
+    {
       type: "shot_outcome",
       minute: 3,
       side: "away",
@@ -480,6 +498,28 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
         home: 0,
         away: 0,
       },
+    },
+    {
+      type: "foul",
+      minute: 8,
+      side: "home",
+      committedByPlayerId: playerId("player:home-000001"),
+      sufferedByPlayerId: playerId("player:away-000001"),
+      zoneDanger: 0.665,
+    },
+    {
+      type: "yellow_card",
+      minute: 8,
+      side: "home",
+      playerId: playerId("player:home-000001"),
+    },
+    {
+      type: "foul",
+      minute: 12,
+      side: "home",
+      committedByPlayerId: playerId("player:home-000001"),
+      sufferedByPlayerId: playerId("player:away-000001"),
+      zoneDanger: 0.232,
     },
     {
       type: "full_time",

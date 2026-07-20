@@ -13,11 +13,8 @@ import type { WebCareerContinueResult } from "../../runtime/web-career-runtime";
 import { AppShell } from "../app-shell/AppShell";
 import { PlayerFactPanel } from "../../shared/ui/PlayerFactPanel";
 import { SquadSelectionTable, type SquadSelectionRow } from "../../shared/ui/SquadSelectionTable";
-import {
-  TacticalBenchBoard,
-  type TacticalBenchBoardCandidate,
-} from "../tactics-board/components/TacticalBenchBoard";
-import { TacticalBoardPitch } from "../tactics-board/components/TacticalBoardPitch";
+import type { TacticalBenchBoardCandidate } from "../tactics-board/components/TacticalBenchBoard";
+import { TacticalBoardWorkspace } from "../tactics-board/components/TacticalBoardWorkspace";
 import { selectCurrentTacticalBoardShape } from "../tactics-board/tactical-board-formations";
 import { TACTICAL_BOARD_ROLE_CODES, TACTICAL_BOARD_ROLES } from "../tactics-board/tactical-board-roles";
 import type { TacticalBoardDraft } from "../tactics-board/tactical-board-state";
@@ -29,6 +26,7 @@ import type {
   MatchPreparationSelectionAction,
 } from "./match-preparation-adapter";
 import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
+import { CareerScreenHeader } from "../shared/CareerScreenHeader";
 import { useCareerUiStore } from "../../stores/career-ui-store";
 
 /** Props for the first editable match-preparation screen. */
@@ -42,8 +40,6 @@ export type CareerMatchPreparationScreenProps = Readonly<{
   continueResult?: WebCareerContinueResult;
   text: Translator;
   onBackToMenu: () => void;
-  onBackToDashboard: () => void;
-  onContinueCareer: () => void;
   onInboxActionClick: (actionId: string) => void;
   onFormationChange: (formationId: CareerMatchPreparationFormationId) => void;
   onLineupPlayerChange: (slotKey: string, playerId: string | undefined) => void;
@@ -79,8 +75,6 @@ export function CareerMatchPreparationScreen({
   continueResult,
   text,
   onBackToMenu,
-  onBackToDashboard,
-  onContinueCareer,
   onInboxActionClick,
   onFormationChange,
   onLineupPlayerChange,
@@ -132,6 +126,30 @@ export function CareerMatchPreparationScreen({
     setSelectedDetailPlayerId(playerId);
     setActivePanelTab("detail");
   };
+  const exchangeLineupPlayers = (firstSlotKey: string, secondSlotKey: string): void => {
+    const firstPlayerId = tacticalBoardDraft.slots.find((slot) => slot.slotId === firstSlotKey)?.playerId;
+    const secondPlayerId = tacticalBoardDraft.slots.find((slot) => slot.slotId === secondSlotKey)?.playerId;
+    if (firstPlayerId === null || firstPlayerId === undefined || secondPlayerId === null || secondPlayerId === undefined) return;
+    onLineupPlayerChange(firstSlotKey, secondPlayerId);
+    onLineupPlayerChange(secondSlotKey, firstPlayerId);
+  };
+  const exchangeLineupAndBench = (lineupSlotKey: string, benchSlotKey: TacticalBenchSlotId): void => {
+    const outgoingPlayerId = tacticalBoardDraft.slots.find((slot) => slot.slotId === lineupSlotKey)?.playerId;
+    const incomingPlayerId = tacticalBenchSlots.find((slot) => slot.slotId === benchSlotKey)?.player?.playerId;
+    if ((outgoingPlayerId === null || outgoingPlayerId === undefined) && incomingPlayerId === undefined) return;
+
+    onLineupPlayerChange(lineupSlotKey, incomingPlayerId);
+    onBenchPlayerChange(benchSlotKey, outgoingPlayerId ?? undefined);
+  };
+  const adaptBoardSlot = (
+    slotKey: string,
+    role: TacticalBoardRoleCode,
+    nx: number,
+    ny: number,
+  ): void => {
+    onBoardSlotRoleChange(slotKey, role);
+    onBoardSlotMove(slotKey, nx, ny);
+  };
   const commandActivity = useCareerUiStore((state) => state.commandActivity);
   const commandPending = commandActivity?.status === "pending";
 
@@ -142,44 +160,44 @@ export function CareerMatchPreparationScreen({
       currentDateIso={currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
-      onContinueCareer={onContinueCareer}
       onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-preparation-panel" data-state={commandPending ? "pending" : "idle"} aria-labelledby="match-preparation-title" aria-busy={commandPending}>
-        <header className="tls-preparation-header">
-          <div>
-            <h1 className="tls-shell-title" id="match-preparation-title">{text("career.matchPreparation")}</h1>
-            <p className="tls-shell-status">{formatFixture(view, text)}</p>
-            {draftDirty ? (
-              <span className="tls-preparation-draft-state" data-state="unsaved" role="status">
-                {text("career.saveControl.unsaved")}
-              </span>
-            ) : null}
-          </div>
-          <div className="tls-preparation-header-actions">
-            <button className="tls-menu-button tls-preparation-dashboard" disabled={commandPending} type="button" onClick={onBackToDashboard}>
-              {text("career.shell.nav.dashboard")}
+        <CareerScreenHeader
+          className="tls-preparation-header"
+          command={(
+            <button
+              className="tls-menu-button tls-menu-button-primary tls-preparation-confirm"
+              data-state={commandPending ? "pending" : view.saveAction.status === "available" ? "idle" : "disabled"}
+              disabled={view.saveAction.status !== "available" || commandPending}
+              type="button"
+              onClick={onSavePreparation}
+            >
+              <CommandActivityIndicator
+                activity={commandActivity}
+                commandIds={["confirm_preparation"]}
+                idleLabel={text(view.saveAction.labelKey as MessageKey)}
+                text={text}
+              />
             </button>
-          </div>
-        </header>
+          )}
+          supporting={(
+            <>
+              <p className="tls-shell-status">{formatFixture(view, text)}</p>
+              {draftDirty ? (
+                <span className="tls-preparation-draft-state" data-state="unsaved" role="status">
+                  {text("career.saveControl.unsaved")}
+                </span>
+              ) : null}
+            </>
+          )}
+          title={text("career.matchPreparation")}
+          titleId="match-preparation-title"
+        />
 
         <div className="tls-preparation-command-lock" inert={commandPending ? true : undefined}>
         <section className="tls-preparation-decision-bar">
           <PreparationAlertStrip blockerKeys={view.blockerKeys} text={text} />
-          <button
-            className="tls-menu-button tls-menu-button-primary tls-preparation-confirm"
-            data-state={commandPending ? "pending" : view.saveAction.status === "available" ? "idle" : "disabled"}
-            disabled={view.saveAction.status !== "available" || commandPending}
-            type="button"
-            onClick={onSavePreparation}
-          >
-            <CommandActivityIndicator
-              activity={commandActivity}
-              commandIds={["confirm_preparation"]}
-              idleLabel={text(view.saveAction.labelKey as MessageKey)}
-              text={text}
-            />
-          </button>
         </section>
 
         <section className="tls-preparation-lineup" aria-labelledby="match-preparation-lineup-title">
@@ -226,50 +244,53 @@ export function CareerMatchPreparationScreen({
                 </label>
               </div>
 
-              <TacticalBoardPitch
-                availablePlayers={tacticalBoardPlayers}
-                currentShape={currentShape}
-                {...(view.formation.selectedFormationId === undefined
-                  ? {}
-                  : { formationMotionKey: view.formation.selectedFormationId })}
-                players={tacticalBoardPlayers}
-                slots={tacticalBoardDraft.slots}
-                text={text}
-                onAssign={(slotKey, playerId) => {
-                  onLineupPlayerChange(slotKey, playerId);
-                  focusPlayerDetail(playerId);
-                }}
-                onRemove={onBoardSlotClear}
-                onRoleChange={onBoardSlotRoleChange}
-                onSlotMove={onBoardSlotMove}
-                onSlotOpen={(slotKey) => {
-                  const playerId = tacticalBoardDraft.slots.find((slot) => slot.slotId === slotKey)?.playerId;
-
-                  if (playerId !== undefined && playerId !== null) {
+              <TacticalBoardWorkspace
+                bench={{
+                  availablePlayers: tacticalBenchCandidates,
+                  requiredSlotCount: view.bench.requiredSlotCount,
+                  selectedSlotCount: view.bench.selectedSlotCount,
+                  slots: tacticalBenchSlots,
+                  text,
+                  onAssign: (slotKey, playerId) => {
+                    onBenchPlayerChange(slotKey, playerId);
                     focusPlayerDetail(playerId);
-                  }
-                }}
-              />
+                  },
+                  onPlayerDropOnLineup: (benchSlotKey, _playerId, lineupSlotKey) => {
+                    exchangeLineupAndBench(lineupSlotKey, benchSlotKey);
+                  },
+                  onRemove: (slotKey) => {
+                    onBenchPlayerChange(slotKey, undefined);
+                  },
+                  onSlotOpen: (slotKey) => {
+                    const playerId = view.bench.slots.find((slot) => slot.slotKey === slotKey)?.selectedPlayerId;
 
-              <TacticalBenchBoard
-                availablePlayers={tacticalBenchCandidates}
-                requiredSlotCount={view.bench.requiredSlotCount}
-                selectedSlotCount={view.bench.selectedSlotCount}
-                slots={tacticalBenchSlots}
-                text={text}
-                onAssign={(slotKey, playerId) => {
-                  onBenchPlayerChange(slotKey, playerId);
-                  focusPlayerDetail(playerId);
+                    if (playerId !== undefined) focusPlayerDetail(playerId);
+                  },
                 }}
-                onRemove={(slotKey) => {
-                  onBenchPlayerChange(slotKey, undefined);
-                }}
-                onSlotOpen={(slotKey) => {
-                  const playerId = view.bench.slots.find((slot) => slot.slotKey === slotKey)?.selectedPlayerId;
-
-                  if (playerId !== undefined) {
+                pitch={{
+                  allowReplaceAssigned: true,
+                  availablePlayers: tacticalBoardPlayers,
+                  currentShape,
+                  ...(view.formation.selectedFormationId === undefined
+                    ? {}
+                    : { formationMotionKey: view.formation.selectedFormationId }),
+                  players: tacticalBoardPlayers,
+                  slots: tacticalBoardDraft.slots,
+                  text,
+                  onAssign: (slotKey, playerId) => {
+                    onLineupPlayerChange(slotKey, playerId);
                     focusPlayerDetail(playerId);
-                  }
+                  },
+                  onPlayerDropOnBench: exchangeLineupAndBench,
+                  onRemove: onBoardSlotClear,
+                  onRoleAdaptation: adaptBoardSlot,
+                  onRoleChange: onBoardSlotRoleChange,
+                  onSlotExchange: exchangeLineupPlayers,
+                  onSlotMove: onBoardSlotMove,
+                  onSlotOpen: (slotKey) => {
+                    const playerId = tacticalBoardDraft.slots.find((slot) => slot.slotId === slotKey)?.playerId;
+                    if (playerId !== undefined && playerId !== null) focusPlayerDetail(playerId);
+                  },
                 }}
               />
             </div>

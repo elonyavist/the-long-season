@@ -6,6 +6,8 @@ import {
   SQLITE_CAREER_SCHEMA_V5_STATEMENTS,
   SQLITE_CAREER_SCHEMA_V6_STATEMENTS,
   SQLITE_CAREER_SCHEMA_V7_STATEMENTS,
+  SQLITE_CAREER_SCHEMA_V8_STATEMENTS,
+  SQLITE_CAREER_SCHEMA_V9_STATEMENTS,
 } from "./sqlite-career-schema.ts";
 import { StorageError } from "../game-storage.interface.ts";
 
@@ -44,6 +46,14 @@ export const SQLITE_CAREER_MIGRATIONS: readonly SqliteCareerMigration[] = [
   {
     version: 7,
     statements: SQLITE_CAREER_SCHEMA_V7_STATEMENTS,
+  },
+  {
+    version: 8,
+    statements: SQLITE_CAREER_SCHEMA_V8_STATEMENTS,
+  },
+  {
+    version: 9,
+    statements: SQLITE_CAREER_SCHEMA_V9_STATEMENTS,
   },
 ];
 

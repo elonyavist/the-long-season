@@ -6,6 +6,7 @@ import {
   buildMatchdayFullTimeReviewView,
   buildMatchdayHalfTimeReviewView,
   buildMatchdayLiveMoment,
+  buildMatchdayStatisticsView,
 } from "./career-matchday-presenter";
 
 const selectedClub = { clubId: "club:selected", name: "S.S. Perugia" };
@@ -68,12 +69,15 @@ describe("full-time matchday presentation", () => {
       "player:selected-keeper",
     ]);
     expect(review.opponentPlayers.map((row) => row.playerId)).toEqual(["player:opponent"]);
-    expect(review.consequences).toHaveLength(1);
-    expect(review.consequences[0]).toMatchObject({
+    expect(review.statistics?.metrics).toHaveLength(10);
+    expect(review.selectedTeamConsequences).toHaveLength(2);
+    expect(review.selectedTeamConsequences.find((change) => change.playerId === "player:selected-scorer")).toMatchObject({
       playerId: "player:selected-scorer",
       condition: { delta: -8 },
       playerState: { formDelta: 2, moraleDelta: -1 },
+      availability: [],
     });
+    expect(review.opponentConsequences).toEqual([]);
   });
 
   it("keeps a severe condition decline even without a separate form or morale change", () => {
@@ -87,7 +91,7 @@ describe("full-time matchday presentation", () => {
       )),
     });
 
-    expect(review.consequences.map((change) => change.playerId)).toEqual([
+    expect(review.selectedTeamConsequences.map((change) => change.playerId)).toEqual([
       "player:selected-keeper",
       "player:selected-scorer",
     ]);
@@ -117,7 +121,7 @@ describe("full-time matchday presentation", () => {
 });
 
 describe("persistent matchday tabellino", () => {
-  it("keeps only current goal and substitution facts in chronological fixture lanes", () => {
+  it("keeps supported incidents in newest-first fixture lanes", () => {
     const presentation = buildCareerMatchdayPresentationView(buildFullTimePhase({ homeGoals: 2, awayGoals: 1 }));
 
     expect(presentation.tabellino).toMatchObject({
@@ -130,9 +134,104 @@ describe("persistent matchday tabellino", () => {
       side: incident.side,
       visualPriority: incident.visualPriority,
     }))).toEqual([
-      { eventId: "event:goal", kind: "goal", side: "away", visualPriority: "goal" },
       { eventId: "event:sub", kind: "substitution", side: "home", visualPriority: "secondary" },
+      { eventId: "event:goal", kind: "goal", side: "away", visualPriority: "goal" },
     ]);
+  });
+
+  it("keeps only settled missed penalties, cards, and injuries", () => {
+    const phase = buildFullTimePhase({ homeGoals: 2, awayGoals: 1 });
+    const incidents = [
+      ...phase.timelineEvents,
+      { ...event("event:penalty", 12, "penalty", opponentClub), sequence: 12 },
+      { ...event("event:penalty-miss", 12, "penalty_miss", opponentClub), sequence: 13 },
+      event("event:yellow", 20, "yellow_card", selectedClub),
+      event("event:red", 38, "red_card", opponentClub),
+      event("event:injury", 64, "injury", selectedClub),
+    ];
+    const presentation = buildCareerMatchdayPresentationView({
+      ...phase,
+      timelineEvents: incidents.toSorted((left, right) => left.minute - right.minute),
+    });
+
+    expect(presentation.tabellino.incidents.map((incident) => incident.event.kind)).toEqual([
+      "substitution",
+      "injury",
+      "goal",
+      "red_card",
+      "yellow_card",
+      "penalty_miss",
+    ]);
+  });
+
+  it("collapses a scored penalty into one goal record for the taker", () => {
+    const phase = buildFullTimePhase({ homeGoals: 2, awayGoals: 1 });
+    const presentation = buildCareerMatchdayPresentationView({
+      ...phase,
+      timelineEvents: [
+        {
+          ...event("event:penalty", 57, "penalty", opponentClub),
+          sequence: 100,
+          playerName: "Giorgio Trevisan",
+          secondaryPlayerName: "Matteo Perini",
+        },
+        {
+          ...event("event:penalty-outcome", 57, "penalty_goal", opponentClub),
+          sequence: 101,
+          playerName: "Matteo Moro",
+          secondaryPlayerName: "Giorgio Trevisan",
+        },
+        {
+          ...event("event:penalty-goal", 57, "goal", opponentClub),
+          sequence: 102,
+          playerName: "Matteo Moro",
+          secondaryPlayerName: "Giorgio Trevisan",
+        },
+      ],
+    });
+
+    expect(presentation.tabellino.incidents).toHaveLength(1);
+    expect(presentation.tabellino.incidents[0]).toMatchObject({
+      event: {
+        eventId: "event:penalty-outcome",
+        kind: "penalty_goal",
+        labelKey: "career.matchday.event.penalty_goal_record",
+        playerName: "Matteo Moro",
+      },
+      side: "home",
+      visualPriority: "goal",
+    });
+    expect(presentation.tabellino.incidents[0]?.event.secondaryPlayerName).toBeUndefined();
+  });
+});
+
+describe("matchday statistics presentation", () => {
+  it("preserves canonical metric order and prepares stable comparative bars", () => {
+    const view = buildMatchdayStatisticsView(buildFullTimePhase({ homeGoals: 2, awayGoals: 1 }));
+
+    expect(view.metrics.map((metric) => metric.metricId)).toEqual([
+      "possessionShare",
+      "shots",
+      "shotsOnTarget",
+      "expectedGoals",
+      "corners",
+      "fouls",
+      "yellowCards",
+      "redCards",
+      "saves",
+      "goals",
+    ]);
+    expect(view.metrics.filter((metric) => metric.compact).map((metric) => metric.metricId)).toEqual([
+      "possessionShare",
+      "shots",
+      "expectedGoals",
+    ]);
+    expect(view.metrics.find((metric) => metric.metricId === "shots")).toMatchObject({
+      homeValue: 10,
+      awayValue: 5,
+      homeBarPercent: 66.66666666666666,
+      awayBarPercent: 33.33333333333334,
+    });
   });
 });
 
@@ -176,6 +275,32 @@ function buildFullTimePhase(scoreboard: Readonly<{ homeGoals: number; awayGoals:
     phase: "full_time",
     currentMinute: 90,
     scoreboard,
+    statistics: {
+      home: {
+        possessionShare: 0.57,
+        shots: 10,
+        shotsOnTarget: 5,
+        expectedGoals: 1.8,
+        corners: 4,
+        fouls: 7,
+        yellowCards: 1,
+        redCards: 0,
+        saves: 2,
+        goals: scoreboard.homeGoals,
+      },
+      away: {
+        possessionShare: 0.43,
+        shots: 5,
+        shotsOnTarget: 3,
+        expectedGoals: 0.9,
+        corners: 2,
+        fouls: 9,
+        yellowCards: 2,
+        redCards: 0,
+        saves: 3,
+        goals: scoreboard.awayGoals,
+      },
+    },
     events: [
       {
         eventId: "event:goal",
@@ -246,6 +371,25 @@ function buildFullTimePhase(scoreboard: Readonly<{ homeGoals: number; awayGoals:
     ],
     nextActionId: "back_to_dashboard",
   });
+}
+
+function event(
+  eventId: string,
+  minute: number,
+  kind: string,
+  club: typeof selectedClub,
+) {
+  return {
+    eventId,
+    minute,
+    sequence: minute,
+    kind,
+    club,
+    playerName: `${kind} player`,
+    detailKeys: [],
+    labelKey: `career.matchday.event.${kind}`,
+    cardPriority: "normal" as const,
+  };
 }
 
 function player(

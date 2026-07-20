@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -10,6 +11,8 @@ export interface MatchdayPhaseTabItem<TabId extends string> {
   readonly tabId: TabId;
   /** Localized visible label. */
   readonly label: string;
+  /** Small semantic icon that reinforces the visible label without replacing it. */
+  readonly icon?: LucideIcon;
   /** Current panel content. */
   readonly panel: ReactNode;
   /** Temporarily unavailable views remain discoverable but cannot receive focus. */
@@ -73,6 +76,7 @@ export function MatchdayPhaseTabs<TabId extends string>({
       <div className="tls-match-phase-tab-list" role="tablist" aria-label={ariaLabel}>
         {tabs.map((tab, index) => {
           const isActive = tab.tabId === activeTab.tabId;
+          const TabIcon = tab.icon;
           const tabDomId = `${instanceId}-tab-${tab.tabId}`;
           const panelDomId = `${instanceId}-panel-${tab.tabId}`;
 
@@ -93,7 +97,16 @@ export function MatchdayPhaseTabs<TabId extends string>({
               onClick={() => activateAndFocus(index)}
               onKeyDown={(event) => handleKeyDown(event, index)}
             >
-              {tab.label}
+              {TabIcon === undefined ? null : (
+                <TabIcon
+                  aria-hidden="true"
+                  className="tls-match-phase-tab-icon"
+                  focusable="false"
+                  size={15}
+                  strokeWidth={1.8}
+                />
+              )}
+              <span>{tab.label}</span>
             </button>
           );
         })}

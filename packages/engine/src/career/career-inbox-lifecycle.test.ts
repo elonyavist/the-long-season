@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  abilityValue,
   careerInboxMessageId,
   clubId,
   competitionId,
@@ -16,12 +17,16 @@ import {
   type CareerState,
   type Fixture,
   type GameState,
+  type Player,
+  type PlayerAbilities,
+  playerId,
 } from "@game/domain";
 
 import {
   CareerInboxLifecycleError,
   acknowledgeImportantCareerInboxMessage,
   createPlayedFixtureResultInboxMessage,
+  createMatchConsequenceInboxMessages,
   createSeasonRolloverInboxMessage,
   deliverCareerInboxMessages,
   openCareerInboxMessage,
@@ -124,6 +129,45 @@ describe("career inbox lifecycle", () => {
       lifecycle: { read: false, acknowledged: false, resolved: false },
     });
   });
+
+  it("creates important selected-club injury and suspension facts only once", () => {
+    const selectedPlayerId = playerId("player:selected");
+    const opponentPlayerId = playerId("player:opponent");
+    const career = careerFixture([selectedPlayerId], [opponentPlayerId]);
+    const messages = createMatchConsequenceInboxMessages(career, [
+      {
+        type: "injury",
+        fixtureId: TEST_FIXTURE_ID,
+        playerId: selectedPlayerId,
+        severity: "minor",
+        occurredOn: gameDate(20_000),
+        unavailableUntil: gameDate(20_006),
+      },
+      {
+        type: "suspension",
+        fixtureId: TEST_FIXTURE_ID,
+        competitionId: competitionId("competition:test"),
+        playerId: selectedPlayerId,
+        reason: "straight_red",
+        matches: 3,
+      },
+      {
+        type: "injury",
+        fixtureId: TEST_FIXTURE_ID,
+        playerId: opponentPlayerId,
+        severity: "minor",
+        occurredOn: gameDate(20_000),
+        unavailableUntil: gameDate(20_006),
+      },
+    ]);
+
+    expect(messages.map(({ category, source, level }) => ({ category, source, level }))).toEqual([
+      { category: "injury_diagnosis", source: "medical_team", level: "important" },
+      { category: "suspension", source: "competition_office", level: "important" },
+    ]);
+    const delivered = deliverCareerInboxMessages(career, messages);
+    expect(deliverCareerInboxMessages(delivered, messages)).toBe(delivered);
+  });
 });
 
 const TEST_CLUB_ID = clubId("club:selected");
@@ -149,7 +193,10 @@ function matchdayMessage(
   });
 }
 
-function careerFixture(): CareerState {
+function careerFixture(
+  selectedPlayerIds: readonly ReturnType<typeof playerId>[] = [],
+  opponentPlayerIds: readonly ReturnType<typeof playerId>[] = [],
+): CareerState {
   const fixture: Fixture = {
     id: TEST_FIXTURE_ID,
     competitionId: competitionId("competition:test"),
@@ -162,8 +209,20 @@ function careerFixture(): CareerState {
   const gameState: GameState = {
     meta: { seed: "inbox-lifecycle", rngAlgorithmVersion: "test", saveSchemaVersion: 1 },
     calendar: { currentDate: gameDate(20_000), currentSeasonId: seasonId("season:test") },
-    players: {},
-    playerIds: [],
+    players: Object.fromEntries([...selectedPlayerIds, ...opponentPlayerIds].map((id) => [id, {
+      id,
+      firstName: "Inbox",
+      lastName: "Player",
+      birthDate: gameDate(10_000),
+      naturalPositions: [],
+      naturalRoles: [],
+      adaptedRoles: [],
+      weakRoles: [],
+      roleFamiliarity: {},
+      abilities: emptyAbilities(),
+      potential: emptyAbilities(),
+    }])) as Record<ReturnType<typeof playerId>, Player>,
+    playerIds: [...selectedPlayerIds, ...opponentPlayerIds],
     playerStates: {},
     clubs: {
       [TEST_CLUB_ID]: {
@@ -172,7 +231,7 @@ function careerFixture(): CareerState {
         shortName: "SEL",
         category: "third_division",
         reputation: 5,
-        playerIds: [],
+        playerIds: selectedPlayerIds,
       },
       [TEST_OPPONENT_ID]: {
         id: TEST_OPPONENT_ID,
@@ -180,7 +239,7 @@ function careerFixture(): CareerState {
         shortName: "OPP",
         category: "third_division",
         reputation: 5,
-        playerIds: [],
+        playerIds: opponentPlayerIds,
       },
     },
     clubIds: [TEST_CLUB_ID, TEST_OPPONENT_ID],
@@ -196,4 +255,14 @@ function careerFixture(): CareerState {
     marketState: createMarketState({ clubBudgets: {}, clubBudgetIds: [] }),
     transferHistory: [],
   });
+}
+
+function emptyAbilities(): PlayerAbilities {
+  const value = abilityValue(1);
+  return {
+    technical: { finishing: value, passing: value, longPassing: value, crossing: value, dribbling: value, technique: value, tackling: value, penalties: value, freeKicks: value },
+    physical: { pace: value, strength: value, stamina: value, agility: value, heading: value },
+    mental: { positioning: value, vision: value, anticipation: value, composure: value, determination: value, leadership: value },
+    goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
+  };
 }

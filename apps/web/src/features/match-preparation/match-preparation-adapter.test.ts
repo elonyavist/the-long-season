@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { findNextCareerFixture } from "@game/engine";
+
 import {
   buildWebCareerState,
   type WebCareerSaveId,
@@ -7,17 +9,21 @@ import {
 } from "../../runtime/web-career-runtime";
 import { orderPlayerOptionsForLineupSlot } from "../../shared/lib/player-position-ordering";
 import {
+  acceptLiveTeamPlan,
+  adaptMatchPreparationBoardSlot,
   applyMatchPreparationSelectionAction,
   buildCareerTacticalBoardPlayers,
   buildDurableMatchPreparation,
   buildMatchPreparationView,
   createMatchPreparationDraft,
+  exchangeMatchPreparationBoardPlayers,
   isMatchPreparationDraftDirty,
   moveMatchPreparationBoardSlot,
   selectMatchPreparationFormation,
   selectMatchPreparationBenchPlayer,
   selectMatchPreparationPlayer,
   selectMatchPreparationTactic,
+  substituteMatchPreparationPlayer,
 } from "./match-preparation-adapter";
 
 describe("loaded-career match-preparation adapter", () => {
@@ -46,6 +52,63 @@ describe("loaded-career match-preparation adapter", () => {
 
     expect(bench.selectedPlayerIdsBySlot.gk).toBeUndefined();
     expect(bench.selectedBenchPlayerIdsBySlot["bench:01"]).toBe(playerId);
+  });
+
+  it("swaps one starter and substitute while preserving the fixed bench slot", () => {
+    const career = careerState("live-substitution");
+    const playerIds = career.gameState.clubs[career.selectedClubId]?.playerIds;
+    const outgoingPlayerId = playerIds?.[0];
+    const incomingPlayerId = playerIds?.[1];
+    if (outgoingPlayerId === undefined || incomingPlayerId === undefined) throw new Error("Expected two players");
+    let draft = selectMatchPreparationPlayer(createMatchPreparationDraft(career), "gk", outgoingPlayerId);
+    draft = selectMatchPreparationBenchPlayer(draft, "bench:01", incomingPlayerId);
+
+    const substituted = substituteMatchPreparationPlayer(draft, outgoingPlayerId, incomingPlayerId);
+
+    expect(substituted.selectedPlayerIdsBySlot.gk).toBe(incomingPlayerId);
+    expect(substituted.selectedBenchPlayerIdsBySlot["bench:01"]).toBe(outgoingPlayerId);
+  });
+
+  it("keeps a forced-off injured player disabled in the fixed bench slot after engine acceptance", () => {
+    const career = careerState("accepted-forced-injury");
+    let draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+    const outgoingPlayerId = draft.selectedPlayerIdsBySlot["st-left"];
+    const incomingPlayerId = draft.selectedBenchPlayerIdsBySlot["bench:02"];
+    if (outgoingPlayerId === undefined || incomingPlayerId === undefined) {
+      throw new Error("Expected complete XI and bench");
+    }
+    draft = substituteMatchPreparationPlayer(draft, outgoingPlayerId, incomingPlayerId);
+
+    const accepted = acceptLiveTeamPlan(draft, {
+      lineup: draft.tacticalBoardDraft.slots.flatMap((slot) => slot.playerId === null
+        ? []
+        : [{ slotId: slot.slotId, playerId: slot.playerId }]),
+      bench: Object.entries(draft.selectedBenchPlayerIdsBySlot).flatMap(([slotId, playerId]) =>
+        playerId === outgoingPlayerId ? [] : [{ slotId, playerId }],
+      ),
+      unavailable: [{ playerId: outgoingPlayerId, reason: "injured" }],
+    });
+
+    expect(accepted.selectedPlayerIdsBySlot["st-left"]).toBe(incomingPlayerId);
+    expect(accepted.selectedBenchPlayerIdsBySlot["bench:02"]).toBe(outgoingPlayerId);
+    expect(accepted.isSaved).toBe(false);
+  });
+
+  it("exchanges XI assignments and confirms a role adaptation through the shared draft", () => {
+    const career = careerState("live-board-edit");
+    const playerIds = career.gameState.clubs[career.selectedClubId]?.playerIds;
+    const firstPlayerId = playerIds?.[0];
+    const secondPlayerId = playerIds?.[1];
+    if (firstPlayerId === undefined || secondPlayerId === undefined) throw new Error("Expected two players");
+    let draft = selectMatchPreparationPlayer(createMatchPreparationDraft(career), "cm-left", firstPlayerId);
+    draft = selectMatchPreparationPlayer(draft, "cm-right", secondPlayerId);
+    draft = exchangeMatchPreparationBoardPlayers(draft, "cm-left", "cm-right");
+    draft = adaptMatchPreparationBoardSlot(draft, "cm-left", "TRQ", 0.5, 0.3);
+
+    expect(draft.selectedPlayerIdsBySlot["cm-left"]).toBe(secondPlayerId);
+    expect(draft.selectedPlayerIdsBySlot["cm-right"]).toBe(firstPlayerId);
+    expect(draft.tacticalBoardDraft.slots.find((slot) => slot.slotId === "cm-left"))
+      .toMatchObject({ role: "TRQ", ny: 0.3 });
   });
 
   it("orders a role specialist above a raw-average outlier without duplicating selections", () => {
@@ -129,6 +192,55 @@ describe("loaded-career match-preparation adapter", () => {
     expect(carried.selectedBenchPlayerIdsBySlot).toEqual(draft.selectedBenchPlayerIdsBySlot);
     expect(carried.selectedTacticProfileId).toBe(draft.selectedTacticProfileId);
     expect(carried.isSaved).toBe(false);
+  });
+
+  it("removes a suspended player from a carried plan before the next fixture", () => {
+    const career = careerState("next-fixture-suspension");
+    let draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+    draft = selectMatchPreparationTactic(draft, "tactic:balanced");
+    const durable = buildDurableMatchPreparation(career, draft);
+    const selectedPlayerId = Object.values(draft.selectedPlayerIdsBySlot)[0];
+    const suspendedPlayerId = career.gameState.clubs[career.selectedClubId]?.playerIds.find(
+      (playerId) => playerId === selectedPlayerId,
+    );
+    const nextFixture = findNextCareerFixture(career);
+    if (durable === undefined || suspendedPlayerId === undefined || nextFixture.status !== "found") {
+      throw new Error("Expected complete preparation and next fixture");
+    }
+    const { targetFixtureId: _completedFixtureId, ...carriedPreparation } = durable;
+    const unavailableCareer: WebCareerState = {
+      ...career,
+      matchPreparation: carriedPreparation,
+      playerAvailability: {
+        injuries: [],
+        suspensions: [{
+          fixtureId: nextFixture.fixture.id,
+          competitionId: nextFixture.fixture.competitionId,
+          playerId: suspendedPlayerId,
+          reason: "straight_red",
+          remainingMatches: 1,
+        }],
+        yellowCards: [],
+      },
+    };
+
+    const reconciled = createMatchPreparationDraft(unavailableCareer);
+    const availablePlayerOptions = buildMatchPreparationView(unavailableCareer, reconciled)
+      .lineup.slots[0]?.playerOptions ?? [];
+
+    expect(Object.values(reconciled.selectedPlayerIdsBySlot)).not.toContain(suspendedPlayerId);
+    expect(Object.values(reconciled.selectedBenchPlayerIdsBySlot)).not.toContain(suspendedPlayerId);
+    expect(availablePlayerOptions.some((player) => player.playerId === suspendedPlayerId)).toBe(false);
+    expect(reconciled.isSaved).toBe(false);
+    expect(buildDurableMatchPreparation(unavailableCareer, reconciled)).toBeUndefined();
+
+    const filled = applyMatchPreparationSelectionAction(unavailableCareer, reconciled, "fill_gaps");
+    const filledPlayerIds = [
+      ...Object.values(filled.selectedPlayerIdsBySlot),
+      ...Object.values(filled.selectedBenchPlayerIdsBySlot),
+    ];
+    expect(filledPlayerIds).not.toContain(suspendedPlayerId);
+    expect(buildDurableMatchPreparation(unavailableCareer, filled)).toBeDefined();
   });
 
   it("keeps the just-played fixture confirmed until its full-time review is acknowledged", () => {

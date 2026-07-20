@@ -8,6 +8,7 @@ import {
   type CareerState,
   type FixtureId,
   type GameDate,
+  type MatchPlayerConsequence,
   type SeasonId,
 } from "@game/domain";
 
@@ -139,6 +140,34 @@ export function createSeasonRolloverInboxMessage(input: {
     level: "important",
     lifecycle: { read: false, acknowledged: false, resolved: false },
     related: { clubId: input.selectedClubId },
+  });
+}
+
+/** Builds important Posta facts for selected-club injuries and suspensions. */
+export function createMatchConsequenceInboxMessages(
+  careerState: CareerState,
+  consequences: readonly MatchPlayerConsequence[],
+): readonly CareerInboxMessage[] {
+  const selectedPlayers = new Set(careerState.gameState.clubs[careerState.selectedClubId]?.playerIds ?? []);
+
+  return consequences.flatMap((consequence) => {
+    if (!selectedPlayers.has(consequence.playerId)) return [];
+    if (consequence.type === "injury" && consequence.unavailableUntil <= consequence.occurredOn) return [];
+    const category = consequence.type === "injury" ? "injury_diagnosis" : "suspension";
+    const source = consequence.type === "injury" ? "medical_team" : "competition_office";
+    return [createCareerInboxMessage({
+      id: careerInboxMessageId(`inbox:${category}:${consequence.fixtureId}:${consequence.playerId}`),
+      date: careerState.gameState.fixtures[consequence.fixtureId]?.date ?? careerState.gameState.calendar.currentDate,
+      category,
+      source,
+      level: "important",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: {
+        fixtureId: consequence.fixtureId,
+        clubId: careerState.selectedClubId,
+        playerId: consequence.playerId,
+      },
+    })];
   });
 }
 

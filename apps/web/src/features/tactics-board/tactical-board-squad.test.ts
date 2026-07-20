@@ -27,6 +27,7 @@ describe("tactical-board-squad", () => {
       surname: "Rinaldi",
       formTrend: "flat",
       primaryRole: "striker",
+      roleCode: "ATT",
       fitness: 82,
       currentAbility: 79,
     });

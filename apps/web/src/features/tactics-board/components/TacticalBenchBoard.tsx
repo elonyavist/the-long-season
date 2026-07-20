@@ -9,7 +9,9 @@ import type {
   TacticalBenchSlotView,
 } from "../tactical-board-bench";
 import { sortTacticalBenchAssignmentCandidates } from "../tactical-board-suitability";
+import type { TacticalBoardPointerPoint } from "../tactical-board-interactions";
 import { TacticalBoardMenu, type TacticalBoardMenuCandidate } from "./TacticalBoardMenu";
+import { TacticalBoardDragPreview } from "./TacticalBoardDragPreview";
 import { TacticalBenchSlotToken } from "./TacticalBenchSlotToken";
 import { webMotion, webMotionTargets } from "../../../shared/motion/web-motion";
 
@@ -49,6 +51,27 @@ export interface TacticalBenchBoardProps {
   readonly onAssign?: (slotId: TacticalBenchSlotId, playerId: string) => void;
   /** Clears one filled reserve slot. */
   readonly onRemove?: (slotId: TacticalBenchSlotId) => void;
+  /** Controls whether bench players can be edited or only inspected. */
+  readonly mode?: "editable" | "view_only";
+  /** Applies one bench-to-XI drop through the caller-owned command boundary. */
+  readonly onPlayerDropOnLineup?: (
+    benchSlotId: TacticalBenchSlotId,
+    playerId: string,
+    lineupSlotId: string,
+  ) => void;
+  /** Reports active bench drags so the shared pitch can show drop feedback. */
+  readonly onDragActiveChange?: (active: boolean) => void;
+  /** Visually marks the bench while a starter is dragged toward it. */
+  readonly dropActive?: boolean;
+}
+
+interface TacticalBenchDragState {
+  readonly slotId: TacticalBenchSlotId;
+  readonly pointerId: number;
+  readonly start: TacticalBoardPointerPoint;
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly hasMoved: boolean;
 }
 
 /** Shared compact bench board for match preparation and future tactics screens. */
@@ -64,12 +87,22 @@ export function TacticalBenchBoard({
   onOpenSlotChange,
   onAssign,
   onRemove,
+  mode = "editable",
+  onPlayerDropOnLineup,
+  onDragActiveChange,
+  dropActive = false,
 }: TacticalBenchBoardProps): React.JSX.Element {
   const [internalOpenSlotId, setInternalOpenSlotId] = useState<TacticalBenchSlotId | undefined>();
   const menuRef = useRef<HTMLDivElement>(null);
   const previousSlotFactsRef = useRef(tacticalBenchSlotFacts(slots));
+  const [drag, setDrag] = useState<TacticalBenchDragState>();
+  const dragRef = useRef<TacticalBenchDragState | undefined>(undefined);
+  const suppressClickRef = useRef(false);
   const activeSlotId = openSlotId ?? internalOpenSlotId;
   const activeSlot = slots.find((slot) => slot.slotId === activeSlotId);
+  const draggedPlayer = drag === undefined
+    ? undefined
+    : slots.find((slot) => slot.slotId === drag.slotId)?.player;
   const selectedPlayerIds = useMemo(
     () => new Set(slots.flatMap((slot) => (slot.player === undefined ? [] : [slot.player.playerId]))),
     [slots],
@@ -90,6 +123,64 @@ export function TacticalBenchBoard({
     previousSlotFactsRef.current = tacticalBenchSlotFacts(slots);
   }, [slots]);
 
+  useEffect(() => {
+    const pointerId = drag?.pointerId;
+    if (pointerId === undefined) return undefined;
+
+    const moveDrag = (event: PointerEvent): void => {
+      const activeDrag = dragRef.current;
+      if (activeDrag === undefined || event.pointerId !== activeDrag.pointerId) return;
+      const nextDrag = {
+        ...activeDrag,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        hasMoved: activeDrag.hasMoved
+          || Math.hypot(event.clientX - activeDrag.start.x, event.clientY - activeDrag.start.y) > 2,
+      };
+      dragRef.current = nextDrag;
+      setDrag(nextDrag);
+    };
+    const finishDrag = (event: PointerEvent, commit: boolean): void => {
+      const activeDrag = dragRef.current;
+      if (activeDrag === undefined || event.pointerId !== activeDrag.pointerId) return;
+      const draggedSlot = slots.find((slot) => slot.slotId === activeDrag.slotId);
+      const dropTarget = document.elementFromPoint(event.clientX, event.clientY);
+      const lineupSlotId = dropTarget?.closest("[data-tactical-lineup-slot-id]")
+        ?.getAttribute("data-tactical-lineup-slot-id");
+
+      if (
+        commit
+        && activeDrag.hasMoved
+        && draggedSlot?.player !== undefined
+        && lineupSlotId !== null
+        && lineupSlotId !== undefined
+      ) {
+        onPlayerDropOnLineup?.(activeDrag.slotId, draggedSlot.player.playerId, lineupSlotId);
+      }
+      if (activeDrag.hasMoved) {
+        suppressClickRef.current = true;
+        window.setTimeout(() => {
+          suppressClickRef.current = false;
+        }, 0);
+      }
+
+      dragRef.current = undefined;
+      setDrag(undefined);
+      onDragActiveChange?.(false);
+    };
+    const commitDrag = (event: PointerEvent): void => finishDrag(event, true);
+    const cancelDrag = (event: PointerEvent): void => finishDrag(event, false);
+
+    document.addEventListener("pointermove", moveDrag, true);
+    document.addEventListener("pointerup", commitDrag, true);
+    document.addEventListener("pointercancel", cancelDrag, true);
+    return () => {
+      document.removeEventListener("pointermove", moveDrag, true);
+      document.removeEventListener("pointerup", commitDrag, true);
+      document.removeEventListener("pointercancel", cancelDrag, true);
+    };
+  }, [drag?.pointerId, onDragActiveChange, onPlayerDropOnLineup, slots]);
+
   const closeMenu = (): void => {
     if (openSlotId === undefined) {
       setInternalOpenSlotId(undefined);
@@ -99,6 +190,12 @@ export function TacticalBenchBoard({
   };
 
   const openSlot = (slotId: TacticalBenchSlotId): void => {
+    if (mode === "view_only" || suppressClickRef.current) return;
+    const slot = slots.find((candidate) => candidate.slotId === slotId);
+    const canOpen = slot?.player === undefined
+      ? onAssign !== undefined && candidateRows.length > 0
+      : onRemove !== undefined;
+    if (!canOpen) return;
     if (openSlotId === undefined) {
       setInternalOpenSlotId(slotId);
     }
@@ -160,7 +257,11 @@ export function TacticalBenchBoard({
   };
 
   return (
-    <section className="tls-tactical-bench-board" aria-labelledby="tls-tactical-bench-board-title">
+    <section
+      className="tls-tactical-bench-board"
+      aria-labelledby="tls-tactical-bench-board-title"
+      data-drop-active={dropActive ? "true" : "false"}
+    >
       <header className="tls-tactical-bench-board-header">
         <h3 id="tls-tactical-bench-board-title">{text("career.matchPreparation.bench")}</h3>
         <span>{selectedSlotCount}/{requiredSlotCount}</span>
@@ -181,6 +282,7 @@ export function TacticalBenchBoard({
           return (
             <m.div
               className="tls-tactical-bench-board-item"
+              data-dragging={drag?.slotId === slot.slotId ? "true" : "false"}
               data-motion-slot-key={`${slot.slotId}:${slotFact}`}
               key={`${slot.slotId}:${slotFact}`}
               role="listitem"
@@ -192,12 +294,41 @@ export function TacticalBenchBoard({
                 slot={slot}
                 text={text}
                 onOpen={openSlot}
+                onPlayerPointerDown={(event, selectedSlot) => {
+                  if (
+                    mode === "editable"
+                    && event.button === 0
+                    && selectedSlot.player !== undefined
+                    && onPlayerDropOnLineup !== undefined
+                  ) {
+                    const nextDrag = {
+                      slotId: selectedSlot.slotId,
+                      pointerId: event.pointerId,
+                      start: { x: event.clientX, y: event.clientY },
+                      clientX: event.clientX,
+                      clientY: event.clientY,
+                      hasMoved: false,
+                    };
+                    dragRef.current = nextDrag;
+                    setDrag(nextDrag);
+                    onDragActiveChange?.(true);
+                  }
+                }}
               />
             </m.div>
           );
         })}
       </div>
-      {activeSlot === undefined ? null : (
+      {drag?.hasMoved !== true || draggedPlayer === undefined ? null : (
+          <TacticalBoardDragPreview
+            clientX={drag.clientX}
+            clientY={drag.clientY}
+            number={draggedPlayer.number}
+            role={draggedPlayer.roleCode}
+            surname={draggedPlayer.surname}
+          />
+        )}
+      {activeSlot === undefined || mode === "view_only" ? null : (
         <m.div
           key={activeSlot.slotId}
           className="tls-tactical-bench-menu-popover"
@@ -234,6 +365,7 @@ function toMenuCandidate(player: TacticalBenchBoardCandidate): TacticalBoardMenu
       number: player.number,
       surname: player.surname,
       formTrend: "flat",
+      roleCode: player.roleCode,
       ...(player.roleKey === undefined ? {} : { roleKey: player.roleKey }),
     },
     suitability: "competent",

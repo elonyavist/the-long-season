@@ -48,16 +48,19 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
 });
 
 test("migration ledger includes the participation baseline without historical-role compatibility", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [1, 2, 3, 4, 5, 6, 7]);
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   equal(SQLITE_CAREER_MIGRATIONS[0]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), false);
   equal(SQLITE_CAREER_MIGRATIONS[1]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(SQLITE_CAREER_MIGRATIONS[1]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
-  equal(SQLITE_CAREER_MIGRATIONS[2]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), true);
+  equal(SQLITE_CAREER_MIGRATIONS[2]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
   equal(SQLITE_CAREER_MIGRATIONS[3]?.statements.some((statement) => statement.includes("match_preparation_board_slots")), true);
   equal(SQLITE_CAREER_MIGRATIONS[3]?.statements.some((statement) => statement.includes("match_preparation_bench")), true);
   equal(SQLITE_CAREER_MIGRATIONS[4]?.statements.some((statement) => statement.includes("autosave_interval_days")), true);
   equal(SQLITE_CAREER_MIGRATIONS[5]?.statements.some((statement) => statement.includes("career_inbox_messages")), true);
   equal(SQLITE_CAREER_MIGRATIONS[6]?.statements.some((statement) => statement.includes("player_participation_rows")), true);
+  equal(SQLITE_CAREER_MIGRATIONS[7]?.statements.some((statement) => statement.includes("career_player_injuries")), true);
+  equal(SQLITE_CAREER_MIGRATIONS[7]?.statements.some((statement) => statement.includes("committed_by_player_id")), true);
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS[8]?.statements, []);
 });
 
 function worldFixture(rawSaveId: string, seed: string): CareerState {

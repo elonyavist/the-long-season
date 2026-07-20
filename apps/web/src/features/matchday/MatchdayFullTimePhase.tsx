@@ -1,21 +1,20 @@
 import { useState } from "react";
-import type { MessageKey, Translator } from "@game/i18n";
+import { ChartNoAxesCombined, Shield, Shirt } from "lucide-react";
+import type { Translator } from "@game/i18n";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
-import type {
-  MatchdayFullTimeConsequenceView,
-  MatchdayFullTimeReviewView,
-} from "./career-matchday-presenter";
+import type { MatchdayFullTimeReviewView } from "./career-matchday-presenter";
 import {
   MatchdayPhaseTabs,
   type MatchdayPhaseTabItem,
 } from "./MatchdayPhaseTabs";
+import { MatchdayStatistics } from "./MatchdayStatistics";
 import { MatchdayTeamRatings } from "./MatchdayTeamRatings";
 
-type FullTimeTabId = "selected_team" | "opponent" | "consequences";
+type FullTimeTabId = "summary" | "selected_team" | "opponent";
 
 /** Props for the composition-only full-time football review. */
 export type MatchdayFullTimePhaseProps = Readonly<{
@@ -27,7 +26,7 @@ export type MatchdayFullTimePhaseProps = Readonly<{
 
 /**
  * Keeps final match context above one focused review panel. The default view
- * answers how the manager's own team performed; tab state is presentation-only.
+ * opens on the match summary; tab state is presentation-only.
  */
 export function MatchdayFullTimePhase({
   animateEntry = false,
@@ -36,14 +35,36 @@ export function MatchdayFullTimePhase({
 }: MatchdayFullTimePhaseProps): React.JSX.Element {
   const reducedMotion = useReducedMotion();
   const animateCheckpoint = animateEntry && !reducedMotion;
-  const [activeTabId, setActiveTabId] = useState<FullTimeTabId>("selected_team");
+  const [activeTabId, setActiveTabId] = useState<FullTimeTabId>("summary");
   const tabs: readonly MatchdayPhaseTabItem<FullTimeTabId>[] = [
+    {
+      tabId: "summary",
+      label: text("career.matchday.fullTimeTab.summary"),
+      icon: ChartNoAxesCombined,
+      panel: (
+        <section className="tls-matchday-card" aria-label={text("career.matchday.fullTimeSummary")}>
+          <header className="tls-match-centre-card-heading">
+            <div>
+              <h2>{text("career.matchday.fullTimeSummary")}</h2>
+              <p>{text("career.matchday.fullTimeSummaryHint")}</p>
+            </div>
+          </header>
+          {review.statistics === undefined ? (
+            <p className="tls-matchday-empty">{text("career.matchday.statistics.unavailable")}</p>
+          ) : (
+            <MatchdayStatistics mode="complete" text={text} view={review.statistics} />
+          )}
+        </section>
+      ),
+    },
     {
       tabId: "selected_team",
       label: text("career.matchday.fullTimeTab.selectedTeam"),
+      icon: Shirt,
       panel: (
         <MatchdayTeamRatings
           clubName={review.selectedClubName}
+          consequences={review.selectedTeamConsequences}
           rows={review.selectedTeamPlayers}
           text={text}
           variant="final"
@@ -53,19 +74,16 @@ export function MatchdayFullTimePhase({
     {
       tabId: "opponent",
       label: text("career.matchday.fullTimeTab.opponent"),
+      icon: Shield,
       panel: (
         <MatchdayTeamRatings
           clubName={review.opponentClubName}
+          consequences={review.opponentConsequences}
           rows={review.opponentPlayers}
           text={text}
           variant="final"
         />
       ),
-    },
-    {
-      tabId: "consequences",
-      label: text("career.matchday.fullTimeTab.consequences"),
-      panel: <FullTimeConsequences consequences={review.consequences} text={text} />,
     },
   ];
 
@@ -87,77 +105,4 @@ export function MatchdayFullTimePhase({
       />
     </m.section>
   );
-}
-
-function FullTimeConsequences({
-  consequences,
-  text,
-}: Readonly<{
-  consequences: readonly MatchdayFullTimeConsequenceView[];
-  text: Translator;
-}>): React.JSX.Element {
-  return (
-    <section className="tls-matchday-card tls-match-centre-consequences" aria-labelledby="matchday-consequences-title">
-      <header className="tls-match-centre-card-heading">
-        <div>
-          <h2 id="matchday-consequences-title">{text("career.matchday.postMatchConsequences")}</h2>
-          <p>{text("career.matchday.postMatchConsequencesHint")}</p>
-        </div>
-      </header>
-      {consequences.length === 0 ? (
-        <p className="tls-matchday-empty">{text("career.matchday.noPostMatchConsequences")}</p>
-      ) : (
-        <div className="tls-match-centre-consequence-list">
-          {consequences.map((change) => (
-            <FullTimeConsequence change={change} key={change.playerId} text={text} />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function FullTimeConsequence({
-  change,
-  text,
-}: Readonly<{
-  change: MatchdayFullTimeConsequenceView;
-  text: Translator;
-}>): React.JSX.Element {
-  return (
-    <article className="tls-match-centre-consequence-card">
-      <strong>{change.playerName}</strong>
-      <dl>
-        {change.condition === undefined ? null : (
-          <div>
-            <dt>{text("career.matchday.conditionChanges")}</dt>
-            <dd>{change.condition.after}% <span>{signed(change.condition.delta)}</span></dd>
-          </div>
-        )}
-        {change.playerState === undefined || change.playerState.formDelta === 0 ? null : (
-          <div>
-            <dt>{text("career.matchday.form")}</dt>
-            <dd>{change.playerState.formAfter} <span>{signed(change.playerState.formDelta)}</span></dd>
-          </div>
-        )}
-        {change.playerState === undefined || change.playerState.moraleDelta === 0 ? null : (
-          <div>
-            <dt>{text("career.matchday.morale")}</dt>
-            <dd>{change.playerState.moraleAfter} <span>{signed(change.playerState.moraleDelta)}</span></dd>
-          </div>
-        )}
-      </dl>
-      {change.playerState === undefined || change.playerState.reasonKeys.length === 0 ? null : (
-        <small>
-          {change.playerState.reasonKeys
-            .map((reason) => text(`career.advance.playerStateReason.${reason}` as MessageKey))
-            .join(", ")}
-        </small>
-      )}
-    </article>
-  );
-}
-
-function signed(value: number): string {
-  return value > 0 ? `+${value}` : String(value);
 }

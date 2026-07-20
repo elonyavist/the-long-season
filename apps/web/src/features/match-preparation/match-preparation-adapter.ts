@@ -1,5 +1,6 @@
 import {
   findNextCareerFixture,
+  findUnavailableSelectedClubPlayerIdsForNextFixture,
   summarizePlayerDevelopmentAbilities,
 } from "@game/engine";
 import { toISO } from "@game/shared";
@@ -21,10 +22,12 @@ import {
   orderPlayerOptionsForLineupSlot,
 } from "../../shared/lib/player-position-ordering";
 import {
+  adaptTacticalBoardSlot,
   assignTacticalBoardPlayer,
   changeTacticalBoardSlotRole,
   clearTacticalBoardSlot,
   createTacticalBoardDraft,
+  exchangeTacticalBoardSlotPlayers,
   loadTacticalBoardBaseFormation,
   moveTacticalBoardSlot,
   removeTacticalBoardPlayer,
@@ -51,6 +54,13 @@ export interface MatchPreparationDraft {
   readonly isSaved: boolean;
 }
 
+/** Minimal accepted live-team facts needed to realign the volatile board draft. */
+export interface AcceptedLiveTeamPlan {
+  readonly lineup: readonly Readonly<{ slotId: string; playerId: string }>[];
+  readonly bench: readonly Readonly<{ slotId: string; playerId: string }>[];
+  readonly unavailable: readonly Readonly<{ playerId: string; reason: "dismissed" | "injured" }>[];
+}
+
 /** Current player facts used by the compact squad list. */
 export interface MatchPreparationPlayerFact {
   readonly playerId: string;
@@ -73,13 +83,20 @@ export const MATCH_PREPARATION_TACTIC_PROFILES: readonly CareerMatchPreparationT
 /** Creates the editable draft from the loaded durable career, preserving exact board geometry. */
 export function createMatchPreparationDraft(career: WebCareerState): MatchPreparationDraft {
   const preparation = career.matchPreparation;
+  const unavailablePlayerIds = unavailablePlayerIdsForUpcomingPreparation(career, preparation);
+  const didRemoveUnavailableSelection = [
+    ...(preparation?.selectedLineup?.slots.map((slot) => slot.playerId) ?? []),
+    ...(preparation?.benchSlots?.map((slot) => slot.playerId) ?? []),
+  ].some((playerId) => unavailablePlayerIds.has(playerId));
   const isConfirmedForCurrentTask = preparationTargetsCurrentTask(
     career,
     preparation?.targetFixtureId,
   );
   const selectedFormationId = formationIdOrDefault(preparation?.baseFormationId);
   const selectedPlayerIdsBySlot = Object.fromEntries(
-    preparation?.selectedLineup?.slots.map((slot) => [slot.slotKey, slot.playerId]) ?? [],
+    preparation?.selectedLineup?.slots
+      .filter((slot) => !unavailablePlayerIds.has(slot.playerId))
+      .map((slot) => [slot.slotKey, slot.playerId]) ?? [],
   );
   const initialBoard = createTacticalBoardDraft(selectedFormationId, selectedPlayerIdsBySlot);
   const persistedBoardBySlot = new Map(preparation?.boardSlots?.map((slot) => [slot.slotKey, slot]) ?? []);
@@ -99,13 +116,27 @@ export function createMatchPreparationDraft(career: WebCareerState): MatchPrepar
     tacticalBoardDraft,
     selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
     selectedBenchPlayerIdsBySlot: Object.fromEntries(
-      preparation?.benchSlots?.map((slot) => [slot.slotKey, slot.playerId]) ?? [],
+      preparation?.benchSlots?.filter((slot) => !unavailablePlayerIds.has(slot.playerId))
+        .map((slot) => [slot.slotKey, slot.playerId]) ?? [],
     ),
     ...(selectedTacticProfileId === undefined ? {} : { selectedTacticProfileId }),
     isSaved: isConfirmedForCurrentTask
+      && !didRemoveUnavailableSelection
       && preparation?.selectedLineup !== undefined
       && preparation.tactic !== undefined,
   };
+}
+
+/** Keeps a completed-match review stable while reconciling only an upcoming plan. */
+function unavailablePlayerIdsForUpcomingPreparation(
+  career: WebCareerState,
+  preparation: WebCareerState["matchPreparation"],
+): ReadonlySet<string> {
+  const targetFixture = preparation?.targetFixtureId === undefined
+    ? undefined
+    : career.gameState.fixtures[preparation.targetFixtureId];
+  if (targetFixture?.result?.played === true) return new Set();
+  return new Set(findUnavailableSelectedClubPlayerIdsForNextFixture(career));
 }
 
 /**
@@ -117,7 +148,6 @@ function preparationTargetsCurrentTask(
   targetFixtureId: DurableMatchPreparation["targetFixtureId"] | undefined,
 ): boolean {
   if (targetFixtureId === undefined) return false;
-  if (career.activeMatchCheckpoint?.fixtureId === targetFixtureId) return true;
   if (career.gameState.fixtures[targetFixtureId]?.result?.played === true) return true;
 
   const nextFixture = findNextCareerFixture(career);
@@ -248,6 +278,107 @@ export function changeMatchPreparationBoardSlotRole(draft: MatchPreparationDraft
   return changedDraft(draft, { tacticalBoardDraft: changeTacticalBoardSlotRole(draft.tacticalBoardDraft, slotKey, role) });
 }
 
+/** Confirms one role adaptation and destination without exposing an intermediate invalid draft. */
+export function adaptMatchPreparationBoardSlot(
+  draft: MatchPreparationDraft,
+  slotKey: string,
+  role: TacticalBoardRoleCode,
+  nx: number,
+  ny: number,
+): MatchPreparationDraft {
+  return changedDraft(draft, {
+    tacticalBoardDraft: adaptTacticalBoardSlot(draft.tacticalBoardDraft, slotKey, role, nx, ny),
+  });
+}
+
+/** Exchanges two on-pitch players while retaining both tactical positions and roles. */
+export function exchangeMatchPreparationBoardPlayers(
+  draft: MatchPreparationDraft,
+  firstSlotKey: string,
+  secondSlotKey: string,
+): MatchPreparationDraft {
+  const tacticalBoardDraft = exchangeTacticalBoardSlotPlayers(
+    draft.tacticalBoardDraft,
+    firstSlotKey,
+    secondSlotKey,
+  );
+  return changedDraft(draft, {
+    tacticalBoardDraft,
+    selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
+  });
+}
+
+/** Swaps one starter with one substitute and preserves the substitute's fixed bench slot. */
+export function substituteMatchPreparationPlayer(
+  draft: MatchPreparationDraft,
+  outgoingPlayerId: string,
+  incomingPlayerId: string,
+): MatchPreparationDraft {
+  if (outgoingPlayerId === incomingPlayerId) return draft;
+  const lineupSlot = draft.tacticalBoardDraft.slots.find((slot) => slot.playerId === outgoingPlayerId);
+  const benchSlot = Object.entries(draft.selectedBenchPlayerIdsBySlot)
+    .find(([, playerId]) => playerId === incomingPlayerId)?.[0];
+  if (lineupSlot === undefined || benchSlot === undefined) return draft;
+
+  const tacticalBoardDraft = assignTacticalBoardPlayer(
+    draft.tacticalBoardDraft,
+    lineupSlot.slotId,
+    incomingPlayerId,
+  );
+  return changedDraft(draft, {
+    tacticalBoardDraft,
+    selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
+    selectedBenchPlayerIdsBySlot: {
+      ...draft.selectedBenchPlayerIdsBySlot,
+      [benchSlot]: outgoingPlayerId,
+    },
+  });
+}
+
+/**
+ * Aligns the volatile Matchday draft with the team state accepted by the
+ * engine. This removes dismissed/forced-off players and retains substituted
+ * players only in their fixed disabled bench slot.
+ */
+export function acceptLiveTeamPlan(
+  draft: MatchPreparationDraft,
+  accepted: AcceptedLiveTeamPlan,
+): MatchPreparationDraft {
+  const lineupPlayerBySlotId = new Map(
+    accepted.lineup.map((slot) => [slot.slotId, slot.playerId]),
+  );
+  const tacticalBoardDraft: TacticalBoardDraft = {
+    ...draft.tacticalBoardDraft,
+    slots: draft.tacticalBoardDraft.slots.map((slot) => ({
+      ...slot,
+      playerId: lineupPlayerBySlotId.get(slot.slotId) ?? null,
+    })),
+  };
+  const acceptedBenchBySlotId = new Map(
+    accepted.bench.map((slot) => [slot.slotId, slot.playerId]),
+  );
+  const injuredPlayerIds = new Set(
+    accepted.unavailable
+      .filter((player) => player.reason === "injured")
+      .map((player) => player.playerId),
+  );
+  const selectedBenchPlayerIdsBySlot = Object.fromEntries(
+    Object.entries(draft.selectedBenchPlayerIdsBySlot).flatMap(([slotId, draftPlayerId]) => {
+      const acceptedPlayerId = acceptedBenchBySlotId.get(slotId);
+      if (acceptedPlayerId !== undefined) return [[slotId, acceptedPlayerId]];
+      return injuredPlayerIds.has(draftPlayerId) ? [[slotId, draftPlayerId]] : [];
+    }),
+  );
+
+  return {
+    ...draft,
+    tacticalBoardDraft,
+    selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
+    selectedBenchPlayerIdsBySlot,
+    isSaved: false,
+  };
+}
+
 /** Clears one XI assignment without changing slot geometry. */
 export function clearMatchPreparationBoardSlot(draft: MatchPreparationDraft, slotKey: string): MatchPreparationDraft {
   const tacticalBoardDraft = clearTacticalBoardSlot(draft.tacticalBoardDraft, slotKey);
@@ -284,6 +415,12 @@ export function applyMatchPreparationSelectionAction(
 /** Produces complete structured domain input only when the current view is valid. */
 export function buildDurableMatchPreparation(career: WebCareerState, draft: MatchPreparationDraft): DurableMatchPreparation | undefined {
   if (buildMatchPreparationView(career, draft).saveAction.status !== "available") return undefined;
+  const unavailablePlayerIds = new Set<string>(findUnavailableSelectedClubPlayerIdsForNextFixture(career));
+  const selectedPlayerIds = [
+    ...Object.values(draft.selectedPlayerIdsBySlot),
+    ...Object.values(draft.selectedBenchPlayerIdsBySlot),
+  ];
+  if (selectedPlayerIds.some((playerId) => unavailablePlayerIds.has(playerId))) return undefined;
   const tacticProfile = MATCH_PREPARATION_TACTIC_PROFILES.find((profile) => profile.tacticProfileId === draft.selectedTacticProfileId);
   const nextFixture = findNextCareerFixture(career);
   if (tacticProfile === undefined || nextFixture.status !== "found") return undefined;
@@ -314,7 +451,9 @@ export function matchPreparationBenchSlotKeys(): readonly string[] {
 
 function buildCareerPlayerOptions(career: WebCareerState): readonly CareerMatchPreparationPlayerOptionInput[] {
   const club = requiredSelectedClub(career);
+  const unavailablePlayerIds = new Set(findUnavailableSelectedClubPlayerIdsForNextFixture(career));
   return club.playerIds.flatMap((playerId, index) => {
+    if (unavailablePlayerIds.has(playerId)) return [];
     const player = career.gameState.players[playerId];
     if (player === undefined) return [];
     const dynamic = career.gameState.playerStates[playerId];

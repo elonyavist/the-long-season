@@ -10,12 +10,16 @@ import {
   type MatchPreparationDraft,
 } from "../features/match-preparation/match-preparation-adapter";
 import {
-  buildWebHalfTimeSubstitutionPanel,
+  buildWebMatchdayTeamControlPanel,
   buildWebMatchdayPhaseView,
   buildWebMatchdayView,
-  completeWebMatchday,
-  enterWebMatchday,
-  progressWebMatchdayToHalfTime,
+  advanceWebLiveMatchdayMinute,
+  applyWebLiveMatchTeamChanges,
+  createWebLiveMatchdaySession,
+  createWebMatchdayState,
+  resolveWebLiveMatchdayIncident,
+  resumeWebLiveMatchday,
+  type WebLiveMatchdaySession,
   type WebMatchdayState,
 } from "../features/matchday/matchday-adapter";
 import {
@@ -76,23 +80,65 @@ export function buildTestMatchPreparationView(fixture: TestCareerFixture) {
 /** Creates the durable pre-match state from a complete generated preparation. */
 export function createPreMatchTestFixture(suffix = "pre-match") {
   const prepared = createPreparedTestCareerFixture(suffix);
-  const matchday = enterWebMatchday(prepared.career);
-  return matchdayPresentation(prepared, matchday);
+  const created = requireLiveSession(prepared.career);
+  return matchdayPresentation(prepared, created.matchdayState);
 }
 
-/** Creates the durable half-time decision state through real staged progression. */
+/** Creates the memory-only half-time decision state through exact minute progression. */
 export function createHalfTimeTestFixture(suffix = "half-time") {
   const prepared = createPreparedTestCareerFixture(suffix);
-  const matchday = progressWebMatchdayToHalfTime(enterWebMatchday(prepared.career));
-  return matchdayPresentation(prepared, matchday);
+  const created = requireLiveSession(prepared.career);
+  const advanced = advanceSessionToPhase(created.session, "half_time");
+  return matchdayPresentation(prepared, advanced.matchdayState);
 }
 
-/** Creates the committed full-time state from the exact staged report. */
+/** Creates the committed full-time state from the exact progressive report. */
 export function createFullTimeTestFixture(suffix = "full-time") {
   const prepared = createPreparedTestCareerFixture(suffix);
-  const halfTime = progressWebMatchdayToHalfTime(enterWebMatchday(prepared.career));
-  const matchday = completeWebMatchday(halfTime);
-  return matchdayPresentation(prepared, matchday);
+  const created = requireLiveSession(prepared.career);
+  const halfTime = advanceSessionToPhase(created.session, "half_time");
+  const decision = applyWebLiveMatchTeamChanges(halfTime.session, prepared.draft);
+  if (decision.status !== "applied") throw new Error("Expected valid half-time tactical decision");
+  const completed = advanceSessionToPhase(decision.session, "full_time");
+  return matchdayPresentation(prepared, completed.matchdayState);
+}
+
+function requireLiveSession(career: WebCareerState) {
+  const created = createWebLiveMatchdaySession(career);
+  if (created.status !== "ready") throw new Error("Expected a valid progressive match session");
+  return created;
+}
+
+function advanceSessionToPhase(
+  initialSession: WebLiveMatchdaySession,
+  targetPhase: "half_time" | "full_time",
+): Readonly<{ session: WebLiveMatchdaySession; matchdayState: WebMatchdayState }> {
+  let session = resumeWebLiveMatchday(initialSession);
+  let matchdayState = createWebMatchdayState(
+    initialSession.careerState,
+    undefined,
+    initialSession,
+  );
+
+  for (let minute = 0; minute < 140; minute += 1) {
+    const advanced = advanceWebLiveMatchdayMinute(session);
+    session = advanced.session;
+    matchdayState = advanced.matchdayState;
+    if (session.engineState.phase === targetPhase) return { session, matchdayState };
+
+    const decision = session.engineState.pendingDecision;
+    if (decision !== undefined && decision.type !== "half_time") {
+      session = resolveWebLiveMatchdayIncident(
+        session,
+        "acknowledge",
+      );
+    }
+    if (session.engineState.runState !== "running") {
+      session = resumeWebLiveMatchday(session);
+    }
+  }
+
+  throw new Error(`Expected match to reach ${targetPhase}`);
 }
 
 /** Bundles production read models around one generated matchday state. */
@@ -102,6 +148,6 @@ function matchdayPresentation(prepared: PreparedTestCareerFixture, matchday: Web
     matchday,
     view: buildWebMatchdayView(matchday, createMatchPreparationDraft(matchday.careerState)),
     phaseView: buildWebMatchdayPhaseView(matchday),
-    halfTimeSubstitutions: buildWebHalfTimeSubstitutionPanel(matchday),
+    teamControlPanel: buildWebMatchdayTeamControlPanel(matchday),
   };
 }

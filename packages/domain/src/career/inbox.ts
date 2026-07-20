@@ -7,10 +7,10 @@ import type { CareerAttentionBlockerKey, CareerAttentionLevel } from "./attentio
 export type CareerInboxMessageId = Brand<string, "CareerInboxMessageId">;
 
 /** Current message categories backed by complete production workflows. */
-export type CareerInboxCategory = "matchday" | "match_result" | "season_rollover";
+export type CareerInboxCategory = "matchday" | "match_result" | "season_rollover" | "injury_diagnosis" | "suspension";
 
 /** Functional sender used by presentation without inventing a staff identity. */
-export type CareerInboxSource = "technical_staff" | "match_report" | "competition_office";
+export type CareerInboxSource = "technical_staff" | "match_report" | "competition_office" | "medical_team";
 
 /** Stable manager destinations exposed by current Posta messages. */
 export type CareerInboxActionId = "prepare_match" | "open_matchday";
@@ -92,7 +92,10 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
     throw new Error("Unresolved blocking inbox messages must expose an action");
   }
 
-  if ((input.category === "matchday" || input.category === "match_result") && input.related?.fixtureId === undefined) {
+  if (
+    (input.category === "matchday" || input.category === "match_result" || input.category === "injury_diagnosis" || input.category === "suspension")
+    && input.related?.fixtureId === undefined
+  ) {
     throw new Error(`${input.category} inbox messages must reference a fixture`);
   }
 
@@ -100,11 +103,17 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
     throw new Error("Season rollover inbox messages must reference the selected club");
   }
 
+  if ((input.category === "injury_diagnosis" || input.category === "suspension") && input.related?.playerId === undefined) {
+    throw new Error(`${input.category} inbox messages must reference a player`);
+  }
+
   const expectedSource: CareerInboxSource = input.category === "matchday"
     ? "technical_staff"
     : input.category === "match_result"
       ? "match_report"
-      : "competition_office";
+      : input.category === "injury_diagnosis"
+        ? "medical_team"
+        : "competition_office";
   if (input.source !== expectedSource) {
     throw new Error(`${input.category} inbox messages must use source ${expectedSource}`);
   }

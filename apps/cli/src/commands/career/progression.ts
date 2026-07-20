@@ -109,6 +109,7 @@ export function advanceCareerNextFixture(
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
     }),
     matchEngineConfig: contentConfig.matchEngineConfig,
+    competitionMatchRules: contentConfig.competition.matchRules,
     includeExplanationTrace: options.includeExplanationTrace === true,
   }), preMatchRecovery));
 }

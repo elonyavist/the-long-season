@@ -68,8 +68,6 @@ export interface CareerShellView {
   readonly mode: CareerShellMode;
   /** Whether the Inbox/Posta rail should be rendered. */
   readonly showInboxRail: boolean;
-  /** Whether the global Continue action should be rendered. */
-  readonly showGlobalContinue: boolean;
 }
 
 /** Input for building the framework-free career shell view. */
@@ -127,21 +125,15 @@ export function buildCareerShellView(input: BuildCareerShellViewInput): CareerSh
     },
     mode,
     showInboxRail: modeConfig.showInboxRail,
-    showGlobalContinue: modeConfig.showGlobalContinue,
   };
 }
 
 function shellModeConfig(mode: CareerShellMode): Readonly<{
   showInboxRail: boolean;
-  showGlobalContinue: boolean;
 }> {
   if (mode === "matchday") {
-    return { showInboxRail: false, showGlobalContinue: false };
+    return { showInboxRail: false };
   }
 
-  if (mode === "preparation") {
-    return { showInboxRail: true, showGlobalContinue: false };
-  }
-
-  return { showInboxRail: true, showGlobalContinue: true };
+  return { showInboxRail: true };
 }

@@ -1,6 +1,5 @@
 import type {
   TacticalBoardCanonicalRole,
-  TacticalBoardCell,
   TacticalBoardDepartment,
   TacticalBoardRole,
   TacticalBoardRoleCode,
@@ -128,25 +127,45 @@ export function tacticalBoardDepartment(role: TacticalBoardRoleCode): TacticalBo
   return TACTICAL_BOARD_ROLES[role].department;
 }
 
-/** Derives the board cell that contains one normalized position. */
-export function tacticalBoardCellOf(nx: number, ny: number): TacticalBoardCell {
-  const band = ny < 0.4 ? "att" : ny < 0.66 ? "mid" : "def";
-  const channel = nx < 0.34 ? "L" : nx < 0.66 ? "C" : "R";
-
-  return `${band}-${channel}` as TacticalBoardCell;
+/** One non-overlapping destination area shown only while adapting a role. */
+export interface TacticalBoardRoleDestination {
+  readonly role: TacticalBoardRoleCode;
+  readonly zone: TacticalBoardZone;
 }
 
-const ROLE_OPTIONS_BY_CELL: Readonly<Record<TacticalBoardCell, readonly TacticalBoardRoleCode[]>> = {
-  "def-L": ["TS"],
-  "def-C": ["DC"],
-  "def-R": ["TD"],
-  "mid-L": ["ES"],
-  "mid-C": ["MED", "CC", "TRQ"],
-  "mid-R": ["ED"],
-  "att-L": ["AS"],
-  "att-C": ["TRQ", "ATT"],
-  "att-R": ["AD"],
-};
+/**
+ * Stable, non-overlapping role targets used by the shared drag surface.
+ * Splitting central attack and midfield vertically makes the manager's intent
+ * explicit even where canonical movement zones such as CC and TRQ overlap.
+ */
+export const TACTICAL_BOARD_ROLE_DESTINATIONS: readonly TacticalBoardRoleDestination[] = [
+  { role: "AS", zone: zone(0, 0.34, 0, 0.43) },
+  { role: "ATT", zone: zone(0.34, 0.66, 0, 0.24) },
+  { role: "TRQ", zone: zone(0.34, 0.66, 0.24, 0.43) },
+  { role: "AD", zone: zone(0.66, 1, 0, 0.43) },
+  { role: "ES", zone: zone(0, 0.34, 0.43, 0.66) },
+  { role: "CC", zone: zone(0.34, 0.66, 0.43, 0.56) },
+  { role: "MED", zone: zone(0.34, 0.66, 0.56, 0.66) },
+  { role: "ED", zone: zone(0.66, 1, 0.43, 0.66) },
+  { role: "TS", zone: zone(0, 0.34, 0.66, 1) },
+  { role: "DC", zone: zone(0.34, 0.66, 0.66, 1) },
+  { role: "TD", zone: zone(0.66, 1, 0.66, 1) },
+] as const;
+
+/** Returns the one explicit role target under a normalized drag position. */
+export function tacticalBoardRoleDestinationAt(
+  nx: number,
+  ny: number,
+): TacticalBoardRoleCode | undefined {
+  return TACTICAL_BOARD_ROLE_DESTINATIONS.find((destination) => (
+    containsDestinationCoordinate(nx, destination.zone.nxMin, destination.zone.nxMax)
+    && containsDestinationCoordinate(ny, destination.zone.nyMin, destination.zone.nyMax)
+  ))?.role;
+}
+
+function containsDestinationCoordinate(value: number, min: number, max: number): boolean {
+  return value >= min && (value < max || (max === 1 && value <= max));
+}
 
 /** Returns sensible role-change options for a board position. */
 export function tacticalBoardRoleOptionsForPosition(
@@ -154,9 +173,11 @@ export function tacticalBoardRoleOptionsForPosition(
   ny: number,
   currentRole: TacticalBoardRoleCode,
 ): readonly TacticalBoardRoleCode[] {
-  const base = ROLE_OPTIONS_BY_CELL[tacticalBoardCellOf(nx, ny)] ?? [];
+  const destinationRole = tacticalBoardRoleDestinationAt(nx, ny);
 
-  return base.includes(currentRole) ? base : [currentRole, ...base];
+  return destinationRole === undefined || destinationRole === currentRole
+    ? [currentRole]
+    : [currentRole, destinationRole];
 }
 
 /** Converts a canonical role into the board display role used by slots. */

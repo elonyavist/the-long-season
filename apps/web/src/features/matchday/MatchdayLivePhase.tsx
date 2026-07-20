@@ -4,7 +4,6 @@ import * as m from "motion/react-m";
 
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 import type { MatchdayLiveMomentView } from "./career-matchday-presenter";
-import type { MatchdayPlaybackStage } from "./matchday-playback";
 
 /** Props for the single commentary line placed directly below the score. */
 export interface MatchdayLiveCommentaryProps {
@@ -12,19 +11,16 @@ export interface MatchdayLiveCommentaryProps {
   readonly line: string;
   /** Current structured event hierarchy, or an intentional transition. */
   readonly moment: MatchdayLiveMomentView;
-  /** Optional playback stage used for restrained transition styling. */
-  readonly playbackStage?: MatchdayPlaybackStage;
 }
 
 /** Renders one replace-in-place polite live region without an event log. */
 export function MatchdayLiveCommentary({
   line,
   moment,
-  playbackStage,
 }: MatchdayLiveCommentaryProps): React.JSX.Element {
   const reducedMotion = useReducedMotion();
   const commentaryKey = moment.event?.event.eventId
-    ?? `${playbackStage ?? "checkpoint"}:${line}`;
+    ?? `checkpoint:${line}`;
   const narrativeMoment = moment.visualPriority === "goal";
 
   return (
@@ -36,7 +32,6 @@ export function MatchdayLiveCommentary({
       {...(moment.event === undefined ? {} : { "data-event-id": moment.event.event.eventId })}
       data-motion-commentary-key={commentaryKey}
       data-motion-category={narrativeMoment ? "narrative" : "transition"}
-      data-playback-stage={playbackStage}
       initial={reducedMotion
         ? false
         : narrativeMoment

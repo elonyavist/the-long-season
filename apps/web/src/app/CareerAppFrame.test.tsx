@@ -49,7 +49,6 @@ describe("CareerAppFrame", () => {
           currentDateIso="2026-08-01"
           text={text}
           onBackToMenu={vi.fn()}
-          onContinueCareer={vi.fn()}
         >
           <SaveLifecycleProbe />
         </AppShell>

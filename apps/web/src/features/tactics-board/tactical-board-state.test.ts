@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  adaptTacticalBoardSlot,
   assignTacticalBoardPlayer,
   changeTacticalBoardSlotRole,
   clearTacticalBoardSlot,
   createTacticalBoardDraft,
+  exchangeTacticalBoardSlotPlayers,
   loadTacticalBoardBaseFormation,
   moveTacticalBoardSlot,
   removeTacticalBoardPlayer,
@@ -98,5 +100,35 @@ describe("tactical board state", () => {
       role: "ATT",
       playerId: null,
     });
+  });
+
+  it("confirms role and destination adaptation atomically", () => {
+    let draft = createTacticalBoardDraft("4-4-2");
+    draft = assignTacticalBoardPlayer(draft, "cm-left", "player:cm");
+
+    const adapted = adaptTacticalBoardSlot(draft, "cm-left", "TRQ", 0.52, 0.31);
+
+    expect(adapted.slots.find((slot) => slot.slotId === "cm-left")).toMatchObject({
+      playerId: "player:cm",
+      role: "TRQ",
+      canonicalRole: "attacking_midfielder",
+      nx: 0.52,
+      ny: 0.31,
+    });
+  });
+
+  it("exchanges XI players without moving their tactical slots", () => {
+    let draft = createTacticalBoardDraft("4-4-2");
+    draft = assignTacticalBoardPlayer(draft, "cm-left", "player:left");
+    draft = assignTacticalBoardPlayer(draft, "cm-right", "player:right");
+
+    const exchanged = exchangeTacticalBoardSlotPlayers(draft, "cm-left", "cm-right");
+
+    expect(tacticalBoardSelectedPlayerIdsBySlot(exchanged)).toMatchObject({
+      "cm-left": "player:right",
+      "cm-right": "player:left",
+    });
+    expect(exchanged.slots.find((slot) => slot.slotId === "cm-left")?.nx)
+      .toBe(draft.slots.find((slot) => slot.slotId === "cm-left")?.nx);
   });
 });

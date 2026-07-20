@@ -57,6 +57,20 @@ test("fake league facade exposes a coherent generated world bundle", () => {
   assert.deepEqual(Object.keys(league.roleWeights).sort(), ["attacker", "defender", "gk", "midfielder"]);
 });
 
+test("current third division owns its exact regulation and discipline rules", () => {
+  const league = createFakeLeagueSystem();
+
+  assert.deepEqual(league.competition.matchRules, {
+    maximumSubstitutions: 5,
+    substitutionWindowLimit: null,
+    allowsPlayerReentry: false,
+    yellowCardAccumulationThreshold: 5,
+    straightRedSuspensionMatches: 3,
+    secondYellowSuspensionMatches: 1,
+    yellowAccumulationSuspensionMatches: 1,
+  });
+});
+
 test("fake league generates reserves without changing default lineup size", () => {
   const league = createFakeLeagueSystem();
   const firstClubId = league.clubIds[0];

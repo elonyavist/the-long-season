@@ -1,5 +1,6 @@
 import type { MatchScore } from "./match.entity.ts";
 import type { PlayerId } from "../types/ids.ts";
+import type { MatchSubstitutionReasonKey } from "../match/substitution.ts";
 
 /**
  * Side marker used by persisted match events.
@@ -15,6 +16,12 @@ export type ShotType = "normal" | "header" | "set_piece";
  * Structured chance source used by persisted shot events.
  */
 export type ShotChanceType = "open_play" | "counter" | "cross" | "dead_ball";
+
+/** Injury severity emitted by the match and consumed by career consequences. */
+export type MatchInjurySeverity = "knock" | "minor" | "moderate" | "serious";
+
+/** Structured outcome of a taken penalty. */
+export type PenaltyOutcome = "scored" | "saved" | "missed";
 
 /**
  * Shared context carried by persisted shot-outcome events.
@@ -103,6 +110,80 @@ export interface BlockMatchEvent {
   readonly primaryDefenderPlayerId?: PlayerId;
 }
 
+/** Foul fact emitted when one player commits an infringement. */
+export interface FoulMatchEvent {
+  readonly type: "foul";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly committedByPlayerId: PlayerId;
+  readonly sufferedByPlayerId?: PlayerId;
+  /** Normalized danger of the location in the inclusive 0..1 range. */
+  readonly zoneDanger: number;
+}
+
+/** Yellow-card disciplinary fact. */
+export interface YellowCardMatchEvent {
+  readonly type: "yellow_card";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly playerId: PlayerId;
+}
+
+/** Second-yellow dismissal fact; the first yellow remains a separate event. */
+export interface SecondYellowCardMatchEvent {
+  readonly type: "second_yellow_card";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly playerId: PlayerId;
+}
+
+/** Straight-red dismissal fact. */
+export interface RedCardMatchEvent {
+  readonly type: "red_card";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly playerId: PlayerId;
+}
+
+/** Penalty-award fact emitted before its eventual outcome. */
+export interface PenaltyAwardedMatchEvent {
+  readonly type: "penalty_awarded";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly fouledPlayerId?: PlayerId;
+  readonly committedByPlayerId?: PlayerId;
+}
+
+/** Penalty result fact. A scored penalty also produces the ordinary goal fact. */
+export interface PenaltyOutcomeMatchEvent {
+  readonly type: "penalty_outcome";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly takerPlayerId: PlayerId;
+  readonly goalkeeperPlayerId: PlayerId;
+  readonly outcome: PenaltyOutcome;
+}
+
+/** Injury fact emitted during play without deciding the career recovery policy. */
+export interface InjuryMatchEvent {
+  readonly type: "injury";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly playerId: PlayerId;
+  readonly severity: MatchInjurySeverity;
+}
+
+/** Accepted substitution fact emitted after an atomic team change. */
+export interface SubstitutionMatchEvent {
+  readonly type: "substitution";
+  readonly minute: number;
+  readonly side: MatchEventSide;
+  readonly outgoingPlayerId: PlayerId;
+  readonly incomingPlayerId: PlayerId;
+  readonly slotId: string;
+  readonly reasonKey: MatchSubstitutionReasonKey;
+}
+
 /**
  * Half-time marker event.
  */
@@ -139,5 +220,33 @@ export type MatchEvent =
   | SaveMatchEvent
   | MissMatchEvent
   | BlockMatchEvent
+  | FoulMatchEvent
+  | YellowCardMatchEvent
+  | SecondYellowCardMatchEvent
+  | RedCardMatchEvent
+  | PenaltyAwardedMatchEvent
+  | PenaltyOutcomeMatchEvent
+  | InjuryMatchEvent
+  | SubstitutionMatchEvent
   | HalfTimeMatchEvent
   | FullTimeMatchEvent;
+
+/** Incident facts added for progressive live simulation in Phase 77. */
+export type LiveMatchIncidentEvent =
+  | FoulMatchEvent
+  | YellowCardMatchEvent
+  | SecondYellowCardMatchEvent
+  | RedCardMatchEvent
+  | PenaltyAwardedMatchEvent
+  | PenaltyOutcomeMatchEvent
+  | InjuryMatchEvent
+  | SubstitutionMatchEvent;
+
+/**
+ * Complete event vocabulary of the progressive live session.
+ *
+ * `MatchEvent` remains the active batch-report vocabulary until Step 02 moves
+ * its callers to this union; this keeps the migration compile-safe without a
+ * second simulation contract.
+ */
+export type LiveMatchEvent = MatchEvent;

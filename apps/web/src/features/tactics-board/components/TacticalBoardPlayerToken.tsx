@@ -17,6 +17,10 @@ export interface TacticalBoardTokenPlayer {
   readonly number: number;
   readonly surname: string;
   readonly formTrend: TacticalBoardFormTrend;
+  /** Current condition percentage shown only for live Matchday players. */
+  readonly condition?: number;
+  /** Current provisional or final rating shown only when available. */
+  readonly rating?: number;
 }
 
 export interface TacticalBoardPlayerTokenProps {
@@ -38,7 +42,17 @@ export function TacticalBoardPlayerToken({
   onOpen,
 }: TacticalBoardPlayerTokenProps): React.JSX.Element {
   const { x, y } = toSvg(slot.nx, slot.ny);
-  const accessibleName = `${player.number} ${player.surname} ${roleCode} ${text(suitabilityLabelKey(suitability) as MessageKey)}`;
+  const liveFacts = [
+    player.condition === undefined ? "" : `${Math.round(player.condition)}%`,
+    player.rating === undefined ? "" : player.rating.toFixed(1),
+  ].filter((fact) => fact.length > 0).join(" · ");
+  const accessibleName = [
+    player.number,
+    player.surname,
+    roleCode,
+    text(suitabilityLabelKey(suitability) as MessageKey),
+    liveFacts,
+  ].filter((fact) => fact !== "").join(" ");
 
   return (
     <g
@@ -65,6 +79,11 @@ export function TacticalBoardPlayerToken({
       <text className="tls-tactical-board-token-role" textAnchor="middle" y={74}>
         {roleCode}
       </text>
+      {liveFacts.length === 0 ? null : (
+        <text className="tls-tactical-board-token-live" textAnchor="middle" y={94}>
+          {liveFacts}
+        </text>
+      )}
     </g>
   );
 }

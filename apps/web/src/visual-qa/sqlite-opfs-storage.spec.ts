@@ -5,7 +5,6 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "playwright/test";
-import { completeStagedMatchCheckpoint } from "@game/engine";
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(CURRENT_DIR, "../../../..");
@@ -146,26 +145,6 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
         benchSlots: [{ slotKey: "bench:01", playerId: "player:home-02" }],
         tactic: { mentality: "balanced", pressing: 0.5, directness: 0.4, width: 0.6, risk: 0.5 },
       },
-      activeMatchCheckpoint: {
-        schemaVersion: 1, fixtureId: "fixture:future", selectedClubSide: "away", phase: "half_time",
-        initialContext: {
-          fixtureId: "fixture:future", seed: "phase71-active-match",
-          home: { clubId: "club:away", lineup: [{ slotId: "home-1", playerId: "player:away-01", roleKey: "gk" }, { slotId: "home-2", playerId: "player:away-02", roleKey: "attacker" }], strength: { attack: 9, midfield: 9, defense: 9, goalkeeper: 9, overall: 9 }, tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0 } },
-          away: { clubId: "club:home", lineup: [{ slotId: "away-1", playerId: "player:home-02", roleKey: "gk" }, { slotId: "away-2", playerId: "player:home-01", roleKey: "attacker" }], strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 }, tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0 } },
-          engineConfig: {
-            minuteCount: 90, rates: { baseOpportunityRatePerMinute: 0.1, maxOpportunityRatePerMinute: 0.3 },
-            conversionBands: [{ bandKey: "all", minQualityInclusive: 0, maxQualityExclusive: 1.01, goalProbability: 0.1 }],
-            homeAdvantageFactor: 1.05,
-            tacticalDistributionCaps: {
-              directness: { minInclusive: -1, maxInclusive: 1 }, pressing: { minInclusive: -1, maxInclusive: 1 },
-              width: { minInclusive: -1, maxInclusive: 1 }, risk: { minInclusive: -1, maxInclusive: 1 },
-            },
-          },
-        },
-        simulation: { minute: 45, score: { home: 0, away: 0 }, stats: { home: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 }, away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 } }, local: { hasKickedOff: true, hasReachedHalfTime: true, hasReachedFullTime: false } },
-        events: [{ type: "kickoff", minute: 0 }, { type: "half_time", minute: 45, score: { home: 0, away: 0 } }],
-        selectedClubBenchSlots: [], appliedSubstitutions: [],
-      },
       playerParticipationLedger: {
         rows: {
           "season:2026|2026-08|player:home-01": {
@@ -238,8 +217,6 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
       isolatedSaveCount: listed.filter((entry: { readonly saveId: string }) => entry.saveId === firstSaveId || entry.saveId === secondSaveId).length,
       replacementFailed,
       rollbackPreserved: canonical(afterFailedReplacement) === canonical(state),
-      sourceCheckpoint: state.activeMatchCheckpoint,
-      restoredCheckpoint: loaded.activeMatchCheckpoint,
       sourcePreparation: state.matchPreparation,
       restoredPreparation: loaded.matchPreparation,
       restoredPlayerFacts: {
@@ -263,9 +240,6 @@ test("SQLite OPFS round-trips isolated ordered worlds and rolls back a failed re
   expect(result.isolatedSaveCount).toBe(2);
   expect(result.replacementFailed).toBe(true);
   expect(result.rollbackPreserved).toBe(true);
-  expect(completeStagedMatchCheckpoint(result.restoredCheckpoint as never)).toEqual(
-    completeStagedMatchCheckpoint(result.sourceCheckpoint as never),
-  );
   expect(result.restoredPreparation).toEqual(result.sourcePreparation);
   expect(result.restoredPlayerFacts.roleIdentity.primaryRole).toBe("central_midfielder");
   expect(result.restoredPlayerFacts.roleIdentity.abilities.technical.passing).toBe(11);

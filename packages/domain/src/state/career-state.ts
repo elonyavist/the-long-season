@@ -7,9 +7,14 @@ import { createMarketState, type MarketState } from "../entities/transfer.entity
 import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
 import { createYouthAcademyState, type YouthAcademyState } from "./youth-academy-state.ts";
-import { createActiveMatchCheckpoint, type ActiveMatchCheckpoint } from "../career/active-match-checkpoint.ts";
 import { createCareerInboxMessage, type CareerInboxMessage } from "../career/inbox.ts";
 import { createPlayerParticipationLedger, type PlayerParticipationLedger } from "../career/player-participation.ts";
+import {
+  createCareerPlayerAvailabilityState,
+  EMPTY_PLAYER_AVAILABILITY,
+  playerUnavailabilityReason,
+  type CareerPlayerAvailabilityState,
+} from "../career/player-availability.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
@@ -150,10 +155,10 @@ export interface CareerState {
   readonly seasonHistory?: readonly CareerSeasonArchiveEntry[];
   /** Ordered durable Posta messages for the current season only. */
   readonly currentSeasonInbox?: readonly CareerInboxMessage[];
-  /** Optional durable checkpoint for the selected club's in-progress fixture. */
-  readonly activeMatchCheckpoint?: ActiveMatchCheckpoint;
   /** Optional current-season/month participation ledger for future development. */
   readonly playerParticipationLedger?: PlayerParticipationLedger;
+  /** Active injuries, suspensions, and competition yellow-card totals. */
+  readonly playerAvailability?: CareerPlayerAvailabilityState;
 }
 
 /** Machine-readable career-state validation failure. */
@@ -195,12 +200,10 @@ export type CareerStateContractErrorCode =
   | "match_preparation_duplicate_bench_slot"
   | "match_preparation_duplicate_bench_player"
   | "match_preparation_bench_lineup_overlap"
-  | "active_match_fixture_not_found"
-  | "active_match_fixture_already_played"
-  | "active_match_fixture_club_mismatch"
-  | "active_match_selected_side_mismatch"
-  | "active_match_player_not_found"
-  | "player_participation_player_not_found";
+  | "player_participation_player_not_found"
+  | "player_availability_player_not_found"
+  | "player_availability_fixture_not_found"
+  | "match_preparation_player_unavailable";
 
 /**
  * Typed error thrown when a career-state snapshot is inconsistent.
@@ -283,11 +286,9 @@ export function createCareerState(input: CareerState): CareerState {
   const youthAcademyState = input.youthAcademyState === undefined
     ? undefined
     : createYouthAcademyState(input.gameState, input.youthAcademyState);
-  const activeMatchCheckpoint = input.activeMatchCheckpoint === undefined
-    ? undefined
-    : createCareerActiveMatchCheckpoint(input.gameState, input.selectedClubId, input.activeMatchCheckpoint);
   const currentSeasonInbox = createCurrentSeasonInbox(input);
   const playerParticipationLedger = createCareerPlayerParticipationLedger(input);
+  const playerAvailability = createCareerPlayerAvailability(input);
 
   return {
     saveId: input.saveId,
@@ -302,10 +303,32 @@ export function createCareerState(input: CareerState): CareerState {
     currentSeasonInbox,
     ...(input.matchPreparation === undefined
       ? {}
-      : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation) }),
-    ...(activeMatchCheckpoint === undefined ? {} : { activeMatchCheckpoint }),
+      : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation, playerAvailability) }),
     ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
+    ...(input.playerAvailability === undefined ? {} : { playerAvailability }),
   };
+}
+
+/** Validates durable availability references against the current world. */
+function createCareerPlayerAvailability(input: CareerState): CareerPlayerAvailabilityState {
+  const availability = createCareerPlayerAvailabilityState(input.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY);
+  for (const fact of [...availability.injuries, ...availability.suspensions, ...availability.yellowCards]) {
+    if (input.gameState.players[fact.playerId] === undefined) {
+      throw new CareerStateContractError(
+        "player_availability_player_not_found",
+        `availability player does not exist in career game state: ${fact.playerId}`,
+      );
+    }
+  }
+  for (const fact of [...availability.injuries, ...availability.suspensions]) {
+    if (input.gameState.fixtures[fact.fixtureId] === undefined) {
+      throw new CareerStateContractError(
+        "player_availability_fixture_not_found",
+        `availability fixture does not exist in career game state: ${fact.fixtureId}`,
+      );
+    }
+  }
+  return availability;
 }
 
 /** Validates participation rows against the active career player lookup. */
@@ -394,6 +417,7 @@ function createCareerMatchPreparation(
   gameState: GameState,
   selectedClubId: ClubId,
   input: CareerMatchPreparation,
+  availability: CareerPlayerAvailabilityState,
 ): CareerMatchPreparation {
   if (input.selectedClubId !== selectedClubId) {
     throw new CareerStateContractError(
@@ -403,10 +427,23 @@ function createCareerMatchPreparation(
   }
 
   validatePreparationFixture(gameState, selectedClubId, input.targetFixtureId);
-  const selectedLineup = input.selectedLineup === undefined ? undefined : createValidatedPreparationLineup(gameState, selectedClubId, input.selectedLineup);
+  const selectedLineup = input.selectedLineup === undefined ? undefined : createValidatedPreparationLineup(
+    gameState,
+    selectedClubId,
+    input.selectedLineup,
+    input.targetFixtureId,
+    availability,
+  );
   const tactic = input.tactic === undefined ? undefined : createTacticSetup(input.tactic);
   const boardSlots = createPreparationBoardSlots(input.boardSlots, selectedLineup);
-  const benchSlots = createPreparationBenchSlots(gameState, selectedClubId, input.benchSlots, selectedLineup);
+  const benchSlots = createPreparationBenchSlots(
+    gameState,
+    selectedClubId,
+    input.benchSlots,
+    selectedLineup,
+    input.targetFixtureId,
+    availability,
+  );
 
   if (input.baseFormationId !== undefined && input.baseFormationId.trim().length === 0) {
     throw new CareerStateContractError(
@@ -460,6 +497,8 @@ function createPreparationBenchSlots(
   selectedClubId: ClubId,
   input: readonly CareerMatchPreparationBenchSlot[] | undefined,
   selectedLineup: SelectedLineup | undefined,
+  targetFixtureId: FixtureId | undefined,
+  availability: CareerPlayerAvailabilityState,
 ): readonly CareerMatchPreparationBenchSlot[] | undefined {
   if (input === undefined) return undefined;
   const selectedClub = gameState.clubs[selectedClubId];
@@ -487,6 +526,7 @@ function createPreparationBenchSlots(
     if (!ownedPlayerIds.has(slot.playerId)) {
       throw new CareerStateContractError("match_preparation_player_not_owned", `match preparation bench player is not owned by selected club: ${slot.playerId}`);
     }
+    assertPreparationPlayerAvailable(gameState, targetFixtureId, availability, slot.playerId);
     seenSlotKeys.add(slot.slotKey);
     seenPlayerIds.add(slot.playerId);
     return { ...slot };
@@ -577,6 +617,8 @@ function createValidatedPreparationLineup(
   gameState: GameState,
   selectedClubId: ClubId,
   input: SelectedLineup,
+  targetFixtureId: FixtureId | undefined,
+  availability: CareerPlayerAvailabilityState,
 ): SelectedLineup {
   if (input.clubId !== selectedClubId) {
     throw new CareerStateContractError("match_preparation_lineup_club_mismatch", `lineup club must match selected club: ${input.clubId}`);
@@ -594,9 +636,31 @@ function createValidatedPreparationLineup(
     if (!selectedClubPlayerIds.has(slot.playerId)) {
       throw new CareerStateContractError("match_preparation_player_not_owned", `lineup player is not owned by selected club: ${slot.playerId}`);
     }
+    assertPreparationPlayerAvailable(gameState, targetFixtureId, availability, slot.playerId);
   }
 
   return selectedLineup;
+}
+
+function assertPreparationPlayerAvailable(
+  gameState: GameState,
+  targetFixtureId: FixtureId | undefined,
+  availability: CareerPlayerAvailabilityState,
+  playerId: PlayerId,
+): void {
+  if (targetFixtureId === undefined) return;
+  const fixture = gameState.fixtures[targetFixtureId];
+  if (fixture === undefined) return;
+  // Availability produced by this fixture must not invalidate the preparation
+  // snapshot that was valid when the already-completed match kicked off.
+  if (fixture.result?.played === true) return;
+  const reason = playerUnavailabilityReason(availability, playerId, fixture.date, fixture.competitionId);
+  if (reason !== undefined) {
+    throw new CareerStateContractError(
+      "match_preparation_player_unavailable",
+      `match preparation player is ${reason}: ${playerId}`,
+    );
+  }
 }
 
 function hasClubInOrder(gameState: GameState, clubId: ClubId): boolean {
@@ -607,60 +671,6 @@ function hasClubInOrder(gameState: GameState, clubId: ClubId): boolean {
   }
 
   return false;
-}
-
-function createCareerActiveMatchCheckpoint(
-  gameState: GameState,
-  selectedClubId: ClubId,
-  input: ActiveMatchCheckpoint,
-): ActiveMatchCheckpoint {
-  const checkpoint = createActiveMatchCheckpoint(input);
-  const fixture = gameState.fixtures[checkpoint.fixtureId];
-
-  if (fixture === undefined) {
-    throw new CareerStateContractError("active_match_fixture_not_found", `active match fixture does not exist: ${checkpoint.fixtureId}`);
-  }
-
-  if (fixture.result !== undefined) {
-    throw new CareerStateContractError("active_match_fixture_already_played", `active match fixture is already played: ${checkpoint.fixtureId}`);
-  }
-
-  if (fixture.homeClubId !== checkpoint.initialContext.home.clubId || fixture.awayClubId !== checkpoint.initialContext.away.clubId) {
-    throw new CareerStateContractError("active_match_fixture_club_mismatch", `active match clubs do not match fixture: ${checkpoint.fixtureId}`);
-  }
-
-  if (checkpoint.initialContext[checkpoint.selectedClubSide].clubId !== selectedClubId) {
-    throw new CareerStateContractError("active_match_selected_side_mismatch", `active match selected side does not contain selected club: ${selectedClubId}`);
-  }
-
-  for (const player of activeCheckpointPlayerIds(checkpoint)) {
-    if (gameState.players[player] === undefined) {
-      throw new CareerStateContractError("active_match_player_not_found", `active match player does not exist: ${player}`);
-    }
-  }
-
-  return checkpoint;
-}
-
-function activeCheckpointPlayerIds(checkpoint: ActiveMatchCheckpoint): Set<PlayerId> {
-  const players = new Set<PlayerId>();
-
-  for (const team of [checkpoint.initialContext.home, checkpoint.initialContext.away]) {
-    for (const slot of team.lineup) {
-      players.add(slot.playerId);
-    }
-  }
-
-  for (const slot of checkpoint.selectedClubBenchSlots) {
-    if (slot.playerId !== null) players.add(slot.playerId);
-  }
-
-  for (const substitution of checkpoint.appliedSubstitutions) {
-    players.add(substitution.outgoingPlayerId);
-    players.add(substitution.incomingPlayerId);
-  }
-
-  return players;
 }
 
 function assertNonNegativeMoney(amount: Money | undefined): void {

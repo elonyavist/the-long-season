@@ -63,8 +63,6 @@ export interface TacticalBoardSlot {
 }
 
 /** One field cell used to decide sensible role-change options. */
-export type TacticalBoardCell = `${"def" | "mid" | "att"}-${"L" | "C" | "R"}`;
-
 /** Formation preset adapted for the tactical board from UI read-model data. */
 export interface TacticalBoardFormationPreset {
   readonly formationId: string;

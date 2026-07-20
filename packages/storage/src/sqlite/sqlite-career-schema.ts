@@ -1,5 +1,5 @@
 /** Current relational browser-career schema version. */
-export const SQLITE_CAREER_SCHEMA_VERSION = 7;
+export const SQLITE_CAREER_SCHEMA_VERSION = 9;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
@@ -143,6 +143,68 @@ export const SQLITE_CAREER_SCHEMA_V7_STATEMENTS = [
     UNIQUE (save_id, month_key)
   ) STRICT`,
 ] as const;
+
+/** Version-8 durable match incidents and player availability facts. */
+export const SQLITE_CAREER_SCHEMA_V8_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS career_player_injuries (
+    save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    player_id TEXT NOT NULL,
+    fixture_id TEXT NOT NULL,
+    severity TEXT NOT NULL CHECK (severity IN ('knock', 'minor', 'moderate', 'serious')),
+    occurred_on INTEGER NOT NULL,
+    unavailable_until INTEGER NOT NULL,
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, player_id),
+    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, fixture_id) REFERENCES fixtures(save_id, fixture_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS career_player_suspensions (
+    save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    player_id TEXT NOT NULL,
+    fixture_id TEXT NOT NULL,
+    competition_id TEXT NOT NULL,
+    reason TEXT NOT NULL CHECK (reason IN ('straight_red', 'second_yellow', 'yellow_accumulation')),
+    remaining_matches INTEGER NOT NULL CHECK (remaining_matches > 0),
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, competition_id, player_id),
+    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, fixture_id) REFERENCES fixtures(save_id, fixture_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS career_player_yellow_cards (
+    save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    player_id TEXT NOT NULL,
+    competition_id TEXT NOT NULL,
+    card_count INTEGER NOT NULL CHECK (card_count > 0),
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, competition_id, player_id),
+    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id) ON DELETE CASCADE
+  ) STRICT`,
+  `ALTER TABLE match_events ADD COLUMN committed_by_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN suffered_by_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN zone_danger REAL`,
+  `ALTER TABLE match_events ADD COLUMN card_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN fouled_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN penalty_taker_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN penalty_outcome TEXT`,
+  `ALTER TABLE match_events ADD COLUMN injury_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN injury_severity TEXT`,
+  `ALTER TABLE match_events ADD COLUMN outgoing_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN incoming_player_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN slot_id TEXT`,
+  `ALTER TABLE match_events ADD COLUMN substitution_reason_key TEXT`,
+] as const;
+
+/**
+ * Version 9 intentionally has no additive statements.
+ *
+ * The version boundary invalidates beta databases that still contain the
+ * retired unfinished-match checkpoint schema. Fresh databases build the
+ * canonical report-only schema from the revised earlier migrations.
+ */
+export const SQLITE_CAREER_SCHEMA_V9_STATEMENTS = [] as const;
 
 /** Version-2 tables that preserve the complete ordered game world. */
 export const SQLITE_CAREER_SCHEMA_V2_STATEMENTS = [
@@ -405,7 +467,7 @@ export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
   ) STRICT`,
   `CREATE TABLE IF NOT EXISTS match_events (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
-    owner_kind TEXT NOT NULL CHECK (owner_kind IN ('report', 'checkpoint')),
+    owner_kind TEXT NOT NULL CHECK (owner_kind = 'report'),
     owner_id TEXT NOT NULL,
     sort_order INTEGER NOT NULL,
     event_type TEXT NOT NULL,
@@ -424,131 +486,6 @@ export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
     score_home INTEGER,
     score_away INTEGER,
     PRIMARY KEY (save_id, owner_kind, owner_id, sort_order)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS active_match (
-    save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE,
-    schema_version INTEGER NOT NULL,
-    fixture_id TEXT NOT NULL,
-    selected_club_side TEXT NOT NULL,
-    phase TEXT NOT NULL,
-    seed TEXT NOT NULL,
-    minute_count INTEGER NOT NULL,
-    base_opportunity_rate REAL NOT NULL,
-    max_opportunity_rate REAL NOT NULL,
-    home_advantage_factor REAL NOT NULL,
-    cap_directness_min REAL NOT NULL,
-    cap_directness_max REAL NOT NULL,
-    cap_pressing_min REAL NOT NULL,
-    cap_pressing_max REAL NOT NULL,
-    cap_width_min REAL NOT NULL,
-    cap_width_max REAL NOT NULL,
-    cap_risk_min REAL NOT NULL,
-    cap_risk_max REAL NOT NULL,
-    checkpoint_minute INTEGER NOT NULL,
-    score_home INTEGER NOT NULL,
-    score_away INTEGER NOT NULL,
-    home_opportunities INTEGER NOT NULL,
-    home_shots INTEGER NOT NULL,
-    home_shots_on_target INTEGER NOT NULL,
-    home_goals INTEGER NOT NULL,
-    away_opportunities INTEGER NOT NULL,
-    away_shots INTEGER NOT NULL,
-    away_shots_on_target INTEGER NOT NULL,
-    away_goals INTEGER NOT NULL,
-    has_kicked_off INTEGER NOT NULL,
-    has_reached_half_time INTEGER NOT NULL,
-    FOREIGN KEY (save_id, fixture_id) REFERENCES fixtures(save_id, fixture_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS active_match_teams (
-    save_id TEXT NOT NULL REFERENCES active_match(save_id) ON DELETE CASCADE,
-    side TEXT NOT NULL,
-    club_id TEXT NOT NULL,
-    attack REAL NOT NULL,
-    midfield REAL NOT NULL,
-    defense REAL NOT NULL,
-    goalkeeper REAL NOT NULL,
-    overall REAL NOT NULL,
-    directness REAL NOT NULL,
-    pressing REAL NOT NULL,
-    width REAL NOT NULL,
-    risk REAL NOT NULL,
-    PRIMARY KEY (save_id, side),
-    FOREIGN KEY (save_id, club_id) REFERENCES clubs(save_id, club_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS active_match_lineups (
-    save_id TEXT NOT NULL REFERENCES active_match(save_id) ON DELETE CASCADE,
-    side TEXT NOT NULL,
-    sort_order INTEGER NOT NULL,
-    slot_id TEXT NOT NULL,
-    player_id TEXT NOT NULL,
-    role_key TEXT NOT NULL,
-    PRIMARY KEY (save_id, side, sort_order),
-    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS active_match_conversion_bands (
-    save_id TEXT NOT NULL REFERENCES active_match(save_id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL,
-    band_key TEXT NOT NULL,
-    min_quality REAL NOT NULL,
-    max_quality REAL NOT NULL,
-    goal_probability REAL NOT NULL,
-    PRIMARY KEY (save_id, sort_order)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS active_match_bench (
-    save_id TEXT NOT NULL REFERENCES active_match(save_id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL,
-    slot_id TEXT NOT NULL,
-    player_id TEXT,
-    PRIMARY KEY (save_id, sort_order),
-    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS active_match_substitutions (
-    save_id TEXT NOT NULL REFERENCES active_match(save_id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL,
-    side TEXT NOT NULL,
-    event_minute INTEGER NOT NULL,
-    outgoing_player_id TEXT NOT NULL,
-    incoming_player_id TEXT NOT NULL,
-    slot_id TEXT NOT NULL,
-    reason_key TEXT NOT NULL,
-    PRIMARY KEY (save_id, sort_order),
-    FOREIGN KEY (save_id, outgoing_player_id) REFERENCES players(save_id, player_id),
-    FOREIGN KEY (save_id, incoming_player_id) REFERENCES players(save_id, player_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS half_time_plan (
-    save_id TEXT PRIMARY KEY REFERENCES active_match(save_id) ON DELETE CASCADE,
-    base_formation_id TEXT NOT NULL,
-    current_shape TEXT NOT NULL,
-    max_substitutions INTEGER,
-    required_lineup_size INTEGER
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS half_time_plan_lineup (
-    save_id TEXT NOT NULL REFERENCES half_time_plan(save_id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL,
-    slot_id TEXT NOT NULL,
-    player_id TEXT,
-    role_key TEXT NOT NULL,
-    position_key TEXT,
-    PRIMARY KEY (save_id, sort_order),
-    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS half_time_plan_bench (
-    save_id TEXT NOT NULL REFERENCES half_time_plan(save_id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL,
-    slot_id TEXT NOT NULL,
-    player_id TEXT,
-    PRIMARY KEY (save_id, sort_order),
-    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id)
-  ) STRICT`,
-  `CREATE TABLE IF NOT EXISTS half_time_plan_substitutions (
-    save_id TEXT NOT NULL REFERENCES half_time_plan(save_id) ON DELETE CASCADE,
-    sort_order INTEGER NOT NULL,
-    outgoing_player_id TEXT NOT NULL,
-    incoming_player_id TEXT NOT NULL,
-    reason_key TEXT NOT NULL,
-    PRIMARY KEY (save_id, sort_order),
-    FOREIGN KEY (save_id, outgoing_player_id) REFERENCES players(save_id, player_id),
-    FOREIGN KEY (save_id, incoming_player_id) REFERENCES players(save_id, player_id)
   ) STRICT`,
 ] as const;
 

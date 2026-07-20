@@ -27,11 +27,9 @@ describe("MatchdayLiveCommentary", () => {
       React.createElement(MatchdayLiveCommentary, {
         line: "22' Goal: U.S. Pisa - Filippo Costa",
         moment,
-        playbackStage: "event",
       }),
     );
 
-    expect(markup).toContain('data-playback-stage="event"');
     expect(markup).toContain('data-commentary-priority="goal"');
     expect(markup).toContain('data-event-id="event:goal"');
     expect(markup).toContain('data-motion-commentary-key="event:goal"');
@@ -47,15 +45,13 @@ describe("MatchdayLiveCommentary", () => {
       React.createElement(MatchdayLiveCommentary, {
         line: "The second half is under way.",
         moment: { visualPriority: "transition" },
-        playbackStage: "opening",
       }),
     );
 
-    expect(markup).toContain('data-playback-stage="opening"');
     expect(markup).toContain('data-commentary-priority="transition"');
     expect(markup).toContain('data-motion-category="transition"');
     expect(markup).not.toContain("data-event-id");
-    expect(markup).toContain('data-motion-commentary-key="opening:The second half is under way."');
+    expect(markup).toContain('data-motion-commentary-key="checkpoint:The second half is under way."');
     expect(markup).toContain("The second half is under way.");
   });
 });

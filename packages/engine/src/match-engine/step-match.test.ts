@@ -6,7 +6,13 @@ import { deriveRng } from "@game/shared";
 
 import type { MatchEngineConfig } from "./match-engine-config.ts";
 import { buildMatchRngKey, matchRngKeyParts, type MatchContext, type MatchTeamContext } from "./match-context.ts";
-import { createInitialMatchSimulationState, type MatchSide, type MatchSimulationState } from "./match-simulation-state.ts";
+import { buildLiveMatchProjection } from "./live-match-projection.ts";
+import {
+  createInitialMatchSimulationState,
+  telemetryFor,
+  type MatchSide,
+  type MatchSimulationState,
+} from "./match-simulation-state.ts";
 import type { OccasionResolver, OccasionResolution, ResolveOccasionInput } from "./occasion-resolver.ts";
 import { stepMatch, type MatchShotOutcomeStepEvent } from "./step-match.ts";
 
@@ -66,7 +72,12 @@ test("zero-opportunity minute advances deterministically without visible events"
   assert.deepEqual(firstRunNoEvent.events, secondRunNoEvent.events);
   assert.deepEqual(firstRunNoEvent.simulation, secondRunNoEvent.simulation);
   assert.deepEqual(firstRunNoEvent.processedSides, secondRunNoEvent.processedSides);
-  assert.deepEqual(firstRunNoEvent.simulation.stats, {
+  assert.deepEqual(
+    {
+      home: firstRunNoEvent.simulation.stats.home,
+      away: firstRunNoEvent.simulation.stats.away,
+    },
+    {
     home: {
       opportunities: 0,
       shots: 0,
@@ -79,7 +90,97 @@ test("zero-opportunity minute advances deterministically without visible events"
       shotsOnTarget: 0,
       goals: 0,
     },
+    },
+  );
+});
+
+test("one resolved shot per side accumulates truthful causal statistics and condition", () => {
+  const context = withGoalkeeperTeams(validContext({
+    baseOpportunityRatePerMinute: 1,
+    maxOpportunityRatePerMinute: 1,
+  }));
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState(context),
+    rng: rngFor(context),
+    occasionResolver: fixedResolver({
+      outcome: "save",
+      quality: 0.8,
+      isShotOnTarget: true,
+      expectedGoals: 0.42,
+      resultsInCorner: true,
+    }),
   });
+  const projection = buildLiveMatchProjection({ simulation: result.simulation, events: result.events });
+
+  assert.equal(projection.statistics.home.possessionShare + projection.statistics.away.possessionShare, 1);
+  assert.deepEqual(projection.statistics.home, {
+    possessionShare: projection.statistics.home.possessionShare,
+    shots: 1,
+    shotsOnTarget: 1,
+    expectedGoals: 0.42,
+    corners: 1,
+    fouls: 0,
+    yellowCards: 0,
+    redCards: 0,
+    saves: 1,
+    goals: 0,
+  });
+  assert.deepEqual(projection.statistics.away, {
+    ...projection.statistics.home,
+    possessionShare: projection.statistics.away.possessionShare,
+  });
+  const telemetry = telemetryFor(result.simulation);
+  assert.ok((telemetry.playerCondition[playerId("player:home-field")] ?? 100) < 100);
+  assert.ok(
+    (telemetry.playerCondition[playerId("player:home-gk")] ?? 0) >
+      (telemetry.playerCondition[playerId("player:home-field")] ?? 100),
+  );
+});
+
+test("numerical advantage increases deterministic minute control", () => {
+  const context = validContext({ baseOpportunityRatePerMinute: 0, maxOpportunityRatePerMinute: 0 });
+  const result = stepMatch({
+    simulation: createInitialMatchSimulationState({
+      ...context,
+      home: goalkeeperTeam("home", context.home.tacticalDistribution, 10),
+      away: validTeam("away", 10, context.away.tacticalDistribution),
+    }),
+    rng: rngFor(context),
+  });
+  const control = telemetryFor(result.simulation).controlUnits;
+
+  assert.ok(control.home > control.away, `expected home control ${control.home} to exceed away ${control.away}`);
+});
+
+test("lower-possession teams can still win through deterministic conversion", () => {
+  let counterattackingWin:
+    | { readonly fixture: string; readonly possession: number; readonly score: string }
+    | undefined;
+
+  for (let index = 0; index < 400; index += 1) {
+    const context = withGoalkeeperTeams(validContext({
+      fixtureValue: `fixture:counter-sample-${String(index).padStart(6, "0")}`,
+      homeStrength: 10,
+      awayStrength: 10,
+      homeTacticalDistribution: { directness: -1, pressing: 1, width: 0.5, risk: 0.5 },
+      awayTacticalDistribution: { directness: 1, pressing: -1, width: 0, risk: 0 },
+    }));
+    const simulation = runSteps(context, 90);
+    const telemetry = telemetryFor(simulation);
+    const totalControl = telemetry.controlUnits.home + telemetry.controlUnits.away;
+    const awayPossession = telemetry.controlUnits.away / totalControl;
+
+    if (simulation.score.away > simulation.score.home && awayPossession < 0.5) {
+      counterattackingWin = {
+        fixture: String(context.fixtureId),
+        possession: awayPossession,
+        score: `${simulation.score.home}-${simulation.score.away}`,
+      };
+      break;
+    }
+  }
+
+  assert.ok(counterattackingWin, "expected at least one deterministic lower-possession away win");
 });
 
 test("stronger teams produce more shots or goals over a deterministic sample", () => {
@@ -624,10 +725,19 @@ function validConfig(options: {
 /**
  * Builds a deterministic test resolver that always emits the same outcome.
  */
-function fixedResolver(resolution: OccasionResolution): OccasionResolver {
+function fixedResolver(
+  resolution: Omit<OccasionResolution, "expectedGoals" | "resultsInCorner"> &
+    Partial<Pick<OccasionResolution, "expectedGoals" | "resultsInCorner">>,
+): OccasionResolver {
+  const completeResolution: OccasionResolution = {
+    ...resolution,
+    expectedGoals: resolution.expectedGoals ?? 0.2,
+    resultsInCorner: resolution.resultsInCorner ?? false,
+  };
+
   return {
     resolveOccasion(_input: ResolveOccasionInput): OccasionResolution {
-      return resolution;
+      return completeResolution;
     },
   };
 }

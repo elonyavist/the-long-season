@@ -56,8 +56,9 @@ Provide an open, incremental, and iterative execution guide for the project: one
 
 ## Current Documented Phase
 
-- `docs/steps/76-web-motion-language-and-football-feedback-system/`
-- Status: Complete. Steps 01-09 are Done.
+- `docs/steps/77-live-match-control-statistics-and-in-game-decisions/`
+- Status: Complete. Steps 01-10 and the final phase gates pass; no later phase
+  has been started.
 
 ## Claude Code task prompt
 

@@ -14,10 +14,10 @@ import {
   type MatchPreparationPlayerFact,
 } from "../features/match-preparation/match-preparation-adapter";
 import {
-  buildWebHalfTimeSubstitutionPanel,
+  buildWebMatchdayTeamControlPanel,
   buildWebMatchdayPhaseView,
   buildWebMatchdayView,
-  type WebHalfTimeSubstitutionPanel,
+  type WebMatchdayTeamControlPanel,
   type WebMatchdayState,
 } from "../features/matchday/matchday-adapter";
 import { presentCareerInbox } from "../features/inbox/career-inbox-presenter";
@@ -46,7 +46,7 @@ export type CareerScreenPresentations = Readonly<{
   matchPreparationPlayerFactsById: ReadonlyMap<string, MatchPreparationPlayerFact>;
   matchday?: ReturnType<typeof buildWebMatchdayView>;
   matchdayPhase?: ReturnType<typeof buildWebMatchdayPhaseView>;
-  halfTimeSubstitutions?: WebHalfTimeSubstitutionPanel;
+  teamControlPanel?: WebMatchdayTeamControlPanel;
 }>;
 
 /**
@@ -106,8 +106,8 @@ export function useCareerScreenPresentations({
     () => matchdayState === undefined ? undefined : buildWebMatchdayPhaseView(matchdayState),
     [matchdayState],
   );
-  const halfTimeSubstitutions = useMemo(
-    () => matchdayState === undefined ? undefined : buildWebHalfTimeSubstitutionPanel(matchdayState),
+  const teamControlPanel = useMemo(
+    () => matchdayState === undefined ? undefined : buildWebMatchdayTeamControlPanel(matchdayState),
     [matchdayState],
   );
 
@@ -119,6 +119,6 @@ export function useCareerScreenPresentations({
     matchPreparationPlayerFactsById,
     ...(matchday === undefined ? {} : { matchday }),
     ...(matchdayPhase === undefined ? {} : { matchdayPhase }),
-    ...(halfTimeSubstitutions === undefined ? {} : { halfTimeSubstitutions }),
+    ...(teamControlPanel === undefined ? {} : { teamControlPanel }),
   };
 }

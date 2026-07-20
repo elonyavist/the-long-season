@@ -27,6 +27,10 @@ export interface TacticalBenchPlayer {
   readonly surname: string;
   /** Current or natural role abbreviation shown below the surname. */
   readonly roleCode: TacticalBoardRoleCode;
+  /** Current live condition, when the board is used during Matchday. */
+  readonly condition?: number;
+  /** Current live rating, when enough match facts exist. */
+  readonly rating?: number;
 }
 
 /** State-free view data for one fixed substitute bench slot. */
@@ -38,7 +42,13 @@ export interface TacticalBenchSlotView {
   /** Player assigned to the slot; absent means the slot is empty. */
   readonly player?: TacticalBenchPlayer;
   /** Optional invalid state from the caller's read model. */
-  readonly status?: "valid" | "missing_player" | "duplicate_player" | "lineup_player";
+  readonly status?:
+    | "valid"
+    | "missing_player"
+    | "duplicate_player"
+    | "lineup_player"
+    | "substituted_out"
+    | "unavailable";
 }
 
 /** Returns the localized slot label key for one fixed bench slot id. */

@@ -12,6 +12,8 @@ import {
   createCareerState,
   createEmptyPlayerParticipationLedger,
   createMarketState,
+  clubId,
+  competitionId,
   fixtureId,
   gameDate,
   nonNegativeMoney,
@@ -67,7 +69,9 @@ test("JsonCareerStorage satisfies the canonical career lifecycle contract", asyn
 /** Builds one compact but fully validated career snapshot for contract tests. */
 function careerFixture(id: string, seed: string, currentDate: number): CareerState {
   const club = "club:contract" as CareerState["selectedClubId"];
+  const opponent = clubId("club:opponent");
   const player = playerId("player:contract-01");
+  const playedFixture = fixtureId("fixture:contract-played");
   const gameState: GameState = {
     meta: { seed, rngAlgorithmVersion: "sfc32-cyrb128-v1", saveSchemaVersion: 1 },
     calendar: { currentDate: gameDate(currentDate), currentSeasonId: seasonId("season:contract") },
@@ -92,10 +96,22 @@ function careerFixture(id: string, seed: string, currentDate: number): CareerSta
     playerStates: { [player]: { fitness: stateValue(100), form: stateValue(50), morale: stateValue(50) } },
     clubs: {
       [club]: { id: club, name: "Contract Club", shortName: "Contract", category: "third_division", reputation: 5, playerIds: [player] },
+      [opponent]: { id: opponent, name: "Opponent Club", shortName: "Opponent", category: "third_division", reputation: 4, playerIds: [] },
     },
-    clubIds: [club],
-    fixtures: {},
-    fixtureIds: [],
+    clubIds: [club, opponent],
+    fixtures: {
+      [playedFixture]: {
+        id: playedFixture,
+        competitionId: competitionId("competition:contract"),
+        seasonId: seasonId("season:contract"),
+        roundNumber: 1,
+        date: gameDate(currentDate - 1),
+        homeClubId: club,
+        awayClubId: opponent,
+        result: { played: true, homeGoals: 1, awayGoals: 0 },
+      },
+    },
+    fixtureIds: [playedFixture],
   };
 
   return createCareerState({
@@ -108,6 +124,21 @@ function careerFixture(id: string, seed: string, currentDate: number): CareerSta
       clubBudgetIds: [club],
     }),
     transferHistory: [],
+    playerAvailability: {
+      injuries: [{
+        fixtureId: playedFixture,
+        playerId: player,
+        severity: "minor",
+        occurredOn: gameDate(currentDate - 1),
+        unavailableUntil: gameDate(currentDate + 5),
+      }],
+      suspensions: [],
+      yellowCards: [{
+        competitionId: competitionId("competition:contract"),
+        playerId: player,
+        count: 2,
+      }],
+    },
     playerParticipationLedger: playerParticipationLedgerFixture(player),
   });
 }

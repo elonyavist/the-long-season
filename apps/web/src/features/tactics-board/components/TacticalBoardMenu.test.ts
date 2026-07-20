@@ -16,6 +16,7 @@ describe("TacticalBoardMenu", () => {
               number: 9,
               surname: "Rinaldi",
               formTrend: "flat",
+              roleCode: "ATT",
               roleKey: "attacker",
               foot: "right",
             },
@@ -30,7 +31,8 @@ describe("TacticalBoardMenu", () => {
     expect(markup).toContain("tls-player-candidate-row");
     expect(markup).toContain("data-suitability=\"natural\"");
     expect(markup).toContain("Rinaldi");
-    expect(markup).toContain("attacker");
+    expect(markup).toContain("ATT");
+    expect(markup).not.toContain("attacker");
     expect(markup).toContain("94%");
     expect(markup).toContain("right");
     expect(markup).toContain("Natural");

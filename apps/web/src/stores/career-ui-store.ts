@@ -14,25 +14,24 @@ import type {
   WebCareerPersistenceFailureCode,
 } from "../runtime/web-career-runtime";
 import {
+  adaptMatchPreparationBoardSlot,
+  acceptLiveTeamPlan,
   applyMatchPreparationSelectionAction,
   changeMatchPreparationBoardSlotRole,
   clearMatchPreparationBoardSlot,
   createMatchPreparationDraft,
+  exchangeMatchPreparationBoardPlayers,
   moveMatchPreparationBoardSlot,
   reconcileMatchPreparationDraft,
   selectMatchPreparationBenchPlayer,
   selectMatchPreparationFormation,
   selectMatchPreparationPlayer,
   selectMatchPreparationTactic,
+  substituteMatchPreparationPlayer,
   type MatchPreparationDraft,
   type MatchPreparationSelectionAction,
 } from "../features/match-preparation/match-preparation-adapter";
-import {
-  applyWebHalfTimeSubstitutions,
-  createWebMatchdayState,
-  type WebHalfTimeSubstitutionDecision,
-  type WebMatchdayState,
-} from "../features/matchday/matchday-adapter";
+import { createWebMatchdayState, type WebMatchdayState } from "../features/matchday/matchday-adapter";
 import type { TacticalBoardRoleCode } from "../features/tactics-board/tactical-board-types";
 import {
   createCleanCareerSessionStatus,
@@ -60,6 +59,10 @@ export type CareerCommandId =
   | "confirm_preparation"
   | "play_first_half"
   | "play_second_half"
+  | "advance_match_minute"
+  | "pause_match"
+  | "resume_match"
+  | "resolve_match_incident"
   | "return_to_dashboard";
 
 /** Observable lifecycle for the single allowed asynchronous career command. */
@@ -110,6 +113,8 @@ export interface CareerUiStoreState {
   readonly continueResult: WebCareerContinueResult | undefined;
   /** Current unsaved or saved match-preparation draft. */
   readonly matchPreparationState: MatchPreparationDraft | undefined;
+  /** Last team plan accepted by the private live match session. */
+  readonly matchdayTeamBaseline: MatchPreparationDraft | undefined;
   /** Matchday presentation rebuilt from the latest working session state. */
   readonly matchdayState: WebMatchdayState | undefined;
   /** Ephemeral current-season Posta filter; never persisted in CareerState. */
@@ -180,6 +185,8 @@ export interface CareerUiStoreState {
     matchdayState: WebMatchdayState,
     sessionStatus: CareerSessionStatus,
   ) => void;
+  /** Publishes only volatile Matchday facts while the private engine session is live. */
+  readonly receiveLiveMatchdayProgress: (matchdayState: WebMatchdayState) => void;
   /** Exposes a failed storage operation on the appropriate safe screen. */
   readonly failCareerStorage: (
     failure: WebCareerPersistenceFailure,
@@ -199,10 +206,23 @@ export interface CareerUiStoreState {
   readonly openMatchPreparation: () => void;
   /** Restores the preparation draft from the current loaded career baseline. */
   readonly discardMatchPreparationDraft: () => void;
+  /** Records the current draft after the live engine accepts it atomically. */
+  readonly acceptPendingMatchdayTeamChanges: () => void;
+  /** Restores only the last plan accepted during the current live match. */
+  readonly discardPendingMatchdayTeamChanges: () => void;
   /** Handles action IDs coming from Inbox/Posta cards. */
   readonly handleInboxAction: (actionId: string) => void;
-  /** Applies manager-declared half-time substitutions. */
-  readonly applyHalfTimeSubstitutions: (decisions: readonly WebHalfTimeSubstitutionDecision[]) => void;
+  /** Swaps one starter and one substitute in the pending Matchday team plan. */
+  readonly substituteMatchdayPlayer: (outgoingPlayerId: string, incomingPlayerId: string) => void;
+  /** Exchanges two XI assignments without counting as a substitution. */
+  readonly exchangeMatchdayLineupSlots: (firstSlotKey: string, secondSlotKey: string) => void;
+  /** Confirms one role and destination adaptation on the pending Matchday board. */
+  readonly adaptMatchdayBoardSlot: (
+    slotKey: string,
+    role: TacticalBoardRoleCode,
+    nx: number,
+    ny: number,
+  ) => void;
   /** Selects the formation for the current preparation draft. */
   readonly selectFormation: (formationId: CareerMatchPreparationFormationId) => void;
   /** Selects or clears one lineup player in the current preparation draft. */
@@ -231,6 +251,7 @@ function createInitialCareerUiState(): Pick<
   | "commandActivity"
   | "continueResult"
   | "matchPreparationState"
+  | "matchdayTeamBaseline"
   | "matchdayState"
   | "inboxFilter"
   | "selectedInboxMessageId"
@@ -255,6 +276,7 @@ function createInitialCareerUiState(): Pick<
     screen: "app_entry",
     continueResult: undefined,
     matchPreparationState: undefined,
+    matchdayTeamBaseline: undefined,
     matchdayState: undefined,
     inboxFilter: "all",
     selectedInboxMessageId: undefined,
@@ -328,6 +350,7 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
   openPersistedCareer: (activeCareerState, metadata, continueResult) => {
     const availableSaves = [...get().availableSaves.filter((entry) => entry.saveId !== metadata.saveId), metadata]
       .sort((left, right) => left.saveId.localeCompare(right.saveId));
+    const matchPreparationState = createMatchPreparationDraft(activeCareerState);
     set({
       activeCareerState,
       careerSessionStatus: createCleanCareerSessionStatus(activeCareerState, metadata),
@@ -338,7 +361,8 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       storageFailureScope: undefined,
       calendarAdvanceTransition: undefined,
       screen: "career_dashboard",
-      matchPreparationState: createMatchPreparationDraft(activeCareerState),
+      matchPreparationState,
+      matchdayTeamBaseline: matchPreparationState,
       matchdayState: createWebMatchdayState(activeCareerState),
       selectedInboxMessageId: selectInboxFallback(activeCareerState, get().selectedInboxMessageId),
       continueResult,
@@ -349,6 +373,7 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
     const availableSaves = [...get().availableSaves.filter((entry) => entry.saveId !== metadata.saveId), metadata]
       .sort((left, right) => left.saveId.localeCompare(right.saveId));
     const calendarAdvanceTransition = get().calendarAdvanceTransition;
+    const matchPreparationState = createMatchPreparationDraft(activeCareerState);
     set({
       activeCareerState,
       careerSessionStatus,
@@ -358,7 +383,8 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       storageFailure: undefined,
       storageFailureScope: undefined,
       continueResult,
-      matchPreparationState: createMatchPreparationDraft(activeCareerState),
+      matchPreparationState,
+      matchdayTeamBaseline: matchPreparationState,
       matchdayState: createWebMatchdayState(activeCareerState),
       calendarAdvanceTransition: calendarAdvanceTransition === undefined
         ? undefined
@@ -380,6 +406,7 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
   receiveManualCareerSave: (activeCareerState, metadata, continueResult, careerSessionStatus) => {
     const availableSaves = [...get().availableSaves.filter((entry) => entry.saveId !== metadata.saveId), metadata]
       .sort((left, right) => left.saveId.localeCompare(right.saveId));
+    const matchPreparationState = createMatchPreparationDraft(activeCareerState);
     set({
       activeCareerState,
       careerSessionStatus,
@@ -389,7 +416,8 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       storageFailure: undefined,
       storageFailureScope: undefined,
       continueResult,
-      matchPreparationState: createMatchPreparationDraft(activeCareerState),
+      matchPreparationState,
+      matchdayTeamBaseline: matchPreparationState,
       matchdayState: createWebMatchdayState(activeCareerState),
       selectedInboxMessageId: selectInboxFallback(activeCareerState, get().selectedInboxMessageId),
     });
@@ -403,6 +431,7 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
   ) => {
     const availableSaves = [...get().availableSaves.filter((entry) => entry.saveId !== metadata.saveId), metadata]
       .sort((left, right) => left.saveId.localeCompare(right.saveId));
+    const matchPreparationState = createMatchPreparationDraft(activeCareerState);
     set({
       activeCareerState,
       careerSessionStatus,
@@ -412,7 +441,8 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       storageFailure: undefined,
       storageFailureScope: undefined,
       continueResult,
-      matchPreparationState: createMatchPreparationDraft(activeCareerState),
+      matchPreparationState,
+      matchdayTeamBaseline: matchPreparationState,
       matchdayState: createWebMatchdayState(activeCareerState),
       selectedInboxMessageId: selectInboxFallback(activeCareerState, selectedMessageId),
       screen: "career_inbox",
@@ -425,8 +455,16 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
     matchdayState,
     careerSessionStatus,
   ) => {
-    const availableSaves = [...get().availableSaves.filter((entry) => entry.saveId !== metadata.saveId), metadata]
+    const current = get();
+    const livePhase = matchdayState.liveProgress?.snapshot.phase;
+    const preservePreparationDraft = livePhase === "first_half"
+      || livePhase === "half_time"
+      || livePhase === "second_half";
+    const availableSaves = [...current.availableSaves.filter((entry) => entry.saveId !== metadata.saveId), metadata]
       .sort((left, right) => left.saveId.localeCompare(right.saveId));
+    const matchPreparationState = preservePreparationDraft
+      ? current.matchPreparationState ?? createMatchPreparationDraft(activeCareerState)
+      : createMatchPreparationDraft(activeCareerState);
     set({
       activeCareerState,
       careerSessionStatus,
@@ -436,10 +474,14 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       storageFailure: undefined,
       storageFailureScope: undefined,
       continueResult,
-      matchPreparationState: createMatchPreparationDraft(activeCareerState),
+      matchPreparationState,
+      matchdayTeamBaseline: matchPreparationState,
       matchdayState,
       screen: "matchday",
     });
+  },
+  receiveLiveMatchdayProgress: (matchdayState) => {
+    set({ matchdayState });
   },
   failCareerStorage: (storageFailure, storageFailureScope) => {
     if (storageFailureScope === "current_career" && get().activeCareerState !== undefined) {
@@ -486,6 +528,20 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
     const career = get().activeCareerState;
     if (career !== undefined) set({ matchPreparationState: createMatchPreparationDraft(career) });
   },
+  acceptPendingMatchdayTeamChanges: () => {
+    const current = get();
+    const acceptedTeam = current.matchdayState?.liveProgress?.selectedTeam;
+    if (current.matchPreparationState === undefined || acceptedTeam === undefined) return;
+    const acceptedDraft = acceptLiveTeamPlan(current.matchPreparationState, acceptedTeam);
+    set({
+      matchPreparationState: acceptedDraft,
+      matchdayTeamBaseline: acceptedDraft,
+    });
+  },
+  discardPendingMatchdayTeamChanges: () => {
+    const matchdayTeamBaseline = get().matchdayTeamBaseline;
+    if (matchdayTeamBaseline !== undefined) set({ matchPreparationState: matchdayTeamBaseline });
+  },
   handleInboxAction: (actionId) => {
     if (actionId === "open_inbox") {
       get().openInbox();
@@ -502,16 +558,41 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
     }
 
   },
-  applyHalfTimeSubstitutions: (decisions) => {
+  substituteMatchdayPlayer: (outgoingPlayerId, incomingPlayerId) => {
     set((state) => {
       if (state.matchPreparationState === undefined || state.matchdayState === undefined) return state;
-      let draft = state.matchPreparationState;
-      for (const decision of decisions) draft = applySubstitutionToDraft(draft, decision);
       return {
-        matchPreparationState: draft,
-        matchdayState: applyWebHalfTimeSubstitutions(state.matchdayState, decisions),
+        matchPreparationState: substituteMatchPreparationPlayer(
+          state.matchPreparationState,
+          outgoingPlayerId,
+          incomingPlayerId,
+        ),
       };
     });
+  },
+  exchangeMatchdayLineupSlots: (firstSlotKey, secondSlotKey) => {
+    set((state) => state.matchPreparationState === undefined
+      ? state
+      : {
+          matchPreparationState: exchangeMatchPreparationBoardPlayers(
+            state.matchPreparationState,
+            firstSlotKey,
+            secondSlotKey,
+          ),
+        });
+  },
+  adaptMatchdayBoardSlot: (slotKey, role, nx, ny) => {
+    set((state) => state.matchPreparationState === undefined
+      ? state
+      : {
+          matchPreparationState: adaptMatchPreparationBoardSlot(
+            state.matchPreparationState,
+            slotKey,
+            role,
+            nx,
+            ny,
+          ),
+        });
   },
   selectFormation: (formationId) => {
     set((state) => state.matchPreparationState === undefined
@@ -584,6 +665,19 @@ export function resetCareerUiStore(): void {
   useCareerUiStore.setState(createInitialCareerUiState());
 }
 
+/**
+ * Reports whether the manager has changed the live team plan since the engine
+ * last accepted it. Reference comparison is sufficient because every draft
+ * command produces a new immutable draft and acceptance stores that instance.
+ */
+export function selectHasPendingMatchdayTeamChanges(
+  state: Pick<CareerUiStoreState, "matchPreparationState" | "matchdayTeamBaseline">,
+): boolean {
+  return state.matchPreparationState !== undefined
+    && state.matchdayTeamBaseline !== undefined
+    && state.matchPreparationState !== state.matchdayTeamBaseline;
+}
+
 /** Reconciles edits with the loaded baseline so an exact undo becomes clean. */
 function reconcileDraftForCareer(
   state: Pick<CareerUiStoreState, "activeCareerState">,
@@ -594,22 +688,8 @@ function reconcileDraftForCareer(
     : reconcileMatchPreparationDraft(state.activeCareerState, draft);
 }
 
-/** Mirrors one explicit substitution in the shared XI/bench preparation draft. */
-function applySubstitutionToDraft(
-  draft: MatchPreparationDraft,
-  decision: WebHalfTimeSubstitutionDecision,
-): MatchPreparationDraft {
-  const lineupSlot = draft.tacticalBoardDraft.slots.find((slot) => slot.playerId === decision.outgoingPlayerId);
-  const benchSlot = Object.entries(draft.selectedBenchPlayerIdsBySlot)
-    .find(([, playerId]) => playerId === decision.incomingPlayerId)?.[0];
-  if (lineupSlot === undefined || benchSlot === undefined) return draft;
-  const withIncomingPlayer = selectMatchPreparationPlayer(draft, lineupSlot.slotId, decision.incomingPlayerId);
-  return selectMatchPreparationBenchPlayer(withIncomingPlayer, benchSlot, decision.outgoingPlayerId);
-}
-
-/** Opens only a durable in-progress match or an unacknowledged full-time review. */
+/** Reopens only a completed fixture whose full-time review still awaits acknowledgement. */
 function shouldResumeMatchday(careerState: StoredCareerState): boolean {
-  if (careerState.activeMatchCheckpoint !== undefined) return true;
   const targetFixtureId = careerState.matchPreparation?.targetFixtureId;
   return targetFixtureId !== undefined
     && careerState.gameState.fixtures[targetFixtureId]?.result?.report !== undefined;

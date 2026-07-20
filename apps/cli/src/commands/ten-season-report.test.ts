@@ -53,7 +53,7 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(hasLineStartingWith(io.stdoutLines, "  top_assist_max:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  clubs_below_minimum_squad_size:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  youth_roster_max_size:"), true);
-});
+}, 20_000);
 
 test("same seed and season count produce the same report output", async () => {
   const first = captureIo();

@@ -7,7 +7,7 @@ import {
   type MatchdayPlaybackSpeed,
 } from "./matchday-playback";
 
-/** Props for the presentation-only Matchday playback controls. */
+/** Props for the presentation controls that pace the canonical live session. */
 export type MatchdayPlaybackControlsProps = Readonly<{
   paused: boolean;
   speed: MatchdayPlaybackSpeed;
@@ -17,8 +17,8 @@ export type MatchdayPlaybackControlsProps = Readonly<{
 }>;
 
 /**
- * Lets the manager pause or accelerate an already-computed visual reveal.
- * The component owns no simulation, checkpoint, or persistence behavior.
+ * Lets the manager pause or pace the live minute loop.
+ * The component owns no simulation, command legality, or persistence behavior.
  */
 export function MatchdayPlaybackControls({
   paused,

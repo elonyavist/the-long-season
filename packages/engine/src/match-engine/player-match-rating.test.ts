@@ -3,7 +3,14 @@ import { test } from "vitest";
 
 import { playerId, type PlayerId } from "@game/domain";
 
-import { buildPlayerMatchRatings, type MatchStepEvent, type PlayerMatchRatingRegistration } from "../index.ts";
+import {
+  advancePlayerMatchRatingLedger,
+  buildPlayerMatchRatings,
+  createPlayerMatchRatingLedger,
+  projectPlayerMatchRatings,
+  type MatchStepEvent,
+  type PlayerMatchRatingRegistration,
+} from "../index.ts";
 
 const HOME_SCORER = playerId("player:home-scorer");
 const HOME_ASSISTANT = playerId("player:home-assistant");
@@ -102,6 +109,21 @@ test("rating sort is deterministic", () => {
 
   assert.deepEqual(first, second);
   assert.equal(first[0]?.playerId, HOME_SCORER);
+});
+
+test("the incremental ledger changes only after a meaningful structured fact", () => {
+  const initial = createPlayerMatchRatingLedger(registrations());
+  const afterEmptyMinute = advancePlayerMatchRatingLedger(initial, []);
+  const afterGoal = advancePlayerMatchRatingLedger(
+    afterEmptyMinute,
+    [goalEvent({ minute: 12, scorerPlayerId: HOME_SCORER })],
+  );
+
+  assert.deepEqual(projectPlayerMatchRatings(afterEmptyMinute), projectPlayerMatchRatings(initial));
+  assert.ok(
+    row(projectPlayerMatchRatings(afterGoal), HOME_SCORER).rating >
+      row(projectPlayerMatchRatings(afterEmptyMinute), HOME_SCORER).rating,
+  );
 });
 
 function registrations(): readonly PlayerMatchRatingRegistration[] {

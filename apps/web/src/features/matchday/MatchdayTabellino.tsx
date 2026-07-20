@@ -13,15 +13,15 @@ const SCROLL_THRESHOLD = 6;
 
 /** Props for the single compact incident record shared by every match phase. */
 export interface MatchdayTabellinoProps {
-  /** Chronological structured facts prepared for the two fixture sides. */
+  /** Newest-first structured facts prepared for the two fixture sides. */
   readonly view: MatchdayTabellinoView;
   /** Active locale translator. */
   readonly text: Translator;
 }
 
 /**
- * Renders one persistent football record below the score. An empty record is
- * intentionally omitted so pre-match never gains a decorative empty panel.
+ * Renders one newest-first football record below the score. An empty record
+ * is intentionally omitted so pre-match never gains a decorative empty panel.
  */
 export function MatchdayTabellino({
   view,
@@ -82,6 +82,7 @@ function TabellinoIncident({
       className={`tls-match-tabellino-incident is-${incident.visualPriority}`}
       data-motion-category={narrativeMoment ? "narrative" : "transition"}
       data-motion-incident={incident.event.eventId}
+      data-incident-kind={incident.event.kind}
       data-side={incident.side}
       initial={reducedMotion
         ? false
@@ -93,6 +94,13 @@ function TabellinoIncident({
     >
       <time aria-hidden="true">{incident.event.minute}'</time>
       <div className="tls-match-tabellino-incident-copy">
+        <span
+          aria-hidden="true"
+          className="tls-match-tabellino-incident-icon"
+          data-incident-kind={incident.event.kind}
+        >
+          {incidentSymbol(incident.event.kind)}
+        </span>
         <span>{text(incident.event.labelKey as MessageKey)}</span>
         <strong>{formatMatchdayEventPlayerLine(incident.event, text)}</strong>
         <small>{incident.event.club.name}</small>
@@ -108,7 +116,35 @@ export function formatMatchdayEventPlayerLine(
 ): string {
   if (event.playerName === undefined) return text("common.unknown");
   if (event.secondaryPlayerName === undefined) return event.playerName;
+  if (event.kind === "substitution") {
+    return text("career.matchday.substitution.eventLine", {
+      incoming: event.playerName,
+      outgoing: event.secondaryPlayerName,
+    });
+  }
   return `${event.playerName} (${event.secondaryPlayerName})`;
+}
+
+function incidentSymbol(kind: CareerMatchdayPhaseEventView["kind"]): string {
+  switch (kind) {
+    case "goal":
+    case "penalty_goal":
+      return "⚽";
+    case "penalty":
+    case "penalty_miss":
+    case "penalty_save":
+      return "P";
+    case "yellow_card":
+    case "red_card":
+    case "second_yellow":
+      return "■";
+    case "injury":
+      return "+";
+    case "substitution":
+      return "↕";
+    default:
+      return "·";
+  }
 }
 
 /** Builds the localized screen-reader label for one structured incident. */

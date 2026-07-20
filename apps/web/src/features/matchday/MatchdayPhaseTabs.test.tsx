@@ -1,6 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { ChartNoAxesCombined } from "lucide-react";
 
 import {
   MatchdayPhaseTabs,
@@ -9,7 +10,7 @@ import {
 } from "./MatchdayPhaseTabs";
 
 const tabs: readonly MatchdayPhaseTabItem<"summary" | "tactics" | "team" | "opponent">[] = [
-  { tabId: "summary", label: "Summary", panel: <p>Summary facts</p> },
+  { tabId: "summary", label: "Summary", icon: ChartNoAxesCombined, panel: <p>Summary facts</p> },
   { tabId: "tactics", label: "Tactics", panel: <p>Tactical plan</p> },
   { tabId: "team", label: "Your team", panel: <p>Team ratings</p> },
   { tabId: "opponent", label: "Opponent", panel: <p>Opponent ratings</p> },
@@ -29,6 +30,7 @@ describe("MatchdayPhaseTabs", () => {
     expect(markup).toContain('role="tablist"');
     expect(markup).toContain('aria-label="Half-time views"');
     expect(markup.match(/role="tab"/g) ?? []).toHaveLength(4);
+    expect(markup).toContain("tls-match-phase-tab-icon");
     expect(markup.match(/aria-selected="true"/g) ?? []).toHaveLength(1);
     expect(markup.match(/role="tabpanel"/g) ?? []).toHaveLength(1);
     expect(markup).toContain('data-motion-active="false"');

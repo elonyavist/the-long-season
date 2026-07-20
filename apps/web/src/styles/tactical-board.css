@@ -65,6 +65,14 @@
   max-width: 100%;
 }
 
+.tls-tactical-board-field[data-drop-active="true"] .tls-tactical-board-svg,
+.tls-tactical-bench-board[data-drop-active="true"] {
+  border-color: var(--tls-theme-accent);
+  box-shadow:
+    var(--tls-shadow-panel),
+    inset 0 0 0 2px color-mix(in srgb, var(--tls-theme-accent) 38%, transparent);
+}
+
 .tls-tactical-board-active-zone {
   fill: rgba(209, 161, 58, 0.14);
   stroke: var(--tls-color-gold);
@@ -166,6 +174,129 @@
   stroke-width: 3.5;
 }
 
+.tls-tactical-board-token-live {
+  fill: var(--tls-color-field-text-muted);
+  font-family: var(--tls-font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--tls-color-ink);
+  stroke-width: 3;
+}
+
+.tls-tactical-board-role-destination {
+  fill: color-mix(in srgb, var(--tls-color-ink) 78%, transparent);
+  stroke: var(--tls-color-field-text-muted);
+  stroke-dasharray: 8 8;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+[data-active="true"] .tls-tactical-board-role-destination {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tls-theme-accent) 35%, transparent));
+}
+
+[data-active="true"] .tls-tactical-board-role-destination-label {
+  font-size: 1rem;
+}
+
+[data-suitability-tone="natural"] .tls-tactical-board-role-destination {
+  fill: color-mix(in srgb, var(--tls-color-green) 22%, transparent);
+  stroke: var(--tls-color-green);
+}
+
+[data-suitability-tone="compatible"] .tls-tactical-board-role-destination {
+  fill: color-mix(in srgb, var(--tls-color-gold) 18%, transparent);
+  stroke: var(--tls-color-gold);
+}
+
+[data-suitability-tone="unsuitable"] .tls-tactical-board-role-destination {
+  fill: color-mix(in srgb, var(--tls-color-red) 16%, transparent);
+  stroke: var(--tls-color-red);
+}
+
+.tls-tactical-board-role-destination-label,
+.tls-tactical-board-role-destination-fit {
+  fill: var(--tls-color-field-text);
+  font-family: var(--tls-font-mono);
+  paint-order: stroke;
+  stroke: var(--tls-color-ink);
+  stroke-width: 3;
+  text-anchor: middle;
+}
+
+.tls-tactical-board-role-destination-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.tls-tactical-board-role-destination-fit {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.tls-tactical-board-adaptation {
+  display: grid;
+  gap: var(--tls-space-2);
+  width: 100%;
+  max-height: 21rem;
+  box-sizing: border-box;
+  padding: var(--tls-space-3);
+  overflow: auto;
+  color: var(--tls-color-text);
+  background: var(--tls-theme-elevated-panel-surface);
+  border: var(--tls-border-strong);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-panel);
+}
+
+.tls-tactical-board-adaptation > strong {
+  font-size: var(--tls-font-size-sm);
+}
+
+.tls-tactical-board-adaptation-options {
+  display: grid;
+  gap: var(--tls-space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tls-tactical-board-adaptation-role {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--tls-space-2);
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--tls-space-2);
+  color: var(--tls-color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tls-radius-sm);
+  cursor: pointer;
+  font: inherit;
+}
+
+.tls-tactical-board-adaptation-role:hover,
+.tls-tactical-board-adaptation-role:focus-visible,
+.tls-tactical-board-adaptation-role[aria-checked="true"] {
+  background: var(--tls-theme-selected-row-surface);
+  border-color: var(--tls-theme-accent);
+  outline: none;
+}
+
+.tls-tactical-board-adaptation-role small {
+  color: var(--tls-color-text-muted);
+  font-family: var(--tls-font-mono);
+}
+
+.tls-tactical-board-adaptation-actions {
+  display: flex;
+  gap: var(--tls-space-2);
+  justify-content: end;
+}
+
 .tls-tactical-board-empty-slot-ring {
   fill: rgba(8, 15, 17, 0.45);
   stroke: var(--tls-color-paper);
@@ -254,6 +385,60 @@
   cursor: pointer;
   font: inherit;
   text-align: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.tls-tactical-drag-preview {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0 var(--tls-space-2);
+  width: min(12rem, calc(100vw - 2rem));
+  min-height: 3.25rem;
+  padding: 0.45rem 0.65rem;
+  align-items: center;
+  color: var(--tls-color-text);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--tls-theme-elevated-panel-surface) 94%, transparent);
+  border: 1px solid var(--tls-theme-accent);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-panel);
+  transform: translate(-50%, -58%);
+}
+
+.tls-tactical-drag-preview strong {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  grid-row: 1 / 3;
+  place-items: center;
+  color: var(--tls-color-text-dark);
+  background: var(--tls-color-paper);
+  border: 2px solid var(--tls-theme-accent);
+  border-radius: 50%;
+  font-family: var(--tls-font-mono);
+}
+
+.tls-tactical-drag-preview span,
+.tls-tactical-drag-preview small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tls-tactical-drag-preview span {
+  align-self: end;
+  font-weight: 650;
+}
+
+.tls-tactical-drag-preview small {
+  align-self: start;
+  color: var(--tls-theme-primary-action-surface);
+  font-family: var(--tls-font-mono);
+  font-weight: 700;
 }
 
 .tls-tactical-bench-slot:hover,
@@ -269,6 +454,18 @@
 .tls-tactical-bench-slot[data-status="duplicate_player"],
 .tls-tactical-bench-slot[data-status="lineup_player"] {
   border-color: rgba(218, 103, 75, 0.58);
+}
+
+.tls-tactical-bench-slot[data-status="substituted_out"],
+.tls-tactical-bench-slot[data-status="unavailable"] {
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  opacity: 0.5;
+}
+
+.tls-tactical-bench-slot[data-dragging="true"] {
+  border-color: var(--tls-theme-accent);
+  opacity: 0.72;
 }
 
 .tls-tactical-bench-slot-label {
@@ -346,6 +543,76 @@
   white-space: nowrap;
 }
 
+.tls-tactical-bench-player-live,
+.tls-tactical-bench-player-status {
+  color: var(--tls-color-field-text-muted);
+  font-family: var(--tls-font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tls-tactical-bench-player-status {
+  color: var(--tls-color-red);
+}
+
+.tls-tactical-board-outside {
+  display: grid;
+  gap: var(--tls-space-2);
+  padding: var(--tls-space-3);
+  background: var(--tls-theme-muted-surface);
+  border: var(--tls-border-thin);
+  border-left: 0.2rem solid var(--tls-color-red);
+  border-radius: var(--tls-radius-sm);
+}
+
+.tls-tactical-board-outside h3 {
+  margin: 0;
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-xs);
+  text-transform: uppercase;
+}
+
+.tls-tactical-board-outside ul {
+  display: grid;
+  gap: var(--tls-space-1);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tls-tactical-board-outside li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.12rem var(--tls-space-2);
+  align-items: center;
+  padding: var(--tls-space-2);
+  color: var(--tls-color-text-muted);
+  background: var(--tls-theme-table-row-surface);
+  border: var(--tls-border-thin);
+  border-radius: var(--tls-radius-sm);
+  font-size: var(--tls-font-size-xs);
+}
+
+.tls-tactical-board-outside li strong {
+  overflow: hidden;
+  color: var(--tls-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tls-tactical-board-outside li small {
+  grid-column: 2 / -1;
+  color: var(--tls-color-red);
+}
+
+.tls-tactical-board-outside-mark {
+  grid-row: span 2;
+  color: var(--tls-color-red);
+  font-weight: 900;
+}
+
 @media (max-width: 34rem) {
   .tls-tactical-bench-board-surface {
     grid-template-columns: repeat(2, minmax(4.25rem, 1fr));
@@ -355,10 +622,13 @@
 .tls-tactical-board-menu {
   display: grid;
   gap: var(--tls-space-1);
-  min-width: 14rem;
-  max-height: 18rem;
+  width: 100%;
+  min-width: 0;
+  max-height: min(20rem, 62vh);
+  box-sizing: border-box;
   padding: var(--tls-space-1);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--tls-color-text);
   background: var(--tls-theme-elevated-panel-surface);
   border: var(--tls-border-strong);
@@ -369,13 +639,24 @@
 .tls-tactical-board-menu-popover {
   position: absolute;
   z-index: 8;
-  top: min(calc(var(--tls-tactical-board-menu-top) + 0.5rem), calc(100% - 19rem));
-  left: min(calc(var(--tls-tactical-board-menu-left) + 0.5rem), calc(100% - 15rem));
+  top: 0;
+  left: 0;
+  width: min(21.875rem, calc(100% - (2 * var(--tls-space-2))));
+}
+
+.tls-tactical-board-menu-popover[data-variant="adaptation"] {
+  z-index: 9;
+  width: min(18rem, calc(100% - (2 * var(--tls-space-2))));
+}
+
+.tls-tactical-board-menu-popover[data-positioned="false"] {
+  visibility: hidden;
 }
 
 .tls-tactical-board-menu section {
   display: grid;
   gap: var(--tls-space-1);
+  min-width: 0;
 }
 
 .tls-tactical-board-menu-item {
@@ -383,8 +664,11 @@
   gap: var(--tls-space-3);
   align-items: center;
   justify-content: space-between;
-  min-height: 2.25rem;
-  padding: 0 var(--tls-space-2);
+  width: 100%;
+  min-width: 0;
+  min-height: 2rem;
+  box-sizing: border-box;
+  padding: 0.2rem var(--tls-space-2);
   color: var(--tls-color-text);
   background: transparent;
   border: 0;

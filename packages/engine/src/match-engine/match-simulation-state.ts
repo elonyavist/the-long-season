@@ -1,3 +1,5 @@
+import type { PlayerId } from "@game/domain";
+
 import { assertValidMatchContext, type MatchContext } from "./match-context.ts";
 
 /**
@@ -37,6 +39,62 @@ export interface MatchSimulationStats {
   readonly home: MatchSideStats;
   /** Away-side statistics. */
   readonly away: MatchSideStats;
+  /**
+   * Live-only causal telemetry carried by the canonical minute state.
+   *
+   * Optionality is temporary for the Phase 77 legacy staged adapter. New
+   * simulations always include it and Step 06 removes the old shape.
+   */
+  readonly telemetry?: MatchSimulationTelemetry;
+}
+
+/** Causal cumulative statistics owned by the live minute engine. */
+export interface MatchCausalSideStats {
+  /** Completed shot outcomes. */
+  readonly shots: number;
+  /** Goal and saved-shot outcomes. */
+  readonly shotsOnTarget: number;
+  /** Sum of the calibrated conversion probability for every shot. */
+  readonly expectedGoals: number;
+  /** Shot outcomes that produced a corner. */
+  readonly corners: number;
+  /** Fouls emitted by the disciplinary model. Zero until that model runs. */
+  readonly fouls: number;
+  /** Yellow cards emitted by the disciplinary model. */
+  readonly yellowCards: number;
+  /** Red cards emitted by the disciplinary model. */
+  readonly redCards: number;
+  /** Saves made by this side's goalkeeper. */
+  readonly saves: number;
+  /** Goals scored by this side. */
+  readonly goals: number;
+}
+
+/** Raw cumulative control units used to derive possession shares. */
+export interface MatchControlUnits {
+  readonly home: number;
+  readonly away: number;
+}
+
+/** Engine-owned facts needed by live and final match projections. */
+export interface MatchSimulationTelemetry {
+  readonly controlUnits: MatchControlUnits;
+  readonly stats: {
+    readonly home: MatchCausalSideStats;
+    readonly away: MatchCausalSideStats;
+  };
+  /** Match-relative condition for every player who has entered the pitch. */
+  readonly playerCondition: Readonly<Partial<Record<PlayerId, number>>>;
+  /** Cards accumulated inside this match before a possible dismissal. */
+  readonly yellowCardsByPlayer: Readonly<Partial<Record<PlayerId, number>>>;
+  /** Injuries already emitted in this match and whether play continued. */
+  readonly injuriesByPlayer: Readonly<Partial<Record<PlayerId, MatchPlayerInjuryState>>>;
+}
+
+/** Match-local injury state used by performance and aggravation policies. */
+export interface MatchPlayerInjuryState {
+  readonly severity: "knock" | "minor" | "moderate" | "serious";
+  readonly continued: boolean;
 }
 
 /**
@@ -92,6 +150,7 @@ export function createInitialMatchSimulationState(context: MatchContext): MatchS
     stats: {
       home: createEmptySideStats(),
       away: createEmptySideStats(),
+      telemetry: createInitialTelemetry(context),
     },
     local: {
       hasKickedOff: false,
@@ -99,6 +158,11 @@ export function createInitialMatchSimulationState(context: MatchContext): MatchS
       hasReachedFullTime: false,
     },
   };
+}
+
+/** Returns live telemetry, rebuilding only the legacy adapter's absent shape. */
+export function telemetryFor(simulation: MatchSimulationState): MatchSimulationTelemetry {
+  return simulation.stats.telemetry ?? createInitialTelemetry(simulation.context);
 }
 
 /**
@@ -116,6 +180,42 @@ function createEmptySideStats(): MatchSideStats {
     opportunities: 0,
     shots: 0,
     shotsOnTarget: 0,
+    goals: 0,
+  };
+}
+
+function createInitialTelemetry(context: MatchContext): MatchSimulationTelemetry {
+  const playerCondition: Partial<Record<PlayerId, number>> = {};
+
+  for (const team of [context.home, context.away]) {
+    for (const slot of team.lineup) {
+      const profile = team.incidentProfiles?.find((candidate) => candidate.playerId === slot.playerId);
+      playerCondition[slot.playerId] = profile?.startingFitness ?? 100;
+    }
+  }
+
+  return {
+    controlUnits: { home: 0, away: 0 },
+    stats: {
+      home: createEmptyCausalSideStats(),
+      away: createEmptyCausalSideStats(),
+    },
+    playerCondition,
+    yellowCardsByPlayer: {},
+    injuriesByPlayer: {},
+  };
+}
+
+function createEmptyCausalSideStats(): MatchCausalSideStats {
+  return {
+    shots: 0,
+    shotsOnTarget: 0,
+    expectedGoals: 0,
+    corners: 0,
+    fouls: 0,
+    yellowCards: 0,
+    redCards: 0,
+    saves: 0,
     goals: 0,
   };
 }

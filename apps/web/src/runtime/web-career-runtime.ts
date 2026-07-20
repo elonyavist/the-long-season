@@ -29,11 +29,15 @@ import {
 import type { CareerInboxMessageInput } from "@game/ui";
 
 import {
-  applyWebHalfTimeTacticalDecision,
-  completeWebMatchday,
+  advanceWebLiveMatchdayMinute,
+  applyWebLiveMatchTeamChanges,
+  commitWebLiveMatchday,
+  createWebLiveMatchdaySession,
   createWebMatchdayState,
-  enterWebMatchday,
-  progressWebMatchdayToHalfTime,
+  pauseWebLiveMatchday,
+  resolveWebLiveMatchdayIncident,
+  resumeWebLiveMatchday,
+  type WebLiveMatchdaySession,
   type WebMatchdayState,
 } from "../features/matchday/matchday-adapter";
 import type { MatchPreparationDraft } from "../features/match-preparation/match-preparation-adapter";
@@ -120,6 +124,17 @@ export interface UpdatedWebMatchday {
   readonly matchdayState: WebMatchdayState;
 }
 
+/** Narrow result for one live minute; broader career facts publish only after full-time review. */
+export type AdvancedWebMatchdayMinute = Readonly<{
+  status: "live" | "full_time";
+  matchdayState: WebMatchdayState;
+}>;
+
+/** Memory-only result for a live command that must not republish career-wide facts. */
+export type VolatileWebMatchdayUpdate = Readonly<{
+  matchdayState: WebMatchdayState;
+}>;
+
 /** Optional runtime dependencies used to make identity allocation testable. */
 export interface WebCareerRuntimeOptions {
   readonly createIdentity?: () => WebCareerIdentity;
@@ -202,6 +217,7 @@ function errorCode(error: unknown): string | undefined {
 export class WebCareerRuntime {
   private readonly createIdentity: () => WebCareerIdentity;
   private session: CareerSession | undefined;
+  private liveMatchdaySession: WebLiveMatchdaySession | undefined;
 
   public constructor(
     private readonly storage: CareerStorage,
@@ -217,6 +233,7 @@ export class WebCareerRuntime {
 
   /** Loads one validated durable career by ID. */
   public async loadCareer(requestedSaveId: WebCareerSaveId): Promise<WebCareerState> {
+    this.liveMatchdaySession = undefined;
     const [state, saves] = await Promise.all([
       this.storage.loadCareer(requestedSaveId),
       this.storage.listCareers(),
@@ -233,6 +250,7 @@ export class WebCareerRuntime {
 
   /** Generates and durably saves a new career before exposing it to the UI. */
   public async createNewCareer(): Promise<CreatedWebCareer> {
+    this.liveMatchdaySession = undefined;
     const identity = this.createIdentity();
     const generatedState = refreshExistingInboxFacts(buildWebCareerState(identity));
     const selectedClub = generatedState.gameState.clubs[generatedState.selectedClubId];
@@ -323,7 +341,7 @@ export class WebCareerRuntime {
   ): Promise<CommittedWebCareerSession> {
     const session = this.requireSession(requestedSaveId);
     const state = session.workingState();
-    if (isUnsafeMatchdayState(state)) {
+    if (this.liveMatchdaySession !== undefined) {
       throw new Error("Career cannot be saved during an active matchday");
     }
 
@@ -360,15 +378,16 @@ export class WebCareerRuntime {
     return this.enterPreparedMatchday(this.requireSession(requestedSaveId));
   }
 
-  /** Creates or resumes the active checkpoint before publishing the matchday screen. */
+  /** Creates a fresh memory-only live session before publishing pre-match. */
   private enterPreparedMatchday(session: CareerSession): PreparedWebMatchday {
-    const entered = enterWebMatchday(session.workingState());
-
-    if (entered.careerState.activeMatchCheckpoint === undefined) {
-      throw new Error(entered.lastStagedAttempt.invalidReason ?? "Matchday checkpoint could not be created");
+    const created = createWebLiveMatchdaySession(session.workingState());
+    if (created.status !== "ready") {
+      throw new Error(created.matchdayState.lastSessionAttempt.invalidReason ?? "Matchday session could not be created");
     }
 
-    const state = session.replaceWorkingState(refreshExistingInboxFacts(entered.careerState)).workingState;
+    this.liveMatchdaySession = created.session;
+    const state = session.replaceWorkingState(refreshExistingInboxFacts(created.session.careerState)).workingState;
+    this.liveMatchdaySession = { ...created.session, careerState: state };
     session.postponeAutosaveIfDue();
 
     return {
@@ -376,73 +395,110 @@ export class WebCareerRuntime {
       state,
       continueResult: inspectWebCareerAttention(state),
       sessionStatus: session.status(),
-      matchdayState: createWebMatchdayState(state),
+      matchdayState: createWebMatchdayState(state, undefined, this.liveMatchdaySession),
     };
   }
 
-  /** Advances the in-memory pre-match state to half-time. */
-  public async progressMatchdayToHalfTime(requestedSaveId: WebCareerSaveId): Promise<UpdatedWebMatchday> {
-    const session = this.requireSession(requestedSaveId);
-    const currentState = session.workingState();
-    const progressed = progressWebMatchdayToHalfTime(createWebMatchdayState(currentState));
-    if (progressed.lastStagedAttempt.status !== "at_half_time") {
-      throw new Error(progressed.lastStagedAttempt.invalidReason ?? "Matchday did not reach half-time");
+  /** Starts or resumes the clock without simulating a minute immediately. */
+  public resumeMatchday(
+    requestedSaveId: WebCareerSaveId,
+    preparation?: MatchPreparationDraft,
+  ): VolatileWebMatchdayUpdate {
+    this.requireSession(requestedSaveId);
+    let liveSession = this.requireLiveMatchdaySession();
+    if (preparation !== undefined) {
+      const applied = applyWebLiveMatchTeamChanges(liveSession, preparation);
+      liveSession = applied.session;
+      if (applied.status === "invalid") {
+        this.liveMatchdaySession = liveSession;
+        return this.projectVolatileMatchdayUpdate();
+      }
     }
-
-    return this.publishMatchdayUpdate(session, progressed.careerState);
+    this.liveMatchdaySession = resumeWebLiveMatchday(liveSession);
+    return this.projectVolatileMatchdayUpdate();
   }
 
-  /** Applies half-time decisions and completes the same staged report in memory. */
-  public async completeMatchday(
+  /** Applies paused-match team changes without advancing, resuming, or saving. */
+  public applyMatchdayTeamChanges(
     requestedSaveId: WebCareerSaveId,
     preparation: MatchPreparationDraft,
-  ): Promise<UpdatedWebMatchday> {
-    const session = this.requireSession(requestedSaveId);
-    const currentState = session.workingState();
-    const decided = applyWebHalfTimeTacticalDecision(createWebMatchdayState(currentState), preparation);
-    if (decided.lastStagedAttempt.status !== "substitutions_applied") {
-      throw new Error(decided.lastStagedAttempt.invalidReason ?? "Half-time decisions are invalid");
+  ): VolatileWebMatchdayUpdate {
+    this.requireSession(requestedSaveId);
+    const applied = applyWebLiveMatchTeamChanges(this.requireLiveMatchdaySession(), preparation);
+    this.liveMatchdaySession = applied.session;
+    return this.projectVolatileMatchdayUpdate();
+  }
+
+  /** Requests a manual pause after the last fully completed minute. */
+  public pauseMatchday(requestedSaveId: WebCareerSaveId): VolatileWebMatchdayUpdate {
+    this.requireSession(requestedSaveId);
+    this.liveMatchdaySession = pauseWebLiveMatchday(this.requireLiveMatchdaySession());
+    return this.projectVolatileMatchdayUpdate();
+  }
+
+  /** Resolves the current automatic incident pause without advancing the clock. */
+  public resolveMatchdayIncident(requestedSaveId: WebCareerSaveId): VolatileWebMatchdayUpdate {
+    this.requireSession(requestedSaveId);
+    const liveSession = this.requireLiveMatchdaySession();
+    const decision = liveSession.engineState.pendingDecision;
+    if (decision === undefined || decision.type === "half_time") {
+      throw new Error("No match incident is waiting for a manager decision");
+    }
+    this.liveMatchdaySession = resolveWebLiveMatchdayIncident(
+      liveSession,
+      "acknowledge",
+    );
+    return this.projectVolatileMatchdayUpdate();
+  }
+
+  /** Advances exactly one in-memory engine minute. */
+  public advanceMatchdayMinute(requestedSaveId: WebCareerSaveId): AdvancedWebMatchdayMinute {
+    this.requireSession(requestedSaveId);
+    const advanced = advanceWebLiveMatchdayMinute(this.requireLiveMatchdaySession());
+    this.liveMatchdaySession = advanced.session;
+
+    if (advanced.session.engineState.phase !== "full_time") {
+      return {
+        status: "live",
+        matchdayState: advanced.matchdayState,
+      };
     }
 
-    const completed = completeWebMatchday(createWebMatchdayState(decided.careerState));
-    if (completed.playedResult === undefined || completed.lastStagedAttempt.status !== "full_time") {
-      throw new Error(completed.lastStagedAttempt.invalidReason ?? "Matchday did not reach full time");
-    }
-
-    const state = session.replaceWorkingState(refreshExistingInboxFacts(completed.careerState)).workingState;
-    session.postponeAutosaveIfDue();
     return {
-      metadata: session.metadata(),
-      state,
-      continueResult: inspectWebCareerAttention(state),
-      sessionStatus: session.status(),
-      matchdayState: createWebMatchdayState(state, completed.playedResult),
+      status: "full_time",
+      matchdayState: advanced.matchdayState,
     };
   }
 
-  /** Acknowledges full time and keeps the used plan as an unconfirmed next-match draft. */
+  /** Publishes the reviewed full-time result and keeps the used plan as an unconfirmed draft. */
   public async acknowledgeMatchday(requestedSaveId: WebCareerSaveId): Promise<UpdatedWebMatchday> {
     const session = this.requireSession(requestedSaveId);
-    const currentState = session.workingState();
-    const nextState = carryCompletedPreparationAsDraft(currentState);
+    const completedMatch = this.requireLiveMatchdaySession();
+    if (completedMatch.engineState.phase !== "full_time") {
+      throw new Error("The live match cannot be published before full time");
+    }
+    const committed = commitWebLiveMatchday(completedMatch);
+    if (committed.status !== "advanced") {
+      throw new Error(committed.reason);
+    }
+    const previousState = session.workingState();
+    const nextState = carryCompletedPreparationAsDraft(committed.careerState);
     session.replaceWorkingState(refreshExistingInboxFacts(nextState));
-    await this.autosaveAtSafeStop(session);
+    try {
+      await this.autosaveAtSafeStop(session);
+    } catch (error) {
+      session.replaceWorkingState(previousState);
+      throw error;
+    }
+    this.liveMatchdaySession = undefined;
     return this.buildMatchdayUpdate(session);
   }
 
-  /** Replaces working match state and builds its structured presentation result. */
-  private publishMatchdayUpdate(
-    session: CareerSession,
-    nextState: WebCareerState,
-  ): UpdatedWebMatchday {
-    const state = session.replaceWorkingState(nextState).workingState;
-    session.postponeAutosaveIfDue();
+  /** Projects only live facts; career-wide state and attention stay untouched until full-time Continue. */
+  private projectVolatileMatchdayUpdate(): VolatileWebMatchdayUpdate {
+    const liveSession = this.requireLiveMatchdaySession();
     return {
-      metadata: session.metadata(),
-      state,
-      continueResult: inspectWebCareerAttention(state),
-      sessionStatus: session.status(),
-      matchdayState: createWebMatchdayState(state),
+      matchdayState: createWebMatchdayState(liveSession.careerState, undefined, liveSession),
     };
   }
 
@@ -454,7 +510,7 @@ export class WebCareerRuntime {
       state,
       continueResult: inspectWebCareerAttention(state),
       sessionStatus: session.status(),
-      matchdayState: createWebMatchdayState(state),
+      matchdayState: createWebMatchdayState(state, undefined, this.liveMatchdaySession),
     };
   }
 
@@ -486,14 +542,14 @@ export class WebCareerRuntime {
     }
     return this.session;
   }
-}
 
-/** Keeps every live-match phase, including full-time review, outside save boundaries. */
-function isUnsafeMatchdayState(state: WebCareerState): boolean {
-  if (state.activeMatchCheckpoint !== undefined) return true;
-  const targetFixtureId = state.matchPreparation?.targetFixtureId;
-  if (targetFixtureId === undefined) return false;
-  return state.gameState.fixtures[targetFixtureId]?.result?.played === true;
+  /** Returns the active private match session or rejects an invalid command sequence. */
+  private requireLiveMatchdaySession(): WebLiveMatchdaySession {
+    if (this.liveMatchdaySession === undefined) {
+      throw new Error("No live matchday session is active");
+    }
+    return this.liveMatchdaySession;
+  }
 }
 
 /** Removes fixture confirmation while preserving the manager's last team plan as a reusable draft. */
@@ -583,7 +639,7 @@ function evaluateCanonicalCareerAttention(
 /** Maps canonical Inbox facts onto the web presentation contract. */
 function toWebCareerContinueResult(result: ContinueCareerUntilAttentionResult): WebCareerContinueResult {
   const firstMessage = result.stopReason === "attention"
-    ? result.stopDateMessages[0]
+    ? result.stopDateMessages.find(isUnresolvedAttentionMessage)
     : undefined;
   const titleKey = firstMessage === undefined
     ? "career.dashboard.continueStopped.no_attention"
@@ -599,9 +655,9 @@ function toWebCareerContinueResult(result: ContinueCareerUntilAttentionResult): 
     daysAdvanced: result.daysAdvanced,
     titleKey,
     summaryKey,
-    ...(result.selectedMessageId === undefined
+    ...(firstMessage === undefined
       ? {}
-      : { selectedMessageId: String(result.selectedMessageId) }),
+      : { selectedMessageId: String(firstMessage.id) }),
     inboxMessages: result.inboxMessages.map((message) => ({
       messageId: message.id,
       dateIso: toISO(message.date),
@@ -617,6 +673,13 @@ function toWebCareerContinueResult(result: ContinueCareerUntilAttentionResult): 
       })),
     })),
   };
+}
+
+function isUnresolvedAttentionMessage(
+  message: ContinueCareerUntilAttentionResult["stopDateMessages"][number],
+): boolean {
+  if (message.level === "blocking") return !message.lifecycle.resolved;
+  return message.level === "important" && !message.lifecycle.acknowledged;
 }
 
 /** Selects the compact summary for a canonical current-season message. */

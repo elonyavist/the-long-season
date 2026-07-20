@@ -19,15 +19,19 @@ import { CareerInboxScreen } from "../features/inbox/CareerInboxScreen";
 import { buildCalendarAdvanceTransition } from "../features/inbox/calendar-advance-transition";
 import { CareerMatchdayScreen } from "../features/matchday/CareerMatchdayScreen";
 import { CareerMatchPreparationScreen } from "../features/match-preparation/CareerMatchPreparationScreen";
-import { useCareerUiStore } from "../stores/career-ui-store";
+import {
+  selectHasPendingMatchdayTeamChanges,
+  useCareerUiStore,
+} from "../stores/career-ui-store";
 import type { WebCareerRuntimeHandle } from "../infrastructure/persistence/create-web-career-storage";
 import {
+  classifyWebCareerPersistenceFailure,
   inspectWebCareerAttention,
 } from "../runtime/web-career-runtime";
 import { includeDraftInCareerSessionStatus } from "../runtime/career-session";
 import { useCareerCommandRunner } from "./use-career-command-runner";
 
-type PreparationNavigationIntent = "app_entry" | "career_dashboard" | "career_inbox" | "matchday" | "continue_career";
+type PreparationNavigationIntent = "app_entry" | "career_dashboard" | "career_inbox" | "matchday";
 
 /**
  * Composes the web career screens around the runtime and ephemeral UI store.
@@ -46,6 +50,7 @@ export function App(): React.JSX.Element {
   const continueResult = useCareerUiStore((state) => state.continueResult);
   const matchPreparationState = useCareerUiStore((state) => state.matchPreparationState);
   const matchdayState = useCareerUiStore((state) => state.matchdayState);
+  const hasPendingMatchdayTeamChanges = useCareerUiStore(selectHasPendingMatchdayTeamChanges);
   const inboxFilter = useCareerUiStore((state) => state.inboxFilter);
   const selectedInboxMessageId = useCareerUiStore((state) => state.selectedInboxMessageId);
   const careerSessionStatus = useCareerUiStore((state) => state.careerSessionStatus);
@@ -69,7 +74,15 @@ export function App(): React.JSX.Element {
   const beginCalendarAdvanceTransition = useCareerUiStore((state) => state.beginCalendarAdvanceTransition);
   const showCalendarAdvanceDate = useCareerUiStore((state) => state.showCalendarAdvanceDate);
   const receiveMatchdaySessionUpdate = useCareerUiStore((state) => state.receiveMatchdaySessionUpdate);
-  const applyHalfTimeSubstitutions = useCareerUiStore((state) => state.applyHalfTimeSubstitutions);
+  const receiveLiveMatchdayProgress = useCareerUiStore((state) => state.receiveLiveMatchdayProgress);
+  const beginCareerCommand = useCareerUiStore((state) => state.beginCareerCommand);
+  const failCareerCommand = useCareerUiStore((state) => state.failCareerCommand);
+  const failCareerStorage = useCareerUiStore((state) => state.failCareerStorage);
+  const substituteMatchdayPlayer = useCareerUiStore((state) => state.substituteMatchdayPlayer);
+  const exchangeMatchdayLineupSlots = useCareerUiStore((state) => state.exchangeMatchdayLineupSlots);
+  const adaptMatchdayBoardSlot = useCareerUiStore((state) => state.adaptMatchdayBoardSlot);
+  const acceptPendingMatchdayTeamChanges = useCareerUiStore((state) => state.acceptPendingMatchdayTeamChanges);
+  const discardPendingMatchdayTeamChanges = useCareerUiStore((state) => state.discardPendingMatchdayTeamChanges);
   const selectFormation = useCareerUiStore((state) => state.selectFormation);
   const selectLineupPlayer = useCareerUiStore((state) => state.selectLineupPlayer);
   const selectBenchPlayer = useCareerUiStore((state) => state.selectBenchPlayer);
@@ -102,7 +115,7 @@ export function App(): React.JSX.Element {
     matchPreparationPlayerFactsById,
     matchday: matchdayView,
     matchdayPhase: matchdayPhaseView,
-    halfTimeSubstitutions,
+    teamControlPanel,
   } = useCareerScreenPresentations({
     inboxFilter,
     ...(activeCareerState === undefined ? {} : { activeCareerState }),
@@ -304,8 +317,7 @@ export function App(): React.JSX.Element {
     if (intent === "career_dashboard") openDashboard();
     if (intent === "career_inbox") openInbox();
     if (intent === "matchday") openPreparedMatchday();
-    if (intent === "continue_career") continueLoadedCareer();
-  }, [backToMenu, continueLoadedCareer, openDashboard, openInbox, openPreparedMatchday]);
+  }, [backToMenu, openDashboard, openInbox, openPreparedMatchday]);
 
   const requestPreparationNavigation = useCallback((intent: PreparationNavigationIntent) => {
     if (preparationDraftDirty) {
@@ -364,13 +376,19 @@ export function App(): React.JSX.Element {
       failureScope: "current_career",
       execute: async () => {
         if (handlePromise === undefined) throw { code: "storage_unavailable" };
-        return (await handlePromise).runtime.progressMatchdayToHalfTime(activeCareerState.saveId);
+        return (await handlePromise).runtime.resumeMatchday(activeCareerState.saveId);
       },
-      onSuccess: ({ state, metadata, continueResult: result, matchdayState, sessionStatus }) => {
-        receiveMatchdaySessionUpdate(state, metadata, result, matchdayState, sessionStatus);
+      onSuccess: ({ matchdayState }) => {
+        receiveLiveMatchdayProgress(matchdayState);
+        if (matchdayState.lastSessionAttempt.status !== "invalid") acceptPendingMatchdayTeamChanges();
       },
     });
-  }, [activeCareerState, receiveMatchdaySessionUpdate, runCareerCommand]);
+  }, [
+    acceptPendingMatchdayTeamChanges,
+    activeCareerState,
+    receiveLiveMatchdayProgress,
+    runCareerCommand,
+  ]);
 
   const startSecondHalf = useCallback(() => {
     const handlePromise = runtimeHandleRef.current;
@@ -384,13 +402,109 @@ export function App(): React.JSX.Element {
       failureScope: "current_career",
       execute: async () => {
         if (handlePromise === undefined) throw { code: "storage_unavailable" };
-        return (await handlePromise).runtime.completeMatchday(activeCareerState.saveId, matchPreparationState);
+        return (await handlePromise).runtime.resumeMatchday(activeCareerState.saveId, matchPreparationState);
       },
-      onSuccess: ({ state, metadata, continueResult: result, matchdayState, sessionStatus }) => {
-        receiveMatchdaySessionUpdate(state, metadata, result, matchdayState, sessionStatus);
+      onSuccess: ({ matchdayState }) => {
+        receiveLiveMatchdayProgress(matchdayState);
+        if (matchdayState.lastSessionAttempt.status !== "invalid") acceptPendingMatchdayTeamChanges();
       },
     });
-  }, [activeCareerState, matchPreparationState, receiveMatchdaySessionUpdate, runCareerCommand]);
+  }, [
+    acceptPendingMatchdayTeamChanges,
+    activeCareerState,
+    matchPreparationState,
+    receiveLiveMatchdayProgress,
+    runCareerCommand,
+  ]);
+
+  const pauseMatchday = useCallback(() => {
+    const handlePromise = runtimeHandleRef.current;
+    if (activeCareerState === undefined) return;
+    void runCareerCommand({
+      commandId: "pause_match",
+      statusLabelKey: "career.matchday.playback.pause",
+      failureScope: "current_career",
+      execute: async () => {
+        if (handlePromise === undefined) throw { code: "storage_unavailable" };
+        return (await handlePromise).runtime.pauseMatchday(activeCareerState.saveId);
+      },
+      onSuccess: ({ matchdayState }) => {
+        receiveLiveMatchdayProgress(matchdayState);
+      },
+    });
+  }, [activeCareerState, receiveLiveMatchdayProgress, runCareerCommand]);
+
+  const resumeMatchday = useCallback(() => {
+    const handlePromise = runtimeHandleRef.current;
+    if (activeCareerState === undefined || matchPreparationState === undefined) return;
+    void runCareerCommand({
+      commandId: "resume_match",
+      statusLabelKey: "career.matchday.playback.resume",
+      failureScope: "current_career",
+      execute: async () => {
+        if (handlePromise === undefined) throw { code: "storage_unavailable" };
+        return (await handlePromise).runtime.resumeMatchday(activeCareerState.saveId, matchPreparationState);
+      },
+      onSuccess: ({ matchdayState }) => {
+        receiveLiveMatchdayProgress(matchdayState);
+        if (matchdayState.lastSessionAttempt.status !== "invalid") acceptPendingMatchdayTeamChanges();
+      },
+    });
+  }, [
+    acceptPendingMatchdayTeamChanges,
+    activeCareerState,
+    matchPreparationState,
+    receiveLiveMatchdayProgress,
+    runCareerCommand,
+  ]);
+
+  const resolveMatchdayIncident = useCallback(() => {
+    const handlePromise = runtimeHandleRef.current;
+    if (activeCareerState === undefined) return;
+    void runCareerCommand({
+      commandId: "resolve_match_incident",
+      statusLabelKey: "career.command.confirmingTeam",
+      failureScope: "current_career",
+      execute: async () => {
+        if (handlePromise === undefined) throw { code: "storage_unavailable" };
+        return (await handlePromise).runtime.resolveMatchdayIncident(activeCareerState.saveId);
+      },
+      onSuccess: ({ matchdayState }) => {
+        receiveLiveMatchdayProgress(matchdayState);
+      },
+    });
+  }, [activeCareerState, receiveLiveMatchdayProgress, runCareerCommand]);
+
+  const advanceMatchdayMinute = useCallback(async (): Promise<void> => {
+    const handlePromise = runtimeHandleRef.current;
+    if (activeCareerState === undefined) return;
+    try {
+      if (handlePromise === undefined) throw { code: "storage_unavailable" };
+      const update = (await handlePromise).runtime.advanceMatchdayMinute(activeCareerState.saveId);
+      if (update.status === "live") {
+        receiveLiveMatchdayProgress(update.matchdayState);
+        return;
+      }
+      receiveLiveMatchdayProgress(update.matchdayState);
+    } catch (error: unknown) {
+      const failure = classifyWebCareerPersistenceFailure(error);
+      beginCareerCommand(
+        "advance_match_minute",
+        matchdayPhaseView?.phase === "second_half"
+          ? "career.command.playingSecondHalf"
+          : "career.command.playingFirstHalf",
+      );
+      failCareerCommand("advance_match_minute", failure.code);
+      failCareerStorage(failure, "current_career");
+    }
+  }, [
+    activeCareerState,
+    beginCareerCommand,
+    failCareerCommand,
+    failCareerStorage,
+    matchdayPhaseView?.phase,
+    receiveLiveMatchdayProgress,
+  ]);
 
   const finishMatchday = useCallback(() => {
     const handlePromise = runtimeHandleRef.current;
@@ -638,24 +752,31 @@ export function App(): React.JSX.Element {
         <CareerMatchdayScreen
           view={matchdayView}
           phaseView={matchdayPhaseView}
-          {...(halfTimeSubstitutions === undefined ? {} : { halfTimeSubstitutions })}
+          {...(teamControlPanel === undefined ? {} : { teamControlPanel })}
           {...(matchPreparationView === undefined ? {} : { matchPreparationView })}
           {...(matchPreparationState === undefined ? {} : { tacticalBoardDraft: matchPreparationState.tacticalBoardDraft })}
           {...(continueResult === undefined ? {} : { continueResult })}
+          hasPendingTeamChanges={hasPendingMatchdayTeamChanges}
           text={text}
           onBackToMenu={requestBackToMenu}
           onBackToDashboard={finishMatchday}
-          onContinueCareer={continueLoadedCareer}
           onInboxActionClick={handleShellNavigation}
           onPrepareMatch={openMatchPreparation}
-          onPlayFixture={startFirstHalf}
-          onApplyHalfTimeSubstitution={(decision) => applyHalfTimeSubstitutions([decision])}
+          onStartFirstHalf={startFirstHalf}
+          onAdvanceMatchMinute={advanceMatchdayMinute}
+          onPauseMatch={pauseMatchday}
+          onResumeMatch={resumeMatchday}
+          onResolveIncident={resolveMatchdayIncident}
+          onApplyHalfTimeSubstitution={(decision) => {
+            substituteMatchdayPlayer(decision.outgoingPlayerId, decision.incomingPlayerId);
+          }}
           onHalfTimeFormationChange={selectFormation}
-          onHalfTimeLineupPlayerChange={selectLineupPlayer}
-          onHalfTimeBenchPlayerChange={selectBenchPlayer}
           onHalfTimeBoardSlotMove={moveBoardSlot}
           onHalfTimeBoardSlotRoleChange={changeBoardSlotRole}
-          onHalfTimeBoardSlotClear={clearBoardSlot}
+          onMatchdayBoardSlotAdapt={adaptMatchdayBoardSlot}
+          onMatchdayBoardSlotExchange={exchangeMatchdayLineupSlots}
+          onMatchdayTacticProfileChange={selectTacticProfile}
+          onDiscardPendingTeamChanges={discardPendingMatchdayTeamChanges}
           onStartSecondHalf={startSecondHalf}
         />
       </CareerAppFrame>
@@ -681,8 +802,6 @@ export function App(): React.JSX.Element {
           {...(continueResult === undefined ? {} : { continueResult })}
           text={text}
           onBackToMenu={requestBackToMenu}
-          onBackToDashboard={() => requestPreparationNavigation("career_dashboard")}
-          onContinueCareer={() => requestPreparationNavigation("continue_career")}
           onInboxActionClick={handleShellNavigation}
           onFormationChange={selectFormation}
           onLineupPlayerChange={selectLineupPlayer}

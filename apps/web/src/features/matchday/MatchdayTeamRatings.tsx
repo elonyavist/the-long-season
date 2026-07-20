@@ -3,6 +3,7 @@ import type { MessageKey, Translator } from "@game/i18n";
 import type { CareerMatchdayPhasePlayerView } from "@game/ui";
 
 import { roleLabelKey } from "../../shared/lib/match-preparation-labels";
+import type { MatchdayFullTimeConsequenceView } from "./career-matchday-presenter";
 
 /** Compact half-time signal derived from current structured match facts. */
 export type MatchdayTeamRatingSignal = "watch" | "contributor";
@@ -10,6 +11,7 @@ export type MatchdayTeamRatingSignal = "watch" | "contributor";
 /** Props for the reusable selected-team and opponent rating composition. */
 export interface MatchdayTeamRatingsProps {
   readonly clubName: string;
+  readonly consequences?: readonly MatchdayFullTimeConsequenceView[];
   readonly rows: readonly CareerMatchdayPhasePlayerView[];
   readonly text: Translator;
   readonly signalsByPlayerId?: Readonly<Record<string, MatchdayTeamRatingSignal>>;
@@ -22,12 +24,14 @@ export interface MatchdayTeamRatingsProps {
  */
 export function MatchdayTeamRatings({
   clubName,
+  consequences = [],
   rows,
   text,
   signalsByPlayerId = {},
   variant = "live",
 }: MatchdayTeamRatingsProps): React.JSX.Element {
   const headingId = useId();
+  const consequenceByPlayerId = new Map(consequences.map((change) => [change.playerId, change] as const));
 
   return (
     <section className="tls-matchday-card tls-match-team-ratings" aria-labelledby={headingId}>
@@ -44,16 +48,20 @@ export function MatchdayTeamRatings({
         <p className="tls-matchday-empty">{text("career.matchday.noPlayerRatings")}</p>
       ) : (
         <ol className="tls-match-centre-rating-list" aria-label={text("career.matchday.playerRatingsTable")}>
-          {rows.map((row) => (
-            <MatchdayTeamRating
-              key={row.playerId}
-              row={row}
-              text={text}
-              {...(signalsByPlayerId[row.playerId] === undefined
-                ? {}
-                : { signal: signalsByPlayerId[row.playerId] })}
-            />
-          ))}
+          {rows.map((row) => {
+            const consequence = consequenceByPlayerId.get(row.playerId);
+            return (
+              <MatchdayTeamRating
+                key={row.playerId}
+                row={row}
+                text={text}
+                {...(consequence === undefined ? {} : { consequence })}
+                {...(signalsByPlayerId[row.playerId] === undefined
+                  ? {}
+                  : { signal: signalsByPlayerId[row.playerId] })}
+              />
+            );
+          })}
         </ol>
       )}
     </section>
@@ -61,10 +69,12 @@ export function MatchdayTeamRatings({
 }
 
 function MatchdayTeamRating({
+  consequence,
   row,
   signal,
   text,
 }: Readonly<{
+  consequence?: MatchdayFullTimeConsequenceView;
   row: CareerMatchdayPhasePlayerView;
   signal?: MatchdayTeamRatingSignal;
   text: Translator;
@@ -105,8 +115,63 @@ function MatchdayTeamRating({
           <dd>{contributions.length === 0 ? text("common.none") : contributions.join(" · ")}</dd>
         </div>
       </dl>
+      {consequence === undefined ? null : (
+        <MatchdayTeamRatingConsequences change={consequence} text={text} />
+      )}
     </li>
   );
+}
+
+function MatchdayTeamRatingConsequences({
+  change,
+  text,
+}: Readonly<{
+  change: MatchdayFullTimeConsequenceView;
+  text: Translator;
+}>): React.JSX.Element {
+  const facts = [
+    change.condition === undefined
+      ? ""
+      : text("career.matchday.consequence.condition", {
+          before: change.condition.before,
+          after: change.condition.after,
+          delta: signed(change.condition.delta),
+        }),
+    change.playerState === undefined || change.playerState.formDelta === 0
+      ? ""
+      : text("career.matchday.consequence.form", {
+          before: change.playerState.formBefore,
+          after: change.playerState.formAfter,
+          delta: signed(change.playerState.formDelta),
+        }),
+    change.playerState === undefined || change.playerState.moraleDelta === 0
+      ? ""
+      : text("career.matchday.consequence.morale", {
+          before: change.playerState.moraleBefore,
+          after: change.playerState.moraleAfter,
+          delta: signed(change.playerState.moraleDelta),
+        }),
+    ...change.availability.map((availability) => (
+      availability.type === "injury"
+        ? text("career.matchday.consequence.injury", {
+            severity: text(`career.matchday.injurySeverity.${availability.severity}` as MessageKey),
+            date: String(availability.unavailableUntil),
+          })
+        : text("career.matchday.consequence.suspension", { matches: availability.matches })
+    )),
+  ].filter((fact) => fact.length > 0);
+
+  if (facts.length === 0) return <></>;
+
+  return (
+    <ul className="tls-match-centre-rating-consequences">
+      {facts.map((fact) => <li key={fact}>{fact}</li>)}
+    </ul>
+  );
+}
+
+function signed(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
 }
 
 function playerContributions(row: CareerMatchdayPhasePlayerView, text: Translator): readonly string[] {

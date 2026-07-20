@@ -108,6 +108,52 @@ export function changeTacticalBoardSlotRole(
   };
 }
 
+/** Applies one confirmed role adaptation and destination in a single immutable update. */
+export function adaptTacticalBoardSlot(
+  draft: TacticalBoardDraft,
+  slotId: string,
+  role: TacticalBoardRoleCode,
+  nx: number,
+  ny: number,
+): TacticalBoardDraft {
+  return {
+    ...draft,
+    slots: draft.slots.map((slot) => {
+      if (slot.slotId !== slotId || slot.locked) return slot;
+      const clamped = clampToZone(nx, ny, TACTICAL_BOARD_ROLES[role].zone);
+
+      return {
+        ...slot,
+        role,
+        canonicalRole: canonicalRoleForBoardRole(role),
+        nx: clamped.nx,
+        ny: clamped.ny,
+      };
+    }),
+  };
+}
+
+/** Exchanges only player assignments between two XI slots; geometry and roles stay put. */
+export function exchangeTacticalBoardSlotPlayers(
+  draft: TacticalBoardDraft,
+  firstSlotId: string,
+  secondSlotId: string,
+): TacticalBoardDraft {
+  if (firstSlotId === secondSlotId) return draft;
+  const firstSlot = draft.slots.find((slot) => slot.slotId === firstSlotId);
+  const secondSlot = draft.slots.find((slot) => slot.slotId === secondSlotId);
+  if (firstSlot === undefined || secondSlot === undefined) return draft;
+
+  return {
+    ...draft,
+    slots: draft.slots.map((slot) => {
+      if (slot.slotId === firstSlotId) return { ...slot, playerId: secondSlot.playerId };
+      if (slot.slotId === secondSlotId) return { ...slot, playerId: firstSlot.playerId };
+      return slot;
+    }),
+  };
+}
+
 /** Clears the player assignment while preserving slot role and position. */
 export function clearTacticalBoardSlot(draft: TacticalBoardDraft, slotId: string): TacticalBoardDraft {
   return {

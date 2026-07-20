@@ -1,4 +1,4 @@
-import { fixtureId, type ClubId, type FixtureId } from "@game/domain";
+import { fixtureId, type ClubId, type FixtureId, type PlayerId } from "@game/domain";
 import type { RngKeyPart } from "@game/shared";
 
 import type { LineupSlot, TeamStrength } from "./team-strength.ts";
@@ -35,6 +35,21 @@ export interface MatchTacticalDistributionInput {
   readonly risk: number;
 }
 
+/** Player attributes consumed by deterministic discipline and injury policies. */
+export interface MatchPlayerIncidentProfile {
+  readonly playerId: PlayerId;
+  readonly tackling: number;
+  readonly composure: number;
+  readonly determination: number;
+  readonly stamina: number;
+  readonly agility: number;
+  readonly strength: number;
+  readonly penalties: number;
+  readonly goalkeeperReflexes: number;
+  readonly goalkeeperHandling: number;
+  readonly startingFitness: number;
+}
+
 /**
  * Serializable team context for one side of a match.
  */
@@ -47,6 +62,8 @@ export interface MatchTeamContext {
   readonly strength: TeamStrength;
   /** Tactical distribution inputs for this team. */
   readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /** True player inputs used by incident policies when a full squad built this context. */
+  readonly incidentProfiles?: readonly MatchPlayerIncidentProfile[];
 }
 
 /**
@@ -78,7 +95,8 @@ export type MatchContextErrorCode =
   | "missing_team_strength"
   | "missing_lineup"
   | "invalid_engine_config"
-  | "invalid_tactical_distribution";
+  | "invalid_tactical_distribution"
+  | "invalid_incident_profile";
 
 /**
  * Typed error thrown when a match context is incomplete or invalid.
@@ -207,6 +225,41 @@ function assertValidTeamContext(team: MatchTeamContext | undefined, side: "home"
   ) {
     throw new MatchContextError("missing_team_strength", `${side} team strength must contain finite numbers`);
   }
+
+  if (team.incidentProfiles !== undefined) {
+    const lineupPlayerIds = new Set(team.lineup.map((slot) => slot.playerId));
+    const seenPlayerIds = new Set<PlayerId>();
+    for (const profile of team.incidentProfiles) {
+      if (!lineupPlayerIds.has(profile.playerId) || seenPlayerIds.has(profile.playerId)) {
+        throw new MatchContextError(
+          "invalid_incident_profile",
+          `${side} incident profile must belong to one unique lineup player: ${profile.playerId}`,
+        );
+      }
+      if (!incidentProfileValues(profile).every((value) => Number.isFinite(value) && value >= 0 && value <= 100)) {
+        throw new MatchContextError(
+          "invalid_incident_profile",
+          `${side} incident profile values must be finite and inside 0..100: ${profile.playerId}`,
+        );
+      }
+      seenPlayerIds.add(profile.playerId);
+    }
+  }
+}
+
+function incidentProfileValues(profile: MatchPlayerIncidentProfile): readonly number[] {
+  return [
+    profile.tackling,
+    profile.composure,
+    profile.determination,
+    profile.stamina,
+    profile.agility,
+    profile.strength,
+    profile.penalties,
+    profile.goalkeeperReflexes,
+    profile.goalkeeperHandling,
+    profile.startingFitness,
+  ];
 }
 
 /**

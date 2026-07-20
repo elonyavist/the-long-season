@@ -3,9 +3,14 @@ import { deriveRng } from "@game/shared";
 
 import { buildMatchRngKey, matchRngKeyParts, type MatchContext } from "./match-context.ts";
 import { createMatchExplanationTrace, type MatchExplanationTrace } from "./match-explanation-trace.ts";
-import { createInitialMatchSimulationState, type MatchScore, type MatchSimulationState, type MatchSimulationStats } from "./match-simulation-state.ts";
+import type { MatchScore, MatchSimulationState, MatchSimulationStats } from "./match-simulation-state.ts";
 import type { OccasionResolver } from "./occasion-resolver.ts";
-import { stepMatch, type MatchStepEvent } from "./step-match.ts";
+import {
+  createProgressiveMatchSession,
+  ProgressiveMatchSessionError,
+  runProgressiveMatchToMinute,
+} from "./progressive-match-session.ts";
+import type { MatchStepEvent } from "./step-match.ts";
 
 /**
  * Completed aggregate match simulation output.
@@ -89,52 +94,45 @@ export function runMatchSimulation(input: RunMatchSimulationInput): SimulateMatc
     throw new SimulateMatchError("invalid_max_step_count", `maxStepCount must be a positive safe integer: ${maxStepCount}`);
   }
 
-  let simulation = createInitialMatchSimulationState(input.context);
-  const events: MatchStepEvent[] = [];
-
-  for (let stepCount = 0; stepCount < maxStepCount; stepCount += 1) {
-    const nextMinute = simulation.minute + 1;
-    const preparedSimulation = input.beforeStep === undefined ? simulation : input.beforeStep(simulation, nextMinute);
-    const stepResult =
-      input.occasionResolver === undefined
-        ? stepMatch({ simulation: preparedSimulation, rng })
-        : stepMatch({
-            simulation: preparedSimulation,
-            rng,
-            occasionResolver: input.occasionResolver,
-          });
-
-    simulation = stepResult.simulation;
-    events.push(...stepResult.events);
-
-    if (stepResult.isComplete) {
-      const result: SimulateMatchResult = {
-        fixtureId: input.context.fixtureId,
-        finalMinute: simulation.minute,
-        isComplete: true,
-        score: simulation.score,
-        stats: simulation.stats,
-        events,
-      };
-
-      if (input.includeExplanationTrace !== true) {
-        return result;
-      }
-
-      return {
-        ...result,
-        explanationTrace: createMatchExplanationTrace({
-          context: input.context,
-          score: simulation.score,
-          stats: simulation.stats,
-          events,
-        }),
-      };
+  let completed;
+  try {
+    completed = runProgressiveMatchToMinute(
+      createProgressiveMatchSession(input.context),
+      rng,
+      input.context.engineConfig.minuteCount,
+      {
+        maxStepCount,
+        ...(input.occasionResolver === undefined ? {} : { occasionResolver: input.occasionResolver }),
+        ...(input.beforeStep === undefined ? {} : { beforeMinute: input.beforeStep }),
+      },
+    ).state;
+  } catch (error) {
+    if (error instanceof ProgressiveMatchSessionError && error.code === "step_limit_exceeded") {
+      throw new SimulateMatchError(
+        "step_limit_exceeded",
+        `Match did not complete within ${maxStepCount} steps for fixture ${input.context.fixtureId}`,
+      );
     }
+    throw error;
   }
 
-  throw new SimulateMatchError(
-    "step_limit_exceeded",
-    `Match did not complete within ${maxStepCount} steps for fixture ${input.context.fixtureId}`,
-  );
+  const result: SimulateMatchResult = {
+    fixtureId: input.context.fixtureId,
+    finalMinute: completed.simulation.minute,
+    isComplete: completed.phase === "full_time",
+    score: completed.simulation.score,
+    stats: completed.simulation.stats,
+    events: completed.events,
+  };
+
+  if (input.includeExplanationTrace !== true) return result;
+  return {
+    ...result,
+    explanationTrace: createMatchExplanationTrace({
+      context: completed.simulation.context,
+      score: completed.simulation.score,
+      stats: completed.simulation.stats,
+      events: completed.events,
+    }),
+  };
 }

@@ -172,25 +172,22 @@ test("wide journey keeps every current football decision surface coherent", asyn
     await assertFullWidthPreMatch(page, "wide Matchday");
     await capture(page, "19b-pre-match-wide");
 
-    await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
-    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect.poll(() => liveMatchPhase(page)).toMatchObject({ phase: "first_half" });
+    await expect(page.locator("[data-motion-checkpoint='first_half']")).toBeVisible();
     await expect(page.locator("[data-motion-checkpoint='first_half']"))
       .toHaveAttribute("data-motion-active", "true");
     await capture(page, "19c-first-half-wide");
-    await advanceClockUntilPlaybackStage(page, "closing");
-    await page.clock.runFor(950);
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
     await capture(page, "19d-half-time-wide");
 
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
-    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='second_half']")).toBeVisible();
     await capture(page, "19e-second-half-wide");
-    await advanceClockUntilPlaybackStage(page, "closing");
-    await page.clock.runFor(950);
-    await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeVisible();
     await assertNoPageOverflow(page, "wide Full time");
     await capture(page, "19f-full-time-wide");
-    await page.clock.resume();
   } finally {
     await page.close();
   }
@@ -392,7 +389,7 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
     await capture(page, "41-preparation-partial-dirty-desktop");
 
     const partialFingerprint = await currentPreparationFingerprint(page);
-    await page.locator(".tls-preparation-dashboard").click();
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
     const partialDialog = page.locator(".tls-unsaved-dialog");
     await expect(partialDialog.getByRole("heading", { name: "Leave team preparation?", exact: true })).toBeVisible();
     await expect(partialDialog).toHaveAttribute("data-motion-state", "open");
@@ -403,7 +400,7 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
     await partialDialog.getByRole("button", { name: "Stay", exact: true }).click();
     expect(await currentPreparationFingerprint(page)).toBe(partialFingerprint);
 
-    await page.locator(".tls-preparation-dashboard").click();
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
     await partialDialog.getByRole("button", { name: "Discard changes", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Prepare match", exact: true }).click();
@@ -471,7 +468,7 @@ test("narrow preparation keeps validation, board, and dirty dialog usable", asyn
     await assertNoPageOverflow(page, "partial preparation narrow");
     await capture(page, "49-preparation-partial-narrow");
 
-    await page.locator(".tls-preparation-dashboard").click();
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await assertNoPageOverflow(page, "preparation dialog narrow");
     await capture(page, "50-preparation-dialog-narrow");
@@ -511,13 +508,37 @@ test("approved tactical-board interactions remain intact inside the current prep
     await dragTacticalSlotToNorm(page, "gk", 0.5, 0.15);
     expect(await tacticalSlotNorm(page, "gk")).toEqual(goalkeeperBefore);
 
-    await dragTacticalSlotToNorm(page, "cm-right", 0.5, 0.1);
-    expect((await tacticalSlotNorm(page, "cm-right")).ny).toBeGreaterThanOrEqual(0.4);
+    await dragTacticalSlotToNorm(page, "cm-right", 0.5, 0.32);
+    await expect(page.locator(".tls-tactical-board-adaptation")).toBeVisible();
+    await expect(page.locator(".tls-tactical-board-adaptation-role").filter({ hasText: "TRQ" })).toHaveCount(1);
+    await assertTacticalPopoverPlacement(page, 0.5, 0.32);
+    await capture(page, "52a-role-adaptation-popover-desktop");
+    await page.getByRole("button", { name: "Apply changes", exact: true }).click();
+    await expect(page.locator("[data-slot-id='cm-right'][data-role='TRQ']")).toHaveCount(1);
+    await rightClickTacticalSlot(page, "cm-right");
+    await expect(page.locator("[data-role-option='TRQ']")).toHaveCount(1);
+    await expect(page.locator("[data-role-option='ATT']")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    const starterBeforeSwap = await page.locator("[data-slot-id='cm-left'] .tls-tactical-board-token-name")
+      .textContent();
+    const substituteBeforeSwap = await page.locator("[data-bench-slot-id='bench:01'] .tls-tactical-bench-player-name")
+      .textContent();
+    await dragTacticalSlotToBench(page, "cm-left", "bench:01");
+    await expect(page.locator("[data-slot-id='cm-left'] .tls-tactical-board-token-name"))
+      .toHaveText(substituteBeforeSwap ?? "");
+    await expect(page.locator("[data-bench-slot-id='bench:01'] .tls-tactical-bench-player-name"))
+      .toHaveText(starterBeforeSwap ?? "");
+    await dragBenchSlotToTacticalSlot(page, "bench:01", "cm-left");
+    await expect(page.locator("[data-slot-id='cm-left'] .tls-tactical-board-token-name"))
+      .toHaveText(starterBeforeSwap ?? "");
+    await expect(page.locator("[data-bench-slot-id='bench:01'] .tls-tactical-bench-player-name"))
+      .toHaveText(substituteBeforeSwap ?? "");
 
     const previousSuitability = await page.locator("[data-slot-id='rm']").first().getAttribute("data-suitability");
     await dragTacticalSlotToNorm(page, "rm", 0.9, 0.2);
-    await rightClickTacticalSlot(page, "rm");
-    await page.locator(".tls-tactical-board-menu-item").filter({ hasText: "AD" }).first().click();
+    await expect(page.locator(".tls-tactical-board-adaptation-role").filter({ hasText: "AD" })).toHaveCount(1);
+    await page.getByRole("button", { name: "Apply changes", exact: true }).click();
     await expect(page.locator("[data-slot-id='rm'][data-role='AD']")).toHaveCount(1);
     await expect(page.locator(".tls-tactical-board-header").getByText("4-3-3", { exact: true })).toBeVisible();
     await assertTacticalMotionOwnership(page, "role-adjusted lineup");
@@ -526,6 +547,16 @@ test("approved tactical-board interactions remain intact inside the current prep
     await rightClickTacticalSlot(page, "rm");
     await page.getByRole("button", { name: /Remove from lineup/i }).click();
     await page.locator(".tls-tactical-board-empty-slot[data-slot-id='rm']").click();
+    const assignmentMenuGeometry = await page.locator(".tls-tactical-board-menu-popover").evaluate((popover) => ({
+      clientWidth: popover.clientWidth,
+      scrollWidth: popover.scrollWidth,
+      fieldWidth: popover.parentElement?.clientWidth ?? 0,
+    }));
+    expect(assignmentMenuGeometry.scrollWidth).toBeLessThanOrEqual(assignmentMenuGeometry.clientWidth + 1);
+    expect(assignmentMenuGeometry.clientWidth).toBeLessThanOrEqual(351);
+    expect(assignmentMenuGeometry.clientWidth).toBeGreaterThanOrEqual(
+      Math.min(350, assignmentMenuGeometry.fieldWidth - 16) - 1,
+    );
     const suitabilityOrder = await page.locator(".tls-player-candidate-row").evaluateAll((rows) =>
       rows.map((row) => row.getAttribute("data-suitability") ?? ""),
     );
@@ -533,6 +564,7 @@ test("approved tactical-board interactions remain intact inside the current prep
     expect(suitabilityOrder.map(tacticalSuitabilityRank)).toEqual(
       [...suitabilityOrder].map(tacticalSuitabilityRank).sort((left, right) => left - right),
     );
+    await capture(page, "52b-tactical-board-player-selector-desktop");
     await page.keyboard.press("Escape");
 
     const firstBenchSlot = page.locator("[data-bench-slot-id='bench:01']");
@@ -637,8 +669,8 @@ test("narrow task stays in the first useful viewport at zoom and reduced motion"
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).tap();
-    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
-    await page.getByRole("button", { name: "Pause", exact: true }).tap();
+    await expect(page.locator("[data-motion-checkpoint='first_half']")).toBeVisible();
+    await page.locator(".tls-matchday-playback-toggle").tap();
     await page.getByRole("button", { name: "Playback speed 2x", exact: true }).tap();
     await assertMatchdayInteractiveTargets(page, "narrow paused first-half playback");
     await assertNoPageOverflow(page, "narrow paused first-half playback");
@@ -677,7 +709,7 @@ test("one explicit start command presents the first half and stops at the canoni
 
     await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
-    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='first_half']")).toBeVisible();
     const playbackControls = page.getByRole("region", { name: "Playback controls", exact: true });
     await expect(playbackControls).toBeVisible();
     await expect(page.getByRole("button", { name: "Playback speed 1x", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -691,19 +723,38 @@ test("one explicit start command presents the first half and stops at the canoni
     await expect(liveCommentary).toHaveAttribute("data-motion-category", "transition");
     await expect(page.locator(".tls-matchday-score [data-score-motion]")).toHaveCount(2);
     await expect(page.locator(".tls-matchday-score [data-score-changed='true']")).toHaveCount(0);
+    const matchClock = page.locator(".tls-matchday-clock");
+    await expect(matchClock).toBeVisible();
+    await expect(matchClock).toHaveAttribute("data-clock-running", "true");
+    await expect(matchClock.locator("[data-motion-clock-minute]")).toHaveText(/\d+'/);
+    await expect(page.locator(".tls-matchday-score-status")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Pause", exact: true })).toHaveCount(1);
+    const clockHierarchy = await page.evaluate(() => {
+      const clock = document.querySelector<HTMLElement>(".tls-matchday-clock");
+      const score = document.querySelector<HTMLElement>(".tls-matchday-score");
+      return {
+        clock: clock === null ? 0 : Number.parseFloat(getComputedStyle(clock).fontSize),
+        score: score === null ? 0 : Number.parseFloat(getComputedStyle(score).fontSize),
+      };
+    });
+    expect(clockHierarchy.clock).toBeGreaterThanOrEqual(clockHierarchy.score * 0.65);
+    expect(clockHierarchy.clock).toBeLessThan(clockHierarchy.score);
     await expect(playbackControls.locator("[data-motion-control]")).toHaveCount(4);
     await expect(page.locator(".tls-match-centre-live-feed, .tls-match-centre-live-phase")).toHaveCount(0);
     await assertMatchdayInteractiveTargets(page, "first-half playback");
     const openingPageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
     await capture(page, "63-first-half-opening");
 
-    await page.getByRole("button", { name: "Pause", exact: true }).tap();
+    await playbackControls.getByRole("button", { name: "Pause", exact: true }).tap();
     await expect(playbackControls).toHaveAttribute("data-paused", "true");
+    await expect(matchClock).toHaveAttribute("data-clock-running", "false");
+    const pausedCommentaryKey = await liveCommentary.getAttribute("data-motion-commentary-key");
     await page.clock.runFor(5_000);
-    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect(liveCommentary).toHaveAttribute("data-motion-commentary-key", pausedCommentaryKey ?? "");
     await capture(page, "63a-first-half-paused");
 
-    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await playbackControls.getByRole("button", { name: "Resume", exact: true }).click();
+    await expect(matchClock).toHaveAttribute("data-clock-running", "true");
     await page.getByRole("button", { name: "Playback speed 2x", exact: true }).click();
     await expect(playbackControls).toHaveAttribute("data-speed", "2x");
     await capture(page, "63b-first-half-speed-2x");
@@ -717,24 +768,23 @@ test("one explicit start command presents the first half and stops at the canoni
     let sawDetailMoment = false;
     let sawGoalMoment = false;
     for (let elapsed = 0; elapsed <= 60_000; elapsed += 50) {
-      const playbackStage = await liveCommentary.getAttribute("data-playback-stage");
-      if (playbackStage === "closing") break;
-      const priority = await page.locator(".tls-match-centre").getAttribute("data-playback-priority");
-      if ((priority === "ordinary" || priority === "significant") && !sawDetailMoment) {
+      if (await page.locator("[data-motion-checkpoint='half_time']").count() > 0) break;
+      const priority = await liveCommentary.getAttribute("data-commentary-priority");
+      if ((priority === "detail" || priority === "secondary") && !sawDetailMoment) {
         sawDetailMoment = true;
         await expect(liveCommentary).toHaveCount(1);
-        await expect(liveCommentary).toHaveAttribute("data-commentary-priority", "detail");
         await expect(liveCommentary).toHaveAttribute("data-motion-category", "transition");
         await expect(page.locator(".tls-matchday-score [data-score-changed='true']")).toHaveCount(0);
         expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(openingPageHeight);
         await capture(page, "64c-first-half-detail-moment");
-        await page.getByRole("button", { name: "Pause", exact: true }).click();
+        await playbackControls.getByRole("button", { name: "Pause", exact: true }).click();
+        const pausedKey = await liveCommentary.getAttribute("data-motion-commentary-key");
         await page.clock.runFor(2_000);
-        await expect(page.locator(`.tls-match-centre[data-playback-priority='${priority}']`)).toBeVisible();
-        await page.getByRole("button", { name: "Resume", exact: true }).click();
+        await expect(liveCommentary).toHaveAttribute("data-motion-commentary-key", pausedKey ?? "");
+        await playbackControls.getByRole("button", { name: "Resume", exact: true }).click();
       }
       const commentaryPriority = await liveCommentary.getAttribute("data-commentary-priority");
-      if (priority === "goal" && commentaryPriority === "goal") {
+      if (commentaryPriority === "goal") {
         sawGoalMoment = true;
         break;
       }
@@ -751,29 +801,29 @@ test("one explicit start command presents the first half and stops at the canoni
         .toHaveAttribute("data-motion-category", "narrative");
       expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(openingPageHeight);
       await capture(page, "64-first-half-goal-hold");
-      await page.getByRole("button", { name: "Pause", exact: true }).click();
+      await playbackControls.getByRole("button", { name: "Pause", exact: true }).click();
+      const pausedGoalKey = await liveCommentary.getAttribute("data-motion-commentary-key");
       await page.clock.runFor(5_000);
-      await expect(page.locator(".tls-match-centre[data-playback-priority='goal']")).toBeVisible();
+      await expect(liveCommentary).toHaveAttribute("data-motion-commentary-key", pausedGoalKey ?? "");
       await capture(page, "64a-first-half-goal-paused");
-      await page.getByRole("button", { name: "Resume", exact: true }).click();
+      await playbackControls.getByRole("button", { name: "Resume", exact: true }).click();
     }
 
     if (!sawDetailMoment) {
       for (let elapsed = 0; elapsed <= 60_000; elapsed += 50) {
-        const playbackStage = await liveCommentary.getAttribute("data-playback-stage");
-        if (playbackStage === "closing") break;
-        const priority = await page.locator(".tls-match-centre").getAttribute("data-playback-priority");
-        if (priority === "ordinary" || priority === "significant") {
+        if (await page.locator("[data-motion-checkpoint='half_time']").count() > 0) break;
+        const priority = await liveCommentary.getAttribute("data-commentary-priority");
+        if (priority === "detail" || priority === "secondary") {
           sawDetailMoment = true;
-          await expect(liveCommentary).toHaveAttribute("data-commentary-priority", "detail");
           await expect(liveCommentary).toHaveAttribute("data-motion-category", "transition");
           await expect(page.locator(".tls-matchday-score [data-score-changed='true']")).toHaveCount(0);
           expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(openingPageHeight);
           await capture(page, "64c-first-half-detail-moment");
-          await page.getByRole("button", { name: "Pause", exact: true }).click();
+          await playbackControls.getByRole("button", { name: "Pause", exact: true }).click();
+          const pausedKey = await liveCommentary.getAttribute("data-motion-commentary-key");
           await page.clock.runFor(2_000);
-          await expect(page.locator(`.tls-match-centre[data-playback-priority='${priority}']`)).toBeVisible();
-          await page.getByRole("button", { name: "Resume", exact: true }).click();
+          await expect(liveCommentary).toHaveAttribute("data-motion-commentary-key", pausedKey ?? "");
+          await playbackControls.getByRole("button", { name: "Resume", exact: true }).click();
           break;
         }
         await page.clock.runFor(50);
@@ -782,7 +832,6 @@ test("one explicit start command presents the first half and stops at the canoni
     expect(sawDetailMoment).toBe(true);
     await advanceClockUntilPlaybackStage(page, "closing");
     await capture(page, "65-first-half-closing");
-    await page.clock.runFor(950);
 
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
     await expect(page.locator("[data-motion-checkpoint='half_time']"))
@@ -798,10 +847,10 @@ test("one explicit start command presents the first half and stops at the canoni
     await expect(halfTimeTabs.getByRole("tab", { name: "Summary", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(halfTimeTabs.getByRole("tab", { name: "Tactics", exact: true })).toBeEnabled();
     await expect(page.getByRole("heading", { name: "Decision signals", exact: true })).toHaveCount(0);
-    await expect(page.getByText("0/5 changes", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("0/5 changes", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Half-time board", exact: true })).toHaveCount(0);
     await expect(page.getByText("Half-time score", { exact: true })).toHaveCount(0);
-    await expect.poll(() => activeMatchCheckpoint(page)).toMatchObject({ phase: "half_time" });
+    await expect.poll(() => liveMatchPhase(page)).toMatchObject({ phase: "half_time" });
     await expectMainFocus(page);
     await assertSkipLinkRestingOffCanvas(page, "desktop half-time checkpoint");
     await assertMatchdayTabsContained(page, halfTimeTabs, "desktop half-time checkpoint");
@@ -814,6 +863,18 @@ test("one explicit start command presents the first half and stops at the canoni
     await assertHalfTimeInteractiveTargets(page);
     await capture(page, "66-half-time-arrival");
 
+    await halfTimeTabs.getByRole("tab", { name: "Tactics", exact: true }).click();
+    const liveStarterBeforeSwap = await page.locator("[data-slot-id='st-left'] .tls-tactical-board-token-name")
+      .textContent();
+    const liveSubstituteBeforeSwap = await page.locator("[data-bench-slot-id='bench:01'] .tls-tactical-bench-player-name")
+      .textContent();
+    await dragTacticalSlotToBench(page, "st-left", "bench:01");
+    await expect(page.locator("[data-slot-id='st-left'] .tls-tactical-board-token-name"))
+      .toHaveText(liveSubstituteBeforeSwap ?? "");
+    await expect(page.locator("[data-bench-slot-id='bench:01'] .tls-tactical-bench-player-name"))
+      .toHaveText(liveStarterBeforeSwap ?? "");
+    await halfTimeTabs.getByRole("tab", { name: "Summary", exact: true }).click();
+
     await setHalfTimeEventLight(page);
     await expect(page.locator(".tls-match-tabellino")).toHaveCount(0);
     await assertNoPageOverflow(page, "desktop event-light half-time checkpoint");
@@ -825,7 +886,7 @@ test("one explicit start command presents the first half and stops at the canoni
     await expect(page.getByTestId("app-entry-screen")).toBeVisible();
     await page.getByRole("button", { name: "Continue career", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
-    await expect.poll(() => durableMatchFacts(page)).toEqual({ activeCheckpoint: false, playedFixtures: 0 });
+    await expect.poll(() => durableMatchFacts(page)).toEqual({ playedFixtures: 0 });
   } finally {
     await page.close();
   }
@@ -842,15 +903,17 @@ test("reduced motion reaches the same half-time decision without interpolated cl
     await page.getByRole("button", { name: "New career", exact: true }).click();
     await page.getByRole("button", { name: "Prepare match", exact: true }).click();
     await prepareMatch(page);
+    await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
 
+    await advanceClockUntilPlaybackStage(page, "closing");
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
     await expect(page.locator("[data-motion-checkpoint='half_time']"))
       .toHaveAttribute("data-motion-active", "false");
     await expect(page.locator("[data-motion-checkpoint-panel='half_time']"))
       .toHaveAttribute("data-motion-active", "false");
     await expect(page.getByRole("button", { name: "Play to half-time", exact: true })).toHaveCount(0);
-    await expect.poll(() => activeMatchCheckpoint(page)).toMatchObject({ phase: "half_time" });
+    await expect.poll(() => liveMatchPhase(page)).toMatchObject({ phase: "half_time" });
     await expectMainFocus(page);
     await assertSkipLinkRestingOffCanvas(page, "reduced-motion half-time checkpoint");
     await assertNoPageOverflow(page, "reduced-motion half-time checkpoint");
@@ -871,7 +934,7 @@ test("reduced motion reaches the same half-time decision without interpolated cl
       .toHaveAttribute("data-motion-active", "false");
     await expect(page.getByRole("heading", { name: "Half-time board", exact: true })).toBeVisible();
     await assertTacticalMotionOwnership(page, "half-time tactics");
-    const formationSelect = page.locator(".tls-match-centre-half-time-toolbar select");
+    const formationSelect = page.locator(".tls-matchday-tactical-toolbar select");
     await expect(formationSelect).toHaveValue("4-4-2");
     const rightMidfielderBefore = await tacticalSlotNorm(page, "rm");
     await dragTacticalSlotToNorm(
@@ -916,13 +979,14 @@ test("reduced motion reaches the same half-time decision without interpolated cl
       document.documentElement.style.fontSize = "";
     });
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
+    await advanceClockUntilPlaybackStage(page, "closing");
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeVisible();
     await expect(page.locator("[data-motion-checkpoint='full_time']"))
       .toHaveAttribute("data-motion-active", "false");
     await expect(page.locator("[data-motion-checkpoint-panel='full_time']"))
       .toHaveAttribute("data-motion-active", "false");
     await expect(page.getByRole("button", { name: "Play to full time", exact: true })).toHaveCount(0);
-    await expect.poll(() => durableMatchFacts(page)).toEqual({ activeCheckpoint: false, playedFixtures: 1 });
+    await expect.poll(() => durableMatchFacts(page)).toEqual({ playedFixtures: 0 });
     await expectMainFocus(page);
     await assertSkipLinkRestingOffCanvas(page, "reduced-motion full-time review");
     await assertFullTimeFootballReview(page, "reduced-motion full-time review");
@@ -936,26 +1000,26 @@ test("reduced motion reaches the same half-time decision without interpolated cl
 
     const fullTimeTabs = page.getByRole("tablist", { name: "Full-time review views", exact: true });
     await assertMatchdayTabsContained(page, fullTimeTabs, "reduced-motion full-time review");
+    const summaryTab = fullTimeTabs.getByRole("tab", { name: "Summary", exact: true });
     const selectedTeamTab = fullTimeTabs.getByRole("tab", { name: "Your team", exact: true });
     const opponentTab = fullTimeTabs.getByRole("tab", { name: "Opponent", exact: true });
-    const consequencesTab = fullTimeTabs.getByRole("tab", { name: "Consequences", exact: true });
-    await selectedTeamTab.focus();
+    await expect(summaryTab).toHaveAttribute("aria-selected", "true");
+    await summaryTab.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(selectedTeamTab).toBeFocused();
+    await expect(selectedTeamTab).toHaveAttribute("aria-selected", "true");
+    await assertNoPageOverflow(page, "reduced-motion selected-team full-time review");
+    await capture(page, "68a-full-time-selected-team-narrow");
+
     await page.keyboard.press("ArrowRight");
     await expect(opponentTab).toBeFocused();
     await expect(opponentTab).toHaveAttribute("aria-selected", "true");
     await assertNoPageOverflow(page, "reduced-motion opponent full-time review");
-    await capture(page, "68a-full-time-opponent-narrow");
-
-    await page.keyboard.press("ArrowRight");
-    await expect(consequencesTab).toBeFocused();
-    await expect(consequencesTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator(".tls-match-centre-consequences")).toBeVisible();
-    await assertNoPageOverflow(page, "reduced-motion consequences full-time review");
-    await capture(page, "68aa-full-time-consequences-narrow");
+    await capture(page, "68aa-full-time-opponent-narrow");
 
     await page.keyboard.press("Home");
-    await expect(selectedTeamTab).toBeFocused();
-    await expect(selectedTeamTab).toHaveAttribute("aria-selected", "true");
+    await expect(summaryTab).toBeFocused();
+    await expect(summaryTab).toHaveAttribute("aria-selected", "true");
 
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
@@ -985,7 +1049,6 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await page.clock.install();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
     await advanceClockUntilPlaybackStage(page, "closing");
-    await page.clock.runFor(950);
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
 
     await setMatchdayCommandActivity(page, "pending", "play_second_half");
@@ -995,7 +1058,7 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await setMatchdayCommandActivity(page, "clear", "play_second_half");
 
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
-    await expect(page.locator("[data-playback-stage='opening']")).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint='second_half']")).toBeVisible();
     await expect(page.locator("[data-motion-checkpoint='second_half']"))
       .toHaveAttribute("data-motion-active", "true");
     await expect(page.locator(".tls-match-broadcast-live-line")).toHaveCount(1);
@@ -1007,15 +1070,14 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await capture(page, "72-second-half-event");
     await advanceClockUntilPlaybackStage(page, "closing");
     await capture(page, "73-second-half-closing");
-    await page.clock.runFor(950);
 
-    await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeVisible();
     await expect(page.locator("[data-motion-checkpoint='full_time']"))
       .toHaveAttribute("data-motion-active", "true");
     await expect(page.locator("[data-motion-checkpoint-panel='full_time']"))
       .toHaveAttribute("data-motion-active", "true");
     await expect(page.getByRole("button", { name: "Play to full time", exact: true })).toHaveCount(0);
-    await expect.poll(() => durableMatchFacts(page)).toEqual({ activeCheckpoint: false, playedFixtures: 1 });
+    await expect.poll(() => durableMatchFacts(page)).toEqual({ playedFixtures: 0 });
     await assertFullTimeFootballReview(page, "desktop full-time review");
     await assertCompactTabellino(page, "desktop full-time review", true);
     await assertNoPageOverflow(page, "desktop full-time review");
@@ -1027,37 +1089,9 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await assertNoPageOverflow(page, "desktop opponent full-time review");
     await capture(page, "74e-full-time-opponent");
 
-    await selectFullTimeReviewTab(page, "Consequences");
-    await expect(page.locator(".tls-match-centre-consequences")).toBeVisible();
-    await assertNoPageOverflow(page, "desktop consequences full-time review");
-    await capture(page, "74f-full-time-consequences");
-
     await selectFullTimeReviewTab(page, "Your team");
-
-    await setFullTimeVisualScenario(page, "loss");
-    await expect(page.getByText("Defeat", { exact: true })).toBeVisible();
-    await assertFullTimeFootballReview(page, "desktop full-time loss review");
-    await capture(page, "74a-full-time-loss");
-
-    await setFullTimeVisualScenario(page, "win");
-    await expect(page.getByText("Win", { exact: true })).toBeVisible();
-    await assertFullTimeFootballReview(page, "desktop full-time win review");
-    await capture(page, "74b-full-time-win");
-
-    await setFullTimeVisualScenario(page, "draw");
-    await expect(page.getByText("Draw", { exact: true })).toBeVisible();
-    await assertFullTimeFootballReview(page, "desktop full-time draw review");
-    await capture(page, "74c-full-time-draw");
-
-    await setFullTimeVisualScenario(page, "event-light");
-    await expect(page.locator(".tls-match-tabellino")).toHaveCount(0);
-    await assertFullTimeFootballReview(page, "desktop event-light full-time review");
-    await capture(page, "74d-full-time-event-light");
-
-    await selectFullTimeReviewTab(page, "Consequences");
-    await expect(page.getByText("No notable individual changes after this match.", { exact: true })).toBeVisible();
-    await assertNoPageOverflow(page, "desktop event-light consequences review");
-    await capture(page, "74g-full-time-event-light-consequences");
+    await assertNoPageOverflow(page, "desktop selected-team full-time review");
+    await capture(page, "74f-full-time-selected-team");
 
     await page.clock.resume();
     page.once("dialog", (dialog) => dialog.accept());
@@ -1065,13 +1099,14 @@ test("one half-time confirmation presents the second half and arrives at full ti
     await expect(page.getByTestId("app-entry-screen")).toBeVisible();
     await page.getByRole("button", { name: "Continue career", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
-    await expect.poll(() => durableMatchFacts(page)).toEqual({ activeCheckpoint: false, playedFixtures: 0 });
+    await expect.poll(() => durableMatchFacts(page)).toEqual({ playedFixtures: 0 });
   } finally {
     await page.close();
   }
 });
 
 test("the second fixture returns to preparation and starts without a false storage failure", async ({ browser }) => {
+  test.setTimeout(180_000);
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
     await resetCareerStorage(page);
@@ -1080,14 +1115,21 @@ test("the second fixture returns to preparation and starts without a false stora
     await page.getByRole("button", { name: "Prepare match", exact: true }).click();
     await prepareMatch(page);
     await page.getByRole("button", { name: "Start match", exact: true }).click();
+    await expect(page.locator("[data-motion-checkpoint]"))
+      .toHaveAttribute("data-motion-checkpoint", "first_half");
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Return to dashboard", exact: true }).click();
+    await expect(page.locator("[data-motion-checkpoint]"))
+      .toHaveAttribute("data-motion-checkpoint", "second_half");
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
 
     await page.locator(".tls-dashboard-primary-action").click();
     await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+    await acknowledgeDueAttentionUntilMatchday(page);
     await expect(page.getByRole("button", { name: "Prepare match", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Prepare match", exact: true }).click();
 
@@ -1106,9 +1148,12 @@ test("the second fixture returns to preparation and starts without a false stora
 
     await page.getByRole("button", { name: "Confirm and go to match", exact: true }).click();
     await page.getByRole("button", { name: "Start match", exact: true }).click();
+    await expect(page.locator("[data-motion-checkpoint]"))
+      .toHaveAttribute("data-motion-checkpoint", "first_half");
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
     await expect(page.locator(".tls-storage-recovery[data-state='recovery']")).toHaveCount(0);
-    await expect.poll(() => activeMatchCheckpoint(page)).toMatchObject({ phase: "half_time" });
+    await expect.poll(() => liveMatchPhase(page)).toMatchObject({ phase: "half_time" });
   } finally {
     await page.close();
   }
@@ -1198,7 +1243,8 @@ async function dragTacticalSlotToNorm(page: Page, slotId: string, nx: number, ny
     pointerType: "mouse",
   });
   if (slotId !== "gk") {
-    await expect(page.locator(".tls-tactical-board-active-zone")).toBeAttached();
+    await expect(page.locator(".tls-tactical-board-role-destinations")).toBeAttached();
+    expect(await page.locator(".tls-tactical-board-role-destination").count()).toBeGreaterThan(0);
   }
   await svg.dispatchEvent("pointerup", {
     bubbles: true,
@@ -1210,7 +1256,66 @@ async function dragTacticalSlotToNorm(page: Page, slotId: string, nx: number, ny
     pointerId: 73,
     pointerType: "mouse",
   });
-  await expect(page.locator(".tls-tactical-board-active-zone")).toHaveCount(0);
+  await expect(page.locator(".tls-tactical-board-role-destinations")).toHaveCount(0);
+}
+
+/** Drags one starter across the SVG boundary onto a fixed bench slot. */
+async function dragTacticalSlotToBench(page: Page, slotId: string, benchSlotId: string): Promise<void> {
+  await page.locator(".tls-tactical-workspace-grid").scrollIntoViewIfNeeded();
+  const start = await tacticalSlotCenter(page, slotId);
+  const targetBox = await page.locator(`[data-bench-slot-id="${benchSlotId}"]`).boundingBox();
+  if (targetBox === null) throw new Error(`Missing tactical bench slot ${benchSlotId}.`);
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height / 2,
+    { steps: 8 },
+  );
+  await expect(page.locator(".tls-tactical-drag-preview")).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator(".tls-tactical-drag-preview")).toHaveCount(0);
+}
+
+/** Drags one available substitute onto a lineup slot in the shared tactical workspace. */
+async function dragBenchSlotToTacticalSlot(page: Page, benchSlotId: string, slotId: string): Promise<void> {
+  await page.locator(".tls-tactical-workspace-grid").scrollIntoViewIfNeeded();
+  const startBox = await page.locator(`[data-bench-slot-id="${benchSlotId}"]`).boundingBox();
+  if (startBox === null) throw new Error(`Missing tactical bench slot ${benchSlotId}.`);
+  const target = await tacticalSlotCenter(page, slotId);
+
+  await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 8 });
+  await expect(page.locator(".tls-tactical-drag-preview")).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator(".tls-tactical-drag-preview")).toHaveCount(0);
+}
+
+/** Verifies a role-adaptation panel remains readable, in bounds, and close to its normalized anchor. */
+async function assertTacticalPopoverPlacement(page: Page, anchorNx: number, anchorNy: number): Promise<void> {
+  const fieldBox = await page.locator(".tls-tactical-board-field").boundingBox();
+  const popoverBox = await page.locator(".tls-tactical-board-menu-popover").boundingBox();
+  if (fieldBox === null || popoverBox === null) throw new Error("Missing tactical popover geometry.");
+
+  expect(popoverBox.width).toBeGreaterThan(240);
+  expect(popoverBox.x).toBeGreaterThanOrEqual(fieldBox.x - 1);
+  expect(popoverBox.y).toBeGreaterThanOrEqual(fieldBox.y - 1);
+  expect(popoverBox.x + popoverBox.width).toBeLessThanOrEqual(fieldBox.x + fieldBox.width + 1);
+  expect(popoverBox.y + popoverBox.height).toBeLessThanOrEqual(fieldBox.y + fieldBox.height + 1);
+
+  const anchorX = fieldBox.x + fieldBox.width * anchorNx;
+  const anchorY = fieldBox.y + fieldBox.height * anchorNy;
+  const horizontalDistance = distanceFromRange(anchorX, popoverBox.x, popoverBox.x + popoverBox.width);
+  const verticalDistance = distanceFromRange(anchorY, popoverBox.y, popoverBox.y + popoverBox.height);
+  expect(Math.hypot(horizontalDistance, verticalDistance)).toBeLessThanOrEqual(48);
+}
+
+function distanceFromRange(value: number, minimum: number, maximum: number): number {
+  if (value < minimum) return minimum - value;
+  if (value > maximum) return value - maximum;
+  return 0;
 }
 
 /** Dispatches the current touch long-press gesture, optionally exceeding its cancellation threshold. */
@@ -1293,6 +1398,26 @@ async function resetCareerStorage(page: Page): Promise<void> {
   await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByTestId("app-entry-screen")).toBeVisible();
   await expect(page.getByRole("button", { name: "New career", exact: true })).toBeEnabled();
+}
+
+/**
+ * Follows the real Continue contract when post-match consequences precede the
+ * next matchday message. Opening important facts acknowledges them, then the
+ * shell command advances to the next canonical attention boundary.
+ */
+async function acknowledgeDueAttentionUntilMatchday(page: Page): Promise<void> {
+  const prepareMatch = page.getByRole("button", { name: "Prepare match", exact: true });
+
+  for (let handled = 0; handled < 8; handled += 1) {
+    if (await prepareMatch.isVisible()) return;
+
+    const continueCareer = page.getByRole("button", { name: "Continue", exact: true });
+    await expect(continueCareer).toBeEnabled();
+    await continueCareer.click();
+    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+  }
+
+  throw new Error("Expected Continue to reach the next matchday decision");
 }
 
 /** Completes the existing deterministic preparation path without bypassing UI commands. */
@@ -1437,46 +1562,109 @@ async function setMatchdayCommandActivity(
   }, { nextStatus: status, nextCommandId: commandId });
 }
 
-/** Advances the installed Playwright clock until the requested playback stage appears. */
+/** Runs the canonical minute loop at 4x until the next checkpoint or event. */
 async function advanceClockUntilPlaybackStage(
   page: Page,
   stage: "event" | "closing",
+  clock: "controlled" | "real" = "controlled",
 ): Promise<void> {
-  for (let elapsed = 0; elapsed <= 60_000; elapsed += 50) {
-    if (await page.locator(`[data-playback-stage='${stage}']`).count() > 0) return;
-    await page.clock.runFor(50);
+  const activePhase = await page.locator("[data-motion-checkpoint]").getAttribute("data-motion-checkpoint");
+  if (stage === "closing" && (activePhase === "half_time" || activePhase === "full_time")) return;
+  const targetPhase = activePhase === "first_half" ? "half_time" : "full_time";
+  const initialCommentaryKey = await page.locator(".tls-match-broadcast-live-line")
+    .getAttribute("data-motion-commentary-key");
+
+  const openingDecisionAction = page.locator(
+    ".tls-matchday-primary-action[data-action-id='resolve_incident'], "
+    + ".tls-matchday-primary-action[data-action-id='resume_match']",
+  );
+  if (await openingDecisionAction.count() > 0 && await openingDecisionAction.first().isVisible()) {
+    await openingDecisionAction.first().click();
   }
-  throw new Error(`Matchday playback did not reach ${stage}`);
+
+  const speedFour = page.getByRole("button", { name: "Playback speed 4x", exact: true });
+  await expect(speedFour).toBeVisible();
+  if (await speedFour.getAttribute("aria-pressed") !== "true") {
+    await speedFour.click();
+  }
+  await expect(speedFour).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".tls-matchday-playback-controls"))
+    .toHaveAttribute("data-speed", "4x");
+
+  const deadline = Date.now() + 30_000;
+  const checkpoint = page.locator("[data-motion-checkpoint]");
+  const commentary = page.locator(".tls-match-broadcast-live-line");
+  for (let tick = 0; tick < 400 && Date.now() <= deadline; tick += 1) {
+    const decisionAction = page.locator(
+      ".tls-matchday-primary-action[data-action-id='resolve_incident'], "
+      + ".tls-matchday-primary-action[data-action-id='resume_match']",
+    );
+    if (await decisionAction.count() > 0 && await decisionAction.first().isVisible()) {
+      await decisionAction.first().click();
+    }
+    const phase = await checkpoint.evaluateAll((elements) => (
+      elements[0]?.getAttribute("data-motion-checkpoint") ?? null
+    ));
+    if (stage === "closing" && phase === targetPhase) return;
+    if (stage === "event" && await commentary.count() > 0) {
+      const commentaryEventId = await commentary.getAttribute("data-event-id");
+      const commentaryKey = await commentary.getAttribute("data-motion-commentary-key");
+      if (commentaryEventId !== null && commentaryKey !== initialCommentaryKey) return;
+    }
+    if (clock === "controlled") await page.clock.runFor(250);
+    // Yield long enough for React to publish the completed minute and arm the next one.
+    await page.waitForTimeout(50);
+  }
+  const diagnostic = await page.evaluate(async () => {
+    const modulePath = "/src/stores/career-ui-store.ts";
+    const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+    const state = useCareerUiStore.getState();
+    return {
+      command: state.commandActivity,
+      phase: state.matchdayState?.liveProgress?.snapshot.phase,
+      minute: state.matchdayState?.liveProgress?.snapshot.currentMinute,
+      runState: state.matchdayState?.liveProgress?.snapshot.runState,
+      pendingDecision: state.matchdayState?.liveProgress?.pendingDecision,
+      screen: state.screen,
+      storageFailure: state.storageFailure,
+      controls: document.querySelectorAll(".tls-matchday-playback-controls").length,
+      checkpoints: document.querySelectorAll("[data-motion-checkpoint]").length,
+      primaryAction: document.querySelector<HTMLElement>(".tls-matchday-primary-action")?.dataset.actionId,
+      bodyText: document.body.innerText.slice(0, 500),
+      speed: document.querySelector<HTMLElement>(".tls-matchday-playback-controls")?.dataset.speed,
+    };
+  });
+  throw new Error(`Progressive Matchday did not reach ${stage}: ${JSON.stringify(diagnostic)}`);
 }
 
-/** Reads the in-memory checkpoint through the public UI store. */
-async function activeMatchCheckpoint(page: Page): Promise<Readonly<{ phase?: string }>> {
+/** Reads the current memory-only live phase through the public UI store. */
+async function liveMatchPhase(page: Page): Promise<Readonly<{ phase?: string }>> {
   return page.evaluate(async () => {
     const modulePath = "/src/stores/career-ui-store.ts";
     const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
-    const checkpoint = useCareerUiStore.getState().activeCareerState?.activeMatchCheckpoint;
-    return checkpoint === undefined ? {} : { phase: checkpoint.phase };
+    const phase = useCareerUiStore.getState().matchdayState?.liveProgress?.snapshot.phase;
+    return phase === undefined ? {} : { phase };
   });
 }
 
-/** Reprojects the durable half-time checkpoint as an event-light UI fixture. */
+/** Reprojects the in-memory half-time snapshot as an event-light UI fixture. */
 async function setHalfTimeEventLight(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const modulePath = "/src/stores/career-ui-store.ts";
     const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
     const matchdayState = useCareerUiStore.getState().matchdayState;
-    const stagedProgress = matchdayState?.stagedProgress;
-    if (matchdayState === undefined || stagedProgress === undefined) {
-      throw new Error("Expected an active staged match");
+    const liveProgress = matchdayState?.liveProgress;
+    if (matchdayState === undefined || liveProgress === undefined) {
+      throw new Error("Expected an active progressive match");
     }
 
     useCareerUiStore.setState({
       matchdayState: {
         ...matchdayState,
-        stagedProgress: {
-          ...stagedProgress,
+        liveProgress: {
+          ...liveProgress,
           snapshot: {
-            ...stagedProgress.snapshot,
+            ...liveProgress.snapshot,
             events: [],
             score: { home: 0, away: 0 },
           },
@@ -1486,55 +1674,10 @@ async function setHalfTimeEventLight(page: Page): Promise<void> {
   });
 }
 
-/** Reprojects one committed report for deterministic full-time visual variants only. */
-async function setFullTimeVisualScenario(
-  page: Page,
-  scenario: "win" | "draw" | "loss" | "event-light",
-): Promise<void> {
-  await page.evaluate(async (nextScenario) => {
-    const modulePath = "/src/stores/career-ui-store.ts";
-    const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
-    const matchdayState = useCareerUiStore.getState().matchdayState;
-    const playedResult = matchdayState?.playedResult;
-    if (matchdayState === undefined || playedResult === undefined) {
-      throw new Error("Expected a committed match review");
-    }
-
-    const selectedClubIsHome = playedResult.fixtureAfter.homeClubId
-      === playedResult.careerState.selectedClubId;
-    const homeWins = nextScenario === "win" ? selectedClubIsHome : !selectedClubIsHome;
-    const score = nextScenario === "event-light"
-      ? { home: 0, away: 0 }
-      : nextScenario === "draw"
-        ? { home: 1, away: 1 }
-        : homeWins
-          ? { home: 1, away: 0 }
-          : { home: 0, away: 1 };
-    const report = {
-      ...playedResult.report,
-      score,
-      ...(nextScenario === "event-light" ? { events: [] } : {}),
-    };
-
-    useCareerUiStore.setState({
-      matchdayState: {
-        ...matchdayState,
-        playedResult: {
-          ...playedResult,
-          report,
-          ...(nextScenario === "event-light"
-            ? { conditionChanges: [], playerStateConsequences: [] }
-            : {}),
-        },
-      },
-    });
-  }, scenario);
-}
-
 /** Reads durable-baseline match facts after a real browser refresh. */
 async function durableMatchFacts(
   page: Page,
-): Promise<Readonly<{ activeCheckpoint: boolean; playedFixtures: number }>> {
+): Promise<Readonly<{ playedFixtures: number }>> {
   return page.evaluate(async () => {
     const modulePath = "/src/stores/career-ui-store.ts";
     const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
@@ -1542,7 +1685,6 @@ async function durableMatchFacts(
     if (career === undefined) throw new Error("Expected loaded career");
     const fixtures = career.gameState.fixtures as Record<string, { result?: { played?: boolean } }>;
     return {
-      activeCheckpoint: career.activeMatchCheckpoint !== undefined,
       playedFixtures: Object.values(fixtures)
         .filter((fixture) => fixture?.result?.played === true).length,
     };
@@ -1617,11 +1759,18 @@ async function captureDashboardStates(
     await page.getByRole("button", { name: "Go to match", exact: true }).click();
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Start match", exact: true }).click();
+    await expect(page.locator("[data-motion-checkpoint]"))
+      .toHaveAttribute("data-motion-checkpoint", "first_half");
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
     await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start second half", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Return to dashboard", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
+    await expect(page.locator("[data-motion-checkpoint]"))
+      .toHaveAttribute("data-motion-checkpoint", "second_half");
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true }))
+      .toBeVisible();
     await clearDashboardAttention(page);
     await expect(page.locator(".tls-dashboard-priority")).toHaveAttribute("data-task-state", "post_match");
     await assertDashboardPrimaryCommand(page, "Continue");
@@ -1817,7 +1966,7 @@ async function assertMatchdayTabsContained(
 /** Guards Matchday playback and primary commands against undersized targets. */
 async function assertMatchdayInteractiveTargets(page: Page, checkpoint: string): Promise<void> {
   const undersized = await page.locator(
-    ".tls-matchday-playback-controls button, .tls-match-broadcast-action",
+    ".tls-matchday-playback-controls button, .tls-matchday-primary-action",
   ).evaluateAll((elements) => elements
     .filter((element) => {
       const style = getComputedStyle(element);
@@ -1899,14 +2048,14 @@ async function assertFullTimeFootballReview(page: Page, checkpoint: string): Pro
   await expect(review).toBeVisible();
   await expect(tabs).toBeVisible();
   await expect(tabs.getByRole("tab")).toHaveCount(3);
+  await expect(tabs.getByRole("tab", { name: "Summary", exact: true })).toBeEnabled();
   await expect(tabs.getByRole("tab", { name: "Your team", exact: true })).toBeEnabled();
   await expect(tabs.getByRole("tab", { name: "Opponent", exact: true })).toBeEnabled();
-  await expect(tabs.getByRole("tab", { name: "Consequences", exact: true })).toBeEnabled();
   await expect(activePanel).toBeVisible();
   await expect(review.getByRole("tabpanel")).toHaveCount(1);
   await expect(review.locator(".tls-matchday-table")).toHaveCount(0);
   await expect(page.locator(".tls-app-shell-right-rail")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Return to dashboard", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toHaveCount(1);
 
   const copy = (await review.textContent())?.toLowerCase() ?? "";
   expect(copy, `${checkpoint} exposes a technical fallback`).not.toMatch(/\b(?:fixture:|unknown)\b|next action/);
@@ -1925,18 +2074,21 @@ async function assertFullTimeFootballReview(page: Page, checkpoint: string): Pro
 /** Opens one final-review tab and validates its single focused panel. */
 async function selectFullTimeReviewTab(
   page: Page,
-  tabName: "Your team" | "Opponent" | "Consequences",
+  tabName: "Summary" | "Your team" | "Opponent",
 ): Promise<void> {
   const review = page.locator(".tls-match-centre-full-time");
   const tab = review.getByRole("tab", { name: tabName, exact: true });
   await tab.click();
   await expect(tab).toHaveAttribute("aria-selected", "true");
 
-  if (tabName !== "Consequences") {
+  if (tabName !== "Summary") {
     const ratings = review.locator(".tls-match-team-ratings");
     await expect(ratings).toBeVisible();
     expect(await ratings.locator(".tls-match-centre-rating-row").count()).toBeGreaterThan(0);
+    return;
   }
+
+  await expect(review.locator(".tls-match-statistics")).toBeVisible();
 }
 
 /** Guards the single bounded match record shared by live and review states. */

@@ -11,10 +11,14 @@ const homeClub = { clubId: "club:home", name: "U.S. Pisa" };
 const awayClub = { clubId: "club:away", name: "S.S. Perugia" };
 
 describe("MatchdayTabellino", () => {
-  it("renders chronological home and away lanes with stronger goal hierarchy", () => {
+  it("renders newest-first home and away incidents with stronger goal hierarchy", () => {
     const markup = render(view([
+      incident(
+        event("event:sub", 62, "substitution", awayClub, "Marco Esposito", "Nico Pavoni"),
+        "away",
+        "secondary",
+      ),
       incident(event("event:goal", 14, "goal", homeClub, "Filippo Costa"), "home", "goal"),
-      incident(event("event:sub", 62, "substitution", awayClub, "Marco Esposito"), "away", "secondary"),
     ]));
 
     expect(markup).toContain("Match tabellino");
@@ -28,7 +32,10 @@ describe("MatchdayTabellino", () => {
     expect(markup).toContain('data-motion-category="transition"');
     expect(markup).toContain('data-motion-incident="event:sub"');
     expect(markup).toContain('data-side="away"');
-    expect(markup.indexOf("14&#x27;")).toBeLessThan(markup.indexOf("62&#x27;"));
+    expect(markup).toContain('data-incident-kind="goal"');
+    expect(markup).toContain('data-incident-kind="substitution"');
+    expect(markup).toContain("In: Marco Esposito · Out: Nico Pavoni");
+    expect(markup.indexOf("62&#x27;")).toBeLessThan(markup.indexOf("14&#x27;"));
     expect(markup).toContain('aria-label="14&#x27; Goal U.S. Pisa Filippo Costa"');
     expect(markup).not.toContain('tabindex="0"');
   });
@@ -47,6 +54,22 @@ describe("MatchdayTabellino", () => {
 
     expect(markup).toContain('data-has-overflow="true"');
     expect(markup).toContain('class="tls-match-tabellino-list" aria-label="Match tabellino" tabindex="0"');
+  });
+
+  it("renders a scored penalty as one goal row without a secondary player", () => {
+    const penaltyGoal = {
+      ...event("event:penalty-outcome", 57, "penalty_goal", homeClub, "Matteo Moro"),
+      labelKey: "career.matchday.event.penalty_goal_record",
+    };
+    const markup = render(view([incident(penaltyGoal, "home", "goal")]));
+
+    expect(markup).toContain('class="tls-match-tabellino-incident is-goal"');
+    expect(markup).toContain('data-incident-kind="penalty_goal"');
+    expect(markup).toContain("⚽");
+    expect(markup).toContain("Goal (penalty)");
+    expect(markup).toContain("Matteo Moro");
+    expect(markup).not.toContain("Penalty scored");
+    expect(markup).not.toContain("Giorgio Trevisan");
   });
 });
 
@@ -80,9 +103,10 @@ function incident(
 function event(
   eventId: string,
   minute: number,
-  kind: "goal" | "substitution",
+  kind: "goal" | "penalty_goal" | "substitution",
   club: typeof homeClub,
   playerName: string,
+  secondaryPlayerName?: string,
 ): CareerMatchdayPhaseEventView {
   return {
     eventId,
@@ -91,6 +115,7 @@ function event(
     kind,
     club,
     playerName,
+    ...(secondaryPlayerName === undefined ? {} : { secondaryPlayerName }),
     labelKey: `career.matchday.event.${kind}`,
     cardPriority: kind === "goal" ? "major" : "normal",
   };

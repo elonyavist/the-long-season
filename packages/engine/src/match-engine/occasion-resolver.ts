@@ -31,6 +31,10 @@ export interface OccasionResolution {
   readonly quality: number;
   /** Whether the outcome counts as a shot on target. */
   readonly isShotOnTarget: boolean;
+  /** Calibrated conversion probability accumulated as xG exactly once. */
+  readonly expectedGoals: number;
+  /** Whether this concrete non-goal shot outcome awards a corner. */
+  readonly resultsInCorner: boolean;
 }
 
 /**

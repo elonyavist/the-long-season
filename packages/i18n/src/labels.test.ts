@@ -154,7 +154,7 @@ test("translates web matchday labels in every supported language", () => {
   assert.equal(translate("it", "career.matchday.action.start_second_half"), "Inizia secondo tempo");
   assert.equal(translate("en", "career.matchday.halfTimeTabs"), "Half-time views");
   assert.equal(translate("en", "career.matchday.fullTimeTabs"), "Full-time review views");
-  assert.equal(translate("it", "career.matchday.fullTimeTab.consequences"), "Conseguenze");
+  assert.equal(translate("it", "career.matchday.fullTimeTab.summary"), "Riepilogo");
   assert.equal(translate("it", "career.matchday.halfTimeTab.summary"), "Sintesi");
   assert.equal(translate("de", "career.matchday.halfTimeTab.tactics"), "Taktik");
   assert.equal(translate("es", "career.matchday.halfTimeTab.selectedTeam"), "Tu equipo");
@@ -164,14 +164,14 @@ test("translates web matchday labels in every supported language", () => {
   assert.equal(translate("de", "career.matchday.halfTimeSignal.contributor"), "Schlussel");
   assert.equal(translate("es", "career.matchday.noPlayerRatings"), "Todavia no hay valoraciones disponibles.");
   assert.equal(
-    translate("fr", "career.matchday.noPostMatchConsequences"),
-    "Aucun changement individuel notable apres ce match.",
+    translate("fr", "career.matchday.consequence.injury", { severity: "legere", date: "2026-08-08" }),
+    "Blessure : legere, indisponible jusqu'au 2026-08-08",
   );
   assert.equal(
     translate("fr", "career.matchday.halfTimeTacticsUnavailable"),
     "La tactique de mi-temps n'est pas disponible pour ce match.",
   );
-  assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Return to dashboard");
+  assert.equal(translate("en", "career.matchday.action.back_to_dashboard"), "Continue");
   assert.equal(translate("en", "career.matchday.scoreState.label"), "Your side");
   assert.equal(translate("en", "career.matchday.phaseProgress"), "Match phase progress");
   assert.equal(translate("en", "career.matchday.playback.pause"), "Pause");

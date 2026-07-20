@@ -236,10 +236,19 @@
 }
 
 .tls-career-shell-date {
-  color: var(--tls-color-text-muted);
+  display: inline-block;
+  min-block-size: 1.5rem;
+  color: color-mix(in srgb, var(--tls-color-text) 78%, var(--tls-color-text-muted));
   font-family: var(--tls-font-mono);
-  font-size: var(--tls-font-size-xs);
+  font-size: var(--tls-font-size-md);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  transform-origin: left center;
+}
+
+.tls-career-shell-date[data-advancing="true"] {
+  color: var(--tls-theme-primary-action-surface);
 }
 
 .tls-app-shell {
@@ -254,7 +263,7 @@
 
 .tls-app-shell-sidebar {
   position: sticky;
-  top: var(--tls-space-4);
+  top: var(--tls-space-3);
   display: grid;
   gap: var(--tls-space-3);
   min-width: 0;
@@ -393,12 +402,6 @@
 .tls-app-shell[data-shell-mode="matchday"] .tls-app-shell-main {
   width: 100%;
   max-width: none;
-}
-
-.tls-app-shell-continue {
-  width: 100%;
-  min-height: 3.25rem;
-  text-transform: uppercase;
 }
 
 .tls-app-shell-posta {

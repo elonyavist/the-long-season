@@ -1438,9 +1438,76 @@ Completion:
   accessibility proof, ownership inventory, and visual evidence are recorded
   in `docs/audits/WEB_MOTION_SYSTEM_REPORT.md`.
 
-### Phase 77 - Market UI MVP With Budget Visibility
+### Phase 77 - Live Match Control, Statistics And In-Game Decisions
 
-Primary dependency: future Squad screen and future web persistence.
+Primary dependency: complete Phases 75 and 76 plus the current deterministic
+Matchday/career commit path.
+
+Purpose:
+
+- Replace half-at-once Matchday progression with one deterministic minute
+  session used by batch and interactive drivers.
+- Add real live statistics, incidents, manager/AI decisions, substitutions,
+  and tactical reactions before expanding into another web section.
+- Close the engine-to-browser football loop with durable injury, discipline,
+  participation, and Posta consequences at completed-fixture commit.
+
+User-facing reason:
+
+- A football manager becomes fun when the manager can read a changing match,
+  intervene at the right moment, and understand why the decision mattered.
+
+Minimum useful scope:
+
+- pre-match, first half, half time, second half, and full-time session states;
+- `1x`, `2x`, `4x`, unlimited manual pause, and automatic injury/red-card/
+  half-time decision pauses;
+- causal possession, shots, shots on target, xG, corners, fouls, cards, saves,
+  goals, condition, and ratings;
+- maximum-five, no-re-entry substitutions with no window limit in the current
+  playable league slice;
+- deterministic AI substitutions and tactical changes;
+- shared tactical-board drag/drop and accessible command alternatives;
+- cumulative tabellino, live statistics, and full-time consequence tabs;
+- deterministic `50 worlds x 1 season` quality gate.
+
+What must not happen:
+
+- No second simulator, cosmetic statistic, UI-owned rule, live storage
+  checkpoint, or per-minute write.
+- No extra time, shootout, cup branch, pass completion, offside model, VAR,
+  2D/3D viewer, or unsupported competition placeholder.
+- No duplicate tactical board, runtime LLM, or animation-driven gameplay.
+
+Definition of Done:
+
+- The same deterministic minute engine powers batch and live Matchday.
+- Manager and AI decisions affect later minutes through one validated command
+  path.
+- Statistics, incidents, ratings, and consequences remain structured,
+  reproducible, and storage-safe.
+- The complete browser flow passes desktop/narrow, keyboard/touch, 200% text,
+  reduced-motion, accessibility, and full repository gates.
+- All ten documented steps and the final phase report are complete.
+
+Completion:
+
+- Steps 01-10 are complete. The canonical progressive minute session now owns
+  batch and live Matchday; unfinished play is memory-only; manager and AI
+  changes share one validated command path; and full-time `Continua` publishes
+  career/table/Posta consequences once.
+- The repeated `50 worlds x 1 season` gate passes all `15,300` fixtures with
+  zero structural failure and stable hash
+  `396aaed146613af94950c0a6365b548e`. The final calibrated sample produces
+  `3.156` goals and `0.186` penalties awarded per match without loosening the
+  existing target profile. The full Node 24 package, browser,
+  accessibility, dependency, monorepo, diff, and Graphify gates pass; detailed
+  evidence is in `docs/audits/LIVE_MATCH_CONTROL_REPORT.md`.
+
+### Phase 78 - Market UI MVP With Budget Visibility
+
+Primary dependency: complete Phase 77, the future Squad screen, and current web
+persistence.
 
 Purpose:
 
@@ -1473,9 +1540,9 @@ Definition of Done:
 - The user can make a permanent transfer decision that changes the save and
   creates a visible squad consequence.
 
-### Phase 78 - Finances Foundation And Poverty Loop MVP
+### Phase 79 - Finances Foundation And Poverty Loop MVP
 
-Primary dependency: Phase 77 market UI and existing budget state.
+Primary dependency: Phase 78 market UI and existing budget state.
 
 Purpose:
 
@@ -1508,7 +1575,7 @@ Definition of Done:
 - At least one manager decision is constrained by money in a visible,
   understandable way.
 
-### Phase 79 - Promotion Pyramid And La Scalata Foundation
+### Phase 80 - Promotion Pyramid And La Scalata Foundation
 
 Primary dependency: Phase 63 canonical season advancement and enough persistence
 to survive multiple seasons.
@@ -1536,16 +1603,16 @@ What must not happen:
 - No continental cups.
 - No all-five-nation full pyramid in the first slice.
 - No real-club licensing or real names.
-- No economy/facility requirements unless Phase 78 already supports them.
+- No economy/facility requirements unless Phase 79 already supports them.
 
 Definition of Done:
 
 - A deterministic career can move clubs between divisions and preserve coherent
   history.
 
-### Phase 80 - Youth, Staff, Facilities, And Archive Expansion Plan
+### Phase 81 - Youth, Staff, Facilities, And Archive Expansion Plan
 
-Primary dependency: Phases 69, 70, 74, 75, and 76.
+Primary dependency: Phases 69, 70, 74, 75, 76, and 77.
 
 Purpose:
 
@@ -1573,7 +1640,7 @@ Definition of Done:
 
 - The next pillar is selected with evidence, not because it was next in a list.
 
-### Phase 81 - Narrative Content Factory And Corpus Foundation
+### Phase 82 - Narrative Content Factory And Corpus Foundation
 
 Primary dependency: a playable matchday loop, durable structured match/world
 events, and at least one surface where narrative variety would improve user
@@ -1652,22 +1719,21 @@ Current status:
     - complete
 18. `Phase 76 - Web Motion Language And Football Feedback System`
     - complete
+19. `Phase 77 - Live Match Control, Statistics And In-Game Decisions`
+    - complete
 
 Next recommendation:
 
-1. Document `Future Web Backlog - Squad Screen And Player Memory Foundation`
-   as the next bounded phase before Market UI work.
+1. Plan `Phase 78 - Market UI MVP With Budget Visibility` only after satisfying
+   its documented Squad-screen dependency.
 
 Reason:
 
-- Phase 76 has closed the shared motion and command-feedback foundation without
-  changing structured football facts, persistence, or tactical ownership.
-- The player lifecycle and SQLite/OPFS career baseline already exist, while a
-  useful Squad screen is still the dependency that lets the manager understand
-  players before entering the Market workflow.
-- Phase 75 is complete. Its `10000 x 50` gate passes with zero failed worlds and
-  zero structural roster, goalkeeper, youth, age, potential, or lifecycle
-  collapse.
+- Phase 77 closes the live football loop and removes its checkpoint and
+  half-time-only compatibility paths. Market work can now consume completed
+  availability, budget, Posta, and squad facts without coupling to live ticks.
+- The Squad dependency must be satisfied first so transfer decisions land in a
+  real inspectable roster instead of creating a market-only dead end.
 
 ## Relationship To Web Section Roadmap
 

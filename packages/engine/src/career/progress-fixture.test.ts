@@ -8,6 +8,7 @@ import {
   clubId,
   competitionId,
   createCareerState,
+  createCompetitionMatchRules,
   createEmptyPlayerParticipationLedger,
   createMarketState,
   fixtureId,
@@ -29,15 +30,16 @@ import {
 } from "@game/domain";
 
 import {
-  createInitialStagedMatchState,
-  progressStagedMatchToFullTime,
-  progressStagedMatchToHalfTime,
+  simulateMatch,
   type MatchEngineConfig,
   type MatchTeamContext,
 } from "../match-engine/index.ts";
-import { createStagedMatchCheckpoint } from "./active-match-checkpoint.ts";
+import { createMatchReport } from "../match-engine/create-match-report.ts";
 import { monthKeyForCareerDate } from "./advance-career-month.ts";
-import { commitStagedCareerFixture, progressNextCareerFixture } from "./progress-fixture.ts";
+import {
+  commitCompletedCareerFixture,
+  progressNextCareerFixture,
+} from "./progress-fixture.ts";
 
 /**
  * Career progression tests prove one selected-club fixture can be simulated and
@@ -62,6 +64,7 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.equal(result.status, "advanced");
@@ -74,8 +77,9 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
     assert.equal(result.careerState.gameState.fixtures[selectedFixtureId]?.result?.played, true);
     assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 4);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.fitness, 92);
-    assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.form, 50);
-    assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.morale, 50);
+    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.form, 50);
+    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.morale, 50);
+    assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-02")]?.form, 50);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.fitness, 100);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.form, 50);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.morale, 50);
@@ -143,6 +147,7 @@ test("progressNextCareerFixture closes crossed monthly lifecycle before accruing
       [otherClubId]: teamContextFixture(otherClubId, 10),
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.equal(result.status, "advanced");
@@ -168,59 +173,54 @@ test("progressNextCareerFixture is deterministic for the same state and team con
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   };
 
   assert.deepEqual(progressNextCareerFixture(input), progressNextCareerFixture(input));
 });
 
-test("commitStagedCareerFixture applies the completed staged report once and clears its checkpoint", () => {
+test("commitCompletedCareerFixture publishes the watched final state without reconstructing its last minute", () => {
   const selectedClubId = clubId("club:selected");
   const otherClubId = clubId("club:other");
   const selectedFixtureId = fixtureId("fixture:000001");
-  const baseCareer = careerStateFixture({
+  const careerState = careerStateFixture({
     selectedClubId,
     clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
     fixtures: [fixtureFixture(selectedFixtureId, selectedClubId, otherClubId)],
   });
   const selectedTeam = teamContextFixture(selectedClubId, 12);
-  const initial = createInitialStagedMatchState({
+  const initialContext = {
     fixtureId: selectedFixtureId,
-    seed: baseCareer.gameState.meta.seed,
+    seed: careerState.gameState.meta.seed,
     home: selectedTeam,
     away: teamContextFixture(otherClubId, 10),
     engineConfig: matchEngineConfigFixture(),
-  });
-  const halfTime = progressStagedMatchToHalfTime(initial);
-  const checkpoint = createStagedMatchCheckpoint({
-    state: halfTime.state,
-    selectedClubSide: "home",
-    selectedClubBenchSlots: [],
-  });
-  const career = createCareerState({ ...baseCareer, activeMatchCheckpoint: checkpoint });
-  const fullTime = progressStagedMatchToFullTime(halfTime.state);
-  const report = fullTime.snapshot.fullTimeReport;
+  };
+  const completed = simulateMatch(initialContext);
+  const report = createMatchReport(completed);
 
-  assert.ok(report);
-  const committed = commitStagedCareerFixture({
-    careerState: career,
+  const finalContext = {
+    ...initialContext,
+    home: {
+      ...initialContext.home,
+      lineup: initialContext.home.lineup.slice(1),
+    },
+  };
+  const committed = commitCompletedCareerFixture({
+    careerState,
     report,
-    selectedStarterIds: selectedTeam.lineup.map((slot) => slot.playerId),
+    initialContext,
+    finalContext,
+    selectedClubBenchPlayerIds: [],
+    appliedSubstitutions: [],
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.equal(committed.status, "advanced");
   if (committed.status === "advanced") {
     assert.deepEqual(committed.report, report);
-    assert.deepEqual(committed.fixtureAfter.result?.report, report);
-    assert.equal(committed.careerState.activeMatchCheckpoint, undefined);
+    assert.equal(committed.fixtureAfter.result?.played, true);
     assert.equal(committed.careerState.playerParticipationLedger?.rowKeys.length, 4);
-
-    const duplicate = commitStagedCareerFixture({
-      careerState: committed.careerState,
-      report,
-      selectedStarterIds: selectedTeam.lineup.map((slot) => slot.playerId),
-    });
-    assert.equal(duplicate.status, "invalid");
-    if (duplicate.status === "invalid") assert.equal(duplicate.reason, "fixture_already_played");
   }
 });
 
@@ -241,6 +241,7 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.equal(result.status, "advanced");
@@ -267,28 +268,28 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
       {
         fixtureId: selectedFixtureId,
         score: {
-          home: 1,
-          away: 3,
+          home: 2,
+          away: 2,
         },
-        eventCount: 23,
+        eventCount: 49,
         stats: {
           home: {
-            opportunities: 11,
-            shots: 11,
-            shotsOnTarget: 4,
-            goals: 1,
+            opportunities: 15,
+            shots: 15,
+            shotsOnTarget: 6,
+            goals: 2,
           },
           away: {
-            opportunities: 9,
-            shots: 9,
-            shotsOnTarget: 3,
-            goals: 3,
+            opportunities: 7,
+            shots: 7,
+            shotsOnTarget: 2,
+            goals: 2,
           },
         },
         fixtureAfterResult: {
           played: true,
-          homeGoals: 1,
-          awayGoals: 3,
+          homeGoals: 2,
+          awayGoals: 2,
         },
         currentDate: gameDate(20_000),
         conditionChanges: [
@@ -316,32 +317,21 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
         ],
         playerStateConsequences: [
           {
-            playerId: playerId("player:selected-01"),
-            participantRole: "starter",
-            beforeForm: 50,
-            afterForm: 49,
-            formDelta: -1,
-            beforeMorale: 50,
-            afterMorale: 48,
-            moraleDelta: -2,
-            reasonKeys: ["result_loss"],
-          },
-          {
             playerId: playerId("player:selected-02"),
             participantRole: "starter",
             beforeForm: 50,
-            afterForm: 52,
-            formDelta: 2,
+            afterForm: 55,
+            formDelta: 5,
             beforeMorale: 50,
-            afterMorale: 50,
-            moraleDelta: 0,
-            reasonKeys: ["result_loss", "player_goal"],
+            afterMorale: 54,
+            moraleDelta: 4,
+            reasonKeys: ["result_draw", "player_goal"],
           },
         ],
         playerStateConsequenceSummary: {
-          changedPlayerCount: 2,
-          totalFormDelta: 1,
-          totalMoraleDelta: -2,
+          changedPlayerCount: 1,
+          totalFormDelta: 5,
+          totalMoraleDelta: 4,
         },
         monthlyLifecycle: [],
       },
@@ -364,6 +354,7 @@ test("progressNextCareerFixture can include explanation trace without changing f
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   };
 
   const normal = progressNextCareerFixture(input);
@@ -402,6 +393,7 @@ test("progressNextCareerFixture reports negative selected-club condition impact 
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
     includeExplanationTrace: true,
   });
 
@@ -433,6 +425,7 @@ test("progressNextCareerFixture treats caller-supplied recovered state as the pr
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.equal(result.status, "advanced");
@@ -465,6 +458,7 @@ test("progressNextCareerFixture returns none when there is no fixture to advance
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.deepEqual(result, {
@@ -489,6 +483,7 @@ test("progressNextCareerFixture reports missing team context without simulating"
       [selectedClubId]: teamContextFixture(selectedClubId, 12),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.deepEqual(result, {
@@ -528,6 +523,7 @@ test("progressNextCareerFixture can build the non-selected opponent context with
       },
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.equal(result.status, "advanced");
@@ -566,6 +562,7 @@ test("progressNextCareerFixture never auto-builds the selected club lineup", () 
       },
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
   });
 
   assert.deepEqual(result, {
@@ -824,6 +821,19 @@ function matchEngineConfigFixture(): MatchEngineConfig {
       risk: { minInclusive: 0, maxInclusive: 1 },
     },
   };
+}
+
+/** Supplies the explicit playable-league discipline contract to career progression. */
+function competitionMatchRulesFixture() {
+  return createCompetitionMatchRules({
+    maximumSubstitutions: 5,
+    substitutionWindowLimit: null,
+    allowsPlayerReentry: false,
+    yellowCardAccumulationThreshold: 5,
+    straightRedSuspensionMatches: 3,
+    secondYellowSuspensionMatches: 1,
+    yellowAccumulationSuspensionMatches: 1,
+  });
 }
 
 function roleWeightsFixture() {

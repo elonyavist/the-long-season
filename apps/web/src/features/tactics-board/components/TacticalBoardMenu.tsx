@@ -14,6 +14,8 @@ import type { TacticalBoardSuitabilityLevel, TacticalBoardTokenPlayer } from "./
 import { suitabilityLabelKey } from "./TacticalBoardPlayerToken";
 
 export interface TacticalBoardMenuCandidatePlayer extends TacticalBoardTokenPlayer {
+  /** Specific football role shown instead of a broad department label. */
+  readonly roleCode?: TacticalBoardRoleCode;
   readonly roleKey?: string;
   readonly foot?: TacticalPlayerFoot;
 }
@@ -58,6 +60,7 @@ export function TacticalBoardMenu({
             <button
               className="tls-tactical-board-menu-item"
               data-current={option.isCurrent}
+              data-role-option={option.role}
               key={option.role}
               onClick={() => onRoleChange?.(option.role)}
               type="button"
@@ -92,7 +95,8 @@ export function TacticalBoardMenu({
               <PlayerCandidateRow
                 fitnessText={formatFitnessPercent(candidate.fitness, text)}
                 number={candidate.player.number}
-                roleLabel={text(candidate.player.roleKey === undefined ? "common.unknown" : roleLabelKey(candidate.player.roleKey))}
+                roleLabel={candidate.player.roleCode
+                  ?? text(candidate.player.roleKey === undefined ? "common.unknown" : roleLabelKey(candidate.player.roleKey))}
                 surname={candidate.player.surname}
                 suitabilityLabel={text(suitabilityLabelKey(candidate.suitability) as MessageKey)}
                 suitabilityTone={candidate.suitability}

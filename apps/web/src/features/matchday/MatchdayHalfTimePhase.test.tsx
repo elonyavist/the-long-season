@@ -23,7 +23,7 @@ describe("MatchdayHalfTimePhase", () => {
     const validationIssues = buildMatchdayHalfTimeValidationIssues(
       preparationView,
       fixture.draft.tacticalBoardDraft,
-      fixture.halfTimeSubstitutions,
+      fixture.teamControlPanel,
     );
     const markup = renderToStaticMarkup(
       React.createElement(MatchdayHalfTimePhase, {
@@ -32,12 +32,13 @@ describe("MatchdayHalfTimePhase", () => {
         validationIssues,
         matchPreparationView: preparationView,
         tacticalBoardDraft: fixture.draft.tacticalBoardDraft,
-        substitutionPanel: fixture.halfTimeSubstitutions,
+        substitutionPanel: fixture.teamControlPanel,
       }),
     );
 
     const summaryIndex = markup.indexOf("Half-time decisions");
     expect(summaryIndex).toBeGreaterThan(-1);
+    expect(markup).toContain('class="tls-visually-hidden"');
     expect(markup).toContain('role="tablist"');
     expect(markup).toContain('aria-label="Half-time views"');
     expect(markup).toContain('data-motion-active="false"');
@@ -52,7 +53,9 @@ describe("MatchdayHalfTimePhase", () => {
     expect(markup).toContain("Opponent");
     expect(markup).not.toContain("Tactical board");
     expect(markup).not.toContain("tls-tactical-bench-board");
-    expect(markup.match(/0\/5 changes/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("0/5 changes");
+    expect(markup).toContain('data-tone="watch"');
+    expect(markup).toContain('data-tone="positive"');
     expect(markup).not.toContain("Decision signals");
     expect(markup).not.toContain("Half-time score");
     expect(markup).not.toContain("First-half review");
@@ -67,7 +70,7 @@ describe("MatchdayHalfTimePhase", () => {
       { ...preparationView, blockerKeys: ["missing_lineup_slot"] },
       fixture.draft.tacticalBoardDraft,
       {
-        ...fixture.halfTimeSubstitutions,
+        ...fixture.teamControlPanel,
         validationFactKeys: ["missing_lineup_slot", "incoming_already_on_pitch"],
       },
     );

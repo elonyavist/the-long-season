@@ -1,23 +1,29 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as m from "motion/react-m";
 
 import type { Translator } from "@game/i18n";
 
-import { pointerToNorm, TACTICAL_BOARD_PITCH, toSvg } from "../tactical-board-geometry";
+import type { TacticalBenchSlotId } from "../tactical-board-bench";
+import { pointerToNorm, TACTICAL_BOARD_PITCH } from "../tactical-board-geometry";
 import {
   canChangeTacticalBoardSlotRole,
   canDragTacticalBoardSlot,
   shouldCancelTacticalBoardLongPress,
   TACTICAL_BOARD_LONG_PRESS_MS,
-  tacticalBoardZoneRect,
   type TacticalBoardPointerPoint,
 } from "../tactical-board-interactions";
-import { TACTICAL_BOARD_ROLES, tacticalBoardRoleOptionsForPosition } from "../tactical-board-roles";
+import {
+  TACTICAL_BOARD_ROLES,
+  tacticalBoardRoleDestinationAt,
+  tacticalBoardRoleOptionsForPosition,
+} from "../tactical-board-roles";
 import {
   sortTacticalBoardAssignmentCandidates,
   suitabilityForTacticalBoardAssignment,
 } from "../tactical-board-suitability";
 import type { TacticalBoardRoleCode, TacticalBoardSlot } from "../tactical-board-types";
+import { TacticalBoardAnchoredPopover } from "./TacticalBoardAnchoredPopover";
+import { TacticalBoardDragPreview } from "./TacticalBoardDragPreview";
 import { TacticalBoardEmptySlot } from "./TacticalBoardEmptySlot";
 import { TacticalBoardMenu } from "./TacticalBoardMenu";
 import { TacticalBoardPitchMarkings } from "./TacticalBoardPitchMarkings";
@@ -26,14 +32,21 @@ import {
   type TacticalBoardSuitabilityLevel,
   type TacticalBoardTokenPlayer,
 } from "./TacticalBoardPlayerToken";
+import { TacticalBoardRoleAdaptationPopover } from "./TacticalBoardRoleAdaptationPopover";
+import { TacticalBoardRoleDestinations } from "./TacticalBoardRoleDestinations";
 import { webMotion, webMotionTargets } from "../../../shared/motion/web-motion";
 
+/** Player projection accepted by every shared tactical-board consumer. */
 export interface TacticalBoardPitchPlayer extends TacticalBoardTokenPlayer {
+  /** Specific natural-position code shown in shared assignment menus. */
+  readonly roleCode?: TacticalBoardRoleCode;
   readonly suitabilityBySlotId?: Readonly<Record<string, TacticalBoardSuitabilityLevel>>;
   readonly suitabilityByRole?: Partial<Record<TacticalBoardRoleCode, TacticalBoardSuitabilityLevel>>;
   readonly fitness?: number;
+  readonly rating?: number;
 }
 
+/** Public interaction contract for the single shared tactical pitch. */
 export interface TacticalBoardPitchProps {
   readonly slots: readonly TacticalBoardSlot[];
   readonly players: readonly TacticalBoardPitchPlayer[];
@@ -47,6 +60,28 @@ export interface TacticalBoardPitchProps {
   readonly onRoleChange?: (slotId: string, role: TacticalBoardRoleCode) => void;
   readonly onRemove?: (slotId: string) => void;
   readonly onAssign?: (slotId: string, playerId: string) => void;
+  /** Explicit mode prevents live playback from exposing accidental edits. */
+  readonly mode?: "editable" | "view_only";
+  /** Lets an occupied XI token expose eligible substitutes as click fallback. */
+  readonly allowReplaceAssigned?: boolean;
+  /** Exchanges two XI assignments while preserving tactical slot identity. */
+  readonly onSlotExchange?: (firstSlotId: string, secondSlotId: string) => void;
+  /** Drops a starter onto one fixed substitute slot. */
+  readonly onPlayerDropOnBench?: (
+    lineupSlotId: string,
+    benchSlotId: TacticalBenchSlotId,
+  ) => void;
+  /** Applies one confirmed role and normalized destination atomically. */
+  readonly onRoleAdaptation?: (
+    slotId: string,
+    role: TacticalBoardRoleCode,
+    nx: number,
+    ny: number,
+  ) => void;
+  /** Reports active pitch drags so sibling drop surfaces can show feedback. */
+  readonly onDragActiveChange?: (active: boolean) => void;
+  /** Visually marks the pitch while a substitute is dragged toward the XI. */
+  readonly dropActive?: boolean;
 }
 
 interface TacticalBoardDragState {
@@ -54,6 +89,11 @@ interface TacticalBoardDragState {
   readonly pointerId: number;
   readonly start: TacticalBoardPointerPoint;
   readonly hasMoved: boolean;
+  readonly nx: number;
+  readonly ny: number;
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly outsidePitch: boolean;
 }
 
 interface TacticalBoardLongPressState {
@@ -66,7 +106,14 @@ interface TacticalBoardMenuState {
   readonly slotId: string;
 }
 
-/** Shared vertical tactical pitch used by match preparation and future tactics screens. */
+interface TacticalBoardAdaptationState {
+  readonly slotId: string;
+  readonly nx: number;
+  readonly ny: number;
+  readonly roles: readonly TacticalBoardRoleCode[];
+}
+
+/** Shared vertical tactical pitch used by preparation, tactics, and Matchday. */
 export function TacticalBoardPitch({
   slots,
   players,
@@ -79,6 +126,13 @@ export function TacticalBoardPitch({
   onRoleChange,
   onRemove,
   onAssign,
+  mode = "editable",
+  allowReplaceAssigned = false,
+  onSlotExchange,
+  onPlayerDropOnBench,
+  onRoleAdaptation,
+  onDragActiveChange,
+  dropActive = false,
 }: TacticalBoardPitchProps): React.JSX.Element {
   const playerById = new Map(players.map((player) => [player.playerId, player]));
   const selectedPlayerIds = useMemo(
@@ -89,15 +143,18 @@ export function TacticalBoardPitch({
     () => (availablePlayers ?? players).filter((player) => !selectedPlayerIds.has(player.playerId)),
     [availablePlayers, players, selectedPlayerIds],
   );
-  const [drag, setDrag] = useState<TacticalBoardDragState | undefined>();
-  const [menu, setMenu] = useState<TacticalBoardMenuState | undefined>();
+  const [drag, setDrag] = useState<TacticalBoardDragState>();
+  const [menu, setMenu] = useState<TacticalBoardMenuState>();
+  const [adaptation, setAdaptation] = useState<TacticalBoardAdaptationState>();
+  const svgRef = useRef<SVGSVGElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<TacticalBoardDragState | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<number | undefined>(undefined);
   const longPressStateRef = useRef<TacticalBoardLongPressState | undefined>(undefined);
   const suppressClickRef = useRef(false);
   const previousSlotFactsRef = useRef(tacticalBoardSlotFacts(slots));
   const previousFormationMotionKeyRef = useRef(formationMotionKey);
-
   const formationChanged = previousFormationMotionKeyRef.current !== formationMotionKey;
 
   useEffect(() => {
@@ -106,56 +163,49 @@ export function TacticalBoardPitch({
   }, [formationMotionKey, slots]);
 
   const activeDragSlot = drag === undefined ? undefined : slots.find((slot) => slot.slotId === drag.slotId);
+  const activeDragPlayer = playerForSlot(activeDragSlot, playerById);
   const activeMenuSlot = menu === undefined ? undefined : slots.find((slot) => slot.slotId === menu.slotId);
-  const activeMenuPlayer =
-    activeMenuSlot === undefined || activeMenuSlot.playerId === null ? undefined : playerById.get(activeMenuSlot.playerId);
+  const activeMenuPlayer = playerForSlot(activeMenuSlot, playerById);
+  const adaptationSlot = adaptation === undefined ? undefined : slots.find((slot) => slot.slotId === adaptation.slotId);
+  const adaptationPlayer = playerForSlot(adaptationSlot, playerById);
 
   useEffect(() => {
-    if (menu === undefined) {
-      return undefined;
-    }
+    if (menu === undefined && adaptation === undefined) return undefined;
 
-    const closeMenuWhenTargetIsOutsideActiveControls = (event: PointerEvent): void => {
-      if (!(event.target instanceof Node)) {
-        return;
-      }
-
-      if (menuRef.current?.contains(event.target) === true) {
-        return;
-      }
-
-      if (event.target instanceof Element && event.target.closest("[data-slot-id]") !== null) {
-        return;
-      }
-
+    const closeOutside = (event: PointerEvent): void => {
+      if (!(event.target instanceof Node) || menuRef.current?.contains(event.target) === true) return;
+      if (event.target instanceof Element && event.target.closest("[data-slot-id]") !== null) return;
       setMenu(undefined);
+      setAdaptation(undefined);
+    };
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      setMenu(undefined);
+      setAdaptation(undefined);
     };
 
-    const closeMenuOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") {
-        setMenu(undefined);
-      }
-    };
-
-    document.addEventListener("pointerdown", closeMenuWhenTargetIsOutsideActiveControls, true);
-    document.addEventListener("keydown", closeMenuOnEscape, true);
-
+    document.addEventListener("pointerdown", closeOutside, true);
+    document.addEventListener("keydown", closeOnEscape, true);
     return () => {
-      document.removeEventListener("pointerdown", closeMenuWhenTargetIsOutsideActiveControls, true);
-      document.removeEventListener("keydown", closeMenuOnEscape, true);
+      document.removeEventListener("pointerdown", closeOutside, true);
+      document.removeEventListener("keydown", closeOnEscape, true);
     };
-  }, [menu]);
+  }, [adaptation, menu]);
 
-  const clearLongPress = (): void => {
-    if (longPressTimerRef.current !== undefined) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = undefined;
-    }
-
+  const clearLongPress = useCallback((): void => {
+    if (longPressTimerRef.current !== undefined) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = undefined;
     longPressStateRef.current = undefined;
-  };
+  }, []);
+
+  const updateDrag = useCallback((nextDrag: TacticalBoardDragState | undefined): void => {
+    dragRef.current = nextDrag;
+    setDrag(nextDrag);
+  }, []);
 
   const openSlotMenu = (slotId: string): void => {
+    if (mode === "view_only") return;
+    setAdaptation(undefined);
     setMenu({ slotId });
     onSlotOpen?.(slotId);
   };
@@ -177,161 +227,200 @@ export function TacticalBoardPitch({
     }, TACTICAL_BOARD_LONG_PRESS_MS);
   };
 
-  const slotFromEventTarget = (target: EventTarget | null): TacticalBoardSlot | undefined => {
-    if (!(target instanceof Element)) {
-      return undefined;
-    }
-
-    const slotElement = target.closest("[data-slot-id]");
-    const slotId = slotElement?.getAttribute("data-slot-id");
-
+  const slotFromTarget = (target: EventTarget | null): TacticalBoardSlot | undefined => {
+    if (!(target instanceof Element)) return undefined;
+    const slotId = target.closest("[data-tactical-lineup-slot-id]")
+      ?.getAttribute("data-tactical-lineup-slot-id");
     return slotId === null || slotId === undefined ? undefined : slots.find((slot) => slot.slotId === slotId);
   };
 
   const openSlotFromClick = (slotId: string): void => {
-    if (suppressClickRef.current) {
-      return;
-    }
-
-    openSlotMenu(slotId);
+    if (!suppressClickRef.current) openSlotMenu(slotId);
   };
 
   const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>): void => {
-    if (event.button !== 0) {
-      return;
-    }
-
-    const slot = slotFromEventTarget(event.target);
-    if (slot === undefined) {
-      return;
-    }
+    if (mode === "view_only" || event.button !== 0) return;
+    const slot = slotFromTarget(event.target);
+    if (slot === undefined) return;
 
     setMenu(undefined);
+    setAdaptation(undefined);
     const start = { x: event.clientX, y: event.clientY };
-
-    if (event.pointerType !== "mouse") {
-      scheduleLongPress(slot.slotId, event.pointerId, start);
-    }
-
-    if (!canDragTacticalBoardSlot(slot)) {
-      return;
-    }
+    if (event.pointerType !== "mouse") scheduleLongPress(slot.slotId, event.pointerId, start);
+    if (!canDragTacticalBoardSlot(slot)) return;
 
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
-      // Some synthetic pointer events used by QA do not create a capturable native pointer.
+      // Synthetic QA pointer events do not always create a native capture.
     }
-    setDrag({ slotId: slot.slotId, pointerId: event.pointerId, start, hasMoved: false });
+    updateDrag({
+      slotId: slot.slotId,
+      pointerId: event.pointerId,
+      start,
+      hasMoved: false,
+      nx: slot.nx,
+      ny: slot.ny,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      outsidePitch: false,
+    });
+    onDragActiveChange?.(true);
   };
 
   const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>): void => {
     const longPressState = longPressStateRef.current;
     if (
-      longPressState !== undefined &&
-      longPressState.pointerId === event.pointerId &&
-      shouldCancelTacticalBoardLongPress(longPressState.start, { x: event.clientX, y: event.clientY })
-    ) {
-      clearLongPress();
-    }
+      longPressState !== undefined
+      && longPressState.pointerId === event.pointerId
+      && shouldCancelTacticalBoardLongPress(longPressState.start, { x: event.clientX, y: event.clientY })
+    ) clearLongPress();
 
-    if (drag === undefined || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    const slot = slots.find((candidate) => candidate.slotId === drag.slotId);
-    if (slot === undefined || !canDragTacticalBoardSlot(slot)) {
-      return;
-    }
+    const activeDrag = dragRef.current;
+    if (activeDrag === undefined || activeDrag.pointerId !== event.pointerId) return;
+    const slot = slots.find((candidate) => candidate.slotId === activeDrag.slotId);
+    if (slot === undefined || !canDragTacticalBoardSlot(slot)) return;
 
     const norm = pointerToNorm(event.currentTarget, event.clientX, event.clientY);
-    const zone = TACTICAL_BOARD_ROLES[slot.role].zone;
-    const nextNx = Math.min(zone.nxMax, Math.max(zone.nxMin, norm.nx));
-    const nextNy = Math.min(zone.nyMax, Math.max(zone.nyMin, norm.ny));
-    const hasMoved =
-      drag.hasMoved || shouldCancelTacticalBoardLongPress(drag.start, { x: event.clientX, y: event.clientY }, 2);
-
-    setDrag({ ...drag, hasMoved });
-    onSlotMove?.(slot.slotId, nextNx, nextNy);
+    updateDrag({
+      ...activeDrag,
+      hasMoved: activeDrag.hasMoved
+        || shouldCancelTacticalBoardLongPress(activeDrag.start, { x: event.clientX, y: event.clientY }, 2),
+      nx: clampUnit(norm.nx),
+      ny: clampUnit(norm.ny),
+      clientX: event.clientX,
+      clientY: event.clientY,
+      outsidePitch: pointIsOutside(event.currentTarget, event.clientX, event.clientY),
+    });
   };
 
-  const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>): void => {
-    clearLongPress();
+  const finishDrag = useCallback((completed: TacticalBoardDragState, dropTarget: Element | null): void => {
+    const slot = slots.find((candidate) => candidate.slotId === completed.slotId);
+    if (slot === undefined) return;
+    const lineupTargetId = dropTarget?.closest("[data-tactical-lineup-slot-id]")
+      ?.getAttribute("data-tactical-lineup-slot-id");
+    const benchTargetId = dropTarget?.closest("[data-bench-slot-id]")
+      ?.getAttribute("data-bench-slot-id") as TacticalBenchSlotId | null | undefined;
 
-    if (drag !== undefined && drag.pointerId === event.pointerId) {
+    if (lineupTargetId !== null && lineupTargetId !== undefined && lineupTargetId !== slot.slotId) {
+      onSlotExchange?.(slot.slotId, lineupTargetId);
+      return;
+    }
+    if (benchTargetId !== null && benchTargetId !== undefined) {
+      onPlayerDropOnBench?.(slot.slotId, benchTargetId);
+      return;
+    }
+    if (completed.outsidePitch) return;
+
+    const destinationRole = tacticalBoardRoleDestinationAt(completed.nx, completed.ny);
+    if (
+      destinationRole !== undefined
+      && destinationRole !== slot.role
+      && onRoleAdaptation !== undefined
+    ) {
+      setAdaptation({
+        slotId: slot.slotId,
+        nx: completed.nx,
+        ny: completed.ny,
+        roles: [destinationRole],
+      });
+      return;
+    }
+    if (destinationRole === slot.role) {
+      onSlotMove?.(slot.slotId, completed.nx, completed.ny);
+      return;
+    }
+
+    const roleZone = TACTICAL_BOARD_ROLES[slot.role].zone;
+    const insideRole = completed.nx >= roleZone.nxMin
+      && completed.nx <= roleZone.nxMax
+      && completed.ny >= roleZone.nyMin
+      && completed.ny <= roleZone.nyMax;
+    if (insideRole) {
+      onSlotMove?.(slot.slotId, completed.nx, completed.ny);
+      return;
+    }
+
+    const roles = tacticalBoardRoleOptionsForPosition(completed.nx, completed.ny, slot.role)
+      .filter((role) => role !== slot.role);
+    if (roles.length > 0 && onRoleAdaptation !== undefined) {
+      setAdaptation({ slotId: slot.slotId, nx: completed.nx, ny: completed.ny, roles });
+      return;
+    }
+    onSlotMove?.(slot.slotId, completed.nx, completed.ny);
+  }, [onPlayerDropOnBench, onRoleAdaptation, onSlotExchange, onSlotMove, slots]);
+
+  useEffect(() => {
+    const pointerId = drag?.pointerId;
+    if (pointerId === undefined) return undefined;
+
+    const completePointerDrag = (event: PointerEvent, commit: boolean): void => {
+      if (event.pointerId !== pointerId) return;
+      clearLongPress();
+      const completed = dragRef.current;
+      const svg = svgRef.current;
+
       try {
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }
+        if (svg?.hasPointerCapture(pointerId) === true) svg.releasePointerCapture(pointerId);
       } catch {
-        // Ignore synthetic pointer release mismatches; drag state is still cleared below.
+        // The shared document boundary still completes synthetic or interrupted drags.
       }
 
-      if (drag.hasMoved) {
+      if (commit && completed?.hasMoved === true) {
+        finishDrag(completed, document.elementFromPoint(event.clientX, event.clientY));
         suppressClickRef.current = true;
         window.setTimeout(() => {
           suppressClickRef.current = false;
         }, 0);
       }
 
-      setDrag(undefined);
-    }
-  };
+      updateDrag(undefined);
+      onDragActiveChange?.(false);
+    };
+    const commitDrag = (event: PointerEvent): void => completePointerDrag(event, true);
+    const cancelDrag = (event: PointerEvent): void => completePointerDrag(event, false);
+
+    document.addEventListener("pointerup", commitDrag, true);
+    document.addEventListener("pointercancel", cancelDrag, true);
+    return () => {
+      document.removeEventListener("pointerup", commitDrag, true);
+      document.removeEventListener("pointercancel", cancelDrag, true);
+    };
+  }, [clearLongPress, drag?.pointerId, finishDrag, onDragActiveChange, updateDrag]);
 
   const handleContextMenu = (event: React.MouseEvent<SVGSVGElement>): void => {
-    const slot = slotFromEventTarget(event.target);
-    if (slot === undefined) {
-      return;
-    }
-
+    const slot = slotFromTarget(event.target);
+    if (slot === undefined || mode === "view_only") return;
     event.preventDefault();
     clearLongPress();
     openSlotMenu(slot.slotId);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<SVGSVGElement>): void => {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-
-    const slot = slotFromEventTarget(event.target);
-    if (slot === undefined) {
-      return;
-    }
-
+    if ((event.key !== "Enter" && event.key !== " ") || mode === "view_only") return;
+    const slot = slotFromTarget(event.target);
+    if (slot === undefined) return;
     event.preventDefault();
     openSlotMenu(slot.slotId);
   };
 
-  const activeZoneRect =
-    activeDragSlot === undefined ? undefined : tacticalBoardZoneRect(TACTICAL_BOARD_ROLES[activeDragSlot.role].zone);
-  const menuAnchor = activeMenuSlot === undefined ? undefined : toSvg(activeMenuSlot.nx, activeMenuSlot.ny);
-  const menuStyle =
-    menuAnchor === undefined
-      ? undefined
-      : ({
-          "--tls-tactical-board-menu-left": `${(menuAnchor.x / TACTICAL_BOARD_PITCH.viewBoxW) * 100}%`,
-          "--tls-tactical-board-menu-top": `${(menuAnchor.y / TACTICAL_BOARD_PITCH.viewBoxH) * 100}%`,
-        } as React.CSSProperties);
-
-  const roleOptions =
-    activeMenuSlot === undefined ||
-    activeMenuPlayer === undefined ||
-    !canChangeTacticalBoardSlotRole(activeMenuSlot)
-      ? []
-      : tacticalBoardRoleOptionsForPosition(activeMenuSlot.nx, activeMenuSlot.ny, activeMenuSlot.role).map((role) => ({
-          role,
-          suitability: suitabilityForTacticalBoardAssignment(activeMenuPlayer, role, activeMenuSlot.slotId),
-          isCurrent: role === activeMenuSlot.role,
-        }));
-  const candidates =
-    activeMenuSlot === undefined || (activeMenuSlot.playerId !== null && !activeMenuSlot.locked)
-      ? []
-      : sortTacticalBoardAssignmentCandidates(selectablePlayers, activeMenuSlot.role, activeMenuSlot.slotId).map((player) => ({
-          player,
-          suitability: suitabilityForTacticalBoardAssignment(player, activeMenuSlot.role, activeMenuSlot.slotId),
-          ...(player.fitness === undefined ? {} : { fitness: player.fitness }),
-        }));
+  const roleOptions = activeMenuSlot === undefined
+    || activeMenuPlayer === undefined
+    || !canChangeTacticalBoardSlotRole(activeMenuSlot)
+    ? []
+    : tacticalBoardRoleOptionsForPosition(activeMenuSlot.nx, activeMenuSlot.ny, activeMenuSlot.role).map((role) => ({
+        role,
+        suitability: suitabilityForTacticalBoardAssignment(activeMenuPlayer, role, activeMenuSlot.slotId),
+        isCurrent: role === activeMenuSlot.role,
+      }));
+  const candidates = activeMenuSlot === undefined
+    || (activeMenuSlot.playerId !== null && !activeMenuSlot.locked && !allowReplaceAssigned)
+    ? []
+    : sortTacticalBoardAssignmentCandidates(selectablePlayers, activeMenuSlot.role, activeMenuSlot.slotId).map((player) => ({
+        player,
+        suitability: suitabilityForTacticalBoardAssignment(player, activeMenuSlot.role, activeMenuSlot.slotId),
+        ...(player.fitness === undefined ? {} : { fitness: player.fitness }),
+      }));
 
   return (
     <section className="tls-tactical-board" aria-labelledby="tls-tactical-board-title">
@@ -345,54 +434,57 @@ export function TacticalBoardPitch({
         </dl>
       </header>
 
-      <div className="tls-tactical-board-field">
+      <div
+        className="tls-tactical-board-field"
+        data-drop-active={dropActive ? "true" : "false"}
+        data-mode={mode}
+        ref={fieldRef}
+      >
         <svg
           aria-label={text("career.tacticalBoard.title")}
           className="tls-tactical-board-svg"
           data-formation-motion-key={formationMotionKey}
           onContextMenu={handleContextMenu}
           onKeyDown={handleKeyDown}
-          onPointerCancel={handlePointerUp}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
+          ref={svgRef}
           role="img"
           viewBox={`0 0 ${TACTICAL_BOARD_PITCH.viewBoxW} ${TACTICAL_BOARD_PITCH.viewBoxH}`}
         >
           <TacticalBoardPitchMarkings />
-          {activeZoneRect === undefined || activeDragSlot === undefined ? null : (
-            <rect
-              className="tls-tactical-board-active-zone"
-              data-department={TACTICAL_BOARD_ROLES[activeDragSlot.role].department}
-              height={activeZoneRect.height}
-              width={activeZoneRect.width}
-              x={activeZoneRect.x}
-              y={activeZoneRect.y}
+          {activeDragPlayer === undefined || activeDragSlot === undefined || drag?.outsidePitch === true ? null : (
+            <TacticalBoardRoleDestinations
+              activeNx={drag?.nx ?? activeDragSlot.nx}
+              activeNy={drag?.ny ?? activeDragSlot.ny}
+              player={activeDragPlayer}
+              slotId={activeDragSlot.slotId}
+              text={text}
             />
           )}
           {slots.map((slot) => {
             const player = slot.playerId === null ? undefined : playerById.get(slot.playerId);
+            const renderedSlot = drag?.slotId === slot.slotId && !drag.outsidePitch
+              ? { ...slot, nx: drag.nx, ny: drag.ny }
+              : slot;
             const slotFact = tacticalBoardSlotFact(slot);
             const slotChanged = previousSlotFactsRef.current.get(slot.slotId) !== slotFact;
 
             return (
               <m.g
-                key={`${formationMotionKey ?? "formation"}:${slot.slotId}:${slotFact}`}
-                data-motion-slot-key={`${slot.slotId}:${slotFact}`}
-                initial={formationChanged || slotChanged ? webMotionTargets.tacticalSelectionEnter : false}
                 animate={webMotionTargets.rest}
+                data-motion-slot-key={`${slot.slotId}:${slotFact}`}
+                data-tactical-lineup-slot-id={slot.slotId}
+                initial={formationChanged || slotChanged ? webMotionTargets.tacticalSelectionEnter : false}
+                key={`${formationMotionKey ?? "formation"}:${slot.slotId}:${slotFact}`}
                 transition={webMotion.micro}
               >
                 {player === undefined ? (
-                  <TacticalBoardEmptySlot
-                    slot={slot}
-                    text={text}
-                    onOpen={openSlotFromClick}
-                  />
+                  <TacticalBoardEmptySlot slot={renderedSlot} text={text} onOpen={openSlotFromClick} />
                 ) : (
                   <TacticalBoardPlayerToken
                     player={player}
-                    slot={slot}
+                    slot={renderedSlot}
                     suitability={suitabilityForTacticalBoardAssignment(player, slot.role, slot.slotId)}
                     text={text}
                     onOpen={openSlotFromClick}
@@ -403,12 +495,30 @@ export function TacticalBoardPitch({
           })}
         </svg>
 
+        {drag?.hasMoved !== true || !drag.outsidePitch || activeDragPlayer === undefined || activeDragSlot === undefined
+          ? null
+          : (
+              <TacticalBoardDragPreview
+                clientX={drag.clientX}
+                clientY={drag.clientY}
+                number={activeDragPlayer.number}
+                role={activeDragSlot.role}
+                surname={activeDragPlayer.surname}
+              />
+            )}
+
         {activeMenuSlot === undefined ? null : (
-          <div className="tls-tactical-board-menu-popover" ref={menuRef} style={menuStyle}>
+          <TacticalBoardAnchoredPopover
+            anchorNx={activeMenuSlot.nx}
+            anchorNy={activeMenuSlot.ny}
+            containerRef={fieldRef}
+            ref={menuRef}
+            variant="menu"
+          >
             <m.div
-              key={activeMenuSlot.slotId}
-              initial={webMotionTargets.tacticalPopoverEnter}
               animate={webMotionTargets.rest}
+              initial={webMotionTargets.tacticalPopoverEnter}
+              key={activeMenuSlot.slotId}
               transition={webMotion.micro}
             >
               <TacticalBoardMenu
@@ -429,11 +539,57 @@ export function TacticalBoardPitch({
                 }}
               />
             </m.div>
-          </div>
+          </TacticalBoardAnchoredPopover>
+        )}
+        {adaptation === undefined || adaptationPlayer === undefined ? null : (
+          <TacticalBoardAnchoredPopover
+            anchorNx={adaptation.nx}
+            anchorNy={adaptation.ny}
+            containerRef={fieldRef}
+            ref={menuRef}
+            variant="adaptation"
+          >
+            <m.div
+              animate={webMotionTargets.rest}
+              initial={webMotionTargets.tacticalPopoverEnter}
+              transition={webMotion.micro}
+            >
+              <TacticalBoardRoleAdaptationPopover
+                player={adaptationPlayer}
+                roles={adaptation.roles}
+                slotId={adaptation.slotId}
+                text={text}
+                onApply={(role) => {
+                  onRoleAdaptation?.(adaptation.slotId, role, adaptation.nx, adaptation.ny);
+                  setAdaptation(undefined);
+                }}
+                onCancel={() => setAdaptation(undefined)}
+              />
+            </m.div>
+          </TacticalBoardAnchoredPopover>
         )}
       </div>
     </section>
   );
+}
+
+function playerForSlot(
+  slot: TacticalBoardSlot | undefined,
+  players: ReadonlyMap<string, TacticalBoardPitchPlayer>,
+): TacticalBoardPitchPlayer | undefined {
+  return slot?.playerId === null || slot?.playerId === undefined ? undefined : players.get(slot.playerId);
+}
+
+function clampUnit(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function pointIsOutside(svg: SVGSVGElement, clientX: number, clientY: number): boolean {
+  const bounds = svg.getBoundingClientRect();
+  return clientX < bounds.left
+    || clientX > bounds.right
+    || clientY < bounds.top
+    || clientY > bounds.bottom;
 }
 
 function tacticalBoardSlotFacts(slots: readonly TacticalBoardSlot[]): Map<string, string> {

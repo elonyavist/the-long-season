@@ -13,8 +13,6 @@ import {
   type TestCareerFixture,
 } from "../../test-fixtures/career-fixture";
 import {
-  applyWebHalfTimeSubstitutions,
-  buildWebHalfTimeSubstitutionPanel,
   buildWebMatchdayPhaseView,
   buildWebMatchdayView,
   createWebMatchdayState,
@@ -50,6 +48,7 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).toContain("Match centre");
     expect(markup).toContain("tls-matchday-scoreboard");
     expect(markup.match(/data-score-motion=/g) ?? []).toHaveLength(2);
+    expect(markup).not.toContain("tls-matchday-clock");
     expect(markup).not.toContain('data-score-changed="true"');
     expect(markup).toContain("tls-match-centre-phase-rail");
     expect(markup).toContain(fixture.phaseView.fixture.homeClub.name);
@@ -57,6 +56,14 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).toContain("Start match");
     expect(markup).toContain('data-state="idle"');
     expect(markup.match(/Start match/g) ?? []).toHaveLength(1);
+    const screenHeader = markup.slice(
+      markup.indexOf("tls-matchday-header"),
+      markup.indexOf("</header>") + 9,
+    );
+    expect(screenHeader).toContain("Matchday");
+    expect(screenHeader).toContain("tls-matchday-primary-action");
+    expect(screenHeader).toContain("Start match");
+    expect(markup.indexOf("tls-matchday-header")).toBeLessThan(markup.indexOf("tls-match-broadcast-frame"));
     expect(markup).not.toContain("Live line");
     expect(markup).not.toContain("Next command");
     expect(markup).not.toContain("tls-matchday-context-strip");
@@ -96,6 +103,18 @@ describe("CareerMatchdayScreen", () => {
     );
 
     expect(markup).toContain("First half");
+    expect(markup).toContain('class="tls-matchday-clock"');
+    expect(markup).toContain('data-clock-running="false"');
+    expect(markup).toContain('data-motion-clock-minute="38"');
+    expect(markup).toContain('aria-label="Minute 38"');
+    const screenHeader = markup.slice(
+      markup.indexOf("tls-matchday-header"),
+      markup.indexOf("</header>") + 9,
+    );
+    expect(screenHeader).toContain("tls-matchday-playback-controls");
+    expect(markup.indexOf("tls-match-centre-phase-rail"))
+      .toBeLessThan(markup.indexOf("tls-match-broadcast-live-line"));
+    expect(markup).not.toContain("tls-matchday-score-status");
     expect(markup).not.toContain("Play to half-time");
     expect(markup).not.toContain("tls-match-centre-live-phase");
     expect(markup).not.toContain("tls-match-centre-live-event");
@@ -138,7 +157,7 @@ describe("CareerMatchdayScreen", () => {
     const markup = renderMatchday(
       fixture.view,
       fixture.phaseView,
-      fixture.halfTimeSubstitutions,
+      fixture.teamControlPanel,
       fixture,
     );
 
@@ -159,7 +178,7 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("Tactical board");
     expect(markup).not.toContain("tls-tactical-bench-board");
     expect(markup).not.toContain("Current shape");
-    expect(markup.match(/0\/5 changes/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("0/5 changes");
     expect(markup).not.toContain("Half-time score");
     expect(markup).not.toContain("First-half tabellino");
     expect(markup).not.toContain("Player signals");
@@ -177,7 +196,7 @@ describe("CareerMatchdayScreen", () => {
         blockerKeys: ["missing_saved_lineup", "missing_saved_tactic"],
       },
       fixture.phaseView,
-      fixture.halfTimeSubstitutions,
+      fixture.teamControlPanel,
       fixture,
     );
 
@@ -185,39 +204,6 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("Prepare match");
     expect(markup).not.toContain("missing saved lineup");
     expect(markup).not.toContain("missing saved tactic");
-  });
-
-  it("renders applied and invalid half-time substitution feedback", () => {
-    const fixture = createHalfTimeTestFixture("screen-substitutions");
-    const halfTimeState = fixture.matchday;
-    const outgoingPlayerId = halfTimeState.stagedProgress?.state.simulation.context.away.lineup[1]?.playerId;
-    const incomingPlayerId = halfTimeState.stagedProgress?.selectedBenchPlayerIds[0];
-
-    if (outgoingPlayerId === undefined || incomingPlayerId === undefined) {
-      throw new Error("Expected selected-club away lineup and bench for screen substitution feedback test");
-    }
-
-    const substituted = applyWebHalfTimeSubstitutions(halfTimeState, [{ outgoingPlayerId, incomingPlayerId }]);
-    const nextOutgoingPlayerId = substituted.stagedProgress?.state.simulation.context.away.lineup
-      .find((slot) => slot.playerId !== incomingPlayerId)
-      ?.playerId;
-
-    if (nextOutgoingPlayerId === undefined) {
-      throw new Error("Expected a remaining selected-club player for invalid screen substitution feedback test");
-    }
-
-    const invalid = applyWebHalfTimeSubstitutions(substituted, [{
-      outgoingPlayerId: nextOutgoingPlayerId,
-      incomingPlayerId,
-    }]);
-    const markup = renderMatchday(
-      buildWebMatchdayView(invalid, fixture.draft),
-      buildWebMatchdayPhaseView(invalid),
-      buildWebHalfTimeSubstitutionPanel(invalid),
-    );
-
-    expect(markup).toContain("Applied substitutions");
-    expect(markup).toContain("The incoming player is already on the pitch.");
   });
 
   it("renders played result as a stable score and tabellino above one tabbed post-match review", () => {
@@ -233,15 +219,14 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).toContain("tls-matchday-scoreboard");
     expect(markup).toContain("tls-match-centre-full-time");
     expect(markup).toContain("Match tabellino");
-    expect(markup).toContain(`${fixture.phaseView.selectedClub.name} ratings`);
+    expect(markup).toContain("Match summary");
     expect(markup).toContain('aria-label="Full-time review views"');
     expect(markup.match(/role="tab"/g) ?? []).toHaveLength(3);
-    expect(markup).toContain('aria-label="Player ratings table"');
-    expect(markup).toContain(">Fit<");
+    expect(markup).toContain('aria-label="Match statistics"');
+    expect(markup).not.toContain('aria-label="Player ratings table"');
     expect(markup).not.toContain("Post-match state");
-    expect(markup).toContain("Return to dashboard");
-    expect(markup.match(/Return to dashboard/g) ?? []).toHaveLength(1);
-    expect(markup).not.toContain(">Continue</button>");
+    expect(markup).toContain("Continue");
+    expect(markup.match(/data-action-id="back_to_dashboard"/g) ?? []).toHaveLength(1);
     expect(markup).not.toContain("Final ratings");
     expect(markup).not.toContain("Next action");
     expect(markup).not.toContain(">unknown<");
@@ -255,11 +240,11 @@ describe("CareerMatchdayScreen", () => {
     expect(markup).not.toContain("tls-matchday-dashboard");
 
     const tabellinoIndex = markup.indexOf("Match tabellino");
-    const ratingsIndex = markup.indexOf(`${fixture.phaseView.selectedClub.name} ratings`);
+    const summaryIndex = markup.indexOf("Match summary");
 
     expect(tabellinoIndex).toBeGreaterThan(-1);
-    expect(ratingsIndex).toBeGreaterThan(-1);
-    expect(tabellinoIndex).toBeLessThan(ratingsIndex);
+    expect(summaryIndex).toBeGreaterThan(-1);
+    expect(tabellinoIndex).toBeLessThan(summaryIndex);
   });
 
 });
@@ -274,8 +259,8 @@ describe("career matchday presentation contract", () => {
     ]));
 
     expect(presentation.tabellino.incidents.map((incident) => `${incident.side}:${incident.visualPriority}:${incident.event.kind}`)).toEqual([
-      "away:secondary:substitution",
       "home:goal:goal",
+      "away:secondary:substitution",
     ]);
   });
 
@@ -312,10 +297,10 @@ describe("career matchday presentation contract", () => {
     expect(presentation.halfTimeReview?.contributors).toEqual([]);
   });
 
-  it("omits the obsolete second-half reveal command from the web presentation", () => {
+  it("replaces the obsolete second-half reveal command with a resume command", () => {
     const presentation = buildCareerMatchdayPresentationView(buildPresenterPhaseView([], "second_half"));
 
-    expect(presentation.primaryAction).toBeUndefined();
+    expect(presentation.primaryAction?.actionId).toBe("resume_match");
     expect(presentation.phaseIndicators.map((phase) => `${phase.phase}:${phase.status}`)).toEqual([
       "pre_match:complete",
       "first_half:complete",
@@ -325,10 +310,10 @@ describe("career matchday presentation contract", () => {
     ]);
   });
 
-  it("omits the obsolete first-half reveal command from the web presentation", () => {
+  it("replaces the obsolete first-half reveal command with a resume command", () => {
     const presentation = buildCareerMatchdayPresentationView(buildPresenterPhaseView([], "first_half"));
 
-    expect(presentation.primaryAction).toBeUndefined();
+    expect(presentation.primaryAction?.actionId).toBe("resume_match");
     expect(presentation.phaseIndicators.find((phase) => phase.phase === "first_half")?.status).toBe("current");
   });
 });
@@ -404,7 +389,7 @@ function minuteForPresenterPhase(phase: Parameters<typeof buildCareerMatchdayPha
 function renderMatchday(
   view: Parameters<typeof CareerMatchdayScreen>[0]["view"],
   phaseView: Parameters<typeof CareerMatchdayScreen>[0]["phaseView"],
-  halfTimeSubstitutions?: Parameters<typeof CareerMatchdayScreen>[0]["halfTimeSubstitutions"],
+  teamControlPanel?: Parameters<typeof CareerMatchdayScreen>[0]["teamControlPanel"],
   matchPreparationFixture?: TestCareerFixture,
 ): string {
   return renderToStaticMarkup(
@@ -413,12 +398,16 @@ function renderMatchday(
       text: createWebTranslator("en"),
       onBackToMenu: () => undefined,
       onBackToDashboard: () => undefined,
-      onContinueCareer: () => undefined,
       onInboxActionClick: () => undefined,
       onPrepareMatch: () => undefined,
-      onPlayFixture: () => undefined,
+      onStartFirstHalf: () => undefined,
+      onAdvanceMatchMinute: async () => undefined,
+      onPauseMatch: () => undefined,
+      onResumeMatch: () => undefined,
+      onResolveIncident: () => undefined,
+      onStartSecondHalf: () => undefined,
       phaseView,
-      ...(halfTimeSubstitutions === undefined ? {} : { halfTimeSubstitutions }),
+      ...(teamControlPanel === undefined ? {} : { teamControlPanel }),
       ...(matchPreparationFixture === undefined
         ? {}
         : {

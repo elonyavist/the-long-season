@@ -2,6 +2,7 @@ import {
   clubId,
   competitionId,
   createCareerState,
+  createCareerPlayerAvailabilityState,
   createPlayerParticipationLedger,
   careerInboxMessageId,
   createCareerInboxMessage,
@@ -10,7 +11,6 @@ import {
   nonNegativeMoney,
   playerId,
   seasonId,
-  type ActiveMatchCheckpoint,
   type CareerMatchPreparation,
   type CareerAttentionBlockerKey,
   type CareerAttentionLevel,
@@ -19,10 +19,14 @@ import {
   type CareerInboxSource,
   type CareerSeasonArchiveEntry,
   type CareerState,
+  type CareerPlayerAvailabilityState,
   type ClubTransferBudget,
-  type HalfTimeTacticalDecisionPlan,
   type LeagueTableRow,
   type MatchEvent,
+  type MatchInjurySeverity,
+  type MatchSubstitutionReasonKey,
+  type MatchSuspensionReason,
+  type PenaltyOutcome,
   type MatchReport,
   type MatchSideStats,
   type PlayerParticipationLedger,
@@ -55,11 +59,11 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
   }
   insertYouthState(database, state);
   insertCurrentSeasonInbox(database, state);
+  insertPlayerAvailability(database, state);
   insertPlayerParticipationLedger(database, state);
   insertSeasonHistory(database, state);
   insertMatchPreparation(database, state);
   insertFixtureReports(database, state);
-  insertActiveMatch(database, state);
 }
 
 /** Adds all current durable career systems to a reconstructed world snapshot. */
@@ -72,12 +76,82 @@ export function loadCareerStateRows(database: SqliteWorldDatabase, requestedSave
     marketState: loadMarketState(database, requestedSaveId),
     transferHistory: loadTransferHistory(database, requestedSaveId),
     currentSeasonInbox: loadCurrentSeasonInbox(database, requestedSaveId),
+    ...(loadPlayerAvailability(database, requestedSaveId) ?? {}),
     ...(loadPlayerParticipationLedger(database, requestedSaveId) ?? {}),
     ...(loadYouthState(database, requestedSaveId, gameState) ?? {}),
     ...(loadSeasonHistory(database, requestedSaveId) ?? {}),
     ...(loadMatchPreparation(database, requestedSaveId) ?? {}),
-    ...(loadActiveMatch(database, requestedSaveId) ?? {}),
   });
+}
+
+/** Writes durable injuries, suspensions, and competition yellow-card totals. */
+function insertPlayerAvailability(database: SqliteWorldDatabase, state: CareerState): void {
+  const availability = state.playerAvailability;
+  if (availability === undefined) return;
+  availability.injuries.forEach((injury, sortOrder) => {
+    database.run(`INSERT INTO career_player_injuries
+      (save_id, sort_order, player_id, fixture_id, severity, occurred_on, unavailable_until)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, injury.playerId, injury.fixtureId, injury.severity,
+      injury.occurredOn, injury.unavailableUntil,
+    ]);
+  });
+  availability.suspensions.forEach((suspension, sortOrder) => {
+    database.run(`INSERT INTO career_player_suspensions
+      (save_id, sort_order, player_id, fixture_id, competition_id, reason, remaining_matches)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, suspension.playerId, suspension.fixtureId,
+      suspension.competitionId, suspension.reason, suspension.remainingMatches,
+    ]);
+  });
+  availability.yellowCards.forEach((entry, sortOrder) => {
+    database.run(`INSERT INTO career_player_yellow_cards
+      (save_id, sort_order, player_id, competition_id, card_count) VALUES (?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, entry.playerId, entry.competitionId, entry.count,
+    ]);
+  });
+}
+
+/** Reconstructs the optional durable player-availability slice. */
+function loadPlayerAvailability(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+): Pick<CareerState, "playerAvailability"> | undefined {
+  const injuries = database.queryAll(
+    "SELECT * FROM career_player_injuries WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => ({
+    playerId: playerId(text(row, "player_id")),
+    fixtureId: fixtureId(text(row, "fixture_id")),
+    severity: text(row, "severity") as MatchInjurySeverity,
+    occurredOn: gameDate(number(row, "occurred_on")),
+    unavailableUntil: gameDate(number(row, "unavailable_until")),
+  }));
+  const suspensions = database.queryAll(
+    "SELECT * FROM career_player_suspensions WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => ({
+    playerId: playerId(text(row, "player_id")),
+    fixtureId: fixtureId(text(row, "fixture_id")),
+    competitionId: competitionId(text(row, "competition_id")),
+    reason: text(row, "reason") as MatchSuspensionReason,
+    remainingMatches: number(row, "remaining_matches"),
+  }));
+  const yellowCards = database.queryAll(
+    "SELECT * FROM career_player_yellow_cards WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => ({
+    playerId: playerId(text(row, "player_id")),
+    competitionId: competitionId(text(row, "competition_id")),
+    count: number(row, "card_count"),
+  }));
+  if (injuries.length === 0 && suspensions.length === 0 && yellowCards.length === 0) return undefined;
+  const playerAvailability: CareerPlayerAvailabilityState = createCareerPlayerAvailabilityState({
+    injuries,
+    suspensions,
+    yellowCards,
+  });
+  return { playerAvailability };
 }
 
 /** Writes monthly participation facts used by the player-development lifecycle. */
@@ -331,82 +405,21 @@ function insertMatchReport(database: SqliteWorldDatabase, save: SaveId, report: 
   insertMatchEvents(database, save, "report", report.fixtureId, report.events);
 }
 
-function insertActiveMatch(database: SqliteWorldDatabase, state: CareerState): void {
-  const checkpoint = state.activeMatchCheckpoint;
-  if (checkpoint === undefined) return;
-  const config = checkpoint.initialContext.engineConfig;
-  const simulation = checkpoint.simulation;
-  database.run(`INSERT INTO active_match
-    (save_id, schema_version, fixture_id, selected_club_side, phase, seed, minute_count,
-     base_opportunity_rate, max_opportunity_rate, home_advantage_factor,
-     cap_directness_min, cap_directness_max, cap_pressing_min, cap_pressing_max,
-     cap_width_min, cap_width_max, cap_risk_min, cap_risk_max,
-     checkpoint_minute, score_home, score_away,
-     home_opportunities, home_shots, home_shots_on_target, home_goals,
-     away_opportunities, away_shots, away_shots_on_target, away_goals,
-     has_kicked_off, has_reached_half_time)
-    VALUES (${placeholders(31)})`, [state.saveId, checkpoint.schemaVersion, checkpoint.fixtureId, checkpoint.selectedClubSide,
-    checkpoint.phase, checkpoint.initialContext.seed, config.minuteCount, config.rates.baseOpportunityRatePerMinute,
-    config.rates.maxOpportunityRatePerMinute, config.homeAdvantageFactor,
-    config.tacticalDistributionCaps.directness.minInclusive, config.tacticalDistributionCaps.directness.maxInclusive,
-    config.tacticalDistributionCaps.pressing.minInclusive, config.tacticalDistributionCaps.pressing.maxInclusive,
-    config.tacticalDistributionCaps.width.minInclusive, config.tacticalDistributionCaps.width.maxInclusive,
-    config.tacticalDistributionCaps.risk.minInclusive, config.tacticalDistributionCaps.risk.maxInclusive,
-    simulation.minute, simulation.score.home, simulation.score.away,
-    ...sideStatsValues(simulation.stats.home), ...sideStatsValues(simulation.stats.away),
-    simulation.local.hasKickedOff ? 1 : 0, simulation.local.hasReachedHalfTime ? 1 : 0]);
-  for (const side of ["home", "away"] as const) insertActiveTeam(database, state.saveId, side, checkpoint.initialContext[side]);
-  config.conversionBands.forEach((band, sortOrder) => {
-    database.run(`INSERT INTO active_match_conversion_bands
-      (save_id, sort_order, band_key, min_quality, max_quality, goal_probability) VALUES (?, ?, ?, ?, ?, ?)`,
-    [state.saveId, sortOrder, band.bandKey, band.minQualityInclusive, band.maxQualityExclusive, band.goalProbability]);
-  });
-  insertMatchEvents(database, state.saveId, "checkpoint", checkpoint.fixtureId, checkpoint.events);
-  checkpoint.selectedClubBenchSlots.forEach((slot, sortOrder) => {
-    database.run("INSERT INTO active_match_bench (save_id, sort_order, slot_id, player_id) VALUES (?, ?, ?, ?)", [state.saveId, sortOrder, slot.slotId, slot.playerId]);
-  });
-  checkpoint.appliedSubstitutions.forEach((substitution, sortOrder) => {
-    database.run(`INSERT INTO active_match_substitutions
-      (save_id, sort_order, side, event_minute, outgoing_player_id, incoming_player_id, slot_id, reason_key)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [state.saveId, sortOrder, substitution.side, substitution.minute, substitution.outgoingPlayerId, substitution.incomingPlayerId, substitution.slotId, substitution.reasonKey]);
-  });
-  if (checkpoint.halfTimeTacticalPlan !== undefined) insertHalfTimePlan(database, state.saveId, checkpoint.halfTimeTacticalPlan);
-}
-
-function insertActiveTeam(database: SqliteWorldDatabase, save: SaveId, side: "home" | "away", team: ActiveMatchCheckpoint["initialContext"]["home"]): void {
-  database.run(`INSERT INTO active_match_teams
-    (save_id, side, club_id, attack, midfield, defense, goalkeeper, overall, directness, pressing, width, risk)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [save, side, team.clubId, team.strength.attack, team.strength.midfield,
-    team.strength.defense, team.strength.goalkeeper, team.strength.overall, team.tacticalDistribution.directness,
-    team.tacticalDistribution.pressing, team.tacticalDistribution.width, team.tacticalDistribution.risk]);
-  team.lineup.forEach((slot, sortOrder) => database.run(`INSERT INTO active_match_lineups
-    (save_id, side, sort_order, slot_id, player_id, role_key) VALUES (?, ?, ?, ?, ?, ?)`, [save, side, sortOrder, slot.slotId, slot.playerId, slot.roleKey]));
-}
-
-function insertHalfTimePlan(database: SqliteWorldDatabase, save: SaveId, plan: HalfTimeTacticalDecisionPlan): void {
-  database.run(`INSERT INTO half_time_plan
-    (save_id, base_formation_id, current_shape, max_substitutions, required_lineup_size) VALUES (?, ?, ?, ?, ?)`,
-  [save, plan.baseFormationId, plan.currentShape, plan.maxSubstitutions ?? null, plan.requiredLineupSize ?? null]);
-  plan.lineupSlots.forEach((slot, sortOrder) => database.run(`INSERT INTO half_time_plan_lineup
-    (save_id, sort_order, slot_id, player_id, role_key, position_key) VALUES (?, ?, ?, ?, ?, ?)`,
-  [save, sortOrder, slot.slotId, slot.playerId, slot.roleKey, slot.positionKey ?? null]));
-  plan.benchSlots.forEach((slot, sortOrder) => database.run(`INSERT INTO half_time_plan_bench
-    (save_id, sort_order, slot_id, player_id) VALUES (?, ?, ?, ?)`, [save, sortOrder, slot.slotId, slot.playerId]));
-  plan.substitutions.forEach((substitution, sortOrder) => database.run(`INSERT INTO half_time_plan_substitutions
-    (save_id, sort_order, outgoing_player_id, incoming_player_id, reason_key) VALUES (?, ?, ?, ?, ?)`,
-  [save, sortOrder, substitution.outgoingPlayerId, substitution.incomingPlayerId, substitution.reasonKey]));
-}
-
-function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKind: "report" | "checkpoint", ownerId: string, events: readonly MatchEvent[]): void {
+function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKind: "report", ownerId: string, events: readonly MatchEvent[]): void {
   events.forEach((event, sortOrder) => {
     const shot = "shot" in event ? event.shot : undefined;
     const score = "score" in event ? event.score : undefined;
+    const side = "side" in event ? event.side : shot?.side;
+    const minute = shot?.minute ?? ("minute" in event ? event.minute : 0);
     database.run(`INSERT INTO match_events
       (save_id, owner_kind, owner_id, sort_order, event_type, event_minute, side, quality, is_shot_on_target,
        shot_type, chance_type, scorer_player_id, assist_player_id, creator_player_id, shooter_player_id,
-       goalkeeper_player_id, primary_defender_player_id, score_home, score_away)
-      VALUES (${placeholders(19)})`, [save, ownerKind, ownerId, sortOrder, event.type, shot?.minute ?? ("minute" in event ? event.minute : 0),
-      shot?.side ?? null, shot?.quality ?? null, shot === undefined ? null : shot.isShotOnTarget ? 1 : 0,
+       goalkeeper_player_id, primary_defender_player_id, score_home, score_away,
+       committed_by_player_id, suffered_by_player_id, zone_danger, card_player_id, fouled_player_id,
+       penalty_taker_player_id, penalty_outcome, injury_player_id, injury_severity,
+       outgoing_player_id, incoming_player_id, slot_id, substitution_reason_key)
+      VALUES (${placeholders(32)})`, [save, ownerKind, ownerId, sortOrder, event.type, minute,
+      side ?? null, shot?.quality ?? null, shot === undefined ? null : shot.isShotOnTarget ? 1 : 0,
       shot?.shotType ?? null, shot?.chanceType ?? null,
       "scorerPlayerId" in event ? event.scorerPlayerId : null,
       "assistPlayerId" in event ? event.assistPlayerId ?? null : null,
@@ -414,7 +427,20 @@ function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKin
       "shooterPlayerId" in event ? event.shooterPlayerId ?? null : null,
       "goalkeeperPlayerId" in event ? event.goalkeeperPlayerId : null,
       "primaryDefenderPlayerId" in event ? event.primaryDefenderPlayerId ?? null : null,
-      score?.home ?? null, score?.away ?? null]);
+      score?.home ?? null, score?.away ?? null,
+      event.type === "foul" ? event.committedByPlayerId : event.type === "penalty_awarded" ? event.committedByPlayerId ?? null : null,
+      event.type === "foul" ? event.sufferedByPlayerId ?? null : null,
+      event.type === "foul" ? event.zoneDanger : null,
+      event.type === "yellow_card" || event.type === "second_yellow_card" || event.type === "red_card" ? event.playerId : null,
+      event.type === "penalty_awarded" ? event.fouledPlayerId ?? null : null,
+      event.type === "penalty_outcome" ? event.takerPlayerId : null,
+      event.type === "penalty_outcome" ? event.outcome : null,
+      event.type === "injury" ? event.playerId : null,
+      event.type === "injury" ? event.severity : null,
+      event.type === "substitution" ? event.outgoingPlayerId : null,
+      event.type === "substitution" ? event.incomingPlayerId : null,
+      event.type === "substitution" ? event.slotId : null,
+      event.type === "substitution" ? event.reasonKey : null]);
   });
 }
 
@@ -514,50 +540,7 @@ function attachFixtureReports(database: SqliteWorldDatabase, save: SaveId, gameS
   return { ...gameState, fixtures };
 }
 
-function loadActiveMatch(database: SqliteWorldDatabase, save: SaveId): Pick<CareerState, "activeMatchCheckpoint"> | undefined {
-  const row = database.queryAll("SELECT * FROM active_match WHERE save_id = ?", [save])[0];
-  if (row === undefined) return undefined;
-  const checkpointFixtureId = fixtureId(text(row, "fixture_id"));
-  const activeMatchCheckpoint: ActiveMatchCheckpoint = {
-    schemaVersion: number(row, "schema_version") as ActiveMatchCheckpoint["schemaVersion"], fixtureId: checkpointFixtureId,
-    selectedClubSide: text(row, "selected_club_side") as ActiveMatchCheckpoint["selectedClubSide"], phase: text(row, "phase") as ActiveMatchCheckpoint["phase"],
-    initialContext: { fixtureId: checkpointFixtureId, seed: text(row, "seed"), home: loadActiveTeam(database, save, "home"), away: loadActiveTeam(database, save, "away"),
-      engineConfig: { minuteCount: number(row, "minute_count"), rates: { baseOpportunityRatePerMinute: number(row, "base_opportunity_rate"), maxOpportunityRatePerMinute: number(row, "max_opportunity_rate") },
-        conversionBands: database.queryAll("SELECT * FROM active_match_conversion_bands WHERE save_id = ? ORDER BY sort_order", [save]).map((band) => ({ bandKey: text(band, "band_key"), minQualityInclusive: number(band, "min_quality"), maxQualityExclusive: number(band, "max_quality"), goalProbability: number(band, "goal_probability") })),
-        homeAdvantageFactor: number(row, "home_advantage_factor"), tacticalDistributionCaps: {
-          directness: cap(row, "directness"), pressing: cap(row, "pressing"), width: cap(row, "width"), risk: cap(row, "risk"),
-        } } },
-    simulation: { minute: number(row, "checkpoint_minute"), score: { home: number(row, "score_home"), away: number(row, "score_away") }, stats: readStats(row),
-      local: { hasKickedOff: boolean(row, "has_kicked_off"), hasReachedHalfTime: boolean(row, "has_reached_half_time"), hasReachedFullTime: false } },
-    events: loadMatchEvents(database, save, "checkpoint", checkpointFixtureId),
-    selectedClubBenchSlots: database.queryAll("SELECT slot_id, player_id FROM active_match_bench WHERE save_id = ? ORDER BY sort_order", [save]).map((bench) => ({ slotId: text(bench, "slot_id"), playerId: optionalText(bench, "player_id") === undefined ? null : playerId(text(bench, "player_id")) })),
-    appliedSubstitutions: database.queryAll("SELECT * FROM active_match_substitutions WHERE save_id = ? ORDER BY sort_order", [save]).map((substitution) => ({ side: text(substitution, "side") as "home" | "away", minute: number(substitution, "event_minute"), outgoingPlayerId: playerId(text(substitution, "outgoing_player_id")), incomingPlayerId: playerId(text(substitution, "incoming_player_id")), slotId: text(substitution, "slot_id"), reasonKey: text(substitution, "reason_key") as "half_time_manager_decision" })),
-    ...(loadHalfTimePlan(database, save) ?? {}),
-  };
-  return { activeMatchCheckpoint };
-}
-
-function loadActiveTeam(database: SqliteWorldDatabase, save: SaveId, side: "home" | "away"): ActiveMatchCheckpoint["initialContext"]["home"] {
-  const row = database.queryAll("SELECT * FROM active_match_teams WHERE save_id = ? AND side = ?", [save, side])[0];
-  if (row === undefined) throw mappingFailure(`active match ${side} team is missing`);
-  return { clubId: clubId(text(row, "club_id")), lineup: database.queryAll("SELECT slot_id, player_id, role_key FROM active_match_lineups WHERE save_id = ? AND side = ? ORDER BY sort_order", [save, side]).map((slot) => ({ slotId: text(slot, "slot_id"), playerId: playerId(text(slot, "player_id")), roleKey: text(slot, "role_key") })),
-    strength: { attack: number(row, "attack"), midfield: number(row, "midfield"), defense: number(row, "defense"), goalkeeper: number(row, "goalkeeper"), overall: number(row, "overall") },
-    tacticalDistribution: { directness: number(row, "directness"), pressing: number(row, "pressing"), width: number(row, "width"), risk: number(row, "risk") } };
-}
-
-function loadHalfTimePlan(database: SqliteWorldDatabase, save: SaveId): Pick<ActiveMatchCheckpoint, "halfTimeTacticalPlan"> | undefined {
-  const row = database.queryAll("SELECT * FROM half_time_plan WHERE save_id = ?", [save])[0];
-  if (row === undefined) return undefined;
-  const maxSubstitutions = optionalNumber(row, "max_substitutions");
-  const requiredLineupSize = optionalNumber(row, "required_lineup_size");
-  return { halfTimeTacticalPlan: { baseFormationId: text(row, "base_formation_id"), currentShape: text(row, "current_shape"),
-    lineupSlots: database.queryAll("SELECT * FROM half_time_plan_lineup WHERE save_id = ? ORDER BY sort_order", [save]).map((slot) => ({ slotId: text(slot, "slot_id"), playerId: optionalText(slot, "player_id") === undefined ? null : playerId(text(slot, "player_id")), roleKey: text(slot, "role_key"), ...(optionalText(slot, "position_key") === undefined ? {} : { positionKey: text(slot, "position_key") }) })),
-    benchSlots: database.queryAll("SELECT * FROM half_time_plan_bench WHERE save_id = ? ORDER BY sort_order", [save]).map((slot) => ({ slotId: text(slot, "slot_id"), playerId: optionalText(slot, "player_id") === undefined ? null : playerId(text(slot, "player_id")) })),
-    substitutions: database.queryAll("SELECT * FROM half_time_plan_substitutions WHERE save_id = ? ORDER BY sort_order", [save]).map((substitution) => ({ outgoingPlayerId: playerId(text(substitution, "outgoing_player_id")), incomingPlayerId: playerId(text(substitution, "incoming_player_id")), reasonKey: text(substitution, "reason_key") as "half_time_manager_decision" })),
-    ...(maxSubstitutions === undefined ? {} : { maxSubstitutions }), ...(requiredLineupSize === undefined ? {} : { requiredLineupSize }) } };
-}
-
-function loadMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKind: "report" | "checkpoint", ownerId: string): readonly MatchEvent[] {
+function loadMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKind: "report", ownerId: string): readonly MatchEvent[] {
   return database.queryAll("SELECT * FROM match_events WHERE save_id = ? AND owner_kind = ? AND owner_id = ? ORDER BY sort_order", [save, ownerKind, ownerId]).map(readMatchEvent);
 }
 
@@ -566,7 +549,14 @@ function readMatchEvent(row: Record<string, unknown>): MatchEvent {
   const minute = number(row, "event_minute");
   if (type === "kickoff") return { type, minute: 0 };
   if (type === "half_time" || type === "full_time") return { type, minute, score: { home: number(row, "score_home"), away: number(row, "score_away") } };
-  const shot = { minute, side: text(row, "side") as "home" | "away", quality: number(row, "quality"), isShotOnTarget: boolean(row, "is_shot_on_target"), shotType: text(row, "shot_type") as "normal" | "header" | "set_piece", chanceType: text(row, "chance_type") as "open_play" | "counter" | "cross" | "dead_ball" };
+  const side = text(row, "side") as "home" | "away";
+  if (type === "foul") return { type, minute, side, committedByPlayerId: playerId(text(row, "committed_by_player_id")), ...optionalPlayer(row, "suffered_by_player_id", "sufferedByPlayerId"), zoneDanger: number(row, "zone_danger") };
+  if (type === "yellow_card" || type === "second_yellow_card" || type === "red_card") return { type, minute, side, playerId: playerId(text(row, "card_player_id")) };
+  if (type === "penalty_awarded") return { type, minute, side, ...optionalPlayer(row, "fouled_player_id", "fouledPlayerId"), ...optionalPlayer(row, "committed_by_player_id", "committedByPlayerId") };
+  if (type === "penalty_outcome") return { type, minute, side, takerPlayerId: playerId(text(row, "penalty_taker_player_id")), goalkeeperPlayerId: playerId(text(row, "goalkeeper_player_id")), outcome: text(row, "penalty_outcome") as PenaltyOutcome };
+  if (type === "injury") return { type, minute, side, playerId: playerId(text(row, "injury_player_id")), severity: text(row, "injury_severity") as MatchInjurySeverity };
+  if (type === "substitution") return { type, minute, side, outgoingPlayerId: playerId(text(row, "outgoing_player_id")), incomingPlayerId: playerId(text(row, "incoming_player_id")), slotId: text(row, "slot_id"), reasonKey: text(row, "substitution_reason_key") as MatchSubstitutionReasonKey };
+  const shot = { minute, side, quality: number(row, "quality"), isShotOnTarget: boolean(row, "is_shot_on_target"), shotType: text(row, "shot_type") as "normal" | "header" | "set_piece", chanceType: text(row, "chance_type") as "open_play" | "counter" | "cross" | "dead_ball" };
   if (type === "goal") return { type, shot, scorerPlayerId: playerId(text(row, "scorer_player_id")), ...optionalPlayer(row, "assist_player_id", "assistPlayerId"), ...optionalPlayer(row, "creator_player_id", "creatorPlayerId") };
   if (type === "save") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId"), goalkeeperPlayerId: playerId(text(row, "goalkeeper_player_id")) };
   if (type === "miss") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId") };
@@ -579,7 +569,7 @@ function optionalPlayer(row: Record<string, unknown>, column: string, property: 
   return value === undefined ? {} : { [property]: playerId(value) };
 }
 
-function readStats(row: Record<string, unknown>): ActiveMatchCheckpoint["simulation"]["stats"] {
+function readStats(row: Record<string, unknown>): MatchReport["stats"] {
   return { home: readSideStats(row, "home_"), away: readSideStats(row, "away_") };
 }
 
@@ -597,10 +587,6 @@ function tableRowValues(row: LeagueTableRow): readonly SqliteBindValue[] {
 
 function readTableRow(row: Record<string, unknown>, prefix = ""): LeagueTableRow {
   return { position: number(row, `${prefix}position`), clubId: clubId(text(row, `${prefix}club_id`)), played: number(row, `${prefix}played`), wins: number(row, `${prefix}wins`), draws: number(row, `${prefix}draws`), losses: number(row, `${prefix}losses`), goalsFor: number(row, `${prefix}goals_for`), goalsAgainst: number(row, `${prefix}goals_against`), goalDifference: number(row, `${prefix}goal_difference`), points: number(row, `${prefix}points`) };
-}
-
-function cap(row: Record<string, unknown>, key: string): { readonly minInclusive: number; readonly maxInclusive: number } {
-  return { minInclusive: number(row, `cap_${key}_min`), maxInclusive: number(row, `cap_${key}_max`) };
 }
 
 function placeholders(count: number): string {

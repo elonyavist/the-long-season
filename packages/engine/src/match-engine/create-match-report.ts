@@ -40,6 +40,15 @@ function toMatchEvent(event: MatchStepEvent): MatchEvent {
       };
     case "shot_outcome":
       return toShotOutcomeEvent(event);
+    case "foul":
+    case "yellow_card":
+    case "second_yellow_card":
+    case "red_card":
+    case "penalty_awarded":
+    case "penalty_outcome":
+    case "injury":
+    case "substitution":
+      return { ...event };
     case "half_time":
       return {
         type: "half_time",

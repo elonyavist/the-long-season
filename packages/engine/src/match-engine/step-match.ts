@@ -1,16 +1,37 @@
-import type { FixtureId, PlayerId, ShotChanceType, ShotType } from "@game/domain";
+import type {
+  FixtureId,
+  FoulMatchEvent,
+  InjuryMatchEvent,
+  MatchEventSide,
+  PlayerId,
+  ShotChanceType,
+  ShotType,
+  SubstitutionMatchEvent,
+} from "@game/domain";
 import { deriveRng, type Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
 import { selectChanceActors, type ChanceActors } from "./chance-actors.ts";
-import type { MatchTeamContext } from "./match-context.ts";
+import { progressOnPitchCondition } from "./match-condition.ts";
+import { accumulateControlUnits, deriveMatchMinuteControl } from "./match-control.ts";
+import {
+  resolveMatchMinuteDiscipline,
+  type MatchDisciplineEvent,
+  type MatchPenaltyResolution,
+} from "./match-discipline.ts";
+import { injuryForcesExit, resolveMatchMinuteInjury } from "./match-injury.ts";
+import type { MatchContext, MatchTeamContext } from "./match-context.ts";
+import { removeForcedOffPlayerFromMatchContext } from "./match-team-exit.ts";
 import {
   isMatchSimulationComplete,
+  telemetryFor,
+  type MatchCausalSideStats,
   type MatchScore,
   type MatchSide,
   type MatchSideStats,
   type MatchSimulationState,
   type MatchSimulationStats,
+  type MatchSimulationTelemetry,
 } from "./match-simulation-state.ts";
 import type { OccasionOutcome, OccasionResolver, OccasionResolution } from "./occasion-resolver.ts";
 
@@ -24,6 +45,9 @@ import type { OccasionOutcome, OccasionResolver, OccasionResolution } from "./oc
 export type MatchStepEvent =
   | MatchKickoffStepEvent
   | MatchShotOutcomeStepEvent
+  | MatchDisciplineEvent
+  | InjuryMatchEvent
+  | SubstitutionMatchEvent
   | MatchHalfTimeStepEvent
   | MatchFullTimeStepEvent;
 
@@ -174,6 +198,13 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
   const events: MatchStepEvent[] = [];
   let nextScore = input.simulation.score;
   let nextStats = input.simulation.stats;
+  let nextTelemetry = telemetryFor(input.simulation);
+  let nextContext = input.simulation.context;
+  const minuteControl = deriveMatchMinuteControl(input.simulation, nextTelemetry);
+  nextTelemetry = {
+    ...nextTelemetry,
+    controlUnits: accumulateControlUnits(nextTelemetry.controlUnits, minuteControl),
+  };
 
   if (!input.simulation.local.hasKickedOff) {
     events.push({ type: "kickoff", minute: 0 });
@@ -181,7 +212,15 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
 
   for (const attackingSide of processedSides) {
     const defendingSide = otherSide(attackingSide);
-    if (!shouldGenerateOpportunity(input.simulation, attackingSide, defendingSide, input.rng)) {
+    if (
+      !shouldGenerateOpportunity(
+        input.simulation,
+        attackingSide,
+        defendingSide,
+        minuteControl.chanceCreationMultiplier[attackingSide],
+        input.rng,
+      )
+    ) {
       continue;
     }
 
@@ -196,6 +235,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     );
 
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
+    nextTelemetry = applyOccasionToTelemetry(nextTelemetry, attackingSide, resolution);
     const scoreBeforeGoal = nextScore;
     const shotContext = deriveShotContext(input.simulation, currentMinute, attackingSide, resolution.quality);
     const chanceActors = selectChanceActors({
@@ -258,6 +298,57 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     );
   }
 
+  const foulEvents: FoulMatchEvent[] = [];
+  for (const defendingSide of processedSides) {
+    const discipline = resolveMatchMinuteDiscipline(
+      { ...input.simulation, context: nextContext },
+      nextTelemetry,
+      currentMinute,
+      defendingSide,
+    );
+    events.push(...discipline.events);
+    foulEvents.push(...discipline.events.filter((event): event is FoulMatchEvent => event.type === "foul"));
+    nextTelemetry = applyDisciplineToTelemetry(nextTelemetry, discipline.events);
+    if (discipline.dismissedPlayerId !== undefined) {
+      nextContext = removeForcedOffPlayerFromMatchContext(nextContext, defendingSide, discipline.dismissedPlayerId);
+    }
+    if (discipline.penalty !== undefined) {
+      const penaltyApplied = applyPenaltyResolution(
+        nextScore,
+        nextStats,
+        nextTelemetry,
+        discipline.penalty,
+        currentMinute,
+      );
+      nextScore = penaltyApplied.score;
+      nextStats = penaltyApplied.stats;
+      nextTelemetry = penaltyApplied.telemetry;
+      if (penaltyApplied.goalEvent !== undefined) events.push(penaltyApplied.goalEvent);
+    }
+  }
+
+  for (const side of processedSides) {
+    const injury = resolveMatchMinuteInjury(
+      { ...input.simulation, context: nextContext },
+      nextTelemetry,
+      currentMinute,
+      side,
+      foulEvents.filter((foul) => oppositeEventSide(foul.side) === side),
+    );
+    if (injury === undefined) continue;
+    events.push(injury);
+    nextTelemetry = {
+      ...nextTelemetry,
+      injuriesByPlayer: {
+        ...nextTelemetry.injuriesByPlayer,
+        [injury.playerId]: { severity: injury.severity, continued: !injuryForcesExit(injury.severity) },
+      },
+    };
+    if (injuryForcesExit(injury.severity)) {
+      nextContext = removeForcedOffPlayerFromMatchContext(nextContext, side, injury.playerId);
+    }
+  }
+
   const isComplete = currentMinute >= input.simulation.context.engineConfig.minuteCount;
   const halfTimeMinute = Math.floor(input.simulation.context.engineConfig.minuteCount / 2);
   const reachesHalfTime = currentMinute === halfTimeMinute && !input.simulation.local.hasReachedHalfTime;
@@ -278,11 +369,19 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     });
   }
 
+  nextTelemetry = {
+    ...nextTelemetry,
+    playerCondition: progressOnPitchCondition(input.simulation, nextTelemetry),
+  };
+
   const nextSimulation: MatchSimulationState = {
-    context: input.simulation.context,
+    context: nextContext,
     minute: currentMinute,
     score: nextScore,
-    stats: nextStats,
+    stats: {
+      ...nextStats,
+      telemetry: nextTelemetry,
+    },
     local: {
       hasKickedOff: true,
       hasReachedHalfTime: input.simulation.local.hasReachedHalfTime || reachesHalfTime,
@@ -313,9 +412,10 @@ function shouldGenerateOpportunity(
   simulation: MatchSimulationState,
   attackingSide: MatchSide,
   defendingSide: MatchSide,
+  controlMultiplier: number,
   rng: Rng,
 ): boolean {
-  const rate = deriveOpportunityRate(simulation, attackingSide, defendingSide);
+  const rate = deriveOpportunityRate(simulation, attackingSide, defendingSide, controlMultiplier);
   return rng.nextFloat() < rate;
 }
 
@@ -326,6 +426,7 @@ function deriveOpportunityRate(
   simulation: MatchSimulationState,
   attackingSide: MatchSide,
   defendingSide: MatchSide,
+  controlMultiplier: number,
 ): number {
   const attackingTeam = teamBySide(simulation, attackingSide);
   const defendingTeam = teamBySide(simulation, defendingSide);
@@ -338,9 +439,40 @@ function deriveOpportunityRate(
     1.5,
   );
   const baseRate = simulation.context.engineConfig.rates.baseOpportunityRatePerMinute;
-  const rate = baseRate * (1 + strengthModifier);
+  const rate = baseRate * (1 + strengthModifier) * controlMultiplier;
 
   return clamp(rate, 0, simulation.context.engineConfig.rates.maxOpportunityRatePerMinute);
+}
+
+/** Adds one shot's causal facts to live telemetry exactly once. */
+function applyOccasionToTelemetry(
+  telemetry: MatchSimulationTelemetry,
+  attackingSide: MatchSide,
+  resolution: OccasionResolution,
+): MatchSimulationTelemetry {
+  const defendingSide = otherSide(attackingSide);
+  const attackingStats = telemetry.stats[attackingSide];
+  const defendingStats = telemetry.stats[defendingSide];
+  const nextAttackingStats: MatchCausalSideStats = {
+    ...attackingStats,
+    shots: attackingStats.shots + 1,
+    shotsOnTarget: attackingStats.shotsOnTarget + (resolution.isShotOnTarget ? 1 : 0),
+    expectedGoals: attackingStats.expectedGoals + resolution.expectedGoals,
+    corners: attackingStats.corners + (resolution.resultsInCorner ? 1 : 0),
+    goals: attackingStats.goals + (resolution.outcome === "goal" ? 1 : 0),
+  };
+  const nextDefendingStats: MatchCausalSideStats = {
+    ...defendingStats,
+    saves: defendingStats.saves + (resolution.outcome === "save" ? 1 : 0),
+  };
+
+  return {
+    ...telemetry,
+    stats:
+      attackingSide === "home"
+        ? { home: nextAttackingStats, away: nextDefendingStats }
+        : { home: nextDefendingStats, away: nextAttackingStats },
+  };
 }
 
 /**
@@ -352,6 +484,7 @@ function deriveOpportunityRate(
  * shot-to-goal conversion probabilities.
  */
 const OPPORTUNITY_STRENGTH_SEPARATION_DIVISOR = 16;
+const PENALTY_EXPECTED_GOALS = 0.76;
 
 /**
  * Applies one resolved opportunity to accumulated stats.
@@ -378,6 +511,91 @@ function applyOccasionToStats(
         home: stats.home,
         away: nextSideStats,
       };
+}
+
+function applyDisciplineToTelemetry(
+  telemetry: MatchSimulationTelemetry,
+  events: readonly MatchDisciplineEvent[],
+): MatchSimulationTelemetry {
+  let next = telemetry;
+  for (const event of events) {
+    if (event.type === "foul") {
+      next = withCausalSideStat(next, event.side, "fouls");
+    } else if (event.type === "yellow_card") {
+      next = {
+        ...withCausalSideStat(next, event.side, "yellowCards"),
+        yellowCardsByPlayer: {
+          ...next.yellowCardsByPlayer,
+          [event.playerId]: (next.yellowCardsByPlayer[event.playerId] ?? 0) + 1,
+        },
+      };
+    } else if (event.type === "second_yellow_card" || event.type === "red_card") {
+      next = withCausalSideStat(next, event.side, "redCards");
+    }
+  }
+  return next;
+}
+
+function withCausalSideStat(
+  telemetry: MatchSimulationTelemetry,
+  side: MatchEventSide,
+  key: "fouls" | "yellowCards" | "redCards",
+): MatchSimulationTelemetry {
+  const current = telemetry.stats[side];
+  const updated = { ...current, [key]: current[key] + 1 };
+  return {
+    ...telemetry,
+    stats: side === "home"
+      ? { home: updated, away: telemetry.stats.away }
+      : { home: telemetry.stats.home, away: updated },
+  };
+}
+
+function applyPenaltyResolution(
+  score: MatchScore,
+  stats: MatchSimulationStats,
+  telemetry: MatchSimulationTelemetry,
+  penalty: MatchPenaltyResolution,
+  minute: number,
+): {
+  readonly score: MatchScore;
+  readonly stats: MatchSimulationStats;
+  readonly telemetry: MatchSimulationTelemetry;
+  readonly goalEvent?: MatchGoalStepEvent;
+} {
+  const isScored = penalty.outcome === "scored";
+  const isSaved = penalty.outcome === "saved";
+  const resolution: OccasionResolution = {
+    outcome: isScored ? "goal" : isSaved ? "save" : "miss",
+    quality: PENALTY_EXPECTED_GOALS,
+    expectedGoals: PENALTY_EXPECTED_GOALS,
+    isShotOnTarget: isScored || isSaved,
+    resultsInCorner: false,
+  };
+  const nextStats = applyOccasionToStats(stats, penalty.side, resolution);
+  const nextTelemetry = applyOccasionToTelemetry(telemetry, penalty.side, resolution);
+  if (!isScored) return { score, stats: nextStats, telemetry: nextTelemetry };
+
+  return {
+    score: applyGoalToScore(score, penalty.side),
+    stats: nextStats,
+    telemetry: nextTelemetry,
+    goalEvent: {
+      type: "shot_outcome",
+      minute,
+      side: penalty.side,
+      outcome: "goal",
+      quality: PENALTY_EXPECTED_GOALS,
+      isShotOnTarget: true,
+      shotType: "set_piece",
+      chanceType: "dead_ball",
+      scorerPlayerId: penalty.takerPlayerId,
+    },
+  };
+}
+
+function oppositeEventSide(side: MatchEventSide): MatchEventSide {
+  return side === "home" ? "away" : "home";
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { CareerMatchPreparationPlayerOptionInput } from "@game/ui";
 
-import { TACTICAL_BOARD_ROLE_CODES } from "./tactical-board-roles";
+import { boardRoleFromCanonicalRole, TACTICAL_BOARD_ROLE_CODES } from "./tactical-board-roles";
 import {
   suitFor,
   type TacticalBoardRoleSuitability,
@@ -13,6 +13,7 @@ export interface TacticalBoardSquadPlayer extends TacticalBoardSuitabilityPlayer
   readonly id: string;
   readonly number: number;
   readonly surname: string;
+  readonly roleCode: TacticalBoardRoleCode;
   readonly fitness?: number;
   readonly formTrend: "up" | "flat" | "down";
   readonly suitabilityByRole: Readonly<Record<TacticalBoardRoleCode, TacticalBoardRoleSuitability>>;
@@ -57,6 +58,7 @@ export function buildTacticalBoardSquadPlayer(
     number,
     surname: surnameFromDisplayName(player.name),
     roleKey: player.roleKey,
+    roleCode: boardRoleFromCanonicalRole(primaryRole),
     primaryRole,
     altRoles: alternativeRolesForPlayerOption(player),
     formTrend: formTrendFromFitness(player.fitness),

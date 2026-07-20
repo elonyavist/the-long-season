@@ -20,7 +20,6 @@ import {
   nextTransferHistorySequence,
   type CareerState,
 } from "./career-state.ts";
-import { ACTIVE_MATCH_CHECKPOINT_SCHEMA_VERSION, type ActiveMatchCheckpoint } from "../career/active-match-checkpoint.ts";
 import { careerInboxMessageId, createCareerInboxMessage } from "../career/inbox.ts";
 import {
   accruePlayerFixtureParticipation,
@@ -83,24 +82,6 @@ test("createCareerState rejects unsupported schema versions", () => {
         schemaVersion: CAREER_STATE_SCHEMA_VERSION + 1,
       }),
     "unsupported_schema_version",
-  );
-});
-
-test("createCareerState preserves a valid selected-club active match checkpoint", () => {
-  const checkpoint = activeMatchCheckpointFixture();
-  const career = createCareerState({ ...careerStateFixture(), activeMatchCheckpoint: checkpoint });
-
-  assert.deepEqual(career.activeMatchCheckpoint, checkpoint);
-  assert.notEqual(career.activeMatchCheckpoint, checkpoint);
-});
-
-test("createCareerState rejects active checkpoints for another selected side", () => {
-  assertCareerStateError(
-    () => createCareerState({
-      ...careerStateFixture(),
-      activeMatchCheckpoint: { ...activeMatchCheckpointFixture(), selectedClubSide: "away" },
-    }),
-    "active_match_selected_side_mismatch",
   );
 });
 
@@ -258,6 +239,53 @@ test("createCareerState preserves saved selected-club match preparation", () => 
   assert.deepEqual(career.matchPreparation?.boardSlots, [
     { slotKey: "st", nx: 0.5, ny: 0.18, roleKey: "ATT" },
   ]);
+});
+
+test("createCareerState rejects unavailable players for future preparation but preserves played preparation", () => {
+  const base = careerStateFixture();
+  const fixture = fixtureId("fixture:000001");
+  const selectedPlayer = playerId("player:010010");
+  const matchPreparation = {
+    selectedClubId: base.selectedClubId,
+    targetFixtureId: fixture,
+    selectedLineup: {
+      clubId: base.selectedClubId,
+      slots: [{ slotKey: "st", playerId: selectedPlayer, roleKey: "attacker" }],
+    },
+    updatedAt: gameDate(20_000),
+  } as const;
+  const playerAvailability = {
+    injuries: [{
+      fixtureId: fixture,
+      playerId: selectedPlayer,
+      severity: "minor" as const,
+      occurredOn: gameDate(19_999),
+      unavailableUntil: gameDate(20_006),
+    }],
+    suspensions: [],
+    yellowCards: [],
+  };
+
+  assertCareerStateError(
+    () => createCareerState({ ...base, matchPreparation, playerAvailability }),
+    "match_preparation_player_unavailable",
+  );
+
+  const playedFixture = base.gameState.fixtures[fixture];
+  if (playedFixture === undefined) throw new Error("Expected fixture");
+  const preserved = createCareerState({
+    ...base,
+    gameState: {
+      ...base.gameState,
+      fixtures: {
+        ...base.gameState.fixtures,
+        [fixture]: { ...playedFixture, result: { played: true, homeGoals: 1, awayGoals: 0 } },
+      },
+    },
+    matchPreparation,
+    playerAvailability,
+  });
+  assert.equal(preserved.matchPreparation?.selectedLineup?.slots[0]?.playerId, selectedPlayer);
 });
 
 test("createCareerState preserves ordered substitutes and rejects XI overlap", () => {
@@ -684,57 +712,6 @@ function careerStateFixture(): CareerState {
     gameState: gameStateFixture(),
     marketState: marketStateFixture(),
     transferHistory: [],
-  };
-}
-
-/** Builds a resumable checkpoint matching the minimal career fixture. */
-function activeMatchCheckpointFixture(): ActiveMatchCheckpoint {
-  const fixture = fixtureId("fixture:000001");
-
-  return {
-    schemaVersion: ACTIVE_MATCH_CHECKPOINT_SCHEMA_VERSION,
-    fixtureId: fixture,
-    selectedClubSide: "home",
-    phase: "half_time",
-    initialContext: {
-      fixtureId: fixture,
-      seed: "demo-001",
-      home: activeMatchTeam("club:pro01", "player:010010", "home"),
-      away: activeMatchTeam("club:pro18", "player:180010", "away"),
-      engineConfig: {
-        minuteCount: 90,
-        rates: { baseOpportunityRatePerMinute: 0.1, maxOpportunityRatePerMinute: 0.3 },
-        conversionBands: [{ bandKey: "all", minQualityInclusive: 0, maxQualityExclusive: 1.01, goalProbability: 0.1 }],
-        homeAdvantageFactor: 1.05,
-        tacticalDistributionCaps: {
-          directness: { minInclusive: -1, maxInclusive: 1 },
-          pressing: { minInclusive: -1, maxInclusive: 1 },
-          width: { minInclusive: -1, maxInclusive: 1 },
-          risk: { minInclusive: -1, maxInclusive: 1 },
-        },
-      },
-    },
-    simulation: {
-      minute: 45,
-      score: { home: 0, away: 0 },
-      stats: {
-        home: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
-        away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
-      },
-      local: { hasKickedOff: true, hasReachedHalfTime: true, hasReachedFullTime: false },
-    },
-    events: [{ type: "kickoff", minute: 0 }, { type: "half_time", minute: 45, score: { home: 0, away: 0 } }],
-    selectedClubBenchSlots: [],
-    appliedSubstitutions: [],
-  };
-}
-
-function activeMatchTeam(club: string, player: string, side: string) {
-  return {
-    clubId: clubId(club),
-    lineup: [{ slotId: `slot:${side}:1`, playerId: playerId(player), roleKey: "balanced" }],
-    strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
-    tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0 },
   };
 }
 

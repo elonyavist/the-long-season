@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, fixtureId } from "../types/ids.ts";
+import { clubId, fixtureId, playerId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import {
   careerInboxMessageId,
@@ -130,4 +130,29 @@ test("Continue stops for unresolved blocking and unacknowledged important messag
   assert.equal(doesCareerInboxMessageStopContinue(important), true);
   assert.equal(doesCareerInboxMessageStopContinue(acknowledged), false);
   assert.equal(doesCareerInboxMessageStopContinue(informational), false);
+});
+
+test("diagnosis and suspension messages carry player facts without fake actions", () => {
+  const related = { fixtureId: fixtureId("fixture:inbox-01"), playerId: playerId("player:inbox-01") };
+  const diagnosis = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:diagnosis:01"),
+    date: gameDate(20_001),
+    category: "injury_diagnosis",
+    source: "medical_team",
+    level: "important",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    related,
+  });
+  const suspension = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:suspension:01"),
+    date: gameDate(20_001),
+    category: "suspension",
+    source: "competition_office",
+    level: "important",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    related,
+  });
+
+  assert.deepEqual(diagnosis.actionIds, []);
+  assert.deepEqual(suspension.blockerKeys, []);
 });

@@ -1,4 +1,11 @@
-import type { MatchPhase } from "@game/domain";
+import type {
+  LiveMatchStatistics,
+  LiveMatchPauseReason,
+  LiveMatchPendingDecision,
+  LiveMatchRunState,
+  MatchPlayerConsequence,
+  MatchPhase,
+} from "@game/domain";
 
 import type {
   CareerMatchdayClubInput,
@@ -12,6 +19,9 @@ export type CareerMatchdayPhaseActionId =
   | "prepare_match"
   | "start_first_half"
   | "continue_to_half_time"
+  | "pause_match"
+  | "resume_match"
+  | "resolve_incident"
   | "apply_half_time_substitutions"
   | "start_second_half"
   | "continue_to_full_time"
@@ -96,6 +106,16 @@ export interface CareerMatchdayHalfTimeSubstitutionInput {
   readonly blockerKeys?: readonly string[];
 }
 
+/** Presentation-safe live clock and automatic-decision facts. */
+export interface CareerMatchdayLiveControlInput {
+  /** Whether the canonical minute loop is advancing or waiting. */
+  readonly runState: LiveMatchRunState;
+  /** Stable reason for the current pause, when paused. */
+  readonly pauseReason?: LiveMatchPauseReason;
+  /** Required incident decision emitted by the engine, when present. */
+  readonly pendingDecision?: LiveMatchPendingDecision;
+}
+
 /** Explicit input required to build a phase-aware matchday view. */
 export interface BuildCareerMatchdayPhaseViewInput {
   /** Stable save identifier. */
@@ -112,16 +132,22 @@ export interface BuildCareerMatchdayPhaseViewInput {
   readonly currentMinute: number;
   /** Current score. */
   readonly scoreboard: CareerMatchdayPhaseScoreboardInput;
+  /** Engine-derived cumulative match statistics at the current minute. */
+  readonly statistics?: LiveMatchStatistics;
   /** Timeline events visible at this phase. */
   readonly events: readonly CareerMatchdayPhaseEventInput[];
   /** Player rows visible at this phase. */
   readonly players: readonly CareerMatchdayPhasePlayerInput[];
   /** Half-time substitution action facts. */
   readonly halfTimeSubstitutions?: CareerMatchdayHalfTimeSubstitutionInput;
+  /** Live run/pause facts supplied by the application adapter. */
+  readonly liveControl?: CareerMatchdayLiveControlInput;
   /** Full-time-only condition changes. Ignored before full time. */
   readonly conditionChanges?: readonly CareerMatchdayConditionChangeInput[];
   /** Full-time-only form/morale changes. Ignored before full time. */
   readonly playerStateChanges?: readonly CareerMatchdayPlayerStateChangeInput[];
+  /** Full-time-only public injury and suspension outcomes. */
+  readonly availabilityConsequences?: readonly MatchPlayerConsequence[];
   /** Stable next action when known. */
   readonly nextActionId?: CareerMatchdayPhaseActionId;
 }
@@ -182,6 +208,8 @@ export interface CareerMatchdayPhaseView {
   readonly currentMinute: number;
   /** Scoreboard facts. */
   readonly scoreboard: CareerMatchdayPhaseScoreboardView;
+  /** Engine-derived cumulative match statistics at the current minute. */
+  readonly statistics?: LiveMatchStatistics;
   /** Ordered timeline rows. */
   readonly timelineEvents: readonly CareerMatchdayPhaseEventView[];
   /** Major event cards. */
@@ -190,10 +218,14 @@ export interface CareerMatchdayPhaseView {
   readonly playerRows: readonly CareerMatchdayPhasePlayerView[];
   /** Actions available for the current phase. */
   readonly actions: readonly CareerMatchdayPhaseActionView[];
+  /** Live run/pause facts used by playback and decision controls. */
+  readonly liveControl?: CareerMatchdayLiveControlInput;
   /** Full-time-only condition changes. */
   readonly conditionChanges: readonly CareerMatchdayConditionChangeInput[];
   /** Full-time-only form/morale changes. */
   readonly playerStateChanges: readonly CareerMatchdayPlayerStateChangeInput[];
+  /** Full-time-only public injury and suspension outcomes. */
+  readonly availabilityConsequences: readonly MatchPlayerConsequence[];
   /** Stable next action when known. */
   readonly nextActionId?: CareerMatchdayPhaseActionId;
 }
@@ -225,12 +257,19 @@ export function buildCareerMatchdayPhaseView(input: BuildCareerMatchdayPhaseView
       ...input.scoreboard,
       selectedClubScoreState: selectedClubScoreState(input.fixture.selectedClubSide, input.scoreboard),
     },
+    ...(input.statistics === undefined
+      ? {}
+      : { statistics: structuredClone(input.statistics) }),
     timelineEvents,
     keyEventCards: timelineEvents.filter((event) => event.cardPriority === "major"),
     playerRows,
     actions,
+    ...(input.liveControl === undefined ? {} : { liveControl: input.liveControl }),
     conditionChanges: isFullTime ? input.conditionChanges ?? [] : [],
     playerStateChanges: isFullTime ? input.playerStateChanges ?? [] : [],
+    availabilityConsequences: isFullTime
+      ? structuredClone(input.availabilityConsequences ?? [])
+      : [],
     ...(input.nextActionId === undefined ? {} : { nextActionId: input.nextActionId }),
   };
 }
@@ -306,15 +345,24 @@ function comparePlayers(first: CareerMatchdayPhasePlayerView, second: CareerMatc
 }
 
 function buildActions(input: BuildCareerMatchdayPhaseViewInput): readonly CareerMatchdayPhaseActionView[] {
+  if (
+    input.liveControl?.pendingDecision !== undefined
+    && input.liveControl.pendingDecision.type !== "half_time"
+  ) {
+    return [action("resolve_incident", "available", [])];
+  }
+
   switch (input.phase) {
     case "pre_match":
       return [action("start_first_half", "available", [])];
     case "first_half":
-      return [action("continue_to_half_time", "available", [])];
+    case "second_half":
+      if (input.liveControl?.runState === "running") {
+        return [action("pause_match", "available", [])];
+      }
+      return [action("resume_match", "available", [])];
     case "half_time":
       return [action("start_second_half", "available", [])];
-    case "second_half":
-      return [action("continue_to_full_time", "available", [])];
     case "full_time":
       return [action("back_to_dashboard", "available", [])];
     case "extra_time":
@@ -331,7 +379,19 @@ function action(
   return {
     actionId,
     status,
-    labelKey: `career.matchday.action.${actionId}`,
+    labelKey: liveActionLabelKey(actionId),
     blockerKeys,
   };
+}
+
+function liveActionLabelKey(actionId: CareerMatchdayPhaseActionId): string {
+  switch (actionId) {
+    case "pause_match":
+      return "career.matchday.playback.pause";
+    case "resume_match":
+    case "resolve_incident":
+      return "career.matchday.playback.resume";
+    default:
+      return `career.matchday.action.${actionId}`;
+  }
 }

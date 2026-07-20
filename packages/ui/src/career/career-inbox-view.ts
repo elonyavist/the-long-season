@@ -8,7 +8,9 @@ export type CareerInboxViewStatus = "unread" | "read" | "resolved" | "expired";
 export type CareerInboxViewCategory =
   | "matchday"
   | "match_result"
-  | "season_rollover";
+  | "season_rollover"
+  | "injury_diagnosis"
+  | "suspension";
 
 /** Input action attached to an Inbox / Posta message. */
 export interface CareerInboxActionInput {
@@ -200,8 +202,8 @@ export interface CareerPostaSeasonInput {
 export interface CareerPostaMessageInput {
   readonly messageId: string;
   readonly dateIso: string;
-  readonly category: "matchday" | "match_result" | "season_rollover";
-  readonly source: "technical_staff" | "match_report" | "competition_office";
+  readonly category: CareerInboxViewCategory;
+  readonly source: "technical_staff" | "match_report" | "competition_office" | "medical_team";
   readonly level: CareerPostaAttentionLevel;
   readonly lifecycle: CareerPostaLifecycleInput;
   readonly blockerKeys: readonly string[];

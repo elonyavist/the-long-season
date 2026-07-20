@@ -13,14 +13,11 @@ import {
 } from "react";
 
 import { AppShellPostaRail } from "./AppShellPostaRail";
-import { CalendarAdvanceTransition } from "../inbox/CalendarAdvanceTransition";
 import { useCareerSaveLifecycle } from "./CareerSaveControl";
 import { CareerSaveDialog } from "./CareerSaveDialog";
+import { CareerCurrentDate } from "./CareerCurrentDate";
 import type { WebCareerPersistenceFailure } from "../../runtime/web-career-runtime";
-import {
-  CommandActivityIndicator,
-  CommandActivityLiveRegion,
-} from "../shared/CommandActivityIndicator";
+import { CommandActivityLiveRegion } from "../shared/CommandActivityIndicator";
 import { useCareerUiStore } from "../../stores/career-ui-store";
 import { webMotion } from "../../shared/motion/web-motion";
 
@@ -64,7 +61,6 @@ export type AppShellProps = Readonly<{
   currentDateIso: string;
   text: Translator;
   onBackToMenu: () => void;
-  onContinueCareer: () => void;
   onInboxActionClick?: (actionId: string) => void;
   children: ReactNode;
 }>;
@@ -104,7 +100,6 @@ export function AppShell({
   currentDateIso,
   text,
   onBackToMenu,
-  onContinueCareer,
   onInboxActionClick,
   children,
 }: AppShellProps): React.JSX.Element {
@@ -155,7 +150,6 @@ export function AppShell({
           ? { completionMessage: text("career.calendarAdvance.complete", { date: calendarAdvanceTransition.stopDateIso }) }
           : {})}
       />
-      <CalendarAdvanceTransition transition={calendarAdvanceTransition} text={text} />
       <aside className="tls-app-shell-sidebar" aria-label={text("career.shell.navigation")}>
         <div className="tls-app-shell-brand-block">
           <span className="tls-career-shell-crest" aria-hidden="true">
@@ -163,10 +157,11 @@ export function AppShell({
           <div className="tls-career-shell-brand">
             <p>{text("web.app.title")}</p>
             <strong>{selectedClubName}</strong>
-            <time className="tls-career-shell-date" dateTime={visibleDateIso}>
-              <span className="tls-visually-hidden">{text("career.currentDate")}: </span>
-              {visibleDateIso}
-            </time>
+            <CareerCurrentDate
+              advancing={calendarAdvanceTransition?.status === "advancing"}
+              dateIso={visibleDateIso}
+              label={text("career.currentDate")}
+            />
           </div>
         </div>
 
@@ -215,17 +210,6 @@ export function AppShell({
         ) : null}
 
         <div className="tls-app-shell-utilities">
-          {shellView.showGlobalContinue ? (
-            <button className="tls-menu-button tls-menu-button-primary tls-app-shell-continue" data-state={commandPending ? "pending" : "idle"} disabled={commandPending} type="button" onClick={onContinueCareer}>
-              <CommandActivityIndicator
-                activity={commandActivity}
-                commandIds={["continue_career"]}
-                idleLabel={text("career.dashboard.continue")}
-                text={text}
-              />
-            </button>
-          ) : null}
-
           {saveLifecycle === undefined ? null : (
             <button
               aria-haspopup="dialog"

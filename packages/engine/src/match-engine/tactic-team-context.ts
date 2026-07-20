@@ -10,7 +10,11 @@ import {
   type TacticSetup,
 } from "@game/domain";
 
-import type { MatchTacticalDistributionInput, MatchTeamContext } from "./match-context.ts";
+import type {
+  MatchPlayerIncidentProfile,
+  MatchTacticalDistributionInput,
+  MatchTeamContext,
+} from "./match-context.ts";
 import {
   deriveTeamStrength,
   TeamStrengthError,
@@ -136,6 +140,12 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
       lineup,
       strength: deriveTeamStrength(strengthInput),
       tacticalDistribution: tacticToMatchDistribution(tactic),
+      incidentProfiles: lineup.map((slot) =>
+        createMatchPlayerIncidentProfile(
+          input.players[slot.playerId] as Player,
+          input.playerStates?.[slot.playerId],
+        ),
+      ),
     };
   } catch (error) {
     if (error instanceof TeamStrengthError) {
@@ -144,6 +154,26 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
 
     throw error;
   }
+}
+
+/** Maps canonical player facts into the compact incident-policy input. */
+export function createMatchPlayerIncidentProfile(
+  player: Player,
+  state?: PlayerDynamicState,
+): MatchPlayerIncidentProfile {
+  return {
+    playerId: player.id,
+    tackling: Number(player.abilities.technical.tackling),
+    composure: Number(player.abilities.mental.composure),
+    determination: Number(player.abilities.mental.determination),
+    stamina: Number(player.abilities.physical.stamina),
+    agility: Number(player.abilities.physical.agility),
+    strength: Number(player.abilities.physical.strength),
+    penalties: Number(player.abilities.technical.penalties),
+    goalkeeperReflexes: Number(player.abilities.goalkeeping.reflexes),
+    goalkeeperHandling: Number(player.abilities.goalkeeping.handling),
+    startingFitness: Number(state?.fitness ?? 100),
+  };
 }
 
 /**

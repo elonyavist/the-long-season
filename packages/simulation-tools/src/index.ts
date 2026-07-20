@@ -72,3 +72,20 @@ export {
   type LongRunYouthStabilityCheck,
   type LongRunYouthStabilityReport,
 } from "./long-run/youth-stability.ts";
+
+export {
+  liveMatchControlWorldSeed,
+  runLiveMatchControlGate,
+  verifyLiveMatchControlGateReproducibility,
+  type LiveMatchControlDistribution,
+  type LiveMatchControlDistributionKey,
+  type LiveMatchControlFailure,
+  type LiveMatchControlFixtureSetup,
+  type LiveMatchControlGateReport,
+  type LiveMatchControlGateWorld,
+  type LiveMatchControlInvariantKey,
+  type LiveMatchControlReproducibility,
+  type LiveMatchControlResultRates,
+  type LiveMatchControlWorldSummary,
+  type RunLiveMatchControlGateInput,
+} from "./live-match/live-match-control-gate.ts";

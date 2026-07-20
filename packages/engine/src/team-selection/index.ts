@@ -1,13 +1,20 @@
 /** Public entrypoint for deterministic AI team-selection helpers. */
 export {
-  applyAiHalfTimeSubstitutions,
-  selectAiHalfTimeSubstitutions,
-  type AiHalfTimeSubstitutionReason,
-  type AiHalfTimeSubstitutionReasonKey,
-  type AiHalfTimeSubstitutionSelection,
-  type ApplyAiHalfTimeSubstitutionsResult,
-  type SelectAiHalfTimeSubstitutionsInput,
-} from "./ai-half-time-substitution.ts";
+  applyAiInGameDecision,
+  applyProgressiveAiInGameDecisions,
+  hasProgressiveAiInGameDecisionBoundary,
+  selectAiInGameDecision,
+  type AiInGameDecisionReason,
+  type AiInGameDecisionReasonKey,
+  type AiInGameDecisionSelection,
+  type AiInGameFormationOption,
+  type AiInGamePlayerSignal,
+  type ApplyAiInGameDecisionResult,
+  type ApplyProgressiveAiInGameDecisionsInput,
+  type ApplyProgressiveAiInGameDecisionsResult,
+  type ProgressiveAiInGameDecision,
+  type SelectAiInGameDecisionInput,
+} from "./ai-in-game-decisions.ts";
 export {
   AiSquadSelectionError,
   buildAiSquadMatchTeamContext,

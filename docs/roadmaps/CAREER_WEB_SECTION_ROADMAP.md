@@ -1958,8 +1958,123 @@ Completion:
   production consumers, the canonical browser gate passes in normal and
   reduced-motion modes, and the final evidence is recorded in
   `docs/audits/WEB_MOTION_SYSTEM_REPORT.md`.
-- The single recommended next phase is `Future Web Backlog - Squad Screen And
-  Player Memory Foundation`; it is not started here.
+- Phase 77 is now the single documented next phase. Squad remains the next
+  section after the live Matchday contract is complete.
+
+### Phase 77 - Live Match Control, Statistics And In-Game Decisions
+
+Primary dependency: complete Phase 76 motion language, Phase 75 player
+lifecycle, and the deterministic Matchday/career commit path.
+
+Purpose:
+
+- Replace half-at-once Matchday progression with one deterministic live minute
+  session shared by batch and interactive drivers.
+- Give the manager real pause, substitution, role, formation, and team-
+  instruction decisions backed by the approved tactical board.
+- Present causal live statistics, incidents, ratings, condition, and
+  consequences with a premium football-broadcast hierarchy.
+
+Minimum useful scope:
+
+- `pre_match`, `first_half`, `half_time`, `second_half`, and `full_time` live
+  states;
+- `1x`, `2x`, `4x`, unlimited manual pause, and automatic injury/red-card/
+  half-time decision pauses;
+- real possession, shots, shots on target, xG, corners, fouls, cards, saves,
+  goals, condition, and ratings;
+- deterministic selected-club and opponent substitutions/tactical changes;
+- shared-board drag/drop plus click/tap/keyboard alternatives;
+- cumulative tabellino, `Partita`/`Statistiche`/`Tattica`, and full-time team
+  tabs;
+- durable injury/suspension/Posta consequences at completed-fixture commit;
+- 50 deterministic worlds across one complete season plus full visual and
+  accessibility QA.
+
+What must not happen:
+
+- No second simulator, cosmetic statistic, UI-owned football rule, per-minute
+  storage write, or live recovery checkpoint.
+- No extra time, shootout, cup branch, substitution-window limit, pass model,
+  offside model, 2D/3D viewer, or unsupported event placeholder.
+- No second tactical board, drag-only command, hidden role conversion, runtime
+  LLM, or decorative animation layer.
+
+Definition of Done:
+
+- One deterministic minute session drives batch and live Matchday.
+- Every visible fact and decision has one tested engine/domain owner.
+- The complete browser journey is usable at desktop/narrow widths, 200% text,
+  keyboard, touch, and reduced motion.
+- The `50 worlds x 1 season` gate passes without structural match, statistic,
+  discipline, injury, or substitution failure.
+- Steps 01-10 and the final report are complete before Squad or Market starts.
+
+Progress:
+
+- Step 01 is complete: live phases, session/team facts, manager commands,
+  structured incidents/statistics/consequences, and the current competition's
+  substitution and yellow-card rules now have one tested domain contract.
+- Step 02 is complete: batch and staged progression now share one canonical
+  one-minute session, arbitrary pauses expose no future facts, and presentation
+  cadence cannot alter deterministic output.
+- Step 03 is complete: the minute engine now owns causal possession, shots,
+  shots on target, xG, corners, saves, goals, on-pitch condition, and one
+  incremental rating ledger shared by live and final projections. Control
+  affects chance creation only, while fixed-seed coverage proves that lower-
+  possession counterattacking wins remain possible.
+- Step 04 is complete: deterministic fouls, penalties, cards, and injuries now
+  flow from minute causality into typed pauses, immediate dismissals or forced
+  exits, durable injury dates, competition-scoped suspensions, yellow totals,
+  later selection exclusion, structured Posta, and SQLite schema version `8`.
+- Step 05 is complete: one compact deterministic opponent policy now handles
+  forced injury, dismissal recovery, low condition, poor performance, score,
+  and minute context through the same validated live command path as the
+  manager. Substitutions and bounded tactical changes emit structured facts,
+  stable tie-breaks preserve reproducibility, and the half-time-only AI seam
+  has been removed.
+- Step 06 is complete: the browser now drives one memory-only canonical minute
+  session with `1x`/`2x`/`4x`, manual pause, real decision pauses, immediate
+  command feedback, and no per-minute career/ Posta/persistence rebuild. The
+  fixture remains unpublished at full time until `Continua`; refresh restarts
+  the unfinished match from the durable pre-match boundary. Minor injuries no
+  longer force a decision pause: only a red card or injury requiring
+  substitution blocks live play, while penalty award/outcome and goals receive
+  bounded narrative holds.
+- Step 07 is complete: `Partita`, `Statistiche`, and `Tattica` now consume one
+  cumulative structured live projection. The stable broadcast header keeps one
+  current commentary line, the tabellino retains both halves, and comparative
+  bars expose only causal engine metrics. Penalty award/outcome and goals use
+  bounded narrative holds; red cards and forced injuries remain decision
+  pauses. Browser QA also proved that a carried plan now removes unavailable
+  players before the next fixture without replacing them silently.
+- Step 08 is complete: the approved shared board now owns paused live
+  substitutions, starter exchanges, formation and role changes, suitability
+  destinations, forced-exit display, fixed bench identity, and accessible
+  click/tap/keyboard parity. Outgoing players cannot re-enter and live edits
+  remain typed, reversible, and memory-only until accepted.
+- Step 08 verification: Node 24.16.0; web tests (`59` files / `254` tests),
+  web typecheck/build, canonical Playwright `19/19`, dependency-cruiser (`573`
+  modules / `2,094` dependencies), diff check, and Graphify update pass.
+- Step 09 is complete. Career-wide state, table, availability, Posta, and
+  attention remain unchanged at every minute and at the initial full-time
+  projection. One cached canonical preview feeds the three review tabs, and
+  one `Continua` command commits those facts atomically; a due autosave failure
+  leaves the review retryable without duplicate consequences.
+- Step 09 verification: Node 24 engine/UI/i18n/web suites PASS (web `59` files /
+  `256` tests); Playwright PASS (`19/19`); web typecheck/build,
+  dependency-cruiser (`573` modules / `2,097` dependencies), and diff check
+  PASS.
+- Step 10 is complete: superseded staged, half-time-only, and durable
+  unfinished-match paths are removed; SQLite schema version `9` owns the clean
+  beta reset; canonical Motion/accessibility QA passes `19/19`; and the
+  repeated `50 worlds x 1 season` gate completes `15,300` fixtures with zero
+  invariant failure and stable hash
+  `396aaed146613af94950c0a6365b548e`, with `3.156` goals per match and
+  `0.186` penalties awarded per match inside the unchanged calibration gate.
+- Phase 77 is complete. Final ownership, distributions, accepted anomalies,
+  residual risks, and manual checks are recorded in
+  `docs/audits/LIVE_MATCH_CONTROL_REPORT.md`.
 
 ## Dependency Summary
 
@@ -1989,14 +2104,15 @@ Recommended order:
 21. Phase 74 - Player Generation And Model Consolidation Cleanup - complete
 22. Phase 75 - Player Generation, Potential And Development Lifecycle Rework - complete; no web UI implementation in this phase
 23. Phase 76 - Web Motion Language And Football Feedback System - complete
-24. Future Web Backlog - Squad Screen And Player Memory Foundation - recommended next, not started
-25. Future Web Backlog - Calendar And Fixtures
-26. Future Web Backlog - Market UI MVP
-27. Future Web Backlog - Finances Foundation
-28. Future Web Backlog - Youth UI
-29. Future Web Backlog - Staff Foundation
-30. Future Web Backlog - Archive And History
-31. Future Web Backlog - Main Dashboard Consolidation
+24. Phase 77 - Live Match Control, Statistics And In-Game Decisions - complete
+25. Future Web Backlog - Squad Screen And Player Memory Foundation
+26. Future Web Backlog - Calendar And Fixtures
+27. Future Web Backlog - Market UI MVP
+28. Future Web Backlog - Finances Foundation
+29. Future Web Backlog - Youth UI
+30. Future Web Backlog - Staff Foundation
+31. Future Web Backlog - Archive And History
+32. Future Web Backlog - Main Dashboard Consolidation
 
 This order is intentionally linear:
 
@@ -2032,6 +2148,10 @@ This order is intentionally linear:
 - Phase 76 establishes one accessible, bundle-conscious motion language before
   new Squad, Calendar, Market, Finance, Youth, Staff, and Archive sections can
   accumulate disconnected animation and command-feedback conventions.
+- Phase 77 follows immediately because live substitutions, tactical commands,
+  causal statistics, incidents, and AI reactions are engine/product behavior,
+  not a visual polish pass. Closing this loop prevents future Squad and Market
+  screens from depending on half-time-only or cosmetic Matchday assumptions.
 - Squad and tactics are needed before matchday feels like a user choice.
 - Calendar/fixtures make Continue understandable.
 - Matchday closes the first loop.

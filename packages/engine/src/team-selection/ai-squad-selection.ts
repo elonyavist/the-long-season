@@ -24,6 +24,7 @@ import {
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
 } from "../match-engine/index.ts";
+import { createMatchPlayerIncidentProfile } from "../match-engine/tactic-team-context.ts";
 
 /** Recent deterministic usage facts that can gently rotate an AI squad. */
 export interface AiRecentPlayerUse {
@@ -192,6 +193,12 @@ export function buildAiSquadMatchTeamContext(
           ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
         }),
         tacticalDistribution: input.tacticalDistribution,
+        incidentProfiles: selection.lineup.map((slot) =>
+          createMatchPlayerIncidentProfile(
+            requiredPlayer(input, slot.playerId),
+            input.playerStates?.[slot.playerId],
+          ),
+        ),
       },
     };
   } catch (error) {

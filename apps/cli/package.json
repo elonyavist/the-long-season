@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "cli": "node src/index.ts",
+    "live-match-control-report": "node src/commands/live-match-control-report.main.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

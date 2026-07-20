@@ -6,5 +6,5 @@
  */
 export * from "./inbox.ts";
 export * from "./attention.ts";
-export * from "./active-match-checkpoint.ts";
 export * from "./player-participation.ts";
+export * from "./player-availability.ts";

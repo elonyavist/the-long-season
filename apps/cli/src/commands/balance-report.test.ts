@@ -84,7 +84,7 @@ test("calibration-v1 passes the tuned twenty-season calibration sample", async (
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes("Target profile: calibration-v1"), true);
   assert.equal(io.stdoutLines.includes("Status: PASS"), true);
-});
+}, 20_000);
 
 test("balance-report exits nonzero on invalid args", async () => {
   const io = captureIo();

@@ -92,10 +92,10 @@ describe("AppShell", () => {
     expect(html).not.toContain("Career context");
   });
 
-  it("keeps Continue, save access, and compact Posta awareness in the sidebar", () => {
+  it("keeps save access and compact Posta awareness in the sidebar without a progression command", () => {
     const html = renderShell();
 
-    expect(html).toContain("Continue");
+    expect(html).not.toContain(">Continue</button>");
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain(">Save</span>");
     expect(html).toContain("Inbox");
@@ -104,7 +104,7 @@ describe("AppShell", () => {
     expect(html).not.toContain('class="tls-app-shell-right-rail"');
   });
 
-  it("hides the global Continue in focused preparation mode while keeping Posta", () => {
+  it("keeps focused preparation mode free of a global Continue while retaining Posta", () => {
     const html = renderShell("preparation");
 
     expect(html).not.toContain(">Continue</button>");
@@ -183,7 +183,6 @@ function renderShell(
         shellView={shellView}
         text={text}
         onBackToMenu={vi.fn()}
-        onContinueCareer={vi.fn()}
       >
         <section>Dashboard body</section>
       </AppShell>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MessageKey, Translator } from "@game/i18n";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
@@ -31,21 +31,15 @@ import {
   MatchdayTabellino,
 } from "./MatchdayTabellino";
 import {
-  buildFirstHalfPlaybackPlan,
-  buildSecondHalfPlaybackPlan,
-  prefersReducedMatchdayMotion,
-  projectFirstHalfPlaybackFrame,
-  projectSecondHalfPlaybackFrame,
-  scaledMatchdayPlaybackHoldMs,
-  type MatchdayPlaybackStage,
-  type MatchdayPlaybackPriority,
+  matchdayMinuteDelayMs,
   type MatchdayPlaybackSpeed,
 } from "./matchday-playback";
 import type {
-  WebHalfTimeSubstitutionDecision,
-  WebHalfTimeSubstitutionPanel,
+  WebMatchdaySubstitutionDecision,
+  WebMatchdayTeamControlPanel,
 } from "./matchday-adapter";
 import { AppShell, focusCurrentCareerTask } from "../app-shell/AppShell";
+import { CareerScreenHeader } from "../shared/CareerScreenHeader";
 import type { TacticalBoardDraft } from "../tactics-board/tactical-board-state";
 import type { TacticalBoardRoleCode } from "../tactics-board/tactical-board-types";
 import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
@@ -58,7 +52,9 @@ import {
   MatchdayHalfTimePhase,
 } from "./MatchdayHalfTimePhase";
 import { MatchdayFullTimePhase } from "./MatchdayFullTimePhase";
+import { MatchdayLiveWorkspace } from "./MatchdayLiveWorkspace";
 import { MatchdayPlaybackControls } from "./MatchdayPlaybackControls";
+import { useMatchdayNarrativeFrame } from "./use-matchday-narrative-frame";
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
 const MATCHDAY_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
@@ -81,53 +77,70 @@ const MATCHDAY_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
   },
 ];
 
+type MatchdayPlaybackControlState = Readonly<{
+  paused: boolean;
+  speed: MatchdayPlaybackSpeed;
+  onPausedChange: (paused: boolean) => void;
+  onSpeedChange: (speed: MatchdayPlaybackSpeed) => void;
+}>;
+
 /** Props for the playable match centre web screen. */
 export type CareerMatchdayScreenProps = Readonly<{
   view: CareerMatchdayView;
   phaseView: CareerMatchdayPhaseView;
-  halfTimeSubstitutions?: WebHalfTimeSubstitutionPanel;
+  teamControlPanel?: WebMatchdayTeamControlPanel;
   matchPreparationView?: CareerMatchPreparationView;
   tacticalBoardDraft?: TacticalBoardDraft;
+  hasPendingTeamChanges?: boolean;
   continueResult?: WebCareerContinueResult;
   text: Translator;
   onBackToMenu: () => void;
   onBackToDashboard: () => void;
-  onContinueCareer: () => void;
   onInboxActionClick: (actionId: string) => void;
   onPrepareMatch: () => void;
-  onPlayFixture: () => void;
-  onApplyHalfTimeSubstitution?: (decision: WebHalfTimeSubstitutionDecision) => void;
+  onStartFirstHalf: () => void;
+  onAdvanceMatchMinute: () => Promise<void>;
+  onPauseMatch: () => void;
+  onResumeMatch: () => void;
+  onResolveIncident: () => void;
+  onApplyHalfTimeSubstitution?: (decision: WebMatchdaySubstitutionDecision) => void;
   onHalfTimeFormationChange?: (formationId: CareerMatchPreparationFormationId) => void;
-  onHalfTimeLineupPlayerChange?: (slotKey: string, playerId: string | undefined) => void;
-  onHalfTimeBenchPlayerChange?: (slotKey: string, playerId: string | undefined) => void;
   onHalfTimeBoardSlotMove?: (slotKey: string, nx: number, ny: number) => void;
   onHalfTimeBoardSlotRoleChange?: (slotKey: string, role: TacticalBoardRoleCode) => void;
-  onHalfTimeBoardSlotClear?: (slotKey: string) => void;
-  onStartSecondHalf?: () => void;
+  onMatchdayBoardSlotAdapt?: (slotKey: string, role: TacticalBoardRoleCode, nx: number, ny: number) => void;
+  onMatchdayBoardSlotExchange?: (firstSlotKey: string, secondSlotKey: string) => void;
+  onMatchdayTacticProfileChange?: (tacticProfileId: string | undefined) => void;
+  onDiscardPendingTeamChanges?: () => void;
+  onStartSecondHalf: () => void;
 }>;
 
 /** Renders the phase-aware match centre without owning match simulation rules. */
 export function CareerMatchdayScreen({
   view,
   phaseView,
-  halfTimeSubstitutions,
+  teamControlPanel,
   matchPreparationView,
   tacticalBoardDraft,
+  hasPendingTeamChanges = false,
   continueResult,
   text,
   onBackToMenu,
   onBackToDashboard,
-  onContinueCareer,
   onInboxActionClick,
   onPrepareMatch,
-  onPlayFixture,
+  onStartFirstHalf,
+  onAdvanceMatchMinute,
+  onPauseMatch,
+  onResumeMatch,
+  onResolveIncident,
   onApplyHalfTimeSubstitution,
   onHalfTimeFormationChange,
-  onHalfTimeLineupPlayerChange,
-  onHalfTimeBenchPlayerChange,
   onHalfTimeBoardSlotMove,
   onHalfTimeBoardSlotRoleChange,
-  onHalfTimeBoardSlotClear,
+  onMatchdayBoardSlotAdapt,
+  onMatchdayBoardSlotExchange,
+  onMatchdayTacticProfileChange,
+  onDiscardPendingTeamChanges,
   onStartSecondHalf,
 }: CareerMatchdayScreenProps): React.JSX.Element {
   const inboxView = buildCareerInboxView(continueResult?.inboxMessages ?? []);
@@ -139,7 +152,22 @@ export function CareerMatchdayScreen({
   });
   const commandActivity = useCareerUiStore((state) => state.commandActivity);
   const commandPending = commandActivity?.status === "pending";
-  const playback = useMatchdayPlayback(phaseView, commandActivity);
+  const narrativeFrame = useMatchdayNarrativeFrame(
+    phaseView.timelineEvents,
+    phaseView.currentMinute,
+    (phaseView.phase === "first_half" || phaseView.phase === "second_half")
+      && phaseView.liveControl?.runState === "running",
+  );
+  const currentEventId = narrativeFrame.currentEventId
+    ?? latestCurrentMinuteEventId(phaseView);
+  const playback = useMatchdayPlayback(
+    phaseView,
+    commandActivity,
+    narrativeFrame.holdActive,
+    onAdvanceMatchMinute,
+    onPauseMatch,
+    onResumeMatch,
+  );
 
   return (
     <AppShell
@@ -148,226 +176,163 @@ export function CareerMatchdayScreen({
       currentDateIso={view.currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
-      onContinueCareer={onContinueCareer}
       onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-matchday-panel" aria-labelledby="career-matchday-title" aria-busy={commandPending}>
-        <header className="tls-matchday-header">
-          <div>
-            <h1 className="tls-shell-title" id="career-matchday-title">{text("career.matchday.title")}</h1>
-          </div>
-        </header>
-
         <MatchCentre
           view={view}
-          phaseView={playback.visiblePhaseView}
-          {...(playback.playbackStage === undefined ? {} : { playbackStage: playback.playbackStage })}
-          {...(playback.playbackPriority === undefined ? {} : { playbackPriority: playback.playbackPriority })}
-          {...(playback.currentEventId === undefined ? {} : { currentEventId: playback.currentEventId })}
+          phaseView={phaseView}
+          {...(currentEventId === undefined ? {} : { currentEventId })}
           {...(playback.controls === undefined ? {} : { playbackControls: playback.controls })}
           commandActivity={commandActivity}
           text={text}
           onPrepareMatch={onPrepareMatch}
-          onPlayFixture={onPlayFixture}
-          onStartFirstHalf={() => {
-            playback.requestFirstHalfPlayback();
-            onPlayFixture();
-          }}
+          onStartFirstHalf={onStartFirstHalf}
+          onPauseMatch={onPauseMatch}
+          onResumeMatch={onResumeMatch}
+          onResolveIncident={onResolveIncident}
           onBackToDashboard={onBackToDashboard}
           {...(matchPreparationView === undefined ? {} : { matchPreparationView })}
           {...(tacticalBoardDraft === undefined ? {} : { tacticalBoardDraft })}
-          {...(halfTimeSubstitutions === undefined ? {} : { halfTimeSubstitutions })}
+          hasPendingTeamChanges={hasPendingTeamChanges}
+          {...(teamControlPanel === undefined ? {} : { teamControlPanel })}
           {...(onApplyHalfTimeSubstitution === undefined ? {} : { onApplyHalfTimeSubstitution })}
           {...(onHalfTimeFormationChange === undefined ? {} : { onHalfTimeFormationChange })}
-          {...(onHalfTimeLineupPlayerChange === undefined ? {} : { onHalfTimeLineupPlayerChange })}
-          {...(onHalfTimeBenchPlayerChange === undefined ? {} : { onHalfTimeBenchPlayerChange })}
           {...(onHalfTimeBoardSlotMove === undefined ? {} : { onHalfTimeBoardSlotMove })}
           {...(onHalfTimeBoardSlotRoleChange === undefined ? {} : { onHalfTimeBoardSlotRoleChange })}
-          {...(onHalfTimeBoardSlotClear === undefined ? {} : { onHalfTimeBoardSlotClear })}
-          {...(onStartSecondHalf === undefined
-            ? {}
-            : {
-                onStartSecondHalf: () => {
-                  playback.requestSecondHalfPlayback();
-                  onStartSecondHalf();
-                },
-              })}
+          {...(onMatchdayBoardSlotAdapt === undefined ? {} : { onMatchdayBoardSlotAdapt })}
+          {...(onMatchdayBoardSlotExchange === undefined ? {} : { onMatchdayBoardSlotExchange })}
+          {...(onMatchdayTacticProfileChange === undefined ? {} : { onMatchdayTacticProfileChange })}
+          {...(onDiscardPendingTeamChanges === undefined ? {} : { onDiscardPendingTeamChanges })}
+          onStartSecondHalf={onStartSecondHalf}
         />
       </section>
     </AppShell>
   );
 }
 
-/** Owns presentation-only period playback while preserving the canonical match checkpoint. */
+/** Schedules one engine minute at a time while the canonical session is running. */
 function useMatchdayPlayback(
   phaseView: CareerMatchdayPhaseView,
   commandActivity: CareerCommandActivity | undefined,
+  narrativeHoldActive: boolean,
+  onAdvanceMatchMinute: () => Promise<void>,
+  onPauseMatch: () => void,
+  onResumeMatch: () => void,
 ): Readonly<{
-  visiblePhaseView: CareerMatchdayPhaseView;
-  playbackStage?: MatchdayPlaybackStage;
-  playbackPriority?: MatchdayPlaybackPriority;
-  currentEventId?: string;
-  controls?: Readonly<{
-    paused: boolean;
-    speed: MatchdayPlaybackSpeed;
-    onPausedChange: (paused: boolean) => void;
-    onSpeedChange: (speed: MatchdayPlaybackSpeed) => void;
-  }>;
-  requestFirstHalfPlayback: () => void;
-  requestSecondHalfPlayback: () => void;
+  controls?: MatchdayPlaybackControlState;
 }> {
-  const [activePlayback, setActivePlayback] = useState<Readonly<{
-    period: "first_half" | "second_half";
-    frameIndex: number;
-  }>>();
-  const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState<MatchdayPlaybackSpeed>(1);
-  const playbackPlan = useMemo(
-    () => activePlayback?.period === "first_half" && phaseView.phase === "half_time"
-      ? buildFirstHalfPlaybackPlan(phaseView, prefersReducedMatchdayMotion())
-      : activePlayback?.period === "second_half" && phaseView.phase === "full_time"
-        ? buildSecondHalfPlaybackPlan(phaseView, prefersReducedMatchdayMotion())
-        : undefined,
-    [activePlayback?.period, phaseView],
-  );
-  const playbackFrame = activePlayback === undefined
-    ? undefined
-    : playbackPlan?.frames[activePlayback.frameIndex];
+  const reducedMotion = useReducedMotion();
+  const advanceMinuteRef = useRef(onAdvanceMatchMinute);
+  const minuteRequestInFlight = useRef(false);
+  const liveControl = phaseView.liveControl;
+  const livePhase = phaseView.phase === "first_half" || phaseView.phase === "second_half";
+  const running = liveControl?.runState === "running";
+  const commandUnavailable = commandActivity !== undefined
+    && (commandActivity.commandId !== "advance_match_minute" || commandActivity.status === "failed");
 
   useEffect(() => {
-    if (activePlayback === undefined || commandActivity?.status !== "failed") return;
-    const failedPeriod = commandActivity.commandId === "play_first_half"
-      ? "first_half"
-      : commandActivity.commandId === "play_second_half"
-        ? "second_half"
-        : undefined;
-    if (failedPeriod !== activePlayback.period) return;
-
-    setActivePlayback(undefined);
-    setPaused(false);
-    setSpeed(1);
-  }, [activePlayback, commandActivity]);
+    advanceMinuteRef.current = onAdvanceMatchMinute;
+  }, [onAdvanceMatchMinute]);
 
   useEffect(() => {
-    if (
-      activePlayback === undefined
-      || playbackPlan === undefined
-      || playbackFrame === undefined
-      || paused
-    ) return;
+    if (!livePhase || !running || commandUnavailable || narrativeHoldActive) return;
 
     const timeout = window.setTimeout(() => {
-      setActivePlayback((current) => {
-        if (current === undefined || current.period !== activePlayback.period) return current;
-        const nextFrameIndex = current.frameIndex + 1;
-        return nextFrameIndex < playbackPlan.frames.length
-          ? { ...current, frameIndex: nextFrameIndex }
-          : undefined;
+      if (minuteRequestInFlight.current) return;
+      minuteRequestInFlight.current = true;
+      void advanceMinuteRef.current().finally(() => {
+        minuteRequestInFlight.current = false;
       });
-    }, scaledMatchdayPlaybackHoldMs(playbackFrame, speed));
+    }, matchdayMinuteDelayMs(speed, Boolean(reducedMotion)));
 
     return () => window.clearTimeout(timeout);
-  }, [activePlayback, paused, playbackFrame, playbackPlan, speed]);
-
-  useEffect(() => {
-    if (activePlayback !== undefined) return;
-    setPaused(false);
-    setSpeed(1);
-  }, [activePlayback]);
-
-  const visiblePhaseView = playbackFrame !== undefined
-    && activePlayback?.period === "first_half"
-    && phaseView.phase === "half_time"
-    ? projectFirstHalfPlaybackFrame(phaseView, playbackFrame)
-    : playbackFrame !== undefined
-      && activePlayback?.period === "second_half"
-      && phaseView.phase === "full_time"
-      ? projectSecondHalfPlaybackFrame(phaseView, playbackFrame)
-      : phaseView;
-  const playbackStage = playbackFrame?.stage;
-  const playbackPriority = playbackFrame?.priority;
-  const currentEventId = playbackFrame?.currentEventId;
+  }, [
+    commandUnavailable,
+    livePhase,
+    narrativeHoldActive,
+    phaseView.currentMinute,
+    reducedMotion,
+    running,
+    speed,
+  ]);
 
   return {
-    visiblePhaseView,
-    ...(playbackStage === undefined ? {} : { playbackStage }),
-    ...(playbackPriority === undefined ? {} : { playbackPriority }),
-    ...(currentEventId === undefined ? {} : { currentEventId }),
-    ...(playbackFrame === undefined
+    ...(!livePhase || liveControl?.pendingDecision !== undefined
       ? {}
       : {
           controls: {
-            paused,
+            paused: !running,
             speed,
-            onPausedChange: setPaused,
+            onPausedChange: (paused: boolean) => {
+              if (paused) onPauseMatch();
+              else onResumeMatch();
+            },
             onSpeedChange: setSpeed,
           },
         }),
-    requestFirstHalfPlayback: () => {
-      setPaused(false);
-      setSpeed(1);
-      setActivePlayback({ period: "first_half", frameIndex: 0 });
-    },
-    requestSecondHalfPlayback: () => {
-      setPaused(false);
-      setSpeed(1);
-      setActivePlayback({ period: "second_half", frameIndex: 0 });
-    },
   };
+}
+
+function latestCurrentMinuteEventId(view: CareerMatchdayPhaseView): string | undefined {
+  return view.timelineEvents
+    .filter((event) => event.minute === view.currentMinute)
+    .at(-1)
+    ?.eventId;
 }
 
 function MatchCentre({
   view,
   phaseView,
-  playbackStage,
-  playbackPriority,
   currentEventId,
   playbackControls,
   commandActivity,
   text,
   onPrepareMatch,
-  onPlayFixture,
   matchPreparationView,
   tacticalBoardDraft,
-  halfTimeSubstitutions,
+  hasPendingTeamChanges = false,
+  teamControlPanel,
   onApplyHalfTimeSubstitution,
   onHalfTimeFormationChange,
-  onHalfTimeLineupPlayerChange,
-  onHalfTimeBenchPlayerChange,
   onHalfTimeBoardSlotMove,
   onHalfTimeBoardSlotRoleChange,
-  onHalfTimeBoardSlotClear,
+  onMatchdayBoardSlotAdapt,
+  onMatchdayBoardSlotExchange,
+  onMatchdayTacticProfileChange,
+  onDiscardPendingTeamChanges,
   onStartFirstHalf,
   onStartSecondHalf,
+  onPauseMatch,
+  onResumeMatch,
+  onResolveIncident,
   onBackToDashboard,
 }: Readonly<{
   view: CareerMatchdayView;
   phaseView: CareerMatchdayPhaseView;
-  playbackStage?: MatchdayPlaybackStage;
-  playbackPriority?: MatchdayPlaybackPriority;
   currentEventId?: string;
-  playbackControls?: Readonly<{
-    paused: boolean;
-    speed: MatchdayPlaybackSpeed;
-    onPausedChange: (paused: boolean) => void;
-    onSpeedChange: (speed: MatchdayPlaybackSpeed) => void;
-  }>;
+  playbackControls?: MatchdayPlaybackControlState;
   commandActivity: CareerCommandActivity | undefined;
   text: Translator;
   onPrepareMatch: () => void;
-  onPlayFixture: () => void;
   matchPreparationView?: CareerMatchPreparationView;
   tacticalBoardDraft?: TacticalBoardDraft;
-  halfTimeSubstitutions?: WebHalfTimeSubstitutionPanel;
-  onApplyHalfTimeSubstitution?: (decision: WebHalfTimeSubstitutionDecision) => void;
+  hasPendingTeamChanges?: boolean;
+  teamControlPanel?: WebMatchdayTeamControlPanel;
+  onApplyHalfTimeSubstitution?: (decision: WebMatchdaySubstitutionDecision) => void;
   onHalfTimeFormationChange?: (formationId: CareerMatchPreparationFormationId) => void;
-  onHalfTimeLineupPlayerChange?: (slotKey: string, playerId: string | undefined) => void;
-  onHalfTimeBenchPlayerChange?: (slotKey: string, playerId: string | undefined) => void;
   onHalfTimeBoardSlotMove?: (slotKey: string, nx: number, ny: number) => void;
   onHalfTimeBoardSlotRoleChange?: (slotKey: string, role: TacticalBoardRoleCode) => void;
-  onHalfTimeBoardSlotClear?: (slotKey: string) => void;
+  onMatchdayBoardSlotAdapt?: (slotKey: string, role: TacticalBoardRoleCode, nx: number, ny: number) => void;
+  onMatchdayBoardSlotExchange?: (firstSlotKey: string, secondSlotKey: string) => void;
+  onMatchdayTacticProfileChange?: (tacticProfileId: string | undefined) => void;
+  onDiscardPendingTeamChanges?: () => void;
   onStartFirstHalf: () => void;
-  onStartSecondHalf?: () => void;
+  onStartSecondHalf: () => void;
+  onPauseMatch: () => void;
+  onResumeMatch: () => void;
+  onResolveIncident: () => void;
   onBackToDashboard: () => void;
 }>): React.JSX.Element {
   const presentation = buildCareerMatchdayPresentationView(phaseView);
@@ -375,7 +340,7 @@ function MatchCentre({
     ? buildMatchdayHalfTimeValidationIssues(
         matchPreparationView,
         tacticalBoardDraft,
-        halfTimeSubstitutions,
+        teamControlPanel,
       )
     : [];
   const preparationBlockerKeys = phaseView.phase === "pre_match" ? view.blockerKeys : [];
@@ -391,6 +356,7 @@ function MatchCentre({
   const phaseChanged = previousPhase.current !== phaseView.phase;
   const [enteredPhase, setEnteredPhase] = useState<CareerMatchdayPhaseView["phase"]>();
   const animatePhaseEntry = phaseChanged || enteredPhase === phaseView.phase;
+  const visiblePrimaryAction = playbackControls === undefined ? primaryAction : undefined;
 
   useEffect(() => {
     if (previousPhase.current === phaseView.phase) return;
@@ -400,41 +366,59 @@ function MatchCentre({
   }, [phaseView.phase]);
 
   return (
-    <div
-      className="tls-match-centre"
-      data-playback-priority={playbackPriority}
-    >
+    <div className="tls-match-centre">
+      <CareerScreenHeader
+        className="tls-matchday-header"
+        command={(
+          <MatchdayHeaderCommand
+            commandActivity={commandActivity}
+            {...(playbackControls === undefined ? {} : { playbackControls })}
+            {...(visiblePrimaryAction === undefined ? {} : { primaryAction: visiblePrimaryAction })}
+            text={text}
+            onPrepareMatch={onPrepareMatch}
+            onBackToDashboard={onBackToDashboard}
+            onStartFirstHalf={onStartFirstHalf}
+            onStartSecondHalf={onStartSecondHalf}
+            onPauseMatch={onPauseMatch}
+            onResumeMatch={onResumeMatch}
+            onResolveIncident={onResolveIncident}
+          />
+        )}
+        title={text("career.matchday.title")}
+        titleId="career-matchday-title"
+      />
+
       <MatchdayBroadcastHeader
         phaseView={phaseView}
         presentation={presentation}
-        commandActivity={commandActivity}
         liveLine={liveLine}
         liveMoment={liveMoment}
         phaseChanged={animatePhaseEntry}
-        {...(playbackStage === undefined ? {} : { playbackStage })}
         text={text}
-        onPrepareMatch={onPrepareMatch}
-        onPlayFixture={onPlayFixture}
-        onBackToDashboard={onBackToDashboard}
-        {...(primaryAction === undefined ? {} : { primaryAction })}
-        onStartFirstHalf={onStartFirstHalf}
-        {...(onStartSecondHalf === undefined ? {} : { onStartSecondHalf })}
       />
-
-      {playbackControls === undefined ? null : (
-        <MatchdayPlaybackControls
-          paused={playbackControls.paused}
-          speed={playbackControls.speed}
-          text={text}
-          onPausedChange={playbackControls.onPausedChange}
-          onSpeedChange={playbackControls.onSpeedChange}
-        />
-      )}
 
       <div className="tls-match-centre-command-lock" inert={commandPending ? true : undefined}>
       <MatchdayBlockers blockerKeys={preparationBlockerKeys} text={text} />
 
-      {phaseView.phase === "half_time" ? (
+      {phaseView.phase === "first_half" || phaseView.phase === "second_half" ? (
+        <MatchdayLiveWorkspace
+          phaseView={phaseView}
+          presentation={presentation}
+          text={text}
+          {...(matchPreparationView === undefined ? {} : { matchPreparationView })}
+          {...(tacticalBoardDraft === undefined ? {} : { tacticalBoardDraft })}
+          {...(teamControlPanel === undefined ? {} : { teamControlPanel })}
+          hasPendingTeamChanges={hasPendingTeamChanges}
+          {...(onApplyHalfTimeSubstitution === undefined ? {} : { onSubstitution: onApplyHalfTimeSubstitution })}
+          {...(onHalfTimeFormationChange === undefined ? {} : { onFormationChange: onHalfTimeFormationChange })}
+          {...(onMatchdayTacticProfileChange === undefined ? {} : { onTacticProfileChange: onMatchdayTacticProfileChange })}
+          {...(onHalfTimeBoardSlotMove === undefined ? {} : { onBoardSlotMove: onHalfTimeBoardSlotMove })}
+          {...(onHalfTimeBoardSlotRoleChange === undefined ? {} : { onBoardSlotRoleChange: onHalfTimeBoardSlotRoleChange })}
+          {...(onMatchdayBoardSlotAdapt === undefined ? {} : { onBoardSlotAdapt: onMatchdayBoardSlotAdapt })}
+          {...(onMatchdayBoardSlotExchange === undefined ? {} : { onBoardSlotExchange: onMatchdayBoardSlotExchange })}
+          {...(onDiscardPendingTeamChanges === undefined ? {} : { onDiscardPendingChanges: onDiscardPendingTeamChanges })}
+        />
+      ) : phaseView.phase === "half_time" ? (
         presentation.halfTimeReview === undefined ? null : (
           <MatchdayHalfTimePhase
             key={`half-time:${phaseView.fixture.fixtureId}`}
@@ -444,14 +428,16 @@ function MatchCentre({
             validationIssues={halfTimeValidationIssues}
             {...(matchPreparationView === undefined ? {} : { matchPreparationView })}
             {...(tacticalBoardDraft === undefined ? {} : { tacticalBoardDraft })}
-            {...(halfTimeSubstitutions === undefined ? {} : { substitutionPanel: halfTimeSubstitutions })}
+            {...(teamControlPanel === undefined ? {} : { substitutionPanel: teamControlPanel })}
+            hasPendingTeamChanges={hasPendingTeamChanges}
             {...(onApplyHalfTimeSubstitution === undefined ? {} : { onApplyHalfTimeSubstitution })}
             {...(onHalfTimeFormationChange === undefined ? {} : { onFormationChange: onHalfTimeFormationChange })}
-            {...(onHalfTimeLineupPlayerChange === undefined ? {} : { onLineupPlayerChange: onHalfTimeLineupPlayerChange })}
-            {...(onHalfTimeBenchPlayerChange === undefined ? {} : { onBenchPlayerChange: onHalfTimeBenchPlayerChange })}
             {...(onHalfTimeBoardSlotMove === undefined ? {} : { onBoardSlotMove: onHalfTimeBoardSlotMove })}
             {...(onHalfTimeBoardSlotRoleChange === undefined ? {} : { onBoardSlotRoleChange: onHalfTimeBoardSlotRoleChange })}
-            {...(onHalfTimeBoardSlotClear === undefined ? {} : { onBoardSlotClear: onHalfTimeBoardSlotClear })}
+            {...(onMatchdayBoardSlotAdapt === undefined ? {} : { onBoardSlotAdapt: onMatchdayBoardSlotAdapt })}
+            {...(onMatchdayBoardSlotExchange === undefined ? {} : { onBoardSlotExchange: onMatchdayBoardSlotExchange })}
+            {...(onMatchdayTacticProfileChange === undefined ? {} : { onTacticProfileChange: onMatchdayTacticProfileChange })}
+            {...(onDiscardPendingTeamChanges === undefined ? {} : { onDiscardPendingChanges: onDiscardPendingTeamChanges })}
           />
         )
       ) : phaseView.phase === "full_time" ? (
@@ -469,40 +455,117 @@ function MatchCentre({
   );
 }
 
-function MatchdayBroadcastHeader({
-  phaseView,
-  presentation,
+/** Keeps the current Matchday command in one stable place beside the screen title. */
+function MatchdayHeaderCommand({
   commandActivity,
-  liveLine,
-  liveMoment,
-  phaseChanged,
-  playbackStage,
+  playbackControls,
   primaryAction,
   text,
   onPrepareMatch,
-  onPlayFixture,
   onBackToDashboard,
   onStartFirstHalf,
   onStartSecondHalf,
+  onPauseMatch,
+  onResumeMatch,
+  onResolveIncident,
 }: Readonly<{
-  phaseView: CareerMatchdayPhaseView;
-  presentation: CareerMatchdayPresentationView;
   commandActivity: CareerCommandActivity | undefined;
-  liveLine: string;
-  liveMoment: ReturnType<typeof buildMatchdayLiveMoment>;
-  phaseChanged: boolean;
-  playbackStage?: MatchdayPlaybackStage;
+  playbackControls?: MatchdayPlaybackControlState;
   primaryAction?: MatchdayManagerActionView;
   text: Translator;
   onPrepareMatch: () => void;
-  onPlayFixture: () => void;
   onBackToDashboard: () => void;
-  onStartFirstHalf?: () => void;
-  onStartSecondHalf?: () => void;
+  onStartFirstHalf: () => void;
+  onStartSecondHalf: () => void;
+  onPauseMatch: () => void;
+  onResumeMatch: () => void;
+  onResolveIncident: () => void;
+}>): React.JSX.Element | null {
+  if (playbackControls !== undefined) {
+    return (
+      <div className="tls-matchday-header-command">
+        <MatchdayPlaybackControls
+          paused={playbackControls.paused}
+          speed={playbackControls.speed}
+          text={text}
+          onPausedChange={playbackControls.onPausedChange}
+          onSpeedChange={playbackControls.onSpeedChange}
+        />
+      </div>
+    );
+  }
+
+  if (primaryAction === undefined) return null;
+
+  return (
+    <div className="tls-matchday-header-command">
+      <button
+        className="tls-menu-button tls-menu-button-primary tls-matchday-primary-action"
+        data-action-id={primaryAction.actionId}
+        data-state={commandActivity?.status === "pending"
+          ? "pending"
+          : primaryAction.status === "available"
+            ? "idle"
+            : "disabled"}
+        disabled={primaryAction.status !== "available" || commandActivity?.status === "pending"}
+        type="button"
+        onClick={handlerForPhaseAction(primaryAction.actionId, {
+          onPrepareMatch,
+          onBackToDashboard,
+          onStartFirstHalf,
+          onStartSecondHalf,
+          onPauseMatch,
+          onResumeMatch,
+          onResolveIncident,
+        })}
+      >
+        <CommandActivityIndicator
+          activity={commandActivity}
+          commandIds={[
+            "play_first_half",
+            "play_second_half",
+            "pause_match",
+            "resume_match",
+            "resolve_match_incident",
+            "return_to_dashboard",
+          ]}
+          idleLabel={text(primaryAction.labelKey as MessageKey)}
+          text={text}
+        />
+      </button>
+    </div>
+  );
+}
+
+function MatchdayBroadcastHeader({
+  phaseView,
+  presentation,
+  liveLine,
+  liveMoment,
+  phaseChanged,
+  text,
+}: Readonly<{
+  phaseView: CareerMatchdayPhaseView;
+  presentation: CareerMatchdayPresentationView;
+  liveLine: string;
+  liveMoment: ReturnType<typeof buildMatchdayLiveMoment>;
+  phaseChanged: boolean;
+  text: Translator;
 }>): React.JSX.Element {
   const header = presentation.scoreHeader;
   const reducedMotion = useReducedMotion();
   const animateCheckpoint = phaseChanged && !reducedMotion;
+  const liveGoalClubId = (phaseView.phase === "first_half" || phaseView.phase === "second_half")
+    && liveMoment.visualPriority === "goal"
+    ? liveMoment.event?.event.club.clubId
+    : undefined;
+  const highlightedGoalSide = liveGoalClubId === phaseView.fixture.homeClub.clubId
+    ? "home"
+    : liveGoalClubId === phaseView.fixture.awayClub.clubId
+      ? "away"
+      : undefined;
+  const running = (phaseView.phase === "first_half" || phaseView.phase === "second_half")
+    && phaseView.liveControl?.runState === "running";
 
   return (
     <m.section
@@ -514,64 +577,101 @@ function MatchdayBroadcastHeader({
       initial={animateCheckpoint ? webMotionTargets.matchCheckpointEnter : false}
       transition={webMotion.transition}
     >
-      <div className="tls-match-broadcast-meta" aria-label={text("career.matchday.context")}>
-        <span>{text(header.phaseLabelKey as MessageKey)}</span>
-        <span>{phaseMinuteLabel(header.minute, text)}</span>
-        <span>{text("career.fixtureRound", { round: header.round })}</span>
-        <span>{text(`career.dashboard.fixtureSide.${phaseView.fixture.selectedClubSide}` as MessageKey)}</span>
+      <div className="tls-match-broadcast-topbar">
+        <div className="tls-match-broadcast-meta" aria-label={text("career.matchday.context")}>
+          <span>{text(header.phaseLabelKey as MessageKey)}</span>
+          <span>{text("career.fixtureRound", { round: header.round })}</span>
+          <span>{text(`career.dashboard.fixtureSide.${phaseView.fixture.selectedClubSide}` as MessageKey)}</span>
+        </div>
+
+        {header.phase === "pre_match" ? <span aria-hidden="true" /> : (
+          <MatchdayClock
+            minute={header.minute}
+            running={running}
+            text={text}
+          />
+        )}
+
+        <span aria-hidden="true" />
       </div>
 
       <div className="tls-match-broadcast-main">
-        <MatchdayScoreboard header={header} text={text} />
-
-        {primaryAction === undefined ? null : (
-          <button
-            className="tls-menu-button tls-menu-button-primary tls-match-broadcast-action"
-            data-state={commandActivity?.status === "pending"
-              ? "pending"
-              : primaryAction.status === "available"
-                ? "idle"
-                : "disabled"}
-            disabled={primaryAction.status !== "available" || commandActivity?.status === "pending"}
-            type="button"
-            onClick={handlerForPhaseAction(primaryAction.actionId, {
-              onPrepareMatch,
-              onPlayFixture,
-              onBackToDashboard,
-              ...(onStartFirstHalf === undefined ? {} : { onStartFirstHalf }),
-              ...(onStartSecondHalf === undefined ? {} : { onStartSecondHalf }),
-            })}
-          >
-            <CommandActivityIndicator
-              activity={commandActivity}
-              commandIds={["play_first_half", "play_second_half", "return_to_dashboard"]}
-              idleLabel={text(primaryAction.labelKey as MessageKey)}
-              text={text}
-            />
-          </button>
-        )}
+        <MatchdayScoreboard
+          header={header}
+          {...(highlightedGoalSide === undefined ? {} : { highlightedGoalSide })}
+        />
       </div>
+
+      <PhaseRail indicators={presentation.phaseIndicators} text={text} />
 
       <MatchdayLiveCommentary
         line={liveLine}
         moment={liveMoment}
-        {...(playbackStage === undefined ? {} : { playbackStage })}
       />
 
-      <MatchdayTabellino view={presentation.tabellino} text={text} />
+      {phaseView.phase === "first_half" || phaseView.phase === "second_half" ? null : (
+        <MatchdayTabellino view={presentation.tabellino} text={text} />
+      )}
 
-      <PhaseRail indicators={presentation.phaseIndicators} text={text} />
     </m.section>
   );
 }
 
-function MatchdayScoreboard({ header, text }: Readonly<{ header: MatchdayScoreHeaderView; text: Translator }>): React.JSX.Element {
+function MatchdayClock({
+  minute,
+  running,
+  text,
+}: Readonly<{
+  minute: number;
+  running: boolean;
+  text: Translator;
+}>): React.JSX.Element {
+  const reducedMotion = useReducedMotion();
+
+  return (
+    <div
+      aria-label={`${text("career.matchday.minute")} ${minute}`}
+      className="tls-matchday-clock"
+      data-clock-running={running ? "true" : "false"}
+    >
+      <m.span
+        aria-hidden="true"
+        animate={running && !reducedMotion
+          ? webMotionTargets.matchClockRunning
+          : webMotionTargets.rest}
+        className="tls-matchday-clock-signal"
+        data-motion-clock-signal="true"
+        transition={running && !reducedMotion
+          ? webMotion.matchClockRunning
+          : webMotion.micro}
+      />
+      <m.time
+        aria-hidden="true"
+        animate={webMotionTargets.rest}
+        data-motion-clock-minute={minute}
+        initial={reducedMotion ? false : webMotionTargets.matchClockTickEnter}
+        key={`minute:${minute}`}
+        transition={webMotion.micro}
+      >
+        {minute}'
+      </m.time>
+    </div>
+  );
+}
+
+function MatchdayScoreboard({
+  header,
+  highlightedGoalSide,
+}: Readonly<{
+  header: MatchdayScoreHeaderView;
+  highlightedGoalSide?: "home" | "away";
+}>): React.JSX.Element {
   const reducedMotion = useReducedMotion();
   const previousScore = useRef<Readonly<{ home: number; away: number }> | undefined>(undefined);
-  const homeChanged = previousScore.current !== undefined
-    && previousScore.current.home !== header.homeGoals;
-  const awayChanged = previousScore.current !== undefined
-    && previousScore.current.away !== header.awayGoals;
+  const homeChanged = highlightedGoalSide === "home"
+    || (previousScore.current !== undefined && previousScore.current.home !== header.homeGoals);
+  const awayChanged = highlightedGoalSide === "away"
+    || (previousScore.current !== undefined && previousScore.current.away !== header.awayGoals);
 
   useEffect(() => {
     previousScore.current = {
@@ -607,9 +707,6 @@ function MatchdayScoreboard({ header, text }: Readonly<{ header: MatchdayScoreHe
         </m.span>
       </div>
       <strong>{header.awayClubName}</strong>
-      <small>{text(header.phase === "full_time"
-        ? fullTimeOutcomeLabelKey(header.selectedClubScoreState)
-        : `career.matchday.scoreState.${header.selectedClubScoreState}` as MessageKey)}</small>
     </div>
   );
 }
@@ -731,9 +828,11 @@ function handlerForPhaseAction(
   actionId: MatchdayManagerActionId,
   handlers: Readonly<{
     onPrepareMatch: () => void;
-    onPlayFixture: () => void;
-    onStartFirstHalf?: () => void;
-    onStartSecondHalf?: () => void;
+    onStartFirstHalf: () => void;
+    onStartSecondHalf: () => void;
+    onPauseMatch: () => void;
+    onResumeMatch: () => void;
+    onResolveIncident: () => void;
     onBackToDashboard: () => void;
   }>,
 ): () => void {
@@ -741,30 +840,19 @@ function handlerForPhaseAction(
     case "prepare_match":
       return handlers.onPrepareMatch;
     case "start_first_half":
-      return handlers.onStartFirstHalf ?? handlers.onPlayFixture;
+      return handlers.onStartFirstHalf;
     case "start_second_half":
-      return handlers.onStartSecondHalf ?? handlers.onPlayFixture;
+      return handlers.onStartSecondHalf;
+    case "pause_match":
+      return handlers.onPauseMatch;
+    case "resume_match":
+      return handlers.onResumeMatch;
+    case "resolve_incident":
+      return handlers.onResolveIncident;
     case "back_to_dashboard":
       return handlers.onBackToDashboard;
     case "apply_half_time_substitutions":
       return () => undefined;
-  }
-}
-
-function phaseMinuteLabel(minute: number, text: Translator): string {
-  return minute === 0 ? text("career.matchday.notStarted") : `${minute}'`;
-}
-
-function fullTimeOutcomeLabelKey(
-  scoreState: MatchdayScoreHeaderView["selectedClubScoreState"],
-): MessageKey {
-  switch (scoreState) {
-    case "leading":
-      return "career.matchday.fullTimeOutcome.win";
-    case "drawing":
-      return "career.matchday.fullTimeOutcome.draw";
-    case "trailing":
-      return "career.matchday.fullTimeOutcome.loss";
   }
 }
 

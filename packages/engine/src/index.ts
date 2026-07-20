@@ -10,12 +10,6 @@ export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
 export * from "./team-selection/index.ts";
 export {
-  completeStagedMatchCheckpoint,
-  createStagedMatchCheckpoint,
-  restoreStagedMatchCheckpoint,
-  type CreateStagedMatchCheckpointInput,
-} from "./career/active-match-checkpoint.ts";
-export {
   CareerMatchStateConsequenceError,
   applyCareerMatchStateConsequences,
   type ApplyCareerMatchStateConsequencesInput,
@@ -39,6 +33,7 @@ export {
 } from "./career/apply-career-transfer.ts";
 export {
   findNextCareerFixture,
+  findUnavailableSelectedClubPlayerIdsForNextFixture,
   type NextCareerFixtureFound,
   type NextCareerFixtureInvalid,
   type NextCareerFixtureInvalidReason,
@@ -60,8 +55,15 @@ export {
   deliverCareerInboxMessages,
   openCareerInboxMessage,
   reconcileCareerInboxResolution,
+  createMatchConsequenceInboxMessages,
   type CareerInboxLifecycleErrorCode,
 } from "./career/career-inbox-lifecycle.ts";
+export {
+  applyMatchAvailabilityConsequences,
+  injuryDurationDays,
+  type ApplyMatchAvailabilityConsequencesInput,
+  type ApplyMatchAvailabilityConsequencesResult,
+} from "./career/match-availability-consequences.ts";
 export {
   generateNextSeasonCalendar,
   type NextSeasonCalendarGenerated,
@@ -70,9 +72,9 @@ export {
   type NextSeasonCalendarResult,
 } from "./career/next-season-calendar.ts";
 export {
-  commitStagedCareerFixture,
+  commitCompletedCareerFixture,
   progressNextCareerFixture,
-  type CommitStagedCareerFixtureInput,
+  type CommitCompletedCareerFixtureInput,
   type ProgressCareerFixtureAdvanced,
   type ProgressCareerFixtureInvalid,
   type ProgressCareerFixtureInvalidReason,

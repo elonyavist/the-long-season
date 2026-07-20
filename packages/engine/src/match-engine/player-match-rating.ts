@@ -64,6 +64,17 @@ export interface BuildPlayerMatchRatingsInput {
   readonly sortBy?: PlayerMatchRatingSortMode;
 }
 
+/** Immutable contribution ledger shared by provisional and final ratings. */
+export interface PlayerMatchRatingLedger {
+  /** Current structured contribution summaries in stable registration order. */
+  readonly entries: readonly PlayerMatchRatingLedgerEntry[];
+}
+
+/** One ledger entry, including its deterministic registration order. */
+export interface PlayerMatchRatingLedgerEntry extends PlayerMatchInvolvementSummary {
+  readonly registrationOrder: number;
+}
+
 /**
  * Builds deterministic player ratings from structured match events.
  *
@@ -72,9 +83,28 @@ export interface BuildPlayerMatchRatingsInput {
  * noise and never invents events that the engine did not emit.
  */
 export function buildPlayerMatchRatings(input: BuildPlayerMatchRatingsInput): readonly PlayerMatchRatingRow[] {
-  const rows = initialRows(input.playerRegistrations ?? []);
+  const ledger = advancePlayerMatchRatingLedger(
+    createPlayerMatchRatingLedger(input.playerRegistrations ?? []),
+    input.events,
+  );
+  return projectPlayerMatchRatings(ledger, input.sortBy);
+}
 
-  for (const event of input.events) {
+/** Creates an empty contribution ledger with explicit quiet-player rows. */
+export function createPlayerMatchRatingLedger(
+  registrations: readonly PlayerMatchRatingRegistration[],
+): PlayerMatchRatingLedger {
+  return { entries: initialRows(registrations).map(freezeLedgerEntry) };
+}
+
+/** Applies only newly observed structured events to a contribution ledger. */
+export function advancePlayerMatchRatingLedger(
+  ledger: PlayerMatchRatingLedger,
+  events: readonly MatchStepEvent[],
+): PlayerMatchRatingLedger {
+  const rows = ledger.entries.map(toMutableRow);
+
+  for (const event of events) {
     switch (event.type) {
       case "shot_outcome":
         applyShotOutcome(rows, event);
@@ -86,8 +116,16 @@ export function buildPlayerMatchRatings(input: BuildPlayerMatchRatingsInput): re
     }
   }
 
-  rows.sort(input.sortBy === "rating" ? compareMutableRowsByRating : compareMutableRowsBySideOrder);
+  return { entries: rows.map(freezeLedgerEntry) };
+}
 
+/** Projects familiar 1-10 ratings from the current contribution ledger. */
+export function projectPlayerMatchRatings(
+  ledger: PlayerMatchRatingLedger,
+  sortBy: PlayerMatchRatingSortMode = "side_order",
+): readonly PlayerMatchRatingRow[] {
+  const rows = ledger.entries.map(toMutableRow);
+  rows.sort(sortBy === "rating" ? compareMutableRowsByRating : compareMutableRowsBySideOrder);
   return rows.map(freezeRow);
 }
 
@@ -206,6 +244,27 @@ function createMutableRow(
     misses: 0,
     blockedShots: 0,
     registrationOrder,
+  };
+}
+
+function toMutableRow(entry: PlayerMatchRatingLedgerEntry): MutablePlayerMatchRatingRow {
+  return { ...entry };
+}
+
+function freezeLedgerEntry(row: MutablePlayerMatchRatingRow): PlayerMatchRatingLedgerEntry {
+  return {
+    playerId: row.playerId,
+    side: row.side,
+    goals: row.goals,
+    assists: row.assists,
+    chancesCreated: row.chancesCreated,
+    shots: row.shots,
+    shotsOnTarget: row.shotsOnTarget,
+    saves: row.saves,
+    blocks: row.blocks,
+    misses: row.misses,
+    blockedShots: row.blockedShots,
+    registrationOrder: row.registrationOrder,
   };
 }
 

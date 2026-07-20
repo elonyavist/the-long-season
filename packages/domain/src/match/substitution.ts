@@ -1,11 +1,12 @@
 import type { MatchEventSide } from "../entities/match-event.entity.ts";
 import type { PlayerId } from "../types/ids.ts";
 
-/** Conservative v1 regulation-time substitution limit until competition rules own this. */
-export const DEFAULT_REGULATION_SUBSTITUTION_LIMIT = 5;
-
-/** Stable reason key for a manager-declared half-time substitution. */
-export type MatchSubstitutionReasonKey = "half_time_manager_decision";
+/** Stable factual reasons for a completed regulation-time substitution. */
+export type MatchSubstitutionReasonKey =
+  | "manager_decision"
+  | "half_time_manager_decision"
+  | "forced_injury"
+  | "ai_decision";
 
 /**
  * Manager-declared substitution decision.

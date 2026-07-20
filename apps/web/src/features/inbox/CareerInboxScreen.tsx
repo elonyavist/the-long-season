@@ -5,6 +5,8 @@ import * as m from "motion/react-m";
 
 import type { CareerCommandActivity } from "../../stores/career-ui-store";
 import { AppShell } from "../app-shell/AppShell";
+import { CareerScreenHeader } from "../shared/CareerScreenHeader";
+import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
 import { InboxMessageDetail } from "./InboxMessageDetail";
 import { InboxMessageList } from "./InboxMessageList";
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
@@ -71,7 +73,6 @@ export function CareerInboxScreen({
       currentDateIso={currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
-      onContinueCareer={onContinueCareer}
       onInboxActionClick={(actionId) => {
         if (actionId === "open_dashboard") onBackToDashboard();
       }}
@@ -82,16 +83,34 @@ export function CareerInboxScreen({
         aria-labelledby="career-inbox-heading"
         aria-busy={commandPending}
       >
-        <header className="tls-screen-header">
-          <div>
-            <p className="tls-screen-kicker">{text("career.inbox.decisionCenter")}</p>
-            <h1 id="career-inbox-heading">{text("career.inbox.title")}</h1>
-          </div>
-          <dl className="tls-inbox-summary-counts">
-            <div><dt>{text("career.inbox.unreadCount")}</dt><dd>{postaView.unreadCount}</dd></div>
-            <div><dt>{text("career.inbox.actionRequiredCount")}</dt><dd>{postaView.toHandleCount}</dd></div>
-          </dl>
-        </header>
+        <CareerScreenHeader
+          className="tls-screen-header"
+          command={(
+            <button
+              className="tls-menu-button tls-menu-button-primary tls-inbox-primary-action"
+              data-state={commandPending ? "pending" : "idle"}
+              disabled={commandPending}
+              type="button"
+              onClick={onContinueCareer}
+            >
+              <CommandActivityIndicator
+                activity={commandActivity}
+                commandIds={["continue_career"]}
+                idleLabel={text("career.dashboard.continue")}
+                text={text}
+              />
+            </button>
+          )}
+          eyebrow={text("career.inbox.decisionCenter")}
+          supporting={(
+            <dl className="tls-inbox-summary-counts">
+              <div><dt>{text("career.inbox.unreadCount")}</dt><dd>{postaView.unreadCount}</dd></div>
+              <div><dt>{text("career.inbox.actionRequiredCount")}</dt><dd>{postaView.toHandleCount}</dd></div>
+            </dl>
+          )}
+          title={text("career.inbox.title")}
+          titleId="career-inbox-heading"
+        />
 
         <div
           className="tls-inbox-filters"

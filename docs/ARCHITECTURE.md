@@ -101,10 +101,11 @@ Why this matters:
 | Career Continue loop | `packages/engine/src/career/continue-career.ts` via `continueCareerUntilAttention` |
 | Player participation ledger | `packages/domain/src/career/player-participation.ts` |
 | Match simulation | `packages/engine/src/match-engine/simulate-match.ts` |
-| Staged matchday progression | `packages/engine/src/match-engine/staged-match-progression.ts` |
+| Progressive live-match session | `packages/engine/src/match-engine/progressive-match-session.ts` |
+| Live-match projection | `packages/engine/src/match-engine/live-match-projection.ts` |
 | Player match ratings | `packages/engine/src/match-engine/player-match-rating.ts` |
-| Half-time tactical decision contract | `packages/domain/src/match/half-time-tactical-decision.ts` |
-| Half-time substitutions | `packages/engine/src/match-engine/half-time-substitutions.ts` |
+| Live manager commands | `packages/domain/src/match/live-match-command.ts` |
+| Deterministic opponent decisions | `packages/engine/src/team-selection/ai-in-game-decisions.ts` |
 | Manual tactic segments | `packages/engine/src/match-engine/simulate-match-with-manual-tactics.ts` |
 | Team strength | `packages/engine/src/match-engine/team-strength.ts` |
 | Calendar generation | `packages/engine/src/season-engine/calendar.ts` |
@@ -131,7 +132,7 @@ Why this matters:
 | Web match-preparation screen | `apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx` |
 | Web dashboard adapter | `apps/web/src/features/dashboard/build-career-dashboard.ts` |
 | Web match-preparation adapter | `apps/web/src/features/match-preparation/match-preparation-adapter.ts` |
-| Web matchday checkpoint adapter | `apps/web/src/features/matchday/matchday-adapter.ts` |
+| Web live-match adapter | `apps/web/src/features/matchday/matchday-adapter.ts` |
 | Web matchday presenter | `apps/web/src/features/matchday/career-matchday-presenter.ts` |
 | Web matchday screen | `apps/web/src/features/matchday/CareerMatchdayScreen.tsx` |
 | Web app shell | `apps/web/src/features/app-shell/AppShell.tsx` |
@@ -279,20 +280,35 @@ Shared files must stay free from football concepts.
   Converts simulation output into durable domain match reports.
 - `packages/engine/src/match-engine/match-explanation-trace.ts`
   Produces structured explanation data for debugging fixture outcomes.
-- `packages/engine/src/match-engine/staged-match-progression.ts`
-  Deterministic interactive-matchday progression. It creates an initial staged
-  match state, progresses from pre-match to half-time, applies continuation to
-  full time, and keeps future extra-time/penalty phases as inactive structural
-  values until cup rules exist. It does not persist browser state or make
-  selected-club decisions.
+- `packages/engine/src/match-engine/progressive-match-session.ts`
+  Canonical deterministic live-match owner. It advances exactly one minute,
+  keeps the caller-owned RNG cursor, exposes only facts already resolved, and
+  applies validated team commands while paused so they affect the following
+  minute. Batch and browser drivers use this session instead of independent
+  half-at-once or checkpoint simulators.
+- `packages/engine/src/match-engine/live-match-projection.ts`
+  Builds immutable live statistics, score, condition, rating, incident, and
+  availability projections from the progressive engine state. It contains no
+  browser timing, localized prose, or persistence behavior.
+- `packages/engine/src/match-engine/match-discipline.ts`
+  Resolves deterministic fouls, cards, and penalties from current player,
+  tactic, fatigue, and zone facts. Dangerous-foul incidence and penalty
+  conversion are separate policies so calibration does not distort taker or
+  goalkeeper ability.
+- `packages/engine/src/match-engine/match-team-exit.ts`
+  Removes a dismissed or forced-off player from the current engine context. If
+  the goalkeeper exits before an interactive decision can be applied, it gives
+  the strongest remaining goalkeeper profile temporary emergency ownership so
+  batch simulation remains playable; it does not create a replacement or let
+  the player re-enter.
+- `packages/engine/src/team-selection/ai-in-game-decisions.ts`
+  Deterministic opponent policy over current score, minute, condition, rating,
+  availability, and competition rules. It validates changes through the same
+  live command path used for manager decisions.
 - `packages/engine/src/match-engine/player-match-rating.ts`
   Derives deterministic live/final player rating facts from structured match
   events and stats. Ratings are not random cosmetic values and do not parse
   prose.
-- `packages/engine/src/match-engine/half-time-substitutions.ts`
-  Validates and applies manager-declared selected-club half-time substitutions
-  against the staged match context. It checks phase, pitch membership, bench
-  membership, duplicate players, and the conservative v1 substitution cap.
 - `packages/engine/src/use-cases/simulate-season.ts`
   Simulates a full season from app/content-provided inputs.
 - `packages/engine/src/career/progress-fixture.ts`
@@ -384,15 +400,17 @@ adapt.
   Browser-facing `CareerStorage` implementation over a narrow worker port. It
   owns typed error mapping and delegates SQL execution to the web worker.
 - `packages/storage/src/sqlite/sqlite-career-migrations.ts`
-  Ordered immutable relational migrations. Browser schema version 7 is the
-  current beta baseline and includes tactical preparation, match checkpoints,
-  current-season Posta messages, and the durable player participation ledger.
-  Existing beta databases below version 7 are intentionally unsupported and
-  route to the reset flow instead of being upgraded.
+  Ordered immutable relational migrations. Browser schema version 9 is the
+  current beta baseline and includes tactical preparation, current-season
+  Posta messages, player availability, discipline, and the participation
+  ledger. Version 9 retires unfinished-match checkpoint storage; earlier beta
+  databases are intentionally unsupported and route to reset instead of being
+  dual-read or upgraded.
 - `packages/storage/src/sqlite/career-state-mapper.ts`
   Relational write/read mapping for career systems, match reports,
-  preparation, active match checkpoints, durable Inbox lifecycle, and the
-  participation ledger rows used by monthly development.
+  preparation, durable Inbox lifecycle, availability/discipline facts, and
+  participation rows used by monthly development. It has no live-match or
+  playback-cursor mapping.
 - `packages/storage/src/sqlite/world-state-mapper.ts`
   Relational write/read mapping for ordered clubs, players, abilities, dynamic
   state, rosters, fixtures, and fixture results. It traverses abilities through
@@ -533,13 +551,12 @@ text or importing engine internals.
   has no timer, browser API, React state, or alternate recovery persistence.
 - `apps/web/src/runtime/web-career-runtime.ts`
   Canonical browser application boundary. It creates/lists/loads careers,
-  applies Continue, Posta lifecycle, and staged matchday commands to the loaded
-  `CareerSession`, refreshes due facts without a write-through save, and reaches
-  storage only for creation, policy metadata, manual save, or due autosave at a
-  safe stop. Explicit manual save may receive one complete validated
-  preparation payload and commits it through the same session boundary;
-  incomplete drafts and individual tactical edits never write storage. React
-  and Zustand do not call storage directly.
+  applies Continue, Posta lifecycle, and live-match commands to the loaded
+  `CareerSession`, and owns one private memory-only live session. Minute ticks,
+  pauses, presentation holds, and tactical edits never rebuild career-wide
+  projections or write storage. At full time one explicit `Continua` reuses the
+  cached completion preview, applies consequences/table/Posta once, and then
+  performs only a due autosave. React and Zustand do not call storage directly.
 - `apps/web/src/features/inbox/career-inbox-presenter.ts`
   Adapts durable messages plus current fixture/report/archive facts into the
   pure `@game/ui` Posta inputs. It does not determine attention, mutate
@@ -590,10 +607,11 @@ text or importing engine internals.
   and emits a validated durable preparation payload. Unsaved edits remain UI
   state until an explicit runtime command commits and reloads them.
 - `apps/web/src/features/matchday/matchday-adapter.ts`
-  Rebuilds the matchday screen from the loaded career and optional durable
-  checkpoint. A completed fixture is reconstructed from its persisted
-  structured report, including deterministic player ratings derived from those
-  facts, so refresh never re-simulates the match or invents cosmetic values.
+  Creates and projects the private progressive match session from loaded career
+  and confirmed preparation facts. It maps engine snapshots into read-only web
+  facts, applies typed paused-match commands, and caches one canonical full-time
+  completion preview. It never persists unfinished play; refresh discards the
+  volatile session and restarts the fixture from the last durable boundary.
 - `apps/web/src/shared/lib/player-position-ordering.ts`
   Web-side tactical ordering helper for selectable player options. It keeps
   natural slot fits first, adapted fits next, weak/emergency fits last, and
@@ -692,12 +710,11 @@ text or importing engine internals.
   and persistence stay outside the screen; the approved board remains the
   dominant football object.
 - `apps/web/src/features/matchday/matchday-adapter.ts`
-  Rebuilds matchday exclusively from the loaded save's fixture, clubs, roster,
-  XI, bench, tactic, and durable staged checkpoint. It creates pre-match and
-  half-time checkpoints, maps half-time decisions, commits the exact staged
-  report without resimulation, and builds the mandatory phase-aware read model
-  consumed by the current web screen. Production callers no longer derive a
-  fallback phase from the older summary view.
+  Owns the web translation between the private progressive engine session and
+  the phase-aware read model. It creates pre-match state from fixture, roster,
+  XI, bench, and tactic; advances one minute; applies validated substitutions
+  and tactical changes while paused; projects cumulative facts; and prepares
+  one full-time commit preview without mutating durable career truth.
 - `apps/web/src/features/matchday/career-matchday-presenter.ts`
   Pure browser-side presenter for matchday information architecture. It derives
   compact score-header facts, passive phase progress, one primary command, one
@@ -710,22 +727,19 @@ text or importing engine internals.
   or navigation. It does not simulate, localize prose, persist data, or invent
   match events.
 - `apps/web/src/features/matchday/matchday-playback.ts`
-  Pure, bounded presentation policy over already-computed half-time and
-  full-time checkpoints. It groups each period's real events into immutable
-  frames, derives intermediate scores only from revealed structured goals,
-  restores the exact checkpoint score at closing, and collapses interpolation
-  for reduced motion. It owns no engine mutation, save write, interval, or
-  durable playback cursor.
+  Pure presentation policy for semantic event holds. It classifies ordinary
+  commentary, goal/penalty narrative holds, and true decision pauses without
+  mutating engine facts. Reduced motion removes decorative transition, not
+  facts or decision boundaries; no playback cursor is durable.
 - `apps/web/src/features/matchday/MatchdayLivePhase.tsx`
   Focused live commentary primitive shared by both periods. It keeps one stable
   polite live region under the score, replaces its current structured event
   instead of appending a feed, and never adds football outcomes or technical
   IDs.
 - `apps/web/src/features/matchday/MatchdayPlaybackControls.tsx`
-  Presentation-only pause and speed controls for already-computed frames. It
-  exposes one toggle and one segmented speed choice with stable accessible
-  names; reduced-motion mode bypasses interpolation before this component is
-  mounted.
+  Presentation-only pause and speed controls for requesting future engine
+  minutes. It exposes one toggle and one segmented speed choice with stable
+  accessible names; speed changes cadence only and cannot alter RNG or facts.
 - `apps/web/src/features/matchday/MatchdayTabellino.tsx`
   Compact two-sided match incident summary placed directly below the broadcast
   header. Goals own the strongest hierarchy; substitutions and other supported
@@ -748,28 +762,23 @@ text or importing engine internals.
   two-select substitution fallback is removed. The component does not own
   simulation, persistence, geometry, or player suitability.
 - `apps/web/src/features/matchday/MatchdayFullTimePhase.tsx`
-  Composition-only full-time review with selected-team, opponent, and
-  consequence tabs beneath the dominant result and tabellino. It omits
-  unavailable optional facts and exposes no secondary exit or technical
-  diagnostic table. It does not derive engine outcomes, commit results, or
-  persist review state.
+  Composition-only full-time review with Summary, selected-team, and opponent
+  tabs beneath the dominant result and tabellino. Public consequences are
+  integrated into the corresponding team rows; hidden opponent morale remains
+  absent. It does not derive outcomes, commit results, or persist review state.
 - `apps/web/src/features/matchday/CareerMatchdayScreen.tsx`
   Localized five-state match centre. It renders pre-match confirmation,
-  bounded first-half playback after one explicit Start match command, the real
-  half-time tactical decision, bounded second-half playback after confirmation,
-  and full-time review from the phase-aware `@game/ui` matchday read model plus
-  the web presenter. One screen-level presentation controller keeps shell and
-  centre on the same visible phase. Presentation timing uses one cleared timeout
-  per immutable frame, supports bounded event-priority holds and presentation-
-  only pause/speed, stops automatically at both canonical checkpoints, and
-  never checkpoints or persists a playback cursor. The broadcast header is the
-  single score/minute/commentary/action owner; a compact tabellino follows it.
-  Half-time and full time delegate their tabbed bodies to
-  `MatchdayHalfTimePhase` and `MatchdayFullTimePhase`. Half time is the only
-  editable tactical workspace. It does not own engine rules.
+  progressive first and second halves, half-time decisions, and full-time
+  review from the phase-aware `@game/ui` read model plus the web presenter. A
+  single cleared timer requests one future minute at the selected cadence;
+  engine decisions, manual pause, or semantic holds stop that request loop.
+  The broadcast header is the single score/minute/commentary/action owner and
+  the cumulative tabellino retains both halves. Paused play and half time reuse
+  the shared tactical workspace. The screen never owns football rules, RNG,
+  career publication, or persistence.
 - `apps/web/src/visual-qa/current-product.spec.ts`
   Authoritative Playwright QA for the current browser product. It covers App
-  Entry lifecycle states; Dashboard, Posta, preparation, staged Matchday, and
+  Entry lifecycle states; Dashboard, Posta, preparation, live Matchday, and
   full-time return; dirty draft recovery; command feedback; desktop, wide,
   narrow, focus, `200%` text, and reduced-motion behavior; and the approved
   tactical-board interactions including assignment order, duplicate prevention,
@@ -794,7 +803,7 @@ text or importing engine internals.
   and form colors remain stable.
 
 The web app now owns a durable browser career lifecycle. New/list/load,
-Continue, match preparation, staged matchday, full-time commit, and review
+Continue, match preparation, live matchday, full-time commit, and review
 acknowledgement all pass through `WebCareerRuntime` and canonical SQLite/OPFS
 storage. UI preferences remain separate. Squad detail and economics remain
 future product sections, not persistence placeholders.
@@ -809,11 +818,11 @@ retry. There is no IndexedDB, localStorage, sessionStorage, or in-memory career
 fallback.
 
 Refresh intentionally returns to app entry. The manager explicitly selects a
-durable save through Continue, after which the runtime restores the latest
-meaningful decision checkpoint: saved pre-match preparation, half-time state,
-or the completed full-time review. Full time is committed once in one storage
-transaction; subsequent loads derive presentation from the durable fixture
-report and do not apply football consequences again.
+durable save through Continue. Saved preparation can be restored, but an
+unfinished match is deliberately absent from storage and restarts from minute
+zero. Full time remains volatile until its single `Continua` command commits
+the fixture and consequences once; subsequent loads derive presentation from
+the durable fixture report and do not apply football consequences again.
 
 ### Web Motion System
 
@@ -859,8 +868,9 @@ Architectural constraints:
   may not write Zustand or storage, invoke a command, or determine a football
   checkpoint. Calendar-date replacement also uses the shared transition and no
   longer has a parallel React-state CSS keyframe.
-- Matchday event holds remain in `matchday-playback.ts`; Motion presents each
-  immutable frame but does not control the underlying hold policy.
+- Matchday event holds remain in `matchday-playback.ts`; Motion presents the
+  current structured event but does not control the engine minute or hold
+  policy.
 - Tactical drag geometry remains in the tactical-board Modules. Motion may
   present assignment, removal, substitution, and formation continuity, but it
   must not replace normalized coordinates, clamp rules, or pointer ownership.

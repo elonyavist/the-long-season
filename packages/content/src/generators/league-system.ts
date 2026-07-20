@@ -1,5 +1,6 @@
 import {
   competitionId,
+  createCompetitionMatchRules,
   gameDate,
   seasonId,
   type Competition,
@@ -156,6 +157,15 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
     id: competitionId("competition:demo-third-division"),
     name: "Demo Third Division",
     clubIds: clubs.clubIds,
+    matchRules: createCompetitionMatchRules({
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: null,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    }),
   };
 
   return {
@@ -182,7 +192,7 @@ function fakeMatchEngineConfig(): FakeMatchEngineConfig {
   return {
     minuteCount: 90,
     rates: {
-      baseOpportunityRatePerMinute: 0.09,
+      baseOpportunityRatePerMinute: 0.085,
       maxOpportunityRatePerMinute: 0.24,
     },
     conversionBands: [

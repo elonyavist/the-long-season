@@ -46,6 +46,7 @@ export {
   MatchContextError,
   type MatchContext,
   type MatchContextErrorCode,
+  type MatchPlayerIncidentProfile,
   type MatchRngKey,
   type MatchTacticalDistributionInput,
   type MatchTeamContext,
@@ -64,13 +65,61 @@ export {
 export {
   createInitialMatchSimulationState,
   isMatchSimulationComplete,
+  telemetryFor,
+  type MatchCausalSideStats,
+  type MatchControlUnits,
   type MatchLocalState,
   type MatchScore,
   type MatchSide,
   type MatchSideStats,
   type MatchSimulationState,
   type MatchSimulationStats,
+  type MatchSimulationTelemetry,
+  type MatchPlayerInjuryState,
 } from "./match-simulation-state.ts";
+export {
+  accumulateControlUnits,
+  deriveMatchMinuteControl,
+  type MatchMinuteControl,
+} from "./match-control.ts";
+export { progressOnPitchCondition } from "./match-condition.ts";
+export {
+  incidentProfileFor,
+  resolveMatchMinuteDiscipline,
+  type MatchDisciplineEvent,
+  type MatchDisciplineResolution,
+  type MatchPenaltyResolution,
+} from "./match-discipline.ts";
+export { injuryForcesExit, resolveMatchMinuteInjury, severityForRoll } from "./match-injury.ts";
+
+export {
+  advanceProgressiveMatchMinute,
+  applyConfirmedProgressiveTeamChanges,
+  applyValidatedLiveMatchCommand,
+  createProgressiveMatchMinuteSnapshot,
+  createProgressiveMatchSession,
+  pauseProgressiveMatchSession,
+  progressiveMatchPhaseFor,
+  ProgressiveMatchSessionError,
+  resumeProgressiveMatchSession,
+  resolveProgressiveMatchIncidentDecision,
+  runProgressiveMatchToMinute,
+  type AdvanceProgressiveMatchMinuteOptions,
+  type ApplyConfirmedProgressiveTeamChangesInput,
+  type AppliedLiveMatchCommandFact,
+  type ApplyValidatedLiveMatchCommandResult,
+  type CreateProgressiveMatchSessionOptions,
+  type ProgressiveMatchAvailability,
+  type ProgressiveMatchBeforeMinute,
+  type ProgressiveMatchMinuteSnapshot,
+  type ProgressiveMatchSessionErrorCode,
+  type ProgressiveMatchSessionState,
+  type ProgressiveMatchTeamAvailability,
+  type ProgressiveMatchTeamSnapshot,
+  type ResolveProgressiveIncidentDecisionInput,
+  type RunProgressiveMatchToMinuteOptions,
+  type RunProgressiveMatchToMinuteResult,
+} from "./progressive-match-session.ts";
 
 export {
   type OccasionOutcome,
@@ -93,40 +142,30 @@ export {
 } from "./simulate-match-with-manual-tactics.ts";
 
 export {
+  advancePlayerMatchRatingLedger,
   buildPlayerMatchRatings,
+  createPlayerMatchRatingLedger,
   playerRatingRegistrationsFromContext,
+  projectPlayerMatchRatings,
   type BuildPlayerMatchRatingsInput,
+  type PlayerMatchRatingLedger,
+  type PlayerMatchRatingLedgerEntry,
   type PlayerMatchInvolvementSummary,
   type PlayerMatchRatingRegistration,
   type PlayerMatchRatingRow,
   type PlayerMatchRatingSortMode,
 } from "./player-match-rating.ts";
-
 export {
-  applyHalfTimeSubstitutions,
-  type ApplyHalfTimeSubstitutionsInput,
-  type ApplyHalfTimeSubstitutionsResult,
-  type HalfTimeSubstitutionInvalidReason,
-  type HalfTimeSubstitutionsApplied,
-  type HalfTimeSubstitutionsInvalid,
-} from "./half-time-substitutions.ts";
+  buildLiveMatchProjection,
+  livePlayerRegistration,
+  LiveMatchProjectionError,
+  type BuildLiveMatchProjectionInput,
+  type LiveMatchProjection,
+  type LiveMatchProjectionErrorCode,
+  type LivePlayerMatchProjection,
+} from "./live-match-projection.ts";
 
-export type { HalfTimeTacticalDecisionPlan, MatchSubstitutionDecision } from "@game/domain";
-
-export {
-  createInitialStagedMatchState,
-  phaseForMinute,
-  progressStagedMatchToFullTime,
-  progressStagedMatchToHalfTime,
-  progressStagedMatchToPhase,
-  StagedMatchProgressionError,
-  type StagedMatchProgressionErrorCode,
-  type StagedMatchProgressionOptions,
-  type StagedMatchProgressionResult,
-  type StagedMatchSnapshot,
-  type StagedMatchState,
-  type StagedMatchTargetPhase,
-} from "./staged-match-progression.ts";
+export type { MatchSubstitutionDecision } from "@game/domain";
 
 export {
   stepMatch,
@@ -155,6 +194,7 @@ export {
 
 export {
   buildTacticTeamContext,
+  createMatchPlayerIncidentProfile,
   tacticToMatchDistribution,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,

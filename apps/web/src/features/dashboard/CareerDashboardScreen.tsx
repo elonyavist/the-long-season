@@ -13,6 +13,7 @@ import type {
 import type { CareerCommandActivity } from "../../stores/career-ui-store";
 import { AppShell } from "../app-shell/AppShell";
 import { CommandActivityIndicator } from "../shared/CommandActivityIndicator";
+import { CareerScreenHeader } from "../shared/CareerScreenHeader";
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 
 /** Inputs for the operational Dashboard surface. */
@@ -69,7 +70,6 @@ export function CareerDashboardScreen({
       currentDateIso={view.context.currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
-      onContinueCareer={onContinueCareer}
       onInboxActionClick={onInboxActionClick}
     >
       <section
@@ -78,12 +78,28 @@ export function CareerDashboardScreen({
         aria-labelledby="career-dashboard-title"
         aria-busy={commandPending}
       >
-        <header className="tls-dashboard-header">
-          <p className="tls-dashboard-kicker">{text("career.dashboard.commandCentre")}</p>
-          <h1 className="tls-shell-title" id="career-dashboard-title">
-            {text("career.shell.nav.dashboard")}
-          </h1>
-        </header>
+        <CareerScreenHeader
+          className="tls-dashboard-header"
+          command={(
+            <button
+              className="tls-menu-button tls-menu-button-primary tls-dashboard-primary-action"
+              data-state={commandPending ? "pending" : "idle"}
+              disabled={commandPending}
+              type="button"
+              onClick={primaryAction.onClick}
+            >
+              <CommandActivityIndicator
+                activity={commandActivity}
+                commandIds={["continue_career"]}
+                idleLabel={text(primaryAction.labelKey)}
+                text={text}
+              />
+            </button>
+          )}
+          eyebrow={text("career.dashboard.commandCentre")}
+          title={text("career.shell.nav.dashboard")}
+          titleId="career-dashboard-title"
+        />
 
         <m.section
           key={taskMotionKey}
@@ -110,20 +126,6 @@ export function CareerDashboardScreen({
             )}
           </div>
 
-          <button
-            className="tls-menu-button tls-menu-button-primary tls-dashboard-primary-action"
-            data-state={commandPending ? "pending" : "idle"}
-            disabled={commandPending}
-            type="button"
-            onClick={primaryAction.onClick}
-          >
-            <CommandActivityIndicator
-              activity={commandActivity}
-              commandIds={["continue_career"]}
-              idleLabel={text(primaryAction.labelKey)}
-              text={text}
-            />
-          </button>
         </m.section>
 
         <section className="tls-dashboard-overview" aria-label={text("career.dashboard.clubSnapshot")}>

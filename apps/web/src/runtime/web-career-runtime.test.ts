@@ -18,9 +18,11 @@ import {
 
 import {
   WebCareerRuntime,
+  type AdvancedWebMatchdayMinute,
   buildWebCareerState,
   classifyWebCareerPersistenceFailure,
   inspectWebCareerAttention,
+  type WebCareerInboxMessageId,
   type WebCareerSaveId,
   type WebCareerState,
 } from "./web-career-runtime";
@@ -382,14 +384,14 @@ describe("WebCareerRuntime", () => {
 
     expect(storage.savedInputs).toHaveLength(0);
     expect(saved.state.matchPreparation).toEqual(matchPreparation);
-    expect(saved.state.activeMatchCheckpoint?.phase).toBe("pre_match");
+    expect(saved.matchdayState.liveProgress?.snapshot.phase).toBe("pre_match");
     expect(saved.continueResult.stopReason).toBe("attention");
     expect(saved.state.currentSeasonInbox).toHaveLength(1);
     expect(saved.state.currentSeasonInbox?.[0]?.id).toBe(messageId);
     expect(saved.state.currentSeasonInbox?.[0]?.actionIds).toEqual(["open_matchday"]);
   });
 
-  it("creates a checkpoint when reopening an already confirmed match preparation", async () => {
+  it("creates a fresh memory-only session when reopening confirmed preparation", async () => {
     const storage = new RecordingCareerStorage();
     const generated = buildWebCareerState({
       saveId: "save:web-reopen-prepared" as WebCareerSaveId,
@@ -402,12 +404,33 @@ describe("WebCareerRuntime", () => {
 
     const entered = runtime.openPreparedMatchday(state.saveId);
 
-    expect(entered.state.activeMatchCheckpoint?.fixtureId).toBe(state.matchPreparation.targetFixtureId);
-    expect(entered.state.activeMatchCheckpoint?.phase).toBe("pre_match");
-    expect(entered.matchdayState.stagedProgress?.snapshot.phase).toBe("pre_match");
+    expect(entered.matchdayState.liveProgress?.fixtureBefore.id).toBe(state.matchPreparation.targetFixtureId);
+    expect(entered.matchdayState.liveProgress?.snapshot.phase).toBe("pre_match");
   });
 
-  it("keeps a complete deterministic match journey in memory until an explicit save", async () => {
+  it("publishes a narrow live tick without rebuilding global career context", async () => {
+    const storage = new RecordingCareerStorage();
+    const generated = buildWebCareerState({
+      saveId: "save:web-live-tick" as WebCareerSaveId,
+      worldSeed: "web-live-tick-seed",
+    });
+    const state = { ...generated, matchPreparation: completePreparation(generated) };
+    storage.states.set(state.saveId, state);
+    const runtime = new WebCareerRuntime(storage);
+    await runtime.loadCareer(state.saveId);
+    runtime.openPreparedMatchday(state.saveId);
+    runtime.resumeMatchday(state.saveId);
+
+    const tick = runtime.advanceMatchdayMinute(state.saveId);
+
+    expect(tick.status).toBe("live");
+    expect(tick.matchdayState.liveProgress?.snapshot.currentMinute).toBe(1);
+    expect(tick).not.toHaveProperty("metadata");
+    expect(tick).not.toHaveProperty("continueResult");
+    expect(tick).not.toHaveProperty("sessionStatus");
+  });
+
+  it("keeps a complete deterministic match journey private until full-time Continue", async () => {
     const storage = new RecordingCareerStorage();
     const state = buildWebCareerState({
       saveId: "save:web-matchday" as WebCareerSaveId,
@@ -418,29 +441,62 @@ describe("WebCareerRuntime", () => {
     await runtime.loadCareer(state.saveId);
     await runtime.continueCareer(state.saveId);
     await runtime.saveMatchPreparation(state.saveId, completePreparation(state));
-    const halfTime = await runtime.progressMatchdayToHalfTime(state.saveId);
-    const firstCheckpoint = structuredClone(halfTime.state.activeMatchCheckpoint);
-    const repeatedHalfTime = await runtime.progressMatchdayToHalfTime(state.saveId);
-    const halfTimeDraft = createMatchPreparationDraft(halfTime.state);
+    const halfTime = advanceRuntimeToPhase(runtime, state.saveId, "half_time");
+    const halfTimeDraft = createMatchPreparationDraft(halfTime.matchdayState.careerState);
 
-    expect(halfTime.state.activeMatchCheckpoint?.phase).toBe("half_time");
-    expect(repeatedHalfTime.state.activeMatchCheckpoint).toEqual(firstCheckpoint);
+    expect(halfTime.matchdayState.liveProgress?.snapshot.phase).toBe("half_time");
     expect(storage.savedInputs).toHaveLength(0);
-    const completed = await runtime.completeMatchday(state.saveId, halfTimeDraft);
-    const playedFixture = completed.matchdayState.playedResult?.fixtureAfter;
+    const completed = advanceRuntimeToPhase(runtime, state.saveId, "full_time", halfTimeDraft);
+    const playedFixture = completed.matchdayState.liveProgress?.fixtureBefore;
 
     expect(storage.savedInputs).toHaveLength(0);
-    expect(completed.state.activeMatchCheckpoint).toBeUndefined();
-    expect(playedFixture?.result?.played).toBe(true);
-    expect(playedFixture?.result?.report).toEqual(completed.matchdayState.playedResult?.report);
-    expect(completed.state.currentSeasonInbox?.[0]?.lifecycle.resolved).toBe(true);
+    expect(completed.matchdayState.playedResult).toBeUndefined();
+    expect(completed.matchdayState.liveProgress?.snapshot.phase).toBe("full_time");
+    expect(playedFixture?.result).toBeUndefined();
+    expect(completed).not.toHaveProperty("metadata");
+    expect(completed).not.toHaveProperty("continueResult");
+    expect(completed).not.toHaveProperty("sessionStatus");
+    expect(completed.matchdayState.careerState.gameState.fixtures[playedFixture!.id]?.result).toBeUndefined();
+    expect(completed.matchdayState.careerState.currentSeasonInbox?.[0]?.lifecycle.resolved).toBe(false);
 
     const acknowledged = await runtime.acknowledgeMatchday(state.saveId);
+    expect(acknowledged.state.gameState.fixtures[playedFixture!.id]?.result?.played).toBe(true);
+    expect(acknowledged.state.currentSeasonInbox?.[0]?.lifecycle.resolved).toBe(true);
     expect(acknowledged.sessionStatus.dirty).toBe(true);
     expect(storage.savedInputs).toHaveLength(0);
 
     const reloaded = await runtime.loadCareer(state.saveId);
     expect(reloaded.gameState.fixtures[playedFixture!.id]?.result).toBeUndefined();
+  });
+
+  it("keeps the full-time session retryable when a due autosave fails", async () => {
+    const storage = new RecordingCareerStorage();
+    const generated = buildWebCareerState({
+      saveId: "save:web-matchday-commit-retry" as WebCareerSaveId,
+      worldSeed: "web-matchday-commit-retry-seed",
+    });
+    const firstFixture = generated.gameState.fixtures[generated.gameState.fixtureIds[0]!];
+    if (firstFixture === undefined) throw new Error("Expected generated first fixture");
+    const state = withTestDate(generated, firstFixture.date - 7);
+    storage.states.set(state.saveId, state);
+    storage.policies.set(state.saveId, null);
+    const runtime = new WebCareerRuntime(storage);
+    await runtime.loadCareer(state.saveId);
+    await runtime.continueCareer(state.saveId);
+    await runtime.saveMatchPreparation(state.saveId, completePreparation(state));
+    const completed = advanceRuntimeToPhase(runtime, state.saveId, "full_time");
+    const fixtureId = completed.matchdayState.liveProgress?.fixtureBefore.id;
+    if (fixtureId === undefined) throw new Error("Expected completed fixture");
+    await runtime.updateAutosavePolicy(7);
+    storage.failNextSave = true;
+
+    await expect(runtime.acknowledgeMatchday(state.saveId)).rejects.toThrow("Test save failure");
+
+    expect(runtime.careerSessionStatus()).toMatchObject({ dirty: true });
+    const retried = await runtime.acknowledgeMatchday(state.saveId);
+    expect(retried.state.gameState.fixtures[fixtureId]?.result?.played).toBe(true);
+    expect(retried.matchdayState.liveProgress).toBeUndefined();
+    expect(storage.savedInputs).toHaveLength(2);
   });
 
   it("carries the previous team plan into the next fixture without treating it as confirmed", async () => {
@@ -455,12 +511,14 @@ describe("WebCareerRuntime", () => {
     await runtime.loadCareer(state.saveId);
     await runtime.continueCareer(state.saveId);
     await runtime.saveMatchPreparation(state.saveId, firstPreparation);
-    const halfTime = await runtime.progressMatchdayToHalfTime(state.saveId);
-    const completed = await runtime.completeMatchday(
+    const halfTime = advanceRuntimeToPhase(runtime, state.saveId, "half_time");
+    const completed = advanceRuntimeToPhase(
+      runtime,
       state.saveId,
-      createMatchPreparationDraft(halfTime.state),
+      "full_time",
+      createMatchPreparationDraft(halfTime.matchdayState.careerState),
     );
-    const firstFixtureId = completed.matchdayState.playedResult?.fixtureId;
+    const firstFixtureId = completed.matchdayState.liveProgress?.fixtureBefore.id;
     if (firstFixtureId === undefined) throw new Error("Expected completed first fixture");
 
     const acknowledged = await runtime.acknowledgeMatchday(state.saveId);
@@ -468,11 +526,24 @@ describe("WebCareerRuntime", () => {
 
     expect(acknowledged.state.matchPreparation).not.toHaveProperty("targetFixtureId");
     expect(acknowledged.state.matchPreparation?.selectedLineup).toEqual(firstPreparation.selectedLineup);
-    expect(carriedDraft.selectedPlayerIdsBySlot).toEqual(
-      Object.fromEntries(firstPreparation.selectedLineup!.slots.map((slot) => [slot.slotKey, slot.playerId])),
+    const unavailableAfterFirstFixture = new Set<string>(
+      acknowledged.state.playerAvailability?.suspensions.map((entry) => entry.playerId) ?? [],
     );
+    expect(Object.values(carriedDraft.selectedPlayerIdsBySlot)).not.toEqual([]);
+    expect(Object.values(carriedDraft.selectedPlayerIdsBySlot).some(
+      (playerId) => unavailableAfterFirstFixture.has(playerId),
+    )).toBe(false);
+    expect(firstPreparation.selectedLineup!.slots
+      .filter((slot) => !unavailableAfterFirstFixture.has(slot.playerId))
+      .every((slot) => carriedDraft.selectedPlayerIdsBySlot[slot.slotKey] === slot.playerId))
+      .toBe(true);
     expect(carriedDraft.isSaved).toBe(false);
 
+    const firstContinue = await runtime.continueCareer(state.saveId);
+    const attentionMessageId = firstContinue.continueResult.selectedMessageId;
+    if (attentionMessageId !== undefined) {
+      await runtime.openInboxMessage(state.saveId, attentionMessageId as WebCareerInboxMessageId);
+    }
     const continued = await runtime.continueCareer(state.saveId);
     const nextFixture = findNextCareerFixture(continued.state);
     if (nextFixture.status !== "found") throw new Error("Expected second selected-club fixture");
@@ -491,17 +562,57 @@ describe("WebCareerRuntime", () => {
       "missing_saved_tactic",
     ]);
 
-    const secondPreparation = buildDurableMatchPreparation(continued.state, createMatchPreparationDraft(continued.state));
+    const reconciledSecondDraft = createMatchPreparationDraft(continued.state);
+    const suspendedPlayerId = continued.state.playerAvailability?.suspensions[0]?.playerId;
+    if (suspendedPlayerId !== undefined) {
+      expect([
+        ...Object.values(reconciledSecondDraft.selectedPlayerIdsBySlot),
+        ...Object.values(reconciledSecondDraft.selectedBenchPlayerIdsBySlot),
+      ]).not.toContain(suspendedPlayerId);
+    }
+    const validSecondDraft = applyMatchPreparationSelectionAction(
+      continued.state,
+      reconciledSecondDraft,
+      "fill_gaps",
+    );
+    const secondPreparation = buildDurableMatchPreparation(continued.state, validSecondDraft);
     if (secondPreparation === undefined) throw new Error("Expected reusable second-fixture preparation");
     expect(secondPreparation.targetFixtureId).toBe(nextFixture.fixture.id);
 
     const entered = await runtime.saveMatchPreparation(state.saveId, secondPreparation);
-    expect(entered.state.activeMatchCheckpoint?.fixtureId).toBe(nextFixture.fixture.id);
-    await expect(runtime.progressMatchdayToHalfTime(state.saveId)).resolves.toMatchObject({
-      matchdayState: { lastStagedAttempt: { status: "at_half_time" } },
+    expect(entered.matchdayState.liveProgress?.fixtureBefore.id).toBe(nextFixture.fixture.id);
+    expect(advanceRuntimeToPhase(runtime, state.saveId, "half_time").matchdayState).toMatchObject({
+      lastSessionAttempt: { status: "paused" },
+      liveProgress: { snapshot: { phase: "half_time", currentMinute: 45 } },
     });
   });
 });
+
+function advanceRuntimeToPhase(
+  runtime: WebCareerRuntime,
+  saveId: WebCareerSaveId,
+  targetPhase: "half_time" | "full_time",
+  halfTimeDraft?: ReturnType<typeof createMatchPreparationDraft>,
+): AdvancedWebMatchdayMinute {
+  let matchdayState = runtime.resumeMatchday(saveId, halfTimeDraft).matchdayState;
+
+  for (let minute = 0; minute < 140; minute += 1) {
+    const update = runtime.advanceMatchdayMinute(saveId);
+    matchdayState = update.matchdayState;
+    const progress = matchdayState.liveProgress;
+    if (progress?.snapshot.phase === targetPhase) return update;
+
+    const decision = progress?.pendingDecision;
+    if (decision !== undefined && decision.type !== "half_time") {
+      matchdayState = runtime.resolveMatchdayIncident(saveId).matchdayState;
+    }
+    if (matchdayState.liveProgress?.snapshot.runState !== "running") {
+      matchdayState = runtime.resumeMatchday(saveId).matchdayState;
+    }
+  }
+
+  throw new Error(`Expected runtime match to reach ${targetPhase}`);
+}
 
 /** Uses the same public adapter actions as the manager-facing preparation screen. */
 function completePreparation(career: WebCareerState): NonNullable<WebCareerState["matchPreparation"]> {

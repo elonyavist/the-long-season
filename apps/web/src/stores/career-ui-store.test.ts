@@ -4,13 +4,17 @@ import { createMatchdayAttention, findNextCareerFixture } from "@game/engine";
 
 import { DEFAULT_WEB_PREFERENCES } from "../app/preferences";
 import { buildDurableMatchPreparation } from "../features/match-preparation/match-preparation-adapter";
-import { enterWebMatchday } from "../features/matchday/matchday-adapter";
+import { createWebLiveMatchdaySession } from "../features/matchday/matchday-adapter";
 import {
   buildWebCareerState,
   inspectWebCareerAttention,
   type WebCareerSaveId,
 } from "../runtime/web-career-runtime";
-import { resetCareerUiStore, useCareerUiStore } from "./career-ui-store";
+import {
+  resetCareerUiStore,
+  selectHasPendingMatchdayTeamChanges,
+  useCareerUiStore,
+} from "./career-ui-store";
 
 /** Reads the current Zustand snapshot without mounting React. */
 function state(): ReturnType<typeof useCareerUiStore.getState> {
@@ -28,6 +32,7 @@ describe("career UI store", () => {
     expect(state().availableSaves).toEqual([]);
     expect(state().activeCareerState).toBeUndefined();
     expect(state().matchPreparationState).toBeUndefined();
+    expect(state().matchdayTeamBaseline).toBeUndefined();
     expect(state().screen).toBe("app_entry");
   });
 
@@ -300,7 +305,9 @@ describe("career UI store", () => {
     const durable = buildDurableMatchPreparation(career, requiredDraft());
     if (durable === undefined) throw new Error("Expected complete durable preparation");
     const prepared = { ...career, matchPreparation: durable };
-    const matchdayState = enterWebMatchday(prepared);
+    const created = createWebLiveMatchdaySession(prepared);
+    if (created.status !== "ready") throw new Error("Expected valid live matchday session");
+    const matchdayState = created.matchdayState;
     const persisted = matchdayState.careerState;
     const save = metadata(persisted.saveId, "Committed club");
 
@@ -325,6 +332,70 @@ describe("career UI store", () => {
     });
     expect(state().screen).toBe("matchday");
     expect(state().selectedInboxMessageId).toBe(selectedInboxMessageId);
+  });
+
+  it("publishes a live minute without rebuilding unrelated career UI state", () => {
+    const career = generatedCareerWithInbox("live-minute");
+    state().openPersistedCareer(career, metadata(career.saveId, "Live club"), inspectWebCareerAttention(career));
+    state().openMatchPreparation();
+    state().applySelectionAction("auto");
+    state().selectTacticProfile("tactic:balanced");
+    const durable = buildDurableMatchPreparation(career, requiredDraft());
+    if (durable === undefined) throw new Error("Expected complete durable preparation");
+    const created = createWebLiveMatchdaySession({ ...career, matchPreparation: durable });
+    if (created.status !== "ready") throw new Error("Expected valid live matchday session");
+    const before = state();
+    const nextMatchdayState = {
+      ...created.matchdayState,
+      lastSessionAttempt: {
+        ...created.matchdayState.lastSessionAttempt,
+        status: "paused" as const,
+      },
+    };
+
+    state().receiveLiveMatchdayProgress(nextMatchdayState);
+
+    expect(state().matchdayState).toBe(nextMatchdayState);
+    expect(state().activeCareerState).toBe(before.activeCareerState);
+    expect(state().continueResult).toBe(before.continueResult);
+    expect(state().matchPreparationState).toBe(before.matchPreparationState);
+    expect(state().availableSaves).toBe(before.availableSaves);
+  });
+
+  it("discards live tactical edits to the last engine-accepted team plan", () => {
+    const career = openGeneratedCareer("live-team-baseline");
+    state().applySelectionAction("auto");
+    state().selectTacticProfile("tactic:balanced");
+    const durable = buildDurableMatchPreparation(career, requiredDraft());
+    if (durable === undefined) throw new Error("Expected complete durable preparation");
+    const prepared = { ...career, matchPreparation: durable };
+    const created = createWebLiveMatchdaySession(prepared);
+    if (created.status !== "ready") throw new Error("Expected valid live matchday session");
+    state().receiveMatchdaySessionUpdate(
+      prepared,
+      metadata(prepared.saveId, "Live plan club"),
+      inspectWebCareerAttention(prepared),
+      created.matchdayState,
+      {
+        dirty: true,
+        autosaveIntervalDays: 7,
+        lastPersistedGameDate: prepared.gameState.calendar.currentDate,
+        autosavePostponed: false,
+      },
+    );
+    state().acceptPendingMatchdayTeamChanges();
+    const acceptedPlan = requiredDraft();
+    expect(selectHasPendingMatchdayTeamChanges(state())).toBe(false);
+
+    state().selectFormation("3-5-2");
+    expect(requiredDraft().selectedFormationId).toBe("3-5-2");
+    expect(selectHasPendingMatchdayTeamChanges(state())).toBe(true);
+
+    state().discardPendingMatchdayTeamChanges();
+
+    expect(requiredDraft()).toBe(acceptedPlan);
+    expect(requiredDraft().selectedFormationId).toBe("4-4-2");
+    expect(selectHasPendingMatchdayTeamChanges(state())).toBe(false);
   });
 
   it("enforces XI and bench mutual exclusivity in the draft", () => {

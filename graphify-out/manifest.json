@@ -45,13 +45,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-inbox-view.ts": {
-    "mtime": 1784068103.4059994,
-    "ast_hash": "82b4bb9f67e88b94f38770b4a41ab407",
+    "mtime": 1784467583.6318533,
+    "ast_hash": "dd6789db029c0384ef3f34030b9be3a3",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-shell-view.ts": {
-    "mtime": 1784042478.8433928,
-    "ast_hash": "cef9f3ff42179c21d22794d73a6fc565",
+    "mtime": 1784555647.1638339,
+    "ast_hash": "df396c457945c1d41820e6fcec1e18db",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-inbox-view.test.ts": {
@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-shell-view.test.ts": {
-    "mtime": 1784068103.4082386,
-    "ast_hash": "0c58c45d6fa99e5b968af5527493cad1",
+    "mtime": 1784555647.1646972,
+    "ast_hash": "09b95be37d35444064b8654f9a791835",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-dashboard-view.test.ts": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/league-system.test.ts": {
-    "mtime": 1782162956.6239488,
-    "ast_hash": "8761a361de14038356634eff61d31c3b",
+    "mtime": 1784462297.550235,
+    "ast_hash": "cc5522ab3c0e24b4b231df985c92c421",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/player-rarity-budget.ts": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/league-system.ts": {
-    "mtime": 1782162902.468986,
-    "ast_hash": "290c80ad84a01af4c3414cf04d5765cb",
+    "mtime": 1784508974.0345104,
+    "ast_hash": "f391559312d9ac06bf0b2b2e105e533d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/initial-youth-academies.ts": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/index.ts": {
-    "mtime": 1784414952.191579,
-    "ast_hash": "a7991476f850af8094daf5806bd773d9",
+    "mtime": 1784502360.8586874,
+    "ast_hash": "566db62b24adbdad479ef5bd2adf7eaa",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/calibration-report.ts": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/i18n/src/labels.test.ts": {
-    "mtime": 1784414914.7173305,
-    "ast_hash": "7831b115ec2dfa108827aaaf52b3b2f5",
+    "mtime": 1784494197.0425966,
+    "ast_hash": "8e3bcd7fde8f1dcc62f9e6be5e054f0f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/i18n/src/language.ts": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/i18n/src/labels.ts": {
-    "mtime": 1784414842.9325993,
-    "ast_hash": "57da6308ba24f32799879560375ea884",
+    "mtime": 1784536392.578624,
+    "ast_hash": "f66d540ed9362425497eb423312f48fc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/package.json": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/index.ts": {
-    "mtime": 1784412523.0340679,
-    "ast_hash": "0ed69b980cb9982a2b0b0bfcc279ba2b",
+    "mtime": 1784504963.1660447,
+    "ast_hash": "a224623195b8ed5e29bbeed1ad78b54e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/squad-maintenance.test.ts": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/progress-fixture.test.ts": {
-    "mtime": 1784413241.7620833,
-    "ast_hash": "4eef90e8077fbcfa60b35e7c928cfb77",
+    "mtime": 1784505599.9903944,
+    "ast_hash": "0e14a0c2e4fe1c7baf3aa9f11b75377a",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-fixture.test.ts": {
@@ -615,8 +615,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/progress-fixture.ts": {
-    "mtime": 1784412398.1758378,
-    "ast_hash": "9184ac725c1c32757faa63ec0ab6cb2e",
+    "mtime": 1784504963.167498,
+    "ast_hash": "f896acfc4449f72bbad4fd59de5fccb8",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-season-calendar.ts": {
@@ -635,8 +635,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-fixture.ts": {
-    "mtime": 1782062382.6223886,
-    "ast_hash": "98a3ab6b62e02909bfd57b57a10bcabe",
+    "mtime": 1784484202.8977551,
+    "ast_hash": "3a6b063e57ff6f4aaab1568feeb84fb0",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-promotion.test.ts": {
@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/use-cases/simulate-season.test.ts": {
-    "mtime": 1784400299.429988,
-    "ast_hash": "4b81f732dce1ba56023e6fd3e4a7df5d",
+    "mtime": 1784505599.9917529,
+    "ast_hash": "46ce4125ae6953a9a3253ce7ba549bca",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/use-cases/simulate-season.ts": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-simulation-runner.ts": {
-    "mtime": 1782136443.1249285,
-    "ast_hash": "51aad03e0626aa03a05a9e588d8b4c23",
+    "mtime": 1784461123.2849996,
+    "ast_hash": "22b15c1b4987dbe99df4a7305487a61b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/manual-tactic-change.test.ts": {
@@ -800,13 +800,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/tactic-team-context.ts": {
-    "mtime": 1781880899.7118015,
-    "ast_hash": "46f5a31cd9899fa6d690a3ea8143283e",
+    "mtime": 1784462673.2477624,
+    "ast_hash": "3c1edf1c3f5ae1f3078bf71405bb1349",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/occasion-resolver.ts": {
-    "mtime": 1781511499.1163518,
-    "ast_hash": "c8f829119bdaf61342e06c45ab009c81",
+    "mtime": 1784460381.5455704,
+    "ast_hash": "a6ba7c18d3db395e55e9b82a78549d25",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-context.test.ts": {
@@ -830,23 +830,23 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/step-match.test.ts": {
-    "mtime": 1782407541.0250084,
-    "ast_hash": "ff4e3156fe291dba4a587be4b8f59816",
+    "mtime": 1784461123.2863414,
+    "ast_hash": "f166343a941af7bdddbdede610424a53",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/create-match-report.ts": {
-    "mtime": 1781878784.7013357,
-    "ast_hash": "0325392fcdd201fd5ea8298034a702a0",
+    "mtime": 1784463077.2149546,
+    "ast_hash": "7fae9d68cd4dd636afe71a678b8ab2ee",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/simulate-match.test.ts": {
-    "mtime": 1782407399.438592,
-    "ast_hash": "a63ebfa79ed244e1bd70b7b701692f08",
+    "mtime": 1784465667.2513025,
+    "ast_hash": "8f25ce2732177a189c5358c8b6165c5c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/step-match.ts": {
-    "mtime": 1782134650.695521,
-    "ast_hash": "b1fc5836e223e8d357f345ca166a3d15",
+    "mtime": 1784508588.742518,
+    "ast_hash": "18f989cddc5ad2d0343c5b3a3dff17dd",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-explanation-trace.ts": {
@@ -855,13 +855,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-simulation-state.ts": {
-    "mtime": 1781511499.1162121,
-    "ast_hash": "6d0b4042b1c65f8ddef089ac51a4acf3",
+    "mtime": 1784462673.2489445,
+    "ast_hash": "dd03bb6fa45505eadf939e41d2ff8ed1",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/index.ts": {
-    "mtime": 1782817051.052779,
-    "ast_hash": "bc020510b621d1e9e733ffb43fa23619",
+    "mtime": 1784504963.1665654,
+    "ast_hash": "a6a766500622cf34fb3e94abf17a670d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/simulate-match.ts": {
@@ -870,8 +870,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-context.ts": {
-    "mtime": 1781511054.8152943,
-    "ast_hash": "bef3d7fa66089cfdcec4419807689998",
+    "mtime": 1784462673.2471306,
+    "ast_hash": "30a1edb6772de1cdc607ac00d3003830",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/chance-actors.test.ts": {
@@ -885,8 +885,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/aggregate-occasion-resolver.ts": {
-    "mtime": 1781511538.5208702,
-    "ast_hash": "3a590ca317b026cace4e6d6c4adfbbeb",
+    "mtime": 1784460381.5458944,
+    "ast_hash": "324525e75185836b099998ab203c0850",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/squad/formation-squad-fit.test.ts": {
@@ -965,8 +965,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/index.ts": {
-    "mtime": 1784318400.8482814,
-    "ast_hash": "62a0bf0cbd5bce034685701308ecc570",
+    "mtime": 1784504926.035657,
+    "ast_hash": "c158c966587086ab0353f09124d4a7aa",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/value-objects/game-date.ts": {
@@ -1005,18 +1005,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/inbox.test.ts": {
-    "mtime": 1784064998.078288,
-    "ast_hash": "0c30b38fedb9231a0b40f1db49a1cd65",
+    "mtime": 1784462409.4542272,
+    "ast_hash": "4b578f5ba96be02640cf483c57121068",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/inbox.ts": {
-    "mtime": 1784064998.0776107,
-    "ast_hash": "36663c5dcf19603f1cf0e079b00443fe",
+    "mtime": 1784462280.411962,
+    "ast_hash": "4ea07c467dfb5334d9bd0dc848a5247b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/index.ts": {
-    "mtime": 1784397403.5933251,
-    "ast_hash": "1d622346f5d5de7165cda426ce112a05",
+    "mtime": 1784504926.0350688,
+    "ast_hash": "b72331b4b9768387373a6722ff97d7c3",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/attention.test.ts": {
@@ -1090,8 +1090,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/state/career-state.ts": {
-    "mtime": 1784397434.9865644,
-    "ast_hash": "a1828372ed5cab9954371f426a547428",
+    "mtime": 1784504926.0364258,
+    "ast_hash": "14edb551c80c16f9d5a5daf7c93cb4bf",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/state/youth-academy-state.ts": {
@@ -1100,8 +1100,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/state/career-state.test.ts": {
-    "mtime": 1784397464.7878144,
-    "ast_hash": "2db11cef76b6180f0866943937a8d242",
+    "mtime": 1784504926.036858,
+    "ast_hash": "294c934c6a232f2042e0ba461f68de5e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/squad/squad-depth.test.ts": {
@@ -1135,8 +1135,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/competition.entity.ts": {
-    "mtime": 1781526757.8142226,
-    "ast_hash": "f31bd22a8e0a8f3113665e42da538841",
+    "mtime": 1784462280.4088492,
+    "ast_hash": "a69ff3d4fc265b529a905f879bf7183f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/player.entity.test.ts": {
@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/match-event.entity.ts": {
-    "mtime": 1781878804.910831,
-    "ast_hash": "8c09c151e3f210d13455c484eae71f0f",
+    "mtime": 1784462280.4102774,
+    "ast_hash": "5bdb58fbcf3bf9b1b7928b5932aa77d5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/club.entity.ts": {
@@ -1185,8 +1185,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/package.json": {
-    "mtime": 1784442669.2633867,
-    "ast_hash": "9f707388762f6dfe6016bf1802b1df4c",
+    "mtime": 1784547775.0297637,
+    "ast_hash": "f262b4041be3f7b7859e96d75bd4f51e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/tsconfig.json": {
@@ -1225,8 +1225,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/package.json": {
-    "mtime": 1782203753.601301,
-    "ast_hash": "735ab50e9c1a2f72e3976c7138e29186",
+    "mtime": 1784502750.6932292,
+    "ast_hash": "eb5e789ec03678009e11edc5391feea9",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/tsconfig.json": {
@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/balance-report.test.ts": {
-    "mtime": 1782115280.2461596,
-    "ast_hash": "b3d9c3d4d5895c490c7864045f9120a0",
+    "mtime": 1784509521.4466186,
+    "ast_hash": "bc1b11cd78efebe5a03b5f248e0d2c2c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report.ts": {
@@ -1275,8 +1275,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report.test.ts": {
-    "mtime": 1784423779.9315255,
-    "ast_hash": "cfb6445451f6b321b77dcdaa5b2cfd41",
+    "mtime": 1784509521.447308,
+    "ast_hash": "df20922cfb5e1dca15957aa3d1efd406",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/balance-report.ts": {
@@ -1350,8 +1350,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/progression.ts": {
-    "mtime": 1782153170.0293725,
-    "ast_hash": "da3dd6c0b7bd6e0931f8350bfc1fe7de",
+    "mtime": 1784502784.9945924,
+    "ast_hash": "1b327d33621b450eb89539b30a24ca61",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/season-rollover-output.ts": {
@@ -1445,18 +1445,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/PROJECT_STATUS.md": {
-    "mtime": 1784451232.8054502,
-    "ast_hash": "321e4acf58f1f63377ce95c275eacc19",
+    "mtime": 1784509421.8015802,
+    "ast_hash": "8924a27413caf38844710ad0c2091a18",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/ARCHITECTURE.md": {
-    "mtime": 1784451106.5986044,
-    "ast_hash": "941d25acebe5bcd2a1367fe570f5633a",
+    "mtime": 1784509421.8032668,
+    "ast_hash": "d56453dd57b3e000aa020e206733afb5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/step_prompt_to_use.md": {
-    "mtime": 1784442495.6403892,
-    "ast_hash": "39582c36e01c794641eb852514c1780c",
+    "mtime": 1784457469.8695927,
+    "ast_hash": "7deaf67bbf3b9e0ba03846345d562835",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/archive/README.md": {
@@ -1950,8 +1950,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/README.md": {
-    "mtime": 1784451106.5974402,
-    "ast_hash": "44a6db2fdb01ee4ba42e415562e8f166",
+    "mtime": 1784507881.4540768,
+    "ast_hash": "f18999a1cce51189db1274a2af8d0a8d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/09-manual-tactical-changes-v1/03-manual-tactic-change-contract.md": {
@@ -5275,8 +5275,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md": {
-    "mtime": 1784451106.5993083,
-    "ast_hash": "f2b17fa409a8eab8926cd6ac94d3ab9c",
+    "mtime": 1784509421.8024604,
+    "ast_hash": "a16251d60b2327ba85a7b497fd67cc25",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_MATCH_PREPARATION_SLICE_REPORT.md": {
@@ -5470,8 +5470,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/App.tsx": {
-    "mtime": 1784445675.3900628,
-    "ast_hash": "77fef38b3073d49e2fa1bdef81ee4d0e",
+    "mtime": 1784555759.493794,
+    "ast_hash": "7b238472bd89a5e07b46f7221fe3ea37",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/app.test.tsx": {
@@ -5485,8 +5485,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/dashboard/CareerDashboardScreen.tsx": {
-    "mtime": 1784446305.6845593,
-    "ast_hash": "51090a9e21ba304611c63fc9e351834d",
+    "mtime": 1784555759.4871178,
+    "ast_hash": "eb608a68e7c7bf096a997d8bd4994bd0",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/dashboard/career-dashboard-presenter.ts": {
@@ -5515,23 +5515,23 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/CareerMatchPreparationScreen.test.ts": {
-    "mtime": 1784447083.822349,
-    "ast_hash": "fdf51336379e923f884043a90d133dce",
+    "mtime": 1784556097.5991032,
+    "ast_hash": "26896b0c62afd96f7d4e94b446a0880c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx": {
-    "mtime": 1784446952.5803246,
-    "ast_hash": "0b26527a50560ccaa4a5c867677d019d",
+    "mtime": 1784555759.4924903,
+    "ast_hash": "213729246d2a17d95e4cd682c46aa2c7",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/stores/career-ui-store.ts": {
-    "mtime": 1784240911.5892408,
-    "ast_hash": "efbe45a56435e2c479588a2dd28fd611",
+    "mtime": 1784505116.5312226,
+    "ast_hash": "1b52e077c3d0f9dec46e972e7ff9ee2d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/stores/career-ui-store.test.ts": {
-    "mtime": 1784240852.9468672,
-    "ast_hash": "497c916a4348b22e590802b1718a7fb0",
+    "mtime": 1784491672.733448,
+    "ast_hash": "de84b444aed8a915ea6da1ace052ee66",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/ui/SquadSelectionTable.tsx": {
@@ -5720,8 +5720,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-roles.ts": {
-    "mtime": 1782261359.315741,
-    "ast_hash": "ef235dfd5f1ae24c97139966f384910e",
+    "mtime": 1784540488.9341676,
+    "ast_hash": "bfb6481fd84db619b8287e660f1d935e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-types.test.ts": {
@@ -5735,8 +5735,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-types.ts": {
-    "mtime": 1782261359.3153238,
-    "ast_hash": "0ce30008a85a8e3ffbb3063781cc890f",
+    "mtime": 1784540488.9355812,
+    "ast_hash": "bfc6c6b5ab65ddc6fdac5fa2fa596344",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-interactions.ts": {
@@ -5750,8 +5750,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-squad.ts": {
-    "mtime": 1782262813.24216,
-    "ast_hash": "278d97304f7036a70aefcebd5e83f0a9",
+    "mtime": 1784539589.0369272,
+    "ast_hash": "115a377f3087ab8edcb6f285dd7338d6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-suitability.test.ts": {
@@ -5760,13 +5760,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-roles.test.ts": {
-    "mtime": 1782261359.3164165,
-    "ast_hash": "6e81c0d8a30b7602f3714d00806fcb1b",
+    "mtime": 1784540488.9362512,
+    "ast_hash": "4f2079fb2f533c3463e099c14ffe3163",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-state.test.ts": {
-    "mtime": 1783936703.9256296,
-    "ast_hash": "e273b5b2c9b61e1aff431f6475836a24",
+    "mtime": 1784489155.537198,
+    "ast_hash": "aacf0db998f49f61090f6e018e46cbee",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-geometry.ts": {
@@ -5775,8 +5775,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-squad.test.ts": {
-    "mtime": 1782262713.6873477,
-    "ast_hash": "307c60d68d41c94c922df929b905284e",
+    "mtime": 1784539589.0402784,
+    "ast_hash": "d997b19413b81919ecc8456c539c5134",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-suitability.ts": {
@@ -5790,8 +5790,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-state.ts": {
-    "mtime": 1783936703.9257522,
-    "ast_hash": "6aee6ed63af3881957a08d70dfd9f8b7",
+    "mtime": 1784489091.5799117,
+    "ast_hash": "74075d716f2990379b17fdfcde9f3506",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardPitch.test.ts": {
@@ -5800,13 +5800,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardMenu.tsx": {
-    "mtime": 1782299511.5177,
-    "ast_hash": "76143f871be216c1421bde688ec1d4b8",
+    "mtime": 1784540488.9369617,
+    "ast_hash": "1d2a64f14a296aa6db1d06cc29add945",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardPitch.tsx": {
-    "mtime": 1784446952.5786276,
-    "ast_hash": "1ce1387ea42d183117a92c4c69b9ab6b",
+    "mtime": 1784539589.0379589,
+    "ast_hash": "6bcb19dc8f77e48c578c3924101041c0",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardPitchMarkings.tsx": {
@@ -5820,8 +5820,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardPlayerToken.tsx": {
-    "mtime": 1782261830.2911227,
-    "ast_hash": "24b927b331abac3261af7f109e5356f6",
+    "mtime": 1784489662.3382447,
+    "ast_hash": "141d42eb1e7b42bef10fd29a0b55c145",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/SHARED_TACTICAL_BOARD_FEATURE_AUDIT.md": {
@@ -5885,8 +5885,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardMenu.test.ts": {
-    "mtime": 1782299467.6978476,
-    "ast_hash": "9ed48102f4b6ea0d0f679751baab6588",
+    "mtime": 1784539589.0398269,
+    "ast_hash": "1ba46cc23316bfe6fb75facc0dac394b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/ui/PlayerCandidateRow.tsx": {
@@ -6000,8 +6000,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-bench.ts": {
-    "mtime": 1782298786.7988667,
-    "ast_hash": "16526544df1ecd2df273697417852459",
+    "mtime": 1784489662.3377955,
+    "ast_hash": "bdb862c5bde31973027abc505845d8a4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-bench.test.ts": {
@@ -6010,13 +6010,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBenchBoard.tsx": {
-    "mtime": 1784446900.9331067,
-    "ast_hash": "a1447b93ed4627702455f869e7fa010a",
+    "mtime": 1784539589.0393715,
+    "ast_hash": "e320a2d5eb07371dfd0d0075c5039699",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBenchSlotToken.tsx": {
-    "mtime": 1782299343.6813958,
-    "ast_hash": "20cd6d215d56234b4e0894b15ba94c69",
+    "mtime": 1784489662.3386188,
+    "ast_hash": "6ab2163a2649169308991d42db2ee853",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBenchBoard.test.ts": {
@@ -6170,8 +6170,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md": {
-    "mtime": 1784451232.811022,
-    "ast_hash": "98d8cc904095bccc671a8a794eedd117",
+    "mtime": 1784509421.8028243,
+    "ast_hash": "c37c9678d9aaaca5ad7fef0cfcfccb94",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/ENGINE_SAFETY_NET_AUDIT.md": {
@@ -6400,13 +6400,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/CareerMatchdayScreen.test.ts": {
-    "mtime": 1784449478.171281,
-    "ast_hash": "1fbcbb4919d937383b3d2ce7aa9ff987",
+    "mtime": 1784556097.5996099,
+    "ast_hash": "646cbf40d9c306b2de9c8d4e37fcff9f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/CareerMatchdayScreen.tsx": {
-    "mtime": 1784450648.0833147,
-    "ast_hash": "583902c11080ca26a7aa17f45d499ff5",
+    "mtime": 1784555759.4932234,
+    "ast_hash": "0e40bd386f24a8d005d5983231e6ac4e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_MATCHDAY_PLAYABLE_SLICE_AUDIT.md": {
@@ -6465,53 +6465,33 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-matchday-phase-view.test.ts": {
-    "mtime": 1782813247.331293,
-    "ast_hash": "9f9e57151439555931b8aa22f6fd061b",
+    "mtime": 1784509610.8796928,
+    "ast_hash": "6c1aff1452a4a1222b79ceca4dc059e4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-matchday-phase-view.ts": {
-    "mtime": 1782813247.3301387,
-    "ast_hash": "2cb3c3033fe276f82d8fbfc524000407",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/half-time-substitutions.test.ts": {
-    "mtime": 1782814117.1215587,
-    "ast_hash": "441a77bee67ca81b0a2daed0a3fe3dd1",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/staged-match-progression.ts": {
-    "mtime": 1782813947.390474,
-    "ast_hash": "7a1a72709ae51071e7a699451a399474",
+    "mtime": 1784493781.8940873,
+    "ast_hash": "9681fcf27ed2b1289b44077844dc13cc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/player-match-rating.ts": {
-    "mtime": 1782771140.9023347,
-    "ast_hash": "f6437e3ff48f03326cb8267ae2ca6e7e",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/half-time-substitutions.ts": {
-    "mtime": 1782813899.181473,
-    "ast_hash": "e3d356242e660ed9626d562831da6251",
+    "mtime": 1784460450.1025684,
+    "ast_hash": "9dda09f711cd362b98a59f9011e30a31",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/player-match-rating.test.ts": {
-    "mtime": 1782771196.1550336,
-    "ast_hash": "54493d5b07098ee1726fe46b6bbe8351",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/staged-match-progression.test.ts": {
-    "mtime": 1782814135.4022331,
-    "ast_hash": "b381a78cc7fc5d63139a174fd1c4e9fe",
+    "mtime": 1784460742.091207,
+    "ast_hash": "93f67e0c8663a7154f869ae585f7f2d1",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/match-phase.ts": {
-    "mtime": 1782770883.5806806,
-    "ast_hash": "e96af6da864d5122f8fe10261ff17f89",
+    "mtime": 1784458571.4555173,
+    "ast_hash": "9f85019a7409c7386704e4ac8d333ea6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/substitution.ts": {
-    "mtime": 1782771362.4655058,
-    "ast_hash": "a489a05af3f7972e9b8b840ffe3df6d5",
+    "mtime": 1784504926.0360243,
+    "ast_hash": "eacaeb691e58a63d653d0d6fa8539005",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/INTERACTIVE_MATCHDAY_FLOW_REPORT.md": {
@@ -6587,16 +6567,6 @@
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/66-interactive-matchday-flow-and-half-time-decisions/01-current-matchday-flow-and-ui-audit.md": {
     "mtime": 1782769722.2914844,
     "ast_hash": "5841417efbc6d7c96d6a8c08e2d7a021",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/half-time-tactical-decision.test.ts": {
-    "mtime": 1782813832.7017462,
-    "ast_hash": "837da27e614bab06f048882ad7fd3640",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/half-time-tactical-decision.ts": {
-    "mtime": 1782813791.0835814,
-    "ast_hash": "bfe07d4230f5b0eb73d3b6320cb7c6ff",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/MATCHDAY_FLOW_SIMPLIFICATION_AUDIT.md": {
@@ -6845,13 +6815,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/AppShell.tsx": {
-    "mtime": 1784443997.0719728,
-    "ast_hash": "91b7d7612a98274e0fe748c2631f253c",
+    "mtime": 1784555647.165363,
+    "ast_hash": "2dab9fec5a7af42a6b1bf756997d2610",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/AppShell.test.tsx": {
-    "mtime": 1784443997.07422,
-    "ast_hash": "836fa1c9ca07f51924c5d0c4ba19524e",
+    "mtime": 1784556097.598081,
+    "ast_hash": "b6bcfb85f504575b6b16f4896de35c70",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/dashboard/CareerDashboardScreen.test.tsx": {
@@ -6875,8 +6845,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/career-matchday-presenter.ts": {
-    "mtime": 1784295866.0770884,
-    "ast_hash": "f5ab0ac1e47a61c51a692a9b158b487a",
+    "mtime": 1784536571.4146695,
+    "ast_hash": "d80f93602404b2bc3c8dc2b0f93b3804",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_MATCHDAY_INFORMATION_ARCHITECTURE_VISUAL_QA.md": {
@@ -7049,29 +7019,9 @@
     "ast_hash": "f93e15ce684af1482d3a3c44fd1a89e3",
     "semantic_hash": ""
   },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/active-match-checkpoint.test.ts": {
-    "mtime": 1783948448.7176409,
-    "ast_hash": "565d6ba5af683f3981d2fdf0d52bbcd0",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/active-match-checkpoint.ts": {
-    "mtime": 1783948448.7174752,
-    "ast_hash": "3e62709bbc01b83347123c9432a6ce25",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/active-match-checkpoint.test.ts": {
-    "mtime": 1783948362.0696013,
-    "ast_hash": "eb341a98e7e6193ac27c1e273fe43ade",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/active-match-checkpoint.ts": {
-    "mtime": 1783948362.069017,
-    "ast_hash": "9fa493f5c33e024236a19d605af46cf0",
-    "semantic_hash": ""
-  },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-schema.ts": {
-    "mtime": 1784398385.5796046,
-    "ast_hash": "b72b63962f1981979e744c4889360288",
+    "mtime": 1784505365.0450737,
+    "ast_hash": "dff23c8d45211d91a79d76f330f5c140",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-storage.ts": {
@@ -7085,13 +7035,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-migrations.ts": {
-    "mtime": 1784398385.5803013,
-    "ast_hash": "7aa705de8aacb276d7e596ce91e437d0",
+    "mtime": 1784505365.045821,
+    "ast_hash": "2d7db0019d1a34ba8413038a62568f00",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts": {
-    "mtime": 1784398746.154198,
-    "ast_hash": "012e74adf3c582911f078349889c917b",
+    "mtime": 1784505141.5397246,
+    "ast_hash": "ac50fc1293e7a0a24f5322f438606885",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/infrastructure/persistence/create-web-career-storage.ts": {
@@ -7110,8 +7060,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/career-storage.contract.test.ts": {
-    "mtime": 1784398590.574587,
-    "ast_hash": "f7913dc15aa0c0c8acd417e9ed975446",
+    "mtime": 1784464328.1539676,
+    "ast_hash": "4b984832ee372d86c6a87c65ea7a480c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/world-state-mapper.ts": {
@@ -7120,28 +7070,28 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/career-state-mapper.ts": {
-    "mtime": 1784398476.4807682,
-    "ast_hash": "9d97d2ff3a47fc7998a349653463a89f",
+    "mtime": 1784505324.3982475,
+    "ast_hash": "d8f7d7e5499dd8ff0faf996d2b251165",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/career-state-mapper.test.ts": {
-    "mtime": 1784398718.6014018,
-    "ast_hash": "69e16ada9c9dce5dfc11d1ab358dbc85",
+    "mtime": 1784505473.2237546,
+    "ast_hash": "9ea83298030f11b19d462cf87cf0d6fd",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/world-state-mapper.test.ts": {
-    "mtime": 1784398566.6750958,
-    "ast_hash": "cf6e27a3f0510659e356e6008f89d46b",
+    "mtime": 1784505473.2246084,
+    "ast_hash": "66a7916dd537ff81a6037cb810e50034",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/runtime/web-career-runtime.test.ts": {
-    "mtime": 1784240943.4933946,
-    "ast_hash": "d5804eac7198102d7c66864892371db9",
+    "mtime": 1784505116.531687,
+    "ast_hash": "8f62fafc195e9fba77d4dd651c8a1be4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/runtime/web-career-runtime.ts": {
-    "mtime": 1784240911.5885496,
-    "ast_hash": "e33e63ade001d59192ccbce044c72a09",
+    "mtime": 1784494313.9731429,
+    "ast_hash": "0dc0aa8b034d76406681d867e3774ec9",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/dashboard/build-career-dashboard.ts": {
@@ -7155,33 +7105,33 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-storage.test.ts": {
-    "mtime": 1784398510.4206774,
-    "ast_hash": "330cbefa9671672c03779ca447c6f443",
+    "mtime": 1784505599.9884202,
+    "ast_hash": "da871814014ce8de12ec511fa1902009",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/matchday-adapter.ts": {
-    "mtime": 1784413838.6274915,
-    "ast_hash": "47d9754a48952d877b3e63ac348a53a1",
+    "mtime": 1784507622.9028118,
+    "ast_hash": "b8bc594a409ab7a79028e0fe98799ce6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/matchday-adapter.test.ts": {
-    "mtime": 1784227456.0167475,
-    "ast_hash": "a654b266fe9b12b75a95ca7bca188a37",
+    "mtime": 1784509694.6054368,
+    "ast_hash": "bc4ca4adfa9eed4d1a68905ba0c9102e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/match-preparation-adapter.ts": {
-    "mtime": 1784324658.6918397,
-    "ast_hash": "7c50aa67f0c313881bb1479f73752e65",
+    "mtime": 1784505116.5298522,
+    "ast_hash": "746389755f6900e2a3ee5bf3ffa46d38",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/match-preparation-adapter.test.ts": {
-    "mtime": 1784324960.2950017,
-    "ast_hash": "5ad57ba3339caf409f5361d2c7bca30d",
+    "mtime": 1784491693.4485393,
+    "ast_hash": "36538c8710979e95eb844c4fbfb27117",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/test-fixtures/career-fixture.ts": {
-    "mtime": 1783965208.5471425,
-    "ast_hash": "aa7483db4e655c05034ee8ad9c5b9af8",
+    "mtime": 1784489366.5609512,
+    "ast_hash": "5ef04c42f0a387287e62f98592c674dc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_CAREER_PERSISTENCE_AND_SAVE_LIFECYCLE_REPORT.md": {
@@ -7370,13 +7320,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-inbox-lifecycle.test.ts": {
-    "mtime": 1784065030.034024,
-    "ast_hash": "96414fd18ccdf6d8dd0f1909bd5ee366",
+    "mtime": 1784464192.2313375,
+    "ast_hash": "020b09a7020d1ccda13de10c279b6237",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-inbox-lifecycle.ts": {
-    "mtime": 1784378758.0763853,
-    "ast_hash": "71433d294a1c02640d0e42f6577b4996",
+    "mtime": 1784463636.9353223,
+    "ast_hash": "5404391d5348510d2100d5eb0cad41a6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/CareerInboxScreen.test.tsx": {
@@ -7385,8 +7335,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/CareerInboxScreen.tsx": {
-    "mtime": 1784445675.390493,
-    "ast_hash": "88ce90df034049eed657ff9304519b65",
+    "mtime": 1784555759.488018,
+    "ast_hash": "2ea025ba0679549313afaacc17d0ea9f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/career-inbox-presenter.ts": {
@@ -7429,16 +7379,6 @@
     "ast_hash": "9d00868ee09e50a06b4538b58239e279",
     "semantic_hash": ""
   },
-  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/CalendarAdvanceTransition.tsx": {
-    "mtime": 1784450648.0841908,
-    "ast_hash": "201a13a7d150d42c2af999e229fe2cd7",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/CalendarAdvanceTransition.test.tsx": {
-    "mtime": 1784450648.0845199,
-    "ast_hash": "63da5603955a40e7d2ce12309c29f9c4",
-    "semantic_hash": ""
-  },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/calendar-advance-transition.test.ts": {
     "mtime": 1784445675.393202,
     "ast_hash": "711b4548419087a41a5ea37f9967ada3",
@@ -7460,8 +7400,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/visual-qa/current-product.spec.ts": {
-    "mtime": 1784450024.053156,
-    "ast_hash": "8e9548d578c7958fef86421cc50cd0dd",
+    "mtime": 1784556097.601665,
+    "ast_hash": "f6b09998576e851f54a3a93dca6cb8d8",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/WEB_UI_UX_PREMIUM_REMEDIATION_MAP.md": {
@@ -7610,63 +7550,63 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/CareerAppFrame.test.tsx": {
-    "mtime": 1784276062.9163287,
-    "ast_hash": "606c2739918597d958abf31dd8d1a0b5",
+    "mtime": 1784556097.5986972,
+    "ast_hash": "46658069caf7e2533e3027f88940bec3",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/use-career-screen-presentations.ts": {
-    "mtime": 1784121988.553126,
-    "ast_hash": "01e9f4bd6e85e241ed3f1a3de6aab964",
+    "mtime": 1784489366.561739,
+    "ast_hash": "412f2a120a112ade5536e204bd0ee813",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/use-career-screen-presentations.test.ts": {
-    "mtime": 1784123190.0233068,
-    "ast_hash": "a02cde89f3377b85f715e7229da78420",
+    "mtime": 1784489366.5613928,
+    "ast_hash": "8c8c8aa54ae31d63b54cea5b49eabe15",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayLivePhase.tsx": {
-    "mtime": 1784450648.0811489,
-    "ast_hash": "2a2b421e7c7d1428550c3d88c94b9f51",
+    "mtime": 1784467961.4306164,
+    "ast_hash": "5eb3536548e010cbd4269469896b3dec",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/matchday-playback.test.ts": {
-    "mtime": 1784289152.2883735,
-    "ast_hash": "73b5683956800cd36cb1b6c5c2fbf0d6",
+    "mtime": 1784491500.8254802,
+    "ast_hash": "a34f90cd4794b7b8ff019fdb46fa36dc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/matchday-playback.ts": {
-    "mtime": 1784288996.929453,
-    "ast_hash": "44e49cdd62751686d98c608500f64721",
+    "mtime": 1784491500.825037,
+    "ast_hash": "5abe2e5f4ddf759f8805a1368de81071",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayLivePhase.test.tsx": {
-    "mtime": 1784448371.5522895,
-    "ast_hash": "3764fad0a6b70f5388a31e7fe5b2ce9a",
+    "mtime": 1784468238.484406,
+    "ast_hash": "d1abe3e78613af53eb82b0f9980ce677",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayHalfTimePhase.test.tsx": {
-    "mtime": 1784449478.1705081,
-    "ast_hash": "b37e5d33280875529c435a6366be92aa",
+    "mtime": 1784548539.7288837,
+    "ast_hash": "552a3a38ca2836c988681d76ca763e2f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayHalfTimePhase.tsx": {
-    "mtime": 1784450648.0828478,
-    "ast_hash": "d1a48c93f80c9871c1031beb70b9b78a",
+    "mtime": 1784548539.727787,
+    "ast_hash": "d041d103ddbcacce747bf418963b1ff5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayFullTimePhase.tsx": {
-    "mtime": 1784450648.0821927,
-    "ast_hash": "57dcb2736299e1298ecd1d9ef7e9f6f1",
+    "mtime": 1784547963.1675448,
+    "ast_hash": "5d06eec31a6185a6e5f5d5b347a64a07",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayFullTimePhase.test.tsx": {
-    "mtime": 1784449478.170959,
-    "ast_hash": "dbd5adb090ddd86dbb87ee8e7497fd93",
+    "mtime": 1784494156.574357,
+    "ast_hash": "fe00272a67d5f3c70824c10875da671c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/career-matchday-presenter.test.ts": {
-    "mtime": 1784296077.609785,
-    "ast_hash": "9d53ec75ca77754a2e21ecebe9da4bc9",
+    "mtime": 1784536571.4149263,
+    "ast_hash": "a4fb53790aa6165e694fd342f49f238f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_UI_UX_PREMIUM_REMEDIATION_REPORT.md": {
@@ -7690,12 +7630,12 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/test-results/.last-run.json": {
-    "mtime": 1784281591.533538,
+    "mtime": 1784483095.4448926,
     "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/test-results/.last-run.json": {
-    "mtime": 1784450916.5741446,
+    "mtime": 1784557134.6747437,
     "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
     "semantic_hash": ""
   },
@@ -7755,28 +7695,28 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayPlaybackControls.tsx": {
-    "mtime": 1784450648.0836918,
-    "ast_hash": "a9ec0f1a5728010671a445fb48a21d89",
+    "mtime": 1784468005.7265615,
+    "ast_hash": "f13446e69b7c43f2c03757aacefa685c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayTabellino.test.tsx": {
-    "mtime": 1784448371.5530558,
-    "ast_hash": "f7c0d27e717edb66d1a5830540922ec4",
+    "mtime": 1784536571.4154317,
+    "ast_hash": "5949558967aeee05564ca96b21d740d7",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayTabellino.tsx": {
-    "mtime": 1784450648.0805628,
-    "ast_hash": "3992c4edc33fe2848679f1b9bdcb062d",
+    "mtime": 1784536392.5769613,
+    "ast_hash": "2fb1f5256c6c5ea3b3328e0fdfc858f2",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayPhaseTabs.tsx": {
-    "mtime": 1784450648.081651,
-    "ast_hash": "0865e747df2be8f34429d4a3b3c8ba28",
+    "mtime": 1784547963.1654356,
+    "ast_hash": "b5764cb928a7e0ce2a2ef13807c101f5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayPhaseTabs.test.tsx": {
-    "mtime": 1784449478.1700327,
-    "ast_hash": "091ac85ae5d8abf3955a2a4b5f3bb567",
+    "mtime": 1784547963.1686072,
+    "ast_hash": "bc129c853742773b8a66177e4b779a73",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayTeamRatings.test.tsx": {
@@ -7785,8 +7725,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayTeamRatings.tsx": {
-    "mtime": 1784295866.077492,
-    "ast_hash": "3c5438447bda2d8c7b4da9fbc58dc9cf",
+    "mtime": 1784494131.4289896,
+    "ast_hash": "9597c3dd748966c08f93f4ed1058f1ac",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/MATCHDAY_BROADCAST_WORKSPACE_REWORK_REPORT.md": {
@@ -8075,18 +8015,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-squad-selection.ts": {
-    "mtime": 1784400035.163259,
-    "ast_hash": "45dd339b29c12e0d98655428c8bb1a9d",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-half-time-substitution.test.ts": {
-    "mtime": 1784401467.6965604,
-    "ast_hash": "ec8b0b8a9a7f362aa875149236c6d198",
-    "semantic_hash": ""
-  },
-  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-half-time-substitution.ts": {
-    "mtime": 1784402469.6798494,
-    "ast_hash": "7a35d22a9de7da8c6fa6f6788b83968e",
+    "mtime": 1784462673.248406,
+    "ast_hash": "bb6673158ac4f7c65a552ddc6f221770",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-squad-selection.test.ts": {
@@ -8095,8 +8025,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/index.ts": {
-    "mtime": 1784401928.924492,
-    "ast_hash": "d4fb212260fc2cf4166849d14f223f13",
+    "mtime": 1784501205.5589762,
+    "ast_hash": "325ff03ef400408e1902eaae2bbbaf05",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/player-participation.ts": {
@@ -8190,8 +8120,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/motion/web-motion.ts": {
-    "mtime": 1784449385.7794704,
-    "ast_hash": "8384a0f7efd23a0c5a97079af7e08d24",
+    "mtime": 1784555647.1628664,
+    "ast_hash": "4a48b82791101445c40c5f5e6e600e3d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/motion/dom-animation.ts": {
@@ -8212,6 +8142,281 @@
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_MOTION_SYSTEM_REPORT.md": {
     "mtime": 1784451162.3221216,
     "ast_hash": "f122a49f7e4de0d2bbd258407fc217f9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/06-web-live-pause-command-and-session-orchestration.md": {
+    "mtime": 1784478100.785558,
+    "ast_hash": "9db870c568edb4d8ad8103bef858f0a4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/05-deterministic-ai-in-game-decisions.md": {
+    "mtime": 1784465782.6129272,
+    "ast_hash": "9ec9626fda18f43b922b9f1646c6ae78",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/01-live-match-domain-contract-and-competition-rules.md": {
+    "mtime": 1784461414.9446127,
+    "ast_hash": "0d1b289613ba83bf3c304439f02aa1d4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/09-full-time-team-review-and-career-consequences.md": {
+    "mtime": 1784495084.865181,
+    "ast_hash": "31085586db31f691e7962ead9fcbbe0c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/04-fouls-cards-injuries-and-disciplinary-lifecycle.md": {
+    "mtime": 1784464582.014194,
+    "ast_hash": "26b9cb3b77e40829a958dc16779237f7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/08-shared-live-tactical-board-drag-drop-and-substitutions.md": {
+    "mtime": 1784493174.3764307,
+    "ast_hash": "6a83ca7d8cf6271785f517b2ec7df138",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/07-match-and-statistics-broadcast-tabs.md": {
+    "mtime": 1784484922.512979,
+    "ast_hash": "3c5894fbc99dc3afa6269ceb93c1ee75",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/10-motion-accessibility-long-run-gate-cleanup-and-phase-report.md": {
+    "mtime": 1784507847.385299,
+    "ast_hash": "32815213af88540d3de5807602edc573",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/README.md": {
+    "mtime": 1784507962.682114,
+    "ast_hash": "a7c2ebf9943e82c3dab6df65afc93ab5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/03-causal-team-statistics-and-live-rating-projection.md": {
+    "mtime": 1784461414.9453995,
+    "ast_hash": "3fa7b72d98b6670ecfee63b4165e22f3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/77-live-match-control-statistics-and-in-game-decisions/02-progressive-minute-engine-and-match-session-state.md": {
+    "mtime": 1784461414.945025,
+    "ast_hash": "0f2652acd50dfa7a609a84894658b595",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/live-match-contract.test.ts": {
+    "mtime": 1784486023.135753,
+    "ast_hash": "65ff06d0ac1d36a28f9d5b438b854fde",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/live-match-statistics.ts": {
+    "mtime": 1784458251.0466113,
+    "ast_hash": "6aa79ce475236eb514665bca3289ab05",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/live-match-session.ts": {
+    "mtime": 1784477991.1860132,
+    "ast_hash": "91e284665d8d139d94d330f1e8f9e3f9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/match-consequence.ts": {
+    "mtime": 1784458317.6144052,
+    "ast_hash": "9a79852da442168b47ef7b1c02d0b8a7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/match/live-match-command.ts": {
+    "mtime": 1784486023.134572,
+    "ast_hash": "3ee9d239a1643d69a7b65ac88a2153b4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/competition.entity.test.ts": {
+    "mtime": 1784462297.551334,
+    "ast_hash": "1d61ae82d2cec7c0518525991aa644bf",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/audits/LIVE_MATCH_CONTROL_REPORT.md": {
+    "mtime": 1784510233.727308,
+    "ast_hash": "b908198c9ee26ae631495d3d688c204f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/progressive-match-session.test.ts": {
+    "mtime": 1784486023.1361723,
+    "ast_hash": "5528d9aea66ce7966157cd538e9f00b7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/progressive-match-session.ts": {
+    "mtime": 1784504963.1669972,
+    "ast_hash": "b153fd7f61cf9b7b8b81fba7c52c2af5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-control.ts": {
+    "mtime": 1784460381.5449517,
+    "ast_hash": "51258202ee23d104966f66a1b3f1932c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/live-match-projection.ts": {
+    "mtime": 1784460507.7369075,
+    "ast_hash": "f0c6cf49327fe4d3ec5ae1d26b9da0aa",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-condition.ts": {
+    "mtime": 1784462917.828596,
+    "ast_hash": "9e3daf3b1a9559ce66576a003a35434f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/match-availability-consequences.ts": {
+    "mtime": 1784463665.517607,
+    "ast_hash": "e5ad74b4a305f91df198f4eab46aacbe",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/match-availability-consequences.test.ts": {
+    "mtime": 1784465667.2487934,
+    "ast_hash": "94a26eb6c082b75572ce176371d2ebea",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-discipline.ts": {
+    "mtime": 1784508974.0350347,
+    "ast_hash": "86f3be504aeaa888a2159b8f884892df",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-injury.test.ts": {
+    "mtime": 1784464358.3591766,
+    "ast_hash": "2cad17c3d403b60613b70862adf81977",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-injury.ts": {
+    "mtime": 1784463282.0064821,
+    "ast_hash": "f36cf4ffea2649718c97716c64a40fa9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/player-availability.ts": {
+    "mtime": 1784478181.7477422,
+    "ast_hash": "15260871548bcc4d7a3c10754e31186d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/player-availability.test.ts": {
+    "mtime": 1784462409.4534893,
+    "ast_hash": "3fb64a38ee2ba61930b93fdd6a23c956",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-in-game-decisions.ts": {
+    "mtime": 1784504503.823222,
+    "ast_hash": "0a28f8dcfe669c9fd099f69eef598df6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-in-game-decisions.test.ts": {
+    "mtime": 1784505599.9892983,
+    "ast_hash": "a4a3d8cb6191de80ec56510bc18c8b30",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayStatistics.tsx": {
+    "mtime": 1784547963.168179,
+    "ast_hash": "130564ad35dc00e5ca5cf4d83e8be1c1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayStatistics.test.tsx": {
+    "mtime": 1784547963.1689088,
+    "ast_hash": "9dd1e973470b5c8911a7f063e988cfd2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayLiveWorkspace.tsx": {
+    "mtime": 1784548186.166081,
+    "ast_hash": "84c60a148f673eaf378e3dd23523c719",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayLiveWorkspace.test.tsx": {
+    "mtime": 1784548132.7362828,
+    "ast_hash": "61961477a4ca296c6a65468af1f2c945",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/use-matchday-narrative-frame.ts": {
+    "mtime": 1784482186.4185383,
+    "ast_hash": "ef7f30250ad1dff4cab4c27409709017",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/MatchdayTacticalWorkspace.tsx": {
+    "mtime": 1784529687.3901925,
+    "ast_hash": "875c50aa179eda3a525741543ee2b32f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardOutsidePlayers.tsx": {
+    "mtime": 1784490281.8444428,
+    "ast_hash": "0cfeb80b95700fea5eebd9a1b1cefc12",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardRoleDestinations.tsx": {
+    "mtime": 1784529291.11336,
+    "ast_hash": "70e497ad9e03bf15b1b4940d01cc21f3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardRoleAdaptationPopover.tsx": {
+    "mtime": 1784489752.2768111,
+    "ast_hash": "cffd37688306f6202506aa1caa7ed204",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/live-match/live-match-control-gate.ts": {
+    "mtime": 1784508874.354471,
+    "ast_hash": "3699dbf675a74a145c5cf16ed27a7917",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-team-exit.ts": {
+    "mtime": 1784508588.7416666,
+    "ast_hash": "6ff0603d88cc1e105259ec9d6692a735",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/match-engine/match-team-exit.test.ts": {
+    "mtime": 1784508588.7418308,
+    "ast_hash": "25b4a57255b29caa4a0e60b765da50b9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/live-match-control-report-data.ts": {
+    "mtime": 1784502750.6919546,
+    "ast_hash": "f8fb14de460fbe3318e5814c69c24f3f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/live-match-control-report.test.ts": {
+    "mtime": 1784509817.9501855,
+    "ast_hash": "1a9bc0d3531c98a8a7879b77a81a59d8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/live-match-control-report.main.ts": {
+    "mtime": 1784502750.6923268,
+    "ast_hash": "73ccf15040d4c82bf29bf1caf63c97fa",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/live-match-control-report.ts": {
+    "mtime": 1784508269.230024,
+    "ast_hash": "4977da8986683d81a417e7cabb9e8e7d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardDragPreview.tsx": {
+    "mtime": 1784529291.113758,
+    "ast_hash": "bf4fae06844f8fb47331f1f54e402755",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardWorkspace.tsx": {
+    "mtime": 1784529634.5629022,
+    "ast_hash": "8e856e90c2b9d2ae0f312aac04c879c3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/components/TacticalBoardAnchoredPopover.tsx": {
+    "mtime": 1784533818.8420951,
+    "ast_hash": "9469d1b513efd02cfab70cecda2c6c08",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/shared/CareerScreenHeader.test.tsx": {
+    "mtime": 1784556097.6033065,
+    "ast_hash": "de75f501adb2027afabf6226822de9d8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/shared/CareerScreenHeader.tsx": {
+    "mtime": 1784555647.1616108,
+    "ast_hash": "113d09ef5ed2882164d9cfea903134ac",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/CareerCurrentDate.test.tsx": {
+    "mtime": 1784556097.6038675,
+    "ast_hash": "8256194f253281f50b1cb33f73ec9011",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/CareerCurrentDate.tsx": {
+    "mtime": 1784555647.162232,
+    "ast_hash": "35ec27701a018e656eeaa8f0afdfec8b",
     "semantic_hash": ""
   }
 }

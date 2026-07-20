@@ -33,6 +33,8 @@ export class AggregateOccasionResolver implements OccasionResolver {
         outcome: "goal",
         quality,
         isShotOnTarget: true,
+        expectedGoals: goalProbability,
+        resultsInCorner: false,
       };
     }
 
@@ -45,6 +47,8 @@ export class AggregateOccasionResolver implements OccasionResolver {
         outcome: "block",
         quality,
         isShotOnTarget: false,
+        expectedGoals: goalProbability,
+        resultsInCorner: quality >= 0.35,
       };
     }
 
@@ -53,6 +57,8 @@ export class AggregateOccasionResolver implements OccasionResolver {
         outcome: "save",
         quality,
         isShotOnTarget: true,
+        expectedGoals: goalProbability,
+        resultsInCorner: quality >= 0.72,
       };
     }
 
@@ -60,6 +66,8 @@ export class AggregateOccasionResolver implements OccasionResolver {
       outcome: "miss",
       quality,
       isShotOnTarget: false,
+      expectedGoals: goalProbability,
+      resultsInCorner: false,
     };
   }
 }

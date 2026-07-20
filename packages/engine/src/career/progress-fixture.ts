@@ -1,17 +1,21 @@
 import {
+  EMPTY_PLAYER_AVAILABILITY,
   createCareerState,
+  playerUnavailabilityReason,
   type CareerState,
   type ClubId,
+  type CompetitionMatchRules,
   type Formation,
   type Fixture,
   type FixtureId,
   type MatchReport,
+  type MatchPlayerConsequence,
   type AppliedMatchSubstitution,
   type PlayerId,
 } from "@game/domain";
 
 import type { MatchEngineConfig } from "../match-engine/match-engine-config.ts";
-import type { MatchTeamContext } from "../match-engine/match-context.ts";
+import type { MatchContext, MatchTeamContext } from "../match-engine/match-context.ts";
 import { createMatchReport } from "../match-engine/create-match-report.ts";
 import type { MatchExplanationConditionSnapshot, MatchExplanationTrace } from "../match-engine/match-explanation-trace.ts";
 import type {
@@ -23,7 +27,7 @@ import { buildPlayerMatchRatings, playerRatingRegistrationsFromContext, type Pla
 import { simulateMatch } from "../match-engine/simulate-match.ts";
 import { AiSquadSelectionError, buildAiSquadMatchTeamContext } from "../team-selection/index.ts";
 import { applyMatchReportToFixture } from "../use-cases/apply-match-report-to-fixture.ts";
-import { completeStagedMatchCheckpoint } from "./active-match-checkpoint.ts";
+import { createMatchConsequenceInboxMessages, deliverCareerInboxMessages } from "./career-inbox-lifecycle.ts";
 import { applyCareerFixtureConditionConsequences, type CareerFixtureConditionChange } from "./career-condition-consequences.ts";
 import {
   applyCareerMatchStateConsequences,
@@ -33,6 +37,7 @@ import {
 import { advanceCareerMonths, type CareerMonthlyLifecycleSummary } from "./advance-career-month.ts";
 import { findNextCareerFixture, type NextCareerFixtureInvalidReason } from "./next-fixture.ts";
 import { accrueCommittedFixtureParticipation, type FixtureParticipationSideContext } from "./player-participation.ts";
+import { applyMatchAvailabilityConsequences } from "./match-availability-consequences.ts";
 
 /** Invalid-state reasons specific to career fixture progression. */
 export type ProgressCareerFixtureInvalidReason =
@@ -43,6 +48,7 @@ export type ProgressCareerFixtureInvalidReason =
   | "missing_away_team_context"
   | "home_team_context_mismatch"
   | "away_team_context_mismatch"
+  | "unavailable_player_selected"
   | "invalid_ai_team_selection";
 
 /** Optional AI team-selection data for non-user fixture sides. */
@@ -75,6 +81,8 @@ export interface ProgressNextCareerFixtureInput {
   readonly aiTeamSelectionByClubId?: Readonly<Partial<Record<ClubId, ProgressCareerAiTeamSelectionInput>>>;
   /** Match-engine tuning supplied by caller content/config. */
   readonly matchEngineConfig: MatchEngineConfig;
+  /** Competition-owned discipline rules for the fixture being progressed. */
+  readonly competitionMatchRules: CompetitionMatchRules;
   /** Whether to attach optional explanation data for the played fixture. */
   readonly includeExplanationTrace?: boolean;
 }
@@ -99,6 +107,8 @@ export interface ProgressCareerFixtureAdvanced {
   readonly playerStateConsequences: readonly CareerMatchPlayerStateConsequence[];
   /** Aggregate selected-club form/morale consequence facts. */
   readonly playerStateConsequenceSummary: CareerMatchStateConsequenceSummary;
+  /** New durable injury and suspension facts caused by this fixture. */
+  readonly playerAvailabilityConsequences: readonly MatchPlayerConsequence[];
   /** Monthly player lifecycle checkpoints closed before this fixture was accrued. */
   readonly monthlyLifecycle: readonly CareerMonthlyLifecycleSummary[];
   /** Copied career state with the fixture result applied. */
@@ -131,27 +141,36 @@ export type ProgressCareerFixtureResult =
   | ProgressCareerFixtureInvalid
   | ProgressCareerFixtureNone;
 
-/** Input for atomically committing a report already produced by staged progression. */
-export interface CommitStagedCareerFixtureInput {
-  /** Recovered durable career that owns the active match checkpoint. */
+/** Input for atomically publishing one completed in-memory match. */
+export interface CommitCompletedCareerFixtureInput {
+  /** Durable career that must remain unchanged until this commit succeeds. */
   readonly careerState: CareerState;
-  /** Completed staged report to make authoritative. */
+  /** Final structured report produced by the completed live match. */
   readonly report: MatchReport;
-  /** Selected-club starters whose existing v1 match consequences must apply. */
-  readonly selectedStarterIds: readonly PlayerId[];
-  /** Final staged ratings from the completed match, when already available to the caller. */
+  /** Frozen kickoff context used to identify starters and participation. */
+  readonly initialContext: MatchContext;
+  /** Final live context after accepted substitutions and tactical decisions. */
+  readonly finalContext: MatchContext;
+  /** Selected-club bench registered for this fixture. */
+  readonly selectedClubBenchPlayerIds: readonly PlayerId[];
+  /** Substitutions accepted during the completed match. */
+  readonly appliedSubstitutions: readonly AppliedMatchSubstitution[];
+  /** Final player ratings derived from the same completed match facts. */
   readonly playerRatings?: readonly PlayerMatchRatingRow[];
+  /** Competition-owned discipline rules for the completed fixture. */
+  readonly competitionMatchRules: CompetitionMatchRules;
 }
 
 /**
- * Applies one already-simulated staged report without running the match again.
+ * Publishes an already-completed in-memory match exactly once.
  *
- * The returned state applies the fixture result and player consequences and
- * clears the active checkpoint in the same immutable domain transition. The
- * storage adapter can therefore publish full time with one atomic save.
+ * Live drivers use this boundary only after the manager confirms full time.
+ * It never re-simulates a minute or creates an artificial active checkpoint,
+ * so accepted red cards, substitutions, and tactical context cannot diverge
+ * from the report the manager has just watched.
  */
-export function commitStagedCareerFixture(
-  input: CommitStagedCareerFixtureInput,
+export function commitCompletedCareerFixture(
+  input: CommitCompletedCareerFixtureInput,
 ): ProgressCareerFixtureAdvanced | ProgressCareerFixtureInvalid {
   const fixture = input.careerState.gameState.fixtures[input.report.fixtureId];
 
@@ -163,35 +182,33 @@ export function commitStagedCareerFixture(
     return invalidResult(input.careerState, "fixture_already_played", fixture.id);
   }
 
-  if (input.careerState.activeMatchCheckpoint?.fixtureId !== fixture.id) {
+  if (!contextsMatchFixture(input.initialContext, input.finalContext, fixture)) {
     return invalidResult(input.careerState, "fixture_report_mismatch", fixture.id);
   }
 
-  const checkpointCompletion = completeStagedMatchCheckpoint(input.careerState.activeMatchCheckpoint);
-  const checkpointReport = checkpointCompletion.snapshot.fullTimeReport;
-
-  if (checkpointReport === undefined || JSON.stringify(checkpointReport) !== JSON.stringify(input.report)) {
+  const selectedClubSide = selectedClubFixtureSide(input.careerState.selectedClubId, fixture);
+  if (selectedClubSide === undefined) {
     return invalidResult(input.careerState, "fixture_report_mismatch", fixture.id);
   }
 
-  const selectedClubSide = input.careerState.activeMatchCheckpoint.selectedClubSide;
-  const selectedBenchPlayerIds = input.careerState.activeMatchCheckpoint.selectedClubBenchSlots
-    .map((slot) => slot.playerId)
-    .filter((playerId): playerId is PlayerId => playerId !== null);
+  const selectedInitialTeam = selectedClubSide === "home"
+    ? input.initialContext.home
+    : input.initialContext.away;
 
   return applyCareerFixtureReport({
     careerState: input.careerState,
     fixture,
     report: input.report,
-    selectedStarterIds: input.selectedStarterIds,
-    participationSides: sideContextsFromStagedMatch(
-      checkpointCompletion.state.initialContext,
-      checkpointCompletion.state.simulation.context,
+    selectedStarterIds: selectedInitialTeam.lineup.map((slot) => slot.playerId),
+    participationSides: sideContextsFromCompletedMatch(
+      input.initialContext,
+      input.finalContext,
       selectedClubSide,
-      selectedBenchPlayerIds,
+      input.selectedClubBenchPlayerIds,
     ),
-    appliedSubstitutions: checkpointCompletion.snapshot.appliedSubstitutions,
-    playerRatings: input.playerRatings ?? checkpointCompletion.snapshot.playerRatings,
+    appliedSubstitutions: input.appliedSubstitutions,
+    ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
+    competitionMatchRules: input.competitionMatchRules,
   });
 }
 
@@ -260,6 +277,7 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
       },
     ],
     playerRatings: simulatedFixture.playerRatings,
+    competitionMatchRules: input.competitionMatchRules,
   });
 
   return {
@@ -284,6 +302,7 @@ interface ApplyCareerFixtureReportInput {
   readonly participationSides?: readonly FixtureParticipationSideContext[];
   readonly appliedSubstitutions?: readonly AppliedMatchSubstitution[];
   readonly playerRatings?: readonly PlayerMatchRatingRow[];
+  readonly competitionMatchRules: CompetitionMatchRules;
 }
 
 /** Applies report, condition, form, morale, calendar, and checkpoint changes once. */
@@ -317,9 +336,21 @@ function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): Progres
     ...gameStateWithResult,
     playerStates: matchStateConsequences.playerStates,
   };
-  const { activeMatchCheckpoint: _completedCheckpoint, ...careerWithoutCheckpoint } = monthlyLifecycle.careerState;
+  const availabilityConsequences = applyMatchAvailabilityConsequences({
+    ...(monthlyLifecycle.careerState.playerAvailability === undefined
+      ? {}
+      : { availability: monthlyLifecycle.careerState.playerAvailability }),
+    fixture: input.fixture,
+    report: input.report,
+    rules: input.competitionMatchRules,
+    worldSeed: input.careerState.gameState.meta.seed,
+    participatingPlayerIds: [
+      ...(input.careerState.gameState.clubs[input.fixture.homeClubId]?.playerIds ?? []),
+      ...(input.careerState.gameState.clubs[input.fixture.awayClubId]?.playerIds ?? []),
+    ],
+  });
   const progressedCareerStateWithoutParticipation = createCareerState({
-    ...careerWithoutCheckpoint,
+    ...monthlyLifecycle.careerState,
     gameState: {
       ...gameStateWithConsequences,
       calendar: {
@@ -329,8 +360,9 @@ function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): Progres
           : gameStateWithConsequences.calendar.currentDate,
       },
     },
+    playerAvailability: availabilityConsequences.availability,
   });
-  const progressedCareerState = input.participationSides === undefined
+  const progressedCareerStateWithParticipation = input.participationSides === undefined
     ? progressedCareerStateWithoutParticipation
     : accrueCommittedFixtureParticipation({
         careerState: progressedCareerStateWithoutParticipation,
@@ -342,6 +374,10 @@ function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): Progres
         ...(input.appliedSubstitutions === undefined ? {} : { appliedSubstitutions: input.appliedSubstitutions }),
         ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
       });
+  const progressedCareerState = deliverCareerInboxMessages(
+    progressedCareerStateWithParticipation,
+    createMatchConsequenceInboxMessages(progressedCareerStateWithParticipation, availabilityConsequences.consequences),
+  );
   const fixtureAfter = progressedCareerState.gameState.fixtures[input.fixture.id];
 
   if (fixtureAfter === undefined) {
@@ -357,6 +393,7 @@ function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): Progres
     conditionChanges: conditionConsequences.changes,
     playerStateConsequences: matchStateConsequences.changes,
     playerStateConsequenceSummary: matchStateConsequences.summary,
+    playerAvailabilityConsequences: availabilityConsequences.consequences,
     monthlyLifecycle: monthlyLifecycle.summaries,
     careerState: progressedCareerState,
   };
@@ -436,6 +473,18 @@ function resolveTeamContext(
 ): ResolveTeamContextResult {
   const suppliedContext = input.teamsByClubId[clubId];
   if (suppliedContext !== undefined || clubId === careerState.selectedClubId) {
+    if (suppliedContext !== undefined && suppliedContext.lineup.some((slot) =>
+      playerUnavailabilityReason(
+        careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
+        slot.playerId,
+        fixture.date,
+        fixture.competitionId,
+      ) !== undefined)) {
+      return {
+        status: "invalid",
+        result: invalidResult(careerState, "unavailable_player_selected", fixture.id),
+      };
+    }
     return {
       status: "resolved",
       context: suppliedContext,
@@ -464,7 +513,12 @@ function resolveTeamContext(
       context: buildAiSquadMatchTeamContext({
         clubId,
         formation: aiSelection.formation,
-        playerIds: club.playerIds,
+        playerIds: club.playerIds.filter((playerId) => playerUnavailabilityReason(
+          careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
+          playerId,
+          fixture.date,
+          fixture.competitionId,
+        ) === undefined),
         players: careerState.gameState.players,
         playerStates: careerState.gameState.playerStates,
         roleWeights: aiSelection.roleWeights,
@@ -527,7 +581,7 @@ function simulateFixtureAndCreateReport(
   };
 }
 
-function sideContextsFromStagedMatch(
+function sideContextsFromCompletedMatch(
   initialContext: { readonly home: MatchTeamContext; readonly away: MatchTeamContext },
   finalContext: { readonly home: MatchTeamContext; readonly away: MatchTeamContext },
   selectedClubSide: "home" | "away",
@@ -547,6 +601,23 @@ function sideContextsFromStagedMatch(
       benchPlayerIds: selectedClubSide === "away" ? selectedBenchPlayerIds : [],
     },
   ];
+}
+
+/** Ensures one final report belongs to the same fixture and clubs that kicked off. */
+function contextsMatchFixture(initial: MatchContext, final: MatchContext, fixture: Fixture): boolean {
+  return initial.fixtureId === fixture.id
+    && final.fixtureId === fixture.id
+    && initial.home.clubId === fixture.homeClubId
+    && initial.away.clubId === fixture.awayClubId
+    && final.home.clubId === fixture.homeClubId
+    && final.away.clubId === fixture.awayClubId;
+}
+
+/** Resolves which fixture side belongs to the manager's selected club. */
+function selectedClubFixtureSide(selectedClubId: ClubId, fixture: Fixture): "home" | "away" | undefined {
+  if (fixture.homeClubId === selectedClubId) return "home";
+  if (fixture.awayClubId === selectedClubId) return "away";
+  return undefined;
 }
 
 /**
