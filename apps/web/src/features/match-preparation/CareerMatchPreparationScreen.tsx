@@ -31,6 +31,7 @@ import { useCareerUiStore } from "../../stores/career-ui-store";
 
 /** Props for the first editable match-preparation screen. */
 export type CareerMatchPreparationScreenProps = Readonly<{
+  workspaceMode?: "match_preparation" | "tactics";
   view: CareerMatchPreparationView;
   currentDateIso: string;
   draftDirty: boolean;
@@ -49,7 +50,7 @@ export type CareerMatchPreparationScreenProps = Readonly<{
   onBoardSlotMove: (slotKey: string, nx: number, ny: number) => void;
   onBoardSlotRoleChange: (slotKey: string, role: TacticalBoardRoleCode) => void;
   onBoardSlotClear: (slotKey: string) => void;
-  onSavePreparation: () => void;
+  onSavePreparation?: () => void;
 }>;
 
 type MatchPreparationPlayerOption = CareerMatchPreparationView["lineup"]["slots"][number]["playerOptions"][number];
@@ -66,6 +67,7 @@ const MATCH_PREPARATION_PANEL_TABS: readonly {
 
 /** Renders the editable lineup slice for the next selected-club fixture. */
 export function CareerMatchPreparationScreen({
+  workspaceMode = "match_preparation",
   view,
   currentDateIso,
   draftDirty,
@@ -90,7 +92,7 @@ export function CareerMatchPreparationScreen({
   const shellView = buildCareerShellView({
     activeSectionKey: "tactics",
     inboxView,
-    mode: "preparation",
+    mode: workspaceMode === "match_preparation" ? "preparation" : "standard",
   });
   const playerStatusById = useMemo(() => buildPlayerStatusById(view), [view]);
   const tacticalBoardPlayerById = useMemo(
@@ -103,6 +105,10 @@ export function CareerMatchPreparationScreen({
   );
   const tacticalBenchCandidates = useMemo(
     () => buildTacticalBenchCandidates(tacticalBoardPlayers),
+    [tacticalBoardPlayers],
+  );
+  const selectableTacticalBoardPlayers = useMemo(
+    () => tacticalBoardPlayers.filter((player) => player.unavailabilityReason === undefined),
     [tacticalBoardPlayers],
   );
   const currentShape = useMemo(
@@ -165,7 +171,7 @@ export function CareerMatchPreparationScreen({
       <section className="tls-shell-panel tls-preparation-panel" data-state={commandPending ? "pending" : "idle"} aria-labelledby="match-preparation-title" aria-busy={commandPending}>
         <CareerScreenHeader
           className="tls-preparation-header"
-          command={(
+          {...(workspaceMode !== "match_preparation" || onSavePreparation === undefined ? {} : { command: (
             <button
               className="tls-menu-button tls-menu-button-primary tls-preparation-confirm"
               data-state={commandPending ? "pending" : view.saveAction.status === "available" ? "idle" : "disabled"}
@@ -180,7 +186,7 @@ export function CareerMatchPreparationScreen({
                 text={text}
               />
             </button>
-          )}
+          ) })}
           supporting={(
             <>
               <p className="tls-shell-status">{formatFixture(view, text)}</p>
@@ -191,13 +197,15 @@ export function CareerMatchPreparationScreen({
               ) : null}
             </>
           )}
-          title={text("career.matchPreparation")}
+          title={workspaceMode === "match_preparation"
+            ? text("career.matchPreparation")
+            : text("career.shell.nav.tactics")}
           titleId="match-preparation-title"
         />
 
         <div className="tls-preparation-command-lock" inert={commandPending ? true : undefined}>
         <section className="tls-preparation-decision-bar">
-          <PreparationAlertStrip blockerKeys={view.blockerKeys} text={text} />
+          <PreparationAlertStrip view={view} text={text} />
         </section>
 
         <section className="tls-preparation-lineup" aria-labelledby="match-preparation-lineup-title">
@@ -269,7 +277,7 @@ export function CareerMatchPreparationScreen({
                 }}
                 pitch={{
                   allowReplaceAssigned: true,
-                  availablePlayers: tacticalBoardPlayers,
+                  availablePlayers: selectableTacticalBoardPlayers,
                   currentShape,
                   ...(view.formation.selectedFormationId === undefined
                     ? {}
@@ -386,13 +394,17 @@ export function CareerMatchPreparationScreen({
 
 /** Renders the compact preparation blocker strip without changing blocker semantics. */
 function PreparationAlertStrip({
-  blockerKeys,
+  view,
   text,
 }: Readonly<{
-  blockerKeys: readonly CareerMatchPreparationBlockerKey[];
+  view: CareerMatchPreparationView;
   text: Translator;
 }>): React.JSX.Element {
-  const isReady = blockerKeys.length === 0;
+  const blockerKeys = view.blockerKeys.filter(
+    (blocker) => blocker !== "selected_player_injured" && blocker !== "selected_player_suspended",
+  );
+  const hasEligibilityBlockers = view.eligibilityBlockers.length > 0;
+  const isReady = blockerKeys.length === 0 && !hasEligibilityBlockers;
 
   return (
     <section
@@ -408,6 +420,16 @@ function PreparationAlertStrip({
         <ul>
           {blockerKeys.map((blocker) => (
             <li key={blocker}>{text(blockerLabelKey(blocker))}</li>
+          ))}
+          {view.eligibilityBlockers.map((blocker) => (
+            <li key={`${blocker.playerId}:${blocker.reason}`}>
+              {text(
+                blocker.reason === "injured"
+                  ? "career.matchPreparation.eligibility.injured"
+                  : "career.matchPreparation.eligibility.suspended",
+                { player: blocker.playerName },
+              )}
+            </li>
           ))}
         </ul>
       )}
@@ -436,7 +458,7 @@ function buildTacticalBenchSlots(
 function buildTacticalBenchCandidates(
   players: readonly TacticalBoardSquadPlayer[],
 ): readonly TacticalBenchBoardCandidate[] {
-  return players.map((player) => ({
+  return players.filter((player) => player.unavailabilityReason === undefined).map((player) => ({
     playerId: player.playerId,
     number: player.number,
     surname: player.surname,

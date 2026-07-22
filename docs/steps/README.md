@@ -54,11 +54,20 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - `docs/PROJECT_STATUS.md` explains the current active step and project state to a new LLM or junior developer.
 - Future phases can start without changing `docs/PROJECT_RULES.md`.
 
-## Current Documented Phase
+## Current Active Phase
 
-- `docs/steps/77-live-match-control-statistics-and-in-game-decisions/`
-- Status: Complete. Steps 01-10 and the final phase gates pass; no later phase
-  has been started.
+- `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/`
+- Status: In progress. Steps 01-14 are Done and Step 15 is the single active
+  step.
+
+## Next Documented Phase
+
+- `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
+- Status: Documented and queued. Its fifteen ordered steps begin only after
+  Phase 78 Step 15 is Done.
+- Transfer-window dates are source-backed content owned by each playable
+  competition. They are not user-configurable and no unused championship
+  calendar is shipped speculatively.
 
 ## Claude Code task prompt
 

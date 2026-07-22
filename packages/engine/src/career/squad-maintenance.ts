@@ -1,12 +1,13 @@
 import {
   createCareerState,
+  playerSquadDepartment,
   type CareerState,
   type Club,
   type ClubId,
   type Player,
   type PlayerDynamicState,
   type PlayerId,
-  type PlayerPosition,
+  type PlayerSquadDepartment,
 } from "@game/domain";
 
 import { createCareerIntakePool, type CareerIntakeCandidate } from "./player-intake.ts";
@@ -16,6 +17,14 @@ export const MINIMUM_CAREER_SQUAD_SIZE = 18;
 
 /** Default target active squad size after maintenance. */
 export const TARGET_CAREER_SQUAD_SIZE = 22;
+
+/** Minimum role-defined department depth protected by career lifecycle moves. */
+export const MINIMUM_CAREER_DEPARTMENT_DEPTH: Readonly<Record<PlayerSquadDepartment, number>> = {
+  goalkeeper: 2,
+  defender: 6,
+  midfielder: 6,
+  attacker: 3,
+};
 
 /** Factual role-balance warning emitted by squad maintenance. */
 export type SquadMaintenanceWarning =
@@ -60,6 +69,88 @@ export interface MaintainCareerSquadShapeResult {
   readonly records: readonly SquadMaintenanceRecord[];
 }
 
+/** Derived squad depth used by maintenance and long-run AI recruitment. */
+export interface CareerSquadStructureAssessment {
+  /** Number of senior players currently owned by the club. */
+  readonly squadSize: number;
+  /** Current player count in each broad football department. */
+  readonly departmentDepth: Readonly<Record<PlayerSquadDepartment, number>>;
+  /** Whether one more player is required to reach the configured target. */
+  readonly requiresPlayer: boolean;
+  /** Department that must be filled before generic squad depth. */
+  readonly neededDepartment?: PlayerSquadDepartment;
+  /** Factual structural warnings remaining in the squad. */
+  readonly warnings: readonly SquadMaintenanceWarning[];
+}
+
+/**
+ * Assesses one squad without mutating ownership or inventing recruitment.
+ *
+ * Department needs are strict before generic target size: goalkeeper first,
+ * then defenders, midfielders, and attackers. This ordering is shared by the
+ * legacy intake path and canonical free-agent recruitment.
+ */
+export function assessCareerSquadStructure(input: {
+  readonly playerIds: readonly PlayerId[];
+  readonly players: CareerState["gameState"]["players"];
+  readonly minimumSquadSize?: number;
+  readonly targetSquadSize?: number;
+  /** Allow canonical recruitment to repair department depth above target size. */
+  readonly fillDepartmentDepthBeyondTarget?: boolean;
+}): CareerSquadStructureAssessment {
+  const minimumSquadSize = input.minimumSquadSize ?? MINIMUM_CAREER_SQUAD_SIZE;
+  const targetSquadSize = input.targetSquadSize ?? TARGET_CAREER_SQUAD_SIZE;
+  const departmentDepth: Record<PlayerSquadDepartment, number> = {
+    goalkeeper: 0,
+    defender: 0,
+    midfielder: 0,
+    attacker: 0,
+  };
+
+  for (const playerId of input.playerIds) {
+    const player = input.players[playerId];
+    if (player !== undefined) departmentDepth[playerSquadDepartment(player)] += 1;
+  }
+
+  const warnings: SquadMaintenanceWarning[] = [];
+  if (input.playerIds.length < minimumSquadSize) warnings.push("below_minimum_squad_size");
+  if (departmentDepth.goalkeeper === 0) warnings.push("no_natural_goalkeeper");
+  if (departmentDepth.goalkeeper < MINIMUM_CAREER_DEPARTMENT_DEPTH.goalkeeper) {
+    warnings.push("weak_goalkeeper_depth");
+  }
+  if (departmentDepth.defender < MINIMUM_CAREER_DEPARTMENT_DEPTH.defender) {
+    warnings.push("weak_defender_depth");
+  }
+  if (departmentDepth.midfielder < MINIMUM_CAREER_DEPARTMENT_DEPTH.midfielder) {
+    warnings.push("weak_midfielder_depth");
+  }
+  if (departmentDepth.attacker < MINIMUM_CAREER_DEPARTMENT_DEPTH.attacker) {
+    warnings.push("weak_attacker_depth");
+  }
+
+  const mayFillDepartment = input.fillDepartmentDepthBeyondTarget === true
+    || input.playerIds.length < targetSquadSize;
+  const neededDepartment = departmentDepth.goalkeeper === 0
+    ? "goalkeeper"
+    : mayFillDepartment && departmentDepth.goalkeeper < MINIMUM_CAREER_DEPARTMENT_DEPTH.goalkeeper
+      ? "goalkeeper"
+      : mayFillDepartment && departmentDepth.defender < MINIMUM_CAREER_DEPARTMENT_DEPTH.defender
+        ? "defender"
+        : mayFillDepartment && departmentDepth.midfielder < MINIMUM_CAREER_DEPARTMENT_DEPTH.midfielder
+          ? "midfielder"
+          : mayFillDepartment && departmentDepth.attacker < MINIMUM_CAREER_DEPARTMENT_DEPTH.attacker
+            ? "attacker"
+            : undefined;
+
+  return {
+    squadSize: input.playerIds.length,
+    departmentDepth,
+    requiresPlayer: neededDepartment !== undefined || input.playerIds.length < targetSquadSize,
+    ...(neededDepartment === undefined ? {} : { neededDepartment }),
+    warnings,
+  };
+}
+
 /**
  * Applies generated intake players where clubs need structural squad depth.
  *
@@ -91,7 +182,12 @@ export function maintainCareerSquadShape(input: MaintainCareerSquadShapeInput): 
     const beforeSquadSize = club.playerIds.length;
     const addedPlayerIds: PlayerId[] = [];
     let nextClub = { ...club, playerIds: [...club.playerIds] };
-    let needs = squadNeeds(nextClub.playerIds, players as CareerState["gameState"]["players"], minimumSquadSize, targetSquadSize);
+    let needs = assessCareerSquadStructure({
+      playerIds: nextClub.playerIds,
+      players: players as CareerState["gameState"]["players"],
+      minimumSquadSize,
+      targetSquadSize,
+    });
 
     while (needs.requiresPlayer && unusedCandidates.length > 0) {
       const candidateIndex = bestCandidateIndexForClub(unusedCandidates, clubId, needs);
@@ -112,7 +208,12 @@ export function maintainCareerSquadShape(input: MaintainCareerSquadShapeInput): 
         playerIds: [...nextClub.playerIds, candidate.player.id],
       };
       addedPlayerIds.push(candidate.player.id);
-      needs = squadNeeds(nextClub.playerIds, players as CareerState["gameState"]["players"], minimumSquadSize, targetSquadSize);
+      needs = assessCareerSquadStructure({
+        playerIds: nextClub.playerIds,
+        players: players as CareerState["gameState"]["players"],
+        minimumSquadSize,
+        targetSquadSize,
+      });
     }
 
     clubs[clubId] = nextClub;
@@ -140,90 +241,10 @@ export function maintainCareerSquadShape(input: MaintainCareerSquadShapeInput): 
   };
 }
 
-interface SquadNeeds {
-  readonly requiresPlayer: boolean;
-  readonly neededGroup?: "goalkeeper" | "defender" | "midfielder" | "attacker";
-  readonly warnings: readonly SquadMaintenanceWarning[];
-}
-
-function squadNeeds(
-  playerIds: readonly PlayerId[],
-  players: CareerState["gameState"]["players"],
-  minimumSquadSize: number,
-  targetSquadSize: number,
-): SquadNeeds {
-  let goalkeepers = 0;
-  let defenders = 0;
-  let midfielders = 0;
-  let attackers = 0;
-
-  for (const playerId of playerIds) {
-    const player = players[playerId];
-    if (player === undefined) {
-      continue;
-    }
-
-    switch (positionGroup(player.naturalPositions[0])) {
-      case "goalkeeper":
-        goalkeepers += 1;
-        break;
-      case "defender":
-        defenders += 1;
-        break;
-      case "midfielder":
-        midfielders += 1;
-        break;
-      case "attacker":
-        attackers += 1;
-        break;
-    }
-  }
-
-  const warnings: SquadMaintenanceWarning[] = [];
-  if (playerIds.length < minimumSquadSize) warnings.push("below_minimum_squad_size");
-  if (goalkeepers === 0) warnings.push("no_natural_goalkeeper");
-  if (goalkeepers < 2) warnings.push("weak_goalkeeper_depth");
-  if (defenders < 6) warnings.push("weak_defender_depth");
-  if (midfielders < 6) warnings.push("weak_midfielder_depth");
-  if (attackers < 3) warnings.push("weak_attacker_depth");
-
-  if (goalkeepers === 0) {
-    return { requiresPlayer: true, neededGroup: "goalkeeper", warnings };
-  }
-
-  if (playerIds.length >= targetSquadSize) {
-    return {
-      requiresPlayer: false,
-      warnings,
-    };
-  }
-
-  if (goalkeepers < 2) {
-    return { requiresPlayer: true, neededGroup: "goalkeeper", warnings };
-  }
-
-  if (defenders < 6) {
-    return { requiresPlayer: true, neededGroup: "defender", warnings };
-  }
-
-  if (midfielders < 6) {
-    return { requiresPlayer: true, neededGroup: "midfielder", warnings };
-  }
-
-  if (attackers < 3) {
-    return { requiresPlayer: true, neededGroup: "attacker", warnings };
-  }
-
-  return {
-    requiresPlayer: playerIds.length < targetSquadSize,
-    warnings,
-  };
-}
-
 function bestCandidateIndexForClub(
   candidates: readonly CareerIntakeCandidate[],
   clubId: Club["id"],
-  needs: SquadNeeds,
+  needs: CareerSquadStructureAssessment,
 ): number {
   let fallbackIndex = -1;
 
@@ -237,32 +258,13 @@ function bestCandidateIndexForClub(
       fallbackIndex = index;
     }
 
-    if (needs.neededGroup !== undefined && positionGroup(candidate.player.naturalPositions[0]) === needs.neededGroup) {
+    if (
+      needs.neededDepartment !== undefined
+      && playerSquadDepartment(candidate.player) === needs.neededDepartment
+    ) {
       return index;
     }
   }
 
   return fallbackIndex;
-}
-
-function positionGroup(position: PlayerPosition | undefined): "goalkeeper" | "defender" | "midfielder" | "attacker" {
-  switch (position) {
-    case "gk":
-      return "goalkeeper";
-    case "rb":
-    case "cb":
-    case "lb":
-    case "rwb":
-    case "lwb":
-      return "defender";
-    case "dm":
-    case "cm":
-    case "am":
-      return "midfielder";
-    case "rw":
-    case "lw":
-    case "st":
-    default:
-      return "attacker";
-  }
 }

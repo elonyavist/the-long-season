@@ -22,8 +22,12 @@ export function formatCareerMarketApplyOutput(input: {
   readonly careerSaveWritten: boolean;
   readonly text: Translator;
 }): readonly string[] {
-  const buyerBudgetBefore = input.scenario.marketState.clubBudgets[input.scenario.buyingClubId]?.transferBudget;
-  const buyerBudgetAfter = input.result.careerState.marketState.clubBudgets[input.scenario.buyingClubId]?.transferBudget;
+  const buyerBudgetBefore = input.scenario.clubFinanceState.accounts[
+    input.scenario.buyingClubId
+  ]?.availableTransferBudget;
+  const buyerBudgetAfter = input.result.careerState.clubFinanceState?.accounts[
+    input.scenario.buyingClubId
+  ]?.availableTransferBudget;
   const lines = [
     input.text("career.marketApply.title"),
     `${input.text("season.seed")}: ${input.seed}`,

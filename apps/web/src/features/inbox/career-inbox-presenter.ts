@@ -94,6 +94,18 @@ export function presentCareerInbox(input: {
           fixtureCount: latestSeason.aggregateGoals.fixtureCount,
           totalGoals: latestSeason.aggregateGoals.totalGoals,
         };
+    const contract = message.related.contractId === undefined
+      ? undefined
+      : input.careerState.seniorSquadState?.contracts[message.related.contractId];
+    const contractPlayer = contract === undefined
+      ? undefined
+      : input.careerState.gameState.players[contract.playerId];
+    const contractFacts = contract === undefined || contractPlayer === undefined
+      ? undefined
+      : {
+          playerName: `${contractPlayer.firstName} ${contractPlayer.lastName}`,
+          expiresOnIso: toISO(contract.endsOn),
+        };
 
     return {
       messageId: String(message.id),
@@ -101,11 +113,13 @@ export function presentCareerInbox(input: {
       category: message.category,
       source: message.source,
       level: message.level,
+      continuePolicy: message.continuePolicy,
       lifecycle: message.lifecycle,
       blockerKeys: message.blockerKeys,
       actionIds: message.actionIds,
       ...(fixtureFacts === undefined ? {} : { fixture: fixtureFacts }),
       ...(seasonFacts === undefined ? {} : { season: seasonFacts }),
+      ...(contractFacts === undefined ? {} : { contract: contractFacts }),
     } satisfies CareerPostaMessageInput;
   });
 
@@ -137,14 +151,21 @@ function toRailMessage(message: CareerPostaMessageInput): CareerInboxMessageInpu
         : "unread",
     titleKey: `career.inbox.subject.${message.category}`,
     summaryKey: railSummaryKey(message),
-    actionRequired: message.level === "blocking" && !message.lifecycle.resolved,
+    actionRequired: isMessageToHandle(message),
     relatedLabels: message.fixture === undefined
-      ? message.season === undefined ? [] : [message.season.championClubName]
+      ? message.season === undefined
+        ? message.contract === undefined ? [] : [message.contract.playerName]
+        : [message.season.championClubName]
       : [message.fixture.opponentName],
     actions: actionId === undefined
       ? []
       : [{ actionId, labelKey: `career.inbox.action.${actionId}` }],
   };
+}
+
+function isMessageToHandle(message: CareerPostaMessageInput): boolean {
+  if (message.continuePolicy === "until_resolved") return !message.lifecycle.resolved;
+  return message.continuePolicy === "until_acknowledged" && !message.lifecycle.acknowledged;
 }
 
 function railSummaryKey(message: CareerPostaMessageInput): string {

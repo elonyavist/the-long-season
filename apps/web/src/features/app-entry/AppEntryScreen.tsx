@@ -26,6 +26,7 @@ export type AppEntryScreenProps = Readonly<{
   onContinueCareer: () => void;
   onSelectedSaveChange: (saveId: SaveMetadata["saveId"]) => void;
   onRetryStorage: () => void;
+  betaResetPerformed: boolean;
 }>;
 
 /** Renders the first app screen: main actions plus language/currency settings. */
@@ -38,6 +39,7 @@ export function AppEntryScreen({
   onContinueCareer,
   onSelectedSaveChange,
   onRetryStorage,
+  betaResetPerformed,
 }: AppEntryScreenProps): React.JSX.Element {
   const startAction = getAppEntryAction(view, "start_new_career");
   const continueAction = getAppEntryAction(view, "continue_career");
@@ -115,6 +117,12 @@ export function AppEntryScreen({
               <p className="tls-app-entry-state" data-state="empty">
                 {text("web.app.storage.empty" as MessageKey)}
               </p>
+            ) : null}
+            {view.lifecycleStatus === "ready" && betaResetPerformed ? (
+              <div className="tls-storage-reset-notice" role="status">
+                <strong>{text("web.app.storage.betaReset.title" as MessageKey)}</strong>
+                <p className="m-0">{text("web.app.storage.betaReset.summary" as MessageKey)}</p>
+              </div>
             ) : null}
             {view.saves.length === 0 ? null : (
               <div className="tls-preference-field">

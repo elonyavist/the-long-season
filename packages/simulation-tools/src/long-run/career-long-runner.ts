@@ -1,10 +1,13 @@
 import { simulateSeason, type SimulateSeasonInput, type SimulateSeasonResult } from "@game/engine";
 import type { CareerState } from "@game/domain";
 
+import type { LongRunContractFinanceSeasonRow } from "./contract-finance-stability.ts";
 import { DEFAULT_LONG_RUN_SEASON_COUNT, longRunSeasonSeed } from "./long-runner.ts";
 
 /** Refresh facts emitted after one career long-run season. */
 export interface CareerLongRunRefreshSummary {
+  /** Contract, registration, finance, and selected-plan health after refresh. */
+  readonly contractFinance: LongRunContractFinanceSeasonRow;
   /** Number of active players that left rosters. */
   readonly exitCount: number;
   /** Player exits grouped by deterministic career reason. */
@@ -91,7 +94,7 @@ export interface AdvanceCareerLongRunSeasonResult {
 }
 
 /** Input for the career-aware long-run simulation. */
-export interface RunCareerLongRunSimulationInput {
+export interface RunCareerLongRunSimulationInput<TRetainedSeasonResult = SimulateSeasonResult> {
   /** Stable report seed used to derive season seeds. */
   readonly seed: string;
   /** Initial career state. */
@@ -102,22 +105,30 @@ export interface RunCareerLongRunSimulationInput {
   readonly createSeasonInput: (context: CreateCareerLongRunSeasonInputContext) => SimulateSeasonInput;
   /** App bridge that applies post-season career refresh. */
   readonly advanceCareerState: (context: AdvanceCareerLongRunSeasonContext) => AdvanceCareerLongRunSeasonResult;
+  /**
+   * Projects a completed season into the facts the caller needs to retain.
+   *
+   * The runner always passes the full result to `advanceCareerState` before
+   * calling this mapper. Large gates can therefore release match histories
+   * without weakening career advancement or duplicating simulation logic.
+   */
+  readonly retainSeasonResult?: (result: SimulateSeasonResult) => TRetainedSeasonResult;
 }
 
 /** One simulated career season in a long-run report. */
-export interface CareerLongRunSeasonResult {
+export interface CareerLongRunSeasonResult<TRetainedSeasonResult = SimulateSeasonResult> {
   /** One-based season number. */
   readonly seasonNumber: number;
   /** Stable season-specific seed. */
   readonly seasonSeed: string;
-  /** Raw deterministic engine season result. */
-  readonly result: SimulateSeasonResult;
+  /** Deterministic season facts retained by the caller. */
+  readonly result: TRetainedSeasonResult;
   /** Post-season refresh facts. */
   readonly refresh: CareerLongRunRefreshSummary;
 }
 
 /** Result of a career-aware long-run simulation. */
-export interface CareerLongRunSimulationResult {
+export interface CareerLongRunSimulationResult<TRetainedSeasonResult = SimulateSeasonResult> {
   /** Original report seed. */
   readonly seed: string;
   /** Number of simulated seasons. */
@@ -125,7 +136,7 @@ export interface CareerLongRunSimulationResult {
   /** Career state after the final post-season refresh. */
   readonly finalCareerState: CareerState;
   /** Ordered season results and refresh facts. */
-  readonly seasons: readonly CareerLongRunSeasonResult[];
+  readonly seasons: readonly CareerLongRunSeasonResult<TRetainedSeasonResult>[];
 }
 
 /**
@@ -135,14 +146,16 @@ export interface CareerLongRunSimulationResult {
  * inputs and refresh logic, so this package remains independent from content,
  * storage, and CLI code.
  */
-export function runCareerLongRunSimulation(input: RunCareerLongRunSimulationInput): CareerLongRunSimulationResult {
+export function runCareerLongRunSimulation<TRetainedSeasonResult = SimulateSeasonResult>(
+  input: RunCareerLongRunSimulationInput<TRetainedSeasonResult>,
+): CareerLongRunSimulationResult<TRetainedSeasonResult> {
   const seasonCount = input.seasonCount ?? DEFAULT_LONG_RUN_SEASON_COUNT;
 
   if (!Number.isSafeInteger(seasonCount) || seasonCount <= 0) {
     throw new Error(`Career long-run season count must be a positive safe integer: ${seasonCount}`);
   }
 
-  const seasons: CareerLongRunSeasonResult[] = [];
+  const seasons: CareerLongRunSeasonResult<TRetainedSeasonResult>[] = [];
   let careerState = input.initialCareerState;
 
   for (let seasonNumber = 1; seasonNumber <= seasonCount; seasonNumber += 1) {
@@ -151,10 +164,15 @@ export function runCareerLongRunSimulation(input: RunCareerLongRunSimulationInpu
     const result = simulateSeason(seasonInput);
     const advanced = input.advanceCareerState({ seasonNumber, seasonSeed, careerState, seasonResult: result });
 
+    const retainedResult =
+      input.retainSeasonResult === undefined
+        ? (result as TRetainedSeasonResult)
+        : input.retainSeasonResult(result);
+
     seasons.push({
       seasonNumber,
       seasonSeed,
-      result,
+      result: retainedResult,
       refresh: advanced.refresh,
     });
     careerState = advanced.careerState;

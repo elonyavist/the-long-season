@@ -1,12 +1,16 @@
 import {
+  beginClubFinanceTransaction,
+  commitClubFinanceTransaction,
   createCareerState,
   type CareerSeasonAggregateGoals,
   type CareerSeasonArchiveEntry,
   type CareerState,
   type ClubId,
+  type CompetitionSeasonDistribution,
   type Fixture,
   type FixtureId,
   type GameDate,
+  type LeagueTableRow,
   type LeagueTableRules,
   type PlayerId,
   type SeasonId,
@@ -33,6 +37,12 @@ import { simulateTransferTurnover } from "./transfer-turnover.ts";
 import { type YouthIntakeCandidate, applySeasonalYouthIntake } from "./youth-intake.ts";
 import { applyYouthAcademyLifecycle, type YouthLifecycleRecord } from "./youth-lifecycle.ts";
 import { promoteYouthCandidatesToSeniorSquads } from "./youth-promotion.ts";
+import {
+  refreshAnnualTransferBudgetAvailability,
+  settleAnnualPayroll,
+  settleSeasonDistribution,
+} from "./career-finance-lifecycle.ts";
+import { replenishSeniorSquadsFromFreeAgents } from "./senior-squad-replenishment.ts";
 
 const YOUTH_ROSTER_TARGET_MINIMUM = 8;
 const YOUTH_ROSTER_TARGET_MAXIMUM = 12;
@@ -43,6 +53,8 @@ export interface AdvanceCareerCompletedSeasonMode {
   readonly kind: "completedSeason";
   /** Competition point rules supplied by an Adapter because engine cannot import content. */
   readonly tableRules: LeagueTableRules;
+  /** Competition-owned end-of-season prize distribution, when finance is active. */
+  readonly seasonDistribution?: CompetitionSeasonDistribution;
 }
 
 /** Mode used by reports that need a season refresh without persisted fixture history. */
@@ -53,6 +65,10 @@ export interface AdvanceCareerReportRefreshMode {
   readonly nextSeasonId: SeasonId;
   /** Adapter-provided next season start date for report progression. */
   readonly nextSeasonStartDate: GameDate;
+  /** Competition-owned prize distribution used by finance-aware reports. */
+  readonly seasonDistribution?: CompetitionSeasonDistribution;
+  /** Simulated final table paired with `seasonDistribution`. */
+  readonly finalTable?: readonly LeagueTableRow[];
 }
 
 /** Explicit advancement modes supported by the canonical career-season use-case. */
@@ -98,13 +114,24 @@ export interface AdvanceCareerOneSeasonInput {
   readonly createYouthIntakeCandidates?: (context: CareerYouthIntakeCandidateProviderContext) => readonly YouthIntakeCandidate[];
   /** Whether selected-club youth promotion can be automated. Defaults to protected. */
   readonly allowSelectedClubYouthPromotion?: boolean;
+  /**
+   * Whether an Adapter-controlled simulation may replenish the selected club.
+   *
+   * Interactive careers must leave this disabled so the manager owns every
+   * signing. Long-run reports may enable it to model a deterministic test
+   * manager without mutating the saved lineup or bench.
+   */
+  readonly allowSelectedClubSquadReplenishment?: boolean;
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
 export type CareerSeasonAdvancementOperation =
   | "completed_season_validation"
   | "season_archive"
+  | "annual_payroll"
   | "monthly_lifecycle"
+  | "season_distribution"
+  | "annual_transfer_budget_refresh"
   | "player_exits"
   | "youth_lifecycle"
   | "youth_intake"
@@ -289,7 +316,8 @@ export type AdvanceCareerOneSeasonInvalidReason =
   | "no_current_season_fixtures"
   | "multiple_current_season_competitions"
   | "season_table_empty"
-  | "selected_club_not_in_table";
+  | "selected_club_not_in_table"
+  | "finance_lifecycle_rejected";
 
 /** Successful canonical season advancement result. */
 export interface AdvanceCareerOneSeasonAdvanced {
@@ -341,23 +369,92 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
 
   const operationOrder: CareerSeasonAdvancementOperation[] = [...seasonContext.operationOrder];
   const advancementSeasonId = seasonId(`${previousSeasonId}:advance:${seasonContext.nextSeasonId}`);
+  const workingCareerState = input.careerState.clubFinanceState === undefined
+    ? input.careerState
+    : {
+        ...input.careerState,
+        clubFinanceState: beginClubFinanceTransaction(input.careerState.clubFinanceState),
+      };
+
+  const annualPayroll = workingCareerState.clubFinanceState === undefined
+    && workingCareerState.seniorSquadState === undefined
+    ? undefined
+    : settleAnnualPayroll({
+        careerState: workingCareerState,
+        seasonId: previousSeasonId,
+        occurredOn: previousDate,
+      });
+  if (annualPayroll?.status === "rejected") {
+    return {
+      status: "invalid",
+      careerState: input.careerState,
+      reason: "finance_lifecycle_rejected",
+    };
+  }
+  if (annualPayroll !== undefined) operationOrder.push("annual_payroll");
 
   operationOrder.push("monthly_lifecycle");
   const monthlyLifecycle = advanceCareerMonths({
-    careerState: input.careerState,
+    careerState: annualPayroll?.careerState ?? workingCareerState,
     worldSeed: input.worldSeed,
     fromDate: previousDate,
     toDate: seasonContext.nextSeasonStartDate,
     seasonId: previousSeasonId,
-    playerIds: input.seniorDevelopmentPlayerIds ?? seniorPlayerIds(input.careerState),
+    playerIds: input.seniorDevelopmentPlayerIds ?? seniorPlayerIds(workingCareerState),
   });
+  const distributionInput = input.mode.kind === "completedSeason"
+    ? input.mode.seasonDistribution === undefined || seasonContext.archive === undefined
+      ? undefined
+      : { distribution: input.mode.seasonDistribution, finalTable: seasonContext.archive.entry.finalTable }
+    : input.mode.seasonDistribution === undefined || input.mode.finalTable === undefined
+      ? undefined
+      : { distribution: input.mode.seasonDistribution, finalTable: input.mode.finalTable };
+  const distributed = distributionInput !== undefined
+    && (monthlyLifecycle.careerState.clubFinanceState !== undefined
+      || monthlyLifecycle.careerState.seniorSquadState !== undefined)
+    ? settleSeasonDistribution({
+        careerState: monthlyLifecycle.careerState,
+        seasonId: previousSeasonId,
+        occurredOn: seasonContext.nextSeasonStartDate,
+        distribution: distributionInput.distribution,
+        finalTable: distributionInput.finalTable,
+      })
+    : undefined;
+  if (distributed?.status === "rejected") {
+    return {
+      status: "invalid",
+      careerState: input.careerState,
+      reason: "finance_lifecycle_rejected",
+    };
+  }
+  if (distributed !== undefined) operationOrder.push("season_distribution");
+
+  const stateAfterDistribution = distributed?.careerState ?? monthlyLifecycle.careerState;
+  const refreshedTransferBudgets = stateAfterDistribution.clubFinanceState === undefined
+    && stateAfterDistribution.seniorSquadState === undefined
+    ? undefined
+    : refreshAnnualTransferBudgetAvailability({ careerState: stateAfterDistribution });
+  if (refreshedTransferBudgets?.status === "rejected") {
+    return {
+      status: "invalid",
+      careerState: input.careerState,
+      reason: "finance_lifecycle_rejected",
+    };
+  }
+  if (refreshedTransferBudgets !== undefined) operationOrder.push("annual_transfer_budget_refresh");
+
+  const stateAfterFinance = refreshedTransferBudgets?.careerState ?? stateAfterDistribution;
+  const usesCanonicalSeniorSquads = stateAfterFinance.seniorSquadState !== undefined
+    && stateAfterFinance.clubFinanceState !== undefined;
 
   operationOrder.push("player_exits");
-  const exits = applyEndOfSeasonPlayerExits({
-    careerState: monthlyLifecycle.careerState,
-    worldSeed: input.worldSeed,
-    seasonId: advancementSeasonId,
-  });
+  const exits = usesCanonicalSeniorSquads
+    ? applyEndOfSeasonPlayerExits({
+        careerState: stateAfterFinance,
+        worldSeed: input.worldSeed,
+        seasonId: advancementSeasonId,
+      })
+    : { careerState: stateAfterFinance, exits: [] };
 
   operationOrder.push("youth_lifecycle");
   const youthLifecycle = applyYouthAcademyLifecycle({
@@ -383,36 +480,56 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
   });
 
   operationOrder.push("youth_promotion");
-  const youthPromotions = promoteYouthCandidatesToSeniorSquads({
-    careerState: youthIntake.careerState,
-    allowSelectedClubPromotion: input.allowSelectedClubYouthPromotion ?? false,
-  });
+  const youthPromotions = usesCanonicalSeniorSquads
+    ? promoteYouthCandidatesToSeniorSquads({
+        careerState: youthIntake.careerState,
+        allowSelectedClubPromotion: input.allowSelectedClubYouthPromotion ?? false,
+        occurredOn: seasonContext.nextSeasonStartDate,
+      })
+    : { careerState: youthIntake.careerState, records: [] };
 
   operationOrder.push("squad_maintenance");
-  const seniorIntakeCandidates =
-    input.createSeniorIntakeCandidates?.({
-      careerState: youthPromotions.careerState,
-      seasonId: advancementSeasonId,
-    }) ??
-    input.seniorIntakeCandidates ??
-    [];
-  const maintained = maintainCareerSquadShape({
-    careerState: youthPromotions.careerState,
-    intakeCandidates: seniorIntakeCandidates,
-  });
+  const seniorIntakeCandidates = usesCanonicalSeniorSquads
+    ? []
+    : input.createSeniorIntakeCandidates?.({
+        careerState: youthPromotions.careerState,
+        seasonId: advancementSeasonId,
+      }) ??
+      input.seniorIntakeCandidates ??
+      [];
+  const maintained = usesCanonicalSeniorSquads
+    ? { careerState: youthPromotions.careerState, records: [] }
+    : maintainCareerSquadShape({
+        careerState: youthPromotions.careerState,
+        intakeCandidates: seniorIntakeCandidates,
+      });
 
   operationOrder.push("transfer_turnover");
-  const turnover = simulateTransferTurnover({
-    careerState: maintained.careerState,
-    worldSeed: input.worldSeed,
-    seasonId: advancementSeasonId,
-  });
+  const turnover = usesCanonicalSeniorSquads
+    ? simulateTransferTurnover({
+        careerState: maintained.careerState,
+        worldSeed: input.worldSeed,
+        seasonId: advancementSeasonId,
+        occurredOn: seasonContext.nextSeasonStartDate,
+      })
+    : { careerState: maintained.careerState, transfers: [] };
 
   operationOrder.push("post_transfer_squad_maintenance");
-  const postTransferMaintained = maintainCareerSquadShape({
-    careerState: turnover.careerState,
-    intakeCandidates: intakeCandidatesNotYetActive(turnover.careerState, seniorIntakeCandidates),
-  });
+  const replenishmentClubIds = turnover.careerState.gameState.clubIds.filter(
+    (clubId) =>
+      clubId !== input.careerState.selectedClubId
+      || input.allowSelectedClubSquadReplenishment === true,
+  );
+  const postTransferMaintained = usesCanonicalSeniorSquads
+    ? replenishSeniorSquadsFromFreeAgents({
+        careerState: turnover.careerState,
+        clubIds: replenishmentClubIds,
+        occurredOn: seasonContext.nextSeasonStartDate,
+      })
+    : maintainCareerSquadShape({
+        careerState: turnover.careerState,
+        intakeCandidates: intakeCandidatesNotYetActive(turnover.careerState, seniorIntakeCandidates),
+      });
   const maintenanceRecords = [...maintained.records, ...postTransferMaintained.records];
 
   const stateBeforePlayerRollover = applyCompletedSeasonChangesIfNeeded(postTransferMaintained.careerState, seasonContext, operationOrder);
@@ -423,13 +540,19 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     nextSeasonId: seasonContext.nextSeasonId,
     nextSeasonStartDate: seasonContext.nextSeasonStartDate,
   });
-  const careerState = seasonContext.archive === undefined
+  const careerStateBeforeFinanceCommit = seasonContext.archive === undefined
     ? rolledOver.careerState
     : deliverCareerInboxMessages(rolledOver.careerState, [createSeasonRolloverInboxMessage({
         nextSeasonId: seasonContext.nextSeasonId,
         date: seasonContext.nextSeasonStartDate,
-        selectedClubId: input.careerState.selectedClubId,
-      })]);
+      selectedClubId: input.careerState.selectedClubId,
+    })]);
+  const careerState = careerStateBeforeFinanceCommit.clubFinanceState === undefined
+    ? careerStateBeforeFinanceCommit
+    : createCareerState({
+        ...careerStateBeforeFinanceCommit,
+        clubFinanceState: commitClubFinanceTransaction(careerStateBeforeFinanceCommit.clubFinanceState),
+      });
   if (seasonContext.archive !== undefined) operationOrder.push("season_inbox_delivery");
 
   const warnings = advancementWarnings(youthLifecycle.records, input.careerState.selectedClubId);

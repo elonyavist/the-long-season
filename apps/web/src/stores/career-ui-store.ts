@@ -39,7 +39,14 @@ import {
 } from "../runtime/career-session";
 
 /** Current top-level screen in the in-memory web career prototype. */
-export type CareerUiScreen = "app_entry" | "career_dashboard" | "career_inbox" | "match_preparation" | "matchday";
+export type CareerUiScreen =
+  | "app_entry"
+  | "career_dashboard"
+  | "career_inbox"
+  | "career_squad"
+  | "career_tactics"
+  | "match_preparation"
+  | "matchday";
 
 /** Bounded persistence lifecycle represented by the app-entry screen. */
 export type CareerStorageLifecycleStatus = "storage_loading" | "ready" | "career_loading" | "storage_error";
@@ -54,6 +61,7 @@ export type CareerCommandId =
   | "load_career"
   | "continue_career"
   | "open_inbox_message"
+  | "contract_negotiation"
   | "manual_save"
   | "update_autosave_policy"
   | "confirm_preparation"
@@ -177,6 +185,12 @@ export interface CareerUiStoreState {
     sessionStatus: CareerSessionStatus,
     selectedMessageId: string,
   ) => void;
+  /** Publishes a memory-only career command while preserving route and preparation edits. */
+  readonly receiveWorkingCareerUpdate: (
+    state: StoredCareerState,
+    continueResult: WebCareerContinueResult,
+    sessionStatus: CareerSessionStatus,
+  ) => void;
   /** Publishes one in-memory staged-match update. */
   readonly receiveMatchdaySessionUpdate: (
     state: StoredCareerState,
@@ -198,6 +212,10 @@ export interface CareerUiStoreState {
   readonly openDashboard: () => void;
   /** Opens the central Posta destination and selects a deterministic message. */
   readonly openInbox: () => void;
+  /** Opens the selected club's senior-squad workspace. */
+  readonly openSquad: () => void;
+  /** Opens the persistent current-plan tactics workspace. */
+  readonly openTactics: () => void;
   /** Changes the ephemeral Posta list filter. */
   readonly setInboxFilter: (filter: CareerPostaFilter) => void;
   /** Selects one real current-season message. */
@@ -448,6 +466,22 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
       screen: "career_inbox",
     });
   },
+  receiveWorkingCareerUpdate: (activeCareerState, continueResult, careerSessionStatus) => {
+    const current = get();
+    const matchPreparationState = current.matchPreparationState === undefined
+      ? createMatchPreparationDraft(activeCareerState)
+      : reconcileMatchPreparationDraft(activeCareerState, current.matchPreparationState);
+    set({
+      activeCareerState,
+      careerSessionStatus,
+      storageLifecycleStatus: "ready",
+      storageFailure: undefined,
+      storageFailureScope: undefined,
+      continueResult,
+      matchPreparationState,
+      selectedInboxMessageId: selectInboxFallback(activeCareerState, current.selectedInboxMessageId),
+    });
+  },
   receiveMatchdaySessionUpdate: (
     activeCareerState,
     metadata,
@@ -511,6 +545,12 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
         ? undefined
         : selectInboxFallback(state.activeCareerState, state.selectedInboxMessageId),
     }));
+  },
+  openSquad: () => {
+    set({ screen: "career_squad" });
+  },
+  openTactics: () => {
+    set({ screen: "career_tactics" });
   },
   setInboxFilter: (inboxFilter) => {
     set({ inboxFilter });

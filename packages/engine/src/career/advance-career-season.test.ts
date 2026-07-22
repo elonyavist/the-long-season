@@ -7,7 +7,6 @@ import {
   clubId,
   competitionId,
   createCareerState,
-  createMarketState,
   fixtureId,
   gameDate,
   playerId,
@@ -96,6 +95,7 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
       category: "season_rollover",
       source: "competition_office",
       level: "important",
+      continuePolicy: "until_acknowledged",
       lifecycle: { read: false, acknowledged: false, resolved: false },
       related: { clubId: "club:selected" },
       blockerKeys: [],
@@ -316,10 +316,6 @@ function careerStateFixture(input: {
       ],
       fixtures: input.fixtures,
       players,
-    }),
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
     }),
     transferHistory: [],
   });

@@ -8,7 +8,6 @@ import {
   competitionId,
   createCareerInboxMessage,
   createCareerState,
-  createMarketState,
   fixtureId,
   gameDate,
   saveId,
@@ -252,7 +251,6 @@ function careerFixture(
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: TEST_CLUB_ID,
     gameState,
-    marketState: createMarketState({ clubBudgets: {}, clubBudgetIds: [] }),
     transferHistory: [],
   });
 }

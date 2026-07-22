@@ -1,8 +1,11 @@
 import {
   EMPTY_PLAYER_AVAILABILITY,
   createCareerState,
+  findCareerFixtureEligibilityBlockers,
   playerUnavailabilityReason,
+  type CareerFixtureEligibilityBlocker,
   type CareerState,
+  type ClubFinanceLedgerEntryId,
   type ClubId,
   type CompetitionMatchRules,
   type Formation,
@@ -38,6 +41,7 @@ import { advanceCareerMonths, type CareerMonthlyLifecycleSummary } from "./advan
 import { findNextCareerFixture, type NextCareerFixtureInvalidReason } from "./next-fixture.ts";
 import { accrueCommittedFixtureParticipation, type FixtureParticipationSideContext } from "./player-participation.ts";
 import { applyMatchAvailabilityConsequences } from "./match-availability-consequences.ts";
+import { settleFixtureContractBonuses } from "./career-finance-lifecycle.ts";
 
 /** Invalid-state reasons specific to career fixture progression. */
 export type ProgressCareerFixtureInvalidReason =
@@ -49,7 +53,8 @@ export type ProgressCareerFixtureInvalidReason =
   | "home_team_context_mismatch"
   | "away_team_context_mismatch"
   | "unavailable_player_selected"
-  | "invalid_ai_team_selection";
+  | "invalid_ai_team_selection"
+  | "finance_lifecycle_rejected";
 
 /** Optional AI team-selection data for non-user fixture sides. */
 export interface ProgressCareerAiTeamSelectionInput {
@@ -111,6 +116,8 @@ export interface ProgressCareerFixtureAdvanced {
   readonly playerAvailabilityConsequences: readonly MatchPlayerConsequence[];
   /** Monthly player lifecycle checkpoints closed before this fixture was accrued. */
   readonly monthlyLifecycle: readonly CareerMonthlyLifecycleSummary[];
+  /** Finance entries committed by full-time contract bonuses. */
+  readonly financeLedgerEntryIds: readonly ClubFinanceLedgerEntryId[];
   /** Copied career state with the fixture result applied. */
   readonly careerState: CareerState;
 }
@@ -131,6 +138,8 @@ export interface ProgressCareerFixtureInvalid {
   readonly reason: ProgressCareerFixtureInvalidReason;
   /** Fixture related to the failure when available. */
   readonly fixtureId?: FixtureId;
+  /** Selected players that cannot participate, when eligibility caused the rejection. */
+  readonly eligibilityBlockers?: readonly CareerFixtureEligibilityBlocker[];
   /** Original career state reference, unchanged. */
   readonly careerState: CareerState;
 }
@@ -280,6 +289,10 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     competitionMatchRules: input.competitionMatchRules,
   });
 
+  if (applied.status === "invalid") {
+    return applied;
+  }
+
   return {
     ...applied,
     ...(simulatedFixture.explanationTrace === undefined
@@ -299,14 +312,16 @@ interface ApplyCareerFixtureReportInput {
   readonly fixture: Fixture;
   readonly report: MatchReport;
   readonly selectedStarterIds: readonly PlayerId[];
-  readonly participationSides?: readonly FixtureParticipationSideContext[];
+  readonly participationSides: readonly FixtureParticipationSideContext[];
   readonly appliedSubstitutions?: readonly AppliedMatchSubstitution[];
   readonly playerRatings?: readonly PlayerMatchRatingRow[];
   readonly competitionMatchRules: CompetitionMatchRules;
 }
 
 /** Applies report, condition, form, morale, calendar, and checkpoint changes once. */
-function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): ProgressCareerFixtureAdvanced {
+function applyCareerFixtureReport(
+  input: ApplyCareerFixtureReportInput,
+): ProgressCareerFixtureAdvanced | ProgressCareerFixtureInvalid {
   const monthlyLifecycle = advanceCareerMonths({
     careerState: input.careerState,
     worldSeed: input.careerState.gameState.meta.seed,
@@ -362,21 +377,34 @@ function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): Progres
     },
     playerAvailability: availabilityConsequences.availability,
   });
-  const progressedCareerStateWithParticipation = input.participationSides === undefined
-    ? progressedCareerStateWithoutParticipation
-    : accrueCommittedFixtureParticipation({
-        careerState: progressedCareerStateWithoutParticipation,
-        fixtureId: input.fixture.id,
-        seasonId: input.fixture.seasonId,
-        fixtureDate: input.fixture.date,
-        finalMinute: input.report.finalMinute,
-        sides: input.participationSides,
+  const progressedCareerStateWithParticipation = accrueCommittedFixtureParticipation({
+    careerState: progressedCareerStateWithoutParticipation,
+    fixtureId: input.fixture.id,
+    seasonId: input.fixture.seasonId,
+    fixtureDate: input.fixture.date,
+    finalMinute: input.report.finalMinute,
+    sides: input.participationSides,
+    ...(input.appliedSubstitutions === undefined ? {} : { appliedSubstitutions: input.appliedSubstitutions }),
+    ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
+  });
+  const fixtureBonuses = progressedCareerStateWithParticipation.clubFinanceState === undefined
+    && progressedCareerStateWithParticipation.seniorSquadState === undefined
+    ? undefined
+    : settleFixtureContractBonuses({
+        careerState: progressedCareerStateWithParticipation,
+        fixture: input.fixture,
+        report: input.report,
+        participationSides: input.participationSides,
         ...(input.appliedSubstitutions === undefined ? {} : { appliedSubstitutions: input.appliedSubstitutions }),
-        ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
       });
+  if (fixtureBonuses?.status === "rejected") {
+    return invalidResult(input.careerState, "finance_lifecycle_rejected", input.fixture.id);
+  }
+  const progressedCareerStateAfterFinance = fixtureBonuses?.careerState
+    ?? progressedCareerStateWithParticipation;
   const progressedCareerState = deliverCareerInboxMessages(
-    progressedCareerStateWithParticipation,
-    createMatchConsequenceInboxMessages(progressedCareerStateWithParticipation, availabilityConsequences.consequences),
+    progressedCareerStateAfterFinance,
+    createMatchConsequenceInboxMessages(progressedCareerStateAfterFinance, availabilityConsequences.consequences),
   );
   const fixtureAfter = progressedCareerState.gameState.fixtures[input.fixture.id];
 
@@ -395,6 +423,7 @@ function applyCareerFixtureReport(input: ApplyCareerFixtureReportInput): Progres
     playerStateConsequenceSummary: matchStateConsequences.summary,
     playerAvailabilityConsequences: availabilityConsequences.consequences,
     monthlyLifecycle: monthlyLifecycle.summaries,
+    financeLedgerEntryIds: fixtureBonuses?.postedEntryIds ?? [],
     careerState: progressedCareerState,
   };
 }
@@ -473,17 +502,24 @@ function resolveTeamContext(
 ): ResolveTeamContextResult {
   const suppliedContext = input.teamsByClubId[clubId];
   if (suppliedContext !== undefined || clubId === careerState.selectedClubId) {
-    if (suppliedContext !== undefined && suppliedContext.lineup.some((slot) =>
-      playerUnavailabilityReason(
+    if (suppliedContext !== undefined) {
+      const eligibilityBlockers = findCareerFixtureEligibilityBlockers(
         careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
-        slot.playerId,
+        suppliedContext.lineup.map((slot) => slot.playerId),
         fixture.date,
         fixture.competitionId,
-      ) !== undefined)) {
-      return {
-        status: "invalid",
-        result: invalidResult(careerState, "unavailable_player_selected", fixture.id),
-      };
+      );
+      if (eligibilityBlockers.length > 0) {
+        return {
+          status: "invalid",
+          result: invalidResult(
+            careerState,
+            "unavailable_player_selected",
+            fixture.id,
+            eligibilityBlockers,
+          ),
+        };
+      }
     }
     return {
       status: "resolved",
@@ -684,11 +720,13 @@ function invalidResult(
   careerState: CareerState,
   reason: ProgressCareerFixtureInvalidReason,
   fixtureId: FixtureId,
+  eligibilityBlockers?: readonly CareerFixtureEligibilityBlocker[],
 ): ProgressCareerFixtureInvalid {
   return {
     status: "invalid",
     reason,
     fixtureId,
+    ...(eligibilityBlockers === undefined ? {} : { eligibilityBlockers }),
     careerState,
   };
 }

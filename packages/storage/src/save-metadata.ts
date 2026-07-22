@@ -9,7 +9,7 @@ import type { SaveId } from "@game/domain";
 export const CURRENT_SAVE_SCHEMA_VERSION = 1;
 
 /** Current persisted career-envelope version, independent from generic saves. */
-export const CURRENT_CAREER_SAVE_SCHEMA_VERSION = 3;
+export const CURRENT_CAREER_SAVE_SCHEMA_VERSION = 6;
 
 /** Supported in-game autosave intervals; `null` means manual-only saving. */
 export type CareerAutosaveIntervalDays = 7 | 15 | null;

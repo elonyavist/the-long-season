@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTranslator } from "@game/i18n";
 import { test } from "vitest";
@@ -9,7 +9,11 @@ import {
   DEFAULT_TEN_SEASON_REPORT_SEED,
   runTenSeasonReportCommand,
 } from "./ten-season-report.ts";
-import { createLongRunGateReport } from "./ten-season-report/report-data.ts";
+import { createResumableLongRunGateReport } from "./ten-season-report/gate-checkpoint.ts";
+import {
+  createLongRunGateReport,
+  resolveLongRunGateWorkerCount,
+} from "./ten-season-report/report-data.ts";
 
 test("ten-season-report uses deterministic default arguments", async () => {
   const io = captureIo();
@@ -49,11 +53,14 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Youth promotions:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  Clubs above youth target:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "Youth checks:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "Contract and finance stability:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Annual wage utilization max:"), true);
+  assert.equal(hasLineStartingWith(io.stdoutLines, "  Contract lifecycle:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "Anomaly scoring:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  top_assist_max:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  clubs_below_minimum_squad_size:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  youth_roster_max_size:"), true);
-}, 20_000);
+}, 30_000);
 
 test("same seed and season count produce the same report output", async () => {
   const first = captureIo();
@@ -84,7 +91,7 @@ test("ten-season-report keeps role-weighted player quality diagnostics determini
     true,
   );
   assert.equal(
-    io.stdoutLines.includes("  Final ability spread: spread=2.55 top=A.C. Lecco:10.07 bottom=A.S.D. Trieste:7.52"),
+    io.stdoutLines.includes("  Final ability spread: spread=2.57 top=A.C. Lecco:10.07 bottom=U.S. Turin:7.50"),
     true,
   );
 });
@@ -115,6 +122,9 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(hasLineStartingWith(first.stdoutLines, "Youth roster max observed:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Active players min/max:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Clubs above youth target:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Contract/finance structural violations:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Annual wage utilization max:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Contract lifecycle:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Execution:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Signal check counts:"), true);
@@ -136,6 +146,9 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(firstReport.includes("Table Spread Warning Snapshots"), true);
     assert.equal(firstReport.includes("Youth roster max observed:"), true);
     assert.equal(firstReport.includes("Active player count min/max:"), true);
+    assert.equal(firstReport.includes("Contract/finance structural violations:"), true);
+    assert.equal(firstReport.includes("Maximum annual wage utilization:"), true);
+    assert.equal(firstReport.includes("Contract lifecycle:"), true);
     assert.equal(firstReport.includes("Execution:"), true);
     assert.equal(firstReport.includes("Warning check counts:"), true);
     assert.equal(firstReport.includes("Signal check counts:"), true);
@@ -147,7 +160,7 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
   } finally {
     await rm(directoryPath, { recursive: true, force: true });
   }
-});
+}, 20_000);
 
 test("multi-world gate partitions produce the same world summaries as the sequential runner", async () => {
   const text = createTranslator("en");
@@ -178,6 +191,144 @@ test("multi-world gate partitions produce the same world summaries as the sequen
   assert.deepEqual(partitioned.failingCheckCounts, sequential.failingCheckCounts);
 });
 
+test("resumable gate reuses complete deterministic shards without changing aggregate results", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-checkpoints-"));
+  const input = {
+    seedPrefix: "phase78-resume-test",
+    worldCount: 2,
+    seasonCount: 1,
+    language: "en" as const,
+    checkpointDirectoryPath,
+    shardCount: 2,
+    workerCount: 1,
+  };
+
+  try {
+    const first = await createResumableLongRunGateReport(input);
+    const resumed = await createResumableLongRunGateReport(input);
+    const { execution: firstExecution, ...firstAggregate } = first;
+    const { execution: resumedExecution, ...resumedAggregate } = resumed;
+
+    assert.equal(firstExecution.mode, "sharded");
+    assert.equal(firstExecution.resumedShardCount, 0);
+    assert.equal(resumedExecution.mode, "sharded");
+    assert.equal(resumedExecution.resumedShardCount, 2);
+    assert.deepEqual(resumedExecution.partitionHashes, firstExecution.partitionHashes);
+    assert.deepEqual(resumedAggregate, firstAggregate);
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 20_000);
+
+test("resumable multi-world shards preserve the canonical sequential hash", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-multi-world-"));
+  const text = createTranslator("en");
+
+  try {
+    const sequential = await createLongRunGateReport({
+      seedPrefix: "phase78-multi-world-hash-test",
+      worldCount: 3,
+      seasonCount: 1,
+      text,
+      language: "en",
+      workerCount: 1,
+    });
+    const sharded = await createResumableLongRunGateReport({
+      seedPrefix: "phase78-multi-world-hash-test",
+      worldCount: 3,
+      seasonCount: 1,
+      language: "en",
+      checkpointDirectoryPath,
+      shardCount: 1,
+      workerCount: 2,
+    });
+    const { execution: sequentialExecution, ...sequentialAggregate } = sequential;
+    const { execution: shardedExecution, ...shardedAggregate } = sharded;
+
+    assert.deepEqual(shardedExecution.partitionHashes, sequentialExecution.partitionHashes);
+    assert.deepEqual(shardedAggregate, sequentialAggregate);
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 20_000);
+
+test("resumable gates parallelize explicit shards without the small-sample threshold", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-parallel-"));
+  const shardCount = 2;
+
+  try {
+    const report = await createResumableLongRunGateReport({
+      seedPrefix: "phase78-parallel-shard-test",
+      worldCount: shardCount,
+      seasonCount: 1,
+      language: "en",
+      checkpointDirectoryPath,
+      shardCount,
+    });
+    const expectedWorkerCount = resolveLongRunGateWorkerCount({
+      worldCount: shardCount,
+      workerCount: Math.max(1, availableParallelism() - 1),
+    });
+
+    assert.equal(report.execution.workerCount, expectedWorkerCount);
+    assert.equal(report.execution.shardCount, shardCount);
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 20_000);
+
+test("resumable gate rejects a corrupted shard instead of trusting partial evidence", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-corrupt-"));
+  const input = {
+    seedPrefix: "phase78-corrupt-test",
+    worldCount: 1,
+    seasonCount: 1,
+    language: "en" as const,
+    checkpointDirectoryPath,
+    shardCount: 1,
+    workerCount: 1,
+  };
+
+  try {
+    await createResumableLongRunGateReport(input);
+    const [checkpointFilename] = await readdir(checkpointDirectoryPath);
+    assert.notEqual(checkpointFilename, undefined);
+
+    const checkpointPath = join(checkpointDirectoryPath, checkpointFilename!);
+    const checkpoint = JSON.parse(await readFile(checkpointPath, "utf8")) as Record<string, unknown>;
+    checkpoint.summaryHash = "corrupt";
+    await writeFile(checkpointPath, JSON.stringify(checkpoint), "utf8");
+
+    await assert.rejects(
+      createResumableLongRunGateReport(input),
+      /checkpoint hash mismatch/,
+    );
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 20_000);
+
+test("ten-season-report wires an explicit worker limit into resumable gates", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-workers-"));
+  const io = captureIo();
+
+  try {
+    await runTenSeasonReportCommand([
+      "--seed-prefix=phase78-worker-cli-test",
+      "--worlds=1",
+      "--seasons=1",
+      `--checkpoint-dir=${checkpointDirectoryPath}`,
+      "--shards=1",
+      "--workers=1",
+    ], io);
+
+    assert.equal(io.stderrLines.length, 0);
+    assert.equal(io.stdoutLines.some((line) => line.includes("Execution: sharded; workers=1")), true);
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 20_000);
+
 test("ten-season-report exits nonzero on invalid season count", async () => {
   const io = captureIo();
   const exitCode = await runTenSeasonReportCommand(["--seasons=0"], io);
@@ -194,6 +345,24 @@ test("ten-season-report exits nonzero on invalid world count", async () => {
   assert.equal(exitCode, 1);
   assert.equal(io.stdoutLines.length, 0);
   assert.equal(io.stderrLines[0], "--worlds requires a positive integer: 0");
+});
+
+test("ten-season-report rejects an invalid worker count", async () => {
+  const io = captureIo();
+  const exitCode = await runTenSeasonReportCommand(["--workers=0"], io);
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0], "--workers requires a positive integer: 0");
+});
+
+test("ten-season-report requires checkpoints for an explicit worker limit", async () => {
+  const io = captureIo();
+  const exitCode = await runTenSeasonReportCommand(["--worlds=1", "--workers=1"], io);
+
+  assert.equal(exitCode, 1);
+  assert.equal(io.stdoutLines.length, 0);
+  assert.equal(io.stderrLines[0], "--workers requires --checkpoint-dir");
 });
 
 /**

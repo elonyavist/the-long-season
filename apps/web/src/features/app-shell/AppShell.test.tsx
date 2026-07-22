@@ -68,12 +68,14 @@ describe("AppShell", () => {
     expect(html).toContain('data-screen-key="dashboard:standard"');
   });
 
-  it("offers a compact navigation control without enabling future sections", () => {
+  it("offers Squad and Tactics in compact navigation without enabling later sections", () => {
     const html = renderShell();
 
     expect(html).toContain('class="tls-app-shell-compact-nav"');
     expect(html).toContain('<select aria-label="Career navigation"');
-    expect(html).toContain('<option disabled="" value="squad">Squad</option>');
+    expect(html).toContain('<option value="squad">Squad</option>');
+    expect(html).toContain('<option value="tactics">Tactics</option>');
+    expect(html).toContain('<option disabled="" value="fixtures">Fixtures</option>');
   });
 
   it("renders the persistent MVP career sections without fake future navigation", () => {

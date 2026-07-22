@@ -13,21 +13,27 @@ import {
   summarizePlayerDevelopmentAbilities,
   type AdvanceCareerReportRefreshMode,
   type CareerIntakeCandidate,
+  type SimulateSeasonResult,
   type YouthIntakeCandidate,
 } from "@game/engine";
 import { createTranslator, type SupportedLanguage, type Translator } from "@game/i18n";
 import {
   createLongRunAnomalyReport,
   createLongRunClubStabilityReport,
+  createLongRunContractFinanceSeasonRow,
+  createLongRunContractFinanceStabilityReport,
   createLongRunPlayerEvolutionReport,
   createLongRunYouthStabilityReport,
   runCareerLongRunSimulation,
   worstLongRunAnomalyStatus,
-  type CareerLongRunSeasonResult as LongRunSeasonResult,
+  type AdvanceCareerLongRunSeasonContext,
+  type AdvanceCareerLongRunSeasonResult,
+  type CareerLongRunSeasonResult,
   type LongRunAnomalyReport,
   type LongRunBalanceSeasonRow,
   type LongRunClubSeasonRow,
   type LongRunClubStabilityReport,
+  type LongRunContractFinanceStabilityReport,
   type LongRunPlayerEvolutionReport,
   type LongRunPlayerProductionRow,
   type LongRunPlayerSnapshotRow,
@@ -50,6 +56,23 @@ const DEFAULT_PARALLEL_GATE_WORLD_THRESHOLD = 100;
 /** Hard cap that keeps release gates fast without starving the workstation. */
 const DEFAULT_MAX_LONG_RUN_WORKERS = 12;
 
+/** Minimal deterministic season facts retained by the CLI long-run report. */
+export interface LongRunRetainedSeasonResult {
+  /** Number of completed league fixtures. */
+  readonly fixtureCount: number;
+  /** Number of completed fixtures that ended level. */
+  readonly drawCount: number;
+  /** Final league table. */
+  readonly table: SimulateSeasonResult["table"];
+  /** Goal totals sorted by the season simulator. */
+  readonly playerGoalStats: SimulateSeasonResult["playerGoalStats"];
+  /** Player production totals used by creator-concentration reports. */
+  readonly playerSummaryStats: SimulateSeasonResult["playerSummaryStats"];
+}
+
+/** One CLI long-run season with only report-relevant retained facts. */
+export type LongRunSeasonResult = CareerLongRunSeasonResult<LongRunRetainedSeasonResult>;
+
 /** Complete report bundle for one deterministic career world. */
 export interface SingleWorldLongRunReport {
   /** Seed used to generate this world. */
@@ -64,6 +87,8 @@ export interface SingleWorldLongRunReport {
   readonly clubStabilityReport: LongRunClubStabilityReport;
   /** Youth-academy population and lifecycle report. */
   readonly youthStabilityReport: LongRunYouthStabilityReport;
+  /** Contract, registration, finance, and plan-continuity report. */
+  readonly contractFinanceStabilityReport: LongRunContractFinanceStabilityReport;
   /** Deterministic anomaly report. */
   readonly anomalyReport: LongRunAnomalyReport;
   /** Initial/final club ability hierarchy snapshot. */
@@ -174,6 +199,26 @@ export interface LongRunGateWorldSummary {
   readonly clubsAboveYouthTargetCount: number;
   /** Club-season observations below youth roster minimum. */
   readonly clubsBelowYouthMinimumCount: number;
+  /** Structural contract, ownership, finance, and plan violations. */
+  readonly contractFinanceStructuralViolationCount: number;
+  /** Lowest club cash balance observed, in minor units. */
+  readonly minimumCashBalanceObserved: number;
+  /** Highest committed annual-wage share observed. */
+  readonly maximumWageBudgetUtilizationObserved: number;
+  /** Highest free-agent share observed. */
+  readonly maximumFreeAgentShareObserved: number;
+  /** Lowest sampled player valuation, in minor units. */
+  readonly minimumPlayerValueObserved: number;
+  /** Highest sampled player valuation, in minor units. */
+  readonly maximumPlayerValueObserved: number;
+  /** Contract renewals across the world run. */
+  readonly renewalCount: number;
+  /** Contract releases across the world run. */
+  readonly releaseCount: number;
+  /** Contract expiries across the world run. */
+  readonly expiryCount: number;
+  /** Selected-club expiry decisions left explicitly to the manager. */
+  readonly selectedClubExpiredDecisionCount: number;
   /** Failing anomaly keys for this world. */
   readonly failingCheckKeys: readonly string[];
   /** Warning-level anomaly keys for this world. */
@@ -222,6 +267,26 @@ export interface LongRunGateReport {
   readonly clubsAboveYouthTargetCount: number;
   /** Total club-season observations below youth roster minimum. */
   readonly clubsBelowYouthMinimumCount: number;
+  /** Total structural contract, ownership, finance, and plan violations. */
+  readonly contractFinanceStructuralViolationCount: number;
+  /** Lowest club cash balance observed, in minor units. */
+  readonly minimumCashBalanceObserved: number;
+  /** Highest committed annual-wage share observed. */
+  readonly maximumWageBudgetUtilizationObserved: number;
+  /** Highest free-agent share observed. */
+  readonly maximumFreeAgentShareObserved: number;
+  /** Lowest sampled player valuation, in minor units. */
+  readonly minimumPlayerValueObserved: number;
+  /** Highest sampled player valuation, in minor units. */
+  readonly maximumPlayerValueObserved: number;
+  /** Total contract renewals across every world. */
+  readonly renewalCount: number;
+  /** Total contract releases across every world. */
+  readonly releaseCount: number;
+  /** Total contract expiries across every world. */
+  readonly expiryCount: number;
+  /** Total selected-club expiry decisions intentionally left to managers. */
+  readonly selectedClubExpiredDecisionCount: number;
   /** Average goals-per-match value across world averages. */
   readonly goalsPerMatchAverage: number;
   /** 95th percentile goals-per-match world average. */
@@ -274,12 +339,16 @@ export interface LongRunGateCheckCount {
 
 /** Deterministic metadata for the way a long-run gate was executed. */
 export interface LongRunGateExecutionSummary {
-  /** `sequential` for small gates, `parallel` for partitioned gates. */
-  readonly mode: "sequential" | "parallel";
+  /** Execution strategy used without changing generated seeds or summaries. */
+  readonly mode: "sequential" | "parallel" | "sharded";
   /** Number of worker partitions used to create world summaries. */
   readonly workerCount: number;
   /** Stable partition summary hashes in partition order. */
   readonly partitionHashes: readonly string[];
+  /** Stable shard count when checkpoints were requested. */
+  readonly shardCount?: number;
+  /** Checkpoints reused instead of recomputed during this invocation. */
+  readonly resumedShardCount?: number;
 }
 
 /** Input for the explicit long-run gate report. */
@@ -298,8 +367,22 @@ export interface CreateLongRunGateReportInput {
   readonly workerCount?: number;
 }
 
+/** Inputs for aggregating already-computed compact world summaries. */
+export interface CreateLongRunGateReportFromWorldsInput {
+  /** Seed prefix shared by every world summary. */
+  readonly seedPrefix: string;
+  /** Expected number of world summaries. */
+  readonly worldCount: number;
+  /** Seasons simulated in every world. */
+  readonly seasonCount: number;
+  /** Deterministic execution evidence for this invocation. */
+  readonly execution: LongRunGateExecutionSummary;
+  /** Compact summaries in any order; aggregation restores seed order. */
+  readonly worlds: readonly LongRunGateWorldSummary[];
+}
+
 /** A contiguous world-index partition for a long-run gate worker. */
-interface LongRunGateWorkerPartition {
+export interface LongRunGateWorkerPartition {
   /** First one-based world index in the partition. */
   readonly startIndex: number;
   /** Last one-based world index in the partition. */
@@ -307,7 +390,7 @@ interface LongRunGateWorkerPartition {
 }
 
 /** Serializable worker input for a long-run gate partition. */
-interface LongRunGateWorkerData extends LongRunGateWorkerPartition {
+export interface LongRunGateWorkerData extends LongRunGateWorkerPartition {
   /** Seed prefix used to derive world seeds. */
   readonly seedPrefix: string;
   /** Number of seasons per world. */
@@ -317,7 +400,7 @@ interface LongRunGateWorkerData extends LongRunGateWorkerPartition {
 }
 
 /** Successful worker response with compact deterministic summaries. */
-interface LongRunGateWorkerSuccess {
+export interface LongRunGateWorkerSuccess {
   /** Worker success marker. */
   readonly ok: true;
   /** Completed partition. */
@@ -348,6 +431,7 @@ export function createSingleWorldReport(seed: string, seasonCount: number, text:
     seed,
     seasonCount,
     initialCareerState,
+    retainSeasonResult: retainLongRunSeasonResult,
     createSeasonInput: ({ seasonSeed, careerState }) => createCareerSeasonInput(league, careerState, seasonSeed),
     advanceCareerState: (context) => advanceCareerForReport(league, seed, context),
   });
@@ -359,6 +443,9 @@ export function createSingleWorldReport(seed: string, seasonCount: number, text:
   });
   const clubStabilityReport = createLongRunClubStabilityReport(clubSeasonRows(league, report.seasons), refreshTotals(report.seasons));
   const youthStabilityReport = createLongRunYouthStabilityReport(youthSeasonRows(report.seasons));
+  const contractFinanceStabilityReport = createLongRunContractFinanceStabilityReport(
+    report.seasons.map((season) => season.refresh.contractFinance),
+  );
   const anomalyReport = createLongRunAnomalyReport({
     balance: balanceSeasonRows(report.seasons),
     playerEvolution: playerEvolutionReport,
@@ -372,6 +459,7 @@ export function createSingleWorldReport(seed: string, seasonCount: number, text:
     playerEvolutionReport,
     clubStabilityReport,
     youthStabilityReport,
+    contractFinanceStabilityReport,
     anomalyReport,
     strengthHierarchy: summarizeClubAbilityHierarchy(league, initialCareerState, report.finalCareerState as CliCareerState),
   };
@@ -382,14 +470,7 @@ export function createSingleWorldReport(seed: string, seasonCount: number, text:
  * metrics. This is intentionally outside `pnpm check` because large gates can
  * be expensive.
  */
-export async function createLongRunGateReport(input: {
-  readonly seedPrefix: string;
-  readonly worldCount: number;
-  readonly seasonCount: number;
-  readonly text: Translator;
-  readonly language?: SupportedLanguage;
-  readonly workerCount?: number;
-}): Promise<LongRunGateReport> {
+export async function createLongRunGateReport(input: CreateLongRunGateReportInput): Promise<LongRunGateReport> {
   const workerCount = resolveLongRunGateWorkerCount(input);
   const partitions = createLongRunGatePartitions(input.worldCount, workerCount);
   const partitionWorlds =
@@ -413,14 +494,22 @@ export async function createLongRunGateReport(input: {
     partitionHashes: partitionWorlds.map((partition) => hashGateWorldSummaries(partition.worlds)),
   };
 
-  return summarizeGateWorlds(input.seedPrefix, input.worldCount, input.seasonCount, execution, worlds);
+  return createLongRunGateReportFromWorlds({
+    seedPrefix: input.seedPrefix,
+    worldCount: input.worldCount,
+    seasonCount: input.seasonCount,
+    execution,
+    worlds,
+  });
 }
 
 /**
  * Resolves the worker count for a gate without changing the deterministic
  * world seeds or result ordering.
  */
-function resolveLongRunGateWorkerCount(input: CreateLongRunGateReportInput): number {
+export function resolveLongRunGateWorkerCount(
+  input: Pick<CreateLongRunGateReportInput, "workerCount" | "worldCount">,
+): number {
   if (input.workerCount !== undefined) {
     return clampWorkerCount(input.workerCount, input.worldCount);
   }
@@ -451,7 +540,10 @@ function clampWorkerCount(workerCount: number, worldCount: number): number {
 /**
  * Splits one-based world indexes into stable contiguous partitions.
  */
-function createLongRunGatePartitions(worldCount: number, workerCount: number): readonly LongRunGateWorkerPartition[] {
+export function createLongRunGatePartitions(
+  worldCount: number,
+  workerCount: number,
+): readonly LongRunGateWorkerPartition[] {
   const partitions: LongRunGateWorkerPartition[] = [];
   const baseSize = Math.floor(worldCount / workerCount);
   const remainder = worldCount % workerCount;
@@ -489,7 +581,7 @@ async function runLongRunGatePartitions(
 /**
  * Starts one Node worker for a long-run gate partition.
  */
-function runLongRunGateWorkerThread(input: LongRunGateWorkerData): Promise<LongRunGateWorkerSuccess> {
+export function runLongRunGateWorkerThread(input: LongRunGateWorkerData): Promise<LongRunGateWorkerSuccess> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./report-data.ts", import.meta.url), {
       workerData: input,
@@ -521,8 +613,13 @@ function runLongRunGatePartition(input: LongRunGateWorkerData): LongRunGateWorke
 
   for (let index = input.startIndex; index <= input.endIndex; index += 1) {
     const seed = `${input.seedPrefix}-world-${String(index).padStart(5, "0")}`;
-    const report = createSingleWorldReport(seed, input.seasonCount, text);
-    worlds.push(summarizeGateWorld(report));
+    try {
+      const report = createSingleWorldReport(seed, input.seasonCount, text);
+      worlds.push(summarizeGateWorld(report));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Long-run gate world ${index} (${seed}) failed: ${message}`, { cause: error });
+    }
   }
 
   return {
@@ -538,7 +635,7 @@ function runLongRunGatePartition(input: LongRunGateWorkerData): LongRunGateWorke
 /**
  * Produces a compact stable hash for each gate partition.
  */
-function hashGateWorldSummaries(worlds: readonly LongRunGateWorldSummary[]): string {
+export function hashGateWorldSummaries(worlds: readonly LongRunGateWorldSummary[]): string {
   return createHash("sha256").update(JSON.stringify(worlds)).digest("hex").slice(0, 16);
 }
 
@@ -574,7 +671,11 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
 
   return {
     seed: report.seed,
-    status: worstLongRunAnomalyStatus([report.anomalyReport.status, report.youthStabilityReport.status]),
+    status: worstLongRunAnomalyStatus([
+      report.anomalyReport.status,
+      report.youthStabilityReport.status,
+      report.contractFinanceStabilityReport.status,
+    ]),
     goalsPerMatchAverage: roundReportNumber(average(balanceRows.map((season) => season.goalsPerMatch))),
     drawRateAverage: drawSnapshot.average,
     drawRateMax: drawSnapshot.max,
@@ -627,13 +728,25 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
     maximumActivePlayerCountObserved: report.youthStabilityReport.maximumActivePlayerCountObserved,
     clubsAboveYouthTargetCount: report.youthStabilityReport.clubsAboveYouthTargetCount,
     clubsBelowYouthMinimumCount: report.youthStabilityReport.clubsBelowYouthMinimumCount,
+    contractFinanceStructuralViolationCount: report.contractFinanceStabilityReport.structuralViolationCount,
+    minimumCashBalanceObserved: report.contractFinanceStabilityReport.minimumCashBalanceObserved,
+    maximumWageBudgetUtilizationObserved: report.contractFinanceStabilityReport.maximumWageBudgetUtilizationObserved,
+    maximumFreeAgentShareObserved: report.contractFinanceStabilityReport.maximumFreeAgentShareObserved,
+    minimumPlayerValueObserved: report.contractFinanceStabilityReport.minimumPlayerValueObserved,
+    maximumPlayerValueObserved: report.contractFinanceStabilityReport.maximumPlayerValueObserved,
+    renewalCount: report.contractFinanceStabilityReport.renewalCount,
+    releaseCount: report.contractFinanceStabilityReport.releaseCount,
+    expiryCount: report.contractFinanceStabilityReport.expiryCount,
+    selectedClubExpiredDecisionCount: report.contractFinanceStabilityReport.selectedClubExpiredDecisionCount,
     failingCheckKeys: [
       ...report.anomalyReport.checks.filter((check) => check.status === "fail").map((check) => check.key),
       ...report.youthStabilityReport.checks.filter((check) => check.status === "fail").map((check) => check.key),
+      ...report.contractFinanceStabilityReport.checks.filter((check) => check.status === "fail").map((check) => check.key),
     ],
     warningCheckKeys: [
       ...report.anomalyReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
       ...report.youthStabilityReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
+      ...report.contractFinanceStabilityReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
     ],
   };
 }
@@ -901,20 +1014,28 @@ function topCreatorConcentrationProductionRow(
 
 /**
  * Aggregates per-world summaries into the final gate report.
+ *
+ * Checkpoint adapters call this boundary after validating and ordering their
+ * compact shard results. Gameplay simulation remains owned by the canonical
+ * single-world runner above.
  */
-function summarizeGateWorlds(
-  seedPrefix: string,
-  worldCount: number,
-  seasonCount: number,
-  execution: LongRunGateExecutionSummary,
-  worlds: readonly LongRunGateWorldSummary[],
+export function createLongRunGateReportFromWorlds(
+  input: CreateLongRunGateReportFromWorldsInput,
 ): LongRunGateReport {
+  if (input.worlds.length !== input.worldCount) {
+    throw new Error(
+      `Long-run gate expected ${input.worldCount} world summaries but received ${input.worlds.length}`,
+    );
+  }
+
+  const worlds = [...input.worlds].sort((left, right) => left.seed.localeCompare(right.seed));
+
   return {
-    seedPrefix,
-    worldCount,
-    seasonCount,
-    execution,
-    totalSeasonCount: worldCount * seasonCount,
+    seedPrefix: input.seedPrefix,
+    worldCount: input.worldCount,
+    seasonCount: input.seasonCount,
+    execution: input.execution,
+    totalSeasonCount: input.worldCount * input.seasonCount,
     failedWorldCount: worlds.filter((world) => world.status === "fail").length,
     warningWorldCount: worlds.filter((world) => world.status === "warn").length,
     minimumSquadSizeObserved: Math.min(...worlds.map((world) => world.minimumSquadSizeObserved)),
@@ -930,6 +1051,24 @@ function summarizeGateWorlds(
     maximumActivePlayerCountObserved: Math.max(...worlds.map((world) => world.maximumActivePlayerCountObserved)),
     clubsAboveYouthTargetCount: worlds.reduce((sum, world) => sum + world.clubsAboveYouthTargetCount, 0),
     clubsBelowYouthMinimumCount: worlds.reduce((sum, world) => sum + world.clubsBelowYouthMinimumCount, 0),
+    contractFinanceStructuralViolationCount: worlds.reduce(
+      (sum, world) => sum + world.contractFinanceStructuralViolationCount,
+      0,
+    ),
+    minimumCashBalanceObserved: Math.min(...worlds.map((world) => world.minimumCashBalanceObserved)),
+    maximumWageBudgetUtilizationObserved: Math.max(
+      ...worlds.map((world) => world.maximumWageBudgetUtilizationObserved),
+    ),
+    maximumFreeAgentShareObserved: Math.max(...worlds.map((world) => world.maximumFreeAgentShareObserved)),
+    minimumPlayerValueObserved: Math.min(...worlds.map((world) => world.minimumPlayerValueObserved)),
+    maximumPlayerValueObserved: Math.max(...worlds.map((world) => world.maximumPlayerValueObserved)),
+    renewalCount: worlds.reduce((sum, world) => sum + world.renewalCount, 0),
+    releaseCount: worlds.reduce((sum, world) => sum + world.releaseCount, 0),
+    expiryCount: worlds.reduce((sum, world) => sum + world.expiryCount, 0),
+    selectedClubExpiredDecisionCount: worlds.reduce(
+      (sum, world) => sum + world.selectedClubExpiredDecisionCount,
+      0,
+    ),
     goalsPerMatchAverage: roundReportNumber(average(worlds.map((world) => world.goalsPerMatchAverage))),
     goalsPerMatchP95: percentile(worlds.map((world) => world.goalsPerMatchAverage), 0.95),
     tablePointsSpreadAverage: roundReportNumber(average(worlds.map((world) => world.tablePointsSpreadAverage))),
@@ -1036,6 +1175,9 @@ function signalKindForCheckKey(key: string): string {
     case "senior_active_player_population":
     case "youth_active_player_population":
     case "total_active_player_population":
+    case "wage_budget_utilization":
+    case "free_agent_share":
+    case "selected_club_expiry_decisions":
       return "monitor";
     default:
       return "structural";
@@ -1054,13 +1196,21 @@ function compareWorstGateWorld(left: LongRunGateWorldSummary, right: LongRunGate
 
   const structuralDelta =
     right.clubsBelowMinimumSquadSizeCount +
-    right.clubsWithoutNaturalGoalkeeperCount -
-    (left.clubsBelowMinimumSquadSizeCount + left.clubsWithoutNaturalGoalkeeperCount);
+    right.clubsWithoutNaturalGoalkeeperCount +
+    right.contractFinanceStructuralViolationCount -
+    (left.clubsBelowMinimumSquadSizeCount +
+      left.clubsWithoutNaturalGoalkeeperCount +
+      left.contractFinanceStructuralViolationCount);
   if (structuralDelta !== 0) {
     return structuralDelta;
   }
 
-  return left.seed.localeCompare(right.seed);
+  return (
+    right.maximumWageBudgetUtilizationObserved - left.maximumWageBudgetUtilizationObserved ||
+    right.maximumFreeAgentShareObserved - left.maximumFreeAgentShareObserved ||
+    left.minimumCashBalanceObserved - right.minimumCashBalanceObserved ||
+    left.seed.localeCompare(right.seed)
+  );
 }
 
 /**
@@ -1085,8 +1235,8 @@ function gateStatusSeverity(status: LongRunAnomalyReport["status"]): number {
 function advanceCareerForReport(
   league: FakeLeagueSystem,
   worldSeed: string,
-  context: Parameters<typeof runCareerLongRunSimulation>[0]["advanceCareerState"] extends (value: infer Context) => unknown ? Context : never,
-): ReturnType<Parameters<typeof runCareerLongRunSimulation>[0]["advanceCareerState"]> {
+  context: AdvanceCareerLongRunSeasonContext,
+): AdvanceCareerLongRunSeasonResult {
   const nextSeasonId =
     `${context.careerState.gameState.calendar.currentSeasonId}:long-run-${context.seasonNumber}` as AdvanceCareerReportRefreshMode["nextSeasonId"];
   const nextSeasonStartDate = (context.careerState.gameState.calendar.currentDate + 365) as AdvanceCareerReportRefreshMode["nextSeasonStartDate"];
@@ -1097,11 +1247,19 @@ function advanceCareerForReport(
       kind: "reportRefresh",
       nextSeasonId,
       nextSeasonStartDate,
+      ...(league.competition.seasonDistribution === undefined
+        ? {}
+        : {
+            seasonDistribution: league.competition.seasonDistribution,
+            finalTable: context.seasonResult.table,
+          }),
     },
     createYouthIntakeCandidates: (candidateContext) =>
       youthIntakeCandidatesForCareer(candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
     createSeniorIntakeCandidates: (candidateContext) =>
       intakeCandidatesForCareer(league, candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
+    allowSelectedClubYouthPromotion: true,
+    allowSelectedClubSquadReplenishment: true,
   });
 
   if (advanced.status !== "advanced") {
@@ -1111,6 +1269,11 @@ function advanceCareerForReport(
   return {
     careerState: advanced.careerState,
     refresh: {
+      contractFinance: createLongRunContractFinanceSeasonRow({
+        seasonNumber: context.seasonNumber,
+        previousCareerState: context.careerState,
+        careerState: advanced.careerState,
+      }),
       exitCount: advanced.facts.playerExits.exitCount,
       exitReasons: {
         retirement: advanced.facts.playerExits.reasons.retirement,
@@ -1139,6 +1302,26 @@ function advanceCareerForReport(
       clubsAboveYouthTarget: advanced.facts.youthHealth.clubsAboveYouthTarget,
       clubsBelowYouthMinimum: advanced.facts.youthHealth.clubsBelowYouthMinimum,
     },
+  };
+}
+
+/**
+ * Releases fixture and player-state histories after career advancement while
+ * preserving every fact consumed by balance and stability reports.
+ */
+function retainLongRunSeasonResult(result: SimulateSeasonResult): LongRunRetainedSeasonResult {
+  return {
+    fixtureCount: result.fixtures.length,
+    drawCount: result.fixtures.reduce(
+      (count, fixture) =>
+        fixture.result !== undefined && fixture.result.homeGoals === fixture.result.awayGoals
+          ? count + 1
+          : count,
+      0,
+    ),
+    table: result.table,
+    playerGoalStats: result.playerGoalStats,
+    playerSummaryStats: result.playerSummaryStats,
   };
 }
 
@@ -1579,18 +1762,14 @@ function balanceSeasonRows(seasons: readonly LongRunSeasonResult[]): readonly Lo
 export function goalsPerMatch(season: LongRunSeasonResult): number {
   const totalGoals = season.result.table.reduce((sum, row) => sum + row.goalsFor, 0);
 
-  return totalGoals / season.result.fixtures.length;
+  return totalGoals / season.result.fixtureCount;
 }
 
 /**
  * Calculates the share of completed fixtures that ended in a draw.
  */
 export function drawRate(season: LongRunSeasonResult): number {
-  const draws = season.result.fixtures.filter(
-    (fixture) => fixture.result !== undefined && fixture.result.homeGoals === fixture.result.awayGoals,
-  ).length;
-
-  return draws / season.result.fixtures.length;
+  return season.result.drawCount / season.result.fixtureCount;
 }
 
 /**

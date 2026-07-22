@@ -7,7 +7,6 @@ import {
   type CareerState,
   type ClubId,
   type Player,
-  type PlayerDynamicState,
   type PlayerId,
   type SeasonId,
   type YouthAcademyClubRoster,
@@ -58,9 +57,10 @@ export interface YouthAcademyLifecycleResult {
 /**
  * Develops active youth players and resolves age-out decisions.
  *
- * Senior rosters are not changed. Released/external-move youth leave the active
- * world immediately; promotion candidates remain in the world but outside the
- * active academy roster for the next promotion step.
+ * Senior rosters are not changed. Every age-out player leaves the active
+ * academy roster, but their immutable player and dynamic-state facts remain in
+ * the world so promotion, external movement, or free agency can continue via a
+ * later explicit ownership transition.
  */
 export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): YouthAcademyLifecycleResult {
   const youthState = input.careerState.youthAcademyState;
@@ -79,15 +79,11 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
     seasonId: input.seasonId,
     playerIds: activeYouthPlayerIds,
   });
-  const players: Partial<Record<PlayerId, Player>> = { ...developed.careerState.gameState.players };
-  const playerStates: Partial<Record<PlayerId, PlayerDynamicState>> = { ...developed.careerState.gameState.playerStates };
-  const playerIds = [...developed.careerState.gameState.playerIds];
   const clubRosters: Record<ClubId, YouthAcademyClubRoster> = {};
   const clubRosterIds: ClubId[] = [];
   const playerLifecycle: Record<PlayerId, YouthPlayerLifecycle> = {};
   const playerLifecycleIds: PlayerId[] = [];
   const records: YouthLifecycleRecord[] = [];
-  const removedPlayerIds = new Set<PlayerId>();
 
   for (const clubId of developed.careerState.gameState.clubIds) {
     const roster = youthState.clubRosters[clubId];
@@ -123,18 +119,12 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
         outcome,
       });
 
-      if (outcome === "promotion_candidate") {
-        playerLifecycle[playerId] = {
-          ...requiredLifecycle(youthState, playerId),
-          status: "promotion_candidate",
-          statusChangedAt: developed.careerState.gameState.calendar.currentDate,
-        };
-        playerLifecycleIds.push(playerId);
-      } else {
-        removedPlayerIds.add(playerId);
-        delete players[playerId];
-        delete playerStates[playerId];
-      }
+      playerLifecycle[playerId] = {
+        ...requiredLifecycle(youthState, playerId),
+        status: outcome,
+        statusChangedAt: developed.careerState.gameState.calendar.currentDate,
+      };
+      playerLifecycleIds.push(playerId);
     }
 
     clubRosters[clubId] = {
@@ -149,10 +139,8 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
     currentCareerState: developed.careerState,
     playerLifecycle,
     playerLifecycleIds,
-    removedPlayerIds,
   });
 
-  const nextPlayerIds = playerIds.filter((playerId) => !removedPlayerIds.has(playerId));
   const nextYouthState: YouthAcademyState = {
     clubRosters,
     clubRosterIds,
@@ -163,12 +151,6 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
   return {
     careerState: createCareerState({
       ...developed.careerState,
-      gameState: {
-        ...developed.careerState.gameState,
-        players: players as CareerState["gameState"]["players"],
-        playerIds: nextPlayerIds,
-        playerStates: playerStates as CareerState["gameState"]["playerStates"],
-      },
       youthAcademyState: nextYouthState,
     }),
     developmentChanges: developed.changes,
@@ -198,12 +180,11 @@ function preserveNonRosterLifecycleRows(input: {
   readonly currentCareerState: CareerState;
   readonly playerLifecycle: Record<PlayerId, YouthPlayerLifecycle>;
   readonly playerLifecycleIds: PlayerId[];
-  readonly removedPlayerIds: ReadonlySet<PlayerId>;
 }): void {
   const seen = new Set<PlayerId>(input.playerLifecycleIds);
 
   for (const playerId of input.youthState.playerLifecycleIds) {
-    if (seen.has(playerId) || input.removedPlayerIds.has(playerId)) {
+    if (seen.has(playerId)) {
       continue;
     }
 

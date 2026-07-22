@@ -376,7 +376,10 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
     };
   }
 
-  return createCareerState({
+  // Career systems are attached by `loadCareerStateRows` before the complete
+  // Phase 78 state is validated. Validating this world-only projection here
+  // would incorrectly accept a save without contracts or finances.
+  return {
     saveId: saveId(requiredText(rows.save, "save_id")),
     schemaVersion: requiredNumber(rows.save, "career_schema_version"),
     selectedClubId: clubId(requiredText(rows.save, "selected_club_id")),
@@ -398,9 +401,8 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
       fixtures: fixtures as CareerState["gameState"]["fixtures"],
       fixtureIds: orderedFixtureIds,
     },
-    marketState: { clubBudgets: {}, clubBudgetIds: [] },
     transferHistory: [],
-  });
+  };
 }
 
 function insertMappedRows(database: SqliteWorldDatabase, rows: WorldRows): void {

@@ -45,19 +45,36 @@ test("buildCareerShellView exposes Posta as a real central destination", () => {
   assert.equal(view.navigationItems.find((item) => item.sectionKey === "inbox")?.isInteractive, true);
 });
 
-test("buildCareerShellView preserves disabled future sections with label keys", () => {
+test("buildCareerShellView exposes Squad as a real central destination", () => {
   const view = buildCareerShellView({
-    activeSectionKey: "dashboard",
+    activeSectionKey: "squad",
     inboxView: buildCareerInboxView([]),
   });
 
   const squad = view.navigationItems.find((item) => item.sectionKey === "squad");
 
-  assert.equal(squad?.status, "disabled");
-  assert.equal(squad?.isCurrent, false);
-  assert.equal(squad?.isInteractive, false);
-  assert.equal(squad?.labelKey, "career.shell.nav.squad");
-  assert.equal(squad?.disabledReasonKey, "career.shell.disabled.futurePhase");
+  assert.equal(view.centralContentSectionKey, "squad");
+  assert.equal(squad?.status, "available");
+  assert.equal(squad?.isCurrent, true);
+  assert.equal(squad?.isInteractive, true);
+});
+
+test("buildCareerShellView exposes Tactics while preserving later disabled sections", () => {
+  const view = buildCareerShellView({
+    activeSectionKey: "dashboard",
+    inboxView: buildCareerInboxView([]),
+  });
+
+  const tactics = view.navigationItems.find((item) => item.sectionKey === "tactics");
+  const fixtures = view.navigationItems.find((item) => item.sectionKey === "fixtures");
+
+  assert.equal(tactics?.status, "available");
+  assert.equal(tactics?.isCurrent, false);
+  assert.equal(tactics?.isInteractive, true);
+  assert.equal(tactics?.labelKey, "career.shell.nav.tactics");
+  assert.equal(tactics?.disabledReasonKey, undefined);
+  assert.equal(fixtures?.status, "disabled");
+  assert.equal(fixtures?.disabledReasonKey, "career.shell.disabled.futurePhase");
 });
 
 test("buildCareerShellView keeps Inbox visible during preparation", () => {

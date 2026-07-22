@@ -25,8 +25,6 @@ export {
 } from "./player-willingness.ts";
 export {
   evaluatePermanentTransfer,
-  previewPermanentTransfer,
   type EvaluatePermanentTransferInput,
-  type PermanentTransferApplyPreview,
   type PermanentTransferFeasibility,
 } from "./transfer-feasibility.ts";

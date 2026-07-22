@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import type { CareerAutosaveIntervalDays, SaveMetadata } from "@game/storage";
 import { toISO } from "@game/shared";
+import type { CareerContractTermsInput } from "@game/ui";
 
 import { createWebTranslator } from "./translation";
 import { CareerAppFrame } from "./CareerAppFrame";
@@ -19,6 +20,12 @@ import { CareerInboxScreen } from "../features/inbox/CareerInboxScreen";
 import { buildCalendarAdvanceTransition } from "../features/inbox/calendar-advance-transition";
 import { CareerMatchdayScreen } from "../features/matchday/CareerMatchdayScreen";
 import { CareerMatchPreparationScreen } from "../features/match-preparation/CareerMatchPreparationScreen";
+import { CareerSquadScreen } from "../features/squad/CareerSquadScreen";
+import {
+  previewCareerContractOffer,
+  type CareerContractFinancePreview,
+} from "../features/squad/career-squad-adapter";
+import { CareerTacticsScreen } from "../features/tactics/CareerTacticsScreen";
 import {
   selectHasPendingMatchdayTeamChanges,
   useCareerUiStore,
@@ -27,11 +34,19 @@ import type { WebCareerRuntimeHandle } from "../infrastructure/persistence/creat
 import {
   classifyWebCareerPersistenceFailure,
   inspectWebCareerAttention,
+  type WebSelectedClubContractCommand,
+  type WebSelectedClubContractCommandResult,
 } from "../runtime/web-career-runtime";
 import { includeDraftInCareerSessionStatus } from "../runtime/career-session";
 import { useCareerCommandRunner } from "./use-career-command-runner";
 
-type PreparationNavigationIntent = "app_entry" | "career_dashboard" | "career_inbox" | "matchday";
+type PreparationNavigationIntent =
+  | "app_entry"
+  | "career_dashboard"
+  | "career_inbox"
+  | "career_squad"
+  | "career_tactics"
+  | "matchday";
 
 /**
  * Composes the web career screens around the runtime and ephemeral UI store.
@@ -64,6 +79,8 @@ export function App(): React.JSX.Element {
   const backToMenu = useCareerUiStore((state) => state.backToMenu);
   const openDashboard = useCareerUiStore((state) => state.openDashboard);
   const openInbox = useCareerUiStore((state) => state.openInbox);
+  const openSquad = useCareerUiStore((state) => state.openSquad);
+  const openTactics = useCareerUiStore((state) => state.openTactics);
   const setInboxFilter = useCareerUiStore((state) => state.setInboxFilter);
   const selectInboxMessage = useCareerUiStore((state) => state.selectInboxMessage);
   const openMatchPreparation = useCareerUiStore((state) => state.openMatchPreparation);
@@ -71,6 +88,7 @@ export function App(): React.JSX.Element {
   const receiveCareerSessionUpdate = useCareerUiStore((state) => state.receiveCareerSessionUpdate);
   const receiveManualCareerSave = useCareerUiStore((state) => state.receiveManualCareerSave);
   const receiveInboxSessionUpdate = useCareerUiStore((state) => state.receiveInboxSessionUpdate);
+  const receiveWorkingCareerUpdate = useCareerUiStore((state) => state.receiveWorkingCareerUpdate);
   const beginCalendarAdvanceTransition = useCareerUiStore((state) => state.beginCalendarAdvanceTransition);
   const showCalendarAdvanceDate = useCareerUiStore((state) => state.showCalendarAdvanceDate);
   const receiveMatchdaySessionUpdate = useCareerUiStore((state) => state.receiveMatchdaySessionUpdate);
@@ -96,6 +114,7 @@ export function App(): React.JSX.Element {
   const runtimeHandleRef = useRef<Promise<WebCareerRuntimeHandle> | undefined>(undefined);
   const previousScreenRef = useRef(screen);
   const [storageRetryNonce, setStorageRetryNonce] = useState(0);
+  const [betaResetPerformed, setBetaResetPerformed] = useState(false);
   const [sessionStatusOverride, setSessionStatusOverride] = useState(careerSessionStatus);
   const [showUnsavedExitDialog, setShowUnsavedExitDialog] = useState(false);
   const [pendingPreparationNavigation, setPendingPreparationNavigation] = useState<PreparationNavigationIntent>();
@@ -110,6 +129,7 @@ export function App(): React.JSX.Element {
   const {
     dashboard: dashboardPresentation,
     inbox: inboxPresentation,
+    squad: squadPresentation,
     matchPreparation: matchPreparationView,
     tacticalBoardPlayers,
     matchPreparationPlayerFactsById,
@@ -129,7 +149,8 @@ export function App(): React.JSX.Element {
     setSessionStatusOverride(undefined);
   }, [careerSessionStatus]);
 
-  const preparationDraftDirty = screen === "match_preparation"
+  const preparationDraftDirty = screen !== "app_entry"
+    && screen !== "matchday"
     && activeCareerState !== undefined
     && matchPreparationState !== undefined
     && isMatchPreparationDraftDirty(activeCareerState, matchPreparationState);
@@ -150,6 +171,7 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     let active = true;
+    setBetaResetPerformed(false);
     beginSaveDiscovery();
     let handlePromise: Promise<WebCareerRuntimeHandle> | undefined;
 
@@ -167,9 +189,18 @@ export function App(): React.JSX.Element {
         commandId: "discover_careers",
         statusLabelKey: "web.app.storage.loading",
         failureScope: "app_entry",
-        execute: async () => (await currentHandlePromise).runtime.listCareers(),
-        onSuccess: (saves) => {
-          if (active) receiveAvailableSaves(saves);
+        execute: async () => {
+          const handle = await currentHandlePromise;
+          return {
+            saves: await handle.runtime.listCareers(),
+            betaResetPerformed: handle.storageInfo.betaResetPerformed,
+          };
+        },
+        onSuccess: (result) => {
+          if (active) {
+            receiveAvailableSaves(result.saves);
+            setBetaResetPerformed(result.betaResetPerformed);
+          }
         },
       });
     });
@@ -316,11 +347,17 @@ export function App(): React.JSX.Element {
     if (intent === "app_entry") backToMenu();
     if (intent === "career_dashboard") openDashboard();
     if (intent === "career_inbox") openInbox();
+    if (intent === "career_squad") openSquad();
+    if (intent === "career_tactics") openTactics();
     if (intent === "matchday") openPreparedMatchday();
-  }, [backToMenu, openDashboard, openInbox, openPreparedMatchday]);
+  }, [backToMenu, openDashboard, openInbox, openPreparedMatchday, openSquad, openTactics]);
 
   const requestPreparationNavigation = useCallback((intent: PreparationNavigationIntent) => {
-    if (preparationDraftDirty) {
+    const canPreserveDraftAcrossRoute = intent === "career_dashboard"
+      || intent === "career_inbox"
+      || intent === "career_squad"
+      || intent === "career_tactics";
+    if (preparationDraftDirty && !canPreserveDraftAcrossRoute) {
       setPendingPreparationNavigation(intent);
       return;
     }
@@ -336,12 +373,59 @@ export function App(): React.JSX.Element {
       requestPreparationNavigation("career_dashboard");
       return;
     }
+    if (actionId === "open_squad") {
+      requestPreparationNavigation("career_squad");
+      return;
+    }
+    if (actionId === "open_tactics") {
+      requestPreparationNavigation("career_tactics");
+      return;
+    }
     if (actionId === "open_matchday") {
       requestPreparationNavigation("matchday");
       return;
     }
     handleInboxAction(actionId);
   }, [handleInboxAction, requestPreparationNavigation]);
+
+  const previewSelectedClubContractOffer = useCallback((
+    playerId: string,
+    terms: CareerContractTermsInput,
+  ): CareerContractFinancePreview => activeCareerState === undefined
+    ? { status: "rejected", reason: "contract_context_missing" }
+    : previewCareerContractOffer(activeCareerState, playerId, terms), [activeCareerState]);
+
+  const applySelectedClubContractCommand = useCallback(async (
+    command: WebSelectedClubContractCommand,
+  ): Promise<WebSelectedClubContractCommandResult | undefined> => {
+    const handlePromise = runtimeHandleRef.current;
+    if (activeCareerState === undefined) return undefined;
+
+    let commandResult: WebSelectedClubContractCommandResult | undefined;
+    const completed = await runCareerCommand({
+      commandId: "contract_negotiation",
+      statusLabelKey: "career.command.updatingContract",
+      failureScope: "current_career",
+      execute: async () => {
+        if (handlePromise === undefined) throw { code: "storage_unavailable" };
+        return (await handlePromise).runtime.applySelectedClubContractCommand(
+          activeCareerState.saveId,
+          command,
+        );
+      },
+      onSuccess: (result) => {
+        commandResult = result;
+        if (result.status === "applied") {
+          receiveWorkingCareerUpdate(
+            result.state,
+            result.continueResult,
+            result.sessionStatus,
+          );
+        }
+      },
+    });
+    return completed ? commandResult : undefined;
+  }, [activeCareerState, receiveWorkingCareerUpdate, runCareerCommand]);
 
   const savePreparationAndOpenMatchday = useCallback(() => {
     const handlePromise = runtimeHandleRef.current;
@@ -742,6 +826,65 @@ export function App(): React.JSX.Element {
   }
 
   if (
+    screen === "career_squad"
+    && squadPresentation !== undefined
+    && inboxPresentation !== undefined
+    && careerFrameProps !== undefined
+  ) {
+    return (
+      <CareerAppFrame {...careerFrameProps}>
+        <CareerSquadScreen
+          presentation={squadPresentation}
+          inboxView={inboxPresentation.railView}
+          language={preferences.language}
+          contractCommandPending={commandActivity?.status === "pending"
+            && commandActivity.commandId === "contract_negotiation"}
+          text={text}
+          onBackToMenu={requestBackToMenu}
+          onInboxActionClick={handleShellNavigation}
+          onLineupPlayerChange={selectLineupPlayer}
+          onBenchPlayerChange={selectBenchPlayer}
+          previewContractOffer={previewSelectedClubContractOffer}
+          onContractCommand={applySelectedClubContractCommand}
+        />
+      </CareerAppFrame>
+    );
+  }
+
+  if (
+    screen === "career_tactics"
+    && activeCareerState !== undefined
+    && matchPreparationView !== undefined
+    && matchPreparationState !== undefined
+    && careerFrameProps !== undefined
+  ) {
+    return (
+      <CareerAppFrame {...careerFrameProps}>
+        <CareerTacticsScreen
+          view={matchPreparationView}
+          currentDateIso={toISO(activeCareerState.gameState.calendar.currentDate)}
+          draftDirty={preparationDraftDirty}
+          tacticalBoardDraft={matchPreparationState.tacticalBoardDraft}
+          tacticalBoardPlayers={tacticalBoardPlayers}
+          playerFactsById={matchPreparationPlayerFactsById}
+          {...(continueResult === undefined ? {} : { continueResult })}
+          text={text}
+          onBackToMenu={requestBackToMenu}
+          onInboxActionClick={handleShellNavigation}
+          onFormationChange={selectFormation}
+          onLineupPlayerChange={selectLineupPlayer}
+          onBenchPlayerChange={selectBenchPlayer}
+          onTacticProfileChange={selectTacticProfile}
+          onSelectionAction={applySelectionAction}
+          onBoardSlotMove={moveBoardSlot}
+          onBoardSlotRoleChange={changeBoardSlotRole}
+          onBoardSlotClear={clearBoardSlot}
+        />
+      </CareerAppFrame>
+    );
+  }
+
+  if (
     screen === "matchday"
     && matchdayView !== undefined
     && matchdayPhaseView !== undefined
@@ -827,6 +970,7 @@ export function App(): React.JSX.Element {
       onContinueCareer={continueExistingCareer}
       onSelectedSaveChange={(save: SaveMetadata["saveId"]) => selectSave(save)}
       onRetryStorage={retryStorage}
+      betaResetPerformed={betaResetPerformed}
     />
   );
 }

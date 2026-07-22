@@ -282,6 +282,117 @@ test("narrow dashboard keeps one decision hierarchy across every valid operation
   await captureDashboardStates(browser, { width: 390, height: 844 }, "narrow");
 });
 
+test("desktop Squad keeps one dense vertical roster and an accessible full-screen profile", async ({ browser }) => {
+  const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(desktop);
+    await desktop.getByRole("button", { name: "New career", exact: true }).click();
+    await desktop.getByRole("button", { name: "Squad", exact: true }).click();
+
+    await expect(desktop.getByRole("heading", { level: 1, name: "Squad", exact: true })).toBeVisible();
+    await expectMainFocus(desktop);
+    await expect(desktop.locator(".tls-squad-table tbody tr")).toHaveCount(22);
+    await expect(desktop.locator(".tls-squad-table-frame")).toHaveCSS("overflow-x", "hidden");
+    await assertNoPageOverflow(desktop, "desktop Squad");
+    await capture(desktop, "69-squad-desktop");
+
+    await desktop.evaluate(async () => {
+      const modulePath = "/src/stores/career-ui-store.ts";
+      const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+      useCareerUiStore.getState().applySelectionAction("auto");
+    });
+    const availablePlayer = desktop.locator(".tls-squad-table tbody tr[data-status='available']").first();
+    const availablePlayerName = (await availablePlayer.locator(".tls-squad-player-name").innerText()).trim();
+    const availablePlayerSurname = availablePlayerName.split(/\s+/).at(-1) ?? availablePlayerName;
+    await availablePlayer.getByRole("button", { name: "Field", exact: true }).click();
+    const lineupChoice = desktop.getByRole("dialog", { name: "Choose XI position", exact: true });
+    await expect(lineupChoice).toBeVisible();
+    await expect(lineupChoice.locator(".tls-squad-choice-option")).toHaveCount(11);
+    await capture(desktop, "69d-squad-explicit-lineup-choice-desktop");
+    await lineupChoice.locator(".tls-squad-choice-option").first().click();
+    await expect(lineupChoice).toBeHidden();
+
+    await desktop.getByRole("button", { name: "Tactics", exact: true }).click();
+    await expect(desktop.getByRole("heading", { level: 1, name: "Tactics", exact: true })).toBeVisible();
+    await expect(desktop.locator(".tls-tactical-board-token")).toHaveCount(11);
+    await expect(desktop.locator(".tls-tactical-board-token", { hasText: availablePlayerSurname })).toHaveCount(1);
+    await assertNoPageOverflow(desktop, "desktop Tactics after Squad replacement");
+    await capture(desktop, "69e-tactics-shared-plan-desktop");
+    await desktop.getByRole("button", { name: "Squad", exact: true }).click();
+
+    const firstPlayer = desktop.locator(".tls-squad-table tbody tr").first();
+    await firstPlayer.focus();
+    await desktop.keyboard.press("Enter");
+    const profile = desktop.getByRole("dialog", { name: /.+/ });
+    await expect(profile).toBeVisible();
+    await expect(desktop.getByRole("button", { name: "Close player profile", exact: true })).toBeFocused();
+    await expect(profile.getByText("Annual wage", { exact: true }).first()).toBeVisible();
+    await expect(profile.getByText("Monthly wage", { exact: true })).toHaveCount(0);
+    await expect(profile.locator(".tls-player-attribute-groups > section")).toHaveCount(4);
+    await expect(profile.locator(".tls-contract-workspace")).toBeVisible();
+    await profile.getByRole("button", { name: "Open renewal talks", exact: true }).click();
+    await expect(profile.getByRole("textbox", { name: /^Annual wage/ })).toBeVisible();
+    await expect(profile.getByText("This offer fits the current budget.", { exact: true })).toBeVisible();
+    await assertNoPageOverflow(desktop, "desktop player profile renewal");
+    await captureViewport(desktop, "69a-player-profile-desktop");
+    await desktop.keyboard.press("Escape");
+    await expect(profile).toBeHidden();
+    await expect(firstPlayer).toBeFocused();
+  } finally {
+    await desktop.close();
+  }
+});
+
+test("narrow Squad and player profile reflow without horizontal scrolling", async ({ browser }) => {
+  const narrow = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  try {
+    await narrow.emulateMedia({ reducedMotion: "reduce" });
+    await resetCareerStorage(narrow);
+    await narrow.getByRole("button", { name: "New career", exact: true }).click();
+    await narrow.getByRole("combobox", { name: "Career navigation", exact: true }).selectOption("squad");
+    await expect(narrow.getByRole("heading", { level: 1, name: "Squad", exact: true })).toBeVisible();
+    await assertNoPageOverflow(narrow, "narrow Squad");
+    await capture(narrow, "69b-squad-narrow");
+
+    const firstPlayer = narrow.locator(".tls-squad-table tbody tr").first();
+    await firstPlayer.focus();
+    await narrow.keyboard.press("Enter");
+    const profile = narrow.getByRole("dialog", { name: /.+/ });
+    await expect(profile).toBeVisible();
+    await expect(profile.locator(".tls-contract-workspace")).toBeVisible();
+    await assertNoPageOverflow(narrow, "narrow player profile");
+    await captureViewport(narrow, "69f-player-profile-narrow");
+
+    await narrow.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await assertNoPageOverflow(narrow, "narrow player profile at 200% text");
+    await expect(profile).toHaveCSS("overflow-x", "hidden");
+    expect(await profile.locator(".tls-player-profile-shell").evaluate((element) => {
+      const shellBounds = element.getBoundingClientRect();
+      return [...element.querySelectorAll<HTMLElement>("*")]
+        .filter((child) => {
+          const bounds = child.getBoundingClientRect();
+          return bounds.left < shellBounds.left - 1 || bounds.right > shellBounds.right + 1;
+        })
+        .map((child) => child.className || child.tagName);
+    })).toEqual([]);
+    await narrow.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+    await narrow.keyboard.press("Escape");
+    await expect(profile).toBeHidden();
+
+    await narrow.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await assertNoPageOverflow(narrow, "narrow Squad at 200% text");
+    await capture(narrow, "69c-squad-text-zoom-narrow");
+  } finally {
+    await narrow.close();
+  }
+});
+
 test("desktop Posta owns one dense decision workspace across current message states", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
@@ -390,6 +501,12 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
 
     const partialFingerprint = await currentPreparationFingerprint(page);
     await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+    expect(await currentPreparationFingerprint(page)).toBe(partialFingerprint);
+    await page.getByRole("button", { name: "Tactics", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Tactics", exact: true })).toBeVisible();
+    expect(await currentPreparationFingerprint(page)).toBe(partialFingerprint);
+    await page.getByRole("button", { name: "Main menu", exact: true }).click();
     const partialDialog = page.locator(".tls-unsaved-dialog");
     await expect(partialDialog.getByRole("heading", { name: "Leave team preparation?", exact: true })).toBeVisible();
     await expect(partialDialog).toHaveAttribute("data-motion-state", "open");
@@ -400,8 +517,10 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
     await partialDialog.getByRole("button", { name: "Stay", exact: true }).click();
     expect(await currentPreparationFingerprint(page)).toBe(partialFingerprint);
 
-    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+    await page.getByRole("button", { name: "Main menu", exact: true }).click();
     await partialDialog.getByRole("button", { name: "Discard changes", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Continue career", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Continue career", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Prepare match", exact: true }).click();
     await expect(page.locator(".tls-preparation-draft-state")).toHaveCount(0);
@@ -426,12 +545,12 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
     await capture(page, "45-preparation-pending-desktop");
     await setPendingCommand(page, false);
 
-    await page.getByRole("button", { name: "Inbox", exact: true }).click();
+    await page.getByRole("button", { name: "Main menu", exact: true }).click();
     const completeDialog = page.locator(".tls-unsaved-dialog");
     await expect(completeDialog.getByRole("button", { name: "Save and continue", exact: true })).toBeVisible();
     await capture(page, "46-preparation-complete-dialog-desktop");
     await completeDialog.getByRole("button", { name: "Save and continue", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue career", exact: true })).toBeVisible();
 
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Continue career", exact: true }).click();
@@ -468,7 +587,7 @@ test("narrow preparation keeps validation, board, and dirty dialog usable", asyn
     await assertNoPageOverflow(page, "partial preparation narrow");
     await capture(page, "49-preparation-partial-narrow");
 
-    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+    await page.getByRole("button", { name: "Main menu", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await assertNoPageOverflow(page, "preparation dialog narrow");
     await capture(page, "50-preparation-dialog-narrow");
@@ -1581,6 +1700,11 @@ async function advanceClockUntilPlaybackStage(
   if (await openingDecisionAction.count() > 0 && await openingDecisionAction.first().isVisible()) {
     await openingDecisionAction.first().click();
   }
+  const openingPlaybackResume = page.locator(".tls-matchday-playback-controls")
+    .getByRole("button", { name: "Resume", exact: true });
+  if (await openingPlaybackResume.count() > 0 && await openingPlaybackResume.isVisible()) {
+    await openingPlaybackResume.click();
+  }
 
   const speedFour = page.getByRole("button", { name: "Playback speed 4x", exact: true });
   await expect(speedFour).toBeVisible();
@@ -1601,6 +1725,11 @@ async function advanceClockUntilPlaybackStage(
     );
     if (await decisionAction.count() > 0 && await decisionAction.first().isVisible()) {
       await decisionAction.first().click();
+    }
+    const playbackResume = page.locator(".tls-matchday-playback-controls")
+      .getByRole("button", { name: "Resume", exact: true });
+    if (await playbackResume.count() > 0 && await playbackResume.isVisible()) {
+      await playbackResume.click();
     }
     const phase = await checkpoint.evaluateAll((elements) => (
       elements[0]?.getAttribute("data-motion-checkpoint") ?? null
@@ -2149,6 +2278,11 @@ async function assertFullWidthPreMatch(page: Page, checkpoint: string): Promise<
 /** Captures one deterministic phase screenshot outside the repository. */
 async function capture(page: Page, name: string): Promise<void> {
   await page.screenshot({ fullPage: true, path: resolve(QA_OUTPUT_DIR, `${name}.png`) });
+}
+
+/** Captures fixed dialogs as the user sees them instead of compositing underlying page scroll. */
+async function captureViewport(page: Page, name: string): Promise<void> {
+  await page.screenshot({ fullPage: false, path: resolve(QA_OUTPUT_DIR, `${name}.png`) });
 }
 
 async function waitForServer(): Promise<void> {

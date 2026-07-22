@@ -1,6 +1,6 @@
 import {
   findNextCareerFixture,
-  findUnavailableSelectedClubPlayerIdsForNextFixture,
+  findNextFixtureEligibilityBlockers,
   summarizePlayerDevelopmentAbilities,
 } from "@game/engine";
 import { toISO } from "@game/shared";
@@ -83,11 +83,6 @@ export const MATCH_PREPARATION_TACTIC_PROFILES: readonly CareerMatchPreparationT
 /** Creates the editable draft from the loaded durable career, preserving exact board geometry. */
 export function createMatchPreparationDraft(career: WebCareerState): MatchPreparationDraft {
   const preparation = career.matchPreparation;
-  const unavailablePlayerIds = unavailablePlayerIdsForUpcomingPreparation(career, preparation);
-  const didRemoveUnavailableSelection = [
-    ...(preparation?.selectedLineup?.slots.map((slot) => slot.playerId) ?? []),
-    ...(preparation?.benchSlots?.map((slot) => slot.playerId) ?? []),
-  ].some((playerId) => unavailablePlayerIds.has(playerId));
   const isConfirmedForCurrentTask = preparationTargetsCurrentTask(
     career,
     preparation?.targetFixtureId,
@@ -95,7 +90,6 @@ export function createMatchPreparationDraft(career: WebCareerState): MatchPrepar
   const selectedFormationId = formationIdOrDefault(preparation?.baseFormationId);
   const selectedPlayerIdsBySlot = Object.fromEntries(
     preparation?.selectedLineup?.slots
-      .filter((slot) => !unavailablePlayerIds.has(slot.playerId))
       .map((slot) => [slot.slotKey, slot.playerId]) ?? [],
   );
   const initialBoard = createTacticalBoardDraft(selectedFormationId, selectedPlayerIdsBySlot);
@@ -116,27 +110,13 @@ export function createMatchPreparationDraft(career: WebCareerState): MatchPrepar
     tacticalBoardDraft,
     selectedPlayerIdsBySlot: tacticalBoardSelectedPlayerIdsBySlot(tacticalBoardDraft),
     selectedBenchPlayerIdsBySlot: Object.fromEntries(
-      preparation?.benchSlots?.filter((slot) => !unavailablePlayerIds.has(slot.playerId))
-        .map((slot) => [slot.slotKey, slot.playerId]) ?? [],
+      preparation?.benchSlots?.map((slot) => [slot.slotKey, slot.playerId]) ?? [],
     ),
     ...(selectedTacticProfileId === undefined ? {} : { selectedTacticProfileId }),
     isSaved: isConfirmedForCurrentTask
-      && !didRemoveUnavailableSelection
       && preparation?.selectedLineup !== undefined
       && preparation.tactic !== undefined,
   };
-}
-
-/** Keeps a completed-match review stable while reconciling only an upcoming plan. */
-function unavailablePlayerIdsForUpcomingPreparation(
-  career: WebCareerState,
-  preparation: WebCareerState["matchPreparation"],
-): ReadonlySet<string> {
-  const targetFixture = preparation?.targetFixtureId === undefined
-    ? undefined
-    : career.gameState.fixtures[preparation.targetFixtureId];
-  if (targetFixture?.result?.played === true) return new Set();
-  return new Set(findUnavailableSelectedClubPlayerIdsForNextFixture(career));
 }
 
 /**
@@ -161,6 +141,19 @@ export function buildMatchPreparationView(career: WebCareerState, draft: MatchPr
   const nextFixture = nextFixtureResult.status === "found" ? nextFixtureResult.fixture : undefined;
   const playerOptions = buildCareerPlayerOptions(career);
   const formation = getFormation(draft.selectedFormationId);
+  const eligibilityBlockers = findNextFixtureEligibilityBlockers(
+    career,
+    selectedMatchPreparationPlayerIds(career, draft),
+  ).map((blocker) => {
+    const player = career.gameState.players[blocker.playerId];
+    return {
+      playerId: blocker.playerId,
+      playerName: player === undefined
+        ? String(blocker.playerId)
+        : `${player.firstName} ${player.lastName}`,
+      reason: blocker.reason,
+    };
+  });
 
   return buildCareerMatchPreparationView({
     saveId: career.saveId,
@@ -192,6 +185,7 @@ export function buildMatchPreparationView(career: WebCareerState, draft: MatchPr
     })),
     tacticProfiles: MATCH_PREPARATION_TACTIC_PROFILES,
     ...(draft.selectedTacticProfileId === undefined ? {} : { selectedTacticProfileId: draft.selectedTacticProfileId }),
+    eligibilityBlockers,
     isSaved: draft.isSaved,
   });
 }
@@ -394,7 +388,9 @@ export function applyMatchPreparationSelectionAction(
   if (action === "clear") {
     return changedDraft(draft, { tacticalBoardDraft: createTacticalBoardDraft(draft.selectedFormationId), selectedPlayerIdsBySlot: {}, selectedBenchPlayerIdsBySlot: {} });
   }
-  const playerOptions = buildCareerPlayerOptions(career);
+  const playerOptions = buildCareerPlayerOptions(career).filter(
+    (player) => player.unavailabilityReason === undefined,
+  );
   const formation = getFormation(draft.selectedFormationId);
   let tacticalBoardDraft = draft.tacticalBoardDraft;
   const bench = { ...draft.selectedBenchPlayerIdsBySlot };
@@ -415,12 +411,6 @@ export function applyMatchPreparationSelectionAction(
 /** Produces complete structured domain input only when the current view is valid. */
 export function buildDurableMatchPreparation(career: WebCareerState, draft: MatchPreparationDraft): DurableMatchPreparation | undefined {
   if (buildMatchPreparationView(career, draft).saveAction.status !== "available") return undefined;
-  const unavailablePlayerIds = new Set<string>(findUnavailableSelectedClubPlayerIdsForNextFixture(career));
-  const selectedPlayerIds = [
-    ...Object.values(draft.selectedPlayerIdsBySlot),
-    ...Object.values(draft.selectedBenchPlayerIdsBySlot),
-  ];
-  if (selectedPlayerIds.some((playerId) => unavailablePlayerIds.has(playerId))) return undefined;
   const tacticProfile = MATCH_PREPARATION_TACTIC_PROFILES.find((profile) => profile.tacticProfileId === draft.selectedTacticProfileId);
   const nextFixture = findNextCareerFixture(career);
   if (tacticProfile === undefined || nextFixture.status !== "found") return undefined;
@@ -451,22 +441,47 @@ export function matchPreparationBenchSlotKeys(): readonly string[] {
 
 function buildCareerPlayerOptions(career: WebCareerState): readonly CareerMatchPreparationPlayerOptionInput[] {
   const club = requiredSelectedClub(career);
-  const unavailablePlayerIds = new Set(findUnavailableSelectedClubPlayerIdsForNextFixture(career));
+  const unavailabilityByPlayerId = new Map(
+    findNextFixtureEligibilityBlockers(career, club.playerIds)
+      .map((blocker) => [blocker.playerId, blocker.reason] as const),
+  );
   return club.playerIds.flatMap((playerId, index) => {
-    if (unavailablePlayerIds.has(playerId)) return [];
     const player = career.gameState.players[playerId];
     if (player === undefined) return [];
     const dynamic = career.gameState.playerStates[playerId];
     const positionKey = player.naturalPositions[0];
+    const unavailabilityReason = unavailabilityByPlayerId.get(playerId);
     return [{
       playerId,
       name: `${player.firstName} ${player.lastName}`,
       roleKey: broadRole(player.primaryRole),
       ...(positionKey === undefined ? {} : { positionKey }),
       ...(dynamic === undefined ? {} : { fitness: dynamic.fitness }),
+      ...(unavailabilityReason === undefined ? {} : { unavailabilityReason }),
       currentAbility: currentRoleStrength(player),
       number: index + 1,
     } as CareerMatchPreparationPlayerOptionInput];
+  });
+}
+
+/** Returns the exact manager-selected XI and bench IDs in stable UI order. */
+export function selectedMatchPreparationPlayerIds(
+  career: WebCareerState,
+  draft: MatchPreparationDraft,
+): Parameters<typeof findNextFixtureEligibilityBlockers>[1] {
+  const playerIdByValue = new Map(
+    career.gameState.playerIds.map((playerId) => [String(playerId), playerId] as const),
+  );
+  const selectedPlayerIds = [
+    ...draft.tacticalBoardDraft.slots.flatMap((slot) => slot.playerId === null ? [] : [slot.playerId]),
+    ...matchPreparationBenchSlotKeys().flatMap((slotKey) => {
+      const playerId = draft.selectedBenchPlayerIdsBySlot[slotKey];
+      return playerId === undefined ? [] : [playerId];
+    }),
+  ];
+  return selectedPlayerIds.flatMap((selectedPlayerId) => {
+    const canonicalPlayerId = playerIdByValue.get(selectedPlayerId);
+    return canonicalPlayerId === undefined ? [] : [canonicalPlayerId];
   });
 }
 

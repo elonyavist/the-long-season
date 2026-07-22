@@ -1,18 +1,25 @@
 import { releaseProxy, wrap, type Remote } from "comlink";
 
-import { SqliteCareerStorage, StorageError, type SqliteCareerWorkerPort } from "@game/storage/sqlite";
+import {
+  SqliteCareerStorage,
+  StorageError,
+  type SqliteCareerWorkerInfo,
+  type SqliteCareerWorkerPort,
+} from "@game/storage/sqlite";
 
 import { WebCareerRuntime } from "../../runtime/web-career-runtime";
 
 /** Browser-owned handle that closes both SQLite and its dedicated worker. */
 export interface WebCareerStorageHandle {
   readonly storage: SqliteCareerStorage;
+  readonly storageInfo: SqliteCareerWorkerInfo;
   close(): Promise<void>;
 }
 
 /** Browser-owned runtime handle used by the React composition root. */
 export interface WebCareerRuntimeHandle {
   readonly runtime: WebCareerRuntime;
+  readonly storageInfo: SqliteCareerWorkerInfo;
   close(): Promise<void>;
 }
 
@@ -24,7 +31,16 @@ export async function createWebCareerStorage(): Promise<WebCareerStorageHandle> 
   const workerBootstrap = workerBootstrapFailure(worker);
 
   try {
-    await Promise.race([storage.initialize(), workerBootstrap.failure]);
+    const storageInfo = await Promise.race([storage.initialize(), workerBootstrap.failure]);
+    return {
+      storage,
+      storageInfo,
+      async close() {
+        await storage.close();
+        remote[releaseProxy]();
+        worker.terminate();
+      },
+    };
   } catch (error) {
     remote[releaseProxy]();
     worker.terminate();
@@ -33,14 +49,6 @@ export async function createWebCareerStorage(): Promise<WebCareerStorageHandle> 
     workerBootstrap.dispose();
   }
 
-  return {
-    storage,
-    async close() {
-      await storage.close();
-      remote[releaseProxy]();
-      worker.terminate();
-    },
-  };
 }
 
 /** Rejects initialization when the module worker cannot start or deserialize messages. */
@@ -70,6 +78,7 @@ export async function createWebCareerRuntime(): Promise<WebCareerRuntimeHandle> 
   const handle = await createWebCareerStorage();
   return {
     runtime: new WebCareerRuntime(handle.storage),
+    storageInfo: handle.storageInfo,
     close: () => handle.close(),
   };
 }

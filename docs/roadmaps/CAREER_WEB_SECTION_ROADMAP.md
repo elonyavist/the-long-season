@@ -277,8 +277,8 @@ The web boundary is explicit:
   current Matchday journey remain unchanged;
 - there is no Squad UI, player-detail UI, Market UI, or hidden-potential
   exposure in Phase 74;
-- the future Squad screen follows only after the consolidated model and save
-  compatibility pass.
+- the Squad screen follows in documented Phase 78 only after the consolidated
+  player model and later lifecycle/save work pass.
 
 Status: Complete. Canonical ability semantics and role profiles now
 exist in domain, every new senior player crosses one validated construction
@@ -1449,7 +1449,12 @@ What must not happen:
 - No prose-only mail system without structured event IDs.
 - No hidden automatic resolution.
 
-### Phase 63 - Squad Screen
+### Superseded Future Section - Squad Screen
+
+Status: superseded by the documented
+`Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation`.
+Phase 78 is the executable scope and keeps Squad and Tactics as separate routes
+over one canonical current plan.
 
 Primary dependency: match-preparation needs real player selection pressure.
 
@@ -1744,37 +1749,6 @@ Definition of Done:
   tables or generic SaaS surfaces.
 - Final report states whether persistence can resume or another UX pass is
   required.
-
-### Future Web Backlog - Market UI MVP
-
-Primary dependency: squad screen and basic finances/budget visibility.
-
-Purpose:
-
-- Let the user pursue clear squad improvement stories.
-
-Minimum useful scope:
-
-- inspect possible targets from known generated world data;
-- make permanent transfer offer;
-- see budget impact;
-- see player willingness result;
-- accepted/rejected outcome;
-- update squad if transfer is applied.
-
-Engine/read-model dependencies:
-
-- market MVP permanent transfers;
-- career transfer persistence;
-- player willingness;
-- budget state.
-
-What must not happen:
-
-- No loans yet unless a later phase requires them.
-- No auctions.
-- No complex add-ons.
-- No scouting fog unless specifically designed.
 
 ### Future Web Backlog - Finances Foundation
 
@@ -2076,6 +2050,210 @@ Progress:
   residual risks, and manual checks are recorded in
   `docs/audits/LIVE_MATCH_CONTROL_REPORT.md`.
 
+### Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation
+
+Primary dependency: complete Phase 77, Phase 75 player lifecycle, current
+SQLite/OPFS persistence, Posta/Continue, and the approved shared tactical
+board.
+
+Purpose:
+
+- Deliver a nearly complete senior-squad section backed by real contracts,
+  club money, wage commitments, availability, and one durable current plan.
+- Establish the football and persistence ownership required before Market or a
+  broader Finances section can be useful.
+
+Minimum useful scope:
+
+- deterministic shirt numbers, active contracts, contract history, club cash,
+  transfer budget, annual wage budget, committed wages, and finance ledger for
+  every generated club;
+- delayed accept/reject/counter renewal negotiation with selected-club Posta
+  decisions and deterministic AI lifecycle;
+- annual payroll at the canonical season boundary plus appearance, goal, and
+  clean-sheet bonus settlement;
+- clean invalidation of every current beta save, with no compatibility path;
+- one carried XI, bench, formation, role assignment, and tactic shared by
+  Squad, Tactics, preparation, and Matchday;
+- unavailable selected players remain visible and block kickoff until the
+  manager explicitly acts;
+- senior table columns
+  `# | Role | Player | Condition | Morale | Status | Value | Level | Potential | Action`
+  without horizontal scrolling;
+- `Status` communicates both selection (`XI`, bench, or unselected) and
+  availability (available, injured, or suspended);
+- an under-eight-month contract icon beside the player name while wage and
+  complete contract status remain in the player profile;
+- explicit selection/replacement from the table through canonical suitability
+  ordering, with no hidden removal;
+- full-screen accessible player profile with exact current attributes, role
+  fit, value, annual wage, dates, agreed status, supported bonuses, contract
+  history, and coarse club-relative current/potential assessments;
+- desktop, narrow, 200% text, keyboard, touch, reduced-motion, persistence,
+  dependency, and long-run structural QA.
+
+What must not happen:
+
+- No nested Squad/Tactics pseudo-route, second tactical board, second match
+  plan, UI-owned suitability/finance formula, horizontal roster table, hidden
+  potential number, automatic selected-club renewal/release/replacement, or
+  removal of an injured/suspended selected player.
+- No Market target browser, broad Finances screen, Youth/Staff UI, unsupported
+  contract clause, agent, loan, installment, scout fog, old-save mapper, or
+  placeholder field without a current gameplay consumer.
+
+Definition of Done:
+
+- Every generated club begins with coherent contracts and finances.
+- The manager can understand the senior squad, select the current plan, inspect
+  a complete player profile, and resolve real renewal decisions.
+- Squad, Tactics, preparation, and Matchday remain synchronized through one
+  durable plan and one shared tactical board.
+- Contract, payroll, expiry, transfer/youth integration, AI lifecycle, save
+  reset, responsive UI, and staged long-run gates pass without dead paths.
+
+Documentation:
+
+- `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/`
+  is in progress with fifteen ordered steps. Step 01 is complete: the ownership audit
+  names every canonical extension/replacement target, records the clean beta
+  reset boundary, and confirms there is no existing contract, club-finance,
+  Squad, Tactics, or profile owner. Step 02 is complete: generated senior
+  players now have stable role-aware shirt registrations, one active agreement,
+  supported bonuses, and ordered signing history with fixed-seed coverage.
+  Step 03 is complete: every generated club now has one validated cash,
+  transfer-budget, wage-budget, committed-wage, season-total, and ordered-ledger
+  owner consumed by the market, CLI, simulation tooling, and web new-world
+  composition. Step 04 is complete: envelope `4` and SQLite `10` now reject all
+  older beta baselines, round-trip registrations, contracts, histories,
+  finances, and ledgers losslessly, and distinguish a browser beta reset from a
+  storage-access failure. Step 05 is complete: annual payroll, signing and
+  fixture bonuses, transfer fees, and season distributions now settle exactly
+  once through canonical integer-minor-unit ledger boundaries; permanent
+  transfers stage finance, registration, agreement, and wage headroom
+  atomically; canonical squads no longer enter ownership-only legacy rollover
+  paths. Step 06 is complete: one deterministic engine path now derives factual
+  player demands, evaluates every supported term, waits `2..6` seeded days,
+  accepts, rejects, counters, expires, or withdraws, and rechecks cash plus wage
+  headroom before both submission and activation. Accepted renewals replace the
+  active agreement atomically, retain immutable history, settle the signing
+  bonus once, and emit structured facts only. Step 07 is complete:
+  selected-club reminders, responses, counteroffers, expiry choices, and typed
+  actions now project into Posta with explicit blocking policy while the
+  negotiation remains engine-owned and the normal save cadence remains
+  unchanged. Step 08 is complete: AI clubs now use the canonical delayed
+  negotiation and affordability rules, retain at least eighteen senior players
+  plus department depth, and create real ownership-derived free agents on
+  expiry without automating the selected club. Career envelope `5` and SQLite
+  `11` persist negotiations and explicit Inbox Continue policy losslessly.
+  Annual wages remain annual budget commitments and settle once at the season
+  boundary. Step 09 is complete: permanent transfers now stage seller closure,
+  buyer registration and contract, deterministic shirt assignment, fee and
+  signing-cost settlement, annual-wage headroom, negotiation cleanup, and
+  factual history atomically. Youth promotion, release, expiry, player exits,
+  and AI turnover use contract-aware transitions; valuation and transfer terms
+  consume real contract security without treating employed players as free
+  agents. Step 10 is complete: the exact manager plan survives full time,
+  Continue, navigation, and reload, while one structured domain eligibility
+  query blocks preparation confirmation and direct kickoff for selected injured
+  or suspended players without editing the plan. Step 11 is complete: one
+  engine-owned public assessment and framework-free UI models now own the
+  locked Squad columns, deterministic sort/filter behavior, explicit lineup
+  choices, exact current attributes, annual contract facts, and hidden-
+  potential-safe profile projection. Step 12 is complete: Squad is a real
+  responsive route backed by the current career, with the locked dense roster
+  columns, canonical filtering/sorting, accessible row/profile entry, public
+  level labels, annual contract facts, and no horizontal table scrolling.
+  Desktop, narrow, 200% text, reduced-motion, keyboard, and SQLite/OPFS browser
+  evidence passes. Step 13 is complete: Squad actions now mutate the one
+  canonical plan through explicit slot choices, and the separate Tactics route
+  reuses the exact approved preparation workspace. Internal career navigation
+  preserves the draft while deliberate career exit and Matchday boundaries
+  retain explicit save/discard protection. Step 14 is complete: the full-screen
+  profile now presents exact current attributes, public potential, role fit,
+  annual contract terms, history, engine-derived finance previews, and every
+  supported selected-club renewal decision through the canonical working
+  session. Desktop, narrow, keyboard, reduced-motion, command-failure, and real
+  SQLite/OPFS evidence pass without a direct web-to-domain dependency. Step 15
+  contract, finance, and squad long-run gates is the single active step.
+
+The former Phase 78 Step 16 is retired. Its integrated accessibility, visual,
+dead-code, architecture, browser, and reporting closeout is owned once by Phase
+79 Step 15, after the Market journey exists.
+
+### Phase 79 - Transfer Market Windows, Negotiations And Market Workspace
+
+Primary dependency: complete Phase 78 Step 15, canonical contracts and club
+finance, one durable manager plan, current Posta/Continue, and SQLite/OPFS.
+
+Purpose:
+
+- Turn the current permanent-transfer foundations into one complete,
+  time-bound and financially truthful football-market journey.
+- Let the manager inspect players all year, negotiate during legal windows,
+  understand multiple pending offers, and resolve real replies from Posta.
+- Add preliminary agreements for players in their final six contract months
+  without creating a disconnected future-contract subsystem.
+
+Minimum useful scope:
+
+- source-backed transfer dates owned by each competition that is actually
+  playable; dates are content, not settings, and the game ships no speculative
+  calendar rows for unavailable leagues;
+- exactly two inclusive registration windows each season, with the current
+  Italian professional third-tier demo using the official 2026/27 professional
+  dates and a deterministic month/day template in later generated seasons;
+- year-round Market inspection and own-player renewals; permanent offers and
+  ordinary external registrations only while a window is open;
+- separate club and player talks, each bounded to three game days without a
+  counter resetting its deadline;
+- submitted and countered proposals shown as pending exposure while actual
+  cash, transfer budget, signing money, and annual wage headroom remain
+  untouched until an affordable atomic completion;
+- club acceptance followed by player terms, explicit counters, rejection,
+  withdrawal, expiry, retry, and unaffordable cancellation;
+- final-six-month preliminary agreements that have no transfer fee, keep the
+  player at the current club until expiry, and activate exactly once;
+- deterministic AI targeting, valuation, willingness, affordability, squad
+  protection, and expiry behavior through the same canonical rules;
+- responsive Market search, filters, target table, player inspection, budget
+  context, offer composer, deadline feedback, Posta routing, and accessible
+  keyboard/touch alternatives;
+- lossless persistence, cross-surface Squad/Tactics/preparation/Matchday
+  reconciliation, staged long-run gates, and one final integrated Phase 78/79
+  cleanup and report.
+
+What must not happen:
+
+- No user-editable or generic transfer calendar and no unused championship
+  configuration.
+- No loans, installments, auctions, agents, promises, work permits,
+  registration quotas, bidding wars, or fake scouting fog.
+- No budget reservation for unanswered offers, partial commit, hidden
+  selected-club decision, exact hidden potential, parallel browser Market
+  state, action-level autosave, or duplicate contract form.
+
+Definition of Done:
+
+- The manager can complete a permanent signing and an eligible preliminary
+  agreement through clear legal, negotiation, financial, Posta, and squad
+  consequences.
+- Every negotiation stage resolves or expires within three days and every
+  completion rechecks current affordability atomically.
+- Market, Squad, player profile, Dashboard, Posta, Continue, Tactics,
+  preparation, Matchday, persistence, annual payroll, and AI consume the same
+  facts after completion, reload, expiry, and future activation.
+- Desktop, narrow, 200% text, keyboard, touch, reduced motion, no-horizontal-
+  overflow, package, dependency, browser, and staged long-run gates pass.
+- The final step removes every superseded Phase 78/79 path and records exactly
+  one next recommendation without starting it.
+
+Documentation:
+
+- `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
+  is documented with fifteen ordered steps and remains queued until Phase 78
+  Step 15 is Done.
+
 ## Dependency Summary
 
 Recommended order:
@@ -2105,10 +2283,10 @@ Recommended order:
 22. Phase 75 - Player Generation, Potential And Development Lifecycle Rework - complete; no web UI implementation in this phase
 23. Phase 76 - Web Motion Language And Football Feedback System - complete
 24. Phase 77 - Live Match Control, Statistics And In-Game Decisions - complete
-25. Future Web Backlog - Squad Screen And Player Memory Foundation
+25. Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation - in progress; Steps 01-14 Done, Step 15 active
 26. Future Web Backlog - Calendar And Fixtures
-27. Future Web Backlog - Market UI MVP
-28. Future Web Backlog - Finances Foundation
+27. Phase 79 - Transfer Market Windows, Negotiations And Market Workspace - documented, queued
+28. Phase 80 - Finances Expansion And Poverty Loop MVP
 29. Future Web Backlog - Youth UI
 30. Future Web Backlog - Staff Foundation
 31. Future Web Backlog - Archive And History
@@ -2152,11 +2330,18 @@ This order is intentionally linear:
   causal statistics, incidents, and AI reactions are engine/product behavior,
   not a visual polish pass. Closing this loop prevents future Squad and Market
   screens from depending on half-time-only or cosmetic Matchday assumptions.
-- Squad and tactics are needed before matchday feels like a user choice.
+- Phase 78 follows because a credible Squad screen requires real contracts,
+  wages, club cash, persistent numbers, availability, and one carried match
+  plan. Implementing those together prevents decorative fields and lets Market
+  reuse complete ownership and affordability rules.
+- Squad and Tactics stay separate destinations but edit the same current plan.
 - Calendar/fixtures make Continue understandable.
 - Matchday closes the first loop.
-- Market, finances, youth, and staff become meaningful after the core loop is
-  playable.
+- Phase 79 follows the Phase 78 foundation because transfer windows, club and
+  player talks, pending exposure, atomic affordability, and preliminary
+  agreements need real contracts, squad ownership, and annual wage budgets.
+- The broader Finances surface follows Phase 79; youth and staff become
+  meaningful after the core loop is playable.
 - Archive becomes valuable after there is history worth preserving.
 - Dashboard should be consolidated again last, after it knows what real
   sections exist.

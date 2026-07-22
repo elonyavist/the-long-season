@@ -1,6 +1,7 @@
 import {
   EMPTY_PLAYER_AVAILABILITY,
-  playerUnavailabilityReason,
+  findCareerFixtureEligibilityBlockers,
+  type CareerFixtureEligibilityBlocker,
   type CareerState,
   type Fixture,
   type FixtureId,
@@ -96,27 +97,25 @@ export function findNextCareerFixture(careerState: CareerState): NextCareerFixtu
 }
 
 /**
- * Lists selected-club players who cannot be selected for the next fixture.
+ * Reports which explicitly selected players cannot enter the next fixture.
  *
- * Adapters use this read-only projection when carrying a previous match plan
- * into a new matchday. It deliberately returns an empty list when no next
- * fixture can be resolved, so an unrelated invalid lookup never erases a
- * manager's existing draft.
+ * The projection never changes or reconciles the manager's durable plan. An
+ * unresolved next fixture returns no blockers and leaves lookup errors to the
+ * normal next-fixture result.
  */
-export function findUnavailableSelectedClubPlayerIdsForNextFixture(
+export function findNextFixtureEligibilityBlockers(
   careerState: CareerState,
-): readonly PlayerId[] {
+  selectedPlayerIds: readonly PlayerId[],
+): readonly CareerFixtureEligibilityBlocker[] {
   const nextFixture = findNextCareerFixture(careerState);
-  const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
-  if (nextFixture.status !== "found" || selectedClub === undefined) return [];
+  if (nextFixture.status !== "found") return [];
 
-  const availability = careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY;
-  return selectedClub.playerIds.filter((playerId) => playerUnavailabilityReason(
-    availability,
-    playerId,
+  return findCareerFixtureEligibilityBlockers(
+    careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
+    selectedPlayerIds,
     nextFixture.fixture.date,
     nextFixture.fixture.competitionId,
-  ) !== undefined);
+  );
 }
 
 function containsSelectedClubInOrder(careerState: CareerState): boolean {

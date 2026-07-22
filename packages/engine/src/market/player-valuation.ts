@@ -9,6 +9,7 @@ import {
   type GameDate,
   type Money,
   type Player,
+  type PlayerContract,
   type PlayerPosition,
 } from "@game/domain";
 
@@ -54,6 +55,10 @@ export interface DerivePlayerValuationInput {
   readonly currentDate: GameDate;
   /** Explicit valuation tuning. */
   readonly config: PlayerValuationConfig;
+  /** Active agreement whose remaining security affects the transfer price. */
+  readonly contract?: PlayerContract;
+  /** Current supported form value on the canonical 0-100 scale. */
+  readonly currentForm?: number;
 }
 
 /** Deterministic output of the true-data player valuation model. */
@@ -76,6 +81,12 @@ export interface PlayerValuation {
   readonly reputationMultiplier: number;
   /** Position multiplier used for this player's primary position. */
   readonly positionMultiplier: number;
+  /** Whole days remaining on the active agreement, when supplied. */
+  readonly remainingContractDays?: number;
+  /** Modest multiplier for the security of the remaining agreement. */
+  readonly contractSecurityMultiplier: number;
+  /** Modest multiplier for already-supported current form. */
+  readonly formMultiplier: number;
 }
 
 /** Canonical football-quality facts shared by market valuation and willingness. */
@@ -167,13 +178,22 @@ export function derivePlayerValuation(input: DerivePlayerValuationInput): Player
   const categoryMultiplier = input.config.categoryMultipliers[input.club.category];
   const reputationMultiplier = 1 + input.club.reputation * input.config.reputationStepMultiplier;
   const positionMultiplier = input.config.positionMultipliers[primaryPosition];
+  const remainingContractDays = input.contract === undefined
+    ? undefined
+    : Math.max(0, input.contract.endsOn - input.currentDate);
+  const contractSecurityMultiplier = remainingContractDays === undefined
+    ? 1
+    : contractSecurityFor(remainingContractDays);
+  const formMultiplier = input.currentForm === undefined ? 1 : currentFormMultiplier(input.currentForm);
   const rawValue =
     input.config.baseValue *
     abilityScore *
     ageMultiplier *
     categoryMultiplier *
     reputationMultiplier *
-    positionMultiplier;
+    positionMultiplier *
+    contractSecurityMultiplier *
+    formMultiplier;
 
   return {
     value: nonNegativeMoney(clampSafeInteger(Math.round(rawValue), input.config.minValue, input.config.maxValue)),
@@ -185,6 +205,9 @@ export function derivePlayerValuation(input: DerivePlayerValuationInput): Player
     categoryMultiplier,
     reputationMultiplier,
     positionMultiplier,
+    ...(remainingContractDays === undefined ? {} : { remainingContractDays }),
+    contractSecurityMultiplier,
+    formMultiplier,
   };
 }
 
@@ -231,6 +254,23 @@ function findAgeMultiplier(ageBands: readonly PlayerValuationAgeBand[], age: num
   }
 
   throw new PlayerValuationError("missing_age_band", `no age multiplier for age: ${age}`);
+}
+
+function contractSecurityFor(remainingDays: number): number {
+  if (remainingDays <= 0) return 0.72;
+  if (remainingDays <= 183) return 0.78;
+  if (remainingDays <= 365) return 0.86;
+  if (remainingDays <= 730) return 1;
+  if (remainingDays <= 1_095) return 1.08;
+  if (remainingDays <= 1_460) return 1.14;
+  return 1.18;
+}
+
+function currentFormMultiplier(form: number): number {
+  if (!Number.isFinite(form) || form < 0 || form > 100) {
+    throw new PlayerValuationError("invalid_config", `current form must be in range 0-100: ${form}`);
+  }
+  return 0.94 + form / 100 * 0.12;
 }
 
 function clampSafeInteger(value: number, minValue: Money, maxValue: Money): number {

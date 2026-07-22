@@ -154,6 +154,7 @@ test("buildCareerPostaView presents only archived structured facts for season ro
       category: "season_rollover",
       source: "competition_office",
       level: "important",
+      continuePolicy: "until_acknowledged",
       lifecycle: { read: false, acknowledged: false, resolved: false },
       blockerKeys: [],
       actionIds: [],
@@ -178,6 +179,32 @@ test("buildCareerPostaView presents only archived structured facts for season ro
   ]);
 });
 
+test("contract reminder stays visible without entering To handle", () => {
+  const view = buildCareerPostaView({
+    activeFilter: "all",
+    messages: [{
+      messageId: "inbox:contract-reminder:01",
+      dateIso: "2026-11-01",
+      category: "contract_reminder",
+      source: "contract_office",
+      level: "important",
+      continuePolicy: "never",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      blockerKeys: [],
+      actionIds: ["open_contract_negotiation"],
+      contract: { playerName: "Luca Rossi", expiresOnIso: "2027-06-30" },
+    }],
+  });
+
+  assert.equal(view.toHandleCount, 0);
+  assert.equal(view.unreadCount, 1);
+  assert.equal(view.selectedMessage?.sourceKey, "career.inbox.source.contract_office");
+  assert.deepEqual(view.selectedMessage?.factRows, [
+    { labelKey: "career.inbox.fact.player", value: "Luca Rossi" },
+    { labelKey: "career.inbox.fact.contractExpiry", value: "2027-06-30" },
+  ]);
+});
+
 function postaMessage(
   messageId: string,
   level: "blocking" | "important" | "informational",
@@ -189,6 +216,11 @@ function postaMessage(
     category: "matchday" as const,
     source: "technical_staff" as const,
     level,
+    continuePolicy: level === "blocking"
+      ? "until_resolved" as const
+      : level === "important"
+        ? "until_acknowledged" as const
+        : "never" as const,
     lifecycle: { read, acknowledged: false, resolved: false },
     blockerKeys: level === "blocking" ? ["missing_saved_lineup"] : [],
     actionIds: level === "blocking" ? ["prepare_match"] : [],

@@ -9,7 +9,6 @@ import {
   clubId,
   createCareerState,
   createEmptyPlayerParticipationLedger,
-  createMarketState,
   fixtureId,
   gameDate,
   hardCapForRoleAbility,
@@ -471,10 +470,6 @@ function careerStateFixture(players: readonly Player[]): CareerState {
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
     gameState: gameStateFixture(selectedClubId, players),
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
-    }),
     transferHistory: [],
   });
   return careerStateWithMonthlyParticipation(careerState, careerState.gameState.calendar.currentSeasonId);

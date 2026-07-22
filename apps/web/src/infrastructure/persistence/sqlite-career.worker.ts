@@ -20,11 +20,14 @@ type WorkerSaveMetadata = Awaited<ReturnType<SqliteCareerWorkerPort["saveCareer"
 
 let database: Database | undefined;
 let sqliteVersion: string | undefined;
+let betaResetPerformed = false;
 
 /** Worker-owned SQLite/OPFS implementation. No database handle crosses Comlink. */
 const workerApi: SqliteCareerWorkerPort = {
   async initialize() {
-    if (database !== undefined && sqliteVersion !== undefined) return workerInfo(sqliteVersion);
+    if (database !== undefined && sqliteVersion !== undefined) {
+      return workerInfo(sqliteVersion, betaResetPerformed);
+    }
 
     try {
       const sqlite3 = await sqlite3InitModule();
@@ -37,12 +40,25 @@ const workerApi: SqliteCareerWorkerPort = {
       database = new OpfsDb(SQLITE_CAREER_DATABASE_PATH, "c");
       sqliteVersion = sqlite3.version.libVersion;
       database.exec("PRAGMA foreign_keys = ON");
-      applyMigrations(database);
-      return workerInfo(sqliteVersion);
+      try {
+        applyMigrations(database);
+      } catch (error) {
+        if (!isUnsupportedSchemaVersion(error)) throw error;
+
+        database.close();
+        database = undefined;
+        await deleteBetaDatabase();
+        database = new OpfsDb(SQLITE_CAREER_DATABASE_PATH, "c");
+        database.exec("PRAGMA foreign_keys = ON");
+        applyMigrations(database);
+        betaResetPerformed = true;
+      }
+      return workerInfo(sqliteVersion, betaResetPerformed);
     } catch (error) {
       database?.close();
       database = undefined;
       sqliteVersion = undefined;
+      betaResetPerformed = false;
 
       if (hasWorkerCode(error)) throw error;
       throw workerFailure("sqlite_unavailable", errorMessage(error));
@@ -98,13 +114,36 @@ const workerApi: SqliteCareerWorkerPort = {
     database?.close();
     database = undefined;
     sqliteVersion = undefined;
+    betaResetPerformed = false;
   },
 };
 
 expose(workerApi);
 
-function workerInfo(version: string) {
-  return { databasePath: SQLITE_CAREER_DATABASE_PATH, sqliteVersion: version, schemaVersion: SQLITE_CAREER_SCHEMA_VERSION };
+function workerInfo(version: string, didResetBetaDatabase: boolean) {
+  return {
+    databasePath: SQLITE_CAREER_DATABASE_PATH,
+    sqliteVersion: version,
+    schemaVersion: SQLITE_CAREER_SCHEMA_VERSION,
+    betaResetPerformed: didResetBetaDatabase,
+  };
+}
+
+/** Removes only the known OPFS beta database after its connection is closed. */
+async function deleteBetaDatabase(): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  const fileName = SQLITE_CAREER_DATABASE_PATH.replace(/^\/+/, "");
+
+  try {
+    await root.removeEntry(fileName);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "NotFoundError") return;
+    throw error;
+  }
+}
+
+function isUnsupportedSchemaVersion(error: unknown): boolean {
+  return hasWorkerCode(error) && error.code === "unsupported_schema_version";
 }
 
 function applyMigrations(db: Database): void {

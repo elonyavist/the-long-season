@@ -1,19 +1,43 @@
 import { brand, type Brand } from "../types/brand.ts";
-import type { ClubId, FixtureId, PlayerId } from "../types/ids.ts";
+import type { ClubId, FixtureId, PlayerContractId, PlayerId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
-import type { CareerAttentionBlockerKey, CareerAttentionLevel } from "./attention.ts";
+import type {
+  CareerAttentionBlockerKey,
+  CareerAttentionContinuePolicy,
+  CareerAttentionLevel,
+} from "./attention.ts";
+import type { ContractNegotiationId } from "./contract-negotiation.ts";
 
 /** Stable identifier for one durable career Posta message. */
 export type CareerInboxMessageId = Brand<string, "CareerInboxMessageId">;
 
 /** Current message categories backed by complete production workflows. */
-export type CareerInboxCategory = "matchday" | "match_result" | "season_rollover" | "injury_diagnosis" | "suspension";
+export type CareerInboxCategory =
+  | "matchday"
+  | "match_result"
+  | "season_rollover"
+  | "injury_diagnosis"
+  | "suspension"
+  | "contract_reminder"
+  | "contract_counteroffer"
+  | "contract_accepted"
+  | "contract_rejected"
+  | "contract_expiry_decision";
 
 /** Functional sender used by presentation without inventing a staff identity. */
-export type CareerInboxSource = "technical_staff" | "match_report" | "competition_office" | "medical_team";
+export type CareerInboxSource =
+  | "technical_staff"
+  | "match_report"
+  | "competition_office"
+  | "medical_team"
+  | "contract_office";
 
 /** Stable manager destinations exposed by current Posta messages. */
-export type CareerInboxActionId = "prepare_match" | "open_matchday";
+export type CareerInboxActionId =
+  | "prepare_match"
+  | "open_matchday"
+  | "open_contract_negotiation"
+  | "release_player_at_expiry";
 
 /** Independent durable lifecycle facts for one message. */
 export interface CareerInboxMessageLifecycle {
@@ -27,6 +51,8 @@ export interface CareerInboxRelatedEntities {
   readonly fixtureId?: FixtureId;
   readonly clubId?: ClubId;
   readonly playerId?: PlayerId;
+  readonly contractId?: PlayerContractId;
+  readonly contractNegotiationId?: ContractNegotiationId;
 }
 
 /** Input accepted by the durable message constructor. */
@@ -36,6 +62,7 @@ export interface CareerInboxMessageInput {
   readonly category: CareerInboxCategory;
   readonly source: CareerInboxSource;
   readonly level: CareerAttentionLevel;
+  readonly continuePolicy?: CareerAttentionContinuePolicy;
   readonly lifecycle: CareerInboxMessageLifecycle;
   readonly related?: CareerInboxRelatedEntities;
   readonly blockerKeys?: readonly CareerAttentionBlockerKey[];
@@ -49,6 +76,7 @@ export interface CareerInboxMessage {
   readonly category: CareerInboxCategory;
   readonly source: CareerInboxSource;
   readonly level: CareerAttentionLevel;
+  readonly continuePolicy: CareerAttentionContinuePolicy;
   readonly lifecycle: CareerInboxMessageLifecycle;
   readonly related: CareerInboxRelatedEntities;
   readonly blockerKeys: readonly CareerAttentionBlockerKey[];
@@ -93,6 +121,23 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
   }
 
   if (
+    input.category.startsWith("contract_")
+    && input.related?.contractId === undefined
+    && input.related?.contractNegotiationId === undefined
+  ) {
+    throw new Error(`${input.category} inbox messages must reference a contract or negotiation`);
+  }
+
+  if (
+    (input.category === "contract_counteroffer"
+      || input.category === "contract_accepted"
+      || input.category === "contract_rejected")
+    && input.related?.contractNegotiationId === undefined
+  ) {
+    throw new Error(`${input.category} inbox messages must reference a contract negotiation`);
+  }
+
+  if (
     (input.category === "matchday" || input.category === "match_result" || input.category === "injury_diagnosis" || input.category === "suspension")
     && input.related?.fixtureId === undefined
   ) {
@@ -107,7 +152,9 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
     throw new Error(`${input.category} inbox messages must reference a player`);
   }
 
-  const expectedSource: CareerInboxSource = input.category === "matchday"
+  const expectedSource: CareerInboxSource = input.category.startsWith("contract_")
+    ? "contract_office"
+    : input.category === "matchday"
     ? "technical_staff"
     : input.category === "match_result"
       ? "match_report"
@@ -124,6 +171,13 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
     category: input.category,
     source: input.source,
     level: input.level,
+    continuePolicy:
+      input.continuePolicy
+      ?? (input.level === "blocking"
+        ? "until_resolved"
+        : input.level === "important"
+          ? "until_acknowledged"
+          : "never"),
     lifecycle: { ...input.lifecycle },
     related: input.related ?? {},
     blockerKeys: [...new Set(input.blockerKeys ?? [])],
@@ -133,9 +187,9 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
 
 /** Returns whether this lifecycle state must stop career advancement. */
 export function doesCareerInboxMessageStopContinue(message: CareerInboxMessage): boolean {
-  if (message.level === "blocking") {
+  if (message.continuePolicy === "until_resolved") {
     return !message.lifecycle.resolved;
   }
 
-  return message.level === "important" && !message.lifecycle.acknowledged;
+  return message.continuePolicy === "until_acknowledged" && !message.lifecycle.acknowledged;
 }

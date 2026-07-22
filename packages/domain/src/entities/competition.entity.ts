@@ -1,4 +1,17 @@
 import type { ClubId, CompetitionId } from "../types/ids.ts";
+import { nonNegativeMoney, type CurrencyCode, type Money } from "../value-objects/money.ts";
+
+/** Prize paid by a competition for one final league position. */
+export interface CompetitionSeasonDistributionPrize {
+  readonly position: number;
+  readonly amount: Money;
+}
+
+/** Ordered season-end prize distribution owned by one competition. */
+export interface CompetitionSeasonDistribution {
+  readonly currency: CurrencyCode;
+  readonly prizes: readonly CompetitionSeasonDistributionPrize[];
+}
 
 /**
  * Regulation facts owned by one competition.
@@ -60,6 +73,31 @@ export interface Competition {
   readonly clubIds: readonly ClubId[];
   /** Regulation and discipline rules for matches in this competition. */
   readonly matchRules: CompetitionMatchRules;
+  /** Optional season-end distribution; current generated leagues always provide it. */
+  readonly seasonDistribution?: CompetitionSeasonDistribution;
+}
+
+/** Validates one ordered and complete league-position distribution. */
+export function createCompetitionSeasonDistribution(
+  input: CompetitionSeasonDistribution,
+  participantCount: number,
+): CompetitionSeasonDistribution {
+  if (!Number.isSafeInteger(participantCount) || participantCount <= 0) {
+    throw new Error(`Competition participant count must be positive: ${participantCount}`);
+  }
+  if (input.prizes.length !== participantCount) {
+    throw new Error(`Competition distribution must cover ${participantCount} positions`);
+  }
+  return {
+    currency: input.currency,
+    prizes: input.prizes.map((prize, index) => {
+      const expectedPosition = index + 1;
+      if (prize.position !== expectedPosition) {
+        throw new Error(`Competition distribution position must be ${expectedPosition}: ${prize.position}`);
+      }
+      return { position: prize.position, amount: nonNegativeMoney(prize.amount) };
+    }),
+  };
 }
 
 /**

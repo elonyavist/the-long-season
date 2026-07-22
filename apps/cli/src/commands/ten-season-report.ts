@@ -7,6 +7,7 @@ import {
   type SupportedLanguage,
 } from "@game/i18n";
 import { DEFAULT_LONG_RUN_SEASON_COUNT } from "@game/simulation-tools";
+import { createResumableLongRunGateReport } from "./ten-season-report/gate-checkpoint.ts";
 import { formatLongRunGateReportMarkdown, formatLongRunGateReportOutput } from "./ten-season-report/gate-output.ts";
 import {
   createLongRunGateReport,
@@ -47,13 +48,23 @@ export async function runTenSeasonReportCommand(
   }
 
   if (parsed.worldCount !== undefined) {
-    const batchReport = await createLongRunGateReport({
-      seedPrefix: parsed.seedPrefix,
-      worldCount: parsed.worldCount,
-      seasonCount: parsed.seasonCount,
-      text,
-      language: parsed.language,
-    });
+    const batchReport = parsed.checkpointDirectoryPath === undefined
+      ? await createLongRunGateReport({
+          seedPrefix: parsed.seedPrefix,
+          worldCount: parsed.worldCount,
+          seasonCount: parsed.seasonCount,
+          text,
+          language: parsed.language,
+        })
+      : await createResumableLongRunGateReport({
+          seedPrefix: parsed.seedPrefix,
+          worldCount: parsed.worldCount,
+          seasonCount: parsed.seasonCount,
+          language: parsed.language,
+          checkpointDirectoryPath: await resolveWorkspaceOutputPath(parsed.checkpointDirectoryPath),
+          shardCount: parsed.shardCount ?? Math.min(parsed.worldCount, 100),
+          ...(parsed.workerCount === undefined ? {} : { workerCount: parsed.workerCount }),
+        });
 
     if (parsed.reportOutputPath !== undefined) {
       await writeTextFile(parsed.reportOutputPath, formatLongRunGateReportMarkdown(batchReport, parsed.reportOutputPath));
@@ -74,6 +85,7 @@ export async function runTenSeasonReportCommand(
     singleReport.playerEvolutionReport,
     singleReport.clubStabilityReport,
     singleReport.youthStabilityReport,
+    singleReport.contractFinanceStabilityReport,
     singleReport.anomalyReport,
     singleReport.strengthHierarchy,
     parsed.seed,
@@ -148,6 +160,9 @@ function parseArgs(args: readonly string[]): ParsedArgs {
   let seasonCount = DEFAULT_LONG_RUN_SEASON_COUNT;
   let worldCount: number | undefined;
   let reportOutputPath: string | undefined;
+  let checkpointDirectoryPath: string | undefined;
+  let shardCount: number | undefined;
+  let workerCount: number | undefined;
   let language: SupportedLanguage = "en";
 
   for (const arg of args) {
@@ -240,6 +255,69 @@ function parseArgs(args: readonly string[]): ParsedArgs {
       continue;
     }
 
+    if (arg === "--checkpoint-dir") {
+      return {
+        ok: false,
+        message: createTranslator(language)("tenSeason.error.checkpointDirectoryRequired"),
+        language,
+      };
+    }
+
+    if (arg.startsWith("--checkpoint-dir=")) {
+      const value = arg.slice("--checkpoint-dir=".length);
+
+      if (value.length === 0) {
+        return {
+          ok: false,
+          message: createTranslator(language)("tenSeason.error.checkpointDirectoryRequired"),
+          language,
+        };
+      }
+
+      checkpointDirectoryPath = value;
+      continue;
+    }
+
+    if (arg === "--shards") {
+      return { ok: false, message: createTranslator(language)("tenSeason.error.shardsRequired"), language };
+    }
+
+    if (arg.startsWith("--shards=")) {
+      const value = arg.slice("--shards=".length);
+      const parsed = parsePositiveSafeInteger(value);
+
+      if (parsed === undefined) {
+        return {
+          ok: false,
+          message: createTranslator(language)("tenSeason.error.shardsInvalid", { value }),
+          language,
+        };
+      }
+
+      shardCount = parsed;
+      continue;
+    }
+
+    if (arg === "--workers") {
+      return { ok: false, message: createTranslator(language)("tenSeason.error.workersRequired"), language };
+    }
+
+    if (arg.startsWith("--workers=")) {
+      const value = arg.slice("--workers=".length);
+      const parsed = parsePositiveSafeInteger(value);
+
+      if (parsed === undefined) {
+        return {
+          ok: false,
+          message: createTranslator(language)("tenSeason.error.workersInvalid", { value }),
+          language,
+        };
+      }
+
+      workerCount = parsed;
+      continue;
+    }
+
     if (arg === "--lang") {
       return {
         ok: false,
@@ -274,7 +352,40 @@ function parseArgs(args: readonly string[]): ParsedArgs {
     };
   }
 
-  return { ok: true, seed, seedPrefix, seasonCount, worldCount, reportOutputPath, language };
+  if (checkpointDirectoryPath !== undefined && worldCount === undefined) {
+    return {
+      ok: false,
+      message: createTranslator(language)("tenSeason.error.checkpointDirectoryRequiresWorlds"),
+      language,
+    };
+  }
+  if (shardCount !== undefined && checkpointDirectoryPath === undefined) {
+    return {
+      ok: false,
+      message: createTranslator(language)("tenSeason.error.shardsRequireCheckpointDirectory"),
+      language,
+    };
+  }
+  if (workerCount !== undefined && checkpointDirectoryPath === undefined) {
+    return {
+      ok: false,
+      message: createTranslator(language)("tenSeason.error.workersRequireCheckpointDirectory"),
+      language,
+    };
+  }
+
+  return {
+    ok: true,
+    seed,
+    seedPrefix,
+    seasonCount,
+    worldCount,
+    reportOutputPath,
+    checkpointDirectoryPath,
+    shardCount,
+    workerCount,
+    language,
+  };
 }
 
 /**
@@ -305,6 +416,9 @@ type ParsedArgs =
       readonly seasonCount: number;
       readonly worldCount: number | undefined;
       readonly reportOutputPath: string | undefined;
+      readonly checkpointDirectoryPath: string | undefined;
+      readonly shardCount: number | undefined;
+      readonly workerCount: number | undefined;
       readonly language: SupportedLanguage;
     }
   | {

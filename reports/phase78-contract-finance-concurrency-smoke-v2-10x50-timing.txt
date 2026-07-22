@@ -1,0 +1,57 @@
+
+> the-long-season@0.0.0 cli /Users/elianarducci/common-projects/the-long-season
+> pnpm --filter @game/cli run cli -- ten-season-report --seed-prefix\=phase78-contract-finance-concurrency-smoke-v2 --worlds\=10 --seasons\=50 --checkpoint-dir\=reports/checkpoints/phase78-concurrency-smoke-v2-10x50 --shards\=10 --report-output\=reports/phase78-contract-finance-concurrency-smoke-v2-10x50.md
+
+
+> @game/cli@0.0.0 cli /Users/elianarducci/common-projects/the-long-season/apps/cli
+> node src/index.ts -- ten-season-report --seed-prefix\=phase78-contract-finance-concurrency-smoke-v2 --worlds\=10 --seasons\=50 --checkpoint-dir\=reports/checkpoints/phase78-concurrency-smoke-v2-10x50 --shards\=10 --report-output\=reports/phase78-contract-finance-concurrency-smoke-v2-10x50.md
+
+The Long Season long-run gate report
+Seed prefix: phase78-contract-finance-concurrency-smoke-v2
+Worlds: 10
+Seasons: 50
+Total seasons: 500
+Execution: sharded; workers=10; shards=10; resumed=0; partition_hashes=9288a341455b49aa,f2eb3f88d98aa1dc,685cb8bddbeffcaa,0779cb3dbbeaf8e0,3f3b52997f59c0ea,ad841baf3dab1655,232ee086682bd767,03f10b8919d0c5bf,13acadd1e4b95aa3,2136b570534e4d64
+Status: PASS
+Failed worlds: 0
+Warning worlds: 10
+Goals per match avg/p95: avg=2.990 p95=3.070
+Table spread avg/min: avg=43.99 min=42.48
+Draw rate avg/max: avg=0.230 max=0.240
+Champion streak max: 8
+Top assist p95: 18
+Production warning max: assists=18 top1=0.29 top3=0.48
+Age 30+ share p95: 0.30
+Minimum squad size observed: 19
+Clubs below minimum squad size: 0
+Clubs without natural goalkeeper: 0
+Role coverage warnings: total=508 p95=55
+Youth roster max observed: 11
+Active players min/max: senior=395..440 youth=198..198 total=593..638
+Clubs above youth target: 0
+Clubs below youth minimum: 0
+Contract/finance structural violations: 0
+Club cash floor (minor): 1119510000
+Annual wage utilization max: 1.0000
+Free-agent share max: 0.4277
+Sampled player value min/max (minor): 23409961..351094462
+Contract lifecycle: renewals=95457 releases=9139 expiries=13572 selected_expiry_decisions=8257
+Warning check counts: free_agent_population_share=10, wage_budget_utilization=10, top_assist_max=4, goals_per_match_avg=3, senior_active_player_population=3, total_active_player_population=3
+Signal check counts: monitor=19, structural=10, story=4
+Failing check counts: none
+Signal guide: story=healthy football variance, monitor=watch trend, structural=gameplay risk
+Report output: reports/phase78-contract-finance-concurrency-smoke-v2-10x50.md
+Worst worlds:
+  phase78-contract-finance-concurrency-smoke-v2-world-00001 status=warn min_squad=20 youth_max=11 active_players=senior:396..423,youth:198..198,total:594..621 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1171240000,wage_max:1.0000,free_agents_max:0.4277,value:26808790..313553428,renewals:9543,releases:915,expiries:1338,selected_expiry_decisions:822 top_assist_max=16 table_spread=avg:44.86,min:31,max:61,low_season:23,champion_pts:65..85,last_pts:14..36,ability_spread:2.70..2.83 draw_rate=avg:0.230,max:0.290,high_season:42 creator_snapshot=season:22,club:A.S. Bologna,creator:Matteo Nardini,assists:11,team_goals:40,top1:0.28,top3:0.44,top_assist:Matteo Nardini,top_scorer:Luca Abate:17 warn_checks=top_assist_max,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00007 status=warn min_squad=20 youth_max=11 active_players=senior:396..440,youth:198..198,total:594..638 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1147420000,wage_max:1.0000,free_agents_max:0.4234,value:27354856..326352761,renewals:9581,releases:921,expiries:1378,selected_expiry_decisions:825 top_assist_max=15 table_spread=avg:43.76,min:27,max:60,low_season:4,champion_pts:59..89,last_pts:19..34,ability_spread:2.31..2.97 draw_rate=avg:0.240,max:0.280,high_season:29 creator_snapshot=season:42,club:Pro Cesena,creator:Nuno Moreira,assists:13,team_goals:51,top1:0.25,top3:0.43,top_assist:Nuno Moreira,top_scorer:Enrico Grassi:17 warn_checks=wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00010 status=warn min_squad=20 youth_max=11 active_players=senior:395..417,youth:198..198,total:593..615 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1142700000,wage_max:1.0000,free_agents_max:0.4223,value:23713733..328426350,renewals:9533,releases:902,expiries:1402,selected_expiry_decisions:837 top_assist_max=13 table_spread=avg:43.38,min:25,max:58,low_season:1,champion_pts:61..82,last_pts:18..36,ability_spread:2.27..2.98 draw_rate=avg:0.240,max:0.310,high_season:3 creator_snapshot=season:26,club:A.C. Modena,creator:Enrico Rosati,assists:12,team_goals:51,top1:0.24,top3:0.40,top_assist:Enrico Rosati,top_scorer:Enrico Cerri:18 warn_checks=senior_active_player_population,total_active_player_population,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00009 status=warn min_squad=20 youth_max=11 active_players=senior:396..415,youth:198..198,total:594..613 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1121030000,wage_max:1.0000,free_agents_max:0.4211,value:26312408..310959181,renewals:9543,releases:929,expiries:1326,selected_expiry_decisions:816 top_assist_max=15 table_spread=avg:43.90,min:29,max:62,low_season:2,champion_pts:64..89,last_pts:21..37,ability_spread:2.49..2.69 draw_rate=avg:0.240,max:0.290,high_season:10 creator_snapshot=season:30,club:U.S. Pescara,creator:Giorgio Savini,assists:14,team_goals:48,top1:0.29,top3:0.48,top_assist:Giorgio Savini,top_scorer:Giorgio Conti:18 warn_checks=goals_per_match_avg,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00006 status=warn min_squad=20 youth_max=11 active_players=senior:396..422,youth:198..198,total:594..620 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1138180000,wage_max:1.0000,free_agents_max:0.4182,value:26804025..334225312,renewals:9510,releases:896,expiries:1353,selected_expiry_decisions:827 top_assist_max=15 table_spread=avg:44.00,min:24,max:59,low_season:5,champion_pts:59..92,last_pts:17..35,ability_spread:2.81..3.09 draw_rate=avg:0.240,max:0.300,high_season:14 creator_snapshot=season:44,club:U.S. Cesena,creator:Giorgio Maresca,assists:12,team_goals:42,top1:0.29,top3:0.47,top_assist:Giorgio Maresca,top_scorer:Davide Accardi:18 warn_checks=wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00008 status=warn min_squad=19 youth_max=11 active_players=senior:396..415,youth:198..198,total:594..613 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1135900000,wage_max:1.0000,free_agents_max:0.4171,value:26637961..328476812,renewals:9575,releases:893,expiries:1376,selected_expiry_decisions:836 top_assist_max=18 table_spread=avg:42.48,min:29,max:56,low_season:46,champion_pts:59..85,last_pts:17..36,ability_spread:2.60..2.95 draw_rate=avg:0.240,max:0.290,high_season:46 creator_snapshot=season:19,club:F.C. Terni,creator:Matteo Sassi,assists:10,team_goals:41,top1:0.24,top3:0.41,top_assist:Giorgio Moro,top_scorer:Nico Cavallaro:21 warn_checks=top_assist_max,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00003 status=warn min_squad=20 youth_max=11 active_players=senior:396..422,youth:198..198,total:594..620 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1119510000,wage_max:1.0000,free_agents_max:0.4148,value:24227171..336354805,renewals:9517,releases:892,expiries:1379,selected_expiry_decisions:821 top_assist_max=15 table_spread=avg:43.76,min:31,max:57,low_season:6,champion_pts:62..81,last_pts:17..34,ability_spread:2.41..2.71 draw_rate=avg:0.230,max:0.290,high_season:5 creator_snapshot=season:27,club:Pro Modena,creator:Davide Battaglia,assists:10,team_goals:43,top1:0.23,top3:0.42,top_assist:Giorgio Costa,top_scorer:Nikola Babic:17 warn_checks=goals_per_match_avg,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00004 status=warn min_squad=19 youth_max=11 active_players=senior:395..424,youth:198..198,total:593..622 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1172160000,wage_max:1.0000,free_agents_max:0.4148,value:27490049..351094462,renewals:9571,releases:941,expiries:1328,selected_expiry_decisions:822 top_assist_max=15 table_spread=avg:44.20,min:28,max:64,low_season:7,champion_pts:60..85,last_pts:16..34,ability_spread:2.74..2.48 draw_rate=avg:0.230,max:0.320,high_season:44 creator_snapshot=season:8,club:A.C. Siena,creator:Nico Greco,assists:11,team_goals:42,top1:0.26,top3:0.48,top_assist:Nico Greco,top_scorer:Luca Righetti:17 warn_checks=senior_active_player_population,total_active_player_population,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00005 status=warn min_squad=20 youth_max=11 active_players=senior:396..425,youth:198..198,total:594..623 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1131050000,wage_max:1.0000,free_agents_max:0.4095,value:23409961..337364484,renewals:9541,releases:908,expiries:1364,selected_expiry_decisions:818 top_assist_max=16 table_spread=avg:43.74,min:31,max:59,low_season:40,champion_pts:62..85,last_pts:22..35,ability_spread:2.41..2.51 draw_rate=avg:0.240,max:0.290,high_season:42 creator_snapshot=season:17,club:Pescara Calcio,creator:Davide Masi,assists:13,team_goals:48,top1:0.27,top3:0.46,top_assist:Davide Masi,top_scorer:Nico Di Biase:19 warn_checks=top_assist_max,wage_budget_utilization,free_agent_population_share fail_checks=none
+  phase78-contract-finance-concurrency-smoke-v2-world-00002 status=warn min_squad=20 youth_max=11 active_players=senior:395..416,youth:198..198,total:593..614 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1157510000,wage_max:1.0000,free_agents_max:0.4084,value:28643875..314059263,renewals:9543,releases:942,expiries:1328,selected_expiry_decisions:833 top_assist_max=17 table_spread=avg:45.80,min:32,max:61,low_season:37,champion_pts:63..85,last_pts:18..34,ability_spread:2.77..2.60 draw_rate=avg:0.220,max:0.270,high_season:48 creator_snapshot=season:11,club:F.C. Genoa,creator:Enrico Bartoli,assists:13,team_goals:49,top1:0.27,top3:0.47,top_assist:Enrico Bartoli,top_scorer:Logan Morgan:24 warn_checks=goals_per_match_avg,top_assist_max,senior_active_player_population,total_active_player_population,wage_budget_utilization,free_agent_population_share fail_checks=none
+real 63.76
+user 467.88
+sys 29.78

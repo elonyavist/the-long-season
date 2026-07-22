@@ -34,6 +34,12 @@ export function formatLongRunGateReportOutput(
     `${text("tenSeason.activePlayersMinMax")}: senior=${report.minimumSeniorPlayerCountObserved}..${report.maximumSeniorPlayerCountObserved} youth=${report.minimumYouthPlayerCountObserved}..${report.maximumYouthPlayerCountObserved} total=${report.minimumActivePlayerCountObserved}..${report.maximumActivePlayerCountObserved}`,
     `${text("tenSeason.clubsAboveYouthTarget")}: ${report.clubsAboveYouthTargetCount}`,
     `${text("tenSeason.clubsBelowYouthMinimum")}: ${report.clubsBelowYouthMinimumCount}`,
+    `Contract/finance structural violations: ${report.contractFinanceStructuralViolationCount}`,
+    `Club cash floor (minor): ${report.minimumCashBalanceObserved}`,
+    `Annual wage utilization max: ${report.maximumWageBudgetUtilizationObserved.toFixed(4)}`,
+    `Free-agent share max: ${report.maximumFreeAgentShareObserved.toFixed(4)}`,
+    `Sampled player value min/max (minor): ${report.minimumPlayerValueObserved}..${report.maximumPlayerValueObserved}`,
+    `Contract lifecycle: renewals=${report.renewalCount} releases=${report.releaseCount} expiries=${report.expiryCount} selected_expiry_decisions=${report.selectedClubExpiredDecisionCount}`,
     `${text("tenSeason.warningCheckCounts")}: ${formatCheckCounts(report.warningCheckCounts)}`,
     `${text("tenSeason.signalCheckCounts")}: ${formatCheckCounts(report.signalCheckCounts)}`,
     `${text("tenSeason.failingCheckCounts")}: ${formatCheckCounts(report.failingCheckCounts)}`,
@@ -49,9 +55,9 @@ export function formatLongRunGateReportOutput(
  */
 export function formatLongRunGateReportMarkdown(report: LongRunGateReport, reportOutputPath: string): string {
   const lines = [
-    "# Career Squad Refresh Long-Run Gates Report",
+    "# Senior Squad, Contracts And Club Finance Long-Run Gates Report",
     "",
-    `Date: 2026-06-22`,
+    `Date: 2026-07-21`,
     `Seed prefix: \`${report.seedPrefix}\``,
     `Worlds: ${report.worldCount}`,
     `Seasons per world: ${report.seasonCount}`,
@@ -82,6 +88,12 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
     `- Active player count min/max: senior=${report.minimumSeniorPlayerCountObserved}..${report.maximumSeniorPlayerCountObserved} youth=${report.minimumYouthPlayerCountObserved}..${report.maximumYouthPlayerCountObserved} total=${report.minimumActivePlayerCountObserved}..${report.maximumActivePlayerCountObserved}`,
     `- Clubs above youth target: ${report.clubsAboveYouthTargetCount}`,
     `- Clubs below youth minimum: ${report.clubsBelowYouthMinimumCount}`,
+    `- Contract/finance structural violations: ${report.contractFinanceStructuralViolationCount}`,
+    `- Club cash floor (minor): ${report.minimumCashBalanceObserved}`,
+    `- Maximum annual wage utilization: ${report.maximumWageBudgetUtilizationObserved.toFixed(4)}`,
+    `- Maximum free-agent share: ${report.maximumFreeAgentShareObserved.toFixed(4)}`,
+    `- Sampled player value min/max (minor): ${report.minimumPlayerValueObserved}..${report.maximumPlayerValueObserved}`,
+    `- Contract lifecycle: renewals=${report.renewalCount}; releases=${report.releaseCount}; expiries=${report.expiryCount}; selected expiry decisions=${report.selectedClubExpiredDecisionCount}`,
     `- Warning check counts: ${formatCheckCounts(report.warningCheckCounts)}`,
     `- Signal check counts: ${formatCheckCounts(report.signalCheckCounts)}`,
     `- Failing check counts: ${formatCheckCounts(report.failingCheckCounts)}`,
@@ -89,11 +101,11 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
     "",
     "## Worst Worlds",
     "",
-    "| Seed | Status | Min squad | Youth max | Active players | Below min | Youth above target | No GK | Top assist max | Table spread snapshot | Creator snapshot | Warn checks | Fail checks |",
-    "|---|---:|---:|---:|---|---:|---:|---:|---:|---|---|---|---|",
+    "| Seed | Status | Min squad | Youth max | Active players | Below min | Youth above target | No GK | Contract/finance snapshot | Top assist max | Table spread snapshot | Creator snapshot | Warn checks | Fail checks |",
+    "|---|---:|---:|---:|---|---:|---:|---:|---|---:|---|---|---|---|",
     ...report.worstWorlds.map(
       (world) =>
-      `| \`${world.seed}\` | ${world.status.toUpperCase()} | ${world.minimumSquadSizeObserved} | ${world.maximumYouthRosterSizeObserved} | senior ${world.minimumSeniorPlayerCountObserved}..${world.maximumSeniorPlayerCountObserved}; youth ${world.minimumYouthPlayerCountObserved}..${world.maximumYouthPlayerCountObserved}; total ${world.minimumActivePlayerCountObserved}..${world.maximumActivePlayerCountObserved} | ${world.clubsBelowMinimumSquadSizeCount} | ${world.clubsAboveYouthTargetCount} | ${world.clubsWithoutNaturalGoalkeeperCount} | ${world.topAssistMax} | avg ${world.tablePointsSpreadAverage.toFixed(2)}; min ${world.tablePointsSpreadMin}; max ${world.tablePointsSpreadMax}; low season ${world.lowestTableSpreadSeasonNumber}; champion pts ${world.firstPlacePointsMin}..${world.firstPlacePointsMax}; last pts ${world.lastPlacePointsMin}..${world.lastPlacePointsMax}; ability spread ${world.initialClubAbilitySpread.toFixed(2)}->${world.finalClubAbilitySpread.toFixed(2)}; draw rate avg/max ${world.drawRateAverage.toFixed(3)}/${world.drawRateMax.toFixed(3)} | season ${world.topCreatorSeasonNumber}; ${world.topCreatorClubName}; ${world.topCreatorName}; assists ${world.topCreatorAssists}; team goals ${world.topCreatorClubGoals}; top1 ${world.topCreatorGoalShareMax.toFixed(2)}; top3 ${world.topThreeCreatorGoalShareMax.toFixed(2)}; top assist ${world.topAssistName}; top scorer ${world.topScorerName}:${world.topScorerGoals} | ${world.warningCheckKeys.join(", ") || "none"} | ${world.failingCheckKeys.join(", ") || "none"} |`,
+      `| \`${world.seed}\` | ${world.status.toUpperCase()} | ${world.minimumSquadSizeObserved} | ${world.maximumYouthRosterSizeObserved} | senior ${world.minimumSeniorPlayerCountObserved}..${world.maximumSeniorPlayerCountObserved}; youth ${world.minimumYouthPlayerCountObserved}..${world.maximumYouthPlayerCountObserved}; total ${world.minimumActivePlayerCountObserved}..${world.maximumActivePlayerCountObserved} | ${world.clubsBelowMinimumSquadSizeCount} | ${world.clubsAboveYouthTargetCount} | ${world.clubsWithoutNaturalGoalkeeperCount} | structural ${world.contractFinanceStructuralViolationCount}; cash ${world.minimumCashBalanceObserved}; wage ${world.maximumWageBudgetUtilizationObserved.toFixed(4)}; free agents ${world.maximumFreeAgentShareObserved.toFixed(4)}; values ${world.minimumPlayerValueObserved}..${world.maximumPlayerValueObserved}; renew/release/expiry ${world.renewalCount}/${world.releaseCount}/${world.expiryCount} | ${world.topAssistMax} | avg ${world.tablePointsSpreadAverage.toFixed(2)}; min ${world.tablePointsSpreadMin}; max ${world.tablePointsSpreadMax}; low season ${world.lowestTableSpreadSeasonNumber}; champion pts ${world.firstPlacePointsMin}..${world.firstPlacePointsMax}; last pts ${world.lastPlacePointsMin}..${world.lastPlacePointsMax}; ability spread ${world.initialClubAbilitySpread.toFixed(2)}->${world.finalClubAbilitySpread.toFixed(2)}; draw rate avg/max ${world.drawRateAverage.toFixed(3)}/${world.drawRateMax.toFixed(3)} | season ${world.topCreatorSeasonNumber}; ${world.topCreatorClubName}; ${world.topCreatorName}; assists ${world.topCreatorAssists}; team goals ${world.topCreatorClubGoals}; top1 ${world.topCreatorGoalShareMax.toFixed(2)}; top3 ${world.topThreeCreatorGoalShareMax.toFixed(2)}; top assist ${world.topAssistName}; top scorer ${world.topScorerName}:${world.topScorerGoals} | ${world.warningCheckKeys.join(", ") || "none"} | ${world.failingCheckKeys.join(", ") || "none"} |`,
     ),
     "",
     "## Production Warning Snapshots",
@@ -128,7 +140,7 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
     "Run the same gate with:",
     "",
     "```bash",
-    `pnpm cli ten-season-report --seed-prefix=${report.seedPrefix} --worlds=${report.worldCount} --seasons=${report.seasonCount} --report-output=${reportOutputPath}`,
+    formatReproductionCommand(report, reportOutputPath),
     "```",
     "",
   ];
@@ -140,7 +152,18 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
  * Formats deterministic execution metadata for reproducible large gates.
  */
 function formatExecutionSummary(report: LongRunGateReport): string {
-  return `${report.execution.mode}; workers=${report.execution.workerCount}; partition_hashes=${report.execution.partitionHashes.join(",")}`;
+  const shardSummary = report.execution.mode === "sharded"
+    ? `; shards=${report.execution.shardCount ?? 0}; resumed=${report.execution.resumedShardCount ?? 0}`
+    : "";
+  return `${report.execution.mode}; workers=${report.execution.workerCount}${shardSummary}; partition_hashes=${report.execution.partitionHashes.join(",")}`;
+}
+
+/** Formats a command that preserves the execution strategy used by the report. */
+function formatReproductionCommand(report: LongRunGateReport, reportOutputPath: string): string {
+  const checkpointArgs = report.execution.mode === "sharded"
+    ? ` --checkpoint-dir=<checkpoint-directory> --shards=${report.execution.shardCount ?? 1}`
+    : "";
+  return `pnpm cli ten-season-report --seed-prefix=${report.seedPrefix} --worlds=${report.worldCount} --seasons=${report.seasonCount}${checkpointArgs} --report-output=${reportOutputPath}`;
 }
 
 /**
@@ -153,7 +176,7 @@ function formatWorstGateWorldLines(worlds: readonly LongRunGateWorldSummary[]): 
 
   return worlds.map(
     (world) =>
-      `  ${world.seed} status=${world.status} min_squad=${world.minimumSquadSizeObserved} youth_max=${world.maximumYouthRosterSizeObserved} active_players=senior:${world.minimumSeniorPlayerCountObserved}..${world.maximumSeniorPlayerCountObserved},youth:${world.minimumYouthPlayerCountObserved}..${world.maximumYouthPlayerCountObserved},total:${world.minimumActivePlayerCountObserved}..${world.maximumActivePlayerCountObserved} below_min=${world.clubsBelowMinimumSquadSizeCount} youth_above_target=${world.clubsAboveYouthTargetCount} youth_below_min=${world.clubsBelowYouthMinimumCount} no_gk=${world.clubsWithoutNaturalGoalkeeperCount} top_assist_max=${world.topAssistMax} table_spread=avg:${world.tablePointsSpreadAverage.toFixed(2)},min:${world.tablePointsSpreadMin},max:${world.tablePointsSpreadMax},low_season:${world.lowestTableSpreadSeasonNumber},champion_pts:${world.firstPlacePointsMin}..${world.firstPlacePointsMax},last_pts:${world.lastPlacePointsMin}..${world.lastPlacePointsMax},ability_spread:${world.initialClubAbilitySpread.toFixed(2)}..${world.finalClubAbilitySpread.toFixed(2)} draw_rate=avg:${world.drawRateAverage.toFixed(3)},max:${world.drawRateMax.toFixed(3)},high_season:${world.highestDrawRateSeasonNumber} creator_snapshot=season:${world.topCreatorSeasonNumber},club:${world.topCreatorClubName},creator:${world.topCreatorName},assists:${world.topCreatorAssists},team_goals:${world.topCreatorClubGoals},top1:${world.topCreatorGoalShareMax.toFixed(2)},top3:${world.topThreeCreatorGoalShareMax.toFixed(2)},top_assist:${world.topAssistName},top_scorer:${world.topScorerName}:${world.topScorerGoals} warn_checks=${world.warningCheckKeys.join(",") || "none"} fail_checks=${world.failingCheckKeys.join(",") || "none"}`,
+      `  ${world.seed} status=${world.status} min_squad=${world.minimumSquadSizeObserved} youth_max=${world.maximumYouthRosterSizeObserved} active_players=senior:${world.minimumSeniorPlayerCountObserved}..${world.maximumSeniorPlayerCountObserved},youth:${world.minimumYouthPlayerCountObserved}..${world.maximumYouthPlayerCountObserved},total:${world.minimumActivePlayerCountObserved}..${world.maximumActivePlayerCountObserved} below_min=${world.clubsBelowMinimumSquadSizeCount} youth_above_target=${world.clubsAboveYouthTargetCount} youth_below_min=${world.clubsBelowYouthMinimumCount} no_gk=${world.clubsWithoutNaturalGoalkeeperCount} contract_finance=structural:${world.contractFinanceStructuralViolationCount},cash_min:${world.minimumCashBalanceObserved},wage_max:${world.maximumWageBudgetUtilizationObserved.toFixed(4)},free_agents_max:${world.maximumFreeAgentShareObserved.toFixed(4)},value:${world.minimumPlayerValueObserved}..${world.maximumPlayerValueObserved},renewals:${world.renewalCount},releases:${world.releaseCount},expiries:${world.expiryCount},selected_expiry_decisions:${world.selectedClubExpiredDecisionCount} top_assist_max=${world.topAssistMax} table_spread=avg:${world.tablePointsSpreadAverage.toFixed(2)},min:${world.tablePointsSpreadMin},max:${world.tablePointsSpreadMax},low_season:${world.lowestTableSpreadSeasonNumber},champion_pts:${world.firstPlacePointsMin}..${world.firstPlacePointsMax},last_pts:${world.lastPlacePointsMin}..${world.lastPlacePointsMax},ability_spread:${world.initialClubAbilitySpread.toFixed(2)}..${world.finalClubAbilitySpread.toFixed(2)} draw_rate=avg:${world.drawRateAverage.toFixed(3)},max:${world.drawRateMax.toFixed(3)},high_season:${world.highestDrawRateSeasonNumber} creator_snapshot=season:${world.topCreatorSeasonNumber},club:${world.topCreatorClubName},creator:${world.topCreatorName},assists:${world.topCreatorAssists},team_goals:${world.topCreatorClubGoals},top1:${world.topCreatorGoalShareMax.toFixed(2)},top3:${world.topThreeCreatorGoalShareMax.toFixed(2)},top_assist:${world.topAssistName},top_scorer:${world.topScorerName}:${world.topScorerGoals} warn_checks=${world.warningCheckKeys.join(",") || "none"} fail_checks=${world.failingCheckKeys.join(",") || "none"}`,
   );
 }
 

@@ -21,7 +21,7 @@ test("balance-report uses deterministic default arguments", async () => {
   assert.equal(io.stdoutLines.includes(`Seed prefix: ${DEFAULT_BALANCE_REPORT_SEED_PREFIX}`), true);
   assert.equal(io.stdoutLines.includes(`Seasons: ${DEFAULT_BALANCE_REPORT_SEASON_COUNT}`), true);
   assert.equal(io.stdoutLines.includes("Status: PASS"), true);
-});
+}, 20_000);
 
 test("same seed prefix and season count produce same report output", async () => {
   const first = captureIo();

@@ -1,32 +1,6 @@
 import type { ClubId, PlayerId } from "../types/ids.ts";
 import type { Money } from "../value-objects/money.ts";
-
-/**
- * Temporary transfer funds for one club in the market MVP.
- *
- * The first market step is command-local and serializable. It tracks only the
- * amount available for permanent fees, using `Money` so later economy work does
- * not need to migrate plain numbers.
- */
-export interface ClubTransferBudget {
-  /** Club owning this available fee amount. */
-  readonly clubId: ClubId;
-  /** Available minor-unit amount for permanent fees. */
-  readonly transferBudget: Money;
-}
-
-/**
- * Explicit market data used by the first transfer MVP.
- *
- * The ordered club list is the traversal source. The record is only a lookup
- * table and must not be enumerated by simulation code.
- */
-export interface MarketState {
-  /** Lookup table of transfer funds by club ID. */
-  readonly clubBudgets: Readonly<Record<ClubId, ClubTransferBudget>>;
-  /** Deterministic traversal order for budgeted clubs. */
-  readonly clubBudgetIds: readonly ClubId[];
-}
+import type { ClubFinanceState } from "../career/club-finance.ts";
 
 /**
  * Manager-declared permanent transfer request.
@@ -61,6 +35,8 @@ export type TransferRejectionReasonCode =
   | "player_already_owned_by_buying_club"
   | "missing_buying_budget"
   | "insufficient_transfer_budget"
+  | "insufficient_wage_budget"
+  | "insufficient_cash"
   | "player_unwilling";
 
 /**
@@ -97,17 +73,12 @@ export interface PermanentTransferPreview {
   readonly status: TransferFeasibilityStatus;
   /** Empty when status is `accepted`; populated when status is `rejected`. */
   readonly reasons: readonly TransferRejectionReason[];
-  /** Market data after the preview is applied, or the original data when rejected. */
-  readonly marketState: MarketState;
+  /** Club finances after the preview, or the original state when rejected. */
+  readonly clubFinanceState: ClubFinanceState;
 }
 
 /** Error categories exposed by market-domain helpers. */
-export type TransferContractErrorCode =
-  | "same_club"
-  | "duplicate_budget_club"
-  | "missing_budget_entry"
-  | "budget_entry_mismatch"
-  | "unknown_budget_club";
+export type TransferContractErrorCode = "same_club";
 
 /**
  * Typed error thrown when a market-domain shape is ambiguous.
@@ -151,107 +122,5 @@ export function createPermanentTransferIntent(input: PermanentTransferIntent): P
     buyingClubId: input.buyingClubId,
     sellingClubId: input.sellingClubId,
     playerId: input.playerId,
-  };
-}
-
-/**
- * Builds a validated market state while preserving explicit budget order.
- *
- * The helper checks duplicate ordered IDs, missing lookup entries, and lookup
- * entries whose embedded club ID does not match the ordered key.
- *
- * @example
- * const market = createMarketState({
- *   clubBudgets: {
- *     [clubId("club:pro01")]: {
- *       clubId: clubId("club:pro01"),
- *       transferBudget: nonNegativeMoney(1_000_000_00),
- *     },
- *   },
- *   clubBudgetIds: [clubId("club:pro01")],
- * });
- */
-export function createMarketState(input: MarketState): MarketState {
-  const seenClubIds = new Set<ClubId>();
-  const clubBudgetIds: ClubId[] = [];
-  const clubBudgets: Record<ClubId, ClubTransferBudget> = {};
-
-  for (const clubId of input.clubBudgetIds) {
-    if (seenClubIds.has(clubId)) {
-      throw new TransferContractError("duplicate_budget_club", `duplicate transfer budget club: ${clubId}`);
-    }
-
-    const budget = input.clubBudgets[clubId];
-    if (budget === undefined) {
-      throw new TransferContractError("missing_budget_entry", `missing transfer budget for club: ${clubId}`);
-    }
-
-    if (budget.clubId !== clubId) {
-      throw new TransferContractError("budget_entry_mismatch", `transfer budget entry mismatch: ${clubId}`);
-    }
-
-    seenClubIds.add(clubId);
-    clubBudgetIds.push(clubId);
-    clubBudgets[clubId] = {
-      clubId: budget.clubId,
-      transferBudget: budget.transferBudget,
-    };
-  }
-
-  return {
-    clubBudgets,
-    clubBudgetIds,
-  };
-}
-
-/**
- * Finds a club transfer budget by explicit ordered traversal.
- *
- * This avoids deriving simulation order from a record lookup.
- */
-export function findClubTransferBudget(state: MarketState, clubId: ClubId): ClubTransferBudget | undefined {
-  for (const budgetClubId of state.clubBudgetIds) {
-    if (budgetClubId === clubId) {
-      return state.clubBudgets[budgetClubId];
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Replaces one club budget and returns a fresh market state.
- *
- * The target club must already exist in the ordered market state so callers
- * cannot silently append a new club at an order-sensitive point.
- */
-export function replaceClubTransferBudget(state: MarketState, budget: ClubTransferBudget): MarketState {
-  const clubBudgets: Record<ClubId, ClubTransferBudget> = {};
-  let replaced = false;
-
-  for (const clubId of state.clubBudgetIds) {
-    const currentBudget = state.clubBudgets[clubId];
-    if (currentBudget === undefined) {
-      throw new TransferContractError("missing_budget_entry", `missing transfer budget for club: ${clubId}`);
-    }
-
-    if (clubId === budget.clubId) {
-      clubBudgets[clubId] = {
-        clubId: budget.clubId,
-        transferBudget: budget.transferBudget,
-      };
-      replaced = true;
-    } else {
-      clubBudgets[clubId] = currentBudget;
-    }
-  }
-
-  if (!replaced) {
-    throw new TransferContractError("unknown_budget_club", `unknown transfer budget club: ${budget.clubId}`);
-  }
-
-  return {
-    clubBudgets,
-    clubBudgetIds: [...state.clubBudgetIds],
   };
 }

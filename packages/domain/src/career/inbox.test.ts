@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, fixtureId, playerId } from "../types/ids.ts";
+import { clubId, fixtureId, playerContractId, playerId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
+import { contractNegotiationId } from "./contract-negotiation.ts";
 import {
   careerInboxMessageId,
   createCareerInboxMessage,
@@ -130,6 +131,63 @@ test("Continue stops for unresolved blocking and unacknowledged important messag
   assert.equal(doesCareerInboxMessageStopContinue(important), true);
   assert.equal(doesCareerInboxMessageStopContinue(acknowledged), false);
   assert.equal(doesCareerInboxMessageStopContinue(informational), false);
+});
+
+test("contract reminders remain visible without stopping Continue", () => {
+  const reminder = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:contract-reminder:contract-01"),
+    date: gameDate(20_000),
+    category: "contract_reminder",
+    source: "contract_office",
+    level: "important",
+    continuePolicy: "never",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    related: {
+      clubId: clubId("club:selected"),
+      playerId: playerId("player:contract-01"),
+      contractId: playerContractId("contract:contract-01"),
+    },
+    actionIds: ["open_contract_negotiation"],
+  });
+
+  assert.equal(reminder.continuePolicy, "never");
+  assert.equal(doesCareerInboxMessageStopContinue(reminder), false);
+});
+
+test("contract responses require a stable negotiation reference", () => {
+  const contractRelated = {
+    contractId: playerContractId("contract:contract-02"),
+  };
+
+  assert.throws(
+    () => createCareerInboxMessage({
+      id: careerInboxMessageId("inbox:contract-counteroffer:missing-negotiation"),
+      date: gameDate(20_000),
+      category: "contract_counteroffer",
+      source: "contract_office",
+      level: "blocking",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: contractRelated,
+      actionIds: ["open_contract_negotiation"],
+    }),
+    /contract negotiation/,
+  );
+
+  const counter = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:contract-counteroffer:contract-02"),
+    date: gameDate(20_000),
+    category: "contract_counteroffer",
+    source: "contract_office",
+    level: "blocking",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    related: {
+      ...contractRelated,
+      contractNegotiationId: contractNegotiationId("contract-negotiation:contract-02"),
+    },
+    actionIds: ["open_contract_negotiation"],
+  });
+
+  assert.equal(doesCareerInboxMessageStopContinue(counter), true);
 });
 
 test("diagnosis and suspension messages carry player facts without fake actions", () => {

@@ -38,6 +38,14 @@ export interface CareerPlayerAvailabilityState {
 /** Reason why a player cannot be selected for a fixture. */
 export type CareerPlayerUnavailabilityReason = "injured" | "suspended";
 
+/** One fixture-specific eligibility blocker for a selected player. */
+export interface CareerFixtureEligibilityBlocker {
+  /** Selected player who cannot take part in the fixture. */
+  readonly playerId: PlayerId;
+  /** Canonical durable reason preventing participation. */
+  readonly reason: CareerPlayerUnavailabilityReason;
+}
+
 /** Validates and copies the durable availability state. */
 export function createCareerPlayerAvailabilityState(
   input: CareerPlayerAvailabilityState = EMPTY_PLAYER_AVAILABILITY,
@@ -82,6 +90,31 @@ export function playerUnavailabilityReason(
   if (state.injuries.some((injury) => injury.playerId === playerId && injury.unavailableUntil >= fixtureDate)) return "injured";
   if (state.suspensions.some((suspension) => suspension.playerId === playerId && suspension.competitionId === competitionId && suspension.remainingMatches > 0)) return "suspended";
   return undefined;
+}
+
+/**
+ * Returns fixture eligibility blockers without changing the manager's plan.
+ *
+ * Input order is preserved and duplicate player IDs are reported once, which
+ * keeps domain, engine, and presentation diagnostics deterministic.
+ */
+export function findCareerFixtureEligibilityBlockers(
+  state: CareerPlayerAvailabilityState,
+  playerIds: readonly PlayerId[],
+  fixtureDate: GameDate,
+  competitionId: CompetitionId,
+): readonly CareerFixtureEligibilityBlocker[] {
+  const seenPlayerIds = new Set<PlayerId>();
+  const blockers: CareerFixtureEligibilityBlocker[] = [];
+
+  for (const playerId of playerIds) {
+    if (seenPlayerIds.has(playerId)) continue;
+    seenPlayerIds.add(playerId);
+    const reason = playerUnavailabilityReason(state, playerId, fixtureDate, competitionId);
+    if (reason !== undefined) blockers.push({ playerId, reason });
+  }
+
+  return blockers;
 }
 
 /** Empty availability state used by new careers. */

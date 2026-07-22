@@ -102,6 +102,17 @@ test("translates player diagnostics report labels in every supported language", 
   }), "age~26: Jean Test, age 26->33, croissance 0.00, declin 1.00, marge 0.50");
 });
 
+test("translates senior squad, player-profile, and annual contract labels", () => {
+  assert.equal(translate("en", "career.contract.field.annualWage"), "Annual wage");
+  assert.equal(translate("it", "career.contract.field.annualWage"), "Stipendio annuale");
+  assert.equal(translate("de", "career.contract.field.annualWage"), "Jahresgehalt");
+  assert.equal(translate("es", "career.contract.field.annualWage"), "Salario anual");
+  assert.equal(translate("fr", "career.contract.field.annualWage"), "Salaire annuel");
+  assert.equal(translate("it", "career.player.role.attacking_midfielder"), "Trequartista");
+  assert.equal(translate("en", "career.player.attribute.physical.stamina"), "Stamina");
+  assert.equal(translate("it", "career.squad.action.removeFromStartingXi"), "Togli dall'undici");
+});
+
 test("translates every documented match-preparation formation label in every supported language", () => {
   const formationKeys = [
     "4-4-2",

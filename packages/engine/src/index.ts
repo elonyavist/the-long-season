@@ -32,8 +32,16 @@ export {
   type ApplyCareerPermanentTransferResult,
 } from "./career/apply-career-transfer.ts";
 export {
+  applyCareerFreeAgentSigning,
+  type ApplyCareerFreeAgentSigningInput,
+  type ApplyCareerFreeAgentSigningResult,
+  type CareerFreeAgentSigningApplied,
+  type CareerFreeAgentSigningRejected,
+  type CareerFreeAgentSigningRejectionReason,
+} from "./career/apply-career-free-agent-signing.ts";
+export {
   findNextCareerFixture,
-  findUnavailableSelectedClubPlayerIdsForNextFixture,
+  findNextFixtureEligibilityBlockers,
   type NextCareerFixtureFound,
   type NextCareerFixtureInvalid,
   type NextCareerFixtureInvalidReason,
@@ -90,6 +98,88 @@ export {
   type AdvanceCareerMonthsResult,
   type CareerMonthlyLifecycleSummary,
 } from "./career/advance-career-month.ts";
+export {
+  advanceAiContractLifecycle,
+  type AdvanceAiContractLifecycleResult,
+  type AiContractDecisionReason,
+  type AiContractLifecycleFact,
+} from "./career/ai-contract-lifecycle.ts";
+export { selectFreeAgentPlayerIds } from "./career/free-agent-pool.ts";
+export {
+  replenishSeniorSquadsFromFreeAgents,
+  type ReplenishSeniorSquadsFromFreeAgentsInput,
+  type ReplenishSeniorSquadsFromFreeAgentsResult,
+} from "./career/senior-squad-replenishment.ts";
+export {
+  applyContractActivationFinance,
+  checkContractOfferAffordability,
+  reallocateTransferBudgetToWages,
+  settleAnnualPayroll,
+  settleFixtureContractBonuses,
+  settleSeasonDistribution,
+  type ApplyContractActivationFinanceInput,
+  type CareerFinanceApplied,
+  type CareerFinanceLifecycleResult,
+  type CareerFinanceRejected,
+  type CareerFinanceRejectionReason,
+  type CareerAnnualPayrollFact,
+  type CareerAnnualPayrollResult,
+  type CheckContractOfferAffordabilityInput,
+  type ContractOfferAffordabilityResult,
+  type ContractOfferAffordable,
+  type ReallocateTransferBudgetToWagesInput,
+  type SettleFixtureContractBonusesInput,
+  type SettleAnnualPayrollInput,
+  type SettleSeasonDistributionInput,
+} from "./career/career-finance-lifecycle.ts";
+export {
+  ContractDemandError,
+  deriveContractDemand,
+  evaluateContractOffer,
+  type ContractDemandErrorCode,
+  type DeriveContractDemandInput,
+  type EvaluateContractOfferInput,
+} from "./career/contract-negotiation-demand.ts";
+export {
+  acceptContractCounterOffer,
+  advanceContractNegotiations,
+  chooseReleaseAtContractExpiry,
+  createContractNegotiationDraft,
+  createRenewalNegotiationId,
+  offerContractRenewal,
+  offerSelectedClubRenewal,
+  rejectContractCounterOffer,
+  reviseContractOffer,
+  submitContractOffer,
+  withdrawContractNegotiation,
+  type AdvanceContractNegotiationsResult,
+  type ContractNegotiationApplied,
+  type ContractNegotiationCommandResult,
+  type ContractNegotiationFact,
+  type ContractNegotiationRejected,
+  type ContractNegotiationRejectionReason,
+  type ChooseReleaseAtContractExpiryInput,
+  type CreateContractNegotiationDraftInput,
+  type OfferContractRenewalInput,
+  type OfferSelectedClubRenewalInput,
+  type ReviseContractOfferInput,
+  type ResolveContractCounterInput,
+  type SubmitContractOfferInput,
+} from "./career/contract-negotiation.ts";
+export {
+  advanceSelectedClubContractsToAttention,
+  projectSelectedClubContractAttention,
+  type AdvanceSelectedClubContractsToAttentionResult,
+  type SelectedClubContractAttention,
+} from "./career/selected-club-contract-workflow.ts";
+export {
+  prepareSeniorSquadPermanentTransfer,
+  prepareSeniorSquadSigning,
+  SeniorSquadTransferError,
+  type PrepareSeniorSquadSigningInput,
+  type PrepareSeniorSquadPermanentTransferInput,
+  type PreparedSeniorSquadPermanentTransfer,
+} from "./career/senior-squad-transfer.ts";
 export {
   accrueCommittedFixtureParticipation,
   buildFixtureParticipationContributions,

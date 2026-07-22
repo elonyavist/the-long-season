@@ -4,18 +4,24 @@ import { test } from "vitest";
 import {
   CAREER_STATE_SCHEMA_VERSION,
   abilityValue,
+  clubFinanceLedgerEntryId,
   clubId,
   createCareerState,
-  createMarketState,
+  createClubFinanceState,
+  createSeniorSquadState,
   gameDate,
   getPlayerRoleProfile,
   mapPlayerAbilities,
+  nonNegativeMoney,
+  playerContractId,
   playerId,
   saveId,
   seasonId,
+  seniorSquadRegistrationId,
   stateValue,
   type CareerState,
   type Club,
+  type ClubFinanceState,
   type ClubId,
   type GameState,
   type Player,
@@ -24,6 +30,7 @@ import {
   type PlayerId,
   type PlayerPosition,
   type PlayerRole,
+  type SeniorSquadState,
 } from "@game/domain";
 
 import { simulateTransferTurnover } from "./transfer-turnover.ts";
@@ -37,15 +44,22 @@ test("simulateTransferTurnover moves a suitable player between clubs", () => {
   const careerState = careerStateFixture([
     clubFixture(buyer, 5, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
     clubFixture(seller, 6, [
-      ...playersForClub("seller", ["gk", "gk", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st", "st", "st", "st"]),
       playerFixture(movable, "cb", 7).id,
+      ...playersForClubAtAbility("seller", [
+        "gk", "gk",
+        "cb", "cb", "cb", "cb", "cb", "cb",
+        "cm", "cm", "cm", "cm", "cm", "cm",
+        "st", "st", "st", "st", "st", "st",
+      ], 13),
     ]),
   ]);
 
+  const occurredOn = gameDate(20_365);
   const result = simulateTransferTurnover({
     careerState,
     worldSeed: "turnover-world",
     seasonId: seasonId("season:0001"),
+    occurredOn,
     maxMoves: 1,
   });
 
@@ -53,6 +67,30 @@ test("simulateTransferTurnover moves a suitable player between clubs", () => {
   assert.equal(result.transfers[0]?.playerId, movable);
   assert.equal(result.careerState.gameState.clubs[buyer]?.playerIds.includes(movable), true);
   assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.includes(movable), false);
+  assert.equal(result.careerState.transferHistory.length, 1);
+  assert.equal(result.careerState.transferHistory[0]?.occurredOn, occurredOn);
+  assert.deepEqual(
+    result.careerState.seniorSquadState?.contractHistoryEntryIds.map((id) =>
+      result.careerState.seniorSquadState?.contractHistory[id]?.event
+    ),
+    ["transfer_terminated", "signed"],
+  );
+  assert.equal(
+    result.careerState.seniorSquadState?.activeContractIds.some((id) => {
+      const contract = result.careerState.seniorSquadState?.contracts[id];
+      return contract?.playerId === movable
+        && contract.clubId === buyer
+        && contract.startsOn === occurredOn;
+    }),
+    true,
+  );
+  assert.equal(
+    result.careerState.seniorSquadState?.registrationIds.some((id) => {
+      const registration = result.careerState.seniorSquadState?.registrations[id];
+      return registration?.playerId === movable && registration.clubId === buyer;
+    }),
+    true,
+  );
 });
 
 test("simulateTransferTurnover is deterministic for same seed and season", () => {
@@ -76,34 +114,19 @@ test("simulateTransferTurnover is deterministic for same seed and season", () =>
 
 test("simulateTransferTurnover default cap allows roughly one move per four clubs", () => {
   const careerState = careerStateFixture(
-    Array.from({ length: 8 }, (_, index) =>
-      clubFixture(
+    Array.from({ length: 8 }, (_, index) => {
+      const surplusDefenders = index % 2 === 0;
+      return clubFixture(
         clubId(`club:cap-${String(index + 1).padStart(2, "0")}`),
         5,
         playersForClub(`cap-${String(index + 1).padStart(2, "0")}`, [
-          "gk",
-          "gk",
-          "cb",
-          "cb",
-          "cb",
-          "cb",
-          "cb",
-          "cb",
-          "cm",
-          "cm",
-          "cm",
-          "cm",
-          "cm",
-          "cm",
-          "st",
-          "st",
-          "st",
-          "st",
-          "st",
-          "st",
+          "gk", "gk",
+          ...Array.from({ length: surplusDefenders ? 7 : 5 }, () => "cb" as const),
+          ...Array.from({ length: surplusDefenders ? 5 : 7 }, () => "cm" as const),
+          "st", "st", "st", "st", "st", "st",
         ]),
-      ),
-    ),
+      );
+    }),
   );
 
   const result = simulateTransferTurnover({
@@ -122,9 +145,14 @@ test("simulateTransferTurnover rejects casual downward moves for strong players"
   const careerState = careerStateFixture([
     clubFixture(buyer, 3, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
     clubFixture(seller, 8, [
-      ...playersForClub("seller", ["gk", "gk", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st", "st", "st", "st"]),
       playerFixture(star, "cb", 13).id,
-    ]),
+      ...playersForClubAtAbility("seller", [
+        "gk", "gk",
+        "cb", "cb", "cb", "cb", "cb", "cb",
+        "cm", "cm", "cm", "cm", "cm", "cm",
+        "st", "st", "st", "st", "st", "st",
+      ], 13),
+    ], "second_division"),
   ]);
 
   const result = simulateTransferTurnover({
@@ -145,9 +173,14 @@ test("simulateTransferTurnover protects a strong role specialist despite a low r
   const careerState = careerStateFixture([
     clubFixture(buyer, 3, playersForClub("buyer-specialist", ["gk", "gk", "cb", "cm", "st"])),
     clubFixture(seller, 8, [
-      ...playersForClub("seller-specialist", ["gk", "gk", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st", "st", "st", "st"]),
       playerFixture(specialist, "cb", 1, roleShapedAbilities("center_back", 14, 1)).id,
-    ]),
+      ...playersForClubAtAbility("seller-specialist", [
+        "gk", "gk",
+        "cb", "cb", "cb", "cb", "cb", "cb",
+        "cm", "cm", "cm", "cm", "cm", "cm",
+        "st", "st", "st", "st", "st", "st",
+      ], 13),
+    ], "second_division"),
   ]);
 
   const result = simulateTransferTurnover({
@@ -184,24 +217,60 @@ test("simulateTransferTurnover evaluates goalkeeper suitability through goalkeep
   assert.equal((result.transfers[0]?.currentAbilityAverage ?? 0) >= 12, true);
 });
 
+test("simulateTransferTurnover cannot sell below protected department depth", () => {
+  const buyer = clubId("club:depth-buyer");
+  const seller = clubId("club:depth-seller");
+  const careerState = careerStateFixture([
+    clubFixture(buyer, 5, playersForClub("depth-buyer", [
+      "gk", "gk",
+      "cb", "cb", "cb", "cb", "cb", "cb",
+      "cm",
+      "st", "st", "st",
+    ])),
+    clubFixture(seller, 6, playersForClub("depth-seller", [
+      "gk", "gk",
+      "cb", "cb", "cb", "cb", "cb", "cb",
+      "cm", "cm", "cm",
+      "st", "st", "st", "st", "st", "st", "st", "st", "st", "st",
+    ])),
+  ]);
+
+  const result = simulateTransferTurnover({
+    careerState,
+    worldSeed: "protected-department-depth",
+    seasonId: seasonId("season:0001"),
+    maxMoves: 1,
+  });
+
+  assert.deepEqual(result.transfers, []);
+  assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.length, 21);
+});
+
 function turnoverFixture(): CareerState {
   const buyer = clubId("club:buyer");
   const seller = clubId("club:seller");
   return careerStateFixture([
     clubFixture(buyer, 5, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
     clubFixture(seller, 6, [
-      ...playersForClub("seller", ["gk", "gk", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st", "st", "st", "st"]),
       playerFixture(playerId("player:movable"), "cb", 7).id,
+      ...playersForClub("seller", [
+        "gk", "gk",
+        "cb", "cb", "cb", "cb", "cb", "cb",
+        "cm", "cm", "cm", "cm", "cm", "cm",
+        "st", "st", "st", "st", "st", "st",
+      ]),
     ]),
   ]);
 }
 
 function careerStateFixture(clubs: readonly Club[]): CareerState {
+  const selectedClub = clubFixture(clubId("club:user"), 5, []);
+  const worldClubs = [selectedClub, ...clubs];
   const players: Partial<Record<PlayerId, Player>> = {};
   const playerIds: PlayerId[] = [];
   const playerStates: Partial<Record<PlayerId, PlayerDynamicState>> = {};
 
-  for (const club of clubs) {
+  for (const club of worldClubs) {
     for (const clubPlayerId of club.playerIds) {
       const player = playerLookup.get(clubPlayerId);
       if (player === undefined) {
@@ -213,46 +282,150 @@ function careerStateFixture(clubs: readonly Club[]): CareerState {
     }
   }
 
-  const selectedClubId = clubs[0]?.id ?? clubId("club:missing");
+  const selectedClubId = selectedClub.id;
+  const gameState: GameState = {
+    meta: {
+      seed: "transfer-turnover-test",
+      rngAlgorithmVersion: "test",
+      saveSchemaVersion: 1,
+    },
+    calendar: {
+      currentDate: gameDate(20_000),
+      currentSeasonId: seasonId("season:0001"),
+    },
+    players: players as GameState["players"],
+    playerIds,
+    playerStates: playerStates as GameState["playerStates"],
+    clubs: Object.fromEntries(worldClubs.map((club) => [club.id, club])) as GameState["clubs"],
+    clubIds: worldClubs.map((club) => club.id),
+    fixtures: {},
+    fixtureIds: [],
+  };
+  const seniorSquadState = canonicalSeniorSquadState(gameState);
 
   return createCareerState({
     saveId: saveId("save:transfer-turnover"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
-    gameState: {
-      meta: {
-        seed: "transfer-turnover-test",
-        rngAlgorithmVersion: "test",
-        saveSchemaVersion: 1,
-      },
-      calendar: {
-        currentDate: gameDate(20_000),
-        currentSeasonId: seasonId("season:0001"),
-      },
-      players: players as GameState["players"],
-      playerIds,
-      playerStates: playerStates as GameState["playerStates"],
-      clubs: Object.fromEntries(clubs.map((club) => [club.id, club])) as GameState["clubs"],
-      clubIds: clubs.map((club) => club.id),
-      fixtures: {},
-      fixtureIds: [],
-    },
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
-    }),
+    gameState,
     transferHistory: [],
+    seniorSquadState,
+    clubFinanceState: canonicalClubFinanceState(gameState, seniorSquadState),
+  });
+}
+
+function canonicalSeniorSquadState(gameState: GameState): SeniorSquadState {
+  const registrations: Record<string, SeniorSquadState["registrations"][keyof SeniorSquadState["registrations"]]> = {};
+  const registrationIds: SeniorSquadState["registrationIds"][number][] = [];
+  const contracts: Record<string, SeniorSquadState["contracts"][keyof SeniorSquadState["contracts"]]> = {};
+  const contractIds: SeniorSquadState["contractIds"][number][] = [];
+
+  for (const clubIdValue of gameState.clubIds) {
+    const club = gameState.clubs[clubIdValue];
+    if (club === undefined) continue;
+    for (let index = 0; index < club.playerIds.length; index += 1) {
+      const ownedPlayerId = club.playerIds[index];
+      if (ownedPlayerId === undefined) continue;
+      const suffix = `${String(clubIdValue).slice(5)}:${String(ownedPlayerId).slice(7)}`;
+      const registrationId = seniorSquadRegistrationId(`registration:${suffix}`);
+      const contractId = playerContractId(`contract:${suffix}`);
+      registrations[registrationId] = {
+        id: registrationId,
+        playerId: ownedPlayerId,
+        clubId: clubIdValue,
+        shirtNumber: index + 1,
+        registeredOn: gameDate(19_000),
+      };
+      contracts[contractId] = {
+        id: contractId,
+        playerId: ownedPlayerId,
+        clubId: clubIdValue,
+        type: "professional",
+        startsOn: gameDate(19_000),
+        endsOn: gameDate(21_000),
+        annualWage: nonNegativeMoney(100_000_00),
+        squadStatus: "squad_player",
+        bonuses: {
+          signingBonus: nonNegativeMoney(0),
+          appearanceBonus: nonNegativeMoney(1_000_00),
+        },
+      };
+      registrationIds.push(registrationId);
+      contractIds.push(contractId);
+    }
+  }
+
+  return createSeniorSquadState(gameState, {
+    registrations,
+    registrationIds,
+    contracts,
+    contractIds,
+    activeContractIds: contractIds,
+    contractHistory: {},
+    contractHistoryEntryIds: [],
+  });
+}
+
+function canonicalClubFinanceState(gameState: GameState, seniorSquadState: SeniorSquadState): ClubFinanceState {
+  const accounts: Record<string, ClubFinanceState["accounts"][keyof ClubFinanceState["accounts"]]> = {};
+  const ledgerEntries: Record<string, ClubFinanceState["ledgerEntries"][keyof ClubFinanceState["ledgerEntries"]]> = {};
+  const ledgerEntryIds: ClubFinanceState["ledgerEntryIds"][number][] = [];
+
+  for (const clubIdValue of gameState.clubIds) {
+    const committedAnnualWage = seniorSquadState.activeContractIds.reduce((total, contractId) => {
+      const contract = seniorSquadState.contracts[contractId];
+      return contract?.clubId === clubIdValue ? total + contract.annualWage : total;
+    }, 0);
+    const cashBalance = nonNegativeMoney(1_000_000_000_00);
+    accounts[clubIdValue] = {
+      clubId: clubIdValue,
+      currency: "EUR",
+      cashBalance,
+      annualTransferBudget: nonNegativeMoney(500_000_000_00),
+      availableTransferBudget: nonNegativeMoney(500_000_000_00),
+      annualWageBudget: nonNegativeMoney(500_000_000_00),
+      committedAnnualWage: nonNegativeMoney(committedAnnualWage),
+      seasonIncome: nonNegativeMoney(0),
+      seasonExpenses: nonNegativeMoney(0),
+    };
+    const entryId = clubFinanceLedgerEntryId(`finance-ledger:opening:${String(clubIdValue).slice(5)}`);
+    ledgerEntries[entryId] = {
+      id: entryId,
+      sequenceNumber: ledgerEntryIds.length + 1,
+      clubId: clubIdValue,
+      occurredOn: gameDate(20_000),
+      currency: "EUR",
+      reason: "opening_capital",
+      direction: "credit",
+      amount: cashBalance,
+      balanceAfter: cashBalance,
+      referenceId: `opening:${clubIdValue}`,
+    };
+    ledgerEntryIds.push(entryId);
+  }
+
+  return createClubFinanceState(gameState, seniorSquadState, {
+    currency: "EUR",
+    accounts,
+    clubIds: gameState.clubIds,
+    ledgerEntries,
+    ledgerEntryIds,
   });
 }
 
 const playerLookup = new Map<PlayerId, Player>();
 
-function clubFixture(id: ClubId, reputation: number, playerIds: readonly PlayerId[]): Club {
+function clubFixture(
+  id: ClubId,
+  reputation: number,
+  playerIds: readonly PlayerId[],
+  category: Club["category"] = "third_division",
+): Club {
   return {
     id,
     name: String(id),
     shortName: String(id).slice("club:".length).toUpperCase(),
-    category: "third_division",
+    category,
     reputation,
     playerIds,
   };
@@ -260,6 +433,16 @@ function clubFixture(id: ClubId, reputation: number, playerIds: readonly PlayerI
 
 function playersForClub(prefix: string, positions: readonly PlayerPosition[]): PlayerId[] {
   return positions.map((position, index) => playerFixture(playerId(`player:${prefix}-${String(index + 1).padStart(2, "0")}`), position, 7).id);
+}
+
+function playersForClubAtAbility(
+  prefix: string,
+  positions: readonly PlayerPosition[],
+  ability: number,
+): PlayerId[] {
+  return positions.map((position, index) =>
+    playerFixture(playerId(`player:${prefix}-${String(index + 1).padStart(2, "0")}`), position, ability).id
+  );
 }
 
 function playerFixture(

@@ -5,7 +5,6 @@ import {
   CAREER_STATE_SCHEMA_VERSION,
   clubId,
   createCareerState,
-  createMarketState,
   gameDate,
   nonNegativeMoney,
   playerId,
@@ -169,12 +168,6 @@ function careerStateFixture(options: {
       fixtures: {},
       fixtureIds: [],
     },
-    marketState: createMarketState({
-      clubBudgets: {
-        [pro01]: { clubId: pro01, transferBudget: nonNegativeMoney(1_000_000_00) },
-      },
-      clubBudgetIds: [pro01],
-    }),
     transferHistory: [],
     ...(options.includeYouthState === false
       ? {}

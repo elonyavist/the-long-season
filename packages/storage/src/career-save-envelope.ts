@@ -7,16 +7,17 @@ import {
   type CareerSaveMetadata,
   type SaveMetadata,
 } from "./save-metadata.ts";
+import { createPersistableCareerState } from "./career-storage.contract.ts";
 
-/** Persisted career save envelope with explicit lifecycle-ledger support. */
-export interface StoredCareerSaveV3 {
+/** Persisted career save envelope for the complete Phase 78 ownership baseline. */
+export interface StoredCareerSaveV6 {
   readonly saveSchemaVersion: typeof CURRENT_CAREER_SAVE_SCHEMA_VERSION;
   readonly metadata: CareerSaveMetadata;
   readonly state: CareerState;
 }
 
 /** Current persisted career save shape after migration. */
-export type StoredCareerSave = StoredCareerSaveV3;
+export type StoredCareerSave = StoredCareerSaveV6;
 
 /**
  * Validates an unknown persisted career envelope against the current beta baseline.
@@ -58,7 +59,10 @@ export function migrateCareerSave(rawSave: unknown): StoredCareerSave {
       ...(metadata as unknown as SaveMetadata),
       autosaveIntervalDays,
     },
-    state: createCareerState(rawSave.state as unknown as CareerState),
+    state: createPersistableCareerState(
+      createCareerState(rawSave.state as unknown as CareerState),
+      "unsupported_schema_version",
+    ),
   };
 }
 

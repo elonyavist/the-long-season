@@ -4,12 +4,12 @@ import { generateRoundRobinCalendar } from "@game/engine";
 import { MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED, type MarketDemoProfileKey } from "../simulate-season/profile-keys.ts";
 import type {
   CliCareerState,
-  CliClubTransferBudget,
+  CliClubFinanceState,
   CliGameState,
-  CliMarketState,
-  CliMoney,
   CliPlayerAbilities,
+  CliMoney,
   CliSaveId,
+  CliSeniorSquadState,
   ClubId,
   PlayerId,
 } from "./types.ts";
@@ -32,8 +32,10 @@ export interface CareerMarketScenario {
   readonly targetPlayerId: PlayerId;
   /** Game-state snapshot used as the transfer input. */
   readonly gameState: CliGameState;
-  /** Market-state snapshot used as the transfer input. */
-  readonly marketState: CliMarketState;
+  /** Canonical club-finance snapshot used as the transfer input. */
+  readonly clubFinanceState: CliClubFinanceState;
+  /** Canonical senior registrations and agreements used by the transfer input. */
+  readonly seniorSquadState: CliSeniorSquadState;
 }
 
 /** Builds the durable career state used by profile-based market apply demos. */
@@ -43,7 +45,8 @@ export function careerStateFromScenario(saveId: CliSaveId, scenario: CareerMarke
     schemaVersion: 1,
     selectedClubId: scenario.selectedClubId,
     gameState: scenario.gameState,
-    marketState: scenario.marketState,
+    seniorSquadState: scenario.seniorSquadState,
+    clubFinanceState: scenario.clubFinanceState,
     transferHistory: [],
   };
 }
@@ -82,7 +85,8 @@ export function careerStateFromNewWorld(saveId: CliSaveId, league: FakeLeagueSys
       },
     },
     youthAcademyState: youthAcademies.youthAcademyState,
-    marketState: marketStateFixture([[selectedClubId, money(6_000_000_00)]]),
+    seniorSquadState: league.seniorSquadState,
+    clubFinanceState: league.clubFinanceState,
     transferHistory: [],
   };
 }
@@ -107,10 +111,14 @@ function buildAffordableScenario(league: FakeLeagueSystem): CareerMarketScenario
     sellingClubId,
     targetPlayerId,
     gameState: gameStateFromLeague(league),
-    marketState: marketStateFixture([
-      [selectedClubId, money(6_000_000_00)],
-      [sellingClubId, money(500_000_00)],
-    ]),
+    seniorSquadState: league.seniorSquadState,
+    clubFinanceState: withMarketDemoBudget(
+      league.clubFinanceState,
+      league.seniorSquadState,
+      selectedClubId,
+      targetPlayerId,
+      6_000_000_00,
+    ),
   };
 }
 
@@ -150,10 +158,53 @@ function buildStarRejectedScenario(league: FakeLeagueSystem): CareerMarketScenar
         },
       },
     },
-    marketState: marketStateFixture([
-      [selectedClubId, money(100_000_000_00)],
-      [sellingClubId, money(0)],
-    ]),
+    seniorSquadState: league.seniorSquadState,
+    clubFinanceState: withMarketDemoBudget(
+      league.clubFinanceState,
+      league.seniorSquadState,
+      selectedClubId,
+      targetPlayerId,
+      100_000_000_00,
+    ),
+  };
+}
+
+/**
+ * Gives a named CLI market scenario its documented transfer headroom.
+ *
+ * The override changes annual limits only: cash remains explained by the
+ * generated opening ledger. Wage headroom includes the target agreement so an
+ * affordable demo is not rejected for an unrelated generated-world variance.
+ */
+export function withMarketDemoBudget(
+  financeState: CliClubFinanceState,
+  seniorSquadState: CliSeniorSquadState,
+  buyingClubId: ClubId,
+  targetPlayerId: PlayerId,
+  transferBudgetMinorUnits: number,
+): CliClubFinanceState {
+  const account = financeState.accounts[buyingClubId];
+  if (account === undefined) throw new Error(`Market demo finance account not found: ${buyingClubId}`);
+
+  const targetContract = seniorSquadState.activeContractIds
+    .map((contractId) => seniorSquadState.contracts[contractId])
+    .find((contract) => contract?.playerId === targetPlayerId);
+  if (targetContract === undefined) throw new Error(`Market demo contract not found: ${targetPlayerId}`);
+
+  const transferBudget = transferBudgetMinorUnits as CliMoney;
+  const credibleTransferWageHeadroom = Math.ceil(targetContract.annualWage * 1.25) as CliMoney;
+  const requiredWageBudget = (account.committedAnnualWage + credibleTransferWageHeadroom) as CliMoney;
+  return {
+    ...financeState,
+    accounts: {
+      ...financeState.accounts,
+      [buyingClubId]: {
+        ...account,
+        annualTransferBudget: transferBudget,
+        availableTransferBudget: transferBudget,
+        annualWageBudget: Math.max(account.annualWageBudget, requiredWageBudget) as CliMoney,
+      },
+    },
   };
 }
 
@@ -218,24 +269,6 @@ function fixturesById(fixtures: readonly CliFixture[]): CliGameState["fixtures"]
   return indexed as CliGameState["fixtures"];
 }
 
-function marketStateFixture(rows: readonly (readonly [ClubId, CliMoney])[]): CliMarketState {
-  const clubBudgets: Record<ClubId, CliClubTransferBudget> = {} as Record<ClubId, CliClubTransferBudget>;
-  const clubBudgetIds: ClubId[] = [];
-
-  for (const [clubId, transferBudget] of rows) {
-    clubBudgets[clubId] = {
-      clubId,
-      transferBudget,
-    };
-    clubBudgetIds.push(clubId);
-  }
-
-  return {
-    clubBudgets,
-    clubBudgetIds,
-  };
-}
-
 function abilitiesFixture(value: number): CliPlayerAbilities {
   const ability = value as CliPlayerAbilities["technical"]["finishing"];
 
@@ -294,8 +327,4 @@ function requiredClubPlayerId(league: FakeLeagueSystem, clubId: ClubId, oneBased
   }
 
   return playerId;
-}
-
-function money(value: number): CliMoney {
-  return value as CliMoney;
 }

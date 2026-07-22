@@ -1,4 +1,12 @@
-import type { Club, ClubCategory, GameDate, Player } from "@game/domain";
+import type {
+  AgreedSquadStatus,
+  Club,
+  ClubCategory,
+  ContractOfferTerms,
+  GameDate,
+  Player,
+  PlayerContract,
+} from "@game/domain";
 
 import { derivePlayerMarketAbility } from "./player-valuation.ts";
 
@@ -6,7 +14,10 @@ import { derivePlayerMarketAbility } from "./player-valuation.ts";
 export type PlayerWillingnessReasonCode =
   | "sporting_level_too_low"
   | "reputation_drop_too_large"
-  | "prime_player_downward_move";
+  | "prime_player_downward_move"
+  | "annual_wage_regression"
+  | "squad_status_regression"
+  | "contract_security_regression";
 
 /** One structured player willingness reason. */
 export interface PlayerWillingnessReason {
@@ -44,6 +55,10 @@ export interface DerivePlayerWillingnessInput {
   readonly buyingClub: Club;
   /** Current game date used to derive age. */
   readonly currentDate: GameDate;
+  /** Current active agreement used to assess what the player gives up. */
+  readonly currentContract?: PlayerContract;
+  /** Terms already accepted in principle at the destination. */
+  readonly proposedTerms?: ContractOfferTerms;
 }
 
 /**
@@ -71,6 +86,19 @@ export function derivePlayerWillingness(input: DerivePlayerWillingnessInput): Pl
     reasons.push(reason("prime_player_downward_move", categoryDrop, reputationDrop));
   }
 
+  if (input.currentContract !== undefined && input.proposedTerms !== undefined && categoryDrop >= 0) {
+    if (input.proposedTerms.annualWage < input.currentContract.annualWage * 0.9) {
+      reasons.push(reason("annual_wage_regression", categoryDrop, reputationDrop));
+    }
+    if (statusRank(input.proposedTerms.squadStatus) < statusRank(input.currentContract.squadStatus)) {
+      reasons.push(reason("squad_status_regression", categoryDrop, reputationDrop));
+    }
+    const remainingDays = Math.max(0, input.currentContract.endsOn - input.currentDate);
+    if (age <= 31 && input.proposedTerms.durationYears * 365 + 90 < remainingDays) {
+      reasons.push(reason("contract_security_regression", categoryDrop, reputationDrop));
+    }
+  }
+
   return {
     status: reasons.length === 0 ? "accepted" : "rejected",
     reasons,
@@ -96,6 +124,14 @@ function reason(
 function categoryRank(category: ClubCategory): number {
   if (category === "first_division") return 3;
   if (category === "second_division") return 2;
+  return 1;
+}
+
+function statusRank(status: AgreedSquadStatus): number {
+  if (status === "key_player") return 5;
+  if (status === "regular_starter") return 4;
+  if (status === "squad_player") return 3;
+  if (status === "fringe_player") return 2;
   return 1;
 }
 

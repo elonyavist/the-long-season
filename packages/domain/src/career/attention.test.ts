@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, fixtureId } from "../types/ids.ts";
+import { clubId, fixtureId, playerContractId, playerId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import {
   careerAttentionEventId,
   compareCareerAttentionEvents,
   createCareerAttentionEvent,
+  createContractAttentionEvent,
   createMatchdayAttentionEvent,
   isUnresolvedCareerAttentionEvent,
 } from "./attention.ts";
@@ -76,4 +77,23 @@ test("attention sorting uses date, level, then stable ID", () => {
     "attention:matchday:fixture:000003",
   ]);
   assert.equal(isUnresolvedCareerAttentionEvent(first), true);
+});
+
+test("contract reminder identity is stable and its explicit policy does not stop Continue", () => {
+  const reminder = createContractAttentionEvent({
+    contractId: playerContractId("contract:attention-01"),
+    clubId: clubId("club:perugia"),
+    playerId: playerId("player:attention-01"),
+    date: gameDate(20_000),
+    level: "important",
+    reason: "contract_reminder",
+    continuePolicy: "never",
+  });
+
+  assert.equal(
+    reminder.id,
+    "attention:contract:contract_reminder:contract:attention-01",
+  );
+  assert.equal(reminder.continuePolicy, "never");
+  assert.equal(isUnresolvedCareerAttentionEvent(reminder), false);
 });

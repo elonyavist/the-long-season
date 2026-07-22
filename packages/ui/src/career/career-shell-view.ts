@@ -85,8 +85,8 @@ export interface BuildCareerShellViewInput {
 const DEFAULT_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
   { sectionKey: "dashboard", labelKey: "career.shell.nav.dashboard", status: "available" },
   { sectionKey: "inbox", labelKey: "career.shell.nav.inbox", status: "available" },
-  { sectionKey: "squad", labelKey: "career.shell.nav.squad", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
-  { sectionKey: "tactics", labelKey: "career.shell.nav.tactics", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
+  { sectionKey: "squad", labelKey: "career.shell.nav.squad", status: "available" },
+  { sectionKey: "tactics", labelKey: "career.shell.nav.tactics", status: "available" },
   { sectionKey: "fixtures", labelKey: "career.shell.nav.fixtures", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
   { sectionKey: "market", labelKey: "career.shell.nav.market", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
   { sectionKey: "finances", labelKey: "career.shell.nav.finances", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },

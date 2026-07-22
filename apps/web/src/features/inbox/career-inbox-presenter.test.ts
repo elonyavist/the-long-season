@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createMatchdayAttention, findNextCareerFixture } from "@game/engine";
+import {
+  createMatchdayAttention,
+  findNextCareerFixture,
+  projectSelectedClubContractAttention,
+} from "@game/engine";
 
 import {
   buildWebCareerState,
@@ -84,6 +88,7 @@ describe("presentCareerInbox", () => {
       category: "match_result",
       source: "match_report",
       level: "informational",
+      continuePolicy: "never",
       lifecycle: { read: false, acknowledged: false, resolved: false },
       related: { fixtureId },
       blockerKeys: [],
@@ -104,6 +109,42 @@ describe("presentCareerInbox", () => {
       expect.objectContaining({ labelKey: "career.inbox.fact.lineup" }),
     );
     expect(presentation.railView.messages[0]?.category).toBe("match_result");
+  });
+
+  it("presents a renewal reminder as visible contract context without blocking Continue", () => {
+    const career = buildWebCareerState({
+      saveId: "save:posta-contract-reminder" as WebCareerSaveId,
+      worldSeed: "posta-contract-reminder-seed",
+    });
+    const contract = career.seniorSquadState?.activeContractIds
+      .map((id) => career.seniorSquadState?.contracts[id])
+      .find((candidate) => candidate?.clubId === career.selectedClubId);
+    if (contract === undefined) throw new Error("Expected selected-club contract");
+    const reminder = projectSelectedClubContractAttention(
+      career,
+      (contract.endsOn - 243) as typeof contract.endsOn,
+    ).find((attention) => attention.message.category === "contract_reminder");
+    if (reminder === undefined) throw new Error("Expected contract reminder");
+
+    const presentation = presentCareerInbox({
+      careerState: { ...career, currentSeasonInbox: [reminder.message] },
+      activeFilter: "all",
+    });
+
+    expect(presentation.postaView.toHandleCount).toBe(0);
+    expect(presentation.railView.actionRequiredCount).toBe(0);
+    expect(presentation.postaView.selectedMessage).toMatchObject({
+      subjectKey: "career.inbox.subject.contract_reminder",
+      sourceKey: "career.inbox.source.contract_office",
+      primaryAction: {
+        actionId: "open_contract_negotiation",
+        labelKey: "career.inbox.action.open_contract_negotiation",
+      },
+    });
+    expect(presentation.postaView.selectedMessage?.factRows.map((row) => row.labelKey)).toEqual([
+      "career.inbox.fact.player",
+      "career.inbox.fact.contractExpiry",
+    ]);
   });
 
   it("presents an important rollover from the latest durable season archive", () => {
@@ -144,6 +185,7 @@ describe("presentCareerInbox", () => {
       category: "season_rollover",
       source: "competition_office",
       level: "important",
+      continuePolicy: "until_acknowledged",
       lifecycle: { read: false, acknowledged: false, resolved: false },
       related: { clubId: career.selectedClubId },
       actionIds: [],

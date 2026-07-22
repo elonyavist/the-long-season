@@ -8,6 +8,9 @@ import { brand, type Brand } from "../types/brand.ts";
  */
 export type Money = Brand<number, "Money">;
 
+/** Real currencies currently stored by career financial facts. */
+export type CurrencyCode = "EUR";
+
 /**
  * Percentage stored as basis points.
  *

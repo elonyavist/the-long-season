@@ -7,10 +7,12 @@ import { test } from "vitest";
 import {
   CAREER_STATE_SCHEMA_VERSION,
   accruePlayerFixtureParticipation,
+  careerInboxMessageId,
   closePlayerParticipationMonth,
   createCareerState,
+  createCareerInboxMessage,
+  contractNegotiationId,
   createEmptyPlayerParticipationLedger,
-  createMarketState,
   fixtureId,
   gameDate,
   nonNegativeMoney,
@@ -27,6 +29,7 @@ import {
 
 import { JsonCareerStorage } from "./json-career-storage.ts";
 import { StorageError } from "./game-storage.interface.ts";
+import { withPersistableCareerFacts } from "./testing/persistable-career-fixture.ts";
 
 /**
  * JSON career storage tests protect durable career-state round trips.
@@ -215,6 +218,96 @@ test("save then load preserves optional youth academy state", async () => {
   }
 });
 
+test("save then load preserves a blocking selected-club counteroffer exactly", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const base = minimalCareerState();
+  const player = playerId("player:pro01-01");
+  const club = base.selectedClubId;
+  const contract = base.seniorSquadState?.activeContractIds[0];
+  assert.ok(contract !== undefined);
+  const negotiation = contractNegotiationId("contract-negotiation:storage-counteroffer");
+  const submittedTerms = contractTerms(120_000_00);
+  const counterTerms = contractTerms(135_000_00);
+  const preferredTerms = contractTerms(145_000_00);
+  const state = createCareerState({
+    ...base,
+    contractNegotiationState: {
+      negotiations: {
+        [negotiation]: {
+          id: negotiation,
+          playerId: player,
+          clubId: club,
+          currentContractId: contract,
+          createdOn: gameDate(19_995),
+          status: "countered",
+          submittedOffer: {
+            submittedOn: gameDate(19_996),
+            responseDueOn: gameDate(19_998),
+            terms: submittedTerms,
+          },
+          counterOffer: {
+            issuedOn: gameDate(19_998),
+            expiresOn: gameDate(20_012),
+            terms: counterTerms,
+            evaluation: {
+              decision: "countered",
+              scoreBasisPoints: 8_500,
+              reasons: ["annual_wage_below_demand"],
+              demand: {
+                evaluatedOn: gameDate(19_998),
+                age: 27,
+                currentAbility: 10,
+                reachablePotential: 12,
+                role: "goalkeeper",
+                expectedSquadStatus: "squad_player",
+                currentAnnualWage: nonNegativeMoney(100_000_00),
+                remainingContractDays: 367,
+                clubReputation: 5,
+                clubCategory: "third_division",
+                freeAgentLeverageBasisPoints: 0,
+                preferredTerms,
+                minimumTerms: counterTerms,
+              },
+            },
+          },
+        },
+      },
+      negotiationIds: [negotiation],
+    },
+    currentSeasonInbox: [createCareerInboxMessage({
+      id: careerInboxMessageId(`inbox:contract-counteroffer:${negotiation}`),
+      date: gameDate(19_998),
+      category: "contract_counteroffer",
+      source: "contract_office",
+      level: "blocking",
+      continuePolicy: "until_resolved",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: {
+        clubId: club,
+        playerId: player,
+        contractId: contract,
+        contractNegotiationId: negotiation,
+      },
+      actionIds: ["open_contract_negotiation"],
+    })],
+  });
+
+  try {
+    await storage.saveCareer({ saveId: state.saveId, name: "Counteroffer", state });
+
+    const loaded = await storage.loadCareer(state.saveId);
+
+    assert.deepEqual(loaded.contractNegotiationState, state.contractNegotiationState);
+    assert.deepEqual(loaded.currentSeasonInbox, state.currentSeasonInbox);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
 test("loading a missing career save throws a typed storage error", async () => {
   const directoryPath = await createTempSaveDirectory();
   const storage = new JsonCareerStorage({ directoryPath });
@@ -235,7 +328,7 @@ test("loading malformed career saves fails clearly", async () => {
   const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
 
   try {
-    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 3, metadata: {}, state: {} }), "utf8");
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 6, metadata: {}, state: {} }), "utf8");
 
     await assert.rejects(
       () => storage.loadCareer(saveId("save:bad")),
@@ -263,7 +356,7 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 3);
+    assert.equal(raw.saveSchemaVersion, 6);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
     assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
   } finally {
@@ -278,7 +371,7 @@ test("old beta career envelopes fail with a typed reset boundary", async () => {
   const savePath = (id: ReturnType<typeof saveId>) => join(directoryPath, `${encodeURIComponent(id)}.career.json`);
 
   try {
-    for (const version of [1, 2] as const) {
+    for (const version of [1, 2, 3, 4, 5] as const) {
       const id = saveId(`save:old-beta-${version}`);
       await writeFile(savePath(id), JSON.stringify({
         saveSchemaVersion: version,
@@ -329,20 +422,14 @@ test("policy-only updates preserve gameplay and gameplay timestamps", async () =
 function minimalCareerState(): CareerState {
   const pro01 = "club:pro01" as CareerState["selectedClubId"];
 
-  return createCareerState({
+  return withPersistableCareerFacts(createCareerState({
     saveId: saveId("save:career-demo"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: pro01,
     gameState: minimalGameState(),
-    marketState: createMarketState({
-      clubBudgets: {
-        [pro01]: { clubId: pro01, transferBudget: nonNegativeMoney(6_000_000_00) },
-      },
-      clubBudgetIds: [pro01],
-    }),
     transferHistory: [],
     playerParticipationLedger: playerParticipationLedgerFixture(playerId("player:pro01-01")),
-  });
+  }));
 }
 
 /** Builds a closed monthly ledger so JSON saves prove lifecycle persistence. */
@@ -516,6 +603,20 @@ function playerStateFixture(): PlayerDynamicState {
     fitness: 100 as PlayerDynamicState["fitness"],
     form: 50 as PlayerDynamicState["form"],
     morale: 50 as PlayerDynamicState["morale"],
+  };
+}
+
+/** Builds one complete term set for persistence-boundary assertions. */
+function contractTerms(annualWage: number) {
+  return {
+    durationYears: 2,
+    annualWage: nonNegativeMoney(annualWage),
+    squadStatus: "squad_player" as const,
+    bonuses: {
+      signingBonus: nonNegativeMoney(5_000_00),
+      appearanceBonus: nonNegativeMoney(500_00),
+      cleanSheetBonus: nonNegativeMoney(250_00),
+    },
   };
 }
 

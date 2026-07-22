@@ -8,3 +8,6 @@ export * from "./inbox.ts";
 export * from "./attention.ts";
 export * from "./player-participation.ts";
 export * from "./player-availability.ts";
+export * from "./senior-squad.ts";
+export * from "./club-finance.ts";
+export * from "./contract-negotiation.ts";

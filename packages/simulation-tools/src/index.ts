@@ -74,6 +74,17 @@ export {
 } from "./long-run/youth-stability.ts";
 
 export {
+  createLongRunContractFinanceSeasonRow,
+  createLongRunContractFinanceStabilityReport,
+  type CreateLongRunContractFinanceSeasonRowInput,
+  type LongRunContractFinanceCheck,
+  type LongRunContractFinanceSeasonRow,
+  type LongRunContractFinanceStabilityReport,
+  type LongRunLedgerReasonAmounts,
+  type LongRunSquadDepartment,
+} from "./long-run/contract-finance-stability.ts";
+
+export {
   liveMatchControlWorldSeed,
   runLiveMatchControlGate,
   verifyLiveMatchControlGateReproducibility,

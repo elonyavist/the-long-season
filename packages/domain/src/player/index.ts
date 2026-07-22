@@ -2,3 +2,4 @@
 export * from "./create-player.ts";
 export * from "./player-abilities.ts";
 export * from "./player-role-profile.ts";
+export * from "./player-squad-department.ts";

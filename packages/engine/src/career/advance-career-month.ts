@@ -11,6 +11,10 @@ import {
 } from "@game/domain";
 
 import { developPlayersForSeason, type PlayerDevelopmentChange } from "./player-development.ts";
+import {
+  advanceAiContractLifecycle,
+  type AdvanceAiContractLifecycleResult,
+} from "./ai-contract-lifecycle.ts";
 
 /** Input for the canonical monthly career player lifecycle checkpoint. */
 export interface AdvanceCareerMonthsInput {
@@ -58,6 +62,8 @@ export interface AdvanceCareerMonthsResult {
   readonly careerState: CareerState;
   /** Structured summaries for each newly closed month. */
   readonly summaries: readonly CareerMonthlyLifecycleSummary[];
+  /** AI renewal decisions and ownership expiries reached by this calendar route. */
+  readonly contractLifecycle?: AdvanceAiContractLifecycleResult;
 }
 
 /**
@@ -70,8 +76,16 @@ export interface AdvanceCareerMonthsResult {
 export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCareerMonthsResult {
   const seasonId = input.seasonId ?? input.careerState.gameState.calendar.currentSeasonId;
   const fromDate = input.fromDate ?? input.careerState.gameState.calendar.currentDate;
+  const contractLifecycle = input.careerState.seniorSquadState === undefined
+    ? undefined
+    : advanceAiContractLifecycle({
+        careerState: input.careerState,
+        fromDate,
+        throughDate: input.toDate,
+      });
+  const careerStateAfterContracts = contractLifecycle?.careerState ?? input.careerState;
   const eligibleRows = eligibleOpenParticipationRows({
-    ledger: input.careerState.playerParticipationLedger,
+    ledger: careerStateAfterContracts.playerParticipationLedger,
     seasonId,
     beforeMonthKey: monthKeyForCareerDate(input.toDate),
     playerIds: input.playerIds,
@@ -79,12 +93,13 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
 
   if (input.toDate <= fromDate || eligibleRows.length === 0) {
     return {
-      careerState: input.careerState,
+      careerState: careerStateAfterContracts,
       summaries: [],
+      ...(contractLifecycle === undefined ? {} : { contractLifecycle }),
     };
   }
 
-  let careerState = input.careerState;
+  let careerState = careerStateAfterContracts;
   const summaries: CareerMonthlyLifecycleSummary[] = [];
 
   for (const monthKey of uniqueSortedMonthKeys(eligibleRows)) {
@@ -125,6 +140,7 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
   return {
     careerState,
     summaries,
+    ...(contractLifecycle === undefined ? {} : { contractLifecycle }),
   };
 }
 

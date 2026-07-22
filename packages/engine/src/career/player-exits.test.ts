@@ -4,18 +4,24 @@ import { test } from "vitest";
 import {
   CAREER_STATE_SCHEMA_VERSION,
   abilityValue,
+  clubFinanceLedgerEntryId,
   clubId,
   createCareerState,
-  createMarketState,
+  createClubFinanceState,
+  createSeniorSquadState,
   gameDate,
   mapPlayerAbilities,
+  nonNegativeMoney,
+  playerContractId,
   playerId,
   rawDiagnosticAbilityAverage,
   saveId,
   seasonId,
+  seniorSquadRegistrationId,
   stateValue,
   type CareerState,
   type Club,
+  type ClubFinanceState,
   type ClubId,
   type GameState,
   type Player,
@@ -23,6 +29,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type SeniorSquadState,
 } from "@game/domain";
 
 import { applyEndOfSeasonPlayerExits } from "./player-exits.ts";
@@ -48,6 +55,19 @@ test("applyEndOfSeasonPlayerExits retires hard-threshold old outfield players", 
   assert.deepEqual(result.careerState.gameState.clubs[clubId("club:selected")]?.playerIds, []);
   assert.equal(result.careerState.gameState.players[retiringPlayer]?.id, retiringPlayer);
   assert.equal(result.careerState.gameState.playerStates[retiringPlayer], undefined);
+  assert.deepEqual(result.careerState.seniorSquadState?.activeContractIds, []);
+  assert.deepEqual(result.careerState.seniorSquadState?.registrationIds, []);
+  assert.equal(result.careerState.seniorSquadState?.contractHistoryEntryIds.length, 1);
+  assert.equal(
+    result.careerState.seniorSquadState?.contractHistory[
+      result.careerState.seniorSquadState.contractHistoryEntryIds[0]!
+    ]?.event,
+    "released",
+  );
+  assert.equal(
+    result.careerState.clubFinanceState?.accounts[clubId("club:selected")]?.committedAnnualWage,
+    0,
+  );
 });
 
 test("applyEndOfSeasonPlayerExits uses later hard retirement for goalkeepers", () => {
@@ -64,6 +84,27 @@ test("applyEndOfSeasonPlayerExits uses later hard retirement for goalkeepers", (
 
   assert.deepEqual(result.exits, []);
   assert.deepEqual(result.careerState, careerState);
+});
+
+test("applyEndOfSeasonPlayerExits removes unattached players past the hard retirement age", () => {
+  const retiredFreeAgent = playerId("player:retired-free-agent");
+  const careerState = freeAgentCareerStateFixture([
+    playerFixture(retiredFreeAgent, "st", 47, abilitySet(8), abilitySet(8)),
+  ]);
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "free-agent-retirement-world",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.equal(result.exits.length, 1);
+  assert.equal(result.exits[0]?.playerId, retiredFreeAgent);
+  assert.equal(result.exits[0]?.clubId, undefined);
+  assert.equal(result.exits[0]?.reason, "retirement");
+  assert.deepEqual(result.careerState.gameState.playerIds, []);
+  assert.equal(result.careerState.gameState.players[retiredFreeAgent]?.id, retiredFreeAgent);
+  assert.equal(result.careerState.gameState.playerStates[retiredFreeAgent], undefined);
 });
 
 test("applyEndOfSeasonPlayerExits is deterministic for same seed and season", () => {
@@ -142,17 +183,138 @@ test("applyEndOfSeasonPlayerExits does not release non-retiring players from alr
 
 function careerStateFixture(players: readonly Player[]): CareerState {
   const selectedClubId = clubId("club:selected");
+  const gameState = gameStateFixture(selectedClubId, players);
+  const seniorSquadState = canonicalSeniorSquadState(gameState);
 
   return createCareerState({
     saveId: saveId("save:player-exits"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
-    gameState: gameStateFixture(selectedClubId, players),
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
-    }),
+    gameState,
     transferHistory: [],
+    seniorSquadState,
+    clubFinanceState: canonicalClubFinanceState(gameState, seniorSquadState),
+  });
+}
+
+function freeAgentCareerStateFixture(players: readonly Player[]): CareerState {
+  const selectedClubId = clubId("club:selected");
+  const populatedGameState = gameStateFixture(selectedClubId, players);
+  const gameState: GameState = {
+    ...populatedGameState,
+    clubs: {
+      [selectedClubId]: clubFixture(selectedClubId, []),
+    },
+  };
+  const seniorSquadState = canonicalSeniorSquadState(gameState);
+
+  return createCareerState({
+    saveId: saveId("save:free-agent-player-exits"),
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    selectedClubId,
+    gameState,
+    transferHistory: [],
+    seniorSquadState,
+    clubFinanceState: canonicalClubFinanceState(gameState, seniorSquadState),
+  });
+}
+
+function canonicalSeniorSquadState(gameState: GameState): SeniorSquadState {
+  const registrations: Record<string, SeniorSquadState["registrations"][keyof SeniorSquadState["registrations"]]> = {};
+  const registrationIds: SeniorSquadState["registrationIds"][number][] = [];
+  const contracts: Record<string, SeniorSquadState["contracts"][keyof SeniorSquadState["contracts"]]> = {};
+  const contractIds: SeniorSquadState["contractIds"][number][] = [];
+
+  for (const clubIdValue of gameState.clubIds) {
+    const club = gameState.clubs[clubIdValue];
+    if (club === undefined) continue;
+    for (let index = 0; index < club.playerIds.length; index += 1) {
+      const ownedPlayerId = club.playerIds[index];
+      if (ownedPlayerId === undefined) continue;
+      const suffix = `${String(clubIdValue).slice(5)}:${String(ownedPlayerId).slice(7)}`;
+      const registrationId = seniorSquadRegistrationId(`registration:${suffix}`);
+      const contractId = playerContractId(`contract:${suffix}`);
+      registrations[registrationId] = {
+        id: registrationId,
+        playerId: ownedPlayerId,
+        clubId: clubIdValue,
+        shirtNumber: index + 1,
+        registeredOn: gameDate(19_000),
+      };
+      contracts[contractId] = {
+        id: contractId,
+        playerId: ownedPlayerId,
+        clubId: clubIdValue,
+        type: "professional",
+        startsOn: gameDate(19_000),
+        endsOn: gameDate(22_000),
+        annualWage: nonNegativeMoney(100_000_00),
+        squadStatus: "squad_player",
+        bonuses: {
+          signingBonus: nonNegativeMoney(0),
+          appearanceBonus: nonNegativeMoney(1_000_00),
+        },
+      };
+      registrationIds.push(registrationId);
+      contractIds.push(contractId);
+    }
+  }
+
+  return createSeniorSquadState(gameState, {
+    registrations,
+    registrationIds,
+    contracts,
+    contractIds,
+    activeContractIds: contractIds,
+    contractHistory: {},
+    contractHistoryEntryIds: [],
+  });
+}
+
+function canonicalClubFinanceState(gameState: GameState, seniorSquadState: SeniorSquadState): ClubFinanceState {
+  const accounts: Record<string, ClubFinanceState["accounts"][keyof ClubFinanceState["accounts"]]> = {};
+  const ledgerEntries: Record<string, ClubFinanceState["ledgerEntries"][keyof ClubFinanceState["ledgerEntries"]]> = {};
+  const ledgerEntryIds: ClubFinanceState["ledgerEntryIds"][number][] = [];
+
+  for (const clubIdValue of gameState.clubIds) {
+    const committedAnnualWage = seniorSquadState.activeContractIds.reduce((total, contractId) => {
+      const contract = seniorSquadState.contracts[contractId];
+      return contract?.clubId === clubIdValue ? total + contract.annualWage : total;
+    }, 0);
+    const cashBalance = nonNegativeMoney(100_000_000_00);
+    accounts[clubIdValue] = {
+      clubId: clubIdValue,
+      currency: "EUR",
+      cashBalance,
+      annualTransferBudget: nonNegativeMoney(20_000_000_00),
+      availableTransferBudget: nonNegativeMoney(20_000_000_00),
+      annualWageBudget: nonNegativeMoney(50_000_000_00),
+      committedAnnualWage: nonNegativeMoney(committedAnnualWage),
+      seasonIncome: nonNegativeMoney(0),
+      seasonExpenses: nonNegativeMoney(0),
+    };
+    const entryId = clubFinanceLedgerEntryId(`finance-ledger:opening:${String(clubIdValue).slice(5)}`);
+    ledgerEntries[entryId] = {
+      id: entryId,
+      sequenceNumber: ledgerEntryIds.length + 1,
+      clubId: clubIdValue,
+      occurredOn: gameDate(20_000),
+      currency: "EUR",
+      reason: "opening_capital",
+      direction: "credit",
+      amount: cashBalance,
+      balanceAfter: cashBalance,
+      referenceId: `opening:${clubIdValue}`,
+    };
+    ledgerEntryIds.push(entryId);
+  }
+
+  return createClubFinanceState(gameState, seniorSquadState, {
+    currency: "EUR",
+    accounts,
+    clubIds: gameState.clubIds,
+    ledgerEntries,
+    ledgerEntryIds,
   });
 }
 

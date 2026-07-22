@@ -3,64 +3,31 @@ import { test } from "vitest";
 
 import {
   abilityValue,
+  clubFinanceLedgerEntryId,
   clubId,
-  createMarketState,
   gameDate,
   nonNegativeMoney,
   playerId,
   seasonId,
   type Club,
+  type ClubFinanceLedgerEntry,
+  type ClubFinanceLedgerEntryId,
+  type ClubFinanceAccount,
+  type ClubFinanceState,
   type GameState,
-  type MarketState,
   type Player,
   type PlayerAbilities,
   type PlayerPosition,
 } from "@game/domain";
 
-import { evaluatePermanentTransfer, previewPermanentTransfer } from "./transfer-feasibility.ts";
+import { evaluatePermanentTransfer } from "./transfer-feasibility.ts";
 
 /**
- * Transfer feasibility tests protect the command-local preview behavior.
+ * Transfer feasibility tests protect pure market evaluation behavior.
  *
- * The accepted path must copy state and budget data; rejected paths must return
- * structured reasons without modifying the original inputs.
+ * Ownership and finance changes belong exclusively to the durable career
+ * transfer use case, so this module only returns structured facts and reasons.
  */
-test("previewPermanentTransfer applies accepted ownership and budget copies", () => {
-  const pro01 = clubId("club:pro01");
-  const pro18 = clubId("club:pro18");
-  const target = playerId("player:target");
-  const gameState = gameStateFixture({
-    clubs: [
-      clubFixture(pro01, "third_division", 6, [playerId("player:pro01-01")]),
-      clubFixture(pro18, "third_division", 4, [target]),
-    ],
-    players: [playerFixture(target, "st", 10, 12, 24), playerFixture(playerId("player:pro01-01"), "cm", 9, 10, 24)],
-  });
-  const marketState = marketStateFixture([
-    [pro01, 5_000_000_00],
-    [pro18, 500_000_00],
-  ]);
-
-  const preview = previewPermanentTransfer({
-    gameState,
-    marketState,
-    intent: {
-      buyingClubId: pro01,
-      sellingClubId: pro18,
-      playerId: target,
-    },
-  });
-
-  assert.equal(preview.status, "accepted");
-  assert.equal(preview.reasons.length, 0);
-  assert.ok(preview.transferFee !== undefined);
-  assert.deepEqual(preview.gameState.clubs[pro01]?.playerIds, [playerId("player:pro01-01"), target]);
-  assert.deepEqual(preview.gameState.clubs[pro18]?.playerIds, []);
-  assert.deepEqual(gameState.clubs[pro18]?.playerIds, [target]);
-  assert.equal(preview.marketState.clubBudgets[pro01]?.transferBudget, 5_000_000_00 - preview.transferFee);
-  assert.equal(preview.marketState.clubBudgets[pro18]?.transferBudget, 500_000_00 + preview.transferFee);
-});
-
 test("evaluatePermanentTransfer rejects insufficient transfer budget", () => {
   const pro01 = clubId("club:pro01");
   const pro18 = clubId("club:pro18");
@@ -74,7 +41,7 @@ test("evaluatePermanentTransfer rejects insufficient transfer budget", () => {
       ],
       players: [playerFixture(target, "st", 10, 12, 24)],
     }),
-    marketState: marketStateFixture([[pro01, 100_000_00]]),
+    clubFinanceState: clubFinanceStateFixture([[pro01, 100_000_00]]),
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
@@ -82,6 +49,30 @@ test("evaluatePermanentTransfer rejects insufficient transfer budget", () => {
   assert.deepEqual(
     result.reasons.map((reason) => reason.code),
     ["insufficient_transfer_budget"],
+  );
+});
+
+test("evaluatePermanentTransfer rejects a fee that the club cannot fund with cash", () => {
+  const pro01 = clubId("club:pro01");
+  const pro18 = clubId("club:pro18");
+  const target = playerId("player:target");
+
+  const result = evaluatePermanentTransfer({
+    gameState: gameStateFixture({
+      clubs: [
+        clubFixture(pro01, "third_division", 6, []),
+        clubFixture(pro18, "third_division", 4, [target]),
+      ],
+      players: [playerFixture(target, "st", 10, 12, 24)],
+    }),
+    clubFinanceState: clubFinanceStateFixture([[pro01, 5_000_000_00, 100_000_00]]),
+    intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
+  });
+
+  assert.equal(result.status, "rejected");
+  assert.deepEqual(
+    result.reasons.map((reason) => reason.code),
+    ["insufficient_cash"],
   );
 });
 
@@ -98,7 +89,7 @@ test("evaluatePermanentTransfer rejects an unwilling player", () => {
       ],
       players: [playerFixture(target, "st", 15, 16, 27)],
     }),
-    marketState: marketStateFixture([
+    clubFinanceState: clubFinanceStateFixture([
       [pro01, 100_000_000_00],
       [elite, 0],
     ]),
@@ -126,7 +117,7 @@ test("evaluatePermanentTransfer returns structured identity and ownership reason
       ],
       players: [playerFixture(target, "st", 10, 12, 24)],
     }),
-    marketState: marketStateFixture([[pro01, 5_000_000_00]]),
+    clubFinanceState: clubFinanceStateFixture([[pro01, 5_000_000_00]]),
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
@@ -137,29 +128,28 @@ test("evaluatePermanentTransfer returns structured identity and ownership reason
   );
 });
 
-test("previewPermanentTransfer returns original references when rejected", () => {
+test("evaluatePermanentTransfer derives an accepted budget preview without mutating finance state", () => {
   const pro01 = clubId("club:pro01");
   const pro18 = clubId("club:pro18");
   const target = playerId("player:target");
-  const gameState = gameStateFixture({
-    clubs: [
-      clubFixture(pro01, "third_division", 6, []),
-      clubFixture(pro18, "third_division", 4, [target]),
-    ],
-    players: [playerFixture(target, "st", 10, 12, 24)],
-  });
-  const marketState = marketStateFixture([[pro18, 500_000_00]]);
+  const financeState = clubFinanceStateFixture([[pro01, 100_000_000_00]]);
 
-  const preview = previewPermanentTransfer({
-    gameState,
-    marketState,
+  const result = evaluatePermanentTransfer({
+    gameState: gameStateFixture({
+      clubs: [
+        clubFixture(pro01, "third_division", 6, []),
+        clubFixture(pro18, "third_division", 4, [target]),
+      ],
+      players: [playerFixture(target, "st", 10, 12, 24)],
+    }),
+    clubFinanceState: financeState,
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
-  assert.equal(preview.status, "rejected");
-  assert.deepEqual(preview.reasons.map((reason) => reason.code), ["missing_buying_budget"]);
-  assert.equal(preview.gameState, gameState);
-  assert.equal(preview.marketState, marketState);
+  assert.equal(result.status, "accepted");
+  assert.equal(result.buyerBudgetBefore, 100_000_000_00);
+  assert.equal(result.buyerBudgetAfter, 100_000_000_00 - (result.transferFee ?? 0));
+  assert.equal(financeState.accounts[pro01]?.availableTransferBudget, 100_000_000_00);
 });
 
 function gameStateFixture(input: {
@@ -201,25 +191,44 @@ function gameStateFixture(input: {
   };
 }
 
-function marketStateFixture(rows: readonly (readonly [Club["id"], number])[]): MarketState {
-  const clubBudgets: Record<Club["id"], MarketState["clubBudgets"][Club["id"]]> = {} as Record<
-    Club["id"],
-    MarketState["clubBudgets"][Club["id"]]
-  >;
-  const clubBudgetIds: Club["id"][] = [];
+function clubFinanceStateFixture(
+  rows: readonly (readonly [Club["id"], transferBudget: number, cashBalance?: number])[],
+): ClubFinanceState {
+  const accounts: Record<Club["id"], ClubFinanceAccount> = {} as Record<Club["id"], ClubFinanceAccount>;
+  const clubIds: Club["id"][] = [];
+  const ledgerEntries: Record<ClubFinanceLedgerEntryId, ClubFinanceLedgerEntry> = {};
+  const ledgerEntryIds: ClubFinanceLedgerEntryId[] = [];
 
-  for (const [id, amount] of rows) {
-    clubBudgets[id] = {
+  for (const [id, transferBudget, cashBalance = transferBudget] of rows) {
+    accounts[id] = {
       clubId: id,
-      transferBudget: nonNegativeMoney(amount),
+      currency: "EUR",
+      cashBalance: nonNegativeMoney(cashBalance),
+      annualTransferBudget: nonNegativeMoney(transferBudget),
+      availableTransferBudget: nonNegativeMoney(transferBudget),
+      annualWageBudget: nonNegativeMoney(0),
+      committedAnnualWage: nonNegativeMoney(0),
+      seasonIncome: nonNegativeMoney(0),
+      seasonExpenses: nonNegativeMoney(0),
     };
-    clubBudgetIds.push(id);
+    clubIds.push(id);
+    const entryId = clubFinanceLedgerEntryId(`finance-ledger:opening:${id}`);
+    ledgerEntries[entryId] = {
+      id: entryId,
+      sequenceNumber: ledgerEntryIds.length + 1,
+      clubId: id,
+      occurredOn: gameDate(20_000),
+      currency: "EUR",
+      reason: "opening_capital",
+      direction: "credit",
+      amount: nonNegativeMoney(cashBalance),
+      balanceAfter: nonNegativeMoney(cashBalance),
+      referenceId: `test:${id}`,
+    };
+    ledgerEntryIds.push(entryId);
   }
 
-  return createMarketState({
-    clubBudgets,
-    clubBudgetIds,
-  });
+  return { currency: "EUR", accounts, clubIds, ledgerEntries, ledgerEntryIds };
 }
 
 function clubFixture(id: Club["id"], category: Club["category"], reputation: number, playerIds: readonly Player["id"][]): Club {

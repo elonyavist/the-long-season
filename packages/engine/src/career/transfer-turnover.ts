@@ -1,20 +1,26 @@
 import {
-  createCareerState,
   getPlayerRoleProfile,
+  playerSquadDepartment,
   rawDiagnosticAbilityAverage,
   roleCurrentAbility,
   type CareerState,
   type Club,
+  type GameDate,
+  type Money,
   type Player,
   type PlayerId,
-  type PlayerPosition,
+  type PlayerSquadDepartment,
   type SeasonId,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
-import { MINIMUM_CAREER_SQUAD_SIZE } from "./squad-maintenance.ts";
+import { applyCareerPermanentTransfer } from "./apply-career-transfer.ts";
+import {
+  MINIMUM_CAREER_DEPARTMENT_DEPTH,
+  MINIMUM_CAREER_SQUAD_SIZE,
+} from "./squad-maintenance.ts";
 
-type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
+type BroadPositionGroup = PlayerSquadDepartment;
 
 /** One deterministic minimal player movement between clubs. */
 export interface TransferTurnoverRecord {
@@ -28,6 +34,8 @@ export interface TransferTurnoverRecord {
   readonly positionGroup: BroadPositionGroup;
   /** Rounded role current ability used by willingness/suitability checks. */
   readonly currentAbilityAverage: number;
+  /** Canonical permanent-transfer fee paid by the buyer. */
+  readonly transferFee: Money;
 }
 
 /** Input for deterministic transfer-turnover simulation. */
@@ -38,96 +46,84 @@ export interface SimulateTransferTurnoverInput {
   readonly worldSeed: string;
   /** Season ID being closed by this turnover pass. */
   readonly seasonId: SeasonId;
+  /** Effective date shared by transfer, contract, history, and finance facts. */
+  readonly occurredOn?: GameDate;
   /** Optional move cap. Defaults to roughly one move per four clubs. */
   readonly maxMoves?: number;
 }
 
 /** Result of deterministic transfer turnover. */
 export interface SimulateTransferTurnoverResult {
-  /** Copied career state with roster ownership updated. */
+  /** Canonical career state after accepted atomic market transitions. */
   readonly careerState: CareerState;
   /** Factual movements applied by the turnover pass. */
   readonly transfers: readonly TransferTurnoverRecord[];
 }
 
 /**
- * Applies a tiny deterministic inter-club turnover pass.
+ * Applies a small deterministic AI-only permanent-transfer pass.
  *
- * This is not the market system. It has no fees, contracts, negotiations,
- * wages, or loans. It only gives the long-run world some believable movement
- * while preserving roster ownership validity.
+ * Candidate discovery is intentionally narrow, but every accepted movement
+ * uses the canonical market transaction so fee, ownership, registration,
+ * employment, annual wage commitment, and history change together.
  */
 export function simulateTransferTurnover(input: SimulateTransferTurnoverInput): SimulateTransferTurnoverResult {
-  const maxMoves = input.maxMoves ?? Math.max(1, Math.floor(input.careerState.gameState.clubIds.length / 4));
-  const clubs: Partial<Record<Club["id"], Club>> = {};
-  for (const clubId of input.careerState.gameState.clubIds) {
-    const club = input.careerState.gameState.clubs[clubId];
-    if (club !== undefined) {
-      clubs[clubId] = { ...club, playerIds: [...club.playerIds] };
-    }
+  if (input.careerState.seniorSquadState === undefined || input.careerState.clubFinanceState === undefined) {
+    throw new Error("Canonical senior-squad and club-finance state are required for transfer turnover");
   }
 
+  const maxMoves = input.maxMoves ?? Math.max(1, Math.floor(input.careerState.gameState.clubIds.length / 4));
+  let careerState = input.careerState;
   const transfers: TransferTurnoverRecord[] = [];
   for (const toClubId of shuffledClubIds(input.careerState.gameState.clubIds, input.worldSeed, input.seasonId)) {
     if (transfers.length >= maxMoves) {
       break;
     }
+    if (toClubId === input.careerState.selectedClubId) continue;
 
-    const toClub = clubs[toClubId];
+    const toClub = careerState.gameState.clubs[toClubId];
     if (toClub === undefined) {
       continue;
     }
 
-    const neededGroup = weakestPositionGroup(toClub, input.careerState.gameState.players);
-    const fromClub = findSourceClub({
-      clubs,
+    const neededGroup = weakestPositionGroup(toClub, careerState.gameState.players);
+    const sourceClubs = findSourceClubs({
       toClub,
       neededGroup,
-      careerState: input.careerState,
+      careerState,
       worldSeed: input.worldSeed,
       seasonId: input.seasonId,
     });
-    if (fromClub === undefined) {
-      continue;
+    let accepted = false;
+    for (const fromClub of sourceClubs) {
+      for (const candidate of findMovablePlayers({ fromClub, neededGroup, careerState })) {
+        const application = applyCareerPermanentTransfer({
+          careerState,
+          ...(input.occurredOn === undefined ? {} : { occurredOn: input.occurredOn }),
+          intent: {
+            buyingClubId: toClub.id,
+            sellingClubId: fromClub.id,
+            playerId: candidate.id,
+          },
+        });
+        if (application.status !== "accepted" || application.transferFee === undefined) continue;
+        careerState = application.careerState;
+        transfers.push({
+          playerId: candidate.id,
+          fromClubId: fromClub.id,
+          toClubId: toClub.id,
+          positionGroup: playerSquadDepartment(candidate),
+          currentAbilityAverage: roundAverage(turnoverCurrentAbility(candidate)),
+          transferFee: application.transferFee,
+        });
+        accepted = true;
+        break;
+      }
+      if (accepted) break;
     }
-
-    const candidate = findMovablePlayer({
-      fromClub,
-      toClub,
-      neededGroup,
-      careerState: input.careerState,
-    });
-    if (candidate === undefined) {
-      continue;
-    }
-
-    clubs[fromClub.id] = {
-      ...fromClub,
-      playerIds: fromClub.playerIds.filter((playerId) => playerId !== candidate.id),
-    };
-    clubs[toClub.id] = {
-      ...toClub,
-      playerIds: [...toClub.playerIds, candidate.id],
-    };
-    transfers.push({
-      playerId: candidate.id,
-      fromClubId: fromClub.id,
-      toClubId: toClub.id,
-      positionGroup: positionGroup(candidate.naturalPositions[0]),
-      currentAbilityAverage: roundAverage(turnoverCurrentAbility(candidate)),
-    });
   }
 
-  return {
-    careerState: createCareerState({
-      ...input.careerState,
-      gameState: {
-        ...input.careerState.gameState,
-        clubs: clubs as CareerState["gameState"]["clubs"],
-      },
-    }),
-    transfers,
-  };
+  return { careerState, transfers };
 }
 
 /**
@@ -151,7 +147,6 @@ function shuffledClubIds(
 }
 
 interface FindSourceClubInput {
-  readonly clubs: Partial<Record<Club["id"], Club>>;
   readonly toClub: Club;
   readonly neededGroup: BroadPositionGroup;
   readonly careerState: CareerState;
@@ -159,38 +154,51 @@ interface FindSourceClubInput {
   readonly seasonId: SeasonId;
 }
 
-function findSourceClub(input: FindSourceClubInput): Club | undefined {
+function findSourceClubs(input: FindSourceClubInput): readonly Club[] {
   const candidates: Club[] = [];
   for (const clubId of input.careerState.gameState.clubIds) {
-    const club = input.clubs[clubId];
-    if (club === undefined || club.id === input.toClub.id || club.playerIds.length <= MINIMUM_CAREER_SQUAD_SIZE + 1) {
+    const club = input.careerState.gameState.clubs[clubId];
+    if (
+      club === undefined
+      || club.id === input.toClub.id
+      || club.id === input.careerState.selectedClubId
+      || club.playerIds.length <= MINIMUM_CAREER_SQUAD_SIZE + 1
+    ) {
       continue;
     }
 
-    if (findMovablePlayer({ fromClub: club, toClub: input.toClub, neededGroup: input.neededGroup, careerState: input.careerState }) !== undefined) {
+    if (findMovablePlayers({ fromClub: club, neededGroup: input.neededGroup, careerState: input.careerState }).length > 0) {
       candidates.push(club);
     }
   }
 
-  if (candidates.length === 0) {
-    return undefined;
-  }
-
-  const rng = deriveRng(input.worldSeed, "career-transfer-turnover-source", input.seasonId, input.toClub.id, input.neededGroup);
-  return candidates[rng.nextInt(0, candidates.length)];
+  return candidates
+    .map((club) => ({
+      club,
+      order: deriveRng(
+        input.worldSeed,
+        "career-transfer-turnover-source",
+        input.seasonId,
+        input.toClub.id,
+        input.neededGroup,
+        club.id,
+      ).nextFloat(),
+    }))
+    .sort((left, right) => left.order - right.order || String(left.club.id).localeCompare(String(right.club.id)))
+    .map(({ club }) => club);
 }
 
 interface FindMovablePlayerInput {
   readonly fromClub: Club;
-  readonly toClub: Club;
   readonly neededGroup: BroadPositionGroup;
   readonly careerState: CareerState;
 }
 
-function findMovablePlayer(input: FindMovablePlayerInput): Player | undefined {
+function findMovablePlayers(input: FindMovablePlayerInput): readonly Player[] {
+  const candidates: Player[] = [];
   for (const playerId of input.fromClub.playerIds) {
     const player = input.careerState.gameState.players[playerId];
-    if (player === undefined || positionGroup(player.naturalPositions[0]) !== input.neededGroup) {
+    if (player === undefined || playerSquadDepartment(player) !== input.neededGroup) {
       continue;
     }
 
@@ -198,14 +206,10 @@ function findMovablePlayer(input: FindMovablePlayerInput): Player | undefined {
       continue;
     }
 
-    if (!playerAcceptsMove(player, input.fromClub, input.toClub)) {
-      continue;
-    }
-
-    return player;
+    candidates.push(player);
   }
 
-  return undefined;
+  return candidates;
 }
 
 function canSourceClubLosePlayer(fromClub: Club, player: Player, careerState: CareerState): boolean {
@@ -213,35 +217,16 @@ function canSourceClubLosePlayer(fromClub: Club, player: Player, careerState: Ca
     return false;
   }
 
-  if (positionGroup(player.naturalPositions[0]) !== "goalkeeper") {
-    return true;
-  }
-
-  let goalkeepers = 0;
+  const department = playerSquadDepartment(player);
+  let departmentCount = 0;
   for (const playerId of fromClub.playerIds) {
     const clubPlayer = careerState.gameState.players[playerId];
-    if (clubPlayer !== undefined && positionGroup(clubPlayer.naturalPositions[0]) === "goalkeeper") {
-      goalkeepers += 1;
+    if (clubPlayer !== undefined && playerSquadDepartment(clubPlayer) === department) {
+      departmentCount += 1;
     }
   }
 
-  return goalkeepers > 2;
-}
-
-function playerAcceptsMove(player: Player, fromClub: Club, toClub: Club): boolean {
-  const abilityAverage = turnoverCurrentAbility(player);
-  const reputationDrop = fromClub.reputation - toClub.reputation;
-  const categoryDrop = categoryLevel(fromClub.category) - categoryLevel(toClub.category);
-
-  if (abilityAverage >= 12 && (reputationDrop >= 2 || categoryDrop >= 1)) {
-    return false;
-  }
-
-  if (abilityAverage >= 10 && reputationDrop >= 4) {
-    return false;
-  }
-
-  return true;
+  return departmentCount > MINIMUM_CAREER_DEPARTMENT_DEPTH[department];
 }
 
 function weakestPositionGroup(club: Club, players: CareerState["gameState"]["players"]): BroadPositionGroup {
@@ -250,51 +235,18 @@ function weakestPositionGroup(club: Club, players: CareerState["gameState"]["pla
   for (const playerId of club.playerIds) {
     const player = players[playerId];
     if (player !== undefined) {
-      counts[positionGroup(player.naturalPositions[0])] += 1;
+      counts[playerSquadDepartment(player)] += 1;
     }
   }
 
-  if (counts.goalkeeper < 2) return "goalkeeper";
-  if (counts.defender < 6) return "defender";
-  if (counts.midfielder < 6) return "midfielder";
-  if (counts.attacker < 3) return "attacker";
+  if (counts.goalkeeper < MINIMUM_CAREER_DEPARTMENT_DEPTH.goalkeeper) return "goalkeeper";
+  if (counts.defender < MINIMUM_CAREER_DEPARTMENT_DEPTH.defender) return "defender";
+  if (counts.midfielder < MINIMUM_CAREER_DEPARTMENT_DEPTH.midfielder) return "midfielder";
+  if (counts.attacker < MINIMUM_CAREER_DEPARTMENT_DEPTH.attacker) return "attacker";
 
   if (counts.defender <= counts.midfielder && counts.defender <= counts.attacker) return "defender";
   if (counts.midfielder <= counts.attacker) return "midfielder";
   return "attacker";
-}
-
-function positionGroup(position: PlayerPosition | undefined): BroadPositionGroup {
-  switch (position) {
-    case "gk":
-      return "goalkeeper";
-    case "rb":
-    case "cb":
-    case "lb":
-    case "rwb":
-    case "lwb":
-      return "defender";
-    case "dm":
-    case "cm":
-    case "am":
-      return "midfielder";
-    case "rw":
-    case "lw":
-    case "st":
-    default:
-      return "attacker";
-  }
-}
-
-function categoryLevel(category: Club["category"]): number {
-  switch (category) {
-    case "first_division":
-      return 3;
-    case "second_division":
-      return 2;
-    case "third_division":
-      return 1;
-  }
 }
 
 /** Returns current football quality for turnover willingness decisions. */

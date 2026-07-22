@@ -1,9 +1,9 @@
 import type { FakeLeagueSystem } from "@game/content";
 import type { MessageKey, Translator } from "@game/i18n";
 import type {
-  CareerLongRunSeasonResult as LongRunSeasonResult,
   LongRunAnomalyReport,
   LongRunClubStabilityReport,
+  LongRunContractFinanceStabilityReport,
   LongRunPlayerEvolutionReport,
   LongRunYouthStabilityReport,
 } from "@game/simulation-tools";
@@ -13,6 +13,7 @@ import {
   goalsPerMatch,
   type ClubAbilityHierarchySnapshot,
   type ClubAbilityHierarchySummary,
+  type LongRunSeasonResult,
 } from "./report-data.ts";
 
 /**
@@ -24,6 +25,7 @@ export function formatTenSeasonReportOutput(
   playerEvolution: LongRunPlayerEvolutionReport,
   clubStability: LongRunClubStabilityReport,
   youthStability: LongRunYouthStabilityReport,
+  contractFinanceStability: LongRunContractFinanceStabilityReport,
   anomalyReport: LongRunAnomalyReport,
   strengthHierarchy: ClubAbilityHierarchySummary,
   seed: string,
@@ -54,9 +56,28 @@ export function formatTenSeasonReportOutput(
   lines.push("", ...formatStrengthHierarchyLines(strengthHierarchy, text));
   lines.push("", ...formatClubStabilityLines(clubStability, text));
   lines.push("", ...formatYouthStabilityLines(youthStability, text));
+  lines.push("", ...formatContractFinanceStabilityLines(contractFinanceStability));
   lines.push("", ...formatAnomalyLines(anomalyReport, text));
 
   return lines;
+}
+
+/** Formats contract and finance diagnostics without hiding football warnings. */
+function formatContractFinanceStabilityLines(
+  report: LongRunContractFinanceStabilityReport,
+): readonly string[] {
+  return [
+    `Contract and finance stability: ${report.status.toUpperCase()}`,
+    `  Structural violations: ${report.structuralViolationCount}`,
+    `  Cash floor (minor): ${report.minimumCashBalanceObserved}`,
+    `  Annual wage utilization max: ${report.maximumWageBudgetUtilizationObserved.toFixed(4)}`,
+    `  Free-agent share max: ${report.maximumFreeAgentShareObserved.toFixed(4)}`,
+    `  Sampled player value min/max (minor): ${report.minimumPlayerValueObserved}..${report.maximumPlayerValueObserved}`,
+    `  Contract lifecycle: renewals=${report.renewalCount} releases=${report.releaseCount} expiries=${report.expiryCount} selected_expiry_decisions=${report.selectedClubExpiredDecisionCount}`,
+    ...report.checks.map(
+      (check) => `  ${check.key}: ${check.status.toUpperCase()} value=${check.value} target=${check.threshold}`,
+    ),
+  ];
 }
 
 /**

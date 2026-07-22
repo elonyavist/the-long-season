@@ -1,13 +1,14 @@
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { createCareerState, type CareerState, type SaveId } from "@game/domain";
+import type { CareerState, SaveId } from "@game/domain";
 
 import {
   migrateCareerSave,
   type StoredCareerSave,
 } from "./career-save-envelope.ts";
 import type { CareerStorage, SaveCareerInput } from "./career-storage.interface.ts";
+import { createPersistableCareerState } from "./career-storage.contract.ts";
 import { StorageError } from "./game-storage.interface.ts";
 import {
   CURRENT_CAREER_SAVE_SCHEMA_VERSION,
@@ -39,7 +40,7 @@ export class JsonCareerStorage implements CareerStorage {
   public async saveCareer(input: SaveCareerInput): Promise<CareerSaveMetadata> {
     await this.ensureDirectory();
 
-    const state = createCareerState(input.state);
+    const state = createPersistableCareerState(input.state, "save_unwritable");
     const existing = await this.loadStoredCareerIfExists(input.saveId);
     const timestamp = this.nowISO();
     const metadata: CareerSaveMetadata = {

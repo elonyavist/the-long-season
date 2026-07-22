@@ -4,9 +4,9 @@ import { toISO } from "@game/shared";
 import { CLI_CAREER_WORLD_GENERATOR_VERSION } from "./scenarios.ts";
 import type {
   CliCareerState,
-  CliClubTransferBudget,
+  CliClubFinanceAccount,
+  CliClubFinanceState,
   CliGameState,
-  CliMarketState,
   CliMoney,
   ClubId,
   PlayerId,
@@ -113,19 +113,24 @@ export function formatTransferHistoryLines(careerState: CliCareerState, text: Tr
 export function formatAffectedClubLines(careerState: CliCareerState, text: Translator): readonly string[] {
   return affectedClubIds(careerState).map((clubId) => {
     const club = careerState.gameState.clubs[clubId];
-    const budget = findClubTransferBudget(careerState.marketState, clubId);
+    const account = careerState.clubFinanceState === undefined
+      ? undefined
+      : findClubFinanceAccount(careerState.clubFinanceState, clubId);
 
     return `  ${clubLabel(clubId, careerState.gameState)}: ${text("career.clubRosterSize")}=${
       club?.playerIds.length ?? 0
-    } ${text("career.clubBudget")}=${formatMoney(budget?.transferBudget)}`;
+    } ${text("career.clubBudget")}=${formatMoney(account?.availableTransferBudget)}`;
   });
 }
 
-/** Finds a club transfer-budget record without assuming object insertion order. */
-export function findClubTransferBudget(marketState: CliMarketState, clubId: ClubId): CliClubTransferBudget | undefined {
-  for (const budgetClubId of marketState.clubBudgetIds) {
-    if (budgetClubId === clubId) {
-      return marketState.clubBudgets[budgetClubId];
+/** Finds one canonical club-finance account without relying on record order. */
+export function findClubFinanceAccount(
+  financeState: CliClubFinanceState,
+  clubId: ClubId,
+): CliClubFinanceAccount | undefined {
+  for (const financeClubId of financeState.clubIds) {
+    if (financeClubId === clubId) {
+      return financeState.accounts[financeClubId];
     }
   }
 

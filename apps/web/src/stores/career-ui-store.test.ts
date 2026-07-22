@@ -87,6 +87,33 @@ describe("career UI store", () => {
     expect(state().screen).toBe("match_preparation");
   });
 
+  it("opens the real Squad workspace without changing durable career data", () => {
+    const career = generatedCareer("squad-route");
+    const save = metadata(career.saveId, "Squad club");
+    state().openPersistedCareer(career, save, inspectWebCareerAttention(career));
+
+    state().openSquad();
+
+    expect(state().screen).toBe("career_squad");
+    expect(state().activeCareerState).toEqual(career);
+  });
+
+  it("opens Tactics over the same canonical preparation draft", () => {
+    const career = generatedCareer("tactics-route");
+    state().openPersistedCareer(
+      career,
+      metadata(career.saveId, "Tactics club"),
+      inspectWebCareerAttention(career),
+    );
+    const canonicalDraft = state().matchPreparationState;
+
+    state().openTactics();
+
+    expect(state().screen).toBe("career_tactics");
+    expect(state().matchPreparationState).toBe(canonicalDraft);
+    expect(state().activeCareerState).toEqual(career);
+  });
+
   it("owns only Posta filter and selection while durable lifecycle stays in the career", () => {
     const career = generatedCareerWithInbox("inbox-state");
     state().openPersistedCareer(career, metadata(career.saveId, "Inbox club"), inspectWebCareerAttention(career));

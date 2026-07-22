@@ -10,7 +10,6 @@ import {
   createCareerState,
   createCompetitionMatchRules,
   createEmptyPlayerParticipationLedger,
-  createMarketState,
   fixtureId,
   gameDate,
   getFormation,
@@ -19,6 +18,7 @@ import {
   seasonId,
   stateValue,
   type CareerState,
+  type CareerPlayerAvailabilityState,
   type Club,
   type ClubId,
   type Fixture,
@@ -177,6 +177,49 @@ test("progressNextCareerFixture is deterministic for the same state and team con
   };
 
   assert.deepEqual(progressNextCareerFixture(input), progressNextCareerFixture(input));
+});
+
+test("progressNextCareerFixture identifies every ineligible selected player without changing the plan", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const selectedFixtureId = fixtureId("fixture:000001");
+  const injuredPlayerId = playerId("player:selected-02");
+  const fixture = fixtureFixture(selectedFixtureId, selectedClubId, otherClubId);
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
+    fixtures: [fixture],
+    playerAvailability: {
+      injuries: [{
+        fixtureId: selectedFixtureId,
+        playerId: injuredPlayerId,
+        severity: "minor",
+        occurredOn: gameDate(19_999),
+        unavailableUntil: gameDate(20_003),
+      }],
+      suspensions: [],
+      yellowCards: [],
+    },
+  });
+
+  const result = progressNextCareerFixture({
+    careerState,
+    teamsByClubId: {
+      [selectedClubId]: teamContextFixture(selectedClubId, 12),
+      [otherClubId]: teamContextFixture(otherClubId, 10),
+    },
+    matchEngineConfig: matchEngineConfigFixture(),
+    competitionMatchRules: competitionMatchRulesFixture(),
+  });
+
+  assert.equal(result.status, "invalid");
+  if (result.status === "invalid") {
+    assert.equal(result.reason, "unavailable_player_selected");
+    assert.deepEqual(result.eligibilityBlockers, [
+      { playerId: injuredPlayerId, reason: "injured" },
+    ]);
+    assert.equal(result.careerState, careerState);
+  }
 });
 
 test("commitCompletedCareerFixture publishes the watched final state without reconstructing its last minute", () => {
@@ -580,18 +623,16 @@ function careerStateFixture(input: {
   readonly playerStateOverrides?: Partial<Record<PlayerId, PlayerDynamicState>>;
   readonly currentDate?: ReturnType<typeof gameDate>;
   readonly playerParticipationLedger?: PlayerParticipationLedger;
+  readonly playerAvailability?: CareerPlayerAvailabilityState;
 }): CareerState {
   return createCareerState({
     saveId: saveId("save:career-progress-fixture"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: input.selectedClubId,
     gameState: gameStateFixture(input.clubs, input.fixtures, input.playerStateOverrides ?? {}, input.currentDate ?? gameDate(20_000)),
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
-    }),
     transferHistory: [],
     ...(input.playerParticipationLedger === undefined ? {} : { playerParticipationLedger: input.playerParticipationLedger }),
+    ...(input.playerAvailability === undefined ? {} : { playerAvailability: input.playerAvailability }),
   });
 }
 

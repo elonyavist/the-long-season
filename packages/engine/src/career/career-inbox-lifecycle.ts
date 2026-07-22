@@ -180,10 +180,8 @@ export function createMatchConsequenceInboxMessages(
 export function reconcileCareerInboxResolution(careerState: CareerState): CareerState {
   let changed = false;
   const messages = (careerState.currentSeasonInbox ?? []).map((message) => {
-    if (message.level !== "blocking" || message.lifecycle.resolved) return message;
-    const fixtureId = message.related.fixtureId;
-    const isResolved = fixtureId !== undefined
-      && careerState.gameState.fixtures[fixtureId]?.result?.played === true;
+    if (message.lifecycle.resolved) return message;
+    const isResolved = isInboxMessageResolvedByCareerState(careerState, message);
     if (!isResolved) return message;
 
     changed = true;
@@ -203,6 +201,41 @@ export function reconcileCareerInboxResolution(careerState: CareerState): Career
   });
 
   return deliverCareerInboxMessages(reconciled, resultMessages);
+}
+
+function isInboxMessageResolvedByCareerState(
+  careerState: CareerState,
+  message: CareerInboxMessage,
+): boolean {
+  if (message.category === "matchday") {
+    const fixtureId = message.related.fixtureId;
+    return fixtureId !== undefined
+      && careerState.gameState.fixtures[fixtureId]?.result?.played === true;
+  }
+  if (!message.category.startsWith("contract_")) return false;
+
+  const contractId = message.related.contractId;
+  const negotiationId = message.related.contractNegotiationId;
+  const directNegotiation = negotiationId === undefined
+    ? undefined
+    : careerState.contractNegotiationState?.negotiations[negotiationId];
+  const contractNegotiation = directNegotiation
+    ?? (contractId === undefined
+      ? undefined
+      : (careerState.contractNegotiationState?.negotiationIds ?? [])
+          .map((id) => careerState.contractNegotiationState?.negotiations[id])
+          .find((negotiation) => negotiation?.currentContractId === contractId));
+  const contractIsActive = contractId !== undefined
+    && careerState.seniorSquadState?.activeContractIds.includes(contractId) === true;
+
+  if (message.category === "contract_counteroffer") {
+    return contractNegotiation !== undefined && contractNegotiation.status !== "countered";
+  }
+  if (message.category === "contract_expiry_decision") {
+    return !contractIsActive || contractNegotiation?.status === "release_at_expiry";
+  }
+  if (message.category === "contract_reminder") return !contractIsActive;
+  return message.category === "contract_accepted" || message.category === "contract_rejected";
 }
 
 function requiredMessage(

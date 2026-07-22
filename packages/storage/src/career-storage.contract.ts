@@ -1,6 +1,7 @@
-import type { CareerState, SaveId } from "@game/domain";
+import { createCareerState, type CareerState, type SaveId } from "@game/domain";
 
 import type { CareerStorage } from "./career-storage.interface.ts";
+import { StorageError, type StorageErrorCode } from "./game-storage.interface.ts";
 import type { SaveMetadata } from "./save-metadata.ts";
 
 /** Named states used to exercise one implementation of the storage contract. */
@@ -21,6 +22,33 @@ export interface CareerStorageContractResult {
   readonly replacementMetadata: SaveMetadata;
   readonly loadedReplacement: CareerState;
   readonly finalList: readonly SaveMetadata[];
+}
+
+/** Career snapshot whose Phase 78 persistence-owned slices are complete. */
+export type PersistableCareerState = CareerState & Required<
+  Pick<CareerState, "seniorSquadState" | "clubFinanceState">
+>;
+
+/**
+ * Validates the complete beta persistence baseline without synthesizing facts.
+ *
+ * Domain careers may be assembled incrementally by focused engine tests, but a
+ * durable save must always contain the generated senior-squad and finance
+ * slices. Old beta payloads therefore fail at this boundary instead of loading
+ * with invented contracts or balances.
+ */
+export function createPersistableCareerState(
+  input: CareerState,
+  failureCode: Extract<StorageErrorCode, "save_unreadable" | "save_unwritable" | "unsupported_schema_version">,
+): PersistableCareerState {
+  const state = createCareerState(input);
+  if (state.seniorSquadState === undefined || state.clubFinanceState === undefined) {
+    throw new StorageError(
+      failureCode,
+      "Career save does not contain the Phase 78 senior-squad and club-finance baseline",
+    );
+  }
+  return state as PersistableCareerState;
 }
 
 /**

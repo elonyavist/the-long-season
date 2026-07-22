@@ -20,6 +20,7 @@ describe("AppEntryScreen", () => {
         onContinueCareer={() => undefined}
         onSelectedSaveChange={() => undefined}
         onRetryStorage={() => undefined}
+        betaResetPerformed={false}
       />,
     );
 
@@ -54,6 +55,7 @@ describe("AppEntryScreen", () => {
         onContinueCareer={() => undefined}
         onSelectedSaveChange={() => undefined}
         onRetryStorage={() => undefined}
+        betaResetPerformed={false}
       />,
     );
 
@@ -79,6 +81,7 @@ describe("AppEntryScreen", () => {
         onContinueCareer={() => undefined}
         onSelectedSaveChange={() => undefined}
         onRetryStorage={() => undefined}
+        betaResetPerformed={false}
       />,
     );
 
@@ -87,6 +90,34 @@ describe("AppEntryScreen", () => {
     expect(markup).toContain("Free some device storage, then try again");
     expect(markup).toContain("Try again");
     expect(markup).not.toContain("SQLITE");
+  });
+
+  it("explains an intentional beta reset without presenting a storage failure", () => {
+    const preferences = DEFAULT_WEB_PREFERENCES;
+    const markup = renderToStaticMarkup(
+      <AppEntryScreen
+        view={buildAppEntryViewModel({
+          preferences,
+          lifecycleStatus: "ready",
+          saves: [],
+          selectedSaveId: undefined,
+          storageFailure: undefined,
+        })}
+        preferences={preferences}
+        text={createWebTranslator("en")}
+        onPreferencesChange={() => undefined}
+        onStartNewCareer={() => undefined}
+        onContinueCareer={() => undefined}
+        onSelectedSaveChange={() => undefined}
+        onRetryStorage={() => undefined}
+        betaResetPerformed
+      />,
+    );
+
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("Beta careers were reset");
+    expect(markup).toContain("Start a new career");
+    expect(markup).not.toContain('role="alert"');
   });
 
 });

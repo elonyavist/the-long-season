@@ -15,6 +15,7 @@ import {
   computePlayerMatchStats,
   deriveTeamStrength,
   findNextCareerFixture,
+  findNextFixtureEligibilityBlockers,
   injuryForcesExit,
   hasProgressiveAiInGameDecisionBoundary,
   matchRngKeyParts,
@@ -48,6 +49,7 @@ import {
 import {
   MATCH_PREPARATION_TACTIC_PROFILES,
   createMatchPreparationDraft,
+  selectedMatchPreparationPlayerIds,
   type MatchPreparationDraft,
 } from "../match-preparation/match-preparation-adapter";
 import { TACTICAL_BENCH_SLOT_IDS } from "../tactics-board/tactical-board-bench";
@@ -75,6 +77,7 @@ type LiveMatchTeamState = DomainLiveMatchSession["home"];
 type AppliedMatchSubstitution = DomainLiveMatchSession["substitutions"][number];
 type FormationKey = LiveMatchTeamState["formation"];
 type TacticSetup = LiveMatchTeamState["tactic"];
+type MatchdayFixtureEligibilityBlocker = ReturnType<typeof findNextFixtureEligibilityBlockers>[number];
 type LiveMatchPendingDecision = NonNullable<
   NonNullable<BuildCareerMatchdayPhaseViewInput["liveControl"]>["pendingDecision"]
 >;
@@ -189,6 +192,8 @@ export interface WebMatchdaySessionAttempt {
   readonly invalidReason?: string;
   /** Structured tactical-plan facts when second-half decision validation fails. */
   readonly invalidFactKeys?: readonly string[];
+  /** Exact selected players who cannot enter the fixture. */
+  readonly eligibilityBlockers?: readonly MatchdayFixtureEligibilityBlocker[];
 }
 
 /** Successful persisted web matchday commit. */
@@ -360,6 +365,7 @@ function rehydrateReviewedResult(careerState: CareerState): WebMatchdayAdvancedR
       totalFormDelta: 0,
       totalMoraleDelta: 0,
     },
+    financeLedgerEntryIds: [],
     monthlyLifecycle: [],
     careerState,
   };
@@ -883,6 +889,22 @@ function prepareWebMatchdayKickoff(
         blockerKeys: [],
         ...(nextFixture.status === "invalid" ? { invalidReason: nextFixture.reason } : { invalidReason: "none" }),
         ...("fixtureId" in nextFixture && nextFixture.fixtureId !== undefined ? { fixtureId: nextFixture.fixtureId } : {}),
+      },
+    };
+  }
+
+  const eligibilityBlockers = findNextFixtureEligibilityBlockers(
+    preparedCareerState,
+    selectedMatchPreparationPlayerIds(preparedCareerState, preparation),
+  );
+  if (eligibilityBlockers.length > 0) {
+    return {
+      status: "blocked",
+      attempt: {
+        status: "blocked",
+        blockerKeys: [],
+        fixtureId: nextFixture.fixtureId,
+        eligibilityBlockers,
       },
     };
   }

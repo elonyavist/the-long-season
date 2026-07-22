@@ -5,7 +5,6 @@ import type { Club } from "../entities/club.entity.ts";
 import type { Fixture } from "../entities/fixture.entity.ts";
 import type { Player, PlayerAbilities, PlayerDynamicState } from "../entities/player.entity.ts";
 import { TacticContractError } from "../entities/tactic.entity.ts";
-import { createMarketState, type MarketState } from "../entities/transfer.entity.ts";
 import { clubId, competitionId, fixtureId, playerId, saveId, seasonId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import { nonNegativeMoney } from "../value-objects/money.ts";
@@ -48,7 +47,6 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
     },
     selectedClubId: pro01,
     gameState,
-    marketState: marketStateFixture(),
     transferHistory: [
       {
         sequenceNumber: 1,
@@ -69,7 +67,6 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
     generatorVersion: CAREER_WORLD_GENERATOR_VERSION,
     creationSourceKey: "career:cli-new-world",
   });
-  assert.deepEqual(career.marketState.clubBudgetIds, [pro01, pro18]);
   assert.equal(career.transferHistory[0]?.playerId, player18);
   assert.equal(nextTransferHistorySequence(career), 2);
 });
@@ -119,40 +116,6 @@ test("createCareerState rejects missing or unordered selected clubs", () => {
         },
       }),
     "selected_club_not_ordered",
-  );
-});
-
-test("createCareerState rejects market budgets for unknown clubs and invalid money", () => {
-  const unknownClubId = clubId("club:unknown");
-
-  assertCareerStateError(
-    () =>
-      createCareerState({
-        ...careerStateFixture(),
-        marketState: createMarketState({
-          clubBudgets: {
-            [unknownClubId]: { clubId: unknownClubId, transferBudget: nonNegativeMoney(10_000_00) },
-          },
-          clubBudgetIds: [unknownClubId],
-        }),
-      }),
-    "budget_club_not_found",
-  );
-
-  const pro01 = clubId("club:pro01");
-
-  assertCareerStateError(
-    () =>
-      createCareerState({
-        ...careerStateFixture(),
-        marketState: {
-          clubBudgets: {
-            [pro01]: { clubId: pro01, transferBudget: -1 as MarketState["clubBudgets"][typeof pro01]["transferBudget"] },
-          },
-          clubBudgetIds: [pro01],
-        },
-      }),
-    "invalid_money",
   );
 });
 
@@ -241,7 +204,7 @@ test("createCareerState preserves saved selected-club match preparation", () => 
   ]);
 });
 
-test("createCareerState rejects unavailable players for future preparation but preserves played preparation", () => {
+test("createCareerState preserves an unavailable owned player in the durable manager plan", () => {
   const base = careerStateFixture();
   const fixture = fixtureId("fixture:000001");
   const selectedPlayer = playerId("player:010010");
@@ -266,26 +229,9 @@ test("createCareerState rejects unavailable players for future preparation but p
     yellowCards: [],
   };
 
-  assertCareerStateError(
-    () => createCareerState({ ...base, matchPreparation, playerAvailability }),
-    "match_preparation_player_unavailable",
-  );
-
-  const playedFixture = base.gameState.fixtures[fixture];
-  if (playedFixture === undefined) throw new Error("Expected fixture");
-  const preserved = createCareerState({
-    ...base,
-    gameState: {
-      ...base.gameState,
-      fixtures: {
-        ...base.gameState.fixtures,
-        [fixture]: { ...playedFixture, result: { played: true, homeGoals: 1, awayGoals: 0 } },
-      },
-    },
-    matchPreparation,
-    playerAvailability,
-  });
+  const preserved = createCareerState({ ...base, matchPreparation, playerAvailability });
   assert.equal(preserved.matchPreparation?.selectedLineup?.slots[0]?.playerId, selectedPlayer);
+  assert.equal(preserved.playerAvailability?.injuries[0]?.playerId, selectedPlayer);
 });
 
 test("createCareerState preserves ordered substitutes and rejects XI overlap", () => {
@@ -710,7 +656,6 @@ function careerStateFixture(): CareerState {
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: clubId("club:pro01"),
     gameState: gameStateFixture(),
-    marketState: marketStateFixture(),
     transferHistory: [],
   };
 }
@@ -725,20 +670,6 @@ function historyEntryFixture(sequenceNumber: number): CareerState["transferHisto
     playerId: playerId("player:180010"),
     transferFee: nonNegativeMoney(1_500_000_00),
   };
-}
-
-/** Builds a compact market state fixture with two budgeted clubs. */
-function marketStateFixture(): MarketState {
-  const pro01 = clubId("club:pro01");
-  const pro18 = clubId("club:pro18");
-
-  return createMarketState({
-    clubBudgets: {
-      [pro01]: { clubId: pro01, transferBudget: nonNegativeMoney(6_000_000_00) },
-      [pro18]: { clubId: pro18, transferBudget: nonNegativeMoney(500_000_00) },
-    },
-    clubBudgetIds: [pro01, pro18],
-  });
 }
 
 /** Builds a minimal game snapshot containing two clubs and two players. */

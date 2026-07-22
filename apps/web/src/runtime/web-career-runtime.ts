@@ -5,13 +5,21 @@ import {
   type InitialYouthAcademyClubContext,
 } from "@game/content";
 import {
+  acceptContractCounterOffer,
   acknowledgeImportantCareerInboxMessage,
-  continueCareerUntilAttention,
+  advanceSelectedClubContractsToAttention,
+  chooseReleaseAtContractExpiry,
   createMatchdayAttention,
-  deliverCareerInboxMessages,
+  createRenewalNegotiationId,
   findNextCareerFixture,
+  offerSelectedClubRenewal,
   openCareerInboxMessage,
-  reconcileCareerInboxResolution,
+  rejectContractCounterOffer,
+  reviseContractOffer,
+  submitContractOffer,
+  withdrawContractNegotiation,
+  type ContractNegotiationCommandResult,
+  type ContractNegotiationRejectionReason,
   type ContinueCareerUntilAttentionResult,
 } from "@game/engine";
 import { generateRoundRobinCalendar } from "@game/engine";
@@ -26,7 +34,7 @@ import {
   StorageError,
   type StorageErrorCode,
 } from "@game/storage/sqlite";
-import type { CareerInboxMessageInput } from "@game/ui";
+import type { CareerContractTermsInput, CareerInboxMessageInput } from "@game/ui";
 
 import {
   advanceWebLiveMatchdayMinute,
@@ -59,6 +67,12 @@ export type WebCareerInboxMessageId = NonNullable<
 export type WebCareerSaveId = Parameters<CareerStorage["loadCareer"]>[0];
 
 type LeagueClubId = FakeLeagueSystem["clubIds"][number];
+type WebContractPlayerId = Parameters<typeof offerSelectedClubRenewal>[0]["playerId"];
+type WebContractNegotiationId = Parameters<typeof acceptContractCounterOffer>[0]["negotiationId"];
+type WebContractNegotiation = Extract<
+  ContractNegotiationCommandResult,
+  { readonly status: "applied" }
+>["negotiation"];
 
 /** Current generated-world version written by browser-created careers. */
 export const WEB_CAREER_WORLD_GENERATOR_VERSION = 1;
@@ -104,6 +118,56 @@ export interface CommittedWebCareerSession {
   readonly continueResult: WebCareerContinueResult;
   readonly sessionStatus: CareerSessionStatus;
 }
+
+/** Explicit selected-club contract action accepted by the web application seam. */
+export type WebSelectedClubContractCommand =
+  | Readonly<{
+      type: "offer_renewal";
+      playerId: string;
+      terms: CareerContractTermsInput;
+    }>
+  | Readonly<{
+      type: "revise_offer";
+      negotiationId: string;
+      terms: CareerContractTermsInput;
+    }>
+  | Readonly<{
+      type: "submit_offer";
+      negotiationId: string;
+    }>
+  | Readonly<{
+      type: "accept_counter" | "reject_counter" | "withdraw_offer";
+      negotiationId: string;
+    }>
+  | Readonly<{
+      type: "release_at_expiry";
+      playerId: string;
+      negotiationId?: string;
+    }>;
+
+/** Successful selected-club contract action projected from the working session. */
+export interface AppliedWebSelectedClubContractCommand {
+  readonly status: "applied";
+  readonly state: WebCareerState;
+  readonly negotiation: WebContractNegotiation;
+  readonly continueResult: WebCareerContinueResult;
+  readonly sessionStatus: CareerSessionStatus;
+}
+
+/** Structured contract rejection that preserves the exact working session. */
+export interface RejectedWebSelectedClubContractCommand {
+  readonly status: "rejected";
+  readonly state: WebCareerState;
+  readonly reason: ContractNegotiationRejectionReason;
+  readonly negotiationId?: WebContractNegotiationId;
+  readonly continueResult: WebCareerContinueResult;
+  readonly sessionStatus: CareerSessionStatus;
+}
+
+/** Result shared by every selected-club contract action in the web runtime. */
+export type WebSelectedClubContractCommandResult =
+  | AppliedWebSelectedClubContractCommand
+  | RejectedWebSelectedClubContractCommand;
 
 /** Working-session result after preparation opens the match centre. */
 export interface PreparedWebMatchday {
@@ -292,10 +356,7 @@ export class WebCareerRuntime {
     const currentState = session.workingState();
     const inspection = advanceCanonicalCareerToAttention(currentState);
     const continueResult = toWebCareerContinueResult(inspection.result);
-    const deliveredState = reconcileCareerInboxResolution(
-      deliverCareerInboxMessages(currentState, inspection.result.inboxMessages),
-    );
-    const nextState = withCurrentDate(deliveredState, continueResult.stopDateIso);
+    const nextState = withCurrentDate(inspection.careerState, continueResult.stopDateIso);
     let state = nextState === currentState
       ? currentState
       : session.replaceWorkingState(nextState).workingState;
@@ -329,6 +390,102 @@ export class WebCareerRuntime {
     return {
       metadata: session.metadata(),
       state,
+      continueResult: inspectWebCareerAttention(state),
+      sessionStatus: session.status(),
+    };
+  }
+
+  /**
+   * Applies one explicit selected-club contract action to the working session.
+   *
+   * Contract commands never save implicitly. Their authoritative engine state
+   * is reconciled back into Posta before the result reaches presentation.
+   */
+  public applySelectedClubContractCommand(
+    requestedSaveId: WebCareerSaveId,
+    command: WebSelectedClubContractCommand,
+  ): WebSelectedClubContractCommandResult {
+    const session = this.requireSession(requestedSaveId);
+    const currentState = session.workingState();
+    const decidedOn = currentState.gameState.calendar.currentDate;
+    const result = (() => {
+      switch (command.type) {
+        case "offer_renewal":
+          {
+            const playerId = resolveContractPlayerId(currentState, command.playerId);
+          return offerSelectedClubRenewal({
+            careerState: currentState,
+            negotiationId: nextRenewalNegotiationId(currentState, playerId),
+            playerId,
+            offeredOn: decidedOn,
+            terms: command.terms,
+          });
+          }
+        case "revise_offer":
+          return reviseContractOffer({
+            careerState: currentState,
+            negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
+            revisedOn: decidedOn,
+            terms: command.terms,
+          });
+        case "submit_offer":
+          return submitContractOffer({
+            careerState: currentState,
+            negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
+            submittedOn: decidedOn,
+          });
+        case "accept_counter":
+          return acceptContractCounterOffer({
+            careerState: currentState,
+            negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+          });
+        case "reject_counter":
+          return rejectContractCounterOffer({
+            careerState: currentState,
+            negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+          });
+        case "withdraw_offer":
+          return withdrawContractNegotiation({
+            careerState: currentState,
+            negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+          });
+        case "release_at_expiry":
+          {
+            const playerId = resolveContractPlayerId(currentState, command.playerId);
+          return chooseReleaseAtContractExpiry({
+            careerState: currentState,
+            negotiationId: command.negotiationId
+              ? resolveContractNegotiationId(currentState, command.negotiationId)
+              : nextRenewalNegotiationId(currentState, playerId),
+            playerId,
+            clubId: currentState.selectedClubId,
+            decidedOn,
+          });
+          }
+      }
+    })();
+
+    if (result.status === "rejected") {
+      return {
+        status: "rejected",
+        state: currentState,
+        reason: result.reason,
+        ...(result.negotiationId === undefined ? {} : { negotiationId: result.negotiationId }),
+        continueResult: inspectWebCareerAttention(currentState),
+        sessionStatus: session.status(),
+      };
+    }
+
+    const state = session.replaceWorkingState(
+      refreshExistingInboxFacts(result.careerState),
+    ).workingState;
+    return {
+      status: "applied",
+      state,
+      negotiation: result.negotiation,
       continueResult: inspectWebCareerAttention(state),
       sessionStatus: session.status(),
     };
@@ -552,6 +709,47 @@ export class WebCareerRuntime {
   }
 }
 
+/** Resolves a presentation player ID through canonical career ownership before an engine command. */
+function resolveContractPlayerId(
+  careerState: WebCareerState,
+  rawPlayerId: string,
+): WebContractPlayerId {
+  const resolved = careerState.gameState.playerIds.find((playerId) => String(playerId) === rawPlayerId);
+  if (resolved === undefined) {
+    throw new Error(`Contract command player is missing from the career: ${rawPlayerId}`);
+  }
+  return resolved;
+}
+
+/** Resolves a presentation negotiation ID through durable state before an engine command. */
+function resolveContractNegotiationId(
+  careerState: WebCareerState,
+  rawNegotiationId: string,
+): WebContractNegotiationId {
+  const resolved = careerState.contractNegotiationState?.negotiationIds.find(
+    (negotiationId) => String(negotiationId) === rawNegotiationId,
+  );
+  if (resolved === undefined) {
+    throw new Error(`Contract negotiation is missing from the career: ${rawNegotiationId}`);
+  }
+  return resolved;
+}
+
+/** Allocates the first unused stable renewal identity without random state. */
+function nextRenewalNegotiationId(
+  careerState: WebCareerState,
+  playerId: WebContractPlayerId,
+): WebContractNegotiationId {
+  const negotiations = careerState.contractNegotiationState?.negotiations ?? {};
+  let sequence = (careerState.contractNegotiationState?.negotiationIds.length ?? 0) + 1;
+  let candidate = createRenewalNegotiationId(playerId, sequence);
+  while (negotiations[candidate] !== undefined) {
+    sequence += 1;
+    candidate = createRenewalNegotiationId(playerId, sequence);
+  }
+  return candidate;
+}
+
 /** Removes fixture confirmation while preserving the manager's last team plan as a reusable draft. */
 function carryCompletedPreparationAsDraft(careerState: WebCareerState): WebCareerState {
   const preparation = careerState.matchPreparation;
@@ -578,6 +776,7 @@ export function inspectWebCareerAttention(careerState: WebCareerState): WebCaree
 
 /** Inspects attention due on the current date without moving the career clock. */
 function inspectCanonicalCareerAttention(careerState: WebCareerState): {
+  readonly careerState: WebCareerState;
   readonly result: ContinueCareerUntilAttentionResult;
 } {
   return evaluateCanonicalCareerAttention(
@@ -588,6 +787,7 @@ function inspectCanonicalCareerAttention(careerState: WebCareerState): {
 
 /** Evaluates the next selected-club fixture as Continue's deterministic boundary. */
 function advanceCanonicalCareerToAttention(careerState: WebCareerState): {
+  readonly careerState: WebCareerState;
   readonly result: ContinueCareerUntilAttentionResult;
 } {
   const nextFixture = findNextCareerFixture(careerState);
@@ -607,13 +807,15 @@ function advanceCanonicalCareerToAttention(careerState: WebCareerState): {
 function evaluateCanonicalCareerAttention(
   careerState: WebCareerState,
   boundaryDate: WebCareerState["gameState"]["calendar"]["currentDate"],
-): { readonly result: ContinueCareerUntilAttentionResult } {
+): {
+  readonly careerState: WebCareerState;
+  readonly result: ContinueCareerUntilAttentionResult;
+} {
   const nextFixture = findNextCareerFixture(careerState);
   if (nextFixture.status === "invalid") {
     throw new Error(`Loaded career next fixture is invalid: ${nextFixture.reason}`);
   }
 
-  const currentDate = careerState.gameState.calendar.currentDate;
   const matchday = nextFixture.status === "found"
     ? createMatchdayAttention({
         fixtureId: nextFixture.fixture.id,
@@ -622,18 +824,15 @@ function evaluateCanonicalCareerAttention(
         preparation: matchdayPreparationFacts(careerState, nextFixture.fixture.id),
       })
     : undefined;
-  const projectedState = reconcileCareerInboxResolution(
-    matchday === undefined || matchday.message.date > boundaryDate
-      ? careerState
-      : deliverCareerInboxMessages(careerState, [matchday.message]),
-  );
-  const result = continueCareerUntilAttention({
-    currentDate,
+  const evaluated = advanceSelectedClubContractsToAttention({
+    careerState,
     boundaryDate,
-    messages: projectedState.currentSeasonInbox ?? [],
+    additionalMessages:
+      matchday === undefined || matchday.message.date > boundaryDate
+        ? []
+        : [matchday.message],
   });
-
-  return { result };
+  return { careerState: evaluated.careerState, result: evaluated.result };
 }
 
 /** Maps canonical Inbox facts onto the web presentation contract. */
@@ -666,7 +865,7 @@ function toWebCareerContinueResult(result: ContinueCareerUntilAttentionResult): 
       status: message.lifecycle.resolved ? "resolved" : message.lifecycle.read ? "read" : "unread",
       titleKey: `career.inbox.subject.${message.category}`,
       summaryKey: inboxMessagePreviewKey(message),
-      actionRequired: message.level === "blocking" && !message.lifecycle.resolved,
+      actionRequired: isUnresolvedAttentionMessage(message),
       actions: message.actionIds.map((actionId) => ({
         actionId,
         labelKey: `career.inbox.action.${actionId}`,
@@ -678,8 +877,8 @@ function toWebCareerContinueResult(result: ContinueCareerUntilAttentionResult): 
 function isUnresolvedAttentionMessage(
   message: ContinueCareerUntilAttentionResult["stopDateMessages"][number],
 ): boolean {
-  if (message.level === "blocking") return !message.lifecycle.resolved;
-  return message.level === "important" && !message.lifecycle.acknowledged;
+  if (message.continuePolicy === "until_resolved") return !message.lifecycle.resolved;
+  return message.continuePolicy === "until_acknowledged" && !message.lifecycle.acknowledged;
 }
 
 /** Selects the compact summary for a canonical current-season message. */
@@ -697,19 +896,7 @@ function inboxMessagePreviewKey(
 
 /** Delivers a due matchday fact or refreshes its existing current-season message. */
 function refreshExistingInboxFacts(careerState: WebCareerState): WebCareerState {
-  let refreshed = reconcileCareerInboxResolution(careerState);
-  const nextFixture = findNextCareerFixture(refreshed);
-  if (nextFixture.status !== "found") return refreshed;
-  const message = createMatchdayAttention({
-    fixtureId: nextFixture.fixture.id,
-    clubId: refreshed.selectedClubId,
-    date: nextFixture.fixture.date,
-    preparation: matchdayPreparationFacts(refreshed, nextFixture.fixture.id),
-  }).message;
-  const isDelivered = refreshed.currentSeasonInbox?.some((candidate) => candidate.id === message.id) === true;
-  const isDue = message.date <= refreshed.gameState.calendar.currentDate;
-  if (isDelivered || isDue) refreshed = deliverCareerInboxMessages(refreshed, [message]);
-  return refreshed;
+  return inspectCanonicalCareerAttention(careerState).careerState;
 }
 
 /** Derives fixture readiness without mutating the durable preparation. */
@@ -797,12 +984,8 @@ export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState
       fixtureIds: calendar.fixtureIds,
     },
     youthAcademyState: youthAcademies.youthAcademyState,
-    marketState: {
-      clubBudgets: {
-        [selectedClubId]: { clubId: selectedClubId, transferBudget: 6_000_000_00 },
-      },
-      clubBudgetIds: [selectedClubId],
-    },
+    seniorSquadState: league.seniorSquadState,
+    clubFinanceState: league.clubFinanceState,
     transferHistory: [],
   } as unknown as WebCareerState;
 }

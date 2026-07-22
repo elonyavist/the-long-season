@@ -35,7 +35,22 @@ export type CareerMatchPreparationBlockerKey =
   | "missing_bench_goalkeeper"
   | "duplicate_bench_player"
   | "player_in_lineup_and_bench"
+  | "selected_player_injured"
+  | "selected_player_suspended"
   | "missing_tactic";
+
+/** Fixture-specific reason why a selected player cannot enter the match. */
+export type CareerMatchPreparationEligibilityReason = "injured" | "suspended";
+
+/** Structured eligibility warning supplied by a domain-aware adapter. */
+export interface CareerMatchPreparationEligibilityBlockerInput {
+  /** Selected player who cannot participate. */
+  readonly playerId: string;
+  /** Display name resolved by the adapter. */
+  readonly playerName: string;
+  /** Canonical fixture-specific reason. */
+  readonly reason: CareerMatchPreparationEligibilityReason;
+}
 
 /** Stable action identifiers available from the match-preparation section. */
 export type CareerMatchPreparationActionId = "save_preparation";
@@ -105,6 +120,8 @@ export interface CareerMatchPreparationPlayerOptionInput {
   readonly fitness?: number;
   /** Current ability used by explicit manager helper actions when available. */
   readonly currentAbility?: number;
+  /** Fixture-specific reason preventing a new selection, when applicable. */
+  readonly unavailabilityReason?: CareerMatchPreparationEligibilityReason;
 }
 
 /** One input slot in the editable preparation lineup. */
@@ -177,6 +194,8 @@ export interface BuildCareerMatchPreparationViewInput {
   readonly tacticProfiles: readonly CareerMatchPreparationTacticProfileInput[];
   /** Current selected tactic profile. */
   readonly selectedTacticProfileId?: string;
+  /** Fixture eligibility blockers derived outside the UI package. */
+  readonly eligibilityBlockers?: readonly CareerMatchPreparationEligibilityBlockerInput[];
   /** Whether this preparation has already been saved. */
   readonly isSaved?: boolean;
 }
@@ -301,6 +320,8 @@ export interface CareerMatchPreparationView {
   readonly tactic: CareerMatchPreparationTacticView;
   /** Current preparation blockers. */
   readonly blockerKeys: readonly CareerMatchPreparationBlockerKey[];
+  /** Exact selected players preventing match entry. */
+  readonly eligibilityBlockers: readonly CareerMatchPreparationEligibilityBlockerInput[];
   /** Save action state. */
   readonly saveAction: CareerMatchPreparationActionView;
   /** Translation key for the primary section summary. */
@@ -317,6 +338,8 @@ const BLOCKER_ORDER: readonly CareerMatchPreparationBlockerKey[] = [
   "missing_bench_goalkeeper",
   "duplicate_bench_player",
   "player_in_lineup_and_bench",
+  "selected_player_injured",
+  "selected_player_suspended",
   "missing_tactic",
 ];
 
@@ -371,6 +394,7 @@ export function buildCareerMatchPreparationView(
     bench,
     tactic,
     blockerKeys,
+    eligibilityBlockers: input.eligibilityBlockers ?? [],
     saveAction: {
       actionId: "save_preparation",
       status: blockerKeys.length === 0 ? "available" : "blocked",
@@ -529,6 +553,12 @@ function buildBlockerKeys(
 
   if (benchLineupOverlapIds.size > 0) {
     blockers.push("player_in_lineup_and_bench");
+  }
+
+  for (const eligibilityBlocker of input.eligibilityBlockers ?? []) {
+    blockers.push(eligibilityBlocker.reason === "injured"
+      ? "selected_player_injured"
+      : "selected_player_suspended");
   }
 
   if (normalizeOptionalId(input.selectedTacticProfileId) === undefined) {

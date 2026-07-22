@@ -6,7 +6,6 @@ import {
   abilityValue,
   clubId,
   createCareerState,
-  createMarketState,
   fixtureId,
   gameDate,
   playerId,
@@ -226,7 +225,6 @@ function careerStateFixture(): CareerState {
       fixtures: {},
       fixtureIds: [],
     },
-    marketState: createMarketState({ clubBudgets: {}, clubBudgetIds: [] }),
     transferHistory: [],
   });
 }

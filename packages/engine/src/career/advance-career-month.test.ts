@@ -8,7 +8,6 @@ import {
   clubId,
   createCareerState,
   createEmptyPlayerParticipationLedger,
-  createMarketState,
   fixtureId,
   gameDate,
   playerId,
@@ -153,10 +152,6 @@ function careerStateWithParticipation(input: {
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: clubId("club:selected"),
     gameState: gameStateFixture(input.currentDate, [playerFixture(input.player)]),
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
-    }),
     transferHistory: [],
     playerParticipationLedger,
   });

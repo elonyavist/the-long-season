@@ -17,6 +17,8 @@ export interface TacticalBoardSquadPlayer extends TacticalBoardSuitabilityPlayer
   readonly fitness?: number;
   readonly formTrend: "up" | "flat" | "down";
   readonly suitabilityByRole: Readonly<Record<TacticalBoardRoleCode, TacticalBoardRoleSuitability>>;
+  /** Current-fixture reason preventing this player from being newly selected. */
+  readonly unavailabilityReason?: "injured" | "suspended";
 }
 
 const PRIMARY_ROLE_BY_POSITION_KEY: Readonly<Record<string, TacticalBoardCanonicalRole>> = {
@@ -50,7 +52,7 @@ export function buildTacticalBoardSquadPlayer(
   player: CareerMatchPreparationPlayerOptionInput,
   number: number,
 ): TacticalBoardSquadPlayer {
-  const primaryRole = primaryRoleForPlayerOption(player);
+  const primaryRole = canonicalRoleForPlayerOption(player);
   const basePlayer = {
     id: player.playerId,
     playerId: player.playerId,
@@ -66,6 +68,9 @@ export function buildTacticalBoardSquadPlayer(
     ...(player.positionKey === undefined ? {} : { positionKey: player.positionKey }),
     ...(player.fitness === undefined ? {} : { fitness: player.fitness }),
     ...(player.currentAbility === undefined ? {} : { currentAbility: player.currentAbility }),
+    ...(player.unavailabilityReason === undefined
+      ? {}
+      : { unavailabilityReason: player.unavailabilityReason }),
   } satisfies TacticalBoardSquadPlayer;
 
   return {
@@ -96,7 +101,14 @@ export function formTrendFromFitness(fitness: number | undefined): "up" | "flat"
   return "down";
 }
 
-function primaryRoleForPlayerOption(player: CareerMatchPreparationPlayerOptionInput): TacticalBoardCanonicalRole {
+/**
+ * Maps one player identity to the canonical role shared by Squad, Tactics,
+ * and Matchday. Keeping this translation here prevents screen adapters from
+ * inventing their own role fallbacks.
+ */
+export function canonicalRoleForPlayerOption(
+  player: Pick<CareerMatchPreparationPlayerOptionInput, "positionKey" | "roleKey">,
+): TacticalBoardCanonicalRole {
   const primaryRole = player.positionKey === undefined ? undefined : PRIMARY_ROLE_BY_POSITION_KEY[player.positionKey];
 
   if (primaryRole !== undefined) {
@@ -121,7 +133,7 @@ function primaryRoleForPlayerOption(player: CareerMatchPreparationPlayerOptionIn
 function alternativeRolesForPlayerOption(
   player: CareerMatchPreparationPlayerOptionInput,
 ): readonly TacticalBoardCanonicalRole[] {
-  const primaryRole = primaryRoleForPlayerOption(player);
+  const primaryRole = canonicalRoleForPlayerOption(player);
   const alternativesByPosition: Readonly<Record<string, readonly TacticalBoardCanonicalRole[]>> = {
     rb: ["right_midfielder", "center_back"],
     lb: ["left_midfielder", "center_back"],

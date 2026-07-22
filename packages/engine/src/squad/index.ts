@@ -5,6 +5,7 @@
  * pick lineups, mutate squads, or execute market actions.
  */
 export * from "./formation-squad-fit.ts";
+export * from "./public-club-player-assessment.ts";
 export {
   FORMATION_CATALOG,
   FORMATION_KEYS,

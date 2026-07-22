@@ -44,6 +44,23 @@ describe("buildCareerMatchPreparationView", () => {
     expect(view.summaryKey).toBe("career.matchPreparation.summary.ready_to_save");
   });
 
+  it("blocks match entry with exact adapter-supplied eligibility facts", () => {
+    const eligibilityBlocker = {
+      playerId: "player:001",
+      playerName: "Test Goalkeeper",
+      reason: "injured" as const,
+    };
+    const view = buildCareerMatchPreparationView({
+      ...baseInput(),
+      eligibilityBlockers: [eligibilityBlocker],
+    });
+
+    expect(view.status).toBe("blocked");
+    expect(view.blockerKeys).toEqual(["selected_player_injured"]);
+    expect(view.eligibilityBlockers).toEqual([eligibilityBlocker]);
+    expect(view.saveAction.status).toBe("blocked");
+  });
+
   it("exposes the default formation catalog and selected formation", () => {
     const view = buildCareerMatchPreparationView(baseInput());
 

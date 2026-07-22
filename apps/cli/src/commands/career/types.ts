@@ -11,8 +11,11 @@ export type CliCareerState = ApplyCareerPermanentTransferInput["careerState"];
 /** Current saved game-state shape used by the career CLI. */
 export type CliGameState = CliCareerState["gameState"];
 
-/** Current saved market-state shape used by the career CLI. */
-export type CliMarketState = CliCareerState["marketState"];
+/** Current canonical club-finance state used by the career CLI. */
+export type CliClubFinanceState = NonNullable<CliCareerState["clubFinanceState"]>;
+
+/** Current canonical senior registration and contract state used by the career CLI. */
+export type CliSeniorSquadState = NonNullable<CliCareerState["seniorSquadState"]>;
 
 /** Permanent-transfer intent shape accepted by the engine use-case. */
 export type CliIntent = ApplyCareerPermanentTransferInput["intent"];
@@ -29,11 +32,11 @@ export type CliPlayer = CliGameState["players"][PlayerId];
 /** Ability map shape stored on generated players. */
 export type CliPlayerAbilities = CliPlayer["abilities"];
 
-/** Money value object shape used by current market state. */
-export type CliMoney = CliMarketState["clubBudgets"][ClubId]["transferBudget"];
+/** Money value object shape used by canonical club finances. */
+export type CliMoney = CliClubFinanceState["accounts"][ClubId]["availableTransferBudget"];
 
-/** Transfer-budget row stored for one club. */
-export type CliClubTransferBudget = CliMarketState["clubBudgets"][ClubId];
+/** Canonical finance account stored for one club. */
+export type CliClubFinanceAccount = CliClubFinanceState["accounts"][ClubId];
 
 /** Career save ID accepted by the storage adapter. */
 export type CliSaveId = SaveCareerInput["saveId"];

@@ -1,26 +1,48 @@
 import {
+  clubFinanceLedgerEntryId,
   clubId,
   competitionId,
+  contractNegotiationId,
+  createClubFinanceState,
   createCareerState,
   createCareerPlayerAvailabilityState,
+  createContractNegotiationState,
   createPlayerParticipationLedger,
+  createSeniorSquadState,
   careerInboxMessageId,
   createCareerInboxMessage,
   fixtureId,
   gameDate,
   nonNegativeMoney,
+  playerContractHistoryEntryId,
+  playerContractId,
   playerId,
   seasonId,
+  seniorSquadRegistrationId,
+  type AgreedSquadStatus,
   type CareerMatchPreparation,
   type CareerAttentionBlockerKey,
   type CareerAttentionLevel,
+  type CareerAttentionContinuePolicy,
   type CareerInboxActionId,
   type CareerInboxCategory,
   type CareerInboxSource,
   type CareerSeasonArchiveEntry,
   type CareerState,
   type CareerPlayerAvailabilityState,
-  type ClubTransferBudget,
+  type ClubFinanceLedgerDirection,
+  type ClubFinanceLedgerEntry,
+  type ClubFinanceLedgerEntryId,
+  type ClubFinanceLedgerReason,
+  type ClubFinanceState,
+  type ClubId,
+  type CurrencyCode,
+  type ContractNegotiation,
+  type ContractNegotiationId,
+  type ContractNegotiationState,
+  type ContractOfferEvaluation,
+  type ContractOfferEvaluationReason,
+  type ContractOfferTerms,
   type LeagueTableRow,
   type MatchEvent,
   type MatchInjurySeverity,
@@ -32,7 +54,15 @@ import {
   type PlayerParticipationLedger,
   type PlayerParticipationRow,
   type PlayerId,
+  type PlayerContract,
+  type PlayerContractHistoryEntry,
+  type PlayerContractHistoryEntryId,
+  type PlayerContractId,
+  type PlayerContractType,
   type SaveId,
+  type SeniorSquadRegistration,
+  type SeniorSquadRegistrationId,
+  type SeniorSquadState,
   type YouthAcademyState,
   type YouthAcademyClubRoster,
   type YouthPlayerLifecycle,
@@ -47,11 +77,9 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
   if (state.careerWorld !== undefined) {
     database.run("INSERT INTO career_world (save_id, world_seed, generator_version, creation_source_key) VALUES (?, ?, ?, ?)", [save, state.careerWorld.worldSeed, state.careerWorld.generatorVersion, state.careerWorld.creationSourceKey]);
   }
-  state.marketState.clubBudgetIds.forEach((budgetClubId, sortOrder) => {
-    const budget = state.marketState.clubBudgets[budgetClubId];
-    if (budget === undefined) throw mappingFailure(`ordered market budget is missing: ${budgetClubId}`);
-    database.run("INSERT INTO market_budgets (save_id, sort_order, club_id, transfer_budget) VALUES (?, ?, ?, ?)", [save, sortOrder, budget.clubId, budget.transferBudget]);
-  });
+  insertSeniorSquadState(database, state);
+  insertClubFinanceState(database, state);
+  insertContractNegotiationState(database, state);
   for (const entry of state.transferHistory) {
     database.run(`INSERT INTO transfer_history
       (save_id, sequence_number, occurred_on, buying_club_id, selling_club_id, player_id, transfer_fee)
@@ -69,11 +97,21 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
 /** Adds all current durable career systems to a reconstructed world snapshot. */
 export function loadCareerStateRows(database: SqliteWorldDatabase, requestedSaveId: SaveId, world: CareerState): CareerState {
   const gameState = attachFixtureReports(database, requestedSaveId, world.gameState);
+  const seniorSquadState = loadSeniorSquadState(database, requestedSaveId, gameState);
+  const clubFinanceState = loadClubFinanceState(database, requestedSaveId, gameState, seniorSquadState);
+  const contractNegotiationState = loadContractNegotiationState(
+    database,
+    requestedSaveId,
+    gameState,
+    seniorSquadState,
+  );
   return createCareerState({
     ...world,
     gameState,
     ...(loadCareerWorldMetadata(database, requestedSaveId) ?? {}),
-    marketState: loadMarketState(database, requestedSaveId),
+    seniorSquadState,
+    clubFinanceState,
+    ...(contractNegotiationState === undefined ? {} : { contractNegotiationState }),
     transferHistory: loadTransferHistory(database, requestedSaveId),
     currentSeasonInbox: loadCurrentSeasonInbox(database, requestedSaveId),
     ...(loadPlayerAvailability(database, requestedSaveId) ?? {}),
@@ -247,13 +285,392 @@ function loadPlayerParticipationLedger(database: SqliteWorldDatabase, save: Save
   return { playerParticipationLedger };
 }
 
+type PersistedNegotiationTermsKind =
+  | "draft"
+  | "submitted"
+  | "counter"
+  | "accepted"
+  | "demand_preferred"
+  | "demand_minimum";
+
+/** Writes the optional ordered contract-negotiation state without JSON blobs. */
+function insertContractNegotiationState(database: SqliteWorldDatabase, state: CareerState): void {
+  const negotiationState = state.contractNegotiationState;
+  if (negotiationState === undefined) return;
+
+  database.run("INSERT INTO contract_negotiation_states (save_id) VALUES (?)", [state.saveId]);
+  negotiationState.negotiationIds.forEach((negotiationIdValue, sortOrder) => {
+    const negotiation = negotiationState.negotiations[negotiationIdValue];
+    if (negotiation === undefined) {
+      throw mappingFailure(`ordered contract negotiation is missing: ${negotiationIdValue}`);
+    }
+
+    let draftCreatedOn: SqliteBindValue = null;
+    let submittedOn: SqliteBindValue = null;
+    let responseDueOn: SqliteBindValue = null;
+    let counterIssuedOn: SqliteBindValue = null;
+    let counterExpiresOn: SqliteBindValue = null;
+    let acceptedOn: SqliteBindValue = null;
+    let acceptedSource: SqliteBindValue = null;
+    let activatedContractId: SqliteBindValue = null;
+    let rejectedOn: SqliteBindValue = null;
+    let rejectedBy: SqliteBindValue = null;
+    let withdrawnOn: SqliteBindValue = null;
+    let expiredOn: SqliteBindValue = null;
+    let expiryReason: SqliteBindValue = null;
+    let decidedOn: SqliteBindValue = null;
+
+    switch (negotiation.status) {
+      case "draft":
+        draftCreatedOn = negotiation.draft.createdOn;
+        break;
+      case "awaiting_response":
+        submittedOn = negotiation.submittedOffer.submittedOn;
+        responseDueOn = negotiation.submittedOffer.responseDueOn;
+        break;
+      case "countered":
+        submittedOn = negotiation.submittedOffer.submittedOn;
+        responseDueOn = negotiation.submittedOffer.responseDueOn;
+        counterIssuedOn = negotiation.counterOffer.issuedOn;
+        counterExpiresOn = negotiation.counterOffer.expiresOn;
+        break;
+      case "accepted":
+        submittedOn = negotiation.submittedOffer.submittedOn;
+        responseDueOn = negotiation.submittedOffer.responseDueOn;
+        acceptedOn = negotiation.acceptedOn;
+        acceptedSource = negotiation.acceptedSource;
+        activatedContractId = negotiation.activatedContractId;
+        break;
+      case "rejected":
+        submittedOn = negotiation.submittedOffer.submittedOn;
+        responseDueOn = negotiation.submittedOffer.responseDueOn;
+        rejectedOn = negotiation.rejectedOn;
+        rejectedBy = negotiation.rejectedBy;
+        break;
+      case "withdrawn":
+        withdrawnOn = negotiation.withdrawnOn;
+        break;
+      case "expired":
+        expiredOn = negotiation.expiredOn;
+        expiryReason = negotiation.reason;
+        break;
+      case "release_at_expiry":
+        decidedOn = negotiation.decidedOn;
+        break;
+    }
+
+    database.run(`INSERT INTO contract_negotiations
+      (save_id, sort_order, negotiation_id, player_id, club_id, current_contract_id, created_on, status,
+       draft_created_on, submitted_on, response_due_on, counter_issued_on, counter_expires_on,
+       accepted_on, accepted_source, activated_contract_id, rejected_on, rejected_by, withdrawn_on,
+       expired_on, expiry_reason, decided_on)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId,
+      sortOrder,
+      negotiation.id,
+      negotiation.playerId,
+      negotiation.clubId,
+      negotiation.currentContractId,
+      negotiation.createdOn,
+      negotiation.status,
+      draftCreatedOn,
+      submittedOn,
+      responseDueOn,
+      counterIssuedOn,
+      counterExpiresOn,
+      acceptedOn,
+      acceptedSource,
+      activatedContractId,
+      rejectedOn,
+      rejectedBy,
+      withdrawnOn,
+      expiredOn,
+      expiryReason,
+      decidedOn,
+    ]);
+
+    switch (negotiation.status) {
+      case "draft":
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "draft", negotiation.draft.terms);
+        break;
+      case "awaiting_response":
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "submitted", negotiation.submittedOffer.terms);
+        break;
+      case "countered":
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "submitted", negotiation.submittedOffer.terms);
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "counter", negotiation.counterOffer.terms);
+        insertNegotiationEvaluation(database, state.saveId, negotiation.id, negotiation.counterOffer.evaluation);
+        break;
+      case "accepted":
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "submitted", negotiation.submittedOffer.terms);
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "accepted", negotiation.acceptedTerms);
+        insertNegotiationEvaluation(database, state.saveId, negotiation.id, negotiation.evaluation);
+        break;
+      case "rejected":
+        insertNegotiationTerms(database, state.saveId, negotiation.id, "submitted", negotiation.submittedOffer.terms);
+        if (negotiation.evaluation !== undefined) {
+          insertNegotiationEvaluation(database, state.saveId, negotiation.id, negotiation.evaluation);
+        }
+        break;
+      case "withdrawn":
+      case "expired":
+      case "release_at_expiry":
+        break;
+    }
+  });
+}
+
+/** Writes one supported contract term set for a negotiation. */
+function insertNegotiationTerms(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  negotiation: ContractNegotiationId,
+  kind: PersistedNegotiationTermsKind,
+  terms: ContractOfferTerms,
+): void {
+  database.run(`INSERT INTO contract_negotiation_terms
+    (save_id, negotiation_id, terms_kind, duration_years, annual_wage, squad_status,
+     signing_bonus, appearance_bonus, goal_bonus, clean_sheet_bonus)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+    save,
+    negotiation,
+    kind,
+    terms.durationYears,
+    terms.annualWage,
+    terms.squadStatus,
+    terms.bonuses.signingBonus,
+    terms.bonuses.appearanceBonus,
+    terms.bonuses.goalBonus ?? null,
+    terms.bonuses.cleanSheetBonus ?? null,
+  ]);
+}
+
+/** Writes one deterministic player response and its objective demand snapshot. */
+function insertNegotiationEvaluation(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  negotiation: ContractNegotiationId,
+  evaluation: ContractOfferEvaluation,
+): void {
+  const demand = evaluation.demand;
+  database.run(`INSERT INTO contract_negotiation_evaluations
+    (save_id, negotiation_id, decision, score_basis_points, evaluated_on, age, current_ability,
+     reachable_potential, role, expected_squad_status, current_annual_wage, remaining_contract_days,
+     club_reputation, club_category, free_agent_leverage_basis_points)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+    save,
+    negotiation,
+    evaluation.decision,
+    evaluation.scoreBasisPoints,
+    demand.evaluatedOn,
+    demand.age,
+    demand.currentAbility,
+    demand.reachablePotential,
+    demand.role,
+    demand.expectedSquadStatus,
+    demand.currentAnnualWage,
+    demand.remainingContractDays,
+    demand.clubReputation,
+    demand.clubCategory,
+    demand.freeAgentLeverageBasisPoints,
+  ]);
+  evaluation.reasons.forEach((reason, sortOrder) => {
+    database.run(`INSERT INTO contract_negotiation_evaluation_reasons
+      (save_id, negotiation_id, sort_order, reason) VALUES (?, ?, ?, ?)`,
+    [save, negotiation, sortOrder, reason]);
+  });
+  insertNegotiationTerms(database, save, negotiation, "demand_preferred", demand.preferredTerms);
+  insertNegotiationTerms(database, save, negotiation, "demand_minimum", demand.minimumTerms);
+}
+
+/** Reconstructs an optional ordered negotiation state from normalized rows. */
+function loadContractNegotiationState(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  gameState: CareerState["gameState"],
+  seniorSquadState: SeniorSquadState,
+): ContractNegotiationState | undefined {
+  if (database.queryAll("SELECT save_id FROM contract_negotiation_states WHERE save_id = ?", [save]).length === 0) {
+    return undefined;
+  }
+
+  const negotiations: Record<ContractNegotiationId, ContractNegotiation> = {};
+  const negotiationIds = database.queryAll(
+    "SELECT * FROM contract_negotiations WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => {
+    const id = contractNegotiationId(text(row, "negotiation_id"));
+    const common = {
+      id,
+      playerId: playerId(text(row, "player_id")),
+      clubId: clubId(text(row, "club_id")),
+      currentContractId: playerContractId(text(row, "current_contract_id")),
+      createdOn: gameDate(number(row, "created_on")),
+    };
+    const status = text(row, "status") as ContractNegotiation["status"];
+    const submittedOffer = () => ({
+      submittedOn: gameDate(number(row, "submitted_on")),
+      responseDueOn: gameDate(number(row, "response_due_on")),
+      terms: loadNegotiationTerms(database, save, id, "submitted"),
+    });
+
+    switch (status) {
+      case "draft":
+        negotiations[id] = {
+          ...common,
+          status,
+          draft: {
+            createdOn: gameDate(number(row, "draft_created_on")),
+            terms: loadNegotiationTerms(database, save, id, "draft"),
+          },
+        };
+        break;
+      case "awaiting_response":
+        negotiations[id] = { ...common, status, submittedOffer: submittedOffer() };
+        break;
+      case "countered":
+        negotiations[id] = {
+          ...common,
+          status,
+          submittedOffer: submittedOffer(),
+          counterOffer: {
+            issuedOn: gameDate(number(row, "counter_issued_on")),
+            expiresOn: gameDate(number(row, "counter_expires_on")),
+            terms: loadNegotiationTerms(database, save, id, "counter"),
+            evaluation: requireNegotiationEvaluation(database, save, id),
+          },
+        };
+        break;
+      case "accepted":
+        negotiations[id] = {
+          ...common,
+          status,
+          submittedOffer: submittedOffer(),
+          acceptedOn: gameDate(number(row, "accepted_on")),
+          acceptedTerms: loadNegotiationTerms(database, save, id, "accepted"),
+          acceptedSource: text(row, "accepted_source") as "submitted_offer" | "counter_offer",
+          evaluation: requireNegotiationEvaluation(database, save, id),
+          activatedContractId: playerContractId(text(row, "activated_contract_id")),
+        };
+        break;
+      case "rejected": {
+        const evaluation = loadNegotiationEvaluation(database, save, id);
+        negotiations[id] = {
+          ...common,
+          status,
+          submittedOffer: submittedOffer(),
+          rejectedOn: gameDate(number(row, "rejected_on")),
+          rejectedBy: text(row, "rejected_by") as "player" | "club",
+          ...(evaluation === undefined ? {} : { evaluation }),
+        };
+        break;
+      }
+      case "withdrawn":
+        negotiations[id] = { ...common, status, withdrawnOn: gameDate(number(row, "withdrawn_on")) };
+        break;
+      case "expired":
+        negotiations[id] = {
+          ...common,
+          status,
+          expiredOn: gameDate(number(row, "expired_on")),
+          reason: text(row, "expiry_reason") as "counter_offer_expired" | "current_contract_expired",
+        };
+        break;
+      case "release_at_expiry":
+        negotiations[id] = { ...common, status, decidedOn: gameDate(number(row, "decided_on")) };
+        break;
+    }
+    return id;
+  });
+
+  return createContractNegotiationState(gameState, seniorSquadState, { negotiations, negotiationIds });
+}
+
+/** Reconstructs one named term set and rejects incomplete relational rows. */
+function loadNegotiationTerms(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  negotiation: ContractNegotiationId,
+  kind: PersistedNegotiationTermsKind,
+): ContractOfferTerms {
+  const rows = database.queryAll(
+    "SELECT * FROM contract_negotiation_terms WHERE save_id = ? AND negotiation_id = ? AND terms_kind = ?",
+    [save, negotiation, kind],
+  );
+  if (rows.length !== 1) throw mappingFailure(`expected one ${kind} term set for negotiation: ${negotiation}`);
+  const row = rows[0]!;
+  const goalBonus = optionalNumber(row, "goal_bonus");
+  const cleanSheetBonus = optionalNumber(row, "clean_sheet_bonus");
+  return {
+    durationYears: number(row, "duration_years"),
+    annualWage: nonNegativeMoney(number(row, "annual_wage")),
+    squadStatus: text(row, "squad_status") as AgreedSquadStatus,
+    bonuses: {
+      signingBonus: nonNegativeMoney(number(row, "signing_bonus")),
+      appearanceBonus: nonNegativeMoney(number(row, "appearance_bonus")),
+      ...(goalBonus === undefined ? {} : { goalBonus: nonNegativeMoney(goalBonus) }),
+      ...(cleanSheetBonus === undefined ? {} : { cleanSheetBonus: nonNegativeMoney(cleanSheetBonus) }),
+    },
+  };
+}
+
+/** Reconstructs one optional deterministic player-response evaluation. */
+function loadNegotiationEvaluation(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  negotiation: ContractNegotiationId,
+): ContractOfferEvaluation | undefined {
+  const rows = database.queryAll(
+    "SELECT * FROM contract_negotiation_evaluations WHERE save_id = ? AND negotiation_id = ?",
+    [save, negotiation],
+  );
+  if (rows.length === 0) return undefined;
+  if (rows.length !== 1) throw mappingFailure(`expected one evaluation for negotiation: ${negotiation}`);
+  const row = rows[0]!;
+  return {
+    decision: text(row, "decision") as ContractOfferEvaluation["decision"],
+    scoreBasisPoints: number(row, "score_basis_points"),
+    reasons: database.queryAll(
+      "SELECT reason FROM contract_negotiation_evaluation_reasons WHERE save_id = ? AND negotiation_id = ? ORDER BY sort_order",
+      [save, negotiation],
+    ).map((reasonRow) => text(reasonRow, "reason") as ContractOfferEvaluationReason),
+    demand: {
+      evaluatedOn: gameDate(number(row, "evaluated_on")),
+      age: number(row, "age"),
+      currentAbility: number(row, "current_ability"),
+      reachablePotential: number(row, "reachable_potential"),
+      role: text(row, "role") as ContractOfferEvaluation["demand"]["role"],
+      expectedSquadStatus: text(row, "expected_squad_status") as AgreedSquadStatus,
+      currentAnnualWage: nonNegativeMoney(number(row, "current_annual_wage")),
+      remainingContractDays: number(row, "remaining_contract_days"),
+      clubReputation: number(row, "club_reputation"),
+      clubCategory: text(row, "club_category") as ContractOfferEvaluation["demand"]["clubCategory"],
+      freeAgentLeverageBasisPoints: number(row, "free_agent_leverage_basis_points"),
+      preferredTerms: loadNegotiationTerms(database, save, negotiation, "demand_preferred"),
+      minimumTerms: loadNegotiationTerms(database, save, negotiation, "demand_minimum"),
+    },
+  };
+}
+
+/** Requires the evaluation owned by a countered or accepted negotiation. */
+function requireNegotiationEvaluation(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  negotiation: ContractNegotiationId,
+): ContractOfferEvaluation {
+  const evaluation = loadNegotiationEvaluation(database, save, negotiation);
+  if (evaluation === undefined) throw mappingFailure(`negotiation evaluation is missing: ${negotiation}`);
+  return evaluation;
+}
+
 /** Writes ordered current-season message facts without rendered text or blobs. */
 function insertCurrentSeasonInbox(database: SqliteWorldDatabase, state: CareerState): void {
   (state.currentSeasonInbox ?? []).forEach((message, sortOrder) => {
     database.run(`INSERT INTO career_inbox_messages
       (save_id, sort_order, message_id, message_date, category, source, attention_level,
-       is_read, is_acknowledged, is_resolved, fixture_id, club_id, player_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+       continue_policy, is_read, is_acknowledged, is_resolved, fixture_id, club_id, player_id,
+       contract_id, contract_negotiation_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
       state.saveId,
       sortOrder,
       message.id,
@@ -261,12 +678,15 @@ function insertCurrentSeasonInbox(database: SqliteWorldDatabase, state: CareerSt
       message.category,
       message.source,
       message.level,
+      message.continuePolicy,
       message.lifecycle.read ? 1 : 0,
       message.lifecycle.acknowledged ? 1 : 0,
       message.lifecycle.resolved ? 1 : 0,
       message.related.fixtureId ?? null,
       message.related.clubId ?? null,
       message.related.playerId ?? null,
+      message.related.contractId ?? null,
+      message.related.contractNegotiationId ?? null,
     ]);
     message.blockerKeys.forEach((blockerKey, blockerOrder) => {
       database.run(`INSERT INTO career_inbox_blockers
@@ -288,12 +708,15 @@ function loadCurrentSeasonInbox(database: SqliteWorldDatabase, save: SaveId): No
     const fixture = optionalText(row, "fixture_id");
     const club = optionalText(row, "club_id");
     const player = optionalText(row, "player_id");
+    const contract = optionalText(row, "contract_id");
+    const negotiation = optionalText(row, "contract_negotiation_id");
     return createCareerInboxMessage({
       id: messageId,
       date: gameDate(number(row, "message_date")),
       category: text(row, "category") as CareerInboxCategory,
       source: text(row, "source") as CareerInboxSource,
       level: text(row, "attention_level") as CareerAttentionLevel,
+      continuePolicy: text(row, "continue_policy") as CareerAttentionContinuePolicy,
       lifecycle: {
         read: boolean(row, "is_read"),
         acknowledged: boolean(row, "is_acknowledged"),
@@ -303,6 +726,8 @@ function loadCurrentSeasonInbox(database: SqliteWorldDatabase, save: SaveId): No
         ...(fixture === undefined ? {} : { fixtureId: fixtureId(fixture) }),
         ...(club === undefined ? {} : { clubId: clubId(club) }),
         ...(player === undefined ? {} : { playerId: playerId(player) }),
+        ...(contract === undefined ? {} : { contractId: playerContractId(contract) }),
+        ...(negotiation === undefined ? {} : { contractNegotiationId: contractNegotiationId(negotiation) }),
       },
       blockerKeys: database.queryAll(
         "SELECT blocker_key FROM career_inbox_blockers WHERE save_id = ? AND message_id = ? ORDER BY sort_order",
@@ -449,14 +874,230 @@ function loadCareerWorldMetadata(database: SqliteWorldDatabase, save: SaveId): P
   return row === undefined ? undefined : { careerWorld: { worldSeed: text(row, "world_seed"), generatorVersion: number(row, "generator_version"), creationSourceKey: text(row, "creation_source_key") } };
 }
 
-function loadMarketState(database: SqliteWorldDatabase, save: SaveId): CareerState["marketState"] {
-  const clubBudgets: Record<string, ClubTransferBudget> = {};
-  const clubBudgetIds = database.queryAll("SELECT club_id, transfer_budget FROM market_budgets WHERE save_id = ? ORDER BY sort_order", [save]).map((row) => {
-    const budgetClubId = clubId(text(row, "club_id"));
-    clubBudgets[budgetClubId] = { clubId: budgetClubId, transferBudget: nonNegativeMoney(number(row, "transfer_budget")) };
-    return budgetClubId;
+/** Writes canonical registrations, immutable contracts, active IDs, and history. */
+function insertSeniorSquadState(database: SqliteWorldDatabase, state: CareerState): void {
+  const senior = state.seniorSquadState;
+  if (senior === undefined) throw mappingFailure("senior-squad state is required by the Phase 78 save baseline");
+
+  senior.registrationIds.forEach((id, sortOrder) => {
+    const registration = senior.registrations[id];
+    if (registration === undefined) throw mappingFailure(`ordered registration is missing: ${id}`);
+    database.run(`INSERT INTO senior_squad_registrations
+      (save_id, sort_order, registration_id, player_id, club_id, shirt_number, registered_on)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, registration.id, registration.playerId, registration.clubId,
+      registration.shirtNumber, registration.registeredOn,
+    ]);
   });
-  return { clubBudgets, clubBudgetIds };
+
+  senior.contractIds.forEach((id, sortOrder) => {
+    const contract = senior.contracts[id];
+    if (contract === undefined) throw mappingFailure(`ordered contract is missing: ${id}`);
+    database.run(`INSERT INTO player_contracts
+      (save_id, sort_order, contract_id, player_id, club_id, contract_type, starts_on, ends_on,
+       annual_wage, squad_status, signing_bonus, appearance_bonus, goal_bonus, clean_sheet_bonus)
+      VALUES (${placeholders(14)})`, [
+      state.saveId, sortOrder, contract.id, contract.playerId, contract.clubId, contract.type,
+      contract.startsOn, contract.endsOn, contract.annualWage, contract.squadStatus,
+      contract.bonuses.signingBonus, contract.bonuses.appearanceBonus,
+      contract.bonuses.goalBonus ?? null, contract.bonuses.cleanSheetBonus ?? null,
+    ]);
+  });
+
+  senior.activeContractIds.forEach((id, sortOrder) => {
+    database.run(
+      "INSERT INTO active_player_contracts (save_id, sort_order, contract_id) VALUES (?, ?, ?)",
+      [state.saveId, sortOrder, id],
+    );
+  });
+
+  senior.contractHistoryEntryIds.forEach((id, sortOrder) => {
+    const entry = senior.contractHistory[id];
+    if (entry === undefined) throw mappingFailure(`ordered contract-history entry is missing: ${id}`);
+    database.run(`INSERT INTO player_contract_history
+      (save_id, sort_order, history_entry_id, sequence_number, occurred_on, event_type,
+       contract_id, player_id, club_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, entry.id, entry.sequenceNumber, entry.occurredOn, entry.event,
+      entry.contractId, entry.playerId, entry.clubId,
+    ]);
+  });
+}
+
+/** Reconstructs and validates the complete senior-squad persistence slice. */
+function loadSeniorSquadState(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  gameState: CareerState["gameState"],
+): SeniorSquadState {
+  const registrations: Record<SeniorSquadRegistrationId, SeniorSquadRegistration> = {};
+  const registrationIds = database.queryAll(
+    "SELECT * FROM senior_squad_registrations WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => {
+    const id = seniorSquadRegistrationId(text(row, "registration_id"));
+    registrations[id] = {
+      id,
+      playerId: playerId(text(row, "player_id")),
+      clubId: clubId(text(row, "club_id")),
+      shirtNumber: number(row, "shirt_number"),
+      registeredOn: gameDate(number(row, "registered_on")),
+    };
+    return id;
+  });
+
+  const contracts: Record<PlayerContractId, PlayerContract> = {};
+  const contractIds = database.queryAll(
+    "SELECT * FROM player_contracts WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => {
+    const id = playerContractId(text(row, "contract_id"));
+    const goalBonus = optionalNumber(row, "goal_bonus");
+    const cleanSheetBonus = optionalNumber(row, "clean_sheet_bonus");
+    contracts[id] = {
+      id,
+      playerId: playerId(text(row, "player_id")),
+      clubId: clubId(text(row, "club_id")),
+      type: text(row, "contract_type") as PlayerContractType,
+      startsOn: gameDate(number(row, "starts_on")),
+      endsOn: gameDate(number(row, "ends_on")),
+      annualWage: nonNegativeMoney(number(row, "annual_wage")),
+      squadStatus: text(row, "squad_status") as AgreedSquadStatus,
+      bonuses: {
+        signingBonus: nonNegativeMoney(number(row, "signing_bonus")),
+        appearanceBonus: nonNegativeMoney(number(row, "appearance_bonus")),
+        ...(goalBonus === undefined ? {} : { goalBonus: nonNegativeMoney(goalBonus) }),
+        ...(cleanSheetBonus === undefined
+          ? {}
+          : { cleanSheetBonus: nonNegativeMoney(cleanSheetBonus) }),
+      },
+    };
+    return id;
+  });
+
+  const activeContractIds = database.queryAll(
+    "SELECT contract_id FROM active_player_contracts WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => playerContractId(text(row, "contract_id")));
+
+  const contractHistory: Record<PlayerContractHistoryEntryId, PlayerContractHistoryEntry> = {};
+  const contractHistoryEntryIds = database.queryAll(
+    "SELECT * FROM player_contract_history WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => {
+    const id = playerContractHistoryEntryId(text(row, "history_entry_id"));
+    contractHistory[id] = {
+      id,
+      sequenceNumber: number(row, "sequence_number"),
+      occurredOn: gameDate(number(row, "occurred_on")),
+      event: text(row, "event_type") as PlayerContractHistoryEntry["event"],
+      contractId: playerContractId(text(row, "contract_id")),
+      playerId: playerId(text(row, "player_id")),
+      clubId: clubId(text(row, "club_id")),
+    };
+    return id;
+  });
+
+  return createSeniorSquadState(gameState, {
+    registrations,
+    registrationIds,
+    contracts,
+    contractIds,
+    activeContractIds,
+    contractHistory,
+    contractHistoryEntryIds,
+  });
+}
+
+/** Writes exact account balances and the ordered finance ledger. */
+function insertClubFinanceState(database: SqliteWorldDatabase, state: CareerState): void {
+  const finances = state.clubFinanceState;
+  if (finances === undefined) throw mappingFailure("club-finance state is required by the Phase 78 save baseline");
+
+  finances.clubIds.forEach((id, sortOrder) => {
+    const account = finances.accounts[id];
+    if (account === undefined) throw mappingFailure(`ordered finance account is missing: ${id}`);
+    database.run(`INSERT INTO club_finance_accounts
+      (save_id, sort_order, club_id, currency, cash_balance, annual_transfer_budget,
+       available_transfer_budget, annual_wage_budget, committed_annual_wages,
+       season_income, season_expenses) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, account.clubId, account.currency, account.cashBalance,
+      account.annualTransferBudget, account.availableTransferBudget, account.annualWageBudget,
+      account.committedAnnualWage, account.seasonIncome, account.seasonExpenses,
+    ]);
+  });
+
+  finances.ledgerEntryIds.forEach((id, sortOrder) => {
+    const entry = finances.ledgerEntries[id];
+    if (entry === undefined) throw mappingFailure(`ordered finance-ledger entry is missing: ${id}`);
+    database.run(`INSERT INTO club_finance_ledger
+      (save_id, sort_order, ledger_entry_id, sequence_number, club_id, occurred_on, currency,
+       reason, direction, amount, balance_after, reference_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      state.saveId, sortOrder, entry.id, entry.sequenceNumber, entry.clubId, entry.occurredOn,
+      entry.currency, entry.reason, entry.direction, entry.amount, entry.balanceAfter,
+      entry.referenceId,
+    ]);
+  });
+}
+
+/** Reconstructs and validates all club accounts and ledger movements. */
+function loadClubFinanceState(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  gameState: CareerState["gameState"],
+  seniorSquadState: SeniorSquadState,
+): ClubFinanceState {
+  const accounts: ClubFinanceState["accounts"] extends Readonly<Record<ClubId, infer Account>>
+    ? Record<ClubId, Account>
+    : never = {};
+  const clubIds = database.queryAll(
+    "SELECT * FROM club_finance_accounts WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => {
+    const id = clubId(text(row, "club_id"));
+    accounts[id] = {
+      clubId: id,
+      currency: text(row, "currency") as CurrencyCode,
+      cashBalance: nonNegativeMoney(number(row, "cash_balance")),
+      annualTransferBudget: nonNegativeMoney(number(row, "annual_transfer_budget")),
+      availableTransferBudget: nonNegativeMoney(number(row, "available_transfer_budget")),
+      annualWageBudget: nonNegativeMoney(number(row, "annual_wage_budget")),
+      committedAnnualWage: nonNegativeMoney(number(row, "committed_annual_wages")),
+      seasonIncome: nonNegativeMoney(number(row, "season_income")),
+      seasonExpenses: nonNegativeMoney(number(row, "season_expenses")),
+    };
+    return id;
+  });
+
+  const ledgerEntries: Record<ClubFinanceLedgerEntryId, ClubFinanceLedgerEntry> = {};
+  const ledgerEntryIds = database.queryAll(
+    "SELECT * FROM club_finance_ledger WHERE save_id = ? ORDER BY sort_order",
+    [save],
+  ).map((row) => {
+    const id = clubFinanceLedgerEntryId(text(row, "ledger_entry_id"));
+    ledgerEntries[id] = {
+      id,
+      sequenceNumber: number(row, "sequence_number"),
+      clubId: clubId(text(row, "club_id")),
+      occurredOn: gameDate(number(row, "occurred_on")),
+      currency: text(row, "currency") as CurrencyCode,
+      reason: text(row, "reason") as ClubFinanceLedgerReason,
+      direction: text(row, "direction") as ClubFinanceLedgerDirection,
+      amount: nonNegativeMoney(number(row, "amount")),
+      balanceAfter: nonNegativeMoney(number(row, "balance_after")),
+      referenceId: text(row, "reference_id"),
+    };
+    return id;
+  });
+
+  const currency = accounts[clubIds[0] ?? ("" as ClubId)]?.currency ?? "EUR";
+  return createClubFinanceState(gameState, seniorSquadState, {
+    currency,
+    accounts,
+    clubIds,
+    ledgerEntries,
+    ledgerEntryIds,
+  });
 }
 
 function loadTransferHistory(database: SqliteWorldDatabase, save: SaveId): CareerState["transferHistory"] {

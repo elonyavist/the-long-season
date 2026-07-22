@@ -1,0 +1,48 @@
+
+> the-long-season@0.0.0 cli /Users/elianarducci/common-projects/the-long-season
+> pnpm --filter @game/cli run cli -- ten-season-report --seed-prefix\=phase78-contract-finance-benchmark-v3 --worlds\=1 --seasons\=50 --report-output\=reports/phase78-contract-finance-benchmark-v5-transaction-repeat.md
+
+
+> @game/cli@0.0.0 cli /Users/elianarducci/common-projects/the-long-season/apps/cli
+> node src/index.ts -- ten-season-report --seed-prefix\=phase78-contract-finance-benchmark-v3 --worlds\=1 --seasons\=50 --report-output\=reports/phase78-contract-finance-benchmark-v5-transaction-repeat.md
+
+The Long Season long-run gate report
+Seed prefix: phase78-contract-finance-benchmark-v3
+Worlds: 1
+Seasons: 50
+Total seasons: 50
+Execution: sequential; workers=1; partition_hashes=8a6eda07a6a45fd9
+Status: PASS
+Failed worlds: 0
+Warning worlds: 1
+Goals per match avg/p95: avg=2.980 p95=2.980
+Table spread avg/min: avg=44.62 min=44.62
+Draw rate avg/max: avg=0.240 max=0.240
+Champion streak max: 6
+Top assist p95: 16
+Production warning max: assists=16 top1=0.29 top3=0.44
+Age 30+ share p95: 0.29
+Minimum squad size observed: 19
+Clubs below minimum squad size: 0
+Clubs without natural goalkeeper: 0
+Role coverage warnings: total=54 p95=54
+Youth roster max observed: 11
+Active players min/max: senior=396..422 youth=198..198 total=594..620
+Clubs above youth target: 0
+Clubs below youth minimum: 0
+Contract/finance structural violations: 0
+Club cash floor (minor): 1107120000
+Annual wage utilization max: 1.0000
+Free-agent share max: 0.4222
+Sampled player value min/max (minor): 20025699..339139295
+Contract lifecycle: renewals=9572 releases=924 expiries=1350 selected_expiry_decisions=818
+Warning check counts: free_agent_population_share=1, top_assist_max=1, wage_budget_utilization=1
+Signal check counts: monitor=1, story=1, structural=1
+Failing check counts: none
+Signal guide: story=healthy football variance, monitor=watch trend, structural=gameplay risk
+Report output: reports/phase78-contract-finance-benchmark-v5-transaction-repeat.md
+Worst worlds:
+  phase78-contract-finance-benchmark-v3-world-00001 status=warn min_squad=19 youth_max=11 active_players=senior:396..422,youth:198..198,total:594..620 below_min=0 youth_above_target=0 youth_below_min=0 no_gk=0 contract_finance=structural:0,cash_min:1107120000,wage_max:1.0000,free_agents_max:0.4222,value:20025699..339139295,renewals:9572,releases:924,expiries:1350,selected_expiry_decisions:818 top_assist_max=16 table_spread=avg:44.62,min:27,max:60,low_season:4,champion_pts:57..86,last_pts:20..36,ability_spread:2.41..3.06 draw_rate=avg:0.240,max:0.300,high_season:5 creator_snapshot=season:21,club:Brescia Calcio,creator:Callum Fletcher,assists:13,team_goals:45,top1:0.29,top3:0.44,top_assist:Callum Fletcher,top_scorer:Enrico Esposito:17 warn_checks=top_assist_max,wage_budget_utilization,free_agent_population_share fail_checks=none
+real 24.78
+user 25.66
+sys 0.67

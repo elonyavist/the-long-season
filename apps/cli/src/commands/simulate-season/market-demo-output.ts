@@ -1,13 +1,15 @@
 import type { FakeLeagueSystem } from "@game/content";
 import {
-  previewPermanentTransfer,
+  evaluatePermanentTransfer,
   type EvaluatePermanentTransferInput,
-  type PermanentTransferApplyPreview,
+  type PermanentTransferFeasibility,
 } from "@game/engine";
 import type {
   MessageKey,
   Translator,
 } from "@game/i18n";
+
+import { withMarketDemoBudget } from "../career/scenarios.ts";
 
 import {
   MARKET_DEMO_PROFILE_PRO01_AFFORDABLE_PERMANENT,
@@ -16,14 +18,13 @@ import {
 } from "./profile-keys.ts";
 
 type CliGameState = EvaluatePermanentTransferInput["gameState"];
-type CliMarketState = EvaluatePermanentTransferInput["marketState"];
+type CliClubFinanceState = EvaluatePermanentTransferInput["clubFinanceState"];
 type CliIntent = EvaluatePermanentTransferInput["intent"];
 type ClubId = FakeLeagueSystem["clubIds"][number];
 type PlayerId = FakeLeagueSystem["playerIds"][number];
 type CliPlayer = CliGameState["players"][PlayerId];
 type CliPlayerAbilities = CliPlayer["abilities"];
-type CliMoney = CliMarketState["clubBudgets"][ClubId]["transferBudget"];
-type CliClubTransferBudget = CliMarketState["clubBudgets"][ClubId];
+type CliMoney = CliClubFinanceState["accounts"][ClubId]["availableTransferBudget"];
 
 interface MarketDemoScenario {
   readonly selectedClubId: ClubId;
@@ -31,7 +32,7 @@ interface MarketDemoScenario {
   readonly sellingClubId: ClubId;
   readonly targetPlayerId: PlayerId;
   readonly gameState: CliGameState;
-  readonly marketState: CliMarketState;
+  readonly clubFinanceState: CliClubFinanceState;
 }
 
 /**
@@ -49,13 +50,13 @@ export function formatMarketDemoOutput(
     sellingClubId: scenario.sellingClubId,
     playerId: scenario.targetPlayerId,
   };
-  const preview = previewPermanentTransfer({
+  const evaluation = evaluatePermanentTransfer({
     gameState: scenario.gameState,
-    marketState: scenario.marketState,
+    clubFinanceState: scenario.clubFinanceState,
     intent,
   });
-  const buyerBudgetBefore = scenario.marketState.clubBudgets[scenario.buyingClubId]?.transferBudget;
-  const buyerBudgetAfter = preview.marketState.clubBudgets[scenario.buyingClubId]?.transferBudget;
+  const buyerBudgetBefore = evaluation.buyerBudgetBefore;
+  const buyerBudgetAfter = evaluation.buyerBudgetAfter ?? buyerBudgetBefore;
   const lines = [
     text("market.title"),
     `${text("season.seed")}: ${seed}`,
@@ -66,17 +67,17 @@ export function formatMarketDemoOutput(
     `${text("market.buyingClub")}: ${clubLabel(scenario.buyingClubId, scenario.gameState)}`,
     `${text("market.sellingClub")}: ${clubLabel(scenario.sellingClubId, scenario.gameState)}`,
     `${text("market.targetPlayer")}: ${playerLabel(scenario.targetPlayerId, scenario.gameState)}`,
-    `${text("market.status")}: ${formatMarketStatus(preview, text)}`,
-    `${text("market.transferValue")}: ${formatMoney(preview.transferFee)}`,
+    `${text("market.status")}: ${formatMarketStatus(evaluation, text)}`,
+    `${text("market.transferValue")}: ${formatMoney(evaluation.transferFee)}`,
     `${text("market.buyerBudgetBefore")}: ${formatMoney(buyerBudgetBefore)}`,
     `${text("market.buyerBudgetAfter")}: ${formatMoney(buyerBudgetAfter)}`,
     text("market.inspectionOnly"),
   ];
 
   lines.push(`${text("market.reasons")}:`);
-  lines.push(...formatReasonLines(preview, text));
+  lines.push(...formatReasonLines(evaluation, text));
   lines.push(`${text("market.rosterPreview")}:`);
-  lines.push(...formatRosterPreviewLines(scenario, preview, text));
+  lines.push(...formatRosterPreviewLines(scenario, evaluation, text));
 
   return lines;
 }
@@ -104,10 +105,13 @@ function buildAffordableScenario(league: FakeLeagueSystem): MarketDemoScenario {
     sellingClubId,
     targetPlayerId,
     gameState: gameStateFromLeague(league),
-    marketState: marketStateFixture([
-      [selectedClubId, money(6_000_000_00)],
-      [sellingClubId, money(500_000_00)],
-    ]),
+    clubFinanceState: withMarketDemoBudget(
+      league.clubFinanceState,
+      league.seniorSquadState,
+      selectedClubId,
+      targetPlayerId,
+      6_000_000_00,
+    ),
   };
 }
 
@@ -147,10 +151,13 @@ function buildStarRejectedScenario(league: FakeLeagueSystem): MarketDemoScenario
         },
       },
     },
-    marketState: marketStateFixture([
-      [selectedClubId, money(100_000_000_00)],
-      [sellingClubId, money(0)],
-    ]),
+    clubFinanceState: withMarketDemoBudget(
+      league.clubFinanceState,
+      league.seniorSquadState,
+      selectedClubId,
+      targetPlayerId,
+      100_000_000_00,
+    ),
   };
 }
 
@@ -175,38 +182,20 @@ function gameStateFromLeague(league: FakeLeagueSystem): CliGameState {
   };
 }
 
-function marketStateFixture(rows: readonly (readonly [ClubId, CliMoney])[]): CliMarketState {
-  const clubBudgets: Record<ClubId, CliClubTransferBudget> = {} as Record<ClubId, CliClubTransferBudget>;
-  const clubBudgetIds: ClubId[] = [];
-
-  for (const [clubId, transferBudget] of rows) {
-    clubBudgets[clubId] = {
-      clubId,
-      transferBudget,
-    };
-    clubBudgetIds.push(clubId);
-  }
-
-  return {
-    clubBudgets,
-    clubBudgetIds,
-  };
-}
-
-function formatReasonLines(preview: PermanentTransferApplyPreview, text: Translator): readonly string[] {
+function formatReasonLines(evaluation: PermanentTransferFeasibility, text: Translator): readonly string[] {
   const lines: string[] = [];
 
-  if (preview.reasons.length === 0) {
+  if (evaluation.reasons.length === 0) {
     lines.push(`  ${text("common.none")}`);
   } else {
-    for (const reason of preview.reasons) {
+    for (const reason of evaluation.reasons) {
       lines.push(`  ${text(presentationMessageKey("market.reason", reason.code))}`);
     }
   }
 
-  if (preview.willingness?.reasons !== undefined && preview.willingness.reasons.length > 0) {
+  if (evaluation.willingness?.reasons !== undefined && evaluation.willingness.reasons.length > 0) {
     lines.push(`  ${text("market.playerWillingness")}:`);
-    for (const reason of preview.willingness.reasons) {
+    for (const reason of evaluation.willingness.reasons) {
       lines.push(`    ${text(presentationMessageKey("market.willingnessReason", reason.code))}`);
     }
   }
@@ -216,26 +205,24 @@ function formatReasonLines(preview: PermanentTransferApplyPreview, text: Transla
 
 function formatRosterPreviewLines(
   scenario: MarketDemoScenario,
-  preview: PermanentTransferApplyPreview,
+  evaluation: PermanentTransferFeasibility,
   text: Translator,
 ): readonly string[] {
-  if (preview.status === "rejected") {
+  if (evaluation.status === "rejected") {
     return [`  ${text("market.rosterPreviewRejected")}`];
   }
 
   const buyingBefore = scenario.gameState.clubs[scenario.buyingClubId]?.playerIds.length ?? 0;
-  const buyingAfter = preview.gameState.clubs[scenario.buyingClubId]?.playerIds.length ?? buyingBefore;
   const sellingBefore = scenario.gameState.clubs[scenario.sellingClubId]?.playerIds.length ?? 0;
-  const sellingAfter = preview.gameState.clubs[scenario.sellingClubId]?.playerIds.length ?? sellingBefore;
 
   return [
-    `  ${text("market.buyingClub")}: ${buyingBefore} -> ${buyingAfter}`,
-    `  ${text("market.sellingClub")}: ${sellingBefore} -> ${sellingAfter}`,
+    `  ${text("market.buyingClub")}: ${buyingBefore} -> ${buyingBefore + 1}`,
+    `  ${text("market.sellingClub")}: ${sellingBefore} -> ${Math.max(0, sellingBefore - 1)}`,
   ];
 }
 
-function formatMarketStatus(preview: PermanentTransferApplyPreview, text: Translator): string {
-  return text(preview.status === "accepted" ? "market.status.accepted" : "market.status.rejected");
+function formatMarketStatus(evaluation: PermanentTransferFeasibility, text: Translator): string {
+  return text(evaluation.status === "accepted" ? "market.status.accepted" : "market.status.rejected");
 }
 
 function formatMoney(value: CliMoney | undefined): string {
@@ -313,10 +300,6 @@ function playerLabel(playerId: PlayerId, gameState: CliGameState): string {
 
 function clubLabel(clubId: ClubId, gameState: CliGameState): string {
   return gameState.clubs[clubId]?.name ?? String(clubId);
-}
-
-function money(value: number): CliMoney {
-  return value as CliMoney;
 }
 
 function presentationMessageKey(prefix: string, value: string): MessageKey {

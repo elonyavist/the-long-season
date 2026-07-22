@@ -1,17 +1,24 @@
 import {
   competitionId,
   createCompetitionMatchRules,
+  type ClubFinanceState,
   gameDate,
   seasonId,
   type Competition,
   type GameDate,
   type LeagueTableRules,
+  type SeniorSquadState,
   type SeasonId,
 } from "@game/domain";
 import { fromISO } from "@game/shared";
 
 import { generateFakeClubs, type FakeClubs } from "./fake-clubs.ts";
 import { generateFakePlayersForClubs, type FakePlayers } from "./fake-players.ts";
+import { generateInitialSeniorSquadState } from "./senior-squad-world.ts";
+import {
+  generateCompetitionSeasonDistribution,
+  generateInitialClubFinanceState,
+} from "./club-finance-world.ts";
 
 /**
  * Ability weight keys mirrored as data so content does not import engine code.
@@ -112,6 +119,10 @@ export interface FakeMatchEngineConfig {
  * generators.
  */
 export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
+  /** Initial senior registrations, contracts, and factual signing history. */
+  readonly seniorSquadState: SeniorSquadState;
+  /** Opening cash, annual budgets, and ordered ledgers for every club. */
+  readonly clubFinanceState: ClubFinanceState;
   /** Generated season ID. */
   readonly seasonId: SeasonId;
   /** Generated single competition. */
@@ -152,6 +163,21 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
     clubs.clubIds,
     options.worldSeed === undefined ? {} : { seed: options.worldSeed },
   );
+  const seniorSquadState = generateInitialSeniorSquadState({
+    worldSeed: options.worldSeed ?? "demo-001",
+    referenceDate: gameDate(fromISO("2026-08-01")),
+    clubs: clubs.clubsById,
+    clubIds: clubs.clubIds,
+    players: players.players,
+    playerIds: players.playerIds,
+  });
+  const clubFinanceState = generateInitialClubFinanceState({
+    referenceDate: gameDate(fromISO("2026-08-01")),
+    clubs: clubs.clubsById,
+    clubIds: clubs.clubIds,
+    players: players.players,
+    seniorSquadState,
+  });
   const season = seasonId("season:demo-001");
   const competition: Competition = {
     id: competitionId("competition:demo-third-division"),
@@ -166,11 +192,14 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
       secondYellowSuspensionMatches: 1,
       yellowAccumulationSuspensionMatches: 1,
     }),
+    seasonDistribution: generateCompetitionSeasonDistribution(clubFinanceState),
   };
 
   return {
     ...clubs,
     ...players,
+    seniorSquadState,
+    clubFinanceState,
     seasonId: season,
     competition,
     seasonStartDate: gameDate(fromISO("2026-08-01")),

@@ -1,18 +1,23 @@
 import {
-  createCareerState,
   getPlayerRoleProfile,
   rawDiagnosticAbilityAverage,
   roleCurrentAbility,
   rolePotentialAbility,
+  createCareerState,
   type CareerState,
   type Club,
   type ClubId,
+  type GameDate,
   type Player,
   type PlayerId,
-  type YouthAcademyClubRoster,
+  type SeniorSquadState,
   type YouthAcademyState,
-  type YouthPlayerLifecycle,
 } from "@game/domain";
+
+import { applyContractActivationFinance } from "./career-finance-lifecycle.ts";
+import { evaluateCareerContractCapacity } from "./career-contract-reservations.ts";
+import { deriveContractDemand } from "./contract-negotiation-demand.ts";
+import { prepareSeniorSquadSigning } from "./senior-squad-transfer.ts";
 
 /** Phase 32 senior squad target upper bound. */
 export const YOUTH_PROMOTION_SENIOR_TARGET_SIZE = 25;
@@ -25,6 +30,8 @@ export interface PromoteYouthCandidatesInput {
   readonly allowSelectedClubPromotion?: boolean;
   /** Optional senior roster target. Defaults to Phase 32 target `25`. */
   readonly seniorTargetSize?: number;
+  /** Date used for the new senior registration, contract, and history facts. */
+  readonly occurredOn?: GameDate;
 }
 
 /** Factual youth promotion record for reports. */
@@ -44,7 +51,8 @@ export type YouthPromotionReason =
   | "promoted"
   | "selected_club_protected"
   | "senior_squad_full"
-  | "not_useful_enough";
+  | "not_useful_enough"
+  | "contract_unaffordable";
 
 /** Result of one youth-to-senior promotion pass. */
 export interface PromoteYouthCandidatesResult {
@@ -55,111 +63,149 @@ export interface PromoteYouthCandidatesResult {
 }
 
 /**
- * Promotes explicit youth candidates into senior squads when there is room.
+ * Promotes explicit youth candidates through the canonical senior lifecycle.
  *
- * This function does not choose a user lineup or tactic. The selected club is
- * protected by default; long-run lab commands can opt in explicitly.
+ * Every accepted promotion adds ownership, registration, professional terms,
+ * annual wage commitment, signing cost, contract history, and youth history in
+ * one valid career snapshot. The selected club remains protected by default.
  */
 export function promoteYouthCandidatesToSeniorSquads(input: PromoteYouthCandidatesInput): PromoteYouthCandidatesResult {
   const youthState = input.careerState.youthAcademyState;
-  if (youthState === undefined) {
-    return {
-      careerState: input.careerState,
-      records: [],
-    };
+  if (youthState === undefined) return { careerState: input.careerState, records: [] };
+  if (input.careerState.seniorSquadState === undefined || input.careerState.clubFinanceState === undefined) {
+    throw new Error("Youth promotion requires canonical senior-squad and club-finance state");
   }
 
   const seniorTargetSize = input.seniorTargetSize ?? YOUTH_PROMOTION_SENIOR_TARGET_SIZE;
-  const clubs: Partial<Record<ClubId, Club>> = {};
-  const clubRosters: Record<ClubId, YouthAcademyClubRoster> = {};
-  const clubRosterIds: ClubId[] = [];
-  const playerLifecycle: Record<PlayerId, YouthPlayerLifecycle> = {};
-  const playerLifecycleIds: PlayerId[] = [];
   const records: YouthPromotionRecord[] = [];
-  const promotedPlayerIds = new Set<PlayerId>();
+  const activePlayerIds = new Set(input.careerState.gameState.playerIds);
+  let careerState = input.careerState;
 
   for (const clubId of input.careerState.gameState.clubIds) {
-    const club = input.careerState.gameState.clubs[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    const nextClubPlayerIds = [...club.playerIds];
-    const candidates = promotionCandidatesForClub(input.careerState, youthState, clubId);
-
-    for (const candidate of candidates) {
+    const candidates = promotionCandidatesForClub(
+      input.careerState,
+      youthState,
+      clubId,
+      activePlayerIds,
+    );
+    for (const player of candidates) {
+      const club = careerState.gameState.clubs[clubId];
+      if (club === undefined) continue;
       const reason = promotionReason({
-        careerState: input.careerState,
+        careerState,
         club,
-        player: candidate.player,
-        currentSeniorSize: nextClubPlayerIds.length,
+        player,
         seniorTargetSize,
         allowSelectedClubPromotion: input.allowSelectedClubPromotion ?? false,
       });
-
-      if (reason === "promoted") {
-        nextClubPlayerIds.push(candidate.player.id);
-        promotedPlayerIds.add(candidate.player.id);
-        records.push({
-          clubId,
-          playerId: candidate.player.id,
-          promoted: true,
-          reason,
-        });
-      } else {
-        records.push({
-          clubId,
-          playerId: candidate.player.id,
-          promoted: false,
-          reason,
-        });
+      if (reason !== "promoted") {
+        records.push({ clubId, playerId: player.id, promoted: false, reason });
+        continue;
       }
+
+      const promoted = promoteCandidate(
+        careerState,
+        clubId,
+        player,
+        input.occurredOn ?? careerState.gameState.calendar.currentDate,
+      );
+      if (promoted === undefined) {
+        records.push({
+          clubId,
+          playerId: player.id,
+          promoted: false,
+          reason: "contract_unaffordable",
+        });
+        continue;
+      }
+      careerState = promoted;
+      records.push({ clubId, playerId: player.id, promoted: true, reason: "promoted" });
     }
-
-    clubs[clubId] = {
-      ...club,
-      playerIds: nextClubPlayerIds,
-    };
-
-    const activeRoster = youthState.clubRosters[clubId];
-    clubRosters[clubId] = {
-      clubId,
-      playerIds: [...(activeRoster?.playerIds ?? [])],
-    };
-    clubRosterIds.push(clubId);
   }
 
-  for (const playerId of youthState.playerLifecycleIds) {
-    if (promotedPlayerIds.has(playerId)) {
-      continue;
-    }
+  return { careerState, records };
+}
 
-    const lifecycle = youthState.playerLifecycle[playerId];
-    if (lifecycle === undefined) {
-      continue;
-    }
+function promoteCandidate(
+  careerState: CareerState,
+  clubId: ClubId,
+  player: Player,
+  occurredOn: GameDate,
+): CareerState | undefined {
+  const seniorSquadState = requiredSeniorState(careerState);
+  const demand = deriveContractDemand({
+    careerState,
+    playerId: player.id,
+    clubId,
+    evaluatedOn: occurredOn,
+    isFreeAgent: true,
+  });
+  const capacity = evaluateCareerContractCapacity({
+    careerState,
+    clubId,
+    addedAnnualWage: demand.minimumTerms.annualWage,
+    addedSigningBonus: demand.minimumTerms.bonuses.signingBonus,
+  });
+  if (capacity.status === "unaffordable") return undefined;
 
-    playerLifecycle[playerId] = { ...lifecycle };
-    playerLifecycleIds.push(playerId);
+  const signing = prepareSeniorSquadSigning({
+    gameState: careerState.gameState,
+    seniorSquadState,
+    playerId: player.id,
+    clubId,
+    occurredOn,
+    transitionSequence: nextOwnershipTransitionSequence(seniorSquadState),
+    acceptedTerms: demand.minimumTerms,
+    preferredShirtNumber: preferredShirtNumber(player),
+  });
+  const youthAcademyState = markYouthPromoted(
+    requiredYouthState(careerState),
+    clubId,
+    player.id,
+    occurredOn,
+  );
+  const activated = applyContractActivationFinance({
+    careerState,
+    proposedGameState: signing.gameState,
+    seniorSquadState: signing.seniorSquadState,
+    activatedContractIds: [signing.activatedContractId],
+    occurredOn,
+  });
+  return activated.status === "applied"
+    ? createCareerState({ ...activated.careerState, youthAcademyState })
+    : undefined;
+}
+
+function markYouthPromoted(
+  state: YouthAcademyState,
+  clubId: ClubId,
+  playerId: PlayerId,
+  occurredOn: CareerState["gameState"]["calendar"]["currentDate"],
+): YouthAcademyState {
+  const lifecycle = state.playerLifecycle[playerId];
+  if (lifecycle === undefined || lifecycle.clubId !== clubId) {
+    throw new Error(`Youth lifecycle not found for promoted player: ${playerId}`);
   }
-
-  const nextYouthState: YouthAcademyState = {
-    clubRosters,
-    clubRosterIds,
-    playerLifecycle,
-    playerLifecycleIds,
-  };
-
+  const clubRoster = state.clubRosters[clubId];
   return {
-    careerState: createCareerState({
-      ...input.careerState,
-      gameState: {
-        ...input.careerState.gameState,
-        clubs: clubs as CareerState["gameState"]["clubs"],
+    ...state,
+    clubRosters: clubRoster === undefined
+      ? state.clubRosters
+      : {
+          ...state.clubRosters,
+          [clubId]: {
+            ...clubRoster,
+            playerIds: clubRoster.playerIds.filter((candidateId) => candidateId !== playerId),
+          },
+        },
+    playerLifecycle: {
+      ...state.playerLifecycle,
+      [playerId]: {
+        ...lifecycle,
+        status: "promoted",
+        statusChangedAt: occurredOn,
       },
-      youthAcademyState: nextYouthState,
-    }),
-    records,
+    },
   };
 }
 
@@ -167,21 +213,16 @@ function promotionCandidatesForClub(
   careerState: CareerState,
   youthState: YouthAcademyState,
   clubId: ClubId,
-): readonly { readonly player: Player }[] {
-  const candidates: { readonly player: Player }[] = [];
-
+  activePlayerIds: ReadonlySet<PlayerId>,
+): readonly Player[] {
+  const candidates: Player[] = [];
   for (const playerId of youthState.playerLifecycleIds) {
     const lifecycle = youthState.playerLifecycle[playerId];
-    if (lifecycle === undefined || lifecycle.clubId !== clubId || lifecycle.status !== "promotion_candidate") {
-      continue;
-    }
-
+    if (lifecycle?.clubId !== clubId || lifecycle.status !== "promotion_candidate") continue;
+    if (!activePlayerIds.has(playerId) || careerState.gameState.playerStates[playerId] === undefined) continue;
     const player = careerState.gameState.players[playerId];
-    if (player !== undefined) {
-      candidates.push({ player });
-    }
+    if (player !== undefined) candidates.push(player);
   }
-
   return candidates;
 }
 
@@ -189,44 +230,61 @@ function promotionReason(input: {
   readonly careerState: CareerState;
   readonly club: Club;
   readonly player: Player;
-  readonly currentSeniorSize: number;
   readonly seniorTargetSize: number;
   readonly allowSelectedClubPromotion: boolean;
 }): YouthPromotionReason {
   if (input.club.id === input.careerState.selectedClubId && !input.allowSelectedClubPromotion) {
     return "selected_club_protected";
   }
-
-  if (input.currentSeniorSize >= input.seniorTargetSize) {
-    return "senior_squad_full";
-  }
-
-  if (!isUsefulPromotionCandidate(input.player)) {
-    return "not_useful_enough";
-  }
-
+  if (input.club.playerIds.length >= input.seniorTargetSize) return "senior_squad_full";
+  if (!isUsefulPromotionCandidate(input.player)) return "not_useful_enough";
   return "promoted";
 }
 
 function isUsefulPromotionCandidate(player: Player): boolean {
   const ability = youthPromotionAbility(player);
-
   return ability.current >= 7.4 || ability.potentialRoom >= 3.5;
 }
 
 /** Returns the football measures needed only by senior-promotion decisions. */
-function youthPromotionAbility(player: Player): {
-  readonly current: number;
-  readonly potentialRoom: number;
-} {
+function youthPromotionAbility(player: Player): { readonly current: number; readonly potentialRoom: number } {
   if (player.primaryRole === undefined) {
     const current = Number(rawDiagnosticAbilityAverage(player.abilities));
     const potential = Number(rawDiagnosticAbilityAverage(player.potential));
     return { current, potentialRoom: potential - current };
   }
-
   const profile = getPlayerRoleProfile(player.primaryRole);
   const current = Number(roleCurrentAbility(player.abilities, profile));
   const potential = Number(rolePotentialAbility(player.potential, profile));
   return { current, potentialRoom: potential - current };
+}
+
+function nextOwnershipTransitionSequence(state: SeniorSquadState): number {
+  return state.contractHistoryEntryIds.length + 1;
+}
+
+function preferredShirtNumber(player: Player): number {
+  switch (player.primaryRole) {
+    case "goalkeeper": return 1;
+    case "center_back": return 5;
+    case "full_back": return 2;
+    case "wing_back": return 3;
+    case "defensive_midfielder": return 6;
+    case "central_midfielder": return 8;
+    case "attacking_midfielder": return 10;
+    case "wide_midfielder": return 7;
+    case "winger": return 11;
+    case "striker": return 9;
+    default: return 1;
+  }
+}
+
+function requiredSeniorState(careerState: CareerState): SeniorSquadState {
+  if (careerState.seniorSquadState === undefined) throw new Error("Senior squad state is required");
+  return careerState.seniorSquadState;
+}
+
+function requiredYouthState(careerState: CareerState): YouthAcademyState {
+  if (careerState.youthAcademyState === undefined) throw new Error("Youth academy state is required");
+  return careerState.youthAcademyState;
 }

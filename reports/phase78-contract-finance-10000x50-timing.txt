@@ -1,0 +1,8 @@
+
+> the-long-season@0.0.0 cli /Users/elianarducci/common-projects/the-long-season
+> pnpm --filter @game/cli run cli -- ten-season-report --seed-prefix\=phase78-contract-finance --worlds\=10000 --seasons\=50 --checkpoint-dir\=reports/checkpoints/phase78-contract-finance-10000x50 --shards\=2000 --report-output\=reports/phase78-contract-finance-10000x50.md
+
+
+> @game/cli@0.0.0 cli /Users/elianarducci/common-projects/the-long-season/apps/cli
+> node src/index.ts -- ten-season-report --seed-prefix\=phase78-contract-finance --worlds\=10000 --seasons\=50 --checkpoint-dir\=reports/checkpoints/phase78-contract-finance-10000x50 --shards\=2000 --report-output\=reports/phase78-contract-finance-10000x50.md
+

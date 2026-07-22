@@ -11,12 +11,10 @@ import {
   closePlayerParticipationMonth,
   createCareerState,
   createEmptyPlayerParticipationLedger,
-  createMarketState,
   clubId,
   competitionId,
   fixtureId,
   gameDate,
-  nonNegativeMoney,
   playerId,
   saveId,
   seasonId,
@@ -28,6 +26,7 @@ import {
 
 import { contractSaveIds, runCareerStorageContract } from "./career-storage.contract.ts";
 import { JsonCareerStorage } from "./json-career-storage.ts";
+import { withPersistableCareerFacts } from "./testing/persistable-career-fixture.ts";
 
 /** The JSON adapter obeys the same lifecycle contract required from SQLite. */
 test("JsonCareerStorage satisfies the canonical career lifecycle contract", async () => {
@@ -114,15 +113,11 @@ function careerFixture(id: string, seed: string, currentDate: number): CareerSta
     fixtureIds: [playedFixture],
   };
 
-  return createCareerState({
+  return withPersistableCareerFacts(createCareerState({
     saveId: saveId(id),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: club,
     gameState,
-    marketState: createMarketState({
-      clubBudgets: { [club]: { clubId: club, transferBudget: nonNegativeMoney(6_000_000_00) } },
-      clubBudgetIds: [club],
-    }),
     transferHistory: [],
     playerAvailability: {
       injuries: [{
@@ -140,7 +135,7 @@ function careerFixture(id: string, seed: string, currentDate: number): CareerSta
       }],
     },
     playerParticipationLedger: playerParticipationLedgerFixture(player),
-  });
+  }));
 }
 
 /** Builds one closed monthly participation ledger for save/load contracts. */

@@ -1,16 +1,16 @@
-# Graph Report - the-long-season  (2026-07-20)
+# Graph Report - the-long-season  (2026-07-22)
 
 ## Corpus Check
-- 1402 files · ~1,180,364 words
+- 1907 files · ~1,317,885 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 18226 nodes · 29795 edges · 1114 communities (1109 shown, 5 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 67 edges (avg confidence: 0.8)
+- 24833 nodes · 38573 edges · 1573 communities (1569 shown, 4 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 92 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e8cbe4d1`
+- Built from commit: `01a4c968`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1088,9 +1088,12 @@
 - [[_COMMUNITY_Community 1074|Community 1074]]
 - [[_COMMUNITY_Community 1075|Community 1075]]
 - [[_COMMUNITY_Community 1076|Community 1076]]
+- [[_COMMUNITY_Community 1077|Community 1077]]
+- [[_COMMUNITY_Community 1078|Community 1078]]
 - [[_COMMUNITY_Community 1079|Community 1079]]
 - [[_COMMUNITY_Community 1080|Community 1080]]
 - [[_COMMUNITY_Community 1081|Community 1081]]
+- [[_COMMUNITY_Community 1082|Community 1082]]
 - [[_COMMUNITY_Community 1083|Community 1083]]
 - [[_COMMUNITY_Community 1084|Community 1084]]
 - [[_COMMUNITY_Community 1085|Community 1085]]
@@ -1113,30 +1116,486 @@
 - [[_COMMUNITY_Community 1102|Community 1102]]
 - [[_COMMUNITY_Community 1103|Community 1103]]
 - [[_COMMUNITY_Community 1104|Community 1104]]
+- [[_COMMUNITY_Community 1105|Community 1105]]
 - [[_COMMUNITY_Community 1106|Community 1106]]
 - [[_COMMUNITY_Community 1107|Community 1107]]
 - [[_COMMUNITY_Community 1108|Community 1108]]
 - [[_COMMUNITY_Community 1109|Community 1109]]
 - [[_COMMUNITY_Community 1110|Community 1110]]
 - [[_COMMUNITY_Community 1111|Community 1111]]
+- [[_COMMUNITY_Community 1112|Community 1112]]
+- [[_COMMUNITY_Community 1113|Community 1113]]
+- [[_COMMUNITY_Community 1114|Community 1114]]
+- [[_COMMUNITY_Community 1115|Community 1115]]
+- [[_COMMUNITY_Community 1116|Community 1116]]
 - [[_COMMUNITY_Community 1117|Community 1117]]
 - [[_COMMUNITY_Community 1118|Community 1118]]
+- [[_COMMUNITY_Community 1119|Community 1119]]
 - [[_COMMUNITY_Community 1120|Community 1120]]
+- [[_COMMUNITY_Community 1121|Community 1121]]
+- [[_COMMUNITY_Community 1122|Community 1122]]
+- [[_COMMUNITY_Community 1123|Community 1123]]
 - [[_COMMUNITY_Community 1124|Community 1124]]
+- [[_COMMUNITY_Community 1125|Community 1125]]
 - [[_COMMUNITY_Community 1126|Community 1126]]
 - [[_COMMUNITY_Community 1127|Community 1127]]
+- [[_COMMUNITY_Community 1128|Community 1128]]
+- [[_COMMUNITY_Community 1129|Community 1129]]
+- [[_COMMUNITY_Community 1130|Community 1130]]
+- [[_COMMUNITY_Community 1131|Community 1131]]
+- [[_COMMUNITY_Community 1132|Community 1132]]
+- [[_COMMUNITY_Community 1133|Community 1133]]
+- [[_COMMUNITY_Community 1134|Community 1134]]
+- [[_COMMUNITY_Community 1135|Community 1135]]
+- [[_COMMUNITY_Community 1136|Community 1136]]
+- [[_COMMUNITY_Community 1137|Community 1137]]
+- [[_COMMUNITY_Community 1138|Community 1138]]
+- [[_COMMUNITY_Community 1139|Community 1139]]
+- [[_COMMUNITY_Community 1140|Community 1140]]
+- [[_COMMUNITY_Community 1141|Community 1141]]
+- [[_COMMUNITY_Community 1142|Community 1142]]
+- [[_COMMUNITY_Community 1143|Community 1143]]
+- [[_COMMUNITY_Community 1144|Community 1144]]
+- [[_COMMUNITY_Community 1145|Community 1145]]
+- [[_COMMUNITY_Community 1146|Community 1146]]
+- [[_COMMUNITY_Community 1147|Community 1147]]
+- [[_COMMUNITY_Community 1148|Community 1148]]
+- [[_COMMUNITY_Community 1149|Community 1149]]
+- [[_COMMUNITY_Community 1150|Community 1150]]
+- [[_COMMUNITY_Community 1151|Community 1151]]
+- [[_COMMUNITY_Community 1152|Community 1152]]
+- [[_COMMUNITY_Community 1153|Community 1153]]
+- [[_COMMUNITY_Community 1154|Community 1154]]
+- [[_COMMUNITY_Community 1155|Community 1155]]
+- [[_COMMUNITY_Community 1156|Community 1156]]
+- [[_COMMUNITY_Community 1157|Community 1157]]
+- [[_COMMUNITY_Community 1158|Community 1158]]
+- [[_COMMUNITY_Community 1159|Community 1159]]
+- [[_COMMUNITY_Community 1160|Community 1160]]
+- [[_COMMUNITY_Community 1161|Community 1161]]
+- [[_COMMUNITY_Community 1162|Community 1162]]
+- [[_COMMUNITY_Community 1163|Community 1163]]
+- [[_COMMUNITY_Community 1164|Community 1164]]
+- [[_COMMUNITY_Community 1165|Community 1165]]
+- [[_COMMUNITY_Community 1166|Community 1166]]
+- [[_COMMUNITY_Community 1167|Community 1167]]
+- [[_COMMUNITY_Community 1168|Community 1168]]
+- [[_COMMUNITY_Community 1169|Community 1169]]
+- [[_COMMUNITY_Community 1170|Community 1170]]
+- [[_COMMUNITY_Community 1171|Community 1171]]
+- [[_COMMUNITY_Community 1172|Community 1172]]
+- [[_COMMUNITY_Community 1173|Community 1173]]
+- [[_COMMUNITY_Community 1174|Community 1174]]
+- [[_COMMUNITY_Community 1175|Community 1175]]
+- [[_COMMUNITY_Community 1176|Community 1176]]
+- [[_COMMUNITY_Community 1177|Community 1177]]
+- [[_COMMUNITY_Community 1178|Community 1178]]
+- [[_COMMUNITY_Community 1179|Community 1179]]
+- [[_COMMUNITY_Community 1180|Community 1180]]
+- [[_COMMUNITY_Community 1181|Community 1181]]
+- [[_COMMUNITY_Community 1182|Community 1182]]
+- [[_COMMUNITY_Community 1183|Community 1183]]
+- [[_COMMUNITY_Community 1184|Community 1184]]
+- [[_COMMUNITY_Community 1185|Community 1185]]
+- [[_COMMUNITY_Community 1186|Community 1186]]
+- [[_COMMUNITY_Community 1187|Community 1187]]
+- [[_COMMUNITY_Community 1188|Community 1188]]
+- [[_COMMUNITY_Community 1189|Community 1189]]
+- [[_COMMUNITY_Community 1190|Community 1190]]
+- [[_COMMUNITY_Community 1191|Community 1191]]
+- [[_COMMUNITY_Community 1192|Community 1192]]
+- [[_COMMUNITY_Community 1193|Community 1193]]
+- [[_COMMUNITY_Community 1194|Community 1194]]
+- [[_COMMUNITY_Community 1195|Community 1195]]
+- [[_COMMUNITY_Community 1196|Community 1196]]
+- [[_COMMUNITY_Community 1197|Community 1197]]
+- [[_COMMUNITY_Community 1198|Community 1198]]
+- [[_COMMUNITY_Community 1199|Community 1199]]
+- [[_COMMUNITY_Community 1200|Community 1200]]
+- [[_COMMUNITY_Community 1201|Community 1201]]
+- [[_COMMUNITY_Community 1202|Community 1202]]
+- [[_COMMUNITY_Community 1203|Community 1203]]
+- [[_COMMUNITY_Community 1204|Community 1204]]
+- [[_COMMUNITY_Community 1205|Community 1205]]
+- [[_COMMUNITY_Community 1206|Community 1206]]
+- [[_COMMUNITY_Community 1207|Community 1207]]
+- [[_COMMUNITY_Community 1208|Community 1208]]
+- [[_COMMUNITY_Community 1209|Community 1209]]
+- [[_COMMUNITY_Community 1210|Community 1210]]
+- [[_COMMUNITY_Community 1211|Community 1211]]
+- [[_COMMUNITY_Community 1212|Community 1212]]
+- [[_COMMUNITY_Community 1213|Community 1213]]
+- [[_COMMUNITY_Community 1214|Community 1214]]
+- [[_COMMUNITY_Community 1215|Community 1215]]
+- [[_COMMUNITY_Community 1216|Community 1216]]
+- [[_COMMUNITY_Community 1217|Community 1217]]
+- [[_COMMUNITY_Community 1218|Community 1218]]
+- [[_COMMUNITY_Community 1219|Community 1219]]
+- [[_COMMUNITY_Community 1220|Community 1220]]
+- [[_COMMUNITY_Community 1221|Community 1221]]
+- [[_COMMUNITY_Community 1222|Community 1222]]
+- [[_COMMUNITY_Community 1223|Community 1223]]
+- [[_COMMUNITY_Community 1224|Community 1224]]
+- [[_COMMUNITY_Community 1225|Community 1225]]
+- [[_COMMUNITY_Community 1226|Community 1226]]
+- [[_COMMUNITY_Community 1227|Community 1227]]
+- [[_COMMUNITY_Community 1228|Community 1228]]
+- [[_COMMUNITY_Community 1229|Community 1229]]
+- [[_COMMUNITY_Community 1230|Community 1230]]
+- [[_COMMUNITY_Community 1231|Community 1231]]
+- [[_COMMUNITY_Community 1232|Community 1232]]
+- [[_COMMUNITY_Community 1233|Community 1233]]
+- [[_COMMUNITY_Community 1234|Community 1234]]
+- [[_COMMUNITY_Community 1235|Community 1235]]
+- [[_COMMUNITY_Community 1236|Community 1236]]
+- [[_COMMUNITY_Community 1237|Community 1237]]
+- [[_COMMUNITY_Community 1238|Community 1238]]
+- [[_COMMUNITY_Community 1239|Community 1239]]
+- [[_COMMUNITY_Community 1240|Community 1240]]
+- [[_COMMUNITY_Community 1241|Community 1241]]
+- [[_COMMUNITY_Community 1242|Community 1242]]
+- [[_COMMUNITY_Community 1243|Community 1243]]
+- [[_COMMUNITY_Community 1244|Community 1244]]
+- [[_COMMUNITY_Community 1245|Community 1245]]
+- [[_COMMUNITY_Community 1246|Community 1246]]
+- [[_COMMUNITY_Community 1247|Community 1247]]
+- [[_COMMUNITY_Community 1248|Community 1248]]
+- [[_COMMUNITY_Community 1249|Community 1249]]
+- [[_COMMUNITY_Community 1250|Community 1250]]
+- [[_COMMUNITY_Community 1251|Community 1251]]
+- [[_COMMUNITY_Community 1252|Community 1252]]
+- [[_COMMUNITY_Community 1253|Community 1253]]
+- [[_COMMUNITY_Community 1254|Community 1254]]
+- [[_COMMUNITY_Community 1255|Community 1255]]
+- [[_COMMUNITY_Community 1256|Community 1256]]
+- [[_COMMUNITY_Community 1257|Community 1257]]
+- [[_COMMUNITY_Community 1258|Community 1258]]
+- [[_COMMUNITY_Community 1259|Community 1259]]
+- [[_COMMUNITY_Community 1260|Community 1260]]
+- [[_COMMUNITY_Community 1261|Community 1261]]
+- [[_COMMUNITY_Community 1262|Community 1262]]
+- [[_COMMUNITY_Community 1263|Community 1263]]
+- [[_COMMUNITY_Community 1264|Community 1264]]
+- [[_COMMUNITY_Community 1265|Community 1265]]
+- [[_COMMUNITY_Community 1266|Community 1266]]
+- [[_COMMUNITY_Community 1267|Community 1267]]
+- [[_COMMUNITY_Community 1268|Community 1268]]
+- [[_COMMUNITY_Community 1269|Community 1269]]
+- [[_COMMUNITY_Community 1270|Community 1270]]
+- [[_COMMUNITY_Community 1271|Community 1271]]
+- [[_COMMUNITY_Community 1272|Community 1272]]
+- [[_COMMUNITY_Community 1273|Community 1273]]
+- [[_COMMUNITY_Community 1274|Community 1274]]
+- [[_COMMUNITY_Community 1275|Community 1275]]
+- [[_COMMUNITY_Community 1276|Community 1276]]
+- [[_COMMUNITY_Community 1277|Community 1277]]
+- [[_COMMUNITY_Community 1278|Community 1278]]
+- [[_COMMUNITY_Community 1279|Community 1279]]
+- [[_COMMUNITY_Community 1280|Community 1280]]
+- [[_COMMUNITY_Community 1281|Community 1281]]
+- [[_COMMUNITY_Community 1282|Community 1282]]
+- [[_COMMUNITY_Community 1283|Community 1283]]
+- [[_COMMUNITY_Community 1284|Community 1284]]
+- [[_COMMUNITY_Community 1285|Community 1285]]
+- [[_COMMUNITY_Community 1286|Community 1286]]
+- [[_COMMUNITY_Community 1287|Community 1287]]
+- [[_COMMUNITY_Community 1288|Community 1288]]
+- [[_COMMUNITY_Community 1289|Community 1289]]
+- [[_COMMUNITY_Community 1290|Community 1290]]
+- [[_COMMUNITY_Community 1291|Community 1291]]
+- [[_COMMUNITY_Community 1292|Community 1292]]
+- [[_COMMUNITY_Community 1293|Community 1293]]
+- [[_COMMUNITY_Community 1294|Community 1294]]
+- [[_COMMUNITY_Community 1295|Community 1295]]
+- [[_COMMUNITY_Community 1296|Community 1296]]
+- [[_COMMUNITY_Community 1297|Community 1297]]
+- [[_COMMUNITY_Community 1298|Community 1298]]
+- [[_COMMUNITY_Community 1299|Community 1299]]
+- [[_COMMUNITY_Community 1300|Community 1300]]
+- [[_COMMUNITY_Community 1301|Community 1301]]
+- [[_COMMUNITY_Community 1302|Community 1302]]
+- [[_COMMUNITY_Community 1303|Community 1303]]
+- [[_COMMUNITY_Community 1304|Community 1304]]
+- [[_COMMUNITY_Community 1305|Community 1305]]
+- [[_COMMUNITY_Community 1306|Community 1306]]
+- [[_COMMUNITY_Community 1307|Community 1307]]
+- [[_COMMUNITY_Community 1308|Community 1308]]
+- [[_COMMUNITY_Community 1309|Community 1309]]
+- [[_COMMUNITY_Community 1310|Community 1310]]
+- [[_COMMUNITY_Community 1311|Community 1311]]
+- [[_COMMUNITY_Community 1312|Community 1312]]
+- [[_COMMUNITY_Community 1313|Community 1313]]
+- [[_COMMUNITY_Community 1314|Community 1314]]
+- [[_COMMUNITY_Community 1315|Community 1315]]
+- [[_COMMUNITY_Community 1316|Community 1316]]
+- [[_COMMUNITY_Community 1317|Community 1317]]
+- [[_COMMUNITY_Community 1318|Community 1318]]
+- [[_COMMUNITY_Community 1319|Community 1319]]
+- [[_COMMUNITY_Community 1320|Community 1320]]
+- [[_COMMUNITY_Community 1321|Community 1321]]
+- [[_COMMUNITY_Community 1322|Community 1322]]
+- [[_COMMUNITY_Community 1323|Community 1323]]
+- [[_COMMUNITY_Community 1324|Community 1324]]
+- [[_COMMUNITY_Community 1325|Community 1325]]
+- [[_COMMUNITY_Community 1326|Community 1326]]
+- [[_COMMUNITY_Community 1327|Community 1327]]
+- [[_COMMUNITY_Community 1328|Community 1328]]
+- [[_COMMUNITY_Community 1329|Community 1329]]
+- [[_COMMUNITY_Community 1330|Community 1330]]
+- [[_COMMUNITY_Community 1331|Community 1331]]
+- [[_COMMUNITY_Community 1332|Community 1332]]
+- [[_COMMUNITY_Community 1333|Community 1333]]
+- [[_COMMUNITY_Community 1334|Community 1334]]
+- [[_COMMUNITY_Community 1335|Community 1335]]
+- [[_COMMUNITY_Community 1336|Community 1336]]
+- [[_COMMUNITY_Community 1337|Community 1337]]
+- [[_COMMUNITY_Community 1338|Community 1338]]
+- [[_COMMUNITY_Community 1339|Community 1339]]
+- [[_COMMUNITY_Community 1340|Community 1340]]
+- [[_COMMUNITY_Community 1341|Community 1341]]
+- [[_COMMUNITY_Community 1342|Community 1342]]
+- [[_COMMUNITY_Community 1343|Community 1343]]
+- [[_COMMUNITY_Community 1344|Community 1344]]
+- [[_COMMUNITY_Community 1345|Community 1345]]
+- [[_COMMUNITY_Community 1346|Community 1346]]
+- [[_COMMUNITY_Community 1347|Community 1347]]
+- [[_COMMUNITY_Community 1348|Community 1348]]
+- [[_COMMUNITY_Community 1349|Community 1349]]
+- [[_COMMUNITY_Community 1350|Community 1350]]
+- [[_COMMUNITY_Community 1351|Community 1351]]
+- [[_COMMUNITY_Community 1352|Community 1352]]
+- [[_COMMUNITY_Community 1353|Community 1353]]
+- [[_COMMUNITY_Community 1354|Community 1354]]
+- [[_COMMUNITY_Community 1355|Community 1355]]
+- [[_COMMUNITY_Community 1356|Community 1356]]
+- [[_COMMUNITY_Community 1357|Community 1357]]
+- [[_COMMUNITY_Community 1358|Community 1358]]
+- [[_COMMUNITY_Community 1359|Community 1359]]
+- [[_COMMUNITY_Community 1360|Community 1360]]
+- [[_COMMUNITY_Community 1361|Community 1361]]
+- [[_COMMUNITY_Community 1362|Community 1362]]
+- [[_COMMUNITY_Community 1363|Community 1363]]
+- [[_COMMUNITY_Community 1364|Community 1364]]
+- [[_COMMUNITY_Community 1365|Community 1365]]
+- [[_COMMUNITY_Community 1366|Community 1366]]
+- [[_COMMUNITY_Community 1367|Community 1367]]
+- [[_COMMUNITY_Community 1368|Community 1368]]
+- [[_COMMUNITY_Community 1369|Community 1369]]
+- [[_COMMUNITY_Community 1370|Community 1370]]
+- [[_COMMUNITY_Community 1371|Community 1371]]
+- [[_COMMUNITY_Community 1372|Community 1372]]
+- [[_COMMUNITY_Community 1373|Community 1373]]
+- [[_COMMUNITY_Community 1374|Community 1374]]
+- [[_COMMUNITY_Community 1375|Community 1375]]
+- [[_COMMUNITY_Community 1376|Community 1376]]
+- [[_COMMUNITY_Community 1377|Community 1377]]
+- [[_COMMUNITY_Community 1378|Community 1378]]
+- [[_COMMUNITY_Community 1379|Community 1379]]
+- [[_COMMUNITY_Community 1380|Community 1380]]
+- [[_COMMUNITY_Community 1381|Community 1381]]
+- [[_COMMUNITY_Community 1382|Community 1382]]
+- [[_COMMUNITY_Community 1383|Community 1383]]
+- [[_COMMUNITY_Community 1384|Community 1384]]
+- [[_COMMUNITY_Community 1385|Community 1385]]
+- [[_COMMUNITY_Community 1386|Community 1386]]
+- [[_COMMUNITY_Community 1387|Community 1387]]
+- [[_COMMUNITY_Community 1388|Community 1388]]
+- [[_COMMUNITY_Community 1389|Community 1389]]
+- [[_COMMUNITY_Community 1390|Community 1390]]
+- [[_COMMUNITY_Community 1391|Community 1391]]
+- [[_COMMUNITY_Community 1392|Community 1392]]
+- [[_COMMUNITY_Community 1393|Community 1393]]
+- [[_COMMUNITY_Community 1394|Community 1394]]
+- [[_COMMUNITY_Community 1395|Community 1395]]
+- [[_COMMUNITY_Community 1396|Community 1396]]
+- [[_COMMUNITY_Community 1397|Community 1397]]
+- [[_COMMUNITY_Community 1398|Community 1398]]
+- [[_COMMUNITY_Community 1399|Community 1399]]
+- [[_COMMUNITY_Community 1400|Community 1400]]
+- [[_COMMUNITY_Community 1401|Community 1401]]
+- [[_COMMUNITY_Community 1402|Community 1402]]
+- [[_COMMUNITY_Community 1403|Community 1403]]
+- [[_COMMUNITY_Community 1404|Community 1404]]
+- [[_COMMUNITY_Community 1405|Community 1405]]
+- [[_COMMUNITY_Community 1406|Community 1406]]
+- [[_COMMUNITY_Community 1407|Community 1407]]
+- [[_COMMUNITY_Community 1408|Community 1408]]
+- [[_COMMUNITY_Community 1409|Community 1409]]
+- [[_COMMUNITY_Community 1410|Community 1410]]
+- [[_COMMUNITY_Community 1411|Community 1411]]
+- [[_COMMUNITY_Community 1412|Community 1412]]
+- [[_COMMUNITY_Community 1413|Community 1413]]
+- [[_COMMUNITY_Community 1414|Community 1414]]
+- [[_COMMUNITY_Community 1415|Community 1415]]
+- [[_COMMUNITY_Community 1416|Community 1416]]
+- [[_COMMUNITY_Community 1417|Community 1417]]
+- [[_COMMUNITY_Community 1418|Community 1418]]
+- [[_COMMUNITY_Community 1419|Community 1419]]
+- [[_COMMUNITY_Community 1420|Community 1420]]
+- [[_COMMUNITY_Community 1421|Community 1421]]
+- [[_COMMUNITY_Community 1422|Community 1422]]
+- [[_COMMUNITY_Community 1423|Community 1423]]
+- [[_COMMUNITY_Community 1424|Community 1424]]
+- [[_COMMUNITY_Community 1425|Community 1425]]
+- [[_COMMUNITY_Community 1426|Community 1426]]
+- [[_COMMUNITY_Community 1427|Community 1427]]
+- [[_COMMUNITY_Community 1428|Community 1428]]
+- [[_COMMUNITY_Community 1429|Community 1429]]
+- [[_COMMUNITY_Community 1430|Community 1430]]
+- [[_COMMUNITY_Community 1431|Community 1431]]
+- [[_COMMUNITY_Community 1432|Community 1432]]
+- [[_COMMUNITY_Community 1433|Community 1433]]
+- [[_COMMUNITY_Community 1434|Community 1434]]
+- [[_COMMUNITY_Community 1435|Community 1435]]
+- [[_COMMUNITY_Community 1436|Community 1436]]
+- [[_COMMUNITY_Community 1437|Community 1437]]
+- [[_COMMUNITY_Community 1438|Community 1438]]
+- [[_COMMUNITY_Community 1439|Community 1439]]
+- [[_COMMUNITY_Community 1440|Community 1440]]
+- [[_COMMUNITY_Community 1441|Community 1441]]
+- [[_COMMUNITY_Community 1442|Community 1442]]
+- [[_COMMUNITY_Community 1443|Community 1443]]
+- [[_COMMUNITY_Community 1444|Community 1444]]
+- [[_COMMUNITY_Community 1445|Community 1445]]
+- [[_COMMUNITY_Community 1446|Community 1446]]
+- [[_COMMUNITY_Community 1447|Community 1447]]
+- [[_COMMUNITY_Community 1448|Community 1448]]
+- [[_COMMUNITY_Community 1449|Community 1449]]
+- [[_COMMUNITY_Community 1450|Community 1450]]
+- [[_COMMUNITY_Community 1451|Community 1451]]
+- [[_COMMUNITY_Community 1452|Community 1452]]
+- [[_COMMUNITY_Community 1453|Community 1453]]
+- [[_COMMUNITY_Community 1454|Community 1454]]
+- [[_COMMUNITY_Community 1455|Community 1455]]
+- [[_COMMUNITY_Community 1456|Community 1456]]
+- [[_COMMUNITY_Community 1457|Community 1457]]
+- [[_COMMUNITY_Community 1458|Community 1458]]
+- [[_COMMUNITY_Community 1459|Community 1459]]
+- [[_COMMUNITY_Community 1460|Community 1460]]
+- [[_COMMUNITY_Community 1461|Community 1461]]
+- [[_COMMUNITY_Community 1462|Community 1462]]
+- [[_COMMUNITY_Community 1463|Community 1463]]
+- [[_COMMUNITY_Community 1464|Community 1464]]
+- [[_COMMUNITY_Community 1465|Community 1465]]
+- [[_COMMUNITY_Community 1466|Community 1466]]
+- [[_COMMUNITY_Community 1467|Community 1467]]
+- [[_COMMUNITY_Community 1468|Community 1468]]
+- [[_COMMUNITY_Community 1469|Community 1469]]
+- [[_COMMUNITY_Community 1470|Community 1470]]
+- [[_COMMUNITY_Community 1471|Community 1471]]
+- [[_COMMUNITY_Community 1472|Community 1472]]
+- [[_COMMUNITY_Community 1473|Community 1473]]
+- [[_COMMUNITY_Community 1474|Community 1474]]
+- [[_COMMUNITY_Community 1475|Community 1475]]
+- [[_COMMUNITY_Community 1476|Community 1476]]
+- [[_COMMUNITY_Community 1477|Community 1477]]
+- [[_COMMUNITY_Community 1478|Community 1478]]
+- [[_COMMUNITY_Community 1479|Community 1479]]
+- [[_COMMUNITY_Community 1480|Community 1480]]
+- [[_COMMUNITY_Community 1481|Community 1481]]
+- [[_COMMUNITY_Community 1482|Community 1482]]
+- [[_COMMUNITY_Community 1483|Community 1483]]
+- [[_COMMUNITY_Community 1484|Community 1484]]
+- [[_COMMUNITY_Community 1485|Community 1485]]
+- [[_COMMUNITY_Community 1486|Community 1486]]
+- [[_COMMUNITY_Community 1487|Community 1487]]
+- [[_COMMUNITY_Community 1488|Community 1488]]
+- [[_COMMUNITY_Community 1489|Community 1489]]
+- [[_COMMUNITY_Community 1490|Community 1490]]
+- [[_COMMUNITY_Community 1491|Community 1491]]
+- [[_COMMUNITY_Community 1492|Community 1492]]
+- [[_COMMUNITY_Community 1493|Community 1493]]
+- [[_COMMUNITY_Community 1494|Community 1494]]
+- [[_COMMUNITY_Community 1495|Community 1495]]
+- [[_COMMUNITY_Community 1496|Community 1496]]
+- [[_COMMUNITY_Community 1497|Community 1497]]
+- [[_COMMUNITY_Community 1498|Community 1498]]
+- [[_COMMUNITY_Community 1499|Community 1499]]
+- [[_COMMUNITY_Community 1500|Community 1500]]
+- [[_COMMUNITY_Community 1501|Community 1501]]
+- [[_COMMUNITY_Community 1502|Community 1502]]
+- [[_COMMUNITY_Community 1503|Community 1503]]
+- [[_COMMUNITY_Community 1504|Community 1504]]
+- [[_COMMUNITY_Community 1505|Community 1505]]
+- [[_COMMUNITY_Community 1506|Community 1506]]
+- [[_COMMUNITY_Community 1507|Community 1507]]
+- [[_COMMUNITY_Community 1508|Community 1508]]
+- [[_COMMUNITY_Community 1509|Community 1509]]
+- [[_COMMUNITY_Community 1510|Community 1510]]
+- [[_COMMUNITY_Community 1511|Community 1511]]
+- [[_COMMUNITY_Community 1512|Community 1512]]
+- [[_COMMUNITY_Community 1513|Community 1513]]
+- [[_COMMUNITY_Community 1514|Community 1514]]
+- [[_COMMUNITY_Community 1515|Community 1515]]
+- [[_COMMUNITY_Community 1516|Community 1516]]
+- [[_COMMUNITY_Community 1517|Community 1517]]
+- [[_COMMUNITY_Community 1518|Community 1518]]
+- [[_COMMUNITY_Community 1519|Community 1519]]
+- [[_COMMUNITY_Community 1520|Community 1520]]
+- [[_COMMUNITY_Community 1521|Community 1521]]
+- [[_COMMUNITY_Community 1522|Community 1522]]
+- [[_COMMUNITY_Community 1523|Community 1523]]
+- [[_COMMUNITY_Community 1524|Community 1524]]
+- [[_COMMUNITY_Community 1525|Community 1525]]
+- [[_COMMUNITY_Community 1526|Community 1526]]
+- [[_COMMUNITY_Community 1527|Community 1527]]
+- [[_COMMUNITY_Community 1528|Community 1528]]
+- [[_COMMUNITY_Community 1529|Community 1529]]
+- [[_COMMUNITY_Community 1530|Community 1530]]
+- [[_COMMUNITY_Community 1531|Community 1531]]
+- [[_COMMUNITY_Community 1532|Community 1532]]
+- [[_COMMUNITY_Community 1533|Community 1533]]
+- [[_COMMUNITY_Community 1534|Community 1534]]
+- [[_COMMUNITY_Community 1535|Community 1535]]
+- [[_COMMUNITY_Community 1536|Community 1536]]
+- [[_COMMUNITY_Community 1537|Community 1537]]
+- [[_COMMUNITY_Community 1538|Community 1538]]
+- [[_COMMUNITY_Community 1539|Community 1539]]
+- [[_COMMUNITY_Community 1540|Community 1540]]
+- [[_COMMUNITY_Community 1541|Community 1541]]
+- [[_COMMUNITY_Community 1542|Community 1542]]
+- [[_COMMUNITY_Community 1543|Community 1543]]
+- [[_COMMUNITY_Community 1544|Community 1544]]
+- [[_COMMUNITY_Community 1545|Community 1545]]
+- [[_COMMUNITY_Community 1546|Community 1546]]
+- [[_COMMUNITY_Community 1547|Community 1547]]
+- [[_COMMUNITY_Community 1548|Community 1548]]
+- [[_COMMUNITY_Community 1549|Community 1549]]
+- [[_COMMUNITY_Community 1550|Community 1550]]
+- [[_COMMUNITY_Community 1551|Community 1551]]
+- [[_COMMUNITY_Community 1552|Community 1552]]
+- [[_COMMUNITY_Community 1553|Community 1553]]
+- [[_COMMUNITY_Community 1554|Community 1554]]
+- [[_COMMUNITY_Community 1555|Community 1555]]
+- [[_COMMUNITY_Community 1556|Community 1556]]
+- [[_COMMUNITY_Community 1557|Community 1557]]
+- [[_COMMUNITY_Community 1558|Community 1558]]
+- [[_COMMUNITY_Community 1559|Community 1559]]
+- [[_COMMUNITY_Community 1560|Community 1560]]
+- [[_COMMUNITY_Community 1561|Community 1561]]
+- [[_COMMUNITY_Community 1562|Community 1562]]
+- [[_COMMUNITY_Community 1563|Community 1563]]
+- [[_COMMUNITY_Community 1564|Community 1564]]
+- [[_COMMUNITY_Community 1565|Community 1565]]
+- [[_COMMUNITY_Community 1566|Community 1566]]
+- [[_COMMUNITY_Community 1567|Community 1567]]
+- [[_COMMUNITY_Community 1568|Community 1568]]
+- [[_COMMUNITY_Community 1569|Community 1569]]
+- [[_COMMUNITY_Community 1570|Community 1570]]
+- [[_COMMUNITY_Community 1571|Community 1571]]
+- [[_COMMUNITY_Community 1572|Community 1572]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `playerId` - 350 edges
-2. `Open Decisions And Follow-Up` - 303 edges
-3. `clubId` - 231 edges
-4. `gameDate` - 205 edges
-5. `fixtureId` - 166 edges
-6. `seasonId` - 159 edges
-7. `CareerState` - 117 edges
-8. `Phase Roadmap` - 116 edges
-9. `createCareerState()` - 114 edges
-10. `Translator` - 112 edges
+1. `playerId` - 402 edges
+2. `Open Decisions And Follow-Up` - 316 edges
+3. `gameDate` - 314 edges
+4. `clubId` - 293 edges
+5. `CareerState` - 174 edges
+6. `seasonId` - 172 edges
+7. `fixtureId` - 169 edges
+8. `createCareerState()` - 142 edges
+9. `nonNegativeMoney()` - 138 edges
+10. `Phase Roadmap` - 119 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `tacticalSlotNorm()` --calls--> `number()`  [INFERRED]
@@ -1145,80 +1604,80 @@
   apps/web/src/features/match-preparation/match-preparation-demo.ts → packages/ui/src/career/career-match-preparation-view.ts
 - `SaveDemoMatchPreparationResult` --references--> `CareerMatchPreparationView`  [EXTRACTED]
   apps/web/src/career/match-preparation-demo.ts → packages/ui/src/career/career-match-preparation-view.ts
+- `buildPhase()` --calls--> `buildCareerMatchdayPhaseView()`  [EXTRACTED]
+  apps/web/src/features/matchday/MatchdayFullTimePhase.test.tsx → packages/ui/src/career/career-matchday-phase-view.ts
 - `createFakeLiveMatchControlWorld()` --calls--> `createFakeLeagueSystem()`  [EXTRACTED]
   apps/cli/src/commands/live-match-control-report-data.ts → packages/content/src/generators/league-system.ts
-- `parseCanonicalDate()` --calls--> `number()`  [INFERRED]
-  apps/web/src/features/inbox/calendar-advance-transition.ts → packages/storage/src/sqlite/career-state-mapper.ts
 
-## Communities (1114 total, 5 thin omitted)
+## Communities (1573 total, 4 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (303): 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`, 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`, 2026-06-15 — `docs/steps/00-foundation/02-shared-rng-and-date.md`, 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`, 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`, 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`, 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`, 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md` (+295 more)
+Nodes (316): 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`, 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`, 2026-06-15 — `docs/steps/00-foundation/02-shared-rng-and-date.md`, 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`, 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`, 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`, 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`, 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md` (+308 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.02
-Nodes (200): result, CareerCommandRequest, CareerCommandRunner, CareerCommandRunnerDependencies, markup, CareerMatchPreparationBenchSlotInput, CareerMatchPreparationTacticProfileInput, findUnavailableSelectedClubPlayerIdsForNextFixture() (+192 more)
+Cohesion: 0.01
+Nodes (247): result, markup, markup, CareerDashboardPreparationInput, CareerInboxMessageInput, CareerMatchPreparationBenchSlotInput, CareerMatchPreparationTacticProfileInput, CareerContinueStopReason (+239 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.04
-Nodes (92): MatchScore, BlockMatchEvent, FoulMatchEvent, FullTimeMatchEvent, GoalMatchEvent, HalfTimeMatchEvent, InjuryMatchEvent, KickoffMatchEvent (+84 more)
+Cohesion: 0.05
+Nodes (55): applyHalfTimeSubstitutions(), ApplyHalfTimeSubstitutionsInput, ApplyHalfTimeSubstitutionsResult, HalfTimeSubstitutionInvalidReason, HalfTimeSubstitutionsApplied, HalfTimeSubstitutionsInvalid, hasDuplicatePlayers(), invalid() (+47 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
 Nodes (44): 10. Pulizia tema (una sola identità premium), 11. Roadmap a micro-step (uno alla volta), 12. Fuori ambito, 13. Rischi e mitigazioni, 1.1 Decisioni di brainstorming (bloccate), 1. Obiettivo, 2.1 INVARIATO — logica di dominio (nessuna modifica funzionale), 2.2 RI-VESTITO — solo CSS chrome del campo (logica intatta) (+36 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.04
-Nodes (89): CareerScreenPresentationInput, CareerScreenPresentations, fixture, HookProbe(), input, createStagedMatchCheckpoint(), commitStagedCareerFixture(), createMatchPreparationDraft() (+81 more)
+Cohesion: 0.21
+Nodes (12): GeneratedPlayerPotentialClass, allocateReachablePotential(), AllocateReachablePotentialInput, budgetRangeForAge(), classBudget(), clubTierBudgetModifier(), divisionBudgetModifier(), goalkeeperBudgetRange() (+4 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.05
-Nodes (52): CareerMatchPreparationPlayerOptionInput, compareNumbers(), comparePlayerOptionsByPosition(), DEPARTMENT_BY_POSITION, FALLBACK_CODE_BY_ROLE, FALLBACK_DEPARTMENT_BY_ROLE, FALLBACK_POSITION_BY_ROLE, playerDepartment() (+44 more)
+Cohesion: 0.03
+Nodes (173): advanceAiContractLifecycle(), AdvanceAiContractLifecycleResult, AffordableAiTerms, AiContractDecisionReason, AiContractLifecycleFact, aiRenewalDecision(), clubPlayerKey(), contractNegotiationsForContract() (+165 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.15
-Nodes (22): BLOCKED_FICTIONAL_CLUB_NAMES, CLUB_CITY_POOLS, CLUB_CITY_TIER_WEIGHTS, CLUB_NAMING_SOURCES, ClubCityPoolTier, ClubCitySource, ClubCityTierWeight, ClubCountryCode (+14 more)
+Cohesion: 0.06
+Nodes (45): BLOCKED_FICTIONAL_CLUB_NAMES, CLUB_CITY_POOLS, CLUB_CITY_TIER_WEIGHTS, CLUB_NAMING_SOURCES, ClubCityPoolTier, ClubCitySource, ClubCityTierWeight, ClubCountryCode (+37 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
-Nodes (46): benchSlotStatus(), BLOCKER_ORDER, buildBenchSlotView(), buildBenchView(), buildBlockerKeys(), buildCareerMatchPreparationView(), buildFormationView(), buildLineupSlotView() (+38 more)
+Nodes (47): benchSlotStatus(), BLOCKER_ORDER, buildBenchSlotView(), buildBenchView(), buildBlockerKeys(), buildCareerMatchPreparationView(), buildFormationView(), buildLineupSlotView() (+39 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.03
-Nodes (60): ApplyCareerWeeklyRecoveryResult, CareerAdvanceAdvanced, AbilityValue, asClubId(), asCompetitionId(), asFixtureId(), asGameDate(), asMoney() (+52 more)
+Nodes (56): AbilityValue, asClubId(), asCompetitionId(), asFixtureId(), asGameDate(), asMoney(), asSaveId(), asSeasonId() (+48 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.09
-Nodes (33): CareerMatchPreparationBenchSlotStatus, CareerMatchPreparationLineupSlotStatus, benchStatusLabelKey(), formatFitness(), formatFoot(), formatOptionalNumber(), formatTacticalPlayerOption(), roleLabelKey() (+25 more)
+Cohesion: 0.06
+Nodes (46): completeStagedMatchCheckpoint(), copyMatchContext(), copyStats(), requiredShooter(), restoreMatchContext(), restoreStagedMatchCheckpoint(), restoreTeamContext(), halfTime (+38 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.03
-Nodes (164): CareerMonthlyLifecycleSummary, AdvanceCareerCompletedSeasonMode, advanceCareerOneSeason(), AdvanceCareerOneSeasonAdvanced, AdvanceCareerOneSeasonInput, AdvanceCareerOneSeasonInvalid, AdvanceCareerOneSeasonInvalidReason, AdvanceCareerOneSeasonMode (+156 more)
+Cohesion: 0.02
+Nodes (168): CareerMonthlyLifecycleSummary, AdvanceCareerCompletedSeasonMode, advanceCareerOneSeason(), AdvanceCareerOneSeasonAdvanced, AdvanceCareerOneSeasonInput, AdvanceCareerOneSeasonInvalid, AdvanceCareerOneSeasonInvalidReason, AdvanceCareerOneSeasonMode (+160 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.05
-Nodes (58): createBatchNameUsage(), generateCareerIntakePlayers(), abilityValues(), advanceCareerForReport(), average(), averageAbility(), averagePotentialRoom(), balanceSeasonRows() (+50 more)
+Cohesion: 0.06
+Nodes (55): LongRunBalanceSeasonRow, abilityValues(), average(), averageAbility(), averagePotentialRoom(), balanceSeasonRows(), ChampionStreakSnapshot, clampWorkerCount() (+47 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.11
-Nodes (24): CareerDashboardPreparationInput, buildDemoCareerDashboard(), buildDemoCareerDashboardInput(), NEXT_OPPONENT, SELECTED_CLUB, first, input, second (+16 more)
+Cohesion: 0.06
+Nodes (76): CareerAttentionBlockerKey, CareerAttentionCategory, CareerAttentionContinuePolicy, CareerAttentionEvent, CareerAttentionEventInput, CareerAttentionLevel, CareerAttentionReason, CareerAttentionRelatedEntities (+68 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.07
-Nodes (27): AbilityOverrides, abilitySet(), affected, attackerId, base, baseInput, defenderBoost, defenderId (+19 more)
+Nodes (34): abilitiesFixture(), applied, ATTACKING_ROLES, attackingOption, awayBench(), awayXi(), baseHome, baseState (+26 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.11
-Nodes (26): action(), buildCareerDashboardView(), BuildCareerDashboardViewInput, buildConditionSummary(), buildContextView(), buildDashboardActions(), buildLeagueResultsView(), buildLeagueTableView() (+18 more)
+Cohesion: 0.04
+Nodes (85): CareerMatchdayLiveControlInput, LiveMatchEvent, MatchEventSide, FixtureRunResult, PlayerMatchInvolvementSummary, AppliedLiveMatchCommandFact, ApplyConfirmedProgressiveTeamChangesInput, applyValidatedLiveMatchCommand() (+77 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.02
-Nodes (109): action(), buildActions(), buildCareerMatchdayPhaseView(), CareerMatchdayHalfTimeSubstitutionInput, CareerMatchdayPhaseActionId, CareerMatchdayPhaseActionStatus, CareerMatchdayPhaseActionView, CareerMatchdayPhaseScoreboardInput (+101 more)
+Cohesion: 0.03
+Nodes (158): applyPermanentTransferFeeFinance(), clubFinanceStateFixture(), deriveCareerContractOfferReservations(), evaluateCareerContractCapacity(), replaceReservedContractWage(), applied(), applyContractActivationFinance(), applyContractActivationsFinance() (+150 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.03
-Nodes (144): completeStagedMatchCheckpoint(), copyMatchContext(), copyStats(), requiredShooter(), restoreMatchContext(), restoreStagedMatchCheckpoint(), restoreTeamContext(), halfTime (+136 more)
+Cohesion: 0.13
+Nodes (14): PLAYER_GENERATION_BANDS, PLAYER_GENERATION_CLUB_TIERS, PLAYER_GENERATION_DIVISIONS, PlayerGenerationBandProfile, PlayerGenerationBandRange, first, firstTitle, mid (+6 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.04
@@ -1237,36 +1696,36 @@ Cohesion: 0.05
 Nodes (38): advanceIo, afterInspectIo, applyIo, beforeInspectIo, budgetBeforeAdvance, CapturedIo, completeCareerSeason(), conflictingMode (+30 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.08
-Nodes (34): chanceCreatorWeightForRole(), chanceShooterWeightForRole(), CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE, excludePlayerWhenPossible(), pickWeightedPlayer(), PRIMARY_DEFENDER_ROLE_WEIGHTS, primaryDefenderWeightForRole(), selectChanceActors() (+26 more)
+Cohesion: 0.09
+Nodes (37): MatchScore, BlockMatchEvent, FoulMatchEvent, FullTimeMatchEvent, GoalMatchEvent, HalfTimeMatchEvent, InjuryMatchEvent, KickoffMatchEvent (+29 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.13
-Nodes (40): MatchSideStats, attachFixtureReports(), boolean(), cap(), insertActiveMatch(), insertActiveTeam(), insertCareerStateRows(), insertCurrentSeasonInbox() (+32 more)
+Cohesion: 0.02
+Nodes (133): createWebTranslator(), italian, translateWebLabel(), CareerMatchdayPhasePlayerView, markup, buildCareerMatchdayPresentationView(), buildMatchdayEventGroups(), buildMatchdayFullTimeReviewView() (+125 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.10
-Nodes (35): buildCareerDashboardInput(), buildCurrentLeagueTableRows(), compareFixtureChronology(), findCurrentSeasonPlayedFixtures(), findLatestLeagueRoundFixtures(), findLatestSelectedClubFixture(), findRecentSelectedClubFixture(), findRecentSelectedClubFixtures() (+27 more)
+Cohesion: 0.12
+Nodes (27): lifecycle(), lifecycle(), buildDerivationKey(), hashStringToSeedWords(), RngKeyPart, first, sampleSequence(), second (+19 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.02
-Nodes (138): CareerMatchPreparationBlockerKey, CareerMatchPreparationFormationId, CareerMatchPreparationFormationInput, CareerMatchPreparationFormationSlotInput, CareerMatchPreparationView, TacticalBenchBoard(), TacticalBenchBoardCandidate, TacticalBenchBoardProps (+130 more)
+Nodes (179): CAREER_MATCH_PREPARATION_FORMATIONS, CareerMatchPreparationFormationId, CareerMatchPreparationFormationInput, CareerMatchPreparationFormationSlotInput, CareerMatchPreparationPlayerOptionInput, CareerMatchPreparationView, TacticalBenchBoard(), TacticalBenchBoardCandidate (+171 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.03
-Nodes (104): applyCareerFixtureConditionConsequences(), createMatchConsequenceInboxMessages(), applyCareerMatchStateConsequences(), assertUniquePlayerId(), CareerMatchPlayerStateConsequence, CareerMatchStateConsequenceError, CareerMatchStateConsequenceErrorCode, CareerMatchStateConsequenceReasonKey (+96 more)
+Cohesion: 0.05
+Nodes (50): createSelectedLineup(), createTacticSetup(), isTacticMentalityKey(), SelectedLineupSlot, TacticContractError, TacticContractErrorCode, TacticKnobValue, TacticMentalityKey (+42 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.07
-Nodes (40): AbilityGroup, AbilityScope, appendAbilityRows(), assertOrderedLookup(), groupedRows(), insertMappedRows(), insertRow(), insertRows() (+32 more)
+Nodes (41): competitionMatchRulesFixture(), createCompetitionMatchRules(), generateCompetitionSeasonDistribution(), cashBalances, first, league, maximumCommittedWage, second (+33 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.05
 Nodes (38): Adopted Behavior, Adopted Contract, Career Matchday Condition Audit, code:bash (pnpm cli career --save=phase41-check --summary), code:text (S.S. Perugia: tracked effect=negative affected=11), Commands Reviewed, Existing Systems To Reuse, Explanation Output (+30 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.06
-Nodes (52): formatSupportedMarketDemoProfiles(), isLineupDemoProfileKey(), isMarketDemoProfileKey(), isTacticDemoProfileKey(), parseCareerArgs(), ParsedCareerArgs, ParsedLanguageArgument, ParsedLineupDemo (+44 more)
+Cohesion: 0.11
+Nodes (29): CareerLineupDemoPlayerChange, applyDevelopmentDeltas(), averagePlayerPotentialRoom(), buildCareerDevelopmentReport(), buildTrajectorySamples(), CareerDevelopmentReportPlayerExample, CareerDevelopmentTrajectorySample, CareerSeasonRolloverResult (+21 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.07
@@ -1274,23 +1733,23 @@ Nodes (35): action(), buildActions(), buildBlockerKeys(), buildCareerMatchdayVie
 
 ### Community 30 - "Community 30"
 Cohesion: 0.09
-Nodes (21): buildCurrentTeamContext(), createFakeLiveMatchControlWorld(), createFixtureSetup(), createLiveMatchControlReport(), CreateLiveMatchControlReportInput, createLiveTeam(), FakePlayerId, FakePlayerState (+13 more)
+Nodes (20): buildCurrentTeamContext(), createFakeLiveMatchControlWorld(), createFixtureSetup(), createLiveMatchControlReport(), CreateLiveMatchControlReportInput, createLiveTeam(), FakePlayerId, FakePlayerState (+12 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.11
-Nodes (24): planSqliteCareerMigrations(), SQLITE_CAREER_MIGRATIONS, SqliteCareerMigration, SQLITE_CAREER_SCHEMA_STATEMENTS, SQLITE_CAREER_SCHEMA_V1_STATEMENTS, SQLITE_CAREER_SCHEMA_V2_STATEMENTS, SQLITE_CAREER_SCHEMA_V3_STATEMENTS, SQLITE_CAREER_SCHEMA_V4_STATEMENTS (+16 more)
+Cohesion: 0.06
+Nodes (50): findWorkspaceRoot(), parseArgs(), ParsedArgs, parsePositiveSafeInteger(), parseSeasonCount(), resolveWorkspaceOutputPath(), runTenSeasonReportCommand(), TenSeasonReportCommandIo (+42 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.02
-Nodes (116): Future Web Backlog - Archive And History, Future Web Backlog - Finances Foundation, Future Web Backlog - Main Dashboard Consolidation, Future Web Backlog - Market UI MVP, Future Web Backlog - Staff Foundation, Future Web Backlog - Youth UI, Phase 52 - Web Match Preparation Slice, Phase 53 - Inbox/Posta Decision Center (+108 more)
+Nodes (119): Future Web Backlog - Archive And History, Future Web Backlog - Finances Foundation, Future Web Backlog - Main Dashboard Consolidation, Future Web Backlog - Market UI MVP, Future Web Backlog - Staff Foundation, Future Web Backlog - Youth UI, Phase 52 - Web Match Preparation Slice, Phase 53 - Inbox/Posta Decision Center (+111 more)
 
 ### Community 33 - "Community 33"
 Cohesion: 0.06
 Nodes (31): 0. Sommario esecutivo, 1.1 Struttura e impianto, 1.2 Punti di forza (reali, verificati), 1.3 Temi trasversali del codice (le radici, non i sintomi), 1.4 Valutazione per area, 1.5 Problemi puntuali per severità, 2.1 La verità centrale: **manca il motore delle conseguenze** — CRITICAL, 2.2 Il test di accensione dei 30 minuti (`requirements.md §I`) (+23 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.11
-Nodes (35): appendLineupRegistrations(), Club, ClubId, clubLabel(), Fixture, FixtureDetailLineupInspection, fixturePlayerRegistrations(), formatChanceType() (+27 more)
+Cohesion: 0.12
+Nodes (32): appendLineupRegistrations(), Club, ClubId, clubLabel(), Fixture, fixturePlayerRegistrations(), formatChanceType(), formatConditionEffect() (+24 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.10
@@ -1298,15 +1757,15 @@ Nodes (19): Active match checkpoint, Audit Conclusion, Career systems, code:text
 
 ### Community 36 - "Community 36"
 Cohesion: 0.02
-Nodes (127): totalPlayerAbilityDelta(), assertDisjointRoles(), assertRoleFamiliarity(), createPlayerRoleIdentity(), familiarityEntries(), GoalkeepingAbilities, MentalAbilities, PhysicalAbilities (+119 more)
+Nodes (155): abilitySet(), adapterReport, careerStateFixture(), clubFixture(), completedCareerStateFixture(), first, fixtureFixture(), gameStateFixture() (+147 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.06
 Nodes (31): Blocking Decision, Budget Boundary For Market MVP, Calendar And Season Transition Dependencies, Candidate Shared Modules, Career Systems Dependency Map, Current State, Current State, Current State (+23 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.03
-Nodes (94): MATCH_PREPARATION_TACTIC_PROFILES, AdvanceWebLiveMatchdayMinuteResult, AppliedMatchSubstitution, applyOpponentAiInGameDecisions(), applyWebLiveMatchTeamChanges(), ApplyWebLiveMatchTeamChangesResult, balancedTactic(), buildCareerTeamsByClubId() (+86 more)
+Cohesion: 0.02
+Nodes (179): createStagedMatchCheckpoint(), MatchPreparationDraft, selectMatchPreparationFormation(), TacticalPitchLineup(), markup, state, view, buildPresenterPhaseView() (+171 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.06
@@ -1317,64 +1776,64 @@ Cohesion: 0.06
 Nodes (33): Accepted Skin, Alerts, Status, Loading, And Recovery, Broken Token References, Buttons And Commands, Color Token Inventory, Component Language Audit, Cross-Screen State Comparison, Current Drift (+25 more)
 
 ### Community 41 - "Community 41"
-Cohesion: 0.13
-Nodes (16): competitionMatchRulesFixture(), CompetitionMatchRulesError, createCompetitionMatchRules(), createFakeLeagueSystem(), FakeAbilityWeightKey, FakeLeagueSystemOptions, FakeMatchEngineConfig, FakePlayerStateMultiplierCurves (+8 more)
+Cohesion: 0.07
+Nodes (42): action(), buildActions(), buildCareerMatchdayPhaseView(), BuildCareerMatchdayPhaseViewInput, CareerMatchdayHalfTimeSubstitutionInput, CareerMatchdayPhaseActionId, CareerMatchdayPhaseActionStatus, CareerMatchdayPhaseActionView (+34 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.09
-Nodes (24): GENERATED_PLAYER_ARCHETYPE_KEYS, GENERATED_PLAYER_ARCHETYPES, GeneratedPlayerArchetype, GeneratedPlayerDepthRole, GeneratedPlayerRange, archetype, goodProspect, prodigy (+16 more)
+Cohesion: 0.05
+Nodes (45): age, archetypes, CAREER_START_EPOCH_DAY, configured, current, expectedRole, first, firstClub (+37 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.04
-Nodes (66): simulateFixtureAndCreateReport(), applyHalfTimeSubstitutions(), ApplyHalfTimeSubstitutionsInput, ApplyHalfTimeSubstitutionsResult, HalfTimeSubstitutionInvalidReason, HalfTimeSubstitutionsApplied, HalfTimeSubstitutionsInvalid, hasDuplicatePlayers() (+58 more)
+Cohesion: 0.02
+Nodes (134): ApplyCareerFixtureConditionConsequencesInput, ApplyCareerFixtureConditionConsequencesResult, before, first, firstResult, input, playerStateFixture(), playerStates (+126 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.07
 Nodes (29): Attacking Midfielder, Attribute Classification, Center Back, Central Midfielder, code:text (Third division senior), code:text (Youth 15-17 in third division), Defensive Midfielder, Development Model Rule (+21 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.06
-Nodes (32): before, blockEvents, context, expectedPlayerId, first, firstRunKickoff, firstRunNoEvent, firstRunRng (+24 more)
+Cohesion: 0.05
+Nodes (90): simulateFixtureAndCreateReport(), copyStats(), createMatchReport(), toMatchEvent(), toShotOutcomeEvent(), assertScoreAgreement(), buildLiveMatchProjection(), BuildLiveMatchProjectionInput (+82 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.22
-Nodes (17): applyCareerPermanentTransfer(), ApplyCareerPermanentTransferInput, ApplyCareerPermanentTransferResult, ClubTransferBudget, PermanentTransferIntent, PermanentTransferPreview, TransferContractErrorCode, TransferFeasibilityStatus (+9 more)
+Cohesion: 0.06
+Nodes (37): abilitySet(), after, attacker, before, careerState, careerStateFixture(), careerStateWithCurrentDate(), careerStateWithMonthlyParticipation() (+29 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.06
 Nodes (33): Advance A Career Fixture, Canonical Player Lifecycle, CLI, code:text (apps/cli), code:text (content producer), code:text (structured engine/domain facts), Common Debugging Paths, Content (+25 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.02
-Nodes (197): ClubCategory, PlayerArchetype, PlayerRole, RoleIdentifiedPlayer, BatchNameUsage, CAREER_START_EPOCH_DAY, CareerIntakeClubContext, CareerIntakeGeneratedPlayer (+189 more)
+Cohesion: 0.04
+Nodes (76): PlayerArchetype, applyTierModifier(), bucketForRoleAbility(), clamp(), clubTierModifier(), CurrentAbilityBandRange, CurrentAbilityLaneBands, CurrentAbilityRarityLane (+68 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.05
-Nodes (55): SimulateSeasonError, abilitySet(), addLifecyclePlayers(), aiSelectionPlayers(), aiSelectionReadyTeams(), baseInput, clubsInRound, defaultResult (+47 more)
+Cohesion: 0.10
+Nodes (34): ClubFinanceLedgerReason, activeContractsFor(), affordabilityTerms(), average(), contractFinanceCheck(), countContractDateFacts(), countFreeAgentViolations(), countOwnershipViolations() (+26 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.23
-Nodes (22): ageDistributionCheck(), average(), championDominanceCheck(), championStreakFailThreshold(), championStreakWarnThreshold(), check(), createLongRunAnomalyReport(), goalkeeperCoverageCheck() (+14 more)
+Cohesion: 0.14
+Nodes (29): ageDistributionCheck(), average(), championDominanceCheck(), championStreakFailThreshold(), championStreakWarnThreshold(), check(), createLongRunAnomalyReport(), CreateLongRunAnomalyReportInput (+21 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.06
-Nodes (36): baseCareer, before, career, careerState, changedStarter, checkpoint, clubFixture(), committed (+28 more)
+Nodes (40): baseCareer, before, career, careerState, careerStateFixture(), changedStarter, checkpoint, clubFixture() (+32 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.07
-Nodes (29): age, archetype, assignedArchetypeCounts, assignments, bottomAverage, CAREER_START_EPOCH_DAY, clubContexts, clubs (+21 more)
+Cohesion: 0.06
+Nodes (31): fakeClubPlayerIds(), fakePlayerId(), age, archetype, assignedArchetypeCounts, assignments, bottomAverage, CAREER_START_EPOCH_DAY (+23 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.23
-Nodes (15): ClubAbilityHierarchySnapshot, ClubAbilityHierarchySummary, clubLabel(), drawRate(), goalsPerMatch(), formatAbilityHierarchySnapshot(), formatAnomalyLines(), formatClubStabilityLines() (+7 more)
+Cohesion: 0.06
+Nodes (77): CareerDevelopmentReportFormatResult, CareerDevelopmentReportPlayerExample, CareerDevelopmentTrajectorySample, formatCareerDevelopmentReportOutput(), formatDelta(), formatDevelopmentExample(), formatTrajectorySample(), affectedClubIds() (+69 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.13
-Nodes (17): benchBoardElement(), DE_MESSAGES, EN_MESSAGES, EnglishMessageKey, ES_MESSAGES, FR_MESSAGES, hasConcreteTranslation(), interpolate() (+9 more)
+Cohesion: 0.07
+Nodes (27): AbilityOverrides, abilitySet(), affected, attackerId, base, baseInput, defenderBoost, defenderId (+19 more)
 
 ### Community 55 - "Community 55"
-Cohesion: 0.02
-Nodes (157): abilitySet(), active, careerState, clubFixture(), first, gameStateFixture(), keeper, lowQualityVeteran (+149 more)
+Cohesion: 0.04
+Nodes (51): assertValidMinuteCount(), buildManualTacticChangeSchedule(), BuildManualTacticChangeScheduleInput, compareManualTacticChanges(), isValidManualTacticChangeSchedule(), ManualTacticChange, ManualTacticChangeError, ManualTacticChangeErrorCode (+43 more)
 
 ### Community 56 - "Community 56"
 Cohesion: 0.07
@@ -1385,8 +1844,8 @@ Cohesion: 0.06
 Nodes (28): args, balanced, combined, defaultIo, defensive, demoIo, explanationIo, explanationStart (+20 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.09
-Nodes (25): careerDashboardActionAvailability, CareerDashboardActionAvailabilityStatus, CareerDashboardActionId, careerDashboardActionResult, CareerDashboardBlockerKey, CareerDashboardPresentation, CareerDashboardSectionId, DASHBOARD_SECTION_IDS (+17 more)
+Cohesion: 0.50
+Nodes (4): ApplyCareerWeeklyRecoveryResult, CareerAdvanceAdvanced, DemoMatchdayAdvancedResult, DemoStagedMatchdayProgress
 
 ### Community 59 - "Community 59"
 Cohesion: 0.08
@@ -1394,15 +1853,15 @@ Nodes (23): Architecture Contract, code:bash (nvm use 24), Definition Of Done, E
 
 ### Community 60 - "Community 60"
 Cohesion: 0.03
-Nodes (69): Future Engine Backlog - Match Engine Feel And Tactical Input Effect Review, Future Phase - Web Career Persistence And Save Lifecycle Foundation, Future Web Backlog - Calendar, Fixtures, And Season Recap, Future Web Backlog - Inbox/Posta Decision Center, Future Web Backlog - Squad Screen And Player Memory Foundation, Operational Roadmap, Phase 62 - Engine Safety Net And Deterministic Regression Gates, Phase 63 - Canonical Career Advancement Use-Case (+61 more)
+Nodes (76): Future Engine Backlog - Match Engine Feel And Tactical Input Effect Review, Future Phase - Web Career Persistence And Save Lifecycle Foundation, Future Web Backlog - Calendar, Fixtures, And Season Recap, Future Web Backlog - Inbox/Posta Decision Center, Future Web Backlog - Squad Screen And Player Memory Foundation, Operational Roadmap, Phase 62 - Engine Safety Net And Deterministic Regression Gates, Phase 63 - Canonical Career Advancement Use-Case (+68 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.21
-Nodes (15): compareAscending(), compareDescending(), compareMutableRowsByContribution(), compareMutableRowsBySideOrder(), comparePlayerIdsAscending(), compareSides(), computePlayerMatchStats(), creditShot() (+7 more)
+Cohesion: 0.12
+Nodes (15): before, first, firstResult, negative, playerIds, playerStateFixture(), playerStates, rested (+7 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.23
-Nodes (15): findClubTransferBudget(), replaceClubTransferBudget(), applyMarketBudgetPreview(), applyPlayerOwnershipPreview(), collectIdentityReasons(), evaluatePermanentTransfer(), previewPermanentTransfer(), rejected() (+7 more)
+Cohesion: 0.01
+Nodes (313): agingMultiplier(), applyPlayerAgingPolicy(), ApplyPlayerAgingPolicyInput, ApplyPlayerAgingPolicyResult, currentAbilityFloor(), goalkeeperAgingMultiplier(), goalkeeperRemainingRoom(), lateOutfieldSkillDeclineAge() (+305 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.08
@@ -1422,7 +1881,7 @@ Nodes (20): `app/`, code:text (apps/web/src/), Current File Migration Map, Decis
 
 ### Community 67 - "Community 67"
 Cohesion: 0.02
-Nodes (130): CareerMatchdayPhaseEventView, CareerMatchdayPhasePlayerView, buildCareerMatchdayPresentationView(), buildMatchdayEventGroups(), buildMatchdayFullTimeReviewView(), buildMatchdayHalfTimeReviewView(), buildMatchdayLiveMoment(), buildMatchdayPhaseIndicators() (+122 more)
+Nodes (109): CareerMatchdayPhaseEventView, MatchdayLiveMomentView, MatchdayPresentedEventView, MatchdayTabellinoIncidentView, broadcastLine(), CareerMatchdayScreen(), CareerMatchdayScreenProps, DemoTacticalBoardPlayer (+101 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.18
@@ -1433,8 +1892,8 @@ Cohesion: 0.06
 Nodes (33): dependencies, comlink, @game/content, @game/engine, @game/i18n, @game/shared, @game/storage, @game/ui (+25 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.07
-Nodes (42): requiredAutosavePolicy(), deriveHistoricalRoleIdentity(), isRecord(), migrateCareerSave(), normalizeCareerPlayerRoleMetadata(), ROLES_BY_POSITION, StoredCareerSave, StoredCareerSaveV1 (+34 more)
+Cohesion: 0.05
+Nodes (44): CareerStateContractError, abilitySet(), activeMatchCheckpointFixture(), activeMatchTeam(), base, career, careerStateFixture(), checkpoint (+36 more)
 
 ### Community 71 - "Community 71"
 Cohesion: 0.09
@@ -1502,7 +1961,7 @@ Nodes (19): code:bash (pnpm cli simulate-season --seed=world-a --player-generati
 
 ### Community 87 - "Community 87"
 Cohesion: 0.13
-Nodes (22): GenerateSeasonalYouthIntakePlayersResult, potentialRarityBudgetForDivision(), BudgetedPlayerRarityKind, buildPlayerRarityAllocation(), BuildPlayerRarityAllocationInput, buildYouthPlayerRarityAllocation(), BuildYouthPlayerRarityAllocationInput, PlayerRarityAllocation (+14 more)
+Nodes (27): canUseName(), ClubNameUsage, createClubNameUsage(), createLeagueNameUsage(), currentAbilityRarityLaneForArchetype(), defaultClubContext(), FAKE_CAREER_START_EPOCH_DAY, FakeLineupSlot (+19 more)
 
 ### Community 88 - "Community 88"
 Cohesion: 0.11
@@ -1521,12 +1980,12 @@ Cohesion: 0.04
 Nodes (44): AI Participation Is Still Too Thin For Development, Baseline Commands, Career Development Baseline, CLI And Simulation Tools, code:bash (nvm use 24), code:bash (pnpm cli career --save=phase75-baseline-a --seed=phase75-bas), code:bash (pnpm cli ten-season-report --seed-prefix=phase75-baseline --), code:text (7f979b773a3d0d96eb6035f3096c5a2353100f57b9b99387b1a149b8bad3) (+36 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.03
-Nodes (112): attentionLevelRank(), CareerAttentionBlockerKey, CareerAttentionCategory, CareerAttentionEvent, careerAttentionEventId, CareerAttentionEventInput, CareerAttentionLevel, CareerAttentionReason (+104 more)
+Cohesion: 0.05
+Nodes (54): SimulateSeasonError, abilitySet(), aiSelectionPlayers(), aiSelectionReadyTeams(), baseInput, clubsInRound, defaultResult, demoClubIds() (+46 more)
 
 ### Community 93 - "Community 93"
-Cohesion: 0.06
-Nodes (78): CareerDevelopmentReportFormatResult, CareerDevelopmentReportPlayerExample, CareerDevelopmentTrajectorySample, formatCareerDevelopmentReportOutput(), formatDelta(), formatDevelopmentExample(), formatTrajectorySample(), affectedClubIds() (+70 more)
+Cohesion: 0.09
+Nodes (34): PlayerRoleIdentity, BatchNameUsage, CAREER_START_EPOCH_DAY, clubTierForReputation(), createBatchNameUsage(), generateCareerIntakePlayers(), GenerateCareerIntakePlayersResult, generateOneIntakePlayer() (+26 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.11
@@ -1542,11 +2001,11 @@ Nodes (17): Anomaly Aggregation And Warning Status Semantics, CLI Command Parsin
 
 ### Community 97 - "Community 97"
 Cohesion: 0.07
-Nodes (41): buildDemoBenchSlots(), buildDemoLineupSlots(), buildDemoMatchPreparationInput(), buildDemoMatchPreparationView(), createCompleteUnsavedDemoMatchPreparationState(), createInitialDemoMatchPreparationState(), DEMO_BENCH_SLOT_KEYS, DEMO_LINEUP_SLOTS (+33 more)
+Nodes (39): CareerMatchPreparationLineupSlotInput, buildDemoBenchSlots(), buildDemoLineupSlots(), buildDemoMatchPreparationInput(), buildDemoMatchPreparationView(), createCompleteUnsavedDemoMatchPreparationState(), createInitialDemoMatchPreparationState(), DEMO_BENCH_SLOT_KEYS (+31 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.03
-Nodes (116): advanceCareerMonths(), AdvanceCareerMonthsResult, civilDateFromEpochDay(), eligibleOpenParticipationRows(), ledgerForEligibleRows(), mergeClosedMonths(), monthKeyForCareerDate(), monthlySummary() (+108 more)
+Cohesion: 0.10
+Nodes (31): BuildCareerContractViewInput, CareerContractView, assertValidProfileInput(), ATTRIBUTE_FAMILY_ORDER, buildAttributeGroups(), buildCareerPlayerProfileView(), buildRoleViews(), CareerPlayerAttributeFamily (+23 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.11
@@ -1561,8 +2020,8 @@ Cohesion: 0.17
 Nodes (11): Accepted Skins, Accessibility And Visual QA, code:text (/tmp/the-long-season-phase61), Next Phase Recommendation, Non-Themeable Proof, Removed And Migrated Skins, Residual Risks, Token Taxonomy (+3 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.17
-Nodes (13): allocation, assignments, FAKE_INPUT, first, input, second, baseLevelForDivision(), clampInteger() (+5 more)
+Cohesion: 0.10
+Nodes (28): action(), buildCareerDashboardView(), BuildCareerDashboardViewInput, buildConditionSummary(), buildContextView(), buildDashboardActions(), buildLeagueResultsView(), buildLeagueTableView() (+20 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.15
@@ -1617,8 +2076,8 @@ Cohesion: 0.05
 Nodes (43): Accessibility, responsive, and football-quality evidence, Adopted solution, Adopted solution, Adopted solution, Adopted solution, Adopted solution, Adopted solution, Adopted solution (+35 more)
 
 ### Community 116 - "Community 116"
-Cohesion: 0.12
-Nodes (17): alpha, beforeClubIds, beforeFixtureIds, beforeFixtures, bravo, charlie, clubIds, fixtureIds (+9 more)
+Cohesion: 0.11
+Nodes (18): Architecture And Ownership, Club Finances, code:bash (nvm use 24), Contracts, Definition Of Done, Entry Gate, Goal, Locked Product Decisions (+10 more)
 
 ### Community 117 - "Community 117"
 Cohesion: 0.13
@@ -1653,16 +2112,16 @@ Cohesion: 0.13
 Nodes (14): Career CLI Smoke, code:sh (pnpm cli career --save=<saveId> --rollover-season), code:sh (pnpm exec vitest run apps/cli/src/commands/career.test.ts -t), code:sh (pnpm cli career --save=phase27-manual --seed=world-a --new-w), Completion, Implemented Model, Next Calendar, Phase 28 Readiness (+6 more)
 
 ### Community 125 - "Community 125"
-Cohesion: 0.09
-Nodes (23): assertGeneratedClubIdentity(), fakeClubId(), fakeClubPlayerIds(), fakePlayerId(), generateFakeClubs(), createClubNameUsage(), createLeagueNameUsage(), defaultClubContext() (+15 more)
+Cohesion: 0.12
+Nodes (22): buildDemoCareerDashboard(), buildDemoCareerDashboardInput(), NEXT_OPPONENT, SELECTED_CLUB, first, input, second, view (+14 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.20
 Nodes (9): Accessibility Notes, Browser Coverage, code:sh (node --experimental-strip-types apps/web/src/visual-qa/share), code:text (/tmp/the-long-season-phase58), Conclusion, Interaction Checks, Match Preparation Tactical Workspace Visual QA, Residual Risks (+1 more)
 
 ### Community 127 - "Community 127"
-Cohesion: 0.05
-Nodes (73): createFakeSeasonInput(), createFakeTeamsByClubId(), buildFixtureExplanationTrace(), buildManualTacticFixture(), buildSetupOverrideContextForCli(), CliManualTacticFixture, CliSeasonResult, CliTeamContext (+65 more)
+Cohesion: 0.09
+Nodes (24): careerDashboardActionAvailability, CareerDashboardActionId, careerDashboardActionResult, CareerDashboardBlockerKey, CareerDashboardPresentation, CareerDashboardSectionId, DASHBOARD_SECTION_IDS, presentCareerDashboard() (+16 more)
 
 ### Community 128 - "Community 128"
 Cohesion: 0.14
@@ -1693,8 +2152,8 @@ Cohesion: 0.22
 Nodes (8): 01 - Current UX Issue Audit And Target Layout, code:sh (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, What NOT To Implement, What To Implement
 
 ### Community 135 - "Community 135"
-Cohesion: 0.14
-Nodes (13): dependencies, @game/domain, @game/engine, @game/shared, devDependencies, typescript, exports, name (+5 more)
+Cohesion: 0.13
+Nodes (14): dependencies, @game/domain, @game/engine, @game/shared, devDependencies, typescript, exports, name (+6 more)
 
 ### Community 136 - "Community 136"
 Cohesion: 0.29
@@ -2289,16 +2748,16 @@ Cohesion: 0.18
 Nodes (10): Lifecycle Rules, Non-Goals, Phase 31 Baseline, Population Targets, Required Long-Run Metrics, Success Criteria, User-Control Boundary, Why Phase 32 Exists (+2 more)
 
 ### Community 284 - "Community 284"
-Cohesion: 0.04
-Nodes (98): ProgressCareerAiTeamSelectionInput, createSelectedLineup(), createTacticSetup(), isTacticMentalityKey(), SelectedLineup, SelectedLineupSlot, TacticContractError, TacticContractErrorCode (+90 more)
+Cohesion: 0.06
+Nodes (50): addUnavailablePlayer(), advanceProgressiveMatchMinute(), applyConfirmedProgressiveTeamChanges(), ApplyValidatedLiveMatchCommandResult, availabilityAfterIncidents(), continueInjuredPlayer(), copyAvailability(), copyStats() (+42 more)
 
 ### Community 285 - "Community 285"
-Cohesion: 0.17
-Nodes (11): Allowed dependencies, Claude Code task prompt, Current Documented Phase, Definition of Done, Expected files, Goal, Implementation Steps, Required tests (+3 more)
+Cohesion: 0.14
+Nodes (13): Allowed dependencies, Claude Code task prompt, Current Active Phase, Current Documented Phase, Definition of Done, Expected files, Goal, Implementation Steps (+5 more)
 
 ### Community 286 - "Community 286"
-Cohesion: 0.05
-Nodes (35): AdvancedWebMatchdayMinute, carriedDraft, completed, currentDate, entered, first, firstCheckpoint, firstPreparation (+27 more)
+Cohesion: 0.08
+Nodes (31): assertUniquePlayers(), buildActions(), buildCareerSquadView(), BuildCareerSquadViewInput, buildPlayerRow(), CAREER_SQUAD_COLUMNS, CareerSquadColumnKey, CareerSquadColumnView (+23 more)
 
 ### Community 287 - "Community 287"
 Cohesion: 0.20
@@ -3941,8 +4400,8 @@ Cohesion: 0.20
 Nodes (9): Accessibility Notes, Browser QA Coverage, Canonical Formation Role Visual QA, code:sh (node --experimental-strip-types apps/web/src/visual-qa/tacti), code:text (/tmp/the-long-season-phase54), Decision, Findings, Residual Risk (+1 more)
 
 ### Community 703 - "Community 703"
-Cohesion: 0.36
-Nodes (6): buildCalendarAdvanceTransition(), CalendarAdvanceFrame, CalendarAdvanceTransitionPlan, formatEpochDay(), parseCanonicalDate(), plan
+Cohesion: 0.09
+Nodes (20): CareerInboxLifecycleError, acknowledged, blocking, career, delivered, emptyAbilities(), first, important (+12 more)
 
 ### Community 704 - "Community 704"
 Cohesion: 0.13
@@ -4017,8 +4476,8 @@ Cohesion: 0.14
 Nodes (13): Canonical Role Adaptation, Coordinate And State Contract, Integration Decisions, Match-Preparation Replacement, Next Phase Decision, Persistence Shape, Real Squad Adapter, Remaining Non-Blocking Risks (+5 more)
 
 ### Community 722 - "Community 722"
-Cohesion: 0.12
-Nodes (15): before, first, firstResult, negative, playerIds, playerStateFixture(), playerStates, rested (+7 more)
+Cohesion: 0.09
+Nodes (36): createLiveMatchTeamState(), formatSupportedConditionDemoProfiles(), formatSupportedFormationKeys(), formatSupportedLineupDemoProfiles(), formatSupportedMarketDemoProfiles(), formatSupportedSetupDemoProfiles(), isConditionDemoProfileKey(), isLineupDemoProfileKey() (+28 more)
 
 ### Community 723 - "Community 723"
 Cohesion: 0.28
@@ -4061,8 +4520,8 @@ Cohesion: 0.22
 Nodes (8): 09 - Phase Report And Next Phase Decision, code:sh (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, What NOT To Implement, What To Implement
 
 ### Community 733 - "Community 733"
-Cohesion: 0.04
-Nodes (44): copyStats(), createMatchReport(), blockEvents, goalCounts, goalEvents, report, result, resultWithFutureFields (+36 more)
+Cohesion: 0.05
+Nodes (44): selectFreeAgentPlayerIds(), abilities(), acceptedId, advanced, AI_CLUB, aiNegotiation, careerFixture(), club() (+36 more)
 
 ### Community 734 - "Community 734"
 Cohesion: 0.22
@@ -4085,12 +4544,12 @@ Cohesion: 0.22
 Nodes (8): code:sh (git diff --check), Definition of Done, Expected files, Goal, Required checks, Step 01 - Current Palette Failure Review And Target Lock, What NOT to implement, What to implement
 
 ### Community 739 - "Community 739"
-Cohesion: 0.04
-Nodes (53): createWebTranslator(), italian, translateWebLabel(), markup, CareerInboxPanel(), button, element, findButtonInChildren() (+45 more)
+Cohesion: 0.13
+Nodes (22): CareerContractBonusField, careerNonNegativeMoneyFromMinorUnits(), editableSubmitLabel(), AgreedSquadStatus, ContractOfferTerms, ContractRenewalFormField, ContractRenewalFormValues, ContractRenewalValidation (+14 more)
 
 ### Community 740 - "Community 740"
-Cohesion: 0.07
-Nodes (34): abilitiesFixture(), applied, ATTACKING_ROLES, attackingOption, awayBench(), awayXi(), baseHome, baseState (+26 more)
+Cohesion: 0.18
+Nodes (21): buildCareerDashboardViewFromCareerState(), buildRecentSelectedClubMatch(), buildSelectedClubTableRow(), CliFixture, CliFixtureId, formatActionLines(), formatBlockerKey(), formatBlockerLines() (+13 more)
 
 ### Community 741 - "Community 741"
 Cohesion: 0.22
@@ -4133,8 +4592,8 @@ Cohesion: 0.14
 Nodes (13): Architecture target, Binding persistence decisions, Canonical save scope, code:text (React screens), Definition of Done, Goal, No-dead-code contract, Ordered steps (+5 more)
 
 ### Community 751 - "Community 751"
-Cohesion: 0.13
-Nodes (11): createWebMatchdayState(), pauseWebLiveMatchday(), createWebCareerRuntime(), createWebCareerStorage(), WebCareerRuntimeHandle, WebCareerStorageHandle, workerBootstrapFailure(), CareerSessionSnapshot (+3 more)
+Cohesion: 0.06
+Nodes (50): calibrationV1SeasonCalibrationTargets, ContentCalibrationMetricKey, ContentCalibrationTarget, defaultSeasonCalibrationTargets, strictFailureSmokeTargets, formatSupportedCareerLineupDemoProfiles(), formatSupportedCareerTacticDemoProfiles(), formatSupportedMarketDemoProfiles() (+42 more)
 
 ### Community 752 - "Community 752"
 Cohesion: 0.15
@@ -4153,12 +4612,12 @@ Cohesion: 0.22
 Nodes (8): code:sh (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Step 03 - Palette Reduction And Preference Migration, What NOT to implement, What to implement
 
 ### Community 756 - "Community 756"
-Cohesion: 0.06
-Nodes (33): CareerInboxMessageInput, CareerContinueStopReason, CareerDashboardPresentation, CareerDashboardSectionId, CareerDashboardTaskState, DASHBOARD_SECTION_IDS, dashboardTaskState(), presentCareerDashboard() (+25 more)
+Cohesion: 0.04
+Nodes (73): CareerMatchPreparationBenchSlotStatus, CareerMatchPreparationBlockerKey, CareerMatchPreparationLineupSlotStatus, DemoMatchPreparationPlayerFoot, getDemoMatchPreparationPlayerFact(), compareNumbers(), comparePlayerOptionsByPosition(), FALLBACK_POSITION_BY_ROLE (+65 more)
 
 ### Community 757 - "Community 757"
-Cohesion: 0.03
-Nodes (99): ApplyCareerFixtureConditionConsequencesInput, ApplyCareerFixtureConditionConsequencesResult, CareerFixtureConditionChange, before, first, firstResult, input, playerStateFixture() (+91 more)
+Cohesion: 0.01
+Nodes (323): ActiveMatchCheckpoint, CreateStagedMatchCheckpointInput, sideStats(), team(), validCheckpoint(), CareerSeniorIntakeCandidateProviderContext, CareerYouthIntakeCandidateProviderContext, applyCareerFixtureConditionConsequences() (+315 more)
 
 ### Community 758 - "Community 758"
 Cohesion: 0.13
@@ -4245,8 +4704,8 @@ Cohesion: 0.17
 Nodes (11): Current Engine State, Current UI Read-Model State, Current Web State, Expected Source Files For Later Steps, In-Memory Decision, Question, Recommendation, Risks For Later Steps (+3 more)
 
 ### Community 779 - "Community 779"
-Cohesion: 0.04
-Nodes (61): benchStatusLabelKey(), formatFitness(), formatFitnessPercent(), formatFoot(), formatOptionalNumber(), formatTacticalPlayerOption(), roleLabelKey(), slotStatusLabelKey() (+53 more)
+Cohesion: 0.03
+Nodes (94): benchStatusLabelKey(), formatFitness(), formatFitnessPercent(), formatFoot(), formatOptionalNumber(), formatTacticalPlayerOption(), roleLabelKey(), slotStatusLabelKey() (+86 more)
 
 ### Community 780 - "Community 780"
 Cohesion: 0.08
@@ -4261,8 +4720,8 @@ Cohesion: 0.18
 Nodes (10): Dashboard And Inbox/Posta After Play, How The App Reaches Matchday, Key Entry Points For Junior Developers, Next Phase Recommendation, Quality Review, Real Engine Facts Used, Residual Risks, Roadmap Updates (+2 more)
 
 ### Community 783 - "Community 783"
-Cohesion: 0.07
-Nodes (26): afterFirst, base, baseSession(), currentGoalkeeper, currentTeam, firstChange, initial, input (+18 more)
+Cohesion: 0.13
+Nodes (22): chanceCreatorWeightForRole(), chanceShooterWeightForRole(), CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE, excludePlayerWhenPossible(), pickWeightedPlayer(), PRIMARY_DEFENDER_ROLE_WEIGHTS, primaryDefenderWeightForRole(), selectChanceActors() (+14 more)
 
 ### Community 784 - "Community 784"
 Cohesion: 0.10
@@ -4449,8 +4908,8 @@ Cohesion: 0.22
 Nodes (8): 07 - Section Quality Review And Phase Report, code:bash (nvm use 24), Done when, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 830 - "Community 830"
-Cohesion: 0.03
-Nodes (62): ActiveMatchCheckpoint, ActiveMatchCheckpointError, ActiveMatchCheckpointErrorCode, ActiveMatchCheckpointPhase, ActiveMatchConversionBand, ActiveMatchEngineConfig, ActiveMatchInitialContext, ActiveMatchLineupSlot (+54 more)
+Cohesion: 0.02
+Nodes (177): advanceCareerMonths(), AdvanceCareerMonthsInput, AdvanceCareerMonthsResult, civilDateFromEpochDay(), eligibleOpenParticipationRows(), ledgerForEligibleRows(), mergeClosedMonths(), monthKeyForCareerDate() (+169 more)
 
 ### Community 831 - "Community 831"
 Cohesion: 0.13
@@ -4489,20 +4948,20 @@ Cohesion: 0.22
 Nodes (8): 01 - Current Matchday Flow And UI Audit, code:bash (nvm use 24), Done when, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 840 - "Community 840"
-Cohesion: 0.22
-Nodes (12): LongRunAnomalyStatus, average(), check(), createLongRunYouthStabilityReport(), CreateLongRunYouthStabilityReportOptions, LongRunYouthSeasonRow, LongRunYouthStabilityCheck, LongRunYouthStabilityReport (+4 more)
+Cohesion: 0.11
+Nodes (23): nameCultureForNationality(), nationalitiesForBucket(), NATIONALITY_DISTRIBUTION_PROFILE_KEYS, NATIONALITY_DISTRIBUTION_PROFILES, NationalityBucket, NationalityDistributionProfile, NationalityDistributionProfileKey, regionalEuropeanNationalities() (+15 more)
 
 ### Community 841 - "Community 841"
 Cohesion: 0.09
-Nodes (21): DemoMatchPreparationPlayerFoot, getDemoMatchPreparationPlayerFact(), buildSquadRows(), CareerMatchPreparationScreen(), CareerMatchPreparationScreenProps, compareNumbers(), compareSquadRows(), firstPreparedPlayerId() (+13 more)
+Nodes (30): applyAiHalfTimeSubstitutions(), BenchUpgrade, bestBenchUpgrade(), CandidateForReason, isGoalkeeperRoleKey(), playerRoleForRoleKey(), playerScoreForRole(), ratingsByPlayer() (+22 more)
 
 ### Community 842 - "Community 842"
 Cohesion: 0.22
 Nodes (8): 02 - Engine Staged Match Progression Contract, code:bash (nvm use 24), Done when, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 843 - "Community 843"
-Cohesion: 0.18
-Nodes (15): applyCareerWeeklyRecovery(), assertRecoverablePlayerIds(), progressNextCareerFixture(), selectedClubTeamContext(), buildCareerTeamsByClubId(), completeBenchCount(), completeLineupCount(), nextSelectedClubFixtureId() (+7 more)
+Cohesion: 0.03
+Nodes (132): AdvanceCareerLongRunSeasonContext, AdvanceCareerLongRunSeasonResult, CareerLongRunRefreshSummary, CareerLongRunSimulationResult, CreateCareerLongRunSeasonInputContext, RunCareerLongRunSimulationInput, careerStateFixture(), initialCareerState (+124 more)
 
 ### Community 844 - "Community 844"
 Cohesion: 0.20
@@ -4569,8 +5028,8 @@ Cohesion: 0.11
 Nodes (17): 0. Sommario esecutivo, 1. Mappa del flusso (ciò che l'utente tocca davvero), 2.1 Prima partita ("a freddo" — preparazione inclusa), 2.2 Partita successiva ("a caldo" — già preparata), 2.3 Lettura del dato, 2. Quanti click e quanti pulsanti — *dal cruscotto al risultato finale*, 3. Il match centre: ben strutturato, ma non si "vive", 4. Navigazione e azioni: porte chiuse e pulsanti morti (+9 more)
 
 ### Community 860 - "Community 860"
-Cohesion: 0.06
-Nodes (59): FormatCareerDashboardOutputInput, applyLineupDemoProfile(), buildFirstTeamSelectedLineup(), buildRotatedLineup(), CareerLineupDemoPlayerChange, CareerMatchPreparation, CliSelectedLineup, CliTacticSetup (+51 more)
+Cohesion: 0.02
+Nodes (131): CareerScreenPresentationInput, CareerScreenPresentations, fixture, HookProbe(), input, useCareerScreenPresentations(), ContractNegotiationRejectionReason, buildCareerDashboard() (+123 more)
 
 ### Community 861 - "Community 861"
 Cohesion: 0.12
@@ -4805,8 +5264,8 @@ Cohesion: 0.29
 Nodes (11): assertNoHorizontalOverflow(), assertVisibleColumns(), assertVisiblePositionCodes(), CURRENT_DIR, inspectSquadList(), main(), openMatchPreparation(), REPO_ROOT (+3 more)
 
 ### Community 919 - "Community 919"
-Cohesion: 0.18
-Nodes (10): clubs, englishNames, first, frenchNames, germanNames, identities, names, sampledNames (+2 more)
+Cohesion: 0.15
+Nodes (12): code:bash (rg -n "playerIds|transferFunds|shirt|number|valuation|availa), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 920 - "Community 920"
 Cohesion: 0.20
@@ -4817,8 +5276,8 @@ Cohesion: 0.20
 Nodes (9): 13 - Playwright Refresh QA Architecture And Phase Report, code:bash (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Scope, Visual check for the user (+1 more)
 
 ### Community 922 - "Community 922"
-Cohesion: 0.06
-Nodes (35): abilitySet(), after, attacker, before, careerState, careerStateWithCurrentDate(), clubFixture(), currentSeasonId (+27 more)
+Cohesion: 0.12
+Nodes (23): actionsForNegotiation(), assertUniqueHistory(), buildCareerContractView(), buildDraftFields(), camelCaseBonus(), CareerActiveContractInput, CareerContractActionId, CareerContractActionView (+15 more)
 
 ### Community 923 - "Community 923"
 Cohesion: 0.22
@@ -4841,16 +5300,16 @@ Cohesion: 0.22
 Nodes (8): 11 - Demo Runtime Removal And Production Path Cleanup, code:bash (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 928 - "Community 928"
-Cohesion: 0.05
-Nodes (63): appEntryActionAvailability, AppEntryActionAvailabilityStatus, AppEntryActionId, appEntryActionResult, AppEntryUnavailableReasonKey, UiActionDetailValue, UiActionResult, UiActionResultStatus (+55 more)
+Cohesion: 0.29
+Nodes (6): AppEntryActionAvailabilityStatus, appEntryActionResult, AppEntryUnavailableReasonKey, UiActionDetailValue, UiActionResult, UiActionResultStatus
 
 ### Community 929 - "Community 929"
 Cohesion: 0.08
 Nodes (34): removeTempSaveDirectory(), FORMATIONS, removeTempSaveDirectory(), removeTempSaveDirectory(), removeTempSaveDirectory(), am(), backFive(), backFour() (+26 more)
 
 ### Community 930 - "Community 930"
-Cohesion: 0.10
-Nodes (30): bestPlayerSuitability(), bestSuitability(), buildDepthByPositionFamily(), buildFormationSquadFitReport(), BuildFormationSquadFitReportInput, buildSlotFit(), buildSquadFitHints(), buildSurplusGroups() (+22 more)
+Cohesion: 0.19
+Nodes (13): buildDemoMatchdayInput(), buildDemoMatchdayPhaseInput(), buildDemoMatchdayPhaseView(), buildDemoMatchdayView(), clubInput(), defaultOpponentLineupFromRoster(), defaultRoleKeyForSlot(), eventInputs() (+5 more)
 
 ### Community 931 - "Community 931"
 Cohesion: 0.14
@@ -4861,20 +5320,20 @@ Cohesion: 0.11
 Nodes (17): Architecture target, Calendar transition, code:text (structured career facts), Definition of Done, Goal, Locked attention model, Locked daily advancement model, Locked initial message policy (+9 more)
 
 ### Community 933 - "Community 933"
-Cohesion: 0.13
-Nodes (20): applyMigrations(), assertBootstrapCareer(), errorMessage(), hasWorkerCode(), inTransaction(), normalizeWorkerOperationError(), queryAll(), queryOne() (+12 more)
+Cohesion: 0.08
+Nodes (35): applyMigrations(), assertBootstrapCareer(), errorMessage(), hasWorkerCode(), inTransaction(), isUnsupportedSchemaVersion(), normalizeWorkerOperationError(), queryAll() (+27 more)
 
 ### Community 934 - "Community 934"
 Cohesion: 0.10
 Nodes (19): Ability meanings, Attribute and potential invariants, code:bash (nvm use 24), Current Problem Map, Definition Of Done, Determinism And Balance Contract, Goal, Locked Semantic Contract (+11 more)
 
 ### Community 935 - "Community 935"
-Cohesion: 0.02
-Nodes (153): App(), PreparationNavigationIntent, CareerAppFrame(), CareerAppFrameProps, CareerExitDialogState, html, SaveLifecycleProbe(), shellView (+145 more)
+Cohesion: 0.06
+Nodes (38): buildCareerPostaView(), BuildCareerPostaViewInput, buildPostaFactRows(), CareerInboxActionInput, CareerInboxMessageActionView, CareerInboxViewCategory, CareerPostaAttentionLevel, CareerPostaContinuePolicy (+30 more)
 
 ### Community 936 - "Community 936"
-Cohesion: 0.13
-Nodes (10): assertMatchingSave(), CareerSession, cloneCareerState(), isCareerAutosaveDue(), changed, clean, fixtureState(), session (+2 more)
+Cohesion: 0.10
+Nodes (20): doesCareerInboxMessageStopContinue(), isActionRequiredInboxMessage(), acknowledged, base, baseMessage, blocking, contractRelated, counter (+12 more)
 
 ### Community 937 - "Community 937"
 Cohesion: 0.10
@@ -4885,12 +5344,12 @@ Cohesion: 0.14
 Nodes (13): Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks (+5 more)
 
 ### Community 939 - "Community 939"
-Cohesion: 0.31
-Nodes (9): LongRunAnomalyReport, formatCheckCounts(), formatExecutionSummary(), formatLongRunGateReportMarkdown(), formatLongRunGateReportOutput(), formatWorstGateWorldLines(), LongRunGateCheckCount, LongRunGateReport (+1 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 940 - "Community 940"
-Cohesion: 0.13
-Nodes (26): Club, ClubId, clubLabel(), comparePlayerIdsAscending(), findFixture(), findRound(), Fixture, FixtureId (+18 more)
+Cohesion: 0.24
+Nodes (14): CURRENT_DIR, expectHoverAndBorderAlignment(), expectNoHorizontalOverflow(), expectPitchGrassStable(), expectSkinArtDirection(), expectStableSemanticColors(), expectThemeApplied(), inspectPalette() (+6 more)
 
 ### Community 941 - "Community 941"
 Cohesion: 0.14
@@ -4985,8 +5444,8 @@ Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Completion criteria, Contract requirements, Expected files, Goal, Required checks, Scope, Status (+2 more)
 
 ### Community 964 - "Community 964"
-Cohesion: 0.18
-Nodes (6): CURRENT_DIR, invalidReplacement, localCareerKeys, REPO_ROOT, secondState, state
+Cohesion: 0.17
+Nodes (17): benchCandidateForPlayer(), benchCandidatesForInput(), boundedFitnessModifier(), boundedRecentUseModifier(), buildAiSquadMatchTeamContext(), candidateForSlot(), chooseBenchPlayerIds(), playerRoleForSlot() (+9 more)
 
 ### Community 965 - "Community 965"
 Cohesion: 0.18
@@ -5037,8 +5496,8 @@ Cohesion: 0.20
 Nodes (9): Aggregate Metrics, Career Squad Refresh Long-Run Gates Report, code:bash (pnpm cli ten-season-report --seed-prefix=phase75-diagnostic ), Dynasty Warning Snapshots, Phase 75 Calibration Classification, Production Warning Snapshots, Reproduction, Table Spread Warning Snapshots (+1 more)
 
 ### Community 977 - "Community 977"
-Cohesion: 0.20
-Nodes (13): compareNumbers(), comparePlayerOptionsByPosition(), FALLBACK_POSITION_BY_ROLE, orderPlayerOptionsForLineupSlot(), POSITION_ORDER, POSITION_ORDER_INDEX, positionSortIndex(), SLOT_POSITION_TIERS (+5 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 978 - "Community 978"
 Cohesion: 0.29
@@ -5074,7 +5533,7 @@ Nodes (13): Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expec
 
 ### Community 986 - "Community 986"
 Cohesion: 0.15
-Nodes (13): applied, AWAY_STARTER_ONE, fullTime, halfTime, HOME_BENCH_ONE, HOME_BENCH_TWO, HOME_STARTER_ONE, HOME_STARTER_TWO (+5 more)
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 988 - "Community 988"
 Cohesion: 0.12
@@ -5133,16 +5592,16 @@ Cohesion: 0.11
 Nodes (17): Adopted Solution, Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expected Files, Findings Closed, Goal, Implementation Contract (+9 more)
 
 ### Community 1002 - "Community 1002"
-Cohesion: 0.13
-Nodes (26): CareerDashboardRecentMatchInput, CareerDashboardTableRowInput, buildCareerDashboardViewFromCareerState(), buildRecentSelectedClubMatch(), buildSelectedClubTableRow(), CliFixture, CliFixtureId, formatActionLines() (+18 more)
+Cohesion: 0.05
+Nodes (48): assertInitialLiveTeams(), LiveMatchCommand, LiveMatchCommandRejection, LiveMatchCommandValidation, PauseLiveMatchCommand, playerSet(), rejected(), ResumeLiveMatchCommand (+40 more)
 
 ### Community 1003 - "Community 1003"
 Cohesion: 0.03
-Nodes (37): blocker, clock, completeDialog, consequencesTab, CURRENT_DIR, detailTitle, disabledFutureNavigation, firstBenchSlot (+29 more)
+Nodes (44): availablePlayer, availablePlayerName, blocker, bounds, clock, completeDialog, consequencesTab, CURRENT_DIR (+36 more)
 
 ### Community 1004 - "Community 1004"
-Cohesion: 0.05
-Nodes (58): createMatchdayAttention(), containsSelectedClubInOrder(), findNextCareerFixture(), career, identity, input, playedCareer, prepared (+50 more)
+Cohesion: 0.10
+Nodes (19): acknowledged, base, before, blocking, first, firstResult, fixture, important (+11 more)
 
 ### Community 1005 - "Community 1005"
 Cohesion: 0.15
@@ -5177,8 +5636,8 @@ Cohesion: 0.17
 Nodes (11): code:bash (nvm use 24), Completion criteria, Expected files, Final report requirements, Goal, Manual inspection, Required checks, Scope (+3 more)
 
 ### Community 1013 - "Community 1013"
-Cohesion: 0.10
-Nodes (27): accumulateFixtureTotals(), accumulateSeasonTotals(), accumulateUpset(), assertValidBatchInput(), CalibrationMetricKey, CalibrationSeasonSummary, CalibrationTarget, CalibrationTotals (+19 more)
+Cohesion: 0.17
+Nodes (17): applyCareerWeeklyRecovery(), assertRecoverablePlayerIds(), containsSelectedClubInOrder(), findNextCareerFixture(), prepareWebMatchdayKickoff(), buildCareerTeamsByClubId(), completeBenchCount(), completeLineupCount() (+9 more)
 
 ### Community 1014 - "Community 1014"
 Cohesion: 0.18
@@ -5189,16 +5648,16 @@ Cohesion: 0.18
 Nodes (10): Evidence And Method, Executive Result, Incremental Remediation Order, Junior Developer Walkthrough, Localization Ownership, Preserved Strengths, Regression Boundary Map, Step 07 Handoff (+2 more)
 
 ### Community 1016 - "Community 1016"
-Cohesion: 0.20
-Nodes (7): createPermanentTransferIntent(), intent, market, pro01, pro18, updated, TransferContractError
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1017 - "Community 1017"
 Cohesion: 0.20
 Nodes (9): code:text (01 safety gate + task-first shell + focus), Dependency Order, Explicitly Deferred, Non-Negotiable Constraints, Phase 73B Exit Gate, Purpose, Severity Coverage, Source Evidence (+1 more)
 
 ### Community 1018 - "Community 1018"
-Cohesion: 0.09
-Nodes (25): acceptedPlan, alpha, attention, before, career, changedSlot, committed, created (+17 more)
+Cohesion: 0.06
+Nodes (32): before, blockEvents, context, expectedPlayerId, first, firstRunKickoff, firstRunNoEvent, firstRunRng (+24 more)
 
 ### Community 1019 - "Community 1019"
 Cohesion: 0.22
@@ -5257,8 +5716,8 @@ Cohesion: 0.50
 Nodes (4): Compatibility Requiring Proof Before Deletion, Confirmed Production-Unreachable, Test-Preserved, Confirmed Superseded Source Paths, Intentional Test Infrastructure
 
 ### Community 1033 - "Community 1033"
-Cohesion: 0.03
-Nodes (86): careerStateWithMonthlyParticipation(), accrueCommittedFixtureParticipation(), AccrueCommittedFixtureParticipationInput, accruePlayerFixtureParticipation(), assertMonthKey(), assertSafeNonNegativeInteger(), buildFixtureParticipationContributions(), BuildFixtureParticipationContributionsResult (+78 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1034 - "Community 1034"
 Cohesion: 0.67
@@ -5281,16 +5740,16 @@ Cohesion: 0.14
 Nodes (13): Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Inspectable Outcome, Manual Inspection (+5 more)
 
 ### Community 1039 - "Community 1039"
-Cohesion: 0.12
-Nodes (17): BuildCareerMatchdayPhaseViewInput, CareerMatchdayPhaseEventInput, CareerMatchdayPhasePlayerInput, baseInput(), fixture, fullTime, halfTime, notFullTime (+9 more)
+Cohesion: 0.06
+Nodes (31): 1. Player generation and club membership, 2. Preparation, Matchday, and plan carryover, 3. Transfers and valuation, 4. Youth conversion and player exits, 5. Monthly and full-time career boundaries, Current Ownership Trace, Exact Replacement And Extension Map, Executive Conclusion (+23 more)
 
 ### Community 1040 - "Community 1040"
 Cohesion: 0.15
 Nodes (12): Audit Contract, code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Inspectable Outcome, Manual Inspection, Required Checks (+4 more)
 
 ### Community 1041 - "Community 1041"
-Cohesion: 0.22
-Nodes (8): createCareerCommandRunner(), execute, exposeFailure, fail, first, order, published, runner
+Cohesion: 0.01
+Nodes (202): App(), PreparationNavigationIntent, CareerAppFrame(), CareerAppFrameProps, CareerExitDialogState, html, SaveLifecycleProbe(), shellView (+194 more)
 
 ### Community 1042 - "Community 1042"
 Cohesion: 0.15
@@ -5309,8 +5768,8 @@ Cohesion: 0.15
 Nodes (12): Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Inspectable Outcome, Required Checks (+4 more)
 
 ### Community 1046 - "Community 1046"
-Cohesion: 0.05
-Nodes (73): AppliedLiveMatchCommandFact, applyValidatedLiveMatchCommand(), ApplyLiveMatchTeamChangesCommand, LiveMatchCommandRejectionCode, validateLiveMatchCommand(), FormationSlotCandidate, canonicalPlayerRoleDepartment, PositionSuitability (+65 more)
+Cohesion: 0.11
+Nodes (18): Architecture And Ownership, Budget And Pending Exposure, code:bash (nvm use 24), Competition-Owned Transfer Windows, Definition Of Done, Entry Gate, Goal, Locked Product Decisions (+10 more)
 
 ### Community 1047 - "Community 1047"
 Cohesion: 0.15
@@ -5318,7 +5777,7 @@ Nodes (12): Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expec
 
 ### Community 1048 - "Community 1048"
 Cohesion: 0.12
-Nodes (28): abilitiesFixture(), buildAffordableScenario(), buildMarketDemoScenario(), buildStarRejectedScenario(), CliClubTransferBudget, CliGameState, CliIntent, CliMarketState (+20 more)
+Nodes (29): abilitiesFixture(), buildAffordableScenario(), buildMarketDemoScenario(), buildStarRejectedScenario(), CliClubFinanceState, CliClubTransferBudget, CliGameState, CliIntent (+21 more)
 
 ### Community 1049 - "Community 1049"
 Cohesion: 0.15
@@ -5349,12 +5808,12 @@ Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Inspectable Outcome, Required Checks, Scope, Status (+2 more)
 
 ### Community 1056 - "Community 1056"
-Cohesion: 0.36
-Nodes (11): abilityValues(), average(), averagePotentialRoom(), formatCareerSquadPlayerLine(), formatCareerYouthPlayerLine(), formatPrimaryPosition(), formatUnknownNationality(), roleRelevantCurrentAbility() (+3 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1057 - "Community 1057"
-Cohesion: 0.15
-Nodes (12): CAREER_MATCH_PREPARATION_FORMATIONS, DEFAULT_SLOT_COORDINATE, SLOT_COORDINATES, tacticalPitchSlotStyle, centerBackRow, centralMidfielderRow, column, defensiveMidfielderRow (+4 more)
+Cohesion: 0.06
+Nodes (64): ClubCategory, CareerIntakeClubContext, FakePlayerClubContext, selectPlayerArchetype(), ClubNameUsage, clubTierForReputation(), createClubNameUsage(), generateInitialYouthAcademies() (+56 more)
 
 ### Community 1058 - "Community 1058"
 Cohesion: 0.18
@@ -5421,8 +5880,8 @@ Cohesion: 0.14
 Nodes (13): Adopted Solution, code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Inspectable Outcome, Lesson Learned, Required Checks (+5 more)
 
 ### Community 1074 - "Community 1074"
-Cohesion: 0.11
-Nodes (17): aggregateMatches(), context, equal, first, goalCounts, GOLDEN_MATCH_RESULT, MatchFlowAggregate, profiledContext() (+9 more)
+Cohesion: 0.07
+Nodes (55): FormatCareerDashboardOutputInput, applyLineupDemoProfile(), buildFirstTeamSelectedLineup(), buildRotatedLineup(), CareerMatchPreparation, CliSelectedLineup, CliTacticSetup, findNextSelectedClubFixture() (+47 more)
 
 ### Community 1075 - "Community 1075"
 Cohesion: 0.12
@@ -5432,25 +5891,37 @@ Nodes (16): Behavioral safety, code:bash (nvm use 24), Definition Of Done, Entry
 Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
+### Community 1077 - "Community 1077"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1078 - "Community 1078"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
 ### Community 1079 - "Community 1079"
 Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1080 - "Community 1080"
-Cohesion: 0.16
-Nodes (19): averagePlayerAbilities(), clampSafeInteger(), DEFAULT_PLAYER_VALUATION_CONFIG, deriveAge(), derivePlayerValuation(), findAgeMultiplier(), PlayerMarketAbility, PlayerValuationAgeBand (+11 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1081 - "Community 1081"
 Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1082 - "Community 1082"
+Cohesion: 0.12
+Nodes (15): Adopted Solution, code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Lesson Learned, Manual Inspection (+7 more)
 
 ### Community 1083 - "Community 1083"
 Cohesion: 0.22
 Nodes (8): Aggregate Metrics, Career Squad Refresh Long-Run Gates Report, code:bash (pnpm cli ten-season-report --seed-prefix=phase74-player-mode), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Table Spread Warning Snapshots, Worst Worlds
 
 ### Community 1084 - "Community 1084"
-Cohesion: 0.12
-Nodes (17): progressStagedMatchToHalfTime(), applyDemoHalfTimeSubstitutions(), buildDemoHalfTimeSubstitutionPanel(), playDemoMatchdayFirstHalf(), selectedBenchPlayerIds(), fullTime, halfTime, invalid (+9 more)
+Cohesion: 0.09
+Nodes (23): ActiveMatchCheckpointError, ActiveMatchCheckpointErrorCode, ActiveMatchCheckpointPhase, ActiveMatchConversionBand, ActiveMatchEngineConfig, ActiveMatchInitialContext, ActiveMatchLineupSlot, ActiveMatchLocalState (+15 more)
 
 ### Community 1085 - "Community 1085"
 Cohesion: 0.15
@@ -5465,8 +5936,8 @@ Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1088 - "Community 1088"
-Cohesion: 0.08
-Nodes (29): BuildCareerPostaViewInput, buildPostaFactRows(), CareerInboxActionInput, CareerInboxMessageActionView, CareerInboxViewCategory, CareerPostaAttentionLevel, CareerPostaFactRowView, CareerPostaFixtureInput (+21 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1089 - "Community 1089"
 Cohesion: 0.15
@@ -5509,88 +5980,1916 @@ Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1099 - "Community 1099"
-Cohesion: 0.07
-Nodes (55): addFailure(), assertFixtureSetup(), assertInitialLiveTeams(), assertPlayableTeamAfterDecision(), assertValidInput(), collectFixtureFailures(), collectFixtureSamples(), countEventsBySide() (+47 more)
+Cohesion: 0.08
+Nodes (48): addFailure(), assertFixtureSetup(), assertPlayableTeamAfterDecision(), assertValidInput(), collectFixtureFailures(), collectFixtureSamples(), countEventsBySide(), countInjuries() (+40 more)
 
 ### Community 1100 - "Community 1100"
 Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1101 - "Community 1101"
-Cohesion: 0.11
-Nodes (33): abilitiesFixture(), buildAffordableScenario(), buildMarketDemoScenario(), buildStarRejectedScenario(), CareerMarketScenario, careerStateFromNewWorld(), CliFixture, CliFixtureId (+25 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1102 - "Community 1102"
-Cohesion: 0.05
-Nodes (50): initialYouthIdentity(), FlagAssetCode, flagAssetForNationality(), NATIONALITY_FLAG_ASSET_CODES, NationalityFlagAsset, absolutePath, asset, assets (+42 more)
+Cohesion: 0.15
+Nodes (23): Club, ClubId, clubLabel(), comparePlayerIdsAscending(), Fixture, FixtureId, formatAssistCount(), formatGoalCount() (+15 more)
 
 ### Community 1103 - "Community 1103"
-Cohesion: 0.02
-Nodes (249): validContext(), validTeam(), AdvanceCareerMonthsInput, careerStateWithParticipation(), CareerSeasonAdvancementFacts, CareerYouthIntakeCandidateProviderContext, PreparedSeasonContextValid, abilitySet() (+241 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1104 - "Community 1104"
-Cohesion: 0.19
-Nodes (9): database, insertedTables, matchTeam(), RecordingDatabase, richCareerFixture(), sideStats(), tableRow(), SqliteBindValue (+1 more)
+Cohesion: 0.05
+Nodes (84): createFakeSeasonInput(), createFakeTeamsByClubId(), buildFixtureExplanationTrace(), buildManualTacticFixture(), buildSetupOverrideContextForCli(), CliManualTacticFixture, CliTeamContext, ClubId (+76 more)
+
+### Community 1105 - "Community 1105"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1106 - "Community 1106"
-Cohesion: 0.08
-Nodes (32): LiveMatchControlDistribution, LiveMatchControlDistributionKey, LiveMatchControlFailure, LiveMatchControlInvariantKey, LiveMatchControlReproducibility, LiveMatchControlResultRates, LiveMatchControlWorldSummary, RunLiveMatchControlGateInput (+24 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1107 - "Community 1107"
-Cohesion: 0.19
-Nodes (14): buildDemoMatchdayInput(), buildDemoMatchdayPhaseInput(), buildDemoMatchdayPhaseView(), buildDemoMatchdayView(), clubInput(), defaultOpponentLineupFromRoster(), defaultRoleKeyForSlot(), eventInputs() (+6 more)
+Cohesion: 0.12
+Nodes (19): average(), createLongRunPlayerEvolutionReport(), CreateLongRunPlayerEvolutionReportInput, createTrajectoryDiagnostics(), LongRunPlayerMovementRow, LongRunPlayerProductionRow, LongRunPlayerSnapshotRow, LongRunPlayerTrajectoryCheck (+11 more)
 
 ### Community 1108 - "Community 1108"
 Cohesion: 0.03
-Nodes (93): CareerMatchdayLiveControlInput, LiveMatchEvent, MatchEventSide, TacticSetup, LiveMatchControlFixtureSetup, PlayerMatchInvolvementSummary, addUnavailablePlayer(), advanceProgressiveMatchMinute() (+85 more)
+Nodes (118): appEntryActionAvailability, AppEntryActionId, AppEntryView, AppLanguageKey, CurrencyPreferenceKey, AppEntryViewModelInput, buildAppEntryViewModel(), getAppEntryAction() (+110 more)
 
 ### Community 1109 - "Community 1109"
-Cohesion: 0.09
-Nodes (28): LiveMatchLineupSlot, FormationSide, FormationSlot, CanonicalPlayerRole, ADAPTED_FAMILIES_BY_POSITION, ADAPTED_ROLES_BY_POSITION, bestSideBonus(), evaluatePositionSuitability() (+20 more)
+Cohesion: 0.06
+Nodes (45): bestPlayerSuitability(), bestSuitability(), buildDepthByPositionFamily(), buildFormationSquadFitReport(), buildSlotFit(), buildSquadFitHints(), buildSurplusGroups(), compareCandidates() (+37 more)
 
 ### Community 1110 - "Community 1110"
-Cohesion: 0.06
-Nodes (49): calibrationV1SeasonCalibrationTargets, ContentCalibrationMetricKey, ContentCalibrationTarget, defaultSeasonCalibrationTargets, strictFailureSmokeTargets, balanceMetricMessageKey(), BalanceReportCommandIo, formatBalanceReportOutput() (+41 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1111 - "Community 1111"
-Cohesion: 0.24
-Nodes (14): CURRENT_DIR, expectHoverAndBorderAlignment(), expectNoHorizontalOverflow(), expectPitchGrassStable(), expectSkinArtDirection(), expectStableSemanticColors(), expectThemeApplied(), inspectPalette() (+6 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1112 - "Community 1112"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1113 - "Community 1113"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1114 - "Community 1114"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1115 - "Community 1115"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1116 - "Community 1116"
+Cohesion: 0.10
+Nodes (28): accumulateFixtureTotals(), accumulateSeasonTotals(), accumulateUpset(), assertValidBatchInput(), CalibrationMetricKey, CalibrationMetricResult, CalibrationSeasonSummary, CalibrationTarget (+20 more)
+
+### Community 1117 - "Community 1117"
+Cohesion: 0.16
+Nodes (21): abilityValues(), average(), averagePotentialRoom(), formatCareerSquadPlayerLine(), formatCareerYouthPlayerLine(), formatPrimaryPosition(), formatUnknownNationality(), roleRelevantCurrentAbility() (+13 more)
 
 ### Community 1118 - "Community 1118"
 Cohesion: 0.05
 Nodes (40): Canonical Ownership At Phase Close, Career Ownership, Condition And Ratings, Control And Possession, Deterministic Season Evidence, Durable Consequences, Football Interpretation, Interruption And Publication Guarantees (+32 more)
 
+### Community 1119 - "Community 1119"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
 ### Community 1120 - "Community 1120"
-Cohesion: 0.07
-Nodes (28): CareerCurrentDate(), CareerCurrentDateProps, html, MatchdayTabellinoView, MATCHDAY_PLAYBACK_SPEEDS, MatchdayPlaybackSpeed, MatchdayPlaybackControls(), MatchdayPlaybackControlsProps (+20 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1121 - "Community 1121"
+Cohesion: 0.02
+Nodes (215): AiContractLifecycleIndex, DueAiContract, seniorSquadFixture(), abilities(), acceptedTerms(), AI_CLUB, careerFixture(), careerState (+207 more)
+
+### Community 1122 - "Community 1122"
+Cohesion: 0.06
+Nodes (66): ShotChanceType, ShotType, AggregateOccasionResolver, clamp(), deriveOpportunityQuality(), resolveGoalProbability(), teamBySide(), ChanceActors (+58 more)
+
+### Community 1123 - "Community 1123"
+Cohesion: 0.24
+Nodes (17): createContractAttentionEvent(), createPlayedFixtureResultInboxMessage(), matchdayMessage(), createInboxMessageForAttentionEvent(), message(), careerInboxMessageId, createCareerInboxMessage(), advanceSelectedClubContractsToAttention() (+9 more)
+
+### Community 1125 - "Community 1125"
+Cohesion: 0.20
+Nodes (17): ClubAbilityHierarchySnapshot, ClubAbilityHierarchySummary, clubLabel(), drawRate(), goalsPerMatch(), LongRunSeasonResult, formatAbilityHierarchySnapshot(), formatAnomalyLines() (+9 more)
 
 ### Community 1126 - "Community 1126"
-Cohesion: 0.13
-Nodes (15): CreateLongRunAnomalyReportInput, failureReport, report, warningReport, average(), createLongRunClubStabilityReport(), longestChampionStreak(), LongRunClubSeasonRow (+7 more)
+Cohesion: 0.08
+Nodes (30): FlagAssetCode, flagAssetForNationality(), NATIONALITY_FLAG_ASSET_CODES, NationalityFlagAsset, absolutePath, asset, assets, mappedNationalities (+22 more)
 
 ### Community 1127 - "Community 1127"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1128 - "Community 1128"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1129 - "Community 1129"
+Cohesion: 0.10
+Nodes (15): counterTerms, CURRENT_DIR, firstRuntime, invalidReplacement, loadedCounterMessage, localCareerKeys, offerTerms, pendingState (+7 more)
+
+### Community 1130 - "Community 1130"
+Cohesion: 0.13
+Nodes (14): applyDemoHalfTimeSubstitutions(), buildDemoHalfTimeSubstitutionPanel(), fullTime, halfTime, invalid, invalidPreparation, panel, phaseView (+6 more)
+
+### Community 1131 - "Community 1131"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1132 - "Community 1132"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1133 - "Community 1133"
+Cohesion: 0.21
+Nodes (15): compareAscending(), compareDescending(), compareMutableRowsByContribution(), compareMutableRowsBySideOrder(), comparePlayerIdsAscending(), compareSides(), computePlayerMatchStats(), creditShot() (+7 more)
+
+### Community 1134 - "Community 1134"
+Cohesion: 0.16
+Nodes (11): database, historyEvents, inboxInsert, insertedTables, matchTeam(), negotiationTerms(), RecordingDatabase, richCareerFixture() (+3 more)
+
+### Community 1135 - "Community 1135"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1136 - "Community 1136"
+Cohesion: 0.16
+Nodes (16): LongRunAnomalyStatus, CareerLongRunSeasonResult, LongRunContractFinanceCheck, LongRunContractFinanceStabilityReport, average(), check(), createLongRunYouthStabilityReport(), CreateLongRunYouthStabilityReportOptions (+8 more)
+
+### Community 1137 - "Community 1137"
 Cohesion: 0.25
-Nodes (6): BuildCareerMatchPreparationViewInput, baseInput(), forwardSlots, input, slot(), view
+Nodes (15): createCareerAttentionEvent(), createMatchdayAttentionEvent(), createMatchdayReachedEvent(), createMatchPreparationRequiredEvent(), compareMessages(), continueCareerUntilAttention(), createMatchdayAttention(), levelRank() (+7 more)
+
+### Community 1138 - "Community 1138"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1139 - "Community 1139"
+Cohesion: 0.09
+Nodes (16): createWebMatchdayState(), enterWebMatchday(), createWebCareerRuntime(), createWebCareerStorage(), WebCareerRuntimeHandle, WebCareerStorageHandle, workerBootstrapFailure(), assertMatchingSave() (+8 more)
+
+### Community 1140 - "Community 1140"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1141 - "Community 1141"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1142 - "Community 1142"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1143 - "Community 1143"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1144 - "Community 1144"
+Cohesion: 0.27
+Nodes (11): acknowledgeImportantCareerInboxMessage(), CareerInboxLifecycleErrorCode, deliverCareerInboxMessages(), equalInboxMessage(), openCareerInboxMessage(), reconcileCareerInboxResolution(), replaceMessage(), requiredMessage() (+3 more)
+
+### Community 1145 - "Community 1145"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1146 - "Community 1146"
+Cohesion: 0.22
+Nodes (7): BuildCareerMatchPreparationViewInput, baseInput(), eligibilityBlocker, forwardSlots, input, slot(), view
+
+### Community 1147 - "Community 1147"
+Cohesion: 0.36
+Nodes (6): buildCalendarAdvanceTransition(), CalendarAdvanceFrame, CalendarAdvanceTransitionPlan, formatEpochDay(), parseCanonicalDate(), plan
+
+### Community 1148 - "Community 1148"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1149 - "Community 1149"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1150 - "Community 1150"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1151 - "Community 1151"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1152 - "Community 1152"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1153 - "Community 1153"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1154 - "Community 1154"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1155 - "Community 1155"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1156 - "Community 1156"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1157 - "Community 1157"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1158 - "Community 1158"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1159 - "Community 1159"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1160 - "Community 1160"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1161 - "Community 1161"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1162 - "Community 1162"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1163 - "Community 1163"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1164 - "Community 1164"
+Cohesion: 0.21
+Nodes (13): abilitySet(), candidate(), candidates, careerState, careerStateFixture(), clubFixture(), existing, gameStateFixture() (+5 more)
+
+### Community 1165 - "Community 1165"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1166 - "Community 1166"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1167 - "Community 1167"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1168 - "Community 1168"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1169 - "Community 1169"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1170 - "Community 1170"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1171 - "Community 1171"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1172 - "Community 1172"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1173 - "Community 1173"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1174 - "Community 1174"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1175 - "Community 1175"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1176 - "Community 1176"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1177 - "Community 1177"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1178 - "Community 1178"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1179 - "Community 1179"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1180 - "Community 1180"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-debug --wor), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1181 - "Community 1181"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-debug --wor), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1182 - "Community 1182"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-profile-v2 ), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1183 - "Community 1183"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1184 - "Community 1184"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1185 - "Community 1185"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1186 - "Community 1186"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1187 - "Community 1187"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1188 - "Community 1188"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1189 - "Community 1189"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1190 - "Community 1190"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1191 - "Community 1191"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1192 - "Community 1192"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1193 - "Community 1193"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1194 - "Community 1194"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1195 - "Community 1195"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1196 - "Community 1196"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1197 - "Community 1197"
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
+
+### Community 1198 - "Community 1198"
+Cohesion: 0.17
+Nodes (11): DEFAULT_SLOT_COORDINATE, SLOT_COORDINATES, tacticalPitchSlotStyle, centerBackRow, centralMidfielderRow, column, defensiveMidfielderRow, formation (+3 more)
+
+### Community 1199 - "Community 1199"
+Cohesion: 0.15
+Nodes (12): attentionLevelRank(), careerAttentionEventId, compareCareerAttentionEvents(), isUnresolvedCareerAttentionEvent(), base, event, first, incomplete (+4 more)
+
+### Community 1200 - "Community 1200"
+Cohesion: 0.17
+Nodes (8): blockEvents, goalCounts, goalEvents, report, result, resultWithFutureFields, saveEvents, shotEvents
+
+### Community 1201 - "Community 1201"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1202 - "Community 1202"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1203 - "Community 1203"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1204 - "Community 1204"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1205 - "Community 1205"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1206 - "Community 1206"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1207 - "Community 1207"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1208 - "Community 1208"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1209 - "Community 1209"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1210 - "Community 1210"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1211 - "Community 1211"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1212 - "Community 1212"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1213 - "Community 1213"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1214 - "Community 1214"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1215 - "Community 1215"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1216 - "Community 1216"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1217 - "Community 1217"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1218 - "Community 1218"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1219 - "Community 1219"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1220 - "Community 1220"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1221 - "Community 1221"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1222 - "Community 1222"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1223 - "Community 1223"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1224 - "Community 1224"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1225 - "Community 1225"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1226 - "Community 1226"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1227 - "Community 1227"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1228 - "Community 1228"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1229 - "Community 1229"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1230 - "Community 1230"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1231 - "Community 1231"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1232 - "Community 1232"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1233 - "Community 1233"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1234 - "Community 1234"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1235 - "Community 1235"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1236 - "Community 1236"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1237 - "Community 1237"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1238 - "Community 1238"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1239 - "Community 1239"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1240 - "Community 1240"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1241 - "Community 1241"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1242 - "Community 1242"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1243 - "Community 1243"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1244 - "Community 1244"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1245 - "Community 1245"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1246 - "Community 1246"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1247 - "Community 1247"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1248 - "Community 1248"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1249 - "Community 1249"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1250 - "Community 1250"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1251 - "Community 1251"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1252 - "Community 1252"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1253 - "Community 1253"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1254 - "Community 1254"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1255 - "Community 1255"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1256 - "Community 1256"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1257 - "Community 1257"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1258 - "Community 1258"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1259 - "Community 1259"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1260 - "Community 1260"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1261 - "Community 1261"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1262 - "Community 1262"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1263 - "Community 1263"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1264 - "Community 1264"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1265 - "Community 1265"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1266 - "Community 1266"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1267 - "Community 1267"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1268 - "Community 1268"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1269 - "Community 1269"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1270 - "Community 1270"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1271 - "Community 1271"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1272 - "Community 1272"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1273 - "Community 1273"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1274 - "Community 1274"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1275 - "Community 1275"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1276 - "Community 1276"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1277 - "Community 1277"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1278 - "Community 1278"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1279 - "Community 1279"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1280 - "Community 1280"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1281 - "Community 1281"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1282 - "Community 1282"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1283 - "Community 1283"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1284 - "Community 1284"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1285 - "Community 1285"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1286 - "Community 1286"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1287 - "Community 1287"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1288 - "Community 1288"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1289 - "Community 1289"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1290 - "Community 1290"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1291 - "Community 1291"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1292 - "Community 1292"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1293 - "Community 1293"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1294 - "Community 1294"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1295 - "Community 1295"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1296 - "Community 1296"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1297 - "Community 1297"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1298 - "Community 1298"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1299 - "Community 1299"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1300 - "Community 1300"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1301 - "Community 1301"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1302 - "Community 1302"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1303 - "Community 1303"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1304 - "Community 1304"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1305 - "Community 1305"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1306 - "Community 1306"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1307 - "Community 1307"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1308 - "Community 1308"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1309 - "Community 1309"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1310 - "Community 1310"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1311 - "Community 1311"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1312 - "Community 1312"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1313 - "Community 1313"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1314 - "Community 1314"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1315 - "Community 1315"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1316 - "Community 1316"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1317 - "Community 1317"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1318 - "Community 1318"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1319 - "Community 1319"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1320 - "Community 1320"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1321 - "Community 1321"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1322 - "Community 1322"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1323 - "Community 1323"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1324 - "Community 1324"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1325 - "Community 1325"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1326 - "Community 1326"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1327 - "Community 1327"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1328 - "Community 1328"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1329 - "Community 1329"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1330 - "Community 1330"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1331 - "Community 1331"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1332 - "Community 1332"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1333 - "Community 1333"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1334 - "Community 1334"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1335 - "Community 1335"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1336 - "Community 1336"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1337 - "Community 1337"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1338 - "Community 1338"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1339 - "Community 1339"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1340 - "Community 1340"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1341 - "Community 1341"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1342 - "Community 1342"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1343 - "Community 1343"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1344 - "Community 1344"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1345 - "Community 1345"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1346 - "Community 1346"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1347 - "Community 1347"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1348 - "Community 1348"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1349 - "Community 1349"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1350 - "Community 1350"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1351 - "Community 1351"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1352 - "Community 1352"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1353 - "Community 1353"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1354 - "Community 1354"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1355 - "Community 1355"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1356 - "Community 1356"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1357 - "Community 1357"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1358 - "Community 1358"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1359 - "Community 1359"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1360 - "Community 1360"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1361 - "Community 1361"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1362 - "Community 1362"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1363 - "Community 1363"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1364 - "Community 1364"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1365 - "Community 1365"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1366 - "Community 1366"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1367 - "Community 1367"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1368 - "Community 1368"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1369 - "Community 1369"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1370 - "Community 1370"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1371 - "Community 1371"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1372 - "Community 1372"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1373 - "Community 1373"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1374 - "Community 1374"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1375 - "Community 1375"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1376 - "Community 1376"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1377 - "Community 1377"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1378 - "Community 1378"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1379 - "Community 1379"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1380 - "Community 1380"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1381 - "Community 1381"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1382 - "Community 1382"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1383 - "Community 1383"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1384 - "Community 1384"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1385 - "Community 1385"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1386 - "Community 1386"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1387 - "Community 1387"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1388 - "Community 1388"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1389 - "Community 1389"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1390 - "Community 1390"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1391 - "Community 1391"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1392 - "Community 1392"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1393 - "Community 1393"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1394 - "Community 1394"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1395 - "Community 1395"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1396 - "Community 1396"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1397 - "Community 1397"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1398 - "Community 1398"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1399 - "Community 1399"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1400 - "Community 1400"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1401 - "Community 1401"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1402 - "Community 1402"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1403 - "Community 1403"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1404 - "Community 1404"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1405 - "Community 1405"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1406 - "Community 1406"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1407 - "Community 1407"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1408 - "Community 1408"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1409 - "Community 1409"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1410 - "Community 1410"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1411 - "Community 1411"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1412 - "Community 1412"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1413 - "Community 1413"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1414 - "Community 1414"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1415 - "Community 1415"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1416 - "Community 1416"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1417 - "Community 1417"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1418 - "Community 1418"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1419 - "Community 1419"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1420 - "Community 1420"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1421 - "Community 1421"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1422 - "Community 1422"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1423 - "Community 1423"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1424 - "Community 1424"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1425 - "Community 1425"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1426 - "Community 1426"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1427 - "Community 1427"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1428 - "Community 1428"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1429 - "Community 1429"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1430 - "Community 1430"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1431 - "Community 1431"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1432 - "Community 1432"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1433 - "Community 1433"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1434 - "Community 1434"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1435 - "Community 1435"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1436 - "Community 1436"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1437 - "Community 1437"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1438 - "Community 1438"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1439 - "Community 1439"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1440 - "Community 1440"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1441 - "Community 1441"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1442 - "Community 1442"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1443 - "Community 1443"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1444 - "Community 1444"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1445 - "Community 1445"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1446 - "Community 1446"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1447 - "Community 1447"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1448 - "Community 1448"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1449 - "Community 1449"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1450 - "Community 1450"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1451 - "Community 1451"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1452 - "Community 1452"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1453 - "Community 1453"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1454 - "Community 1454"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1455 - "Community 1455"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1456 - "Community 1456"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1457 - "Community 1457"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1458 - "Community 1458"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1459 - "Community 1459"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1460 - "Community 1460"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1461 - "Community 1461"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1462 - "Community 1462"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1463 - "Community 1463"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1464 - "Community 1464"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1465 - "Community 1465"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1466 - "Community 1466"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1467 - "Community 1467"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1468 - "Community 1468"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1469 - "Community 1469"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1470 - "Community 1470"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1471 - "Community 1471"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1472 - "Community 1472"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1473 - "Community 1473"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1474 - "Community 1474"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1475 - "Community 1475"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1476 - "Community 1476"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1477 - "Community 1477"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1478 - "Community 1478"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1479 - "Community 1479"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1480 - "Community 1480"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1481 - "Community 1481"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1482 - "Community 1482"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1483 - "Community 1483"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1484 - "Community 1484"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1485 - "Community 1485"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1486 - "Community 1486"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1487 - "Community 1487"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1488 - "Community 1488"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1489 - "Community 1489"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1490 - "Community 1490"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1491 - "Community 1491"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1492 - "Community 1492"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1493 - "Community 1493"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1494 - "Community 1494"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1495 - "Community 1495"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1496 - "Community 1496"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1497 - "Community 1497"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1498 - "Community 1498"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1499 - "Community 1499"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1500 - "Community 1500"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1501 - "Community 1501"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1502 - "Community 1502"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1503 - "Community 1503"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1504 - "Community 1504"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1505 - "Community 1505"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1506 - "Community 1506"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1507 - "Community 1507"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1508 - "Community 1508"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1509 - "Community 1509"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1510 - "Community 1510"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1511 - "Community 1511"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1512 - "Community 1512"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1513 - "Community 1513"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1514 - "Community 1514"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1515 - "Community 1515"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1516 - "Community 1516"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1517 - "Community 1517"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1518 - "Community 1518"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1519 - "Community 1519"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1520 - "Community 1520"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1521 - "Community 1521"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1522 - "Community 1522"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1523 - "Community 1523"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1524 - "Community 1524"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1525 - "Community 1525"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1526 - "Community 1526"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1527 - "Community 1527"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1528 - "Community 1528"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1529 - "Community 1529"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1530 - "Community 1530"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1531 - "Community 1531"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1532 - "Community 1532"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1533 - "Community 1533"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1534 - "Community 1534"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1535 - "Community 1535"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1536 - "Community 1536"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1537 - "Community 1537"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1538 - "Community 1538"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1539 - "Community 1539"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1540 - "Community 1540"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1541 - "Community 1541"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1542 - "Community 1542"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1543 - "Community 1543"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1544 - "Community 1544"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1545 - "Community 1545"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1546 - "Community 1546"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1547 - "Community 1547"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1548 - "Community 1548"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1549 - "Community 1549"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1550 - "Community 1550"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1551 - "Community 1551"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1552 - "Community 1552"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1553 - "Community 1553"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1554 - "Community 1554"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1555 - "Community 1555"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1556 - "Community 1556"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1557 - "Community 1557"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1558 - "Community 1558"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1559 - "Community 1559"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1560 - "Community 1560"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1561 - "Community 1561"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1562 - "Community 1562"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1563 - "Community 1563"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1564 - "Community 1564"
+Cohesion: 0.27
+Nodes (8): average(), createLongRunClubStabilityReport(), longestChampionStreak(), LongRunClubSeasonRow, LongRunRefreshTotals, mostTitledClub(), roundMetric(), report
+
+### Community 1565 - "Community 1565"
+Cohesion: 0.28
+Nodes (5): loadDomAnimation(), html, WebMotionProvider(), WebMotionProviderProps, root
+
+### Community 1566 - "Community 1566"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1567 - "Community 1567"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1568 - "Community 1568"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1569 - "Community 1569"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1570 - "Community 1570"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1571 - "Community 1571"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
+
+### Community 1572 - "Community 1572"
+Cohesion: 0.22
+Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
 
 ## Knowledge Gaps
-- **10563 isolated node(s):** `target`, `module`, `moduleResolution`, `noEmit`, `strict` (+10558 more)
+- **15873 isolated node(s):** `target`, `module`, `moduleResolution`, `noEmit`, `strict` (+15868 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `playerId` connect `Community 757` to `Community 2`, `Community 6`, `Community 8`, `Community 1033`, `Community 10`, `Community 13`, `Community 783`, `Community 1039`, `Community 16`, `Community 21`, `Community 22`, `Community 1046`, `Community 25`, `Community 26`, `Community 922`, `Community 284`, `Community 930`, `Community 36`, `Community 1062`, `Community 43`, `Community 45`, `Community 46`, `Community 48`, `Community 49`, `Community 1074`, `Community 51`, `Community 55`, `Community 61`, `Community 830`, `Community 62`, `Community 1099`, `Community 1103`, `Community 722`, `Community 1108`, `Community 1109`, `Community 986`, `Community 92`, `Community 733`, `Community 98`, `Community 740`, `Community 109`, `Community 1013`, `Community 1016`?**
+- **Why does `playerId` connect `Community 43` to `Community 2`, `Community 5`, `Community 6`, `Community 9`, `Community 10`, `Community 12`, `Community 1164`, `Community 14`, `Community 15`, `Community 13`, `Community 783`, `Community 21`, `Community 25`, `Community 284`, `Community 1057`, `Community 36`, `Community 1062`, `Community 936`, `Community 41`, `Community 45`, `Community 46`, `Community 1199`, `Community 1200`, `Community 49`, `Community 51`, `Community 54`, `Community 55`, `Community 58`, `Community 1084`, `Community 61`, `Community 62`, `Community 830`, `Community 703`, `Community 964`, `Community 70`, `Community 841`, `Community 843`, `Community 1099`, `Community 1104`, `Community 1109`, `Community 87`, `Community 1116`, `Community 93`, `Community 733`, `Community 92`, `Community 1121`, `Community 1122`, `Community 98`, `Community 1002`, `Community 109`, `Community 1133`, `Community 757`, `Community 1018`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `FORMATIONS` connect `Community 701` to `Community 929`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `number()` connect `Community 22` to `Community 1033`, `Community 10`, `Community 11`, `Community 14`, `Community 20`, `Community 1046`, `Community 25`, `Community 26`, `Community 284`, `Community 28`, `Community 30`, `Community 1056`, `Community 36`, `Community 933`, `Community 935`, `Community 936`, `Community 43`, `Community 48`, `Community 52`, `Community 703`, `Community 1088`, `Community 70`, `Community 83`, `Community 1110`, `Community 87`, `Community 98`, `Community 611`, `Community 1003`, `Community 757`, `Community 125`, `Community 127`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `number()` connect `Community 12` to `Community 6`, `Community 10`, `Community 11`, `Community 14`, `Community 15`, `Community 20`, `Community 23`, `Community 25`, `Community 286`, `Community 31`, `Community 30`, `Community 1057`, `Community 36`, `Community 933`, `Community 935`, `Community 43`, `Community 49`, `Community 52`, `Community 830`, `Community 62`, `Community 964`, `Community 841`, `Community 843`, `Community 1104`, `Community 722`, `Community 83`, `Community 1108`, `Community 87`, `Community 1117`, `Community 1121`, `Community 739`, `Community 611`, `Community 102`, `Community 1003`, `Community 751`, `Community 1139`, `Community 757`, `Community 1147`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `clubId` connect `Community 36` to `Community 2`, `Community 5`, `Community 6`, `Community 9`, `Community 10`, `Community 12`, `Community 1164`, `Community 13`, `Community 15`, `Community 783`, `Community 25`, `Community 26`, `Community 284`, `Community 1057`, `Community 936`, `Community 42`, `Community 43`, `Community 45`, `Community 46`, `Community 1199`, `Community 49`, `Community 51`, `Community 52`, `Community 55`, `Community 1084`, `Community 830`, `Community 62`, `Community 703`, `Community 964`, `Community 70`, `Community 841`, `Community 843`, `Community 1099`, `Community 87`, `Community 1116`, `Community 93`, `Community 733`, `Community 92`, `Community 1121`, `Community 1004`, `Community 109`, `Community 1137`, `Community 757`, `Community 1144`, `Community 1018`?**
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **What connects `target`, `module`, `moduleResolution` to the rest of the system?**
-  _10563 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _15873 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.006600660066006601 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.006329113924050633 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.018262606497900617 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.014295476288096215 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.041782178217821785 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04918032786885246 - nodes in this community are weakly interconnected._

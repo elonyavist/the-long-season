@@ -5,7 +5,7 @@ import { toISO } from "@game/shared";
 import {
   clubLabel,
   countPlayedSelectedClubFixtures,
-  findClubTransferBudget,
+  findClubFinanceAccount,
   findNextSelectedClubFixture,
   formatAffectedClubLines,
   formatCareerWorldMetadataLines,
@@ -25,7 +25,9 @@ export function formatCareerInspectOutput(input: {
   readonly text: Translator;
 }): readonly string[] {
   const selectedClub = input.careerState.gameState.clubs[input.careerState.selectedClubId];
-  const selectedBudget = findClubTransferBudget(input.careerState.marketState, input.careerState.selectedClubId);
+  const selectedAccount = input.careerState.clubFinanceState === undefined
+    ? undefined
+    : findClubFinanceAccount(input.careerState.clubFinanceState, input.careerState.selectedClubId);
   const lines = [
     input.text("career.inspect.title"),
     `${input.text("career.save")}: ${input.careerState.saveId}`,
@@ -33,7 +35,7 @@ export function formatCareerInspectOutput(input: {
     ...formatCareerWorldMetadataLines(input.careerState, input.text),
     `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
     `${input.text("career.selectedClubRosterSize")}: ${selectedClub?.playerIds.length ?? 0}`,
-    `${input.text("career.selectedClubTransferFunds")}: ${formatMoney(selectedBudget?.transferBudget)}`,
+    `${input.text("career.selectedClubTransferFunds")}: ${formatMoney(selectedAccount?.availableTransferBudget)}`,
     `${input.text("career.selectedClubPlayedFixtures")}: ${countPlayedSelectedClubFixtures(input.careerState)}`,
     `${input.text("career.transferHistory")}:`,
     ...formatTransferHistoryLines(input.careerState, input.text),
@@ -53,7 +55,9 @@ export function formatCareerSummaryOutput(input: {
   readonly text: Translator;
 }): readonly string[] {
   const selectedClub = input.careerState.gameState.clubs[input.careerState.selectedClubId];
-  const selectedBudget = findClubTransferBudget(input.careerState.marketState, input.careerState.selectedClubId);
+  const selectedAccount = input.careerState.clubFinanceState === undefined
+    ? undefined
+    : findClubFinanceAccount(input.careerState.clubFinanceState, input.careerState.selectedClubId);
   const nextFixture = findNextSelectedClubFixture(input.careerState);
 
   return [
@@ -65,7 +69,7 @@ export function formatCareerSummaryOutput(input: {
     `${input.text("career.currentSeason")}: ${input.careerState.gameState.calendar.currentSeasonId}`,
     `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
     `${input.text("career.selectedClubRosterSize")}: ${selectedClub?.playerIds.length ?? 0}`,
-    `${input.text("career.selectedClubTransferFunds")}: ${formatMoney(selectedBudget?.transferBudget)}`,
+    `${input.text("career.selectedClubTransferFunds")}: ${formatMoney(selectedAccount?.availableTransferBudget)}`,
     `${input.text("career.nextSelectedClubFixture")}:`,
     ...formatNextSelectedClubFixtureLines(input.careerState, nextFixture, input.text),
     `${input.text("career.matchPreparation")}:`,

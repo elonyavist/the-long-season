@@ -13,6 +13,8 @@ import {
   applyMatchPreparationSelectionAction,
   buildDurableMatchPreparation,
   createMatchPreparationDraft,
+  selectMatchPreparationBenchPlayer,
+  selectMatchPreparationPlayer,
   selectMatchPreparationTactic,
 } from "../features/match-preparation/match-preparation-adapter";
 
@@ -247,6 +249,7 @@ describe("WebCareerRuntime", () => {
       category: "matchday",
       source: "technical_staff",
       level: "important",
+      continuePolicy: "until_acknowledged",
       lifecycle: { read: false, acknowledged: false, resolved: false },
       related: { fixtureId: firstFixtureId, clubId: generated.selectedClubId },
       blockerKeys: [],
@@ -269,6 +272,60 @@ describe("WebCareerRuntime", () => {
       acknowledged: true,
       resolved: false,
     });
+  });
+
+  it("routes selected-club contract decisions through one memory-only command seam", async () => {
+    const storage = new RecordingCareerStorage();
+    const state = buildWebCareerState({
+      saveId: "save:web-contract-command" as WebCareerSaveId,
+      worldSeed: "web-contract-command-seed",
+    });
+    const contract = state.seniorSquadState?.activeContractIds
+      .map((id) => state.seniorSquadState?.contracts[id])
+      .find((candidate) => candidate?.clubId === state.selectedClubId);
+    if (contract === undefined) throw new Error("Expected selected-club active contract");
+    storage.states.set(state.saveId, state);
+    const runtime = new WebCareerRuntime(storage);
+    await runtime.loadCareer(state.saveId);
+
+    const offered = runtime.applySelectedClubContractCommand(state.saveId, {
+      type: "offer_renewal",
+      playerId: contract.playerId,
+      terms: {
+        durationYears: 2,
+        annualWage: contract.annualWage,
+        squadStatus: contract.squadStatus,
+        bonuses: contract.bonuses,
+      },
+    });
+
+    expect(offered.status).toBe("applied");
+    if (offered.status !== "applied") throw new Error("Expected applied renewal offer");
+    expect(offered.negotiation).toMatchObject({
+      playerId: contract.playerId,
+      clubId: state.selectedClubId,
+      status: "awaiting_response",
+    });
+    expect(offered.sessionStatus.dirty).toBe(true);
+    expect(storage.savedInputs).toHaveLength(0);
+
+    const withdrawn = runtime.applySelectedClubContractCommand(state.saveId, {
+      type: "withdraw_offer",
+      negotiationId: offered.negotiation.id,
+    });
+    expect(withdrawn.status).toBe("applied");
+    if (withdrawn.status !== "applied") throw new Error("Expected withdrawn renewal offer");
+    expect(withdrawn.negotiation.status).toBe("withdrawn");
+
+    const released = runtime.applySelectedClubContractCommand(state.saveId, {
+      type: "release_at_expiry",
+      playerId: contract.playerId,
+    });
+    expect(released.status).toBe("applied");
+    if (released.status !== "applied") throw new Error("Expected release-at-expiry decision");
+    expect(released.negotiation.status).toBe("release_at_expiry");
+    expect(released.state.seniorSquadState?.activeContractIds).toContain(contract.id);
+    expect(storage.savedInputs).toHaveLength(0);
   });
 
   it("autosaves once when Continue reaches the exact seven-day safe boundary", async () => {
@@ -526,17 +583,13 @@ describe("WebCareerRuntime", () => {
 
     expect(acknowledged.state.matchPreparation).not.toHaveProperty("targetFixtureId");
     expect(acknowledged.state.matchPreparation?.selectedLineup).toEqual(firstPreparation.selectedLineup);
-    const unavailableAfterFirstFixture = new Set<string>(
-      acknowledged.state.playerAvailability?.suspensions.map((entry) => entry.playerId) ?? [],
-    );
     expect(Object.values(carriedDraft.selectedPlayerIdsBySlot)).not.toEqual([]);
-    expect(Object.values(carriedDraft.selectedPlayerIdsBySlot).some(
-      (playerId) => unavailableAfterFirstFixture.has(playerId),
-    )).toBe(false);
-    expect(firstPreparation.selectedLineup!.slots
-      .filter((slot) => !unavailableAfterFirstFixture.has(slot.playerId))
-      .every((slot) => carriedDraft.selectedPlayerIdsBySlot[slot.slotKey] === slot.playerId))
-      .toBe(true);
+    expect(firstPreparation.selectedLineup!.slots.every(
+      (slot) => carriedDraft.selectedPlayerIdsBySlot[slot.slotKey] === slot.playerId,
+    )).toBe(true);
+    expect(acknowledged.state.matchPreparation?.benchSlots?.every(
+      (slot) => carriedDraft.selectedBenchPlayerIdsBySlot[slot.slotKey] === slot.playerId,
+    )).toBe(true);
     expect(carriedDraft.isSaved).toBe(false);
 
     const firstContinue = await runtime.continueCareer(state.saveId);
@@ -563,16 +616,42 @@ describe("WebCareerRuntime", () => {
     ]);
 
     const reconciledSecondDraft = createMatchPreparationDraft(continued.state);
-    const suspendedPlayerId = continued.state.playerAvailability?.suspensions[0]?.playerId;
+    const selectedPlayerIds = new Set([
+      ...Object.values(reconciledSecondDraft.selectedPlayerIdsBySlot),
+      ...Object.values(reconciledSecondDraft.selectedBenchPlayerIdsBySlot),
+    ]);
+    const suspendedPlayerId = continued.state.playerAvailability?.suspensions.find(
+      (entry) => selectedPlayerIds.has(entry.playerId),
+    )?.playerId;
     if (suspendedPlayerId !== undefined) {
       expect([
         ...Object.values(reconciledSecondDraft.selectedPlayerIdsBySlot),
         ...Object.values(reconciledSecondDraft.selectedBenchPlayerIdsBySlot),
-      ]).not.toContain(suspendedPlayerId);
+      ]).toContain(suspendedPlayerId);
+    }
+    let managerEditedSecondDraft = reconciledSecondDraft;
+    if (suspendedPlayerId !== undefined) {
+      const lineupSlot = Object.entries(managerEditedSecondDraft.selectedPlayerIdsBySlot)
+        .find(([, playerId]) => playerId === suspendedPlayerId)?.[0];
+      const benchSlot = Object.entries(managerEditedSecondDraft.selectedBenchPlayerIdsBySlot)
+        .find(([, playerId]) => playerId === suspendedPlayerId)?.[0];
+      if (lineupSlot !== undefined) {
+        managerEditedSecondDraft = selectMatchPreparationPlayer(
+          managerEditedSecondDraft,
+          lineupSlot,
+          undefined,
+        );
+      } else if (benchSlot !== undefined) {
+        managerEditedSecondDraft = selectMatchPreparationBenchPlayer(
+          managerEditedSecondDraft,
+          benchSlot,
+          undefined,
+        );
+      }
     }
     const validSecondDraft = applyMatchPreparationSelectionAction(
       continued.state,
-      reconciledSecondDraft,
+      managerEditedSecondDraft,
       "fill_gaps",
     );
     const secondPreparation = buildDurableMatchPreparation(continued.state, validSecondDraft);

@@ -1,5 +1,6 @@
-import { createCareerState, type CareerState, type SaveId } from "@game/domain";
+import type { CareerState, SaveId } from "@game/domain";
 
+import { createPersistableCareerState } from "../career-storage.contract.ts";
 import type { CareerStorage, SaveCareerInput } from "../career-storage.interface.ts";
 import { StorageError } from "../game-storage.interface.ts";
 import type {
@@ -32,6 +33,8 @@ export interface SqliteCareerWorkerInfo {
   readonly databasePath: string;
   readonly sqliteVersion: string;
   readonly schemaVersion: number;
+  /** True only when the browser intentionally replaced an incompatible beta database. */
+  readonly betaResetPerformed: boolean;
 }
 
 /** Browser-worker protocol consumed by the framework-free storage adapter. */
@@ -75,7 +78,7 @@ export class SqliteCareerStorage implements CareerStorage {
 
   public async saveCareer(input: SaveCareerInput): Promise<CareerSaveMetadata> {
     await this.ensureInitialized();
-    const state = createCareerState(input.state);
+    const state = createPersistableCareerState(input.state, "save_unwritable");
 
     try {
       return await this.worker.saveCareer({ ...input, state });
@@ -88,7 +91,10 @@ export class SqliteCareerStorage implements CareerStorage {
     await this.ensureInitialized();
 
     try {
-      return createCareerState(await this.worker.loadCareer(saveId));
+      return createPersistableCareerState(
+        await this.worker.loadCareer(saveId),
+        "unsupported_schema_version",
+      );
     } catch (error) {
       if (isWorkerError(error, "save_not_found")) {
         throw new StorageError("save_not_found", `Career save not found: ${saveId}`, { cause: error });

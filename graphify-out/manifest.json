@@ -35,8 +35,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/index.ts": {
-    "mtime": 1782771696.456654,
-    "ast_hash": "698265d7f4f404dc6909007037436e9f",
+    "mtime": 1784629732.8572354,
+    "ast_hash": "fdd650b92848cc4387c15d6f4b4ce975",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-dashboard-actions.ts": {
@@ -45,23 +45,23 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-inbox-view.ts": {
-    "mtime": 1784467583.6318533,
-    "ast_hash": "dd6789db029c0384ef3f34030b9be3a3",
+    "mtime": 1784603821.6262598,
+    "ast_hash": "382e545afd9b02c22d45e50e32c54a8a",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-shell-view.ts": {
-    "mtime": 1784555647.1638339,
-    "ast_hash": "df396c457945c1d41820e6fcec1e18db",
+    "mtime": 1784649445.474515,
+    "ast_hash": "35106ad76428a024072b85655373df6c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-inbox-view.test.ts": {
-    "mtime": 1784068103.40753,
-    "ast_hash": "c4194cb2add35c925ecae84640369425",
+    "mtime": 1784604428.714067,
+    "ast_hash": "e5b38cb190ffc4b5369f6ed363b068c6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-shell-view.test.ts": {
-    "mtime": 1784555647.1646972,
-    "ast_hash": "09b95be37d35444064b8654f9a791835",
+    "mtime": 1784649630.6569824,
+    "ast_hash": "5755b2d5231773a5f1f73a08fa37b532",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-dashboard-view.test.ts": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/index.ts": {
-    "mtime": 1782771696.4562595,
-    "ast_hash": "f0e1ed5c9fcbc34147bd56461f465183",
+    "mtime": 1784629732.8563883,
+    "ast_hash": "f9e2c55de90fff228f35ce7ba80638f4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/build-career-dashboard-view.test.ts": {
@@ -125,8 +125,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/index.ts": {
-    "mtime": 1784396542.8096197,
-    "ast_hash": "19ae65c826b7944e05c3579ee0432587",
+    "mtime": 1784589869.8419714,
+    "ast_hash": "d3e5158208b8cd176f7ecb28487abd63",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/clubs/club-identity-source-data.ts": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/league-system.test.ts": {
-    "mtime": 1784462297.550235,
-    "ast_hash": "cc5522ab3c0e24b4b231df985c92c421",
+    "mtime": 1784590166.524208,
+    "ast_hash": "23c51de82354d42bba912d03ad84c83d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/player-rarity-budget.ts": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/league-system.ts": {
-    "mtime": 1784508974.0345104,
-    "ast_hash": "f391559312d9ac06bf0b2b2e105e533d",
+    "mtime": 1784598067.7206342,
+    "ast_hash": "58cb4c851bd6cc2a792cd57b606fff0d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/initial-youth-academies.ts": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/package.json": {
-    "mtime": 1781610182.4995744,
-    "ast_hash": "b99ddcf97cd4d25ab11b077dc4af3e00",
+    "mtime": 1784671062.0434072,
+    "ast_hash": "db871b5ce2fbc14dfedc65e7b4db6d23",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/tsconfig.json": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/index.ts": {
-    "mtime": 1784502360.8586874,
-    "ast_hash": "566db62b24adbdad479ef5bd2adf7eaa",
+    "mtime": 1784670858.5520544,
+    "ast_hash": "a30b63c9db9a30f9845178eb0eeef78d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/calibration-report.ts": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/long-run/career-long-runner.test.ts": {
-    "mtime": 1782105080.310861,
-    "ast_hash": "98c34596abeba2ac901d8dcadb67e38e",
+    "mtime": 1784721436.768984,
+    "ast_hash": "ace7043a715a7256ecbe9f006867b010",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/long-run/anomaly-scoring.ts": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/long-run/career-long-runner.ts": {
-    "mtime": 1782105069.725307,
-    "ast_hash": "7848581aa415e3866dbe760a04d59f40",
+    "mtime": 1784721436.7684193,
+    "ast_hash": "d312cb2ab457c96cbf1e2e8b884b5e0f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/long-run/player-evolution.ts": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/save-metadata.ts": {
-    "mtime": 1784398305.582423,
-    "ast_hash": "66d1776c676db2d7b2a139895e1668e6",
+    "mtime": 1784623080.6785524,
+    "ast_hash": "ab145ab8fff8496b68c53e3d8f233f1a",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/json-game-storage.ts": {
@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/index.ts": {
-    "mtime": 1784398305.5857205,
-    "ast_hash": "1c61e111592018ed75755d8746467ead",
+    "mtime": 1784623080.679496,
+    "ast_hash": "617655c3fd37bd12983112da87700195",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/migrate-save.ts": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/i18n/src/labels.test.ts": {
-    "mtime": 1784494197.0425966,
-    "ast_hash": "8e3bcd7fde8f1dcc62f9e6be5e054f0f",
+    "mtime": 1784629909.1454964,
+    "ast_hash": "959be6acf40a46185fb2426947dd118b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/i18n/src/language.ts": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/i18n/src/labels.ts": {
-    "mtime": 1784536392.578624,
-    "ast_hash": "f66d540ed9362425497eb423312f48fc",
+    "mtime": 1784703274.5803454,
+    "ast_hash": "d3e1b726159c58a64d3c9320252f00e2",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/package.json": {
@@ -525,18 +525,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/index.ts": {
-    "mtime": 1784504963.1660447,
-    "ast_hash": "a224623195b8ed5e29bbeed1ad78b54e",
+    "mtime": 1784674729.4532793,
+    "ast_hash": "5350a5c6d64ea340d26e38d00e1b1e58",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/squad-maintenance.test.ts": {
-    "mtime": 1782083769.2423308,
-    "ast_hash": "c66124298e7b3f2f958f1ec8cb8d8279",
+    "mtime": 1784590576.2467985,
+    "ast_hash": "c203148748ba12a3d6545c9e629a8c12",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-development.test.ts": {
-    "mtime": 1784411235.1285949,
-    "ast_hash": "0f7cfd0ce922e93d9d6c468117d26d8a",
+    "mtime": 1784590576.247866,
+    "ast_hash": "d7cdee5b2fa354dc712647876d32850d",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-season-rollover.ts": {
@@ -555,18 +555,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-season-rollover.test.ts": {
-    "mtime": 1784409206.8069525,
-    "ast_hash": "412ae09497600f849f8ba688641adffa",
+    "mtime": 1784590576.2459042,
+    "ast_hash": "ce6f056bb74b07623670e6195cdd0e74",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-exits.test.ts": {
-    "mtime": 1784411460.3904462,
-    "ast_hash": "586d1e02a061fcc6463d28b8d25e33fe",
+    "mtime": 1784682996.8396206,
+    "ast_hash": "3ea7332dc62be35aefab5f146fce4c11",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/transfer-turnover.ts": {
-    "mtime": 1784323764.4650438,
-    "ast_hash": "9b6672423d2056ba965fcc9839e5dfa3",
+    "mtime": 1784680553.7052567,
+    "ast_hash": "5f27022a4df8787b1e7ef6c1fa19757b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-intake.ts": {
@@ -575,13 +575,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/progress-fixture.test.ts": {
-    "mtime": 1784505599.9903944,
-    "ast_hash": "0e14a0c2e4fe1c7baf3aa9f11b75377a",
+    "mtime": 1784626853.1342413,
+    "ast_hash": "64993d354d7b87abf396c7f2262f7abc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-fixture.test.ts": {
-    "mtime": 1782062437.0636587,
-    "ast_hash": "e3fbe286367356296c5b7a439da42758",
+    "mtime": 1784590576.2507515,
+    "ast_hash": "dc721d81bb87f7c25198272633328186",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-development.ts": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/transfer-turnover.test.ts": {
-    "mtime": 1784323888.87786,
-    "ast_hash": "c1917fdaf62dbacdb54b56e61c33366c",
+    "mtime": 1784680594.6713316,
+    "ast_hash": "68b21a3c42ef5f2ef710fea5d77f2d5f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/season-completion.ts": {
@@ -600,23 +600,23 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-lifecycle.ts": {
-    "mtime": 1784323764.4638104,
-    "ast_hash": "32187c973b6f6c170f55e060be742865",
+    "mtime": 1784619887.204571,
+    "ast_hash": "86e22c59db2d798139ac3e9c10bb7a4c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/apply-career-transfer.ts": {
-    "mtime": 1782021454.1157858,
-    "ast_hash": "fc6b6552dbe2f83a59c8ac42805fb73c",
+    "mtime": 1784701079.441182,
+    "ast_hash": "bf8ee843f6099b14b96de4f5a7b5540f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-lifecycle.test.ts": {
-    "mtime": 1784411620.029926,
-    "ast_hash": "771034c2ef76f889b8697bf5ce866177",
+    "mtime": 1784619994.9884264,
+    "ast_hash": "ace4a2e5e301a3bc6706f2042e20c89a",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/progress-fixture.ts": {
-    "mtime": 1784504963.167498,
-    "ast_hash": "f896acfc4449f72bbad4fd59de5fccb8",
+    "mtime": 1784626789.2057037,
+    "ast_hash": "d99149887102ff0a667303dd8816adbc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-season-calendar.ts": {
@@ -625,8 +625,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-exits.ts": {
-    "mtime": 1784411376.5881693,
-    "ast_hash": "91847f62923b41af07b0de248bd14b64",
+    "mtime": 1784698918.6305478,
+    "ast_hash": "ea6c42fb37dfd01136507479fc4564bd",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-intake.test.ts": {
@@ -635,13 +635,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-fixture.ts": {
-    "mtime": 1784484202.8977551,
-    "ast_hash": "3a6b063e57ff6f4aaab1568feeb84fb0",
+    "mtime": 1784626789.2037787,
+    "ast_hash": "d9662452e378928d2e46125db4890640",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-promotion.test.ts": {
-    "mtime": 1784323888.87721,
-    "ast_hash": "0ca717369e7c3a47f8733c5764e255c2",
+    "mtime": 1784696257.4711387,
+    "ast_hash": "f5ebdbc1fd318797116012188b57c2be",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-intake.ts": {
@@ -650,8 +650,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/apply-career-transfer.test.ts": {
-    "mtime": 1782021435.748683,
-    "ast_hash": "4342a86cd91d6bfa345c62ee327c3721",
+    "mtime": 1784680594.6708395,
+    "ast_hash": "17bc5987cff073f1ba05cf26d23a9b22",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/continue-career.ts": {
@@ -660,8 +660,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/next-season-calendar.test.ts": {
-    "mtime": 1782074982.814807,
-    "ast_hash": "52b91599e8e0fb77fa1824b35ce23f3e",
+    "mtime": 1784590576.247577,
+    "ast_hash": "5847d857cd5a5f530964ace85ef0619f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-condition-consequences.test.ts": {
@@ -670,8 +670,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-intake.test.ts": {
-    "mtime": 1784321632.1078775,
-    "ast_hash": "a2f6caa756a3a3135c62c197f0a1079c",
+    "mtime": 1784590576.2446482,
+    "ast_hash": "2fe5f22af619bbaf8a0028afef80951f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-condition-consequences.ts": {
@@ -680,18 +680,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/youth-promotion.ts": {
-    "mtime": 1784323764.4645994,
-    "ast_hash": "5fd41820f757a5ca71a39fe64d5d7a49",
+    "mtime": 1784695048.6152325,
+    "ast_hash": "ec84bf59e045dfeeb27e11052d3e2611",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/season-completion.test.ts": {
-    "mtime": 1782074850.0951676,
-    "ast_hash": "501ff1109572fc2bb6445f22b63ca5aa",
+    "mtime": 1784590576.2439668,
+    "ast_hash": "912cc775aa124261c78202876c7de05e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/squad-maintenance.ts": {
-    "mtime": 1782083769.1117764,
-    "ast_hash": "46cda9d59e35b4498fe8f80954438cdc",
+    "mtime": 1784675120.6041992,
+    "ast_hash": "5de55520d7659ccf827e7e3b09e880ee",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-weekly-recovery.test.ts": {
@@ -895,8 +895,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/squad/index.ts": {
-    "mtime": 1781956305.0245266,
-    "ast_hash": "a6d342387bc1a3af77935b624a73d1e7",
+    "mtime": 1784628955.0735292,
+    "ast_hash": "84268aa77e4856ccd6629e67703d84e2",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/squad/formation-squad-fit.ts": {
@@ -905,18 +905,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/transfer-feasibility.ts": {
-    "mtime": 1782019711.5466259,
-    "ast_hash": "9b0869f81619d6e8c14fb0a3edf541ac",
+    "mtime": 1784623650.6975484,
+    "ast_hash": "095c3842bd3dfa78808ab4e022569cc4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/transfer-feasibility.test.ts": {
-    "mtime": 1782019781.0655987,
-    "ast_hash": "9c691978c27bb4cea50e48f1da9331e4",
+    "mtime": 1784623650.6989715,
+    "ast_hash": "c3267bec910e08b052d1a282156295bb",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/player-willingness.ts": {
-    "mtime": 1784324399.7465425,
-    "ast_hash": "fdc66ce47c535a908e4dbdbea0c2f25a",
+    "mtime": 1784618457.4645803,
+    "ast_hash": "e46202f146b715d6a54045e76e454669",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/player-willingness.test.ts": {
@@ -925,8 +925,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/player-valuation.ts": {
-    "mtime": 1784324399.7457407,
-    "ast_hash": "a77527098852b09ded4b26f2d64baca0",
+    "mtime": 1784618457.463758,
+    "ast_hash": "378346479b0ddcc6f6648f08b36ecc1c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/player-valuation.test.ts": {
@@ -935,8 +935,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/market/index.ts": {
-    "mtime": 1784381150.4738877,
-    "ast_hash": "4dba475e82aae62535a91da8a3a477ce",
+    "mtime": 1784623003.0440562,
+    "ast_hash": "49ff44a67939818e8fae0cfd434c8ca7",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/player-state/fitness.ts": {
@@ -990,8 +990,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/value-objects/money.ts": {
-    "mtime": 1781501773.402278,
-    "ast_hash": "8b51ce0fcd62cd94d81d3cbb29fdaa69",
+    "mtime": 1784589775.8908002,
+    "ast_hash": "8e164fbbfd349ef0c9750e60778aeb12",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/value-objects/rating.ts": {
@@ -1005,28 +1005,28 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/inbox.test.ts": {
-    "mtime": 1784462409.4542272,
-    "ast_hash": "4b578f5ba96be02640cf483c57121068",
+    "mtime": 1784608571.599278,
+    "ast_hash": "0f921ce1f83f4e0fabfd56945bd5016f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/inbox.ts": {
-    "mtime": 1784462280.411962,
-    "ast_hash": "4ea07c467dfb5334d9bd0dc848a5247b",
+    "mtime": 1784604241.0169802,
+    "ast_hash": "176ac0a3ae072effd3b4f4a1f164a9b5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/index.ts": {
-    "mtime": 1784504926.0350688,
-    "ast_hash": "b72331b4b9768387373a6722ff97d7c3",
+    "mtime": 1784600079.3495786,
+    "ast_hash": "bdcd9db122f77a626026edb8e05f3e50",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/attention.test.ts": {
-    "mtime": 1784037688.2349744,
-    "ast_hash": "82d843ab6e0ba9f1565ae08ede3cd05d",
+    "mtime": 1784608571.5985541,
+    "ast_hash": "00c59d1f5e354f846172e750936d1ca8",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/attention.ts": {
-    "mtime": 1784037732.3088455,
-    "ast_hash": "4fc45cf99c558e5f8082c142c6c95cfe",
+    "mtime": 1784603432.0835934,
+    "ast_hash": "9f82b2890a620be444fda6da7e9f434e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/types/brand.ts": {
@@ -1035,13 +1035,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/types/ids.ts": {
-    "mtime": 1781501773.3927531,
-    "ast_hash": "64a73a2253cb4df8c97798700e7e33f0",
+    "mtime": 1784589595.2695103,
+    "ast_hash": "a33f843a67ebc194a9e28465885aab44",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/types/ids.test.ts": {
-    "mtime": 1781501786.2418818,
-    "ast_hash": "e5754efa91e582b9e5e6891fde5ce724",
+    "mtime": 1784589595.2698681,
+    "ast_hash": "442a964a1f06bde2c061a702fb46312f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/tactics/position-suitability.test.ts": {
@@ -1090,8 +1090,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/state/career-state.ts": {
-    "mtime": 1784504926.0364258,
-    "ast_hash": "14edb551c80c16f9d5a5daf7c93cb4bf",
+    "mtime": 1784626714.7152212,
+    "ast_hash": "6cc83ff35b3c89ce7e9ad3ae40c05699",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/state/youth-academy-state.ts": {
@@ -1100,8 +1100,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/state/career-state.test.ts": {
-    "mtime": 1784504926.036858,
-    "ast_hash": "294c934c6a232f2042e0ba461f68de5e",
+    "mtime": 1784626714.7157612,
+    "ast_hash": "99229a79745462f8ed967832dbec3e56",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/squad/squad-depth.test.ts": {
@@ -1120,8 +1120,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/transfer.entity.ts": {
-    "mtime": 1782019265.7759926,
-    "ast_hash": "3a4515eab6104ea74eb260d0bff21a4a",
+    "mtime": 1784597256.0284748,
+    "ast_hash": "dcaf21ed7ace24b5b8cc5d268fc8e830",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/league-table.entity.ts": {
@@ -1130,13 +1130,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/transfer.entity.test.ts": {
-    "mtime": 1782019320.3759923,
-    "ast_hash": "265de29a6de8859c254b2eadd0607c00",
+    "mtime": 1784589993.0945058,
+    "ast_hash": "8e4ab1b953a8864769a52c18cf12c3a2",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/competition.entity.ts": {
-    "mtime": 1784462280.4088492,
-    "ast_hash": "a69ff3d4fc265b529a905f879bf7183f",
+    "mtime": 1784589775.892019,
+    "ast_hash": "ba6131a096197a6b3466c665080a992e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/player.entity.test.ts": {
@@ -1185,7 +1185,7 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/package.json": {
-    "mtime": 1784547775.0297637,
+    "mtime": 1784667980.9325466,
     "ast_hash": "f262b4041be3f7b7859e96d75bd4f51e",
     "semantic_hash": ""
   },
@@ -1265,18 +1265,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/balance-report.test.ts": {
-    "mtime": 1784509521.4466186,
-    "ast_hash": "bc1b11cd78efebe5a03b5f248e0d2c2c",
+    "mtime": 1784598684.6860626,
+    "ast_hash": "fedb1091027fba8c4bfd8dd0ea41feac",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report.ts": {
-    "mtime": 1784417057.6269915,
-    "ast_hash": "972be8a053614097d81deb8e7bd2f605",
+    "mtime": 1784703411.6908886,
+    "ast_hash": "b90e28a7c9470706d49a671c99a65dcd",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report.test.ts": {
-    "mtime": 1784509521.447308,
-    "ast_hash": "df20922cfb5e1dca15957aa3d1efd406",
+    "mtime": 1784704541.1022248,
+    "ast_hash": "e54a9a03cf864f007c2a9085aa22d848",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/balance-report.ts": {
@@ -1285,7 +1285,7 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career.test.ts": {
-    "mtime": 1784414889.7604277,
+    "mtime": 1784589052.7540476,
     "ast_hash": "26bb9fc0a5471f20d6744d1ec6ae9cfe",
     "semantic_hash": ""
   },
@@ -1300,13 +1300,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/overview-output.ts": {
-    "mtime": 1782192120.7098722,
-    "ast_hash": "8c28e394e57572c24a4e4f53efafbece",
+    "mtime": 1784590954.1264749,
+    "ast_hash": "ccf09fc392c0e0b5c1bacb162d47dca9",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/market-output.ts": {
-    "mtime": 1782192815.7049568,
-    "ast_hash": "bcfdf2fc17e12ec700342f39cfa7386f",
+    "mtime": 1784590954.1258407,
+    "ast_hash": "4723ec78d832f73ed2a0813adaab175a",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/matchday-output.ts": {
@@ -1320,13 +1320,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/types.ts": {
-    "mtime": 1782061247.2969408,
-    "ast_hash": "85b49052876f96dada9acb57b09f0c50",
+    "mtime": 1784596201.6341302,
+    "ast_hash": "918809fb5e7673fa87a3353c0881af90",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/format.ts": {
-    "mtime": 1782192919.2865782,
-    "ast_hash": "443a804ca68e5fab3aa1847e2757f088",
+    "mtime": 1784590954.125503,
+    "ast_hash": "679755b36a8bcc4674f73c57ea8e6b17",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/parse-career-args.ts": {
@@ -1360,23 +1360,23 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/career/scenarios.ts": {
-    "mtime": 1782104112.7097366,
-    "ast_hash": "fea13c9ad28573b94204ca608cc2312f",
+    "mtime": 1784624606.9775722,
+    "ast_hash": "2d109397eb5a22eea637633bad9a0f4c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report/single-world-output.ts": {
-    "mtime": 1782198961.0375004,
-    "ast_hash": "05c5ea9fd698995354ba0e100bb4acf4",
+    "mtime": 1784721436.7704952,
+    "ast_hash": "1e0ef6e24172e722cf7faecff63b6f32",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report/gate-output.ts": {
-    "mtime": 1784417079.7875526,
-    "ast_hash": "153a368a20e3e8eb3768528a6f291a33",
+    "mtime": 1784671710.389139,
+    "ast_hash": "fe6de11341bb27b9a75c07f6cebe5197",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report/report-data.ts": {
-    "mtime": 1784423230.6012316,
-    "ast_hash": "15e9a01983f5aa2ab6e3434db0150b35",
+    "mtime": 1784721466.3812506,
+    "ast_hash": "7e92b5db2d14c04063cc19f534d35dcf",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/simulate-season/formation-fit-output.ts": {
@@ -1400,8 +1400,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/simulate-season/market-demo-output.ts": {
-    "mtime": 1782078192.3315454,
-    "ast_hash": "142492ca352e53a80c20a82b2b153f37",
+    "mtime": 1784623650.6984534,
+    "ast_hash": "cfc575c417e01bbc56f6bf9ae2f6a5f9",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/simulate-season/profile-keys.ts": {
@@ -1445,8 +1445,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/PROJECT_STATUS.md": {
-    "mtime": 1784509421.8015802,
-    "ast_hash": "8924a27413caf38844710ad0c2091a18",
+    "mtime": 1784729232.4054694,
+    "ast_hash": "6ca25f5ad3561f0d1c50545caa040115",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/ARCHITECTURE.md": {
@@ -1455,8 +1455,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/step_prompt_to_use.md": {
-    "mtime": 1784457469.8695927,
-    "ast_hash": "7deaf67bbf3b9e0ba03846345d562835",
+    "mtime": 1784586831.301885,
+    "ast_hash": "7c7b4be4711ece9d26ed33703c60a219",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/archive/README.md": {
@@ -1950,8 +1950,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/README.md": {
-    "mtime": 1784507881.4540768,
-    "ast_hash": "f18999a1cce51189db1274a2af8d0a8d",
+    "mtime": 1784729232.4043603,
+    "ast_hash": "2344d576ea4f72b40fa8c589bb34bf36",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/09-manual-tactical-changes-v1/03-manual-tactic-change-contract.md": {
@@ -5265,18 +5265,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-match-preparation-view.ts": {
-    "mtime": 1782812865.2207172,
-    "ast_hash": "c36749bd6fe827734426a4ecd6697653",
+    "mtime": 1784627239.848132,
+    "ast_hash": "b095df773345c8898f315bf0981f35c9",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-match-preparation-view.test.ts": {
-    "mtime": 1782812865.221462,
-    "ast_hash": "09317aef05698fa649bc6af467353b34",
+    "mtime": 1784626916.968001,
+    "ast_hash": "b9db018283abc6f1ffae82a9ee4de1e4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md": {
-    "mtime": 1784509421.8024604,
-    "ast_hash": "a16251d60b2327ba85a7b497fd67cc25",
+    "mtime": 1784729312.4676423,
+    "ast_hash": "3eb776d48144ae45456a4ec61b4a5f84",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_MATCH_PREPARATION_SLICE_REPORT.md": {
@@ -5470,8 +5470,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/App.tsx": {
-    "mtime": 1784555759.493794,
-    "ast_hash": "7b238472bd89a5e07b46f7221fe3ea37",
+    "mtime": 1784667716.3343544,
+    "ast_hash": "a1c90a8097a0d0f59df2b2affce2e282",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/app.test.tsx": {
@@ -5505,8 +5505,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-entry/AppEntryScreen.tsx": {
-    "mtime": 1784236413.3726635,
-    "ast_hash": "fdfbc378af25f1b8804a8a63b0f9a7bb",
+    "mtime": 1784593602.4890604,
+    "ast_hash": "e60758979ff6053c9936825aab04ddec",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/match-preparation-career-loop.test.ts": {
@@ -5520,18 +5520,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/CareerMatchPreparationScreen.tsx": {
-    "mtime": 1784555759.4924903,
-    "ast_hash": "213729246d2a17d95e4cd682c46aa2c7",
+    "mtime": 1784649445.4750247,
+    "ast_hash": "d5471e2f07900944277ab7962b5b8af0",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/stores/career-ui-store.ts": {
-    "mtime": 1784505116.5312226,
-    "ast_hash": "1b52e077c3d0f9dec46e972e7ff9ee2d",
+    "mtime": 1784663039.4077585,
+    "ast_hash": "19021dadd660b2e07a14eddc4b2ea8bc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/stores/career-ui-store.test.ts": {
-    "mtime": 1784491672.733448,
-    "ast_hash": "de84b444aed8a915ea6da1ace052ee66",
+    "mtime": 1784649730.3043308,
+    "ast_hash": "9c1316e5c0f865daa42e1e41fffe7778",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/ui/SquadSelectionTable.tsx": {
@@ -5750,8 +5750,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-squad.ts": {
-    "mtime": 1784539589.0369272,
-    "ast_hash": "115a377f3087ab8edcb6f285dd7338d6",
+    "mtime": 1784638569.0879757,
+    "ast_hash": "a5e7862c32a08b9c97a3a426c3db80aa",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics-board/tactical-board-suitability.test.ts": {
@@ -6040,8 +6040,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-entry/AppEntryScreen.test.tsx": {
-    "mtime": 1784236413.373355,
-    "ast_hash": "49c60bca86e69d2bb52fd227eff0c4e9",
+    "mtime": 1784593664.0450969,
+    "ast_hash": "a4028bf9fd7833472630d49589cfb32a",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/WEB_THEME_COLOR_AUDIT.md": {
@@ -6170,8 +6170,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md": {
-    "mtime": 1784509421.8028243,
-    "ast_hash": "c37c9678d9aaaca5ad7fef0cfcfccb94",
+    "mtime": 1784729274.3699193,
+    "ast_hash": "60b9b467d5512d19f29b8b6f75c01af4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/ENGINE_SAFETY_NET_AUDIT.md": {
@@ -6225,13 +6225,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/advance-career-season.ts": {
-    "mtime": 1784423666.5987442,
-    "ast_hash": "9632c0dd007af929620a4f52c39f01cd",
+    "mtime": 1784711190.9481394,
+    "ast_hash": "da376911e75feefd31b93bb791ab64cf",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/advance-career-season.test.ts": {
-    "mtime": 1784423541.889653,
-    "ast_hash": "032e40ebd8afc1d4f2a353257463030f",
+    "mtime": 1784608219.48697,
+    "ast_hash": "da4657999f5494b0695217fcf5497354",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/CAREER_ADVANCEMENT_PATH_AUDIT.md": {
@@ -6820,8 +6820,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/AppShell.test.tsx": {
-    "mtime": 1784556097.598081,
-    "ast_hash": "b6bcfb85f504575b6b16f4896de35c70",
+    "mtime": 1784649630.6582656,
+    "ast_hash": "bbe9b2efe61583bf14d9646fe5db774c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/dashboard/CareerDashboardScreen.test.tsx": {
@@ -6925,18 +6925,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/career-save-envelope.ts": {
-    "mtime": 1784398347.0031817,
-    "ast_hash": "15b1e2ad351aa6f0f5df6f32a605f181",
+    "mtime": 1784623080.679095,
+    "ast_hash": "f4d2e8e705be62888695bdc4fa72332c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/json-career-storage.test.ts": {
-    "mtime": 1784398694.171106,
-    "ast_hash": "16354279c788c0e46ab709bee8cf1da7",
+    "mtime": 1784623080.6828778,
+    "ast_hash": "918c5faf14492250efb376677463088f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/json-career-storage.ts": {
-    "mtime": 1784398305.5841208,
-    "ast_hash": "0187d1ebdcc90ccee7088b897141d555",
+    "mtime": 1784592439.2623138,
+    "ast_hash": "d5f06e0bacd7b099ceb8836ed36ae6e7",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/career-storage.interface.ts": {
@@ -7020,13 +7020,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-schema.ts": {
-    "mtime": 1784505365.0450737,
-    "ast_hash": "dff23c8d45211d91a79d76f330f5c140",
+    "mtime": 1784623080.6811788,
+    "ast_hash": "89eeb32fa3fd2b480a8d68ed716d1eca",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-storage.ts": {
-    "mtime": 1784378824.689092,
-    "ast_hash": "fa5c62f8225f7394f4a7d6eb49385c2a",
+    "mtime": 1784593602.4855554,
+    "ast_hash": "e9ebd7f20641ff11a9cf0299f23d2964",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/index.ts": {
@@ -7035,63 +7035,63 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-migrations.ts": {
-    "mtime": 1784505365.045821,
-    "ast_hash": "2d7db0019d1a34ba8413038a62568f00",
+    "mtime": 1784623080.6814473,
+    "ast_hash": "210acb2373cdaee747cec7f4c8355838",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts": {
-    "mtime": 1784505141.5397246,
-    "ast_hash": "ac50fc1293e7a0a24f5322f438606885",
+    "mtime": 1784623080.6837285,
+    "ast_hash": "5bddb2e0efcd52e57a85b60b7782a4df",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/infrastructure/persistence/create-web-career-storage.ts": {
-    "mtime": 1783970357.2172248,
-    "ast_hash": "67b92fa2f1aad0d1e1a5b80474726c88",
+    "mtime": 1784593602.487413,
+    "ast_hash": "1ae24f4497f95d81b0f97cf296e8f639",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/infrastructure/persistence/sqlite-career.worker.ts": {
-    "mtime": 1783980411.4097898,
-    "ast_hash": "b7336e8d067959bf85d2204749f637e1",
+    "mtime": 1784593602.486759,
+    "ast_hash": "e677b85a9ea21311d43a5d70093d780e",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/career-storage.contract.ts": {
-    "mtime": 1783952967.0981803,
-    "ast_hash": "0bb44ece39d2df32c509553d643022b1",
+    "mtime": 1784592439.261699,
+    "ast_hash": "bbdee930dff168a930f2cbdeb318b17c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/career-storage.contract.test.ts": {
-    "mtime": 1784464328.1539676,
-    "ast_hash": "4b984832ee372d86c6a87c65ea7a480c",
+    "mtime": 1784593176.9518743,
+    "ast_hash": "cadb11f8657475444f874c057382aaec",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/world-state-mapper.ts": {
-    "mtime": 1784398410.4939208,
-    "ast_hash": "0b8196822d5be0fae8d9c192beb32f16",
+    "mtime": 1784592904.650757,
+    "ast_hash": "4f7119473fca887686fb2ea9f3efff97",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/career-state-mapper.ts": {
-    "mtime": 1784505324.3982475,
-    "ast_hash": "d8f7d7e5499dd8ff0faf996d2b251165",
+    "mtime": 1784607452.7132187,
+    "ast_hash": "d689eb4943b0817ba9649ba0ec76daff",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/career-state-mapper.test.ts": {
-    "mtime": 1784505473.2237546,
-    "ast_hash": "9ea83298030f11b19d462cf87cf0d6fd",
+    "mtime": 1784623108.240331,
+    "ast_hash": "e7e27461d6720f431ffecd7f1b6ac8d6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/world-state-mapper.test.ts": {
-    "mtime": 1784505473.2246084,
-    "ast_hash": "66a7916dd537ff81a6037cb810e50034",
+    "mtime": 1784623080.682435,
+    "ast_hash": "1acc084ddef13e6db586a48d6636dda5",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/runtime/web-career-runtime.test.ts": {
-    "mtime": 1784505116.531687,
-    "ast_hash": "8f62fafc195e9fba77d4dd651c8a1be4",
+    "mtime": 1784627497.6849923,
+    "ast_hash": "e5e5c8c38b726a718812c209d654e616",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/runtime/web-career-runtime.ts": {
-    "mtime": 1784494313.9731429,
-    "ast_hash": "0dc0aa8b034d76406681d867e3774ec9",
+    "mtime": 1784667846.9256353,
+    "ast_hash": "00efcf021e1a07dfe2592e42f849d169",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/dashboard/build-career-dashboard.ts": {
@@ -7105,28 +7105,28 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/sqlite/sqlite-career-storage.test.ts": {
-    "mtime": 1784505599.9884202,
-    "ast_hash": "da871814014ce8de12ec511fa1902009",
+    "mtime": 1784623123.9736893,
+    "ast_hash": "50b92bfdf5861a81bcae2b7545d16459",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/matchday-adapter.ts": {
-    "mtime": 1784507622.9028118,
-    "ast_hash": "b8bc594a409ab7a79028e0fe98799ce6",
+    "mtime": 1784627760.4332798,
+    "ast_hash": "ef2ada946acf5fdf6cb5428bc659be72",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/matchday/matchday-adapter.test.ts": {
-    "mtime": 1784509694.6054368,
-    "ast_hash": "bc4ca4adfa9eed4d1a68905ba0c9102e",
+    "mtime": 1784627328.8478498,
+    "ast_hash": "bc3eb018b7b6a5e8e2f30f22d1a6e4a0",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/match-preparation-adapter.ts": {
-    "mtime": 1784505116.5298522,
-    "ast_hash": "746389755f6900e2a3ee5bf3ffa46d38",
+    "mtime": 1784627603.1621273,
+    "ast_hash": "8aacd4cc4b0b7c61134e349d8e3f4a35",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/match-preparation/match-preparation-adapter.test.ts": {
-    "mtime": 1784491693.4485393,
-    "ast_hash": "36538c8710979e95eb844c4fbfb27117",
+    "mtime": 1784627382.6143003,
+    "ast_hash": "786c72ede9b36e42b28a8160e03b7ae4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/test-fixtures/career-fixture.ts": {
@@ -7320,13 +7320,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-inbox-lifecycle.test.ts": {
-    "mtime": 1784464192.2313375,
-    "ast_hash": "020b09a7020d1ccda13de10c279b6237",
+    "mtime": 1784590576.247014,
+    "ast_hash": "7a3bdd114534d4337540b74279ad942b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-inbox-lifecycle.ts": {
-    "mtime": 1784463636.9353223,
-    "ast_hash": "5404391d5348510d2100d5eb0cad41a6",
+    "mtime": 1784603608.0120347,
+    "ast_hash": "b11408010e9c39ff36110cc682316abc",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/CareerInboxScreen.test.tsx": {
@@ -7340,18 +7340,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/career-inbox-presenter.ts": {
-    "mtime": 1784065420.7604165,
-    "ast_hash": "9b20f8a0efd826b5a7ac01fad72db106",
+    "mtime": 1784603969.8404944,
+    "ast_hash": "0822652c430c38f4600b0e4283f2e627",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/career-inbox-presenter.test.ts": {
-    "mtime": 1784065851.2506773,
-    "ast_hash": "0a1e85b559e7215d4c242640fab80393",
+    "mtime": 1784604775.9260201,
+    "ast_hash": "216eeb25e856e8cc99d7ceba40cf18f2",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/InboxMessageList.test.tsx": {
-    "mtime": 1784200864.2989633,
-    "ast_hash": "8c624701f51a0d46011f0d63b396028d",
+    "mtime": 1784604157.5976756,
+    "ast_hash": "40014235df4f47c37c291ac4425e3090",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/InboxMessageDetail.tsx": {
@@ -7365,8 +7365,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/inbox/InboxMessageDetail.test.tsx": {
-    "mtime": 1784200864.2991893,
-    "ast_hash": "f1006a5f72aac0133aa6443da56ab896",
+    "mtime": 1784604157.5971823,
+    "ast_hash": "7067ecc4f950676fb27ac20eaae76847",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/AppShellPostaRail.test.tsx": {
@@ -7400,8 +7400,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/visual-qa/current-product.spec.ts": {
-    "mtime": 1784556097.601665,
-    "ast_hash": "f6b09998576e851f54a3a93dca6cb8d8",
+    "mtime": 1784666870.6680694,
+    "ast_hash": "df4e05887620079dae286572849e55e8",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/WEB_UI_UX_PREMIUM_REMEDIATION_MAP.md": {
@@ -7555,8 +7555,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/use-career-screen-presentations.ts": {
-    "mtime": 1784489366.561739,
-    "ast_hash": "412f2a120a112ade5536e204bd0ee813",
+    "mtime": 1784646740.2360675,
+    "ast_hash": "70bbd44c7195d6a211e4a1544512e1b3",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/app/use-career-screen-presentations.test.ts": {
@@ -7630,12 +7630,12 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/test-results/.last-run.json": {
-    "mtime": 1784483095.4448926,
+    "mtime": 1784666904.5366533,
     "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/test-results/.last-run.json": {
-    "mtime": 1784557134.6747437,
+    "mtime": 1784667191.6993842,
     "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
     "semantic_hash": ""
   },
@@ -7745,8 +7745,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/player/index.ts": {
-    "mtime": 1784319878.421189,
-    "ast_hash": "b2428028e3f8e22c4b2a6761843f1a6f",
+    "mtime": 1784672951.9357915,
+    "ast_hash": "3c37f1823aac937ae2b0d9ee30410c65",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/PLAYER_MODEL_CONSOLIDATION_BASELINE.md": {
@@ -7965,13 +7965,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/advance-career-month.ts": {
-    "mtime": 1784413039.105117,
-    "ast_hash": "955694b94ab5bc0aaa53c1ca3368f6f4",
+    "mtime": 1784612110.0725355,
+    "ast_hash": "330728c525a6b275423b409d588326d4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-role-adaptation.test.ts": {
-    "mtime": 1784410408.150855,
-    "ast_hash": "2ea054aa010104c58bffe50a0e67ecf6",
+    "mtime": 1784590576.2436063,
+    "ast_hash": "5321cbcade403e5d16756ce06ac44268",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-aging-policy.ts": {
@@ -7995,8 +7995,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-participation.test.ts": {
-    "mtime": 1784402399.7752154,
-    "ast_hash": "ea42623b3cbb015b90a0b1656021ae80",
+    "mtime": 1784590576.2444382,
+    "ast_hash": "4dd26d3b01aa2a988b4eb341225216ae",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-aging-policy.test.ts": {
@@ -8005,8 +8005,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/advance-career-month.test.ts": {
-    "mtime": 1784413082.7726917,
-    "ast_hash": "580e5eb5609138eaebf0bd201f9b76ff",
+    "mtime": 1784590576.246228,
+    "ast_hash": "aa643c929d5f1c8f74f6fca5d565d321",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/player-role-adaptation.ts": {
@@ -8120,8 +8120,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/motion/web-motion.ts": {
-    "mtime": 1784555647.1628664,
-    "ast_hash": "4a48b82791101445c40c5f5e6e600e3d",
+    "mtime": 1784646740.232348,
+    "ast_hash": "8004244b7cdf59a1187e6fc662e2645f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/shared/motion/dom-animation.ts": {
@@ -8225,8 +8225,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/entities/competition.entity.test.ts": {
-    "mtime": 1784462297.551334,
-    "ast_hash": "1d61ae82d2cec7c0518525991aa644bf",
+    "mtime": 1784589812.444429,
+    "ast_hash": "df870e3b3d396593ec79568fc840bd5c",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/LIVE_MATCH_CONTROL_REPORT.md": {
@@ -8285,13 +8285,13 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/player-availability.ts": {
-    "mtime": 1784478181.7477422,
-    "ast_hash": "15260871548bcc4d7a3c10754e31186d",
+    "mtime": 1784626714.7136164,
+    "ast_hash": "20c91df00d14baf0b377cce2f7e2d0b6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/player-availability.test.ts": {
-    "mtime": 1784462409.4534893,
-    "ast_hash": "3fb64a38ee2ba61930b93fdd6a23c956",
+    "mtime": 1784626714.7145855,
+    "ast_hash": "92b1865a00240254926d614a6c21bca4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/team-selection/ai-in-game-decisions.ts": {
@@ -8417,6 +8417,2546 @@
   "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/app-shell/CareerCurrentDate.tsx": {
     "mtime": 1784555647.162232,
     "ast_hash": "35ec27701a018e656eeaa8f0afdfec8b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/07-selected-club-contract-posta-and-continue-workflow.md": {
+    "mtime": 1784605203.949846,
+    "ast_hash": "c383d9f628fe229bf895295c47f848e6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/01-current-ownership-and-gap-audit.md": {
+    "mtime": 1784585727.9571092,
+    "ast_hash": "02062aca000bca9078ff41fb9cde2777",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/05-payroll-bonuses-and-finance-ledger-lifecycle.md": {
+    "mtime": 1784613335.6006925,
+    "ast_hash": "89658eaee849cc54b0a1ad6bec9f2d24",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/03-club-finance-and-budget-world-generation.md": {
+    "mtime": 1784591362.1613464,
+    "ast_hash": "b93bc40461e4ea113bb07e9b1f4b7e4a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/09-transfer-youth-valuation-and-contract-history-integration.md": {
+    "mtime": 1784625805.7260568,
+    "ast_hash": "ae0f351f962806787a426cd4fb0f7b32",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/02-shirt-number-and-player-contract-world-generation.md": {
+    "mtime": 1784589204.683311,
+    "ast_hash": "78ce80b02675dc0c8d5cca755d986b17",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/13-explicit-lineup-selection-and-tactics-synchronization.md": {
+    "mtime": 1784651328.8123488,
+    "ast_hash": "20cb54bd517fb875ab920d05ebf3679c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/11-squad-player-profile-and-contract-read-models.md": {
+    "mtime": 1784630153.2831342,
+    "ast_hash": "c5f407f3a4e3d028b68d89c9105aed17",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/README.md": {
+    "mtime": 1784728688.6519704,
+    "ast_hash": "1d9b68ab4f0a503ea50c96542eb9c0f4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/06-contract-demand-offer-and-negotiation-engine.md": {
+    "mtime": 1784601517.0758183,
+    "ast_hash": "286b2aa0842aa7e1b15a1e3d8aee78ea",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/12-senior-squad-table-and-navigation-workspace.md": {
+    "mtime": 1784648420.903594,
+    "ast_hash": "c0990b2ae0f2ae3d04e304b4f28cfc9f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/10-durable-match-plan-and-fixture-eligibility-separation.md": {
+    "mtime": 1784628105.3316927,
+    "ast_hash": "01db790d2f06325b723ef557f4f3cac8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/08-ai-renewal-expiry-and-free-agent-lifecycle.md": {
+    "mtime": 1784605203.9504666,
+    "ast_hash": "023ac0f2327d6dbe2c9981d1e046ca6f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/04-clean-beta-save-reset-and-persistence-contract.md": {
+    "mtime": 1784585727.9574807,
+    "ast_hash": "a60f51bd154326318de9fd883a09a538",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/15-contract-finance-and-squad-long-run-gates.md": {
+    "mtime": 1784728688.652791,
+    "ast_hash": "29965959bb9827715741e5c643daea29",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/14-full-screen-player-profile-and-renewal-workspace.md": {
+    "mtime": 1784668412.2996943,
+    "ast_hash": "97f7348203fd29882eaf191572b837b1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/audits/SENIOR_SQUAD_CONTRACTS_AND_FINANCE_REPORT.md": {
+    "mtime": 1784668412.303315,
+    "ast_hash": "4bc82af3596a265d8c43c35ebf6b5b17",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/senior-squad-world.test.ts": {
+    "mtime": 1784588731.512256,
+    "ast_hash": "29d913278c6035f7946afe8b3891e1cc",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/senior-squad-world.ts": {
+    "mtime": 1784588909.2882173,
+    "ast_hash": "744bc9674ac4dbdc90398c22e1d06ffd",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/senior-squad.test.ts": {
+    "mtime": 1784695048.616534,
+    "ast_hash": "9e9b23651b04be4912a720e4fc65db48",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/senior-squad.ts": {
+    "mtime": 1784695048.6138628,
+    "ast_hash": "7f0064da725a193fb96834a1da9604c0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/club-finance-world.test.ts": {
+    "mtime": 1784598067.72132,
+    "ast_hash": "c23164b67ae5eab3e3331d2b55b5d250",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/content/src/generators/club-finance-world.ts": {
+    "mtime": 1784598067.719936,
+    "ast_hash": "29c19c15a6bc1a0bd023c38f3544cd71",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/club-finance.test.ts": {
+    "mtime": 1784701664.3405278,
+    "ast_hash": "cd885ecd5cd415d4067be2719ebed11e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/club-finance.ts": {
+    "mtime": 1784701613.2090247,
+    "ast_hash": "10a5069743cec7f0325231871f0a63e7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/storage/src/testing/persistable-career-fixture.ts": {
+    "mtime": 1784593176.951351,
+    "ast_hash": "38c619509305df515283a1fdc2db6e69",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-finance-lifecycle.test.ts": {
+    "mtime": 1784711190.9488325,
+    "ast_hash": "067d08b0f17b4398ef2919ea453aec12",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-finance-lifecycle.ts": {
+    "mtime": 1784711190.947364,
+    "ast_hash": "e7a9826ac0aa4dfa406cf2d68dff73c7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/senior-squad-transfer.ts": {
+    "mtime": 1784698840.4023507,
+    "ast_hash": "a99dce0b51f8d0bedb2c66e00da16914",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/contract-negotiation.test.ts": {
+    "mtime": 1784619887.203598,
+    "ast_hash": "614d0a45d7081625aed8e8fdcd571f70",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/contract-negotiation-demand.test.ts": {
+    "mtime": 1784600999.2888997,
+    "ast_hash": "f22c4a7555cbd3e454124683c27f2c56",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/contract-negotiation.ts": {
+    "mtime": 1784700412.7087219,
+    "ast_hash": "1177c33ee0cc9e9f395fa972a049d7c3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/contract-negotiation-demand.ts": {
+    "mtime": 1784624606.9758146,
+    "ast_hash": "338ebfafc1e9f9e63d456f7857379d8d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/contract-negotiation.test.ts": {
+    "mtime": 1784700392.6848586,
+    "ast_hash": "a973af7b2c386f82233e36a2fb6a40a8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/career/contract-negotiation.ts": {
+    "mtime": 1784700341.1402445,
+    "ast_hash": "b3404ad786bfd7a9d7cb703cacf1a98e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/selected-club-contract-workflow.ts": {
+    "mtime": 1784603608.0129952,
+    "ast_hash": "55f29d42559c2392119632863a05fd48",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/ai-contract-lifecycle.test.ts": {
+    "mtime": 1784685641.6151438,
+    "ast_hash": "c83f26b68b80777a1f2a91c0f292e021",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/ai-contract-lifecycle.ts": {
+    "mtime": 1784700460.6088805,
+    "ast_hash": "ab6affc6cfd1ea278307c6af16390511",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-contract-view.ts": {
+    "mtime": 1784667665.7053595,
+    "ast_hash": "6e420cbb53776650d6f32677decdfcf3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-player-profile-view.ts": {
+    "mtime": 1784662997.1554446,
+    "ast_hash": "1937bb1db36d8eafa6fe3020572a71af",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-player-profile-view.test.ts": {
+    "mtime": 1784629627.6018012,
+    "ast_hash": "efd43aca662362a0275eda1d368ead95",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-squad-view.test.ts": {
+    "mtime": 1784649730.3031323,
+    "ast_hash": "e23de56598498d0388e38cb9ae80d532",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-contract-view.test.ts": {
+    "mtime": 1784629402.3663893,
+    "ast_hash": "d7492a9dc0855f06fd9e95bd8b8e189c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/ui/src/career/career-squad-view.ts": {
+    "mtime": 1784649730.3025992,
+    "ast_hash": "3a47397127da6a1684d5ce66ce1b4563",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/squad/public-club-player-assessment.ts": {
+    "mtime": 1784628955.0727036,
+    "ast_hash": "d06d1f92a4e32cdfcf7b00063913af4d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/squad/public-club-player-assessment.test.ts": {
+    "mtime": 1784629064.5574126,
+    "ast_hash": "39123ae0c7148c53b8675d0c5c875c13",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/CareerSquadScreen.tsx": {
+    "mtime": 1784667716.3340135,
+    "ast_hash": "9698d418f4634db03c77a77e1ac2a1a1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/CareerPlayerProfileDialog.tsx": {
+    "mtime": 1784667716.3335,
+    "ast_hash": "3bc952df01118c89f270cdf1aeefc1e2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/career-squad-adapter.ts": {
+    "mtime": 1784667899.2080698,
+    "ast_hash": "de1f32ac199605d7a180a10b95482b1b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/career-squad-adapter.test.ts": {
+    "mtime": 1784665673.7180858,
+    "ast_hash": "38374c2b47cb38a61b606c98d4789c7e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/tactics/CareerTacticsScreen.tsx": {
+    "mtime": 1784649445.4756627,
+    "ast_hash": "6b1bec2a17b4eb6c17e072f0ff37a272",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/SquadLineupChoiceDialog.tsx": {
+    "mtime": 1784649730.3035476,
+    "ast_hash": "56b6a9d1e46e5f263cefd9ebe59ab88e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/CareerPlayerProfileDialog.test.tsx": {
+    "mtime": 1784665378.3632767,
+    "ast_hash": "041620c02da2c1abd63db8ee94f57f83",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/CareerContractWorkspace.tsx": {
+    "mtime": 1784667759.8805263,
+    "ast_hash": "90b7e5d27bfa88942801178a897eb28f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/contract-renewal-form.test.ts": {
+    "mtime": 1784667694.5439303,
+    "ast_hash": "11f589009864c9aa0d0a1e0cf9afae39",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/web/src/features/squad/contract-renewal-form.ts": {
+    "mtime": 1784667694.5426595,
+    "ast_hash": "4e3c29ae32c3965b75748afa2f806a43",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/long-run/contract-finance-stability.test.ts": {
+    "mtime": 1784671028.825228,
+    "ast_hash": "648cc917f2431025207ca3722c5f7853",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/simulation-tools/src/long-run/contract-finance-stability.ts": {
+    "mtime": 1784727527.6350846,
+    "ast_hash": "cb32c76661e27a8407ce80305985b7d3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/senior-squad-replenishment.ts": {
+    "mtime": 1784711190.9467313,
+    "ast_hash": "9f58276ce39a73c8de02fb4f85bbed05",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/apply-career-free-agent-signing.test.ts": {
+    "mtime": 1784710267.2142982,
+    "ast_hash": "8a82fa14e86d4c033686b0b4aa5f9ebb",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/career-contract-reservations.ts": {
+    "mtime": 1784687243.2972274,
+    "ast_hash": "da6c73250bbef4cff40131a36ed8b87e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/free-agent-pool.ts": {
+    "mtime": 1784675645.4789395,
+    "ast_hash": "1b99c4e1d32ba47887f6f6e6c7e0ce44",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/engine/src/career/apply-career-free-agent-signing.ts": {
+    "mtime": 1784698517.68887,
+    "ast_hash": "b3d60e3dabcb9cff84e470af42a272aa",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/player/player-squad-department.test.ts": {
+    "mtime": 1784672951.9352133,
+    "ast_hash": "6fd2aa82791b06bf0847905650bf0cd8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/packages/domain/src/player/player-squad-department.ts": {
+    "mtime": 1784672951.9349747,
+    "ast_hash": "a64325ad1f58cfc914c38a1aa4baae23",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/apps/cli/src/commands/ten-season-report/gate-checkpoint.ts": {
+    "mtime": 1784724219.6635432,
+    "ast_hash": "d6679d1704a291be809c02b53703082f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0004-of-0010.json": {
+    "mtime": 1784702056.637347,
+    "ast_hash": "e537db2f87f59a06ebc1b55aa1035eff",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0003-of-0010.json": {
+    "mtime": 1784702056.239213,
+    "ast_hash": "e5b3c2ab7cd7b72645638b193a5b899c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0002-of-0010.json": {
+    "mtime": 1784702054.8512595,
+    "ast_hash": "03346b0dc350f58cdc328cfe027c2e9d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0005-of-0010.json": {
+    "mtime": 1784702055.8288662,
+    "ast_hash": "5e97ebd847bd5527047fda2e3aa593b0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0010-of-0010.json": {
+    "mtime": 1784702056.7910001,
+    "ast_hash": "2fa8f61790a0e9d4c1e8e91278be2323",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0008-of-0010.json": {
+    "mtime": 1784702056.7368293,
+    "ast_hash": "7ce2daf06a01417a103686cc7af91aab",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0009-of-0010.json": {
+    "mtime": 1784702057.3274958,
+    "ast_hash": "ed2a30c8a4bbc1adfb7bb8dfada15294",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0007-of-0010.json": {
+    "mtime": 1784702056.94211,
+    "ast_hash": "4b5ed96be2c8120bbe5612f0f49104bc",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0001-of-0010.json": {
+    "mtime": 1784702054.691532,
+    "ast_hash": "c8150138343d207b48fd144007441280",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-concurrency-smoke-v2-10x50/shard-0006-of-0010.json": {
+    "mtime": 1784702056.2826326,
+    "ast_hash": "5bbb50a45d225f0e24c1fb01a9f39051",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0006-of-0025.json": {
+    "mtime": 1784694175.0772684,
+    "ast_hash": "db20c0241846994a9be593dd49429de1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0001-of-0025.json": {
+    "mtime": 1784693245.9713657,
+    "ast_hash": "4614fa6b746f599e8f34e7598f84a28c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0014-of-0025.json": {
+    "mtime": 1784695703.1018255,
+    "ast_hash": "995813af99ae5fbd7b07a29393e495f3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0013-of-0025.json": {
+    "mtime": 1784695703.1953206,
+    "ast_hash": "e1741ce188a36f3b17841b644bced505",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0025-of-0025.json": {
+    "mtime": 1784696029.1141825,
+    "ast_hash": "592d8616c31913a425ff032c2449fca9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0022-of-0025.json": {
+    "mtime": 1784696037.1188176,
+    "ast_hash": "9d9d139f8e73caa1d546eb25ffe1f60f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0012-of-0025.json": {
+    "mtime": 1784695702.3827093,
+    "ast_hash": "adc54e0b9cc2d9beb94fbc25fb4a9c32",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0015-of-0025.json": {
+    "mtime": 1784695715.0060267,
+    "ast_hash": "6c79d4c8618bf241d238345808181270",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0007-of-0025.json": {
+    "mtime": 1784694173.8360817,
+    "ast_hash": "6bcac95c1133a22932b98efc274d513f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0023-of-0025.json": {
+    "mtime": 1784696032.5587382,
+    "ast_hash": "82549aa906169a16d342103d20bbe396",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0024-of-0025.json": {
+    "mtime": 1784696033.0823104,
+    "ast_hash": "b04913f3305c8ad7f208665b3951b36d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0018-of-0025.json": {
+    "mtime": 1784695715.325121,
+    "ast_hash": "1946fef383769ffb0833bea4304709d4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0019-of-0025.json": {
+    "mtime": 1784695714.3359141,
+    "ast_hash": "e41768ef93cf8aeee497a1eca54a6674",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0009-of-0025.json": {
+    "mtime": 1784694167.9102104,
+    "ast_hash": "fa05627ec05a01d5b39db0a355def994",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0008-of-0025.json": {
+    "mtime": 1784694165.9754894,
+    "ast_hash": "5055528c6b7e15449e5b5e489ca48b2b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0017-of-0025.json": {
+    "mtime": 1784695715.8387005,
+    "ast_hash": "5dd4581841e31d76b0286dd29e5070da",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0010-of-0025.json": {
+    "mtime": 1784694173.036297,
+    "ast_hash": "2c30130e6f558def0f3dcd186fa43542",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0005-of-0025.json": {
+    "mtime": 1784694173.3899226,
+    "ast_hash": "3771cf10c845b54acf48027635996635",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0002-of-0025.json": {
+    "mtime": 1784694165.6139405,
+    "ast_hash": "2b05e8297f2e900340525abd3d5b7a72",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0021-of-0025.json": {
+    "mtime": 1784695714.2607324,
+    "ast_hash": "0469496cb684dabbe9836ac6ebb02ad9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0003-of-0025.json": {
+    "mtime": 1784694152.786891,
+    "ast_hash": "02266f5ddf814d83e1d1f6fcf74ff4a6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0004-of-0025.json": {
+    "mtime": 1784694174.328966,
+    "ast_hash": "00d55e211c150d8759c6b4839ec9b668",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0011-of-0025.json": {
+    "mtime": 1784694171.3142376,
+    "ast_hash": "c303e9b9f18bacd6dbbce263d515b078",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0016-of-0025.json": {
+    "mtime": 1784695712.428245,
+    "ast_hash": "db2f4d3f0cc9fed2433d72db149639b2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30/shard-0020-of-0025.json": {
+    "mtime": 1784695709.3803413,
+    "ast_hash": "f6b759b6184b5bce50aa062c0d661195",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-250x30-repeat.md": {
+    "mtime": 1784696074.2640445,
+    "ast_hash": "885d919aee8c54be4f3e3065aeaa39d9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v2.md": {
+    "mtime": 1784699826.0992448,
+    "ast_hash": "d410bd583e5d6effaac102c786d79eae",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-profile-v2.md": {
+    "mtime": 1784699913.1395457,
+    "ast_hash": "2339dc0bc407fd90de97ff3996e4efb4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-profile-v4.md": {
+    "mtime": 1784701315.8680391,
+    "ast_hash": "ac63c4b0095c0f6d6d8f9bb20d307da1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v3.md": {
+    "mtime": 1784700547.2316344,
+    "ast_hash": "3c2156f15aee01325f100833166cb984",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-debug-1x10-batched.md": {
+    "mtime": 1784692527.7780213,
+    "ast_hash": "6baf19b8a8157c9511c16ffae275d20b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-concurrency-smoke-v2-10x50.md": {
+    "mtime": 1784702057.3295438,
+    "ast_hash": "e8cd5bcd2da70194045d163ececfc04e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-250x30-batched.md": {
+    "mtime": 1784696037.146236,
+    "ast_hash": "a17fdb7729c514df06984a4302daa2e8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-world-00191-28-fixed.md": {
+    "mtime": 1784695109.006524,
+    "ast_hash": "5228da034f9872ca44476e9c000c7931",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-concurrency-smoke-v2-10x50-timing.txt": {
+    "mtime": 1784702057.6394465,
+    "ast_hash": "c2eefce861fce68862bc4fcfe2d26198",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v5-transaction.md": {
+    "mtime": 1784701717.3918028,
+    "ast_hash": "151995aaaad4257f99fc1a8cf9229d38",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-50x10.md": {
+    "mtime": 1784677781.8713205,
+    "ast_hash": "873713f8adc97846f58164efae3ab9ff",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-50x10-batched.md": {
+    "mtime": 1784711612.6926534,
+    "ast_hash": "c425e9b03adb3b7472c080bc8a250280",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-profile-v5.md": {
+    "mtime": 1784701914.9069772,
+    "ast_hash": "09bc5bb68a419dd13f66291c8e2c3411",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v5-timing.txt": {
+    "mtime": 1784701853.7477868,
+    "ast_hash": "643db4931b46c1b34707b96c2a46dae6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v5-transaction-repeat.md": {
+    "mtime": 1784701853.7096024,
+    "ast_hash": "a097cb417622a87d7e6180cca089b14c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-debug-1x10.md": {
+    "mtime": 1784676730.90331,
+    "ast_hash": "49677fb0ba993f92cf040be116309f05",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-profile-v3.md": {
+    "mtime": 1784700640.166808,
+    "ast_hash": "a6985890a42c9276dab039f6efbc4478",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v3-transfer-batch.md": {
+    "mtime": 1784701198.5922582,
+    "ast_hash": "5f191f907beb14e49cd38cede471bb20",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-benchmark-v4.md": {
+    "mtime": 1784701158.303041,
+    "ast_hash": "7caa56e67828d751b1e6e304b8dd5dd2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0151-of-2000.json": {
+    "mtime": 1784708843.5492465,
+    "ast_hash": "bdfc138170558823730b04d6217c65d0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0104-of-2000.json": {
+    "mtime": 1784707467.4182947,
+    "ast_hash": "e02d74a02c971eda401776288020fe52",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0073-of-2000.json": {
+    "mtime": 1784706603.838469,
+    "ast_hash": "1f97d2c916ee1ca609bc0525f1f91ba1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0026-of-2000.json": {
+    "mtime": 1784704933.9107237,
+    "ast_hash": "31d0bd1a5e15266b410de4769423bccc",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0156-of-2000.json": {
+    "mtime": 1784708990.928548,
+    "ast_hash": "e59e5798ea6878675a1df36d870da578",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0103-of-2000.json": {
+    "mtime": 1784707456.8091807,
+    "ast_hash": "1d47b814ac2c94c63cb0b343a1129e90",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0074-of-2000.json": {
+    "mtime": 1784706616.4972694,
+    "ast_hash": "da78217a8add1dbbbb325caf19550695",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0021-of-2000.json": {
+    "mtime": 1784704804.3249815,
+    "ast_hash": "3ca5aa4c6b6f33818138e0f49db3ad6a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0061-of-2000.json": {
+    "mtime": 1784706242.7762501,
+    "ast_hash": "735cad15e276bab8fdb8b4ad14f917b7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0034-of-2000.json": {
+    "mtime": 1784705200.7806332,
+    "ast_hash": "4a2645e421c4e6f2a75f5a730278f147",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0143-of-2000.json": {
+    "mtime": 1784708614.0794144,
+    "ast_hash": "4307d3a511ef538fd05e3147326b79ba",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0116-of-2000.json": {
+    "mtime": 1784707813.459738,
+    "ast_hash": "e4ecdeed3515ddecdc8148ead46108fa",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0099-of-2000.json": {
+    "mtime": 1784707346.8800259,
+    "ast_hash": "b063949be8d9da38d49178e00d69efe9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0066-of-2000.json": {
+    "mtime": 1784706378.67479,
+    "ast_hash": "513ee200d64973ca5ec09a15ab71c481",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0033-of-2000.json": {
+    "mtime": 1784705192.298554,
+    "ast_hash": "e72fd0e11993c7f6856e4cf6ec22eb67",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0144-of-2000.json": {
+    "mtime": 1784708625.8602386,
+    "ast_hash": "5800895935bdc028db3aef22537a86d7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0111-of-2000.json": {
+    "mtime": 1784707682.9631047,
+    "ast_hash": "e638ca94cc00e84b0a0d5a029039e035",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0050-of-2000.json": {
+    "mtime": 1784705747.3458848,
+    "ast_hash": "82acd75f5263b1af90283247764f6ca5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0005-of-2000.json": {
+    "mtime": 1784702927.618537,
+    "ast_hash": "c65943d540b8a5a60be82e3ccadf5bdf",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0127-of-2000.json": {
+    "mtime": 1784708145.7456255,
+    "ast_hash": "5d0ede34b2202350cc678a08d6e04b9a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0057-of-2000.json": {
+    "mtime": 1784706071.7587454,
+    "ast_hash": "efa901f8691ed96cdfca505cdf595925",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0002-of-2000.json": {
+    "mtime": 1784702920.2783036,
+    "ast_hash": "d1095aae1e34bd700c0627b300287778",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0120-of-2000.json": {
+    "mtime": 1784707927.6955357,
+    "ast_hash": "66a5d443ee777fb22fc53cc4a151ed4b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0160-of-2000.json": {
+    "mtime": 1784709116.4011753,
+    "ast_hash": "8b4cbebc5251eac9e82012cb264f6941",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0135-of-2000.json": {
+    "mtime": 1784708384.3389003,
+    "ast_hash": "ce64b51fbb118a9fcd478d59bdd96dd9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0042-of-2000.json": {
+    "mtime": 1784705440.5419793,
+    "ast_hash": "bc65faec5986787d9d063835552b6e03",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0017-of-2000.json": {
+    "mtime": 1784703919.5164652,
+    "ast_hash": "f5fac64a52da1292c5fb15cdb479350e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0167-of-2000.json": {
+    "mtime": 1784709334.6962428,
+    "ast_hash": "c879ee4b607087890e8b7393b8d3c29c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0132-of-2000.json": {
+    "mtime": 1784708276.2712631,
+    "ast_hash": "17200abb37b25e66405c739663a7fb7a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0045-of-2000.json": {
+    "mtime": 1784705566.4961765,
+    "ast_hash": "87adc26bc350797e720d2a130276c21f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0010-of-2000.json": {
+    "mtime": 1784702921.715179,
+    "ast_hash": "b998f8315649436b56c4247133ea5b67",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0110-of-2000.json": {
+    "mtime": 1784707636.5610573,
+    "ast_hash": "120c5fa9614f39b6285ed48471a28ea5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0145-of-2000.json": {
+    "mtime": 1784708669.6157608,
+    "ast_hash": "d5a6e28d5719ea3b05b472cdfa2bc7df",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0032-of-2000.json": {
+    "mtime": 1784705123.8576765,
+    "ast_hash": "4d71c9b7a9c5baf9fbba4d72350962a9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0067-of-2000.json": {
+    "mtime": 1784706432.405463,
+    "ast_hash": "63b50dcb6bc7a4a689682f1327376442",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0098-of-2000.json": {
+    "mtime": 1784707299.150535,
+    "ast_hash": "98d0e910e3794df498f1e7497c3571b2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0117-of-2000.json": {
+    "mtime": 1784707858.0770667,
+    "ast_hash": "839b70062737b0db066cc20c56d4fcd7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0142-of-2000.json": {
+    "mtime": 1784708569.1766992,
+    "ast_hash": "327b6e752af040931b31b1f43e01f7cb",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0035-of-2000.json": {
+    "mtime": 1784705252.2995555,
+    "ast_hash": "4757e966d8f742ac622e72a3b84c810a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0060-of-2000.json": {
+    "mtime": 1784706184.24694,
+    "ast_hash": "ec60bbd2ec441680e85ad0e178e71fee",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0020-of-2000.json": {
+    "mtime": 1784703919.972147,
+    "ast_hash": "4da460f11784b686805bd00568e4173f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0075-of-2000.json": {
+    "mtime": 1784706659.2498333,
+    "ast_hash": "4363cc878d1887810ea2547b6f3ec29c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0102-of-2000.json": {
+    "mtime": 1784707412.8935654,
+    "ast_hash": "037e437e760a498d710fc0e45acfac6f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0157-of-2000.json": {
+    "mtime": 1784709039.7461054,
+    "ast_hash": "9d70748a07447375568adbe575d08ffb",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0027-of-2000.json": {
+    "mtime": 1784704989.3605523,
+    "ast_hash": "4207c20d24d860f0ac67e08ca7672d4c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0072-of-2000.json": {
+    "mtime": 1784706553.9212692,
+    "ast_hash": "687a25eef1ad8285c464461d35e94bb4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0105-of-2000.json": {
+    "mtime": 1784707513.7669492,
+    "ast_hash": "360ec87a2fc9856fc9154f90aba3fd2f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0150-of-2000.json": {
+    "mtime": 1784708801.9562898,
+    "ast_hash": "54838ef2357aa91e5ab5b0043309b8ff",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0011-of-2000.json": {
+    "mtime": 1784703917.9464836,
+    "ast_hash": "3005684c2b29e70abf9c0293b58bf3ef",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0044-of-2000.json": {
+    "mtime": 1784705510.8891475,
+    "ast_hash": "0591cd3eb5d6a821cbc731a434ceaa8a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0133-of-2000.json": {
+    "mtime": 1784708323.922982,
+    "ast_hash": "f189da73771a8217c609d82f770fb6e8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0166-of-2000.json": {
+    "mtime": 1784709292.1393223,
+    "ast_hash": "920552fd813e5c60cfd699f3f97d2773",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0016-of-2000.json": {
+    "mtime": 1784703928.8938842,
+    "ast_hash": "ed49599fd8629294a97293803f5a100e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0043-of-2000.json": {
+    "mtime": 1784705495.3709056,
+    "ast_hash": "4169993499caca23031058a85cb59f33",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0134-of-2000.json": {
+    "mtime": 1784708337.0081034,
+    "ast_hash": "d7e8cb4b3f556c6afb1e9880376c6987",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0161-of-2000.json": {
+    "mtime": 1784709168.6016989,
+    "ast_hash": "bdd72ffee3a2da2d7904992f761fba3a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0121-of-2000.json": {
+    "mtime": 1784707973.5209062,
+    "ast_hash": "438fd6e1785435c28e321db2d449f50e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0003-of-2000.json": {
+    "mtime": 1784702930.6334546,
+    "ast_hash": "ceedcb01f2913bb353c5530d8b109830",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0056-of-2000.json": {
+    "mtime": 1784705971.1656044,
+    "ast_hash": "7439efe5b7fe77fa84e61f7359033ad8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0126-of-2000.json": {
+    "mtime": 1784708102.5450284,
+    "ast_hash": "ad6b3768527c28cdeb804afa84e42299",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0004-of-2000.json": {
+    "mtime": 1784702927.2379727,
+    "ast_hash": "0b0294d1e928e241e34c97e1672657f6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0051-of-2000.json": {
+    "mtime": 1784705790.4007993,
+    "ast_hash": "1742888eabcf05e2bdaf2b1e65ee0e78",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0009-of-2000.json": {
+    "mtime": 1784702928.1626759,
+    "ast_hash": "986f372fe4e646dd8c3e187235572e6c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0049-of-2000.json": {
+    "mtime": 1784705729.6848328,
+    "ast_hash": "8369f0df915e1be3390a7f760804f64e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0139-of-2000.json": {
+    "mtime": 1784708500.7401907,
+    "ast_hash": "d1c772f11ba6c931789011c9b3180907",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0087-of-2000.json": {
+    "mtime": 1784707001.9602184,
+    "ast_hash": "7494fe97d0c0a8ebea9406fc0aa985b5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0078-of-2000.json": {
+    "mtime": 1784706729.0328686,
+    "ast_hash": "42eea2118418b47f4dcee0188b3b4978",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0108-of-2000.json": {
+    "mtime": 1784707579.8633335,
+    "ast_hash": "7f3ca53c456a88e488e5ceea4ea0aa5b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0080-of-2000.json": {
+    "mtime": 1784706784.0993636,
+    "ast_hash": "e4b67223c4245ada687fee96449207b9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0095-of-2000.json": {
+    "mtime": 1784707233.3874998,
+    "ast_hash": "81d47934d39207c966883e1085a04203",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0148-of-2000.json": {
+    "mtime": 1784708742.8635595,
+    "ast_hash": "a4a438698399b62c327f016d27a01d41",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0092-of-2000.json": {
+    "mtime": 1784707127.5575612,
+    "ast_hash": "27dbdd272bdc8186ab1a257e531e49e9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0038-of-2000.json": {
+    "mtime": 1784705318.4851155,
+    "ast_hash": "84665d7be9b4f5b5b611a76c75a55fed",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0138-of-2000.json": {
+    "mtime": 1784708455.8709848,
+    "ast_hash": "30574427603c73aa222a6cc78720c68b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0048-of-2000.json": {
+    "mtime": 1784705678.2392724,
+    "ast_hash": "00c810f484c4001a40e98dfe4a6bf2ad",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0008-of-2000.json": {
+    "mtime": 1784702927.932662,
+    "ast_hash": "84e32eb9dfc63838defd20df141fad01",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0039-of-2000.json": {
+    "mtime": 1784705370.705662,
+    "ast_hash": "e6754292170d88459e28139a4208e323",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0093-of-2000.json": {
+    "mtime": 1784707176.4096425,
+    "ast_hash": "3480f1e2823671946fc1ec999bb11e68",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0149-of-2000.json": {
+    "mtime": 1784708785.2851436,
+    "ast_hash": "02d055443239ff3b9621ac5f77e47bce",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0094-of-2000.json": {
+    "mtime": 1784707185.3948784,
+    "ast_hash": "3a9cd5fe2d0cbe58d2fc18bad3ba90c0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0081-of-2000.json": {
+    "mtime": 1784706826.9038606,
+    "ast_hash": "c875af7d16fd7c7c58eeb2022773f58e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0109-of-2000.json": {
+    "mtime": 1784707624.766972,
+    "ast_hash": "34bf98631e3586f4356381415cdbe2c8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0079-of-2000.json": {
+    "mtime": 1784706772.7241685,
+    "ast_hash": "3be8fcbcd9edeba8d7e0448a73517cb3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0086-of-2000.json": {
+    "mtime": 1784706953.855261,
+    "ast_hash": "a22601d59286e8b809e1ed715770a75d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0168-of-2000.json": {
+    "mtime": 1784709348.2170408,
+    "ast_hash": "d124e5a00bf239494ad0481f426b7aed",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0018-of-2000.json": {
+    "mtime": 1784703922.7092152,
+    "ast_hash": "763210b51df8c4888688568aecf3a32a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0058-of-2000.json": {
+    "mtime": 1784706087.1538095,
+    "ast_hash": "33b1de334cf2e7a76c24005f435f12f8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0128-of-2000.json": {
+    "mtime": 1784708159.8591363,
+    "ast_hash": "6cd13790500ff408261b6c32edb84b63",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0069-of-2000.json": {
+    "mtime": 1784706489.2703598,
+    "ast_hash": "a03daa81db52b58588101a968b1f7112",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0096-of-2000.json": {
+    "mtime": 1784707243.3155181,
+    "ast_hash": "1fd05e96e99f7473f2638a223339a50e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0091-of-2000.json": {
+    "mtime": 1784707120.6573377,
+    "ast_hash": "796b44305d6e0862513f87540d6ba6f9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0119-of-2000.json": {
+    "mtime": 1784707915.240509,
+    "ast_hash": "40cac06d6e7e012523bbc280d9695af6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0159-of-2000.json": {
+    "mtime": 1784709103.892964,
+    "ast_hash": "83728b0e6a8e4744bbfee62dc9c04704",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0084-of-2000.json": {
+    "mtime": 1784706899.3090284,
+    "ast_hash": "bf5baf9bd27f5eb564c7a548ba855f06",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0029-of-2000.json": {
+    "mtime": 1784705050.6942391,
+    "ast_hash": "854aa509dc076f16d2273fa8098ffd30",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0083-of-2000.json": {
+    "mtime": 1784706884.397848,
+    "ast_hash": "a9b930d576e390114b7988a9589b476c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0129-of-2000.json": {
+    "mtime": 1784708204.947541,
+    "ast_hash": "1e44f7fe0b1e0569bcf3363503880244",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0059-of-2000.json": {
+    "mtime": 1784706174.6374362,
+    "ast_hash": "94707d9670f2529c98d87bad24784bed",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0019-of-2000.json": {
+    "mtime": 1784703927.107803,
+    "ast_hash": "2c98ef813c91aa5dc0122c8e1a8d6f72",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0169-of-2000.json": {
+    "mtime": 1784709390.5034144,
+    "ast_hash": "f9a10d56b33ad760faf27274f8843d40",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0082-of-2000.json": {
+    "mtime": 1784706841.5172155,
+    "ast_hash": "ab305ee8cd99c73454de879eb0ec5d4a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0028-of-2000.json": {
+    "mtime": 1784704993.5946186,
+    "ast_hash": "a3ca108b6060fd22d7b18b7b57f81023",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0085-of-2000.json": {
+    "mtime": 1784706943.140179,
+    "ast_hash": "eab55459ec04f7ea7da388c9fdfe38e0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0158-of-2000.json": {
+    "mtime": 1784709053.420029,
+    "ast_hash": "64525e118ff90a6d31170fb0fa4cff09",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0118-of-2000.json": {
+    "mtime": 1784707870.7366703,
+    "ast_hash": "9cbd5a59fa401765cd61a43fed621f5f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0090-of-2000.json": {
+    "mtime": 1784707071.687129,
+    "ast_hash": "7b529dd6a379085f9107f74f0b355cb1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0097-of-2000.json": {
+    "mtime": 1784707289.5378351,
+    "ast_hash": "bcbd8eb65077ed3dde4292a59cfe408b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0068-of-2000.json": {
+    "mtime": 1784706442.106458,
+    "ast_hash": "34c035f96d6f8829514c8c6efe6fa896",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0062-of-2000.json": {
+    "mtime": 1784706251.846092,
+    "ast_hash": "7b739e9903577a35c41fc8804bb0b63d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0037-of-2000.json": {
+    "mtime": 1784705312.508793,
+    "ast_hash": "4e1682fead645e3bc126077f122e98c4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0140-of-2000.json": {
+    "mtime": 1784708512.1514585,
+    "ast_hash": "6c8a5c484b9acb4fdc13f25182e0fb29",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0115-of-2000.json": {
+    "mtime": 1784707800.315553,
+    "ast_hash": "626de23dbb6d9396367c9fbf6f6dbc71",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0065-of-2000.json": {
+    "mtime": 1784706366.6030045,
+    "ast_hash": "9d380ddbaad2011058b6ba531c863109",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0030-of-2000.json": {
+    "mtime": 1784705056.3245797,
+    "ast_hash": "97e414b5f1f5ef040441e30158517a47",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0147-of-2000.json": {
+    "mtime": 1784708727.09407,
+    "ast_hash": "42d6e4cc6d6465c0cc135f93c8125cb8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0112-of-2000.json": {
+    "mtime": 1784707695.7779465,
+    "ast_hash": "ecdd43c1f407febc7d175ad81846fad6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0152-of-2000.json": {
+    "mtime": 1784708860.075437,
+    "ast_hash": "1b0facc8ac5b642c5c403918a17fa947",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0107-of-2000.json": {
+    "mtime": 1784707570.3819437,
+    "ast_hash": "224c1df16cbe2d0d9b71fb80a7ee3a1d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0070-of-2000.json": {
+    "mtime": 1784706498.5986967,
+    "ast_hash": "ea5c79e2db1d86c58e605a109223a733",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0025-of-2000.json": {
+    "mtime": 1784704928.8916206,
+    "ast_hash": "a0c91500a61ac3385b823c4dc799a2c5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0155-of-2000.json": {
+    "mtime": 1784708973.8898628,
+    "ast_hash": "4ac3c5a5b746efcac9462fbd21414055",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0100-of-2000.json": {
+    "mtime": 1784707356.284282,
+    "ast_hash": "5bb361a42637294c70c695de7138d037",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0077-of-2000.json": {
+    "mtime": 1784706715.1518633,
+    "ast_hash": "4142078851a70ffeef0c2e601c1bc5a2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0022-of-2000.json": {
+    "mtime": 1784704805.190463,
+    "ast_hash": "539d235575143e7f7bb1909407e4e851",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0088-of-2000.json": {
+    "mtime": 1784707011.3528688,
+    "ast_hash": "ecca78c6e0d9499ad6ba7858a8aea758",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0163-of-2000.json": {
+    "mtime": 1784709223.2910683,
+    "ast_hash": "aff617f5fd7c6db178dcebe33f8adf16",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0136-of-2000.json": {
+    "mtime": 1784708397.4711149,
+    "ast_hash": "d50e4cc494d9f130c92664359866d7d5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0041-of-2000.json": {
+    "mtime": 1784705432.9486895,
+    "ast_hash": "bae5be47f2fbf6ee28fd8342a65bb22a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0014-of-2000.json": {
+    "mtime": 1784703926.269237,
+    "ast_hash": "a7e4e2cdd9d2e6079990dc16c3697128",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0164-of-2000.json": {
+    "mtime": 1784709235.2428687,
+    "ast_hash": "7924812fe3f3354996f02ede1c074b5a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0131-of-2000.json": {
+    "mtime": 1784708263.1896217,
+    "ast_hash": "75c561541e89604276dab1a6c504efe1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0046-of-2000.json": {
+    "mtime": 1784705590.8582006,
+    "ast_hash": "f666d6c8394b68d83b508b931607b7f7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0013-of-2000.json": {
+    "mtime": 1784703929.6789985,
+    "ast_hash": "40bb4c5eb7c0845a7430dd308a257e4f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0053-of-2000.json": {
+    "mtime": 1784705854.0900805,
+    "ast_hash": "7ce6e7c1cc4376608d7cf5bd38fa3dba",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0006-of-2000.json": {
+    "mtime": 1784702928.0856283,
+    "ast_hash": "8fb8c4000fab99e0eb0c0cf1f8eae5d8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0171-of-2000.json": {
+    "mtime": 1784709446.7047868,
+    "ast_hash": "51f250037adb73d58609080cd075066d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0124-of-2000.json": {
+    "mtime": 1784708043.618207,
+    "ast_hash": "c6614f22153a3e56f8826f6a6713cb9d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0054-of-2000.json": {
+    "mtime": 1784705867.7710357,
+    "ast_hash": "6b53274f8bc81f404e09bee8f60bd8ce",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0001-of-2000.json": {
+    "mtime": 1784702918.130368,
+    "ast_hash": "88ee24fa5899426fca9ea716507852ed",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0123-of-2000.json": {
+    "mtime": 1784708029.9356477,
+    "ast_hash": "abc18a576414380d9b1af368830a9c9a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0089-of-2000.json": {
+    "mtime": 1784707062.9553885,
+    "ast_hash": "bb2b0435df8891a50cdd99bcf9aee0c2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0023-of-2000.json": {
+    "mtime": 1784704862.6484976,
+    "ast_hash": "138dc7586effb3240ff3e70982981d54",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0076-of-2000.json": {
+    "mtime": 1784706673.7089078,
+    "ast_hash": "8f399669b82bba956d0b96579b16edee",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0101-of-2000.json": {
+    "mtime": 1784707400.1977322,
+    "ast_hash": "9fc9417515140dcf2b91459fd732484b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0154-of-2000.json": {
+    "mtime": 1784708920.8152463,
+    "ast_hash": "4632bcae2c173775efdb76746723c91e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0024-of-2000.json": {
+    "mtime": 1784704864.474698,
+    "ast_hash": "9f2cfd084c0f64088ca883277c09de00",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0071-of-2000.json": {
+    "mtime": 1784706545.96924,
+    "ast_hash": "3ede95f5781f5ae198156d85a8398c2a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0106-of-2000.json": {
+    "mtime": 1784707523.5194986,
+    "ast_hash": "2534a2333dd2b0b4c87f8925b10248ab",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0153-of-2000.json": {
+    "mtime": 1784708904.0203176,
+    "ast_hash": "15bdce1aa9e8f7be1b626b29063648e6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0113-of-2000.json": {
+    "mtime": 1784707743.4388802,
+    "ast_hash": "8d8c46c6ff1f2a85ba5d0a3da72116b2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0146-of-2000.json": {
+    "mtime": 1784708684.842757,
+    "ast_hash": "ca99b35d41feb2006939c6e147f471be",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0031-of-2000.json": {
+    "mtime": 1784705115.1614287,
+    "ast_hash": "b0de3924d9a80b358e22e56a5cbc6bf0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0064-of-2000.json": {
+    "mtime": 1784706315.8504078,
+    "ast_hash": "1ba8e94a5ed56f54691e664843c59b7f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0114-of-2000.json": {
+    "mtime": 1784707755.0696669,
+    "ast_hash": "3d85f16b54b06cdf7d5204425077cd36",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0141-of-2000.json": {
+    "mtime": 1784708557.496646,
+    "ast_hash": "6047849300efc26ec2a760bc51511277",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0036-of-2000.json": {
+    "mtime": 1784705260.9443052,
+    "ast_hash": "bc6a63a25e3b6aa6c36c7ea829d31dcc",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0063-of-2000.json": {
+    "mtime": 1784706305.996303,
+    "ast_hash": "c8071f22e02a5bcc2bd6c237c261d6e2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0122-of-2000.json": {
+    "mtime": 1784707986.385335,
+    "ast_hash": "7bbefd9ca2a2057e482bd921787a3712",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0055-of-2000.json": {
+    "mtime": 1784705947.4006736,
+    "ast_hash": "68b62ac05fc7007e4d291954c49979f1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0125-of-2000.json": {
+    "mtime": 1784708087.4984295,
+    "ast_hash": "13df488b8b38ccdb4f551ae603309c30",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0170-of-2000.json": {
+    "mtime": 1784709402.5420449,
+    "ast_hash": "f7af3952a46cb9efa0915c95e4f6795d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0007-of-2000.json": {
+    "mtime": 1784702923.1068575,
+    "ast_hash": "73fce48a3445014193a0e6a5acbd3685",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0052-of-2000.json": {
+    "mtime": 1784705807.2836795,
+    "ast_hash": "d626698333ea39db52d1f0d00e2bce5b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0012-of-2000.json": {
+    "mtime": 1784703918.442679,
+    "ast_hash": "c98e530883485721f92a9360ba4270dd",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0047-of-2000.json": {
+    "mtime": 1784705660.360882,
+    "ast_hash": "c7c3eadbaa719bdecb9acadc7c2028e8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0130-of-2000.json": {
+    "mtime": 1784708216.2007413,
+    "ast_hash": "c8e15d06bf0a94a36b610dc810edfd8c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0165-of-2000.json": {
+    "mtime": 1784709278.6125035,
+    "ast_hash": "371f483d643c4acb756f8b2497e61d5e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0015-of-2000.json": {
+    "mtime": 1784703926.769422,
+    "ast_hash": "aa2818b4617c7abe60e86f86ab74c698",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0040-of-2000.json": {
+    "mtime": 1784705378.5852802,
+    "ast_hash": "d79f03640472d02266f724fcc3bab785",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0137-of-2000.json": {
+    "mtime": 1784708443.047969,
+    "ast_hash": "0f5cb499d6d42095f7245890a1ec8eec",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50/shard-0162-of-2000.json": {
+    "mtime": 1784709180.1523716,
+    "ast_hash": "c7980c7b6f2f174665b26bc8aecc571f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-dynamic-queue-smoke-20x50/shard-0001-of-0004.json": {
+    "mtime": 1784704662.1519945,
+    "ast_hash": "e890647af0212ca2d8cab8cc9ba091b5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-dynamic-queue-smoke-20x50/shard-0004-of-0004.json": {
+    "mtime": 1784704719.203447,
+    "ast_hash": "3ce2409753a0acc6b5a634866758426f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-dynamic-queue-smoke-20x50/shard-0003-of-0004.json": {
+    "mtime": 1784704719.115112,
+    "ast_hash": "71485d7f487c9deeaa8bbeee4774c20a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-dynamic-queue-smoke-20x50/shard-0002-of-0004.json": {
+    "mtime": 1784704663.553258,
+    "ast_hash": "035f5cb732807f0f02cd32e4ed64556e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0151-of-2000.json": {
+    "mtime": 1784725850.2953076,
+    "ast_hash": "df615b21adb3e588ddb759f87dd28e4a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0104-of-2000.json": {
+    "mtime": 1784719277.3214571,
+    "ast_hash": "28be615e0317fdaea7ecef201f3ba3ea",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0073-of-2000.json": {
+    "mtime": 1784716835.5953245,
+    "ast_hash": "37fccc230d8d46077c82c559773a70ef",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0026-of-2000.json": {
+    "mtime": 1784714143.9804904,
+    "ast_hash": "ca9a39791bf7f11e10a6e2cbe16246f3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0103-of-2000.json": {
+    "mtime": 1784719273.8807034,
+    "ast_hash": "3e0937340000efac0191b2b487fbee7c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0074-of-2000.json": {
+    "mtime": 1784716884.8468657,
+    "ast_hash": "a4a9c2ed667956106b08362191bd4359",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0021-of-2000.json": {
+    "mtime": 1784714005.189645,
+    "ast_hash": "901ef57839404551957f4cfe057e2831",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0061-of-2000.json": {
+    "mtime": 1784716434.4540536,
+    "ast_hash": "d21b47a4f99a7b73c8d9b16efb1cf0eb",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0034-of-2000.json": {
+    "mtime": 1784714410.0982347,
+    "ast_hash": "1a844c2ffa5542bf7e02132ff7edf418",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0143-of-2000.json": {
+    "mtime": 1784725003.4764,
+    "ast_hash": "0ac31af32a62027da0d81c423fcb0bb2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0116-of-2000.json": {
+    "mtime": 1784721186.5540338,
+    "ast_hash": "64058886dd25999d5cc23a5c505aff08",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0099-of-2000.json": {
+    "mtime": 1784719107.161003,
+    "ast_hash": "858db22d3317498cf5344727e2f29457",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0066-of-2000.json": {
+    "mtime": 1784716658.4117832,
+    "ast_hash": "ff5086eb81a502710a6c54efe5dbc4b4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0033-of-2000.json": {
+    "mtime": 1784714398.3662958,
+    "ast_hash": "a18cbc168aa3b9a8414fa6c34c92e024",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0144-of-2000.json": {
+    "mtime": 1784725005.2198207,
+    "ast_hash": "3d7714ed666e893b1a17d51f54a52ea1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0111-of-2000.json": {
+    "mtime": 1784720751.9993563,
+    "ast_hash": "acd251c27068d1609ff01bb174e0f78a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0050-of-2000.json": {
+    "mtime": 1784715032.2506762,
+    "ast_hash": "6f2d7cecb0af851f5a2b24391e01b5cf",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0005-of-2000.json": {
+    "mtime": 1784713462.2499297,
+    "ast_hash": "2ef5af253f39ea3371b3f0ea5b3129c1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0127-of-2000.json": {
+    "mtime": 1784722842.0839326,
+    "ast_hash": "489b59e42ba0fcaff0d46e5ef0727248",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0057-of-2000.json": {
+    "mtime": 1784716287.3092806,
+    "ast_hash": "9f6854c0e229be6d6c94af85c774930f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0002-of-2000.json": {
+    "mtime": 1784713331.6789925,
+    "ast_hash": "563f7776acada0b97a58a72d1d93b275",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0120-of-2000.json": {
+    "mtime": 1784722588.273242,
+    "ast_hash": "fad70bd64d4c6a2868f72a09f0e0c27b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0135-of-2000.json": {
+    "mtime": 1784723342.7589474,
+    "ast_hash": "705a21120d70ba88903b27da77ddec5e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0042-of-2000.json": {
+    "mtime": 1784714803.755892,
+    "ast_hash": "0ea330cc0e123ed76a9ab17b771568b7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0017-of-2000.json": {
+    "mtime": 1784713868.6923027,
+    "ast_hash": "b4e38802d53ec4d979ef63fd8b835da9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0132-of-2000.json": {
+    "mtime": 1784723152.5688305,
+    "ast_hash": "1008bc81cc1595a1f4469c84b4d5fb69",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0045-of-2000.json": {
+    "mtime": 1784714883.0048163,
+    "ast_hash": "63568045d187fd56560cf69f68469192",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0010-of-2000.json": {
+    "mtime": 1784713616.7210627,
+    "ast_hash": "e23d384ebbd30f02555aacd5b9bb03e8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0110-of-2000.json": {
+    "mtime": 1784720674.079368,
+    "ast_hash": "9d30d1b2d491eddf5247e6cc4cef52b4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0145-of-2000.json": {
+    "mtime": 1784725133.190427,
+    "ast_hash": "8ed742138d03ec914f8e9b977605ead9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0032-of-2000.json": {
+    "mtime": 1784714346.2171354,
+    "ast_hash": "1e12550fc23fb51237b5c1e155172822",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0067-of-2000.json": {
+    "mtime": 1784716658.4926515,
+    "ast_hash": "931c4cbdbb4c44e93cba4919e6848120",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0098-of-2000.json": {
+    "mtime": 1784718634.2040353,
+    "ast_hash": "774e98b0a98ca463bb25ab3d91a5ee1d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0117-of-2000.json": {
+    "mtime": 1784722518.1603339,
+    "ast_hash": "d21c7d100248fee3733963e9c9e5816a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0142-of-2000.json": {
+    "mtime": 1784724994.9805496,
+    "ast_hash": "a22408934638945bb16cc9662d8c03cf",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0035-of-2000.json": {
+    "mtime": 1784714481.6212523,
+    "ast_hash": "5efbadfe435f502e5be92d951228435a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0060-of-2000.json": {
+    "mtime": 1784716361.7688584,
+    "ast_hash": "b88082a3e46145c15e959458bac132a4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0020-of-2000.json": {
+    "mtime": 1784713945.1030684,
+    "ast_hash": "45c5ef5fef4385a052753181714e9b07",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0075-of-2000.json": {
+    "mtime": 1784716892.4199405,
+    "ast_hash": "766610f8f3abe1784c5628f9e3322386",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0102-of-2000.json": {
+    "mtime": 1784719202.203124,
+    "ast_hash": "6e6cb3ab3369f11c76ba089180a507f6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0027-of-2000.json": {
+    "mtime": 1784714194.9450624,
+    "ast_hash": "1489db28c633ceef1ea9317fd7348e77",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0072-of-2000.json": {
+    "mtime": 1784716830.5989742,
+    "ast_hash": "b2ef3e018a0a98591c1bf1b3c1207675",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0105-of-2000.json": {
+    "mtime": 1784719327.8622956,
+    "ast_hash": "dd3a3136807ed9d7a67c5248a75a816d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0150-of-2000.json": {
+    "mtime": 1784725848.0668921,
+    "ast_hash": "8ea8423ee82bf3be9cc3bcb5725ad83c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0011-of-2000.json": {
+    "mtime": 1784713672.8291667,
+    "ast_hash": "6cafd7598b771d573de52ad0def201b5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0044-of-2000.json": {
+    "mtime": 1784714875.683153,
+    "ast_hash": "61cfabc019e0e3784626a4534604ef07",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0133-of-2000.json": {
+    "mtime": 1784723293.1365883,
+    "ast_hash": "5ea7e91d77553c4da56c25ca969e4fbb",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0016-of-2000.json": {
+    "mtime": 1784713810.13489,
+    "ast_hash": "a0aa89c7696b5c810df88846425d1af0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0043-of-2000.json": {
+    "mtime": 1784714806.6423452,
+    "ast_hash": "21d54f94dd1e035f09d38cbafb5f24c5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0134-of-2000.json": {
+    "mtime": 1784723329.759799,
+    "ast_hash": "271a61ddc9f6b0a59f200f8945289c8d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0121-of-2000.json": {
+    "mtime": 1784722653.614063,
+    "ast_hash": "47972b09675d8f08e0b22a34211e24aa",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0003-of-2000.json": {
+    "mtime": 1784713396.1042075,
+    "ast_hash": "e3a4626ba5a252183f940615a4bac42a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0056-of-2000.json": {
+    "mtime": 1784716282.1889656,
+    "ast_hash": "324a0c49a87c0c10d4f7d1260cde5bff",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0126-of-2000.json": {
+    "mtime": 1784722819.4066722,
+    "ast_hash": "e9ecf439457bb7c8763601e9fd410276",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0004-of-2000.json": {
+    "mtime": 1784713397.8939664,
+    "ast_hash": "cdfdf713c981128059fc853e57451879",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0051-of-2000.json": {
+    "mtime": 1784715102.9768975,
+    "ast_hash": "02f07aa90de3a7161a6b320cd6cc18d8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0009-of-2000.json": {
+    "mtime": 1784713609.847029,
+    "ast_hash": "f025c2c3768151dc107115648d7c351f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0049-of-2000.json": {
+    "mtime": 1784715028.0515609,
+    "ast_hash": "96a4edeeeb46b2a1e59321b5654262a2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0139-of-2000.json": {
+    "mtime": 1784724843.0220633,
+    "ast_hash": "d7996e14691ca91eb41df911e76e2af6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0087-of-2000.json": {
+    "mtime": 1784717819.0915725,
+    "ast_hash": "8fbd5c1a1d76f4600eea1314402a3e5a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0078-of-2000.json": {
+    "mtime": 1784717180.2451363,
+    "ast_hash": "cd7e86e89d1f9fed994a9faa3670fd2f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0108-of-2000.json": {
+    "mtime": 1784720411.068078,
+    "ast_hash": "e68326fbf49e72faa60de7cef3483a0a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0080-of-2000.json": {
+    "mtime": 1784717326.4084077,
+    "ast_hash": "ffd17f4113d9c286e10f97a8dab51418",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0095-of-2000.json": {
+    "mtime": 1784718495.100321,
+    "ast_hash": "db5a98b23e0ce6bc8f02e72f5696454f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0148-of-2000.json": {
+    "mtime": 1784725310.9955611,
+    "ast_hash": "6ef05dc730f7fbdc87e75915be00052b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0092-of-2000.json": {
+    "mtime": 1784718129.1206791,
+    "ast_hash": "028a55498c9a79d29a1c8dc4e0d33c1c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0038-of-2000.json": {
+    "mtime": 1784714645.189008,
+    "ast_hash": "260871724f9d528afa766c807712f14c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0138-of-2000.json": {
+    "mtime": 1784724844.2265258,
+    "ast_hash": "5f3e0d5e10e72b36e63acd4ec62a5a1a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0048-of-2000.json": {
+    "mtime": 1784714961.613303,
+    "ast_hash": "2edd88799e3e23594394573253a2923b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0008-of-2000.json": {
+    "mtime": 1784713546.338014,
+    "ast_hash": "642d9683c36f13db403d895262a72e6c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0039-of-2000.json": {
+    "mtime": 1784714723.525788,
+    "ast_hash": "dfc7e0e989bfda955467cdb59a4c32dc",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0093-of-2000.json": {
+    "mtime": 1784718205.4554245,
+    "ast_hash": "b1a83fcf54c6dd493f99ff0bbc98020d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0149-of-2000.json": {
+    "mtime": 1784725321.2395282,
+    "ast_hash": "c612daf389a232c5ab89612fb6f2403f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0094-of-2000.json": {
+    "mtime": 1784718280.4859369,
+    "ast_hash": "71d9b7d20d1bfd40c481837d90a9cb0a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0081-of-2000.json": {
+    "mtime": 1784717352.105308,
+    "ast_hash": "11fe38298a281dc0d7bb9b70ef4a2569",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0109-of-2000.json": {
+    "mtime": 1784720594.6970146,
+    "ast_hash": "d77996ae0788166063951c0084c76a8b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0079-of-2000.json": {
+    "mtime": 1784717209.4429808,
+    "ast_hash": "308686e17548cdd57b4255ca08ea7e83",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0086-of-2000.json": {
+    "mtime": 1784717741.4055107,
+    "ast_hash": "30022f604e6c41e150a90d607cae3bdd",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0018-of-2000.json": {
+    "mtime": 1784713875.881376,
+    "ast_hash": "ce614c12404fc3548b7edb4d61086fc8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0058-of-2000.json": {
+    "mtime": 1784716352.1585839,
+    "ast_hash": "9ce00bc27c467f176b23f9c294ac3ffa",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0128-of-2000.json": {
+    "mtime": 1784722845.2290738,
+    "ast_hash": "567b63ba1f7dfe39b98ef9ba28718759",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0069-of-2000.json": {
+    "mtime": 1784716721.8624403,
+    "ast_hash": "b21eb3f965ecc4db8bdeae123cd0ab45",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0096-of-2000.json": {
+    "mtime": 1784718499.7731357,
+    "ast_hash": "636154615c9a18f84c4851a43cba3255",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0091-of-2000.json": {
+    "mtime": 1784718056.657422,
+    "ast_hash": "1fa9678e45ee1cdc5783e45bbb46900a",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0119-of-2000.json": {
+    "mtime": 1784722585.1014216,
+    "ast_hash": "cda0589cd91d8172e95e6d3b7c54327b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0084-of-2000.json": {
+    "mtime": 1784717591.3027687,
+    "ast_hash": "b4239c437e47a2ccb9c8f51f2380e6a4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0029-of-2000.json": {
+    "mtime": 1784714259.158893,
+    "ast_hash": "7505cddd237ec8761ea28555764b35ff",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0083-of-2000.json": {
+    "mtime": 1784717483.3839512,
+    "ast_hash": "59858454b2a728f33d225e53736bc006",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0129-of-2000.json": {
+    "mtime": 1784722982.6417599,
+    "ast_hash": "8243c3ebb2922a9d96a15e09f0c2ca29",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0059-of-2000.json": {
+    "mtime": 1784716356.5694537,
+    "ast_hash": "be89531dec74608440267873485aaed6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0019-of-2000.json": {
+    "mtime": 1784713936.280841,
+    "ast_hash": "d1f459f1b84d9f61123723da148a700c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0082-of-2000.json": {
+    "mtime": 1784717462.2355359,
+    "ast_hash": "978d113a8ff4047f7b5a8ab86686314b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0028-of-2000.json": {
+    "mtime": 1784714203.221599,
+    "ast_hash": "7d8034157bc00d35ab644ac0af7eb872",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0085-of-2000.json": {
+    "mtime": 1784717621.0168865,
+    "ast_hash": "2381c320523513098f151601f18f1a26",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0118-of-2000.json": {
+    "mtime": 1784722518.7492929,
+    "ast_hash": "f5636b4b2718ff6f2cbfdc309e72e07c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0090-of-2000.json": {
+    "mtime": 1784718050.1926546,
+    "ast_hash": "52010134aa744c53d54e26fabef4668f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0097-of-2000.json": {
+    "mtime": 1784718628.224384,
+    "ast_hash": "46d3c3f1c683b7f0ea43cbc697eef0c8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0068-of-2000.json": {
+    "mtime": 1784716718.3405669,
+    "ast_hash": "39b3d0e5a1e04f846c35f16312f15b2b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0062-of-2000.json": {
+    "mtime": 1784716438.6459405,
+    "ast_hash": "0e0aae79ce8b431d7c58c4c4dd7b280d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0037-of-2000.json": {
+    "mtime": 1784714646.951191,
+    "ast_hash": "68e812e0b5cee5dbeec462af8def6888",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0140-of-2000.json": {
+    "mtime": 1784724917.202474,
+    "ast_hash": "f95ce5f466a1d5cb75dfefff6d7092b9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0115-of-2000.json": {
+    "mtime": 1784721089.699926,
+    "ast_hash": "99ea3b11973def7552b2b618b3ac1238",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0065-of-2000.json": {
+    "mtime": 1784716517.0325725,
+    "ast_hash": "04cb7efae4834489d4669418b111e94f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0030-of-2000.json": {
+    "mtime": 1784714269.5844936,
+    "ast_hash": "6dea87a0f3b09c2cf1086a9336a8befe",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0147-of-2000.json": {
+    "mtime": 1784725291.2739112,
+    "ast_hash": "ee5c6f4c0bf8e62a7ac433b4409f476b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0112-of-2000.json": {
+    "mtime": 1784720903.9425144,
+    "ast_hash": "99c4bb24cdf3c47f80e54eb206074363",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0152-of-2000.json": {
+    "mtime": 1784725999.8995934,
+    "ast_hash": "4545549160472569ac6eee31d3fec788",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0107-of-2000.json": {
+    "mtime": 1784720411.4179213,
+    "ast_hash": "40eb08a6866a9acb658fa6c549701874",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0070-of-2000.json": {
+    "mtime": 1784716774.92729,
+    "ast_hash": "8d7c0ca0bf7020fb35ef58405594d6d6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0025-of-2000.json": {
+    "mtime": 1784714136.262727,
+    "ast_hash": "76ced7bbcd1b311bc2f1a90eb26d115f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0100-of-2000.json": {
+    "mtime": 1784719109.1544418,
+    "ast_hash": "1a27a767c38d1da27a01cc7b6296785f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0077-of-2000.json": {
+    "mtime": 1784717019.189744,
+    "ast_hash": "bed53e0641d21fe231b245812d7fe60c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0022-of-2000.json": {
+    "mtime": 1784714015.7929044,
+    "ast_hash": "f55552b01f02588ac06aa87e8604a3a8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0088-of-2000.json": {
+    "mtime": 1784717892.6591375,
+    "ast_hash": "c157d29ac42af1faa3bccee1f825592e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0136-of-2000.json": {
+    "mtime": 1784723480.8717494,
+    "ast_hash": "331ac22c20b6e86dd910d28c96303aba",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0041-of-2000.json": {
+    "mtime": 1784714798.3580656,
+    "ast_hash": "741d9d2854b4372383705b4839ec73e2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0014-of-2000.json": {
+    "mtime": 1784713744.566414,
+    "ast_hash": "404f9c3dd64928266ee43c586c128798",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0131-of-2000.json": {
+    "mtime": 1784723122.8824034,
+    "ast_hash": "3b39d902163257a16d9a90739665982e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0046-of-2000.json": {
+    "mtime": 1784714947.6811872,
+    "ast_hash": "67fecf08d9e9fe708c2519c8f5d6c728",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0013-of-2000.json": {
+    "mtime": 1784713738.841278,
+    "ast_hash": "6f84adbddd5de5eed74e8710f9ffdded",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0053-of-2000.json": {
+    "mtime": 1784715185.690702,
+    "ast_hash": "1990d6c1e507b5c8a954f5bd03f48702",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0006-of-2000.json": {
+    "mtime": 1784713465.4699044,
+    "ast_hash": "132dbe159ae051f3f87b4fa504591401",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0124-of-2000.json": {
+    "mtime": 1784722725.9177551,
+    "ast_hash": "c318477a413ee9c081d9fa97495ec9f9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0054-of-2000.json": {
+    "mtime": 1784716216.6481335,
+    "ast_hash": "c09b790c21b9d2965180813a2b3def4c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0001-of-2000.json": {
+    "mtime": 1784713329.8709116,
+    "ast_hash": "5db7b0fcd403d6d43b67169a09320cb1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0123-of-2000.json": {
+    "mtime": 1784722660.0191884,
+    "ast_hash": "90e7ecd77de94b9ace68cad64a961d90",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0089-of-2000.json": {
+    "mtime": 1784717972.0050797,
+    "ast_hash": "3d40c4f7916ece4712ebc2172afe55ff",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0023-of-2000.json": {
+    "mtime": 1784714074.6628494,
+    "ast_hash": "cd613087c932cbfb8d3092a301c51423",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0076-of-2000.json": {
+    "mtime": 1784716996.711797,
+    "ast_hash": "266b72051e106d825e7a8b29665cfbb3",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0101-of-2000.json": {
+    "mtime": 1784719198.7405062,
+    "ast_hash": "e3ef8848e5687c8acd189819ba006ff4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0024-of-2000.json": {
+    "mtime": 1784714083.6501896,
+    "ast_hash": "8be5da676e228e96eee4f7c47c1e2025",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0071-of-2000.json": {
+    "mtime": 1784716780.0293722,
+    "ast_hash": "9a8ad80bfac59f9b823e360b3489820d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0106-of-2000.json": {
+    "mtime": 1784719330.8286586,
+    "ast_hash": "85372782bf14e9633e4da7ed0bb8b16e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0153-of-2000.json": {
+    "mtime": 1784726005.4804745,
+    "ast_hash": "c6bcaacd252dcd77afbacf647eec0017",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0113-of-2000.json": {
+    "mtime": 1784720960.9344623,
+    "ast_hash": "b5b2d1aa451a20caafc8cbf79154112d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0146-of-2000.json": {
+    "mtime": 1784725150.6632566,
+    "ast_hash": "328ad17cd68fcf579938c610abf655ca",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0031-of-2000.json": {
+    "mtime": 1784714336.0892441,
+    "ast_hash": "0aa0aea944751477684d7d9398009a80",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0064-of-2000.json": {
+    "mtime": 1784716511.4490206,
+    "ast_hash": "07a29ee5e1a65ac475be60a133b6acf9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0114-of-2000.json": {
+    "mtime": 1784721025.9785373,
+    "ast_hash": "0b6b7b6b23f33f77f254690e97a4c9e1",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0141-of-2000.json": {
+    "mtime": 1784724922.3926861,
+    "ast_hash": "7a3ee41957beb382b938bb186ae694ed",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0036-of-2000.json": {
+    "mtime": 1784714495.0556056,
+    "ast_hash": "942737282c9cdaa898e6f166332c0779",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0063-of-2000.json": {
+    "mtime": 1784716507.8040795,
+    "ast_hash": "31d474730957994df7febc6cffca7516",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0122-of-2000.json": {
+    "mtime": 1784722659.8729672,
+    "ast_hash": "a69a2bc09083273dd06cd47c9953050d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0055-of-2000.json": {
+    "mtime": 1784716216.1749833,
+    "ast_hash": "5737b7a3e04903f3a902cb996f772770",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0125-of-2000.json": {
+    "mtime": 1784722729.4798605,
+    "ast_hash": "2c12e0d13587cc01566b633890cd6cce",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0007-of-2000.json": {
+    "mtime": 1784713543.4156294,
+    "ast_hash": "750e749bac714038e2e17973412ea779",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0052-of-2000.json": {
+    "mtime": 1784715110.7354667,
+    "ast_hash": "ef056f65612349c9f306a48b1640490c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0012-of-2000.json": {
+    "mtime": 1784713678.6465201,
+    "ast_hash": "bb087ddd47f6b3c87f7732b79ec483b4",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0047-of-2000.json": {
+    "mtime": 1784714954.8971694,
+    "ast_hash": "7729adeccc7a972368827582b997548b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0130-of-2000.json": {
+    "mtime": 1784722994.6673572,
+    "ast_hash": "a2d1394aa718d245341f2c0bac0c509b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0015-of-2000.json": {
+    "mtime": 1784713800.417085,
+    "ast_hash": "56fe1be8467c91b640d01ce985c7a7a8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0040-of-2000.json": {
+    "mtime": 1784714731.212313,
+    "ast_hash": "cc07beef5d7747cb3d0d6589a77fd97f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-10000x50-v2/shard-0137-of-2000.json": {
+    "mtime": 1784723510.2652538,
+    "ast_hash": "c49ccfdf56ea1424b96c486179f77495",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0006-of-0025.json": {
+    "mtime": 1784712265.581441,
+    "ast_hash": "cde777c2eb9ede2ca9a9248dd8349923",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0001-of-0025.json": {
+    "mtime": 1784712006.6772792,
+    "ast_hash": "cd68927a4f31f1ed562f33ed34fe9601",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0014-of-0025.json": {
+    "mtime": 1784712694.610174,
+    "ast_hash": "394ff217674f0de4908b402e9af6ef8f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0013-of-0025.json": {
+    "mtime": 1784712646.001205,
+    "ast_hash": "98833506d5c694c638affff2275fc7af",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0025-of-0025.json": {
+    "mtime": 1784713172.8299162,
+    "ast_hash": "1690bcbbb60c0e931d55e2f44835247c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0022-of-0025.json": {
+    "mtime": 1784713063.1986837,
+    "ast_hash": "6598c021cf710e6e055d4c971c492930",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0012-of-0025.json": {
+    "mtime": 1784712595.0955188,
+    "ast_hash": "1a67a134adc2236748f2e6faf2516b57",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0015-of-0025.json": {
+    "mtime": 1784712744.685879,
+    "ast_hash": "e4c57a8c7b7412237a51f991b97044a8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0007-of-0025.json": {
+    "mtime": 1784712322.1626487,
+    "ast_hash": "2f1e0e25b176e2cb1525d2a1c06f1436",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0023-of-0025.json": {
+    "mtime": 1784713102.9693787,
+    "ast_hash": "6d49c4657ba6566962f64dade9030d8e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0024-of-0025.json": {
+    "mtime": 1784713143.5041902,
+    "ast_hash": "c4b41db9f7f2aaefc3cd1d240c338458",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0018-of-0025.json": {
+    "mtime": 1784712893.3480942,
+    "ast_hash": "f8bdbbedca817d91fc578c205cf39002",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0019-of-0025.json": {
+    "mtime": 1784712940.836467,
+    "ast_hash": "7ebe712a397743b8c8e1fddf1786f356",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0009-of-0025.json": {
+    "mtime": 1784712441.4975727,
+    "ast_hash": "ec21934d31b94552a4d3b4a1fff31a53",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0008-of-0025.json": {
+    "mtime": 1784712384.6347644,
+    "ast_hash": "56569125f9d39de0834e09a47136f074",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0017-of-0025.json": {
+    "mtime": 1784712842.9648461,
+    "ast_hash": "38315e2cc7187bbf1b1dc0829bc574ad",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0010-of-0025.json": {
+    "mtime": 1784712496.1485226,
+    "ast_hash": "8abdeb3896b48747a9e03c78e3bf3844",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0005-of-0025.json": {
+    "mtime": 1784712212.5610075,
+    "ast_hash": "7672d71b873e85e5c65890672bc04894",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0002-of-0025.json": {
+    "mtime": 1784712056.6830623,
+    "ast_hash": "0dac4d9c5ab4b84d93f27cd47ceb1c06",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0021-of-0025.json": {
+    "mtime": 1784713025.3858266,
+    "ast_hash": "74c520dcec4347dec5ab78ffcde17e7b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0003-of-0025.json": {
+    "mtime": 1784712108.0560694,
+    "ast_hash": "b0d75f45c6e2c02b3709141f3be43f84",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0004-of-0025.json": {
+    "mtime": 1784712161.1632597,
+    "ast_hash": "ee7285e094ab7adb0f767272e51f520f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0011-of-0025.json": {
+    "mtime": 1784712545.5382314,
+    "ast_hash": "f8f7dd3db758db0619b7c65417300844",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0016-of-0025.json": {
+    "mtime": 1784712794.6817534,
+    "ast_hash": "5c44e546bdd73ae589583f8e54ad3bb0",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-250x30-v2/shard-0020-of-0025.json": {
+    "mtime": 1784712990.0463507,
+    "ast_hash": "14861ed8b5f09f59e615924be741b4a8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0004-of-0010.json": {
+    "mtime": 1784703481.3447323,
+    "ast_hash": "36971425093d1fafd67b348ea667567d",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0003-of-0010.json": {
+    "mtime": 1784703481.0937042,
+    "ast_hash": "918e0635ad7cb5a31ea1408a44a19948",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0002-of-0010.json": {
+    "mtime": 1784703480.4714632,
+    "ast_hash": "dee088595b7f60fd7b94f75ece56d5ba",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0005-of-0010.json": {
+    "mtime": 1784703481.0331876,
+    "ast_hash": "31d5456e244c3d97eef681a5bf42eb3e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0010-of-0010.json": {
+    "mtime": 1784703514.8917177,
+    "ast_hash": "ea23668e5370ee7cde0312e2fadc4205",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0008-of-0010.json": {
+    "mtime": 1784703513.8951542,
+    "ast_hash": "a58249624c58ca9a18315be516ca7cf6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0009-of-0010.json": {
+    "mtime": 1784703514.7786694,
+    "ast_hash": "4ec48cc6f09de723db8a30dbfc497c61",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0007-of-0010.json": {
+    "mtime": 1784703514.9374163,
+    "ast_hash": "43ab49e3aa160e70c597859d6055b07e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0001-of-0010.json": {
+    "mtime": 1784703480.7179952,
+    "ast_hash": "51ac2bf290d6804de16b2a92f93c7430",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/checkpoints/phase78-contract-finance-concurrency-smoke-v3-10x50/shard-0006-of-0010.json": {
+    "mtime": 1784703515.242711,
+    "ast_hash": "04e71c58eb69d4c422ec0efae317c89e",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/03-window-eligibility-and-out-of-window-policy.md": {
+    "mtime": 1784728819.9356997,
+    "ast_hash": "d005522232e4dce19e130fc3d9fd9acc",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/06-player-contract-table-and-atomic-transfer-completion.md": {
+    "mtime": 1784728915.4931514,
+    "ast_hash": "1dab8a93166e5889933839b4e4ef2f2c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/01-current-market-ownership-and-gap-audit.md": {
+    "mtime": 1784728819.9352598,
+    "ast_hash": "7c2eafd449883911e6aa6bed374923a8",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/04-three-day-negotiation-clock-and-pending-exposure.md": {
+    "mtime": 1784728819.9359262,
+    "ast_hash": "161df76cd1470570885860b35bdeec49",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/02-playable-competition-transfer-window-catalog.md": {
+    "mtime": 1784728819.9354615,
+    "ast_hash": "0546c9623dbf757e1181e32f55ea405b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/12-posta-continue-and-market-deadline-integration.md": {
+    "mtime": 1784729019.8050666,
+    "ast_hash": "c251e0ea65adaeaa52693d6bf926a906",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/10-market-workspace-and-player-inspection.md": {
+    "mtime": 1784728915.493729,
+    "ast_hash": "6e54f11d777a171a17b7dd6d6859e9e6",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/README.md": {
+    "mtime": 1784728819.9349332,
+    "ast_hash": "61c2bd503c2cbc48d0bbbef113cf3fa9",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/15-integrated-accessibility-cleanup-architecture-and-phase-report.md": {
+    "mtime": 1784729019.8059888,
+    "ast_hash": "4bbd6d4be141b542e9202410e4baee1b",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/07-final-six-month-preliminary-agreements.md": {
+    "mtime": 1784728915.4933405,
+    "ast_hash": "a8d972e94092ef08f708ce87ba783421",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/08-ai-market-targeting-and-squad-protection.md": {
+    "mtime": 1784728915.4934852,
+    "ast_hash": "624bdd0ddb3324488111820565a400a2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/09-market-search-budget-and-target-read-models.md": {
+    "mtime": 1784728915.4936361,
+    "ast_hash": "559be45fe55bcfc6e897abd8669d3b48",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/14-market-contract-finance-and-squad-long-run-gates.md": {
+    "mtime": 1784729019.8056777,
+    "ast_hash": "4c5f9ed0fb4d35a2e151ca919355c4ba",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/11-offer-composer-and-two-stage-decision-flow.md": {
+    "mtime": 1784729019.8046653,
+    "ast_hash": "7f495edf96e9d699033a0528ee6e8be2",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/05-club-to-club-permanent-transfer-negotiation.md": {
+    "mtime": 1784728819.9361331,
+    "ast_hash": "c558ed1c05dc1f4b6baa30b6e88c9541",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/13-persistence-squad-plan-and-cross-surface-integration.md": {
+    "mtime": 1784729019.8053567,
+    "ast_hash": "346922e96535f19bede6772249c881c5",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-250x30-batched-v2.md": {
+    "mtime": 1784713172.8348162,
+    "ast_hash": "44f21462f5c3f2c1e661b6cd48f85c81",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-world-00864-9-goalkeeper-fix.md": {
+    "mtime": 1784710318.9459515,
+    "ast_hash": "a30be0537c7d6acd55efa29699249083",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-concurrency-smoke-v3-10x50.md": {
+    "mtime": 1784703515.2441645,
+    "ast_hash": "159e251a8a55eba3550cefbd721cf7b7",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-765x50-accepted.md": {
+    "mtime": 1784726955.6865919,
+    "ast_hash": "86bebafe6f3858851d7a44b643cfe112",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-10000x50-timing.txt": {
+    "mtime": 1784702536.8006775,
+    "ast_hash": "2909d36b8a1e291b2c15ee63faf60f1f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-250x30-repeat-v2.md": {
+    "mtime": 1784713199.162165,
+    "ast_hash": "2a1b60c308e5b4f26d23b4a52e4fea7c",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-50x10-repeat.md": {
+    "mtime": 1784711931.7300599,
+    "ast_hash": "334446e74d33fbee324554f86b0b877f",
+    "semantic_hash": ""
+  },
+  "/Users/elianarducci/common-projects/the-long-season/reports/phase78-contract-finance-dynamic-queue-smoke-20x50.md": {
+    "mtime": 1784704719.2056823,
+    "ast_hash": "d9cd5176ac537247ea7d1d2a808569a2",
     "semantic_hash": ""
   }
 }

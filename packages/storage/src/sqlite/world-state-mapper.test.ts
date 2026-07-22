@@ -26,8 +26,9 @@ test("world rows round-trip ordered players, clubs, states, roles, abilities, an
 
   const rows = mapCareerWorldRows({ saveId: state.saveId, name: metadata.name, state }, metadata);
   const restored = reconstructCareerWorldRows(rows);
+  const { currentSeasonInbox: _careerSlice, ...worldOnlyState } = state;
 
-  deepStrictEqual(restored, state);
+  deepStrictEqual(restored, worldOnlyState);
   deepStrictEqual(restored.gameState.playerIds, state.gameState.playerIds);
   deepStrictEqual(restored.gameState.clubIds, state.gameState.clubIds);
   deepStrictEqual(restored.gameState.fixtureIds, state.gameState.fixtureIds);
@@ -47,20 +48,23 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
   );
 });
 
-test("migration ledger includes the participation baseline without historical-role compatibility", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  equal(SQLITE_CAREER_MIGRATIONS[0]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), false);
-  equal(SQLITE_CAREER_MIGRATIONS[1]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[1]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
-  equal(SQLITE_CAREER_MIGRATIONS[2]?.statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
-  equal(SQLITE_CAREER_MIGRATIONS[3]?.statements.some((statement) => statement.includes("match_preparation_board_slots")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[3]?.statements.some((statement) => statement.includes("match_preparation_bench")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[4]?.statements.some((statement) => statement.includes("autosave_interval_days")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[5]?.statements.some((statement) => statement.includes("career_inbox_messages")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[6]?.statements.some((statement) => statement.includes("player_participation_rows")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[7]?.statements.some((statement) => statement.includes("career_player_injuries")), true);
-  equal(SQLITE_CAREER_MIGRATIONS[7]?.statements.some((statement) => statement.includes("committed_by_player_id")), true);
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS[8]?.statements, []);
+test("migration ledger exposes one complete Phase 78 baseline", () => {
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [12]);
+  const statements = SQLITE_CAREER_MIGRATIONS[0]?.statements ?? [];
+  equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
+  equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
+  equal(statements.some((statement) => statement.includes("match_preparation_board_slots")), true);
+  equal(statements.some((statement) => statement.includes("autosave_interval_days")), true);
+  equal(statements.some((statement) => statement.includes("career_inbox_messages")), true);
+  equal(statements.some((statement) => statement.includes("player_participation_rows")), true);
+  equal(statements.some((statement) => statement.includes("career_player_injuries")), true);
+  equal(statements.some((statement) => statement.includes("committed_by_player_id")), true);
+  equal(statements.some((statement) => statement.includes("senior_squad_registrations")), true);
+  equal(statements.some((statement) => statement.includes("player_contracts")), true);
+  equal(statements.some((statement) => statement.includes("club_finance_accounts")), true);
+  equal(statements.some((statement) => statement.includes("contract_negotiation_states")), true);
+  equal(statements.some((statement) => statement.includes("continue_policy")), true);
+  equal(statements.some((statement) => statement.includes("market_budgets")), false);
 });
 
 function worldFixture(rawSaveId: string, seed: string): CareerState {
@@ -139,7 +143,6 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
       },
       fixtureIds: [futureFixtureId, playedFixtureId],
     },
-    marketState: { clubBudgets: {}, clubBudgetIds: [] },
     transferHistory: [],
   });
 }

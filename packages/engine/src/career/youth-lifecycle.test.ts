@@ -6,7 +6,6 @@ import {
   abilityValue,
   clubId,
   createCareerState,
-  createMarketState,
   gameDate,
   getPlayerRoleProfile,
   mapPlayerAbilities,
@@ -52,7 +51,7 @@ test("applyYouthAcademyLifecycle does not invent youth growth without real parti
   assert.equal(result.records.length, 0);
 });
 
-test("applyYouthAcademyLifecycle removes aged-out released youth from active state", () => {
+test("applyYouthAcademyLifecycle releases aged-out youth without deleting their player facts", () => {
   const agedOut = playerId("player:youth-aged-out");
   const careerState = careerStateFixture([
     youthPlayerFixture(agedOut, 20, abilitySet(5), abilitySet(7)),
@@ -65,8 +64,10 @@ test("applyYouthAcademyLifecycle removes aged-out released youth from active sta
 
   assert.equal(result.records[0]?.outcome, "released");
   assert.equal(result.careerState.youthAcademyState?.clubRosters[clubId("club:pro01")]?.playerIds.length, 0);
-  assert.equal(result.careerState.gameState.players[agedOut], undefined);
-  assert.equal(result.careerState.gameState.playerIds.includes(agedOut), false);
+  assert.deepEqual(result.careerState.gameState.players[agedOut], careerState.gameState.players[agedOut]);
+  assert.deepEqual(result.careerState.gameState.playerStates[agedOut], careerState.gameState.playerStates[agedOut]);
+  assert.equal(result.careerState.gameState.playerIds.includes(agedOut), true);
+  assert.equal(result.careerState.youthAcademyState?.playerLifecycle[agedOut]?.status, "released");
 });
 
 test("applyYouthAcademyLifecycle keeps aged-out promotion candidates outside the active youth roster", () => {
@@ -170,12 +171,6 @@ function careerStateFixture(youthPlayers: readonly Player[], includeYouthState =
       fixtures: {},
       fixtureIds: [],
     },
-    marketState: createMarketState({
-      clubBudgets: {
-        [pro01]: { clubId: pro01, transferBudget: nonNegativeMoney(1_000_000_00) },
-      },
-      clubBudgetIds: [pro01],
-    }),
     transferHistory: [],
     ...(includeYouthState
       ? {

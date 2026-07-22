@@ -10,10 +10,16 @@ import {
 } from "./sqlite-career-storage.ts";
 
 describe("SQLite career storage failure boundaries", () => {
-  it("keeps migrations ordered and plans every upgrade from schema one", () => {
-    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(planSqliteCareerMigrations(9)).toEqual([]);
+  it("uses one complete Phase 78 baseline for fresh browser databases", () => {
+    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([12]);
+    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([12]);
+    expect(planSqliteCareerMigrations(12)).toEqual([]);
+  });
+
+  it("persists every canonical contract-history event in the clean beta baseline", () => {
+    const schema = SQLITE_CAREER_MIGRATIONS[0]?.statements.join("\n") ?? "";
+
+    expect(schema).toContain("'signed', 'renewed', 'transfer_terminated', 'expired', 'released'");
   });
 
   it("rejects older beta, future, and invalid schema versions without destructive recovery", () => {
@@ -24,6 +30,12 @@ describe("SQLite career storage failure boundaries", () => {
       code: "unsupported_schema_version",
     }));
     expect(() => planSqliteCareerMigrations(10)).toThrowError(expect.objectContaining({
+      code: "unsupported_schema_version",
+    }));
+    expect(() => planSqliteCareerMigrations(11)).toThrowError(expect.objectContaining({
+      code: "unsupported_schema_version",
+    }));
+    expect(() => planSqliteCareerMigrations(13)).toThrowError(expect.objectContaining({
       code: "unsupported_schema_version",
     }));
     expect(() => planSqliteCareerMigrations(-1)).toThrowError(expect.objectContaining({
@@ -58,7 +70,12 @@ describe("SQLite career storage failure boundaries", () => {
 /** Creates one narrow fake worker while preserving typed method signatures. */
 function workerPort(overrides: Partial<SqliteCareerWorkerPort> = {}): SqliteCareerWorkerPort {
   return {
-    initialize: vi.fn().mockResolvedValue({ databasePath: "test.sqlite3", sqliteVersion: "test", schemaVersion: 9 }),
+    initialize: vi.fn().mockResolvedValue({
+      databasePath: "test.sqlite3",
+      sqliteVersion: "test",
+      schemaVersion: 12,
+      betaResetPerformed: false,
+    }),
     saveCareer: vi.fn(),
     loadCareer: vi.fn(),
     listCareers: vi.fn().mockResolvedValue([]),

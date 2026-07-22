@@ -20,6 +20,14 @@ export type CompetitionId = Brand<string, "CompetitionId">;
 export type FixtureId = Brand<string, "FixtureId">;
 export type SeasonId = Brand<string, "SeasonId">;
 export type SaveId = Brand<string, "SaveId">;
+/** Stable identifier for one senior-squad registration. */
+export type SeniorSquadRegistrationId = Brand<string, "SeniorSquadRegistrationId">;
+/** Stable identifier for one immutable player contract agreement. */
+export type PlayerContractId = Brand<string, "PlayerContractId">;
+/** Stable identifier for one ordered factual contract-history entry. */
+export type PlayerContractHistoryEntryId = Brand<string, "PlayerContractHistoryEntryId">;
+/** Stable identifier for one immutable club-finance ledger entry. */
+export type ClubFinanceLedgerEntryId = Brand<string, "ClubFinanceLedgerEntryId">;
 
 /**
  * Matches strings that JavaScript treats as integer-like object keys.
@@ -122,4 +130,24 @@ export function seasonId(value: string): SeasonId {
  */
 export function saveId(value: string): SaveId {
   return brand<string, "SaveId">(namespacedId(value, "save:"));
+}
+
+/** Builds a validated senior-squad registration ID. */
+export function seniorSquadRegistrationId(value: string): SeniorSquadRegistrationId {
+  return brand<string, "SeniorSquadRegistrationId">(namespacedId(value, "registration:"));
+}
+
+/** Builds a validated player-contract ID. */
+export function playerContractId(value: string): PlayerContractId {
+  return brand<string, "PlayerContractId">(namespacedId(value, "contract:"));
+}
+
+/** Builds a validated player contract-history entry ID. */
+export function playerContractHistoryEntryId(value: string): PlayerContractHistoryEntryId {
+  return brand<string, "PlayerContractHistoryEntryId">(namespacedId(value, "contract-history:"));
+}
+
+/** Builds a validated club-finance ledger entry ID. */
+export function clubFinanceLedgerEntryId(value: string): ClubFinanceLedgerEntryId {
+  return brand<string, "ClubFinanceLedgerEntryId">(namespacedId(value, "finance-ledger:"));
 }

@@ -1,17 +1,17 @@
 import {
   addMoney,
   compareMoney,
-  findClubTransferBudget,
-  replaceClubTransferBudget,
+  findClubFinanceAccount,
+  nonNegativeMoney,
   subtractMoney,
   type Club,
-  type ClubId,
+  type ClubFinanceState,
+  type ContractOfferTerms,
   type GameState,
-  type MarketState,
   type Money,
   type PermanentTransferIntent,
   type Player,
-  type PlayerId,
+  type PlayerContract,
   type TransferRejectionReason,
 } from "@game/domain";
 
@@ -27,12 +27,18 @@ import { derivePlayerWillingness, type PlayerWillingness } from "./player-willin
 export interface EvaluatePermanentTransferInput {
   /** Current immutable game state. */
   readonly gameState: GameState;
-  /** Current command-local market data. */
-  readonly marketState: MarketState;
+  /** Canonical club cash and budget state. */
+  readonly clubFinanceState: ClubFinanceState;
   /** Manager-declared move. */
   readonly intent: PermanentTransferIntent;
   /** Optional valuation tuning; defaults to the MVP config. */
   readonly valuationConfig?: PlayerValuationConfig;
+  /** Seller agreement used by valuation and player willingness. */
+  readonly currentContract?: PlayerContract;
+  /** Accepted annual terms used by willingness and affordability. */
+  readonly proposedTerms?: ContractOfferTerms;
+  /** Current supported form on the canonical 0-100 scale. */
+  readonly currentForm?: number;
 }
 
 /** Feasibility output before applying a preview. */
@@ -47,20 +53,16 @@ export interface PermanentTransferFeasibility {
   readonly valuation?: PlayerValuation;
   /** Transfer fee used for affordability checks when valuation exists. */
   readonly transferFee?: Money;
+  /** Buyer's available transfer budget before this pure evaluation. */
+  readonly buyerBudgetBefore?: Money;
+  /** Derived budget after an accepted move; no finance state is mutated. */
+  readonly buyerBudgetAfter?: Money;
   /** Player willingness when player and both clubs are known. */
   readonly willingness?: PlayerWillingness;
 }
 
-/** Preview output with copied state snapshots. */
-export interface PermanentTransferApplyPreview extends PermanentTransferFeasibility {
-  /** Original game state when rejected; copied game state when accepted. */
-  readonly gameState: GameState;
-  /** Original market state when rejected; copied market state when accepted. */
-  readonly marketState: MarketState;
-}
-
 /**
- * Evaluates ownership, temporary fee funds, valuation, and player willingness.
+ * Evaluates ownership, canonical club finances, valuation, and willingness.
  *
  * The function returns structured reasons instead of throwing for gameplay
  * rejections, so presentation layers can localize the outcome.
@@ -98,18 +100,44 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     club: sellingClub,
     currentDate: input.gameState.calendar.currentDate,
     config: input.valuationConfig ?? DEFAULT_PLAYER_VALUATION_CONFIG,
+    ...(input.currentContract === undefined ? {} : { contract: input.currentContract }),
+    ...(input.currentForm === undefined ? {} : { currentForm: input.currentForm }),
   });
   const transferFee = valuation.value;
-  const buyingBudget = findClubTransferBudget(input.marketState, input.intent.buyingClubId);
+  const buyingAccount = findClubFinanceAccount(input.clubFinanceState, input.intent.buyingClubId);
 
-  if (buyingBudget === undefined) {
+  if (buyingAccount === undefined) {
     reasons.push({ code: "missing_buying_budget", clubId: input.intent.buyingClubId, requiredBudget: transferFee });
-  } else if (compareMoney(buyingBudget.transferBudget, transferFee) < 0) {
+  } else if (compareMoney(buyingAccount.availableTransferBudget, transferFee) < 0) {
     reasons.push({
       code: "insufficient_transfer_budget",
       clubId: input.intent.buyingClubId,
       requiredBudget: transferFee,
-      availableBudget: buyingBudget.transferBudget,
+      availableBudget: buyingAccount.availableTransferBudget,
+    });
+  } else if (
+    input.proposedTerms !== undefined
+    && compareMoney(
+      nonNegativeMoney(Math.max(0, buyingAccount.annualWageBudget - buyingAccount.committedAnnualWage)),
+      input.proposedTerms.annualWage,
+    ) < 0
+  ) {
+    reasons.push({
+      code: "insufficient_wage_budget",
+      clubId: input.intent.buyingClubId,
+      requiredBudget: input.proposedTerms.annualWage,
+      availableBudget: nonNegativeMoney(Math.max(0, buyingAccount.annualWageBudget - buyingAccount.committedAnnualWage)),
+    });
+  } else if (compareMoney(
+    buyingAccount.cashBalance,
+    addMoney(transferFee, input.proposedTerms?.bonuses.signingBonus ?? nonNegativeMoney(0)),
+  ) < 0) {
+    const requiredCash = addMoney(transferFee, input.proposedTerms?.bonuses.signingBonus ?? nonNegativeMoney(0));
+    reasons.push({
+      code: "insufficient_cash",
+      clubId: input.intent.buyingClubId,
+      requiredBudget: requiredCash,
+      availableBudget: buyingAccount.cashBalance,
     });
   }
 
@@ -118,44 +146,27 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     sellingClub,
     buyingClub,
     currentDate: input.gameState.calendar.currentDate,
+    ...(input.currentContract === undefined ? {} : { currentContract: input.currentContract }),
+    ...(input.proposedTerms === undefined ? {} : { proposedTerms: input.proposedTerms }),
   });
 
   if (willingness.status === "rejected") {
     reasons.push({ code: "player_unwilling", playerId: input.intent.playerId });
   }
 
+  const status = reasons.length === 0 ? "accepted" : "rejected";
+
   return {
     intent: input.intent,
-    status: reasons.length === 0 ? "accepted" : "rejected",
+    status,
     reasons,
     valuation,
     transferFee,
     willingness,
-  };
-}
-
-/**
- * Applies an accepted permanent transfer to copied game and market data.
- *
- * Rejected previews return the original state references plus the structured
- * rejection reasons. Accepted previews move the player from seller to buyer and
- * move the fee between available transfer funds when both club budgets exist.
- */
-export function previewPermanentTransfer(input: EvaluatePermanentTransferInput): PermanentTransferApplyPreview {
-  const feasibility = evaluatePermanentTransfer(input);
-
-  if (feasibility.status === "rejected" || feasibility.transferFee === undefined) {
-    return {
-      ...feasibility,
-      gameState: input.gameState,
-      marketState: input.marketState,
-    };
-  }
-
-  return {
-    ...feasibility,
-    gameState: applyPlayerOwnershipPreview(input.gameState, input.intent),
-    marketState: applyMarketBudgetPreview(input.marketState, input.intent, feasibility.transferFee),
+    ...(buyingAccount === undefined ? {} : { buyerBudgetBefore: buyingAccount.availableTransferBudget }),
+    ...(status === "accepted" && buyingAccount !== undefined
+      ? { buyerBudgetAfter: subtractMoney(buyingAccount.availableTransferBudget, transferFee) }
+      : {}),
   };
 }
 
@@ -192,61 +203,4 @@ function rejected(
     status: "rejected",
     reasons,
   };
-}
-
-function applyPlayerOwnershipPreview(gameState: GameState, intent: PermanentTransferIntent): GameState {
-  const buyingClub = gameState.clubs[intent.buyingClubId];
-  const sellingClub = gameState.clubs[intent.sellingClubId];
-
-  if (buyingClub === undefined || sellingClub === undefined) {
-    return gameState;
-  }
-
-  const clubs: Readonly<Record<ClubId, Club>> = {
-    ...gameState.clubs,
-    [buyingClub.id]: {
-      ...buyingClub,
-      playerIds: [...buyingClub.playerIds, intent.playerId],
-    },
-    [sellingClub.id]: {
-      ...sellingClub,
-      playerIds: removePlayerId(sellingClub.playerIds, intent.playerId),
-    },
-  };
-
-  return {
-    ...gameState,
-    clubs,
-  };
-}
-
-function applyMarketBudgetPreview(
-  marketState: MarketState,
-  intent: PermanentTransferIntent,
-  transferFee: Money,
-): MarketState {
-  const buyingBudget = findClubTransferBudget(marketState, intent.buyingClubId);
-  const sellingBudget = findClubTransferBudget(marketState, intent.sellingClubId);
-
-  if (buyingBudget === undefined) {
-    return marketState;
-  }
-
-  const buyerUpdated = replaceClubTransferBudget(marketState, {
-    clubId: buyingBudget.clubId,
-    transferBudget: subtractMoney(buyingBudget.transferBudget, transferFee),
-  });
-
-  if (sellingBudget === undefined) {
-    return buyerUpdated;
-  }
-
-  return replaceClubTransferBudget(buyerUpdated, {
-    clubId: sellingBudget.clubId,
-    transferBudget: addMoney(sellingBudget.transferBudget, transferFee),
-  });
-}
-
-function removePlayerId(playerIds: readonly PlayerId[], playerId: PlayerId): readonly PlayerId[] {
-  return playerIds.filter((candidateId) => candidateId !== playerId);
 }

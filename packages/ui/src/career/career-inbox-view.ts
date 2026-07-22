@@ -10,7 +10,12 @@ export type CareerInboxViewCategory =
   | "match_result"
   | "season_rollover"
   | "injury_diagnosis"
-  | "suspension";
+  | "suspension"
+  | "contract_reminder"
+  | "contract_counteroffer"
+  | "contract_accepted"
+  | "contract_rejected"
+  | "contract_expiry_decision";
 
 /** Input action attached to an Inbox / Posta message. */
 export interface CareerInboxActionInput {
@@ -165,6 +170,9 @@ export type CareerPostaFilter = "all" | "to_handle" | "unread";
 /** Attention levels mirrored at the UI boundary without importing domain. */
 export type CareerPostaAttentionLevel = "blocking" | "important" | "informational";
 
+/** Continue behavior mirrored at the UI boundary without importing domain. */
+export type CareerPostaContinuePolicy = "never" | "until_acknowledged" | "until_resolved";
+
 /** Durable lifecycle facts consumed by the framework-free Posta builder. */
 export interface CareerPostaLifecycleInput {
   readonly read: boolean;
@@ -198,18 +206,31 @@ export interface CareerPostaSeasonInput {
   readonly totalGoals: number;
 }
 
+/** Contract facts already resolved by the application presenter. */
+export interface CareerPostaContractInput {
+  readonly playerName: string;
+  readonly expiresOnIso: string;
+}
+
 /** One language-agnostic current-season message accepted by Posta. */
 export interface CareerPostaMessageInput {
   readonly messageId: string;
   readonly dateIso: string;
   readonly category: CareerInboxViewCategory;
-  readonly source: "technical_staff" | "match_report" | "competition_office" | "medical_team";
+  readonly source:
+    | "technical_staff"
+    | "match_report"
+    | "competition_office"
+    | "medical_team"
+    | "contract_office";
   readonly level: CareerPostaAttentionLevel;
+  readonly continuePolicy: CareerPostaContinuePolicy;
   readonly lifecycle: CareerPostaLifecycleInput;
   readonly blockerKeys: readonly string[];
   readonly actionIds: readonly string[];
   readonly fixture?: CareerPostaFixtureInput;
   readonly season?: CareerPostaSeasonInput;
+  readonly contract?: CareerPostaContractInput;
 }
 
 /** Dense row used by the Posta message list. */
@@ -389,6 +410,13 @@ function buildPostaFactRows(message: CareerPostaMessageInput): CareerPostaFactRo
     );
   }
 
+  if (message.contract !== undefined) {
+    rows.push(
+      { labelKey: "career.inbox.fact.player", value: message.contract.playerName },
+      { labelKey: "career.inbox.fact.contractExpiry", value: message.contract.expiresOnIso },
+    );
+  }
+
   return rows;
 }
 
@@ -424,8 +452,8 @@ function matchesPostaFilter(
 }
 
 function isPostaToHandle(message: CareerPostaMessageInput): boolean {
-  if (message.level === "blocking") return !message.lifecycle.resolved;
-  return message.level === "important" && !message.lifecycle.acknowledged;
+  if (message.continuePolicy === "until_resolved") return !message.lifecycle.resolved;
+  return message.continuePolicy === "until_acknowledged" && !message.lifecycle.acknowledged;
 }
 
 function comparePostaMessages(left: CareerPostaMessageInput, right: CareerPostaMessageInput): number {

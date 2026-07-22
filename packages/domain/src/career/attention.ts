@@ -1,5 +1,6 @@
 import { brand, type Brand } from "../types/brand.ts";
-import type { ClubId, FixtureId, PlayerId } from "../types/ids.ts";
+import type { ClubId, FixtureId, PlayerContractId, PlayerId } from "../types/ids.ts";
+import type { ContractNegotiationId } from "./contract-negotiation.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 
 /** Stable identifier for one career attention event. */
@@ -9,10 +10,19 @@ export type CareerAttentionEventId = Brand<string, "CareerAttentionEventId">;
 export type CareerAttentionLevel = "blocking" | "important" | "informational";
 
 /** Current attention categories backed by real career workflows. */
-export type CareerAttentionCategory = "matchday";
+export type CareerAttentionCategory = "matchday" | "contract";
 
 /** Machine-readable reason why the manager receives attention. */
-export type CareerAttentionReason = "matchday_decision";
+export type CareerAttentionReason =
+  | "matchday_decision"
+  | "contract_reminder"
+  | "contract_counteroffer"
+  | "contract_accepted"
+  | "contract_rejected"
+  | "contract_expiry_decision";
+
+/** Explicit advancement effect, independent from visual message importance. */
+export type CareerAttentionContinuePolicy = "never" | "until_acknowledged" | "until_resolved";
 
 /** Structured preparation facts that prevent entry into a fixture. */
 export type CareerAttentionBlockerKey =
@@ -26,6 +36,8 @@ export interface CareerAttentionRelatedEntities {
   readonly fixtureId?: FixtureId;
   readonly clubId?: ClubId;
   readonly playerId?: PlayerId;
+  readonly contractId?: PlayerContractId;
+  readonly contractNegotiationId?: ContractNegotiationId;
 }
 
 /** Input accepted by the language-agnostic attention constructor. */
@@ -35,6 +47,7 @@ export interface CareerAttentionEventInput {
   readonly category: CareerAttentionCategory;
   readonly level: CareerAttentionLevel;
   readonly reason: CareerAttentionReason;
+  readonly continuePolicy?: CareerAttentionContinuePolicy;
   readonly related?: CareerAttentionRelatedEntities;
   readonly blockerKeys?: readonly CareerAttentionBlockerKey[];
 }
@@ -46,6 +59,7 @@ export interface CareerAttentionEvent {
   readonly category: CareerAttentionCategory;
   readonly level: CareerAttentionLevel;
   readonly reason: CareerAttentionReason;
+  readonly continuePolicy: CareerAttentionContinuePolicy;
   readonly related: CareerAttentionRelatedEntities;
   readonly blockerKeys: readonly CareerAttentionBlockerKey[];
 }
@@ -79,12 +93,27 @@ export function createCareerAttentionEvent(input: CareerAttentionEventInput): Ca
     throw new Error("Matchday attention must reference a fixture");
   }
 
+  if (
+    input.category === "contract"
+    && input.related?.contractId === undefined
+    && input.related?.contractNegotiationId === undefined
+  ) {
+    throw new Error("Contract attention must reference a contract or negotiation");
+  }
+
   return {
     id: input.id,
     date: input.date,
     category: input.category,
     level: input.level,
     reason: input.reason,
+    continuePolicy:
+      input.continuePolicy
+      ?? (input.level === "blocking"
+        ? "until_resolved"
+        : input.level === "important"
+          ? "until_acknowledged"
+          : "never"),
     related: input.related ?? {},
     blockerKeys: [...new Set(input.blockerKeys ?? [])],
   };
@@ -115,6 +144,36 @@ export function createMatchdayAttentionEvent(input: {
   });
 }
 
+/** Creates one stable contract attention identity from authoritative entities. */
+export function createContractAttentionEvent(input: {
+  readonly contractId: PlayerContractId;
+  readonly contractNegotiationId?: ContractNegotiationId;
+  readonly clubId: ClubId;
+  readonly playerId: PlayerId;
+  readonly date: GameDate;
+  readonly level: CareerAttentionLevel;
+  readonly reason: Exclude<CareerAttentionReason, "matchday_decision">;
+  readonly continuePolicy: CareerAttentionContinuePolicy;
+}): CareerAttentionEvent {
+  const identity = input.contractNegotiationId ?? input.contractId;
+  return createCareerAttentionEvent({
+    id: careerAttentionEventId(`attention:contract:${input.reason}:${identity}`),
+    date: input.date,
+    category: "contract",
+    level: input.level,
+    reason: input.reason,
+    continuePolicy: input.continuePolicy,
+    related: {
+      contractId: input.contractId,
+      ...(input.contractNegotiationId === undefined
+        ? {}
+        : { contractNegotiationId: input.contractNegotiationId }),
+      clubId: input.clubId,
+      playerId: input.playerId,
+    },
+  });
+}
+
 /** Sorts attention facts by date, level, and stable ID. */
 export function compareCareerAttentionEvents(left: CareerAttentionEvent, right: CareerAttentionEvent): number {
   if (left.date !== right.date) {
@@ -127,7 +186,7 @@ export function compareCareerAttentionEvents(left: CareerAttentionEvent, right: 
 
 /** Returns whether a newly produced attention fact requires a Continue stop. */
 export function isUnresolvedCareerAttentionEvent(event: CareerAttentionEvent): boolean {
-  return event.level !== "informational";
+  return event.continuePolicy !== "never";
 }
 
 function attentionLevelRank(level: CareerAttentionLevel): number {

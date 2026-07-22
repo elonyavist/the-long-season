@@ -1,19 +1,24 @@
 import {
-  createCareerState,
+  createSeniorSquadState,
   getPlayerRoleProfile,
   rawDiagnosticAbilityAverage,
   roleCurrentAbility,
   type CareerState,
   type Club,
-  type ClubId,
   type Player,
-  type PlayerDynamicState,
+  type PlayerContractId,
   type PlayerId,
   type PlayerPosition,
   type PlayerRole,
   type SeasonId,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
+import { reconcileActiveContractWageCommitments } from "./career-finance-lifecycle.ts";
+import { reconcileClosedContractNegotiations } from "./contract-negotiation.ts";
+import {
+  prepareSeniorSquadDepartures,
+  type PrepareSeniorSquadDepartureInput,
+} from "./senior-squad-transfer.ts";
 
 type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
 const MINIMUM_POST_EXIT_SQUAD_SIZE = 18;
@@ -33,10 +38,10 @@ export interface PlayerExitInput {
 
 /** One factual player-exit record for later reports and tests. */
 export interface PlayerExitRecord {
-  /** Player that left the active career-world roster. */
+  /** Player whose senior-club ownership ended. */
   readonly playerId: PlayerId;
-  /** Club that owned the player before the exit. */
-  readonly clubId: Club["id"];
+  /** Club that owned the player before the exit; absent for an unattached player. */
+  readonly clubId?: Club["id"];
   /** Whole-years age at the current career date. */
   readonly age: number;
   /** Broad role bucket used by the exit model. */
@@ -49,7 +54,7 @@ export interface PlayerExitRecord {
 
 /** Result of one pure end-of-season exit pass. */
 export interface PlayerExitResult {
-  /** Copied career state with active rosters and player order updated. */
+  /** Canonical career state with ownership, employment, and finance updated. */
   readonly careerState: CareerState;
   /** Structured non-presentational exit records. */
   readonly exits: readonly PlayerExitRecord[];
@@ -58,14 +63,33 @@ export interface PlayerExitResult {
 /**
  * Applies deterministic end-of-season player exits.
  *
- * Exited players leave club rosters and the active `playerIds` traversal order,
- * but their immutable player record stays in `players` so old transfer history
- * and report references remain readable. This function never creates
- * replacements and never chooses a new user lineup.
+ * Every exit first closes the registration and active contract. Retirements and
+ * career step-downs then leave active world traversal, while released players
+ * remain as real free agents. Immutable player and contract-history records stay
+ * readable. This function never creates replacements or silently chooses a new
+ * user lineup.
  */
 export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitResult {
+  if (input.careerState.seniorSquadState === undefined || input.careerState.clubFinanceState === undefined) {
+    throw new Error("Canonical senior-squad and club-finance state are required for player exits");
+  }
+
   const exits: PlayerExitRecord[] = [];
-  const exitedPlayerIds = new Set<PlayerId>();
+  const inactivePlayerIds = new Set<PlayerId>();
+  const departingPlayerIds = new Set<PlayerId>();
+  const endedContractIds: PlayerContractId[] = [];
+  const departures: Omit<
+    PrepareSeniorSquadDepartureInput,
+    "gameState" | "seniorSquadState"
+  >[] = [];
+  const remainingPlayersByClub = new Map(
+    input.careerState.gameState.clubIds.map((clubId) => [
+      clubId,
+      input.careerState.gameState.clubs[clubId]?.playerIds.length ?? 0,
+    ]),
+  );
+  let gameState = input.careerState.gameState;
+  let seniorSquadState = input.careerState.seniorSquadState;
 
   for (const playerId of input.careerState.gameState.playerIds) {
     const player = input.careerState.gameState.players[playerId];
@@ -74,23 +98,47 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
     }
 
     const clubId = owningClubId(input.careerState, playerId);
-    if (clubId === undefined) {
-      continue;
-    }
-    const club = input.careerState.gameState.clubs[clubId];
+    const club = clubId === undefined
+      ? undefined
+      : input.careerState.gameState.clubs[clubId];
 
     const evaluation = evaluatePlayerExit({
       player,
       currentDate: input.careerState.gameState.calendar.currentDate,
       worldSeed: input.worldSeed,
       seasonId: input.seasonId,
-      clubPlayerCount: club?.playerIds.length ?? 0,
+      clubPlayerCount: clubId === undefined
+        ? Number.POSITIVE_INFINITY
+        : remainingPlayersByClub.get(clubId) ?? club?.playerIds.length ?? 0,
     });
     if (evaluation === undefined) {
       continue;
     }
+    if (clubId === undefined) {
+      if (evaluation.reason === "released") continue;
+      inactivePlayerIds.add(playerId);
+      exits.push({
+        playerId,
+        age: evaluation.age,
+        positionGroup: evaluation.positionGroup,
+        currentAbilityAverage: evaluation.currentAbilityAverage,
+        reason: evaluation.reason,
+      });
+      continue;
+    }
+    if (clubId === input.careerState.selectedClubId && evaluation.reason !== "retirement") {
+      continue;
+    }
 
-    exitedPlayerIds.add(playerId);
+    departures.push({
+      playerId,
+      occurredOn: input.careerState.gameState.calendar.currentDate,
+      transitionSequence: seniorSquadState.contractHistoryEntryIds.length + departures.length + 1,
+      event: "released",
+    });
+    departingPlayerIds.add(playerId);
+    remainingPlayersByClub.set(clubId, Math.max(0, (remainingPlayersByClub.get(clubId) ?? 0) - 1));
+    if (evaluation.reason !== "released") inactivePlayerIds.add(playerId);
     exits.push({
       playerId,
       clubId,
@@ -108,42 +156,48 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
     };
   }
 
-  const activePlayerIds = input.careerState.gameState.playerIds.filter((playerId) => !exitedPlayerIds.has(playerId));
-  const playerStates: Partial<Record<PlayerId, PlayerDynamicState>> = {};
-  for (const playerId of activePlayerIds) {
-    const playerState = input.careerState.gameState.playerStates[playerId];
-    if (playerState !== undefined) {
-      playerStates[playerId] = playerState;
-    }
+  if (departures.length > 0) {
+    const prepared = prepareSeniorSquadDepartures({
+      gameState,
+      seniorSquadState,
+      departures,
+    });
+    gameState = prepared.gameState;
+    seniorSquadState = prepared.seniorSquadState;
+    endedContractIds.push(...prepared.endedContractIds);
   }
 
-  const clubs: Partial<Record<ClubId, Club>> = {};
-  for (const clubId of input.careerState.gameState.clubIds) {
-    const club = input.careerState.gameState.clubs[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    clubs[clubId] = {
-      ...club,
-      playerIds: club.playerIds.filter((playerId) => !exitedPlayerIds.has(playerId)),
+  if (inactivePlayerIds.size > 0) {
+    const playerStates = { ...gameState.playerStates };
+    for (const playerId of inactivePlayerIds) delete playerStates[playerId];
+    gameState = {
+      ...gameState,
+      playerIds: gameState.playerIds.filter((playerId) => !inactivePlayerIds.has(playerId)),
+      playerStates,
     };
+    seniorSquadState = createSeniorSquadState(gameState, seniorSquadState);
   }
 
-  const matchPreparation = isMatchPreparationStillOwned(input.careerState, exitedPlayerIds) ? input.careerState.matchPreparation : undefined;
-  const { matchPreparation: _removedMatchPreparation, ...careerStateWithoutPreparation } = input.careerState;
+  const matchPreparation = removePlayersFromPreparation(input.careerState.matchPreparation, departingPlayerIds);
+  const contractNegotiationState = reconcileClosedContractNegotiations({
+    gameState,
+    seniorSquadState,
+    contractNegotiationState: input.careerState.contractNegotiationState,
+    closedContractIds: endedContractIds,
+  });
+  const reconciled = reconcileActiveContractWageCommitments({
+    careerState: input.careerState,
+    gameState,
+    seniorSquadState,
+    contractNegotiationState: contractNegotiationState ?? null,
+    matchPreparation: matchPreparation ?? null,
+  });
+  if (reconciled.status === "rejected") {
+    throw new Error(`Player-exit finance reconciliation failed: ${reconciled.reason}`);
+  }
 
   return {
-    careerState: createCareerState({
-      ...careerStateWithoutPreparation,
-      gameState: {
-        ...input.careerState.gameState,
-        playerIds: activePlayerIds,
-        playerStates: playerStates as CareerState["gameState"]["playerStates"],
-        clubs: clubs as CareerState["gameState"]["clubs"],
-      },
-      ...(matchPreparation === undefined ? {} : { matchPreparation }),
-    }),
+    careerState: reconciled.careerState,
     exits,
   };
 }
@@ -217,19 +271,25 @@ function playerExitAbility(player: Player): number {
   return roundAverage(Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(role))));
 }
 
-function isMatchPreparationStillOwned(careerState: CareerState, exitedPlayerIds: ReadonlySet<PlayerId>): boolean {
-  const selectedLineup = careerState.matchPreparation?.selectedLineup;
-  if (selectedLineup === undefined) {
-    return true;
-  }
-
-  for (const slot of selectedLineup.slots) {
-    if (exitedPlayerIds.has(slot.playerId)) {
-      return false;
-    }
-  }
-
-  return true;
+function removePlayersFromPreparation(
+  preparation: CareerState["matchPreparation"],
+  departedPlayerIds: ReadonlySet<PlayerId>,
+): CareerState["matchPreparation"] {
+  if (preparation === undefined) return undefined;
+  return {
+    ...preparation,
+    ...(preparation.selectedLineup === undefined
+      ? {}
+      : {
+          selectedLineup: {
+            ...preparation.selectedLineup,
+            slots: preparation.selectedLineup.slots.filter((slot) => !departedPlayerIds.has(slot.playerId)),
+          },
+        }),
+    ...(preparation.benchSlots === undefined
+      ? {}
+      : { benchSlots: preparation.benchSlots.filter((slot) => !departedPlayerIds.has(slot.playerId)) }),
+  };
 }
 
 function owningClubId(careerState: CareerState, playerId: PlayerId): Club["id"] | undefined {

@@ -3,7 +3,6 @@ import type { ClubId, CompetitionId, FixtureId, PlayerId, SaveId, SeasonId } fro
 import type { GameDate } from "../value-objects/game-date.ts";
 import type { Money } from "../value-objects/money.ts";
 import { createSelectedLineup, createTacticSetup, type SelectedLineup, type TacticSetup } from "../entities/tactic.entity.ts";
-import { createMarketState, type MarketState } from "../entities/transfer.entity.ts";
 import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
 import type { GameState } from "./game-state.ts";
 import { createYouthAcademyState, type YouthAcademyState } from "./youth-academy-state.ts";
@@ -12,9 +11,14 @@ import { createPlayerParticipationLedger, type PlayerParticipationLedger } from 
 import {
   createCareerPlayerAvailabilityState,
   EMPTY_PLAYER_AVAILABILITY,
-  playerUnavailabilityReason,
   type CareerPlayerAvailabilityState,
 } from "../career/player-availability.ts";
+import { createSeniorSquadState, type SeniorSquadState } from "../career/senior-squad.ts";
+import { createClubFinanceState, type ClubFinanceState } from "../career/club-finance.ts";
+import {
+  createContractNegotiationState,
+  type ContractNegotiationState,
+} from "../career/contract-negotiation.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
@@ -129,7 +133,7 @@ export interface CareerSeasonArchiveEntry {
  *
  * `CareerState` wraps the current `GameState` instead of duplicating world data.
  * It adds only the manager-facing persistence slice needed after the market MVP:
- * selected club, transfer funds, permanent-transfer history, and optional
+ * selected club, club finances, permanent-transfer history, and optional
  * career systems such as the youth academy.
  */
 export interface CareerState {
@@ -143,8 +147,8 @@ export interface CareerState {
   readonly selectedClubId: ClubId;
   /** Current playable world snapshot. */
   readonly gameState: GameState;
-  /** Durable transfer funds for the current market MVP. */
-  readonly marketState: MarketState;
+  /** Canonical cash, annual budgets, wage commitments, and ordered ledger. */
+  readonly clubFinanceState?: ClubFinanceState;
   /** Ordered permanent-transfer decisions already applied to this career. */
   readonly transferHistory: readonly PermanentTransferHistoryEntry[];
   /** Optional durable youth academy membership and lifecycle state. */
@@ -159,6 +163,10 @@ export interface CareerState {
   readonly playerParticipationLedger?: PlayerParticipationLedger;
   /** Active injuries, suspensions, and competition yellow-card totals. */
   readonly playerAvailability?: CareerPlayerAvailabilityState;
+  /** Canonical senior registrations, contracts, and factual contract history. */
+  readonly seniorSquadState?: SeniorSquadState;
+  /** Ordered durable contract discussions awaiting or recording a decision. */
+  readonly contractNegotiationState?: ContractNegotiationState;
 }
 
 /** Machine-readable career-state validation failure. */
@@ -166,7 +174,6 @@ export type CareerStateContractErrorCode =
   | "unsupported_schema_version"
   | "selected_club_not_found"
   | "selected_club_not_ordered"
-  | "budget_club_not_found"
   | "invalid_money"
   | "invalid_history_sequence"
   | "duplicate_history_sequence"
@@ -202,8 +209,7 @@ export type CareerStateContractErrorCode =
   | "match_preparation_bench_lineup_overlap"
   | "player_participation_player_not_found"
   | "player_availability_player_not_found"
-  | "player_availability_fixture_not_found"
-  | "match_preparation_player_unavailable";
+  | "player_availability_fixture_not_found";
 
 /**
  * Typed error thrown when a career-state snapshot is inconsistent.
@@ -237,7 +243,7 @@ export class CareerStateContractError extends Error {
  *   schemaVersion: CAREER_STATE_SCHEMA_VERSION,
  *   selectedClubId: clubId("club:pro01"),
  *   gameState,
- *   marketState,
+ *   clubFinanceState,
  *   transferHistory: [],
  * });
  */
@@ -253,12 +259,6 @@ export function createCareerState(input: CareerState): CareerState {
 
   if (!hasClubInOrder(input.gameState, input.selectedClubId)) {
     throw new CareerStateContractError("selected_club_not_ordered", `selected club is not ordered: ${input.selectedClubId}`);
-  }
-
-  const marketState = createMarketState(input.marketState);
-  for (const clubId of marketState.clubBudgetIds) {
-    assertClubExists(input.gameState, clubId, "budget_club_not_found");
-    assertNonNegativeMoney(marketState.clubBudgets[clubId]?.transferBudget);
   }
 
   const seenHistorySequences = new Set<number>();
@@ -289,6 +289,15 @@ export function createCareerState(input: CareerState): CareerState {
   const currentSeasonInbox = createCurrentSeasonInbox(input);
   const playerParticipationLedger = createCareerPlayerParticipationLedger(input);
   const playerAvailability = createCareerPlayerAvailability(input);
+  const seniorSquadState = input.seniorSquadState === undefined
+    ? undefined
+    : createSeniorSquadState(input.gameState, input.seniorSquadState);
+  const contractNegotiationState = input.contractNegotiationState === undefined
+    ? undefined
+    : createContractNegotiationState(input.gameState, seniorSquadState, input.contractNegotiationState);
+  const clubFinanceState = input.clubFinanceState === undefined || seniorSquadState === undefined
+    ? input.clubFinanceState
+    : createClubFinanceState(input.gameState, seniorSquadState, input.clubFinanceState);
 
   return {
     saveId: input.saveId,
@@ -296,16 +305,18 @@ export function createCareerState(input: CareerState): CareerState {
     ...(input.careerWorld === undefined ? {} : { careerWorld: createCareerWorldMetadata(input.careerWorld) }),
     selectedClubId: input.selectedClubId,
     gameState: input.gameState,
-    marketState,
     transferHistory,
     ...(youthAcademyState === undefined ? {} : { youthAcademyState }),
     ...(seasonHistory.length === 0 ? {} : { seasonHistory }),
     currentSeasonInbox,
     ...(input.matchPreparation === undefined
       ? {}
-      : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation, playerAvailability) }),
+      : { matchPreparation: createCareerMatchPreparation(input.gameState, input.selectedClubId, input.matchPreparation) }),
     ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
     ...(input.playerAvailability === undefined ? {} : { playerAvailability }),
+    ...(seniorSquadState === undefined ? {} : { seniorSquadState }),
+    ...(contractNegotiationState === undefined ? {} : { contractNegotiationState }),
+    ...(clubFinanceState === undefined ? {} : { clubFinanceState }),
   };
 }
 
@@ -417,7 +428,6 @@ function createCareerMatchPreparation(
   gameState: GameState,
   selectedClubId: ClubId,
   input: CareerMatchPreparation,
-  availability: CareerPlayerAvailabilityState,
 ): CareerMatchPreparation {
   if (input.selectedClubId !== selectedClubId) {
     throw new CareerStateContractError(
@@ -431,8 +441,6 @@ function createCareerMatchPreparation(
     gameState,
     selectedClubId,
     input.selectedLineup,
-    input.targetFixtureId,
-    availability,
   );
   const tactic = input.tactic === undefined ? undefined : createTacticSetup(input.tactic);
   const boardSlots = createPreparationBoardSlots(input.boardSlots, selectedLineup);
@@ -441,8 +449,6 @@ function createCareerMatchPreparation(
     selectedClubId,
     input.benchSlots,
     selectedLineup,
-    input.targetFixtureId,
-    availability,
   );
 
   if (input.baseFormationId !== undefined && input.baseFormationId.trim().length === 0) {
@@ -497,8 +503,6 @@ function createPreparationBenchSlots(
   selectedClubId: ClubId,
   input: readonly CareerMatchPreparationBenchSlot[] | undefined,
   selectedLineup: SelectedLineup | undefined,
-  targetFixtureId: FixtureId | undefined,
-  availability: CareerPlayerAvailabilityState,
 ): readonly CareerMatchPreparationBenchSlot[] | undefined {
   if (input === undefined) return undefined;
   const selectedClub = gameState.clubs[selectedClubId];
@@ -526,7 +530,6 @@ function createPreparationBenchSlots(
     if (!ownedPlayerIds.has(slot.playerId)) {
       throw new CareerStateContractError("match_preparation_player_not_owned", `match preparation bench player is not owned by selected club: ${slot.playerId}`);
     }
-    assertPreparationPlayerAvailable(gameState, targetFixtureId, availability, slot.playerId);
     seenSlotKeys.add(slot.slotKey);
     seenPlayerIds.add(slot.playerId);
     return { ...slot };
@@ -617,8 +620,6 @@ function createValidatedPreparationLineup(
   gameState: GameState,
   selectedClubId: ClubId,
   input: SelectedLineup,
-  targetFixtureId: FixtureId | undefined,
-  availability: CareerPlayerAvailabilityState,
 ): SelectedLineup {
   if (input.clubId !== selectedClubId) {
     throw new CareerStateContractError("match_preparation_lineup_club_mismatch", `lineup club must match selected club: ${input.clubId}`);
@@ -636,31 +637,9 @@ function createValidatedPreparationLineup(
     if (!selectedClubPlayerIds.has(slot.playerId)) {
       throw new CareerStateContractError("match_preparation_player_not_owned", `lineup player is not owned by selected club: ${slot.playerId}`);
     }
-    assertPreparationPlayerAvailable(gameState, targetFixtureId, availability, slot.playerId);
   }
 
   return selectedLineup;
-}
-
-function assertPreparationPlayerAvailable(
-  gameState: GameState,
-  targetFixtureId: FixtureId | undefined,
-  availability: CareerPlayerAvailabilityState,
-  playerId: PlayerId,
-): void {
-  if (targetFixtureId === undefined) return;
-  const fixture = gameState.fixtures[targetFixtureId];
-  if (fixture === undefined) return;
-  // Availability produced by this fixture must not invalidate the preparation
-  // snapshot that was valid when the already-completed match kicked off.
-  if (fixture.result?.played === true) return;
-  const reason = playerUnavailabilityReason(availability, playerId, fixture.date, fixture.competitionId);
-  if (reason !== undefined) {
-    throw new CareerStateContractError(
-      "match_preparation_player_unavailable",
-      `match preparation player is ${reason}: ${playerId}`,
-    );
-  }
 }
 
 function hasClubInOrder(gameState: GameState, clubId: ClubId): boolean {

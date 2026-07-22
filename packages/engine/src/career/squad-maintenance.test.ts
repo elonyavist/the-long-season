@@ -6,7 +6,6 @@ import {
   abilityValue,
   clubId,
   createCareerState,
-  createMarketState,
   gameDate,
   playerId,
   saveId,
@@ -112,10 +111,6 @@ function careerStateFixture(selectedClubId: ClubId, players: readonly Player[]):
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
     gameState: gameStateFixture(selectedClubId, players),
-    marketState: createMarketState({
-      clubBudgets: {},
-      clubBudgetIds: [],
-    }),
     transferHistory: [],
   });
 }

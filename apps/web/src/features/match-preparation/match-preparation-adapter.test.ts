@@ -194,7 +194,7 @@ describe("loaded-career match-preparation adapter", () => {
     expect(carried.isSaved).toBe(false);
   });
 
-  it("removes a suspended player from a carried plan before the next fixture", () => {
+  it("preserves a suspended player in the carried plan until the manager replaces him", () => {
     const career = careerState("next-fixture-suspension");
     let draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
     draft = selectMatchPreparationTactic(draft, "tactic:balanced");
@@ -225,16 +225,28 @@ describe("loaded-career match-preparation adapter", () => {
     };
 
     const reconciled = createMatchPreparationDraft(unavailableCareer);
-    const availablePlayerOptions = buildMatchPreparationView(unavailableCareer, reconciled)
-      .lineup.slots[0]?.playerOptions ?? [];
+    const view = buildMatchPreparationView(unavailableCareer, reconciled);
+    const playerOptions = view.lineup.slots[0]?.playerOptions ?? [];
 
-    expect(Object.values(reconciled.selectedPlayerIdsBySlot)).not.toContain(suspendedPlayerId);
-    expect(Object.values(reconciled.selectedBenchPlayerIdsBySlot)).not.toContain(suspendedPlayerId);
-    expect(availablePlayerOptions.some((player) => player.playerId === suspendedPlayerId)).toBe(false);
+    expect(reconciled.selectedPlayerIdsBySlot).toEqual(draft.selectedPlayerIdsBySlot);
+    expect(reconciled.selectedBenchPlayerIdsBySlot).toEqual(draft.selectedBenchPlayerIdsBySlot);
+    expect(playerOptions.find((player) => player.playerId === suspendedPlayerId)).toMatchObject({
+      playerId: suspendedPlayerId,
+      unavailabilityReason: "suspended",
+    });
+    expect(view.eligibilityBlockers).toEqual([{
+      playerId: suspendedPlayerId,
+      playerName: playerOptions.find((player) => player.playerId === suspendedPlayerId)?.name,
+      reason: "suspended",
+    }]);
     expect(reconciled.isSaved).toBe(false);
     expect(buildDurableMatchPreparation(unavailableCareer, reconciled)).toBeUndefined();
 
-    const filled = applyMatchPreparationSelectionAction(unavailableCareer, reconciled, "fill_gaps");
+    const suspendedSlotKey = Object.entries(reconciled.selectedPlayerIdsBySlot)
+      .find(([, playerId]) => playerId === suspendedPlayerId)?.[0];
+    if (suspendedSlotKey === undefined) throw new Error("Expected suspended player in XI");
+    const cleared = selectMatchPreparationPlayer(reconciled, suspendedSlotKey, undefined);
+    const filled = applyMatchPreparationSelectionAction(unavailableCareer, cleared, "fill_gaps");
     const filledPlayerIds = [
       ...Object.values(filled.selectedPlayerIdsBySlot),
       ...Object.values(filled.selectedBenchPlayerIdsBySlot),

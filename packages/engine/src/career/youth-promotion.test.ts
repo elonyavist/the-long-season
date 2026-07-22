@@ -4,30 +4,43 @@ import { test } from "vitest";
 import {
   CAREER_STATE_SCHEMA_VERSION,
   abilityValue,
+  clubFinanceLedgerEntryId,
   clubId,
+  contractNegotiationId,
   createCareerState,
-  createMarketState,
+  createClubFinanceState,
+  createSeniorSquadState,
   gameDate,
   getPlayerRoleProfile,
   mapPlayerAbilities,
   nonNegativeMoney,
+  playerContractId,
   playerId,
   saveId,
   seasonId,
+  seniorSquadRegistrationId,
   stateValue,
   rawDiagnosticAbilityAverage,
   roleCurrentAbility,
   type CareerState,
   type Club,
+  type ClubFinanceState,
+  type GameState,
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
   type PlayerRole,
+  type SeniorSquadState,
 } from "@game/domain";
 
 import { promoteYouthCandidatesToSeniorSquads } from "./youth-promotion.ts";
+import { offerContractRenewal } from "./contract-negotiation.ts";
+import {
+  prepareSeniorSquadSigning,
+  SeniorSquadTransferError,
+} from "./senior-squad-transfer.ts";
 
 /** Tests for explicit youth-to-senior promotion rules. */
 
@@ -43,7 +56,26 @@ test("promoteYouthCandidatesToSeniorSquads promotes AI club candidates when ther
   assert.equal(result.records[0]?.promoted, true);
   assert.equal(result.records[0]?.reason, "promoted");
   assert.equal(result.careerState.gameState.clubs[clubId("club:pro02")]?.playerIds.includes(candidate), true);
-  assert.equal(result.careerState.youthAcademyState?.playerLifecycle[candidate], undefined);
+  assert.equal(result.careerState.youthAcademyState?.playerLifecycle[candidate]?.status, "promoted");
+  const registration = result.careerState.seniorSquadState?.registrationIds
+    .map((id) => result.careerState.seniorSquadState?.registrations[id])
+    .find((row) => row?.playerId === candidate);
+  const contract = result.careerState.seniorSquadState?.activeContractIds
+    .map((id) => result.careerState.seniorSquadState?.contracts[id])
+    .find((row) => row?.playerId === candidate);
+  assert.ok(registration);
+  assert.equal(contract?.type, "professional");
+  assert.equal(
+    result.careerState.seniorSquadState?.contractHistoryEntryIds
+      .map((id) => result.careerState.seniorSquadState?.contractHistory[id])
+      .some((entry) => entry?.playerId === candidate && entry.event === "signed"),
+    true,
+  );
+  assert.equal(
+    result.careerState.clubFinanceState?.accounts[clubId("club:pro02")]?.committedAnnualWage,
+    (careerState.clubFinanceState?.accounts[clubId("club:pro02")]?.committedAnnualWage ?? 0)
+      + (contract?.annualWage ?? 0),
+  );
 });
 
 test("promoteYouthCandidatesToSeniorSquads protects the selected club by default", () => {
@@ -59,6 +91,72 @@ test("promoteYouthCandidatesToSeniorSquads protects the selected club by default
   assert.equal(result.records[0]?.reason, "selected_club_protected");
   assert.equal(result.careerState.gameState.clubs[clubId("club:pro01")]?.playerIds.includes(candidate), false);
   assert.equal(result.careerState.youthAcademyState?.playerLifecycle[candidate]?.status, "promotion_candidate");
+});
+
+test("promoteYouthCandidatesToSeniorSquads ignores historical candidates that already left the active world", () => {
+  const candidate = playerId("player:historical-candidate");
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+  });
+  const gameState = {
+    ...careerState.gameState,
+    playerIds: careerState.gameState.playerIds.filter((playerIdValue) => playerIdValue !== candidate),
+    playerStates: Object.fromEntries(
+      Object.entries(careerState.gameState.playerStates)
+        .filter(([playerIdValue]) => playerIdValue !== candidate),
+    ),
+  };
+  const historicalCareerState = createCareerState({ ...careerState, gameState });
+
+  const result = promoteYouthCandidatesToSeniorSquads({ careerState: historicalCareerState });
+
+  assert.deepEqual(result.records, []);
+  assert.equal(result.careerState.gameState.clubs[clubId("club:pro02")]?.playerIds.includes(candidate), false);
+  assert.equal(
+    result.careerState.youthAcademyState?.playerLifecycle[candidate]?.status,
+    "promotion_candidate",
+  );
+});
+
+test("prepareSeniorSquadSigning rejects historical players outside the active world", () => {
+  const candidate = playerId("player:historical-signing-candidate");
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+  });
+  const gameState: GameState = {
+    ...careerState.gameState,
+    playerIds: careerState.gameState.playerIds.filter((activePlayerId) => activePlayerId !== candidate),
+    playerStates: Object.fromEntries(
+      Object.entries(careerState.gameState.playerStates)
+        .filter(([activePlayerId]) => activePlayerId !== candidate),
+    ),
+  };
+
+  assert.throws(
+    () => prepareSeniorSquadSigning({
+      gameState,
+      seniorSquadState: careerState.seniorSquadState!,
+      playerId: candidate,
+      clubId: clubId("club:pro02"),
+      occurredOn: gameState.calendar.currentDate,
+      transitionSequence: 1,
+      acceptedTerms: {
+        durationYears: 2,
+        annualWage: nonNegativeMoney(100_000_00),
+        squadStatus: "prospect",
+        bonuses: {
+          signingBonus: nonNegativeMoney(0),
+          appearanceBonus: nonNegativeMoney(0),
+        },
+      },
+    }),
+    (error: unknown) => error instanceof SeniorSquadTransferError
+      && error.message === `Signing player is not active: ${candidate}`,
+  );
 });
 
 test("promoteYouthCandidatesToSeniorSquads can explicitly promote selected-club candidates for lab automation", () => {
@@ -150,6 +248,84 @@ test("promoteYouthCandidatesToSeniorSquads recognizes role-specific potential ro
   assert.equal(result.records[0]?.reason, "promoted");
 });
 
+test("promoteYouthCandidatesToSeniorSquads dates new terms at the explicit season boundary", () => {
+  const candidate = playerId("player:next-season-candidate");
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+  });
+  const nextSeasonStart = gameDate(20_365);
+
+  const result = promoteYouthCandidatesToSeniorSquads({
+    careerState,
+    occurredOn: nextSeasonStart,
+  });
+  const contract = result.careerState.seniorSquadState?.activeContractIds
+    .map((id) => result.careerState.seniorSquadState?.contracts[id])
+    .find((row) => row?.playerId === candidate);
+  const registration = result.careerState.seniorSquadState?.registrationIds
+    .map((id) => result.careerState.seniorSquadState?.registrations[id])
+    .find((row) => row?.playerId === candidate);
+
+  assert.equal(result.records[0]?.reason, "promoted");
+  assert.equal(contract?.startsOn, nextSeasonStart);
+  assert.ok((contract?.endsOn ?? nextSeasonStart) > nextSeasonStart);
+  assert.equal(registration?.registeredOn, nextSeasonStart);
+  assert.equal(
+    result.careerState.youthAcademyState?.playerLifecycle[candidate]?.statusChangedAt,
+    nextSeasonStart,
+  );
+});
+
+test("promoteYouthCandidatesToSeniorSquads preserves wages promised by an open renewal", () => {
+  const candidate = playerId("player:reserved-wage-candidate");
+  const careerState = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+  });
+  const aiClubId = clubId("club:pro02");
+  const renewingPlayerId = careerState.gameState.clubs[aiClubId]?.playerIds[0];
+  const account = careerState.clubFinanceState?.accounts[aiClubId];
+  const currentContract = careerState.seniorSquadState?.activeContractIds
+    .map((id) => careerState.seniorSquadState?.contracts[id])
+    .find((contract) => contract?.playerId === renewingPlayerId);
+  assert.ok(renewingPlayerId !== undefined && account !== undefined && currentContract !== undefined);
+  if (renewingPlayerId === undefined || account === undefined || currentContract === undefined) return;
+
+  const offered = offerContractRenewal({
+    careerState,
+    negotiationId: contractNegotiationId("contract-negotiation:youth-reserved-wage"),
+    playerId: renewingPlayerId,
+    clubId: aiClubId,
+    offeredOn: careerState.gameState.calendar.currentDate,
+    terms: {
+      durationYears: 2,
+      annualWage: nonNegativeMoney(
+        account.annualWageBudget
+          - account.committedAnnualWage
+          + currentContract.annualWage,
+      ),
+      squadStatus: currentContract.squadStatus,
+      bonuses: {
+        signingBonus: nonNegativeMoney(0),
+        appearanceBonus: nonNegativeMoney(0),
+      },
+    },
+  });
+  assert.equal(offered.status, "applied");
+  if (offered.status !== "applied") return;
+
+  const result = promoteYouthCandidatesToSeniorSquads({
+    careerState: offered.careerState,
+    occurredOn: gameDate(20_365),
+  });
+
+  assert.equal(result.records[0]?.reason, "contract_unaffordable");
+  assert.equal(result.careerState.gameState.clubs[aiClubId]?.playerIds.includes(candidate), false);
+});
+
 function careerStateFixture(input: {
   readonly selectedClubId: string;
   readonly candidateClubId: string;
@@ -197,36 +373,34 @@ function careerStateFixture(input: {
     }
   }
 
+  const gameState: GameState = {
+    meta: {
+      seed: "youth-promotion",
+      rngAlgorithmVersion: "test",
+      saveSchemaVersion: 1,
+    },
+    calendar: {
+      currentDate: gameDate(20_000),
+      currentSeasonId: seasonId("season:0001"),
+    },
+    players,
+    playerIds,
+    playerStates,
+    clubs,
+    clubIds: [pro01, pro02],
+    fixtures: {},
+    fixtureIds: [],
+  };
+  const seniorSquadState = canonicalSeniorSquadState(gameState);
+
   return createCareerState({
     saveId: saveId("save:youth-promotion"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
-    gameState: {
-      meta: {
-        seed: "youth-promotion",
-        rngAlgorithmVersion: "test",
-        saveSchemaVersion: 1,
-      },
-      calendar: {
-        currentDate: gameDate(20_000),
-        currentSeasonId: seasonId("season:0001"),
-      },
-      players,
-      playerIds,
-      playerStates,
-      clubs,
-      clubIds: [pro01, pro02],
-      fixtures: {},
-      fixtureIds: [],
-    },
-    marketState: createMarketState({
-      clubBudgets: {
-        [pro01]: { clubId: pro01, transferBudget: nonNegativeMoney(1_000_000_00) },
-        [pro02]: { clubId: pro02, transferBudget: nonNegativeMoney(1_000_000_00) },
-      },
-      clubBudgetIds: [pro01, pro02],
-    }),
+    gameState,
     transferHistory: [],
+    seniorSquadState,
+    clubFinanceState: canonicalClubFinanceState(gameState, seniorSquadState),
     youthAcademyState: {
       clubRosters: {
         [pro01]: { clubId: pro01, playerIds: [] },
@@ -244,6 +418,103 @@ function careerStateFixture(input: {
       },
       playerLifecycleIds: [input.candidate],
     },
+  });
+}
+
+function canonicalSeniorSquadState(gameState: GameState): SeniorSquadState {
+  const registrations: Record<string, SeniorSquadState["registrations"][keyof SeniorSquadState["registrations"]]> = {};
+  const registrationIds: SeniorSquadState["registrationIds"][number][] = [];
+  const contracts: Record<string, SeniorSquadState["contracts"][keyof SeniorSquadState["contracts"]]> = {};
+  const contractIds: SeniorSquadState["contractIds"][number][] = [];
+
+  for (const clubIdValue of gameState.clubIds) {
+    const club = gameState.clubs[clubIdValue];
+    if (club === undefined) continue;
+    for (let index = 0; index < club.playerIds.length; index += 1) {
+      const seniorPlayerId = club.playerIds[index];
+      if (seniorPlayerId === undefined) continue;
+      const suffix = `${String(clubIdValue).slice(5)}:${String(seniorPlayerId).slice(7)}`;
+      const registrationId = seniorSquadRegistrationId(`registration:${suffix}`);
+      const contractId = playerContractId(`contract:${suffix}`);
+      registrations[registrationId] = {
+        id: registrationId,
+        playerId: seniorPlayerId,
+        clubId: clubIdValue,
+        shirtNumber: index + 1,
+        registeredOn: gameDate(19_000),
+      };
+      registrationIds.push(registrationId);
+      contracts[contractId] = {
+        id: contractId,
+        playerId: seniorPlayerId,
+        clubId: clubIdValue,
+        type: "professional",
+        startsOn: gameDate(19_000),
+        endsOn: gameDate(22_000),
+        annualWage: nonNegativeMoney(100_000_00),
+        squadStatus: "squad_player",
+        bonuses: {
+          signingBonus: nonNegativeMoney(5_000_00),
+          appearanceBonus: nonNegativeMoney(1_000_00),
+        },
+      };
+      contractIds.push(contractId);
+    }
+  }
+
+  return createSeniorSquadState(gameState, {
+    registrations,
+    registrationIds,
+    contracts,
+    contractIds,
+    activeContractIds: contractIds,
+    contractHistory: {},
+    contractHistoryEntryIds: [],
+  });
+}
+
+function canonicalClubFinanceState(gameState: GameState, seniorSquadState: SeniorSquadState): ClubFinanceState {
+  const accounts: Record<string, ClubFinanceState["accounts"][keyof ClubFinanceState["accounts"]]> = {};
+  const ledgerEntries: Record<string, ClubFinanceState["ledgerEntries"][keyof ClubFinanceState["ledgerEntries"]]> = {};
+  const ledgerEntryIds: ClubFinanceState["ledgerEntryIds"][number][] = [];
+  for (const clubIdValue of gameState.clubIds) {
+    const committedAnnualWage = seniorSquadState.activeContractIds.reduce((total, contractId) => {
+      const contract = seniorSquadState.contracts[contractId];
+      return contract?.clubId === clubIdValue ? total + contract.annualWage : total;
+    }, 0);
+    const cashBalance = nonNegativeMoney(100_000_000_00);
+    accounts[clubIdValue] = {
+      clubId: clubIdValue,
+      currency: "EUR",
+      cashBalance,
+      annualTransferBudget: nonNegativeMoney(20_000_000_00),
+      availableTransferBudget: nonNegativeMoney(20_000_000_00),
+      annualWageBudget: nonNegativeMoney(50_000_000_00),
+      committedAnnualWage: nonNegativeMoney(committedAnnualWage),
+      seasonIncome: nonNegativeMoney(0),
+      seasonExpenses: nonNegativeMoney(0),
+    };
+    const entryId = clubFinanceLedgerEntryId(`finance-ledger:opening:${String(clubIdValue).slice(5)}`);
+    ledgerEntries[entryId] = {
+      id: entryId,
+      sequenceNumber: ledgerEntryIds.length + 1,
+      clubId: clubIdValue,
+      occurredOn: gameDate(20_000),
+      currency: "EUR",
+      reason: "opening_capital",
+      direction: "credit",
+      amount: cashBalance,
+      balanceAfter: cashBalance,
+      referenceId: `opening:${clubIdValue}`,
+    };
+    ledgerEntryIds.push(entryId);
+  }
+  return createClubFinanceState(gameState, seniorSquadState, {
+    currency: "EUR",
+    accounts,
+    clubIds: gameState.clubIds,
+    ledgerEntries,
+    ledgerEntryIds,
   });
 }
 

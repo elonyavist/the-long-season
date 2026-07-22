@@ -54,6 +54,8 @@ test("fake league facade exposes a coherent generated world bundle", () => {
   assert.equal(toISO(league.seasonStartDate), "2026-08-01");
   assert.equal(league.tableRules.pointsForWin, 3);
   assert.equal(league.matchEngineConfig.minuteCount, 90);
+  assert.deepEqual(league.clubFinanceState.clubIds, league.clubIds);
+  assert.equal(league.competition.seasonDistribution?.prizes.length, league.clubIds.length);
   assert.deepEqual(Object.keys(league.roleWeights).sort(), ["attacker", "defender", "gk", "midfielder"]);
 });
 

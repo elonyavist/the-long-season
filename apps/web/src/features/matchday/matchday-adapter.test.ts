@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { findNextCareerFixture } from "@game/engine";
 
 import {
   applyMatchPreparationSelectionAction,
@@ -58,6 +59,39 @@ describe("progressive web matchday adapter", () => {
     expect(paused.engineState).toMatchObject({ runState: "paused", pauseReason: "manual" });
     expect(resumed.engineState.simulation.minute).toBe(1);
     expect(resumed.engineState.runState).toBe("running");
+  });
+
+  it("blocks direct kickoff without changing an ineligible selected plan", () => {
+    const career = preparedCareer("adapter-ineligible-kickoff");
+    const nextFixture = findNextCareerFixture(career);
+    const selectedPlayerId = career.matchPreparation?.selectedLineup?.slots[0]?.playerId;
+    if (nextFixture.status !== "found" || selectedPlayerId === undefined) {
+      throw new Error("Expected selected player and next fixture");
+    }
+    const unavailableCareer: WebCareerState = {
+      ...career,
+      playerAvailability: {
+        injuries: [],
+        yellowCards: [],
+        suspensions: [{
+          fixtureId: nextFixture.fixture.id,
+          competitionId: nextFixture.fixture.competitionId,
+          playerId: selectedPlayerId,
+          reason: "straight_red",
+          remainingMatches: 1,
+        }],
+      },
+    };
+
+    const created = createWebLiveMatchdaySession(unavailableCareer);
+
+    expect(created.status).toBe("blocked");
+    expect(created.matchdayState.lastSessionAttempt).toMatchObject({
+      status: "blocked",
+      fixtureId: nextFixture.fixture.id,
+      eligibilityBlockers: [{ playerId: selectedPlayerId, reason: "suspended" }],
+    });
+    expect(unavailableCareer.matchPreparation).toEqual(career.matchPreparation);
   });
 
   it("keeps full-time facts private until the explicit career commit", () => {
