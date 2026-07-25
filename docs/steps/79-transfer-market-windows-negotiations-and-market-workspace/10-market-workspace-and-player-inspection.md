@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready.
+Done.
 
 ## Goal
 
@@ -31,6 +31,11 @@ without horizontal scrolling or dashboard-style clutter.
 7. Present closed-window, empty, loading, error, and storage-recovery states
    through current shared primitives.
 8. Use semantic Motion for route/detail transitions and changed results only.
+9. Resolve the display half of `P79-CF-03`: extract one shared localized
+   integer-minor-unit currency display formatter, migrate the existing Squad
+   table, player profile, and contract workspace, and make Market consume that
+   same formatter. Read-only display precision must be an explicit formatter
+   option, not three local defaults.
 
 ## Implementation Contract
 
@@ -41,6 +46,9 @@ without horizontal scrolling or dashboard-style clutter.
 - Desktop should be dense and scan-friendly; narrow layouts must reflow, not
   clip or hide the main action.
 - Every action has a keyboard and non-drag path.
+- Currency display is a reusable presentation primitive; editable monetary
+  text remains owned by the typed form parser introduced for exact minor
+  units.
 
 ## Expected Files
 
@@ -48,6 +56,8 @@ without horizontal scrolling or dashboard-style clutter.
 - current routing/navigation/shell files only where Market becomes active
 - current shared table/profile/overlay/status/motion primitives only where a
   reusable correction is required
+- current shared money presentation helper plus existing Squad/profile/
+  contract consumers required to remove the three local formatters
 - focused web tests and current-product visual QA fixture updates
 - `packages/i18n/` labels/tests required by visible copy
 - `docs/PROJECT_STATUS.md`
@@ -84,4 +94,5 @@ graphify update .
 - Market is a complete inspection workspace, not a placeholder.
 - No horizontal scroll, clipped action, focus loss, or hidden state exists.
 - Existing profile/table primitives are reused without parallel copies.
+- No feature-local read-only currency formatter remains.
 - Step 11 is the only next implementation step.

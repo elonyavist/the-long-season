@@ -5,7 +5,6 @@ import {
   type ClubCategory,
   type ClubId,
   type ContractDemandSnapshot,
-  type ContractNegotiationId,
   type ContractOfferEvaluation,
   type ContractOfferEvaluationReason,
   type ContractOfferTerms,
@@ -48,7 +47,8 @@ export interface DeriveContractDemandInput {
 /** Input for deterministic evaluation of one submitted offer. */
 export interface EvaluateContractOfferInput {
   readonly worldSeed: string;
-  readonly negotiationId: ContractNegotiationId;
+  /** Stable lifecycle key used only to seed the deterministic decision. */
+  readonly negotiationId: string;
   readonly evaluatedOn: GameDate;
   readonly offer: ContractOfferTerms;
   readonly demand: ContractDemandSnapshot;

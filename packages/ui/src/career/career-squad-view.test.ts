@@ -174,7 +174,6 @@ function player(overrides: Partial<CareerSquadPlayerInput> = {}): CareerSquadPla
     primaryRole: "central_midfielder",
     condition: 91,
     morale: 64,
-    moraleDirection: "up",
     selection: "unselected",
     availabilityReasons: [],
     value: nonNegativeMoney(750_000_00),

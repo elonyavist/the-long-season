@@ -13,7 +13,7 @@ import {
 } from "@game/domain";
 
 import { derivePlayerMarketAbility } from "../market/player-valuation.ts";
-import { evaluateCareerContractCapacity } from "./career-contract-reservations.ts";
+import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import {
   applyContractActivationsFinance,
   reallocateTransferBudgetsToWages,

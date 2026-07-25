@@ -7,9 +7,14 @@ import {
   type PlayerId,
   type PlayerParticipationLedger,
   type PlayerParticipationRow,
+  type SeasonTransferWindows,
   type SeasonId,
 } from "@game/domain";
 
+import {
+  advanceAiMarketLifecycle,
+  type AdvanceAiMarketLifecycleResult,
+} from "./ai-market-lifecycle.ts";
 import { developPlayersForSeason, type PlayerDevelopmentChange } from "./player-development.ts";
 import {
   advanceAiContractLifecycle,
@@ -30,6 +35,13 @@ export interface AdvanceCareerMonthsInput {
   readonly seasonId?: SeasonId;
   /** Optional explicit player order. Defaults to players with eligible participation rows. */
   readonly playerIds?: readonly PlayerId[];
+  /**
+   * Adapter-owned transfer windows for the active competition season.
+   *
+   * The engine cannot infer competition dates. When omitted, monthly contract
+   * and development work still advances, but no AI market decision is made.
+   */
+  readonly transferWindows?: SeasonTransferWindows;
 }
 
 /** Structured diagnostic for one applied season/month checkpoint. */
@@ -64,6 +76,8 @@ export interface AdvanceCareerMonthsResult {
   readonly summaries: readonly CareerMonthlyLifecycleSummary[];
   /** AI renewal decisions and ownership expiries reached by this calendar route. */
   readonly contractLifecycle?: AdvanceAiContractLifecycleResult;
+  /** AI market facts reached through canonical negotiations when windows were supplied. */
+  readonly marketLifecycle?: AdvanceAiMarketLifecycleResult;
 }
 
 /**
@@ -84,8 +98,19 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         throughDate: input.toDate,
       });
   const careerStateAfterContracts = contractLifecycle?.careerState ?? input.careerState;
+  const marketLifecycle = input.transferWindows === undefined
+    || careerStateAfterContracts.seniorSquadState === undefined
+    || careerStateAfterContracts.clubFinanceState === undefined
+    ? undefined
+    : advanceAiMarketLifecycle({
+        careerState: careerStateAfterContracts,
+        fromDate,
+        throughDate: input.toDate,
+        transferWindows: input.transferWindows,
+      });
+  const careerStateAfterMarket = marketLifecycle?.careerState ?? careerStateAfterContracts;
   const eligibleRows = eligibleOpenParticipationRows({
-    ledger: careerStateAfterContracts.playerParticipationLedger,
+    ledger: careerStateAfterMarket.playerParticipationLedger,
     seasonId,
     beforeMonthKey: monthKeyForCareerDate(input.toDate),
     playerIds: input.playerIds,
@@ -93,13 +118,14 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
 
   if (input.toDate <= fromDate || eligibleRows.length === 0) {
     return {
-      careerState: careerStateAfterContracts,
+      careerState: careerStateAfterMarket,
       summaries: [],
       ...(contractLifecycle === undefined ? {} : { contractLifecycle }),
+      ...(marketLifecycle === undefined ? {} : { marketLifecycle }),
     };
   }
 
-  let careerState = careerStateAfterContracts;
+  let careerState = careerStateAfterMarket;
   const summaries: CareerMonthlyLifecycleSummary[] = [];
 
   for (const monthKey of uniqueSortedMonthKeys(eligibleRows)) {
@@ -141,6 +167,7 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
     careerState,
     summaries,
     ...(contractLifecycle === undefined ? {} : { contractLifecycle }),
+    ...(marketLifecycle === undefined ? {} : { marketLifecycle }),
   };
 }
 

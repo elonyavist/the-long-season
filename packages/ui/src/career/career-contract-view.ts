@@ -8,6 +8,8 @@ import {
   type PlayerContractType,
 } from "@game/domain";
 
+import { hasCareerContractExpiryAlert } from "./career-contract-expiry.ts";
+
 /** Bonus fields supported by the real contract command for this player. */
 export type CareerContractBonusField = "signing_bonus" | "appearance_bonus" | "goal_bonus" | "clean_sheet_bonus";
 
@@ -44,7 +46,10 @@ export interface CareerActiveContractInput {
   readonly squadStatus: AgreedSquadStatus;
   readonly bonuses: CareerContractTermsInput["bonuses"];
   readonly remainingDays: number;
-  /** The domain-aware adapter supplies the renewal-window decision. */
+}
+
+/** Current active agreement plus the shared presentation expiry signal. */
+export interface CareerActiveContractView extends CareerActiveContractInput {
   readonly hasExpiryAlert: boolean;
 }
 
@@ -153,7 +158,7 @@ export interface CareerContractDraftFieldView {
 
 /** Complete contract sub-view consumed by the full-screen player profile. */
 export interface CareerContractView {
-  readonly activeContract: CareerActiveContractInput;
+  readonly activeContract: CareerActiveContractView;
   readonly history: readonly CareerContractHistoryInput[];
   readonly negotiation?: CareerContractNegotiationInput;
   readonly finance: CareerContractFinanceInput;
@@ -261,8 +266,12 @@ function actionsForNegotiation(
   }
 }
 
-function copyActiveContract(contract: CareerActiveContractInput): CareerActiveContractInput {
-  return { ...contract, bonuses: { ...contract.bonuses } };
+function copyActiveContract(contract: CareerActiveContractInput): CareerActiveContractView {
+  return {
+    ...contract,
+    bonuses: { ...contract.bonuses },
+    hasExpiryAlert: hasCareerContractExpiryAlert(contract.remainingDays),
+  };
 }
 
 function copyNegotiation(negotiation: CareerContractNegotiationInput): CareerContractNegotiationInput {

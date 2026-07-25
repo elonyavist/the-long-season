@@ -22,7 +22,6 @@ describe("contract renewal form", () => {
       goalBonus: nonNegativeMoney(5_000_00),
     },
     remainingDays: 699,
-    hasExpiryAlert: false,
   };
 
   it("uses age-aware duration and annual money from the active agreement", () => {

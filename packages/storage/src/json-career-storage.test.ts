@@ -328,7 +328,7 @@ test("loading malformed career saves fails clearly", async () => {
   const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
 
   try {
-    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 6, metadata: {}, state: {} }), "utf8");
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 7, metadata: {}, state: {} }), "utf8");
 
     await assert.rejects(
       () => storage.loadCareer(saveId("save:bad")),
@@ -356,7 +356,7 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 6);
+    assert.equal(raw.saveSchemaVersion, 7);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
     assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
   } finally {

@@ -88,7 +88,7 @@ const DEFAULT_NAVIGATION_ITEMS: readonly CareerShellNavigationItemInput[] = [
   { sectionKey: "squad", labelKey: "career.shell.nav.squad", status: "available" },
   { sectionKey: "tactics", labelKey: "career.shell.nav.tactics", status: "available" },
   { sectionKey: "fixtures", labelKey: "career.shell.nav.fixtures", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
-  { sectionKey: "market", labelKey: "career.shell.nav.market", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
+  { sectionKey: "market", labelKey: "career.shell.nav.market", status: "available" },
   { sectionKey: "finances", labelKey: "career.shell.nav.finances", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
   { sectionKey: "facilities", labelKey: "career.shell.nav.facilities", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },
   { sectionKey: "youth", labelKey: "career.shell.nav.youth", status: "disabled", disabledReasonKey: "career.shell.disabled.futurePhase" },

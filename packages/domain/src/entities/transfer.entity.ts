@@ -37,7 +37,11 @@ export type TransferRejectionReasonCode =
   | "insufficient_transfer_budget"
   | "insufficient_wage_budget"
   | "insufficient_cash"
-  | "player_unwilling";
+  | "player_unwilling"
+  | "outside_transfer_window"
+  | "senior_squad_state_missing"
+  | "seller_contract_not_found"
+  | "registration_unavailable";
 
 /**
  * Structured feasibility failure detail.

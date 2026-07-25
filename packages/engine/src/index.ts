@@ -10,6 +10,14 @@ export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
 export * from "./team-selection/index.ts";
 export {
+  advanceAiMarketLifecycle,
+  deriveAiMarketNeeds,
+  type AdvanceAiMarketLifecycleResult,
+  type AiMarketLifecycleFact,
+  type AiMarketNeed,
+  type AiMarketNeedReason,
+} from "./career/ai-market-lifecycle.ts";
+export {
   CareerMatchStateConsequenceError,
   applyCareerMatchStateConsequences,
   type ApplyCareerMatchStateConsequencesInput,
@@ -28,6 +36,7 @@ export {
 } from "./career/career-weekly-recovery.ts";
 export {
   applyCareerPermanentTransfer,
+  type AcceptedPermanentTransferDeal,
   type ApplyCareerPermanentTransferInput,
   type ApplyCareerPermanentTransferResult,
 } from "./career/apply-career-transfer.ts";
@@ -104,6 +113,19 @@ export {
   type AiContractDecisionReason,
   type AiContractLifecycleFact,
 } from "./career/ai-contract-lifecycle.ts";
+export {
+  acceptPreliminaryAgreementCounter,
+  advancePreliminaryAgreementLifecycle,
+  createPreliminaryAgreementId,
+  rejectPreliminaryAgreementCounter,
+  submitPreliminaryAgreementOffer,
+  withdrawPreliminaryAgreement,
+  type AdvancePreliminaryAgreementLifecycleResult,
+  type PreliminaryAgreementCommandRejectionReason,
+  type PreliminaryAgreementCommandResult,
+  type PreliminaryAgreementLifecycleFact,
+  type SubmitPreliminaryAgreementOfferInput,
+} from "./career/preliminary-agreement.ts";
 export { selectFreeAgentPlayerIds } from "./career/free-agent-pool.ts";
 export {
   replenishSeniorSquadsFromFreeAgents,
@@ -132,6 +154,50 @@ export {
   type SettleAnnualPayrollInput,
   type SettleSeasonDistributionInput,
 } from "./career/career-finance-lifecycle.ts";
+export {
+  deriveMarketPendingExposure,
+  type MarketPendingExposure,
+} from "./career/market-pending-exposure.ts";
+export {
+  evaluateCareerContractCapacity,
+  evaluateTransferFeeCapacity,
+  type CareerContractCapacityEvaluation,
+  type CareerContractCapacityReason,
+  type EvaluateCareerContractCapacityInput,
+  type TransferFeeCapacityEvaluation,
+  type TransferFeeCapacityReason,
+} from "./career/career-contract-capacity.ts";
+export {
+  acceptTransferCounter,
+  advanceTransferNegotiations,
+  createTransferNegotiationId,
+  deriveSellerTransferWillingness,
+  submitTransferOffer,
+  withdrawTransferNegotiation,
+  type AdvanceTransferNegotiationsInput,
+  type AdvanceTransferNegotiationsResult,
+  type AdvancedTransferNegotiation,
+  type ResolveTransferNegotiationInput,
+  type SellerTransferDecision,
+  type SubmitTransferOfferInput,
+  type SubmittedTransferParties,
+  type TransferDepartment,
+  type TransferNegotiationCommandRejectionReason,
+  type TransferNegotiationCommandResult,
+} from "./career/transfer-negotiation.ts";
+export {
+  acceptTransferPlayerCounter,
+  advanceTransferPlayerNegotiations,
+  rejectTransferPlayerCounter,
+  submitTransferPlayerOffer,
+  type AdvanceTransferPlayerNegotiationsInput,
+  type AdvanceTransferPlayerNegotiationsResult,
+  type AdvancedTransferPlayerNegotiation,
+  type ResolveTransferPlayerCounterInput,
+  type SubmitTransferPlayerOfferInput,
+  type TransferPlayerNegotiationCommandRejectionReason,
+  type TransferPlayerNegotiationCommandResult,
+} from "./career/transfer-player-negotiation.ts";
 export {
   ContractDemandError,
   deriveContractDemand,
@@ -167,11 +233,17 @@ export {
   type SubmitContractOfferInput,
 } from "./career/contract-negotiation.ts";
 export {
-  advanceSelectedClubContractsToAttention,
+  advanceSelectedClubWorkflowsToAttention,
   projectSelectedClubContractAttention,
-  type AdvanceSelectedClubContractsToAttentionResult,
+  type AdvanceSelectedClubWorkflowsToAttentionResult,
   type SelectedClubContractAttention,
 } from "./career/selected-club-contract-workflow.ts";
+export {
+  advanceSelectedClubMarketLifecycles,
+  isSelectedClubMarketMessageResolved,
+  nextSelectedClubMarketDueDate,
+  projectSelectedClubMarketAttention,
+} from "./career/selected-club-market-workflow.ts";
 export {
   prepareSeniorSquadPermanentTransfer,
   prepareSeniorSquadSigning,
@@ -269,12 +341,6 @@ export {
   type SquadMaintenanceRecord,
   type SquadMaintenanceWarning,
 } from "./career/squad-maintenance.ts";
-export {
-  simulateTransferTurnover,
-  type SimulateTransferTurnoverInput,
-  type SimulateTransferTurnoverResult,
-  type TransferTurnoverRecord,
-} from "./career/transfer-turnover.ts";
 export {
   rolloverPlayersForNextSeason,
   type PlayerSeasonRolloverInput,

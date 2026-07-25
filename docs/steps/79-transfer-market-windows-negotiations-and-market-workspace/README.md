@@ -141,6 +141,27 @@ The manager can:
 - No package-wide configuration container, UI-owned market rule, or second
   transfer implementation is allowed.
 
+## Phase 78 Carry-Forward Quality Register
+
+Phase 79 must correct the following proven Phase 78 defects inside the existing
+step that owns each boundary. They are not a license for a generic cleanup
+step or unrelated refactor.
+
+| ID | Classification | Required resolution | Owning step |
+| --- | --- | --- | --- |
+| `P79-CF-01` | Incomplete behavior | Replace the hardcoded `steady` morale direction with a reload-stable direction derived from the latest canonical morale consequence. Do not compare React render snapshots. If no canonical fact can support a direction, remove the unsupported direction branches instead of fabricating one. | 09 |
+| `P79-CF-02` | Divergence risk | Replace both adapter-owned `244` checks with one exported `@game/ui` contract-expiry alert policy/helper and cover the exact boundary once. | 09 |
+| `P79-CF-03` | Duplication and inconsistent presentation | Replace the three web-local currency formatters with one shared localized display formatter. Keep exact two-decimal editable values as a separate form concern rather than forcing display and input precision to match accidentally. | 10-11 |
+| `P79-CF-04` | Latent draft-loss bug | Seed a contract or transfer draft once when its editing workflow opens. Career-state/object identity refreshes must not erase typed values; only explicit reset, cancel, successful replacement, player/workflow change, or close may reseed it. | 11 |
+| `P79-CF-05` | UX verification gap | Reuse canonical `CareerSessionStatus.dirty`; prove contract and market commands mark it and that the unsaved warning remains visible or reachable while the relevant workspace is open. Do not create contract-local dirty state or action-level autosave. | 13 |
+| `P79-CF-06` | Long-career performance defect | Pre-index contract history and latest matching negotiations by player before building player profiles; prohibit repeated full-history/full-negotiation scans inside the player loop. | 09 |
+| `P79-CF-07` | Type-safety defect | Replace `as unknown as WebCareerState` in the browser career builder with an explicitly typed construction boundary whose missing fields fail typecheck. | 13 |
+| `P79-CF-08` | Readability defect | Correct the malformed contract-command switch indentation while that runtime is touched and keep the command branches formatter-clean. | 13 |
+
+Step 15 must prove all eight entries are resolved, that the old helpers and
+unsupported branches are removed, and that no parallel state or compatibility
+path was introduced.
+
 ## Ordered Steps
 
 1. `01-current-market-ownership-and-gap-audit.md`

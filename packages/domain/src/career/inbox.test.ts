@@ -4,6 +4,8 @@ import { test } from "vitest";
 import { clubId, fixtureId, playerContractId, playerId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import { contractNegotiationId } from "./contract-negotiation.ts";
+import { preliminaryAgreementId } from "./preliminary-agreement.ts";
+import { transferNegotiationId } from "./transfer-negotiation.ts";
 import {
   careerInboxMessageId,
   createCareerInboxMessage,
@@ -213,4 +215,91 @@ test("diagnosis and suspension messages carry player facts without fake actions"
 
   assert.deepEqual(diagnosis.actionIds, []);
   assert.deepEqual(suspension.blockerKeys, []);
+});
+
+test("market messages require a market identity, a player, and the transfer office", () => {
+  const marketRelated = {
+    playerId: playerId("player:inbox-market-01"),
+    transferNegotiationId: transferNegotiationId("transfer-negotiation:inbox-market-01"),
+  };
+
+  assert.throws(
+    () => createCareerInboxMessage({
+      id: careerInboxMessageId("inbox:market-club-counteroffer:missing-identity"),
+      date: gameDate(20_000),
+      category: "market_club_counteroffer",
+      source: "transfer_office",
+      level: "blocking",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: { playerId: playerId("player:inbox-market-01") },
+      actionIds: ["open_market_negotiation"],
+    }),
+    /transfer negotiation or preliminary agreement/,
+  );
+
+  assert.throws(
+    () => createCareerInboxMessage({
+      id: careerInboxMessageId("inbox:market-club-counteroffer:missing-player"),
+      date: gameDate(20_000),
+      category: "market_club_counteroffer",
+      source: "transfer_office",
+      level: "blocking",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: { transferNegotiationId: transferNegotiationId("transfer-negotiation:inbox-market-01") },
+      actionIds: ["open_market_negotiation"],
+    }),
+    /must reference a player/,
+  );
+
+  assert.throws(
+    () => createCareerInboxMessage({
+      id: careerInboxMessageId("inbox:market-club-counteroffer:wrong-source"),
+      date: gameDate(20_000),
+      category: "market_club_counteroffer",
+      source: "contract_office",
+      level: "blocking",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      related: marketRelated,
+      actionIds: ["open_market_negotiation"],
+    }),
+    /transfer_office/,
+  );
+
+  const counter = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:market-club-counteroffer:inbox-market-01"),
+    date: gameDate(20_000),
+    category: "market_club_counteroffer",
+    source: "transfer_office",
+    level: "blocking",
+    lifecycle: { read: false, acknowledged: false, resolved: false },
+    related: marketRelated,
+    actionIds: ["open_market_negotiation"],
+  });
+  assert.equal(doesCareerInboxMessageStopContinue(counter), true);
+
+  const activated = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:market-preliminary-activated:inbox-market-02"),
+    date: gameDate(20_000),
+    category: "market_preliminary_activated",
+    source: "transfer_office",
+    level: "important",
+    continuePolicy: "until_acknowledged",
+    lifecycle: { read: false, acknowledged: false, resolved: true },
+    related: {
+      playerId: playerId("player:inbox-market-02"),
+      preliminaryAgreementId: preliminaryAgreementId("preliminary-agreement:inbox-market-02"),
+    },
+  });
+  assert.equal(doesCareerInboxMessageStopContinue(activated), true);
+
+  const withdrawn = createCareerInboxMessage({
+    id: careerInboxMessageId("inbox:market-offer-withdrawn:inbox-market-01"),
+    date: gameDate(20_000),
+    category: "market_offer_withdrawn",
+    source: "transfer_office",
+    level: "informational",
+    lifecycle: { read: false, acknowledged: false, resolved: true },
+    related: marketRelated,
+  });
+  assert.equal(doesCareerInboxMessageStopContinue(withdrawn), false);
 });

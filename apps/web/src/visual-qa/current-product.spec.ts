@@ -393,6 +393,103 @@ test("narrow Squad and player profile reflow without horizontal scrolling", asyn
   }
 });
 
+test("desktop Market presents window, budget, targets, and a public inspection profile", async ({ browser }) => {
+  const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(desktop);
+    await desktop.getByRole("button", { name: "New career", exact: true }).click();
+    await desktop.getByRole("button", { name: "Market", exact: true }).click();
+
+    await expect(desktop.getByRole("heading", { level: 1, name: "Market", exact: true })).toBeVisible();
+    await expectMainFocus(desktop);
+    await expect(desktop.locator(".tls-market-window")).toBeVisible();
+    await expect(desktop.locator(".tls-market-finance-strip")).toBeVisible();
+    await expect(desktop.locator(".tls-market-table-frame")).toHaveCSS("overflow-x", "hidden");
+    const targetRows = desktop.locator(".tls-market-table tbody tr");
+    await expect(targetRows.first()).toBeVisible();
+    await assertNoPageOverflow(desktop, "desktop Market");
+    await capture(desktop, "79a-market-desktop");
+
+    const firstTarget = targetRows.first();
+    await firstTarget.focus();
+    await desktop.keyboard.press("Enter");
+    const profile = desktop.getByRole("dialog", { name: /.+/ });
+    await expect(profile).toBeVisible();
+    await expect(desktop.locator(".tls-market-player-summary")).toBeVisible();
+    await expect(desktop.locator(".tls-market-eligibility-detail")).toBeVisible();
+    await assertNoPageOverflow(desktop, "desktop Market player profile");
+    await captureViewport(desktop, "79b-market-player-profile-desktop");
+    await desktop.keyboard.press("Escape");
+    await expect(profile).toBeHidden();
+    await expect(firstTarget).toBeFocused();
+  } finally {
+    await desktop.close();
+  }
+});
+
+test("narrow Market reflows filters and the target table without horizontal scrolling", async ({ browser }) => {
+  const narrow = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  try {
+    await narrow.emulateMedia({ reducedMotion: "reduce" });
+    await resetCareerStorage(narrow);
+    await narrow.getByRole("button", { name: "New career", exact: true }).click();
+    await narrow.getByRole("combobox", { name: "Career navigation", exact: true }).selectOption("market");
+    await expect(narrow.getByRole("heading", { level: 1, name: "Market", exact: true })).toBeVisible();
+    await assertNoPageOverflow(narrow, "narrow Market");
+    await capture(narrow, "79c-market-narrow");
+
+    const firstTarget = narrow.locator(".tls-market-table tbody tr").first();
+    await firstTarget.focus();
+    await narrow.keyboard.press("Enter");
+    const profile = narrow.getByRole("dialog", { name: /.+/ });
+    await expect(profile).toBeVisible();
+    await assertNoPageOverflow(narrow, "narrow Market player profile");
+    await narrow.keyboard.press("Escape");
+    await expect(profile).toBeHidden();
+  } finally {
+    await narrow.close();
+  }
+});
+
+test("a submitted transfer offer stays pending, tracks exposure, and withdraws cleanly", async ({ browser }) => {
+  const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(desktop);
+    await desktop.getByRole("button", { name: "New career", exact: true }).click();
+    await desktop.getByRole("button", { name: "Market", exact: true }).click();
+    await expect(desktop.getByRole("heading", { level: 1, name: "Market", exact: true })).toBeVisible();
+
+    const transferBudgetBefore = await desktop.locator(".tls-market-window").locator("xpath=following-sibling::div[1]").locator("strong").innerText();
+
+    const firstOpenTarget = desktop.locator(".tls-market-table tbody tr").first();
+    await firstOpenTarget.getByRole("button", { name: /Open .+ market profile/ }).click();
+    const profile = desktop.getByRole("dialog", { name: /.+/ });
+    await expect(profile).toBeVisible();
+
+    const feeInput = profile.locator(".tls-market-composer input");
+    await expect(feeInput).toBeVisible();
+    await feeInput.fill("1500000");
+    await expect(profile.locator(".tls-contract-finance-ok")).toBeVisible();
+    await profile.getByRole("button", { name: "Submit offer", exact: true }).click();
+
+    await expect(profile.getByText("Offer submitted. Expect a reply within three game days.", { exact: true })).toBeVisible();
+    await expect(profile.getByText("Waiting for the selling club's reply.", { exact: true })).toBeVisible();
+    await assertNoPageOverflow(desktop, "desktop Market pending offer");
+    await captureViewport(desktop, "79d-market-pending-offer-desktop");
+
+    await expect(desktop.getByText("€1,500,000", { exact: true })).toBeVisible();
+    await expect(desktop.getByText("1 open talks", { exact: true })).toBeVisible();
+    await expect(desktop.getByText(transferBudgetBefore, { exact: true })).toBeVisible();
+
+    await profile.getByRole("button", { name: "Withdraw", exact: true }).click();
+    await expect(profile.getByText("Talks withdrawn.", { exact: true })).toBeVisible();
+    await expect(desktop.getByText("0 open talks", { exact: true })).toBeVisible();
+    await expect(profile.locator(".tls-market-composer input")).toBeVisible();
+  } finally {
+    await desktop.close();
+  }
+});
+
 test("desktop Posta owns one dense decision workspace across current message states", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {

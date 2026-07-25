@@ -34,3 +34,4 @@ export * from "./value-objects/game-date.ts";
 export * from "./value-objects/money.ts";
 export * from "./value-objects/person-identity.ts";
 export * from "./value-objects/rating.ts";
+export * from "./value-objects/transfer-window.ts";

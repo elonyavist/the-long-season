@@ -6,16 +6,17 @@ import {
   abilityValue,
   clubFinanceLedgerEntryId,
   clubId,
+  competitionId,
   createCareerState,
   createClubFinanceState,
   createSeniorSquadState,
   gameDate,
-  getPlayerRoleProfile,
   mapPlayerAbilities,
   nonNegativeMoney,
   playerContractId,
   playerId,
   saveId,
+  seasonTransferWindows,
   seasonId,
   seniorSquadRegistrationId,
   stateValue,
@@ -33,234 +34,158 @@ import {
   type SeniorSquadState,
 } from "@game/domain";
 
-import { simulateTransferTurnover } from "./transfer-turnover.ts";
+import {
+  advanceAiMarketLifecycle,
+  deriveAiMarketNeeds,
+} from "./ai-market-lifecycle.ts";
 
-/** Tests for minimal deterministic transfer turnover. */
+/** Tests for deterministic AI market behavior through canonical negotiations. */
 
-test("simulateTransferTurnover moves a suitable player between clubs", () => {
+test("deriveAiMarketNeeds orders structural department gaps before softer needs", () => {
   const buyer = clubId("club:buyer");
   const seller = clubId("club:seller");
-  const movable = playerId("player:movable");
   const careerState = careerStateFixture([
     clubFixture(buyer, 5, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
-    clubFixture(seller, 6, [
-      playerFixture(movable, "cb", 7).id,
-      ...playersForClubAtAbility("seller", [
-        "gk", "gk",
-        "cb", "cb", "cb", "cb", "cb", "cb",
-        "cm", "cm", "cm", "cm", "cm", "cm",
-        "st", "st", "st", "st", "st", "st",
-      ], 13),
-    ]),
+    clubFixture(seller, 6, balancedSeniorSquad("seller")),
   ]);
 
-  const occurredOn = gameDate(20_365);
-  const result = simulateTransferTurnover({
+  const needs = deriveAiMarketNeeds({
     careerState,
-    worldSeed: "turnover-world",
-    seasonId: seasonId("season:0001"),
-    occurredOn,
-    maxMoves: 1,
+    asOf: gameDate(20_000),
   });
 
-  assert.equal(result.transfers.length, 1);
-  assert.equal(result.transfers[0]?.playerId, movable);
-  assert.equal(result.careerState.gameState.clubs[buyer]?.playerIds.includes(movable), true);
-  assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.includes(movable), false);
-  assert.equal(result.careerState.transferHistory.length, 1);
-  assert.equal(result.careerState.transferHistory[0]?.occurredOn, occurredOn);
+  assert.equal(needs[0]?.clubId, buyer);
+  assert.equal(needs[0]?.reasons[0], "structural_depth");
+  assert.equal(needs.filter((need) => need.clubId === buyer).length, 3);
   assert.deepEqual(
-    result.careerState.seniorSquadState?.contractHistoryEntryIds.map((id) =>
-      result.careerState.seniorSquadState?.contractHistory[id]?.event
-    ),
-    ["transfer_terminated", "signed"],
-  );
-  assert.equal(
-    result.careerState.seniorSquadState?.activeContractIds.some((id) => {
-      const contract = result.careerState.seniorSquadState?.contracts[id];
-      return contract?.playerId === movable
-        && contract.clubId === buyer
-        && contract.startsOn === occurredOn;
-    }),
-    true,
-  );
-  assert.equal(
-    result.careerState.seniorSquadState?.registrationIds.some((id) => {
-      const registration = result.careerState.seniorSquadState?.registrations[id];
-      return registration?.playerId === movable && registration.clubId === buyer;
-    }),
-    true,
+    needs.filter((need) => need.clubId === buyer).map((need) => need.department),
+    ["defender", "midfielder", "attacker"],
   );
 });
 
-test("simulateTransferTurnover is deterministic for same seed and season", () => {
-  const careerState = turnoverFixture();
+test("advanceAiMarketLifecycle starts no permanent negotiation outside a window", () => {
+  const careerState = marketFixture();
+  const result = advanceAiMarketLifecycle({
+    careerState,
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_020),
+    transferWindows: marketWindows({
+      summer: [19_900, 19_950],
+      winter: [20_200, 20_220],
+    }),
+  });
 
-  const first = simulateTransferTurnover({
+  assert.equal(result.facts.some((fact) => fact.event === "club_offer_submitted"), false);
+  assert.equal(result.careerState.transferNegotiationState?.negotiationIds.length ?? 0, 0);
+  assert.equal(result.careerState.transferHistory.length, 0);
+});
+
+test("advanceAiMarketLifecycle is deterministic and completes transfers through canonical state", () => {
+  const careerState = marketFixture();
+  const input = {
     careerState,
-    worldSeed: "same-turnover",
-    seasonId: seasonId("season:0001"),
-    maxMoves: 1,
-  });
-  const second = simulateTransferTurnover({
-    careerState,
-    worldSeed: "same-turnover",
-    seasonId: seasonId("season:0001"),
-    maxMoves: 1,
-  });
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_030),
+    transferWindows: marketWindows({
+      summer: [19_990, 20_050],
+      winter: [20_200, 20_220],
+    }),
+  } as const;
+
+  const first = advanceAiMarketLifecycle(input);
+  const second = advanceAiMarketLifecycle(input);
 
   assert.deepEqual(second, first);
-});
-
-test("simulateTransferTurnover default cap allows roughly one move per four clubs", () => {
-  const careerState = careerStateFixture(
-    Array.from({ length: 8 }, (_, index) => {
-      const surplusDefenders = index % 2 === 0;
-      return clubFixture(
-        clubId(`club:cap-${String(index + 1).padStart(2, "0")}`),
-        5,
-        playersForClub(`cap-${String(index + 1).padStart(2, "0")}`, [
-          "gk", "gk",
-          ...Array.from({ length: surplusDefenders ? 7 : 5 }, () => "cb" as const),
-          ...Array.from({ length: surplusDefenders ? 5 : 7 }, () => "cm" as const),
-          "st", "st", "st", "st", "st", "st",
-        ]),
-      );
-    }),
+  assert.equal(first.facts.some((fact) => fact.event === "club_offer_submitted"), true);
+  assert.equal(first.facts.some((fact) => fact.event === "transfer_completed"), true);
+  assert.equal(first.careerState.transferHistory.length > 0, true);
+  assert.equal(
+    first.careerState.seniorSquadState?.contractHistoryEntryIds.length,
+    first.careerState.transferHistory.length * 2,
   );
-
-  const result = simulateTransferTurnover({
-    careerState,
-    worldSeed: "default-cap-turnover",
-    seasonId: seasonId("season:0001"),
-  });
-
-  assert.equal(result.transfers.length, 2);
 });
 
-test("simulateTransferTurnover rejects casual downward moves for strong players", () => {
+test("advanceAiMarketLifecycle protects the selected club and seller department floors", () => {
   const buyer = clubId("club:buyer");
-  const seller = clubId("club:seller");
-  const star = playerId("player:star");
+  const protectedSeller = clubId("club:protected-seller");
   const careerState = careerStateFixture([
-    clubFixture(buyer, 3, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
-    clubFixture(seller, 8, [
-      playerFixture(star, "cb", 13).id,
-      ...playersForClubAtAbility("seller", [
+    clubFixture(buyer, 5, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
+    clubFixture(protectedSeller, 6, [
+      ...playersForClub("protected-seller", [
         "gk", "gk",
         "cb", "cb", "cb", "cb", "cb", "cb",
-        "cm", "cm", "cm", "cm", "cm", "cm",
+        "cm", "cm", "cm", "cm", "cm", "cm", "cm",
         "st", "st", "st", "st", "st", "st",
-      ], 13),
-    ], "second_division"),
-  ]);
-
-  const result = simulateTransferTurnover({
-    careerState,
-    worldSeed: "downward-turnover",
-    seasonId: seasonId("season:0001"),
-    maxMoves: 1,
-  });
-
-  assert.deepEqual(result.transfers, []);
-  assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.includes(star), true);
-});
-
-test("simulateTransferTurnover protects a strong role specialist despite a low raw average", () => {
-  const buyer = clubId("club:buyer-specialist");
-  const seller = clubId("club:seller-specialist");
-  const specialist = playerId("player:center-back-specialist");
-  const careerState = careerStateFixture([
-    clubFixture(buyer, 3, playersForClub("buyer-specialist", ["gk", "gk", "cb", "cm", "st"])),
-    clubFixture(seller, 8, [
-      playerFixture(specialist, "cb", 1, roleShapedAbilities("center_back", 14, 1)).id,
-      ...playersForClubAtAbility("seller-specialist", [
-        "gk", "gk",
-        "cb", "cb", "cb", "cb", "cb", "cb",
-        "cm", "cm", "cm", "cm", "cm", "cm",
-        "st", "st", "st", "st", "st", "st",
-      ], 13),
-    ], "second_division"),
-  ]);
-
-  const result = simulateTransferTurnover({
-    careerState,
-    worldSeed: "specialist-downward-turnover",
-    seasonId: seasonId("season:0001"),
-    maxMoves: 1,
-  });
-
-  assert.deepEqual(result.transfers, []);
-  assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.includes(specialist), true);
-});
-
-test("simulateTransferTurnover evaluates goalkeeper suitability through goalkeeper attributes", () => {
-  const buyer = clubId("club:keeper-buyer");
-  const seller = clubId("club:keeper-seller");
-  const specialist = playerId("player:keeper-specialist");
-  const careerState = careerStateFixture([
-    clubFixture(buyer, 5, playersForClub("keeper-buyer", ["cb", "cb", "cm", "cm", "st"])),
-    clubFixture(seller, 6, [
-      playerFixture(specialist, "gk", 1, roleShapedAbilities("goalkeeper", 14, 1)).id,
-      ...playersForClub("keeper-seller", ["gk", "gk", "cb", "cb", "cb", "cb", "cb", "cm", "cm", "cm", "cm", "cm", "cm", "st", "st", "st", "st", "st", "st"]),
+      ]),
     ]),
   ]);
-
-  const result = simulateTransferTurnover({
+  const selectedClubId = careerState.selectedClubId;
+  const selectedBefore = careerState.gameState.clubs[selectedClubId]?.playerIds;
+  const protectedBefore = careerState.gameState.clubs[protectedSeller]?.playerIds;
+  const result = advanceAiMarketLifecycle({
     careerState,
-    worldSeed: "goalkeeper-turnover",
-    seasonId: seasonId("season:0001"),
-    maxMoves: 1,
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_030),
+    transferWindows: marketWindows({
+      summer: [19_990, 20_050],
+      winter: [20_200, 20_220],
+    }),
   });
 
-  assert.equal(result.transfers[0]?.playerId, specialist);
-  assert.equal((result.transfers[0]?.currentAbilityAverage ?? 0) >= 12, true);
+  assert.deepEqual(result.careerState.gameState.clubs[selectedClubId]?.playerIds, selectedBefore);
+  assert.equal(
+    result.facts.some((fact) =>
+      fact.buyingClubId === selectedClubId || fact.sellingClubId === selectedClubId
+    ),
+    false,
+  );
+  const protectedAfter = result.careerState.gameState.clubs[protectedSeller]?.playerIds ?? [];
+  const remainingDefenders = protectedAfter.filter((playerIdValue) =>
+    careerState.gameState.players[playerIdValue]?.naturalPositions.includes("cb")
+  ).length;
+  assert.equal((protectedBefore?.length ?? 0) >= protectedAfter.length, true);
+  assert.equal(protectedAfter.length >= 18, true);
+  assert.equal(remainingDefenders, 6);
 });
 
-test("simulateTransferTurnover cannot sell below protected department depth", () => {
-  const buyer = clubId("club:depth-buyer");
-  const seller = clubId("club:depth-seller");
-  const careerState = careerStateFixture([
-    clubFixture(buyer, 5, playersForClub("depth-buyer", [
-      "gk", "gk",
-      "cb", "cb", "cb", "cb", "cb", "cb",
-      "cm",
-      "st", "st", "st",
-    ])),
-    clubFixture(seller, 6, playersForClub("depth-seller", [
-      "gk", "gk",
-      "cb", "cb", "cb", "cb", "cb", "cb",
-      "cm", "cm", "cm",
-      "st", "st", "st", "st", "st", "st", "st", "st", "st", "st",
-    ])),
-  ]);
-
-  const result = simulateTransferTurnover({
-    careerState,
-    worldSeed: "protected-department-depth",
-    seasonId: seasonId("season:0001"),
-    maxMoves: 1,
-  });
-
-  assert.deepEqual(result.transfers, []);
-  assert.equal(result.careerState.gameState.clubs[seller]?.playerIds.length, 21);
-});
-
-function turnoverFixture(): CareerState {
+function marketFixture(): CareerState {
   const buyer = clubId("club:buyer");
   const seller = clubId("club:seller");
   return careerStateFixture([
     clubFixture(buyer, 5, playersForClub("buyer", ["gk", "gk", "cb", "cm", "st"])),
     clubFixture(seller, 6, [
-      playerFixture(playerId("player:movable"), "cb", 7).id,
-      ...playersForClub("seller", [
+      playerFixture(playerId("player:movable"), "cb", 15).id,
+      ...playersForClubAtAbility("seller", [
         "gk", "gk",
         "cb", "cb", "cb", "cb", "cb", "cb",
         "cm", "cm", "cm", "cm", "cm", "cm",
         "st", "st", "st", "st", "st", "st",
-      ]),
+      ], 10),
     ]),
   ]);
+}
+
+function balancedSeniorSquad(prefix: string): PlayerId[] {
+  return playersForClub(prefix, [
+    "gk", "gk",
+    "cb", "cb", "cb", "cb", "cb", "cb",
+    "cm", "cm", "cm", "cm", "cm", "cm", "cm",
+    "st", "st", "st", "st", "st", "st",
+  ]);
+}
+
+function marketWindows(input: {
+  readonly summer: readonly [number, number];
+  readonly winter: readonly [number, number];
+}) {
+  return seasonTransferWindows({
+    competitionId: competitionId("competition:test"),
+    seasonId: seasonId("season:0001"),
+    windows: [
+      { opensOn: gameDate(input.summer[0]), closesOn: gameDate(input.summer[1]) },
+      { opensOn: gameDate(input.winter[0]), closesOn: gameDate(input.winter[1]) },
+    ],
+  });
 }
 
 function careerStateFixture(clubs: readonly Club[]): CareerState {
@@ -490,15 +415,6 @@ function primaryRoleForPosition(position: PlayerPosition): PlayerRole {
     default:
       return "central_midfielder";
   }
-}
-
-function roleShapedAbilities(role: PlayerRole, relevantValue: number, baselineValue: number): PlayerAbilities {
-  const profile = getPlayerRoleProfile(role);
-  const relevantKeys = new Set([...profile.coreForRole, ...profile.secondaryForRole]);
-
-  return mapPlayerAbilities(abilitySet(baselineValue), (value, key) =>
-    relevantKeys.has(key) ? abilityValue(relevantValue) : value,
-  );
 }
 
 function playerStateFixture(): PlayerDynamicState {

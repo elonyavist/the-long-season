@@ -37,6 +37,15 @@ export interface EvaluatePermanentTransferInput {
   readonly currentContract?: PlayerContract;
   /** Accepted annual terms used by willingness and affordability. */
   readonly proposedTerms?: ContractOfferTerms;
+  /** Explicit fee already accepted by both clubs in an interactive negotiation. */
+  readonly agreedTransferFee?: Money;
+  /**
+   * Confirms the player stage already accepted `proposedTerms`.
+   *
+   * The willingness projection is still returned for inspection, but it cannot
+   * reject terms which the player has already accepted.
+   */
+  readonly playerAgreementConfirmed?: boolean;
   /** Current supported form on the canonical 0-100 scale. */
   readonly currentForm?: number;
 }
@@ -103,7 +112,7 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     ...(input.currentContract === undefined ? {} : { contract: input.currentContract }),
     ...(input.currentForm === undefined ? {} : { currentForm: input.currentForm }),
   });
-  const transferFee = valuation.value;
+  const transferFee = input.agreedTransferFee ?? valuation.value;
   const buyingAccount = findClubFinanceAccount(input.clubFinanceState, input.intent.buyingClubId);
 
   if (buyingAccount === undefined) {
@@ -150,7 +159,7 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     ...(input.proposedTerms === undefined ? {} : { proposedTerms: input.proposedTerms }),
   });
 
-  if (willingness.status === "rejected") {
+  if (willingness.status === "rejected" && input.playerAgreementConfirmed !== true) {
     reasons.push({ code: "player_unwilling", playerId: input.intent.playerId });
   }
 

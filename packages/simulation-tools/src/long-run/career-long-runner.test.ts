@@ -230,6 +230,13 @@ function contractFinanceRow(seasonNumber: number): LongRunContractFinanceSeasonR
     selectedPlanObservationCount: 0,
     selectedPlanRetainedPlayerMissingCount: 0,
     selectedPlanHiddenReplacementCount: 0,
+    completedTransferCount: 0,
+    transferWindowViolationCount: 0,
+    negotiationClockViolationCount: 0,
+    unaffordableCompletedTransferCount: 0,
+    preliminaryAgreementCount: 0,
+    preliminaryAgreementActivationCount: 0,
+    preliminaryAgreementViolationCount: 0,
   };
 }
 

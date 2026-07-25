@@ -4,7 +4,6 @@ import {
   nonNegativeMoney,
   playerSquadDepartment,
   publishContractNegotiations,
-  type CareerMatchPreparation,
   type CareerState,
   type ClubId,
   type ContractNegotiation,
@@ -23,7 +22,6 @@ import {
   reconcileActiveContractWageCommitments,
   reallocateTransferBudgetToWages,
 } from "./career-finance-lifecycle.ts";
-import { deriveCareerContractOfferReservations } from "./career-contract-reservations.ts";
 import {
   acceptContractCounterOffer,
   advanceContractNegotiations,
@@ -34,7 +32,12 @@ import {
 } from "./contract-negotiation.ts";
 import { deriveContractDemand } from "./contract-negotiation-demand.ts";
 import { selectFreeAgentPlayerIds } from "./free-agent-pool.ts";
+import {
+  advancePreliminaryAgreementLifecycle,
+  type PreliminaryAgreementLifecycleFact,
+} from "./preliminary-agreement.ts";
 import { prepareSeniorSquadDepartures } from "./senior-squad-transfer.ts";
+import { reconcileSelectedClubDeparturesFromMatchPreparation } from "./selected-match-preparation.ts";
 import {
   MINIMUM_CAREER_DEPARTMENT_DEPTH,
   MINIMUM_CAREER_SQUAD_SIZE,
@@ -76,6 +79,7 @@ export interface AdvanceAiContractLifecycleResult {
   readonly careerState: CareerState;
   readonly facts: readonly AiContractLifecycleFact[];
   readonly negotiationFacts: readonly ContractNegotiationFact[];
+  readonly preliminaryAgreementFacts: readonly PreliminaryAgreementLifecycleFact[];
 }
 
 /**
@@ -95,10 +99,19 @@ export function advanceAiContractLifecycle(input: {
     input.throughDate <= input.fromDate
     || input.careerState.seniorSquadState === undefined
   ) {
-    return { careerState: input.careerState, facts: [], negotiationFacts: [] };
+    return {
+      careerState: input.careerState,
+      facts: [],
+      negotiationFacts: [],
+      preliminaryAgreementFacts: [],
+    };
   }
 
-  let careerState = input.careerState;
+  const preliminaryAgreements = advancePreliminaryAgreementLifecycle({
+    careerState: input.careerState,
+    throughDate: input.throughDate,
+  });
+  let careerState = preliminaryAgreements.careerState;
   const facts: AiContractLifecycleFact[] = [];
   const negotiationFacts: ContractNegotiationFact[] = [];
 
@@ -126,6 +139,7 @@ export function advanceAiContractLifecycle(input: {
     careerState: expired.careerState,
     facts: [...facts, ...expired.facts],
     negotiationFacts,
+    preliminaryAgreementFacts: preliminaryAgreements.facts,
   };
 }
 
@@ -239,7 +253,7 @@ function startDueAiNegotiations(input: {
     if (careerState === unresolvedState) break;
   }
 
-  return { careerState, facts, negotiationFacts };
+  return { careerState, facts, negotiationFacts, preliminaryAgreementFacts: [] };
 }
 
 interface DueAiContract {
@@ -317,7 +331,7 @@ function resolveAiNegotiations(
       negotiation.counterOffer.issuedOn,
       lifecycleIndex,
     );
-    const reservations = createAiOfferReservations(careerState, negotiationId);
+    const reservations = createAiOfferReservations(careerState);
     const affordable = decision.retain
       ? affordableAiTerms(
           careerState,
@@ -325,7 +339,6 @@ function resolveAiNegotiations(
           [negotiation.counterOffer.terms],
           decision.reason === "structural_depth",
           reservations,
-          negotiationId,
         )
       : undefined;
     const shouldAccept = affordable !== undefined;
@@ -355,7 +368,7 @@ function resolveAiNegotiations(
     });
   }
 
-  return { careerState, facts, negotiationFacts };
+  return { careerState, facts, negotiationFacts, preliminaryAgreementFacts: [] };
 }
 
 function expireDueContracts(
@@ -414,10 +427,11 @@ function expireDueContracts(
       .filter((contract) => contract.clubId === inputState.selectedClubId)
       .map((contract) => contract.playerId),
   );
-  const matchPreparation = removePlayersFromPreparation(
-    inputState.matchPreparation,
-    selectedPlayerIds,
-  );
+  const matchPreparation = reconcileSelectedClubDeparturesFromMatchPreparation({
+    careerState: inputState,
+    departingClubId: inputState.selectedClubId,
+    playerIds: selectedPlayerIds,
+  });
   const reconciled = reconcileActiveContractWageCommitments({
     careerState: inputState,
     gameState: prepared.gameState,
@@ -482,28 +496,6 @@ function expireOpenNegotiations(
         negotiationIds,
       })
     : state;
-}
-
-function removePlayersFromPreparation(
-  preparation: CareerMatchPreparation | undefined,
-  playerIds: ReadonlySet<PlayerId>,
-): CareerMatchPreparation | undefined {
-  if (preparation === undefined || playerIds.size === 0) return preparation;
-  return {
-    ...preparation,
-    ...(preparation.selectedLineup === undefined
-      ? {}
-      : {
-          selectedLineup: {
-            ...preparation.selectedLineup,
-            slots: preparation.selectedLineup.slots.filter((slot) => !playerIds.has(slot.playerId)),
-          },
-        }),
-    ...(preparation.boardSlots === undefined ? {} : { boardSlots: preparation.boardSlots }),
-    ...(preparation.benchSlots === undefined
-      ? {}
-      : { benchSlots: preparation.benchSlots.filter((slot) => !playerIds.has(slot.playerId)) }),
-  };
 }
 
 function prepareAiReleaseDecision(
@@ -614,7 +606,6 @@ function affordableAiTerms(
   candidates: readonly ContractOfferTerms[],
   allowStructuralReallocation: boolean,
   reservations?: AiOfferReservations,
-  excludedNegotiationId?: ContractNegotiationId,
 ): AffordableAiTerms | undefined {
   for (const terms of candidates) {
     const affordability = checkContractOfferAffordability({
@@ -622,7 +613,6 @@ function affordableAiTerms(
       clubId: contract.clubId,
       replacedContractId: contract.id,
       terms,
-      ...(excludedNegotiationId === undefined ? {} : { excludedNegotiationId }),
     });
     const account = careerState.clubFinanceState?.accounts[contract.clubId];
     if (account === undefined) continue;
@@ -660,18 +650,22 @@ function affordableAiTerms(
   return undefined;
 }
 
-function createAiOfferReservations(
-  careerState: CareerState,
-  excludedNegotiationId?: ContractNegotiationId,
-): AiOfferReservations {
+/**
+ * Seeds one AI pass's in-memory offer planner from committed facts only.
+ *
+ * The returned maps let one AI evaluation avoid self-overcommitting across the
+ * several offers it decides in the same tick (via `reserveAiOffer`). They are
+ * seeded from each club's actually committed annual wage and zero pending
+ * signing cash: unresolved offers already in negotiation state never reserve
+ * budget (Phase 79 locked rule); affordability is rechecked at activation.
+ */
+function createAiOfferReservations(careerState: CareerState): AiOfferReservations {
   const committedAnnualWageByClub = new Map<ClubId, Money>();
   const signingBonusByClub = new Map<ClubId, Money>();
   for (const clubId of careerState.clubFinanceState?.clubIds ?? []) {
-    const reserved = deriveCareerContractOfferReservations(careerState, clubId, {
-      ...(excludedNegotiationId === undefined ? {} : { excludedNegotiationId }),
-    });
-    committedAnnualWageByClub.set(clubId, reserved.projectedCommittedAnnualWage);
-    signingBonusByClub.set(clubId, reserved.reservedSigningBonus);
+    const account = careerState.clubFinanceState?.accounts[clubId];
+    committedAnnualWageByClub.set(clubId, account?.committedAnnualWage ?? nonNegativeMoney(0));
+    signingBonusByClub.set(clubId, nonNegativeMoney(0));
   }
 
   return { committedAnnualWageByClub, signingBonusByClub };

@@ -2,22 +2,18 @@ import type { MessageKey, Translator } from "@game/i18n";
 import type { CareerContractTermsInput, CareerPlayerProfileView } from "@game/ui";
 import {
   Activity,
-  ArrowDown,
-  ArrowRight,
-  ArrowUp,
   BadgeEuro,
-  ShieldCheck,
   X,
 } from "lucide-react";
-import * as m from "motion/react-m";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import type { WebPreferences } from "../../app/preferences";
 import type {
   WebSelectedClubContractCommand,
   WebSelectedClubContractCommandResult,
 } from "../../runtime/web-career-runtime";
-import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
+import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { FullScreenDialog } from "../shared/FullScreenDialog";
 import type { CareerContractFinancePreview } from "./career-squad-adapter";
 import { CareerContractWorkspace } from "./CareerContractWorkspace";
 
@@ -47,50 +43,18 @@ export function CareerPlayerProfileDialog({
   onContractCommand,
   onClose,
 }: CareerPlayerProfileDialogProps): React.JSX.Element {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-
-    if (profile !== undefined && !dialog.open) {
-      previousFocusRef.current = document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-      dialog.showModal();
-      closeButtonRef.current?.focus();
-      return;
-    }
-
-    if (profile === undefined && dialog.open) {
-      dialog.close();
-      previousFocusRef.current?.focus();
-      previousFocusRef.current = null;
-    }
-  }, [profile]);
 
   return (
-    <dialog
-      aria-labelledby="career-player-profile-title"
-      className="tls-player-profile-dialog"
-      ref={dialogRef}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) onClose();
-      }}
+    <FullScreenDialog
+      labelledBy="career-player-profile-title"
+      open={profile !== undefined}
+      shellClassName="tls-player-profile-shell"
+      initialFocusRef={closeButtonRef}
+      onClose={onClose}
     >
       {profile === undefined ? null : (
-        <m.article
-          className="tls-player-profile-shell"
-          initial={webMotionTargets.dialogEnter}
-          animate={webMotionTargets.rest}
-          transition={webMotion.transition}
-        >
+        <>
           <header className="tls-player-profile-header">
             <div className="tls-player-profile-number" aria-hidden="true">
               {profile.shirtNumber}
@@ -119,9 +83,13 @@ export function CareerPlayerProfileDialog({
           <dl className="tls-player-profile-summary" aria-label={text("career.playerProfile.summary") }>
             <ProfileFact label={text("career.squad.column.current_level")} value={text(levelKey(profile.currentLevel))} />
             <ProfileFact label={text("career.squad.column.potential_level")} value={text(levelKey(profile.potentialLevel))} />
-            <ProfileFact label={text("career.playerProfile.value")} value={formatMoney(profile.value, profile.currency, language)} icon="value" />
+            <ProfileFact
+              label={text("career.playerProfile.value")}
+              value={formatMoneyFromMinorUnits(profile.value, profile.currency, language, "whole")}
+              icon="value"
+            />
             <ProfileFact label={text("career.squad.column.condition")} value={`${Math.round(profile.condition)}%`} icon="condition" />
-            <ProfileFact label={text("career.squad.column.morale")} value={text(`career.squad.morale.${profile.moraleDirection}` as MessageKey)} icon={profile.moraleDirection} />
+            <ProfileFact label={text("career.squad.column.morale")} value={String(Math.round(profile.morale))} />
             <ProfileFact label={text("career.playerProfile.selection")} value={selectionLabel(profile, text)} />
             <ProfileFact label={text("career.playerProfile.availability")} value={availabilityLabel(profile, text)} />
           </dl>
@@ -178,9 +146,9 @@ export function CareerPlayerProfileDialog({
             previewOffer={previewContractOffer}
             onCommand={onContractCommand}
           />
-        </m.article>
+        </>
       )}
-    </dialog>
+    </FullScreenDialog>
   );
 }
 
@@ -191,19 +159,9 @@ function ProfileFact({
 }: Readonly<{
   label: string;
   value: string;
-  icon?: "value" | "condition" | "up" | "steady" | "down";
+  icon?: "value" | "condition";
 }>): React.JSX.Element {
-  const Icon = icon === "value"
-    ? BadgeEuro
-    : icon === "condition"
-      ? Activity
-      : icon === "up"
-        ? ArrowUp
-        : icon === "down"
-          ? ArrowDown
-          : icon === "steady"
-            ? ArrowRight
-            : ShieldCheck;
+  const Icon = icon === "value" ? BadgeEuro : Activity;
   return (
     <div>
       <dt>{label}</dt>
@@ -227,14 +185,6 @@ function availabilityLabel(profile: CareerPlayerProfileView, text: Translator): 
   return profile.availabilityReasons
     .map((reason) => text(`career.squad.status.${reason}` as MessageKey))
     .join(", ");
-}
-
-function formatMoney(amount: number, currency: string, language: WebPreferences["language"]): string {
-  return new Intl.NumberFormat(language, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount / 100);
 }
 
 function formatAttribute(value: number): string {

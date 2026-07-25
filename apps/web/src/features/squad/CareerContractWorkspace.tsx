@@ -13,9 +13,11 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { WebPreferences } from "../../app/preferences";
+import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { ContractTermsForm } from "../shared/ContractTermsForm";
 import type {
   WebSelectedClubContractCommand,
   WebSelectedClubContractCommandResult,
@@ -29,8 +31,6 @@ import {
   type ContractRenewalFormField,
   type ContractRenewalFormValues,
 } from "./contract-renewal-form";
-
-type AgreedSquadStatus = CareerContractTermsInput["squadStatus"];
 
 /** Props for the contract facts and explicit renewal workflow in a player profile. */
 export interface CareerContractWorkspaceProps {
@@ -50,11 +50,6 @@ type WorkspaceFeedback = Readonly<{
   kind: "success" | "error";
   key: MessageKey;
 }>;
-
-type RenewalFormChange = <Field extends keyof ContractRenewalFormValues>(
-  field: Field,
-  value: ContractRenewalFormValues[Field],
-) => void;
 
 type RejectedFinancePreview = Extract<CareerContractFinancePreview, { status: "rejected" }>;
 
@@ -96,12 +91,20 @@ export function CareerContractWorkspace({
     ? previewOffer(rawPlayerId, validation.terms)
     : undefined;
 
+  // P79-CF-04: reseed only on a real negotiation transition or player change,
+  // never on an unrelated career-state identity refresh (autosave publish,
+  // another command elsewhere) that rebuilds `contract` with fresh object
+  // identity but the same negotiation fact.
+  const negotiationIdentityToken = `${rawPlayerId}:${contract.negotiation?.negotiationId ?? "none"}:${contract.negotiation?.status ?? "none"}`;
+  const lastSyncedTokenRef = useRef<string | undefined>(undefined);
   useEffect(() => {
+    if (lastSyncedTokenRef.current === negotiationIdentityToken) return;
+    lastSyncedTokenRef.current = negotiationIdentityToken;
     setValues(formSeed);
     setFieldErrors({});
     setFeedback(undefined);
     setEditing(contract.negotiation?.status === "draft");
-  }, [contract.negotiation, formSeed, rawPlayerId]);
+  }, [negotiationIdentityToken, formSeed]);
 
   const submitEditableOffer = async (): Promise<void> => {
     const validated = validateContractRenewalForm(values, bonusFields);
@@ -248,7 +251,7 @@ export function CareerContractWorkspace({
         ) : null}
 
         {editing ? (
-          <RenewalForm
+          <ContractTermsForm
             values={values}
             errors={fieldErrors}
             supportedBonusFields={bonusFields}
@@ -316,119 +319,6 @@ export function CareerContractWorkspace({
   );
 }
 
-function RenewalForm({
-  values,
-  errors,
-  supportedBonusFields,
-  currency,
-  pending,
-  text,
-  submitLabel,
-  onChange,
-  onCancel,
-  onSubmit,
-}: Readonly<{
-  values: ContractRenewalFormValues;
-  errors: Readonly<Partial<Record<ContractRenewalFormField, string>>>;
-  supportedBonusFields: readonly string[];
-  currency: string;
-  pending: boolean;
-  text: Translator;
-  submitLabel: string;
-  onChange: RenewalFormChange;
-  onCancel: () => void;
-  onSubmit: () => void;
-}>): React.JSX.Element {
-  return (
-    <form className="tls-contract-form" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} noValidate>
-      <div className="tls-contract-form-grid">
-        <ContractInput
-          field="durationYears"
-          label={text("career.contract.field.durationYears")}
-          value={values.durationYears}
-          error={errors.durationYears}
-          inputMode="numeric"
-          suffix={text("career.contract.years")}
-          onChange={onChange}
-        />
-        <ContractInput
-          field="annualWage"
-          label={text("career.contract.field.annualWage")}
-          value={values.annualWage}
-          error={errors.annualWage}
-          inputMode="decimal"
-          suffix={currency}
-          onChange={onChange}
-        />
-        <label className="tls-contract-field">
-          <span>{text("career.contract.field.squadStatus")}</span>
-          <select
-            value={values.squadStatus}
-            onChange={(event) => onChange("squadStatus", event.currentTarget.value as AgreedSquadStatus)}
-          >
-            {SQUAD_STATUSES.map((status) => (
-              <option key={status} value={status}>{text(`career.contract.squadStatus.${status}` as MessageKey)}</option>
-            ))}
-          </select>
-        </label>
-        <ContractInput field="signingBonus" label={text("career.contract.field.signingBonus")} value={values.signingBonus} error={errors.signingBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
-        <ContractInput field="appearanceBonus" label={text("career.contract.field.appearanceBonus")} value={values.appearanceBonus} error={errors.appearanceBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
-        {supportedBonusFields.includes("goal_bonus") ? (
-          <ContractInput field="goalBonus" label={text("career.contract.field.goalBonus")} value={values.goalBonus} error={errors.goalBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
-        ) : null}
-        {supportedBonusFields.includes("clean_sheet_bonus") ? (
-          <ContractInput field="cleanSheetBonus" label={text("career.contract.field.cleanSheetBonus")} value={values.cleanSheetBonus} error={errors.cleanSheetBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
-        ) : null}
-      </div>
-      <div className="tls-contract-form-actions">
-        <button className="tls-menu-button" disabled={pending} type="button" onClick={onCancel}>
-          <X aria-hidden="true" size={17} />
-          {text("career.contract.action.cancel")}
-        </button>
-        <button className="tls-menu-button tls-menu-button-primary" disabled={pending} type="submit">
-          <Send aria-hidden="true" size={17} />
-          {submitLabel}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function ContractInput({
-  field,
-  label,
-  value,
-  error,
-  inputMode,
-  suffix,
-  onChange,
-}: Readonly<{
-  field: ContractRenewalFormField;
-  label: string;
-  value: string;
-  error: string | undefined;
-  inputMode: "numeric" | "decimal";
-  suffix: string;
-  onChange: RenewalFormChange;
-}>): React.JSX.Element {
-  const errorId = `contract-${field}-error`;
-  return (
-    <label className="tls-contract-field">
-      <span>{label}</span>
-      <span className="tls-contract-input">
-        <input
-          aria-describedby={error === undefined ? undefined : errorId}
-          aria-invalid={error === undefined ? undefined : "true"}
-          inputMode={inputMode}
-          value={value}
-          onChange={(event) => onChange(field, event.currentTarget.value)}
-        />
-        <span>{suffix}</span>
-      </span>
-      {error === undefined ? null : <small id={errorId}>{error}</small>}
-    </label>
-  );
-}
 
 function ContractActions({
   contract,
@@ -514,24 +404,24 @@ function FinanceFacts({
   return (
     <>
       <dl className="tls-contract-finance-grid">
-        <ContractFact label={text("career.contract.cash")} value={formatMoney(finance.cashBalance, finance.currency, language)} />
-        <ContractFact label={text("career.contract.annualWageBudget")} value={formatMoney(finance.annualWageBudget, finance.currency, language)} />
+        <ContractFact label={text("career.contract.cash")} value={formatMoneyFromMinorUnits(finance.cashBalance, finance.currency, language, "whole")} />
+        <ContractFact label={text("career.contract.annualWageBudget")} value={formatMoneyFromMinorUnits(finance.annualWageBudget, finance.currency, language, "whole")} />
         <ContractFact
           label={text("career.contract.committedAnnualWage")}
           value={projected === undefined
-            ? formatMoney(finance.committedAnnualWage, finance.currency, language)
-            : `${formatMoney(projected.currentCommittedAnnualWage, finance.currency, language)} → ${formatMoney(projected.projectedCommittedAnnualWage, finance.currency, language)}`}
+            ? formatMoneyFromMinorUnits(finance.committedAnnualWage, finance.currency, language, "whole")
+            : `${formatMoneyFromMinorUnits(projected.currentCommittedAnnualWage, finance.currency, language, "whole")} → ${formatMoneyFromMinorUnits(projected.projectedCommittedAnnualWage, finance.currency, language, "whole")}`}
         />
         <ContractFact
           label={text("career.contract.remainingAnnualWage")}
           value={projected === undefined
-            ? formatMoney(finance.remainingAnnualWageBudget, finance.currency, language)
-            : `${formatMoney(projected.currentRemainingAnnualWageBudget, finance.currency, language)} → ${formatMoney(projected.projectedRemainingAnnualWageBudget, finance.currency, language)}`}
+            ? formatMoneyFromMinorUnits(finance.remainingAnnualWageBudget, finance.currency, language, "whole")
+            : `${formatMoneyFromMinorUnits(projected.currentRemainingAnnualWageBudget, finance.currency, language, "whole")} → ${formatMoneyFromMinorUnits(projected.projectedRemainingAnnualWageBudget, finance.currency, language, "whole")}`}
         />
         {projected === undefined ? null : (
           <ContractFact
             label={text("career.contract.cashAfterSigning")}
-            value={`${formatMoney(projected.currentCashBalance, finance.currency, language)} → ${formatMoney(projected.projectedCashBalance, finance.currency, language)}`}
+            value={`${formatMoneyFromMinorUnits(projected.currentCashBalance, finance.currency, language, "whole")} → ${formatMoneyFromMinorUnits(projected.projectedCashBalance, finance.currency, language, "whole")}`}
           />
         )}
       </dl>
@@ -564,12 +454,12 @@ function TermsGrid({
       {terms.durationYears === undefined ? null : (
         <ContractFact label={text("career.contract.field.durationYears")} value={text("career.contract.durationValue", { years: terms.durationYears })} />
       )}
-      <ContractFact label={text("career.contract.field.annualWage")} value={formatMoney(terms.annualWage, currency, language)} />
+      <ContractFact label={text("career.contract.field.annualWage")} value={formatMoneyFromMinorUnits(terms.annualWage, currency, language, "whole")} />
       <ContractFact label={text("career.contract.field.squadStatus")} value={text(`career.contract.squadStatus.${terms.squadStatus}` as MessageKey)} />
-      <ContractFact label={text("career.contract.field.signingBonus")} value={formatMoney(terms.bonuses.signingBonus, currency, language)} />
-      <ContractFact label={text("career.contract.field.appearanceBonus")} value={formatMoney(terms.bonuses.appearanceBonus, currency, language)} />
-      {terms.bonuses.goalBonus === undefined ? null : <ContractFact label={text("career.contract.field.goalBonus")} value={formatMoney(terms.bonuses.goalBonus, currency, language)} />}
-      {terms.bonuses.cleanSheetBonus === undefined ? null : <ContractFact label={text("career.contract.field.cleanSheetBonus")} value={formatMoney(terms.bonuses.cleanSheetBonus, currency, language)} />}
+      <ContractFact label={text("career.contract.field.signingBonus")} value={formatMoneyFromMinorUnits(terms.bonuses.signingBonus, currency, language, "whole")} />
+      <ContractFact label={text("career.contract.field.appearanceBonus")} value={formatMoneyFromMinorUnits(terms.bonuses.appearanceBonus, currency, language, "whole")} />
+      {terms.bonuses.goalBonus === undefined ? null : <ContractFact label={text("career.contract.field.goalBonus")} value={formatMoneyFromMinorUnits(terms.bonuses.goalBonus, currency, language, "whole")} />}
+      {terms.bonuses.cleanSheetBonus === undefined ? null : <ContractFact label={text("career.contract.field.cleanSheetBonus")} value={formatMoneyFromMinorUnits(terms.bonuses.cleanSheetBonus, currency, language, "whole")} />}
     </dl>
   );
 }
@@ -647,23 +537,7 @@ function financeRejectionMessageKey(reason: RejectedFinancePreview["reason"]): M
   return "career.contract.error.financeUnavailable";
 }
 
-function formatMoney(amount: number, currency: string, language: WebPreferences["language"]): string {
-  return new Intl.NumberFormat(language, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount / 100);
-}
-
 function formatDate(value: string, language: WebPreferences["language"]): string {
   return new Intl.DateTimeFormat(language, { day: "2-digit", month: "short", year: "numeric" })
     .format(new Date(`${value}T12:00:00Z`));
 }
-
-const SQUAD_STATUSES: readonly AgreedSquadStatus[] = [
-  "key_player",
-  "regular_starter",
-  "squad_player",
-  "fringe_player",
-  "prospect",
-];

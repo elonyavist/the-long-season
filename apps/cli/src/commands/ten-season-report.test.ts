@@ -60,8 +60,13 @@ test("ten-season-report uses deterministic default arguments", async () => {
   assert.equal(hasLineStartingWith(io.stdoutLines, "  top_assist_max:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  clubs_below_minimum_squad_size:"), true);
   assert.equal(hasLineStartingWith(io.stdoutLines, "  youth_roster_max_size:"), true);
-}, 30_000);
+}, 90_000);
 
+// Runs two full 2-season simulations back to back; the default 5s test timeout
+// is too tight for this heavy determinism check under concurrent suite load.
+// These gate tests now also advance the AI transfer market (the report harness
+// threads real transfer windows), which roughly doubles their cost, so the
+// budgets below stay generous enough to survive a loaded `pnpm check` run.
 test("same seed and season count produce the same report output", async () => {
   const first = captureIo();
   const second = captureIo();
@@ -70,7 +75,7 @@ test("same seed and season count produce the same report output", async () => {
   assert.equal(await runTenSeasonReportCommand(args, first), 0);
   assert.equal(await runTenSeasonReportCommand(args, second), 0);
   assert.deepEqual(first.stdoutLines, second.stdoutLines);
-});
+}, 90_000);
 
 test("ten-season-report respects explicit season count", async () => {
   const io = captureIo();
@@ -160,7 +165,7 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
   } finally {
     await rm(directoryPath, { recursive: true, force: true });
   }
-}, 20_000);
+}, 60_000);
 
 test("multi-world gate partitions produce the same world summaries as the sequential runner", async () => {
   const text = createTranslator("en");
@@ -218,7 +223,7 @@ test("resumable gate reuses complete deterministic shards without changing aggre
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 20_000);
+}, 60_000);
 
 test("resumable multi-world shards preserve the canonical sequential hash", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-multi-world-"));
@@ -250,7 +255,7 @@ test("resumable multi-world shards preserve the canonical sequential hash", asyn
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 20_000);
+}, 60_000);
 
 test("resumable gates parallelize explicit shards without the small-sample threshold", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-parallel-"));
@@ -275,7 +280,7 @@ test("resumable gates parallelize explicit shards without the small-sample thres
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 20_000);
+}, 60_000);
 
 test("resumable gate rejects a corrupted shard instead of trusting partial evidence", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-corrupt-"));
@@ -306,7 +311,7 @@ test("resumable gate rejects a corrupted shard instead of trusting partial evide
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 20_000);
+}, 60_000);
 
 test("ten-season-report wires an explicit worker limit into resumable gates", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-workers-"));
@@ -327,7 +332,7 @@ test("ten-season-report wires an explicit worker limit into resumable gates", as
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 20_000);
+}, 60_000);
 
 test("ten-season-report exits nonzero on invalid season count", async () => {
   const io = captureIo();

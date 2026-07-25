@@ -45,7 +45,7 @@ import {
   submitContractOffer,
   withdrawContractNegotiation,
 } from "./contract-negotiation.ts";
-import { advanceSelectedClubContractsToAttention } from "./selected-club-contract-workflow.ts";
+import { advanceSelectedClubWorkflowsToAttention } from "./selected-club-contract-workflow.ts";
 
 /** Lifecycle tests cover every decision without relying on UI or persistence. */
 
@@ -260,7 +260,7 @@ test("selected-club renewal helper creates one submitted negotiation without hid
 
 test("Continue delivers a renewal reminder without stopping and blocks on the final expiry decision", () => {
   const reminderBoundary = gameDate(21_000 - 243);
-  const reminder = advanceSelectedClubContractsToAttention({
+  const reminder = advanceSelectedClubWorkflowsToAttention({
     careerState: careerFixture(),
     boundaryDate: reminderBoundary,
   });
@@ -271,7 +271,7 @@ test("Continue delivers a renewal reminder without stopping and blocks on the fi
   assert.equal(reminder.careerState.currentSeasonInbox?.[0]?.continuePolicy, "never");
 
   const finalBoundary = gameDate(21_000 - 30);
-  const final = advanceSelectedClubContractsToAttention({
+  const final = advanceSelectedClubWorkflowsToAttention({
     careerState: reminder.careerState,
     boundaryDate: finalBoundary,
   });
@@ -283,7 +283,7 @@ test("Continue delivers a renewal reminder without stopping and blocks on the fi
 test("Continue resolves one delayed response and stops on a player counter at its due date", () => {
   const submitted = submittedMinimumOffer(careerFixture());
   const responseDueOn = submitted.negotiation.submittedOffer.responseDueOn;
-  const advanced = advanceSelectedClubContractsToAttention({
+  const advanced = advanceSelectedClubWorkflowsToAttention({
     careerState: submitted.careerState,
     boundaryDate: gameDate(addDays(responseDueOn, 30)),
   });
@@ -303,7 +303,7 @@ test("an earlier matchday stop never resolves a future contract response", () =>
     date: matchdayDate,
     preparation: { hasSavedLineup: true, hasSavedTactic: true },
   });
-  const advanced = advanceSelectedClubContractsToAttention({
+  const advanced = advanceSelectedClubWorkflowsToAttention({
     careerState: submitted.careerState,
     boundaryDate: submitted.negotiation.submittedOffer.responseDueOn,
     additionalMessages: [matchday.message],

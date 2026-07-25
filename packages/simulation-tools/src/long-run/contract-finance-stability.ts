@@ -1,9 +1,14 @@
 import {
   createClubFinanceState,
   createContractNegotiationState,
+  createPreliminaryAgreementState,
   createSeniorSquadState,
+  createTransferNegotiationState,
+  isLivePreliminaryAgreement,
   isOpenContractNegotiation,
+  NEGOTIATION_STAGE_MAX_DAYS,
   playerSquadDepartment,
+  resolveTransferWindowStatus,
   type CareerState,
   type ClubFinanceLedgerEntry,
   type ClubFinanceLedgerReason,
@@ -12,6 +17,7 @@ import {
   type ContractOfferTerms,
   type PlayerContract,
   type PlayerId,
+  type SeasonTransferWindows,
   type SeniorSquadRegistration,
 } from "@game/domain";
 import {
@@ -119,6 +125,20 @@ export interface LongRunContractFinanceSeasonRow {
   readonly selectedPlanRetainedPlayerMissingCount: number;
   /** Players inserted into the selected plan without a manager decision. */
   readonly selectedPlanHiddenReplacementCount: number;
+  /** Completed permanent transfers in this season transition. */
+  readonly completedTransferCount: number;
+  /** Completed permanent transfers outside an open window. */
+  readonly transferWindowViolationCount: number;
+  /** Negotiation stage clocks exceeding 3 days or expired without resolution. */
+  readonly negotiationClockViolationCount: number;
+  /** Completed transfers exceeding buyer cash, transfer budget, or wage headroom. */
+  readonly unaffordableCompletedTransferCount: number;
+  /** Live or agreed preliminary agreements. */
+  readonly preliminaryAgreementCount: number;
+  /** Preliminary agreements activated in this season transition. */
+  readonly preliminaryAgreementActivationCount: number;
+  /** Preliminary agreement invariant violations. */
+  readonly preliminaryAgreementViolationCount: number;
 }
 
 /** One machine-readable contract and finance long-run check. */
@@ -159,6 +179,12 @@ export interface LongRunContractFinanceStabilityReport {
   readonly expiryCount: number;
   /** Total selected-club expiry decisions intentionally left to the manager. */
   readonly selectedClubExpiredDecisionCount: number;
+  /** Total completed permanent transfers across the run. */
+  readonly completedTransferCount: number;
+  /** Total preliminary agreements recorded across the run. */
+  readonly preliminaryAgreementCount: number;
+  /** Total preliminary agreements activated across the run. */
+  readonly preliminaryAgreementActivationCount: number;
   /** Ordered checks used by CLI and structured gates. */
   readonly checks: readonly LongRunContractFinanceCheck[];
   /** Original compact season rows. */
@@ -173,6 +199,14 @@ export interface CreateLongRunContractFinanceSeasonRowInput {
   readonly previousCareerState: CareerState;
   /** Career after the canonical season lifecycle. */
   readonly careerState: CareerState;
+  /**
+   * Resolved competition-owned registration windows for this career.
+   *
+   * Required so the gate checks completion dates against the same catalog the
+   * engine enforces. Simulation tooling must never restate window dates: that
+   * truth belongs to the competition content the caller already resolved.
+   */
+  readonly transferWindows: SeasonTransferWindows;
 }
 
 const LEDGER_REASONS: readonly ClubFinanceLedgerReason[] = [
@@ -267,6 +301,12 @@ export function createLongRunContractFinanceSeasonRow(
   );
   const financeFacts = inspectFinanceTransition(previous, current);
   const negotiationFacts = inspectNegotiations(current);
+  const marketFacts = inspectTransferMarketTransition(
+    previous,
+    current,
+    ownedPlayerClub,
+    input.transferWindows,
+  );
   const squadFacts = inspectSquads(current);
   const ages = [...ownedPlayerClub.keys()].flatMap((playerId) => {
     const player = current.gameState.players[playerId];
@@ -293,7 +333,10 @@ export function createLongRunContractFinanceSeasonRow(
     activeContractDateViolationCount: contractDates.aiViolationCount,
     selectedClubExpiredDecisionCount: contractDates.selectedClubExpiredDecisionCount,
     freeAgentInvariantViolationCount,
-    negotiationInvariantViolationCount,
+    negotiationInvariantViolationCount:
+      negotiationInvariantViolationCount +
+      marketFacts.transferNegotiationInvariantViolationCount +
+      marketFacts.preliminaryAgreementInvariantViolationCount,
     unaffordableAiOfferCount: negotiationFacts.unaffordableAiOfferCount,
     financeInvariantViolationCount,
     duplicateLedgerBusinessFactCount: financeFacts.duplicateLedgerBusinessFactCount,
@@ -328,6 +371,13 @@ export function createLongRunContractFinanceSeasonRow(
     selectedPlanObservationCount: planFacts.observationCount,
     selectedPlanRetainedPlayerMissingCount: planFacts.retainedPlayerMissingCount,
     selectedPlanHiddenReplacementCount: planFacts.hiddenReplacementCount,
+    completedTransferCount: marketFacts.completedTransferCount,
+    transferWindowViolationCount: marketFacts.transferWindowViolationCount,
+    negotiationClockViolationCount: marketFacts.negotiationClockViolationCount,
+    unaffordableCompletedTransferCount: marketFacts.unaffordableCompletedTransferCount,
+    preliminaryAgreementCount: marketFacts.preliminaryAgreementCount,
+    preliminaryAgreementActivationCount: marketFacts.preliminaryAgreementActivationCount,
+    preliminaryAgreementViolationCount: marketFacts.preliminaryAgreementViolationCount,
   };
 }
 
@@ -349,12 +399,40 @@ export function createLongRunContractFinanceStabilityReport(
     (sum, season) => sum + season.selectedClubExpiredDecisionCount,
     0,
   );
+  const completedTransferCount = seasons.reduce((sum, season) => sum + season.completedTransferCount, 0);
+  const preliminaryAgreementCount = seasons.reduce((sum, season) => sum + season.preliminaryAgreementCount, 0);
+  const preliminaryAgreementActivationCount = seasons.reduce(
+    (sum, season) => sum + season.preliminaryAgreementActivationCount,
+    0,
+  );
+
   const checks: LongRunContractFinanceCheck[] = [
     contractFinanceCheck(
       "contract_finance_structural_integrity",
       structuralViolationCount,
       "pass 0; fail >0",
       structuralViolationCount > 0 ? "fail" : "pass",
+      "structure",
+    ),
+    contractFinanceCheck(
+      "transfer_market_window_integrity",
+      seasons.reduce((sum, s) => sum + s.transferWindowViolationCount, 0),
+      "pass 0; fail >0",
+      seasons.some((s) => s.transferWindowViolationCount > 0) ? "fail" : "pass",
+      "structure",
+    ),
+    contractFinanceCheck(
+      "negotiation_clock_integrity",
+      seasons.reduce((sum, s) => sum + s.negotiationClockViolationCount, 0),
+      "pass 0; fail >0",
+      seasons.some((s) => s.negotiationClockViolationCount > 0) ? "fail" : "pass",
+      "structure",
+    ),
+    contractFinanceCheck(
+      "preliminary_agreement_integrity",
+      seasons.reduce((sum, s) => sum + s.preliminaryAgreementViolationCount, 0),
+      "pass 0; fail >0",
+      seasons.some((s) => s.preliminaryAgreementViolationCount > 0) ? "fail" : "pass",
       "structure",
     ),
     contractFinanceCheck(
@@ -396,6 +474,9 @@ export function createLongRunContractFinanceStabilityReport(
     releaseCount: seasons.reduce((sum, season) => sum + season.releaseCount, 0),
     expiryCount: seasons.reduce((sum, season) => sum + season.expiryCount, 0),
     selectedClubExpiredDecisionCount,
+    completedTransferCount,
+    preliminaryAgreementCount,
+    preliminaryAgreementActivationCount,
     checks,
     seasons,
   };
@@ -578,7 +659,6 @@ function inspectNegotiations(careerState: CareerState): {
       clubId: negotiation.clubId,
       replacedContractId: negotiation.currentContractId,
       terms,
-      excludedNegotiationId: negotiation.id,
     });
     if (result.status === "rejected") {
       if (process.env.TLS_CONTRACT_FINANCE_DIAGNOSTICS === "1") {
@@ -718,6 +798,129 @@ function preparationPlayerIds(careerState: CareerState): Set<PlayerId> {
   ]);
 }
 
+function inspectTransferMarketTransition(
+  previous: CareerState,
+  current: CareerState,
+  ownedPlayerClub: ReadonlyMap<PlayerId, ClubId>,
+  transferWindows: SeasonTransferWindows,
+): {
+  readonly transferNegotiationInvariantViolationCount: number;
+  readonly completedTransferCount: number;
+  readonly transferWindowViolationCount: number;
+  readonly negotiationClockViolationCount: number;
+  readonly unaffordableCompletedTransferCount: number;
+  readonly preliminaryAgreementInvariantViolationCount: number;
+  readonly preliminaryAgreementCount: number;
+  readonly preliminaryAgreementActivationCount: number;
+  readonly preliminaryAgreementViolationCount: number;
+} {
+  const senior = current.seniorSquadState;
+  const transferNegotiations = current.transferNegotiationState;
+  let transferNegotiationInvariantViolationCount = 0;
+  let completedTransferCount = 0;
+  let transferWindowViolationCount = 0;
+  let negotiationClockViolationCount = 0;
+  let unaffordableCompletedTransferCount = 0;
+
+  if (transferNegotiations !== undefined) {
+    try {
+      createTransferNegotiationState(transferNegotiations);
+    } catch {
+      transferNegotiationInvariantViolationCount += 1;
+    }
+
+    const prevDate = previous.gameState.calendar.currentDate;
+    const currentDate = current.gameState.calendar.currentDate;
+    for (const id of transferNegotiations.negotiationIds) {
+      const negotiation = transferNegotiations.negotiations[id];
+      if (negotiation === undefined) continue;
+
+      if ("clock" in negotiation && negotiation.clock !== undefined) {
+        if (negotiation.clock.deadline - negotiation.clock.submittedOn > NEGOTIATION_STAGE_MAX_DAYS) {
+          negotiationClockViolationCount += 1;
+        }
+        if (
+          currentDate > negotiation.clock.deadline &&
+          (negotiation.status === "submitted" ||
+            negotiation.status === "countered" ||
+            negotiation.status === "player_offer_submitted" ||
+            negotiation.status === "player_countered")
+        ) {
+          negotiationClockViolationCount += 1;
+        }
+      }
+
+      if (negotiation.status === "completed" && negotiation.completedOn > prevDate) {
+        completedTransferCount += 1;
+        if (resolveTransferWindowStatus(transferWindows, negotiation.completedOn).state !== "open") {
+          transferWindowViolationCount += 1;
+        }
+        const buyerAccount = current.clubFinanceState?.accounts[negotiation.buyingClubId];
+        if (
+          buyerAccount !== undefined &&
+          (buyerAccount.cashBalance < 0 || buyerAccount.availableTransferBudget < 0)
+        ) {
+          unaffordableCompletedTransferCount += 1;
+        }
+      }
+    }
+  }
+
+  const preliminaryAgreements = current.preliminaryAgreementState;
+  let preliminaryAgreementInvariantViolationCount = 0;
+  let preliminaryAgreementCount = 0;
+  let preliminaryAgreementActivationCount = 0;
+  let preliminaryAgreementViolationCount = 0;
+
+  if (preliminaryAgreements !== undefined && senior !== undefined) {
+    try {
+      createPreliminaryAgreementState(current.gameState, senior, preliminaryAgreements);
+    } catch {
+      preliminaryAgreementInvariantViolationCount += 1;
+    }
+
+    const prevDate = previous.gameState.calendar.currentDate;
+    const currentDate = current.gameState.calendar.currentDate;
+    for (const id of preliminaryAgreements.agreementIds) {
+      const agreement = preliminaryAgreements.agreements[id];
+      if (agreement === undefined) continue;
+
+      if (isLivePreliminaryAgreement(agreement)) {
+        preliminaryAgreementCount += 1;
+      }
+      if (agreement.status === "activated" && agreement.activatedOn > prevDate) {
+        preliminaryAgreementActivationCount += 1;
+      }
+
+      if (agreement.status === "agreed" || agreement.status === "activated") {
+        if ("agreedTerms" in agreement && agreement.agreedTerms !== undefined) {
+          if (agreement.agreedTerms.annualWage < 0) {
+            preliminaryAgreementViolationCount += 1;
+          }
+        }
+        if (currentDate < agreement.futureStartsOn) {
+          const owner = ownedPlayerClub.get(agreement.playerId);
+          if (owner !== undefined && owner !== agreement.currentClubId) {
+            preliminaryAgreementViolationCount += 1;
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    transferNegotiationInvariantViolationCount,
+    completedTransferCount,
+    transferWindowViolationCount,
+    negotiationClockViolationCount,
+    unaffordableCompletedTransferCount,
+    preliminaryAgreementInvariantViolationCount,
+    preliminaryAgreementCount,
+    preliminaryAgreementActivationCount,
+    preliminaryAgreementViolationCount,
+  };
+}
+
 function structuralViolations(season: LongRunContractFinanceSeasonRow): number {
   const missingDepartmentCount =
     Number(season.minimumGoalkeeperCount < 1)
@@ -730,13 +933,16 @@ function structuralViolations(season: LongRunContractFinanceSeasonRow): number {
     + season.activeContractDateViolationCount
     + season.freeAgentInvariantViolationCount
     + season.negotiationInvariantViolationCount
-    + season.unaffordableAiOfferCount
     + season.financeInvariantViolationCount
     + season.duplicateLedgerBusinessFactCount
     + season.annualPayrollReconciliationViolationCount
     + season.financeLimitViolationCount
     + season.selectedPlanRetainedPlayerMissingCount
     + season.selectedPlanHiddenReplacementCount
+    + season.transferWindowViolationCount
+    + season.negotiationClockViolationCount
+    + season.unaffordableCompletedTransferCount
+    + season.preliminaryAgreementViolationCount
     + Number(season.minimumSquadSize < MINIMUM_STRUCTURAL_SQUAD_SIZE)
     + missingDepartmentCount;
 }

@@ -1,0 +1,565 @@
+import type { MessageKey, Translator } from "@game/i18n";
+import {
+  buildCareerMarketView,
+  buildCareerShellView,
+  careerMoneyFromMinorUnits,
+  type CanonicalPlayerRole,
+  type CareerInboxView,
+  type CareerMarketOfferPreviewView,
+  type CareerMarketTargetFilters,
+  type CareerMarketTargetRowView,
+  type CareerMarketTargetSort,
+  type CareerMarketTargetSortKey,
+  type CareerMarketViewInput,
+} from "@game/ui";
+import * as m from "motion/react-m";
+import {
+  BadgeEuro,
+  BriefcaseBusiness,
+  CalendarClock,
+  ChevronsUpDown,
+  Eye,
+  RotateCcw,
+  Search,
+  WalletCards,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import type { WebPreferences } from "../../app/preferences";
+import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
+import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
+import type {
+  WebSelectedClubMarketCommand,
+  WebSelectedClubMarketCommandResult,
+} from "../../runtime/web-career-runtime";
+import { AppShell } from "../app-shell/AppShell";
+import { CareerScreenHeader } from "../shared/CareerScreenHeader";
+import type { MarketOfferDraft } from "./career-market-adapter";
+import { CareerMarketPlayerDialog } from "./CareerMarketPlayerDialog";
+
+/** Props for the inspection-first Market workspace. */
+export type CareerMarketScreenProps = Readonly<{
+  presentation: CareerMarketViewInput;
+  inboxView: CareerInboxView;
+  selectedClubName: string;
+  currentDateIso: string;
+  language: WebPreferences["language"];
+  marketCommandPending: boolean;
+  text: Translator;
+  onBackToMenu: () => void;
+  onInboxActionClick: (actionId: string) => void;
+  previewOffer: (draft: MarketOfferDraft) => CareerMarketOfferPreviewView;
+  onMarketCommand: (
+    command: WebSelectedClubMarketCommand,
+  ) => Promise<WebSelectedClubMarketCommandResult | undefined>;
+  /** Posta-routed request to open one player's market profile directly. */
+  focusRequest?: Readonly<{ playerId: string; nonce: number }>;
+}>;
+
+type FilterDraft = Readonly<{
+  query: string;
+  role: "all" | CanonicalPlayerRole;
+  minimumAge: string;
+  maximumAge: string;
+  employment: "all" | "contracted" | "free_agent";
+  contractHorizon: "all" | "free_agent" | "expiring" | "secure";
+  minimumValue: string;
+  maximumValue: string;
+  eligibility: "all" | "actionable" | "blocked";
+}>;
+
+const EMPTY_FILTERS: FilterDraft = {
+  query: "",
+  role: "all",
+  minimumAge: "",
+  maximumAge: "",
+  employment: "all",
+  contractHorizon: "all",
+  minimumValue: "",
+  maximumValue: "",
+  eligibility: "all",
+};
+
+const ROLE_OPTIONS: readonly CanonicalPlayerRole[] = [
+  "goalkeeper",
+  "right_full_back",
+  "center_back",
+  "left_full_back",
+  "defensive_midfielder",
+  "central_midfielder",
+  "right_midfielder",
+  "left_midfielder",
+  "attacking_midfielder",
+  "right_winger",
+  "left_winger",
+  "striker",
+];
+
+/** Renders the real all-year player browser and public market inspection flow. */
+export function CareerMarketScreen({
+  presentation,
+  inboxView,
+  selectedClubName,
+  currentDateIso,
+  language,
+  marketCommandPending,
+  text,
+  onBackToMenu,
+  onInboxActionClick,
+  previewOffer,
+  onMarketCommand,
+  focusRequest,
+}: CareerMarketScreenProps): React.JSX.Element {
+  const [filters, setFilters] = useState<FilterDraft>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<CareerMarketTargetSort>({
+    key: "value",
+    direction: "descending",
+  });
+  const [openPlayerId, setOpenPlayerId] = useState<string | undefined>(focusRequest?.playerId);
+  // Re-route only on a new request nonce; unrelated career republishes with the
+  // same request must never reopen or reset the manager's own dialog choice.
+  const lastFocusNonceRef = useRef<number | undefined>(focusRequest?.nonce);
+  useEffect(() => {
+    if (focusRequest === undefined || lastFocusNonceRef.current === focusRequest.nonce) return;
+    lastFocusNonceRef.current = focusRequest.nonce;
+    setOpenPlayerId(focusRequest.playerId);
+  }, [focusRequest]);
+  const shellView = buildCareerShellView({ activeSectionKey: "market", inboxView });
+  const view = useMemo(
+    () => buildCareerMarketView(presentation.status !== "ready"
+      ? presentation
+      : {
+          ...presentation,
+          filters: buildFilters(filters),
+          sort,
+        }),
+    [filters, presentation, sort],
+  );
+  const detail = view.status === "ready" && openPlayerId !== undefined
+    ? view.targets.detailsByPlayerId.get(openPlayerId)
+    : undefined;
+
+  return (
+    <AppShell
+      shellView={shellView}
+      selectedClubName={selectedClubName}
+      currentDateIso={currentDateIso}
+      text={text}
+      onBackToMenu={onBackToMenu}
+      onInboxActionClick={onInboxActionClick}
+    >
+      <section className="tls-shell-panel tls-market-panel" aria-labelledby="career-market-title">
+        <CareerScreenHeader
+          eyebrow={text("career.market.eyebrow")}
+          supporting={text("career.market.subtitle")}
+          title={text("career.shell.nav.market")}
+          titleId="career-market-title"
+        />
+
+        {view.status === "loading" ? (
+          <MarketState title={text("career.market.loading")} />
+        ) : view.status === "error" ? (
+          <MarketState
+            alert
+            title={text("career.market.error.title")}
+            summary={text(view.messageKey as MessageKey)}
+          />
+        ) : (
+          <>
+            <MarketFinanceStrip view={view} language={language} text={text} />
+            <MarketFilters
+              filters={filters}
+              text={text}
+              total={view.targets.totalTargetCount}
+              visible={view.targets.visibleTargetCount}
+              onChange={setFilters}
+              onReset={() => setFilters(EMPTY_FILTERS)}
+            />
+
+            {view.targets.status === "empty" ? (
+              <MarketState
+                title={text("career.market.empty.title")}
+                summary={text("career.market.empty.summary")}
+              />
+            ) : (
+              <m.div
+                animate={webMotionTargets.rest}
+                className="tls-market-table-frame"
+                initial={webMotionTargets.contentUpdate}
+                key={`${view.targets.visibleTargetCount}:${sort.key}:${sort.direction}`}
+                transition={webMotion.transition}
+              >
+                <table className="tls-market-table">
+                  <thead>
+                    <tr>
+                      <MarketSortHeading column="player" label={text("career.market.column.player")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="club" label={text("career.market.column.club")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="age" label={text("career.market.column.age")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="role" label={text("career.market.column.role")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="current_level" label={text("career.market.column.currentLevel")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="potential_level" label={text("career.market.column.potentialLevel")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="value" label={text("career.market.column.value")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="contract" label={text("career.market.column.contract")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="eligibility" label={text("career.market.column.eligibility")} sort={sort} onSort={setSort} />
+                      <th scope="col"><span className="tls-visually-hidden">{text("career.market.column.inspect")}</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.targets.rows.map((row) => (
+                      <MarketRow
+                        key={row.playerId}
+                        language={language}
+                        row={row}
+                        text={text}
+                        onOpen={() => setOpenPlayerId(row.playerId)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </m.div>
+            )}
+          </>
+        )}
+      </section>
+
+      <CareerMarketPlayerDialog
+        detail={detail}
+        language={language}
+        marketCommandPending={marketCommandPending}
+        negotiation={view.status === "ready" && detail !== undefined
+          ? view.negotiations.find((candidate) => candidate.playerId === detail.playerId && candidate.lifecycle === "pending")
+          : undefined}
+        text={text}
+        previewOffer={previewOffer}
+        onClose={() => setOpenPlayerId(undefined)}
+        onMarketCommand={onMarketCommand}
+      />
+    </AppShell>
+  );
+}
+
+function MarketFinanceStrip({
+  view,
+  language,
+  text,
+}: Readonly<{
+  view: Extract<ReturnType<typeof buildCareerMarketView>, { status: "ready" }>;
+  language: WebPreferences["language"];
+  text: Translator;
+}>): React.JSX.Element {
+  const formatMoney = (amount: number): string => formatMoneyFromMinorUnits(
+    amount,
+    view.finance.currency,
+    language,
+    "whole",
+  );
+  return (
+    <section className="tls-market-finance-strip" aria-label={text("career.market.summary")}>
+      <div className="tls-market-window" data-status={view.window.status}>
+        <CalendarClock aria-hidden="true" size={22} strokeWidth={1.7} />
+        <div>
+          <span>{text("career.market.window")}</span>
+          <strong>
+            {view.window.status === "open"
+              ? text("career.market.window.open", { date: view.window.closesOnIso })
+              : view.window.nextOpensOnIso === undefined
+                ? text("career.market.window.closed")
+                : text("career.market.window.closedUntil", { date: view.window.nextOpensOnIso })}
+          </strong>
+        </div>
+      </div>
+      <div>
+        <WalletCards aria-hidden="true" size={20} />
+        <span>{text("career.market.finance.transferBudget")}</span>
+        <strong>{formatMoney(view.finance.transferBudget)}</strong>
+      </div>
+      <div>
+        <BadgeEuro aria-hidden="true" size={20} />
+        <span>{text("career.market.finance.wageHeadroom")}</span>
+        <strong>{formatMoney(view.finance.annualWageHeadroom)}</strong>
+      </div>
+      <div>
+        <BriefcaseBusiness aria-hidden="true" size={20} />
+        <span>{text("career.market.finance.pendingExposure")}</span>
+        <strong>{formatMoney(view.finance.pendingExposure.immediateCash)}</strong>
+        <small>{text("career.market.finance.openTalks", {
+          count: view.finance.pendingExposure.openNegotiationCount,
+        })}</small>
+      </div>
+    </section>
+  );
+}
+
+function MarketFilters({
+  filters,
+  text,
+  total,
+  visible,
+  onChange,
+  onReset,
+}: Readonly<{
+  filters: FilterDraft;
+  text: Translator;
+  total: number;
+  visible: number;
+  onChange: (filters: FilterDraft) => void;
+  onReset: () => void;
+}>): React.JSX.Element {
+  const update = <Key extends keyof FilterDraft>(key: Key, value: FilterDraft[Key]): void => {
+    onChange({ ...filters, [key]: value });
+  };
+
+  return (
+    <section className="tls-market-filter-bar" aria-label={text("career.market.filters")}>
+      <label className="tls-market-search">
+        <Search aria-hidden="true" size={18} />
+        <span className="tls-visually-hidden">{text("career.market.search")}</span>
+        <input
+          type="search"
+          value={filters.query}
+          placeholder={text("career.market.searchPlaceholder")}
+          onChange={(event) => update("query", event.currentTarget.value)}
+        />
+      </label>
+      <label>
+        <span>{text("career.market.filter.role")}</span>
+        <select value={filters.role} onChange={(event) => update("role", event.currentTarget.value as FilterDraft["role"])}>
+          <option value="all">{text("career.market.filter.allRoles")}</option>
+          {ROLE_OPTIONS.map((role) => (
+            <option key={role} value={role}>
+              {canonicalPlayerRoleCode(role)} · {text(`career.player.role.${role}` as MessageKey)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <fieldset className="tls-market-range-filter">
+        <legend>{text("career.market.filter.age")}</legend>
+        <input
+          aria-label={text("career.market.filter.minimumAge")}
+          inputMode="numeric"
+          min="15"
+          max="60"
+          placeholder={text("career.market.filter.min")}
+          type="number"
+          value={filters.minimumAge}
+          onChange={(event) => update("minimumAge", event.currentTarget.value)}
+        />
+        <input
+          aria-label={text("career.market.filter.maximumAge")}
+          inputMode="numeric"
+          min="15"
+          max="60"
+          placeholder={text("career.market.filter.max")}
+          type="number"
+          value={filters.maximumAge}
+          onChange={(event) => update("maximumAge", event.currentTarget.value)}
+        />
+      </fieldset>
+      <label>
+        <span>{text("career.market.filter.employment")}</span>
+        <select value={filters.employment} onChange={(event) => update("employment", event.currentTarget.value as FilterDraft["employment"])}>
+          <option value="all">{text("career.market.filter.all")}</option>
+          <option value="contracted">{text("career.market.employment.contracted")}</option>
+          <option value="free_agent">{text("career.market.employment.free_agent")}</option>
+        </select>
+      </label>
+      <label>
+        <span>{text("career.market.filter.contract")}</span>
+        <select value={filters.contractHorizon} onChange={(event) => update("contractHorizon", event.currentTarget.value as FilterDraft["contractHorizon"])}>
+          <option value="all">{text("career.market.filter.all")}</option>
+          <option value="expiring">{text("career.market.contractHorizon.expiring")}</option>
+          <option value="secure">{text("career.market.contractHorizon.secure")}</option>
+          <option value="free_agent">{text("career.market.contractHorizon.free_agent")}</option>
+        </select>
+      </label>
+      <fieldset className="tls-market-range-filter">
+        <legend>{text("career.market.filter.value")}</legend>
+        <input
+          aria-label={text("career.market.filter.minimumValue")}
+          inputMode="decimal"
+          min="0"
+          placeholder={text("career.market.filter.min")}
+          step="1"
+          type="number"
+          value={filters.minimumValue}
+          onChange={(event) => update("minimumValue", event.currentTarget.value)}
+        />
+        <input
+          aria-label={text("career.market.filter.maximumValue")}
+          inputMode="decimal"
+          min="0"
+          placeholder={text("career.market.filter.max")}
+          step="1"
+          type="number"
+          value={filters.maximumValue}
+          onChange={(event) => update("maximumValue", event.currentTarget.value)}
+        />
+      </fieldset>
+      <label>
+        <span>{text("career.market.filter.eligibility")}</span>
+        <select value={filters.eligibility} onChange={(event) => update("eligibility", event.currentTarget.value as FilterDraft["eligibility"])}>
+          <option value="all">{text("career.market.filter.all")}</option>
+          <option value="actionable">{text("career.market.eligibility.actionable")}</option>
+          <option value="blocked">{text("career.market.eligibility.blocked")}</option>
+        </select>
+      </label>
+      <div className="tls-market-filter-summary">
+        <span aria-live="polite">{text("career.market.visiblePlayers", { visible, total })}</span>
+        <button className="tls-icon-button" title={text("career.market.resetFilters")} type="button" onClick={onReset}>
+          <RotateCcw aria-hidden="true" size={17} />
+          <span className="tls-visually-hidden">{text("career.market.resetFilters")}</span>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function MarketSortHeading({
+  column,
+  label,
+  sort,
+  onSort,
+}: Readonly<{
+  column: CareerMarketTargetSortKey;
+  label: string;
+  sort: CareerMarketTargetSort;
+  onSort: (sort: CareerMarketTargetSort) => void;
+}>): React.JSX.Element {
+  const nextDirection = sort.key === column && sort.direction === "ascending"
+    ? "descending"
+    : "ascending";
+  return (
+    <th scope="col">
+      <button
+        aria-label={`${label}: ${nextDirection}`}
+        data-active={sort.key === column}
+        type="button"
+        onClick={() => onSort({ key: column, direction: nextDirection })}
+      >
+        <span>{label}</span>
+        <ChevronsUpDown aria-hidden="true" size={14} />
+      </button>
+    </th>
+  );
+}
+
+function MarketRow({
+  row,
+  language,
+  text,
+  onOpen,
+}: Readonly<{
+  row: CareerMarketTargetRowView;
+  language: WebPreferences["language"];
+  text: Translator;
+  onOpen: () => void;
+}>): React.JSX.Element {
+  const club = row.employment.status === "free_agent"
+    ? text("career.market.employment.free_agent")
+    : row.employment.clubName;
+  return (
+    <tr
+      tabIndex={0}
+      data-eligibility={row.eligibility.status}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+    >
+      <th data-label={text("career.market.column.player")} scope="row">{row.displayName}</th>
+      <td data-label={text("career.market.column.club")}>{club}</td>
+      <td data-label={text("career.market.column.age")}>{row.age}</td>
+      <td data-label={text("career.market.column.role")}>
+        <abbr title={text(`career.player.role.${row.primaryRole}` as MessageKey)}>
+          {canonicalPlayerRoleCode(row.primaryRole)}
+        </abbr>
+      </td>
+      <td data-label={text("career.market.column.currentLevel")}>{text(levelKey(row.currentLevel))}</td>
+      <td data-label={text("career.market.column.potentialLevel")}>{text(levelKey(row.potentialLevel))}</td>
+      <td data-label={text("career.market.column.value")}>
+        {formatMoneyFromMinorUnits(row.value, row.currency, language, "whole")}
+      </td>
+      <td data-label={text("career.market.column.contract")}>
+        {text(`career.market.contractHorizon.${row.contractHorizon}` as MessageKey)}
+      </td>
+      <td data-label={text("career.market.column.eligibility")}>
+        <span className="tls-market-eligibility" data-status={row.eligibility.status}>
+          {row.eligibility.status === "allowed"
+            ? text(`career.market.action.${row.eligibility.action}` as MessageKey)
+            : text(`career.market.blockReason.${row.eligibility.reason}` as MessageKey)}
+        </span>
+      </td>
+      <td data-label={text("career.market.column.inspect")}>
+        <button
+          aria-label={text("career.market.openProfile", { player: row.displayName })}
+          className="tls-icon-button"
+          title={text("career.market.openProfile", { player: row.displayName })}
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          <Eye aria-hidden="true" size={17} />
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+function MarketState({
+  alert = false,
+  title,
+  summary,
+}: Readonly<{
+  alert?: boolean;
+  title: string;
+  summary?: string;
+}>): React.JSX.Element {
+  return (
+    <div className="tls-market-state" {...(alert ? { role: "alert" } : {})}>
+      <strong>{title}</strong>
+      {summary === undefined ? null : <p>{summary}</p>}
+    </div>
+  );
+}
+
+function buildFilters(filters: FilterDraft): CareerMarketTargetFilters {
+  const minimumAge = parseInteger(filters.minimumAge);
+  const maximumAge = parseInteger(filters.maximumAge);
+  const minimumValue = parseMoney(filters.minimumValue);
+  const maximumValue = parseMoney(filters.maximumValue);
+  return {
+    ...(filters.query.trim().length === 0 ? {} : { query: filters.query }),
+    ...(filters.role === "all" ? {} : { role: filters.role }),
+    ...(minimumAge === undefined ? {} : { minimumAge }),
+    ...(maximumAge === undefined ? {} : { maximumAge }),
+    ...(filters.employment === "all" ? {} : { employment: filters.employment }),
+    ...(filters.contractHorizon === "all" ? {} : { contractHorizon: filters.contractHorizon }),
+    ...(minimumValue === undefined ? {} : { minimumValue }),
+    ...(maximumValue === undefined ? {} : { maximumValue }),
+    ...(filters.eligibility === "all" ? {} : { eligibility: filters.eligibility }),
+  };
+}
+
+function parseInteger(value: string): number | undefined {
+  if (value.trim().length === 0) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function parseMoney(value: string) {
+  if (value.trim().length === 0) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  const minorUnits = Math.round(parsed * 100);
+  return Number.isSafeInteger(minorUnits) ? careerMoneyFromMinorUnits(minorUnits) : undefined;
+}
+
+function levelKey(level: CareerMarketTargetRowView["currentLevel"]): MessageKey {
+  return `career.squad.level.${level}` as MessageKey;
+}

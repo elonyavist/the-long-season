@@ -9,12 +9,17 @@ import {
   type LeagueTableRules,
   type SeniorSquadState,
   type SeasonId,
+  type SeasonTransferWindows,
 } from "@game/domain";
 import { fromISO } from "@game/shared";
 
 import { generateFakeClubs, type FakeClubs } from "./fake-clubs.ts";
 import { generateFakePlayersForClubs, type FakePlayers } from "./fake-players.ts";
 import { generateInitialSeniorSquadState } from "./senior-squad-world.ts";
+import {
+  resolveSeasonTransferWindows,
+  seasonStartYearFromDate,
+} from "./transfer-window-catalog.ts";
 import {
   generateCompetitionSeasonDistribution,
   generateInitialClubFinanceState,
@@ -127,6 +132,8 @@ export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
   readonly seasonId: SeasonId;
   /** Generated single competition. */
   readonly competition: Competition;
+  /** Resolved source-backed transfer windows for the generated season. */
+  readonly transferWindows: SeasonTransferWindows;
   /** First round date. */
   readonly seasonStartDate: GameDate;
   /** Basic three-points-for-a-win table rules. */
@@ -194,6 +201,12 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
     }),
     seasonDistribution: generateCompetitionSeasonDistribution(clubFinanceState),
   };
+  const seasonStartDate = gameDate(fromISO("2026-08-01"));
+  const transferWindows = resolveSeasonTransferWindows({
+    competitionId: competition.id,
+    seasonId: season,
+    seasonStartYear: seasonStartYearFromDate(seasonStartDate),
+  });
 
   return {
     ...clubs,
@@ -202,7 +215,8 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
     clubFinanceState,
     seasonId: season,
     competition,
-    seasonStartDate: gameDate(fromISO("2026-08-01")),
+    transferWindows,
+    seasonStartDate,
     tableRules: {
       pointsForWin: 3,
       pointsForDraw: 1,

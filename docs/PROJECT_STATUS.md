@@ -225,8 +225,11 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   club and player negotiation stages, non-reserving pending exposure, atomic
   affordable transfer completion, final-six-month preliminary agreements,
   deterministic AI, Posta/Continue decisions, persistence, Market UI, and the
-  integrated Phase 78/79 closeout. The former Phase 78 Step 16 has been retired
-  and absorbed by Phase 79 Step 15.
+  integrated Phase 78/79 closeout. Its locked carry-forward register now also
+  assigns eight audited Squad/contract/runtime corrections to Steps 01, 09,
+  10, 11, 13, and 15 without adding a generic cleanup step or duplicate state.
+  The former Phase 78 Step 16 has been retired and absorbed by Phase 79 Step
+  15.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, in-memory permanent-transfer market contracts, deterministic true-data player valuation, player willingness, transfer feasibility/apply preview, durable `CareerState`, JSON career save/load, persistent accepted permanent-transfer application, pure engine `findNextCareerFixture` and `progressNextCareerFixture`, pure engine `developPlayersForSeason` growth/decline with bounded potential realization, deterministic country-specific city-based fictional club naming patterns in content while preserving stable `club:` IDs, `pnpm cli career --save=<saveId> --apply-market-demo=<profile>`, `pnpm cli career --save=<saveId> --inspect`, `pnpm cli career --save=<saveId> --summary`, `pnpm cli career --save=<saveId> --advance-next-fixture`, `pnpm cli career --save=<saveId> --development-report`, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with generated fictional player identities, expanded nationality metadata, default 11-player lineups plus reserve players, division/tier player generation bands, role-based attribute templates, player archetypes with potential classes, rarity budgets for lower-division exceptions, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--identity-review` generated player identity inspection, `--player-generation-report` generated player quality inspection, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection, and localized `--market-demo=pro01-affordable-permanent|pro01-star-rejected` permanent-transfer inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -236,52 +239,348 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 ## Current Active Step
 
-- Step: `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/15-contract-finance-and-squad-long-run-gates.md`.
-- Status: In progress. Steps 01-14 are complete and Step 15 is the active
-  implementation step.
-- Adopted solution: the full-screen Squad profile consumes canonical UI models
-  for identity, role suitability, exact current attributes, public potential,
-  annual contract terms, history, and engine-derived finance previews. Renewal
-  submission, revision, withdrawal, acceptance, rejection, and release remain
-  engine/session commands; React owns only the recoverable form draft and
-  command presentation. The web package no longer imports domain directly.
-- Last verification: Node 24 UI tests pass `75/75`; web tests pass `63` files /
-  `278` tests; web typecheck and build pass; the complete current-product and
-  SQLite/OPFS browser gate passes `21/21`; dependency-cruiser passes with `626`
-  modules and `2,314` dependencies; diff and Graphify pass. The existing build
-  chunk-size warning remains non-blocking and unchanged.
-- Next action: extend the canonical long-run runner with locked contract,
-  registration, free-agent, valuation, negotiation, payroll, and finance
-  invariants, then execute the documented staged gates without relaxing a
-  threshold after observing results.
-- Blocker: none.
-- Lesson learned: validating finance by repeatedly scanning every contract and
-  posting one wage entry per player made long runs needlessly expensive. One
-  pre-aggregated validation pass and one club/season payroll entry retain the
-  audit trail while keeping multi-season simulation fast. Contract-aware
-  rollover must not compose with legacy ownership-only exits or promotion;
-  Steps 08-09 own their explicit replacement. A delayed acceptance also needs
-  a second affordability check and a distinct structured failure fact because
-  club finances can change while an offer is pending. Step 07 made negotiation
-  state and explicit Inbox Continue policy runtime-active in the browser;
-  Step 08 persisted both through a clean beta schema and exposed a second
-  lesson: whole-career validation inside every AI offer is correct but
-  unnecessarily expensive. Incremental domain commands now validate the
-  changed record and affected invariant while retaining canonical immutable
-  identity. Step 09 now applies that atomic boundary to every current ownership
-  transition. It also exposed two contract truths that remain binding: a
-  transfer is not a free-agent negotiation and must protect credible existing
-  wage/status/security, while a renewal extends from the later of today plus
-  term or the current expiry instead of stacking a second full term. Step 10
-  confirmed that durable manager intent and temporary fixture eligibility need
-  separate owners: recovery now clears a blocker without mutating the plan.
-  Step 13 confirmed that route continuity and persistence are separate: loaded-
-  career routes share one draft in memory, while only deliberate save/autosave
-  writes it and only real exit boundaries need discard protection. Step 14
-  confirmed that presentation-safe money constructors belong in UI while raw
-  string IDs are resolved to canonical domain IDs at the runtime boundary;
-  this keeps the browser independent from domain imports without duplicating
-  money arithmetic or weakening command validation.
+- Step: `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/15-transfer-market-squad-contracts-finance-closeout-and-final-review.md`. Steps 01-14 are Done.
+- Status: Phase 79 Step 14 (Market, contract, finance and squad long-run gates) is
+  REOPENED. Its first execution produced a false pass and its recorded result was
+  wrong; the gate must be re-run before Step 15 can start. See the Step 14
+  correction entry below.
+- Step 14 correction (2026-07-24, review finding): the original Step 14 entry
+  claimed a `750x50` gate with "100% clean structural integrity pass
+  (`contract_finance=structural:0`) across all 750 worlds". Both halves of that
+  claim were wrong.
+  - The published `docs/audits/TRANSFER_MARKET_LONG_RUN_REPORT.md` actually
+    records `Status: FAIL`, `Failed worlds: 2`, and
+    `Contract/finance structural violations: 1`. The status entry did not match
+    its own artifact.
+  - More seriously, the gate never exercised the market at all.
+    `advanceCareerForReport` called `advanceCareerOneSeason` without
+    `transferWindows`, so `advanceCareerMonths` skipped
+    `advanceAiMarketLifecycle` and every world reported `transfer=0`. The three
+    market checks added by Step 14 (`transfer_market_window_integrity`,
+    `negotiation_clock_integrity`, `preliminary_agreement_integrity`) all
+    iterate over `transferNegotiationState` / `preliminaryAgreementState`, so
+    with an inert market they iterated zero times and passed vacuously. The
+    "100% clean pass" validated nothing about transfer windows, negotiation
+    clocks, preliminary agreements, or affordability.
+  - The single failing world's squad collapse to 17 players was a downstream
+    symptom of the same defect: with no market, AI clubs could not replace
+    departures. `clubs_below_minimum_squad_size` and
+    `contract_finance_structural_integrity` both counted that one event, because
+    `structuralViolations` already includes `minimumSquadSize < 18`.
+  - Fixes applied: `report-data.ts` now threads `league.transferWindows` into
+    `advanceCareerOneSeason`, so the AI market runs inside the gate;
+    `player-valuation.ts` `findAgeMultiplier` now prices plausible ages just
+    outside the senior bands with the nearest boundary band instead of throwing
+    (the `rare_prodigy` archetype seeds 15-year-olds into senior reserves, which
+    crashed every market path the moment the market actually ran);
+    `contract-finance-stability.ts` no longer restates window dates or the
+    three-day stage bound locally and now consumes the caller's resolved
+    `SeasonTransferWindows` plus domain `resolveTransferWindowStatus` and
+    `NEGOTIATION_STAGE_MAX_DAYS`.
+  - Re-verification so far: full `pnpm check` PASS (`223` files / `1351` tests);
+    a market-active `60x8` sample gate PASS with `0` failed worlds, `0`
+    structural violations, and minimum squad size `18`. The full `750x50` gate
+    has NOT been re-run to completion yet (one attempt was interrupted after
+    about four hours), so `docs/audits/TRANSFER_MARKET_LONG_RUN_REPORT.md` is
+    still the stale pre-fix FAIL artifact.
+- Next action: re-run the full `750x50` market-active gate, replace the stale
+  audit report, and only then close Step 14 and start Step 15.
+- Step 14 adopted solution (SUPERSEDED by the Step 14 correction above; its
+  gate-result claims are known to be wrong and its
+  `isDateInTransferWindow` helper has since been removed):
+  - Extended long-run stability report & runner (`contract-finance-stability.ts` & `career-long-runner.ts`):
+    - Added transfer window boundary checking (`isDateInTransferWindow`), 3-day negotiation stage deadline inspection, preliminary agreement invariant verification, and affordability completion inspection.
+    - Updated `structuralViolations` sum to fail structural gate if any window violation, clock breach, preliminary agreement invariant failure, or unaffordable transfer completion occurs.
+    - Added machine-readable checks (`transfer_market_window_integrity`, `negotiation_clock_integrity`, `preliminary_agreement_integrity`) to the long-run stability report.
+  - Staged simulation gates executed:
+    - Executed `50x10`, `250x30`, and `750x50` (37,500 total simulated seasons) long-run simulation gates.
+    - 100% clean structural integrity pass (`contract_finance=structural:0`) across all 750 worlds for transfer windows, negotiation clocks, preliminary agreements, and financial affordability.
+  - Generated audit documentation:
+    - Produced `docs/audits/TRANSFER_MARKET_LONG_RUN_REPORT.md` documenting long-run gate performance and aggregate statistics.
+- Step 14 verification (SUPERSEDED): the package tests and `pnpm check` cited
+  here did pass, but they never covered the market path, so they did not
+  establish what the Step 14 entry claimed.
+- Step 11 adopted solution: the browser now has one complete explicit market
+  command flow, end-to-end verified in a real browser.
+  - Engine: `evaluateTransferFeeCapacity` (new, in `career-contract-capacity.ts`)
+    previews a manager-chosen fee against transfer budget and cash only, never
+    running seller willingness; `evaluateCareerContractCapacity` exported for
+    reuse. `createTransferNegotiationId` added alongside the existing
+    `createPreliminaryAgreementId` pattern.
+  - Runtime (`web-career-runtime.ts`): `WebSelectedClubMarketCommand` (11
+    variants: submit/accept/reject/withdraw across transfer club-stage,
+    transfer player-stage, preliminary agreement, plus `sign_free_agent` for
+    the immediate no-stage free-agent path) and
+    `applySelectedClubMarketCommand`, mirroring the contract-command pattern
+    exactly (ID resolution, session replace, Posta refresh, no implicit save).
+  - Web adapter: `previewMarketOffer` builds the Step-09 `CareerMarketOfferPreviewView`
+    for every draft kind from the matching engine capacity query only;
+    `resolveCareerTransferWindows` extracted as one shared window-resolution
+    owner (adapter + runtime both call it, no duplication);
+    `career-market-adapter.test.ts` covers window/finance projection, target
+    scoping, and the missing-source path.
+  - UI: extracted the Squad renewal form into a shared
+    `apps/web/src/features/shared/ContractTermsForm.tsx` (`ContractTermsForm`
+    + `ContractTermsInput`) so Squad renewal and the three Market annual-terms
+    composers (player-stage, preliminary, free-agent) use exactly one contract
+    form. `CareerMarketPlayerDialog.tsx` gained the full composer: club-stage
+    fee input, player-stage/preliminary/free-agent terms form, counter
+    comparisons, accept/reject/withdraw actions, and pending/terminal states,
+    all driven only by `negotiation`/`eligibility` facts.
+  - `packages/ui`: `CareerMarketOfferPreviewView.kind` extended with
+    `free_agent_offer`; `CareerMarketNegotiationInput` gained optional
+    `offeredTerms`/`counterTerms` (full annual terms, not just the flat
+    `annualWage` summary) so the composer can render an exact counter
+    comparison without a second finance/contract model.
+  - `P79-CF-04` resolved: `CareerContractWorkspace.tsx`'s reseed effect now
+    guards on a `playerId:negotiationId:status` string token instead of
+    `contract` object identity, so an unrelated career-state republish
+    (autosave, another command) no longer wipes a typed draft; only a real
+    negotiation transition, explicit cancel, or player change reseeds. The new
+    Market composer is immune by construction: its form values are seeded once
+    via a lazy `useState` initializer and never resynced from props.
+  - `P79-CF-03` completed: editable money entry stays on the existing 2-decimal
+    `contract-renewal-form.ts` parser (plus a small local fee parser for the
+    plain transfer-fee field); read-only display stays on the one shared
+    `formatMoneyFromMinorUnits`; both cross through exact integer minor units.
+  - i18n: added `career.command.updatingMarket` and all 27
+    `career.market.composer.*` keys across all five languages (ASCII-safe,
+    matching established terminology).
+- Step 11 verification: full `pnpm check` PASS (`222` files / `1339` tests;
+  lint, `check:localized-text`, depcruise `675`/`2572` clean, all typechecks
+  clean); web build PASS; Playwright `current-product.spec.ts` PASS (`23/23`
+  across repeated runs, including the new `a submitted transfer offer stays
+  pending, tracks exposure, and withdraws cleanly` test — isolated single-test
+  flakes appeared on different, unrelated tests across three full-suite runs
+  and passed clean in isolation, matching this environment's established
+  under-load flake pattern, not a regression). Manually verified in a real
+  browser end-to-end: typed fee → live affordable preview → submit → pending
+  state with correct feedback → finance strip showed pending exposure
+  (`€1,500,000`, `1 open talks`) while the actual transfer budget stayed
+  unchanged → withdraw → composer returned to a fresh fee form, exposure back
+  to `€0`/`0 open talks`.
+- Step 11 free-agent and preliminary-agreement live-browser verification
+  (2026-07-24, user-requested: "non puoi fare il test reale?"): the fresh
+  test career had zero free agents and no player inside the six-month
+  preliminary window, so a temporary, session-only debug hook
+  (`WebCareerRuntime.__debugReplaceWorkingState`, plus a matching
+  `window.__runtimeHandlePromise` exposure in `App.tsx`) mutated the real
+  running session directly through `session.replaceWorkingState` — the exact
+  same call every real command uses — to free one real player and shorten
+  another's contract horizon. Nothing was saved; the temporary hooks were
+  removed afterward and `pnpm check`/build/Playwright re-run clean.
+  - Free-agent composer: rendered "This offer fits the current budget",
+    submitted, applied, reduced annual wage headroom by exactly the signed
+    wage (`€856,300` → `€776,300` for an `€80,000` wage), and removed the
+    player from the market pool.
+  - Preliminary-agreement composer: confirmed only offered once the transfer
+    window is closed (an open window always prioritizes a direct transfer
+    offer, by design — `evaluateMarketActionEligibility` allows both, the
+    adapter picks one next action). With the window closed, the composer
+    submitted, showed `1 open talks` at `€0` pending exposure, and reached
+    the waiting-for-reply state with a working withdraw control.
+  - One false rejection (`invalid_signing_transition`) surfaced while setting
+    up the free-agent fixture; root cause was the debug hook's own ad-hoc
+    player removal leaving stale `seniorSquadState.contractIds` and
+    `contractHistory` references, not a defect in shipped code — fixed by
+    driving the release through the engine's own
+    `prepareSeniorSquadDeparture` instead. No change was needed in
+    `apply-career-free-agent-signing.ts`, `applySelectedClubMarketCommand`,
+    or the composer.
+- Step 10 re-verification (2026-07-24, user-requested audit of Steps 09-10):
+  Step 09 held up completely on re-check (UI `16` files / `87` tests, UI
+  typecheck clean, `moraleDirection` confirmed removed rather than hardcoded,
+  the single `CAREER_CONTRACT_EXPIRY_ALERT_DAYS` boundary confirmed as the only
+  owner, contract history confirmed indexed once). Step 10 was marked Done but
+  had six real, unverified gaps, all now fixed in place:
+  1. **Functional bug**: `career-market-adapter.ts` built targets from every
+     generated player including academy-age youth, crashing
+     `derivePlayerValuation` (`PlayerValuationError: no age multiplier for age:
+     15`) whenever a youth player was iterated. Fixed by scoping targets to
+     `selectFreeAgentPlayerIds` plus other-club senior owners only (the same
+     canonical free-agent selector the rest of career already uses).
+  2. **Missing CSS**: zero `.tls-market-*` rules existed; the Market route
+     rendered fully unstyled with real horizontal table overflow, violating the
+     step's own "no horizontal scroll" completion criterion. Added a complete
+     Market CSS section reusing the exact Squad/player-profile tokens, table
+     pattern, status-pill pattern, and full-screen-dialog shell pattern
+     (finance strip, filter bar, table with desktop nth-child widths scoped to
+     `@media (min-width: 981px)`, narrow row-card reflow at 980px, eligibility
+     pill, player inspection dialog, role-fit badges). No `!important` added
+     (kept the codebase's zero-`!important` convention).
+  3. **No Playwright coverage**: Market had no visual QA despite the Local
+     Runtime And Visual QA Rules requirement. Added `desktop Market presents
+     window, budget, targets, and a public inspection profile` and `narrow
+     Market reflows filters and the target table without horizontal
+     scrolling` to `current-product.spec.ts`, following the exact Squad-test
+     pattern; both pass, and the full `22`-test suite passes.
+  4. **Dependency-boundary violation**: `apps/web/src/shared/canonical-player-role.ts`
+     and `apps/web/src/features/market/CareerMarketScreen.tsx` imported
+     `CanonicalPlayerRole` directly from `@game/domain`, violating `apps/web ->
+     ... , ui, ...` (no direct domain import) and failing depcruise. Fixed by
+     re-exporting `CanonicalPlayerRole` once from `@game/ui`'s public surface
+     (`ui -> domain` is allowed) and pointing both web files at that export.
+  5. **Localization gap**: all 82 `career.market.*` keys existed only in `en`
+     and `it`; `de`/`es`/`fr` were entirely missing, failing
+     `packages/i18n`'s "all five supported languages cover the current
+     catalog" test and the project's five-language localization rule. Added
+     complete, ASCII-safe (matching the catalog's established no-diacritics
+     convention), terminology-consistent translations for all three languages
+     (reusing existing Squad/contract/suitability vocabulary where a concept
+     already had an established term, e.g. `career.playerProfile.suitability.*`).
+  6. **No adapter test**: added `career-market-adapter.test.ts` (`4` tests)
+     covering window/finance projection, target scoping (never the selected
+     club), public-only levels, eligibility shape, empty pending exposure on a
+     fresh career, and the missing-source error path.
+- Step 10 verification after fixes: full `pnpm check` PASS (`221` files /
+  `1335` tests; lint, `check:localized-text`, and all package typechecks
+  clean; depcruise `671` modules / `2551` dependencies, zero violations);
+  `pnpm --filter @game/web run build` PASS; complete
+  `current-product.spec.ts` Playwright suite PASS (`22/22`, desktop + narrow +
+  200% text + reduced motion + keyboard); `git diff --check` clean. `graphify
+  update .` deferred (same disproportionate full-rebuild cost noted throughout
+  this phase).
+- Lesson learned: a step marked `Done` with passing checks at the time can
+  still hide real gaps that only a fresh, independent re-audit surfaces
+  (unstyled CSS never fails a unit test; a missing Playwright spec never fails
+  itself; missing i18n keys only fail if the coverage test is run and its
+  failure is read past the first `pnpm check` stage). When asked to verify a
+  "Done" step, re-run every required check for that step from a clean state
+  rather than trusting the recorded verification snapshot.
+- Step 09 adopted solution: framework-free `@game/ui` target, detail, window,
+  finance, pending-exposure, offer-preview, and negotiation models now expose
+  only public, deterministic market facts. All supported filters and sorts have
+  stable tie-breakers; loading, error, empty, closed-window, pending, and
+  completed states are explicit. Unsupported hardcoded morale direction was
+  removed. One shared `@game/ui` 244-day contract-expiry alert policy now feeds
+  both Squad table and profile, and the Squad adapter indexes contract history
+  and latest valid negotiations once before projecting players.
+- Step 09 verification: UI tests PASS (`16` files / `87` tests), UI typecheck
+  PASS, focused web Squad adapter PASS (`6` tests), i18n tests PASS (`2` files /
+  `18` tests), full `pnpm check` PASS (`220` files / `1331` tests, depcruise
+  `661` modules / `2509` dependencies), `git diff --check` and `graphify update
+  .` PASS.
+- Step 09 lesson: complexity regressions are best protected through observable
+  access-count tests rather than wall-clock assertions; exact hidden potential
+  must remain absent even when the Market detail becomes richer.
+- Next action: implement only Step 10, mounting the read-only Market workspace
+  and player inspection over the Step 09 read models.
+- Step 08 adopted solution: a deterministic AI market lifecycle now derives
+  bounded needs from senior depth, department coverage, age, quality, expiry,
+  annual wage load, budget, division, and reputation. AI clubs use the same
+  canonical permanent-transfer, player-contract, preliminary-agreement,
+  affordability, and atomic-completion commands as the selected club. The
+  selected club is excluded from automation, permanent offers respect open
+  windows, preliminary agreements respect the final-six-month rule, and stable
+  ordering plus per-season limits prevent offer fan-out. The obsolete direct
+  turnover path was deleted. Structural seller protection is an explicit AI
+  policy option rather than a hidden restriction on manual negotiations.
+- Step 08 verification: focused AI market, transfer-negotiation, player-table,
+  preliminary-agreement, and season-advancement suites PASS (`5` files / `32`
+  tests); engine typecheck PASS; full `pnpm check` PASS (`217` files / `1318`
+  tests, depcruise `655` modules / `2485` dependencies); `git diff --check` and
+  `graphify update .` PASS.
+- Step 07 adopted solution: durable preliminary agreements reuse canonical
+  annual contract terms and the existing three-day player-response clock while
+  leaving ownership, registration, selection, payroll, and finance untouched
+  before expiry. The canonical career-day lifecycle activates an agreed deal
+  once, atomically reconciling ownership, senior registration, shirt number,
+  contract/history, signing finance, stale negotiations, and any selected-club
+  match plan. Structural activation failures become durable cancellation facts;
+  no transfer fee is created.
+- Step 07 verification: focused domain and engine suites PASS (`20` tests);
+  regression preliminary-agreement suites PASS (`11` tests); full `pnpm check`
+  PASS (`217` files / `1321` tests, depcruise `655` modules / `2480`
+  dependencies); `git diff --check` and `graphify update .` PASS.
+- Step 06 adopted solution: accepted club-to-club terms now open a distinct
+  player-contract stage with its own immutable three-day clock. The stage
+  reuses the canonical Phase 78 contract demand/evaluation model, spends and
+  reserves nothing while pending, and stores the exact accepted annual terms.
+  Completion rechecks ownership, seller contract, affordability, window, and
+  registration before one canonical permanent-transfer commit updates fee,
+  contracts, registration, shirt number, history, ledger, squad, and selected
+  match preparation. Structured rejection facts leave the career unchanged,
+  repeated advancement is idempotent, and a sold selected player is removed
+  without a hidden replacement.
+- Step 06 verification: focused domain and engine suites PASS (`31` tests);
+  domain + engine typechecks and focused ESLint PASS; full `pnpm check` PASS
+  (`215` files / `1313` tests, depcruise `650` modules / `2441` dependencies);
+  `git diff --check` and `graphify update .` PASS.
+- Step 05 adopted solution: new domain `transfer-negotiation.ts` (7-state
+  club-to-club lifecycle + `TransferNegotiationState`, wired into
+  `CareerState.transferNegotiationState`) and engine `transfer-negotiation.ts`
+  (`submitTransferOffer`, `advanceTransferNegotiations`, `acceptTransferCounter`,
+  `withdrawTransferNegotiation`, `deriveSellerTransferWillingness`). Submission is
+  window-gated and validates ownership/duplicate/positive fee; the seller reply
+  is deterministic (valuation × squad-status × security × cash, squad-depth
+  not-for-sale guard, 0.75 counter band). Accepted club agreements are
+  provisional (no ownership/finance change), affordability rechecks cancel as
+  `unaffordable`, the 3-day deadline survives a counter, and advancing is
+  idempotent.
+- Step 05 verification: domain (`6`) + engine (`11`) transfer-negotiation tests
+  PASS; domain + engine typechecks PASS; full `pnpm check` PASS (`215` files /
+  `1306` tests, depcruise `649` modules clean); `git diff --check` clean.
+  `graphify update .` deferred (unchanged cost rationale).
+- Step 04 adopted solution: deleted the temporary reservation-as-spend
+  (`deriveCareerContractOfferReservations` + `career-contract-reservations.ts`);
+  `evaluateCareerContractCapacity` moved to `career-contract-capacity.ts` and now
+  judges affordability against committed contracts and cash only (acceptance
+  still rechecks atomically). New informational
+  `deriveMarketPendingExposure` (engine) derives aggregate pending wage/signing
+  exposure without touching finance. New domain `negotiation-stage-clock.ts`
+  (`createNegotiationStageClock`/`counterResponseClock`/`isNegotiationStageDue`/
+  `isNegotiationStageExpired`, `NEGOTIATION_STAGE_MAX_DAYS = 3`) bounds a stage to
+  three days, caps the deadline at window close, and keeps the deadline on a
+  counteroffer (consumed by Steps 05-06). Every reservation caller migrated
+  across transfer, free-agent, youth-promotion, AI, and finance lifecycles plus
+  the simulation-tools long-run checker; reservation-behavior tests were flipped
+  to the locked "pending offers do not reserve budget" truth.
+- Step 04 verification: affected suites PASS; full `pnpm check` PASS (`213`
+  files / `1289` tests, all typechecks, depcruise `645` modules clean); `git diff
+  --check` clean. Necessary deviation (documented): raised the ten-season
+  determinism test timeout to 30s because the heavier pending-exposure sim
+  brushed the 5s vitest default under concurrent load (logic is deterministic;
+  it passes standalone). `graphify update .` deferred (unchanged cost rationale).
+- Step 02 adopted solution: domain `transfer-window.ts` owns `TransferWindow`,
+  `SeasonTransferWindows`, two-inclusive-window validation
+  (`not_two_windows`/`reversed_window`/`unordered_windows`/`overlapping_windows`),
+  and `resolveTransferWindowStatus` (open/closed + next opening). Content
+  `transfer-window-catalog.ts` owns the FIGC 2026/27 template for
+  `competition:demo-third-division` only, with deterministic per-season
+  roll-forward; `createFakeLeagueSystem` now exposes
+  `transferWindows: SeasonTransferWindows`. Source in
+  `docs/audits/TRANSFER_WINDOW_SOURCE_AUDIT.md`.
+- Step 02 verification: new domain+content tests PASS (`18/18`); domain and
+  content typechecks PASS; full `pnpm check` PASS (`211` files / `1274` tests,
+  lint + depcruise + typecheck clean); `git diff --check` clean. `graphify
+  update .` deferred (same disproportionate full-rebuild cost noted in Step 01).
+- Entry-gate override (explicit user decision, 2026-07-23): Phase 79 was started
+  while Phase 78 Step 15 (`15-contract-finance-and-squad-long-run-gates.md`) is
+  still In progress, not Done. The Phase 79 README entry gate requires Phase 78
+  Steps 01-15 Done. The user explicitly chose to proceed anyway; Phase 78 Step
+  15 is treated as accepted/deferred. This is a documented deviation, not a
+  satisfied gate. Phase 78 Step 15's long-run contract/finance gate remains
+  unrun and must be revisited before any release-scale claim.
+- Prior steps (historical): Step 01 produced
+  `docs/audits/TRANSFER_MARKET_OWNERSHIP_AND_GAP_AUDIT.md` (retain/extend/replace/
+  remove table, named replacement path for `deriveCareerContractOfferReservations`
+  reservation-as-spend, all eight `P79-CF-*` findings mapped). Step 02 added the
+  domain transfer-window vocabulary and the content FIGC 2026/27 catalog.
+- Next action: complete Step 09 — framework-free market search, budget,
+  eligibility, target-detail, and negotiation read models for the selected
+  club.
+- Blocker: none. Standing caveat: Phase 78 Step 15 long-run gate is unrun (see
+  entry-gate override above).
+- Lesson learned: structural squad floors belong to the autonomous AI decision
+  policy and must be opt-in at the canonical seller evaluation boundary; making
+  them global would silently change valid manual negotiation behavior. A future
+  agreement must not be modeled as a delayed callback
+  or as early ownership. Keeping it as validated durable intent makes the
+  pre-expiry career truthful and allows one idempotent activation boundary to
+  reject impossible transitions without publishing a partial transfer. A
+  selected plan also cannot persist an empty `selectedLineup`; when its sole
+  assignment leaves, the XI and board geometry are omitted while unrelated
+  preparation facts remain.
 
 ## How To Read The Project
 
@@ -295,6 +594,17 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 
 | Step | Status | Outcome | Adopted solution | Verification |
 |---|---|---|---|---|
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/11-offer-composer-and-two-stage-decision-flow.md` | Done | The manager can submit, revise, accept, reject, and withdraw permanent-transfer and preliminary-agreement talks through one explicit command flow with live affordability previews; browser-verified end-to-end. | New `evaluateTransferFeeCapacity` engine query; `WebSelectedClubMarketCommand`/`applySelectedClubMarketCommand` runtime boundary (11 variants incl. `sign_free_agent`); `previewMarketOffer` adapter over the Step 09 preview contract; shared `ContractTermsForm` extracted for Squad+Market (no second contract form); `P79-CF-04` fixed via token-guarded reseed (Squad) and by-construction immunity (Market); `P79-CF-03` completed (edit/display precision stay separate). | Full `pnpm check` PASS (`222` files / `1339` tests, depcruise `675`/`2572` clean); web build PASS; Playwright PASS (`23/23`); manual browser verification of the full submit→pending→withdraw cycle and finance/exposure accuracy. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/10-market-workspace-and-player-inspection.md` | Done | Market is a real, styled, accessible, localized, tested browser route; a real free-agent/adapter crash, zero CSS, missing Playwright coverage, a dependency-boundary violation, and a five-language localization gap were found on re-audit and fixed. | Scope Market targets to `selectFreeAgentPlayerIds` plus other-club senior owners; add a complete `.tls-market-*` CSS section reusing Squad/profile tokens and patterns; add desktop+narrow Playwright specs; re-export `CanonicalPlayerRole` from `@game/ui` instead of importing `@game/domain` in `apps/web`; add all 82 `career.market.*` `de`/`es`/`fr` translations; add `career-market-adapter.test.ts`. | Full `pnpm check` PASS (`221` files / `1335` tests, depcruise `671` / `2551` clean); web build PASS; Playwright `current-product.spec.ts` PASS (`22/22`); `git diff --check` clean. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/09-market-search-budget-and-target-read-models.md` | Done | Re-verified: framework-free `@game/ui` Market models are truthful and public-only; all three carry-forward fixes (`P79-CF-01/02/06`) confirmed present and correct on independent re-check. | Confirmed `moraleDirection` removed (not hardcoded), single `CAREER_CONTRACT_EXPIRY_ALERT_DAYS` boundary is the only expiry-alert owner, and Squad adapter indexes contract history/negotiations once before the player loop. | UI tests PASS (`16` files / `87` tests); UI typecheck PASS; findings folded into the Step 10 re-verification entry above. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/08-ai-market-targeting-and-squad-protection.md` | Done | AI clubs participate in both market windows through bounded, football-reasoned decisions without automating the selected club or bypassing canonical transfer rules. | Derive deterministic needs from squad and finance facts; route permanent and preliminary talks through canonical commands; use stable ordering and bounded active/seasonal limits; keep structural seller protection AI-specific; delete the obsolete direct turnover path. | Focused suites PASS (`5` files / `32` tests); engine typecheck PASS; full `pnpm check` PASS (`217` files / `1318` tests, depcruise `655` / `2485`); diff and Graphify update PASS. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/07-final-six-month-preliminary-agreements.md` | Done | Eligible players can agree a future contract in their final six months without joining early; activation happens exactly once after current expiry. | Durable future-agreement state reuses canonical terms and the three-day player clock; ownership, registration, payroll, selection, and finance remain unchanged until an atomic activation reconciles every affected contract, squad, finance, history, negotiation, and selected-plan fact. | Focused domain/engine suites PASS (`20` tests); regression suites PASS (`11` tests); full `pnpm check` PASS (`217` files / `1321` tests, depcruise `655` / `2480`); diff and Graphify update PASS. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/06-player-contract-table-and-atomic-transfer-completion.md` | Done | An accepted club fee now opens a separate player-contract table and completes exactly one permanent transfer only after player acceptance and final invariant checks. | Reuse the Phase 78 annual contract demand/evaluation model under an independent three-day stage clock; keep pending terms informational; store exact accepted terms; call the canonical atomic permanent-transfer boundary for fee, contracts, registration, number, history, ledger, squad, and selected-plan reconciliation; expose structured terminal failures and idempotent advancement. | Focused domain + engine suites PASS (`31` tests); typechecks and focused ESLint PASS; full `pnpm check` PASS (`215` files / `1313` tests, depcruise `650` / `2441`); diff and Graphify update PASS. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/05-club-to-club-permanent-transfer-negotiation.md` | Done | A manager can offer a fee for an employed player and get a deterministic accept/reject/counter from the seller within three game days; no ownership or money moves before player terms. | New domain 7-state `TransferNegotiation` (+ `CareerState.transferNegotiationState`) and engine use case over the existing valuation owner; seller willingness from value × status × security × cash with a squad-depth not-for-sale guard; provisional acceptance, unaffordable cancellation, counter keeps the deadline, idempotent advance. | Domain (`6`) + engine (`11`) tests PASS; typechecks PASS; full `pnpm check` PASS (`215` files / `1306` tests, depcruise `649` clean); `git diff --check` clean. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/04-three-day-negotiation-clock-and-pending-exposure.md` | Done | Pending offers no longer reserve budget; combined risk is an informational query; a three-day stage clock (deadline capped at window close, unchanged by a counter) is available for the transfer stages. | Delete reservation-as-spend and migrate every caller to committed-facts affordability (`career-contract-capacity.ts`); add `deriveMarketPendingExposure` and domain `negotiation-stage-clock.ts`; recheck affordability at acceptance; flip reservation-behavior tests to the locked truth. | Affected suites PASS; full `pnpm check` PASS (`213` files / `1289` tests, depcruise `645` clean); `git diff --check` clean. Documented deviation: ten-season determinism test timeout raised to 30s. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/03-window-eligibility-and-out-of-window-policy.md` | Done | One engine owner answers which market actions are legal now and why, with active-close / next-open dates; permanent transfers reject out-of-window attempts independently of UI. | Pure `evaluateMarketActionEligibility` over resolved `SeasonTransferWindows`; window-gated transfers/registrations require an open window; renewals and inspection year-round; preliminary agreements need <= 183 remaining days; add `outside_transfer_window` reason and gate `applyCareerPermanentTransfer` when windows supplied. | Eligibility + transfer tests PASS (`13`); engine typecheck PASS; full `pnpm check` PASS (`212` files / `1282` tests); `git diff --check` clean. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/02-playable-competition-transfer-window-catalog.md` | Done | Each playable competition now has exactly two source-backed inclusive transfer windows; the demo third division uses the FIGC 2026/27 dates and rolls forward deterministically. | Domain owns window vocabulary/validation/status; content owns the cited month/day template for playable competitions only and resolves absolute per-season dates; world generation exposes `FakeLeagueSystem.transferWindows`; no user-configurable calendar or speculative rows. | New domain+content tests PASS (`18/18`); domain+content typechecks PASS; full `pnpm check` PASS (`211` files / `1274` tests); `git diff --check` clean. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/01-current-market-ownership-and-gap-audit.md` | Done | Complete transfer/valuation/contract/finance ownership audit with retain/extend/replace/remove table, named replacement path for the temporary pending-reservation behavior, and all eight `P79-CF-*` findings mapped to one owning step and one test seam. Started under an explicit user entry-gate override (Phase 78 Step 15 still In progress). | Audit production callers and Graphify evidence, not filenames; keep every new Module tied to one named gap; distinguish durable domain facts from transient web drafts; name one deletion path for `deriveCareerContractOfferReservations` reservation-as-spend. | `graphify query` ran; `git diff --check` clean; `pnpm depcruise` PASS (`636` modules / `2,375` deps). `graphify update .` deferred (disproportionate full-rebuild cost for a single-doc step). |
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/14-full-screen-player-profile-and-renewal-workspace.md` | Done | Squad now opens one complete full-screen football profile with exact current attributes, public potential, annual contract facts, history, finance preview, and every supported renewal decision. | Keep contract and finance truth in domain/engine; expose presentation-safe UI inputs and runtime commands; retain only a recoverable form draft in React; resolve raw browser IDs at the runtime boundary; preserve focus and command errors without closing the profile. | Node 24 UI PASS (`75/75`); web PASS (`63` files / `278` tests); web typecheck/build PASS; complete Playwright current-product and SQLite/OPFS gate PASS (`21/21`); dependency-cruiser PASS (`626` modules / `2,314` dependencies); diff and Graphify PASS. |
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/13-explicit-lineup-selection-and-tactics-synchronization.md` | Done | Squad, Tactics, preparation, and Matchday now consume one current plan with explicit, atomic XI and bench replacement. | Reuse the approved preparation workspace on the separate Tactics route; centralize slot ownership and suitability ordering in framework-free projections; preserve the draft across internal routes; prompt only at real career-exit or Matchday boundaries. | Node 24 engine PASS; web PASS (`61` files / `271` tests); web typecheck/build PASS; complete Playwright product and SQLite/OPFS gate PASS (`20/20`); dependency, monorepo, diff, and Graphify gates PASS. |
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/12-senior-squad-table-and-navigation-workspace.md` | Done | Squad is a real responsive career route with a dense senior-roster table, canonical sorting/filtering, contract alert, and accessible player-profile entry. | Consume only Step 11 projections in React; retain route-local table state in Zustand; use one native full-screen dialog; fit desktop, narrow, and 200% text without horizontal table scrolling or copied football formulas. | Node 24 web tests PASS (`61` files / `269` tests); web typecheck/build PASS; dependency-cruiser PASS (`616` modules / `2,279` dependencies); complete Playwright product and SQLite/OPFS gate PASS (`20/20`); diff check PASS. |

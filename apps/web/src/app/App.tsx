@@ -19,6 +19,11 @@ import { CareerDashboardScreen } from "../features/dashboard/CareerDashboardScre
 import { CareerInboxScreen } from "../features/inbox/CareerInboxScreen";
 import { buildCalendarAdvanceTransition } from "../features/inbox/calendar-advance-transition";
 import { CareerMatchdayScreen } from "../features/matchday/CareerMatchdayScreen";
+import { CareerMarketScreen } from "../features/market/CareerMarketScreen";
+import {
+  previewMarketOffer,
+  type MarketOfferDraft,
+} from "../features/market/career-market-adapter";
 import { CareerMatchPreparationScreen } from "../features/match-preparation/CareerMatchPreparationScreen";
 import { CareerSquadScreen } from "../features/squad/CareerSquadScreen";
 import {
@@ -36,6 +41,8 @@ import {
   inspectWebCareerAttention,
   type WebSelectedClubContractCommand,
   type WebSelectedClubContractCommandResult,
+  type WebSelectedClubMarketCommand,
+  type WebSelectedClubMarketCommandResult,
 } from "../runtime/web-career-runtime";
 import { includeDraftInCareerSessionStatus } from "../runtime/career-session";
 import { useCareerCommandRunner } from "./use-career-command-runner";
@@ -46,6 +53,7 @@ type PreparationNavigationIntent =
   | "career_inbox"
   | "career_squad"
   | "career_tactics"
+  | "career_market"
   | "matchday";
 
 /**
@@ -81,6 +89,9 @@ export function App(): React.JSX.Element {
   const openInbox = useCareerUiStore((state) => state.openInbox);
   const openSquad = useCareerUiStore((state) => state.openSquad);
   const openTactics = useCareerUiStore((state) => state.openTactics);
+  const openMarket = useCareerUiStore((state) => state.openMarket);
+  const openMarketPlayer = useCareerUiStore((state) => state.openMarketPlayer);
+  const marketFocus = useCareerUiStore((state) => state.marketFocus);
   const setInboxFilter = useCareerUiStore((state) => state.setInboxFilter);
   const selectInboxMessage = useCareerUiStore((state) => state.selectInboxMessage);
   const openMatchPreparation = useCareerUiStore((state) => state.openMatchPreparation);
@@ -129,6 +140,7 @@ export function App(): React.JSX.Element {
   const {
     dashboard: dashboardPresentation,
     inbox: inboxPresentation,
+    market: marketPresentation,
     squad: squadPresentation,
     matchPreparation: matchPreparationView,
     tacticalBoardPlayers,
@@ -168,6 +180,8 @@ export function App(): React.JSX.Element {
   const commandPending = commandActivity?.status === "pending";
   const saveCommandPending = commandActivity?.status === "pending"
     && commandActivity.commandId === "manual_save";
+  const marketCommandPending = commandActivity?.status === "pending"
+    && commandActivity.commandId === "market_negotiation";
 
   useEffect(() => {
     let active = true;
@@ -349,14 +363,16 @@ export function App(): React.JSX.Element {
     if (intent === "career_inbox") openInbox();
     if (intent === "career_squad") openSquad();
     if (intent === "career_tactics") openTactics();
+    if (intent === "career_market") openMarket();
     if (intent === "matchday") openPreparedMatchday();
-  }, [backToMenu, openDashboard, openInbox, openPreparedMatchday, openSquad, openTactics]);
+  }, [backToMenu, openDashboard, openInbox, openMarket, openPreparedMatchday, openSquad, openTactics]);
 
   const requestPreparationNavigation = useCallback((intent: PreparationNavigationIntent) => {
     const canPreserveDraftAcrossRoute = intent === "career_dashboard"
       || intent === "career_inbox"
       || intent === "career_squad"
-      || intent === "career_tactics";
+      || intent === "career_tactics"
+      || intent === "career_market";
     if (preparationDraftDirty && !canPreserveDraftAcrossRoute) {
       setPendingPreparationNavigation(intent);
       return;
@@ -381,12 +397,35 @@ export function App(): React.JSX.Element {
       requestPreparationNavigation("career_tactics");
       return;
     }
+    if (actionId === "open_market") {
+      requestPreparationNavigation("career_market");
+      return;
+    }
     if (actionId === "open_matchday") {
       requestPreparationNavigation("matchday");
       return;
     }
+    if (actionId === "open_market_negotiation") {
+      const targetMessageId = inboxPresentation?.postaView.selectedMessageId;
+      const message = activeCareerState?.currentSeasonInbox?.find(
+        (candidate) => String(candidate.id) === targetMessageId,
+      );
+      const playerId = message?.related.playerId;
+      if (playerId !== undefined) {
+        openMarketPlayer(String(playerId));
+        return;
+      }
+      requestPreparationNavigation("career_market");
+      return;
+    }
     handleInboxAction(actionId);
-  }, [handleInboxAction, requestPreparationNavigation]);
+  }, [
+    activeCareerState,
+    handleInboxAction,
+    inboxPresentation,
+    openMarketPlayer,
+    requestPreparationNavigation,
+  ]);
 
   const previewSelectedClubContractOffer = useCallback((
     playerId: string,
@@ -409,6 +448,44 @@ export function App(): React.JSX.Element {
       execute: async () => {
         if (handlePromise === undefined) throw { code: "storage_unavailable" };
         return (await handlePromise).runtime.applySelectedClubContractCommand(
+          activeCareerState.saveId,
+          command,
+        );
+      },
+      onSuccess: (result) => {
+        commandResult = result;
+        if (result.status === "applied") {
+          receiveWorkingCareerUpdate(
+            result.state,
+            result.continueResult,
+            result.sessionStatus,
+          );
+        }
+      },
+    });
+    return completed ? commandResult : undefined;
+  }, [activeCareerState, receiveWorkingCareerUpdate, runCareerCommand]);
+
+  const previewSelectedClubMarketOffer = useCallback((
+    draft: MarketOfferDraft,
+  ): ReturnType<typeof previewMarketOffer> => activeCareerState === undefined
+    ? { status: "blocked", previewId: "none", reason: "missing_finance" }
+    : previewMarketOffer(activeCareerState, draft), [activeCareerState]);
+
+  const applySelectedClubMarketCommand = useCallback(async (
+    command: WebSelectedClubMarketCommand,
+  ): Promise<WebSelectedClubMarketCommandResult | undefined> => {
+    const handlePromise = runtimeHandleRef.current;
+    if (activeCareerState === undefined) return undefined;
+
+    let commandResult: WebSelectedClubMarketCommandResult | undefined;
+    const completed = await runCareerCommand({
+      commandId: "market_negotiation",
+      statusLabelKey: "career.command.updatingMarket",
+      failureScope: "current_career",
+      execute: async () => {
+        if (handlePromise === undefined) throw { code: "storage_unavailable" };
+        return (await handlePromise).runtime.applySelectedClubMarketCommand(
           activeCareerState.saveId,
           command,
         );
@@ -846,6 +923,33 @@ export function App(): React.JSX.Element {
           onBenchPlayerChange={selectBenchPlayer}
           previewContractOffer={previewSelectedClubContractOffer}
           onContractCommand={applySelectedClubContractCommand}
+        />
+      </CareerAppFrame>
+    );
+  }
+
+  if (
+    screen === "career_market"
+    && activeCareerState !== undefined
+    && marketPresentation !== undefined
+    && inboxPresentation !== undefined
+    && careerFrameProps !== undefined
+  ) {
+    return (
+      <CareerAppFrame {...careerFrameProps}>
+        <CareerMarketScreen
+          presentation={marketPresentation}
+          inboxView={inboxPresentation.railView}
+          selectedClubName={activeCareerState.gameState.clubs[activeCareerState.selectedClubId]?.name ?? ""}
+          currentDateIso={toISO(activeCareerState.gameState.calendar.currentDate)}
+          language={preferences.language}
+          marketCommandPending={marketCommandPending}
+          text={text}
+          onBackToMenu={requestBackToMenu}
+          onInboxActionClick={handleShellNavigation}
+          previewOffer={previewSelectedClubMarketOffer}
+          onMarketCommand={applySelectedClubMarketCommand}
+          {...(marketFocus === undefined ? {} : { focusRequest: marketFocus })}
         />
       </CareerAppFrame>
     );

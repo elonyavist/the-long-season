@@ -36,7 +36,7 @@ import {
 } from "@game/domain";
 
 import type { MatchTeamContext } from "../match-engine/match-context.ts";
-import { deriveCareerContractOfferReservations } from "./career-contract-reservations.ts";
+import { deriveMarketPendingExposure } from "./market-pending-exposure.ts";
 import { prepareSeniorSquadDeparture } from "./senior-squad-transfer.ts";
 import { offerContractRenewal } from "./contract-negotiation.ts";
 import {
@@ -313,15 +313,56 @@ test("an unresolved wage-cut offer does not release annual wage budget before ac
   assert.equal(offered.status, "applied");
   if (offered.status !== "applied") return;
 
-  const reservations = deriveCareerContractOfferReservations(
-    offered.careerState,
-    contract.clubId,
-  );
-
+  // The offer never touches the finance account, and an unresolved wage cut
+  // contributes no pending exposure (it is not a saving until accepted).
   assert.equal(
-    reservations.projectedCommittedAnnualWage,
+    offered.careerState.clubFinanceState?.accounts[contract.clubId]?.committedAnnualWage,
     account.committedAnnualWage,
   );
+  const exposure = deriveMarketPendingExposure(offered.careerState, contract.clubId);
+  assert.equal(exposure.pendingAnnualWageExposure, nonNegativeMoney(0));
+});
+
+test("an unresolved raise contributes wage and signing exposure without touching finance", () => {
+  const state = careerFixture();
+  const contract = state.seniorSquadState?.contracts[HOME_CONTRACT];
+  const account = state.clubFinanceState?.accounts[HOME];
+  assert.ok(contract !== undefined && account !== undefined);
+  if (contract === undefined || account === undefined) return;
+
+  const raise = 50_000_00;
+  const signing = 10_000_00;
+  const offered = offerContractRenewal({
+    careerState: state,
+    negotiationId: contractNegotiationId("contract-negotiation:test:raise-exposure"),
+    playerId: contract.playerId,
+    clubId: contract.clubId,
+    offeredOn: state.gameState.calendar.currentDate,
+    terms: {
+      durationYears: 2,
+      annualWage: nonNegativeMoney(contract.annualWage + raise),
+      squadStatus: contract.squadStatus,
+      bonuses: {
+        signingBonus: nonNegativeMoney(signing),
+        appearanceBonus: nonNegativeMoney(0),
+      },
+    },
+  });
+  assert.equal(offered.status, "applied");
+  if (offered.status !== "applied") return;
+
+  // Finance is untouched by the pending offer, but exposure reflects the risk.
+  assert.equal(
+    offered.careerState.clubFinanceState?.accounts[HOME]?.committedAnnualWage,
+    account.committedAnnualWage,
+  );
+  assert.equal(
+    offered.careerState.clubFinanceState?.accounts[HOME]?.cashBalance,
+    account.cashBalance,
+  );
+  const exposure = deriveMarketPendingExposure(offered.careerState, contract.clubId);
+  assert.equal(exposure.pendingAnnualWageExposure, nonNegativeMoney(raise));
+  assert.equal(exposure.pendingSigningExposure, nonNegativeMoney(signing));
 });
 
 test("full-time settlement charges appearance, goal, and clean-sheet bonuses from committed facts once", () => {

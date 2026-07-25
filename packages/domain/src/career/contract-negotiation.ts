@@ -25,6 +25,23 @@ export interface ContractOfferTerms {
   readonly bonuses: PlayerContractBonuses;
 }
 
+/**
+ * Validates the one canonical set of contract terms shared by every signing flow.
+ *
+ * Negotiation aggregates may attach their own error code and context, but they
+ * must not duplicate duration, wage, or bonus validation rules.
+ */
+export function assertValidContractOfferTerms(terms: ContractOfferTerms): void {
+  if (!Number.isSafeInteger(terms.durationYears) || terms.durationYears < 1 || terms.durationYears > 5) {
+    throw new Error(`Contract duration must be a whole number from one to five years: ${terms.durationYears}`);
+  }
+  nonNegativeMoney(terms.annualWage);
+  nonNegativeMoney(terms.bonuses.signingBonus);
+  nonNegativeMoney(terms.bonuses.appearanceBonus);
+  if (terms.bonuses.goalBonus !== undefined) nonNegativeMoney(terms.bonuses.goalBonus);
+  if (terms.bonuses.cleanSheetBonus !== undefined) nonNegativeMoney(terms.bonuses.cleanSheetBonus);
+}
+
 /** Editable offer before the club commits it to a delayed player response. */
 export interface ContractOfferDraft {
   readonly createdOn: GameDate;
@@ -507,14 +524,7 @@ function validateSubmittedOffer(offer: SubmittedContractOffer, negotiation: Cont
 
 function validateOfferTerms(terms: ContractOfferTerms, id: ContractNegotiationId): void {
   try {
-    if (!Number.isSafeInteger(terms.durationYears) || terms.durationYears < 1 || terms.durationYears > 5) {
-      throw new Error("invalid duration");
-    }
-    nonNegativeMoney(terms.annualWage);
-    nonNegativeMoney(terms.bonuses.signingBonus);
-    nonNegativeMoney(terms.bonuses.appearanceBonus);
-    if (terms.bonuses.goalBonus !== undefined) nonNegativeMoney(terms.bonuses.goalBonus);
-    if (terms.bonuses.cleanSheetBonus !== undefined) nonNegativeMoney(terms.bonuses.cleanSheetBonus);
+    assertValidContractOfferTerms(terms);
   } catch {
     fail("invalid_offer_terms", `invalid contract offer terms: ${id}`);
   }

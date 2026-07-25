@@ -6,21 +6,38 @@ import {
 } from "@game/content";
 import {
   acceptContractCounterOffer,
+  acceptPreliminaryAgreementCounter,
+  acceptTransferCounter,
+  acceptTransferPlayerCounter,
   acknowledgeImportantCareerInboxMessage,
-  advanceSelectedClubContractsToAttention,
+  advanceSelectedClubWorkflowsToAttention,
+  applyCareerFreeAgentSigning,
   chooseReleaseAtContractExpiry,
   createMatchdayAttention,
+  createPreliminaryAgreementId,
   createRenewalNegotiationId,
+  createTransferNegotiationId,
   findNextCareerFixture,
   offerSelectedClubRenewal,
   openCareerInboxMessage,
   rejectContractCounterOffer,
+  rejectPreliminaryAgreementCounter,
+  rejectTransferPlayerCounter,
   reviseContractOffer,
   submitContractOffer,
+  submitPreliminaryAgreementOffer,
+  submitTransferOffer,
+  submitTransferPlayerOffer,
   withdrawContractNegotiation,
+  withdrawPreliminaryAgreement,
+  withdrawTransferNegotiation,
+  type ApplyCareerFreeAgentSigningResult,
   type ContractNegotiationCommandResult,
   type ContractNegotiationRejectionReason,
   type ContinueCareerUntilAttentionResult,
+  type PreliminaryAgreementCommandResult,
+  type TransferNegotiationCommandResult,
+  type TransferPlayerNegotiationCommandResult,
 } from "@game/engine";
 import { generateRoundRobinCalendar } from "@game/engine";
 import { fromISO, toISO } from "@game/shared";
@@ -36,6 +53,7 @@ import {
 } from "@game/storage/sqlite";
 import type { CareerContractTermsInput, CareerInboxMessageInput } from "@game/ui";
 
+import { resolveCareerTransferWindows } from "../features/market/market-transfer-windows";
 import {
   advanceWebLiveMatchdayMinute,
   applyWebLiveMatchTeamChanges,
@@ -73,6 +91,20 @@ type WebContractNegotiation = Extract<
   ContractNegotiationCommandResult,
   { readonly status: "applied" }
 >["negotiation"];
+
+type WebMarketPlayerId = Parameters<typeof submitTransferOffer>[0]["playerId"];
+type WebMarketClubId = Parameters<typeof submitTransferOffer>[0]["sellingClubId"];
+type WebTransferNegotiationId = Parameters<typeof acceptTransferCounter>[0]["negotiationId"];
+type WebPreliminaryAgreementId = Parameters<typeof acceptPreliminaryAgreementCounter>[0]["agreementId"];
+type WebTransferFee = Parameters<typeof submitTransferOffer>[0]["offeredFee"];
+type WebTransferNegotiation = Extract<
+  TransferNegotiationCommandResult | TransferPlayerNegotiationCommandResult,
+  { readonly status: "applied" }
+>["negotiation"];
+type WebPreliminaryAgreement = Extract<
+  PreliminaryAgreementCommandResult,
+  { readonly status: "applied" }
+>["agreement"];
 
 /** Current generated-world version written by browser-created careers. */
 export const WEB_CAREER_WORLD_GENERATOR_VERSION = 1;
@@ -168,6 +200,80 @@ export interface RejectedWebSelectedClubContractCommand {
 export type WebSelectedClubContractCommandResult =
   | AppliedWebSelectedClubContractCommand
   | RejectedWebSelectedClubContractCommand;
+
+/**
+ * Explicit selected-club market action accepted by the web application seam.
+ *
+ * Club-stage and player-stage permanent-transfer talks share one negotiation
+ * identity once submitted; preliminary agreements use a separate identity.
+ * Submission never reserves money (Phase 79 locked rule).
+ */
+export type WebSelectedClubMarketCommand =
+  | Readonly<{
+      type: "submit_transfer_offer";
+      playerId: string;
+      sellingClubId: string;
+      offeredFee: WebTransferFee;
+    }>
+  | Readonly<{
+      type: "accept_transfer_counter" | "withdraw_transfer_offer";
+      negotiationId: string;
+    }>
+  | Readonly<{
+      type: "submit_transfer_player_offer";
+      negotiationId: string;
+      terms: CareerContractTermsInput;
+    }>
+  | Readonly<{
+      type: "accept_transfer_player_counter" | "reject_transfer_player_counter";
+      negotiationId: string;
+    }>
+  | Readonly<{
+      type: "submit_preliminary_agreement";
+      playerId: string;
+      terms: CareerContractTermsInput;
+    }>
+  | Readonly<{
+      type: "accept_preliminary_agreement_counter"
+        | "reject_preliminary_agreement_counter"
+        | "withdraw_preliminary_agreement";
+      agreementId: string;
+    }>
+  | Readonly<{
+      type: "sign_free_agent";
+      playerId: string;
+      terms: CareerContractTermsInput;
+    }>;
+
+/** Immediate free-agent signing outcome; there is no negotiation stage to resume. */
+export interface WebFreeAgentSigningOutcome {
+  readonly kind: "free_agent_signed";
+  readonly playerId: string;
+  readonly activatedContractId: string;
+}
+
+/** Successful selected-club market action projected from the working session. */
+export interface AppliedWebSelectedClubMarketCommand {
+  readonly status: "applied";
+  readonly state: WebCareerState;
+  readonly outcome: WebTransferNegotiation | WebPreliminaryAgreement | WebFreeAgentSigningOutcome;
+  readonly continueResult: WebCareerContinueResult;
+  readonly sessionStatus: CareerSessionStatus;
+}
+
+/** Structured market rejection that preserves the exact working session. */
+export interface RejectedWebSelectedClubMarketCommand {
+  readonly status: "rejected";
+  readonly state: WebCareerState;
+  readonly reason: string;
+  readonly continueResult: WebCareerContinueResult;
+  readonly sessionStatus: CareerSessionStatus;
+}
+
+/** Result shared by every selected-club market action in the web runtime. */
+export type WebSelectedClubMarketCommandResult =
+  | AppliedWebSelectedClubMarketCommand
+  | RejectedWebSelectedClubMarketCommand;
 
 /** Working-session result after preparation opens the match centre. */
 export interface PreparedWebMatchday {
@@ -410,9 +516,8 @@ export class WebCareerRuntime {
     const decidedOn = currentState.gameState.calendar.currentDate;
     const result = (() => {
       switch (command.type) {
-        case "offer_renewal":
-          {
-            const playerId = resolveContractPlayerId(currentState, command.playerId);
+        case "offer_renewal": {
+          const playerId = resolveContractPlayerId(currentState, command.playerId);
           return offerSelectedClubRenewal({
             careerState: currentState,
             negotiationId: nextRenewalNegotiationId(currentState, playerId),
@@ -420,7 +525,7 @@ export class WebCareerRuntime {
             offeredOn: decidedOn,
             terms: command.terms,
           });
-          }
+        }
         case "revise_offer":
           return reviseContractOffer({
             careerState: currentState,
@@ -452,9 +557,8 @@ export class WebCareerRuntime {
             negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
             decidedOn,
           });
-        case "release_at_expiry":
-          {
-            const playerId = resolveContractPlayerId(currentState, command.playerId);
+        case "release_at_expiry": {
+          const playerId = resolveContractPlayerId(currentState, command.playerId);
           return chooseReleaseAtContractExpiry({
             careerState: currentState,
             negotiationId: command.negotiationId
@@ -464,7 +568,7 @@ export class WebCareerRuntime {
             clubId: currentState.selectedClubId,
             decidedOn,
           });
-          }
+        }
       }
     })();
 
@@ -486,6 +590,163 @@ export class WebCareerRuntime {
       status: "applied",
       state,
       negotiation: result.negotiation,
+      continueResult: inspectWebCareerAttention(state),
+      sessionStatus: session.status(),
+    };
+  }
+
+  /**
+   * Applies one explicit selected-club market action to the working session.
+   *
+   * Every branch delegates validation, affordability, and outcome entirely to
+   * the matching engine command; the runtime only resolves presentation IDs
+   * into canonical ones, supplies the resolved transfer-window catalog, and
+   * reconciles the resulting session the same way contract commands do.
+   */
+  public applySelectedClubMarketCommand(
+    requestedSaveId: WebCareerSaveId,
+    command: WebSelectedClubMarketCommand,
+  ): WebSelectedClubMarketCommandResult {
+    const session = this.requireSession(requestedSaveId);
+    const currentState = session.workingState();
+    const decidedOn = currentState.gameState.calendar.currentDate;
+
+    // Free-agent signing is an immediate apply with no negotiation stage, so
+    // it does not fit the shared negotiation/agreement outcome shape below.
+    if (command.type === "sign_free_agent") {
+      const playerId = resolveMarketPlayerId(currentState, command.playerId);
+      const signing: ApplyCareerFreeAgentSigningResult = applyCareerFreeAgentSigning({
+        careerState: currentState,
+        playerId,
+        clubId: currentState.selectedClubId,
+        occurredOn: decidedOn,
+        acceptedTerms: command.terms,
+      });
+      if (signing.status === "rejected") {
+        return {
+          status: "rejected",
+          state: currentState,
+          reason: signing.reason,
+          continueResult: inspectWebCareerAttention(currentState),
+          sessionStatus: session.status(),
+        };
+      }
+      const signedState = session.replaceWorkingState(
+        refreshExistingInboxFacts(signing.careerState),
+      ).workingState;
+      return {
+        status: "applied",
+        state: signedState,
+        outcome: {
+          kind: "free_agent_signed",
+          playerId: command.playerId,
+          activatedContractId: String(signing.activatedContractId),
+        },
+        continueResult: inspectWebCareerAttention(signedState),
+        sessionStatus: session.status(),
+      };
+    }
+
+    const transferWindows = resolveCareerTransferWindows(currentState);
+    const result: TransferNegotiationCommandResult | TransferPlayerNegotiationCommandResult | PreliminaryAgreementCommandResult = (() => {
+      switch (command.type) {
+        case "submit_transfer_offer": {
+          const playerId = resolveMarketPlayerId(currentState, command.playerId);
+          return submitTransferOffer({
+            careerState: currentState,
+            negotiationId: nextTransferNegotiationId(currentState, playerId),
+            buyingClubId: currentState.selectedClubId,
+            sellingClubId: resolveMarketClubId(currentState, command.sellingClubId),
+            playerId,
+            offeredFee: command.offeredFee,
+            submittedOn: decidedOn,
+            transferWindows,
+          });
+        }
+        case "accept_transfer_counter":
+          return acceptTransferCounter({
+            careerState: currentState,
+            negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+          });
+        case "withdraw_transfer_offer":
+          return withdrawTransferNegotiation({
+            careerState: currentState,
+            negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+          });
+        case "submit_transfer_player_offer":
+          return submitTransferPlayerOffer({
+            careerState: currentState,
+            negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
+            submittedOn: decidedOn,
+            terms: command.terms,
+            transferWindows,
+          });
+        case "accept_transfer_player_counter":
+          return acceptTransferPlayerCounter({
+            careerState: currentState,
+            negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+            transferWindows,
+          });
+        case "reject_transfer_player_counter":
+          return rejectTransferPlayerCounter({
+            careerState: currentState,
+            negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
+            decidedOn,
+            transferWindows,
+          });
+        case "submit_preliminary_agreement": {
+          const playerId = resolveMarketPlayerId(currentState, command.playerId);
+          return submitPreliminaryAgreementOffer({
+            careerState: currentState,
+            agreementId: nextPreliminaryAgreementId(currentState, playerId),
+            playerId,
+            offeringClubId: currentState.selectedClubId,
+            submittedOn: decidedOn,
+            terms: command.terms,
+            transferWindows,
+          });
+        }
+        case "accept_preliminary_agreement_counter":
+          return acceptPreliminaryAgreementCounter({
+            careerState: currentState,
+            agreementId: resolvePreliminaryAgreementId(currentState, command.agreementId),
+            decidedOn,
+          });
+        case "reject_preliminary_agreement_counter":
+          return rejectPreliminaryAgreementCounter({
+            careerState: currentState,
+            agreementId: resolvePreliminaryAgreementId(currentState, command.agreementId),
+            decidedOn,
+          });
+        case "withdraw_preliminary_agreement":
+          return withdrawPreliminaryAgreement({
+            careerState: currentState,
+            agreementId: resolvePreliminaryAgreementId(currentState, command.agreementId),
+            withdrawnOn: decidedOn,
+          });
+      }
+    })();
+
+    if (result.status === "rejected") {
+      return {
+        status: "rejected",
+        state: currentState,
+        reason: result.reason,
+        continueResult: inspectWebCareerAttention(currentState),
+        sessionStatus: session.status(),
+      };
+    }
+
+    const state = session.replaceWorkingState(
+      refreshExistingInboxFacts(result.careerState),
+    ).workingState;
+    return {
+      status: "applied",
+      state,
+      outcome: "negotiation" in result ? result.negotiation : result.agreement,
       continueResult: inspectWebCareerAttention(state),
       sessionStatus: session.status(),
     };
@@ -750,6 +1011,88 @@ function nextRenewalNegotiationId(
   return candidate;
 }
 
+/** Resolves a presentation player ID through canonical career ownership before a market command. */
+function resolveMarketPlayerId(
+  careerState: WebCareerState,
+  rawPlayerId: string,
+): WebMarketPlayerId {
+  const resolved = careerState.gameState.playerIds.find((playerId) => String(playerId) === rawPlayerId);
+  if (resolved === undefined) {
+    throw new Error(`Market command player is missing from the career: ${rawPlayerId}`);
+  }
+  return resolved;
+}
+
+/** Resolves a presentation club ID through canonical career ownership before a market command. */
+function resolveMarketClubId(
+  careerState: WebCareerState,
+  rawClubId: string,
+): WebMarketClubId {
+  const resolved = careerState.gameState.clubIds.find((clubId) => String(clubId) === rawClubId);
+  if (resolved === undefined) {
+    throw new Error(`Market command club is missing from the career: ${rawClubId}`);
+  }
+  return resolved;
+}
+
+/** Resolves a presentation negotiation ID through durable state before a market command. */
+function resolveTransferNegotiationId(
+  careerState: WebCareerState,
+  rawNegotiationId: string,
+): WebTransferNegotiationId {
+  const resolved = careerState.transferNegotiationState?.negotiationIds.find(
+    (negotiationId) => String(negotiationId) === rawNegotiationId,
+  );
+  if (resolved === undefined) {
+    throw new Error(`Transfer negotiation is missing from the career: ${rawNegotiationId}`);
+  }
+  return resolved;
+}
+
+/** Resolves a presentation agreement ID through durable state before a market command. */
+function resolvePreliminaryAgreementId(
+  careerState: WebCareerState,
+  rawAgreementId: string,
+): WebPreliminaryAgreementId {
+  const resolved = careerState.preliminaryAgreementState?.agreementIds.find(
+    (agreementId) => String(agreementId) === rawAgreementId,
+  );
+  if (resolved === undefined) {
+    throw new Error(`Preliminary agreement is missing from the career: ${rawAgreementId}`);
+  }
+  return resolved;
+}
+
+/** Allocates the first unused stable transfer-negotiation identity without random state. */
+function nextTransferNegotiationId(
+  careerState: WebCareerState,
+  playerId: WebMarketPlayerId,
+): WebTransferNegotiationId {
+  const negotiations = careerState.transferNegotiationState?.negotiations ?? {};
+  let sequence = (careerState.transferNegotiationState?.negotiationIds.length ?? 0) + 1;
+  let candidate = createTransferNegotiationId(careerState.selectedClubId, playerId, sequence);
+  while (negotiations[candidate] !== undefined) {
+    sequence += 1;
+    candidate = createTransferNegotiationId(careerState.selectedClubId, playerId, sequence);
+  }
+  return candidate;
+}
+
+/** Allocates the first unused stable preliminary-agreement identity without random state. */
+function nextPreliminaryAgreementId(
+  careerState: WebCareerState,
+  playerId: WebMarketPlayerId,
+): WebPreliminaryAgreementId {
+  const agreements = careerState.preliminaryAgreementState?.agreements ?? {};
+  let sequence = (careerState.preliminaryAgreementState?.agreementIds.length ?? 0) + 1;
+  let candidate = createPreliminaryAgreementId(playerId, careerState.selectedClubId, sequence);
+  while (agreements[candidate] !== undefined) {
+    sequence += 1;
+    candidate = createPreliminaryAgreementId(playerId, careerState.selectedClubId, sequence);
+  }
+  return candidate;
+}
+
 /** Removes fixture confirmation while preserving the manager's last team plan as a reusable draft. */
 function carryCompletedPreparationAsDraft(careerState: WebCareerState): WebCareerState {
   const preparation = careerState.matchPreparation;
@@ -824,13 +1167,14 @@ function evaluateCanonicalCareerAttention(
         preparation: matchdayPreparationFacts(careerState, nextFixture.fixture.id),
       })
     : undefined;
-  const evaluated = advanceSelectedClubContractsToAttention({
+  const evaluated = advanceSelectedClubWorkflowsToAttention({
     careerState,
     boundaryDate,
     additionalMessages:
       matchday === undefined || matchday.message.date > boundaryDate
         ? []
         : [matchday.message],
+    transferWindows: resolveCareerTransferWindows(careerState),
   });
   return { careerState: evaluated.careerState, result: evaluated.result };
 }
@@ -956,7 +1300,7 @@ export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState
     clubContexts: youthClubContexts(league),
   });
 
-  return {
+  const state: WebCareerState = {
     saveId: identity.saveId,
     schemaVersion: 1,
     careerWorld: {
@@ -987,7 +1331,8 @@ export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState
     seniorSquadState: league.seniorSquadState,
     clubFinanceState: league.clubFinanceState,
     transferHistory: [],
-  } as unknown as WebCareerState;
+  };
+  return state;
 }
 
 /** Allocates one browser career ID and uses the same stable token as its seed. */

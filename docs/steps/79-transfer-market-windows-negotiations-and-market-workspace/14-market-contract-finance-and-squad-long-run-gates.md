@@ -2,7 +2,14 @@
 
 ## Status
 
-Ready.
+Reopened. A first execution was recorded as complete, but its gate never ran the
+AI market (`transferWindows` was not threaded into `advanceCareerOneSeason`), so
+every market check passed vacuously over empty negotiation state and the
+published report actually says `FAIL`. The wiring, a valuation crash on
+15-year-old prodigies, and the locally restated window dates are fixed; the full
+`750x50` market-active gate still has to be re-run and the stale audit report
+replaced before this step can close. See the Step 14 correction entry in
+`docs/PROJECT_STATUS.md`.
 
 ## Goal
 

@@ -12,6 +12,8 @@ import {
   type SeasonId,
 } from "@game/domain";
 
+import { isSelectedClubMarketMessageResolved } from "./selected-club-market-workflow.ts";
+
 /** Stable failures exposed by the narrow Inbox lifecycle use cases. */
 export type CareerInboxLifecycleErrorCode =
   | "message_not_found"
@@ -211,6 +213,9 @@ function isInboxMessageResolvedByCareerState(
     const fixtureId = message.related.fixtureId;
     return fixtureId !== undefined
       && careerState.gameState.fixtures[fixtureId]?.result?.played === true;
+  }
+  if (message.category.startsWith("market_")) {
+    return isSelectedClubMarketMessageResolved(careerState, message);
   }
   if (!message.category.startsWith("contract_")) return false;
 

@@ -358,7 +358,6 @@ export function submitContractOffer(input: SubmitContractOfferInput): ContractNe
     clubId: negotiation.clubId,
     replacedContractId: negotiation.currentContractId,
     terms: negotiation.draft.terms,
-    excludedNegotiationId: negotiation.id,
   });
   if (affordability.status === "rejected") {
     return rejected(input.careerState, affordability.reason, input.negotiationId);
@@ -570,7 +569,6 @@ export function advanceContractNegotiations(
       clubId: negotiation.clubId,
       replacedContractId: negotiation.currentContractId,
       terms: negotiation.submittedOffer.terms,
-      excludedNegotiationId: negotiation.id,
     });
     if (affordability.status === "rejected") {
       const unaffordableEvaluation: ContractOfferEvaluation = {
@@ -896,7 +894,6 @@ function activateAcceptedTerms(input: {
     clubId: input.negotiation.clubId,
     replacedContractId: input.negotiation.currentContractId,
     terms: input.acceptedTerms,
-    excludedNegotiationId: input.negotiation.id,
   });
   if (affordability.status === "rejected") {
     const unaffordableEvaluation: ContractOfferEvaluation = {

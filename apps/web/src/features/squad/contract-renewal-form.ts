@@ -154,7 +154,8 @@ function moneyError(value: string): "required" | "invalid" {
   return value.trim().length === 0 ? "required" : "invalid";
 }
 
-function recommendedDurationYears(age: number): number {
+/** Age-based starting contract length reused by every fresh (non-renewal) offer draft. */
+export function recommendedDurationYears(age: number): number {
   if (age <= 21) return 4;
   if (age >= 32) return 2;
   return 3;

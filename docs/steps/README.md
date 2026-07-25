@@ -56,15 +56,18 @@ Provide an open, incremental, and iterative execution guide for the project: one
 
 ## Current Active Phase
 
-- `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/`
-- Status: In progress. Steps 01-14 are Done and Step 15 is the single active
-  step.
-
-## Next Documented Phase
-
 - `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
-- Status: Documented and queued. Its fifteen ordered steps begin only after
-  Phase 78 Step 15 is Done.
+- Status: In progress. Steps 01-13 are Done, Step 14 is Reopened (its long-run
+  gate must be re-run against a market-active simulation), and Step 15 is not
+  started.
+- Entry-gate deviation: Phase 79 was started by explicit user decision while
+  Phase 78 Step 15 was still open. Phase 78 Step 15's obligations remain
+  outstanding and are tracked in `docs/PROJECT_STATUS.md`.
+
+## Previous Phase Still Open
+
+- `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/`
+- Status: In progress. Steps 01-14 are Done and Step 15 was never closed.
 - Transfer-window dates are source-backed content owned by each playable
   competition. They are not user-configurable and no unused championship
   calendar is shipped speculatively.

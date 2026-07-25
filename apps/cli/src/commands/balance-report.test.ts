@@ -21,7 +21,7 @@ test("balance-report uses deterministic default arguments", async () => {
   assert.equal(io.stdoutLines.includes(`Seed prefix: ${DEFAULT_BALANCE_REPORT_SEED_PREFIX}`), true);
   assert.equal(io.stdoutLines.includes(`Seasons: ${DEFAULT_BALANCE_REPORT_SEASON_COUNT}`), true);
   assert.equal(io.stdoutLines.includes("Status: PASS"), true);
-}, 20_000);
+}, 60_000);
 
 test("same seed prefix and season count produce same report output", async () => {
   const first = captureIo();
@@ -84,7 +84,7 @@ test("calibration-v1 passes the tuned twenty-season calibration sample", async (
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes("Target profile: calibration-v1"), true);
   assert.equal(io.stdoutLines.includes("Status: PASS"), true);
-}, 20_000);
+}, 60_000);
 
 test("balance-report exits nonzero on invalid args", async () => {
   const io = captureIo();

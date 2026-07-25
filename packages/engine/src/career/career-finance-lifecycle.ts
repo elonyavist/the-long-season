@@ -28,7 +28,7 @@ import {
   type SeasonId,
   type SeniorSquadState,
 } from "@game/domain";
-import { evaluateCareerContractCapacity } from "./career-contract-reservations.ts";
+import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import {
   buildFixtureParticipationContributions,
   type FixtureParticipationSideContext,
@@ -87,8 +87,6 @@ export interface CheckContractOfferAffordabilityInput {
   readonly clubId: ClubId;
   readonly replacedContractId: PlayerContractId;
   readonly terms: ContractOfferTerms;
-  /** Current open negotiation omitted while evaluating its replacement terms. */
-  readonly excludedNegotiationId?: ContractNegotiationId;
 }
 
 /**
@@ -126,9 +124,6 @@ export function checkContractOfferAffordability(
     addedAnnualWage: input.terms.annualWage,
     replacedAnnualWage: contract.annualWage,
     addedSigningBonus: input.terms.bonuses.signingBonus,
-    ...(input.excludedNegotiationId === undefined
-      ? {}
-      : { excludedNegotiationId: input.excludedNegotiationId }),
   });
   if (capacity.status === "unaffordable") {
     return rejected(input.careerState, capacity.reason, {

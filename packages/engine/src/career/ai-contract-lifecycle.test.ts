@@ -36,6 +36,7 @@ import {
   advanceAiContractLifecycle,
 } from "./ai-contract-lifecycle.ts";
 import { advanceCareerMonths } from "./advance-career-month.ts";
+import { deriveMarketPendingExposure } from "./market-pending-exposure.ts";
 import {
   advanceContractNegotiations,
   chooseAiReleaseAtContractExpiry,
@@ -329,7 +330,7 @@ test("AI counter decisions preserve wages promised by the other open negotiation
   assert.ok((resolvedAccount?.committedAnnualWage ?? Infinity) <= (resolvedAccount?.annualWageBudget ?? 0));
 });
 
-test("renewal submission cannot spend wage room promised by another open offer", () => {
+test("renewal submission does not spend wage room promised by another open offer", () => {
   const fixture = careerFixture({ aiPlayerCount: 18, targetIndex: 0 });
   const renewingPlayerIds = fixture.careerState.gameState.clubs[AI_CLUB]?.playerIds.slice(0, 2) ?? [];
   const contracts = renewingPlayerIds.map((renewingPlayerId) =>
@@ -388,9 +389,13 @@ test("renewal submission cannot spend wage room promised by another open offer",
     offeredOn: CURRENT_DATE,
     terms: termsFor(secondContract),
   });
-  assert.equal(second.status, "rejected");
-  assert.equal(second.status === "rejected" ? second.reason : undefined, "wage_budget_exceeded");
-  assert.strictEqual(second.careerState, first.careerState);
+  // Phase 79 locked rule: an open offer never reserves wage room. Both
+  // submissions are judged against committed contracts only and succeed; the
+  // combined risk is visible only as informational pending exposure.
+  assert.equal(second.status, "applied");
+  if (second.status !== "applied") return;
+  const exposure = deriveMarketPendingExposure(second.careerState, AI_CLUB);
+  assert.equal(exposure.pendingAnnualWageExposure, nonNegativeMoney(wageIncrease * 2));
 });
 
 function careerFixture(input: {

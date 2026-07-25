@@ -45,6 +45,7 @@ export type CareerUiScreen =
   | "career_inbox"
   | "career_squad"
   | "career_tactics"
+  | "career_market"
   | "match_preparation"
   | "matchday";
 
@@ -62,6 +63,7 @@ export type CareerCommandId =
   | "continue_career"
   | "open_inbox_message"
   | "contract_negotiation"
+  | "market_negotiation"
   | "manual_save"
   | "update_autosave_policy"
   | "confirm_preparation"
@@ -129,6 +131,11 @@ export interface CareerUiStoreState {
   readonly inboxFilter: CareerPostaFilter;
   /** Ephemeral selected Posta identity; lifecycle remains in CareerState. */
   readonly selectedInboxMessageId: string | undefined;
+  /**
+   * Ephemeral Market routing target requested by a Posta action. The nonce
+   * makes each request distinct so re-opening the same player still routes.
+   */
+  readonly marketFocus: Readonly<{ playerId: string; nonce: number }> | undefined;
   /** Replaces bounded web preferences from the settings controls. */
   readonly setPreferences: (preferences: WebPreferences) => void;
   /** Marks startup save discovery as active. */
@@ -216,6 +223,10 @@ export interface CareerUiStoreState {
   readonly openSquad: () => void;
   /** Opens the persistent current-plan tactics workspace. */
   readonly openTactics: () => void;
+  /** Opens the all-year transfer-market inspection workspace. */
+  readonly openMarket: () => void;
+  /** Opens Market focused on one player's negotiation or detail state. */
+  readonly openMarketPlayer: (playerId: string) => void;
   /** Changes the ephemeral Posta list filter. */
   readonly setInboxFilter: (filter: CareerPostaFilter) => void;
   /** Selects one real current-season message. */
@@ -273,6 +284,7 @@ function createInitialCareerUiState(): Pick<
   | "matchdayState"
   | "inboxFilter"
   | "selectedInboxMessageId"
+  | "marketFocus"
   | "preferences"
   | "screen"
   | "selectedSaveId"
@@ -298,6 +310,7 @@ function createInitialCareerUiState(): Pick<
     matchdayState: undefined,
     inboxFilter: "all",
     selectedInboxMessageId: undefined,
+    marketFocus: undefined,
   };
 }
 
@@ -551,6 +564,15 @@ export const useCareerUiStore = create<CareerUiStoreState>((set, get) => ({
   },
   openTactics: () => {
     set({ screen: "career_tactics" });
+  },
+  openMarket: () => {
+    set({ screen: "career_market", marketFocus: undefined });
+  },
+  openMarketPlayer: (playerId) => {
+    set((state) => ({
+      screen: "career_market",
+      marketFocus: { playerId, nonce: (state.marketFocus?.nonce ?? 0) + 1 },
+    }));
   },
   setInboxFilter: (inboxFilter) => {
     set({ inboxFilter });

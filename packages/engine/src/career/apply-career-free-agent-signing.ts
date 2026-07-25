@@ -11,7 +11,7 @@ import {
   applyContractActivationFinance,
   type CareerFinanceRejectionReason,
 } from "./career-finance-lifecycle.ts";
-import { evaluateCareerContractCapacity } from "./career-contract-reservations.ts";
+import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import { selectFreeAgentPlayerIds } from "./free-agent-pool.ts";
 import { prepareSeniorSquadSigning } from "./senior-squad-transfer.ts";
 

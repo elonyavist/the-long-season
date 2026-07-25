@@ -45,6 +45,7 @@ export const webMotionTargets = Object.freeze({
   calendarDateTickEnter: { opacity: 0.55, scale: 0.98, x: 0, y: 5 },
   dashboardTaskEnter: { opacity: 0.84, scale: 1, x: 0, y: 4 },
   dialogEnter: { opacity: 0.9, scale: 0.99, x: 0, y: 5 },
+  contentUpdate: { opacity: 0.88, scale: 1, x: 0, y: 3 },
   footballContextEnter: { opacity: 0.88, scale: 1, x: 0, y: 3 },
   tacticalSelectionEnter: { opacity: 0.58, scale: 1, x: 0, y: 0 },
   tacticalPopoverEnter: { opacity: 0.86, scale: 0.985, x: 0, y: 2 },

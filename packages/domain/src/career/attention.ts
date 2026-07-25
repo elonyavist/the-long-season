@@ -1,6 +1,8 @@
 import { brand, type Brand } from "../types/brand.ts";
 import type { ClubId, FixtureId, PlayerContractId, PlayerId } from "../types/ids.ts";
 import type { ContractNegotiationId } from "./contract-negotiation.ts";
+import type { PreliminaryAgreementId } from "./preliminary-agreement.ts";
+import type { TransferNegotiationId } from "./transfer-negotiation.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 
 /** Stable identifier for one career attention event. */
@@ -10,7 +12,7 @@ export type CareerAttentionEventId = Brand<string, "CareerAttentionEventId">;
 export type CareerAttentionLevel = "blocking" | "important" | "informational";
 
 /** Current attention categories backed by real career workflows. */
-export type CareerAttentionCategory = "matchday" | "contract";
+export type CareerAttentionCategory = "matchday" | "contract" | "market";
 
 /** Machine-readable reason why the manager receives attention. */
 export type CareerAttentionReason =
@@ -19,7 +21,18 @@ export type CareerAttentionReason =
   | "contract_counteroffer"
   | "contract_accepted"
   | "contract_rejected"
-  | "contract_expiry_decision";
+  | "contract_expiry_decision"
+  | "market_club_accepted"
+  | "market_club_counteroffer"
+  | "market_club_rejected"
+  | "market_player_counteroffer"
+  | "market_player_rejected"
+  | "market_offer_expired"
+  | "market_transfer_completed"
+  | "market_agreement_failed"
+  | "market_offer_withdrawn"
+  | "market_preliminary_agreed"
+  | "market_preliminary_activated";
 
 /** Explicit advancement effect, independent from visual message importance. */
 export type CareerAttentionContinuePolicy = "never" | "until_acknowledged" | "until_resolved";
@@ -38,6 +51,8 @@ export interface CareerAttentionRelatedEntities {
   readonly playerId?: PlayerId;
   readonly contractId?: PlayerContractId;
   readonly contractNegotiationId?: ContractNegotiationId;
+  readonly transferNegotiationId?: TransferNegotiationId;
+  readonly preliminaryAgreementId?: PreliminaryAgreementId;
 }
 
 /** Input accepted by the language-agnostic attention constructor. */
@@ -101,6 +116,14 @@ export function createCareerAttentionEvent(input: CareerAttentionEventInput): Ca
     throw new Error("Contract attention must reference a contract or negotiation");
   }
 
+  if (
+    input.category === "market"
+    && input.related?.transferNegotiationId === undefined
+    && input.related?.preliminaryAgreementId === undefined
+  ) {
+    throw new Error("Market attention must reference a transfer negotiation or preliminary agreement");
+  }
+
   return {
     id: input.id,
     date: input.date,
@@ -152,7 +175,7 @@ export function createContractAttentionEvent(input: {
   readonly playerId: PlayerId;
   readonly date: GameDate;
   readonly level: CareerAttentionLevel;
-  readonly reason: Exclude<CareerAttentionReason, "matchday_decision">;
+  readonly reason: Exclude<CareerAttentionReason, "matchday_decision" | `market_${string}`>;
   readonly continuePolicy: CareerAttentionContinuePolicy;
 }): CareerAttentionEvent {
   const identity = input.contractNegotiationId ?? input.contractId;
@@ -168,6 +191,37 @@ export function createContractAttentionEvent(input: {
       ...(input.contractNegotiationId === undefined
         ? {}
         : { contractNegotiationId: input.contractNegotiationId }),
+      clubId: input.clubId,
+      playerId: input.playerId,
+    },
+  });
+}
+
+/** Creates one stable market attention identity from authoritative entities. */
+export function createMarketAttentionEvent(input: {
+  readonly transferNegotiationId?: TransferNegotiationId;
+  readonly preliminaryAgreementId?: PreliminaryAgreementId;
+  readonly clubId: ClubId;
+  readonly playerId: PlayerId;
+  readonly date: GameDate;
+  readonly level: CareerAttentionLevel;
+  readonly reason: Extract<CareerAttentionReason, `market_${string}`>;
+  readonly continuePolicy: CareerAttentionContinuePolicy;
+}): CareerAttentionEvent {
+  const identity = input.transferNegotiationId ?? input.preliminaryAgreementId;
+  if (identity === undefined) {
+    throw new Error("Market attention event must specify a transfer negotiation or preliminary agreement ID");
+  }
+  return createCareerAttentionEvent({
+    id: careerAttentionEventId(`attention:market:${input.reason}:${identity}`),
+    date: input.date,
+    category: "market",
+    level: input.level,
+    reason: input.reason,
+    continuePolicy: input.continuePolicy,
+    related: {
+      ...(input.transferNegotiationId === undefined ? {} : { transferNegotiationId: input.transferNegotiationId }),
+      ...(input.preliminaryAgreementId === undefined ? {} : { preliminaryAgreementId: input.preliminaryAgreementId }),
       clubId: input.clubId,
       playerId: input.playerId,
     },

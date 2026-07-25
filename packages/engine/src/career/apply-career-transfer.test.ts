@@ -6,6 +6,7 @@ import {
   abilityValue,
   clubFinanceLedgerEntryId,
   clubId,
+  competitionId,
   contractNegotiationId,
   createCareerState,
   gameDate,
@@ -15,6 +16,7 @@ import {
   playerId,
   saveId,
   seasonId,
+  seasonTransferWindows,
   seniorSquadRegistrationId,
   type CareerState,
   type Club,
@@ -116,6 +118,77 @@ test("applyCareerPermanentTransfer applies accepted ownership, budget, and histo
   );
 });
 
+test("applyCareerPermanentTransfer rejects a transfer outside an open window without mutating career state", () => {
+  const pro01 = clubId("club:pro01");
+  const pro18 = clubId("club:pro18");
+  const target = playerId("player:target");
+  const careerState = careerStateFixture({
+    clubs: [
+      clubFixture(pro01, "third_division", 6, [playerId("player:pro01-01")]),
+      clubFixture(pro18, "third_division", 4, [target]),
+    ],
+    players: [playerFixture(target, "st", 10, 12, 24), playerFixture(playerId("player:pro01-01"), "cm", 9, 10, 24)],
+    financeRows: [
+      [pro01, 6_000_000_00],
+      [pro18, 500_000_00],
+    ],
+  });
+  // Windows that both start after the transfer date, so the attempt is closed.
+  const transferWindows = seasonTransferWindows({
+    competitionId: competitionId("competition:demo-third-division"),
+    seasonId: seasonId("season:demo-001"),
+    windows: [
+      { opensOn: gameDate(20_050), closesOn: gameDate(20_090) },
+      { opensOn: gameDate(20_200), closesOn: gameDate(20_230) },
+    ],
+  });
+
+  const result = applyCareerPermanentTransfer({
+    careerState,
+    occurredOn: gameDate(20_010),
+    transferWindows,
+    intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
+  });
+
+  assert.equal(result.status, "rejected");
+  assert.deepEqual(result.reasons.map((reason) => reason.code), ["outside_transfer_window"]);
+  assert.equal(result.careerState, careerState);
+});
+
+test("applyCareerPermanentTransfer accepts a transfer inside an open window", () => {
+  const pro01 = clubId("club:pro01");
+  const pro18 = clubId("club:pro18");
+  const target = playerId("player:target");
+  const careerState = careerStateFixture({
+    clubs: [
+      clubFixture(pro01, "third_division", 6, [playerId("player:pro01-01")]),
+      clubFixture(pro18, "third_division", 4, [target]),
+    ],
+    players: [playerFixture(target, "st", 10, 12, 24), playerFixture(playerId("player:pro01-01"), "cm", 9, 10, 24)],
+    financeRows: [
+      [pro01, 6_000_000_00],
+      [pro18, 500_000_00],
+    ],
+  });
+  const transferWindows = seasonTransferWindows({
+    competitionId: competitionId("competition:demo-third-division"),
+    seasonId: seasonId("season:demo-001"),
+    windows: [
+      { opensOn: gameDate(20_000), closesOn: gameDate(20_050) },
+      { opensOn: gameDate(20_200), closesOn: gameDate(20_230) },
+    ],
+  });
+
+  const result = applyCareerPermanentTransfer({
+    careerState,
+    occurredOn: gameDate(20_010),
+    transferWindows,
+    intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
+  });
+
+  assert.equal(result.status, "accepted");
+});
+
 test("applyCareerPermanentTransfer rejects insufficient transfer budget without mutating career state", () => {
   const pro01 = clubId("club:pro01");
   const pro18 = clubId("club:pro18");
@@ -140,7 +213,7 @@ test("applyCareerPermanentTransfer rejects insufficient transfer budget without 
   assert.deepEqual(careerState.transferHistory, []);
 });
 
-test("applyCareerPermanentTransfer preserves wages promised by an unresolved renewal", () => {
+test("applyCareerPermanentTransfer is not blocked by an unresolved renewal offer's pending wages", () => {
   const pro01 = clubId("club:pro01");
   const pro18 = clubId("club:pro18");
   const buyerPlayer = playerId("player:pro01-01");
@@ -190,10 +263,12 @@ test("applyCareerPermanentTransfer preserves wages promised by an unresolved ren
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
-  assert.equal(result.status, "rejected");
-  assert.equal(result.reasons[0]?.code, "insufficient_wage_budget");
-  assert.strictEqual(result.careerState, offered.careerState);
-  assert.deepEqual(result.careerState.gameState.clubs[pro18]?.playerIds, [target]);
+  // Phase 79 locked rule: an unresolved offer does not reserve wage budget, so
+  // affordability is judged against committed contracts only. The transfer is
+  // funded here even though a pending renewal would spend the whole budget if
+  // it were ever accepted.
+  assert.equal(result.status, "accepted");
+  assert.deepEqual(result.careerState.gameState.clubs[pro01]?.playerIds, [buyerPlayer, target]);
 });
 
 test("applyCareerPermanentTransfer rejects unwilling players without mutating career state", () => {
@@ -258,6 +333,57 @@ test("applyCareerPermanentTransfer appends after existing transfer history", () 
 
   assert.equal(result.status, "accepted");
   assert.equal(result.careerState.transferHistory.at(-1)?.sequenceNumber, 4);
+});
+
+test("selling a selected-club starter leaves the saved slot empty without choosing a replacement", () => {
+  const buyer = clubId("club:pro01");
+  const seller = clubId("club:pro18");
+  const target = playerId("player:target");
+  const substitute = playerId("player:substitute");
+  const base = careerStateFixture({
+    clubs: [
+      clubFixture(buyer, "third_division", 6, []),
+      clubFixture(seller, "third_division", 4, [target, substitute]),
+    ],
+    players: [
+      playerFixture(target, "st", 10, 12, 24),
+      playerFixture(substitute, "cm", 9, 10, 24),
+    ],
+    financeRows: [
+      [buyer, 6_000_000_00],
+      [seller, 500_000_00],
+    ],
+  });
+  const careerState = createCareerState({
+    ...base,
+    selectedClubId: seller,
+    matchPreparation: {
+      selectedClubId: seller,
+      selectedLineup: {
+        clubId: seller,
+        slots: [{ slotKey: "st", playerId: target, roleKey: "striker" }],
+      },
+      boardSlots: [{ slotKey: "st", nx: 0.5, ny: 0.18, roleKey: "ATT" }],
+      benchSlots: [{ slotKey: "bench:01", playerId: substitute }],
+      updatedAt: gameDate(20_000),
+    },
+  });
+
+  const result = applyCareerPermanentTransfer({
+    careerState,
+    intent: {
+      buyingClubId: buyer,
+      sellingClubId: seller,
+      playerId: target,
+    },
+  });
+
+  assert.equal(result.status, "accepted");
+  assert.equal(result.careerState.matchPreparation?.selectedLineup, undefined);
+  assert.equal(result.careerState.matchPreparation?.boardSlots, undefined);
+  assert.deepEqual(result.careerState.matchPreparation?.benchSlots, [
+    { slotKey: "bench:01", playerId: substitute },
+  ]);
 });
 
 function careerStateFixture(input: {

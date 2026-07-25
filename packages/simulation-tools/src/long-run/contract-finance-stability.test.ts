@@ -17,6 +17,9 @@ test("contract and finance stability passes clean structural rows", () => {
     report.checks.map((check) => [check.key, check.status]),
     [
       ["contract_finance_structural_integrity", "pass"],
+      ["transfer_market_window_integrity", "pass"],
+      ["negotiation_clock_integrity", "pass"],
+      ["preliminary_agreement_integrity", "pass"],
       ["wage_budget_utilization", "pass"],
       ["free_agent_population_share", "pass"],
       ["selected_club_expiry_decisions", "pass"],
@@ -117,6 +120,13 @@ function seasonRow(
     selectedPlanObservationCount: 1,
     selectedPlanRetainedPlayerMissingCount: 0,
     selectedPlanHiddenReplacementCount: 0,
+    completedTransferCount: 0,
+    transferWindowViolationCount: 0,
+    negotiationClockViolationCount: 0,
+    unaffordableCompletedTransferCount: 0,
+    preliminaryAgreementCount: 0,
+    preliminaryAgreementActivationCount: 0,
+    preliminaryAgreementViolationCount: 0,
     ...overrides,
   };
 }

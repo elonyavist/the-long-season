@@ -28,3 +28,11 @@ export {
   type EvaluatePermanentTransferInput,
   type PermanentTransferFeasibility,
 } from "./transfer-feasibility.ts";
+export {
+  evaluateMarketActionEligibility,
+  PRELIMINARY_AGREEMENT_MAX_REMAINING_DAYS,
+  type MarketActionEligibility,
+  type MarketActionEligibilityInput,
+  type MarketActionKind,
+  type MarketEligibilityReasonCode,
+} from "./market-eligibility.ts";

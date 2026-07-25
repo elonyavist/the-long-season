@@ -10,7 +10,9 @@ import { toISO } from "@game/shared";
 import {
   buildCareerPlayerProfileView,
   careerMoneyFromMinorUnits,
+  hasCareerContractExpiryAlert,
   type CareerContractBonusField,
+  type CareerContractHistoryInput,
   type CareerContractNegotiationInput,
   type CareerContractTermsInput,
   type CareerPlayerProfileView,
@@ -30,9 +32,9 @@ import type { TacticalBoardRoleSuitability } from "../tactics-board/tactical-boa
 
 type Money = CareerContractTermsInput["annualWage"];
 type ContractOfferTerms = CareerContractTermsInput;
-type PlayerId = WebCareerState["gameState"]["playerIds"][number];
 type SeniorSquadState = NonNullable<WebCareerState["seniorSquadState"]>;
 type PlayerContractId = SeniorSquadState["activeContractIds"][number];
+type ActivePlayerContract = NonNullable<SeniorSquadState["contracts"][PlayerContractId]>;
 type ContractNegotiationState = NonNullable<WebCareerState["contractNegotiationState"]>;
 type ContractNegotiation = ContractNegotiationState["negotiations"][
   ContractNegotiationState["negotiationIds"][number]
@@ -225,6 +227,15 @@ export function presentCareerSquad(
   const availableBenchSlotKey = matchPreparationBenchSlotKeys().find(
     (slotKey) => draft.selectedBenchPlayerIdsBySlot[slotKey] === undefined,
   );
+  const contractHistoryByPlayerId = indexContractHistory(
+    seniorSquad,
+    career.selectedClubId,
+  );
+  const contractNegotiationByPlayerId = indexLatestContractNegotiations(
+    career.contractNegotiationState,
+    career.selectedClubId,
+    contractByPlayerId,
+  );
   const profilesByPlayerId = new Map<string, CareerPlayerProfileView>();
   const playerInputs: CareerSquadPlayerInput[] = [];
 
@@ -275,20 +286,9 @@ export function presentCareerSquad(
         }),
       };
     });
-    const contractHistory = seniorSquad.contractHistoryEntryIds.flatMap((historyId) => {
-      const history = seniorSquad.contractHistory[historyId];
-      return history?.playerId === player.id && history.clubId === career.selectedClubId
-        ? [{
-            historyId: String(history.id),
-            sequenceNumber: history.sequenceNumber,
-            occurredOnIso: toISO(history.occurredOn),
-            event: history.event,
-            contractId: String(history.contractId),
-          }]
-        : [];
-    });
+    const contractHistory = contractHistoryByPlayerId.get(playerId) ?? [];
     const supportedBonusFields = contractBonusFields(contract);
-    const negotiation = negotiationForProfile(career, player.id, contract.id);
+    const negotiation = contractNegotiationByPlayerId.get(playerId);
     const profile = buildCareerPlayerProfileView({
       playerId,
       shirtNumber: registration.shirtNumber,
@@ -301,7 +301,6 @@ export function presentCareerSquad(
       condition: Number(dynamic.fitness),
       form: Number(dynamic.form),
       morale: Number(dynamic.morale),
-      moraleDirection: "steady",
       selection,
       availabilityReasons,
       value: valuation.value,
@@ -318,7 +317,6 @@ export function presentCareerSquad(
           squadStatus: contract.squadStatus,
           bonuses: contract.bonuses,
           remainingDays,
-          hasExpiryAlert: remainingDays < 244,
         },
         history: contractHistory,
         finance: {
@@ -348,14 +346,13 @@ export function presentCareerSquad(
       primaryRole: tacticalPlayer.primaryRole,
       condition: Number(dynamic.fitness),
       morale: Number(dynamic.morale),
-      moraleDirection: "steady",
       selection,
       availabilityReasons,
       value: valuation.value,
       currency: finance.currency,
       currentLevel: assessment.currentLevel,
       potentialLevel: assessment.potentialLevel,
-      hasExpiringContract: remainingDays < 244,
+      hasExpiringContract: hasCareerContractExpiryAlert(remainingDays),
       lineupSlotChoices,
       ...(selectedLineupSlotKey === undefined ? {} : { selectedLineupSlotKey }),
       ...(selectedBenchSlotKey === undefined ? {} : { selectedBenchSlotKey }),
@@ -372,35 +369,59 @@ export function presentCareerSquad(
   };
 }
 
-function negotiationForProfile(
-  career: WebCareerState,
-  playerId: PlayerId,
-  activeContractId: PlayerContractId,
-): CareerContractNegotiationInput | undefined {
-  const state = career.contractNegotiationState;
-  if (state === undefined) return undefined;
-
-  for (let index = state.negotiationIds.length - 1; index >= 0; index -= 1) {
-    const negotiationId = state.negotiationIds[index];
-    if (negotiationId === undefined) continue;
-    const negotiation = state.negotiations[negotiationId];
-    if (
-      negotiation === undefined
-      || negotiation.playerId !== playerId
-      || negotiation.clubId !== career.selectedClubId
-      || !negotiationMatchesActiveContract(negotiation, activeContractId)
-    ) continue;
-    return toContractNegotiationInput(negotiation);
-  }
-  return undefined;
-}
-
 function negotiationMatchesActiveContract(
   negotiation: ContractNegotiation,
   activeContractId: PlayerContractId,
 ): boolean {
   return negotiation.currentContractId === activeContractId
     || (negotiation.status === "accepted" && negotiation.activatedContractId === activeContractId);
+}
+
+function indexContractHistory(
+  seniorSquad: SeniorSquadState,
+  selectedClubId: WebCareerState["selectedClubId"],
+): ReadonlyMap<string, readonly CareerContractHistoryInput[]> {
+  const historyByPlayerId = new Map<string, CareerContractHistoryInput[]>();
+
+  for (const historyId of seniorSquad.contractHistoryEntryIds) {
+    const history = seniorSquad.contractHistory[historyId];
+    if (history === undefined || history.clubId !== selectedClubId) continue;
+    const playerId = String(history.playerId);
+    const playerHistory = historyByPlayerId.get(playerId) ?? [];
+    playerHistory.push({
+      historyId: String(history.id),
+      sequenceNumber: history.sequenceNumber,
+      occurredOnIso: toISO(history.occurredOn),
+      event: history.event,
+      contractId: String(history.contractId),
+    });
+    historyByPlayerId.set(playerId, playerHistory);
+  }
+
+  return historyByPlayerId;
+}
+
+function indexLatestContractNegotiations(
+  state: WebCareerState["contractNegotiationState"],
+  selectedClubId: WebCareerState["selectedClubId"],
+  contractByPlayerId: ReadonlyMap<string, ActivePlayerContract>,
+): ReadonlyMap<string, CareerContractNegotiationInput> {
+  const negotiationByPlayerId = new Map<string, CareerContractNegotiationInput>();
+  if (state === undefined) return negotiationByPlayerId;
+
+  for (const negotiationId of state.negotiationIds) {
+    const negotiation = state.negotiations[negotiationId];
+    if (negotiation === undefined || negotiation.clubId !== selectedClubId) continue;
+    const playerId = String(negotiation.playerId);
+    const activeContract = contractByPlayerId.get(playerId);
+    if (
+      activeContract === undefined
+      || !negotiationMatchesActiveContract(negotiation, activeContract.id)
+    ) continue;
+    negotiationByPlayerId.set(playerId, toContractNegotiationInput(negotiation));
+  }
+
+  return negotiationByPlayerId;
 }
 
 function toContractNegotiationInput(

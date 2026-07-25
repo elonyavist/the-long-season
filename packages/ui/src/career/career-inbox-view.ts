@@ -15,7 +15,18 @@ export type CareerInboxViewCategory =
   | "contract_counteroffer"
   | "contract_accepted"
   | "contract_rejected"
-  | "contract_expiry_decision";
+  | "contract_expiry_decision"
+  | "market_club_accepted"
+  | "market_club_counteroffer"
+  | "market_club_rejected"
+  | "market_player_counteroffer"
+  | "market_player_rejected"
+  | "market_offer_expired"
+  | "market_transfer_completed"
+  | "market_agreement_failed"
+  | "market_offer_withdrawn"
+  | "market_preliminary_agreed"
+  | "market_preliminary_activated";
 
 /** Input action attached to an Inbox / Posta message. */
 export interface CareerInboxActionInput {
@@ -212,6 +223,12 @@ export interface CareerPostaContractInput {
   readonly expiresOnIso: string;
 }
 
+/** Market facts already resolved by the application presenter. */
+export interface CareerPostaMarketInput {
+  readonly playerName: string;
+  readonly counterpartyClubName?: string;
+}
+
 /** One language-agnostic current-season message accepted by Posta. */
 export interface CareerPostaMessageInput {
   readonly messageId: string;
@@ -222,7 +239,8 @@ export interface CareerPostaMessageInput {
     | "match_report"
     | "competition_office"
     | "medical_team"
-    | "contract_office";
+    | "contract_office"
+    | "transfer_office";
   readonly level: CareerPostaAttentionLevel;
   readonly continuePolicy: CareerPostaContinuePolicy;
   readonly lifecycle: CareerPostaLifecycleInput;
@@ -231,6 +249,7 @@ export interface CareerPostaMessageInput {
   readonly fixture?: CareerPostaFixtureInput;
   readonly season?: CareerPostaSeasonInput;
   readonly contract?: CareerPostaContractInput;
+  readonly market?: CareerPostaMarketInput;
 }
 
 /** Dense row used by the Posta message list. */
@@ -415,6 +434,16 @@ function buildPostaFactRows(message: CareerPostaMessageInput): CareerPostaFactRo
       { labelKey: "career.inbox.fact.player", value: message.contract.playerName },
       { labelKey: "career.inbox.fact.contractExpiry", value: message.contract.expiresOnIso },
     );
+  }
+
+  if (message.market !== undefined) {
+    rows.push({ labelKey: "career.inbox.fact.player", value: message.market.playerName });
+    if (message.market.counterpartyClubName !== undefined) {
+      rows.push({
+        labelKey: "career.inbox.fact.counterpartyClub",
+        value: message.market.counterpartyClubName,
+      });
+    }
   }
 
   return rows;

@@ -105,7 +105,7 @@ test("applyCareerFreeAgentSigning rejects unaffordable terms without publishing 
   assert.equal(selectFreeAgentPlayerIds(result.careerState).includes(freeAgentId), true);
 });
 
-test("applyCareerFreeAgentSigning preserves annual wages promised by an unresolved renewal", () => {
+test("applyCareerFreeAgentSigning is not blocked by an unresolved renewal offer's pending wages", () => {
   const fixture = careerFixture({ aiPlayerCount: 18, freeAgentCount: 1 });
   const renewingPlayerId = fixture.careerState.gameState.clubs[AI_CLUB]?.playerIds[0]!;
   const offered = offerContractRenewal({
@@ -131,13 +131,12 @@ test("applyCareerFreeAgentSigning preserves annual wages promised by an unresolv
     acceptedTerms: acceptedTerms(),
   });
 
-  assert.equal(result.status, "rejected");
-  if (result.status !== "rejected") return;
-  assert.equal(result.reason, "wage_budget_exceeded");
-  assert.strictEqual(result.careerState, offered.careerState);
+  // The pending renewal does not reserve wage budget; the signing is judged
+  // against committed contracts only and completes.
+  assert.equal(result.status, "applied");
 });
 
-test("applyCareerFreeAgentSigning preserves cash promised by an unresolved renewal", () => {
+test("applyCareerFreeAgentSigning is not blocked by an unresolved renewal offer's pending cash", () => {
   const fixture = careerFixture({ aiPlayerCount: 18, freeAgentCount: 1 });
   const renewingPlayerId = fixture.careerState.gameState.clubs[AI_CLUB]?.playerIds[0]!;
   const offered = offerContractRenewal({
@@ -166,10 +165,9 @@ test("applyCareerFreeAgentSigning preserves cash promised by an unresolved renew
     acceptedTerms: acceptedTerms(),
   });
 
-  assert.equal(result.status, "rejected");
-  if (result.status !== "rejected") return;
-  assert.equal(result.reason, "insufficient_cash");
-  assert.strictEqual(result.careerState, offered.careerState);
+  // The pending renewal's signing bonus does not reserve cash; the signing is
+  // judged against the current cash balance only and completes.
+  assert.equal(result.status, "applied");
 });
 
 test("selectFreeAgentPlayerIds reserves unresolved youth promotion candidates for their academy club", () => {

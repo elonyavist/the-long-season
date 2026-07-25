@@ -78,7 +78,6 @@ function contractInput(): BuildCareerContractViewInput {
       squadStatus: "regular_starter",
       bonuses: terms(1_200_000_00).bonuses,
       remainingDays: 243,
-      hasExpiryAlert: true,
     },
     history: [
       {

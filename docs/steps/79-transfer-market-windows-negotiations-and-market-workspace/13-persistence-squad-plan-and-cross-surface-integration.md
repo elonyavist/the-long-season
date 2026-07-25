@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready.
+Done.
 
 ## Goal
 
@@ -39,6 +39,16 @@ its activation date.
 8. Reconcile Dashboard budget, Posta facts, player profile, contract history,
    annual payroll, and full-time/season lifecycle after reload.
 9. Keep manual and 7/15-day save cadence unchanged; no action-level autosave.
+10. Resolve `P79-CF-05`: prove every applied renewal/market command marks the
+    existing `CareerSessionStatus` dirty, the shared save/exit protection
+    exposes that state while a profile or Market workspace is active, and an
+    explicit save clears it. Do not add a contract-specific dirty source.
+11. Resolve `P79-CF-07`: construct the initial browser career through an
+    explicitly typed builder or validated schema so omission or mismatch of a
+    `WebCareerState` field fails typecheck; remove the double assertion.
+12. Resolve `P79-CF-08` while editing the runtime by formatting the renewal and
+    release command branches consistently and locking their behavior with the
+    existing focused command tests.
 
 ## Implementation Contract
 
@@ -49,6 +59,8 @@ its activation date.
   through component effects.
 - Transfer completion and future activation remain engine transactions before
   persistence observes them.
+- Working-session dirtiness is the only unsaved-gameplay truth, and compile-
+  time state construction cannot be bypassed with `unknown`.
 
 ## Expected Files
 
@@ -67,6 +79,8 @@ its activation date.
 - No derived exposure persistence, action autosave, UI filter persistence,
   compatibility mapper, silent plan replacement, or partial transfer recovery.
 - No second web career store or event bus.
+- No local contract dirty flag, hidden immediate save, or double-cast around a
+  manually assembled career state.
 - No broad Finances route.
 
 ## Required Checks
@@ -95,4 +109,6 @@ graphify update .
 - Every cross-surface projection agrees after completion and reload.
 - No action-level autosave, derived duplicate state, or compatibility path is
   introduced.
+- Contract/market commands participate in the shared unsaved-session warning,
+  and browser career construction remains fully checked by TypeScript.
 - Step 14 is the only next implementation step.

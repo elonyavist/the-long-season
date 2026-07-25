@@ -22,10 +22,12 @@ import {
 } from "../features/matchday/matchday-adapter";
 import { presentCareerInbox } from "../features/inbox/career-inbox-presenter";
 import type { CareerInboxPresentation } from "../features/inbox/career-inbox-presenter";
+import { presentCareerMarket } from "../features/market/career-market-adapter";
 import {
   presentCareerSquad,
   type CareerSquadPresentation,
 } from "../features/squad/career-squad-adapter";
+import type { CareerMarketViewInput } from "@game/ui";
 import type {
   WebCareerContinueResult,
   WebCareerState,
@@ -45,6 +47,7 @@ export type CareerScreenPresentationInput = Readonly<{
 export type CareerScreenPresentations = Readonly<{
   dashboard?: CareerDashboardPresentation;
   inbox?: CareerInboxPresentation;
+  market?: CareerMarketViewInput;
   squad?: CareerSquadPresentation;
   matchPreparation?: ReturnType<typeof buildMatchPreparationView>;
   tacticalBoardPlayers: ReturnType<typeof buildCareerTacticalBoardPlayers>;
@@ -96,6 +99,12 @@ export function useCareerScreenPresentations({
       : presentCareerSquad(activeCareerState, matchPreparationState),
     [activeCareerState, matchPreparationState],
   );
+  const market = useMemo(
+    () => activeCareerState === undefined
+      ? undefined
+      : presentCareerMarket(activeCareerState),
+    [activeCareerState],
+  );
   const tacticalBoardPlayers = useMemo(
     () => activeCareerState === undefined ? [] : buildCareerTacticalBoardPlayers(activeCareerState),
     [activeCareerState],
@@ -125,6 +134,7 @@ export function useCareerScreenPresentations({
   return {
     ...(dashboard === undefined ? {} : { dashboard }),
     ...(inbox === undefined ? {} : { inbox }),
+    ...(market === undefined ? {} : { market }),
     ...(squad === undefined ? {} : { squad }),
     ...(matchPreparation === undefined ? {} : { matchPreparation }),
     tacticalBoardPlayers,

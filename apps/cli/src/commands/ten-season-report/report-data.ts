@@ -1254,6 +1254,7 @@ function advanceCareerForReport(
             finalTable: context.seasonResult.table,
           }),
     },
+    transferWindows: league.transferWindows,
     createYouthIntakeCandidates: (candidateContext) =>
       youthIntakeCandidatesForCareer(candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
     createSeniorIntakeCandidates: (candidateContext) =>
@@ -1273,6 +1274,7 @@ function advanceCareerForReport(
         seasonNumber: context.seasonNumber,
         previousCareerState: context.careerState,
         careerState: advanced.careerState,
+        transferWindows: league.transferWindows,
       }),
       exitCount: advanced.facts.playerExits.exitCount,
       exitReasons: {

@@ -9,6 +9,7 @@ import {
   type ContractNegotiation,
   type GameDate,
   type PlayerContract,
+  type SeasonTransferWindows,
 } from "@game/domain";
 
 import {
@@ -20,6 +21,12 @@ import {
   type ContinueCareerUntilAttentionResult,
 } from "./continue-career.ts";
 import { advanceContractNegotiations } from "./contract-negotiation.ts";
+import {
+  advanceSelectedClubMarketLifecycles,
+  isSelectedClubMarketMessageResolved,
+  nextSelectedClubMarketDueDate,
+  projectSelectedClubMarketAttention,
+} from "./selected-club-market-workflow.ts";
 
 const RENEWAL_REMINDER_DAYS = 243;
 const FINAL_EXPIRY_DECISION_DAYS = 30;
@@ -30,8 +37,8 @@ export interface SelectedClubContractAttention {
   readonly message: CareerInboxMessage;
 }
 
-/** Result of advancing selected-club contract talks through the canonical stop rule. */
-export interface AdvanceSelectedClubContractsToAttentionResult {
+/** Result of advancing selected-club talks through the canonical stop rule. */
+export interface AdvanceSelectedClubWorkflowsToAttentionResult {
   readonly careerState: CareerState;
   readonly result: ContinueCareerUntilAttentionResult;
 }
@@ -75,14 +82,17 @@ export function projectSelectedClubContractAttention(
 /**
  * Advances delayed selected-club responses without crossing an earlier stop.
  *
- * Future responses are previewed one due date at a time. Only state reached on
- * or before the resulting stop date is returned and delivered to Posta.
+ * Contract and market responses are previewed one due date at a time. Only
+ * state reached on or before the resulting stop date is returned and delivered
+ * to Posta. Market lifecycles that need the resolved window catalog stay
+ * untouched when `transferWindows` is not supplied.
  */
-export function advanceSelectedClubContractsToAttention(input: {
+export function advanceSelectedClubWorkflowsToAttention(input: {
   readonly careerState: CareerState;
   readonly boundaryDate: GameDate;
   readonly additionalMessages?: readonly CareerInboxMessage[];
-}): AdvanceSelectedClubContractsToAttentionResult {
+  readonly transferWindows?: SeasonTransferWindows;
+}): AdvanceSelectedClubWorkflowsToAttentionResult {
   const startDate = input.careerState.gameState.calendar.currentDate;
   const boundaryDate = input.boundaryDate < startDate ? startDate : input.boundaryDate;
   let working = reconcileCareerInboxResolution(input.careerState);
@@ -90,10 +100,19 @@ export function advanceSelectedClubContractsToAttention(input: {
     working.currentSeasonInbox ?? [],
     input.additionalMessages ?? [],
     projectSelectedClubContractAttention(working, boundaryDate).map(({ message }) => message),
+    projectSelectedClubMarketAttention(working, boundaryDate),
   );
 
   while (true) {
-    const nextDueDate = nextSelectedClubNegotiationDueDate(working, boundaryDate);
+    const nextContractDueDate = nextSelectedClubNegotiationDueDate(working, boundaryDate);
+    const nextMarketDueDate = nextSelectedClubMarketDueDate(working, boundaryDate);
+    const nextDueDate = nextContractDueDate === undefined
+      ? nextMarketDueDate
+      : nextMarketDueDate === undefined
+        ? nextContractDueDate
+        : nextContractDueDate < nextMarketDueDate
+          ? nextContractDueDate
+          : nextMarketDueDate;
     if (nextDueDate === undefined) {
       return finish(working, continueCareerUntilAttention({ currentDate: startDate, boundaryDate, messages }));
     }
@@ -109,11 +128,18 @@ export function advanceSelectedClubContractsToAttention(input: {
     }
 
     working = advanceContractNegotiations(working, nextDueDate, working.selectedClubId).careerState;
+    working = advanceSelectedClubMarketLifecycles({
+      careerState: working,
+      throughDate: nextDueDate,
+      ...(input.transferWindows === undefined ? {} : { transferWindows: input.transferWindows }),
+    });
     messages = mergeMessages(
       messages,
       projectSelectedClubContractAttention(working, boundaryDate).map(({ message }) => message),
+      projectSelectedClubMarketAttention(working, boundaryDate),
     );
     messages = refreshProjectedContractResolution(working, messages);
+    messages = refreshProjectedMarketResolution(working, messages);
     const onDueDate = continueCareerUntilAttention({
       currentDate: startDate,
       boundaryDate: nextDueDate,
@@ -291,10 +317,22 @@ function selectedContractNegotiations(careerState: CareerState): readonly Contra
   });
 }
 
+function refreshProjectedMarketResolution(
+  careerState: CareerState,
+  messages: readonly CareerInboxMessage[],
+): readonly CareerInboxMessage[] {
+  return messages.map((message) => {
+    if (!message.category.startsWith("market_") || message.lifecycle.resolved) return message;
+    return isSelectedClubMarketMessageResolved(careerState, message)
+      ? createCareerInboxMessage({ ...message, lifecycle: { ...message.lifecycle, resolved: true } })
+      : message;
+  });
+}
+
 function finish(
   careerState: CareerState,
   result: ContinueCareerUntilAttentionResult,
-): AdvanceSelectedClubContractsToAttentionResult {
+): AdvanceSelectedClubWorkflowsToAttentionResult {
   return {
     careerState: reconcileCareerInboxResolution(
       deliverCareerInboxMessages(careerState, result.inboxMessages),

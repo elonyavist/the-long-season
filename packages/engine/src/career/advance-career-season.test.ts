@@ -63,7 +63,6 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
       "youth_intake",
       "youth_promotion",
       "squad_maintenance",
-      "transfer_turnover",
       "post_transfer_squad_maintenance",
       "next_calendar_merge",
       "player_state_rollover",
@@ -218,7 +217,6 @@ test("advanceCareerOneSeason supports report refresh without completed-season ar
       "youth_intake",
       "youth_promotion",
       "squad_maintenance",
-      "transfer_turnover",
       "post_transfer_squad_maintenance",
       "player_state_rollover",
     ]);

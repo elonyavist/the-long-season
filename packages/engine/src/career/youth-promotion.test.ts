@@ -278,7 +278,7 @@ test("promoteYouthCandidatesToSeniorSquads dates new terms at the explicit seaso
   );
 });
 
-test("promoteYouthCandidatesToSeniorSquads preserves wages promised by an open renewal", () => {
+test("promoteYouthCandidatesToSeniorSquads is not blocked by wages promised by an open renewal", () => {
   const candidate = playerId("player:reserved-wage-candidate");
   const careerState = careerStateFixture({
     selectedClubId: "club:pro01",
@@ -322,8 +322,10 @@ test("promoteYouthCandidatesToSeniorSquads preserves wages promised by an open r
     occurredOn: gameDate(20_365),
   });
 
-  assert.equal(result.records[0]?.reason, "contract_unaffordable");
-  assert.equal(result.careerState.gameState.clubs[aiClubId]?.playerIds.includes(candidate), false);
+  // Phase 79 locked rule: an open renewal offer does not reserve wage budget,
+  // so promotion is judged against committed contracts only and proceeds.
+  assert.notEqual(result.records[0]?.reason, "contract_unaffordable");
+  assert.equal(result.careerState.gameState.clubs[aiClubId]?.playerIds.includes(candidate), true);
 });
 
 function careerStateFixture(input: {

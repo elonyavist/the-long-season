@@ -168,6 +168,45 @@ test("derivePlayerValuation clamps to configured value limits", () => {
   assert.equal(high.value, 1_500_000_00);
 });
 
+test("derivePlayerValuation prices ages just outside the senior bands with the nearest band", () => {
+  const club = clubFixture("pro01", "third_division", 6);
+  const currentDate = gameDate(20_000);
+  const config = DEFAULT_PLAYER_VALUATION_CONFIG;
+
+  // A 15-year-old `rare_prodigy` sits one year below the youngest band (16-20);
+  // a 46-year-old sits one year above the oldest band (34-45). The valuation
+  // must price both instead of crashing, matching the nearest boundary band.
+  const prodigy = derivePlayerValuation({
+    player: playerFixture("young", "st", 12, 16, 15),
+    club,
+    currentDate,
+    config,
+  });
+  const youngest = derivePlayerValuation({
+    player: playerFixture("youngest-band", "st", 12, 16, 16),
+    club,
+    currentDate,
+    config,
+  });
+  const veteran = derivePlayerValuation({
+    player: playerFixture("old", "st", 12, 12, 46),
+    club,
+    currentDate,
+    config,
+  });
+  const oldest = derivePlayerValuation({
+    player: playerFixture("oldest-band", "st", 12, 12, 45),
+    club,
+    currentDate,
+    config,
+  });
+
+  assert.equal(prodigy.age, 15);
+  assert.equal(prodigy.value, youngest.value);
+  assert.equal(veteran.age, 46);
+  assert.equal(veteran.value, oldest.value);
+});
+
 test("derivePlayerValuation rejects missing primary position and bad config", () => {
   assertPlayerValuationError(
     () =>

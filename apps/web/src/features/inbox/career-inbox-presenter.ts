@@ -106,6 +106,7 @@ export function presentCareerInbox(input: {
           playerName: `${contractPlayer.firstName} ${contractPlayer.lastName}`,
           expiresOnIso: toISO(contract.endsOn),
         };
+    const marketFacts = buildMarketFacts(input.careerState, message);
 
     return {
       messageId: String(message.id),
@@ -120,6 +121,7 @@ export function presentCareerInbox(input: {
       ...(fixtureFacts === undefined ? {} : { fixture: fixtureFacts }),
       ...(seasonFacts === undefined ? {} : { season: seasonFacts }),
       ...(contractFacts === undefined ? {} : { contract: contractFacts }),
+      ...(marketFacts === undefined ? {} : { market: marketFacts }),
     } satisfies CareerPostaMessageInput;
   });
 
@@ -152,14 +154,48 @@ function toRailMessage(message: CareerPostaMessageInput): CareerInboxMessageInpu
     titleKey: `career.inbox.subject.${message.category}`,
     summaryKey: railSummaryKey(message),
     actionRequired: isMessageToHandle(message),
-    relatedLabels: message.fixture === undefined
-      ? message.season === undefined
-        ? message.contract === undefined ? [] : [message.contract.playerName]
-        : [message.season.championClubName]
-      : [message.fixture.opponentName],
+    relatedLabels: message.fixture !== undefined
+      ? [message.fixture.opponentName]
+      : message.season !== undefined
+        ? [message.season.championClubName]
+        : message.contract !== undefined
+          ? [message.contract.playerName]
+          : message.market !== undefined
+            ? [message.market.playerName]
+            : [],
     actions: actionId === undefined
       ? []
       : [{ actionId, labelKey: `career.inbox.action.${actionId}` }],
+  };
+}
+
+/** Resolves visible market names from the durable negotiation references. */
+function buildMarketFacts(
+  careerState: WebCareerState,
+  message: NonNullable<WebCareerState["currentSeasonInbox"]>[number],
+): CareerPostaMessageInput["market"] {
+  if (!message.category.startsWith("market_")) return undefined;
+  const player = message.related.playerId === undefined
+    ? undefined
+    : careerState.gameState.players[message.related.playerId];
+  if (player === undefined) return undefined;
+
+  const negotiationId = message.related.transferNegotiationId;
+  const negotiation = negotiationId === undefined
+    ? undefined
+    : careerState.transferNegotiationState?.negotiations[negotiationId];
+  const agreementId = message.related.preliminaryAgreementId;
+  const agreement = agreementId === undefined
+    ? undefined
+    : careerState.preliminaryAgreementState?.agreements[agreementId];
+  const counterpartyClubId = negotiation?.sellingClubId ?? agreement?.currentClubId;
+  const counterpartyClub = counterpartyClubId === undefined
+    ? undefined
+    : careerState.gameState.clubs[counterpartyClubId];
+
+  return {
+    playerName: `${player.firstName} ${player.lastName}`,
+    ...(counterpartyClub === undefined ? {} : { counterpartyClubName: counterpartyClub.name }),
   };
 }
 

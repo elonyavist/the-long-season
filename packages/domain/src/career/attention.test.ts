@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import { brand } from "../types/brand.ts";
 import { clubId, fixtureId, playerContractId, playerId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import {
@@ -8,6 +9,7 @@ import {
   compareCareerAttentionEvents,
   createCareerAttentionEvent,
   createContractAttentionEvent,
+  createMarketAttentionEvent,
   createMatchdayAttentionEvent,
   isUnresolvedCareerAttentionEvent,
 } from "./attention.ts";
@@ -96,4 +98,36 @@ test("contract reminder identity is stable and its explicit policy does not stop
   );
   assert.equal(reminder.continuePolicy, "never");
   assert.equal(isUnresolvedCareerAttentionEvent(reminder), false);
+});
+
+test("market attention event identity is stable and requires negotiation reference", () => {
+  const event = createMarketAttentionEvent({
+    transferNegotiationId: brand("transfer:attention-01"),
+    clubId: clubId("club:perugia"),
+    playerId: playerId("player:attention-01"),
+    date: gameDate(20_000),
+    level: "blocking",
+    reason: "market_club_counteroffer",
+    continuePolicy: "until_resolved",
+  });
+
+  assert.equal(
+    event.id,
+    "attention:market:market_club_counteroffer:transfer:attention-01",
+  );
+  assert.equal(event.category, "market");
+  assert.equal(event.continuePolicy, "until_resolved");
+  assert.equal(isUnresolvedCareerAttentionEvent(event), true);
+
+  assert.throws(
+    () =>
+      createCareerAttentionEvent({
+        id: careerAttentionEventId("attention:market:invalid"),
+        date: gameDate(20_000),
+        category: "market",
+        level: "blocking",
+        reason: "market_club_counteroffer",
+      }),
+    /Market attention must reference a transfer negotiation or preliminary agreement/,
+  );
 });

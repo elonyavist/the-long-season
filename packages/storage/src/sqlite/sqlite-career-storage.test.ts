@@ -10,10 +10,10 @@ import {
 } from "./sqlite-career-storage.ts";
 
 describe("SQLite career storage failure boundaries", () => {
-  it("uses one complete Phase 78 baseline for fresh browser databases", () => {
-    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([12]);
-    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([12]);
-    expect(planSqliteCareerMigrations(12)).toEqual([]);
+  it("uses one complete Phase 79 baseline for fresh browser databases", () => {
+    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([13]);
+    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([13]);
+    expect(planSqliteCareerMigrations(13)).toEqual([]);
   });
 
   it("persists every canonical contract-history event in the clean beta baseline", () => {
@@ -35,7 +35,10 @@ describe("SQLite career storage failure boundaries", () => {
     expect(() => planSqliteCareerMigrations(11)).toThrowError(expect.objectContaining({
       code: "unsupported_schema_version",
     }));
-    expect(() => planSqliteCareerMigrations(13)).toThrowError(expect.objectContaining({
+    expect(() => planSqliteCareerMigrations(12)).toThrowError(expect.objectContaining({
+      code: "unsupported_schema_version",
+    }));
+    expect(() => planSqliteCareerMigrations(14)).toThrowError(expect.objectContaining({
       code: "unsupported_schema_version",
     }));
     expect(() => planSqliteCareerMigrations(-1)).toThrowError(expect.objectContaining({

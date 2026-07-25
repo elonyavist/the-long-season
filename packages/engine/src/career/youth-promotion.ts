@@ -15,7 +15,7 @@ import {
 } from "@game/domain";
 
 import { applyContractActivationFinance } from "./career-finance-lifecycle.ts";
-import { evaluateCareerContractCapacity } from "./career-contract-reservations.ts";
+import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import { deriveContractDemand } from "./contract-negotiation-demand.ts";
 import { prepareSeniorSquadSigning } from "./senior-squad-transfer.ts";
 

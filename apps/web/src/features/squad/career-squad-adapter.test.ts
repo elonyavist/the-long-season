@@ -107,4 +107,33 @@ describe("presentCareerSquad", () => {
       messageKey: "career.squad.error.missingData",
     });
   });
+
+  it("indexes contract history once instead of rescanning it for every player", () => {
+    const fixture = createTestCareerFixture("squad-history-index");
+    const seniorSquad = fixture.career.seniorSquadState;
+    expect(seniorSquad).toBeDefined();
+    if (seniorSquad === undefined) return;
+
+    let historyReads = 0;
+    const observedHistory = new Proxy(seniorSquad.contractHistory, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && Object.hasOwn(target, property)) {
+          historyReads += 1;
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const observedCareer = {
+      ...fixture.career,
+      seniorSquadState: {
+        ...seniorSquad,
+        contractHistory: observedHistory,
+      },
+    };
+
+    const presentation = presentCareerSquad(observedCareer, fixture.draft);
+
+    expect(presentation.status).toBe("ready");
+    expect(historyReads).toBe(seniorSquad.contractHistoryEntryIds.length);
+  });
 });

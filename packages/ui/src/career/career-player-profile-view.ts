@@ -19,7 +19,6 @@ import {
 } from "./career-contract-view.ts";
 import type {
   CareerSquadAvailabilityReason,
-  CareerSquadMoraleDirection,
   CareerSquadPlayerLevel,
   CareerSquadSelection,
 } from "./career-squad-view.ts";
@@ -66,7 +65,6 @@ export interface CareerPlayerProfileInput {
   readonly condition: number;
   readonly form: number;
   readonly morale: number;
-  readonly moraleDirection: CareerSquadMoraleDirection;
   readonly selection: CareerSquadSelection;
   readonly availabilityReasons: readonly CareerSquadAvailabilityReason[];
   readonly value: Money;
@@ -89,7 +87,6 @@ export interface CareerPlayerProfileView {
   readonly condition: number;
   readonly form: number;
   readonly morale: number;
-  readonly moraleDirection: CareerSquadMoraleDirection;
   readonly selection: CareerSquadSelection;
   readonly availabilityReasons: readonly CareerSquadAvailabilityReason[];
   readonly value: Money;
@@ -121,7 +118,6 @@ export function buildCareerPlayerProfileView(input: CareerPlayerProfileInput): C
     condition: input.condition,
     form: input.form,
     morale: input.morale,
-    moraleDirection: input.moraleDirection,
     selection: input.selection,
     availabilityReasons: [...input.availabilityReasons],
     value: input.value,

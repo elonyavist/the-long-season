@@ -42,6 +42,11 @@ premium football-management product across desktop, narrow, keyboard, touch,
    Phase 78 report, transfer-window source audit, market long-run report, and a
    final integrated phase report.
 9. Recommend exactly one next phase only after all evidence passes.
+10. Close the `P79-CF-01` through `P79-CF-08` register with source and caller
+    proof: no hardcoded morale direction, duplicated expiry threshold, local
+    read-only money formatter, identity-driven draft reset, invisible dirty
+    command, per-player history scan, double-cast state builder, or malformed
+    contract-command branch remains.
 
 ## Implementation Contract
 
@@ -121,4 +126,6 @@ graphify update .
   budget.
 - Final reports record distributions, removed code, accepted warnings,
   residual risks, and exactly one next recommendation.
+- The carry-forward quality register is fully resolved without a second state,
+  compatibility path, speculative abstraction, or unsupported UI branch.
 - Phase 79 is complete without starting the next phase.

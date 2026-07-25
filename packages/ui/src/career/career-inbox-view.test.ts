@@ -205,6 +205,33 @@ test("contract reminder stays visible without entering To handle", () => {
   ]);
 });
 
+test("market messages surface transfer-office facts and the market destination", () => {
+  const view = buildCareerPostaView({
+    activeFilter: "all",
+    messages: [{
+      messageId: "inbox:market-club-counteroffer:transfer-negotiation:demo:1",
+      dateIso: "2026-08-04",
+      category: "market_club_counteroffer",
+      source: "transfer_office",
+      level: "blocking",
+      continuePolicy: "until_resolved",
+      lifecycle: { read: false, acknowledged: false, resolved: false },
+      blockerKeys: [],
+      actionIds: ["open_market_negotiation"],
+      market: { playerName: "Nico Verdi", counterpartyClubName: "Pro Modena" },
+    }],
+  });
+
+  assert.equal(view.toHandleCount, 1);
+  assert.equal(view.selectedMessage?.subjectKey, "career.inbox.subject.market_club_counteroffer");
+  assert.equal(view.selectedMessage?.sourceKey, "career.inbox.source.transfer_office");
+  assert.equal(view.selectedMessage?.primaryAction?.actionId, "open_market_negotiation");
+  assert.deepEqual(view.selectedMessage?.factRows, [
+    { labelKey: "career.inbox.fact.player", value: "Nico Verdi" },
+    { labelKey: "career.inbox.fact.counterpartyClub", value: "Pro Modena" },
+  ]);
+});
+
 function postaMessage(
   messageId: string,
   level: "blocking" | "important" | "informational",

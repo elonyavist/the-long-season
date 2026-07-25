@@ -1,5 +1,5 @@
 /** Current relational browser-career schema version. */
-export const SQLITE_CAREER_SCHEMA_VERSION = 12;
+export const SQLITE_CAREER_SCHEMA_VERSION = 13;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
@@ -689,6 +689,196 @@ export const SQLITE_CAREER_SCHEMA_V11_STATEMENTS = [
     PRIMARY KEY (save_id, negotiation_id, sort_order),
     FOREIGN KEY (save_id, negotiation_id)
       REFERENCES contract_negotiation_evaluations(save_id, negotiation_id) ON DELETE CASCADE
+  ) STRICT`,
+] as const;
+
+/** Version-12 relational transfer-negotiation and preliminary-agreement state baseline. */
+export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS transfer_negotiation_states (
+    save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS transfer_negotiations (
+    save_id TEXT NOT NULL REFERENCES transfer_negotiation_states(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    buying_club_id TEXT NOT NULL,
+    selling_club_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN (
+      'submitted', 'countered', 'accepted', 'player_offer_submitted',
+      'player_countered', 'player_rejected', 'player_expired',
+      'completion_failed', 'completed', 'rejected', 'withdrawn',
+      'expired', 'unaffordable'
+    )),
+    submitted_on INTEGER,
+    offered_fee INTEGER CHECK (offered_fee IS NULL OR offered_fee >= 0),
+    counter_fee INTEGER CHECK (counter_fee IS NULL OR counter_fee >= 0),
+    counter_issued_on INTEGER,
+    agreed_fee INTEGER CHECK (agreed_fee IS NULL OR agreed_fee >= 0),
+    accepted_on INTEGER,
+    club_accepted_on INTEGER,
+    rejected_on INTEGER,
+    rejection_reason TEXT CHECK (rejection_reason IS NULL OR rejection_reason IN (
+      'fee_below_valuation', 'player_not_for_sale', 'player_unwilling', 'contract_terms_rejected'
+    )),
+    withdrawn_on INTEGER,
+    expired_on INTEGER,
+    cancelled_on INTEGER,
+    failed_on INTEGER,
+    completion_failure_reason TEXT CHECK (completion_failure_reason IS NULL OR completion_failure_reason IN (
+      'outside_transfer_window', 'stale_ownership', 'stale_contract',
+      'registration_unavailable', 'unaffordable'
+    )),
+    completed_on INTEGER,
+    accepted_source TEXT CHECK (accepted_source IS NULL OR accepted_source IN ('submitted_offer', 'counter_offer')),
+    activated_contract_id TEXT,
+    transfer_history_sequence INTEGER,
+    stage_deadline_date INTEGER,
+    stage_deadline_reason TEXT,
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, negotiation_id),
+    FOREIGN KEY (save_id, buying_club_id) REFERENCES clubs(save_id, club_id),
+    FOREIGN KEY (save_id, selling_club_id) REFERENCES clubs(save_id, club_id),
+    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id),
+    FOREIGN KEY (save_id, activated_contract_id) REFERENCES player_contracts(save_id, contract_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS transfer_negotiation_terms (
+    save_id TEXT NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    terms_kind TEXT NOT NULL CHECK (terms_kind IN (
+      'offered', 'counter', 'accepted', 'demand_preferred', 'demand_minimum'
+    )),
+    duration_years INTEGER NOT NULL CHECK (duration_years BETWEEN 1 AND 5),
+    annual_wage INTEGER NOT NULL CHECK (annual_wage >= 0),
+    squad_status TEXT NOT NULL CHECK (squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
+    signing_bonus INTEGER NOT NULL CHECK (signing_bonus >= 0),
+    appearance_bonus INTEGER NOT NULL CHECK (appearance_bonus >= 0),
+    goal_bonus INTEGER CHECK (goal_bonus IS NULL OR goal_bonus >= 0),
+    clean_sheet_bonus INTEGER CHECK (clean_sheet_bonus IS NULL OR clean_sheet_bonus >= 0),
+    PRIMARY KEY (save_id, negotiation_id, terms_kind),
+    FOREIGN KEY (save_id, negotiation_id)
+      REFERENCES transfer_negotiations(save_id, negotiation_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS transfer_negotiation_evaluations (
+    save_id TEXT NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('accepted', 'countered', 'rejected')),
+    score_basis_points INTEGER NOT NULL,
+    evaluated_on INTEGER NOT NULL,
+    age INTEGER NOT NULL CHECK (age >= 0),
+    current_ability REAL NOT NULL,
+    reachable_potential REAL NOT NULL,
+    role TEXT NOT NULL,
+    expected_squad_status TEXT NOT NULL CHECK (expected_squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
+    current_annual_wage INTEGER NOT NULL CHECK (current_annual_wage >= 0),
+    remaining_contract_days INTEGER NOT NULL,
+    club_reputation REAL NOT NULL,
+    club_category TEXT NOT NULL,
+    free_agent_leverage_basis_points INTEGER NOT NULL,
+    PRIMARY KEY (save_id, negotiation_id),
+    FOREIGN KEY (save_id, negotiation_id)
+      REFERENCES transfer_negotiations(save_id, negotiation_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS transfer_negotiation_evaluation_reasons (
+    save_id TEXT NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    PRIMARY KEY (save_id, negotiation_id, sort_order),
+    FOREIGN KEY (save_id, negotiation_id)
+      REFERENCES transfer_negotiation_evaluations(save_id, negotiation_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS preliminary_agreement_states (
+    save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS preliminary_agreements (
+    save_id TEXT NOT NULL REFERENCES preliminary_agreement_states(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    agreement_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    current_club_id TEXT NOT NULL,
+    offering_club_id TEXT NOT NULL,
+    current_contract_id TEXT NOT NULL,
+    created_on INTEGER NOT NULL,
+    future_starts_on INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK (status IN (
+      'offer_submitted', 'countered', 'agreed', 'rejected',
+      'withdrawn', 'expired', 'activation_cancelled', 'activated'
+    )),
+    counter_issued_on INTEGER,
+    agreed_on INTEGER,
+    accepted_source TEXT CHECK (accepted_source IS NULL OR accepted_source IN ('submitted_offer', 'counter_offer')),
+    rejected_on INTEGER,
+    rejection_reason TEXT CHECK (rejection_reason IS NULL OR rejection_reason IN (
+      'player_unwilling', 'contract_terms_rejected', 'club_terms_unaffordable'
+    )),
+    withdrawn_on INTEGER,
+    expired_on INTEGER,
+    expiry_reason TEXT CHECK (expiry_reason IS NULL OR expiry_reason IN (
+      'negotiation_deadline', 'current_contract_expired'
+    )),
+    cancelled_on INTEGER,
+    cancellation_reason TEXT CHECK (cancellation_reason IS NULL OR cancellation_reason IN (
+      'current_contract_changed', 'player_ownership_changed', 'destination_unavailable',
+      'registration_unavailable', 'unaffordable', 'contract_overlap'
+    )),
+    activated_on INTEGER,
+    activated_contract_id TEXT,
+    stage_deadline_date INTEGER,
+    stage_deadline_reason TEXT,
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, agreement_id),
+    FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id),
+    FOREIGN KEY (save_id, current_club_id) REFERENCES clubs(save_id, club_id),
+    FOREIGN KEY (save_id, offering_club_id) REFERENCES clubs(save_id, club_id),
+    FOREIGN KEY (save_id, current_contract_id) REFERENCES player_contracts(save_id, contract_id),
+    FOREIGN KEY (save_id, activated_contract_id) REFERENCES player_contracts(save_id, contract_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS preliminary_agreement_terms (
+    save_id TEXT NOT NULL,
+    agreement_id TEXT NOT NULL,
+    terms_kind TEXT NOT NULL CHECK (terms_kind IN (
+      'offered', 'counter', 'agreed', 'demand_preferred', 'demand_minimum'
+    )),
+    duration_years INTEGER NOT NULL CHECK (duration_years BETWEEN 1 AND 5),
+    annual_wage INTEGER NOT NULL CHECK (annual_wage >= 0),
+    squad_status TEXT NOT NULL CHECK (squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
+    signing_bonus INTEGER NOT NULL CHECK (signing_bonus >= 0),
+    appearance_bonus INTEGER NOT NULL CHECK (appearance_bonus >= 0),
+    goal_bonus INTEGER CHECK (goal_bonus IS NULL OR goal_bonus >= 0),
+    clean_sheet_bonus INTEGER CHECK (clean_sheet_bonus IS NULL OR clean_sheet_bonus >= 0),
+    PRIMARY KEY (save_id, agreement_id, terms_kind),
+    FOREIGN KEY (save_id, agreement_id)
+      REFERENCES preliminary_agreements(save_id, agreement_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS preliminary_agreement_evaluations (
+    save_id TEXT NOT NULL,
+    agreement_id TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('accepted', 'countered', 'rejected')),
+    score_basis_points INTEGER NOT NULL,
+    evaluated_on INTEGER NOT NULL,
+    age INTEGER NOT NULL CHECK (age >= 0),
+    current_ability REAL NOT NULL,
+    reachable_potential REAL NOT NULL,
+    role TEXT NOT NULL,
+    expected_squad_status TEXT NOT NULL CHECK (expected_squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
+    current_annual_wage INTEGER NOT NULL CHECK (current_annual_wage >= 0),
+    remaining_contract_days INTEGER NOT NULL,
+    club_reputation REAL NOT NULL,
+    club_category TEXT NOT NULL,
+    free_agent_leverage_basis_points INTEGER NOT NULL,
+    PRIMARY KEY (save_id, agreement_id),
+    FOREIGN KEY (save_id, agreement_id)
+      REFERENCES preliminary_agreements(save_id, agreement_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS preliminary_agreement_evaluation_reasons (
+    save_id TEXT NOT NULL,
+    agreement_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    PRIMARY KEY (save_id, agreement_id, sort_order),
+    FOREIGN KEY (save_id, agreement_id)
+      REFERENCES preliminary_agreement_evaluations(save_id, agreement_id) ON DELETE CASCADE
   ) STRICT`,
 ] as const;
 

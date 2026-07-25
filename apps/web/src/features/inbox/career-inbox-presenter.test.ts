@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   createMatchdayAttention,
+  createTransferNegotiationId,
   findNextCareerFixture,
   projectSelectedClubContractAttention,
+  projectSelectedClubMarketAttention,
+  submitTransferOffer,
 } from "@game/engine";
+import { careerNonNegativeMoneyFromMinorUnits } from "@game/ui";
 
 import {
   buildWebCareerState,
   type WebCareerSaveId,
   type WebCareerState,
 } from "../../runtime/web-career-runtime";
+import { resolveCareerTransferWindows } from "../market/market-transfer-windows";
 import { presentCareerInbox } from "./career-inbox-presenter";
 
 describe("presentCareerInbox", () => {
@@ -215,6 +220,86 @@ describe("presentCareerInbox", () => {
       { labelKey: "career.inbox.fact.goals", value: "872" },
     ]);
     expect(presentation.railView.messages[0]?.category).toBe("season_rollover");
+  });
+  it("presents a market counteroffer with resolved player and counterparty names", () => {
+    const career = buildWebCareerState({
+      saveId: "save:posta-market" as WebCareerSaveId,
+      worldSeed: "posta-market-seed",
+    });
+    const sellingClubId = career.gameState.clubIds.find((id) => id !== career.selectedClubId);
+    if (sellingClubId === undefined) throw new Error("Expected a selling club");
+    const targetPlayerId = career.gameState.clubs[sellingClubId]?.playerIds[0];
+    const targetPlayer = targetPlayerId === undefined
+      ? undefined
+      : career.gameState.players[targetPlayerId];
+    if (targetPlayerId === undefined || targetPlayer === undefined) {
+      throw new Error("Expected a market target player");
+    }
+
+    const negotiationId = createTransferNegotiationId(career.selectedClubId, targetPlayerId, 1);
+    const submitted = submitTransferOffer({
+      careerState: career,
+      negotiationId,
+      buyingClubId: career.selectedClubId,
+      sellingClubId,
+      playerId: targetPlayerId,
+      offeredFee: careerNonNegativeMoneyFromMinorUnits(50_000_00),
+      submittedOn: career.gameState.calendar.currentDate,
+      transferWindows: resolveCareerTransferWindows(career),
+    });
+    if (submitted.status !== "applied" || submitted.negotiation.status !== "submitted") {
+      throw new Error("Expected a submitted transfer offer");
+    }
+    const countered = {
+      id: negotiationId,
+      buyingClubId: career.selectedClubId,
+      sellingClubId,
+      playerId: targetPlayerId,
+      status: "countered",
+      submittedOn: submitted.negotiation.submittedOn,
+      offeredFee: submitted.negotiation.offeredFee,
+      counterFee: careerNonNegativeMoneyFromMinorUnits(80_000_00),
+      counterIssuedOn: career.gameState.calendar.currentDate,
+      clock: submitted.negotiation.clock,
+    };
+    const counteredCareer: WebCareerState = {
+      ...submitted.careerState,
+      transferNegotiationState: {
+        negotiations: { [negotiationId]: countered },
+        negotiationIds: [negotiationId],
+      } as NonNullable<WebCareerState["transferNegotiationState"]>,
+    };
+    const messages = projectSelectedClubMarketAttention(
+      counteredCareer,
+      counteredCareer.gameState.calendar.currentDate,
+    );
+    const presentation = presentCareerInbox({
+      careerState: { ...counteredCareer, currentSeasonInbox: messages },
+      activeFilter: "all",
+    });
+
+    expect(presentation.postaView.toHandleCount).toBe(1);
+    expect(presentation.postaView.selectedMessage).toMatchObject({
+      subjectKey: "career.inbox.subject.market_club_counteroffer",
+      sourceKey: "career.inbox.source.transfer_office",
+      primaryAction: {
+        actionId: "open_market_negotiation",
+        labelKey: "career.inbox.action.open_market_negotiation",
+      },
+    });
+    expect(presentation.postaView.selectedMessage?.factRows).toEqual([
+      {
+        labelKey: "career.inbox.fact.player",
+        value: `${targetPlayer.firstName} ${targetPlayer.lastName}`,
+      },
+      {
+        labelKey: "career.inbox.fact.counterpartyClub",
+        value: career.gameState.clubs[sellingClubId]?.name,
+      },
+    ]);
+    expect(presentation.railView.messages[0]?.relatedLabels).toEqual([
+      `${targetPlayer.firstName} ${targetPlayer.lastName}`,
+    ]);
   });
 });
 

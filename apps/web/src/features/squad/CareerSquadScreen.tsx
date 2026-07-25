@@ -13,12 +13,9 @@ import {
 } from "@game/ui";
 import {
   Armchair,
-  ArrowDown,
-  ArrowUp,
   ChevronsUpDown,
   Eye,
   FileClock,
-  Minus,
   Search,
   UserRoundMinus,
   UserRoundPlus,
@@ -30,6 +27,8 @@ import type {
   WebSelectedClubContractCommand,
   WebSelectedClubContractCommandResult,
 } from "../../runtime/web-career-runtime";
+import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
+import { formatMoneyFromMinorUnits } from "../../shared/format-money";
 import { AppShell } from "../app-shell/AppShell";
 import { CareerScreenHeader } from "../shared/CareerScreenHeader";
 import { CareerPlayerProfileDialog } from "./CareerPlayerProfileDialog";
@@ -303,7 +302,7 @@ function SquadRow({
       <td data-label={text("career.squad.column.number")}>{row.shirtNumber}</td>
       <td data-label={text("career.squad.column.role")}>
         <abbr title={text(`career.player.role.${row.primaryRole}` as MessageKey)}>
-          {shortRole(row.primaryRole)}
+          {canonicalPlayerRoleCode(row.primaryRole)}
         </abbr>
       </td>
       <th data-label={text("career.squad.column.player")} scope="row">
@@ -320,15 +319,15 @@ function SquadRow({
         </span>
       </th>
       <td data-label={text("career.squad.column.condition")}>{Math.round(row.condition)}%</td>
-      <td data-label={text("career.squad.column.morale")}>
-        <MoraleDirection direction={row.moraleDirection} text={text} />
-      </td>
+      <td data-label={text("career.squad.column.morale")}>{Math.round(row.morale)}</td>
       <td data-label={text("career.squad.column.status") }>
         <span className="tls-squad-status" data-status={row.compositeStatus}>
           {text(`career.squad.status.${row.compositeStatus}` as MessageKey)}
         </span>
       </td>
-      <td data-label={text("career.squad.column.value")}>{formatMoney(row.value, row.currency, language)}</td>
+      <td data-label={text("career.squad.column.value")}>
+        {formatMoneyFromMinorUnits(row.value, row.currency, language, "whole")}
+      </td>
       <td data-label={text("career.squad.column.current_level")}>{text(levelKey(row.currentLevel))}</td>
       <td data-label={text("career.squad.column.potential_level")}>{text(levelKey(row.potentialLevel))}</td>
       <td data-label={text("career.squad.column.action") }>
@@ -374,22 +373,6 @@ function SquadRow({
   );
 }
 
-function MoraleDirection({
-  direction,
-  text,
-}: Readonly<{
-  direction: CareerSquadPlayerRowView["moraleDirection"];
-  text: Translator;
-}>): React.JSX.Element {
-  const Icon = direction === "up" ? ArrowUp : direction === "down" ? ArrowDown : Minus;
-  return (
-    <span className="tls-squad-morale" data-direction={direction} title={text(`career.squad.morale.${direction}` as MessageKey)}>
-      <Icon aria-hidden="true" size={18} strokeWidth={2} />
-      <span className="tls-visually-hidden">{text(`career.squad.morale.${direction}` as MessageKey)}</span>
-    </span>
-  );
-}
-
 function nextSort(current: CareerSquadSort, key: CareerSquadColumnKey): CareerSquadSort {
   if (key === "action") return current;
   if (current.key !== key) return { key, direction: "ascending" };
@@ -408,34 +391,4 @@ function sortLabel(
 
 function levelKey(level: CareerSquadPlayerRowView["currentLevel"]): MessageKey {
   return `career.squad.level.${level}` as MessageKey;
-}
-
-function formatMoney(
-  amountMinorUnits: number,
-  currency: string,
-  language: WebPreferences["language"],
-): string {
-  return new Intl.NumberFormat(language, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amountMinorUnits / 100);
-}
-
-function shortRole(role: CareerSquadPlayerRowView["primaryRole"]): string {
-  const labels: Readonly<Record<CareerSquadPlayerRowView["primaryRole"], string>> = {
-    goalkeeper: "POR",
-    right_full_back: "TD",
-    center_back: "DC",
-    left_full_back: "TS",
-    defensive_midfielder: "MED",
-    central_midfielder: "CC",
-    right_midfielder: "ED",
-    left_midfielder: "ES",
-    attacking_midfielder: "TRQ",
-    right_winger: "AD",
-    left_winger: "AS",
-    striker: "ATT",
-  };
-  return labels[role];
 }

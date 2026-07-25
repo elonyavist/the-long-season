@@ -13,6 +13,7 @@ import {
   type LeagueTableRow,
   type LeagueTableRules,
   type PlayerId,
+  type SeasonTransferWindows,
   type SeasonId,
   seasonId,
 } from "@game/domain";
@@ -33,7 +34,6 @@ import { type CareerIntakeCandidate } from "./player-intake.ts";
 import { generateNextSeasonCalendar, type NextSeasonCalendarGenerated } from "./next-season-calendar.ts";
 import { rolloverPlayersForNextSeason } from "./player-season-rollover.ts";
 import { maintainCareerSquadShape, MINIMUM_CAREER_SQUAD_SIZE } from "./squad-maintenance.ts";
-import { simulateTransferTurnover } from "./transfer-turnover.ts";
 import { type YouthIntakeCandidate, applySeasonalYouthIntake } from "./youth-intake.ts";
 import { applyYouthAcademyLifecycle, type YouthLifecycleRecord } from "./youth-lifecycle.ts";
 import { promoteYouthCandidatesToSeniorSquads } from "./youth-promotion.ts";
@@ -122,6 +122,13 @@ export interface AdvanceCareerOneSeasonInput {
    * manager without mutating the saved lineup or bench.
    */
   readonly allowSelectedClubSquadReplenishment?: boolean;
+  /**
+   * Adapter-owned windows used by AI clubs during this calendar advancement.
+   *
+   * Omit only when the caller cannot supply a competition calendar; the engine
+   * never invents or guesses transfer dates.
+   */
+  readonly transferWindows?: SeasonTransferWindows;
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
@@ -137,7 +144,7 @@ export type CareerSeasonAdvancementOperation =
   | "youth_intake"
   | "youth_promotion"
   | "squad_maintenance"
-  | "transfer_turnover"
+  | "ai_market_lifecycle"
   | "post_transfer_squad_maintenance"
   | "next_calendar_merge"
   | "player_state_rollover"
@@ -221,9 +228,9 @@ export interface CareerSquadMaintenanceFact {
   readonly warningCount: number;
 }
 
-/** Aggregate transfer-turnover facts emitted by one advancement. */
+/** Aggregate completed canonical market movements emitted by one advancement. */
 export interface CareerTransferTurnoverFact {
-  /** Number of deterministic inter-club player movements. */
+  /** Number of completed inter-club transfers negotiated by AI clubs. */
   readonly transferCount: number;
 }
 
@@ -401,7 +408,11 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     toDate: seasonContext.nextSeasonStartDate,
     seasonId: previousSeasonId,
     playerIds: input.seniorDevelopmentPlayerIds ?? seniorPlayerIds(workingCareerState),
+    ...(input.transferWindows === undefined ? {} : { transferWindows: input.transferWindows }),
   });
+  if (monthlyLifecycle.marketLifecycle !== undefined) {
+    operationOrder.push("ai_market_lifecycle");
+  }
   const distributionInput = input.mode.kind === "completedSeason"
     ? input.mode.seasonDistribution === undefined || seasonContext.archive === undefined
       ? undefined
@@ -504,31 +515,21 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
         intakeCandidates: seniorIntakeCandidates,
       });
 
-  operationOrder.push("transfer_turnover");
-  const turnover = usesCanonicalSeniorSquads
-    ? simulateTransferTurnover({
-        careerState: maintained.careerState,
-        worldSeed: input.worldSeed,
-        seasonId: advancementSeasonId,
-        occurredOn: seasonContext.nextSeasonStartDate,
-      })
-    : { careerState: maintained.careerState, transfers: [] };
-
   operationOrder.push("post_transfer_squad_maintenance");
-  const replenishmentClubIds = turnover.careerState.gameState.clubIds.filter(
+  const replenishmentClubIds = maintained.careerState.gameState.clubIds.filter(
     (clubId) =>
       clubId !== input.careerState.selectedClubId
       || input.allowSelectedClubSquadReplenishment === true,
   );
   const postTransferMaintained = usesCanonicalSeniorSquads
     ? replenishSeniorSquadsFromFreeAgents({
-        careerState: turnover.careerState,
+        careerState: maintained.careerState,
         clubIds: replenishmentClubIds,
         occurredOn: seasonContext.nextSeasonStartDate,
       })
     : maintainCareerSquadShape({
-        careerState: turnover.careerState,
-        intakeCandidates: intakeCandidatesNotYetActive(turnover.careerState, seniorIntakeCandidates),
+        careerState: maintained.careerState,
+        intakeCandidates: intakeCandidatesNotYetActive(maintained.careerState, seniorIntakeCandidates),
       });
   const maintenanceRecords = [...maintained.records, ...postTransferMaintained.records];
 
@@ -586,7 +587,9 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
         warningCount: maintenanceRecords.reduce((sum, record) => sum + record.warnings.length, 0),
       },
       transferTurnover: {
-        transferCount: turnover.transfers.length,
+        transferCount: monthlyLifecycle.marketLifecycle?.facts.filter(
+          (fact) => fact.event === "transfer_completed",
+        ).length ?? 0,
       },
       squadHealth: squadHealthFact(rolledOver.careerState),
       youthHealth: youthHealthFact(rolledOver.careerState),

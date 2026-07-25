@@ -665,6 +665,40 @@ describe("WebCareerRuntime", () => {
       liveProgress: { snapshot: { phase: "half_time", currentMinute: 45 } },
     });
   });
+
+  it("proves applied renewal/market commands set CareerSessionStatus dirty=true and explicit save clears it (P79-CF-05)", async () => {
+    const storage = new RecordingCareerStorage();
+    const runtime = new WebCareerRuntime(storage, {
+      createIdentity: () => ({ saveId: "save:web-contract-dirty" as WebCareerSaveId, worldSeed: "web-contract-dirty-seed" }),
+    });
+    const created = await runtime.createNewCareer();
+
+    expect(runtime.careerSessionStatus()?.dirty).toBe(false);
+
+    const club = created.state.gameState.clubs[created.state.selectedClubId];
+    if (club === undefined || club.playerIds.length === 0) throw new Error("Expected selected club players");
+    const playerId = club.playerIds[0]!;
+
+    const result = runtime.applySelectedClubContractCommand(created.metadata.saveId, {
+      type: "offer_renewal",
+      playerId,
+      terms: {
+        durationYears: 2,
+        annualWage: 120_000_00 as any,
+        squadStatus: "regular_starter",
+        bonuses: {
+          signingBonus: 0 as any,
+          appearanceBonus: 0 as any,
+        },
+      },
+    });
+
+    expect(result.status).toBe("applied");
+    expect(runtime.careerSessionStatus()?.dirty).toBe(true);
+
+    await runtime.saveCareerNow(created.metadata.saveId);
+    expect(runtime.careerSessionStatus()?.dirty).toBe(false);
+  });
 });
 
 function advanceRuntimeToPhase(

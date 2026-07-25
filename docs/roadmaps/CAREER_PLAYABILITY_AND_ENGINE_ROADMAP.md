@@ -1632,6 +1632,10 @@ Minimum useful scope:
   evidence;
 - a final integrated accessibility, visual, dead-code, architecture, browser,
   dependency, and report closeout for Phases 78 and 79.
+- targeted closure of the eight audited Phase 78 carry-forward defects through
+  existing Phase 79 owners, including canonical morale trend facts, one expiry
+  alert boundary, indexed long-career profile projection, robust web drafts,
+  canonical dirty-state proof, and type-safe browser career construction.
 
 What must not happen:
 

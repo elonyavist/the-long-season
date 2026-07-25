@@ -7,6 +7,8 @@ import type {
   CareerAttentionLevel,
 } from "./attention.ts";
 import type { ContractNegotiationId } from "./contract-negotiation.ts";
+import type { PreliminaryAgreementId } from "./preliminary-agreement.ts";
+import type { TransferNegotiationId } from "./transfer-negotiation.ts";
 
 /** Stable identifier for one durable career Posta message. */
 export type CareerInboxMessageId = Brand<string, "CareerInboxMessageId">;
@@ -22,7 +24,18 @@ export type CareerInboxCategory =
   | "contract_counteroffer"
   | "contract_accepted"
   | "contract_rejected"
-  | "contract_expiry_decision";
+  | "contract_expiry_decision"
+  | "market_club_accepted"
+  | "market_club_counteroffer"
+  | "market_club_rejected"
+  | "market_player_counteroffer"
+  | "market_player_rejected"
+  | "market_offer_expired"
+  | "market_transfer_completed"
+  | "market_agreement_failed"
+  | "market_offer_withdrawn"
+  | "market_preliminary_agreed"
+  | "market_preliminary_activated";
 
 /** Functional sender used by presentation without inventing a staff identity. */
 export type CareerInboxSource =
@@ -30,14 +43,16 @@ export type CareerInboxSource =
   | "match_report"
   | "competition_office"
   | "medical_team"
-  | "contract_office";
+  | "contract_office"
+  | "transfer_office";
 
 /** Stable manager destinations exposed by current Posta messages. */
 export type CareerInboxActionId =
   | "prepare_match"
   | "open_matchday"
   | "open_contract_negotiation"
-  | "release_player_at_expiry";
+  | "release_player_at_expiry"
+  | "open_market_negotiation";
 
 /** Independent durable lifecycle facts for one message. */
 export interface CareerInboxMessageLifecycle {
@@ -53,6 +68,8 @@ export interface CareerInboxRelatedEntities {
   readonly playerId?: PlayerId;
   readonly contractId?: PlayerContractId;
   readonly contractNegotiationId?: ContractNegotiationId;
+  readonly transferNegotiationId?: TransferNegotiationId;
+  readonly preliminaryAgreementId?: PreliminaryAgreementId;
 }
 
 /** Input accepted by the durable message constructor. */
@@ -129,6 +146,18 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
   }
 
   if (
+    input.category.startsWith("market_")
+    && input.related?.transferNegotiationId === undefined
+    && input.related?.preliminaryAgreementId === undefined
+  ) {
+    throw new Error(`${input.category} inbox messages must reference a transfer negotiation or preliminary agreement`);
+  }
+
+  if (input.category.startsWith("market_") && input.related?.playerId === undefined) {
+    throw new Error(`${input.category} inbox messages must reference a player`);
+  }
+
+  if (
     (input.category === "contract_counteroffer"
       || input.category === "contract_accepted"
       || input.category === "contract_rejected")
@@ -154,6 +183,8 @@ export function createCareerInboxMessage(input: CareerInboxMessageInput): Career
 
   const expectedSource: CareerInboxSource = input.category.startsWith("contract_")
     ? "contract_office"
+    : input.category.startsWith("market_")
+    ? "transfer_office"
     : input.category === "matchday"
     ? "technical_staff"
     : input.category === "match_result"

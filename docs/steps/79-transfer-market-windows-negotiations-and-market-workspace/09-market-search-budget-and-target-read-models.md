@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready.
+Done.
 
 ## Goal
 
@@ -32,6 +32,18 @@ actual budget beside possible pending exposure without hidden-potential leaks.
 6. Build selected-club negotiation summaries for club stage, player stage,
    preliminary agreement, deadlines, and outcome reasons.
 7. Localize labels and format dates/money through current shared owners.
+8. Resolve `P79-CF-01`: expose one truthful, reload-stable morale direction for
+   the reused Squad/player-profile projection from the latest canonical
+   morale consequence. If the audited state has no such fact, remove the
+   unsupported directional contract and UI branches rather than deriving
+   direction from component memory.
+9. Resolve `P79-CF-02`: add one exported `@game/ui` contract-expiry alert
+   policy/helper and make table/profile projections consume the same exact
+   boundary instead of adapter-owned `244` literals.
+10. Resolve `P79-CF-06`: build player-keyed contract-history and latest-valid-
+    negotiation indexes once per presentation, then consume O(1) lookups while
+    projecting each player. Add a long-history regression fixture that proves
+    work grows with players plus history, not their product.
 
 ## Implementation Contract
 
@@ -41,12 +53,16 @@ actual budget beside possible pending exposure without hidden-potential leaks.
   models.
 - Lists use stable IDs and deterministic sort tie-breakers.
 - Empty, closed-window, pending, error, and completed states are first-class.
+- Morale direction and expiry status are derived presentation facts over
+  canonical inputs; React identity and duplicated web thresholds own neither.
 
 ## Expected Files
 
 - focused Market view-model Modules/tests under `packages/ui/`
 - current public player-assessment, contract, finance, and negotiation query
   owners only where a reusable projection is required
+- current Squad/player-profile projection Adapter and focused tests only for
+  `P79-CF-01`, `P79-CF-02`, and `P79-CF-06`
 - `packages/i18n/` labels/tests required by the new public view models
 - package exports only where consumed
 - `docs/PROJECT_STATUS.md`
@@ -84,4 +100,28 @@ graphify update .
   framework-free.
 - Every sort/filter/result is deterministic and covered.
 - No hidden or duplicated business rule reaches presentation.
+- Morale arrows cannot be permanently hardcoded, expiry alerts cannot diverge,
+  and player projection performs no per-player full-history scan.
 - Step 10 is the only next implementation step.
+
+## Completion Notes
+
+- `@game/ui` now owns framework-free Market target, detail, window, finance,
+  pending-exposure, offer-preview, and negotiation models with deterministic
+  filters, sorts, IDs, and first-class loading/error/empty/closed states.
+- Browser-facing models expose only public categorical current/potential
+  assessments; exact hidden ability, willingness, and affordability formulas
+  remain outside presentation.
+- Unsupported hardcoded morale direction was removed instead of being inferred
+  from React memory.
+- `CAREER_CONTRACT_EXPIRY_ALERT_DAYS` and
+  `hasCareerContractExpiryAlert` now own the exact shared 244-day boundary used
+  by both table and profile projections.
+- Squad projection indexes contract history and latest valid negotiations once
+  before the player loop. A property-access regression test proves history is
+  read once per entry rather than once per player and entry.
+- Verification: UI tests PASS (`16` files / `87` tests), UI typecheck PASS,
+  focused web Squad adapter PASS (`6` tests), i18n tests PASS (`2` files / `18`
+  tests), full `pnpm check` PASS (`220` files / `1331` tests; dependency cruise
+  `661` modules / `2509` dependencies), `git diff --check` PASS, and
+  `graphify update .` PASS.

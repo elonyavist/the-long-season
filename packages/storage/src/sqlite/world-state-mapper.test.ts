@@ -48,8 +48,8 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
   );
 });
 
-test("migration ledger exposes one complete Phase 78 baseline", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [12]);
+test("migration ledger exposes one complete Phase 79 baseline", () => {
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [13]);
   const statements = SQLITE_CAREER_MIGRATIONS[0]?.statements ?? [];
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);

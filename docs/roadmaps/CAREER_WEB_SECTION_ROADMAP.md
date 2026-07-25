@@ -2222,6 +2222,11 @@ Minimum useful scope:
 - lossless persistence, cross-surface Squad/Tactics/preparation/Matchday
   reconciliation, staged long-run gates, and one final integrated Phase 78/79
   cleanup and report.
+- close the eight audited Phase 78 carry-forward defects in their owning
+  Phase 79 steps: canonical morale direction, one expiry-alert policy, shared
+  currency display, stable form drafts, visible canonical dirty state,
+  indexed profile projection, typed career construction, and clean runtime
+  command branches.
 
 What must not happen:
 
@@ -2251,8 +2256,153 @@ Definition of Done:
 Documentation:
 
 - `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
-  is documented with fifteen ordered steps and remains queued until Phase 78
-  Step 15 is Done.
+  is documented with fifteen ordered steps.
+
+Step progress:
+
+- Step 01 (current market ownership and gap audit) complete:
+  `docs/audits/TRANSFER_MARKET_OWNERSHIP_AND_GAP_AUDIT.md` records the
+  retain/extend/replace/remove table, the temporary pending-reservation
+  replacement path (`deriveCareerContractOfferReservations`), and all eight
+  `P79-CF-*` carry-forward findings against one owning step and one test seam
+  each. No production code changed. Started under an explicit user decision to
+  proceed before Phase 78 Step 15 is marked Done; that entry-gate override is
+  recorded in `docs/PROJECT_STATUS.md`. Step 02 is the only next step.
+- Step 02 (playable-competition transfer-window catalog) complete: domain owns
+  `TransferWindow`/`SeasonTransferWindows` with two-inclusive-window validation
+  and `resolveTransferWindowStatus`; content owns the FIGC 2026/27 template for
+  `competition:demo-third-division` only, resolved deterministically per season
+  and exposed on `FakeLeagueSystem.transferWindows`. Source recorded in
+  `docs/audits/TRANSFER_WINDOW_SOURCE_AUDIT.md`. No speculative league rows, no
+  user-configurable calendar, no eligibility behavior yet. `pnpm check` PASS
+  (`211` files / `1274` tests). Step 03 is the only next step.
+- Step 03 (window eligibility and out-of-window policy) complete: one pure
+  engine owner `evaluateMarketActionEligibility` classifies each market action
+  (`permanent_transfer_offer`/`completion`, `external_free_agent_registration`,
+  `contract_renewal`, `preliminary_agreement`, `market_inspection`) as allowed
+  or blocked with stable reason codes and the active close / next-open date;
+  window-gated actions require an open window, renewals and inspection stay
+  year-round, and preliminary agreements need six contract months or less
+  (`PRELIMINARY_AGREEMENT_MAX_REMAINING_DAYS = 183`). `applyCareerPermanentTransfer`
+  now rejects out-of-window attempts (`outside_transfer_window`) when supplied
+  resolved windows, independent of any disabled UI control. No UI, offer
+  lifecycle, AI targeting, or persistence change. `pnpm check` PASS (`212`
+  files / `1282` tests). Step 04 is the only next step.
+- Step 04 (three-day negotiation clock and pending exposure) complete: removed
+  the temporary Phase 78 reservation-as-spend
+  (`deriveCareerContractOfferReservations` + `career-contract-reservations.ts`
+  deleted; every caller migrated across transfer, free-agent, youth-promotion,
+  AI, and finance lifecycles). `evaluateCareerContractCapacity` (now
+  `career-contract-capacity.ts`) judges affordability against committed
+  contracts and cash only; acceptance still rechecks atomically. New
+  informational `deriveMarketPendingExposure` derives aggregate pending
+  wage/signing exposure without touching finance. New domain
+  `negotiation-stage-clock.ts` bounds a stage to three days, caps the deadline
+  at window close, and keeps the deadline on a counteroffer (consumed by Steps
+  05-06). Reservation-behavior tests were migrated to the locked truth. `pnpm
+  check` PASS (`213` files / `1289` tests). Necessary deviation: raised the
+  heavy ten-season determinism test's timeout to 30s (the pending-exposure
+  model runs a heavier sim and brushed the 5s default under load). Step 05 is
+  the only next step.
+- Step 05 (club-to-club permanent-transfer negotiation) complete: new domain
+  `transfer-negotiation.ts` (states submitted/countered/accepted/rejected/
+  withdrawn/expired/unaffordable, `TransferNegotiationState`, validation) wired
+  into `CareerState.transferNegotiationState`. New engine
+  `transfer-negotiation.ts` owns `submitTransferOffer` (window-gated, ownership +
+  duplicate + positive-fee validated), `advanceTransferNegotiations`
+  (deterministic seller reply via `deriveSellerTransferWillingness`: valuation ×
+  squad-status × contract-security × cash, with a squad-depth-protected
+  not-for-sale guard and a 0.75 counter band), `acceptTransferCounter`, and
+  `withdrawTransferNegotiation`. Accepted club agreements are provisional — no
+  ownership or money moves; affordability rechecks at acceptance cancel as
+  `unaffordable`; the three-day deadline survives a counter; advancing is
+  idempotent. `pnpm check` PASS (`215` files / `1306` tests). Step 06 is the
+  only next step.
+- Step 06 (player-contract table and atomic transfer completion) complete:
+  accepted club terms now open an independent three-day player table, reuse the
+  canonical annual contract demand/evaluation model, reserve nothing while
+  pending, and complete through one atomic permanent-transfer boundary after
+  ownership, seller-contract, affordability, window, and registration rechecks.
+  Fee, contracts, registration, shirt number, history, ledger, squad, and
+  selected-plan reconciliation commit together or the career remains
+  unchanged. Focused suites PASS (`31` tests); full `pnpm check` PASS (`215`
+  files / `1313` tests, depcruise `650` / `2441`).
+- Step 07 (final-six-month preliminary agreements) complete: a player in the
+  final six calendar months may agree future annual terms through the existing
+  player clock without moving ownership, registration, selection, payroll, or
+  finance before contract expiry. Canonical advancement activates the agreement
+  once through an atomic ownership, registration, contract, history, finance,
+  negotiation, and selected-plan transition; impossible activation records a
+  durable cancellation fact. Full `pnpm check` PASS (`217` files / `1321`
+  tests). Step 08 is the only next step.
+- Step 08 (AI market targeting and squad protection) complete: deterministic
+  AI clubs derive bounded football needs and act only through canonical window,
+  negotiation, player-table, preliminary-agreement, affordability, and atomic
+  completion commands. Stable ordering and season limits prevent offer fan-out;
+  the selected club remains manual; structural seller protection is an explicit
+  AI policy; the obsolete direct turnover path is deleted. Focused suites PASS
+  (`5` files / `32` tests); full `pnpm check` PASS (`217` files / `1318`
+  tests, depcruise `655` / `2485`).
+- Step 09 (market search, budget, and target read models) complete:
+  framework-free `@game/ui` models expose truthful window, finance,
+  pending-exposure, offer-preview, eligibility, target, filter, detail, and
+  negotiation facts without exact hidden potential. One shared 244-day
+  contract-alert policy replaced duplicated adapter literals, unsupported
+  hardcoded morale direction was removed, and Squad history/negotiation
+  projection is indexed once before the player loop. Full `pnpm check` PASS
+  (`220` files / `1331` tests; dependency cruise `661` / `2509`).
+- Step 10 (market workspace and player inspection) complete: the Market route
+  mounts over the Step 09 models with a finance/window strip, filterable
+  target table, and a public inspection profile reusing the Squad full-screen
+  pattern. A 2026-07-24 re-audit of "Done" Steps 09-10 (user-requested) found
+  Step 09 fully correct on re-check, but found and fixed six real Step 10
+  gaps: a free-agent/youth leak crashing valuation on academy-age players
+  (`career-market-adapter.ts` now scopes targets through
+  `selectFreeAgentPlayerIds`), a completely unstyled route with real
+  horizontal table overflow (zero `.tls-market-*` CSS existed; added, reusing
+  Squad/profile tokens and patterns with no `!important`), missing Playwright
+  coverage (added desktop+narrow Market specs to `current-product.spec.ts`,
+  now `22/22`), a dependency-boundary violation (`apps/web` importing
+  `@game/domain` directly in two files; fixed by re-exporting
+  `CanonicalPlayerRole` from `@game/ui`), and all 82 `career.market.*` keys
+  missing German/Spanish/French translations (added, ASCII-safe, matching
+  established terminology). Full `pnpm check` PASS (`221` files / `1335`
+  tests, depcruise `671` / `2551`, zero violations); web build PASS. Lesson: a
+  step's recorded "Done" verification snapshot can miss real gaps that don't
+  fail the first check stage reached; re-run every required check from clean
+  when re-auditing a completed step.
+- Step 11 (offer composer and two-stage decision flow) complete: the manager
+  can submit a club-stage transfer fee, progress to player-stage annual terms
+  after club acceptance, negotiate a preliminary agreement, or sign a free
+  agent, and accept/reject/withdraw at every live stage, through one explicit
+  command flow. New engine `evaluateTransferFeeCapacity` previews a chosen fee
+  against transfer budget and cash without running seller willingness; new
+  runtime `WebSelectedClubMarketCommand`/`applySelectedClubMarketCommand`
+  (11 command variants) mirrors the existing contract-command pattern exactly;
+  new adapter `previewMarketOffer` fills the Step 09 `CareerMarketOfferPreviewView`
+  contract from the matching engine query only. The Squad renewal form was
+  extracted into a shared `ContractTermsForm` component so Squad and all three
+  Market annual-terms composers use exactly one contract form, not a second
+  one. `P79-CF-04` is resolved: the Squad contract workspace now reseeds its
+  draft only on a real negotiation-identity token change, and the new Market
+  composer is immune by construction (lazy-seeded local state, never resynced
+  from props). `P79-CF-03` is complete: editable money stays on the existing
+  2-decimal parser, read-only display stays on the one shared formatter, both
+  cross exact integer minor units. Full `pnpm check` PASS (`222` files /
+  `1339` tests, depcruise `675`/`2572` clean); web build PASS; Playwright
+  PASS (`23/23`, including a new submit→pending→exposure→withdraw regression
+  test). Manually verified end-to-end in a real browser: typed fee, live
+  affordability preview, submit, pending state, correct finance/exposure
+  accuracy (transfer budget unchanged, pending exposure and open-talk count
+  correct), withdraw back to a fresh composer. The free-agent and preliminary
+  composers were subsequently also live-browser-exercised (a temporary,
+  session-only debug hook injected a real free agent and a near-expiry
+  contract directly through the real running session, then was removed;
+  nothing was saved): free-agent signing applied and reduced annual wage
+  headroom by exactly the signed wage; the preliminary-agreement composer
+  (only offered once the transfer window is closed, by design) submitted and
+  reached the waiting-for-reply state with correct pending-exposure and
+  withdraw behavior. Step 12 is the only next step.
 
 ## Dependency Summary
 
@@ -2285,7 +2435,7 @@ Recommended order:
 24. Phase 77 - Live Match Control, Statistics And In-Game Decisions - complete
 25. Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation - in progress; Steps 01-14 Done, Step 15 active
 26. Future Web Backlog - Calendar And Fixtures
-27. Phase 79 - Transfer Market Windows, Negotiations And Market Workspace - documented, queued
+27. Phase 79 - Transfer Market Windows, Negotiations And Market Workspace - in progress; Steps 01-14 Done, Step 15 active
 28. Phase 80 - Finances Expansion And Poverty Loop MVP
 29. Future Web Backlog - Youth UI
 30. Future Web Backlog - Staff Foundation

@@ -253,6 +253,17 @@ function findAgeMultiplier(ageBands: readonly PlayerValuationAgeBand[], age: num
     }
   }
 
+  // Price plausible ages that fall just outside the senior bands with the
+  // nearest boundary band instead of failing. Generation deliberately seeds
+  // senior reserves with the occasional very young prodigy (the `rare_prodigy`
+  // archetype starts at 15), and long careers can push a player past the top
+  // band; every market path must value such a real player rather than crash.
+  // A genuine gap between non-contiguous bands still fails loudly.
+  const lowestBand = ageBands.reduce((lowest, band) => (band.minAge < lowest.minAge ? band : lowest));
+  const highestBand = ageBands.reduce((highest, band) => (band.maxAge > highest.maxAge ? band : highest));
+  if (age < lowestBand.minAge) return lowestBand.multiplier;
+  if (age > highestBand.maxAge) return highestBand.multiplier;
+
   throw new PlayerValuationError("missing_age_band", `no age multiplier for age: ${age}`);
 }
 

@@ -17,9 +17,6 @@ export type CareerSquadSelection = "starting_xi" | "substitute" | "unselected";
 /** Reasons that make a selected player unavailable without removing him. */
 export type CareerSquadAvailabilityReason = "injured" | "suspended";
 
-/** Directional morale signal supplied by the career adapter. */
-export type CareerSquadMoraleDirection = "up" | "steady" | "down";
-
 /** Composite row status used by the compact Status column. */
 export type CareerSquadCompositeStatus =
   | "injured"
@@ -87,7 +84,6 @@ export interface CareerSquadPlayerInput {
   readonly primaryRole: CanonicalPlayerRole;
   readonly condition: number;
   readonly morale: number;
-  readonly moraleDirection: CareerSquadMoraleDirection;
   readonly selection: CareerSquadSelection;
   readonly availabilityReasons: readonly CareerSquadAvailabilityReason[];
   readonly value: Money;
@@ -155,7 +151,6 @@ export interface CareerSquadPlayerRowView {
   readonly department: CanonicalPlayerRoleDepartment;
   readonly condition: number;
   readonly morale: number;
-  readonly moraleDirection: CareerSquadMoraleDirection;
   readonly selection: CareerSquadSelection;
   readonly availabilityReasons: readonly CareerSquadAvailabilityReason[];
   readonly compositeStatus: CareerSquadCompositeStatus;
@@ -274,7 +269,6 @@ function buildPlayerRow(player: CareerSquadPlayerInput): CareerSquadPlayerRowVie
     department: canonicalPlayerRoleDepartment(player.primaryRole),
     condition: player.condition,
     morale: player.morale,
-    moraleDirection: player.moraleDirection,
     selection: player.selection,
     availabilityReasons: [...player.availabilityReasons],
     compositeStatus: compositeStatus(player),

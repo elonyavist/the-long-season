@@ -73,7 +73,6 @@ function profileInput(): CareerPlayerProfileInput {
     condition: 86,
     form: 63,
     morale: 68,
-    moraleDirection: "up",
     selection: "starting_xi",
     availabilityReasons: ["injured"],
     value: nonNegativeMoney(3_500_000_00),
@@ -93,7 +92,6 @@ function profileInput(): CareerPlayerProfileInput {
           appearanceBonus: nonNegativeMoney(4_000_00),
         },
         remainingDays: 243,
-        hasExpiryAlert: true,
       },
       history: [],
       finance: {

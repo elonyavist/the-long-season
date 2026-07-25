@@ -19,6 +19,14 @@ import {
   createContractNegotiationState,
   type ContractNegotiationState,
 } from "../career/contract-negotiation.ts";
+import {
+  createTransferNegotiationState,
+  type TransferNegotiationState,
+} from "../career/transfer-negotiation.ts";
+import {
+  createPreliminaryAgreementState,
+  type PreliminaryAgreementState,
+} from "../career/preliminary-agreement.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
@@ -167,6 +175,10 @@ export interface CareerState {
   readonly seniorSquadState?: SeniorSquadState;
   /** Ordered durable contract discussions awaiting or recording a decision. */
   readonly contractNegotiationState?: ContractNegotiationState;
+  /** Ordered durable club-to-club transfer talks awaiting or recording a decision. */
+  readonly transferNegotiationState?: TransferNegotiationState;
+  /** Ordered future contracts agreed before the player's current deal expires. */
+  readonly preliminaryAgreementState?: PreliminaryAgreementState;
 }
 
 /** Machine-readable career-state validation failure. */
@@ -295,6 +307,12 @@ export function createCareerState(input: CareerState): CareerState {
   const contractNegotiationState = input.contractNegotiationState === undefined
     ? undefined
     : createContractNegotiationState(input.gameState, seniorSquadState, input.contractNegotiationState);
+  const transferNegotiationState = input.transferNegotiationState === undefined
+    ? undefined
+    : createTransferNegotiationState(input.transferNegotiationState);
+  const preliminaryAgreementState = input.preliminaryAgreementState === undefined
+    ? undefined
+    : createPreliminaryAgreementState(input.gameState, seniorSquadState, input.preliminaryAgreementState);
   const clubFinanceState = input.clubFinanceState === undefined || seniorSquadState === undefined
     ? input.clubFinanceState
     : createClubFinanceState(input.gameState, seniorSquadState, input.clubFinanceState);
@@ -316,6 +334,8 @@ export function createCareerState(input: CareerState): CareerState {
     ...(input.playerAvailability === undefined ? {} : { playerAvailability }),
     ...(seniorSquadState === undefined ? {} : { seniorSquadState }),
     ...(contractNegotiationState === undefined ? {} : { contractNegotiationState }),
+    ...(transferNegotiationState === undefined ? {} : { transferNegotiationState }),
+    ...(preliminaryAgreementState === undefined ? {} : { preliminaryAgreementState }),
     ...(clubFinanceState === undefined ? {} : { clubFinanceState }),
   };
 }

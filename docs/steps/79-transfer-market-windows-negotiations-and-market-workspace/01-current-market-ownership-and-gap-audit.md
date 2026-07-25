@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready after Phase 78 Step 15 is Done.
+Done.
 
 ## Goal
 
@@ -29,6 +29,12 @@ transfer engine or preserving temporary reservation behavior by accident.
 6. Name the exact owner and test seam for every Phase 79 capability.
 7. Record absent capabilities explicitly; do not create implementation while
    auditing.
+8. Verify every `P79-CF-01` through `P79-CF-08` carry-forward finding against
+   its production caller, current tests, package ownership, and reload/session
+   behavior; record confirmed owner, deletion target, and regression seam.
+9. Distinguish functional defects, latent defects, divergence/performance
+   risks, and already-canonical behavior so later steps do not add duplicate
+   state to "fix" a false positive.
 
 ## Implementation Contract
 
@@ -38,6 +44,9 @@ transfer engine or preserving temporary reservation behavior by accident.
 - The audit must distinguish durable domain facts from transient web drafts.
 - The temporary Phase 78 pending-reservation behavior must have one named
   replacement path and deletion proof.
+- A UI render snapshot is not a valid source for persistent morale direction,
+  and a workspace-local flag is not a valid replacement for canonical session
+  dirtiness.
 
 ## Expected Files
 
@@ -70,5 +79,7 @@ graphify update .
 ## Completion Criteria
 
 - The audit has a complete retain/extend/replace/remove table.
+- The audit includes all eight carry-forward IDs with one owning step and one
+  test seam each.
 - No duplicate transfer, negotiation, finance, or storage owner is proposed.
 - Step 02 is the only next implementation step.
