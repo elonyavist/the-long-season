@@ -12,7 +12,12 @@ import {
 } from "@game/domain";
 import { test } from "vitest";
 
-import { evaluateTransferFeeCapacity } from "./career-contract-capacity.ts";
+import {
+  evaluateCareerContractCapacity,
+  evaluateTransferFeeCapacity,
+} from "./career-contract-capacity.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 
 const BUYER = clubId("club:pro01");
 
@@ -29,7 +34,7 @@ function careerFixture(input: {
         cashBalance: nonNegativeMoney(input.cashBalance),
         annualTransferBudget: nonNegativeMoney(input.availableTransferBudget),
         availableTransferBudget: nonNegativeMoney(input.availableTransferBudget),
-        annualWageBudget: nonNegativeMoney(100_000_000_00),
+        annualWageBudget: nonNegativeMoney(10_000_000_00),
         committedAnnualWage: nonNegativeMoney(0),
         seasonIncome: nonNegativeMoney(0),
         seasonExpenses: nonNegativeMoney(0),
@@ -66,6 +71,7 @@ test("a fee within both transfer budget and cash is affordable", () => {
     careerState: state,
     buyingClubId: BUYER,
     fee: nonNegativeMoney(1_000_000_00),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
   });
   assert.equal(result.status, "affordable");
   if (result.status !== "affordable") return;
@@ -79,6 +85,7 @@ test("a fee above the transfer budget is rejected even with enough cash", () => 
     careerState: state,
     buyingClubId: BUYER,
     fee: nonNegativeMoney(1_000_000_00),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
   });
   assert.equal(result.status, "unaffordable");
   assert.equal(result.status === "unaffordable" ? result.reason : undefined, "insufficient_transfer_budget");
@@ -90,6 +97,7 @@ test("a fee within budget but above cash is rejected", () => {
     careerState: state,
     buyingClubId: BUYER,
     fee: nonNegativeMoney(1_000_000_00),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
   });
   assert.equal(result.status, "unaffordable");
   assert.equal(result.status === "unaffordable" ? result.reason : undefined, "insufficient_cash");
@@ -101,7 +109,48 @@ test("an unknown buying club is unaffordable", () => {
     careerState: state,
     buyingClubId: clubId("club:unknown"),
     fee: nonNegativeMoney(1),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
   });
   assert.equal(result.status, "unaffordable");
   assert.equal(result.status === "unaffordable" ? result.reason : undefined, "club_finance_account_missing");
+});
+
+test("structural repair may use the existing wage buffer without exceeding the actual budget", () => {
+  const state = careerFixture({
+    cashBalance: 5_000_000_00,
+    availableTransferBudget: 0,
+  });
+  const account = state.clubFinanceState?.accounts[BUYER];
+  assert.notEqual(account, undefined);
+  const constrainedState = createCareerState({
+    ...state,
+    clubFinanceState: {
+      ...state.clubFinanceState!,
+      accounts: {
+        ...state.clubFinanceState!.accounts,
+        [BUYER]: {
+          ...account!,
+          annualWageBudget: nonNegativeMoney(100_000_00),
+          committedAnnualWage: nonNegativeMoney(98_000_00),
+        },
+      },
+    },
+  });
+  const input = {
+    careerState: constrainedState,
+    clubId: BUYER,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    addedAnnualWage: nonNegativeMoney(1_000_00),
+    addedSigningBonus: nonNegativeMoney(0),
+  };
+
+  assert.equal(evaluateCareerContractCapacity(input).status, "unaffordable");
+  assert.equal(
+    evaluateCareerContractCapacity({
+      ...input,
+      allowFullWageBudgetForStructuralRepair: true,
+    }).status,
+    "affordable",
+  );
 });

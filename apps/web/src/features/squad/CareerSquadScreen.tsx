@@ -6,19 +6,15 @@ import {
   type CareerInboxView,
   type CareerSquadColumnKey,
   type CareerSquadFilters,
-  type CareerSquadPlayerActionView,
+  type CareerSquadPlacementOptionView,
   type CareerSquadPlayerRowView,
   type CareerSquadSlotChoiceView,
   type CareerSquadSort,
 } from "@game/ui";
 import {
-  Armchair,
   ChevronsUpDown,
-  Eye,
   FileClock,
   Search,
-  UserRoundMinus,
-  UserRoundPlus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -29,14 +25,22 @@ import type {
 } from "../../runtime/web-career-runtime";
 import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
 import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
+import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
 import { AppShell } from "../app-shell/AppShell";
 import { CareerScreenHeader } from "../shared/CareerScreenHeader";
 import { CareerPlayerProfileDialog } from "./CareerPlayerProfileDialog";
 import { SquadLineupChoiceDialog } from "./SquadLineupChoiceDialog";
+import { SquadRowActionMenu } from "./SquadRowActionMenu";
 import type {
   CareerContractFinancePreview,
   CareerSquadPresentation,
 } from "./career-squad-adapter";
+import {
+  planCareerSquadPlacement,
+  type CareerSquadPlacementOperation,
+  type CareerSquadPlacementTarget,
+} from "./career-squad-placement";
 
 /** Props for the browser Senior Squad workspace introduced in Phase 78. */
 export type CareerSquadScreenProps = Readonly<{
@@ -82,6 +86,7 @@ export function CareerSquadScreen({
     displayName: string;
     choices: readonly CareerSquadSlotChoiceView[];
   }>>();
+  const [placementFeedback, setPlacementFeedback] = useState("");
   const shellView = buildCareerShellView({ activeSectionKey: "squad", inboxView });
   const view = useMemo(
     () => presentation.status === "error"
@@ -100,6 +105,49 @@ export function CareerSquadScreen({
   const profile = presentation.status === "ready" && openPlayerId !== undefined
     ? presentation.profilesByPlayerId.get(openPlayerId)
     : undefined;
+  const menuDismissSignal = [
+    query,
+    department ?? "all",
+    availability ?? "all",
+    sort.key,
+    sort.direction,
+  ].join("\u0000");
+
+  const applyPlacement = (
+    row: CareerSquadPlayerRowView,
+    target: CareerSquadPlacementTarget,
+  ): void => {
+    if (presentation.status !== "ready") return;
+    const plan = planCareerSquadPlacement({
+      playerId: row.playerId,
+      lineupSlots: presentation.placementContext.lineupSlots,
+      benchSlots: presentation.placementContext.benchSlots,
+      target,
+    });
+    if (plan.status === "rejected") {
+      setPlacementFeedback(text("career.squad.placement.rejected", {
+        player: row.displayName,
+      }));
+      return;
+    }
+    if (plan.status === "noop") {
+      setPlacementFeedback(text("career.squad.placement.unchanged", {
+        player: row.displayName,
+      }));
+      return;
+    }
+
+    for (const operation of plan.operations) {
+      dispatchPlacementOperation(
+        operation,
+        onLineupPlayerChange,
+        onBenchPlayerChange,
+      );
+    }
+    setPlacementFeedback(text("career.squad.placement.updated", {
+      player: row.displayName,
+    }));
+  };
 
   return (
     <AppShell
@@ -113,7 +161,6 @@ export function CareerSquadScreen({
       <section className="tls-shell-panel tls-squad-panel" aria-labelledby="career-squad-title">
         <CareerScreenHeader
           className="tls-squad-header"
-          eyebrow={text("career.squad.eyebrow")}
           supporting={text("career.squad.subtitle")}
           title={text("career.shell.nav.squad")}
           titleId="career-squad-title"
@@ -178,6 +225,9 @@ export function CareerSquadScreen({
                 })}
               </p>
             </div>
+            <p className="tls-visually-hidden" aria-live="polite" role="status">
+              {placementFeedback}
+            </p>
 
             {view.rows.length === 0 ? (
               <div className="tls-squad-state">
@@ -214,32 +264,19 @@ export function CareerSquadScreen({
                       <SquadRow
                         key={row.playerId}
                         language={language}
+                        menuDismissSignal={menuDismissSignal}
                         row={row}
                         text={text}
                         onOpen={() => setOpenPlayerId(row.playerId)}
-                        onAction={(action) => {
-                          if (action.actionId === "field_player") {
-                            const directChoice = action.mode === "direct" ? action.choices[0] : undefined;
-                            if (directChoice !== undefined) {
-                              onLineupPlayerChange(directChoice.slotKey, row.playerId);
-                            } else {
-                              setLineupChoice({
-                                playerId: row.playerId,
-                                displayName: row.displayName,
-                                choices: action.choices,
-                              });
-                            }
-                            return;
-                          }
-                          if (action.actionId === "select_as_substitute") {
-                            onBenchPlayerChange(action.slotKey, row.playerId);
-                            return;
-                          }
-                          if (action.actionId === "remove_from_starting_xi") {
-                            onLineupPlayerChange(action.slotKey, undefined);
-                            return;
-                          }
-                          onBenchPlayerChange(action.slotKey, undefined);
+                        onPlacementChange={(option) => {
+                          applyPlacement(row, placementTarget(option));
+                        }}
+                        onChooseLineupPosition={() => {
+                          setLineupChoice({
+                            playerId: row.playerId,
+                            displayName: row.displayName,
+                            choices: detailedLineupChoices(row),
+                          });
                         }}
                       />
                     ))}
@@ -265,7 +302,15 @@ export function CareerSquadScreen({
         text={text}
         onChoose={(slotKey) => {
           if (lineupChoice === undefined) return;
-          onLineupPlayerChange(slotKey, lineupChoice.playerId);
+          const row = view?.rows.find((candidate) => candidate.playerId === lineupChoice.playerId);
+          const choice = lineupChoice.choices.find((candidate) => candidate.slotKey === slotKey);
+          if (row !== undefined && choice !== undefined) {
+            applyPlacement(row, {
+              kind: "lineup",
+              slotKey,
+              expectedPlayerId: choice.occupantPlayerId ?? null,
+            });
+          }
           setLineupChoice(undefined);
         }}
         onClose={() => setLineupChoice(undefined)}
@@ -277,29 +322,36 @@ export function CareerSquadScreen({
 function SquadRow({
   row,
   language,
+  menuDismissSignal,
   text,
   onOpen,
-  onAction,
+  onPlacementChange,
+  onChooseLineupPosition,
 }: Readonly<{
   row: CareerSquadPlayerRowView;
   language: WebPreferences["language"];
+  menuDismissSignal: string;
   text: Translator;
   onOpen: () => void;
-  onAction: (action: CareerSquadPlayerActionView) => void;
+  onPlacementChange: (option: CareerSquadPlacementOptionView) => void;
+  onChooseLineupPosition: () => void;
 }>): React.JSX.Element {
   return (
     <tr
       tabIndex={0}
       data-status={row.compositeStatus}
-      onClick={onOpen}
+      onClick={(event) => {
+        if (!isInteractiveRowTarget(event.target)) onOpen();
+      }}
       onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           onOpen();
         }
       }}
     >
-      <td data-label={text("career.squad.column.number")}>{row.shirtNumber}</td>
+      <td data-label={text("career.squad.column.number")} data-align="numeric">{row.shirtNumber}</td>
       <td data-label={text("career.squad.column.role")}>
         <abbr title={text(`career.player.role.${row.primaryRole}` as MessageKey)}>
           {canonicalPlayerRoleCode(row.primaryRole)}
@@ -318,56 +370,62 @@ function SquadRow({
           ) : null}
         </span>
       </th>
-      <td data-label={text("career.squad.column.condition")}>{Math.round(row.condition)}%</td>
-      <td data-label={text("career.squad.column.morale")}>{Math.round(row.morale)}</td>
+      <td data-label={text("career.squad.column.condition")} data-align="numeric">{Math.round(row.condition)}%</td>
+      <td data-label={text("career.squad.column.morale")} data-align="numeric">{Math.round(row.morale)}</td>
       <td data-label={text("career.squad.column.status") }>
         <span className="tls-squad-status" data-status={row.compositeStatus}>
           {text(`career.squad.status.${row.compositeStatus}` as MessageKey)}
         </span>
       </td>
-      <td data-label={text("career.squad.column.value")}>
-        {formatMoneyFromMinorUnits(row.value, row.currency, language, "whole")}
-      </td>
-      <td data-label={text("career.squad.column.current_level")}>{text(levelKey(row.currentLevel))}</td>
-      <td data-label={text("career.squad.column.potential_level")}>{text(levelKey(row.potentialLevel))}</td>
-      <td data-label={text("career.squad.column.action") }>
-        <div className="tls-squad-row-actions">
-          {row.actions.map((action) => {
-            const Icon = action.actionId === "field_player"
-              ? UserRoundPlus
-              : action.actionId === "select_as_substitute"
-                ? Armchair
-                : UserRoundMinus;
-            const label = text(action.labelKey);
-            return (
-              <button
-                aria-label={label}
-                className="tls-icon-button"
-                key={action.actionId}
-                title={label}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onAction(action);
-                }}
-              >
-                <Icon aria-hidden="true" size={17} strokeWidth={1.8} />
-              </button>
-            );
-          })}
-          <button
-            aria-label={text("career.squad.openProfile", { player: row.displayName })}
-            className="tls-icon-button tls-squad-open-profile"
-            title={text("career.squad.openProfile", { player: row.displayName })}
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpen();
+      <td data-label={text("career.squad.column.placement")}>
+        <label className="tls-squad-placement-control">
+          <span className="tls-visually-hidden">
+            {text("career.squad.placement.label", { player: row.displayName })}
+          </span>
+          <select
+            aria-label={text("career.squad.placement.label", { player: row.displayName })}
+            value={row.placement.value}
+            onChange={(event) => {
+              const selectedOption = row.placement.options.find(
+                (option) => option.value === event.currentTarget.value,
+              );
+              if (selectedOption !== undefined) onPlacementChange(selectedOption);
             }}
           >
-            <Eye aria-hidden="true" size={17} strokeWidth={1.8} />
-          </button>
-        </div>
+            {row.placement.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {placementOptionLabel(option, row.playerId, text)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </td>
+      <td data-label={text("career.squad.column.value")} data-align="numeric">
+        {formatMoneyFromMinorUnits(row.value, row.currency, language, "whole")}
+      </td>
+      <td data-label={text("career.squad.column.current_level")}>
+        <PlayerStarRating
+          label={text("career.squad.column.current_level")}
+          rating={row.currentRating}
+          text={text}
+        />
+      </td>
+      <td data-label={text("career.squad.column.potential_level")}>
+        <PlayerPotentialRangeRating
+          language={language}
+          range={row.potentialRange}
+          text={text}
+        />
+      </td>
+      <td data-label={text("career.squad.column.action") }>
+        <SquadRowActionMenu
+          canChooseLineupPosition={detailedLineupChoices(row).length > 0}
+          dismissSignal={menuDismissSignal}
+          playerName={row.displayName}
+          text={text}
+          onChooseLineupPosition={onChooseLineupPosition}
+          onOpenProfile={onOpen}
+        />
       </td>
     </tr>
   );
@@ -389,6 +447,64 @@ function sortLabel(
   return text(`career.squad.sort.${nextDirection}` as MessageKey, { column: label });
 }
 
-function levelKey(level: CareerSquadPlayerRowView["currentLevel"]): MessageKey {
-  return `career.squad.level.${level}` as MessageKey;
+function placementTarget(
+  option: CareerSquadPlacementOptionView,
+): CareerSquadPlacementTarget {
+  if (option.kind === "unselected") return { kind: "unselected" };
+  if (option.kind === "bench") {
+    return {
+      kind: "bench",
+      slotKey: option.slotKey,
+      expectedPlayerId: option.occupantPlayerId ?? null,
+    };
+  }
+  return {
+    kind: "lineup",
+    slotKey: option.slotKey,
+    expectedPlayerId: option.occupantPlayerId ?? null,
+  };
+}
+
+function placementOptionLabel(
+  option: CareerSquadPlacementOptionView,
+  currentPlayerId: string,
+  text: Translator,
+): string {
+  if (option.kind !== "lineup") return text(option.labelKey);
+  const values = {
+    slot: text(option.labelKey as MessageKey),
+    suitability: text(`career.squad.placement.suitability.${option.suitability}` as MessageKey),
+  };
+  return option.occupantName === undefined || option.occupantPlayerId === currentPlayerId
+    ? text("career.squad.placement.lineupOption", values)
+    : text("career.squad.placement.lineupOptionOccupied", {
+        ...values,
+        player: option.occupantName,
+      });
+}
+
+function dispatchPlacementOperation(
+  operation: CareerSquadPlacementOperation,
+  onLineupPlayerChange: CareerSquadScreenProps["onLineupPlayerChange"],
+  onBenchPlayerChange: CareerSquadScreenProps["onBenchPlayerChange"],
+): void {
+  if (operation.kind === "lineup") {
+    onLineupPlayerChange(operation.slotKey, operation.playerId);
+    return;
+  }
+  onBenchPlayerChange(operation.slotKey, operation.playerId);
+}
+
+function isInteractiveRowTarget(target: EventTarget | null): boolean {
+  return target instanceof Element
+    && target.closest(
+      "button, select, input, textarea, label, a, [role='button'], [role='menu'], [role='menuitem']",
+    )
+      !== null;
+}
+
+function detailedLineupChoices(
+  row: CareerSquadPlayerRowView,
+): readonly CareerSquadSlotChoiceView[] {
+  return row.lineupChoices.filter((choice) => choice.occupantPlayerId !== row.playerId);
 }

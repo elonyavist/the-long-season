@@ -99,71 +99,71 @@ test("stable season seed produces a compact golden sentinel", () => {
       fixtureCount: 306,
       champion: {
         position: 1,
-        clubId: clubId("club:test-02"),
+        clubId: clubId("club:test-05"),
         played: 34,
         wins: 8,
-        draws: 24,
-        losses: 2,
-        goalsFor: 11,
-        goalsAgainst: 3,
-        goalDifference: 8,
-        points: 48,
+        draws: 26,
+        losses: 0,
+        goalsFor: 10,
+        goalsAgainst: 0,
+        goalDifference: 10,
+        points: 50,
       },
       runnerUp: {
         position: 2,
-        clubId: clubId("club:test-06"),
+        clubId: clubId("club:test-01"),
         played: 34,
-        wins: 8,
-        draws: 23,
+        wins: 9,
+        draws: 22,
         losses: 3,
-        goalsFor: 9,
+        goalsFor: 12,
         goalsAgainst: 4,
-        goalDifference: 5,
-        points: 47,
+        goalDifference: 8,
+        points: 49,
       },
       bottom: {
         position: 18,
-        clubId: clubId("club:test-17"),
+        clubId: clubId("club:test-16"),
         played: 34,
-        wins: 0,
-        draws: 24,
+        wins: 2,
+        draws: 22,
         losses: 10,
-        goalsFor: 1,
-        goalsAgainst: 12,
-        goalDifference: -11,
-        points: 24,
+        goalsFor: 2,
+        goalsAgainst: 10,
+        goalDifference: -8,
+        points: 28,
       },
       firstFixture: {
-        id: fixtureId("fixture:000001"),
+        id: fixtureId("fixture:test-league:2026:000001"),
         homeGoals: 0,
         awayGoals: 0,
-        eventCount: 12,
-        homeShots: 1,
-        awayShots: 1,
+        eventCount: 9,
+        homeShots: 0,
+        awayShots: 0,
       },
       lastFixture: {
-        id: fixtureId("fixture:000306"),
-        homeGoals: 0,
+        id: fixtureId("fixture:test-league:2026:000306"),
+        homeGoals: 1,
         awayGoals: 0,
-        eventCount: 11,
-        homeShots: 0,
-        awayShots: 1,
+        eventCount: 7,
+        homeShots: 1,
+        awayShots: 0,
       },
       topScorers: [
         {
-          playerId: playerId("player:test-02-02"),
-          clubId: clubId("club:test-02"),
-          goals: 11,
-        },
-        {
-          playerId: playerId("player:test-06-02"),
-          clubId: clubId("club:test-06"),
-          goals: 9,
+          playerId: playerId("player:test-01-02"),
+          clubId: clubId("club:test-01"),
+          goals: 12,
         },
         {
           playerId: playerId("player:test-03-02"),
           clubId: clubId("club:test-03"),
-          goals: 8,
+          goals: 12,
+        },
+        {
+          playerId: playerId("player:test-02-02"),
+          clubId: clubId("club:test-02"),
+          goals: 10,
         },
       ],
     },
@@ -249,7 +249,10 @@ test("valid fixture lineup override shape is accepted", () => {
 
 test("fixture lineup override changes only the intended fixture result", () => {
   const input = seasonInput("fixture-lineup-applied-seed");
-  const fixture = generatedFixtureById(input, fixtureId("fixture:000004"));
+  const fixture = generatedFixtureById(
+    input,
+    fixtureId("fixture:test-league:2026:000004"),
+  );
   const overrideResult = simulateSeason({
     ...input,
     fixtureLineupOverrides: [fixtureLineupOverrideWithReserve(input, fixture, fixture.homeClubId)],
@@ -281,8 +284,14 @@ test("same seed plus same fixture lineup override is deterministic", () => {
 
 test("fixture lineup override registrations follow explicit override input order", () => {
   const input = seasonInput("ordered-fixture-lineup-overrides-seed");
-  const firstFixture = generatedFixtureById(input, fixtureId("fixture:000001"));
-  const secondFixture = generatedFixtureById(input, fixtureId("fixture:000002"));
+  const firstFixture = generatedFixtureById(
+    input,
+    fixtureId("fixture:test-league:2026:000001"),
+  );
+  const secondFixture = generatedFixtureById(
+    input,
+    fixtureId("fixture:test-league:2026:000002"),
+  );
   const firstOverride = fixtureLineupOverrideWithReserve(input, firstFixture, firstFixture.homeClubId);
   const secondOverride = fixtureLineupOverrideWithReserve(input, secondFixture, secondFixture.homeClubId);
   const withFixtureLineupOverrides: SimulateSeasonInput = {

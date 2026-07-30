@@ -1,6 +1,11 @@
 import type { Club } from "../entities/club.entity.ts";
 import type { Fixture } from "../entities/fixture.entity.ts";
 import type { Player, PlayerDynamicState } from "../entities/player.entity.ts";
+import type { PlayerEconomyCalibrationVersionBundle } from "../balance/player-economy-calibration.ts";
+import {
+  createDomesticCompetitionWorld,
+  type DomesticCompetitionWorld,
+} from "../career/competition-world.ts";
 import type { ClubId, FixtureId, PlayerId, SeasonId } from "../types/ids.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 
@@ -18,6 +23,13 @@ export interface GameMeta {
   readonly rngAlgorithmVersion: string;
   /** Current save snapshot schema version. */
   readonly saveSchemaVersion: number;
+  /**
+   * Exact topology and economy versions selected when this career was built.
+   *
+   * Older in-memory test fixtures may omit this until they cross the new-world
+   * bootstrap boundary. Persisted Phase 79C careers always provide it.
+   */
+  readonly calibrationVersions?: PlayerEconomyCalibrationVersionBundle;
 }
 
 /**
@@ -58,4 +70,37 @@ export interface GameState {
   readonly fixtures: Readonly<Record<FixtureId, Fixture>>;
   /** Deterministic fixture traversal order. */
   readonly fixtureIds: readonly FixtureId[];
+  /**
+   * Ordered domestic competition registry when the career uses the Phase 79C
+   * multi-competition topology.
+   */
+  readonly domesticCompetitionWorld?: DomesticCompetitionWorld;
+}
+
+/**
+ * Validates and copies the metadata and optional domestic competition slice.
+ *
+ * Existing entity lookups remain under their established owners; this boundary
+ * only freezes version facts and validates topology references when supplied.
+ */
+export function createGameState(input: GameState): GameState {
+  const calibrationVersions = input.meta.calibrationVersions === undefined
+    ? undefined
+    : Object.freeze({ ...input.meta.calibrationVersions });
+  const domesticCompetitionWorld = input.domesticCompetitionWorld === undefined
+    ? undefined
+    : createDomesticCompetitionWorld(input.domesticCompetitionWorld, {
+        clubs: input.clubs,
+        fixtureIds: input.fixtureIds,
+        fixtures: input.fixtures,
+      });
+
+  return {
+    ...input,
+    meta: {
+      ...input.meta,
+      ...(calibrationVersions === undefined ? {} : { calibrationVersions }),
+    },
+    ...(domesticCompetitionWorld === undefined ? {} : { domesticCompetitionWorld }),
+  };
 }

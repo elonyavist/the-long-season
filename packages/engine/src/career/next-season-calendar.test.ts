@@ -5,6 +5,7 @@ import {
   CAREER_STATE_SCHEMA_VERSION,
   clubId,
   competitionId,
+  createCompetition,
   createCareerState,
   fixtureId,
   gameDate,
@@ -15,6 +16,7 @@ import {
   type ClubId,
   type Fixture,
   type GameState,
+  type DomesticCompetitionWorld,
 } from "@game/domain";
 import { addDays } from "@game/shared";
 
@@ -36,7 +38,7 @@ test("generateNextSeasonCalendar creates a deterministic next season without fix
   if (first.status === "generated") {
     assert.equal(first.previousSeasonId, "season:0001");
     assert.equal(first.seasonId, "season:0002");
-    assert.equal(first.competitionId, "competition:test");
+    assert.deepEqual(first.competitionIds, ["competition:test"]);
     assert.equal(first.seasonStartDate, gameDate(addDays(gameDate(20_007), 70)));
     assert.deepEqual(first.fixtureIds, [fixtureId("fixture:000003"), fixtureId("fixture:000004")]);
     assert.equal(first.fixtures[0]?.seasonId, "season:0002");
@@ -77,7 +79,7 @@ test("generateNextSeasonCalendar rejects incomplete current seasons", () => {
   });
 });
 
-test("generateNextSeasonCalendar rejects mixed current-season competitions", () => {
+test("generateNextSeasonCalendar no longer rejects mixed current-season competitions", () => {
   const selectedClubId = clubId("club:selected");
   const otherClubId = clubId("club:other");
   const mixedFixtureId = fixtureId("fixture:000002");
@@ -94,11 +96,78 @@ test("generateNextSeasonCalendar rejects mixed current-season competitions", () 
     ],
   });
 
-  assert.deepEqual(generateNextSeasonCalendar(state), {
-    status: "invalid",
-    reason: "multiple_current_season_competitions",
-    fixtureId: mixedFixtureId,
+  const result = generateNextSeasonCalendar(state);
+
+  assert.equal(result.status, "generated");
+});
+
+test("generateNextSeasonCalendar publishes every ordered domestic calendar", () => {
+  const currentSeasonId = seasonId("season:2026");
+  const competitionIds = [1, 2, 3].map((tier) =>
+    competitionId(`competition:tier-${tier}`)
+  );
+  const clubs = [1, 2, 3, 4, 5, 6].map((number) =>
+    clubFixture(clubId(`club:${number}`))
+  );
+  const competitions = Object.fromEntries(competitionIds.map(
+    (id, index) => [
+      id,
+      createCompetition({
+        id,
+        name: String(id),
+        clubIds: clubs.slice(index * 2, index * 2 + 2).map((club) => club.id),
+        matchRules: {
+          maximumSubstitutions: 5,
+          substitutionWindowLimit: null,
+          allowsPlayerReentry: false,
+          yellowCardAccumulationThreshold: 5,
+          straightRedSuspensionMatches: 3,
+          secondYellowSuspensionMatches: 1,
+          yellowAccumulationSuspensionMatches: 1,
+        },
+      }),
+    ],
+  )) as DomesticCompetitionWorld["competitions"];
+  const fixtures = competitionIds.map((id, index) => ({
+    ...fixtureFixture(
+      fixtureId(`fixture:tier-${index + 1}:2026:000001`),
+      currentSeasonId,
+      clubs[index * 2]!.id,
+      clubs[index * 2 + 1]!.id,
+      true,
+      gameDate(20_000 + index),
+    ),
+    competitionId: id,
+  }));
+  const world: DomesticCompetitionWorld = {
+    competitionIds,
+    competitions,
+    seasonHistory: [],
+  };
+  const state = createCareerState({
+    saveId: saveId("save:multi-calendar"),
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    selectedClubId: clubs[4]!.id,
+    gameState: {
+      ...gameStateFixture(currentSeasonId, clubs, fixtures),
+      domesticCompetitionWorld: world,
+    },
+    transferHistory: [],
   });
+
+  const result = generateNextSeasonCalendar(state, world);
+
+  assert.equal(result.status, "generated");
+  if (result.status !== "generated") return;
+  assert.deepEqual(result.competitionIds, competitionIds);
+  assert.equal(result.fixtureIds.length, 6);
+  assert.equal(new Set(result.fixtureIds).size, 6);
+  assert.deepEqual(
+    result.competitionIds.map((id) =>
+      result.fixtures.filter((fixture) => fixture.competitionId === id).length
+    ),
+    [2, 2, 2],
+  );
 });
 
 function completeCareerStateFixture(currentSeasonId = seasonId("season:0001")): CareerState {

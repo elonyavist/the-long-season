@@ -41,6 +41,20 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - Generated IDs must be stable and non integer-like.
 - All domain IDs must use the `type:value` namespace convention and must be created through specific domain constructors (`playerId`, `clubId`, `competitionId`, `fixtureId`, `seasonId`, `saveId`).
 
+## Beta Save Compatibility Rules
+
+- The project is in beta until an explicit documented product decision ends
+  this policy.
+- When a schema, stamped balance/configuration version, or persisted invariant
+  changes incompatibly, advance the supported version and delete/reset the
+  incompatible save through the canonical storage/runtime interface.
+- Do not add save migrations, compatibility defaults, dual readers/writers,
+  legacy fields, or fallback reconstruction solely to preserve beta saves.
+- Never partially reinterpret an incompatible save as current data. The reset
+  must be explicit, tested, and followed by creation of a fresh career.
+- Compatible changes that do not alter persisted truth do not require an
+  artificial schema bump or deletion.
+
 ## Presentation And Localization Rules
 
 - User-facing text must be rendered through the localization layer once Phase 13 introduces it.
@@ -119,6 +133,26 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - If Playwright cannot run, document the exact blocker in
   `docs/PROJECT_STATUS.md` and the phase report instead of silently skipping
   visual QA.
+
+## Simulation Execution Rules
+
+- `packages/simulation-tools/src/simulation-execution-policy.ts` is the single
+  owner of the repository simulation worker budget.
+- Current and future batch-simulation adapters default to
+  `min(7, independent work items)` and must never exceed `7` workers.
+- A single indivisible world/season remains one work item and therefore uses
+  one worker; do not create empty or duplicate jobs to display a larger count.
+- Explicit CLI or test overrides may reduce concurrency. Values above the
+  canonical limit are capped, not treated as authority to saturate the host.
+- CLI environments may use `TLS_SIMULATION_WORKERS` only as a lower
+  operational override. Do not introduce runner-specific worker environment
+  variables or a second host-CPU-derived default.
+- Worker count is execution metadata only. It must not alter seeds, canonical
+  ordering, checkpoint hashes, metrics, thresholds, or gameplay behavior.
+- Resumable long runs require an explicit checkpoint directory and stable
+  shards. Their reproduction command must record the actual worker count.
+- Vitest uses the same seven-worker maximum. Playwright retains its separate
+  visual-QA worker policy.
 
 ## Web Accessibility Rules
 

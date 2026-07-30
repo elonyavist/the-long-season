@@ -4,14 +4,20 @@ import { test } from "vitest";
 import {
   careerInboxMessageId,
   clubId,
+  competitionId,
   createCareerInboxMessage,
   fixtureId,
   gameDate,
   type CareerAttentionLevel,
   type CareerInboxMessage,
+  type CareerState,
 } from "@game/domain";
 
-import { continueCareerUntilAttention, createMatchdayAttention } from "./continue-career.ts";
+import {
+  continueCareerUntilAttention,
+  createMatchdayAttention,
+  createNextCareerMatchdayAttention,
+} from "./continue-career.ts";
 
 test("prepared and incomplete fixtures produce one stable matchday stop identity", () => {
   const base = {
@@ -132,6 +138,53 @@ test("equal inputs produce equal ordering and stop output", () => {
   assert.deepEqual(continueCareerUntilAttention(input), continueCareerUntilAttention(input));
 });
 
+test("next matchday attention uses the selected club competition and global fixture identity", () => {
+  const selectedClubId = clubId("club:selected");
+  const opponentId = clubId("club:opponent");
+  const firstCompetitionId = competitionId("competition:first");
+  const secondCompetitionId = competitionId("competition:second");
+  const selectedFixtureId = fixtureId("fixture:second:2026:000001");
+  const clubs = {
+    [selectedClubId]: club(selectedClubId),
+    [opponentId]: club(opponentId),
+  };
+  const state = {
+    selectedClubId,
+    gameState: {
+      clubs,
+      clubIds: [selectedClubId, opponentId],
+      fixtureIds: [selectedFixtureId],
+      fixtures: {
+        [selectedFixtureId]: {
+          id: selectedFixtureId,
+          competitionId: secondCompetitionId,
+          date: gameDate(20_007),
+          homeClubId: opponentId,
+          awayClubId: selectedClubId,
+        },
+      },
+      domesticCompetitionWorld: {
+        competitionIds: [firstCompetitionId, secondCompetitionId],
+        competitions: {
+          [firstCompetitionId]: competition(firstCompetitionId, []),
+          [secondCompetitionId]: competition(secondCompetitionId, [selectedClubId, opponentId]),
+        },
+        seasonHistory: [],
+      },
+    },
+  } as unknown as CareerState;
+  const result = createNextCareerMatchdayAttention({
+    careerState: state,
+    preparation: { hasSavedLineup: true, hasSavedTactic: true },
+  });
+
+  assert.equal(result.status, "found");
+  assert.equal(
+    result.status === "found" ? result.attention.message.related.fixtureId : undefined,
+    selectedFixtureId,
+  );
+});
+
 function message(
   suffix: string,
   date: ReturnType<typeof gameDate>,
@@ -148,4 +201,35 @@ function message(
     related: { fixtureId: fixtureId(`fixture:${suffix}`) },
     actionIds: level === "blocking" ? ["open_matchday"] : [],
   });
+}
+
+function club(id: ReturnType<typeof clubId>) {
+  return {
+    id,
+    name: id,
+    shortName: id,
+    category: "third_division" as const,
+    reputation: 5,
+    playerIds: [],
+  };
+}
+
+function competition(
+  id: ReturnType<typeof competitionId>,
+  clubIds: readonly ReturnType<typeof clubId>[],
+) {
+  return {
+    id,
+    name: id,
+    clubIds,
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: null,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
+  } as const;
 }

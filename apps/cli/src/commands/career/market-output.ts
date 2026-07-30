@@ -1,4 +1,4 @@
-import type { FakeLeagueSystem } from "@game/content";
+import type { FakeDomesticWorld } from "@game/content";
 import type { ApplyCareerPermanentTransferResult } from "@game/engine";
 import type { Translator } from "@game/i18n";
 
@@ -9,10 +9,11 @@ import {
   presentationMessageKey,
 } from "./format.ts";
 import type { CareerMarketScenario } from "./scenarios.ts";
+import { competitionIdForClubInWorld } from "./scenarios.ts";
 
 /** Formats the result of applying a profile-based permanent-transfer demo. */
 export function formatCareerMarketApplyOutput(input: {
-  readonly league: FakeLeagueSystem;
+  readonly world: FakeDomesticWorld;
   readonly seed: string;
   readonly saveId: string;
   readonly saveDirectoryPath: string;
@@ -31,7 +32,7 @@ export function formatCareerMarketApplyOutput(input: {
   const lines = [
     input.text("career.marketApply.title"),
     `${input.text("season.seed")}: ${input.seed}`,
-    `${input.text("season.competition")}: ${input.league.competition.name}`,
+    `${input.text("season.competition")}: ${selectedCompetitionName(input)}`,
     `${input.text("career.save")}: ${input.saveId}`,
     `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
     `${input.text("market.demo")}: ${input.profileKey}`,
@@ -53,6 +54,20 @@ export function formatCareerMarketApplyOutput(input: {
   ];
 
   return lines;
+}
+
+/** Resolves the selected club's current competition for deterministic output. */
+function selectedCompetitionName(input: {
+  readonly world: FakeDomesticWorld;
+  readonly scenario: CareerMarketScenario;
+}): string {
+  const competitionId = competitionIdForClubInWorld(
+    input.world.domesticCompetitionWorld,
+    input.scenario.selectedClubId,
+  );
+  return competitionId === undefined
+    ? "unknown"
+    : input.world.domesticCompetitionWorld.competitions[competitionId]?.name ?? String(competitionId);
 }
 
 function formatReasonLines(result: ApplyCareerPermanentTransferResult, text: Translator): readonly string[] {

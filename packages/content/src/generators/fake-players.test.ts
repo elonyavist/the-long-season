@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  getPlayerRoleProfile,
   isPotentialAtLeastCurrent,
   PLAYER_ABILITY_KEYS,
   readPlayerAbility,
+  roleCurrentAbility,
+  rolePotentialAbility,
   type ClubId,
   type Player,
 } from "@game/domain";
@@ -119,6 +122,41 @@ test("fake player generation assigns archetypes with coherent age and potential"
   }
 });
 
+test("joint exceptional assignments construct a senior current star before sampling youth prodigies", () => {
+  const clubs = generateFakeClubs();
+  const currentAndPotentialId = fakePlayerId(1, 1);
+  const potentialOnlyId = fakePlayerId(1, 2);
+  const clubContexts = Object.fromEntries(clubs.clubIds.map((clubId, index) => [
+    clubId,
+    {
+      category: "first_division",
+      reputation: 100 - index,
+    },
+  ])) as Record<ClubId, { readonly category: "first_division"; readonly reputation: number }>;
+  const generated = generateFakePlayersForClubs(clubs.clubIds, {
+    seed: "joint-exceptional-profile",
+    clubContexts,
+    exceptionalAssignments: {
+      currentSixPlayerIds: [currentAndPotentialId],
+      potentialSixPlayerIds: [currentAndPotentialId, potentialOnlyId],
+    },
+  });
+  const currentStar = requiredPlayer(generated.players[currentAndPotentialId]);
+  const futureProspect = requiredPlayer(generated.players[potentialOnlyId]);
+  const currentStarAge = generatedAge(currentStar);
+  const futureProspectAge = generatedAge(futureProspect);
+
+  assert.equal(generated.playerArchetypes[currentAndPotentialId], "category_star");
+  assert.equal(currentStarAge >= 24 && currentStarAge <= 32, true);
+  assert.equal(currentRoleAbility(currentStar) >= 17, true);
+  assert.equal(potentialRoleAbility(currentStar) >= 17, true);
+
+  assert.equal(generated.playerArchetypes[potentialOnlyId], "rare_prodigy");
+  assert.equal(futureProspectAge >= 15 && futureProspectAge <= 18, true);
+  assert.equal(currentRoleAbility(futureProspect) < 17, true);
+  assert.equal(potentialRoleAbility(futureProspect) >= 17, true);
+});
+
 test("rare prodigies are possible across generated career worlds but not guaranteed", () => {
   const clubs = generateFakeClubs();
   const generatedWithProdigy = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-0" });
@@ -151,6 +189,29 @@ test("budgeted archetypes come only from league-level rarity assignments", () =>
 
   assert.equal((assignedArchetypeCounts.get("serious_prospect") ?? 0) >= 2, true);
   assert.equal((assignedArchetypeCounts.get("rare_prodigy") ?? 0) <= 1, true);
+});
+
+test("world-level exceptional construction removes superseded division rarity metadata", () => {
+  const clubs = generateFakeClubs();
+  const ordinary = generateFakePlayersForClubs(clubs.clubIds, {
+    seed: "superseded-division-rarity",
+  });
+  const supersededAssignment = Object.values(ordinary.playerRarityAssignments)[0];
+  assert.ok(supersededAssignment !== undefined);
+  const id = fakePlayerId(
+    Number(supersededAssignment.slotKey.split(":")[0]),
+    Number(supersededAssignment.slotKey.split(":")[1]),
+  );
+  const exceptional = generateFakePlayersForClubs(clubs.clubIds, {
+    seed: "superseded-division-rarity",
+    exceptionalAssignments: {
+      currentSixPlayerIds: [],
+      potentialSixPlayerIds: [id],
+    },
+  });
+
+  assert.equal(exceptional.playerArchetypes[id], "rare_prodigy");
+  assert.equal(exceptional.playerRarityAssignments[id], undefined);
 });
 
 test("first-division top-club context creates a more international squad pool", () => {
@@ -296,6 +357,23 @@ function playerCurrentAbilityAverage(player: Player): number {
     Number(player.abilities.mental.positioning) +
     Number(player.abilities.goalkeeping.reflexes)
   ) / 6;
+}
+
+/** Returns the generated age at the fixed career start date. */
+function generatedAge(player: Player): number {
+  return Math.floor((CAREER_START_EPOCH_DAY - Number(player.birthDate)) / 365);
+}
+
+/** Returns the current weighted ability for the player's canonical role. */
+function currentRoleAbility(player: Player): number {
+  assert.ok(player.primaryRole !== undefined);
+  return Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(player.primaryRole)));
+}
+
+/** Returns the potential weighted ability for the player's canonical role. */
+function potentialRoleAbility(player: Player): number {
+  assert.ok(player.primaryRole !== undefined);
+  return Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(player.primaryRole)));
 }
 
 /** Returns whether a generated archetype lookup contains the requested key. */

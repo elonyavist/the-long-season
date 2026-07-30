@@ -1,10 +1,26 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, gameDate, PLAYER_ABILITY_KEYS, readPlayerAbility, seasonId } from "@game/domain";
+import {
+  CAREER_STATE_SCHEMA_VERSION,
+  clubId,
+  createCareerState,
+  gameDate,
+  getPlayerRoleProfile,
+  PLAYER_ABILITY_KEYS,
+  playerId,
+  readPlayerAbility,
+  rolePotentialAbility,
+  saveId,
+  seasonId,
+} from "@game/domain";
 import { fromISO } from "@game/shared";
 
-import { generateCareerIntakePlayers } from "./career-intake-players.ts";
+import {
+  createAnnualWorldIntakeCandidateProviders,
+  generateCareerIntakePlayers,
+} from "./career-intake-players.ts";
+import { createFakeDomesticWorld } from "./domestic-world.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
@@ -141,6 +157,76 @@ test("generateCareerIntakePlayers avoids duplicate full names and surnames insid
   assert.equal(new Set(lastNames).size, lastNames.length);
 });
 
+test("generateCareerIntakePlayers applies only explicitly allocated potential-six assignments", () => {
+  const forcedId = playerId("player:intake-perugia-0002-001");
+  const result = generateCareerIntakePlayers({
+    ...intakeInput("annual-world-exception"),
+    potentialSixPlayerIds: [forcedId],
+  });
+  const exceptional = result.generatedPlayers.filter(({ player }) =>
+    Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(player.primaryRole))) >= 17
+  );
+
+  assert.deepEqual(exceptional.map(({ player }) => player.id), [forcedId]);
+  assert.equal(exceptional[0]?.archetypeKey, "rare_prodigy");
+});
+
+test("shared annual providers allocate once and generate two to four accepted-ready exceptions per decade", () => {
+  const careerState = annualProviderCareerState();
+  let allocatedExceptionalCount = 0;
+
+  for (let seasonIndex = 0; seasonIndex < 10; seasonIndex += 1) {
+    const providers = createAnnualWorldIntakeCandidateProviders({
+      worldSeed: "annual-provider-decade",
+      seasonIndex,
+      seniorCandidatesPerClub: 1,
+    });
+    const intakeSeasonId = seasonId(`season:intake-${seasonIndex}`);
+    const candidates = providers.createYouthIntakeCandidates({
+      careerState,
+      seasonId: intakeSeasonId,
+      intakeDate: careerState.gameState.calendar.currentDate,
+    });
+    const diagnostics = providers.diagnostics();
+
+    assert.equal(diagnostics.allocationCallCount, 1);
+    assert.equal(diagnostics.allocation.potentialSixPlayerKeys.length <= 1, true);
+    assert.deepEqual(
+      diagnostics.generatedPotentialSixPlayerIds.map(String),
+      diagnostics.allocation.potentialSixPlayerKeys,
+    );
+    assert.equal(
+      diagnostics.generatedPotentialSixPlayerIds.every((id) =>
+        candidates.some((candidate) => candidate.player.id === id)
+      ),
+      true,
+    );
+    assert.throws(
+      () => providers.createYouthIntakeCandidates({
+        careerState,
+        seasonId: intakeSeasonId,
+        intakeDate: careerState.gameState.calendar.currentDate,
+      }),
+      /already composed/,
+    );
+    allocatedExceptionalCount +=
+      diagnostics.allocation.potentialSixPlayerKeys.length;
+
+    if (seasonIndex === 0) {
+      assert.equal(
+        providers.createSeniorIntakeCandidates({
+          careerState,
+          seasonId: intakeSeasonId,
+        }).length,
+        careerState.gameState.clubIds.length,
+      );
+    }
+  }
+
+  assert.equal(allocatedExceptionalCount >= 2, true);
+  assert.equal(allocatedExceptionalCount <= 4, true);
+});
+
 function intakeInput(worldSeed: string): Parameters<typeof generateCareerIntakePlayers>[0] {
   return {
     worldSeed,
@@ -152,4 +238,83 @@ function intakeInput(worldSeed: string): Parameters<typeof generateCareerIntakeP
     },
     count: 6,
   };
+}
+
+function annualProviderCareerState() {
+  const world = createFakeDomesticWorld({
+    worldSeed: "annual-provider-career",
+  });
+  const clubRosters = Object.fromEntries(
+    world.initialYouthAcademies.youthAcademyState.clubRosterIds.map((id) => [
+      id,
+      {
+        clubId: id,
+        playerIds:
+          world.initialYouthAcademies.youthAcademyState.clubRosters[id]!
+            .playerIds.slice(0, -1),
+      },
+    ]),
+  ) as typeof world.initialYouthAcademies.youthAcademyState.clubRosters;
+  const activeYouthIds = new Set(
+    Object.values(clubRosters).flatMap((roster) => roster.playerIds),
+  );
+  const playerLifecycle = Object.fromEntries(
+    world.initialYouthAcademies.youthAcademyState.playerLifecycleIds.map((id) => {
+      const lifecycle =
+        world.initialYouthAcademies.youthAcademyState.playerLifecycle[id]!;
+      return [
+        id,
+        activeYouthIds.has(id)
+          ? lifecycle
+          : {
+              ...lifecycle,
+              status: "aged_out" as const,
+              statusChangedAt: world.seasonStartDate,
+            },
+      ];
+    }),
+  ) as typeof world.initialYouthAcademies.youthAcademyState.playerLifecycle;
+
+  return createCareerState({
+    saveId: saveId("save:annual-provider-career"),
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    selectedClubId: world.defaultSelectedClubId,
+    gameState: {
+      meta: {
+        seed: "annual-provider-career",
+        rngAlgorithmVersion: "sfc32-cyrb128-v1",
+        saveSchemaVersion: 1,
+        calibrationVersions: world.calibrationVersions,
+      },
+      calendar: {
+        currentDate: world.seasonStartDate,
+        currentSeasonId: world.seasonId,
+      },
+      players: {
+        ...world.players,
+        ...world.initialYouthAcademies.players,
+      },
+      playerIds: [
+        ...world.playerIds,
+        ...world.initialYouthAcademies.playerIds,
+      ],
+      playerStates: {
+        ...world.playerStates,
+        ...world.initialYouthAcademies.playerStates,
+      },
+      clubs: world.clubsById,
+      clubIds: world.clubIds,
+      fixtures: {},
+      fixtureIds: [],
+      domesticCompetitionWorld: world.domesticCompetitionWorld,
+    },
+    youthAcademyState: {
+      ...world.initialYouthAcademies.youthAcademyState,
+      clubRosters,
+      playerLifecycle,
+    },
+    seniorSquadState: world.seniorSquadState,
+    clubFinanceState: world.clubFinanceState,
+    transferHistory: [],
+  });
 }

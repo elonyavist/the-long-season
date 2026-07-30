@@ -1,21 +1,29 @@
 import type { MessageKey, Translator } from "@game/i18n";
 import type { CareerContractTermsInput, CareerPlayerProfileView } from "@game/ui";
-import {
-  Activity,
-  BadgeEuro,
-  X,
-} from "lucide-react";
-import { useRef } from "react";
+import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import type { WebPreferences } from "../../app/preferences";
 import type {
   WebSelectedClubContractCommand,
   WebSelectedClubContractCommandResult,
 } from "../../runtime/web-career-runtime";
+import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
 import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { PlayerAttributeGroups } from "../../shared/ui/PlayerAttributeGroups";
+import { PlayerProfileTabs } from "../../shared/ui/PlayerProfileTabs";
+import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
+import { PlayerRoleChips } from "../../shared/ui/PlayerRoleChips";
+import {
+  buildPlayerStatisticsPeriodItems,
+  PlayerStatisticsPanel,
+} from "../../shared/ui/PlayerStatisticsPanel";
+import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
 import { FullScreenDialog } from "../shared/FullScreenDialog";
 import type { CareerContractFinancePreview } from "./career-squad-adapter";
 import { CareerContractWorkspace } from "./CareerContractWorkspace";
+
+type SquadPlayerProfileTabId = "attributes" | "statistics" | "contract";
 
 /** Props for the complete accessible senior-player profile. */
 export interface CareerPlayerProfileDialogProps {
@@ -44,6 +52,11 @@ export function CareerPlayerProfileDialog({
   onClose,
 }: CareerPlayerProfileDialogProps): React.JSX.Element {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [activeTabId, setActiveTabId] = useState<SquadPlayerProfileTabId>("attributes");
+
+  useEffect(() => {
+    setActiveTabId("attributes");
+  }, [profile?.playerId]);
 
   return (
     <FullScreenDialog
@@ -60,7 +73,6 @@ export function CareerPlayerProfileDialog({
               {profile.shirtNumber}
             </div>
             <div className="tls-player-profile-identity">
-              <p className="tls-career-screen-eyebrow">{text("career.playerProfile.eyebrow")}</p>
               <h2 id="career-player-profile-title">{profile.displayName}</h2>
               <p>
                 {text(`career.player.role.${profile.primaryRole}` as MessageKey)}
@@ -80,71 +92,111 @@ export function CareerPlayerProfileDialog({
             </button>
           </header>
 
-          <dl className="tls-player-profile-summary" aria-label={text("career.playerProfile.summary") }>
-            <ProfileFact label={text("career.squad.column.current_level")} value={text(levelKey(profile.currentLevel))} />
-            <ProfileFact label={text("career.squad.column.potential_level")} value={text(levelKey(profile.potentialLevel))} />
+          <dl className="tls-player-profile-summary" aria-label={text("career.playerProfile.summary")}>
+            <ProfileFact
+              label={text("career.squad.column.current_level")}
+              value={(
+                <PlayerStarRating
+                  label={text("career.squad.column.current_level")}
+                  rating={profile.currentRating}
+                  text={text}
+                />
+              )}
+            />
+            <ProfileFact
+              label={text("career.squad.column.potential_level")}
+              value={(
+                <PlayerPotentialRangeRating
+                  language={language}
+                  range={profile.potentialRange}
+                  text={text}
+                />
+              )}
+            />
             <ProfileFact
               label={text("career.playerProfile.value")}
               value={formatMoneyFromMinorUnits(profile.value, profile.currency, language, "whole")}
-              icon="value"
             />
-            <ProfileFact label={text("career.squad.column.condition")} value={`${Math.round(profile.condition)}%`} icon="condition" />
+            <ProfileFact label={text("career.squad.column.condition")} value={`${Math.round(profile.condition)}%`} />
             <ProfileFact label={text("career.squad.column.morale")} value={String(Math.round(profile.morale))} />
             <ProfileFact label={text("career.playerProfile.selection")} value={selectionLabel(profile, text)} />
             <ProfileFact label={text("career.playerProfile.availability")} value={availabilityLabel(profile, text)} />
           </dl>
 
-          <section className="tls-player-profile-section" aria-labelledby="career-player-profile-roles-title">
-            <div className="tls-player-profile-section-heading">
-              <div>
-                <p className="tls-career-screen-eyebrow">{text("career.playerProfile.football")}</p>
-                <h3 id="career-player-profile-roles-title">{text("career.playerProfile.overview")}</h3>
-              </div>
-            </div>
-            <div className="tls-player-profile-role-list">
-              {profile.roles.filter((role) => role.suitability !== "invalid").map((role) => (
-                <span data-suitability={role.suitability} key={role.role}>
-                  <strong>{text(role.labelKey as MessageKey)}</strong>
-                  <small>{text(`career.playerProfile.suitability.${role.suitability}` as MessageKey)}</small>
-                </span>
-              ))}
-            </div>
-          </section>
+          <PlayerRoleChips
+            ariaLabel={text("career.playerProfile.rolesLabel")}
+            roles={profile.roles.map((role) => ({
+              roleId: role.role,
+              code: canonicalPlayerRoleCode(role.role),
+              label: text(role.labelKey as MessageKey),
+              suitability: role.suitability,
+              suitabilityLabel: text(
+                `career.playerProfile.suitability.${role.suitability}` as MessageKey,
+              ),
+              isPrimary: role.isPrimary,
+            }))}
+          />
 
-          <section className="tls-player-profile-section" aria-labelledby="career-player-profile-attributes-title">
-            <div className="tls-player-profile-section-heading">
-              <div>
-                <p className="tls-career-screen-eyebrow">{text("career.playerProfile.currentAbility")}</p>
-                <h3 id="career-player-profile-attributes-title">{text("career.playerProfile.attributes")}</h3>
-              </div>
-              <p>{text("career.playerProfile.attributesHint")}</p>
-            </div>
-            <div className="tls-player-attribute-groups">
-              {profile.attributeGroups.map((group) => (
-                <section key={group.family} aria-labelledby={`attribute-group-${group.family}`}>
-                  <h4 id={`attribute-group-${group.family}`}>{text(group.labelKey as MessageKey)}</h4>
-                  <dl>
-                    {group.attributes.map((attribute) => (
-                      <div key={attribute.key} data-band={attributeBand(attribute.value)}>
-                        <dt>{text(attribute.labelKey as MessageKey)}</dt>
-                        <dd>{formatAttribute(attribute.value)}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
-              ))}
-            </div>
-          </section>
-
-          <CareerContractWorkspace
-            playerId={profile.playerId}
-            playerAge={profile.age}
-            contract={profile.contract}
-            language={language}
-            pending={contractCommandPending}
-            text={text}
-            previewOffer={previewContractOffer}
-            onCommand={onContractCommand}
+          <PlayerProfileTabs<SquadPlayerProfileTabId>
+            activeTabId={activeTabId}
+            ariaLabel={text("career.playerProfile.tabs.label")}
+            tabs={[
+              {
+                tabId: "attributes",
+                label: text("career.playerProfile.tabs.attributes"),
+                panel: (
+                  <div className="tls-player-profile-tab-content">
+                    <p className="tls-player-profile-tab-hint">
+                      {text("career.playerProfile.attributesHint")}
+                    </p>
+                    <PlayerAttributeGroups
+                      ariaLabel={text("career.playerProfile.attributes")}
+                      language={language}
+                      groups={profile.attributeGroups.map((group) => ({
+                        groupId: group.family,
+                        label: text(group.labelKey as MessageKey),
+                        attributes: group.attributes.map((attribute) => ({
+                          attributeId: attribute.key,
+                          label: text(attribute.labelKey as MessageKey),
+                          value: attribute.value,
+                        })),
+                      }))}
+                    />
+                  </div>
+                ),
+              },
+              {
+                tabId: "statistics",
+                label: text("career.playerProfile.tabs.statistics"),
+                panel: (
+                  <PlayerStatisticsPanel
+                    ariaLabel={text("career.playerProfile.statistics.label")}
+                    periods={buildPlayerStatisticsPeriodItems(
+                      profile.statistics,
+                      language,
+                      text,
+                    )}
+                  />
+                ),
+              },
+              {
+                tabId: "contract",
+                label: text("career.playerProfile.tabs.contract"),
+                panel: (
+                  <CareerContractWorkspace
+                    playerId={profile.playerId}
+                    playerAge={profile.age}
+                    contract={profile.contract}
+                    language={language}
+                    pending={contractCommandPending}
+                    text={text}
+                    previewOffer={previewContractOffer}
+                    onCommand={onContractCommand}
+                  />
+                ),
+              },
+            ]}
+            onActiveTabChange={setActiveTabId}
           />
         </>
       )}
@@ -152,26 +204,23 @@ export function CareerPlayerProfileDialog({
   );
 }
 
+/*
+ * No icons. Two of the seven facts used to carry one, which read as decoration
+ * rather than as a rule the eye could follow. The label already names the fact.
+ */
 function ProfileFact({
   label,
   value,
-  icon,
 }: Readonly<{
   label: string;
-  value: string;
-  icon?: "value" | "condition";
+  value: React.ReactNode;
 }>): React.JSX.Element {
-  const Icon = icon === "value" ? BadgeEuro : Activity;
   return (
     <div>
       <dt>{label}</dt>
-      <dd>{icon === undefined ? null : <Icon aria-hidden="true" size={17} />}{value}</dd>
+      <dd>{value}</dd>
     </div>
   );
-}
-
-function levelKey(level: CareerPlayerProfileView["currentLevel"]): MessageKey {
-  return `career.squad.level.${level}` as MessageKey;
 }
 
 function selectionLabel(profile: CareerPlayerProfileView, text: Translator): string {
@@ -185,15 +234,4 @@ function availabilityLabel(profile: CareerPlayerProfileView, text: Translator): 
   return profile.availabilityReasons
     .map((reason) => text(`career.squad.status.${reason}` as MessageKey))
     .join(", ");
-}
-
-function formatAttribute(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function attributeBand(value: number): "low" | "average" | "good" | "excellent" {
-  if (value >= 15) return "excellent";
-  if (value >= 12) return "good";
-  if (value >= 8) return "average";
-  return "low";
 }

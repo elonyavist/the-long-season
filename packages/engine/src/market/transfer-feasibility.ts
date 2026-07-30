@@ -8,6 +8,7 @@ import {
   type ClubFinanceState,
   type ContractOfferTerms,
   type GameState,
+  type MarketBehaviorCalibrationConfig,
   type Money,
   type PermanentTransferIntent,
   type Player,
@@ -16,7 +17,6 @@ import {
 } from "@game/domain";
 
 import {
-  DEFAULT_PLAYER_VALUATION_CONFIG,
   derivePlayerValuation,
   type PlayerValuation,
   type PlayerValuationConfig,
@@ -31,7 +31,10 @@ export interface EvaluatePermanentTransferInput {
   readonly clubFinanceState: ClubFinanceState;
   /** Manager-declared move. */
   readonly intent: PermanentTransferIntent;
-  /** Optional valuation tuning; defaults to the MVP config. */
+  /**
+   * Explicit versioned public-value content. Required unless both clubs have
+   * already accepted an explicit fee and no public-value projection is needed.
+   */
   readonly valuationConfig?: PlayerValuationConfig;
   /** Seller agreement used by valuation and player willingness. */
   readonly currentContract?: PlayerContract;
@@ -46,8 +49,8 @@ export interface EvaluatePermanentTransferInput {
    * reject terms which the player has already accepted.
    */
   readonly playerAgreementConfirmed?: boolean;
-  /** Current supported form on the canonical 0-100 scale. */
-  readonly currentForm?: number;
+  /** Exact version-selected willingness and affordability policy. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }
 
 /** Feasibility output before applying a preview. */
@@ -104,41 +107,71 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     return rejected(input.intent, reasons);
   }
 
-  const valuation = derivePlayerValuation({
-    player,
-    club: sellingClub,
-    currentDate: input.gameState.calendar.currentDate,
-    config: input.valuationConfig ?? DEFAULT_PLAYER_VALUATION_CONFIG,
-    ...(input.currentContract === undefined ? {} : { contract: input.currentContract }),
-    ...(input.currentForm === undefined ? {} : { currentForm: input.currentForm }),
-  });
-  const transferFee = input.agreedTransferFee ?? valuation.value;
+  const valuation = input.valuationConfig === undefined
+    ? undefined
+    : derivePlayerValuation({
+        player,
+        currentDate: input.gameState.calendar.currentDate,
+        config: input.valuationConfig,
+        marketContext: {
+          kind: "contracted",
+          division: sellingClub.category,
+        },
+      });
+  const transferFee = input.agreedTransferFee ?? valuation?.value;
+  if (transferFee === undefined) {
+    throw new Error(
+      "Explicit valuation config is required when no agreed transfer fee exists",
+    );
+  }
   const buyingAccount = findClubFinanceAccount(input.clubFinanceState, input.intent.buyingClubId);
 
   if (buyingAccount === undefined) {
     reasons.push({ code: "missing_buying_budget", clubId: input.intent.buyingClubId, requiredBudget: transferFee });
-  } else if (compareMoney(buyingAccount.availableTransferBudget, transferFee) < 0) {
+  } else if (compareMoney(
+    percentageMoney(
+      buyingAccount.availableTransferBudget,
+      input.marketBehaviorPolicy.affordability.maximumTransferBudgetUseBasisPoints,
+    ),
+    transferFee,
+  ) < 0) {
     reasons.push({
       code: "insufficient_transfer_budget",
       clubId: input.intent.buyingClubId,
       requiredBudget: transferFee,
-      availableBudget: buyingAccount.availableTransferBudget,
+      availableBudget: percentageMoney(
+        buyingAccount.availableTransferBudget,
+        input.marketBehaviorPolicy.affordability.maximumTransferBudgetUseBasisPoints,
+      ),
     });
   } else if (
     input.proposedTerms !== undefined
-    && compareMoney(
-      nonNegativeMoney(Math.max(0, buyingAccount.annualWageBudget - buyingAccount.committedAnnualWage)),
-      input.proposedTerms.annualWage,
-    ) < 0
+    && addMoney(buyingAccount.committedAnnualWage, input.proposedTerms.annualWage)
+      > percentageMoney(
+        buyingAccount.annualWageBudget,
+        input.marketBehaviorPolicy.affordability.maximumWageBudgetUseBasisPoints,
+      )
   ) {
+    const maximumCommittedWage = percentageMoney(
+      buyingAccount.annualWageBudget,
+      input.marketBehaviorPolicy.affordability.maximumWageBudgetUseBasisPoints,
+    );
     reasons.push({
       code: "insufficient_wage_budget",
       clubId: input.intent.buyingClubId,
       requiredBudget: input.proposedTerms.annualWage,
-      availableBudget: nonNegativeMoney(Math.max(0, buyingAccount.annualWageBudget - buyingAccount.committedAnnualWage)),
+      availableBudget: nonNegativeMoney(
+        Math.max(0, maximumCommittedWage - buyingAccount.committedAnnualWage),
+      ),
     });
   } else if (compareMoney(
-    buyingAccount.cashBalance,
+    nonNegativeMoney(Math.max(
+      0,
+      buyingAccount.cashBalance - percentageMoney(
+        buyingAccount.annualWageBudget,
+        input.marketBehaviorPolicy.affordability.minimumCashReserveBasisPoints,
+      ),
+    )),
     addMoney(transferFee, input.proposedTerms?.bonuses.signingBonus ?? nonNegativeMoney(0)),
   ) < 0) {
     const requiredCash = addMoney(transferFee, input.proposedTerms?.bonuses.signingBonus ?? nonNegativeMoney(0));
@@ -154,7 +187,13 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     player,
     sellingClub,
     buyingClub,
+    currentTier: sellingClub.category,
+    destinationTier: buyingClub.category,
     currentDate: input.gameState.calendar.currentDate,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
+    ...(input.valuationConfig === undefined
+      ? {}
+      : { ratingScale: input.valuationConfig.ratingScale }),
     ...(input.currentContract === undefined ? {} : { currentContract: input.currentContract }),
     ...(input.proposedTerms === undefined ? {} : { proposedTerms: input.proposedTerms }),
   });
@@ -169,7 +208,7 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     intent: input.intent,
     status,
     reasons,
-    valuation,
+    ...(valuation === undefined ? {} : { valuation }),
     transferFee,
     willingness,
     ...(buyingAccount === undefined ? {} : { buyerBudgetBefore: buyingAccount.availableTransferBudget }),
@@ -177,6 +216,12 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
       ? { buyerBudgetAfter: subtractMoney(buyingAccount.availableTransferBudget, transferFee) }
       : {}),
   };
+}
+
+function percentageMoney(value: Money, basisPoints: number): Money {
+  return nonNegativeMoney(Number(
+    (BigInt(value) * BigInt(basisPoints)) / 10_000n,
+  ));
 }
 
 function collectIdentityReasons(

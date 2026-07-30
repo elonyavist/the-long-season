@@ -15,6 +15,26 @@ export type GeneratedPlayerDepthRole = "starter" | "rotation" | "depth" | "prosp
 /** Broad potential class used by tests and quality reports. */
 export type GeneratedPlayerPotentialClass = "limited" | "category" | "interesting" | "serious" | "elite";
 
+/** Exceptional construction lane selected before sampling a generated profile. */
+export type GeneratedExceptionalProfileKind =
+  | "ordinary"
+  | "current_six"
+  | "potential_only_six";
+
+/** Allocation facts required to select one compatible exceptional lane. */
+export interface ResolveGeneratedExceptionalProfileInput {
+  readonly currentSixAllocated: boolean;
+  readonly potentialSixAllocated: boolean;
+}
+
+/** Compatible construction decision shared by fake senior generators. */
+export interface GeneratedExceptionalProfile {
+  readonly kind: GeneratedExceptionalProfileKind;
+  readonly archetypeKey?: GeneratedPlayerArchetypeKey;
+  readonly currentAbilityLane: "ordinary" | "exceptional";
+  readonly requiresSixStarPotentialFloor: boolean;
+}
+
 /** Inclusive numeric range used by deterministic content generators. */
 export interface GeneratedPlayerRange {
   /** Minimum inclusive value. */
@@ -129,4 +149,37 @@ export const GENERATED_PLAYER_ARCHETYPES: Readonly<Record<GeneratedPlayerArchety
  */
 export function getGeneratedPlayerArchetype(key: GeneratedPlayerArchetypeKey): GeneratedPlayerArchetype {
   return GENERATED_PLAYER_ARCHETYPES[key];
+}
+
+/**
+ * Resolves exceptional profile precedence before age or abilities are sampled.
+ *
+ * Current-six status wins when both allocations identify the same slot because
+ * an already world-class player must use the senior `category_star` lane.
+ * Only potential-only exceptional players use the youth prodigy lane.
+ */
+export function resolveGeneratedExceptionalProfile(
+  input: ResolveGeneratedExceptionalProfileInput,
+): GeneratedExceptionalProfile {
+  if (input.currentSixAllocated) {
+    return {
+      kind: "current_six",
+      archetypeKey: "category_star",
+      currentAbilityLane: "exceptional",
+      requiresSixStarPotentialFloor: input.potentialSixAllocated,
+    };
+  }
+  if (input.potentialSixAllocated) {
+    return {
+      kind: "potential_only_six",
+      archetypeKey: "rare_prodigy",
+      currentAbilityLane: "ordinary",
+      requiresSixStarPotentialFloor: true,
+    };
+  }
+  return {
+    kind: "ordinary",
+    currentAbilityLane: "ordinary",
+    requiresSixStarPotentialFloor: false,
+  };
 }

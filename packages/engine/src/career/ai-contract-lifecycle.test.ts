@@ -33,17 +33,75 @@ import {
 } from "@game/domain";
 
 import {
-  advanceAiContractLifecycle,
+  advanceAiContractLifecycle as advanceAiContractLifecycleWithPolicy,
 } from "./ai-contract-lifecycle.ts";
-import { advanceCareerMonths } from "./advance-career-month.ts";
+import { advanceCareerMonths as advanceCareerMonthsWithPolicy } from "./advance-career-month.ts";
 import { deriveMarketPendingExposure } from "./market-pending-exposure.ts";
 import {
-  advanceContractNegotiations,
+  advanceContractNegotiations as advanceContractNegotiationsWithPolicy,
   chooseAiReleaseAtContractExpiry,
-  offerContractRenewal,
+  offerContractRenewal as offerContractRenewalWithPolicy,
 } from "./contract-negotiation.ts";
-import { deriveContractDemand } from "./contract-negotiation-demand.ts";
+import {
+  deriveContractDemand as deriveContractDemandWithPolicy,
+} from "./contract-negotiation-demand.ts";
 import { selectFreeAgentPlayerIds } from "./free-agent-pool.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+const WAGE_POLICY = playerWagePolicyConfigFixture();
+const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+
+function advanceAiContractLifecycle(
+  input: Omit<
+    Parameters<typeof advanceAiContractLifecycleWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceAiContractLifecycleWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function advanceCareerMonths(
+  input: Omit<
+    Parameters<typeof advanceCareerMonthsWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceCareerMonthsWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function deriveContractDemand(
+  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+) {
+  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function offerContractRenewal(
+  input: Omit<Parameters<typeof offerContractRenewalWithPolicy>[0], "wagePolicy">,
+) {
+  return offerContractRenewalWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function advanceContractNegotiations(
+  careerState: Parameters<typeof advanceContractNegotiationsWithPolicy>[0],
+  throughDate: Parameters<typeof advanceContractNegotiationsWithPolicy>[1],
+  clubFilter?: Parameters<typeof advanceContractNegotiationsWithPolicy>[3],
+) {
+  return advanceContractNegotiationsWithPolicy(
+    careerState,
+    throughDate,
+    WAGE_POLICY,
+    clubFilter,
+  );
+}
 
 const SELECTED_CLUB = clubId("club:selected");
 const AI_CLUB = clubId("club:ai");

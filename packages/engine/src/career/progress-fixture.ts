@@ -12,9 +12,11 @@ import {
   type Fixture,
   type FixtureId,
   type MatchReport,
+  type MarketBehaviorCalibrationConfig,
   type MatchPlayerConsequence,
   type AppliedMatchSubstitution,
   type PlayerId,
+  type PlayerWagePolicyConfig,
 } from "@game/domain";
 
 import type { MatchEngineConfig } from "../match-engine/match-engine-config.ts";
@@ -80,6 +82,9 @@ export interface ProgressCareerAiTeamSelectionInput {
 export interface ProgressNextCareerFixtureInput {
   /** Current durable career state loaded by the caller. */
   readonly careerState: CareerState;
+  /** Version-linked wage policy used if fixture-date advancement crosses a month. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Match-ready team contexts keyed by club ID. The selected club must be supplied by the caller. */
   readonly teamsByClubId: Readonly<Partial<Record<ClubId, MatchTeamContext>>>;
   /** Optional AI selector config used only for non-selected clubs when their context is missing. */
@@ -154,6 +159,9 @@ export type ProgressCareerFixtureResult =
 export interface CommitCompletedCareerFixtureInput {
   /** Durable career that must remain unchanged until this commit succeeds. */
   readonly careerState: CareerState;
+  /** Version-linked wage policy used by fixture-date monthly advancement. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Final structured report produced by the completed live match. */
   readonly report: MatchReport;
   /** Frozen kickoff context used to identify starters and participation. */
@@ -206,6 +214,8 @@ export function commitCompletedCareerFixture(
 
   return applyCareerFixtureReport({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     fixture,
     report: input.report,
     selectedStarterIds: selectedInitialTeam.lineup.map((slot) => slot.playerId),
@@ -270,6 +280,8 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
   const selectedStarterIds = selectedClubContext.lineup.map((slot) => slot.playerId);
   const applied = applyCareerFixtureReport({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     fixture: nextFixture.fixture,
     report: simulatedFixture.report,
     selectedStarterIds,
@@ -309,6 +321,8 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
 
 interface ApplyCareerFixtureReportInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly fixture: Fixture;
   readonly report: MatchReport;
   readonly selectedStarterIds: readonly PlayerId[];
@@ -324,6 +338,8 @@ function applyCareerFixtureReport(
 ): ProgressCareerFixtureAdvanced | ProgressCareerFixtureInvalid {
   const monthlyLifecycle = advanceCareerMonths({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     worldSeed: input.careerState.gameState.meta.seed,
     fromDate: input.careerState.gameState.calendar.currentDate,
     toDate: input.fixture.date,

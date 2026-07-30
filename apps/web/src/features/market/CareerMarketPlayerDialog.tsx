@@ -10,15 +10,9 @@ import type {
 } from "@game/ui";
 import { careerNonNegativeMoneyFromMinorUnits } from "@game/ui";
 import {
-  Activity,
-  BadgeEuro,
   BriefcaseBusiness,
-  CalendarClock,
   Check,
-  CircleGauge,
   Send,
-  ShieldCheck,
-  Smile,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -30,6 +24,15 @@ import type {
 } from "../../runtime/web-career-runtime";
 import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
 import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { PlayerAttributeGroups } from "../../shared/ui/PlayerAttributeGroups";
+import { PlayerProfileTabs } from "../../shared/ui/PlayerProfileTabs";
+import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
+import { PlayerRoleChips } from "../../shared/ui/PlayerRoleChips";
+import {
+  buildPlayerStatisticsPeriodItems,
+  PlayerStatisticsPanel,
+} from "../../shared/ui/PlayerStatisticsPanel";
+import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
 import { ContractTermsForm } from "../shared/ContractTermsForm";
 import { FullScreenDialog } from "../shared/FullScreenDialog";
 import type { MarketOfferDraft } from "./career-market-adapter";
@@ -42,6 +45,13 @@ import {
 } from "../squad/contract-renewal-form";
 
 const ALL_BONUS_FIELDS: readonly CareerContractBonusField[] = ["signing_bonus", "appearance_bonus"];
+
+type MarketPlayerProfileTabId = "attributes" | "statistics" | "contract";
+
+interface MarketPlayerProfileTabState {
+  readonly playerId: string | undefined;
+  readonly activeTabId: MarketPlayerProfileTabId;
+}
 
 /** Props for the public Market inspection profile and its offer composer. */
 export type CareerMarketPlayerDialogProps = Readonly<{
@@ -75,23 +85,36 @@ export function CareerMarketPlayerDialog({
 }: CareerMarketPlayerDialogProps): React.JSX.Element {
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = "career-market-player-title";
+  const [tabState, setTabState] = useState<MarketPlayerProfileTabState>({
+    playerId: detail?.playerId,
+    activeTabId: "attributes",
+  });
+  useEffect(() => {
+    setTabState((current) => resetMarketPlayerProfileTabForPlayer(
+      detail?.playerId,
+      current,
+    ));
+  }, [detail?.playerId]);
+  const activeTabId = resolveMarketPlayerProfileTab(detail?.playerId, tabState);
 
   return (
     <FullScreenDialog
       initialFocusRef={closeRef}
       labelledBy={titleId}
       open={detail !== undefined}
-      shellClassName="tls-market-player-shell"
+      shellClassName="tls-player-profile-shell"
       onClose={onClose}
     >
       {detail === undefined ? null : (
         <>
-          <header className="tls-market-player-header">
-            <div className="tls-market-player-role" aria-hidden="true">
+          <header className="tls-player-profile-header">
+            <div
+              className="tls-player-profile-number"
+              aria-hidden="true"
+            >
               {canonicalPlayerRoleCode(detail.primaryRole)}
             </div>
-            <div>
-              <p className="tls-career-screen-eyebrow">{text("career.market.profile.eyebrow")}</p>
+            <div className="tls-player-profile-identity">
               <h2 id={titleId}>{detail.displayName}</h2>
               <p>
                 {text(`career.player.role.${detail.primaryRole}` as MessageKey)}
@@ -99,11 +122,13 @@ export function CareerMarketPlayerDialog({
                 {detail.employment.status === "free_agent"
                   ? text("career.market.employment.free_agent")
                   : detail.employment.clubName}
+                {" · "}
+                {text(`career.market.tier.${detail.employment.sourceTier}` as MessageKey)}
               </p>
             </div>
             <button
               aria-label={text("career.market.profile.close")}
-              className="tls-icon-button"
+              className="tls-icon-button tls-player-profile-close"
               ref={closeRef}
               title={text("career.market.profile.close")}
               type="button"
@@ -113,117 +138,162 @@ export function CareerMarketPlayerDialog({
             </button>
           </header>
 
-          <dl className="tls-market-player-summary">
+          <dl
+            aria-label={text("career.playerProfile.summary")}
+            className="tls-player-profile-summary tls-market-player-summary"
+          >
             <MarketFact
-              icon={<CalendarClock aria-hidden="true" size={19} />}
               label={text("career.market.column.age")}
               value={String(detail.age)}
             />
             <MarketFact
-              icon={<BadgeEuro aria-hidden="true" size={19} />}
               label={text("career.market.column.value")}
-              value={formatMoneyFromMinorUnits(detail.value, detail.currency, language, "whole")}
+              value={formatMoneyFromMinorUnits(detail.publicValue, detail.currency, language, "whole")}
             />
             <MarketFact
-              icon={<Activity aria-hidden="true" size={19} />}
+              label={detail.employment.status === "free_agent"
+                ? text("career.market.column.transferFee")
+                : text("career.market.column.askingPrice")}
+              value={formatMoneyFromMinorUnits(
+                detail.employment.status === "free_agent"
+                  ? detail.freeAgentTransferFee ?? 0
+                  : detail.askingPrice ?? 0,
+                detail.currency,
+                language,
+                "whole",
+              )}
+            />
+            <MarketFact
+              label={text("career.market.profile.sourceCompetition")}
+              value={detail.employment.status === "free_agent"
+                ? text("career.market.tier.free_agent")
+                : detail.employment.competitionName}
+            />
+            <MarketFact
               label={text("career.market.profile.condition")}
               value={`${Math.round(detail.condition)}%`}
             />
             <MarketFact
-              icon={<CircleGauge aria-hidden="true" size={19} />}
               label={text("career.market.profile.form")}
               value={String(Math.round(detail.form))}
             />
             <MarketFact
-              icon={<Smile aria-hidden="true" size={19} />}
               label={text("career.market.profile.morale")}
               value={String(Math.round(detail.morale))}
             />
             <MarketFact
-              icon={<ShieldCheck aria-hidden="true" size={19} />}
-              label={text("career.market.profile.assessment")}
-              value={`${text(levelKey(detail.currentLevel))} · ${text(levelKey(detail.potentialLevel))}`}
+              label={text("career.market.column.currentLevel")}
+              value={(
+                <PlayerStarRating
+                  label={text("career.market.column.currentLevel")}
+                  rating={detail.currentRating}
+                  text={text}
+                />
+              )}
+            />
+            <MarketFact
+              label={text("career.market.column.potentialLevel")}
+              value={(
+                <PlayerPotentialRangeRating
+                  language={language}
+                  range={detail.potentialRange}
+                  text={text}
+                />
+              )}
             />
           </dl>
 
-          <section className="tls-market-player-section" aria-labelledby="career-market-contract-title">
-            <div>
-              <p className="tls-career-screen-eyebrow">{text("career.market.profile.employment")}</p>
-              <h3 id="career-market-contract-title">
-                {detail.employment.status === "free_agent"
-                  ? text("career.market.employment.free_agent")
-                  : detail.employment.clubName}
-              </h3>
-            </div>
-            {detail.employment.status === "free_agent" ? (
-              <p>{text("career.market.contract.freeAgentSummary")}</p>
-            ) : (
-              <dl className="tls-market-contract-facts">
-                <div>
-                  <dt>{text("career.market.contract.expires")}</dt>
-                  <dd>{detail.employment.contractEndsOnIso}</dd>
-                </div>
-                <div>
-                  <dt>{text("career.market.contract.horizon")}</dt>
-                  <dd>{text(`career.market.contractHorizon.${detail.contractHorizon}` as MessageKey)}</dd>
-                </div>
-              </dl>
-            )}
-          </section>
+          <PlayerRoleChips
+            ariaLabel={text("career.playerProfile.rolesLabel")}
+            roles={detail.roles.map((role) => ({
+              roleId: role.role,
+              code: canonicalPlayerRoleCode(role.role),
+              label: text(role.labelKey as MessageKey),
+              suitability: role.suitability,
+              suitabilityLabel: text(
+                `career.playerProfile.suitability.${role.suitability}` as MessageKey,
+              ),
+              isPrimary: role.isPrimary,
+            }))}
+          />
 
-          <section className="tls-market-player-section" aria-labelledby="career-market-roles-title">
-            <div>
-              <p className="tls-career-screen-eyebrow">{text("career.market.profile.rolesEyebrow")}</p>
-              <h3 id="career-market-roles-title">{text("career.market.profile.roles")}</h3>
-            </div>
-            <div className="tls-market-role-fits">
-              {detail.roleFits.map((roleFit) => (
-                <span
-                  data-suitability={roleFit.suitability}
-                  key={roleFit.role}
-                >
-                  <strong>{canonicalPlayerRoleCode(roleFit.role)}</strong>
-                  <small>{text(`career.player.role.${roleFit.role}` as MessageKey)}</small>
-                  <em>{text(`career.market.suitability.${roleFit.suitability}` as MessageKey)}</em>
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <section
-            className="tls-market-player-section tls-market-eligibility-detail"
-            data-status={detail.eligibility.status}
-            aria-labelledby="career-market-eligibility-title"
-          >
-            <BriefcaseBusiness aria-hidden="true" size={24} strokeWidth={1.7} />
-            <div>
-              <p className="tls-career-screen-eyebrow">{text("career.market.profile.nextAction")}</p>
-              <h3 id="career-market-eligibility-title">
-                {detail.eligibility.status === "allowed"
-                  ? text(actionKey(detail.eligibility.action))
-                  : text(blockReasonKey(detail.eligibility.reason))}
-              </h3>
-              {detail.eligibility.status === "blocked"
-                && detail.eligibility.nextAllowedOnIso !== undefined ? (
-                  <p>{text("career.market.eligibility.nextAllowed", {
-                    date: detail.eligibility.nextAllowedOnIso,
-                  })}</p>
-                ) : null}
-            </div>
-          </section>
-
-          <MarketOfferComposer
-            age={detail.age}
-            currency={detail.currency}
-            eligibility={detail.eligibility}
-            language={language}
-            negotiation={negotiation}
-            pending={marketCommandPending}
-            playerId={detail.playerId}
-            sellingClubId={detail.employment.status === "contracted" ? detail.employment.clubId : undefined}
-            text={text}
-            previewOffer={previewOffer}
-            onCommand={onMarketCommand}
+          <PlayerProfileTabs<MarketPlayerProfileTabId>
+            activeTabId={activeTabId}
+            ariaLabel={text("career.playerProfile.tabs.label")}
+            tabs={[
+              {
+                tabId: "attributes",
+                label: text("career.playerProfile.tabs.attributes"),
+                panel: (
+                  <div className="tls-player-profile-tab-content">
+                    <p className="tls-player-profile-tab-hint">
+                      {text("career.playerProfile.attributesHint")}
+                    </p>
+                    <PlayerAttributeGroups
+                      ariaLabel={text("career.playerProfile.attributes")}
+                      language={language}
+                      groups={detail.attributeGroups.map((group) => ({
+                        groupId: group.family,
+                        label: text(group.labelKey as MessageKey),
+                        attributes: group.attributes.map((attribute) => ({
+                          attributeId: attribute.key,
+                          label: text(attribute.labelKey as MessageKey),
+                          value: attribute.value,
+                        })),
+                      }))}
+                    />
+                  </div>
+                ),
+              },
+              {
+                tabId: "statistics",
+                label: text("career.playerProfile.tabs.statistics"),
+                panel: (
+                  <PlayerStatisticsPanel
+                    ariaLabel={text("career.playerProfile.statistics.label")}
+                    periods={buildPlayerStatisticsPeriodItems(
+                      detail.statistics,
+                      language,
+                      text,
+                    )}
+                  />
+                ),
+              },
+              {
+                tabId: "contract",
+                label: text("career.market.profile.tabs.contractOffer"),
+                panel: (
+                  <div
+                    className="tls-player-profile-tab-content"
+                    data-market-draft-owner={marketOfferDraftIdentity(detail.playerId)}
+                  >
+                    <MarketEmploymentAndEligibility detail={detail} text={text} />
+                    <MarketOfferComposer
+                      age={detail.age}
+                      currency={detail.currency}
+                      eligibility={detail.eligibility}
+                      key={marketOfferDraftIdentity(detail.playerId)}
+                      language={language}
+                      negotiation={negotiation}
+                      pending={marketCommandPending}
+                      playerId={detail.playerId}
+                      sellingClubId={detail.employment.status === "contracted"
+                        ? detail.employment.clubId
+                        : undefined}
+                      text={text}
+                      previewOffer={previewOffer}
+                      onCommand={onMarketCommand}
+                    />
+                  </div>
+                ),
+              },
+            ]}
+            onActiveTabChange={(nextTabId) => {
+              setTabState({
+                playerId: detail.playerId,
+                activeTabId: nextTabId,
+              });
+            }}
           />
         </>
       )}
@@ -231,25 +301,115 @@ export function CareerMarketPlayerDialog({
   );
 }
 
+/**
+ * Preserves a tab for the same inspected player and defaults every new player
+ * to Attributes without relying on an after-render effect.
+ */
+export function resolveMarketPlayerProfileTab(
+  playerId: string | undefined,
+  state: MarketPlayerProfileTabState,
+): MarketPlayerProfileTabId {
+  return playerId !== undefined && state.playerId === playerId
+    ? state.activeTabId
+    : "attributes";
+}
+
+/**
+ * Records a real player change exactly once while ignoring dialog closure.
+ *
+ * Recording the new owner prevents returning to an older player from reviving
+ * that player's previously selected tab.
+ */
+export function resetMarketPlayerProfileTabForPlayer(
+  playerId: string | undefined,
+  state: MarketPlayerProfileTabState,
+): MarketPlayerProfileTabState {
+  if (playerId === undefined || state.playerId === playerId) return state;
+  return {
+    playerId,
+    activeTabId: "attributes",
+  };
+}
+
+/**
+ * Keys the offer workflow to its player so tab navigation keeps its draft,
+ * while switching target cannot carry money or contract terms across players.
+ */
+export function marketOfferDraftIdentity(playerId: string): string {
+  return `market-offer:${playerId}`;
+}
+
 function MarketFact({
-  icon,
   label,
   value,
 }: Readonly<{
-  icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
 }>): React.JSX.Element {
   return (
     <div>
-      <dt>{icon}<span>{label}</span></dt>
+      <dt>{label}</dt>
       <dd>{value}</dd>
     </div>
   );
 }
 
-function levelKey(level: CareerMarketTargetDetailView["currentLevel"]): MessageKey {
-  return `career.squad.level.${level}` as MessageKey;
+/** Keeps employment, contract horizon, eligibility, finance, and offer context together. */
+function MarketEmploymentAndEligibility({
+  detail,
+  text,
+}: Readonly<{
+  detail: CareerMarketTargetDetailView;
+  text: Translator;
+}>): React.JSX.Element {
+  return (
+    <>
+      <section className="tls-market-player-section" aria-labelledby="career-market-contract-title">
+        <div>
+          <h3 id="career-market-contract-title">
+            {detail.employment.status === "free_agent"
+              ? text("career.market.employment.free_agent")
+              : detail.employment.clubName}
+          </h3>
+        </div>
+        {detail.employment.status === "free_agent" ? (
+          <p>{text("career.market.contract.freeAgentSummary")}</p>
+        ) : (
+          <dl className="tls-market-contract-facts">
+            <div>
+              <dt>{text("career.market.contract.expires")}</dt>
+              <dd>{detail.employment.contractEndsOnIso}</dd>
+            </div>
+            <div>
+              <dt>{text("career.market.contract.horizon")}</dt>
+              <dd>{text(`career.market.contractHorizon.${detail.contractHorizon}` as MessageKey)}</dd>
+            </div>
+          </dl>
+        )}
+      </section>
+
+      <section
+        className="tls-market-player-section tls-market-eligibility-detail"
+        data-status={detail.eligibility.status}
+        aria-labelledby="career-market-eligibility-title"
+      >
+        <BriefcaseBusiness aria-hidden="true" size={24} strokeWidth={1.7} />
+        <div>
+          <h3 id="career-market-eligibility-title">
+            {detail.eligibility.status === "allowed"
+              ? text(actionKey(detail.eligibility.action))
+              : text(blockReasonKey(detail.eligibility.reason))}
+          </h3>
+          {detail.eligibility.status === "blocked"
+            && detail.eligibility.nextAllowedOnIso !== undefined ? (
+              <p>{text("career.market.eligibility.nextAllowed", {
+                date: detail.eligibility.nextAllowedOnIso,
+              })}</p>
+            ) : null}
+        </div>
+      </section>
+    </>
+  );
 }
 
 function actionKey(action: CareerMarketTargetAction): MessageKey {
@@ -395,7 +555,7 @@ function MarketOfferComposer({
           currency={currency}
           feedback={feedbackBanner}
           language={language}
-          offeredFee={negotiation.transferFee}
+          offeredFee={negotiation.counterFee}
           pending={pending}
           text={text}
           onAccept={() => void runCommand(
@@ -414,7 +574,7 @@ function MarketOfferComposer({
         return (
           <div className="tls-market-composer">
             <p>{text("career.market.composer.clubAgreed", {
-              fee: formatMoneyFromMinorUnits(negotiation.transferFee ?? 0, currency, language, "whole"),
+              fee: formatMoneyFromMinorUnits(negotiation.agreedFee ?? 0, currency, language, "whole"),
             })}</p>
             <button
               className="tls-menu-button tls-menu-button-primary"

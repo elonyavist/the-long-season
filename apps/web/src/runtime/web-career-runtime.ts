@@ -1,8 +1,11 @@
 import {
-  createFakeLeagueSystem,
-  generateInitialYouthAcademies,
-  type FakeLeagueSystem,
-  type InitialYouthAcademyClubContext,
+  createAnnualWorldIntakeCandidateProviders,
+  createFakeDomesticWorld,
+  playerEconomyCalibration,
+  selectAskingPriceCurves,
+  selectMarketBehaviorCalibration,
+  selectPlayerValuationConfig,
+  selectPlayerWagePolicyConfig,
 } from "@game/content";
 import {
   acceptContractCounterOffer,
@@ -10,6 +13,7 @@ import {
   acceptTransferCounter,
   acceptTransferPlayerCounter,
   acknowledgeImportantCareerInboxMessage,
+  advanceCareerOneSeason,
   advanceSelectedClubWorkflowsToAttention,
   applyCareerFreeAgentSigning,
   chooseReleaseAtContractExpiry,
@@ -17,6 +21,7 @@ import {
   createPreliminaryAgreementId,
   createRenewalNegotiationId,
   createTransferNegotiationId,
+  combineDomesticCompetitionCalendars,
   findNextCareerFixture,
   offerSelectedClubRenewal,
   openCareerInboxMessage,
@@ -32,6 +37,7 @@ import {
   withdrawPreliminaryAgreement,
   withdrawTransferNegotiation,
   type ApplyCareerFreeAgentSigningResult,
+  type AdvanceCareerOneSeasonResult,
   type ContractNegotiationCommandResult,
   type ContractNegotiationRejectionReason,
   type ContinueCareerUntilAttentionResult,
@@ -75,6 +81,9 @@ import {
 
 /** Career state type exposed through the architecture-approved storage seam. */
 export type WebCareerState = Awaited<ReturnType<CareerStorage["loadCareer"]>>;
+type PlayerEconomyCalibrationVersionBundle = NonNullable<
+  WebCareerState["gameState"]["meta"]["calibrationVersions"]
+>;
 
 /** Inbox identity projected through the approved storage-owned career state. */
 export type WebCareerInboxMessageId = NonNullable<
@@ -84,7 +93,6 @@ export type WebCareerInboxMessageId = NonNullable<
 /** Save ID type exposed through the architecture-approved storage seam. */
 export type WebCareerSaveId = Parameters<CareerStorage["loadCareer"]>[0];
 
-type LeagueClubId = FakeLeagueSystem["clubIds"][number];
 type WebContractPlayerId = Parameters<typeof offerSelectedClubRenewal>[0]["playerId"];
 type WebContractNegotiationId = Parameters<typeof acceptContractCounterOffer>[0]["negotiationId"];
 type WebContractNegotiation = Extract<
@@ -140,6 +148,13 @@ export interface ContinuedWebCareer {
   readonly metadata: CareerSaveMetadata;
   readonly state: WebCareerState;
   readonly continueResult: WebCareerContinueResult;
+  readonly sessionStatus: CareerSessionStatus;
+}
+
+/** Working-session result of attempting the complete domestic season boundary. */
+export interface RolledOverWebCareerSeason {
+  readonly result: AdvanceCareerOneSeasonResult;
+  readonly state: WebCareerState;
   readonly sessionStatus: CareerSessionStatus;
 }
 
@@ -412,6 +427,18 @@ export class WebCareerRuntime {
     if (metadata === undefined) {
       throw new Error(`Loaded career metadata is missing: ${requestedSaveId}`);
     }
+    try {
+      assertSupportedWebCareerCalibrationVersions(state);
+    } catch (error) {
+      if (
+        error instanceof StorageError
+        && error.code === "unsupported_schema_version"
+      ) {
+        await this.storage.deleteCareer(requestedSaveId);
+        this.session = undefined;
+      }
+      throw error;
+    }
     this.session = new CareerSession(state, metadata);
     const refreshedState = refreshExistingInboxFacts(state);
     if (refreshedState !== state) this.session.replaceWorkingState(refreshedState);
@@ -435,6 +462,7 @@ export class WebCareerRuntime {
     });
 
     const state = await this.storage.loadCareer(identity.saveId);
+    assertSupportedWebCareerCalibrationVersions(state);
     this.session = new CareerSession(state, metadata);
     return { metadata, state };
   }
@@ -478,6 +506,36 @@ export class WebCareerRuntime {
     };
   }
 
+  /**
+   * Rolls every completed domestic competition into the next season in memory.
+   *
+   * The engine publishes the full boundary atomically. An invalid boundary
+   * leaves the loaded working session unchanged; persistence remains an
+   * explicit runtime action so no partial durable save can escape.
+   */
+  public rolloverCompletedSeason(
+    requestedSaveId: WebCareerSaveId,
+  ): RolledOverWebCareerSeason {
+    const session = this.requireSession(requestedSaveId);
+    const currentState = session.workingState();
+    const result = rolloverCompletedWebCareerSeason(currentState);
+    if (result.status === "invalid") {
+      return {
+        result,
+        state: currentState,
+        sessionStatus: session.status(),
+      };
+    }
+    const state = session.replaceWorkingState(
+      refreshExistingInboxFacts(result.careerState),
+    ).workingState;
+    return {
+      result,
+      state,
+      sessionStatus: session.status(),
+    };
+  }
+
   /** Opens one durable Posta message in memory and acknowledges important attention. */
   public async openInboxMessage(
     requestedSaveId: WebCareerSaveId,
@@ -514,6 +572,9 @@ export class WebCareerRuntime {
     const session = this.requireSession(requestedSaveId);
     const currentState = session.workingState();
     const decidedOn = currentState.gameState.calendar.currentDate;
+    const wagePolicy = selectPlayerWagePolicyConfig(
+      currentState.gameState.meta.calibrationVersions,
+    );
     const result = (() => {
       switch (command.type) {
         case "offer_renewal": {
@@ -524,6 +585,7 @@ export class WebCareerRuntime {
             playerId,
             offeredOn: decidedOn,
             terms: command.terms,
+            wagePolicy,
           });
         }
         case "revise_offer":
@@ -538,24 +600,28 @@ export class WebCareerRuntime {
             careerState: currentState,
             negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
             submittedOn: decidedOn,
+            wagePolicy,
           });
         case "accept_counter":
           return acceptContractCounterOffer({
             careerState: currentState,
             negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
             decidedOn,
+            wagePolicy,
           });
         case "reject_counter":
           return rejectContractCounterOffer({
             careerState: currentState,
             negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
             decidedOn,
+            wagePolicy,
           });
         case "withdraw_offer":
           return withdrawContractNegotiation({
             careerState: currentState,
             negotiationId: resolveContractNegotiationId(currentState, command.negotiationId),
             decidedOn,
+            wagePolicy,
           });
         case "release_at_expiry": {
           const playerId = resolveContractPlayerId(currentState, command.playerId);
@@ -610,6 +676,13 @@ export class WebCareerRuntime {
     const session = this.requireSession(requestedSaveId);
     const currentState = session.workingState();
     const decidedOn = currentState.gameState.calendar.currentDate;
+    const transferWindows = resolveCareerTransferWindows(currentState);
+    const wagePolicy = selectPlayerWagePolicyConfig(
+      currentState.gameState.meta.calibrationVersions,
+    );
+    const marketBehaviorPolicy = selectMarketBehaviorCalibration(
+      currentState.gameState.meta.calibrationVersions,
+    );
 
     // Free-agent signing is an immediate apply with no negotiation stage, so
     // it does not fit the shared negotiation/agreement outcome shape below.
@@ -620,7 +693,16 @@ export class WebCareerRuntime {
         playerId,
         clubId: currentState.selectedClubId,
         occurredOn: decidedOn,
+        transferWindows,
         acceptedTerms: command.terms,
+        wagePolicy,
+        marketBehaviorPolicy,
+        valuationConfig: selectPlayerValuationConfig(
+          currentState.gameState.meta.calibrationVersions,
+        ),
+        askingPriceConfig: selectAskingPriceCurves(
+          currentState.gameState.meta.calibrationVersions,
+        ),
       });
       if (signing.status === "rejected") {
         return {
@@ -647,7 +729,6 @@ export class WebCareerRuntime {
       };
     }
 
-    const transferWindows = resolveCareerTransferWindows(currentState);
     const result: TransferNegotiationCommandResult | TransferPlayerNegotiationCommandResult | PreliminaryAgreementCommandResult = (() => {
       switch (command.type) {
         case "submit_transfer_offer": {
@@ -661,6 +742,13 @@ export class WebCareerRuntime {
             offeredFee: command.offeredFee,
             submittedOn: decidedOn,
             transferWindows,
+            valuationConfig: selectPlayerValuationConfig(
+              currentState.gameState.meta.calibrationVersions,
+            ),
+            askingPriceConfig: selectAskingPriceCurves(
+              currentState.gameState.meta.calibrationVersions,
+            ),
+            marketBehaviorPolicy,
           });
         }
         case "accept_transfer_counter":
@@ -668,6 +756,7 @@ export class WebCareerRuntime {
             careerState: currentState,
             negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
             decidedOn,
+            marketBehaviorPolicy,
           });
         case "withdraw_transfer_offer":
           return withdrawTransferNegotiation({
@@ -682,6 +771,8 @@ export class WebCareerRuntime {
             submittedOn: decidedOn,
             terms: command.terms,
             transferWindows,
+            wagePolicy,
+            marketBehaviorPolicy,
           });
         case "accept_transfer_player_counter":
           return acceptTransferPlayerCounter({
@@ -689,6 +780,8 @@ export class WebCareerRuntime {
             negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
             decidedOn,
             transferWindows,
+            wagePolicy,
+            marketBehaviorPolicy,
           });
         case "reject_transfer_player_counter":
           return rejectTransferPlayerCounter({
@@ -696,6 +789,8 @@ export class WebCareerRuntime {
             negotiationId: resolveTransferNegotiationId(currentState, command.negotiationId),
             decidedOn,
             transferWindows,
+            wagePolicy,
+            marketBehaviorPolicy,
           });
         case "submit_preliminary_agreement": {
           const playerId = resolveMarketPlayerId(currentState, command.playerId);
@@ -707,6 +802,7 @@ export class WebCareerRuntime {
             submittedOn: decidedOn,
             terms: command.terms,
             transferWindows,
+            wagePolicy,
           });
         }
         case "accept_preliminary_agreement_counter":
@@ -714,6 +810,8 @@ export class WebCareerRuntime {
             careerState: currentState,
             agreementId: resolvePreliminaryAgreementId(currentState, command.agreementId),
             decidedOn,
+            wagePolicy,
+            marketBehaviorPolicy,
           });
         case "reject_preliminary_agreement_counter":
           return rejectPreliminaryAgreementCounter({
@@ -1170,6 +1268,15 @@ function evaluateCanonicalCareerAttention(
   const evaluated = advanceSelectedClubWorkflowsToAttention({
     careerState,
     boundaryDate,
+    valuationConfig: selectPlayerValuationConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    wagePolicy: selectPlayerWagePolicyConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      careerState.gameState.meta.calibrationVersions,
+    ),
     additionalMessages:
       matchday === undefined || matchday.message.date > boundaryDate
         ? []
@@ -1283,22 +1390,22 @@ function withCurrentDate(careerState: WebCareerState, dateIso: string): WebCaree
 
 /** Builds one validated career snapshot from an explicit durable identity. */
 export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState {
-  const league = createFakeLeagueSystem({ worldSeed: identity.worldSeed });
-  const selectedClubId = requiredSelectedClubId(league);
-  const calendar = generateRoundRobinCalendar({
-    seed: identity.worldSeed,
-    seasonId: league.seasonId,
-    competitionId: league.competition.id,
-    clubIds: league.clubIds,
-    seasonStartDate: league.seasonStartDate,
-  });
-  const youthAcademies = generateInitialYouthAcademies({
-    worldSeed: identity.worldSeed,
-    seasonId: league.seasonId,
-    referenceDate: league.seasonStartDate,
-    clubIds: league.clubIds,
-    clubContexts: youthClubContexts(league),
-  });
+  const world = createFakeDomesticWorld({ worldSeed: identity.worldSeed });
+  const selectedClubId = world.defaultSelectedClubId;
+  const calendar = combineDomesticCompetitionCalendars(
+    world.domesticCompetitionWorld,
+    world.domesticCompetitionWorld.competitionIds.map((competitionId) => {
+      const competition = world.domesticCompetitionWorld.competitions[competitionId];
+      if (competition === undefined) throw new Error(`Missing domestic competition: ${competitionId}`);
+      return generateRoundRobinCalendar({
+        seed: identity.worldSeed,
+        seasonId: world.seasonId,
+        competitionId,
+        clubIds: competition.clubIds,
+        seasonStartDate: world.seasonStartDate,
+      });
+    }),
+  );
 
   const state: WebCareerState = {
     saveId: identity.saveId,
@@ -1314,25 +1421,62 @@ export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState
         seed: identity.worldSeed,
         rngAlgorithmVersion: "sfc32-cyrb128-v1",
         saveSchemaVersion: 1,
+        calibrationVersions: { ...world.calibrationVersions },
       },
       calendar: {
-        currentDate: league.seasonStartDate,
-        currentSeasonId: league.seasonId,
+        currentDate: world.seasonStartDate,
+        currentSeasonId: world.seasonId,
       },
-      players: { ...league.players, ...youthAcademies.players },
-      playerIds: [...league.playerIds, ...youthAcademies.playerIds],
-      playerStates: { ...league.playerStates, ...youthAcademies.playerStates },
-      clubs: league.clubsById,
-      clubIds: league.clubIds,
+      players: { ...world.players, ...world.initialYouthAcademies.players },
+      playerIds: [...world.playerIds, ...world.initialYouthAcademies.playerIds],
+      playerStates: { ...world.playerStates, ...world.initialYouthAcademies.playerStates },
+      clubs: world.clubsById,
+      clubIds: world.clubIds,
       fixtures: indexFixtures(calendar.fixtures),
       fixtureIds: calendar.fixtureIds,
+      domesticCompetitionWorld: world.domesticCompetitionWorld,
     },
-    youthAcademyState: youthAcademies.youthAcademyState,
-    seniorSquadState: league.seniorSquadState,
-    clubFinanceState: league.clubFinanceState,
+    youthAcademyState: world.initialYouthAcademies.youthAcademyState,
+    seniorSquadState: world.seniorSquadState,
+    clubFinanceState: world.clubFinanceState,
     transferHistory: [],
   };
   return state;
+}
+
+/**
+ * Applies the canonical completed-season boundary without reading or writing
+ * browser storage. Keeping this adapter pure makes repeated-run checks cheap.
+ */
+export function rolloverCompletedWebCareerSeason(
+  careerState: WebCareerState,
+): AdvanceCareerOneSeasonResult {
+  const worldSeed =
+    careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed;
+  const annualIntake = createAnnualWorldIntakeCandidateProviders({
+    worldSeed,
+    seasonIndex: careerState.seasonHistory?.length ?? 0,
+  });
+  return advanceCareerOneSeason({
+    careerState,
+    worldSeed,
+    mode: {
+      kind: "completedSeason",
+      tableRules: {
+        pointsForWin: 3,
+        pointsForDraw: 1,
+        pointsForLoss: 0,
+      },
+    },
+    wagePolicy: selectPlayerWagePolicyConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,
+    createSeniorIntakeCandidates: annualIntake.createSeniorIntakeCandidates,
+  });
 }
 
 /** Allocates one browser career ID and uses the same stable token as its seed. */
@@ -1348,13 +1492,6 @@ function createBrowserCareerIdentity(): WebCareerIdentity {
   };
 }
 
-/** Selects the first deterministic generated club for the first web MVP. */
-function requiredSelectedClubId(league: FakeLeagueSystem): LeagueClubId {
-  const selectedClubId = league.clubIds[0];
-  if (selectedClubId === undefined) throw new Error("Generated league has no selectable club");
-  return selectedClubId;
-}
-
 /** Indexes engine-generated fixtures while preserving their separate order. */
 function indexFixtures(
   fixtures: ReturnType<typeof generateRoundRobinCalendar>["fixtures"],
@@ -1362,12 +1499,29 @@ function indexFixtures(
   return Object.fromEntries(fixtures.map((fixture) => [fixture.id, fixture])) as WebCareerState["gameState"]["fixtures"];
 }
 
-/** Supplies division and reputation facts required by youth generation. */
-function youthClubContexts(league: FakeLeagueSystem): Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"] {
-  const contexts: Partial<Record<LeagueClubId, InitialYouthAcademyClubContext>> = {};
-  for (const clubId of league.clubIds) {
-    const club = league.clubsById[clubId];
-    if (club !== undefined) contexts[clubId] = { category: club.category, reputation: club.reputation };
+/**
+ * Rejects loaded saves whose immutable topology/economy assets differ from the
+ * only complete bundle supported by this web build.
+ */
+export function assertSupportedWebCareerCalibrationVersions(state: WebCareerState): void {
+  const actual = state.gameState.meta.calibrationVersions;
+  const expected = playerEconomyCalibration.versions;
+  if (actual === undefined || !sameCalibrationVersions(actual, expected)) {
+    throw new StorageError(
+      "unsupported_schema_version",
+      "Unsupported career topology/calibration versions",
+    );
   }
-  return contexts as Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"];
+}
+
+function sameCalibrationVersions(
+  actual: PlayerEconomyCalibrationVersionBundle,
+  expected: PlayerEconomyCalibrationVersionBundle,
+): boolean {
+  const expectedKeys = Object.keys(expected);
+  return Object.keys(actual).length === expectedKeys.length
+    && expectedKeys.every((key) =>
+    actual[key as keyof PlayerEconomyCalibrationVersionBundle]
+      === expected[key as keyof PlayerEconomyCalibrationVersionBundle]
+  );
 }

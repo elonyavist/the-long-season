@@ -3,6 +3,14 @@
 Date: 2026-06-25
 Baseline: Phase 61 complete; Claude Code full-project analysis reviewed.
 Scope: operational phase roadmap from Phase 62 onward.
+Current update: 2026-07-30. Phases 79A, 79B, 79C, and 79D are complete.
+Phase 79D closed by explicit product decision after implementation, bounded
+diagnostics, repository checks, build, Playwright `29/29`, and manual browser
+QA passed. Its stopped direct `50 x 20` produced no report and is not claimed
+as evidence. Phase 80 graphical and structural rework is now in progress;
+Step 01 establishes the global seven-worker simulation policy and Step 02
+awaits the user's concrete inventory. Phase 79 Step 14 remains Reopened and
+paused; its release gate is unrun.
 
 ## Goal
 
@@ -1664,78 +1672,360 @@ Definition of Done:
 Documentation:
 
 - `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
-  is documented and queued after Phase 78 Step 15.
+  is in progress with Steps 01-13 Done, Step 14 Reopened, and Step 15 not
+  started under the recorded Phase 78 entry-gate override.
 
-### Phase 80 - Finances Expansion And Poverty Loop MVP
+### Phase 79A - Transfer Market Activity, Free-Agent Economy And Long-Run Diagnostics
 
-Primary dependency: Phase 78 finance foundation and Phase 79 market UI.
+Primary dependency: Phase 79 Steps 01-13 and the market-active `50 worlds x 20
+seasons` diagnostic from reopened Step 14.
 
 Purpose:
 
-- Turn the Phase 78 club-finance foundation into the first focused
-  manager-facing version of "poverty as design" without building a full
-  accounting simulator.
+- Explain and correct the medium-run market-economy imbalance before spending
+  release-gate time on Phase 79's `750 x 50`.
+- Make permanent transfers, preliminary agreements, free-agent stock/flow, and
+  wage pressure independently observable from structured facts.
 
-User-facing reason:
+Evidence requiring the interposition:
 
-- In lower divisions, money must create tension. A signing should feel like a
-  trade-off, not a free action.
+- only `13 / 50` diagnostic worlds complete any permanent transfer;
+- representative zero-transfer worlds still create roughly `500` preliminary
+  agreements and activate roughly `300`, so the market is active but strongly
+  biased toward expiring-contract recruitment;
+- free-agent share warns in every world and peaks around `0.35..0.43`;
+- wage utilization warns in every world because one exact-ceiling club-season
+  is enough to set the current maximum-only signal to `1.0`;
+- all market, negotiation, contract, finance, registration, and squad
+  structural counters remain clean.
 
 Minimum useful scope:
 
-- the Phase 78 transfer/wage budget and payroll model as the canonical base;
-- a focused manager-facing cash, wage, transfer, and recent-ledger view;
-- simple income/cost summary;
-- first board budget constraints;
-- clear warnings when money blocks or changes a decision;
-- currency preference rendering.
+- lock the existing `50 x 20` evidence and hypotheses in a durable report;
+- add permanent and preliminary funnel diagnostics from need/target through
+  terminal outcome and activation;
+- reconcile seasonal free-agent opening stock, expiry/release inflow,
+  signing/activation/exit outflow, age, ability, and time unattached;
+- expose wage-utilization and headroom distributions while preserving
+  `>1.0` as a hard structural failure;
+- correct only the measured canonical market or lifecycle bottlenecks, with no
+  transfer quota, forced deal, artificial player deletion, or squad inflation;
+- repeat the same deterministic `50 x 20` cohort and return control to Phase 79
+  Step 14.
 
 What must not happen:
 
-- No stadium, ticket pricing, sponsorship, facilities, or bankruptcy cascade
-  unless explicitly scoped.
-- No fake numbers that do not affect decisions.
-- No finance screen full of decorative accounting lines.
+- No `750 x 50` or `10,000 x 50` run inside Phase 79A.
+- No threshold weakening, warning suppression, seed exception, guaranteed
+  transfer, hidden selected-club action, or synthetic turnover.
+- No tuning of matches, league tables, dynasties, assists, player development,
+  youth, or unrelated active-population edges.
+- No deferred finance UI or broader economy expansion.
 
 Definition of Done:
 
-- At least one manager decision is constrained by money in a visible,
-  understandable way.
+- permanent and preliminary activity are separately explainable;
+- useful free-agent stock reaches a bounded, football-credible equilibrium;
+- wage pressure is reported by prevalence and distribution without hiding
+  exact-ceiling or above-budget facts;
+- the repeated `50 x 20` has zero Phase 79A-owned structural failure and
+  records deterministic before/after evidence;
+- Phase 79 Step 14 was restored at the Phase 79A boundary without a release
+  gate claim; later 79B/79C/79D interpositions own the subsequent schedule.
 
-### Phase 81 - Promotion Pyramid And La Scalata Foundation
+Documentation:
 
-Primary dependency: Phase 63 canonical season advancement and enough persistence
-to survive multiple seasons.
+- `docs/steps/79a-transfer-market-activity-free-agent-economy-and-long-run-diagnostics/`
+  contains seven ordered steps and is complete. Its repeated `50 x 20` has
+  zero owned structural failure; no Phase 79 release gate was run.
+
+### Phase 79B - Squad And Market Player Workspace UI/UX And Career Statistics
+
+Status: complete user-requested browser/product interposition.
 
 Purpose:
 
-- Start turning the one-league simulation into the actual "La Scalata" promise.
+- Replace dense row actions with one accessible action menu and add direct
+  lineup placement with automatic occupied-slot swaps.
+- Give Squad and Market shared role-aware player inspectors, exact current
+  attributes, durable career statistics, and three accessible tabs.
+
+Historical result:
+
+- all seven ordered steps are Done;
+- current attributes are exact and goalkeeper/outfield groups are distinct;
+- Squad and Market share the same half-star renderer and detail projections;
+- browser, persistence, package, and repository-wide checks pass;
+- control returned to Phase 79 Step 14 without running or claiming its release
+  gate.
+
+Forward supersession:
+
+- Phase 79B's selected-club-relative `1..5` ordinary rating plus separate elite
+  marker remains accurate implementation history;
+- completed Phase 79C explicitly replaced only that rating/valuation contract
+  with the accepted global `1..6` model;
+- Phase 79B's action menu, placement, statistics, tabs, exact-current
+  attributes, role grouping, accessibility, and scroll fix remain binding.
+
+Documentation:
+
+- `docs/steps/79b-squad-market-player-workspace-ui-ux-and-career-statistics/`
+  contains seven completed steps.
+
+### Phase 79C - Global Player Rating, Three-Division World And Market Economy Calibration
+
+Status: Done. All fourteen steps are complete. Control returned to Phase 79
+Step 14 without running or claiming its staged `750 x 50` gate.
+
+Primary dependency: Phases 74, 75, 78 Steps 01-14, 79 Steps 01-13, 79A, and
+79B.
+
+Purpose:
+
+- Give every player one global current/potential `1..6` half-star identity.
+- Create the first canonical fictional first/second/third-division career world
+  instead of presenting a third-division-only Market.
+- Calibrate public values against dated Italian aggregate evidence, separate
+  asking price and final fee, and rebalance wages/budgets/AI from independent
+  economic evidence.
 
 User-facing reason:
 
-- The identity of the game is bringing a lower-division club upward. That cannot
-  wait forever, but it must sit on a stable loop.
+- A manager starting in the third division must see and feel the sporting and
+  financial distance to second-division players, first-division regulars, and
+  rare world champions.
 
 Minimum useful scope:
 
-- spec the first multi-division country model;
-- promotion/relegation rules for the minimal supported pyramid;
-- rollover that moves clubs between competitions deterministically;
-- fixture/calendar regeneration after movement;
-- table/history persistence across divisions;
-- smoke tests for multi-season promotion/relegation.
+- versioned source/evidence contract with no live data dependency;
+- absolute `1..6` half-star current and potential ratings, including half/full
+  dark-orange sixth-star presentation;
+- one-decimal exact current attributes and no exact-potential leak;
+- division-aware current/potential generation and world rarity budgets;
+- ordered multi-competition state and lossless JSON/SQLite persistence;
+- the accepted `fictional-three-tier-v1` topology: three 18-club competitions,
+  3-up/down between First/Second, 2-up/down between Second/Third, and a closed
+  Third Division lower boundary;
+- canonical three-division content with the selected club starting in third;
+- deterministic promotion/relegation, calendars, histories, and rollover;
+- canonical cross-division Market population and credible willingness;
+- nonlinear public values matching median/P90/P99/max anchors, progressive
+  upper-tail compression, and rare `€150m` young six-star cap;
+- separate seller asking price, agreed fee, completed fee, and free-agent
+  zero-fee semantics;
+- independently sourced wages, contracts, budgets, affordability, and AI;
+- six schema-validated JSON balance assets injected through CLI/web
+  composition with no engine/simulation-tools content import or default;
+- focused tests, browser QA, and one final `10 worlds x 10 seasons` short gate.
 
 What must not happen:
 
-- No continental cups.
-- No all-five-nation full pyramid in the first slice.
+- No real-player/club data, live Transfermarkt client, scraper, or raw page
+  cache.
+- No wage inferred from Transfermarkt value.
+- No synthetic Market pool, relative stars, redundant elite Boolean, fake
+  scouting fog, or exact numeric potential.
+- No cup, continental competition, five-country world, advanced third-tier
+  playoff/playout, loans, installments, agents, or deferred finance surface.
+- No `50 x 20`, `750 x 50`, or `10,000 x 50` run or replacement claim.
+
+Definition of Done:
+
+- global ratings, generated division bands, exceptional rarity, canonical
+  three-division movement, public values, asking/fee semantics, and economic AI
+  meet their explicit contracts;
+- every changed fact persists and reaches CLI/UI/web through canonical
+  boundaries;
+- focused/browser/repository checks and the bounded `10 x 10` pass;
+- the phase returns to Phase 79's appropriate closeout path without claiming a
+  full long run.
+
+Documentation:
+
+- `docs/audits/GLOBAL_PLAYER_RATING_AND_MARKET_ECONOMY_CALIBRATION_SPEC.md`
+  records evidence, current defects, and accepted decisions.
+- `docs/audits/DOMESTIC_COMPETITION_TOPOLOGY_DECISION.md` records the bounded
+  fictional topology and separates it from the real Italian reference.
+- `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/`
+  contains fourteen completed ordered steps.
+- `docs/audits/GLOBAL_PLAYER_RATING_AND_MARKET_ECONOMY_79C_REPORT.md`
+  records the final implementation, browser/absence evidence, bounded cohort,
+  residual warnings, and Phase 79 handoff.
+
+### Phase 79D - Exceptional Player Generation, Prospect Economy And Non-Vacuous Diagnostics
+
+Status: Complete by explicit product decision on 2026-07-30. All nine ordered
+documents are closed. Phase 79 Step 14 remains paused without a gate claim.
+
+Primary dependency: completed Phases 74, 75, 79A, 79B, and 79C plus the
+canonical Phase 79 market workflows.
+
+Purpose:
+
+- Correct the post-79C systematic current-six/prodigy archetype collision.
+- Make effective generated ratings obey the world rarity budgets.
+- Connect the annual exceptional allocator once per canonical world season.
+- Replace singular youth potential promises with one derived age/role-aware
+  lower-to-upper public range.
+- Price the same public range as a discounted expectation.
+- Make `€150m` a rare hard ceiling rather than a routine target.
+- Prevent non-eligible values from rounding to the exact cap label.
+- Make asking, offered, countered, agreed, and completed fees behaviorally
+  observable rather than only structurally distinct.
+- Prevent required rarity/intake/cap gates from passing with zero observations.
+
+User-facing reason:
+
+- Sorting the Market by potential must produce credible football stories: no
+  already-complete six-star child, no ceiling presented as certain development,
+  and no elite-upside prospect available for a negligible fee.
+
+Minimum useful scope:
+
+- reproducible `100`-world joint age/rating/value baseline;
+- hybrid slot-first, archetype-compatible exceptional construction;
+- actual rather than forced-ID initial rarity limits;
+- production annual allocation across CLI, web, labs, and diagnostics;
+- versioned engine-outcome-calibrated public projection, with real market
+  sources used only for monetary calibration;
+- accessible six-slot lower/uncertain/outline potential presentation;
+- range-aware source-linked prospect realization and uncertainty curve;
+- shared upper-tail compression, whole-euro cap separation, and rare final cap;
+- versioned deterministic AI offer spread plus asking/offer/counter/completed
+  diagnostics;
+- observation-counted joint gates;
+- targeted Market/Squad/profile browser QA and a final corrective cohort
+  obligation. Browser QA passed; the direct `50 worlds x 20 seasons` attempt
+  was stopped, produced no report, and is explicitly unclaimed. The replacement
+  run is deferred to the final validation step of Phase 80 with
+  checkpoints and the repository-wide `7` workers.
+
+What must not happen:
+
+- No scouting, hidden current attributes, exact numeric potential, real-player
+  content, live source client, unbounded rejection sampling, duplicated
+  valuation formula, or unrelated match/economy tuning.
+- No persisted potential range or beta-save compatibility migration; an
+  incompatible save is deleted/reset through the canonical path.
+- No zero-observation pass, warning suppression, seed exception, or `750`-world
+  claim.
+
+Definition of Done:
+
+- exceptional player age/current/potential/value combinations are credible;
+- young-player potential is a role-aware range whose lower estimate is not
+  presented as guaranteed;
+- exact displayed cap membership and negotiation spread are non-vacuous;
+- initial and longitudinal effective rarity stay inside the accepted bounds;
+- every production annual path observes the world allocator exactly once;
+- public value, asking price, fee, affordability, and AI remain coherent;
+- focused checks, browser QA, and `pnpm check` pass;
+- the explicit product closeout records that the direct `50 x 20` did not pass
+  or produce evidence and moves it to the end of Phase 80;
+- Phase 79 Step 14 remains paused until that checkpointed `50 x 20`, using
+  exactly `7` workers, is complete.
+
+Documentation:
+
+- `docs/audits/EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_SPEC.md`
+  records the verified defects and accepted corrective contract.
+- `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/`
+  contains nine ordered step documents.
+
+### Phase 80 - Graphical And Structural Rework
+
+Primary dependency: completed Phase 79D implementation/bounded evidence plus
+the current production browser, persistence, and simulation architecture.
+
+Status:
+
+- In progress. Step 01 established the repository seven-worker execution
+  policy and phase boundary. Step 02 waits for the user's concrete graphical
+  and structural rework inventory.
+
+Purpose:
+
+- Rework the current product's visual presentation and selected structural
+  seams without guessing requirements or regressing deterministic gameplay,
+  canonical ownership, accessibility, or persistence.
+- Close the deferred corrective `50 x 20` only after every accepted rework,
+  using resumable checkpoints, `50` stable shards, and `7` workers.
+
+Minimum useful scope:
+
+- one accepted evidence-backed inventory of the user's actual reworks;
+- separate visual, interaction, read-model, runtime, persistence, simulation,
+  and cross-cutting ownership;
+- one bounded implementation step per accepted change or cohesive batch;
+- complete browser/accessibility/architecture cleanup;
+- one final checkpointed `50 x 20` under the canonical worker policy.
+
+What must not happen:
+
+- No invented graphical redesign or structural refactor.
+- No finance expansion, advanced pyramid, or unrelated feature.
+- No duplicate command, read-model, persistence, or simulation owner.
+- No compatibility debris when a beta path is replaced.
+- No worker count above seven and no long run before final closeout.
+
+Definition of Done:
+
+- Every delivered change maps to the accepted Step 02 inventory.
+- Repository/browser checks pass and replaced paths are removed.
+- The final `50 x 20` completes with `50` shards and `7` workers without
+  claiming Phase 79 Step 14's separate release gate.
+
+Documentation:
+
+- `docs/steps/80-graphical-and-structural-rework/` owns the phase.
+- `docs/audits/SIMULATION_EXECUTION_POLICY.md` owns the worker contract.
+
+### Deferred - Finances Expansion And Poverty Loop MVP
+
+The former Phase 80 reservation is superseded by the explicit graphical and
+structural rework decision. Its intended manager-facing finance scope remains
+valid future backlog, but it has no active phase number and is not silently
+included in Phase 80.
+
+### Phase 81 - Advanced Pyramid Rules And La Scalata Expansion
+
+Primary dependency: Phase 79C's minimal canonical three-division world and any
+later accepted finance/infrastructure contract required by a concrete rule.
+
+Supersession:
+
+- Phase 79C Steps 04-08 now own the first multi-division country,
+  promotion/relegation, rollover, calendar regeneration, and cross-division
+  history that this phase originally reserved.
+- Phase 81 must not rebuild those foundations or keep a second competition
+  model.
+
+Purpose:
+
+- Expand the already-playable Scalata pyramid with advanced competition rules
+  and consequences that were explicitly excluded from Phase 79C.
+
+Minimum useful scope:
+
+- source-backed multi-group third-tier structure when product scope is ready;
+- advanced playoffs/playouts and category-specific tie-breakers;
+- promotion finance/infrastructure consequences only after the deferred
+  finance scope supports them;
+- richer cross-division archive and recap;
+- a later documented decision on additional launch nations.
+
+What must not happen:
+
+- No duplicate basic promotion/relegation or alternate world state.
+- No continental cups unless separately documented.
+- No all-five-nation expansion in one unbounded slice.
 - No real-club licensing or real names.
-- No economy/facility requirements unless Phase 80 already supports them.
 
 Definition of Done:
 
-- A deterministic career can move clubs between divisions and preserve coherent
-  history.
+- Advanced pyramid rules extend the Phase 79C canonical world without forking
+  its state, calendars, history, market, or persistence owners.
 
 ### Phase 82 - Youth, Staff, Facilities, And Archive Expansion Plan
 
@@ -1849,26 +2139,47 @@ Current status:
 19. `Phase 77 - Live Match Control, Statistics And In-Game Decisions`
     - complete
 20. `Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation`
-    - in progress; Steps 01-14 Done, Step 15 active
+    - in progress; Steps 01-14 Done, Step 15 remains open
 21. `Phase 79 - Transfer Market Windows, Negotiations And Market Workspace`
-    - documented and queued after Phase 78 Step 15
+    - in progress; Steps 01-13 Done, Step 14 Reopened and paused for Phase 80
+22. `Phase 79A - Transfer Market Activity, Free-Agent Economy And Long-Run Diagnostics`
+    - complete; Steps 01-07 Done
+23. `Phase 79B - Squad And Market Player Workspace UI/UX And Career Statistics`
+    - complete; Steps 01-07 Done
+24. `Phase 79C - Global Player Rating, Three-Division World And Market Economy Calibration`
+    - complete; Steps 01-14 Done
+25. `Phase 79D - Exceptional Player Generation, Prospect Economy And Non-Vacuous Diagnostics`
+    - complete by explicit product decision; all nine ordered documents Done,
+      interrupted `50 x 20` unclaimed
+26. `Phase 80 - Graphical And Structural Rework`
+    - in progress; Step 01 Done, Step 02 ready for the user's accepted rework
+      inventory
 
 Next recommendation:
 
-1. Complete the active Phase 78 Step 15 structural gate.
-2. Start Phase 79 Step 01 only after Phase 78 is marked Done; do not implement
-   Phase 79 calendar, negotiation, or web behavior early.
+1. Execute Phase 80 Step 02 after the user supplies the concrete graphical and
+   structural reworks.
+2. Create later Phase 80 implementation steps only from that accepted
+   inventory.
+3. Put one resumable `50 x 20` in the final Phase 80 validation step, with a
+   declared checkpoint directory, `50` stable shards, and exactly `7` workers.
+4. Resume Phase 79 Step 14 only after Phase 80 and that cohort complete;
+   its separate release-scale sequence remains unrun and unclaimed.
+5. Do not start Phase 79 Step 15, deferred finance work, or Phase 81 early.
 
 Reason:
 
-- Phase 77 closes the live football loop and removes its checkpoint and
-  half-time-only compatibility paths. Phase 78 can therefore persist a carried
-  match plan and settle match bonuses only at canonical boundaries.
-- Squad, contracts, wages, and club cash must become real together so the
-  future Market changes an inspectable roster and a coherent budget instead of
-  creating a market-only dead end.
-- The intentional beta reset avoids permanent compatibility code and ensures
-  every club begins the new lifecycle with complete contracts and finances.
+- Phase 79A already corrected the measured activity/free-agent diagnostic
+  defects and Phase 79B completed the player workspaces.
+- Phase 79C replaced the former one-division, relative-rating baseline, but
+  post-phase Market inspection exposed joint age/rating/value contradictions
+  that its aggregate and potentially vacuous cap checks did not measure.
+- Phase 79D corrected those owned defects with bounded implementation and
+  browser evidence. Its stopped direct cohort remains unclaimed; the
+  checkpointed replacement belongs to the final Phase 80 gate.
+- Twenty seasons cover one representative age-15-to-35 player arc and the
+  required year-20 stock while keeping `750` three-division worlds
+  operationally bounded. This gate does not claim evidence after year 20.
 
 ## Relationship To Web Section Roadmap
 
@@ -1898,7 +2209,8 @@ New playability-first order:
 6. Inbox/Posta;
 7. senior squad, contracts, and club-finance foundation;
 8. market;
-9. calendar/recap.
+9. global rating, three-division world, and calibrated market economy;
+10. calendar/recap and advanced pyramid expansion.
 
 ## Manual Review Checklist Before Creating Step Docs
 

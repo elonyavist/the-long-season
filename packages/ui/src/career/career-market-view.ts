@@ -48,7 +48,13 @@ export type CareerMarketOfferPreviewView =
       readonly status: "ready";
       readonly previewId: string;
       readonly kind: "transfer_offer" | "player_offer" | "counter_offer" | "preliminary_agreement" | "free_agent_offer";
-      readonly transferFee: Money;
+      readonly publicValue?: Money;
+      readonly askingPrice?: Money;
+      readonly offeredFee?: Money;
+      readonly counterFee?: Money;
+      readonly agreedFee?: Money;
+      /** Zero for free-agent previews; otherwise the fee settled if accepted. */
+      readonly completedFee: Money;
       readonly contractTerms?: CareerContractTermsInput;
       readonly currentFinance: Omit<CareerMarketFinanceView, "pendingExposure">;
       readonly projectedFinance: Omit<CareerMarketFinanceView, "pendingExposure">;
@@ -97,7 +103,13 @@ export interface CareerMarketNegotiationInput {
   readonly openedOnIso: string;
   readonly deadlineOnIso?: string;
   readonly resolvedOnIso?: string;
-  readonly transferFee?: Money;
+  readonly publicValue?: Money;
+  readonly initialAskingPrice?: Money;
+  readonly currentAskingPrice?: Money;
+  readonly offeredFee?: Money;
+  readonly counterFee?: Money;
+  readonly agreedFee?: Money;
+  readonly completedFee?: Money;
   readonly annualWage?: Money;
   readonly outcomeReason?: string;
   /** Full terms currently on the table, when this stage has annual terms. */

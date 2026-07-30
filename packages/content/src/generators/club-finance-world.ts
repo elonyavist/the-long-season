@@ -12,18 +12,23 @@ import {
   type ClubId,
   type CompetitionSeasonDistribution,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type Money,
-  type RoleIdentifiedPlayer,
+  type PlayerWagePolicyConfig,
   type SeniorSquadState,
 } from "@game/domain";
+import { deriveOpeningAnnualWageBudget } from "./opening-wage-budget.ts";
 
 /** Inputs required to finance every generated senior squad. */
 export interface InitialClubFinanceGenerationInput {
   readonly referenceDate: GameDate;
   readonly clubs: Readonly<Record<ClubId, Club>>;
   readonly clubIds: readonly ClubId[];
-  readonly players: Readonly<Record<RoleIdentifiedPlayer["id"], RoleIdentifiedPlayer>>;
   readonly seniorSquadState: SeniorSquadState;
+  /** Validated source-backed targets for the opening annual wage ceiling. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Validated opening cash and transfer-budget targets. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }
 
 /**
@@ -45,10 +50,18 @@ export function generateInitialClubFinanceState(
     const club = input.clubs[clubId];
     if (club === undefined) throw new Error(`Cannot generate finances for missing club: ${clubId}`);
     const committedAnnualWage = committedWage(input.seniorSquadState, clubId);
-    const quality = rosterQuality(club, input.players);
-    const annualWageBudget = wageBudget(club, committedAnnualWage);
-    const annualTransferBudget = transferBudget(club, committedAnnualWage, quality);
-    const openingCash = cashRequirement(club, committedAnnualWage, annualTransferBudget, quality);
+    const annualWageBudget = deriveOpeningAnnualWageBudget({
+      club,
+      clubs: input.clubs,
+      clubIds: input.clubIds,
+      wagePolicy: input.wagePolicy,
+    });
+    const annualTransferBudget = openingFinanceAmount(
+      input,
+      club,
+      "annualTransferBudget",
+    );
+    const openingCash = openingFinanceAmount(input, club, "cash");
 
     accounts[clubId] = {
       clubId,
@@ -94,9 +107,10 @@ export function generateInitialClubFinanceState(
 /** Generates the current league's explainable final-position prize schedule. */
 export function generateCompetitionSeasonDistribution(
   financeState: ClubFinanceState,
+  participantClubIds: readonly ClubId[] = financeState.clubIds,
 ): CompetitionSeasonDistribution {
-  const participantCount = financeState.clubIds.length;
-  const maximumCommittedWage = financeState.clubIds.reduce((maximum, clubId) => {
+  const participantCount = participantClubIds.length;
+  const maximumCommittedWage = participantClubIds.reduce((maximum, clubId) => {
     return Math.max(maximum, financeState.accounts[clubId]?.committedAnnualWage ?? 0);
   }, 0);
   const operatingDistribution = roundMoney(maximumCommittedWage * 1.08, 10_000_00);
@@ -118,49 +132,52 @@ function committedWage(state: SeniorSquadState, clubId: ClubId): Money {
   return total;
 }
 
-function rosterQuality(
+function openingFinanceAmount(
+  input: InitialClubFinanceGenerationInput,
   club: Club,
-  players: Readonly<Record<RoleIdentifiedPlayer["id"], RoleIdentifiedPlayer>>,
-): number {
-  if (club.playerIds.length === 0) return 0;
-  let total = 0;
-  for (const playerId of club.playerIds) {
-    const player = players[playerId];
-    if (player === undefined) throw new Error(`Cannot value missing generated player: ${playerId}`);
-    const abilities = player.abilities;
-    const values = [
-      ...Object.values(abilities.technical),
-      ...Object.values(abilities.mental),
-      ...Object.values(abilities.physical),
-      ...Object.values(abilities.goalkeeping),
-    ];
-    total += values.reduce((sum, value) => sum + value, 0) / values.length;
-  }
-  return total / club.playerIds.length;
-}
-
-function wageBudget(club: Club, committedAnnualWage: Money): Money {
-  const headroom = 1.08 + Math.min(0.14, club.reputation * 0.012);
-  return nonNegativeMoney(roundMoney(committedAnnualWage * headroom, 10_000_00));
-}
-
-function transferBudget(club: Club, committedAnnualWage: Money, quality: number): Money {
-  const categoryFactor = club.category === "first_division" ? 4 : club.category === "second_division" ? 2 : 1;
-  const amount = committedAnnualWage * 0.18
-    + club.reputation * 85_000_00
-    + quality * 30_000_00;
-  return nonNegativeMoney(roundMoney(amount * categoryFactor, 10_000_00));
-}
-
-function cashRequirement(
-  club: Club,
-  committedAnnualWage: Money,
-  annualTransferBudget: Money,
-  quality: number,
+  kind: "annualTransferBudget" | "cash",
 ): Money {
-  const operatingBuffer = committedAnnualWage * (1.35 + club.reputation * 0.015);
-  const sportingBuffer = annualTransferBudget * 1.15 + quality * 20_000_00;
-  return nonNegativeMoney(roundMoney(operatingBuffer + sportingBuffer, 10_000_00));
+  const target = input.marketBehaviorPolicy.openingFinanceTargets.find(
+    (candidate) => candidate.division === club.category,
+  );
+  if (target === undefined) {
+    throw new Error(`Opening finance target missing for ${club.category}`);
+  }
+  const divisionClubs = input.clubIds
+    .map((clubId) => input.clubs[clubId])
+    .filter((candidate): candidate is Club => candidate?.category === club.category);
+  const minimumReputation = Math.min(
+    ...divisionClubs.map((candidate) => candidate.reputation),
+  );
+  const maximumReputation = Math.max(
+    ...divisionClubs.map((candidate) => candidate.reputation),
+  );
+  const position = maximumReputation <= minimumReputation
+    ? 0.5
+    : Math.max(
+        0,
+        Math.min(
+          1,
+          (club.reputation - minimumReputation)
+            / (maximumReputation - minimumReputation),
+        ),
+      );
+  const minimum = kind === "cash"
+    ? target.cashMinimumMinorUnits
+    : target.annualTransferBudgetMinimumMinorUnits;
+  const median = kind === "cash"
+    ? target.cashMedianMinorUnits
+    : target.annualTransferBudgetMedianMinorUnits;
+  const maximum = kind === "cash"
+    ? target.cashMaximumMinorUnits
+    : target.annualTransferBudgetMaximumMinorUnits;
+  const amount = position <= 0.5
+    ? minimum + (median - minimum) * position * 2
+    : median + (maximum - median) * (position - 0.5) * 2;
+  return nonNegativeMoney(roundMoney(
+    amount,
+    input.marketBehaviorPolicy.openingFinanceRoundingMinorUnits,
+  ));
 }
 
 function roundMoney(value: number, precision: number): number {

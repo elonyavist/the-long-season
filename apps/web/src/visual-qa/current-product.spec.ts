@@ -293,6 +293,20 @@ test("desktop Squad keeps one dense vertical roster and an accessible full-scree
     await expectMainFocus(desktop);
     await expect(desktop.locator(".tls-squad-table tbody tr")).toHaveCount(22);
     await expect(desktop.locator(".tls-squad-table-frame")).toHaveCSS("overflow-x", "hidden");
+    expect(
+      (await textLineCounts(desktop.locator(".tls-squad-table thead button span")))
+        .every((lineCount) => lineCount === 1),
+    ).toBe(true);
+    expect(await controlBoundaryContrast(
+      desktop.locator(".tls-squad-placement-control select").first(),
+    )).toBeGreaterThanOrEqual(3);
+    expect(await controlBoundaryContrast(
+      desktop.locator(".tls-squad-row-menu-trigger").first(),
+    )).toBeGreaterThanOrEqual(3);
+    expect(await foregroundContrast(
+      desktop.locator(".tls-player-rating-star[data-fill='empty']").first(),
+      ".tls-squad-table tbody tr",
+    )).toBeGreaterThanOrEqual(3);
     await assertNoPageOverflow(desktop, "desktop Squad");
     await capture(desktop, "69-squad-desktop");
 
@@ -304,13 +318,93 @@ test("desktop Squad keeps one dense vertical roster and an accessible full-scree
     const availablePlayer = desktop.locator(".tls-squad-table tbody tr[data-status='available']").first();
     const availablePlayerName = (await availablePlayer.locator(".tls-squad-player-name").innerText()).trim();
     const availablePlayerSurname = availablePlayerName.split(/\s+/).at(-1) ?? availablePlayerName;
-    await availablePlayer.getByRole("button", { name: "Field", exact: true }).click();
+    const availableMenuTrigger = desktop.getByRole("button", {
+      name: `Actions for ${availablePlayerName}`,
+      exact: true,
+    });
+    const availablePlacement = desktop.getByRole("combobox", {
+      name: `Placement for ${availablePlayerName}`,
+      exact: true,
+    });
+    await availableMenuTrigger.scrollIntoViewIfNeeded();
+    await desktop.waitForTimeout(50);
+    await availableMenuTrigger.click();
+    const availableMenu = desktop.getByRole("menu", {
+      name: `Actions for ${availablePlayerName}`,
+      exact: true,
+    });
+    await expect(availableMenu).toBeVisible();
+    await expect(availableMenu.getByRole("menuitem", { name: "Open profile", exact: true })).toBeFocused();
+    expect(await availableMenu.evaluate((element) => element.parentElement === document.body)).toBe(true);
+    await desktop.keyboard.press("End");
+    await expect(availableMenu.getByRole("menuitem", {
+      name: "Choose XI position",
+      exact: true,
+    })).toBeFocused();
+    await desktop.keyboard.press("Home");
+    await expect(availableMenu.getByRole("menuitem", { name: "Open profile", exact: true })).toBeFocused();
+    await desktop.keyboard.press("ArrowDown");
+    await expect(availableMenu.getByRole("menuitem", {
+      name: "Choose XI position",
+      exact: true,
+    })).toBeFocused();
+    await desktop.keyboard.press("ArrowUp");
+    await expect(availableMenu.getByRole("menuitem", { name: "Open profile", exact: true })).toBeFocused();
+    await desktop.keyboard.press("Shift+Tab");
+    await expect(availableMenu).toBeHidden();
+    await expect(availablePlacement).toBeFocused();
+
+    await availableMenuTrigger.click();
+    await expect(availableMenu).toBeVisible();
+    const availableNextRow = availablePlayer.locator("xpath=following-sibling::tr[1]");
+    await expect(availableNextRow).toHaveCount(1);
+    await desktop.keyboard.press("Tab");
+    await expect(availableMenu).toBeHidden();
+    await expect(availableNextRow).toBeFocused();
+
+    await availableMenuTrigger.click();
+    await expect(availableMenu).toBeVisible();
+    await desktop.keyboard.press("Escape");
+    await expect(availableMenu).toBeHidden();
+    await expect(availableMenuTrigger).toBeFocused();
+
+    await availableMenuTrigger.click();
+    await availableMenu.getByRole("menuitem", {
+      name: "Choose XI position",
+      exact: true,
+    }).click();
     const lineupChoice = desktop.getByRole("dialog", { name: "Choose XI position", exact: true });
     await expect(lineupChoice).toBeVisible();
     await expect(lineupChoice.locator(".tls-squad-choice-option")).toHaveCount(11);
     await capture(desktop, "69d-squad-explicit-lineup-choice-desktop");
     await lineupChoice.locator(".tls-squad-choice-option").first().click();
     await expect(lineupChoice).toBeHidden();
+    await expect(availablePlacement).toHaveValue(/^lineup:/);
+    await expect(desktop.locator(".tls-squad-table tbody tr[data-status='starting_xi']")).toHaveCount(11);
+
+    const sourcePlacementValue = await availablePlacement.inputValue();
+    const otherStarterPlacement = desktop.locator(
+      ".tls-squad-table tbody tr[data-status='starting_xi'] .tls-squad-placement-control select",
+    ).filter({
+      hasNot: desktop.locator(`option:checked[value="${sourcePlacementValue}"]`),
+    }).first();
+    const targetPlacementValue = await otherStarterPlacement.inputValue();
+    const otherStarterPlacementLabel = await otherStarterPlacement.getAttribute("aria-label");
+    expect(otherStarterPlacementLabel).not.toBeNull();
+    const stableOtherStarterPlacement = desktop.getByRole("combobox", {
+      name: otherStarterPlacementLabel ?? "",
+      exact: true,
+    });
+    expect(targetPlacementValue).toMatch(/^lineup:/);
+    const targetOptionLabel = await availablePlacement.locator(
+      `option[value="${targetPlacementValue}"]`,
+    ).textContent();
+    expect(targetOptionLabel).toContain("Starting XI ·");
+    expect(targetOptionLabel).toContain(" — ");
+    await availablePlacement.selectOption(targetPlacementValue);
+    await expect(availablePlacement).toHaveValue(targetPlacementValue);
+    await expect(stableOtherStarterPlacement).toHaveValue(sourcePlacementValue);
+    await expect(desktop.getByRole("dialog")).toHaveCount(0);
 
     await desktop.getByRole("button", { name: "Tactics", exact: true }).click();
     await expect(desktop.getByRole("heading", { level: 1, name: "Tactics", exact: true })).toBeVisible();
@@ -320,37 +414,154 @@ test("desktop Squad keeps one dense vertical roster and an accessible full-scree
     await capture(desktop, "69e-tactics-shared-plan-desktop");
     await desktop.getByRole("button", { name: "Squad", exact: true }).click();
 
+    const tableFrame = desktop.locator(".tls-squad-table-frame");
+    await tableFrame.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await desktop.waitForTimeout(50);
     const firstPlayer = desktop.locator(".tls-squad-table tbody tr").first();
+    const firstPlayerName = (await firstPlayer.locator(".tls-squad-player-name").innerText()).trim();
+    const firstMenuTrigger = desktop.getByRole("button", {
+      name: `Actions for ${firstPlayerName}`,
+      exact: true,
+    });
+    await firstMenuTrigger.scrollIntoViewIfNeeded();
+    await desktop.waitForTimeout(50);
+    await firstMenuTrigger.click();
+    const firstMenu = desktop.getByRole("menu", {
+      name: `Actions for ${firstPlayerName}`,
+      exact: true,
+    });
+    await expect(firstMenu).toBeVisible();
+    expect(await firstMenu.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0
+        && bounds.top >= 0
+        && bounds.right <= window.innerWidth
+        && bounds.bottom <= window.innerHeight;
+    })).toBe(true);
+    await desktop.keyboard.press("Escape");
+    await expect(firstMenuTrigger).toBeFocused();
+    await firstMenuTrigger.click();
+    await desktop.getByRole("heading", { level: 1, name: "Squad", exact: true }).click();
+    await expect(firstMenu).toBeHidden();
+    await expect(firstMenuTrigger).toBeFocused();
+
+    await tableFrame.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await desktop.waitForTimeout(50);
+    const lastPlayer = desktop.locator(".tls-squad-table tbody tr").last();
+    const lastPlayerName = (await lastPlayer.locator(".tls-squad-player-name").innerText()).trim();
+    const lastMenuTrigger = desktop.getByRole("button", {
+      name: `Actions for ${lastPlayerName}`,
+      exact: true,
+    });
+    await lastMenuTrigger.scrollIntoViewIfNeeded();
+    await desktop.waitForTimeout(50);
+    await lastMenuTrigger.click();
+    const lastMenu = desktop.getByRole("menu", {
+      name: `Actions for ${lastPlayerName}`,
+      exact: true,
+    });
+    await expect(lastMenu).toHaveAttribute("data-placement", "top");
+    await tableFrame.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await expect(lastMenu).toBeHidden();
+    await expect(lastMenuTrigger).toBeFocused();
+
     await firstPlayer.focus();
     await desktop.keyboard.press("Enter");
     const profile = desktop.getByRole("dialog", { name: /.+/ });
     await expect(profile).toBeVisible();
     await expect(desktop.getByRole("button", { name: "Close player profile", exact: true })).toBeFocused();
+    expect(await controlBoundaryContrast(
+      profile.locator(".tls-player-profile-close"),
+    )).toBeGreaterThanOrEqual(3);
+    const attributesTab = profile.getByRole("tab", { name: "Attributes", exact: true });
+    const statisticsTab = profile.getByRole("tab", { name: "Statistics", exact: true });
+    const contractTab = profile.getByRole("tab", { name: "Contract", exact: true });
+    await expect(profile.getByRole("tab")).toHaveCount(3);
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.locator(".tls-player-role-chip[data-suitability='weak']")).toHaveCount(0);
+    await expect(profile.locator(".tls-player-attribute-groups > section")).toHaveCount(3);
+    await expect(profile.locator(".tls-player-attribute-group[data-family='goalkeeping']")).toHaveCount(1);
+    await expect(profile.locator(".tls-player-attribute-group[data-family='technical']")).toHaveCount(0);
+    await expect(profile.locator(".tls-contract-workspace")).toBeHidden();
+    await captureViewport(desktop, "69i-player-profile-attributes-desktop");
+    await attributesTab.focus();
+    await desktop.keyboard.press("ArrowRight");
+    await expect(statisticsTab).toBeFocused();
+    await expect(statisticsTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.getByRole("heading", { name: "Current season", exact: true })).toBeVisible();
+    await expect(profile.getByRole("heading", { name: "Career", exact: true })).toBeVisible();
+    await expect(profile.locator(".tls-player-statistics-coverage-item")).toHaveCount(4);
+    await captureViewport(desktop, "69a-player-profile-statistics-desktop");
+    await desktop.keyboard.press("ArrowRight");
+    await expect(contractTab).toBeFocused();
+    await expect(contractTab).toHaveAttribute("aria-selected", "true");
     await expect(profile.getByText("Annual wage", { exact: true }).first()).toBeVisible();
     await expect(profile.getByText("Monthly wage", { exact: true })).toHaveCount(0);
-    await expect(profile.locator(".tls-player-attribute-groups > section")).toHaveCount(4);
     await expect(profile.locator(".tls-contract-workspace")).toBeVisible();
     await profile.getByRole("button", { name: "Open renewal talks", exact: true }).click();
-    await expect(profile.getByRole("textbox", { name: /^Annual wage/ })).toBeVisible();
+    const annualWageDraft = profile.getByRole("textbox", { name: /^Annual wage/ });
+    await expect(annualWageDraft).toBeVisible();
+    expect(await controlBoundaryContrast(
+      annualWageDraft.locator("xpath=.."),
+    )).toBeGreaterThanOrEqual(3);
+    await annualWageDraft.fill("555000");
     await expect(profile.getByText("This offer fits the current budget.", { exact: true })).toBeVisible();
+    await statisticsTab.click();
+    await expect(profile.locator(".tls-contract-workspace")).toBeHidden();
+    await contractTab.click();
+    await expect(annualWageDraft).toHaveValue("555000");
     await assertNoPageOverflow(desktop, "desktop player profile renewal");
-    await captureViewport(desktop, "69a-player-profile-desktop");
+    await assertFullScreenDialogOwnsScroll(desktop, profile, "desktop player profile");
+    expect(await profile.locator(
+      ".tls-player-profile-shell, .tls-player-profile-tabs, .tls-player-profile-tab-panel",
+    ).evaluateAll((elements) => elements.flatMap((element) => {
+      const overflowY = getComputedStyle(element).overflowY;
+      return overflowY === "auto" || overflowY === "scroll"
+        ? [element.className]
+        : [];
+    }))).toEqual([]);
+    await captureViewport(desktop, "69g-player-profile-contract-desktop");
     await desktop.keyboard.press("Escape");
     await expect(profile).toBeHidden();
     await expect(firstPlayer).toBeFocused();
+
+    const secondPlayer = desktop.locator(".tls-squad-table tbody tr").nth(1);
+    await secondPlayer.focus();
+    await desktop.keyboard.press("Enter");
+    await expect(profile).toBeVisible();
+    await expect(profile.getByRole("tab", { name: "Attributes", exact: true }))
+      .toHaveAttribute("aria-selected", "true");
+    await desktop.keyboard.press("Escape");
+    await expect(secondPlayer).toBeFocused();
   } finally {
     await desktop.close();
   }
 });
 
 test("narrow Squad and player profile reflow without horizontal scrolling", async ({ browser }) => {
-  const narrow = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const narrow = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
   try {
     await narrow.emulateMedia({ reducedMotion: "reduce" });
     await resetCareerStorage(narrow);
     await narrow.getByRole("button", { name: "New career", exact: true }).click();
     await narrow.getByRole("combobox", { name: "Career navigation", exact: true }).selectOption("squad");
     await expect(narrow.getByRole("heading", { level: 1, name: "Squad", exact: true })).toBeVisible();
+    const squadFrame = narrow.locator(".tls-squad-table-frame");
+    await expect(squadFrame).toHaveCSS("overflow-y", "auto");
+    await assertScrollFrameOwnsVerticalOverflow(
+      narrow,
+      squadFrame,
+      "narrow Squad",
+    );
     await assertNoPageOverflow(narrow, "narrow Squad");
     await capture(narrow, "69b-squad-narrow");
 
@@ -359,14 +570,30 @@ test("narrow Squad and player profile reflow without horizontal scrolling", asyn
     await narrow.keyboard.press("Enter");
     const profile = narrow.getByRole("dialog", { name: /.+/ });
     await expect(profile).toBeVisible();
-    await expect(profile.locator(".tls-contract-workspace")).toBeVisible();
+    const attributesTab = profile.getByRole("tab", { name: "Attributes", exact: true });
+    const statisticsTab = profile.getByRole("tab", { name: "Statistics", exact: true });
+    const contractTab = profile.getByRole("tab", { name: "Contract", exact: true });
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.locator(".tls-player-attribute-groups > section")).toHaveCount(3);
+    await captureViewport(narrow, "69j-player-profile-attributes-narrow");
+    await attributesTab.focus();
+    await narrow.keyboard.press("ArrowDown");
+    await expect(statisticsTab).toBeFocused();
+    await expect(statisticsTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.locator(".tls-player-statistics-period")).toHaveCount(2);
     await assertNoPageOverflow(narrow, "narrow player profile");
-    await captureViewport(narrow, "69f-player-profile-narrow");
+    await assertFullScreenDialogOwnsScroll(narrow, profile, "narrow player profile");
+    await captureViewport(narrow, "69f-player-profile-statistics-narrow");
 
     await narrow.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
     await assertNoPageOverflow(narrow, "narrow player profile at 200% text");
+    await assertMatchdayTabsContained(
+      narrow,
+      profile.locator(".tls-player-profile-tab-list"),
+      "narrow player profile at 200% text",
+    );
     await expect(profile).toHaveCSS("overflow-x", "hidden");
     expect(await profile.locator(".tls-player-profile-shell").evaluate((element) => {
       const shellBounds = element.getBoundingClientRect();
@@ -377,9 +604,22 @@ test("narrow Squad and player profile reflow without horizontal scrolling", asyn
         })
         .map((child) => child.className || child.tagName);
     })).toEqual([]);
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "69h-player-profile-statistics-text-zoom-narrow");
+    await attributesTab.click();
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "69l-player-profile-attributes-text-zoom-narrow");
+    await contractTab.click();
+    await expect(profile.locator(".tls-contract-workspace")).toBeVisible();
+    await assertNoPageOverflow(narrow, "narrow contract tab at 200% text");
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "69m-player-profile-contract-text-zoom-narrow");
     await narrow.evaluate(() => {
       document.documentElement.style.fontSize = "";
     });
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "69k-player-profile-contract-narrow");
     await narrow.keyboard.press("Escape");
     await expect(profile).toBeHidden();
 
@@ -387,7 +627,39 @@ test("narrow Squad and player profile reflow without horizontal scrolling", asyn
       document.documentElement.style.fontSize = "200%";
     });
     await assertNoPageOverflow(narrow, "narrow Squad at 200% text");
-    await capture(narrow, "69c-squad-text-zoom-narrow");
+    await assertScrollFrameOwnsVerticalOverflow(
+      narrow,
+      squadFrame,
+      "narrow Squad at 200% text",
+    );
+    await assertTableCellsContained(
+      narrow,
+      ".tls-squad-table tbody tr:first-child",
+      "narrow Squad at 200% text",
+    );
+    const zoomedFirstPlayerName = (
+      await narrow.locator(".tls-squad-table tbody tr").first()
+        .locator(".tls-squad-player-name").innerText()
+    ).trim();
+    const zoomedMenuTrigger = narrow.getByRole("button", {
+      name: `Actions for ${zoomedFirstPlayerName}`,
+      exact: true,
+    });
+    await zoomedMenuTrigger.tap();
+    const zoomedMenu = narrow.getByRole("menu", {
+      name: `Actions for ${zoomedFirstPlayerName}`,
+      exact: true,
+    });
+    await expect(zoomedMenu).toBeVisible();
+    expect(await zoomedMenu.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0
+        && bounds.top >= 0
+        && bounds.right <= window.innerWidth
+        && bounds.bottom <= window.innerHeight;
+    })).toBe(true);
+    await assertNoPageOverflow(narrow, "narrow Squad menu at 200% text");
+    await captureViewport(narrow, "69c-squad-text-zoom-narrow");
   } finally {
     await narrow.close();
   }
@@ -407,52 +679,329 @@ test("desktop Market presents window, budget, targets, and a public inspection p
     await expect(desktop.locator(".tls-market-table-frame")).toHaveCSS("overflow-x", "hidden");
     const targetRows = desktop.locator(".tls-market-table tbody tr");
     await expect(targetRows.first()).toBeVisible();
+    expect(
+      (await textLineCounts(desktop.locator(".tls-market-table thead button span")))
+        .every((lineCount) => lineCount === 1),
+    ).toBe(true);
+    expect(await controlBoundaryContrast(
+      desktop.locator(".tls-market-filter-bar select").first(),
+    )).toBeGreaterThanOrEqual(3);
+    expect(await controlBoundaryContrast(
+      desktop.locator(".tls-market-table .tls-icon-button").first(),
+    )).toBeGreaterThanOrEqual(3);
+    expect(await foregroundContrast(
+      desktop.locator(".tls-player-rating-star[data-fill='empty']").first(),
+      ".tls-market-table tbody tr",
+    )).toBeGreaterThanOrEqual(3);
+    const unfilteredTargetCount = await targetRows.count();
+    const divisionFilter = desktop.getByRole("combobox", {
+      name: "Division",
+      exact: true,
+    });
+    await divisionFilter.selectOption("first_division");
+    const firstDivisionTargetCount = await targetRows.count();
+    expect(firstDivisionTargetCount).toBeGreaterThan(0);
+    expect(firstDivisionTargetCount).toBeLessThan(unfilteredTargetCount);
+    await expect(
+      targetRows.locator(".tls-market-club-source small").first(),
+    ).toContainText("First division");
+    await expect(
+      desktop.locator(".tls-market-table .tls-player-star-rating[data-rating='3.5']").first(),
+    ).toBeVisible();
+    const halfSixthRating = desktop.locator(
+      ".tls-market-table .tls-player-star-rating[data-rating='5.5']",
+    ).first();
+    const fullSixthRating = desktop.locator(
+      ".tls-market-table .tls-player-star-rating[data-rating='6']",
+    ).first();
+    await expect(halfSixthRating).toBeVisible();
+    await expect(fullSixthRating).toBeVisible();
+    await expect(halfSixthRating).toHaveAttribute(
+      "aria-label",
+      /5\.5 out of 6 stars$/,
+    );
+    await expect(fullSixthRating).toHaveAttribute(
+      "aria-label",
+      /6 out of 6 stars$/,
+    );
+    await expect(
+      halfSixthRating.locator(
+        ".tls-player-rating-star[data-sixth='true'][data-fill='half']",
+      ),
+    ).toBeVisible();
+    const fullSixthStar = fullSixthRating.locator(
+      ".tls-player-rating-star[data-sixth='true'][data-fill='full']",
+    );
+    await expect(fullSixthStar).toBeVisible();
+    expect(await fullSixthStar.locator(".tls-player-rating-star-fill").evaluate(
+      (element) => getComputedStyle(element).color,
+    )).toBe("rgb(195, 107, 44)");
     await assertNoPageOverflow(desktop, "desktop Market");
     await capture(desktop, "79a-market-desktop");
+    await divisionFilter.selectOption("all");
+    await expect(targetRows).toHaveCount(unfilteredTargetCount);
+    await desktop.getByRole("combobox", {
+      name: "Role",
+      exact: true,
+    }).selectOption("striker");
+    await expect(targetRows.first()).toBeVisible();
 
     const firstTarget = targetRows.first();
     await firstTarget.focus();
     await desktop.keyboard.press("Enter");
     const profile = desktop.getByRole("dialog", { name: /.+/ });
     await expect(profile).toBeVisible();
+    expect(await controlBoundaryContrast(
+      profile.locator(".tls-player-profile-close"),
+    )).toBeGreaterThanOrEqual(3);
     await expect(desktop.locator(".tls-market-player-summary")).toBeVisible();
-    await expect(desktop.locator(".tls-market-eligibility-detail")).toBeVisible();
+    const attributesTab = profile.getByRole("tab", { name: "Attributes", exact: true });
+    const statisticsTab = profile.getByRole("tab", { name: "Statistics", exact: true });
+    const contractTab = profile.getByRole("tab", { name: "Contract and offer", exact: true });
+    await expect(profile.getByRole("tab")).toHaveCount(3);
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.getByText("Public value", { exact: true })).toBeVisible();
+    await expect(profile.getByText("Asking price", { exact: true })).toBeVisible();
+    await expect(profile.locator(".tls-player-role-chip[data-suitability='weak']")).toHaveCount(0);
+    await expect(profile.locator(".tls-player-attribute-groups > section")).toHaveCount(3);
+    expect(
+      await profile.locator(".tls-player-attribute-group[data-family='goalkeeping']").count()
+      + await profile.locator(".tls-player-attribute-group[data-family='technical']").count(),
+    ).toBe(1);
+    expect(await profile.locator(".tls-player-attribute dd").evaluateAll(
+      (values) => values.every((value) => /^\d+\.\d$/.test(value.textContent?.trim() ?? "")),
+    )).toBe(true);
+    await expect(profile.locator(".tls-market-eligibility-detail")).toBeHidden();
     await assertNoPageOverflow(desktop, "desktop Market player profile");
-    await captureViewport(desktop, "79b-market-player-profile-desktop");
+    await assertFullScreenDialogOwnsScroll(desktop, profile, "desktop Market player profile");
+    await captureViewport(desktop, "79b-market-player-attributes-desktop");
+
+    await attributesTab.focus();
+    await desktop.keyboard.press("ArrowRight");
+    await expect(statisticsTab).toBeFocused();
+    await expect(statisticsTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.getByRole("heading", { name: "Current season", exact: true })).toBeVisible();
+    await expect(profile.getByRole("heading", { name: "Career", exact: true })).toBeVisible();
+    await expect(profile.locator(".tls-player-statistics-coverage-item")).toHaveCount(4);
+    await captureViewport(desktop, "79e-market-player-statistics-desktop");
+
+    await desktop.keyboard.press("ArrowRight");
+    await expect(contractTab).toBeFocused();
+    await expect(contractTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.locator(".tls-market-eligibility-detail")).toBeVisible();
+    const feeDraft = profile.locator(".tls-market-composer input").first();
+    await expect(feeDraft).toBeVisible();
+    expect(await controlBoundaryContrast(
+      feeDraft.locator("xpath=.."),
+    )).toBeGreaterThanOrEqual(3);
+    await feeDraft.fill("1250000");
+    await attributesTab.click();
+    await expect(feeDraft).toBeHidden();
+    await contractTab.click();
+    await expect(feeDraft).toHaveValue("1250000");
+
     await desktop.keyboard.press("Escape");
     await expect(profile).toBeHidden();
     await expect(firstTarget).toBeFocused();
+
+    const secondTarget = targetRows.nth(1);
+    await secondTarget.focus();
+    await desktop.keyboard.press("Enter");
+    await expect(profile).toBeVisible();
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await desktop.keyboard.press("Escape");
+    await expect(profile).toBeHidden();
   } finally {
     await desktop.close();
   }
 });
 
 test("narrow Market reflows filters and the target table without horizontal scrolling", async ({ browser }) => {
-  const narrow = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const narrow = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
   try {
     await narrow.emulateMedia({ reducedMotion: "reduce" });
     await resetCareerStorage(narrow);
     await narrow.getByRole("button", { name: "New career", exact: true }).click();
     await narrow.getByRole("combobox", { name: "Career navigation", exact: true }).selectOption("market");
     await expect(narrow.getByRole("heading", { level: 1, name: "Market", exact: true })).toBeVisible();
+    const marketFrame = narrow.locator(".tls-market-table-frame");
+    await expect(marketFrame).toHaveCSS("overflow-y", "auto");
+    expect(await marketFrame.evaluate((element) => element.scrollHeight > element.clientHeight))
+      .toBe(true);
     await assertNoPageOverflow(narrow, "narrow Market");
     await capture(narrow, "79c-market-narrow");
 
     const firstTarget = narrow.locator(".tls-market-table tbody tr").first();
-    await firstTarget.focus();
-    await narrow.keyboard.press("Enter");
+    expect(await firstTarget.locator("th, td").evaluateAll((cells) => cells.every(
+      (cell) => cell.scrollWidth <= cell.clientWidth + 1,
+    ))).toBe(true);
+    await firstTarget.getByRole("button", { name: /Open .+ market profile/ }).tap();
     const profile = narrow.getByRole("dialog", { name: /.+/ });
     await expect(profile).toBeVisible();
+    const attributesTab = profile.getByRole("tab", { name: "Attributes", exact: true });
+    const statisticsTab = profile.getByRole("tab", { name: "Statistics", exact: true });
+    const contractTab = profile.getByRole("tab", { name: "Contract and offer", exact: true });
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await expect(profile.locator(".tls-player-attribute-groups > section")).toHaveCount(3);
     await assertNoPageOverflow(narrow, "narrow Market player profile");
+    await assertFullScreenDialogOwnsScroll(narrow, profile, "narrow Market player profile");
+    await captureViewport(narrow, "79f-market-player-attributes-narrow");
+
+    await attributesTab.focus();
+    await narrow.keyboard.press("ArrowDown");
+    await expect(statisticsTab).toBeFocused();
+    await expect(profile.locator(".tls-player-statistics-period")).toHaveCount(2);
+    await narrow.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await assertNoPageOverflow(narrow, "narrow Market player profile at 200% text");
+    await assertMatchdayTabsContained(
+      narrow,
+      profile.locator(".tls-player-profile-tab-list"),
+      "narrow Market player profile at 200% text",
+    );
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "79g-market-player-statistics-text-zoom-narrow");
+    await attributesTab.click();
+    await expect(attributesTab).toHaveAttribute("aria-selected", "true");
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "79i-market-player-attributes-text-zoom-narrow");
+    await contractTab.click();
+    await expect(profile.locator(".tls-market-eligibility-detail")).toBeVisible();
+    await assertNoPageOverflow(narrow, "narrow Market contract and offer at 200% text");
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "79j-market-player-contract-text-zoom-narrow");
+    await narrow.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+    await profile.locator(".tls-player-profile-tab-list").scrollIntoViewIfNeeded();
+    await captureViewport(narrow, "79k-market-player-contract-narrow");
     await narrow.keyboard.press("Escape");
     await expect(profile).toBeHidden();
+    await narrow.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await assertNoPageOverflow(narrow, "narrow Market at 200% text");
+    await assertTableCellsContained(
+      narrow,
+      ".tls-market-table tbody tr:first-child",
+      "narrow Market at 200% text",
+    );
+    await capture(narrow, "79l-market-text-zoom-narrow");
   } finally {
     await narrow.close();
   }
 });
 
+/**
+ * Exercises Hallmark's four required responsive widths with real touch targets.
+ *
+ * A fresh page per width prevents viewport changes from sharing transient shell
+ * layout state. The cases guard the gaps around the product breakpoints: both
+ * workbenches must remain contained, and tab labels must stay unambiguous.
+ */
+for (const width of [320, 375, 414, 768] as const) {
+  test(`Squad and Market stay touch-usable at the Hallmark ${width}px width`, async ({
+    browser,
+  }, testInfo) => {
+    testInfo.setTimeout(60_000);
+    const page = await browser.newPage({
+      viewport: { width, height: 900 },
+      hasTouch: true,
+    });
+    try {
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await resetCareerStorage(page);
+      await page.getByRole("button", { name: "New career", exact: true }).click();
+      await exerciseHallmarkPlayerWorkspaces(page, width);
+    } finally {
+      await page.close();
+    }
+  });
+}
+
+test("localized Squad and Market table controls stay inside their desktop columns", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await expect(page.getByRole("heading", {
+      level: 1,
+      name: "Dashboard",
+      exact: true,
+    })).toBeVisible();
+
+    for (const width of [1440, 1200, 1000] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const language of ["en", "it", "de", "es", "fr"] as const) {
+        await page.evaluate(async (nextLanguage) => {
+          const modulePath = "/src/stores/career-ui-store.ts";
+          const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+          const store = useCareerUiStore.getState();
+          store.setPreferences({ ...store.preferences, language: nextLanguage });
+          store.openSquad();
+          await new Promise<void>((resolveFrame) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()));
+          });
+        }, language);
+        await expect(page.locator(".tls-squad-table")).toBeVisible();
+        if (width === 1440) {
+          await assertElementsWithinOwner(
+            page.locator(".tls-squad-table thead button"),
+            "th",
+            `${language} Squad headings at ${width}px`,
+          );
+        } else {
+          await expect(page.locator(".tls-squad-table thead")).toBeHidden();
+          await assertTableCellsContained(
+            page,
+            ".tls-squad-table tbody tr:first-child",
+            `${language} Squad at ${width}px`,
+          );
+        }
+        await assertElementsWithinOwner(
+          page.locator(".tls-squad-status"),
+          "td",
+          `${language} Squad statuses at ${width}px`,
+        );
+
+        await page.evaluate(async () => {
+          const modulePath = "/src/stores/career-ui-store.ts";
+          const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+          useCareerUiStore.getState().openMarket();
+          await new Promise<void>((resolveFrame) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()));
+          });
+        });
+        await expect(page.locator(".tls-market-table")).toBeVisible();
+        if (width === 1440) {
+          await assertElementsWithinOwner(
+            page.locator(".tls-market-table thead button"),
+            "th",
+            `${language} Market headings at ${width}px`,
+          );
+        } else {
+          await expect(page.locator(".tls-market-table thead")).toBeHidden();
+          await assertTableCellsContained(
+            page,
+            ".tls-market-table tbody tr:first-child",
+            `${language} Market at ${width}px`,
+          );
+        }
+      }
+    }
+  } finally {
+    await page.close();
+  }
+});
+
 test("a submitted transfer offer stays pending, tracks exposure, and withdraws cleanly", async ({ browser }) => {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const pageErrors: string[] = [];
+  desktop.on("pageerror", (error) => pageErrors.push(error.message));
   try {
     await resetCareerStorage(desktop);
     await desktop.getByRole("button", { name: "New career", exact: true }).click();
@@ -465,30 +1014,249 @@ test("a submitted transfer offer stays pending, tracks exposure, and withdraws c
     await firstOpenTarget.getByRole("button", { name: /Open .+ market profile/ }).click();
     const profile = desktop.getByRole("dialog", { name: /.+/ });
     await expect(profile).toBeVisible();
+    const openedPlayerName = await profile.getByRole("heading", { level: 2 }).innerText();
+    await profile.getByRole("tab", { name: "Contract and offer", exact: true }).click();
 
     const feeInput = profile.locator(".tls-market-composer input");
     await expect(feeInput).toBeVisible();
-    await feeInput.fill("1500000");
+    await feeInput.fill("100000");
     await expect(profile.locator(".tls-contract-finance-ok")).toBeVisible();
     await profile.getByRole("button", { name: "Submit offer", exact: true }).click();
 
     await expect(profile.getByText("Offer submitted. Expect a reply within three game days.", { exact: true })).toBeVisible();
-    await expect(profile.getByText("Waiting for the selling club's reply.", { exact: true })).toBeVisible();
+    await expect.poll(async () => desktop.evaluate(async () => {
+      const modulePath = "/src/stores/career-ui-store.ts";
+      const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+      const career = useCareerUiStore.getState().activeCareerState;
+      return (career?.transferNegotiationState?.negotiationIds ?? []).map(
+        (negotiationId: string) => {
+          const negotiation = career?.transferNegotiationState?.negotiations[negotiationId];
+          const player = negotiation === undefined
+            ? undefined
+            : career?.gameState.players[negotiation.playerId];
+          return player === undefined ? "" : `${player.firstName} ${player.lastName}`;
+        },
+      );
+    })).toEqual([openedPlayerName]);
+    await expect.poll(async () => ({
+      pageErrors,
+      pendingStateCount: await profile
+        .getByText("Waiting for the selling club's reply.", { exact: true })
+        .count(),
+    }), { timeout: 30_000 }).toEqual({
+      pageErrors: [],
+      pendingStateCount: 1,
+    });
     await assertNoPageOverflow(desktop, "desktop Market pending offer");
     await captureViewport(desktop, "79d-market-pending-offer-desktop");
 
-    await expect(desktop.getByText("€1,500,000", { exact: true })).toBeVisible();
-    await expect(desktop.getByText("1 open talks", { exact: true })).toBeVisible();
+    const pendingExposure = desktop.locator(".tls-market-finance-strip > div").nth(3);
+    await expect(pendingExposure.getByText("€100,000", { exact: true })).toBeVisible();
+    await expect(pendingExposure.getByText("1 open talks", { exact: true })).toBeVisible();
     await expect(desktop.getByText(transferBudgetBefore, { exact: true })).toBeVisible();
 
     await profile.getByRole("button", { name: "Withdraw", exact: true }).click();
     await expect(profile.getByText("Talks withdrawn.", { exact: true })).toBeVisible();
-    await expect(desktop.getByText("0 open talks", { exact: true })).toBeVisible();
+    await expect(pendingExposure.getByText("0 open talks", { exact: true })).toBeVisible();
     await expect(profile.locator(".tls-market-composer input")).toBeVisible();
   } finally {
     await desktop.close();
   }
 });
+
+/** Counts rendered text lines without assuming a particular font metric. */
+async function textLineCounts(locator: Locator): Promise<readonly number[]> {
+  return locator.evaluateAll((elements) => elements.map((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return range.getClientRects().length;
+  }));
+}
+
+/** Rejects content clipped by a responsive table card, even when the page hides overflow. */
+async function assertTableCellsContained(
+  page: Page,
+  rowSelector: string,
+  checkpoint: string,
+): Promise<void> {
+  const overflowingCells = await page.locator(rowSelector).locator("th, td")
+    .evaluateAll((cells) => cells.flatMap((cell, index) => (
+      cell.scrollWidth > cell.clientWidth + 1 ? [index] : []
+    )));
+  expect(overflowingCells, `${checkpoint} clips card values`).toEqual([]);
+}
+
+/** Rejects nowrap labels that fit themselves but escape their owning table cell. */
+async function assertElementsWithinOwner(
+  locator: Locator,
+  ownerSelector: "th" | "td",
+  checkpoint: string,
+): Promise<void> {
+  const violations = await locator.evaluateAll((elements, selector) => elements.flatMap(
+    (element, index) => {
+      const owner = element.closest(selector);
+      if (owner === null) return [`${index}:missing-owner`];
+      const bounds = element.getBoundingClientRect();
+      const ownerBounds = owner.getBoundingClientRect();
+      return element.scrollWidth > element.clientWidth + 1
+        || bounds.left < ownerBounds.left - 1
+        || bounds.right > ownerBounds.right + 1
+        ? [`${index}:${element.textContent?.trim() ?? ""}`]
+        : [];
+    },
+  ), ownerSelector);
+  expect(violations, `${checkpoint} overflow their cells`).toEqual([]);
+}
+
+/**
+ * Rejects the Chromium table-overflow leak that creates a second page-length
+ * scroll range outside an intentionally scrollable roster or market frame.
+ */
+async function assertScrollFrameOwnsVerticalOverflow(
+  page: Page,
+  frame: Locator,
+  checkpoint: string,
+): Promise<void> {
+  const metrics = await frame.evaluate((element) => {
+    const shell = element.closest(".tls-app-shell");
+    if (shell === null) throw new Error("Missing app shell for scroll frame");
+    const shellBottom = shell.getBoundingClientRect().bottom + window.scrollY;
+    return {
+      documentHeight: document.documentElement.scrollHeight,
+      frameClientHeight: element.clientHeight,
+      frameScrollHeight: element.scrollHeight,
+      visibleShellBottom: Math.max(window.innerHeight, Math.ceil(shellBottom)),
+    };
+  });
+  expect(
+    metrics.frameScrollHeight,
+    `${checkpoint} must retain its internal vertical scroll`,
+  ).toBeGreaterThan(metrics.frameClientHeight);
+  expect(
+    metrics.documentHeight,
+    `${checkpoint} leaks the frame's scroll height into the page`,
+  ).toBeLessThanOrEqual(metrics.visibleShellBottom + 2);
+  await expect(frame).toHaveCSS("overflow-y", "auto");
+  await expect(page.locator(".tls-app-shell")).toBeVisible();
+}
+
+/** Uses whichever career navigation form is visible at the current viewport. */
+async function navigateCareerWorkspace(
+  page: Page,
+  value: "squad" | "market",
+  label: "Squad" | "Market",
+): Promise<void> {
+  const compactNavigation = page.getByRole("combobox", {
+    name: "Career navigation",
+    exact: true,
+  });
+  if ((page.viewportSize()?.width ?? 0) <= 760) {
+    await expect(compactNavigation).toBeAttached();
+    await compactNavigation.selectOption(value);
+    return;
+  }
+  await page.getByRole("button", { name: label, exact: true }).click();
+}
+
+/** Runs the shared touch, orientation, containment, and dialog checks at one width. */
+async function exerciseHallmarkPlayerWorkspaces(
+  page: Page,
+  width: 320 | 375 | 414 | 768,
+): Promise<void> {
+  await navigateCareerWorkspace(page, "squad", "Squad");
+  await assertNoPageOverflow(page, `Squad at ${width}px`);
+  const firstPlayer = page.locator(".tls-squad-table tbody tr").first();
+  const firstPlayerName = (
+    await firstPlayer.locator(".tls-squad-player-name").innerText()
+  ).trim();
+  const placement = page.getByRole("combobox", {
+    name: `Placement for ${firstPlayerName}`,
+    exact: true,
+  });
+  await placement.tap();
+  await expect(placement).toBeFocused();
+  await page.getByRole("button", {
+    name: `Actions for ${firstPlayerName}`,
+    exact: true,
+  }).tap();
+  const squadMenu = page.getByRole("menu", {
+    name: `Actions for ${firstPlayerName}`,
+    exact: true,
+  });
+  await expect(squadMenu).toBeVisible();
+  await squadMenu.getByRole("menuitem", { name: "Open profile", exact: true }).tap();
+
+  const squadProfile = page.getByRole("dialog", { name: /.+/ });
+  await expect(squadProfile).toBeVisible();
+  const squadTabs = squadProfile.getByRole("tab");
+  const expectedOrientation = width <= 620 ? "vertical" : "horizontal";
+  const forwardArrow = width <= 620 ? "ArrowDown" : "ArrowRight";
+  await expect(squadProfile.getByRole("tablist"))
+    .toHaveAttribute("aria-orientation", expectedOrientation);
+  await expect(squadTabs).toHaveCount(3);
+  expect(await textLineCounts(squadTabs)).toEqual([1, 1, 1]);
+  const squadStatisticsTab = squadProfile.getByRole("tab", {
+    name: "Statistics",
+    exact: true,
+  });
+  const squadContractTab = squadProfile.getByRole("tab", {
+    name: "Contract",
+    exact: true,
+  });
+  await squadStatisticsTab.tap();
+  await expect(squadStatisticsTab).toHaveAttribute("aria-selected", "true");
+  await squadStatisticsTab.focus();
+  await page.keyboard.press(forwardArrow);
+  await expect(squadContractTab).toBeFocused();
+  await expect(squadContractTab).toHaveAttribute("aria-selected", "true");
+  await squadProfile.getByRole("tab", { name: "Attributes", exact: true }).tap();
+  await assertNoPageOverflow(page, `Squad profile at ${width}px`);
+  await assertFullScreenDialogOwnsScroll(
+    page,
+    squadProfile,
+    `Squad profile at ${width}px`,
+  );
+  await squadProfile.locator(".tls-player-profile-close").tap();
+  await expect(squadProfile).toBeHidden();
+
+  await navigateCareerWorkspace(page, "market", "Market");
+  await assertNoPageOverflow(page, `Market at ${width}px`);
+  await page.locator(".tls-market-table tbody tr").first()
+    .getByRole("button", { name: /Open .+ market profile/ })
+    .tap();
+
+  const marketProfile = page.getByRole("dialog", { name: /.+/ });
+  await expect(marketProfile).toBeVisible();
+  const marketTabs = marketProfile.getByRole("tab");
+  await expect(marketProfile.getByRole("tablist"))
+    .toHaveAttribute("aria-orientation", expectedOrientation);
+  await expect(marketTabs).toHaveCount(3);
+  expect(await textLineCounts(marketTabs)).toEqual([1, 1, 1]);
+  const marketStatisticsTab = marketProfile.getByRole("tab", {
+    name: "Statistics",
+    exact: true,
+  });
+  const marketContractTab = marketProfile.getByRole("tab", {
+    name: "Contract and offer",
+    exact: true,
+  });
+  await marketStatisticsTab.tap();
+  await expect(marketStatisticsTab).toHaveAttribute("aria-selected", "true");
+  await marketStatisticsTab.focus();
+  await page.keyboard.press(forwardArrow);
+  await expect(marketContractTab).toBeFocused();
+  await expect(marketContractTab).toHaveAttribute("aria-selected", "true");
+  await marketProfile.getByRole("tab", { name: "Attributes", exact: true }).tap();
+  await assertNoPageOverflow(page, `Market profile at ${width}px`);
+  await assertFullScreenDialogOwnsScroll(
+    page,
+    marketProfile,
+    `Market profile at ${width}px`,
+  );
+  await captureViewport(page, `79h-player-workspaces-hallmark-${width}`);
+  await marketProfile.locator(".tls-player-profile-close").tap();
+  await expect(marketProfile).toBeHidden();
+}
 
 test("desktop Posta owns one dense decision workspace across current message states", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -647,7 +1415,8 @@ test("preparation drafts stay explicit across stay, discard, save, and reload", 
     await expect(completeDialog.getByRole("button", { name: "Save and continue", exact: true })).toBeVisible();
     await capture(page, "46-preparation-complete-dialog-desktop");
     await completeDialog.getByRole("button", { name: "Save and continue", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Continue career", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue career", exact: true }))
+      .toBeVisible({ timeout: 30_000 });
 
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Continue career", exact: true }).click();
@@ -1344,7 +2113,8 @@ test("the second fixture returns to preparation and starts without a false stora
     await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
 
     await page.locator(".tls-dashboard-primary-action").click();
-    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true }))
+      .toBeVisible({ timeout: 30_000 });
     await acknowledgeDueAttentionUntilMatchday(page);
     await expect(page.getByRole("button", { name: "Prepare match", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Prepare match", exact: true }).click();
@@ -1628,9 +2398,10 @@ async function acknowledgeDueAttentionUntilMatchday(page: Page): Promise<void> {
     if (await prepareMatch.isVisible()) return;
 
     const continueCareer = page.getByRole("button", { name: "Continue", exact: true });
-    await expect(continueCareer).toBeEnabled();
+    await expect(continueCareer).toBeEnabled({ timeout: 30_000 });
     await continueCareer.click();
-    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true }))
+      .toBeVisible({ timeout: 30_000 });
   }
 
   throw new Error("Expected Continue to reach the next matchday decision");
@@ -2090,6 +2861,32 @@ async function foregroundContrast(
   }, backgroundOwnerSelector);
 }
 
+/** Measures a resting control border against the control surface it defines. */
+async function controlBoundaryContrast(locator: Locator): Promise<number> {
+  return locator.evaluate((element) => {
+    const rgb = (value: string): readonly [number, number, number] => {
+      const values = value.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+      if (values === undefined || values.length !== 3) {
+        throw new Error(`Unsupported color ${value}`);
+      }
+      return [values[0] ?? 0, values[1] ?? 0, values[2] ?? 0];
+    };
+    const luminance = ([red, green, blue]: readonly [number, number, number]): number => {
+      const channel = (value: number): number => {
+        const normalized = value / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      };
+      return (0.2126 * channel(red)) + (0.7152 * channel(green)) + (0.0722 * channel(blue));
+    };
+    const style = getComputedStyle(element);
+    const border = luminance(rgb(style.borderTopColor));
+    const surface = luminance(rgb(style.backgroundColor));
+    return (Math.max(border, surface) + 0.05) / (Math.min(border, surface) + 0.05);
+  });
+}
+
 /** Verifies the shared top-level focus owner landed on the current main region. */
 async function expectMainFocus(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => {
@@ -2126,6 +2923,37 @@ async function assertNoPageOverflow(page: Page, checkpoint: string): Promise<voi
     overflow.scrollWidth,
     `${checkpoint} has horizontal page overflow: ${JSON.stringify(overflow.offenders)}`,
   ).toBeLessThanOrEqual(overflow.clientWidth + 1);
+}
+
+/**
+ * Verifies that a full-screen profile is the only vertical scroll owner.
+ *
+ * Native dialogs make the document inert but Chromium can keep its scrollbar
+ * painted, producing a frozen bar beside the dialog's moving one.
+ */
+async function assertFullScreenDialogOwnsScroll(
+  page: Page,
+  dialog: Locator,
+  checkpoint: string,
+): Promise<void> {
+  await expect(page.locator("html"), `${checkpoint} must hide the document scrollbar`)
+    .toHaveCSS("overflow-y", "hidden");
+
+  const rootScrollTop = await page.evaluate(() => document.documentElement.scrollTop);
+  const scrollRange = await dialog.evaluate((element) => element.scrollHeight - element.clientHeight);
+  expect(scrollRange, `${checkpoint} must have enough content to exercise dialog scroll`).toBeGreaterThan(0);
+
+  await dialog.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  expect(await dialog.evaluate((element) => element.scrollTop), `${checkpoint} must scroll internally`)
+    .toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollTop), `${checkpoint} moved the page underneath`)
+    .toBe(rootScrollTop);
+
+  await dialog.evaluate((element) => {
+    element.scrollTop = 0;
+  });
 }
 
 /** Keeps the keyboard-only skip command off canvas until the user requests it. */

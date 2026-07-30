@@ -1,11 +1,17 @@
-import { createFakeLeagueSystem } from "@game/content";
-import { applyCareerPermanentTransfer } from "@game/engine";
+import {
+  createFakeDomesticWorld,
+  selectMarketBehaviorCalibration,
+  selectAskingPriceCurves,
+  selectPlayerValuationConfig,
+  selectPlayerWagePolicyConfig,
+} from "@game/content";
 import { createTranslator } from "@game/i18n";
 import { JsonCareerStorage, StorageError } from "@game/storage";
 
 import { formatCareerDevelopmentReportOutput } from "./career/development-output.ts";
 import { formatCareerDashboardOutput } from "./career/dashboard-output.ts";
 import { formatCareerMarketApplyOutput } from "./career/market-output.ts";
+import { applyCareerMarketDemo } from "./career/market-demo.ts";
 import { formatCareerAdvanceOutput } from "./career/matchday-output.ts";
 import {
   formatCareerInspectOutput,
@@ -31,11 +37,13 @@ import {
   buildMarketDemoScenario,
   careerStateFromNewWorld,
   careerStateFromScenario,
+  assertSupportedCareerCalibrationVersions,
+  selectedClubTransferWindows,
 } from "./career/scenarios.ts";
 import { advanceCareerNextFixture } from "./career/progression.ts";
 import { saveCareerLineupDemo, saveCareerTacticDemo } from "./career/preparation.ts";
 import { buildCareerDevelopmentReport, rolloverCareerSeason } from "./career/season-labs.ts";
-import type { CliIntent } from "./career/types.ts";
+import type { CliCareerState, CliIntent, CliSaveId } from "./career/types.ts";
 
 /** Minimal IO adapter used by command tests. */
 export interface CareerCommandIo {
@@ -86,7 +94,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "inspect") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       for (const line of formatCareerInspectOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
@@ -104,7 +112,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "summary") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       for (const line of formatCareerSummaryOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
@@ -122,7 +130,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "dashboard") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       for (const line of formatCareerDashboardOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
@@ -140,7 +148,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "squad") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       for (const line of formatCareerSquadOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
@@ -158,7 +166,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "youthAcademy") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       for (const line of formatCareerYouthAcademyOutput({ careerState, saveDirectoryPath: storageDirectoryPath, text })) {
         io.stdout(line);
       }
@@ -176,7 +184,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "setLineupDemo") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       const result = saveCareerLineupDemo(careerState, parsed.lineupDemo);
 
       await storage.saveCareer({
@@ -207,7 +215,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "setTacticDemo") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       const result = saveCareerTacticDemo(careerState, parsed.tacticDemo);
 
       await storage.saveCareer({
@@ -238,7 +246,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "advanceNextFixture") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       const result = advanceCareerNextFixture(careerState, {
         includeExplanationTrace: parsed.includeFixtureExplanation,
       });
@@ -273,7 +281,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "rolloverSeason") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       const result = rolloverCareerSeason(careerState);
 
       if (result.status === "rolledOver") {
@@ -306,7 +314,7 @@ export async function runCareerCommand(
 
   if (parsed.mode === "developmentReport") {
     try {
-      const careerState = await storage.loadCareer(parsed.saveId);
+      const careerState = await loadSupportedCareer(storage, parsed.saveId);
       const result = buildCareerDevelopmentReport(careerState);
 
       for (const line of formatCareerDevelopmentReportOutput({
@@ -330,8 +338,8 @@ export async function runCareerCommand(
   }
 
   if (parsed.mode === "newWorldPreview") {
-    const league = createFakeLeagueSystem({ worldSeed: parsed.seed });
-    const careerState = careerStateFromNewWorld(parsed.saveId, league, parsed.seed);
+    const world = createFakeDomesticWorld({ worldSeed: parsed.seed });
+    const careerState = careerStateFromNewWorld(parsed.saveId, world, parsed.seed);
 
     await storage.saveCareer({
       saveId: parsed.saveId,
@@ -340,7 +348,7 @@ export async function runCareerCommand(
     });
 
     for (const line of formatNewCareerWorldOutput({
-      league,
+      world,
       careerState,
       saveDirectoryPath: storageDirectoryPath,
       worldSeed: parsed.seed,
@@ -352,15 +360,31 @@ export async function runCareerCommand(
     return 0;
   }
 
-  const league = createFakeLeagueSystem();
-  const scenario = buildMarketDemoScenario(league, parsed.marketDemo);
+  const world = createFakeDomesticWorld();
+  const scenario = buildMarketDemoScenario(world, parsed.marketDemo);
   const careerState = careerStateFromScenario(parsed.saveId, scenario);
   const intent: CliIntent = {
     buyingClubId: scenario.buyingClubId,
     sellingClubId: scenario.sellingClubId,
     playerId: scenario.targetPlayerId,
   };
-  const result = applyCareerPermanentTransfer({ careerState, intent });
+  const result = applyCareerMarketDemo({
+    careerState,
+    intent,
+    transferWindows: selectedClubTransferWindows(world, scenario.selectedClubId),
+    valuationConfig: selectPlayerValuationConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    askingPriceConfig: selectAskingPriceCurves(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    wagePolicy: selectPlayerWagePolicyConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+  });
   const careerSaveWritten = result.status === "accepted";
 
   if (careerSaveWritten) {
@@ -372,7 +396,7 @@ export async function runCareerCommand(
   }
 
   for (const line of formatCareerMarketApplyOutput({
-    league,
+    world,
     seed: parsed.seed,
     saveId: parsed.saveId,
     saveDirectoryPath: storageDirectoryPath,
@@ -386,6 +410,25 @@ export async function runCareerCommand(
   }
 
   return 0;
+}
+
+/** Loads a CLI career and rejects unsupported immutable content versions. */
+async function loadSupportedCareer(
+  storage: JsonCareerStorage,
+  saveId: CliSaveId,
+): Promise<CliCareerState> {
+  const careerState = await storage.loadCareer(saveId);
+  try {
+    assertSupportedCareerCalibrationVersions(careerState);
+  } catch (error) {
+    await storage.deleteCareer(saveId);
+    throw new StorageError(
+      "unsupported_schema_version",
+      `Unsupported beta career was reset: ${saveId}`,
+      { cause: error },
+    );
+  }
+  return careerState;
 }
 
 function defaultIo(): CareerCommandIo {

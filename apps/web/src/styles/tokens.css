@@ -20,6 +20,8 @@
   --tls-theme-primary-action-hover: #e1c36d;
   --tls-theme-primary-action-text: #101512;
   --tls-theme-secondary-action-surface: #1b3440;
+  /* Resting control edges must remain >= 3:1 against the secondary surface. */
+  --tls-theme-interactive-border: #6d8589;
   --tls-theme-focus-ring: #e1c36d;
   --tls-theme-shell-overlay: rgba(55, 104, 89, 0.14);
   --tls-theme-club-green: #3d7657;
@@ -106,20 +108,83 @@
     linear-gradient(180deg, var(--tls-color-pitch), var(--tls-color-pitch-dark));
   --tls-shadow-panel: 0 1.25rem 3.25rem rgba(0, 0, 0, 0.34);
   --tls-shadow-inset: inset 0 1px 0 color-mix(in srgb, var(--tls-theme-heading-text) 7%, transparent);
-  --tls-font-ui: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
-  --tls-font-display: "Rockwell", "Palatino Linotype", "Georgia", serif;
+  --tls-shadow-raised: 0 1rem 2.5rem rgba(0, 0, 0, 0.25);
+  --tls-shadow-entry: 0 2.25rem 6rem rgba(0, 0, 0, 0.44);
+
+  /*
+   * Role-suitability scale. Shared verbatim with the tactical board, which still
+   * declares the same literal values; keep the two in step when either changes.
+   */
+  --tls-suitability-natural: var(--tls-color-green);
+  --tls-suitability-accomplished: #93bf64;
+  --tls-suitability-competent: var(--tls-color-gold);
+  --tls-suitability-unconvincing: #c8863b;
+  --tls-suitability-makeshift: var(--tls-color-red);
+
+  /* Match-incident colors. Booking yellow reads brighter than the action gold. */
+  --tls-incident-yellow-card: #f1c84b;
+
+  /*
+   * Public player assessment. Five ordinary stars use club gold; the exceptional
+   * sixth marker is deliberately dark orange, never danger.
+   */
+  --tls-player-rating-star: var(--tls-color-gold);
+  --tls-player-rating-star-empty: var(--tls-theme-interactive-border);
+  --tls-player-rating-sixth: #c36b2c;
+
+  /* Modal scrims. Dialog backdrops sit over arbitrary content, so they stay neutral. */
+  --tls-scrim: color-mix(in srgb, #000000 70%, transparent);
+  --tls-scrim-strong: color-mix(in srgb, #000000 72%, transparent);
+
+  /*
+   * Mixing endpoints. Never use these as a surface or a text colour: they exist
+   * only to lighten or darken another token inside a color-mix().
+   */
+  --tls-mix-light: #ffffff;
+  --tls-mix-dark: #000000;
+
+  /* Pressed feedback shared by every control that also has a hover state. */
+  --tls-press-shadow: inset 0 2px 0 color-mix(in srgb, var(--tls-mix-dark) 22%, transparent);
+  /*
+   * Self-hosted so the identity is identical on every platform. The previous
+   * stack resolved only where Avenir Next and Rockwell happened to be installed.
+   * Mono stays a system stack: the tactical board owns every mono surface.
+   */
+  --tls-font-ui: "Mulish Variable", "Avenir Next", "Segoe UI", sans-serif;
+  --tls-font-display: "Rokkitt Variable", "Rockwell", "Georgia", serif;
   --tls-font-mono: "SFMono-Regular", "Consolas", monospace;
   --tls-font-size-xs: 0.75rem;
   --tls-font-size-sm: 0.875rem;
   --tls-font-size-md: 1rem;
   --tls-font-size-lg: 1.25rem;
   --tls-font-size-xl: 2rem;
+  /*
+   * 4pt scale. Steps 7 and 8 exist so wide section gaps stop being written as
+   * raw rem values; --tls-rule-hairline covers the 1px seams the dense football
+   * tables draw between cells.
+   */
   --tls-space-1: 0.25rem;
   --tls-space-2: 0.5rem;
   --tls-space-3: 0.75rem;
   --tls-space-4: 1rem;
   --tls-space-5: 1.5rem;
   --tls-space-6: 2rem;
+  --tls-space-7: 3rem;
+  --tls-space-8: 4rem;
+  --tls-rule-hairline: 1px;
+
+  /* Reading measure for running prose. Panels stay sized in rem. */
+  --tls-measure-prose: 68ch;
+
+  /*
+   * Widest a full-screen inspector grows before its columns stop reading as
+   * rows. Was 96rem, at which a label and its value sat a screen apart.
+   */
+  --tls-measure-inspector: 72rem;
+
+  /* One shared control height so inputs and buttons never disagree on a form. */
+  --tls-control-height: 2.75rem;
+
   --tls-radius-sm: 3px;
   --tls-radius-md: 6px;
   --tls-border-thin: 1px solid var(--tls-color-line-soft);

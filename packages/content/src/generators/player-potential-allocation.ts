@@ -1,10 +1,12 @@
 import {
   abilityValue,
+  getPlayerRoleProfile,
   hardCapForRoleAbility,
   mapPlayerAbilities,
   PLAYER_ABILITY_KEYS,
   readPlayerAbility,
   roleAttributeBucket,
+  rolePotentialAbility,
   type ClubCategory,
   type PlayerAbilities,
   type PlayerAbilityKey,
@@ -33,6 +35,8 @@ export interface AllocateReachablePotentialInput {
   readonly clubTier: PlayerGenerationClubTier;
   /** Broad potential lane selected by rarity/academy policy. */
   readonly potentialClass: GeneratedPlayerPotentialClass;
+  /** Optional world-budgeted minimum for one exceptional potential player. */
+  readonly minimumRolePotentialAbility?: number;
 }
 
 /**
@@ -54,12 +58,50 @@ export function allocateReachablePotential(input: AllocateReachablePotentialInpu
     growthByAbility.set(path.key, Math.min(path.maxGrowth, share));
   }
 
-  return mapPlayerAbilities(input.abilities, (current, key) => {
+  const allocated = mapPlayerAbilities(input.abilities, (current, key) => {
     const growth = growthByAbility.get(key) ?? 0;
     const roleCap = hardCapForRoleAbility(input.role, key);
     const ceiling = roleCap === undefined ? 20 : Math.max(Number(current), roleCap);
     return abilityValue(clamp(Number(current) + growth, Number(current), ceiling));
   });
+
+  return input.minimumRolePotentialAbility === undefined
+    ? allocated
+    : raisePotentialRoleAbility(allocated, input.role, input.minimumRolePotentialAbility);
+}
+
+function raisePotentialRoleAbility(
+  potential: PlayerAbilities,
+  role: PlayerRole,
+  minimum: number,
+): PlayerAbilities {
+  const profile = getPlayerRoleProfile(role);
+  if (Number(rolePotentialAbility(potential, profile)) >= minimum) return potential;
+  const safeMinimum = Math.min(20, minimum + 0.01);
+
+  let low = 0;
+  let high = 20;
+  let raised = potential;
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const delta = (low + high) / 2;
+    const candidate = mapPlayerAbilities(potential, (current, key) => {
+      const bucket = roleAttributeBucket(role, key);
+      if (bucket !== "coreForRole" && bucket !== "secondaryForRole") return current;
+      const cap = hardCapForRoleAbility(role, key) ?? 20;
+      return abilityValue(Math.min(cap, Number(current) + delta));
+    });
+    if (Number(rolePotentialAbility(candidate, profile)) >= safeMinimum) {
+      raised = candidate;
+      high = delta;
+    } else {
+      low = delta;
+    }
+  }
+
+  if (Number(rolePotentialAbility(raised, profile)) < minimum) {
+    throw new Error(`Role potential-ability floor is unreachable for ${role}: ${minimum}`);
+  }
+  return raised;
 }
 
 function reachableGrowthBudget(input: AllocateReachablePotentialInput): number {

@@ -777,8 +777,8 @@ function labelKeyForSlot(slotKey: string): string {
     "dm-left": "career.matchPreparation.slot.dmLeft",
     "am-right": "career.matchPreparation.slot.amRight",
     "am-left": "career.matchPreparation.slot.amLeft",
-    "st-right": "career.matchPreparation.slot.st",
-    "st-left": "career.matchPreparation.slot.st",
+    "st-right": "career.matchPreparation.slot.stRight",
+    "st-left": "career.matchPreparation.slot.stLeft",
   };
 
   return slotLabelKeys[slotKey] ?? `career.matchPreparation.slot.${slotKey}`;

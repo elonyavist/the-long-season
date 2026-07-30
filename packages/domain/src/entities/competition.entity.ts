@@ -77,6 +77,66 @@ export interface Competition {
   readonly seasonDistribution?: CompetitionSeasonDistribution;
 }
 
+/** Stable validation failures for one competition definition. */
+export type CompetitionErrorCode =
+  | "empty_name"
+  | "empty_club_order"
+  | "duplicate_club"
+  | "invalid_season_distribution";
+
+/** Typed error raised when a competition definition is not internally coherent. */
+export class CompetitionError extends Error {
+  /** Stable machine-readable failure reason. */
+  public readonly code: CompetitionErrorCode;
+
+  /** Creates one competition validation error. */
+  public constructor(code: CompetitionErrorCode, message: string) {
+    super(message);
+    this.name = "CompetitionError";
+    this.code = code;
+  }
+}
+
+/**
+ * Validates and copies one ordered competition definition.
+ *
+ * World-level membership and fixture references are validated by the domestic
+ * competition registry, while this constructor owns the competition's local
+ * order and regulation facts.
+ */
+export function createCompetition(input: Competition): Competition {
+  const name = input.name.trim();
+  if (name.length === 0) {
+    throw new CompetitionError("empty_name", "competition name must not be empty");
+  }
+  if (input.clubIds.length === 0) {
+    throw new CompetitionError("empty_club_order", `competition has no clubs: ${input.id}`);
+  }
+  if (new Set(input.clubIds).size !== input.clubIds.length) {
+    throw new CompetitionError("duplicate_club", `competition contains duplicate clubs: ${input.id}`);
+  }
+
+  let seasonDistribution: CompetitionSeasonDistribution | undefined;
+  try {
+    seasonDistribution = input.seasonDistribution === undefined
+      ? undefined
+      : createCompetitionSeasonDistribution(input.seasonDistribution, input.clubIds.length);
+  } catch (error) {
+    throw new CompetitionError(
+      "invalid_season_distribution",
+      `invalid season distribution for ${input.id}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  return {
+    id: input.id,
+    name,
+    clubIds: [...input.clubIds],
+    matchRules: createCompetitionMatchRules(input.matchRules),
+    ...(seasonDistribution === undefined ? {} : { seasonDistribution }),
+  };
+}
+
 /** Validates one ordered and complete league-position distribution. */
 export function createCompetitionSeasonDistribution(
   input: CompetitionSeasonDistribution,

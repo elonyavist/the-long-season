@@ -1,5 +1,11 @@
-import { generateInitialYouthAcademies, type FakeLeagueSystem, type InitialYouthAcademyClubContext } from "@game/content";
-import { generateRoundRobinCalendar } from "@game/engine";
+import {
+  playerEconomyCalibration,
+  type FakeDomesticWorld,
+} from "@game/content";
+import {
+  combineDomesticCompetitionCalendars,
+  generateRoundRobinCalendar,
+} from "@game/engine";
 
 import { MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED, type MarketDemoProfileKey } from "../simulate-season/profile-keys.ts";
 import type {
@@ -16,9 +22,19 @@ import type {
 
 type CliFixtureId = CliGameState["fixtureIds"][number];
 type CliFixture = CliGameState["fixtures"][CliFixtureId];
+type PlayerEconomyCalibrationVersionBundle = NonNullable<
+  CliGameState["meta"]["calibrationVersions"]
+>;
 
 /** Current deterministic generator version written by CLI-created career worlds. */
 export const CLI_CAREER_WORLD_GENERATOR_VERSION = 1;
+
+/** Shared three-points table rules used by CLI career-only projections. */
+export const CLI_CAREER_TABLE_RULES = {
+  pointsForWin: 3,
+  pointsForDraw: 1,
+  pointsForLoss: 0,
+} as const;
 
 /** Complete in-memory setup for one predefined career market scenario. */
 export interface CareerMarketScenario {
@@ -52,17 +68,13 @@ export function careerStateFromScenario(saveId: CliSaveId, scenario: CareerMarke
 }
 
 /** Builds and annotates a newly generated career world before persisting it. */
-export function careerStateFromNewWorld(saveId: CliSaveId, league: FakeLeagueSystem, worldSeed: string): CliCareerState {
-  const selectedClubId = requiredClubId(league, 1);
-  const gameState = gameStateFromLeague(league, worldSeed);
-  const youthAcademies = generateInitialYouthAcademies({
-    worldSeed,
-    seasonId: league.seasonId,
-    referenceDate: league.seasonStartDate,
-    clubIds: league.clubIds,
-    clubContexts: youthClubContexts(league),
-  });
-
+export function careerStateFromNewWorld(
+  saveId: CliSaveId,
+  world: FakeDomesticWorld,
+  worldSeed: string,
+): CliCareerState {
+  const selectedClubId = world.defaultSelectedClubId;
+  const gameState = gameStateFromWorld(world, worldSeed);
   return {
     saveId,
     schemaVersion: 1,
@@ -74,47 +86,60 @@ export function careerStateFromNewWorld(saveId: CliSaveId, league: FakeLeagueSys
     selectedClubId,
     gameState: {
       ...gameState,
-      players: {
-        ...gameState.players,
-        ...youthAcademies.players,
-      },
-      playerIds: [...gameState.playerIds, ...youthAcademies.playerIds],
-      playerStates: {
-        ...gameState.playerStates,
-        ...youthAcademies.playerStates,
-      },
+      ...gameState,
+      players: { ...gameState.players, ...world.initialYouthAcademies.players },
+      playerIds: [...gameState.playerIds, ...world.initialYouthAcademies.playerIds],
+      playerStates: { ...gameState.playerStates, ...world.initialYouthAcademies.playerStates },
     },
-    youthAcademyState: youthAcademies.youthAcademyState,
-    seniorSquadState: league.seniorSquadState,
-    clubFinanceState: league.clubFinanceState,
+    youthAcademyState: world.initialYouthAcademies.youthAcademyState,
+    seniorSquadState: world.seniorSquadState,
+    clubFinanceState: world.clubFinanceState,
     transferHistory: [],
   };
 }
 
 /** Builds one supported deterministic market demo scenario from fake content. */
-export function buildMarketDemoScenario(league: FakeLeagueSystem, profileKey: MarketDemoProfileKey): CareerMarketScenario {
+export function buildMarketDemoScenario(world: FakeDomesticWorld, profileKey: MarketDemoProfileKey): CareerMarketScenario {
   if (profileKey === MARKET_DEMO_PROFILE_PRO01_STAR_REJECTED) {
-    return buildStarRejectedScenario(league);
+    return buildStarRejectedScenario(world);
   }
 
-  return buildAffordableScenario(league);
+  return buildAffordableScenario(world);
 }
 
-function buildAffordableScenario(league: FakeLeagueSystem): CareerMarketScenario {
-  const selectedClubId = requiredClubId(league, 1);
-  const sellingClubId = requiredClubId(league, 18);
-  const targetPlayerId = requiredClubPlayerId(league, sellingClubId, 10);
+/** Resolves source-audited windows through canonical current membership. */
+export function selectedClubTransferWindows(
+  world: FakeDomesticWorld,
+  selectedClubId: ClubId,
+) {
+  const competitionId = competitionIdForClubInWorld(
+    world.domesticCompetitionWorld,
+    selectedClubId,
+  );
+  const windows = competitionId === undefined
+    ? undefined
+    : world.transferWindowsByCompetitionId[competitionId];
+  if (windows === undefined) {
+    throw new Error(`Selected club transfer windows not found: ${selectedClubId}`);
+  }
+  return windows;
+}
+
+function buildAffordableScenario(world: FakeDomesticWorld): CareerMarketScenario {
+  const selectedClubId = world.defaultSelectedClubId;
+  const sellingClubId = requiredDivisionClubId(world, "third_division", 18);
+  const targetPlayerId = requiredClubPlayerId(world, sellingClubId, 10);
 
   return {
     selectedClubId,
     buyingClubId: selectedClubId,
     sellingClubId,
     targetPlayerId,
-    gameState: gameStateFromLeague(league),
-    seniorSquadState: league.seniorSquadState,
+    gameState: gameStateFromWorld(world),
+    seniorSquadState: world.seniorSquadState,
     clubFinanceState: withMarketDemoBudget(
-      league.clubFinanceState,
-      league.seniorSquadState,
+      world.clubFinanceState,
+      world.seniorSquadState,
       selectedClubId,
       targetPlayerId,
       6_000_000_00,
@@ -122,11 +147,11 @@ function buildAffordableScenario(league: FakeLeagueSystem): CareerMarketScenario
   };
 }
 
-function buildStarRejectedScenario(league: FakeLeagueSystem): CareerMarketScenario {
-  const selectedClubId = requiredClubId(league, 1);
-  const sellingClubId = requiredClubId(league, 2);
-  const targetPlayerId = requiredClubPlayerId(league, sellingClubId, 10);
-  const gameState = gameStateFromLeague(league);
+function buildStarRejectedScenario(world: FakeDomesticWorld): CareerMarketScenario {
+  const selectedClubId = world.defaultSelectedClubId;
+  const sellingClubId = requiredDivisionClubId(world, "first_division", 2);
+  const targetPlayerId = requiredClubPlayerId(world, sellingClubId, 10);
+  const gameState = gameStateFromWorld(world);
   const sellingClub = gameState.clubs[sellingClubId];
   const targetPlayer = gameState.players[targetPlayerId];
 
@@ -158,13 +183,13 @@ function buildStarRejectedScenario(league: FakeLeagueSystem): CareerMarketScenar
         },
       },
     },
-    seniorSquadState: league.seniorSquadState,
+    seniorSquadState: world.seniorSquadState,
     clubFinanceState: withMarketDemoBudget(
-      league.clubFinanceState,
-      league.seniorSquadState,
+      world.clubFinanceState,
+      world.seniorSquadState,
       selectedClubId,
       targetPlayerId,
-      100_000_000_00,
+      500_000_000_00,
     ),
   };
 }
@@ -172,9 +197,10 @@ function buildStarRejectedScenario(league: FakeLeagueSystem): CareerMarketScenar
 /**
  * Gives a named CLI market scenario its documented transfer headroom.
  *
- * The override changes annual limits only: cash remains explained by the
- * generated opening ledger. Wage headroom includes the target agreement so an
- * affordable demo is not rejected for an unrelated generated-world variance.
+ * The fixture provides both budget and liquid headroom so its documented
+ * outcome reaches the player table under the canonical Phase 79 workflow.
+ * Wage headroom includes the target agreement so an affordable demo is not
+ * rejected for an unrelated generated-world variance.
  */
 export function withMarketDemoBudget(
   financeState: CliClubFinanceState,
@@ -194,65 +220,91 @@ export function withMarketDemoBudget(
   const transferBudget = transferBudgetMinorUnits as CliMoney;
   const credibleTransferWageHeadroom = Math.ceil(targetContract.annualWage * 1.25) as CliMoney;
   const requiredWageBudget = (account.committedAnnualWage + credibleTransferWageHeadroom) as CliMoney;
+  const requiredCash = Math.max(
+    account.cashBalance,
+    transferBudget + requiredWageBudget,
+  ) as CliMoney;
+  const openingEntry = financeState.ledgerEntryIds
+    .map((entryId) => financeState.ledgerEntries[entryId])
+    .find((entry) => entry?.clubId === buyingClubId);
+  if (openingEntry === undefined) {
+    throw new Error(`Market demo opening finance entry not found: ${buyingClubId}`);
+  }
+  const fundedAccount = {
+    ...account,
+    cashBalance: requiredCash,
+    annualTransferBudget: transferBudget,
+    availableTransferBudget: transferBudget,
+    annualWageBudget: Math.max(account.annualWageBudget, requiredWageBudget) as CliMoney,
+  };
+  if (requiredCash === account.cashBalance) {
+    return {
+      ...financeState,
+      accounts: { ...financeState.accounts, [buyingClubId]: fundedAccount },
+    };
+  }
+
+  const fundingEntryId = (
+    `finance-ledger:market-demo-funding:${buyingClubId}:${transferBudgetMinorUnits}`
+  ) as CliClubFinanceState["ledgerEntryIds"][number];
   return {
     ...financeState,
-    accounts: {
-      ...financeState.accounts,
-      [buyingClubId]: {
-        ...account,
-        annualTransferBudget: transferBudget,
-        availableTransferBudget: transferBudget,
-        annualWageBudget: Math.max(account.annualWageBudget, requiredWageBudget) as CliMoney,
+    accounts: { ...financeState.accounts, [buyingClubId]: fundedAccount },
+    ledgerEntries: {
+      ...financeState.ledgerEntries,
+      [fundingEntryId]: {
+        id: fundingEntryId,
+        sequenceNumber: financeState.ledgerEntryIds.length + 1,
+        clubId: buyingClubId,
+        occurredOn: openingEntry.occurredOn,
+        currency: financeState.currency,
+        reason: "opening_capital",
+        direction: "credit",
+        amount: (requiredCash - account.cashBalance) as CliMoney,
+        balanceAfter: requiredCash,
+        referenceId: `market-demo-funding:${buyingClubId}:${transferBudgetMinorUnits}`,
       },
     },
+    ledgerEntryIds: [...financeState.ledgerEntryIds, fundingEntryId],
   };
 }
 
-function gameStateFromLeague(league: FakeLeagueSystem, seed = "career-demo"): CliGameState {
-  const calendar = generateRoundRobinCalendar({
-    seed,
-    seasonId: league.seasonId,
-    competitionId: league.competition.id,
-    clubIds: league.clubIds,
-    seasonStartDate: league.seasonStartDate,
-  });
+function gameStateFromWorld(world: FakeDomesticWorld, seed = "career-demo"): CliGameState {
+  const calendar = combineDomesticCompetitionCalendars(
+    world.domesticCompetitionWorld,
+    world.domesticCompetitionWorld.competitionIds.map((competitionId) => {
+      const competition = world.domesticCompetitionWorld.competitions[competitionId];
+      if (competition === undefined) throw new Error(`Missing domestic competition: ${competitionId}`);
+      return generateRoundRobinCalendar({
+        seed,
+        seasonId: world.seasonId,
+        competitionId,
+        clubIds: competition.clubIds,
+        seasonStartDate: world.seasonStartDate,
+      });
+    }),
+  );
 
   return {
     meta: {
       seed,
       rngAlgorithmVersion: "career-demo",
       saveSchemaVersion: 1,
+      calibrationVersions: { ...world.calibrationVersions },
     },
     calendar: {
-      currentDate: league.seasonStartDate,
-      currentSeasonId: league.seasonId,
+      currentDate: world.seasonStartDate,
+      currentSeasonId: world.seasonId,
     },
-    players: league.players,
-    playerIds: league.playerIds,
-    playerStates: league.playerStates,
-    clubs: league.clubsById,
-    clubIds: league.clubIds,
+    players: world.players,
+    playerIds: world.playerIds,
+    playerStates: world.playerStates,
+    clubs: world.clubsById,
+    clubIds: world.clubIds,
     fixtures: fixturesById(calendar.fixtures),
     fixtureIds: calendar.fixtureIds,
+    domesticCompetitionWorld: world.domesticCompetitionWorld,
   };
-}
-
-function youthClubContexts(league: FakeLeagueSystem): Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"] {
-  const contexts: Partial<Record<ClubId, InitialYouthAcademyClubContext>> = {};
-
-  for (const clubId of league.clubIds) {
-    const club = league.clubsById[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    contexts[clubId] = {
-      category: club.category,
-      reputation: club.reputation,
-    };
-  }
-
-  return contexts as Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"];
 }
 
 /**
@@ -309,8 +361,12 @@ function abilitiesFixture(value: number): CliPlayerAbilities {
   };
 }
 
-function requiredClubId(league: FakeLeagueSystem, oneBasedClubNumber: number): ClubId {
-  const clubId = league.clubIds[oneBasedClubNumber - 1];
+function requiredDivisionClubId(
+  world: FakeDomesticWorld,
+  category: keyof FakeDomesticWorld["divisionClubIds"],
+  oneBasedClubNumber: number,
+): ClubId {
+  const clubId = world.divisionClubIds[category][oneBasedClubNumber - 1];
 
   if (clubId === undefined) {
     throw new Error(String(oneBasedClubNumber));
@@ -319,12 +375,55 @@ function requiredClubId(league: FakeLeagueSystem, oneBasedClubNumber: number): C
   return clubId;
 }
 
-function requiredClubPlayerId(league: FakeLeagueSystem, clubId: ClubId, oneBasedSlotNumber: number): PlayerId {
-  const playerId = league.clubsById[clubId]?.playerIds[oneBasedSlotNumber - 1];
+function requiredClubPlayerId(world: FakeDomesticWorld, clubId: ClubId, oneBasedSlotNumber: number): PlayerId {
+  const playerId = world.clubsById[clubId]?.playerIds[oneBasedSlotNumber - 1];
 
   if (playerId === undefined) {
     throw new Error(String(oneBasedSlotNumber));
   }
 
   return playerId;
+}
+
+/**
+ * Rejects a loaded career whose immutable topology/economy asset versions are
+ * absent or differ from the only bundle supported by this application build.
+ */
+export function assertSupportedCareerCalibrationVersions(careerState: CliCareerState): void {
+  const actual = careerState.gameState.meta.calibrationVersions;
+  const expected = playerEconomyCalibration.versions;
+  if (actual === undefined || !sameCalibrationVersions(actual, expected)) {
+    throw new Error("Unsupported career topology/calibration versions");
+  }
+  const selectedCompetitionId = careerState.gameState.domesticCompetitionWorld === undefined
+    ? undefined
+    : competitionIdForClubInWorld(
+        careerState.gameState.domesticCompetitionWorld,
+        careerState.selectedClubId,
+      );
+  if (selectedCompetitionId === undefined) {
+    throw new Error("Selected club has no canonical domestic competition");
+  }
+}
+
+/** Derives one club's competition without adding a second membership truth. */
+export function competitionIdForClubInWorld(
+  world: NonNullable<CliGameState["domesticCompetitionWorld"]>,
+  clubId: ClubId,
+) {
+  return world.competitionIds.find((competitionId) =>
+    world.competitions[competitionId]?.clubIds.includes(clubId) === true
+  );
+}
+
+function sameCalibrationVersions(
+  actual: PlayerEconomyCalibrationVersionBundle,
+  expected: PlayerEconomyCalibrationVersionBundle,
+): boolean {
+  const expectedKeys = Object.keys(expected);
+  return Object.keys(actual).length === expectedKeys.length
+    && expectedKeys.every((key) =>
+    actual[key as keyof PlayerEconomyCalibrationVersionBundle]
+      === expected[key as keyof PlayerEconomyCalibrationVersionBundle]
+  );
 }

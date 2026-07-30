@@ -4,7 +4,9 @@ import {
   nonNegativeMoney,
   type CareerState,
   type ClubId,
+  type MarketBehaviorCalibrationConfig,
   type Money,
+  type PlayerWagePolicyConfig,
 } from "@game/domain";
 
 /** Stable reason why a new contract commitment cannot be funded. */
@@ -23,12 +25,21 @@ export type CareerContractCapacityReason =
 export interface EvaluateCareerContractCapacityInput {
   readonly careerState: CareerState;
   readonly clubId: ClubId;
+  /** Validated policy that owns the account's annual wage ceiling. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Exact version-selected reserve and budget-utilization policy. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly addedAnnualWage: Money;
   /** Validated active wage replaced atomically by the proposed agreement. */
   readonly replacedAnnualWage?: Money;
   readonly addedSigningBonus: Money;
   /** Immediate non-contract cash cost, such as a permanent-transfer fee. */
   readonly additionalImmediateCost?: Money;
+  /**
+   * Structural AI squad repair may consume the existing two-percent planning
+   * buffer, but never exceed the club's actual annual wage budget.
+   */
+  readonly allowFullWageBudgetForStructuralRepair?: boolean;
 }
 
 /** Structured result of one contract-capacity evaluation. */
@@ -59,6 +70,12 @@ export type CareerContractCapacityEvaluation =
 export function evaluateCareerContractCapacity(
   input: EvaluateCareerContractCapacityInput,
 ): CareerContractCapacityEvaluation {
+  const club = input.careerState.gameState.clubs[input.clubId];
+  const divisionTarget = input.wagePolicy.wageFinanceCalibration.gameDesignTargets
+    .find((candidate) => candidate.division === club?.category);
+  if (divisionTarget === undefined) {
+    return { status: "unaffordable", reason: "club_finance_account_missing" };
+  }
   const financeState = input.careerState.clubFinanceState;
   const account = financeState === undefined
     ? undefined
@@ -73,12 +90,19 @@ export function evaluateCareerContractCapacity(
     ),
     input.addedAnnualWage,
   );
-  if (requiredAnnualWage > account.annualWageBudget) {
+  const maximumCommittedAnnualWage =
+    input.allowFullWageBudgetForStructuralRepair === true
+      ? account.annualWageBudget
+      : percentageMoney(
+          account.annualWageBudget,
+          input.marketBehaviorPolicy.affordability.maximumWageBudgetUseBasisPoints,
+        );
+  if (requiredAnnualWage > maximumCommittedAnnualWage) {
     return {
       status: "unaffordable",
       reason: "wage_budget_exceeded",
       requiredAmount: requiredAnnualWage,
-      availableAmount: account.annualWageBudget,
+      availableAmount: maximumCommittedAnnualWage,
     };
   }
 
@@ -86,19 +110,24 @@ export function evaluateCareerContractCapacity(
     input.addedSigningBonus,
     input.additionalImmediateCost ?? nonNegativeMoney(0),
   );
-  if (requiredCash > account.cashBalance) {
+  const spendableCash = cashAvailableAboveReserve(
+    account.cashBalance,
+    account.annualWageBudget,
+    input.marketBehaviorPolicy.affordability.minimumCashReserveBasisPoints,
+  );
+  if (requiredCash > spendableCash) {
     return {
       status: "unaffordable",
       reason: "insufficient_cash",
       requiredAmount: requiredCash,
-      availableAmount: account.cashBalance,
+      availableAmount: spendableCash,
     };
   }
 
   return {
     status: "affordable",
     requiredAnnualWage,
-    availableAnnualWageBudget: account.annualWageBudget,
+    availableAnnualWageBudget: maximumCommittedAnnualWage,
     requiredCash,
     availableCash: account.cashBalance,
   };
@@ -138,6 +167,8 @@ export function evaluateTransferFeeCapacity(input: {
   readonly careerState: CareerState;
   readonly buyingClubId: ClubId;
   readonly fee: Money;
+  /** Exact version-selected reserve and transfer-budget policy. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): TransferFeeCapacityEvaluation {
   const financeState = input.careerState.clubFinanceState;
   const account = financeState === undefined
@@ -152,20 +183,29 @@ export function evaluateTransferFeeCapacity(input: {
     };
   }
 
-  if (input.fee > account.availableTransferBudget) {
+  const spendableTransferBudget = percentageMoney(
+    account.availableTransferBudget,
+    input.marketBehaviorPolicy.affordability.maximumTransferBudgetUseBasisPoints,
+  );
+  if (input.fee > spendableTransferBudget) {
     return {
       status: "unaffordable",
       reason: "insufficient_transfer_budget",
       requiredAmount: input.fee,
-      availableAmount: account.availableTransferBudget,
+      availableAmount: spendableTransferBudget,
     };
   }
-  if (input.fee > account.cashBalance) {
+  const spendableCash = cashAvailableAboveReserve(
+    account.cashBalance,
+    account.annualWageBudget,
+    input.marketBehaviorPolicy.affordability.minimumCashReserveBasisPoints,
+  );
+  if (input.fee > spendableCash) {
     return {
       status: "unaffordable",
       reason: "insufficient_cash",
       requiredAmount: input.fee,
-      availableAmount: account.cashBalance,
+      availableAmount: spendableCash,
     };
   }
 
@@ -176,4 +216,21 @@ export function evaluateTransferFeeCapacity(input: {
     availableCash: account.cashBalance,
     projectedCash: nonNegativeMoney(account.cashBalance - input.fee),
   };
+}
+
+/** Returns liquid cash that can be spent without crossing the policy reserve. */
+function cashAvailableAboveReserve(
+  cashBalance: Money,
+  annualWageBudget: Money,
+  minimumCashReserveBasisPoints: number,
+): Money {
+  const reserve = percentageMoney(annualWageBudget, minimumCashReserveBasisPoints);
+  return nonNegativeMoney(Math.max(0, cashBalance - reserve));
+}
+
+/** Applies one integer basis-point percentage without floating-point drift. */
+function percentageMoney(value: Money, basisPoints: number): Money {
+  return nonNegativeMoney(Number(
+    (BigInt(value) * BigInt(basisPoints)) / 10_000n,
+  ));
 }

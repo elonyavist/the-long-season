@@ -112,3 +112,33 @@ test("generated current profile always emits valid 0..20 ability values", () => 
     assert.equal(value >= 0 && value <= 20, true, key);
   }
 });
+
+test("the exceptional senior lane constructs six-star role quality without a post-generation floor", () => {
+  const roles = [
+    "goalkeeper",
+    "center_back",
+    "full_back",
+    "central_midfielder",
+    "winger",
+    "striker",
+  ] as const;
+
+  for (const role of roles) {
+    const profile = buildCurrentPlayerProfile({
+      seed: "world-current-six",
+      playerKey: `player:world-current-six:${role}`,
+      division: "first_division",
+      clubTier: "title_contender",
+      role,
+      ageYears: 27,
+      rarityLane: "exceptional",
+      slotDepthAdjustment: 0.35,
+    });
+
+    assert.equal(
+      Number(roleCurrentAbility(profile, getPlayerRoleProfile(role))) >= 17,
+      true,
+      role,
+    );
+  }
+});

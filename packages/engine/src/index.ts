@@ -10,9 +10,25 @@ export * from "./player-state/index.ts";
 export * from "./squad/index.ts";
 export * from "./team-selection/index.ts";
 export {
+  applyDomesticPromotionRelegation,
+  type DomesticCompetitionMovement,
+  type DomesticPromotionRelegationApplied,
+  type DomesticPromotionRelegationInvalid,
+  type DomesticPromotionRelegationResult,
+} from "./career/promotion-relegation.ts";
+export {
+  buildCareerMarketCatalog,
+  type CareerMarketCatalog,
+  type CareerMarketCatalogEmployment,
+  type CareerMarketCatalogTarget,
+  type CareerMarketSourceTier,
+} from "./career/career-market-catalog.ts";
+export {
   advanceAiMarketLifecycle,
   deriveAiMarketNeeds,
   type AdvanceAiMarketLifecycleResult,
+  type AiMarketDiagnosticFact,
+  type AiMarketDiagnosticReason,
   type AiMarketLifecycleFact,
   type AiMarketNeed,
   type AiMarketNeedReason,
@@ -51,6 +67,7 @@ export {
 export {
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
+  orderedCareerFixtureIds,
   type NextCareerFixtureFound,
   type NextCareerFixtureInvalid,
   type NextCareerFixtureInvalidReason,
@@ -60,11 +77,13 @@ export {
 export {
   continueCareerUntilAttention,
   createMatchdayAttention,
+  createNextCareerMatchdayAttention,
   type CareerMatchdayAttention,
   type CareerContinueStopReason,
   type ContinueCareerPreparationInput,
   type ContinueCareerUntilAttentionInput,
   type ContinueCareerUntilAttentionResult,
+  type NextCareerMatchdayAttentionResult,
 } from "./career/continue-career.ts";
 export {
   CareerInboxLifecycleError,
@@ -172,6 +191,7 @@ export {
   advanceTransferNegotiations,
   createTransferNegotiationId,
   deriveSellerTransferWillingness,
+  deriveTransferCommercialSnapshot,
   submitTransferOffer,
   withdrawTransferNegotiation,
   type AdvanceTransferNegotiationsInput,
@@ -182,6 +202,7 @@ export {
   type SubmitTransferOfferInput,
   type SubmittedTransferParties,
   type TransferDepartment,
+  type TransferCommercialSnapshot,
   type TransferNegotiationCommandRejectionReason,
   type TransferNegotiationCommandResult,
 } from "./career/transfer-negotiation.ts";
@@ -370,6 +391,7 @@ export {
   type CareerSeasonAdvancementOperation,
   type CareerSeasonAdvancementWarning,
   type CareerSeasonArchiveFact,
+  type CareerSeasonMarketLifecycleFact,
   type CareerSquadHealthFact,
   type CareerSquadMaintenanceFact,
   type CareerTransferTurnoverFact,
@@ -378,6 +400,14 @@ export {
   type CareerYouthLifecycleFact,
   type CareerYouthPromotionFact,
 } from "./career/advance-career-season.ts";
+export {
+  buildCareerPlayerSeasonStatistics,
+  selectCareerPlayerStatistics,
+  type BuildCareerPlayerSeasonStatisticsInput,
+  type CareerPlayerStatisticsSelection,
+  type CareerPlayerStatisticsSummary,
+  type SelectCareerPlayerStatisticsInput,
+} from "./career/player-statistics.ts";
 export { createMatchReport } from "./match-engine/create-match-report.ts";
 export {
   ApplyMatchReportToFixtureError,
@@ -399,8 +429,10 @@ export {
 } from "./use-cases/simulate-season.ts";
 export {
   CalendarGenerationError,
+  combineDomesticCompetitionCalendars,
   generateRoundRobinCalendar,
   type CalendarGenerationErrorCode,
+  type DomesticCalendarCollection,
   type GenerateRoundRobinCalendarInput,
   type RoundRobinCalendar,
 } from "./season-engine/calendar.ts";

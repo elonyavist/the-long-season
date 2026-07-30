@@ -32,7 +32,7 @@ describe("CareerInboxScreen", () => {
       />,
     );
 
-    expect(html).toContain("Manager decisions");
+    expect(html).toContain('id="career-inbox-heading"');
     expect(html).toContain("All");
     expect(html).toContain("To handle");
     expect(html).toContain("Unread");

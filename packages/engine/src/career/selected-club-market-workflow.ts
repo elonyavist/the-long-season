@@ -4,12 +4,15 @@ import {
   type CareerInboxMessage,
   type CareerState,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type PreliminaryAgreement,
   type SeasonTransferWindows,
+  type PlayerWagePolicyConfig,
   type TransferNegotiation,
 } from "@game/domain";
 
 import { advancePreliminaryAgreementLifecycle } from "./preliminary-agreement.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 import { advanceTransferNegotiations } from "./transfer-negotiation.ts";
 import { advanceTransferPlayerNegotiations } from "./transfer-player-negotiation.ts";
 
@@ -98,6 +101,9 @@ export function nextSelectedClubMarketDueDate(
       consider(negotiation.clock.responseDueOn);
       consider((negotiation.clock.deadline + 1) as GameDate);
     }
+    if (negotiation.status === "countered" || negotiation.status === "accepted") {
+      consider((negotiation.clock.deadline + 1) as GameDate);
+    }
     if (negotiation.status === "player_countered") {
       consider((negotiation.clock.deadline + 1) as GameDate);
     }
@@ -133,16 +139,25 @@ export function advanceSelectedClubMarketLifecycles(input: {
   readonly careerState: CareerState;
   readonly throughDate: GameDate;
   readonly transferWindows?: SeasonTransferWindows;
+  /** Explicit versioned public-value content for seller replies. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Explicit wage policy used by player and preliminary tables. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): CareerState {
   let working = advanceTransferNegotiations({
     careerState: input.careerState,
     throughDate: input.throughDate,
     protectedSellingClubIds: [input.careerState.selectedClubId],
     protectSquadDepth: true,
+    valuationConfig: input.valuationConfig,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
   }).careerState;
   if (input.transferWindows !== undefined) {
     working = advanceTransferPlayerNegotiations({
       careerState: working,
+      wagePolicy: input.wagePolicy,
+      marketBehaviorPolicy: input.marketBehaviorPolicy,
       throughDate: input.throughDate,
       transferWindows: input.transferWindows,
     }).careerState;
@@ -150,6 +165,8 @@ export function advanceSelectedClubMarketLifecycles(input: {
   return advancePreliminaryAgreementLifecycle({
     careerState: working,
     throughDate: input.throughDate,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
   }).careerState;
 }
 

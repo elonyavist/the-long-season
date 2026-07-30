@@ -7,6 +7,7 @@ import {
   createCareerState,
   fixtureId,
   gameDate,
+  nonNegativeMoney,
   playerId,
   saveId,
   seasonId,
@@ -48,8 +49,8 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
   );
 });
 
-test("migration ledger exposes one complete Phase 79 baseline", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [13]);
+test("migration ledger exposes the Phase 79 baseline, player statistics, and Phase 79C topology", () => {
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [17]);
   const statements = SQLITE_CAREER_MIGRATIONS[0]?.statements ?? [];
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
@@ -65,6 +66,12 @@ test("migration ledger exposes one complete Phase 79 baseline", () => {
   equal(statements.some((statement) => statement.includes("contract_negotiation_states")), true);
   equal(statements.some((statement) => statement.includes("continue_policy")), true);
   equal(statements.some((statement) => statement.includes("market_budgets")), false);
+  equal(
+    statements.some((statement) => statement.includes("season_player_statistics")),
+    true,
+  );
+  equal(statements.some((statement) => statement.includes("domestic_competitions")), true);
+  equal(statements.some((statement) => statement.includes("topology_decision_id")), true);
 });
 
 function worldFixture(rawSaveId: string, seed: string): CareerState {
@@ -110,7 +117,20 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
     schemaVersion: 1,
     selectedClubId: homeId,
     gameState: {
-      meta: { seed, rngAlgorithmVersion: "sfc32-v1", saveSchemaVersion: 1 },
+      meta: {
+        seed,
+        rngAlgorithmVersion: "sfc32-v1",
+        saveSchemaVersion: 1,
+        calibrationVersions: {
+          topologyDecisionId: "fictional-three-tier-v1",
+          playerRatingScaleVersion: "rating-v1",
+          playerMarketCalibrationVersion: "market-v1",
+          valuationCurvesVersion: "valuation-v1",
+          askingPriceCurvesVersion: "asking-v1",
+          marketBehaviorCalibrationVersion: "behavior-v1",
+          wageFinanceCalibrationVersion: "wage-v1",
+        },
+      },
       calendar: { currentDate: gameDate(20_100), currentSeasonId: seasonId("season:2026") },
       players: { [homePlayerId]: homePlayer, [awayPlayerId]: awayPlayer },
       playerIds: [awayPlayerId, homePlayerId],
@@ -142,9 +162,59 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
         },
       },
       fixtureIds: [futureFixtureId, playedFixtureId],
+      domesticCompetitionWorld: {
+        competitionIds: [competitionId("competition:ita-3")],
+        competitions: {
+          [competitionId("competition:ita-3")]: {
+            id: competitionId("competition:ita-3"),
+            name: "Scalata Three",
+            clubIds: [awayId, homeId],
+            matchRules: {
+              maximumSubstitutions: 5,
+              substitutionWindowLimit: null,
+              allowsPlayerReentry: false,
+              yellowCardAccumulationThreshold: 5,
+              straightRedSuspensionMatches: 3,
+              secondYellowSuspensionMatches: 1,
+              yellowAccumulationSuspensionMatches: 1,
+            },
+            seasonDistribution: {
+              currency: "EUR",
+              prizes: [
+                { position: 1, amount: nonNegativeMoney(2_000_000_00) },
+                { position: 2, amount: nonNegativeMoney(1_000_000_00) },
+              ],
+            },
+          },
+        },
+        seasonHistory: [{
+          sequenceNumber: 1,
+          seasonId: seasonId("season:2025"),
+          competitionId: competitionId("competition:ita-3"),
+          finalTable: [
+            tableRow(1, homeId, 3),
+            tableRow(2, awayId, 0),
+          ],
+        }],
+      },
     },
     transferHistory: [],
   });
+}
+
+function tableRow(position: number, id: ReturnType<typeof clubId>, points: number) {
+  return {
+    position,
+    clubId: id,
+    played: 1,
+    wins: points === 3 ? 1 : 0,
+    draws: 0,
+    losses: points === 0 ? 1 : 0,
+    goalsFor: points === 3 ? 2 : 0,
+    goalsAgainst: points === 3 ? 0 : 2,
+    goalDifference: points === 3 ? 2 : -2,
+    points,
+  };
 }
 
 function metadataFixture(state: CareerState): CareerSaveMetadata {

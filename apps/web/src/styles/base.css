@@ -4,6 +4,12 @@
 
 html {
   min-width: 320px;
+  /*
+   * Both the root and the body clip. Only body clipped before, so an overflowing
+   * descendant could still widen the page. clip rather than hidden so the sticky
+   * table headers and the fixed background layers keep working.
+   */
+  overflow-x: clip;
   background: var(--tls-theme-app-background);
   color: var(--tls-color-text);
   font-family: var(--tls-font-ui);
@@ -48,9 +54,14 @@ textarea {
   font: inherit;
 }
 
+/*
+ * One control height for the whole product. Buttons used to floor at 2.5rem
+ * while every form control floored at 2.75rem, so a button next to an input was
+ * visibly shorter. 2.75rem is also the 44px touch-target floor.
+ */
 button,
 select {
-  min-height: 2.5rem;
+  min-height: var(--tls-control-height);
 }
 
 button {

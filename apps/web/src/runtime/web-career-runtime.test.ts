@@ -24,6 +24,7 @@ import {
   buildWebCareerState,
   classifyWebCareerPersistenceFailure,
   inspectWebCareerAttention,
+  rolloverCompletedWebCareerSeason,
   type WebCareerInboxMessageId,
   type WebCareerSaveId,
   type WebCareerState,
@@ -47,6 +48,78 @@ describe("WebCareerRuntime", () => {
     const identity = { saveId: "save:web-fixed" as WebCareerSaveId, worldSeed: "web-fixed-seed" };
 
     expect(buildWebCareerState(identity)).toEqual(buildWebCareerState(identity));
+  });
+
+  it("builds the canonical three-division topology and stable identity hash", () => {
+    const state = buildWebCareerState({
+      saveId: "save:web-shared-hash" as WebCareerSaveId,
+      worldSeed: "shared-three-division-seed",
+    });
+
+    expect(state.selectedClubId).toBe("club:ita-3-01");
+    expect(state.gameState.clubIds).toHaveLength(54);
+    expect(state.gameState.fixtureIds).toHaveLength(918);
+    expect(state.gameState.domesticCompetitionWorld?.competitionIds).toEqual([
+      "competition:ita-1",
+      "competition:ita-2",
+      "competition:ita-3",
+    ]);
+    expect(canonicalCareerIdentityHash(state)).toBe("ac2f4c6c");
+  });
+
+  it("publishes one completed three-division boundary atomically and deterministically", () => {
+    const generated = buildWebCareerState({
+      saveId: "save:web-rollover" as WebCareerSaveId,
+      worldSeed: "web-rollover-seed",
+    });
+    const completed = completeWebCareerSeason(generated);
+    const first = rolloverCompletedWebCareerSeason(completed);
+    const repeated = rolloverCompletedWebCareerSeason(completed);
+
+    expect(first).toEqual(repeated);
+    expect(first.status).toBe("advanced");
+    if (first.status !== "advanced") throw new Error("Expected completed season rollover");
+    expect(first.careerState.gameState.calendar.currentSeasonId).toBe("season:2027");
+    expect(first.careerState.gameState.fixtureIds).toHaveLength(1_836);
+    expect(first.careerState.gameState.domesticCompetitionWorld?.seasonHistory).toHaveLength(3);
+    expect(first.facts.competitionMovements).toHaveLength(10);
+    expect(first.facts.youthIntake.acceptedPlayerCount).toBe(
+      first.facts.youthIntake.candidateCount,
+    );
+    expect(first.facts.youthIntake.skippedPlayerCount).toBe(0);
+    expect(first.facts.youthIntake.acceptedPlayerIds).toHaveLength(
+      first.facts.youthIntake.acceptedPlayerCount,
+    );
+    expect(first.careerState.gameState.domesticCompetitionWorld?.competitions[
+      "competition:ita-2" as keyof NonNullable<
+        WebCareerState["gameState"]["domesticCompetitionWorld"]
+      >["competitions"]
+    ]?.clubIds).toContain(generated.selectedClubId);
+    expect(first.careerState.selectedClubId).toBe(generated.selectedClubId);
+    const promotedFixture = findNextCareerFixture(first.careerState);
+    expect(promotedFixture.status).toBe("found");
+    if (promotedFixture.status !== "found") throw new Error("Expected promoted-club fixture");
+    expect(promotedFixture.fixture.competitionId).toBe("competition:ita-2");
+
+    const secondBoundary = rolloverCompletedWebCareerSeason(
+      completeWebCareerSeason(first.careerState),
+    );
+    expect(secondBoundary.status).toBe("advanced");
+    if (secondBoundary.status !== "advanced") throw new Error("Expected second season rollover");
+    expect(secondBoundary.careerState.gameState.calendar.currentSeasonId).toBe("season:2028");
+    expect(secondBoundary.careerState.gameState.domesticCompetitionWorld?.seasonHistory).toHaveLength(6);
+    expect(secondBoundary.careerState.gameState.domesticCompetitionWorld?.competitionIds.map(
+      (competitionId) =>
+        secondBoundary.careerState.gameState.domesticCompetitionWorld?.competitions[
+          competitionId
+        ]?.clubIds.length,
+    )).toEqual([18, 18, 18]);
+    const secondPromotedFixture = findNextCareerFixture(secondBoundary.careerState);
+    expect(secondPromotedFixture.status).toBe("found");
+    if (secondPromotedFixture.status !== "found") {
+      throw new Error("Expected twice-promoted club fixture");
+    }
+    expect(secondPromotedFixture.fixture.competitionId).toBe("competition:ita-1");
   });
 
   it("writes a generated career before returning it to the caller", async () => {
@@ -90,6 +163,44 @@ describe("WebCareerRuntime", () => {
     expect(loaded.currentSeasonInbox?.[0]?.category).toBe("matchday");
     expect(runtime.careerSessionStatus()).toMatchObject({ dirty: true, autosaveIntervalDays: 7 });
     expect(storage.savedInputs).toHaveLength(0);
+  });
+
+  it("deletes only the loaded beta career with a mismatched calibration version", async () => {
+    const storage = new RecordingCareerStorage();
+    const generated = buildWebCareerState({
+      saveId: "save:web-version-mismatch" as WebCareerSaveId,
+      worldSeed: "web-version-mismatch",
+    });
+    const state = {
+      ...generated,
+      gameState: {
+        ...generated.gameState,
+        meta: {
+          ...generated.gameState.meta,
+          calibrationVersions: {
+            ...generated.gameState.meta.calibrationVersions,
+            playerRatingScaleVersion: "player-rating-scale-v1",
+          },
+        },
+      },
+    } as WebCareerState;
+    const compatible = buildWebCareerState({
+      saveId: "save:web-version-compatible" as WebCareerSaveId,
+      worldSeed: "web-version-compatible",
+    });
+    storage.states.set(state.saveId, state);
+    storage.states.set(compatible.saveId, compatible);
+    const runtime = new WebCareerRuntime(storage);
+
+    await expect(runtime.loadCareer(state.saveId)).rejects.toMatchObject({
+      name: "StorageError",
+      code: "unsupported_schema_version",
+    });
+    expect(storage.states.has(state.saveId)).toBe(false);
+    expect(storage.states.has(compatible.saveId)).toBe(true);
+    await expect(runtime.loadCareer(compatible.saveId)).resolves.toEqual(
+      expect.objectContaining({ saveId: compatible.saveId }),
+    );
   });
 
   it("refreshes a delivered matchday action in place when a loaded preparation is complete", async () => {
@@ -734,6 +845,67 @@ function completePreparation(career: WebCareerState): NonNullable<WebCareerState
   const preparation = buildDurableMatchPreparation(career, draft);
   if (preparation === undefined) throw new Error("Expected complete generated match preparation");
   return preparation;
+}
+
+/** Completes only the active season with deterministic table-producing scores. */
+function completeWebCareerSeason(career: WebCareerState): WebCareerState {
+  const fixtures = { ...career.gameState.fixtures };
+  for (const fixtureId of career.gameState.fixtureIds) {
+    const fixture = career.gameState.fixtures[fixtureId];
+    if (
+      fixture === undefined
+      || fixture.seasonId !== career.gameState.calendar.currentSeasonId
+    ) {
+      continue;
+    }
+    const homeRank = Number(String(fixture.homeClubId).slice(-2));
+    const awayRank = Number(String(fixture.awayClubId).slice(-2));
+    fixtures[fixtureId] = {
+      ...fixture,
+      result: homeRank < awayRank
+        ? { played: true, homeGoals: 2, awayGoals: 1 }
+        : { played: true, homeGoals: 1, awayGoals: 2 },
+    };
+  }
+  return {
+    ...career,
+    gameState: {
+      ...career.gameState,
+      fixtures,
+    },
+  };
+}
+
+/**
+ * Hashes only canonical world identity and ordered topology facts.
+ *
+ * The CLI suite uses the same projection and expected hash, proving that both
+ * composition roots build the same seed-specific world without importing one
+ * application from the other.
+ */
+function canonicalCareerIdentityHash(state: WebCareerState): string {
+  const world = state.gameState.domesticCompetitionWorld;
+  const serialized = JSON.stringify({
+    selectedClubId: state.selectedClubId,
+    calibrationVersions: state.gameState.meta.calibrationVersions,
+    competitionIds: world?.competitionIds,
+    memberships: world?.competitionIds.map((competitionId) => [
+      competitionId,
+      world.competitions[competitionId]?.clubIds,
+    ]),
+    clubIds: state.gameState.clubIds,
+    clubs: state.gameState.clubIds.map((clubId) => state.gameState.clubs[clubId]),
+    playerIds: state.gameState.playerIds,
+    players: state.gameState.playerIds.map((playerId) => state.gameState.players[playerId]),
+    fixtureIds: state.gameState.fixtureIds,
+    fixtures: state.gameState.fixtureIds.map((fixtureId) => state.gameState.fixtures[fixtureId]),
+  });
+  let hash = 2_166_136_261;
+  for (let index = 0; index < serialized.length; index += 1) {
+    hash ^= serialized.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 /** Minimal recording adapter used to test runtime orchestration, not SQLite. */

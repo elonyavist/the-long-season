@@ -65,7 +65,7 @@ describe("MatchdayTabellino", () => {
 
     expect(markup).toContain('class="tls-match-tabellino-incident is-goal"');
     expect(markup).toContain('data-incident-kind="penalty_goal"');
-    expect(markup).toContain("⚽");
+    expect(markup).toContain("●");
     expect(markup).toContain("Goal (penalty)");
     expect(markup).toContain("Matteo Moro");
     expect(markup).not.toContain("Penalty scored");

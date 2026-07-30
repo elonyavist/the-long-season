@@ -1,3 +1,8 @@
+/* Hallmark · macrostructure: Workbench · tone: serious retro club office · anchor hue: muted gold
+ * pre-emit critique: P5 H5 E5 S5 R5 V4
+ * contrast: pass (40–41) · icons: pass (30) · honest: pass (46)
+ * chrome: pass (47) · tokens: pass (48) · responsive: pass (34, 49–57)
+ */
 .tls-menu-button {
   width: 100%;
   padding: 0 var(--tls-space-4);
@@ -35,7 +40,12 @@
   gap: var(--tls-space-2);
   margin-block-end: var(--tls-space-4);
   padding: var(--tls-space-4);
-  border-inline-start: 3px solid var(--tls-color-gold);
+  /*
+   * Hairline all round. The tinted surface already says "read me"; the thick
+   * gold edge said it a second time and read as decoration.
+   */
+  border: 1px solid color-mix(in srgb, var(--tls-color-gold) 46%, var(--tls-theme-border));
+  border-radius: var(--tls-radius-sm);
   background: color-mix(in srgb, var(--tls-theme-primary-action-surface) 10%, transparent);
   color: var(--tls-color-text);
 }
@@ -80,7 +90,7 @@
 .tls-menu-button-primary:hover:not(:disabled) {
   color: var(--tls-theme-primary-action-text);
   background: var(--tls-theme-primary-action-hover);
-  border-color: color-mix(in srgb, var(--tls-theme-primary-action-hover) 82%, #ffffff);
+  border-color: color-mix(in srgb, var(--tls-theme-primary-action-hover) 82%, var(--tls-mix-light));
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--tls-theme-primary-action-text) 18%, transparent),
     0 0 0 1px color-mix(in srgb, var(--tls-theme-primary-action-surface) 34%, transparent);
@@ -218,20 +228,20 @@
 }
 
 .tls-player-candidate-row[data-suitability="natural"] .tls-player-candidate-suitability {
-  background: var(--tls-color-green);
+  background: var(--tls-suitability-natural);
 }
 
 .tls-player-candidate-row[data-suitability="accomplished"] .tls-player-candidate-suitability {
-  background: #93bf64;
+  background: var(--tls-suitability-accomplished);
 }
 
 .tls-player-candidate-row[data-suitability="unconvincing"] .tls-player-candidate-suitability {
-  background: #c8863b;
+  background: var(--tls-suitability-unconvincing);
 }
 
 .tls-player-candidate-row[data-suitability="makeshift"] .tls-player-candidate-suitability {
   color: var(--tls-color-text);
-  background: var(--tls-color-red);
+  background: var(--tls-suitability-makeshift);
 }
 
 .tls-dashboard-panel {
@@ -287,8 +297,12 @@
   max-width: 24rem;
 }
 
+/*
+ * The shell panel is the only card on this screen. The priority block is a
+ * region inside it, separated by a surface shift and a top rule rather than a
+ * second border-plus-shadow box.
+ */
 .tls-dashboard-priority {
-  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(var(--tls-space-4), 3vw, var(--tls-space-6));
@@ -297,49 +311,23 @@
   padding: clamp(var(--tls-space-5), 4vw, var(--tls-space-6));
   overflow: hidden;
   background: color-mix(in srgb, var(--tls-theme-elevated-panel-surface) 94%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tls-theme-chalk) 24%, transparent);
-  border-radius: var(--tls-radius-sm);
-  box-shadow: var(--tls-shadow-inset);
-}
-
-.tls-dashboard-priority::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 0.34rem;
-  content: "";
-  background: var(--tls-theme-primary-action-surface);
-}
-
-.tls-dashboard-priority::after {
-  position: absolute;
-  width: 16rem;
-  aspect-ratio: 1;
-  right: 15%;
-  bottom: -10.5rem;
-  content: "";
-  pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--tls-theme-chalk) 10%, transparent);
-  border-radius: 50%;
-}
-
-.tls-dashboard-priority[data-task-state="attention"]::before,
-.tls-dashboard-priority[data-task-state="unprepared"]::before {
-  background: var(--tls-state-warning-foreground);
-}
-
-.tls-dashboard-priority[data-task-state="post_match"]::before {
-  background: var(--tls-state-success-foreground);
+  border-top: 1px solid color-mix(in srgb, var(--tls-theme-chalk) 24%, transparent);
 }
 
 .tls-dashboard-task-copy {
   display: grid;
   gap: var(--tls-space-3);
   min-width: 0;
-  position: relative;
-  z-index: 1;
 }
 
+/*
+ * Task state is carried by the label: its own colour plus one accent square.
+ * It used to be a full-height edge stripe, which duplicated this signal.
+ */
 .tls-dashboard-task-state {
+  display: flex;
+  gap: var(--tls-space-2);
+  align-items: center;
   margin: 0;
   color: var(--tls-theme-primary-action-surface);
   font-size: var(--tls-font-size-xs);
@@ -348,9 +336,20 @@
   text-transform: uppercase;
 }
 
+.tls-dashboard-task-state::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  content: "";
+  background: currentColor;
+}
+
 .tls-dashboard-priority[data-task-state="attention"] .tls-dashboard-task-state,
 .tls-dashboard-priority[data-task-state="unprepared"] .tls-dashboard-task-state {
   color: var(--tls-state-warning-foreground);
+}
+
+.tls-dashboard-priority[data-task-state="post_match"] .tls-dashboard-task-state {
+  color: var(--tls-state-success-foreground);
 }
 
 .tls-dashboard-task-copy h2 {
@@ -365,7 +364,7 @@
 }
 
 .tls-dashboard-task-summary {
-  max-width: 40rem;
+  max-width: var(--tls-measure-prose);
   margin: 0;
   color: var(--tls-color-text-muted);
   font-size: var(--tls-font-size-md);
@@ -698,7 +697,7 @@
   border: 1px solid color-mix(in srgb, var(--tls-theme-chalk) 24%, transparent);
   border-top: 0.22rem solid var(--tls-theme-primary-action-surface);
   border-radius: var(--tls-radius-sm);
-  box-shadow: var(--tls-shadow-inset), 0 1rem 2.5rem rgba(0, 0, 0, 0.26);
+  box-shadow: var(--tls-shadow-inset), var(--tls-shadow-raised);
 }
 
 .tls-match-broadcast-topbar {
@@ -804,7 +803,7 @@
 .tls-match-tabellino-clubs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4rem;
+  gap: var(--tls-space-8);
   min-width: 0;
   color: var(--tls-color-text-muted);
   font-size: var(--tls-font-size-xs);
@@ -916,7 +915,7 @@
 }
 
 .tls-match-tabellino-incident-icon[data-incident-kind="yellow_card"] {
-  color: #f1c84b;
+  color: var(--tls-incident-yellow-card);
 }
 
 .tls-match-tabellino-incident-icon[data-incident-kind="red_card"],
@@ -981,8 +980,8 @@
 
 .tls-matchday-playback-toggle,
 .tls-matchday-playback-speed-option {
-  min-width: 2.75rem;
-  min-height: 2.5rem;
+  min-width: var(--tls-control-height);
+  min-height: var(--tls-control-height);
   color: var(--tls-color-text-muted);
   font: inherit;
   font-family: var(--tls-font-mono);
@@ -2077,8 +2076,8 @@
   justify-content: space-between;
   padding: var(--tls-space-3);
   background: color-mix(in srgb, var(--tls-theme-table-header-surface) 74%, transparent);
+  /* Uniform hairline. The green edge marked no state, it was just an edge. */
   border: 1px solid var(--tls-theme-border);
-  border-left: 0.2rem solid var(--tls-theme-club-green-strong);
   border-radius: var(--tls-radius-sm);
   box-shadow: var(--tls-shadow-inset);
 }
@@ -2191,7 +2190,7 @@
 .tls-preparation-panel-tab[aria-selected="true"] {
   color: var(--tls-color-text-dark);
   background: var(--tls-theme-primary-action-surface);
-  border-color: color-mix(in srgb, var(--tls-theme-primary-action-surface) 82%, #ffffff);
+  border-color: color-mix(in srgb, var(--tls-theme-primary-action-surface) 82%, var(--tls-mix-light));
 }
 
 .tls-preparation-squad-panel [role="tabpanel"][hidden] {
@@ -2243,7 +2242,7 @@
 .tls-preparation-squad-filter[aria-pressed="true"] {
   color: var(--tls-color-text-dark);
   background: var(--tls-theme-primary-action-surface);
-  border-color: color-mix(in srgb, var(--tls-theme-primary-action-surface) 82%, #ffffff);
+  border-color: color-mix(in srgb, var(--tls-theme-primary-action-surface) 82%, var(--tls-mix-light));
 }
 
 .tls-preparation-squad-table-wrap {
@@ -2453,7 +2452,7 @@
   aspect-ratio: 1;
   background: var(--tls-state-success-foreground);
   border-radius: 50%;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tls-state-success-foreground) 72%, #000000);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tls-state-success-foreground) 72%, var(--tls-mix-dark));
 }
 
 .tls-preparation-fitness-signal[data-level="watch"] .tls-preparation-fitness-dot {
@@ -2475,7 +2474,7 @@
   place-items: center;
   color: var(--tls-color-text-dark);
   background: var(--tls-theme-primary-action-surface);
-  border: 1px solid color-mix(in srgb, var(--tls-theme-primary-action-surface) 76%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--tls-theme-primary-action-surface) 76%, var(--tls-mix-light));
   border-radius: 999px;
   font-family: var(--tls-font-mono);
   font-size: 0.58rem;
@@ -3174,7 +3173,7 @@
   top: var(--tls-space-3);
   right: var(--tls-space-3);
   display: grid;
-  width: 2.5rem;
+  width: var(--tls-control-height);
   aspect-ratio: 1;
   place-items: center;
   padding: 0;
@@ -3256,7 +3255,7 @@
 
 .tls-unsaved-dialog-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   gap: var(--tls-space-2);
   margin-top: var(--tls-space-5);
   padding-top: var(--tls-space-4);
@@ -3626,7 +3625,7 @@
 .tls-inbox-football-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
+  gap: var(--tls-rule-hairline);
   margin: 0;
   background: var(--tls-color-line-soft);
   border: 1px solid var(--tls-theme-border);
@@ -3837,7 +3836,7 @@
   padding: 0 var(--tls-space-3);
   color: var(--tls-color-text);
   background: var(--tls-theme-secondary-action-surface);
-  border: 1px solid var(--tls-theme-border);
+  border: 1px solid var(--tls-theme-interactive-border);
   border-radius: var(--tls-radius-sm);
   font: inherit;
   text-transform: none;
@@ -3860,7 +3859,7 @@
   padding-inline: var(--tls-space-3);
   color: var(--tls-color-text-muted);
   background: var(--tls-theme-secondary-action-surface);
-  border: 1px solid var(--tls-theme-border);
+  border: 1px solid var(--tls-theme-interactive-border);
   border-radius: var(--tls-radius-sm);
 }
 
@@ -3888,6 +3887,11 @@
 }
 
 .tls-squad-table-frame {
+  /*
+   * Establishing this containing block prevents Chromium from propagating the
+   * responsive table's very tall scroll overflow into the document itself.
+   */
+  position: relative;
   width: 100%;
   min-width: 0;
   max-height: min(68vh, 52rem);
@@ -3904,16 +3908,17 @@
   table-layout: fixed;
 }
 
-.tls-squad-table col[data-column="number"] { width: 4%; }
-.tls-squad-table col[data-column="role"] { width: 5%; }
-.tls-squad-table col[data-column="player"] { width: 17%; }
-.tls-squad-table col[data-column="condition"] { width: 7%; }
-.tls-squad-table col[data-column="morale"] { width: 6%; }
-.tls-squad-table col[data-column="status"] { width: 9%; }
-.tls-squad-table col[data-column="value"] { width: 10%; }
+.tls-squad-table col[data-column="number"] { width: 3.5%; }
+.tls-squad-table col[data-column="role"] { width: 7%; }
+.tls-squad-table col[data-column="player"] { width: 12.5%; }
+.tls-squad-table col[data-column="condition"] { width: 9.5%; }
+.tls-squad-table col[data-column="morale"] { width: 7%; }
+.tls-squad-table col[data-column="status"] { width: 11%; }
+.tls-squad-table col[data-column="placement"] { width: 15%; }
+.tls-squad-table col[data-column="value"] { width: 9%; }
 .tls-squad-table col[data-column="current_level"] { width: 10%; }
-.tls-squad-table col[data-column="potential_level"] { width: 11%; }
-.tls-squad-table col[data-column="action"] { width: 21%; }
+.tls-squad-table col[data-column="potential_level"] { width: 10%; }
+.tls-squad-table col[data-column="action"] { width: 5.5%; }
 
 .tls-squad-table thead {
   position: sticky;
@@ -3936,10 +3941,13 @@
 }
 
 .tls-squad-table thead th {
+  padding-inline: var(--tls-space-1);
+  overflow-wrap: normal;
   color: var(--tls-color-text-muted);
   font-size: var(--tls-font-size-xs);
   font-weight: 750;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .tls-squad-table thead button {
@@ -3955,6 +3963,11 @@
   font: inherit;
   text-align: left;
   text-transform: inherit;
+  white-space: nowrap;
+}
+
+.tls-squad-table thead button svg {
+  flex: 0 0 auto;
 }
 
 .tls-squad-table thead button[data-active="true"] {
@@ -4012,6 +4025,7 @@
   font-size: var(--tls-font-size-xs);
   font-weight: 700;
   line-height: 1.15;
+  white-space: nowrap;
 }
 
 .tls-squad-status[data-status="starting_xi"],
@@ -4030,7 +4044,7 @@
 
 .tls-icon-button {
   display: inline-grid;
-  width: 2.5rem;
+  width: var(--tls-control-height);
   aspect-ratio: 1;
   place-items: center;
   padding: 0;
@@ -4041,20 +4055,179 @@
   cursor: pointer;
 }
 
+/*
+ * One compact public assessment renderer for Squad and Market. Each ordinary
+ * star keeps its outline while the foreground copy is clipped at half width;
+ * the optional sixth marker uses the dedicated dark orange, not danger red.
+ */
+.tls-player-star-rating,
+.tls-player-star-rating-glyphs {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tls-player-star-rating-glyphs {
+  gap: 0.12rem;
+}
+
+.tls-player-rating-star {
+  position: relative;
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  flex: 0 0 1rem;
+  color: var(--tls-player-rating-star-empty);
+}
+
+.tls-player-rating-star svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tls-player-rating-star-fill {
+  color: var(--tls-player-rating-star);
+}
+
+.tls-player-rating-star[data-fill="half"] .tls-player-rating-star-fill {
+  clip-path: inset(0 50% 0 0);
+}
+
+.tls-player-rating-star[data-sixth="true"] {
+  margin-inline-start: var(--tls-space-1);
+}
+
+.tls-player-rating-star[data-sixth="true"] .tls-player-rating-star-outline,
+.tls-player-rating-star[data-sixth="true"] .tls-player-rating-star-fill {
+  color: var(--tls-player-rating-sixth);
+}
+
+/*
+ * Potential always reserves six slots: solid fill is the conservative public
+ * estimate, diagonal hatching is uncertain upside, and the remaining outline
+ * sits beyond the ceiling. DOM data attributes mirror every visual state.
+ */
+.tls-player-potential-range,
+.tls-player-potential-range-glyphs {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tls-player-potential-range-glyphs {
+  gap: 0.12rem;
+}
+
+.tls-player-potential-star {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  flex: 0 0 1rem;
+  color: var(--tls-player-rating-star);
+}
+
+.tls-player-potential-star[data-sixth="true"] {
+  margin-inline-start: var(--tls-space-1);
+  color: var(--tls-player-rating-sixth);
+}
+
+.tls-player-potential-star svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tls-player-potential-star-outline {
+  color: var(--tls-player-rating-star-empty);
+}
+
+.tls-player-potential-star-uncertain {
+  color: inherit;
+}
+
+.tls-player-potential-pattern-line {
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+.tls-player-potential-star[data-within-ceiling="false"] {
+  color: var(--tls-player-rating-star-empty);
+}
+
 .tls-icon-button:hover {
   color: var(--tls-theme-heading-text);
   border-color: var(--tls-theme-primary-action-surface);
 }
 
-.tls-squad-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--tls-space-1);
-  align-items: center;
+.tls-squad-placement-control {
+  display: block;
+  min-width: 0;
 }
 
-.tls-squad-row-actions .tls-icon-button {
-  width: 2.15rem;
+.tls-squad-placement-control select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tls-control-height);
+  padding: 0 var(--tls-space-2);
+  overflow: hidden;
+  color: var(--tls-theme-heading-text);
+  background: var(--tls-theme-secondary-action-surface);
+  border: 1px solid var(--tls-theme-interactive-border);
+  border-radius: var(--tls-radius-sm);
+  font: 650 var(--tls-font-size-xs) / 1.2 var(--tls-font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tls-squad-placement-control select:focus-visible,
+.tls-squad-row-menu button:focus-visible {
+  outline: 2px solid var(--tls-theme-focus-ring);
+  outline-offset: 2px;
+}
+
+.tls-squad-row-menu {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  gap: var(--tls-rule-hairline);
+  width: max-content;
+  min-width: min(13rem, calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
+  padding: var(--tls-space-1);
+  color: var(--tls-color-text);
+  background: var(--tls-theme-elevated-panel-surface);
+  border: 1px solid var(--tls-theme-strong-border);
+  border-radius: var(--tls-radius-sm);
+  box-shadow: var(--tls-shadow-panel);
+}
+
+.tls-squad-row-menu button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--tls-space-2);
+  align-items: center;
+  min-height: var(--tls-control-height);
+  padding: var(--tls-space-2) var(--tls-space-3);
+  color: var(--tls-color-text);
+  background: var(--tls-theme-table-row-surface);
+  border: 0;
+  border-radius: var(--tls-radius-sm);
+  cursor: pointer;
+  font: 650 var(--tls-font-size-sm) / 1.2 var(--tls-font-ui);
+  text-align: left;
+}
+
+.tls-squad-row-menu button:hover,
+.tls-squad-row-menu button:focus-visible {
+  color: var(--tls-theme-heading-text);
+  background: var(--tls-theme-table-alternate-row-surface);
+}
+
+.tls-squad-row-menu button svg {
+  color: var(--tls-theme-primary-action-surface);
 }
 
 .tls-squad-choice-dialog {
@@ -4071,8 +4244,13 @@
 }
 
 .tls-squad-choice-dialog::backdrop {
-  background: color-mix(in srgb, #000000 70%, transparent);
+  background: var(--tls-scrim);
   backdrop-filter: blur(0.18rem);
+}
+
+.tls-squad-choice-dialog .tls-icon-button,
+.tls-player-profile-close {
+  border-color: var(--tls-theme-interactive-border);
 }
 
 .tls-squad-choice-shell {
@@ -4109,7 +4287,7 @@
 
 .tls-squad-choice-list {
   display: grid;
-  gap: 1px;
+  gap: var(--tls-rule-hairline);
   min-height: 0;
   padding: var(--tls-space-2);
   overflow-y: auto;
@@ -4199,7 +4377,7 @@
 
 .tls-market-finance-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: var(--tls-space-3);
 }
 
@@ -4256,7 +4434,7 @@
 
 .tls-market-filter-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   gap: var(--tls-space-3);
   align-items: end;
   padding: var(--tls-space-3);
@@ -4292,7 +4470,7 @@
   padding: 0 var(--tls-space-3);
   color: var(--tls-color-text);
   background: var(--tls-theme-secondary-action-surface);
-  border: 1px solid var(--tls-theme-border);
+  border: 1px solid var(--tls-theme-interactive-border);
   border-radius: var(--tls-radius-sm);
   font: inherit;
   text-transform: none;
@@ -4315,7 +4493,7 @@
   padding-inline: var(--tls-space-3);
   color: var(--tls-color-text-muted);
   background: var(--tls-theme-secondary-action-surface);
-  border: 1px solid var(--tls-theme-border);
+  border: 1px solid var(--tls-theme-interactive-border);
   border-radius: var(--tls-radius-sm);
 }
 
@@ -4331,6 +4509,11 @@
 .tls-market-search:focus-within {
   outline: 2px solid var(--tls-theme-primary-action-surface);
   outline-offset: 2px;
+}
+
+.tls-squad-panel .tls-icon-button,
+.tls-market-panel .tls-icon-button {
+  border-color: var(--tls-theme-interactive-border);
 }
 
 .tls-market-range-filter {
@@ -4373,19 +4556,21 @@
   table-layout: fixed;
 }
 
-/* Column widths are desktop-only: the narrow reflow below drops nth-child
-   sizing entirely by switching th/td to a two-column label/value grid. */
-@media (min-width: 981px) {
-  .tls-market-table th:nth-child(1), .tls-market-table td:nth-child(1) { width: 15%; }
-  .tls-market-table th:nth-child(2), .tls-market-table td:nth-child(2) { width: 13%; }
+/* Column widths are wide-desktop-only. Below 1400 px the persistent sidebar
+   leaves too little room for five localized sortable labels, so the workbench
+   deliberately changes to labelled cards instead of clipping those controls. */
+@media (min-width: 1400px) {
+  .tls-market-table th:nth-child(1), .tls-market-table td:nth-child(1) { width: 10%; }
+  .tls-market-table th:nth-child(2), .tls-market-table td:nth-child(2) { width: 10%; }
   .tls-market-table th:nth-child(3), .tls-market-table td:nth-child(3) { width: 5%; }
-  .tls-market-table th:nth-child(4), .tls-market-table td:nth-child(4) { width: 6%; }
-  .tls-market-table th:nth-child(5), .tls-market-table td:nth-child(5) { width: 10%; }
-  .tls-market-table th:nth-child(6), .tls-market-table td:nth-child(6) { width: 10%; }
-  .tls-market-table th:nth-child(7), .tls-market-table td:nth-child(7) { width: 11%; }
-  .tls-market-table th:nth-child(8), .tls-market-table td:nth-child(8) { width: 11%; }
-  .tls-market-table th:nth-child(9), .tls-market-table td:nth-child(9) { width: 13%; }
-  .tls-market-table th:nth-child(10), .tls-market-table td:nth-child(10) { width: 6%; }
+  .tls-market-table th:nth-child(4), .tls-market-table td:nth-child(4) { width: 7%; }
+  .tls-market-table th:nth-child(5), .tls-market-table td:nth-child(5) { width: 9%; }
+  .tls-market-table th:nth-child(6), .tls-market-table td:nth-child(6) { width: 9%; }
+  .tls-market-table th:nth-child(7), .tls-market-table td:nth-child(7) { width: 13%; }
+  .tls-market-table th:nth-child(8), .tls-market-table td:nth-child(8) { width: 10%; }
+  .tls-market-table th:nth-child(9), .tls-market-table td:nth-child(9) { width: 8%; }
+  .tls-market-table th:nth-child(10), .tls-market-table td:nth-child(10) { width: 13%; }
+  .tls-market-table th:nth-child(11), .tls-market-table td:nth-child(11) { width: 6%; }
 }
 
 .tls-market-table thead {
@@ -4409,25 +4594,38 @@
 }
 
 .tls-market-table thead th {
+  padding-inline: var(--tls-space-1);
+  overflow-wrap: normal;
   color: var(--tls-color-text-muted);
   font-size: var(--tls-font-size-xs);
   font-weight: 750;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .tls-market-table thead button {
-  display: inline-flex;
-  gap: var(--tls-space-1);
+  position: relative;
+  display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
-  padding: 0;
+  padding: 0 1rem 0 0;
   color: inherit;
   background: transparent;
   border: 0;
+  box-sizing: border-box;
   cursor: pointer;
   font: inherit;
   text-align: left;
   text-transform: inherit;
+  white-space: nowrap;
+}
+
+.tls-market-table thead button svg {
+  position: absolute;
+  inset-inline-end: 0;
+  flex: 0 0 auto;
 }
 
 .tls-market-table thead button[data-active="true"] {
@@ -4450,6 +4648,17 @@
 
 .tls-market-table tbody tr[data-eligibility="blocked"] th {
   box-shadow: inset 0.22rem 0 var(--tls-state-warning-foreground);
+}
+
+.tls-market-club-source {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.tls-market-club-source small {
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-xs);
+  line-height: 1.25;
 }
 
 .tls-market-table abbr {
@@ -4497,94 +4706,7 @@
 
 .tls-market-state p { margin: 0; }
 
-/* Market player inspection dialog: public facts only, same shell language as
-   the Squad full-screen profile. */
-
-.tls-market-player-shell {
-  display: grid;
-  gap: var(--tls-space-6);
-  align-content: start;
-  width: min(calc(100% - (2 * var(--tls-space-5))), 96rem);
-  min-width: 0;
-  min-height: 100%;
-  padding: clamp(var(--tls-space-5), 4vw, 3.5rem);
-  margin-inline: auto;
-}
-
-.tls-market-player-header {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--tls-space-4);
-  align-items: center;
-  padding-bottom: var(--tls-space-5);
-  border-bottom: 1px solid var(--tls-color-line-soft);
-}
-
-.tls-market-player-header h2 {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--tls-theme-heading-text);
-  font-family: var(--tls-font-display);
-  font-size: clamp(2rem, 5vw, 3.7rem);
-  line-height: 1;
-}
-
-.tls-market-player-header p:last-child {
-  margin: var(--tls-space-2) 0 0;
-  color: var(--tls-color-text-muted);
-}
-
-.tls-market-player-role {
-  display: grid;
-  width: clamp(3.4rem, 7vw, 4.6rem);
-  aspect-ratio: 1;
-  place-items: center;
-  color: var(--tls-color-text-dark);
-  background: var(--tls-color-paper);
-  border: 0.22rem solid var(--tls-theme-primary-action-surface);
-  border-radius: 50%;
-  font-family: var(--tls-font-mono);
-  font-size: 1.2rem;
-  font-weight: 750;
-}
-
-.tls-market-player-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: 1px;
-  margin: 0;
-  overflow: hidden;
-  background: var(--tls-theme-border);
-  border: 1px solid var(--tls-theme-border);
-  border-radius: var(--tls-radius-sm);
-}
-
-.tls-market-player-summary > div {
-  display: grid;
-  gap: var(--tls-space-2);
-  padding: var(--tls-space-4);
-  background: var(--tls-theme-table-row-surface);
-}
-
-.tls-market-player-summary dt {
-  display: inline-flex;
-  gap: var(--tls-space-2);
-  align-items: center;
-  color: var(--tls-color-text-muted);
-  font-size: var(--tls-font-size-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.tls-market-player-summary dd {
-  margin: 0;
-  color: var(--tls-theme-heading-text);
-  font-family: var(--tls-font-mono);
-  font-size: 1.15rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
+/* Market reuses the shared player shell, header, summary, roles, and tabs. */
 
 .tls-market-player-section {
   display: grid;
@@ -4603,8 +4725,8 @@
 
 .tls-market-contract-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: var(--tls-rule-hairline);
   margin: 0;
   overflow: hidden;
   background: var(--tls-theme-border);
@@ -4629,54 +4751,6 @@
 .tls-market-contract-facts dd {
   margin: 0;
   color: var(--tls-color-text);
-}
-
-.tls-market-role-fits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--tls-space-2);
-}
-
-.tls-market-role-fits span {
-  display: grid;
-  gap: var(--tls-space-1);
-  min-width: 8.5rem;
-  padding: var(--tls-space-3) var(--tls-space-4);
-  color: var(--tls-color-text);
-  background: var(--tls-state-information-surface);
-  border: 1px solid var(--tls-state-information-border);
-  border-radius: var(--tls-radius-sm);
-}
-
-.tls-market-role-fits strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--tls-theme-heading-text);
-}
-
-.tls-market-role-fits small,
-.tls-market-role-fits em {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: currentColor;
-  font-size: var(--tls-font-size-xs);
-  font-style: normal;
-}
-
-.tls-market-role-fits span[data-suitability="natural"] {
-  color: var(--tls-state-success-foreground);
-  background: var(--tls-state-success-surface);
-  border-color: var(--tls-state-success-border);
-}
-
-.tls-market-role-fits span[data-suitability="adapted"] {
-  color: var(--tls-state-information-foreground);
-}
-
-.tls-market-role-fits span[data-suitability="weak"] {
-  color: var(--tls-state-danger-foreground);
-  background: var(--tls-state-danger-surface);
-  border-color: var(--tls-state-danger-border);
 }
 
 .tls-market-eligibility-detail {
@@ -4748,16 +4822,27 @@
   border: 0;
 }
 
+/*
+ * Chromium keeps the document scrollbar painted while a native modal is open,
+ * even though the page underneath is inert. The profile then shows two adjacent
+ * scrollbars: one frozen for Squad/Market and one moving with the dialog.
+ * Hiding only the root's vertical overflow leaves the dialog as the sole scroll
+ * owner and preserves the document's scroll position for focus restoration.
+ */
+html:has(.tls-full-screen-dialog[open]) {
+  overflow-y: hidden;
+}
+
 .tls-full-screen-dialog::backdrop {
-  background: color-mix(in srgb, #000000 72%, transparent);
+  background: var(--tls-scrim-strong);
   backdrop-filter: blur(0.2rem);
 }
 
 .tls-player-profile-shell {
   display: grid;
-  gap: var(--tls-space-6);
+  gap: var(--tls-space-4);
   align-content: start;
-  width: min(calc(100% - (2 * var(--tls-space-5))), 96rem);
+  width: min(calc(100% - (2 * var(--tls-space-5))), var(--tls-measure-inspector));
   min-width: 0;
   min-height: 100%;
   padding: clamp(var(--tls-space-5), 4vw, 3.5rem);
@@ -4770,7 +4855,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--tls-space-4);
   align-items: center;
-  padding-bottom: var(--tls-space-5);
+  padding-bottom: var(--tls-space-4);
   border-bottom: 1px solid var(--tls-color-line-soft);
 }
 
@@ -4783,7 +4868,7 @@
   overflow-wrap: anywhere;
   color: var(--tls-theme-heading-text);
   font-family: var(--tls-font-display);
-  font-size: clamp(2rem, 5vw, 3.7rem);
+  font-size: clamp(1.9rem, 4vw, 3rem);
   line-height: 1;
 }
 
@@ -4794,7 +4879,7 @@
 
 .tls-player-profile-number {
   display: grid;
-  width: clamp(3.4rem, 7vw, 4.6rem);
+  width: clamp(3rem, 6vw, 3.8rem);
   aspect-ratio: 1;
   place-items: center;
   color: var(--tls-color-text-dark);
@@ -4808,8 +4893,8 @@
 
 .tls-player-profile-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  gap: var(--tls-rule-hairline);
   margin: 0;
   overflow: hidden;
   background: var(--tls-theme-border);
@@ -4820,7 +4905,7 @@
 .tls-player-profile-summary > div {
   display: grid;
   gap: var(--tls-space-2);
-  padding: var(--tls-space-4);
+  padding: var(--tls-space-3);
   background: var(--tls-theme-table-row-surface);
 }
 
@@ -4838,26 +4923,30 @@
   margin: 0;
   color: var(--tls-theme-heading-text);
   font-family: var(--tls-font-mono);
-  font-size: 1.15rem;
+  font-size: var(--tls-font-size-sm);
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
-.tls-player-profile-section,
+/* The mounted contract tab keeps its complete workflow in one vertical grid. */
 .tls-contract-workspace {
   display: grid;
   gap: var(--tls-space-4);
   min-width: 0;
   padding-bottom: var(--tls-space-6);
-  border-bottom: 1px solid var(--tls-color-line-soft);
 }
 
+/*
+ * Single column at every width. The heading and its hint used to sit on one row
+ * pushed to opposite edges, which reads as a templated two-column section head
+ * and put the hint furthest from the text it explains.
+ */
 .tls-player-profile-section-heading,
 .tls-contract-negotiation-heading {
   display: flex;
-  gap: var(--tls-space-4);
-  align-items: end;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--tls-space-2);
+  align-items: start;
   min-width: 0;
 }
 
@@ -4883,69 +4972,169 @@
   font-size: var(--tls-font-size-sm);
 }
 
-.tls-player-profile-role-list {
+.tls-player-role-chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--tls-space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
-.tls-player-profile-role-list span {
-  display: grid;
-  gap: var(--tls-space-1);
-  min-width: 8.5rem;
-  padding: var(--tls-space-3) var(--tls-space-4);
+.tls-player-role-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--tls-space-2);
+  align-items: center;
+  min-width: 0;
+  min-height: 2rem;
+  padding: var(--tls-space-1) var(--tls-space-3);
   color: var(--tls-color-text);
   background: var(--tls-state-information-surface);
   border: 1px solid var(--tls-state-information-border);
-  border-radius: var(--tls-radius-sm);
+  border-radius: 999px;
 }
 
-.tls-player-profile-role-list strong {
+.tls-player-role-chip strong {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--tls-theme-heading-text);
+  font-size: var(--tls-font-size-xs);
 }
 
-.tls-player-profile-role-list small {
+.tls-player-role-chip span {
   min-width: 0;
   overflow-wrap: anywhere;
   color: currentColor;
   font-size: var(--tls-font-size-xs);
 }
 
-.tls-player-profile-role-list span[data-suitability="natural"] {
+.tls-player-role-chip .tls-player-role-chip-code {
+  flex: 0 0 auto;
+  overflow-wrap: normal;
+  color: var(--tls-theme-primary-action-surface);
+  font-family: var(--tls-font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.tls-player-role-chip .tls-player-role-chip-name {
+  flex: 1 1 10ch;
+  overflow-wrap: normal;
+  color: var(--tls-theme-heading-text);
+  font-weight: 650;
+  white-space: normal;
+  word-break: normal;
+}
+
+.tls-player-role-chip .tls-player-role-chip-suitability {
+  flex: 0 0 auto;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.tls-player-role-chip[data-suitability="natural"] {
   color: var(--tls-state-success-foreground);
   background: var(--tls-state-success-surface);
   border-color: var(--tls-state-success-border);
 }
 
-.tls-player-profile-role-list span[data-suitability="capable"] {
+.tls-player-role-chip[data-suitability="adapted"] {
   color: var(--tls-state-information-foreground);
 }
 
-.tls-player-profile-role-list span[data-suitability="viable"] {
-  color: var(--tls-state-warning-foreground);
-  background: var(--tls-state-warning-surface);
-  border-color: var(--tls-state-warning-border);
+.tls-player-role-chip[data-primary="true"] {
+  box-shadow: inset 0 0 0 1px currentColor;
 }
 
-.tls-player-profile-role-list span[data-suitability="weak"] {
-  color: var(--tls-state-danger-foreground);
-  background: var(--tls-state-danger-surface);
-  border-color: var(--tls-state-danger-border);
-}
-
-.tls-player-attribute-groups {
+.tls-player-profile-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--tls-space-4);
   min-width: 0;
 }
 
+.tls-player-profile-tab-list {
+  display: grid;
+  /*
+   * The three tabs share a row at ordinary text sizes and become full-width
+   * rows when 200% text would otherwise split their labels mid-word.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15ch), 1fr));
+  gap: var(--tls-rule-hairline);
+  min-width: 0;
+  padding: var(--tls-space-1);
+  background: var(--tls-theme-border);
+  border: 1px solid var(--tls-theme-border);
+  border-radius: var(--tls-radius-sm);
+}
+
+.tls-player-profile-tab {
+  min-width: 0;
+  min-height: var(--tls-control-height);
+  padding: var(--tls-space-2) var(--tls-space-3);
+  hyphens: none;
+  overflow-wrap: normal;
+  word-break: normal;
+  color: var(--tls-color-text-muted);
+  background: var(--tls-theme-table-row-surface);
+  border: 0;
+  border-radius: var(--tls-radius-sm);
+  cursor: pointer;
+  font: 700 var(--tls-font-size-sm) / 1.2 var(--tls-font-ui);
+  white-space: nowrap;
+}
+
+.tls-player-profile-tab[aria-selected="true"] {
+  color: var(--tls-color-text-dark);
+  background: var(--tls-theme-primary-action-surface);
+}
+
+.tls-player-profile-tab:hover {
+  color: var(--tls-theme-heading-text);
+  background: var(--tls-theme-table-alternate-row-surface);
+}
+
+.tls-player-profile-tab[aria-selected="true"]:hover {
+  color: var(--tls-color-text-dark);
+  background: var(--tls-theme-primary-action-surface);
+}
+
+.tls-player-profile-tab:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--tls-theme-focus-ring);
+  outline-offset: 2px;
+}
+
+.tls-player-profile-tab-panel {
+  min-width: 0;
+}
+
+.tls-player-profile-tab-content {
+  display: grid;
+  gap: var(--tls-space-4);
+  min-width: 0;
+}
+
+.tls-player-profile-tab-hint {
+  max-width: 40rem;
+  margin: 0;
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-sm);
+}
+
+.tls-player-attribute-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--tls-space-4);
+  min-width: 0;
+}
+
+/* A neutral hairline separates each of the three role-appropriate families. */
 .tls-player-attribute-groups > section {
   min-width: 0;
   padding-top: var(--tls-space-3);
-  border-top: 0.18rem solid var(--tls-theme-club-green-strong);
+  border-top: 1px solid var(--tls-color-line-soft);
 }
 
 .tls-player-attribute-groups h4 {
@@ -4957,7 +5146,7 @@
 
 .tls-player-attribute-groups dl {
   display: grid;
-  gap: 1px;
+  gap: var(--tls-rule-hairline);
   margin: 0;
   background: var(--tls-color-line-soft);
 }
@@ -4990,8 +5179,79 @@
 .tls-player-attribute-groups [data-band="good"] dd { color: var(--tls-state-information-foreground); }
 .tls-player-attribute-groups [data-band="low"] dd { color: var(--tls-state-danger-foreground); }
 
-.tls-contract-workspace {
-  border-bottom: 0;
+.tls-player-statistics-panel,
+.tls-player-statistics-periods,
+.tls-player-statistics-period {
+  min-width: 0;
+}
+
+.tls-player-statistics-periods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--tls-space-4);
+}
+
+.tls-player-statistics-period {
+  display: grid;
+  gap: var(--tls-space-3);
+  align-content: start;
+  padding-top: var(--tls-space-3);
+  border-top: 0.18rem solid var(--tls-theme-strong-border);
+}
+
+.tls-player-statistics-period h4 {
+  margin: 0;
+  color: var(--tls-theme-heading-text);
+  font-family: var(--tls-font-display);
+  font-size: var(--tls-font-size-lg);
+}
+
+.tls-player-statistics-metrics,
+.tls-player-statistics-coverage {
+  display: grid;
+  gap: var(--tls-rule-hairline);
+  margin: 0;
+  background: var(--tls-color-line-soft);
+}
+
+.tls-player-statistics-metric,
+.tls-player-statistics-coverage-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--tls-space-3);
+  align-items: center;
+  min-height: 2.25rem;
+  padding: var(--tls-space-2) var(--tls-space-3);
+  background: color-mix(in srgb, var(--tls-theme-table-row-surface) 92%, transparent);
+}
+
+.tls-player-statistics-metric dt,
+.tls-player-statistics-coverage-item dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-sm);
+}
+
+.tls-player-statistics-metric dd,
+.tls-player-statistics-coverage-item dd {
+  margin: 0;
+  color: var(--tls-theme-heading-text);
+  font-family: var(--tls-font-mono);
+  font-weight: 750;
+  text-align: end;
+}
+
+.tls-player-statistics-coverage-item[data-coverage="complete"] dd {
+  color: var(--tls-state-success-foreground);
+}
+
+.tls-player-statistics-coverage-item[data-coverage="partial"] dd {
+  color: var(--tls-state-warning-foreground);
+}
+
+.tls-player-statistics-coverage-item[data-coverage="unavailable"] dd {
+  color: var(--tls-color-text-muted);
 }
 
 .tls-contract-expiry-alert,
@@ -5043,8 +5303,8 @@
 .tls-contract-meta,
 .tls-contract-finance-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: var(--tls-rule-hairline);
   margin: 0;
   overflow: hidden;
   background: var(--tls-color-line-soft);
@@ -5173,7 +5433,7 @@
   min-height: 2.75rem;
   color: var(--tls-color-text);
   background: var(--tls-theme-secondary-action-surface);
-  border: 1px solid var(--tls-theme-border);
+  border: 1px solid var(--tls-theme-interactive-border);
   border-radius: var(--tls-radius-sm);
   font: inherit;
   font-size: var(--tls-font-size-md);
@@ -5224,7 +5484,12 @@
   outline-offset: 2px;
 }
 
+/*
+ * Reserved even when empty, so a validation message appearing does not push the
+ * rest of the form down while the manager is still typing.
+ */
 .tls-contract-field small {
+  min-height: 1lh;
   color: var(--tls-state-danger-foreground);
   font-weight: 600;
   text-transform: none;
@@ -5324,7 +5589,7 @@
   font-size: var(--tls-font-size-sm);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1399px) {
   .tls-squad-toolbar {
     grid-template-columns: 1fr 1fr;
   }
@@ -5339,9 +5604,8 @@
   }
 
   .tls-squad-table-frame {
-    max-height: none;
-    overflow-y: visible;
-    border: 0;
+    max-height: min(70dvh, 44rem);
+    overflow-y: auto;
   }
 
   .tls-squad-table,
@@ -5399,16 +5663,17 @@
     box-shadow: none;
   }
 
-  .tls-squad-open-profile {
+  .tls-squad-row-menu-trigger,
+  .tls-squad-placement-control {
     justify-self: start;
   }
 
-  .tls-squad-row-actions {
-    justify-self: start;
+  .tls-squad-placement-control {
+    width: min(100%, 24rem);
   }
 
   .tls-player-profile-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   }
 
   .tls-player-attribute-groups,
@@ -5421,9 +5686,8 @@
   }
 
   .tls-market-table-frame {
-    max-height: none;
-    overflow-y: visible;
-    border: 0;
+    max-height: min(70dvh, 44rem);
+    overflow-y: auto;
   }
 
   .tls-market-table,
@@ -5479,15 +5743,18 @@
     box-shadow: none;
   }
 
-  .tls-market-player-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 620px) {
+  .tls-player-profile-tab-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .tls-squad-toolbar,
   .tls-squad-table tbody tr,
+  .tls-market-table tbody tr,
   .tls-player-attribute-groups,
+  .tls-player-statistics-periods,
   .tls-contract-counter-comparison,
   .tls-contract-form-grid {
     grid-template-columns: 1fr;
@@ -5500,8 +5767,13 @@
   .tls-squad-count { justify-self: start; }
 
   .tls-squad-table th,
-  .tls-squad-table td {
-    grid-template-columns: minmax(5.5rem, 0.55fr) minmax(0, 1fr);
+  .tls-squad-table td,
+  .tls-market-table th,
+  .tls-market-table td {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   .tls-player-profile-shell {
@@ -5511,39 +5783,62 @@
   }
 
   .tls-player-profile-header {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding-inline-end: 3rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    padding-inline-end: 0;
+  }
+
+  .tls-player-profile-number {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .tls-player-profile-identity {
+    grid-row: 2;
+    grid-column: 1 / -1;
   }
 
   .tls-player-profile-close {
-    position: absolute;
-    top: var(--tls-space-4);
-    right: var(--tls-space-4);
+    position: static;
+    grid-row: 1;
+    grid-column: 2;
   }
 
-  .tls-player-profile-section-heading,
-  .tls-contract-negotiation-heading {
-    align-items: start;
-    flex-direction: column;
+  /*
+   * auto-fit, not a forced two columns. Forcing two held a money value in a
+   * ~165px tile on a 375px phone, where mono digits could only break mid-number.
+   * These let the grid drop to one column on its own, so the 340px override that
+   * used to do it by hand is gone.
+   *
+   * The min() wrapper is load-bearing: a bare minmax(11rem, 1fr) is a hard floor,
+   * and at 200% root font-size 11rem is 352px against ~326px of usable width, so
+   * the track outgrew the dialog. min(100%, …) lets it collapse instead.
+   */
+  .tls-player-profile-summary {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   }
 
-  .tls-player-profile-summary,
-  .tls-player-profile-role-list,
-  .tls-player-attribute-groups dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .tls-player-profile-role-list {
+  .tls-player-role-chips {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   }
 
-  .tls-player-profile-role-list span {
+  .tls-player-attribute-groups dl {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  }
+
+  .tls-player-role-chip {
     width: auto;
     min-width: 0;
-    padding: var(--tls-space-3);
+    padding: var(--tls-space-2) var(--tls-space-3);
   }
 
-  .tls-player-profile-section,
+  .tls-player-profile-tab {
+    padding-inline: var(--tls-space-1);
+    font-size: var(--tls-font-size-xs);
+  }
+
   .tls-contract-workspace {
     gap: var(--tls-space-3);
     padding-bottom: var(--tls-space-4);
@@ -5577,10 +5872,65 @@
   }
 }
 
-@media (max-width: 340px) {
-  .tls-player-profile-summary,
-  .tls-player-profile-role-list,
-  .tls-player-attribute-groups dl {
-    grid-template-columns: 1fr;
-  }
+
+/*
+ * Pressed state.
+ *
+ * Every control that reacts to hover also has to react to the press itself,
+ * otherwise a click on a slow command reads as "nothing happened". One signal
+ * per control: the surface darkens toward the app background and takes the
+ * shared inset top edge. No transform, so table rows never shift their grid.
+ */
+.tls-matchday-playback-toggle:active:not(:disabled),
+.tls-matchday-playback-speed-option:active:not(:disabled),
+.tls-match-phase-tab:active:not(:disabled),
+.tls-preparation-panel-tab:active:not(:disabled),
+.tls-preparation-squad-filter:active:not(:disabled),
+.tls-preparation-squad-player:active:not(:disabled),
+.tls-career-save-dialog-close:active:not(:disabled),
+.tls-inbox-message-row:active:not(:disabled),
+.tls-icon-button:active:not(:disabled),
+.tls-squad-row-menu button:active:not(:disabled),
+.tls-squad-choice-option:active:not(:disabled),
+.tls-contract-action-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--tls-theme-secondary-action-surface) 82%, var(--tls-theme-app-background));
+  border-color: var(--tls-theme-primary-action-hover);
+  box-shadow: var(--tls-press-shadow);
+}
+
+.tls-preparation-squad-table tbody tr:active td,
+.tls-squad-table tbody tr:active,
+.tls-market-table tbody tr:active {
+  background: color-mix(in srgb, var(--tls-theme-selected-row-surface) 76%, var(--tls-theme-app-background));
+}
+
+/*
+ * Numeric table cells.
+ *
+ * tabular-nums keeps digits on a shared vertical rhythm down a column, which is
+ * the whole point of a squad or market list. nowrap protects grouped money and
+ * percentage values from the table's overflow-wrap: anywhere, which was free to
+ * split them mid-number.
+ */
+.tls-squad-table th,
+.tls-squad-table td,
+.tls-market-table th,
+.tls-market-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.tls-squad-table td[data-align="numeric"],
+.tls-market-table td[data-align="numeric"] {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+/*
+ * Reading measure. Running prose gets a character-based cap so a wide screen
+ * never stretches a sentence past the point where the eye loses the next line.
+ * Panels and tables stay sized in rem: they are data, not prose.
+ */
+.tls-inbox-detail-section > p,
+.tls-inbox-detail-header p {
+  max-width: var(--tls-measure-prose);
 }

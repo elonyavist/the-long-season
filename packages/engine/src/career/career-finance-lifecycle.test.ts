@@ -38,17 +38,40 @@ import {
 import type { MatchTeamContext } from "../match-engine/match-context.ts";
 import { deriveMarketPendingExposure } from "./market-pending-exposure.ts";
 import { prepareSeniorSquadDeparture } from "./senior-squad-transfer.ts";
-import { offerContractRenewal } from "./contract-negotiation.ts";
+import { offerContractRenewal as offerContractRenewalWithPolicy } from "./contract-negotiation.ts";
 import {
   applyContractActivationFinance,
-  checkContractOfferAffordability,
+  checkContractOfferAffordability as checkContractOfferAffordabilityWithPolicy,
   refreshAnnualTransferBudgetAvailability,
   reconcileActiveContractWageCommitments,
   reallocateTransferBudgetToWages,
+  reallocateTransferBudgetsToWages,
   settleAnnualPayroll,
   settleFixtureContractBonuses,
   settleSeasonDistribution,
 } from "./career-finance-lifecycle.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+
+function offerContractRenewal(
+  input: Omit<Parameters<typeof offerContractRenewalWithPolicy>[0], "wagePolicy">,
+) {
+  return offerContractRenewalWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+  });
+}
+
+function checkContractOfferAffordability(
+  input: Omit<
+    Parameters<typeof checkContractOfferAffordabilityWithPolicy>[0],
+    "wagePolicy"
+  >,
+) {
+  return checkContractOfferAffordabilityWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+  });
+}
 
 /**
  * Finance lifecycle tests protect the exact-once money boundaries that make
@@ -243,6 +266,50 @@ test("transfer allocation cannot consume sale proceeds beyond the remaining annu
   assert.equal(rejected.reason, "transfer_budget_insufficient");
   assert.equal(rejected.availableAmount, annualTransferBudget);
   assert.strictEqual(rejected.careerState, stateWithSaleProceeds);
+});
+
+test("structural squad repair may convert real sale proceeds after the annual allocation is exhausted", () => {
+  const state = careerFixture();
+  const finance = state.clubFinanceState;
+  const account = finance?.accounts[HOME];
+  assert.ok(finance !== undefined && account !== undefined);
+  if (finance === undefined || account === undefined) return;
+  const annualTransferBudget = nonNegativeMoney(100_000_00);
+  const availableTransferBudget = nonNegativeMoney(500_000_00);
+  const amount = nonNegativeMoney(150_000_00);
+  const stateWithSaleProceeds = createCareerState({
+    ...state,
+    clubFinanceState: {
+      ...finance,
+      accounts: {
+        ...finance.accounts,
+        [HOME]: {
+          ...account,
+          annualTransferBudget,
+          availableTransferBudget,
+        },
+      },
+    },
+  });
+
+  const moved = reallocateTransferBudgetsToWages({
+    careerState: stateWithSaleProceeds,
+    allocations: [{ clubId: HOME, amount, allowSaleProceeds: true }],
+  });
+
+  assert.equal(moved.status, "applied");
+  if (moved.status !== "applied") return;
+  const nextAccount = moved.careerState.clubFinanceState?.accounts[HOME];
+  assert.equal(nextAccount?.annualTransferBudget, 0);
+  assert.equal(
+    nextAccount?.availableTransferBudget,
+    availableTransferBudget - amount,
+  );
+  assert.equal(
+    nextAccount?.annualWageBudget,
+    account.annualWageBudget + amount,
+  );
+  assert.equal(nextAccount?.cashBalance, account.cashBalance);
 });
 
 test("season boundary reopens spent transfer allocation without inventing cash or erasing sale proceeds", () => {

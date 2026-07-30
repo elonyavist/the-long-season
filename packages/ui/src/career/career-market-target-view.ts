@@ -1,13 +1,26 @@
 import {
   canonicalPlayerRoleOrder,
   type CanonicalPlayerRole,
+  type ClubCategory,
   type CurrencyCode,
   type Money,
   type PositionSuitability,
 } from "@game/domain";
 
 import { hasCareerContractExpiryAlert } from "./career-contract-expiry.ts";
-import type { CareerSquadPlayerLevel } from "./career-squad-view.ts";
+import {
+  compareCareerPlayerPotentialRanges,
+  careerPlayerRatingSortScore,
+  copyCareerPlayerPotentialRange,
+  copyCareerPlayerRating,
+  type CareerPlayerPotentialRangeView,
+  type CareerPlayerRatingView,
+} from "./career-player-rating.ts";
+import {
+  buildCareerPlayerDetailView,
+  type CareerPlayerDetailInput,
+  type CareerPlayerDetailView,
+} from "./career-player-detail-view.ts";
 
 /** Stable market actions exposed by a target row or target detail. */
 export type CareerMarketTargetAction =
@@ -44,12 +57,19 @@ export type CareerMarketEmploymentInput =
       readonly status: "contracted";
       readonly clubId: string;
       readonly clubName: string;
+      readonly competitionId: string;
+      readonly competitionName: string;
+      readonly sourceTier: ClubCategory;
       readonly contractEndsOnIso: string;
       readonly contractRemainingDays: number;
     }
   | {
       readonly status: "free_agent";
+      readonly sourceTier: "free_agent";
     };
+
+/** Persisted source tier exposed by every Market target. */
+export type CareerMarketSourceTier = ClubCategory | "free_agent";
 
 /** Public transfer posture supplied by the canonical market query. */
 export type CareerMarketAvailability =
@@ -62,7 +82,6 @@ export type CareerMarketAvailability =
 export interface CareerMarketRoleFitInput {
   readonly role: CanonicalPlayerRole;
   readonly suitability: PositionSuitability;
-  readonly isPrimary: boolean;
 }
 
 /** Complete public facts required to project one market target. */
@@ -76,14 +95,34 @@ export interface CareerMarketTargetInput {
   readonly condition: number;
   readonly form: number;
   readonly morale: number;
-  readonly currentLevel: CareerSquadPlayerLevel;
-  readonly potentialLevel: CareerSquadPlayerLevel;
-  readonly value: Money;
+  readonly currentRating: CareerPlayerRatingView;
+  readonly potentialRange: CareerPlayerPotentialRangeView;
+  readonly publicValue: Money;
+  /** Seller request for contracted players, frozen from the engine preview. */
+  readonly askingPrice?: Money;
+  /** Exact zero transfer fee shown only for a free-agent target. */
+  readonly freeAgentTransferFee?: Money;
   readonly currency: CurrencyCode;
   readonly employment: CareerMarketEmploymentInput;
   readonly availability: CareerMarketAvailability;
   readonly eligibility: CareerMarketTargetEligibility;
+  /**
+   * Resolves exact current abilities and statistics only when this target is
+   * opened. This presentation-only callback is never persisted or serialized.
+   */
+  readonly resolveDetail?: () => CareerMarketTargetDetailInput;
 }
+
+/**
+ * Expensive per-player facts kept outside the light Market row contract.
+ *
+ * Reusing the shared detail input prevents Squad and Market from defining
+ * separate attribute or statistics policies.
+ */
+export type CareerMarketTargetDetailInput = Pick<
+  CareerPlayerDetailInput,
+  "currentAbilities" | "statistics"
+>;
 
 /** Contract-horizon groups visible in the market filters. */
 export type CareerMarketContractHorizon = "free_agent" | "expiring" | "secure";
@@ -95,6 +134,7 @@ export interface CareerMarketTargetFilters {
   readonly minimumAge?: number;
   readonly maximumAge?: number;
   readonly employment?: CareerMarketEmploymentInput["status"];
+  readonly sourceTier?: CareerMarketSourceTier;
   readonly contractHorizon?: CareerMarketContractHorizon;
   readonly minimumValue?: Money;
   readonly maximumValue?: Money;
@@ -105,6 +145,7 @@ export interface CareerMarketTargetFilters {
 export type CareerMarketTargetSortKey =
   | "player"
   | "club"
+  | "tier"
   | "age"
   | "role"
   | "current_level"
@@ -126,9 +167,11 @@ export interface CareerMarketTargetRowView {
   readonly displayName: string;
   readonly age: number;
   readonly primaryRole: CanonicalPlayerRole;
-  readonly currentLevel: CareerSquadPlayerLevel;
-  readonly potentialLevel: CareerSquadPlayerLevel;
-  readonly value: Money;
+  readonly currentRating: CareerPlayerRatingView;
+  readonly potentialRange: CareerPlayerPotentialRangeView;
+  readonly publicValue: Money;
+  readonly askingPrice?: Money;
+  readonly freeAgentTransferFee?: Money;
   readonly currency: CurrencyCode;
   readonly employment: CareerMarketEmploymentInput;
   readonly contractHorizon: CareerMarketContractHorizon;
@@ -137,30 +180,30 @@ export interface CareerMarketTargetRowView {
 }
 
 /** Public target detail used by the full-screen market inspection surface. */
-export interface CareerMarketTargetDetailView extends CareerMarketTargetRowView {
+export interface CareerMarketTargetDetailView
+  extends CareerMarketTargetRowView, CareerPlayerDetailView {
   readonly condition: number;
   readonly form: number;
   readonly morale: number;
-  readonly roleFits: readonly CareerMarketRoleFitInput[];
 }
 
 /** Framework-free target catalog consumed by Market renderers. */
 export interface CareerMarketTargetCatalogView {
   readonly status: "empty" | "populated";
   readonly rows: readonly CareerMarketTargetRowView[];
-  readonly detailsByPlayerId: ReadonlyMap<string, CareerMarketTargetDetailView>;
   readonly totalTargetCount: number;
   readonly visibleTargetCount: number;
   readonly filters: CareerMarketTargetFilters;
   readonly sort?: CareerMarketTargetSort;
+  /**
+   * Resolves and memoizes one opened target detail without precomputing the
+   * exact attributes or archive statistics of every Market row. Unknown or
+   * incomplete targets resolve to `undefined` instead of breaking the screen.
+   */
+  readonly resolveDetail: (
+    playerId: string,
+  ) => CareerMarketTargetDetailView | undefined;
 }
-
-const LEVEL_ORDER: Readonly<Record<CareerSquadPlayerLevel, number>> = {
-  depth: 0,
-  squad: 1,
-  first_team: 2,
-  leading: 3,
-};
 
 /** Builds the public target catalog without exposing exact hidden ability. */
 export function buildCareerMarketTargetCatalog(
@@ -169,20 +212,39 @@ export function buildCareerMarketTargetCatalog(
   sort?: CareerMarketTargetSort,
 ): CareerMarketTargetCatalogView {
   assertUniqueTargets(targets);
-  const details = targets.map(buildTargetDetail);
+  const rowsByPlayerId = new Map(
+    targets.map((target) => [target.playerId, target] as const),
+  );
+  const resolvedDetails = new Map<string, CareerMarketTargetDetailView>();
+  const allRows = targets.map(buildTargetRow);
   const rows = sortCareerMarketTargetRows(
-    filterCareerMarketTargetRows(details, filters),
+    filterCareerMarketTargetRows(allRows, filters),
     sort,
   );
 
   return {
     status: rows.length === 0 ? "empty" : "populated",
     rows,
-    detailsByPlayerId: new Map(details.map((detail) => [detail.playerId, detail])),
-    totalTargetCount: details.length,
+    totalTargetCount: allRows.length,
     visibleTargetCount: rows.length,
     filters,
     ...(sort === undefined ? {} : { sort }),
+    resolveDetail(playerId) {
+      const resolved = resolvedDetails.get(playerId);
+      if (resolved !== undefined) return resolved;
+      const target = rowsByPlayerId.get(playerId);
+      if (target === undefined || target.resolveDetail === undefined) return undefined;
+      try {
+        const detail = buildCareerMarketTargetDetailView(
+          target,
+          target.resolveDetail(),
+        );
+        resolvedDetails.set(playerId, detail);
+        return detail;
+      } catch {
+        return undefined;
+      }
+    },
   };
 }
 
@@ -198,14 +260,16 @@ export function filterCareerMarketTargetRows(
       query.length > 0
       && !row.displayName.toLocaleLowerCase("en").includes(query)
       && !employmentLabel(row.employment).toLocaleLowerCase("en").includes(query)
+      && !competitionLabel(row.employment).toLocaleLowerCase("en").includes(query)
     ) return false;
     if (filters.role !== undefined && row.primaryRole !== filters.role) return false;
     if (filters.minimumAge !== undefined && row.age < filters.minimumAge) return false;
     if (filters.maximumAge !== undefined && row.age > filters.maximumAge) return false;
     if (filters.employment !== undefined && row.employment.status !== filters.employment) return false;
+    if (filters.sourceTier !== undefined && row.employment.sourceTier !== filters.sourceTier) return false;
     if (filters.contractHorizon !== undefined && row.contractHorizon !== filters.contractHorizon) return false;
-    if (filters.minimumValue !== undefined && row.value < filters.minimumValue) return false;
-    if (filters.maximumValue !== undefined && row.value > filters.maximumValue) return false;
+    if (filters.minimumValue !== undefined && row.publicValue < filters.minimumValue) return false;
+    if (filters.maximumValue !== undefined && row.publicValue > filters.maximumValue) return false;
     if (filters.eligibility === "actionable" && row.eligibility.status !== "allowed") return false;
     if (filters.eligibility === "blocked" && row.eligibility.status !== "blocked") return false;
     return true;
@@ -219,6 +283,9 @@ export function sortCareerMarketTargetRows(
 ): readonly CareerMarketTargetRowView[] {
   return [...rows].sort((left, right) => {
     if (sort !== undefined) {
+      if (sort.key === "potential_level") {
+        return comparePotentialRows(left, right, sort.direction);
+      }
       const compared = compareTargetRows(left, right, sort.key);
       if (compared !== 0) return sort.direction === "ascending" ? compared : -compared;
     }
@@ -229,29 +296,52 @@ export function sortCareerMarketTargetRows(
   });
 }
 
-function buildTargetDetail(target: CareerMarketTargetInput): CareerMarketTargetDetailView {
+/** Builds one opened target detail through the shared player-detail policy. */
+export function buildCareerMarketTargetDetailView(
+  target: CareerMarketTargetInput,
+  detailInput: CareerMarketTargetDetailInput,
+): CareerMarketTargetDetailView {
+  const row = buildTargetRow(target);
+  const detail = buildCareerPlayerDetailView({
+    playerId: target.playerId,
+    primaryRole: target.primaryRole,
+    roles: target.roleFits.map((fit) => ({
+      role: fit.role,
+      suitability: fit.suitability,
+    })),
+    currentAbilities: detailInput.currentAbilities,
+    statistics: detailInput.statistics,
+  });
+
+  return {
+    ...row,
+    ...detail,
+    condition: target.condition,
+    form: target.form,
+    morale: target.morale,
+  };
+}
+
+/** Copies only facts needed by the always-visible Market table. */
+function buildTargetRow(target: CareerMarketTargetInput): CareerMarketTargetRowView {
   assertTarget(target);
   return {
     playerId: target.playerId,
     displayName: `${target.firstName} ${target.lastName}`.trim(),
     age: target.age,
     primaryRole: target.primaryRole,
-    currentLevel: target.currentLevel,
-    potentialLevel: target.potentialLevel,
-    value: target.value,
+    currentRating: copyCareerPlayerRating(target.currentRating),
+    potentialRange: copyCareerPlayerPotentialRange(target.potentialRange),
+    publicValue: target.publicValue,
+    ...(target.askingPrice === undefined ? {} : { askingPrice: target.askingPrice }),
+    ...(target.freeAgentTransferFee === undefined
+      ? {}
+      : { freeAgentTransferFee: target.freeAgentTransferFee }),
     currency: target.currency,
     employment: copyEmployment(target.employment),
     contractHorizon: contractHorizon(target.employment),
     availability: target.availability,
     eligibility: copyEligibility(target.eligibility),
-    condition: target.condition,
-    form: target.form,
-    morale: target.morale,
-    roleFits: [...target.roleFits]
-      .sort((left, right) => (
-        Number(right.isPrimary) - Number(left.isPrimary)
-        || canonicalPlayerRoleOrder(left.role) - canonicalPlayerRoleOrder(right.role)
-      )),
   };
 }
 
@@ -268,19 +358,54 @@ function compareTargetRows(
   switch (key) {
     case "player": return left.displayName.localeCompare(right.displayName);
     case "club": return employmentLabel(left.employment).localeCompare(employmentLabel(right.employment));
+    case "tier": return tierRank(left.employment.sourceTier) - tierRank(right.employment.sourceTier);
     case "age": return left.age - right.age;
     case "role": return canonicalPlayerRoleOrder(left.primaryRole) - canonicalPlayerRoleOrder(right.primaryRole);
-    case "current_level": return LEVEL_ORDER[left.currentLevel] - LEVEL_ORDER[right.currentLevel];
-    case "potential_level": return LEVEL_ORDER[left.potentialLevel] - LEVEL_ORDER[right.potentialLevel];
-    case "value": return left.value - right.value;
+    case "current_level":
+      return careerPlayerRatingSortScore(left.currentRating)
+        - careerPlayerRatingSortScore(right.currentRating);
+    case "potential_level":
+      return compareCareerPlayerPotentialRanges(
+        left.potentialRange,
+        right.potentialRange,
+      );
+    case "value": return left.publicValue - right.publicValue;
     case "contract": return remainingContractDays(left.employment) - remainingContractDays(right.employment);
     case "availability": return left.availability.localeCompare(right.availability);
     case "eligibility": return left.eligibility.status.localeCompare(right.eligibility.status);
   }
 }
 
+function comparePotentialRows(
+  left: CareerMarketTargetRowView,
+  right: CareerMarketTargetRowView,
+  direction: CareerMarketTargetSort["direction"],
+): number {
+  const projectionOrder = compareCareerPlayerPotentialRanges(
+    left.potentialRange,
+    right.potentialRange,
+  );
+  const currentOrder = careerPlayerRatingSortScore(left.currentRating)
+    - careerPlayerRatingSortScore(right.currentRating);
+  const directionMultiplier = direction === "ascending" ? 1 : -1;
+  return projectionOrder * directionMultiplier
+    || currentOrder * directionMultiplier
+    || left.playerId.localeCompare(right.playerId);
+}
+
 function employmentLabel(employment: CareerMarketEmploymentInput): string {
   return employment.status === "free_agent" ? "" : employment.clubName;
+}
+
+function competitionLabel(employment: CareerMarketEmploymentInput): string {
+  return employment.status === "free_agent" ? "" : employment.competitionName;
+}
+
+function tierRank(tier: CareerMarketSourceTier): number {
+  if (tier === "first_division") return 1;
+  if (tier === "second_division") return 2;
+  if (tier === "third_division") return 3;
+  return 4;
 }
 
 function remainingContractDays(employment: CareerMarketEmploymentInput): number {
@@ -288,7 +413,9 @@ function remainingContractDays(employment: CareerMarketEmploymentInput): number 
 }
 
 function copyEmployment(employment: CareerMarketEmploymentInput): CareerMarketEmploymentInput {
-  return employment.status === "free_agent" ? { status: "free_agent" } : { ...employment };
+  return employment.status === "free_agent"
+    ? { status: "free_agent", sourceTier: "free_agent" }
+    : { ...employment };
 }
 
 function copyEligibility(eligibility: CareerMarketTargetEligibility): CareerMarketTargetEligibility {

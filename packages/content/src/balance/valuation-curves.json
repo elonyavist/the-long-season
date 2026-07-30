@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "version": "valuation-curves-v3",
+  "classification": "explicit_game_design_target",
+  "playerRatingScaleVersion": "player-rating-scale-v3",
+  "playerMarketCalibrationVersion": "player-market-calibration-transfermarkt-it-2026-07-28-v2",
+  "qualityInterpolationExponentMilli": 2000,
+  "ratingValueAnchors": [
+    { "rating": 1, "valueMinorUnits": 2500000 },
+    { "rating": 1.5, "valueMinorUnits": 5000000 },
+    { "rating": 2, "valueMinorUnits": 7500000 },
+    { "rating": 2.5, "valueMinorUnits": 10000000 },
+    { "rating": 3, "valueMinorUnits": 15000000 },
+    { "rating": 3.5, "valueMinorUnits": 200000000 },
+    { "rating": 4, "valueMinorUnits": 1500000000 },
+    { "rating": 4.5, "valueMinorUnits": 3500000000 },
+    { "rating": 5, "valueMinorUnits": 6000000000 },
+    { "rating": 5.5, "valueMinorUnits": 10000000000 },
+    { "rating": 6, "valueMinorUnits": 15000000000 }
+  ],
+  "ageMultipliers": [
+    { "minimumAge": 15, "maximumAge": 18, "multiplierBasisPoints": 10500 },
+    { "minimumAge": 19, "maximumAge": 21, "multiplierBasisPoints": 12000 },
+    { "minimumAge": 22, "maximumAge": 25, "multiplierBasisPoints": 12500 },
+    { "minimumAge": 26, "maximumAge": 29, "multiplierBasisPoints": 11000 },
+    { "minimumAge": 30, "maximumAge": 32, "multiplierBasisPoints": 8500 },
+    { "minimumAge": 33, "maximumAge": 35, "multiplierBasisPoints": 6000 },
+    { "minimumAge": 36, "maximumAge": 45, "multiplierBasisPoints": 3500 }
+  ],
+  "prospectExpectation": {
+    "version": "prospect-expectation-v2",
+    "potentialProjectionPolicyVersion": "player-potential-projection-v2",
+    "uncertaintyDiscountBasisPointsPerHalfStar": 500,
+    "minimumUncertaintyMultiplierBasisPoints": 6000
+  },
+  "positionMultipliers": {
+    "goalkeeper": 8500,
+    "defender": 9500,
+    "midfielder": 10000,
+    "forward": 11000
+  },
+  "marketContext": {
+    "multiplierBasisPoints": {
+      "first_division": 18500,
+      "second_division": 10000,
+      "third_division": 9000,
+      "free_agent": 10000
+    },
+    "maximumMinorUnits": {
+      "first_division": 15000000000,
+      "second_division": 1800000000,
+      "third_division": 500000000,
+      "free_agent": 15000000000
+    }
+  },
+  "upperTail": {
+    "compressionStartsMinorUnits": 8000000000,
+    "compressionBasisPoints": 2500,
+    "hardCapMinorUnits": 15000000000,
+    "hardCapMaximumAge": 25,
+    "hardCapRequiredRating": 6
+  }
+}

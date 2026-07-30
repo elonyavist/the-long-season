@@ -35,11 +35,79 @@ import {
 } from "@game/domain";
 
 import {
-  advanceAiMarketLifecycle,
-  deriveAiMarketNeeds,
+  advanceAiMarketLifecycle as advanceAiMarketLifecycleWithConfig,
+  deriveAiTransferOfferFee,
+  deriveAiMarketNeeds as deriveAiMarketNeedsWithPolicy,
 } from "./ai-market-lifecycle.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { askingPriceConfigFixture } from "../test-fixtures/asking-price-config.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
 
 /** Tests for deterministic AI market behavior through canonical negotiations. */
+
+const VALUATION_CONFIG = playerValuationConfigFixture();
+const ASKING_PRICE_CONFIG = askingPriceConfigFixture();
+const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+
+function deriveAiMarketNeeds(
+  input: Omit<Parameters<typeof deriveAiMarketNeedsWithPolicy>[0], "marketBehaviorPolicy">,
+) {
+  return deriveAiMarketNeedsWithPolicy({
+    ...input,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function advanceAiMarketLifecycle(
+  input: Omit<
+    Parameters<typeof advanceAiMarketLifecycleWithConfig>[0],
+    "valuationConfig" | "askingPriceConfig" | "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceAiMarketLifecycleWithConfig({
+    ...input,
+    valuationConfig: VALUATION_CONFIG,
+    askingPriceConfig: ASKING_PRICE_CONFIG,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+test("AI offer policy deterministically reaches reject, counter, and asking bands within capacity", () => {
+  const askingPrice = nonNegativeMoney(10_000_000);
+  const observedOffers = new Set<number>();
+  for (let index = 0; index < 200; index += 1) {
+    observedOffers.add(deriveAiTransferOfferFee({
+      askingPrice,
+      maximumAffordableFee: askingPrice,
+      buyingClubId: clubId("club:buyer"),
+      playerId: playerId(`player:offer-band-${index}`),
+      submittedOn: gameDate(20_000),
+      policy: MARKET_BEHAVIOR_POLICY.aiTransferOffer,
+    }));
+  }
+
+  assert.equal([...observedOffers].some((fee) => fee < askingPrice * 0.75), true);
+  assert.equal(
+    [...observedOffers].some(
+      (fee) => fee >= askingPrice * 0.75 && fee < askingPrice,
+    ),
+    true,
+  );
+  assert.equal(observedOffers.has(askingPrice), true);
+  assert.equal(
+    deriveAiTransferOfferFee({
+      askingPrice,
+      maximumAffordableFee: nonNegativeMoney(6_000_000),
+      buyingClubId: clubId("club:buyer"),
+      playerId: playerId("player:affordability-bound"),
+      submittedOn: gameDate(20_000),
+      policy: MARKET_BEHAVIOR_POLICY.aiTransferOffer,
+    }) <= 6_000_000,
+    true,
+  );
+});
 
 test("deriveAiMarketNeeds orders structural department gaps before softer needs", () => {
   const buyer = clubId("club:buyer");
@@ -76,6 +144,14 @@ test("advanceAiMarketLifecycle starts no permanent negotiation outside a window"
   });
 
   assert.equal(result.facts.some((fact) => fact.event === "club_offer_submitted"), false);
+  assert.equal(
+    result.diagnostics.some(
+      (fact) =>
+        fact.event === "permanent_target_unavailable"
+        && fact.reason === "transfer_window_closed",
+    ),
+    true,
+  );
   assert.equal(result.careerState.transferNegotiationState?.negotiationIds.length ?? 0, 0);
   assert.equal(result.careerState.transferHistory.length, 0);
 });
@@ -96,12 +172,112 @@ test("advanceAiMarketLifecycle is deterministic and completes transfers through 
   const second = advanceAiMarketLifecycle(input);
 
   assert.deepEqual(second, first);
+  assert.equal(first.diagnostics.some((fact) => fact.event === "need_evaluated"), true);
+  assert.equal(first.diagnostics.some((fact) => fact.event === "permanent_target_found"), true);
   assert.equal(first.facts.some((fact) => fact.event === "club_offer_submitted"), true);
   assert.equal(first.facts.some((fact) => fact.event === "transfer_completed"), true);
   assert.equal(first.careerState.transferHistory.length > 0, true);
   assert.equal(
     first.careerState.seniorSquadState?.contractHistoryEntryIds.length,
     first.careerState.transferHistory.length * 2,
+  );
+});
+
+test("advanceAiMarketLifecycle lets the strongest first-division squad prioritize a lower-tier six-star prospect", () => {
+  const higherReputationBuyer = clubId("club:elite-buyer");
+  const strongestBuyer = clubId("club:elite-strongest");
+  const secondDivisionClub = clubId("club:elite-second");
+  const seller = clubId("club:elite-seller");
+  const prospect = playerWithPotentialFixture(
+    playerId("player:elite-prospect"),
+    "cm",
+    10,
+    17,
+  );
+  const baseCareerState = careerStateFixture(
+    [
+      clubFixture(
+        higherReputationBuyer,
+        10,
+        balancedSeniorSquad("elite-buyer"),
+      ),
+      clubFixture(
+        strongestBuyer,
+        9,
+        balancedSeniorSquadAtAbility("elite-strongest", 14),
+      ),
+      clubFixture(
+        secondDivisionClub,
+        6,
+        balancedSeniorSquad("elite-second"),
+      ),
+      clubFixture(seller, 4, [
+        prospect.id,
+        ...balancedSeniorSquad("elite-seller"),
+      ]),
+    ],
+    new Map([
+      [higherReputationBuyer, "first_division"],
+      [strongestBuyer, "first_division"],
+      [secondDivisionClub, "second_division"],
+      [seller, "third_division"],
+    ]),
+  );
+  const expiringBuyerMidfielderId =
+    baseCareerState.gameState.clubs[strongestBuyer]?.playerIds.find(
+      (candidateId) =>
+        baseCareerState.gameState.players[candidateId]?.primaryRole
+          === "central_midfielder",
+    );
+  assert.notEqual(expiringBuyerMidfielderId, undefined);
+  const careerState = withContractEndDate(
+    baseCareerState,
+    expiringBuyerMidfielderId!,
+    gameDate(20_100),
+  );
+  const ordinaryBuyerNeeds = deriveAiMarketNeeds({
+    careerState,
+    asOf: gameDate(20_000),
+  }).filter((need) => need.clubId === strongestBuyer);
+  assert.equal(
+    ordinaryBuyerNeeds.some((need) => need.department === "midfielder"),
+    true,
+  );
+
+  const result = advanceAiMarketLifecycle({
+    careerState,
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_030),
+    transferWindows: marketWindows({
+      summer: [19_990, 20_050],
+      winter: [20_200, 20_220],
+    }),
+  });
+
+  assert.equal(
+    result.facts.some(
+      (fact) =>
+        fact.buyingClubId === strongestBuyer
+        && fact.playerId === prospect.id
+        && fact.event === "club_offer_submitted"
+        && fact.reason === "elite_prospect_opportunity",
+    ),
+    true,
+  );
+  assert.equal(
+    result.facts.some(
+      (fact) =>
+        fact.buyingClubId === strongestBuyer
+        && fact.playerId === prospect.id
+        && fact.event === "transfer_completed",
+    ),
+    true,
+  );
+  assert.equal(
+    result.careerState.gameState.clubs[strongestBuyer]?.playerIds.includes(
+      prospect.id,
+    ),
+    true,
   );
 });
 
@@ -148,6 +324,106 @@ test("advanceAiMarketLifecycle protects the selected club and seller department 
   assert.equal(remainingDefenders, 6);
 });
 
+test("deriveAiMarketNeeds identifies a weak depth outlier as a current squad upgrade", () => {
+  const careerState = withContractEndDate(
+    upgradeNeedFixture(),
+    playerId("player:upgrade-weak-defender"),
+    gameDate(20_150),
+  );
+  const needs = deriveAiMarketNeeds({
+    careerState,
+    asOf: gameDate(20_000),
+  });
+  const defenderNeed = needs.find(
+    (need) =>
+      need.clubId === clubId("club:buyer")
+      && need.department === "defender",
+  );
+
+  assert.notEqual(defenderNeed, undefined);
+  assert.equal(defenderNeed?.currentDepth, 10);
+  assert.equal(defenderNeed?.targetDepth, 7);
+  assert.deepEqual(defenderNeed?.reasons, ["quality_gap"]);
+});
+
+test("a financially constrained club may still make no permanent offer in an open window", () => {
+  const careerState = marketFixture();
+  const buyer = clubId("club:buyer");
+  const buyerAccount = careerState.clubFinanceState?.accounts[buyer];
+  assert.notEqual(buyerAccount, undefined);
+  const constrainedState: CareerState = {
+    ...careerState,
+    clubFinanceState: {
+      ...careerState.clubFinanceState!,
+      accounts: {
+        ...careerState.clubFinanceState?.accounts,
+        [buyer]: {
+          ...buyerAccount!,
+          cashBalance: nonNegativeMoney(0),
+          availableTransferBudget: nonNegativeMoney(0),
+        },
+      },
+    },
+  };
+  const result = advanceAiMarketLifecycle({
+    careerState: constrainedState,
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_030),
+    transferWindows: marketWindows({
+      summer: [19_990, 20_050],
+      winter: [20_200, 20_220],
+    }),
+  });
+
+  assert.equal(
+    result.facts.some(
+      (fact) => fact.buyingClubId === buyer && fact.event === "club_offer_submitted",
+    ),
+    false,
+  );
+  assert.equal(
+    result.diagnostics.some(
+      (fact) => fact.clubId === buyer && fact.reason === "club_cannot_recruit",
+    ),
+    true,
+  );
+});
+
+test("an in-window preliminary fallback waits until every permanent department need is evaluated", () => {
+  const careerState = withContractEndDate(
+    fallbackPriorityFixture(),
+    playerId("player:seller-01"),
+    gameDate(20_150),
+  );
+  const result = advanceAiMarketLifecycle({
+    careerState,
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_001),
+    transferWindows: marketWindows({
+      summer: [19_990, 20_050],
+      winter: [20_200, 20_220],
+    }),
+  });
+
+  assert.equal(
+    result.diagnostics.some(
+      (fact) =>
+        fact.clubId === clubId("club:buyer")
+        && fact.department === "goalkeeper"
+        && fact.reason === "seller_department_floor",
+    ),
+    true,
+  );
+  assert.equal(
+    result.facts.some(
+      (fact) =>
+        fact.buyingClubId === clubId("club:buyer")
+        && fact.event === "club_offer_submitted",
+    ),
+    true,
+  );
+});
+
 function marketFixture(): CareerState {
   const buyer = clubId("club:buyer");
   const seller = clubId("club:seller");
@@ -165,6 +441,75 @@ function marketFixture(): CareerState {
   ]);
 }
 
+function fallbackPriorityFixture(): CareerState {
+  const buyer = clubId("club:buyer");
+  const seller = clubId("club:seller");
+  return careerStateFixture([
+    clubFixture(buyer, 5, [
+      ...playersForClubAtAbility("buyer-gk", ["gk"], 10),
+      ...playersForClubAtAbility("buyer-def", ["cb", "cb", "cb", "cb", "cb", "cb"], 5),
+      ...playersForClubAtAbility("buyer-mid", ["cm", "cm", "cm", "cm", "cm", "cm", "cm"], 15),
+      ...playersForClubAtAbility("buyer-att", ["st", "st", "st", "st"], 15),
+    ]),
+    clubFixture(seller, 6, [
+      ...playersForClubAtAbility("seller", [
+        "gk", "gk",
+        "cb", "cb", "cb", "cb", "cb", "cb", "cb",
+        "cm", "cm", "cm", "cm", "cm", "cm", "cm",
+        "st", "st", "st", "st",
+      ], 10),
+    ]),
+  ]);
+}
+
+function upgradeNeedFixture(): CareerState {
+  const buyer = clubId("club:buyer");
+  const seller = clubId("club:seller");
+  return careerStateFixture([
+    clubFixture(buyer, 5, [
+      ...playersForClubAtAbility("upgrade-gk", ["gk", "gk"], 10),
+      playerFixture(playerId("player:upgrade-weak-defender"), "cb", 2).id,
+      ...playersForClubAtAbility(
+        "upgrade-def",
+        ["cb", "cb", "cb", "cb", "cb", "cb", "cb", "cb", "cb"],
+        10,
+      ),
+      ...playersForClubAtAbility(
+        "upgrade-mid",
+        ["cm", "cm", "cm", "cm", "cm", "cm"],
+        10,
+      ),
+      ...playersForClubAtAbility("upgrade-att", ["st", "st", "st", "st"], 10),
+    ]),
+    clubFixture(seller, 6, balancedSeniorSquad("upgrade-seller")),
+  ]);
+}
+
+function withContractEndDate(
+  careerState: CareerState,
+  targetPlayerId: PlayerId,
+  endsOn: ReturnType<typeof gameDate>,
+): CareerState {
+  const contractId = careerState.seniorSquadState?.activeContractIds.find(
+    (candidateId) =>
+      careerState.seniorSquadState?.contracts[candidateId]?.playerId === targetPlayerId,
+  );
+  const contract = contractId === undefined
+    ? undefined
+    : careerState.seniorSquadState?.contracts[contractId];
+  assert.notEqual(contract, undefined);
+  return {
+    ...careerState,
+    seniorSquadState: {
+      ...careerState.seniorSquadState!,
+      contracts: {
+        ...careerState.seniorSquadState?.contracts,
+        [contractId!]: { ...contract!, endsOn },
+      },
+    },
+  };
+}
+
 function balancedSeniorSquad(prefix: string): PlayerId[] {
   return playersForClub(prefix, [
     "gk", "gk",
@@ -172,6 +517,18 @@ function balancedSeniorSquad(prefix: string): PlayerId[] {
     "cm", "cm", "cm", "cm", "cm", "cm", "cm",
     "st", "st", "st", "st", "st", "st",
   ]);
+}
+
+function balancedSeniorSquadAtAbility(
+  prefix: string,
+  ability: number,
+): PlayerId[] {
+  return playersForClubAtAbility(prefix, [
+    "gk", "gk",
+    "cb", "cb", "cb", "cb", "cb", "cb",
+    "cm", "cm", "cm", "cm", "cm", "cm", "cm",
+    "st", "st", "st", "st", "st", "st",
+  ], ability);
 }
 
 function marketWindows(input: {
@@ -188,9 +545,22 @@ function marketWindows(input: {
   });
 }
 
-function careerStateFixture(clubs: readonly Club[]): CareerState {
+function careerStateFixture(
+  clubs: readonly Club[],
+  categoryByClubId: ReadonlyMap<ClubId, Club["category"]> = new Map(),
+): CareerState {
   const selectedClub = clubFixture(clubId("club:user"), 5, []);
-  const worldClubs = [selectedClub, ...clubs];
+  const worldClubs = [selectedClub, ...clubs].map((club, index): Club => ({
+    ...club,
+    category: categoryByClubId.get(club.id)
+      ?? (
+        index === 0
+          ? "first_division"
+          : index === 1
+            ? "second_division"
+            : "third_division"
+      ),
+  }));
   const players: Partial<Record<PlayerId, Player>> = {};
   const playerIds: PlayerId[] = [];
   const playerStates: Partial<Record<PlayerId, PlayerDynamicState>> = {};
@@ -208,6 +578,9 @@ function careerStateFixture(clubs: readonly Club[]): CareerState {
   }
 
   const selectedClubId = selectedClub.id;
+  const firstCompetitionId = competitionId("competition:test-first");
+  const secondCompetitionId = competitionId("competition:test-second");
+  const thirdCompetitionId = competitionId("competition:test-third");
   const gameState: GameState = {
     meta: {
       seed: "transfer-turnover-test",
@@ -225,6 +598,37 @@ function careerStateFixture(clubs: readonly Club[]): CareerState {
     clubIds: worldClubs.map((club) => club.id),
     fixtures: {},
     fixtureIds: [],
+    domesticCompetitionWorld: {
+      competitionIds: [
+        firstCompetitionId,
+        secondCompetitionId,
+        thirdCompetitionId,
+      ],
+      competitions: {
+        [firstCompetitionId]: competitionFixture(
+          firstCompetitionId,
+          "First",
+          worldClubs
+            .filter(({ category }) => category === "first_division")
+            .map(({ id }) => id),
+        ),
+        [secondCompetitionId]: competitionFixture(
+          secondCompetitionId,
+          "Second",
+          worldClubs
+            .filter(({ category }) => category === "second_division")
+            .map(({ id }) => id),
+        ),
+        [thirdCompetitionId]: competitionFixture(
+          thirdCompetitionId,
+          "Third",
+          worldClubs
+            .filter(({ category }) => category === "third_division")
+            .map(({ id }) => id),
+        ),
+      },
+      seasonHistory: [],
+    },
   };
   const seniorSquadState = canonicalSeniorSquadState(gameState);
 
@@ -237,6 +641,27 @@ function careerStateFixture(clubs: readonly Club[]): CareerState {
     seniorSquadState,
     clubFinanceState: canonicalClubFinanceState(gameState, seniorSquadState),
   });
+}
+
+function competitionFixture(
+  id: ReturnType<typeof competitionId>,
+  name: string,
+  clubIds: readonly ClubId[],
+) {
+  return {
+    id,
+    name,
+    clubIds,
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: null,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
+  };
 }
 
 function canonicalSeniorSquadState(gameState: GameState): SeniorSquadState {
@@ -385,6 +810,20 @@ function playerFixture(
     primaryRole: primaryRoleForPosition(position),
     abilities,
     potential: mapPlayerAbilities(abilities, (value) => abilityValue(Math.min(20, Number(value) + 1))),
+  };
+  playerLookup.set(id, player);
+  return player;
+}
+
+function playerWithPotentialFixture(
+  id: PlayerId,
+  position: PlayerPosition,
+  currentAbility: number,
+  potentialAbility: number,
+): Player {
+  const player = {
+    ...playerFixture(id, position, currentAbility),
+    potential: abilitySet(potentialAbility),
   };
   playerLookup.set(id, player);
   return player;

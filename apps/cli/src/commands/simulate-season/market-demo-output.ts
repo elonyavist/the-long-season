@@ -1,4 +1,9 @@
-import type { FakeLeagueSystem } from "@game/content";
+import {
+  playerEconomyCalibration,
+  selectMarketBehaviorCalibration,
+  selectPlayerValuationConfig,
+  type FakeLeagueSystem,
+} from "@game/content";
 import {
   evaluatePermanentTransfer,
   type EvaluatePermanentTransferInput,
@@ -54,6 +59,12 @@ export function formatMarketDemoOutput(
     gameState: scenario.gameState,
     clubFinanceState: scenario.clubFinanceState,
     intent,
+    valuationConfig: selectPlayerValuationConfig(
+      scenario.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      scenario.gameState.meta.calibrationVersions,
+    ),
   });
   const buyerBudgetBefore = evaluation.buyerBudgetBefore;
   const buyerBudgetAfter = evaluation.buyerBudgetAfter ?? buyerBudgetBefore;
@@ -167,6 +178,7 @@ function gameStateFromLeague(league: FakeLeagueSystem): CliGameState {
       seed: "market-demo",
       rngAlgorithmVersion: "market-demo",
       saveSchemaVersion: 1,
+      calibrationVersions: { ...playerEconomyCalibration.versions },
     },
     calendar: {
       currentDate: league.seasonStartDate,

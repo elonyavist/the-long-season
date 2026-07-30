@@ -1,0 +1,31 @@
+{
+  "date": "2026-07-28",
+  "scope": "multi-page-app-redesign",
+  "targets": [
+    "apps/web/src/features/squad/CareerSquadScreen.tsx",
+    "apps/web/src/features/squad/CareerPlayerProfileDialog.tsx",
+    "apps/web/src/features/market/CareerMarketScreen.tsx",
+    "apps/web/src/features/market/CareerMarketPlayerDialog.tsx"
+  ],
+  "framework": "React 19 + Vite 8 + TypeScript",
+  "styling": "Canonical CSS tokens and component styles under apps/web/src/styles",
+  "tokens": "apps/web/src/styles/tokens.css",
+  "fonts": [
+    "Rokkitt Variable",
+    "Mulish Variable",
+    "system monospace"
+  ],
+  "motion": "Motion for React with existing reduced-motion policy",
+  "existingIdentity": "Dark teal, chalk, muted gold, compact football workbench",
+  "existingAssets": [
+    "apps/web/src/assets/campo-calcio.svg"
+  ],
+  "constraints": [
+    "Preserve the persistent career shell and approved tactical board",
+    "Preserve dirty worktree changes",
+    "No route-tree replacement or file deletion",
+    "No parallel runtime token system",
+    "No scouting fog without a canonical knowledge model",
+    "No Phase 79 long run in this redesign phase"
+  ]
+}

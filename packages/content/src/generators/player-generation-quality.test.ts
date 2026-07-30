@@ -1,11 +1,23 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { Player } from "@game/domain";
+import {
+  getPlayerRoleProfile,
+  roleCurrentAbility,
+  rolePotentialAbility,
+  type Player,
+  type PlayerStarRating,
+} from "@game/domain";
 
+import { playerRatingScale } from "../balance/player-economy-calibration.ts";
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
-import { generateFakePlayersForClubs, type FakePlayers } from "./fake-players.ts";
+import {
+  generateFakePlayersForClubs,
+  type FakePlayers,
+} from "./fake-players.ts";
+import { createFakeDomesticWorld } from "./domestic-world.ts";
 import { getGeneratedPlayerArchetype } from "./player-archetypes.ts";
+import { clubTierForGeneratedClubNumber } from "./player-generation-bands.ts";
 
 /** Product-level tests for generated third-division squad quality. */
 
@@ -97,14 +109,131 @@ test("every generated third-division club has at least one prospect without guar
   }
 });
 
+test("complete initial world respects first-team bands and exact global six-star budgets", () => {
+  const first = createFakeDomesticWorld({ worldSeed: "quality-global-world" });
+  const repeated = createFakeDomesticWorld({ worldSeed: "quality-global-world" });
+
+  assert.deepEqual(first, repeated);
+  assert.equal(
+    first.exceptionalAllocation.currentSixPlayerKeys.length >= 1
+      && first.exceptionalAllocation.currentSixPlayerKeys.length <= 2,
+    true,
+  );
+  assert.equal(
+    first.exceptionalAllocation.potentialSixPlayerKeys.length >= 2
+      && first.exceptionalAllocation.potentialSixPlayerKeys.length <= 4,
+    true,
+  );
+  assert.equal(
+    first.exceptionalAllocation.potentialSixPlayerKeys.filter((id) =>
+      clubForPlayer(first, id)?.category !== "first_division"
+    ).length <= 1,
+    true,
+  );
+
+  for (const id of first.playerIds) {
+    const player = requiredPlayer(first.players[id]);
+    const roleProfile = roleProfileFor(player);
+    const currentRating = ratingForAbility(Number(roleCurrentAbility(
+      player.abilities,
+      roleProfile,
+    )));
+    const potentialRating = ratingForAbility(Number(rolePotentialAbility(
+      player.potential,
+      roleProfile,
+    )));
+    const club = clubForPlayer(first, id);
+    assert.ok(club !== undefined);
+    const placement = first.lineupsByClubId[club.id]?.some(
+      (slot) => slot.playerId === id,
+    )
+      ? "starter"
+      : "reserve";
+
+    if (placement === "starter") {
+      const exceptional = first.exceptionalAllocation.currentSixPlayerKeys.includes(id);
+      const localWhiteFly =
+        first.playerRarityAssignments[id]?.rarityKind === "white_fly";
+      const band = playerRatingScale.divisionFirstTeamBands.find((candidate) =>
+        candidate.division === club.category
+      );
+      assert.ok(band !== undefined);
+      assert.equal(
+        currentRating >= band.normalMinimum,
+        true,
+        `${id} ${club.category} starter floor`,
+      );
+      assert.equal(
+        currentRating <= (exceptional || localWhiteFly ? band.exceptionalMaximum : band.normalMaximum),
+        true,
+        `${id} ${club.category} starter ceiling`,
+      );
+    }
+
+    assert.equal(potentialRating >= currentRating, true, `${id} potential`);
+  }
+
+  const allPlayerIds = [
+    ...first.playerIds,
+    ...first.initialYouthAcademies.playerIds,
+  ];
+  const actualCurrentSix = allPlayerIds.filter((id) => {
+    const player = requiredPlayer(
+      first.players[id] ?? first.initialYouthAcademies.players[id],
+    );
+    return ratingForAbility(Number(roleCurrentAbility(
+      player.abilities,
+      roleProfileFor(player),
+    ))) === 6;
+  });
+  const actualPotentialSix = allPlayerIds.filter((id) => {
+    const player = requiredPlayer(
+      first.players[id] ?? first.initialYouthAcademies.players[id],
+    );
+    return ratingForAbility(Number(rolePotentialAbility(
+      player.potential,
+      roleProfileFor(player),
+    ))) === 6;
+  });
+
+  assert.deepEqual(
+    actualCurrentSix.map(String).toSorted(),
+    [...first.exceptionalAllocation.currentSixPlayerKeys].toSorted(),
+  );
+  assert.deepEqual(
+    actualPotentialSix.map(String).toSorted(),
+    [...first.exceptionalAllocation.potentialSixPlayerKeys].toSorted(),
+  );
+  for (const id of actualCurrentSix) {
+    const club = clubForPlayer(first, id);
+    assert.equal(club?.category, "first_division");
+    assert.equal(first.lineupsByClubId[club!.id]?.some((slot) => slot.playerId === id), true);
+    const divisionIndex = first.divisionClubIds.first_division.indexOf(club!.id);
+    assert.equal(clubTierForGeneratedClubNumber(divisionIndex + 1), "title_contender");
+  }
+});
+
 function generatedLeague(seed: string): FakePlayers {
   const clubs = generateFakeClubs();
   return generateFakePlayersForClubs(clubs.clubIds, { seed });
 }
 
+function ratingForAbility(ability: number): PlayerStarRating {
+  let rating: PlayerStarRating = 1;
+  for (const threshold of playerRatingScale.abilityThresholds) {
+    if (ability >= threshold.minimumAbilityInclusive) rating = threshold.rating;
+  }
+  return rating;
+}
+
 function requiredPlayer(player: Player | undefined): Player {
   assert.ok(player !== undefined);
   return player;
+}
+
+function roleProfileFor(player: Player) {
+  assert.ok(player.primaryRole !== undefined);
+  return getPlayerRoleProfile(player.primaryRole);
 }
 
 function playerDisplayName(player: Player): string {
@@ -124,5 +253,17 @@ function currentRolePeak(player: Player): number {
     Number(abilities.technical.tackling),
     Number(abilities.mental.positioning),
     Number(abilities.goalkeeping.reflexes),
+  );
+}
+
+function clubForPlayer(
+  world: ReturnType<typeof createFakeDomesticWorld>,
+  id: string,
+) {
+  return world.clubs.find((club) =>
+    club.playerIds.includes(id as Player["id"])
+    || world.initialYouthAcademies.youthAcademyState.clubRosters[
+      club.id
+    ]?.playerIds.includes(id as Player["id"])
   );
 }

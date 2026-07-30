@@ -28,23 +28,99 @@ import {
 import { test } from "vitest";
 
 import {
-  acceptTransferCounter,
-  advanceTransferNegotiations,
-  deriveSellerTransferWillingness,
-  submitTransferOffer,
+  acceptTransferCounter as acceptTransferCounterWithPolicy,
+  advanceTransferNegotiations as advanceTransferNegotiationsWithConfig,
+  deriveTransferCommercialSnapshot,
+  submitTransferOffer as submitTransferOfferWithConfig,
   withdrawTransferNegotiation,
 } from "./transfer-negotiation.ts";
-import { deriveContractDemand } from "./contract-negotiation-demand.ts";
+import { deriveContractDemand as deriveContractDemandWithPolicy } from "./contract-negotiation-demand.ts";
 import {
-  advanceTransferPlayerNegotiations,
-  submitTransferPlayerOffer,
+  advanceTransferPlayerNegotiations as advanceTransferPlayerNegotiationsWithPolicy,
+  submitTransferPlayerOffer as submitTransferPlayerOfferWithPolicy,
 } from "./transfer-player-negotiation.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { askingPriceConfigFixture } from "../test-fixtures/asking-price-config.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
 
 const SELLER = clubId("club:pro18");
 const BUYER = clubId("club:pro01");
 const TARGET = playerId("player:target");
 const SUBMITTED_ON = gameDate(20_000);
 const NEG_ID = transferNegotiationId("transfer-negotiation:demo:1");
+const VALUATION_CONFIG = playerValuationConfigFixture();
+const ASKING_PRICE_CONFIG = askingPriceConfigFixture();
+const WAGE_POLICY = playerWagePolicyConfigFixture();
+const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+
+function acceptTransferCounter(
+  input: Omit<Parameters<typeof acceptTransferCounterWithPolicy>[0], "marketBehaviorPolicy">,
+) {
+  return acceptTransferCounterWithPolicy({
+    ...input,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function deriveContractDemand(
+  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+) {
+  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function submitTransferPlayerOffer(
+  input: Omit<
+    Parameters<typeof submitTransferPlayerOfferWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return submitTransferPlayerOfferWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function advanceTransferPlayerNegotiations(
+  input: Omit<
+    Parameters<typeof advanceTransferPlayerNegotiationsWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceTransferPlayerNegotiationsWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function submitTransferOffer(
+  input: Omit<
+    Parameters<typeof submitTransferOfferWithConfig>[0],
+    "valuationConfig" | "askingPriceConfig" | "marketBehaviorPolicy"
+  >,
+) {
+  return submitTransferOfferWithConfig({
+    ...input,
+    valuationConfig: VALUATION_CONFIG,
+    askingPriceConfig: ASKING_PRICE_CONFIG,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function advanceTransferNegotiations(
+  input: Omit<
+    Parameters<typeof advanceTransferNegotiationsWithConfig>[0],
+    "valuationConfig" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceTransferNegotiationsWithConfig({
+    ...input,
+    valuationConfig: VALUATION_CONFIG,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
 
 /** Windows so that SUBMITTED_ON (20_000) is inside an open window. */
 function windows(): SeasonTransferWindows {
@@ -164,7 +240,8 @@ test("a fee well below the asking value is rejected", () => {
 test("a fee in the counter band produces a counteroffer that keeps the deadline", () => {
   const state = careerFixture({ buyerBudget: 500_000_000_00 });
   const asking = askingFeeFor(state, nonNegativeMoney(1));
-  const submitted = submit(state, nonNegativeMoney(Math.round(asking * 0.8)));
+  const offered = nonNegativeMoney(Math.round(asking * 0.8));
+  const submitted = submit(state, offered);
   const advanced = advanceTransferNegotiations({
     careerState: submitted.careerState,
     throughDate: dueDate(submitted),
@@ -173,7 +250,34 @@ test("a fee in the counter band produces a counteroffer that keeps the deadline"
   assert.equal(negotiation?.status, "countered");
   if (negotiation?.status !== "countered") return;
   assert.equal(negotiation.clock.deadline, submitted.negotiation.status === "submitted" ? submitted.negotiation.clock.deadline : undefined);
-  assert.equal(negotiation.counterFee, asking);
+  assert.equal(
+    negotiation.counterFee,
+    asking - Math.floor((asking - offered) * 0.5),
+  );
+  assert.ok(negotiation.counterFee < asking);
+  assert.ok(negotiation.counterFee > offered);
+});
+
+test("an unanswered club counter expires on the original stage deadline", () => {
+  const state = careerFixture({ buyerBudget: 500_000_000_00 });
+  const asking = askingFeeFor(state, nonNegativeMoney(1));
+  const submitted = submit(state, nonNegativeMoney(Math.round(asking * 0.8)));
+  const countered = advanceTransferNegotiations({
+    careerState: submitted.careerState,
+    throughDate: dueDate(submitted),
+  });
+  const negotiation = countered.careerState.transferNegotiationState?.negotiations[NEG_ID];
+  assert.equal(negotiation?.status, "countered");
+  if (negotiation?.status !== "countered") return;
+
+  const expired = advanceTransferNegotiations({
+    careerState: countered.careerState,
+    throughDate: gameDate(negotiation.clock.deadline + 1),
+  });
+  assert.equal(
+    expired.careerState.transferNegotiationState?.negotiations[NEG_ID]?.status,
+    "expired",
+  );
 });
 
 test("an accepted seller reply the buyer can no longer fund is cancelled as unaffordable", () => {
@@ -208,6 +312,48 @@ test("advancing twice does not re-resolve a settled negotiation", () => {
   assert.equal(twice.careerState, once.careerState);
 });
 
+test("due club stages resolve by submission date before negotiation ID", () => {
+  const state = careerFixture({ buyerBudget: 500_000_000_00 });
+  const olderId = transferNegotiationId("transfer-negotiation:z-older");
+  const newerId = transferNegotiationId("transfer-negotiation:a-newer");
+  const older = submitTransferOffer({
+    careerState: state,
+    negotiationId: olderId,
+    buyingClubId: BUYER,
+    sellingClubId: SELLER,
+    playerId: playerId("player:s2"),
+    offeredFee: nonNegativeMoney(1),
+    submittedOn: SUBMITTED_ON,
+    transferWindows: windows(),
+  });
+  assert.equal(older.status, "applied");
+  if (older.status !== "applied" || older.negotiation.status !== "submitted") return;
+  const newer = submitTransferOffer({
+    careerState: older.careerState,
+    negotiationId: newerId,
+    buyingClubId: BUYER,
+    sellingClubId: SELLER,
+    playerId: playerId("player:s3"),
+    offeredFee: nonNegativeMoney(1),
+    submittedOn: gameDate(SUBMITTED_ON + 1),
+    transferWindows: windows(),
+  });
+  assert.equal(newer.status, "applied");
+  if (newer.status !== "applied" || newer.negotiation.status !== "submitted") return;
+
+  const advanced = advanceTransferNegotiations({
+    careerState: newer.careerState,
+    throughDate: gameDate(Math.max(
+      older.negotiation.clock.responseDueOn,
+      newer.negotiation.clock.responseDueOn,
+    )),
+  });
+  assert.deepEqual(
+    advanced.resolved.map(({ negotiationId }) => negotiationId),
+    [olderId, newerId],
+  );
+});
+
 test("the buyer can withdraw an open negotiation", () => {
   const state = careerFixture({ buyerBudget: 500_000_000_00 });
   const submitted = submit(state, nonNegativeMoney(1_000_000_00));
@@ -228,6 +374,9 @@ test("accepting a counter at the countered fee provisionally agrees the deal", (
   const asking = askingFeeFor(state, nonNegativeMoney(1));
   const submitted = submit(state, nonNegativeMoney(Math.round(asking * 0.8)));
   const advanced = advanceTransferNegotiations({ careerState: submitted.careerState, throughDate: dueDate(submitted) });
+  const countered = advanced.careerState.transferNegotiationState
+    ?.negotiations[NEG_ID];
+  assert.equal(countered?.status, "countered");
   const accepted = acceptTransferCounter({
     careerState: advanced.careerState,
     negotiationId: NEG_ID,
@@ -238,7 +387,54 @@ test("accepting a counter at the countered fee provisionally agrees the deal", (
   assert.equal(accepted.negotiation.status, "accepted");
   assert.equal(
     accepted.negotiation.status === "accepted" ? accepted.negotiation.agreedFee : undefined,
-    asking,
+    countered?.status === "countered" ? countered.counterFee : undefined,
+  );
+  assert.ok(
+    accepted.negotiation.status === "accepted"
+      && accepted.negotiation.agreedFee < asking,
+  );
+});
+
+test("a club counter cannot be accepted after its immutable deadline", () => {
+  const state = careerFixture({ buyerBudget: 500_000_000_00 });
+  const asking = askingFeeFor(state, nonNegativeMoney(1));
+  const submitted = submit(state, nonNegativeMoney(Math.round(asking * 0.8)));
+  const countered = advanceTransferNegotiations({
+    careerState: submitted.careerState,
+    throughDate: dueDate(submitted),
+  });
+  const negotiation = countered.careerState.transferNegotiationState?.negotiations[NEG_ID];
+  assert.equal(negotiation?.status, "countered");
+  if (negotiation?.status !== "countered") return;
+
+  const accepted = acceptTransferCounter({
+    careerState: countered.careerState,
+    negotiationId: NEG_ID,
+    decidedOn: gameDate(negotiation.clock.deadline + 1),
+  });
+  assert.equal(accepted.status, "rejected");
+  assert.equal(accepted.status === "rejected" ? accepted.reason : undefined, "decision_after_deadline");
+});
+
+test("a provisional club acceptance expires if player terms are not started in time", () => {
+  const state = careerFixture({ buyerBudget: 500_000_000_00 });
+  const asking = askingFeeFor(state, nonNegativeMoney(1));
+  const submitted = submit(state, nonNegativeMoney(asking + 1));
+  const accepted = advanceTransferNegotiations({
+    careerState: submitted.careerState,
+    throughDate: dueDate(submitted),
+  });
+  const negotiation = accepted.careerState.transferNegotiationState?.negotiations[NEG_ID];
+  assert.equal(negotiation?.status, "accepted");
+  if (negotiation?.status !== "accepted") return;
+
+  const expired = advanceTransferNegotiations({
+    careerState: accepted.careerState,
+    throughDate: gameDate(negotiation.clock.deadline + 1),
+  });
+  assert.equal(
+    expired.careerState.transferNegotiationState?.negotiations[NEG_ID]?.status,
+    "expired",
   );
 });
 
@@ -300,7 +496,7 @@ test("the player can reject contract terms without changing ownership or finance
 });
 
 test("accepted player terms complete the agreed transfer atomically and once", () => {
-  const agreement = acceptedClubAgreement();
+  const agreement = acceptedCounterAgreement();
   const terms = preferredPlayerTerms(agreement.careerState);
   const agreedFee = agreement.negotiation.status === "accepted"
     ? agreement.negotiation.agreedFee
@@ -322,9 +518,10 @@ test("accepted player terms complete the agreed transfer atomically and once", (
   });
   const negotiation = completed.careerState.transferNegotiationState?.negotiations[NEG_ID];
   assert.equal(negotiation?.status, "completed");
+  assert.ok(agreement.negotiation.offeredFee < agreedFee);
   assert.deepEqual(completed.careerState.gameState.clubs[BUYER]?.playerIds.includes(TARGET), true);
   assert.deepEqual(completed.careerState.gameState.clubs[SELLER]?.playerIds.includes(TARGET), false);
-  assert.equal(completed.careerState.transferHistory.at(-1)?.transferFee, agreedFee);
+  assert.equal(completed.careerState.transferHistory.at(-1)?.completedFee, agreedFee);
   const activeContract = completed.careerState.seniorSquadState?.activeContractIds
     .map((id) => completed.careerState.seniorSquadState?.contracts[id])
     .find((contract) => contract?.playerId === TARGET && contract.clubId === BUYER);
@@ -386,6 +583,35 @@ test("a newly unaffordable accepted player deal fails without a partial transfer
   assert.deepEqual(failed.careerState.transferHistory, []);
 });
 
+test("a protected AI completion fails when the seller no longer has structural depth", () => {
+  const agreement = acceptedClubAgreement();
+  const submitted = submitTransferPlayerOffer({
+    careerState: agreement.careerState,
+    negotiationId: NEG_ID,
+    submittedOn: SUBMITTED_ON,
+    terms: preferredPlayerTerms(agreement.careerState),
+    transferWindows: windows(),
+  });
+  assert.equal(submitted.status, "applied");
+  if (submitted.status !== "applied" || submitted.negotiation.status !== "player_offer_submitted") return;
+
+  const failed = advanceTransferPlayerNegotiations({
+    careerState: submitted.careerState,
+    throughDate: submitted.negotiation.clock.responseDueOn,
+    transferWindows: windows(),
+    protectSellerSquadDepth: true,
+  });
+  const negotiation = failed.careerState.transferNegotiationState?.negotiations[NEG_ID];
+  assert.equal(negotiation?.status, "completion_failed");
+  assert.equal(
+    negotiation?.status === "completion_failed" ? negotiation.reason : undefined,
+    "stale_ownership",
+  );
+  assert.equal(failed.careerState.gameState.clubs[SELLER]?.playerIds.includes(TARGET), true);
+  assert.equal(failed.careerState.gameState.clubs[BUYER]?.playerIds.includes(TARGET), false);
+  assert.deepEqual(failed.careerState.transferHistory, []);
+});
+
 test("an unanswered player-contract table expires after its deadline", () => {
   const agreement = acceptedClubAgreement();
   const submitted = submitTransferPlayerOffer({
@@ -422,6 +648,34 @@ function acceptedClubAgreement() {
   const negotiation = advanced.careerState.transferNegotiationState?.negotiations[NEG_ID];
   if (negotiation?.status !== "accepted") throw new Error("club agreement was not accepted");
   return { careerState: advanced.careerState, negotiation };
+}
+
+/** Builds the same accepted club agreement through the seller-counter path. */
+function acceptedCounterAgreement() {
+  const state = careerFixture({ buyerBudget: 500_000_000_00 });
+  const asking = askingFeeFor(state, nonNegativeMoney(1));
+  const submitted = submit(state, nonNegativeMoney(Math.round(asking * 0.8)));
+  const countered = advanceTransferNegotiations({
+    careerState: submitted.careerState,
+    throughDate: dueDate(submitted),
+  });
+  const accepted = acceptTransferCounter({
+    careerState: countered.careerState,
+    negotiationId: NEG_ID,
+    decidedOn: dueDate(submitted),
+  });
+  if (accepted.status !== "applied" || accepted.negotiation.status !== "accepted") {
+    throw new Error("seller counter was not accepted");
+  }
+  return {
+    careerState: accepted.careerState,
+    negotiation: {
+      ...accepted.negotiation,
+      offeredFee: submitted.negotiation.status === "submitted"
+        ? submitted.negotiation.offeredFee
+        : nonNegativeMoney(0),
+    },
+  };
 }
 
 function preferredPlayerTerms(careerState: CareerState): ContractOfferTerms {
@@ -461,11 +715,16 @@ function dueDate(submitted: ReturnType<typeof submit>): ReturnType<typeof gameDa
 }
 
 function askingFeeFor(state: CareerState, offeredFee: ReturnType<typeof nonNegativeMoney>): number {
-  const decision = deriveSellerTransferWillingness({
+  void offeredFee;
+  const snapshot = deriveTransferCommercialSnapshot({
     careerState: state,
-    negotiation: { buyingClubId: BUYER, sellingClubId: SELLER, playerId: TARGET, offeredFee, submittedOn: SUBMITTED_ON },
+    sellingClubId: SELLER,
+    playerId: TARGET,
+    asOf: SUBMITTED_ON,
+    valuationConfig: VALUATION_CONFIG,
+    askingPriceConfig: ASKING_PRICE_CONFIG,
   });
-  return decision.askingFee ?? 0;
+  return snapshot?.currentAskingPrice ?? 0;
 }
 
 function careerFixture(input: { readonly buyerBudget?: number }): CareerState {

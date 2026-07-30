@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { fakeClubId, generateFakeClubIdentities, generateFakeClubs } from "./fake-clubs.ts";
+import {
+  fakeClubId,
+  generateFakeClubIdentities,
+  generateFakeClubs,
+  generatedFakeClubId,
+} from "./fake-clubs.ts";
 import { createFakeLeagueSystem } from "./league-system.ts";
 
 /**
@@ -27,6 +32,33 @@ test("same seed produces the same fictional club identities", () => {
     first.clubs.map((club) => club.name),
     second.clubs.map((club) => club.name),
   );
+});
+
+test("multi-division namespaces keep club and roster identities globally unique", () => {
+  const first = generateFakeClubs({
+    seed: "domestic-world",
+    category: "first_division",
+    divisionLevel: "first_division",
+    clubIdNamespace: "ita-1",
+    playerIdNamespace: "ita-1",
+    shortNamePrefix: "D1",
+  });
+  const third = generateFakeClubs({
+    seed: "domestic-world",
+    category: "third_division",
+    divisionLevel: "third_division",
+    clubIdNamespace: "ita-3",
+    playerIdNamespace: "ita-3",
+    shortNamePrefix: "D3",
+    excludedNames: first.clubs.map((club) => club.name),
+  });
+
+  assert.equal(first.clubIds[0], generatedFakeClubId(1, "ita-1"));
+  assert.equal(first.clubs[0]?.category, "first_division");
+  assert.equal(third.clubs[0]?.category, "third_division");
+  assert.equal(new Set([...first.clubIds, ...third.clubIds]).size, 36);
+  assert.equal(new Set([...first.clubs, ...third.clubs].flatMap((club) => club.playerIds)).size, 36 * 22);
+  assert.equal(new Set([...first.clubs, ...third.clubs].map((club) => club.name)).size, 36);
 });
 
 test("different seeds can produce different fictional club mixes", () => {

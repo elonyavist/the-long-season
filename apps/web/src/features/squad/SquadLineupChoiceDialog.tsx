@@ -5,6 +5,7 @@ import * as m from "motion/react-m";
 import { useEffect, useRef } from "react";
 
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
+import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
 
 /** Accessible explicit replacement chooser used by Senior Squad actions. */
 export function SquadLineupChoiceDialog({
@@ -63,7 +64,6 @@ export function SquadLineupChoiceDialog({
         >
           <header className="tls-squad-choice-header">
             <div>
-              <p className="tls-career-screen-eyebrow">{text("career.squad.eyebrow")}</p>
               <h2 id="squad-lineup-choice-title">{text("career.squad.lineupChoice.title")}</h2>
               <p>{text("career.squad.lineupChoice.summary", { player: choice.displayName })}</p>
             </div>
@@ -96,10 +96,14 @@ export function SquadLineupChoiceDialog({
                 </span>
                 <span className="tls-squad-choice-facts">
                   {text(`formation.suitability.${slot.suitability}` as MessageKey)}
-                  {slot.occupantCurrentLevel === undefined ? null : (
+                  {slot.occupantCurrentRating === undefined ? null : (
                     <>
                       <span aria-hidden="true"> · </span>
-                      {text(`career.squad.level.${slot.occupantCurrentLevel}` as MessageKey)}
+                      <PlayerStarRating
+                        label={text("career.squad.column.current_level")}
+                        rating={slot.occupantCurrentRating}
+                        text={text}
+                      />
                     </>
                   )}
                   {slot.occupantCondition === undefined ? null : (

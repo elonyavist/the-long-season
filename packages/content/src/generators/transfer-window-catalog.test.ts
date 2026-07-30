@@ -18,6 +18,14 @@ test("the demo competition has one source-backed template", () => {
   assert.equal(template?.sourceKey, "figc-2026-27-professional");
 });
 
+test("all three canonical domestic competitions use the audited professional template", () => {
+  for (const id of ["competition:ita-1", "competition:ita-2", "competition:ita-3"]) {
+    const template = transferWindowTemplateFor(competitionId(id));
+    assert.ok(template);
+    assert.equal(template.sourceKey, "figc-2026-27-professional");
+  }
+});
+
 test("no speculative competition has a template", () => {
   assert.equal(transferWindowTemplateFor(competitionId("competition:eng-2")), undefined);
 });

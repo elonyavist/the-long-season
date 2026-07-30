@@ -5,17 +5,27 @@
  * layers are responsible for localization and presentation.
  */
 export {
-  DEFAULT_PLAYER_VALUATION_CONFIG,
   PlayerValuationError,
   derivePlayerMarketAbility,
   derivePlayerValuation,
   type DerivePlayerValuationInput,
   type PlayerMarketAbility,
   type PlayerValuation,
-  type PlayerValuationAgeBand,
   type PlayerValuationConfig,
+  type PlayerValuationComponents,
   type PlayerValuationErrorCode,
+  type PlayerValuationMarketContext,
 } from "./player-valuation.ts";
+export {
+  deriveSellerAskingPrice,
+  type DeriveSellerAskingPriceInput,
+  type SellerAskingPrice,
+  type SellerAskingPriceComponents,
+  type SellerFinancePressure,
+  type SellerPlayerDesire,
+  type SellerReluctanceReason,
+  type SellerReplacementNeed,
+} from "./seller-asking-price.ts";
 export {
   derivePlayerWillingness,
   type DerivePlayerWillingnessInput,

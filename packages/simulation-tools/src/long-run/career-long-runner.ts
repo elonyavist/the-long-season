@@ -113,6 +113,23 @@ export interface RunCareerLongRunSimulationInput<TRetainedSeasonResult = Simulat
    * without weakening career advancement or duplicating simulation logic.
    */
   readonly retainSeasonResult?: (result: SimulateSeasonResult) => TRetainedSeasonResult;
+  /**
+   * Receives the canonical post-refresh state at selected diagnostic boundaries.
+   *
+   * The callback must remain read-only. It lets reports inspect year ten
+   * without retaining twenty complete career snapshots in memory.
+   */
+  readonly observeAdvancedSeason?: (
+    result: CareerLongRunAdvancedSeasonObservation,
+  ) => void;
+}
+
+/** Read-only post-refresh checkpoint exposed to a diagnostic composition root. */
+export interface CareerLongRunAdvancedSeasonObservation {
+  readonly seasonNumber: number;
+  readonly seasonSeed: string;
+  readonly careerState: CareerState;
+  readonly refresh: CareerLongRunRefreshSummary;
 }
 
 /** One simulated career season in a long-run report. */
@@ -173,6 +190,12 @@ export function runCareerLongRunSimulation<TRetainedSeasonResult = SimulateSeaso
       seasonNumber,
       seasonSeed,
       result: retainedResult,
+      refresh: advanced.refresh,
+    });
+    input.observeAdvancedSeason?.({
+      seasonNumber,
+      seasonSeed,
+      careerState: advanced.careerState,
       refresh: advanced.refresh,
     });
     careerState = advanced.careerState;

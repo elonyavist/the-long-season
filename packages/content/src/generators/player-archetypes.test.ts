@@ -5,6 +5,7 @@ import {
   GENERATED_PLAYER_ARCHETYPE_KEYS,
   GENERATED_PLAYER_ARCHETYPES,
   getGeneratedPlayerArchetype,
+  resolveGeneratedExceptionalProfile,
   type GeneratedPlayerArchetype,
 } from "./player-archetypes.ts";
 
@@ -51,6 +52,33 @@ test("rare prodigies are possible but uncommon in reserve generation", () => {
   assert.equal(prodigy.reserveWeight > 0, true);
   assert.equal(prodigy.reserveWeight / reserveWeightTotal < 0.02, true);
   assert.equal(prodigy.lineupWeight, 0);
+});
+
+test("current-six allocation wins over potential-only prodigy precedence", () => {
+  assert.deepEqual(
+    resolveGeneratedExceptionalProfile({
+      currentSixAllocated: true,
+      potentialSixAllocated: true,
+    }),
+    {
+      kind: "current_six",
+      archetypeKey: "category_star",
+      currentAbilityLane: "exceptional",
+      requiresSixStarPotentialFloor: true,
+    },
+  );
+  assert.deepEqual(
+    resolveGeneratedExceptionalProfile({
+      currentSixAllocated: false,
+      potentialSixAllocated: true,
+    }),
+    {
+      kind: "potential_only_six",
+      archetypeKey: "rare_prodigy",
+      currentAbilityLane: "ordinary",
+      requiresSixStarPotentialFloor: true,
+    },
+  );
 });
 
 /** Asserts an age range is deterministic-friendly and integer-based. */

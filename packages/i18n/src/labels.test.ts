@@ -110,7 +110,85 @@ test("translates senior squad, player-profile, and annual contract labels", () =
   assert.equal(translate("fr", "career.contract.field.annualWage"), "Salaire annuel");
   assert.equal(translate("it", "career.player.role.attacking_midfielder"), "Trequartista");
   assert.equal(translate("en", "career.player.attribute.physical.stamina"), "Stamina");
-  assert.equal(translate("it", "career.squad.action.removeFromStartingXi"), "Togli dall'undici");
+  assert.equal(translate("it", "career.squad.column.placement"), "Schieramento");
+  assert.equal(
+    translate("en", "career.squad.action.openMenu", { player: "Ada Rossi" }),
+    "Actions for Ada Rossi",
+  );
+  assert.equal(
+    translate("it", "career.squad.placement.suitability.weak"),
+    "Fuori ruolo",
+  );
+  assert.equal(
+    translate("it", "career.squad.placement.lineupOption", {
+      slot: "AD",
+      suitability: "Naturale",
+    }),
+    "Titolare · AD — Naturale",
+  );
+  assert.equal(
+    translate("fr", "career.squad.placement.lineupOptionOccupied", {
+      slot: "BU-D",
+      suitability: "Adapte",
+      player: "Jean Test",
+    }),
+    "Titulaire · BU-D — Adapte · remplace Jean Test",
+  );
+  assert.equal(translate("en", "career.playerProfile.tabs.statistics"), "Statistics");
+  assert.equal(translate("it", "career.playerProfile.tabs.contract"), "Contratto");
+  assert.equal(
+    translate("it", "career.market.profile.tabs.contractOffer"),
+    "Contratto e offerta",
+  );
+  assert.equal(
+    translate("de", "career.playerProfile.statistics.coverage.unavailable"),
+    "Daten nicht verfugbar",
+  );
+  assert.equal(
+    translate("es", "career.playerProfile.statistics.field.substituteAppearances"),
+    "Apariciones como suplente",
+  );
+  assert.equal(
+    translate("fr", "career.playerProfile.statistics.scope.current_season"),
+    "Saison actuelle",
+  );
+});
+
+test("translates accessible public player ratings in every supported language", () => {
+  assert.equal(
+    translate("en", "career.playerRating.accessible", { label: "Potential", stars: "3.5" }),
+    "Potential: 3.5 out of 6 stars",
+  );
+  assert.equal(
+    translate("it", "career.playerRating.accessible", { label: "Potenziale", stars: "5.5" }),
+    "Potenziale: 5.5 stelle su 6",
+  );
+  assert.equal(
+    translate("de", "career.playerRating.accessible", { label: "Potenzial", stars: 4 }),
+    "Potenzial: 4 von 6 Sternen",
+  );
+  assert.equal(
+    translate("es", "career.playerRating.accessible", { label: "Potencial", stars: 6 }),
+    "Potencial: 6 de 6 estrellas",
+  );
+  assert.equal(
+    translate("fr", "career.playerRating.accessible", { label: "Potentiel", stars: 6 }),
+    "Potentiel : 6 étoiles sur 6",
+  );
+  assert.equal(
+    translate("it", "career.playerPotentialRange.accessibleRange", {
+      lower: "3,5",
+      upper: "5",
+      uncertainty: "1,5",
+    }),
+    "Potenziale stimato da 3,5 a 5 stelle. Fascia incerta: 1,5 stelle.",
+  );
+  assert.equal(
+    translate("en", "career.playerPotentialRange.accessibleSingular", {
+      stars: "4.5",
+    }),
+    "Estimated potential: 4.5 out of 6 stars.",
+  );
 });
 
 test("translates every documented match-preparation formation label in every supported language", () => {

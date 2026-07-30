@@ -20,10 +20,15 @@ import { runCareerLongRunSimulation } from "./career-long-runner.ts";
 
 test("runCareerLongRunSimulation sequences season simulation and refresh hooks", () => {
   const initialCareerState = careerStateFixture();
+  const observedSeasonNumbers: number[] = [];
   const result = runCareerLongRunSimulation({
     seed: "career-long-run",
     seasonCount: 2,
     initialCareerState,
+    observeAdvancedSeason: ({ seasonNumber, careerState }) => {
+      observedSeasonNumbers.push(seasonNumber);
+      assert.equal(careerState, initialCareerState);
+    },
     createSeasonInput: ({ seasonSeed }) => seasonInput(seasonSeed),
     advanceCareerState: ({ careerState, seasonNumber }) => ({
       careerState,
@@ -64,6 +69,7 @@ test("runCareerLongRunSimulation sequences season simulation and refresh hooks",
   assert.equal(result.seasons[0]?.seasonSeed, "career-long-run-season-001");
   assert.equal(result.seasons[1]?.refresh.transferTurnoverCount, 5);
   assert.deepEqual(result.finalCareerState, initialCareerState);
+  assert.deepEqual(observedSeasonNumbers, [1, 2]);
 });
 
 test("runCareerLongRunSimulation rejects invalid season counts", () => {
@@ -181,6 +187,7 @@ function contractFinanceRow(seasonNumber: number): LongRunContractFinanceSeasonR
     ownedSeniorPlayerCount: 44,
     freeAgentCount: 0,
     freeAgentShare: 0,
+    freeAgentSigningPublicValues: [],
     missingStateCount: 0,
     seniorSquadInvariantViolationCount: 0,
     ownershipInvariantViolationCount: 0,
@@ -195,6 +202,12 @@ function contractFinanceRow(seasonNumber: number): LongRunContractFinanceSeasonR
     financeLimitViolationCount: 0,
     minimumCashBalance: 1,
     maximumWageBudgetUtilization: 0.5,
+    wageBudgetUtilizations: [0.5, 0.5],
+    annualWageHeadrooms: [1, 1],
+    wagePressureClubCount: 0,
+    exactWageCeilingClubCount: 0,
+    aboveWageBudgetClubCount: 0,
+    reallocationExactCeilingClubCount: 0,
     minimumSquadSize: 22,
     maximumSquadSize: 22,
     minimumGoalkeeperCount: 2,
@@ -207,6 +220,9 @@ function contractFinanceRow(seasonNumber: number): LongRunContractFinanceSeasonR
     minimumAnnualWage: 1,
     averageAnnualWage: 2,
     maximumAnnualWage: 3,
+    divisionWageEconomy: [],
+    divisionMarketEconomy: [],
+    crossTierTransfers: [],
     valuationSampleCount: 0,
     minimumPlayerValue: 0,
     averagePlayerValue: 0,
@@ -237,6 +253,62 @@ function contractFinanceRow(seasonNumber: number): LongRunContractFinanceSeasonR
     preliminaryAgreementCount: 0,
     preliminaryAgreementActivationCount: 0,
     preliminaryAgreementViolationCount: 0,
+    permanentTransferFunnel: {
+      needsEvaluatedCount: 0,
+      recruitableNeedCount: 0,
+      targetFoundCount: 0,
+      targetUnavailableCount: 0,
+      offerSubmittedCount: 0,
+      sellerRejectedCount: 0,
+      sellerCounteredCount: 0,
+      sellerAcceptedCount: 0,
+      sellerExpiredCount: 0,
+      sellerWithdrawnCount: 0,
+      playerTermsStartedCount: 0,
+      playerCounteredCount: 0,
+      playerRejectedCount: 0,
+      playerCounterAcceptedCount: 0,
+      unaffordableCompletionCount: 0,
+      completedCount: 0,
+      lostReasonCounts: {},
+      lostByClubDepartment: [],
+      clubActivity: [],
+    },
+    preliminaryAgreementFunnel: {
+      candidateFoundCount: 0,
+      candidateUnavailableCount: 0,
+      offerSubmittedCount: 0,
+      offerRejectedCount: 0,
+      counteredCount: 0,
+      counterAcceptedCount: 0,
+      counterRejectedCount: 0,
+      agreementCreatedCount: 0,
+      expiredCount: 0,
+      activationCount: 0,
+      activationFailureCount: 0,
+      lostReasonCounts: {},
+    },
+    freeAgentFlow: {
+      openingStock: 0,
+      expiryInflow: 0,
+      releaseInflow: 0,
+      youthExternalMoveInflow: 0,
+      youthReleaseInflow: 0,
+      otherInflow: 0,
+      ordinarySigningOutflow: 0,
+      preliminaryActivationOutflow: 0,
+      retirementOutflow: 0,
+      careerStepDownOutflow: 0,
+      otherOutflow: 0,
+      closingStock: 0,
+      reconciliationDelta: 0,
+      usefulClosingStock: 0,
+      bands: {
+        age: { under_23: 0, prime_23_29: 0, age_30_34: 0, age_35_plus: 0 },
+        currentAbility: { under_8: 0, ability_8_9: 0, ability_10_11: 0, ability_12_plus: 0 },
+        unattached: { under_1_season: 0, one_to_two_seasons: 0, three_plus_seasons: 0 },
+      },
+    },
   };
 }
 

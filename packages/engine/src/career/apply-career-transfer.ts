@@ -13,8 +13,10 @@ import {
   type ContractOfferTerms,
   type GameDate,
   type GameState,
+  type MarketBehaviorCalibrationConfig,
   type Money,
   type PlayerContract,
+  type PlayerWagePolicyConfig,
   type PermanentTransferIntent,
   type SeasonTransferWindows,
   type TransferRejectionReason,
@@ -39,7 +41,11 @@ import { reconcileSelectedClubDeparturesFromMatchPreparation } from "./selected-
 
 /** Club fee and player terms already accepted by both transfer tables. */
 export interface AcceptedPermanentTransferDeal {
-  readonly transferFee: Money;
+  readonly publicValue: Money;
+  readonly initialAskingPrice: Money;
+  readonly offeredFee: Money;
+  readonly counterFee?: Money;
+  readonly agreedFee: Money;
   readonly contractTerms: ContractOfferTerms;
   readonly playerAgreementConfirmed: true;
 }
@@ -50,17 +56,24 @@ export interface ApplyCareerPermanentTransferInput {
   readonly careerState: CareerState;
   /** Manager-declared permanent transfer request. */
   readonly intent: PermanentTransferIntent;
-  /** Optional valuation tuning; defaults to the market MVP config. */
+  /**
+   * Explicit versioned public-value content. Required for a derived-fee
+   * transfer; an already-accepted deal does not recalculate public value.
+   */
   readonly valuationConfig?: PlayerValuationConfig;
   /** Effective football date for season-boundary transfers. */
   readonly occurredOn?: GameDate;
   /**
-   * Resolved competition windows enforced when supplied. When present, a
-   * permanent transfer outside an open window is rejected independently of any
-   * disabled UI control. When omitted, window legality is not checked here
-   * (season-rollover AI turnover keeps its own lifecycle boundary).
+   * Resolved competition windows enforced by every permanent-transfer caller.
+   *
+   * Keeping this required prevents non-UI callers from bypassing registration
+   * legality by omitting the calendar context.
    */
-  readonly transferWindows?: SeasonTransferWindows;
+  readonly transferWindows: SeasonTransferWindows;
+  /** Explicit wage policy used by destination terms and final capacity. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Exact version-selected seller, willingness, reserve, and affordability policy. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /**
    * Explicit accepted deal produced by the interactive negotiation lifecycle.
    *
@@ -113,20 +126,18 @@ export function applyCareerPermanentTransfer(
     };
   }
 
-  if (input.transferWindows !== undefined) {
-    const eligibility = evaluateMarketActionEligibility({
-      action: "permanent_transfer_completion",
-      windows: input.transferWindows,
-      asOf: input.occurredOn ?? input.careerState.gameState.calendar.currentDate,
-    });
-    if (eligibility.status === "blocked") {
-      return {
-        intent: input.intent,
-        status: "rejected",
-        reasons: [{ code: "outside_transfer_window", clubId: input.intent.buyingClubId }],
-        careerState: input.careerState,
-      };
-    }
+  const eligibility = evaluateMarketActionEligibility({
+    action: "permanent_transfer_completion",
+    windows: input.transferWindows,
+    asOf: input.occurredOn ?? input.careerState.gameState.calendar.currentDate,
+  });
+  if (eligibility.status === "blocked") {
+    return {
+      intent: input.intent,
+      status: "rejected",
+      reasons: [{ code: "outside_transfer_window", clubId: input.intent.buyingClubId }],
+      careerState: input.careerState,
+    };
   }
 
   if (input.careerState.seniorSquadState === undefined) {
@@ -157,28 +168,29 @@ export function applyCareerPermanentTransfer(
   }
   const occurredOn = input.occurredOn ?? input.careerState.gameState.calendar.currentDate;
   const acceptedTerms = input.acceptedDeal?.contractTerms ?? deriveTransferContractTerms({
-      careerState: input.careerState,
+    careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
       playerId: input.intent.playerId,
       buyingClubId: input.intent.buyingClubId,
       evaluatedOn: occurredOn,
       currentContract,
     });
-  const currentForm = input.careerState.gameState.playerStates[input.intent.playerId]?.form;
-
   const feasibility = evaluatePermanentTransfer({
     gameState: input.careerState.gameState,
     clubFinanceState: input.careerState.clubFinanceState,
     intent: input.intent,
     currentContract,
     proposedTerms: acceptedTerms,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     ...(input.acceptedDeal === undefined
       ? {}
       : {
-          agreedTransferFee: input.acceptedDeal.transferFee,
+          agreedTransferFee: input.acceptedDeal.agreedFee,
           playerAgreementConfirmed: input.acceptedDeal.playerAgreementConfirmed,
         }),
-    ...(currentForm === undefined ? {} : { currentForm: Number(currentForm) }),
-    ...(input.valuationConfig === undefined ? {} : { valuationConfig: input.valuationConfig }),
+    ...(input.valuationConfig === undefined
+      ? {}
+      : { valuationConfig: input.valuationConfig }),
   });
 
   if (feasibility.status === "rejected" || feasibility.transferFee === undefined) {
@@ -196,6 +208,8 @@ export function applyCareerPermanentTransfer(
   const capacity = evaluateCareerContractCapacity({
     careerState: input.careerState,
     clubId: feasibility.intent.buyingClubId,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     addedAnnualWage: acceptedTerms.annualWage,
     addedSigningBonus: acceptedTerms.bonuses.signingBonus,
     additionalImmediateCost: feasibility.transferFee,
@@ -265,12 +279,23 @@ export function applyCareerPermanentTransfer(
   const transferHistory = [
     ...input.careerState.transferHistory,
     {
+      kind: "permanent_transfer" as const,
       sequenceNumber: transferSequence,
       occurredOn,
       buyingClubId: feasibility.intent.buyingClubId,
       sellingClubId: feasibility.intent.sellingClubId,
       playerId: feasibility.intent.playerId,
-      transferFee: feasibility.transferFee,
+      publicValue: input.acceptedDeal?.publicValue
+        ?? feasibility.valuation?.value
+        ?? feasibility.transferFee,
+      initialAskingPrice: input.acceptedDeal?.initialAskingPrice
+        ?? feasibility.transferFee,
+      offeredFee: input.acceptedDeal?.offeredFee ?? feasibility.transferFee,
+      ...(input.acceptedDeal?.counterFee === undefined
+        ? {}
+        : { counterFee: input.acceptedDeal.counterFee }),
+      agreedFee: feasibility.transferFee,
+      completedFee: feasibility.transferFee,
     },
   ];
   const acceptedBase: CareerState = {
@@ -405,9 +430,11 @@ function deriveTransferContractTerms(input: {
   readonly buyingClubId: ClubId;
   readonly evaluatedOn: GameState["calendar"]["currentDate"];
   readonly currentContract: PlayerContract;
+  readonly wagePolicy: PlayerWagePolicyConfig;
 }): ContractOfferTerms {
   const preferred = deriveContractDemand({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
     playerId: input.playerId,
     clubId: input.buyingClubId,
     evaluatedOn: input.evaluatedOn,

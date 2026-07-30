@@ -20,7 +20,24 @@ import {
   type PlayerPosition,
 } from "@game/domain";
 
-import { evaluatePermanentTransfer } from "./transfer-feasibility.ts";
+import {
+  evaluatePermanentTransfer as evaluatePermanentTransferWithConfig,
+} from "./transfer-feasibility.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+function evaluatePermanentTransfer(
+  input: Omit<
+    Parameters<typeof evaluatePermanentTransferWithConfig>[0],
+    "valuationConfig" | "marketBehaviorPolicy"
+  >,
+) {
+  return evaluatePermanentTransferWithConfig({
+    ...input,
+    valuationConfig: playerValuationConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
 
 /**
  * Transfer feasibility tests protect pure market evaluation behavior.
@@ -255,6 +272,7 @@ function playerFixture(
     lastName: id,
     birthDate: gameDate(20_000 - age * 365),
     naturalPositions: [primaryPosition],
+    primaryRole: "striker",
     abilities: abilitiesFixture(currentAbility),
     potential: abilitiesFixture(potentialAbility),
   };

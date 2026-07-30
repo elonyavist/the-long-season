@@ -37,9 +37,37 @@ import {
 import { createMatchReport } from "../match-engine/create-match-report.ts";
 import { monthKeyForCareerDate } from "./advance-career-month.ts";
 import {
-  commitCompletedCareerFixture,
-  progressNextCareerFixture,
+  commitCompletedCareerFixture as commitCompletedCareerFixtureWithPolicy,
+  progressNextCareerFixture as progressNextCareerFixtureWithPolicy,
 } from "./progress-fixture.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+function progressNextCareerFixture(
+  input: Omit<
+    Parameters<typeof progressNextCareerFixtureWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return progressNextCareerFixtureWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
+
+function commitCompletedCareerFixture(
+  input: Omit<
+    Parameters<typeof commitCompletedCareerFixtureWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return commitCompletedCareerFixtureWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
 
 /**
  * Career progression tests prove one selected-club fixture can be simulated and

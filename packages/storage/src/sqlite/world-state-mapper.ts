@@ -2,16 +2,22 @@ import {
   abilityValue,
   clubId,
   competitionId,
+  createCompetitionMatchRules,
   createCareerState,
   fixtureId,
   gameDate,
   PLAYER_ABILITY_KEYS,
   playerId,
   readPlayerAbility,
+  nonNegativeMoney,
   saveId,
   seasonId,
   stateValue,
   type CareerState,
+  type Competition,
+  type CompetitionSeasonHistoryEntry,
+  type CurrencyCode,
+  type DomesticCompetitionWorld,
   type Fixture,
   type Player,
   type PlayerAbilities,
@@ -76,6 +82,11 @@ interface WorldRows {
   readonly fixtures: readonly Record<string, unknown>[];
   readonly fixtureOrder: readonly Record<string, unknown>[];
   readonly fixtureResults: readonly Record<string, unknown>[];
+  readonly competitions: readonly Record<string, unknown>[];
+  readonly competitionClubs: readonly Record<string, unknown>[];
+  readonly competitionPrizes: readonly Record<string, unknown>[];
+  readonly competitionHistory: readonly Record<string, unknown>[];
+  readonly competitionHistoryRows: readonly Record<string, unknown>[];
 }
 
 /**
@@ -158,7 +169,10 @@ export function loadCareerWorld(database: SqliteWorldDatabase, requestedSaveId: 
 
   const world = reconstructCareerWorldRows({
     save: saveRows[0]!,
-    meta: requiredOnlyRow(database, "SELECT seed, rng_algorithm_version, save_schema_version FROM game_meta WHERE save_id = ?", requestedSaveId),
+    meta: requiredOnlyRow(database, `SELECT seed, rng_algorithm_version, save_schema_version,
+      topology_decision_id, player_rating_scale_version, player_market_calibration_version,
+      valuation_curves_version, asking_price_curves_version, market_behavior_calibration_version,
+      wage_finance_calibration_version FROM game_meta WHERE save_id = ?`, requestedSaveId),
     calendar: requiredOnlyRow(database, 'SELECT "current_date", current_season_id FROM game_calendar WHERE save_id = ?', requestedSaveId),
     clubs: database.queryAll("SELECT club_id, name, short_name, category, reputation FROM clubs WHERE save_id = ?", [requestedSaveId]),
     clubOrder: database.queryAll("SELECT sort_order, club_id FROM club_order WHERE save_id = ? ORDER BY sort_order", [requestedSaveId]),
@@ -177,6 +191,26 @@ export function loadCareerWorld(database: SqliteWorldDatabase, requestedSaveId: 
       home_club_id, away_club_id FROM fixtures WHERE save_id = ?`, [requestedSaveId]),
     fixtureOrder: database.queryAll("SELECT sort_order, fixture_id FROM fixture_order WHERE save_id = ? ORDER BY sort_order", [requestedSaveId]),
     fixtureResults: database.queryAll("SELECT fixture_id, home_goals, away_goals FROM fixture_results WHERE save_id = ?", [requestedSaveId]),
+    competitions: database.queryAll(
+      "SELECT * FROM domestic_competitions WHERE save_id = ? ORDER BY sort_order",
+      [requestedSaveId],
+    ),
+    competitionClubs: database.queryAll(
+      "SELECT * FROM domestic_competition_clubs WHERE save_id = ? ORDER BY competition_id, sort_order",
+      [requestedSaveId],
+    ),
+    competitionPrizes: database.queryAll(
+      "SELECT * FROM domestic_competition_prizes WHERE save_id = ? ORDER BY competition_id, position",
+      [requestedSaveId],
+    ),
+    competitionHistory: database.queryAll(
+      "SELECT * FROM domestic_competition_history WHERE save_id = ? ORDER BY sort_order",
+      [requestedSaveId],
+    ),
+    competitionHistoryRows: database.queryAll(
+      "SELECT * FROM domestic_competition_history_rows WHERE save_id = ? ORDER BY history_sequence_number, sort_order",
+      [requestedSaveId],
+    ),
   });
   return loadCareerStateRows(database, requestedSaveId, world);
 }
@@ -263,6 +297,74 @@ export function mapCareerWorldRows(input: SaveCareerInput, metadata: CareerSaveM
     }
   });
 
+  const competitions: Record<string, SqliteBindValue>[] = [];
+  const competitionClubs: Record<string, SqliteBindValue>[] = [];
+  const competitionPrizes: Record<string, SqliteBindValue>[] = [];
+  const competitionHistory: Record<string, SqliteBindValue>[] = [];
+  const competitionHistoryRows: Record<string, SqliteBindValue>[] = [];
+  const domesticWorld = state.gameState.domesticCompetitionWorld;
+  domesticWorld?.competitionIds.forEach((orderedCompetitionId, sortOrder) => {
+    const competition = domesticWorld.competitions[orderedCompetitionId];
+    if (competition === undefined) {
+      throw new SqliteWorldStateError(
+        "unsupported_bootstrap_state",
+        `ordered domestic competition is missing: ${orderedCompetitionId}`,
+      );
+    }
+    competitions.push({
+      sort_order: sortOrder,
+      competition_id: competition.id,
+      name: competition.name,
+      maximum_substitutions: competition.matchRules.maximumSubstitutions,
+      substitution_window_limit: competition.matchRules.substitutionWindowLimit,
+      allows_player_reentry: competition.matchRules.allowsPlayerReentry ? 1 : 0,
+      yellow_card_accumulation_threshold: competition.matchRules.yellowCardAccumulationThreshold,
+      straight_red_suspension_matches: competition.matchRules.straightRedSuspensionMatches,
+      second_yellow_suspension_matches: competition.matchRules.secondYellowSuspensionMatches,
+      yellow_accumulation_suspension_matches: competition.matchRules.yellowAccumulationSuspensionMatches,
+      distribution_currency: competition.seasonDistribution?.currency ?? null,
+    });
+    competition.clubIds.forEach((memberClubId, memberOrder) => {
+      competitionClubs.push({
+        competition_id: competition.id,
+        sort_order: memberOrder,
+        club_id: memberClubId,
+      });
+    });
+    competition.seasonDistribution?.prizes.forEach((prize) => {
+      competitionPrizes.push({
+        competition_id: competition.id,
+        position: prize.position,
+        amount: prize.amount,
+      });
+    });
+  });
+  domesticWorld?.seasonHistory.forEach((entry, sortOrder) => {
+    competitionHistory.push({
+      sort_order: sortOrder,
+      sequence_number: entry.sequenceNumber,
+      season_id: entry.seasonId,
+      competition_id: entry.competitionId,
+    });
+    entry.finalTable.forEach((row, rowOrder) => {
+      competitionHistoryRows.push({
+        history_sequence_number: entry.sequenceNumber,
+        sort_order: rowOrder,
+        position: row.position,
+        club_id: row.clubId,
+        played: row.played,
+        wins: row.wins,
+        draws: row.draws,
+        losses: row.losses,
+        goals_for: row.goalsFor,
+        goals_against: row.goalsAgainst,
+        goal_difference: row.goalDifference,
+        points: row.points,
+      });
+    });
+  });
+  const calibrationVersions = state.gameState.meta.calibrationVersions;
+
   return {
     save: {
       save_id: input.saveId,
@@ -278,6 +380,13 @@ export function mapCareerWorldRows(input: SaveCareerInput, metadata: CareerSaveM
       seed: state.gameState.meta.seed,
       rng_algorithm_version: state.gameState.meta.rngAlgorithmVersion,
       save_schema_version: state.gameState.meta.saveSchemaVersion,
+      topology_decision_id: calibrationVersions?.topologyDecisionId ?? null,
+      player_rating_scale_version: calibrationVersions?.playerRatingScaleVersion ?? null,
+      player_market_calibration_version: calibrationVersions?.playerMarketCalibrationVersion ?? null,
+      valuation_curves_version: calibrationVersions?.valuationCurvesVersion ?? null,
+      asking_price_curves_version: calibrationVersions?.askingPriceCurvesVersion ?? null,
+      market_behavior_calibration_version: calibrationVersions?.marketBehaviorCalibrationVersion ?? null,
+      wage_finance_calibration_version: calibrationVersions?.wageFinanceCalibrationVersion ?? null,
     },
     calendar: { current_date: state.gameState.calendar.currentDate, current_season_id: state.gameState.calendar.currentSeasonId },
     clubs,
@@ -293,6 +402,11 @@ export function mapCareerWorldRows(input: SaveCareerInput, metadata: CareerSaveM
     fixtures,
     fixtureOrder,
     fixtureResults,
+    competitions,
+    competitionClubs,
+    competitionPrizes,
+    competitionHistory,
+    competitionHistoryRows,
   };
 }
 
@@ -376,6 +490,87 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
     };
   }
 
+  const competitionClubs = groupedRows(rows.competitionClubs, "competition_id");
+  const competitionPrizes = groupedRows(rows.competitionPrizes, "competition_id");
+  const competitionIds = rows.competitions.map((row) =>
+    competitionId(requiredText(row, "competition_id"))
+  );
+  const competitions: Record<string, Competition> = {};
+  for (const row of rows.competitions) {
+    const id = competitionId(requiredText(row, "competition_id"));
+    const currency = nullableText(row, "distribution_currency") as CurrencyCode | undefined;
+    const prizes = competitionPrizes.get(id) ?? [];
+    competitions[id] = {
+      id,
+      name: requiredText(row, "name"),
+      clubIds: (competitionClubs.get(id) ?? []).map((memberRow) =>
+        clubId(requiredText(memberRow, "club_id"))
+      ),
+      matchRules: createCompetitionMatchRules({
+        maximumSubstitutions: requiredNumber(row, "maximum_substitutions"),
+        substitutionWindowLimit: nullableNumber(row, "substitution_window_limit"),
+        allowsPlayerReentry: requiredBoolean(row, "allows_player_reentry"),
+        yellowCardAccumulationThreshold: requiredNumber(row, "yellow_card_accumulation_threshold"),
+        straightRedSuspensionMatches: requiredNumber(row, "straight_red_suspension_matches"),
+        secondYellowSuspensionMatches: requiredNumber(row, "second_yellow_suspension_matches"),
+        yellowAccumulationSuspensionMatches: requiredNumber(row, "yellow_accumulation_suspension_matches"),
+      }),
+      ...(currency === undefined
+        ? {}
+        : {
+            seasonDistribution: {
+              currency,
+              prizes: prizes.map((prize) => ({
+                position: requiredNumber(prize, "position"),
+                amount: nonNegativeMoney(requiredNumber(prize, "amount")),
+              })),
+            },
+          }),
+    };
+  }
+  const historyRows = groupedRowsByNumber(rows.competitionHistoryRows, "history_sequence_number");
+  const seasonHistory: CompetitionSeasonHistoryEntry[] = rows.competitionHistory.map((row) => {
+    const sequenceNumber = requiredNumber(row, "sequence_number");
+    return {
+      sequenceNumber,
+      seasonId: seasonId(requiredText(row, "season_id")),
+      competitionId: competitionId(requiredText(row, "competition_id")),
+      finalTable: (historyRows.get(sequenceNumber) ?? []).map(
+        (tableRow) => ({
+          position: requiredNumber(tableRow, "position"),
+          clubId: clubId(requiredText(tableRow, "club_id")),
+          played: requiredNumber(tableRow, "played"),
+          wins: requiredNumber(tableRow, "wins"),
+          draws: requiredNumber(tableRow, "draws"),
+          losses: requiredNumber(tableRow, "losses"),
+          goalsFor: requiredNumber(tableRow, "goals_for"),
+          goalsAgainst: requiredNumber(tableRow, "goals_against"),
+          goalDifference: requiredNumber(tableRow, "goal_difference"),
+          points: requiredNumber(tableRow, "points"),
+        }),
+      ),
+    };
+  });
+  const domesticCompetitionWorld: DomesticCompetitionWorld | undefined = competitionIds.length === 0
+    ? undefined
+    : {
+        competitionIds,
+        competitions: competitions as Readonly<Record<ReturnType<typeof competitionId>, Competition>>,
+        seasonHistory,
+      };
+  const topologyDecisionId = nullableText(rows.meta, "topology_decision_id");
+  const calibrationVersions = topologyDecisionId === undefined
+    ? undefined
+    : {
+        topologyDecisionId,
+        playerRatingScaleVersion: requiredText(rows.meta, "player_rating_scale_version"),
+        playerMarketCalibrationVersion: requiredText(rows.meta, "player_market_calibration_version"),
+        valuationCurvesVersion: requiredText(rows.meta, "valuation_curves_version"),
+        askingPriceCurvesVersion: requiredText(rows.meta, "asking_price_curves_version"),
+        marketBehaviorCalibrationVersion: requiredText(rows.meta, "market_behavior_calibration_version"),
+        wageFinanceCalibrationVersion: requiredText(rows.meta, "wage_finance_calibration_version"),
+      };
+
   // Career systems are attached by `loadCareerStateRows` before the complete
   // Phase 78 state is validated. Validating this world-only projection here
   // would incorrectly accept a save without contracts or finances.
@@ -388,6 +583,7 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
         seed: requiredText(rows.meta, "seed"),
         rngAlgorithmVersion: requiredText(rows.meta, "rng_algorithm_version"),
         saveSchemaVersion: requiredNumber(rows.meta, "save_schema_version"),
+        ...(calibrationVersions === undefined ? {} : { calibrationVersions }),
       },
       calendar: {
         currentDate: gameDate(requiredNumber(rows.calendar, "current_date")),
@@ -400,6 +596,7 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
       clubIds: orderedClubIds,
       fixtures: fixtures as CareerState["gameState"]["fixtures"],
       fixtureIds: orderedFixtureIds,
+      ...(domesticCompetitionWorld === undefined ? {} : { domesticCompetitionWorld }),
     },
     transferHistory: [],
   };
@@ -407,7 +604,18 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
 
 function insertMappedRows(database: SqliteWorldDatabase, rows: WorldRows): void {
   insertRow(database, "career_saves", ["save_id", "name", "created_at_iso", "updated_at_iso", "save_schema_version", "career_schema_version", "selected_club_id", "autosave_interval_days"], rows.save);
-  insertSaveRow(database, "game_meta", ["seed", "rng_algorithm_version", "save_schema_version"], rows.save, rows.meta);
+  insertSaveRow(database, "game_meta", [
+    "seed",
+    "rng_algorithm_version",
+    "save_schema_version",
+    "topology_decision_id",
+    "player_rating_scale_version",
+    "player_market_calibration_version",
+    "valuation_curves_version",
+    "asking_price_curves_version",
+    "market_behavior_calibration_version",
+    "wage_finance_calibration_version",
+  ], rows.save, rows.meta);
   insertSaveRow(database, "game_calendar", ["current_date", "current_season_id"], rows.save, rows.calendar);
   insertRows(database, "players", ["player_id", "first_name", "last_name", "birth_date", "primary_role", "archetype", "has_natural_roles", "has_adapted_roles", "has_weak_roles", "has_role_familiarity"], rows.save, rows.players);
   insertRows(database, "player_order", ["sort_order", "player_id"], rows.save, rows.playerOrder);
@@ -422,6 +630,54 @@ function insertMappedRows(database: SqliteWorldDatabase, rows: WorldRows): void 
   insertRows(database, "fixtures", ["fixture_id", "competition_id", "season_id", "round_number", "fixture_date", "home_club_id", "away_club_id"], rows.save, rows.fixtures);
   insertRows(database, "fixture_order", ["sort_order", "fixture_id"], rows.save, rows.fixtureOrder);
   insertRows(database, "fixture_results", ["fixture_id", "home_goals", "away_goals"], rows.save, rows.fixtureResults);
+  insertRows(database, "domestic_competitions", [
+    "sort_order",
+    "competition_id",
+    "name",
+    "maximum_substitutions",
+    "substitution_window_limit",
+    "allows_player_reentry",
+    "yellow_card_accumulation_threshold",
+    "straight_red_suspension_matches",
+    "second_yellow_suspension_matches",
+    "yellow_accumulation_suspension_matches",
+    "distribution_currency",
+  ], rows.save, rows.competitions);
+  insertRows(
+    database,
+    "domestic_competition_clubs",
+    ["competition_id", "sort_order", "club_id"],
+    rows.save,
+    rows.competitionClubs,
+  );
+  insertRows(
+    database,
+    "domestic_competition_prizes",
+    ["competition_id", "position", "amount"],
+    rows.save,
+    rows.competitionPrizes,
+  );
+  insertRows(
+    database,
+    "domestic_competition_history",
+    ["sort_order", "sequence_number", "season_id", "competition_id"],
+    rows.save,
+    rows.competitionHistory,
+  );
+  insertRows(database, "domestic_competition_history_rows", [
+    "history_sequence_number",
+    "sort_order",
+    "position",
+    "club_id",
+    "played",
+    "wins",
+    "draws",
+    "losses",
+    "goals_for",
+    "goals_against",
+    "goal_difference",
+    "points",
+  ], rows.save, rows.competitionHistoryRows);
 }
 
 function insertSaveRow(database: SqliteWorldDatabase, table: string, columns: readonly string[], save: Record<string, unknown>, row: Record<string, unknown>): void {
@@ -534,6 +790,20 @@ function groupedRows(rows: readonly Record<string, unknown>[], key: string): Map
   return groups;
 }
 
+function groupedRowsByNumber(
+  rows: readonly Record<string, unknown>[],
+  key: string,
+): Map<number, Record<string, unknown>[]> {
+  const groups = new Map<number, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const groupKey = requiredNumber(row, key);
+    const group = groups.get(groupKey) ?? [];
+    group.push(row);
+    groups.set(groupKey, group);
+  }
+  return groups;
+}
+
 function requiredMappedRow(rows: Map<string, Record<string, unknown>>, key: string, label: string): Record<string, unknown> {
   const row = rows.get(key);
   if (row === undefined) throw new SqliteWorldStateError("sqlite_unavailable", `ordered ${label} row is missing: ${key}`);
@@ -562,6 +832,12 @@ function requiredNumber(row: Record<string, unknown>, key: string): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "bigint" && value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER) return Number(value);
   throw new SqliteWorldStateError("sqlite_unavailable", `SQLite column ${key} is not numeric`);
+}
+
+function nullableNumber(row: Record<string, unknown>, key: string): number | null {
+  const value = row[key];
+  if (value === null || value === undefined) return null;
+  return requiredNumber(row, key);
 }
 
 function requiredAutosavePolicy(

@@ -3,6 +3,7 @@ import {
   gameDate,
   type ClubId,
   type CompetitionId,
+  type DomesticCompetitionWorld,
   type Fixture,
   type FixtureId,
   type GameDate,
@@ -43,8 +44,22 @@ export interface RoundRobinCalendar {
   readonly fixtures: readonly Fixture[];
 }
 
+/** Published ordered fixture collection for several domestic competitions. */
+export interface DomesticCalendarCollection {
+  /** Globally unique fixture order grouped by canonical competition order. */
+  readonly fixtureIds: readonly FixtureId[];
+  /** Fixtures in the same canonical order as `fixtureIds`. */
+  readonly fixtures: readonly Fixture[];
+}
+
 /** Error categories exposed by calendar generation. */
-export type CalendarGenerationErrorCode = "invalid_club_count" | "duplicate_club";
+export type CalendarGenerationErrorCode =
+  | "invalid_club_count"
+  | "duplicate_club"
+  | "duplicate_fixture"
+  | "calendar_competition_mismatch"
+  | "calendar_membership_mismatch"
+  | "missing_competition_calendar";
 
 /**
  * Typed error thrown when a calendar cannot be generated from the input.
@@ -91,7 +106,7 @@ export function generateRoundRobinCalendar(input: GenerateRoundRobinCalendarInpu
     }
 
     for (const pairing of pairings) {
-      const id = nextFixtureId(nextFixtureNumber);
+      const id = nextFixtureId(input.competitionId, input.seasonId, nextFixtureNumber);
       nextFixtureNumber += 1;
       roundFixtureIds.push(id);
       fixtures.push({
@@ -119,6 +134,71 @@ export function generateRoundRobinCalendar(input: GenerateRoundRobinCalendarInpu
     fixtureIds: fixtures.map((fixture) => fixture.id),
     fixtures,
   };
+}
+
+/**
+ * Publishes multiple calendars through canonical competition order.
+ *
+ * This is the only multi-calendar merge path. It rejects missing calendars,
+ * duplicate IDs, and fixtures whose clubs do not belong to their competition.
+ */
+export function combineDomesticCompetitionCalendars(
+  world: DomesticCompetitionWorld,
+  calendars: readonly RoundRobinCalendar[],
+): DomesticCalendarCollection {
+  const calendarByCompetition = new Map<CompetitionId, RoundRobinCalendar>();
+  for (const calendar of calendars) {
+    if (calendarByCompetition.has(calendar.competitionId)) {
+      throw new CalendarGenerationError(
+        "calendar_competition_mismatch",
+        `Duplicate calendar for competition: ${calendar.competitionId}`,
+      );
+    }
+    calendarByCompetition.set(calendar.competitionId, calendar);
+  }
+  const fixtureIds: FixtureId[] = [];
+  const fixtures: Fixture[] = [];
+  const seenFixtureIds = new Set<FixtureId>();
+
+  for (const competitionId of world.competitionIds) {
+    const competition = world.competitions[competitionId];
+    const calendar = calendarByCompetition.get(competitionId);
+    if (competition === undefined || calendar === undefined) {
+      throw new CalendarGenerationError(
+        "missing_competition_calendar",
+        `Missing calendar for ordered competition: ${competitionId}`,
+      );
+    }
+    const members = new Set(competition.clubIds);
+    for (const fixture of calendar.fixtures) {
+      if (fixture.competitionId !== competitionId) {
+        throw new CalendarGenerationError(
+          "calendar_competition_mismatch",
+          `Calendar fixture competition mismatch: ${fixture.id}`,
+        );
+      }
+      if (!members.has(fixture.homeClubId) || !members.has(fixture.awayClubId)) {
+        throw new CalendarGenerationError(
+          "calendar_membership_mismatch",
+          `Calendar fixture contains a non-member club: ${fixture.id}`,
+        );
+      }
+      if (seenFixtureIds.has(fixture.id)) {
+        throw new CalendarGenerationError("duplicate_fixture", `Duplicate fixture ID: ${fixture.id}`);
+      }
+      seenFixtureIds.add(fixture.id);
+      fixtureIds.push(fixture.id);
+      fixtures.push(fixture);
+    }
+  }
+
+  if (calendarByCompetition.size !== world.competitionIds.length) {
+    throw new CalendarGenerationError(
+      "calendar_competition_mismatch",
+      "Calendar collection contains an unknown or duplicate competition",
+    );
+  }
+  return { fixtureIds, fixtures };
 }
 
 /**
@@ -248,8 +328,18 @@ function rotateClubIds(clubIds: readonly ClubId[]): ClubId[] {
 /**
  * Builds one stable namespaced fixture ID.
  */
-function nextFixtureId(fixtureNumber: number): FixtureId {
-  return fixtureId(`fixture:${String(fixtureNumber).padStart(6, "0")}`);
+function nextFixtureId(
+  competitionId: CompetitionId,
+  seasonId: SeasonId,
+  fixtureNumber: number,
+): FixtureId {
+  return fixtureId(
+    `fixture:${idPart(competitionId, "competition:")}:${idPart(seasonId, "season:")}:${String(fixtureNumber).padStart(6, "0")}`,
+  );
+}
+
+function idPart(id: string, prefix: string): string {
+  return encodeURIComponent(id.slice(prefix.length));
 }
 
 /**

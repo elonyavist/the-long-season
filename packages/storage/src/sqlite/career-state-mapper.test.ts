@@ -45,6 +45,7 @@ test("career rows use explicit relational tables and scalar binds", () => {
     "youth_lifecycle",
     "season_history",
     "season_table_rows",
+    "season_player_statistics",
     "match_preparation",
     "match_preparation_lineup",
     "match_preparation_board_slots",
@@ -63,6 +64,127 @@ test("career rows use explicit relational tables and scalar binds", () => {
     .filter(({ sql }) => sql.includes("INSERT INTO player_contract_history"))
     .map(({ bind }) => bind[5]);
   assert.deepEqual(historyEvents, ["signed", "renewed", "transfer_terminated", "expired", "released"]);
+  const seasonHistoryInsert = database.statements.find(({ sql }) => sql.includes("INSERT INTO season_history\n"));
+  const seasonPlayerStatisticsInsert = database.statements.find(
+    ({ sql }) => sql.includes("INSERT INTO season_player_statistics\n"),
+  );
+  assert.equal(seasonHistoryInsert?.bind[7], "complete");
+  assert.equal(seasonHistoryInsert?.bind[8], "partial");
+  assert.deepEqual(seasonPlayerStatisticsInsert?.bind, [
+    "save:mapper",
+    1,
+    0,
+    "player:retired",
+    12,
+    3,
+    1_100,
+    104.5,
+    15,
+    8,
+    4,
+    0,
+  ]);
+});
+
+test("season history without legacy player statistics writes explicit unavailable coverage", () => {
+  const database = new RecordingDatabase();
+  const state = richCareerFixture();
+  const archivedSeason = state.seasonHistory?.[0];
+  assert.ok(archivedSeason);
+  const { playerStatistics: _legacyMissingStatistics, ...legacyArchivedSeason } = archivedSeason;
+
+  insertCareerStateRows(database, {
+    ...state,
+    seasonHistory: [legacyArchivedSeason],
+  });
+
+  const seasonHistoryInsert = database.statements.find(({ sql }) => sql.includes("INSERT INTO season_history\n"));
+  assert.equal(seasonHistoryInsert?.bind[7], "unavailable");
+  assert.equal(seasonHistoryInsert?.bind[8], "unavailable");
+  assert.equal(
+    database.statements.some(({ sql }) => sql.includes("INSERT INTO season_player_statistics\n")),
+    false,
+  );
+});
+
+test("market clocks persist their exact response date instead of reseeding it from submission", () => {
+  const database = new RecordingDatabase();
+  const state = richCareerFixture();
+  const terms = negotiationTerms(120_000_00);
+  const demand = {
+    evaluatedOn: 20_010,
+    age: 25,
+    currentAbility: 10,
+    reachablePotential: 12,
+    role: "central_midfielder",
+    expectedSquadStatus: "squad_player",
+    currentAnnualWage: 100_000_00,
+    remainingContractDays: 170,
+    clubReputation: 5,
+    clubCategory: "third_division",
+    freeAgentLeverageBasisPoints: 0,
+    preferredTerms: terms,
+    minimumTerms: terms,
+  } as const;
+
+  insertCareerStateRows(database, {
+    ...state,
+    transferNegotiationState: {
+      negotiations: {
+        "transfer-negotiation:clock": {
+          id: "transfer-negotiation:clock",
+          buyingClubId: "club:away",
+          sellingClubId: "club:home",
+          playerId: "player:one",
+          publicValue: 900_000_00,
+          initialAskingPrice: 1_100_000_00,
+          currentAskingPrice: 1_100_000_00,
+          status: "submitted",
+          submittedOn: 20_010,
+          offeredFee: 1_000_000_00,
+          clock: {
+            submittedOn: 20_010,
+            responseDueOn: 20_012,
+            deadline: 20_013,
+          },
+        },
+      },
+      negotiationIds: ["transfer-negotiation:clock"],
+    },
+    preliminaryAgreementState: {
+      agreements: {
+        "preliminary-agreement:clock": {
+          id: "preliminary-agreement:clock",
+          playerId: "player:one",
+          currentClubId: "club:home",
+          offeringClubId: "club:away",
+          currentContractId: "contract:one",
+          createdOn: 20_010,
+          futureStartsOn: 20_180,
+          status: "offer_submitted",
+          offeredTerms: terms,
+          demand,
+          clock: {
+            submittedOn: 20_010,
+            responseDueOn: 20_011,
+            deadline: 20_013,
+          },
+        },
+      },
+      agreementIds: ["preliminary-agreement:clock"],
+    },
+  } as unknown as CareerState);
+
+  const transferInsert = database.statements.find(({ sql }) =>
+    sql.includes("INSERT INTO transfer_negotiations\n"),
+  );
+  const preliminaryInsert = database.statements.find(({ sql }) =>
+    sql.includes("INSERT INTO preliminary_agreements\n"),
+  );
+  assert.equal(transferInsert?.bind[10], 20_010);
+  assert.equal(transferInsert?.bind[11], 20_012);
+  assert.equal(preliminaryInsert?.bind[7], 20_010);
+  assert.equal(preliminaryInsert?.bind[8], 20_011);
 });
 
 /** Captures mapper writes without pretending to implement persistence. */
@@ -304,7 +426,19 @@ function richCareerFixture(): CareerState {
       },
       negotiationIds: ["contract-negotiation:one"],
     },
-    transferHistory: [{ sequenceNumber: 1, occurredOn: 20_000, buyingClubId: "club:home", sellingClubId: "club:away", playerId: "player:one", transferFee: 100_000_000 }],
+    transferHistory: [{
+      kind: "permanent_transfer",
+      sequenceNumber: 1,
+      occurredOn: 20_000,
+      buyingClubId: "club:home",
+      sellingClubId: "club:away",
+      playerId: "player:one",
+      publicValue: 90_000_000,
+      initialAskingPrice: 110_000_000,
+      offeredFee: 100_000_000,
+      agreedFee: 100_000_000,
+      completedFee: 100_000_000,
+    }],
     currentSeasonInbox: [{
       id: "inbox:matchday:fixture:played",
       date: 20_100,
@@ -375,6 +509,21 @@ function richCareerFixture(): CareerState {
       championClubId: "club:home",
       selectedClubFinish: tableRow(),
       aggregateGoals: { fixtureCount: 1, totalGoals: 1 },
+      playerStatistics: {
+        participationCoverage: "complete",
+        eventCoverage: "partial",
+        rows: [{
+          playerId: "player:retired",
+          starts: 12,
+          substituteAppearances: 3,
+          minutes: 1_100,
+          ratingTotal: 104.5,
+          ratingSamples: 15,
+          goals: 8,
+          assists: 4,
+          saves: 0,
+        }],
+      },
     }],
     matchPreparation: {
       selectedClubId: "club:home",

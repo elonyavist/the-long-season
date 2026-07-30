@@ -1,5 +1,5 @@
 /** Current relational browser-career schema version. */
-export const SQLITE_CAREER_SCHEMA_VERSION = 13;
+export const SQLITE_CAREER_SCHEMA_VERSION = 17;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
@@ -323,11 +323,17 @@ export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS transfer_history (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
     sequence_number INTEGER NOT NULL,
+    movement_kind TEXT NOT NULL CHECK (movement_kind IN ('permanent_transfer', 'free_agent_signing')),
     occurred_on INTEGER NOT NULL,
     buying_club_id TEXT NOT NULL,
-    selling_club_id TEXT NOT NULL,
+    selling_club_id TEXT,
     player_id TEXT NOT NULL,
-    transfer_fee INTEGER NOT NULL,
+    public_value INTEGER NOT NULL CHECK (public_value > 0),
+    initial_asking_price INTEGER CHECK (initial_asking_price IS NULL OR initial_asking_price >= 0),
+    offered_fee INTEGER CHECK (offered_fee IS NULL OR offered_fee >= 0),
+    counter_fee INTEGER CHECK (counter_fee IS NULL OR counter_fee >= 0),
+    agreed_fee INTEGER CHECK (agreed_fee IS NULL OR agreed_fee >= 0),
+    completed_fee INTEGER NOT NULL CHECK (completed_fee >= 0),
     PRIMARY KEY (save_id, sequence_number),
     FOREIGN KEY (save_id, buying_club_id) REFERENCES clubs(save_id, club_id),
     FOREIGN KEY (save_id, selling_club_id) REFERENCES clubs(save_id, club_id),
@@ -704,6 +710,11 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
     buying_club_id TEXT NOT NULL,
     selling_club_id TEXT NOT NULL,
     player_id TEXT NOT NULL,
+    public_value INTEGER NOT NULL CHECK (public_value > 0),
+    initial_asking_price INTEGER NOT NULL CHECK (initial_asking_price > 0),
+    current_asking_price INTEGER NOT NULL CHECK (current_asking_price > 0),
+    offered_fee INTEGER NOT NULL CHECK (offered_fee > 0),
+    counter_fee INTEGER CHECK (counter_fee IS NULL OR counter_fee > 0),
     status TEXT NOT NULL CHECK (status IN (
       'submitted', 'countered', 'accepted', 'player_offer_submitted',
       'player_countered', 'player_rejected', 'player_expired',
@@ -711,10 +722,10 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
       'expired', 'unaffordable'
     )),
     submitted_on INTEGER,
-    offered_fee INTEGER CHECK (offered_fee IS NULL OR offered_fee >= 0),
-    counter_fee INTEGER CHECK (counter_fee IS NULL OR counter_fee >= 0),
+    response_due_on INTEGER,
     counter_issued_on INTEGER,
     agreed_fee INTEGER CHECK (agreed_fee IS NULL OR agreed_fee >= 0),
+    completed_fee INTEGER CHECK (completed_fee IS NULL OR completed_fee >= 0),
     accepted_on INTEGER,
     club_accepted_on INTEGER,
     rejected_on INTEGER,
@@ -800,6 +811,7 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
     offering_club_id TEXT NOT NULL,
     current_contract_id TEXT NOT NULL,
     created_on INTEGER NOT NULL,
+    response_due_on INTEGER,
     future_starts_on INTEGER NOT NULL,
     status TEXT NOT NULL CHECK (status IN (
       'offer_submitted', 'countered', 'agreed', 'rejected',
@@ -879,6 +891,121 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
     PRIMARY KEY (save_id, agreement_id, sort_order),
     FOREIGN KEY (save_id, agreement_id)
       REFERENCES preliminary_agreement_evaluations(save_id, agreement_id) ON DELETE CASCADE
+  ) STRICT`,
+] as const;
+
+/**
+ * Version-15 completed-season player statistics.
+ *
+ * Archived rows intentionally do not reference the current `players` table:
+ * retired players can leave the active world while their career history must
+ * remain available.
+ */
+export const SQLITE_CAREER_SCHEMA_V15_STATEMENTS = [
+  `ALTER TABLE season_history ADD COLUMN participation_coverage TEXT NOT NULL DEFAULT 'unavailable'
+    CHECK (participation_coverage IN ('complete', 'partial', 'unavailable'))`,
+  `ALTER TABLE season_history ADD COLUMN event_coverage TEXT NOT NULL DEFAULT 'unavailable'
+    CHECK (event_coverage IN ('complete', 'partial', 'unavailable'))`,
+  `CREATE TABLE IF NOT EXISTS season_player_statistics (
+    save_id TEXT NOT NULL,
+    history_sequence_number INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL,
+    player_id TEXT NOT NULL,
+    starts INTEGER NOT NULL CHECK (starts >= 0),
+    substitute_appearances INTEGER NOT NULL CHECK (substitute_appearances >= 0),
+    minutes INTEGER NOT NULL CHECK (minutes >= 0),
+    rating_total REAL NOT NULL CHECK (rating_total >= 0),
+    rating_samples INTEGER NOT NULL CHECK (rating_samples >= 0),
+    goals INTEGER NOT NULL CHECK (goals >= 0),
+    assists INTEGER NOT NULL CHECK (assists >= 0),
+    saves INTEGER NOT NULL CHECK (saves >= 0),
+    PRIMARY KEY (save_id, history_sequence_number, sort_order),
+    UNIQUE (save_id, history_sequence_number, player_id),
+    FOREIGN KEY (save_id, history_sequence_number)
+      REFERENCES season_history(save_id, sequence_number) ON DELETE CASCADE
+  ) STRICT`,
+] as const;
+
+/**
+ * Version-16 domestic competition topology and calibration-version facts.
+ *
+ * Current membership is stored once in `domestic_competition_clubs`; the
+ * ordered competition rows and historical tables remain relational and
+ * language-agnostic.
+ */
+export const SQLITE_CAREER_SCHEMA_V16_STATEMENTS = [
+  `ALTER TABLE game_meta ADD COLUMN topology_decision_id TEXT`,
+  `ALTER TABLE game_meta ADD COLUMN player_rating_scale_version TEXT`,
+  `ALTER TABLE game_meta ADD COLUMN player_market_calibration_version TEXT`,
+  `ALTER TABLE game_meta ADD COLUMN valuation_curves_version TEXT`,
+  `ALTER TABLE game_meta ADD COLUMN asking_price_curves_version TEXT`,
+  `ALTER TABLE game_meta ADD COLUMN market_behavior_calibration_version TEXT`,
+  `ALTER TABLE game_meta ADD COLUMN wage_finance_calibration_version TEXT`,
+  `CREATE TABLE IF NOT EXISTS domestic_competitions (
+    save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    competition_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    maximum_substitutions INTEGER NOT NULL,
+    substitution_window_limit INTEGER,
+    allows_player_reentry INTEGER NOT NULL CHECK (allows_player_reentry IN (0, 1)),
+    yellow_card_accumulation_threshold INTEGER NOT NULL,
+    straight_red_suspension_matches INTEGER NOT NULL,
+    second_yellow_suspension_matches INTEGER NOT NULL,
+    yellow_accumulation_suspension_matches INTEGER NOT NULL,
+    distribution_currency TEXT,
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, competition_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS domestic_competition_clubs (
+    save_id TEXT NOT NULL,
+    competition_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    club_id TEXT NOT NULL,
+    PRIMARY KEY (save_id, competition_id, sort_order),
+    UNIQUE (save_id, club_id),
+    FOREIGN KEY (save_id, competition_id)
+      REFERENCES domestic_competitions(save_id, competition_id) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, club_id) REFERENCES clubs(save_id, club_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS domestic_competition_prizes (
+    save_id TEXT NOT NULL,
+    competition_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    amount INTEGER NOT NULL CHECK (amount >= 0),
+    PRIMARY KEY (save_id, competition_id, position),
+    FOREIGN KEY (save_id, competition_id)
+      REFERENCES domestic_competitions(save_id, competition_id) ON DELETE CASCADE
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS domestic_competition_history (
+    save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    sequence_number INTEGER NOT NULL,
+    season_id TEXT NOT NULL,
+    competition_id TEXT NOT NULL,
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, sequence_number),
+    FOREIGN KEY (save_id, competition_id)
+      REFERENCES domestic_competitions(save_id, competition_id)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS domestic_competition_history_rows (
+    save_id TEXT NOT NULL,
+    history_sequence_number INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    club_id TEXT NOT NULL,
+    played INTEGER NOT NULL,
+    wins INTEGER NOT NULL,
+    draws INTEGER NOT NULL,
+    losses INTEGER NOT NULL,
+    goals_for INTEGER NOT NULL,
+    goals_against INTEGER NOT NULL,
+    goal_difference INTEGER NOT NULL,
+    points INTEGER NOT NULL,
+    PRIMARY KEY (save_id, history_sequence_number, sort_order),
+    FOREIGN KEY (save_id, history_sequence_number)
+      REFERENCES domestic_competition_history(save_id, sequence_number) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, club_id) REFERENCES clubs(save_id, club_id)
   ) STRICT`,
 ] as const;
 

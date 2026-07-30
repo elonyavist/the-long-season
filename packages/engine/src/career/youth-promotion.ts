@@ -8,8 +8,10 @@ import {
   type Club,
   type ClubId,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type Player,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type SeniorSquadState,
   type YouthAcademyState,
 } from "@game/domain";
@@ -26,6 +28,10 @@ export const YOUTH_PROMOTION_SENIOR_TARGET_SIZE = 25;
 export interface PromoteYouthCandidatesInput {
   /** Durable career state before promotions are applied. */
   readonly careerState: CareerState;
+  /** Explicit wage policy used by every promoted player's terms and capacity. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Exact version-selected reserve and affordability policy. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Whether the selected club can be automated by a lab/report command. */
   readonly allowSelectedClubPromotion?: boolean;
   /** Optional senior roster target. Defaults to Phase 32 target `25`. */
@@ -108,6 +114,8 @@ export function promoteYouthCandidatesToSeniorSquads(input: PromoteYouthCandidat
         clubId,
         player,
         input.occurredOn ?? careerState.gameState.calendar.currentDate,
+        input.wagePolicy,
+        input.marketBehaviorPolicy,
       );
       if (promoted === undefined) {
         records.push({
@@ -131,10 +139,13 @@ function promoteCandidate(
   clubId: ClubId,
   player: Player,
   occurredOn: GameDate,
+  wagePolicy: PlayerWagePolicyConfig,
+  marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): CareerState | undefined {
   const seniorSquadState = requiredSeniorState(careerState);
   const demand = deriveContractDemand({
     careerState,
+    wagePolicy,
     playerId: player.id,
     clubId,
     evaluatedOn: occurredOn,
@@ -143,6 +154,8 @@ function promoteCandidate(
   const capacity = evaluateCareerContractCapacity({
     careerState,
     clubId,
+    wagePolicy,
+    marketBehaviorPolicy,
     addedAnnualWage: demand.minimumTerms.annualWage,
     addedSigningBonus: demand.minimumTerms.bonuses.signingBonus,
   });

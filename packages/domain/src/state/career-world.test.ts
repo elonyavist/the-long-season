@@ -24,6 +24,7 @@ test("createCareerWorldMetadata trims and preserves valid metadata", () => {
     generatorVersion: CAREER_WORLD_GENERATOR_VERSION,
     creationSourceKey: "career:cli-new-world",
   });
+  assert.equal("calibrationVersions" in metadata, false);
 });
 
 test("createCareerWorldMetadata rejects empty world seeds", () => {

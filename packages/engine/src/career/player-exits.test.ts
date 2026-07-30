@@ -38,8 +38,10 @@ import { applyEndOfSeasonPlayerExits } from "./player-exits.ts";
 
 test("applyEndOfSeasonPlayerExits retires hard-threshold old outfield players", () => {
   const retiringPlayer = playerId("player:retiring");
+  const departmentCover = playerId("player:department-cover");
   const careerState = careerStateFixture([
     playerFixture(retiringPlayer, "st", 37, abilitySet(11), abilitySet(11)),
+    playerFixture(departmentCover, "st", 24, abilitySet(9), abilitySet(9)),
   ]);
 
   const result = applyEndOfSeasonPlayerExits({
@@ -51,12 +53,12 @@ test("applyEndOfSeasonPlayerExits retires hard-threshold old outfield players", 
   assert.equal(result.exits.length, 1);
   assert.equal(result.exits[0]?.playerId, retiringPlayer);
   assert.equal(result.exits[0]?.reason, "retirement");
-  assert.deepEqual(result.careerState.gameState.playerIds, []);
-  assert.deepEqual(result.careerState.gameState.clubs[clubId("club:selected")]?.playerIds, []);
+  assert.deepEqual(result.careerState.gameState.playerIds, [departmentCover]);
+  assert.deepEqual(result.careerState.gameState.clubs[clubId("club:selected")]?.playerIds, [departmentCover]);
   assert.equal(result.careerState.gameState.players[retiringPlayer]?.id, retiringPlayer);
   assert.equal(result.careerState.gameState.playerStates[retiringPlayer], undefined);
-  assert.deepEqual(result.careerState.seniorSquadState?.activeContractIds, []);
-  assert.deepEqual(result.careerState.seniorSquadState?.registrationIds, []);
+  assert.equal(result.careerState.seniorSquadState?.activeContractIds.length, 1);
+  assert.equal(result.careerState.seniorSquadState?.registrationIds.length, 1);
   assert.equal(result.careerState.seniorSquadState?.contractHistoryEntryIds.length, 1);
   assert.equal(
     result.careerState.seniorSquadState?.contractHistory[
@@ -66,8 +68,24 @@ test("applyEndOfSeasonPlayerExits retires hard-threshold old outfield players", 
   );
   assert.equal(
     result.careerState.clubFinanceState?.accounts[clubId("club:selected")]?.committedAnnualWage,
-    0,
+    100_000_00,
   );
+});
+
+test("applyEndOfSeasonPlayerExits defers retirement when it would empty a club department", () => {
+  const lastAttacker = playerId("player:last-attacker");
+  const careerState = careerStateFixture([
+    playerFixture(lastAttacker, "st", 37, abilitySet(11), abilitySet(11)),
+  ]);
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "last-department-retirement",
+    seasonId: seasonId("season:0001"),
+  });
+
+  assert.deepEqual(result.exits, []);
+  assert.deepEqual(result.careerState, careerState);
 });
 
 test("applyEndOfSeasonPlayerExits uses later hard retirement for goalkeepers", () => {
@@ -107,6 +125,113 @@ test("applyEndOfSeasonPlayerExits removes unattached players past the hard retir
   assert.equal(result.careerState.gameState.playerStates[retiredFreeAgent], undefined);
 });
 
+test("applyEndOfSeasonPlayerExits steps down a non-viable academy release after two unattached seasons", () => {
+  const releasedPlayerId = playerId("player:released-two-seasons");
+  const base = freeAgentCareerStateFixture([
+    playerFixture(releasedPlayerId, "st", 22, abilitySet(7), abilitySet(7)),
+  ]);
+  const owner = clubId("club:selected");
+  const careerState = createCareerState({
+    ...base,
+    youthAcademyState: {
+      clubRosters: { [owner]: { clubId: owner, playerIds: [] } },
+      clubRosterIds: [owner],
+      playerLifecycle: {
+        [releasedPlayerId]: {
+          playerId: releasedPlayerId,
+          clubId: owner,
+          status: "released",
+          academyEntrySeasonId: seasonId("season:academy-entry"),
+          academyEntryDate: gameDate(17_000),
+          statusChangedAt: gameDate(base.gameState.calendar.currentDate - 730),
+        },
+      },
+      playerLifecycleIds: [releasedPlayerId],
+    },
+  });
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "released-step-down-world",
+    seasonId: seasonId("season:0003"),
+  });
+
+  assert.equal(result.exits[0]?.playerId, releasedPlayerId);
+  assert.equal(result.exits[0]?.clubId, undefined);
+  assert.equal(result.exits[0]?.reason, "career_step_down");
+  assert.deepEqual(result.careerState.gameState.playerIds, []);
+});
+
+test("applyEndOfSeasonPlayerExits keeps a recent low-value academy release available", () => {
+  const releasedPlayerId = playerId("player:recent-release");
+  const base = freeAgentCareerStateFixture([
+    playerFixture(releasedPlayerId, "st", 21, abilitySet(7), abilitySet(7)),
+  ]);
+  const owner = clubId("club:selected");
+  const careerState = createCareerState({
+    ...base,
+    youthAcademyState: {
+      clubRosters: { [owner]: { clubId: owner, playerIds: [] } },
+      clubRosterIds: [owner],
+      playerLifecycle: {
+        [releasedPlayerId]: {
+          playerId: releasedPlayerId,
+          clubId: owner,
+          status: "released",
+          academyEntrySeasonId: seasonId("season:academy-entry"),
+          academyEntryDate: gameDate(18_000),
+          statusChangedAt: gameDate(base.gameState.calendar.currentDate - 729),
+        },
+      },
+      playerLifecycleIds: [releasedPlayerId],
+    },
+  });
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "recent-release-world",
+    seasonId: seasonId("season:0002"),
+  });
+
+  assert.deepEqual(result.exits, []);
+  assert.deepEqual(result.careerState.gameState.playerIds, [releasedPlayerId]);
+});
+
+test("applyEndOfSeasonPlayerExits keeps a released goalkeeper available beyond two seasons", () => {
+  const releasedPlayerId = playerId("player:released-goalkeeper");
+  const base = freeAgentCareerStateFixture([
+    playerFixture(releasedPlayerId, "gk", 22, abilitySet(7), abilitySet(7)),
+  ]);
+  const owner = clubId("club:selected");
+  const careerState = createCareerState({
+    ...base,
+    youthAcademyState: {
+      clubRosters: { [owner]: { clubId: owner, playerIds: [] } },
+      clubRosterIds: [owner],
+      playerLifecycle: {
+        [releasedPlayerId]: {
+          playerId: releasedPlayerId,
+          clubId: owner,
+          status: "released",
+          academyEntrySeasonId: seasonId("season:academy-entry"),
+          academyEntryDate: gameDate(16_000),
+          statusChangedAt: gameDate(base.gameState.calendar.currentDate - 1_460),
+        },
+      },
+      playerLifecycleIds: [releasedPlayerId],
+    },
+  });
+
+  const result = applyEndOfSeasonPlayerExits({
+    careerState,
+    worldSeed: "released-goalkeeper-patience",
+    seasonId: seasonId("season:0005"),
+  });
+
+  assert.deepEqual(result.exits, []);
+  assert.deepEqual(result.careerState.gameState.playerIds, [releasedPlayerId]);
+});
+
 test("applyEndOfSeasonPlayerExits is deterministic for same seed and season", () => {
   const players = [
     playerFixture(playerId("player:old-01"), "cb", 35, abilitySet(8), abilitySet(8)),
@@ -133,7 +258,7 @@ test("applyEndOfSeasonPlayerExits preserves explicit active player order", () =>
   const active = playerId("player:active");
   const retiring = playerId("player:retiring");
   const careerState = careerStateFixture([
-    playerFixture(active, "cm", 24, abilitySet(10), abilitySet(12)),
+    playerFixture(active, "st", 24, abilitySet(10), abilitySet(12)),
     playerFixture(retiring, "st", 37, abilitySet(10), abilitySet(10)),
   ]);
 
@@ -149,11 +274,13 @@ test("applyEndOfSeasonPlayerExits preserves explicit active player order", () =>
 
 test("applyEndOfSeasonPlayerExits reports role-shaped quality for exit decisions", () => {
   const retiring = playerId("player:raw-diagnostic-retiring");
+  const departmentCover = playerId("player:raw-diagnostic-cover");
   const unevenAbilities = mapPlayerAbilities(abilitySet(1), (value, key) =>
     key === "technical.finishing" ? abilityValue(20) : value,
   );
   const careerState = careerStateFixture([
     playerFixture(retiring, "st", 37, unevenAbilities, unevenAbilities),
+    playerFixture(departmentCover, "st", 24, abilitySet(9), abilitySet(9)),
   ]);
 
   const result = applyEndOfSeasonPlayerExits({

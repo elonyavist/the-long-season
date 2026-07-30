@@ -1,4 +1,8 @@
-import { createFakeLeagueSystem } from "@game/content";
+import {
+  createFakeGameplayConfig,
+  selectMarketBehaviorCalibration,
+  selectPlayerWagePolicyConfig,
+} from "@game/content";
 import {
   applyCareerWeeklyRecovery,
   buildTacticTeamContext,
@@ -15,6 +19,9 @@ import {
 } from "@game/engine";
 
 import type { CliCareerState, CliGameState, ClubId } from "./types.ts";
+import {
+  competitionIdForClubInWorld,
+} from "./scenarios.ts";
 
 const CAREER_DEFAULT_LINEUP_SIZE = 11;
 
@@ -66,9 +73,7 @@ export function advanceCareerNextFixture(
     };
   }
 
-  const contentConfig = createFakeLeagueSystem({
-    worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
-  });
+  const contentConfig = createFakeGameplayConfig();
   const nextFixture = findNextCareerFixture(careerState);
 
   if (nextFixture.status === "none") {
@@ -109,7 +114,13 @@ export function advanceCareerNextFixture(
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
     }),
     matchEngineConfig: contentConfig.matchEngineConfig,
-    competitionMatchRules: contentConfig.competition.matchRules,
+    competitionMatchRules: selectedCompetitionMatchRules(recoveredCareerState),
+    wagePolicy: selectPlayerWagePolicyConfig(
+      recoveredCareerState.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      recoveredCareerState.gameState.meta.calibrationVersions,
+    ),
     includeExplanationTrace: options.includeExplanationTrace === true,
   }), preMatchRecovery));
 }
@@ -215,19 +226,23 @@ function withPreMatchRecovery(
 }
 
 function nextSelectedClubFixtureId(careerState: CliCareerState): CliGameState["fixtureIds"][number] | undefined {
-  for (const fixtureId of careerState.gameState.fixtureIds) {
-    const fixture = careerState.gameState.fixtures[fixtureId];
+  const nextFixture = findNextCareerFixture(careerState);
+  return nextFixture.status === "found" ? nextFixture.fixtureId : undefined;
+}
 
-    if (fixture === undefined || fixture.result?.played === true) {
-      continue;
-    }
-
-    if (fixture.homeClubId === careerState.selectedClubId || fixture.awayClubId === careerState.selectedClubId) {
-      return fixtureId;
-    }
+/** Reads match rules from the managed club's canonical current competition. */
+function selectedCompetitionMatchRules(careerState: CliCareerState) {
+  const world = careerState.gameState.domesticCompetitionWorld;
+  const competitionId = world === undefined
+    ? undefined
+    : competitionIdForClubInWorld(world, careerState.selectedClubId);
+  const rules = competitionId === undefined
+    ? undefined
+    : world?.competitions[competitionId]?.matchRules;
+  if (rules === undefined) {
+    throw new Error("Selected club competition match rules are unavailable");
   }
-
-  return undefined;
+  return rules;
 }
 
 function defaultOpponentLineupFromRoster(playerIds: CliGameState["playerIds"]): readonly LineupSlot[] {

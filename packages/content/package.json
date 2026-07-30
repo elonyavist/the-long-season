@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@game/domain": "workspace:*",
-    "@game/shared": "workspace:*"
+    "@game/shared": "workspace:*",
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

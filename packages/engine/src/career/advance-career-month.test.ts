@@ -23,7 +23,25 @@ import {
   type PlayerId,
 } from "@game/domain";
 
-import { advanceCareerMonths, monthKeyForCareerDate } from "./advance-career-month.ts";
+import {
+  advanceCareerMonths as advanceCareerMonthsWithPolicy,
+  monthKeyForCareerDate,
+} from "./advance-career-month.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+function advanceCareerMonths(
+  input: Omit<
+    Parameters<typeof advanceCareerMonthsWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceCareerMonthsWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
 
 /**
  * Monthly career lifecycle tests protect the single calendar checkpoint that

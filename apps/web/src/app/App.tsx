@@ -3,6 +3,10 @@ import { useReducedMotion } from "motion/react";
 import type { CareerAutosaveIntervalDays, SaveMetadata } from "@game/storage";
 import { toISO } from "@game/shared";
 import type { CareerContractTermsInput } from "@game/ui";
+import {
+  selectAskingPriceCurves,
+  selectPlayerValuationConfig,
+} from "@game/content";
 
 import { createWebTranslator } from "./translation";
 import { CareerAppFrame } from "./CareerAppFrame";
@@ -470,7 +474,12 @@ export function App(): React.JSX.Element {
     draft: MarketOfferDraft,
   ): ReturnType<typeof previewMarketOffer> => activeCareerState === undefined
     ? { status: "blocked", previewId: "none", reason: "missing_finance" }
-    : previewMarketOffer(activeCareerState, draft), [activeCareerState]);
+    : previewMarketOffer(
+        activeCareerState,
+        draft,
+        selectPlayerValuationConfig(activeCareerState.gameState.meta.calibrationVersions),
+        selectAskingPriceCurves(activeCareerState.gameState.meta.calibrationVersions),
+      ), [activeCareerState]);
 
   const applySelectedClubMarketCommand = useCallback(async (
     command: WebSelectedClubMarketCommand,

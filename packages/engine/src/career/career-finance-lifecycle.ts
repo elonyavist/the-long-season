@@ -24,11 +24,11 @@ import {
   type Money,
   type AppliedMatchSubstitution,
   type PlayerContractId,
+  type PlayerWagePolicyConfig,
   type PlayerId,
   type SeasonId,
   type SeniorSquadState,
 } from "@game/domain";
-import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import {
   buildFixtureParticipationContributions,
   type FixtureParticipationSideContext,
@@ -85,6 +85,7 @@ export type ContractOfferAffordabilityResult = ContractOfferAffordable | CareerF
 export interface CheckContractOfferAffordabilityInput {
   readonly careerState: CareerState;
   readonly clubId: ClubId;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly replacedContractId: PlayerContractId;
   readonly terms: ContractOfferTerms;
 }
@@ -118,28 +119,33 @@ export function checkContractOfferAffordability(
     });
   }
 
-  const capacity = evaluateCareerContractCapacity({
-    careerState: input.careerState,
-    clubId: input.clubId,
-    addedAnnualWage: input.terms.annualWage,
-    replacedAnnualWage: contract.annualWage,
-    addedSigningBonus: input.terms.bonuses.signingBonus,
-  });
-  if (capacity.status === "unaffordable") {
-    return rejected(input.careerState, capacity.reason, {
+  const requiredAnnualWage = addMoney(
+    nonNegativeMoney(account.committedAnnualWage - contract.annualWage),
+    input.terms.annualWage,
+  );
+  if (requiredAnnualWage > account.annualWageBudget) {
+    return rejected(input.careerState, "wage_budget_exceeded", {
       clubId: input.clubId,
       contractId: input.replacedContractId,
-      ...(capacity.requiredAmount === undefined ? {} : { requiredAmount: capacity.requiredAmount }),
-      ...(capacity.availableAmount === undefined ? {} : { availableAmount: capacity.availableAmount }),
+      requiredAmount: requiredAnnualWage,
+      availableAmount: account.annualWageBudget,
+    });
+  }
+  if (input.terms.bonuses.signingBonus > account.cashBalance) {
+    return rejected(input.careerState, "insufficient_cash", {
+      clubId: input.clubId,
+      contractId: input.replacedContractId,
+      requiredAmount: input.terms.bonuses.signingBonus,
+      availableAmount: account.cashBalance,
     });
   }
 
   return {
     status: "affordable",
     clubId: input.clubId,
-    projectedCommittedAnnualWage: capacity.requiredAnnualWage,
-    availableAnnualWageBudget: capacity.availableAnnualWageBudget,
-    availableCash: capacity.availableCash,
+    projectedCommittedAnnualWage: requiredAnnualWage,
+    availableAnnualWageBudget: account.annualWageBudget,
+    availableCash: account.cashBalance,
   };
 }
 
@@ -154,12 +160,27 @@ export interface ReallocateTransferBudgetToWagesInput {
 export interface TransferBudgetToWageAllocation {
   readonly clubId: ClubId;
   readonly amount: Money;
+  /**
+   * Allows an automated structural-squad repair to convert real unspent sale
+   * proceeds after the normal annual transfer allocation is exhausted.
+   */
+  readonly allowSaleProceeds?: boolean;
 }
 
 /** Input for applying several transfer-to-wage allocations atomically. */
 export interface ReallocateTransferBudgetsToWagesInput {
   readonly careerState: CareerState;
   readonly allocations: readonly TransferBudgetToWageAllocation[];
+}
+
+/** Input for a source-calibrated structural squad wage-budget repair. */
+export interface EnsureStructuralWageBudgetInput {
+  readonly careerState: CareerState;
+  readonly clubId: ClubId;
+  /** Minimum planning ceiling required by an already-derived structural signing. */
+  readonly requiredAnnualWageBudget: Money;
+  /** Versioned tier targets that cap the repair without inventing a new number. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
 }
 
 /**
@@ -211,9 +232,11 @@ export function reallocateTransferBudgetsToWages(
         clubId: allocation.clubId,
       });
     }
-    const reallocatableTransferBudget = nonNegativeMoney(
-      Math.min(account.annualTransferBudget, account.availableTransferBudget),
-    );
+    const reallocatableTransferBudget = allocation.allowSaleProceeds === true
+      ? account.availableTransferBudget
+      : nonNegativeMoney(
+          Math.min(account.annualTransferBudget, account.availableTransferBudget),
+        );
     if (allocation.amount > reallocatableTransferBudget) {
       return rejected(input.careerState, "transfer_budget_insufficient", {
         clubId: allocation.clubId,
@@ -224,7 +247,9 @@ export function reallocateTransferBudgetsToWages(
 
     accountByClub.set(allocation.clubId, {
       ...account,
-      annualTransferBudget: subtractMoney(account.annualTransferBudget, allocation.amount),
+      annualTransferBudget: nonNegativeMoney(
+        Math.max(0, account.annualTransferBudget - allocation.amount),
+      ),
       availableTransferBudget: subtractMoney(account.availableTransferBudget, allocation.amount),
       annualWageBudget: addMoney(account.annualWageBudget, allocation.amount),
     });
@@ -238,6 +263,49 @@ export function reallocateTransferBudgetsToWages(
       return account === undefined ? [] : [account];
     }),
   );
+  return applied(withFinanceState(input.careerState, financeState), []);
+}
+
+/**
+ * Raises an AI club's wage planning ceiling only for structural squad repair.
+ *
+ * The ceiling never exceeds the versioned division maximum and does not move
+ * or spend cash. The later contract-activation boundary still validates the
+ * exact wage and signing bonus against both budget and cash before publishing
+ * a signing.
+ */
+export function ensureStructuralWageBudget(
+  input: EnsureStructuralWageBudgetInput,
+): CareerFinanceLifecycleResult {
+  const prerequisites = requiredFinanceState(input.careerState);
+  if (prerequisites.status === "rejected") return prerequisites;
+  const account = findClubFinanceAccount(prerequisites.financeState, input.clubId);
+  const club = input.careerState.gameState.clubs[input.clubId];
+  const target = input.wagePolicy.wageFinanceCalibration.gameDesignTargets.find(
+    (candidate) => candidate.division === club?.category,
+  );
+  if (account === undefined || target === undefined) {
+    return rejected(input.careerState, "club_finance_account_missing", {
+      clubId: input.clubId,
+    });
+  }
+  if (input.requiredAnnualWageBudget <= account.annualWageBudget) {
+    return applied(input.careerState, []);
+  }
+  const maximum = nonNegativeMoney(
+    target.annualSeniorWageBudgetMaximumMinorUnits,
+  );
+  if (input.requiredAnnualWageBudget > maximum) {
+    return rejected(input.careerState, "wage_budget_exceeded", {
+      clubId: input.clubId,
+      requiredAmount: input.requiredAnnualWageBudget,
+      availableAmount: maximum,
+    });
+  }
+  const financeState = replaceClubFinanceAccounts(prerequisites.financeState, [{
+    ...account,
+    annualWageBudget: input.requiredAnnualWageBudget,
+  }]);
   return applied(withFinanceState(input.careerState, financeState), []);
 }
 

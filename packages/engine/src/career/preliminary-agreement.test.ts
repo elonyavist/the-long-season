@@ -28,12 +28,62 @@ import {
 } from "@game/domain";
 import { test } from "vitest";
 
-import { deriveContractDemand } from "./contract-negotiation-demand.ts";
-import { advanceAiContractLifecycle } from "./ai-contract-lifecycle.ts";
 import {
-  advancePreliminaryAgreementLifecycle,
-  submitPreliminaryAgreementOffer,
+  deriveContractDemand as deriveContractDemandWithPolicy,
+} from "./contract-negotiation-demand.ts";
+import {
+  advanceAiContractLifecycle as advanceAiContractLifecycleWithPolicy,
+} from "./ai-contract-lifecycle.ts";
+import {
+  advancePreliminaryAgreementLifecycle as advancePreliminaryAgreementLifecycleWithPolicy,
+  submitPreliminaryAgreementOffer as submitPreliminaryAgreementOfferWithPolicy,
 } from "./preliminary-agreement.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+const WAGE_POLICY = playerWagePolicyConfigFixture();
+const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+
+function deriveContractDemand(
+  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+) {
+  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function advanceAiContractLifecycle(
+  input: Omit<
+    Parameters<typeof advanceAiContractLifecycleWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceAiContractLifecycleWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function advancePreliminaryAgreementLifecycle(
+  input: Omit<
+    Parameters<typeof advancePreliminaryAgreementLifecycleWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advancePreliminaryAgreementLifecycleWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function submitPreliminaryAgreementOffer(
+  input: Omit<
+    Parameters<typeof submitPreliminaryAgreementOfferWithPolicy>[0],
+    "wagePolicy"
+  >,
+) {
+  return submitPreliminaryAgreementOfferWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
 
 const SELLER = clubId("club:preliminary-seller");
 const BUYER = clubId("club:preliminary-buyer");

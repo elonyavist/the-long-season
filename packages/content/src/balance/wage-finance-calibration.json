@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "version": "wage-finance-calibration-reportcalcio-2025-v1",
+  "classification": "mixed",
+  "retrievedAt": "2026-07-28T21:02:00+02:00",
+  "timeZone": "Europe/Rome",
+  "currency": "EUR",
+  "sourceReferences": [
+    {
+      "id": "figc-pwc-reportcalcio-2025-en",
+      "title": "ReportCalcio 2025 English edition, economic profile of professional football 2023/24",
+      "url": "https://www.pwc.com/it/it/publications/reportcalcio/2025/doc/ReportCalcio2025_en.pdf",
+      "classification": "observed_source_fact"
+    }
+  ],
+  "sourceBaselines": [
+    {
+      "division": "first_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "figc-pwc-reportcalcio-2025-en",
+      "sourceSeason": "2023/24",
+      "sampleClubCount": 20,
+      "populationClubCount": 20,
+      "valueOfProductionPerClubMinorUnits": 19185000000,
+      "employeeCostPerClubMinorUnits": 10000000000,
+      "employeeCostToProductionBasisPoints": 5200,
+      "approximate": true
+    },
+    {
+      "division": "second_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "figc-pwc-reportcalcio-2025-en",
+      "sourceSeason": "2023/24",
+      "sampleClubCount": 20,
+      "populationClubCount": 20,
+      "valueOfProductionPerClubMinorUnits": 2413000000,
+      "employeeCostPerClubMinorUnits": 1971500000,
+      "employeeCostToProductionBasisPoints": 8173,
+      "approximate": false
+    },
+    {
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "figc-pwc-reportcalcio-2025-en",
+      "sourceSeason": "2023/24",
+      "sampleClubCount": 46,
+      "populationClubCount": 60,
+      "valueOfProductionPerClubMinorUnits": 473400000,
+      "employeeCostPerClubMinorUnits": 421800000,
+      "employeeCostToProductionBasisPoints": 8910,
+      "approximate": false
+    }
+  ],
+  "gameDesignTargets": [
+    {
+      "division": "first_division",
+      "classification": "explicit_game_design_target",
+      "annualSeniorWageBudgetMinimumMinorUnits": 6000000000,
+      "annualSeniorWageBudgetMedianMinorUnits": 9000000000,
+      "annualSeniorWageBudgetMaximumMinorUnits": 14000000000,
+      "targetCommittedWageMinimumBasisPoints": 7000,
+      "targetCommittedWageMaximumBasisPoints": 9500
+    },
+    {
+      "division": "second_division",
+      "classification": "explicit_game_design_target",
+      "annualSeniorWageBudgetMinimumMinorUnits": 1000000000,
+      "annualSeniorWageBudgetMedianMinorUnits": 1600000000,
+      "annualSeniorWageBudgetMaximumMinorUnits": 2500000000,
+      "targetCommittedWageMinimumBasisPoints": 7000,
+      "targetCommittedWageMaximumBasisPoints": 9500
+    },
+    {
+      "division": "third_division",
+      "classification": "explicit_game_design_target",
+      "annualSeniorWageBudgetMinimumMinorUnits": 200000000,
+      "annualSeniorWageBudgetMedianMinorUnits": 300000000,
+      "annualSeniorWageBudgetMaximumMinorUnits": 450000000,
+      "targetCommittedWageMinimumBasisPoints": 7000,
+      "targetCommittedWageMaximumBasisPoints": 9500
+    }
+  ],
+  "openingBudgetRoundingMinorUnits": 1000000,
+  "annualWageByRating": [
+    { "rating": 1, "annualWageMinorUnits": 3000000 },
+    { "rating": 1.5, "annualWageMinorUnits": 5000000 },
+    { "rating": 2, "annualWageMinorUnits": 8000000 },
+    { "rating": 2.5, "annualWageMinorUnits": 14000000 },
+    { "rating": 3, "annualWageMinorUnits": 25000000 },
+    { "rating": 3.5, "annualWageMinorUnits": 50000000 },
+    { "rating": 4, "annualWageMinorUnits": 120000000 },
+    { "rating": 4.5, "annualWageMinorUnits": 250000000 },
+    { "rating": 5, "annualWageMinorUnits": 500000000 },
+    { "rating": 5.5, "annualWageMinorUnits": 1000000000 },
+    { "rating": 6, "annualWageMinorUnits": 1800000000 }
+  ],
+  "annualWagePolicy": {
+    "roundingMinorUnits": 10000,
+    "divisionMultipliers": {
+      "first_division": 10000,
+      "second_division": 8500,
+      "third_division": 7000
+    },
+    "squadStatusMultipliers": {
+      "key_player": 13500,
+      "regular_starter": 11500,
+      "squad_player": 9000,
+      "fringe_player": 7000,
+      "prospect": 6000
+    },
+    "ageMultipliers": [
+      { "minimumAge": 15, "maximumAge": 20, "multiplierBasisPoints": 8500 },
+      { "minimumAge": 21, "maximumAge": 23, "multiplierBasisPoints": 10000 },
+      { "minimumAge": 24, "maximumAge": 29, "multiplierBasisPoints": 10500 },
+      { "minimumAge": 30, "maximumAge": 32, "multiplierBasisPoints": 9500 },
+      { "minimumAge": 33, "maximumAge": 45, "multiplierBasisPoints": 8000 }
+    ],
+    "potentialPremiumMaximumAge": 23,
+    "potentialGapPremiums": [
+      { "maximumGapStarsInclusive": 0, "premiumBasisPoints": 0 },
+      { "maximumGapStarsInclusive": 0.5, "premiumBasisPoints": 500 },
+      { "maximumGapStarsInclusive": 1, "premiumBasisPoints": 1000 },
+      { "maximumGapStarsInclusive": 2, "premiumBasisPoints": 1800 },
+      { "maximumGapStarsInclusive": 3, "premiumBasisPoints": 2500 },
+      { "maximumGapStarsInclusive": 5, "premiumBasisPoints": 3000 }
+    ],
+    "freeAgentMultiplierBasisPoints": 11200,
+    "longContractMinimumDaysExclusive": 730,
+    "longContractMultiplierBasisPoints": 10800,
+    "currentWageFloorAgeMultipliers": [
+      { "minimumAge": 15, "maximumAge": 24, "multiplierBasisPoints": 11200 },
+      { "minimumAge": 25, "maximumAge": 32, "multiplierBasisPoints": 10600 },
+      { "minimumAge": 33, "maximumAge": 45, "multiplierBasisPoints": 10000 }
+    ]
+  },
+  "contractTermsPolicy": {
+    "preferredDuration": {
+      "highPotentialMaximumAge": 20,
+      "highPotentialMinimumGapStars": 1.5,
+      "highPotentialYears": 5,
+      "youngMaximumAge": 23,
+      "youngYears": 4,
+      "primeMaximumAge": 27,
+      "primeYears": 3,
+      "matureMaximumAge": 31,
+      "matureYears": 2,
+      "veteranYears": 1,
+      "minimumDurationReductionYears": 1
+    },
+    "minimumWageMultiplierBasisPoints": 9000,
+    "minimumBonusMultiplierBasisPoints": 8000,
+    "bonuses": {
+      "annualAppearanceDivisor": 110,
+      "signingBonusBasisPoints": {
+        "key_player": 1400,
+        "regular_starter": 1000,
+        "squad_player": 600,
+        "fringe_player": 600,
+        "prospect": 600
+      },
+      "goalBonusMultiplierBasisPoints": 14000,
+      "defensiveCleanSheetMultiplierBasisPoints": 10000,
+      "roundingMinorUnits": 100,
+      "signingRoundingMinorUnits": 1000
+    }
+  }
+}

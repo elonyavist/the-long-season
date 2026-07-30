@@ -45,9 +45,14 @@ test("generated contract policy produces credible third-division distributions",
   const annualWages = state.activeContractIds.map((id) => state.contracts[id]!.annualWage);
   const statuses = new Set(state.activeContractIds.map((id) => state.contracts[id]!.squadStatus));
   const durations = state.activeContractIds.map((id) => state.contracts[id]!.endsOn - state.contracts[id]!.startsOn);
+  const orderedWages = [...annualWages].sort((left, right) => left - right);
+  const wageP50 = orderedWages[Math.floor((orderedWages.length - 1) * 0.5)] ?? 0;
+  const wageP99 = orderedWages[Math.floor((orderedWages.length - 1) * 0.99)] ?? 0;
 
-  assert.equal(Math.min(...annualWages) >= 25_000_00, true);
-  assert.equal(Math.max(...annualWages) < 2_000_000_00, true);
+  assert.equal(Math.min(...annualWages) > 0, true);
+  assert.equal(wageP50 >= 50_000_00 && wageP50 <= 150_000_00, true);
+  assert.equal(wageP99 < 500_000_00, true);
+  assert.equal(Math.max(...annualWages) < 500_000_00, true);
   assert.equal(Math.min(...durations) >= 365, true);
   assert.equal(statuses.has("key_player"), true);
   assert.equal(statuses.has("regular_starter"), true);

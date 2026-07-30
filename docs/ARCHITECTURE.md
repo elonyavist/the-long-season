@@ -1,6 +1,6 @@
 # The Long Season Architecture
 
-Last updated: 2026-07-18
+Last updated: 2026-07-28
 
 ## Purpose
 
@@ -88,7 +88,8 @@ Why this matters:
 | Simulate one season | `apps/cli/src/commands/simulate-season.ts` |
 | Career command | `apps/cli/src/commands/career.ts` |
 | Long-run report command | `apps/cli/src/commands/ten-season-report.ts` |
-| Generated world facade | `packages/content/src/generators/league-system.ts` via `createFakeLeagueSystem` |
+| Canonical career world | `packages/content/src/generators/domestic-world.ts` via `createFakeDomesticWorld` |
+| Focused single-competition fixture | `packages/content/src/generators/league-system.ts` via `createFakeLeagueSystem` |
 | Validated player construction | `packages/domain/src/player/create-player.ts` via `createPlayer` |
 | Generated player assembly | `packages/content/src/generators/generated-player-factory.ts` via `createGeneratedPlayer` |
 | Monthly player lifecycle | `packages/engine/src/career/advance-career-month.ts` via `advanceCareerMonths` |
@@ -100,6 +101,7 @@ Why this matters:
 | Post-match player-state consequences | `packages/engine/src/career/career-match-state-consequences.ts` via `applyCareerMatchStateConsequences` |
 | Career Continue loop | `packages/engine/src/career/continue-career.ts` via `continueCareerUntilAttention` |
 | Player participation ledger | `packages/domain/src/career/player-participation.ts` |
+| Domestic competition registry | `packages/domain/src/career/competition-world.ts` |
 | Match simulation | `packages/engine/src/match-engine/simulate-match.ts` |
 | Progressive live-match session | `packages/engine/src/match-engine/progressive-match-session.ts` |
 | Live-match projection | `packages/engine/src/match-engine/live-match-projection.ts` |
@@ -122,6 +124,8 @@ Why this matters:
 | Career shell/navigation view builder | `packages/ui/src/career/career-shell-view.ts` |
 | Career match-preparation view builder | `packages/ui/src/career/career-match-preparation-view.ts` |
 | Career matchday phase view builder | `packages/ui/src/career/career-matchday-phase-view.ts` |
+| Shared career player-detail view | `packages/ui/src/career/career-player-detail-view.ts` |
+| Career player-statistics view | `packages/ui/src/career/career-player-statistics-view.ts` |
 | Web app | `apps/web/src/main.tsx` |
 | Web React root | `apps/web/src/app/App.tsx` |
 | Web durable career runtime | `apps/web/src/runtime/web-career-runtime.ts` |
@@ -152,11 +156,28 @@ content producer
   -> domain createPlayer(...)
   -> CareerState / GameState
   -> player-participation.ts durable participation ledger
+  -> player-statistics.ts completed-season archive and current/career selector
   -> engine development and lifecycle use-cases
   -> engine market decisions
   -> storage normalization and mapping
   -> CLI/web projection
 ```
+
+Market and late-career structural policy remains engine-owned:
+
+- AI transfer talks provisionally reserve neither a player nor a squad slot,
+  so negotiated completion rechecks the seller's current squad and department
+  floors before the atomic transfer boundary;
+- free-agent replenishment ranks public current ability and positional fit,
+  with a non-preferred fallback permitted only below the hard 18-player floor;
+- low-ability unattached outfield players step down after two complete seasons,
+  goalkeepers after five, and retirement is deferred when it would empty a
+  club's broad department.
+
+`packages/simulation-tools/src/long-run/contract-finance-stability.ts` owns the
+factual permanent/preliminary funnels, free-agent stock/flow bands, wage
+distributions, and structural check meaning. CLI report modules aggregate and
+render those facts but do not own the gameplay policy.
 
 The responsibilities inside that path are deliberately narrow:
 
@@ -186,16 +207,22 @@ The responsibilities inside that path are deliberately narrow:
    minutes, closed development months, and fixture idempotency. Fixture
    progression feeds these rows from real match participation; monthly
    lifecycle consumes completed months for slow development.
-8. `player-valuation.ts` and `player-willingness.ts` evaluate football quality
-   for the player's primary role. `derivePlayerMarketAbility` is the public
-   engine projection reused by outer adapters that need current and potential
-   role quality; tactical-board suitability remains a separate formation-slot
-   decision.
-8. `career-save-envelope.ts` accepts only the current beta save envelope. JSON
+8. Domain and engine `career/player-statistics.ts` Modules own the durable
+   archived row contract, independent participation/event coverage, completed-
+   season capture before player exits, and weighted current/career selection.
+   Archived rows remain valid after retirement and never depend on an active
+   player lookup.
+9. `player-potential-projection.ts` derives the observer-independent
+   age/role-aware P10/P50/P90 public range from current role quality and the
+   sole stored ceiling. `player-valuation.ts` prices that public projection
+   with uncertainty discounting; `player-willingness.ts` remains a separate
+   sporting decision. The public P90 upper is not the stored ceiling, and
+   tactical-board suitability remains a separate formation-slot decision.
+10. `career-save-envelope.ts` accepts only the current beta save envelope. JSON
    and SQLite persist the same durable player facts without inventing gameplay
    policy; discarded beta saves fail with a typed reset boundary instead of
    migration or normalization.
-9. CLI reports and web adapters project canonical role measures. They may
+11. CLI reports and web adapters project canonical role measures. They may
    format or scale those facts, but they must not enumerate abilities or define
    private role averages.
 
@@ -218,7 +245,8 @@ layout defects to an app adapter.
   These are domain data contracts, not presentation text or UI behavior. The
   same area now owns the participation ledger used by later development steps:
   fixture idempotency, starts, substitute appearances, minutes, ratings, and
-  played-role minutes.
+  played-role minutes. `player-statistics.ts` additionally owns the immutable
+  per-season archive rows and explicit source-coverage vocabulary.
 - `packages/domain/src/player/player-abilities.ts`
   Owns the ordered 25-attribute vocabulary, traversal helpers, potential
   invariant, and explicitly distinct raw diagnostic, role-current, and
@@ -272,6 +300,18 @@ Shared files must stay free from football concepts.
 
 ### Engine
 
+- `packages/engine/src/season-engine/calendar.ts`
+  Owns the single deterministic double-round-robin generator for both one and
+  many domestic competitions. Calendar identity requires explicit competition
+  and season IDs; fixture IDs namespace both values. Multi-competition
+  publication follows `DomesticCompetitionWorld.competitionIds`, validates
+  canonical club membership, and rejects missing calendars or duplicate
+  fixture/calendar identities before exposing the ordered collection.
+- `packages/engine/src/career/next-fixture.ts`
+  Traverses fixtures through ordered domestic competition IDs and stable
+  `GameState.fixtureIds`. Selected-club queries first resolve canonical current
+  membership and then remain confined to that competition; world-level season
+  completion uses the same generalized ordering rather than object-key order.
 - `packages/engine/src/match-engine/step-match.ts`
   One-minute match stepping and event generation. Large and gameplay-critical.
 - `packages/engine/src/match-engine/chance-actors.ts`
@@ -327,6 +367,10 @@ Shared files must stay free from football concepts.
   validation/archive, development, exits, youth lifecycle, intake, promotion,
   squad maintenance, transfer turnover, calendar merge, and player rollover.
   Callers provide content-generated candidates and table/calendar inputs.
+- `packages/engine/src/career/player-statistics.ts`
+  Builds the complete season archive before exits/reset and selects current-
+  season plus weighted whole-career totals. Missing participation or event
+  sources remain explicit; the selector never invents historical zeroes.
 - `packages/engine/src/career/continue-career.ts`
   Pure canonical-day Continue rule. It orders same-date messages by attention
   level and stable ID, stops only for blocking or important attention, and
@@ -346,6 +390,26 @@ Shared files must stay free from football concepts.
   `transfer-turnover.ts`, `youth-lifecycle.ts`, `youth-intake.ts`,
   `youth-promotion.ts`
   Career refresh and youth pipeline logic.
+- `packages/engine/src/career/senior-squad-replenishment.ts`
+  Canonical free-agent replenishment. It restores every requested club's hard
+  senior/department floor before optional depth, shares a finite pool fairly,
+  and requests the smallest validated reserve lazily only when that pool cannot
+  cover structural needs. All signings still pass through contract,
+  registration, and finance validation.
+- `packages/engine/src/squad/public-player-assessment.ts`
+  Composes observer-independent current rating and public potential-range facts
+  on the explicitly supplied global `1..6` half-star scale.
+- `packages/engine/src/squad/player-potential-projection.ts`
+  Derives one immutable P10/P50/P90 current/lower/expected/upper projection
+  from role ability, age, versioned policy, and the sole stored potential
+  ceiling. Public read models receive star facts; hidden numeric/stored-ceiling
+  facts remain available only to valuation and diagnostics.
+- `packages/engine/src/market/player-valuation.ts`,
+  `seller-asking-price.ts`, `player-willingness.ts`,
+  `transfer-feasibility.ts`
+  Own distinct public value, seller asking price, sporting willingness, and
+  affordability rules. They receive validated balance policies explicitly;
+  public value never doubles as asking or completed fee.
 - `packages/engine/src/index.ts`
   Public engine entry point. It is broad today; future narrowing should happen
   only after adapters consume deeper use-cases.
@@ -354,9 +418,17 @@ Engine files must not import content, storage, CLI, or i18n.
 
 ### Content
 
+- `packages/content/src/generators/domestic-world.ts`
+  Canonical production career-world facade. `createFakeDomesticWorld` composes
+  the ordered fictional three-division country, its 54 clubs, squads, youth,
+  contracts, finance, memberships, windows, and exact calibration versions.
 - `packages/content/src/generators/league-system.ts`
-  Generated-world facade. Prefer `createFakeLeagueSystem` when a caller needs a
-  coherent generated world bundle.
+  Focused single-competition generator retained for isolated simulation and
+  tests. Production career bootstraps use `createFakeDomesticWorld`.
+- `packages/content/src/balance/player-economy-calibration.ts` and
+  `packages/content/src/balance/*.json`
+  Validate and expose the six versioned rating, public-value, asking-price,
+  wage/finance, and market-behavior assets selected at app composition.
 - `packages/content/src/generators/fake-clubs.ts`
   Stable club IDs and fictional city-based club identities.
 - `packages/content/src/generators/fake-players.ts`
@@ -370,8 +442,14 @@ Engine files must not import content, storage, CLI, or i18n.
   Shared strict assembly seam for senior, initial-youth, seasonal-youth, and
   later-career producers. It does not own source-specific distribution policy.
 - `packages/content/src/generators/player-rarity-budget.ts`
-  Deterministic division-level youth rarity allocation. It keeps ordinary
-  prospects as the majority while bounding high and elite arrivals.
+  Deterministic initial-world and annual-world exceptional allocation. It
+  reconciles naturally qualifying profiles, constructs only the remaining
+  compatible slots, and exposes allocation truth separately from effective
+  generated stock.
+- `packages/content/src/generators/career-intake-players.ts`
+  Owns one annual world-season candidate-provider composition shared by CLI,
+  web, labs, and reports. Youth candidates trigger the exceptional allocation
+  once after real vacancies are known; senior candidates reuse that result.
 - `packages/content/src/generators/player-role-templates.ts`
   Generation-specific role and division sampling ranges. Stable role meaning
   and hard caps live in domain, not in this content policy file.
@@ -390,9 +468,11 @@ adapt.
   adapters implement this interface; callers do not depend on filesystem,
   SQLite, OPFS, or worker details.
 - `packages/storage/src/career-save-envelope.ts`
-  Current beta JSON save-envelope validation. Phase 75 intentionally supports
-  only envelope v3; earlier beta saves return a typed unsupported-schema reset
-  error and are not migrated, normalized, or dual-read.
+  Current beta JSON save-envelope validation. Envelope version 7 carries the
+  additive statistics archive plus the optional Phase 79C domestic registry
+  and `GameMeta` calibration-version facts through canonical `CareerState`;
+  earlier unsupported beta saves return a typed reset boundary and are not
+  dual-read.
 - `packages/storage/src/json-career-storage.ts`
   Node/CLI JSON career adapter. This is the only career adapter that imports
   Node filesystem and path APIs.
@@ -400,22 +480,26 @@ adapt.
   Browser-facing `CareerStorage` implementation over a narrow worker port. It
   owns typed error mapping and delegates SQL execution to the web worker.
 - `packages/storage/src/sqlite/sqlite-career-migrations.ts`
-  Ordered immutable relational migrations. Browser schema version 9 is the
-  current beta baseline and includes tactical preparation, current-season
-  Posta messages, player availability, discipline, and the participation
-  ledger. Version 9 retires unfinished-match checkpoint storage; earlier beta
-  databases are intentionally unsupported and route to reset instead of being
-  dual-read or upgraded.
+  Ordered immutable relational migrations. Browser schema version 16 is
+  current: version 14 is the supported Phase 79 baseline and the incremental
+  `14 -> 15` migration adds archived player-statistics coverage and rows.
+  The incremental `15 -> 16` migration adds all seven calibration-version
+  columns plus relational domestic competition membership, prizes, and
+  completed tables. Archive rows deliberately have no active-player foreign
+  key, so retired players remain historical facts. Earlier beta databases
+  remain unsupported.
 - `packages/storage/src/sqlite/career-state-mapper.ts`
   Relational write/read mapping for career systems, match reports,
   preparation, durable Inbox lifecycle, availability/discipline facts, and
-  participation rows used by monthly development. It has no live-match or
-  playback-cursor mapping.
+  participation rows used by monthly development, and ordered completed-season
+  player-statistics archives. It has no live-match or playback-cursor mapping.
 - `packages/storage/src/sqlite/world-state-mapper.ts`
   Relational write/read mapping for ordered clubs, players, abilities, dynamic
-  state, rosters, fixtures, and fixture results. It traverses abilities through
-  the domain-owned canonical 25-key list and validates reconstructed career
-  world state through the same current beta construction boundary as JSON.
+  state, rosters, fixtures, fixture results, ordered domestic competitions,
+  canonical current membership, historical final tables, and `GameMeta`
+  calibration versions. It traverses abilities through the domain-owned
+  canonical 25-key list and validates reconstructed career world state through
+  the same current beta construction boundary as JSON.
 - `packages/storage/src/json-game-storage.ts`
   Older game-state JSON storage.
 - `packages/storage/src/migrate-save.ts`
@@ -427,6 +511,10 @@ Storage must not simulate matches or generate content.
 
 ### Simulation Tools
 
+- `packages/simulation-tools/src/simulation-execution-policy.ts`
+  Pure repository-wide concurrency owner. Batch adapters default to
+  `min(7, independent work items)` and cannot exceed seven workers; the policy
+  never inspects the host or changes deterministic simulation facts.
 - `packages/simulation-tools/src/calibration-report.ts`
   Balance calibration report model.
 - `packages/simulation-tools/src/long-run/long-runner.ts`
@@ -441,6 +529,13 @@ Storage must not simulate matches or generate content.
   Youth population/lifecycle report model.
 - `packages/simulation-tools/src/long-run/anomaly-scoring.ts`
   Warning/failure semantics and shared PASS/WARN/FAIL severity helpers.
+- `packages/simulation-tools/src/player-generation-economy-audit.ts`
+  Pure non-vacuous initial/annual rarity, stored-ceiling/public-upper, public
+  value/cap, and negotiation-spread observations.
+- `packages/simulation-tools/src/player-potential-outcome-audit.ts`
+  Pure deterministic development-outcome calibration. It keeps public-P90
+  misses symmetric, treats outcomes above the stored ceiling as structural
+  failures, and requires positive observations for evaluated gates.
 
 Simulation tools may define report models and thresholds. They must not render
 localized CLI text or import generated content.
@@ -500,6 +595,23 @@ localized CLI text or import generated content.
   centre. It derives scoreboard, period rail, timeline rows, highlight cards,
   player rating rows, half-time action availability, single phase-primary
   actions, and full-time-only consequences from structured facts.
+- `packages/ui/src/career/career-player-rating.ts`
+  Validates and sorts the global half-star current rating plus the ordered
+  lower-to-upper public potential range. Exact numeric potential and the stored
+  ceiling are not part of this browser-facing contract.
+- `packages/ui/src/career/career-player-detail-view.ts`
+  Shared framework-free Squad/Market projection for natural/adapted roles and
+  exact current attribute families. Goalkeepers receive goalkeeping, mental,
+  and physical groups; outfield players receive technical, mental, and
+  physical groups.
+- `packages/ui/src/career/career-player-statistics-view.ts`
+  Coverage-aware current-season/career projection. It omits unsupported source
+  values, exposes goalkeeper saves only for goalkeepers, and preserves the
+  engine-owned weighted average.
+- `packages/ui/src/career/career-market-target-view.ts`
+  Keeps the Market catalog lightweight and accepts one selected-club assessment
+  baseline. The web adapter resolves exact attributes and statistics lazily for
+  the opened target rather than precomputing hundreds of detail views.
 
 UI read-model files are not the web UI. They exist so CLI smoke output and the
 future web adapter can consume the same structured facts without parsing console
@@ -600,6 +712,29 @@ text or importing engine internals.
   Maps one loaded `CareerState` into the pure dashboard read model. It derives
   the next fixture, preparation readiness, selected-club condition, and recent
   result without persistence or fabricated fallback facts.
+- `apps/web/src/features/squad/CareerSquadScreen.tsx`
+  Dense senior-squad workbench with one canonical placement select and one
+  portal action menu per player. Occupied XI choices use the existing
+  selection commands to swap automatically; Tactics reads the same durable
+  match plan.
+- `apps/web/src/features/squad/CareerPlayerProfileDialog.tsx`
+  Shared-shell player inspector with Attributes, Statistics, and Contract
+  tabs. The renewal workspace stays mounted while hidden so tab changes cannot
+  erase a draft.
+- `apps/web/src/features/market/CareerMarketScreen.tsx`
+  Filtered Market workbench whose row catalog contains public summary facts
+  only. Opening a target invokes the memoized lazy detail resolver; row
+  interactions never expose hidden numeric potential.
+- `apps/web/src/features/market/CareerMarketPlayerDialog.tsx`
+  Reuses the shared stars, role chips, attribute groups, statistics formatter,
+  responsive tabs, and single-scroll dialog shell. Exact current attributes
+  are immediate; Contract and offer keeps the canonical offer composer mounted.
+- `apps/web/src/shared/ui/PlayerStarRating.tsx`,
+  `PlayerProfileTabs.tsx`, `PlayerRoleChips.tsx`,
+  `PlayerAttributeGroups.tsx`, `PlayerStatisticsPanel.tsx`
+  Shared presentation primitives for both workbenches. Tabs follow their
+  responsive horizontal/vertical ARIA orientation, and the statistics Module
+  owns the sole locale/coverage formatting policy.
 - `apps/web/src/features/match-preparation/match-preparation-adapter.ts`
   Creates the editable browser draft from loaded career facts, applies explicit
   manager selection commands, preserves normalized board geometry, derives a
@@ -783,7 +918,11 @@ text or importing engine internals.
   narrow, focus, `200%` text, and reduced-motion behavior; and the approved
   tactical-board interactions including assignment order, duplicate prevention,
   goalkeeper lock, movement clamp, role change, menu dismissal, keyboard, and
-  touch long press. The Phase 73C release matrix additionally proves bounded
+  touch long press. The Phase 79B matrix additionally proves Squad placement
+  swaps, menu clipping/dismissal, six player-detail tabs, retained drafts,
+  selected-club-relative stars, role-aware attributes, statistics coverage,
+  one dialog scroll owner, touch/keyboard parity, `200%` text, and exact
+  320/375/414/768 px containment. The Phase 73C release matrix proves bounded
   playback, event priority, compact tabellino, interval tactical change,
   selected/opponent review tabs, focus, text zoom, and reduced motion. Current
   Phase 73C evidence is written under
@@ -791,9 +930,9 @@ text or importing engine internals.
 - `apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts`
   Focused Playwright proof for the unique browser persistence boundary. It
   round-trips isolated ordered career worlds through SQLite WASM on OPFS and
-  proves failed replacement rollback, including the Phase 75 participation
-  ledger. Together with `current-product.spec.ts` it forms the complete
-  `pnpm web:visual:qa` release gate.
+  proves failed replacement rollback, including participation and the
+  schema-15 retired-player statistics archive. Together with
+  `current-product.spec.ts` it forms the complete `pnpm web:visual:qa` gate.
 - `apps/web/src/styles/*`
   Premium retro visual foundation: tokens, base chrome, layout, and component
   styles, including the rebuilt app shell, Posta/attention rail, dashboard,
@@ -805,8 +944,9 @@ text or importing engine internals.
 The web app now owns a durable browser career lifecycle. New/list/load,
 Continue, match preparation, live matchday, full-time commit, and review
 acknowledgement all pass through `WebCareerRuntime` and canonical SQLite/OPFS
-storage. UI preferences remain separate. Squad detail and economics remain
-future product sections, not persistence placeholders.
+storage. UI preferences remain separate. Squad and Market now expose canonical
+selection, player-detail, contract, finance, and offer projections without
+owning their football or persistence rules.
 
 On browser startup, `createWebCareerStorage` creates one dedicated Comlink
 worker. The worker alone opens SQLite's official OPFS VFS, applies migrations,
@@ -1030,10 +1170,13 @@ Simulation packages should not hardcode UI/CLI labels.
 
 1. CLI enters `apps/cli/src/commands/career.ts`.
 2. Args are parsed by `career/parse-career-args.ts`.
-3. New worlds are built through `createFakeLeagueSystem` and
-   `career/scenarios.ts`.
-4. Career saves are written/read by `JsonCareerStorage`.
-5. Career output is rendered by `career/format.ts`.
+3. New careers are built through `createFakeDomesticWorld`; the selected club
+   begins in the canonical Third Division.
+4. CLI and web select the six balance policies from the exact versions stamped
+   in immutable `GameMeta`.
+5. Career saves are written/read by `JsonCareerStorage`; web uses the canonical
+   SQLite/OPFS adapter and the same persisted domestic registry/version bundle.
+6. Career output is rendered by `career/format.ts`.
 
 ### Prepare A Match
 
@@ -1056,24 +1199,43 @@ Simulation packages should not hardcode UI/CLI labels.
 
 ### Generate A World
 
-1. Call `createFakeLeagueSystem({ worldSeed })`.
-2. Club identities come from `fake-clubs.ts`.
-3. Senior squads and lineups come from `fake-players.ts`.
-4. Career creation adds youth academies in `career/scenarios.ts`.
-5. Calendar generation remains in engine because it is a rule, not content data.
+1. Call `createFakeDomesticWorld({ worldSeed })` for a production career.
+2. Content allocates the bounded exceptional-player stock once across the whole
+   country, then composes three ordered 18-club competitions.
+3. Club identities come from `fake-clubs.ts`; senior squads and lineups come
+   from `fake-players.ts`; content also creates youth, contracts, finance,
+   memberships, windows, and calibration-version facts.
+4. App composition passes the exact stamped balance policies to engine
+   workflows. Engine and simulation-tools never import content.
+5. Calendar generation and promotion/relegation remain in engine because they
+   are rules, not content data.
+6. Use `createFakeLeagueSystem` only for focused single-competition simulation
+   fixtures that do not represent the production career bootstrap.
 
 ### Run Long-Run Diagnostics
 
 1. CLI enters `ten-season-report.ts`.
 2. `ten-season-report.ts` parses args and creates the translator.
-3. `ten-season-report/report-data.ts` builds fake content, in-memory career
-   state, and app/content-specific report refresh callbacks.
+3. `ten-season-report/report-data.ts` builds the same
+   `createFakeDomesticWorld` content and exact version-selected policies used
+   by CLI/web, plus in-memory career state and report refresh callbacks.
 4. Those callbacks call `advanceCareerOneSeason` in `reportRefresh` mode.
 5. `runCareerLongRunSimulation` in simulation-tools runs the season loop.
-6. Simulation-tools builds player, club, youth, and anomaly report models.
+6. Simulation-tools builds player, club, youth, rating/value, contract/finance,
+   cross-tier market, squad-floor, and anomaly report models. Season-scoped
+   replenishment facts make free-agent values and zero fees non-vacuous without
+   creating duplicate transfer history.
 7. `report-data.ts` summarizes single-world or multi-world report facts.
 8. `single-world-output.ts` or `gate-output.ts` renders localized console
    output. `gate-output.ts` also renders optional Markdown.
+9. Resumable multi-worker runs require an explicit checkpoint directory and
+   stable shards.
+10. `simulation-execution-policy.ts` owns the host-independent default/maximum:
+    `min(7, independent work items)`. Direct and checkpointed multi-world CLI
+    adapters use it; explicit overrides can only reduce concurrency.
+11. The next user-requested `50 x 20` is reserved for the final Phase 80 gate
+    with `50` shards and `7` workers. The interrupted Phase 79D direct run
+    produced no report and is not evidence.
 
 ### Render Localized CLI Output
 
@@ -1091,6 +1253,7 @@ Simulation packages should not hardcode UI/CLI labels.
 | Career match did not use expected lineup/tactic | `career/preparation.ts`, `career/progression.ts`, then `progress-fixture.ts`. |
 | Player condition changed unexpectedly | `career/progression.ts`, `career-weekly-recovery.ts`, `career-condition-consequences.ts`, then `progress-fixture.ts`. |
 | Generated players look unrealistic | `fake-players.ts`, role template/classification files, player-generation tests, and the player-generation report CLI. |
+| Public potential or prospect value looks wrong | `player-potential-projection.ts`, `public-player-assessment.ts`, `player-valuation.ts`, then `player-potential-outcome-audit.ts` and `player-generation-economy-audit.ts`. |
 | Club names look repetitive | `fake-clubs.ts` and `clubs/club-identity-source-data.ts`. |
 | Long-run warnings are unclear | Start with `apps/cli/src/commands/ten-season-report/gate-output.ts`, then `ten-season-report/report-data.ts` signal grouping, then `simulation-tools/src/long-run/anomaly-scoring.ts` and `youth-stability.ts`. |
 | Save cannot be read | `JsonCareerStorage`, save schema in domain, and storage tests. |

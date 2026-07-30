@@ -16,6 +16,70 @@ export {
 } from "./calibration-report.ts";
 
 export {
+  createPlayerMarketCalibrationReport,
+  type CreatePlayerMarketCalibrationReportInput,
+  type PlayerMarketCalibrationObservation,
+  type PlayerMarketCalibrationReport,
+  type PlayerMarketCalibrationSampleMetadata,
+  type PlayerMarketClubSquadObservation,
+  type PlayerMarketDivisionDiagnostic,
+  type PlayerMarketDivisionValueFit,
+  type PlayerMarketSquadComparator,
+  type PlayerMarketValueFitCheck,
+  type PlayerRatingHistogram,
+} from "./player-market-calibration-report.ts";
+
+export {
+  createPlayerGenerationEconomyAudit,
+  createPlayerGenerationAnnualIntakeSummary,
+  type CreatePlayerGenerationEconomyAuditInput,
+  type PlayerGenerationAnnualIntakeObservation,
+  type PlayerGenerationAnnualIntakeSummary,
+  type PlayerExceptionalAllocationLabels,
+  type PlayerGenerationAllocationSummary,
+  type PlayerGenerationCapSummary,
+  type PlayerGenerationEconomyAudit,
+  type PlayerGenerationEconomyGate,
+  type PlayerGenerationEconomyObservation,
+  type PlayerGenerationExceptionalSlice,
+  type PlayerGenerationGateExample,
+  type PlayerGenerationGateStatus,
+  type PlayerGenerationInitialRarityConstraints,
+  type PlayerGenerationMoneyDistribution,
+  type PlayerGenerationNegotiationObservation,
+  type PlayerGenerationNegotiationSummary,
+  type PlayerGenerationCounterOutcome,
+  type PlayerGenerationNumberDistribution,
+  type PlayerGenerationPopulation,
+  type PlayerGenerationPotentialRangeSlice,
+  type PlayerGenerationRatioDistribution,
+  type PlayerGenerationRatingDistribution,
+  type PlayerGenerationRoleGroup,
+  type PlayerGenerationSellerOutcome,
+  type SuppliedNegotiationAggregate,
+} from "./player-generation-economy-audit.ts";
+
+export {
+  PUBLIC_UPPER_EXCEEDANCE_MAXIMUM_BASIS_POINTS,
+  PUBLIC_UPPER_EXCEEDANCE_MINIMUM_BASIS_POINTS,
+  createPotentialProjectionPolicyCalibration,
+  createPlayerPotentialOutcomeAudit,
+  type CreatePlayerPotentialOutcomeAuditInput,
+  type PlayerPotentialOutcomeAudit,
+  type PlayerPotentialOutcomeCell,
+  type PlayerPotentialOutcomeCoverageContract,
+  type PlayerPotentialOutcomeGate,
+  type PlayerPotentialOutcomeGateExample,
+  type PlayerPotentialOutcomeObservation,
+  type PotentialProjectionCalibrationAgeBand,
+  type PotentialProjectionPolicyCalibrationBand,
+  type PotentialOutcomeDistribution,
+  type PotentialOutcomeParticipationBand,
+  type PotentialOutcomeRoleGroup,
+  type PotentialOutcomeRoomBand,
+} from "./player-potential-outcome-audit.ts";
+
+export {
   DEFAULT_LONG_RUN_SEASON_COUNT,
   longRunSeasonSeed,
   runLongRunSimulation,
@@ -26,9 +90,16 @@ export {
 } from "./long-run/long-runner.ts";
 
 export {
+  SIMULATION_WORKER_LIMIT,
+  resolveSimulationWorkerCount,
+  type ResolveSimulationWorkerCountInput,
+} from "./simulation-execution-policy.ts";
+
+export {
   runCareerLongRunSimulation,
   type AdvanceCareerLongRunSeasonContext,
   type AdvanceCareerLongRunSeasonResult,
+  type CareerLongRunAdvancedSeasonObservation,
   type CareerLongRunRefreshSummary,
   type CareerLongRunSeasonResult,
   type CareerLongRunSimulationResult,
@@ -80,7 +151,14 @@ export {
   type LongRunContractFinanceCheck,
   type LongRunContractFinanceSeasonRow,
   type LongRunContractFinanceStabilityReport,
+  type LongRunCrossTierTransferRow,
+  type LongRunDivisionMarketEconomyRow,
+  type LongRunDivisionWageEconomyRow,
+  type LongRunFreeAgentBands,
+  type LongRunFreeAgentFlow,
   type LongRunLedgerReasonAmounts,
+  type LongRunPermanentTransferFunnel,
+  type LongRunPreliminaryAgreementFunnel,
   type LongRunSquadDepartment,
 } from "./long-run/contract-finance-stability.ts";
 

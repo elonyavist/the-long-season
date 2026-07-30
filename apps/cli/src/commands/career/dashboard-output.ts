@@ -1,4 +1,3 @@
-import { createFakeLeagueSystem } from "@game/content";
 import { computeLeagueTable } from "@game/engine";
 import type { MessageKey, Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
@@ -13,6 +12,10 @@ import {
 } from "@game/ui";
 
 import { clubLabel, findNextSelectedClubFixture } from "./format.ts";
+import {
+  CLI_CAREER_TABLE_RULES,
+  competitionIdForClubInWorld,
+} from "./scenarios.ts";
 import type { CliCareerState, CliGameState } from "./types.ts";
 
 type CliFixtureId = CliGameState["fixtureIds"][number];
@@ -242,14 +245,20 @@ function toDashboardFixture(
 
 /** Builds a selected-club table row only after the club has played. */
 function buildSelectedClubTableRow(careerState: CliCareerState): CareerDashboardTableRowInput | undefined {
-  const league = createFakeLeagueSystem(
-    careerState.careerWorld?.worldSeed === undefined ? {} : { worldSeed: careerState.careerWorld.worldSeed },
+  const world = careerState.gameState.domesticCompetitionWorld;
+  const competitionId = world === undefined
+    ? undefined
+    : competitionIdForClubInWorld(world, careerState.selectedClubId);
+  const competition = competitionId === undefined ? undefined : world?.competitions[competitionId];
+  if (competition === undefined) return undefined;
+  const fixtureIds = careerState.gameState.fixtureIds.filter((fixtureId) =>
+    careerState.gameState.fixtures[fixtureId]?.competitionId === competitionId
   );
   const table = computeLeagueTable({
-    clubIds: careerState.gameState.clubIds,
+    clubIds: competition.clubIds,
     fixtures: careerState.gameState.fixtures,
-    fixtureIds: careerState.gameState.fixtureIds,
-    rules: league.tableRules,
+    fixtureIds,
+    rules: CLI_CAREER_TABLE_RULES,
   });
   const row = table.find((tableRow) => tableRow.clubId === careerState.selectedClubId);
 

@@ -21,13 +21,11 @@
   isolation: isolate;
   display: grid;
   width: min(100%, 74rem);
-  gap: clamp(var(--tls-space-5), 4vw, 3rem);
+  gap: clamp(var(--tls-space-5), 4vw, var(--tls-space-7));
   overflow: hidden;
-  padding: clamp(var(--tls-space-5), 4vw, 4rem);
+  padding: clamp(var(--tls-space-5), 4vw, var(--tls-space-8));
   background: color-mix(in srgb, var(--tls-theme-shell-surface) 88%, transparent);
-  border: 0;
-  border-left: 0.32rem solid var(--tls-theme-primary-action-surface);
-  box-shadow: 0 2.25rem 6rem rgba(0, 0, 0, 0.44);
+  box-shadow: var(--tls-shadow-entry);
   backdrop-filter: blur(10px);
 }
 
@@ -72,7 +70,7 @@
     );
   border: 1px solid color-mix(in srgb, var(--tls-color-paper) 34%, transparent);
   border-radius: var(--tls-radius-sm);
-  box-shadow: var(--tls-shadow-inset), 0 1rem 2.5rem rgba(0, 0, 0, 0.25);
+  box-shadow: var(--tls-shadow-inset), var(--tls-shadow-raised);
 }
 
 .tls-app-entry-football-mark::before,
@@ -202,7 +200,7 @@
   background:
     linear-gradient(135deg, var(--tls-color-paper) 0 48%, var(--tls-theme-accent) 48% 52%, var(--tls-color-pitch) 52%),
     var(--tls-color-paper);
-  border: 1px solid rgba(240, 227, 189, 0.62);
+  border: 1px solid color-mix(in srgb, var(--tls-color-field-text-muted) 62%, transparent);
   border-radius: 0 0 44% 44%;
   clip-path: polygon(50% 0, 92% 16%, 86% 72%, 50% 100%, 14% 72%, 8% 16%);
   box-shadow: var(--tls-shadow-inset);
@@ -655,4 +653,11 @@
   .tls-app-shell-posta .tls-app-shell-inbox-counts {
     display: none;
   }
+}
+
+/* Pressed state for the shell chrome. Matches the control press in components.css. */
+.tls-app-shell-nav-item[data-status="available"]:active,
+.tls-app-shell-posta-open:active:not(:disabled) {
+  background: color-mix(in srgb, var(--tls-theme-secondary-action-surface) 82%, var(--tls-theme-app-background));
+  box-shadow: var(--tls-press-shadow);
 }

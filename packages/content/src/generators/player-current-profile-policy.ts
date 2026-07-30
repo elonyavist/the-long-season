@@ -46,7 +46,7 @@ export interface BuildCurrentPlayerProfileInput {
  * below the minimum credible footballer floor.
  */
 export function buildCurrentPlayerProfile(input: BuildCurrentPlayerProfileInput): PlayerAbilities {
-  return {
+  const sampled: PlayerAbilities = {
     technical: {
       finishing: currentRating(input, "technical.finishing"),
       passing: currentRating(input, "technical.passing"),
@@ -81,6 +81,8 @@ export function buildCurrentPlayerProfile(input: BuildCurrentPlayerProfileInput)
       footwork: currentRating(input, "goalkeeping.footwork"),
     },
   };
+
+  return sampled;
 }
 
 function currentRating(input: BuildCurrentPlayerProfileInput, abilityKey: PlayerAbilityKey) {

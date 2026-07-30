@@ -8,8 +8,14 @@ import {
   type PositionSuitability,
 } from "@game/domain";
 
-/** Public club-relative level shown instead of hidden numeric ability. */
-export type CareerSquadPlayerLevel = "leading" | "first_team" | "squad" | "depth";
+import {
+  compareCareerPlayerPotentialRanges,
+  careerPlayerRatingSortScore,
+  copyCareerPlayerPotentialRange,
+  copyCareerPlayerRating,
+  type CareerPlayerPotentialRangeView,
+  type CareerPlayerRatingView,
+} from "./career-player-rating.ts";
 
 /** Durable match-plan placement kept separate from player availability. */
 export type CareerSquadSelection = "starting_xi" | "substitute" | "unselected";
@@ -33,6 +39,7 @@ export const CAREER_SQUAD_COLUMNS = [
   "condition",
   "morale",
   "status",
+  "placement",
   "value",
   "current_level",
   "potential_level",
@@ -71,7 +78,7 @@ export interface CareerSquadSlotChoiceInput {
   readonly suitability: PositionSuitability;
   readonly occupantPlayerId?: string;
   readonly occupantName?: string;
-  readonly occupantCurrentLevel?: CareerSquadPlayerLevel;
+  readonly occupantCurrentRating?: CareerPlayerRatingView;
   readonly occupantCondition?: number;
 }
 
@@ -88,8 +95,8 @@ export interface CareerSquadPlayerInput {
   readonly availabilityReasons: readonly CareerSquadAvailabilityReason[];
   readonly value: Money;
   readonly currency: CurrencyCode;
-  readonly currentLevel: CareerSquadPlayerLevel;
-  readonly potentialLevel: CareerSquadPlayerLevel;
+  readonly currentRating: CareerPlayerRatingView;
+  readonly potentialRange: CareerPlayerPotentialRangeView;
   /** The adapter owns the renewal-window rule and supplies only its public result. */
   readonly hasExpiringContract: boolean;
   readonly lineupSlotChoices: readonly CareerSquadSlotChoiceInput[];
@@ -114,33 +121,55 @@ export interface CareerSquadSlotChoiceView {
   readonly isEmpty: boolean;
   readonly occupantPlayerId?: string;
   readonly occupantName?: string;
-  readonly occupantCurrentLevel?: CareerSquadPlayerLevel;
+  readonly occupantCurrentRating?: CareerPlayerRatingView;
   readonly occupantCondition?: number;
 }
 
-/** Framework-free commands exposed by one player row. */
-export type CareerSquadPlayerActionView =
-  | {
-      readonly actionId: "field_player";
-      readonly labelKey: "career.squad.action.field";
-      readonly mode: "direct" | "choose_slot";
-      readonly choices: readonly CareerSquadSlotChoiceView[];
-    }
-  | {
-      readonly actionId: "select_as_substitute";
-      readonly labelKey: "career.squad.action.selectAsSubstitute";
-      readonly slotKey: string;
-    }
-  | {
-      readonly actionId: "remove_from_starting_xi";
-      readonly labelKey: "career.squad.action.removeFromStartingXi";
-      readonly slotKey: string;
-    }
-  | {
-      readonly actionId: "remove_from_bench";
-      readonly labelKey: "career.squad.action.removeFromBench";
-      readonly slotKey: string;
-    };
+/**
+ * Stable native-select value for one Squad placement.
+ *
+ * The prefix keeps HTML values unambiguous while the option itself remains a
+ * structured target, so renderers never have to infer football rules.
+ */
+export type CareerSquadPlacementValue =
+  | "unselected"
+  | `bench:${string}`
+  | `lineup:${string}`;
+
+/** The explicit `Non convocato` destination shared by every Squad row. */
+export interface CareerSquadUnselectedPlacementOptionView {
+  readonly kind: "unselected";
+  readonly value: "unselected";
+  readonly labelKey: "career.squad.placement.unselected";
+}
+
+/** One concrete bench destination exposed only when that move is possible. */
+export interface CareerSquadBenchPlacementOptionView {
+  readonly kind: "bench";
+  readonly value: `bench:${string}`;
+  readonly labelKey: "career.squad.placement.bench";
+  readonly slotKey: string;
+  readonly isEmpty: boolean;
+  readonly occupantPlayerId?: string;
+}
+
+/** One legal real-XI destination, including its current occupant when present. */
+export interface CareerSquadLineupPlacementOptionView extends CareerSquadSlotChoiceView {
+  readonly kind: "lineup";
+  readonly value: `lineup:${string}`;
+}
+
+/** One native-select option for changing a player's current placement. */
+export type CareerSquadPlacementOptionView =
+  | CareerSquadUnselectedPlacementOptionView
+  | CareerSquadBenchPlacementOptionView
+  | CareerSquadLineupPlacementOptionView;
+
+/** Current value and truthful options for one Squad placement select. */
+export interface CareerSquadPlacementView {
+  readonly value: CareerSquadPlacementValue;
+  readonly options: readonly CareerSquadPlacementOptionView[];
+}
 
 /** One fully projected row with no hidden numeric ability or potential. */
 export interface CareerSquadPlayerRowView {
@@ -156,10 +185,12 @@ export interface CareerSquadPlayerRowView {
   readonly compositeStatus: CareerSquadCompositeStatus;
   readonly value: Money;
   readonly currency: CurrencyCode;
-  readonly currentLevel: CareerSquadPlayerLevel;
-  readonly potentialLevel: CareerSquadPlayerLevel;
+  readonly currentRating: CareerPlayerRatingView;
+  readonly potentialRange: CareerPlayerPotentialRangeView;
   readonly hasExpiringContract: boolean;
-  readonly actions: readonly CareerSquadPlayerActionView[];
+  readonly placement: CareerSquadPlacementView;
+  /** Sorted legal XI targets retained for the detailed contextual-menu chooser. */
+  readonly lineupChoices: readonly CareerSquadSlotChoiceView[];
 }
 
 /** Input for the complete framework-free Senior Squad table view. */
@@ -193,11 +224,10 @@ const SUITABILITY_ORDER: Readonly<Record<PositionSuitability, number>> = {
   invalid: 3,
 };
 
-const LEVEL_ORDER: Readonly<Record<CareerSquadPlayerLevel, number>> = {
-  depth: 0,
-  squad: 1,
-  first_team: 2,
-  leading: 3,
+const PLACEMENT_ORDER: Readonly<Record<CareerSquadSelection, number>> = {
+  starting_xi: 0,
+  substitute: 1,
+  unselected: 2,
 };
 
 /** Builds the stable Senior Squad table without mutating source facts. */
@@ -250,6 +280,9 @@ export function sortCareerSquadRows(
 ): readonly CareerSquadPlayerRowView[] {
   return [...rows].sort((left, right) => {
     if (sort !== undefined) {
+      if (sort.key === "potential_level") {
+        return comparePotentialRows(left, right, sort.direction);
+      }
       const compared = compareBySortKey(left, right, sort.key);
       if (compared !== 0) return sort.direction === "ascending" ? compared : -compared;
     }
@@ -274,58 +307,110 @@ function buildPlayerRow(player: CareerSquadPlayerInput): CareerSquadPlayerRowVie
     compositeStatus: compositeStatus(player),
     value: player.value,
     currency: player.currency,
-    currentLevel: player.currentLevel,
-    potentialLevel: player.potentialLevel,
+    currentRating: copyCareerPlayerRating(player.currentRating),
+    potentialRange: copyCareerPlayerPotentialRange(player.potentialRange),
     hasExpiringContract: player.hasExpiringContract,
-    actions: buildActions(player),
+    placement: buildPlacement(player),
+    lineupChoices: buildDetailedLineupChoices(player),
   };
 }
 
-function buildActions(player: CareerSquadPlayerInput): readonly CareerSquadPlayerActionView[] {
-  const actions: CareerSquadPlayerActionView[] = [];
+function buildPlacement(player: CareerSquadPlayerInput): CareerSquadPlacementView {
+  const value = currentPlacementValue(player);
+  const options: CareerSquadPlacementOptionView[] = [{
+    kind: "unselected",
+    value: "unselected",
+    labelKey: "career.squad.placement.unselected",
+  }];
 
-  if (player.selection === "starting_xi" && player.selectedLineupSlotKey !== undefined) {
-    actions.push({
-      actionId: "remove_from_starting_xi",
-      labelKey: "career.squad.action.removeFromStartingXi",
-      slotKey: player.selectedLineupSlotKey,
-    });
-  } else if (player.selection === "substitute" && player.selectedBenchSlotKey !== undefined) {
-    actions.push({
-      actionId: "remove_from_bench",
-      labelKey: "career.squad.action.removeFromBench",
-      slotKey: player.selectedBenchSlotKey,
-    });
-  }
-
-  const canEnterLineup = player.selection !== "starting_xi"
-    && (player.availabilityReasons.length === 0 || player.selection === "substitute");
-  if (canEnterLineup) {
-    const compatibleChoices = player.lineupSlotChoices
-      .filter((choice): choice is CareerSquadSlotChoiceInput & {
-        readonly suitability: Exclude<PositionSuitability, "invalid">;
-      } => choice.suitability !== "invalid")
-      .map(toSlotChoiceView)
-      .sort(compareSlotChoices);
-
-    if (compatibleChoices.length > 0) {
-      actions.push({
-        actionId: "field_player",
-        labelKey: "career.squad.action.field",
-        mode: compatibleChoices.length === 1 ? "direct" : "choose_slot",
-        choices: compatibleChoices,
+  if (canOfferNewPlacement(player)) {
+    const isCurrentBenchSlot = player.selection === "substitute";
+    const benchSlotKey = isCurrentBenchSlot
+      ? player.selectedBenchSlotKey
+      : player.availableBenchSlotKey;
+    if (benchSlotKey !== undefined) {
+      options.push({
+        kind: "bench",
+        value: benchPlacementValue(benchSlotKey),
+        labelKey: "career.squad.placement.bench",
+        slotKey: benchSlotKey,
+        isEmpty: !isCurrentBenchSlot,
+        ...(isCurrentBenchSlot ? { occupantPlayerId: player.playerId } : {}),
       });
     }
+
+    options.push(...legalLineupChoices(player).map(toLineupPlacementOption));
   }
 
-  if (player.selection !== "substitute" && player.availableBenchSlotKey !== undefined) {
-    actions.push({
-      actionId: "select_as_substitute",
-      labelKey: "career.squad.action.selectAsSubstitute",
-      slotKey: player.availableBenchSlotKey,
-    });
+  if (!options.some((option) => option.value === value)) {
+    throw new Error(`Current Squad placement is not available for player: ${player.playerId}`);
   }
-  return actions;
+
+  return { value, options };
+}
+
+function buildDetailedLineupChoices(
+  player: CareerSquadPlayerInput,
+): readonly CareerSquadSlotChoiceView[] {
+  if (!canOfferNewPlacement(player)) {
+    return [];
+  }
+
+  return legalLineupChoices(player)
+    .map(toSlotChoiceView)
+    .sort(compareSlotChoices);
+}
+
+function canOfferNewPlacement(player: CareerSquadPlayerInput): boolean {
+  return player.availabilityReasons.length === 0 || player.selection !== "unselected";
+}
+
+function legalLineupChoices(
+  player: CareerSquadPlayerInput,
+): readonly (CareerSquadSlotChoiceInput & {
+  readonly suitability: Exclude<PositionSuitability, "invalid">;
+})[] {
+  return player.lineupSlotChoices.filter((choice): choice is CareerSquadSlotChoiceInput & {
+    readonly suitability: Exclude<PositionSuitability, "invalid">;
+  } => choice.suitability !== "invalid");
+}
+
+function currentPlacementValue(player: CareerSquadPlayerInput): CareerSquadPlacementValue {
+  if (player.selection === "starting_xi") {
+    if (player.selectedLineupSlotKey === undefined) {
+      throw new Error(`Starting Squad player has no lineup slot: ${player.playerId}`);
+    }
+    return lineupPlacementValue(player.selectedLineupSlotKey);
+  }
+
+  if (player.selection === "substitute") {
+    if (player.selectedBenchSlotKey === undefined) {
+      throw new Error(`Substitute Squad player has no bench slot: ${player.playerId}`);
+    }
+    return benchPlacementValue(player.selectedBenchSlotKey);
+  }
+
+  return "unselected";
+}
+
+function lineupPlacementValue(slotKey: string): `lineup:${string}` {
+  return `lineup:${slotKey}`;
+}
+
+function benchPlacementValue(slotKey: string): `bench:${string}` {
+  return `bench:${slotKey}`;
+}
+
+function toLineupPlacementOption(
+  choice: CareerSquadSlotChoiceInput & {
+    readonly suitability: Exclude<PositionSuitability, "invalid">;
+  },
+): CareerSquadLineupPlacementOptionView {
+  return {
+    kind: "lineup",
+    value: lineupPlacementValue(choice.slotKey),
+    ...toSlotChoiceView(choice),
+  };
 }
 
 function toSlotChoiceView(
@@ -339,7 +424,9 @@ function toSlotChoiceView(
     isEmpty: choice.occupantPlayerId === undefined,
     ...(choice.occupantPlayerId === undefined ? {} : { occupantPlayerId: choice.occupantPlayerId }),
     ...(choice.occupantName === undefined ? {} : { occupantName: choice.occupantName }),
-    ...(choice.occupantCurrentLevel === undefined ? {} : { occupantCurrentLevel: choice.occupantCurrentLevel }),
+    ...(choice.occupantCurrentRating === undefined
+      ? {}
+      : { occupantCurrentRating: copyCareerPlayerRating(choice.occupantCurrentRating) }),
     ...(choice.occupantCondition === undefined ? {} : { occupantCondition: choice.occupantCondition }),
   };
 }
@@ -347,19 +434,19 @@ function toSlotChoiceView(
 function compareSlotChoices(left: CareerSquadSlotChoiceView, right: CareerSquadSlotChoiceView): number {
   return Number(right.isEmpty) - Number(left.isEmpty)
     || SUITABILITY_ORDER[left.suitability] - SUITABILITY_ORDER[right.suitability]
-    || compareOptionalLevel(left.occupantCurrentLevel, right.occupantCurrentLevel)
+    || compareOptionalRating(left.occupantCurrentRating, right.occupantCurrentRating)
     || compareOptionalNumber(left.occupantCondition, right.occupantCondition)
     || (left.occupantPlayerId ?? "").localeCompare(right.occupantPlayerId ?? "")
     || canonicalPlayerRoleOrder(left.role) - canonicalPlayerRoleOrder(right.role)
     || left.slotKey.localeCompare(right.slotKey);
 }
 
-function compareOptionalLevel(
-  left: CareerSquadPlayerLevel | undefined,
-  right: CareerSquadPlayerLevel | undefined,
+function compareOptionalRating(
+  left: CareerPlayerRatingView | undefined,
+  right: CareerPlayerRatingView | undefined,
 ): number {
-  return (left === undefined ? Number.MAX_SAFE_INTEGER : LEVEL_ORDER[left])
-    - (right === undefined ? Number.MAX_SAFE_INTEGER : LEVEL_ORDER[right]);
+  return (left === undefined ? Number.MAX_SAFE_INTEGER : careerPlayerRatingSortScore(left))
+    - (right === undefined ? Number.MAX_SAFE_INTEGER : careerPlayerRatingSortScore(right));
 }
 
 function compareOptionalNumber(left: number | undefined, right: number | undefined): number {
@@ -386,10 +473,36 @@ function compareBySortKey(
     case "condition": return left.condition - right.condition;
     case "morale": return left.morale - right.morale;
     case "status": return left.compositeStatus.localeCompare(right.compositeStatus);
+    case "placement":
+      return PLACEMENT_ORDER[left.selection] - PLACEMENT_ORDER[right.selection]
+        || left.placement.value.localeCompare(right.placement.value);
     case "value": return Number(left.value) - Number(right.value);
-    case "current_level": return LEVEL_ORDER[left.currentLevel] - LEVEL_ORDER[right.currentLevel];
-    case "potential_level": return LEVEL_ORDER[left.potentialLevel] - LEVEL_ORDER[right.potentialLevel];
+    case "current_level":
+      return careerPlayerRatingSortScore(left.currentRating)
+        - careerPlayerRatingSortScore(right.currentRating);
+    case "potential_level":
+      return compareCareerPlayerPotentialRanges(
+        left.potentialRange,
+        right.potentialRange,
+      );
   }
+}
+
+function comparePotentialRows(
+  left: CareerSquadPlayerRowView,
+  right: CareerSquadPlayerRowView,
+  direction: CareerSquadSortDirection,
+): number {
+  const projectionOrder = compareCareerPlayerPotentialRanges(
+    left.potentialRange,
+    right.potentialRange,
+  );
+  const currentOrder = careerPlayerRatingSortScore(left.currentRating)
+    - careerPlayerRatingSortScore(right.currentRating);
+  const directionMultiplier = direction === "ascending" ? 1 : -1;
+  return projectionOrder * directionMultiplier
+    || currentOrder * directionMultiplier
+    || left.playerId.localeCompare(right.playerId);
 }
 
 function assertUniquePlayers(players: readonly CareerSquadPlayerInput[]): void {

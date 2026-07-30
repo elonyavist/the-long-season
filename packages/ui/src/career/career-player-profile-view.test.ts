@@ -12,18 +12,16 @@ import {
   type CareerPlayerProfileInput,
 } from "./career-player-profile-view.ts";
 
-test("projects all 25 exact current attributes in the agreed families", () => {
+test("projects only the three outfield current-attribute families", () => {
   const view = buildCareerPlayerProfileView(profileInput());
 
   assert.deepEqual(view.attributeGroups.map((group) => [group.family, group.attributes.length]), [
     ["technical", 9],
     ["mental", 6],
     ["physical", 5],
-    ["goalkeeping", 5],
   ]);
-  assert.equal(view.attributeGroups.flatMap((group) => group.attributes).length, 25);
+  assert.equal(view.attributeGroups.flatMap((group) => group.attributes).length, 20);
   assert.equal(view.attributeGroups[0]?.attributes[0]?.value, 11.25);
-  assert.equal(view.attributeGroups[3]?.attributes[4]?.key, "goalkeeping.footwork");
 });
 
 test("keeps selection and availability separate while preserving annual contract facts", () => {
@@ -35,24 +33,27 @@ test("keeps selection and availability separate while preserving annual contract
   assert.equal(view.contract.draftFields.find((field) => field.field === "annual_wage")?.valueType, "annual_money");
 });
 
-test("serializes only categorical potential assessment and current attributes", () => {
-  const view = buildCareerPlayerProfileView(profileInput());
+test("serializes only the public potential range and copies half-star assessments", () => {
+  const input = profileInput();
+  const view = buildCareerPlayerProfileView(input);
   const serialized = JSON.stringify(view);
 
-  assert.equal(view.potentialLevel, "leading");
+  assert.deepEqual(view.currentRating, { stars: 3.5 });
+  assert.deepEqual(view.potentialRange, { lowerStars: 4, upperStars: 6 });
+  assert.notEqual(view.currentRating, input.currentRating);
+  assert.notEqual(view.potentialRange, input.potentialRange);
   assert.equal(serialized.includes("potentialAbilities"), false);
   assert.equal(serialized.includes("potentialAbility"), false);
   assert.equal(serialized.includes("reachablePotential"), false);
   assert.equal(serialized.includes("currentAbility"), false);
 });
 
-test("orders roles canonically and keeps the primary role natural", () => {
+test("orders only natural/adapted roles canonically and keeps the primary role natural", () => {
   const view = buildCareerPlayerProfileView(profileInput());
 
   assert.deepEqual(view.roles.map((role) => [role.role, role.suitability, role.isPrimary]), [
     ["central_midfielder", "natural", true],
     ["attacking_midfielder", "adapted", false],
-    ["striker", "weak", false],
   ]);
 });
 
@@ -70,6 +71,7 @@ function profileInput(): CareerPlayerProfileInput {
       { role: "central_midfielder", suitability: "adapted" },
     ],
     currentAbilities: abilities(11.25),
+    statistics: statisticsInput(),
     condition: 86,
     form: 63,
     morale: 68,
@@ -77,8 +79,8 @@ function profileInput(): CareerPlayerProfileInput {
     availabilityReasons: ["injured"],
     value: nonNegativeMoney(3_500_000_00),
     currency: "EUR",
-    currentLevel: "first_team",
-    potentialLevel: "leading",
+    currentRating: { stars: 3.5 },
+    potentialRange: { lowerStars: 4, upperStars: 6 },
     contract: {
       activeContract: {
         contractId: "contract:test",
@@ -103,6 +105,36 @@ function profileInput(): CareerPlayerProfileInput {
         remainingAnnualWageBudget: nonNegativeMoney(1_500_000_00),
       },
       supportedBonusFields: ["signing_bonus", "appearance_bonus"],
+    },
+  };
+}
+
+function statisticsInput(): CareerPlayerProfileInput["statistics"] {
+  return {
+    currentSeasonId: "season:current",
+    currentSeason: {
+      starts: 4,
+      substituteAppearances: 2,
+      appearances: 6,
+      minutes: 420,
+      averageRating: 7.25,
+      goals: 2,
+      assists: 3,
+      saves: 0,
+      participationCoverage: "complete",
+      eventCoverage: "complete",
+    },
+    career: {
+      starts: 30,
+      substituteAppearances: 8,
+      appearances: 38,
+      minutes: 2_700,
+      averageRating: 7.1,
+      goals: 8,
+      assists: 12,
+      saves: 0,
+      participationCoverage: "partial",
+      eventCoverage: "partial",
     },
   };
 }

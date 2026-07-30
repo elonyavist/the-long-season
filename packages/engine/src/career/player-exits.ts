@@ -88,6 +88,12 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
       input.careerState.gameState.clubs[clubId]?.playerIds.length ?? 0,
     ]),
   );
+  const remainingDepartmentsByClub = new Map(
+    input.careerState.gameState.clubIds.map((clubId) => [
+      clubId,
+      departmentCounts(input.careerState, clubId),
+    ]),
+  );
   let gameState = input.careerState.gameState;
   let seniorSquadState = input.careerState.seniorSquadState;
 
@@ -101,6 +107,9 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
     const club = clubId === undefined
       ? undefined
       : input.careerState.gameState.clubs[clubId];
+    const unattachedSince = clubId === undefined
+      ? latestUnattachedDate(input.careerState, playerId)
+      : undefined;
 
     const evaluation = evaluatePlayerExit({
       player,
@@ -110,6 +119,10 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
       clubPlayerCount: clubId === undefined
         ? Number.POSITIVE_INFINITY
         : remainingPlayersByClub.get(clubId) ?? club?.playerIds.length ?? 0,
+      clubDepartmentCount: clubId === undefined
+        ? Number.POSITIVE_INFINITY
+        : remainingDepartmentsByClub.get(clubId)?.[broadPositionGroup(player.naturalPositions[0])] ?? 0,
+      ...(unattachedSince === undefined ? {} : { unattachedSince }),
     });
     if (evaluation === undefined) {
       continue;
@@ -138,6 +151,13 @@ export function applyEndOfSeasonPlayerExits(input: PlayerExitInput): PlayerExitR
     });
     departingPlayerIds.add(playerId);
     remainingPlayersByClub.set(clubId, Math.max(0, (remainingPlayersByClub.get(clubId) ?? 0) - 1));
+    const remainingDepartments = remainingDepartmentsByClub.get(clubId);
+    if (remainingDepartments !== undefined) {
+      remainingDepartments[evaluation.positionGroup] = Math.max(
+        0,
+        remainingDepartments[evaluation.positionGroup] - 1,
+      );
+    }
     if (evaluation.reason !== "released") inactivePlayerIds.add(playerId);
     exits.push({
       playerId,
@@ -208,6 +228,10 @@ interface PlayerExitEvaluationInput {
   readonly worldSeed: string;
   readonly seasonId: SeasonId;
   readonly clubPlayerCount: number;
+  /** Current players in the candidate's broad department at the owning club. */
+  readonly clubDepartmentCount: number;
+  /** Factual date when an unattached player most recently left a club or academy. */
+  readonly unattachedSince?: CareerState["gameState"]["calendar"]["currentDate"];
 }
 
 interface PlayerExitEvaluation {
@@ -221,8 +245,22 @@ function evaluatePlayerExit(input: PlayerExitEvaluationInput): PlayerExitEvaluat
   const age = Math.floor((input.currentDate - input.player.birthDate) / 365);
   const positionGroup = broadPositionGroup(input.player.naturalPositions[0]);
   const currentAbilityAverage = playerExitAbility(input.player);
-  const candidate = exitCandidateFor(positionGroup, age, currentAbilityAverage);
+  const unattachedPatienceDays = positionGroup === "goalkeeper" ? 1_825 : 730;
+  const hasExhaustedLowerDivisionInterest =
+    input.clubPlayerCount === Number.POSITIVE_INFINITY
+    && input.unattachedSince !== undefined
+    && input.currentDate - input.unattachedSince >= unattachedPatienceDays
+    && currentAbilityAverage < 8;
+  const candidate = hasExhaustedLowerDivisionInterest
+    ? { reason: "career_step_down" as const, probability: 1 }
+    : exitCandidateFor(positionGroup, age, currentAbilityAverage);
   if (candidate === undefined) {
+    return undefined;
+  }
+  if (
+    input.clubPlayerCount !== Number.POSITIVE_INFINITY
+    && input.clubDepartmentCount <= 1
+  ) {
     return undefined;
   }
   if (candidate.reason !== "retirement" && input.clubPlayerCount <= MINIMUM_POST_EXIT_SQUAD_SIZE) {
@@ -240,6 +278,26 @@ function evaluatePlayerExit(input: PlayerExitEvaluationInput): PlayerExitEvaluat
     currentAbilityAverage,
     reason: candidate.reason,
   };
+}
+
+/** Counts current senior players by broad department for one club. */
+function departmentCounts(
+  careerState: CareerState,
+  clubId: Club["id"],
+): Record<BroadPositionGroup, number> {
+  const counts: Record<BroadPositionGroup, number> = {
+    goalkeeper: 0,
+    defender: 0,
+    midfielder: 0,
+    attacker: 0,
+  };
+  for (const playerId of careerState.gameState.clubs[clubId]?.playerIds ?? []) {
+    const player = careerState.gameState.players[playerId];
+    if (player !== undefined) {
+      counts[broadPositionGroup(player.naturalPositions[0])] += 1;
+    }
+  }
+  return counts;
 }
 
 function exitCandidateFor(
@@ -269,6 +327,44 @@ function playerExitAbility(player: Player): number {
   }
 
   return roundAverage(Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(role))));
+}
+
+/**
+ * Finds the latest explicit transition that made a player available to this
+ * career layer, including academy releases that have no senior contract row.
+ */
+function latestUnattachedDate(
+  careerState: CareerState,
+  playerId: PlayerId,
+): CareerState["gameState"]["calendar"]["currentDate"] | undefined {
+  let latest: number | undefined;
+  for (const historyId of careerState.seniorSquadState?.contractHistoryEntryIds ?? []) {
+    const history = careerState.seniorSquadState?.contractHistory[historyId];
+    if (
+      history?.playerId !== playerId
+      || (history.event !== "expired" && history.event !== "released")
+    ) {
+      continue;
+    }
+    latest = latest === undefined
+      ? Number(history.occurredOn)
+      : Math.max(latest, Number(history.occurredOn));
+  }
+
+  const youthLifecycle = careerState.youthAcademyState?.playerLifecycle[playerId];
+  if (
+    youthLifecycle?.statusChangedAt !== undefined
+    && (
+      youthLifecycle.status === "released"
+      || youthLifecycle.status === "external_move_candidate"
+    )
+  ) {
+    latest = latest === undefined
+      ? Number(youthLifecycle.statusChangedAt)
+      : Math.max(latest, Number(youthLifecycle.statusChangedAt));
+  }
+
+  return latest as CareerState["gameState"]["calendar"]["currentDate"] | undefined;
 }
 
 function removePlayersFromPreparation(

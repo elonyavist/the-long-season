@@ -7,6 +7,8 @@ import {
   gameDate,
   getPlayerRoleProfile,
   mapPlayerAbilities,
+  nonNegativeMoney,
+  playerContractId,
   playerId,
   rawDiagnosticAbilityAverage,
   type Club,
@@ -16,7 +18,22 @@ import {
   type PlayerRole,
 } from "@game/domain";
 
-import { derivePlayerWillingness } from "./player-willingness.ts";
+import { derivePlayerWillingness as derivePlayerWillingnessWithPolicy } from "./player-willingness.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+
+function derivePlayerWillingness(
+  input: Omit<
+    Parameters<typeof derivePlayerWillingnessWithPolicy>[0],
+    "marketBehaviorPolicy" | "ratingScale"
+  >,
+) {
+  return derivePlayerWillingnessWithPolicy({
+    ...input,
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    ratingScale: playerValuationConfigFixture().ratingScale,
+  });
+}
 
 /**
  * Player willingness tests lock only the early sporting-level behavior.
@@ -29,6 +46,8 @@ test("accepts a plausible same-level move", () => {
     player: playerFixture("01", "st", 11, 25),
     sellingClub: clubFixture("pro08", "third_division", 5),
     buyingClub: clubFixture("pro01", "third_division", 6),
+    currentTier: "third_division",
+    destinationTier: "third_division",
     currentDate: gameDate(20_000),
   });
 
@@ -42,6 +61,8 @@ test("rejects a strong first-division prime player moving to a third-division cl
     player: playerFixture("01", "st", 15, 27),
     sellingClub: clubFixture("elite01", "first_division", 10),
     buyingClub: clubFixture("pro01", "third_division", 5),
+    currentTier: "first_division",
+    destinationTier: "third_division",
     currentDate: gameDate(20_000),
   });
 
@@ -57,6 +78,8 @@ test("rejects a high-reputation one-level downgrade for a strong player", () => 
     player: playerFixture("01", "am", 13, 26),
     sellingClub: clubFixture("elite01", "first_division", 9),
     buyingClub: clubFixture("pro01", "second_division", 4),
+    currentTier: "first_division",
+    destinationTier: "second_division",
     currentDate: gameDate(20_000),
   });
 
@@ -72,6 +95,8 @@ test("accepts a younger non-star one-level downgrade", () => {
     player: playerFixture("01", "cm", 10.5, 20),
     sellingClub: clubFixture("elite01", "first_division", 7),
     buyingClub: clubFixture("pro01", "second_division", 5),
+    currentTier: "first_division",
+    destinationTier: "second_division",
     currentDate: gameDate(20_000),
   });
 
@@ -80,11 +105,34 @@ test("accepts a younger non-star one-level downgrade", () => {
   assert.equal(result.age, 20);
 });
 
+test("rejects a lower-tier move for a young six-star-potential prospect", () => {
+  const player = {
+    ...playerFixture("elite-prospect", "cm", 8, 18),
+    potential: abilitiesFixture(17),
+  };
+  const result = derivePlayerWillingness({
+    player,
+    sellingClub: clubFixture("elite01", "first_division", 7),
+    buyingClub: clubFixture("pro01", "second_division", 5),
+    currentTier: "first_division",
+    destinationTier: "second_division",
+    currentDate: gameDate(20_000),
+  });
+
+  assert.equal(result.status, "rejected");
+  assert.deepEqual(
+    result.reasons.map((reason) => reason.code),
+    ["sporting_level_too_low"],
+  );
+});
+
 test("returns structured category and reputation gaps", () => {
   const result = derivePlayerWillingness({
     player: playerFixture("01", "st", 14, 28),
     sellingClub: clubFixture("elite01", "first_division", 9),
     buyingClub: clubFixture("pro01", "third_division", 4),
+    currentTier: "first_division",
+    destinationTier: "third_division",
     currentDate: gameDate(20_000),
   });
 
@@ -104,6 +152,8 @@ test("rejects an excessive step down for a role specialist hidden by the old raw
     player,
     sellingClub: clubFixture("elite01", "first_division", 9),
     buyingClub: clubFixture("pro01", "second_division", 4),
+    currentTier: "first_division",
+    destinationTier: "second_division",
     currentDate: gameDate(20_000),
   });
 
@@ -112,7 +162,59 @@ test("rejects an excessive step down for a role specialist hidden by the old raw
   assert.equal(result.status, "rejected");
   assert.deepEqual(
     result.reasons.map((reason) => reason.code),
-    ["reputation_drop_too_large", "prime_player_downward_move"],
+    [
+      "sporting_level_too_low",
+      "reputation_drop_too_large",
+      "prime_player_downward_move",
+    ],
+  );
+});
+
+test("rejects same-tier terms that regress wage, status, and contract security", () => {
+  const player = playerFixture("terms", "cm", 11, 25);
+  const sellingClub = clubFixture("pro08", "third_division", 6);
+  const buyingClub = clubFixture("pro01", "third_division", 6);
+  const currentDate = gameDate(20_000);
+  const result = derivePlayerWillingness({
+    player,
+    sellingClub,
+    buyingClub,
+    currentTier: "third_division",
+    destinationTier: "third_division",
+    currentDate,
+    currentContract: {
+      id: playerContractId("contract:terms-current"),
+      playerId: player.id,
+      clubId: sellingClub.id,
+      type: "professional",
+      startsOn: gameDate(currentDate - 365),
+      endsOn: gameDate(currentDate + 3 * 365),
+      annualWage: nonNegativeMoney(100_000_00),
+      squadStatus: "regular_starter",
+      bonuses: {
+        signingBonus: nonNegativeMoney(0),
+        appearanceBonus: nonNegativeMoney(0),
+      },
+    },
+    proposedTerms: {
+      durationYears: 2,
+      annualWage: nonNegativeMoney(80_000_00),
+      squadStatus: "squad_player",
+      bonuses: {
+        signingBonus: nonNegativeMoney(0),
+        appearanceBonus: nonNegativeMoney(0),
+      },
+    },
+  });
+
+  assert.equal(result.status, "rejected");
+  assert.deepEqual(
+    result.reasons.map((reason) => reason.code),
+    [
+      "annual_wage_regression",
+      "squad_status_regression",
+      "contract_security_regression",
+    ],
   );
 });
 

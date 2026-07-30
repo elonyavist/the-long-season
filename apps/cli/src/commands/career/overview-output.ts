@@ -1,4 +1,4 @@
-import { getGeneratedPlayerArchetype, type FakeLeagueSystem } from "@game/content";
+import { getGeneratedPlayerArchetype, type FakeDomesticWorld } from "@game/content";
 import type { Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 
@@ -16,6 +16,7 @@ import {
 } from "./format.ts";
 import { formatCareerMatchPreparationLines } from "./preparation-output.ts";
 import { CLI_CAREER_WORLD_GENERATOR_VERSION } from "./scenarios.ts";
+import { competitionIdForClubInWorld } from "./scenarios.ts";
 import type { CliCareerState } from "./types.ts";
 
 /** Formats the persisted career inspection view. */
@@ -79,7 +80,7 @@ export function formatCareerSummaryOutput(input: {
 
 /** Formats the output shown after creating a new seeded career world. */
 export function formatNewCareerWorldOutput(input: {
-  readonly league: FakeLeagueSystem;
+  readonly world: FakeDomesticWorld;
   readonly careerState: CliCareerState;
   readonly saveDirectoryPath: string;
   readonly worldSeed: string;
@@ -92,23 +93,23 @@ export function formatNewCareerWorldOutput(input: {
     `${input.text("season.seed")}: ${input.worldSeed}`,
     `${input.text("career.worldSeed")}: ${input.worldSeed}`,
     `${input.text("career.generatorVersion")}: ${CLI_CAREER_WORLD_GENERATOR_VERSION}`,
-    `${input.text("season.competition")}: ${input.league.competition.name}`,
+    `${input.text("season.competition")}: ${selectedCompetitionName(input.careerState)}`,
     `${input.text("career.save")}: ${input.careerState.saveId}`,
     `${input.text("career.saveDirectory")}: ${input.saveDirectoryPath}`,
     `${input.text("setup.selectedClub")}: ${clubLabel(input.careerState.selectedClubId, input.careerState.gameState)}`,
     `${input.text("career.generatedSquadSize")}: ${selectedClub?.playerIds.length ?? 0}`,
     `${input.text("career.saveWritten")}: ${input.text("common.yes")}`,
     `${input.text("identity.nationalitySummary")}:`,
-    ...formatCareerNationalitySummary(input.league, input.careerState, input.text),
+    ...formatCareerNationalitySummary(input.world, input.careerState, input.text),
     `${input.text("career.ageSummary")}:`,
     ...formatCareerAgeSummary(input.careerState, input.text),
     `${input.text("career.prospectSummary")}:`,
-    ...formatCareerProspectSummary(input.league, input.careerState, input.text),
+    ...formatCareerProspectSummary(input.world, input.careerState, input.text),
   ];
 }
 
 function formatCareerNationalitySummary(
-  league: FakeLeagueSystem,
+  league: FakeDomesticWorld,
   careerState: CliCareerState,
   text: Translator,
 ): readonly string[] {
@@ -167,7 +168,7 @@ function formatCareerAgeSummary(careerState: CliCareerState, text: Translator): 
 }
 
 function formatCareerProspectSummary(
-  league: FakeLeagueSystem,
+  league: FakeDomesticWorld,
   careerState: CliCareerState,
   text: Translator,
 ): readonly string[] {
@@ -205,4 +206,15 @@ function formatCareerProspectSummary(
     `  ${text("career.prospect.highPotential")}: ${counts.highPotential}`,
     `  ${text("career.prospect.rareWonderkid")}: ${counts.rareWonderkid}`,
   ];
+}
+
+/** Derives the managed club's current competition label from membership. */
+function selectedCompetitionName(careerState: CliCareerState): string {
+  const world = careerState.gameState.domesticCompetitionWorld;
+  const competitionId = world === undefined
+    ? undefined
+    : competitionIdForClubInWorld(world, careerState.selectedClubId);
+  return competitionId === undefined
+    ? String(careerState.gameState.calendar.currentSeasonId)
+    : world?.competitions[competitionId]?.name ?? String(competitionId);
 }

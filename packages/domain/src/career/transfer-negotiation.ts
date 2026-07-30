@@ -22,12 +22,23 @@ export function transferNegotiationId(value: string): TransferNegotiationId {
   return value as TransferNegotiationId;
 }
 
-/** Parties and target shared by every stage of one transfer negotiation. */
+/**
+ * Parties, target, and immutable commercial snapshot shared by every stage.
+ *
+ * These amounts intentionally survive rejection, withdrawal, acceptance, and
+ * completion so persistence and presentation never have to reinterpret one
+ * ambiguous "fee" field after the negotiation advances.
+ */
 export interface TransferNegotiationParties {
   readonly id: TransferNegotiationId;
   readonly buyingClubId: ClubId;
   readonly sellingClubId: ClubId;
   readonly playerId: PlayerId;
+  readonly publicValue: Money;
+  readonly initialAskingPrice: Money;
+  readonly currentAskingPrice: Money;
+  readonly offeredFee: Money;
+  readonly counterFee?: Money;
 }
 
 /** Stable reason a club-stage transfer negotiation ended without agreement. */
@@ -39,7 +50,6 @@ export type TransferNegotiationRejectionReason =
 export interface SubmittedTransferNegotiation extends TransferNegotiationParties {
   readonly status: "submitted";
   readonly submittedOn: GameDate;
-  readonly offeredFee: Money;
   readonly clock: NegotiationStageClock;
 }
 
@@ -47,7 +57,6 @@ export interface SubmittedTransferNegotiation extends TransferNegotiationParties
 export interface CounteredTransferNegotiation extends TransferNegotiationParties {
   readonly status: "countered";
   readonly submittedOn: GameDate;
-  readonly offeredFee: Money;
   readonly counterFee: Money;
   readonly counterIssuedOn: GameDate;
   readonly clock: NegotiationStageClock;
@@ -63,6 +72,8 @@ export interface AcceptedTransferNegotiation extends TransferNegotiationParties 
   readonly status: "accepted";
   readonly agreedFee: Money;
   readonly acceptedOn: GameDate;
+  /** Original club-stage clock; acceptance does not extend the stage deadline. */
+  readonly clock: NegotiationStageClock;
 }
 
 /** Contract offer awaiting the player's deterministic response. */
@@ -128,6 +139,7 @@ export interface CompletionFailedTransferNegotiation extends TransferNegotiation
 export interface CompletedTransferNegotiation extends TransferNegotiationParties {
   readonly status: "completed";
   readonly agreedFee: Money;
+  readonly completedFee: Money;
   readonly completedOn: GameDate;
   readonly acceptedTerms: ContractOfferTerms;
   readonly acceptedSource: "submitted_offer" | "counter_offer";
@@ -187,6 +199,8 @@ export interface TransferNegotiationState {
 export type TransferNegotiationStateErrorCode =
   | "duplicate_negotiation_id"
   | "invalid_offer_fee"
+  | "invalid_commercial_snapshot"
+  | "completed_fee_mismatch"
   | "same_club"
   | "duplicate_open_negotiation";
 
@@ -210,6 +224,11 @@ export function transferNegotiationParties(
     buyingClubId: negotiation.buyingClubId,
     sellingClubId: negotiation.sellingClubId,
     playerId: negotiation.playerId,
+    publicValue: negotiation.publicValue,
+    initialAskingPrice: negotiation.initialAskingPrice,
+    currentAskingPrice: negotiation.currentAskingPrice,
+    offeredFee: negotiation.offeredFee,
+    ...(negotiation.counterFee === undefined ? {} : { counterFee: negotiation.counterFee }),
   };
 }
 
@@ -246,11 +265,24 @@ export function createTransferNegotiationState(
     if (negotiation.buyingClubId === negotiation.sellingClubId) {
       throw new TransferNegotiationStateError("same_club", `Transfer negotiation buyer and seller must differ: ${id}`);
     }
-    if (negotiation.status === "submitted" || negotiation.status === "countered") {
-      if (negotiation.offeredFee <= 0) {
-        throw new TransferNegotiationStateError("invalid_offer_fee", `Transfer offer fee must be positive: ${id}`);
-      }
-    } else if (
+    if (
+      !isPositiveMoney(negotiation.publicValue)
+      || !isPositiveMoney(negotiation.initialAskingPrice)
+      || !isPositiveMoney(negotiation.currentAskingPrice)
+      || (negotiation.counterFee !== undefined && !isPositiveMoney(negotiation.counterFee))
+    ) {
+      throw new TransferNegotiationStateError(
+        "invalid_commercial_snapshot",
+        `Transfer negotiation commercial amounts must be positive integer minor units: ${id}`,
+      );
+    }
+    if (!isPositiveMoney(negotiation.offeredFee)) {
+      throw new TransferNegotiationStateError(
+        "invalid_offer_fee",
+        `Transfer offer fee must be positive: ${id}`,
+      );
+    }
+    if (
       negotiation.status === "accepted"
       || negotiation.status === "player_offer_submitted"
       || negotiation.status === "player_countered"
@@ -262,6 +294,15 @@ export function createTransferNegotiationState(
       if (negotiation.agreedFee <= 0) {
         throw new TransferNegotiationStateError("invalid_offer_fee", `Agreed transfer fee must be positive: ${id}`);
       }
+    }
+    if (
+      negotiation.status === "completed"
+      && negotiation.completedFee !== negotiation.agreedFee
+    ) {
+      throw new TransferNegotiationStateError(
+        "completed_fee_mismatch",
+        `Completed transfer fee must equal the agreed fee: ${id}`,
+      );
     }
     if (isOpenTransferNegotiation(negotiation)) {
       const pairKey = `${negotiation.buyingClubId}=>${negotiation.playerId}`;
@@ -276,4 +317,9 @@ export function createTransferNegotiationState(
   }
 
   return { negotiations: input.negotiations, negotiationIds: input.negotiationIds };
+}
+
+/** Checks the shared positive-integer money invariant without rebranding. */
+function isPositiveMoney(value: Money): boolean {
+  return Number.isSafeInteger(value) && value > 0;
 }

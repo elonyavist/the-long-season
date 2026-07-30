@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "version": "asking-price-curves-v3",
+  "classification": "explicit_game_design_target",
+  "valuationCurvesVersion": "valuation-curves-v3",
+  "contractDaysRemaining": [
+    { "maximumValueInclusive": 0, "multiplierBasisPoints": 6500 },
+    { "maximumValueInclusive": 183, "multiplierBasisPoints": 7500 },
+    { "maximumValueInclusive": 365, "multiplierBasisPoints": 8500 },
+    { "maximumValueInclusive": 730, "multiplierBasisPoints": 10000 },
+    { "maximumValueInclusive": 1095, "multiplierBasisPoints": 11250 },
+    { "maximumValueInclusive": 1460, "multiplierBasisPoints": 12000 },
+    { "maximumValueInclusive": 3650, "multiplierBasisPoints": 13000 }
+  ],
+  "squadStatusMultipliers": {
+    "key_player": 14000,
+    "starter": 12000,
+    "rotation": 10000,
+    "prospect": 11500,
+    "surplus": 8000
+  },
+  "replacementNeedMultipliers": {
+    "covered": 10000,
+    "thin": 11500,
+    "critical": 14000
+  },
+  "sellerPressureMultipliers": {
+    "healthy": 10000,
+    "strained": 9000,
+    "must_sell": 7500
+  },
+  "playerDesireMultipliers": {
+    "content": 10000,
+    "open_to_move": 9000,
+    "wants_exit": 8000
+  },
+  "finalMultiplierMinimumBasisPoints": 5000,
+  "finalMultiplierMaximumBasisPoints": 18000,
+  "freeAgentTransferFeeMinorUnits": 0
+}

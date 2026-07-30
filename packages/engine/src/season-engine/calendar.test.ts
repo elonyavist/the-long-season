@@ -4,7 +4,12 @@ import { test } from "vitest";
 import { clubId, competitionId, gameDate, seasonId, type ClubId, type Fixture } from "@game/domain";
 import { diffDays, fromISO } from "@game/shared";
 
-import { generateRoundRobinCalendar, type RoundRobinCalendar } from "../index.ts";
+import {
+  CalendarGenerationError,
+  combineDomesticCompetitionCalendars,
+  generateRoundRobinCalendar,
+  type RoundRobinCalendar,
+} from "../index.ts";
 
 /**
  * Calendar tests prove deterministic double round-robin generation without
@@ -95,9 +100,89 @@ test("dates advance by seven days", () => {
 test("fixture IDs use the fixture namespace and explicit order", () => {
   const calendar = generateCalendar();
 
-  assert.equal(calendar.fixtureIds[0], "fixture:000001");
-  assert.equal(calendar.fixtureIds[calendar.fixtureIds.length - 1], "fixture:000306");
+  assert.equal(calendar.fixtureIds[0], "fixture:ita-3:2026:000001");
+  assert.equal(calendar.fixtureIds[calendar.fixtureIds.length - 1], "fixture:ita-3:2026:000306");
   assert.equal(calendar.fixtures[0]?.id, calendar.fixtureIds[0]);
+});
+
+test("three same-season 18-club calendars publish 918 globally unique fixtures", () => {
+  const competitionIds = [
+    competitionId("competition:first"),
+    competitionId("competition:second"),
+    competitionId("competition:third"),
+  ] as const;
+  const calendars = competitionIds.map((id, divisionIndex) =>
+    generateRoundRobinCalendar({
+      seed: "three-calendars",
+      seasonId: seasonId("season:2026"),
+      competitionId: id,
+      clubIds: calendarInputClubIds.map((_, clubIndex) =>
+        clubId(`club:${divisionIndex + 1}-${clubIndex + 1}`)
+      ),
+      seasonStartDate: gameDate(fromISO("2026-08-01")),
+    })
+  );
+  const world = {
+    competitionIds,
+    competitions: Object.fromEntries(calendars.map((calendar, index) => [
+      calendar.competitionId,
+      {
+        id: calendar.competitionId,
+        name: `Division ${index + 1}`,
+        clubIds: calendar.fixtures
+          .slice(0, 9)
+          .flatMap((fixture) => [fixture.homeClubId, fixture.awayClubId]),
+        matchRules: {
+          maximumSubstitutions: 5,
+          substitutionWindowLimit: null,
+          allowsPlayerReentry: false,
+          yellowCardAccumulationThreshold: 5,
+          straightRedSuspensionMatches: 3,
+          secondYellowSuspensionMatches: 1,
+          yellowAccumulationSuspensionMatches: 1,
+        },
+      },
+    ])),
+    seasonHistory: [],
+  };
+  const combined = combineDomesticCompetitionCalendars(world, calendars);
+
+  assert.equal(combined.fixtureIds.length, 918);
+  assert.equal(new Set(combined.fixtureIds).size, 918);
+  assert.deepEqual(
+    combined.fixtures.slice(0, 306).map((fixture) => fixture.competitionId),
+    Array.from({ length: 306 }, () => competitionIds[0]),
+  );
+});
+
+test("multi-calendar publication rejects a cross-competition member", () => {
+  const calendar = generateCalendar();
+  const world = {
+    competitionIds: [calendar.competitionId],
+    competitions: {
+      [calendar.competitionId]: {
+        id: calendar.competitionId,
+        name: "Wrong members",
+        clubIds: calendarInputClubIds.slice(1),
+        matchRules: {
+          maximumSubstitutions: 5,
+          substitutionWindowLimit: null,
+          allowsPlayerReentry: false,
+          yellowCardAccumulationThreshold: 5,
+          straightRedSuspensionMatches: 3,
+          secondYellowSuspensionMatches: 1,
+          yellowAccumulationSuspensionMatches: 1,
+        },
+      },
+    },
+    seasonHistory: [],
+  };
+
+  assert.throws(
+    () => combineDomesticCompetitionCalendars(world, [calendar]),
+    (error: unknown) =>
+      error instanceof CalendarGenerationError && error.code === "calendar_membership_mismatch",
+  );
 });
 
 /**

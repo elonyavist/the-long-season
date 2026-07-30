@@ -13,7 +13,9 @@ import {
   type ContractOfferEvaluation,
   type ContractOfferTerms,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type PlayerContract,
+  type PlayerWagePolicyConfig,
   type PreliminaryAgreement,
   type PreliminaryAgreementActivationCancellationReason,
   type PreliminaryAgreementId,
@@ -59,6 +61,7 @@ export type PreliminaryAgreementCommandResult =
 /** Input for submitting one future-contract offer to an externally owned player. */
 export interface SubmitPreliminaryAgreementOfferInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly agreementId: PreliminaryAgreementId;
   readonly playerId: PlayerContract["playerId"];
   readonly offeringClubId: PlayerContract["clubId"];
@@ -109,6 +112,7 @@ export function submitPreliminaryAgreementOffer(
 
   const demand = deriveContractDemand({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
     playerId: input.playerId,
     clubId: input.offeringClubId,
     evaluatedOn: input.submittedOn,
@@ -170,13 +174,26 @@ export interface AdvancePreliminaryAgreementLifecycleResult {
 export function advancePreliminaryAgreementLifecycle(input: {
   readonly careerState: CareerState;
   readonly throughDate: GameDate;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): AdvancePreliminaryAgreementLifecycleResult {
   const state = input.careerState.preliminaryAgreementState;
   if (state === undefined) return { careerState: input.careerState, facts: [] };
 
   let careerState = input.careerState;
   const facts: PreliminaryAgreementLifecycleFact[] = [];
-  for (const agreementId of [...state.agreementIds].sort()) {
+  const dueAgreementIds = state.agreementIds
+    .filter((agreementId) => {
+      const agreement = state.agreements[agreementId];
+      return agreement?.status === "offer_submitted" || agreement?.status === "countered";
+    })
+    .sort((leftId, rightId) => {
+      const left = state.agreements[leftId];
+      const right = state.agreements[rightId];
+      if (left === undefined || right === undefined) return String(leftId).localeCompare(String(rightId));
+      return left.createdOn - right.createdOn || String(leftId).localeCompare(String(rightId));
+    });
+  for (const agreementId of dueAgreementIds) {
     const agreement = careerState.preliminaryAgreementState?.agreements[agreementId];
     if (agreement?.status === "countered") {
       if (
@@ -210,14 +227,29 @@ export function advancePreliminaryAgreementLifecycle(input: {
         continue;
       }
       if (input.throughDate < agreement.clock.responseDueOn) continue;
-      const resolution = resolveSubmittedAgreement(careerState, agreement);
+      const resolution = resolveSubmittedAgreement(
+        careerState,
+        agreement,
+        input.wagePolicy,
+        input.marketBehaviorPolicy,
+      );
       careerState = resolution.careerState;
       facts.push(resolution.fact);
     }
   }
 
-  const activationIds = careerState.preliminaryAgreementState?.agreementIds ?? [];
-  for (const agreementId of [...activationIds].sort()) {
+  const activationState = careerState.preliminaryAgreementState;
+  const activationIds = (activationState?.agreementIds ?? [])
+    .filter((agreementId) => activationState?.agreements[agreementId]?.status === "agreed")
+    .sort((leftId, rightId) => {
+      const left = activationState?.agreements[leftId];
+      const right = activationState?.agreements[rightId];
+      if (left?.status !== "agreed" || right?.status !== "agreed") {
+        return String(leftId).localeCompare(String(rightId));
+      }
+      return left.createdOn - right.createdOn || String(leftId).localeCompare(String(rightId));
+    });
+  for (const agreementId of activationIds) {
     const agreement = careerState.preliminaryAgreementState?.agreements[agreementId];
     if (agreement?.status !== "agreed" || agreement.futureStartsOn > input.throughDate) continue;
     const activation = activateAgreement(careerState, agreement);
@@ -233,6 +265,8 @@ export function advancePreliminaryAgreementLifecycle(input: {
 /** Accepts one live player counter after rechecking future affordability. */
 export function acceptPreliminaryAgreementCounter(input: {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly agreementId: PreliminaryAgreementId;
   readonly decidedOn: GameDate;
 }): PreliminaryAgreementCommandResult {
@@ -242,7 +276,13 @@ export function acceptPreliminaryAgreementCounter(input: {
   if (input.decidedOn > agreement.clock.deadline) {
     return rejected(input.agreementId, "decision_after_deadline");
   }
-  if (!futureTermsAreAffordable(input.careerState, agreement, agreement.counterTerms)) {
+  if (!futureTermsAreAffordable(
+    input.careerState,
+    agreement,
+    agreement.counterTerms,
+    input.wagePolicy,
+    input.marketBehaviorPolicy,
+  )) {
     const rejectedAgreement: PreliminaryAgreement = {
       ...base(agreement),
       status: "rejected",
@@ -300,6 +340,8 @@ export function withdrawPreliminaryAgreement(input: {
 function resolveSubmittedAgreement(
   careerState: CareerState,
   agreement: Extract<PreliminaryAgreement, { readonly status: "offer_submitted" }>,
+  wagePolicy: PlayerWagePolicyConfig,
+  marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): {
   readonly careerState: CareerState;
   readonly fact: PreliminaryAgreementLifecycleFact;
@@ -324,9 +366,13 @@ function resolveSubmittedAgreement(
     player,
     sellingClub: currentClub,
     buyingClub: offeringClub,
+    currentTier: currentClub.category,
+    destinationTier: offeringClub.category,
     currentDate: decidedOn,
     currentContract,
     proposedTerms: agreement.offeredTerms,
+    marketBehaviorPolicy,
+    ratingScale: wagePolicy.ratingScale,
   });
   if (willingness.status === "rejected") {
     const rejectedAgreement: PreliminaryAgreement = {
@@ -376,7 +422,13 @@ function resolveSubmittedAgreement(
       fact: fact(countered, "countered", decidedOn),
     };
   }
-  if (!futureTermsAreAffordable(careerState, agreement, agreement.offeredTerms)) {
+  if (!futureTermsAreAffordable(
+    careerState,
+    agreement,
+    agreement.offeredTerms,
+    wagePolicy,
+    marketBehaviorPolicy,
+  )) {
     const rejectedAgreement: PreliminaryAgreement = {
       ...base(agreement),
       status: "rejected",
@@ -543,6 +595,8 @@ function futureTermsAreAffordable(
   careerState: CareerState,
   agreement: Pick<PreliminaryAgreement, "id" | "offeringClubId">,
   terms: ContractOfferTerms,
+  wagePolicy: PlayerWagePolicyConfig,
+  marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): boolean {
   let agreedAnnualWage = 0;
   let agreedSigningBonus = 0;
@@ -559,6 +613,8 @@ function futureTermsAreAffordable(
   return evaluateCareerContractCapacity({
     careerState,
     clubId: agreement.offeringClubId,
+    wagePolicy,
+    marketBehaviorPolicy,
     addedAnnualWage: nonNegativeMoney(agreedAnnualWage + terms.annualWage),
     addedSigningBonus: nonNegativeMoney(agreedSigningBonus + terms.bonuses.signingBonus),
   }).status === "affordable";

@@ -1,41 +1,126 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { nonNegativeMoney } from "@game/domain";
+import {
+  abilityValue,
+  nonNegativeMoney,
+  type PlayerAbilities,
+} from "@game/domain";
 
 import {
   buildCareerMarketTargetCatalog,
+  buildCareerMarketTargetDetailView,
   filterCareerMarketTargetRows,
   sortCareerMarketTargetRows,
+  type CareerMarketTargetDetailInput,
   type CareerMarketTargetFilters,
   type CareerMarketTargetInput,
   type CareerMarketTargetSortKey,
 } from "./career-market-target-view.ts";
 
-test("projects public target facts without exact hidden potential", () => {
+test("keeps the target catalog light without resolving per-player detail", () => {
+  let detailResolutionCount = 0;
+  const input = targets();
   const catalog = buildCareerMarketTargetCatalog(targets());
-  const serialized = JSON.stringify({
-    rows: catalog.rows,
-    details: [...catalog.detailsByPlayerId.values()],
-  });
+  const lazyCatalog = buildCareerMarketTargetCatalog([
+    {
+      ...input[0]!,
+      resolveDetail: () => {
+        detailResolutionCount += 1;
+        return detailInput();
+      },
+    },
+    input[1]!,
+    {
+      ...input[2]!,
+      resolveDetail: () => {
+        throw new Error("Incomplete statistics source");
+      },
+    },
+  ]);
+  const serialized = JSON.stringify(catalog);
 
   assert.equal(catalog.status, "populated");
   assert.equal(catalog.totalTargetCount, 4);
   assert.equal(catalog.visibleTargetCount, 4);
+  assert.equal(detailResolutionCount, 0);
+  assert.equal(serialized.includes("attributeGroups"), false);
+  assert.equal(serialized.includes("statistics"), false);
   assert.equal(serialized.includes("currentAbility"), false);
   assert.equal(serialized.includes("potentialAbility"), false);
   assert.equal(serialized.includes("reachablePotential"), false);
-  assert.deepEqual(
-    catalog.detailsByPlayerId.get("player:one")?.roleFits.map((fit) => fit.role),
-    ["striker", "attacking_midfielder"],
+  const detail = lazyCatalog.resolveDetail("player:one");
+  const repeated = lazyCatalog.resolveDetail("player:one");
+  assert.equal(detailResolutionCount, 1);
+  assert.equal(repeated, detail);
+  assert.equal(lazyCatalog.resolveDetail("player:two"), undefined);
+  assert.equal(lazyCatalog.resolveDetail("player:three"), undefined);
+  assert.equal(lazyCatalog.resolveDetail("player:missing"), undefined);
+});
+
+test("builds one exact shared target detail without numeric potential or weak roles", () => {
+  const input = targets()[0]!;
+  const detail = buildCareerMarketTargetDetailView(
+    {
+      ...input,
+      roleFits: [
+        ...input.roleFits,
+        { role: "center_back", suitability: "weak" },
+      ],
+    },
+    detailInput(),
   );
+  const serialized = JSON.stringify(detail);
+
+  assert.deepEqual(
+    detail.roles.map((role) => [role.role, role.suitability]),
+    [
+      ["attacking_midfielder", "adapted"],
+      ["striker", "natural"],
+    ],
+  );
+  assert.deepEqual(detail.attributeGroups.map((group) => group.family), [
+    "technical",
+    "mental",
+    "physical",
+  ]);
+  assert.equal(detail.attributeGroups[0]?.attributes[0]?.value, 11.25);
+  assert.equal(detail.statistics.currentSeason.participation.coverage, "complete");
+  assert.equal(detail.statistics.career.events.coverage, "partial");
+  assert.equal(
+    "saves" in detail.statistics.currentSeason.events,
+    false,
+  );
+  assert.equal(serialized.includes("potentialAbility"), false);
+  assert.equal(serialized.includes("reachablePotential"), false);
+});
+
+test("uses goalkeeper attributes and goalkeeper-only event facts for a Market detail", () => {
+  const detail = buildCareerMarketTargetDetailView(targets()[2]!, detailInput());
+
+  assert.deepEqual(detail.attributeGroups.map((group) => group.family), [
+    "goalkeeping",
+    "mental",
+    "physical",
+  ]);
+  assert.equal(
+    detail.attributeGroups.some((group) => group.family === "technical"),
+    false,
+  );
+  assert.equal("saves" in detail.statistics.currentSeason.events, true);
 });
 
 test("uses one shared eight-month boundary for contract-horizon filtering", () => {
   const catalog = buildCareerMarketTargetCatalog(targets());
 
-  assert.equal(catalog.detailsByPlayerId.get("player:one")?.contractHorizon, "expiring");
-  assert.equal(catalog.detailsByPlayerId.get("player:two")?.contractHorizon, "secure");
+  assert.equal(
+    catalog.rows.find((row) => row.playerId === "player:one")?.contractHorizon,
+    "expiring",
+  );
+  assert.equal(
+    catalog.rows.find((row) => row.playerId === "player:two")?.contractHorizon,
+    "secure",
+  );
   assert.deepEqual(
     filterCareerMarketTargetRows(catalog.rows, { contractHorizon: "expiring" })
       .map((row) => row.playerId),
@@ -55,6 +140,7 @@ test("applies every supported target filter to visible output", () => {
     [{ minimumAge: 26 }, ["player:two", "player:four"]],
     [{ maximumAge: 21 }, ["player:three"]],
     [{ employment: "free_agent" }, ["player:three"]],
+    [{ sourceTier: "second_division" }, ["player:two"]],
     [{ contractHorizon: "secure" }, ["player:two", "player:four"]],
     [{ minimumValue: nonNegativeMoney(3_000_000_00) }, ["player:two", "player:four"]],
     [{ maximumValue: nonNegativeMoney(1_000_000_00) }, ["player:three", "player:one"]],
@@ -75,6 +161,7 @@ test("sorts every supported column deterministically with stable tie-breakers", 
   const keys: readonly CareerMarketTargetSortKey[] = [
     "player",
     "club",
+    "tier",
     "age",
     "role",
     "current_level",
@@ -101,6 +188,67 @@ test("sorts every supported column deterministically with stable tie-breakers", 
   }
 });
 
+test("sorts half-star assessments with the elite marker above ordinary five stars", () => {
+  const input = targets();
+  const fiveStarRating = input[1]!.currentRating;
+  const catalog = buildCareerMarketTargetCatalog([
+    {
+      ...input[0]!,
+      playerId: "player:half",
+      currentRating: { stars: 4.5 },
+    },
+    {
+      ...input[1]!,
+      playerId: "player:five",
+      currentRating: fiveStarRating,
+    },
+    {
+      ...input[2]!,
+      playerId: "player:elite",
+      currentRating: { stars: 6 },
+    },
+  ]);
+
+  assert.deepEqual(
+    sortCareerMarketTargetRows(catalog.rows, {
+      key: "current_level",
+      direction: "ascending",
+    }).map((row) => row.playerId),
+    ["player:half", "player:five", "player:elite"],
+  );
+  const projectedFiveStarRating = catalog.rows.find(
+    (row) => row.playerId === "player:five",
+  )?.currentRating;
+  assert.deepEqual(projectedFiveStarRating, fiveStarRating);
+  assert.notEqual(projectedFiveStarRating, fiveStarRating);
+});
+
+test("ranks a narrow strong projection above a wide elite-upside lottery ticket", () => {
+  const input = targets();
+  const catalog = buildCareerMarketTargetCatalog([
+    {
+      ...input[0]!,
+      playerId: "player:lottery",
+      currentRating: { stars: 2 },
+      potentialRange: { lowerStars: 2, upperStars: 6 },
+    },
+    {
+      ...input[1]!,
+      playerId: "player:narrow",
+      currentRating: { stars: 4 },
+      potentialRange: { lowerStars: 4, upperStars: 5.5 },
+    },
+  ]);
+
+  assert.deepEqual(
+    sortCareerMarketTargetRows(catalog.rows, {
+      key: "potential_level",
+      direction: "descending",
+    }).map((row) => row.playerId),
+    ["player:narrow", "player:lottery"],
+  );
+});
+
 test("rejects duplicate targets and invalid public ages", () => {
   const input = targets();
 
@@ -123,20 +271,23 @@ function targets(): readonly CareerMarketTargetInput[] {
       age: 24,
       primaryRole: "striker",
       roleFits: [
-        { role: "attacking_midfielder", suitability: "adapted", isPrimary: false },
-        { role: "striker", suitability: "natural", isPrimary: true },
+        { role: "attacking_midfielder", suitability: "adapted" },
+        { role: "striker", suitability: "natural" },
       ],
       condition: 91,
       form: 67,
       morale: 63,
-      currentLevel: "first_team",
-      potentialLevel: "leading",
-      value: nonNegativeMoney(1_000_000_00),
+      currentRating: { stars: 3.5 },
+      potentialRange: { lowerStars: 3.5, upperStars: 4.5 },
+      publicValue: nonNegativeMoney(1_000_000_00),
       currency: "EUR",
       employment: {
         status: "contracted",
         clubId: "club:alfa",
         clubName: "Alfa Calcio",
+        competitionId: "competition:first",
+        competitionName: "First Division",
+        sourceTier: "first_division",
         contractEndsOnIso: "2027-04-01",
         contractRemainingDays: 243,
       },
@@ -149,18 +300,21 @@ function targets(): readonly CareerMarketTargetInput[] {
       lastName: "Beta",
       age: 30,
       primaryRole: "center_back",
-      roleFits: [{ role: "center_back", suitability: "natural", isPrimary: true }],
+      roleFits: [{ role: "center_back", suitability: "natural" }],
       condition: 88,
       form: 58,
       morale: 55,
-      currentLevel: "leading",
-      potentialLevel: "leading",
-      value: nonNegativeMoney(4_000_000_00),
+      currentRating: { stars: 5 },
+      potentialRange: { lowerStars: 5, upperStars: 5 },
+      publicValue: nonNegativeMoney(4_000_000_00),
       currency: "EUR",
       employment: {
         status: "contracted",
         clubId: "club:beta",
         clubName: "Beta United",
+        competitionId: "competition:second",
+        competitionName: "Second Division",
+        sourceTier: "second_division",
         contractEndsOnIso: "2027-04-02",
         contractRemainingDays: 244,
       },
@@ -173,15 +327,15 @@ function targets(): readonly CareerMarketTargetInput[] {
       lastName: "Gamma",
       age: 20,
       primaryRole: "goalkeeper",
-      roleFits: [{ role: "goalkeeper", suitability: "natural", isPrimary: true }],
+      roleFits: [{ role: "goalkeeper", suitability: "natural" }],
       condition: 100,
       form: 60,
       morale: 60,
-      currentLevel: "squad",
-      potentialLevel: "first_team",
-      value: nonNegativeMoney(500_000_00),
+      currentRating: { stars: 2.5 },
+      potentialRange: { lowerStars: 2.5, upperStars: 3.5 },
+      publicValue: nonNegativeMoney(500_000_00),
       currency: "EUR",
-      employment: { status: "free_agent" },
+      employment: { status: "free_agent", sourceTier: "free_agent" },
       availability: "free_agent",
       eligibility: { status: "allowed", action: "submit_free_agent_contract_offer" },
     },
@@ -191,18 +345,21 @@ function targets(): readonly CareerMarketTargetInput[] {
       lastName: "Delta",
       age: 27,
       primaryRole: "central_midfielder",
-      roleFits: [{ role: "central_midfielder", suitability: "natural", isPrimary: true }],
+      roleFits: [{ role: "central_midfielder", suitability: "natural" }],
       condition: 85,
       form: 52,
       morale: 49,
-      currentLevel: "squad",
-      potentialLevel: "squad",
-      value: nonNegativeMoney(3_000_000_00),
+      currentRating: { stars: 2.5 },
+      potentialRange: { lowerStars: 2.5, upperStars: 3 },
+      publicValue: nonNegativeMoney(3_000_000_00),
       currency: "EUR",
       employment: {
         status: "contracted",
         clubId: "club:delta",
         clubName: "Delta 1908",
+        competitionId: "competition:third",
+        competitionName: "Third Division",
+        sourceTier: "third_division",
         contractEndsOnIso: "2028-07-01",
         contractRemainingDays: 700,
       },
@@ -210,4 +367,78 @@ function targets(): readonly CareerMarketTargetInput[] {
       eligibility: { status: "blocked", reason: "outside_transfer_window" },
     },
   ];
+}
+
+/** Exact current facts resolved only for an opened Market target. */
+function detailInput(): CareerMarketTargetDetailInput {
+  return {
+    currentAbilities: abilities(11.25),
+    statistics: {
+      currentSeasonId: "season:current",
+      currentSeason: {
+        starts: 3,
+        substituteAppearances: 1,
+        appearances: 4,
+        minutes: 290,
+        averageRating: 7.4,
+        goals: 1,
+        assists: 2,
+        saves: 0,
+        participationCoverage: "complete",
+        eventCoverage: "complete",
+      },
+      career: {
+        starts: 20,
+        substituteAppearances: 5,
+        appearances: 25,
+        minutes: 1_800,
+        averageRating: 7.1,
+        goals: 4,
+        assists: 6,
+        saves: 0,
+        participationCoverage: "partial",
+        eventCoverage: "partial",
+      },
+    },
+  };
+}
+
+/** Deterministic abilities fixture preserving non-half exact decimals. */
+function abilities(value: number): PlayerAbilities {
+  const score = abilityValue(value);
+  return {
+    technical: {
+      finishing: score,
+      passing: score,
+      longPassing: score,
+      crossing: score,
+      dribbling: score,
+      technique: score,
+      tackling: score,
+      penalties: score,
+      freeKicks: score,
+    },
+    physical: {
+      pace: score,
+      strength: score,
+      stamina: score,
+      agility: score,
+      heading: score,
+    },
+    mental: {
+      positioning: score,
+      vision: score,
+      anticipation: score,
+      composure: score,
+      determination: score,
+      leadership: score,
+    },
+    goalkeeping: {
+      reflexes: score,
+      handling: score,
+      rushingOut: score,
+      goalkeeperPositioning: score,
+      footwork: score,
+    },
+  };
 }

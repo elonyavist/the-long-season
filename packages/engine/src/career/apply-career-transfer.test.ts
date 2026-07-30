@@ -32,8 +32,38 @@ import {
   type SeniorSquadState,
 } from "@game/domain";
 
-import { applyCareerPermanentTransfer } from "./apply-career-transfer.ts";
-import { offerContractRenewal } from "./contract-negotiation.ts";
+import {
+  applyCareerPermanentTransfer as applyCareerPermanentTransferWithConfig,
+} from "./apply-career-transfer.ts";
+import {
+  offerContractRenewal as offerContractRenewalWithPolicy,
+} from "./contract-negotiation.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+function applyCareerPermanentTransfer(
+  input: Omit<
+    Parameters<typeof applyCareerPermanentTransferWithConfig>[0],
+    "valuationConfig" | "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return applyCareerPermanentTransferWithConfig({
+    ...input,
+    valuationConfig: playerValuationConfigFixture(),
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
+
+function offerContractRenewal(
+  input: Omit<Parameters<typeof offerContractRenewalWithPolicy>[0], "wagePolicy">,
+) {
+  return offerContractRenewalWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+  });
+}
 
 /**
  * Persistent transfer tests protect durable career-state mutation.
@@ -61,6 +91,7 @@ test("applyCareerPermanentTransfer applies accepted ownership, budget, and histo
   const result = applyCareerPermanentTransfer({
     careerState,
     occurredOn,
+    transferWindows: openTransferWindows(occurredOn),
     intent: {
       buyingClubId: pro01,
       sellingClubId: pro18,
@@ -96,12 +127,17 @@ test("applyCareerPermanentTransfer applies accepted ownership, budget, and histo
   );
   assert.deepEqual(result.careerState.transferHistory, [
     {
+      kind: "permanent_transfer",
       sequenceNumber: 1,
       occurredOn,
       buyingClubId: pro01,
       sellingClubId: pro18,
       playerId: target,
-      transferFee: result.transferFee,
+      publicValue: result.transferFee,
+      initialAskingPrice: result.transferFee,
+      offeredFee: result.transferFee,
+      agreedFee: result.transferFee,
+      completedFee: result.transferFee,
     },
   ]);
   assert.ok(
@@ -204,6 +240,7 @@ test("applyCareerPermanentTransfer rejects insufficient transfer budget without 
 
   const result = applyCareerPermanentTransfer({
     careerState,
+    transferWindows: openTransferWindows(careerState.gameState.calendar.currentDate),
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
@@ -260,6 +297,7 @@ test("applyCareerPermanentTransfer is not blocked by an unresolved renewal offer
 
   const result = applyCareerPermanentTransfer({
     careerState: offered.careerState,
+    transferWindows: openTransferWindows(offered.careerState.gameState.calendar.currentDate),
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
@@ -289,6 +327,7 @@ test("applyCareerPermanentTransfer rejects unwilling players without mutating ca
 
   const result = applyCareerPermanentTransfer({
     careerState,
+    transferWindows: openTransferWindows(careerState.gameState.calendar.currentDate),
     intent: { buyingClubId: pro01, sellingClubId: elite, playerId: target },
   });
 
@@ -316,18 +355,24 @@ test("applyCareerPermanentTransfer appends after existing transfer history", () 
     }),
     transferHistory: [
       {
+        kind: "permanent_transfer",
         sequenceNumber: 3,
         occurredOn: gameDate(19_999),
         buyingClubId: pro01,
         sellingClubId: pro18,
         playerId: target,
-        transferFee: nonNegativeMoney(1_000_00),
+        publicValue: nonNegativeMoney(900_00),
+        initialAskingPrice: nonNegativeMoney(1_100_00),
+        offeredFee: nonNegativeMoney(1_000_00),
+        agreedFee: nonNegativeMoney(1_000_00),
+        completedFee: nonNegativeMoney(1_000_00),
       },
     ],
   });
 
   const result = applyCareerPermanentTransfer({
     careerState,
+    transferWindows: openTransferWindows(careerState.gameState.calendar.currentDate),
     intent: { buyingClubId: pro01, sellingClubId: pro18, playerId: target },
   });
 
@@ -371,6 +416,7 @@ test("selling a selected-club starter leaves the saved slot empty without choosi
 
   const result = applyCareerPermanentTransfer({
     careerState,
+    transferWindows: openTransferWindows(careerState.gameState.calendar.currentDate),
     intent: {
       buyingClubId: buyer,
       sellingClubId: seller,
@@ -385,6 +431,17 @@ test("selling a selected-club starter leaves the saved slot empty without choosi
     { slotKey: "bench:01", playerId: substitute },
   ]);
 });
+
+function openTransferWindows(asOf: ReturnType<typeof gameDate>) {
+  return seasonTransferWindows({
+    competitionId: competitionId("competition:demo-third-division"),
+    seasonId: seasonId("season:demo-001"),
+    windows: [
+      { opensOn: gameDate(asOf - 10), closesOn: gameDate(asOf + 50) },
+      { opensOn: gameDate(asOf + 200), closesOn: gameDate(asOf + 230) },
+    ],
+  });
+}
 
 function careerStateFixture(input: {
   readonly clubs: readonly Club[];
@@ -465,7 +522,9 @@ function clubFinanceStateFixture(
       cashBalance: nonNegativeMoney(amount),
       annualTransferBudget: nonNegativeMoney(amount),
       availableTransferBudget: nonNegativeMoney(amount),
-      annualWageBudget: nonNegativeMoney(100_000_000_00),
+      // Keep the fixture internally credible: a 10% liquidity reserve must not
+      // exceed the multi-million transfer cash used by accepted scenarios.
+      annualWageBudget: nonNegativeMoney(5_000_000_00),
       committedAnnualWage: nonNegativeMoney(committedAnnualWage),
       seasonIncome: nonNegativeMoney(0),
       seasonExpenses: nonNegativeMoney(0),

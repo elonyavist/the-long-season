@@ -1,12 +1,20 @@
 import {
-  DEFAULT_PLAYER_VALUATION_CONFIG,
+  selectPlayerPotentialProjectionPolicy,
+  selectMarketBehaviorCalibration,
+  selectPlayerWagePolicyConfig,
+} from "@game/content";
+import {
+  buildCareerMarketCatalog,
   deriveMarketPendingExposure,
   derivePlayerValuation,
-  derivePublicClubPlayerAssessments,
+  derivePublicPlayerAssessments,
+  deriveTransferCommercialSnapshot,
   evaluateCareerContractCapacity,
   evaluateMarketActionEligibility,
   evaluateTransferFeeCapacity,
-  selectFreeAgentPlayerIds,
+  selectCareerPlayerStatistics,
+  type PlayerValuationConfig,
+  type SubmitTransferOfferInput,
 } from "@game/engine";
 import { toISO } from "@game/shared";
 import {
@@ -39,11 +47,9 @@ type PreliminaryAgreement = NonNullable<PreliminaryAgreementState["agreements"][
   PreliminaryAgreementState["agreementIds"][number]
 ]>;
 type SeniorSquadState = NonNullable<WebCareerState["seniorSquadState"]>;
-type ActiveContract = NonNullable<
-  SeniorSquadState["contracts"][SeniorSquadState["activeContractIds"][number]]
->;
 type ClubId = WebCareerState["gameState"]["clubIds"][number];
 type GameDate = WebCareerState["gameState"]["calendar"]["currentDate"];
+type AskingPriceCurvesConfig = SubmitTransferOfferInput["askingPriceConfig"];
 
 /** One in-progress market draft the manager is previewing before submission. */
 export type MarketOfferDraft =
@@ -68,15 +74,23 @@ const LIVE_PRELIMINARY_STATUSES = new Set<PreliminaryAgreement["status"]>([
 ]);
 
 /** Projects the complete Market source from canonical career facts in linear passes. */
-export function presentCareerMarket(career: WebCareerState): CareerMarketViewInput {
+export function presentCareerMarket(
+  career: WebCareerState,
+  valuationConfig: PlayerValuationConfig,
+  askingPriceConfig: AskingPriceCurvesConfig,
+): CareerMarketViewInput {
   try {
-    return buildReadyMarketPresentation(career);
+    return buildReadyMarketPresentation(career, valuationConfig, askingPriceConfig);
   } catch {
     return { status: "error", messageKey: "career.market.error.missingData" };
   }
 }
 
-function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewInput {
+function buildReadyMarketPresentation(
+  career: WebCareerState,
+  valuationConfig: PlayerValuationConfig,
+  askingPriceConfig: AskingPriceCurvesConfig,
+): CareerMarketViewInput {
   const seniorSquad = career.seniorSquadState;
   const selectedClub = career.gameState.clubs[career.selectedClubId];
   const finance = career.clubFinanceState?.accounts[career.selectedClubId];
@@ -110,22 +124,25 @@ function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewI
           : { nextOpensOnIso: toISO(transferWindowEligibility.nextOpensOn) }),
       };
 
-  const ownerByPlayerId = indexPlayerOwners(career);
-  const contractByPlayerId = indexActiveContracts(seniorSquad);
-  const assessmentByPlayerId = indexPublicAssessments(career, ownerByPlayerId);
-  // Market targets are the senior population only: players owned by another
-  // club plus the canonical free-agent pool. Academy players stay out of the
-  // Market (no Youth UI in this phase), and the engine selector is the single
-  // owner of what "free agent" means.
-  const freeAgentIds = new Set(selectFreeAgentPlayerIds(career).map(String));
-  const targetPlayers = career.gameState.playerIds.flatMap((playerId) => {
-    const player = career.gameState.players[playerId];
-    if (player === undefined) return [];
-    const ownerId = ownerByPlayerId.get(String(player.id));
-    if (ownerId === career.selectedClubId) return [];
-    if (ownerId === undefined && !freeAgentIds.has(String(player.id))) return [];
-    return [player];
+  const marketCatalog = buildCareerMarketCatalog(career);
+  const targetPlayers = marketCatalog.targets.map((target) => {
+    const player = career.gameState.players[target.playerId];
+    if (player === undefined) {
+      throw new Error(`Canonical Market target is missing: ${String(target.playerId)}`);
+    }
+    return player;
   });
+  // Every target is assessed in one call on the same global content scale.
+  const assessmentByPlayerId = new Map(
+    derivePublicPlayerAssessments({
+      ratingScale: valuationConfig.ratingScale,
+      potentialProjectionPolicy: selectPlayerPotentialProjectionPolicy(
+        career.gameState.meta.calibrationVersions,
+      ),
+      currentDate,
+      players: targetPlayers,
+    }).map((assessment) => [String(assessment.playerId), assessment]),
+  );
   const tacticalPlayerById = new Map(
     buildTacticalBoardSquadPlayers(targetPlayers.map((player) => {
       const dynamic = career.gameState.playerStates[player.id];
@@ -142,11 +159,18 @@ function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewI
   const selectedOpenTransferByPlayerId = indexSelectedOpenTransfers(career);
   const selectedLivePreliminaryByPlayerId = indexSelectedLivePreliminaryAgreements(career);
 
-  const targets: CareerMarketTargetInput[] = targetPlayers.map((player) => {
+  const targets: CareerMarketTargetInput[] = marketCatalog.targets.map((catalogTarget) => {
+    const player = career.gameState.players[catalogTarget.playerId];
+    if (player === undefined) {
+      throw new Error(`Canonical Market target is missing: ${String(catalogTarget.playerId)}`);
+    }
     const playerId = String(player.id);
-    const ownerId = ownerByPlayerId.get(playerId);
-    const owner = ownerId === undefined ? undefined : career.gameState.clubs[ownerId];
-    const contract = contractByPlayerId.get(playerId);
+    const owner = catalogTarget.employment.status === "contracted"
+      ? career.gameState.clubs[catalogTarget.employment.clubId]
+      : undefined;
+    const contract = catalogTarget.employment.status === "contracted"
+      ? seniorSquad.contracts[catalogTarget.employment.contractId]
+      : undefined;
     const dynamic = career.gameState.playerStates[player.id];
     const assessment = assessmentByPlayerId.get(playerId);
     const tacticalPlayer = tacticalPlayerById.get(playerId);
@@ -154,20 +178,31 @@ function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewI
       dynamic === undefined
       || assessment === undefined
       || tacticalPlayer === undefined
-      || (owner !== undefined && contract === undefined)
+      || (catalogTarget.employment.status === "contracted"
+        && (owner === undefined || contract === undefined))
     ) {
       throw new Error(`Market target is incomplete: ${playerId}`);
     }
 
     const valuation = derivePlayerValuation({
       player,
-      club: owner ?? selectedClub,
       currentDate,
-      ...(contract === undefined ? {} : { contract }),
-      currentForm: Number(dynamic.form),
-      config: DEFAULT_PLAYER_VALUATION_CONFIG,
+      config: valuationConfig,
+      marketContext: owner === undefined
+        ? { kind: "free_agent" }
+        : { kind: "contracted", division: owner.category },
     });
     const remainingDays = contract === undefined ? undefined : Math.max(0, contract.endsOn - currentDate);
+    const commercial = owner === undefined
+      ? undefined
+      : deriveTransferCommercialSnapshot({
+          careerState: career,
+          sellingClubId: owner.id,
+          playerId: player.id,
+          asOf: currentDate,
+          valuationConfig,
+          askingPriceConfig,
+        });
 
     return {
       playerId,
@@ -179,17 +214,33 @@ function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewI
       condition: Number(dynamic.fitness),
       form: Number(dynamic.form),
       morale: Number(dynamic.morale),
-      currentLevel: assessment.currentLevel,
-      potentialLevel: assessment.potentialLevel,
-      value: valuation.value,
+      currentRating: assessment.currentRating,
+      potentialRange: {
+        lowerStars: assessment.potentialProjection.lowerRating.stars,
+        upperStars: assessment.potentialProjection.upperRating.stars,
+      },
+      publicValue: valuation.value,
+      ...(commercial === undefined
+        ? {}
+        : { askingPrice: commercial.currentAskingPrice }),
+      ...(owner === undefined
+        ? {
+            freeAgentTransferFee: careerMoneyFromMinorUnits(
+              askingPriceConfig.freeAgentTransferFeeMinorUnits,
+            ),
+          }
+        : {}),
       currency: finance.currency,
-      employment: owner === undefined || contract === undefined
-        ? { status: "free_agent" }
+      employment: catalogTarget.employment.status === "free_agent"
+        ? { status: "free_agent", sourceTier: "free_agent" }
         : {
             status: "contracted",
-            clubId: String(owner.id),
-            clubName: owner.name,
-            contractEndsOnIso: toISO(contract.endsOn),
+            clubId: String(catalogTarget.employment.clubId),
+            clubName: catalogTarget.employment.clubName,
+            competitionId: String(catalogTarget.employment.competitionId),
+            competitionName: catalogTarget.employment.competitionName,
+            sourceTier: catalogTarget.employment.sourceTier,
+            contractEndsOnIso: toISO(catalogTarget.employment.contractEndsOn),
             contractRemainingDays: remainingDays ?? 0,
           },
       availability: owner === undefined ? "free_agent" : "negotiable",
@@ -203,6 +254,15 @@ function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewI
         hasOpenTransfer: selectedOpenTransferByPlayerId.has(playerId),
         hasLivePreliminary: selectedLivePreliminaryByPlayerId.has(playerId),
       }),
+      // The catalog stores this factory without invoking it. Exact attributes
+      // and archive-backed statistics are projected only for an opened target.
+      resolveDetail: () => ({
+        currentAbilities: player.abilities,
+        statistics: selectCareerPlayerStatistics({
+          careerState: career,
+          playerId: player.id,
+        }),
+      }),
     };
   });
 
@@ -211,7 +271,7 @@ function buildReadyMarketPresentation(career: WebCareerState): CareerMarketViewI
 
   return {
     status: "ready",
-    competitionName: competitionName(String(windows.competitionId)),
+    competitionName: competitionName(career, windows.competitionId),
     window,
     finance: { ...baseFinanceView(finance), pendingExposure },
     targets,
@@ -245,6 +305,8 @@ function baseFinanceView(
 export function previewMarketOffer(
   career: WebCareerState,
   draft: MarketOfferDraft,
+  valuationConfig: PlayerValuationConfig,
+  askingPriceConfig: AskingPriceCurvesConfig,
 ): CareerMarketOfferPreviewView {
   const previewId = draftPreviewId(draft);
   const finance = career.clubFinanceState?.accounts[career.selectedClubId];
@@ -253,17 +315,39 @@ export function previewMarketOffer(
   const existingPendingExposure = buildPendingExposure(career);
 
   if (draft.kind === "transfer_offer") {
+    const target = buildCareerMarketCatalog(career).targets.find(
+      (candidate) => String(candidate.playerId) === draft.playerId,
+    );
+    const commercial = target?.employment.status === "contracted"
+      ? deriveTransferCommercialSnapshot({
+          careerState: career,
+          sellingClubId: target.employment.clubId,
+          playerId: target.playerId,
+          asOf: career.gameState.calendar.currentDate,
+          valuationConfig,
+          askingPriceConfig,
+        })
+      : undefined;
+    if (commercial === undefined) {
+      return { status: "blocked", previewId, reason: "target_not_found" };
+    }
     const capacity = evaluateTransferFeeCapacity({
       careerState: career,
       buyingClubId: career.selectedClubId,
       fee: draft.fee,
+      marketBehaviorPolicy: selectMarketBehaviorCalibration(
+        career.gameState.meta.calibrationVersions,
+      ),
     });
     if (capacity.status === "unaffordable") return { status: "blocked", previewId, reason: capacity.reason };
     return {
       status: "ready",
       previewId,
       kind: "transfer_offer",
-      transferFee: draft.fee,
+      publicValue: commercial.publicValue,
+      askingPrice: commercial.currentAskingPrice,
+      offeredFee: draft.fee,
+      completedFee: draft.fee,
       currentFinance,
       projectedFinance: {
         ...currentFinance,
@@ -280,13 +364,37 @@ export function previewMarketOffer(
       clubId: career.selectedClubId,
       addedAnnualWage: draft.terms.annualWage,
       addedSigningBonus: draft.terms.bonuses.signingBonus,
+      wagePolicy: selectPlayerWagePolicyConfig(
+        career.gameState.meta.calibrationVersions,
+      ),
+      marketBehaviorPolicy: selectMarketBehaviorCalibration(
+        career.gameState.meta.calibrationVersions,
+      ),
     });
     if (capacity.status === "unaffordable") return { status: "blocked", previewId, reason: capacity.reason };
     return {
       status: "ready",
       previewId,
       kind: draft.kind,
-      transferFee: careerMoneyFromMinorUnits(0),
+      ...(draft.kind === "free_agent_offer"
+        ? (() => {
+            const player = Object.values(career.gameState.players).find(
+              (candidate) => String(candidate.id) === draft.playerId,
+            );
+            if (player === undefined) return {};
+            return {
+              publicValue: derivePlayerValuation({
+                player,
+                currentDate: career.gameState.calendar.currentDate,
+                config: valuationConfig,
+                marketContext: { kind: "free_agent" },
+              }).value,
+            };
+          })()
+        : {}),
+      completedFee: careerMoneyFromMinorUnits(
+        askingPriceConfig.freeAgentTransferFeeMinorUnits,
+      ),
       contractTerms: draft.terms,
       currentFinance,
       projectedFinance: {
@@ -310,6 +418,9 @@ export function previewMarketOffer(
     careerState: career,
     buyingClubId: negotiation.buyingClubId,
     fee,
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      career.gameState.meta.calibrationVersions,
+    ),
   });
   if (feeCapacity.status === "unaffordable") return { status: "blocked", previewId, reason: feeCapacity.reason };
   const wageCapacity = evaluateCareerContractCapacity({
@@ -318,13 +429,24 @@ export function previewMarketOffer(
     addedAnnualWage: draft.terms.annualWage,
     addedSigningBonus: draft.terms.bonuses.signingBonus,
     additionalImmediateCost: fee,
+    wagePolicy: selectPlayerWagePolicyConfig(
+      career.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      career.gameState.meta.calibrationVersions,
+    ),
   });
   if (wageCapacity.status === "unaffordable") return { status: "blocked", previewId, reason: wageCapacity.reason };
   return {
     status: "ready",
     previewId,
     kind: draft.kind,
-    transferFee: fee,
+    publicValue: negotiation.publicValue,
+    askingPrice: negotiation.currentAskingPrice,
+    offeredFee: negotiation.offeredFee,
+    ...(negotiation.counterFee === undefined ? {} : { counterFee: negotiation.counterFee }),
+    agreedFee: fee,
+    completedFee: fee,
     contractTerms: draft.terms,
     currentFinance,
     projectedFinance: {
@@ -358,62 +480,6 @@ function findTransferNegotiationByRawId(
     if (String(negotiationId) === rawNegotiationId) return state.negotiations[negotiationId];
   }
   return undefined;
-}
-
-function indexPlayerOwners(career: WebCareerState): ReadonlyMap<string, ClubId> {
-  const ownerByPlayerId = new Map<string, ClubId>();
-  for (const clubId of career.gameState.clubIds) {
-    const club = career.gameState.clubs[clubId];
-    if (club === undefined) continue;
-    for (const playerId of club.playerIds) ownerByPlayerId.set(String(playerId), clubId);
-  }
-  return ownerByPlayerId;
-}
-
-function indexActiveContracts(seniorSquad: SeniorSquadState): ReadonlyMap<string, ActiveContract> {
-  const contractByPlayerId = new Map<string, ActiveContract>();
-  for (const contractId of seniorSquad.activeContractIds) {
-    const contract = seniorSquad.contracts[contractId];
-    if (contract !== undefined) contractByPlayerId.set(String(contract.playerId), contract);
-  }
-  return contractByPlayerId;
-}
-
-function indexPublicAssessments(
-  career: WebCareerState,
-  ownerByPlayerId: ReadonlyMap<string, ClubId>,
-) {
-  const assessmentByPlayerId = new Map<
-    string,
-    ReturnType<typeof derivePublicClubPlayerAssessments>[number]
-  >();
-  for (const clubId of career.gameState.clubIds) {
-    const club = career.gameState.clubs[clubId];
-    if (club === undefined) continue;
-    const players = club.playerIds.flatMap((playerId) => {
-      const player = career.gameState.players[playerId];
-      return player === undefined ? [] : [player];
-    });
-    for (const assessment of derivePublicClubPlayerAssessments(players)) {
-      assessmentByPlayerId.set(String(assessment.playerId), assessment);
-    }
-  }
-
-  const freeAgents = career.gameState.playerIds.flatMap((playerId) => {
-    const player = career.gameState.players[playerId];
-    return player === undefined || ownerByPlayerId.has(String(player.id)) ? [] : [player];
-  });
-  const selectedClub = career.gameState.clubs[career.selectedClubId];
-  const selectedPlayers = selectedClub?.playerIds.flatMap((playerId) => {
-    const player = career.gameState.players[playerId];
-    return player === undefined ? [] : [player];
-  }) ?? [];
-  for (const assessment of derivePublicClubPlayerAssessments([...selectedPlayers, ...freeAgents])) {
-    if (!ownerByPlayerId.has(String(assessment.playerId))) {
-      assessmentByPlayerId.set(String(assessment.playerId), assessment);
-    }
-  }
-  return assessmentByPlayerId;
 }
 
 function indexSelectedOpenTransfers(career: WebCareerState): ReadonlySet<string> {
@@ -570,7 +636,6 @@ function buildNegotiationViews(career: WebCareerState): readonly CareerMarketNeg
     const counterpartClubName = career.gameState.clubs[counterpartId]?.name;
     const deadline = transferDeadline(negotiation);
     const resolvedOn = transferResolvedOn(negotiation);
-    const transferFee = transferFeeFor(negotiation);
     const terms = transferTermsFor(negotiation);
     const offeredTerms = negotiation.status === "player_offer_submitted" || negotiation.status === "player_countered"
       ? negotiation.offeredTerms
@@ -588,7 +653,15 @@ function buildNegotiationViews(career: WebCareerState): readonly CareerMarketNeg
       openedOnIso: toISO(transferOpenedOn(negotiation)),
       ...(deadline === undefined ? {} : { deadlineOnIso: toISO(deadline) }),
       ...(resolvedOn === undefined ? {} : { resolvedOnIso: toISO(resolvedOn) }),
-      ...(transferFee === undefined ? {} : { transferFee }),
+      publicValue: negotiation.publicValue,
+      initialAskingPrice: negotiation.initialAskingPrice,
+      currentAskingPrice: negotiation.currentAskingPrice,
+      offeredFee: negotiation.offeredFee,
+      ...(negotiation.counterFee === undefined ? {} : { counterFee: negotiation.counterFee }),
+      ...("agreedFee" in negotiation ? { agreedFee: negotiation.agreedFee } : {}),
+      ...(negotiation.status === "completed"
+        ? { completedFee: negotiation.completedFee }
+        : {}),
       ...(terms === undefined ? {} : { annualWage: terms.annualWage }),
       ...(offeredTerms === undefined ? {} : { offeredTerms: toCareerContractTermsInput(offeredTerms) }),
       ...(counterTerms === undefined ? {} : { counterTerms: toCareerContractTermsInput(counterTerms) }),
@@ -701,7 +774,7 @@ function toCareerContractTermsInput(terms: {
 
 function transferFeeFor(
   negotiation: TransferNegotiation,
-): CareerMarketNegotiationInput["transferFee"] {
+): Money | undefined {
   if (negotiation.status === "submitted") return negotiation.offeredFee;
   if (negotiation.status === "countered") return negotiation.counterFee;
   return "agreedFee" in negotiation ? negotiation.agreedFee : undefined;
@@ -752,7 +825,6 @@ function roleSuitabilities(player: TacticalBoardSquadPlayer): CareerMarketTarget
   return TACTICAL_BOARD_ROLE_CODES.map((roleCode) => ({
     role: TACTICAL_BOARD_ROLES[roleCode].canonicalRole,
     suitability: toPositionSuitability(player.suitabilityByRole[roleCode]),
-    isPrimary: TACTICAL_BOARD_ROLES[roleCode].canonicalRole === player.primaryRole,
   }));
 }
 
@@ -771,7 +843,14 @@ function broadRole(role: string | undefined): "goalkeeper" | "defender" | "midfi
   return "midfielder";
 }
 
-function competitionName(competitionId: string): string {
-  if (competitionId === "competition:demo-third-division") return "Demo Third Division";
-  return competitionId;
+function competitionName(
+  career: WebCareerState,
+  competitionId: ReturnType<typeof resolveCareerTransferWindows>["competitionId"],
+): string {
+  const competition = career.gameState.domesticCompetitionWorld
+    ?.competitions[competitionId];
+  if (competition === undefined) {
+    throw new Error(`Market competition is missing: ${String(competitionId)}`);
+  }
+  return competition.name;
 }

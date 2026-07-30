@@ -11,6 +11,7 @@ import {
   TransferNegotiationStateError,
   transferNegotiationId,
   type AcceptedTransferNegotiation,
+  type CompletedTransferNegotiation,
   type SubmittedTransferNegotiation,
 } from "./transfer-negotiation.ts";
 
@@ -25,6 +26,9 @@ function submitted(id: string, overrides: Partial<SubmittedTransferNegotiation> 
     buyingClubId: BUYER,
     sellingClubId: SELLER,
     playerId: TARGET,
+    publicValue: nonNegativeMoney(900_000),
+    initialAskingPrice: nonNegativeMoney(1_100_000),
+    currentAskingPrice: nonNegativeMoney(1_100_000),
     submittedOn: gameDate(100),
     offeredFee: nonNegativeMoney(1_000_000),
     clock: createNegotiationStageClock({ submittedOn: gameDate(100), responseDelayDays: 2 }),
@@ -42,8 +46,13 @@ function accepted(
     buyingClubId: BUYER,
     sellingClubId: SELLER,
     playerId: TARGET,
+    publicValue: nonNegativeMoney(900_000),
+    initialAskingPrice: nonNegativeMoney(1_100_000),
+    currentAskingPrice: nonNegativeMoney(1_100_000),
+    offeredFee: nonNegativeMoney(1_000_000),
     agreedFee: nonNegativeMoney(1_000_000),
     acceptedOn: gameDate(102),
+    clock: createNegotiationStageClock({ submittedOn: gameDate(100), responseDelayDays: 2 }),
     ...overrides,
   };
 }
@@ -65,6 +74,52 @@ test("createTransferNegotiationState accepts a valid single negotiation", () => 
     negotiationIds: [id],
   });
   assert.equal(state.negotiationIds.length, 1);
+});
+
+test("commercial snapshot remains structurally distinct after club acceptance", () => {
+  const negotiation = accepted("transfer-negotiation:commercial");
+  assert.equal(negotiation.publicValue, 900_000);
+  assert.equal(negotiation.initialAskingPrice, 1_100_000);
+  assert.equal(negotiation.currentAskingPrice, 1_100_000);
+  assert.equal(negotiation.offeredFee, 1_000_000);
+  assert.equal(negotiation.agreedFee, 1_000_000);
+});
+
+test("completed fee must equal the agreed fee", () => {
+  const acceptedNegotiation = accepted("transfer-negotiation:completed");
+  const completed: CompletedTransferNegotiation = {
+    ...acceptedNegotiation,
+    status: "completed",
+    completedOn: gameDate(103),
+    completedFee: nonNegativeMoney(999_999),
+    acceptedTerms: {
+      durationYears: 3,
+      annualWage: nonNegativeMoney(100_000),
+      squadStatus: "squad_player",
+      bonuses: {
+        signingBonus: nonNegativeMoney(10_000),
+        appearanceBonus: nonNegativeMoney(1_000),
+      },
+    },
+    acceptedSource: "submitted_offer",
+    evaluation: {
+      decision: "accepted",
+      scoreBasisPoints: 10_000,
+      reasons: [],
+      demand: {} as CompletedTransferNegotiation["evaluation"]["demand"],
+    },
+    activatedContractId: "contract:completed" as CompletedTransferNegotiation["activatedContractId"],
+    transferHistorySequence: 1,
+  };
+  assert.throws(
+    () => createTransferNegotiationState({
+      negotiations: { [completed.id]: completed },
+      negotiationIds: [completed.id],
+    }),
+    (error: unknown) =>
+      error instanceof TransferNegotiationStateError
+      && error.code === "completed_fee_mismatch",
+  );
 });
 
 test("a non-positive offered fee is rejected", () => {

@@ -4,8 +4,10 @@ import { test } from "vitest";
 import {
   abilityValue,
   isPotentialAtLeastCurrent,
+  getPlayerRoleProfile,
   PLAYER_ABILITY_KEYS,
   readPlayerAbility,
+  rolePotentialAbility,
   type PlayerAbilities,
 } from "@game/domain";
 
@@ -126,6 +128,27 @@ test("goalkeeper potential keeps a later curve than outfield physical growth", (
 
   assert.equal(Number(goalkeeper.goalkeeping.reflexes) > 10, true);
   assert.equal(Number(winger.physical.pace) <= 10.2, true);
+});
+
+test("an explicit world intake assignment reaches its requested role-potential floor", () => {
+  const current = filledAbilities(8);
+  const potential = allocateReachablePotential({
+    seed: "world-potential-six",
+    playerKey: "player:world-potential-six",
+    abilities: current,
+    ageYears: 17,
+    role: "central_midfielder",
+    division: "second_division",
+    clubTier: "playoff_contender",
+    potentialClass: "elite",
+    minimumRolePotentialAbility: 17,
+  });
+
+  assert.equal(
+    Number(rolePotentialAbility(potential, getPlayerRoleProfile("central_midfielder"))) >= 17,
+    true,
+  );
+  assert.equal(isPotentialAtLeastCurrent(current, potential), true);
 });
 
 function filledAbilities(value: number, overrides: PartialDeepPlayerAbilities = {}): PlayerAbilities {

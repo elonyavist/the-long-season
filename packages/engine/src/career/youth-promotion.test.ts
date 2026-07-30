@@ -35,12 +35,40 @@ import {
   type SeniorSquadState,
 } from "@game/domain";
 
-import { promoteYouthCandidatesToSeniorSquads } from "./youth-promotion.ts";
-import { offerContractRenewal } from "./contract-negotiation.ts";
+import {
+  promoteYouthCandidatesToSeniorSquads as promoteYouthCandidatesToSeniorSquadsWithPolicy,
+} from "./youth-promotion.ts";
+import {
+  offerContractRenewal as offerContractRenewalWithPolicy,
+} from "./contract-negotiation.ts";
 import {
   prepareSeniorSquadSigning,
   SeniorSquadTransferError,
 } from "./senior-squad-transfer.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+function promoteYouthCandidatesToSeniorSquads(
+  input: Omit<
+    Parameters<typeof promoteYouthCandidatesToSeniorSquadsWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return promoteYouthCandidatesToSeniorSquadsWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
+
+function offerContractRenewal(
+  input: Omit<Parameters<typeof offerContractRenewalWithPolicy>[0], "wagePolicy">,
+) {
+  return offerContractRenewalWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+  });
+}
 
 /** Tests for explicit youth-to-senior promotion rules. */
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  selectAskingPriceCurves,
+  selectMarketBehaviorCalibration,
+  selectPlayerValuationConfig,
+} from "@game/content";
+import {
   createMatchdayAttention,
   createTransferNegotiationId,
   findNextCareerFixture,
@@ -38,7 +43,7 @@ describe("presentCareerInbox", () => {
     expect(detail?.factRows.some((row) => "value" in row && row.value?.startsWith("fixture:"))).toBe(false);
     expect(detail?.factRows).toContainEqual({
       labelKey: "career.inbox.fact.competition",
-      value: "Demo Third Division",
+      value: "Fictional Third Division",
     });
     expect(detail?.primaryAction?.actionId).toBe("prepare_match");
   });
@@ -246,19 +251,24 @@ describe("presentCareerInbox", () => {
       offeredFee: careerNonNegativeMoneyFromMinorUnits(50_000_00),
       submittedOn: career.gameState.calendar.currentDate,
       transferWindows: resolveCareerTransferWindows(career),
+      valuationConfig: selectPlayerValuationConfig(
+        career.gameState.meta.calibrationVersions,
+      ),
+      askingPriceConfig: selectAskingPriceCurves(
+        career.gameState.meta.calibrationVersions,
+      ),
+      marketBehaviorPolicy: selectMarketBehaviorCalibration(
+        career.gameState.meta.calibrationVersions,
+      ),
     });
     if (submitted.status !== "applied" || submitted.negotiation.status !== "submitted") {
       throw new Error("Expected a submitted transfer offer");
     }
     const countered = {
-      id: negotiationId,
-      buyingClubId: career.selectedClubId,
-      sellingClubId,
-      playerId: targetPlayerId,
+      ...submitted.negotiation,
       status: "countered",
-      submittedOn: submitted.negotiation.submittedOn,
-      offeredFee: submitted.negotiation.offeredFee,
       counterFee: careerNonNegativeMoneyFromMinorUnits(80_000_00),
+      currentAskingPrice: careerNonNegativeMoneyFromMinorUnits(80_000_00),
       counterIssuedOn: career.gameState.calendar.currentDate,
       clock: submitted.negotiation.clock,
     };

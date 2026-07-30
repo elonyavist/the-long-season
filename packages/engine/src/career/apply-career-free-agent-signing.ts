@@ -1,12 +1,19 @@
 import {
+  nonNegativeMoney,
+  nextTransferHistorySequence,
+  type AskingPriceCurvesConfig,
   type CareerState,
   type ClubId,
   type ContractOfferTerms,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type PlayerContractId,
   type PlayerId,
+  type PlayerWagePolicyConfig,
+  type SeasonTransferWindows,
 } from "@game/domain";
 
+import { evaluateMarketActionEligibility } from "../market/market-eligibility.ts";
 import {
   applyContractActivationFinance,
   type CareerFinanceRejectionReason,
@@ -14,6 +21,10 @@ import {
 import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import { selectFreeAgentPlayerIds } from "./free-agent-pool.ts";
 import { prepareSeniorSquadSigning } from "./senior-squad-transfer.ts";
+import {
+  derivePlayerValuation,
+  type PlayerValuationConfig,
+} from "../market/player-valuation.ts";
 
 /** Stable reason why a free-agent signing could not be committed. */
 export type CareerFreeAgentSigningRejectionReason =
@@ -22,6 +33,7 @@ export type CareerFreeAgentSigningRejectionReason =
   | "player_not_found"
   | "club_not_found"
   | "player_not_free_agent"
+  | "outside_transfer_window"
   | "invalid_signing_transition"
   | CareerFinanceRejectionReason;
 
@@ -31,7 +43,17 @@ export interface ApplyCareerFreeAgentSigningInput {
   readonly playerId: PlayerId;
   readonly clubId: ClubId;
   readonly occurredOn: GameDate;
+  /** Current competition windows; registration is illegal while they are closed. */
+  readonly transferWindows: SeasonTransferWindows;
   readonly acceptedTerms: ContractOfferTerms;
+  /** Explicit public-value content used for the zero-fee history snapshot. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Explicit asking-price content that owns the free-agent zero-fee rule. */
+  readonly askingPriceConfig: AskingPriceCurvesConfig;
+  /** Explicit wage policy used by the final annual-capacity check. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Exact version-selected reserve and affordability policy. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly preferredShirtNumber?: number;
 }
 
@@ -42,6 +64,8 @@ export interface CareerFreeAgentSigningApplied {
   readonly playerId: PlayerId;
   readonly clubId: ClubId;
   readonly activatedContractId: PlayerContractId;
+  readonly publicValue: ReturnType<typeof nonNegativeMoney>;
+  readonly completedFee: ReturnType<typeof nonNegativeMoney>;
 }
 
 /** Rejected signing that preserves the exact input career reference. */
@@ -68,13 +92,22 @@ export type ApplyCareerFreeAgentSigningResult =
 export function applyCareerFreeAgentSigning(
   input: ApplyCareerFreeAgentSigningInput,
 ): ApplyCareerFreeAgentSigningResult {
+  const eligibility = evaluateMarketActionEligibility({
+    action: "external_free_agent_registration",
+    windows: input.transferWindows,
+    asOf: input.occurredOn,
+  });
+  if (eligibility.status === "blocked") {
+    return rejected(input, "outside_transfer_window");
+  }
   if (input.careerState.seniorSquadState === undefined) {
     return rejected(input, "senior_squad_state_missing");
   }
   if (input.careerState.clubFinanceState === undefined) {
     return rejected(input, "finance_state_missing");
   }
-  if (input.careerState.gameState.players[input.playerId] === undefined) {
+  const player = input.careerState.gameState.players[input.playerId];
+  if (player === undefined) {
     return rejected(input, "player_not_found");
   }
   if (input.careerState.gameState.clubs[input.clubId] === undefined) {
@@ -83,10 +116,21 @@ export function applyCareerFreeAgentSigning(
   if (!selectFreeAgentPlayerIds(input.careerState).includes(input.playerId)) {
     return rejected(input, "player_not_free_agent");
   }
+  const publicValue = derivePlayerValuation({
+    player,
+    currentDate: input.occurredOn,
+    config: input.valuationConfig,
+    marketContext: { kind: "free_agent" },
+  }).value;
+  const completedFee = nonNegativeMoney(
+    input.askingPriceConfig.freeAgentTransferFeeMinorUnits,
+  );
 
   const capacity = evaluateCareerContractCapacity({
     careerState: input.careerState,
     clubId: input.clubId,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     addedAnnualWage: input.acceptedTerms.annualWage,
     addedSigningBonus: input.acceptedTerms.bonuses.signingBonus,
   });
@@ -116,10 +160,26 @@ export function applyCareerFreeAgentSigning(
 
     return {
       status: "applied",
-      careerState: financed.careerState,
+      careerState: {
+        ...financed.careerState,
+        transferHistory: [
+          ...financed.careerState.transferHistory,
+          {
+            kind: "free_agent_signing",
+            sequenceNumber: nextTransferHistorySequence(financed.careerState),
+            occurredOn: input.occurredOn,
+            buyingClubId: input.clubId,
+            playerId: input.playerId,
+            publicValue,
+            completedFee,
+          },
+        ],
+      },
       playerId: input.playerId,
       clubId: input.clubId,
       activatedContractId: prepared.activatedContractId,
+      publicValue,
+      completedFee,
     };
   } catch {
     return rejected(input, "invalid_signing_transition");

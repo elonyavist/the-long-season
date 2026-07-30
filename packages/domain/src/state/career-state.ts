@@ -4,7 +4,7 @@ import type { GameDate } from "../value-objects/game-date.ts";
 import type { Money } from "../value-objects/money.ts";
 import { createSelectedLineup, createTacticSetup, type SelectedLineup, type TacticSetup } from "../entities/tactic.entity.ts";
 import { createCareerWorldMetadata, type CareerWorldMetadata } from "./career-world.ts";
-import type { GameState } from "./game-state.ts";
+import { createGameState, type GameState } from "./game-state.ts";
 import { createYouthAcademyState, type YouthAcademyState } from "./youth-academy-state.ts";
 import { createCareerInboxMessage, type CareerInboxMessage } from "../career/inbox.ts";
 import { createPlayerParticipationLedger, type PlayerParticipationLedger } from "../career/player-participation.ts";
@@ -27,18 +27,19 @@ import {
   createPreliminaryAgreementState,
   type PreliminaryAgreementState,
 } from "../career/preliminary-agreement.ts";
+import {
+  createCareerPlayerSeasonStatistics,
+  type CareerPlayerSeasonStatistics,
+} from "../career/player-statistics.ts";
 
 /** Current schema version for durable career-state snapshots. */
 export const CAREER_STATE_SCHEMA_VERSION = 1;
 
 /**
  * One completed permanent transfer stored in the career timeline.
- *
- * The first durable history keeps only facts already supported by the market
- * MVP: buyer, seller, player, fee, and date. Loans, wages, clauses, agents, and
- * negotiations are future systems and are intentionally absent.
  */
 export interface PermanentTransferHistoryEntry {
+  readonly kind: "permanent_transfer";
   /** Deterministic 1-based history order inside the career save. */
   readonly sequenceNumber: number;
   /** In-world date when the transfer became durable. */
@@ -49,9 +50,36 @@ export interface PermanentTransferHistoryEntry {
   readonly sellingClubId: ClubId;
   /** Player moved by this permanent transfer. */
   readonly playerId: PlayerId;
-  /** Permanent transfer fee in minor units. */
-  readonly transferFee: Money;
+  /** Public market value frozen when the club-to-club negotiation opened. */
+  readonly publicValue: Money;
+  /** Seller's first requested price. */
+  readonly initialAskingPrice: Money;
+  /** Buyer's submitted fee. */
+  readonly offeredFee: Money;
+  /** Seller's counteroffer when the single counter stage occurred. */
+  readonly counterFee?: Money;
+  /** Fee accepted by both clubs. */
+  readonly agreedFee: Money;
+  /** Fee actually settled atomically; it must equal `agreedFee`. */
+  readonly completedFee: Money;
 }
+
+/** One zero-fee free-agent registration stored in the same movement timeline. */
+export interface FreeAgentSigningHistoryEntry {
+  readonly kind: "free_agent_signing";
+  readonly sequenceNumber: number;
+  readonly occurredOn: GameDate;
+  readonly buyingClubId: ClubId;
+  readonly playerId: PlayerId;
+  readonly publicValue: Money;
+  /** Free agents have no selling club and always settle a zero transfer fee. */
+  readonly completedFee: Money;
+}
+
+/** Durable player movement fact supported by the current market lifecycle. */
+export type CareerTransferHistoryEntry =
+  | PermanentTransferHistoryEntry
+  | FreeAgentSigningHistoryEntry;
 
 /**
  * Durable manager preparation for the selected club's upcoming match work.
@@ -134,6 +162,13 @@ export interface CareerSeasonArchiveEntry {
   readonly selectedClubFinish: LeagueTableRow;
   /** Aggregate goal facts for the archived season. */
   readonly aggregateGoals: CareerSeasonAggregateGoals;
+  /**
+   * Per-player season totals.
+   *
+   * Optionality is a compatibility seam for saves written before this archive
+   * existed; `createCareerState` normalizes absence to unavailable coverage.
+   */
+  readonly playerStatistics?: CareerPlayerSeasonStatistics;
 }
 
 /**
@@ -158,7 +193,7 @@ export interface CareerState {
   /** Canonical cash, annual budgets, wage commitments, and ordered ledger. */
   readonly clubFinanceState?: ClubFinanceState;
   /** Ordered permanent-transfer decisions already applied to this career. */
-  readonly transferHistory: readonly PermanentTransferHistoryEntry[];
+  readonly transferHistory: readonly CareerTransferHistoryEntry[];
   /** Optional durable youth academy membership and lifecycle state. */
   readonly youthAcademyState?: YouthAcademyState;
   /** Optional saved match-preparation choices for the selected club. */
@@ -272,9 +307,10 @@ export function createCareerState(input: CareerState): CareerState {
   if (!hasClubInOrder(input.gameState, input.selectedClubId)) {
     throw new CareerStateContractError("selected_club_not_ordered", `selected club is not ordered: ${input.selectedClubId}`);
   }
+  const gameState = createGameState(input.gameState);
 
   const seenHistorySequences = new Set<number>();
-  const transferHistory: PermanentTransferHistoryEntry[] = [];
+  const transferHistory: CareerTransferHistoryEntry[] = [];
 
   for (const entry of input.transferHistory) {
     if (!Number.isSafeInteger(entry.sequenceNumber) || entry.sequenceNumber <= 0) {
@@ -286,9 +322,24 @@ export function createCareerState(input: CareerState): CareerState {
     }
 
     assertClubExists(input.gameState, entry.buyingClubId, "history_buying_club_not_found");
-    assertClubExists(input.gameState, entry.sellingClubId, "history_selling_club_not_found");
     assertPlayerExists(input.gameState, entry.playerId);
-    assertNonNegativeMoney(entry.transferFee);
+    assertNonNegativeMoney(entry.publicValue);
+    assertNonNegativeMoney(entry.completedFee);
+    if (entry.publicValue <= 0) {
+      throw new CareerStateContractError("invalid_money", "transfer-history public value must be positive");
+    }
+    if (entry.kind === "permanent_transfer") {
+      assertClubExists(input.gameState, entry.sellingClubId, "history_selling_club_not_found");
+      assertNonNegativeMoney(entry.initialAskingPrice);
+      assertNonNegativeMoney(entry.offeredFee);
+      if (entry.counterFee !== undefined) assertNonNegativeMoney(entry.counterFee);
+      assertNonNegativeMoney(entry.agreedFee);
+      if (entry.agreedFee !== entry.completedFee) {
+        throw new CareerStateContractError("invalid_money", "completed transfer fee must equal agreed fee");
+      }
+    } else if (entry.completedFee !== 0) {
+      throw new CareerStateContractError("invalid_money", "free-agent transfer fee must be zero");
+    }
 
     seenHistorySequences.add(entry.sequenceNumber);
     transferHistory.push({ ...entry });
@@ -322,7 +373,7 @@ export function createCareerState(input: CareerState): CareerState {
     schemaVersion: input.schemaVersion,
     ...(input.careerWorld === undefined ? {} : { careerWorld: createCareerWorldMetadata(input.careerWorld) }),
     selectedClubId: input.selectedClubId,
-    gameState: input.gameState,
+    gameState,
     transferHistory,
     ...(youthAcademyState === undefined ? {} : { youthAcademyState }),
     ...(seasonHistory.length === 0 ? {} : { seasonHistory }),
@@ -598,6 +649,7 @@ function createSeasonHistory(input: CareerState): CareerSeasonArchiveEntry[] {
       finalTable: entry.finalTable.map((row) => ({ ...row })),
       selectedClubFinish: { ...entry.selectedClubFinish },
       aggregateGoals: { ...entry.aggregateGoals },
+      playerStatistics: createCareerPlayerSeasonStatistics(entry.playerStatistics),
     });
   }
 

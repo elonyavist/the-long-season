@@ -16,6 +16,34 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `SIMULATION_EXECUTION_POLICY.md` - repository-wide default/maximum
+  seven-worker budget for current and future batch simulations, including
+  checkpoint and determinism constraints.
+- `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_REPORT.md` -
+  completed Phase 79D implementation and bounded verification, explicit record
+  that the stopped `50 x 20` produced no evidence, and the user decision to
+  defer a checkpointed cohort to Phase 80 closeout.
+- `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_SPEC.md` - accepted
+  corrective contract for archetype-compatible exceptional generation,
+  effective rarity budgets, derived public potential ranges, range-aware
+  prospect valuation, display-safe cap semantics, negotiation spread, annual
+  intake, and non-vacuous diagnostics.
+- `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_BASELINE.md` -
+  reproducible 100-world pre-change joint-profile baseline, supplied Phase 79C
+  negotiation facts, deterministic engine development-outcome matrix, and
+  twelve-defect metric/source trace for Phase 79D.
+- `GLOBAL_PLAYER_RATING_AND_MARKET_ECONOMY_79C_REPORT.md` - completed Phase 79C
+  implementation, verification, residual warnings, and Phase 79 handoff.
+- `GLOBAL_PLAYER_RATING_AND_MARKET_ECONOMY_79C_10X10_REPORT.md` - generated
+  bounded three-division cohort evidence.
+- `GLOBAL_PLAYER_RATING_AND_MARKET_ECONOMY_CALIBRATION_SPEC.md` - accepted
+  product, source, scale, economy, and tolerance contract implemented by
+  Phase 79C.
+- `DOMESTIC_COMPETITION_TOPOLOGY_DECISION.md` - accepted bounded fictional
+  three-tier topology and source/design separation implemented by Phase 79C.
+- `PLAYER_MARKET_CALIBRATION_PROVENANCE_LEDGER.md` and
+  `WAGE_AND_CLUB_FINANCE_CALIBRATION_SOURCE_AUDIT.md` - reproducible market
+  evidence and independent wage/finance evidence used by Phase 79C.
 - `DOCUMENTATION_NOISE_AUDIT.md` - Phase 26 classification of active, historical, archive, and deletion candidates.
 - `CURRENT_ENGINE_BASELINE.md` - concise current engine/career baseline before long-run work.
 - `LONG_RUN_METRICS_SPEC.md` - mandatory and deferred metrics for the ten-season credibility report.

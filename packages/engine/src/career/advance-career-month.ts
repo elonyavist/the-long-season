@@ -2,9 +2,12 @@ import {
   createCareerState,
   createPlayerParticipationLedger,
   type CareerState,
+  type AskingPriceCurvesConfig,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type PlayerDevelopmentMonthKey,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type PlayerParticipationLedger,
   type PlayerParticipationRow,
   type SeasonTransferWindows,
@@ -20,6 +23,7 @@ import {
   advanceAiContractLifecycle,
   type AdvanceAiContractLifecycleResult,
 } from "./ai-contract-lifecycle.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 
 /** Input for the canonical monthly career player lifecycle checkpoint. */
 export interface AdvanceCareerMonthsInput {
@@ -31,6 +35,10 @@ export interface AdvanceCareerMonthsInput {
   readonly fromDate?: GameDate;
   /** Date reached by the caller's calendar route. */
   readonly toDate: GameDate;
+  /** Version-linked wage policy required by monthly contract lifecycles. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Version-linked market policy required by affordability and AI decisions. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Season whose participation facts are being closed. Defaults to the active season. */
   readonly seasonId?: SeasonId;
   /** Optional explicit player order. Defaults to players with eligible participation rows. */
@@ -42,6 +50,13 @@ export interface AdvanceCareerMonthsInput {
    * and development work still advances, but no AI market decision is made.
    */
   readonly transferWindows?: SeasonTransferWindows;
+  /**
+   * Versioned public-value content required when `transferWindows` enables AI
+   * market work. Calendar-only monthly advancement does not need valuation.
+   */
+  readonly valuationConfig?: PlayerValuationConfig;
+  /** Versioned asking-price content paired with `valuationConfig`. */
+  readonly askingPriceConfig?: AskingPriceCurvesConfig;
 }
 
 /** Structured diagnostic for one applied season/month checkpoint. */
@@ -92,12 +107,20 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
   const fromDate = input.fromDate ?? input.careerState.gameState.calendar.currentDate;
   const contractLifecycle = input.careerState.seniorSquadState === undefined
     ? undefined
-    : advanceAiContractLifecycle({
+      : advanceAiContractLifecycle({
         careerState: input.careerState,
         fromDate,
         throughDate: input.toDate,
+        wagePolicy: input.wagePolicy,
+        marketBehaviorPolicy: input.marketBehaviorPolicy,
       });
   const careerStateAfterContracts = contractLifecycle?.careerState ?? input.careerState;
+  if (
+    input.transferWindows !== undefined
+    && (input.valuationConfig === undefined || input.askingPriceConfig === undefined)
+  ) {
+    throw new Error("AI market advancement requires explicit valuation and asking-price configs");
+  }
   const marketLifecycle = input.transferWindows === undefined
     || careerStateAfterContracts.seniorSquadState === undefined
     || careerStateAfterContracts.clubFinanceState === undefined
@@ -107,6 +130,10 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         fromDate,
         throughDate: input.toDate,
         transferWindows: input.transferWindows,
+        valuationConfig: input.valuationConfig!,
+        askingPriceConfig: input.askingPriceConfig!,
+        wagePolicy: input.wagePolicy,
+        marketBehaviorPolicy: input.marketBehaviorPolicy,
       });
   const careerStateAfterMarket = marketLifecycle?.careerState ?? careerStateAfterContracts;
   const eligibleRows = eligibleOpenParticipationRows({

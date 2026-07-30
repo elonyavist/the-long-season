@@ -24,6 +24,7 @@ import {
   accruePlayerFixtureParticipation,
   createEmptyPlayerParticipationLedger,
 } from "../career/player-participation.ts";
+import { competitionIdForClub } from "../career/competition-world.ts";
 
 /**
  * Career-state tests cover durable domain shape only.
@@ -49,12 +50,17 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
     gameState,
     transferHistory: [
       {
+        kind: "permanent_transfer",
         sequenceNumber: 1,
         occurredOn: gameDate(20_000),
         buyingClubId: pro01,
         sellingClubId: pro18,
         playerId: player18,
-        transferFee: nonNegativeMoney(1_500_000_00),
+        publicValue: nonNegativeMoney(1_400_000_00),
+        initialAskingPrice: nonNegativeMoney(1_600_000_00),
+        offeredFee: nonNegativeMoney(1_500_000_00),
+        agreedFee: nonNegativeMoney(1_500_000_00),
+        completedFee: nonNegativeMoney(1_500_000_00),
       },
     ],
   });
@@ -69,6 +75,10 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
   });
   assert.equal(career.transferHistory[0]?.playerId, player18);
   assert.equal(nextTransferHistorySequence(career), 2);
+  assert.equal(
+    competitionIdForClub(career.gameState.domesticCompetitionWorld!, career.selectedClubId),
+    "competition:0001",
+  );
 });
 
 test("createCareerState rejects unsupported schema versions", () => {
@@ -126,12 +136,17 @@ test("createCareerState rejects invalid transfer history references", () => {
         ...careerStateFixture(),
         transferHistory: [
           {
+            kind: "permanent_transfer",
             sequenceNumber: 0,
             occurredOn: gameDate(20_000),
             buyingClubId: clubId("club:pro01"),
             sellingClubId: clubId("club:pro18"),
             playerId: playerId("player:180010"),
-            transferFee: nonNegativeMoney(1_500_000_00),
+            publicValue: nonNegativeMoney(1_400_000_00),
+            initialAskingPrice: nonNegativeMoney(1_600_000_00),
+            offeredFee: nonNegativeMoney(1_500_000_00),
+            agreedFee: nonNegativeMoney(1_500_000_00),
+            completedFee: nonNegativeMoney(1_500_000_00),
           },
         ],
       }),
@@ -320,6 +335,53 @@ test("createCareerState preserves compact completed-season history", () => {
   assert.equal(career.seasonHistory?.[0]?.championClubId, pro01);
   assert.equal(career.seasonHistory?.[0]?.selectedClubFinish.clubId, pro01);
   assert.deepEqual(career.seasonHistory?.[0]?.aggregateGoals, { fixtureCount: 1, totalGoals: 2 });
+  assert.deepEqual(career.seasonHistory?.[0]?.playerStatistics, {
+    participationCoverage: "unavailable",
+    eventCoverage: "unavailable",
+    rows: [],
+  });
+});
+
+test("createCareerState preserves archived statistics for players outside the active world", () => {
+  const pro01 = clubId("club:pro01");
+  const pro18 = clubId("club:pro18");
+  const retiredPlayerId = playerId("player:retired");
+
+  const career = createCareerState({
+    ...careerStateFixture(),
+    seasonHistory: [
+      {
+        sequenceNumber: 1,
+        seasonId: seasonId("season:0001"),
+        competitionId: competitionId("competition:0001"),
+        finalTable: [
+          leagueTableRowFixture(1, pro01, 3),
+          leagueTableRowFixture(2, pro18, 0),
+        ],
+        championClubId: pro01,
+        selectedClubFinish: leagueTableRowFixture(1, pro01, 3),
+        aggregateGoals: { fixtureCount: 1, totalGoals: 2 },
+        playerStatistics: {
+          participationCoverage: "complete",
+          eventCoverage: "complete",
+          rows: [{
+            playerId: retiredPlayerId,
+            starts: 1,
+            substituteAppearances: 0,
+            minutes: 90,
+            ratingTotal: 7.5,
+            ratingSamples: 1,
+            goals: 1,
+            assists: 0,
+            saves: 0,
+          }],
+        },
+      },
+    ],
+  });
+
+  assert.equal(career.gameState.players[retiredPlayerId], undefined);
+  assert.equal(career.seasonHistory?.[0]?.playerStatistics?.rows[0]?.playerId, retiredPlayerId);
 });
 
 test("createCareerState keeps old saves without season history valid", () => {
@@ -663,12 +725,17 @@ function careerStateFixture(): CareerState {
 /** Builds a valid history entry fixture. */
 function historyEntryFixture(sequenceNumber: number): CareerState["transferHistory"][number] {
   return {
+    kind: "permanent_transfer",
     sequenceNumber,
     occurredOn: gameDate(20_000),
     buyingClubId: clubId("club:pro01"),
     sellingClubId: clubId("club:pro18"),
     playerId: playerId("player:180010"),
-    transferFee: nonNegativeMoney(1_500_000_00),
+    publicValue: nonNegativeMoney(1_400_000_00),
+    initialAskingPrice: nonNegativeMoney(1_600_000_00),
+    offeredFee: nonNegativeMoney(1_500_000_00),
+    agreedFee: nonNegativeMoney(1_500_000_00),
+    completedFee: nonNegativeMoney(1_500_000_00),
   };
 }
 
@@ -729,6 +796,7 @@ function gameStateFixture(): GameState {
       seed: "demo-001",
       rngAlgorithmVersion: "sfc32-v1",
       saveSchemaVersion: 1,
+      calibrationVersions: calibrationVersionsFixture(),
     },
     calendar: {
       currentDate: gameDate(20_000),
@@ -741,7 +809,39 @@ function gameStateFixture(): GameState {
     clubIds: [pro01, pro18],
     fixtures,
     fixtureIds: [fixture],
+    domesticCompetitionWorld: {
+      competitionIds: [competitionId("competition:0001")],
+      competitions: {
+        [competitionId("competition:0001")]: {
+          id: competitionId("competition:0001"),
+          name: "Test League",
+          clubIds: [pro01, pro18],
+          matchRules: {
+            maximumSubstitutions: 5,
+            substitutionWindowLimit: null,
+            allowsPlayerReentry: false,
+            yellowCardAccumulationThreshold: 5,
+            straightRedSuspensionMatches: 3,
+            secondYellowSuspensionMatches: 1,
+            yellowAccumulationSuspensionMatches: 1,
+          },
+        },
+      },
+      seasonHistory: [],
+    },
   };
+}
+
+function calibrationVersionsFixture() {
+  return {
+    topologyDecisionId: "fictional-three-tier-v1",
+    playerRatingScaleVersion: "rating-v1",
+    playerMarketCalibrationVersion: "market-v1",
+    valuationCurvesVersion: "valuation-v1",
+    askingPriceCurvesVersion: "asking-v1",
+    marketBehaviorCalibrationVersion: "behavior-v1",
+    wageFinanceCalibrationVersion: "wage-v1",
+  } as const;
 }
 
 /** Builds a minimal valid youth-academy state fixture. */

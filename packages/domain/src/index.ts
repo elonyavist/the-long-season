@@ -7,6 +7,7 @@
  */
 export * from "./entities/club.entity.ts";
 export * from "./entities/competition.entity.ts";
+export * from "./career/competition-world.ts";
 export * from "./entities/fixture.entity.ts";
 export * from "./entities/league-table.entity.ts";
 export * from "./entities/match.entity.ts";
@@ -15,6 +16,8 @@ export * from "./entities/player.entity.ts";
 export * from "./entities/tactic.entity.ts";
 export * from "./entities/transfer.entity.ts";
 export * from "./career/index.ts";
+export * from "./career/player-statistics.ts";
+export * from "./balance/index.ts";
 export * from "./match/live-match-command.ts";
 export * from "./match/live-match-session.ts";
 export * from "./match/live-match-statistics.ts";
@@ -33,5 +36,6 @@ export * from "./types/ids.ts";
 export * from "./value-objects/game-date.ts";
 export * from "./value-objects/money.ts";
 export * from "./value-objects/person-identity.ts";
+export * from "./value-objects/player-star-rating.ts";
 export * from "./value-objects/rating.ts";
 export * from "./value-objects/transfer-window.ts";

@@ -9,6 +9,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRatingScaleConfig,
   type RoleIdentifiedPlayer,
   type SeasonId,
   type YouthDevelopmentLevel,
@@ -36,6 +37,7 @@ import {
   youthDevelopmentCurrentBoost,
   youthDevelopmentInterestingChance,
 } from "./youth-development-level.ts";
+import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 
 /** Exact academy size chosen by Phase 33. */
 export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
@@ -82,6 +84,10 @@ export interface GenerateInitialYouthAcademiesInput {
   readonly youthPlayersPerClub?: number;
   /** Optional league nation, defaulting to the current Italian demo world. */
   readonly leagueNation?: LeagueNationCode;
+  /** Optional complete-world potential-six assignments for academy players. */
+  readonly potentialSixPlayerIds?: readonly PlayerId[];
+  /** Validated scale used only for assigned potential-six floors. */
+  readonly ratingScale?: PlayerRatingScaleConfig;
 }
 
 /** Result of deterministic initial youth academy generation. */
@@ -118,6 +124,10 @@ export interface GenerateSeasonalYouthIntakePlayersInput {
   readonly leagueNation?: LeagueNationCode;
   /** Exact positions missing from the active academy after lifecycle exits. */
   readonly targetPositions?: readonly PlayerPosition[];
+  /** World-level assignments selected before per-club intake generation. */
+  readonly potentialSixPlayerIds?: readonly PlayerId[];
+  /** Validated scale used only for assigned potential-six floors. */
+  readonly ratingScale?: PlayerRatingScaleConfig;
 }
 
 /** One generated annual youth intake player and metadata. */
@@ -182,7 +192,8 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
 
     for (let index = 0; index < youthPlayersPerClub; index += 1) {
       const id = initialYouthPlayerId(clubId, index + 1);
-      const archetypeKey = rarityAssignments[id] ?? selectRoutineInitialYouthArchetype({
+      const forcePotentialSix = input.potentialSixPlayerIds?.includes(id) === true;
+      const archetypeKey = forcePotentialSix ? "rare_prodigy" : rarityAssignments[id] ?? selectRoutineInitialYouthArchetype({
         worldSeed: input.worldSeed,
         seasonId: input.seasonId,
         clubId,
@@ -210,6 +221,9 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
         youthDevelopmentLevel,
         ageYears: initialYouthAge(input.worldSeed, input.seasonId, id),
         clubContext,
+        ...(forcePotentialSix
+          ? { minimumRolePotentialAbility: minimumSixAbility(input.ratingScale ?? defaultPlayerRatingScale) }
+          : {}),
       });
 
       players[id] = generatedPlayer.player;
@@ -269,7 +283,10 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
 
   for (let index = 0; index < targetPositions.length; index += 1) {
     const id = seasonalYouthPlayerId(input.clubId, input.seasonId, index + 1);
-    const archetypeKey = selectSeasonalYouthArchetype(input.worldSeed, input.seasonId, input.clubId, id, youthDevelopmentLevel);
+    const forcePotentialSix = input.potentialSixPlayerIds?.includes(id) === true;
+    const archetypeKey = forcePotentialSix
+      ? "rare_prodigy"
+      : selectSeasonalYouthArchetype(input.worldSeed, input.seasonId, input.clubId, id, youthDevelopmentLevel);
     const position = targetPositions[index] ?? "cm";
     const identity = initialYouthIdentity({
       worldSeed: input.worldSeed,
@@ -291,6 +308,9 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
       youthDevelopmentLevel,
       ageYears: seasonalYouthAge(input.worldSeed, input.seasonId, id),
       clubContext: input.clubContext,
+      ...(forcePotentialSix
+        ? { minimumRolePotentialAbility: minimumSixAbility(input.ratingScale ?? defaultPlayerRatingScale) }
+        : {}),
     });
 
     generatedPlayers.push({
@@ -315,6 +335,7 @@ function youthAcademyPlayer(input: {
   readonly youthDevelopmentLevel: YouthDevelopmentLevel;
   readonly ageYears: number;
   readonly clubContext: InitialYouthAcademyClubContext;
+  readonly minimumRolePotentialAbility?: number;
 }): CreatedPlayer {
   const archetype = getGeneratedPlayerArchetype(input.archetypeKey);
   const clubTier = clubTierForReputation(input.clubContext.reputation);
@@ -340,6 +361,9 @@ function youthAcademyPlayer(input: {
     division: input.clubContext.category,
     clubTier,
     potentialClass: archetype.potentialClass,
+    ...(input.minimumRolePotentialAbility === undefined
+      ? {}
+      : { minimumRolePotentialAbility: input.minimumRolePotentialAbility }),
   });
 
   return assembleGeneratedPlayer({
@@ -352,6 +376,14 @@ function youthAcademyPlayer(input: {
     abilities,
     potential: proposedPotential,
   });
+}
+
+function minimumSixAbility(scale: PlayerRatingScaleConfig): number {
+  const threshold = scale.abilityThresholds.find((candidate) => candidate.rating === 6);
+  if (threshold === undefined) {
+    throw new Error("Validated rating scale is missing rating 6");
+  }
+  return threshold.minimumAbilityInclusive;
 }
 
 function initialYouthIdentity(input: {
@@ -549,12 +581,18 @@ function positionForInitialYouthSlot(worldSeed: string, seasonId: SeasonId, id: 
   return planned ?? "cm";
 }
 
-function initialYouthPlayerId(clubId: ClubId, sequence: number): PlayerId {
+/** Builds the stable initial-academy player ID for one club and slot. */
+export function initialYouthPlayerId(clubId: ClubId, sequence: number): PlayerId {
   const clubKey = String(clubId).replace("club:", "").replaceAll(":", "-");
   return playerId(`player:youth-${clubKey}-${String(sequence).padStart(2, "0")}`);
 }
 
-function seasonalYouthPlayerId(clubId: ClubId, seasonId: SeasonId, sequence: number): PlayerId {
+/** Returns the stable ID for one annual academy-intake candidate. */
+export function seasonalYouthPlayerId(
+  clubId: ClubId,
+  seasonId: SeasonId,
+  sequence: number,
+): PlayerId {
   const clubKey = String(clubId).replace("club:", "").replaceAll(":", "-");
   const seasonKey = String(seasonId).replace("season:", "").replaceAll(":", "-");
   return playerId(`player:youth-intake-${clubKey}-${seasonKey}-${String(sequence).padStart(2, "0")}`);

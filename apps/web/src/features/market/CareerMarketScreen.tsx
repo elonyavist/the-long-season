@@ -6,6 +6,7 @@ import {
   type CanonicalPlayerRole,
   type CareerInboxView,
   type CareerMarketOfferPreviewView,
+  type CareerMarketSourceTier,
   type CareerMarketTargetFilters,
   type CareerMarketTargetRowView,
   type CareerMarketTargetSort,
@@ -29,6 +30,8 @@ import type { WebPreferences } from "../../app/preferences";
 import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
 import { formatMoneyFromMinorUnits } from "../../shared/format-money";
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
+import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
+import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
 import type {
   WebSelectedClubMarketCommand,
   WebSelectedClubMarketCommandResult,
@@ -60,6 +63,7 @@ export type CareerMarketScreenProps = Readonly<{
 type FilterDraft = Readonly<{
   query: string;
   role: "all" | CanonicalPlayerRole;
+  sourceTier: "all" | CareerMarketSourceTier;
   minimumAge: string;
   maximumAge: string;
   employment: "all" | "contracted" | "free_agent";
@@ -72,6 +76,7 @@ type FilterDraft = Readonly<{
 const EMPTY_FILTERS: FilterDraft = {
   query: "",
   role: "all",
+  sourceTier: "all",
   minimumAge: "",
   maximumAge: "",
   employment: "all",
@@ -137,7 +142,7 @@ export function CareerMarketScreen({
     [filters, presentation, sort],
   );
   const detail = view.status === "ready" && openPlayerId !== undefined
-    ? view.targets.detailsByPlayerId.get(openPlayerId)
+    ? view.targets.resolveDetail(openPlayerId)
     : undefined;
 
   return (
@@ -151,7 +156,6 @@ export function CareerMarketScreen({
     >
       <section className="tls-shell-panel tls-market-panel" aria-labelledby="career-market-title">
         <CareerScreenHeader
-          eyebrow={text("career.market.eyebrow")}
           supporting={text("career.market.subtitle")}
           title={text("career.shell.nav.market")}
           titleId="career-market-title"
@@ -200,6 +204,7 @@ export function CareerMarketScreen({
                       <MarketSortHeading column="current_level" label={text("career.market.column.currentLevel")} sort={sort} onSort={setSort} />
                       <MarketSortHeading column="potential_level" label={text("career.market.column.potentialLevel")} sort={sort} onSort={setSort} />
                       <MarketSortHeading column="value" label={text("career.market.column.value")} sort={sort} onSort={setSort} />
+                      <th scope="col">{text("career.market.column.askingOrFee")}</th>
                       <MarketSortHeading column="contract" label={text("career.market.column.contract")} sort={sort} onSort={setSort} />
                       <MarketSortHeading column="eligibility" label={text("career.market.column.eligibility")} sort={sort} onSort={setSort} />
                       <th scope="col"><span className="tls-visually-hidden">{text("career.market.column.inspect")}</span></th>
@@ -333,6 +338,22 @@ function MarketFilters({
           ))}
         </select>
       </label>
+      <label>
+        <span>{text("career.market.filter.tier")}</span>
+        <select
+          value={filters.sourceTier}
+          onChange={(event) => update(
+            "sourceTier",
+            event.currentTarget.value as FilterDraft["sourceTier"],
+          )}
+        >
+          <option value="all">{text("career.market.filter.allTiers")}</option>
+          <option value="first_division">{text("career.market.tier.first_division")}</option>
+          <option value="second_division">{text("career.market.tier.second_division")}</option>
+          <option value="third_division">{text("career.market.tier.third_division")}</option>
+          <option value="free_agent">{text("career.market.tier.free_agent")}</option>
+        </select>
+      </label>
       <fieldset className="tls-market-range-filter">
         <legend>{text("career.market.filter.age")}</legend>
         <input
@@ -458,30 +479,63 @@ function MarketRow({
   const club = row.employment.status === "free_agent"
     ? text("career.market.employment.free_agent")
     : row.employment.clubName;
+  const source = row.employment.status === "free_agent"
+    ? text("career.market.tier.free_agent")
+    : `${row.employment.competitionName} · ${text(
+        `career.market.tier.${row.employment.sourceTier}` as MessageKey,
+      )}`;
   return (
     <tr
       tabIndex={0}
       data-eligibility={row.eligibility.status}
-      onClick={onOpen}
+      onClick={(event) => {
+        if (isInteractiveMarketRowTarget(event.target, event.currentTarget)) return;
+        onOpen();
+      }}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (
+          event.target === event.currentTarget
+          && (event.key === "Enter" || event.key === " ")
+        ) {
           event.preventDefault();
           onOpen();
         }
       }}
     >
       <th data-label={text("career.market.column.player")} scope="row">{row.displayName}</th>
-      <td data-label={text("career.market.column.club")}>{club}</td>
-      <td data-label={text("career.market.column.age")}>{row.age}</td>
+      <td data-label={text("career.market.column.club")}>
+        <span className="tls-market-club-source">
+          <span>{club}</span>
+          <small>{source}</small>
+        </span>
+      </td>
+      <td data-label={text("career.market.column.age")} data-align="numeric">{row.age}</td>
       <td data-label={text("career.market.column.role")}>
         <abbr title={text(`career.player.role.${row.primaryRole}` as MessageKey)}>
           {canonicalPlayerRoleCode(row.primaryRole)}
         </abbr>
       </td>
-      <td data-label={text("career.market.column.currentLevel")}>{text(levelKey(row.currentLevel))}</td>
-      <td data-label={text("career.market.column.potentialLevel")}>{text(levelKey(row.potentialLevel))}</td>
-      <td data-label={text("career.market.column.value")}>
-        {formatMoneyFromMinorUnits(row.value, row.currency, language, "whole")}
+      <td data-label={text("career.market.column.currentLevel")}>
+        <PlayerStarRating
+          label={text("career.market.column.currentLevel")}
+          rating={row.currentRating}
+          text={text}
+        />
+      </td>
+      <td data-label={text("career.market.column.potentialLevel")}>
+        <PlayerPotentialRangeRating
+          language={language}
+          range={row.potentialRange}
+          text={text}
+        />
+      </td>
+      <td data-label={text("career.market.column.value")} data-align="numeric">
+        {formatMoneyFromMinorUnits(row.publicValue, row.currency, language, "whole")}
+      </td>
+      <td data-label={text("career.market.column.askingOrFee")} data-align="numeric">
+        {row.employment.status === "free_agent"
+          ? formatMoneyFromMinorUnits(row.freeAgentTransferFee ?? 0, row.currency, language, "whole")
+          : formatMoneyFromMinorUnits(row.askingPrice ?? 0, row.currency, language, "whole")}
       </td>
       <td data-label={text("career.market.column.contract")}>
         {text(`career.market.contractHorizon.${row.contractHorizon}` as MessageKey)}
@@ -511,6 +565,32 @@ function MarketRow({
   );
 }
 
+const MARKET_ROW_INTERACTIVE_SELECTOR = [
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "a",
+  "label",
+  "form",
+  "[role='button']",
+  "[role='menu']",
+  "[role='menuitem']",
+  "[role='tab']",
+  "[contenteditable='true']",
+].join(", ");
+
+/** Prevents nested controls from activating their owning keyboard-clickable row. */
+export function isInteractiveMarketRowTarget(
+  target: EventTarget | null,
+  row: HTMLTableRowElement,
+): boolean {
+  if (target === row || target === null) return false;
+  const closest = (target as Partial<Element>).closest;
+  return typeof closest === "function"
+    && closest.call(target, MARKET_ROW_INTERACTIVE_SELECTOR) !== null;
+}
+
 function MarketState({
   alert = false,
   title,
@@ -536,6 +616,7 @@ function buildFilters(filters: FilterDraft): CareerMarketTargetFilters {
   return {
     ...(filters.query.trim().length === 0 ? {} : { query: filters.query }),
     ...(filters.role === "all" ? {} : { role: filters.role }),
+    ...(filters.sourceTier === "all" ? {} : { sourceTier: filters.sourceTier }),
     ...(minimumAge === undefined ? {} : { minimumAge }),
     ...(maximumAge === undefined ? {} : { maximumAge }),
     ...(filters.employment === "all" ? {} : { employment: filters.employment }),
@@ -558,8 +639,4 @@ function parseMoney(value: string) {
   if (!Number.isFinite(parsed) || parsed < 0) return undefined;
   const minorUnits = Math.round(parsed * 100);
   return Number.isSafeInteger(minorUnits) ? careerMoneyFromMinorUnits(minorUnits) : undefined;
-}
-
-function levelKey(level: CareerMarketTargetRowView["currentLevel"]): MessageKey {
-  return `career.squad.level.${level}` as MessageKey;
 }

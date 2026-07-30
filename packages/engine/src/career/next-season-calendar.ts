@@ -4,6 +4,7 @@ import {
   seasonId,
   type CareerState,
   type CompetitionId,
+  type DomesticCompetitionWorld,
   type Fixture,
   type FixtureId,
   type GameDate,
@@ -11,7 +12,10 @@ import {
 } from "@game/domain";
 import { addDays } from "@game/shared";
 
-import { generateRoundRobinCalendar } from "../season-engine/calendar.ts";
+import {
+  combineDomesticCompetitionCalendars,
+  generateRoundRobinCalendar,
+} from "../season-engine/calendar.ts";
 import { assessCareerSeasonCompletion, type CareerSeasonCompletionInvalidReason } from "./season-completion.ts";
 
 const NEXT_SEASON_BREAK_DAYS = 70;
@@ -22,7 +26,7 @@ const FIXTURE_NUMERIC_SUFFIX = /^fixture:(\d+)$/;
 export type NextSeasonCalendarInvalidReason =
   | CareerSeasonCompletionInvalidReason
   | "current_season_incomplete"
-  | "multiple_current_season_competitions";
+  | "fixture_id_collision";
 
 /** Result returned when a deterministic next-season calendar was generated. */
 export interface NextSeasonCalendarGenerated {
@@ -32,8 +36,8 @@ export interface NextSeasonCalendarGenerated {
   readonly previousSeasonId: SeasonId;
   /** Newly derived season ID. */
   readonly seasonId: SeasonId;
-  /** Competition carried forward unchanged for this MVP. */
-  readonly competitionId: CompetitionId;
+  /** Ordered competitions that received a complete next-season calendar. */
+  readonly competitionIds: readonly CompetitionId[];
   /** First scheduled date of the next season. */
   readonly seasonStartDate: GameDate;
   /** Ordered new fixture IDs with no collision against existing fixtures. */
@@ -58,14 +62,17 @@ export type NextSeasonCalendarResult =
   | NextSeasonCalendarInvalid;
 
 /**
- * Generates the next season calendar for the current career competition.
+ * Generates every ordered next-season domestic calendar.
  *
  * This function is deterministic and read-only. It requires the current season
- * to be complete, keeps the same clubs and competition for the MVP, starts the
- * next season 70 days after the latest current-season fixture, and remaps
- * generated fixture IDs so old fixtures are never overwritten.
+ * to be complete, starts the next season 70 days after the latest
+ * current-season fixture, and rejects any identity collision atomically.
  */
-export function generateNextSeasonCalendar(careerState: CareerState): NextSeasonCalendarResult {
+export function generateNextSeasonCalendar(
+  careerState: CareerState,
+  nextCompetitionWorld: DomesticCompetitionWorld | undefined =
+    careerState.gameState.domesticCompetitionWorld,
+): NextSeasonCalendarResult {
   const completion = assessCareerSeasonCompletion(careerState);
 
   if (completion.status === "invalid") {
@@ -90,33 +97,91 @@ export function generateNextSeasonCalendar(careerState: CareerState): NextSeason
   }
 
   const nextSeasonId = nextSeasonIdFrom(completion.seasonId);
-  const generated = generateRoundRobinCalendar({
-    seed: careerState.gameState.meta.seed,
-    seasonId: nextSeasonId,
-    competitionId: seasonDetails.competitionId,
-    clubIds: careerState.gameState.clubIds,
-    seasonStartDate: gameDate(addDays(seasonDetails.latestFixtureDate, NEXT_SEASON_BREAK_DAYS)),
+  const seasonStartDate = gameDate(addDays(
+    seasonDetails.latestFixtureDate,
+    NEXT_SEASON_BREAK_DAYS,
+  ));
+  const competitionIds = nextCompetitionWorld?.competitionIds
+    ?? [seasonDetails.competitionIds[0]!];
+  const calendars = competitionIds.map((competitionId) => {
+    const clubIds = nextCompetitionWorld?.competitions[competitionId]?.clubIds
+      ?? careerState.gameState.clubIds;
+    return generateRoundRobinCalendar({
+      seed: careerState.gameState.meta.seed,
+      seasonId: nextSeasonId,
+      competitionId,
+      clubIds,
+      seasonStartDate,
+    });
   });
-  const remappedFixtures = remapFixtureIds(careerState.gameState.fixtureIds, generated.fixtures);
+  const generated = nextCompetitionWorld === undefined
+    ? calendars[0]!
+    : combineDomesticCompetitionCalendars(nextCompetitionWorld, calendars);
+  const publishedFixtures = nextCompetitionWorld === undefined
+    ? remapFixtureIds(careerState.gameState.fixtureIds, generated.fixtures)
+    : generated.fixtures;
+  const existingFixtureIds = new Set(careerState.gameState.fixtureIds);
+  const collision = publishedFixtures.find((fixture) =>
+    existingFixtureIds.has(fixture.id)
+  );
+  if (collision !== undefined) {
+    return {
+      status: "invalid",
+      reason: "fixture_id_collision",
+      fixtureId: collision.id,
+    };
+  }
 
   return {
     status: "generated",
     previousSeasonId: completion.seasonId,
     seasonId: nextSeasonId,
-    competitionId: seasonDetails.competitionId,
-    seasonStartDate: generated.rounds[0]?.date ?? gameDate(addDays(seasonDetails.latestFixtureDate, NEXT_SEASON_BREAK_DAYS)),
-    fixtureIds: remappedFixtures.map((fixture) => fixture.id),
-    fixtures: remappedFixtures,
+    competitionIds,
+    seasonStartDate,
+    fixtureIds: publishedFixtures.map((fixture) => fixture.id),
+    fixtures: publishedFixtures,
   };
+}
+
+function remapFixtureIds(
+  existingFixtureIds: readonly FixtureId[],
+  generatedFixtures: readonly Fixture[],
+): Fixture[] {
+  const existingFixtureIdSet = new Set(existingFixtureIds);
+  let nextFixtureNumber = 1;
+  for (const existingFixtureId of existingFixtureIds) {
+    const match = FIXTURE_NUMERIC_SUFFIX.exec(String(existingFixtureId));
+    if (match !== null) {
+      nextFixtureNumber = Math.max(
+        nextFixtureNumber,
+        Number.parseInt(match[1] ?? "0", 10) + 1,
+      );
+    }
+  }
+  return generatedFixtures.map((fixture) => {
+    let id = fixtureId(`fixture:${String(nextFixtureNumber).padStart(6, "0")}`);
+    nextFixtureNumber += 1;
+    while (existingFixtureIdSet.has(id)) {
+      id = fixtureId(`fixture:${String(nextFixtureNumber).padStart(6, "0")}`);
+      nextFixtureNumber += 1;
+    }
+    existingFixtureIdSet.add(id);
+    return { ...fixture, id };
+  });
 }
 
 function collectCurrentSeasonDetails(
   careerState: CareerState,
   currentSeasonId: SeasonId,
 ):
-  | { readonly status: "valid"; readonly competitionId: CompetitionId; readonly latestFixtureDate: GameDate }
+  | {
+      readonly status: "valid";
+      readonly competitionIds: readonly CompetitionId[];
+      readonly latestFixtureDate: GameDate;
+    }
   | NextSeasonCalendarInvalid {
-  let competitionIdValue: CompetitionId | undefined;
+  const competitionIds: CompetitionId[] = [];
+  const seenCompetitionIds = new Set<CompetitionId>();
   let latestFixtureDate: GameDate | undefined;
 
   for (const fixtureIdValue of careerState.gameState.fixtureIds) {
@@ -125,19 +190,15 @@ function collectCurrentSeasonDetails(
       continue;
     }
 
-    if (competitionIdValue !== undefined && fixture.competitionId !== competitionIdValue) {
-      return {
-        status: "invalid",
-        reason: "multiple_current_season_competitions",
-        fixtureId: fixtureIdValue,
-      };
+    if (!seenCompetitionIds.has(fixture.competitionId)) {
+      seenCompetitionIds.add(fixture.competitionId);
+      competitionIds.push(fixture.competitionId);
     }
 
-    competitionIdValue = fixture.competitionId;
     latestFixtureDate = latestFixtureDate === undefined || fixture.date > latestFixtureDate ? fixture.date : latestFixtureDate;
   }
 
-  if (competitionIdValue === undefined || latestFixtureDate === undefined) {
+  if (competitionIds.length === 0 || latestFixtureDate === undefined) {
     return {
       status: "invalid",
       reason: "no_current_season_fixtures",
@@ -146,7 +207,7 @@ function collectCurrentSeasonDetails(
 
   return {
     status: "valid",
-    competitionId: competitionIdValue,
+    competitionIds,
     latestFixtureDate,
   };
 }
@@ -164,40 +225,4 @@ function nextSeasonIdFrom(currentSeasonId: SeasonId): SeasonId {
   const nextNumber = Number.parseInt(numeric, 10) + 1;
 
   return seasonId(`season:${prefix}${String(nextNumber).padStart(numeric.length, "0")}`);
-}
-
-function remapFixtureIds(existingFixtureIds: readonly FixtureId[], generatedFixtures: readonly Fixture[]): Fixture[] {
-  const existingFixtureIdSet = new Set<FixtureId>();
-  let nextFixtureNumber = 1;
-
-  for (const existingFixtureId of existingFixtureIds) {
-    existingFixtureIdSet.add(existingFixtureId);
-    const match = FIXTURE_NUMERIC_SUFFIX.exec(String(existingFixtureId));
-
-    if (match === null) {
-      continue;
-    }
-
-    nextFixtureNumber = Math.max(nextFixtureNumber, Number.parseInt(match[1] ?? "0", 10) + 1);
-  }
-
-  const remapped: Fixture[] = [];
-
-  for (const generatedFixture of generatedFixtures) {
-    let nextFixtureId = fixtureId(`fixture:${String(nextFixtureNumber).padStart(6, "0")}`);
-    nextFixtureNumber += 1;
-
-    while (existingFixtureIdSet.has(nextFixtureId)) {
-      nextFixtureId = fixtureId(`fixture:${String(nextFixtureNumber).padStart(6, "0")}`);
-      nextFixtureNumber += 1;
-    }
-
-    existingFixtureIdSet.add(nextFixtureId);
-    remapped.push({
-      ...generatedFixture,
-      id: nextFixtureId,
-    });
-  }
-
-  return remapped;
 }

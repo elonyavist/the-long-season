@@ -63,6 +63,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource-variable/mulish':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/rokkitt':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@game/content':
         specifier: workspace:*
         version: link:../../packages/content
@@ -133,6 +139,9 @@ importers:
       '@game/shared':
         specifier: workspace:*
         version: link:../shared
+      valibot:
+        specifier: ^1.4.2
+        version: 1.4.2(typescript@5.9.3)
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -257,6 +266,12 @@ packages:
   '@eslint/plugin-kit@0.7.2':
     resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@fontsource-variable/mulish@5.3.0':
+    resolution: {integrity: sha512-CLh1WAcz2noJmoAun0/dsE7+0ZO6Kq/MBd+x00CcZ9dmThXqYqdhSssXGOdqb3G9YVaeGOmVkMS5yrZd1BHr9Q==}
+
+  '@fontsource-variable/rokkitt@5.3.0':
+    resolution: {integrity: sha512-2IFboxeeIE9va/Jm5kYfMhKjPsm4VYxamP8rvFnY4pn04vn8zG0MQAqCCDhxKihwGLWXXpBv8OC3xCxaw2wSjg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1249,6 +1264,14 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  valibot@1.4.2:
+    resolution: {integrity: sha512-gjdCvJ6d3RyHAneqxMYMW9QMCwYMb3jpOO0IyHZV1bnRHFBHrX3VkIILt5XYR0WhwHiH7Mty8ovuPZ/O3gamrg==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   vite@8.0.16:
     resolution: {integrity: sha512-h9bXPmJichP5fLmVQo3PyaGSDE2n3aPuomeAlVRm0JLmt4rY6zmPKd59HYI4LNW8oTK7tlTsuC7l/m7awx9Jcw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1425,6 +1448,10 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
+
+  '@fontsource-variable/mulish@5.3.0': {}
+
+  '@fontsource-variable/rokkitt@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -2321,6 +2348,10 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  valibot@1.4.2(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
 
   vite@8.0.16(@types/node@25.9.3)(jiti@2.7.0):
     dependencies:

@@ -12,8 +12,21 @@ import {
   type PlayerAbilities,
 } from "@game/domain";
 
-import { deriveContractDemand, evaluateContractOffer } from "./contract-negotiation-demand.ts";
+import {
+  deriveContractDemand as deriveContractDemandWithPolicy,
+  evaluateContractOffer,
+} from "./contract-negotiation-demand.ts";
 import { createRenewalNegotiationId } from "./contract-negotiation.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+
+function deriveContractDemand(
+  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+) {
+  return deriveContractDemandWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+  });
+}
 
 /** Demand tests compare football contexts rather than opaque random outcomes. */
 
@@ -22,7 +35,7 @@ test("demand is deterministic and distinguishes age, club level, and free-agent 
   const young = deriveContractDemand({ careerState: base, playerId: PLAYER, clubId: CLUB, evaluatedOn: TODAY });
   const repeated = deriveContractDemand({ careerState: base, playerId: PLAYER, clubId: CLUB, evaluatedOn: TODAY });
   assert.deepEqual(repeated, young);
-  assert.equal(young.preferredTerms.durationYears, 5);
+  assert.equal(young.preferredTerms.durationYears, 4);
 
   const veteranState = withPlayerAge(base, 34);
   const veteran = deriveContractDemand({ careerState: veteranState, playerId: PLAYER, clubId: CLUB, evaluatedOn: TODAY });

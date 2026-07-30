@@ -11,9 +11,11 @@ import {
   type ContractNegotiationPublication,
   type ContractOfferTerms,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type Money,
   type PlayerContract,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type PlayerSquadDepartment,
 } from "@game/domain";
 
@@ -94,6 +96,8 @@ export function advanceAiContractLifecycle(input: {
   readonly careerState: CareerState;
   readonly fromDate: GameDate;
   readonly throughDate: GameDate;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): AdvanceAiContractLifecycleResult {
   if (
     input.throughDate <= input.fromDate
@@ -110,12 +114,18 @@ export function advanceAiContractLifecycle(input: {
   const preliminaryAgreements = advancePreliminaryAgreementLifecycle({
     careerState: input.careerState,
     throughDate: input.throughDate,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
   let careerState = preliminaryAgreements.careerState;
   const facts: AiContractLifecycleFact[] = [];
   const negotiationFacts: ContractNegotiationFact[] = [];
 
-  const resolvedExisting = resolveAiNegotiations(careerState, input.throughDate);
+  const resolvedExisting = resolveAiNegotiations(
+    careerState,
+    input.throughDate,
+    input.wagePolicy,
+  );
   careerState = resolvedExisting.careerState;
   negotiationFacts.push(...resolvedExisting.negotiationFacts);
   facts.push(...resolvedExisting.facts);
@@ -124,17 +134,22 @@ export function advanceAiContractLifecycle(input: {
     careerState,
     fromDate: input.fromDate,
     throughDate: input.throughDate,
+    wagePolicy: input.wagePolicy,
   });
   careerState = started.careerState;
   negotiationFacts.push(...started.negotiationFacts);
   facts.push(...started.facts);
 
-  const resolvedStarted = resolveAiNegotiations(careerState, input.throughDate);
+  const resolvedStarted = resolveAiNegotiations(
+    careerState,
+    input.throughDate,
+    input.wagePolicy,
+  );
   careerState = resolvedStarted.careerState;
   negotiationFacts.push(...resolvedStarted.negotiationFacts);
   facts.push(...resolvedStarted.facts);
 
-  const expired = expireDueContracts(careerState, input.throughDate);
+  const expired = expireDueContracts(careerState, input.throughDate, input.wagePolicy);
   return {
     careerState: expired.careerState,
     facts: [...facts, ...expired.facts],
@@ -147,6 +162,7 @@ function startDueAiNegotiations(input: {
   readonly careerState: CareerState;
   readonly fromDate: GameDate;
   readonly throughDate: GameDate;
+  readonly wagePolicy: PlayerWagePolicyConfig;
 }): AdvanceAiContractLifecycleResult {
   let careerState = input.careerState;
   const facts: AiContractLifecycleFact[] = [];
@@ -169,7 +185,13 @@ function startDueAiNegotiations(input: {
 
     for (const { contract, decisionDate } of dueContracts) {
       attemptedContractIds.add(contract.id);
-      const decision = aiRenewalDecision(careerState, contract, decisionDate, lifecycleIndex);
+      const decision = aiRenewalDecision(
+        careerState,
+        contract,
+        decisionDate,
+        input.wagePolicy,
+        lifecycleIndex,
+      );
       if (!decision.retain) {
         const release = prepareAiReleaseDecision(
           nextRenewalNegotiationId(careerState, contract.playerId),
@@ -188,6 +210,7 @@ function startDueAiNegotiations(input: {
 
       const demand = deriveContractDemand({
         careerState,
+        wagePolicy: input.wagePolicy,
         playerId: contract.playerId,
         clubId: contract.clubId,
         evaluatedOn: decisionDate,
@@ -197,6 +220,7 @@ function startDueAiNegotiations(input: {
         contract,
         decision.preferredTerms(demand.preferredTerms, demand.minimumTerms),
         decision.reason === "structural_depth",
+        input.wagePolicy,
         reservations,
       );
       if (affordable === undefined) {
@@ -219,6 +243,7 @@ function startDueAiNegotiations(input: {
       const negotiationId = nextRenewalNegotiationId(careerState, contract.playerId);
       const submitted = prepareSubmittedContractRenewal({
         careerState,
+        wagePolicy: input.wagePolicy,
         negotiationId,
         playerId: contract.playerId,
         clubId: contract.clubId,
@@ -246,7 +271,11 @@ function startDueAiNegotiations(input: {
 
     if (submittedOfferCount === 0) continue;
     const unresolvedState = careerState;
-    const resolved = resolveAiNegotiations(careerState, input.throughDate);
+    const resolved = resolveAiNegotiations(
+      careerState,
+      input.throughDate,
+      input.wagePolicy,
+    );
     careerState = resolved.careerState;
     negotiationFacts.push(...resolved.negotiationFacts);
     facts.push(...resolved.facts);
@@ -301,6 +330,7 @@ function dueAiContracts(input: {
 function resolveAiNegotiations(
   inputState: CareerState,
   throughDate: GameDate,
+  wagePolicy: PlayerWagePolicyConfig,
   clubIds: readonly ClubId[] = inputState.gameState.clubIds,
 ): AdvanceAiContractLifecycleResult {
   let careerState = inputState;
@@ -308,7 +338,12 @@ function resolveAiNegotiations(
   const negotiationFacts: ContractNegotiationFact[] = [];
 
   const includedClubIds = new Set(clubIds.filter((clubId) => clubId !== careerState.selectedClubId));
-  const advanced = advanceContractNegotiations(careerState, throughDate, includedClubIds);
+  const advanced = advanceContractNegotiations(
+    careerState,
+    throughDate,
+    wagePolicy,
+    includedClubIds,
+  );
   careerState = advanced.careerState;
   negotiationFacts.push(...advanced.facts);
 
@@ -329,6 +364,7 @@ function resolveAiNegotiations(
       careerState,
       contract,
       negotiation.counterOffer.issuedOn,
+      wagePolicy,
       lifecycleIndex,
     );
     const reservations = createAiOfferReservations(careerState);
@@ -338,6 +374,7 @@ function resolveAiNegotiations(
           contract,
           [negotiation.counterOffer.terms],
           decision.reason === "structural_depth",
+          wagePolicy,
           reservations,
         )
       : undefined;
@@ -345,11 +382,13 @@ function resolveAiNegotiations(
     const resolved = shouldAccept
       ? acceptContractCounterOffer({
           careerState: affordable.careerState,
+          wagePolicy,
           negotiationId,
           decidedOn: negotiation.counterOffer.issuedOn,
         })
       : rejectContractCounterOffer({
           careerState,
+          wagePolicy,
           negotiationId,
           decidedOn: negotiation.counterOffer.issuedOn,
         });
@@ -374,6 +413,7 @@ function resolveAiNegotiations(
 function expireDueContracts(
   inputState: CareerState,
   throughDate: GameDate,
+  wagePolicy: PlayerWagePolicyConfig,
 ): { readonly careerState: CareerState; readonly facts: readonly AiContractLifecycleFact[] } {
   const seniorSquadState = inputState.seniorSquadState;
   if (seniorSquadState === undefined) return { careerState: inputState, facts: [] };
@@ -396,7 +436,13 @@ function expireDueContracts(
 
     const reason: AiContractDecisionReason = selectedRelease
       ? "selected_club_release_instruction"
-      : aiRenewalDecision(inputState, contract, contract.endsOn, lifecycleIndex).reason;
+      : aiRenewalDecision(
+          inputState,
+          contract,
+          contract.endsOn,
+          wagePolicy,
+          lifecycleIndex,
+        ).reason;
     markProjectedDeparture(inputState, lifecycleIndex, contract);
     expiringContracts.push({ contract, reason });
     facts.push(lifecycleFact(contract, contract.endsOn, "contract_expired", reason));
@@ -547,6 +593,7 @@ function aiRenewalDecision(
   careerState: CareerState,
   contract: PlayerContract,
   evaluatedOn: GameDate,
+  wagePolicy: PlayerWagePolicyConfig,
   lifecycleIndex: AiContractLifecycleIndex = createAiContractLifecycleIndex(careerState),
 ): {
   readonly retain: boolean;
@@ -555,6 +602,7 @@ function aiRenewalDecision(
 } {
   const demand = deriveContractDemand({
     careerState,
+    wagePolicy,
     playerId: contract.playerId,
     clubId: contract.clubId,
     evaluatedOn,
@@ -605,12 +653,14 @@ function affordableAiTerms(
   contract: PlayerContract,
   candidates: readonly ContractOfferTerms[],
   allowStructuralReallocation: boolean,
+  wagePolicy: PlayerWagePolicyConfig,
   reservations?: AiOfferReservations,
 ): AffordableAiTerms | undefined {
   for (const terms of candidates) {
     const affordability = checkContractOfferAffordability({
       careerState,
       clubId: contract.clubId,
+      wagePolicy,
       replacedContractId: contract.id,
       terms,
     });

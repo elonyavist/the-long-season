@@ -5,14 +5,20 @@ import {
   type CareerSeasonAggregateGoals,
   type CareerSeasonArchiveEntry,
   type CareerState,
+  type AskingPriceCurvesConfig,
   type ClubId,
+  type CompetitionId,
+  type CompetitionSeasonHistoryEntry,
   type CompetitionSeasonDistribution,
+  type DomesticCompetitionWorld,
   type Fixture,
   type FixtureId,
   type GameDate,
   type LeagueTableRow,
   type LeagueTableRules,
+  type MarketBehaviorCalibrationConfig,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type SeasonTransferWindows,
   type SeasonId,
   seasonId,
@@ -43,6 +49,18 @@ import {
   settleSeasonDistribution,
 } from "./career-finance-lifecycle.ts";
 import { replenishSeniorSquadsFromFreeAgents } from "./senior-squad-replenishment.ts";
+import type {
+  AiMarketDiagnosticFact,
+  AiMarketLifecycleFact,
+} from "./ai-market-lifecycle.ts";
+import type { AiContractLifecycleFact } from "./ai-contract-lifecycle.ts";
+import type { PreliminaryAgreementLifecycleFact } from "./preliminary-agreement.ts";
+import { buildCareerPlayerSeasonStatistics } from "./player-statistics.ts";
+import {
+  applyDomesticPromotionRelegation,
+  type DomesticCompetitionMovement,
+} from "./promotion-relegation.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 
 const YOUTH_ROSTER_TARGET_MINIMUM = 8;
 const YOUTH_ROSTER_TARGET_MAXIMUM = 12;
@@ -53,8 +71,6 @@ export interface AdvanceCareerCompletedSeasonMode {
   readonly kind: "completedSeason";
   /** Competition point rules supplied by an Adapter because engine cannot import content. */
   readonly tableRules: LeagueTableRules;
-  /** Competition-owned end-of-season prize distribution, when finance is active. */
-  readonly seasonDistribution?: CompetitionSeasonDistribution;
 }
 
 /** Mode used by reports that need a season refresh without persisted fixture history. */
@@ -102,6 +118,10 @@ export interface AdvanceCareerOneSeasonInput {
   readonly worldSeed: string;
   /** Advancement mode and mode-specific content inputs. */
   readonly mode: AdvanceCareerOneSeasonMode;
+  /** Version-linked wage policy used by every season-boundary contract path. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Version-linked market policy used by every affordability and AI decision. */
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Optional explicit senior player order for development. Defaults to senior club rosters. */
   readonly seniorDevelopmentPlayerIds?: readonly PlayerId[];
   /** Adapter-generated senior intake candidates used by squad maintenance. */
@@ -129,6 +149,13 @@ export interface AdvanceCareerOneSeasonInput {
    * never invents or guesses transfer dates.
    */
   readonly transferWindows?: SeasonTransferWindows;
+  /**
+   * Versioned public-value content required whenever transfer windows enable
+   * the AI market lifecycle during this season boundary.
+   */
+  readonly valuationConfig?: PlayerValuationConfig;
+  /** Versioned asking-price content required with AI market windows. */
+  readonly askingPriceConfig?: AskingPriceCurvesConfig;
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
@@ -146,6 +173,7 @@ export type CareerSeasonAdvancementOperation =
   | "squad_maintenance"
   | "ai_market_lifecycle"
   | "post_transfer_squad_maintenance"
+  | "promotion_relegation"
   | "next_calendar_merge"
   | "player_state_rollover"
   | "season_inbox_delivery";
@@ -160,6 +188,13 @@ export interface CareerSeasonArchiveFact {
   readonly selectedClubPosition: number;
   /** Aggregate goal facts captured in the archive entry. */
   readonly aggregateGoals: CareerSeasonAggregateGoals;
+}
+
+/** One completed competition and the movements selected from its final table. */
+export interface CareerCompetitionSeasonArchiveFact {
+  readonly competitionId: CompetitionId;
+  readonly championClubId: ClubId;
+  readonly finalTable: readonly LeagueTableRow[];
 }
 
 /** Aggregate player development facts emitted by one advancement. */
@@ -182,6 +217,8 @@ export interface CareerPlayerExitFact {
   readonly exitCount: number;
   /** Exit counts grouped by deterministic reason. */
   readonly reasons: Readonly<Record<PlayerExitReason, number>>;
+  /** Stable IDs grouped by reason so downstream stock-flow reports avoid guessing. */
+  readonly playerIdsByReason: Readonly<Record<PlayerExitReason, readonly PlayerId[]>>;
 }
 
 /** Aggregate youth lifecycle facts emitted by one advancement. */
@@ -198,6 +235,12 @@ export interface CareerYouthLifecycleFact {
   readonly releasedCount: number;
   /** Selected-club lifecycle decisions that future UI may need to surface. */
   readonly selectedClubDecisionCount: number;
+  /** Stable player IDs grouped by academy exit outcome for stock-flow reports. */
+  readonly playerIdsByOutcome: {
+    readonly promotion_candidate: readonly PlayerId[];
+    readonly external_move_candidate: readonly PlayerId[];
+    readonly released: readonly PlayerId[];
+  };
 }
 
 /** Aggregate youth intake facts emitted by one advancement. */
@@ -206,6 +249,12 @@ export interface CareerYouthIntakeFact {
   readonly candidateCount: number;
   /** Number of youth candidates accepted into active academies. */
   readonly acceptedPlayerCount: number;
+  /** Number of generated candidates skipped because no academy slot remained. */
+  readonly skippedPlayerCount: number;
+  /** Stable accepted IDs used by composition diagnostics without re-deriving state. */
+  readonly acceptedPlayerIds: readonly PlayerId[];
+  /** Stable skipped IDs used to distinguish allocation from acceptance. */
+  readonly skippedPlayerIds: readonly PlayerId[];
 }
 
 /** Aggregate youth promotion facts emitted by one advancement. */
@@ -226,12 +275,42 @@ export interface CareerSquadMaintenanceFact {
   readonly addedPlayerCount: number;
   /** Number of structural warnings remaining after maintenance. */
   readonly warningCount: number;
+  /** Number of clubs that moved transfer budget into annual-wage room. */
+  readonly wageBudgetReallocationClubCount: number;
+  /** Clubs where that reallocation was followed by exact annual-wage ceiling use. */
+  readonly wageBudgetReallocationExactCeilingCount: number;
+  /** Clubs receiving a tier-capped planning repair to preserve playable structure. */
+  readonly structuralWageBudgetTopUpClubCount: number;
+  /** Explicit structural contract releases used to restore a hard squad invariant. */
+  readonly structuralReleaseClubCount: number;
+  /**
+   * Canonical free-agent contracts completed by post-transfer replenishment.
+   *
+   * These season-scoped facts let diagnostics count structural recruitment
+   * without pretending that generated intake candidates were direct signings.
+   */
+  readonly freeAgentSignings: readonly {
+    readonly clubId: ClubId;
+    readonly playerId: PlayerId;
+  }[];
 }
 
 /** Aggregate completed canonical market movements emitted by one advancement. */
 export interface CareerTransferTurnoverFact {
   /** Number of completed inter-club transfers negotiated by AI clubs. */
   readonly transferCount: number;
+}
+
+/** Structured market evidence retained only until report tooling aggregates one season. */
+export interface CareerSeasonMarketLifecycleFact {
+  /** Canonical negotiation and preliminary-agreement lifecycle facts. */
+  readonly facts: readonly AiMarketLifecycleFact[];
+  /** Recruitment opportunity observations that never affect gameplay choices. */
+  readonly diagnostics: readonly AiMarketDiagnosticFact[];
+  /** Preliminary lifecycle facts resolved by the contract pass before market checkpoints. */
+  readonly preliminaryAgreementFacts: readonly PreliminaryAgreementLifecycleFact[];
+  /** Contract expiry and free-agent creation facts from the same calendar pass. */
+  readonly contractLifecycleFacts: readonly AiContractLifecycleFact[];
 }
 
 /** Senior squad health facts after one advancement. */
@@ -292,6 +371,10 @@ export interface CareerSeasonAdvancementFacts {
   readonly operationOrder: readonly CareerSeasonAdvancementOperation[];
   /** Completed-season archive facts when durable rollover was used. */
   readonly seasonArchive?: CareerSeasonArchiveFact;
+  /** Ordered completed domestic tables when a full competition world exists. */
+  readonly competitionSeasonArchives?: readonly CareerCompetitionSeasonArchiveFact[];
+  /** Ordered promotion/relegation facts selected from pre-movement tables. */
+  readonly competitionMovements?: readonly DomesticCompetitionMovement[];
   /** Player development aggregate facts. */
   readonly playerDevelopment: CareerPlayerDevelopmentFact;
   /** Player exit aggregate facts. */
@@ -306,6 +389,8 @@ export interface CareerSeasonAdvancementFacts {
   readonly squadMaintenance: CareerSquadMaintenanceFact;
   /** Transfer turnover aggregate facts. */
   readonly transferTurnover: CareerTransferTurnoverFact;
+  /** Optional market funnel evidence when competition windows were supplied. */
+  readonly marketLifecycle?: CareerSeasonMarketLifecycleFact;
   /** Senior squad health after advancement. */
   readonly squadHealth: CareerSquadHealthFact;
   /** Youth academy health after advancement. */
@@ -321,9 +406,10 @@ export type AdvanceCareerOneSeasonInvalidReason =
   | "fixture_home_club_not_found"
   | "fixture_away_club_not_found"
   | "no_current_season_fixtures"
-  | "multiple_current_season_competitions"
+  | "fixture_id_collision"
   | "season_table_empty"
   | "selected_club_not_in_table"
+  | "promotion_relegation_invalid"
   | "finance_lifecycle_rejected";
 
 /** Successful canonical season advancement result. */
@@ -408,39 +494,43 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     toDate: seasonContext.nextSeasonStartDate,
     seasonId: previousSeasonId,
     playerIds: input.seniorDevelopmentPlayerIds ?? seniorPlayerIds(workingCareerState),
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     ...(input.transferWindows === undefined ? {} : { transferWindows: input.transferWindows }),
+    ...(input.valuationConfig === undefined ? {} : { valuationConfig: input.valuationConfig }),
+    ...(input.askingPriceConfig === undefined ? {} : { askingPriceConfig: input.askingPriceConfig }),
   });
   if (monthlyLifecycle.marketLifecycle !== undefined) {
     operationOrder.push("ai_market_lifecycle");
   }
-  const distributionInput = input.mode.kind === "completedSeason"
-    ? input.mode.seasonDistribution === undefined || seasonContext.archive === undefined
-      ? undefined
-      : { distribution: input.mode.seasonDistribution, finalTable: seasonContext.archive.entry.finalTable }
-    : input.mode.seasonDistribution === undefined || input.mode.finalTable === undefined
-      ? undefined
-      : { distribution: input.mode.seasonDistribution, finalTable: input.mode.finalTable };
-  const distributed = distributionInput !== undefined
-    && (monthlyLifecycle.careerState.clubFinanceState !== undefined
-      || monthlyLifecycle.careerState.seniorSquadState !== undefined)
-    ? settleSeasonDistribution({
-        careerState: monthlyLifecycle.careerState,
+  const distributionInputs = seasonDistributionInputs(input, seasonContext);
+  let stateAfterDistribution = monthlyLifecycle.careerState;
+  let distributionApplied = false;
+  if (
+    distributionInputs.length > 0
+    && (stateAfterDistribution.clubFinanceState !== undefined
+      || stateAfterDistribution.seniorSquadState !== undefined)
+  ) {
+    for (const distributionInput of distributionInputs) {
+      const distributed = settleSeasonDistribution({
+        careerState: stateAfterDistribution,
         seasonId: previousSeasonId,
         occurredOn: seasonContext.nextSeasonStartDate,
         distribution: distributionInput.distribution,
         finalTable: distributionInput.finalTable,
-      })
-    : undefined;
-  if (distributed?.status === "rejected") {
-    return {
-      status: "invalid",
-      careerState: input.careerState,
-      reason: "finance_lifecycle_rejected",
-    };
+      });
+      if (distributed.status === "rejected") {
+        return {
+          status: "invalid",
+          careerState: input.careerState,
+          reason: "finance_lifecycle_rejected",
+        };
+      }
+      stateAfterDistribution = distributed.careerState;
+      distributionApplied = true;
+    }
   }
-  if (distributed !== undefined) operationOrder.push("season_distribution");
-
-  const stateAfterDistribution = distributed?.careerState ?? monthlyLifecycle.careerState;
+  if (distributionApplied) operationOrder.push("season_distribution");
   const refreshedTransferBudgets = stateAfterDistribution.clubFinanceState === undefined
     && stateAfterDistribution.seniorSquadState === undefined
     ? undefined
@@ -494,20 +584,25 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
   const youthPromotions = usesCanonicalSeniorSquads
     ? promoteYouthCandidatesToSeniorSquads({
         careerState: youthIntake.careerState,
+        wagePolicy: input.wagePolicy,
+        marketBehaviorPolicy: input.marketBehaviorPolicy,
         allowSelectedClubPromotion: input.allowSelectedClubYouthPromotion ?? false,
         occurredOn: seasonContext.nextSeasonStartDate,
       })
     : { careerState: youthIntake.careerState, records: [] };
 
   operationOrder.push("squad_maintenance");
+  const resolveSeniorIntakeCandidates = () =>
+    input.createSeniorIntakeCandidates?.({
+      careerState: youthPromotions.careerState,
+      seasonId: advancementSeasonId,
+    }) ??
+    input.seniorIntakeCandidates ??
+    [];
+  let canonicalSeniorIntakeCandidates: readonly CareerIntakeCandidate[] = [];
   const seniorIntakeCandidates = usesCanonicalSeniorSquads
     ? []
-    : input.createSeniorIntakeCandidates?.({
-        careerState: youthPromotions.careerState,
-        seasonId: advancementSeasonId,
-      }) ??
-      input.seniorIntakeCandidates ??
-      [];
+    : resolveSeniorIntakeCandidates();
   const maintained = usesCanonicalSeniorSquads
     ? { careerState: youthPromotions.careerState, records: [] }
     : maintainCareerSquadShape({
@@ -524,14 +619,29 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
   const postTransferMaintained = usesCanonicalSeniorSquads
     ? replenishSeniorSquadsFromFreeAgents({
         careerState: maintained.careerState,
+        wagePolicy: input.wagePolicy,
+        marketBehaviorPolicy: input.marketBehaviorPolicy,
         clubIds: replenishmentClubIds,
         occurredOn: seasonContext.nextSeasonStartDate,
+        createIntakeCandidates: () => {
+          canonicalSeniorIntakeCandidates = resolveSeniorIntakeCandidates();
+          return canonicalSeniorIntakeCandidates;
+        },
       })
-    : maintainCareerSquadShape({
-        careerState: maintained.careerState,
-        intakeCandidates: intakeCandidatesNotYetActive(maintained.careerState, seniorIntakeCandidates),
-      });
+    : {
+        ...maintainCareerSquadShape({
+          careerState: maintained.careerState,
+          intakeCandidates: intakeCandidatesNotYetActive(maintained.careerState, seniorIntakeCandidates),
+        }),
+        wageBudgetReallocations: [],
+        structuralWageBudgetTopUps: [],
+        structuralReleases: [],
+      };
   const maintenanceRecords = [...maintained.records, ...postTransferMaintained.records];
+  const wageBudgetReallocations = postTransferMaintained.wageBudgetReallocations;
+  const structuralWageBudgetTopUps =
+    postTransferMaintained.structuralWageBudgetTopUps;
+  const structuralReleases = postTransferMaintained.structuralReleases;
 
   const stateBeforePlayerRollover = applyCompletedSeasonChangesIfNeeded(postTransferMaintained.careerState, seasonContext, operationOrder);
 
@@ -569,12 +679,36 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
       nextSeasonStartDate: seasonContext.nextSeasonStartDate,
       operationOrder,
       ...(seasonContext.archive === undefined ? {} : { seasonArchive: seasonContext.archive.fact }),
+      ...(seasonContext.competitionArchives === undefined
+        ? {}
+        : {
+            competitionSeasonArchives: seasonContext.competitionArchives.map(
+              ({ entry }) => ({
+                competitionId: entry.competitionId,
+                championClubId: entry.finalTable[0]!.clubId,
+                finalTable: entry.finalTable,
+              }),
+            ),
+          }),
+      ...(seasonContext.movements === undefined
+        ? {}
+        : { competitionMovements: seasonContext.movements }),
       playerDevelopment: monthlyPlayerDevelopmentFact(monthlyLifecycle.summaries),
       playerExits: playerExitFact(exits.exits),
       youthLifecycle: youthLifecycleFact(youthLifecycle.developmentChanges, youthLifecycle.records, input.careerState.selectedClubId),
       youthIntake: {
         candidateCount: youthIntakeCandidates.length,
         acceptedPlayerCount: youthIntake.records.reduce((sum, record) => sum + record.acceptedPlayerIds.length, 0),
+        skippedPlayerCount: youthIntake.records.reduce(
+          (sum, record) => sum + record.skippedPlayerIds.length,
+          0,
+        ),
+        acceptedPlayerIds: youthIntake.records.flatMap(
+          (record) => record.acceptedPlayerIds,
+        ),
+        skippedPlayerIds: youthIntake.records.flatMap(
+          (record) => record.skippedPlayerIds,
+        ),
       },
       youthPromotions: {
         candidateCount: youthPromotions.records.length,
@@ -582,15 +716,45 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
         selectedClubProtectedCount: youthPromotions.records.filter((record) => record.reason === "selected_club_protected").length,
       },
       squadMaintenance: {
-        candidateCount: seniorIntakeCandidates.length,
+        candidateCount: usesCanonicalSeniorSquads
+          ? canonicalSeniorIntakeCandidates.length
+          : seniorIntakeCandidates.length,
         addedPlayerCount: maintenanceRecords.reduce((sum, record) => sum + record.addedPlayerIds.length, 0),
         warningCount: maintenanceRecords.reduce((sum, record) => sum + record.warnings.length, 0),
+        wageBudgetReallocationClubCount: wageBudgetReallocations.length,
+        wageBudgetReallocationExactCeilingCount: wageBudgetReallocations.filter(({ clubId }) => {
+          const account = rolledOver.careerState.clubFinanceState?.accounts[clubId];
+          return account !== undefined
+            && account.annualWageBudget > 0
+            && account.committedAnnualWage === account.annualWageBudget;
+        }).length,
+        structuralWageBudgetTopUpClubCount:
+          structuralWageBudgetTopUps.length,
+        structuralReleaseClubCount: structuralReleases.length,
+        freeAgentSignings: usesCanonicalSeniorSquads
+          ? postTransferMaintained.records.flatMap((record) =>
+              record.addedPlayerIds.map((playerId) => ({
+                clubId: record.clubId,
+                playerId,
+              })))
+          : [],
       },
       transferTurnover: {
         transferCount: monthlyLifecycle.marketLifecycle?.facts.filter(
           (fact) => fact.event === "transfer_completed",
         ).length ?? 0,
       },
+      ...(monthlyLifecycle.marketLifecycle === undefined
+        ? {}
+        : {
+            marketLifecycle: {
+              facts: monthlyLifecycle.marketLifecycle.facts,
+              diagnostics: monthlyLifecycle.marketLifecycle.diagnostics,
+              preliminaryAgreementFacts:
+                monthlyLifecycle.contractLifecycle?.preliminaryAgreementFacts ?? [],
+              contractLifecycleFacts: monthlyLifecycle.contractLifecycle?.facts ?? [],
+            },
+          }),
       squadHealth: squadHealthFact(rolledOver.careerState),
       youthHealth: youthHealthFact(rolledOver.careerState),
       warnings,
@@ -616,6 +780,13 @@ interface PreparedSeasonContextValid {
     readonly fact: CareerSeasonArchiveFact;
   };
   readonly nextSeasonFixtures?: readonly Fixture[];
+  readonly nextCompetitionWorld?: DomesticCompetitionWorld;
+  readonly categoryByClubId?: Readonly<Record<ClubId, CareerState["gameState"]["clubs"][ClubId]["category"]>>;
+  readonly competitionArchives?: readonly {
+    readonly entry: CompetitionSeasonHistoryEntry;
+    readonly distribution?: CompetitionSeasonDistribution;
+  }[];
+  readonly movements?: readonly DomesticCompetitionMovement[];
 }
 
 function prepareSeasonContext(input: AdvanceCareerOneSeasonInput): PreparedSeasonContext {
@@ -628,7 +799,18 @@ function prepareSeasonContext(input: AdvanceCareerOneSeasonInput): PreparedSeaso
     };
   }
 
-  const nextCalendar = generateNextSeasonCalendar(input.careerState);
+  const domesticWorld = input.careerState.gameState.domesticCompetitionWorld;
+  const domesticBoundary = domesticWorld === undefined
+    ? undefined
+    : prepareDomesticMovement(
+        input.careerState,
+        buildDomesticFinalTables(input.careerState, input.mode.tableRules),
+      );
+  if (domesticBoundary?.status === "invalid") return domesticBoundary;
+  const nextCalendar = generateNextSeasonCalendar(
+    input.careerState,
+    domesticBoundary?.nextCompetitionWorld,
+  );
   if (nextCalendar.status === "invalid") {
     return {
       status: "invalid",
@@ -637,7 +819,12 @@ function prepareSeasonContext(input: AdvanceCareerOneSeasonInput): PreparedSeaso
     };
   }
 
-  const archive = buildSeasonArchive(input.careerState, nextCalendar, input.mode.tableRules);
+  const archive = domesticBoundary === undefined
+    ? buildSeasonArchive(input.careerState, nextCalendar, input.mode.tableRules)
+    : buildSelectedSeasonArchive(
+        input.careerState,
+        domesticBoundary.finalTables,
+      );
   if (archive.status === "invalid") {
     return archive;
   }
@@ -646,9 +833,21 @@ function prepareSeasonContext(input: AdvanceCareerOneSeasonInput): PreparedSeaso
     status: "valid",
     nextSeasonId: nextCalendar.seasonId,
     nextSeasonStartDate: nextCalendar.seasonStartDate,
-    operationOrder: ["completed_season_validation", "season_archive"],
+    operationOrder: [
+      "completed_season_validation",
+      "season_archive",
+      ...(domesticBoundary === undefined ? [] : ["promotion_relegation" as const]),
+    ],
     archive: archive.archive,
     nextSeasonFixtures: nextCalendar.fixtures,
+    ...(domesticBoundary === undefined
+      ? {}
+      : {
+          nextCompetitionWorld: domesticBoundary.nextCompetitionWorld,
+          categoryByClubId: domesticBoundary.categoryByClubId,
+          competitionArchives: domesticBoundary.competitionArchives,
+          movements: domesticBoundary.movements,
+        }),
   };
 }
 
@@ -685,14 +884,19 @@ function buildSeasonArchive(
   }
 
   const aggregateGoals = aggregateGoalsFor(careerState, fixtureIds);
+  const playerStatistics = buildCareerPlayerSeasonStatistics({
+    careerState,
+    seasonId: nextCalendar.previousSeasonId,
+  });
   const entry: CareerSeasonArchiveEntry = {
     sequenceNumber: nextSeasonSequenceNumber(careerState),
     seasonId: nextCalendar.previousSeasonId,
-    competitionId: nextCalendar.competitionId,
+    competitionId: nextCalendar.competitionIds[0]!,
     finalTable,
     championClubId: champion.clubId,
     selectedClubFinish,
     aggregateGoals,
+    playerStatistics,
   };
 
   return {
@@ -707,6 +911,178 @@ function buildSeasonArchive(
       },
     },
   };
+}
+
+interface PreparedDomesticMovement {
+  readonly status: "valid";
+  readonly finalTables: Readonly<Record<CompetitionId, readonly LeagueTableRow[]>>;
+  readonly nextCompetitionWorld: DomesticCompetitionWorld;
+  readonly categoryByClubId: NonNullable<PreparedSeasonContextValid["categoryByClubId"]>;
+  readonly competitionArchives: NonNullable<PreparedSeasonContextValid["competitionArchives"]>;
+  readonly movements: readonly DomesticCompetitionMovement[];
+}
+
+/**
+ * Computes one immutable table per ordered competition from current fixtures.
+ */
+function buildDomesticFinalTables(
+  careerState: CareerState,
+  tableRules: LeagueTableRules,
+): Readonly<Record<CompetitionId, readonly LeagueTableRow[]>> {
+  const world = careerState.gameState.domesticCompetitionWorld;
+  if (world === undefined) return {};
+  return Object.fromEntries(world.competitionIds.map((competitionId) => {
+    const competition = world.competitions[competitionId]!;
+    const fixtureIds = currentSeasonFixtureIds(careerState).filter((fixtureId) =>
+      careerState.gameState.fixtures[fixtureId]?.competitionId === competitionId
+    );
+    return [
+      competitionId,
+      computeLeagueTable({
+        clubIds: competition.clubIds,
+        fixtures: careerState.gameState.fixtures,
+        fixtureIds,
+        rules: tableRules,
+      }),
+    ];
+  })) as Readonly<Record<CompetitionId, readonly LeagueTableRow[]>>;
+}
+
+/**
+ * Applies movement and appends all completed tables without mutating the input.
+ */
+function prepareDomesticMovement(
+  careerState: CareerState,
+  finalTables: Readonly<Record<CompetitionId, readonly LeagueTableRow[]>>,
+): PreparedDomesticMovement | {
+  readonly status: "invalid";
+  readonly reason: "season_table_empty" | "selected_club_not_in_table" | "promotion_relegation_invalid";
+} {
+  const world = careerState.gameState.domesticCompetitionWorld;
+  if (world === undefined) {
+    return { status: "invalid", reason: "promotion_relegation_invalid" };
+  }
+  if (world.competitionIds.some((competitionId) =>
+    finalTables[competitionId]?.[0] === undefined
+  )) {
+    return { status: "invalid", reason: "season_table_empty" };
+  }
+  const selectedCompetitionId = world.competitionIds.find((competitionId) =>
+    world.competitions[competitionId]?.clubIds.includes(careerState.selectedClubId)
+      === true
+  );
+  if (
+    selectedCompetitionId === undefined
+    || finalTables[selectedCompetitionId]?.some((row) =>
+      row.clubId === careerState.selectedClubId
+    ) !== true
+  ) {
+    return { status: "invalid", reason: "selected_club_not_in_table" };
+  }
+  const movement = applyDomesticPromotionRelegation({
+    competitionWorld: world,
+    finalTables,
+  });
+  if (movement.status === "invalid") {
+    return { status: "invalid", reason: "promotion_relegation_invalid" };
+  }
+  const firstSequence = nextCompetitionSeasonSequenceNumber(world);
+  const competitionArchives = world.competitionIds.map(
+    (competitionId, index) => ({
+      entry: {
+        sequenceNumber: firstSequence + index,
+        seasonId: careerState.gameState.calendar.currentSeasonId,
+        competitionId,
+        finalTable: finalTables[competitionId]!.map((row) => ({ ...row })),
+      },
+      ...(world.competitions[competitionId]?.seasonDistribution === undefined
+        ? {}
+        : {
+            distribution:
+              world.competitions[competitionId]!.seasonDistribution,
+          }),
+    }),
+  );
+
+  return {
+    status: "valid",
+    finalTables,
+    nextCompetitionWorld: {
+      ...movement.competitionWorld,
+      seasonHistory: [
+        ...world.seasonHistory,
+        ...competitionArchives.map(({ entry }) => entry),
+      ],
+    },
+    categoryByClubId: movement.categoryByClubId,
+    competitionArchives,
+    movements: movement.movements,
+  };
+}
+
+/**
+ * Builds the manager-facing archive from the selected club's completed tier.
+ */
+function buildSelectedSeasonArchive(
+  careerState: CareerState,
+  finalTables: Readonly<Record<CompetitionId, readonly LeagueTableRow[]>>,
+): SeasonArchiveBuildResult {
+  const world = careerState.gameState.domesticCompetitionWorld;
+  const competitionId = world?.competitionIds.find((candidateId) =>
+    world.competitions[candidateId]?.clubIds.includes(careerState.selectedClubId)
+      === true
+  );
+  const finalTable = competitionId === undefined
+    ? undefined
+    : finalTables[competitionId];
+  const champion = finalTable?.[0];
+  if (competitionId === undefined || finalTable === undefined || champion === undefined) {
+    return { status: "invalid", reason: "season_table_empty" };
+  }
+  const selectedClubFinish = finalTable.find((row) =>
+    row.clubId === careerState.selectedClubId
+  );
+  if (selectedClubFinish === undefined) {
+    return { status: "invalid", reason: "selected_club_not_in_table" };
+  }
+  const fixtureIds = currentSeasonFixtureIds(careerState).filter((fixtureId) =>
+    careerState.gameState.fixtures[fixtureId]?.competitionId === competitionId
+  );
+  const aggregateGoals = aggregateGoalsFor(careerState, fixtureIds);
+  const entry: CareerSeasonArchiveEntry = {
+    sequenceNumber: nextSeasonSequenceNumber(careerState),
+    seasonId: careerState.gameState.calendar.currentSeasonId,
+    competitionId,
+    finalTable,
+    championClubId: champion.clubId,
+    selectedClubFinish,
+    aggregateGoals,
+    playerStatistics: buildCareerPlayerSeasonStatistics({
+      careerState,
+      seasonId: careerState.gameState.calendar.currentSeasonId,
+    }),
+  };
+  return {
+    status: "valid",
+    archive: {
+      entry,
+      fact: {
+        seasonId: entry.seasonId,
+        championClubId: entry.championClubId,
+        selectedClubPosition: selectedClubFinish.position,
+        aggregateGoals,
+      },
+    },
+  };
+}
+
+function nextCompetitionSeasonSequenceNumber(
+  world: DomesticCompetitionWorld,
+): number {
+  return world.seasonHistory.reduce(
+    (maximum, entry) => Math.max(maximum, entry.sequenceNumber),
+    0,
+  ) + 1;
 }
 
 function applyYouthIntakeIfCandidatesExist(input: {
@@ -725,6 +1101,31 @@ function applyYouthIntakeIfCandidatesExist(input: {
   return applySeasonalYouthIntake(input);
 }
 
+function seasonDistributionInputs(
+  input: AdvanceCareerOneSeasonInput,
+  seasonContext: PreparedSeasonContextValid,
+): readonly {
+  readonly distribution: CompetitionSeasonDistribution;
+  readonly finalTable: readonly LeagueTableRow[];
+}[] {
+  const mode = input.mode;
+  if (mode.kind === "completedSeason") {
+    return (seasonContext.competitionArchives ?? []).flatMap(
+      ({ entry, distribution }) =>
+        distribution === undefined
+          ? []
+          : [{ distribution, finalTable: entry.finalTable }],
+    );
+  }
+  return mode.seasonDistribution === undefined
+      || mode.finalTable === undefined
+    ? []
+    : [{
+        distribution: mode.seasonDistribution,
+        finalTable: mode.finalTable,
+      }];
+}
+
 function intakeCandidatesNotYetActive(
   careerState: CareerState,
   candidates: readonly CareerIntakeCandidate[],
@@ -738,28 +1139,70 @@ function applyCompletedSeasonChangesIfNeeded(
   seasonContext: PreparedSeasonContextValid,
   operationOrder: CareerSeasonAdvancementOperation[],
 ): CareerState {
-  if (seasonContext.archive === undefined || seasonContext.nextSeasonFixtures === undefined) {
+  if (
+    seasonContext.archive === undefined
+    && seasonContext.nextCompetitionWorld === undefined
+  ) {
     return careerState;
   }
 
-  operationOrder.push("next_calendar_merge");
-  const mergedFixtures = mergeFixtures(careerState, seasonContext.nextSeasonFixtures);
-  const {
-    matchPreparation: _matchPreparation,
-    currentSeasonInbox: _previousSeasonInbox,
-    ...careerStateWithoutPreparation
-  } = careerState;
+  const mergedFixtures = seasonContext.nextSeasonFixtures === undefined
+    ? {
+        fixtures: careerState.gameState.fixtures,
+        fixtureIds: careerState.gameState.fixtureIds,
+      }
+    : mergeFixtures(careerState, seasonContext.nextSeasonFixtures);
+  if (seasonContext.nextSeasonFixtures !== undefined) {
+    operationOrder.push("next_calendar_merge");
+  }
+  const clubs = seasonContext.categoryByClubId === undefined
+    ? careerState.gameState.clubs
+    : Object.fromEntries(careerState.gameState.clubIds.map((clubId) => {
+        const club = careerState.gameState.clubs[clubId]!;
+        return [
+          clubId,
+          {
+            ...club,
+            category: seasonContext.categoryByClubId?.[clubId] ?? club.category,
+          },
+        ];
+      })) as CareerState["gameState"]["clubs"];
+  const careerStateWithoutPreparation = seasonContext.archive === undefined
+    ? careerState
+    : withoutCurrentSeasonManagerPreparation(careerState);
 
   return createCareerState({
     ...careerStateWithoutPreparation,
     gameState: {
       ...careerState.gameState,
+      clubs,
       fixtures: mergedFixtures.fixtures,
       fixtureIds: mergedFixtures.fixtureIds,
+      ...(seasonContext.nextCompetitionWorld === undefined
+        ? {}
+        : { domesticCompetitionWorld: seasonContext.nextCompetitionWorld }),
     },
-    seasonHistory: [...(careerState.seasonHistory ?? []), seasonContext.archive.entry],
-    currentSeasonInbox: [],
+    ...(seasonContext.archive === undefined
+      ? {}
+      : {
+          seasonHistory: [
+            ...(careerState.seasonHistory ?? []),
+            seasonContext.archive.entry,
+          ],
+          currentSeasonInbox: [],
+        }),
   });
+}
+
+function withoutCurrentSeasonManagerPreparation(
+  careerState: CareerState,
+): Omit<CareerState, "matchPreparation" | "currentSeasonInbox"> {
+  const {
+    matchPreparation: _matchPreparation,
+    currentSeasonInbox: _currentSeasonInbox,
+    ...remaining
+  } = careerState;
+  return remaining;
 }
 
 function currentSeasonFixtureIds(careerState: CareerState): readonly FixtureId[] {
@@ -853,6 +1296,11 @@ function playerExitFact(exits: readonly PlayerExitRecord[]): CareerPlayerExitFac
       released: exits.filter((exit) => exit.reason === "released").length,
       career_step_down: exits.filter((exit) => exit.reason === "career_step_down").length,
     },
+    playerIdsByReason: {
+      retirement: exits.filter((exit) => exit.reason === "retirement").map((exit) => exit.playerId),
+      released: exits.filter((exit) => exit.reason === "released").map((exit) => exit.playerId),
+      career_step_down: exits.filter((exit) => exit.reason === "career_step_down").map((exit) => exit.playerId),
+    },
   };
 }
 
@@ -868,6 +1316,17 @@ function youthLifecycleFact(
     externalMoveCandidateCount: records.filter((record) => record.outcome === "external_move_candidate").length,
     releasedCount: records.filter((record) => record.outcome === "released").length,
     selectedClubDecisionCount: records.filter((record) => record.clubId === selectedClubId && record.outcome === "promotion_candidate").length,
+    playerIdsByOutcome: {
+      promotion_candidate: records
+        .filter((record) => record.outcome === "promotion_candidate")
+        .map((record) => record.playerId),
+      external_move_candidate: records
+        .filter((record) => record.outcome === "external_move_candidate")
+        .map((record) => record.playerId),
+      released: records
+        .filter((record) => record.outcome === "released")
+        .map((record) => record.playerId),
+    },
   };
 }
 

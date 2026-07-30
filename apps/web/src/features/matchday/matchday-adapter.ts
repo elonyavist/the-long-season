@@ -35,7 +35,12 @@ import {
   type ProgressiveMatchSessionState,
   type ProgressCareerFixtureAdvanced,
 } from "@game/engine";
-import { createFakeLeagueSystem } from "@game/content";
+import {
+  createFakeGameplayConfig,
+  selectMarketBehaviorCalibration,
+  selectPlayerWagePolicyConfig,
+  type FakeGameplayConfig,
+} from "@game/content";
 import { deriveRng, toISO, type Rng } from "@game/shared";
 import {
   buildCareerMatchdayPhaseView,
@@ -63,6 +68,10 @@ import type { TacticalBoardRoleCode } from "../tactics-board/tactical-board-type
 import type { WebCareerState as CareerState } from "../../runtime/web-career-runtime";
 
 type GameState = CareerState["gameState"];
+type DomesticCompetitionWorld = NonNullable<GameState["domesticCompetitionWorld"]>;
+type CompetitionMatchRules = DomesticCompetitionWorld["competitions"][
+  DomesticCompetitionWorld["competitionIds"][number]
+]["matchRules"];
 type ClubId = CareerState["selectedClubId"];
 type FixtureId = GameState["fixtureIds"][number];
 type Fixture = GameState["fixtures"][FixtureId];
@@ -82,10 +91,10 @@ type LiveMatchPendingDecision = NonNullable<
   NonNullable<BuildCareerMatchdayPhaseViewInput["liveControl"]>["pendingDecision"]
 >;
 type MatchdayContentConfig = Pick<
-  ReturnType<typeof createFakeLeagueSystem>,
+  FakeGameplayConfig,
   "matchEngineConfig" | "roleWeights" | "stateMultiplierCurves"
 > & {
-  readonly competitionMatchRules: ReturnType<typeof createFakeLeagueSystem>["competition"]["matchRules"];
+  readonly competitionMatchRules: CompetitionMatchRules;
 };
 
 const CAREER_DEFAULT_LINEUP_SIZE = 11;
@@ -958,15 +967,26 @@ function prepareWebMatchdayKickoff(
 
 /** Recreates canonical match tuning from the loaded career's immutable world seed. */
 function matchdayContentConfig(careerState: CareerState): MatchdayContentConfig {
-  const league = createFakeLeagueSystem({
-    worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
-  });
+  const gameplay = createFakeGameplayConfig();
+  const world = careerState.gameState.domesticCompetitionWorld;
+  const competitionId = world === undefined
+    ? undefined
+    : world.competitionIds.find(
+        (candidateId) =>
+          world.competitions[candidateId]?.clubIds.includes(
+            careerState.selectedClubId,
+          ) === true,
+      );
+  const competitionMatchRules = competitionId === undefined
+    ? undefined
+    : world?.competitions[competitionId]?.matchRules;
+  if (competitionMatchRules === undefined) {
+    throw new Error("Selected club competition match rules are unavailable");
+  }
 
   return {
-    matchEngineConfig: league.matchEngineConfig,
-    roleWeights: league.roleWeights,
-    stateMultiplierCurves: league.stateMultiplierCurves,
-    competitionMatchRules: league.competition.matchRules,
+    ...gameplay,
+    competitionMatchRules,
   };
 }
 
@@ -1367,6 +1387,12 @@ function commitProgressiveWebMatchday(
     appliedSubstitutions: finalState.appliedSubstitutions,
     playerRatings: livePlayerRatings(projectLiveProgress(session)),
     competitionMatchRules: matchdayContentConfig(session.careerState).competitionMatchRules,
+    wagePolicy: selectPlayerWagePolicyConfig(
+      session.careerState.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      session.careerState.gameState.meta.calibrationVersions,
+    ),
   });
 }
 

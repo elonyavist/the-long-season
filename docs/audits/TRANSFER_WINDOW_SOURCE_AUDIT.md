@@ -14,6 +14,25 @@ start.
 
 ## Playable Competitions
 
+### Phase 79C confirmed topology coverage
+
+The official
+[FIGC 2026/27 registration-period announcement](https://www.figc.it/it/federazione/news/approvati-i-criteri-per-le-riammissioni-le-sostituzioni-e-i-ripescaggi-nei-campionati-professionistici-szuz8fvh)
+also closes the source gate for every competition in
+`fictional-three-tier-v1`. These rows are cited source facts for the first
+supported season; adding the future content catalog entries belongs to Phase
+79C Step 06.
+
+| Fictional playable competition | Source scope | Summer 2026 | Winter 2027 |
+| --- | --- | --- | --- |
+| First Division | FIGC Serie A period | `2026-06-29`..`2026-09-01` | `2027-01-02`..`2027-02-01` |
+| Second Division | FIGC Serie B period | `2026-07-01`..`2026-09-01` | `2027-01-02`..`2027-02-01` |
+| Third Division | FIGC Serie C period | `2026-07-01`..`2026-09-01` | `2027-01-02`..`2027-02-01` |
+
+The fictional names and 18-club topology remain game design. The dates borrow
+the cited professional-tier registration periods and are not a claim that the
+fictional structure reproduces Italy.
+
 ### `competition:demo-third-division` (Italian professional third tier demo)
 
 - Source: FIGC 2026/27 professional registration periods.

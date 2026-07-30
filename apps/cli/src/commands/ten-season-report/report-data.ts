@@ -1,29 +1,45 @@
 import { createHash } from "node:crypto";
-import { availableParallelism } from "node:os";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 import {
-  createFakeLeagueSystem,
-  generateCareerIntakePlayers,
-  generateSeasonalYouthIntakePlayers,
-  YOUTH_ACADEMY_POSITION_PLAN,
-  type FakeLeagueSystem,
+  createAnnualWorldIntakeCandidateProviders,
+  createFakeDomesticWorld,
+  resolveSeasonTransferWindows,
+  seasonStartYearFromDate,
+  selectAskingPriceCurves,
+  selectMarketBehaviorCalibration,
+  selectPlayerValuationConfig,
+  selectPlayerWagePolicyConfig,
+  type FakeDomesticWorld,
 } from "@game/content";
 import {
   advanceCareerOneSeason,
+  developPlayersForSeason,
+  derivePlayerPotentialProjection,
+  derivePlayerValuation,
+  deriveTeamStrength,
+  deriveTransferCommercialSnapshot,
+  selectFreeAgentPlayerIds,
+  settleSeasonDistribution,
   summarizePlayerDevelopmentAbilities,
   type AdvanceCareerReportRefreshMode,
-  type CareerIntakeCandidate,
+  type LineupSlot,
+  type RoleWeightProfile,
+  type SimulateSeasonInput,
+  type SimulateSeasonTeamInput,
   type SimulateSeasonResult,
-  type YouthIntakeCandidate,
 } from "@game/engine";
 import { createTranslator, type SupportedLanguage, type Translator } from "@game/i18n";
 import {
+  createPlayerGenerationAnnualIntakeSummary,
+  createPlayerGenerationEconomyAudit,
+  createPlayerPotentialOutcomeAudit,
   createLongRunAnomalyReport,
   createLongRunClubStabilityReport,
   createLongRunContractFinanceSeasonRow,
   createLongRunContractFinanceStabilityReport,
   createLongRunPlayerEvolutionReport,
   createLongRunYouthStabilityReport,
+  resolveSimulationWorkerCount,
   runCareerLongRunSimulation,
   worstLongRunAnomalyStatus,
   type AdvanceCareerLongRunSeasonContext,
@@ -34,15 +50,44 @@ import {
   type LongRunClubSeasonRow,
   type LongRunClubStabilityReport,
   type LongRunContractFinanceStabilityReport,
+  type LongRunCrossTierTransferRow,
+  type LongRunDivisionMarketEconomyRow,
+  type LongRunDivisionWageEconomyRow,
+  type LongRunFreeAgentBands,
+  type LongRunPermanentTransferFunnel,
+  type LongRunPreliminaryAgreementFunnel,
   type LongRunPlayerEvolutionReport,
   type LongRunPlayerProductionRow,
   type LongRunPlayerSnapshotRow,
   type LongRunYouthSeasonRow,
   type LongRunYouthStabilityReport,
+  type PlayerGenerationEconomyAudit,
+  type PlayerGenerationEconomyGate,
+  type PlayerGenerationEconomyObservation,
+  type PlayerGenerationAnnualIntakeObservation,
+  type PlayerGenerationAnnualIntakeSummary,
+  type PlayerGenerationNegotiationObservation,
+  type PlayerPotentialOutcomeAudit,
+  type PlayerPotentialOutcomeObservation,
+  type PotentialProjectionPolicyCalibrationBand,
+  type SuppliedNegotiationAggregate,
 } from "@game/simulation-tools";
-import { careerStateFromNewWorld } from "../career/scenarios.ts";
+import {
+  careerStateFromNewWorld,
+  competitionIdForClubInWorld,
+} from "../career/scenarios.ts";
 import type { CliCareerState, CliPlayer, CliSaveId } from "../career/types.ts";
-import { createCareerSeasonInput } from "../fake-season-input.ts";
+
+type Phase79CCalibrationVersions = FakeDomesticWorld["calibrationVersions"];
+type Phase79DValuationConfig = ReturnType<typeof selectPlayerValuationConfig>;
+type Phase79CClubId = CliCareerState["gameState"]["clubIds"][number];
+type Phase79CPlayerId = CliCareerState["gameState"]["playerIds"][number];
+type Phase79DTransferNegotiationState =
+  NonNullable<CliCareerState["transferNegotiationState"]>;
+type Phase79DTransferNegotiation =
+  Phase79DTransferNegotiationState["negotiations"][
+    Phase79DTransferNegotiationState["negotiationIds"][number]
+  ];
 
 /** Candidate pool size per club for long-run squad maintenance stress tests. */
 const LONG_RUN_INTAKE_CANDIDATES_PER_CLUB = 8;
@@ -50,11 +95,61 @@ const LONG_RUN_INTAKE_CANDIDATES_PER_CLUB = 8;
 /** Minimum club goals needed before creator-share ratios are structurally meaningful. */
 const MIN_GOALS_FOR_CREATOR_SHARE = 40;
 
-/** Large gates use worker partitions by default so release checks remain practical. */
-const DEFAULT_PARALLEL_GATE_WORLD_THRESHOLD = 100;
+/** Fixed seed prefix for the Phase 79D pre-change 100-world baseline. */
+export const PHASE_79D_BASELINE_SEED_PREFIX = "phase79d-prechange-baseline";
 
-/** Hard cap that keeps release gates fast without starving the workstation. */
-const DEFAULT_MAX_LONG_RUN_WORKERS = 12;
+/** Exact world count required by the Phase 79D baseline contract. */
+export const PHASE_79D_BASELINE_WORLD_COUNT = 100;
+
+/** Reproduced Phase 79C market cohort retained as supplied aggregate facts. */
+export const PHASE_79C_NEGOTIATION_BASELINE: SuppliedNegotiationAggregate = {
+  sourceLabel: "phase79c-three-division-short-10x10",
+  offerCount: 23_718,
+  sellerCounterCount: 0,
+  permanentCompletionCount: 12_237,
+  askingPriceDistribution: {
+    observationCount: 12_237,
+    p50MinorUnits: 146_668_271,
+    p90MinorUnits: 1_523_434_510,
+    p99MinorUnits: 3_140_116_475,
+    maximumMinorUnits: 11_736_102_461,
+  },
+  completedFeeDistribution: {
+    observationCount: 12_237,
+    p50MinorUnits: 146_668_271,
+    p90MinorUnits: 1_523_434_510,
+    p99MinorUnits: 3_140_116_475,
+    maximumMinorUnits: 11_736_102_461,
+  },
+};
+
+/** Reproducibility metadata and structured diagnostics for the Step 01 baseline. */
+export interface Phase79DInitialWorldBaseline {
+  readonly seedPrefix: typeof PHASE_79D_BASELINE_SEED_PREFIX;
+  readonly worldCount: typeof PHASE_79D_BASELINE_WORLD_COUNT;
+  readonly populationInclusion: "initial contracted senior players only";
+  readonly moneyUnit: "integer minor units; 100 minor units = EUR 1";
+  readonly percentileMethod: PlayerGenerationEconomyAudit["percentileMethod"];
+  readonly calibrationVersions: Phase79CCalibrationVersions;
+  readonly compositionHashes: readonly Readonly<{ seed: string; hash: string }>[];
+  readonly audit: PlayerGenerationEconomyAudit;
+}
+
+/** Reproducibility metadata and report for the development-outcome matrix. */
+export interface Phase79DPotentialOutcomeBaseline {
+  readonly seedPrefix: "phase79d-potential-outcome";
+  readonly sampleStreamsPerCell: 5;
+  readonly startAgeMinimum: 15;
+  readonly startAgeMaximum: 27;
+  readonly finalAge: 35;
+  readonly participationMinutesPerMonth: Readonly<Record<
+    PlayerPotentialOutcomeObservation["participationBand"],
+    number
+  >>;
+  readonly projectionPolicyCalibration:
+    readonly PotentialProjectionPolicyCalibrationBand[];
+  readonly audit: PlayerPotentialOutcomeAudit;
+}
 
 /** Minimal deterministic season facts retained by the CLI long-run report. */
 export interface LongRunRetainedSeasonResult {
@@ -73,12 +168,48 @@ export interface LongRunRetainedSeasonResult {
 /** One CLI long-run season with only report-relevant retained facts. */
 export type LongRunSeasonResult = CareerLongRunSeasonResult<LongRunRetainedSeasonResult>;
 
+/** Year-ten exceptional-rating stock checked against the versioned rarity contract. */
+export interface Phase79CYearTenRatingStock {
+  readonly currentFiveAndHalfCount: number;
+  readonly currentSixCount: number;
+  readonly potentialSixCount: number;
+  readonly lowerDivisionPotentialSixCount: number;
+  readonly violationCount: number;
+  readonly locations: readonly string[];
+}
+
+/** Compact distribution for one retained set of market money facts. */
+export interface LongRunMoneyDistribution {
+  readonly count: number;
+  readonly p50: number;
+  readonly p90: number;
+  readonly p99: number;
+  readonly maximum: number;
+}
+
+/** One world's closing wage-economy row with deterministic seed provenance. */
+export interface LongRunGateDivisionWageEconomySnapshot extends LongRunDivisionWageEconomyRow {
+  readonly seed: string;
+}
+
+/** One world's closing market-economy row with deterministic seed provenance. */
+export interface LongRunGateDivisionMarketEconomySnapshot extends LongRunDivisionMarketEconomyRow {
+  readonly seed: string;
+}
+
+/** One world's closing cross-tier transfer row with deterministic seed provenance. */
+export interface LongRunGateCrossTierTransferSnapshot extends LongRunCrossTierTransferRow {
+  readonly seed: string;
+}
+
 /** Complete report bundle for one deterministic career world. */
 export interface SingleWorldLongRunReport {
   /** Seed used to generate this world. */
   readonly seed: string;
   /** Generated fake league for this world. */
-  readonly league: FakeLeagueSystem;
+  readonly league: FakeDomesticWorld;
+  /** Final canonical career retained for bounded Phase 79C diagnostics. */
+  readonly finalCareerState: CliCareerState;
   /** Completed career-aware season rows. */
   readonly seasons: readonly LongRunSeasonResult[];
   /** Player-development and production report. */
@@ -91,6 +222,14 @@ export interface SingleWorldLongRunReport {
   readonly contractFinanceStabilityReport: LongRunContractFinanceStabilityReport;
   /** Deterministic anomaly report. */
   readonly anomalyReport: LongRunAnomalyReport;
+  /** Annual exceptional-intake funnel observed through canonical rollover. */
+  readonly annualIntakeAudit: PlayerGenerationAnnualIntakeSummary;
+  /** Joint player/range/value/cap/negotiation facts for Phase 79D gates. */
+  readonly playerEconomyAudit: PlayerGenerationEconomyAudit;
+  /** Exact season-ten stock; absent when the requested run ends earlier. */
+  readonly yearTenExceptionalRatingStock?: Phase79CYearTenRatingStock;
+  /** Active exceptional-rating stock after the requested final season. */
+  readonly closingExceptionalRatingStock: Phase79CYearTenRatingStock;
   /** Initial/final club ability hierarchy snapshot. */
   readonly strengthHierarchy: ClubAbilityHierarchySummary;
 }
@@ -99,6 +238,32 @@ export interface SingleWorldLongRunReport {
 export interface LongRunGateWorldSummary {
   /** Stable generated world seed. */
   readonly seed: string;
+  /** Same-seed initial composition hash, independent from the simulated seasons. */
+  readonly compositionHash: string;
+  /** Exact calibration versions stamped into this career. */
+  readonly calibrationVersions: Phase79CCalibrationVersions;
+  /** Final exceptional-rating stock and any versioned cap violation. */
+  readonly yearTenRatingStock: Phase79CYearTenRatingStock;
+  /** Whether this world actually reached the season-ten boundary. */
+  readonly yearTenRatingStockObservationCount: 0 | 1;
+  /** Non-vacuous Phase 79D gates retained without full player observations. */
+  readonly playerEconomyGates: readonly PlayerGenerationEconomyGate[];
+  /** Public values frozen for completed permanent transfers. */
+  readonly permanentTransferPublicValues: readonly number[];
+  /** Initial seller asking prices frozen for completed permanent transfers. */
+  readonly permanentTransferAskingPrices: readonly number[];
+  /** Exact settled fees for completed permanent transfers. */
+  readonly permanentTransferCompletedFees: readonly number[];
+  /** Public values retained by completed free-agent signings. */
+  readonly freeAgentPublicValues: readonly number[];
+  /** Free-agent signings whose completed fee is not exactly zero. */
+  readonly freeAgentZeroFeeViolationCount: number;
+  /** Closing per-division wage economy. */
+  readonly closingDivisionWageEconomy: readonly LongRunDivisionWageEconomyRow[];
+  /** Closing per-division cash, transfer room, exposure, and activity. */
+  readonly closingDivisionMarketEconomy: readonly LongRunDivisionMarketEconomyRow[];
+  /** Closing cross-tier attempt/completion diagnostics. */
+  readonly closingCrossTierTransfers: readonly LongRunCrossTierTransferRow[];
   /** PASS/WARN/FAIL status for this world. */
   readonly status: LongRunAnomalyReport["status"];
   /** Average goals per match across this world run. */
@@ -219,6 +384,28 @@ export interface LongRunGateWorldSummary {
   readonly expiryCount: number;
   /** Selected-club expiry decisions left explicitly to the manager. */
   readonly selectedClubExpiredDecisionCount: number;
+  /** Completed permanent transfers across the world run. */
+  readonly completedTransferCount: number;
+  /** Permanent-transfer funnel aggregated across the world run. */
+  readonly permanentTransferFunnel: LongRunPermanentTransferFunnel;
+  /** Preliminary-agreement funnel aggregated across the world run. */
+  readonly preliminaryAgreementFunnel: LongRunPreliminaryAgreementFunnel;
+  /** Highest useful closing free-agent stock in one season. */
+  readonly maximumUsefulFreeAgentCountObserved: number;
+  /** Closing free-agent band observations across this world run. */
+  readonly freeAgentBandObservations: LongRunFreeAgentBands;
+  /** Bounded club-season utilization samples used for exact cohort quantiles. */
+  readonly wageBudgetUtilizations: readonly number[];
+  /** Bounded club-season headroom samples used for exact cohort quantiles. */
+  readonly annualWageHeadrooms: readonly number[];
+  /** Share of club-seasons at or above 95% wage utilization. */
+  readonly wagePressureClubSeasonShare: number;
+  /** Share of club-seasons exactly at the wage ceiling. */
+  readonly exactWageCeilingClubSeasonShare: number;
+  /** Share of club-seasons above the wage budget. */
+  readonly aboveWageBudgetClubSeasonShare: number;
+  /** Exact-ceiling club-seasons reached after transfer-to-wage reallocation. */
+  readonly reallocationExactCeilingClubSeasonCount: number;
   /** Failing anomaly keys for this world. */
   readonly failingCheckKeys: readonly string[];
   /** Warning-level anomaly keys for this world. */
@@ -237,6 +424,22 @@ export interface LongRunGateReport {
   readonly execution: LongRunGateExecutionSummary;
   /** Total simulated seasons. */
   readonly totalSeasonCount: number;
+  /** Number of worlds breaching the versioned year-ten exceptional-rating caps. */
+  readonly ratingInflationViolationWorldCount: number;
+  /** Worlds that actually reached and observed the season-ten stock boundary. */
+  readonly yearTenRatingStockObservationCount: number;
+  /** Aggregated Phase 79D gate observations and non-pass world counts. */
+  readonly playerEconomyGates: readonly LongRunGatePlayerEconomyGateSummary[];
+  /** Highest year-ten current-six stock across worlds. */
+  readonly yearTenCurrentSixMaximumObserved: number;
+  /** Highest year-ten potential-six stock across worlds. */
+  readonly yearTenPotentialSixMaximumObserved: number;
+  /** Highest lower-division potential-six stock across worlds. */
+  readonly yearTenLowerDivisionPotentialSixMaximumObserved: number;
+  /** Exact calibration-version bundles observed, keyed by their stable JSON form. */
+  readonly calibrationVersionBundles: readonly Phase79CCalibrationVersions[];
+  /** Deterministic initial composition hash per seed. */
+  readonly compositionHashes: readonly Readonly<{ seed: string; hash: string }>[];
   /** Number of worlds with failing anomaly checks. */
   readonly failedWorldCount: number;
   /** Number of worlds with warning-level anomaly checks. */
@@ -287,6 +490,46 @@ export interface LongRunGateReport {
   readonly expiryCount: number;
   /** Total selected-club expiry decisions intentionally left to managers. */
   readonly selectedClubExpiredDecisionCount: number;
+  /** Total completed permanent transfers. */
+  readonly completedTransferCount: number;
+  /** Completed permanent-transfer public-value distribution. */
+  readonly permanentTransferPublicValueDistribution: LongRunMoneyDistribution;
+  /** Completed permanent-transfer asking-price distribution. */
+  readonly permanentTransferAskingPriceDistribution: LongRunMoneyDistribution;
+  /** Completed permanent-transfer settled-fee distribution. */
+  readonly permanentTransferCompletedFeeDistribution: LongRunMoneyDistribution;
+  /** Completed free-agent public-value distribution. */
+  readonly freeAgentPublicValueDistribution: LongRunMoneyDistribution;
+  /** Exact-zero-fee invariant violations across free-agent signings. */
+  readonly freeAgentZeroFeeViolationCount: number;
+  /** Permanent-transfer funnel aggregated across every world. */
+  readonly permanentTransferFunnel: LongRunPermanentTransferFunnel;
+  /** Preliminary-agreement funnel aggregated across every world. */
+  readonly preliminaryAgreementFunnel: LongRunPreliminaryAgreementFunnel;
+  /** Highest useful closing free-agent stock in one world-season. */
+  readonly maximumUsefulFreeAgentCountObserved: number;
+  /** Closing free-agent band observations across every world-season. */
+  readonly freeAgentBandObservations: LongRunFreeAgentBands;
+  /** Median wage utilization across every club-season. */
+  readonly wageBudgetUtilizationP50: number;
+  /** 90th-percentile wage utilization across every club-season. */
+  readonly wageBudgetUtilizationP90: number;
+  /** 95th-percentile wage utilization across every club-season. */
+  readonly wageBudgetUtilizationP95: number;
+  /** 99th-percentile wage utilization across every club-season. */
+  readonly wageBudgetUtilizationP99: number;
+  /** Share of club-seasons at or above 95% wage utilization. */
+  readonly wagePressureClubSeasonShare: number;
+  /** Share of club-seasons exactly at the wage ceiling. */
+  readonly exactWageCeilingClubSeasonShare: number;
+  /** Share of club-seasons above the wage budget. */
+  readonly aboveWageBudgetClubSeasonShare: number;
+  /** Median remaining annual-wage headroom in minor units. */
+  readonly annualWageHeadroomP50: number;
+  /** 10th-percentile remaining annual-wage headroom in minor units. */
+  readonly annualWageHeadroomP10: number;
+  /** Exact-ceiling club-seasons reached after transfer-to-wage reallocation. */
+  readonly reallocationExactCeilingClubSeasonCount: number;
   /** Average goals-per-match value across world averages. */
   readonly goalsPerMatchAverage: number;
   /** 95th percentile goals-per-match world average. */
@@ -327,6 +570,33 @@ export interface LongRunGateReport {
   readonly dynastyWarningWorlds: readonly LongRunGateWorldSummary[];
   /** Worlds with the tightest average first-to-last table spread. */
   readonly tableSpreadWarningWorlds: readonly LongRunGateWorldSummary[];
+  /** Worlds with recruitment needs but no completed permanent transfer. */
+  readonly zeroPermanentTransferWorlds: readonly LongRunGateWorldSummary[];
+  /** Worlds with the largest useful free-agent stock. */
+  readonly usefulFreeAgentWorlds: readonly LongRunGateWorldSummary[];
+  /** Worlds with the broadest club-season wage pressure. */
+  readonly wagePressureWorlds: readonly LongRunGateWorldSummary[];
+  /** Closing wage-economy rows for every world and division. */
+  readonly divisionWageEconomySnapshots: readonly LongRunGateDivisionWageEconomySnapshot[];
+  /** Closing market-economy rows for every world and division. */
+  readonly divisionMarketEconomySnapshots: readonly LongRunGateDivisionMarketEconomySnapshot[];
+  /** Closing cross-tier transfer rows for every world. */
+  readonly crossTierTransferSnapshots: readonly LongRunGateCrossTierTransferSnapshot[];
+  /** Exceptional year-ten locations for each deterministic world. */
+  readonly yearTenExceptionalLocations: readonly Readonly<{
+    seed: string;
+    locations: readonly string[];
+  }>[];
+}
+
+/** Cohort aggregate for one stable Phase 79D player/economy gate key. */
+export interface LongRunGatePlayerEconomyGateSummary {
+  readonly key: string;
+  readonly observationCount: number;
+  readonly violationCount: number;
+  readonly failedWorldCount: number;
+  readonly notEvaluatedWorldCount: number;
+  readonly threshold: string;
 }
 
 /** Aggregate count for one anomaly key in a batch gate report. */
@@ -425,22 +695,45 @@ type LongRunGateWorkerMessage = LongRunGateWorkerSuccess | LongRunGateWorkerFail
  * long-run batch gates. Keeping one path avoids report drift.
  */
 export function createSingleWorldReport(seed: string, seasonCount: number, text: Translator): SingleWorldLongRunReport {
-  const league = createFakeLeagueSystem({ worldSeed: seed });
+  const league = createFakeDomesticWorld({ worldSeed: seed });
   const initialCareerState = careerStateFromNewWorld("save:ten-season-report" as CliSaveId, league, seed);
+  const annualIntakeObservations: PlayerGenerationAnnualIntakeObservation[] = [];
+  let yearTenCareerState: CliCareerState | undefined;
+  const usefulLowerDivisionAbilityThreshold =
+    lowerDivisionUsefulAbilityThreshold(initialCareerState);
   const report = runCareerLongRunSimulation({
     seed,
     seasonCount,
     initialCareerState,
     retainSeasonResult: retainLongRunSeasonResult,
-    createSeasonInput: ({ seasonSeed, careerState }) => createCareerSeasonInput(league, careerState, seasonSeed),
-    advanceCareerState: (context) => advanceCareerForReport(league, seed, context),
+    createSeasonInput: ({ seasonSeed, careerState }) =>
+      createDomesticCareerSeasonInput(league, careerState as CliCareerState, seasonSeed),
+    advanceCareerState: (context) =>
+      advanceCareerForReport(league, seed, context, annualIntakeObservations),
+    observeAdvancedSeason: ({ seasonNumber, careerState }) => {
+      if (seasonNumber === 10) {
+        yearTenCareerState = careerState as CliCareerState;
+      }
+    },
   });
-  const playerEvolutionReport = createLongRunPlayerEvolutionReport({
+  const rawPlayerEvolutionReport = createLongRunPlayerEvolutionReport({
     initialPlayers: snapshotPlayers(initialCareerState),
     finalPlayers: snapshotPlayers(report.finalCareerState as CliCareerState),
     production: productionRows(report.finalCareerState as CliCareerState, report.seasons, text),
-    usefulPlayerCurrentAbilityThreshold: 12,
+    usefulPlayerCurrentAbilityThreshold:
+      usefulLowerDivisionAbilityThreshold,
   });
+  const playerEvolutionReport: LongRunPlayerEvolutionReport = {
+    ...rawPlayerEvolutionReport,
+    // The legacy one-league gate measured lower-division overproduction. A
+    // complete three-tier world must not count normal First/Second players as
+    // failures, so only the current Third Division population enters this
+    // unchanged threshold.
+    usefulAfterLongRun: usefulThirdDivisionPlayerCount(
+      report.finalCareerState as CliCareerState,
+      usefulLowerDivisionAbilityThreshold,
+    ),
+  };
   const clubStabilityReport = createLongRunClubStabilityReport(clubSeasonRows(league, report.seasons), refreshTotals(report.seasons));
   const youthStabilityReport = createLongRunYouthStabilityReport(youthSeasonRows(report.seasons));
   const contractFinanceStabilityReport = createLongRunContractFinanceStabilityReport(
@@ -451,18 +744,107 @@ export function createSingleWorldReport(seed: string, seasonCount: number, text:
     playerEvolution: playerEvolutionReport,
     clubStability: clubStabilityReport,
   });
+  const finalCareerState = report.finalCareerState as CliCareerState;
+  const valuationConfig = selectPlayerValuationConfig(
+    requireCalibrationVersions(finalCareerState),
+  );
+  const initialObservations = phase79DInitialWorldObservations(seed, league);
+  const finalObservations = phase79DActiveCareerObservations({
+    seed,
+    seasonIndex: seasonCount,
+    careerState: finalCareerState,
+    valuationConfig,
+  });
+  const playerEconomyAudit = createPlayerGenerationEconomyAudit({
+    observations: [...initialObservations, ...finalObservations],
+    negotiationObservations: phase79DNegotiationObservations({
+      seed,
+      seasonStartDate: league.seasonStartDate,
+      careerState: finalCareerState,
+    }),
+    hardCapMinorUnits:
+      valuationConfig.valuationCurves.upperTail.hardCapMinorUnits,
+    initialRarityConstraints: {
+      ...valuationConfig.ratingScale.rarity.initialWorld,
+    },
+    annualIntakeObservations,
+  });
 
   return {
     seed,
     league,
+    finalCareerState,
     seasons: report.seasons,
     playerEvolutionReport,
     clubStabilityReport,
     youthStabilityReport,
     contractFinanceStabilityReport,
     anomalyReport,
+    annualIntakeAudit: createPlayerGenerationAnnualIntakeSummary(
+      annualIntakeObservations,
+    ),
+    playerEconomyAudit,
+    ...(yearTenCareerState === undefined
+      ? {}
+      : {
+          yearTenExceptionalRatingStock:
+            summarizePhase79CYearTenRatingStock(
+              yearTenCareerState,
+              selectPlayerValuationConfig(
+                requireCalibrationVersions(yearTenCareerState),
+              ),
+            ),
+        }),
+    closingExceptionalRatingStock: summarizePhase79CYearTenRatingStock(
+      finalCareerState,
+      valuationConfig,
+    ),
     strengthHierarchy: summarizeClubAbilityHierarchy(league, initialCareerState, report.finalCareerState as CliCareerState),
   };
+}
+
+/** Counts genuinely high-ability players currently registered in tier three. */
+function usefulThirdDivisionPlayerCount(
+  careerState: CliCareerState,
+  usefulAbilityThreshold: number,
+): number {
+  const playerIds = new Set(
+    careerState.gameState.clubIds.flatMap((clubId) => {
+      const club = careerState.gameState.clubs[clubId];
+      return club?.category === "third_division" ? club.playerIds : [];
+    }),
+  );
+  return snapshotPlayers(careerState).filter(
+    (player) =>
+      playerIds.has(player.playerId as Phase79CPlayerId)
+      && player.currentAbility >= usefulAbilityThreshold,
+  ).length;
+}
+
+/**
+ * Resolves the first global rating above Third Division's documented
+ * exceptional maximum. This keeps the legacy usefulness check semantically
+ * stable after replacing the old relative ability scale.
+ */
+function lowerDivisionUsefulAbilityThreshold(
+  careerState: CliCareerState,
+): number {
+  const ratingScale = selectPlayerValuationConfig(
+    careerState.gameState.meta.calibrationVersions,
+  ).ratingScale;
+  const exceptionalMaximum = ratingScale.divisionFirstTeamBands.find(
+    (band) => band.division === "third_division",
+  )?.exceptionalMaximum;
+  const nextRating = ratingScale.supportedRatings.find(
+    (rating) => exceptionalMaximum !== undefined && rating > exceptionalMaximum,
+  );
+  const threshold = ratingScale.abilityThresholds.find(
+    (candidate) => candidate.rating === nextRating,
+  )?.minimumAbilityInclusive;
+  if (threshold === undefined) {
+    throw new Error("Third Division usefulness threshold is missing");
+  }
+  return threshold;
 }
 
 /**
@@ -510,31 +892,34 @@ export async function createLongRunGateReport(input: CreateLongRunGateReportInpu
 export function resolveLongRunGateWorkerCount(
   input: Pick<CreateLongRunGateReportInput, "workerCount" | "worldCount">,
 ): number {
-  if (input.workerCount !== undefined) {
-    return clampWorkerCount(input.workerCount, input.worldCount);
-  }
-
-  const envWorkerCount = process.env.TLS_LONG_RUN_WORKERS;
-  if (envWorkerCount !== undefined) {
-    const parsed = Number(envWorkerCount);
-
-    if (Number.isSafeInteger(parsed) && parsed > 0) {
-      return clampWorkerCount(parsed, input.worldCount);
-    }
-  }
-
-  if (input.worldCount < DEFAULT_PARALLEL_GATE_WORLD_THRESHOLD) {
-    return 1;
-  }
-
-  return clampWorkerCount(Math.max(1, availableParallelism() - 1), input.worldCount);
+  return resolveSimulationWorkerCount({
+    workItemCount: input.worldCount,
+    ...(input.workerCount !== undefined
+      ? { requestedWorkerCount: input.workerCount }
+      : simulationWorkerEnvironmentOverride()),
+  });
 }
 
 /**
- * Caps worker count so a gate never creates empty partitions.
+ * Reads the optional process-level simulation override for CLI batch runners.
  */
-function clampWorkerCount(workerCount: number, worldCount: number): number {
-  return Math.max(1, Math.min(workerCount, worldCount, DEFAULT_MAX_LONG_RUN_WORKERS));
+function simulationWorkerEnvironmentOverride(): {
+  readonly requestedWorkerCount?: number;
+} {
+  const value = process.env.TLS_SIMULATION_WORKERS;
+
+  if (value === undefined) {
+    return {};
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new RangeError(
+      `TLS_SIMULATION_WORKERS must be a positive safe integer: ${value}`,
+    );
+  }
+
+  return { requestedWorkerCount: parsed };
 }
 
 /**
@@ -668,14 +1053,67 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
   const tableSpreadSnapshot = summarizeTableSpread(balanceRows);
   const drawSnapshot = summarizeDrawRates(report.seasons);
   const championStreakSnapshot = summarizeChampionStreak(report.clubStabilityReport.seasons, balanceRows);
+  const calibrationVersions = requireCalibrationVersions(report.finalCareerState);
+  const yearTenRatingStock = report.yearTenExceptionalRatingStock
+    ?? report.closingExceptionalRatingStock;
+  const yearTenRatingStockObservationCount =
+    report.yearTenExceptionalRatingStock === undefined ? 0 : 1;
+  const failedPlayerEconomyGates = report.playerEconomyAudit.gates.filter(
+    ({ status }) => status === "fail" || status === "not_evaluated",
+  );
+  const permanentTransfers = report.finalCareerState.transferHistory.filter(
+    (entry) => entry.kind === "permanent_transfer",
+  );
+  const freeAgentSignings = report.finalCareerState.transferHistory.filter(
+    (entry) => entry.kind === "free_agent_signing",
+  );
+  const replenishmentFreeAgentPublicValues =
+    report.contractFinanceStabilityReport.seasons.flatMap(
+      (season) => season.freeAgentSigningPublicValues,
+    );
+  const freeAgentZeroFeeViolationCount = freeAgentSignings.filter(
+    (entry) => entry.completedFee !== 0,
+  ).length;
+  const baseStatus = worstLongRunAnomalyStatus([
+    report.anomalyReport.status,
+    report.youthStabilityReport.status,
+    report.contractFinanceStabilityReport.status,
+  ]);
 
   return {
     seed: report.seed,
-    status: worstLongRunAnomalyStatus([
-      report.anomalyReport.status,
-      report.youthStabilityReport.status,
-      report.contractFinanceStabilityReport.status,
-    ]),
+    compositionHash: hashPhase79CComposition(report.league),
+    calibrationVersions,
+    yearTenRatingStock,
+    yearTenRatingStockObservationCount,
+    playerEconomyGates: report.playerEconomyAudit.gates,
+    permanentTransferPublicValues: permanentTransfers.map((entry) => entry.publicValue),
+    permanentTransferAskingPrices: permanentTransfers.map(
+      (entry) => entry.initialAskingPrice,
+    ),
+    permanentTransferCompletedFees: permanentTransfers.map(
+      (entry) => entry.completedFee,
+    ),
+    freeAgentPublicValues: [
+      ...freeAgentSignings.map((entry) => entry.publicValue),
+      ...replenishmentFreeAgentPublicValues,
+    ],
+    freeAgentZeroFeeViolationCount,
+    closingDivisionWageEconomy:
+      report.contractFinanceStabilityReport.closingDivisionWageEconomy,
+    closingDivisionMarketEconomy:
+      report.contractFinanceStabilityReport.closingDivisionMarketEconomy,
+    closingCrossTierTransfers:
+      report.contractFinanceStabilityReport.closingCrossTierTransfers,
+    status:
+      (
+        yearTenRatingStockObservationCount > 0
+        && yearTenRatingStock.violationCount > 0
+      )
+        || freeAgentZeroFeeViolationCount > 0
+        || failedPlayerEconomyGates.length > 0
+        ? "fail"
+        : baseStatus,
     goalsPerMatchAverage: roundReportNumber(average(balanceRows.map((season) => season.goalsPerMatch))),
     drawRateAverage: drawSnapshot.average,
     drawRateMax: drawSnapshot.max,
@@ -738,16 +1176,860 @@ function summarizeGateWorld(report: SingleWorldLongRunReport): LongRunGateWorldS
     releaseCount: report.contractFinanceStabilityReport.releaseCount,
     expiryCount: report.contractFinanceStabilityReport.expiryCount,
     selectedClubExpiredDecisionCount: report.contractFinanceStabilityReport.selectedClubExpiredDecisionCount,
+    completedTransferCount: report.contractFinanceStabilityReport.completedTransferCount,
+    permanentTransferFunnel: report.contractFinanceStabilityReport.permanentTransferFunnel,
+    preliminaryAgreementFunnel: report.contractFinanceStabilityReport.preliminaryAgreementFunnel,
+    maximumUsefulFreeAgentCountObserved:
+      report.contractFinanceStabilityReport.maximumUsefulFreeAgentCountObserved,
+    freeAgentBandObservations: report.contractFinanceStabilityReport.freeAgentBandObservations,
+    wageBudgetUtilizations: report.contractFinanceStabilityReport.seasons.flatMap(
+      (season) => season.wageBudgetUtilizations,
+    ),
+    annualWageHeadrooms: report.contractFinanceStabilityReport.seasons.flatMap(
+      (season) => season.annualWageHeadrooms,
+    ),
+    wagePressureClubSeasonShare: report.contractFinanceStabilityReport.wagePressureClubSeasonShare,
+    exactWageCeilingClubSeasonShare:
+      report.contractFinanceStabilityReport.exactWageCeilingClubSeasonShare,
+    aboveWageBudgetClubSeasonShare:
+      report.contractFinanceStabilityReport.aboveWageBudgetClubSeasonShare,
+    reallocationExactCeilingClubSeasonCount:
+      report.contractFinanceStabilityReport.reallocationExactCeilingClubSeasonCount,
     failingCheckKeys: [
       ...report.anomalyReport.checks.filter((check) => check.status === "fail").map((check) => check.key),
       ...report.youthStabilityReport.checks.filter((check) => check.status === "fail").map((check) => check.key),
       ...report.contractFinanceStabilityReport.checks.filter((check) => check.status === "fail").map((check) => check.key),
+      ...(yearTenRatingStockObservationCount > 0
+          && yearTenRatingStock.violationCount > 0
+        ? ["phase79c_year_ten_rating_inflation"]
+        : []),
+      ...(freeAgentZeroFeeViolationCount > 0
+        ? ["phase79c_free_agent_non_zero_fee"]
+        : []),
+      ...failedPlayerEconomyGates.map(
+        ({ key }) => `phase79d_${key}`,
+      ),
     ],
     warningCheckKeys: [
       ...report.anomalyReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
       ...report.youthStabilityReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
       ...report.contractFinanceStabilityReport.checks.filter((check) => check.status === "warn").map((check) => check.key),
     ],
+  };
+}
+
+/**
+ * Hashes the complete initial composition facts needed to prove a same-seed
+ * replay without executing a second long-run cohort.
+ */
+export function hashPhase79CComposition(world: FakeDomesticWorld): string {
+  return createHash("sha256").update(JSON.stringify({
+    versions: world.calibrationVersions,
+    competitionIds: world.domesticCompetitionWorld.competitionIds,
+    competitions: world.domesticCompetitionWorld.competitionIds.map((competitionId) => {
+      const competition = world.domesticCompetitionWorld.competitions[competitionId];
+      return {
+        id: competitionId,
+        clubIds: competition?.clubIds ?? [],
+      };
+    }),
+    clubs: world.clubIds.map((clubId) => {
+      const club = world.clubsById[clubId];
+      return {
+        id: clubId,
+        name: club?.name,
+        category: club?.category,
+        reputation: club?.reputation,
+        playerIds: club?.playerIds ?? [],
+      };
+    }),
+    players: world.playerIds.map((playerId) => {
+      const player = world.players[playerId];
+      return {
+        id: playerId,
+        birthDate: player?.birthDate,
+        naturalPositions: player?.naturalPositions,
+        primaryRole: player?.primaryRole,
+        abilities: player?.abilities,
+        potential: player?.potential,
+        identity: world.playerIdentities[playerId],
+      };
+    }),
+    exceptionalAllocation: world.exceptionalAllocation,
+  })).digest("hex").slice(0, 16);
+}
+
+/**
+ * Reproduces the Phase 79D pre-change initial-world baseline over exactly one
+ * hundred canonical three-division worlds.
+ *
+ * Only contracted senior players are included because this baseline explains
+ * the public Market contradictions. Academy outcomes are covered separately by
+ * the development matrix and later intake diagnostics.
+ */
+export function createPhase79DInitialWorldBaseline(): Phase79DInitialWorldBaseline {
+  const worlds = Array.from(
+    { length: PHASE_79D_BASELINE_WORLD_COUNT },
+    (_, index) => {
+      const seed = `${PHASE_79D_BASELINE_SEED_PREFIX}-world-${String(index + 1).padStart(5, "0")}`;
+      return { seed, world: createFakeDomesticWorld({ worldSeed: seed }) };
+    },
+  );
+  const firstWorld = worlds[0]?.world;
+  if (firstWorld === undefined) {
+    throw new Error("Phase 79D baseline requires at least one generated world");
+  }
+  const observations = worlds.flatMap(({ seed, world }) =>
+    phase79DInitialWorldObservations(seed, world),
+  );
+  const valuationConfig = selectPlayerValuationConfig(firstWorld.calibrationVersions);
+
+  return {
+    seedPrefix: PHASE_79D_BASELINE_SEED_PREFIX,
+    worldCount: PHASE_79D_BASELINE_WORLD_COUNT,
+    populationInclusion: "initial contracted senior players only",
+    moneyUnit: "integer minor units; 100 minor units = EUR 1",
+    percentileMethod: "Hyndman-Fan type 7 linear interpolation, rounded to nearest integer",
+    calibrationVersions: { ...firstWorld.calibrationVersions },
+    compositionHashes: worlds.map(({ seed, world }) => ({
+      seed,
+      hash: hashPhase79CComposition(world),
+    })),
+    audit: createPlayerGenerationEconomyAudit({
+      observations,
+      hardCapMinorUnits: valuationConfig.valuationCurves.upperTail.hardCapMinorUnits,
+      initialRarityConstraints: {
+        ...valuationConfig.ratingScale.rarity.initialWorld,
+      },
+      suppliedNegotiationAggregates: [PHASE_79C_NEGOTIATION_BASELINE],
+    }),
+  };
+}
+
+/**
+ * Runs the existing engine development and aging owners over the complete
+ * Phase 79D age/role/room/participation matrix.
+ *
+ * The adapter constructs only deterministic input state. It intentionally owns
+ * no growth, decline, realization, role weighting, or potential formula.
+ */
+export function createPhase79DPotentialOutcomeBaseline(): Phase79DPotentialOutcomeBaseline {
+  const seedPrefix = "phase79d-potential-outcome";
+  const sourceWorld = createFakeDomesticWorld({
+    worldSeed: `${seedPrefix}-templates`,
+  });
+  const sourceCareer = careerStateFromNewWorld(
+    "save:phase79d-potential-templates" as CliSaveId,
+    sourceWorld,
+    `${seedPrefix}-templates`,
+  );
+  const outfield = sourceWorld.playerIds
+    .map((playerId) => sourceWorld.players[playerId])
+    .find((player) => player?.naturalPositions[0] !== "gk");
+  const goalkeeper = sourceWorld.playerIds
+    .map((playerId) => sourceWorld.players[playerId])
+    .find((player) => player?.naturalPositions[0] === "gk");
+  if (outfield === undefined || goalkeeper === undefined) {
+    throw new Error("Phase 79D development matrix requires outfield and goalkeeper templates");
+  }
+
+  const observations: PlayerPotentialOutcomeObservation[] = [];
+  const roomValues = {
+    small: 2,
+    medium: 5,
+    large: 10,
+  } as const;
+  const participationMinutes = {
+    low: 60,
+    typical: 300,
+    high: 540,
+  } as const;
+
+  for (let startAge = 15; startAge <= 27; startAge += 1) {
+    for (const [roleGroup, template] of [
+      ["outfield", outfield],
+      ["goalkeeper", goalkeeper],
+    ] as const) {
+      for (const [roomBand, room] of Object.entries(roomValues) as readonly [
+        PlayerPotentialOutcomeObservation["roomBand"],
+        number,
+      ][]) {
+        for (
+          const [participationBand, minutesPerMonth]
+          of Object.entries(participationMinutes) as readonly [
+            PlayerPotentialOutcomeObservation["participationBand"],
+            number,
+          ][]
+        ) {
+          for (let stream = 1; stream <= 5; stream += 1) {
+            observations.push(runPhase79DPotentialOutcome({
+              sourceCareer,
+              template,
+              sourceId: [
+                seedPrefix,
+                startAge,
+                roleGroup,
+                roomBand,
+                participationBand,
+                stream,
+              ].join(":"),
+              startAge,
+              roleGroup,
+              roomBand,
+              participationBand,
+              room,
+              minutesPerMonth,
+              finalAge: 35,
+            }));
+          }
+        }
+      }
+    }
+  }
+
+  const projectionPolicy = selectPlayerValuationConfig(
+    sourceCareer.gameState.meta.calibrationVersions,
+  ).potentialProjectionPolicy;
+  const projectionAgeBands = (
+    ["goalkeeper", "outfield"] as const
+  ).flatMap((roleGroup) =>
+    projectionPolicy.ageBandsByRoleFamily[roleGroup].map((ageBand) => ({
+      roleGroup,
+      minimumAge: ageBand.minimumAge,
+      maximumAge: ageBand.maximumAge,
+    }))
+  );
+  const audit = createPlayerPotentialOutcomeAudit({
+    observations,
+    coverage: {
+      startAges: Array.from({ length: 13 }, (_, index) => index + 15),
+      roleGroups: ["outfield", "goalkeeper"],
+      roomBands: ["small", "medium", "large"],
+      participationBands: ["low", "typical", "high"],
+      observationsPerCell: 5,
+    },
+    projectionAgeBands,
+  });
+
+  return {
+    seedPrefix,
+    sampleStreamsPerCell: 5,
+    startAgeMinimum: 15,
+    startAgeMaximum: 27,
+    finalAge: 35,
+    participationMinutesPerMonth: participationMinutes,
+    projectionPolicyCalibration: audit.projectionPolicyCalibration,
+    audit,
+  };
+}
+
+interface RunPhase79DPotentialOutcomeInput {
+  readonly sourceCareer: CliCareerState;
+  readonly template: CliPlayer;
+  readonly sourceId: string;
+  readonly startAge: number;
+  readonly roleGroup: PlayerPotentialOutcomeObservation["roleGroup"];
+  readonly roomBand: PlayerPotentialOutcomeObservation["roomBand"];
+  readonly participationBand: PlayerPotentialOutcomeObservation["participationBand"];
+  readonly room: number;
+  readonly minutesPerMonth: number;
+  readonly finalAge: number;
+}
+
+function runPhase79DPotentialOutcome(
+  input: RunPhase79DPotentialOutcomeInput,
+): PlayerPotentialOutcomeObservation {
+  const templatePlayerState = input.sourceCareer.gameState.playerStates[input.template.id];
+  const sourceClub = input.sourceCareer.gameState.clubs[input.sourceCareer.selectedClubId];
+  if (templatePlayerState === undefined || sourceClub === undefined) {
+    throw new Error("Phase 79D development template state is incomplete");
+  }
+  const startCurrentDate = input.sourceCareer.gameState.calendar.currentDate;
+  const currentAbility = 7;
+  const player: CliPlayer = {
+    ...input.template,
+    birthDate: (startCurrentDate - input.startAge * 365) as CliPlayer["birthDate"],
+    abilities: constantAbilityShape(input.template.abilities, currentAbility),
+    potential: constantAbilityShape(
+      input.template.potential,
+      Math.min(20, currentAbility + input.room),
+    ),
+  };
+  const onePlayerClub = {
+    ...sourceClub,
+    playerIds: [player.id],
+  };
+  const {
+    domesticCompetitionWorld: _domesticCompetitionWorld,
+    ...baseGameState
+  } = input.sourceCareer.gameState;
+  let careerState: CliCareerState = {
+    saveId: `save:${input.sourceId}` as CliSaveId,
+    schemaVersion: input.sourceCareer.schemaVersion,
+    selectedClubId: sourceClub.id,
+    gameState: {
+      ...baseGameState,
+      calendar: {
+        ...baseGameState.calendar,
+        currentDate: startCurrentDate,
+      },
+      players: { [player.id]: player } as CliCareerState["gameState"]["players"],
+      playerIds: [player.id],
+      playerStates: {
+        [player.id]: templatePlayerState,
+      } as CliCareerState["gameState"]["playerStates"],
+      clubs: {
+        [sourceClub.id]: onePlayerClub,
+      } as CliCareerState["gameState"]["clubs"],
+      clubIds: [sourceClub.id],
+      fixtures: {},
+      fixtureIds: [],
+    },
+    transferHistory: [],
+  };
+  const starting = summarizePlayerDevelopmentAbilities(player);
+  const valuationConfig = selectPlayerValuationConfig(
+    requireCalibrationVersions(input.sourceCareer),
+  );
+  const startingProjection = derivePlayerPotentialProjection({
+    player,
+    currentDate: startCurrentDate,
+    policy: valuationConfig.potentialProjectionPolicy,
+    ratingScale: valuationConfig.ratingScale,
+  });
+  let peakRoleAbility = starting.currentAbility;
+
+  for (let age = input.startAge; age <= input.finalAge; age += 1) {
+    const seasonKey = `season:phase79d-${input.sourceId}-${age}`;
+    const seasonId = seasonKey as CliCareerState["gameState"]["calendar"]["currentSeasonId"];
+    const developedPlayer = careerState.gameState.players[player.id];
+    if (developedPlayer === undefined || developedPlayer.primaryRole === undefined) {
+      throw new Error("Phase 79D development player lost its stable role");
+    }
+    const playedRole = canonicalPlayedRoleForPosition(
+      developedPlayer.naturalPositions[0],
+    );
+    const rows = Object.fromEntries(
+      Array.from({ length: 12 }, (_, monthIndex) => {
+        const monthKey = `${String(2026 + age - input.startAge)}-${String(monthIndex + 1).padStart(2, "0")}`;
+        const rowKey = `${seasonKey}|${monthKey}|${String(player.id)}`;
+        return [rowKey, {
+          rowKey,
+          playerId: player.id,
+          seasonId,
+          monthKey,
+          starts: input.minutesPerMonth >= 270 ? 4 : 0,
+          substituteAppearances: input.minutesPerMonth < 270 ? 2 : 0,
+          minutes: input.minutesPerMonth,
+          ratingTotal: 6.5,
+          ratingSamples: 1,
+          playedRoleMinutes: {
+            [playedRole]: input.minutesPerMonth,
+          },
+          appliedFixtureIds: [
+            `fixture:phase79d-${input.sourceId}-${age}-${monthIndex + 1}`,
+          ],
+        }];
+      }),
+    );
+    careerState = {
+      ...careerState,
+      gameState: {
+        ...careerState.gameState,
+        calendar: {
+          currentDate: (
+            startCurrentDate + (age - input.startAge) * 365
+          ) as CliCareerState["gameState"]["calendar"]["currentDate"],
+          currentSeasonId: seasonId,
+        },
+      },
+      playerParticipationLedger: {
+        rows,
+        rowKeys: Object.keys(rows),
+        closedMonthKeys: [],
+      } as unknown as NonNullable<CliCareerState["playerParticipationLedger"]>,
+    };
+    careerState = developPlayersForSeason({
+      careerState,
+      worldSeed: input.sourceId,
+      seasonId,
+      playerIds: [player.id],
+    }).careerState as CliCareerState;
+    const summary = summarizePlayerDevelopmentAbilities(
+      careerState.gameState.players[player.id]!,
+    );
+    peakRoleAbility = Math.max(peakRoleAbility, summary.currentAbility);
+  }
+
+  const finalPlayer = careerState.gameState.players[player.id];
+  if (finalPlayer === undefined) {
+    throw new Error("Phase 79D development matrix lost its player");
+  }
+  const final = summarizePlayerDevelopmentAbilities(finalPlayer);
+  return {
+    sourceId: input.sourceId,
+    startAge: input.startAge,
+    roleGroup: input.roleGroup,
+    roomBand: input.roomBand,
+    participationBand: input.participationBand,
+    startingRoleAbility: starting.currentAbility,
+    ceilingRoleAbility: starting.potentialAbility,
+    peakRoleAbility,
+    finalRoleAbility: final.currentAbility,
+    remainingRoom: final.potentialRoom,
+    publicLowerRoleAbility: startingProjection.conservativeLowerAbility,
+    publicExpectedRoleAbility: startingProjection.expectedAbility,
+    publicUpperRoleAbility: startingProjection.upperAbility,
+    publicLowerRating:
+      startingProjection.conservativeLowerRating,
+    publicExpectedRating:
+      startingProjection.expectedRating,
+    publicUpperRating:
+      startingProjection.upperRating,
+  };
+}
+
+function constantAbilityShape(
+  source: CliPlayer["abilities"],
+  value: number,
+): CliPlayer["abilities"] {
+  return Object.fromEntries(
+    Object.entries(source).map(([group, abilities]) => [
+      group,
+      Object.fromEntries(
+        Object.keys(abilities).map((ability) => [ability, value]),
+      ),
+    ]),
+  ) as unknown as CliPlayer["abilities"];
+}
+
+function canonicalPlayedRoleForPosition(
+  position: CliPlayer["naturalPositions"][number] | undefined,
+): string {
+  switch (position) {
+    case "gk": return "goalkeeper";
+    case "rb": return "right_full_back";
+    case "cb": return "center_back";
+    case "lb": return "left_full_back";
+    case "dm": return "defensive_midfielder";
+    case "cm": return "central_midfielder";
+    case "am": return "attacking_midfielder";
+    case "rw": return "right_winger";
+    case "lw": return "left_winger";
+    case "st": return "striker";
+    case "rwb": return "right_full_back";
+    case "lwb": return "left_full_back";
+    default: return "central_midfielder";
+  }
+}
+
+function phase79DInitialWorldObservations(
+  seed: string,
+  world: FakeDomesticWorld,
+): readonly PlayerGenerationEconomyObservation[] {
+  const careerState = careerStateFromNewWorld(
+    `save:phase79d-baseline:${seed}` as CliSaveId,
+    world,
+    seed,
+  );
+  const valuationConfig = selectPlayerValuationConfig(world.calibrationVersions);
+  const askingPriceConfig = selectAskingPriceCurves(world.calibrationVersions);
+  const projectionByPlayerId = new Map(
+    world.playerIds.map((playerId) => {
+      const player = world.players[playerId];
+      if (player === undefined) {
+        throw new Error(`Phase 79D baseline player is missing: ${playerId}`);
+      }
+      const projection = derivePlayerPotentialProjection({
+        player,
+        currentDate: world.seasonStartDate,
+        policy: valuationConfig.potentialProjectionPolicy,
+        ratingScale: valuationConfig.ratingScale,
+      });
+      return [projection.playerId, projection] as const;
+    }),
+  );
+  const clubByPlayerId = new Map<Phase79CPlayerId, Phase79CClubId>();
+  for (const clubId of world.clubIds) {
+    for (const playerId of world.clubsById[clubId]?.playerIds ?? []) {
+      clubByPlayerId.set(playerId, clubId);
+    }
+  }
+  const allocatedCurrentSix = new Set(
+    world.exceptionalAllocation.currentSixPlayerKeys,
+  );
+  const allocatedPotentialSix = new Set(
+    world.exceptionalAllocation.potentialSixPlayerKeys,
+  );
+
+  return world.playerIds.map((playerId) => {
+    const player = world.players[playerId];
+    const clubId = clubByPlayerId.get(playerId);
+    const club = clubId === undefined ? undefined : world.clubsById[clubId];
+    const projection = projectionByPlayerId.get(playerId);
+    if (player === undefined || clubId === undefined || club === undefined || projection === undefined) {
+      throw new Error(`Phase 79D baseline ownership is incomplete: ${playerId}`);
+    }
+    const valuation = derivePlayerValuation({
+      player,
+      currentDate: world.seasonStartDate,
+      config: valuationConfig,
+      marketContext: {
+        kind: "contracted",
+        division: club.category,
+      },
+    });
+    const commercial = deriveTransferCommercialSnapshot({
+      careerState,
+      sellingClubId: clubId,
+      playerId,
+      asOf: world.seasonStartDate,
+      valuationConfig,
+      askingPriceConfig,
+    });
+    const rarityAssignment = world.playerRarityAssignments[playerId];
+    return {
+      observationId: `${seed}|0|${String(playerId)}`,
+      worldId: seed,
+      playerId: String(playerId),
+      playerName: `${player.firstName} ${player.lastName}`,
+      age: playerAgeYears(careerState, player),
+      seasonIndex: 0,
+      division: club.category,
+      population: "senior",
+      roleGroup: player.naturalPositions[0] === "gk"
+        ? "goalkeeper"
+        : "outfield",
+      currentRating: projection.currentRating,
+      storedPotentialCeilingRating: projection.storedCeilingRating,
+      publicPotentialLowerRating:
+        projection.conservativeLowerRating,
+      publicPotentialExpectedRating:
+        projection.expectedRating,
+      publicPotentialUpperRating:
+        projection.upperRating,
+      publicValueMinorUnits: Number(valuation.value),
+      ...(commercial === undefined
+        ? {}
+        : { askingPriceMinorUnits: Number(commercial.initialAskingPrice) }),
+      allocation: {
+        currentSixAllocated: allocatedCurrentSix.has(String(playerId)),
+        potentialSixAllocated: allocatedPotentialSix.has(String(playerId)),
+        ...(rarityAssignment === undefined
+          ? {}
+          : { rarityKind: rarityAssignment.rarityKind }),
+      },
+      archetype: world.playerArchetypes[playerId] ?? "unknown",
+      hardCapEligible: valuation.components.hardCapEligible,
+    };
+  });
+}
+
+/**
+ * Projects one active career checkpoint into the same public range/value facts
+ * used by the initial-world audit.
+ */
+function phase79DActiveCareerObservations(input: {
+  readonly seed: string;
+  readonly seasonIndex: number;
+  readonly careerState: CliCareerState;
+  readonly valuationConfig: Phase79DValuationConfig;
+}): readonly PlayerGenerationEconomyObservation[] {
+  const seniorClubByPlayer = new Map<Phase79CPlayerId, Phase79CClubId>();
+  for (const clubId of input.careerState.gameState.clubIds) {
+    for (
+      const playerId of input.careerState.gameState.clubs[clubId]?.playerIds
+        ?? []
+    ) {
+      seniorClubByPlayer.set(playerId, clubId);
+    }
+  }
+  const academyClubByPlayer = new Map<Phase79CPlayerId, Phase79CClubId>();
+  for (const clubId of input.careerState.youthAcademyState?.clubRosterIds ?? []) {
+    for (
+      const playerId
+      of input.careerState.youthAcademyState?.clubRosters[clubId]?.playerIds
+        ?? []
+    ) {
+      academyClubByPlayer.set(playerId, clubId);
+    }
+  }
+  const freeAgentIds = new Set(selectFreeAgentPlayerIds(input.careerState));
+  const activeIds = input.careerState.gameState.playerIds.filter((playerId) =>
+    seniorClubByPlayer.has(playerId)
+    || academyClubByPlayer.has(playerId)
+    || freeAgentIds.has(playerId)
+  );
+  const projectionByPlayerId = new Map(
+    activeIds.map((playerId) => {
+      const player = input.careerState.gameState.players[playerId];
+      if (player === undefined) {
+        throw new Error(`Phase 79D active player is missing: ${playerId}`);
+      }
+      const projection = derivePlayerPotentialProjection({
+        player,
+        currentDate: input.careerState.gameState.calendar.currentDate,
+        policy: input.valuationConfig.potentialProjectionPolicy,
+        ratingScale: input.valuationConfig.ratingScale,
+      });
+      return [projection.playerId, projection] as const;
+    }),
+  );
+
+  return activeIds.map((playerId) => {
+    const player = input.careerState.gameState.players[playerId];
+    const projection = projectionByPlayerId.get(playerId);
+    const clubId = seniorClubByPlayer.get(playerId)
+      ?? academyClubByPlayer.get(playerId);
+    const club = clubId === undefined
+      ? undefined
+      : input.careerState.gameState.clubs[clubId];
+    if (player === undefined || projection === undefined) {
+      throw new Error(`Phase 79D active observation is incomplete: ${playerId}`);
+    }
+    const division = club?.category ?? "free_agent";
+    const valuation = derivePlayerValuation({
+      player,
+      currentDate: input.careerState.gameState.calendar.currentDate,
+      config: input.valuationConfig,
+      marketContext: division === "free_agent"
+        ? { kind: "free_agent" }
+        : { kind: "contracted", division },
+    });
+    const commercial = clubId === undefined || !seniorClubByPlayer.has(playerId)
+      ? undefined
+      : deriveTransferCommercialSnapshot({
+          careerState: input.careerState,
+          sellingClubId: clubId,
+          playerId,
+          asOf: input.careerState.gameState.calendar.currentDate,
+          valuationConfig: input.valuationConfig,
+          askingPriceConfig: selectAskingPriceCurves(
+            requireCalibrationVersions(input.careerState),
+          ),
+        });
+    return {
+      observationId:
+        `${input.seed}|${input.seasonIndex}|${String(playerId)}`,
+      worldId: input.seed,
+      playerId: String(playerId),
+      playerName: `${player.firstName} ${player.lastName}`,
+      age: playerAgeYears(input.careerState, player),
+      seasonIndex: input.seasonIndex,
+      division,
+      population: seniorClubByPlayer.has(playerId)
+        ? "senior"
+        : academyClubByPlayer.has(playerId) ? "academy" : "free_agent",
+      roleGroup: player.naturalPositions[0] === "gk"
+        ? "goalkeeper"
+        : "outfield",
+      currentRating: projection.currentRating,
+      storedPotentialCeilingRating: projection.storedCeilingRating,
+      publicPotentialLowerRating:
+        projection.conservativeLowerRating,
+      publicPotentialExpectedRating:
+        projection.expectedRating,
+      publicPotentialUpperRating:
+        projection.upperRating,
+      publicValueMinorUnits: Number(valuation.value),
+      ...(commercial === undefined
+        ? {}
+        : { askingPriceMinorUnits: Number(commercial.initialAskingPrice) }),
+      archetype: player.archetype ?? "unknown",
+      hardCapEligible: valuation.components.hardCapEligible,
+    };
+  });
+}
+
+/**
+ * Retains every durable transfer stage separately so completion cannot stand
+ * in for seller/counter-path coverage.
+ */
+function phase79DNegotiationObservations(input: {
+  readonly seed: string;
+  readonly seasonStartDate: number;
+  readonly careerState: CliCareerState;
+}): readonly PlayerGenerationNegotiationObservation[] {
+  const state = input.careerState.transferNegotiationState;
+  if (state === undefined) return [];
+  return state.negotiationIds.map((negotiationId) => {
+    const negotiation = state.negotiations[negotiationId];
+    if (negotiation === undefined) {
+      throw new Error(`Phase 79D negotiation is missing: ${negotiationId}`);
+    }
+    const player = input.careerState.gameState.players[negotiation.playerId];
+    const sellingClub =
+      input.careerState.gameState.clubs[negotiation.sellingClubId];
+    if (player === undefined || sellingClub === undefined) {
+      throw new Error(`Phase 79D negotiation parties are incomplete: ${negotiationId}`);
+    }
+    const eventDate = transferNegotiationEventDate(
+      negotiation,
+      input.careerState.gameState.calendar.currentDate,
+    );
+    return {
+      negotiationId: `${input.seed}|${String(negotiationId)}`,
+      playerId: String(player.id),
+      playerName: `${player.firstName} ${player.lastName}`,
+      age: Math.max(0, Math.floor((eventDate - player.birthDate) / 365)),
+      seasonIndex: Math.max(
+        0,
+        Math.floor((eventDate - input.seasonStartDate) / 365),
+      ),
+      division: sellingClub.category,
+      askingPriceMinorUnits: Number(negotiation.initialAskingPrice),
+      offeredFeeMinorUnits: Number(negotiation.offeredFee),
+      ...(negotiation.counterFee === undefined
+        ? {}
+        : { counterFeeMinorUnits: Number(negotiation.counterFee) }),
+      ...("agreedFee" in negotiation
+        ? { agreedFeeMinorUnits: Number(negotiation.agreedFee) }
+        : {}),
+      ...(negotiation.status === "completed"
+        ? { completedFeeMinorUnits: Number(negotiation.completedFee) }
+        : {}),
+      sellerOutcome: sellerOutcomeForNegotiation(negotiation),
+      counterOutcome: counterOutcomeForNegotiation(negotiation),
+    };
+  });
+}
+
+function sellerOutcomeForNegotiation(
+  negotiation: Phase79DTransferNegotiation,
+): PlayerGenerationNegotiationObservation["sellerOutcome"] {
+  if (negotiation.status === "submitted") return "open";
+  if (negotiation.status === "rejected") return "rejected";
+  if (negotiation.status === "expired") return "expired";
+  if (negotiation.status === "withdrawn") return "withdrawn";
+  if (negotiation.counterFee !== undefined) return "countered";
+  return "accepted";
+}
+
+function counterOutcomeForNegotiation(
+  negotiation: Phase79DTransferNegotiation,
+): PlayerGenerationNegotiationObservation["counterOutcome"] {
+  if (negotiation.counterFee === undefined) return "not_observed";
+  if (negotiation.status === "countered") return "open";
+  if (negotiation.status === "expired") return "expired";
+  if (negotiation.status === "withdrawn") return "rejected";
+  return "accepted";
+}
+
+function transferNegotiationEventDate(
+  negotiation: Phase79DTransferNegotiation,
+  fallback: number,
+): number {
+  if ("completedOn" in negotiation) return negotiation.completedOn;
+  if ("failedOn" in negotiation) return negotiation.failedOn;
+  if ("rejectedOn" in negotiation) return negotiation.rejectedOn;
+  if ("expiredOn" in negotiation) return negotiation.expiredOn;
+  if ("withdrawnOn" in negotiation) return negotiation.withdrawnOn;
+  if ("cancelledOn" in negotiation) return negotiation.cancelledOn;
+  if ("acceptedOn" in negotiation) return negotiation.acceptedOn;
+  if ("submittedOn" in negotiation) return negotiation.submittedOn;
+  return fallback;
+}
+
+/** Requires the immutable version bundle before a gate can interpret rarity caps. */
+function requireCalibrationVersions(
+  careerState: CliCareerState,
+): Phase79CCalibrationVersions {
+  const versions = careerState.gameState.meta.calibrationVersions;
+  if (versions === undefined) {
+    throw new Error("Phase 79C long-run career is missing calibration versions");
+  }
+  return versions;
+}
+
+/**
+ * Summarizes active year-ten `5.5`/`6` stock and validates only the already
+ * versioned rarity caps. It does not invent or relax a closeout threshold.
+ */
+export function summarizePhase79CYearTenRatingStock(
+  careerState: CliCareerState,
+  valuationConfig: Phase79DValuationConfig,
+): Phase79CYearTenRatingStock {
+  const seniorClubByPlayer = new Map<Phase79CPlayerId, Phase79CClubId>();
+  for (const clubId of careerState.gameState.clubIds) {
+    for (const playerId of careerState.gameState.clubs[clubId]?.playerIds ?? []) {
+      seniorClubByPlayer.set(playerId, clubId);
+    }
+  }
+  const academyClubByPlayer = new Map<Phase79CPlayerId, Phase79CClubId>();
+  for (const clubId of careerState.youthAcademyState?.clubRosterIds ?? []) {
+    for (const playerId of careerState.youthAcademyState?.clubRosters[clubId]?.playerIds ?? []) {
+      academyClubByPlayer.set(playerId, clubId);
+    }
+  }
+  const freeAgentIds = new Set(selectFreeAgentPlayerIds(careerState));
+  const activePlayerIds = careerState.gameState.playerIds.filter(
+    (playerId) =>
+      seniorClubByPlayer.has(playerId)
+      || academyClubByPlayer.has(playerId)
+      || freeAgentIds.has(playerId),
+  );
+  const projections = activePlayerIds.map((playerId) => {
+      const player = careerState.gameState.players[playerId];
+      if (player === undefined) {
+        throw new Error(`Active Phase 79C rating player is missing: ${playerId}`);
+      }
+      return derivePlayerPotentialProjection({
+        player,
+        currentDate: careerState.gameState.calendar.currentDate,
+        policy: valuationConfig.potentialProjectionPolicy,
+        ratingScale: valuationConfig.ratingScale,
+      });
+  });
+  let currentFiveAndHalfCount = 0;
+  let currentSixCount = 0;
+  let potentialSixCount = 0;
+  let lowerDivisionPotentialSixCount = 0;
+  const locations: string[] = [];
+
+  for (const projection of projections) {
+    const currentRating = projection.currentRating;
+    const storedCeilingRating = projection.storedCeilingRating;
+    if (currentRating === 5.5) currentFiveAndHalfCount += 1;
+    if (currentRating === 6) currentSixCount += 1;
+    if (storedCeilingRating === 6) potentialSixCount += 1;
+    const clubId = seniorClubByPlayer.get(projection.playerId)
+      ?? academyClubByPlayer.get(projection.playerId);
+    const division = clubId === undefined
+      ? undefined
+      : careerState.gameState.clubs[clubId]?.category;
+    if (
+      storedCeilingRating === 6
+      && (division === "second_division" || division === "third_division")
+    ) {
+      lowerDivisionPotentialSixCount += 1;
+    }
+    if (currentRating >= 5.5 || storedCeilingRating === 6) {
+      const slot = seniorClubByPlayer.has(projection.playerId)
+        ? "senior"
+        : academyClubByPlayer.has(projection.playerId)
+          ? "academy"
+          : "free_agent";
+      locations.push(
+        `${projection.playerId}|current=${currentRating}`
+        + `|storedCeiling=${storedCeilingRating}`
+        + `|division=${division ?? "free_agent"}|club=${clubId ?? "none"}|slot=${slot}`,
+      );
+    }
+  }
+
+  const caps = valuationConfig.ratingScale.rarity.yearTen;
+  const violationCount = [
+    currentSixCount > caps.activeCurrentSixMaximum,
+    potentialSixCount > caps.activePotentialSixMaximum,
+    lowerDivisionPotentialSixCount > caps.lowerDivisionPotentialSixMaximum,
+  ].filter(Boolean).length;
+  return {
+    currentFiveAndHalfCount,
+    currentSixCount,
+    potentialSixCount,
+    lowerDivisionPotentialSixCount,
+    violationCount,
+    locations: locations.sort(),
   };
 }
 
@@ -929,7 +2211,7 @@ function summarizeChampionStreak(
  * development, transfers, lineups, or match simulation.
  */
 function summarizeClubAbilityHierarchy(
-  league: FakeLeagueSystem,
+  league: FakeDomesticWorld,
   initialCareerState: CliCareerState,
   finalCareerState: CliCareerState,
 ): ClubAbilityHierarchySummary {
@@ -943,7 +2225,7 @@ function summarizeClubAbilityHierarchy(
  * Computes the top-to-bottom average current-ability spread for senior squads.
  */
 function summarizeClubAbilityHierarchySnapshot(
-  league: FakeLeagueSystem,
+  league: FakeDomesticWorld,
   careerState: CliCareerState,
 ): ClubAbilityHierarchySnapshot {
   const rows = careerState.gameState.clubIds.map((clubId) => {
@@ -1029,6 +2311,8 @@ export function createLongRunGateReportFromWorlds(
   }
 
   const worlds = [...input.worlds].sort((left, right) => left.seed.localeCompare(right.seed));
+  const wageBudgetUtilizations = worlds.flatMap((world) => world.wageBudgetUtilizations);
+  const annualWageHeadrooms = worlds.flatMap((world) => world.annualWageHeadrooms);
 
   return {
     seedPrefix: input.seedPrefix,
@@ -1036,6 +2320,34 @@ export function createLongRunGateReportFromWorlds(
     seasonCount: input.seasonCount,
     execution: input.execution,
     totalSeasonCount: input.worldCount * input.seasonCount,
+    ratingInflationViolationWorldCount: worlds.filter(
+      (world) =>
+        world.yearTenRatingStockObservationCount > 0
+        && world.yearTenRatingStock.violationCount > 0,
+    ).length,
+    yearTenRatingStockObservationCount: worlds.reduce(
+      (sum, world) => sum + world.yearTenRatingStockObservationCount,
+      0,
+    ),
+    playerEconomyGates: aggregatePlayerEconomyGates(worlds),
+    yearTenCurrentSixMaximumObserved: Math.max(
+      ...worlds.map((world) => world.yearTenRatingStock.currentSixCount),
+    ),
+    yearTenPotentialSixMaximumObserved: Math.max(
+      ...worlds.map((world) => world.yearTenRatingStock.potentialSixCount),
+    ),
+    yearTenLowerDivisionPotentialSixMaximumObserved: Math.max(
+      ...worlds.map(
+        (world) => world.yearTenRatingStock.lowerDivisionPotentialSixCount,
+      ),
+    ),
+    calibrationVersionBundles: uniqueCalibrationVersionBundles(
+      worlds.map((world) => world.calibrationVersions),
+    ),
+    compositionHashes: worlds.map((world) => ({
+      seed: world.seed,
+      hash: world.compositionHash,
+    })),
     failedWorldCount: worlds.filter((world) => world.status === "fail").length,
     warningWorldCount: worlds.filter((world) => world.status === "warn").length,
     minimumSquadSizeObserved: Math.min(...worlds.map((world) => world.minimumSquadSizeObserved)),
@@ -1069,6 +2381,63 @@ export function createLongRunGateReportFromWorlds(
       (sum, world) => sum + world.selectedClubExpiredDecisionCount,
       0,
     ),
+    completedTransferCount: worlds.reduce((sum, world) => sum + world.completedTransferCount, 0),
+    permanentTransferPublicValueDistribution: moneyDistribution(
+      worlds.flatMap((world) => world.permanentTransferPublicValues),
+    ),
+    permanentTransferAskingPriceDistribution: moneyDistribution(
+      worlds.flatMap((world) => world.permanentTransferAskingPrices),
+    ),
+    permanentTransferCompletedFeeDistribution: moneyDistribution(
+      worlds.flatMap((world) => world.permanentTransferCompletedFees),
+    ),
+    freeAgentPublicValueDistribution: moneyDistribution(
+      worlds.flatMap((world) => world.freeAgentPublicValues),
+    ),
+    freeAgentZeroFeeViolationCount: worlds.reduce(
+      (sum, world) => sum + world.freeAgentZeroFeeViolationCount,
+      0,
+    ),
+    permanentTransferFunnel: aggregatePermanentTransferFunnels(
+      worlds.map((world) => world.permanentTransferFunnel),
+    ),
+    preliminaryAgreementFunnel: aggregatePreliminaryAgreementFunnels(
+      worlds.map((world) => world.preliminaryAgreementFunnel),
+    ),
+    maximumUsefulFreeAgentCountObserved: Math.max(
+      ...worlds.map((world) => world.maximumUsefulFreeAgentCountObserved),
+    ),
+    freeAgentBandObservations: aggregateFreeAgentBands(
+      worlds.map((world) => world.freeAgentBandObservations),
+    ),
+    wageBudgetUtilizationP50: percentile(wageBudgetUtilizations, 0.5),
+    wageBudgetUtilizationP90: percentile(wageBudgetUtilizations, 0.9),
+    wageBudgetUtilizationP95: percentile(wageBudgetUtilizations, 0.95),
+    wageBudgetUtilizationP99: percentile(wageBudgetUtilizations, 0.99),
+    wagePressureClubSeasonShare: roundReportNumber(
+      safeReportRatio(
+        wageBudgetUtilizations.filter((value) => value >= 0.95).length,
+        wageBudgetUtilizations.length,
+      ),
+    ),
+    exactWageCeilingClubSeasonShare: roundReportNumber(
+      safeReportRatio(
+        wageBudgetUtilizations.filter((value) => value === 1).length,
+        wageBudgetUtilizations.length,
+      ),
+    ),
+    aboveWageBudgetClubSeasonShare: roundReportNumber(
+      safeReportRatio(
+        wageBudgetUtilizations.filter((value) => value > 1).length,
+        wageBudgetUtilizations.length,
+      ),
+    ),
+    annualWageHeadroomP50: percentile(annualWageHeadrooms, 0.5),
+    annualWageHeadroomP10: percentile(annualWageHeadrooms, 0.1),
+    reallocationExactCeilingClubSeasonCount: worlds.reduce(
+      (sum, world) => sum + world.reallocationExactCeilingClubSeasonCount,
+      0,
+    ),
     goalsPerMatchAverage: roundReportNumber(average(worlds.map((world) => world.goalsPerMatchAverage))),
     goalsPerMatchP95: percentile(worlds.map((world) => world.goalsPerMatchAverage), 0.95),
     tablePointsSpreadAverage: roundReportNumber(average(worlds.map((world) => world.tablePointsSpreadAverage))),
@@ -1089,6 +2458,54 @@ export function createLongRunGateReportFromWorlds(
     productionWarningWorlds: [...worlds].sort(compareProductionWarningWorld).slice(0, 10),
     dynastyWarningWorlds: [...worlds].sort(compareDynastyWarningWorld).slice(0, 10),
     tableSpreadWarningWorlds: [...worlds].sort(compareTableSpreadWarningWorld).slice(0, 10),
+    zeroPermanentTransferWorlds: worlds
+      .filter(
+        (world) =>
+          world.completedTransferCount === 0
+          && world.permanentTransferFunnel.needsEvaluatedCount > 0,
+      )
+      .sort((left, right) =>
+        right.permanentTransferFunnel.needsEvaluatedCount
+        - left.permanentTransferFunnel.needsEvaluatedCount
+        || left.seed.localeCompare(right.seed)
+      )
+      .slice(0, 10),
+    usefulFreeAgentWorlds: [...worlds]
+      .sort((left, right) =>
+        right.maximumUsefulFreeAgentCountObserved - left.maximumUsefulFreeAgentCountObserved
+        || right.maximumFreeAgentShareObserved - left.maximumFreeAgentShareObserved
+        || left.seed.localeCompare(right.seed)
+      )
+      .slice(0, 10),
+    wagePressureWorlds: [...worlds]
+      .sort((left, right) =>
+        right.wagePressureClubSeasonShare - left.wagePressureClubSeasonShare
+        || right.exactWageCeilingClubSeasonShare - left.exactWageCeilingClubSeasonShare
+        || left.seed.localeCompare(right.seed)
+      )
+      .slice(0, 10),
+    divisionWageEconomySnapshots: worlds.flatMap((world) =>
+      world.closingDivisionWageEconomy.map((row) => ({
+        seed: world.seed,
+        ...row,
+      }))
+    ),
+    divisionMarketEconomySnapshots: worlds.flatMap((world) =>
+      world.closingDivisionMarketEconomy.map((row) => ({
+        seed: world.seed,
+        ...row,
+      }))
+    ),
+    crossTierTransferSnapshots: worlds.flatMap((world) =>
+      world.closingCrossTierTransfers.map((row) => ({
+        seed: world.seed,
+        ...row,
+      }))
+    ),
+    yearTenExceptionalLocations: worlds.map((world) => ({
+      seed: world.seed,
+      locations: world.yearTenRatingStock.locations,
+    })),
   };
 }
 
@@ -1175,7 +2592,9 @@ function signalKindForCheckKey(key: string): string {
     case "senior_active_player_population":
     case "youth_active_player_population":
     case "total_active_player_population":
-    case "wage_budget_utilization":
+    case "wage_budget_pressure_prevalence":
+    case "wage_budget_exact_ceiling_prevalence":
+    case "wage_budget_headroom_p10":
     case "free_agent_share":
     case "selected_club_expiry_decisions":
       return "monitor";
@@ -1228,44 +2647,250 @@ function gateStatusSeverity(status: LongRunAnomalyReport["status"]): number {
   return 0;
 }
 
+/**
+ * Builds one simulated season for the managed club's canonical competition.
+ *
+ * The career still contains all 54 clubs for contracts, finance, development,
+ * and market lifecycle; this bounded season result covers the selected tier
+ * until Step 08 integrates all three tables into rollover.
+ */
+function createDomesticCareerSeasonInput(
+  world: FakeDomesticWorld,
+  careerState: CliCareerState,
+  seed: string,
+): SimulateSeasonInput {
+  const competition = selectedCompetition(world, careerState);
+  const teamsByClubId: Record<string, SimulateSeasonTeamInput> = {};
+  const roleWeights: Readonly<Record<string, RoleWeightProfile>> = world.roleWeights;
+  for (const clubId of competition.clubIds) {
+    const club = careerState.gameState.clubs[clubId];
+    if (club === undefined) throw new Error(`Missing report club: ${clubId}`);
+    const lineup = reportLineup(club.playerIds, careerState);
+    teamsByClubId[clubId] = {
+      lineup,
+      players: careerState.gameState.players,
+      roleWeights,
+      stateMultiplierCurves: world.stateMultiplierCurves,
+      strength: deriveTeamStrength({
+        lineup,
+        players: careerState.gameState.players,
+        playerStates: careerState.gameState.playerStates,
+        roleWeights,
+        stateMultiplierCurves: world.stateMultiplierCurves,
+      }),
+      tacticalDistribution: {
+        directness: 0.5,
+        pressing: 0.5,
+        width: 0.5,
+        risk: 0.5,
+      },
+    };
+  }
+  return {
+    seed,
+    seasonId: careerState.gameState.calendar.currentSeasonId,
+    competitionId: competition.id,
+    clubIds: competition.clubIds,
+    seasonStartDate: careerState.gameState.calendar.currentDate,
+    teamsByClubId,
+    matchEngineConfig: world.matchEngineConfig,
+    tableRules: world.tableRules,
+  };
+}
+
+/** Selects a balanced deterministic XI from one current senior roster. */
+function reportLineup(
+  playerIds: readonly CliCareerState["gameState"]["playerIds"][number][],
+  careerState: CliCareerState,
+): readonly LineupSlot[] {
+  const selected: CliCareerState["gameState"]["playerIds"][number][] = [];
+  addReportPlayers(selected, playerIds, careerState, "goalkeeper", 1);
+  addReportPlayers(selected, playerIds, careerState, "defender", 4);
+  addReportPlayers(selected, playerIds, careerState, "midfielder", 4);
+  addReportPlayers(selected, playerIds, careerState, "attacker", 2);
+  for (const playerId of playerIds) {
+    if (selected.length >= 11) break;
+    if (!selected.includes(playerId)) selected.push(playerId);
+  }
+  return selected.slice(0, 11).map((playerId, index) => {
+    const group = reportPositionGroup(careerState.gameState.players[playerId]?.naturalPositions[0]);
+    return {
+      slotId: `slot:${String(index + 1).padStart(2, "0")}`,
+      playerId,
+      roleKey: group === "goalkeeper" ? "gk" : group,
+    };
+  });
+}
+
+function addReportPlayers(
+  selected: CliCareerState["gameState"]["playerIds"][number][],
+  playerIds: readonly CliCareerState["gameState"]["playerIds"][number][],
+  careerState: CliCareerState,
+  group: "goalkeeper" | "defender" | "midfielder" | "attacker",
+  count: number,
+): void {
+  for (const playerId of playerIds) {
+    if (selected.filter((id) =>
+      reportPositionGroup(careerState.gameState.players[id]?.naturalPositions[0]) === group
+    ).length >= count) break;
+    if (
+      !selected.includes(playerId)
+      && reportPositionGroup(careerState.gameState.players[playerId]?.naturalPositions[0]) === group
+    ) {
+      selected.push(playerId);
+    }
+  }
+}
+
+function reportPositionGroup(
+  position: CliPlayer["naturalPositions"][number] | undefined,
+): "goalkeeper" | "defender" | "midfielder" | "attacker" {
+  if (position === "gk") return "goalkeeper";
+  if (["rb", "cb", "lb", "rwb", "lwb"].includes(position ?? "")) return "defender";
+  if (["dm", "cm", "am"].includes(position ?? "")) return "midfielder";
+  return "attacker";
+}
+
+/** Derives the managed club's current competition from canonical membership. */
+function selectedCompetition(
+  _world: FakeDomesticWorld,
+  careerState: CliCareerState,
+) {
+  const registry = careerState.gameState.domesticCompetitionWorld;
+  if (registry === undefined) {
+    throw new Error("Report career has no domestic competition registry");
+  }
+  const competitionId = competitionIdForClubInWorld(
+    registry,
+    careerState.selectedClubId,
+  );
+  const competition = competitionId === undefined
+    ? undefined
+    : registry.competitions[competitionId];
+  if (competition === undefined) {
+    throw new Error("Managed club competition is unavailable in report world");
+  }
+  return competition;
+}
+
 
 /**
  * Applies deterministic post-season career refresh in memory for the report.
  */
 function advanceCareerForReport(
-  league: FakeLeagueSystem,
+  league: FakeDomesticWorld,
   worldSeed: string,
   context: AdvanceCareerLongRunSeasonContext,
+  annualIntakeObservations: PlayerGenerationAnnualIntakeObservation[],
 ): AdvanceCareerLongRunSeasonResult {
   const nextSeasonId =
     `${context.careerState.gameState.calendar.currentSeasonId}:long-run-${context.seasonNumber}` as AdvanceCareerReportRefreshMode["nextSeasonId"];
   const nextSeasonStartDate = (context.careerState.gameState.calendar.currentDate + 365) as AdvanceCareerReportRefreshMode["nextSeasonStartDate"];
+  const competition = selectedCompetition(league, context.careerState as CliCareerState);
+  const transferWindows = resolveSeasonTransferWindows({
+    competitionId: competition.id,
+    seasonId: context.careerState.gameState.calendar.currentSeasonId,
+    seasonStartYear: seasonStartYearFromDate(
+      context.careerState.gameState.calendar.currentDate,
+    ),
+  });
+  const fundedCareerState = settleUnsimulatedCompetitionDistributions(
+    league,
+    context.careerState as CliCareerState,
+    competition.id,
+    context.careerState.gameState.calendar.currentSeasonId,
+    context.careerState.gameState.calendar.currentDate,
+  );
+  const valuationConfig = selectPlayerValuationConfig(
+    fundedCareerState.gameState.meta.calibrationVersions,
+  );
+  const wagePolicy = selectPlayerWagePolicyConfig(
+    fundedCareerState.gameState.meta.calibrationVersions,
+  );
+  const marketBehaviorPolicy = selectMarketBehaviorCalibration(
+    fundedCareerState.gameState.meta.calibrationVersions,
+  );
+  const askingPriceConfig = selectAskingPriceCurves(
+    fundedCareerState.gameState.meta.calibrationVersions,
+  );
+  const annualIntake = createAnnualWorldIntakeCandidateProviders({
+    worldSeed,
+    seasonIndex: context.seasonNumber - 1,
+    seniorCandidatesPerClub: LONG_RUN_INTAKE_CANDIDATES_PER_CLUB,
+  });
   const advanced = advanceCareerOneSeason({
-    careerState: context.careerState,
+    careerState: fundedCareerState,
     worldSeed,
     mode: {
       kind: "reportRefresh",
       nextSeasonId,
       nextSeasonStartDate,
-      ...(league.competition.seasonDistribution === undefined
+      ...(competition.seasonDistribution === undefined
         ? {}
         : {
-            seasonDistribution: league.competition.seasonDistribution,
+            seasonDistribution: competition.seasonDistribution,
             finalTable: context.seasonResult.table,
           }),
     },
-    transferWindows: league.transferWindows,
-    createYouthIntakeCandidates: (candidateContext) =>
-      youthIntakeCandidatesForCareer(candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
-    createSeniorIntakeCandidates: (candidateContext) =>
-      intakeCandidatesForCareer(league, candidateContext.careerState as CliCareerState, worldSeed, context.seasonNumber),
+    createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,
+    createSeniorIntakeCandidates: annualIntake.createSeniorIntakeCandidates,
     allowSelectedClubYouthPromotion: true,
     allowSelectedClubSquadReplenishment: true,
+    transferWindows,
+    valuationConfig,
+    askingPriceConfig,
+    wagePolicy,
+    marketBehaviorPolicy,
   });
 
   if (advanced.status !== "advanced") {
     throw new Error(`Cannot advance report career season ${context.seasonNumber}: ${advanced.reason}`);
   }
+  const annualIntakeDiagnostics = annualIntake.diagnostics();
+  const acceptedYouthIds = new Set(
+    advanced.facts.youthIntake.acceptedPlayerIds.map(String),
+  );
+  if (
+    annualIntakeDiagnostics.allocation.potentialSixPlayerKeys.some(
+      (id) => !acceptedYouthIds.has(id),
+    )
+  ) {
+    throw new Error(
+      `Exceptional annual intake was generated but not accepted in season ${context.seasonNumber}`,
+    );
+  }
+  const allocatedPotentialSixPlayerIds =
+    annualIntakeDiagnostics.allocation.potentialSixPlayerKeys.map(String);
+  const allocatedThroughCurrentSeason = [
+    ...annualIntakeObservations.flatMap(
+      (observation) => observation.allocatedPotentialSixPlayerIds,
+    ),
+    ...allocatedPotentialSixPlayerIds,
+  ];
+  const activePlayerIds = activeCareerPlayerIds(advanced.careerState);
+  const activeAllocatedPlayers = allocatedThroughCurrentSeason
+    .filter((id) => activePlayerIds.has(id))
+    .map((id) => advanced.careerState.gameState.players[id as Phase79CPlayerId])
+    .filter((player): player is CliPlayer => player !== undefined);
+  const activePotentialSixPlayerIds = activeAllocatedPlayers
+    .map((player) =>
+      derivePlayerPotentialProjection({
+        player,
+        currentDate: advanced.careerState.gameState.calendar.currentDate,
+        policy: valuationConfig.potentialProjectionPolicy,
+        ratingScale: valuationConfig.ratingScale,
+      })
+    )
+    .filter(({ storedCeilingRating }) => storedCeilingRating === 6)
+    .map(({ playerId }) => String(playerId));
+  annualIntakeObservations.push({
+    seasonIndex: context.seasonNumber - 1,
+    allocatedPotentialSixPlayerIds,
+    generatedPotentialSixPlayerIds:
+      annualIntakeDiagnostics.generatedPotentialSixPlayerIds.map(String),
+    acceptedPlayerIds: advanced.facts.youthIntake.acceptedPlayerIds.map(String),
+    activePotentialSixPlayerIds,
+  });
 
   return {
     careerState: advanced.careerState,
@@ -1274,7 +2899,15 @@ function advanceCareerForReport(
         seasonNumber: context.seasonNumber,
         previousCareerState: context.careerState,
         careerState: advanced.careerState,
-        transferWindows: league.transferWindows,
+        transferWindows,
+        valuationConfig,
+        wagePolicy,
+        ...(advanced.facts.marketLifecycle === undefined
+          ? {}
+          : { marketLifecycle: advanced.facts.marketLifecycle }),
+        playerExits: advanced.facts.playerExits,
+        squadMaintenance: advanced.facts.squadMaintenance,
+        youthLifecycle: advanced.facts.youthLifecycle,
       }),
       exitCount: advanced.facts.playerExits.exitCount,
       exitReasons: {
@@ -1308,6 +2941,76 @@ function advanceCareerForReport(
 }
 
 /**
+ * Returns canonical active ownership across senior, academy, and free-agent
+ * populations. Retained historical player entities do not count as active.
+ */
+function activeCareerPlayerIds(careerState: CliCareerState): ReadonlySet<string> {
+  const activeIds = new Set<string>(selectFreeAgentPlayerIds(careerState).map(String));
+  for (const clubId of careerState.gameState.clubIds) {
+    for (const playerId of careerState.gameState.clubs[clubId]?.playerIds ?? []) {
+      activeIds.add(String(playerId));
+    }
+  }
+  for (const clubId of careerState.youthAcademyState?.clubRosterIds ?? []) {
+    for (const playerId of careerState.youthAcademyState?.clubRosters[clubId]?.playerIds ?? []) {
+      activeIds.add(String(playerId));
+    }
+  }
+  return activeIds;
+}
+
+/**
+ * Credits canonical distributions for the tiers outside the focused report.
+ *
+ * The bounded pre-calibration report retains only the managed competition's
+ * match result. Country-wide payroll still needs the other two competitions'
+ * operating distributions until Step 14 enables the fully integrated cohort
+ * after economic calibration.
+ */
+function settleUnsimulatedCompetitionDistributions(
+  world: FakeDomesticWorld,
+  careerState: CliCareerState,
+  selectedCompetitionId: FakeDomesticWorld["domesticCompetitionWorld"]["competitionIds"][number],
+  season: CliCareerState["gameState"]["calendar"]["currentSeasonId"],
+  occurredOn: CliCareerState["gameState"]["calendar"]["currentDate"],
+): CliCareerState {
+  let fundedCareerState = careerState;
+  for (const competitionId of world.domesticCompetitionWorld.competitionIds) {
+    if (competitionId === selectedCompetitionId) continue;
+    const competition = world.domesticCompetitionWorld.competitions[competitionId];
+    if (competition?.seasonDistribution === undefined) continue;
+    const finalTable: SimulateSeasonResult["table"] = competition.clubIds.map(
+      (clubId, index) => ({
+        position: index + 1,
+        clubId,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        points: 0,
+      }),
+    );
+    const settled = settleSeasonDistribution({
+      careerState: fundedCareerState,
+      seasonId: season,
+      occurredOn,
+      distribution: competition.seasonDistribution,
+      finalTable,
+    });
+    if (settled.status === "rejected") {
+      throw new Error(
+        `Cannot fund report competition ${competitionId}: ${settled.reason}`,
+      );
+    }
+    fundedCareerState = settled.careerState as CliCareerState;
+  }
+  return fundedCareerState;
+}
+
+/**
  * Releases fixture and player-state histories after career advancement while
  * preserving every fact consumed by balance and stability reports.
  */
@@ -1325,124 +3028,6 @@ function retainLongRunSeasonResult(result: SimulateSeasonResult): LongRunRetaine
     playerGoalStats: result.playerGoalStats,
     playerSummaryStats: result.playerSummaryStats,
   };
-}
-
-function intakeCandidatesForCareer(
-  league: FakeLeagueSystem,
-  careerState: CliCareerState,
-  worldSeed: string,
-  seasonNumber: number,
-): readonly CareerIntakeCandidate[] {
-  const candidates: CareerIntakeCandidate[] = [];
-
-  for (const clubId of careerState.gameState.clubIds) {
-    const club = careerState.gameState.clubs[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    const generated = generateCareerIntakePlayers({
-      worldSeed,
-      seasonId: `${careerState.gameState.calendar.currentSeasonId}:intake-${seasonNumber}` as Parameters<
-        typeof generateCareerIntakePlayers
-      >[0]["seasonId"],
-      clubId,
-      clubContext: {
-        category: club.category,
-        reputation: club.reputation,
-      },
-      count: LONG_RUN_INTAKE_CANDIDATES_PER_CLUB,
-      referenceDate: careerState.gameState.calendar.currentDate,
-    });
-
-    for (const player of generated.generatedPlayers) {
-      candidates.push({
-        player: player.player,
-        playerState: player.playerState,
-        targetClubId: clubId,
-      });
-    }
-  }
-
-  return candidates;
-}
-
-function youthIntakeCandidatesForCareer(
-  careerState: CliCareerState,
-  worldSeed: string,
-  seasonNumber: number,
-): readonly YouthIntakeCandidate[] {
-  const candidates: YouthIntakeCandidate[] = [];
-
-  for (const clubId of careerState.gameState.clubIds) {
-    const club = careerState.gameState.clubs[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    const generated = generateSeasonalYouthIntakePlayers({
-      worldSeed,
-      seasonId: `${careerState.gameState.calendar.currentSeasonId}:youth-intake-${seasonNumber}` as Parameters<
-        typeof generateSeasonalYouthIntakePlayers
-      >[0]["seasonId"],
-      clubId,
-      clubContext: {
-        category: club.category,
-        reputation: club.reputation,
-      },
-      referenceDate: careerState.gameState.calendar.currentDate,
-      targetPositions: youthRefillTargetPositions(careerState, clubId),
-    });
-
-    for (const player of generated.generatedPlayers) {
-      candidates.push({
-        player: player.player,
-        playerState: player.playerState,
-        targetClubId: clubId,
-      });
-    }
-  }
-
-  return candidates;
-}
-
-function youthRefillTargetPositions(
-  careerState: CliCareerState,
-  clubId: CliCareerState["gameState"]["clubIds"][number],
-): NonNullable<Parameters<typeof generateSeasonalYouthIntakePlayers>[0]["targetPositions"]> {
-  const missing = [...YOUTH_ACADEMY_POSITION_PLAN];
-  const roster = careerState.youthAcademyState?.clubRosters[clubId];
-
-  for (const playerId of roster?.playerIds ?? []) {
-    const position = careerState.gameState.players[playerId]?.naturalPositions[0];
-    if (position === undefined) {
-      continue;
-    }
-
-    const exactIndex = missing.findIndex((candidate) => candidate === position);
-    if (exactIndex >= 0) {
-      missing.splice(exactIndex, 1);
-      continue;
-    }
-
-    const departmentIndex = missing.findIndex((candidate) => sameYouthDepartment(candidate, position));
-    if (departmentIndex >= 0) {
-      missing.splice(departmentIndex, 1);
-    }
-  }
-
-  return missing;
-}
-
-function sameYouthDepartment(left: string, right: string): boolean {
-  return youthDepartment(left) === youthDepartment(right);
-}
-
-function youthDepartment(position: string): "attacker" | "defender" | "goalkeeper" | "midfielder" {
-  if (position === "gk") return "goalkeeper";
-  if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") return "defender";
-  if (position === "dm" || position === "cm" || position === "am") return "midfielder";
-  return "attacker";
 }
 
 /**
@@ -1653,8 +3238,8 @@ function maxTopThreeAssistShare(season: LongRunSeasonResult): number {
 /**
  * Builds club-stability season rows from completed simulated seasons.
  */
-function clubSeasonRows(league: FakeLeagueSystem, seasons: readonly LongRunSeasonResult[]): readonly LongRunClubSeasonRow[] {
-  const selectedClubId = league.clubIds[0];
+function clubSeasonRows(league: FakeDomesticWorld, seasons: readonly LongRunSeasonResult[]): readonly LongRunClubSeasonRow[] {
+  const selectedClubId = league.defaultSelectedClubId;
 
   if (selectedClubId === undefined) {
     throw new Error("Cannot build club stability rows without clubs");
@@ -1777,7 +3362,7 @@ export function drawRate(season: LongRunSeasonResult): number {
 /**
  * Resolves a generated club display name for report output.
  */
-export function clubLabel(league: FakeLeagueSystem, clubId: FakeLeagueSystem["clubIds"][number]): string {
+export function clubLabel(league: FakeDomesticWorld, clubId: FakeDomesticWorld["clubIds"][number]): string {
   const club = league.clubsById[clubId];
 
   if (club === undefined) {
@@ -1829,6 +3414,203 @@ function reportCurrentAbility(player: CliPlayer): number {
  */
 function reportPotentialRoom(player: CliPlayer): number {
   return roundReportNumber(summarizePlayerDevelopmentAbilities(player).potentialRoom);
+}
+
+function aggregatePermanentTransferFunnels(
+  funnels: readonly LongRunPermanentTransferFunnel[],
+): LongRunPermanentTransferFunnel {
+  return {
+    needsEvaluatedCount: sumFunnelField(funnels, "needsEvaluatedCount"),
+    recruitableNeedCount: sumFunnelField(funnels, "recruitableNeedCount"),
+    targetFoundCount: sumFunnelField(funnels, "targetFoundCount"),
+    targetUnavailableCount: sumFunnelField(funnels, "targetUnavailableCount"),
+    offerSubmittedCount: sumFunnelField(funnels, "offerSubmittedCount"),
+    sellerRejectedCount: sumFunnelField(funnels, "sellerRejectedCount"),
+    sellerCounteredCount: sumFunnelField(funnels, "sellerCounteredCount"),
+    sellerAcceptedCount: sumFunnelField(funnels, "sellerAcceptedCount"),
+    sellerExpiredCount: sumFunnelField(funnels, "sellerExpiredCount"),
+    sellerWithdrawnCount: sumFunnelField(funnels, "sellerWithdrawnCount"),
+    playerTermsStartedCount: sumFunnelField(funnels, "playerTermsStartedCount"),
+    playerCounteredCount: sumFunnelField(funnels, "playerCounteredCount"),
+    playerRejectedCount: sumFunnelField(funnels, "playerRejectedCount"),
+    playerCounterAcceptedCount: sumFunnelField(funnels, "playerCounterAcceptedCount"),
+    unaffordableCompletionCount: sumFunnelField(funnels, "unaffordableCompletionCount"),
+    completedCount: sumFunnelField(funnels, "completedCount"),
+    lostReasonCounts: aggregateReasonCounts(funnels.map((funnel) => funnel.lostReasonCounts)),
+    lostByClubDepartment: aggregateMarketLossSlices(
+      funnels.flatMap((funnel) => funnel.lostByClubDepartment),
+    ),
+    clubActivity: aggregateMarketClubActivity(
+      funnels.flatMap((funnel) => funnel.clubActivity),
+    ),
+  };
+}
+
+function aggregatePreliminaryAgreementFunnels(
+  funnels: readonly LongRunPreliminaryAgreementFunnel[],
+): LongRunPreliminaryAgreementFunnel {
+  return {
+    candidateFoundCount: sumFunnelField(funnels, "candidateFoundCount"),
+    candidateUnavailableCount: sumFunnelField(funnels, "candidateUnavailableCount"),
+    offerSubmittedCount: sumFunnelField(funnels, "offerSubmittedCount"),
+    offerRejectedCount: sumFunnelField(funnels, "offerRejectedCount"),
+    counteredCount: sumFunnelField(funnels, "counteredCount"),
+    counterAcceptedCount: sumFunnelField(funnels, "counterAcceptedCount"),
+    counterRejectedCount: sumFunnelField(funnels, "counterRejectedCount"),
+    agreementCreatedCount: sumFunnelField(funnels, "agreementCreatedCount"),
+    expiredCount: sumFunnelField(funnels, "expiredCount"),
+    activationCount: sumFunnelField(funnels, "activationCount"),
+    activationFailureCount: sumFunnelField(funnels, "activationFailureCount"),
+    lostReasonCounts: aggregateReasonCounts(funnels.map((funnel) => funnel.lostReasonCounts)),
+  };
+}
+
+function sumFunnelField<T extends object, K extends keyof T>(
+  funnels: readonly T[],
+  key: K,
+): number {
+  return funnels.reduce((sum, funnel) => sum + Number(funnel[key]), 0);
+}
+
+function aggregateReasonCounts(
+  rows: readonly Readonly<Record<string, number>>[],
+): Readonly<Record<string, number>> {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    for (const [reason, count] of Object.entries(row)) {
+      totals.set(reason, (totals.get(reason) ?? 0) + count);
+    }
+  }
+  return Object.fromEntries([...totals].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function aggregateMarketLossSlices(
+  rows: LongRunPermanentTransferFunnel["lostByClubDepartment"],
+): LongRunPermanentTransferFunnel["lostByClubDepartment"] {
+  const totals = new Map<string, LongRunPermanentTransferFunnel["lostByClubDepartment"][number]>();
+  for (const row of rows) {
+    const key = `${row.clubId}|${row.department}|${row.reason}|${row.transferWindowOpen}`;
+    const previous = totals.get(key);
+    totals.set(key, { ...row, count: (previous?.count ?? 0) + row.count });
+  }
+  return [...totals.values()].sort((left, right) =>
+    left.clubId.localeCompare(right.clubId)
+    || left.department.localeCompare(right.department)
+    || left.reason.localeCompare(right.reason)
+    || Number(right.transferWindowOpen) - Number(left.transferWindowOpen)
+  );
+}
+
+function aggregateMarketClubActivity(
+  rows: LongRunPermanentTransferFunnel["clubActivity"],
+): LongRunPermanentTransferFunnel["clubActivity"] {
+  const totals = new Map<string, LongRunPermanentTransferFunnel["clubActivity"][number]>();
+  for (const row of rows) {
+    const previous = totals.get(row.clubId);
+    totals.set(row.clubId, {
+      clubId: row.clubId,
+      needsEvaluatedCount: (previous?.needsEvaluatedCount ?? 0) + row.needsEvaluatedCount,
+      recruitableNeedCount: (previous?.recruitableNeedCount ?? 0) + row.recruitableNeedCount,
+      permanentTargetFoundCount:
+        (previous?.permanentTargetFoundCount ?? 0) + row.permanentTargetFoundCount,
+      permanentOfferSubmittedCount:
+        (previous?.permanentOfferSubmittedCount ?? 0) + row.permanentOfferSubmittedCount,
+      permanentCompletedCount:
+        (previous?.permanentCompletedCount ?? 0) + row.permanentCompletedCount,
+      preliminaryOfferSubmittedCount:
+        (previous?.preliminaryOfferSubmittedCount ?? 0) + row.preliminaryOfferSubmittedCount,
+    });
+  }
+  return [...totals.values()].sort((left, right) => left.clubId.localeCompare(right.clubId));
+}
+
+function aggregateFreeAgentBands(rows: readonly LongRunFreeAgentBands[]): LongRunFreeAgentBands {
+  return {
+    age: {
+      under_23: rows.reduce((sum, row) => sum + row.age.under_23, 0),
+      prime_23_29: rows.reduce((sum, row) => sum + row.age.prime_23_29, 0),
+      age_30_34: rows.reduce((sum, row) => sum + row.age.age_30_34, 0),
+      age_35_plus: rows.reduce((sum, row) => sum + row.age.age_35_plus, 0),
+    },
+    currentAbility: {
+      under_8: rows.reduce((sum, row) => sum + row.currentAbility.under_8, 0),
+      ability_8_9: rows.reduce((sum, row) => sum + row.currentAbility.ability_8_9, 0),
+      ability_10_11: rows.reduce((sum, row) => sum + row.currentAbility.ability_10_11, 0),
+      ability_12_plus: rows.reduce((sum, row) => sum + row.currentAbility.ability_12_plus, 0),
+    },
+    unattached: {
+      under_1_season: rows.reduce((sum, row) => sum + row.unattached.under_1_season, 0),
+      one_to_two_seasons: rows.reduce((sum, row) => sum + row.unattached.one_to_two_seasons, 0),
+      three_plus_seasons: rows.reduce((sum, row) => sum + row.unattached.three_plus_seasons, 0),
+    },
+  };
+}
+
+/**
+ * Aggregates stable Phase 79D gate keys without retaining player observations.
+ *
+ * Threshold disagreement is rejected because it would make two worker
+ * partitions interpret the same key differently.
+ */
+function aggregatePlayerEconomyGates(
+  worlds: readonly LongRunGateWorldSummary[],
+): readonly LongRunGatePlayerEconomyGateSummary[] {
+  const keys = [...new Set(
+    worlds.flatMap((world) => world.playerEconomyGates.map(({ key }) => key)),
+  )].sort();
+  return keys.map((key) => {
+    const gates = worlds.flatMap((world) =>
+      world.playerEconomyGates.filter((gate) => gate.key === key)
+    );
+    const thresholds = new Set(gates.map(({ threshold }) => threshold));
+    if (thresholds.size !== 1) {
+      throw new Error(`Phase 79D gate threshold mismatch: ${key}`);
+    }
+    return {
+      key,
+      observationCount: gates.reduce(
+        (sum, gate) => sum + gate.observationCount,
+        0,
+      ),
+      violationCount: gates.reduce(
+        (sum, gate) => sum + gate.violationCount,
+        0,
+      ),
+      failedWorldCount: gates.filter(({ status }) => status === "fail").length,
+      notEvaluatedWorldCount: gates.filter(
+        ({ status }) => status === "not_evaluated",
+      ).length,
+      threshold: gates[0]!.threshold,
+    };
+  });
+}
+
+/** Retains each exact immutable version bundle once in deterministic order. */
+function uniqueCalibrationVersionBundles(
+  bundles: readonly Phase79CCalibrationVersions[],
+): readonly Phase79CCalibrationVersions[] {
+  const unique = new Map<string, Phase79CCalibrationVersions>();
+  for (const bundle of bundles) {
+    unique.set(JSON.stringify(bundle), bundle);
+  }
+  return [...unique.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, bundle]) => ({ ...bundle }));
+}
+
+/** Creates one compact exact-money distribution for Phase 79C audit output. */
+function moneyDistribution(values: readonly number[]): LongRunMoneyDistribution {
+  return {
+    count: values.length,
+    p50: percentile(values, 0.5),
+    p90: percentile(values, 0.9),
+    p99: percentile(values, 0.99),
+    maximum: Math.max(...values, 0),
+  };
+}
+
+function safeReportRatio(numerator: number, denominator: number): number {
+  return denominator <= 0 ? 0 : numerator / denominator;
 }
 
 /**

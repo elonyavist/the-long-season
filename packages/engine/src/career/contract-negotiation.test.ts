@@ -31,23 +31,95 @@ import {
 } from "@game/domain";
 import { addDays } from "@game/shared";
 
-import { deriveContractDemand } from "./contract-negotiation-demand.ts";
+import { deriveContractDemand as deriveContractDemandWithPolicy } from "./contract-negotiation-demand.ts";
 import { createMatchdayAttention } from "./continue-career.ts";
 import {
-  acceptContractCounterOffer,
-  advanceContractNegotiations,
+  acceptContractCounterOffer as acceptContractCounterOfferWithPolicy,
+  advanceContractNegotiations as advanceContractNegotiationsWithPolicy,
   chooseReleaseAtContractExpiry,
   createContractNegotiationDraft,
   createRenewalNegotiationId,
-  offerSelectedClubRenewal,
-  rejectContractCounterOffer,
+  offerSelectedClubRenewal as offerSelectedClubRenewalWithPolicy,
+  rejectContractCounterOffer as rejectContractCounterOfferWithPolicy,
   reviseContractOffer,
-  submitContractOffer,
-  withdrawContractNegotiation,
+  submitContractOffer as submitContractOfferWithPolicy,
+  withdrawContractNegotiation as withdrawContractNegotiationWithPolicy,
 } from "./contract-negotiation.ts";
-import { advanceSelectedClubWorkflowsToAttention } from "./selected-club-contract-workflow.ts";
+import {
+  advanceSelectedClubWorkflowsToAttention as advanceSelectedClubWorkflowsToAttentionWithConfig,
+} from "./selected-club-contract-workflow.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
 
 /** Lifecycle tests cover every decision without relying on UI or persistence. */
+
+const VALUATION_CONFIG = playerValuationConfigFixture();
+const WAGE_POLICY = playerWagePolicyConfigFixture();
+const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+
+function deriveContractDemand(
+  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+) {
+  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function submitContractOffer(
+  input: Omit<Parameters<typeof submitContractOfferWithPolicy>[0], "wagePolicy">,
+) {
+  return submitContractOfferWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function advanceContractNegotiations(
+  careerState: Parameters<typeof advanceContractNegotiationsWithPolicy>[0],
+  throughDate: Parameters<typeof advanceContractNegotiationsWithPolicy>[1],
+  clubFilter?: Parameters<typeof advanceContractNegotiationsWithPolicy>[3],
+) {
+  return advanceContractNegotiationsWithPolicy(
+    careerState,
+    throughDate,
+    WAGE_POLICY,
+    clubFilter,
+  );
+}
+
+function acceptContractCounterOffer(
+  input: Omit<Parameters<typeof acceptContractCounterOfferWithPolicy>[0], "wagePolicy">,
+) {
+  return acceptContractCounterOfferWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function rejectContractCounterOffer(
+  input: Omit<Parameters<typeof rejectContractCounterOfferWithPolicy>[0], "wagePolicy">,
+) {
+  return rejectContractCounterOfferWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function offerSelectedClubRenewal(
+  input: Omit<Parameters<typeof offerSelectedClubRenewalWithPolicy>[0], "wagePolicy">,
+) {
+  return offerSelectedClubRenewalWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function withdrawContractNegotiation(
+  input: Omit<Parameters<typeof withdrawContractNegotiationWithPolicy>[0], "wagePolicy">,
+) {
+  return withdrawContractNegotiationWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function advanceSelectedClubWorkflowsToAttention(
+  input: Omit<
+    Parameters<typeof advanceSelectedClubWorkflowsToAttentionWithConfig>[0],
+    "valuationConfig" | "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceSelectedClubWorkflowsToAttentionWithConfig({
+    ...input,
+    valuationConfig: VALUATION_CONFIG,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
 
 test("preferred renewal waits for its due date and activates contract plus finance exactly once", () => {
   const initial = careerFixture();

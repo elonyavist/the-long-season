@@ -140,7 +140,11 @@ function ContractTermsInput({
         />
         <span>{suffix}</span>
       </span>
-      {error === undefined ? null : <small id={errorId}>{error}</small>}
+      {/*
+        * Always rendered so the row keeps its height. Mounting this only on
+        * error made the whole form jump the moment a value became invalid.
+        */}
+      <small id={errorId}>{error}</small>
     </label>
   );
 }

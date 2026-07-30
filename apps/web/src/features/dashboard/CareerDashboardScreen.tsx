@@ -96,7 +96,6 @@ export function CareerDashboardScreen({
               />
             </button>
           )}
-          eyebrow={text("career.dashboard.commandCentre")}
           title={text("career.shell.nav.dashboard")}
           titleId="career-dashboard-title"
         />

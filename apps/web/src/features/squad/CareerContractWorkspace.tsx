@@ -177,10 +177,7 @@ export function CareerContractWorkspace({
   return (
     <section className="tls-contract-workspace" aria-labelledby="career-contract-title">
       <div className="tls-player-profile-section-heading">
-        <div>
-          <p className="tls-career-screen-eyebrow">{text("career.contract.eyebrow")}</p>
-          <h3 id="career-contract-title">{text("career.contract.title")}</h3>
-        </div>
+        <h3 id="career-contract-title">{text("career.contract.title")}</h3>
         {contract.activeContract.hasExpiryAlert ? (
           <span className="tls-contract-expiry-alert">
             <Clock3 aria-hidden="true" size={17} />

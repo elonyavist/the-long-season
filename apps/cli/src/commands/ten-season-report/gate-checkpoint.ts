@@ -1,5 +1,4 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import type { SupportedLanguage } from "@game/i18n";
 
@@ -93,7 +92,7 @@ export async function createResumableLongRunGateReport(
   const pendingWorldCount = Math.max(1, tasks.length || input.worldCount);
   const workerCount = resolveLongRunGateWorkerCount({
     worldCount: pendingWorldCount,
-    workerCount: input.workerCount ?? Math.max(1, availableParallelism() - 1),
+    ...(input.workerCount === undefined ? {} : { workerCount: input.workerCount }),
   });
   await runMissingWorlds({
     input,

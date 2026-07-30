@@ -1,7 +1,12 @@
-import type { ClubCategory, YouthDevelopmentLevel } from "@game/domain";
+import type {
+  ClubCategory,
+  PlayerRatingScaleConfig,
+  YouthDevelopmentLevel,
+} from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import type { CurrentAbilityRarityLane } from "./player-current-ability-bands.ts";
 import { potentialRarityBudgetForDivision } from "./player-potential-rarity.ts";
 import { youthDevelopmentRarityCandidateScoreModifier } from "./youth-development-level.ts";
 
@@ -94,6 +99,339 @@ export interface BuildPlayerRarityAllocationInput {
   readonly clubDevelopmentLevelsByClubNumber?: Readonly<Record<number, YouthDevelopmentLevel>>;
 }
 
+/** Stable senior candidate considered by the complete-world rarity producer. */
+export interface InitialWorldExceptionalCandidate {
+  readonly playerKey: string;
+  readonly division: ClubCategory;
+  readonly clubTier: "title_contender" | "playoff_contender" | "mid_table" | "survival";
+  readonly isFirstTeam: boolean;
+  /** Whether this deterministic ordinary profile already reaches six stars now. */
+  readonly naturallyCurrentSix?: boolean;
+  /** Whether this deterministic ordinary profile already has a six-star ceiling. */
+  readonly naturallyPotentialSix?: boolean;
+  /** Actual archetype used by a naturally qualifying profile. */
+  readonly naturalArchetypeKey?: GeneratedPlayerArchetypeKey;
+  /** Actual current-quality lane used by a naturally qualifying profile. */
+  readonly naturalCurrentAbilityLane?: CurrentAbilityRarityLane;
+  /** Whether this slot can be reconstructed through an exceptional senior lane. */
+  readonly canConstructExceptionalProfile?: boolean;
+}
+
+/** Truthful profile assignment for one effective initial-world exception. */
+export interface InitialWorldExceptionalAssignment {
+  readonly playerKey: string;
+  readonly currentSix: boolean;
+  readonly potentialSix: boolean;
+  readonly source: "natural" | "constructed";
+  readonly archetypeKey: GeneratedPlayerArchetypeKey;
+  readonly currentAbilityLane: CurrentAbilityRarityLane;
+}
+
+/** Exact exceptional assignments shared by all initial-world division generators. */
+export interface InitialWorldExceptionalAllocation {
+  readonly currentSixPlayerKeys: readonly string[];
+  readonly potentialSixPlayerKeys: readonly string[];
+  /** Natural senior six-star ceilings reconstructed below six to honor the cap. */
+  readonly reconstructedPotentialBelowSixPlayerKeys: readonly string[];
+  readonly assignmentsByPlayerKey: Readonly<Record<string, InitialWorldExceptionalAssignment>>;
+}
+
+/** Input for the complete initial-world exceptional allocation. */
+export interface BuildInitialWorldExceptionalAllocationInput {
+  readonly seed: string;
+  readonly ratingScale: PlayerRatingScaleConfig;
+  readonly candidates: readonly InitialWorldExceptionalCandidate[];
+}
+
+/** Input for one season in a deterministic ten-season intake cohort. */
+export interface BuildAnnualWorldIntakeExceptionalAllocationInput {
+  readonly seed: string;
+  readonly cohortKey: string;
+  readonly seasonIndex: number;
+  readonly ratingScale: PlayerRatingScaleConfig;
+  readonly candidatePlayerKeys: readonly string[];
+}
+
+/** Potential-six assignments for one complete annual world intake. */
+export interface AnnualWorldIntakeExceptionalAllocation {
+  readonly scheduledSeasonOffsets: readonly number[];
+  readonly potentialSixPlayerKeys: readonly string[];
+}
+
+/**
+ * Allocates current-six and potential-six players once across the initial world.
+ *
+ * Current champions can only occupy credible first-team slots at strong
+ * first-division clubs. Potential rarity is separate and may include at most
+ * the configured lower-division allowance.
+ */
+export function buildInitialWorldExceptionalAllocation(
+  input: BuildInitialWorldExceptionalAllocationInput,
+): InitialWorldExceptionalAllocation {
+  assertUniqueCandidateKeys(input.candidates.map((candidate) => candidate.playerKey));
+  const candidatesByKey = new Map(
+    input.candidates.map((candidate) => [candidate.playerKey, candidate]),
+  );
+  const naturalCurrentCandidates = input.candidates.filter(
+    (candidate) => candidate.naturallyCurrentSix === true,
+  );
+  const naturalPotentialCandidates = input.candidates.filter(
+    (candidate) => candidate.naturallyPotentialSix === true,
+  );
+  assertNaturalProfileFacts(naturalCurrentCandidates);
+  assertNaturalProfileFacts(naturalPotentialCandidates);
+  const configuredCurrentCount = countInRange(
+    input.seed,
+    "initial-current-six-count",
+    input.ratingScale.rarity.initialWorld.currentSixMinimum,
+    input.ratingScale.rarity.initialWorld.currentSixMaximum,
+  );
+  const configuredPotentialCount = countInRange(
+    input.seed,
+    "initial-potential-six-count",
+    input.ratingScale.rarity.initialWorld.potentialSixMinimum,
+    input.ratingScale.rarity.initialWorld.potentialSixMaximum,
+  );
+  const currentCandidates = input.candidates.filter((candidate) =>
+    candidate.division === "first_division"
+    && candidate.clubTier === "title_contender"
+    && candidate.isFirstTeam
+    && candidate.canConstructExceptionalProfile !== false
+  );
+  if (naturalCurrentCandidates.some((candidate) => !currentCandidates.includes(candidate))) {
+    throw new Error("Naturally current-six profile is outside the credible current-star lane");
+  }
+  if (naturalCurrentCandidates.length > input.ratingScale.rarity.initialWorld.currentSixMaximum) {
+    throw new Error("Natural current-six profiles exceed the initial-world maximum");
+  }
+  const currentCount = Math.max(
+    configuredCurrentCount,
+    naturalCurrentCandidates.length,
+  );
+  const naturalCurrentKeys = rankedStableKeys(
+    input.seed,
+    "initial-natural-current-six",
+    naturalCurrentCandidates.map((candidate) => candidate.playerKey),
+  );
+  const constructedCurrentKeys = rankedStableKeys(
+    input.seed,
+    "initial-current-six",
+    currentCandidates
+      .map((candidate) => candidate.playerKey)
+      .filter((key) => !naturalCurrentKeys.includes(key)),
+  ).slice(0, currentCount - naturalCurrentKeys.length);
+  const currentSixPlayerKeys = [...naturalCurrentKeys, ...constructedCurrentKeys];
+  const allNaturalPotentialKeys = rankedStableKeys(
+    input.seed,
+    "initial-natural-potential-six",
+    naturalPotentialCandidates.map((candidate) => candidate.playerKey),
+  );
+  const fixedNaturalPotentialKeys = allNaturalPotentialKeys.filter(
+    (key) => candidatesByKey.get(key)?.canConstructExceptionalProfile === false,
+  );
+  const fixedPotentialKeys = uniqueStableKeys([
+    ...currentSixPlayerKeys,
+    ...fixedNaturalPotentialKeys,
+  ]);
+  const desiredNaturalPotentialCount = uniqueStableKeys([
+    ...fixedPotentialKeys,
+    ...allNaturalPotentialKeys,
+  ]).length;
+  const potentialCount = Math.max(
+    configuredPotentialCount,
+    Math.min(
+      input.ratingScale.rarity.initialWorld.potentialSixMaximum,
+      desiredNaturalPotentialCount,
+    ),
+    fixedPotentialKeys.length,
+  );
+  if (potentialCount > input.ratingScale.rarity.initialWorld.potentialSixMaximum) {
+    throw new Error(
+      `Non-reconstructable potential-six profiles exceed the initial-world maximum: ${fixedPotentialKeys.join(",")}`,
+    );
+  }
+  const fixedLowerCount = fixedPotentialKeys.filter(
+    (key) => candidatesByKey.get(key)?.division !== "first_division",
+  ).length;
+  if (
+    fixedLowerCount
+      > input.ratingScale.rarity.initialWorld.lowerDivisionPotentialSixMaximum
+  ) {
+    throw new Error(
+      "Non-reconstructable lower-division potential-six profiles exceed the initial-world maximum",
+    );
+  }
+  const retainedNaturalPotentialKeys: string[] = [];
+  let retainedLowerCount = fixedLowerCount;
+  for (const key of allNaturalPotentialKeys) {
+    if (
+      fixedPotentialKeys.includes(key)
+      || fixedPotentialKeys.length + retainedNaturalPotentialKeys.length
+        >= potentialCount
+    ) {
+      continue;
+    }
+    const isLower = candidatesByKey.get(key)?.division !== "first_division";
+    if (
+      isLower
+      && retainedLowerCount
+        >= input.ratingScale.rarity.initialWorld.lowerDivisionPotentialSixMaximum
+    ) {
+      continue;
+    }
+    retainedNaturalPotentialKeys.push(key);
+    if (isLower) retainedLowerCount += 1;
+  }
+  const requiredPotentialKeys = uniqueStableKeys([
+    ...fixedPotentialKeys,
+    ...retainedNaturalPotentialKeys,
+  ]);
+  const reconstructedPotentialBelowSixPlayerKeys = allNaturalPotentialKeys.filter(
+    (key) => !requiredPotentialKeys.includes(key),
+  );
+  const lowerRequiredCount = retainedLowerCount;
+  const lowerCandidates = input.candidates.filter((candidate) =>
+    candidate.division !== "first_division"
+    && !candidate.isFirstTeam
+    && candidate.canConstructExceptionalProfile !== false
+    && !requiredPotentialKeys.includes(candidate.playerKey)
+  );
+  const firstCandidates = input.candidates.filter((candidate) =>
+    candidate.division === "first_division"
+    && !candidate.isFirstTeam
+    && candidate.canConstructExceptionalProfile !== false
+    && !requiredPotentialKeys.includes(candidate.playerKey)
+  );
+  const remainingPotentialCount = potentialCount - requiredPotentialKeys.length;
+  const lowerAllowance = Math.max(
+    0,
+    input.ratingScale.rarity.initialWorld.lowerDivisionPotentialSixMaximum
+      - lowerRequiredCount,
+  );
+  const lowerCount = lowerAllowance === 0
+    ? 0
+    : Math.min(
+        lowerAllowance,
+        countInRange(input.seed, "initial-lower-potential-six-count", 0, 1),
+        remainingPotentialCount,
+      );
+  const lowerPotential = rankedStableKeys(
+    input.seed,
+    "initial-lower-potential-six",
+    lowerCandidates.map((candidate) => candidate.playerKey),
+  ).slice(0, lowerCount);
+  const firstPotential = rankedStableKeys(
+    input.seed,
+    "initial-first-potential-six",
+    firstCandidates.map((candidate) => candidate.playerKey),
+  ).slice(0, remainingPotentialCount - lowerPotential.length);
+  const potentialSixPlayerKeys = [
+    ...requiredPotentialKeys,
+    ...lowerPotential,
+    ...firstPotential,
+  ];
+
+  if (currentSixPlayerKeys.length !== currentCount || potentialSixPlayerKeys.length !== potentialCount) {
+    throw new Error("Initial world does not contain enough eligible exceptional-player candidates");
+  }
+
+  const naturalKeys = new Set([
+    ...naturalCurrentKeys,
+    ...retainedNaturalPotentialKeys,
+    ...fixedNaturalPotentialKeys,
+  ]);
+  const assignmentsByPlayerKey = Object.fromEntries(
+    potentialSixPlayerKeys.map((key) => {
+      const candidate = candidatesByKey.get(key);
+      if (candidate === undefined) {
+        throw new Error(`Missing exceptional candidate: ${key}`);
+      }
+      const currentSix = currentSixPlayerKeys.includes(key);
+      const natural = naturalKeys.has(key) && (!currentSix || candidate.naturallyCurrentSix === true);
+      const archetypeKey = natural
+        ? candidate.naturalArchetypeKey
+        : currentSix
+          ? "category_star"
+          : "rare_prodigy";
+      const currentAbilityLane = natural
+        ? candidate.naturalCurrentAbilityLane
+        : currentSix
+          ? "exceptional"
+          : "normal";
+      if (archetypeKey === undefined || currentAbilityLane === undefined) {
+        throw new Error(`Missing truthful exceptional profile metadata: ${key}`);
+      }
+      return [key, {
+        playerKey: key,
+        currentSix,
+        potentialSix: true,
+        source: natural ? "natural" : "constructed",
+        archetypeKey,
+        currentAbilityLane,
+      } satisfies InitialWorldExceptionalAssignment];
+    }),
+  );
+
+  return {
+    currentSixPlayerKeys,
+    potentialSixPlayerKeys,
+    reconstructedPotentialBelowSixPlayerKeys,
+    assignmentsByPlayerKey,
+  };
+}
+
+/**
+ * Allocates at most one potential-six player in one annual world intake.
+ *
+ * The ten-season schedule is derived once per cohort and contains exactly the
+ * configured `2..4` offsets; per-club generators never roll this rarity.
+ */
+export function buildAnnualWorldIntakeExceptionalAllocation(
+  input: BuildAnnualWorldIntakeExceptionalAllocationInput,
+): AnnualWorldIntakeExceptionalAllocation {
+  if (!Number.isSafeInteger(input.seasonIndex) || input.seasonIndex < 0) {
+    throw new RangeError(`Invalid intake season index: ${input.seasonIndex}`);
+  }
+  assertUniqueCandidateKeys(input.candidatePlayerKeys);
+  const cohortSeasonIndex = input.seasonIndex % 10;
+  const scheduledCount = countInRange(
+    input.seed,
+    `annual-intake-cohort-count:${input.cohortKey}`,
+    input.ratingScale.rarity.annualIntake.tenSeasonCohortMinimum,
+    input.ratingScale.rarity.annualIntake.tenSeasonCohortMaximum,
+  );
+  const scheduledSeasonOffsets = rankedStableKeys(
+    input.seed,
+    `annual-intake-cohort-seasons:${input.cohortKey}`,
+    // Offset zero can occur before the initial academy has produced any
+    // lifecycle vacancy. Later offsets give the canonical age-out pass time to
+    // expose real slots instead of inventing an exceptional candidate.
+    Array.from({ length: 9 }, (_, index) => String(index + 1)),
+  )
+    .slice(0, scheduledCount)
+    .map(Number)
+    .sort((left, right) => left - right);
+  const isExceptionalSeason = scheduledSeasonOffsets.includes(cohortSeasonIndex);
+  const maximumPerWorld = input.ratingScale.rarity.annualIntake.potentialSixPerWorldMaximum;
+  const potentialSixPlayerKeys = isExceptionalSeason && maximumPerWorld > 0
+    ? rankedStableKeys(
+        input.seed,
+        `annual-intake-potential-six:${input.cohortKey}:${cohortSeasonIndex}`,
+        input.candidatePlayerKeys,
+      ).slice(0, 1)
+    : [];
+
+  if (
+    isExceptionalSeason
+    && maximumPerWorld > 0
+    && potentialSixPlayerKeys.length === 0
+  ) {
+    throw new Error("Exceptional intake season requires at least one candidate");
+  }
+
+  return { scheduledSeasonOffsets, potentialSixPlayerKeys };
+}
+
 /**
  * Builds deterministic league-level rarity assignments.
  *
@@ -105,7 +443,7 @@ export function buildPlayerRarityAllocation(input: BuildPlayerRarityAllocationIn
   const usedSlotKeys = new Set<string>();
   const assignments: Record<string, PlayerRarityAssignment> = {};
 
-  for (const candidate of selectCandidates(input, "white-fly", budget.whiteFlyCount, usedSlotKeys, true)) {
+  for (const candidate of selectCandidates(input, "white-fly", budget.whiteFlyCount, usedSlotKeys, "lineup")) {
     const archetypeKey = whiteFlyArchetypeForSlot(input.seed, candidate.slotKey);
     assignments[candidate.slotKey] = {
       slotKey: candidate.slotKey,
@@ -114,7 +452,7 @@ export function buildPlayerRarityAllocation(input: BuildPlayerRarityAllocationIn
     };
   }
 
-  for (const candidate of selectCandidates(input, "serious-prospect", budget.seriousProspectCount, usedSlotKeys, true)) {
+  for (const candidate of selectCandidates(input, "serious-prospect", budget.seriousProspectCount, usedSlotKeys, "reserve")) {
     assignments[candidate.slotKey] = {
       slotKey: candidate.slotKey,
       rarityKind: "serious_prospect",
@@ -122,7 +460,7 @@ export function buildPlayerRarityAllocation(input: BuildPlayerRarityAllocationIn
     };
   }
 
-  for (const candidate of selectCandidates(input, "rare-prodigy", budget.rareProdigyCount, usedSlotKeys, true)) {
+  for (const candidate of selectCandidates(input, "rare-prodigy", budget.rareProdigyCount, usedSlotKeys, "reserve")) {
     assignments[candidate.slotKey] = {
       slotKey: candidate.slotKey,
       rarityKind: "rare_prodigy",
@@ -176,7 +514,7 @@ export function buildYouthPlayerRarityAllocation(
     "youth-serious-prospect",
     seriousProspectCount,
     usedSlotKeys,
-    false,
+    "all",
   )) {
     assignments[candidate.slotKey] = {
       slotKey: candidate.slotKey,
@@ -189,7 +527,7 @@ export function buildYouthPlayerRarityAllocation(
     "youth-rare-prodigy",
     rareProdigyCount,
     usedSlotKeys,
-    false,
+    "all",
   )) {
     assignments[candidate.slotKey] = {
       slotKey: candidate.slotKey,
@@ -238,11 +576,11 @@ function selectCandidates(
   streamName: string,
   count: number,
   usedSlotKeys: Set<string>,
-  preferReserveSlots: boolean,
+  slotPool: "all" | "lineup" | "reserve",
 ): readonly RarityCandidate[] {
   const selected: RarityCandidate[] = [];
   const usedClubNumbers = new Set<number>();
-  const candidates = rankedCandidates(input, streamName, preferReserveSlots);
+  const candidates = rankedCandidates(input, streamName, slotPool);
 
   for (const candidate of candidates) {
     if (selected.length >= count) {
@@ -264,13 +602,14 @@ function selectCandidates(
 function rankedCandidates(
   input: BuildPlayerRarityAllocationInput,
   streamName: string,
-  preferReserveSlots: boolean,
+  slotPool: "all" | "lineup" | "reserve",
 ): readonly RarityCandidate[] {
   const candidates: RarityCandidate[] = [];
-  const firstSlot = preferReserveSlots ? input.lineupSize + 1 : 1;
+  const firstSlot = slotPool === "reserve" ? input.lineupSize + 1 : 1;
+  const lastSlot = slotPool === "lineup" ? input.lineupSize : input.playersPerClub;
 
   for (let clubNumber = 1; clubNumber <= input.clubCount; clubNumber += 1) {
-    for (let slotNumber = firstSlot; slotNumber <= input.playersPerClub; slotNumber += 1) {
+    for (let slotNumber = firstSlot; slotNumber <= lastSlot; slotNumber += 1) {
       candidates.push({
         clubNumber,
         slotNumber,
@@ -289,6 +628,43 @@ function rankedCandidates(
 
     return left.slotKey.localeCompare(right.slotKey);
   });
+}
+
+function countInRange(seed: string, streamName: string, minimum: number, maximum: number): number {
+  return deriveRng(seed, "world-rarity-count", streamName).nextInt(minimum, maximum + 1);
+}
+
+function rankedStableKeys(seed: string, streamName: string, keys: readonly string[]): readonly string[] {
+  return [...keys].sort((left, right) => {
+    const leftScore = deriveRng(seed, "world-rarity-candidate", streamName, left).nextFloat();
+    const rightScore = deriveRng(seed, "world-rarity-candidate", streamName, right).nextFloat();
+    return leftScore - rightScore || left.localeCompare(right);
+  });
+}
+
+function assertUniqueCandidateKeys(keys: readonly string[]): void {
+  if (new Set(keys).size !== keys.length) {
+    throw new Error("Exceptional-player candidate keys must be unique");
+  }
+}
+
+function assertNaturalProfileFacts(
+  candidates: readonly InitialWorldExceptionalCandidate[],
+): void {
+  for (const candidate of candidates) {
+    if (
+      candidate.naturalArchetypeKey === undefined
+      || candidate.naturalCurrentAbilityLane === undefined
+    ) {
+      throw new Error(
+        `Naturally exceptional candidate is missing profile truth: ${candidate.playerKey}`,
+      );
+    }
+  }
+}
+
+function uniqueStableKeys(keys: readonly string[]): readonly string[] {
+  return [...new Set(keys)];
 }
 
 function rarityCandidateScore(seed: string, streamName: string, slotKey: string): number {

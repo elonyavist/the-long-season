@@ -101,7 +101,6 @@ export function CareerInboxScreen({
               />
             </button>
           )}
-          eyebrow={text("career.inbox.decisionCenter")}
           supporting={(
             <dl className="tls-inbox-summary-counts">
               <div><dt>{text("career.inbox.unreadCount")}</dt><dd>{postaView.unreadCount}</dd></div>

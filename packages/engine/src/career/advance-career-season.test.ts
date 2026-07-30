@@ -3,10 +3,13 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  MATCH_EVENT_SCHEMA_VERSION,
   abilityValue,
+  accruePlayerFixtureParticipation,
   clubId,
   competitionId,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   fixtureId,
   gameDate,
   playerId,
@@ -19,6 +22,7 @@ import {
   type Fixture,
   type GameState,
   type LeagueTableRules,
+  type MatchReport,
   type Player,
   type PlayerAbilities,
   type PlayerDynamicState,
@@ -27,7 +31,24 @@ import {
 } from "@game/domain";
 import { addDays } from "@game/shared";
 
-import { advanceCareerOneSeason } from "./advance-career-season.ts";
+import {
+  advanceCareerOneSeason as advanceCareerOneSeasonWithPolicy,
+} from "./advance-career-season.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+
+function advanceCareerOneSeason(
+  input: Omit<
+    Parameters<typeof advanceCareerOneSeasonWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceCareerOneSeasonWithPolicy({
+    ...input,
+    wagePolicy: playerWagePolicyConfigFixture(),
+    marketBehaviorPolicy: marketBehaviorConfigFixture(),
+  });
+}
 
 /**
  * Canonical season-advancement tests protect the single engine use-case that
@@ -78,6 +99,9 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
     assert.equal(result.facts.youthLifecycle.externalMoveCandidateCount, 0);
     assert.equal(result.facts.youthLifecycle.releasedCount, 0);
     assert.equal(result.facts.youthIntake.acceptedPlayerCount, 0);
+    assert.equal(result.facts.youthIntake.skippedPlayerCount, 0);
+    assert.deepEqual(result.facts.youthIntake.acceptedPlayerIds, []);
+    assert.deepEqual(result.facts.youthIntake.skippedPlayerIds, []);
     assert.equal(result.facts.youthPromotions.promotedCount, 0);
     assert.equal(result.facts.squadMaintenance.warningCount > 0, true);
     assert.equal(result.facts.transferTurnover.transferCount, 0);
@@ -101,6 +125,92 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
       actionIds: [],
     }]);
     assert.equal(result.careerState.gameState.fixtureIds.includes(fixtureId("fixture:000003")), true);
+  }
+});
+
+test("advanceCareerOneSeason archives player statistics before participation reset", () => {
+  const baseState = completedCareerStateFixture();
+  const playedFixtureId = fixtureId("fixture:000001");
+  const scorerPlayerId = playerId("player:selected-st");
+  const fixture = baseState.gameState.fixtures[playedFixtureId]!;
+  const report: MatchReport = {
+    eventSchemaVersion: MATCH_EVENT_SCHEMA_VERSION,
+    fixtureId: playedFixtureId,
+    finalMinute: 90,
+    score: { home: 2, away: 0 },
+    stats: {
+      home: { opportunities: 2, shots: 2, shotsOnTarget: 2, goals: 2 },
+      away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
+    },
+    events: [{
+      type: "goal",
+      shot: {
+        minute: 25,
+        side: "home",
+        quality: 0.7,
+        isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "open_play",
+      },
+      scorerPlayerId,
+    }],
+  };
+  const playerParticipationLedger = accruePlayerFixtureParticipation(
+    createEmptyPlayerParticipationLedger(),
+    {
+      fixtureId: playedFixtureId,
+      playerId: scorerPlayerId,
+      seasonId: seasonId("season:0001"),
+      monthKey: "2024-10",
+      started: true,
+      substituteAppearance: false,
+      minutes: 90,
+      rating: 8,
+      playedRoleMinutes: { striker: 90 },
+    },
+  );
+  const state = createCareerState({
+    ...baseState,
+    gameState: {
+      ...baseState.gameState,
+      fixtures: {
+        ...baseState.gameState.fixtures,
+        [playedFixtureId]: {
+          ...fixture,
+          result: {
+            ...fixture.result!,
+            report,
+          },
+        },
+      },
+    },
+    playerParticipationLedger,
+  });
+
+  const result = advanceCareerOneSeason({
+    careerState: state,
+    worldSeed: "player-statistics-archive-world",
+    mode: { kind: "completedSeason", tableRules: TABLE_RULES },
+  });
+
+  assert.equal(result.status, "advanced");
+  if (result.status === "advanced") {
+    const statistics = result.careerState.seasonHistory?.[0]?.playerStatistics;
+    const row = statistics?.rows.find((candidate) => candidate.playerId === scorerPlayerId);
+    assert.equal(statistics?.participationCoverage, "partial");
+    assert.equal(statistics?.eventCoverage, "partial");
+    assert.deepEqual(row, {
+      playerId: scorerPlayerId,
+      starts: 1,
+      substituteAppearances: 0,
+      minutes: 90,
+      ratingTotal: 8,
+      ratingSamples: 1,
+      goals: 1,
+      assists: 0,
+      saves: 0,
+    });
+    assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 0);
   }
 });
 

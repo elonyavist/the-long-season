@@ -1,13 +1,16 @@
 import {
   createNegotiationStageClock,
   isNegotiationStageExpired,
+  playerSquadDepartment,
   transferNegotiationParties,
   type CareerState,
   type ClubId,
   type ContractOfferEvaluation,
   type ContractOfferTerms,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type PlayerContract,
+  type PlayerWagePolicyConfig,
   type SeasonTransferWindows,
   type TransferCompletionFailureReason,
   type TransferNegotiation,
@@ -22,6 +25,10 @@ import {
 } from "./apply-career-transfer.ts";
 import { deriveContractDemand, evaluateContractOffer } from "./contract-negotiation-demand.ts";
 import { deriveNegotiationStageResponseDelayDays } from "./negotiation-response-delay.ts";
+import {
+  MINIMUM_CAREER_DEPARTMENT_DEPTH,
+  MINIMUM_CAREER_SQUAD_SIZE,
+} from "./squad-maintenance.ts";
 import { upsertTransferNegotiation } from "./transfer-negotiation.ts";
 
 /** Stable reason an explicit player-stage command was refused. */
@@ -49,6 +56,8 @@ export type TransferPlayerNegotiationCommandResult =
 /** Starts the second transfer table from one accepted club agreement. */
 export interface SubmitTransferPlayerOfferInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly negotiationId: TransferNegotiationId;
   readonly submittedOn: GameDate;
   readonly terms: ContractOfferTerms;
@@ -85,6 +94,7 @@ export function submitTransferPlayerOffer(
 
   const demand = deriveContractDemand({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
     playerId: negotiation.playerId,
     clubId: negotiation.buyingClubId,
     evaluatedOn: input.submittedOn,
@@ -111,10 +121,14 @@ export function submitTransferPlayerOffer(
 /** Input for advancing every due player-contract table. */
 export interface AdvanceTransferPlayerNegotiationsInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly throughDate: GameDate;
   readonly transferWindows: SeasonTransferWindows;
   /** Buyers whose player-stage decisions remain under human control. */
   readonly protectedBuyingClubIds?: readonly ClubId[];
+  /** Rechecks AI seller structure when concurrent agreements reach completion. */
+  readonly protectSellerSquadDepth?: boolean;
 }
 
 /** One player-stage outcome produced by a deterministic advancement pass. */
@@ -145,7 +159,26 @@ export function advanceTransferPlayerNegotiations(
   let careerState = input.careerState;
   const resolved: AdvancedTransferPlayerNegotiation[] = [];
   const protectedBuyingClubIds = new Set(input.protectedBuyingClubIds ?? []);
-  for (const negotiationId of [...state.negotiationIds].sort()) {
+  const dueStageIds = state.negotiationIds
+    .filter((negotiationId) => {
+      const negotiation = state.negotiations[negotiationId];
+      return negotiation?.status === "player_offer_submitted"
+        || negotiation?.status === "player_countered";
+    })
+    .sort((leftId, rightId) => {
+      const left = state.negotiations[leftId];
+      const right = state.negotiations[rightId];
+      if (
+        left === undefined
+        || right === undefined
+        || (left.status !== "player_offer_submitted" && left.status !== "player_countered")
+        || (right.status !== "player_offer_submitted" && right.status !== "player_countered")
+      ) return String(leftId).localeCompare(String(rightId));
+      return left.clock.submittedOn - right.clock.submittedOn
+        || String(leftId).localeCompare(String(rightId));
+    });
+
+  for (const negotiationId of dueStageIds) {
     const current = findNegotiation(careerState, negotiationId);
     if (current !== undefined && protectedBuyingClubIds.has(current.buyingClubId)) continue;
     if (current?.status === "player_countered") {
@@ -175,7 +208,14 @@ export function advanceTransferPlayerNegotiations(
     }
     if (input.throughDate < current.clock.responseDueOn) continue;
 
-    const resolution = resolveSubmittedOffer(careerState, current, input.transferWindows);
+    const resolution = resolveSubmittedOffer(
+      careerState,
+      current,
+      input.transferWindows,
+      input.protectSellerSquadDepth === true,
+      input.wagePolicy,
+      input.marketBehaviorPolicy,
+    );
     careerState = resolution.careerState;
     resolved.push({ negotiationId, status: resolution.negotiation.status });
   }
@@ -187,9 +227,13 @@ export function advanceTransferPlayerNegotiations(
 /** Input for accepting or rejecting a player's counteroffer. */
 export interface ResolveTransferPlayerCounterInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly negotiationId: TransferNegotiationId;
   readonly decidedOn: GameDate;
   readonly transferWindows: SeasonTransferWindows;
+  /** Rechecks AI seller structure when concurrent agreements reach completion. */
+  readonly protectSellerSquadDepth?: boolean;
 }
 
 /** Accepts a live player counter and attempts the atomic transfer once. */
@@ -208,6 +252,9 @@ export function acceptTransferPlayerCounter(
     evaluation: negotiation.evaluation,
     completedOn: input.decidedOn,
     transferWindows: input.transferWindows,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
+    protectSellerSquadDepth: input.protectSellerSquadDepth === true,
   });
 }
 
@@ -230,6 +277,9 @@ function resolveSubmittedOffer(
   careerState: CareerState,
   negotiation: Extract<TransferNegotiation, { readonly status: "player_offer_submitted" }>,
   transferWindows: SeasonTransferWindows,
+  protectSellerSquadDepth: boolean,
+  wagePolicy: PlayerWagePolicyConfig,
+  marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): Extract<TransferPlayerNegotiationCommandResult, { readonly status: "applied" }> {
   const decidedOn = negotiation.clock.responseDueOn;
   const player = careerState.gameState.players[negotiation.playerId];
@@ -244,9 +294,13 @@ function resolveSubmittedOffer(
     player,
     sellingClub,
     buyingClub,
+    currentTier: sellingClub.category,
+    destinationTier: buyingClub.category,
     currentDate: decidedOn,
     currentContract,
     proposedTerms: negotiation.offeredTerms,
+    marketBehaviorPolicy,
+    ratingScale: wagePolicy.ratingScale,
   });
   if (willingness.status === "rejected") {
     const playerRejected: TransferNegotiation = {
@@ -300,6 +354,9 @@ function resolveSubmittedOffer(
     evaluation,
     completedOn: decidedOn,
     transferWindows,
+    protectSellerSquadDepth,
+    wagePolicy,
+    marketBehaviorPolicy,
   });
 }
 
@@ -314,7 +371,21 @@ function completeTransfer(input: {
   readonly evaluation: ContractOfferEvaluation;
   readonly completedOn: GameDate;
   readonly transferWindows: SeasonTransferWindows;
+  readonly protectSellerSquadDepth: boolean;
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): Extract<TransferPlayerNegotiationCommandResult, { readonly status: "applied" }> {
+  if (
+    input.protectSellerSquadDepth
+    && !sellerPreservesSquadStructure(input.careerState, input.negotiation)
+  ) {
+    return failed(
+      input.careerState,
+      input.negotiation,
+      input.completedOn,
+      "stale_ownership",
+    );
+  }
   const transfer = applyCareerPermanentTransfer({
     careerState: input.careerState,
     intent: {
@@ -324,8 +395,16 @@ function completeTransfer(input: {
     },
     occurredOn: input.completedOn,
     transferWindows: input.transferWindows,
+    wagePolicy: input.wagePolicy,
+    marketBehaviorPolicy: input.marketBehaviorPolicy,
     acceptedDeal: {
-      transferFee: input.negotiation.agreedFee,
+      publicValue: input.negotiation.publicValue,
+      initialAskingPrice: input.negotiation.initialAskingPrice,
+      offeredFee: input.negotiation.offeredFee,
+      ...(input.negotiation.counterFee === undefined
+        ? {}
+        : { counterFee: input.negotiation.counterFee }),
+      agreedFee: input.negotiation.agreedFee,
       contractTerms: input.acceptedTerms,
       playerAgreementConfirmed: true,
     },
@@ -346,6 +425,7 @@ function completeTransfer(input: {
     ...transferNegotiationParties(input.negotiation),
     status: "completed",
     agreedFee: input.negotiation.agreedFee,
+    completedFee: input.negotiation.agreedFee,
     completedOn: input.completedOn,
     acceptedTerms: input.acceptedTerms,
     acceptedSource: input.acceptedSource,
@@ -354,6 +434,29 @@ function completeTransfer(input: {
     transferHistorySequence: transfer.transferHistorySequence,
   };
   return applied(transfer.careerState, completed);
+}
+
+/**
+ * Rechecks seller floors against current ownership because provisional club
+ * agreements do not reserve players or squad slots from concurrent talks.
+ */
+function sellerPreservesSquadStructure(
+  careerState: CareerState,
+  negotiation: TransferNegotiation,
+): boolean {
+  const sellingClub = careerState.gameState.clubs[negotiation.sellingClubId];
+  const player = careerState.gameState.players[negotiation.playerId];
+  if (sellingClub === undefined || player === undefined) return false;
+
+  const department = playerSquadDepartment(player);
+  const departmentCount = sellingClub.playerIds.reduce((count, playerId) => {
+    const squadPlayer = careerState.gameState.players[playerId];
+    return squadPlayer !== undefined && playerSquadDepartment(squadPlayer) === department
+      ? count + 1
+      : count;
+  }, 0);
+  return sellingClub.playerIds.length - 1 >= MINIMUM_CAREER_SQUAD_SIZE
+    && departmentCount - 1 >= MINIMUM_CAREER_DEPARTMENT_DEPTH[department];
 }
 
 function completionFailureReason(

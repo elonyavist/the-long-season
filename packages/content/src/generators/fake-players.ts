@@ -1,6 +1,7 @@
 import {
   createPersonIdentity,
   gameDate,
+  playerId,
   type ClubId,
   type ClubCategory,
   type CreatedPlayer,
@@ -8,6 +9,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRatingScaleConfig,
   type RoleIdentifiedPlayer,
 } from "@game/domain";
 import { deriveRng, fromISO } from "@game/shared";
@@ -25,8 +27,10 @@ import { buildRoleAwarePlayerAbilities } from "./player-role-templates.ts";
 import {
   GENERATED_PLAYER_ARCHETYPE_KEYS,
   getGeneratedPlayerArchetype,
+  resolveGeneratedExceptionalProfile,
   type GeneratedPlayerArchetype,
   type GeneratedPlayerArchetypeKey,
+  type GeneratedExceptionalProfile,
 } from "./player-archetypes.ts";
 import type { CurrentAbilityRarityLane } from "./player-current-ability-bands.ts";
 import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
@@ -34,6 +38,7 @@ import { allocateReachablePotential } from "./player-potential-allocation.ts";
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
+import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 
 const FAKE_CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 const MAX_LEAGUE_LAST_NAME_USES = 2;
@@ -82,6 +87,17 @@ export interface FakePlayerGenerationOptions {
   readonly leagueNation?: LeagueNationCode;
   /** Optional club context for category/reputation-aware identity distribution. */
   readonly clubContexts?: Readonly<Record<ClubId, FakePlayerClubContext>>;
+  /** Validated global scale used only for explicitly budgeted six-star floors. */
+  readonly ratingScale?: PlayerRatingScaleConfig;
+  /** Complete-world assignments produced once before per-division generation. */
+  readonly exceptionalAssignments?: {
+    readonly currentSixPlayerIds: readonly PlayerId[];
+    readonly potentialSixPlayerIds: readonly PlayerId[];
+    /** Natural upper-ceiling outliers rebuilt through a bounded non-six lane. */
+    readonly reconstructedPotentialBelowSixPlayerIds?: readonly PlayerId[];
+  };
+  /** Optional namespace that keeps independently generated divisions globally unique. */
+  readonly playerIdNamespace?: string;
 }
 
 /** Club context consumed by fake identity generation. */
@@ -111,9 +127,22 @@ export function generateFakePlayersForClubs(
   const lineupsByClubId: Record<ClubId, readonly FakeLineupSlot[]> = {};
   const seed = options.seed ?? "demo-001";
   const leagueNation = options.leagueNation ?? "italian";
+  const ratingScale = options.ratingScale ?? defaultPlayerRatingScale;
+  const currentSixPlayerIds = new Set(options.exceptionalAssignments?.currentSixPlayerIds ?? []);
+  const potentialSixPlayerIds = new Set(options.exceptionalAssignments?.potentialSixPlayerIds ?? []);
+  const reconstructedPotentialBelowSixPlayerIds = new Set(
+    options.exceptionalAssignments?.reconstructedPotentialBelowSixPlayerIds ?? [],
+  );
+  for (const id of reconstructedPotentialBelowSixPlayerIds) {
+    if (currentSixPlayerIds.has(id) || potentialSixPlayerIds.has(id)) {
+      throw new Error(`One player cannot be both exceptional and reconstructed below six: ${id}`);
+    }
+  }
   const leagueNameUsage = createLeagueNameUsage();
+  const division = divisionForGeneratedLeague(clubIds, options.clubContexts);
   const rarityAllocation = buildPlayerRarityAllocation({
     seed,
+    division,
     clubCount: clubIds.length,
     playersPerClub: FAKE_PLAYERS_PER_CLUB,
     lineupSize: FAKE_LINEUP_SIZE,
@@ -131,7 +160,7 @@ export function generateFakePlayersForClubs(
     const clubNameUsage = createClubNameUsage();
 
     for (let slotNumber = 1; slotNumber <= FAKE_PLAYERS_PER_CLUB; slotNumber += 1) {
-      const id = fakePlayerId(clubNumber, slotNumber);
+      const id = generatedFakePlayerId(clubNumber, slotNumber, options.playerIdNamespace);
       const identity = fakePlayerIdentity({
         id,
         clubNumber,
@@ -143,17 +172,40 @@ export function generateFakePlayersForClubs(
         leagueNameUsage,
       });
       const rarityAssignment = rarityAllocation.assignmentsBySlotKey[playerRaritySlotKey(clubNumber, slotNumber)];
-      const archetype =
-        rarityAssignment === undefined
+      const exceptionalProfile = resolveGeneratedExceptionalProfile({
+        currentSixAllocated: currentSixPlayerIds.has(id),
+        potentialSixAllocated: potentialSixPlayerIds.has(id),
+      });
+      const reconstructBelowSix = reconstructedPotentialBelowSixPlayerIds.has(id);
+      const archetype = reconstructBelowSix
+        ? getGeneratedPlayerArchetype("veteran_drop_down")
+        : exceptionalProfile.archetypeKey !== undefined
+        ? getGeneratedPlayerArchetype(exceptionalProfile.archetypeKey)
+        : rarityAssignment === undefined
           ? selectPlayerArchetype(seed, id, clubNumber, slotNumber, slotNumber <= FAKE_LINEUP_SIZE)
           : getGeneratedPlayerArchetype(rarityAssignment.archetypeKey);
-      const created = fakePlayer(id, clubNumber, slotNumber, identity, seed, archetype, clubContext);
+      const created = fakePlayer(
+        id,
+        clubNumber,
+        slotNumber,
+        identity,
+        seed,
+        archetype,
+        clubContext,
+        ratingScale,
+        exceptionalProfile,
+        reconstructBelowSix,
+      );
 
       players[id] = created.player;
       playerIds.push(id);
       playerIdentities[id] = identity;
       playerArchetypes[id] = archetype.key;
-      if (rarityAssignment !== undefined) {
+      if (
+        rarityAssignment !== undefined
+        && exceptionalProfile.kind === "ordinary"
+        && !reconstructBelowSix
+      ) {
         playerRarityAssignments[id] = rarityAssignment;
       }
       playerStates[id] = created.dynamicState;
@@ -181,6 +233,19 @@ export function generateFakePlayersForClubs(
   };
 }
 
+/** Resolves the stable player ID used by one optional namespaced league. */
+export function generatedFakePlayerId(
+  clubNumber: number,
+  slotNumber: number,
+  namespace?: string,
+): PlayerId {
+  if (namespace === undefined) return fakePlayerId(clubNumber, slotNumber);
+  const safeNamespace = namespace.replaceAll(":", "-");
+  return playerId(
+    `player:${safeNamespace}-${String(clubNumber).padStart(2, "0")}-${String(slotNumber).padStart(2, "0")}`,
+  );
+}
+
 /**
  * Builds one generated player with a deterministic ability profile.
  */
@@ -192,6 +257,9 @@ function fakePlayer(
   seed: string,
   archetype: GeneratedPlayerArchetype,
   clubContext: FakePlayerClubContext,
+  ratingScale: PlayerRatingScaleConfig,
+  exceptionalProfile: GeneratedExceptionalProfile,
+  reconstructPotentialBelowSix: boolean,
 ): CreatedPlayer {
   const clubTier = clubTierForGeneratedClubNumber(clubNumber);
   const position = positionForSlot(slotNumber);
@@ -205,7 +273,11 @@ function fakePlayer(
     clubTier,
     role: primaryRole,
     ageYears,
-    rarityLane: currentAbilityRarityLaneForArchetype(archetype.key),
+    rarityLane: reconstructPotentialBelowSix
+      ? "normal"
+      : exceptionalProfile.currentAbilityLane === "exceptional"
+      ? "exceptional"
+      : currentAbilityRarityLaneForGeneratedArchetype(archetype.key),
     slotDepthAdjustment: slotDepthOffset(slotNumber),
   });
   const potential = allocateReachablePotential({
@@ -217,6 +289,9 @@ function fakePlayer(
     division: clubContext.category,
     clubTier,
     potentialClass: archetype.potentialClass,
+    ...(exceptionalProfile.requiresSixStarPotentialFloor
+      ? { minimumRolePotentialAbility: minimumAbilityForRating(ratingScale, 6) }
+      : {}),
   });
 
   return assembleGeneratedPlayer({
@@ -425,7 +500,7 @@ function selectPlayerArchetype(
   let totalWeight = 0;
 
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
-    if (isBudgetedArchetype(key)) {
+    if (isBudgetedArchetype(key) || (isLineupSlot && isYouthArchetype(key))) {
       continue;
     }
 
@@ -436,7 +511,7 @@ function selectPlayerArchetype(
   let cursor = rng.nextFloat() * totalWeight;
 
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
-    if (isBudgetedArchetype(key)) {
+    if (isBudgetedArchetype(key) || (isLineupSlot && isYouthArchetype(key))) {
       continue;
     }
 
@@ -448,6 +523,34 @@ function selectPlayerArchetype(
   }
 
   return getGeneratedPlayerArchetype("senior_regular");
+}
+
+function isYouthArchetype(key: GeneratedPlayerArchetypeKey): boolean {
+  return key === "normal_youth" || key === "good_prospect";
+}
+
+function minimumAbilityForRating(
+  scale: PlayerRatingScaleConfig,
+  rating: 6,
+): number {
+  const threshold = scale.abilityThresholds.find((candidate) => candidate.rating === rating);
+  if (threshold === undefined) {
+    throw new Error(`Validated rating scale is missing rating ${rating}`);
+  }
+  return threshold.minimumAbilityInclusive;
+}
+
+function divisionForGeneratedLeague(
+  clubIds: readonly ClubId[],
+  clubContexts: Readonly<Record<ClubId, FakePlayerClubContext>> | undefined,
+): ClubCategory {
+  const categories = new Set(clubIds.map((clubId, index) =>
+    clubContexts?.[clubId]?.category ?? defaultClubContext(index + 1).category
+  ));
+  if (categories.size !== 1) {
+    throw new Error("One fake-player generation call must contain exactly one division");
+  }
+  return [...categories][0] ?? "third_division";
 }
 
 /**
@@ -478,7 +581,10 @@ function slotDepthOffset(slotNumber: number): number {
   return -1.15;
 }
 
-function currentAbilityRarityLaneForArchetype(archetypeKey: GeneratedPlayerArchetypeKey): CurrentAbilityRarityLane {
+/** Returns the current-quality lane actually used by one senior archetype. */
+export function currentAbilityRarityLaneForGeneratedArchetype(
+  archetypeKey: GeneratedPlayerArchetypeKey,
+): CurrentAbilityRarityLane {
   switch (archetypeKey) {
     case "category_star":
     case "veteran_drop_down":

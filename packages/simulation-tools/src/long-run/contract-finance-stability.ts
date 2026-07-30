@@ -12,19 +12,27 @@ import {
   type CareerState,
   type ClubFinanceLedgerEntry,
   type ClubFinanceLedgerReason,
+  type ClubCategory,
   type ClubId,
   type ContractNegotiation,
   type ContractOfferTerms,
   type PlayerContract,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type SeasonTransferWindows,
   type SeniorSquadRegistration,
 } from "@game/domain";
 import {
   checkContractOfferAffordability,
-  DEFAULT_PLAYER_VALUATION_CONFIG,
+  deriveMarketPendingExposure,
+  derivePlayerMarketAbility,
   derivePlayerValuation,
   selectFreeAgentPlayerIds,
+  type CareerSeasonMarketLifecycleFact,
+  type CareerSquadMaintenanceFact,
+  type CareerPlayerExitFact,
+  type CareerYouthLifecycleFact,
+  type PlayerValuationConfig,
 } from "@game/engine";
 
 import type { LongRunAnomalyStatus } from "./anomaly-scoring.ts";
@@ -34,6 +42,166 @@ export type LongRunSquadDepartment = "goalkeeper" | "defender" | "midfielder" | 
 
 /** Money posted by one ledger reason during one simulated season. */
 export type LongRunLedgerReasonAmounts = Readonly<Record<ClubFinanceLedgerReason, number>>;
+
+/** One stable market loss slice compacted by buyer, department, and reason. */
+export interface LongRunMarketLossSlice {
+  readonly clubId: string;
+  readonly department: LongRunSquadDepartment;
+  readonly reason: string;
+  /** Separates actionable in-window losses from normal closed-window observations. */
+  readonly transferWindowOpen: boolean;
+  readonly count: number;
+}
+
+/** One club's permanent and preliminary recruitment activity. */
+export interface LongRunMarketClubActivity {
+  readonly clubId: string;
+  readonly needsEvaluatedCount: number;
+  readonly recruitableNeedCount: number;
+  readonly permanentTargetFoundCount: number;
+  readonly permanentOfferSubmittedCount: number;
+  readonly permanentCompletedCount: number;
+  readonly preliminaryOfferSubmittedCount: number;
+}
+
+/** Compact permanent-transfer funnel counters for one season or aggregate run. */
+export interface LongRunPermanentTransferFunnel {
+  readonly needsEvaluatedCount: number;
+  readonly recruitableNeedCount: number;
+  readonly targetFoundCount: number;
+  readonly targetUnavailableCount: number;
+  readonly offerSubmittedCount: number;
+  readonly sellerRejectedCount: number;
+  readonly sellerCounteredCount: number;
+  readonly sellerAcceptedCount: number;
+  readonly sellerExpiredCount: number;
+  readonly sellerWithdrawnCount: number;
+  readonly playerTermsStartedCount: number;
+  readonly playerCounteredCount: number;
+  readonly playerRejectedCount: number;
+  readonly playerCounterAcceptedCount: number;
+  readonly unaffordableCompletionCount: number;
+  readonly completedCount: number;
+  /** Stable engine reason counts for lost stages. */
+  readonly lostReasonCounts: Readonly<Record<string, number>>;
+  /** Stable loss rows used to inspect frequency by club and department. */
+  readonly lostByClubDepartment: readonly LongRunMarketLossSlice[];
+  /** Club activity rows that keep permanent and preliminary starts comparable. */
+  readonly clubActivity: readonly LongRunMarketClubActivity[];
+}
+
+/** Compact preliminary-agreement funnel counters for one season or aggregate run. */
+export interface LongRunPreliminaryAgreementFunnel {
+  readonly candidateFoundCount: number;
+  readonly candidateUnavailableCount: number;
+  readonly offerSubmittedCount: number;
+  readonly offerRejectedCount: number;
+  readonly counteredCount: number;
+  readonly counterAcceptedCount: number;
+  readonly counterRejectedCount: number;
+  readonly agreementCreatedCount: number;
+  readonly expiredCount: number;
+  readonly activationCount: number;
+  readonly activationFailureCount: number;
+  /** Stable engine reason counts for lost stages. */
+  readonly lostReasonCounts: Readonly<Record<string, number>>;
+}
+
+/** Closing free-agent population bands used by the long-run economy diagnosis. */
+export interface LongRunFreeAgentBands {
+  readonly age: Readonly<Record<"under_23" | "prime_23_29" | "age_30_34" | "age_35_plus", number>>;
+  readonly currentAbility: Readonly<Record<"under_8" | "ability_8_9" | "ability_10_11" | "ability_12_plus", number>>;
+  readonly unattached: Readonly<Record<"under_1_season" | "one_to_two_seasons" | "three_plus_seasons", number>>;
+}
+
+/** Stock-flow reconciliation for free agents across one season transition. */
+export interface LongRunFreeAgentFlow {
+  readonly openingStock: number;
+  readonly expiryInflow: number;
+  readonly releaseInflow: number;
+  /** Academy age-outs that enter the unattached senior-player pool. */
+  readonly youthExternalMoveInflow: number;
+  /** Academy releases that enter the unattached senior-player pool. */
+  readonly youthReleaseInflow: number;
+  readonly otherInflow: number;
+  readonly ordinarySigningOutflow: number;
+  readonly preliminaryActivationOutflow: number;
+  readonly retirementOutflow: number;
+  readonly careerStepDownOutflow: number;
+  readonly otherOutflow: number;
+  readonly closingStock: number;
+  /** Must be zero when opening + inflows - outflows equals closing stock. */
+  readonly reconciliationDelta: number;
+  /** Prime-age free agents with public current ability at or above 10. */
+  readonly usefulClosingStock: number;
+  readonly bands: LongRunFreeAgentBands;
+}
+
+/**
+ * Compact source-backed wage and contract distribution for one division.
+ *
+ * The row deliberately keeps salary, bonuses, club commitment, utilization,
+ * and headroom separate so diagnostics never imply that wages come from public
+ * market value.
+ */
+export interface LongRunDivisionWageEconomyRow {
+  readonly division: ClubCategory;
+  readonly clubCount: number;
+  readonly playerCount: number;
+  readonly annualWageP50: number;
+  readonly annualWageP90: number;
+  readonly annualWageP99: number;
+  readonly signingBonusP50: number;
+  readonly appearanceBonusP50: number;
+  readonly goalBonusP50: number;
+  readonly cleanSheetBonusP50: number;
+  readonly committedAnnualWageP50: number;
+  readonly committedAnnualWageP90: number;
+  readonly committedAnnualWageP99: number;
+  readonly wageBudgetUtilizationP50: number;
+  readonly wageBudgetUtilizationP90: number;
+  readonly wageBudgetUtilizationP99: number;
+  readonly annualWageHeadroomP50: number;
+  readonly annualWageHeadroomP10: number;
+}
+
+/**
+ * Compact club-finance and market activity distribution for one division.
+ *
+ * Cash, transfer allocation, pending cash, and pending annual wages remain
+ * separate because none is an interchangeable affordability constraint.
+ */
+export interface LongRunDivisionMarketEconomyRow {
+  readonly division: ClubCategory;
+  readonly clubCount: number;
+  readonly cashBalanceP50: number;
+  readonly cashBalanceP90: number;
+  readonly cashBalanceP99: number;
+  readonly availableTransferBudgetP50: number;
+  readonly availableTransferBudgetP90: number;
+  readonly availableTransferBudgetP99: number;
+  readonly pendingCashExposureP50: number;
+  readonly pendingCashExposureP90: number;
+  readonly pendingCashExposureP99: number;
+  readonly pendingAnnualWageExposureP50: number;
+  readonly pendingAnnualWageExposureP90: number;
+  readonly pendingAnnualWageExposureP99: number;
+  readonly permanentAttemptCount: number;
+  readonly permanentCompletionCount: number;
+  readonly freeAgentSigningCount: number;
+}
+
+/** One source-to-destination tier transfer slice for the current season. */
+export interface LongRunCrossTierTransferRow {
+  readonly sourceDivision: ClubCategory;
+  readonly destinationDivision: ClubCategory;
+  readonly attemptCount: number;
+  readonly completionCount: number;
+  readonly publicValueP50: number;
+  readonly askingPriceP50: number;
+  readonly completedFeeP50: number;
+  readonly rejectionReasonCounts: Readonly<Record<string, number>>;
+}
 
 /** One season snapshot of contract, registration, finance, and plan health. */
 export interface LongRunContractFinanceSeasonRow {
@@ -47,6 +215,8 @@ export interface LongRunContractFinanceSeasonRow {
   readonly freeAgentCount: number;
   /** Free-agent share of the active player universe. */
   readonly freeAgentShare: number;
+  /** Public values of free agents signed by canonical squad replenishment. */
+  readonly freeAgentSigningPublicValues: readonly number[];
   /** Missing mandatory Phase 78 aggregate states. */
   readonly missingStateCount: number;
   /** Canonical senior-squad validation failures. */
@@ -75,6 +245,18 @@ export interface LongRunContractFinanceSeasonRow {
   readonly minimumCashBalance: number;
   /** Highest committed-wage share of an annual wage budget. */
   readonly maximumWageBudgetUtilization: number;
+  /** One bounded utilization observation for every active club account. */
+  readonly wageBudgetUtilizations: readonly number[];
+  /** Remaining annual-wage budget for every active club account. */
+  readonly annualWageHeadrooms: readonly number[];
+  /** Clubs at or above the pressure boundary during this season. */
+  readonly wagePressureClubCount: number;
+  /** Clubs exactly at their annual-wage ceiling during this season. */
+  readonly exactWageCeilingClubCount: number;
+  /** Clubs above their annual-wage ceiling during this season. */
+  readonly aboveWageBudgetClubCount: number;
+  /** Exact-ceiling clubs reached after transfer-to-wage reallocation. */
+  readonly reallocationExactCeilingClubCount: number;
   /** Smallest senior squad after refresh. */
   readonly minimumSquadSize: number;
   /** Largest senior squad after refresh. */
@@ -99,6 +281,12 @@ export interface LongRunContractFinanceSeasonRow {
   readonly averageAnnualWage: number;
   /** Highest active annual wage, in minor units. */
   readonly maximumAnnualWage: number;
+  /** Per-division wage, bonus, commitment, utilization, and headroom diagnostics. */
+  readonly divisionWageEconomy: readonly LongRunDivisionWageEconomyRow[];
+  /** Per-division liquid finance, exposure, and completed recruitment diagnostics. */
+  readonly divisionMarketEconomy: readonly LongRunDivisionMarketEconomyRow[];
+  /** Source/destination division attempts, completions, prices, and losses. */
+  readonly crossTierTransfers: readonly LongRunCrossTierTransferRow[];
   /** Number of players valued on this checkpoint season. */
   readonly valuationSampleCount: number;
   /** Lowest sampled player value, in minor units. */
@@ -139,6 +327,12 @@ export interface LongRunContractFinanceSeasonRow {
   readonly preliminaryAgreementActivationCount: number;
   /** Preliminary agreement invariant violations. */
   readonly preliminaryAgreementViolationCount: number;
+  /** Permanent-transfer activity funnel for this season. */
+  readonly permanentTransferFunnel: LongRunPermanentTransferFunnel;
+  /** Preliminary-agreement activity funnel for this season. */
+  readonly preliminaryAgreementFunnel: LongRunPreliminaryAgreementFunnel;
+  /** Free-agent opening stock, flows, closing stock, and population bands. */
+  readonly freeAgentFlow: LongRunFreeAgentFlow;
 }
 
 /** One machine-readable contract and finance long-run check. */
@@ -149,6 +343,10 @@ export interface LongRunContractFinanceCheck {
   readonly status: LongRunAnomalyStatus;
   /** Numeric value that produced the status. */
   readonly value: number;
+  /** Number of inspected facts; independent from the numeric result. */
+  readonly observationCount: number;
+  /** Whether the check had at least one fact to evaluate. */
+  readonly evaluationStatus: "evaluated" | "not_evaluated";
   /** Locked interpretation written before release-gate execution. */
   readonly threshold: string;
   /** Player-facing reason this check matters. */
@@ -185,6 +383,40 @@ export interface LongRunContractFinanceStabilityReport {
   readonly preliminaryAgreementCount: number;
   /** Total preliminary agreements activated across the run. */
   readonly preliminaryAgreementActivationCount: number;
+  /** Permanent-transfer funnel aggregated across every season. */
+  readonly permanentTransferFunnel: LongRunPermanentTransferFunnel;
+  /** Preliminary-agreement funnel aggregated across every season. */
+  readonly preliminaryAgreementFunnel: LongRunPreliminaryAgreementFunnel;
+  /** Median club-season wage utilization. */
+  readonly wageBudgetUtilizationP50: number;
+  /** 90th-percentile club-season wage utilization. */
+  readonly wageBudgetUtilizationP90: number;
+  /** 95th-percentile club-season wage utilization. */
+  readonly wageBudgetUtilizationP95: number;
+  /** 99th-percentile club-season wage utilization. */
+  readonly wageBudgetUtilizationP99: number;
+  /** Share of club-seasons at or above 95% utilization. */
+  readonly wagePressureClubSeasonShare: number;
+  /** Share of club-seasons exactly at the wage ceiling. */
+  readonly exactWageCeilingClubSeasonShare: number;
+  /** Share of club-seasons above the wage budget. */
+  readonly aboveWageBudgetClubSeasonShare: number;
+  /** Exact-ceiling club-seasons reached after transfer-to-wage reallocation. */
+  readonly reallocationExactCeilingClubSeasonCount: number;
+  /** Median remaining annual-wage headroom in minor units. */
+  readonly annualWageHeadroomP50: number;
+  /** 10th-percentile remaining annual-wage headroom in minor units. */
+  readonly annualWageHeadroomP10: number;
+  /** Highest useful closing free-agent count observed. */
+  readonly maximumUsefulFreeAgentCountObserved: number;
+  /** Closing-stock band observations aggregated across the run's seasons. */
+  readonly freeAgentBandObservations: LongRunFreeAgentBands;
+  /** Per-division economy at the final retained season boundary. */
+  readonly closingDivisionWageEconomy: readonly LongRunDivisionWageEconomyRow[];
+  /** Per-division cash, transfer-room, exposure, and market-flow diagnostics at the final boundary. */
+  readonly closingDivisionMarketEconomy: readonly LongRunDivisionMarketEconomyRow[];
+  /** Cross-tier permanent-transfer attempts and completions at the final boundary. */
+  readonly closingCrossTierTransfers: readonly LongRunCrossTierTransferRow[];
   /** Ordered checks used by CLI and structured gates. */
   readonly checks: readonly LongRunContractFinanceCheck[];
   /** Original compact season rows. */
@@ -207,6 +439,18 @@ export interface CreateLongRunContractFinanceSeasonRowInput {
    * truth belongs to the competition content the caller already resolved.
    */
   readonly transferWindows: SeasonTransferWindows;
+  /** Versioned public-value content supplied by the application composition root. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Exact version-selected wage policy used by engine affordability checks. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  /** Season-scoped market facts emitted by the canonical engine advancement. */
+  readonly marketLifecycle?: CareerSeasonMarketLifecycleFact;
+  /** Season-scoped exit IDs and reasons used for free-agent stock reconciliation. */
+  readonly playerExits?: CareerPlayerExitFact;
+  /** Reallocation facts used to attribute exact-ceiling wage states. */
+  readonly squadMaintenance?: CareerSquadMaintenanceFact;
+  /** Academy age-out IDs used to explain non-contract free-agent inflow. */
+  readonly youthLifecycle?: CareerYouthLifecycleFact;
 }
 
 const LEDGER_REASONS: readonly ClubFinanceLedgerReason[] = [
@@ -226,6 +470,12 @@ const MINIMUM_STRUCTURAL_SQUAD_SIZE = 18;
 
 /** Wage pressure above this level is surfaced for design review, not treated as corruption. */
 const WAGE_UTILIZATION_WARNING = 0.95;
+
+/** One in four pressured club-seasons indicates league-wide wage compression. */
+const WAGE_PRESSURE_PREVALENCE_WARNING = 0.25;
+
+/** Repeated exact-ceiling contact becomes a story signal at one in ten club-seasons. */
+const EXACT_WAGE_CEILING_PREVALENCE_WARNING = 0.1;
 
 /** A free-agent pool above this share can make turnover feel noisy or disposable. */
 const FREE_AGENT_SHARE_WARNING = 0.25;
@@ -300,7 +550,7 @@ export function createLongRunContractFinanceSeasonRow(
     registrationByPlayer,
   );
   const financeFacts = inspectFinanceTransition(previous, current);
-  const negotiationFacts = inspectNegotiations(current);
+  const negotiationFacts = inspectNegotiations(current, input.wagePolicy);
   const marketFacts = inspectTransferMarketTransition(
     previous,
     current,
@@ -313,11 +563,33 @@ export function createLongRunContractFinanceSeasonRow(
     return player === undefined ? [] : [ageOn(player.birthDate, currentDate)];
   });
   const wages = activeContracts.map((contract) => Number(contract.annualWage));
+  const divisionWageEconomy = deriveDivisionWageEconomy(current, activeContracts);
+  const freeAgentSigningPublicValues = deriveFreeAgentSigningPublicValues(
+    current,
+    input.squadMaintenance?.freeAgentSignings ?? [],
+    input.valuationConfig,
+  );
+  const divisionMarketEconomy = deriveDivisionMarketEconomy(
+    previous,
+    current,
+    input.squadMaintenance?.freeAgentSignings ?? [],
+  );
+  const crossTierTransfers = deriveCrossTierTransfers(previous, current);
   const valuations = shouldSampleValuations(input.seasonNumber)
-    ? sampledPlayerValues(current, ownedPlayerClub, activeContractByPlayer)
+    ? sampledPlayerValues(current, ownedPlayerClub, input.valuationConfig)
     : [];
   const historyFacts = inspectNewContractHistory(previous, current);
   const planFacts = inspectSelectedPlanContinuity(previous, current, ownedPlayerClub);
+  const permanentTransferFunnel = inspectPermanentTransferFunnel(input.marketLifecycle);
+  const preliminaryAgreementFunnel = inspectPreliminaryAgreementFunnel(input.marketLifecycle);
+  const freeAgentFlow = inspectFreeAgentFlow({
+    previous,
+    current,
+    currentFreeAgentPlayerIds: freeAgentPlayerIds,
+    ...(input.marketLifecycle === undefined ? {} : { marketLifecycle: input.marketLifecycle }),
+    ...(input.playerExits === undefined ? {} : { playerExits: input.playerExits }),
+    ...(input.youthLifecycle === undefined ? {} : { youthLifecycle: input.youthLifecycle }),
+  });
 
   return {
     seasonNumber: input.seasonNumber,
@@ -325,6 +597,7 @@ export function createLongRunContractFinanceSeasonRow(
     ownedSeniorPlayerCount: ownedPlayerClub.size,
     freeAgentCount: freeAgentPlayerIds.length,
     freeAgentShare: roundMetric(safeRatio(freeAgentPlayerIds.length, current.gameState.playerIds.length)),
+    freeAgentSigningPublicValues,
     // An absent negotiation state canonically means that no negotiation has
     // ever been opened; senior ownership and finance are mandatory from day 1.
     missingStateCount: Number(senior === undefined) + Number(finance === undefined),
@@ -344,6 +617,13 @@ export function createLongRunContractFinanceSeasonRow(
     financeLimitViolationCount: financeFacts.financeLimitViolationCount,
     minimumCashBalance: financeFacts.minimumCashBalance,
     maximumWageBudgetUtilization: financeFacts.maximumWageBudgetUtilization,
+    wageBudgetUtilizations: financeFacts.wageBudgetUtilizations,
+    annualWageHeadrooms: financeFacts.annualWageHeadrooms,
+    wagePressureClubCount: financeFacts.wagePressureClubCount,
+    exactWageCeilingClubCount: financeFacts.exactWageCeilingClubCount,
+    aboveWageBudgetClubCount: financeFacts.aboveWageBudgetClubCount,
+    reallocationExactCeilingClubCount:
+      input.squadMaintenance?.wageBudgetReallocationExactCeilingCount ?? 0,
     minimumSquadSize: squadFacts.minimumSquadSize,
     maximumSquadSize: squadFacts.maximumSquadSize,
     minimumGoalkeeperCount: squadFacts.minimumByDepartment.goalkeeper,
@@ -356,6 +636,9 @@ export function createLongRunContractFinanceSeasonRow(
     minimumAnnualWage: minimumOrZero(wages),
     averageAnnualWage: roundMetric(average(wages)),
     maximumAnnualWage: maximumOrZero(wages),
+    divisionWageEconomy,
+    divisionMarketEconomy,
+    crossTierTransfers,
     valuationSampleCount: valuations.length,
     minimumPlayerValue: minimumOrZero(valuations),
     averagePlayerValue: roundMetric(average(valuations)),
@@ -378,6 +661,9 @@ export function createLongRunContractFinanceSeasonRow(
     preliminaryAgreementCount: marketFacts.preliminaryAgreementCount,
     preliminaryAgreementActivationCount: marketFacts.preliminaryAgreementActivationCount,
     preliminaryAgreementViolationCount: marketFacts.preliminaryAgreementViolationCount,
+    permanentTransferFunnel,
+    preliminaryAgreementFunnel,
+    freeAgentFlow,
   };
 }
 
@@ -405,6 +691,26 @@ export function createLongRunContractFinanceStabilityReport(
     (sum, season) => sum + season.preliminaryAgreementActivationCount,
     0,
   );
+  const permanentTransferFunnel = sumPermanentTransferFunnels(
+    seasons.map((season) => season.permanentTransferFunnel),
+  );
+  const preliminaryAgreementFunnel = sumPreliminaryAgreementFunnels(
+    seasons.map((season) => season.preliminaryAgreementFunnel),
+  );
+  const wageBudgetUtilizations = seasons.flatMap((season) => season.wageBudgetUtilizations);
+  const annualWageHeadrooms = seasons.flatMap((season) => season.annualWageHeadrooms);
+  const wagePressureClubSeasonCount = seasons.reduce(
+    (sum, season) => sum + season.wagePressureClubCount,
+    0,
+  );
+  const exactWageCeilingClubSeasonCount = seasons.reduce(
+    (sum, season) => sum + season.exactWageCeilingClubCount,
+    0,
+  );
+  const aboveWageBudgetClubSeasonCount = seasons.reduce(
+    (sum, season) => sum + season.aboveWageBudgetClubCount,
+    0,
+  );
 
   const checks: LongRunContractFinanceCheck[] = [
     contractFinanceCheck(
@@ -413,6 +719,7 @@ export function createLongRunContractFinanceStabilityReport(
       "pass 0; fail >0",
       structuralViolationCount > 0 ? "fail" : "pass",
       "structure",
+      seasons.length,
     ),
     contractFinanceCheck(
       "transfer_market_window_integrity",
@@ -420,6 +727,7 @@ export function createLongRunContractFinanceStabilityReport(
       "pass 0; fail >0",
       seasons.some((s) => s.transferWindowViolationCount > 0) ? "fail" : "pass",
       "structure",
+      seasons.length,
     ),
     contractFinanceCheck(
       "negotiation_clock_integrity",
@@ -427,6 +735,7 @@ export function createLongRunContractFinanceStabilityReport(
       "pass 0; fail >0",
       seasons.some((s) => s.negotiationClockViolationCount > 0) ? "fail" : "pass",
       "structure",
+      seasons.length,
     ),
     contractFinanceCheck(
       "preliminary_agreement_integrity",
@@ -434,17 +743,45 @@ export function createLongRunContractFinanceStabilityReport(
       "pass 0; fail >0",
       seasons.some((s) => s.preliminaryAgreementViolationCount > 0) ? "fail" : "pass",
       "structure",
+      seasons.length,
     ),
     contractFinanceCheck(
-      "wage_budget_utilization",
-      maximumWageBudgetUtilizationObserved,
-      `pass <${WAGE_UTILIZATION_WARNING}; warn ${WAGE_UTILIZATION_WARNING}..1; fail >1`,
-      maximumWageBudgetUtilizationObserved > 1
-        ? "fail"
-        : maximumWageBudgetUtilizationObserved >= WAGE_UTILIZATION_WARNING
-          ? "warn"
-          : "pass",
+      "wage_budget_overspend",
+      aboveWageBudgetClubSeasonCount,
+      "pass 0; fail >0",
+      aboveWageBudgetClubSeasonCount > 0 ? "fail" : "pass",
+      "structure",
+      wageBudgetUtilizations.length,
+    ),
+    contractFinanceCheck(
+      "wage_budget_pressure_prevalence",
+      roundMetric(safeRatio(wagePressureClubSeasonCount, wageBudgetUtilizations.length)),
+      `pass <${WAGE_PRESSURE_PREVALENCE_WARNING}; warn at or above`,
+      safeRatio(wagePressureClubSeasonCount, wageBudgetUtilizations.length)
+          >= WAGE_PRESSURE_PREVALENCE_WARNING
+        ? "warn"
+        : "pass",
       "football_story",
+      wageBudgetUtilizations.length,
+    ),
+    contractFinanceCheck(
+      "wage_budget_exact_ceiling_prevalence",
+      roundMetric(safeRatio(exactWageCeilingClubSeasonCount, wageBudgetUtilizations.length)),
+      `pass <${EXACT_WAGE_CEILING_PREVALENCE_WARNING}; warn at or above; overspend is separate`,
+      safeRatio(exactWageCeilingClubSeasonCount, wageBudgetUtilizations.length)
+          >= EXACT_WAGE_CEILING_PREVALENCE_WARNING
+        ? "warn"
+        : "pass",
+      "football_story",
+      wageBudgetUtilizations.length,
+    ),
+    contractFinanceCheck(
+      "wage_budget_headroom_p10",
+      quantile(annualWageHeadrooms, 0.1),
+      "informational remaining annual-wage headroom in minor units",
+      "pass",
+      "football_story",
+      annualWageHeadrooms.length,
     ),
     contractFinanceCheck(
       "free_agent_population_share",
@@ -452,6 +789,7 @@ export function createLongRunContractFinanceStabilityReport(
       `pass <=${FREE_AGENT_SHARE_WARNING}; warn above; integrity failures are separate`,
       maximumFreeAgentShareObserved > FREE_AGENT_SHARE_WARNING ? "warn" : "pass",
       "football_story",
+      seasons.length,
     ),
     contractFinanceCheck(
       "selected_club_expiry_decisions",
@@ -459,6 +797,7 @@ export function createLongRunContractFinanceStabilityReport(
       "monitor only: the manager, never AI, owns these decisions",
       "pass",
       "decision",
+      seasons.length,
     ),
   ];
 
@@ -477,6 +816,42 @@ export function createLongRunContractFinanceStabilityReport(
     completedTransferCount,
     preliminaryAgreementCount,
     preliminaryAgreementActivationCount,
+    permanentTransferFunnel,
+    preliminaryAgreementFunnel,
+    wageBudgetUtilizationP50: quantile(wageBudgetUtilizations, 0.5),
+    wageBudgetUtilizationP90: quantile(wageBudgetUtilizations, 0.9),
+    wageBudgetUtilizationP95: quantile(wageBudgetUtilizations, 0.95),
+    wageBudgetUtilizationP99: quantile(wageBudgetUtilizations, 0.99),
+    wagePressureClubSeasonShare: roundMetric(safeRatio(
+      wagePressureClubSeasonCount,
+      wageBudgetUtilizations.length,
+    )),
+    exactWageCeilingClubSeasonShare: roundMetric(safeRatio(
+      exactWageCeilingClubSeasonCount,
+      wageBudgetUtilizations.length,
+    )),
+    aboveWageBudgetClubSeasonShare: roundMetric(safeRatio(
+      aboveWageBudgetClubSeasonCount,
+      wageBudgetUtilizations.length,
+    )),
+    reallocationExactCeilingClubSeasonCount: seasons.reduce(
+      (sum, season) => sum + season.reallocationExactCeilingClubCount,
+      0,
+    ),
+    annualWageHeadroomP50: quantile(annualWageHeadrooms, 0.5),
+    annualWageHeadroomP10: quantile(annualWageHeadrooms, 0.1),
+    maximumUsefulFreeAgentCountObserved: maximumOrZero(
+      seasons.map((season) => season.freeAgentFlow.usefulClosingStock),
+    ),
+    freeAgentBandObservations: sumFreeAgentBands(
+      seasons.map((season) => season.freeAgentFlow.bands),
+    ),
+    closingDivisionWageEconomy:
+      seasons[seasons.length - 1]?.divisionWageEconomy ?? [],
+    closingDivisionMarketEconomy:
+      seasons[seasons.length - 1]?.divisionMarketEconomy ?? [],
+    closingCrossTierTransfers:
+      seasons[seasons.length - 1]?.crossTierTransfers ?? [],
     checks,
     seasons,
   };
@@ -566,6 +941,11 @@ function inspectFinanceTransition(previous: CareerState, current: CareerState): 
   readonly financeLimitViolationCount: number;
   readonly minimumCashBalance: number;
   readonly maximumWageBudgetUtilization: number;
+  readonly wageBudgetUtilizations: readonly number[];
+  readonly annualWageHeadrooms: readonly number[];
+  readonly wagePressureClubCount: number;
+  readonly exactWageCeilingClubCount: number;
+  readonly aboveWageBudgetClubCount: number;
   readonly ledgerReasonAmounts: LongRunLedgerReasonAmounts;
 } {
   const finance = current.clubFinanceState;
@@ -576,6 +956,11 @@ function inspectFinanceTransition(previous: CareerState, current: CareerState): 
       financeLimitViolationCount: 0,
       minimumCashBalance: 0,
       maximumWageBudgetUtilization: 0,
+      wageBudgetUtilizations: [],
+      annualWageHeadrooms: [],
+      wagePressureClubCount: 0,
+      exactWageCeilingClubCount: 0,
+      aboveWageBudgetClubCount: 0,
       ledgerReasonAmounts: emptyLedgerReasonAmounts(),
     };
   }
@@ -603,10 +988,13 @@ function inspectFinanceTransition(previous: CareerState, current: CareerState): 
       || account.availableTransferBudget > account.cashBalance
       || account.committedAnnualWage > account.annualWageBudget,
   ).length;
-  const maximumWageBudgetUtilization = Math.max(
-    ...accounts.map((account) => safeRatio(account.committedAnnualWage, account.annualWageBudget)),
-    0,
+  const wageBudgetUtilizations = accounts.map((account) =>
+    roundMetric(safeRatio(account.committedAnnualWage, account.annualWageBudget))
   );
+  const annualWageHeadrooms = accounts.map((account) =>
+    Number(account.annualWageBudget - account.committedAnnualWage)
+  );
+  const maximumWageBudgetUtilization = Math.max(...wageBudgetUtilizations, 0);
 
   return {
     duplicateLedgerBusinessFactCount,
@@ -614,6 +1002,18 @@ function inspectFinanceTransition(previous: CareerState, current: CareerState): 
     financeLimitViolationCount,
     minimumCashBalance: minimumOrZero(accounts.map((account) => Number(account.cashBalance))),
     maximumWageBudgetUtilization: roundMetric(maximumWageBudgetUtilization),
+    wageBudgetUtilizations,
+    annualWageHeadrooms,
+    wagePressureClubCount: wageBudgetUtilizations.filter(
+      (utilization) => utilization >= WAGE_UTILIZATION_WARNING,
+    ).length,
+    exactWageCeilingClubCount: accounts.filter(
+      (account) => account.annualWageBudget > 0
+        && account.committedAnnualWage === account.annualWageBudget,
+    ).length,
+    aboveWageBudgetClubCount: accounts.filter(
+      (account) => account.committedAnnualWage > account.annualWageBudget,
+    ).length,
     ledgerReasonAmounts: sumLedgerReasons(newEntries),
   };
 }
@@ -639,7 +1039,10 @@ function countPayrollReconciliationViolations(
   return [...clubIds].filter((clubId) => (expected.get(clubId) ?? 0) !== (actual.get(clubId) ?? 0)).length;
 }
 
-function inspectNegotiations(careerState: CareerState): {
+function inspectNegotiations(
+  careerState: CareerState,
+  wagePolicy: PlayerWagePolicyConfig,
+): {
   readonly openNegotiationCount: number;
   readonly unaffordableAiOfferCount: number;
 } {
@@ -659,6 +1062,7 @@ function inspectNegotiations(careerState: CareerState): {
       clubId: negotiation.clubId,
       replacedContractId: negotiation.currentContractId,
       terms,
+      wagePolicy,
     });
     if (result.status === "rejected") {
       if (process.env.TLS_CONTRACT_FINANCE_DIAGNOSTICS === "1") {
@@ -725,26 +1129,320 @@ function inspectSquads(careerState: CareerState): {
   };
 }
 
+function deriveDivisionWageEconomy(
+  careerState: CareerState,
+  activeContracts: readonly PlayerContract[],
+): readonly LongRunDivisionWageEconomyRow[] {
+  const divisions: readonly ClubCategory[] = [
+    "first_division",
+    "second_division",
+    "third_division",
+  ];
+  const finance = careerState.clubFinanceState;
+
+  return divisions.flatMap((division) => {
+    const clubIds = careerState.gameState.clubIds.filter(
+      (clubId) => careerState.gameState.clubs[clubId]?.category === division,
+    );
+    if (clubIds.length === 0) return [];
+    const clubs = new Set(clubIds);
+    const contracts = activeContracts.filter((contract) => clubs.has(contract.clubId));
+    const accounts = clubIds.flatMap((clubId) => {
+      const account = finance?.accounts[clubId];
+      return account === undefined ? [] : [account];
+    });
+    const wages = contracts.map((contract) => Number(contract.annualWage));
+    const signingBonuses = contracts.map((contract) => Number(contract.bonuses.signingBonus));
+    const appearanceBonuses = contracts.map((contract) => Number(contract.bonuses.appearanceBonus));
+    const goalBonuses = contracts.map((contract) => Number(contract.bonuses.goalBonus ?? 0));
+    const cleanSheetBonuses = contracts.map(
+      (contract) => Number(contract.bonuses.cleanSheetBonus ?? 0),
+    );
+    const committedWages = accounts.map((account) => Number(account.committedAnnualWage));
+    const utilizations = accounts.map((account) =>
+      safeRatio(account.committedAnnualWage, account.annualWageBudget)
+    );
+    const headrooms = accounts.map(
+      (account) => Number(account.annualWageBudget - account.committedAnnualWage),
+    );
+
+    return [{
+      division,
+      clubCount: accounts.length,
+      playerCount: contracts.length,
+      annualWageP50: quantile(wages, 0.5),
+      annualWageP90: quantile(wages, 0.9),
+      annualWageP99: quantile(wages, 0.99),
+      signingBonusP50: quantile(signingBonuses, 0.5),
+      appearanceBonusP50: quantile(appearanceBonuses, 0.5),
+      goalBonusP50: quantile(goalBonuses, 0.5),
+      cleanSheetBonusP50: quantile(cleanSheetBonuses, 0.5),
+      committedAnnualWageP50: quantile(committedWages, 0.5),
+      committedAnnualWageP90: quantile(committedWages, 0.9),
+      committedAnnualWageP99: quantile(committedWages, 0.99),
+      wageBudgetUtilizationP50: quantile(utilizations, 0.5),
+      wageBudgetUtilizationP90: quantile(utilizations, 0.9),
+      wageBudgetUtilizationP99: quantile(utilizations, 0.99),
+      annualWageHeadroomP50: quantile(headrooms, 0.5),
+      annualWageHeadroomP10: quantile(headrooms, 0.1),
+    }];
+  });
+}
+
+/** Derives tier finance and pending-exposure rows from canonical account facts. */
+function deriveDivisionMarketEconomy(
+  previous: CareerState,
+  current: CareerState,
+  replenishmentSignings: readonly {
+    readonly clubId: ClubId;
+    readonly playerId: PlayerId;
+  }[],
+): readonly LongRunDivisionMarketEconomyRow[] {
+  const newNegotiationIds = new Set(
+    (current.transferNegotiationState?.negotiationIds ?? []).filter(
+      (id) => previous.transferNegotiationState?.negotiations[id] === undefined,
+    ),
+  );
+  const newHistory = current.transferHistory.slice(previous.transferHistory.length);
+  return divisionOrder().flatMap((division) => {
+    const clubIds = current.gameState.clubIds.filter(
+      (clubId) => current.gameState.clubs[clubId]?.category === division,
+    );
+    if (clubIds.length === 0) return [];
+    const clubSet = new Set(clubIds);
+    const accounts = clubIds.flatMap((clubId) => {
+      const account = current.clubFinanceState?.accounts[clubId];
+      return account === undefined ? [] : [account];
+    });
+    const exposures = clubIds.map((clubId) => pendingMarketExposure(current, clubId));
+    const attempts = [...newNegotiationIds].filter((id) => {
+      const negotiation = current.transferNegotiationState?.negotiations[id];
+      return negotiation !== undefined && clubSet.has(negotiation.buyingClubId);
+    }).length;
+    const permanentCompletions = newHistory.filter(
+      (entry) => entry.kind === "permanent_transfer" && clubSet.has(entry.buyingClubId),
+    ).length;
+    const explicitFreeAgentSignings = newHistory.filter(
+      (entry) => entry.kind === "free_agent_signing" && clubSet.has(entry.buyingClubId),
+    ).length;
+    const replenishmentSigningCount = replenishmentSignings.filter(
+      (signing) => clubSet.has(signing.clubId),
+    ).length;
+
+    return [{
+      division,
+      clubCount: accounts.length,
+      cashBalanceP50: quantile(accounts.map((account) => Number(account.cashBalance)), 0.5),
+      cashBalanceP90: quantile(accounts.map((account) => Number(account.cashBalance)), 0.9),
+      cashBalanceP99: quantile(accounts.map((account) => Number(account.cashBalance)), 0.99),
+      availableTransferBudgetP50: quantile(
+        accounts.map((account) => Number(account.availableTransferBudget)),
+        0.5,
+      ),
+      availableTransferBudgetP90: quantile(
+        accounts.map((account) => Number(account.availableTransferBudget)),
+        0.9,
+      ),
+      availableTransferBudgetP99: quantile(
+        accounts.map((account) => Number(account.availableTransferBudget)),
+        0.99,
+      ),
+      pendingCashExposureP50: quantile(exposures.map((row) => row.cash), 0.5),
+      pendingCashExposureP90: quantile(exposures.map((row) => row.cash), 0.9),
+      pendingCashExposureP99: quantile(exposures.map((row) => row.cash), 0.99),
+      pendingAnnualWageExposureP50: quantile(exposures.map((row) => row.annualWage), 0.5),
+      pendingAnnualWageExposureP90: quantile(exposures.map((row) => row.annualWage), 0.9),
+      pendingAnnualWageExposureP99: quantile(exposures.map((row) => row.annualWage), 0.99),
+      permanentAttemptCount: attempts,
+      permanentCompletionCount: permanentCompletions,
+      freeAgentSigningCount:
+        explicitFreeAgentSignings + replenishmentSigningCount,
+    }];
+  });
+}
+
+/** Values canonical replenishment signings in their free-agent market context. */
+function deriveFreeAgentSigningPublicValues(
+  careerState: CareerState,
+  signings: readonly {
+    readonly clubId: ClubId;
+    readonly playerId: PlayerId;
+  }[],
+  valuationConfig: PlayerValuationConfig,
+): readonly number[] {
+  return signings.flatMap(({ playerId }) => {
+    const player = careerState.gameState.players[playerId];
+    return player === undefined
+      ? []
+      : [derivePlayerValuation({
+          player,
+          currentDate: careerState.gameState.calendar.currentDate,
+          config: valuationConfig,
+          marketContext: { kind: "free_agent" },
+        }).value];
+  });
+}
+
+/** Derives compact cross-tier transfer attempts and completed price facts. */
+function deriveCrossTierTransfers(
+  previous: CareerState,
+  current: CareerState,
+): readonly LongRunCrossTierTransferRow[] {
+  interface MutableCrossTierRow {
+    attempts: number;
+    completions: number;
+    publicValues: number[];
+    askingPrices: number[];
+    completedFees: number[];
+    rejectionReasons: Record<string, number>;
+  }
+  const rows = new Map<string, MutableCrossTierRow>();
+  const rowFor = (
+    sourceDivision: ClubCategory,
+    destinationDivision: ClubCategory,
+  ): MutableCrossTierRow => {
+    const key = `${sourceDivision}->${destinationDivision}`;
+    const existing = rows.get(key);
+    if (existing !== undefined) return existing;
+    const created: MutableCrossTierRow = {
+      attempts: 0,
+      completions: 0,
+      publicValues: [],
+      askingPrices: [],
+      completedFees: [],
+      rejectionReasons: {},
+    };
+    rows.set(key, created);
+    return created;
+  };
+
+  for (const id of current.transferNegotiationState?.negotiationIds ?? []) {
+    if (previous.transferNegotiationState?.negotiations[id] !== undefined) continue;
+    const negotiation = current.transferNegotiationState?.negotiations[id];
+    if (negotiation === undefined) continue;
+    const sourceDivision = clubDivision(previous, current, negotiation.sellingClubId);
+    const destinationDivision = clubDivision(previous, current, negotiation.buyingClubId);
+    if (sourceDivision === undefined || destinationDivision === undefined) continue;
+    const row = rowFor(sourceDivision, destinationDivision);
+    row.attempts += 1;
+    row.publicValues.push(Number(negotiation.publicValue));
+    row.askingPrices.push(Number(negotiation.initialAskingPrice));
+    if ("reason" in negotiation && typeof negotiation.reason === "string") {
+      row.rejectionReasons[negotiation.reason] =
+        (row.rejectionReasons[negotiation.reason] ?? 0) + 1;
+    }
+  }
+
+  for (const entry of current.transferHistory.slice(previous.transferHistory.length)) {
+    if (entry.kind !== "permanent_transfer") continue;
+    const sourceDivision = clubDivision(previous, current, entry.sellingClubId);
+    const destinationDivision = clubDivision(previous, current, entry.buyingClubId);
+    if (sourceDivision === undefined || destinationDivision === undefined) continue;
+    const row = rowFor(sourceDivision, destinationDivision);
+    row.completions += 1;
+    row.completedFees.push(Number(entry.completedFee));
+  }
+
+  return [...rows.entries()]
+    .map(([key, row]) => {
+      const [sourceDivision, destinationDivision] = key.split("->") as [
+        ClubCategory,
+        ClubCategory,
+      ];
+      return {
+        sourceDivision,
+        destinationDivision,
+        attemptCount: row.attempts,
+        completionCount: row.completions,
+        publicValueP50: quantile(row.publicValues, 0.5),
+        askingPriceP50: quantile(row.askingPrices, 0.5),
+        completedFeeP50: quantile(row.completedFees, 0.5),
+        rejectionReasonCounts: row.rejectionReasons,
+      };
+    })
+    .sort((left, right) =>
+      divisionOrder().indexOf(left.sourceDivision)
+        - divisionOrder().indexOf(right.sourceDivision)
+      || divisionOrder().indexOf(left.destinationDivision)
+        - divisionOrder().indexOf(right.destinationDivision)
+    );
+}
+
+/** Returns all unresolved acquisition and renewal exposure for one club. */
+function pendingMarketExposure(
+  careerState: CareerState,
+  clubId: ClubId,
+): { readonly cash: number; readonly annualWage: number } {
+  const renewal = deriveMarketPendingExposure(careerState, clubId);
+  let cash = Number(renewal.pendingSigningExposure);
+  let annualWage = Number(renewal.pendingAnnualWageExposure);
+
+  for (const id of careerState.transferNegotiationState?.negotiationIds ?? []) {
+    const negotiation = careerState.transferNegotiationState?.negotiations[id];
+    if (negotiation?.buyingClubId !== clubId) continue;
+    if (negotiation.status === "submitted") cash += Number(negotiation.offeredFee);
+    if (negotiation.status === "countered") cash += Number(negotiation.counterFee);
+    if (negotiation.status === "accepted") cash += Number(negotiation.agreedFee);
+    if (negotiation.status === "player_offer_submitted") {
+      cash += Number(negotiation.agreedFee) + Number(negotiation.offeredTerms.bonuses.signingBonus);
+      annualWage += Number(negotiation.offeredTerms.annualWage);
+    }
+    if (negotiation.status === "player_countered") {
+      cash += Number(negotiation.agreedFee) + Number(negotiation.counterTerms.bonuses.signingBonus);
+      annualWage += Number(negotiation.counterTerms.annualWage);
+    }
+  }
+  for (const id of careerState.preliminaryAgreementState?.agreementIds ?? []) {
+    const agreement = careerState.preliminaryAgreementState?.agreements[id];
+    if (agreement?.offeringClubId !== clubId) continue;
+    if (agreement.status === "offer_submitted") {
+      cash += Number(agreement.offeredTerms.bonuses.signingBonus);
+      annualWage += Number(agreement.offeredTerms.annualWage);
+    }
+    if (agreement.status === "countered") {
+      cash += Number(agreement.counterTerms.bonuses.signingBonus);
+      annualWage += Number(agreement.counterTerms.annualWage);
+    }
+    if (agreement.status === "agreed") {
+      cash += Number(agreement.agreedTerms.bonuses.signingBonus);
+      annualWage += Number(agreement.agreedTerms.annualWage);
+    }
+  }
+  return { cash, annualWage };
+}
+
+function clubDivision(
+  previous: CareerState,
+  current: CareerState,
+  clubId: ClubId,
+): ClubCategory | undefined {
+  return previous.gameState.clubs[clubId]?.category
+    ?? current.gameState.clubs[clubId]?.category;
+}
+
+function divisionOrder(): readonly ClubCategory[] {
+  return ["first_division", "second_division", "third_division"];
+}
+
 function sampledPlayerValues(
   careerState: CareerState,
   ownedPlayerClub: ReadonlyMap<PlayerId, ClubId>,
-  activeContractByPlayer: ReadonlyMap<PlayerId, PlayerContract>,
+  valuationConfig: PlayerValuationConfig,
 ): readonly number[] {
   const values: number[] = [];
   for (const [playerId, clubId] of ownedPlayerClub) {
     const player = careerState.gameState.players[playerId];
     const club = careerState.gameState.clubs[clubId];
     if (player === undefined || club === undefined) continue;
-    const contract = activeContractByPlayer.get(playerId);
-    const currentForm = careerState.gameState.playerStates[playerId]?.form;
     values.push(
       derivePlayerValuation({
         player,
-        club,
         currentDate: careerState.gameState.calendar.currentDate,
-        config: DEFAULT_PLAYER_VALUATION_CONFIG,
-        ...(contract === undefined ? {} : { contract }),
-        ...(currentForm === undefined ? {} : { currentForm }),
+        config: valuationConfig,
+        marketContext: {
+          kind: "contracted",
+          division: club.category,
+        },
       }).value,
     );
   }
@@ -921,6 +1619,524 @@ function inspectTransferMarketTransition(
   };
 }
 
+function inspectPermanentTransferFunnel(
+  marketLifecycle: CareerSeasonMarketLifecycleFact | undefined,
+): LongRunPermanentTransferFunnel {
+  const diagnostics = marketLifecycle?.diagnostics ?? [];
+  const facts = marketLifecycle?.facts ?? [];
+  const lostDiagnostics = diagnostics.filter(
+    (fact) => fact.event === "permanent_target_unavailable" && fact.reason !== undefined,
+  );
+  const affordabilityLosses = facts.filter(
+    (fact) => fact.reason === "counter_exceeds_capacity" || fact.reason === "terms_exceed_capacity",
+  );
+  return {
+    needsEvaluatedCount: diagnosticCount(diagnostics, "need_evaluated"),
+    recruitableNeedCount: diagnosticCount(diagnostics, "need_recruitable"),
+    targetFoundCount: diagnosticCount(diagnostics, "permanent_target_found"),
+    targetUnavailableCount: diagnosticCount(diagnostics, "permanent_target_unavailable"),
+    offerSubmittedCount: facts.filter((fact) => fact.event === "club_offer_submitted").length,
+    sellerRejectedCount: facts.filter((fact) => fact.event === "club_offer_rejected").length,
+    sellerCounteredCount: facts.filter((fact) => fact.event === "club_offer_countered").length,
+    sellerAcceptedCount: facts.filter((fact) => fact.event === "club_offer_accepted").length,
+    sellerExpiredCount: facts.filter((fact) => fact.event === "club_offer_expired").length,
+    sellerWithdrawnCount: facts.filter((fact) => fact.event === "club_offer_withdrawn").length,
+    playerTermsStartedCount: facts.filter((fact) => fact.event === "player_terms_submitted").length,
+    playerCounteredCount: facts.filter((fact) => fact.event === "player_terms_countered").length,
+    playerRejectedCount: facts.filter((fact) =>
+      fact.event === "player_terms_rejected" || fact.event === "player_counter_rejected"
+    ).length,
+    playerCounterAcceptedCount: facts.filter(
+      (fact) => fact.event === "player_counter_accepted",
+    ).length,
+    unaffordableCompletionCount: affordabilityLosses.length,
+    completedCount: facts.filter((fact) => fact.event === "transfer_completed").length,
+    lostReasonCounts: mergeReasonCounts([
+      countDiagnosticReasons(lostDiagnostics),
+      countReasons(
+        affordabilityLosses.flatMap((fact) => fact.reason === undefined ? [] : [fact.reason]),
+      ),
+    ]),
+    lostByClubDepartment: marketLossSlices(lostDiagnostics),
+    clubActivity: marketClubActivity(diagnostics, facts),
+  };
+}
+
+function inspectPreliminaryAgreementFunnel(
+  marketLifecycle: CareerSeasonMarketLifecycleFact | undefined,
+): LongRunPreliminaryAgreementFunnel {
+  const diagnostics = marketLifecycle?.diagnostics ?? [];
+  const facts = marketLifecycle?.facts ?? [];
+  const contractFacts = marketLifecycle?.preliminaryAgreementFacts ?? [];
+  const lostDiagnostics = diagnostics.filter(
+    (fact) => fact.event === "preliminary_candidate_unavailable" && fact.reason !== undefined,
+  );
+  const terminalFailures = facts.filter((fact) =>
+    fact.event === "preliminary_offer_rejected"
+    || fact.event === "preliminary_counter_rejected"
+    || fact.event === "preliminary_expired"
+    || fact.event === "preliminary_activation_cancelled"
+  );
+  const contractTerminalFailures = contractFacts.filter((fact) =>
+    fact.event === "offer_rejected"
+    || fact.event === "expired"
+    || fact.event === "activation_cancelled"
+  );
+  return {
+    candidateFoundCount: diagnosticCount(diagnostics, "preliminary_candidate_found"),
+    candidateUnavailableCount: diagnosticCount(
+      diagnostics,
+      "preliminary_candidate_unavailable",
+    ),
+    offerSubmittedCount: facts.filter((fact) => fact.event === "preliminary_offer_submitted").length,
+    offerRejectedCount:
+      facts.filter((fact) => fact.event === "preliminary_offer_rejected").length
+      + contractFacts.filter((fact) => fact.event === "offer_rejected").length,
+    counteredCount:
+      facts.filter((fact) => fact.event === "preliminary_offer_countered").length
+      + contractFacts.filter((fact) => fact.event === "countered").length,
+    counterAcceptedCount: facts.filter(
+      (fact) => fact.event === "preliminary_counter_accepted",
+    ).length,
+    counterRejectedCount: facts.filter(
+      (fact) => fact.event === "preliminary_counter_rejected",
+    ).length,
+    agreementCreatedCount:
+      facts.filter((fact) => fact.event === "preliminary_agreed").length
+      + contractFacts.filter((fact) => fact.event === "agreed").length,
+    expiredCount:
+      facts.filter((fact) => fact.event === "preliminary_expired").length
+      + contractFacts.filter((fact) => fact.event === "expired").length,
+    activationCount:
+      facts.filter((fact) => fact.event === "preliminary_activated").length
+      + contractFacts.filter((fact) => fact.event === "activated").length,
+    activationFailureCount:
+      facts.filter((fact) => fact.event === "preliminary_activation_cancelled").length
+      + contractFacts.filter((fact) => fact.event === "activation_cancelled").length,
+    lostReasonCounts: mergeReasonCounts([
+      countDiagnosticReasons(lostDiagnostics),
+      countReasons([
+        ...terminalFailures.flatMap((fact) => fact.reason === undefined ? [] : [fact.reason]),
+        ...contractTerminalFailures.flatMap(
+          (fact) => fact.reason === undefined ? [] : [fact.reason],
+        ),
+      ]),
+    ]),
+  };
+}
+
+function inspectFreeAgentFlow(input: {
+  readonly previous: CareerState;
+  readonly current: CareerState;
+  readonly currentFreeAgentPlayerIds: readonly PlayerId[];
+  readonly marketLifecycle?: CareerSeasonMarketLifecycleFact;
+  readonly playerExits?: CareerPlayerExitFact;
+  readonly youthLifecycle?: CareerYouthLifecycleFact;
+}): LongRunFreeAgentFlow {
+  const previousFreeAgents = new Set(selectFreeAgentPlayerIds(input.previous));
+  const currentFreeAgents = new Set(input.currentFreeAgentPlayerIds);
+  const inflowPlayerIds = [...currentFreeAgents].filter((playerId) => !previousFreeAgents.has(playerId));
+  const outflowPlayerIds = [...previousFreeAgents].filter((playerId) => !currentFreeAgents.has(playerId));
+  const newHistoryByPlayer = new Map<PlayerId, "expired" | "released" | "other">();
+  const previousHistoryIds = new Set(input.previous.seniorSquadState?.contractHistoryEntryIds ?? []);
+  for (const historyId of input.current.seniorSquadState?.contractHistoryEntryIds ?? []) {
+    if (previousHistoryIds.has(historyId)) continue;
+    const entry = input.current.seniorSquadState?.contractHistory[historyId];
+    if (entry === undefined) continue;
+    newHistoryByPlayer.set(
+      entry.playerId,
+      entry.event === "expired" || entry.event === "released" ? entry.event : "other",
+    );
+  }
+  const preliminaryActivations = new Set(
+    [
+      ...(input.marketLifecycle?.facts ?? []).flatMap(
+        (fact) => fact.event === "preliminary_activated" ? [fact.playerId] : [],
+      ),
+      ...(input.marketLifecycle?.preliminaryAgreementFacts ?? []).flatMap(
+        (fact) => fact.event === "activated" ? [fact.playerId] : [],
+      ),
+    ],
+  );
+  const retirementIds = new Set(input.playerExits?.playerIdsByReason.retirement ?? []);
+  const releaseIds = new Set(input.playerExits?.playerIdsByReason.released ?? []);
+  const youthExternalMoveIds = new Set(
+    input.youthLifecycle?.playerIdsByOutcome.external_move_candidate ?? [],
+  );
+  const youthReleaseIds = new Set(input.youthLifecycle?.playerIdsByOutcome.released ?? []);
+  const careerStepDownIds = new Set(input.playerExits?.playerIdsByReason.career_step_down ?? []);
+  const expiryIds = new Set(
+    (input.marketLifecycle?.contractLifecycleFacts ?? []).flatMap(
+      (fact) => fact.event === "free_agent_created" ? [fact.playerId] : [],
+    ),
+  );
+  let ordinarySigningOutflow = 0;
+  let preliminaryActivationOutflow = 0;
+  let retirementOutflow = 0;
+  let careerStepDownOutflow = 0;
+  let otherOutflow = 0;
+  const currentOwners = ownedPlayerClubs(input.current);
+  for (const playerId of outflowPlayerIds) {
+    if (preliminaryActivations.has(playerId)) preliminaryActivationOutflow += 1;
+    else if (currentOwners.has(playerId)) ordinarySigningOutflow += 1;
+    else if (retirementIds.has(playerId)) retirementOutflow += 1;
+    else if (careerStepDownIds.has(playerId)) careerStepDownOutflow += 1;
+    else otherOutflow += 1;
+  }
+  const expiryInflow = inflowPlayerIds.filter(
+    (playerId) => expiryIds.has(playerId) || newHistoryByPlayer.get(playerId) === "expired",
+  ).length;
+  const releaseInflow = inflowPlayerIds.filter(
+    (playerId) => releaseIds.has(playerId) || newHistoryByPlayer.get(playerId) === "released",
+  ).length;
+  const youthExternalMoveInflow = inflowPlayerIds.filter(
+    (playerId) => youthExternalMoveIds.has(playerId),
+  ).length;
+  const youthReleaseInflow = inflowPlayerIds.filter(
+    (playerId) => youthReleaseIds.has(playerId),
+  ).length;
+  const otherInflow =
+    inflowPlayerIds.length
+    - expiryInflow
+    - releaseInflow
+    - youthExternalMoveInflow
+    - youthReleaseInflow;
+  const bands = freeAgentBands(input.current, input.currentFreeAgentPlayerIds);
+  const usefulClosingStock = input.currentFreeAgentPlayerIds.filter((playerId) => {
+    const player = input.current.gameState.players[playerId];
+    if (player === undefined) return false;
+    const age = ageOn(player.birthDate, input.current.gameState.calendar.currentDate);
+    return age >= 23
+      && age <= 29
+      && derivePlayerMarketAbility(player).currentAbility >= 10;
+  }).length;
+  const expectedClosingStock =
+    previousFreeAgents.size
+    + expiryInflow
+    + releaseInflow
+    + youthExternalMoveInflow
+    + youthReleaseInflow
+    + otherInflow
+    - ordinarySigningOutflow
+    - preliminaryActivationOutflow
+    - retirementOutflow
+    - careerStepDownOutflow
+    - otherOutflow;
+
+  return {
+    openingStock: previousFreeAgents.size,
+    expiryInflow,
+    releaseInflow,
+    youthExternalMoveInflow,
+    youthReleaseInflow,
+    otherInflow,
+    ordinarySigningOutflow,
+    preliminaryActivationOutflow,
+    retirementOutflow,
+    careerStepDownOutflow,
+    otherOutflow,
+    closingStock: currentFreeAgents.size,
+    reconciliationDelta: currentFreeAgents.size - expectedClosingStock,
+    usefulClosingStock,
+    bands,
+  };
+}
+
+function freeAgentBands(
+  careerState: CareerState,
+  playerIds: readonly PlayerId[],
+): LongRunFreeAgentBands {
+  const age: Record<keyof LongRunFreeAgentBands["age"], number> = {
+    under_23: 0,
+    prime_23_29: 0,
+    age_30_34: 0,
+    age_35_plus: 0,
+  };
+  const currentAbility: Record<keyof LongRunFreeAgentBands["currentAbility"], number> = {
+    under_8: 0,
+    ability_8_9: 0,
+    ability_10_11: 0,
+    ability_12_plus: 0,
+  };
+  const unattached: Record<keyof LongRunFreeAgentBands["unattached"], number> = {
+    under_1_season: 0,
+    one_to_two_seasons: 0,
+    three_plus_seasons: 0,
+  };
+  for (const playerId of playerIds) {
+    const player = careerState.gameState.players[playerId];
+    if (player === undefined) continue;
+    const playerAge = ageOn(player.birthDate, careerState.gameState.calendar.currentDate);
+    if (playerAge < 23) age.under_23 += 1;
+    else if (playerAge < 30) age.prime_23_29 += 1;
+    else if (playerAge < 35) age.age_30_34 += 1;
+    else age.age_35_plus += 1;
+
+    const ability = derivePlayerMarketAbility(player).currentAbility;
+    if (ability < 8) currentAbility.under_8 += 1;
+    else if (ability < 10) currentAbility.ability_8_9 += 1;
+    else if (ability < 12) currentAbility.ability_10_11 += 1;
+    else currentAbility.ability_12_plus += 1;
+
+    const latestDeparture = latestFreeAgentDepartureDate(careerState, playerId);
+    const seasonsUnattached = latestDeparture === undefined
+      ? 0
+      : Math.max(0, (careerState.gameState.calendar.currentDate - latestDeparture) / 365);
+    if (seasonsUnattached < 1) unattached.under_1_season += 1;
+    else if (seasonsUnattached < 3) unattached.one_to_two_seasons += 1;
+    else unattached.three_plus_seasons += 1;
+  }
+  return { age, currentAbility, unattached };
+}
+
+function latestFreeAgentDepartureDate(
+  careerState: CareerState,
+  playerId: PlayerId,
+): number | undefined {
+  let latest: number | undefined;
+  for (const historyId of careerState.seniorSquadState?.contractHistoryEntryIds ?? []) {
+    const entry = careerState.seniorSquadState?.contractHistory[historyId];
+    if (
+      entry?.playerId !== playerId
+      || (entry.event !== "expired" && entry.event !== "released")
+    ) continue;
+    latest = latest === undefined ? entry.occurredOn : Math.max(latest, entry.occurredOn);
+  }
+  const youthLifecycle = careerState.youthAcademyState?.playerLifecycle[playerId];
+  if (
+    youthLifecycle?.statusChangedAt !== undefined
+    && (
+      youthLifecycle.status === "released"
+      || youthLifecycle.status === "external_move_candidate"
+    )
+  ) {
+    latest = latest === undefined
+      ? youthLifecycle.statusChangedAt
+      : Math.max(latest, youthLifecycle.statusChangedAt);
+  }
+  return latest;
+}
+
+function sumPermanentTransferFunnels(
+  funnels: readonly LongRunPermanentTransferFunnel[],
+): LongRunPermanentTransferFunnel {
+  return {
+    needsEvaluatedCount: sumField(funnels, "needsEvaluatedCount"),
+    recruitableNeedCount: sumField(funnels, "recruitableNeedCount"),
+    targetFoundCount: sumField(funnels, "targetFoundCount"),
+    targetUnavailableCount: sumField(funnels, "targetUnavailableCount"),
+    offerSubmittedCount: sumField(funnels, "offerSubmittedCount"),
+    sellerRejectedCount: sumField(funnels, "sellerRejectedCount"),
+    sellerCounteredCount: sumField(funnels, "sellerCounteredCount"),
+    sellerAcceptedCount: sumField(funnels, "sellerAcceptedCount"),
+    sellerExpiredCount: sumField(funnels, "sellerExpiredCount"),
+    sellerWithdrawnCount: sumField(funnels, "sellerWithdrawnCount"),
+    playerTermsStartedCount: sumField(funnels, "playerTermsStartedCount"),
+    playerCounteredCount: sumField(funnels, "playerCounteredCount"),
+    playerRejectedCount: sumField(funnels, "playerRejectedCount"),
+    playerCounterAcceptedCount: sumField(funnels, "playerCounterAcceptedCount"),
+    unaffordableCompletionCount: sumField(funnels, "unaffordableCompletionCount"),
+    completedCount: sumField(funnels, "completedCount"),
+    lostReasonCounts: mergeReasonCounts(funnels.map((funnel) => funnel.lostReasonCounts)),
+    lostByClubDepartment: mergeMarketLossSlices(
+      funnels.flatMap((funnel) => funnel.lostByClubDepartment),
+    ),
+    clubActivity: mergeMarketClubActivity(
+      funnels.flatMap((funnel) => funnel.clubActivity),
+    ),
+  };
+}
+
+function sumPreliminaryAgreementFunnels(
+  funnels: readonly LongRunPreliminaryAgreementFunnel[],
+): LongRunPreliminaryAgreementFunnel {
+  return {
+    candidateFoundCount: sumField(funnels, "candidateFoundCount"),
+    candidateUnavailableCount: sumField(funnels, "candidateUnavailableCount"),
+    offerSubmittedCount: sumField(funnels, "offerSubmittedCount"),
+    offerRejectedCount: sumField(funnels, "offerRejectedCount"),
+    counteredCount: sumField(funnels, "counteredCount"),
+    counterAcceptedCount: sumField(funnels, "counterAcceptedCount"),
+    counterRejectedCount: sumField(funnels, "counterRejectedCount"),
+    agreementCreatedCount: sumField(funnels, "agreementCreatedCount"),
+    expiredCount: sumField(funnels, "expiredCount"),
+    activationCount: sumField(funnels, "activationCount"),
+    activationFailureCount: sumField(funnels, "activationFailureCount"),
+    lostReasonCounts: mergeReasonCounts(funnels.map((funnel) => funnel.lostReasonCounts)),
+  };
+}
+
+function sumFreeAgentBands(rows: readonly LongRunFreeAgentBands[]): LongRunFreeAgentBands {
+  return {
+    age: {
+      under_23: rows.reduce((sum, row) => sum + row.age.under_23, 0),
+      prime_23_29: rows.reduce((sum, row) => sum + row.age.prime_23_29, 0),
+      age_30_34: rows.reduce((sum, row) => sum + row.age.age_30_34, 0),
+      age_35_plus: rows.reduce((sum, row) => sum + row.age.age_35_plus, 0),
+    },
+    currentAbility: {
+      under_8: rows.reduce((sum, row) => sum + row.currentAbility.under_8, 0),
+      ability_8_9: rows.reduce((sum, row) => sum + row.currentAbility.ability_8_9, 0),
+      ability_10_11: rows.reduce((sum, row) => sum + row.currentAbility.ability_10_11, 0),
+      ability_12_plus: rows.reduce((sum, row) => sum + row.currentAbility.ability_12_plus, 0),
+    },
+    unattached: {
+      under_1_season: rows.reduce((sum, row) => sum + row.unattached.under_1_season, 0),
+      one_to_two_seasons: rows.reduce((sum, row) => sum + row.unattached.one_to_two_seasons, 0),
+      three_plus_seasons: rows.reduce((sum, row) => sum + row.unattached.three_plus_seasons, 0),
+    },
+  };
+}
+
+function sumField<T extends object, K extends keyof T>(
+  rows: readonly T[],
+  key: K,
+): number {
+  return rows.reduce((sum, row) => sum + Number(row[key]), 0);
+}
+
+function diagnosticCount(
+  diagnostics: CareerSeasonMarketLifecycleFact["diagnostics"],
+  event: CareerSeasonMarketLifecycleFact["diagnostics"][number]["event"],
+): number {
+  return diagnostics.reduce(
+    (sum, fact) => sum + (fact.event === event ? fact.count : 0),
+    0,
+  );
+}
+
+function marketLossSlices(
+  diagnostics: CareerSeasonMarketLifecycleFact["diagnostics"],
+): readonly LongRunMarketLossSlice[] {
+  const counts = new Map<string, LongRunMarketLossSlice>();
+  for (const fact of diagnostics) {
+    if (fact.event !== "permanent_target_unavailable" || fact.reason === undefined) continue;
+    const transferWindowOpen = fact.transferWindowOpen === true;
+    const key = `${fact.clubId}|${fact.department}|${fact.reason}|${transferWindowOpen}`;
+    const previous = counts.get(key);
+    counts.set(key, {
+      clubId: String(fact.clubId),
+      department: fact.department,
+      reason: fact.reason,
+      transferWindowOpen,
+      count: (previous?.count ?? 0) + fact.count,
+    });
+  }
+  return [...counts.values()].sort(compareMarketLossSlice);
+}
+
+function marketClubActivity(
+  diagnostics: CareerSeasonMarketLifecycleFact["diagnostics"],
+  facts: CareerSeasonMarketLifecycleFact["facts"],
+): readonly LongRunMarketClubActivity[] {
+  const clubIds = new Set([
+    ...diagnostics.map((fact) => String(fact.clubId)),
+    ...facts.map((fact) => String(fact.buyingClubId)),
+  ]);
+  return [...clubIds].sort().map((clubId) => ({
+    clubId,
+    needsEvaluatedCount: diagnostics.reduce(
+      (sum, fact) =>
+        sum + (String(fact.clubId) === clubId && fact.event === "need_evaluated" ? fact.count : 0),
+      0,
+    ),
+    recruitableNeedCount: diagnostics.reduce(
+      (sum, fact) =>
+        sum + (String(fact.clubId) === clubId && fact.event === "need_recruitable" ? fact.count : 0),
+      0,
+    ),
+    permanentTargetFoundCount: diagnostics.reduce(
+      (sum, fact) =>
+        sum + (String(fact.clubId) === clubId && fact.event === "permanent_target_found" ? fact.count : 0),
+      0,
+    ),
+    permanentOfferSubmittedCount: facts.filter(
+      (fact) => String(fact.buyingClubId) === clubId && fact.event === "club_offer_submitted",
+    ).length,
+    permanentCompletedCount: facts.filter(
+      (fact) => String(fact.buyingClubId) === clubId && fact.event === "transfer_completed",
+    ).length,
+    preliminaryOfferSubmittedCount: facts.filter(
+      (fact) =>
+        String(fact.buyingClubId) === clubId && fact.event === "preliminary_offer_submitted",
+    ).length,
+  }));
+}
+
+function mergeMarketLossSlices(
+  rows: readonly LongRunMarketLossSlice[],
+): readonly LongRunMarketLossSlice[] {
+  const totals = new Map<string, LongRunMarketLossSlice>();
+  for (const row of rows) {
+    const key = `${row.clubId}|${row.department}|${row.reason}|${row.transferWindowOpen}`;
+    const previous = totals.get(key);
+    totals.set(key, { ...row, count: (previous?.count ?? 0) + row.count });
+  }
+  return [...totals.values()].sort(compareMarketLossSlice);
+}
+
+function compareMarketLossSlice(
+  left: LongRunMarketLossSlice,
+  right: LongRunMarketLossSlice,
+): number {
+  return left.clubId.localeCompare(right.clubId)
+    || left.department.localeCompare(right.department)
+    || left.reason.localeCompare(right.reason)
+    || Number(right.transferWindowOpen) - Number(left.transferWindowOpen);
+}
+
+function mergeMarketClubActivity(
+  rows: readonly LongRunMarketClubActivity[],
+): readonly LongRunMarketClubActivity[] {
+  const totals = new Map<string, LongRunMarketClubActivity>();
+  for (const row of rows) {
+    const previous = totals.get(row.clubId);
+    totals.set(row.clubId, {
+      clubId: row.clubId,
+      needsEvaluatedCount: (previous?.needsEvaluatedCount ?? 0) + row.needsEvaluatedCount,
+      recruitableNeedCount: (previous?.recruitableNeedCount ?? 0) + row.recruitableNeedCount,
+      permanentTargetFoundCount:
+        (previous?.permanentTargetFoundCount ?? 0) + row.permanentTargetFoundCount,
+      permanentOfferSubmittedCount:
+        (previous?.permanentOfferSubmittedCount ?? 0) + row.permanentOfferSubmittedCount,
+      permanentCompletedCount:
+        (previous?.permanentCompletedCount ?? 0) + row.permanentCompletedCount,
+      preliminaryOfferSubmittedCount:
+        (previous?.preliminaryOfferSubmittedCount ?? 0) + row.preliminaryOfferSubmittedCount,
+    });
+  }
+  return [...totals.values()].sort((left, right) => left.clubId.localeCompare(right.clubId));
+}
+
+function countDiagnosticReasons(
+  diagnostics: CareerSeasonMarketLifecycleFact["diagnostics"],
+): Readonly<Record<string, number>> {
+  const counts = new Map<string, number>();
+  for (const fact of diagnostics) {
+    if (fact.reason === undefined) continue;
+    counts.set(fact.reason, (counts.get(fact.reason) ?? 0) + fact.count);
+  }
+  return Object.fromEntries([...counts].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function countReasons(reasons: readonly string[]): Readonly<Record<string, number>> {
+  const counts = new Map<string, number>();
+  for (const reason of reasons) counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  return Object.fromEntries([...counts].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function mergeReasonCounts(
+  rows: readonly Readonly<Record<string, number>>[],
+): Readonly<Record<string, number>> {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    for (const [reason, count] of Object.entries(row)) {
+      counts.set(reason, (counts.get(reason) ?? 0) + count);
+    }
+  }
+  return Object.fromEntries([...counts].sort(([left], [right]) => left.localeCompare(right)));
+}
+
 function structuralViolations(season: LongRunContractFinanceSeasonRow): number {
   const missingDepartmentCount =
     Number(season.minimumGoalkeeperCount < 1)
@@ -990,8 +2206,17 @@ function contractFinanceCheck(
   threshold: string,
   status: LongRunAnomalyStatus,
   gameplayMeaning: LongRunContractFinanceCheck["gameplayMeaning"],
+  observationCount: number,
 ): LongRunContractFinanceCheck {
-  return { key, value: roundMetric(value), threshold, status, gameplayMeaning };
+  return {
+    key,
+    value: roundMetric(value),
+    threshold,
+    status: observationCount === 0 ? "fail" : status,
+    observationCount,
+    evaluationStatus: observationCount === 0 ? "not_evaluated" : "evaluated",
+    gameplayMeaning,
+  };
 }
 
 function worstStatus(checks: readonly LongRunContractFinanceCheck[]): LongRunAnomalyStatus {
@@ -1014,6 +2239,17 @@ function minimumOrZero(values: readonly number[]): number {
 
 function maximumOrZero(values: readonly number[]): number {
   return values.length === 0 ? 0 : Math.max(...values);
+}
+
+function quantile(values: readonly number[], probability: number): number {
+  if (values.length === 0) return 0;
+  const ordered = [...values].sort((left, right) => left - right);
+  const position = (ordered.length - 1) * probability;
+  const lowerIndex = Math.floor(position);
+  const upperIndex = Math.ceil(position);
+  const lower = ordered[lowerIndex] ?? 0;
+  const upper = ordered[upperIndex] ?? lower;
+  return roundMetric(lower + (upper - lower) * (position - lowerIndex));
 }
 
 function roundMetric(value: number): number {

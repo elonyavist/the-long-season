@@ -30,17 +30,23 @@ import {
 import { test } from "vitest";
 
 import { openCareerInboxMessage } from "./career-inbox-lifecycle.ts";
-import { deriveContractDemand } from "./contract-negotiation-demand.ts";
-import { submitPreliminaryAgreementOffer } from "./preliminary-agreement.ts";
-import { advanceSelectedClubWorkflowsToAttention } from "./selected-club-contract-workflow.ts";
+import { deriveContractDemand as deriveContractDemandWithPolicy } from "./contract-negotiation-demand.ts";
+import { submitPreliminaryAgreementOffer as submitPreliminaryAgreementOfferWithPolicy } from "./preliminary-agreement.ts";
+import {
+  advanceSelectedClubWorkflowsToAttention as advanceSelectedClubWorkflowsToAttentionWithConfig,
+} from "./selected-club-contract-workflow.ts";
 import { projectSelectedClubMarketAttention } from "./selected-club-market-workflow.ts";
 import {
-  acceptTransferCounter,
-  deriveSellerTransferWillingness,
-  submitTransferOffer,
+  acceptTransferCounter as acceptTransferCounterWithPolicy,
+  deriveTransferCommercialSnapshot,
+  submitTransferOffer as submitTransferOfferWithConfig,
   withdrawTransferNegotiation,
 } from "./transfer-negotiation.ts";
-import { submitTransferPlayerOffer } from "./transfer-player-negotiation.ts";
+import { submitTransferPlayerOffer as submitTransferPlayerOfferWithPolicy } from "./transfer-player-negotiation.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { askingPriceConfigFixture } from "../test-fixtures/asking-price-config.ts";
+import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
 
 const SELLER = clubId("club:pro18");
 const BUYER = clubId("club:pro01");
@@ -48,6 +54,78 @@ const TARGET = playerId("player:target");
 const SUBMITTED_ON = gameDate(20_000);
 const NEG_ID = transferNegotiationId("transfer-negotiation:demo:1");
 const AGREEMENT_ID = preliminaryAgreementId("preliminary-agreement:demo:1");
+const VALUATION_CONFIG = playerValuationConfigFixture();
+const ASKING_PRICE_CONFIG = askingPriceConfigFixture();
+const WAGE_POLICY = playerWagePolicyConfigFixture();
+const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+
+function acceptTransferCounter(
+  input: Omit<Parameters<typeof acceptTransferCounterWithPolicy>[0], "marketBehaviorPolicy">,
+) {
+  return acceptTransferCounterWithPolicy({
+    ...input,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function deriveContractDemand(
+  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+) {
+  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+}
+
+function submitTransferPlayerOffer(
+  input: Omit<
+    Parameters<typeof submitTransferPlayerOfferWithPolicy>[0],
+    "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return submitTransferPlayerOfferWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function submitPreliminaryAgreementOffer(
+  input: Omit<
+    Parameters<typeof submitPreliminaryAgreementOfferWithPolicy>[0],
+    "wagePolicy"
+  >,
+) {
+  return submitPreliminaryAgreementOfferWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+  });
+}
+
+function submitTransferOffer(
+  input: Omit<
+    Parameters<typeof submitTransferOfferWithConfig>[0],
+    "valuationConfig" | "askingPriceConfig" | "marketBehaviorPolicy"
+  >,
+) {
+  return submitTransferOfferWithConfig({
+    ...input,
+    valuationConfig: VALUATION_CONFIG,
+    askingPriceConfig: ASKING_PRICE_CONFIG,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
+
+function advanceSelectedClubWorkflowsToAttention(
+  input: Omit<
+    Parameters<typeof advanceSelectedClubWorkflowsToAttentionWithConfig>[0],
+    "valuationConfig" | "wagePolicy" | "marketBehaviorPolicy"
+  >,
+) {
+  return advanceSelectedClubWorkflowsToAttentionWithConfig({
+    ...input,
+    valuationConfig: VALUATION_CONFIG,
+    wagePolicy: WAGE_POLICY,
+    marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+  });
+}
 
 function windows(): SeasonTransferWindows {
   return seasonTransferWindows({
@@ -201,6 +279,48 @@ test("accepted player terms complete the transfer and stop Continue once, withou
   assert.equal(copies[0]?.lifecycle.read, true);
 });
 
+test("selected-club lifecycle rejects an elite first-tier player moving to an ordinary third-tier club", () => {
+  const state = careerFixture({
+    targetAbility: 18,
+    sellerCategory: "first_division",
+    sellerReputation: 10,
+    buyerCategory: "third_division",
+    buyerReputation: 4,
+  });
+  const submitted = submit(state, askingFeeFor(state) + 1);
+  const clubAccepted = advanceSelectedClubWorkflowsToAttention({
+    careerState: submitted.careerState,
+    boundaryDate: responseDueOn(submitted),
+    transferWindows: windows(),
+  });
+  const playerOffer = submitTransferPlayerOffer({
+    careerState: clubAccepted.careerState,
+    negotiationId: NEG_ID,
+    submittedOn: clubAccepted.result.stopDate,
+    terms: preferredPlayerTerms(clubAccepted.careerState),
+    transferWindows: windows(),
+  });
+  assert.equal(playerOffer.status, "applied");
+  if (playerOffer.status !== "applied") return;
+
+  const resolved = advanceSelectedClubWorkflowsToAttention({
+    careerState: playerOffer.careerState,
+    boundaryDate: gameDate(SUBMITTED_ON + 10),
+    transferWindows: windows(),
+  });
+  const negotiation = resolved.careerState.transferNegotiationState
+    ?.negotiations[NEG_ID];
+  assert.equal(negotiation?.status, "player_rejected");
+  assert.equal(
+    negotiation?.status === "player_rejected" ? negotiation.reason : undefined,
+    "player_unwilling",
+  );
+  assert.equal(
+    resolved.careerState.gameState.clubs[BUYER]?.playerIds.includes(TARGET),
+    false,
+  );
+});
+
 test("a rejected preliminary offer surfaces one important player-reply message", () => {
   const state = careerFixture({ targetContractEndsOn: gameDate(20_100) });
   const submittedAgreement = submitPreliminaryAgreementOffer({
@@ -273,17 +393,15 @@ function responseDueOn(submitted: ReturnType<typeof submit>): GameDate {
 }
 
 function askingFeeFor(state: CareerState): number {
-  const decision = deriveSellerTransferWillingness({
+  const snapshot = deriveTransferCommercialSnapshot({
     careerState: state,
-    negotiation: {
-      buyingClubId: BUYER,
-      sellingClubId: SELLER,
-      playerId: TARGET,
-      offeredFee: nonNegativeMoney(1),
-      submittedOn: SUBMITTED_ON,
-    },
+    sellingClubId: SELLER,
+    playerId: TARGET,
+    asOf: SUBMITTED_ON,
+    valuationConfig: VALUATION_CONFIG,
+    askingPriceConfig: ASKING_PRICE_CONFIG,
   });
-  return decision.askingFee ?? 0;
+  return snapshot?.currentAskingPrice ?? 0;
 }
 
 function preferredPlayerTerms(careerState: CareerState): ContractOfferTerms {
@@ -310,17 +428,34 @@ function zeroTerms(): ContractOfferTerms {
   };
 }
 
-function careerFixture(input: { readonly targetContractEndsOn?: GameDate }): CareerState {
+function careerFixture(input: {
+  readonly targetContractEndsOn?: GameDate;
+  readonly targetAbility?: number;
+  readonly sellerCategory?: Club["category"];
+  readonly sellerReputation?: number;
+  readonly buyerCategory?: Club["category"];
+  readonly buyerReputation?: number;
+}): CareerState {
   // The seller keeps the canonical minimum squad size and midfielder depth
   // after the sale, so autonomous seller replies are depth-protected but real.
   const sellerFillerIds = Array.from(
     { length: 18 },
     (_, index) => playerId(`player:s${index + 2}`),
   );
-  const seller = clubFixture(SELLER, [TARGET, ...sellerFillerIds]);
-  const buyer = clubFixture(BUYER, [playerId("player:b1")]);
+  const seller = clubFixture(
+    SELLER,
+    [TARGET, ...sellerFillerIds],
+    input.sellerCategory,
+    input.sellerReputation,
+  );
+  const buyer = clubFixture(
+    BUYER,
+    [playerId("player:b1")],
+    input.buyerCategory,
+    input.buyerReputation,
+  );
   const players = [
-    playerFixture(TARGET, 12),
+    playerFixture(TARGET, input.targetAbility ?? 12),
     ...sellerFillerIds.map((fillerId) => playerFixture(fillerId, 9)),
     playerFixture(playerId("player:b1"), 9),
   ];
@@ -337,8 +472,13 @@ function careerFixture(input: { readonly targetContractEndsOn?: GameDate }): Car
   });
 }
 
-function clubFixture(id: Club["id"], playerIds: readonly Player["id"][]): Club {
-  return { id, name: `Club ${id}`, shortName: id, category: "third_division", reputation: 5, playerIds };
+function clubFixture(
+  id: Club["id"],
+  playerIds: readonly Player["id"][],
+  category: Club["category"] = "third_division",
+  reputation = 5,
+): Club {
+  return { id, name: `Club ${id}`, shortName: id, category, reputation, playerIds };
 }
 
 function playerFixture(id: Player["id"], ability: number): Player {

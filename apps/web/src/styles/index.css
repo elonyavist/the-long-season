@@ -1,3 +1,13 @@
+/* Hallmark · scope: craft pass (app, not page) · genre: utilitarian
+ * theme: existing retro-football identity, preserved — palette and IA unchanged
+ * fonts: Rokkitt Variable (display) + Mulish Variable (body), self-hosted
+ * excluded: tactical board (styles/tactical-board.css, features/tactics-board)
+ * states: default · hover · focus-visible · active · disabled · pending
+ * contrast: pass (40-41) · tokens: pass (48) · chrome: pass (47) · icons: pass (30)
+ * mobile: overflow-x clip on html and body (34)
+ */
+@import "@fontsource-variable/rokkitt/wght.css";
+@import "@fontsource-variable/mulish/wght.css";
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./base.css";

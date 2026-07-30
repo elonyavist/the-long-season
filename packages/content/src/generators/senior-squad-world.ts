@@ -1,5 +1,9 @@
 import {
   createSeniorSquadState,
+  deriveCalibratedAnnualWage,
+  deriveCalibratedContractBonuses,
+  deriveContinuousPlayerWageRating,
+  derivePreferredContractDurationYears,
   nonNegativeMoney,
   playerContractHistoryEntryId,
   playerContractId,
@@ -12,6 +16,7 @@ import {
   type PlayerContractHistoryEntry,
   type PlayerContractHistoryEntryId,
   type PlayerContractId,
+  type PlayerWagePolicyConfig,
   type PlayerRole,
   type RoleIdentifiedPlayer,
   type SeniorSquadRegistration,
@@ -19,6 +24,7 @@ import {
   type SeniorSquadState,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
+import { deriveOpeningCommittedWageTarget } from "./opening-wage-budget.ts";
 
 /** Inputs required to generate all initial senior registrations and contracts. */
 export interface InitialSeniorSquadGenerationInput {
@@ -28,6 +34,8 @@ export interface InitialSeniorSquadGenerationInput {
   readonly clubIds: readonly ClubId[];
   readonly players: Readonly<Record<RoleIdentifiedPlayer["id"], RoleIdentifiedPlayer>>;
   readonly playerIds: readonly RoleIdentifiedPlayer["id"][];
+  /** Validated rating-linked wage and contract policy for generated terms. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
 }
 
 /**
@@ -49,6 +57,7 @@ export function generateInitialSeniorSquadState(input: InitialSeniorSquadGenerat
     const club = input.clubs[clubId];
     if (club === undefined) throw new Error(`Cannot generate contracts for missing club: ${clubId}`);
     const allocatedShirts = new Set<number>();
+    const clubContractIds: PlayerContractId[] = [];
     const squadLevels = club.playerIds.map((playerId) => currentRoleLevel(requiredPlayer(input, playerId)));
     const squadRanks = new Map(
       club.playerIds
@@ -87,9 +96,11 @@ export function generateInitialSeniorSquadState(input: InitialSeniorSquadGenerat
         squadRank: squadRanks.get(playerId) ?? club.playerIds.length,
         currentLevel: level,
         potentialLevel: potentialRoleLevel(player),
+        wagePolicy: input.wagePolicy,
       });
       contracts[contract.id] = contract;
       contractIds.push(contract.id);
+      clubContractIds.push(contract.id);
 
       const historyId = playerContractHistoryEntryId(`contract-history:${String(playerId).slice(7)}:initial`);
       contractHistory[historyId] = {
@@ -104,6 +115,8 @@ export function generateInitialSeniorSquadState(input: InitialSeniorSquadGenerat
       contractHistoryEntryIds.push(historyId);
       historySequence += 1;
     }
+
+    normalizeOpeningClubWages(input, club, clubContractIds, contracts);
   }
 
   return createSeniorSquadState(
@@ -120,6 +133,59 @@ export function generateInitialSeniorSquadState(input: InitialSeniorSquadGenerat
   );
 }
 
+/**
+ * Fits one generated squad to the audited opening utilization band while
+ * preserving every player's policy-derived relative wage.
+ */
+function normalizeOpeningClubWages(
+  input: InitialSeniorSquadGenerationInput,
+  club: Club,
+  contractIds: readonly PlayerContractId[],
+  contracts: Record<PlayerContractId, SeniorSquadState["contracts"][PlayerContractId]>,
+): void {
+  const target = deriveOpeningCommittedWageTarget({
+    club,
+    clubs: input.clubs,
+    clubIds: input.clubIds,
+    wagePolicy: input.wagePolicy,
+  });
+  const rawTotal = contractIds.reduce((sum, contractId) => sum + (contracts[contractId]?.annualWage ?? 0), 0);
+  if (rawTotal <= 0 || contractIds.length === 0) return;
+  const precision = input.wagePolicy.wageFinanceCalibration.annualWagePolicy.roundingMinorUnits;
+  const normalized = contractIds.map((contractId) => {
+    const contract = contracts[contractId];
+    if (contract === undefined) throw new Error(`Generated contract missing during wage normalization: ${contractId}`);
+    return {
+      contractId,
+      annualWage: nonNegativeMoney(roundMoney(
+        (contract.annualWage * target) / rawTotal,
+        precision,
+      )),
+    };
+  });
+  const normalizedTotal = normalized.reduce((sum, candidate) => sum + candidate.annualWage, 0);
+  const first = normalized[0];
+  if (first !== undefined) {
+    first.annualWage = nonNegativeMoney(first.annualWage + (target - normalizedTotal));
+  }
+
+  for (const candidate of normalized) {
+    const contract = contracts[candidate.contractId];
+    if (contract === undefined) continue;
+    const player = requiredPlayer(input, contract.playerId);
+    contracts[candidate.contractId] = {
+      ...contract,
+      annualWage: candidate.annualWage,
+      bonuses: deriveCalibratedContractBonuses({
+        policy: input.wagePolicy,
+        role: player.primaryRole,
+        annualWage: candidate.annualWage,
+        status: contract.squadStatus,
+      }),
+    };
+  }
+}
+
 function initialPlayerContract(input: {
   readonly worldSeed: string;
   readonly referenceDate: GameDate;
@@ -128,14 +194,30 @@ function initialPlayerContract(input: {
   readonly squadRank: number;
   readonly currentLevel: number;
   readonly potentialLevel: number;
+  readonly wagePolicy: PlayerWagePolicyConfig;
 }): SeniorSquadState["contracts"][PlayerContractId] {
   const age = Math.max(15, Math.floor((input.referenceDate - input.player.birthDate) / 365.2425));
   const rng = deriveRng(input.worldSeed, "initial-senior-contract", input.club.id, input.player.id);
   const startsOn = (input.referenceDate - rng.nextInt(30, 541)) as GameDate;
-  const durationYears = contractDurationYears(age, input.squadRank, input.potentialLevel - input.currentLevel);
+  const durationYears = derivePreferredContractDurationYears({
+    policy: input.wagePolicy,
+    age,
+    potentialGapStars: Math.max(
+      0,
+      deriveContinuousPlayerWageRating(input.potentialLevel, input.wagePolicy.ratingScale)
+        - deriveContinuousPlayerWageRating(input.currentLevel, input.wagePolicy.ratingScale),
+    ),
+  });
   const endsOn = (input.referenceDate + durationYears * 365 + rng.nextInt(0, 121)) as GameDate;
   const squadStatus = generatedSquadStatus(age, input.squadRank, input.potentialLevel - input.currentLevel);
-  const annualWage = annualWageFor(input.club, input.currentLevel, input.potentialLevel, age, squadStatus);
+  const annualWage = deriveCalibratedAnnualWage({
+    policy: input.wagePolicy,
+    category: input.club.category,
+    status: squadStatus,
+    currentAbility: input.currentLevel,
+    potentialAbility: input.potentialLevel,
+    age,
+  });
   const id = playerContractId(`contract:${String(input.player.id).slice(7)}:initial`);
 
   return {
@@ -147,54 +229,13 @@ function initialPlayerContract(input: {
     endsOn,
     annualWage,
     squadStatus,
-    bonuses: contractBonuses(input.player.primaryRole, annualWage, squadStatus),
+    bonuses: deriveCalibratedContractBonuses({
+      policy: input.wagePolicy,
+      role: input.player.primaryRole,
+      annualWage,
+      status: squadStatus,
+    }),
   };
-}
-
-function annualWageFor(
-  club: Club,
-  currentLevel: number,
-  potentialLevel: number,
-  age: number,
-  status: AgreedSquadStatus,
-): ReturnType<typeof nonNegativeMoney> {
-  const divisionFactor = club.category === "first_division" ? 4 : club.category === "second_division" ? 2 : 1;
-  const statusFactor: Record<AgreedSquadStatus, number> = {
-    key_player: 1.35,
-    regular_starter: 1.15,
-    squad_player: 0.9,
-    fringe_player: 0.7,
-    prospect: 0.6,
-  };
-  const potentialPremium = age <= 23 ? Math.max(0, potentialLevel - currentLevel) * 5_000_00 : 0;
-  const annualMinorUnits =
-    (30_000_00 + Math.round(currentLevel * currentLevel * 2_100_00) + club.reputation * 4_000_00 + potentialPremium)
-    * divisionFactor
-    * statusFactor[status];
-  return nonNegativeMoney(roundMoney(annualMinorUnits, 10_000));
-}
-
-function contractBonuses(
-  role: PlayerRole,
-  annualWage: ReturnType<typeof nonNegativeMoney>,
-  status: AgreedSquadStatus,
-): PlayerContractBonuses {
-  const signingMultiplier = status === "key_player" ? 0.14 : status === "regular_starter" ? 0.1 : 0.06;
-  const appearanceBonus = nonNegativeMoney(roundMoney(annualWage / 110, 100));
-  const result: {
-    signingBonus: ReturnType<typeof nonNegativeMoney>;
-    appearanceBonus: ReturnType<typeof nonNegativeMoney>;
-    goalBonus?: ReturnType<typeof nonNegativeMoney>;
-    cleanSheetBonus?: ReturnType<typeof nonNegativeMoney>;
-  } = {
-    signingBonus: nonNegativeMoney(roundMoney(annualWage * signingMultiplier, 1_000)),
-    appearanceBonus,
-  };
-  if (role !== "goalkeeper") result.goalBonus = nonNegativeMoney(roundMoney(appearanceBonus * 1.4, 100));
-  if (["goalkeeper", "center_back", "full_back", "wing_back", "defensive_midfielder"].includes(role)) {
-    result.cleanSheetBonus = nonNegativeMoney(roundMoney(appearanceBonus, 100));
-  }
-  return result;
 }
 
 function generatedSquadStatus(age: number, rank: number, potentialRoom: number): AgreedSquadStatus {
@@ -203,13 +244,6 @@ function generatedSquadStatus(age: number, rank: number, potentialRoom: number):
   if (rank <= 11) return "regular_starter";
   if (rank <= 17) return "squad_player";
   return "fringe_player";
-}
-
-function contractDurationYears(age: number, rank: number, potentialRoom: number): number {
-  if (age <= 21 && potentialRoom >= 2) return 4;
-  if (age <= 27) return rank <= 11 ? 3 : 2;
-  if (age <= 31) return 2;
-  return 1;
 }
 
 function allocateShirtNumber(player: RoleIdentifiedPlayer, allocated: ReadonlySet<number>): number {

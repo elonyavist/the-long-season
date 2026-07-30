@@ -2,7 +2,39 @@
 
 ## Status
 
-Documented. Queued after Phase 78 Step 15.
+In progress. Steps 01-13 are Done, Step 14 is Reopened and paused, and Step 15
+is not started. The user-requested Phase 79A, 79B, and 79C interpositions are
+complete; Phase 79D is also complete by explicit product decision.
+
+The market-active `50 x 20` diagnostic kept every Phase 79 structural invariant
+clean but exposed near-absent permanent transfers, systematic free-agent
+accumulation, and maximum-only wage-warning semantics. These findings are owned
+by
+`docs/steps/79a-transfer-market-activity-free-agent-economy-and-long-run-diagnostics/`.
+Phase 79A returned here after its repeated `50 x 20` with zero owned structural
+failure; it does not replace the required release-scale closeout gate.
+
+Phase 79B delivered the bounded Squad/Market player-workspace redesign and
+durable career-statistics archive requested after direct browser review. It
+did not run, replace, weaken, or claim this phase's release gate, and returned
+control to Step 14 before later interpositions.
+
+Phase 79C delivered the global `1..6` rating, canonical three-division world,
+source-backed public-value/wage/economy calibration, promotion/relegation, and
+non-vacuous market diagnostics. Its bounded `10 x 10` passed with zero failed
+worlds, minimum squad `18`, and zero structural or rating-cap violations. It
+did not run or claim this phase's release-scale gate and returned control to
+Step 14 before Phase 79D.
+
+Phase 79D corrected the post-79C exceptional-generation, derived public
+potential range, range-aware prospect value, effective-rarity, annual-intake,
+display-safe upper-cap, asking/offer/counter/completed-fee spread, and
+zero-observation defects. Its focused checks, repository verification, build,
+and browser QA pass. Its direct `50 x 20` was stopped, produced no report, and
+is not claimed as evidence. Step 14 remains paused while Phase 80 reworks are
+documented and executed. Their final validation must
+run a resumable `50 x 20` with exactly `7` workers. The later release-scale
+evidence remains unrun and unclaimed.
 
 ## Goal
 
@@ -19,14 +51,16 @@ and receives a clear answer within three game days.
 
 ## Entry Gate
 
-- Phase 78 Steps 01-15 are Done.
+- Phase 78 Steps 01-14 are Done. Step 15 remains open and was accepted as
+  deferred by the explicit 2026-07-23 entry-gate override recorded in
+  `docs/PROJECT_STATUS.md`; its release obligations remain outstanding.
 - Senior ownership, registrations, contracts, annual wages, club cash,
   transfer budget, annual wage budget, ledgers, and one durable match plan are
   canonical and passing their structural gate.
 - Posta and Continue can stop on real selected-club decisions.
 - SQLite/OPFS persists the current working session and explicit save cadence.
-- No Phase 78 final-cleanup step remains; the integrated final closeout is Step
-  15 of this phase.
+- The integrated Phase 79 Step 15 remains the final cleanup/report boundary;
+  the deferred Phase 78 Step 15 gate is not silently treated as complete.
 
 ## User-Facing Outcome
 
@@ -200,7 +234,7 @@ graphify update .
 ```
 
 The structural gate runs `50 worlds x 10 seasons`, `250 worlds x 30 seasons`,
-and at least `750 worlds x 50 seasons`, with a repeated deterministic sample.
+and at least `750 worlds x 20 seasons`, with a repeated deterministic sample.
 The resumable `10,000 x 50` runner remains a release-scale tool and is not a
 Phase 79 completion requirement.
 

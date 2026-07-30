@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "version": "player-rating-scale-v3",
+  "classification": "explicit_game_design_target",
+  "supportedRatings": [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
+  "abilityThresholds": [
+    { "minimumAbilityInclusive": 0, "rating": 1 },
+    { "minimumAbilityInclusive": 6.5, "rating": 1.5 },
+    { "minimumAbilityInclusive": 7.5, "rating": 2 },
+    { "minimumAbilityInclusive": 8.5, "rating": 2.5 },
+    { "minimumAbilityInclusive": 9.5, "rating": 3 },
+    { "minimumAbilityInclusive": 12.5, "rating": 3.5 },
+    { "minimumAbilityInclusive": 14.5, "rating": 4 },
+    { "minimumAbilityInclusive": 15.5, "rating": 4.5 },
+    { "minimumAbilityInclusive": 16, "rating": 5 },
+    { "minimumAbilityInclusive": 16.5, "rating": 5.5 },
+    { "minimumAbilityInclusive": 17, "rating": 6 }
+  ],
+  "divisionFirstTeamBands": [
+    {
+      "division": "first_division",
+      "normalMinimum": 3,
+      "normalMaximum": 5.5,
+      "exceptionalMaximum": 6
+    },
+    {
+      "division": "second_division",
+      "normalMinimum": 2,
+      "normalMaximum": 3.5,
+      "exceptionalMaximum": 4
+    },
+    {
+      "division": "third_division",
+      "normalMinimum": 1,
+      "normalMaximum": 3,
+      "exceptionalMaximum": 3.5
+    }
+  ],
+  "rarity": {
+    "initialWorld": {
+      "currentSixMinimum": 1,
+      "currentSixMaximum": 2,
+      "potentialSixMinimum": 2,
+      "potentialSixMaximum": 4,
+      "lowerDivisionPotentialSixMaximum": 1
+    },
+    "annualIntake": {
+      "potentialSixPerWorldMinimum": 0,
+      "potentialSixPerWorldMaximum": 1,
+      "tenSeasonCohortMinimum": 2,
+      "tenSeasonCohortMaximum": 4
+    },
+    "yearTen": {
+      "activeCurrentSixMaximum": 4,
+      "activePotentialSixMaximum": 8,
+      "lowerDivisionPotentialSixMaximum": 1
+    }
+  },
+  "potentialProjectionPolicy": {
+    "schemaVersion": 1,
+    "version": "player-potential-projection-v2",
+    "classification": "explicit_game_design_target",
+    "ageBandsByRoleFamily": {
+      "goalkeeper": [
+        {
+          "minimumAge": 0,
+          "maximumAge": 17,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 1068,
+          "upperRealizationBasisPoints": 2496
+        },
+        {
+          "minimumAge": 18,
+          "maximumAge": 20,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 951,
+          "upperRealizationBasisPoints": 2466
+        },
+        {
+          "minimumAge": 21,
+          "maximumAge": 22,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 761,
+          "upperRealizationBasisPoints": 1912
+        },
+        {
+          "minimumAge": 23,
+          "maximumAge": 24,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 367,
+          "upperRealizationBasisPoints": 1038
+        },
+        {
+          "minimumAge": 25,
+          "maximumAge": 27,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 116,
+          "upperRealizationBasisPoints": 449
+        },
+        {
+          "minimumAge": 28,
+          "maximumAge": 200,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
+        }
+      ],
+      "outfield": [
+        {
+          "minimumAge": 0,
+          "maximumAge": 17,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 1667,
+          "upperRealizationBasisPoints": 3076
+        },
+        {
+          "minimumAge": 18,
+          "maximumAge": 20,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 878,
+          "upperRealizationBasisPoints": 2346
+        },
+        {
+          "minimumAge": 21,
+          "maximumAge": 22,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 385,
+          "upperRealizationBasisPoints": 1095
+        },
+        {
+          "minimumAge": 23,
+          "maximumAge": 24,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 142,
+          "upperRealizationBasisPoints": 437
+        },
+        {
+          "minimumAge": 25,
+          "maximumAge": 200,
+          "conservativeRealizationBasisPoints": 0,
+          "expectedRealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 22
+        }
+      ]
+    }
+  }
+}

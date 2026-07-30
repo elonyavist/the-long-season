@@ -163,8 +163,8 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.includes("Players: 396"), true);
   assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
   assert.equal(io.stdoutLines.includes("Current ability distribution:"), true);
-  assert.equal(io.stdoutLines.includes("  0-8: 115"), true);
-  assert.equal(io.stdoutLines.includes("  9-11: 253"), true);
+  assert.equal(io.stdoutLines.includes("  0-8: 113"), true);
+  assert.equal(io.stdoutLines.includes("  9-11: 255"), true);
   assert.equal(io.stdoutLines.includes("  12-14: 28"), true);
   assert.equal(io.stdoutLines.includes("  15+: 0"), true);
   assert.equal(io.stdoutLines.some((line) => /^  15\+: [0-9]+$/.test(line)), true);
@@ -363,7 +363,7 @@ test("simulate-season can print a deterministic condition demo", async () => {
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Season fitness lifecycle: enabled"), true);
   assert.equal(io.stdoutLines.includes("  Rules: match cost=8 daily recovery=5 clamp=0..100"), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  First selected club fixture: fixture:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  First selected club fixture: fixture:demo-third-division:demo-001:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  After first match selected starters fitness: 92"), true);
   assert.equal(io.stdoutLines.includes("  Before next selected fixture fitness after 7 days recovery: 100"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club final table: ${CLUB_NAME_PATTERN} position [0-9]+, [0-9]+ pts, GD [+-][0-9]+$`).test(line)), true);
@@ -417,7 +417,7 @@ test("simulate-season can inspect the deterministic rotated lineup demo", async 
 test("simulate-season fixture detail can apply a selected lineup demo", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(
-    ["--seed=demo-001", "--fixture=fixture:000006", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
+    ["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000006", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
     io,
   );
 
@@ -426,7 +426,7 @@ test("simulate-season fixture detail can apply a selected lineup demo", async ()
   assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
   assert.equal(io.stdoutLines.includes(`Lineup override: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Fixture: fixture:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Fixture: fixture:demo-third-division:demo-001:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: yes"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:01 ${PERSON_NAME_PATTERN} goalkeeper$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05 ${PERSON_NAME_PATTERN} defender$`).test(line)), true);
@@ -443,7 +443,7 @@ test("simulate-season fixture detail can apply a selected lineup demo", async ()
 test("simulate-season fixture lineup demo reports non-applicable fixtures", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(
-    ["--seed=demo-001", "--fixture=fixture:000001", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
+    ["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`],
     io,
   );
 
@@ -456,7 +456,7 @@ test("simulate-season fixture lineup demo reports non-applicable fixtures", asyn
     io.stdoutLines.includes("  Selected starters spend 0 fitness because the selected club is not playing"),
     true,
   );
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:demo-third-division:demo-001:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
 });
 
 test("same seed and lineup demo produce same inspection output", async () => {
@@ -472,7 +472,7 @@ test("same seed and lineup demo produce same inspection output", async () => {
 test("same seed and fixture lineup demo produce same fixture detail output", async () => {
   const first = captureIo();
   const second = captureIo();
-  const args = ["--seed=repeatable-fixture-lineup", "--fixture=fixture:000006", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`];
+  const args = ["--seed=repeatable-fixture-lineup", "--fixture=fixture:demo-third-division:demo-001:000006", `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`];
 
   assert.equal(await runSimulateSeasonCommand(args, first), 0);
   assert.equal(await runSimulateSeasonCommand(args, second), 0);
@@ -503,7 +503,7 @@ test("simulate-season can print one round's fixture results", async () => {
 
   assert.equal(exitCode, 0);
   assert.equal(io.stdoutLines.includes("Round 1 fixtures:"), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:[0-9]{6} ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:demo-third-division:demo-001:[0-9]{6} ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("  Scorers: ")), true);
 });
 
@@ -518,19 +518,19 @@ test("same seed and round produce same fixture detail output", async () => {
 
 test("simulate-season can print one fixture's structured match detail", async () => {
   const io = captureIo();
-  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000001"], io);
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000002"], io);
 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
   assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
-  assert.equal(io.stdoutLines.includes("Fixture: fixture:000001"), true);
+  assert.equal(io.stdoutLines.includes("Fixture: fixture:demo-third-division:demo-001:000002"), true);
   assert.equal(io.stdoutLines.includes("Competition: Demo Third Division"), true);
   assert.equal(io.stdoutLines.includes("Final table:"), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top scorer: ")), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top assist: ")), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top goalkeeper saves: ")), false);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:demo-third-division:demo-001:000002 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(` GOAL ${CLUB_NAME_PATTERN} ${PERSON_NAME_PATTERN}.* shot=[a-z ]+ chance=[a-z ]+$`).test(line)), true);
   assert.equal(
@@ -557,9 +557,9 @@ test("simulate-season can print optional fixture explanation without changing de
   const defaultIo = captureIo();
   const explanationIo = captureIo();
 
-  assert.equal(await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000001"], defaultIo), 0);
+  assert.equal(await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001"], defaultIo), 0);
   assert.equal(
-    await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000001", "--fixture-explanation"], explanationIo),
+    await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001", "--fixture-explanation"], explanationIo),
     0,
   );
 
@@ -578,7 +578,7 @@ test("simulate-season can print optional fixture explanation without changing de
 
 test("simulate-season localizes fixture event enum values in Italian", async () => {
   const io = captureIo();
-  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000006", "--lang=it"], io);
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000006", "--lang=it"], io);
 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
@@ -592,7 +592,7 @@ test("simulate-season localizes fixture event enum values in Italian", async () 
 test("simulate-season localizes fixture explanation labels in Italian", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(
-    ["--seed=demo-001", "--fixture=fixture:000001", "--fixture-explanation", "--lang=it"],
+    ["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001", "--fixture-explanation", "--lang=it"],
     io,
   );
 
@@ -673,7 +673,7 @@ test("same seed and setup demo produce same tactic inspection output", async () 
 test("simulate-season fixture detail can include setup demo context", async () => {
   const io = captureIo();
   const exitCode = await runSimulateSeasonCommand(
-    ["--seed=demo-001", "--fixture=fixture:000001", `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`],
+    ["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001", `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`],
     io,
   );
 
@@ -691,7 +691,7 @@ test("simulate-season fixture detail can inspect a non-applicable manual tactic 
   const exitCode = await runSimulateSeasonCommand(
     [
       "--seed=demo-001",
-      "--fixture=fixture:000001",
+      "--fixture=fixture:demo-third-division:demo-001:000001",
       `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_BALANCED}`,
       `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
     ],
@@ -708,7 +708,7 @@ test("simulate-season fixture detail can inspect a non-applicable manual tactic 
   assert.equal(io.stdoutLines.includes("  Applies to fixture: no"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Reason: ${CLUB_NAME_PATTERN} is not playing this fixture$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Profile timeline:"), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  unchanged: fixture:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  unchanged: fixture:demo-third-division:demo-001:000001 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.includes("Player stats (all starters):"), true);
 });
@@ -718,7 +718,7 @@ test("simulate-season fixture detail applies a manual tactic switch when the sel
   const exitCode = await runSimulateSeasonCommand(
     [
       "--seed=demo-001",
-      "--fixture=fixture:000006",
+      "--fixture=fixture:demo-third-division:demo-001:000006",
       `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_BALANCED}`,
       `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
     ],
@@ -734,7 +734,7 @@ test("simulate-season fixture detail applies a manual tactic switch when the sel
   assert.equal(io.stdoutLines.includes(`  1'-45': ${DEMO_SETUP_PROFILE_PRO01_BALANCED}`), true);
   assert.equal(io.stdoutLines.includes(`  46'-90': ${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`), true);
   assert.equal(
-    io.stdoutLines.some((line) => new RegExp(`^fixture:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)),
+    io.stdoutLines.some((line) => new RegExp(`^fixture:demo-third-division:demo-001:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)),
     true,
   );
   assert.equal(io.stdoutLines.includes("Events:"), true);
@@ -746,7 +746,7 @@ test("same seed and manual tactic switch produce same fixture detail output", as
   const second = captureIo();
   const args = [
     "--seed=repeatable-manual-switch",
-    "--fixture=fixture:000006",
+    "--fixture=fixture:demo-third-division:demo-001:000006",
     `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_BALANCED}`,
     `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
   ];
@@ -758,7 +758,7 @@ test("same seed and manual tactic switch produce same fixture detail output", as
 
 test("simulate-season fixture detail prints durable causal defender context for blocks", async () => {
   const io = captureIo();
-  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:000002"], io);
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001"], io);
 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
@@ -785,8 +785,8 @@ test("same seed and fixture produce same structured match detail output", async 
   const first = captureIo();
   const second = captureIo();
 
-  assert.equal(await runSimulateSeasonCommand(["--seed=repeatable-fixture", "--fixture=fixture:000001"], first), 0);
-  assert.equal(await runSimulateSeasonCommand(["--seed=repeatable-fixture", "--fixture=fixture:000001"], second), 0);
+  assert.equal(await runSimulateSeasonCommand(["--seed=repeatable-fixture", "--fixture=fixture:demo-third-division:demo-001:000001"], first), 0);
+  assert.equal(await runSimulateSeasonCommand(["--seed=repeatable-fixture", "--fixture=fixture:demo-third-division:demo-001:000001"], second), 0);
   assert.deepEqual(first.stdoutLines, second.stdoutLines);
 });
 
@@ -860,7 +860,7 @@ test("simulate-season rejects invalid condition demo arguments", async () => {
 
   assert.equal(
     await runSimulateSeasonCommand(
-      ["--fixture=fixture:000001", `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`],
+      ["--fixture=fixture:demo-third-division:demo-001:000001", `--condition-demo=${CONDITION_DEMO_PROFILE_PRO01_SEASON}`],
       withFixture,
     ),
     1,
@@ -914,7 +914,7 @@ test("simulate-season rejects invalid lineup demo arguments", async () => {
   assert.equal(
     await runSimulateSeasonCommand(
       [
-        "--fixture=fixture:000006",
+        "--fixture=fixture:demo-third-division:demo-001:000006",
         `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_BALANCED}`,
         `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
         `--lineup-demo=${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`,
@@ -947,7 +947,7 @@ test("simulate-season rejects invalid manual tactic switch arguments", async () 
 
   assert.equal(
     await runSimulateSeasonCommand(
-      ["--fixture=fixture:000001", `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`],
+      ["--fixture=fixture:demo-third-division:demo-001:000001", `--manual-tactic-switch=46:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`],
       withoutSetupDemo,
     ),
     1,
@@ -972,7 +972,7 @@ test("simulate-season rejects invalid manual tactic switch arguments", async () 
   assert.equal(
     await runSimulateSeasonCommand(
       [
-        "--fixture=fixture:000001",
+        "--fixture=fixture:demo-third-division:demo-001:000001",
         `--setup-demo=${DEMO_SETUP_PROFILE_PRO01_BALANCED}`,
         `--manual-tactic-switch=91:${DEMO_SETUP_PROFILE_PRO01_ATTACKING}`,
       ],

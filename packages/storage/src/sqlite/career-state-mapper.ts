@@ -31,6 +31,8 @@ import {
   type CareerInboxActionId,
   type CareerInboxCategory,
   type CareerInboxSource,
+  type CareerPlayerSeasonStatistics,
+  type CareerPlayerStatisticsCoverage,
   type CareerSeasonArchiveEntry,
   type CareerState,
   type CareerPlayerAvailabilityState,
@@ -93,8 +95,23 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
   insertPreliminaryAgreementState(database, state);
   for (const entry of state.transferHistory) {
     database.run(`INSERT INTO transfer_history
-      (save_id, sequence_number, occurred_on, buying_club_id, selling_club_id, player_id, transfer_fee)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`, [save, entry.sequenceNumber, entry.occurredOn, entry.buyingClubId, entry.sellingClubId, entry.playerId, entry.transferFee]);
+      (save_id, sequence_number, movement_kind, occurred_on, buying_club_id, selling_club_id, player_id,
+       public_value, initial_asking_price, offered_fee, counter_fee, agreed_fee, completed_fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      save,
+      entry.sequenceNumber,
+      entry.kind,
+      entry.occurredOn,
+      entry.buyingClubId,
+      entry.kind === "permanent_transfer" ? entry.sellingClubId : null,
+      entry.playerId,
+      entry.publicValue,
+      entry.kind === "permanent_transfer" ? entry.initialAskingPrice : null,
+      entry.kind === "permanent_transfer" ? entry.offeredFee : null,
+      entry.kind === "permanent_transfer" ? entry.counterFee ?? null : null,
+      entry.kind === "permanent_transfer" ? entry.agreedFee : null,
+      entry.completedFee,
+    ]);
   }
   insertYouthState(database, state);
   insertCurrentSeasonInbox(database, state);
@@ -456,8 +473,9 @@ function insertTransferNegotiationState(database: SqliteWorldDatabase, state: Ca
     }
 
     let submittedOn: SqliteBindValue = null;
-    let offeredFee: SqliteBindValue = null;
-    let counterFee: SqliteBindValue = null;
+    let responseDueOn: SqliteBindValue = null;
+    const offeredFee: SqliteBindValue = negotiation.offeredFee;
+    const counterFee: SqliteBindValue = negotiation.counterFee ?? null;
     let counterIssuedOn: SqliteBindValue = null;
     let agreedFee: SqliteBindValue = null;
     let acceptedOn: SqliteBindValue = null;
@@ -470,6 +488,7 @@ function insertTransferNegotiationState(database: SqliteWorldDatabase, state: Ca
     let failedOn: SqliteBindValue = null;
     let completionFailureReason: SqliteBindValue = null;
     let completedOn: SqliteBindValue = null;
+    let completedFee: SqliteBindValue = null;
     let acceptedSource: SqliteBindValue = null;
     let activatedContractId: SqliteBindValue = null;
     let transferHistorySequence: SqliteBindValue = null;
@@ -479,30 +498,34 @@ function insertTransferNegotiationState(database: SqliteWorldDatabase, state: Ca
     switch (negotiation.status) {
       case "submitted":
         submittedOn = negotiation.submittedOn;
-        offeredFee = negotiation.offeredFee;
+        responseDueOn = negotiation.clock.responseDueOn;
         stageDeadlineDate = negotiation.clock.deadline;
         break;
       case "countered":
         submittedOn = negotiation.submittedOn;
-        offeredFee = negotiation.offeredFee;
-        counterFee = negotiation.counterFee;
+        responseDueOn = negotiation.clock.responseDueOn;
         counterIssuedOn = negotiation.counterIssuedOn;
         stageDeadlineDate = negotiation.clock.deadline;
         break;
       case "accepted":
+        submittedOn = negotiation.clock.submittedOn;
+        responseDueOn = negotiation.clock.responseDueOn;
         agreedFee = negotiation.agreedFee;
         acceptedOn = negotiation.acceptedOn;
+        stageDeadlineDate = negotiation.clock.deadline;
         break;
       case "player_offer_submitted":
         agreedFee = negotiation.agreedFee;
         clubAcceptedOn = negotiation.clubAcceptedOn;
         submittedOn = negotiation.submittedOn;
+        responseDueOn = negotiation.clock.responseDueOn;
         stageDeadlineDate = negotiation.clock.deadline;
         break;
       case "player_countered":
         agreedFee = negotiation.agreedFee;
         clubAcceptedOn = negotiation.clubAcceptedOn;
         submittedOn = negotiation.submittedOn;
+        responseDueOn = negotiation.clock.responseDueOn;
         counterIssuedOn = negotiation.counterIssuedOn;
         stageDeadlineDate = negotiation.clock.deadline;
         break;
@@ -522,6 +545,7 @@ function insertTransferNegotiationState(database: SqliteWorldDatabase, state: Ca
         break;
       case "completed":
         agreedFee = negotiation.agreedFee;
+        completedFee = negotiation.completedFee;
         completedOn = negotiation.completedOn;
         acceptedSource = negotiation.acceptedSource;
         activatedContractId = negotiation.activatedContractId;
@@ -544,11 +568,12 @@ function insertTransferNegotiationState(database: SqliteWorldDatabase, state: Ca
 
     database.run(`INSERT INTO transfer_negotiations
       (save_id, sort_order, negotiation_id, buying_club_id, selling_club_id, player_id, status,
-       submitted_on, offered_fee, counter_fee, counter_issued_on, agreed_fee, accepted_on,
+       public_value, initial_asking_price, current_asking_price,
+       submitted_on, response_due_on, offered_fee, counter_fee, counter_issued_on, agreed_fee, completed_fee, accepted_on,
        club_accepted_on, rejected_on, rejection_reason, withdrawn_on, expired_on, cancelled_on,
        failed_on, completion_failure_reason, completed_on, accepted_source, activated_contract_id,
        transfer_history_sequence, stage_deadline_date, stage_deadline_reason)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
       state.saveId,
       sortOrder,
       negotiation.id,
@@ -556,11 +581,16 @@ function insertTransferNegotiationState(database: SqliteWorldDatabase, state: Ca
       negotiation.sellingClubId,
       negotiation.playerId,
       negotiation.status,
+      negotiation.publicValue,
+      negotiation.initialAskingPrice,
+      negotiation.currentAskingPrice,
       submittedOn,
+      responseDueOn,
       offeredFee,
       counterFee,
       counterIssuedOn,
       agreedFee,
+      completedFee,
       acceptedOn,
       clubAcceptedOn,
       rejectedOn,
@@ -614,6 +644,7 @@ function insertPreliminaryAgreementState(database: SqliteWorldDatabase, state: C
     }
 
     let counterIssuedOn: SqliteBindValue = null;
+    let responseDueOn: SqliteBindValue = null;
     let agreedOn: SqliteBindValue = null;
     let acceptedSource: SqliteBindValue = null;
     let rejectedOn: SqliteBindValue = null;
@@ -630,10 +661,12 @@ function insertPreliminaryAgreementState(database: SqliteWorldDatabase, state: C
 
     switch (agreement.status) {
       case "offer_submitted":
+        responseDueOn = agreement.clock.responseDueOn;
         stageDeadlineDate = agreement.clock.deadline;
         break;
       case "countered":
         counterIssuedOn = agreement.counterIssuedOn;
+        responseDueOn = agreement.clock.responseDueOn;
         stageDeadlineDate = agreement.clock.deadline;
         break;
       case "agreed":
@@ -667,10 +700,10 @@ function insertPreliminaryAgreementState(database: SqliteWorldDatabase, state: C
 
     database.run(`INSERT INTO preliminary_agreements
       (save_id, sort_order, agreement_id, player_id, current_club_id, offering_club_id, current_contract_id,
-       created_on, future_starts_on, status, counter_issued_on, agreed_on, accepted_source, rejected_on,
+       created_on, response_due_on, future_starts_on, status, counter_issued_on, agreed_on, accepted_source, rejected_on,
        rejection_reason, withdrawn_on, expired_on, expiry_reason, cancelled_on, cancellation_reason,
        activated_on, activated_contract_id, stage_deadline_date, stage_deadline_reason)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
       state.saveId,
       sortOrder,
       agreement.id,
@@ -679,6 +712,7 @@ function insertPreliminaryAgreementState(database: SqliteWorldDatabase, state: C
       agreement.offeringClubId,
       agreement.currentContractId,
       agreement.createdOn,
+      responseDueOn,
       agreement.futureStartsOn,
       agreement.status,
       counterIssuedOn,
@@ -970,7 +1004,20 @@ function loadTransferNegotiationState(
     const playerIdVal = playerId(text(row, "player_id"));
     const status = text(row, "status") as TransferNegotiation["status"];
 
-    const baseParties = { id, buyingClubId, sellingClubId, playerId: playerIdVal };
+    const counterFeeValue = optionalNumber(row, "counter_fee");
+    const baseParties = {
+      id,
+      buyingClubId,
+      sellingClubId,
+      playerId: playerIdVal,
+      publicValue: nonNegativeMoney(number(row, "public_value")),
+      initialAskingPrice: nonNegativeMoney(number(row, "initial_asking_price")),
+      currentAskingPrice: nonNegativeMoney(number(row, "current_asking_price")),
+      offeredFee: nonNegativeMoney(number(row, "offered_fee")),
+      ...(counterFeeValue === undefined
+        ? {}
+        : { counterFee: nonNegativeMoney(counterFeeValue) }),
+    };
 
     switch (status) {
       case "submitted": {
@@ -979,10 +1026,9 @@ function loadTransferNegotiationState(
           ...baseParties,
           status,
           submittedOn: subOn,
-          offeredFee: nonNegativeMoney(number(row, "offered_fee")),
           clock: {
             submittedOn: subOn,
-            responseDueOn: subOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
             deadline: gameDate(number(row, "stage_deadline_date")),
           },
         };
@@ -994,25 +1040,31 @@ function loadTransferNegotiationState(
           ...baseParties,
           status,
           submittedOn: subOn,
-          offeredFee: nonNegativeMoney(number(row, "offered_fee")),
           counterFee: nonNegativeMoney(number(row, "counter_fee")),
           counterIssuedOn: gameDate(number(row, "counter_issued_on")),
           clock: {
             submittedOn: subOn,
-            responseDueOn: subOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
             deadline: gameDate(number(row, "stage_deadline_date")),
           },
         };
         break;
       }
-      case "accepted":
+      case "accepted": {
+        const submittedOn = gameDate(number(row, "submitted_on"));
         negotiations[id] = {
           ...baseParties,
           status,
           agreedFee: nonNegativeMoney(number(row, "agreed_fee")),
           acceptedOn: gameDate(number(row, "accepted_on")),
+          clock: {
+            submittedOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
+            deadline: gameDate(number(row, "stage_deadline_date")),
+          },
         };
         break;
+      }
       case "player_offer_submitted": {
         const offeredTerms = loadNegotiationTerms(database, save, "transfer_negotiation_terms", "negotiation_id", id, "offered");
         const demand = loadContractDemandSnapshot(database, save, "transfer_negotiation_evaluations", "transfer_negotiation_terms", "negotiation_id", id);
@@ -1027,7 +1079,7 @@ function loadTransferNegotiationState(
           demand,
           clock: {
             submittedOn: subOn,
-            responseDueOn: subOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
             deadline: gameDate(number(row, "stage_deadline_date")),
           },
         };
@@ -1050,7 +1102,7 @@ function loadTransferNegotiationState(
           evaluation,
           clock: {
             submittedOn: subOn,
-            responseDueOn: subOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
             deadline: gameDate(number(row, "stage_deadline_date")),
           },
         };
@@ -1092,6 +1144,7 @@ function loadTransferNegotiationState(
           ...baseParties,
           status,
           agreedFee: nonNegativeMoney(number(row, "agreed_fee")),
+          completedFee: nonNegativeMoney(number(row, "completed_fee")),
           completedOn: gameDate(number(row, "completed_on")),
           acceptedTerms,
           acceptedSource: text(row, "accepted_source") as any,
@@ -1183,7 +1236,7 @@ function loadPreliminaryAgreementState(
           demand,
           clock: {
             submittedOn: createdOn,
-            responseDueOn: createdOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
             deadline: gameDate(number(row, "stage_deadline_date")),
           },
         };
@@ -1202,7 +1255,7 @@ function loadPreliminaryAgreementState(
           evaluation,
           clock: {
             submittedOn: createdOn,
-            responseDueOn: createdOn,
+            responseDueOn: gameDate(number(row, "response_due_on")),
             deadline: gameDate(number(row, "stage_deadline_date")),
           },
         };
@@ -1474,19 +1527,43 @@ function insertYouthState(database: SqliteWorldDatabase, state: CareerState): vo
 function insertSeasonHistory(database: SqliteWorldDatabase, state: CareerState): void {
   for (const entry of state.seasonHistory ?? []) {
     const selected = entry.selectedClubFinish;
+    const playerStatistics = entry.playerStatistics;
     database.run(`INSERT INTO season_history
       (save_id, sequence_number, season_id, competition_id, champion_club_id, fixture_count, total_goals,
-       selected_position, selected_club_id, selected_played, selected_wins, selected_draws, selected_losses,
-       selected_goals_for, selected_goals_against, selected_goal_difference, selected_points)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+       participation_coverage, event_coverage, selected_position, selected_club_id, selected_played,
+       selected_wins, selected_draws, selected_losses, selected_goals_for, selected_goals_against,
+       selected_goal_difference, selected_points)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
       state.saveId, entry.sequenceNumber, entry.seasonId, entry.competitionId, entry.championClubId,
-      entry.aggregateGoals.fixtureCount, entry.aggregateGoals.totalGoals, ...tableRowValues(selected),
+      entry.aggregateGoals.fixtureCount, entry.aggregateGoals.totalGoals,
+      playerStatistics?.participationCoverage ?? "unavailable",
+      playerStatistics?.eventCoverage ?? "unavailable",
+      ...tableRowValues(selected),
     ]);
     entry.finalTable.forEach((row, sortOrder) => {
       database.run(`INSERT INTO season_table_rows
         (save_id, history_sequence_number, sort_order, position, club_id, played, wins, draws, losses,
          goals_for, goals_against, goal_difference, points)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [state.saveId, entry.sequenceNumber, sortOrder, ...tableRowValues(row)]);
+    });
+    playerStatistics?.rows.forEach((row, sortOrder) => {
+      database.run(`INSERT INTO season_player_statistics
+        (save_id, history_sequence_number, sort_order, player_id, starts, substitute_appearances,
+         minutes, rating_total, rating_samples, goals, assists, saves)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        state.saveId,
+        entry.sequenceNumber,
+        sortOrder,
+        row.playerId,
+        row.starts,
+        row.substituteAppearances,
+        row.minutes,
+        row.ratingTotal,
+        row.ratingSamples,
+        row.goals,
+        row.assists,
+        row.saves,
+      ]);
     });
   }
 }
@@ -1810,12 +1887,34 @@ function loadClubFinanceState(
 }
 
 function loadTransferHistory(database: SqliteWorldDatabase, save: SaveId): CareerState["transferHistory"] {
-  return database.queryAll(`SELECT sequence_number, occurred_on, buying_club_id, selling_club_id, player_id, transfer_fee
-    FROM transfer_history WHERE save_id = ? ORDER BY sequence_number`, [save]).map((row) => ({
-    sequenceNumber: number(row, "sequence_number"), occurredOn: gameDate(number(row, "occurred_on")),
-    buyingClubId: clubId(text(row, "buying_club_id")), sellingClubId: clubId(text(row, "selling_club_id")),
-    playerId: playerId(text(row, "player_id")), transferFee: nonNegativeMoney(number(row, "transfer_fee")),
-  }));
+  return database.queryAll(`SELECT sequence_number, movement_kind, occurred_on, buying_club_id,
+      selling_club_id, player_id, public_value, initial_asking_price, offered_fee,
+      counter_fee, agreed_fee, completed_fee
+    FROM transfer_history WHERE save_id = ? ORDER BY sequence_number`, [save]).map((row) => {
+    const common = {
+      sequenceNumber: number(row, "sequence_number"),
+      occurredOn: gameDate(number(row, "occurred_on")),
+      buyingClubId: clubId(text(row, "buying_club_id")),
+      playerId: playerId(text(row, "player_id")),
+      publicValue: nonNegativeMoney(number(row, "public_value")),
+      completedFee: nonNegativeMoney(number(row, "completed_fee")),
+    };
+    if (text(row, "movement_kind") === "free_agent_signing") {
+      return { ...common, kind: "free_agent_signing" as const };
+    }
+    const counterFee = optionalNumber(row, "counter_fee");
+    return {
+      ...common,
+      kind: "permanent_transfer" as const,
+      sellingClubId: clubId(text(row, "selling_club_id")),
+      initialAskingPrice: nonNegativeMoney(number(row, "initial_asking_price")),
+      offeredFee: nonNegativeMoney(number(row, "offered_fee")),
+      ...(counterFee === undefined
+        ? {}
+        : { counterFee: nonNegativeMoney(counterFee) }),
+      agreedFee: nonNegativeMoney(number(row, "agreed_fee")),
+    };
+  });
 }
 
 function loadYouthState(database: SqliteWorldDatabase, save: SaveId, gameState: CareerState["gameState"]): Pick<CareerState, "youthAcademyState"> | undefined {
@@ -1846,9 +1945,28 @@ function loadSeasonHistory(database: SqliteWorldDatabase, save: SaveId): Pick<Ca
   const seasonHistory: CareerSeasonArchiveEntry[] = historyRows.map((row) => {
     const sequenceNumber = number(row, "sequence_number");
     const finalTable = database.queryAll("SELECT * FROM season_table_rows WHERE save_id = ? AND history_sequence_number = ? ORDER BY sort_order", [save, sequenceNumber]).map((tableRow) => readTableRow(tableRow));
+    const playerStatistics: CareerPlayerSeasonStatistics = {
+      participationCoverage: text(row, "participation_coverage") as CareerPlayerStatisticsCoverage,
+      eventCoverage: text(row, "event_coverage") as CareerPlayerStatisticsCoverage,
+      rows: database.queryAll(
+        "SELECT * FROM season_player_statistics WHERE save_id = ? AND history_sequence_number = ? ORDER BY sort_order",
+        [save, sequenceNumber],
+      ).map((statisticsRow) => ({
+        playerId: playerId(text(statisticsRow, "player_id")),
+        starts: number(statisticsRow, "starts"),
+        substituteAppearances: number(statisticsRow, "substitute_appearances"),
+        minutes: number(statisticsRow, "minutes"),
+        ratingTotal: number(statisticsRow, "rating_total"),
+        ratingSamples: number(statisticsRow, "rating_samples"),
+        goals: number(statisticsRow, "goals"),
+        assists: number(statisticsRow, "assists"),
+        saves: number(statisticsRow, "saves"),
+      })),
+    };
     return { sequenceNumber, seasonId: seasonId(text(row, "season_id")), competitionId: competitionId(text(row, "competition_id")),
       finalTable, championClubId: clubId(text(row, "champion_club_id")), selectedClubFinish: readTableRow(row, "selected_"),
-      aggregateGoals: { fixtureCount: number(row, "fixture_count"), totalGoals: number(row, "total_goals") } };
+      aggregateGoals: { fixtureCount: number(row, "fixture_count"), totalGoals: number(row, "total_goals") },
+      playerStatistics };
   });
   return { seasonHistory };
 }

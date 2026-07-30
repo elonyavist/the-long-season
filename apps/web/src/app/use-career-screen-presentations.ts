@@ -1,4 +1,8 @@
 import type { CareerPostaFilter } from "@game/ui";
+import {
+  selectAskingPriceCurves,
+  selectPlayerValuationConfig,
+} from "@game/content";
 import { useMemo } from "react";
 
 import { buildCareerDashboard } from "../features/dashboard/build-career-dashboard";
@@ -96,13 +100,21 @@ export function useCareerScreenPresentations({
   const squad = useMemo(
     () => activeCareerState === undefined || matchPreparationState === undefined
       ? undefined
-      : presentCareerSquad(activeCareerState, matchPreparationState),
+      : presentCareerSquad(
+          activeCareerState,
+          matchPreparationState,
+          selectPlayerValuationConfig(activeCareerState.gameState.meta.calibrationVersions),
+        ),
     [activeCareerState, matchPreparationState],
   );
   const market = useMemo(
     () => activeCareerState === undefined
       ? undefined
-      : presentCareerMarket(activeCareerState),
+      : presentCareerMarket(
+          activeCareerState,
+          selectPlayerValuationConfig(activeCareerState.gameState.meta.calibrationVersions),
+          selectAskingPriceCurves(activeCareerState.gameState.meta.calibrationVersions),
+        ),
     [activeCareerState],
   );
   const tacticalBoardPlayers = useMemo(

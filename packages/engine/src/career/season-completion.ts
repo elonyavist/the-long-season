@@ -1,4 +1,5 @@
 import type { CareerState, FixtureId, SeasonId } from "@game/domain";
+import { orderedCareerFixtureIds } from "./next-fixture.ts";
 
 /** Invalid-state reasons for current-season completion checks. */
 export type CareerSeasonCompletionInvalidReason =
@@ -64,7 +65,7 @@ export function assessCareerSeasonCompletion(careerState: CareerState): CareerSe
   let fixtureCount = 0;
   let playedFixtureCount = 0;
 
-  for (const fixtureId of careerState.gameState.fixtureIds) {
+  for (const fixtureId of orderedCareerFixtureIds(careerState)) {
     const fixture = careerState.gameState.fixtures[fixtureId];
 
     if (fixture === undefined) {

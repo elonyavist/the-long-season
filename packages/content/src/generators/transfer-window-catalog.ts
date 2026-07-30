@@ -38,21 +38,27 @@ export interface TransferWindowTemplate {
 /**
  * Source-backed transfer-window templates for competitions the game can play.
  *
- * Only the current playable Italian professional third-tier demo competition
- * exists here. Adding another playable competition later requires its own cited
- * row; the game ships no speculative rows for leagues it cannot start.
+ * The focused demo competition and the three canonical Italian professional
+ * tiers share the same source-audited registration periods. Adding another
+ * playable competition requires its own cited row; the game ships no
+ * speculative rows for leagues it cannot start.
  *
  * FIGC 2026/27 professional registration periods: summer `2026-07-01..2026-09-01`,
  * winter `2027-01-02..2027-02-01`, both inclusive.
  */
+const FIGC_2026_27_PROFESSIONAL_TEMPLATE: TransferWindowTemplate = {
+  summerOpens: { month: 7, day: 1 },
+  summerCloses: { month: 9, day: 1 },
+  winterOpens: { month: 1, day: 2 },
+  winterCloses: { month: 2, day: 1 },
+  sourceKey: "figc-2026-27-professional",
+};
+
 const TRANSFER_WINDOW_TEMPLATES: Readonly<Record<string, TransferWindowTemplate>> = {
-  "competition:demo-third-division": {
-    summerOpens: { month: 7, day: 1 },
-    summerCloses: { month: 9, day: 1 },
-    winterOpens: { month: 1, day: 2 },
-    winterCloses: { month: 2, day: 1 },
-    sourceKey: "figc-2026-27-professional",
-  },
+  "competition:demo-third-division": FIGC_2026_27_PROFESSIONAL_TEMPLATE,
+  "competition:ita-1": FIGC_2026_27_PROFESSIONAL_TEMPLATE,
+  "competition:ita-2": FIGC_2026_27_PROFESSIONAL_TEMPLATE,
+  "competition:ita-3": FIGC_2026_27_PROFESSIONAL_TEMPLATE,
 };
 
 /** Returns the window template for a playable competition, or `undefined`. */

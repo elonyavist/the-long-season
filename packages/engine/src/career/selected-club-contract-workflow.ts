@@ -8,7 +8,9 @@ import {
   type CareerState,
   type ContractNegotiation,
   type GameDate,
+  type MarketBehaviorCalibrationConfig,
   type PlayerContract,
+  type PlayerWagePolicyConfig,
   type SeasonTransferWindows,
 } from "@game/domain";
 
@@ -20,6 +22,7 @@ import {
   continueCareerUntilAttention,
   type ContinueCareerUntilAttentionResult,
 } from "./continue-career.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 import { advanceContractNegotiations } from "./contract-negotiation.ts";
 import {
   advanceSelectedClubMarketLifecycles,
@@ -92,6 +95,11 @@ export function advanceSelectedClubWorkflowsToAttention(input: {
   readonly boundaryDate: GameDate;
   readonly additionalMessages?: readonly CareerInboxMessage[];
   readonly transferWindows?: SeasonTransferWindows;
+  /** Versioned public-value content used by any seller reply reached here. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Explicit wage policy used by contract and player-stage responses. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): AdvanceSelectedClubWorkflowsToAttentionResult {
   const startDate = input.careerState.gameState.calendar.currentDate;
   const boundaryDate = input.boundaryDate < startDate ? startDate : input.boundaryDate;
@@ -127,10 +135,18 @@ export function advanceSelectedClubWorkflowsToAttention(input: {
       if (beforeDue.stopReason === "attention") return finish(working, beforeDue);
     }
 
-    working = advanceContractNegotiations(working, nextDueDate, working.selectedClubId).careerState;
+    working = advanceContractNegotiations(
+      working,
+      nextDueDate,
+      input.wagePolicy,
+      working.selectedClubId,
+    ).careerState;
     working = advanceSelectedClubMarketLifecycles({
       careerState: working,
       throughDate: nextDueDate,
+      valuationConfig: input.valuationConfig,
+      wagePolicy: input.wagePolicy,
+      marketBehaviorPolicy: input.marketBehaviorPolicy,
       ...(input.transferWindows === undefined ? {} : { transferWindows: input.transferWindows }),
     });
     messages = mergeMessages(

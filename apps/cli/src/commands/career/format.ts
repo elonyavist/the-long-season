@@ -99,11 +99,29 @@ export function formatTransferHistoryLines(careerState: CliCareerState, text: Tr
     const base = text("career.historyEntry", {
       sequence: String(entry.sequenceNumber),
       player: playerLabel(entry.playerId, careerState.gameState),
-      seller: clubLabel(entry.sellingClubId, careerState.gameState),
+      seller: entry.kind === "permanent_transfer"
+        ? clubLabel(entry.sellingClubId, careerState.gameState)
+        : text("career.market.employment.free_agent"),
       buyer: clubLabel(entry.buyingClubId, careerState.gameState),
     });
 
-    return `  ${base}; ${text("career.historyFee")}: ${formatMoney(entry.transferFee)}; ${text(
+    const commercialFacts = entry.kind === "permanent_transfer"
+      ? [
+          `${text("career.historyPublicValue")}: ${formatMoney(entry.publicValue)}`,
+          `${text("career.historyAskingPrice")}: ${formatMoney(entry.initialAskingPrice)}`,
+          `${text("career.historyOfferedFee")}: ${formatMoney(entry.offeredFee)}`,
+          ...(entry.counterFee === undefined
+            ? []
+            : [`${text("career.historyCounterFee")}: ${formatMoney(entry.counterFee)}`]),
+          `${text("career.historyAgreedFee")}: ${formatMoney(entry.agreedFee)}`,
+          `${text("career.historyFee")}: ${formatMoney(entry.completedFee)}`,
+        ]
+      : [
+          `${text("career.historyPublicValue")}: ${formatMoney(entry.publicValue)}`,
+          `${text("career.historyFee")}: ${formatMoney(entry.completedFee)}`,
+        ];
+
+    return `  ${base}; ${commercialFacts.join("; ")}; ${text(
       "career.historyDate",
     )}: ${toISO(entry.occurredOn)}`;
   });
@@ -145,7 +163,9 @@ function affectedClubIds(careerState: CliCareerState): readonly ClubId[] {
 
   for (const entry of careerState.transferHistory) {
     pushUniqueClubId(clubIds, seen, entry.buyingClubId);
-    pushUniqueClubId(clubIds, seen, entry.sellingClubId);
+    if (entry.kind === "permanent_transfer") {
+      pushUniqueClubId(clubIds, seen, entry.sellingClubId);
+    }
   }
 
   return clubIds;

@@ -9,6 +9,7 @@ import {
   isPotentialAtLeastCurrent,
   readPlayerAbility,
   roleCurrentAbility,
+  rolePotentialAbility,
   seasonId,
   type ClubId,
 } from "@game/domain";
@@ -17,6 +18,7 @@ import { fromISO } from "@game/shared";
 import {
   generateInitialYouthAcademies,
   generateSeasonalYouthIntakePlayers,
+  initialYouthPlayerId,
   INITIAL_YOUTH_PLAYERS_PER_CLUB,
   type InitialYouthAcademyClubContext,
   YOUTH_ACADEMY_POSITION_PLAN,
@@ -284,6 +286,41 @@ test("generateSeasonalYouthIntakePlayers writes explicit role identity fields", 
     assert.deepEqual(generated.player.naturalRoles, [expectedRole]);
     assert.equal(generated.player.roleFamiliarity?.[expectedRole], "natural");
   }
+});
+
+test("seasonal youth intake applies a potential-six floor only to its world allocation", () => {
+  const inputValue = seasonalInput("annual-academy-exception");
+  const candidate = generateSeasonalYouthIntakePlayers(inputValue).generatedPlayers[0];
+  assert.ok(candidate !== undefined);
+  const result = generateSeasonalYouthIntakePlayers({
+    ...inputValue,
+    potentialSixPlayerIds: [candidate.player.id],
+  });
+  const exceptional = result.generatedPlayers.filter(({ player }) =>
+    Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(player.primaryRole))) >= 17
+  );
+
+  assert.deepEqual(exceptional.map(({ player }) => player.id), [candidate.player.id]);
+  assert.equal(exceptional[0]?.archetypeKey, "rare_prodigy");
+});
+
+test("initial youth academy applies a potential-six floor only to its world allocation", () => {
+  const inputValue = input("initial-academy-exception");
+  const firstClubId = inputValue.clubIds[0];
+  assert.ok(firstClubId !== undefined);
+  const forcedId = initialYouthPlayerId(firstClubId, 1);
+  const result = generateInitialYouthAcademies({
+    ...inputValue,
+    potentialSixPlayerIds: [forcedId],
+  });
+  const exceptional = result.playerIds.filter((playerId) => {
+    const player = result.players[playerId];
+    return player !== undefined
+      && Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(player.primaryRole))) >= 17;
+  });
+
+  assert.deepEqual(exceptional, [forcedId]);
+  assert.equal(result.playerArchetypes[forcedId], "rare_prodigy");
 });
 
 function input(worldSeed: string): Parameters<typeof generateInitialYouthAcademies>[0] {

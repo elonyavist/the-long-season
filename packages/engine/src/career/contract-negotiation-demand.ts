@@ -1,4 +1,8 @@
 import {
+  deriveCalibratedAnnualWage,
+  deriveCalibratedContractBonuses,
+  deriveContinuousPlayerWageRating,
+  derivePreferredContractDurationYears,
   nonNegativeMoney,
   type AgreedSquadStatus,
   type CareerState,
@@ -12,6 +16,7 @@ import {
   type Money,
   type PlayerContract,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type PlayerRole,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
@@ -38,6 +43,8 @@ export interface DeriveContractDemandInput {
   readonly playerId: PlayerId;
   readonly clubId: ClubId;
   readonly evaluatedOn: GameDate;
+  /** Validated, version-linked wage and contract policy. */
+  readonly wagePolicy: PlayerWagePolicyConfig;
   /** Existing agreement retained as leverage when the destination club differs. */
   readonly currentContract?: PlayerContract;
   /** Allows Step 08 free-agent scenarios to reuse this policy before signing. */
@@ -87,10 +94,19 @@ export function deriveContractDemand(input: DeriveContractDemandInput): Contract
   const remainingContractDays = isFreeAgent || currentContract === undefined
     ? 0
     : Math.max(0, currentContract.endsOn - input.evaluatedOn);
-  const durationYears = preferredDurationYears(age, ability.potentialAbility - ability.currentAbility);
-  const preferredAnnualWage = preferredWage({
+  const potentialGapStars = Math.max(
+    0,
+    deriveContinuousPlayerWageRating(ability.potentialAbility, input.wagePolicy.ratingScale)
+      - deriveContinuousPlayerWageRating(ability.currentAbility, input.wagePolicy.ratingScale),
+  );
+  const durationYears = derivePreferredContractDurationYears({
+    policy: input.wagePolicy,
+    age,
+    potentialGapStars,
+  });
+  const preferredAnnualWage = deriveCalibratedAnnualWage({
+    policy: input.wagePolicy,
     category: club.category,
-    reputation: club.reputation,
     currentAbility: ability.currentAbility,
     potentialAbility: ability.potentialAbility,
     age,
@@ -99,13 +115,25 @@ export function deriveContractDemand(input: DeriveContractDemandInput): Contract
     remainingContractDays,
     isFreeAgent,
   });
-  const preferredTerms = termsFor(role, preferredAnnualWage, expectedSquadStatus, durationYears, 10_000);
-  const minimumTerms = termsFor(
+  const preferredTerms = termsFor(
+    input.wagePolicy,
     role,
-    nonNegativeMoney(roundMoney(preferredAnnualWage * 0.9, 10_000)),
+    preferredAnnualWage,
     expectedSquadStatus,
-    Math.max(1, durationYears - 1),
-    8_000,
+    durationYears,
+    10_000,
+  );
+  const termsPolicy = input.wagePolicy.wageFinanceCalibration.contractTermsPolicy;
+  const minimumTerms = termsFor(
+    input.wagePolicy,
+    role,
+    nonNegativeMoney(roundMoney(
+      (preferredAnnualWage * termsPolicy.minimumWageMultiplierBasisPoints) / 10_000,
+      input.wagePolicy.wageFinanceCalibration.annualWagePolicy.roundingMinorUnits,
+    )),
+    expectedSquadStatus,
+    Math.max(1, durationYears - termsPolicy.preferredDuration.minimumDurationReductionYears),
+    termsPolicy.minimumBonusMultiplierBasisPoints,
   );
 
   return {
@@ -200,86 +228,23 @@ function expectedStatus(input: {
   return "fringe_player";
 }
 
-function preferredWage(input: {
-  readonly category: ClubCategory;
-  readonly reputation: number;
-  readonly currentAbility: number;
-  readonly potentialAbility: number;
-  readonly age: number;
-  readonly status: AgreedSquadStatus;
-  readonly currentAnnualWage: Money;
-  readonly remainingContractDays: number;
-  readonly isFreeAgent: boolean;
-}): Money {
-  const categoryFactor: Record<ClubCategory, number> = {
-    first_division: 3.6,
-    second_division: 1.8,
-    third_division: 1,
-  };
-  const statusFactor: Record<AgreedSquadStatus, number> = {
-    key_player: 1.35,
-    regular_starter: 1.15,
-    squad_player: 0.9,
-    fringe_player: 0.72,
-    prospect: 0.65,
-  };
-  const potentialRoom = Math.max(0, input.potentialAbility - input.currentAbility);
-  const agePremium = input.age <= 23
-    ? 1 + Math.min(0.18, potentialRoom * 0.035)
-    : input.age <= 29
-      ? 1.06
-      : input.age >= 33
-        ? 0.94
-        : 1;
-  const leverage = input.isFreeAgent ? 1.12 : input.remainingContractDays > 730 ? 1.08 : 1;
-  const marketWage = (
-    25_000_00
-    + Math.round(input.currentAbility * input.currentAbility * 1_850_00)
-    + Math.max(0, input.reputation) * 3_000_00
-  ) * categoryFactor[input.category] * statusFactor[input.status] * agePremium * leverage;
-  const renewalFloor = input.currentAnnualWage * (input.age >= 33 ? 1 : input.age <= 24 ? 1.12 : 1.06);
-  return nonNegativeMoney(roundMoney(Math.max(marketWage, renewalFloor), 10_000));
-}
-
-function preferredDurationYears(age: number, potentialRoom: number): number {
-  if (age <= 20 && potentialRoom >= 3) return 5;
-  if (age <= 23) return 4;
-  if (age <= 27) return 3;
-  if (age <= 31) return 2;
-  return 1;
-}
-
 function termsFor(
+  policy: PlayerWagePolicyConfig,
   role: PlayerRole,
   annualWage: Money,
   squadStatus: AgreedSquadStatus,
   durationYears: number,
   bonusBasisPoints: number,
 ): ContractOfferTerms {
-  const scale = bonusBasisPoints / 10_000;
-  const signingMultiplier = squadStatus === "key_player" ? 0.14 : squadStatus === "regular_starter" ? 0.1 : 0.06;
-  const appearanceBonus = nonNegativeMoney(roundMoney((annualWage / 110) * scale, 100));
-  const bonuses: {
-    signingBonus: Money;
-    appearanceBonus: Money;
-    goalBonus?: Money;
-    cleanSheetBonus?: Money;
-  } = {
-    signingBonus: nonNegativeMoney(roundMoney(annualWage * signingMultiplier * scale, 1_000)),
-    appearanceBonus,
-  };
-  if (role !== "goalkeeper") bonuses.goalBonus = nonNegativeMoney(roundMoney(appearanceBonus * 1.4, 100));
-  if (DEFENSIVE_ROLES.has(role)) bonuses.cleanSheetBonus = nonNegativeMoney(roundMoney(appearanceBonus, 100));
+  const bonuses = deriveCalibratedContractBonuses({
+    policy,
+    role,
+    annualWage,
+    status: squadStatus,
+    scaleBasisPoints: bonusBasisPoints,
+  });
   return { durationYears, annualWage, squadStatus, bonuses };
 }
-
-const DEFENSIVE_ROLES = new Set<PlayerRole>([
-  "goalkeeper",
-  "center_back",
-  "full_back",
-  "wing_back",
-  "defensive_midfielder",
-]);
 
 const STATUS_ORDER: readonly AgreedSquadStatus[] = [
   "prospect",

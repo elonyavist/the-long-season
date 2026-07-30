@@ -135,8 +135,8 @@ describe("buildCareerMatchPreparationView", () => {
     ]);
   });
 
-  it("labels two-forward formations as two central attackers", () => {
-    for (const selectedFormationId of ["3-5-2", "5-3-2"] as const) {
+  it("labels the right and left strikers explicitly in every two-forward formation", () => {
+    for (const selectedFormationId of ["4-4-2", "4-3-1-2", "3-5-2", "5-3-2"] as const) {
       const view = buildCareerMatchPreparationView({
         ...baseInput(),
         selectedFormationId,
@@ -144,8 +144,8 @@ describe("buildCareerMatchPreparationView", () => {
       const forwardSlots = view.formation.selectedSlots.filter((slot) => slot.slotKey === "st-right" || slot.slotKey === "st-left");
 
       expect(forwardSlots.map((slot) => slot.labelKey)).toEqual([
-        "career.matchPreparation.slot.st",
-        "career.matchPreparation.slot.st",
+        "career.matchPreparation.slot.stRight",
+        "career.matchPreparation.slot.stLeft",
       ]);
     }
   });

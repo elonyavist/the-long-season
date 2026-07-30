@@ -1,13 +1,19 @@
 import {
+  selectPlayerPotentialProjectionPolicy,
+  selectPlayerWagePolicyConfig,
+} from "@game/content";
+import {
   checkContractOfferAffordability,
-  DEFAULT_PLAYER_VALUATION_CONFIG,
   derivePlayerValuation,
-  derivePublicClubPlayerAssessments,
+  derivePublicPlayerAssessments,
   findNextFixtureEligibilityBlockers,
+  selectCareerPlayerStatistics,
   type CareerFinanceRejectionReason,
+  type PlayerValuationConfig,
 } from "@game/engine";
 import { toISO } from "@game/shared";
 import {
+  CAREER_MATCH_PREPARATION_FORMATIONS,
   buildCareerPlayerProfileView,
   careerMoneyFromMinorUnits,
   hasCareerContractExpiryAlert,
@@ -29,6 +35,7 @@ import {
   type TacticalBoardSquadPlayer,
 } from "../tactics-board/tactical-board-squad";
 import type { TacticalBoardRoleSuitability } from "../tactics-board/tactical-board-suitability";
+import type { CareerSquadPlacementSlot } from "./career-squad-placement";
 
 type Money = CareerContractTermsInput["annualWage"];
 type ContractOfferTerms = CareerContractTermsInput;
@@ -48,6 +55,10 @@ export type CareerSquadPresentation =
       currentDateIso: string;
       players: readonly CareerSquadPlayerInput[];
       profilesByPlayerId: ReadonlyMap<string, CareerPlayerProfileView>;
+      placementContext: Readonly<{
+        lineupSlots: readonly CareerSquadPlacementSlot[];
+        benchSlots: readonly CareerSquadPlacementSlot[];
+      }>;
     }>
   | Readonly<{
       status: "error";
@@ -101,6 +112,9 @@ export function previewCareerContractOffer(
     clubId: career.selectedClubId,
     replacedContractId: contractId,
     terms,
+    wagePolicy: selectPlayerWagePolicyConfig(
+      career.gameState.meta.calibrationVersions,
+    ),
   });
   if (result.status === "rejected") {
     return {
@@ -133,12 +147,13 @@ export function previewCareerContractOffer(
  * Projects the selected club's canonical roster without copying football rules.
  *
  * Hidden ability numbers remain inside the engine. The web receives only
- * public club-relative levels, exact current attributes, and deterministic
+ * public global ratings, exact current attributes, and deterministic
  * market value already derived by approved package APIs.
  */
 export function presentCareerSquad(
   career: WebCareerState,
   draft: MatchPreparationDraft,
+  valuationConfig: PlayerValuationConfig,
 ): CareerSquadPresentation {
   const club = career.gameState.clubs[career.selectedClubId];
   const currentDate = career.gameState.calendar.currentDate;
@@ -158,6 +173,24 @@ export function presentCareerSquad(
     return player === undefined ? [] : [player];
   });
   if (players.length !== club.playerIds.length) {
+    return missingData(club.name, currentDateIso);
+  }
+
+  const formation = CAREER_MATCH_PREPARATION_FORMATIONS.find(
+    (candidate) => candidate.formationId === draft.selectedFormationId,
+  );
+  if (
+    formation === undefined
+    || draft.tacticalBoardDraft.baseFormationId !== draft.selectedFormationId
+    || formation.slots.length !== draft.tacticalBoardDraft.slots.length
+  ) {
+    return missingData(club.name, currentDateIso);
+  }
+  const formationSlotByKey = new Map(formation.slots.map((slot) => [slot.slotKey, slot]));
+  if (
+    formationSlotByKey.size !== formation.slots.length
+    || draft.tacticalBoardDraft.slots.some((slot) => !formationSlotByKey.has(slot.slotId))
+  ) {
     return missingData(club.name, currentDateIso);
   }
 
@@ -182,7 +215,14 @@ export function presentCareerSquad(
     }),
   );
   const assessmentById = new Map(
-    derivePublicClubPlayerAssessments(players).map((assessment) => [String(assessment.playerId), assessment]),
+    derivePublicPlayerAssessments({
+      ratingScale: valuationConfig.ratingScale,
+      potentialProjectionPolicy: selectPlayerPotentialProjectionPolicy(
+        career.gameState.meta.calibrationVersions,
+      ),
+      currentDate,
+      players,
+    }).map((assessment) => [String(assessment.playerId), assessment]),
   );
   const registrationByPlayerId = new Map(
     seniorSquad.registrationIds.flatMap((registrationId) => {
@@ -258,30 +298,37 @@ export function presentCareerSquad(
 
     const valuation = derivePlayerValuation({
       player,
-      club,
       currentDate,
-      contract,
-      currentForm: Number(dynamic.form),
-      config: DEFAULT_PLAYER_VALUATION_CONFIG,
+      config: valuationConfig,
+      marketContext: {
+        kind: "contracted",
+        division: club.category,
+      },
     });
     const remainingDays = Math.max(0, contract.endsOn - currentDate);
     const selection = selectionFor(playerId, startingIds, substituteIds);
     const availabilityReason = availabilityByPlayerId.get(playerId);
     const availabilityReasons = availabilityReason === undefined ? [] : [availabilityReason];
     const lineupSlotChoices = draft.tacticalBoardDraft.slots.map((slot) => {
+      const formationSlot = formationSlotByKey.get(slot.slotId);
+      if (formationSlot === undefined) {
+        throw new Error(`Missing formation slot for Squad placement: ${slot.slotId}`);
+      }
       const occupantAssessment = slot.playerId === null ? undefined : assessmentById.get(slot.playerId);
       const occupantCondition = slot.playerId === null
         ? undefined
         : dynamicStateByPlayerId.get(slot.playerId)?.fitness;
       return {
         slotKey: slot.slotId,
-        labelKey: `career.player.role.${slot.canonicalRole}`,
+        labelKey: formationSlot.labelKey,
         role: slot.canonicalRole,
         suitability: toPositionSuitability(tacticalPlayer.suitabilityByRole[slot.role]),
         ...(slot.playerId === null ? {} : {
           occupantPlayerId: slot.playerId,
           occupantName: tacticalPlayerById.get(slot.playerId)?.name ?? slot.playerId,
-          ...(occupantAssessment === undefined ? {} : { occupantCurrentLevel: occupantAssessment.currentLevel }),
+          ...(occupantAssessment === undefined
+            ? {}
+            : { occupantCurrentRating: occupantAssessment.currentRating }),
           ...(occupantCondition === undefined ? {} : { occupantCondition: Number(occupantCondition) }),
         }),
       };
@@ -289,6 +336,10 @@ export function presentCareerSquad(
     const contractHistory = contractHistoryByPlayerId.get(playerId) ?? [];
     const supportedBonusFields = contractBonusFields(contract);
     const negotiation = contractNegotiationByPlayerId.get(playerId);
+    const statistics = selectCareerPlayerStatistics({
+      careerState: career,
+      playerId: player.id,
+    });
     const profile = buildCareerPlayerProfileView({
       playerId,
       shirtNumber: registration.shirtNumber,
@@ -305,8 +356,12 @@ export function presentCareerSquad(
       availabilityReasons,
       value: valuation.value,
       currency: finance.currency,
-      currentLevel: assessment.currentLevel,
-      potentialLevel: assessment.potentialLevel,
+      currentRating: assessment.currentRating,
+      potentialRange: {
+        lowerStars: assessment.potentialProjection.lowerRating.stars,
+        upperStars: assessment.potentialProjection.upperRating.stars,
+      },
+      statistics,
       contract: {
         activeContract: {
           contractId: String(contract.id),
@@ -350,8 +405,11 @@ export function presentCareerSquad(
       availabilityReasons,
       value: valuation.value,
       currency: finance.currency,
-      currentLevel: assessment.currentLevel,
-      potentialLevel: assessment.potentialLevel,
+      currentRating: assessment.currentRating,
+      potentialRange: {
+        lowerStars: assessment.potentialProjection.lowerRating.stars,
+        upperStars: assessment.potentialProjection.upperRating.stars,
+      },
       hasExpiringContract: hasCareerContractExpiryAlert(remainingDays),
       lineupSlotChoices,
       ...(selectedLineupSlotKey === undefined ? {} : { selectedLineupSlotKey }),
@@ -366,6 +424,18 @@ export function presentCareerSquad(
     currentDateIso,
     players: playerInputs,
     profilesByPlayerId,
+    placementContext: {
+      lineupSlots: draft.tacticalBoardDraft.slots.map((slot) => ({
+        slotKey: slot.slotId,
+        ...(slot.playerId === null ? {} : { playerId: slot.playerId }),
+      })),
+      benchSlots: matchPreparationBenchSlotKeys().map((slotKey) => ({
+        slotKey,
+        ...(draft.selectedBenchPlayerIdsBySlot[slotKey] === undefined
+          ? {}
+          : { playerId: draft.selectedBenchPlayerIdsBySlot[slotKey] }),
+      })),
+    },
   };
 }
 

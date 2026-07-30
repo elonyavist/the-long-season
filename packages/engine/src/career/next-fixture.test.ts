@@ -123,6 +123,62 @@ test("findNextCareerFixture reports missing selected club as invalid state", () 
   });
 });
 
+test("findNextCareerFixture resolves the selected club through canonical competition membership", () => {
+  const selectedClubId = clubId("club:selected");
+  const selectedOpponentId = clubId("club:selected-opponent");
+  const otherClubId = clubId("club:other");
+  const otherOpponentId = clubId("club:other-opponent");
+  const firstCompetitionId = competitionId("competition:first");
+  const secondCompetitionId = competitionId("competition:second");
+  const unrelatedFixture = fixtureFixture(
+    fixtureId("fixture:first:season:000001"),
+    otherClubId,
+    otherOpponentId,
+    false,
+    firstCompetitionId,
+  );
+  const selectedFixture = fixtureFixture(
+    fixtureId("fixture:second:season:000001"),
+    selectedOpponentId,
+    selectedClubId,
+    false,
+    secondCompetitionId,
+  );
+  const base = gameStateFixture(
+    [
+      clubFixture(selectedClubId),
+      clubFixture(selectedOpponentId),
+      clubFixture(otherClubId),
+      clubFixture(otherOpponentId),
+    ],
+    [unrelatedFixture, selectedFixture],
+  );
+  const state = createCareerState({
+    saveId: saveId("save:multi-next"),
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
+    selectedClubId,
+    gameState: {
+      ...base,
+      domesticCompetitionWorld: {
+        competitionIds: [firstCompetitionId, secondCompetitionId],
+        competitions: {
+          [firstCompetitionId]: competitionFixture(firstCompetitionId, [otherClubId, otherOpponentId]),
+          [secondCompetitionId]: competitionFixture(secondCompetitionId, [selectedClubId, selectedOpponentId]),
+        },
+        seasonHistory: [],
+      },
+    },
+    transferHistory: [],
+  });
+
+  const result = findNextCareerFixture(state);
+  assert.equal(result.status, "found");
+  assert.equal(
+    result.status === "found" ? result.fixtureId : undefined,
+    selectedFixture.id,
+  );
+});
+
 function careerStateFixture(input: {
   readonly selectedClubId: ClubId;
   readonly clubs: readonly Club[];
@@ -184,10 +240,16 @@ function clubFixture(id: ClubId): Club {
   };
 }
 
-function fixtureFixture(id: Fixture["id"], homeClubId: ClubId, awayClubId: ClubId, played = false): Fixture {
+function fixtureFixture(
+  id: Fixture["id"],
+  homeClubId: ClubId,
+  awayClubId: ClubId,
+  played = false,
+  fixtureCompetitionId = competitionId("competition:test"),
+): Fixture {
   return {
     id,
-    competitionId: competitionId("competition:test"),
+    competitionId: fixtureCompetitionId,
     seasonId: seasonId("season:test"),
     roundNumber: 1,
     date: gameDate(20_000),
@@ -203,4 +265,21 @@ function fixtureFixture(id: Fixture["id"], homeClubId: ClubId, awayClubId: ClubI
         }
       : {}),
   };
+}
+
+function competitionFixture(id: ReturnType<typeof competitionId>, clubIds: readonly ClubId[]) {
+  return {
+    id,
+    name: String(id),
+    clubIds,
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: null,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
+  } as const;
 }

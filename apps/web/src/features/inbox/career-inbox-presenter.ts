@@ -17,10 +17,6 @@ export interface CareerInboxPresentation {
   readonly railView: CareerInboxView;
 }
 
-const DEMO_COMPETITION_NAMES: Readonly<Record<string, string>> = {
-  "competition:demo-third-division": "Demo Third Division",
-};
-
 /**
  * Maps current-season career facts onto framework-free Posta read models.
  *
@@ -47,11 +43,15 @@ export function presentCareerInbox(input: {
     const opponent = opponentId === undefined
       ? undefined
       : input.careerState.gameState.clubs[opponentId];
+    const competition = fixture === undefined
+      ? undefined
+      : input.careerState.gameState.domesticCompetitionWorld
+        ?.competitions[fixture.competitionId];
     const fixtureFacts = fixture === undefined || opponent === undefined
       ? undefined
       : {
           opponentName: opponent.name,
-          competitionName: DEMO_COMPETITION_NAMES[String(fixture.competitionId)] ?? "Competition",
+          competitionName: competition?.name ?? "Competition",
           roundNumber: fixture.roundNumber,
           venue: fixture.homeClubId === input.careerState.selectedClubId
             ? "home" as const

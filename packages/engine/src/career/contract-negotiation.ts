@@ -24,6 +24,7 @@ import {
   type GameState,
   type PlayerContract,
   type PlayerId,
+  type PlayerWagePolicyConfig,
   type SeniorSquadState,
 } from "@game/domain";
 import { addDays, deriveRng, fromISO, toISO } from "@game/shared";
@@ -231,6 +232,7 @@ export function reviseContractOffer(input: ReviseContractOfferInput): ContractNe
 /** Input for one explicit selected-club renewal proposal. */
 export interface OfferSelectedClubRenewalInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly negotiationId: ContractNegotiationId;
   readonly playerId: PlayerId;
   readonly offeredOn: GameDate;
@@ -240,6 +242,7 @@ export interface OfferSelectedClubRenewalInput {
 /** Input for atomically creating and submitting one explicit club renewal. */
 export interface OfferContractRenewalInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly negotiationId: ContractNegotiationId;
   readonly playerId: PlayerId;
   readonly clubId: ClubId;
@@ -301,6 +304,7 @@ export function offerContractRenewal(input: OfferContractRenewalInput): Contract
   const affordability = checkContractOfferAffordability({
     careerState: input.careerState,
     clubId: input.clubId,
+    wagePolicy: input.wagePolicy,
     replacedContractId: currentContract.id,
     terms: input.terms,
   });
@@ -326,6 +330,7 @@ export function offerContractRenewal(input: OfferContractRenewalInput): Contract
 export function offerSelectedClubRenewal(input: OfferSelectedClubRenewalInput): ContractNegotiationCommandResult {
   return offerContractRenewal({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
     negotiationId: input.negotiationId,
     playerId: input.playerId,
     clubId: input.careerState.selectedClubId,
@@ -337,6 +342,7 @@ export function offerSelectedClubRenewal(input: OfferSelectedClubRenewalInput): 
 /** Input for committing a draft to a delayed player response. */
 export interface SubmitContractOfferInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly negotiationId: ContractNegotiationId;
   readonly submittedOn: GameDate;
 }
@@ -356,6 +362,7 @@ export function submitContractOffer(input: SubmitContractOfferInput): ContractNe
   const affordability = checkContractOfferAffordability({
     careerState: input.careerState,
     clubId: negotiation.clubId,
+    wagePolicy: input.wagePolicy,
     replacedContractId: negotiation.currentContractId,
     terms: negotiation.draft.terms,
   });
@@ -393,6 +400,7 @@ export interface AdvanceContractNegotiationsResult {
 export function advanceContractNegotiations(
   careerState: CareerState,
   throughDate: GameDate,
+  wagePolicy: PlayerWagePolicyConfig,
   clubFilter?: ClubId | ReadonlySet<ClubId>,
 ): AdvanceContractNegotiationsResult {
   const initialState = careerState.contractNegotiationState;
@@ -523,6 +531,7 @@ export function advanceContractNegotiations(
     const snapshot = careerSnapshot();
     const demand = deriveContractDemand({
       careerState: snapshot,
+      wagePolicy,
       playerId: negotiation.playerId,
       clubId: negotiation.clubId,
       evaluatedOn: responseDate,
@@ -567,6 +576,7 @@ export function advanceContractNegotiations(
     const affordability = checkContractOfferAffordability({
       careerState: snapshot,
       clubId: negotiation.clubId,
+      wagePolicy,
       replacedContractId: negotiation.currentContractId,
       terms: negotiation.submittedOffer.terms,
     });
@@ -714,6 +724,7 @@ function responseDelayDays(
 /** Input for accepting or rejecting a player's current counteroffer. */
 export interface ResolveContractCounterInput {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly negotiationId: ContractNegotiationId;
   readonly decidedOn: GameDate;
 }
@@ -742,6 +753,7 @@ export function acceptContractCounterOffer(input: ResolveContractCounterInput): 
   }
   return activateAcceptedTerms({
     careerState: input.careerState,
+    wagePolicy: input.wagePolicy,
     negotiation,
     acceptedOn: input.decidedOn,
     acceptedTerms: negotiation.counterOffer.terms,
@@ -882,6 +894,7 @@ function recordReleaseAtContractExpiry(
 
 function activateAcceptedTerms(input: {
   readonly careerState: CareerState;
+  readonly wagePolicy: PlayerWagePolicyConfig;
   readonly negotiation: Extract<ContractNegotiation, { readonly status: "awaiting_response" | "countered" }>;
   readonly acceptedOn: GameDate;
   readonly acceptedTerms: ContractOfferTerms;
@@ -892,6 +905,7 @@ function activateAcceptedTerms(input: {
   const affordability = checkContractOfferAffordability({
     careerState: input.careerState,
     clubId: input.negotiation.clubId,
+    wagePolicy: input.wagePolicy,
     replacedContractId: input.negotiation.currentContractId,
     terms: input.acceptedTerms,
   });

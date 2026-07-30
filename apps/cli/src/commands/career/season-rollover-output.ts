@@ -82,12 +82,16 @@ function formatCareerRolloverInvalidReason(reason: string, text: Translator): st
       return text("career.rollover.reason.fixtureAwayClubNotFound");
     case "no_current_season_fixtures":
       return text("career.rollover.reason.noCurrentSeasonFixtures");
-    case "multiple_current_season_competitions":
-      return text("career.rollover.reason.multipleCurrentSeasonCompetitions");
+    case "fixture_id_collision":
+      return text("career.rollover.reason.fixtureIdCollision");
     case "season_table_empty":
       return text("career.rollover.reason.seasonTableEmpty");
     case "selected_club_not_in_table":
       return text("career.rollover.reason.selectedClubNotInTable");
+    case "promotion_relegation_invalid":
+      return text("career.rollover.reason.promotionRelegationInvalid");
+    case "finance_lifecycle_rejected":
+      return text("career.rollover.reason.financeLifecycleRejected");
     default:
       return reason;
   }

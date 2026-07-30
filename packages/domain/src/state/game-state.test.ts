@@ -7,7 +7,7 @@ import type { Player, PlayerAbilities, PlayerDynamicState } from "../entities/pl
 import { clubId, competitionId, fixtureId, playerId, seasonId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import { abilityValue, stateValue } from "../value-objects/rating.ts";
-import type { GameState } from "./game-state.ts";
+import { createGameState } from "./game-state.ts";
 
 /**
  * Builds a complete 25-attribute ability object with one repeated value.
@@ -116,11 +116,20 @@ test("GameState fixture keeps lookup records separate from ordered ID arrays", (
     awayClubId: secondClubId,
   };
 
-  const state: GameState = {
+  const state = createGameState({
     meta: {
       seed: "demo-001",
       rngAlgorithmVersion: "sfc32-v1",
       saveSchemaVersion: 1,
+      calibrationVersions: {
+        topologyDecisionId: "fictional-three-tier-v1",
+        playerRatingScaleVersion: "rating-v1",
+        playerMarketCalibrationVersion: "market-v1",
+        valuationCurvesVersion: "value-v1",
+        askingPriceCurvesVersion: "asking-v1",
+        marketBehaviorCalibrationVersion: "behavior-v1",
+        wageFinanceCalibrationVersion: "wage-v1",
+      },
     },
     calendar: {
       currentDate: gameDate(20_000),
@@ -144,10 +153,32 @@ test("GameState fixture keeps lookup records separate from ordered ID arrays", (
       [firstFixtureId]: firstFixture,
     },
     fixtureIds: [firstFixtureId],
-  };
+    domesticCompetitionWorld: {
+      competitionIds: [firstFixture.competitionId],
+      competitions: {
+        [firstFixture.competitionId]: {
+          id: firstFixture.competitionId,
+          name: "Test Competition",
+          clubIds: [firstClubId, secondClubId],
+          matchRules: {
+            maximumSubstitutions: 5,
+            substitutionWindowLimit: null,
+            allowsPlayerReentry: false,
+            yellowCardAccumulationThreshold: 5,
+            straightRedSuspensionMatches: 3,
+            secondYellowSuspensionMatches: 1,
+            yellowAccumulationSuspensionMatches: 1,
+          },
+        },
+      },
+      seasonHistory: [],
+    },
+  });
 
   assert.deepEqual(state.playerIds, [secondPlayerId, firstPlayerId]);
   assert.deepEqual(state.clubIds, [secondClubId, firstClubId]);
   assert.deepEqual(state.fixtureIds, [firstFixtureId]);
   assert.deepEqual(state.clubs[firstClubId]?.playerIds, [secondPlayerId, firstPlayerId]);
+  assert.equal(Object.isFrozen(state.meta.calibrationVersions), true);
+  assert.equal(state.domesticCompetitionWorld?.competitionIds[0], firstFixture.competitionId);
 });

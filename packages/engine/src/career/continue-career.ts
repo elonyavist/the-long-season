@@ -7,10 +7,15 @@ import {
   type CareerAttentionEvent,
   type CareerInboxMessage,
   type CareerInboxMessageId,
+  type CareerState,
   type ClubId,
   type FixtureId,
   type GameDate,
 } from "@game/domain";
+import {
+  findNextCareerFixture,
+  type NextCareerFixtureInvalidReason,
+} from "./next-fixture.ts";
 
 /** Machine-readable outcome of deterministic daily career evaluation. */
 export type CareerContinueStopReason = "attention" | "no_attention";
@@ -29,6 +34,16 @@ export interface CareerMatchdayAttention {
   readonly event: CareerAttentionEvent;
   readonly message: CareerInboxMessage;
 }
+
+/** Result of resolving the next selected-club fixture into Continue attention. */
+export type NextCareerMatchdayAttentionResult =
+  | { readonly status: "found"; readonly attention: CareerMatchdayAttention }
+  | { readonly status: "none" }
+  | {
+      readonly status: "invalid";
+      readonly reason: NextCareerFixtureInvalidReason;
+      readonly fixtureId?: FixtureId;
+    };
 
 /** Explicit dated facts consumed by the pure Continue use case. */
 export interface ContinueCareerUntilAttentionInput {
@@ -83,6 +98,36 @@ export function createMatchdayAttention(input: {
   });
 
   return { event, message };
+}
+
+/**
+ * Builds Continue attention from the competition-aware next-fixture selector.
+ *
+ * This keeps matchday identity scoped to the globally unique fixture ID and
+ * prevents callers from selecting an arbitrary fixture object key.
+ */
+export function createNextCareerMatchdayAttention(input: {
+  readonly careerState: CareerState;
+  readonly preparation: ContinueCareerPreparationInput;
+}): NextCareerMatchdayAttentionResult {
+  const nextFixture = findNextCareerFixture(input.careerState);
+  if (nextFixture.status === "none") return { status: "none" };
+  if (nextFixture.status === "invalid") {
+    return {
+      status: "invalid",
+      reason: nextFixture.reason,
+      ...(nextFixture.fixtureId === undefined ? {} : { fixtureId: nextFixture.fixtureId }),
+    };
+  }
+  return {
+    status: "found",
+    attention: createMatchdayAttention({
+      fixtureId: nextFixture.fixtureId,
+      clubId: input.careerState.selectedClubId,
+      date: nextFixture.fixture.date,
+      preparation: input.preparation,
+    }),
+  };
 }
 
 /**

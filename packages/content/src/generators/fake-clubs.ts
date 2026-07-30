@@ -1,4 +1,11 @@
-import { clubId, playerId, type Club, type ClubId, type PlayerId } from "@game/domain";
+import {
+  clubId,
+  playerId,
+  type Club,
+  type ClubCategory,
+  type ClubId,
+  type PlayerId,
+} from "@game/domain";
 import { deriveRng, type Rng } from "@game/shared";
 
 import {
@@ -33,6 +40,16 @@ export interface FakeClubGenerationOptions {
   readonly country?: ClubCountryCode;
   /** Division level used to weight large, medium, and small city pools. */
   readonly divisionLevel?: ClubDivisionLevel;
+  /** Domain category written to every generated club. */
+  readonly category?: ClubCategory;
+  /** Optional stable club-ID namespace for a multi-division world. */
+  readonly clubIdNamespace?: string;
+  /** Optional stable player-ID namespace matching the associated player generator. */
+  readonly playerIdNamespace?: string;
+  /** Optional compact prefix used by table labels. */
+  readonly shortNamePrefix?: string;
+  /** Names already used by earlier generated divisions in the same country. */
+  readonly excludedNames?: readonly string[];
 }
 
 /** Visible fictional identity generated for one fake club slot. */
@@ -65,21 +82,22 @@ export interface FakeClubs {
  */
 export function generateFakeClubs(options: FakeClubGenerationOptions = {}): FakeClubs {
   const identities = generateFakeClubIdentities(FAKE_CLUB_COUNT, options);
+  const category = options.category ?? options.divisionLevel ?? "third_division";
   const clubs: Club[] = [];
   const clubIds: ClubId[] = [];
   const clubsById: Record<ClubId, Club> = {};
 
   for (let clubNumber = 1; clubNumber <= FAKE_CLUB_COUNT; clubNumber += 1) {
-    const id = fakeClubId(clubNumber);
+    const id = generatedFakeClubId(clubNumber, options.clubIdNamespace);
     const identity = identities[clubNumber - 1];
     assertGeneratedClubIdentity(identity, clubNumber);
     const club: Club = {
       id,
       name: identity.name,
-      shortName: `PRO${String(clubNumber).padStart(2, "0")}`,
-      category: "third_division",
-      reputation: 4 + ((clubNumber - 1) % 6),
-      playerIds: fakeClubPlayerIds(clubNumber),
+      shortName: `${options.shortNamePrefix ?? "PRO"}${String(clubNumber).padStart(2, "0")}`,
+      category,
+      reputation: categoryReputation(category, clubNumber),
+      playerIds: fakeClubPlayerIds(clubNumber, options.playerIdNamespace),
     };
 
     clubs.push(club);
@@ -113,7 +131,7 @@ export function generateFakeClubIdentities(
   const cities = CLUB_CITY_POOLS[country];
   const tierWeights = CLUB_CITY_TIER_WEIGHTS[divisionLevel];
   const usedCities = new Set<string>();
-  const usedNames = new Set<string>();
+  const usedNames = new Set<string>(options.excludedNames ?? []);
   const identities: GeneratedClubIdentity[] = [];
 
   for (let slotNumber = 1; slotNumber <= count; slotNumber += 1) {
@@ -141,6 +159,12 @@ export function fakeClubId(clubNumber: number): ClubId {
   return clubId(`club:province-${String(clubNumber).padStart(2, "0")}`);
 }
 
+/** Builds a stable club ID inside an optional multi-division namespace. */
+export function generatedFakeClubId(clubNumber: number, namespace?: string): ClubId {
+  if (namespace === undefined) return fakeClubId(clubNumber);
+  return clubId(`club:${safeIdNamespace(namespace)}-${String(clubNumber).padStart(2, "0")}`);
+}
+
 /**
  * Builds one fake player ID from one-based club and slot numbers.
  */
@@ -153,14 +177,29 @@ export function fakePlayerId(clubNumber: number, slotNumber: number): PlayerId {
 /**
  * Builds the deterministic first-team player ID order for one fake club.
  */
-function fakeClubPlayerIds(clubNumber: number): readonly PlayerId[] {
+function fakeClubPlayerIds(clubNumber: number, namespace?: string): readonly PlayerId[] {
   const playerIds: PlayerId[] = [];
 
   for (let slotNumber = 1; slotNumber <= FAKE_PLAYERS_PER_CLUB; slotNumber += 1) {
-    playerIds.push(fakePlayerId(clubNumber, slotNumber));
+    playerIds.push(namespace === undefined
+      ? fakePlayerId(clubNumber, slotNumber)
+      : playerId(
+          `player:${safeIdNamespace(namespace)}-${String(clubNumber).padStart(2, "0")}-${String(slotNumber).padStart(2, "0")}`,
+        ));
   }
 
   return playerIds;
+}
+
+/** Gives generated tiers distinct but deterministic sporting reputation bands. */
+function categoryReputation(category: ClubCategory, clubNumber: number): number {
+  const base = category === "first_division" ? 14 : category === "second_division" ? 9 : 4;
+  return base + ((clubNumber - 1) % 6);
+}
+
+/** Normalizes a caller-owned namespace for branded generated IDs. */
+function safeIdNamespace(namespace: string): string {
+  return namespace.replaceAll(":", "-");
 }
 
 /**

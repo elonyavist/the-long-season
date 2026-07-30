@@ -1,8 +1,10 @@
 import {
   EMPTY_PLAYER_AVAILABILITY,
+  competitionIdForClub,
   findCareerFixtureEligibilityBlockers,
   type CareerFixtureEligibilityBlocker,
   type CareerState,
+  type CompetitionId,
   type Fixture,
   type FixtureId,
   type PlayerId,
@@ -12,6 +14,7 @@ import {
 export type NextCareerFixtureInvalidReason =
   | "selected_club_not_found"
   | "selected_club_not_ordered"
+  | "selected_club_competition_not_found"
   | "fixture_missing"
   | "fixture_home_club_not_found"
   | "fixture_away_club_not_found";
@@ -65,7 +68,20 @@ export function findNextCareerFixture(careerState: CareerState): NextCareerFixtu
     return { status: "invalid", reason: "selected_club_not_ordered" };
   }
 
-  for (const fixtureId of careerState.gameState.fixtureIds) {
+  const selectedCompetitionId = careerState.gameState.domesticCompetitionWorld === undefined
+    ? undefined
+    : competitionIdForClub(
+        careerState.gameState.domesticCompetitionWorld,
+        careerState.selectedClubId,
+      );
+  if (
+    careerState.gameState.domesticCompetitionWorld !== undefined
+    && selectedCompetitionId === undefined
+  ) {
+    return { status: "invalid", reason: "selected_club_competition_not_found" };
+  }
+
+  for (const fixtureId of orderedCareerFixtureIds(careerState, selectedCompetitionId)) {
     const fixture = careerState.gameState.fixtures[fixtureId];
 
     if (fixture === undefined) {
@@ -94,6 +110,42 @@ export function findNextCareerFixture(careerState: CareerState): NextCareerFixtu
   }
 
   return { status: "none" };
+}
+
+/**
+ * Returns fixture IDs in canonical competition order and then fixture order.
+ *
+ * A single-competition state crosses the same filter/traversal path with no
+ * competition filter; there is no second legacy selection implementation.
+ */
+export function orderedCareerFixtureIds(
+  careerState: CareerState,
+  onlyCompetitionId?: CompetitionId,
+): readonly FixtureId[] {
+  const missingFixtureId = careerState.gameState.fixtureIds.find(
+    (fixtureId) => careerState.gameState.fixtures[fixtureId] === undefined,
+  );
+  if (missingFixtureId !== undefined) return [missingFixtureId];
+  const world = careerState.gameState.domesticCompetitionWorld;
+  const competitionOrder = world?.competitionIds
+    ?? (onlyCompetitionId === undefined ? [] : [onlyCompetitionId]);
+  if (competitionOrder.length === 0) {
+    return careerState.gameState.fixtureIds.filter((fixtureId) => {
+      const fixture = careerState.gameState.fixtures[fixtureId];
+      return onlyCompetitionId === undefined || fixture?.competitionId === onlyCompetitionId;
+    });
+  }
+
+  const ordered: FixtureId[] = [];
+  for (const competitionId of competitionOrder) {
+    if (onlyCompetitionId !== undefined && competitionId !== onlyCompetitionId) continue;
+    for (const fixtureId of careerState.gameState.fixtureIds) {
+      if (careerState.gameState.fixtures[fixtureId]?.competitionId === competitionId) {
+        ordered.push(fixtureId);
+      }
+    }
+  }
+  return ordered;
 }
 
 /**

@@ -9,15 +9,15 @@ import {
 } from "./save-metadata.ts";
 import { createPersistableCareerState } from "./career-storage.contract.ts";
 
-/** Persisted career save envelope for the complete Phase 79 market baseline. */
-export interface StoredCareerSaveV7 {
+/** Persisted career save envelope for the complete Phase 79/79C beta baseline. */
+export interface StoredCareerSaveV8 {
   readonly saveSchemaVersion: typeof CURRENT_CAREER_SAVE_SCHEMA_VERSION;
   readonly metadata: CareerSaveMetadata;
   readonly state: CareerState;
 }
 
 /** Current persisted career save shape after migration. */
-export type StoredCareerSave = StoredCareerSaveV7;
+export type StoredCareerSave = StoredCareerSaveV8;
 
 /**
  * Validates an unknown persisted career envelope against the current beta baseline.

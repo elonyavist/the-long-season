@@ -54,15 +54,68 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - `docs/PROJECT_STATUS.md` explains the current active step and project state to a new LLM or junior developer.
 - Future phases can start without changing `docs/PROJECT_RULES.md`.
 
-## Current Active Phase
+## Current State
 
-- `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
-- Status: In progress. Steps 01-13 are Done, Step 14 is Reopened (its long-run
-  gate must be re-run against a market-active simulation), and Step 15 is not
-  started.
+- `docs/steps/80-graphical-and-structural-rework/`
+- Status: In progress. Step 01 is Done; Step 02 is the sole next step and
+  awaits the user's concrete graphical and structural rework list.
+- Step 01 established one repository-wide simulation execution policy:
+  multi-work-item batches default to `min(7, work items)` and cannot exceed
+  seven workers; explicit overrides may only reduce concurrency.
+- Step 02 is documentation/audit only. It must reproduce and inventory the
+  supplied reworks before creating later implementation steps.
+- Phase 79D delivered archetype-compatible exceptional generation, effective
+  rarity budgets, production annual intake allocation, a derived public
+  potential range, range-aware discounted prospect value, display-safe
+  upper-cap semantics, observable negotiation spread, and non-vacuous joint
+  diagnostics.
+- Focused checks, `pnpm check`, build, Playwright `29/29`, and manual browser
+  QA pass. Its attempted direct `50 x 20` was stopped, wrote no report, and is
+  not claimed as evidence.
+- Phase 80's final validation step must run a resumable `50 x 20` with `50`
+  stable shards and exactly `7` workers.
+- Phase 79 Step 14 remains Reopened and paused without a release-gate claim.
+  Do not resume it until the reworks and their final `50 x 20` are complete.
+- The user-requested Phase 79B browser/product interposition is Done after all
+  seven steps and returned control to Phase 79 before the later 79C/79D
+  interpositions. It did not run, replace, weaken, or claim Phase 79 Step 14's
+  release gate.
+- Phase 79A is Done after a repeated `50 x 20` with zero owned structural
+  failure. It does not replace or claim Phase 79 Step 14's release gate.
 - Entry-gate deviation: Phase 79 was started by explicit user decision while
   Phase 78 Step 15 was still open. Phase 78 Step 15's obligations remain
   outstanding and are tracked in `docs/PROJECT_STATUS.md`.
+
+## Paused Parent Phase
+
+- `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
+- Status: In progress. Steps 01-13 are Done, Step 14 is Reopened but paused
+  during Phase 80, and Step 15 is not started.
+- No Phase 79 staged cohort has been run or claimed against the post-79C
+  economy.
+
+## Completed Corrective Phase
+
+- `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/`
+- Status: Done. All nine ordered documents are closed.
+- The stopped direct `50 x 20` remains explicitly unclaimed; the replacement
+  cohort belongs to the final validation step of Phase 80 and
+  must use checkpoints and exactly `7` workers.
+
+## Completed User-Requested Phase
+
+- `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/`
+- Status: Done. All fourteen ordered steps are complete and control has
+  returned to Phase 79 Step 14.
+- The phase delivered the accepted global `1..6` half-star scale, source-backed
+  three-division value calibration, the accepted three-by-18-club fictional
+  world, promotion/relegation, public-value/asking-price/fee separation, and
+  coordinated wage/budget/AI recalibration through versioned JSON config.
+- Its bounded `10 x 10` passed with zero owned structural or rating-cap
+  failures. It did not run or claim Phase 79 Step 14's staged `750 x 50` and
+  did not close the deferred Phase 78 Step 15. The later Phase 79D handoff
+  supersedes only the release gate's season horizon, not this historical
+  result.
 
 ## Previous Phase Still Open
 

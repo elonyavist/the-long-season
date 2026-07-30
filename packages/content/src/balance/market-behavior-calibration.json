@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "version": "market-behavior-calibration-v3",
+  "classification": "explicit_game_design_target",
+  "askingPriceCurvesVersion": "asking-price-curves-v3",
+  "wageFinanceCalibrationVersion": "wage-finance-calibration-reportcalcio-2025-v1",
+  "openingFinanceRoundingMinorUnits": 1000000,
+  "openingFinanceTargets": [
+    {
+      "division": "first_division",
+      "classification": "explicit_game_design_target",
+      "cashMinimumMinorUnits": 10000000000,
+      "cashMedianMinorUnits": 18000000000,
+      "cashMaximumMinorUnits": 30000000000,
+      "annualTransferBudgetMinimumMinorUnits": 2000000000,
+      "annualTransferBudgetMedianMinorUnits": 5500000000,
+      "annualTransferBudgetMaximumMinorUnits": 12000000000
+    },
+    {
+      "division": "second_division",
+      "classification": "explicit_game_design_target",
+      "cashMinimumMinorUnits": 2000000000,
+      "cashMedianMinorUnits": 3500000000,
+      "cashMaximumMinorUnits": 6000000000,
+      "annualTransferBudgetMinimumMinorUnits": 300000000,
+      "annualTransferBudgetMedianMinorUnits": 700000000,
+      "annualTransferBudgetMaximumMinorUnits": 1500000000
+    },
+    {
+      "division": "third_division",
+      "classification": "explicit_game_design_target",
+      "cashMinimumMinorUnits": 400000000,
+      "cashMedianMinorUnits": 700000000,
+      "cashMaximumMinorUnits": 1200000000,
+      "annualTransferBudgetMinimumMinorUnits": 30000000,
+      "annualTransferBudgetMedianMinorUnits": 100000000,
+      "annualTransferBudgetMaximumMinorUnits": 300000000
+    }
+  ],
+  "sellerNegotiation": {
+    "counterOfferMinimumAskingBasisPoints": 7500,
+    "counterOfferConcessionBasisPoints": 5000
+  },
+  "aiTransferOffer": {
+    "version": "ai-transfer-offer-v1",
+    "minimumAskingBasisPoints": 7000,
+    "maximumAskingBasisPoints": 10000,
+    "askingBasisPointsStep": 500
+  },
+  "sportingWillingness": {
+    "sameDivisionScore": 60,
+    "oneDivisionUpScore": 85,
+    "oneDivisionDownScore": 55,
+    "twoDivisionsUpScore": 100,
+    "twoDivisionsDownScore": 20,
+    "reputationScorePerPoint": 2,
+    "squadStatusScorePerStep": 8,
+    "wageScorePerTenPercent": 2,
+    "maximumAbsoluteWageScore": 20,
+    "contractYearScore": 2,
+    "strongAbilityMinimum": 11.5,
+    "eliteAbilityMinimum": 13,
+    "primeMinimumAge": 24,
+    "primeMaximumAge": 30,
+    "oneDivisionStrongPenalty": 20,
+    "twoDivisionStrongPenalty": 45,
+    "reputationDropMinimum": 4,
+    "reputationDropPenalty": 20,
+    "primeDownwardPenalty": 20,
+    "annualWageRegressionThresholdBasisPoints": 9000,
+    "annualWageRegressionPenalty": 15,
+    "squadStatusRegressionPenalty": 15,
+    "contractSecurityGraceDays": 90,
+    "contractSecurityRegressionPenalty": 15,
+    "acceptanceScoreMinimum": 45
+  },
+  "affordability": {
+    "minimumCashReserveBasisPoints": 1000,
+    "maximumTransferBudgetUseBasisPoints": 9000,
+    "maximumWageBudgetUseBasisPoints": 9800
+  },
+  "aiTargetWeights": {
+    "quality": 40,
+    "potential": 20,
+    "roleNeed": 25,
+    "affordability": 15
+  },
+  "aiLifecycle": {
+    "maximumActiveTalks": 2,
+    "maximumPermanentStartsPerSeason": 6,
+    "maximumPreliminaryStartsPerSeason": 4,
+    "permanentCheckpointDays": 3,
+    "preliminaryCheckpointDays": 14,
+    "preliminaryEligibilityDays": 183,
+    "expiringContractDays": 365,
+    "targetDepartmentDepth": {
+      "goalkeeper": 2,
+      "defender": 7,
+      "midfielder": 7,
+      "attacker": 4
+    },
+    "goalkeeperAgingAge": 33,
+    "outfieldAgingAge": 30,
+    "averageQualityGap": 0.75,
+    "weakestQualityGap": 2,
+    "maximumSquadAboveTarget": 3,
+    "needPriorityWeights": {
+      "structuralDeficit": 100,
+      "targetDeficit": 12,
+      "expiringContract": 20,
+      "agingDepartment": 8,
+      "qualityGap": 6
+    }
+  }
+}

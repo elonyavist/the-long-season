@@ -1,4 +1,8 @@
-import { createFakeLeagueSystem } from "@game/content";
+import {
+  createAnnualWorldIntakeCandidateProviders,
+  selectMarketBehaviorCalibration,
+  selectPlayerWagePolicyConfig,
+} from "@game/content";
 import {
   advanceCareerOneSeason,
   summarizePlayerDevelopmentAbilities,
@@ -7,6 +11,9 @@ import {
 } from "@game/engine";
 
 import type { CliCareerState, CliGameState, PlayerId, ClubId } from "./types.ts";
+import {
+  CLI_CAREER_TABLE_RULES,
+} from "./scenarios.ts";
 
 type CliFixtureId = CliGameState["fixtureIds"][number];
 
@@ -64,8 +71,13 @@ export function buildCareerDevelopmentReport(careerState: CliCareerState): Caree
   let workingState = careerState;
   const aggregates = initialDevelopmentAggregates(careerState);
   const worldSeed = careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed;
+  const startingSeasonIndex = careerState.seasonHistory?.length ?? 0;
 
   for (let seasonIndex = 1; seasonIndex <= DEVELOPMENT_REPORT_SEASONS; seasonIndex += 1) {
+    const annualIntake = createAnnualWorldIntakeCandidateProviders({
+      worldSeed,
+      seasonIndex: startingSeasonIndex + seasonIndex - 1,
+    });
     const advanced = advanceCareerOneSeason({
       careerState: workingState,
       worldSeed,
@@ -74,6 +86,14 @@ export function buildCareerDevelopmentReport(careerState: CliCareerState): Caree
         nextSeasonId: `${workingState.gameState.calendar.currentSeasonId}:development-${seasonIndex}` as AdvanceCareerReportRefreshMode["nextSeasonId"],
         nextSeasonStartDate: (workingState.gameState.calendar.currentDate + 365) as AdvanceCareerReportRefreshMode["nextSeasonStartDate"],
       },
+      wagePolicy: selectPlayerWagePolicyConfig(
+        workingState.gameState.meta.calibrationVersions,
+      ),
+      marketBehaviorPolicy: selectMarketBehaviorCalibration(
+        workingState.gameState.meta.calibrationVersions,
+      ),
+      createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,
+      createSeniorIntakeCandidates: annualIntake.createSeniorIntakeCandidates,
     });
 
     if (advanced.status !== "advanced") {
@@ -144,16 +164,27 @@ export interface CareerSeasonRolloverInvalid {
  * whether a successful result should be written to disk.
  */
 export function rolloverCareerSeason(careerState: CliCareerState): CareerSeasonRolloverResult {
-  const tableRules = createFakeLeagueSystem({
-    worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
-  }).tableRules;
+  const worldSeed =
+    careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed;
+  const annualIntake = createAnnualWorldIntakeCandidateProviders({
+    worldSeed,
+    seasonIndex: careerState.seasonHistory?.length ?? 0,
+  });
   const advanced = advanceCareerOneSeason({
     careerState,
-    worldSeed: careerState.careerWorld?.worldSeed ?? careerState.gameState.meta.seed,
+    worldSeed,
     mode: {
       kind: "completedSeason",
-      tableRules,
+      tableRules: CLI_CAREER_TABLE_RULES,
     },
+    wagePolicy: selectPlayerWagePolicyConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,
+    createSeniorIntakeCandidates: annualIntake.createSeniorIntakeCandidates,
   });
 
   if (advanced.status === "invalid") {

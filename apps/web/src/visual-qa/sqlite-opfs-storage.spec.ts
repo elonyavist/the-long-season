@@ -59,6 +59,19 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
     if (selectedPlayer === undefined || selectedClub === undefined) {
       throw new Error("Generated career has no selected-club negotiation participant");
     }
+    const marketContractIds = pendingState.seniorSquadState.activeContractIds.filter(
+      (contractId: string) => pendingState.seniorSquadState.contracts[contractId]?.clubId !== selectedClubId,
+    );
+    const transferContract = pendingState.seniorSquadState.contracts[marketContractIds[0]];
+    const preliminaryContract = pendingState.seniorSquadState.contracts[marketContractIds[1]];
+    if (transferContract === undefined || preliminaryContract === undefined) {
+      throw new Error("Generated career has no external market participants");
+    }
+    const transferPlayer = pendingState.gameState.players[transferContract.playerId];
+    const preliminaryPlayer = pendingState.gameState.players[preliminaryContract.playerId];
+    if (transferPlayer === undefined || preliminaryPlayer === undefined) {
+      throw new Error("Generated career has no external market players");
+    }
     const negotiationId = "contract-negotiation:opfs-counteroffer";
     const negotiationCreatedOn = pendingState.gameState.calendar.currentDate;
     const responseDueOn = negotiationCreatedOn + 3;
@@ -117,6 +130,73 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
       },
       negotiationIds: [negotiationId],
     };
+    const transferNegotiationId = "transfer-negotiation:opfs-clock";
+    const transferResponseDueOn = negotiationCreatedOn + 2;
+    pendingState.transferNegotiationState = {
+      negotiations: {
+        [transferNegotiationId]: {
+          id: transferNegotiationId,
+          buyingClubId: selectedClubId,
+          sellingClubId: transferContract.clubId,
+          playerId: transferContract.playerId,
+          publicValue: 900_000,
+          initialAskingPrice: 1_100_000,
+          currentAskingPrice: 1_100_000,
+          status: "submitted",
+          submittedOn: negotiationCreatedOn,
+          offeredFee: 1_000_000,
+          clock: {
+            submittedOn: negotiationCreatedOn,
+            responseDueOn: transferResponseDueOn,
+            deadline: negotiationCreatedOn + 3,
+          },
+        },
+      },
+      negotiationIds: [transferNegotiationId],
+    };
+    const preliminaryAgreementId = "preliminary-agreement:opfs-clock";
+    const preliminaryResponseDueOn = negotiationCreatedOn + 1;
+    const preliminaryTerms = {
+      ...offerTerms,
+      squadStatus: preliminaryContract.squadStatus,
+      annualWage: preliminaryContract.annualWage,
+    };
+    pendingState.preliminaryAgreementState = {
+      agreements: {
+        [preliminaryAgreementId]: {
+          id: preliminaryAgreementId,
+          playerId: preliminaryContract.playerId,
+          currentClubId: preliminaryContract.clubId,
+          offeringClubId: selectedClubId,
+          currentContractId: preliminaryContract.id,
+          createdOn: negotiationCreatedOn,
+          futureStartsOn: preliminaryContract.endsOn,
+          status: "offer_submitted",
+          offeredTerms: preliminaryTerms,
+          demand: {
+            evaluatedOn: negotiationCreatedOn,
+            age: 27,
+            currentAbility: 10,
+            reachablePotential: 12,
+            role: preliminaryPlayer.primaryRole,
+            expectedSquadStatus: preliminaryContract.squadStatus,
+            currentAnnualWage: preliminaryContract.annualWage,
+            remainingContractDays: preliminaryContract.endsOn - negotiationCreatedOn,
+            clubReputation: selectedClub.reputation,
+            clubCategory: selectedClub.category,
+            freeAgentLeverageBasisPoints: 0,
+            preferredTerms: preliminaryTerms,
+            minimumTerms: preliminaryTerms,
+          },
+          clock: {
+            submittedOn: negotiationCreatedOn,
+            responseDueOn: preliminaryResponseDueOn,
+            deadline: negotiationCreatedOn + 3,
+          },
+        },
+      },
+      agreementIds: [preliminaryAgreementId],
+    };
     pendingState.currentSeasonInbox = [{
       id: `inbox:contract-counteroffer:${negotiationId}`,
       date: responseDueOn,
@@ -133,6 +213,42 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
       },
       blockerKeys: [],
       actionIds: ["open_contract_negotiation"],
+    }];
+    const archivedTableRow = {
+      position: 1,
+      clubId: selectedClubId,
+      played: 2,
+      wins: 2,
+      draws: 0,
+      losses: 0,
+      goalsFor: 3,
+      goalsAgainst: 1,
+      goalDifference: 2,
+      points: 6,
+    };
+    pendingState.seasonHistory = [{
+      sequenceNumber: 1,
+      seasonId: "season:opfs-archived",
+      competitionId: "competition:opfs-archived",
+      finalTable: [archivedTableRow],
+      championClubId: selectedClubId,
+      selectedClubFinish: archivedTableRow,
+      aggregateGoals: { fixtureCount: 2, totalGoals: 4 },
+      playerStatistics: {
+        participationCoverage: "complete",
+        eventCoverage: "partial",
+        rows: [{
+          playerId: "player:retired-opfs",
+          starts: 2,
+          substituteAppearances: 0,
+          minutes: 180,
+          ratingTotal: 13.7,
+          ratingSamples: 2,
+          goals: 2,
+          assists: 1,
+          saves: 0,
+        }],
+      },
     }];
     await firstHandle.storage.saveCareer({
       saveId: firstSaveId as never,
@@ -167,6 +283,8 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
     const afterFailedReplacement = await secondHandle.storage.loadCareer(firstSaveId as never);
     const listed = await secondHandle.storage.listCareers();
     const loadedNegotiation = loaded.contractNegotiationState?.negotiations[negotiationId];
+    const loadedTransferNegotiation = loaded.transferNegotiationState?.negotiations[transferNegotiationId];
+    const loadedPreliminaryAgreement = loaded.preliminaryAgreementState?.agreements[preliminaryAgreementId];
     const loadedCounterMessage = loaded.currentSeasonInbox?.find(
       (message: { readonly related: { readonly contractNegotiationId?: string } }) => (
         message.related.contractNegotiationId === negotiationId
@@ -200,9 +318,17 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
       negotiationRoundTripExact: canonical(loadedNegotiation) === canonical(
         pendingState.contractNegotiationState.negotiations[negotiationId],
       ),
+      archivedPlayerStatisticsRoundTripExact: canonical(loaded.seasonHistory?.[0]?.playerStatistics)
+        === canonical(pendingState.seasonHistory[0]?.playerStatistics),
       counterContinuePolicy: loadedCounterMessage?.continuePolicy,
       counterResponseDueOn: loadedNegotiation?.status === "countered"
         ? loadedNegotiation.submittedOffer.responseDueOn
+        : undefined,
+      transferResponseDueOn: loadedTransferNegotiation?.status === "submitted"
+        ? loadedTransferNegotiation.clock.responseDueOn
+        : undefined,
+      preliminaryResponseDueOn: loadedPreliminaryAgreement?.status === "offer_submitted"
+        ? loadedPreliminaryAgreement.clock.responseDueOn
         : undefined,
       isolatedSeed: isolated.gameState.meta.seed,
       isolatedSaveCount: listed.filter((entry: { readonly saveId: string }) => (
@@ -236,11 +362,14 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
 
   expect(result.crossOriginIsolated).toBe(true);
   expect(result.metadata.name.length).toBeGreaterThan(0);
-  expect(result.storageInfo).toMatchObject({ schemaVersion: 12, betaResetPerformed: false });
+  expect(result.storageInfo).toMatchObject({ schemaVersion: 17, betaResetPerformed: false });
   expect(result.worldRoundTripExact).toBe(true);
   expect(result.negotiationRoundTripExact).toBe(true);
+  expect(result.archivedPlayerStatisticsRoundTripExact).toBe(true);
   expect(result.counterContinuePolicy).toBe("until_resolved");
   expect(result.counterResponseDueOn).toBeGreaterThan(0);
+  expect(result.transferResponseDueOn).toBeGreaterThan(0);
+  expect(result.preliminaryResponseDueOn).toBeGreaterThan(0);
   expect(result.isolatedSeed).toBe("phase78-opfs-world-b");
   expect(result.isolatedSaveCount).toBe(2);
   expect(result.replacementFailed).toBe(true);

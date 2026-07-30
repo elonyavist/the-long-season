@@ -125,11 +125,16 @@ export function formatMatchdayEventPlayerLine(
   return `${event.playerName} (${event.secondaryPlayerName})`;
 }
 
+/*
+ * Every mark here is a monochrome typographic glyph so the column reads as one
+ * set. The goal used to be a colour emoji, which the OS rendered in its own
+ * style and ignored the incident colour the stylesheet assigns.
+ */
 function incidentSymbol(kind: CareerMatchdayPhaseEventView["kind"]): string {
   switch (kind) {
     case "goal":
     case "penalty_goal":
-      return "⚽";
+      return "●";
     case "penalty":
     case "penalty_miss":
     case "penalty_save":

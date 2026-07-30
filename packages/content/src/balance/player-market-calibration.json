@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 1,
+  "version": "player-market-calibration-transfermarkt-it-2026-07-28-v2",
+  "classification": "mixed",
+  "retrievedAt": "2026-07-28T20:54:35+02:00",
+  "timeZone": "Europe/Rome",
+  "seasonSelector": "2026/27",
+  "currency": "EUR",
+  "percentileMethod": "Hyndman-Fan type 7 linear interpolation, rounded to the nearest euro",
+  "sourceReferences": [
+    {
+      "id": "transfermarkt-it1-2026",
+      "title": "Serie A 2026/27 competition and squad values",
+      "url": "https://www.transfermarkt.it/serie-a/startseite/wettbewerb/IT1/saison_id/2026",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it2-2026",
+      "title": "Serie B 2026/27 competition and squad values",
+      "url": "https://www.transfermarkt.it/serie-b/startseite/wettbewerb/IT2/saison_id/2026",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3a-2026",
+      "title": "Serie C Girone A 2026/27 competition and squad values",
+      "url": "https://www.transfermarkt.it/serie-c-girone-a/startseite/wettbewerb/IT3A/saison_id/2026",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3b-2026",
+      "title": "Serie C Girone B 2026/27 competition and squad values",
+      "url": "https://www.transfermarkt.it/serie-c-girone-b/startseite/wettbewerb/IT3B/saison_id/2026",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3c-2026",
+      "title": "Serie C Girone C 2026/27 competition and squad values",
+      "url": "https://www.transfermarkt.it/serie-c/startseite/wettbewerb/IT3C/saison_id/2026",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-market-value-definition",
+      "title": "Transfermarkt market-value definition",
+      "url": "https://www.transfermarkt.com/navigation/mwdefinition",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it1-u19-2026",
+      "title": "Serie A 2026/27 U19 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-a/marktwerte/wettbewerb/IT1/pos//detailpos/0/altersklasse/u19/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it1-u21-2026",
+      "title": "Serie A 2026/27 U21 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-a/marktwerte/wettbewerb/IT1/pos//detailpos/0/altersklasse/u21/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it2-u19-2026",
+      "title": "Serie B 2026/27 U19 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-b/marktwerte/wettbewerb/IT2/pos//detailpos/0/altersklasse/u19/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it2-u21-2026",
+      "title": "Serie B 2026/27 U21 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-b/marktwerte/wettbewerb/IT2/pos//detailpos/0/altersklasse/u21/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3a-u19-2026",
+      "title": "Serie C Girone A 2026/27 U19 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-c-girone-a/marktwerte/wettbewerb/IT3A/pos//detailpos/0/altersklasse/u19/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3a-u21-2026",
+      "title": "Serie C Girone A 2026/27 U21 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-c-girone-a/marktwerte/wettbewerb/IT3A/pos//detailpos/0/altersklasse/u21/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3b-u19-2026",
+      "title": "Serie C Girone B 2026/27 U19 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-c-girone-b/marktwerte/wettbewerb/IT3B/pos//detailpos/0/altersklasse/u19/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3b-u21-2026",
+      "title": "Serie C Girone B 2026/27 U21 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-c-girone-b/marktwerte/wettbewerb/IT3B/pos//detailpos/0/altersklasse/u21/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3c-u19-2026",
+      "title": "Serie C Girone C 2026/27 U19 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-c/marktwerte/wettbewerb/IT3C/pos//detailpos/0/altersklasse/u19/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    },
+    {
+      "id": "transfermarkt-it3c-u21-2026",
+      "title": "Serie C Girone C 2026/27 U21 market-value leaderboard",
+      "url": "https://www.transfermarkt.it/serie-c/marktwerte/wettbewerb/IT3C/pos//detailpos/0/altersklasse/u21/land_id/0/only_loans/",
+      "classification": "observed_source_fact"
+    }
+  ],
+  "competitionSamples": [
+    {
+      "id": "it1-2026-07-28",
+      "division": "first_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it1-2026",
+      "clubCount": 20,
+      "listedPlayerCount": 651,
+      "includedValuationCount": 649,
+      "excludedUnvaluedCount": 2,
+      "totalValueMinorUnits": 562090000000,
+      "distribution": {
+        "medianMinorUnits": 400000000,
+        "p90MinorUnits": 2300000000,
+        "p99MinorUnits": 5000000000,
+        "maximumMinorUnits": 8500000000
+      }
+    },
+    {
+      "id": "it2-2026-07-28",
+      "division": "second_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it2-2026",
+      "clubCount": 20,
+      "listedPlayerCount": 596,
+      "includedValuationCount": 583,
+      "excludedUnvaluedCount": 13,
+      "totalValueMinorUnits": 52225000000,
+      "distribution": {
+        "medianMinorUnits": 45000000,
+        "p90MinorUnits": 220000000,
+        "p99MinorUnits": 500000000,
+        "maximumMinorUnits": 1200000000
+      }
+    },
+    {
+      "id": "it3a-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3a-2026",
+      "clubCount": 20,
+      "listedPlayerCount": 540,
+      "includedValuationCount": 500,
+      "excludedUnvaluedCount": 40,
+      "totalValueMinorUnits": 9175500000,
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 30000000,
+        "p99MinorUnits": 60100000,
+        "maximumMinorUnits": 180000000
+      }
+    },
+    {
+      "id": "it3b-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3b-2026",
+      "clubCount": 20,
+      "listedPlayerCount": 596,
+      "includedValuationCount": 555,
+      "excludedUnvaluedCount": 41,
+      "totalValueMinorUnits": 11961500000,
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 40000000,
+        "p99MinorUnits": 133800000,
+        "maximumMinorUnits": 350000000
+      }
+    },
+    {
+      "id": "it3c-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3c-2026",
+      "clubCount": 20,
+      "listedPlayerCount": 530,
+      "includedValuationCount": 489,
+      "excludedUnvaluedCount": 41,
+      "totalValueMinorUnits": 10454000000,
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 40000000,
+        "p99MinorUnits": 106000000,
+        "maximumMinorUnits": 300000000
+      }
+    }
+  ],
+  "prospectSamples": [
+    {
+      "id": "it1-u19-2026-07-28",
+      "division": "first_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it1-u19-2026",
+      "ageFilter": "u19",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 16,
+      "minimumAge": 17,
+      "maximumAge": 18,
+      "distribution": {
+        "medianMinorUnits": 200000000,
+        "p90MinorUnits": 1250000000,
+        "p99MinorUnits": 2775000000,
+        "maximumMinorUnits": 3000000000
+      }
+    },
+    {
+      "id": "it1-u21-2026-07-28",
+      "division": "first_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it1-u21-2026",
+      "ageFilter": "u21",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 75,
+      "minimumAge": 18,
+      "maximumAge": 20,
+      "distribution": {
+        "medianMinorUnits": 60000000,
+        "p90MinorUnits": 1800000000,
+        "p99MinorUnits": 3052000000,
+        "maximumMinorUnits": 3200000000
+      }
+    },
+    {
+      "id": "it2-u19-2026-07-28",
+      "division": "second_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it2-u19-2026",
+      "ageFilter": "u19",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 13,
+      "minimumAge": 17,
+      "maximumAge": 18,
+      "distribution": {
+        "medianMinorUnits": 30000000,
+        "p90MinorUnits": 74000000,
+        "p99MinorUnits": 97600000,
+        "maximumMinorUnits": 100000000
+      }
+    },
+    {
+      "id": "it2-u21-2026-07-28",
+      "division": "second_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it2-u21-2026",
+      "ageFilter": "u21",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 57,
+      "minimumAge": 17,
+      "maximumAge": 20,
+      "distribution": {
+        "medianMinorUnits": 30000000,
+        "p90MinorUnits": 250000000,
+        "p99MinorUnits": 500000000,
+        "maximumMinorUnits": 500000000
+      }
+    },
+    {
+      "id": "it3a-u19-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3a-u19-2026",
+      "ageFilter": "u19",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 16,
+      "minimumAge": 17,
+      "maximumAge": 18,
+      "distribution": {
+        "medianMinorUnits": 11250000,
+        "p90MinorUnits": 22500000,
+        "p99MinorUnits": 37750000,
+        "maximumMinorUnits": 40000000
+      }
+    },
+    {
+      "id": "it3a-u21-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3a-u21-2026",
+      "ageFilter": "u21",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 100,
+      "minimumAge": 17,
+      "maximumAge": 20,
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 40000000,
+        "p99MinorUnits": 150300000,
+        "maximumMinorUnits": 180000000
+      }
+    },
+    {
+      "id": "it3b-u19-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3b-u19-2026",
+      "ageFilter": "u19",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 16,
+      "minimumAge": 17,
+      "maximumAge": 18,
+      "distribution": {
+        "medianMinorUnits": 10000000,
+        "p90MinorUnits": 35000000,
+        "p99MinorUnits": 176000000,
+        "maximumMinorUnits": 200000000
+      }
+    },
+    {
+      "id": "it3b-u21-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3b-u21-2026",
+      "ageFilter": "u21",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 100,
+      "minimumAge": 17,
+      "maximumAge": 20,
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 70000000,
+        "p99MinorUnits": 280700000,
+        "maximumMinorUnits": 350000000
+      }
+    },
+    {
+      "id": "it3c-u19-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3c-u19-2026",
+      "ageFilter": "u19",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 14,
+      "minimumAge": 18,
+      "maximumAge": 18,
+      "distribution": {
+        "medianMinorUnits": 12500000,
+        "p90MinorUnits": 78000000,
+        "p99MinorUnits": 142200000,
+        "maximumMinorUnits": 150000000
+      }
+    },
+    {
+      "id": "it3c-u21-2026-07-28",
+      "division": "third_division",
+      "classification": "observed_source_fact",
+      "sourceReferenceId": "transfermarkt-it3c-u21-2026",
+      "ageFilter": "u21",
+      "populationScope": "bounded_leaderboard",
+      "observedRowCount": 100,
+      "minimumAge": 18,
+      "maximumAge": 20,
+      "distribution": {
+        "medianMinorUnits": 12500000,
+        "p90MinorUnits": 50000000,
+        "p99MinorUnits": 151500000,
+        "maximumMinorUnits": 300000000
+      }
+    }
+  ],
+  "divisionBaselines": [
+    {
+      "division": "first_division",
+      "classification": "derived_aggregate",
+      "clubCount": 20,
+      "listedPlayerCount": 651,
+      "includedValuationCount": 649,
+      "totalValueMinorUnits": 562090000000,
+      "meanListedPlayerValueMinorUnits": 863425500,
+      "rawAverageSquadValueMinorUnits": 28104500000,
+      "normalized22SeniorSquadValueMinorUnits": 18995361000,
+      "distribution": {
+        "medianMinorUnits": 400000000,
+        "p90MinorUnits": 2300000000,
+        "p99MinorUnits": 5000000000,
+        "maximumMinorUnits": 8500000000
+      }
+    },
+    {
+      "division": "second_division",
+      "classification": "derived_aggregate",
+      "clubCount": 20,
+      "listedPlayerCount": 596,
+      "includedValuationCount": 583,
+      "totalValueMinorUnits": 52225000000,
+      "meanListedPlayerValueMinorUnits": 87625800,
+      "rawAverageSquadValueMinorUnits": 2611250000,
+      "normalized22SeniorSquadValueMinorUnits": 1927768500,
+      "distribution": {
+        "medianMinorUnits": 45000000,
+        "p90MinorUnits": 220000000,
+        "p99MinorUnits": 500000000,
+        "maximumMinorUnits": 1200000000
+      }
+    },
+    {
+      "division": "third_division",
+      "classification": "derived_aggregate",
+      "clubCount": 60,
+      "listedPlayerCount": 1666,
+      "includedValuationCount": 1544,
+      "totalValueMinorUnits": 31591000000,
+      "meanListedPlayerValueMinorUnits": 18962200,
+      "rawAverageSquadValueMinorUnits": 526516700,
+      "normalized22SeniorSquadValueMinorUnits": 417168100,
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 37500000,
+        "p99MinorUnits": 120000000,
+        "maximumMinorUnits": 350000000
+      }
+    }
+  ],
+  "gameDesignTargets": [
+    {
+      "division": "first_division",
+      "classification": "explicit_game_design_target",
+      "distribution": {
+        "medianMinorUnits": 400000000,
+        "p90MinorUnits": 2300000000,
+        "p99MinorUnits": 5000000000,
+        "maximumMinorUnits": 15000000000
+      },
+      "medianToleranceBasisPoints": 2500,
+      "p90ToleranceBasisPoints": 3000,
+      "p99ToleranceBasisPoints": 3500,
+      "minimumMaximumMinorUnits": 8500000000,
+      "maximumMaximumMinorUnits": 15000000000
+    },
+    {
+      "division": "second_division",
+      "classification": "explicit_game_design_target",
+      "distribution": {
+        "medianMinorUnits": 45000000,
+        "p90MinorUnits": 220000000,
+        "p99MinorUnits": 500000000,
+        "maximumMinorUnits": 1200000000
+      },
+      "medianToleranceBasisPoints": 2500,
+      "p90ToleranceBasisPoints": 3000,
+      "p99ToleranceBasisPoints": 3500,
+      "minimumMaximumMinorUnits": 600000000,
+      "maximumMaximumMinorUnits": 1800000000
+    },
+    {
+      "division": "third_division",
+      "classification": "explicit_game_design_target",
+      "distribution": {
+        "medianMinorUnits": 15000000,
+        "p90MinorUnits": 37500000,
+        "p99MinorUnits": 120000000,
+        "maximumMinorUnits": 350000000
+      },
+      "medianToleranceBasisPoints": 2500,
+      "p90ToleranceBasisPoints": 3000,
+      "p99ToleranceBasisPoints": 3500,
+      "minimumMaximumMinorUnits": 150000000,
+      "maximumMaximumMinorUnits": 500000000
+    }
+  ],
+  "currentGameBaseline": {
+    "classification": "derived_aggregate",
+    "repositoryCommit": "f2c7013d4b91fb0c9fcf185adca8384b6cdcb584",
+    "relevantDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nodeVersion": "v24.16.0",
+    "worldCount": 100,
+    "seedPrefix": "phase79c-current-baseline",
+    "projectionMethod": "Generate 18x22 players independently for each category using the same club IDs, 4..9 reputations, world seed, initial contracts, neutral form 50, and the pre-79C default valuation config.",
+    "categories": [
+      {
+        "division": "first_division",
+        "sampleSize": 39600,
+        "meanMinorUnits": 550078600,
+        "distribution": {
+          "medianMinorUnits": 550001300,
+          "p90MinorUnits": 745545800,
+          "p99MinorUnits": 888327600,
+          "maximumMinorUnits": 1020098753
+        }
+      },
+      {
+        "division": "second_division",
+        "sampleSize": 39600,
+        "meanMinorUnits": 302874400,
+        "distribution": {
+          "medianMinorUnits": 300832400,
+          "p90MinorUnits": 409263000,
+          "p99MinorUnits": 489741400,
+          "maximumMinorUnits": 568999041
+        }
+      },
+      {
+        "division": "third_division",
+        "sampleSize": 39600,
+        "meanMinorUnits": 176856900,
+        "distribution": {
+          "medianMinorUnits": 174123000,
+          "p90MinorUnits": 237074200,
+          "p99MinorUnits": 286955600,
+          "maximumMinorUnits": 342329031
+        }
+      }
+    ]
+  }
+}

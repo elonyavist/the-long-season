@@ -9,6 +9,7 @@ import {
   accruePlayerFixtureParticipation,
   careerInboxMessageId,
   closePlayerParticipationMonth,
+  competitionId,
   createCareerState,
   createCareerInboxMessage,
   contractNegotiationId,
@@ -155,7 +156,7 @@ test("save then load preserves career match preparation", async () => {
   }
 });
 
-test("save then load preserves compact season history", async () => {
+test("save then load preserves compact season history and ordered player statistics", async () => {
   const directoryPath = await createTempSaveDirectory();
   const storage = new JsonCareerStorage({
     directoryPath,
@@ -176,6 +177,21 @@ test("save then load preserves compact season history", async () => {
           fixtureCount: 1,
           totalGoals: 2,
         },
+        playerStatistics: {
+          participationCoverage: "complete",
+          eventCoverage: "partial",
+          rows: [{
+            playerId: playerId("player:retired-json"),
+            starts: 20,
+            substituteAppearances: 4,
+            minutes: 1_880,
+            ratingTotal: 164.2,
+            ratingSamples: 24,
+            goals: 11,
+            assists: 6,
+            saves: 0,
+          }],
+        },
       },
     ],
   });
@@ -190,6 +206,45 @@ test("save then load preserves compact season history", async () => {
     const loaded = await storage.loadCareer(saveId("save:career-history"));
 
     assert.deepEqual(loaded.seasonHistory, state.seasonHistory);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("current JSON envelopes normalize archived seasons that predate player statistics", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const pro01 = "club:pro01" as CareerState["selectedClubId"];
+  const state = createCareerState({
+    ...minimalCareerState(),
+    seasonHistory: [{
+      sequenceNumber: 1,
+      seasonId: seasonId("season:2025"),
+      competitionId: "competition:demo" as NonNullable<CareerState["seasonHistory"]>[number]["competitionId"],
+      finalTable: [leagueTableRowFixture(1, pro01, 3)],
+      championClubId: pro01,
+      selectedClubFinish: leagueTableRowFixture(1, pro01, 3),
+      aggregateGoals: { fixtureCount: 1, totalGoals: 2 },
+    }],
+  });
+
+  try {
+    await storage.saveCareer({
+      saveId: saveId("save:legacy-career-history"),
+      name: "Legacy Career History",
+      state,
+    });
+
+    const loaded = await storage.loadCareer(saveId("save:legacy-career-history"));
+
+    assert.deepEqual(loaded.seasonHistory?.[0]?.playerStatistics, {
+      participationCoverage: "unavailable",
+      eventCoverage: "unavailable",
+      rows: [],
+    });
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -328,7 +383,7 @@ test("loading malformed career saves fails clearly", async () => {
   const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
 
   try {
-    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 7, metadata: {}, state: {} }), "utf8");
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 8, metadata: {}, state: {} }), "utf8");
 
     await assert.rejects(
       () => storage.loadCareer(saveId("save:bad")),
@@ -356,7 +411,7 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 7);
+    assert.equal(raw.saveSchemaVersion, 8);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
     assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
   } finally {
@@ -509,6 +564,15 @@ function minimalGameState(): GameState {
       seed: "demo-001",
       rngAlgorithmVersion: "sfc32-cyrb128-v1",
       saveSchemaVersion: 1,
+      calibrationVersions: {
+        topologyDecisionId: "fictional-three-tier-v1",
+        playerRatingScaleVersion: "rating-v1",
+        playerMarketCalibrationVersion: "market-v1",
+        valuationCurvesVersion: "valuation-v1",
+        askingPriceCurvesVersion: "asking-v1",
+        marketBehaviorCalibrationVersion: "behavior-v1",
+        wageFinanceCalibrationVersion: "wage-v1",
+      },
     },
     calendar: {
       currentDate: gameDate(20_000),
@@ -534,6 +598,35 @@ function minimalGameState(): GameState {
     clubIds: [pro01],
     fixtures: {},
     fixtureIds: [],
+    domesticCompetitionWorld: {
+      competitionIds: [competitionId("competition:demo-third")],
+      competitions: {
+        [competitionId("competition:demo-third")]: {
+          id: competitionId("competition:demo-third"),
+          name: "Scalata Three",
+          clubIds: [pro01],
+          matchRules: {
+            maximumSubstitutions: 5,
+            substitutionWindowLimit: null,
+            allowsPlayerReentry: false,
+            yellowCardAccumulationThreshold: 5,
+            straightRedSuspensionMatches: 3,
+            secondYellowSuspensionMatches: 1,
+            yellowAccumulationSuspensionMatches: 1,
+          },
+          seasonDistribution: {
+            currency: "EUR",
+            prizes: [{ position: 1, amount: nonNegativeMoney(1_000_000_00) }],
+          },
+        },
+      },
+      seasonHistory: [{
+        sequenceNumber: 1,
+        seasonId: seasonId("season:2025"),
+        competitionId: competitionId("competition:demo-third"),
+        finalTable: [leagueTableRowFixture(1, pro01, 3)],
+      }],
+    },
   };
 }
 
