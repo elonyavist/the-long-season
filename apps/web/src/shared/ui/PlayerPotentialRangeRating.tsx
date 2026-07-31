@@ -1,5 +1,8 @@
 import type { SupportedLanguage, Translator } from "@game/i18n";
-import type { CareerPlayerPotentialRangeView } from "@game/ui";
+import type {
+  CareerPlayerPotentialRangeView,
+  CareerPlayerRatingView,
+} from "@game/ui";
 import { Star } from "lucide-react";
 import { useId } from "react";
 
@@ -7,6 +10,8 @@ const POTENTIAL_SLOT_COUNT = 6;
 
 /** Props for the shared accessible lower-to-upper potential renderer. */
 export interface PlayerPotentialRangeRatingProps {
+  /** Public current level used to separate achieved ability from future upside. */
+  readonly currentRating: CareerPlayerRatingView;
   /** Derived public range; it contains no exact ability or persisted floor. */
   readonly range: CareerPlayerPotentialRangeView;
   /** Locale used only to format public half-star values. */
@@ -22,6 +27,7 @@ export interface PlayerPotentialRangeRatingProps {
  * neither the gold/orange palette nor color perception carries meaning alone.
  */
 export function PlayerPotentialRangeRating({
+  currentRating,
   range,
   language,
   text,
@@ -30,9 +36,11 @@ export function PlayerPotentialRangeRating({
   const uncertainty = range.upperStars - range.lowerStars;
   const accessibleLabel = uncertainty === 0
     ? text("career.playerPotentialRange.accessibleSingular", {
+        current: formatStars(currentRating.stars, language),
         stars: formatStars(range.lowerStars, language),
       })
     : text("career.playerPotentialRange.accessibleRange", {
+        current: formatStars(currentRating.stars, language),
         lower: formatStars(range.lowerStars, language),
         upper: formatStars(range.upperStars, language),
         uncertainty: formatStars(uncertainty, language),
@@ -42,6 +50,7 @@ export function PlayerPotentialRangeRating({
     <span
       aria-label={accessibleLabel}
       className="tls-player-potential-range"
+      data-current={formatMachineStars(currentRating.stars)}
       data-lower={formatMachineStars(range.lowerStars)}
       data-upper={formatMachineStars(range.upperStars)}
       role="img"
@@ -50,6 +59,7 @@ export function PlayerPotentialRangeRating({
         {Array.from({ length: POTENTIAL_SLOT_COUNT }, (_, index) => (
           <PotentialRangeStar
             key={index}
+            currentStars={currentRating.stars}
             index={index}
             lowerStars={range.lowerStars}
             upperStars={range.upperStars}
@@ -62,28 +72,37 @@ export function PlayerPotentialRangeRating({
 }
 
 function PotentialRangeStar({
+  currentStars,
   index,
   lowerStars,
   upperStars,
   patternId,
 }: Readonly<{
+  currentStars: number;
   index: number;
   lowerStars: number;
   upperStars: number;
   patternId: string;
 }>): React.JSX.Element {
+  const achievedFraction = slotFraction(currentStars, index);
   const lowerFraction = slotFraction(lowerStars, index);
   const upperFraction = slotFraction(upperStars, index);
-  const uncertainFraction = upperFraction - lowerFraction;
+  const conservativeFutureFraction = Math.max(0, lowerFraction - achievedFraction);
+  const uncertainFutureFraction = Math.max(
+    0,
+    upperFraction - Math.max(achievedFraction, lowerFraction),
+  );
   const sixth = index === POTENTIAL_SLOT_COUNT - 1;
   const upperClipId = `${patternId}-upper`;
   const lowerClipId = `${patternId}-lower`;
+  const achievedClipId = `${patternId}-achieved`;
 
   return (
     <span
       className="tls-player-potential-star"
-      data-conservative={fractionState(lowerFraction)}
-      data-uncertain={fractionState(uncertainFraction)}
+      data-achieved={fractionState(achievedFraction)}
+      data-conservative-future={fractionState(conservativeFutureFraction)}
+      data-uncertain-future={fractionState(uncertainFutureFraction)}
       data-sixth={sixth ? "true" : "false"}
       data-within-ceiling={upperFraction > 0 ? "true" : "false"}
     >
@@ -110,31 +129,52 @@ function PotentialRangeStar({
           <clipPath id={lowerClipId}>
             <rect height="24" width={24 * lowerFraction} x="0" y="0" />
           </clipPath>
+          <clipPath id={achievedClipId}>
+            <rect height="24" width={24 * achievedFraction} x="0" y="0" />
+          </clipPath>
         </defs>
-        {uncertainFraction === 0 ? null : (
-          <Star
-            className="tls-player-potential-star-uncertain"
-            clipPath={`url(#${upperClipId})`}
-            fill={`url(#${patternId})`}
-            size={24}
-            strokeWidth={0}
-          />
-        )}
-        {lowerFraction === 0 ? null : (
-          <Star
-            className="tls-player-potential-star-conservative"
-            clipPath={`url(#${lowerClipId})`}
-            fill="currentColor"
-            size={24}
-            strokeWidth={0}
-          />
-        )}
         <Star
           className="tls-player-potential-star-outline"
           fill="none"
           size={24}
           strokeWidth={1.8}
         />
+        {uncertainFutureFraction === 0 ? null : (
+          <>
+            <Star
+              className="tls-player-potential-star-uncertain-future-base"
+              clipPath={`url(#${upperClipId})`}
+              fill="currentColor"
+              size={24}
+              strokeWidth={1.8}
+            />
+            <Star
+              className="tls-player-potential-star-uncertain-future"
+              clipPath={`url(#${upperClipId})`}
+              fill={`url(#${patternId})`}
+              size={24}
+              strokeWidth={0}
+            />
+          </>
+        )}
+        {conservativeFutureFraction === 0 ? null : (
+          <Star
+            className="tls-player-potential-star-conservative-future"
+            clipPath={`url(#${lowerClipId})`}
+            fill="currentColor"
+            size={24}
+            strokeWidth={1.8}
+          />
+        )}
+        {achievedFraction === 0 ? null : (
+          <Star
+            className="tls-player-potential-star-achieved"
+            clipPath={`url(#${achievedClipId})`}
+            fill="currentColor"
+            size={24}
+            strokeWidth={1.8}
+          />
+        )}
       </svg>
     </span>
   );

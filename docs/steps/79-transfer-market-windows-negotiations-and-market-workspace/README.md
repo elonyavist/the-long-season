@@ -31,10 +31,10 @@ potential range, range-aware prospect value, effective-rarity, annual-intake,
 display-safe upper-cap, asking/offer/counter/completed-fee spread, and
 zero-observation defects. Its focused checks, repository verification, build,
 and browser QA pass. Its direct `50 x 20` was stopped, produced no report, and
-is not claimed as evidence. Step 14 remains paused while Phase 80 reworks are
-documented and executed. Their final validation must
-run a resumable `50 x 20` with exactly `7` workers. The later release-scale
-evidence remains unrun and unclaimed.
+is not claimed as evidence. Step 14 remains paused through the accepted Phase
+80 UI, Phase 80A player-model, and Phase 80B market/loan reworks. Phase 80B
+Step 10 alone must run one resumable `50 x 20` with exactly `7` workers. The
+later release-scale evidence remains unrun and unclaimed.
 
 ## Goal
 

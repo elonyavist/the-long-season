@@ -16,13 +16,36 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_DESIGN_CONTRACT.md` -
+  accepted current/P50/upper, dynamic club environment, quarterly development,
+  contextual prospect generation, national exceptional stock, annual intake,
+  context-invariant global expected-value/calibration epoch, AI-parity,
+  beta-reset, and diagnostic contract.
+- `PHASE_80B_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md` -
+  accepted selected-club incoming-offer, market-posture, final-counter,
+  bidirectional-loan, explicit ownership/selectability accessors,
+  per-buyer/player negotiation invariants, outgoing-action versus
+  seller-willingness semantics, wage-sharing, real-development, persistence,
+  and bounded-closeout contract.
+- `PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md` - accepted durable
+  race coordination, three-active-buyer cap, highest-fee qualification,
+  stale-safe raises, fixed three-day stages, serial-loan scope, player choice,
+  free-agent negotiation, dedicated diagnostics, and final checkpointed-cohort
+  contract.
+- `PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_INVENTORY.md` - accepted
+  evidence, ownership, interaction defaults, non-goals, and ordered delivery
+  for the five current Squad/Market reworks and their Phase 80A handoff.
+- `PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_REPORT.md` - completed Phase 80
+  delivery for all five accepted items, the defects found and fixed while
+  proving them, the obsolete-path absence checks, manual-inspection targets,
+  residual monitor items, and the truthful Phase 80A handoff.
 - `SIMULATION_EXECUTION_POLICY.md` - repository-wide default/maximum
   seven-worker budget for current and future batch simulations, including
   checkpoint and determinism constraints.
 - `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_REPORT.md` -
   completed Phase 79D implementation and bounded verification, explicit record
   that the stopped `50 x 20` produced no evidence, and the user decision to
-  defer a checkpointed cohort to Phase 80 closeout.
+  defer a checkpointed cohort to Phase 80C Step 09.
 - `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_SPEC.md` - accepted
   corrective contract for archetype-compatible exceptional generation,
   effective rarity budgets, derived public potential ranges, range-aware

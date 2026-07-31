@@ -23,7 +23,11 @@ import type {
   WebSelectedClubMarketCommandResult,
 } from "../../runtime/web-career-runtime";
 import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
-import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import {
+  formatMoneyFromMinorUnits,
+  formatMoneyInputFromMinorUnits,
+  parseMoneyInputToMinorUnits,
+} from "../../shared/format-money";
 import { PlayerAttributeGroups } from "../../shared/ui/PlayerAttributeGroups";
 import { PlayerProfileTabs } from "../../shared/ui/PlayerProfileTabs";
 import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
@@ -99,6 +103,9 @@ export function CareerMarketPlayerDialog({
 
   return (
     <FullScreenDialog
+      // The Market profile holds an unsent offer draft, so it is transactional:
+      // only the explicit close control and `Escape` may dismiss it.
+      dismissOnBackdrop={false}
       initialFocusRef={closeRef}
       labelledBy={titleId}
       open={detail !== undefined}
@@ -195,6 +202,7 @@ export function CareerMarketPlayerDialog({
               label={text("career.market.column.potentialLevel")}
               value={(
                 <PlayerPotentialRangeRating
+                  currentRating={detail.currentRating}
                   language={language}
                   range={detail.potentialRange}
                   text={text}
@@ -499,6 +507,7 @@ function MarketOfferComposer({
         <TransferFeeComposer
           currency={currency}
           feedback={feedbackBanner}
+          language={language}
           pending={pending}
           playerId={playerId}
           sellingClubId={sellingClubId}
@@ -517,6 +526,7 @@ function MarketOfferComposer({
         age={age}
         currency={currency}
         feedback={feedbackBanner}
+        language={language}
         pending={pending}
         text={text}
         titleKey={kind === "preliminary_agreement" ? "career.market.composer.preliminaryTitle" : "career.market.composer.freeAgentTitle"}
@@ -594,6 +604,7 @@ function MarketOfferComposer({
           age={age}
           currency={currency}
           feedback={feedbackBanner}
+          language={language}
           pending={pending}
           text={text}
           titleKey="career.market.composer.playerTermsTitle"
@@ -693,6 +704,7 @@ function MarketOfferComposer({
 function TransferFeeComposer({
   currency,
   feedback,
+  language,
   pending,
   playerId,
   sellingClubId,
@@ -702,6 +714,7 @@ function TransferFeeComposer({
 }: Readonly<{
   currency: string;
   feedback: React.ReactNode;
+  language: WebPreferences["language"];
   pending: boolean;
   playerId: string;
   sellingClubId: string;
@@ -710,7 +723,7 @@ function TransferFeeComposer({
   onSubmit: (fee: CareerContractTermsInput["annualWage"]) => void;
 }>): React.JSX.Element {
   const [feeText, setFeeText] = useState("");
-  const parsedFee = parseFeeInput(feeText);
+  const parsedFee = parseFeeInput(feeText, language);
   const preview = parsedFee === undefined
     ? undefined
     : previewOffer({ kind: "transfer_offer", playerId, fee: parsedFee });
@@ -730,6 +743,11 @@ function TransferFeeComposer({
           <input
             inputMode="decimal"
             value={feeText}
+            onBlur={() => {
+              if (parsedFee !== undefined) {
+                setFeeText(formatMoneyInputFromMinorUnits(parsedFee, language));
+              }
+            }}
             onChange={(event) => setFeeText(event.currentTarget.value)}
           />
           <span>{currency}</span>
@@ -760,6 +778,7 @@ function ContractTermsComposer({
   age,
   currency,
   feedback,
+  language,
   pending,
   text,
   titleKey,
@@ -770,6 +789,7 @@ function ContractTermsComposer({
   age: number;
   currency: string;
   feedback: React.ReactNode;
+  language: WebPreferences["language"];
   pending: boolean;
   text: Translator;
   titleKey: MessageKey;
@@ -782,10 +802,13 @@ function ContractTermsComposer({
     annualWage: careerNonNegativeMoneyFromMinorUnits(0),
     squadStatus: "squad_player",
     bonuses: { signingBonus: careerNonNegativeMoneyFromMinorUnits(0), appearanceBonus: careerNonNegativeMoneyFromMinorUnits(0) },
-  }), [age]);
+  }, language), [age, language]);
   const [values, setValues] = useState<ContractRenewalFormValues>(defaultValues);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Partial<Record<ContractRenewalFormField, string>>>>({});
-  const validation = useMemo(() => validateContractRenewalForm(values, ALL_BONUS_FIELDS), [values]);
+  const validation = useMemo(
+    () => validateContractRenewalForm(values, ALL_BONUS_FIELDS, language),
+    [language, values],
+  );
   const preview = validation.status === "valid" ? previewOffer(validation.terms) : undefined;
 
   return (
@@ -794,6 +817,7 @@ function ContractTermsComposer({
       <ContractTermsForm
         currency={currency}
         errors={fieldErrors}
+        language={language}
         pending={pending}
         submitLabel={text(submitLabelKey)}
         supportedBonusFields={ALL_BONUS_FIELDS}
@@ -808,7 +832,7 @@ function ContractTermsComposer({
           setFieldErrors((current) => ({ ...current, [field]: undefined }));
         }}
         onSubmit={() => {
-          const validated = validateContractRenewalForm(values, ALL_BONUS_FIELDS);
+          const validated = validateContractRenewalForm(values, ALL_BONUS_FIELDS, language);
           if (validated.status === "invalid") {
             setFieldErrors(Object.fromEntries(
               Object.entries(validated.errors).map(([field, reason]) => [field, text(validationMessageKey(reason))]),
@@ -981,15 +1005,14 @@ function FinancePreviewFacts({
   return <p className="tls-contract-finance-ok"><Check aria-hidden="true" size={16} />{text("career.contract.financeAffordable")}</p>;
 }
 
-function parseFeeInput(value: string): CareerContractTermsInput["annualWage"] | undefined {
-  const normalized = value.trim().replace(",", ".");
-  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(normalized);
-  if (match === null) return undefined;
-  const whole = Number(match[1]);
-  const fraction = Number((match[2] ?? "").padEnd(2, "0"));
-  const minorUnits = whole * 100 + fraction;
-  if (!Number.isSafeInteger(minorUnits) || minorUnits <= 0) return undefined;
-  return careerNonNegativeMoneyFromMinorUnits(minorUnits);
+/** Reads the club fee through the shared parser; a zero fee is not an offer. */
+function parseFeeInput(
+  value: string,
+  language: WebPreferences["language"],
+): CareerContractTermsInput["annualWage"] | undefined {
+  const parsed = parseMoneyInputToMinorUnits(value, language);
+  if (parsed.status !== "valid" || parsed.minorUnits <= 0) return undefined;
+  return careerNonNegativeMoneyFromMinorUnits(parsed.minorUnits);
 }
 
 function validationMessageKey(reason: string | undefined): MessageKey {

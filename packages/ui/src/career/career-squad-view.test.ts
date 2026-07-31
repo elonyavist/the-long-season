@@ -302,12 +302,55 @@ test("sorts potential by lower estimate, upper ceiling, current rating, then ID"
   ]);
 });
 
+test("keeps Placement next to Role and exposes a sortable canonical age column", () => {
+  const view = buildCareerSquadView({
+    players: [
+      player({ playerId: "player:older", age: 33 }),
+      player({ playerId: "player:younger", age: 18 }),
+      player({ playerId: "player:middle", age: 26 }),
+    ],
+    sort: { key: "age", direction: "ascending" },
+  });
+
+  assert.deepEqual(view.columns.map((column) => column.key), [
+    "number",
+    "role",
+    "placement",
+    "player",
+    "age",
+    "condition",
+    "morale",
+    "status",
+    "value",
+    "current_level",
+    "potential_level",
+    "action",
+  ]);
+  assert.equal(
+    view.columns.find((column) => column.key === "age")?.sortKey,
+    "age",
+  );
+  assert.deepEqual(view.rows.map((row) => row.age), [18, 26, 33]);
+  assert.deepEqual(
+    buildCareerSquadView({
+      players: [
+        player({ playerId: "player:older", age: 33 }),
+        player({ playerId: "player:younger", age: 18 }),
+        player({ playerId: "player:middle", age: 26 }),
+      ],
+      sort: { key: "age", direction: "descending" },
+    }).rows.map((row) => row.age),
+    [33, 26, 18],
+  );
+});
+
 function player(overrides: Partial<CareerSquadPlayerInput> = {}): CareerSquadPlayerInput {
   return {
     playerId: "player:base",
     shirtNumber: 10,
     firstName: "Test",
     lastName: "Player",
+    age: 24,
     primaryRole: "central_midfielder",
     condition: 91,
     morale: 64,

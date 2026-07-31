@@ -22,6 +22,9 @@ import {
   type CareerPlayerDetailView,
 } from "./career-player-detail-view.ts";
 
+/** Fixed row count for every Market result page. */
+export const CAREER_MARKET_PAGE_SIZE = 25;
+
 /** Stable market actions exposed by a target row or target detail. */
 export type CareerMarketTargetAction =
   | "submit_transfer_offer"
@@ -205,6 +208,19 @@ export interface CareerMarketTargetCatalogView {
   ) => CareerMarketTargetDetailView | undefined;
 }
 
+/** One deterministic page sliced from an already filtered and sorted catalog. */
+export interface CareerMarketTargetPageView {
+  readonly rows: readonly CareerMarketTargetRowView[];
+  readonly currentPage: number;
+  readonly pageCount: number;
+  readonly pageSize: typeof CAREER_MARKET_PAGE_SIZE;
+  readonly matchingTargetCount: number;
+  /** One-based position of the first row, or zero when no rows match. */
+  readonly firstVisibleTarget: number;
+  /** One-based position of the last row, or zero when no rows match. */
+  readonly lastVisibleTarget: number;
+}
+
 /** Builds the public target catalog without exposing exact hidden ability. */
 export function buildCareerMarketTargetCatalog(
   targets: readonly CareerMarketTargetInput[],
@@ -245,6 +261,33 @@ export function buildCareerMarketTargetCatalog(
         return undefined;
       }
     },
+  };
+}
+
+/**
+ * Slices one bounded page after the caller has applied canonical filtering and
+ * sorting. Oversized requests clamp to the final page; empty results stay 1/1.
+ */
+export function paginateCareerMarketTargetRows(
+  rows: readonly CareerMarketTargetRowView[],
+  requestedPage = 1,
+): CareerMarketTargetPageView {
+  const pageCount = Math.max(1, Math.ceil(rows.length / CAREER_MARKET_PAGE_SIZE));
+  const normalizedPage = Number.isSafeInteger(requestedPage) && requestedPage >= 1
+    ? requestedPage
+    : 1;
+  const currentPage = Math.min(normalizedPage, pageCount);
+  const startIndex = (currentPage - 1) * CAREER_MARKET_PAGE_SIZE;
+  const pageRows = rows.slice(startIndex, startIndex + CAREER_MARKET_PAGE_SIZE);
+
+  return {
+    rows: pageRows,
+    currentPage,
+    pageCount,
+    pageSize: CAREER_MARKET_PAGE_SIZE,
+    matchingTargetCount: rows.length,
+    firstVisibleTarget: pageRows.length === 0 ? 0 : startIndex + 1,
+    lastVisibleTarget: pageRows.length === 0 ? 0 : startIndex + pageRows.length,
   };
 }
 

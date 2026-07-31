@@ -2,9 +2,11 @@ import type { MessageKey, Translator } from "@game/i18n";
 import type { CareerContractTermsInput } from "@game/ui";
 import { Send, X } from "lucide-react";
 
-import type {
-  ContractRenewalFormField,
-  ContractRenewalFormValues,
+import type { WebPreferences } from "../../app/preferences";
+import {
+  normalizeContractMoneyInput,
+  type ContractRenewalFormField,
+  type ContractRenewalFormValues,
 } from "../squad/contract-renewal-form";
 
 type AgreedSquadStatus = CareerContractTermsInput["squadStatus"];
@@ -36,6 +38,7 @@ export function ContractTermsForm({
   errors,
   supportedBonusFields,
   currency,
+  language,
   pending,
   text,
   submitLabel,
@@ -47,6 +50,7 @@ export function ContractTermsForm({
   errors: Readonly<Partial<Record<ContractRenewalFormField, string>>>;
   supportedBonusFields: readonly string[];
   currency: string;
+  language: WebPreferences["language"];
   pending: boolean;
   text: Translator;
   submitLabel: string;
@@ -54,6 +58,9 @@ export function ContractTermsForm({
   onCancel: () => void;
   onSubmit: () => void;
 }>): React.JSX.Element {
+  // Every money field normalizes to the active locale on blur; an unreadable
+  // draft is left exactly as typed next to its validation message.
+  const normalizeMoney = (value: string): string => normalizeContractMoneyInput(value, language);
   return (
     <form className="tls-contract-form" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} noValidate>
       <div className="tls-contract-form-grid">
@@ -73,6 +80,7 @@ export function ContractTermsForm({
           error={errors.annualWage}
           inputMode="decimal"
           suffix={currency}
+          normalize={normalizeMoney}
           onChange={onChange}
         />
         <label className="tls-contract-field">
@@ -86,13 +94,13 @@ export function ContractTermsForm({
             ))}
           </select>
         </label>
-        <ContractTermsInput field="signingBonus" label={text("career.contract.field.signingBonus")} value={values.signingBonus} error={errors.signingBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
-        <ContractTermsInput field="appearanceBonus" label={text("career.contract.field.appearanceBonus")} value={values.appearanceBonus} error={errors.appearanceBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
+        <ContractTermsInput field="signingBonus" label={text("career.contract.field.signingBonus")} value={values.signingBonus} error={errors.signingBonus} inputMode="decimal" suffix={currency} normalize={normalizeMoney} onChange={onChange} />
+        <ContractTermsInput field="appearanceBonus" label={text("career.contract.field.appearanceBonus")} value={values.appearanceBonus} error={errors.appearanceBonus} inputMode="decimal" suffix={currency} normalize={normalizeMoney} onChange={onChange} />
         {supportedBonusFields.includes("goal_bonus") ? (
-          <ContractTermsInput field="goalBonus" label={text("career.contract.field.goalBonus")} value={values.goalBonus} error={errors.goalBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
+          <ContractTermsInput field="goalBonus" label={text("career.contract.field.goalBonus")} value={values.goalBonus} error={errors.goalBonus} inputMode="decimal" suffix={currency} normalize={normalizeMoney} onChange={onChange} />
         ) : null}
         {supportedBonusFields.includes("clean_sheet_bonus") ? (
-          <ContractTermsInput field="cleanSheetBonus" label={text("career.contract.field.cleanSheetBonus")} value={values.cleanSheetBonus} error={errors.cleanSheetBonus} inputMode="decimal" suffix={currency} onChange={onChange} />
+          <ContractTermsInput field="cleanSheetBonus" label={text("career.contract.field.cleanSheetBonus")} value={values.cleanSheetBonus} error={errors.cleanSheetBonus} inputMode="decimal" suffix={currency} normalize={normalizeMoney} onChange={onChange} />
         ) : null}
       </div>
       <div className="tls-contract-form-actions">
@@ -116,6 +124,7 @@ function ContractTermsInput({
   error,
   inputMode,
   suffix,
+  normalize,
   onChange,
 }: Readonly<{
   field: ContractRenewalFormField;
@@ -124,6 +133,8 @@ function ContractTermsInput({
   error: string | undefined;
   inputMode: "numeric" | "decimal";
   suffix: string;
+  /** Optional blur-time rewrite; omitted for non-money fields. */
+  normalize?: (value: string) => string;
   onChange: ContractTermsFormChange;
 }>): React.JSX.Element {
   const errorId = `contract-${field}-error`;
@@ -136,6 +147,11 @@ function ContractTermsInput({
           aria-invalid={error === undefined ? undefined : "true"}
           inputMode={inputMode}
           value={value}
+          onBlur={(event) => {
+            if (normalize === undefined) return;
+            const normalized = normalize(event.currentTarget.value);
+            if (normalized !== value) onChange(field, normalized);
+          }}
           onChange={(event) => onChange(field, event.currentTarget.value)}
         />
         <span>{suffix}</span>

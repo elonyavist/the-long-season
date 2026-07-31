@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics
+PHASE_DIR_TO_EXECUTE: docs/steps/80-graphical-and-structural-rework
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.
 If the phase README does not exist, stop and report the missing file.

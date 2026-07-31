@@ -5,6 +5,12 @@ import {
   CareerContractTermsInput,
 } from "@game/ui";
 
+import type { WebPreferences } from "../../app/preferences";
+import {
+  formatMoneyInputFromMinorUnits,
+  parseMoneyInputToMinorUnits,
+} from "../../shared/format-money";
+
 type ContractOfferTerms = CareerContractTermsInput;
 type Money = CareerContractTermsInput["annualWage"];
 type AgreedSquadStatus = CareerContractTermsInput["squadStatus"];
@@ -35,36 +41,61 @@ export type ContractRenewalValidation =
 export function createContractRenewalFormValues(input: Readonly<{
   age: number;
   activeContract: CareerActiveContractInput;
+  language: WebPreferences["language"];
 }>): ContractRenewalFormValues {
   return contractTermsToFormValues({
     durationYears: recommendedDurationYears(input.age),
     annualWage: input.activeContract.annualWage,
     squadStatus: input.activeContract.squadStatus,
     bonuses: input.activeContract.bonuses,
-  });
+  }, input.language);
 }
 
-/** Converts safe projected terms back into editable annual-money strings. */
+/**
+ * Converts safe projected terms back into editable annual-money strings.
+ *
+ * Amounts are written in the manager's own language, so the same text the form
+ * shows is the text `validateContractRenewalForm` accepts back.
+ */
 export function contractTermsToFormValues(
   terms: CareerContractTermsInput,
+  language: WebPreferences["language"],
 ): ContractRenewalFormValues {
+  const money = (amount: Money): string => formatMoneyInputFromMinorUnits(amount, language);
   return {
     durationYears: String(terms.durationYears),
-    annualWage: formatMoneyInput(terms.annualWage),
+    annualWage: money(terms.annualWage),
     squadStatus: terms.squadStatus,
-    signingBonus: formatMoneyInput(terms.bonuses.signingBonus),
-    appearanceBonus: formatMoneyInput(terms.bonuses.appearanceBonus),
-    goalBonus: terms.bonuses.goalBonus === undefined ? "" : formatMoneyInput(terms.bonuses.goalBonus),
+    signingBonus: money(terms.bonuses.signingBonus),
+    appearanceBonus: money(terms.bonuses.appearanceBonus),
+    goalBonus: terms.bonuses.goalBonus === undefined ? "" : money(terms.bonuses.goalBonus),
     cleanSheetBonus: terms.bonuses.cleanSheetBonus === undefined
       ? ""
-      : formatMoneyInput(terms.bonuses.cleanSheetBonus),
+      : money(terms.bonuses.cleanSheetBonus),
   };
+}
+
+/**
+ * Normalizes one editable money field on blur, or returns it unchanged.
+ *
+ * An unreadable draft is never rewritten, so the manager keeps the exact text
+ * that failed validation next to its message.
+ */
+export function normalizeContractMoneyInput(
+  value: string,
+  language: WebPreferences["language"],
+): string {
+  const parsed = parseMoneyInputToMinorUnits(value, language);
+  return parsed.status === "valid"
+    ? formatMoneyInputFromMinorUnits(parsed.minorUnits, language)
+    : value;
 }
 
 /** Validates browser text without floating-point money conversion. */
 export function validateContractRenewalForm(
   values: ContractRenewalFormValues,
   supportedBonusFields: readonly CareerContractBonusField[],
+  language: WebPreferences["language"],
 ): ContractRenewalValidation {
   const errors: Partial<Record<ContractRenewalFormField, "required" | "invalid" | "out_of_range">> = {};
   const durationYears = parseDuration(values.durationYears);
@@ -72,19 +103,21 @@ export function validateContractRenewalForm(
     errors.durationYears = values.durationYears.trim().length === 0 ? "required" : "out_of_range";
   }
 
-  const annualWage = parseMoneyInput(values.annualWage);
+  const annualWage = parseMoney(values.annualWage, language);
   if (annualWage === undefined) errors.annualWage = moneyError(values.annualWage);
-  const signingBonus = parseMoneyInput(values.signingBonus);
+  const signingBonus = parseMoney(values.signingBonus, language);
   if (signingBonus === undefined) errors.signingBonus = moneyError(values.signingBonus);
-  const appearanceBonus = parseMoneyInput(values.appearanceBonus);
+  const appearanceBonus = parseMoney(values.appearanceBonus, language);
   if (appearanceBonus === undefined) errors.appearanceBonus = moneyError(values.appearanceBonus);
 
   const supportsGoalBonus = supportedBonusFields.includes("goal_bonus");
-  const goalBonus = supportsGoalBonus ? parseMoneyInput(values.goalBonus) : undefined;
+  const goalBonus = supportsGoalBonus ? parseMoney(values.goalBonus, language) : undefined;
   if (supportsGoalBonus && goalBonus === undefined) errors.goalBonus = moneyError(values.goalBonus);
 
   const supportsCleanSheetBonus = supportedBonusFields.includes("clean_sheet_bonus");
-  const cleanSheetBonus = supportsCleanSheetBonus ? parseMoneyInput(values.cleanSheetBonus) : undefined;
+  const cleanSheetBonus = supportsCleanSheetBonus
+    ? parseMoney(values.cleanSheetBonus, language)
+    : undefined;
   if (supportsCleanSheetBonus && cleanSheetBonus === undefined) {
     errors.cleanSheetBonus = moneyError(values.cleanSheetBonus);
   }
@@ -135,19 +168,12 @@ function parseDuration(value: string): number | undefined {
   return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : undefined;
 }
 
-function parseMoneyInput(value: string): Money | undefined {
-  const normalized = value.trim().replace(",", ".");
-  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(normalized);
-  if (match === null) return undefined;
-  const whole = Number(match[1]);
-  const fraction = Number((match[2] ?? "").padEnd(2, "0"));
-  const minorUnits = whole * 100 + fraction;
-  if (!Number.isSafeInteger(minorUnits)) return undefined;
-  return careerNonNegativeMoneyFromMinorUnits(minorUnits);
-}
-
-function formatMoneyInput(amount: Money): string {
-  return `${Math.floor(amount / 100)}.${String(amount % 100).padStart(2, "0")}`;
+/** Reads one contract amount through the single shared locale-safe parser. */
+function parseMoney(value: string, language: WebPreferences["language"]): Money | undefined {
+  const parsed = parseMoneyInputToMinorUnits(value, language);
+  return parsed.status === "valid"
+    ? careerNonNegativeMoneyFromMinorUnits(parsed.minorUnits)
+    : undefined;
 }
 
 function moneyError(value: string): "required" | "invalid" {

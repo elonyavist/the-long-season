@@ -3910,12 +3910,13 @@
 
 .tls-squad-table col[data-column="number"] { width: 3.5%; }
 .tls-squad-table col[data-column="role"] { width: 7%; }
-.tls-squad-table col[data-column="player"] { width: 12.5%; }
+.tls-squad-table col[data-column="placement"] { width: 13%; }
+.tls-squad-table col[data-column="player"] { width: 10.5%; }
+.tls-squad-table col[data-column="age"] { width: 6%; }
 .tls-squad-table col[data-column="condition"] { width: 9.5%; }
 .tls-squad-table col[data-column="morale"] { width: 7%; }
-.tls-squad-table col[data-column="status"] { width: 11%; }
-.tls-squad-table col[data-column="placement"] { width: 15%; }
-.tls-squad-table col[data-column="value"] { width: 9%; }
+.tls-squad-table col[data-column="status"] { width: 10%; }
+.tls-squad-table col[data-column="value"] { width: 8%; }
 .tls-squad-table col[data-column="current_level"] { width: 10%; }
 .tls-squad-table col[data-column="potential_level"] { width: 10%; }
 .tls-squad-table col[data-column="action"] { width: 5.5%; }
@@ -4105,9 +4106,10 @@
 }
 
 /*
- * Potential always reserves six slots: solid fill is the conservative public
- * estimate, diagonal hatching is uncertain upside, and the remaining outline
- * sits beyond the ceiling. DOM data attributes mirror every visual state.
+ * Potential always reserves six slots. Current ability keeps the Level color;
+ * conservative future uses a light solid fill; uncertain future keeps the
+ * light hatch; and the remaining outline sits beyond the public upper bound.
+ * DOM data attributes mirror every visual state.
  */
 .tls-player-potential-range,
 .tls-player-potential-range-glyphs {
@@ -4125,12 +4127,11 @@
   height: 1rem;
   place-items: center;
   flex: 0 0 1rem;
-  color: var(--tls-player-rating-star);
+  color: var(--tls-player-rating-star-empty);
 }
 
 .tls-player-potential-star[data-sixth="true"] {
   margin-inline-start: var(--tls-space-1);
-  color: var(--tls-player-rating-sixth);
 }
 
 .tls-player-potential-star svg {
@@ -4144,17 +4145,34 @@
   color: var(--tls-player-rating-star-empty);
 }
 
-.tls-player-potential-star-uncertain {
-  color: inherit;
+.tls-player-potential-star-achieved {
+  color: var(--tls-player-rating-star);
+}
+
+.tls-player-potential-star-conservative-future,
+.tls-player-potential-star-uncertain-future-base,
+.tls-player-potential-star-uncertain-future {
+  color: var(--tls-player-rating-projected);
+}
+
+.tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-achieved {
+  color: var(--tls-player-rating-sixth);
+}
+
+.tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-conservative-future,
+.tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-uncertain-future-base,
+.tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-uncertain-future {
+  color: var(--tls-player-rating-projected-sixth);
 }
 
 .tls-player-potential-pattern-line {
+  color: var(--tls-player-rating-star);
   stroke: currentColor;
   stroke-width: 1.6;
 }
 
-.tls-player-potential-star[data-within-ceiling="false"] {
-  color: var(--tls-player-rating-star-empty);
+.tls-player-potential-star[data-sixth="true"] .tls-player-potential-pattern-line {
+  color: var(--tls-player-rating-sixth);
 }
 
 .tls-icon-button:hover {
@@ -4517,12 +4535,28 @@
 }
 
 .tls-market-range-filter {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--tls-space-2);
 }
 
-.tls-market-range-filter input {
+.tls-market-range-filter legend {
+  grid-column: 1 / -1;
+}
+
+.tls-market-range-filter input,
+.tls-market-range-filter select {
   min-width: 0;
+}
+
+.tls-market-age-bound {
+  display: grid;
+  gap: var(--tls-space-1);
+}
+
+.tls-market-age-bound > span {
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-xs);
 }
 
 .tls-market-filter-summary {
@@ -4539,6 +4573,61 @@
   font-size: var(--tls-font-size-sm);
 }
 
+.tls-market-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tls-space-3);
+  padding: var(--tls-space-2) var(--tls-space-3);
+  color: var(--tls-color-text-muted);
+  background: color-mix(in srgb, var(--tls-theme-table-header-surface) 82%, transparent);
+  border: 1px solid var(--tls-theme-border);
+  border-radius: var(--tls-radius-sm);
+  font-family: var(--tls-font-mono);
+  font-size: var(--tls-font-size-sm);
+}
+
+.tls-market-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: var(--tls-space-2);
+}
+
+.tls-market-pagination button,
+.tls-market-pagination select {
+  min-height: var(--tls-control-height);
+  color: var(--tls-color-text);
+  background: var(--tls-theme-secondary-action-surface);
+  border: 1px solid var(--tls-theme-interactive-border);
+  border-radius: var(--tls-radius-sm);
+  font: inherit;
+}
+
+.tls-market-pagination button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tls-space-1);
+  padding-inline: var(--tls-space-3);
+  cursor: pointer;
+}
+
+.tls-market-pagination select {
+  min-width: 3.5rem;
+  padding-inline: var(--tls-space-2);
+}
+
+.tls-market-pagination button:focus-visible,
+.tls-market-pagination select:focus-visible {
+  outline: 2px solid var(--tls-theme-primary-action-surface);
+  outline-offset: 2px;
+}
+
+.tls-market-pagination button:disabled {
+  color: var(--tls-state-disabled-foreground);
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
 .tls-market-table-frame {
   width: 100%;
   min-width: 0;
@@ -4548,6 +4637,18 @@
   border: 1px solid var(--tls-theme-border);
   border-radius: var(--tls-radius-sm);
   scrollbar-color: var(--tls-theme-primary-action-surface) var(--tls-theme-table-header-surface);
+}
+
+@media (max-width: 48rem) {
+  .tls-market-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tls-market-pagination > div {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
 }
 
 .tls-market-table {

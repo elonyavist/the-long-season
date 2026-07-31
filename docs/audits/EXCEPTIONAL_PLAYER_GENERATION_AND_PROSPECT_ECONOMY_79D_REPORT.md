@@ -9,10 +9,11 @@ bounded deterministic, repository, and browser evidence pass. The attempted
 final `50 worlds x 20 seasons` cohort was stopped by the user, produced no
 report, and is not represented here as a pass.
 
-Phase 80 now owns the additional graphical and structural reworks. Its Step 02
-will document the user's concrete scope without inference. The final Phase 80
-closeout must run one checkpointed `50 x 20` with exactly `7` workers so the
-host remains usable.
+Phase 80 owns the additional graphical and structural reworks. Its Step 02
+documented the user's concrete scope without inference. A later accepted
+product decision added Phase 80A player-model work and Phase 80B market/loan
+work, so the sole checkpointed `50 x 20` moved to Phase 80C Step 09. It must
+use exactly `7` workers so the host remains usable.
 
 ## Delivered Model
 
@@ -66,15 +67,15 @@ The direct `50 x 20` was stopped after roughly eight and a half hours. With
 `50` worlds below the automatic parallel threshold, it used one worker. It
 wrote no final report, so it supplies no longitudinal gate evidence.
 
-Phase 80 closeout documentation must declare a resumable command before execution,
-using a checkpoint directory, `50` stable shards, and exactly `7` workers.
-That future run may cover the representative age-15-to-35 arc and year-10 /
-year-20 stocks, but it still must not claim multi-generational equilibrium or
-behavior after season 20.
+Phase 80C closeout documentation freezes the resumable command before
+execution, using a checkpoint directory, `50` stable shards, and exactly `7`
+workers. That future run may cover the representative age-15-to-35 arc and
+year-10/year-20 stocks, but it still must not claim multi-generational
+equilibrium or behavior after season 20.
 
 ## Handoff
 
 Phase 79D is closed. Phase 79 Step 14 remains paused and its release-scale gate
-remains unrun and unclaimed. Phase 80 Step 02 is the next action: document the
-reworks the user identifies; no implementation begins until their scope and
-ordered steps exist.
+remains unrun and unclaimed. Phase 80 is the active bounded UI rework; Phase
+80A and Phase 80B are documented successors, and no final cohort runs before
+Phase 80C Step 09.

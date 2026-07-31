@@ -107,6 +107,7 @@ export function CareerPlayerProfileDialog({
               label={text("career.squad.column.potential_level")}
               value={(
                 <PlayerPotentialRangeRating
+                  currentRating={profile.currentRating}
                   language={language}
                   range={profile.potentialRange}
                   text={text}

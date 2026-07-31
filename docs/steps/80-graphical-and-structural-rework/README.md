@@ -2,10 +2,15 @@
 
 ## Status
 
-In progress. Step 01 is Done and established the repository-wide seven-worker
-simulation policy plus the phase documentation boundary. Step 02 is active but
-must not infer the graphical or structural reworks: it waits for the user's
-concrete change list and then records the accepted inventory.
+Complete. All nine steps are Done and Phase 80A is the only next phase. The
+five accepted reworks ship together with green repository and browser evidence,
+recorded in
+`docs/audits/PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_REPORT.md`. Step 03's
+shared renderer correction passes. Direct product review also exposed an
+upstream generation/projection mismatch; the accepted Phase 80A contract owns
+that model correction, so Phase 80 finished its bounded graphical/interaction
+scope without hiding or duplicating player-model logic. No longitudinal cohort
+ran, and Phase 79 Step 14 remains paused and unclaimed.
 
 The former roadmap reservation `Phase 80 - Finances Expansion And Poverty Loop
 MVP` is superseded by this explicit product decision. Its scope remains a
@@ -17,18 +22,18 @@ Rework the current product's visual presentation and selected structural seams
 without regressing the deterministic game, canonical ownership, browser
 accessibility, save lifecycle, or the completed Phase 79D player/economy model.
 
-The exact reworks are intentionally not guessed in this README. Step 02 must
-record each user-requested change, its current evidence, owner, expected
-outcome, non-goals, and verification before implementation steps are created.
+The accepted reworks are recorded in
+`docs/audits/PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_INVENTORY.md`. Later
+steps may implement only those items and their necessary regression evidence.
 
 ## Entry Gate
 
 - Phase 79D is complete by explicit product decision.
 - Phase 79 Step 14 remains Reopened and paused without a release-gate claim.
 - The stopped Phase 79D `50 x 20` produced no report and remains unclaimed.
-- The final Phase 80 validation sequence must run one resumable `50 x 20`
-  after all accepted reworks, using `50` stable shards and the repository-wide
-  seven-worker policy.
+- The deferred resumable `50 x 20` must not run in Phase 80. It belongs only
+  to Phase 80C Step 09 after Phase 80A player-model, Phase 80B market/loan, and
+  Phase 80C competitive-race reworks, using `50` stable shards and `7` workers.
 - No Phase 79 release-scale cohort, finance expansion, Phase 81 work, or
   unrelated feature starts inside Phase 80.
 
@@ -52,10 +57,13 @@ outcome, non-goals, and verification before implementation steps are created.
 
 1. `01-seven-worker-simulation-policy-and-phase-bootstrap.md`
 2. `02-accepted-graphical-and-structural-rework-inventory.md`
-
-Step 02 creates the later ordered implementation and closeout documents only
-after the user-defined inventory is accepted. This README does not pre-allocate
-fake implementation steps.
+3. `03-achieved-versus-upside-player-star-language.md`
+4. `04-market-pagination-debounced-filters-and-age-controls.md`
+5. `05-squad-age-placement-order-and-debounced-search.md`
+6. `06-canonical-money-presentation-and-editable-inputs.md`
+7. `07-market-offer-dialog-draft-stability.md`
+8. `08-integrated-browser-accessibility-and-regression-closeout.md`
+9. `09-phase-closeout-and-80a-handoff.md`
 
 ## Validation Ladder
 
@@ -63,17 +71,17 @@ fake implementation steps.
   and updates every current execution/documentation seam.
 - Step 02 is audit/design-contract work only. It captures screenshots and
   current architecture evidence for the actual requested reworks.
-- Later implementation steps use focused package checks and proportionate
-  browser QA, one bounded rework at a time.
-- The final implementation step runs the complete repository/browser gates.
-- The final closeout step runs the checkpointed `50 x 20` once, with `50`
-  stable shards and `7` workers, then records a truthful Phase 79 handoff.
-- The `50 x 20` does not replace or claim Phase 79 Step 14's release-scale
-  gate and does not prove equilibrium after season 20.
+- Steps 03-07 use focused package checks and proportionate browser QA, one
+  bounded rework at a time.
+- Step 08 runs the complete repository/browser gates.
+- Step 09 closes only the accepted UI rework and hands control to Phase 80A.
+- Phase 80C Step 09 owns the sole deferred checkpointed `50 x 20`; it does not
+  replace or claim Phase 79 Step 14's release-scale gate.
 
 ## What NOT To Implement
 
-- No guessed graphical redesign, component rewrite, or structural refactor.
+- No graphical redesign, component rewrite, or structural refactor outside
+  accepted inventory IDs `P80-R01` through `P80-R05`.
 - No broad design-system replacement without an accepted inventory item.
 - No duplicated read model, command path, simulation runner, or persistence
   path.
@@ -82,7 +90,7 @@ fake implementation steps.
 - No runtime LLM, live external data, or real-player content.
 - No compatibility migration for obsolete beta saves unless an accepted
   structural rework explicitly requires a clean reset.
-- No long run before the final documented Phase 80 closeout step.
+- No long run in Phase 80.
 - No simulation adapter may raise concurrency above `7`.
 
 ## Definition Of Done
@@ -95,7 +103,8 @@ fake implementation steps.
 - Structural changes pass focused determinism, persistence, dependency, and
   absence checks proportionate to their risk.
 - `pnpm check`, web build, required Playwright QA, diff, and Graphify pass.
-- One final checkpointed `50 x 20` completes with `50` stable shards and `7`
-  workers after every rework.
-- Phase 79 Step 14 receives the truthful result and remains unclaimed until its
-  own documented release gate actually runs.
+- Phase 80 closes with full repository/browser evidence and a documented
+  Phase 80A handoff.
+- The deferred `50 x 20` remains unrun until Phase 80C Step 09.
+- Phase 79 Step 14 remains paused and unclaimed until the later truthful
+  Phase 80C handoff.

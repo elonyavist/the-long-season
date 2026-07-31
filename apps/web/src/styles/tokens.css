@@ -131,6 +131,16 @@
   --tls-player-rating-star: var(--tls-color-gold);
   --tls-player-rating-star-empty: var(--tls-theme-interactive-border);
   --tls-player-rating-sixth: #c36b2c;
+  --tls-player-rating-projected: color-mix(
+    in srgb,
+    var(--tls-player-rating-star) 52%,
+    var(--tls-mix-light)
+  );
+  --tls-player-rating-projected-sixth: color-mix(
+    in srgb,
+    var(--tls-player-rating-sixth) 58%,
+    var(--tls-mix-light)
+  );
 
   /* Modal scrims. Dialog backdrops sit over arbitrary content, so they stay neutral. */
   --tls-scrim: color-mix(in srgb, #000000 70%, transparent);

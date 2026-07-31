@@ -735,6 +735,24 @@ text or importing engine internals.
   Shared presentation primitives for both workbenches. Tabs follow their
   responsive horizontal/vertical ARIA orientation, and the statistics Module
   owns the sole locale/coverage formatting policy.
+- `apps/web/src/shared/format-money.ts`
+  The single web money boundary. Read-only display hands `Intl` an exact
+  decimal string built from the stored integer minor units, so no
+  floating-point division sits between storage and screen. The editable pair
+  reads grouping and decimal characters from the active language, assembles
+  minor units with string arithmetic, rejects ambiguous text instead of
+  guessing it, and normalizes a readable draft on blur. No screen keeps its own
+  money parser.
+- `apps/web/src/shared/lib/use-debounced-value.ts`
+  The single React delay used by typed Market and Squad filters. Domain,
+  engine, `@game/ui`, and command handling stay synchronous; only the draft
+  value reaching a read model is delayed.
+- `apps/web/src/features/shared/FullScreenDialog.tsx`
+  Shared native modal shell owning focus restoration, `Escape`, motion, and one
+  explicit `dismissOnBackdrop` policy. Inspection surfaces keep light
+  dismissal; a transactional surface holding an unsent draft, such as the
+  Market player dialog, opts out so backdrop, gutter, or scrollbar interaction
+  cannot discard it.
 - `apps/web/src/features/match-preparation/match-preparation-adapter.ts`
   Creates the editable browser draft from loaded career facts, applies explicit
   manager selection commands, preserves normalized board geometry, derives a
@@ -1212,6 +1230,50 @@ Simulation packages should not hardcode UI/CLI labels.
 6. Use `createFakeLeagueSystem` only for focused single-competition simulation
    fixtures that do not represent the production career bootstrap.
 
+### Planned Phase 80A-80C Deep Module Seams
+
+These Interfaces are documented contracts, not current production claims. They
+must be implemented in the ordered 80A, 80B, and 80C steps.
+
+1. `derivePublicPlayerAssessment(...)` is the only live-game Interface for
+   current rating, public `P50`, and public upper. UI, sorting, valuation,
+   willingness, and AI consume it; stored ceiling remains inside
+   generation/development/projection/diagnostic Implementations.
+2. `derivePlayerValuation(...)` consumes that public assessment plus intrinsic
+   player facts. Seller posture, employer, contract, division, and free-agent
+   status belong to asking price or final fee, not intrinsic public value.
+3. `ownedPlayerIds(...)` answers legal ownership. `selectablePlayerIds(...)`
+   answers current sporting availability using active loan facts. Direct
+   `Club.playerIds` reads are reserved for deliberately ownership-specific
+   code.
+4. `PlayerMarketPostureState`, `PlayerLoanState`, and
+   `LoanNegotiationState` remain separate aggregates. A discriminated
+   `selectOpenPlayerNegotiations(...)` query supplies shared cap, cooldown, and
+   eligibility rules without merging their storage.
+5. Outgoing command eligibility and seller willingness are separate
+   Interfaces. `targetEligibility(...)` decides whether an approach may be
+   submitted; `deriveSellerTransferWillingness(...)` owns the seller response
+   and may return `player_not_for_sale`. Presentation must not recompute or
+   collapse them.
+6. `PlayerTransferRace` is a durable coordination aggregate over discriminated
+   negotiation references. It owns only participants, player, current stage
+   with its shared clock, and outcome; permanent, loan, and free-agent
+   negotiations continue to own terms and status.
+7. `deriveClubStageResolution(...)` returns qualified, outbid, and rejected
+   sets. `rankPlayerSuitors(...)` chooses only among qualified contract offers.
+   Exactly one accepted path may call an existing atomic transfer/signing
+   commit.
+8. `transfer-race-audit` owns competition diagnostics. It must not be folded
+   into the unrelated player-generation economy audit merely because both feed
+   the same CLI report.
+9. The initial race contract supports permanent transfers and free agents, with
+   at most three active acquiring clubs. Loans retain their serial Phase 80B
+   lifecycle while discriminated references preserve a future extension seam.
+10. Permanent qualification advances only the highest seller-acceptable fee and
+   exact matches. Both shared stages last three in-game days; one-suitor free
+   agents use the same player stage, and manager acceptance cannot close a
+   club stage early.
+
 ### Run Long-Run Diagnostics
 
 1. CLI enters `ten-season-report.ts`.
@@ -1233,9 +1295,11 @@ Simulation packages should not hardcode UI/CLI labels.
 10. `simulation-execution-policy.ts` owns the host-independent default/maximum:
     `min(7, independent work items)`. Direct and checkpointed multi-world CLI
     adapters use it; explicit overrides can only reduce concurrency.
-11. The next user-requested `50 x 20` is reserved for the final Phase 80 gate
-    with `50` shards and `7` workers. The interrupted Phase 79D direct run
-    produced no report and is not evidence.
+11. The next user-requested `50 x 20` is reserved for Phase 80C Step 09, after
+    the Phase 80 UI reworks, Phase 80A player-model work, Phase 80B market/loan
+    work, and Phase 80C competitive-race work. It uses `50` shards and `7`
+    workers. The interrupted Phase 79D direct run produced no report and is not
+    evidence.
 
 ### Render Localized CLI Output
 

@@ -21,6 +21,21 @@ describe("presentCareerSquad", () => {
     );
   });
 
+  it("maps the same canonical age to the squad row and the player profile", () => {
+    const fixture = createTestCareerFixture("squad-canonical-age");
+    const presentation = presentCareerSquad(fixture.career, fixture.draft, playerValuationConfig);
+
+    expect(presentation.status).toBe("ready");
+    if (presentation.status !== "ready") return;
+
+    for (const player of presentation.players) {
+      const profile = presentation.profilesByPlayerId.get(player.playerId);
+      expect(Number.isInteger(player.age)).toBe(true);
+      expect(player.age).toBeGreaterThanOrEqual(15);
+      expect(player.age).toBe(profile?.age);
+    }
+  });
+
   it("exposes public ratings and annual contract facts without hidden ability numbers", () => {
     const fixture = createTestCareerFixture("squad-public-levels");
     const presentation = presentCareerSquad(fixture.career, fixture.draft, playerValuationConfig);

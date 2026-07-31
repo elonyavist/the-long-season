@@ -2,7 +2,8 @@
 
 ## Status
 
-Reopened and paused while Phase 80 reworks are documented and executed. A
+Reopened and paused while the accepted Phase 80, 80A, and 80B reworks are
+documented and executed. A
 first execution was recorded as complete, but its gate never ran the
 AI market (`transferWindows` was not threaded into `advanceCareerOneSeason`), so
 every market check passed vacuously over empty negotiation state and the
@@ -39,7 +40,7 @@ structural violations. The generic report remains red only for
 The user-requested
 `docs/steps/79b-squad-market-player-workspace-ui-ux-and-career-statistics/`
 interposition is Done and has returned control here. This step is again the
-parent step but is currently paused for Phase 80. Neither the
+parent step but is currently paused through Phase 80C. Neither the
 Phase 79A medium run nor any Phase 79B browser check is a substitute for the
 final gate. The long run remains unrun and unclaimed.
 
@@ -60,10 +61,12 @@ intake, cap attraction/display identity, asking/offer/counter/completed-fee
 spread, and zero-observation semantics. Focused checks, `pnpm check`, build,
 Playwright `29/29`, and manual browser QA pass. Its attempted direct `50x20`
 was stopped, produced no report, and is not claimed as corrective evidence.
-The user will define further reworks before this step resumes; their final
-validation must run a checkpointed `50x20` with `50` stable shards and exactly
-`7` workers. This step's own release gate remains separate, unrun, and
-unclaimed.
+The accepted Phase 80 UI, Phase 80A player-model, Phase 80B market/loan, and
+Phase 80C competitive-race reworks must complete before this step resumes.
+Phase 80C Step 09 must run one checkpointed `50x20` with `50` stable shards and
+exactly `7` workers; it moved there from Phase 80B so the cohort observes the
+final competitive market rather than one about to change. This step's own
+release gate remains separate, unrun, and unclaimed.
 
 Twenty seasons cover a representative age-15-to-35 player arc, the year-10 and
 year-20 stock checks, and twice the project's `10+`-season long-horizon

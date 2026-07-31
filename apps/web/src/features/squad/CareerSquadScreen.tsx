@@ -25,6 +25,7 @@ import type {
 } from "../../runtime/web-career-runtime";
 import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
 import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import { useDebouncedValue } from "../../shared/lib/use-debounced-value";
 import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
 import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
 import { AppShell } from "../app-shell/AppShell";
@@ -41,6 +42,9 @@ import {
   type CareerSquadPlacementOperation,
   type CareerSquadPlacementTarget,
 } from "./career-squad-placement";
+
+/** Delay applied only to the typed Squad player-name query. */
+const SQUAD_SEARCH_DELAY_MS = 250;
 
 /** Props for the browser Senior Squad workspace introduced in Phase 78. */
 export type CareerSquadScreenProps = Readonly<{
@@ -88,25 +92,27 @@ export function CareerSquadScreen({
   }>>();
   const [placementFeedback, setPlacementFeedback] = useState("");
   const shellView = buildCareerShellView({ activeSectionKey: "squad", inboxView });
+  // Typing echoes immediately while the table rebuilds once the query settles.
+  const appliedQuery = useDebouncedValue(query, SQUAD_SEARCH_DELAY_MS);
   const view = useMemo(
     () => presentation.status === "error"
       ? undefined
       : buildCareerSquadView({
           players: presentation.players,
           filters: {
-            ...(query.trim().length === 0 ? {} : { query }),
+            ...(appliedQuery.trim().length === 0 ? {} : { query: appliedQuery }),
             ...(department === undefined ? {} : { department }),
             ...(availability === undefined ? {} : { availability }),
           },
           sort,
         }),
-    [availability, department, presentation, query, sort],
+    [appliedQuery, availability, department, presentation, sort],
   );
   const profile = presentation.status === "ready" && openPlayerId !== undefined
     ? presentation.profilesByPlayerId.get(openPlayerId)
     : undefined;
   const menuDismissSignal = [
-    query,
+    appliedQuery,
     department ?? "all",
     availability ?? "all",
     sort.key,
@@ -195,7 +201,8 @@ export function CareerSquadScreen({
                   )}
                 >
                   <option value="all">{text("career.squad.filter.all")}</option>
-                  <option value="goalkeeper">{text("career.squad.department.goalkeeper")}</option>
+                  {/* The value must stay the canonical department, not the role name. */}
+                  <option value="goalkeeping">{text("career.squad.department.goalkeeper")}</option>
                   <option value="defense">{text("career.squad.department.defense")}</option>
                   <option value="midfield">{text("career.squad.department.midfield")}</option>
                   <option value="attack">{text("career.squad.department.attack")}</option>
@@ -357,26 +364,6 @@ function SquadRow({
           {canonicalPlayerRoleCode(row.primaryRole)}
         </abbr>
       </td>
-      <th data-label={text("career.squad.column.player")} scope="row">
-        <span className="tls-squad-player-name">
-          {row.displayName}
-          {row.hasExpiringContract ? (
-            <FileClock
-              aria-label={text("career.squad.contractExpiring")}
-              role="img"
-              size={16}
-              strokeWidth={1.8}
-            />
-          ) : null}
-        </span>
-      </th>
-      <td data-label={text("career.squad.column.condition")} data-align="numeric">{Math.round(row.condition)}%</td>
-      <td data-label={text("career.squad.column.morale")} data-align="numeric">{Math.round(row.morale)}</td>
-      <td data-label={text("career.squad.column.status") }>
-        <span className="tls-squad-status" data-status={row.compositeStatus}>
-          {text(`career.squad.status.${row.compositeStatus}` as MessageKey)}
-        </span>
-      </td>
       <td data-label={text("career.squad.column.placement")}>
         <label className="tls-squad-placement-control">
           <span className="tls-visually-hidden">
@@ -400,6 +387,27 @@ function SquadRow({
           </select>
         </label>
       </td>
+      <th data-label={text("career.squad.column.player")} scope="row">
+        <span className="tls-squad-player-name">
+          {row.displayName}
+          {row.hasExpiringContract ? (
+            <FileClock
+              aria-label={text("career.squad.contractExpiring")}
+              role="img"
+              size={16}
+              strokeWidth={1.8}
+            />
+          ) : null}
+        </span>
+      </th>
+      <td data-label={text("career.squad.column.age")} data-align="numeric">{row.age}</td>
+      <td data-label={text("career.squad.column.condition")} data-align="numeric">{Math.round(row.condition)}%</td>
+      <td data-label={text("career.squad.column.morale")} data-align="numeric">{Math.round(row.morale)}</td>
+      <td data-label={text("career.squad.column.status") }>
+        <span className="tls-squad-status" data-status={row.compositeStatus}>
+          {text(`career.squad.status.${row.compositeStatus}` as MessageKey)}
+        </span>
+      </td>
       <td data-label={text("career.squad.column.value")} data-align="numeric">
         {formatMoneyFromMinorUnits(row.value, row.currency, language, "whole")}
       </td>
@@ -412,6 +420,7 @@ function SquadRow({
       </td>
       <td data-label={text("career.squad.column.potential_level")}>
         <PlayerPotentialRangeRating
+          currentRating={row.currentRating}
           language={language}
           range={row.potentialRange}
           text={text}

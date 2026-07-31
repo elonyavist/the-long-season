@@ -7,10 +7,11 @@ Current update: 2026-07-30. Phases 79A, 79B, 79C, and 79D are complete.
 Phase 79D closed by explicit product decision after implementation, bounded
 diagnostics, repository checks, build, Playwright `29/29`, and manual browser
 QA passed. Its stopped direct `50 x 20` produced no report and is not claimed
-as evidence. Phase 80 graphical and structural rework is now in progress;
-Step 01 establishes the global seven-worker simulation policy and Step 02
-awaits the user's concrete inventory. Phase 79 Step 14 remains Reopened and
-paused; its release gate is unrun.
+as evidence. Phase 80 graphical and structural rework is complete;
+all nine steps are Done and it handed off on 2026-07-31. Phase 80A, Phase 80B, and Phase 80C
+are documented planned successors; Phase 80C Step 09 alone owns the deferred
+checkpointed cohort. Phase 79 Step 14 remains Reopened and paused; its release
+gate is unrun.
 
 ## Goal
 
@@ -1898,8 +1899,8 @@ Minimum useful scope:
 - targeted Market/Squad/profile browser QA and a final corrective cohort
   obligation. Browser QA passed; the direct `50 worlds x 20 seasons` attempt
   was stopped, produced no report, and is explicitly unclaimed. The replacement
-  run is deferred to the final validation step of Phase 80 with
-  checkpoints and the repository-wide `7` workers.
+  run is deferred to Phase 80C Step 09 with checkpoints and the
+  repository-wide `7` workers.
 
 What must not happen:
 
@@ -1922,7 +1923,7 @@ Definition of Done:
 - public value, asking price, fee, affordability, and AI remain coherent;
 - focused checks, browser QA, and `pnpm check` pass;
 - the explicit product closeout records that the direct `50 x 20` did not pass
-  or produce evidence and moves it to the end of Phase 80;
+  or produce evidence and moves it to Phase 80C Step 09;
 - Phase 79 Step 14 remains paused until that checkpointed `50 x 20`, using
   exactly `7` workers, is complete.
 
@@ -1940,26 +1941,37 @@ the current production browser, persistence, and simulation architecture.
 
 Status:
 
-- In progress. Step 01 established the repository seven-worker execution
-  policy and phase boundary. Step 02 waits for the user's concrete graphical
-  and structural rework inventory.
+- Complete. All nine steps are Done; Phase 80A Step 01 is the only next action.
+- Step 03 corrected the shared renderer. Its positive product finding about
+  prospect supply/projection is owned by documented Phase 80A work, not a
+  React-side workaround.
+- Steps 04-07 delivered Market pagination with debounced typed filters and
+  bounded age selects, the Squad age/Placement/search rework, one shared exact
+  locale money presentation and integer-safe editable parser, and an explicit
+  dialog dismissal policy that keeps a transfer-offer draft alive.
+- Step 08 closed every repository, build, dependency, and browser gate on the
+  pinned Node `24.16.0` toolchain and recorded
+  `docs/audits/PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_REPORT.md`.
+- Step 09 closed the phase without running any longitudinal cohort and made
+  Phase 80A Step 01 the only next action.
 
 Purpose:
 
 - Rework the current product's visual presentation and selected structural
   seams without guessing requirements or regressing deterministic gameplay,
   canonical ownership, accessibility, or persistence.
-- Close the deferred corrective `50 x 20` only after every accepted rework,
-  using resumable checkpoints, `50` stable shards, and `7` workers.
+- Finish the bounded five-item UI/interaction rework and hand off to Phase
+  80A without running an intermediate longitudinal cohort.
 
 Minimum useful scope:
 
 - one accepted evidence-backed inventory of the user's actual reworks;
 - separate visual, interaction, read-model, runtime, persistence, simulation,
   and cross-cutting ownership;
-- one bounded implementation step per accepted change or cohesive batch;
+- Steps 03-07 for achieved/upside stars, Market pagination/filtering, Squad
+  age/order/search, money presentation/input, and Market dialog stability;
 - complete browser/accessibility/architecture cleanup;
-- one final checkpointed `50 x 20` under the canonical worker policy.
+- one explicit Phase 80A handoff without claiming player-model corrections.
 
 What must not happen:
 
@@ -1967,19 +1979,190 @@ What must not happen:
 - No finance expansion, advanced pyramid, or unrelated feature.
 - No duplicate command, read-model, persistence, or simulation owner.
 - No compatibility debris when a beta path is replaced.
-- No worker count above seven and no long run before final closeout.
+- No worker count above seven and no long run in Phase 80.
 
 Definition of Done:
 
 - Every delivered change maps to the accepted Step 02 inventory.
 - Repository/browser checks pass and replaced paths are removed.
-- The final `50 x 20` completes with `50` shards and `7` workers without
-  claiming Phase 79 Step 14's separate release gate.
+- Phase 80 closes with the deferred cohort still unrun and Phase 80A as the
+  only next phase.
 
 Documentation:
 
 - `docs/steps/80-graphical-and-structural-rework/` owns the phase.
 - `docs/audits/SIMULATION_EXECUTION_POLICY.md` owns the worker contract.
+
+### Phase 80A - Prospect Generation, Club Environment And Quarterly Development
+
+Primary dependency: Phase 80 Done and its shared three-band potential renderer
+verified.
+
+Status:
+
+- Ready to start. Phase 80 has closed and its entry gate is satisfied.
+
+Purpose:
+
+- Make young-player supply and public upside credible by combining contextual
+  generation, dynamic club environment, quarterly development, age-aware
+  current/P50/upper projection, expected-outcome value, and equal manager/AI
+  information.
+
+Minimum useful scope:
+
+- deterministic 18-club tier and bounded reputation recalculated at season
+  rollover;
+- accepted seven-state development environment;
+- monthly participation facts applied quarterly plus a season-end residual
+  flush;
+- role-aware upper contraction by age and one shared public assessment;
+- division/club/age-aware prospect bands, national exceptional stock, and
+  annual intake top-up;
+- public value based on expected outcome and uncertainty, with no
+  `marketContext`, owner-category/free-agent multiplier, or per-context cap;
+- one global `€150m` cap plus source-backed division population output bands
+  frozen under a new calibration epoch;
+- bounded, positive-denominator diagnostics and incompatible beta-save reset.
+
+What must not happen:
+
+- No incoming offers, market postures, or loans.
+- No permanent hidden realization trait or guaranteed potential floor.
+- No per-match ability mutation, scouting fog, or historical reputation
+  ledger.
+- No beta-save compatibility debris and no `50 x 20`.
+
+Definition of Done:
+
+- Generation, development, projection, value, and AI use one deterministic
+  model with credible age/division/club distributions.
+- Bounded diagnostics and repository/browser gates pass.
+- Phase 80B is the only next phase and the deferred cohort remains unrun.
+
+Documentation:
+
+- `docs/audits/PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_DESIGN_CONTRACT.md`
+- `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
+
+### Phase 80B - Incoming Offers, Market Postures And Loans
+
+Primary dependency: Phase 80A Done with shared public assessment and quarterly
+development in production.
+
+Status:
+
+- Planned. Do not start before Phase 80A closes.
+
+Purpose:
+
+- Complete the talent-market loop with selected-club incoming permanent and
+  loan offers, durable sale/loan postures, one final counterproposal,
+  bidirectional loans, three wage-share choices, real minutes/development, and
+  actionable Posta.
+
+Minimum useful scope:
+
+- maximum five individual unresolved incoming offers;
+- independent/combinable `In vendita` and `Disponibile in prestito` postures;
+- one immutable-deadline final counterproposal;
+- canonical persisted parent ownership that loans never mutate, derived
+  selectable registration, original contract, prorated `0/50/100%` borrower
+  wage share, and deterministic season-end return;
+- explicit `ownedPlayerIds(...)` and `selectablePlayerIds(...)` accessors,
+  selectable outgoing-loan/autonomous-AI-sale floors `18` plus `2/6/6/3`, and
+  separate ownership diagnostics without globally blocking manager-accepted
+  permanent sales;
+- one unresolved negotiation per `(acquiring club, player)` across permanent
+  and loan kinds; different buyers remain valid domain state while Phase 80B's
+  scheduler temporarily avoids creating them concurrently;
+- outgoing command eligibility remains distinct from seller willingness:
+  `Action available` permits submission, while canonical seller evaluation may
+  still return the explicit `player_not_for_sale` response;
+- AI squad-need/rotation targeting using the same public assessment;
+- bounded persistence/browser/finance diagnostics and beta reset;
+- no longitudinal cohort; preserve and bounded-exercise shard/checkpoint/worker
+  infrastructure for Phase 80C.
+
+What must not happen:
+
+- No recall, renewal, loan fee, option/obligation, resale share, bonus,
+  promised minutes, player swaps, or second loan destination.
+- No hidden AI ceiling knowledge, beta migration, competitive race resolution,
+  or long run.
+- No React-side seller-willingness rule or copy that promises negotiation merely
+  because an outgoing command is enabled.
+
+Definition of Done:
+
+- Incoming permanent/loan decisions work through Posta with correct expiry,
+  finance, ownership, history, statistics, development, and persistence.
+- Bounded diagnostics, persistence, browser, and repository gates pass; cohort
+  infrastructure remains usable but no longitudinal cohort is claimed.
+
+Documentation:
+
+- `docs/audits/PHASE_80B_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md`
+- `docs/steps/80b-incoming-offers-market-postures-and-loans/`
+
+### Phase 80C - Competitive Transfer Race And Player Choice
+
+Primary dependency: Phase 80B Done with separate permanent/loan negotiation
+state, ownership/selectability invariants, and bounded market evidence.
+
+Status:
+
+- Planned. Its product contract is accepted; do not start before Phase 80B
+  closes.
+
+Purpose:
+
+- Let different clubs contest one player through a durable race without
+  duplicating commercial facts or allowing processing order to choose a winner.
+
+Minimum useful scope:
+
+- one durable `PlayerTransferRace` over discriminated canonical negotiation
+  references;
+- maximum three active acquiring clubs, with capacity released by a
+  pre-deadline withdrawal;
+- one effective immutable shared clock per stage, with a new player-stage clock
+  opened exactly once after club qualification;
+- club-stage qualified/outbid/rejected sets and separate `outbid` versus
+  `lost_to_rival` outcomes;
+- qualification only for the highest seller-acceptable fee and exact matches;
+- exact relevant rival transfer-fee visibility, stale-safe minimum raises, and
+  bounded manager/AI information parity;
+- player choice only among qualified contract offers;
+- a canonical free-agent negotiation state that preserves the existing atomic
+  signing commit;
+- fixed three-day club and player stages, including one-suitor free agents, and
+  no early close from manager-owner acceptance;
+- serial loans in the initial release, behind a discriminated future extension
+  seam;
+- dedicated non-vacuous race diagnostics and beta-save reset;
+- one final checkpointed `50 x 20` in Step 09 with `50` shards and `7` workers.
+
+What must not happen:
+
+- No optional-field super-aggregate, duplicate fee/terms/status/effective
+  clock, durable bid history, rival contract-term disclosure, or deadline
+  reset.
+- No generic ranking/plugin/event framework and no cohort before Step 09.
+
+Definition of Done:
+
+- One and several participants use one deterministic persisted path; only one
+  accepted participant reaches an atomic commit.
+- Every structural race gate has positive observations and calibration evidence
+  is frozen before the final run.
+- The checkpointed cohort completes and replays without claiming Phase 79 Step
+  14's separate release gate.
+
+Documentation:
+
+- `docs/audits/PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md`
+- `docs/steps/80c-competitive-transfer-race-and-player-choice/`
 
 ### Deferred - Finances Expansion And Poverty Loop MVP
 
@@ -2141,7 +2324,8 @@ Current status:
 20. `Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation`
     - in progress; Steps 01-14 Done, Step 15 remains open
 21. `Phase 79 - Transfer Market Windows, Negotiations And Market Workspace`
-    - in progress; Steps 01-13 Done, Step 14 Reopened and paused for Phase 80
+    - in progress; Steps 01-13 Done, Step 14 Reopened and paused through Phase
+      80B
 22. `Phase 79A - Transfer Market Activity, Free-Agent Economy And Long-Run Diagnostics`
     - complete; Steps 01-07 Done
 23. `Phase 79B - Squad And Market Player Workspace UI/UX And Career Statistics`
@@ -2152,18 +2336,24 @@ Current status:
     - complete by explicit product decision; all nine ordered documents Done,
       interrupted `50 x 20` unclaimed
 26. `Phase 80 - Graphical And Structural Rework`
-    - in progress; Step 01 Done, Step 02 ready for the user's accepted rework
-      inventory
+    - complete; all nine steps Done, no longitudinal cohort run
+27. `Phase 80A - Prospect Generation, Club Environment And Quarterly Development`
+    - ready to start; Step 01 is the only next action
+28. `Phase 80B - Incoming Offers, Market Postures And Loans`
+    - planned; starts only after Phase 80A and closes on bounded evidence
+29. `Phase 80C - Competitive Transfer Race And Player Choice`
+    - planned with accepted product contract; starts only after Phase 80B;
+      Step 09 owns the sole deferred `50 x 20`
 
 Next recommendation:
 
-1. Execute Phase 80 Step 02 after the user supplies the concrete graphical and
-   structural reworks.
-2. Create later Phase 80 implementation steps only from that accepted
-   inventory.
-3. Put one resumable `50 x 20` in the final Phase 80 validation step, with a
-   declared checkpoint directory, `50` stable shards, and exactly `7` workers.
-4. Resume Phase 79 Step 14 only after Phase 80 and that cohort complete;
+1. Execute Phase 80A Step 01, then the remaining Phase 80A steps in documented
+   order.
+2. Execute Phase 80B and Phase 80C only after their predecessor entry gates
+   close, one documented step at a time.
+3. Run the resumable `50 x 20` only in Phase 80C Step 09 with its frozen
+   checkpoint directory, `50` stable shards, and exactly `7` workers.
+4. Resume Phase 79 Step 14 only after Phase 80C and that cohort complete;
    its separate release-scale sequence remains unrun and unclaimed.
 5. Do not start Phase 79 Step 15, deferred finance work, or Phase 81 early.
 
@@ -2176,10 +2366,11 @@ Reason:
   that its aggregate and potentially vacuous cap checks did not measure.
 - Phase 79D corrected those owned defects with bounded implementation and
   browser evidence. Its stopped direct cohort remains unclaimed; the
-  checkpointed replacement belongs to the final Phase 80 gate.
+  checkpointed replacement belongs to Phase 80C Step 09 after all accepted
+  reworks.
 - Twenty seasons cover one representative age-15-to-35 player arc and the
-  required year-20 stock while keeping `750` three-division worlds
-  operationally bounded. This gate does not claim evidence after year 20.
+  required year-20 stock. The Phase 80B cohort uses `50` three-division worlds
+  and does not claim equilibrium or evidence after year 20.
 
 ## Relationship To Web Section Roadmap
 

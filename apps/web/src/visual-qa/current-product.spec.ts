@@ -515,7 +515,8 @@ test("desktop Squad keeps one dense vertical roster and an accessible full-scree
     await statisticsTab.click();
     await expect(profile.locator(".tls-contract-workspace")).toBeHidden();
     await contractTab.click();
-    await expect(annualWageDraft).toHaveValue("555000");
+    // Leaving the field normalizes the draft to the active locale, unchanged in value.
+    await expect(annualWageDraft).toHaveValue("555,000.00");
     await assertNoPageOverflow(desktop, "desktop player profile renewal");
     await assertFullScreenDialogOwnsScroll(desktop, profile, "desktop player profile");
     expect(await profile.locator(
@@ -541,6 +542,74 @@ test("desktop Squad keeps one dense vertical roster and an accessible full-scree
     await expect(secondPlayer).toBeFocused();
   } finally {
     await desktop.close();
+  }
+});
+
+test("Squad exposes age placement and delayed search", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Squad", exact: true }).click();
+
+    await expect(page.locator(".tls-squad-table thead th")).toHaveText([
+      "#",
+      "Role",
+      "Placement",
+      "Player",
+      "Age",
+      "Condition",
+      "Morale",
+      "Status",
+      "Value",
+      "Level",
+      "Potential",
+      "Action",
+    ]);
+
+    const ages = page.locator(".tls-squad-table tbody td[data-label='Age']");
+    await expect(ages).toHaveCount(22);
+    await page.getByRole("button", { name: "Sort Age ascending", exact: true }).click();
+    const ascendingAges = (await ages.allInnerTexts()).map((value) => Number(value.trim()));
+    expect(ascendingAges.every((age) => Number.isInteger(age) && age >= 15)).toBe(true);
+    expect([...ascendingAges].sort((left, right) => left - right)).toEqual(ascendingAges);
+    await page.getByRole("button", { name: "Sort Age descending", exact: true }).click();
+    const descendingAges = (await ages.allInnerTexts()).map((value) => Number(value.trim()));
+    expect([...descendingAges].sort((left, right) => right - left)).toEqual(descendingAges);
+
+    // Placement stays immediate: its select must not wait for the typed query.
+    const firstPlacement = page.locator(".tls-squad-placement-control select").first();
+    await expect(firstPlacement).toBeVisible();
+
+    const rows = page.locator(".tls-squad-table tbody tr");
+    const firstPlayerName = (await rows.first().locator(".tls-squad-player-name").innerText()).trim();
+    const search = page.getByRole("searchbox", { name: "Search players", exact: true });
+    await search.fill(firstPlayerName);
+    await expect(search).toHaveValue(firstPlayerName);
+    await page.waitForTimeout(100);
+    await expect(rows).toHaveCount(22);
+    await expect
+      .poll(async () => {
+        const count = await rows.count();
+        return count >= 1 && count < 22;
+      })
+      .toBe(true);
+    await expect(
+      rows.locator(".tls-squad-player-name").filter({ hasNotText: firstPlayerName }),
+    ).toHaveCount(0);
+
+    await search.fill("");
+    await page.waitForTimeout(300);
+    await expect(rows).toHaveCount(22);
+    // Selects stay immediate and never share the typed-query delay.
+    await page.locator(".tls-squad-toolbar select").first().selectOption("goalkeeping");
+    expect(await rows.count()).toBeGreaterThan(0);
+    await expect(rows.locator("td[data-label='Role']").filter({ hasNotText: "POR" })).toHaveCount(0);
+    await expect(page.locator(".tls-squad-table tbody td[data-label='Age']").first()).toBeVisible();
+    await assertNoPageOverflow(page, "Squad with age column");
+    await capture(page, "81-squad-age-placement-desktop");
+  } finally {
+    await page.close();
   }
 });
 
@@ -665,6 +734,126 @@ test("narrow Squad and player profile reflow without horizontal scrolling", asyn
   }
 });
 
+test("player rating and potential distinguish achieved from upside", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Market", exact: true }).click();
+
+    const potentialRatings = page.locator(".tls-market-table .tls-player-potential-range");
+    await expect(potentialRatings.first()).toBeVisible();
+    let projectedIndex = -1;
+    while (projectedIndex < 0) {
+      projectedIndex = await potentialRatings.evaluateAll((elements) => (
+        elements.findIndex((element) => {
+          const current = Number((element as HTMLElement).dataset.current);
+          const upper = Number((element as HTMLElement).dataset.upper);
+          return Number.isFinite(current) && Number.isFinite(upper) && upper > current;
+        })
+      ));
+      const nextPage = page.getByRole("button", { name: "Next", exact: true });
+      if (projectedIndex >= 0 || await nextPage.isDisabled()) break;
+      await nextPage.click();
+    }
+    expect(projectedIndex).toBeGreaterThanOrEqual(0);
+
+    const projectedRating = potentialRatings.nth(projectedIndex);
+    const projectedRow = projectedRating.locator("xpath=ancestor::tr");
+    await expect(projectedRating).toHaveAttribute(
+      "aria-label",
+      /Current level: .+ Estimated potential/,
+    );
+    await expect(projectedRating.locator(".tls-player-potential-star")).toHaveCount(6);
+    const achievedColor = await projectedRating
+      .locator(".tls-player-potential-star-achieved")
+      .first()
+      .evaluate((element) => getComputedStyle(element).color);
+    const levelColor = await projectedRow
+      .locator(".tls-player-rating-star-fill")
+      .first()
+      .evaluate((element) => getComputedStyle(element).color);
+    const futureColor = await projectedRating
+      .locator(
+        ".tls-player-potential-star-conservative-future, .tls-player-potential-star-uncertain-future-base",
+      )
+      .first()
+      .evaluate((element) => getComputedStyle(element).color);
+    expect(achievedColor).toBe(levelColor);
+    expect(futureColor).not.toBe(achievedColor);
+    await capture(page, "80-player-rating-upside-market-desktop");
+
+    await page.getByRole("button", { name: "Squad", exact: true }).click();
+    const squadPotential = page.locator(".tls-squad-table .tls-player-potential-range").first();
+    await expect(squadPotential).toHaveAttribute("data-current", /^\d(?:\.5)?$/);
+    await expect(squadPotential.locator(".tls-player-potential-star")).toHaveCount(6);
+    await capture(page, "80-player-rating-upside-squad-desktop");
+  } finally {
+    await page.close();
+  }
+});
+
+test("Market paginates and delays typed filters", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Market", exact: true }).click();
+
+    const rows = page.locator(".tls-market-table tbody tr");
+    const pagination = page.getByRole("navigation", {
+      name: "Market results pages",
+      exact: true,
+    });
+    const pageSelect = pagination.getByRole("combobox", {
+      name: "Go to market page",
+      exact: true,
+    });
+    await expect(rows).toHaveCount(25);
+    await expect(pagination).toContainText("Players 1-25 of");
+    await expect(pageSelect).toHaveValue("1");
+
+    await pagination.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(pageSelect).toHaveValue("2");
+    await expect(rows).toHaveCount(25);
+    await expect(pagination).toContainText("Players 26-50 of");
+
+    await page.getByRole("button", { name: /^Player: / }).click();
+    await expect(pageSelect).toHaveValue("1");
+
+    const firstPlayerName = (await rows.first().locator("th").innerText()).trim();
+    const search = page.getByRole("searchbox", { name: "Search players", exact: true });
+    await search.fill(firstPlayerName);
+    await expect(search).toHaveValue(firstPlayerName);
+    await page.waitForTimeout(100);
+    await expect(rows).toHaveCount(25);
+    await page.waitForTimeout(250);
+    // Generated worlds may repeat a fictional full name, so the delayed query is
+    // proven by a smaller matching-only result set instead of an exact count.
+    await expect
+      .poll(async () => {
+        const count = await rows.count();
+        return count >= 1 && count < 25;
+      })
+      .toBe(true);
+    await expect(rows.locator("th").filter({ hasNotText: firstPlayerName })).toHaveCount(0);
+
+    await search.fill("");
+    await page.waitForTimeout(300);
+    await expect(rows).toHaveCount(25);
+    const minimumAge = page.getByRole("combobox", { name: "Minimum age", exact: true });
+    const maximumAge = page.getByRole("combobox", { name: "Maximum age", exact: true });
+    await maximumAge.selectOption("15");
+    await minimumAge.selectOption("40");
+    await expect(minimumAge).toHaveValue("40");
+    await expect(maximumAge).toHaveValue("40");
+    await assertNoPageOverflow(page, "paginated Market");
+    await capture(page, "80-market-pagination-desktop");
+  } finally {
+    await page.close();
+  }
+});
+
 test("desktop Market presents window, budget, targets, and a public inspection profile", async ({ browser }) => {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
@@ -693,13 +882,16 @@ test("desktop Market presents window, budget, targets, and a public inspection p
       desktop.locator(".tls-player-rating-star[data-fill='empty']").first(),
       ".tls-market-table tbody tr",
     )).toBeGreaterThanOrEqual(3);
-    const unfilteredTargetCount = await targetRows.count();
+    // Pagination caps the visible rows, so filtering is proven by the matching
+    // total the pagination summary reports, not by the rendered row count.
+    const unfilteredTargetCount = await matchingMarketTargetCount(desktop);
     const divisionFilter = desktop.getByRole("combobox", {
       name: "Division",
       exact: true,
     });
     await divisionFilter.selectOption("first_division");
-    const firstDivisionTargetCount = await targetRows.count();
+    const firstDivisionTargetCount = await matchingMarketTargetCount(desktop);
+    expect(await targetRows.count()).toBeGreaterThan(0);
     expect(firstDivisionTargetCount).toBeGreaterThan(0);
     expect(firstDivisionTargetCount).toBeLessThan(unfilteredTargetCount);
     await expect(
@@ -739,7 +931,9 @@ test("desktop Market presents window, budget, targets, and a public inspection p
     await assertNoPageOverflow(desktop, "desktop Market");
     await capture(desktop, "79a-market-desktop");
     await divisionFilter.selectOption("all");
-    await expect(targetRows).toHaveCount(unfilteredTargetCount);
+    await expect
+      .poll(async () => matchingMarketTargetCount(desktop))
+      .toBe(unfilteredTargetCount);
     await desktop.getByRole("combobox", {
       name: "Role",
       exact: true,
@@ -798,7 +992,8 @@ test("desktop Market presents window, budget, targets, and a public inspection p
     await attributesTab.click();
     await expect(feeDraft).toBeHidden();
     await contractTab.click();
-    await expect(feeDraft).toHaveValue("1250000");
+    // Leaving the field normalizes the draft to the active locale, unchanged in value.
+    await expect(feeDraft).toHaveValue("1,250,000.00");
 
     await desktop.keyboard.press("Escape");
     await expect(profile).toBeHidden();
@@ -923,6 +1118,141 @@ for (const width of [320, 375, 414, 768] as const) {
   });
 }
 
+test("Market offer draft survives dialog scrolling and gutter interaction", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Market", exact: true }).click();
+
+    const firstRow = page.locator(".tls-market-table tbody tr").first();
+    const opener = firstRow.getByRole("button", { name: /Open .+ market profile/ });
+    await opener.click();
+    const dialog = page.getByRole("dialog", { name: /.+/ });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute("data-backdrop-dismiss", "false");
+
+    const offerTab = dialog.getByRole("tab", { name: "Contract and offer", exact: true });
+    await offerTab.click();
+    const fee = dialog.locator(".tls-market-composer input");
+    await fee.fill("100000");
+    await fee.blur();
+    await expect(fee).toHaveValue("100,000.00");
+
+    // The blank gutter beside the panel must not discard the draft.
+    const shell = dialog.locator(".tls-player-profile-shell");
+    const shellBox = await shell.boundingBox();
+    expect(shellBox).not.toBeNull();
+    if (shellBox !== null) {
+      await page.mouse.click(Math.max(2, shellBox.x / 2), shellBox.y + shellBox.height / 2);
+    }
+    await expect(dialog).toBeVisible();
+    await page.mouse.click(2, 2);
+    await expect(dialog).toBeVisible();
+
+    await shell.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await page.waitForTimeout(50);
+    await expect(dialog).toBeVisible();
+    await expect(fee).toHaveValue("100,000.00");
+
+    await dialog.getByRole("tab", { name: "Attributes", exact: true }).click();
+    await dialog.getByRole("tab", { name: "Statistics", exact: true }).click();
+    await offerTab.click();
+    await expect(fee).toHaveValue("100,000.00");
+    await capture(page, "83-market-offer-draft-stability-desktop");
+
+    // Explicit close and focus restoration still work.
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+
+    await opener.click();
+    await expect(dialog).toBeVisible();
+    await offerTab.click();
+    const reopenedFee = dialog.locator(".tls-market-composer input");
+    await reopenedFee.fill("100000");
+    await expect(dialog.locator(".tls-contract-finance-ok")).toBeVisible();
+    await dialog.getByRole("button", { name: "Submit offer", exact: true }).click();
+    await expect(dialog.getByText(/^Offer submitted\./)).toBeVisible();
+    await dialog.locator(".tls-player-profile-close").click();
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+  } finally {
+    await page.close();
+  }
+});
+
+test("money presentation and editing stay locale safe", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Squad", exact: true }).click();
+
+    // Read-only table money: exact whole units, never compact notation.
+    const englishValues = await page
+      .locator(".tls-squad-table tbody td[data-label='Value']")
+      .allInnerTexts();
+    expect(englishValues.length).toBeGreaterThan(0);
+    expect(englishValues.every((value) => /^€\d{1,3}(,\d{3})*$/.test(value.trim()))).toBe(true);
+
+    await setQaLanguage(page, "it");
+    const italianValues = await page
+      .locator(".tls-squad-table tbody td[data-label='Valore']")
+      .allInnerTexts();
+    expect(italianValues.length).toBe(englishValues.length);
+    expect(
+      // Italian groups only from five digits, so a four-digit amount is ungrouped.
+      italianValues.every((value) => /^\d{1,4}(\.\d{3})*\s€$/.test(value.trim().replace(/ /g, " "))),
+    ).toBe(true);
+    await setQaLanguage(page, "en");
+
+    // Editable contract money: locale round trip and no silent guessing.
+    await page.locator(".tls-squad-table tbody tr").first().click();
+    const profile = page.getByRole("dialog", { name: /.+/ });
+    await expect(profile).toBeVisible();
+    await profile.getByRole("tab", { name: "Contract", exact: true }).click();
+    await profile.getByRole("button", { name: "Open renewal talks", exact: true }).click();
+    const annualWage = profile.getByRole("textbox", { name: /^Annual wage/ });
+    await expect(annualWage).toBeVisible();
+
+    await annualWage.fill("1250000");
+    await annualWage.blur();
+    await expect(annualWage).toHaveValue("1,250,000.00");
+
+    await annualWage.fill("1,50");
+    await annualWage.blur();
+    // Ambiguous English input is neither rewritten nor guessed into an amount.
+    await expect(annualWage).toHaveValue("1,50");
+
+    await annualWage.fill("1,250,000.50");
+    await annualWage.blur();
+    await expect(annualWage).toHaveValue("1,250,000.50");
+    await capture(page, "82-contract-money-editing-desktop");
+    await page.keyboard.press("Escape");
+    await expect(profile).toBeHidden();
+
+    // The transfer-fee draft uses the same shared parser and blur normalization.
+    await page.getByRole("button", { name: "Market", exact: true }).click();
+    await page.locator(".tls-market-table tbody tr").first()
+      .getByRole("button", { name: /Open .+ market profile/ })
+      .click();
+    const marketProfile = page.getByRole("dialog", { name: /.+/ });
+    await expect(marketProfile).toBeVisible();
+    await marketProfile.getByRole("tab", { name: "Contract and offer", exact: true }).click();
+    const fee = marketProfile.getByRole("textbox").first();
+    await fee.fill("2500000");
+    await fee.blur();
+    await expect(fee).toHaveValue("2,500,000.00");
+    await assertNoPageOverflow(page, "Market offer money editing");
+    await capture(page, "82a-market-fee-money-editing-desktop");
+  } finally {
+    await page.close();
+  }
+});
+
 test("localized Squad and Market table controls stay inside their desktop columns", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
@@ -1010,39 +1340,78 @@ test("a submitted transfer offer stays pending, tracks exposure, and withdraws c
 
     const transferBudgetBefore = await desktop.locator(".tls-market-window").locator("xpath=following-sibling::div[1]").locator("strong").innerText();
 
-    const firstOpenTarget = desktop.locator(".tls-market-table tbody tr").first();
-    await firstOpenTarget.getByRole("button", { name: /Open .+ market profile/ }).click();
+    // Every new career seeds its world with a fresh random token, so this
+    // journey must pick an affordable target and offer the seller's own asking
+    // price instead of a fixed amount that the engine would reject outright.
+    await desktop
+      .locator(".tls-market-filter-bar label", { hasText: "Employment" })
+      .locator("select")
+      .selectOption("contracted");
+    await desktop
+      .locator(".tls-market-filter-bar label", { hasText: "Availability to negotiate" })
+      .locator("select")
+      .selectOption("actionable");
+    await desktop.getByRole("button", { name: "Public value: ascending", exact: true }).click();
+    // A seller may still answer "not for sale" for its own football reasons, so
+    // the journey walks the cheapest actionable targets until one offer is
+    // actually taken under consideration, then proves the pending lifecycle.
+    const targetRows = desktop.locator(".tls-market-table tbody tr");
     const profile = desktop.getByRole("dialog", { name: /.+/ });
-    await expect(profile).toBeVisible();
-    const openedPlayerName = await profile.getByRole("heading", { level: 2 }).innerText();
-    await profile.getByRole("tab", { name: "Contract and offer", exact: true }).click();
+    const pendingState = profile.getByText("Waiting for the selling club's reply.", { exact: true });
+    const candidateCount = Math.min(8, await targetRows.count());
+    expect(candidateCount).toBeGreaterThan(0);
 
-    const feeInput = profile.locator(".tls-market-composer input");
-    await expect(feeInput).toBeVisible();
-    await feeInput.fill("100000");
-    await expect(profile.locator(".tls-contract-finance-ok")).toBeVisible();
-    await profile.getByRole("button", { name: "Submit offer", exact: true }).click();
+    let openedPlayerName = "";
+    let askingPriceText = "";
+    let pendingReached = false;
+    for (let candidate = 0; candidate < candidateCount && !pendingReached; candidate += 1) {
+      await targetRows.nth(candidate)
+        .getByRole("button", { name: /Open .+ market profile/ })
+        .click();
+      await expect(profile).toBeVisible();
+      openedPlayerName = (await profile.getByRole("heading", { level: 2 }).innerText()).trim();
+      askingPriceText = (await profile
+        .locator(".tls-market-player-summary div", { hasText: "Asking price" })
+        .locator("dd")
+        .innerText()).trim();
+      const askingPriceUnits = askingPriceText.replace(/[^0-9]/g, "");
+      expect(Number(askingPriceUnits)).toBeGreaterThan(0);
+      await profile.getByRole("tab", { name: "Contract and offer", exact: true }).click();
 
-    await expect(profile.getByText("Offer submitted. Expect a reply within three game days.", { exact: true })).toBeVisible();
+      const feeInput = profile.locator(".tls-market-composer input");
+      await expect(feeInput).toBeVisible();
+      await feeInput.fill(askingPriceUnits);
+      await expect(profile.locator(".tls-contract-finance-ok")).toBeVisible();
+      await profile.getByRole("button", { name: "Submit offer", exact: true }).click();
+      await expect(profile.getByText(
+        "Offer submitted. Expect a reply within three game days.",
+        { exact: true },
+      )).toBeVisible();
+
+      pendingReached = await pendingState.isVisible({ timeout: 5_000 }).catch(() => false);
+      if (!pendingReached) {
+        await profile.locator(".tls-player-profile-close").click();
+        await expect(profile).toBeHidden();
+      }
+    }
+    expect(pendingReached, "no cheap actionable seller took an asking-price offer").toBe(true);
+
     await expect.poll(async () => desktop.evaluate(async () => {
       const modulePath = "/src/stores/career-ui-store.ts";
       const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
       const career = useCareerUiStore.getState().activeCareerState;
-      return (career?.transferNegotiationState?.negotiationIds ?? []).map(
+      return (career?.transferNegotiationState?.negotiationIds ?? []).flatMap(
         (negotiationId: string) => {
           const negotiation = career?.transferNegotiationState?.negotiations[negotiationId];
-          const player = negotiation === undefined
-            ? undefined
-            : career?.gameState.players[negotiation.playerId];
-          return player === undefined ? "" : `${player.firstName} ${player.lastName}`;
+          if (negotiation?.status !== "submitted") return [];
+          const player = career?.gameState.players[negotiation.playerId];
+          return player === undefined ? [] : [`${player.firstName} ${player.lastName}`];
         },
       );
     })).toEqual([openedPlayerName]);
     await expect.poll(async () => ({
       pageErrors,
-      pendingStateCount: await profile
-        .getByText("Waiting for the selling club's reply.", { exact: true })
-        .count(),
+      pendingStateCount: await pendingState.count(),
     }), { timeout: 30_000 }).toEqual({
       pageErrors: [],
       pendingStateCount: 1,
@@ -1051,7 +1420,7 @@ test("a submitted transfer offer stays pending, tracks exposure, and withdraws c
     await captureViewport(desktop, "79d-market-pending-offer-desktop");
 
     const pendingExposure = desktop.locator(".tls-market-finance-strip > div").nth(3);
-    await expect(pendingExposure.getByText("€100,000", { exact: true })).toBeVisible();
+    await expect(pendingExposure.getByText(askingPriceText, { exact: true })).toBeVisible();
     await expect(pendingExposure.getByText("1 open talks", { exact: true })).toBeVisible();
     await expect(desktop.getByText(transferBudgetBefore, { exact: true })).toBeVisible();
 
@@ -2896,6 +3265,30 @@ async function expectMainFocus(page: Page): Promise<void> {
 }
 
 /** Guards the page-level horizontal-flow contract at the named checkpoint. */
+/** Reads how many Market targets match the current filters, across all pages. */
+async function matchingMarketTargetCount(page: Page): Promise<number> {
+  const summary = await page.getByRole("navigation", {
+    name: "Market results pages",
+    exact: true,
+  }).innerText();
+  const total = /of\s+([\d,]+)/.exec(summary)?.[1];
+  if (total === undefined) throw new Error(`Unreadable Market pagination summary: ${summary}`);
+  return Number(total.replace(/,/g, ""));
+}
+
+/** Switches the running career to one supported language and settles a frame. */
+async function setQaLanguage(page: Page, language: "en" | "it"): Promise<void> {
+  await page.evaluate(async (nextLanguage) => {
+    const modulePath = "/src/stores/career-ui-store.ts";
+    const { useCareerUiStore } = await import(/* @vite-ignore */ modulePath);
+    const store = useCareerUiStore.getState();
+    store.setPreferences({ ...store.preferences, language: nextLanguage });
+    await new Promise<void>((resolveFrame) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()));
+    });
+  }, language);
+}
+
 async function assertNoPageOverflow(page: Page, checkpoint: string): Promise<void> {
   const overflow = await page.evaluate(() => {
     const clientWidth = document.documentElement.clientWidth;

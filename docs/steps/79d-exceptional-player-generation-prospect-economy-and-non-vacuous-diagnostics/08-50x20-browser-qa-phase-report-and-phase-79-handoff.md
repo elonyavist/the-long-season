@@ -7,8 +7,8 @@ Done by explicit product decision on 2026-07-30.
 Implementation checks and browser QA pass. The direct `50 x 20` was stopped by
 the user after roughly eight and a half hours, produced no report, and is not
 claimed as passing evidence. The cohort is deliberately deferred to the end of
-Phase 80 with resumable checkpoints and exactly `7` workers. Phase 80 Step 02
-inventories the rework scope without inference.
+Phase 80B with resumable checkpoints and exactly `7` workers, after the
+accepted UI, player-model, market, and loan reworks.
 
 ## Entry Blocker
 
@@ -201,8 +201,8 @@ Future rework documentation must use `--checkpoint-dir`, `--shards=50`, and
   corrected, the range remains accessible across Squad/Market/profile,
   and incompatible beta saves use reset/delete without UI regressions.
 - `pnpm check`, web build, browser, dependency, diff, and Graphify gates pass.
-- Phase 79D is marked Done; Phase 79 Step 14 remains paused until Phase 80 and
-  its checkpointed `50 x 20` complete.
+- Phase 79D is marked Done; Phase 79 Step 14 remains paused until Phase 80B
+  and its checkpointed `50 x 20` complete.
 - Phase 79 Step 14 documents staged evidence ending at `750 worlds × 20
   seasons`, not `750 x 50`, and remains unclaimed until actually run.
 - The final report explains both the full-player-arc/runtime rationale and the

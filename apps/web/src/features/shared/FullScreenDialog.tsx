@@ -14,6 +14,15 @@ export type FullScreenDialogProps = Readonly<{
   shellClassName: string;
   children: ReactNode;
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /**
+   * Whether a backdrop, gutter, or scrollbar press closes the dialog.
+   *
+   * Inspection surfaces keep the default light dismissal. A transactional
+   * surface that holds an unsent draft opts out, so a stray press beside the
+   * panel cannot silently discard what the manager was writing. `Escape` and
+   * the explicit close control stay available in both modes.
+   */
+  dismissOnBackdrop?: boolean;
   onClose: () => void;
 }>;
 
@@ -29,6 +38,7 @@ export function FullScreenDialog({
   shellClassName,
   children,
   initialFocusRef,
+  dismissOnBackdrop = true,
   onClose,
 }: FullScreenDialogProps): React.JSX.Element {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -58,12 +68,14 @@ export function FullScreenDialog({
     <dialog
       aria-labelledby={labelledBy}
       className="tls-full-screen-dialog"
+      data-backdrop-dismiss={dismissOnBackdrop ? "true" : "false"}
       ref={dialogRef}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
       onClick={(event) => {
+        if (!dismissOnBackdrop) return;
         if (event.target === dialogRef.current) onClose();
       }}
     >

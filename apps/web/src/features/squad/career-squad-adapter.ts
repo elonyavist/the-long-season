@@ -398,6 +398,8 @@ export function presentCareerSquad(
       shirtNumber: registration.shirtNumber,
       firstName: player.firstName,
       lastName: player.lastName,
+      // The valuation already owns the canonical age; the table never recomputes it.
+      age: valuation.age,
       primaryRole: tacticalPlayer.primaryRole,
       condition: Number(dynamic.fitness),
       morale: Number(dynamic.morale),

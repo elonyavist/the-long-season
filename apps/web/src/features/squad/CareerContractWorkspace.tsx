@@ -67,9 +67,13 @@ export function CareerContractWorkspace({
   const currentEditableTerms = editableTerms(contract);
   const formSeed = useMemo(
     () => currentEditableTerms === undefined
-      ? createContractRenewalFormValues({ age: playerAge, activeContract: contract.activeContract })
-      : contractTermsToFormValues(currentEditableTerms),
-    [contract.activeContract, currentEditableTerms, playerAge],
+      ? createContractRenewalFormValues({
+          age: playerAge,
+          activeContract: contract.activeContract,
+          language,
+        })
+      : contractTermsToFormValues(currentEditableTerms, language),
+    [contract.activeContract, currentEditableTerms, language, playerAge],
   );
   const [editing, setEditing] = useState(contract.negotiation?.status === "draft");
   const [values, setValues] = useState<ContractRenewalFormValues>(formSeed);
@@ -84,8 +88,8 @@ export function CareerContractWorkspace({
       : []
   ));
   const validation = useMemo(
-    () => validateContractRenewalForm(values, bonusFields),
-    [bonusFields, values],
+    () => validateContractRenewalForm(values, bonusFields, language),
+    [bonusFields, language, values],
   );
   const financePreview = validation.status === "valid"
     ? previewOffer(rawPlayerId, validation.terms)
@@ -107,7 +111,7 @@ export function CareerContractWorkspace({
   }, [negotiationIdentityToken, formSeed]);
 
   const submitEditableOffer = async (): Promise<void> => {
-    const validated = validateContractRenewalForm(values, bonusFields);
+    const validated = validateContractRenewalForm(values, bonusFields, language);
     if (validated.status === "invalid") {
       setFieldErrors(Object.fromEntries(
         Object.entries(validated.errors).map(([field, reason]) => [
@@ -253,6 +257,7 @@ export function CareerContractWorkspace({
             errors={fieldErrors}
             supportedBonusFields={bonusFields}
             currency={contract.finance.currency}
+            language={language}
             pending={pending}
             text={text}
             onChange={(field, value) => {
@@ -267,7 +272,7 @@ export function CareerContractWorkspace({
               setEditing(false);
             }}
             onSubmit={() => void submitEditableOffer()}
-            submitLabel={editableSubmitLabel(contract, values, bonusFields, text)}
+            submitLabel={editableSubmitLabel(contract, values, bonusFields, language, text)}
           />
         ) : (
           <ContractActions
@@ -276,8 +281,12 @@ export function CareerContractWorkspace({
             text={text}
             onEdit={(terms) => {
               setValues(terms === undefined
-                ? createContractRenewalFormValues({ age: playerAge, activeContract: contract.activeContract })
-                : contractTermsToFormValues(terms));
+                ? createContractRenewalFormValues({
+                    age: playerAge,
+                    activeContract: contract.activeContract,
+                    language,
+                  })
+                : contractTermsToFormValues(terms, language));
               setEditing(true);
               setFeedback(undefined);
             }}
@@ -492,9 +501,10 @@ function editableSubmitLabel(
   contract: CareerContractView,
   values: ContractRenewalFormValues,
   bonusFields: readonly CareerContractBonusField[],
+  language: WebPreferences["language"],
   text: Translator,
 ): string {
-  const validation = validateContractRenewalForm(values, bonusFields);
+  const validation = validateContractRenewalForm(values, bonusFields, language);
   if (contract.negotiation?.status !== "draft" || validation.status !== "valid") {
     return contract.negotiation?.status === "countered"
       ? text("career.contract.action.saveRevision")

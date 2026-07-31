@@ -11,6 +11,7 @@ import {
   buildCareerMarketTargetCatalog,
   buildCareerMarketTargetDetailView,
   filterCareerMarketTargetRows,
+  paginateCareerMarketTargetRows,
   sortCareerMarketTargetRows,
   type CareerMarketTargetDetailInput,
   type CareerMarketTargetFilters,
@@ -186,6 +187,46 @@ test("sorts every supported column deterministically with stable tie-breakers", 
     assert.equal(new Set(ascending).size, rows.length);
     assert.equal(new Set(descending).size, rows.length);
   }
+});
+
+test("paginates only after full-dataset sorting and clamps shrinking results", () => {
+  const base = targets()[0]!;
+  const catalog = buildCareerMarketTargetCatalog(
+    Array.from({ length: 60 }, (_, index) => ({
+      ...base,
+      playerId: `player:page-${String(index).padStart(2, "0")}`,
+      firstName: "Player",
+      lastName: String(index).padStart(2, "0"),
+    })),
+    {},
+    { key: "player", direction: "ascending" },
+  );
+
+  const firstPage = paginateCareerMarketTargetRows(catalog.rows, 1);
+  const secondPage = paginateCareerMarketTargetRows(catalog.rows, 2);
+  const clampedPage = paginateCareerMarketTargetRows(catalog.rows, 99);
+  const emptyPage = paginateCareerMarketTargetRows([], 4);
+
+  assert.equal(firstPage.rows.length, 25);
+  assert.equal(firstPage.rows[0]?.playerId, "player:page-00");
+  assert.equal(firstPage.rows[24]?.playerId, "player:page-24");
+  assert.equal(secondPage.rows[0]?.playerId, "player:page-25");
+  assert.equal(secondPage.firstVisibleTarget, 26);
+  assert.equal(secondPage.lastVisibleTarget, 50);
+  assert.equal(clampedPage.currentPage, 3);
+  assert.equal(clampedPage.pageCount, 3);
+  assert.equal(clampedPage.rows.length, 10);
+  assert.equal(clampedPage.firstVisibleTarget, 51);
+  assert.equal(clampedPage.lastVisibleTarget, 60);
+  assert.deepEqual(emptyPage, {
+    rows: [],
+    currentPage: 1,
+    pageCount: 1,
+    pageSize: 25,
+    matchingTargetCount: 0,
+    firstVisibleTarget: 0,
+    lastVisibleTarget: 0,
+  });
 });
 
 test("sorts half-star assessments with the elite marker above ordinary five stars", () => {

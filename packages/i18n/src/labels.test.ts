@@ -111,6 +111,11 @@ test("translates senior squad, player-profile, and annual contract labels", () =
   assert.equal(translate("it", "career.player.role.attacking_midfielder"), "Trequartista");
   assert.equal(translate("en", "career.player.attribute.physical.stamina"), "Stamina");
   assert.equal(translate("it", "career.squad.column.placement"), "Schieramento");
+  assert.equal(translate("en", "career.squad.column.age"), "Age");
+  assert.equal(translate("it", "career.squad.column.age"), "Età");
+  assert.equal(translate("de", "career.squad.column.age"), "Alter");
+  assert.equal(translate("es", "career.squad.column.age"), "Edad");
+  assert.equal(translate("fr", "career.squad.column.age"), "Âge");
   assert.equal(
     translate("en", "career.squad.action.openMenu", { player: "Ada Rossi" }),
     "Actions for Ada Rossi",
@@ -177,17 +182,37 @@ test("translates accessible public player ratings in every supported language", 
   );
   assert.equal(
     translate("it", "career.playerPotentialRange.accessibleRange", {
+      current: "3",
       lower: "3,5",
       upper: "5",
       uncertainty: "1,5",
     }),
-    "Potenziale stimato da 3,5 a 5 stelle. Fascia incerta: 1,5 stelle.",
+    "Livello attuale: 3 stelle. Potenziale stimato da 3,5 a 5 stelle. Fascia incerta: 1,5 stelle.",
   );
   assert.equal(
     translate("en", "career.playerPotentialRange.accessibleSingular", {
+      current: "4.5",
       stars: "4.5",
     }),
-    "Estimated potential: 4.5 out of 6 stars.",
+    "Current level: 4.5 stars. Estimated potential: 4.5 out of 6 stars.",
+  );
+});
+
+test("translates bounded Market pagination in every supported language", () => {
+  assert.equal(
+    translate("en", "career.market.pagination.results", {
+      first: 26,
+      last: 50,
+      total: 374,
+    }),
+    "Players 26-50 of 374",
+  );
+  assert.equal(translate("it", "career.market.pagination.previous"), "Precedente");
+  assert.equal(translate("de", "career.market.pagination.next"), "Weiter");
+  assert.equal(translate("es", "career.market.pagination.select"), "Ir a la pagina del mercado");
+  assert.equal(
+    translate("fr", "career.market.pagination.pageStatus", { page: 2, pages: 15 }),
+    "Page 2 sur 15",
   );
 });
 

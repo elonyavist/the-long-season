@@ -3,6 +3,7 @@ import {
   buildCareerMarketView,
   buildCareerShellView,
   careerMoneyFromMinorUnits,
+  paginateCareerMarketTargetRows,
   type CanonicalPlayerRole,
   type CareerInboxView,
   type CareerMarketOfferPreviewView,
@@ -18,6 +19,8 @@ import {
   BadgeEuro,
   BriefcaseBusiness,
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Eye,
   RotateCcw,
@@ -28,7 +31,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { WebPreferences } from "../../app/preferences";
 import { canonicalPlayerRoleCode } from "../../shared/canonical-player-role";
-import { formatMoneyFromMinorUnits } from "../../shared/format-money";
+import {
+  formatMoneyFromMinorUnits,
+  formatMoneyInputFromMinorUnits,
+  parseMoneyInputToMinorUnits,
+} from "../../shared/format-money";
+import { useDebouncedValue } from "../../shared/lib/use-debounced-value";
 import { webMotion, webMotionTargets } from "../../shared/motion/web-motion";
 import { PlayerPotentialRangeRating } from "../../shared/ui/PlayerPotentialRangeRating";
 import { PlayerStarRating } from "../../shared/ui/PlayerStarRating";
@@ -101,6 +109,9 @@ const ROLE_OPTIONS: readonly CanonicalPlayerRole[] = [
   "striker",
 ];
 
+const MARKET_TYPED_FILTER_DELAY_MS = 250;
+const MARKET_AGE_OPTIONS = Array.from({ length: 26 }, (_, index) => index + 15);
+
 /** Renders the real all-year player browser and public market inspection flow. */
 export function CareerMarketScreen({
   presentation,
@@ -121,6 +132,7 @@ export function CareerMarketScreen({
     key: "value",
     direction: "descending",
   });
+  const [page, setPage] = useState(1);
   const [openPlayerId, setOpenPlayerId] = useState<string | undefined>(focusRequest?.playerId);
   // Re-route only on a new request nonce; unrelated career republishes with the
   // same request must never reopen or reset the manager's own dialog choice.
@@ -131,16 +143,50 @@ export function CareerMarketScreen({
     setOpenPlayerId(focusRequest.playerId);
   }, [focusRequest]);
   const shellView = buildCareerShellView({ activeSectionKey: "market", inboxView });
+  const debouncedQuery = useDebouncedValue(
+    filters.query,
+    MARKET_TYPED_FILTER_DELAY_MS,
+  );
+  const debouncedMinimumValue = useDebouncedValue(
+    filters.minimumValue,
+    MARKET_TYPED_FILTER_DELAY_MS,
+  );
+  const debouncedMaximumValue = useDebouncedValue(
+    filters.maximumValue,
+    MARKET_TYPED_FILTER_DELAY_MS,
+  );
+  const appliedFilters = useMemo<FilterDraft>(() => ({
+    ...filters,
+    query: debouncedQuery,
+    minimumValue: debouncedMinimumValue,
+    maximumValue: debouncedMaximumValue,
+  }), [
+    debouncedMaximumValue,
+    debouncedMinimumValue,
+    debouncedQuery,
+    filters,
+  ]);
   const view = useMemo(
     () => buildCareerMarketView(presentation.status !== "ready"
       ? presentation
       : {
           ...presentation,
-          filters: buildFilters(filters),
+          filters: buildFilters(appliedFilters, language),
           sort,
         }),
-    [filters, presentation, sort],
+    [appliedFilters, language, presentation, sort],
   );
+  const pageView = useMemo(
+    () => view.status === "ready"
+      ? paginateCareerMarketTargetRows(view.targets.rows, page)
+      : undefined,
+    [page, view],
+  );
+  useEffect(() => {
+    if (pageView !== undefined && page !== pageView.currentPage) {
+      setPage(pageView.currentPage);
+    }
+  }, [page, pageView]);
   const detail = view.status === "ready" && openPlayerId !== undefined
     ? view.targets.resolveDetail(openPlayerId)
     : undefined;
@@ -174,11 +220,18 @@ export function CareerMarketScreen({
             <MarketFinanceStrip view={view} language={language} text={text} />
             <MarketFilters
               filters={filters}
+              language={language}
               text={text}
               total={view.targets.totalTargetCount}
               visible={view.targets.visibleTargetCount}
-              onChange={setFilters}
-              onReset={() => setFilters(EMPTY_FILTERS)}
+              onChange={(nextFilters) => {
+                setFilters(nextFilters);
+                setPage(1);
+              }}
+              onReset={() => {
+                setFilters(EMPTY_FILTERS);
+                setPage(1);
+              }}
             />
 
             {view.targets.status === "empty" ? (
@@ -191,27 +244,27 @@ export function CareerMarketScreen({
                 animate={webMotionTargets.rest}
                 className="tls-market-table-frame"
                 initial={webMotionTargets.contentUpdate}
-                key={`${view.targets.visibleTargetCount}:${sort.key}:${sort.direction}`}
+                key={`${view.targets.visibleTargetCount}:${sort.key}:${sort.direction}:${pageView?.currentPage ?? 1}`}
                 transition={webMotion.transition}
               >
                 <table className="tls-market-table">
                   <thead>
                     <tr>
-                      <MarketSortHeading column="player" label={text("career.market.column.player")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="club" label={text("career.market.column.club")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="age" label={text("career.market.column.age")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="role" label={text("career.market.column.role")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="current_level" label={text("career.market.column.currentLevel")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="potential_level" label={text("career.market.column.potentialLevel")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="value" label={text("career.market.column.value")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="player" label={text("career.market.column.player")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="club" label={text("career.market.column.club")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="age" label={text("career.market.column.age")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="role" label={text("career.market.column.role")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="current_level" label={text("career.market.column.currentLevel")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="potential_level" label={text("career.market.column.potentialLevel")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="value" label={text("career.market.column.value")} sort={sort} onSort={handleSort} />
                       <th scope="col">{text("career.market.column.askingOrFee")}</th>
-                      <MarketSortHeading column="contract" label={text("career.market.column.contract")} sort={sort} onSort={setSort} />
-                      <MarketSortHeading column="eligibility" label={text("career.market.column.eligibility")} sort={sort} onSort={setSort} />
+                      <MarketSortHeading column="contract" label={text("career.market.column.contract")} sort={sort} onSort={handleSort} />
+                      <MarketSortHeading column="eligibility" label={text("career.market.column.eligibility")} sort={sort} onSort={handleSort} />
                       <th scope="col"><span className="tls-visually-hidden">{text("career.market.column.inspect")}</span></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {view.targets.rows.map((row) => (
+                    {pageView?.rows.map((row) => (
                       <MarketRow
                         key={row.playerId}
                         language={language}
@@ -223,6 +276,13 @@ export function CareerMarketScreen({
                   </tbody>
                 </table>
               </m.div>
+            )}
+            {pageView === undefined ? null : (
+              <MarketPagination
+                pageView={pageView}
+                text={text}
+                onPageChange={setPage}
+              />
             )}
           </>
         )}
@@ -242,6 +302,11 @@ export function CareerMarketScreen({
       />
     </AppShell>
   );
+
+  function handleSort(nextSort: CareerMarketTargetSort): void {
+    setSort(nextSort);
+    setPage(1);
+  }
 }
 
 function MarketFinanceStrip({
@@ -298,6 +363,7 @@ function MarketFinanceStrip({
 
 function MarketFilters({
   filters,
+  language,
   text,
   total,
   visible,
@@ -305,6 +371,7 @@ function MarketFilters({
   onReset,
 }: Readonly<{
   filters: FilterDraft;
+  language: WebPreferences["language"];
   text: Translator;
   total: number;
   visible: number;
@@ -313,6 +380,30 @@ function MarketFilters({
 }>): React.JSX.Element {
   const update = <Key extends keyof FilterDraft>(key: Key, value: FilterDraft[Key]): void => {
     onChange({ ...filters, [key]: value });
+  };
+  const updateAge = (
+    key: "minimumAge" | "maximumAge",
+    value: string,
+  ): void => {
+    const next = { ...filters, [key]: value };
+    if (value.length > 0) {
+      const selectedAge = Number(value);
+      if (
+        key === "minimumAge"
+        && next.maximumAge.length > 0
+        && selectedAge > Number(next.maximumAge)
+      ) {
+        next.maximumAge = value;
+      }
+      if (
+        key === "maximumAge"
+        && next.minimumAge.length > 0
+        && selectedAge < Number(next.minimumAge)
+      ) {
+        next.minimumAge = value;
+      }
+    }
+    onChange(next);
   };
 
   return (
@@ -356,26 +447,32 @@ function MarketFilters({
       </label>
       <fieldset className="tls-market-range-filter">
         <legend>{text("career.market.filter.age")}</legend>
-        <input
-          aria-label={text("career.market.filter.minimumAge")}
-          inputMode="numeric"
-          min="15"
-          max="60"
-          placeholder={text("career.market.filter.min")}
-          type="number"
-          value={filters.minimumAge}
-          onChange={(event) => update("minimumAge", event.currentTarget.value)}
-        />
-        <input
-          aria-label={text("career.market.filter.maximumAge")}
-          inputMode="numeric"
-          min="15"
-          max="60"
-          placeholder={text("career.market.filter.max")}
-          type="number"
-          value={filters.maximumAge}
-          onChange={(event) => update("maximumAge", event.currentTarget.value)}
-        />
+        <label className="tls-market-age-bound">
+          <span>{text("career.market.filter.min")}</span>
+          <select
+            aria-label={text("career.market.filter.minimumAge")}
+            value={filters.minimumAge}
+            onChange={(event) => updateAge("minimumAge", event.currentTarget.value)}
+          >
+            <option value="">{text("career.market.filter.all")}</option>
+            {MARKET_AGE_OPTIONS.map((age) => (
+              <option key={age} value={age}>{age}</option>
+            ))}
+          </select>
+        </label>
+        <label className="tls-market-age-bound">
+          <span>{text("career.market.filter.max")}</span>
+          <select
+            aria-label={text("career.market.filter.maximumAge")}
+            value={filters.maximumAge}
+            onChange={(event) => updateAge("maximumAge", event.currentTarget.value)}
+          >
+            <option value="">{text("career.market.filter.all")}</option>
+            {MARKET_AGE_OPTIONS.map((age) => (
+              <option key={age} value={age}>{age}</option>
+            ))}
+          </select>
+        </label>
       </fieldset>
       <label>
         <span>{text("career.market.filter.employment")}</span>
@@ -399,21 +496,19 @@ function MarketFilters({
         <input
           aria-label={text("career.market.filter.minimumValue")}
           inputMode="decimal"
-          min="0"
           placeholder={text("career.market.filter.min")}
-          step="1"
-          type="number"
+          type="text"
           value={filters.minimumValue}
+          onBlur={() => update("minimumValue", normalizeValueBound(filters.minimumValue, language))}
           onChange={(event) => update("minimumValue", event.currentTarget.value)}
         />
         <input
           aria-label={text("career.market.filter.maximumValue")}
           inputMode="decimal"
-          min="0"
           placeholder={text("career.market.filter.max")}
-          step="1"
-          type="number"
+          type="text"
           value={filters.maximumValue}
+          onBlur={() => update("maximumValue", normalizeValueBound(filters.maximumValue, language))}
           onChange={(event) => update("maximumValue", event.currentTarget.value)}
         />
       </fieldset>
@@ -433,6 +528,68 @@ function MarketFilters({
         </button>
       </div>
     </section>
+  );
+}
+
+function MarketPagination({
+  pageView,
+  text,
+  onPageChange,
+}: Readonly<{
+  pageView: ReturnType<typeof paginateCareerMarketTargetRows>;
+  text: Translator;
+  onPageChange: (page: number) => void;
+}>): React.JSX.Element {
+  return (
+    <nav
+      aria-label={text("career.market.pagination.navigation")}
+      className="tls-market-pagination"
+    >
+      <span aria-live="polite">
+        {text("career.market.pagination.results", {
+          first: pageView.firstVisibleTarget,
+          last: pageView.lastVisibleTarget,
+          total: pageView.matchingTargetCount,
+        })}
+      </span>
+      <div>
+        <button
+          disabled={pageView.currentPage === 1}
+          type="button"
+          onClick={() => onPageChange(pageView.currentPage - 1)}
+        >
+          <ChevronLeft aria-hidden="true" size={17} />
+          {text("career.market.pagination.previous")}
+        </button>
+        <label>
+          <span className="tls-visually-hidden">
+            {text("career.market.pagination.select")}
+          </span>
+          <select
+            aria-label={text("career.market.pagination.select")}
+            value={pageView.currentPage}
+            onChange={(event) => onPageChange(Number(event.currentTarget.value))}
+          >
+            {Array.from({ length: pageView.pageCount }, (_, index) => index + 1)
+              .map((page) => <option key={page} value={page}>{page}</option>)}
+          </select>
+        </label>
+        <span>
+          {text("career.market.pagination.pageStatus", {
+            page: pageView.currentPage,
+            pages: pageView.pageCount,
+          })}
+        </span>
+        <button
+          disabled={pageView.currentPage === pageView.pageCount}
+          type="button"
+          onClick={() => onPageChange(pageView.currentPage + 1)}
+        >
+          {text("career.market.pagination.next")}
+          <ChevronRight aria-hidden="true" size={17} />
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -524,6 +681,7 @@ function MarketRow({
       </td>
       <td data-label={text("career.market.column.potentialLevel")}>
         <PlayerPotentialRangeRating
+          currentRating={row.currentRating}
           language={language}
           range={row.potentialRange}
           text={text}
@@ -608,11 +766,14 @@ function MarketState({
   );
 }
 
-function buildFilters(filters: FilterDraft): CareerMarketTargetFilters {
+function buildFilters(
+  filters: FilterDraft,
+  language: WebPreferences["language"],
+): CareerMarketTargetFilters {
   const minimumAge = parseInteger(filters.minimumAge);
   const maximumAge = parseInteger(filters.maximumAge);
-  const minimumValue = parseMoney(filters.minimumValue);
-  const maximumValue = parseMoney(filters.maximumValue);
+  const minimumValue = parseMoney(filters.minimumValue, language);
+  const maximumValue = parseMoney(filters.maximumValue, language);
   return {
     ...(filters.query.trim().length === 0 ? {} : { query: filters.query }),
     ...(filters.role === "all" ? {} : { role: filters.role }),
@@ -633,10 +794,16 @@ function parseInteger(value: string): number | undefined {
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function parseMoney(value: string) {
-  if (value.trim().length === 0) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
-  const minorUnits = Math.round(parsed * 100);
-  return Number.isSafeInteger(minorUnits) ? careerMoneyFromMinorUnits(minorUnits) : undefined;
+/** Reads one typed value bound through the single shared locale-safe parser. */
+function parseMoney(value: string, language: WebPreferences["language"]) {
+  const parsed = parseMoneyInputToMinorUnits(value, language);
+  return parsed.status === "valid" ? careerMoneyFromMinorUnits(parsed.minorUnits) : undefined;
+}
+
+/** Rewrites a readable value bound in the active locale, or keeps the draft. */
+function normalizeValueBound(value: string, language: WebPreferences["language"]): string {
+  const parsed = parseMoneyInputToMinorUnits(value, language);
+  return parsed.status === "valid"
+    ? formatMoneyInputFromMinorUnits(parsed.minorUnits, language)
+    : value;
 }

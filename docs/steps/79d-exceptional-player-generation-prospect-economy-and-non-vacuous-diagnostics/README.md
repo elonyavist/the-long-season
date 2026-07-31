@@ -8,10 +8,10 @@ browser QA, and beta-reset path pass.
 
 The attempted final `50 x 20` was stopped by the user after the direct runner
 proved operationally unsuitable at one worker; it produced no report and is
-not claimed as evidence. The user moved that cohort to the end of Phase 80,
-where it must use resumable checkpoints and exactly `7` workers so the machine
-remains usable. Phase 80 Step 02 inventories the concrete rework scope without
-inference. Phase 79 Step 14 remains paused and unclaimed.
+not claimed as evidence. The user later moved that cohort to the end of Phase
+80B, after the accepted UI, player-model, market, and loan reworks, where it
+must use resumable checkpoints and exactly `7` workers so the machine remains
+usable. Phase 79 Step 14 remains paused and unclaimed.
 
 ## Goal
 
@@ -104,7 +104,8 @@ as certainty that every teenager reaches the stored ceiling.
 - Step 07 makes zero-observation semantics and joint-profile gates binding.
 - Step 08 originally owned the final `50 worlds × 20 seasons` corrective run.
   The 2026-07-30 product decision closed 79D without claiming the interrupted
-  run and moved that evidence to the end of Phase 80.
+  run; the later accepted rework sequence moved that evidence to the end of
+  Phase 80B.
 - No earlier step may run `50 x 20`.
 - No Phase 79D step runs or claims the release-scale `750`-world gate.
 
@@ -192,9 +193,9 @@ evidence, not retroactive Phase 79D evidence.
   `pnpm check` pass.
 - By explicit product decision, the interrupted `50 x 20` is deferred and
   unclaimed; Phase 79D closes without presenting partial output as evidence.
-- Phase 79 Step 14 remains paused during Phase 80. Its final documented
-  closeout owns a checkpointed `50 x 20` with exactly
-  `7` workers before any release-scale claim.
+- Phase 79 Step 14 remains paused through Phases 80, 80A, 80B, and 80C. Phase 80C
+  Step 09 owns one checkpointed `50 x 20` with exactly `7` workers before any
+  return to the parent release-scale gate.
 - The phase report explains that twenty seasons cover a representative
   age-15-to-35 arc and year-20 stocks while not proving equilibrium after year
   20.

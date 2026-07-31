@@ -91,6 +91,45 @@ describe("CareerMarketPlayerDialog", () => {
     expect(markup).not.toContain(">Saves<");
   });
 
+  it("presents public money through the shared exact locale formatter", () => {
+    const detail = resolveFixtureDetail(
+      "market-player-dialog-money",
+      (candidate) => candidate.employment.status === "contracted",
+    );
+    const english = renderDialog(detail, "en");
+    const italian = renderDialog(detail, "it").replace(/\u00a0/g, " ");
+    const publicValue = detail.publicValue;
+    const wholeUnits = Math.round(publicValue / 100);
+
+    expect(english).toContain(`€${wholeUnits.toLocaleString("en-US")}`);
+    expect(italian).toContain(`${wholeUnits.toLocaleString("de-DE")} €`);
+    // Exact whole units only: no compact notation and no manual concatenation.
+    expect(english).not.toMatch(/€\d+(\.\d+)?[KM]/);
+  });
+
+  it("keeps every editable money field locale-aware instead of a raw number input", () => {
+    const detail = resolveFixtureDetail(
+      "market-player-dialog-editable-money",
+      (candidate) => candidate.employment.status === "contracted",
+    );
+    const markup = renderDialog({
+      ...detail,
+      eligibility: { status: "allowed", action: "submit_transfer_offer" },
+    });
+
+    expect(markup).toMatch(/inputmode="decimal"/i);
+    expect(markup).not.toContain('type="number"');
+  });
+
+  it("keeps the offer workspace out of backdrop dismissal", () => {
+    const detail = resolveFixtureDetail(
+      "market-player-dialog-draft-stability",
+      (candidate) => candidate.employment.status === "contracted",
+    );
+
+    expect(renderDialog(detail)).toContain('data-backdrop-dismiss="false"');
+  });
+
   it("preserves tab and draft identity only for the same player", () => {
     const state = {
       playerId: "player:a",
@@ -141,14 +180,17 @@ function resolveFixtureDetail(
 }
 
 /** Renders one target without invoking the draft preview until the user types. */
-function renderDialog(detail: CareerMarketTargetDetailView): string {
+function renderDialog(
+  detail: CareerMarketTargetDetailView,
+  language: "en" | "it" = "en",
+): string {
   return renderToStaticMarkup(
     <CareerMarketPlayerDialog
       detail={detail}
-      language="en"
+      language={language}
       marketCommandPending={false}
       negotiation={undefined}
-      text={createWebTranslator("en")}
+      text={createWebTranslator(language)}
       previewOffer={() => {
         throw new Error("Static dialog rendering must not preview an empty draft");
       }}

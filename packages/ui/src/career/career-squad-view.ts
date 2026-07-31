@@ -35,11 +35,12 @@ export type CareerSquadCompositeStatus =
 export const CAREER_SQUAD_COLUMNS = [
   "number",
   "role",
+  "placement",
   "player",
+  "age",
   "condition",
   "morale",
   "status",
-  "placement",
   "value",
   "current_level",
   "potential_level",
@@ -88,6 +89,8 @@ export interface CareerSquadPlayerInput {
   readonly shirtNumber: number;
   readonly firstName: string;
   readonly lastName: string;
+  /** Canonical integer age already derived by the adapter; never recomputed here. */
+  readonly age: number;
   readonly primaryRole: CanonicalPlayerRole;
   readonly condition: number;
   readonly morale: number;
@@ -176,6 +179,8 @@ export interface CareerSquadPlayerRowView {
   readonly playerId: string;
   readonly shirtNumber: number;
   readonly displayName: string;
+  /** Canonical integer age carried through unchanged for display and sorting. */
+  readonly age: number;
   readonly primaryRole: CanonicalPlayerRole;
   readonly department: CanonicalPlayerRoleDepartment;
   readonly condition: number;
@@ -298,6 +303,7 @@ function buildPlayerRow(player: CareerSquadPlayerInput): CareerSquadPlayerRowVie
     playerId: player.playerId,
     shirtNumber: player.shirtNumber,
     displayName: `${player.firstName} ${player.lastName}`.trim(),
+    age: player.age,
     primaryRole: player.primaryRole,
     department: canonicalPlayerRoleDepartment(player.primaryRole),
     condition: player.condition,
@@ -470,6 +476,7 @@ function compareBySortKey(
     case "number": return left.shirtNumber - right.shirtNumber;
     case "role": return canonicalPlayerRoleOrder(left.primaryRole) - canonicalPlayerRoleOrder(right.primaryRole);
     case "player": return left.displayName.localeCompare(right.displayName);
+    case "age": return left.age - right.age;
     case "condition": return left.condition - right.condition;
     case "morale": return left.morale - right.morale;
     case "status": return left.compositeStatus.localeCompare(right.compositeStatus);

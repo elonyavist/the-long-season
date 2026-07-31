@@ -52,9 +52,10 @@ Worker count is execution metadata only:
 - thresholds and pass/warn/fail semantics do not change;
 - replay evidence records the actual execution strategy.
 
-## Phase 80 Closeout
+## Phase 80B Closeout
 
-The final Phase 80 `50 x 20` must use:
+Phase 80 and Phase 80A run no longitudinal cohort. The sole deferred
+replacement `50 x 20` belongs to Phase 80C Step 09 and must use:
 
 - one explicit checkpoint directory;
 - `50` stable shards;
@@ -62,4 +63,3 @@ The final Phase 80 `50 x 20` must use:
 - a report path frozen before execution.
 
 It remains separate from Phase 79 Step 14's unrun release-scale gate.
-
