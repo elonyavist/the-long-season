@@ -23,6 +23,12 @@ describe("buildCareerDashboard", () => {
     expect(input.saveId).toBe(career.saveId);
     expect(input.worldSeed).toBe("dashboard-loaded-seed");
     expect(input.selectedClub.name).toBe(selectedClub?.name);
+    expect(input.selectedClub.developmentEnvironmentKey).toMatch(
+      /^(?:very_poor|poor|limited|adequate|good|very_good|excellent)$/,
+    );
+    expect(view.selectedClub.developmentEnvironmentLabelKey).toBe(
+      `career.clubDevelopmentEnvironment.state.${input.selectedClub.developmentEnvironmentKey}`,
+    );
     expect(input.playerConditions).toHaveLength(selectedClub?.playerIds.length ?? 0);
     expect(view.nextFixture.status).toBe("available");
     expect(view.preparation).toMatchObject({ lineupStatus: "missing", tacticStatus: "missing" });

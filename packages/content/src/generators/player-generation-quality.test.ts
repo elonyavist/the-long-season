@@ -5,9 +5,11 @@ import {
   getPlayerRoleProfile,
   roleCurrentAbility,
   rolePotentialAbility,
+  type ClubCategory,
   type Player,
   type PlayerStarRating,
 } from "@game/domain";
+import { completedCivilYears } from "@game/shared";
 
 import { playerRatingScale } from "../balance/player-economy-calibration.ts";
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
@@ -17,7 +19,7 @@ import {
 } from "./fake-players.ts";
 import { createFakeDomesticWorld } from "./domestic-world.ts";
 import { getGeneratedPlayerArchetype } from "./player-archetypes.ts";
-import { clubTierForGeneratedClubNumber } from "./player-generation-bands.ts";
+import { openingCompetitiveTierForClubRank } from "./player-generation-bands.ts";
 
 /** Product-level tests for generated third-division squad quality. */
 
@@ -69,7 +71,7 @@ test("third-division high-current-ability players stay rare", () => {
   }
 });
 
-test("serious prospects and rare prodigies are bounded by the league rarity budget", () => {
+test("routine league generation budgets serious prospects and never creates national exceptions", () => {
   for (const seed of ["world-a", "world-b", "demo-001"]) {
     const generated = generatedLeague(seed);
     let seriousProspects = 0;
@@ -87,8 +89,8 @@ test("serious prospects and rare prodigies are bounded by the league rarity budg
     }
 
     assert.equal(seriousProspects, generated.playerRarityBudget.seriousProspectCount, seed);
-    assert.equal(rareProdigies, generated.playerRarityBudget.rareProdigyCount, seed);
-    assert.equal(seriousProspects + rareProdigies <= 6, true, seed);
+    assert.equal(rareProdigies, 0, seed);
+    assert.equal(seriousProspects <= 5, true, seed);
   }
 });
 
@@ -115,17 +117,22 @@ test("complete initial world respects first-team bands and exact global six-star
 
   assert.deepEqual(first, repeated);
   assert.equal(
-    first.exceptionalAllocation.currentSixPlayerKeys.length >= 1
-      && first.exceptionalAllocation.currentSixPlayerKeys.length <= 2,
+    first.exceptionalAllocation.currentSixPlayerKeys.length >= 2
+      && first.exceptionalAllocation.currentSixPlayerKeys.length <= 3,
     true,
   );
   assert.equal(
-    first.exceptionalAllocation.potentialSixPlayerKeys.length >= 2
-      && first.exceptionalAllocation.potentialSixPlayerKeys.length <= 4,
+    first.exceptionalAllocation.youngPotentialSixPlayerKeys.length >= 4
+      && first.exceptionalAllocation.youngPotentialSixPlayerKeys.length <= 5,
     true,
   );
   assert.equal(
-    first.exceptionalAllocation.potentialSixPlayerKeys.filter((id) =>
+    first.exceptionalAllocation.potentialSixPlayerKeys.length >= 6
+      && first.exceptionalAllocation.potentialSixPlayerKeys.length <= 8,
+    true,
+  );
+  assert.equal(
+    first.exceptionalAllocation.youngPotentialSixPlayerKeys.filter((id) =>
       clubForPlayer(first, id)?.category !== "first_division"
     ).length <= 1,
     true,
@@ -209,9 +216,100 @@ test("complete initial world respects first-team bands and exact global six-star
     assert.equal(club?.category, "first_division");
     assert.equal(first.lineupsByClubId[club!.id]?.some((slot) => slot.playerId === id), true);
     const divisionIndex = first.divisionClubIds.first_division.indexOf(club!.id);
-    assert.equal(clubTierForGeneratedClubNumber(divisionIndex + 1), "title_contender");
+    assert.equal(
+      ["title_contender", "playoff_contender"].includes(
+        openingCompetitiveTierForClubRank(divisionIndex + 1),
+      ),
+      true,
+    );
   }
 });
+
+test("canonical Phase 80A worlds keep prospect shares and senior quality continuous", () => {
+  const observations: Record<ClubCategory, { eligible: number; atLeastThreeAndHalf: number }> = {
+    first_division: { eligible: 0, atLeastThreeAndHalf: 0 },
+    second_division: { eligible: 0, atLeastThreeAndHalf: 0 },
+    third_division: { eligible: 0, atLeastThreeAndHalf: 0 },
+  };
+  const acceptedShares: Readonly<Record<ClubCategory, readonly [number, number]>> = {
+    first_division: [0.15, 0.25],
+    second_division: [0.08, 0.15],
+    third_division: [0.04, 0.08],
+  };
+  const firstDivisionOrdinaryStarRatings = new Map<PlayerStarRating, number>();
+  const lowerDivisionWhiteFlyMaximums: Record<"second_division" | "third_division", number> = {
+    second_division: 0,
+    third_division: 0,
+  };
+
+  for (let seedIndex = 1; seedIndex <= 20; seedIndex += 1) {
+    const world = createFakeDomesticWorld({
+      worldSeed:
+        `phase80a-prechange-baseline-world-${String(seedIndex).padStart(5, "0")}`,
+    });
+    const categoryByPlayerId = new Map(
+      world.clubs.flatMap((club) => club.playerIds.map((id) => [id, club.category] as const)),
+    );
+
+    for (const id of world.playerIds) {
+      const player = requiredPlayer(world.players[id]);
+      const age = completedCivilYears(Number(player.birthDate), Number(world.seasonStartDate));
+      const category = categoryByPlayerId.get(id);
+      assert.ok(category !== undefined);
+      const currentRating = ratingForAbility(Number(roleCurrentAbility(
+        player.abilities,
+        roleProfileFor(player),
+      )));
+      const archetype = world.playerArchetypes[id];
+      if (
+        category === "first_division"
+        && archetype === "category_star"
+        && !world.exceptionalAllocation.currentSixPlayerKeys.includes(id)
+      ) {
+        firstDivisionOrdinaryStarRatings.set(
+          currentRating,
+          (firstDivisionOrdinaryStarRatings.get(currentRating) ?? 0) + 1,
+        );
+      }
+      if (
+        (category === "second_division" || category === "third_division")
+        && archetype === "category_star"
+      ) {
+        lowerDivisionWhiteFlyMaximums[category] = Math.max(
+          lowerDivisionWhiteFlyMaximums[category],
+          Number(roleCurrentAbility(player.abilities, roleProfileFor(player))),
+        );
+      }
+      if (age < 15 || age > 20) continue;
+      const observation = observations[category];
+      observation.eligible += 1;
+      const potentialRating = ratingForAbility(Number(rolePotentialAbility(
+        player.potential,
+        roleProfileFor(player),
+      )));
+      if (potentialRating >= 3.5) observation.atLeastThreeAndHalf += 1;
+    }
+  }
+
+  assert.equal((firstDivisionOrdinaryStarRatings.get(4.5) ?? 0) > 0, true);
+  assert.equal((firstDivisionOrdinaryStarRatings.get(5) ?? 0) > 0, true);
+  assert.equal(lowerDivisionWhiteFlyMaximums.second_division <= 14.25, true);
+  assert.equal(lowerDivisionWhiteFlyMaximums.third_division <= 13.25, true);
+
+  for (const category of ["first_division", "second_division", "third_division"] as const) {
+    const observation = observations[category];
+    const [minimumShare, maximumShare] = acceptedShares[category];
+    assert.equal(observation.eligible > 0, true, `${category} denominator`);
+    const share = observation.atLeastThreeAndHalf / observation.eligible;
+    assert.equal(share >= minimumShare, true, `${category} lower share ${share}`);
+    assert.equal(share <= maximumShare, true, `${category} upper share ${share}`);
+  }
+  assert.deepEqual(observations, {
+    first_division: { eligible: 2_144, atLeastThreeAndHalf: 421 },
+    second_division: { eligible: 2_176, atLeastThreeAndHalf: 252 },
+    third_division: { eligible: 2_095, atLeastThreeAndHalf: 130 },
+  });
+}, 30_000);
 
 function generatedLeague(seed: string): FakePlayers {
   const clubs = generateFakeClubs();

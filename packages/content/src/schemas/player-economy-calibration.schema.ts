@@ -1,23 +1,29 @@
 import * as v from "valibot";
 
 import {
+  CLUB_COMPETITIVE_TIER_POLICY_VERSION,
+  CLUB_DEVELOPMENT_ENVIRONMENT_KEYS,
   PLAYER_STAR_RATINGS,
   type AskingPriceCurvesConfig,
   type MarketBehaviorCalibrationConfig,
   type PlayerEconomyCalibrationBundle,
   type PlayerEconomyCalibrationVersionBundle,
   type PlayerMarketCalibrationConfig,
+  type PlayerDevelopmentEnvironmentConfig,
   type PlayerPotentialProjectionPolicyConfig,
   type PlayerRatingScaleConfig,
   type ValuationCurvesConfig,
   type WageFinanceCalibrationConfig,
   validatePlayerPotentialProjectionPolicyConfig,
+  validatePlayerDevelopmentEnvironmentConfig,
 } from "@game/domain";
 
 const divisions = ["first_division", "second_division", "third_division"] as const;
 const ratingSchema = v.picklist(PLAYER_STAR_RATINGS);
 const divisionSchema = v.picklist(divisions);
+const developmentEnvironmentKeySchema = v.picklist(CLUB_DEVELOPMENT_ENVIRONMENT_KEYS);
 const schemaVersion = v.literal(1);
+const potentialProjectionSchemaVersion = v.literal(2);
 const nonEmptyString = v.pipe(v.string(), v.minLength(1));
 const safeInteger = v.pipe(v.number(), v.safeInteger());
 const nonNegativeInteger = v.pipe(safeInteger, v.minValue(0));
@@ -36,12 +42,7 @@ const sourceReferenceSchema = v.strictObject({
 const potentialProjectionAgeBandSchema = v.strictObject({
   minimumAge: nonNegativeInteger,
   maximumAge: nonNegativeInteger,
-  conservativeRealizationBasisPoints: v.pipe(
-    safeInteger,
-    v.minValue(0),
-    v.maxValue(10_000),
-  ),
-  expectedRealizationBasisPoints: v.pipe(
+  p50RealizationBasisPoints: v.pipe(
     safeInteger,
     v.minValue(0),
     v.maxValue(10_000),
@@ -54,7 +55,7 @@ const potentialProjectionAgeBandSchema = v.strictObject({
 });
 
 const playerPotentialProjectionPolicySchema = v.strictObject({
-  schemaVersion,
+  schemaVersion: potentialProjectionSchemaVersion,
   version: nonEmptyString,
   classification: v.literal("explicit_game_design_target"),
   ageBandsByRoleFamily: v.strictObject({
@@ -87,22 +88,16 @@ const playerRatingScaleSchema = v.strictObject({
   })),
   rarity: v.strictObject({
     initialWorld: v.strictObject({
-      currentSixMinimum: nonNegativeInteger,
-      currentSixMaximum: nonNegativeInteger,
-      potentialSixMinimum: nonNegativeInteger,
-      potentialSixMaximum: nonNegativeInteger,
-      lowerDivisionPotentialSixMaximum: nonNegativeInteger,
+      establishedCurrentSixMinimum: nonNegativeInteger,
+      establishedCurrentSixMaximum: nonNegativeInteger,
+      youngStoredCeilingSixMinimum: nonNegativeInteger,
+      youngStoredCeilingSixMaximum: nonNegativeInteger,
+      lowerDivisionYoungStoredCeilingSixMaximum: nonNegativeInteger,
+      youngStoredCeilingSixPerClubMaximum: v.pipe(v.number(), v.integer(), v.minValue(1)),
     }),
     annualIntake: v.strictObject({
-      potentialSixPerWorldMinimum: nonNegativeInteger,
-      potentialSixPerWorldMaximum: nonNegativeInteger,
-      tenSeasonCohortMinimum: nonNegativeInteger,
-      tenSeasonCohortMaximum: nonNegativeInteger,
-    }),
-    yearTen: v.strictObject({
-      activeCurrentSixMaximum: nonNegativeInteger,
-      activePotentialSixMaximum: nonNegativeInteger,
-      lowerDivisionPotentialSixMaximum: nonNegativeInteger,
+      activeYoungStoredCeilingSixTargetMinimum: nonNegativeInteger,
+      activeYoungStoredCeilingSixTargetMaximum: nonNegativeInteger,
     }),
   }),
   potentialProjectionPolicy: playerPotentialProjectionPolicySchema,
@@ -200,28 +195,14 @@ const valuationCurvesSchema = v.strictObject({
   prospectExpectation: v.strictObject({
     version: nonEmptyString,
     potentialProjectionPolicyVersion: nonEmptyString,
-    uncertaintyDiscountBasisPointsPerHalfStar: basisPoints,
-    minimumUncertaintyMultiplierBasisPoints: basisPoints,
+    p50ParticipationBasisPoints: basisPoints,
+    upperOptionParticipationBasisPoints: basisPoints,
   }),
   positionMultipliers: v.strictObject({
     goalkeeper: basisPoints,
     defender: basisPoints,
     midfielder: basisPoints,
     forward: basisPoints,
-  }),
-  marketContext: v.strictObject({
-    multiplierBasisPoints: v.strictObject({
-      first_division: positiveInteger,
-      second_division: positiveInteger,
-      third_division: positiveInteger,
-      free_agent: positiveInteger,
-    }),
-    maximumMinorUnits: v.strictObject({
-      first_division: money,
-      second_division: money,
-      third_division: money,
-      free_agent: money,
-    }),
   }),
   upperTail: v.strictObject({
     compressionStartsMinorUnits: money,
@@ -334,6 +315,14 @@ const marketBehaviorCalibrationSchema = v.strictObject({
     potential: nonNegativeInteger,
     roleNeed: nonNegativeInteger,
     affordability: nonNegativeInteger,
+  }),
+  aiRiskAppetite: v.strictObject({
+    uncertaintyPenaltyWeight: positiveInteger,
+    toleranceBasisPointsByCategory: v.strictObject({
+      first_division: basisPoints,
+      second_division: basisPoints,
+      third_division: basisPoints,
+    }),
   }),
   aiLifecycle: v.strictObject({
     maximumActiveTalks: positiveInteger,
@@ -464,6 +453,34 @@ const wageFinanceCalibrationSchema = v.strictObject({
   }),
 });
 
+const developmentEnvironmentTierSchema = v.strictObject({
+  title_contender: developmentEnvironmentKeySchema,
+  playoff_contender: developmentEnvironmentKeySchema,
+  mid_table: developmentEnvironmentKeySchema,
+  survival: developmentEnvironmentKeySchema,
+});
+
+const playerDevelopmentEnvironmentSchema = v.strictObject({
+  schemaVersion,
+  version: nonEmptyString,
+  classification: v.literal("explicit_game_design_target"),
+  competitiveTierPolicyVersion: v.literal(CLUB_COMPETITIVE_TIER_POLICY_VERSION),
+  positiveGrowthMultiplierBasisPointsByKey: v.strictObject({
+    very_poor: positiveInteger,
+    poor: positiveInteger,
+    limited: positiveInteger,
+    adequate: positiveInteger,
+    good: positiveInteger,
+    very_good: positiveInteger,
+    excellent: positiveInteger,
+  }),
+  environmentKeyByCategoryAndTier: v.strictObject({
+    first_division: developmentEnvironmentTierSchema,
+    second_division: developmentEnvironmentTierSchema,
+    third_division: developmentEnvironmentTierSchema,
+  }),
+});
+
 /** Untrusted JSON values accepted by the single content validation boundary. */
 export interface RawPlayerEconomyCalibrationAssets {
   readonly playerRatingScale: unknown;
@@ -472,6 +489,7 @@ export interface RawPlayerEconomyCalibrationAssets {
   readonly askingPriceCurves: unknown;
   readonly marketBehaviorCalibration: unknown;
   readonly wageFinanceCalibration: unknown;
+  readonly playerDevelopmentEnvironment: unknown;
 }
 
 /**
@@ -496,7 +514,7 @@ export class PlayerEconomyCalibrationValidationError extends Error {
 }
 
 /**
- * Parses, cross-validates, and deeply freezes all six economy calibration assets.
+ * Parses, cross-validates, and deeply freezes all seven calibration assets.
  *
  * This is the only boundary that converts imported JSON into domain config
  * shapes. Engine and diagnostics receive the returned values explicitly.
@@ -511,6 +529,7 @@ export function parsePlayerEconomyCalibrationAssets(
   let asking: AskingPriceCurvesConfig;
   let behavior: MarketBehaviorCalibrationConfig;
   let wage: WageFinanceCalibrationConfig;
+  let developmentEnvironment: PlayerDevelopmentEnvironmentConfig;
 
   try {
     const parsedRating = v.parse(playerRatingScaleSchema, raw.playerRatingScale);
@@ -523,6 +542,10 @@ export function parsePlayerEconomyCalibrationAssets(
     asking = v.parse(askingPriceCurvesSchema, raw.askingPriceCurves);
     behavior = v.parse(marketBehaviorCalibrationSchema, raw.marketBehaviorCalibration);
     wage = v.parse(wageFinanceCalibrationSchema, raw.wageFinanceCalibration);
+    developmentEnvironment = v.parse(
+      playerDevelopmentEnvironmentSchema,
+      raw.playerDevelopmentEnvironment,
+    );
   } catch (error) {
     throw validationError("schema validation failed", error);
   }
@@ -530,10 +553,11 @@ export function parsePlayerEconomyCalibrationAssets(
   validateRatingScale(rating);
   validatePotentialProjectionPolicy(potentialProjectionPolicy);
   validateMarketCalibration(market);
-  validateValuationCurves(valuation, market);
+  validateValuationCurves(valuation);
   validateAskingPriceCurves(asking);
   validateMarketBehavior(behavior);
   validateWageFinance(wage);
+  validateDevelopmentEnvironment(developmentEnvironment);
   validateVersionReferences({
     rating,
     potentialProjectionPolicy,
@@ -552,6 +576,7 @@ export function parsePlayerEconomyCalibrationAssets(
     askingPriceCurvesVersion: asking.version,
     marketBehaviorCalibrationVersion: behavior.version,
     wageFinanceCalibrationVersion: wage.version,
+    playerDevelopmentEnvironmentVersion: developmentEnvironment.version,
   };
 
   return deepFreeze({
@@ -563,7 +588,18 @@ export function parsePlayerEconomyCalibrationAssets(
     askingPriceCurves: asking,
     marketBehaviorCalibration: behavior,
     wageFinanceCalibration: wage,
+    playerDevelopmentEnvironment: developmentEnvironment,
   });
+}
+
+function validateDevelopmentEnvironment(
+  config: PlayerDevelopmentEnvironmentConfig,
+): void {
+  try {
+    validatePlayerDevelopmentEnvironmentConfig(config);
+  } catch (error) {
+    throw validationError("development-environment policy validation failed", error);
+  }
 }
 
 function validatePotentialProjectionPolicy(
@@ -593,10 +629,25 @@ function validateRatingScale(config: PlayerRatingScaleConfig): void {
     }
   }
 
-  assertMinimumMaximum(config.rarity.initialWorld.currentSixMinimum, config.rarity.initialWorld.currentSixMaximum, "initial current-six");
-  assertMinimumMaximum(config.rarity.initialWorld.potentialSixMinimum, config.rarity.initialWorld.potentialSixMaximum, "initial potential-six");
-  assertMinimumMaximum(config.rarity.annualIntake.potentialSixPerWorldMinimum, config.rarity.annualIntake.potentialSixPerWorldMaximum, "annual potential-six");
-  assertMinimumMaximum(config.rarity.annualIntake.tenSeasonCohortMinimum, config.rarity.annualIntake.tenSeasonCohortMaximum, "ten-season potential-six");
+  assertMinimumMaximum(config.rarity.initialWorld.establishedCurrentSixMinimum, config.rarity.initialWorld.establishedCurrentSixMaximum, "initial established current-six");
+  assertMinimumMaximum(config.rarity.initialWorld.youngStoredCeilingSixMinimum, config.rarity.initialWorld.youngStoredCeilingSixMaximum, "initial young stored-ceiling-six");
+  assertMinimumMaximum(config.rarity.annualIntake.activeYoungStoredCeilingSixTargetMinimum, config.rarity.annualIntake.activeYoungStoredCeilingSixTargetMaximum, "active young stored-ceiling-six target");
+  if (
+    config.rarity.initialWorld.lowerDivisionYoungStoredCeilingSixMaximum
+      > config.rarity.initialWorld.youngStoredCeilingSixMaximum
+    || config.rarity.initialWorld.youngStoredCeilingSixPerClubMaximum
+      > config.rarity.initialWorld.youngStoredCeilingSixMaximum
+  ) {
+    fail("initial young stored-ceiling-six concentration limits exceed national stock");
+  }
+  if (
+    config.rarity.annualIntake.activeYoungStoredCeilingSixTargetMinimum
+        !== config.rarity.initialWorld.youngStoredCeilingSixMinimum
+    || config.rarity.annualIntake.activeYoungStoredCeilingSixTargetMaximum
+        !== config.rarity.initialWorld.youngStoredCeilingSixMaximum
+  ) {
+    fail("annual young stored-ceiling-six target must match initial national stock");
+  }
 }
 
 function validateMarketCalibration(config: PlayerMarketCalibrationConfig): void {
@@ -642,16 +693,21 @@ function validateMarketCalibration(config: PlayerMarketCalibrationConfig): void 
 
 function validateValuationCurves(
   config: ValuationCurvesConfig,
-  market: PlayerMarketCalibrationConfig,
 ): void {
   assertExactOrder(config.ratingValueAnchors.map((anchor) => anchor.rating), PLAYER_STAR_RATINGS, "valuation ratings");
   assertStrictlyIncreasing(config.ratingValueAnchors.map((anchor) => anchor.valueMinorUnits), "valuation anchors");
+  const p50Participation =
+    config.prospectExpectation.p50ParticipationBasisPoints;
+  const upperOptionParticipation =
+    config.prospectExpectation.upperOptionParticipationBasisPoints;
   if (
-    config.prospectExpectation.uncertaintyDiscountBasisPointsPerHalfStar <= 0
-    || config.prospectExpectation.minimumUncertaintyMultiplierBasisPoints <= 0
-    || config.prospectExpectation.minimumUncertaintyMultiplierBasisPoints > 10_000
+    upperOptionParticipation <= 0
+    || upperOptionParticipation > p50Participation
+    || p50Participation >= 10_000
   ) {
-    fail("prospect uncertainty discount must be positive and bounded");
+    fail(
+      "public-quality participation requires 0 < upper option <= P50 < 10000 basis points",
+    );
   }
 
   let nextAge = config.ageMultipliers[0]?.minimumAge;
@@ -676,22 +732,6 @@ function validateValuationCurves(
   );
   if (sixStarAnchor?.valueMinorUnits !== config.upperTail.hardCapMinorUnits) {
     fail("the six-star anchor must equal the public-value hard cap");
-  }
-  if (
-    config.marketContext.maximumMinorUnits.first_division
-      !== config.upperTail.hardCapMinorUnits
-    || config.marketContext.maximumMinorUnits.free_agent
-      !== config.upperTail.hardCapMinorUnits
-  ) {
-    fail("first-division and free-agent market ceilings must equal the hard cap");
-  }
-  for (const target of market.gameDesignTargets) {
-    if (
-      config.marketContext.maximumMinorUnits[target.division]
-        !== target.maximumMaximumMinorUnits
-    ) {
-      fail(`market-context ceiling must match the reviewed maximum: ${target.division}`);
-    }
   }
 }
 
@@ -775,6 +815,13 @@ function validateMarketBehavior(config: MarketBehaviorCalibrationConfig): void {
   const weightTotal = Object.values(config.aiTargetWeights).reduce((sum, weight) => sum + weight, 0);
   if (weightTotal !== 100) {
     fail(`AI target weights must total 100: ${weightTotal}`);
+  }
+  const riskTolerance = config.aiRiskAppetite.toleranceBasisPointsByCategory;
+  if (
+    riskTolerance.first_division < riskTolerance.second_division
+    || riskTolerance.second_division < riskTolerance.third_division
+  ) {
+    fail("AI risk tolerance must not increase in lower divisions");
   }
 }
 

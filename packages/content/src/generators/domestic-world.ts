@@ -25,7 +25,7 @@ import {
   type SeasonTransferWindows,
   type SeniorSquadState,
 } from "@game/domain";
-import { fromISO } from "@game/shared";
+import { completedCivilYears, fromISO } from "@game/shared";
 
 import {
   playerEconomyCalibration,
@@ -42,9 +42,7 @@ import {
 } from "./fake-clubs.ts";
 import {
   generateFakePlayersForClubs,
-  currentAbilityRarityLaneForGeneratedArchetype,
   type FakeLineupSlot,
-  type FakePlayerClubContext,
   type FakePlayers,
 } from "./fake-players.ts";
 import { createFakeGameplayConfig, type FakeGameplayConfig } from "./gameplay-config.ts";
@@ -57,9 +55,11 @@ import {
   initialYouthPlayerId,
   INITIAL_YOUTH_PLAYERS_PER_CLUB,
   type GenerateInitialYouthAcademiesResult,
-  type InitialYouthAcademyClubContext,
 } from "./initial-youth-academies.ts";
-import { clubTierForGeneratedClubNumber } from "./player-generation-bands.ts";
+import {
+  openingCompetitiveTierForClubRank,
+  type OpeningPlayerGenerationClubContext,
+} from "./player-generation-bands.ts";
 import { currentAbilityRarityLaneForYouthProspect } from "./player-potential-rarity.ts";
 import {
   buildInitialWorldExceptionalAllocation,
@@ -72,7 +72,12 @@ import {
   resolveSeasonTransferWindows,
   seasonStartYearFromDate,
 } from "./transfer-window-catalog.ts";
-import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import {
+  currentAbilityRarityLaneForGeneratedArchetype,
+  resolveGeneratedCurrentAbilityRarityLane,
+  resolveGeneratedExceptionalProfile,
+  type GeneratedPlayerArchetypeKey,
+} from "./player-archetypes.ts";
 
 /** Stable topology decision exposed by every generated complete domestic world. */
 export const FAKE_DOMESTIC_TOPOLOGY_ID = "fictional-three-tier-v1";
@@ -178,20 +183,18 @@ export function createFakeDomesticWorld(
   const divisionClubIds = Object.fromEntries(
     divisions.map((division) => [division.spec.category, division.clubs.clubIds]),
   ) as Record<ClubCategory, readonly ClubId[]>;
-  const youthClubContexts = Object.fromEntries(clubs.map((club) => [
-    club.id,
-    { category: club.category, reputation: club.reputation },
-  ])) as Record<ClubId, InitialYouthAcademyClubContext>;
+  const openingClubContexts = openingPlayerGenerationClubContexts(divisions);
   const preliminaryPlayers = generateDomesticSeniorPlayers({
     divisions,
     worldSeed,
+    clubContexts: openingClubContexts,
   });
   const preliminaryYouthAcademies = generateInitialYouthAcademies({
     worldSeed,
     seasonId: season,
     referenceDate: seasonStartDate,
     clubIds,
-    clubContexts: youthClubContexts,
+    clubContexts: openingClubContexts,
     ratingScale: playerRatingScale,
   });
   const exceptionalAllocation = buildInitialWorldExceptionalAllocation({
@@ -201,11 +204,13 @@ export function createFakeDomesticWorld(
       divisions,
       preliminaryPlayers,
       preliminaryYouthAcademies,
+      seasonStartDate,
     ),
   });
   const generatedPlayers = generateDomesticSeniorPlayers({
     divisions,
     worldSeed,
+    clubContexts: openingClubContexts,
     exceptionalAllocation,
   });
   const players = mergeRecords(generatedPlayers.map((division) => division.players.players));
@@ -283,13 +288,17 @@ export function createFakeDomesticWorld(
     seasonId: season,
     referenceDate: seasonStartDate,
     clubIds,
-    clubContexts: youthClubContexts,
+    clubContexts: openingClubContexts,
     potentialSixPlayerIds: exceptionalAllocation.potentialSixPlayerKeys
       .filter((key) =>
         exceptionalAllocation.assignmentsByPlayerKey[key]?.source === "constructed"
         && key.includes("player:youth-")
       )
       .map(playerIdFromKey),
+    reconstructedPotentialBelowSixPlayerIds:
+      exceptionalAllocation.reconstructedPotentialBelowSixPlayerKeys
+        .filter((key) => key.includes("player:youth-"))
+        .map(playerIdFromKey),
     ratingScale: playerRatingScale,
   });
   const transferWindowsByCompetitionId = Object.fromEntries(
@@ -369,6 +378,7 @@ function generateDomesticDivisionClubs(worldSeed: string): readonly GeneratedDom
 function generateDomesticSeniorPlayers(input: {
   readonly divisions: readonly GeneratedDomesticDivision[];
   readonly worldSeed: string;
+  readonly clubContexts: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>>;
   readonly exceptionalAllocation?: InitialWorldExceptionalAllocation;
 }): readonly GeneratedDomesticDivisionPlayers[] {
   const constructedCurrentSixPlayerIds = input.exceptionalAllocation?.currentSixPlayerKeys
@@ -391,7 +401,7 @@ function generateDomesticSeniorPlayers(input: {
     players: generateFakePlayersForClubs(divisionClubs.clubIds, {
       seed: input.worldSeed,
       playerIdNamespace: spec.namespace,
-      clubContexts: clubContextsFor(divisionClubs),
+      clubContexts: input.clubContexts,
       ratingScale: playerRatingScale,
       ...(input.exceptionalAllocation === undefined
         ? {}
@@ -410,6 +420,7 @@ function exceptionalCandidates(
   divisions: readonly GeneratedDomesticDivision[],
   generatedPlayers: readonly GeneratedDomesticDivisionPlayers[],
   youthAcademies: GenerateInitialYouthAcademiesResult,
+  referenceDate: GameDate,
 ) {
   const seniorPlayers = mergeRecords(
     generatedPlayers.map((division) => division.players.players),
@@ -425,16 +436,21 @@ function exceptionalCandidates(
       if (player === undefined || archetypeKey === undefined) {
         throw new Error(`Missing preliminary senior profile: ${id}`);
       }
+      const ageYears = completedCivilYears(player.birthDate, referenceDate);
       return {
         playerKey: String(id),
+        clubKey: String(club.id),
         division: spec.category,
-        clubTier: clubTierForGeneratedClubNumber(clubIndex + 1),
+        clubTier: openingCompetitiveTierForClubRank(clubIndex + 1),
+        ageYears,
         isFirstTeam: playerIndex < FAKE_LINEUP_SIZE,
         naturallyCurrentSix: generatedRating(player, "current") === 6,
         naturallyPotentialSix: generatedRating(player, "potential") === 6,
         naturalArchetypeKey: archetypeKey,
         naturalCurrentAbilityLane:
           currentAbilityRarityLaneForGeneratedArchetype(archetypeKey),
+        constructedExceptionalCurrentAbilityLane:
+          constructedSeniorExceptionalCurrentAbilityLane(ageYears),
         canConstructExceptionalProfile: true,
       };
     }),
@@ -452,27 +468,80 @@ function exceptionalCandidates(
       }
       return {
         playerKey: String(id),
+        clubKey: String(club.id),
         division: spec.category,
-        clubTier: clubTierForGeneratedClubNumber(clubIndex + 1),
+        clubTier: openingCompetitiveTierForClubRank(clubIndex + 1),
+        ageYears: completedCivilYears(player.birthDate, referenceDate),
         isFirstTeam: false,
         naturallyCurrentSix: generatedRating(player, "current") === 6,
         naturallyPotentialSix: generatedRating(player, "potential") === 6,
         naturalArchetypeKey: archetypeKey,
-        naturalCurrentAbilityLane: currentAbilityRarityLaneForYouthProspect(
+        naturalCurrentAbilityLane: resolveGeneratedCurrentAbilityRarityLane({
           archetypeKey,
-          Number(developmentLevel),
-        ),
-        canConstructExceptionalProfile: false,
+          requestedLane: currentAbilityRarityLaneForYouthProspect(
+            archetypeKey,
+            Number(developmentLevel),
+          ),
+        }),
+        constructedExceptionalCurrentAbilityLane:
+          constructedYouthExceptionalCurrentAbilityLane(
+            Number(developmentLevel),
+          ),
+        canConstructExceptionalProfile: true,
       };
     }),
   ]));
 }
 
-function clubContextsFor(clubs: FakeClubs): Readonly<Record<ClubId, FakePlayerClubContext>> {
-  return Object.fromEntries(clubs.clubs.map((club) => [
-    club.id,
-    { category: club.category, reputation: club.reputation },
-  ])) as Record<ClubId, FakePlayerClubContext>;
+/** Returns the effective lane used by the senior exceptional-profile owner. */
+function constructedSeniorExceptionalCurrentAbilityLane(ageYears: number) {
+  return resolveGeneratedExceptionalProfile({
+    currentSixAllocated: ageYears > 20,
+    potentialSixAllocated: true,
+  }).currentAbilityLane;
+}
+
+/** Returns the effective lane after the academy request meets the archetype floor. */
+function constructedYouthExceptionalCurrentAbilityLane(
+  youthDevelopmentLevel: number,
+) {
+  const exceptionalProfile = resolveGeneratedExceptionalProfile({
+    currentSixAllocated: false,
+    potentialSixAllocated: true,
+  });
+  if (exceptionalProfile.archetypeKey === undefined) {
+    throw new Error("Potential-only exceptional profile has no archetype");
+  }
+  return resolveGeneratedCurrentAbilityRarityLane({
+    archetypeKey: exceptionalProfile.archetypeKey,
+    requestedLane: currentAbilityRarityLaneForYouthProspect(
+      exceptionalProfile.archetypeKey,
+      youthDevelopmentLevel,
+    ),
+  });
+}
+
+/**
+ * Composes the canonical opening football context once for senior and academy
+ * generation.
+ *
+ * Future countries call the same national policy at their own composition
+ * root. They must not multiply one country's prospect bands inside this
+ * Italian world or reconstruct competitive tier from reputation downstream.
+ */
+function openingPlayerGenerationClubContexts(
+  divisions: readonly GeneratedDomesticDivision[],
+): Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>> {
+  return Object.fromEntries(divisions.flatMap(({ clubs }) =>
+    clubs.clubs.map((club, clubIndex) => [
+      club.id,
+      {
+        category: club.category,
+        reputation: club.reputation,
+        competitiveTier: openingCompetitiveTierForClubRank(clubIndex + 1),
+      },
+    ]),
+  )) as Record<ClubId, OpeningPlayerGenerationClubContext>;
 }
 
 function playerIdFromKey(key: string): PlayerId {

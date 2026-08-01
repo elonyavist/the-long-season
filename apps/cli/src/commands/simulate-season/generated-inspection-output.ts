@@ -1,6 +1,7 @@
 import {
   generateInitialYouthAcademies,
   getGeneratedPlayerArchetype,
+  openingCompetitiveTierForClubRank,
   type FakeLeagueSystem,
 } from "@game/content";
 import { summarizePlayerDevelopmentAbilities } from "@game/engine";
@@ -111,9 +112,6 @@ export function formatPlayerGenerationReportOutput(
   lines.push(
     `  ${text("playerGeneration.rarity.seriousProspect")}: ${report.rarityUsage.seriousProspect} / ${league.playerRarityBudget.seriousProspectCount}`,
   );
-  lines.push(
-    `  ${text("playerGeneration.rarity.rareProdigy")}: ${report.rarityUsage.rareProdigy} / ${league.playerRarityBudget.rareProdigyCount}`,
-  );
   lines.push("");
   lines.push(`${text("playerGeneration.prospectCoverage")}:`);
   lines.push(
@@ -212,7 +210,6 @@ interface PlayerGenerationQualityReport {
   readonly rarityUsage: {
     readonly whiteFly: number;
     readonly seriousProspect: number;
-    readonly rareProdigy: number;
   };
   /** Clubs that have at least one generated prospect archetype. */
   readonly clubsWithProspects: number;
@@ -319,7 +316,6 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem, seed: stri
   const rarityUsage = {
     whiteFly: 0,
     seriousProspect: 0,
-    rareProdigy: 0,
   };
   const roleCoherenceWarnings = {
     defenderFinishing: 0,
@@ -377,8 +373,6 @@ function buildPlayerGenerationQualityReport(league: FakeLeagueSystem, seed: stri
       rarityUsage.whiteFly += 1;
     } else if (assignment?.rarityKind === "serious_prospect") {
       rarityUsage.seriousProspect += 1;
-    } else if (assignment?.rarityKind === "rare_prodigy") {
-      rarityUsage.rareProdigy += 1;
     }
 
     addRoleCoherenceWarnings(roleCoherenceWarnings, player);
@@ -514,7 +508,11 @@ function youthReportClubContexts(
   type YouthClubContexts = Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"];
   const contexts: Partial<Record<ClubId, YouthClubContexts[ClubId]>> = {};
 
-  for (const clubId of league.clubIds) {
+  for (let index = 0; index < league.clubIds.length; index += 1) {
+    const clubId = league.clubIds[index];
+    if (clubId === undefined) {
+      continue;
+    }
     const club = league.clubsById[clubId];
     if (club === undefined) {
       continue;
@@ -523,6 +521,7 @@ function youthReportClubContexts(
     contexts[clubId] = {
       category: club.category,
       reputation: club.reputation,
+      competitiveTier: openingCompetitiveTierForClubRank(index + 1),
     };
   }
 

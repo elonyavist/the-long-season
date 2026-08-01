@@ -1,9 +1,17 @@
-import type { ClubCategory } from "../entities/club.entity.ts";
+import type { ClubCategory, ClubCompetitiveTier } from "../entities/club.entity.ts";
 import type { PlayerRole } from "../entities/player.entity.ts";
 import type { AgreedSquadStatus } from "../career/senior-squad.ts";
 import { nonNegativeMoney, type Money } from "../value-objects/money.ts";
 import type { PlayerStarRating } from "../value-objects/player-star-rating.ts";
 import type { PlayerSquadDepartment } from "../player/player-squad-department.ts";
+import {
+  CLUB_COMPETITIVE_TIERS,
+  CLUB_COMPETITIVE_TIER_POLICY_VERSION,
+} from "../career/club-competitive-tier.ts";
+import {
+  CLUB_DEVELOPMENT_ENVIRONMENT_KEYS,
+  type ClubDevelopmentEnvironmentKey,
+} from "../career/club-development-environment.ts";
 
 /** Provenance categories that keep source facts separate from game design. */
 export type CalibrationDataClassification =
@@ -21,6 +29,134 @@ export interface PlayerEconomyCalibrationVersionBundle {
   readonly askingPriceCurvesVersion: string;
   readonly marketBehaviorCalibrationVersion: string;
   readonly wageFinanceCalibrationVersion: string;
+  readonly playerDevelopmentEnvironmentVersion: string;
+}
+
+/** Versioned seven-state club environment used by development and intake. */
+export interface PlayerDevelopmentEnvironmentConfig {
+  readonly schemaVersion: number;
+  readonly version: string;
+  readonly classification: "explicit_game_design_target";
+  /** Links the matrix to the season-frozen competitive-tier policy it expects. */
+  readonly competitiveTierPolicyVersion: typeof CLUB_COMPETITIVE_TIER_POLICY_VERSION;
+  /** Integer multipliers keyed by every public environment state. */
+  readonly positiveGrowthMultiplierBasisPointsByKey: Readonly<
+    Record<ClubDevelopmentEnvironmentKey, number>
+  >;
+  /** Exhaustive category/tier lookup; arrays and first-match fallbacks are forbidden. */
+  readonly environmentKeyByCategoryAndTier: Readonly<
+    Record<
+      ClubCategory,
+      Readonly<Record<ClubCompetitiveTier, ClubDevelopmentEnvironmentKey>>
+    >
+  >;
+}
+
+/** Typed policy failure raised before content can reach the engine. */
+export class PlayerDevelopmentEnvironmentConfigError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "PlayerDevelopmentEnvironmentConfigError";
+  }
+}
+
+const CLUB_CATEGORIES: readonly ClubCategory[] = [
+  "first_division",
+  "second_division",
+  "third_division",
+];
+
+/** Validates the complete, language-neutral development-environment policy. */
+export function validatePlayerDevelopmentEnvironmentConfig(
+  config: PlayerDevelopmentEnvironmentConfig,
+): void {
+  if (config.schemaVersion !== 1) {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      `unsupported development-environment schema: ${config.schemaVersion}`,
+    );
+  }
+  if (config.version.trim().length === 0) {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      "development-environment version is required",
+    );
+  }
+  if (config.classification !== "explicit_game_design_target") {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      "development-environment classification must be explicit_game_design_target",
+    );
+  }
+  if (config.competitiveTierPolicyVersion !== CLUB_COMPETITIVE_TIER_POLICY_VERSION) {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      "development-environment competitive-tier policy version does not match",
+    );
+  }
+
+  assertExactObjectKeys(
+    config.positiveGrowthMultiplierBasisPointsByKey,
+    CLUB_DEVELOPMENT_ENVIRONMENT_KEYS,
+    "development-environment multiplier states",
+  );
+  let previousMultiplier = 0;
+  for (const key of CLUB_DEVELOPMENT_ENVIRONMENT_KEYS) {
+    const multiplier = config.positiveGrowthMultiplierBasisPointsByKey[key];
+    if (!Number.isSafeInteger(multiplier) || multiplier <= previousMultiplier) {
+      throw new PlayerDevelopmentEnvironmentConfigError(
+        "development-environment multipliers must be positive safe integers in strict state order",
+      );
+    }
+    previousMultiplier = multiplier;
+  }
+  if (config.positiveGrowthMultiplierBasisPointsByKey.adequate !== 10_000) {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      "adequate development environment must be the neutral 10000-basis-point state",
+    );
+  }
+
+  assertExactObjectKeys(
+    config.environmentKeyByCategoryAndTier,
+    CLUB_CATEGORIES,
+    "development-environment categories",
+  );
+  const observedKeys = new Set<ClubDevelopmentEnvironmentKey>();
+  for (const category of CLUB_CATEGORIES) {
+    const tierMap = config.environmentKeyByCategoryAndTier[category];
+    assertExactObjectKeys(
+      tierMap,
+      CLUB_COMPETITIVE_TIERS,
+      `development-environment tiers for ${category}`,
+    );
+    for (const tier of CLUB_COMPETITIVE_TIERS) {
+      const key = tierMap[tier];
+      if (!CLUB_DEVELOPMENT_ENVIRONMENT_KEYS.includes(key)) {
+        throw new PlayerDevelopmentEnvironmentConfigError(
+          `invalid development-environment key for ${category}/${tier}: ${String(key)}`,
+        );
+      }
+      observedKeys.add(key);
+    }
+  }
+  if (observedKeys.size !== CLUB_DEVELOPMENT_ENVIRONMENT_KEYS.length) {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      "development-environment matrix must exercise every public state",
+    );
+  }
+}
+
+function assertExactObjectKeys(
+  value: object,
+  expectedKeys: readonly string[],
+  label: string,
+): void {
+  const actualKeys = Object.keys(value).sort();
+  const sortedExpected = [...expectedKeys].sort();
+  if (
+    actualKeys.length !== sortedExpected.length
+    || actualKeys.some((key, index) => key !== sortedExpected[index])
+  ) {
+    throw new PlayerDevelopmentEnvironmentConfigError(
+      `${label} must contain the exact required keys`,
+    );
+  }
 }
 
 /** One cited public source used by an aggregate calibration asset. */
@@ -53,25 +189,25 @@ export interface DivisionFirstTeamRatingBand {
   readonly exceptionalMaximum: PlayerStarRating;
 }
 
-/** Initial-world, intake, and year-ten exceptional-player limits. */
+/** Initial-world and annual-intake exceptional-player stock limits. */
 export interface PlayerRatingRarityContract {
   readonly initialWorld: {
-    readonly currentSixMinimum: number;
-    readonly currentSixMaximum: number;
-    readonly potentialSixMinimum: number;
-    readonly potentialSixMaximum: number;
-    readonly lowerDivisionPotentialSixMaximum: number;
+    /** Established players aged over 20 who already rate six stars. */
+    readonly establishedCurrentSixMinimum: number;
+    readonly establishedCurrentSixMaximum: number;
+    /** Active players aged 15..20 whose stored ceiling rates six stars. */
+    readonly youngStoredCeilingSixMinimum: number;
+    readonly youngStoredCeilingSixMaximum: number;
+    /** National allowance for young ceiling-six players outside division one. */
+    readonly lowerDivisionYoungStoredCeilingSixMaximum: number;
+    /** Ownership concentration limit for the young exceptional cohort. */
+    readonly youngStoredCeilingSixPerClubMaximum: number;
   };
   readonly annualIntake: {
-    readonly potentialSixPerWorldMinimum: number;
-    readonly potentialSixPerWorldMaximum: number;
-    readonly tenSeasonCohortMinimum: number;
-    readonly tenSeasonCohortMaximum: number;
-  };
-  readonly yearTen: {
-    readonly activeCurrentSixMaximum: number;
-    readonly activePotentialSixMaximum: number;
-    readonly lowerDivisionPotentialSixMaximum: number;
+    /** Minimum active young exceptional stock before a vacancy exists. */
+    readonly activeYoungStoredCeilingSixTargetMinimum: number;
+    /** Maximum active young exceptional stock after an intake top-up. */
+    readonly activeYoungStoredCeilingSixTargetMaximum: number;
   };
 }
 
@@ -89,18 +225,62 @@ export interface PlayerRatingScaleConfig {
 /** Broad development curve selected from a player's canonical primary role. */
 export type PlayerPotentialProjectionRoleFamily = "goalkeeper" | "outfield";
 
+/** Inclusive completed-age range shared by calibration and projection. */
+export interface PlayerPotentialProjectionAgeRange {
+  readonly minimumAge: number;
+  readonly maximumAge: number;
+}
+
+/** Builds one immutable exact-age calibration cell. */
+function exactPotentialProjectionAgeRange(
+  age: number,
+): Readonly<PlayerPotentialProjectionAgeRange> {
+  return Object.freeze({ minimumAge: age, maximumAge: age });
+}
+
+/**
+ * Product-owned ages used to pool development evidence and tune projections.
+ * Young evidence remains pooled around the full-upper product contract; every
+ * post-20 age has its own cell until the role-family terminal deadline.
+ */
+export const PLAYER_POTENTIAL_PROJECTION_AGE_RANGES = Object.freeze({
+  goalkeeper: Object.freeze([
+    Object.freeze({ minimumAge: 0, maximumAge: 17 }),
+    Object.freeze({ minimumAge: 18, maximumAge: 20 }),
+    ...Array.from(
+      { length: 11 },
+      (_, index) => exactPotentialProjectionAgeRange(21 + index),
+    ),
+    Object.freeze({ minimumAge: 32, maximumAge: 200 }),
+  ]),
+  outfield: Object.freeze([
+    Object.freeze({ minimumAge: 0, maximumAge: 17 }),
+    Object.freeze({ minimumAge: 18, maximumAge: 20 }),
+    ...Array.from(
+      { length: 7 },
+      (_, index) => exactPotentialProjectionAgeRange(21 + index),
+    ),
+    Object.freeze({ minimumAge: 28, maximumAge: 200 }),
+  ]),
+} satisfies Readonly<
+  Record<
+    PlayerPotentialProjectionRoleFamily,
+    readonly PlayerPotentialProjectionAgeRange[]
+  >
+>);
+
 /**
  * One inclusive age band for public room-realization estimates.
  *
- * Factors are integer basis points applied to the remaining role-ability room,
- * never directly to public stars. The upper factor models a high-upside public
- * estimate and never replaces the player's stored potential ceiling.
+ * Factors are integer basis points applied to remaining role-ability room,
+ * never directly to public stars. P50 is a statistical median rather than a
+ * guarantee; upper is the observed P90 realization rather than the stored
+ * ceiling. Content may override young upper to full stored room as an explicit
+ * product contract.
  */
-export interface PlayerPotentialProjectionAgeBand {
-  readonly minimumAge: number;
-  readonly maximumAge: number;
-  readonly conservativeRealizationBasisPoints: number;
-  readonly expectedRealizationBasisPoints: number;
+export interface PlayerPotentialProjectionAgeBand
+  extends PlayerPotentialProjectionAgeRange {
+  readonly p50RealizationBasisPoints: number;
   readonly upperRealizationBasisPoints: number;
 }
 
@@ -123,8 +303,11 @@ export type PlayerPotentialProjectionPolicyErrorCode =
   | "invalid_version"
   | "missing_age_bands"
   | "non_contiguous_age_bands"
+  | "invalid_age_band_contract"
   | "invalid_realization_factors"
-  | "widening_public_estimate_spread";
+  | "invalid_public_upper_contract"
+  | "widening_public_estimate_spread"
+  | "flat_post_twenty_realization_factors";
 
 /** Typed policy error raised before engine projection can consume bad tuning. */
 export class PlayerPotentialProjectionPolicyError extends Error {
@@ -144,17 +327,20 @@ export class PlayerPotentialProjectionPolicyError extends Error {
 /**
  * Validates one complete potential-projection policy without owning tuning.
  *
- * The public P10-to-P90 realization-estimate spread may narrow or remain
- * stable with age inside each role family, but cannot widen for otherwise
- * equivalent facts.
+ * Post-20 upper room factors must narrow at adjacent ages until they reach
+ * zero; zero may then remain stable through the terminal deadline. P50 is an
+ * independently observed median, so validation only keeps it inside the
+ * current-to-upper envelope instead of inventing a smoothing rule for it.
+ * The accepted full young upper and terminal equality remain structural
+ * product invariants rather than values fitted from development evidence.
  */
 export function validatePlayerPotentialProjectionPolicyConfig(
   config: PlayerPotentialProjectionPolicyConfig,
 ): void {
-  if (!Number.isSafeInteger(config.schemaVersion) || config.schemaVersion <= 0) {
+  if (config.schemaVersion !== 2) {
     throw new PlayerPotentialProjectionPolicyError(
       "invalid_schema_version",
-      "Potential projection policy requires a positive schema version",
+      "Potential projection policy requires schema version 2",
     );
   }
   if (config.version.trim().length === 0) {
@@ -166,6 +352,7 @@ export function validatePlayerPotentialProjectionPolicyConfig(
 
   for (const family of ["goalkeeper", "outfield"] as const) {
     const bands = config.ageBandsByRoleFamily[family];
+    const expectedRanges = PLAYER_POTENTIAL_PROJECTION_AGE_RANGES[family];
     if (bands.length === 0) {
       throw new PlayerPotentialProjectionPolicyError(
         "missing_age_bands",
@@ -174,7 +361,7 @@ export function validatePlayerPotentialProjectionPolicyConfig(
     }
     let previousMaximumAge = -1;
     let previousPublicWidth = Number.POSITIVE_INFINITY;
-    for (const band of bands) {
+    for (const [index, band] of bands.entries()) {
       if (
         !Number.isSafeInteger(band.minimumAge)
         || !Number.isSafeInteger(band.maximumAge)
@@ -186,33 +373,66 @@ export function validatePlayerPotentialProjectionPolicyConfig(
           `Potential projection ${family} age bands must be ordered and contiguous`,
         );
       }
+      const expectedRange = expectedRanges[index];
       if (
-        !Number.isSafeInteger(band.conservativeRealizationBasisPoints)
-        || !Number.isSafeInteger(band.expectedRealizationBasisPoints)
+        bands.length !== expectedRanges.length
+        || expectedRange === undefined
+        || band.minimumAge !== expectedRange.minimumAge
+        || band.maximumAge !== expectedRange.maximumAge
+      ) {
+        throw new PlayerPotentialProjectionPolicyError(
+          "invalid_age_band_contract",
+          `Potential projection ${family} age bands must match the accepted product ranges`,
+        );
+      }
+      if (
+        !Number.isSafeInteger(band.p50RealizationBasisPoints)
         || !Number.isSafeInteger(band.upperRealizationBasisPoints)
-        || band.conservativeRealizationBasisPoints < 0
-        || band.expectedRealizationBasisPoints
-          < band.conservativeRealizationBasisPoints
+        || band.p50RealizationBasisPoints < 0
         || band.upperRealizationBasisPoints
-          < band.expectedRealizationBasisPoints
+          < band.p50RealizationBasisPoints
         || band.upperRealizationBasisPoints > 10_000
       ) {
         throw new PlayerPotentialProjectionPolicyError(
           "invalid_realization_factors",
-          `Potential projection ${family} factors must satisfy 0 <= conservative <= expected <= upper <= 10000`,
+          `Potential projection ${family} factors must satisfy 0 <= P50 <= upper <= 10000`,
         );
       }
-      const publicWidth =
-        band.upperRealizationBasisPoints
-        - band.conservativeRealizationBasisPoints;
+      const publicWidth = band.upperRealizationBasisPoints;
       if (publicWidth > previousPublicWidth) {
         throw new PlayerPotentialProjectionPolicyError(
           "widening_public_estimate_spread",
-          `Older ${family} bands cannot widen the conservative-to-upper public estimate spread`,
+          `Older ${family} bands cannot widen upper room realization`,
+        );
+      }
+      if (
+        band.minimumAge > 20
+        && previousPublicWidth > 0
+        && publicWidth === previousPublicWidth
+      ) {
+        throw new PlayerPotentialProjectionPolicyError(
+          "flat_post_twenty_realization_factors",
+          `Post-20 ${family} upper factors must narrow until reaching zero`,
         );
       }
       previousMaximumAge = band.maximumAge;
       previousPublicWidth = publicWidth;
+    }
+    const fullUpperBands = bands.slice(0, 2);
+    const terminalBand = bands.at(-1);
+    if (
+      fullUpperBands.some(
+        ({ upperRealizationBasisPoints }) =>
+          upperRealizationBasisPoints !== 10_000,
+      )
+      || terminalBand === undefined
+      || terminalBand.p50RealizationBasisPoints !== 0
+      || terminalBand.upperRealizationBasisPoints !== 0
+    ) {
+      throw new PlayerPotentialProjectionPolicyError(
+        "invalid_public_upper_contract",
+        `Potential projection ${family} must expose full upper through age 20 and coincide with current in its terminal band`,
+      );
     }
   }
 }
@@ -334,21 +554,19 @@ export interface ValuationCurvesConfig {
   readonly ratingValueAnchors: readonly PublicValueRatingAnchor[];
   readonly ageMultipliers: readonly EconomyAgeMultiplierBand[];
   /**
-   * Risk policy applied to the Step 05a expected projection, never to the raw
-   * stored ceiling.
+   * Bounded participation in the two public upside tranches.
+   *
+   * Proven current quality is always priced in full. These coefficients price
+   * only the incremental `current -> P50` and `P50 -> upper` curve values, so
+   * a wider public upper can never discount quality already achieved.
    */
   readonly prospectExpectation: {
     readonly version: string;
     readonly potentialProjectionPolicyVersion: string;
-    readonly uncertaintyDiscountBasisPointsPerHalfStar: number;
-    readonly minimumUncertaintyMultiplierBasisPoints: number;
+    readonly p50ParticipationBasisPoints: number;
+    readonly upperOptionParticipationBasisPoints: number;
   };
   readonly positionMultipliers: Readonly<Record<"defender" | "forward" | "goalkeeper" | "midfielder", number>>;
-  /** Owner-market context; observer identity never enters public value. */
-  readonly marketContext: {
-    readonly multiplierBasisPoints: Readonly<Record<ClubCategory | "free_agent", number>>;
-    readonly maximumMinorUnits: Readonly<Record<ClubCategory | "free_agent", number>>;
-  };
   readonly upperTail: {
     readonly compressionStartsMinorUnits: number;
     readonly compressionBasisPoints: number;
@@ -450,6 +668,14 @@ export interface MarketBehaviorCalibrationConfig {
     readonly potential: number;
     readonly roleNeed: number;
     readonly affordability: number;
+  };
+  /**
+   * Public-uncertainty tolerance used to distinguish AI clubs without giving
+   * them access to a player's private stored ceiling.
+   */
+  readonly aiRiskAppetite: {
+    readonly uncertaintyPenaltyWeight: number;
+    readonly toleranceBasisPointsByCategory: Readonly<Record<ClubCategory, number>>;
   };
   readonly aiLifecycle: {
     readonly maximumActiveTalks: number;
@@ -790,4 +1016,5 @@ export interface PlayerEconomyCalibrationBundle {
   readonly askingPriceCurves: AskingPriceCurvesConfig;
   readonly marketBehaviorCalibration: MarketBehaviorCalibrationConfig;
   readonly wageFinanceCalibration: WageFinanceCalibrationConfig;
+  readonly playerDevelopmentEnvironment: PlayerDevelopmentEnvironmentConfig;
 }

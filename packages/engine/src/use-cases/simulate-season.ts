@@ -2,6 +2,9 @@ import {
   type Player,
   type PlayerDynamicState,
   type PlayerId,
+  type PlayerPotentialProjectionPolicyConfig,
+  type PlayerRatingScaleConfig,
+  type PlayerFixtureParticipationContribution,
   type SelectedLineup,
   type TacticSetup,
   type ClubId,
@@ -20,13 +23,16 @@ import { diffDays } from "@game/shared";
 
 import { createMatchReport } from "../match-engine/create-match-report.ts";
 import {
+  buildPlayerMatchRatings,
   buildTacticTeamContext,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
   type LineupSlot,
+  type MatchContext,
   type MatchEngineConfig,
   type MatchTacticalDistributionInput,
   type MatchTeamContext,
+  playerRatingRegistrationsFromContext,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
   type TeamStrength,
@@ -49,6 +55,11 @@ import {
   type SeasonPlayerStatRegistration,
 } from "../season-engine/player-stats.ts";
 import { AiSquadSelectionError, buildAiSquadMatchTeamContext } from "../team-selection/index.ts";
+import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
+import { buildFixtureParticipationContributions } from "../career/player-participation.ts";
 import { applyMatchReportToFixture } from "./apply-match-report-to-fixture.ts";
 
 /**
@@ -61,6 +72,10 @@ import { applyMatchReportToFixture } from "./apply-match-report-to-fixture.ts";
 export interface SimulateSeasonAiSquadSelection {
   /** Base formation used to select a valid match XI. */
   readonly formation: Formation;
+  /** Public projection policy used to assess candidates on each fixture date. */
+  readonly potentialProjectionPolicy: PlayerPotentialProjectionPolicyConfig;
+  /** Global rating scale paired with the projection policy. */
+  readonly ratingScale: PlayerRatingScaleConfig;
   /** Maximum substitutes to include in diagnostics. */
   readonly benchSize?: number;
 }
@@ -193,6 +208,8 @@ export interface SimulateSeasonResult {
   readonly fixtureIds: readonly FixtureId[];
   /** Ordered fixtures after match reports have been applied. */
   readonly fixtures: readonly Fixture[];
+  /** Canonical fixture participation in the same stable fixture order. */
+  readonly fixtureParticipation: readonly SimulateSeasonFixtureParticipation[];
   /** Final derived league table. */
   readonly table: readonly LeagueTableRow[];
   /** Best defense by goals against, using table order as tie-breaker. */
@@ -205,6 +222,14 @@ export interface SimulateSeasonResult {
   readonly playerSummaryStats: readonly SeasonPlayerSummaryStatRow[];
   /** Final dynamic player states when a fitness lifecycle was supplied. */
   readonly finalPlayerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
+}
+
+/** Canonical player-participation contributions produced by one batch fixture. */
+export interface SimulateSeasonFixtureParticipation {
+  /** Fixture whose committed match facts produced these contributions. */
+  readonly fixtureId: FixtureId;
+  /** Exact contributions ready for the career participation ledger. */
+  readonly contributions: readonly PlayerFixtureParticipationContribution[];
 }
 
 /** Error categories exposed by season simulation. */
@@ -266,6 +291,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
   const fixtureLineupOverrides = fixtureLineupOverridesByKey(input, fixturesById(calendar.fixtures));
   let fitnessRuntime = initialFitnessRuntime(input);
   let state = createFixtureState(input, fixturesById(calendar.fixtures), calendar.fixtureIds);
+  const fixtureParticipation: SimulateSeasonFixtureParticipation[] = [];
 
   for (const fixtureId of calendar.fixtureIds) {
     const fixture = state.fixtures[fixtureId];
@@ -276,14 +302,46 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
 
     fitnessRuntime = recoverFitnessBeforeFixture(input, fixture, fitnessRuntime);
 
-    const matchContext = matchContextForFixture(
+    const matchSetup = matchSetupForFixture(
       input,
       fixture,
       setupOverrides,
       fixtureLineupOverrides,
       fitnessRuntime?.playerStates,
     );
-    const report = createMatchReport(simulateMatch(matchContext));
+    const matchContext = matchSetup.matchContext;
+    const simulatedMatch = simulateMatch(matchContext);
+    const report = createMatchReport(simulatedMatch);
+    fixtureParticipation.push({
+      fixtureId,
+      contributions: buildFixtureParticipationContributions({
+        fixtureId,
+        seasonId: input.seasonId,
+        fixtureDate: fixture.date,
+        finalMinute: simulatedMatch.finalMinute,
+        sides: [
+          {
+            side: "home",
+            initialContext: matchContext.home,
+            finalContext: matchContext.home,
+            benchPlayerIds: matchSetup.home.benchPlayerIds,
+          },
+          {
+            side: "away",
+            initialContext: matchContext.away,
+            finalContext: matchContext.away,
+            benchPlayerIds: matchSetup.away.benchPlayerIds,
+          },
+        ],
+        appliedSubstitutions: simulatedMatch.events.filter(
+          (event) => event.type === "substitution",
+        ),
+        playerRatings: buildPlayerMatchRatings({
+          events: simulatedMatch.events,
+          playerRegistrations: playerRatingRegistrationsFromContext(matchContext),
+        }),
+      }).contributions,
+    });
     state = applyMatchReportToFixture({ state, fixtureId, report });
     fitnessRuntime = spendFitnessAfterFixture(input, fixture, matchContext, fitnessRuntime);
   }
@@ -301,6 +359,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     rounds: calendar.rounds,
     fixtureIds: state.fixtureIds,
     fixtures: orderedFixtures(state.fixtures, state.fixtureIds),
+    fixtureParticipation,
     table,
     bestDefense: bestDefense(table),
     worstAttack: worstAttack(table),
@@ -349,19 +408,56 @@ function createFixtureState(
 /**
  * Builds one match context from fixture sides and season team data.
  */
-function matchContextForFixture(
+interface FixtureTeamSetup {
+  /** Match-engine team context chosen for this exact fixture. */
+  readonly teamContext: MatchTeamContext;
+  /** Exact bench selected alongside the XI, empty for fixed-lineup callers. */
+  readonly benchPlayerIds: readonly PlayerId[];
+}
+
+interface FixtureMatchSetup {
+  /** Match context consumed by the deterministic simulator. */
+  readonly matchContext: MatchContext;
+  /** Home selection facts retained for participation accrual. */
+  readonly home: FixtureTeamSetup;
+  /** Away selection facts retained for participation accrual. */
+  readonly away: FixtureTeamSetup;
+}
+
+function matchSetupForFixture(
   input: SimulateSeasonInput,
   fixture: Fixture,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
   fixtureLineupOverrides: OrderedFixtureLineupOverrides,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
-) {
+): FixtureMatchSetup {
+  const home = fixtureTeamSetup(
+    input,
+    fixture,
+    fixture.homeClubId,
+    setupOverrides,
+    fixtureLineupOverrides,
+    playerStates,
+  );
+  const away = fixtureTeamSetup(
+    input,
+    fixture,
+    fixture.awayClubId,
+    setupOverrides,
+    fixtureLineupOverrides,
+    playerStates,
+  );
+
   return {
+    home,
+    away,
+    matchContext: {
     fixtureId: fixture.id,
     seed: input.seed,
-    home: matchTeamContext(input, fixture, fixture.homeClubId, setupOverrides, fixtureLineupOverrides, playerStates),
-    away: matchTeamContext(input, fixture, fixture.awayClubId, setupOverrides, fixtureLineupOverrides, playerStates),
+    home: home.teamContext,
+    away: away.teamContext,
     engineConfig: input.matchEngineConfig,
+    },
   };
 }
 
@@ -376,14 +472,14 @@ interface SeasonFitnessRuntime {
 /**
  * Builds one side context for a fixture.
  */
-function matchTeamContext(
+function fixtureTeamSetup(
   input: SimulateSeasonInput,
   fixture: Fixture,
   clubId: ClubId,
   setupOverrides: Readonly<Record<ClubId, SimulateSeasonSetupOverride>>,
   fixtureLineupOverrides: OrderedFixtureLineupOverrides,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
-): MatchTeamContext {
+): FixtureTeamSetup {
   const setupOverride = setupOverrides[clubId];
   const fixtureLineupOverride = fixtureLineupOverrides.byKey[fixtureLineupOverrideKey(fixture.id, clubId)];
 
@@ -392,16 +488,25 @@ function matchTeamContext(
       ? baseTeamInput(input, clubId).tacticalDistribution
       : buildSetupOverrideContext(setupOverride, playerStates ?? setupOverride.playerStates).tacticalDistribution;
 
-    return buildFixtureLineupOverrideContext(
-      fixtureLineupOverride,
-      clubId,
-      tacticalDistribution,
-      playerStates ?? fixtureLineupOverride.playerStates,
-    );
+    return {
+      teamContext: buildFixtureLineupOverrideContext(
+        fixtureLineupOverride,
+        clubId,
+        tacticalDistribution,
+        playerStates ?? fixtureLineupOverride.playerStates,
+      ),
+      benchPlayerIds: [],
+    };
   }
 
   if (setupOverride !== undefined) {
-    return buildSetupOverrideContext(setupOverride, playerStates ?? setupOverride.playerStates);
+    return {
+      teamContext: buildSetupOverrideContext(
+        setupOverride,
+        playerStates ?? setupOverride.playerStates,
+      ),
+      benchPlayerIds: [],
+    };
   }
 
   const team = baseTeamInput(input, clubId);
@@ -411,14 +516,20 @@ function matchTeamContext(
   }
 
   if (playerStates !== undefined) {
-    return fitnessAwareMatchTeamContext(clubId, team, playerStates);
+    return {
+      teamContext: fitnessAwareMatchTeamContext(clubId, team, playerStates),
+      benchPlayerIds: [],
+    };
   }
 
   return {
-    clubId,
-    lineup: team.lineup,
-    strength: team.strength,
-    tacticalDistribution: team.tacticalDistribution,
+    teamContext: {
+      clubId,
+      lineup: team.lineup,
+      strength: team.strength,
+      tacticalDistribution: team.tacticalDistribution,
+    },
+    benchPlayerIds: [],
   };
 }
 
@@ -782,7 +893,7 @@ function aiSelectedMatchTeamContext(
   team: SimulateSeasonTeamInput,
   playerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
   fixture: Fixture,
-): MatchTeamContext {
+): FixtureTeamSetup {
   if (team.aiSelection === undefined || team.players === undefined || team.roleWeights === undefined) {
     throw new SimulateSeasonError(
       "invalid_ai_squad_selection",
@@ -791,18 +902,29 @@ function aiSelectedMatchTeamContext(
   }
 
   try {
-    return buildAiSquadMatchTeamContext({
+    const playerIds = Object.keys(team.players).sort() as PlayerId[];
+    const result = buildAiSquadMatchTeamContext({
       clubId,
       formation: team.aiSelection.formation,
-      playerIds: Object.keys(team.players).sort() as PlayerId[],
+      playerIds,
       players: team.players,
+      publicAssessments: publicAssessmentsForAiSelection(
+        team.players,
+        playerIds,
+        fixture.date,
+        team.aiSelection,
+      ),
+      currentDate: fixture.date,
       roleWeights: team.roleWeights,
       tacticalDistribution: team.tacticalDistribution,
-      currentDate: fixture.date,
       ...(playerStates === undefined ? {} : { playerStates }),
       ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
       ...(team.aiSelection.benchSize === undefined ? {} : { benchSize: team.aiSelection.benchSize }),
-    }).teamContext;
+    });
+    return {
+      teamContext: result.teamContext,
+      benchPlayerIds: result.selection.benchPlayerIds,
+    };
   } catch (error) {
     if (error instanceof AiSquadSelectionError) {
       throw new SimulateSeasonError(
@@ -813,6 +935,27 @@ function aiSelectedMatchTeamContext(
 
     throw error;
   }
+}
+
+/** Derives fixture-dated safe facts before the selector ranks candidates. */
+function publicAssessmentsForAiSelection(
+  players: Readonly<Record<PlayerId, Player>>,
+  playerIds: readonly PlayerId[],
+  currentDate: GameDate,
+  policy: SimulateSeasonAiSquadSelection,
+): Readonly<Record<PlayerId, PublicPlayerAssessment>> {
+  const assessments: Record<PlayerId, PublicPlayerAssessment> = {};
+  for (const playerId of playerIds) {
+    const player = players[playerId];
+    if (player === undefined) continue;
+    assessments[playerId] = derivePublicPlayerAssessment({
+      player,
+      currentDate,
+      potentialProjectionPolicy: policy.potentialProjectionPolicy,
+      ratingScale: policy.ratingScale,
+    });
+  }
+  return assessments;
 }
 
 /**
@@ -870,7 +1013,7 @@ function recoverFitnessBeforeFixture(
 function spendFitnessAfterFixture(
   input: SimulateSeasonInput,
   fixture: Fixture,
-  matchContext: ReturnType<typeof matchContextForFixture>,
+  matchContext: MatchContext,
   runtime: SeasonFitnessRuntime | undefined,
 ): SeasonFitnessRuntime | undefined {
   if (runtime === undefined || input.fitnessLifecycle === undefined) {
@@ -890,7 +1033,7 @@ function spendFitnessAfterFixture(
 /**
  * Returns ordered player IDs that appeared in one simulated fixture.
  */
-function fixturePlayerIds(matchContext: ReturnType<typeof matchContextForFixture>): readonly PlayerId[] {
+function fixturePlayerIds(matchContext: MatchContext): readonly PlayerId[] {
   return [
     ...matchContext.home.lineup.map((slot) => slot.playerId),
     ...matchContext.away.lineup.map((slot) => slot.playerId),

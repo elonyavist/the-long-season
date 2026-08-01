@@ -163,6 +163,6 @@ execution. Node `24.16.0` also carries the ICU rules these gates assert.
   seller willingness are separate facts. `Action available` permits an
   approach; `player_not_for_sale` remains a valid explicit seller response and
   must not be hidden or recomputed in React.
-- The deferred resumable `50 x 20` remains unrun. It belongs only to Phase 80C
-  Step 09 with `50` stable shards and exactly `7` workers.
+- The deferred resumable `50 x 20` remains unrun. It belongs only to Phase 81
+  Step 12 with `50` stable shards and exactly `7` workers.
 - Phase 79 Step 14 remains Reopened, paused, and unclaimed.

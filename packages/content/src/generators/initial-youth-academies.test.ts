@@ -6,25 +6,37 @@ import {
   clubId,
   gameDate,
   getPlayerRoleProfile,
+  hardCapForRoleAbility,
   isPotentialAtLeastCurrent,
   readPlayerAbility,
   roleCurrentAbility,
   rolePotentialAbility,
   seasonId,
   type ClubId,
+  type Player,
 } from "@game/domain";
-import { fromISO } from "@game/shared";
+import { completedCivilYears, fromISO } from "@game/shared";
 
+import { playerRatingScale } from "../balance/player-economy-calibration.ts";
 import {
   generateInitialYouthAcademies,
   generateSeasonalYouthIntakePlayers,
   initialYouthPlayerId,
   INITIAL_YOUTH_PLAYERS_PER_CLUB,
-  type InitialYouthAcademyClubContext,
   YOUTH_ACADEMY_POSITION_PLAN,
 } from "./initial-youth-academies.ts";
+import {
+  openingCompetitiveTierForClubRank,
+  type OpeningPlayerGenerationClubContext,
+  type PlayerGenerationClubTier,
+} from "./player-generation-bands.ts";
+import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import {
+  contextualProspectClassForArchetype,
+  type ContextualProspectClass,
+} from "./player-potential-rarity.ts";
+import { ContextualProspectJointProfileError } from "./player-prospect-joint-profile.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
-import { potentialRarityBudgetForDivision } from "./player-potential-rarity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -85,7 +97,7 @@ test("generateInitialYouthAcademies keeps ages inside the 15..19 range", () => {
   for (const playerId of result.playerIds) {
     const player = result.players[playerId];
     assert.ok(player !== undefined);
-    const age = Math.floor((CAREER_START_EPOCH_DAY - Number(player.birthDate)) / 365);
+    const age = completedCivilYears(Number(player.birthDate), CAREER_START_EPOCH_DAY);
     assert.equal(age >= 15, true, player.id);
     assert.equal(age <= 19, true, player.id);
   }
@@ -119,7 +131,14 @@ test("generateInitialYouthAcademies creates role-coherent lower-division youth p
     }
 
     if (position === "cb" || position === "rb" || position === "lb") {
-      assert.equal(Number(player.abilities.technical.finishing) <= 8, true, player.id);
+      const role = primaryRoleForPosition(position);
+      const finishingCap = hardCapForRoleAbility(role, "technical.finishing");
+      assert.ok(finishingCap !== undefined);
+      assert.equal(
+        Number(player.abilities.technical.finishing) <= finishingCap,
+        true,
+        player.id,
+      );
     }
   }
 });
@@ -169,9 +188,10 @@ test("generateInitialYouthAcademies enforces generated scale and potential order
   }
 });
 
-test("initial youth high and elite potential obey division-wide rarity caps across one hundred worlds", () => {
-  const configured = potentialRarityBudgetForDivision("third_division");
-
+test("initial youth serious prospects stay environment-bounded and routine generation never creates rare prodigies", () => {
+  let seriousProspectCount = 0;
+  let explicitYoungProspectCount = 0;
+  let routineYoungPlateauCount = 0;
   for (let index = 0; index < 100; index += 1) {
     const result = generateInitialYouthAcademies(divisionInput(`academy-rarity-${index}`));
     const archetypes = result.playerIds.map((playerId) => result.playerArchetypes[playerId]);
@@ -179,12 +199,32 @@ test("initial youth high and elite potential obey division-wide rarity caps acro
     const rareProdigies = archetypes.filter((archetype) => archetype === "rare_prodigy").length;
     const ordinaryYouth = archetypes.filter((archetype) => archetype === "normal_youth").length;
 
-    assert.equal(seriousProspects >= configured.highPerDivision.minInclusive, true);
-    assert.equal(seriousProspects <= configured.highPerDivision.maxInclusive, true);
-    assert.equal(rareProdigies >= configured.elitePerDivision.minInclusive, true);
-    assert.equal(rareProdigies <= configured.elitePerDivision.maxInclusive, true);
+    assert.equal(seriousProspects <= 18, true);
+    assert.equal(rareProdigies, 0);
     assert.equal(ordinaryYouth > result.playerIds.length / 2, true);
+    seriousProspectCount += seriousProspects;
+
+    for (const playerId of result.playerIds) {
+      const player = result.players[playerId];
+      const archetypeKey = result.playerArchetypes[playerId];
+      assert.ok(player !== undefined);
+      assert.ok(archetypeKey !== undefined);
+      const observation = prospectGapObservation(player, archetypeKey);
+      if (observation.prospectClass !== "routine") {
+        assert.equal(
+          observation.ratingGap >= 1,
+          true,
+          `${player.id} ${observation.prospectClass} gap ${observation.ratingGap}`,
+        );
+        explicitYoungProspectCount += 1;
+      } else if (observation.ratingGap === 0) {
+        routineYoungPlateauCount += 1;
+      }
+    }
   }
+  assert.equal(seriousProspectCount > 0, true);
+  assert.equal(explicitYoungProspectCount > 0, true);
+  assert.equal(routineYoungPlateauCount > 0, true);
 }, 15_000);
 
 test("better academies create more interesting routine prospects without extra high or elite slots", () => {
@@ -198,8 +238,16 @@ test("better academies create more interesting routine prospects without extra h
       ...input(`academy-development-spread-${index}`),
       clubIds: [firstClub, secondClub],
       clubContexts: {
-        [firstClub]: { category: "third_division", reputation: 10 },
-        [secondClub]: { category: "third_division", reputation: 1 },
+        [firstClub]: {
+          category: "third_division",
+          reputation: 10,
+          competitiveTier: "title_contender",
+        },
+        [secondClub]: {
+          category: "third_division",
+          reputation: 1,
+          competitiveTier: "survival",
+        },
       },
     });
 
@@ -221,7 +269,11 @@ test("third-division level-five academies still generate bounded current ability
     ...input("bounded-level-five-third-division"),
     clubIds: [firstClub],
     clubContexts: {
-      [firstClub]: { category: "third_division", reputation: 10 },
+      [firstClub]: {
+        category: "third_division",
+        reputation: 10,
+        competitiveTier: "title_contender",
+      },
     },
   });
 
@@ -253,7 +305,10 @@ test("generateSeasonalYouthIntakePlayers creates 15..17 year old players", () =>
   const result = generateSeasonalYouthIntakePlayers(seasonalInput("young-annual-intake"));
 
   for (const generated of result.generatedPlayers) {
-    const age = Math.floor((CAREER_START_EPOCH_DAY - Number(generated.player.birthDate)) / 365);
+    const age = completedCivilYears(
+      Number(generated.player.birthDate),
+      CAREER_START_EPOCH_DAY,
+    );
     assert.equal(age >= 15, true, generated.player.id);
     assert.equal(age <= 17, true, generated.player.id);
   }
@@ -266,6 +321,58 @@ test("generateSeasonalYouthIntakePlayers is deterministic and avoids routine rar
   assert.deepEqual(result, generateSeasonalYouthIntakePlayers(inputValue));
   assert.equal(result.generatedPlayers.some((generated) => generated.archetypeKey === "rare_prodigy"), false);
   assert.equal(new Set(result.generatedPlayers.map((generated) => generated.player.id)).size, result.generatedPlayers.length);
+});
+
+test("seasonal youth intake responds to the seven-state development environment without creating routine exceptions", () => {
+  let adequateProspectCount = 0;
+  let veryPoorProspectCount = 0;
+  let adequateSeriousCount = 0;
+  let veryPoorSeriousCount = 0;
+  let explicitYoungProspectCount = 0;
+
+  for (let seedIndex = 0; seedIndex < 100; seedIndex += 1) {
+    const baseInput = seasonalInput(`annual-environment-${seedIndex}`);
+    const adequate = generateSeasonalYouthIntakePlayers(baseInput);
+    const veryPoor = generateSeasonalYouthIntakePlayers({
+      ...baseInput,
+      clubContext: {
+        ...baseInput.clubContext,
+        competitiveTier: "survival",
+      },
+    });
+
+    for (const generated of adequate.generatedPlayers) {
+      if (generated.archetypeKey === "good_prospect" || generated.archetypeKey === "serious_prospect") {
+        adequateProspectCount += 1;
+      }
+      if (generated.archetypeKey === "serious_prospect") adequateSeriousCount += 1;
+      assert.notEqual(generated.archetypeKey, "rare_prodigy");
+      const observation = prospectGapObservation(generated.player, generated.archetypeKey);
+      if (observation.prospectClass !== "routine") {
+        assert.equal(observation.ratingGap >= 1, true, generated.player.id);
+        explicitYoungProspectCount += 1;
+      }
+    }
+
+    for (const generated of veryPoor.generatedPlayers) {
+      if (generated.archetypeKey === "good_prospect" || generated.archetypeKey === "serious_prospect") {
+        veryPoorProspectCount += 1;
+      }
+      if (generated.archetypeKey === "serious_prospect") veryPoorSeriousCount += 1;
+      assert.notEqual(generated.archetypeKey, "rare_prodigy");
+      const observation = prospectGapObservation(generated.player, generated.archetypeKey);
+      if (observation.prospectClass !== "routine") {
+        assert.equal(observation.ratingGap >= 1, true, generated.player.id);
+        explicitYoungProspectCount += 1;
+      }
+    }
+  }
+
+  assert.equal(adequateProspectCount > veryPoorProspectCount, true);
+  assert.equal(adequateSeriousCount > veryPoorSeriousCount, true);
+  assert.equal(veryPoorProspectCount > 0, true);
+  assert.equal(veryPoorSeriousCount > 0, true);
+  assert.equal(explicitYoungProspectCount > 0, true);
 });
 
 test("default seasonal youth intake candidate pool can refill a whole academy", () => {
@@ -302,6 +409,10 @@ test("seasonal youth intake applies a potential-six floor only to its world allo
 
   assert.deepEqual(exceptional.map(({ player }) => player.id), [candidate.player.id]);
   assert.equal(exceptional[0]?.archetypeKey, "rare_prodigy");
+  assert.equal(
+    prospectGapObservation(exceptional[0]!.player, exceptional[0]!.archetypeKey).ratingGap >= 1,
+    true,
+  );
 });
 
 test("initial youth academy applies a potential-six floor only to its world allocation", () => {
@@ -321,7 +432,86 @@ test("initial youth academy applies a potential-six floor only to its world allo
 
   assert.deepEqual(exceptional, [forcedId]);
   assert.equal(result.playerArchetypes[forcedId], "rare_prodigy");
+  assert.equal(
+    prospectGapObservation(result.players[forcedId]!, result.playerArchetypes[forcedId]!).ratingGap >= 1,
+    true,
+  );
 });
+
+test("academy roots propagate unsupported rare-prodigy placement as typed failures", () => {
+  const firstClub = clubId("club:province-01");
+  const openingInput = input("unsupported-opening-academy-prodigy");
+  const openingForcedId = initialYouthPlayerId(firstClub, 1);
+  assertUnsupportedRarePlacement("survival", () => generateInitialYouthAcademies({
+    ...openingInput,
+    clubIds: [firstClub],
+    clubContexts: {
+      [firstClub]: {
+        category: "first_division",
+        reputation: 1,
+        competitiveTier: "survival",
+      },
+    },
+    potentialSixPlayerIds: [openingForcedId],
+  }));
+
+  const seasonalBase = seasonalInput("unsupported-seasonal-academy-prodigy");
+  const seasonalForcedId = generateSeasonalYouthIntakePlayers(seasonalBase)
+    .generatedPlayers[0]?.player.id;
+  assert.ok(seasonalForcedId !== undefined);
+  assertUnsupportedRarePlacement("mid_table", () => generateSeasonalYouthIntakePlayers({
+    ...seasonalBase,
+    clubContext: {
+      category: "first_division",
+      reputation: 1,
+      competitiveTier: "mid_table",
+    },
+    potentialSixPlayerIds: [seasonalForcedId],
+  }));
+});
+
+/** Returns one role-relative current-to-ceiling observation for a generated youth. */
+function prospectGapObservation(
+  player: Player,
+  archetypeKey: GeneratedPlayerArchetypeKey,
+): Readonly<{ prospectClass: ContextualProspectClass; ratingGap: number }> {
+  assert.ok(player.primaryRole !== undefined);
+  const roleProfile = getPlayerRoleProfile(player.primaryRole);
+  const currentRating = ratingForRoleAbility(Number(roleCurrentAbility(
+    player.abilities,
+    roleProfile,
+  )));
+  const potentialRating = ratingForRoleAbility(Number(rolePotentialAbility(
+    player.potential,
+    roleProfile,
+  )));
+  return {
+    prospectClass: contextualProspectClassForArchetype(archetypeKey),
+    ratingGap: potentialRating - currentRating,
+  };
+}
+
+/** Converts one exact role ability through the versioned global rating scale. */
+function ratingForRoleAbility(ability: number): number {
+  let rating = 1;
+  for (const threshold of playerRatingScale.abilityThresholds) {
+    if (ability >= threshold.minimumAbilityInclusive) rating = threshold.rating;
+  }
+  return rating;
+}
+
+/** Verifies that one invalid composition decision reaches callers unchanged. */
+function assertUnsupportedRarePlacement(
+  expectedTier: PlayerGenerationClubTier,
+  action: () => unknown,
+): void {
+  assert.throws(action, (error: unknown) => {
+    assert.ok(error instanceof ContextualProspectJointProfileError);
+    assert.equal(error.code, "unsupported_rare_prodigy_placement");
+    assert.equal(error.context.clubTier, expectedTier);
+    return true;
+  });
+}
 
 function input(worldSeed: string): Parameters<typeof generateInitialYouthAcademies>[0] {
   const firstClub = clubId("club:province-01");
@@ -351,12 +541,15 @@ function divisionInput(worldSeed: string): Parameters<typeof generateInitialYout
 }
 
 function clubContexts(clubIds: readonly ClubId[]): Parameters<typeof generateInitialYouthAcademies>[0]["clubContexts"] {
-  const contexts: Partial<Record<ClubId, InitialYouthAcademyClubContext>> = {};
+  const contexts: Partial<Record<ClubId, OpeningPlayerGenerationClubContext>> = {};
 
-  for (const clubIdValue of clubIds) {
+  for (let index = 0; index < clubIds.length; index += 1) {
+    const clubIdValue = clubIds[index];
+    assert.ok(clubIdValue !== undefined);
     contexts[clubIdValue] = {
       category: "third_division",
       reputation: clubIdValue === "club:province-01" ? 8 : 4,
+      competitiveTier: openingCompetitiveTierForClubRank(index + 1),
     };
   }
 
@@ -372,6 +565,7 @@ function seasonalInput(worldSeed: string): Parameters<typeof generateSeasonalYou
     clubContext: {
       category: "third_division",
       reputation: 8,
+      competitiveTier: "title_contender",
     },
   };
 }

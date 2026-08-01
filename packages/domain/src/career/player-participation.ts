@@ -1,4 +1,4 @@
-import type { FixtureId, PlayerId, SeasonId } from "../types/ids.ts";
+import { clubId, type ClubId, type FixtureId, type PlayerId, type SeasonId } from "../types/ids.ts";
 import { isCanonicalPlayerRole, type CanonicalPlayerRole } from "../tactics/player-roles.ts";
 
 /** Stable month key used by the development ledger, for example `2026-08`. */
@@ -15,6 +15,7 @@ export type PlayerParticipationLedgerErrorCode =
   | "invalid_substitute_appearances"
   | "invalid_rating"
   | "invalid_role_minutes"
+  | "invalid_club_minutes"
   | "unknown_played_role"
   | "duplicate_fixture_accrual"
   | "closed_month_accrual";
@@ -54,6 +55,8 @@ export interface PlayerParticipationRow {
   readonly ratingSamples: number;
   /** Minutes grouped by canonical role actually played. */
   readonly playedRoleMinutes: Readonly<Partial<Record<CanonicalPlayerRole, number>>>;
+  /** Minutes grouped by the club represented when each fixture was played. */
+  readonly clubMinutes: Readonly<Partial<Record<ClubId, number>>>;
   /** Fixture IDs already applied to this row for idempotency. */
   readonly appliedFixtureIds: readonly FixtureId[];
 }
@@ -74,6 +77,8 @@ export interface PlayerFixtureParticipationContribution {
   readonly fixtureId: FixtureId;
   /** Player receiving minutes and rating facts. */
   readonly playerId: PlayerId;
+  /** Club represented by the player in this committed fixture. */
+  readonly clubId: ClubId;
   /** Season that owns the contribution. */
   readonly seasonId: SeasonId;
   /** Development month receiving the contribution. */
@@ -88,6 +93,33 @@ export interface PlayerFixtureParticipationContribution {
   readonly rating?: number;
   /** Minutes by canonical played role for this fixture. */
   readonly playedRoleMinutes: Readonly<Partial<Record<CanonicalPlayerRole, number>>>;
+}
+
+/** Supported policies for selecting the next durable development checkpoint. */
+export type PlayerParticipationDevelopmentBatchMode =
+  | "complete_quarters"
+  | "season_end_flush";
+
+/** Ordered monthly evidence consumed by one player-development command. */
+export interface PlayerParticipationDevelopmentBatch {
+  /** Season owning every selected row. */
+  readonly seasonId: SeasonId;
+  /** One to three open complete months in chronological order. */
+  readonly monthKeys: readonly PlayerDevelopmentMonthKey[];
+  /** Selected rows ordered first by month and then by durable ledger order. */
+  readonly rows: readonly PlayerParticipationRow[];
+}
+
+/** Input for selecting one checkpoint without changing durable ledger state. */
+export interface SelectNextPlayerParticipationDevelopmentBatchInput {
+  /** Canonical participation ledger; an absent ledger has no selectable work. */
+  readonly ledger: PlayerParticipationLedger | undefined;
+  /** Season whose completed monthly evidence can be consumed. */
+  readonly seasonId: SeasonId;
+  /** First month that is not complete yet and therefore cannot be selected. */
+  readonly beforeMonthKey: PlayerDevelopmentMonthKey;
+  /** Normal quarterly cadence or explicit residual season-end flush. */
+  readonly mode: PlayerParticipationDevelopmentBatchMode;
 }
 
 /** Builds the deterministic row key used by the participation ledger. */
@@ -154,46 +186,117 @@ export function createPlayerParticipationLedger(input: PlayerParticipationLedger
   };
 }
 
-/** Accrues one fixture contribution exactly once into the durable ledger. */
-export function accruePlayerFixtureParticipation(
+/**
+ * Selects the next deterministic development batch from the canonical ledger.
+ *
+ * Normal checkpoints wait for three distinct complete months. Season rollover
+ * may flush one or two residual months. The selector never closes rows or
+ * persists a second quarterly checkpoint collection.
+ */
+export function selectNextPlayerParticipationDevelopmentBatch(
+  input: SelectNextPlayerParticipationDevelopmentBatchInput,
+): PlayerParticipationDevelopmentBatch | undefined {
+  assertMonthKey(input.beforeMonthKey);
+  const ledger = createPlayerParticipationLedger(input.ledger);
+  const closedMonthKeys = new Set(ledger.closedMonthKeys);
+  const openRows = ledger.rowKeys
+    .map((rowKey, ledgerOrder) => ({ row: ledger.rows[rowKey], ledgerOrder }))
+    .filter((entry): entry is { readonly row: PlayerParticipationRow; readonly ledgerOrder: number } =>
+      entry.row !== undefined
+      && entry.row.seasonId === input.seasonId
+      && entry.row.monthKey < input.beforeMonthKey
+      && !closedMonthKeys.has(participationMonthKey(entry.row.seasonId, entry.row.monthKey)),
+    );
+  const openMonthKeys = [...new Set(openRows.map(({ row }) => row.monthKey))].sort();
+
+  if (
+    openMonthKeys.length === 0
+    || (input.mode === "complete_quarters" && openMonthKeys.length < 3)
+  ) {
+    return undefined;
+  }
+
+  const monthKeys = openMonthKeys.slice(0, 3);
+  const monthOrder = new Map(monthKeys.map((monthKey, index) => [monthKey, index]));
+  const rows = openRows
+    .filter(({ row }) => monthOrder.has(row.monthKey))
+    .sort((left, right) =>
+      monthOrder.get(left.row.monthKey)! - monthOrder.get(right.row.monthKey)!
+      || left.ledgerOrder - right.ledgerOrder,
+    )
+    .map(({ row }) => row);
+
+  return {
+    seasonId: input.seasonId,
+    monthKeys,
+    rows,
+  };
+}
+
+/**
+ * Accrues an ordered fixture-contribution batch atomically.
+ *
+ * The source ledger is validated and copied once. Every contribution then
+ * updates that private copy in input order, so an invalid later contribution
+ * cannot partially mutate the caller's ledger.
+ */
+export function accruePlayerFixtureParticipations(
   ledger: PlayerParticipationLedger,
-  contribution: PlayerFixtureParticipationContribution,
+  contributions: readonly PlayerFixtureParticipationContribution[],
 ): PlayerParticipationLedger {
   const source = createPlayerParticipationLedger(ledger);
-  validateContribution(contribution);
-  const monthKey = participationMonthKey(contribution.seasonId, contribution.monthKey);
-  if (source.closedMonthKeys.includes(monthKey)) {
-    throw new PlayerParticipationLedgerError("closed_month_accrual", `participation month is already closed: ${monthKey}`);
+  const rows: Record<string, PlayerParticipationRow> = { ...source.rows };
+  const rowKeys = [...source.rowKeys];
+  const knownRowKeys = new Set(rowKeys);
+  const closedMonthKeys = new Set(source.closedMonthKeys);
+
+  for (const contribution of contributions) {
+    validateContribution(contribution);
+    const monthKey = participationMonthKey(contribution.seasonId, contribution.monthKey);
+    if (closedMonthKeys.has(monthKey)) {
+      throw new PlayerParticipationLedgerError("closed_month_accrual", `participation month is already closed: ${monthKey}`);
+    }
+
+    const rowKey = playerParticipationRowKey(contribution.seasonId, contribution.monthKey, contribution.playerId);
+    const current = rows[rowKey] ?? emptyParticipationRow(rowKey, contribution);
+    if (current.appliedFixtureIds.includes(contribution.fixtureId)) {
+      throw new PlayerParticipationLedgerError("duplicate_fixture_accrual", `fixture already accrued for player: ${contribution.fixtureId}`);
+    }
+
+    rows[rowKey] = createPlayerParticipationRow({
+      rowKey,
+      playerId: contribution.playerId,
+      seasonId: contribution.seasonId,
+      monthKey: contribution.monthKey,
+      starts: current.starts + (contribution.started ? 1 : 0),
+      substituteAppearances: current.substituteAppearances + (contribution.substituteAppearance ? 1 : 0),
+      minutes: current.minutes + contribution.minutes,
+      ratingTotal: current.ratingTotal + (contribution.rating ?? 0),
+      ratingSamples: current.ratingSamples + (contribution.rating === undefined ? 0 : 1),
+      playedRoleMinutes: mergeRoleMinutes(current.playedRoleMinutes, contribution.playedRoleMinutes),
+      clubMinutes: mergeClubMinutes(current.clubMinutes, contribution.clubId, contribution.minutes),
+      appliedFixtureIds: [...current.appliedFixtureIds, contribution.fixtureId],
+    });
+
+    if (!knownRowKeys.has(rowKey)) {
+      knownRowKeys.add(rowKey);
+      rowKeys.push(rowKey);
+    }
   }
-
-  const rowKey = playerParticipationRowKey(contribution.seasonId, contribution.monthKey, contribution.playerId);
-  const current = source.rows[rowKey] ?? emptyParticipationRow(rowKey, contribution);
-  if (current.appliedFixtureIds.includes(contribution.fixtureId)) {
-    throw new PlayerParticipationLedgerError("duplicate_fixture_accrual", `fixture already accrued for player: ${contribution.fixtureId}`);
-  }
-
-  const row = createPlayerParticipationRow({
-    rowKey,
-    playerId: contribution.playerId,
-    seasonId: contribution.seasonId,
-    monthKey: contribution.monthKey,
-    starts: current.starts + (contribution.started ? 1 : 0),
-    substituteAppearances: current.substituteAppearances + (contribution.substituteAppearance ? 1 : 0),
-    minutes: current.minutes + contribution.minutes,
-    ratingTotal: current.ratingTotal + (contribution.rating ?? 0),
-    ratingSamples: current.ratingSamples + (contribution.rating === undefined ? 0 : 1),
-    playedRoleMinutes: mergeRoleMinutes(current.playedRoleMinutes, contribution.playedRoleMinutes),
-    appliedFixtureIds: [...current.appliedFixtureIds, contribution.fixtureId],
-  });
-
-  const rows = { ...source.rows, [rowKey]: row };
-  const rowKeys = source.rowKeys.includes(rowKey) ? source.rowKeys : [...source.rowKeys, rowKey];
 
   return {
     rows,
     rowKeys,
     closedMonthKeys: source.closedMonthKeys,
   };
+}
+
+/** Accrues one fixture contribution exactly once into the durable ledger. */
+export function accruePlayerFixtureParticipation(
+  ledger: PlayerParticipationLedger,
+  contribution: PlayerFixtureParticipationContribution,
+): PlayerParticipationLedger {
+  return accruePlayerFixtureParticipations(ledger, [contribution]);
 }
 
 /** Marks a development month as closed after growth has consumed its facts. */
@@ -273,6 +376,17 @@ function createPlayerParticipationRow(input: PlayerParticipationRow): PlayerPart
   if (roleMinuteTotal > input.minutes) {
     throw new PlayerParticipationLedgerError("invalid_role_minutes", `role minutes exceed total minutes: ${roleMinuteTotal}/${input.minutes}`);
   }
+  const clubMinutes = createClubMinutes(input.clubMinutes);
+  const clubMinuteTotal = Object.values(clubMinutes).reduce<number>(
+    (total, minutes) => total + (minutes ?? 0),
+    0,
+  );
+  if (clubMinuteTotal !== input.minutes) {
+    throw new PlayerParticipationLedgerError(
+      "invalid_club_minutes",
+      `club minutes must equal total minutes: ${clubMinuteTotal}/${input.minutes}`,
+    );
+  }
 
   return {
     rowKey: input.rowKey,
@@ -285,12 +399,14 @@ function createPlayerParticipationRow(input: PlayerParticipationRow): PlayerPart
     ratingTotal: input.ratingTotal,
     ratingSamples: input.ratingSamples,
     playedRoleMinutes,
+    clubMinutes,
     appliedFixtureIds: [...input.appliedFixtureIds],
   };
 }
 
 function validateContribution(contribution: PlayerFixtureParticipationContribution): void {
   assertMonthKey(contribution.monthKey);
+  validateClubId(contribution.clubId);
   assertSafeNonNegativeInteger(contribution.minutes, "invalid_minutes", "minutes");
   if (contribution.minutes > 130) {
     throw new PlayerParticipationLedgerError("invalid_minutes", `fixture minutes are not credible: ${contribution.minutes}`);
@@ -323,8 +439,47 @@ function emptyParticipationRow(
     ratingTotal: 0,
     ratingSamples: 0,
     playedRoleMinutes: {},
+    clubMinutes: {},
     appliedFixtureIds: [],
   };
+}
+
+function mergeClubMinutes(
+  current: Readonly<Partial<Record<ClubId, number>>>,
+  representedClubId: ClubId,
+  minutes: number,
+): Readonly<Partial<Record<ClubId, number>>> {
+  const merged: Partial<Record<ClubId, number>> = { ...current };
+  if (minutes > 0) {
+    merged[representedClubId] = (merged[representedClubId] ?? 0) + minutes;
+  }
+  return createClubMinutes(merged);
+}
+
+function createClubMinutes(
+  input: Readonly<Partial<Record<ClubId, number>>>,
+): Readonly<Partial<Record<ClubId, number>>> {
+  const clubMinutes: Partial<Record<ClubId, number>> = {};
+  for (const [rawClubId, minutes] of Object.entries(input)) {
+    const representedClubId = validateClubId(rawClubId);
+    if (minutes === undefined || minutes === 0) {
+      continue;
+    }
+    assertSafeNonNegativeInteger(minutes, "invalid_club_minutes", `minutes for ${representedClubId}`);
+    clubMinutes[representedClubId] = minutes;
+  }
+  return clubMinutes;
+}
+
+function validateClubId(value: string): ClubId {
+  try {
+    return clubId(value);
+  } catch {
+    throw new PlayerParticipationLedgerError(
+      "invalid_club_minutes",
+      `invalid participation club id: ${value}`,
+    );
+  }
 }
 
 function mergeRoleMinutes(
@@ -391,7 +546,7 @@ function assertMonthKey(monthKey: PlayerDevelopmentMonthKey): void {
 
 function assertSafeNonNegativeInteger(
   value: number,
-  code: Extract<PlayerParticipationLedgerErrorCode, "invalid_minutes" | "invalid_starts" | "invalid_substitute_appearances" | "invalid_rating" | "invalid_role_minutes">,
+  code: Extract<PlayerParticipationLedgerErrorCode, "invalid_minutes" | "invalid_starts" | "invalid_substitute_appearances" | "invalid_rating" | "invalid_role_minutes" | "invalid_club_minutes">,
   label: string,
 ): void {
   if (!Number.isSafeInteger(value) || value < 0) {

@@ -39,6 +39,7 @@ test("adaptPlayerRolesFromParticipation promotes sustained center-back full-back
   const result = adaptPlayerRolesFromParticipation({
     careerState,
     seasonId: seasonId("season:0001"),
+    throughMonthKey: "2026-10",
   });
   const adapted = requiredPlayer(result.careerState, player);
 
@@ -60,6 +61,7 @@ test("adaptPlayerRolesFromParticipation requires sustained multi-month exposure"
   const result = adaptPlayerRolesFromParticipation({
     careerState,
     seasonId: seasonId("season:0001"),
+    throughMonthKey: "2026-08",
   });
 
   assert.equal(result.changes.length, 0);
@@ -76,6 +78,7 @@ test("adaptPlayerRolesFromParticipation ignores unrelated roles even with many m
   const result = adaptPlayerRolesFromParticipation({
     careerState,
     seasonId: seasonId("season:0001"),
+    throughMonthKey: "2026-12",
   });
 
   assert.equal(result.changes.length, 0);
@@ -92,6 +95,7 @@ test("adaptPlayerRolesFromParticipation can promote adapted related roles to nat
   const result = adaptPlayerRolesFromParticipation({
     careerState,
     seasonId: seasonId("season:0001"),
+    throughMonthKey: "2026-12",
   });
   const adapted = requiredPlayer(result.careerState, player);
 
@@ -101,7 +105,7 @@ test("adaptPlayerRolesFromParticipation can promote adapted related roles to nat
   assert.deepEqual(adapted.adaptedRoles, []);
 });
 
-test("adaptPlayerRolesFromParticipation ignores rows from already closed months", () => {
+test("adaptPlayerRolesFromParticipation retains closed rows as cumulative exposure", () => {
   const player = playerId("player:closed-month");
   const ledger = {
     ...participationLedgerFixture(player, "right_full_back", ["2026-08", "2026-09", "2026-10"], 2),
@@ -115,9 +119,36 @@ test("adaptPlayerRolesFromParticipation ignores rows from already closed months"
   const result = adaptPlayerRolesFromParticipation({
     careerState,
     seasonId: seasonId("season:0001"),
+    throughMonthKey: "2026-10",
+  });
+
+  assert.equal(result.changes[0]?.targetRole, "full_back");
+  assert.equal(result.changes[0]?.nextFamiliarity, "adapted");
+});
+
+test("adaptPlayerRolesFromParticipation does not consume rows after the batch boundary", () => {
+  const player = playerId("player:future-exposure");
+  const careerState = careerStateFixture(
+    playerFixture(player, "center_back", ["center_back"], [], ["full_back"]),
+    participationLedgerFixture(
+      player,
+      "right_full_back",
+      ["2026-08", "2026-09", "2026-10"],
+      2,
+    ),
+  );
+
+  const result = adaptPlayerRolesFromParticipation({
+    careerState,
+    seasonId: seasonId("season:0001"),
+    throughMonthKey: "2026-09",
   });
 
   assert.equal(result.changes.length, 0);
+  assert.equal(
+    requiredPlayer(result.careerState, player).roleFamiliarity?.full_back,
+    "weak",
+  );
 });
 
 function careerStateFixture(player: Player, playerParticipationLedger: PlayerParticipationLedger): CareerState {
@@ -145,6 +176,7 @@ function participationLedgerFixture(
     for (let fixtureNumber = 1; fixtureNumber <= fixturesPerMonth; fixtureNumber += 1) {
       ledger = accruePlayerFixtureParticipation(ledger, {
         fixtureId: fixtureId(`fixture:${monthIndex + 1}-${fixtureNumber}`),
+        clubId: clubId("club:selected"),
         playerId: id,
         seasonId: seasonId("season:0001"),
         monthKey,

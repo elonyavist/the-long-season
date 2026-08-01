@@ -139,6 +139,7 @@ export function advanceSelectedClubWorkflowsToAttention(input: {
       working,
       nextDueDate,
       input.wagePolicy,
+      input.valuationConfig,
       working.selectedClubId,
     ).careerState;
     working = advanceSelectedClubMarketLifecycles({

@@ -24,10 +24,81 @@ test.afterAll(() => {
   server.kill("SIGTERM");
 });
 
-test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed replacement", async ({ page }) => {
+test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and rolls back atomically", async ({ page }) => {
   await page.goto(URL);
 
-  const result = await page.evaluate(async () => {
+  const result = await page.evaluate(async ({ repoRoot }) => {
+    const databaseFileName = "the-long-season-careers.sqlite3";
+    const storageRoot = await navigator.storage.getDirectory();
+    try {
+      await storageRoot.removeEntry(databaseFileName);
+    } catch (error) {
+      if (!(error instanceof DOMException) || error.name !== "NotFoundError") throw error;
+    }
+
+    type SqliteFixtureTask =
+      | { readonly kind: "seed"; readonly version: number; readonly marker?: string }
+      | { readonly kind: "inspect" };
+    type SqliteFixtureResult = Readonly<{
+      ok: boolean;
+      message?: string;
+      version?: number;
+      marker?: string;
+    }>;
+    const sqliteModulePath = `${globalThis.location.origin}/@fs${repoRoot}/apps/web/node_modules/@sqlite.org/sqlite-wasm/dist/index.mjs`;
+    const fixtureWorkerSource = `
+      self.addEventListener("message", async (event) => {
+        let database;
+        try {
+          const { default: sqlite3InitModule } = await import(${JSON.stringify(sqliteModulePath)});
+          const sqlite3 = await sqlite3InitModule();
+          database = new sqlite3.oo1.OpfsDb("/${databaseFileName}", "c");
+          if (event.data.kind === "seed") {
+            database.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at_iso TEXT NOT NULL) STRICT");
+            database.exec("DELETE FROM schema_migrations");
+            database.exec({
+              sql: "INSERT INTO schema_migrations (version, applied_at_iso) VALUES (?, '2026-07-31T00:00:00.000Z')",
+              bind: [event.data.version],
+            });
+            if (event.data.marker !== undefined) {
+              database.exec("CREATE TABLE IF NOT EXISTS future_schema_marker (marker TEXT NOT NULL) STRICT");
+              database.exec("DELETE FROM future_schema_marker");
+              database.exec({ sql: "INSERT INTO future_schema_marker (marker) VALUES (?)", bind: [event.data.marker] });
+            }
+            self.postMessage({ ok: true });
+          } else {
+            self.postMessage({
+              ok: true,
+              version: Number(database.selectValue("SELECT MAX(version) FROM schema_migrations")),
+              marker: database.selectValue("SELECT marker FROM future_schema_marker"),
+            });
+          }
+        } catch (error) {
+          self.postMessage({ ok: false, message: error instanceof Error ? error.message : String(error) });
+        } finally {
+          database?.close();
+        }
+      });
+    `;
+    const runSqliteFixtureTask = async (task: SqliteFixtureTask): Promise<SqliteFixtureResult> => {
+      const workerUrl = globalThis.URL.createObjectURL(new Blob([fixtureWorkerSource], { type: "text/javascript" }));
+      const worker = new Worker(workerUrl, { type: "module" });
+      const result = await new Promise<SqliteFixtureResult>((resolveTask) => {
+        worker.addEventListener("message", (event) => resolveTask(event.data), { once: true });
+        worker.addEventListener("error", (event) => resolveTask({
+          ok: false,
+          message: event.message
+            || `${event.filename}:${String(event.lineno)}:${String(event.colno)} ${String(event.error)}`,
+        }), { once: true });
+        worker.postMessage(task);
+      });
+      worker.terminate();
+      globalThis.URL.revokeObjectURL(workerUrl);
+      return result;
+    };
+    const seedResult = await runSqliteFixtureTask({ kind: "seed", version: 21 });
+    if (!seedResult.ok) throw new Error(`Unable to seed SQLite beta v21: ${seedResult.message ?? "unknown error"}`);
+
     const persistenceModulePath = "/src/infrastructure/persistence/create-web-career-storage.ts";
     const runtimeModulePath = "/src/runtime/web-career-runtime.ts";
     const { createWebCareerStorage } = await import(/* @vite-ignore */ persistenceModulePath);
@@ -113,7 +184,7 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
                 evaluatedOn: responseDueOn,
                 age: 27,
                 currentAbility: 10,
-                reachablePotential: 12,
+                publicPotentialP50Ability: 12,
                 role: selectedPlayer.primaryRole,
                 expectedSquadStatus: selectedContract.squadStatus,
                 currentAnnualWage: selectedContract.annualWage,
@@ -177,7 +248,7 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
             evaluatedOn: negotiationCreatedOn,
             age: 27,
             currentAbility: 10,
-            reachablePotential: 12,
+            publicPotentialP50Ability: 12,
             role: preliminaryPlayer.primaryRole,
             expectedSquadStatus: preliminaryContract.squadStatus,
             currentAnnualWage: preliminaryContract.annualWage,
@@ -357,12 +428,51 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
     await secondHandle.storage.deleteCareer(firstSaveId as never);
     await secondHandle.storage.deleteCareer(secondSaveId as never);
     await secondHandle.close();
-    return response;
-  });
+
+    const futureMarker = "preserve-future-schema-v23";
+    const futureSeed = await runSqliteFixtureTask({ kind: "seed", version: 23, marker: futureMarker });
+    if (!futureSeed.ok) throw new Error(`Unable to seed SQLite future v23: ${futureSeed.message ?? "unknown error"}`);
+
+    let futureSchemaRejected = false;
+    let futureSchemaErrorCode: string | undefined;
+    try {
+      const unexpectedHandle = await createWebCareerStorage();
+      await unexpectedHandle.close();
+    } catch (error) {
+      futureSchemaRejected = true;
+      futureSchemaErrorCode = typeof error === "object"
+        && error !== null
+        && "code" in error
+        && typeof error.code === "string"
+        ? error.code
+        : undefined;
+    }
+    const futureInspection = await runSqliteFixtureTask({ kind: "inspect" });
+    if (!futureInspection.ok) {
+      throw new Error(`Unable to inspect SQLite future v23: ${futureInspection.message ?? "unknown error"}`);
+    }
+    let futureDatabaseExists = false;
+    try {
+      await root.getFileHandle(databaseFileName);
+      futureDatabaseExists = true;
+    } catch {
+      futureDatabaseExists = false;
+    }
+    await root.removeEntry(databaseFileName);
+
+    return {
+      ...response,
+      futureSchemaRejected,
+      futureSchemaErrorCode,
+      futureSchemaVersion: futureInspection.version,
+      futureSchemaMarker: futureInspection.marker,
+      futureDatabaseExists,
+    };
+  }, { repoRoot: REPO_ROOT });
 
   expect(result.crossOriginIsolated).toBe(true);
   expect(result.metadata.name.length).toBeGreaterThan(0);
-  expect(result.storageInfo).toMatchObject({ schemaVersion: 17, betaResetPerformed: false });
+  expect(result.storageInfo).toMatchObject({ schemaVersion: 22, betaResetPerformed: true });
   expect(result.worldRoundTripExact).toBe(true);
   expect(result.negotiationRoundTripExact).toBe(true);
   expect(result.archivedPlayerStatisticsRoundTripExact).toBe(true);
@@ -383,6 +493,11 @@ test("SQLite OPFS round-trips generated Phase 78 careers and rolls back a failed
   expect(result.opfsDatabaseExists).toBe(true);
   expect(result.indexedDbNames.filter((name) => /career|save/i.test(name))).toEqual([]);
   expect(result.localCareerKeys).toEqual([]);
+  expect(result.futureSchemaRejected).toBe(true);
+  expect(result.futureSchemaErrorCode).toBe("unsupported_schema_version");
+  expect(result.futureSchemaVersion).toBe(23);
+  expect(result.futureSchemaMarker).toBe("preserve-future-schema-v23");
+  expect(result.futureDatabaseExists).toBe(true);
 });
 
 async function waitForServer(): Promise<void> {

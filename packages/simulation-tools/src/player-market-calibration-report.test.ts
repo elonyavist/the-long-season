@@ -15,49 +15,56 @@ const input: CreatePlayerMarketCalibrationReportInput = {
     askingPriceCurvesVersion: "asking-v1",
     marketBehaviorCalibrationVersion: "behavior-v1",
     wageFinanceCalibrationVersion: "wage-v1",
+    playerDevelopmentEnvironmentVersion: "development-environment-v1",
   },
   metadata: {
     seedPrefix: "diagnostic",
     worldCount: 2,
     projectionMethod: "supplied fixtures",
   },
+  divisionValuePopulation: "all_supplied",
   observations: [
     {
       division: "first_division",
+      seasonStartYear: 2025,
       currentRating: 5.5,
-      potentialRating: 6,
+      publicP50Rating: 6,
       publicValueMinorUnits: 10,
       population: "initial_starter",
       sourceLabel: "generated",
     },
     {
       division: "first_division",
+      seasonStartYear: 2025,
       currentRating: 6,
-      potentialRating: 6,
+      publicP50Rating: 6,
       publicValueMinorUnits: 20,
       population: "initial_reserve",
       sourceLabel: "generated",
     },
     {
       division: "first_division",
+      seasonStartYear: 2025,
       currentRating: 3,
-      potentialRating: 3.5,
+      publicP50Rating: 3.5,
       publicValueMinorUnits: 30,
       population: "initial_youth",
       sourceLabel: "fixture",
     },
     {
       division: "third_division",
+      seasonStartYear: 2026,
       currentRating: 1,
-      potentialRating: 1.5,
+      publicP50Rating: 1.5,
       publicValueMinorUnits: 5,
       population: "annual_intake",
       sourceLabel: "fixture",
     },
     {
       division: "second_division",
+      seasonStartYear: 2026,
       currentRating: 2,
-      potentialRating: 2.5,
+      publicP50Rating: 2.5,
       publicValueMinorUnits: 0,
       population: "annual_intake",
       sourceLabel: "fixture",
@@ -66,18 +73,21 @@ const input: CreatePlayerMarketCalibrationReportInput = {
   clubSquadObservations: [
     {
       division: "first_division",
+      seasonStartYear: 2025,
       activeSeniorCount: 22,
       publicSquadValueMinorUnits: 60,
       sourceLabel: "generated",
     },
     {
       division: "third_division",
+      seasonStartYear: 2025,
       activeSeniorCount: 22,
       publicSquadValueMinorUnits: 5,
       sourceLabel: "fixture",
     },
     {
       division: "second_division",
+      seasonStartYear: 2025,
       activeSeniorCount: 22,
       publicSquadValueMinorUnits: 0,
       sourceLabel: "fixture",
@@ -102,6 +112,9 @@ test("reports versions, metadata, type-7 percentiles, rarity, and source labels"
 
   assert.equal(report.versions.valuationCurvesVersion, "valuation-v1");
   assert.equal(report.metadata.seedPrefix, "diagnostic");
+  assert.equal(report.divisionValuePopulation, "all_supplied");
+  assert.equal(report.divisionValueObservationCount, 5);
+  assert.equal(report.activeClosingCheckpointSeasonStartYear, null);
   assert.equal(report.fitStatus, "pass");
   assert.deepEqual(report.sourceLabelCounts, { fixture: 3, generated: 2 });
   assert.equal(first?.sampleSize, 3);
@@ -115,7 +128,7 @@ test("reports versions, metadata, type-7 percentiles, rarity, and source labels"
   assert.equal(first?.currentRatingHistogram[6], 1);
   assert.equal(first?.currentFiveAndHalfOrHigherCount, 2);
   assert.equal(first?.currentSixCount, 1);
-  assert.equal(first?.potentialSixCount, 2);
+  assert.equal(first?.publicP50SixCount, 2);
   assert.equal(first?.valueFit.status, "pass");
   assert.deepEqual(first?.normalized22SquadComparator, {
     comparatorKind: "normalized_22_active_seniors",
@@ -133,17 +146,17 @@ test("reports versions, metadata, type-7 percentiles, rarity, and source labels"
     maximumMinorUnits: 0,
   });
   assert.deepEqual(
-    report.populations.map(({ population, sampleSize, currentSixCount, potentialSixCount }) => ({
+    report.populations.map(({ population, sampleSize, currentSixCount, publicP50SixCount }) => ({
       population,
       sampleSize,
       currentSixCount,
-      potentialSixCount,
+      publicP50SixCount,
     })),
     [
-      { population: "initial_starter", sampleSize: 1, currentSixCount: 0, potentialSixCount: 1 },
-      { population: "initial_reserve", sampleSize: 1, currentSixCount: 1, potentialSixCount: 1 },
-      { population: "initial_youth", sampleSize: 1, currentSixCount: 0, potentialSixCount: 0 },
-      { population: "annual_intake", sampleSize: 2, currentSixCount: 0, potentialSixCount: 0 },
+      { population: "initial_starter", sampleSize: 1, currentSixCount: 0, publicP50SixCount: 1 },
+      { population: "initial_reserve", sampleSize: 1, currentSixCount: 1, publicP50SixCount: 1 },
+      { population: "initial_youth", sampleSize: 1, currentSixCount: 0, publicP50SixCount: 0 },
+      { population: "annual_intake", sampleSize: 2, currentSixCount: 0, publicP50SixCount: 0 },
     ],
   );
 });
@@ -204,6 +217,69 @@ test("an unobserved division cannot pass its value-fit gate", () => {
   assert.equal(report.divisions[1]?.valueFit.evaluationStatus, "not_evaluated");
   assert.equal(report.divisions[1]?.valueFit.status, "fail");
 });
+
+test("binds division value bands to one explicitly named closing checkpoint", () => {
+  const closingObservations = [
+    closingObservation("first_division", 20),
+    closingObservation("second_division", 0),
+    closingObservation("third_division", 5),
+  ] as const;
+  const report = createPlayerMarketCalibrationReport({
+    ...input,
+    divisionValuePopulation: "active_closing_checkpoint",
+    observations: [...input.observations, ...closingObservations],
+    clubSquadObservations: [
+      ...input.clubSquadObservations,
+      ...input.clubSquadObservations.map((observation) => ({
+        ...observation,
+        seasonStartYear: 2027,
+      })),
+    ],
+    targets: [
+      target("first_division", 20, 20, 20, 20),
+      target("second_division", 0, 0, 0, 0),
+      target("third_division", 5, 5, 5, 5),
+    ],
+  });
+
+  assert.equal(report.divisionValuePopulation, "active_closing_checkpoint");
+  assert.equal(report.divisionValueObservationCount, 3);
+  assert.equal(report.activeClosingCheckpointSeasonStartYear, 2027);
+  assert.deepEqual(
+    report.divisions.map(({ sampleSize }) => sampleSize),
+    [1, 1, 1],
+  );
+  assert.equal(report.fitStatus, "pass");
+});
+
+test("rejects a closing population assembled from two season identities", () => {
+  assert.throws(
+    () => createPlayerMarketCalibrationReport({
+      ...input,
+      observations: [
+        closingObservation("first_division", 20),
+        { ...closingObservation("second_division", 0), seasonStartYear: 2028 },
+      ],
+      divisionValuePopulation: "active_closing_checkpoint",
+    }),
+    /one active closing checkpoint season/,
+  );
+});
+
+function closingObservation(
+  division: CreatePlayerMarketCalibrationReportInput["observations"][number]["division"],
+  publicValueMinorUnits: number,
+): CreatePlayerMarketCalibrationReportInput["observations"][number] {
+  return {
+    division,
+    seasonStartYear: 2027,
+    currentRating: 3,
+    publicP50Rating: 3.5,
+    publicValueMinorUnits,
+    population: "active_closing_checkpoint",
+    sourceLabel: "closing-checkpoint",
+  };
+}
 
 function target(
   division: CreatePlayerMarketCalibrationReportInput["targets"][number]["division"],

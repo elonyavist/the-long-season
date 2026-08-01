@@ -19,10 +19,10 @@ export interface CareerPlayerRatingView {
  * Public potential range shared by Squad, Market, and player profiles.
  *
  * Both values use the closed global half-star scale; neither exposes numeric
- * ability or claims the lower estimate is guaranteed.
+ * ability or claims the P50 estimate is guaranteed.
  */
 export interface CareerPlayerPotentialRangeView {
-  readonly lowerStars: CareerPlayerStarValue;
+  readonly p50Stars: CareerPlayerStarValue;
   readonly upperStars: CareerPlayerStarValue;
 }
 
@@ -44,19 +44,19 @@ export function careerPlayerRatingSortScore(
   return rating.stars * 2;
 }
 
-/** Copies and validates one ordered lower-to-upper public potential range. */
+/** Copies and validates one ordered P50-to-upper public potential range. */
 export function copyCareerPlayerPotentialRange(
   range: CareerPlayerPotentialRangeView,
 ): CareerPlayerPotentialRangeView {
   assertCareerPlayerPotentialRange(range);
   return {
-    lowerStars: range.lowerStars,
+    p50Stars: range.p50Stars,
     upperStars: range.upperStars,
   };
 }
 
 /**
- * Compares ranges conservatively: lower estimate first, then upper ceiling.
+ * Compares ranges by the explicit product policy: P50 first, then public upper.
  *
  * Current rating and player ID remain row-level tie-breakers because they do
  * not belong to the range itself.
@@ -67,7 +67,7 @@ export function compareCareerPlayerPotentialRanges(
 ): number {
   assertCareerPlayerPotentialRange(left);
   assertCareerPlayerPotentialRange(right);
-  return left.lowerStars - right.lowerStars
+  return left.p50Stars - right.p50Stars
     || left.upperStars - right.upperStars;
 }
 
@@ -80,9 +80,9 @@ function assertCareerPlayerRating(rating: CareerPlayerRatingView): void {
 function assertCareerPlayerPotentialRange(
   range: CareerPlayerPotentialRangeView,
 ): void {
-  if (!isPlayerStarRating(range.lowerStars)) {
+  if (!isPlayerStarRating(range.p50Stars)) {
     throw new RangeError(
-      `Unsupported career player potential lower value: ${range.lowerStars}`,
+      `Unsupported career player potential P50 value: ${range.p50Stars}`,
     );
   }
   if (!isPlayerStarRating(range.upperStars)) {
@@ -90,9 +90,9 @@ function assertCareerPlayerPotentialRange(
       `Unsupported career player potential upper value: ${range.upperStars}`,
     );
   }
-  if (range.lowerStars > range.upperStars) {
+  if (range.p50Stars > range.upperStars) {
     throw new RangeError(
-      `Career player potential range is inverted: ${range.lowerStars}..${range.upperStars}`,
+      `Career player potential range is inverted: ${range.p50Stars}..${range.upperStars}`,
     );
   }
 }

@@ -16,6 +16,8 @@ export interface MonthlyDevelopmentPolicyInput {
   readonly age: number;
   /** Durable participation row for the month being processed. */
   readonly participation: PlayerParticipationRow;
+  /** Club environment weighted by the row's exact played minutes. */
+  readonly positiveGrowthEnvironmentBasisPoints: number;
 }
 
 /** Deterministic multipliers applied by one monthly development pass. */
@@ -26,6 +28,8 @@ export interface MonthlyDevelopmentPolicy {
   readonly opportunityMultiplier: number;
   /** Match-performance modifier clamped to roughly `+/-15%`. */
   readonly performanceModifier: number;
+  /** Bounded club-environment multiplier applied after performance. */
+  readonly environmentMultiplier: number;
   /** Final positive-development multiplier for this player/month. */
   readonly growthMultiplier: number;
 }
@@ -35,13 +39,32 @@ export function monthlyDevelopmentPolicy(input: MonthlyDevelopmentPolicyInput): 
   const ageMultiplier = monthlyGrowthAgeMultiplier(input.positionGroup, input.age);
   const opportunityMultiplier = monthlyOpportunityMultiplier(input.participation.minutes);
   const performanceModifier = monthlyPerformanceModifier(averageRating(input.participation));
+  const environmentMultiplier = environmentMultiplierFromBasisPoints(
+    input.positiveGrowthEnvironmentBasisPoints,
+  );
 
   return {
     ageMultiplier,
     opportunityMultiplier,
     performanceModifier,
-    growthMultiplier: ageMultiplier * opportunityMultiplier * performanceModifier,
+    environmentMultiplier,
+    growthMultiplier:
+      ageMultiplier
+      * opportunityMultiplier
+      * performanceModifier
+      * environmentMultiplier,
   };
+}
+
+/** Converts explicit basis points into the positive-development multiplier. */
+export function environmentMultiplierFromBasisPoints(basisPoints: number): number {
+  if (!Number.isFinite(basisPoints) || basisPoints <= 0) {
+    throw new RangeError(
+      `development environment basis points must be positive and finite: ${basisPoints}`,
+    );
+  }
+
+  return basisPoints / 10_000;
 }
 
 /** Converts real monthly minutes into a bounded development opportunity. */

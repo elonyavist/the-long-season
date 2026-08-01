@@ -11,11 +11,18 @@ import {
   type ClubId,
   type Player,
 } from "@game/domain";
-import { fromISO } from "@game/shared";
+import { completedCivilYears, fromISO } from "@game/shared";
 
+import { playerRatingScale } from "../balance/player-economy-calibration.ts";
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
 import { generateFakePlayersForClubs } from "./fake-players.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import {
+  openingCompetitiveTierForClubRank,
+  type OpeningPlayerGenerationClubContext,
+} from "./player-generation-bands.ts";
+import { contextualProspectClassForArchetype } from "./player-potential-rarity.ts";
+import { ContextualProspectJointProfileError } from "./player-prospect-joint-profile.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
@@ -106,20 +113,34 @@ test("fake player generation limits repeated surnames across one generated leagu
 test("fake player generation assigns archetypes with coherent age and potential", () => {
   const clubs = generateFakeClubs();
   const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "archetype-world" });
+  let explicitYoungProspectCount = 0;
+  let routineYoungPlateauCount = 0;
 
   for (const playerId of generated.playerIds) {
     const player = requiredPlayer(generated.players[playerId]);
     const archetypeKey = generated.playerArchetypes[playerId];
     assert.ok(archetypeKey !== undefined);
     const archetype = getGeneratedPlayerArchetype(archetypeKey);
-    const age = Math.floor((CAREER_START_EPOCH_DAY - Number(player.birthDate)) / 365);
+    const age = completedCivilYears(Number(player.birthDate), CAREER_START_EPOCH_DAY);
     const currentFinishing = Number(player.abilities.technical.finishing);
     const potentialFinishing = Number(player.potential.technical.finishing);
+    const prospectClass = contextualProspectClassForArchetype(archetypeKey);
+    const ratingGap = potentialRoleRating(player) - currentRoleRating(player);
 
     assert.equal(age >= archetype.ageYears.minInclusive, true);
     assert.equal(age <= archetype.ageYears.maxInclusive, true);
     assert.equal(potentialFinishing >= currentFinishing, true);
+    if (age <= 20 && prospectClass !== "routine") {
+      assert.equal(ratingGap >= 1, true, `${player.id} ${prospectClass} gap ${ratingGap}`);
+      explicitYoungProspectCount += 1;
+    }
+    if (age <= 20 && prospectClass === "routine" && ratingGap === 0) {
+      routineYoungPlateauCount += 1;
+    }
   }
+
+  assert.equal(explicitYoungProspectCount > 0, true);
+  assert.equal(routineYoungPlateauCount > 0, true);
 });
 
 test("joint exceptional assignments construct a senior current star before sampling youth prodigies", () => {
@@ -131,8 +152,9 @@ test("joint exceptional assignments construct a senior current star before sampl
     {
       category: "first_division",
       reputation: 100 - index,
+      competitiveTier: openingCompetitiveTierForClubRank(index + 1),
     },
-  ])) as Record<ClubId, { readonly category: "first_division"; readonly reputation: number }>;
+  ])) as Record<ClubId, OpeningPlayerGenerationClubContext>;
   const generated = generateFakePlayersForClubs(clubs.clubIds, {
     seed: "joint-exceptional-profile",
     clubContexts,
@@ -152,21 +174,54 @@ test("joint exceptional assignments construct a senior current star before sampl
   assert.equal(potentialRoleAbility(currentStar) >= 17, true);
 
   assert.equal(generated.playerArchetypes[potentialOnlyId], "rare_prodigy");
-  assert.equal(futureProspectAge >= 15 && futureProspectAge <= 18, true);
+  assert.equal(futureProspectAge >= 15 && futureProspectAge <= 20, true);
   assert.equal(currentRoleAbility(futureProspect) < 17, true);
   assert.equal(potentialRoleAbility(futureProspect) >= 17, true);
+  assert.equal(potentialRoleRating(futureProspect) - currentRoleRating(futureProspect) >= 1, true);
 });
 
-test("rare prodigies are possible across generated career worlds but not guaranteed", () => {
+test("opening senior generation propagates unsupported rare-prodigy placement as a typed failure", () => {
   const clubs = generateFakeClubs();
-  const generatedWithProdigy = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-0" });
-  const generatedWithoutProdigy = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-1" });
+  const forcedPlayerId = fakePlayerId(1, 1);
+  const clubContexts = Object.fromEntries(clubs.clubIds.map((clubId, index) => [
+    clubId,
+    {
+      category: "first_division",
+      reputation: 100 - index,
+      competitiveTier: index === 0
+        ? "survival"
+        : openingCompetitiveTierForClubRank(index + 1),
+    },
+  ])) as Record<ClubId, OpeningPlayerGenerationClubContext>;
 
-  assert.equal(hasArchetype(generatedWithProdigy.playerArchetypes, "rare_prodigy"), true);
-  assert.equal(hasArchetype(generatedWithoutProdigy.playerArchetypes, "rare_prodigy"), false);
+  assert.throws(
+    () => generateFakePlayersForClubs(clubs.clubIds, {
+      seed: "unsupported-opening-senior-prodigy",
+      clubContexts,
+      exceptionalAssignments: {
+        currentSixPlayerIds: [],
+        potentialSixPlayerIds: [forcedPlayerId],
+      },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof ContextualProspectJointProfileError);
+      assert.equal(error.code, "unsupported_rare_prodigy_placement");
+      assert.equal(error.context.clubTier, "survival");
+      return true;
+    },
+  );
 });
 
-test("budgeted archetypes come only from league-level rarity assignments", () => {
+test("routine league generation never creates nationally budgeted rare prodigies", () => {
+  const clubs = generateFakeClubs();
+  const first = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-0" });
+  const second = generateFakePlayersForClubs(clubs.clubIds, { seed: "wonderkid-sample-1" });
+
+  assert.equal(hasArchetype(first.playerArchetypes, "rare_prodigy"), false);
+  assert.equal(hasArchetype(second.playerArchetypes, "rare_prodigy"), false);
+});
+
+test("routine budget archetypes come only from league-level rarity assignments", () => {
   const clubs = generateFakeClubs();
   const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "rarity-budget-world" });
   const assignments = Object.values(generated.playerRarityAssignments);
@@ -182,13 +237,14 @@ test("budgeted archetypes come only from league-level rarity assignments", () =>
   for (const playerId of generated.playerIds) {
     const archetypeKey = generated.playerArchetypes[playerId];
     assert.ok(archetypeKey !== undefined);
-    if (archetypeKey === "category_star" || archetypeKey === "veteran_drop_down" || archetypeKey === "serious_prospect" || archetypeKey === "rare_prodigy") {
+    if (archetypeKey === "category_star" || archetypeKey === "veteran_drop_down" || archetypeKey === "serious_prospect") {
       assert.ok(generated.playerRarityAssignments[playerId] !== undefined, `${playerId} ${archetypeKey}`);
     }
+    assert.notEqual(archetypeKey, "rare_prodigy");
   }
 
   assert.equal((assignedArchetypeCounts.get("serious_prospect") ?? 0) >= 2, true);
-  assert.equal((assignedArchetypeCounts.get("rare_prodigy") ?? 0) <= 1, true);
+  assert.equal(assignedArchetypeCounts.has("rare_prodigy"), false);
 });
 
 test("world-level exceptional construction removes superseded division rarity metadata", () => {
@@ -217,14 +273,15 @@ test("world-level exceptional construction removes superseded division rarity me
 test("first-division top-club context creates a more international squad pool", () => {
   const clubs = generateFakeClubs();
   const clubContexts = Object.fromEntries(
-    clubs.clubIds.map((clubId) => [
+    clubs.clubIds.map((clubId, index) => [
       clubId,
       {
         category: "first_division",
         reputation: 9,
+        competitiveTier: openingCompetitiveTierForClubRank(index + 1),
       },
     ]),
-  ) as Record<ClubId, { readonly category: "first_division"; readonly reputation: 9 }>;
+  ) as Record<ClubId, OpeningPlayerGenerationClubContext>;
   const generated = generateFakePlayersForClubs(clubs.clubIds, { clubContexts });
   const identities = Object.values(generated.playerIdentities);
   const foreignCount = identities.filter((identity) => identity.nationality !== "italian").length;
@@ -361,7 +418,7 @@ function playerCurrentAbilityAverage(player: Player): number {
 
 /** Returns the generated age at the fixed career start date. */
 function generatedAge(player: Player): number {
-  return Math.floor((CAREER_START_EPOCH_DAY - Number(player.birthDate)) / 365);
+  return completedCivilYears(Number(player.birthDate), CAREER_START_EPOCH_DAY);
 }
 
 /** Returns the current weighted ability for the player's canonical role. */
@@ -374,6 +431,25 @@ function currentRoleAbility(player: Player): number {
 function potentialRoleAbility(player: Player): number {
   assert.ok(player.primaryRole !== undefined);
   return Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(player.primaryRole)));
+}
+
+/** Returns the canonical current star rating for the player's primary role. */
+function currentRoleRating(player: Player): number {
+  return ratingForRoleAbility(currentRoleAbility(player));
+}
+
+/** Returns the canonical stored-ceiling rating for the player's primary role. */
+function potentialRoleRating(player: Player): number {
+  return ratingForRoleAbility(potentialRoleAbility(player));
+}
+
+/** Converts one exact role ability through the versioned global rating scale. */
+function ratingForRoleAbility(ability: number): number {
+  let rating = 1;
+  for (const threshold of playerRatingScale.abilityThresholds) {
+    if (ability >= threshold.minimumAbilityInclusive) rating = threshold.rating;
+  }
+  return rating;
 }
 
 /** Returns whether a generated archetype lookup contains the requested key. */

@@ -32,9 +32,10 @@ steps may implement only those items and their necessary regression evidence.
 - Phase 79 Step 14 remains Reopened and paused without a release-gate claim.
 - The stopped Phase 79D `50 x 20` produced no report and remains unclaimed.
 - The deferred resumable `50 x 20` must not run in Phase 80. It belongs only
-  to Phase 80C Step 09 after Phase 80A player-model, Phase 80B market/loan, and
-  Phase 80C competitive-race reworks, using `50` stable shards and `7` workers.
-- No Phase 79 release-scale cohort, finance expansion, Phase 81 work, or
+  to Phase 81 Step 12 after Phase 80A player-model, Phase 80B market/loan,
+  Phase 80C competitive-race, and Phase 81 match-engine reworks, using `50`
+  stable shards and `7` workers.
+- No Phase 79 release-scale cohort, finance expansion, future-phase work, or
   unrelated feature starts inside Phase 80.
 
 ## Locked Architecture
@@ -75,7 +76,7 @@ steps may implement only those items and their necessary regression evidence.
   bounded rework at a time.
 - Step 08 runs the complete repository/browser gates.
 - Step 09 closes only the accepted UI rework and hands control to Phase 80A.
-- Phase 80C Step 09 owns the sole deferred checkpointed `50 x 20`; it does not
+- Phase 81 Step 12 owns the sole deferred checkpointed `50 x 20`; it does not
   replace or claim Phase 79 Step 14's release-scale gate.
 
 ## What NOT To Implement
@@ -105,6 +106,6 @@ steps may implement only those items and their necessary regression evidence.
 - `pnpm check`, web build, required Playwright QA, diff, and Graphify pass.
 - Phase 80 closes with full repository/browser evidence and a documented
   Phase 80A handoff.
-- The deferred `50 x 20` remains unrun until Phase 80C Step 09.
+- The deferred `50 x 20` remains unrun until Phase 81 Step 12.
 - Phase 79 Step 14 remains paused and unclaimed until the later truthful
-  Phase 80C handoff.
+  Phase 81 handoff.

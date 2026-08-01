@@ -60,7 +60,8 @@ export interface ContractDemandSnapshot {
   readonly evaluatedOn: GameDate;
   readonly age: number;
   readonly currentAbility: number;
-  readonly reachablePotential: number;
+  /** Public median development outcome used when these terms were derived. */
+  readonly publicPotentialP50Ability: number;
   readonly role: PlayerRole;
   readonly expectedSquadStatus: AgreedSquadStatus;
   readonly currentAnnualWage: Money;

@@ -306,7 +306,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   persisted ceiling; the public upper is a calibrated P90, not that stored
   ceiling. Focused checks, `pnpm check`, build, Playwright `29/29`, and manual
   browser QA pass. The direct `50 x 20` was stopped, produced no report, and is
-  not claimed as evidence. It is deferred to Phase 80C Step 09 with resumable
+  not claimed as evidence. It is deferred to Phase 81 Step 12 with resumable
   checkpoints, `50` stable shards, and exactly `7` workers.
   Phase 79 Step 14 remains paused and unclaimed.
 - Phase 80 graphical and structural rework is complete. All nine steps are
@@ -331,17 +331,25 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   policy exposes only `30.76%` of remaining ceiling room. That is an upstream
   model finding, not an open Step 03 defect; Phase 80A now owns the documented
   generation/projection correction.
-- Phase 80A is ready to start after Phase 80. Its nine ordered steps own
+- Phase 80A is blocked at Step 09 after Phase 80. The first canonical Step 09
+  `20 x 2` evidence plus product screenshots reopened Steps 05, 06, and 08;
+  all three owners are reclosed, and Step 07 was previously reclosed after
+  reserved promotion candidates became explicit active stock. The exact
+  `750 x 3` fresh/resume cohort is deterministic and all `32` Phase-80A-owned
+  player-model gates pass, but the report remains `FAIL` because the
+  `goals_per_match_avg` monitor has `80` high-side failing worlds. Its
+  nine ordered steps own
   dynamic club tier/reputation/environment, quarterly development from monthly
   evidence,
   one current/P50/upper assessment, contextual prospect generation, national
   exceptional stock, annual intake top-up, expected-outcome value, AI
   information parity, diagnostics, and incompatible beta-save deletion.
-  Public value will remove `marketContext`, every owner-category/free-agent
+  Public value removed `marketContext`, every owner-category/free-agent
   multiplier, and every per-context maximum in favor of one global curve/cap
   under a new calibration epoch; old Phase 79C division bands and the Phase
   79D `302 / 100 worlds` stock observation remain historical only.
-- Phase 80B is planned after Phase 80A. Its ten ordered steps own durable sale/
+- Phase 80B remains planned and cannot start while Phase 80A is blocked. Its
+  ten ordered steps own durable sale/
   loan postures, selected-club incoming offers, one final counterproposal,
   bidirectional loans, `0/50/100%` wage sharing, real loan development, Posta
   UI, persistence, bounded diagnostics, and beta reset. `Club.playerIds`
@@ -358,8 +366,16 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   owns durable competitive races with at most three active buyers, highest
   acceptable-fee qualification plus exact matches, fixed three-day club/player
   stages, serial loans, non-instant free-agent negotiation, explicit
-  qualified/`outbid`/player-choice outcomes, dedicated diagnostics, and the
-  sole deferred checkpointed `50 x 20` in Step 09.
+  qualified/`outbid`/player-choice outcomes, and dedicated diagnostics. Step 09
+  closes on bounded non-vacuous evidence, keeps checkpoint infrastructure
+  usable, and hands control to Phase 81 without running a longitudinal cohort.
+- Phase 81 is planned after Phase 80C with its design contract accepted. Its
+  twelve ordered steps keep the deterministic aggregate match engine while
+  making typed formation shape, position suitability, opponent matchup,
+  tactical instructions, causal actors, and live manager decisions materially
+  affect play. Player quality, intrinsic shape, and relational matchup remain
+  separate concepts; pre-match, live, AI, batch, and diagnostic paths share one
+  model. Step 12 alone owns the deferred checkpointed `50 x 20`.
 - Code status: monorepo skeleton, dependency-free domain core contracts, selected-lineup/tactic setup domain contracts, deterministic shared RNG/date utilities, JSON save storage boundary, executable enforcement, `pnpm cli doctor`, pure team-strength derivation, engine `buildTacticTeamContext` setup builder, serializable match context/config contracts, deterministic one-minute match stepping with structured shot context, complete current derived player match stats, engine-local deterministic `ChanceActors` selection for creator/shooter/primary defender/goalkeeper, and `stepMatch` attribution wired through one coherent chance actor set, batch full-match simulation, explicit `ManualTacticChangeSchedule` contract over already-built `MatchTeamContext`s, segmented fixture simulation via `simulateMatchWithManualTactics`, optional `simulateSeason.fitnessLifecycle` spend/recovery with returned `finalPlayerStates`, `simulateSeason` selected setup overrides and fixture lineup overrides, in-memory permanent-transfer market contracts, deterministic true-data player valuation, player willingness, transfer feasibility/apply preview, durable `CareerState`, JSON career save/load, persistent accepted permanent-transfer application, pure engine `findNextCareerFixture` and `progressNextCareerFixture`, pure engine `developPlayersForSeason` growth/decline with bounded potential realization, deterministic country-specific city-based fictional club naming patterns in content while preserving stable `club:` IDs, `pnpm cli career --save=<saveId> --apply-market-demo=<profile>`, `pnpm cli career --save=<saveId> --inspect`, `pnpm cli career --save=<saveId> --summary`, `pnpm cli career --save=<saveId> --advance-next-fixture`, `pnpm cli career --save=<saveId> --development-report`, durable domain match reports with schema version `7`, scorer IDs, optional assist IDs, optional non-duplicated goal creator IDs, goalkeeper save IDs, shooter IDs for generated non-goal shot events, block primary defender IDs, and structured shot context on goal/shot events, deterministic double round-robin calendar generation, copy-on-write fixture result application, deterministic derived league-table computation, season player goal and summary aggregation, fake deterministic content with generated fictional player identities, expanded nationality metadata, default 11-player lineups plus reserve players, division/tier player generation bands, role-based attribute templates, player archetypes with potential classes, rarity budgets for lower-division exceptions, `pnpm cli simulate-season --seed=demo-001` with real top scorer, top assist, and top goalkeeper-save output, optional round fixture detail, clean `--fixture=<fixtureId>` structured match detail with all-starter player stats plus compact causal `creator=` and `defender=` fields, `--identity-review` generated player identity inspection, `--player-generation-report` generated player quality inspection, `--setup-demo=pro01-balanced|pro01-attacking|pro01-defensive` CLI inspection that applies deterministic PRO01 selected lineup/tactic overrides through `simulateSeason.setupOverrides`, `--manual-tactic-switch=<minute>:<profile>` fixture inspection that applies a user-declared manual tactic switch only when the selected club is playing the requested fixture, `--condition-demo=pro01-season` season inspection for deterministic PRO01 fitness consequences, `--fixture=<fixtureId> --lineup-demo=pro01-first-team|pro01-rotated` manual lineup inspection, and localized `--market-demo=pro01-affordable-permanent|pro01-star-rejected` permanent-transfer inspection; `pnpm cli balance-report --seed-prefix=balance-demo --seasons=3` exists and balance report includes explicit table points spread.
 - Runtime: Node `v24.16.0` from `.nvmrc`.
 - First command milestone: `pnpm cli doctor`.
@@ -370,13 +386,11 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current Active Step
 
 - Step:
-  `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
-  Step 01, which is the only next action.
-- Status: Phase 80 is complete. All nine of its steps are Done and its
-  repository/browser closeout is green. No Phase 80 longitudinal cohort ran.
-  Phase 79 Step 14 remains
-  Reopened and paused through Phase 80C; Phase 79 Steps 01-13 remain Done and
-  Step 15 is not started.
+  `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/09-non-vacuous-diagnostics-beta-reset-and-phase-closeout.md`.
+- Status: Blocked. Phase 80A Steps 05, 06, and 08 are Done after reopening.
+  Step 09 completed the exact fresh/resume cohort but cannot close while its
+  frozen report is `FAIL`. Phase 79 Step 14 remains Reopened and paused through
+  Phase 81; the deferred `50 x 20` has not run.
 - Planned-phase architecture reviewed on 2026-07-30 after direct product review
   and an implementation audit. No production code changed; the Phase 80A/80B
   contracts and step documents were corrected. Phase 80C's six product
@@ -426,24 +440,572 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
     exhaustive guards before `outbid` or `lost_to_rival` exists.
     `projectTransferNegotiation` is the known silent-fallthrough example, but
     storage, UI, AI, CLI, and diagnostic mappings require the same audit.
-  - The deferred checkpointed `50 x 20` moved from Phase 80B Step 10 to Phase
-    80C Step 09, so the cohort observes the final competitive market instead of
-    one about to change. Phase 80B keeps the shard/checkpoint/worker
-    infrastructure working and bounded-exercised.
-- Adopted solution: close Phase 80 after all five accepted reworks, integrated
-  repository/browser evidence, absence checks, and a truthful handoff. Keep the
-  prospect-generation correction in Phase 80A and the longitudinal cohort in
-  Phase 80C Step 09.
-- Verification: Phase 80 Steps 01-09 are Done. On Node `24.16.0`, `pnpm check`
-  passed (`1,606` tests / `256` files), dependency-cruiser passed (`769`
-  modules / `2,966` dependencies), the web build passed, Playwright passed
-  `34/34`, and `git diff --check` plus Graphify passed.
-- Blocker: none. The prospect-model mismatch has a documented owner in Phase
-  80A.
-- Lesson learned: presentation findings that reveal canonical model defects
-  must become later engine/content work, not hidden React corrections.
-- Next action: execute only Phase 80A Step 01. Do not start Phase 80B/80C early
-  and do not run the deferred `50 x 20`.
+  - The deferred checkpointed `50 x 20` now belongs to Phase 81 Step 12, so the
+    cohort observes the final accepted player, market, and match model instead
+    of one about to change. Phases 80B and 80C keep the
+    shard/checkpoint/worker infrastructure working and bounded-exercised.
+- Adopted solution: one ceiling-first joint owner now selects the frozen
+  half-star outcome and a feasible within-rating quantile before constructing
+  current ability. Explicit age-15-to-20 prospects retain at least one stored
+  star of room; routine players may plateau; four generation roots share the
+  same semantic constraints; the factory validates without repair; and the
+  legacy current-first/facade APIs are removed. Keep potential class separate from current quality through
+  speaking archetype profiles, weight the Third Division `interesting` upper
+  edge explicitly, and adjust only role-defining senior generation bands. The
+  canonical opening shares are now inside all three frozen ranges without
+  weakening thresholds. Preserve the immutable `4..5` per-world target and model
+  unresolved promotion candidates as an explicit club-associated active-stock
+  source instead of weakening the no-inflation gate. Exhaustive engine,
+  content, CLI, and diagnostic mappings prevent that transitional source from
+  masquerading as academy or senior ownership. Step 08 makes one
+  date-stamped public assessment the only
+  live current/P50/upper input for intrinsic value, willingness, contract
+  demand, AI ranking, CLI, and browser adapters. The global valuation-v5 model
+  fully prices current quality, prices bounded current-to-P50 participation,
+  gives P50-to-upper a smaller positive option value, and retains one rare
+  eligibility-gated `€150m` cap; asking price and exact zero free-agent fee
+  remain separate.
+  `marketContext`, owner/employment multipliers, per-context caps, duplicate
+  market-ability derivation, durable reachable-potential aliases, and every
+  named live AI stored-ceiling read were removed. Versioned AI risk appetite
+  now ranks the same public ranges shown to the manager.
+- Verification: Node `24.16.0`; the reclosed Step 06 required Vitest passes
+  `185/185` across `14` files without increasing a timeout. Its exhaustive
+  joint-policy matrix exercises both feasible interval boundaries for every
+  supported age/division/tier/role/class/half-star configuration, and all four
+  root propagation tests are green. The
+  opening `3.5+` shares are First `421/2,144`, Second `252/2,176`, and Third
+  `130/2,095`, both owning typechecks pass, and its senior-continuum guards are
+  green. The earlier Step 07 regression proves a reserved
+  ceiling-six promotion candidate yields `active == target`, vacancy `0`, and
+  no generated replacement. The bounded `2 x 2` evidence reports all five
+  stock gates at zero violations with positive vacancy evidence `1 / 1`.
+  The full mandatory invocation passed `272` unaffected tests and exposed only
+  its invalid small-sample exit-code expectation; that corrected case then
+  passed in isolation. All seven package typechecks, `git diff --check`, and
+  `graphify update .` pass. The second Step 07 reopen now binds placement and
+  uniqueness to opening/allocation arrivals instead of later transfers; its
+  full mandatory suite passes `279/279` across `23` files, all seven
+  typechecks pass, and schema-v3 checkpoints plus aggregation reject malformed,
+  partial, or unequal gate sets. Step 08 now passes `291/291` mandatory tests
+  across `24` files after replacing valuation-v4 with the monotonic v5 tranche
+  model and calibrating only global curve anchors against a recorded failure.
+  Its final `20 x 2` bounded evidence has zero owned economy violations,
+  `75,210` positive public-ordering observations, `188` stored-six value
+  observations, and passing division-value bands. All seven typechecks and
+  dependency cruise (`782` modules / `3,100` dependencies) pass. Step 09
+  diagnostics remain non-tautological and
+  their focused simulation-tools suite passes `21/21`. Earlier Step 08
+  verification remains:
+  expensive report coverage is exhaustive through
+  `20` unaffected passes plus the focused corrected deterministic assertion;
+  the remaining mandatory suite passes `201/201` across `19` files and
+  additional touched-owner coverage passes `101/101` across `11` files. Seven
+  package typechecks, dependency cruise (`782` modules / `3,077`
+  dependencies), structural absence scans, `git diff --check`, and
+  `graphify update .` pass. Step 09's fresh run simulated `750` worlds with
+  `0` resumed; the replay resumed all `750` with `0` simulated. Both used
+  exactly `7` workers and produced aggregate hash
+  `a09c10cb2b678140a2de7c4a226faac370c2a73b3e0d143dd9e35859f51f4a03`.
+  All `32` player-model gates pass with no structural violations. The overall
+  report remains `FAIL` only because `goals_per_match_avg` records
+  `36/634/80` pass/warn/fail worlds.
+- Blocker: match scoring is outside Step 09's owned player-model scope, while
+  the frozen anomaly contract requires a `monitor` failure to retain its raw
+  severity. The step forbids weakening thresholds, changing denominators, or
+  suppressing the result. Phase 80B cannot start until ownership/acceptance is
+  decided explicitly.
+- Lesson learned: potential rarity, current quality, and intrinsic value need
+  separate speaking owners; changing the value curve cannot repair a malformed
+  generated population. A canonical stock selector cannot omit a transitional player
+  who is temporarily outside both academy and senior registration when a
+  same-rollover allocator uses that selector to decide whether a vacancy
+  exists. Separately, sharing a projection type is insufficient if consumers
+  rederive it independently or choose policy metadata locally. A dated public
+  assessment must be passed through the whole commercial decision, and absence
+  tests must scan the named live owners so stored-ceiling privilege cannot
+  return behind a harmless-looking helper. Checkpoint hashes prove byte
+  integrity, not semantic completeness; resumable gate payloads also need
+  typed shape validation and identical gate-key sets across worlds. The large
+  cohort also shows that most youth plateau because they receive zero minutes,
+  not because the quarterly development transition lacks room; population
+  opportunity and development policy must stay separately measurable.
+- Next action: make one explicit product/phase-order decision: add a narrow
+  match-goal remediation before closeout, or formally carry the unchanged raw
+  monitor failure to a named future match-engine owner. Do not start Phase
+  80B/80C/81 or run the deferred `50 x 20` meanwhile.
+
+### 2026-08-01 — Phase 80A Step 09 exact `750 x 3` blocked closeout
+
+- Status: Blocked. Implementation, fresh execution, and deterministic resume
+  are complete; the Phase 80B handoff is not.
+- Adopted solution: retain one compact schema-4 player-development summary per
+  one-world shard; simulate all three domestic competitions with canonical
+  participation; preserve exact current/P50/upper/stored-ceiling concepts;
+  keep raw anomaly status separate from semantic classification; and repair
+  the world-21 greedy-XI dead end with a private feasibility guard rather than
+  Phase 81's future global optimizer.
+- Verification: fresh `750` simulated / `0` resumed and replay `0` simulated /
+  `750` resumed, exactly `7` workers, identical ordered shard hashes and final
+  aggregate hash
+  `a09c10cb2b678140a2de7c4a226faac370c2a73b3e0d143dd9e35859f51f4a03`.
+  All `32` non-vacuous player-model gates pass; stored-ceiling breaches are
+  `0 / 2,949,467`; young ceiling-six cap breaches are `0 / 6,728`; structural
+  violation examples are empty. Opening age-15-to-17 current-three/public-
+  upper-six players have `1,577` observations valued at
+  `EUR 13.76m..28.77m`, so the reported `EUR 1.4m` pattern is not reproduced.
+- Blocker: `goals_per_match_avg` is `36/634/80` pass/warn/fail across worlds,
+  with all `80` failures high. Its predeclared `monitor` class keeps FAIL
+  severity. Match scoring is outside this step, and the contract forbids
+  result-driven threshold or semantic changes. Required post-report repository/
+  browser closeout checks are therefore not claimed as phase-completion
+  evidence; `git diff --check` and the mandatory Graphify refresh remain green
+  as housekeeping only.
+- Lesson learned: deterministic checkpoint reuse proves evidence integrity,
+  not product acceptance. The cohort separately reveals aggressive visible
+  narrowing at age 21-23 and youth plateaus dominated by zero minutes; neither
+  may be hidden by a new result-derived threshold.
+- Next action: obtain the explicit ownership decision above, keep Phase 80A
+  blocked, and do not begin Phase 80B or the `50 x 20`.
+
+### 2026-08-01 — Phase 80A Step 08 monotonic expected-outcome value reclosed
+
+- Status: Done. Step 09 is active; Phase 79 Step 14 remains paused and the
+  deferred `50 x 20` remains unrun.
+- Adopted solution: fully price current quality, price `50%` of the
+  current-to-P50 tranche, and price `10%` of the P50-to-upper tranche. Remove
+  the global uncertainty haircut and `marketContext`; keep buyer risk,
+  asking-price policy, and free-agent fee separate. After a recorded failing
+  output diagnostic and a disproved P50-weight hypothesis, calibrate only the
+  global `3.5`- and `4`-star anchors to `EUR 2.2m` and `EUR 22m`.
+- Verification: mandatory Vitest `291/291` across `24` files; seven package
+  typechecks; dependency cruise `782` modules / `3,100` dependencies; clean
+  production absence scans and diff. Fresh `20 x 2` bounded evidence reports
+  zero owned economy violations, `75,210` public-order observations with zero
+  failures, `188` stored-six value observations with zero failures, and all
+  three frozen division-value bands passing.
+- Blocker: none.
+- Lesson learned: the First Division median was dominated by achieved-quality
+  anchors, because mature median players had almost no current-to-P50 room.
+  Increasing a prospect tranche could not repair that population-level
+  failure; component attribution must precede calibration.
+- Next action: run Step 09's exact `750 x 3` / `750` one-world-shard gate with
+  exactly `7` workers, then prove a second identical run creates zero worlds.
+
+### 2026-08-01 — Phase 80A Step 06 ceiling-first joint profile reclosed
+
+- Status: Done. Step 08 is the only active Phase 80A step; Step 09 remains
+  paused.
+- Adopted solution: choose the contextual half-star ceiling and one internal
+  quantile once, derive the exact reachable interval from gap, guardrail, role
+  template, and family-growth caps, then construct current and potential from
+  that fixed target. Every explicit prospect aged `15..20` has at least one
+  stored star of opportunity; routine youth may still plateau. Opening senior,
+  opening academy, seasonal academy, and annual career intake roots share the
+  same owner and semantic ceiling constraints.
+- Verification: required Vitest `14` files / `185` tests passed in `77.32s`;
+  `@game/content` and `@game/cli` typechecks, focused ESLint, and diff checks
+  passed. Frozen `3.5+` shares remain `421/2,144`, `252/2,176`, and
+  `130/2,095`; exceptional stock remains green. The focused core runs in
+  `5.67s` after eliminating duplicate searches, with no timeout increase.
+- Blocker: none.
+- Lesson learned: freezing rating counts is not enough if the exact ability
+  inside a half-star can become unreachable. Preserve the authored rating and
+  its quantile, but bound exact materialization before current generation;
+  never hide the conflict with a retry, clamp, or fixed threshold. A factory
+  validation boundary must reject producer bugs rather than rewrite them.
+- Next action: execute reopened Step 08 only. Do not resume Step 09, run
+  `750 x 3`, start Phase 80B/80C/81, or run the deferred `50 x 20` yet.
+
+### 2026-08-01 — Phase 80A young-player model reopened from product evidence
+
+- Status: Step 05 Reopened and active; Steps 06 and 08 Reopened and blocked by
+  their documented predecessors; Step 09 paused.
+- Adopted solution: preserve full public upper through age 20, calibrate every
+  later completed age by role family from the deterministic outcome matrix,
+  generate explicit age-15-to-20 prospect lanes ceiling-first with at least one
+  stored star of opportunity, and replace the global uncertainty haircut with
+  monotonic current/P50/upper value tranches. Routine youth may still plateau;
+  stored room is not promised growth.
+- Verification: renderer inspection confirms the UI is faithful; opening-stock
+  evidence separates generation, projection, and star quantization; paired
+  valuation counterfactuals prove that v4 can reduce value when upper rises.
+  The deterministic matrix also exposed seven retroactive January-to-July
+  rows before its 1 August opening birthday; the month alignment must be fixed
+  before exact-age factors are frozen. Documentation freezes the correction
+  before production changes.
+- Blocker: none inside the active Step 05 scope.
+- Lesson learned: a renderer cannot invent missing model room, a public
+  projection cannot use one coarse post-20 age band, and uncertainty must not
+  be charged both as an intrinsic-value haircut and as AI risk appetite.
+- Next action: implement and verify Step 05 only. The first full calibration
+  after Steps 05/06/08 is the dedicated compact `750 x 3` audit with exactly
+  `7` workers; the first plateau rates are descriptive unless pre-frozen.
+
+### 2026-08-01 — Phase 80A Step 05 exact-age projection rework
+
+- Status: Done after reopening.
+- Outcome: Replaced the coarse post-20 projection policy with `24` explicit
+  role-family/age bands backed by `1,620` deterministic development outcomes;
+  the public upper remains full through age 20 and reaches current at the
+  accepted role-family terminal age.
+- Adopted solution: process each calibration career from August through July,
+  use five distinct outfield templates in a measured `2 defender / 2
+  midfielder / 1 attacker` mix, keep P50 as an independently observed median,
+  and enforce adjacent-age narrowing only on the complete current-to-upper
+  envelope. Production stamps are `player-rating-scale-v7` and
+  `player-potential-projection-v4`; valuation remains v4 until Step 08.
+- Verification: Node `24.16.0`; matrix `24` bands / `1,620` observations / `65`
+  above-public-upper outcomes (`401` bp), with zero missing bands, ordering,
+  non-widening, or stored-ceiling violations. Required focused suites pass:
+  domain/engine `19/19`, remaining mandatory files `169/169`, and full CLI
+  report `25/25` in `509.40s`; all seven package typechecks were green across
+  the implementation, focused ESLint, `git diff --check`, and
+  `graphify update .` pass.
+- Blocker: none.
+- Lesson learned: percentile P50 and P90 facts must not acquire an
+  undocumented shared smoothing rule, and a representative diagnostic must
+  assert the source templates actually consumed rather than self-reported
+  fixture labels. Step 06 must choose ceiling first and bound current from both
+  sides: preserve the one-star gap while keeping that ceiling mechanically
+  reachable under age/role growth caps.
+- Next action: execute reopened Step 06 only. Do not start Step 08 or resume
+  Step 09 until the joint generation owner is green.
+
+### 2026-08-01 — Phase 80A Step 08 re-verification complete
+
+- Status: Done; Step 09 resumed and active.
+- Adopted solution: retain valuation-v4, update only the intentional canonical
+  identity snapshot, and route AI squad prospect rotation through exact-date
+  public assessments instead of stored potential or approximate age.
+- Verification: Node `24.16.0`; mandatory Vitest `20` files / `232` tests;
+  added AI owner coverage `3` files / `46` tests; seven package typechecks;
+  depcruise `782` / `3,085`; focused ESLint; absence scans; diff; Graphify.
+- Blocker: none inside Step 08.
+- Lesson learned: information parity must cover every live AI decision owner,
+  not only market targeting; a safe public type is useful only when the caller
+  must supply it and its assessment date is validated.
+- Next action: execute Step 09 only with fresh schema-v3 checkpoints.
+
+### 2026-08-01 — Phase 80A Step 07 second reopen complete
+
+- Status: Done; Step 08 active and Step 09 still paused.
+- Adopted solution: keep current placement/concentration descriptive and bind
+  generation truth to opening allocation plus new stock arrivals. Preserve the
+  immutable national target and allow ordinary later transfers.
+- Verification: Node `24.16.0`; mandatory Vitest `23` files / `279` tests;
+  seven package typechecks; focused ESLint; diff; Graphify; independent review
+  with no blocker.
+- Blocker: none inside Step 07.
+- Lesson learned: resumable evidence needs both content hashes and an explicit
+  semantic contract; otherwise stale shards can contribute partial
+  denominators while remaining internally hash-valid.
+- Next action: execute reopened Step 08 only.
+
+### 2026-08-01 — Phase 80A Step 06 evidence-driven rework complete
+
+- Status: Done; Step 07 active and Step 09 still paused.
+- Outcome: the generator now separates senior current-quality profiles from
+  potential class, preserves world-budgeted champions, restores the First
+  Division `4.5`/`5` continuum, and makes the Third Division `interesting`
+  `3.5` edge uncommon rather than routine.
+- Adopted solution: apply named, pre-sampling core/secondary adjustments only
+  to senior generated ability; leave youth, off-role caps, value, transfer
+  context, and the frozen cohort untouched.
+- Verification: Node `24.16.0`; required Vitest `13` files / `163` tests;
+  content and CLI typechecks; canonical opening shares First `19.64%`, Second
+  `11.58%`, Third `6.21%`; diff and Graphify pass.
+- Blocker: none inside Step 06.
+- Lesson learned: ceiling frequency and current-quality continuity require
+  different deterministic policies even when they share an archetype label.
+- Next action: execute reopened Step 07 only.
+
+### 2026-08-01 — Phase 80A first canonical `20 x 2` evidence
+
+- Status: FAIL; Steps 06-08 reopened, Step 06 active, Step 09 paused.
+- Adopted solution: preserve the failed evidence and repair its actual owners
+  instead of weakening a band. Step 06 owns the Third Division prospect-share
+  overshoot and malformed senior quality continuum; Step 07 owns allocation-
+  arrival rather than lifelong-registration stock gates; Step 08 owns the
+  context-free global curve after the population repair.
+- Verification: exact seed prefix `phase80a-prechange-baseline`, worlds `20`,
+  seasons `2`, shards `20`, workers `7`, resumed shards `0`. Positive model
+  evidence included `25,753` closing value observations, `3,244` Third
+  Division young observations, `60` stock snapshots, `40` stock transitions,
+  `75,210` public-ordering observations, `687` completed free-agent movements,
+  and positive AI/value-invariance/cap cohorts.
+- Blocker evidence: Third Division `3.5+` share was `275 / 3,244` (`8.48%`);
+  closing value fit failed First median/P90/P99, Second maximum, and Third
+  P90/maximum. Stock placement/uniqueness failures traced to ordinary
+  transfers, not allocation. One world had a two-season table-spread story
+  outlier while the 20-world average was `36.17`.
+- Lesson learned: a generation gate must measure the moment generation owns,
+  and a category-free intrinsic value curve still requires a continuous,
+  category-authored football-quality population. Story variance over two
+  seasons cannot silently become a structural per-world failure.
+- Next action: execute the reopened Step 06 only.
+
+### 2026-08-01 — Phase 80A Step 07 reclosed and Step 09 resumed
+
+- Status: Step 07 Done again; Step 09 active.
+- Adopted solution: added explicit `promotion_candidate` stock identity with a
+  club association for allocation only, kept ownership/academy registration
+  unchanged, and made every current source mapping exhaustive.
+- Verification: the real ceiling-six reservation regression produces zero
+  vacancy/allocation; bounded `2 x 2` stock gates have zero violations and
+  positive replacement evidence; all seven typechecks, diff, and Graphify
+  pass. The underpowered `2 x 2` command still fails honestly on one hard-cap
+  denominator and the closing division cohort, which are owned by `20 x 2`.
+- Blocker: none.
+- Lesson learned: unit-size multi-world reports must verify deterministic,
+  positive evidence without claiming that a two-world sample proves cohort
+  calibration. Transitional stock must be named explicitly and counted before
+  any allocator that can manufacture a replacement.
+- Next action: execute the one canonical Step 09 `20 x 2` with `7` workers.
+
+### 2026-08-01 — Phase 80A Step 07 reopened by Step 09
+
+- Status: Reopened; Step 09 paused.
+- Adopted solution: keep the immutable world target and include unresolved
+  promotion candidates in the same incoming-season active stock used by the
+  national annual allocator.
+- Verification: the non-vacuous diagnostic observed `5/5 -> 5/5 -> 6/5` in
+  `phase31-test-world-00002`; all five incumbents were retained, zero departed,
+  and one ceiling-six intake arrived. Value-invariance, AI-parity, and real
+  free-agent gates were already green and did not cause this failure.
+- Blocker: Step 09 remains paused until the owner regression and Step 07 checks
+  pass.
+- Lesson learned: unresolved promotion state is active national stock even
+  while it is temporarily absent from academy and senior registration arrays.
+- Next action: correct Step 07 only, rerun its focused checks, and return to
+  Step 09 without changing thresholds or seeds.
+
+### 2026-07-31 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/01-reproducible-baseline-and-calibration-contract.md`
+
+- Status: Done.
+- Outcome: froze a replayable 20-world pre-change model baseline with stable
+  seeds and hashes, explicit rating concepts, positive denominators, complete
+  owner inventories, and predeclared Phase 80A calibration bands.
+- Adopted solution: keep the old `11 / 1,710` number as historical evidence
+  because its seeds and hashes were never retained; use the canonical
+  `11 / 1,723` reproduction for every later pre/post comparison. That baseline
+  records the then-live `365.2425`-day convention; Step 05 supersedes live age
+  bucketing with exact completed civil years without rewriting history.
+- Verification: Vitest `26/26`; `@game/simulation-tools` and `@game/cli`
+  typechecks; `git diff --check`; `graphify update .`; no `50 x 20`.
+- Next action: execute Step 02 and add the season-frozen dynamic club tier plus
+  bounded current reputation, without implementing the development environment.
+- Blocker: none.
+- Lesson learned: a historical aggregate without retained seeds and hashes is
+  useful context but cannot be promoted into a reproducible acceptance gate.
+
+### 2026-07-31 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/02-dynamic-club-tier-reputation-and-season-freeze.md`
+
+- Status: Done.
+- Outcome: every active club now has one durable competitive tier frozen for
+  the active season; the canonical season boundary recalculates exact `4/4/6/4`
+  division buckets from a balanced XI/useful-bench roster signal plus the
+  completed national-pyramid result, then moves current reputation by at most
+  two points.
+- Adopted solution: `club-competitive-tier-v1` is a complete season-stamped
+  domain snapshot. Promotion/relegation is applied before clubs are ranked in
+  their new division; incomplete report-only divisions carry forward as a
+  whole with explicit facts. Calendar, club reputation, and the new tier
+  snapshot commit atomically. Fresh CLI/web careers use one engine constructor;
+  persisted JSON v9 and SQLite v18 require the slice and delete incompatible
+  beta saves instead of bootstrapping or migrating them.
+- Verification: focused Vitest `74/74`; domain, content, engine, storage, CLI,
+  and web typechecks; dependency cruise `773` modules / `2,982` dependencies;
+  `git diff --check`; `graphify update .`; no `50 x 20`.
+- Next action: execute Step 03 only and derive the seven-state development
+  environment from the frozen category/tier facts.
+- Blocker: none.
+- Lesson learned: a report refresh with incomplete competition evidence must
+  carry the entire division forward; mixing one observed table with invented
+  rows would make the tier result look precise while changing sporting truth.
+
+### 2026-07-31 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/03-seven-state-development-environment-and-public-label.md`
+
+- Status: Done.
+- Outcome: every active club now derives one frozen-season development
+  environment from its current category and Step 02 competitive tier through
+  the accepted seven-state matrix.
+- Adopted solution: the strict `player-development-environment-v1` content
+  policy owns all twelve cells and integer basis-point multipliers. Careers
+  stamp only its version; the derived environment is frozen in memory and is
+  never persisted as a second fact or history. Dashboard and CLI receive only
+  an exhaustive localization key, never the multiplier. JSON v10 and SQLite
+  v19 delete incompatible beta saves.
+- Verification: focused Vitest `158/158` after one intentional identity-hash
+  update; domain, content, engine, storage, UI, i18n, CLI, and web typechecks;
+  storage `29/29`; desktop/narrow browser assertions; `git diff --check`; and
+  `graphify update .`. No development/intake behavior and no `50 x 20` ran.
+- Next action: execute Step 04 only and process the existing monthly evidence
+  ledger through deterministic quarterly checkpoints plus a rollover residual
+  flush.
+- Blocker: none.
+- Lesson learned: a derived public state still needs its own durable policy
+  stamp. Reusing the competitive-tier version would make reload semantics
+  silently depend on whichever environment matrix happens to ship later.
+
+### 2026-07-31 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/04-quarterly-development-with-monthly-evidence.md`
+
+- Status: Done.
+- Outcome: canonical monthly participation now advances player development in
+  batches of three complete months, while season rollover flushes the final
+  one or two months exactly once.
+- Adopted solution: the monthly ledger and its closed-month keys remain the
+  only checkpoint truth. Each row owns minute-weighted club provenance, so a
+  transfer cannot retroactively change the environment earned by prior
+  minutes. Development uses exact month-end age, reload-stable
+  player/season/month variance, cumulative same-season role evidence, and the
+  environment multiplier only on positive growth; permanent realization and
+  the duplicate youth-development route were removed. JSON v11 and SQLite v20
+  intentionally reject incompatible beta saves.
+- Verification: focused Vitest `110/110`; domain, engine, storage, CLI, and web
+  typechecks; dependency cruise `778` modules / `3,006` dependencies;
+  `git diff --check`; `graphify update .`; no `50 x 20`.
+- Next action: execute Step 05 only and establish the single age-aware
+  current/P50/public-upper assessment without changing generation or value
+  coefficients.
+- Blocker: none.
+- Lesson learned: development evidence must retain the club that earned each
+  minute; looking up a player's current owner at checkpoint time silently
+  rewrites the sporting meaning of pre-transfer participation.
+
+### 2026-07-31 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/05-age-aware-p50-upper-and-shared-public-assessment.md`
+
+- Status: Done.
+- Outcome: one canonical public assessment now derives exact-civil-age current,
+  statistical P50, and reachable upper ability/rating facts for UI, sorting,
+  and intrinsic value without exposing stored ceiling.
+- Adopted solution: calibrate eleven goalkeeper/outfield age bands from a
+  deterministic `1,620`-observation matrix (`324` cells, five streams each),
+  keep full upper through age 20, narrow the complete current-to-upper envelope
+  by age, and converge to current at 28+ outfield / 32+ goalkeeper. The
+  six-slot renderer distinguishes achieved, probable, and uncertain upside.
+- Verification: mandatory focused Vitest `201/201`, including the full CLI
+  report file `19/19`; seven package typechecks; Playwright current-product
+  proof `1/1`; matrix `11/11` bands with positive evidence, zero ordering,
+  non-widening, and ceiling violations; `82/1,620` above-upper outcomes retained
+  as neutral percentile evidence.
+- Next action: execute Step 06 and change only contextual prospect current and
+  ceiling generation.
+- Blocker: none.
+- Lesson learned: completed age must use the exact civil birthday. Historical
+  baselines belong to their recorded checkout; live functions that recompute
+  old evidence with new code are false evidence and were removed instead of
+  retained as compatibility paths. Step 08 now explicitly owns every remaining
+  willingness/contract/AI/CLI stored-ceiling leak.
+
+### 2026-07-31 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/06-contextual-prospect-current-and-ceiling-generation.md`
+
+- Status: Done.
+- Outcome: opening senior and academy generation now produces joint
+  current/ceiling profiles from age, category, exact competitive tier, role,
+  and prospect class, while ordinary youth remain the majority.
+- Adopted solution: the accepted three-division interesting/serious/rare
+  ceiling matrix and age-15-to-20 rare-current guardrails are constructive and
+  deterministic. Potential-only exceptional assignments no longer force an
+  exceptional current lane; exact Gregorian birthdays preserve requested civil
+  age; both senior and academy natural ceiling-six excess can be reconstructed
+  below the national cap without rejection sampling.
+- Verification: mandatory Vitest `159/159`; content and CLI typechecks;
+  `git diff --check`; `graphify update .`. The `100`-world stock reconciliation
+  is green, and positive-denominator young-senior ceiling-`3.5+` shares are
+  `18.36%` Serie A, `10.40%` Serie B, and `7.44%` Serie C.
+- Next action: execute Step 07 and make one national owner sustain initial and
+  annual exceptional stock without inflation.
+- Blocker: none.
+- Lesson learned: opening-academy generation is part of the same national
+  rarity system as senior generation; a reconstruction path limited to seniors
+  cannot truthfully enforce a country-wide ceiling.
+
+### 2026-08-01 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/07-national-exceptional-stock-and-annual-youth-intake.md`
+
+- Status: Done.
+- Outcome: one national composition owner now sustains the world-specific
+  young stored-six target and established current-six stock across initial
+  generation and annual intake.
+- Adopted solution: a canonical active-stock selector classifies senior,
+  academy, free-agent, and loan-aware players without historical or reserved
+  rows. The national allocator preserves one immutable target of `4` or `5`
+  age-15-to-20 stored-six players, `2..3` established current-six players,
+  first-division placement, one-per-club ownership, and deterministic
+  multi-vacancy refill. Exact civil dates align age-out and incoming intake.
+- Verification: mandatory Vitest `264/264` across `23` files; domain, shared,
+  content, engine, simulation-tools, i18n, and CLI typechecks; diff and
+  Graphify all pass on Node `24.16.0`. No longitudinal cohort ran.
+- Blocker: none.
+- Lesson learned: stock replacement is non-vacuous only when every transition
+  has a truthful local result and the bounded cohort separately proves at
+  least one real vacancy and completed refill. A deterministic exact target
+  must not be weakened into a global interval at diagnostic time.
+- Next action: execute Step 08 only; remove valuation context and live AI
+  ceiling access before the bounded Step 09 closeout.
+
+### 2026-08-01 — `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/08-expected-outcome-value-and-ai-information-parity.md`
+
+- Status: Done.
+- Outcome: one date-stamped public assessment now owns intrinsic value,
+  willingness, contract demand, AI ranking, and the CLI/browser projections;
+  manager and AI no longer receive different potential information.
+- Adopted solution: price public P50 on one global nonlinear curve and use the
+  P50-to-upper width only as uncertainty discount. Keep one rare current-six,
+  age-qualified `€150m` cap; keep asking price and exact zero free-agent fee as
+  separate facts. Delete `marketContext`, context multipliers/caps, duplicate
+  market ability, and the durable reachable-potential alias. Versioned AI risk
+  appetite consumes only the same public assessment and club need/budget.
+- Verification: Node `24.16.0`; the report file's `20` unaffected tests plus
+  its corrected deterministic outcome pass, the remaining mandatory suite is
+  `201/201` across `19` files, and touched-owner coverage is `101/101` across
+  `11` files. Seven package typechecks, depcruise `782/3,077`, live-owner
+  absence scans, diff, and Graphify pass. No `50 x 20` ran.
+- Blocker: none.
+- Lesson learned: passing one dated public assessment through a complete
+  commercial operation prevents both policy drift and hidden re-derivation;
+  type-level parity needs owner-specific absence tests to stay enforceable.
+- Next action: execute Step 09 only: bounded positive-denominator diagnostics,
+  clean beta reset, full gates, report, and Phase 80B handoff.
+
+### 2026-07-31 — Phase 81 tactical-shape contract and ordered steps
+
+- Status: Documented; implementation not started. The active step remains Phase
+  80A Step 07.
+- Outcome: Phase 81 now has one accepted design contract, a README, and twelve
+  ordered implementation steps for a phase-aware tactical-shape and manager-
+  decision engine.
+- Adopted solution: preserve the deterministic aggregate match engine, but
+  replace the current four-department information collapse with typed tactical
+  slot facts; keep player quality, intrinsic team shape, and relational
+  opponent matchup separate; add diminishing returns, suitability-aware
+  coordination, phase routes, shared tactic semantics, causal actor selection,
+  AI parity, live-session persistence, structured UI consequences, and
+  non-vacuous diagnostics.
+- Review amendment: Steps 03-05 are explicitly headless structural milestones
+  and cannot claim the gameplay defect fixed. Step 01 freezes numeric
+  paired-seed bands for equal, modest-gap, and First-title-versus-Third-midtable
+  quality scenarios from the post-80A generated world. Step 06 is the first
+  end-to-end gameplay gate; Step 12 only monitors that already-passing
+  quality-versus-structure hierarchy. Step 09 must re-prove the matrix after
+  canonical AI XI selection; a valid-selection hierarchy regression reopens
+  Step 06, while an assignment defect reopens Step 09.
+- Code quality: every step requires football-specific names, narrow pure
+  modules, exhaustive typed unions, removal of obsolete local paths, and an
+  in-scope refactor when touched dead or unclear code would otherwise be
+  preserved. Generic helper/manager/processor modules, compatibility leftovers,
+  and duplicate formulas are forbidden.
+- Cohort ownership: Phase 80C Step 09 now closes only on bounded evidence.
+  Phase 81 Step 12 alone runs and replays the deferred `50 x 20` with `50`
+  stable shards and exactly `7` workers before the Phase 79 handoff.
+- Roadmap alignment: the former advanced-pyramid Phase 81 reservation moves to
+  Phase 82; the former youth/staff/facilities Phase 82 moves to Phase 83; the
+  former narrative-factory Phase 83 moves to Phase 84.
+- Verification: the contract, README, and twelve step documents exist; ordered
+  checks are pinned to Node 24 and the repository-wide worker policy. No
+  production code, save, test, or simulation was changed or run.
+- Blocker: none.
+- Next action: execute Phase 80A Step 07 only.
 
 ### 2026-07-30 — Phase 80A/80B design contract and ordered steps
 
@@ -454,15 +1016,15 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 - Adopted solution: Phase 80A owns player generation, dynamic club environment,
   quarterly development, public projection, value, and AI parity. Phase 80B
   owns incoming offers, postures, final counterproposal, loans, wage sharing,
-  Posta, and persistence. Phase 80C owns competitive races and the final
-  checkpointed cohort.
+  Posta, and persistence. Phase 80C owns competitive races. The later Phase 81
+  decision supersedes this entry's original cohort owner.
 - Verification: all three phase directories and their ordered step documents
   exist; contracts distinguish product truth from calibration work; no
   production code or long run was executed for this documentation update.
 - Blocker: none.
 - Lesson learned: running the deferred cohort after Phase 80 would validate an
-  intermediate product and waste hours; the only meaningful owner is Phase
-  Phase 80C Step 09 after all accepted reworks.
+  intermediate product and waste hours; the current meaningful owner is Phase
+  81 Step 12 after all accepted reworks.
 - Next action: execute the currently active Phase 80 Step 08.
 
 ### 2026-07-30 — Phase 80A/80B value, ownership and negotiation amendment
@@ -490,8 +1052,9 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 - Lesson learned: a shared field that mixes ownership and sporting
   selectability is architectural debt, not a counting shortcut; derived named
   accessors prevent silent free-agent, seller-depth, and squad-health defects.
-- Next action: execute the currently active Phase 80 Step 08. Do not start
-  Phase 80A/80B/80C or run the deferred `50 x 20`.
+- Historical next action at that entry: execute Phase 80 Step 08. Current next
+  action is Phase 80A Step 01; do not start Phase 80B/80C/81 or run the
+  deferred `50 x 20`.
 
 ### 2026-07-30 — Phase 80A/80B/80C architecture-depth amendment
 
@@ -576,8 +1139,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 - Lesson learned: the shared potential renderer is complete and correct, so the
   remaining prospect-upside gap is a generation and projection question. Phase
   80A owns it; presentation must not be used to hide a model finding.
-- Next action: execute Phase 80A Step 01 only. Do not start Phase 80B or 80C,
-  and do not run the deferred `50 x 20`, which belongs to Phase 80C Step 09.
+- Next action: execute Phase 80A Step 01 only. Do not start Phase 80B, 80C, or
+  81, and do not run the deferred `50 x 20`, which belongs to Phase 81 Step 12.
 
 ### 2026-07-31 — Phase 80 Step 08
 
@@ -776,7 +1339,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   report, and is not represented as a pass.
 - Adopted solution: close the phase truthfully while carrying the missing
   longitudinal cohort forward. A later accepted decision assigns that sole
-  run to Phase 80C Step 09; it must be resumable and use exactly `7` workers
+  run to Phase 81 Step 12; it must be resumable and use exactly `7` workers
   so the host remains usable.
 - Verification: focused Phase 79D checks/typechecks PASS; `pnpm check` PASS
   (`252` files / `1,581` tests); Dependency Cruiser PASS (`762` / `2,950`);
@@ -1644,16 +2207,16 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/80-graphical-and-structural-rework/07-market-offer-dialog-draft-stability.md` | Done | Prevents accidental dismissal while editing a Market offer. | Add an explicit shared backdrop-dismiss policy; opt Market out; preserve Escape, explicit close, focus restoration, and draft identity. | Focused Vitest `10/10`, web typecheck, full current-product Playwright `33/33`, diff, and Graphify PASS. |
 | `docs/steps/80-graphical-and-structural-rework/08-integrated-browser-accessibility-and-regression-closeout.md` | Done | Runs all repository/browser/accessibility/absence gates after the five reworks. | Verify desktop/narrow/keyboard/focus/reduced-motion/200%-text journeys and remove obsolete paths before handoff. | On Node `24.16.0`: `pnpm check` PASS, web build PASS, depcruise `769`/`2,966` PASS, `pnpm web:visual:qa` `34/34` PASS, diff and Graphify PASS. |
 | `docs/steps/80-graphical-and-structural-rework/09-phase-closeout-and-80a-handoff.md` | Done | Owns Phase 80 documentation closeout and the truthful Phase 80A handoff. | Record repository/browser evidence, preserve the unrun cohort, and make Phase 80A the only next phase. | Step 08 evidence green; closeout checks rerun; no `50 x 20` report or checkpoint exists. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/README.md` | Ready to start | Owns the accepted player supply, environment, development, projection, context-invariant value, and AI-parity rework after Phase 80. | Execute nine ordered steps; remove valuation `marketContext` and context caps; freeze a new calibration epoch; delete incompatible beta saves; run bounded positive-denominator diagnostics; no `50 x 20`. | Entry gate satisfied; implementation not started. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/01-reproducible-baseline-and-calibration-contract.md` | Ready to start | Freezes pre-change distributions, context multipliers/maximums, definitions, denominators, obsolete baselines, and new source-backed thresholds. | Measure before mutation, declare 79C/79D comparisons superseded, and predeclare the global-value diagnostics. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/02-dynamic-club-tier-reputation-and-season-freeze.md` | Planned | Recomputes deterministic 4/4/6/4 club tiers and bounded reputation once per rollover. | Use current roster plus corrected prior result; freeze for the season; keep no reputation history ledger. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/03-seven-state-development-environment-and-public-label.md` | Planned | Adds the accepted seven-state category/tier environment matrix. | Use one validated content policy and expose a localized public state. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/04-quarterly-development-with-monthly-evidence.md` | Planned | Applies monthly participation/performance evidence in quarterly transitions plus residual season flush. | Remove permanent hidden realization and derive deterministic period variance. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/05-age-aware-p50-upper-and-shared-public-assessment.md` | Planned | Produces one role/age-aware current/P50/upper assessment. | Share it across UI, value, sorting, and AI; upper contracts with age and never exceeds stored ceiling. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/06-contextual-prospect-current-and-ceiling-generation.md` | Planned | Calibrates 15–20 current/ceiling profiles by age, division, and club strength. | Enforce accepted interesting/serious/rare bands and soft `3.5+` shares. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/07-national-exceptional-stock-and-annual-youth-intake.md` | Planned | Maintains accepted per-country current-six and young ceiling-six stock without annual inflation. | Allocate once per country, top up missing stock, cap lower divisions and one-per-club placement. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/08-expected-outcome-value-and-ai-information-parity.md` | Planned | Reprices prospects from expected outcome/uncertainty, removes valuation `marketContext`, and removes AI ceiling knowledge. | Use one global intrinsic model/cap, keep asking posture separate, and prove owner/employment invariance plus exact zero free-agent fee. | Not evaluated. |
-| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/09-non-vacuous-diagnostics-beta-reset-and-phase-closeout.md` | Planned | Closes bounded model/browser diagnostics and hands off to 80B. | Require positive observations, delete incompatible beta saves, run no long cohort. | Not evaluated. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/README.md` | Blocked | Owns the accepted player supply, environment, development, projection, context-invariant value, and AI-parity rework after Phase 80. | Resolve the explicit match-goal monitor ownership/acceptance decision without weakening the frozen evidence; no `50 x 20`. | Steps 01-08 Done; Step 09 fresh/resume deterministic and all `32` player-model gates green, but report-wide `goals_per_match_avg` has `80` failing worlds. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/01-reproducible-baseline-and-calibration-contract.md` | Done | Froze a canonical 20-world pre-change baseline, complete owner inventories, positive denominators, separate rating concepts, obsolete comparisons, and new source-backed thresholds. | Preserve the old `11 / 1,710` as non-reproducible history; use the stable-seed/hash `11 / 1,723` epoch for later comparisons. | Vitest `26/26`; simulation-tools and CLI typechecks; diff and Graphify PASS; no long run. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/02-dynamic-club-tier-reputation-and-season-freeze.md` | Done | Recomputes deterministic 4/4/6/4 club tiers and bounded reputation once per rollover. | Use balanced XI/useful bench plus corrected prior result after movement; commit the season stamp, reputation, and calendar atomically; carry incomplete report divisions whole; persist one current snapshot with a beta reset. | Vitest `74/74`; six package typechecks; depcruise `773`/`2,982`; diff and Graphify PASS; no long run. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/03-seven-state-development-environment-and-public-label.md` | Done | Derives the accepted seven-state category/tier environment without duplicating durable state. | Keep one strict stamped policy; derive from frozen category/tier; expose only the localized state and reserve the multiplier for later consumers. | Vitest `158/158`; eight package typechecks; storage `29/29`; browser desktop/narrow; diff and Graphify PASS; no growth/intake change. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/04-quarterly-development-with-monthly-evidence.md` | Done | Applies canonical monthly participation/performance evidence in batches of three complete months plus a residual rollover flush. | Preserve month and club provenance, derive reload-stable player/month variance, apply environment only to positive growth, and keep closed-month keys as the only checkpoint truth. | Vitest `110/110`; domain, engine, storage, CLI, and web typechecks; depcruise `778`/`3,006`; diff and Graphify PASS. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/05-age-aware-p50-upper-and-shared-public-assessment.md` | Done after reopening | Replaces coarse post-20 bands with exact-age P50/upper calibration while preserving the full-upper-through-20 product rule. | Derive each later age/family factor from the deterministic outcome matrix; keep P50 independently observed and prove adjacent upper non-widening with positive evidence. | `24` bands / `1,620` outcomes; mandatory Vitest green including CLI `25/25`; seven typechecks, ESLint, diff, Graphify green. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/06-contextual-prospect-current-and-ceiling-generation.md` | Done after reopening | Adds one ceiling-first young-prospect joint-profile owner. | Explicit age-15-to-20 prospect lanes receive at least one stored star of room; routine youth may plateau; every generation root shares the same typed Interface. | Mandatory Vitest `185/185`; frozen division shares and stock regressions pass; typechecks, diff, and Graphify green. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/07-national-exceptional-stock-and-annual-youth-intake.md` | Done | Keeps stock drift descriptive while binding generation constraints to opening allocation and new arrivals. | Preserve the canonical selector/allocator and measure placement plus club uniqueness only when stock enters the world. | Mandatory Vitest `279/279`; seven typechecks; checkpoint semantic validation; diff and Graphify PASS; independent review has no blocker. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/08-expected-outcome-value-and-ai-information-parity.md` | Done after reopening | Replaces the valuation-v4 inversion with monotonic current/P50/upper tranches while preserving information parity. | Remove the whole-P50 uncertainty haircut; price upper as bounded positive option value; retain separate AI risk appetite; calibrate global anchors only after attributed failure evidence. | Mandatory Vitest `291/291`; seven typechecks; depcruise `782`/`3,100`; bounded owned economy gates green. |
+| `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/09-non-vacuous-diagnostics-beta-reset-and-phase-closeout.md` | Blocked | Completed compact diagnostics and deterministic replay, but cannot hand off to 80B while the frozen report is red. | Preserve the raw match-goal failure and request an explicit owner/acceptance decision; do not change thresholds or anomaly semantics. | Fresh `750/0` and resume `0/750`, exactly `7` workers, identical hash; `32/32` player-model gates pass; `goals_per_match_avg` has `80` high-side failed worlds. |
 | `docs/steps/80b-incoming-offers-market-postures-and-loans/README.md` | Planned | Owns incoming offers, market postures, final counters, bidirectional loans, explicit ownership/selectability, Posta, persistence, and bounded closeout. | Execute ten ordered steps after 80A; never mutate `Club.playerIds` for loans; derive selectable squads; keep per-buyer/player cross-kind uniqueness; leave parallel buyers valid but unscheduled; delete incompatible beta saves; run no longitudinal cohort. | Documentation only; implementation not started. |
 | `docs/steps/80b-incoming-offers-market-postures-and-loans/01-current-market-ownership-baseline-and-loan-contract.md` | Planned | Classifies all relevant direct roster accesses and freezes permanent-market, ownership, selectability, finance, Posta, persistence, and loan invariants. | Audit before adding state; define owned/selectable accessors, `18` plus `2/6/6/3` floors, and positive diagnostics. | Not evaluated. |
 | `docs/steps/80b-incoming-offers-market-postures-and-loans/02-durable-sale-and-loan-availability-postures.md` | Planned | Adds independent/combinable durable sale and loan availability flags. | Persist until changed or relationship exit; affect AI interest, not public value. | Not evaluated. |
@@ -1665,7 +2228,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/80b-incoming-offers-market-postures-and-loans/08-squad-market-and-posta-loan-ui.md` | Planned | Exposes postures and loan negotiations through existing Squad, Market, and Posta surfaces. | Add no separate loan route; preserve accessibility and shared commands. | Not evaluated. |
 | `docs/steps/80b-incoming-offers-market-postures-and-loans/09-bounded-diagnostics-browser-persistence-and-beta-reset.md` | Planned | Verifies bounded market/loan state, ownership/selectability, finance, browser, and persistence behavior. | Require non-vacuous owned/selectable/floor/per-buyer-negotiation counters and delete incompatible beta saves. | Not evaluated. |
 | `docs/steps/80b-incoming-offers-market-postures-and-loans/10-phase-report-and-phase-80c-handoff.md` | Planned | Closes Phase 80B on bounded evidence and hands the final market to Phase 80C. | Run no longitudinal cohort; prove shard/checkpoint/worker wiring with a bounded exercise and leave parallel-buyer competition to 80C. | Not evaluated. |
-| `docs/steps/80c-competitive-transfer-race-and-player-choice/README.md` | Planned | Owns durable competitive races, seller qualification, stale-safe raises, player choice, free-agent negotiation, race UI/diagnostics, and the sole final cohort. | Keep at most three active buyers; qualify only the highest seller-acceptable fee and exact matches; keep loans serial; use fixed three-day stages; persist coordination early; distinguish `outbid` from `lost_to_rival`; run `50 x 20` only in Step 09. | Product contract accepted; implementation not started. |
+| `docs/steps/80c-competitive-transfer-race-and-player-choice/README.md` | Planned | Owns durable competitive races, seller qualification, stale-safe raises, player choice, free-agent negotiation, race UI/diagnostics, and a bounded Phase 81 handoff. | Keep at most three active buyers; qualify only the highest seller-acceptable fee and exact matches; keep loans serial; use fixed three-day stages; persist coordination early; distinguish `outbid` from `lost_to_rival`; run no longitudinal cohort. | Product contract accepted; implementation not started. |
 | `docs/steps/80c-competitive-transfer-race-and-player-choice/01-race-contract-policy-and-exhaustiveness-guard.md` | Not started | Freezes accepted race semantics, numeric policy, discriminated references, and exhaustive status handling. | Inventory every status consumer before adding terminal states; no gameplay change. | Not evaluated. |
 | `docs/steps/80c-competitive-transfer-race-and-player-choice/02-durable-race-state-persistence-and-beta-reset.md` | Not started | Adds the small durable race coordination aggregate and lossless persistence. | One/many participants use one path; no duplicated terms; delete incompatible beta saves. | Not evaluated. |
 | `docs/steps/80c-competitive-transfer-race-and-player-choice/03-club-stage-clearing-and-competitive-resolution.md` | Not started | Resolves permanent offers as one set at the immutable deadline. | Return qualified/outbid/rejected IDs; do not choose the transfer winner before player choice. | Not evaluated. |
@@ -1674,8 +2237,22 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/80c-competitive-transfer-race-and-player-choice/06-free-agent-negotiation-and-race.md` | Not started | Adds the missing durable free-agent negotiation lifecycle. | Reuse race/player choice and preserve `applyCareerFreeAgentSigning` as the atomic commit. | Not evaluated. |
 | `docs/steps/80c-competitive-transfer-race-and-player-choice/07-market-squad-and-posta-race-ui.md` | Not started | Projects canonical race facts through existing web surfaces. | Distinguish price loss from player-choice loss; never expose rival contract terms. | Not evaluated. |
 | `docs/steps/80c-competitive-transfer-race-and-player-choice/08-non-vacuous-transfer-race-diagnostics.md` | Not started | Adds a dedicated race audit with positive denominators. | Separate structural hard failures from pre-frozen calibration evidence. | Not evaluated. |
-| `docs/steps/80c-competitive-transfer-race-and-player-choice/09-checkpointed-50x20-phase-report-and-phase-79-handoff.md` | Not started | Owns the only deferred longitudinal cohort and truthful parent handoff. | Run/replay the frozen 50-world, 20-season, 50-shard command with exactly 7 workers after all earlier gates. | Not evaluated; no run executed. |
-| `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/README.md` | Done | All nine ordered documents are closed by explicit product decision; the implementation and bounded evidence pass while the interrupted corrective cohort remains unclaimed. | Preserve deterministic slot pre-allocation; keep stored ceiling and public P90 upper distinct; retain non-vacuous structural gates and explicit calibration warnings; defer one checkpointed `50 x 20` with exactly `7` workers to Phase 80C Step 09. | Focused checks/typechecks, `pnpm check` (`252` / `1,581`), dependency boundaries (`762` / `2,950`), web build, Playwright `29/29`, and manual QA PASS; stopped `50 x 20` produced no report or evidence. |
+| `docs/steps/80c-competitive-transfer-race-and-player-choice/09-bounded-phase-report-and-phase-81-handoff.md` | Not started | Closes the competitive-market phase on bounded, non-vacuous evidence and hands working cohort infrastructure to Phase 81. | Run no longitudinal cohort; prove positive race observations and a bounded shard/checkpoint/worker exercise. | Not evaluated; no run executed. |
+| `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md` | Accepted | Freezes the Phase 81 product, architecture, clean-code, diagnostic, persistence, UI, AI, and cohort contract. | Preserve one deterministic aggregate engine; separate quality, intrinsic shape, and relational matchup; use typed football facts, diminishing returns, shared decision seams, and no named formation penalty. | Documentation reviewed; implementation not started. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/README.md` | Planned | Defines twelve ordered steps for the typed, phase-aware tactical-shape and manager-decision engine. | Keep player quality, intrinsic shape, and relational matchup separate; share one pre-match/live/AI/batch seam; remove obsolete local paths; let Step 12 alone run the final cohort. | Design contract accepted; implementation not started. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/01-reproducible-extreme-shape-baseline-and-frozen-contract.md` | Planned | Freezes current extreme-shape behavior and the accepted model contract before gameplay changes. | Lead with equal-quality `3-1-6` versus `4-4-2`; preserve structured baseline facts and predeclare thresholds. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/02-typed-tactical-slot-context-and-collapse-removal.md` | Planned | Carries typed formation line, family, side, role, and suitability facts into the engine. | Remove the four-way open-string collapse and guard every union exhaustively. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/03-intrinsic-tactical-shape-profile-and-diminishing-returns.md` | Planned | Derives one pure intrinsic shape profile with configured diminishing returns. | Measure coverage, continuity, occupation, and overload without named-formation penalties or player-quality duplication. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/04-relational-phase-matchup-and-route-capacity.md` | Planned | Compares both shapes through phase-specific relational route capacities. | Keep matchup directional and fixture-local; do not persist or precompute opponent-independent verdicts. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/05-position-suitability-coordination-without-double-penalty.md` | Planned | Adds suitability-based coordination effects without stacking a blanket attribute penalty. | Preserve destination-role weighting, isolate coordination, and prove natural/familiar/weak monotonicity. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md` | Planned | Routes control and opportunities through the phase model and gives tactical instructions concrete semantics. | Use one versioned config and one pre-match/live/AI/batch evaluator; remove obsolete scalar fallbacks. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/07-route-quality-causal-actors-and-explanation-facts.md` | Planned | Chooses eligible causal actors before resolving route quality and outcomes. | Preserve aggregate simulation; emit structured explanation facts; eliminate post-outcome actor decoration. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/08-live-session-persistence-event-schema-and-beta-reset.md` | Planned | Persists only canonical live inputs and the structured event facts needed for deterministic resume. | Do not persist derived shape caches; reset incompatible beta saves; prove segmented/full-run equivalence. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/09-ai-whole-xi-selection-and-shared-tactical-decisions.md` | Planned | Makes AI evaluate complete XIs and tactics through the same public match model. | No AI-only formula or greedy per-slot shortcut; keep candidate search bounded and deterministic. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/10-pre-match-and-live-tactical-consequence-ui.md` | Planned | Exposes bounded qualitative tactical consequences in the existing preparation and live workspaces. | Project engine facts only; keep copy localized and avoid numeric win promises or a second tactics state. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/11-non-vacuous-tactical-diagnostics-and-integrated-gates.md` | Planned | Adds positive-denominator tactical diagnostics, metamorphic invariants, and integrated repository/browser gates. | Freeze thresholds before the cohort; fail zero observations; never suppress warnings or retune to seeds. | Not evaluated. |
+| `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/12-checkpointed-50x20-phase-report-and-phase-79-handoff.md` | Planned | Runs the sole deferred longitudinal cohort and hands truthful evidence to Phase 79. | Use 50 worlds, 20 seasons, 50 stable shards, exactly 7 workers, checkpoints, and a repeated reuse run. | Not evaluated; no run executed. |
+| `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/README.md` | Done | All nine ordered documents are closed by explicit product decision; the implementation and bounded evidence pass while the interrupted corrective cohort remains unclaimed. | Preserve deterministic slot pre-allocation; keep stored ceiling and public P90 upper distinct; retain non-vacuous structural gates and explicit calibration warnings; defer one checkpointed `50 x 20` with exactly `7` workers to Phase 81 Step 12. | Focused checks/typechecks, `pnpm check` (`252` / `1,581`), dependency boundaries (`762` / `2,950`), web build, Playwright `29/29`, and manual QA PASS; stopped `50 x 20` produced no report or evidence. |
 | `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/01-reproducible-joint-profile-baseline-and-prospect-source-contract.md` | Done | Reproduced the `100`-world joint age/rating/value baseline, zero-counter/asking-fee identity, deterministic development-outcome matrix, and monetary source provenance without gameplay changes. | Use pure supplied-input diagnostics, record allocation versus effective stock, cap-label collisions, offer/counter/fee ratios, derive range probabilities from game outcomes, and retain aggregate real-market evidence only for money calibration. | Focused `24/24`, package typechecks, dependency boundaries, and diff PASS. |
 | `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/02-archetype-compatible-exceptional-profile-construction.md` | Done | Corrected exceptional archetype precedence and constructive age/current/potential compatibility. | Current-six status owns the archetype when current and potential exceptional labels overlap; no unbounded rejection or incompatible post-force. | Focused `44/44`, content typecheck, dependency boundaries, and diff PASS. |
 | `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/03-effective-initial-world-rarity-budgets-and-assignment-truth.md` | Done | Initial rarity now constrains effective ratings and exposes truthful natural/constructed assignment metadata. | Reconcile naturally qualifying profiles before constructing the remaining budget; rebuild only surplus compatible seniors and remove superseded metadata. | Focused `48/48`, `100` complete worlds, package typechecks, dependency boundaries, and diff PASS. |
@@ -1684,7 +2261,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/05b-public-potential-range-integration-presentation-and-beta-reset.md` | Done | Adopted the projection once across versioned content, public read models, accessible Squad/Market/profile presentation, and beta-save reset. | Remove singular public-potential read-model truth; render solid conservative stars, patterned uncertain upside, neutral outline, and exact localized range copy; reset only incompatible saves. | Exact `144/144`; six typechecks, dependency boundaries (`762` / `2,950`), diff, and Graphify PASS. |
 | `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/06-range-aware-prospect-value-negotiation-spread-and-rare-upper-cap.md` | Done after rework | Range-aware value, cap safety, and deterministic negotiation spread remain coherent after the public P90 upper correction; generated rarity is no longer redefined by presentation. | Keep sourced monetary anchors separate from game outcomes; use public P90 for value, stored ceiling for rarity, and expose both diagnostic facts explicitly. | Exact `137/137`; six typechecks, dependency boundaries (`762` / `2,950`), `302` stored-ceiling-six versus `151` public-upper-six, and diff PASS. |
 | `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/07-non-vacuous-joint-distribution-and-market-gates.md` | Done after rework | The upstream width contradiction is fixed with all `1,170` observations retained; diagnostics separate public P90 misses from stored-ceiling violations and generated rarity. | Keep positive observation counts, pool by role-family/age band, retain the predeclared `5%..15%` tolerance as warning evidence, and hard-fail any outcome above stored ceiling. | Exact `45/45`, typechecks, boundaries, diff, and Graphify PASS; aggregate `65/1,170`, six band warnings, zero ceiling violations. |
-| `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/08-50x20-browser-qa-phase-report-and-phase-79-handoff.md` | Done by product decision | Closed browser, repository, absence-audit, and reporting work without misrepresenting the stopped direct cohort as passing evidence. | Accept the completed implementation and bounded evidence for 79D; defer the longitudinal cohort to Phase 80C Step 09 with resumable checkpoints and exactly `7` workers. | `pnpm check` `252` files / `1,581` tests; dependency boundaries, web build, Playwright `29/29`, and manual QA PASS; no `79D_50X20_REPORT` exists. |
+| `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/08-50x20-browser-qa-phase-report-and-phase-79-handoff.md` | Done by product decision | Closed browser, repository, absence-audit, and reporting work without misrepresenting the stopped direct cohort as passing evidence. | Accept the completed implementation and bounded evidence for 79D; defer the longitudinal cohort to Phase 81 Step 12 with resumable checkpoints and exactly `7` workers. | `pnpm check` `252` files / `1,581` tests; dependency boundaries, web build, Playwright `29/29`, and manual QA PASS; no `79D_50X20_REPORT` exists. |
 | `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/README.md` | Done | Completed all fourteen global-rating, three-division-world, and market-economy calibration steps and returned control to Phase 79 Step 14 before the later Phase 79D interposition. | Keep observed/derived/source facts separate from design targets; use six validated JSON balance assets and explicit app composition; keep market-behavior game-design coefficients separate from observed value evidence; require independent wage/finance evidence; use focused gates plus one final `10 x 10`. | Steps 01-14 Done; final `10 x 10` PASS; no Phase 79 release gate was run or claimed. |
 | `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/01-versioned-source-baselines-and-diagnostic-contract.md` | Done | Closed source provenance, independent wage/finance evidence, six versioned schema boundaries, stable domain contracts, and a read-only supplied-input diagnostic without gameplay changes. | Reproduced five competition samples and the pre-79C baseline; stored no real-player rows; kept observed, derived, and design fields explicit; used Valibot at one immutable content boundary and kept tuning out of domain/simulation-tools. | Focused Vitest `14/14`; three package typechecks, web build, depcruise, diff, and Graphify PASS; no long run executed. |
 | `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/02-global-one-to-six-half-star-rating-and-attribute-presentation.md` | Done | Replaced selected-club-relative rating and the separate rating elite flag with one global current/potential `1..6` half-star contract across Squad, Market, lineup choices, and detail. | Pass the validated content scale explicitly at web composition; derive from canonical role ability; render `5.5`/`6` with a half/full dark-orange sixth star; format exact current attributes with one locale-aware decimal; expose no numeric potential. | Focused Vitest `42/42`; i18n `19/19`; web `322/322`; engine/UI/web typechecks, depcruise, absence audit, diff, and Graphify PASS. |
@@ -1700,7 +2277,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/12-source-backed-wage-and-contract-calibration.md` | Done | Unified generated and runtime wages, terms, and capacity behind one independent source-backed policy and solvent three-tier opening budgets. | Derive salary from global role quality, tier, status, age, potential gap, and contract context only; select exact career-stamped content at app composition; retain compact per-tier wage/bonus/commitment/utilization/headroom diagnostics. | Focused `193/193`; i18n `19/19`; web `327/327`; five typechecks; depcruise `750` / `2,881`; diff and Graphify PASS; no long run. |
 | `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/13-transfer-budgets-affordability-willingness-and-market-ai-calibration.md` | Done | Calibrated tiered opening cash/transfer room, seller replies, sporting willingness, acquisition affordability, and AI market behavior behind one exact stamped policy. | Keep cash reserve, transfer allocation, wage headroom, signing bonus, and pending exposure distinct; pass config explicitly through selected/AI paths; retain per-tier and cross-tier market diagnostics without forcing deals. | Focused `158/158`; i18n `19/19`; web `327/327`; five typechecks; depcruise `751` / `2,901`; diff and Graphify PASS; no long run. |
 | `docs/steps/79c-global-player-rating-three-division-world-and-market-economy-calibration/14-short-calibration-visual-qa-cleanup-and-phase-report.md` | Done | Closed Phase 79C with non-vacuous market evidence, complete browser/absence audits, and one bounded deterministic cohort. | Repair hard squad floors fairly before optional depth, materialize a bounded reserve only when the shared free-agent pool is insufficient, and emit season-scoped replenishment facts without duplicating transfer history. | `pnpm check` `247` files / `1,532` tests; browser `29/29`; build/typechecks/depcruise PASS; `10 x 10` PASS with `0` failed worlds, minimum squad `18`, `0` structural/rating-cap violations, and exact zero-fee free-agent semantics. |
-| `docs/audits/DOMESTIC_COMPETITION_TOPOLOGY_DECISION.md` | Accepted | Locked `fictional-three-tier-v1`: three 18-club/34-matchday competitions, 3 movements between First/Second, 2 between Second/Third, and a closed Third lower boundary. | Preserve the existing bounded 18-club prototype while creating a real in-save Scalata; label the format as fictional game design and leave Italian 20/20/60 groups/postseason to advanced Phase 81. | Decision, source comparison, movement rationale, deterministic/persistence contract, and non-goals are documented. No production code changed. |
+| `docs/audits/DOMESTIC_COMPETITION_TOPOLOGY_DECISION.md` | Accepted | Locked `fictional-three-tier-v1`: three 18-club/34-matchday competitions, 3 movements between First/Second, 2 between Second/Third, and a closed Third lower boundary. | Preserve the existing bounded 18-club prototype while creating a real in-save Scalata; label the format as fictional game design and leave Italian 20/20/60 groups/postseason to advanced Phase 82. | Decision, source comparison, movement rationale, deterministic/persistence contract, and non-goals are documented. No production code changed. |
 | `docs/audits/GLOBAL_PLAYER_RATING_AND_MARKET_ECONOMY_CALIBRATION_SPEC.md` | Documented | Recorded the preliminary real-market snapshot, current implementation measurements, root causes, accepted global-star/value/world/economy decisions, ownership, and validation ladder. | Treat retained aggregates as planning evidence until Step 01 records pagination/inclusion/percentile and command/commit/seed provenance; no live source/real-player data; public value differs from asking/final fee; free-agent fee is zero; `€150m` is a compressed young six-star ceiling. | Source links, preliminary captured/derived/design labels, explicit provenance gap, current formula/distribution evidence, and Phase 79C mapping are present. |
 | `docs/steps/79b-squad-market-player-workspace-ui-ux-and-career-statistics/07-responsive-accessibility-visual-qa-and-phase-report.md` | Done | Closed the Squad/Market redesign with shared formatting, complete responsive/accessibility evidence, and a regression fix for the reported scroll glitch. | Keep one formatter and one tab contract; reflow tables to bounded cards below 1400px; contain tall Squad rows in their frame; measure document-versus-shell height; preserve portal menu focus after positioning. | Package suites PASS; web `322/322`; typecheck/build PASS; visual QA `29/29` in `4.4m`; final monorepo/diff/Graphify result recorded in the active-step section. |
 | `docs/steps/79b-squad-market-player-workspace-ui-ux-and-career-statistics/README.md` | Done | Completed all seven bounded player-workspace/statistics steps and returned the single active step to Phase 79 Step 14. | Preserve exact Market attributes, public relative ratings, durable coverage-aware statistics, automatic lineup swaps, three-tab inspectors, and the existing canonical contract/market owners. | Steps 01-07 Done; `750 x 50` not run or claimed. |
@@ -1738,7 +2315,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/03-club-finance-and-budget-world-generation.md` | Done | Every generated club now receives one coherent cash balance, transfer budget, annual wage budget, committed-wage total, season totals, and ordered finance ledger. | Make `ClubFinanceState` the only finance owner; derive opening values from contracts and sporting facts; give the competition one season distribution; migrate market, CLI, simulation tooling, and web new-world creation; remove `MarketState` without compatibility cache. | Node 24 domain/content/engine suites and typechecks PASS; focused transfer-finance tests PASS; dependency-cruiser PASS (`589` modules / `2,128` dependencies); two-seed weak/average/strong manual distribution inspection PASS. |
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/02-shirt-number-and-player-contract-world-generation.md` | Done | Every generated senior now receives one validated, role-aware shirt registration and one deterministic active agreement with supported bonuses and ordered signing history. | Keep immutable player identity separate from registrations/contracts; use namespaced IDs, unique `1..99` shirt numbers, integer minor-unit money, age/level/potential/division/reputation policy, and stable squad-order tie-breaks; expose generated facts from the content world while deferring durable schema composition to Step 04 and transfer mutation to Step 08. | Node 24 focused domain/content PASS (`5` files / `36` tests); domain/content typechecks PASS; dependency-cruiser PASS (`585` modules / `2,108` dependencies); two-seed ten-club manual distribution inspection PASS; `git diff --check` and `graphify update .` PASS. |
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/01-current-ownership-and-gap-audit.md` | Done | Mapped every current senior ownership, money, plan, availability, Posta/Continue, and persistence seam before production changes. | Extend `CareerState` and its canonical adapters; replace roster-index shirt numbers; preserve unavailable selections but reject them at kickoff; invalidate all beta saves through one clean version boundary; add no compatibility defaults or duplicate UI formulas. | Required source scan PASS; `docs/audits/SENIOR_SQUAD_CONTRACTS_AND_FINANCE_REPORT.md` exists with exact replacement targets; Node 24 `git diff --check` PASS; `graphify update .` PASS. |
-| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/README.md` | In progress | Defined fifteen ordered steps for the complete permanent-transfer and preliminary-agreement loop; Steps 01-13 are Done, Step 14 is Reopened and paused through Phase 80C, and Step 15 is not started. | Preserve source-backed windows, staged talks, atomic affordability, preliminary agreements, deterministic AI, Posta decisions, persistence, and Market UI; resume only after Phase 80C and its checkpointed `50 x 20` with exactly `7` workers. | Phase 79D implementation/check/browser evidence passes, but its stopped direct `50 x 20` is unclaimed; the Phase 79 release gate remains unrun and unclaimed. |
+| `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/README.md` | In progress | Defined fifteen ordered steps for the complete permanent-transfer and preliminary-agreement loop; Steps 01-13 are Done, Step 14 is Reopened and paused through Phase 81, and Step 15 is not started. | Preserve source-backed windows, staged talks, atomic affordability, preliminary agreements, deterministic AI, Posta decisions, persistence, and Market UI; resume only after Phase 81 and its checkpointed `50 x 20` with exactly `7` workers. | Phase 79D implementation/check/browser evidence passes, but its stopped direct `50 x 20` is unclaimed; the Phase 79 release gate remains unrun and unclaimed. |
 | `docs/steps/78-senior-squad-player-contracts-and-club-finance-foundation/README.md` | In progress | Phase 78 has fifteen ordered implementation steps; Steps 01-14 are Done and Step 15 is active. | Build persistent shirt numbers, contracts, negotiation, annual payroll, bonuses, club finance, expiry/free agency, transfer/youth integration, one carried match plan, a dense senior Squad table, explicit lineup replacement, and a full-screen player profile; finish its structural long-run gate before Phase 79 begins. | Steps 01-14 pass their documented checks; Step 15 is active; the former Step 16 was retired and its integrated accessibility, cleanup, architecture, and report obligations now belong to Phase 79 Step 15. |
 | `docs/steps/77-live-match-control-statistics-and-in-game-decisions/10-motion-accessibility-long-run-gate-cleanup-and-phase-report.md` | Done | Closed the complete live-match loop with deterministic season evidence, stable responsive presentation, accessible command parity, and no obsolete parallel Matchday path. | Keep one progressive engine session and volatile web projection; delete staged, half-time-only, and active-checkpoint owners; use SQLite schema `9` as the clean beta boundary; preserve bounded semantic Motion; retain the existing calibration thresholds and correct causal opportunity/penalty rates when the gate exposes excess scoring. | Repeated `50 worlds x 1 season` PASS across `15,300` fixtures with hash `396aaed146613af94950c0a6365b548e`, zero failures, and `3.156` goals per match; Playwright `19/19`; Node 24 package/typecheck/build, dependency, `pnpm check`, diff, and Graphify gates PASS. |
 | `docs/steps/77-live-match-control-statistics-and-in-game-decisions/09-full-time-team-review-and-career-consequences.md` | Done | Full time now presents one stable result and tabellino above Summary, Your team, and Opponent tabs, then publishes all career consequences through one Continue command. | Cache one canonical completion preview in the private live session; expose only review facts before acknowledgment; reuse the preview for one atomic career commit; integrate public consequences into team rows; preserve the full-time screen and previous working state when a due autosave fails. | Node 24 engine/UI/i18n/web suites PASS (web `59` files / `256` tests); Playwright PASS (`19/19`); web typecheck/build, dependency-cruiser (`573` modules / `2,097` dependencies), and diff check PASS. |
@@ -1937,7 +2514,7 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 | `docs/steps/62-engine-safety-net-and-deterministic-regression-gates/03-match-edge-case-determinism-tests.md` | Done | Added explicit match low-event and no-event determinism coverage. | `simulateMatch` now has a zero-opportunity full-match test that remains deterministic, 0-0, and emits only kickoff/half-time/full-time. `stepMatch` now has a zero-opportunity no-event minute test proving a non-kickoff minute can advance without visible events while preserving deterministic state and zero stats. No probabilities, RNG keys, or output semantics were changed. | `pnpm exec vitest run packages/engine/src/match-engine/simulate-match.test.ts`; `pnpm exec vitest run packages/engine/src/match-engine/step-match.test.ts`; `pnpm --filter @game/engine run typecheck`; `git diff --check` |
 | `docs/steps/62-engine-safety-net-and-deterministic-regression-gates/02-simulate-season-golden-regression.md` | Done | Added a compact structured `simulateSeason` golden sentinel. | The test pins one stable seed through round/fixture count, champion, runner-up, bottom club, first/last fixture scores and shot/event counts, and top three scorer rows. It avoids CLI prose, full fixture snapshots, generated names, and complete player summary tables. The audit now documents when a future golden update is allowed. | `pnpm exec vitest run packages/engine/src/use-cases/simulate-season.test.ts`; `pnpm --filter @game/engine run typecheck`; `git diff --check` |
 | `docs/steps/62-engine-safety-net-and-deterministic-regression-gates/01-current-regression-surface-audit.md` | Done | Audited the current engine regression surface before adding safety-net tests. | `ENGINE_SAFETY_NET_AUDIT.md` records current coverage for `simulateSeason`, `simulateMatch`, `stepMatch`, career fixture progression, table/player stats, and long-run gates. The adopted Phase 62 gate set is a compact season golden, match low-event evidence, step no-event minute evidence, career fixture structured sentinel, and a long-run command pack. The web roadmap was checked and no web-section task was marked because Phase 62 is engine-scoped. | `test -f docs/audits/ENGINE_SAFETY_NET_AUDIT.md`; `git diff --check` |
-| `docs/PROJECT_RULES.md` / `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md` | Done | Added build-time LLM/content-factory constraints and parked the future narrative corpus foundation in the roadmap. | Engine/domain must emit structured facts only; narrative text belongs behind a content/presentation/narrator seam outside engine; LLM output is authoring-time, reviewed, schema-validated static content only; no runtime LLM and no LLM-generated gameplay truth. Future `Phase 83 - Narrative Content Factory And Corpus Foundation` is documented after core playable-loop and major-system readiness. | `git diff --check` |
+| `docs/PROJECT_RULES.md` / `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md` | Done | Added build-time LLM/content-factory constraints and parked the future narrative corpus foundation in the roadmap. | Engine/domain must emit structured facts only; narrative text belongs behind a content/presentation/narrator seam outside engine; LLM output is authoring-time, reviewed, schema-validated static content only; no runtime LLM and no LLM-generated gameplay truth. Future `Phase 84 - Narrative Content Factory And Corpus Foundation` is documented after core playable-loop and major-system readiness. | `git diff --check` |
 | `docs/steps/62-engine-safety-net-and-deterministic-regression-gates/README.md` | Ready | Created Phase 62 documentation for engine safety-net and deterministic regression gates. | Phase 62 is scoped to audit current regression risks, add structured `simulateSeason` golden evidence, match edge-case/repeatability coverage, career fixture determinism smoke coverage, a long-run verification command pack, and a final report. It explicitly forbids gameplay tuning, UI work, season-advancement implementation, and post-match form/morale consequences. | `git diff --check` |
 | `docs/steps/61-web-visual-identity-system-rework/08-phase-report-and-next-phase-decision.md` | Done | Closed Phase 61 with a final report, architecture update, roadmap update, and one next-phase recommendation. | `WEB_VISUAL_IDENTITY_SYSTEM_REPORT.md` records why the rework was needed, the accepted three-skin set, removed id migration, token taxonomy, field/SVG non-touch proof, QA evidence, residual risks, and recommends exactly `Phase 62 - Inbox/Posta Decision Center`. `docs/ARCHITECTURE.md` now describes the visual-identity skin contract and Phase 61 visual QA. | `test -f docs/audits/WEB_VISUAL_IDENTITY_SYSTEM_REPORT.md`; `pnpm check`; `git diff --check`; `graphify update .` |
 | `docs/steps/61-web-visual-identity-system-rework/07-visual-qa-and-art-direction-gate.md` | Done | Added and ran Phase 61 visual QA for all accepted skins. | `theme-palette.spec.ts` now writes to `/tmp/the-long-season-phase61`, checks the three accepted skins, verifies no horizontal overflow, stable semantic colors, stable tactical pitch grass, visible hierarchy, hover distinction, and border readability. `WEB_VISUAL_IDENTITY_QA.md` records screenshot evidence, manual art-direction acceptance, residual risks, and confirms `campo-calcio.svg` was not changed. | `pnpm --filter @game/web run typecheck`; `pnpm --filter @game/web run test`; `pnpm --filter @game/web run build`; `node --experimental-strip-types apps/web/src/visual-qa/theme-palette.spec.ts`; `git diff --check` |

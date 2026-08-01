@@ -1,4 +1,8 @@
 import type {
+  ClubDevelopmentEnvironmentKey,
+} from "@game/domain";
+import type {
+  CareerClubDevelopmentEnvironmentLabelKey,
   CareerDashboardFixtureSide,
   CareerDashboardView,
 } from "./career-dashboard-view.ts";
@@ -119,7 +123,11 @@ export interface BuildCareerDashboardViewInput {
   /** Current season identifier. */
   readonly currentSeasonId: string;
   /** Selected club summary. */
-  readonly selectedClub: CareerDashboardClubInput & { readonly rosterSize: number };
+  readonly selectedClub: CareerDashboardClubInput & {
+    readonly rosterSize: number;
+    /** Public derived state only; callers must not pass the policy multiplier. */
+    readonly developmentEnvironmentKey: ClubDevelopmentEnvironmentKey;
+  };
   /** Next selected-club fixture when one exists. */
   readonly nextFixture?: CareerDashboardFixtureInput;
   /** Saved match-preparation status. */
@@ -177,6 +185,8 @@ export function buildCareerDashboardView(input: BuildCareerDashboardViewInput): 
       clubId: input.selectedClub.clubId,
       name: input.selectedClub.name,
       rosterSize: input.selectedClub.rosterSize,
+      developmentEnvironmentLabelKey:
+        CLUB_DEVELOPMENT_ENVIRONMENT_LABEL_KEYS[input.selectedClub.developmentEnvironmentKey],
     },
     nextFixture: buildNextFixtureView(input.nextFixture),
     preparation: {
@@ -203,6 +213,24 @@ export function buildCareerDashboardView(input: BuildCareerDashboardViewInput): 
     actions: buildDashboardActions(blockerKeys),
   };
 }
+
+/**
+ * Exhaustive presentation mapping from language-neutral domain state to i18n.
+ *
+ * Keeping this map in the framework-free read-model builder means React never
+ * receives the balance coefficient or reimplements football policy.
+ */
+const CLUB_DEVELOPMENT_ENVIRONMENT_LABEL_KEYS = {
+  very_poor: "career.clubDevelopmentEnvironment.state.very_poor",
+  poor: "career.clubDevelopmentEnvironment.state.poor",
+  limited: "career.clubDevelopmentEnvironment.state.limited",
+  adequate: "career.clubDevelopmentEnvironment.state.adequate",
+  good: "career.clubDevelopmentEnvironment.state.good",
+  very_good: "career.clubDevelopmentEnvironment.state.very_good",
+  excellent: "career.clubDevelopmentEnvironment.state.excellent",
+} as const satisfies Readonly<
+  Record<ClubDevelopmentEnvironmentKey, CareerClubDevelopmentEnvironmentLabelKey>
+>;
 
 /** Keeps the dashboard table short while ensuring the manager's club is visible. */
 function buildLeagueTableView(

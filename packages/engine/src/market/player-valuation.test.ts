@@ -5,36 +5,33 @@ import {
   abilityValue,
   gameDate,
   playerId,
+  type GameDate,
   type Player,
   type PlayerAbilities,
   type PlayerPosition,
   type PlayerRole,
+  type PlayerStarRating,
 } from "@game/domain";
 
 import {
   PlayerValuationError,
-  derivePlayerValuation as derivePlayerValuationWithMarketContext,
+  derivePlayerValuation,
   type PlayerValuationConfig,
 } from "./player-valuation.ts";
+import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
 
-function derivePlayerValuation(
-  input: Omit<
-    Parameters<typeof derivePlayerValuationWithMarketContext>[0],
-    "marketContext"
-  >,
-) {
-  return derivePlayerValuationWithMarketContext({
-    ...input,
-    marketContext: { kind: "free_agent" },
-  });
-}
-
-test("derives one deterministic nonlinear public value from explicit content", () => {
+test("derives one deterministic nonlinear value from a precomputed public assessment", () => {
+  const config = playerValuationConfigFixture();
+  const player = playerFixture("one", "st", 14.5, 15.5, 24);
+  const assessment = assessmentFor(player, gameDate(20_000), config);
   const input = {
-    player: playerFixture("one", "st", 14.5, 15.5, 24),
-    currentDate: gameDate(20_000),
-    config: playerValuationConfigFixture(),
+    assessment,
+    primaryPosition: "st",
+    config,
   } as const;
 
   const first = derivePlayerValuation(input);
@@ -43,135 +40,201 @@ test("derives one deterministic nonlinear public value from explicit content", (
   assert.deepEqual(second, first);
   assert.equal(first.age, 24);
   assert.equal(first.components.currentRating, 4);
-  assert.equal(first.components.potentialLowerRating, 4);
-  assert.equal(first.components.potentialExpectedRating, 4);
+  assert.equal(first.components.potentialP50Rating, 4);
   assert.equal(first.components.potentialUpperRating, 4);
   assert.equal(first.components.ratingAnchorMinorUnits, 400_000_000);
+  assert.equal(
+    first.components.expectedQualityValueMinorUnits,
+    first.components.currentQualityValueMinorUnits
+      + first.components.p50UpsideValueMinorUnits
+      + first.components.upperOptionValueMinorUnits,
+  );
+  assert.equal(first.components.p50ParticipationBasisPoints, 5_000);
+  assert.equal(first.components.upperOptionParticipationBasisPoints, 1_000);
   assert.equal(Number.isSafeInteger(first.value), true);
   assert.equal(first.value % 100, 0);
+  assert.equal("marketContext" in config.valuationCurves, false);
+  assert.equal("marketContextMultiplierBasisPoints" in first.components, false);
 });
 
-test("quality, range-aware expectation, age, and broad position affect value", () => {
-  const currentDate = gameDate(20_000);
+test("current quality, public upside, age, and position have distinct effects", () => {
   const config = playerValuationConfigFixture();
-  const weak = derivePlayerValuation({
-    player: playerFixture("weak", "st", 8, 8, 16),
+  const currentDate = gameDate(20_000);
+  const weak = valuePlayer(
+    playerFixture("weak", "st", 8, 8, 16),
     currentDate,
     config,
-  });
-  const strong = derivePlayerValuation({
-    player: playerFixture("strong", "st", 15, 15, 16),
+  );
+  const strong = valuePlayer(
+    playerFixture("strong", "st", 15, 15, 16),
     currentDate,
     config,
-  });
-  const prospect = derivePlayerValuation({
-    player: playerFixture("prospect", "st", 15, 20, 16),
-    currentDate,
+  );
+  const young = valueAssessment(
+    assessmentFixture("young", 16, 10, 14.5, 14.5, 3, 4, 4),
+    "st",
     config,
-  });
-  const older = derivePlayerValuation({
-    player: playerFixture("older", "st", 15, 20, 34),
-    currentDate,
+  );
+  const older = valueAssessment(
+    assessmentFixture("older", 34, 10, 14.5, 14.5, 3, 4, 4),
+    "st",
     config,
-  });
-  const goalkeeper = derivePlayerValuation({
-    player: playerFixture("keeper", "gk", 15, 20, 16),
-    currentDate,
+  );
+  const goalkeeper = valueAssessment(
+    assessmentFixture("keeper", 16, 10, 14.5, 14.5, 3, 4, 4),
+    "gk",
     config,
-  });
+  );
 
   assert.ok(strong.value > weak.value);
-  assert.ok(prospect.value > strong.value);
-  assert.ok(prospect.value > older.value);
-  assert.ok(prospect.value > goalkeeper.value);
+  assert.ok(young.value > older.value);
+  assert.ok(young.value > goalkeeper.value);
 });
 
-test("range expectation and uncertainty relationships remain monotonic", () => {
-  const currentDate = gameDate(20_000);
-  const baseConfig = playerValuationConfigFixture();
-  const widePolicy = projectionPolicy(0, 2_000);
-  const narrowerPolicy = projectionPolicy(1_000, 2_000);
-  const current = 10;
-  const lowCeiling = derivePlayerValuation({
-    player: playerFixture("low-ceiling", "cm", current, 14, 16),
-    currentDate,
-    config: { ...baseConfig, potentialProjectionPolicy: widePolicy },
-  });
-  const highCeiling = derivePlayerValuation({
-    player: playerFixture("high-ceiling", "cm", current, 18, 16),
-    currentDate,
-    config: { ...baseConfig, potentialProjectionPolicy: widePolicy },
-  });
-  const narrower = derivePlayerValuation({
-    player: playerFixture("narrower", "cm", current, 18, 16),
-    currentDate,
-    config: { ...baseConfig, potentialProjectionPolicy: narrowerPolicy },
-  });
+test("prices P50 and upper as separate positive bounded upside tranches", () => {
+  const config = playerValuationConfigFixture();
+  const lowerP50 = valueAssessment(
+    assessmentFixture("lower-p50", 19, 10, 14.5, 15.5, 3, 4, 4.5),
+    "cm",
+    config,
+  );
+  const higherP50 = valueAssessment(
+    assessmentFixture("higher-p50", 19, 10, 15.4, 15.5, 3, 4, 4.5),
+    "cm",
+    config,
+  );
+  const widerUpper = valueAssessment(
+    assessmentFixture("wider-upper", 19, 10, 15.4, 17, 3, 4, 6),
+    "cm",
+    config,
+  );
 
   assert.ok(
-    highCeiling.components.undiscountedPotentialExpectationMinorUnits
-      >= lowCeiling.components.undiscountedPotentialExpectationMinorUnits,
+    higherP50.components.p50QualityValueMinorUnits
+      > lowerP50.components.p50QualityValueMinorUnits,
   );
+  assert.ok(higherP50.value > lowerP50.value);
   assert.ok(
-    narrower.components.potentialLowerRating
-      >= highCeiling.components.potentialLowerRating,
+    widerUpper.components.upperQualityValueMinorUnits
+      > higherP50.components.upperQualityValueMinorUnits,
   );
-  assert.ok(
-    narrower.components.uncertaintyMultiplierBasisPoints
-      >= highCeiling.components.uncertaintyMultiplierBasisPoints,
-  );
-  assert.ok(narrower.value >= highCeiling.value);
+  assert.ok(widerUpper.components.upperOptionValueMinorUnits > 0);
+  assert.ok(widerUpper.value > higherP50.value);
 });
 
-test("a low-current elite-upside teenager is priced as a discounted prospect, not a champion", () => {
+test("prices exact upper ability continuously inside one public star interval", () => {
+  const config = playerValuationConfigFixture();
+  const lowerUpperAbility = valueAssessment(
+    assessmentFixture("upper-15-6", 19, 10, 14.8, 15.6, 3, 4, 4.5),
+    "cm",
+    config,
+  );
+  const higherUpperAbility = valueAssessment(
+    assessmentFixture("upper-15-9", 19, 10, 14.8, 15.9, 3, 4, 4.5),
+    "cm",
+    config,
+  );
+
+  assert.ok(higherUpperAbility.value > lowerUpperAbility.value);
+  assert.ok(
+    higherUpperAbility.components.upperOptionValueMinorUnits
+      > lowerUpperAbility.components.upperOptionValueMinorUnits,
+  );
+});
+
+test("prices a low-current elite-upside teenager as a discounted prospect", () => {
   const currentDate = gameDate(20_000);
   const config = playerValuationConfigFixture();
-  const ordinary = derivePlayerValuationWithMarketContext({
-    player: playerFixture("ordinary-teen", "st", 7.5, 8, 16),
+  const ordinary = valuePlayer(
+    playerFixture("ordinary-teen", "st", 7.5, 8, 16),
     currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
-  const eliteUpside = derivePlayerValuationWithMarketContext({
-    player: playerFixture("elite-upside-teen", "st", 7.5, 17, 16),
+  );
+  const eliteUpside = valuePlayer(
+    playerFixture("elite-upside-teen", "st", 7.5, 17, 16),
     currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
+  );
 
   assert.equal(eliteUpside.components.currentRating, 2);
   assert.equal(eliteUpside.components.potentialUpperRating, 6);
-  assert.ok(eliteUpside.value > ordinary.value * 10);
-  assert.ok(eliteUpside.value < 150_000_000_00);
+  assert.ok(eliteUpside.value > ordinary.value);
+  assert.ok(eliteUpside.value < 15_000_000_000);
   assert.ok(
-    eliteUpside.components.discountedPotentialExpectationMinorUnits
-      < eliteUpside.components.undiscountedPotentialExpectationMinorUnits,
+    eliteUpside.components.upperOptionValueMinorUnits
+      < eliteUpside.components.upperQualityValueMinorUnits
+        - eliteUpside.components.p50QualityValueMinorUnits,
+  );
+});
+
+test("keeps current, P50, and upper independently monotonic before the shared cap", () => {
+  const config = playerValuationConfigFixture();
+  const currentBase = valueAssessment(
+    assessmentFixture("current-base", 19, 10, 14.8, 16.5, 3, 4, 5.5),
+    "cm",
+    config,
+  );
+  const currentHigher = valueAssessment(
+    assessmentFixture("current-higher", 19, 11, 14.8, 16.5, 3, 4, 5.5),
+    "cm",
+    config,
+  );
+  const p50Higher = valueAssessment(
+    assessmentFixture("p50-higher", 19, 10, 15.2, 16.5, 3, 4, 5.5),
+    "cm",
+    config,
+  );
+  const upperHigher = valueAssessment(
+    assessmentFixture("upper-higher", 19, 10, 14.8, 16.8, 3, 4, 5.5),
+    "cm",
+    config,
+  );
+
+  assert.ok(currentHigher.value > currentBase.value);
+  assert.ok(p50Higher.value > currentBase.value);
+  assert.ok(upperHigher.value > currentBase.value);
+  assert.equal(currentBase.components.upperOptionValueMinorUnits > 0, true);
+});
+
+test("prices no upside when current, P50, and upper are equal", () => {
+  const config = playerValuationConfigFixture();
+  const noUpside = valueAssessment(
+    assessmentFixture("no-upside", 19, 14.8, 14.8, 14.8, 4, 4, 4),
+    "cm",
+    config,
+  );
+
+  assert.equal(noUpside.components.p50UpsideValueMinorUnits, 0);
+  assert.equal(noUpside.components.upperOptionValueMinorUnits, 0);
+  assert.equal(
+    noUpside.components.expectedQualityValueMinorUnits,
+    noUpside.components.currentQualityValueMinorUnits,
   );
 });
 
 test("progress and ordinary small gaps cannot reduce or wildly inflate quality", () => {
   const currentDate = gameDate(20_000);
   const config = playerValuationConfigFixture();
-  const earlier = derivePlayerValuation({
-    player: playerFixture("earlier", "cm", 12, 15, 19),
+  const earlier = valuePlayer(
+    playerFixture("earlier", "cm", 12, 15, 19),
     currentDate,
     config,
-  });
-  const progressed = derivePlayerValuation({
-    player: playerFixture("progressed", "cm", 13, 15, 19),
+  );
+  const progressed = valuePlayer(
+    playerFixture("progressed", "cm", 13, 15, 19),
     currentDate,
     config,
-  });
-  const smallGap = derivePlayerValuation({
-    player: playerFixture("small-gap", "cm", 13, 13.5, 19),
+  );
+  const smallGap = valuePlayer(
+    playerFixture("small-gap", "cm", 13, 13.5, 19),
     currentDate,
     config,
-  });
-  const noGap = derivePlayerValuation({
-    player: playerFixture("no-gap", "cm", 13, 13, 19),
+  );
+  const noGap = valuePlayer(
+    playerFixture("no-gap", "cm", 13, 13, 19),
     currentDate,
     config,
-  });
+  );
 
   assert.ok(
     progressed.components.currentQualityValueMinorUnits
@@ -181,193 +244,148 @@ test("progress and ordinary small gaps cannot reduce or wildly inflate quality",
   assert.ok(smallGap.value <= noGap.value * 1.25);
 });
 
-test("uses continuous quality inside one star interval and only owner market context", () => {
+test("uses continuous quality inside one star interval without owner context", () => {
   const currentDate = gameDate(20_000);
   const config = playerValuationConfigFixture();
-  const lowerFourStar = playerFixture("lower-four", "st", 14.6, 14.6, 24);
-  const upperFourStar = playerFixture("upper-four", "st", 15.4, 15.4, 24);
-  const lower = derivePlayerValuation({
-    player: lowerFourStar,
+  const lower = valuePlayer(
+    playerFixture("lower-four", "st", 14.6, 14.6, 24),
     currentDate,
     config,
-  });
-  const upper = derivePlayerValuation({
-    player: upperFourStar,
+  );
+  const upper = valuePlayer(
+    playerFixture("upper-four", "st", 15.4, 15.4, 24),
     currentDate,
     config,
-  });
-  const firstDivision = derivePlayerValuationWithMarketContext({
-    player: upperFourStar,
-    currentDate,
-    config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
-  const secondDivision = derivePlayerValuationWithMarketContext({
-    player: upperFourStar,
-    currentDate,
-    config,
-    marketContext: { kind: "contracted", division: "second_division" },
-  });
-  const thirdDivision = derivePlayerValuationWithMarketContext({
-    player: upperFourStar,
-    currentDate,
-    config,
-    marketContext: { kind: "contracted", division: "third_division" },
-  });
+  );
 
   assert.equal(lower.components.currentRating, upper.components.currentRating);
   assert.ok(upper.value > lower.value);
-  assert.ok(firstDivision.value > secondDivision.value);
-  assert.ok(secondDivision.value > thirdDivision.value);
-  assert.ok(thirdDivision.value <= 500_000_000);
+  assert.equal("marketContextMaximumMinorUnits" in upper.components, false);
 });
 
 test("only an age-eligible compressed six-star player can reach exactly 150m EUR", () => {
   const config = playerValuationConfigFixture();
   const currentDate = gameDate(20_000);
-  const youngChampion = derivePlayerValuationWithMarketContext({
-    player: playerFixture("young-six", "st", 18, 19, 23),
+  const youngChampion = valuePlayer(
+    playerFixture("young-six", "st", 18, 19, 23),
     currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
-  const olderChampion = derivePlayerValuationWithMarketContext({
-    player: playerFixture("older-six", "st", 18, 19, 28),
+  );
+  const olderChampion = valuePlayer(
+    playerFixture("older-six", "st", 18, 19, 28),
     currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
-  const ordinaryYoungPlayer = derivePlayerValuationWithMarketContext({
-    player: playerFixture("ordinary", "st", 16.7, 16.8, 23),
+  );
+  const ordinaryYoungPlayer = valuePlayer(
+    playerFixture("ordinary", "st", 16.7, 16.8, 23),
     currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
+  );
 
-  assert.equal(youngChampion.value, 150_000_000_00);
+  assert.equal(youngChampion.value, 15_000_000_000);
   assert.equal(youngChampion.components.hardCapEligible, true);
   assert.equal(youngChampion.components.hardCapApplied, true);
-  assert.ok(olderChampion.value <= 149_999_999_00);
+  assert.ok(olderChampion.value <= 14_999_999_900);
   assert.equal(olderChampion.components.hardCapEligible, false);
-  assert.ok(ordinaryYoungPlayer.value <= 149_999_999_00);
+  assert.ok(ordinaryYoungPlayer.value <= 14_999_999_900);
   assert.equal(ordinaryYoungPlayer.value % 100, 0);
 });
 
-test("compresses the upper tail for eligible and non-eligible players without exposing ability", () => {
+test("compresses the global upper tail without exposing private or seller facts", () => {
   const config = playerValuationConfigFixture();
-  const valuation = derivePlayerValuationWithMarketContext({
-    player: playerFixture("older-six", "st", 18, 18, 30),
-    currentDate: gameDate(20_000),
+  const currentDate = gameDate(20_000);
+  const older = valuePlayer(
+    playerFixture("older-six", "st", 18, 18, 30),
+    currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
-  const eligible = derivePlayerValuationWithMarketContext({
-    player: playerFixture("young-six-compressed", "st", 18, 18, 23),
-    currentDate: gameDate(20_000),
+  );
+  const eligible = valuePlayer(
+    playerFixture("young-six-compressed", "st", 18, 18, 23),
+    currentDate,
     config,
-    marketContext: { kind: "contracted", division: "first_division" },
-  });
+  );
 
-  assert.ok(
-    valuation.components.valueBeforeTailCompressionMinorUnits > 8_000_000_000,
-  );
-  assert.ok(
-    valuation.value
-      < valuation.components.valueBeforeTailCompressionMinorUnits,
-  );
+  assert.ok(older.components.valueBeforeTailCompressionMinorUnits > 8_000_000_000);
+  assert.ok(older.value < older.components.valueBeforeTailCompressionMinorUnits);
   assert.ok(
     eligible.components.valueAfterTailCompressionMinorUnits
       < eligible.components.valueBeforeTailCompressionMinorUnits,
   );
-  assert.equal("potentialAbilityAverage" in valuation, false);
-  assert.equal("potentialAbility" in valuation.components, false);
-  assert.equal("contractSecurityMultiplier" in valuation, false);
-  assert.equal("formMultiplier" in valuation, false);
-  assert.equal("club" in valuation.components, false);
+  assert.equal("potentialAbilityAverage" in older, false);
+  assert.equal("potentialAbility" in older.components, false);
+  assert.equal("contractSecurityMultiplier" in older, false);
+  assert.equal("formMultiplier" in older, false);
+  assert.equal("club" in older.components, false);
+  assert.equal("marketContext" in older.components, false);
 });
-
-function projectionPolicy(
-  conservativeRealizationBasisPoints: number,
-  expectedRealizationBasisPoints: number,
-): PlayerValuationConfig["potentialProjectionPolicy"] {
-  return {
-    schemaVersion: 1,
-    version: "projection-v1",
-    classification: "explicit_game_design_target",
-    ageBandsByRoleFamily: {
-      goalkeeper: [{
-        minimumAge: 0,
-        maximumAge: 200,
-        conservativeRealizationBasisPoints,
-        expectedRealizationBasisPoints,
-        upperRealizationBasisPoints: 10_000,
-      }],
-      outfield: [{
-        minimumAge: 0,
-        maximumAge: 200,
-        conservativeRealizationBasisPoints,
-        expectedRealizationBasisPoints,
-        upperRealizationBasisPoints: 10_000,
-      }],
-    },
-  };
-}
 
 test("prices ages outside the senior curve with the nearest boundary band", () => {
   const currentDate = gameDate(20_000);
   const config = playerValuationConfigFixture();
-  const age14 = derivePlayerValuation({
-    player: playerFixture("age-14", "cm", 10, 11, 14),
+  const age14 = valuePlayer(
+    playerFixture("age-14", "cm", 10, 11, 14),
     currentDate,
     config,
-  });
-  const age15 = derivePlayerValuation({
-    player: playerFixture("age-15", "cm", 10, 11, 15),
+  );
+  const age15 = valuePlayer(
+    playerFixture("age-15", "cm", 10, 11, 15),
     currentDate,
     config,
-  });
-  const age46 = derivePlayerValuation({
-    player: playerFixture("age-46", "cm", 10, 11, 46),
+  );
+  const age46 = valuePlayer(
+    playerFixture("age-46", "cm", 10, 11, 46),
     currentDate,
     config,
-  });
-  const age45 = derivePlayerValuation({
-    player: playerFixture("age-45", "cm", 10, 11, 45),
+  );
+  const age45 = valuePlayer(
+    playerFixture("age-45", "cm", 10, 11, 45),
     currentDate,
     config,
-  });
+  );
 
   assert.equal(age14.value, age15.value);
   assert.equal(age46.value, age45.value);
 });
 
-test("rejects incomplete player identity and mismatched content versions", () => {
+test("rejects incomplete public facts and mismatched content versions", () => {
   const config = playerValuationConfigFixture();
+  const assessment = assessmentFixture("invalid", 24, 10, 11, 12, 3, 3, 3);
   assertValuationError(
     () => derivePlayerValuation({
-      player: {
-        ...playerFixture("no-position", "st", 10, 11, 24),
-        naturalPositions: [],
-      },
-      currentDate: gameDate(20_000),
+      assessment,
+      primaryPosition: undefined as unknown as PlayerPosition,
       config,
     }),
     "missing_primary_position",
   );
-  const withRole = playerFixture("no-role", "st", 10, 11, 24);
-  const { primaryRole: _role, ...withoutRole } = withRole;
   assertValuationError(
     () => derivePlayerValuation({
-      player: withoutRole,
-      currentDate: gameDate(20_000),
+      assessment: {
+        ...assessment,
+        p50Ability: 9,
+      },
+      primaryPosition: "st",
       config,
     }),
-    "missing_role_identity",
+    "invalid_assessment",
   );
   assertValuationError(
     () => derivePlayerValuation({
-      player: playerFixture("bad-version", "st", 10, 11, 24),
-      currentDate: gameDate(20_000),
+      assessment: {
+        ...assessment,
+        currentRating: { stars: 6 },
+        p50Rating: { stars: 6 },
+        upperRating: { stars: 6 },
+      },
+      primaryPosition: "st",
+      config,
+    }),
+    "invalid_assessment",
+  );
+  assertValuationError(
+    () => derivePlayerValuation({
+      assessment,
+      primaryPosition: "st",
       config: {
         ...config,
         marketCalibration: {
@@ -378,7 +396,84 @@ test("rejects incomplete player identity and mismatched content versions", () =>
     }),
     "invalid_config",
   );
+  assertValuationError(
+    () => derivePlayerValuation({
+      assessment,
+      primaryPosition: "st",
+      config: {
+        ...config,
+        valuationCurves: {
+          ...config.valuationCurves,
+          prospectExpectation: {
+            ...config.valuationCurves.prospectExpectation,
+            upperOptionParticipationBasisPoints:
+              config.valuationCurves.prospectExpectation
+                .p50ParticipationBasisPoints + 1,
+          },
+        },
+      },
+    }),
+    "invalid_config",
+  );
 });
+
+function valuePlayer(
+  player: Player,
+  currentDate: GameDate,
+  config: PlayerValuationConfig,
+) {
+  const primaryPosition = player.naturalPositions[0];
+  return derivePlayerValuation({
+    assessment: assessmentFor(player, currentDate, config),
+    primaryPosition: primaryPosition as PlayerPosition,
+    config,
+  });
+}
+
+function valueAssessment(
+  assessment: PublicPlayerAssessment,
+  primaryPosition: PlayerPosition,
+  config: PlayerValuationConfig,
+) {
+  return derivePlayerValuation({ assessment, primaryPosition, config });
+}
+
+function assessmentFor(
+  player: Player,
+  currentDate: GameDate,
+  config: PlayerValuationConfig,
+): PublicPlayerAssessment {
+  return derivePublicPlayerAssessment({
+    player,
+    currentDate,
+    potentialProjectionPolicy: config.potentialProjectionPolicy,
+    ratingScale: config.ratingScale,
+  });
+}
+
+function assessmentFixture(
+  suffix: string,
+  age: number,
+  currentAbility: number,
+  p50Ability: number,
+  upperAbility: number,
+  currentRating: PlayerStarRating,
+  p50Rating: PlayerStarRating,
+  upperRating: PlayerStarRating,
+): PublicPlayerAssessment {
+  return {
+    playerId: playerId(`player:test-${suffix}`),
+    assessedOn: gameDate(20_000),
+    age,
+    roleFamily: "outfield",
+    currentAbility,
+    p50Ability,
+    upperAbility,
+    currentRating: { stars: currentRating },
+    p50Rating: { stars: p50Rating },
+    upperRating: { stars: upperRating },
+  };
+}
 
 function playerFixture(
   suffix: string,

@@ -18,13 +18,12 @@ without running or claiming any longitudinal cohort.
 
 ## Why No Cohort Runs Here
 
-The deferred checkpointed `50 x 20` moved to the final step of Phase 80C.
+The deferred checkpointed `50 x 20` belongs to Phase 81 Step 12.
 
-Phase 80C adds competitive resolution, raise behaviour, and the
-player-chooses-between-suitors flow. Running the cohort at the end of Phase 80B
-would certify a market that is about to change, which is exactly how Phase 79
-Step 14 came to hold a gate result that no longer described the shipped
-economy. The cohort must observe the final market, not an intermediate one.
+Phase 80C adds competitive resolution, raise behaviour, and player choice;
+Phase 81 then changes AI selection and match outcomes. Running the cohort at
+the end of Phase 80B would certify both an intermediate market and an
+intermediate match engine.
 
 ## What To Implement
 
@@ -32,10 +31,10 @@ economy. The cohort must observe the final market, not an intermediate one.
 - Record positive observation counts for every required Phase 80B gate and
   report `not_evaluated` rather than `PASS` where a population was empty.
 - Record explicitly that no longitudinal cohort was run, that none is claimed,
-  and that the deferred `50 x 20` belongs to Phase 80C.
+  and that the deferred `50 x 20` belongs to Phase 81 Step 12.
 - Prove the cohort infrastructure still works without running the full cohort:
   shard, checkpoint, and worker wiring must be exercised by a bounded run so
-  Phase 80C Step 09 starts from working infrastructure.
+  Phase 80C and Phase 81 inherit working infrastructure.
 - Record the Phase 80B scheduling restriction as satisfied: zero concurrent
   negotiations were scheduled for one player while the domain still permits
   them.

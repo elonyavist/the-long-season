@@ -10,7 +10,7 @@ import type { MarketBehaviorCalibrationConfig } from "@game/domain";
 export function marketBehaviorConfigFixture(): MarketBehaviorCalibrationConfig {
   return {
     schemaVersion: 1,
-    version: "market-behavior:test-v1",
+    version: "market-behavior:test-v2",
     classification: "explicit_game_design_target",
     askingPriceCurvesVersion: "asking-price:test-v1",
     wageFinanceCalibrationVersion: "wage-finance:test-v1",
@@ -67,6 +67,14 @@ export function marketBehaviorConfigFixture(): MarketBehaviorCalibrationConfig {
       potential: 20,
       roleNeed: 25,
       affordability: 15,
+    },
+    aiRiskAppetite: {
+      uncertaintyPenaltyWeight: 10,
+      toleranceBasisPointsByCategory: {
+        first_division: 8_000,
+        second_division: 6_000,
+        third_division: 4_000,
+      },
     },
     aiLifecycle: {
       maximumActiveTalks: 2,

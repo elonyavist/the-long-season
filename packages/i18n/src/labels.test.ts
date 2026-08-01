@@ -38,6 +38,46 @@ test("translates the career skip command in every supported language", () => {
   assert.equal(translate("fr", "career.shell.skipToContent"), "Aller a la tache actuelle");
 });
 
+test("translates every public club-development environment without exposing coefficients", () => {
+  const italianStates = [
+    "Molto carente",
+    "Carente",
+    "Limitato",
+    "Adeguato",
+    "Buono",
+    "Ottimo",
+    "Eccellente",
+  ];
+  const keys = [
+    "very_poor",
+    "poor",
+    "limited",
+    "adequate",
+    "good",
+    "very_good",
+    "excellent",
+  ] as const;
+
+  assert.equal(translate("en", "career.clubDevelopmentEnvironment.label"), "Development environment");
+  assert.equal(translate("it", "career.clubDevelopmentEnvironment.label"), "Ambiente di sviluppo");
+  assert.equal(translate("de", "career.clubDevelopmentEnvironment.label"), "Entwicklungsumfeld");
+  assert.equal(translate("es", "career.clubDevelopmentEnvironment.label"), "Entorno de desarrollo");
+  assert.equal(translate("fr", "career.clubDevelopmentEnvironment.label"), "Environnement de developpement");
+  assert.deepEqual(
+    keys.map((key) => translate("it", `career.clubDevelopmentEnvironment.state.${key}`)),
+    italianStates,
+  );
+
+  for (const language of ["en", "it", "de", "es", "fr"] as const) {
+    for (const key of keys) {
+      assert.doesNotMatch(
+        translate(language, `career.clubDevelopmentEnvironment.state.${key}`),
+        /(?:0\.92|0\.95|0\.98|1\.00|1\.03|1\.06|1\.10|%)/,
+      );
+    }
+  }
+});
+
 test("translates actionable storage recovery without technical exception prose", () => {
   assert.equal(translate("en", "web.app.storage.retry"), "Try again");
   assert.equal(translate("it", "web.app.storage.retry"), "Riprova");
@@ -183,18 +223,19 @@ test("translates accessible public player ratings in every supported language", 
   assert.equal(
     translate("it", "career.playerPotentialRange.accessibleRange", {
       current: "3",
-      lower: "3,5",
+      p50: "3,5",
       upper: "5",
       uncertainty: "1,5",
     }),
-    "Livello attuale: 3 stelle. Potenziale stimato da 3,5 a 5 stelle. Fascia incerta: 1,5 stelle.",
+    "Livello attuale: 3 su una scala di 6 stelle. Stima mediana del potenziale (P50, non garantita): 3,5 su 6. Limite superiore raggiungibile stimato: 5 su 6. Crescita incerta oltre il P50: 1,5 sulla scala a 6 stelle.",
   );
   assert.equal(
     translate("en", "career.playerPotentialRange.accessibleSingular", {
       current: "4.5",
-      stars: "4.5",
+      p50: "4.5",
+      upper: "4.5",
     }),
-    "Current level: 4.5 stars. Estimated potential: 4.5 out of 6 stars.",
+    "Current level: 4.5 out of 6 stars. Median potential estimate (P50, not guaranteed): 4.5 out of 6. Estimated reachable upper: 4.5 out of 6.",
   );
 });
 

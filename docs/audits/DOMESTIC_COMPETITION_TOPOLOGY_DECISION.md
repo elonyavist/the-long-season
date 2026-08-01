@@ -30,7 +30,7 @@ Additional rules:
 - There are no playoffs, playouts, cups, continental places, infrastructure
   gates, or promotion/relegation-triggered grants, parachute payments, or
   finance consequences in this phase.
-- Phase 81 may add advanced groups/postseason/consequences by extending this
+- Phase 82 may add advanced groups/postseason/consequences by extending this
   canonical state; it must not create a second world model.
 
 ## User-Facing Reason
@@ -52,7 +52,7 @@ postseason simulator inside an economy-calibration phase.
   runtime cost without reproducing the actual third tier.
 - Reproducing the Italian structure would require 20 + 20 + 60 clubs, three
   third-tier groups, asymmetric movement, and a large playoff/playout system.
-  Those advanced rules belong to Phase 81.
+  Those advanced rules belong to Phase 82.
 
 ## Real Italian Reference
 

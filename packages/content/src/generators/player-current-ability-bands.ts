@@ -4,17 +4,27 @@ import {
   type ClubCategory,
   type PlayerAbilityKey,
   type PlayerRole,
+  type PlayerStarRating,
   type RoleAttributeBucket,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
+import type { GeneratedCurrentQualityProfile } from "./player-archetypes.ts";
 import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
 
 /** Rarity lane for current ability inside a division/age band. */
 export type CurrentAbilityRarityLane = "normal" | "rare" | "exceptional";
 
 /** Youth age group used by current-ability generation. */
-export type YouthCurrentAbilityAgeGroup = "age_15_17" | "age_18_19";
+export type YouthCurrentAbilityAgeGroup = "age_15_17" | "age_18_20";
+
+/** Public-star guardrail for a contextually placed rare prodigy. */
+export interface RareProdigyCurrentRatingGuardrail {
+  /** Lowest accepted current rating at generation time. */
+  readonly minimumRating: PlayerStarRating;
+  /** Highest accepted current rating at generation time. */
+  readonly maximumRating: PlayerStarRating;
+}
 
 /** Inclusive numeric current-ability range before per-attribute template offsets. */
 export interface CurrentAbilityBandRange {
@@ -66,7 +76,7 @@ export const YOUTH_CURRENT_ABILITY_BANDS: Readonly<
       allowedButLow: lanes({ normal: [1, 6], rare: [7, 8] }),
       cappedOutOfRole: lanes({ normal: [1, 6], rare: [7, 8] }),
     },
-    age_18_19: {
+    age_18_20: {
       coreForRole: lanes({ normal: [6, 11], rare: [12, 13], exceptional: [14, 14] }),
       secondaryForRole: lanes({ normal: [4, 9], rare: [10, 11] }),
       allowedButLow: lanes({ normal: [1, 7], rare: [8, 10] }),
@@ -80,7 +90,7 @@ export const YOUTH_CURRENT_ABILITY_BANDS: Readonly<
       allowedButLow: lanes({ normal: [1, 7], rare: [8, 9] }),
       cappedOutOfRole: lanes({ normal: [1, 7], rare: [8, 9] }),
     },
-    age_18_19: {
+    age_18_20: {
       coreForRole: lanes({ normal: [7, 12], rare: [13, 14], exceptional: [15, 15] }),
       secondaryForRole: lanes({ normal: [5, 10], rare: [11, 12] }),
       allowedButLow: lanes({ normal: [1, 8], rare: [9, 10] }),
@@ -94,7 +104,7 @@ export const YOUTH_CURRENT_ABILITY_BANDS: Readonly<
       allowedButLow: lanes({ normal: [1, 8], rare: [9, 10] }),
       cappedOutOfRole: lanes({ normal: [1, 8], rare: [9, 10] }),
     },
-    age_18_19: {
+    age_18_20: {
       coreForRole: lanes({ normal: [8, 13], rare: [14, 15], exceptional: [16, 16] }),
       secondaryForRole: lanes({ normal: [6, 11], rare: [12, 13] }),
       allowedButLow: lanes({ normal: [1, 9], rare: [10, 11] }),
@@ -103,9 +113,66 @@ export const YOUTH_CURRENT_ABILITY_BANDS: Readonly<
   },
 };
 
-/** Returns the youth age group for a 15..19-year-old player. */
+/**
+ * Accepted rare-prodigy current-rating guardrails by origin and age.
+ *
+ * First-division values describe the expected strong-club destination. Step 06
+ * applies that documented category guardrail constructively; Step 07 owns the
+ * separate national-stock eligibility rule that places these players at the
+ * correct clubs.
+ */
+export const RARE_PRODIGY_CURRENT_RATING_GUARDRAILS: Readonly<
+  Record<ClubCategory, Readonly<Record<YouthCurrentAbilityAgeGroup, RareProdigyCurrentRatingGuardrail>>>
+> = {
+  third_division: {
+    age_15_17: ratingGuardrail(2, 3),
+    age_18_20: ratingGuardrail(2.5, 3.5),
+  },
+  second_division: {
+    age_15_17: ratingGuardrail(2.5, 3),
+    age_18_20: ratingGuardrail(3, 4),
+  },
+  first_division: {
+    age_15_17: ratingGuardrail(2.5, 3.5),
+    age_18_20: ratingGuardrail(3.5, 4.5),
+  },
+};
+
+/** Returns the youth age group for a 15..20-year-old player. */
 export function youthCurrentAbilityAgeGroup(ageYears: number): YouthCurrentAbilityAgeGroup {
-  return ageYears <= 17 ? "age_15_17" : "age_18_19";
+  if (!Number.isSafeInteger(ageYears) || ageYears < 15 || ageYears > 20) {
+    throw new Error(`Youth current ability age must be an integer from 15 to 20: ${ageYears}`);
+  }
+
+  return ageYears <= 17 ? "age_15_17" : "age_18_20";
+}
+
+/**
+ * Resolves the accepted current-star guardrail for one rare prodigy.
+ *
+ * Lower-division phenomena remain possible because their rarity is owned by
+ * the allocation budget. The first-division band is deliberately restricted
+ * to strong clubs; callers cannot silently apply its stronger guardrail to a
+ * survival or mid-table destination.
+ */
+export function resolveRareProdigyCurrentRatingGuardrail(input: {
+  readonly division: ClubCategory;
+  readonly clubTier: PlayerGenerationClubTier;
+  readonly ageYears: number;
+}): RareProdigyCurrentRatingGuardrail {
+  if (
+    input.division === "first_division"
+    && input.clubTier !== "title_contender"
+    && input.clubTier !== "playoff_contender"
+  ) {
+    throw new Error(
+      `Rare prodigy first-division guardrail requires a strong club tier: ${input.clubTier}`,
+    );
+  }
+
+  return RARE_PRODIGY_CURRENT_RATING_GUARDRAILS[input.division][
+    youthCurrentAbilityAgeGroup(input.ageYears)
+  ];
 }
 
 /** Resolves a senior current-ability band after applying a bounded club-tier modifier. */
@@ -171,11 +238,21 @@ export function resolveEffectiveCurrentAbilityBandForRoleAbility(input: {
   readonly abilityKey: PlayerAbilityKey;
   readonly ageYears?: number;
   readonly rarityLane?: CurrentAbilityRarityLane;
+  readonly currentQualityProfile: GeneratedCurrentQualityProfile;
 }): CurrentAbilityBandRange {
   const bucket = bucketForRoleAbility(input.role, input.abilityKey);
-  const range = input.ageYears === undefined || input.ageYears >= 20
+  const isSenior = input.ageYears === undefined || input.ageYears >= 21;
+  const baseRange = isSenior
     ? resolveSeniorCurrentAbilityBand({ ...input, bucket })
     : resolveYouthCurrentAbilityBand({ ...input, ageYears: input.ageYears, bucket });
+  const range = isSenior
+    ? applySeniorCurrentQualityProfile(baseRange, {
+        division: input.division,
+        clubTier: input.clubTier,
+        bucket,
+        profile: input.currentQualityProfile,
+      })
+    : baseRange;
   const hardCap = hardCapForRoleAbility(input.role, input.abilityKey);
 
   if (hardCap === undefined) {
@@ -186,6 +263,102 @@ export function resolveEffectiveCurrentAbilityBandForRoleAbility(input: {
     minInclusive: Math.min(range.minInclusive, hardCap),
     maxInclusive: Math.min(range.maxInclusive, hardCap),
   };
+}
+
+/**
+ * Shifts only role-defining senior attributes before deterministic sampling.
+ *
+ * These are football-quality population rules. They never enter public
+ * valuation, and they leave incoherent/off-role attributes on the canonical
+ * role caps instead of inflating a whole player profile.
+ */
+function applySeniorCurrentQualityProfile(
+  range: CurrentAbilityBandRange,
+  input: {
+    readonly division: ClubCategory;
+    readonly clubTier: PlayerGenerationClubTier;
+    readonly bucket: RoleAttributeBucket;
+    readonly profile: GeneratedCurrentQualityProfile;
+  },
+): CurrentAbilityBandRange {
+  if (
+    input.bucket !== "coreForRole"
+    && input.bucket !== "secondaryForRole"
+  ) {
+    return range;
+  }
+
+  const adjustment = seniorCurrentQualityAdjustment(input);
+  return {
+    minInclusive: clamp(range.minInclusive + adjustment, 0, 20),
+    maxInclusive: clamp(range.maxInclusive + adjustment, 0, 20),
+  };
+}
+
+/** Returns the explicit senior-population adjustment for one football context. */
+function seniorCurrentQualityAdjustment(input: {
+  readonly division: ClubCategory;
+  readonly clubTier: PlayerGenerationClubTier;
+  readonly profile: GeneratedCurrentQualityProfile;
+}): number {
+  if (
+    input.profile === "youth_prospect"
+    || input.profile === "established_champion"
+  ) {
+    return 0;
+  }
+
+  switch (input.division) {
+    case "first_division":
+      switch (input.profile) {
+        case "senior_regular":
+        case "category_starter":
+          return 0.75;
+        case "category_star":
+          return -0.8;
+        case "veteran_drop_down":
+          return -0.7;
+      }
+    case "second_division":
+      switch (input.profile) {
+        case "senior_regular":
+        case "category_starter":
+          return 0;
+        case "category_star":
+          return -1;
+        case "veteran_drop_down":
+          return -0.4;
+      }
+    case "third_division":
+      return thirdDivisionCurrentQualityAdjustment(
+        input.clubTier,
+        input.profile,
+      );
+  }
+}
+
+/** Keeps lower-division white-fly quality rare without flattening club tiers. */
+function thirdDivisionCurrentQualityAdjustment(
+  clubTier: PlayerGenerationClubTier,
+  profile: Exclude<
+    GeneratedCurrentQualityProfile,
+    "youth_prospect" | "established_champion"
+  >,
+): number {
+  const isStrongClub = clubTier === "title_contender"
+    || clubTier === "playoff_contender";
+
+  switch (profile) {
+    case "senior_regular":
+    case "category_starter":
+      return isStrongClub ? -0.15 : 0;
+    case "category_star":
+      if (isStrongClub) return -1.2;
+      return clubTier === "mid_table" ? -0.35 : -0.3;
+    case "veteran_drop_down":
+      if (isStrongClub) return -0.9;
+      return clubTier === "mid_table" ? -0.2 : -0.1;
+  }
 }
 
 /** Samples a deterministic value from a resolved current-ability range. */
@@ -253,4 +426,11 @@ function range(input: readonly [number, number]): CurrentAbilityBandRange {
     minInclusive: input[0],
     maxInclusive: input[1],
   };
+}
+
+function ratingGuardrail(
+  minimumRating: PlayerStarRating,
+  maximumRating: PlayerStarRating,
+): RareProdigyCurrentRatingGuardrail {
+  return { minimumRating, maximumRating };
 }

@@ -6,12 +6,75 @@ import {
   getGeneratedPlayerArchetype,
 } from "./player-archetypes.ts";
 import {
+  CONTEXTUAL_PROSPECT_CEILING_RATING_BANDS,
   PLAYER_POTENTIAL_RARITY_BANDS,
+  contextualProspectCeilingRatingBand,
+  contextualProspectClassForArchetype,
   currentAbilityRarityLaneForYouthProspect,
   potentialRarityBudgetForDivision,
   potentialRarityForArchetype,
   potentialRarityForPotentialClass,
 } from "./player-potential-rarity.ts";
+
+test("contextual prospect classes keep routine youth outside the division ceiling matrix", () => {
+  assert.equal(contextualProspectClassForArchetype("normal_youth"), "routine");
+  assert.equal(contextualProspectClassForArchetype("good_prospect"), "interesting");
+  assert.equal(contextualProspectClassForArchetype("serious_prospect"), "serious");
+  assert.equal(contextualProspectClassForArchetype("rare_prodigy"), "rare");
+  assert.equal(contextualProspectCeilingRatingBand("first_division", "routine"), undefined);
+});
+
+test("contextual prospect ceiling bands match the accepted three-division matrix", () => {
+  assert.deepEqual(CONTEXTUAL_PROSPECT_CEILING_RATING_BANDS, {
+    third_division: {
+      interesting: {
+        minimumRating: 2.5,
+        maximumRating: 3.5,
+        selection: {
+          kind: "weighted_maximum",
+          maximumRatingBasisPoints: 2_500,
+        },
+      },
+      serious: { minimumRating: 3.5, maximumRating: 4, selection: { kind: "uniform" } },
+      rare: { minimumRating: 5, maximumRating: 6, selection: { kind: "uniform" } },
+    },
+    second_division: {
+      interesting: { minimumRating: 3, maximumRating: 3.5, selection: { kind: "uniform" } },
+      serious: { minimumRating: 3.5, maximumRating: 4.5, selection: { kind: "uniform" } },
+      rare: { minimumRating: 5, maximumRating: 6, selection: { kind: "uniform" } },
+    },
+    first_division: {
+      interesting: { minimumRating: 3.5, maximumRating: 4, selection: { kind: "uniform" } },
+      serious: { minimumRating: 4, maximumRating: 5, selection: { kind: "uniform" } },
+      rare: { minimumRating: 5.5, maximumRating: 6, selection: { kind: "uniform" } },
+    },
+  });
+});
+
+test("third-division interesting prospects reach three-and-a-half only as a weighted edge", () => {
+  const interesting = contextualProspectCeilingRatingBand(
+    "third_division",
+    "interesting",
+  );
+  const serious = contextualProspectCeilingRatingBand(
+    "third_division",
+    "serious",
+  );
+
+  assert.deepEqual(interesting, {
+    minimumRating: 2.5,
+    maximumRating: 3.5,
+    selection: {
+      kind: "weighted_maximum",
+      maximumRatingBasisPoints: 2_500,
+    },
+  });
+  assert.deepEqual(serious, {
+    minimumRating: 3.5,
+    maximumRating: 4,
+    selection: { kind: "uniform" },
+  });
+});
 
 test("every generated archetype maps to the Phase 33 potential rarity scale", () => {
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
@@ -23,15 +86,12 @@ test("every generated archetype maps to the Phase 33 potential rarity scale", ()
   }
 });
 
-test("third-division rarity budget keeps high and elite potential bounded", () => {
+test("third-division routine rarity budget keeps serious potential bounded", () => {
   const budget = potentialRarityBudgetForDivision("third_division");
 
   assert.equal(budget.ordinary, "majority");
   assert.equal(budget.highPerDivision.minInclusive, 2);
   assert.equal(budget.highPerDivision.maxInclusive, 5);
-  assert.equal(budget.elitePerDivision.minInclusive, 0);
-  assert.equal(budget.elitePerDivision.maxInclusive, 1);
-  assert.equal(budget.eliteChance > 0 && budget.eliteChance < 1, true);
 });
 
 test("youth current lane boost is limited to stronger prospects and academies", () => {

@@ -20,6 +20,7 @@ import {
 import type { MatchTeamContext, PlayerMatchRatingRow } from "../match-engine/index.ts";
 import {
   accrueCommittedFixtureParticipation,
+  accrueFixtureParticipationContributions,
   buildFixtureParticipationContributions,
 } from "./player-participation.ts";
 
@@ -51,6 +52,7 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
   assert.deepEqual(slimContributions(result.contributions), [
     {
       playerId: HOME_GOALKEEPER,
+      clubId: clubId("club:home"),
       started: true,
       substituteAppearance: false,
       minutes: 90,
@@ -59,6 +61,7 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
     },
     {
       playerId: HOME_STARTER,
+      clubId: clubId("club:home"),
       started: true,
       substituteAppearance: false,
       minutes: 45,
@@ -67,6 +70,7 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
     },
     {
       playerId: HOME_SUB,
+      clubId: clubId("club:home"),
       started: false,
       substituteAppearance: true,
       minutes: 45,
@@ -75,6 +79,7 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
     },
     {
       playerId: HOME_UNUSED,
+      clubId: clubId("club:home"),
       started: false,
       substituteAppearance: false,
       minutes: 0,
@@ -125,6 +130,40 @@ test("accrueCommittedFixtureParticipation writes committed fixture facts once", 
         finalContext: finalHomeContext(),
         benchPlayerIds: [HOME_SUB, HOME_UNUSED],
       }],
+    }),
+    /fixture already accrued/,
+  );
+});
+
+test("accrueFixtureParticipationContributions reuses domain ledger validation", () => {
+  const contributions = buildFixtureParticipationContributions({
+    fixtureId: FIXTURE_ID,
+    seasonId: SEASON_ID,
+    fixtureDate: gameDate(20_000),
+    finalMinute: 90,
+    sides: [{
+      side: "home",
+      initialContext: initialHomeContext(),
+      finalContext: initialHomeContext(),
+    }],
+    playerRatings: ratingsFixture(),
+  }).contributions;
+  const accrued = accrueFixtureParticipationContributions({
+    careerState: careerStateFixture(),
+    contributions,
+  });
+
+  assert.equal(accrued.playerParticipationLedger?.rowKeys.length, 2);
+  assert.equal(
+    accrued.playerParticipationLedger?.rows[
+      accrued.playerParticipationLedger.rowKeys[0] ?? ""
+    ]?.minutes,
+    90,
+  );
+  assert.throws(
+    () => accrueFixtureParticipationContributions({
+      careerState: accrued,
+      contributions,
     }),
     /fixture already accrued/,
   );
@@ -187,6 +226,7 @@ function ratingFixture(player: PlayerId, rating: number): PlayerMatchRatingRow {
 function slimContributions(contributions: readonly PlayerFixtureParticipationContribution[]) {
   return contributions.map((contribution) => ({
     playerId: contribution.playerId,
+    clubId: contribution.clubId,
     started: contribution.started,
     substituteAppearance: contribution.substituteAppearance,
     minutes: contribution.minutes,

@@ -61,6 +61,29 @@ test("applySeasonalYouthIntake caps active academy size", () => {
   assert.equal(result.records[0]?.skippedPlayerIds.length, 3);
 });
 
+test("applySeasonalYouthIntake preserves every existing player and lifecycle fact during a refill", () => {
+  const careerState = careerStateFixture({ initialYouthCount: YOUTH_ACADEMY_TARGET_MAX_SIZE - 1 });
+  const existingPlayers = structuredClone(careerState.gameState.players);
+  const existingLifecycle = structuredClone(careerState.youthAcademyState?.playerLifecycle);
+
+  const result = applySeasonalYouthIntake({
+    careerState,
+    seasonId: seasonId("season:0002"),
+    intakeDate: gameDate(20_365),
+    candidates: candidateBatch("club:pro01", 1),
+  });
+
+  for (const playerIdValue of careerState.gameState.playerIds) {
+    assert.deepEqual(result.careerState.gameState.players[playerIdValue], existingPlayers[playerIdValue]);
+  }
+  for (const playerIdValue of careerState.youthAcademyState?.playerLifecycleIds ?? []) {
+    assert.deepEqual(
+      result.careerState.youthAcademyState?.playerLifecycle[playerIdValue],
+      existingLifecycle?.[playerIdValue],
+    );
+  }
+});
+
 test("applySeasonalYouthIntake initializes youth state for an old career save when candidates fill the target", () => {
   const careerState = careerStateFixture({ initialYouthCount: 0, includeYouthState: false });
   const result = applySeasonalYouthIntake({
@@ -113,6 +136,29 @@ test("applySeasonalYouthIntake rejects unsafe candidate pools", () => {
         candidates: candidateBatch("club:pro01", 2),
       }),
     "academy_underfilled_after_refill",
+  );
+
+  const historicalPlayerId = playerId("player:historical-intake-id");
+  const baseCareerState = careerStateFixture({ initialYouthCount: 0 });
+  const careerStateWithHistoricalPlayer = createCareerState({
+    ...baseCareerState,
+    gameState: {
+      ...baseCareerState.gameState,
+      players: {
+        ...baseCareerState.gameState.players,
+        [historicalPlayerId]: playerFixture(historicalPlayerId),
+      },
+    },
+  });
+  assertYouthIntakeError(
+    () =>
+      applySeasonalYouthIntake({
+        careerState: careerStateWithHistoricalPlayer,
+        seasonId: seasonId("season:0002"),
+        intakeDate: gameDate(20_365),
+        candidates: [candidateFixture("club:pro01", historicalPlayerId)],
+      }),
+    "candidate_player_already_exists",
   );
 });
 
@@ -213,7 +259,7 @@ function candidateBatch(
   return candidates;
 }
 
-function candidateFixture(targetClubId: string, playerIdValue: string): YouthIntakeCandidate {
+function candidateFixture(targetClubId: string, playerIdValue: string | PlayerId): YouthIntakeCandidate {
   const id = playerId(playerIdValue);
   return {
     targetClubId: clubId(targetClubId),

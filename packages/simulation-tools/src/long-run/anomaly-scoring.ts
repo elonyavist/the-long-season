@@ -4,6 +4,29 @@ import type { LongRunPlayerEvolutionReport } from "./player-evolution.ts";
 /** Status assigned to one long-run anomaly check. */
 export type LongRunAnomalyStatus = "pass" | "warn" | "fail";
 
+/** Stable ordered anomaly keys emitted by the canonical long-run scorer. */
+export const LONG_RUN_ANOMALY_KEYS = [
+  "goals_per_match_avg",
+  "table_points_spread_avg",
+  "top_assist_max",
+  "top_creator_goal_share_max",
+  "top_three_creator_goal_share_max",
+  "champion_streak",
+  "useful_players_after_long_run",
+  "age_30_plus_share",
+  "transfer_turnover_available",
+  "squad_turnover_available",
+  "clubs_below_minimum_squad_size",
+  "clubs_without_natural_goalkeeper",
+  "role_coverage_warning_count",
+] as const;
+
+/** Closed key union that makes every anomaly-semantic consumer exhaustive. */
+export type LongRunAnomalyKey = (typeof LONG_RUN_ANOMALY_KEYS)[number];
+
+/** Player-facing meaning of a raw long-run anomaly result. */
+export type LongRunAnomalySemanticClass = "story" | "monitor" | "structural";
+
 /** Balance row used by long-run anomaly scoring. */
 export interface LongRunBalanceSeasonRow {
   /** Goals per match for this season. */
@@ -19,13 +42,71 @@ export interface LongRunBalanceSeasonRow {
 /** One deterministic anomaly check. */
 export interface LongRunAnomalyCheck {
   /** Stable check key for CLI output and future docs. */
-  readonly key: string;
+  readonly key: LongRunAnomalyKey;
   /** PASS/WARN/FAIL status. */
   readonly status: LongRunAnomalyStatus;
   /** Numeric value that triggered the check. */
   readonly value: number | "unavailable";
   /** Human-readable threshold note owned by simulation tooling, not UI prose. */
   readonly threshold: string;
+}
+
+/** Raw anomaly check plus its separate world-gate interpretation. */
+export interface ProjectedLongRunAnomalyCheck extends LongRunAnomalyCheck {
+  /** Exhaustive football/design interpretation without rewriting raw status. */
+  readonly semanticClass: LongRunAnomalySemanticClass;
+  /** Gate projection; only a story failure may be reduced to a warning. */
+  readonly worldGateStatus: LongRunAnomalyStatus;
+}
+
+const anomalySemanticClassByKey = {
+  goals_per_match_avg: "monitor",
+  table_points_spread_avg: "story",
+  top_assist_max: "story",
+  top_creator_goal_share_max: "monitor",
+  top_three_creator_goal_share_max: "monitor",
+  champion_streak: "story",
+  useful_players_after_long_run: "monitor",
+  age_30_plus_share: "monitor",
+  transfer_turnover_available: "monitor",
+  squad_turnover_available: "monitor",
+  clubs_below_minimum_squad_size: "structural",
+  clubs_without_natural_goalkeeper: "structural",
+  role_coverage_warning_count: "monitor",
+} as const satisfies Readonly<
+  Record<LongRunAnomalyKey, LongRunAnomalySemanticClass>
+>;
+
+/**
+ * Returns the exhaustive player-facing meaning of one canonical anomaly key.
+ *
+ * Keeping this total mapping next to the scorer prevents a new check from
+ * silently inheriting a CLI fallback classification.
+ */
+export function longRunAnomalySemanticClass(
+  key: LongRunAnomalyKey,
+): LongRunAnomalySemanticClass {
+  return anomalySemanticClassByKey[key];
+}
+
+/**
+ * Adds world-gate semantics without mutating the raw anomaly result.
+ *
+ * Healthy football variance may turn a raw story `fail` into a gate `warn`.
+ * Monitor and structural failures retain their raw severity.
+ */
+export function projectLongRunAnomalyCheckForWorldGate(
+  check: LongRunAnomalyCheck,
+): ProjectedLongRunAnomalyCheck {
+  const semanticClass = longRunAnomalySemanticClass(check.key);
+  return {
+    ...check,
+    semanticClass,
+    worldGateStatus:
+      check.status === "fail" && semanticClass === "story"
+        ? "warn"
+        : check.status,
+  };
 }
 
 /** Input for long-run anomaly scoring. */
@@ -312,7 +393,7 @@ function roleCoverageWarningCheck(report: LongRunClubStabilityReport): LongRunAn
 }
 
 function check(
-  key: string,
+  key: LongRunAnomalyKey,
   value: number,
   threshold: string,
   status: () => LongRunAnomalyStatus,

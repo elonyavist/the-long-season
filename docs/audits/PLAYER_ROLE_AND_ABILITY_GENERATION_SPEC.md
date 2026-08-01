@@ -240,6 +240,13 @@ Rarity budget per division and season:
 
 Rarity budget is league/division-level, not per club. The game should not guarantee every club a high or elite prospect.
 
+> Superseded by Phase 80A Step 07 for exceptional youth: `elite` remains a
+> descriptive potential class, but `rare_prodigy` is now assigned only by the
+> national active-stock allocator (`4..5` age-15-to-20 ceiling-six players,
+> vacancy-based annual top-up). There is no longer a per-division elite roll or
+> budget. The `ordinary`, `interesting`, and `high` guidance above remains
+> applicable to routine generation.
+
 ## Lower-Division White-Flies
 
 White-fly players are allowed but must be budgeted:
@@ -319,4 +326,3 @@ Reports must not expose exact hidden potential as normal user-facing truth.
 7. Make development respect role caps.
 8. Extend tests and reports.
 9. Re-run long-run gates.
-

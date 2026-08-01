@@ -17,6 +17,7 @@ describe("CareerDashboardView", () => {
         clubId: "club:pro01",
         name: "A.C. Perugia",
         rosterSize: 22,
+        developmentEnvironmentLabelKey: "career.clubDevelopmentEnvironment.state.adequate",
       },
       nextFixture: {
         status: "available",
@@ -109,6 +110,9 @@ describe("CareerDashboardView", () => {
     };
 
     expect(view.screenKey).toBe("career.dashboard");
+    expect(view.selectedClub.developmentEnvironmentLabelKey).toBe(
+      "career.clubDevelopmentEnvironment.state.adequate",
+    );
     expect(view.nextFixture.selectedClubSide).toBe("home");
     expect(view.recentMatch.homeGoals).toBe(2);
     expect(view.leagueTable.rows[0]?.isSelectedClub).toBe(true);

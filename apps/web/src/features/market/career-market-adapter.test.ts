@@ -74,20 +74,23 @@ describe("presentCareerMarket", () => {
       return player === undefined ? [] : [player];
     });
     const expectedByPlayerId = new Map(
-      careerEngine.derivePublicPlayerAssessments({
-        ratingScale: playerValuationConfig.ratingScale,
-        potentialProjectionPolicy: playerPotentialProjectionPolicy,
-        currentDate: fixture.career.gameState.calendar.currentDate,
-        players: assessedPlayers,
-      }).map((assessment) => [String(assessment.playerId), assessment]),
+      assessedPlayers.map((player) => {
+        const assessment = careerEngine.derivePublicPlayerAssessment({
+          player,
+          ratingScale: playerValuationConfig.ratingScale,
+          potentialProjectionPolicy: playerPotentialProjectionPolicy,
+          currentDate: fixture.career.gameState.calendar.currentDate,
+        });
+        return [String(assessment.playerId), assessment] as const;
+      }),
     );
 
     const target = presentation.targets[0];
     expect(target?.currentRating.stars).toBeGreaterThanOrEqual(1);
     expect(target?.currentRating.stars).toBeLessThanOrEqual(6);
-    expect(target?.potentialRange.lowerStars).toBeGreaterThanOrEqual(1);
+    expect(target?.potentialRange.p50Stars).toBeGreaterThanOrEqual(1);
     expect(target?.potentialRange.upperStars).toBeLessThanOrEqual(6);
-    expect(target?.potentialRange.lowerStars).toBeLessThanOrEqual(
+    expect(target?.potentialRange.p50Stars).toBeLessThanOrEqual(
       target?.potentialRange.upperStars ?? 0,
     );
     expect(target?.publicValue).toBeGreaterThan(0);
@@ -103,8 +106,8 @@ describe("presentCareerMarket", () => {
           return expected === undefined
             ? undefined
             : {
-                lowerStars: expected.potentialProjection.lowerRating.stars,
-                upperStars: expected.potentialProjection.upperRating.stars,
+                p50Stars: expected.p50Rating.stars,
+                upperStars: expected.upperRating.stars,
               };
         })(),
       );

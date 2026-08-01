@@ -271,13 +271,13 @@ test("ranks a narrow strong projection above a wide elite-upside lottery ticket"
       ...input[0]!,
       playerId: "player:lottery",
       currentRating: { stars: 2 },
-      potentialRange: { lowerStars: 2, upperStars: 6 },
+      potentialRange: { p50Stars: 2, upperStars: 6 },
     },
     {
       ...input[1]!,
       playerId: "player:narrow",
       currentRating: { stars: 4 },
-      potentialRange: { lowerStars: 4, upperStars: 5.5 },
+      potentialRange: { p50Stars: 4, upperStars: 5.5 },
     },
   ]);
 
@@ -319,7 +319,7 @@ function targets(): readonly CareerMarketTargetInput[] {
       form: 67,
       morale: 63,
       currentRating: { stars: 3.5 },
-      potentialRange: { lowerStars: 3.5, upperStars: 4.5 },
+      potentialRange: { p50Stars: 3.5, upperStars: 4.5 },
       publicValue: nonNegativeMoney(1_000_000_00),
       currency: "EUR",
       employment: {
@@ -346,7 +346,7 @@ function targets(): readonly CareerMarketTargetInput[] {
       form: 58,
       morale: 55,
       currentRating: { stars: 5 },
-      potentialRange: { lowerStars: 5, upperStars: 5 },
+      potentialRange: { p50Stars: 5, upperStars: 5 },
       publicValue: nonNegativeMoney(4_000_000_00),
       currency: "EUR",
       employment: {
@@ -373,7 +373,7 @@ function targets(): readonly CareerMarketTargetInput[] {
       form: 60,
       morale: 60,
       currentRating: { stars: 2.5 },
-      potentialRange: { lowerStars: 2.5, upperStars: 3.5 },
+      potentialRange: { p50Stars: 2.5, upperStars: 3.5 },
       publicValue: nonNegativeMoney(500_000_00),
       currency: "EUR",
       employment: { status: "free_agent", sourceTier: "free_agent" },
@@ -391,7 +391,7 @@ function targets(): readonly CareerMarketTargetInput[] {
       form: 52,
       morale: 49,
       currentRating: { stars: 2.5 },
-      potentialRange: { lowerStars: 2.5, upperStars: 3 },
+      potentialRange: { p50Stars: 2.5, upperStars: 3 },
       publicValue: nonNegativeMoney(3_000_000_00),
       currency: "EUR",
       employment: {

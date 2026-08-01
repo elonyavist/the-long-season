@@ -395,6 +395,36 @@
   min-height: 3.25rem;
 }
 
+/*
+ * One compact public club fact belongs beside the Dashboard identity. The
+ * coefficient deliberately never reaches this presentation surface.
+ */
+.tls-dashboard-club-environment,
+.tls-dashboard-club-environment div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tls-space-1) var(--tls-space-2);
+  align-items: baseline;
+  padding: 0;
+  margin: 0;
+}
+
+.tls-dashboard-club-environment dt {
+  color: var(--tls-color-text-muted);
+  font-size: var(--tls-font-size-sm);
+}
+
+.tls-dashboard-club-environment dt::after {
+  content: ":";
+}
+
+.tls-dashboard-club-environment dd {
+  margin: 0;
+  color: var(--tls-color-text);
+  font-size: var(--tls-font-size-sm);
+  font-weight: 700;
+}
+
 .tls-dashboard-overview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4107,8 +4137,8 @@
 
 /*
  * Potential always reserves six slots. Current ability keeps the Level color;
- * conservative future uses a light solid fill; uncertain future keeps the
- * light hatch; and the remaining outline sits beyond the public upper bound.
+ * probable P50 future uses a light solid fill; uncertain future keeps the light
+ * hatch; and the remaining outline sits beyond the public upper estimate.
  * DOM data attributes mirror every visual state.
  */
 .tls-player-potential-range,
@@ -4149,7 +4179,7 @@
   color: var(--tls-player-rating-star);
 }
 
-.tls-player-potential-star-conservative-future,
+.tls-player-potential-star-probable-future,
 .tls-player-potential-star-uncertain-future-base,
 .tls-player-potential-star-uncertain-future {
   color: var(--tls-player-rating-projected);
@@ -4159,7 +4189,7 @@
   color: var(--tls-player-rating-sixth);
 }
 
-.tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-conservative-future,
+.tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-probable-future,
 .tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-uncertain-future-base,
 .tls-player-potential-star[data-sixth="true"] .tls-player-potential-star-uncertain-future {
   color: var(--tls-player-rating-projected-sixth);

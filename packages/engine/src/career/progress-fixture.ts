@@ -16,6 +16,7 @@ import {
   type MatchPlayerConsequence,
   type AppliedMatchSubstitution,
   type PlayerId,
+  type PlayerDevelopmentEnvironmentConfig,
   type PlayerWagePolicyConfig,
 } from "@game/domain";
 
@@ -30,6 +31,11 @@ import type {
 } from "../match-engine/index.ts";
 import { buildPlayerMatchRatings, playerRatingRegistrationsFromContext, type PlayerMatchRatingRow } from "../match-engine/player-match-rating.ts";
 import { simulateMatch } from "../match-engine/simulate-match.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
 import { AiSquadSelectionError, buildAiSquadMatchTeamContext } from "../team-selection/index.ts";
 import { applyMatchReportToFixture } from "../use-cases/apply-match-report-to-fixture.ts";
 import { createMatchConsequenceInboxMessages, deliverCareerInboxMessages } from "./career-inbox-lifecycle.ts";
@@ -85,6 +91,10 @@ export interface ProgressNextCareerFixtureInput {
   /** Version-linked wage policy used if fixture-date advancement crosses a month. */
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Canonical public-assessment policy used by crossed contract checkpoints. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Version-linked club-environment policy used by quarterly development. */
+  readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
   /** Match-ready team contexts keyed by club ID. The selected club must be supplied by the caller. */
   readonly teamsByClubId: Readonly<Partial<Record<ClubId, MatchTeamContext>>>;
   /** Optional AI selector config used only for non-selected clubs when their context is missing. */
@@ -162,6 +172,10 @@ export interface CommitCompletedCareerFixtureInput {
   /** Version-linked wage policy used by fixture-date monthly advancement. */
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Canonical public-assessment policy used by crossed contract checkpoints. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Version-linked club-environment policy used by quarterly development. */
+  readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
   /** Final structured report produced by the completed live match. */
   readonly report: MatchReport;
   /** Frozen kickoff context used to identify starters and participation. */
@@ -216,6 +230,8 @@ export function commitCompletedCareerFixture(
     careerState: input.careerState,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
+    valuationConfig: input.valuationConfig,
+    playerDevelopmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
     fixture,
     report: input.report,
     selectedStarterIds: selectedInitialTeam.lineup.map((slot) => slot.playerId),
@@ -282,6 +298,8 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     careerState: input.careerState,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
+    valuationConfig: input.valuationConfig,
+    playerDevelopmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
     fixture: nextFixture.fixture,
     report: simulatedFixture.report,
     selectedStarterIds,
@@ -323,6 +341,8 @@ interface ApplyCareerFixtureReportInput {
   readonly careerState: CareerState;
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  readonly valuationConfig: PlayerValuationConfig;
+  readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
   readonly fixture: Fixture;
   readonly report: MatchReport;
   readonly selectedStarterIds: readonly PlayerId[];
@@ -340,6 +360,9 @@ function applyCareerFixtureReport(
     careerState: input.careerState,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
+    valuationConfig: input.valuationConfig,
+    playerDevelopmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
+    developmentCheckpointMode: "complete_quarters",
     worldSeed: input.careerState.gameState.meta.seed,
     fromDate: input.careerState.gameState.calendar.currentDate,
     toDate: input.fixture.date,
@@ -559,23 +582,33 @@ function resolveTeamContext(
     };
   }
 
+  const selectablePlayerIds = club.playerIds.filter((playerId) =>
+    playerUnavailabilityReason(
+      careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
+      playerId,
+      fixture.date,
+      fixture.competitionId,
+    ) === undefined
+  );
+
   try {
     return {
       status: "resolved",
       context: buildAiSquadMatchTeamContext({
         clubId,
         formation: aiSelection.formation,
-        playerIds: club.playerIds.filter((playerId) => playerUnavailabilityReason(
-          careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
-          playerId,
-          fixture.date,
-          fixture.competitionId,
-        ) === undefined),
+        playerIds: selectablePlayerIds,
         players: careerState.gameState.players,
+        publicAssessments: publicAssessmentsForPlayers(
+          careerState,
+          selectablePlayerIds,
+          fixture.date,
+          input.valuationConfig,
+        ),
+        currentDate: fixture.date,
         playerStates: careerState.gameState.playerStates,
         roleWeights: aiSelection.roleWeights,
         tacticalDistribution: aiSelection.tacticalDistribution,
-        currentDate: fixture.date,
         ...(aiSelection.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: aiSelection.stateMultiplierCurves }),
         ...(aiSelection.benchSize === undefined ? {} : { benchSize: aiSelection.benchSize }),
       }).teamContext,
@@ -590,6 +623,27 @@ function resolveTeamContext(
 
     throw error;
   }
+}
+
+/** Builds safe dated facts for the exact selectable AI roster. */
+function publicAssessmentsForPlayers(
+  careerState: CareerState,
+  playerIds: readonly PlayerId[],
+  currentDate: Fixture["date"],
+  valuationConfig: PlayerValuationConfig,
+): Readonly<Record<PlayerId, PublicPlayerAssessment>> {
+  const assessments: Record<PlayerId, PublicPlayerAssessment> = {};
+  for (const playerId of playerIds) {
+    const player = careerState.gameState.players[playerId];
+    if (player === undefined) continue;
+    assessments[playerId] = derivePublicPlayerAssessment({
+      player,
+      currentDate,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+      ratingScale: valuationConfig.ratingScale,
+    });
+  }
+  return assessments;
 }
 
 interface SimulatedFixtureProgression {

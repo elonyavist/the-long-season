@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  clubTierForGeneratedClubNumber,
   getPlayerGenerationBand,
+  openingCompetitiveTierForClubRank,
   PLAYER_GENERATION_CLUB_TIERS,
   PLAYER_GENERATION_DIVISIONS,
 } from "./player-generation-bands.ts";
@@ -43,13 +43,15 @@ test("third-division current bands stay below first-division top-club quality", 
   assert.equal(firstTitle.currentAbility.maxInclusive >= 18, true);
 });
 
-test("generated club order maps to broad strength tiers", () => {
-  assert.equal(clubTierForGeneratedClubNumber(1), "title_contender");
-  assert.equal(clubTierForGeneratedClubNumber(4), "title_contender");
-  assert.equal(clubTierForGeneratedClubNumber(5), "playoff_contender");
-  assert.equal(clubTierForGeneratedClubNumber(8), "playoff_contender");
-  assert.equal(clubTierForGeneratedClubNumber(9), "mid_table");
-  assert.equal(clubTierForGeneratedClubNumber(14), "mid_table");
-  assert.equal(clubTierForGeneratedClubNumber(15), "survival");
-  assert.equal(clubTierForGeneratedClubNumber(18), "survival");
+test("opening club rank maps to the exact 4/4/6/4 tier shape", () => {
+  assert.equal(openingCompetitiveTierForClubRank(1), "title_contender");
+  assert.equal(openingCompetitiveTierForClubRank(4), "title_contender");
+  assert.equal(openingCompetitiveTierForClubRank(5), "playoff_contender");
+  assert.equal(openingCompetitiveTierForClubRank(8), "playoff_contender");
+  assert.equal(openingCompetitiveTierForClubRank(9), "mid_table");
+  assert.equal(openingCompetitiveTierForClubRank(14), "mid_table");
+  assert.equal(openingCompetitiveTierForClubRank(15), "survival");
+  assert.equal(openingCompetitiveTierForClubRank(18), "survival");
+  assert.throws(() => openingCompetitiveTierForClubRank(0), /1 to 18/);
+  assert.throws(() => openingCompetitiveTierForClubRank(19), /1 to 18/);
 });

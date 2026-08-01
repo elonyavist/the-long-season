@@ -11,6 +11,7 @@ import {
   type PlayerPotentialProjectionPolicyConfig,
   type PlayerRatingScaleConfig,
 } from "@game/domain";
+import { fromISO, toISO } from "@game/shared";
 
 import {
   derivePlayerPotentialProjection,
@@ -19,26 +20,39 @@ import {
 
 const CURRENT_DATE = gameDate(30_000);
 
-/** Synthetic headless factors exercise the ordered P10/P50/P90 contract. */
+/** Synthetic headless factors exercise the ordered current/P50/upper contract. */
 const policy: PlayerPotentialProjectionPolicyConfig = {
-  schemaVersion: 1,
-  version: "step01-large-room-typical-lower-envelope-v1",
+  schemaVersion: 2,
+  version: "test-current-p50-upper-v1",
   classification: "explicit_game_design_target",
   ageBandsByRoleFamily: {
     outfield: [
-      band(0, 17, 900, 1_400, 4_000),
-      band(18, 20, 500, 800, 3_000),
-      band(21, 22, 200, 200, 2_000),
-      band(23, 24, 100, 100, 1_000),
-      band(25, 200, 0, 0, 0),
+      band(0, 17, 4_000, 10_000),
+      band(18, 20, 3_000, 10_000),
+      band(21, 21, 2_000, 6_000),
+      band(22, 22, 1_500, 5_000),
+      band(23, 23, 1_000, 4_000),
+      band(24, 24, 750, 3_000),
+      band(25, 25, 500, 2_000),
+      band(26, 26, 250, 1_000),
+      band(27, 27, 0, 0),
+      band(28, 200, 0, 0),
     ],
     goalkeeper: [
-      band(0, 17, 600, 800, 3_000),
-      band(18, 20, 600, 700, 2_500),
-      band(21, 22, 400, 500, 2_000),
-      band(23, 24, 300, 400, 1_500),
-      band(25, 27, 100, 100, 1_000),
-      band(28, 200, 0, 0, 0),
+      band(0, 17, 3_000, 10_000),
+      band(18, 20, 2_500, 10_000),
+      band(21, 21, 2_200, 8_000),
+      band(22, 22, 2_000, 7_000),
+      band(23, 23, 1_800, 6_000),
+      band(24, 24, 1_600, 5_000),
+      band(25, 25, 1_400, 4_000),
+      band(26, 26, 1_200, 3_000),
+      band(27, 27, 1_000, 2_000),
+      band(28, 28, 800, 1_500),
+      band(29, 29, 600, 1_000),
+      band(30, 30, 400, 700),
+      band(31, 31, 200, 300),
+      band(32, 200, 0, 0),
     ],
   },
 };
@@ -68,28 +82,22 @@ const scale: PlayerRatingScaleConfig = {
   ],
   rarity: {
     initialWorld: {
-      currentSixMinimum: 1,
-      currentSixMaximum: 2,
-      potentialSixMinimum: 2,
-      potentialSixMaximum: 4,
-      lowerDivisionPotentialSixMaximum: 1,
+      establishedCurrentSixMinimum: 2,
+      establishedCurrentSixMaximum: 3,
+      youngStoredCeilingSixMinimum: 4,
+      youngStoredCeilingSixMaximum: 5,
+      lowerDivisionYoungStoredCeilingSixMaximum: 1,
+      youngStoredCeilingSixPerClubMaximum: 1,
     },
     annualIntake: {
-      potentialSixPerWorldMinimum: 0,
-      potentialSixPerWorldMaximum: 1,
-      tenSeasonCohortMinimum: 2,
-      tenSeasonCohortMaximum: 4,
-    },
-    yearTen: {
-      activeCurrentSixMaximum: 4,
-      activePotentialSixMaximum: 8,
-      lowerDivisionPotentialSixMaximum: 1,
+      activeYoungStoredCeilingSixTargetMinimum: 4,
+      activeYoungStoredCeilingSixTargetMaximum: 5,
     },
   },
 };
 
-test("derives ordered age-band projections for ages 15, 18, 22, and later", () => {
-  const projections = [15, 18, 22, 25].map((age, index) =>
+test("derives ordered age-band projections for young, narrowing, and terminal ages", () => {
+  const projections = [15, 18, 22, 25, 28].map((age, index) =>
     derivePlayerPotentialProjection({
       player: playerFixture(index + 1, age, "striker", 7.5, 17),
       currentDate: CURRENT_DATE,
@@ -100,9 +108,8 @@ test("derives ordered age-band projections for ages 15, 18, 22, and later", () =
 
   for (const projection of projections) {
     assert.equal(
-      projection.currentAbility <= projection.conservativeLowerAbility
-      && projection.conservativeLowerAbility <= projection.expectedAbility
-      && projection.expectedAbility <= projection.upperAbility
+      projection.currentAbility <= projection.p50Ability
+      && projection.p50Ability <= projection.upperAbility
       && projection.upperAbility <= projection.storedCeilingAbility,
       true,
     );
@@ -111,22 +118,22 @@ test("derives ordered age-band projections for ages 15, 18, 22, and later", () =
     assert.equal(Object.isFrozen(projection), true);
   }
   assert.deepEqual(
-    projections.map(({ conservativeLowerAbility }) =>
-      Number(conservativeLowerAbility.toFixed(3))
+    projections.map(({ p50Ability }) =>
+      Number(p50Ability.toFixed(3))
     ),
-    [8.355, 7.975, 7.69, 7.5],
+    [11.3, 10.35, 8.925, 7.975, 7.5],
   );
   assert.deepEqual(
     projections.map(({ upperAbility }) => Number(upperAbility.toFixed(3))),
-    [11.3, 10.35, 9.4, 7.5],
+    [17, 17, 12.25, 9.4, 7.5],
   );
   assert.deepEqual(
     projections.map(({ upperRating }) => upperRating),
-    [3, 3, 2.5, 2],
+    [6, 6, 3, 2.5, 2],
   );
 });
 
-test("maps current, conservative, expected, and upper values at half-star boundaries", () => {
+test("maps current, P50, and upper values at half-star boundaries", () => {
   const projection = derivePlayerPotentialProjection({
     player: playerFixture(1, 15, "striker", 8.4, 8.65),
     currentDate: CURRENT_DATE,
@@ -135,9 +142,33 @@ test("maps current, conservative, expected, and upper values at half-star bounda
   });
 
   assert.equal(projection.currentRating, 2);
-  assert.equal(projection.conservativeLowerRating, 2);
-  assert.equal(projection.expectedRating, 2);
+  assert.equal(projection.p50Rating, 2.5);
   assert.equal(projection.upperRating, 2.5);
+});
+
+test("selects age bands on exact civil birthdays", () => {
+  const player = {
+    ...playerFixture(1, 17, "striker", 7.5, 17),
+    birthDate: gameDate(fromISO("2004-08-01")),
+  };
+
+  const beforeBirthday = derivePlayerPotentialProjection({
+    player,
+    currentDate: gameDate(fromISO("2025-07-31")),
+    policy,
+    ratingScale: scale,
+  });
+  const onBirthday = derivePlayerPotentialProjection({
+    player,
+    currentDate: gameDate(fromISO("2025-08-01")),
+    policy,
+    ratingScale: scale,
+  });
+
+  assert.equal(beforeBirthday.age, 20);
+  assert.equal(beforeBirthday.upperAbility, beforeBirthday.storedCeilingAbility);
+  assert.equal(onBirthday.age, 21);
+  assert.equal(onBirthday.upperAbility < onBirthday.storedCeilingAbility, true);
 });
 
 test("keeps zero-room projections singular and bounded by stored potential", () => {
@@ -151,22 +182,20 @@ test("keeps zero-room projections singular and bounded by stored potential", () 
   assert.deepEqual(
     [
       projection.currentAbility,
-      projection.conservativeLowerAbility,
-      projection.expectedAbility,
+      projection.p50Ability,
       projection.upperAbility,
       projection.storedCeilingAbility,
     ],
-    [16, 16, 16, 16, 16],
+    [16, 16, 16, 16],
   );
   assert.deepEqual(
     [
       projection.currentRating,
-      projection.conservativeLowerRating,
-      projection.expectedRating,
+      projection.p50Rating,
       projection.upperRating,
       projection.storedCeilingRating,
     ],
-    [5, 5, 5, 5, 5],
+    [5, 5, 5, 5],
   );
 });
 
@@ -186,26 +215,58 @@ test("uses the later goalkeeper evidence curve without selected-club inputs", ()
 
   assert.equal(goalkeeper.roleFamily, "goalkeeper");
   assert.equal(outfield.roleFamily, "outfield");
-  assert.equal(goalkeeper.expectedAbility > outfield.expectedAbility, true);
+  assert.equal(goalkeeper.p50Ability > outfield.p50Ability, true);
   assert.equal(goalkeeper.upperAbility > outfield.upperAbility, true);
-  assert.equal(Math.abs(goalkeeper.expectedAbility - 10.28) < 1e-9, true);
-  assert.equal(Math.abs(outfield.expectedAbility - 10.07) < 1e-9, true);
+  assert.equal(Math.abs(goalkeeper.p50Ability - 11.12) < 1e-9, true);
+  assert.equal(Math.abs(outfield.p50Ability - 10.525) < 1e-9, true);
 });
 
-test("keeps public width non-increasing within each role family", () => {
+test("narrows exact-age upper factors until zero within each role family", () => {
   for (const family of ["goalkeeper", "outfield"] as const) {
     let previousWidth = Number.POSITIVE_INFINITY;
     for (const ageBand of policy.ageBandsByRoleFamily[family]) {
-      const width = ageBand.upperRealizationBasisPoints
-        - ageBand.conservativeRealizationBasisPoints;
+      const width = ageBand.upperRealizationBasisPoints;
       assert.equal(
         width <= previousWidth,
         true,
-        `${family} public width widened at age ${ageBand.minimumAge}`,
+        `${family} upper realization widened at age ${ageBand.minimumAge}`,
       );
+      if (ageBand.minimumAge > 20 && previousWidth > 0) {
+        assert.equal(width < previousWidth, true);
+      }
       previousWidth = width;
     }
   }
+});
+
+test("enforces full young upper and role-specific terminal ages", () => {
+  for (const role of ["striker", "goalkeeper"] as const) {
+    for (const age of [15, 20]) {
+      const projection = derivePlayerPotentialProjection({
+        player: playerFixture(age, age, role, 7.5, 17),
+        currentDate: CURRENT_DATE,
+        policy,
+        ratingScale: scale,
+      });
+      assert.equal(projection.upperAbility, projection.storedCeilingAbility);
+    }
+  }
+
+  const outfieldAt28 = derivePlayerPotentialProjection({
+    player: playerFixture(28, 28, "striker", 7.5, 17),
+    currentDate: CURRENT_DATE,
+    policy,
+    ratingScale: scale,
+  });
+  const goalkeeperAt32 = derivePlayerPotentialProjection({
+    player: playerFixture(32, 32, "goalkeeper", 7.5, 17),
+    currentDate: CURRENT_DATE,
+    policy,
+    ratingScale: scale,
+  });
+
+  assert.equal(outfieldAt28.upperAbility, outfieldAt28.currentAbility);
+  assert.equal(goalkeeperAt32.upperAbility, goalkeeperAt32.currentAbility);
 });
 
 test("is deterministic, does not mutate inputs, and rejects incomplete facts", () => {
@@ -260,7 +321,10 @@ test("rejects invalid policy factor ordering before deriving a projection", () =
         ...policy,
         ageBandsByRoleFamily: {
           ...policy.ageBandsByRoleFamily,
-          outfield: [band(0, 200, 2_000, 1_000, 3_000)],
+          outfield: [
+            { ...policy.ageBandsByRoleFamily.outfield[0]!, p50RealizationBasisPoints: 10_001 },
+            ...policy.ageBandsByRoleFamily.outfield.slice(1),
+          ],
         },
       },
       ratingScale: scale,
@@ -274,15 +338,13 @@ test("rejects invalid policy factor ordering before deriving a projection", () =
 function band(
   minimumAge: number,
   maximumAge: number,
-  conservativeRealizationBasisPoints: number,
-  expectedRealizationBasisPoints: number,
+  p50RealizationBasisPoints: number,
   upperRealizationBasisPoints: number,
 ) {
   return {
     minimumAge,
     maximumAge,
-    conservativeRealizationBasisPoints,
-    expectedRealizationBasisPoints,
+    p50RealizationBasisPoints,
     upperRealizationBasisPoints,
   };
 }
@@ -298,12 +360,23 @@ function playerFixture(
     id: playerId(`player:projection-${String(sequence).padStart(2, "0")}`),
     firstName: "Projection",
     lastName: String(sequence),
-    birthDate: gameDate(Number(CURRENT_DATE) - Math.ceil(age * 365.2425)),
+    birthDate: birthDateForCompletedAge(age),
     naturalPositions: role === "goalkeeper" ? ["gk"] : ["st"],
     primaryRole: role,
     abilities: uniformAbilities(current),
     potential: uniformAbilities(potential),
   };
+}
+
+/** Builds an exact-birthday fixture instead of approximating years as days. */
+function birthDateForCompletedAge(age: number) {
+  const [currentYear, month, day] = toISO(CURRENT_DATE).split("-");
+  if (currentYear === undefined || month === undefined || day === undefined) {
+    throw new Error("Current projection test date must be a valid ISO date");
+  }
+  return gameDate(fromISO(
+    `${String(Number(currentYear) - age).padStart(4, "0")}-${month}-${day}`,
+  ));
 }
 
 function uniformAbilities(value: number): PlayerAbilities {

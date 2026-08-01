@@ -7,8 +7,16 @@ import {
   type SupportedLanguage,
 } from "@game/i18n";
 import { DEFAULT_LONG_RUN_SEASON_COUNT } from "@game/simulation-tools";
-import { createResumableLongRunGateReport } from "./ten-season-report/gate-checkpoint.ts";
-import { formatLongRunGateReportMarkdown, formatLongRunGateReportOutput } from "./ten-season-report/gate-output.ts";
+import {
+  createResumableLongRunGateReport,
+  createResumablePlayerDevelopmentCohortReport,
+} from "./ten-season-report/gate-checkpoint.ts";
+import {
+  formatLongRunGateReportMarkdown,
+  formatLongRunGateReportOutput,
+  formatPlayerDevelopmentCohortReportMarkdown,
+  formatPlayerDevelopmentCohortReportOutput,
+} from "./ten-season-report/gate-output.ts";
 import {
   createLongRunGateReport,
   createSingleWorldReport,
@@ -17,6 +25,11 @@ import { formatTenSeasonReportOutput } from "./ten-season-report/single-world-ou
 
 /** Default seed used by the ten-season lab report. */
 export const DEFAULT_TEN_SEASON_REPORT_SEED = "world-a";
+
+/** Batch payload selected by the report command. */
+export type TenSeasonReportKind =
+  | "long-run-gate"
+  | "player-development-cohort";
 
 /**
  * Minimal IO adapter used by command tests.
@@ -47,6 +60,45 @@ export async function runTenSeasonReportCommand(
     return 1;
   }
 
+  if (parsed.reportKind === "player-development-cohort") {
+    if (
+      parsed.worldCount === undefined
+      || parsed.checkpointDirectoryPath === undefined
+      || parsed.reportOutputPath === undefined
+    ) {
+      throw new Error(
+        "Validated player-development cohort lost required batch paths",
+      );
+    }
+    const cohortReport =
+      await createResumablePlayerDevelopmentCohortReport({
+        seedPrefix: parsed.seedPrefix,
+        worldCount: parsed.worldCount,
+        seasonCount: 3,
+        language: parsed.language,
+        checkpointDirectoryPath: await resolveWorkspaceOutputPath(
+          parsed.checkpointDirectoryPath,
+        ),
+        ...(parsed.workerCount === undefined
+          ? {}
+          : { workerCount: parsed.workerCount }),
+      });
+    await writeTextFile(
+      parsed.reportOutputPath,
+      formatPlayerDevelopmentCohortReportMarkdown(
+        cohortReport,
+        parsed.reportOutputPath,
+      ),
+    );
+    for (const line of formatPlayerDevelopmentCohortReportOutput(
+      cohortReport,
+      parsed.reportOutputPath,
+    )) {
+      io.stdout(line);
+    }
+    return cohortReport.status === "pass" ? 0 : 1;
+  }
+
   if (parsed.worldCount !== undefined) {
     const batchReport = parsed.checkpointDirectoryPath === undefined
       ? await createLongRunGateReport({
@@ -74,7 +126,7 @@ export async function runTenSeasonReportCommand(
       io.stdout(line);
     }
 
-    return batchReport.failedWorldCount === 0 ? 0 : 1;
+    return batchReport.status === "pass" ? 0 : 1;
   }
 
   const singleReport = createSingleWorldReport(parsed.seed, parsed.seasonCount, text);
@@ -155,6 +207,7 @@ async function findWorkspaceRoot(): Promise<string> {
  * Parses command-line arguments for the ten-season report.
  */
 function parseArgs(args: readonly string[]): ParsedArgs {
+  let reportKind: TenSeasonReportKind = "long-run-gate";
   let seed = DEFAULT_TEN_SEASON_REPORT_SEED;
   let seedPrefix = DEFAULT_TEN_SEASON_REPORT_SEED;
   let seasonCount = DEFAULT_LONG_RUN_SEASON_COUNT;
@@ -172,6 +225,30 @@ function parseArgs(args: readonly string[]): ParsedArgs {
 
     if (arg === "--seed") {
       return { ok: false, message: createTranslator(language)("season.error.seedRequired"), language };
+    }
+
+    if (arg === "--report-kind") {
+      return {
+        ok: false,
+        message: "--report-kind requires a value",
+        language,
+      };
+    }
+
+    if (arg.startsWith("--report-kind=")) {
+      const value = arg.slice("--report-kind=".length);
+      if (
+        value !== "long-run-gate"
+        && value !== "player-development-cohort"
+      ) {
+        return {
+          ok: false,
+          message: `Unsupported report kind: ${value}`,
+          language,
+        };
+      }
+      reportKind = value;
+      continue;
     }
 
     if (arg.startsWith("--seed=")) {
@@ -374,8 +451,24 @@ function parseArgs(args: readonly string[]): ParsedArgs {
     };
   }
 
+  if (reportKind === "player-development-cohort") {
+    const contractError = validatePlayerDevelopmentCohortContract({
+      seedPrefix,
+      worldCount,
+      seasonCount,
+      reportOutputPath,
+      checkpointDirectoryPath,
+      shardCount,
+      workerCount,
+    });
+    if (contractError !== undefined) {
+      return { ok: false, message: contractError, language };
+    }
+  }
+
   return {
     ok: true,
+    reportKind,
     seed,
     seedPrefix,
     seasonCount,
@@ -386,6 +479,44 @@ function parseArgs(args: readonly string[]): ParsedArgs {
     workerCount,
     language,
   };
+}
+
+/**
+ * Enforces the one predeclared Phase 80A cohort contract before any worker or
+ * checkpoint can run. Small fixtures exercise lower-level pure adapters
+ * directly; the product CLI never launches an exploratory cohort variant.
+ */
+function validatePlayerDevelopmentCohortContract(input: {
+  readonly seedPrefix: string;
+  readonly worldCount: number | undefined;
+  readonly seasonCount: number;
+  readonly reportOutputPath: string | undefined;
+  readonly checkpointDirectoryPath: string | undefined;
+  readonly shardCount: number | undefined;
+  readonly workerCount: number | undefined;
+}): string | undefined {
+  if (input.seedPrefix !== "phase80a-player-development-750x3-v1") {
+    return "player-development-cohort requires the frozen Phase 80A seed prefix";
+  }
+  if (input.worldCount !== 750) {
+    return "player-development-cohort requires exactly 750 worlds";
+  }
+  if (input.seasonCount !== 3) {
+    return "player-development-cohort requires exactly 3 seasons";
+  }
+  if (input.checkpointDirectoryPath === undefined) {
+    return "player-development-cohort requires --checkpoint-dir";
+  }
+  if (input.shardCount !== 750) {
+    return "player-development-cohort requires exactly 750 one-world shards";
+  }
+  if (input.workerCount !== 7) {
+    return "player-development-cohort requires exactly 7 workers";
+  }
+  if (input.reportOutputPath === undefined) {
+    return "player-development-cohort requires --report-output";
+  }
+  return undefined;
 }
 
 /**
@@ -411,6 +542,7 @@ function parsePositiveSafeInteger(value: string): number | undefined {
 type ParsedArgs =
   | {
       readonly ok: true;
+      readonly reportKind: TenSeasonReportKind;
       readonly seed: string;
       readonly seedPrefix: string;
       readonly seasonCount: number;

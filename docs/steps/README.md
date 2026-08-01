@@ -57,7 +57,11 @@ Provide an open, incremental, and iterative execution guide for the project: one
 ## Current State
 
 - `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
-- Status: Ready to start. Phase 80A Step 01 is the only next action.
+- Status: Blocked. Steps 05, 06, and 08 are reclosed. Step 09 completed the
+  exact `750 x 3` fresh/resume proof with `750` one-world shards, exactly `7`
+  workers, and an identical aggregate hash, but it is not Done: both reports
+  remain `FAIL` because `goals_per_match_avg` has `80` monitor failures. No
+  Phase 80B handoff occurred, and the deferred `50 x 20` remains unrun.
 - `docs/steps/80-graphical-and-structural-rework/`
 - Status: Done. All nine steps are complete and the phase handed control to
   Phase 80A on 2026-07-31.
@@ -88,11 +92,11 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - Focused checks, `pnpm check`, build, Playwright `29/29`, and manual browser
   QA pass. Its attempted direct `50 x 20` was stopped, wrote no report, and is
   not claimed as evidence.
-- Phase 80 must not run the deferred longitudinal cohort. Phase 80C Step 09
-  alone owns one resumable `50 x 20` with `50` stable shards and exactly `7`
-  workers, after all accepted UI, player-model, market, loan, and competitive-
-  race reworks. It moved out of Phase 80B so the cohort observes the final
-  market instead of one that is about to change.
+- Phases 80, 80A, 80B, and 80C must not run the deferred longitudinal cohort.
+  Phase 81 Step 12 alone owns one resumable `50 x 20` with `50` stable shards
+  and exactly `7` workers, after the accepted UI, player-model, market, loan,
+  competitive-race, and match-engine reworks. This keeps the final evidence
+  representative of the game that will actually be handed back to Phase 79.
 - The Phase 80A contract removes public-valuation `marketContext`, all
   owner-category/free-agent multipliers, and all per-context maximums in favor
   of one global model/cap and a new source-backed calibration epoch.
@@ -107,7 +111,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   club-stage qualification sets, exact rival-fee visibility with a versioned
   minimum raise increment, and player choice between qualified suitors.
 - Phase 79 Step 14 remains Reopened and paused without a release-gate claim.
-  Do not resume it until Phase 80C and its final `50 x 20` are complete.
+  Do not resume it until Phase 81 and its final `50 x 20` are complete.
 - The user-requested Phase 79B browser/product interposition is Done after all
   seven steps and returned control to Phase 79 before the later 79C/79D
   interpositions. It did not run, replace, weaken, or claim Phase 79 Step 14's
@@ -122,7 +126,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
 
 - `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
 - Status: In progress. Steps 01-13 are Done, Step 14 is Reopened but paused
-  through Phases 80, 80A, 80B, and 80C, and Step 15 is not started.
+  through Phases 80, 80A, 80B, 80C, and 81, and Step 15 is not started.
 - No Phase 79 staged cohort has been run or claimed against the post-79C
   economy.
 
@@ -131,22 +135,26 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/`
 - Status: Done. All nine ordered documents are closed.
 - The stopped direct `50 x 20` remains explicitly unclaimed; the replacement
-  cohort belongs to Phase 80C Step 09 and
-  must use checkpoints and exactly `7` workers.
+  cohort belongs to Phase 81 Step 12 and must use checkpoints, `50` stable
+  shards, and exactly `7` workers.
 
 ## Planned Rework Continuation
 
 - `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
-- Status: Planned. It starts only after Phase 80 is Done.
+- Status: Blocked. Steps 01-08 are Done/reclosed; Step 09 completed its exact
+  deterministic fresh/resume execution but cannot close while the frozen
+  report-wide match-goal monitor remains `FAIL`.
 - It owns dynamic club tier/reputation/environment, quarterly development,
   current/P50/upper projection, contextual prospect supply, national
   exceptional stock, annual intake, expected-outcome value, and fair AI
   information.
-- It deletes incompatible beta saves and runs bounded diagnostics, but no
-  `50 x 20`.
+- It deleted/rejected incompatible beta evidence and completed a compact
+  checkpointed `750 worlds x 3 seasons` player-development diagnostic with
+  exactly `7` workers and a zero-new-world resume proof, but no `50 x 20`.
 
 - `docs/steps/80b-incoming-offers-market-postures-and-loans/`
-- Status: Planned. It starts only after Phase 80A is Done.
+- Status: Planned and entry-gated. It starts only after blocked Phase 80A is
+  explicitly unblocked and marked Done.
 - It owns durable sale/loan postures, selected-club incoming offers, one final
   counterproposal, bidirectional loans, three wage-share choices, real
   loan development, Posta UI, and persistence.
@@ -167,8 +175,26 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - It permits at most three active buyers, qualifies only the highest
   seller-acceptable fee and exact matches, keeps loans serial, gives both
   stages fixed three-day clocks, and never closes early on manager acceptance.
-- Step 09 is the sole owner of the deferred checkpointed `50 x 20`, moved here
-  from Phase 80B so the cohort observes the final competitive market.
+- Step 09 closes the phase on bounded, non-vacuous evidence and hands control
+  to Phase 81. It keeps the shared checkpoint/shard infrastructure working but
+  does not run or claim the deferred longitudinal cohort.
+
+- `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/`
+- Status: Planned under an accepted design contract. It starts only after
+  Phase 80C is Done.
+- It preserves the deterministic aggregate match engine while making
+  formation shape, role suitability, opponent matchups, tactical instructions,
+  and live manager decisions causally relevant.
+- It keeps player quality, intrinsic team shape, and relational matchup as
+  separate typed concepts; removes the four-department information collapse;
+  derives causal actors before outcomes; and gives pre-match, live, AI, batch,
+  and diagnostic paths one shared decision seam.
+- Every step must remove obsolete local paths and perform any necessary
+  in-scope refactor instead of layering compatibility branches or generic
+  helper modules over unclear code.
+- Step 12 is the sole owner of the deferred checkpointed `50 x 20`, with `50`
+  stable shards, exactly `7` workers, checkpoint reuse, and a repeated run that
+  proves deterministic reuse before handing evidence back to Phase 79.
 
 ## Completed User-Requested Phase
 

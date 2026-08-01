@@ -1,6 +1,6 @@
 # Career Web Section Roadmap
 
-Date: 2026-07-31
+Date: 2026-08-01
 Current baseline: Phases 79A, 79B, 79C, and 79D are complete. Phase 79D closed
 by explicit product decision after its implementation, bounded diagnostics,
 repository checks, build, Playwright `29/29`, and manual browser QA passed.
@@ -13,10 +13,12 @@ selects, reworked the Squad table around canonical age, Placement order, and a
 delayed search, centralized exact locale money presentation and editing, made
 the Market offer dialog transactional, closed every repository and browser gate
 on the pinned Node `24.16.0` toolchain, and handed off on 2026-07-31.
-Control now sits with documented Phase 80A, then Phase 80B, then the planned
-Phase 80C under its accepted product contract. Phase 80C Step 09 alone runs the
-deferred resumable `50 x 20` with `50` shards and exactly `7` workers. Phase 79 Step 14
-is Reopened and paused; its staged long-run gate remains unrun and unclaimed.
+Control remains with Phase 80A Step 09, which is Blocked after the exact
+`750 x 3` fresh/resume proof. Phase 80B's entry gate remains closed and no
+later phase has started. Phase 81 Step 12 alone runs the deferred resumable
+`50 x 20` with `50` shards and exactly `7` workers.
+Phase 79 Step 14 is Reopened and paused; its staged long-run gate remains unrun
+and unclaimed.
 Phase 69's single fixed web identity still supersedes the earlier three-skin
 experiment.
 
@@ -2190,7 +2192,7 @@ Documentation:
   SQLite/OPFS evidence pass without a direct web-to-domain dependency. Step 15
   remains open and was explicitly deferred by the Phase 79 entry-gate
   override; Phase 79D is complete by explicit product decision, and Phase 79
-  Step 14 remains paused through Phase 80C.
+  Step 14 remains paused through Phase 81.
 
 The former Phase 78 Step 16 is retired. Its integrated accessibility, visual,
 dead-code, architecture, browser, and reporting closeout is owned once by Phase
@@ -2548,9 +2550,10 @@ Completed Phase 79D corrective interposition:
   boundaries, web build, Playwright `29/29`, and manual Squad/Market/profile QA
   pass. The attempted direct `50 x 20` was stopped, produced no report, and is
   not claimed as evidence.
-- The replacement cohort belongs to Phase 80C Step 09. It must use resumable
+- The replacement cohort belongs to Phase 81 Step 12. It must use resumable
   checkpoints, `50` stable shards, and exactly `7` workers, after the accepted
-  Phase 80 UI, Phase 80A player-model, and Phase 80B market/loan work.
+  Phase 80 UI, Phase 80A player-model, Phase 80B market/loan, Phase 80C race,
+  and Phase 81 match-engine work.
 - No scouting, hidden current attributes, exact numeric potential, persisted
   projection, live source dependency, unbounded rejection sampling, unrelated
   UI redesign, or Phase 80 work belongs to Phase 79D.
@@ -2675,10 +2678,10 @@ Phase 80 graphical and structural rework interposition:
   WCAG 2.2 AA, keyboard/focus, reduced-motion, narrow, `200%` text,
   architecture, and regression evidence.
 - Step 09 is complete. The bounded UI rework is closed with full repository and
-  browser evidence, no longitudinal cohort ran, and Phase 80A Step 01 is the
-  only next action.
+  browser evidence, no longitudinal cohort ran, and control passed to Phase
+  80A.
 
-Phase 80A, 80B, and 80C planned continuation:
+Phase 80A, 80B, 80C, and 81 planned continuation:
 
 - Phase 80A owns dynamic club tier/reputation/environment, quarterly
   development, one current/P50/upper public assessment, contextual prospect
@@ -2686,6 +2689,54 @@ Phase 80A, 80B, and 80C planned continuation:
   expected-outcome public value with a global cap, and AI information parity.
   It removes `marketContext`, its multipliers, and its per-context maximums
   rather than neutralizing them.
+- Phase 80A Step 01 is complete. A canonical pre-change baseline now owns `20`
+  stable seeds and composition hashes, positive denominators, separate
+  current/P50/public-upper/stored-ceiling distributions, and the frozen new
+  calibration epoch. The historical `11 / 1,710` remains non-reproducible
+  context; the executable baseline observes `11 / 1,723` exact age-17 players
+  with at least `+1.0` public star of upside. Focused Vitest `26/26`, owning
+  typechecks, diff, and Graphify pass; no longitudinal cohort ran.
+- Phase 80A Step 02 is complete. `club-competitive-tier-v1` now freezes one
+  exact `4/4/6/4` tier per active club and season, ranks after movement from a
+  balanced roster plus completed-result signal, bounds reputation movement to
+  two, commits with the calendar atomically, and persists only the current
+  snapshot behind intentional JSON v9 / SQLite v18 beta reset seams. Step 03
+  is complete: one strict, separately stamped seven-state matrix derives the
+  current club environment from frozen category/tier facts, persists no second
+  state/history, and exposes only its localized public label. JSON v10 and
+  SQLite v19 intentionally reset incompatible beta saves. Step 04 is complete:
+  the canonical monthly ledger now drives three-month development batches and
+  a residual rollover flush, preserves minute-weighted club provenance,
+  removes permanent realization, and keeps deterministic player/month
+  variance behind JSON v11 / SQLite v20 beta reset seams. Focused Vitest
+  `110/110`, five package typechecks, depcruise, diff, and Graphify pass. Step
+  05 was reopened after product evidence exposed a flat `21..24` projection
+  band and is reclosed with `24` exact-age role-family bands backed by `1,620`
+  deterministic outcomes, while preserving the explicit
+  full-upper-through-20 rule. Step 06 is reclosed with one ceiling-first
+  joint-profile Module:
+  explicit age-`15..20` prospect lanes receive at least one stored star of
+  room, routine players may plateau, and all generation roots share the same
+  Interface without post-hoc ceiling inflation. Its required `185/185` tests,
+  typechecks, frozen division shares, stock regressions, diff, and Graphify
+  pass. Step 07 remains complete: an unresolved promotion
+  candidate is now an explicit club-associated active-stock source, so the
+  pre-intake allocator cannot manufacture a vacancy before same-rollover
+  promotion. The `6 / target 5` regression is closed without changing the
+  immutable target, thresholds, or seeds; its binding placement gates now
+  measure stock arrival rather than later market movement, and resumable
+  checkpoints reject malformed or partial gate contracts. Step 08 is
+  complete: valuation-v5 prices proven current fully, bounded P50
+  participation, and smaller positive public-upper option value; removes the
+  global uncertainty haircut and `marketContext`; and passes all owned
+  structural/economic gates on fresh bounded evidence. Step 09 is Blocked, not
+  Done. Its fresh and zero-new-world resume runs completed with `750` shards,
+  exactly `7` workers, and identical aggregate hash
+  `a09c10cb2b678140a2de7c4a226faac370c2a73b3e0d143dd9e35859f51f4a03`.
+  All `32` cohort gates pass with zero structural violations, but both reports
+  remain `FAIL` because `goals_per_match_avg` has `80` monitor failures. No
+  threshold, anomaly status, or semantic-class weakening is permitted, and no
+  Phase 80B handoff occurred.
 - Phase 80B owns durable sale/loan postures, selected-club incoming offers,
   one final counterproposal, bidirectional loans, three wage-share choices,
   real loan development, Posta UI, and canonical persistence. Persisted
@@ -2698,13 +2749,24 @@ Phase 80A, 80B, and 80C planned continuation:
 - Phase 80C owns a durable coordination race over canonical negotiation
   references, one shared clock per stage, club-stage qualification sets,
   stale-safe raises, player choice, free-agent negotiation, dedicated
-  diagnostics, and Step 09's resumable `50 x 20` with `50` stable shards and
-  `7` workers. It does not claim Phase 79 Step 14's separate release-scale
-  gate.
+  diagnostics, and a bounded Step 09 closeout that hands reusable cohort
+  infrastructure to Phase 81. It runs no longitudinal cohort and does not
+  claim Phase 79 Step 14's separate release-scale gate.
 - Its accepted product policy permits at most three active buyers, advances
   only the highest seller-acceptable fee and exact matches, uses fixed
   three-day stages, keeps loans serial, and never treats manager acceptance as
   an early race close.
+- Phase 81 owns the typed tactical slot context, separate intrinsic-shape and
+  relational-matchup models, suitability without double penalty,
+  phase-aware opportunity routes, shared tactic semantics, causal actor
+  selection, live-session persistence, AI parity, and structured tactical
+  consequences in the existing matchday UI. It preserves the deterministic
+  aggregate engine rather than cloning a proprietary competitor. Step 01
+  freezes numeric quality-versus-structure bands before coefficients; Steps
+  03-05 are headless only; Step 06 is the first end-to-end gameplay gate.
+- Phase 81 Step 12 alone owns the final resumable `50 x 20`, with `50` stable
+  shards, exactly `7` workers, checkpoint reuse, and a repeated deterministic
+  replay before the Phase 79 handoff.
 
 Phase 79 historical step progress:
 
@@ -2883,19 +2945,20 @@ Recommended order:
 24. Phase 77 - Live Match Control, Statistics And In-Game Decisions - complete
 25. Phase 78 - Senior Squad, Player Contracts And Club Finance Foundation - in progress; Steps 01-14 Done, Step 15 open/deferred under the explicit Phase 79 override
 26. Future Web Backlog - Calendar And Fixtures
-27. Phase 79 - Transfer Market Windows, Negotiations And Market Workspace - in progress; Steps 01-13 Done, Step 14 Reopened and paused through Phase 80C
+27. Phase 79 - Transfer Market Windows, Negotiations And Market Workspace - in progress; Steps 01-13 Done, Step 14 Reopened and paused through Phase 81
 28. Phase 79A - Transfer Market Activity, Free-Agent Economy And Long-Run Diagnostics - complete; Steps 01-07 Done
 29. Phase 79B - Squad And Market Player Workspace UI/UX And Career Statistics - complete; Steps 01-07 Done
 30. Phase 79C - Global Player Rating, Three-Division World And Market Economy Calibration - complete; Steps 01-14 Done
 31. Phase 79D - Exceptional Player Generation, Prospect Economy And Non-Vacuous Diagnostics - complete by explicit product decision; all nine ordered documents Done, interrupted `50 x 20` unclaimed
 32. Phase 80 - Graphical And Structural Rework - complete; all nine steps Done, no long run
-33. Phase 80A - Prospect Generation, Club Environment And Quarterly Development - ready to start; Step 01 is the only next action
-34. Phase 80B - Incoming Offers, Market Postures And Loans - planned; bounded closeout only
-35. Phase 80C - Competitive Transfer Race And Player Choice - planned under accepted product contract; sole deferred `50 x 20` owner
-36. Future Web Backlog - Youth UI
-37. Future Web Backlog - Staff Foundation
-38. Future Web Backlog - Archive And History
-39. Future Web Backlog - Main Dashboard Consolidation
+33. Phase 80A - Prospect Generation, Club Environment And Quarterly Development - Blocked; Steps 01-08 Done/reclosed, Step 09 Blocked after the completed deterministic `750 x 3` fresh/resume proof
+34. Phase 80B - Incoming Offers, Market Postures And Loans - planned; entry gate closed while Phase 80A Step 09 is Blocked
+35. Phase 80C - Competitive Transfer Race And Player Choice - planned under accepted product contract; bounded closeout only
+36. Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine - planned under accepted design contract; sole deferred `50 x 20` owner
+37. Future Web Backlog - Youth UI
+38. Future Web Backlog - Staff Foundation
+39. Future Web Backlog - Archive And History
+40. Future Web Backlog - Main Dashboard Consolidation
 
 This order is intentionally linear:
 
@@ -2960,8 +3023,8 @@ This order is intentionally linear:
   aggregate percentiles and maximum-only year-ten caps did not protect joint
   age/current/potential/value credibility. It corrected those player-level
   stories and made the bounded diagnostics non-vacuous; the stopped direct
-  cohort remains unclaimed and moves to Phase 80C Step 09 after the complete
-  accepted rework chain.
+  cohort remains unclaimed and moves to Phase 81 Step 12 after the complete
+  accepted player, market, and match-engine rework chain.
 - The broader Finances surface follows Phase 79; youth and staff become
   meaningful after the core loop is playable.
 - Archive becomes valuable after there is history worth preserving.

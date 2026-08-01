@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "vitest";
 
 import {
@@ -36,9 +37,12 @@ import {
 
 import {
   advanceAiMarketLifecycle as advanceAiMarketLifecycleWithConfig,
+  deriveAiMarketTargetScore,
+  deriveAiTransferAffordabilitySnapshot,
   deriveAiTransferOfferFee,
   deriveAiMarketNeeds as deriveAiMarketNeedsWithPolicy,
 } from "./ai-market-lifecycle.ts";
+import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
 import { askingPriceConfigFixture } from "../test-fixtures/asking-price-config.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
@@ -50,11 +54,98 @@ const VALUATION_CONFIG = playerValuationConfigFixture();
 const ASKING_PRICE_CONFIG = askingPriceConfigFixture();
 const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
 
+test("live AI market policy cannot bypass the canonical public assessment", () => {
+  const liveOwnerPaths = [
+    "./ai-market-lifecycle.ts",
+    "./ai-contract-lifecycle.ts",
+    "../team-selection/ai-squad-selection.ts",
+    "../market/player-willingness.ts",
+    "./contract-negotiation-demand.ts",
+    "./progress-fixture.ts",
+    "../use-cases/simulate-season.ts",
+    "./youth-promotion.ts",
+    "./youth-lifecycle.ts",
+    "../../../../apps/cli/src/commands/career/roster-output.ts",
+  ] as const;
+  const forbiddenPatterns = [
+    /derivePlayerMarketAbility/,
+    /\bplayer\s*\.\s*potential\b/,
+    /\bderivePlayerPotentialProjection\b/,
+    /\brolePotentialAbility\b/,
+    /\bstoredCeiling\b/,
+  ] as const;
+
+  for (const relativePath of liveOwnerPaths) {
+    const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
+    for (const forbiddenPattern of forbiddenPatterns) {
+      assert.doesNotMatch(
+        source,
+        forbiddenPattern,
+        `${relativePath} bypasses PublicPlayerAssessment through ${String(forbiddenPattern)}`,
+      );
+    }
+  }
+});
+
+test("AI clubs penalize wider public uncertainty according to category risk appetite", () => {
+  const narrowAssessment = publicAssessmentFixture({ upperAbility: 14, upperStars: 4 });
+  const wideAssessment = publicAssessmentFixture({ upperAbility: 18, upperStars: 5.5 });
+  const sharedInputs = {
+    roleNeedScore: 50,
+    affordabilityScore: 50,
+    policy: MARKET_BEHAVIOR_POLICY,
+  } as const;
+
+  const narrowFirstDivisionScore = deriveAiMarketTargetScore({
+    ...sharedInputs,
+    assessment: narrowAssessment,
+    buyingClubCategory: "first_division",
+  });
+  const wideFirstDivisionScore = deriveAiMarketTargetScore({
+    ...sharedInputs,
+    assessment: wideAssessment,
+    buyingClubCategory: "first_division",
+  });
+  const wideThirdDivisionScore = deriveAiMarketTargetScore({
+    ...sharedInputs,
+    assessment: wideAssessment,
+    buyingClubCategory: "third_division",
+  });
+
+  assert.equal(narrowFirstDivisionScore, 5_400);
+  assert.equal(wideFirstDivisionScore, 5_360);
+  assert.equal(wideThirdDivisionScore, 5_280);
+  assert.equal(narrowFirstDivisionScore > wideFirstDivisionScore, true);
+  assert.equal(wideFirstDivisionScore > wideThirdDivisionScore, true);
+});
+
+function publicAssessmentFixture(input: {
+  readonly upperAbility: number;
+  readonly upperStars: PublicPlayerAssessment["upperRating"]["stars"];
+}): PublicPlayerAssessment {
+  return {
+    playerId: playerId("player:risk-appetite"),
+    assessedOn: gameDate(20_000),
+    age: 18,
+    roleFamily: "outfield",
+    currentAbility: 10,
+    p50Ability: 14,
+    upperAbility: input.upperAbility,
+    currentRating: { stars: 3 },
+    p50Rating: { stars: 4 },
+    upperRating: { stars: input.upperStars },
+  };
+}
+
 function deriveAiMarketNeeds(
-  input: Omit<Parameters<typeof deriveAiMarketNeedsWithPolicy>[0], "marketBehaviorPolicy">,
+  input: Omit<
+    Parameters<typeof deriveAiMarketNeedsWithPolicy>[0],
+    "valuationConfig" | "marketBehaviorPolicy"
+  >,
 ) {
   return deriveAiMarketNeedsWithPolicy({
     ...input,
+    valuationConfig: VALUATION_CONFIG,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
   });
 }
@@ -106,6 +197,27 @@ test("AI offer policy deterministically reaches reject, counter, and asking band
       policy: MARKET_BEHAVIOR_POLICY.aiTransferOffer,
     }) <= 6_000_000,
     true,
+  );
+  assert.deepEqual(
+    deriveAiTransferAffordabilitySnapshot({
+      account: {
+        clubId: clubId("club:buyer"),
+        currency: "EUR",
+        cashBalance: nonNegativeMoney(100_000_000),
+        annualTransferBudget: nonNegativeMoney(50_000_000),
+        availableTransferBudget: nonNegativeMoney(50_000_000),
+        annualWageBudget: nonNegativeMoney(20_000_000),
+        committedAnnualWage: nonNegativeMoney(0),
+        seasonIncome: nonNegativeMoney(0),
+        seasonExpenses: nonNegativeMoney(0),
+      },
+      policy: MARKET_BEHAVIOR_POLICY.affordability,
+    }),
+    {
+      availableTransferCapacity: nonNegativeMoney(45_000_000),
+      availableCashCapacity: nonNegativeMoney(98_000_000),
+      maximumAffordableFee: nonNegativeMoney(45_000_000),
+    },
   );
 });
 
@@ -823,6 +935,7 @@ function playerWithPotentialFixture(
 ): Player {
   const player = {
     ...playerFixture(id, position, currentAbility),
+    birthDate: gameDate(20_000 - 17 * 365),
     potential: abilitySet(potentialAbility),
   };
   playerLookup.set(id, player);

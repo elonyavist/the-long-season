@@ -44,6 +44,8 @@ import {
   MINIMUM_CAREER_DEPARTMENT_DEPTH,
   MINIMUM_CAREER_SQUAD_SIZE,
 } from "./squad-maintenance.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 const AI_RENEWAL_WINDOW_DAYS = 243;
 
@@ -98,6 +100,8 @@ export function advanceAiContractLifecycle(input: {
   readonly throughDate: GameDate;
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Canonical public-assessment policy used by every renewal decision. */
+  readonly valuationConfig: PlayerValuationConfig;
 }): AdvanceAiContractLifecycleResult {
   if (
     input.throughDate <= input.fromDate
@@ -116,6 +120,7 @@ export function advanceAiContractLifecycle(input: {
     throughDate: input.throughDate,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
+    valuationConfig: input.valuationConfig,
   });
   let careerState = preliminaryAgreements.careerState;
   const facts: AiContractLifecycleFact[] = [];
@@ -125,6 +130,7 @@ export function advanceAiContractLifecycle(input: {
     careerState,
     input.throughDate,
     input.wagePolicy,
+    input.valuationConfig,
   );
   careerState = resolvedExisting.careerState;
   negotiationFacts.push(...resolvedExisting.negotiationFacts);
@@ -135,6 +141,7 @@ export function advanceAiContractLifecycle(input: {
     fromDate: input.fromDate,
     throughDate: input.throughDate,
     wagePolicy: input.wagePolicy,
+    valuationConfig: input.valuationConfig,
   });
   careerState = started.careerState;
   negotiationFacts.push(...started.negotiationFacts);
@@ -144,12 +151,18 @@ export function advanceAiContractLifecycle(input: {
     careerState,
     input.throughDate,
     input.wagePolicy,
+    input.valuationConfig,
   );
   careerState = resolvedStarted.careerState;
   negotiationFacts.push(...resolvedStarted.negotiationFacts);
   facts.push(...resolvedStarted.facts);
 
-  const expired = expireDueContracts(careerState, input.throughDate, input.wagePolicy);
+  const expired = expireDueContracts(
+    careerState,
+    input.throughDate,
+    input.wagePolicy,
+    input.valuationConfig,
+  );
   return {
     careerState: expired.careerState,
     facts: [...facts, ...expired.facts],
@@ -163,6 +176,7 @@ function startDueAiNegotiations(input: {
   readonly fromDate: GameDate;
   readonly throughDate: GameDate;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
 }): AdvanceAiContractLifecycleResult {
   let careerState = input.careerState;
   const facts: AiContractLifecycleFact[] = [];
@@ -190,6 +204,7 @@ function startDueAiNegotiations(input: {
         contract,
         decisionDate,
         input.wagePolicy,
+        input.valuationConfig,
         lifecycleIndex,
       );
       if (!decision.retain) {
@@ -214,6 +229,12 @@ function startDueAiNegotiations(input: {
         playerId: contract.playerId,
         clubId: contract.clubId,
         evaluatedOn: decisionDate,
+        publicAssessment: publicAssessmentFor(
+          careerState,
+          contract.playerId,
+          decisionDate,
+          input.valuationConfig,
+        ),
       });
       const affordable = affordableAiTerms(
         careerState,
@@ -275,6 +296,7 @@ function startDueAiNegotiations(input: {
       careerState,
       input.throughDate,
       input.wagePolicy,
+      input.valuationConfig,
     );
     careerState = resolved.careerState;
     negotiationFacts.push(...resolved.negotiationFacts);
@@ -331,6 +353,7 @@ function resolveAiNegotiations(
   inputState: CareerState,
   throughDate: GameDate,
   wagePolicy: PlayerWagePolicyConfig,
+  valuationConfig: PlayerValuationConfig,
   clubIds: readonly ClubId[] = inputState.gameState.clubIds,
 ): AdvanceAiContractLifecycleResult {
   let careerState = inputState;
@@ -342,6 +365,7 @@ function resolveAiNegotiations(
     careerState,
     throughDate,
     wagePolicy,
+    valuationConfig,
     includedClubIds,
   );
   careerState = advanced.careerState;
@@ -365,6 +389,7 @@ function resolveAiNegotiations(
       contract,
       negotiation.counterOffer.issuedOn,
       wagePolicy,
+      valuationConfig,
       lifecycleIndex,
     );
     const reservations = createAiOfferReservations(careerState);
@@ -414,6 +439,7 @@ function expireDueContracts(
   inputState: CareerState,
   throughDate: GameDate,
   wagePolicy: PlayerWagePolicyConfig,
+  valuationConfig: PlayerValuationConfig,
 ): { readonly careerState: CareerState; readonly facts: readonly AiContractLifecycleFact[] } {
   const seniorSquadState = inputState.seniorSquadState;
   if (seniorSquadState === undefined) return { careerState: inputState, facts: [] };
@@ -441,6 +467,7 @@ function expireDueContracts(
           contract,
           contract.endsOn,
           wagePolicy,
+          valuationConfig,
           lifecycleIndex,
         ).reason;
     markProjectedDeparture(inputState, lifecycleIndex, contract);
@@ -594,6 +621,7 @@ function aiRenewalDecision(
   contract: PlayerContract,
   evaluatedOn: GameDate,
   wagePolicy: PlayerWagePolicyConfig,
+  valuationConfig: PlayerValuationConfig,
   lifecycleIndex: AiContractLifecycleIndex = createAiContractLifecycleIndex(careerState),
 ): {
   readonly retain: boolean;
@@ -606,6 +634,12 @@ function aiRenewalDecision(
     playerId: contract.playerId,
     clubId: contract.clubId,
     evaluatedOn,
+    publicAssessment: publicAssessmentFor(
+      careerState,
+      contract.playerId,
+      evaluatedOn,
+      valuationConfig,
+    ),
   });
   const protectedDepth = wouldBreakSquadStructure(
     careerState,
@@ -619,7 +653,7 @@ function aiRenewalDecision(
   if (demand.expectedSquadStatus === "squad_player" && demand.age <= 31 && demand.currentAbility >= 7.5) {
     return retain("useful_squad_player", false);
   }
-  if (demand.age <= 24 && demand.reachablePotential - demand.currentAbility >= 1.5) {
+  if (demand.age <= 24 && demand.publicPotentialP50Ability - demand.currentAbility >= 1.5) {
     return retain("developing_prospect", false);
   }
   return {
@@ -627,6 +661,22 @@ function aiRenewalDecision(
     reason: "surplus_player",
     preferredTerms: () => [],
   };
+}
+
+function publicAssessmentFor(
+  careerState: CareerState,
+  playerId: PlayerId,
+  assessedOn: GameDate,
+  valuationConfig: PlayerValuationConfig,
+) {
+  const player = careerState.gameState.players[playerId];
+  if (player === undefined) throw new Error(`AI contract player not found: ${playerId}`);
+  return derivePublicPlayerAssessment({
+    player,
+    currentDate: assessedOn,
+    ratingScale: valuationConfig.ratingScale,
+    potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+  });
 }
 
 function retain(reason: AiContractDecisionReason, prioritizeAcceptance: boolean) {

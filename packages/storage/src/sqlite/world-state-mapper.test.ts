@@ -27,7 +27,11 @@ test("world rows round-trip ordered players, clubs, states, roles, abilities, an
 
   const rows = mapCareerWorldRows({ saveId: state.saveId, name: metadata.name, state }, metadata);
   const restored = reconstructCareerWorldRows(rows);
-  const { currentSeasonInbox: _careerSlice, ...worldOnlyState } = state;
+  const {
+    clubCompetitiveTierState: _competitiveTierSlice,
+    currentSeasonInbox: _careerSlice,
+    ...worldOnlyState
+  } = state;
 
   deepStrictEqual(restored, worldOnlyState);
   deepStrictEqual(restored.gameState.playerIds, state.gameState.playerIds);
@@ -49,8 +53,8 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
   );
 });
 
-test("migration ledger exposes the Phase 79 baseline, player statistics, and Phase 79C topology", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [17]);
+test("migration ledger exposes the clean Phase 80A persistence baseline", () => {
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [22]);
   const statements = SQLITE_CAREER_MIGRATIONS[0]?.statements ?? [];
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
@@ -58,6 +62,7 @@ test("migration ledger exposes the Phase 79 baseline, player statistics, and Pha
   equal(statements.some((statement) => statement.includes("autosave_interval_days")), true);
   equal(statements.some((statement) => statement.includes("career_inbox_messages")), true);
   equal(statements.some((statement) => statement.includes("player_participation_rows")), true);
+  equal(statements.some((statement) => statement.includes("player_participation_club_minutes")), true);
   equal(statements.some((statement) => statement.includes("career_player_injuries")), true);
   equal(statements.some((statement) => statement.includes("committed_by_player_id")), true);
   equal(statements.some((statement) => statement.includes("senior_squad_registrations")), true);
@@ -72,6 +77,13 @@ test("migration ledger exposes the Phase 79 baseline, player statistics, and Pha
   );
   equal(statements.some((statement) => statement.includes("domestic_competitions")), true);
   equal(statements.some((statement) => statement.includes("topology_decision_id")), true);
+  equal(statements.some((statement) => statement.includes("club_competitive_tier_state")), true);
+  equal(statements.some((statement) => statement.includes("club_competitive_tier_assignments")), true);
+  equal(
+    statements.some((statement) => statement.includes("player_development_environment_version")),
+    true,
+  );
+  equal(statements.some((statement) => statement.includes("competitive_tier_history")), false);
 });
 
 function worldFixture(rawSaveId: string, seed: string): CareerState {
@@ -114,7 +126,7 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
 
   return createCareerState({
     saveId: saveId(rawSaveId),
-    schemaVersion: 1,
+    schemaVersion: 2,
     selectedClubId: homeId,
     gameState: {
       meta: {
@@ -129,6 +141,7 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
           askingPriceCurvesVersion: "asking-v1",
           marketBehaviorCalibrationVersion: "behavior-v1",
           wageFinanceCalibrationVersion: "wage-v1",
+          playerDevelopmentEnvironmentVersion: "development-environment-v1",
         },
       },
       calendar: { currentDate: gameDate(20_100), currentSeasonId: seasonId("season:2026") },

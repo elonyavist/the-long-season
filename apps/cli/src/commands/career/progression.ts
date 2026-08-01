@@ -1,6 +1,8 @@
 import {
   createFakeGameplayConfig,
   selectMarketBehaviorCalibration,
+  selectPlayerDevelopmentEnvironmentConfig,
+  selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
 import {
@@ -119,6 +121,12 @@ export function advanceCareerNextFixture(
       recoveredCareerState.gameState.meta.calibrationVersions,
     ),
     marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      recoveredCareerState.gameState.meta.calibrationVersions,
+    ),
+    valuationConfig: selectPlayerValuationConfig(
+      recoveredCareerState.gameState.meta.calibrationVersions,
+    ),
+    playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       recoveredCareerState.gameState.meta.calibrationVersions,
     ),
     includeExplanationTrace: options.includeExplanationTrace === true,

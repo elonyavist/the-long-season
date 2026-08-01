@@ -15,15 +15,17 @@ import {
 import { deriveRng, fromISO } from "@game/shared";
 
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB, fakePlayerId } from "./fake-clubs.ts";
-import { clubTierForGeneratedClubNumber } from "./player-generation-bands.ts";
+import {
+  openingCompetitiveTierForClubRank,
+  type OpeningPlayerGenerationClubContext,
+} from "./player-generation-bands.ts";
 import {
   buildPlayerRarityAllocation,
-  isBudgetedArchetype,
+  isRoutineSelectionExcludedArchetype,
   playerRaritySlotKey,
   type PlayerRarityAssignment,
   type PlayerRarityBudget,
 } from "./player-rarity-budget.ts";
-import { buildRoleAwarePlayerAbilities } from "./player-role-templates.ts";
 import {
   GENERATED_PLAYER_ARCHETYPE_KEYS,
   getGeneratedPlayerArchetype,
@@ -32,9 +34,11 @@ import {
   type GeneratedPlayerArchetypeKey,
   type GeneratedExceptionalProfile,
 } from "./player-archetypes.ts";
-import type { CurrentAbilityRarityLane } from "./player-current-ability-bands.ts";
 import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
-import { allocateReachablePotential } from "./player-potential-allocation.ts";
+import {
+  buildContextualProspectJointProfile,
+  type ContextualProspectCeilingConstraint,
+} from "./player-prospect-joint-profile.ts";
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
@@ -86,7 +90,7 @@ export interface FakePlayerGenerationOptions {
   /** League nation used for domestic-vs-foreign distribution. */
   readonly leagueNation?: LeagueNationCode;
   /** Optional club context for category/reputation-aware identity distribution. */
-  readonly clubContexts?: Readonly<Record<ClubId, FakePlayerClubContext>>;
+  readonly clubContexts?: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>>;
   /** Validated global scale used only for explicitly budgeted six-star floors. */
   readonly ratingScale?: PlayerRatingScaleConfig;
   /** Complete-world assignments produced once before per-division generation. */
@@ -98,14 +102,6 @@ export interface FakePlayerGenerationOptions {
   };
   /** Optional namespace that keeps independently generated divisions globally unique. */
   readonly playerIdNamespace?: string;
-}
-
-/** Club context consumed by fake identity generation. */
-export interface FakePlayerClubContext {
-  /** Generic tier used by nationality distribution profiles. */
-  readonly category: ClubCategory;
-  /** Club reputation used to distinguish stronger first-division clubs. */
-  readonly reputation: number;
 }
 
 /**
@@ -178,7 +174,7 @@ export function generateFakePlayersForClubs(
       });
       const reconstructBelowSix = reconstructedPotentialBelowSixPlayerIds.has(id);
       const archetype = reconstructBelowSix
-        ? getGeneratedPlayerArchetype("veteran_drop_down")
+        ? getGeneratedPlayerArchetype("senior_regular")
         : exceptionalProfile.archetypeKey !== undefined
         ? getGeneratedPlayerArchetype(exceptionalProfile.archetypeKey)
         : rarityAssignment === undefined
@@ -186,7 +182,6 @@ export function generateFakePlayersForClubs(
           : getGeneratedPlayerArchetype(rarityAssignment.archetypeKey);
       const created = fakePlayer(
         id,
-        clubNumber,
         slotNumber,
         identity,
         seed,
@@ -251,47 +246,36 @@ export function generatedFakePlayerId(
  */
 function fakePlayer(
   id: PlayerId,
-  clubNumber: number,
   slotNumber: number,
   identity: PersonIdentity,
   seed: string,
   archetype: GeneratedPlayerArchetype,
-  clubContext: FakePlayerClubContext,
+  clubContext: OpeningPlayerGenerationClubContext,
   ratingScale: PlayerRatingScaleConfig,
   exceptionalProfile: GeneratedExceptionalProfile,
   reconstructPotentialBelowSix: boolean,
 ): CreatedPlayer {
-  const clubTier = clubTierForGeneratedClubNumber(clubNumber);
+  const clubTier = clubContext.competitiveTier;
   const position = positionForSlot(slotNumber);
   const ageYears = numberInRange(archetype.ageYears, seed, "player-age", id);
   const birthDateJitter = deriveRng(seed, "player-birth-date", id).nextInt(0, 365);
   const primaryRole = primaryRoleForPosition(position);
-  const abilities = buildRoleAwarePlayerAbilities({
+  const profile = buildContextualProspectJointProfile({
     seed,
     playerKey: String(id),
     division: clubContext.category,
     clubTier,
     role: primaryRole,
     ageYears,
-    rarityLane: reconstructPotentialBelowSix
-      ? "normal"
-      : exceptionalProfile.currentAbilityLane === "exceptional"
-      ? "exceptional"
-      : currentAbilityRarityLaneForGeneratedArchetype(archetype.key),
+    archetypeKey: archetype.key,
+    ratingScale,
+    requestedCurrentAbilityLane:
+      reconstructPotentialBelowSix ? "normal" : exceptionalProfile.currentAbilityLane,
+    ceilingConstraint: seniorCeilingConstraint(
+      exceptionalProfile,
+      reconstructPotentialBelowSix,
+    ),
     slotDepthAdjustment: slotDepthOffset(slotNumber),
-  });
-  const potential = allocateReachablePotential({
-    seed,
-    playerKey: String(id),
-    abilities,
-    ageYears,
-    role: primaryRole,
-    division: clubContext.category,
-    clubTier,
-    potentialClass: archetype.potentialClass,
-    ...(exceptionalProfile.requiresSixStarPotentialFloor
-      ? { minimumRolePotentialAbility: minimumAbilityForRating(ratingScale, 6) }
-      : {}),
   });
 
   return assembleGeneratedPlayer({
@@ -301,9 +285,28 @@ function fakePlayer(
     ageYears,
     birthDateJitterDays: birthDateJitter,
     position,
-    abilities,
-    potential,
+    abilities: profile.current,
+    potential: profile.potential,
   });
+}
+
+/**
+ * Converts the national exceptional-stock decision into a semantic ceiling.
+ *
+ * Future country generators should reuse this policy shape at their own world
+ * composition root instead of passing raw role-ability thresholds downstream.
+ */
+function seniorCeilingConstraint(
+  exceptionalProfile: GeneratedExceptionalProfile,
+  reconstructPotentialBelowSix: boolean,
+): ContextualProspectCeilingConstraint {
+  if (reconstructPotentialBelowSix) {
+    return { kind: "below_rating", rating: 6 };
+  }
+  if (exceptionalProfile.requiresSixStarPotentialFloor) {
+    return { kind: "at_least_rating", rating: 6 };
+  }
+  return { kind: "policy" };
 }
 
 /**
@@ -319,7 +322,7 @@ function fakePlayerIdentity(input: {
   readonly slotNumber: number;
   readonly seed: string;
   readonly leagueNation: LeagueNationCode;
-  readonly clubContext: FakePlayerClubContext;
+  readonly clubContext: OpeningPlayerGenerationClubContext;
   readonly clubNameUsage: ClubNameUsage;
   readonly leagueNameUsage: LeagueNameUsage;
 }): PersonIdentity {
@@ -500,7 +503,7 @@ function selectPlayerArchetype(
   let totalWeight = 0;
 
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
-    if (isBudgetedArchetype(key) || (isLineupSlot && isYouthArchetype(key))) {
+    if (isRoutineSelectionExcludedArchetype(key) || (isLineupSlot && isYouthArchetype(key))) {
       continue;
     }
 
@@ -511,7 +514,7 @@ function selectPlayerArchetype(
   let cursor = rng.nextFloat() * totalWeight;
 
   for (const key of GENERATED_PLAYER_ARCHETYPE_KEYS) {
-    if (isBudgetedArchetype(key) || (isLineupSlot && isYouthArchetype(key))) {
+    if (isRoutineSelectionExcludedArchetype(key) || (isLineupSlot && isYouthArchetype(key))) {
       continue;
     }
 
@@ -529,20 +532,9 @@ function isYouthArchetype(key: GeneratedPlayerArchetypeKey): boolean {
   return key === "normal_youth" || key === "good_prospect";
 }
 
-function minimumAbilityForRating(
-  scale: PlayerRatingScaleConfig,
-  rating: 6,
-): number {
-  const threshold = scale.abilityThresholds.find((candidate) => candidate.rating === rating);
-  if (threshold === undefined) {
-    throw new Error(`Validated rating scale is missing rating ${rating}`);
-  }
-  return threshold.minimumAbilityInclusive;
-}
-
 function divisionForGeneratedLeague(
   clubIds: readonly ClubId[],
-  clubContexts: Readonly<Record<ClubId, FakePlayerClubContext>> | undefined,
+  clubContexts: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>> | undefined,
 ): ClubCategory {
   const categories = new Set(clubIds.map((clubId, index) =>
     clubContexts?.[clubId]?.category ?? defaultClubContext(index + 1).category
@@ -581,32 +573,15 @@ function slotDepthOffset(slotNumber: number): number {
   return -1.15;
 }
 
-/** Returns the current-quality lane actually used by one senior archetype. */
-export function currentAbilityRarityLaneForGeneratedArchetype(
-  archetypeKey: GeneratedPlayerArchetypeKey,
-): CurrentAbilityRarityLane {
-  switch (archetypeKey) {
-    case "category_star":
-    case "veteran_drop_down":
-      return "rare";
-    case "category_starter":
-    case "senior_regular":
-    case "normal_youth":
-    case "good_prospect":
-    case "serious_prospect":
-    case "rare_prodigy":
-      return "normal";
-  }
-}
-
 /**
  * Provides the default identity-distribution context for the current demo
  * league, which represents a third-division competition.
  */
-function defaultClubContext(clubNumber: number): FakePlayerClubContext {
+function defaultClubContext(clubNumber: number): OpeningPlayerGenerationClubContext {
   return {
     category: "third_division",
     reputation: 4 + ((clubNumber - 1) % 6),
+    competitiveTier: openingCompetitiveTierForClubRank(clubNumber),
   };
 }
 

@@ -65,6 +65,40 @@ export function addDays(epochDay: number, days: number): number {
 }
 
 /**
+ * Adds whole Gregorian civil years while preserving the month and day.
+ *
+ * If the destination year does not contain the source day, the result clamps
+ * to that month's final day. For example, adding one year to February 29 lands
+ * on February 28. The calculation operates only on epoch-day integers and is
+ * therefore independent of JavaScript `Date`, local timezones, and DST.
+ *
+ * @example
+ * const nextSeason = addCivilYears(fromISO("2027-08-01"), 1);
+ * toISO(nextSeason); // "2028-08-01"
+ */
+export function addCivilYears(epochDay: number, years: number): number {
+  assertSafeInteger(epochDay, "epochDay");
+  assertSafeInteger(years, "years");
+
+  const sourceDate = civilFromDays(epochDay);
+  const destinationYear = sourceDate.year + years;
+  assertSafeInteger(destinationYear, "destinationYear");
+
+  const destinationDay = Math.min(
+    sourceDate.day,
+    daysInMonth(destinationYear, sourceDate.month),
+  );
+  const result = daysFromCivil(
+    destinationYear,
+    sourceDate.month,
+    destinationDay,
+  );
+  assertSafeInteger(result, "result epochDay");
+
+  return result;
+}
+
+/**
  * Returns the signed day distance from `fromEpochDay` to `toEpochDay`.
  *
  * @example
@@ -75,6 +109,33 @@ export function diffDays(toEpochDay: number, fromEpochDay: number): number {
   assertSafeInteger(fromEpochDay, "fromEpochDay");
 
   return toEpochDay - fromEpochDay;
+}
+
+/**
+ * Returns completed Gregorian years between two epoch-day dates.
+ *
+ * A leap-day anniversary occurs on March 1 in non-leap years because February
+ * never reaches day 29. Keeping this rule here gives every domain and content
+ * caller the same exact age boundary without importing football concepts.
+ */
+export function completedCivilYears(
+  birthEpochDay: number,
+  currentEpochDay: number,
+): number {
+  assertSafeInteger(birthEpochDay, "birthEpochDay");
+  assertSafeInteger(currentEpochDay, "currentEpochDay");
+  assertValue(
+    currentEpochDay >= birthEpochDay,
+    `current epoch day must not precede birth epoch day: ${currentEpochDay} < ${birthEpochDay}`,
+  );
+
+  const birth = civilFromDays(birthEpochDay);
+  const current = civilFromDays(currentEpochDay);
+  const birthdayReached =
+    current.month > birth.month
+    || (current.month === birth.month && current.day >= birth.day);
+
+  return current.year - birth.year - (birthdayReached ? 0 : 1);
 }
 
 /**

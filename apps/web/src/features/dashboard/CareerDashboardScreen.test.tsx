@@ -22,6 +22,9 @@ describe("CareerDashboardScreen", () => {
     const html = renderDashboard(presentation);
 
     expect(html).toContain("Decision required");
+    expect(html).toContain("Development environment");
+    expect(html).toMatch(/Very poor|Poor|Limited|Adequate|Good|Very good|Excellent/);
+    expect(html).not.toMatch(/(?:0\.92|0\.95|0\.98|1\.00|1\.03|1\.06|1\.10)/);
     expect(html).toContain("Prepare match");
     expect(html).toContain("Round 1:");
     expect(html).toContain("Choose the starting XI");

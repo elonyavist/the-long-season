@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { fixtureId, playerId, seasonId } from "@game/domain";
+import { clubId, fixtureId, playerId, seasonId } from "@game/domain";
 
 import {
+  environmentMultiplierFromBasisPoints,
   monthlyDevelopmentPolicy,
   monthlyGrowthAgeMultiplier,
   monthlyOpportunityMultiplier,
@@ -47,12 +48,22 @@ test("monthlyDevelopmentPolicy combines age, minutes, and bounded performance", 
       ratingTotal: 16,
       ratingSamples: 2,
       playedRoleMinutes: { central_midfielder: 360 },
+      clubMinutes: { [clubId("club:selected")]: 360 },
       appliedFixtureIds: [fixtureId("fixture:000001")],
     },
+    positiveGrowthEnvironmentBasisPoints: 11_000,
   });
 
   assert.equal(policy.ageMultiplier, 0.85);
   assert.equal(policy.opportunityMultiplier, 0.75);
   assert.equal(policy.performanceModifier, 1.15);
-  assert.equal(Number(policy.growthMultiplier.toFixed(4)), 0.7331);
+  assert.equal(policy.environmentMultiplier, 1.1);
+  assert.equal(Number(policy.growthMultiplier.toFixed(4)), 0.8064);
+});
+
+test("environmentMultiplierFromBasisPoints keeps club context bounded and explicit", () => {
+  assert.equal(environmentMultiplierFromBasisPoints(9_200), 0.92);
+  assert.equal(environmentMultiplierFromBasisPoints(10_000), 1);
+  assert.equal(environmentMultiplierFromBasisPoints(11_000), 1.1);
+  assert.throws(() => environmentMultiplierFromBasisPoints(0), RangeError);
 });

@@ -7,12 +7,6 @@ export type PotentialOutcomeRoomBand = "small" | "medium" | "large";
 /** Participation path selected by the CLI composition adapter. */
 export type PotentialOutcomeParticipationBand = "low" | "typical" | "high";
 
-/** Lower accepted exceedance rate for a public P90 projection. */
-export const PUBLIC_UPPER_EXCEEDANCE_MINIMUM_BASIS_POINTS = 500;
-
-/** Upper accepted exceedance rate for a public P90 projection. */
-export const PUBLIC_UPPER_EXCEEDANCE_MAXIMUM_BASIS_POINTS = 1_500;
-
 /** Numeric tolerance used only to avoid floating-point boundary noise. */
 const ABILITY_COMPARISON_EPSILON = 1e-9;
 
@@ -28,17 +22,17 @@ export interface PlayerPotentialOutcomeObservation {
   readonly roleGroup: PotentialOutcomeRoleGroup;
   readonly roomBand: PotentialOutcomeRoomBand;
   readonly participationBand: PotentialOutcomeParticipationBand;
-  readonly startingRoleAbility: number;
-  readonly ceilingRoleAbility: number;
+  readonly currentRoleAbility: number;
+  readonly storedCeilingRoleAbility: number;
   readonly peakRoleAbility: number;
   readonly finalRoleAbility: number;
   readonly remainingRoom: number;
-  readonly publicLowerRoleAbility: number;
-  readonly publicExpectedRoleAbility: number;
+  readonly publicP50RoleAbility: number;
   readonly publicUpperRoleAbility: number;
-  readonly publicLowerRating: number;
-  readonly publicExpectedRating: number;
+  readonly currentRating: number;
+  readonly publicP50Rating: number;
   readonly publicUpperRating: number;
+  readonly storedCeilingRating: number;
 }
 
 /** Stable type-7 distribution over numeric role-ability observations. */
@@ -56,18 +50,16 @@ export interface PotentialProjectionCalibrationAgeBand {
   readonly maximumAge: number;
 }
 
-/** Pooled P10/P50/P90 realized-room evidence at production policy granularity. */
+/** Pooled P50/P90 realized-room evidence at production policy granularity. */
 export interface PotentialProjectionPolicyCalibrationBand
   extends PotentialProjectionCalibrationAgeBand {
   readonly observationCount: number;
   readonly evaluationStatus: "evaluated" | "not_evaluated";
-  readonly conservativeRealizationBasisPoints: number;
-  readonly expectedRealizationBasisPoints: number;
-  readonly upperRealizationBasisPoints: number;
+  readonly p50RealizationBasisPoints: number;
+  readonly p90RealizationBasisPoints: number;
   readonly abovePublicUpperCount: number;
   readonly abovePublicUpperRateBasisPoints: number | null;
   readonly storedCeilingViolationCount: number;
-  readonly calibrationStatus: "pass" | "warn" | "not_evaluated";
 }
 
 /** One complete age/role/room/participation cell in the calibration matrix. */
@@ -77,11 +69,20 @@ export interface PlayerPotentialOutcomeCell {
   readonly roomBand: PotentialOutcomeRoomBand;
   readonly participationBand: PotentialOutcomeParticipationBand;
   readonly observationCount: number;
+  readonly currentRoleAbility: PotentialOutcomeDistribution;
+  readonly publicP50RoleAbility: PotentialOutcomeDistribution;
+  readonly publicUpperRoleAbility: PotentialOutcomeDistribution;
+  readonly storedCeilingRoleAbility: PotentialOutcomeDistribution;
+  readonly currentRating: PotentialOutcomeDistribution;
+  readonly publicP50Rating: PotentialOutcomeDistribution;
+  readonly publicUpperRating: PotentialOutcomeDistribution;
+  readonly storedCeilingRating: PotentialOutcomeDistribution;
   readonly peakRoleAbility: PotentialOutcomeDistribution;
   readonly finalRoleAbility: PotentialOutcomeDistribution;
   readonly remainingRoom: PotentialOutcomeDistribution;
   readonly realizedRoomShare: PotentialOutcomeDistribution;
-  readonly publicRangeWidth: PotentialOutcomeDistribution;
+  readonly publicUpsideAbilityWidth: PotentialOutcomeDistribution;
+  readonly publicUpsideRatingWidth: PotentialOutcomeDistribution;
 }
 
 /** Complete deterministic outcome matrix over caller-supplied engine results. */
@@ -97,7 +98,7 @@ export interface PlayerPotentialOutcomeAudit {
   readonly nonWideningAgeViolationCount: number;
   readonly abovePublicUpperCount: number;
   readonly abovePublicUpperRateBasisPoints: number | null;
-  readonly publicUpperCalibrationWarningBandCount: number;
+  readonly unobservedCalibrationBandCount: number;
   readonly storedCeilingViolationCount: number;
   readonly projectionPolicyCalibration:
     readonly PotentialProjectionPolicyCalibrationBand[];
@@ -125,7 +126,7 @@ export interface CreatePlayerPotentialOutcomeAuditInput {
 /** One machine-readable coverage or projection-ordering gate. */
 export interface PlayerPotentialOutcomeGate {
   readonly key: string;
-  readonly status: "pass" | "warn" | "fail" | "not_evaluated";
+  readonly status: "pass" | "fail" | "not_evaluated";
   readonly observationCount: number;
   readonly violationCount: number;
   readonly threshold: string;
@@ -139,12 +140,15 @@ export interface PlayerPotentialOutcomeGateExample {
   readonly roleGroup: PotentialOutcomeRoleGroup;
   readonly roomBand: PotentialOutcomeRoomBand;
   readonly participationBand: PotentialOutcomeParticipationBand;
-  readonly publicLowerRating: number;
-  readonly publicExpectedRating: number;
+  readonly currentRoleAbility: number;
+  readonly publicP50RoleAbility: number;
+  readonly currentRating: number;
+  readonly publicP50Rating: number;
   readonly publicUpperRating: number;
+  readonly storedCeilingRating: number;
   readonly publicUpperRoleAbility: number;
   readonly peakRoleAbility: number;
-  readonly ceilingRoleAbility: number;
+  readonly storedCeilingRoleAbility: number;
 }
 
 /**
@@ -160,6 +164,10 @@ export function createPlayerPotentialOutcomeAudit(
   validateObservations(observations);
   validateCoverage(coverage);
   validateCalibrationAgeBands(projectionAgeBands);
+  validateObservationsBelongToCalibrationBands(
+    observations,
+    projectionAgeBands,
+  );
   const groups = new Map<string, PlayerPotentialOutcomeObservation[]>();
   for (const observation of observations) {
     const key = [
@@ -184,16 +192,15 @@ export function createPlayerPotentialOutcomeAudit(
   const projectionOrderingViolations = observations.filter(
     (observation) =>
       !(
-        observation.startingRoleAbility
-          <= observation.publicLowerRoleAbility
-        && observation.publicLowerRoleAbility
-          <= observation.publicExpectedRoleAbility
-        && observation.publicExpectedRoleAbility
+        observation.currentRoleAbility
+          <= observation.publicP50RoleAbility
+        && observation.publicP50RoleAbility
           <= observation.publicUpperRoleAbility
         && observation.publicUpperRoleAbility
-          <= observation.ceilingRoleAbility
-        && observation.publicLowerRating <= observation.publicExpectedRating
-        && observation.publicExpectedRating <= observation.publicUpperRating
+          <= observation.storedCeilingRoleAbility
+        && observation.currentRating <= observation.publicP50Rating
+        && observation.publicP50Rating <= observation.publicUpperRating
+        && observation.publicUpperRating <= observation.storedCeilingRating
       ),
   );
   const nonWideningAgeViolations = findNonWideningAgeViolations(
@@ -205,9 +212,9 @@ export function createPlayerPotentialOutcomeAudit(
       observations,
       projectionAgeBands,
     );
-  const publicUpperCalibrationWarningBands =
+  const unobservedCalibrationBands =
     projectionPolicyCalibration.filter(
-      ({ calibrationStatus }) => calibrationStatus === "warn",
+      ({ evaluationStatus }) => evaluationStatus === "not_evaluated",
     );
   const abovePublicUpperCount = projectionPolicyCalibration.reduce(
     (total, band) => total + band.abovePublicUpperCount,
@@ -216,7 +223,7 @@ export function createPlayerPotentialOutcomeAudit(
   const storedCeilingViolations = observations.filter(
     (observation) =>
       observation.peakRoleAbility
-        > observation.ceilingRoleAbility + ABILITY_COMPARISON_EPSILON,
+        > observation.storedCeilingRoleAbility + ABILITY_COMPARISON_EPSILON,
   );
   const gates: readonly PlayerPotentialOutcomeGate[] = [
     outcomeGate(
@@ -230,7 +237,7 @@ export function createPlayerPotentialOutcomeAudit(
       "public_projection_ordering",
       observations.length,
       projectionOrderingViolations.length,
-      "current <= lower <= expected <= public upper <= stored ceiling",
+      "current <= P50 <= public upper <= stored ceiling",
       projectionOrderingViolations.map(projectionGateExample),
     ),
     outcomeGate(
@@ -240,18 +247,15 @@ export function createPlayerPotentialOutcomeAudit(
       "otherwise-equivalent age bands do not widen as age increases",
       nonWideningAgeViolations,
     ),
-    calibrationGate(
-      "public_upper_p90_calibration",
+    outcomeGate(
+      "projection_policy_calibration_coverage",
       projectionPolicyCalibration.reduce(
         (total, band) => total + band.observationCount,
         0,
       ),
-      publicUpperCalibrationWarningBands.length,
-      "each evaluated role-family/age band has 5%..15% outcomes above public upper",
-      publicUpperCalibrationWarningBands.flatMap((band) => {
-        const example = calibrationBandExample(observations, band);
-        return example === undefined ? [] : [example];
-      }),
+      unobservedCalibrationBands.length,
+      "every role-family/age band has a positive pooled P50/P90 denominator",
+      [],
     ),
     outcomeGate(
       "stored_ceiling_integrity",
@@ -275,8 +279,7 @@ export function createPlayerPotentialOutcomeAudit(
     abovePublicUpperRateBasisPoints: observations.length === 0
       ? null
       : Math.round(abovePublicUpperCount / observations.length * 10_000),
-    publicUpperCalibrationWarningBandCount:
-      publicUpperCalibrationWarningBands.length,
+    unobservedCalibrationBandCount: unobservedCalibrationBands.length,
     storedCeilingViolationCount: storedCeilingViolations.length,
     projectionPolicyCalibration,
     gates,
@@ -297,6 +300,7 @@ export function createPotentialProjectionPolicyCalibration(
 ): readonly PotentialProjectionPolicyCalibrationBand[] {
   validateObservations(observations);
   validateCalibrationAgeBands(ageBands);
+  validateObservationsBelongToCalibrationBands(observations, ageBands);
   return [...ageBands]
     .sort((left, right) =>
       left.roleGroup.localeCompare(right.roleGroup)
@@ -320,38 +324,26 @@ export function createPotentialProjectionPolicyCalibration(
       const storedCeilingViolationCount = bandObservations.filter(
         (observation) =>
           observation.peakRoleAbility
-            > observation.ceilingRoleAbility + ABILITY_COMPARISON_EPSILON,
+            > observation.storedCeilingRoleAbility
+              + ABILITY_COMPARISON_EPSILON,
       ).length;
       const abovePublicUpperRateBasisPoints = bandObservations.length === 0
         ? null
         : Math.round(
             abovePublicUpperCount / bandObservations.length * 10_000,
           );
-      const calibrationStatus = abovePublicUpperRateBasisPoints === null
-        ? "not_evaluated"
-        : (
-            abovePublicUpperRateBasisPoints
-                < PUBLIC_UPPER_EXCEEDANCE_MINIMUM_BASIS_POINTS
-              || abovePublicUpperRateBasisPoints
-                > PUBLIC_UPPER_EXCEEDANCE_MAXIMUM_BASIS_POINTS
-          )
-          ? "warn"
-          : "pass";
       return {
         ...ageBand,
         observationCount: realizedShares.length,
         evaluationStatus:
           realizedShares.length === 0 ? "not_evaluated" : "evaluated",
-        conservativeRealizationBasisPoints:
-          percentileTypeSevenBasisPoints(realizedShares, 0.1),
-        expectedRealizationBasisPoints:
+        p50RealizationBasisPoints:
           percentileTypeSevenBasisPoints(realizedShares, 0.5),
-        upperRealizationBasisPoints:
+        p90RealizationBasisPoints:
           percentileTypeSevenBasisPoints(realizedShares, 0.9),
         abovePublicUpperCount,
         abovePublicUpperRateBasisPoints,
         storedCeilingViolationCount,
-        calibrationStatus,
       };
     });
 }
@@ -369,24 +361,60 @@ function createCell(
     roomBand: first.roomBand,
     participationBand: first.participationBand,
     observationCount: observations.length,
+    currentRoleAbility: distribution(
+      observations.map(({ currentRoleAbility }) => currentRoleAbility),
+    ),
+    publicP50RoleAbility: distribution(
+      observations.map(({ publicP50RoleAbility }) => publicP50RoleAbility),
+    ),
+    publicUpperRoleAbility: distribution(
+      observations.map(({ publicUpperRoleAbility }) => publicUpperRoleAbility),
+    ),
+    storedCeilingRoleAbility: distribution(
+      observations.map(
+        ({ storedCeilingRoleAbility }) => storedCeilingRoleAbility,
+      ),
+    ),
+    currentRating: distribution(
+      observations.map(({ currentRating }) => currentRating),
+    ),
+    publicP50Rating: distribution(
+      observations.map(({ publicP50Rating }) => publicP50Rating),
+    ),
+    publicUpperRating: distribution(
+      observations.map(({ publicUpperRating }) => publicUpperRating),
+    ),
+    storedCeilingRating: distribution(
+      observations.map(({ storedCeilingRating }) => storedCeilingRating),
+    ),
     peakRoleAbility: distribution(observations.map(({ peakRoleAbility }) => peakRoleAbility)),
     finalRoleAbility: distribution(observations.map(({ finalRoleAbility }) => finalRoleAbility)),
     remainingRoom: distribution(observations.map(({ remainingRoom }) => remainingRoom)),
     realizedRoomShare: distribution(observations.map(realizedRoomShare)),
-    publicRangeWidth: distribution(
+    publicUpsideAbilityWidth: distribution(
       observations.map((observation) =>
-        observation.publicUpperRating - observation.publicLowerRating
+        observation.publicUpperRoleAbility - observation.currentRoleAbility
+      ),
+    ),
+    publicUpsideRatingWidth: distribution(
+      observations.map((observation) =>
+        observation.publicUpperRating - observation.currentRating
       ),
     ),
   };
 }
 
 function realizedRoomShare(observation: PlayerPotentialOutcomeObservation): number {
-  const startingRoom = observation.ceilingRoleAbility - observation.startingRoleAbility;
+  const startingRoom = observation.storedCeilingRoleAbility
+    - observation.currentRoleAbility;
   if (startingRoom <= 0) return 0;
   return Math.max(
     0,
-    Math.min(1, (observation.peakRoleAbility - observation.startingRoleAbility) / startingRoom),
+    Math.min(
+      1,
+      (observation.peakRoleAbility - observation.currentRoleAbility)
+        / startingRoom,
+    ),
   );
 }
 
@@ -504,7 +532,7 @@ function findNonWideningAgeViolations(
 }
 
 function projectionWidthHundredths(cell: PlayerPotentialOutcomeCell): number {
-  return cell.publicRangeWidth.p50Hundredths;
+  return cell.publicUpsideAbilityWidth.p50Hundredths;
 }
 
 function outcomeGate(
@@ -526,43 +554,6 @@ function outcomeGate(
   };
 }
 
-function calibrationGate(
-  key: string,
-  observationCount: number,
-  warningCount: number,
-  threshold: string,
-  examples: readonly PlayerPotentialOutcomeGateExample[],
-): PlayerPotentialOutcomeGate {
-  return {
-    key,
-    status: observationCount === 0
-      ? "not_evaluated"
-      : warningCount > 0 ? "warn" : "pass",
-    observationCount,
-    violationCount: warningCount,
-    threshold,
-    examples: examples.slice(0, 10),
-  };
-}
-
-function calibrationBandExample(
-  observations: readonly PlayerPotentialOutcomeObservation[],
-  band: PotentialProjectionPolicyCalibrationBand,
-): PlayerPotentialOutcomeGateExample | undefined {
-  const inBand = observations.filter((observation) =>
-    observation.roleGroup === band.roleGroup
-    && observation.startAge >= band.minimumAge
-    && observation.startAge <= band.maximumAge
-  );
-  const aboveUpper = inBand.find(
-    (observation) =>
-      observation.peakRoleAbility
-        > observation.publicUpperRoleAbility + ABILITY_COMPARISON_EPSILON,
-  );
-  const example = aboveUpper ?? inBand[0];
-  return example === undefined ? undefined : projectionGateExample(example);
-}
-
 function projectionGateExample(
   observation: PlayerPotentialOutcomeObservation,
 ): PlayerPotentialOutcomeGateExample {
@@ -572,12 +563,15 @@ function projectionGateExample(
     roleGroup: observation.roleGroup,
     roomBand: observation.roomBand,
     participationBand: observation.participationBand,
-    publicLowerRating: observation.publicLowerRating,
-    publicExpectedRating: observation.publicExpectedRating,
+    currentRoleAbility: observation.currentRoleAbility,
+    publicP50RoleAbility: observation.publicP50RoleAbility,
+    currentRating: observation.currentRating,
+    publicP50Rating: observation.publicP50Rating,
     publicUpperRating: observation.publicUpperRating,
+    storedCeilingRating: observation.storedCeilingRating,
     publicUpperRoleAbility: observation.publicUpperRoleAbility,
     peakRoleAbility: observation.peakRoleAbility,
-    ceilingRoleAbility: observation.ceilingRoleAbility,
+    storedCeilingRoleAbility: observation.storedCeilingRoleAbility,
   };
 }
 
@@ -629,6 +623,28 @@ function validateCalibrationAgeBands(
   }
 }
 
+/**
+ * Rejects calibration samples that would silently disappear from the pooled
+ * role-family/age-band evidence.
+ */
+function validateObservationsBelongToCalibrationBands(
+  observations: readonly PlayerPotentialOutcomeObservation[],
+  ageBands: readonly PotentialProjectionCalibrationAgeBand[],
+): void {
+  for (const observation of observations) {
+    const matchingBandCount = ageBands.filter((ageBand) =>
+      ageBand.roleGroup === observation.roleGroup
+      && observation.startAge >= ageBand.minimumAge
+      && observation.startAge <= ageBand.maximumAge
+    ).length;
+    if (matchingBandCount !== 1) {
+      throw new Error(
+        `Potential projection calibration has no unique band for ${observation.sourceId}`,
+      );
+    }
+  }
+}
+
 function validateObservations(
   observations: readonly PlayerPotentialOutcomeObservation[],
 ): void {
@@ -639,20 +655,21 @@ function validateObservations(
       || ids.has(observation.sourceId)
       || !Number.isInteger(observation.startAge)
       || observation.startAge < 0
-      || observation.ceilingRoleAbility < observation.startingRoleAbility
+      || observation.storedCeilingRoleAbility
+        < observation.currentRoleAbility
       || observation.remainingRoom < 0
       || [
-        observation.startingRoleAbility,
-        observation.ceilingRoleAbility,
+        observation.currentRoleAbility,
+        observation.storedCeilingRoleAbility,
         observation.peakRoleAbility,
         observation.finalRoleAbility,
         observation.remainingRoom,
-        observation.publicLowerRoleAbility,
-        observation.publicExpectedRoleAbility,
+        observation.publicP50RoleAbility,
         observation.publicUpperRoleAbility,
-        observation.publicLowerRating,
-        observation.publicExpectedRating,
+        observation.currentRating,
+        observation.publicP50Rating,
         observation.publicUpperRating,
+        observation.storedCeilingRating,
       ].some((value) => !Number.isFinite(value))
     ) {
       throw new Error("Potential-outcome audit received an invalid or duplicate observation");

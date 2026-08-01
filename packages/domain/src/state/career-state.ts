@@ -31,9 +31,14 @@ import {
   createCareerPlayerSeasonStatistics,
   type CareerPlayerSeasonStatistics,
 } from "../career/player-statistics.ts";
+import {
+  createClubCompetitiveTierState,
+  createInitialClubCompetitiveTierState,
+  type ClubCompetitiveTierState,
+} from "../career/club-competitive-tier.ts";
 
 /** Current schema version for durable career-state snapshots. */
-export const CAREER_STATE_SCHEMA_VERSION = 1;
+export const CAREER_STATE_SCHEMA_VERSION = 2;
 
 /**
  * One completed permanent transfer stored in the career timeline.
@@ -190,6 +195,8 @@ export interface CareerState {
   readonly selectedClubId: ClubId;
   /** Current playable world snapshot. */
   readonly gameState: GameState;
+  /** Current competitive tier for every club, frozen for the active season. */
+  readonly clubCompetitiveTierState: ClubCompetitiveTierState;
   /** Canonical cash, annual budgets, wage commitments, and ordered ledger. */
   readonly clubFinanceState?: ClubFinanceState;
   /** Ordered permanent-transfer decisions already applied to this career. */
@@ -215,6 +222,17 @@ export interface CareerState {
   /** Ordered future contracts agreed before the player's current deal expires. */
   readonly preliminaryAgreementState?: PreliminaryAgreementState;
 }
+
+/**
+ * Construction input for a career snapshot.
+ *
+ * Fresh in-memory worlds may omit only the first competitive-tier snapshot;
+ * the constructor derives it from authored division order. Persisted current-
+ * version saves always carry the required state explicitly.
+ */
+export type CreateCareerStateInput = Omit<CareerState, "clubCompetitiveTierState"> & {
+  readonly clubCompetitiveTierState?: ClubCompetitiveTierState;
+};
 
 /** Machine-readable career-state validation failure. */
 export type CareerStateContractErrorCode =
@@ -255,6 +273,7 @@ export type CareerStateContractErrorCode =
   | "match_preparation_duplicate_bench_player"
   | "match_preparation_bench_lineup_overlap"
   | "player_participation_player_not_found"
+  | "player_participation_club_not_found"
   | "player_availability_player_not_found"
   | "player_availability_fixture_not_found";
 
@@ -294,7 +313,15 @@ export class CareerStateContractError extends Error {
  *   transferHistory: [],
  * });
  */
-export function createCareerState(input: CareerState): CareerState {
+export function createCareerState(rawInput: CreateCareerStateInput): CareerState {
+  const clubCompetitiveTierState = rawInput.clubCompetitiveTierState === undefined
+    ? createInitialClubCompetitiveTierState(rawInput.gameState)
+    : createClubCompetitiveTierState(
+        rawInput.clubCompetitiveTierState,
+        rawInput.gameState.clubIds,
+        rawInput.gameState.calendar.currentSeasonId,
+      );
+  const input: CareerState = { ...rawInput, clubCompetitiveTierState };
   if (input.schemaVersion !== CAREER_STATE_SCHEMA_VERSION) {
     throw new CareerStateContractError(
       "unsupported_schema_version",
@@ -374,6 +401,7 @@ export function createCareerState(input: CareerState): CareerState {
     ...(input.careerWorld === undefined ? {} : { careerWorld: createCareerWorldMetadata(input.careerWorld) }),
     selectedClubId: input.selectedClubId,
     gameState,
+    clubCompetitiveTierState,
     transferHistory,
     ...(youthAcademyState === undefined ? {} : { youthAcademyState }),
     ...(seasonHistory.length === 0 ? {} : { seasonHistory }),
@@ -431,6 +459,14 @@ function createCareerPlayerParticipationLedger(input: CareerState): PlayerPartic
         "player_participation_player_not_found",
         `participation player does not exist in career game state: ${row.playerId}`,
       );
+    }
+    for (const representedClubId of Object.keys(row.clubMinutes) as ClubId[]) {
+      if (input.gameState.clubs[representedClubId] === undefined) {
+        throw new CareerStateContractError(
+          "player_participation_club_not_found",
+          `participation club does not exist in career game state: ${representedClubId}`,
+        );
+      }
     }
   }
 

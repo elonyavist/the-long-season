@@ -6,15 +6,12 @@
  */
 export {
   PlayerValuationError,
-  derivePlayerMarketAbility,
   derivePlayerValuation,
   type DerivePlayerValuationInput,
-  type PlayerMarketAbility,
   type PlayerValuation,
   type PlayerValuationConfig,
   type PlayerValuationComponents,
   type PlayerValuationErrorCode,
-  type PlayerValuationMarketContext,
 } from "./player-valuation.ts";
 export {
   deriveSellerAskingPrice,

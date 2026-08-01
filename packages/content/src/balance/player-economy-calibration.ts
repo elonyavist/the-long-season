@@ -4,6 +4,7 @@ import playerMarketCalibrationJson from "./player-market-calibration.json" with 
 import playerRatingScaleJson from "./player-rating-scale.json" with { type: "json" };
 import valuationCurvesJson from "./valuation-curves.json" with { type: "json" };
 import wageFinanceCalibrationJson from "./wage-finance-calibration.json" with { type: "json" };
+import playerDevelopmentEnvironmentJson from "./player-development-environment.json" with { type: "json" };
 import type { PlayerEconomyCalibrationVersionBundle } from "@game/domain";
 import { parsePlayerEconomyCalibrationAssets } from "../schemas/player-economy-calibration.schema.ts";
 
@@ -20,6 +21,7 @@ export const playerEconomyCalibration = parsePlayerEconomyCalibrationAssets({
   askingPriceCurves: askingPriceCurvesJson,
   marketBehaviorCalibration: marketBehaviorCalibrationJson,
   wageFinanceCalibration: wageFinanceCalibrationJson,
+  playerDevelopmentEnvironment: playerDevelopmentEnvironmentJson,
 });
 
 /** Closed global rating-scale design selected by the content bundle. */
@@ -27,7 +29,8 @@ export const playerRatingScale = playerEconomyCalibration.playerRatingScale;
 
 /**
  * Age- and role-aware public projection policy calibrated from the Step 01
- * deterministic development outcome matrix.
+ * deterministic development outcome matrix. Post-20 factors retain exact-age
+ * cells so presentation cannot flatten several development years together.
  */
 export const playerPotentialProjectionPolicy =
   playerEconomyCalibration.playerPotentialProjectionPolicy;
@@ -130,6 +133,23 @@ export function selectMarketBehaviorCalibration(
 
 /** Independent wage/club-finance evidence and reviewed game targets. */
 export const wageFinanceCalibration = playerEconomyCalibration.wageFinanceCalibration;
+
+/** Seven-state club environment selected from the current content bundle. */
+export const playerDevelopmentEnvironment =
+  playerEconomyCalibration.playerDevelopmentEnvironment;
+
+/** Selects the environment matrix matching the version stamped in the career. */
+export function selectPlayerDevelopmentEnvironmentConfig(
+  versions: PlayerEconomyCalibrationVersionBundle | undefined,
+): typeof playerDevelopmentEnvironment {
+  if (
+    versions?.playerDevelopmentEnvironmentVersion
+      !== playerDevelopmentEnvironment.version
+  ) {
+    throw new Error("Career development-environment calibration version is unsupported");
+  }
+  return playerDevelopmentEnvironment;
+}
 
 /** Exact version-linked inputs shared by generated and runtime wage policies. */
 export const playerWagePolicyConfig = Object.freeze({

@@ -29,6 +29,10 @@ import {
   type PlayerValuationConfig,
 } from "../market/player-valuation.ts";
 import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
+import {
   deriveSellerAskingPrice,
   type SellerReplacementNeed,
 } from "../market/seller-asking-price.ts";
@@ -104,6 +108,8 @@ export function deriveTransferCommercialSnapshot(input: {
   readonly sellingClubId: ClubId;
   readonly playerId: PlayerId;
   readonly asOf: GameDate;
+  /** Canonical dated public facts already derived by the calling workflow. */
+  readonly publicAssessment: PublicPlayerAssessment;
   readonly valuationConfig: PlayerValuationConfig;
   readonly askingPriceConfig: AskingPriceCurvesConfig;
 }): TransferCommercialSnapshot | undefined {
@@ -117,14 +123,22 @@ export function deriveTransferCommercialSnapshot(input: {
   if (sellingClub === undefined || player === undefined || contract === undefined) {
     return undefined;
   }
+  if (
+    input.publicAssessment.playerId !== input.playerId
+    || input.publicAssessment.assessedOn !== input.asOf
+  ) {
+    throw new Error(
+      `Transfer commercial assessment does not match player/date: ${String(input.playerId)}`,
+    );
+  }
+  const primaryPosition = player.naturalPositions[0];
+  if (primaryPosition === undefined) {
+    throw new Error(`Transfer target has no primary position: ${String(player.id)}`);
+  }
   const publicValue = derivePlayerValuation({
-    player,
-    currentDate: input.asOf,
+    assessment: input.publicAssessment,
+    primaryPosition,
     config: input.valuationConfig,
-    marketContext: {
-      kind: "contracted",
-      division: sellingClub.category,
-    },
   }).value;
   const asking = deriveSellerAskingPrice({
     publicValue,
@@ -214,11 +228,18 @@ export function submitTransferOffer(
     responseDelayDays: responseDelayDays(input.careerState, input.negotiationId, input.submittedOn),
     ...(eligibility.closesOn === undefined ? {} : { windowClosesOn: eligibility.closesOn }),
   });
+  const publicAssessment = derivePublicPlayerAssessment({
+    player,
+    currentDate: input.submittedOn,
+    potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    ratingScale: input.valuationConfig.ratingScale,
+  });
   const commercial = deriveTransferCommercialSnapshot({
     careerState: input.careerState,
     sellingClubId: input.sellingClubId,
     playerId: input.playerId,
     asOf: input.submittedOn,
+    publicAssessment,
     valuationConfig: input.valuationConfig,
     askingPriceConfig: input.askingPriceConfig,
   });

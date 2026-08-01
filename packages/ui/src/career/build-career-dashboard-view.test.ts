@@ -6,6 +6,7 @@ const selectedClub = {
   clubId: "club:perugia",
   name: "S.S. Perugia",
   rosterSize: 22,
+  developmentEnvironmentKey: "adequate" as const,
 };
 
 const baseInput: BuildCareerDashboardViewInput = {
@@ -40,6 +41,28 @@ const baseInput: BuildCareerDashboardViewInput = {
 };
 
 describe("buildCareerDashboardView", () => {
+  it("maps every public environment state to one stable localization key", () => {
+    const keys = [
+      "very_poor",
+      "poor",
+      "limited",
+      "adequate",
+      "good",
+      "very_good",
+      "excellent",
+    ] as const;
+
+    for (const key of keys) {
+      const view = buildCareerDashboardView({
+        ...baseInput,
+        selectedClub: { ...baseInput.selectedClub, developmentEnvironmentKey: key },
+      });
+      expect(view.selectedClub.developmentEnvironmentLabelKey).toBe(
+        `career.clubDevelopmentEnvironment.state.${key}`,
+      );
+    }
+  });
+
   it("builds a new career dashboard with missing preparation blockers", () => {
     const view = buildCareerDashboardView(baseInput);
 
@@ -51,6 +74,9 @@ describe("buildCareerDashboardView", () => {
     expect(view.actions.filter((action) => action.status === "available").map((action) => action.actionId)).toEqual([
       "prepare_match",
     ]);
+    expect(view.selectedClub.developmentEnvironmentLabelKey).toBe(
+      "career.clubDevelopmentEnvironment.state.adequate",
+    );
   });
 
   it("builds a prepared dashboard with advance action available", () => {

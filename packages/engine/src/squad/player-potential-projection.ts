@@ -13,6 +13,8 @@ import {
   type PlayerStarRating,
 } from "@game/domain";
 
+import { completedPlayerAge } from "../player-state/completed-player-age.ts";
+
 /** Stable failures raised when canonical projection facts are incomplete. */
 export type PlayerPotentialProjectionErrorCode =
   | "missing_role_identity"
@@ -55,15 +57,15 @@ export interface PlayerPotentialProjection {
   readonly age: number;
   readonly roleFamily: PlayerPotentialProjectionRoleFamily;
   readonly currentAbility: number;
-  readonly conservativeLowerAbility: number;
-  readonly expectedAbility: number;
+  /** Statistical median endpoint from deterministic development evidence. */
+  readonly p50Ability: number;
   /** High-upside public estimate; this is not the stored potential ceiling. */
   readonly upperAbility: number;
   /** Hidden canonical ceiling retained for diagnostics and defensive checks. */
   readonly storedCeilingAbility: number;
   readonly currentRating: PlayerStarRating;
-  readonly conservativeLowerRating: PlayerStarRating;
-  readonly expectedRating: PlayerStarRating;
+  /** Public half-star presentation of the statistical median endpoint. */
+  readonly p50Rating: PlayerStarRating;
   /** High-upside public star estimate; this is not a guaranteed maximum. */
   readonly upperRating: PlayerStarRating;
   /** Hidden canonical ceiling rating; public read models must not expose it. */
@@ -73,7 +75,7 @@ export interface PlayerPotentialProjection {
 /**
  * Derives one deterministic potential projection without persistence or fog.
  *
- * P10/P50/P90 realization factors apply only to remaining role-ability room.
+ * P50 and reachable-upper factors apply only to remaining role-ability room.
  * The internal stored potential remains the absolute ceiling and no selected
  * club, observer, reputation, contract, value, or form fact can affect the
  * result.
@@ -95,9 +97,7 @@ export function derivePlayerPotentialProjection(
     );
   }
 
-  const age = Math.floor(
-    (Number(input.currentDate) - Number(input.player.birthDate)) / 365.2425,
-  );
+  const age = completedPlayerAge(input.player.birthDate, input.currentDate);
   const roleFamily: PlayerPotentialProjectionRoleFamily =
     input.player.primaryRole === "goalkeeper" ? "goalkeeper" : "outfield";
   const band = projectionBand(
@@ -114,11 +114,8 @@ export function derivePlayerPotentialProjection(
     Number(rolePotentialAbility(input.player.potential, roleProfile)),
   );
   const remainingRoom = storedCeilingAbility - currentAbility;
-  const conservativeLowerAbility = currentAbility + (
-    remainingRoom * band.conservativeRealizationBasisPoints / 10_000
-  );
-  const expectedAbility = currentAbility + (
-    remainingRoom * band.expectedRealizationBasisPoints / 10_000
+  const p50Ability = currentAbility + (
+    remainingRoom * band.p50RealizationBasisPoints / 10_000
   );
   const upperAbility = Math.min(
     storedCeilingAbility,
@@ -132,16 +129,11 @@ export function derivePlayerPotentialProjection(
     age,
     roleFamily,
     currentAbility,
-    conservativeLowerAbility,
-    expectedAbility,
+    p50Ability,
     upperAbility,
     storedCeilingAbility,
     currentRating: ratingForAbility(currentAbility, input.ratingScale),
-    conservativeLowerRating: ratingForAbility(
-      conservativeLowerAbility,
-      input.ratingScale,
-    ),
-    expectedRating: ratingForAbility(expectedAbility, input.ratingScale),
+    p50Rating: ratingForAbility(p50Ability, input.ratingScale),
     upperRating: ratingForAbility(upperAbility, input.ratingScale),
     storedCeilingRating: ratingForAbility(
       storedCeilingAbility,
@@ -150,7 +142,12 @@ export function derivePlayerPotentialProjection(
   });
 }
 
-/** Finds the caller-validated age band or reports unsupported player age. */
+/**
+ * Finds the caller-validated age cell or reports an unsupported player age.
+ *
+ * Young and terminal policy ranges may cover multiple ages; every post-20 age
+ * before the terminal deadline is selected from its own calibrated cell.
+ */
 function projectionBand(
   bands: readonly PlayerPotentialProjectionAgeBand[],
   age: number,

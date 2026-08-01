@@ -79,6 +79,7 @@ test("desktop journey owns screen focus and preserves same-screen interaction fo
 
     await page.getByRole("button", { name: "New career", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+    await assertPublicDevelopmentEnvironment(page);
     await expectMainFocus(page);
     await assertNoPageOverflow(page, "desktop Dashboard");
     await assertNoTechnicalDashboardCopy(page, "desktop attention Dashboard");
@@ -762,8 +763,9 @@ test("player rating and potential distinguish achieved from upside", async ({ br
     const projectedRow = projectedRating.locator("xpath=ancestor::tr");
     await expect(projectedRating).toHaveAttribute(
       "aria-label",
-      /Current level: .+ Estimated potential/,
+      /Current level: .+ Median potential estimate \(P50, not guaranteed\): .+ Estimated reachable upper/,
     );
+    await expect(projectedRating).toHaveAttribute("data-p50", /^\d(?:\.5)?$/);
     await expect(projectedRating.locator(".tls-player-potential-star")).toHaveCount(6);
     const achievedColor = await projectedRating
       .locator(".tls-player-potential-star-achieved")
@@ -775,7 +777,7 @@ test("player rating and potential distinguish achieved from upside", async ({ br
       .evaluate((element) => getComputedStyle(element).color);
     const futureColor = await projectedRating
       .locator(
-        ".tls-player-potential-star-conservative-future, .tls-player-potential-star-uncertain-future-base",
+        ".tls-player-potential-star-probable-future, .tls-player-potential-star-uncertain-future-base",
       )
       .first()
       .evaluate((element) => getComputedStyle(element).color);
@@ -3097,6 +3099,7 @@ async function captureDashboardStates(
     await resetCareerStorage(page);
     await page.getByRole("button", { name: "New career", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
+    await assertPublicDevelopmentEnvironment(page);
     await expect(page.locator(".tls-dashboard-priority")).toHaveAttribute("data-task-state", "attention");
     await assertDashboardPrimaryCommand(page, "Prepare match");
     await expect(page.locator(".tls-dashboard-priority")).toHaveAttribute("data-motion-key", /^attention:/);
@@ -3192,6 +3195,27 @@ async function assertDashboardPrimaryCommand(page: Page, name: string): Promise<
   const actions = page.locator("#tls-career-main .tls-menu-button-primary");
   await expect(actions).toHaveCount(1);
   await expect(actions).toHaveAccessibleName(name);
+}
+
+/** Verifies the public environment is localized, readable, and coefficient-free. */
+async function assertPublicDevelopmentEnvironment(page: Page): Promise<void> {
+  const environment = page.locator(".tls-dashboard-club-environment");
+  await expect(environment).toBeVisible();
+  await expect(environment.locator("dt")).toHaveText("Development environment");
+  await expect(environment.locator("dd")).toHaveText(
+    /^(?:Very poor|Poor|Limited|Adequate|Good|Very good|Excellent)$/,
+  );
+  expect(await environment.evaluate((element) => element.outerHTML)).not.toMatch(
+    /(?:0\.92|0\.95|0\.98|1\.00|1\.03|1\.06|1\.10|%)/,
+  );
+  expect(await foregroundContrast(
+    environment.locator("dt"),
+    ".tls-career-screen-header",
+  )).toBeGreaterThanOrEqual(4.5);
+  expect(await foregroundContrast(
+    environment.locator("dd"),
+    ".tls-career-screen-header",
+  )).toBeGreaterThanOrEqual(4.5);
 }
 
 /** Rejects backend identifiers and fallback vocabulary from valid Dashboard copy. */

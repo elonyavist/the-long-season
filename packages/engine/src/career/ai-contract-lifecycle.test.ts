@@ -48,40 +48,64 @@ import {
 import { selectFreeAgentPlayerIds } from "./free-agent-pool.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
+import {
+  playerDevelopmentCalibrationVersionsFixture,
+  playerDevelopmentEnvironmentConfigFixture,
+} from "../test-fixtures/player-development-environment-config.ts";
 
 const WAGE_POLICY = playerWagePolicyConfigFixture();
 const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
+const VALUATION_CONFIG = playerValuationConfigFixture();
 
 function advanceAiContractLifecycle(
   input: Omit<
     Parameters<typeof advanceAiContractLifecycleWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "valuationConfig"
   >,
 ) {
   return advanceAiContractLifecycleWithPolicy({
     ...input,
     wagePolicy: WAGE_POLICY,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+    valuationConfig: VALUATION_CONFIG,
   });
 }
 
 function advanceCareerMonths(
   input: Omit<
     Parameters<typeof advanceCareerMonthsWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "playerDevelopmentEnvironmentConfig" | "developmentCheckpointMode" | "valuationConfig"
   >,
 ) {
   return advanceCareerMonthsWithPolicy({
     ...input,
     wagePolicy: WAGE_POLICY,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+    valuationConfig: VALUATION_CONFIG,
+    playerDevelopmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
+    developmentCheckpointMode: "complete_quarters",
   });
 }
 
 function deriveContractDemand(
-  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+  input: Omit<
+    Parameters<typeof deriveContractDemandWithPolicy>[0],
+    "wagePolicy" | "publicAssessment"
+  >,
 ) {
-  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+  const player = input.careerState.gameState.players[input.playerId]!;
+  return deriveContractDemandWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.evaluatedOn,
+      ratingScale: VALUATION_CONFIG.ratingScale,
+      potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+    }),
+  });
 }
 
 function offerContractRenewal(
@@ -93,12 +117,13 @@ function offerContractRenewal(
 function advanceContractNegotiations(
   careerState: Parameters<typeof advanceContractNegotiationsWithPolicy>[0],
   throughDate: Parameters<typeof advanceContractNegotiationsWithPolicy>[1],
-  clubFilter?: Parameters<typeof advanceContractNegotiationsWithPolicy>[3],
+  clubFilter?: Parameters<typeof advanceContractNegotiationsWithPolicy>[4],
 ) {
   return advanceContractNegotiationsWithPolicy(
     careerState,
     throughDate,
     WAGE_POLICY,
+    VALUATION_CONFIG,
     clubFilter,
   );
 }
@@ -500,7 +525,12 @@ function careerFixture(input: {
 function gameStateFixture(aiPlayers: readonly Player[], selectedPlayer: Player): GameState {
   const allPlayers = [...aiPlayers, selectedPlayer];
   return {
-    meta: { seed: "ai-contract-lifecycle", rngAlgorithmVersion: "test", saveSchemaVersion: 1 },
+    meta: {
+      seed: "ai-contract-lifecycle",
+      rngAlgorithmVersion: "test",
+      saveSchemaVersion: 1,
+      calibrationVersions: playerDevelopmentCalibrationVersionsFixture(),
+    },
     calendar: { currentDate: CURRENT_DATE, currentSeasonId: SEASON },
     players: Object.fromEntries(allPlayers.map((player) => [player.id, player])),
     playerIds: allPlayers.map((player) => player.id),

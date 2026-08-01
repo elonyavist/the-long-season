@@ -16,7 +16,8 @@ import {
   type PlayerSquadDepartment,
 } from "@game/domain";
 
-import { derivePlayerMarketAbility } from "../market/player-valuation.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import {
   applyContractActivationsFinance,
@@ -49,6 +50,8 @@ export interface ReplenishSeniorSquadsFromFreeAgentsInput {
   readonly wagePolicy: PlayerWagePolicyConfig;
   /** Exact version-selected reserve and affordability policy. */
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Canonical public-assessment policy used by ranking and contract demand. */
+  readonly valuationConfig: PlayerValuationConfig;
   /** Clubs whose recruitment decisions the caller explicitly owns. */
   readonly clubIds: readonly ClubId[];
   readonly occurredOn: GameDate;
@@ -100,6 +103,7 @@ export function replenishSeniorSquadsFromFreeAgents(
       careerState,
       wagePolicy: input.wagePolicy,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
+      valuationConfig: input.valuationConfig,
       clubIds: input.clubIds,
       occurredOn: input.occurredOn,
     },
@@ -385,7 +389,12 @@ function replenishSeniorSquadsPass(
   let projectedCareerState = input.careerState;
   const requestedClubIds = new Set(input.clubIds);
   const freeAgentIds = new Set(selectFreeAgentPlayerIds(projectedCareerState));
-  const rankedFreeAgents = rankFreeAgents(projectedCareerState, freeAgentIds);
+  const rankedFreeAgents = rankFreeAgents(
+    projectedCareerState,
+    freeAgentIds,
+    input.occurredOn,
+    input.valuationConfig,
+  );
   const sameDayDepartures = sameDayDepartureKeys(projectedCareerState, input.occurredOn);
   const plannedSignings: PlannedFreeAgentSigning[] = [];
   const plannedStructuralReleases: PlannedStructuralRelease[] = [];
@@ -437,6 +446,7 @@ function replenishSeniorSquadsPass(
             clubId,
             occurredOn: input.occurredOn,
             wagePolicy: input.wagePolicy,
+            valuationConfig: input.valuationConfig,
           })
         : rankedFreeAgents;
 
@@ -545,6 +555,7 @@ function replenishSeniorSquadsPass(
         occurredOn: input.occurredOn,
         wagePolicy: input.wagePolicy,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
+        valuationConfig: input.valuationConfig,
         allowStructuralBudgetTopUp:
           assessment.squadSize < MINIMUM_CAREER_SQUAD_SIZE
           || assessment.neededDepartment !== undefined,
@@ -803,13 +814,23 @@ function mergeMoneyByClub(
 function rankFreeAgents(
   careerState: CareerState,
   freeAgentIds: ReadonlySet<PlayerId>,
+  occurredOn: GameDate,
+  valuationConfig: PlayerValuationConfig,
 ): readonly PlayerId[] {
   return [...freeAgentIds]
     .flatMap((playerId) => {
       const player = careerState.gameState.players[playerId];
       return player === undefined
         ? []
-        : [{ playerId, currentAbility: derivePlayerMarketAbility(player).currentAbility }];
+        : [{
+            playerId,
+            currentAbility: derivePublicPlayerAssessment({
+              player,
+              currentDate: occurredOn,
+              potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+              ratingScale: valuationConfig.ratingScale,
+            }).currentAbility,
+          }];
     })
     .sort((left, right) =>
       right.currentAbility - left.currentAbility
@@ -830,15 +851,23 @@ function rankAffordableFreeAgentsForClub(input: {
   readonly clubId: ClubId;
   readonly occurredOn: GameDate;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
 }): readonly PlayerId[] {
   return [...input.freeAgentIds]
     .flatMap((playerId) => {
       const player = input.careerState.gameState.players[playerId];
       if (player === undefined) return [];
       try {
+        const publicAssessment = derivePublicPlayerAssessment({
+          player,
+          currentDate: input.occurredOn,
+          potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+          ratingScale: input.valuationConfig.ratingScale,
+        });
         const terms = deriveContractDemand({
           careerState: input.careerState,
           wagePolicy: input.wagePolicy,
+          publicAssessment,
           playerId,
           clubId: input.clubId,
           evaluatedOn: input.occurredOn,
@@ -848,8 +877,7 @@ function rankAffordableFreeAgentsForClub(input: {
           playerId,
           annualWage: terms.annualWage,
           signingBonus: terms.bonuses.signingBonus,
-          currentAbility:
-            derivePlayerMarketAbility(player).currentAbility,
+          currentAbility: publicAssessment.currentAbility,
         }];
       } catch {
         return [];
@@ -921,6 +949,7 @@ function tryPlanCandidate(input: {
   readonly occurredOn: GameDate;
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  readonly valuationConfig: PlayerValuationConfig;
   readonly allowStructuralBudgetTopUp: boolean;
 }): PlannedCandidate | undefined {
   let proposedCareerState = input.careerState;
@@ -928,9 +957,18 @@ function tryPlanCandidate(input: {
   let structuralBudgetTopUpUsed = false;
   let terms: ContractOfferTerms;
   try {
+    const player = proposedCareerState.gameState.players[input.playerId];
+    if (player === undefined) return undefined;
+    const publicAssessment = derivePublicPlayerAssessment({
+      player,
+      currentDate: input.occurredOn,
+      potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+      ratingScale: input.valuationConfig.ratingScale,
+    });
     terms = deriveContractDemand({
       careerState: proposedCareerState,
       wagePolicy: input.wagePolicy,
+      publicAssessment,
       playerId: input.playerId,
       clubId: input.clubId,
       evaluatedOn: input.occurredOn,

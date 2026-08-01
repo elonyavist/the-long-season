@@ -22,6 +22,7 @@ import {
   type PlayerValuationConfig,
 } from "./player-valuation.ts";
 import { derivePlayerWillingness, type PlayerWillingness } from "./player-willingness.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Inputs needed to evaluate one permanent transfer. */
 export interface EvaluatePermanentTransferInput {
@@ -31,11 +32,8 @@ export interface EvaluatePermanentTransferInput {
   readonly clubFinanceState: ClubFinanceState;
   /** Manager-declared move. */
   readonly intent: PermanentTransferIntent;
-  /**
-   * Explicit versioned public-value content. Required unless both clubs have
-   * already accepted an explicit fee and no public-value projection is needed.
-   */
-  readonly valuationConfig?: PlayerValuationConfig;
+  /** Explicit versioned content for the shared valuation/willingness assessment. */
+  readonly valuationConfig: PlayerValuationConfig;
   /** Seller agreement used by valuation and player willingness. */
   readonly currentContract?: PlayerContract;
   /** Accepted annual terms used by willingness and affordability. */
@@ -107,23 +105,22 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     return rejected(input.intent, reasons);
   }
 
-  const valuation = input.valuationConfig === undefined
-    ? undefined
-    : derivePlayerValuation({
-        player,
-        currentDate: input.gameState.calendar.currentDate,
-        config: input.valuationConfig,
-        marketContext: {
-          kind: "contracted",
-          division: sellingClub.category,
-        },
-      });
-  const transferFee = input.agreedTransferFee ?? valuation?.value;
-  if (transferFee === undefined) {
-    throw new Error(
-      "Explicit valuation config is required when no agreed transfer fee exists",
-    );
+  const primaryPosition = player.naturalPositions[0];
+  if (primaryPosition === undefined) {
+    throw new Error(`Player has no primary position: ${String(player.id)}`);
   }
+  const assessment = derivePublicPlayerAssessment({
+    player,
+    currentDate: input.gameState.calendar.currentDate,
+    potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    ratingScale: input.valuationConfig.ratingScale,
+  });
+  const valuation = derivePlayerValuation({
+    assessment,
+    primaryPosition,
+    config: input.valuationConfig,
+  });
+  const transferFee = input.agreedTransferFee ?? valuation.value;
   const buyingAccount = findClubFinanceAccount(input.clubFinanceState, input.intent.buyingClubId);
 
   if (buyingAccount === undefined) {
@@ -184,16 +181,12 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
   }
 
   const willingness = derivePlayerWillingness({
-    player,
+    publicAssessment: assessment,
     sellingClub,
     buyingClub,
     currentTier: sellingClub.category,
     destinationTier: buyingClub.category,
-    currentDate: input.gameState.calendar.currentDate,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
-    ...(input.valuationConfig === undefined
-      ? {}
-      : { ratingScale: input.valuationConfig.ratingScale }),
     ...(input.currentContract === undefined ? {} : { currentContract: input.currentContract }),
     ...(input.proposedTerms === undefined ? {} : { proposedTerms: input.proposedTerms }),
   });
@@ -208,7 +201,7 @@ export function evaluatePermanentTransfer(input: EvaluatePermanentTransferInput)
     intent: input.intent,
     status,
     reasons,
-    ...(valuation === undefined ? {} : { valuation }),
+    valuation,
     transferFee,
     willingness,
     ...(buyingAccount === undefined ? {} : { buyerBudgetBefore: buyingAccount.availableTransferBudget }),

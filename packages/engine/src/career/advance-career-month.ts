@@ -1,14 +1,14 @@
 import {
   createCareerState,
-  createPlayerParticipationLedger,
+  closePlayerParticipationMonth,
+  selectNextPlayerParticipationDevelopmentBatch,
   type CareerState,
   type AskingPriceCurvesConfig,
   type GameDate,
   type MarketBehaviorCalibrationConfig,
+  type PlayerDevelopmentEnvironmentConfig,
   type PlayerDevelopmentMonthKey,
-  type PlayerId,
   type PlayerWagePolicyConfig,
-  type PlayerParticipationLedger,
   type PlayerParticipationRow,
   type SeasonTransferWindows,
   type SeasonId,
@@ -18,7 +18,10 @@ import {
   advanceAiMarketLifecycle,
   type AdvanceAiMarketLifecycleResult,
 } from "./ai-market-lifecycle.ts";
-import { developPlayersForSeason, type PlayerDevelopmentChange } from "./player-development.ts";
+import {
+  developPlayersFromParticipationRows,
+  type PlayerMonthlyDevelopmentChange,
+} from "./player-development.ts";
 import {
   advanceAiContractLifecycle,
   type AdvanceAiContractLifecycleResult,
@@ -39,10 +42,14 @@ export interface AdvanceCareerMonthsInput {
   readonly wagePolicy: PlayerWagePolicyConfig;
   /** Version-linked market policy required by affordability and AI decisions. */
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Canonical public-assessment policy used by contract and market decisions. */
+  readonly valuationConfig: PlayerValuationConfig;
+  /** Version-linked policy used to derive each row's recorded club environment. */
+  readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
+  /** Normal quarterly cadence or the explicit season-end residual flush. */
+  readonly developmentCheckpointMode: "complete_quarters" | "season_end_flush";
   /** Season whose participation facts are being closed. Defaults to the active season. */
   readonly seasonId?: SeasonId;
-  /** Optional explicit player order. Defaults to players with eligible participation rows. */
-  readonly playerIds?: readonly PlayerId[];
   /**
    * Adapter-owned transfer windows for the active competition season.
    *
@@ -50,11 +57,6 @@ export interface AdvanceCareerMonthsInput {
    * and development work still advances, but no AI market decision is made.
    */
   readonly transferWindows?: SeasonTransferWindows;
-  /**
-   * Versioned public-value content required when `transferWindows` enables AI
-   * market work. Calendar-only monthly advancement does not need valuation.
-   */
-  readonly valuationConfig?: PlayerValuationConfig;
   /** Versioned asking-price content paired with `valuationConfig`. */
   readonly askingPriceConfig?: AskingPriceCurvesConfig;
 }
@@ -113,13 +115,14 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         throughDate: input.toDate,
         wagePolicy: input.wagePolicy,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
+        valuationConfig: input.valuationConfig,
       });
   const careerStateAfterContracts = contractLifecycle?.careerState ?? input.careerState;
   if (
     input.transferWindows !== undefined
-    && (input.valuationConfig === undefined || input.askingPriceConfig === undefined)
+    && input.askingPriceConfig === undefined
   ) {
-    throw new Error("AI market advancement requires explicit valuation and asking-price configs");
+    throw new Error("AI market advancement requires explicit asking-price config");
   }
   const marketLifecycle = input.transferWindows === undefined
     || careerStateAfterContracts.seniorSquadState === undefined
@@ -130,20 +133,13 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         fromDate,
         throughDate: input.toDate,
         transferWindows: input.transferWindows,
-        valuationConfig: input.valuationConfig!,
+        valuationConfig: input.valuationConfig,
         askingPriceConfig: input.askingPriceConfig!,
         wagePolicy: input.wagePolicy,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
       });
   const careerStateAfterMarket = marketLifecycle?.careerState ?? careerStateAfterContracts;
-  const eligibleRows = eligibleOpenParticipationRows({
-    ledger: careerStateAfterMarket.playerParticipationLedger,
-    seasonId,
-    beforeMonthKey: monthKeyForCareerDate(input.toDate),
-    playerIds: input.playerIds,
-  });
-
-  if (input.toDate <= fromDate || eligibleRows.length === 0) {
+  if (input.toDate <= fromDate) {
     return {
       careerState: careerStateAfterMarket,
       summaries: [],
@@ -155,39 +151,50 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
   let careerState = careerStateAfterMarket;
   const summaries: CareerMonthlyLifecycleSummary[] = [];
 
-  for (const monthKey of uniqueSortedMonthKeys(eligibleRows)) {
-    const monthRows = eligibleRows.filter((row) => row.monthKey === monthKey);
-    const filteredLedger = ledgerForEligibleRows(careerState.playerParticipationLedger, monthRows);
-    const developed = developPlayersForSeason({
-      careerState: createCareerState({
-        ...careerState,
-        playerParticipationLedger: filteredLedger,
-      }),
+  while (true) {
+    const batch = selectNextPlayerParticipationDevelopmentBatch({
+      ledger: careerState.playerParticipationLedger,
+      seasonId,
+      beforeMonthKey: monthKeyForCareerDate(input.toDate),
+      mode: input.developmentCheckpointMode,
+    });
+    if (batch === undefined) {
+      break;
+    }
+
+    const developed = developPlayersFromParticipationRows({
+      careerState,
       worldSeed: input.worldSeed,
       seasonId,
-      playerIds: input.playerIds ?? uniquePlayerIds(monthRows),
+      participationRows: batch.rows,
+      developmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
     });
-    const playerParticipationLedger = mergeClosedMonths(
-      careerState.playerParticipationLedger,
-      developed.careerState.playerParticipationLedger,
-    );
+    let playerParticipationLedger = developed.careerState.playerParticipationLedger;
+    if (playerParticipationLedger === undefined) {
+      throw new Error("quarterly development requires its source participation ledger");
+    }
+    for (const monthKey of batch.monthKeys) {
+      playerParticipationLedger = closePlayerParticipationMonth(
+        playerParticipationLedger,
+        seasonId,
+        monthKey,
+      );
+    }
 
     careerState = createCareerState({
-      ...careerState,
-      gameState: {
-        ...careerState.gameState,
-        players: developed.careerState.gameState.players,
-      },
-      ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
+      ...developed.careerState,
+      playerParticipationLedger,
     });
 
-    summaries.push(monthlySummary({
-      seasonId,
-      monthKey,
-      rows: monthRows,
-      changes: developed.changes,
-      closedMonthKeys: developed.careerState.playerParticipationLedger?.closedMonthKeys ?? [],
-    }));
+    for (const monthKey of batch.monthKeys) {
+      summaries.push(monthlySummary({
+        seasonId,
+        monthKey,
+        rows: batch.rows.filter((row) => row.monthKey === monthKey),
+        changes: developed.monthlyChanges.filter((change) => change.monthKey === monthKey),
+        closedMonthKeys: playerParticipationLedger.closedMonthKeys,
+      }));
+    }
   }
 
   return {
@@ -204,71 +211,11 @@ export function monthKeyForCareerDate(date: GameDate): PlayerDevelopmentMonthKey
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
-function eligibleOpenParticipationRows(input: {
-  readonly ledger: PlayerParticipationLedger | undefined;
-  readonly seasonId: SeasonId;
-  readonly beforeMonthKey: PlayerDevelopmentMonthKey;
-  readonly playerIds: readonly PlayerId[] | undefined;
-}): readonly PlayerParticipationRow[] {
-  if (input.ledger === undefined) {
-    return [];
-  }
-
-  const playerFilter = input.playerIds === undefined ? undefined : new Set(input.playerIds);
-  const closed = new Set(input.ledger.closedMonthKeys);
-  return input.ledger.rowKeys
-    .map((rowKey) => input.ledger?.rows[rowKey])
-    .filter((row): row is PlayerParticipationRow =>
-      row !== undefined
-      && row.seasonId === input.seasonId
-      && row.monthKey < input.beforeMonthKey
-      && !closed.has(`${row.seasonId}|${row.monthKey}`)
-      && (playerFilter === undefined || playerFilter.has(row.playerId)),
-    );
-}
-
-function ledgerForEligibleRows(
-  sourceLedger: PlayerParticipationLedger | undefined,
-  rows: readonly PlayerParticipationRow[],
-): PlayerParticipationLedger {
-  const source = createPlayerParticipationLedger(sourceLedger);
-  const copiedRows: Record<string, PlayerParticipationRow> = {};
-  const rowKeys: string[] = [];
-
-  for (const row of rows) {
-    copiedRows[row.rowKey] = row;
-    rowKeys.push(row.rowKey);
-  }
-
-  return createPlayerParticipationLedger({
-    rows: copiedRows,
-    rowKeys,
-    closedMonthKeys: source.closedMonthKeys,
-  });
-}
-
-function mergeClosedMonths(
-  originalLedger: PlayerParticipationLedger | undefined,
-  developedLedger: PlayerParticipationLedger | undefined,
-): PlayerParticipationLedger | undefined {
-  if (originalLedger === undefined && developedLedger === undefined) {
-    return undefined;
-  }
-
-  const original = createPlayerParticipationLedger(originalLedger);
-  const developed = createPlayerParticipationLedger(developedLedger);
-  return createPlayerParticipationLedger({
-    rows: original.rows,
-    rowKeys: original.rowKeys,
-    closedMonthKeys: [...original.closedMonthKeys, ...developed.closedMonthKeys],
-  });
-}
-
 function monthlySummary(input: {
   readonly seasonId: SeasonId;
   readonly monthKey: PlayerDevelopmentMonthKey;
   readonly rows: readonly PlayerParticipationRow[];
-  readonly changes: readonly PlayerDevelopmentChange[];
+  readonly changes: readonly PlayerMonthlyDevelopmentChange[];
   readonly closedMonthKeys: readonly string[];
 }): CareerMonthlyLifecycleSummary {
   const rowPlayers = new Set(input.rows.map((row) => row.playerId));
@@ -286,14 +233,6 @@ function monthlySummary(input: {
     totalDecline: roundSummaryDelta(changes.reduce((sum, change) => sum + change.totalDecline, 0)),
     checkpointKey: input.closedMonthKeys.find((key) => key === `${input.seasonId}|${input.monthKey}`) ?? `${input.seasonId}|${input.monthKey}`,
   };
-}
-
-function uniqueSortedMonthKeys(rows: readonly PlayerParticipationRow[]): readonly PlayerDevelopmentMonthKey[] {
-  return [...new Set(rows.map((row) => row.monthKey))].sort();
-}
-
-function uniquePlayerIds(rows: readonly PlayerParticipationRow[]): readonly PlayerId[] {
-  return [...new Set(rows.map((row) => row.playerId))];
 }
 
 function roundSummaryDelta(value: number): number {

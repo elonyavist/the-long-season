@@ -1,4 +1,4 @@
-import { createCareerState, type CareerState } from "@game/domain";
+import type { CareerState } from "@game/domain";
 
 import { StorageError } from "./game-storage.interface.ts";
 import {
@@ -9,22 +9,22 @@ import {
 } from "./save-metadata.ts";
 import { createPersistableCareerState } from "./career-storage.contract.ts";
 
-/** Persisted career save envelope for the complete Phase 79/79C beta baseline. */
-export interface StoredCareerSaveV8 {
+/** Persisted career save envelope for the complete Phase 80A beta baseline. */
+export interface StoredCareerSaveV13 {
   readonly saveSchemaVersion: typeof CURRENT_CAREER_SAVE_SCHEMA_VERSION;
   readonly metadata: CareerSaveMetadata;
   readonly state: CareerState;
 }
 
 /** Current persisted career save shape after migration. */
-export type StoredCareerSave = StoredCareerSaveV8;
+export type StoredCareerSave = StoredCareerSaveV13;
 
 /**
  * Validates an unknown persisted career envelope against the current beta baseline.
  *
  * Earlier beta career files are intentionally rejected instead of migrated.
- * The project is still in beta and old player-potential snapshots are no longer
- * meaningful after the lifecycle rework.
+ * The project is still in beta, and old snapshots do not carry the complete
+ * Phase 80A projection, valuation, and development-policy epoch.
  */
 export function migrateCareerSave(rawSave: unknown): StoredCareerSave {
   if (!isRecord(rawSave)) {
@@ -60,7 +60,7 @@ export function migrateCareerSave(rawSave: unknown): StoredCareerSave {
       autosaveIntervalDays,
     },
     state: createPersistableCareerState(
-      createCareerState(rawSave.state as unknown as CareerState),
+      rawSave.state as unknown as CareerState,
       "unsupported_schema_version",
     ),
   };

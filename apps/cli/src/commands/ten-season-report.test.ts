@@ -3,17 +3,15 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  createAnnualWorldIntakeCandidateProviders,
   createFakeDomesticWorld,
-  selectMarketBehaviorCalibration,
   selectPlayerValuationConfig,
-  selectPlayerWagePolicyConfig,
 } from "@game/content";
-import { advanceCareerOneSeason } from "@game/engine";
+import { completedPlayerAge } from "@game/engine";
 import { createTranslator } from "@game/i18n";
+import { fromISO, toISO } from "@game/shared";
 import {
-  createPlayerGenerationAnnualIntakeSummary,
-  type PlayerGenerationAnnualIntakeObservation,
+  type PlayerGenerationEconomyGate,
+  type PlayerDevelopmentCohortWorldSummary,
 } from "@game/simulation-tools";
 import { test } from "vitest";
 
@@ -21,17 +19,27 @@ import {
   DEFAULT_TEN_SEASON_REPORT_SEED,
   runTenSeasonReportCommand,
 } from "./ten-season-report.ts";
-import { createResumableLongRunGateReport } from "./ten-season-report/gate-checkpoint.ts";
 import {
-  createPhase79DInitialWorldBaseline,
-  createPhase79DPotentialOutcomeBaseline,
+  createResumableLongRunGateReport,
+  createResumablePlayerDevelopmentCohortReport,
+} from "./ten-season-report/gate-checkpoint.ts";
+import {
+  aggregatePlayerEconomyGateEvidence,
+  createPlayerDevelopmentCohortReportFromAggregate,
+  createPlayerDevelopmentCohortReportFromWorlds,
+  createPhase80APotentialOutcomeCalibration,
   createLongRunGateReport,
+  createSingleWorldReport,
   hashPhase79CComposition,
+  phase80APotentialOutcomeMonthKeys,
   resolveLongRunGateWorkerCount,
-  summarizePhase79CYearTenRatingStock,
+  seasonStartYearAtDate,
+  transferNegotiationEventDate,
 } from "./ten-season-report/report-data.ts";
-import { careerStateFromNewWorld } from "./career/scenarios.ts";
-import type { CliCareerState, CliSaveId } from "./career/types.ts";
+import {
+  formatPlayerDevelopmentCohortReportMarkdown,
+  formatPlayerDevelopmentCohortReportOutput,
+} from "./ten-season-report/gate-output.ts";
 
 /**
  * Runs the real default ten-season composition rather than a reduced fixture.
@@ -113,18 +121,18 @@ test("ten-season-report keeps role-weighted player quality diagnostics determini
   const io = captureIo();
 
   assert.equal(await runTenSeasonReportCommand(["--seed=world-a", "--seasons=1"], io), 0);
-  assert.equal(io.stdoutLines.includes("  Current ability avg: 9.94 -> 9.94"), true);
+  assert.equal(io.stdoutLines.includes("  Current ability avg: 9.28 -> 9.21"), true);
   assert.equal(
-    io.stdoutLines.includes("  Initial ability spread: spread=5.08 top=U.S. Florence:12.95 bottom=U.S. Turin:7.87"),
+    io.stdoutLines.includes("  Initial ability spread: spread=5.57 top=Virtus Turin:13.30 bottom=U.S. Ravenna:7.73"),
     true,
   );
   assert.equal(
-    io.stdoutLines.includes("  Final ability spread: spread=5.03 top=Virtus Turin:12.90 bottom=U.S. Turin:7.87"),
+    io.stdoutLines.includes("  Final ability spread: spread=5.21 top=Virtus Palermo:12.94 bottom=U.S. Ravenna:7.73"),
     true,
   );
 }, 30_000);
 
-test("ten-season-report writes deterministic multi-world gate reports", async () => {
+test("ten-season-report writes deterministic non-vacuous reports for an underpowered multi-world sample", async () => {
   const directoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-"));
 
   try {
@@ -138,7 +146,11 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     const secondExitCode = await runTenSeasonReportCommand(args, second);
     const secondReport = await readFile(reportPath, "utf8");
 
-    assert.equal(firstExitCode, secondExitCode);
+    // Two worlds deliberately cannot prove the cohort-level economy bands.
+    // The command must stay deterministic and fail honestly instead of turning
+    // a small denominator into a false green gate.
+    assert.equal(firstExitCode, 1);
+    assert.equal(secondExitCode, 1);
     assert.deepEqual(first.stdoutLines, second.stdoutLines);
     assert.equal(firstReport, secondReport);
     assert.equal(first.stdoutLines.includes("The Long Season long-run gate report"), true);
@@ -155,12 +167,70 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(hasLineStartingWith(first.stdoutLines, "Contract lifecycle:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Execution:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
-    assert.equal(hasLineStartingWith(first.stdoutLines, "Year-10 rating cap violations:"), true);
-    assert.equal(hasLineStartingWith(first.stdoutLines, "Year-10 rating stock observations:"), true);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Player-economy gate violations:"), true);
+    assert.equal(first.stdoutLines.includes("Status: FAIL"), true);
     assert.equal(
       first.stdoutLines.some((line) =>
-        line.startsWith("Phase 79D public_potential_range_ordering:")
+        line.startsWith("Player economy hard_cap_eligibility_and_display:")
+        && line.includes("observations=2")
+        && line.includes("violations=0")
+        && line.includes("matching=1")
+        && line.includes("share_bps=5000")
+      ),
+      true,
+    );
+    for (const stockGate of [
+      "young_stored_ceiling_six_active_stock",
+      "young_stored_ceiling_six_stock_arrival_category_placement",
+      "young_stored_ceiling_six_stock_arrival_club_uniqueness",
+      "young_stored_ceiling_six_no_inflation",
+    ]) {
+      assert.equal(
+        first.stdoutLines.some((line) =>
+          line.startsWith(`Player economy ${stockGate}:`)
+          && line.includes("violations=0")
+        ),
+        true,
+      );
+    }
+    const vacancyReplacementLine = first.stdoutLines.find((line) =>
+      line.startsWith(
+        "Player economy young_stored_ceiling_six_vacancy_replacement:",
+      )
+    );
+    assert.notEqual(vacancyReplacementLine, undefined);
+    assert.match(vacancyReplacementLine!, /violations=0/);
+    assert.match(vacancyReplacementLine!, /cohort_evidence=[1-9][0-9]*/);
+    assert.match(vacancyReplacementLine!, /cohort_minimum=1/);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Closing division value fit:"), true);
+    const closingValueLine = first.stdoutLines.find((line) =>
+      line.startsWith("Closing division value fit:")
+    );
+    assert.match(closingValueLine ?? "", /season_start_year=[1-9][0-9]*/);
+    assert.match(closingValueLine ?? "", /observations=[1-9][0-9]*/);
+    assert.equal(hasLineStartingWith(first.stdoutLines, "Year-10 rating stock observations:"), true);
+    assert.equal(
+      first.stdoutLines.includes(
+        "Year-10 six-star max: current=n/a stored_ceiling=n/a lower_tier_stored_ceiling=n/a",
+      ),
+      true,
+    );
+    assert.equal(
+      first.stdoutLines.some((line) =>
+        line.startsWith("Player economy public_potential_range_ordering:")
         && line.includes("observations=")
+        && line.includes("matching=")
+        && line.includes("cohort_minimum=")
+      ),
+      true,
+    );
+    const playerEconomyLines = first.stdoutLines.filter((line) =>
+      line.startsWith("Player economy ")
+    );
+    assert.equal(playerEconomyLines.length > 0, true);
+    assert.equal(
+      playerEconomyLines.every((line) =>
+        /observations=[1-9][0-9]*/.test(line)
       ),
       true,
     );
@@ -177,6 +247,7 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
       true,
     );
     assert.equal(firstReport.includes("Worlds: 2"), true);
+    assert.equal(firstReport.includes("Status: FAIL"), true);
     assert.equal(firstReport.includes("Table spread average:"), true);
     assert.equal(firstReport.includes("Draw rate average:"), true);
     assert.equal(firstReport.includes("Champion streak max observed:"), true);
@@ -191,10 +262,13 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
     assert.equal(firstReport.includes("Contract lifecycle:"), true);
     assert.equal(firstReport.includes("Execution:"), true);
     assert.equal(firstReport.includes("Warning check counts:"), true);
-    assert.equal(firstReport.includes("Phase 79D Non-Vacuous Player And Market Gates"), true);
+    assert.equal(firstReport.includes("Player Economy Non-Vacuous Gates"), true);
+    assert.equal(firstReport.includes("Closing Checkpoint Division Public Values"), true);
+    assert.equal(firstReport.includes("Date: 2026-08-01"), true);
+    assert.equal(firstReport.includes("nvm use 24"), true);
     assert.equal(firstReport.includes("Phase 79C Version And Replay Evidence"), true);
     assert.equal(firstReport.includes("Phase 79C Closing Division Economy"), true);
-    assert.equal(firstReport.includes("Phase 79C Year-10 Exceptional Locations"), true);
+    assert.equal(firstReport.includes("Year-10 Exceptional Stock Locations"), true);
     assert.equal(firstReport.includes("Free-agent non-zero completed fees: 0"), true);
     assert.equal(firstReport.includes("Signal check counts:"), true);
     assert.equal(firstReport.includes("Warn checks"), true);
@@ -207,6 +281,40 @@ test("ten-season-report writes deterministic multi-world gate reports", async ()
   }
 }, 180_000);
 
+test("transfer diagnostics use counter time and exact civil age/season boundaries", () => {
+  type DiagnosticDate = Parameters<typeof transferNegotiationEventDate>[1];
+  const submittedOn = fromISO("2026-07-31") as DiagnosticDate;
+  const counterIssuedOn = fromISO("2026-08-01") as DiagnosticDate;
+  const fallback = fromISO("2026-08-05") as DiagnosticDate;
+  const birthDate = fromISO("2008-08-01") as DiagnosticDate;
+  const countered = {
+    status: "countered",
+    submittedOn,
+    counterIssuedOn,
+  } as unknown as Parameters<typeof transferNegotiationEventDate>[0];
+  const playerCountered = {
+    status: "player_countered",
+    submittedOn,
+    counterIssuedOn,
+  } as unknown as Parameters<typeof transferNegotiationEventDate>[0];
+
+  assert.equal(transferNegotiationEventDate(countered, fallback), counterIssuedOn);
+  assert.equal(
+    transferNegotiationEventDate(playerCountered, fallback),
+    counterIssuedOn,
+  );
+  assert.equal(completedPlayerAge(birthDate, submittedOn), 17);
+  assert.equal(completedPlayerAge(birthDate, counterIssuedOn), 18);
+  assert.equal(
+    seasonStartYearAtDate(submittedOn, fromISO("2025-08-01")),
+    2025,
+  );
+  assert.equal(
+    seasonStartYearAtDate(counterIssuedOn, fromISO("2025-08-01")),
+    2026,
+  );
+});
+
 test("same-seed Phase 79C composition hashes replay without a second cohort", () => {
   const first = createFakeDomesticWorld({ worldSeed: "phase79c-composition-hash" });
   const replay = createFakeDomesticWorld({ worldSeed: "phase79c-composition-hash" });
@@ -216,80 +324,43 @@ test("same-seed Phase 79C composition hashes replay without a second cohort", ()
   assert.notEqual(hashPhase79CComposition(first), hashPhase79CComposition(different));
 });
 
-test("Phase 79D reproduces the exact post-reconciliation 100-world exceptional-player baseline", () => {
-  const baseline = createPhase79DInitialWorldBaseline();
+test("Phase 80A potential-outcome cycles follow the August career year", () => {
+  const openingDate = fromISO("2026-08-01");
 
-  assert.equal(baseline.worldCount, 100);
-  assert.equal(baseline.audit.observationCount, 118_800);
-  assert.equal(baseline.audit.currentSix.observationCount, 151);
-  assert.equal(baseline.audit.currentSix.minimumAge, 24);
-  assert.equal(baseline.audit.currentSix.maximumAge, 32);
-  assert.deepEqual(baseline.audit.currentSix.archetypeCounts, {
-    category_star: 151,
-  });
-  assert.equal(baseline.audit.storedCeilingSix.observationCount, 302);
-  assert.equal(
-    baseline.audit.storedCeilingSix.valueDistribution.p50MinorUnits,
-    12_486_562_500,
-  );
-  assert.equal(baseline.audit.publicUpperSix.observationCount, 151);
-  assert.equal(baseline.audit.allocation.allocatedPotentialSixCount, 302);
-  assert.equal(baseline.audit.allocation.unallocatedEffectivePotentialSixCount, 0);
-  assert.equal(baseline.audit.allocation.allocatedPotentialSixMissingEffectiveCount, 0);
-  assert.equal(baseline.audit.cap.eligibleExactHardCapCount, 9);
-  assert.equal(baseline.audit.cap.ineligibleRenderedAsHardCapCount, 0);
-  assert.equal(
-    baseline.audit.gates.find(({ key }) =>
-      key === "public_potential_range_ordering"
-    )?.status,
-    "pass",
-  );
-  assert.equal(
-    baseline.audit.gates.find(({ key }) =>
-      key === "stored_ceiling_six_joint_profile"
-    )?.observationCount,
-    302,
-  );
-  assert.equal(
-    baseline.audit.gates.find(({ key }) =>
-      key === "initial_exceptional_allocation"
-    )?.observationCount,
-    118_800,
-  );
-  assert.equal(baseline.audit.annualIntake.evaluationStatus, "not_evaluated");
   assert.deepEqual(
-    baseline.audit.suppliedNegotiationAggregates[0],
-    {
-      sourceLabel: "phase79c-three-division-short-10x10",
-      offerCount: 23_718,
-      sellerCounterCount: 0,
-      permanentCompletionCount: 12_237,
-      askingPriceDistribution: {
-        observationCount: 12_237,
-        p50MinorUnits: 146_668_271,
-        p90MinorUnits: 1_523_434_510,
-        p99MinorUnits: 3_140_116_475,
-        maximumMinorUnits: 11_736_102_461,
-      },
-      completedFeeDistribution: {
-        observationCount: 12_237,
-        p50MinorUnits: 146_668_271,
-        p90MinorUnits: 1_523_434_510,
-        p99MinorUnits: 3_140_116_475,
-        maximumMinorUnits: 11_736_102_461,
-      },
-    },
+    phase80APotentialOutcomeMonthKeys(openingDate, 0),
+    [
+      "2026-08", "2026-09", "2026-10", "2026-11", "2026-12", "2027-01",
+      "2027-02", "2027-03", "2027-04", "2027-05", "2027-06", "2027-07",
+    ],
   );
-}, 120_000);
+  assert.deepEqual(
+    phase80APotentialOutcomeMonthKeys(openingDate, 1),
+    [
+      "2027-08", "2027-09", "2027-10", "2027-11", "2027-12", "2028-01",
+      "2028-02", "2028-03", "2028-04", "2028-05", "2028-06", "2028-07",
+    ],
+  );
+});
 
-test("Phase 79D potential-outcome matrix composes engine owners across every locked cell", () => {
-  const baseline = createPhase79DPotentialOutcomeBaseline();
-  const replay = createPhase79DPotentialOutcomeBaseline();
+test("Phase 80A potential-outcome matrix composes engine owners across every locked cell", () => {
+  const baseline = createPhase80APotentialOutcomeCalibration();
+  const replay = createPhase80APotentialOutcomeCalibration();
 
-  assert.equal(baseline.audit.observationCount, 1_170);
-  assert.equal(baseline.audit.cells.length, 234);
+  assert.equal(baseline.audit.observationCount, 1_620);
+  assert.deepEqual(
+    baseline.outfieldTemplateSelections.map(({ department }) => department),
+    ["defender", "defender", "midfielder", "midfielder", "attacker"],
+  );
+  assert.equal(
+    new Set(
+      baseline.outfieldTemplateSelections.map(({ playerId }) => playerId),
+    ).size,
+    5,
+  );
+  assert.equal(baseline.audit.cells.length, 324);
   assert.equal(baseline.audit.cells.every(({ observationCount }) => observationCount === 5), true);
-  assert.equal(baseline.audit.expectedCellCount, 234);
+  assert.equal(baseline.audit.expectedCellCount, 324);
   assert.equal(baseline.audit.missingCellCount, 0);
   assert.equal(baseline.audit.underObservedCellCount, 0);
   assert.equal(baseline.audit.projectionOrderingViolationCount, 0);
@@ -304,31 +375,62 @@ test("Phase 79D potential-outcome matrix composes engine owners across every loc
     baseline.audit.gates.find(({ key }) =>
       key === "public_projection_non_widening_age"
     )?.observationCount,
-    1_170,
+    1_620,
   );
-  assert.equal(baseline.projectionPolicyCalibration.length, 11);
+  assert.equal(baseline.projectionPolicyCalibration.length, 24);
   assert.equal(
     baseline.projectionPolicyCalibration.reduce(
       (total, band) => total + band.observationCount,
       0,
     ),
-    1_170,
+    1_620,
   );
   assert.equal(
     baseline.projectionPolicyCalibration.filter(
       ({ evaluationStatus }) => evaluationStatus === "evaluated",
     ).length,
-    10,
+    24,
   );
+  const projectionPolicy = selectPlayerValuationConfig(
+    createFakeDomesticWorld({ worldSeed: baseline.seedPrefix })
+      .calibrationVersions,
+  ).potentialProjectionPolicy;
+  for (const calibrationBand of baseline.projectionPolicyCalibration) {
+    const configuredBand = projectionPolicy.ageBandsByRoleFamily[
+      calibrationBand.roleGroup
+    ].find(({ minimumAge, maximumAge }) =>
+      minimumAge === calibrationBand.minimumAge
+      && maximumAge === calibrationBand.maximumAge
+    );
+    assert.notEqual(configuredBand, undefined);
+    assert.equal(
+      configuredBand?.p50RealizationBasisPoints,
+      calibrationBand.p50RealizationBasisPoints,
+    );
+    let contractUpper = calibrationBand.p90RealizationBasisPoints;
+    if (calibrationBand.maximumAge <= 20) {
+      contractUpper = 10_000;
+    }
+    const isTerminalBand = calibrationBand.roleGroup === "outfield"
+      ? calibrationBand.minimumAge >= 28
+      : calibrationBand.minimumAge >= 32;
+    if (isTerminalBand) {
+      contractUpper = 0;
+    }
+    assert.equal(
+      configuredBand?.upperRealizationBasisPoints,
+      contractUpper,
+    );
+  }
+  assert.equal(baseline.audit.unobservedCalibrationBandCount, 0);
   assert.equal(baseline.audit.abovePublicUpperCount, 65);
-  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 556);
-  assert.equal(baseline.audit.publicUpperCalibrationWarningBandCount, 6);
+  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 401);
   assert.equal(baseline.audit.storedCeilingViolationCount, 0);
   assert.equal(
     baseline.audit.gates.find(({ key }) =>
-      key === "public_upper_p90_calibration"
+      key === "projection_policy_calibration_coverage"
     )?.status,
-    "warn",
+    "pass",
   );
   assert.equal(
     baseline.audit.gates.find(({ key }) => key === "stored_ceiling_integrity")
@@ -338,11 +440,11 @@ test("Phase 79D potential-outcome matrix composes engine owners across every loc
   assert.equal(
     baseline.audit.gates.find(({ key }) => key === "stored_ceiling_integrity")
       ?.observationCount,
-    1_170,
+    1_620,
   );
   assert.deepEqual(
     new Set(baseline.audit.cells.map(({ startAge }) => startAge)),
-    new Set(Array.from({ length: 13 }, (_, index) => index + 15)),
+    new Set(Array.from({ length: 18 }, (_, index) => index + 15)),
   );
   assert.deepEqual(
     new Set(baseline.audit.cells.map(({ roleGroup }) => roleGroup)),
@@ -351,98 +453,114 @@ test("Phase 79D potential-outcome matrix composes engine owners across every loc
   assert.deepEqual(baseline, replay);
 }, 30_000);
 
-test("Phase 79D canonical ten-season rollover observes accepted annual exceptions and bounded closing stock", () => {
-  const worldSeed = "phase79d-annual-intake-proof";
-  const world = createFakeDomesticWorld({ worldSeed });
-  const valuationConfig = selectPlayerValuationConfig(world.calibrationVersions);
-  const wagePolicy = selectPlayerWagePolicyConfig(world.calibrationVersions);
-  const marketBehaviorPolicy = selectMarketBehaviorCalibration(
-    world.calibrationVersions,
+test("Phase 80A canonical rollover wires full stock and non-vacuous replacement gates", () => {
+  const representedClubs = new Set<string>();
+  const observedPlayersByClub = new Map<string, Set<string>>();
+  const positivePlayersByClub = new Map<string, Set<string>>();
+  const report = createSingleWorldReport(
+    "phase80a-replacement-29",
+    2,
+    createTranslator("en"),
+    (seasonNumber, rows, careerState) => {
+      if (seasonNumber !== 1) return;
+      const ownerClubIdByPlayerId = new Map(
+        careerState.gameState.clubIds.flatMap((clubId) => {
+          const club = careerState.gameState.clubs[clubId];
+          return club?.playerIds.map((playerId) => [playerId, clubId] as const)
+            ?? [];
+        }),
+      );
+      for (const row of rows) {
+        const ownerClubId = ownerClubIdByPlayerId.get(row.playerId);
+        assert.notEqual(ownerClubId, undefined);
+        const observedPlayers = observedPlayersByClub.get(String(ownerClubId))
+          ?? new Set<string>();
+        observedPlayers.add(row.playerId);
+        observedPlayersByClub.set(String(ownerClubId), observedPlayers);
+        for (const [clubId, minutes] of Object.entries(row.clubMinutes)) {
+          representedClubs.add(clubId);
+          const canonicalClubId = careerState.gameState.clubIds.find(
+            (candidate) => String(candidate) === clubId,
+          );
+          const representedClub = canonicalClubId === undefined
+            ? undefined
+            : careerState.gameState.clubs[canonicalClubId];
+          assert.equal(representedClub?.playerIds.includes(row.playerId), true);
+          if ((minutes ?? 0) > 0) {
+            const positivePlayers = positivePlayersByClub.get(clubId)
+              ?? new Set<string>();
+            positivePlayers.add(row.playerId);
+            positivePlayersByClub.set(clubId, positivePlayers);
+          }
+        }
+      }
+    },
   );
-  const generatedCareer = careerStateFromNewWorld(
-    "save:phase79d-annual-intake-proof" as CliSaveId,
-    world,
-    worldSeed,
+  const annualIntakeAudit = report.annualIntakeAudit;
+  const stock = report.playerEconomyAudit.youngExceptionalStock;
+  assert.equal(representedClubs.size, 54);
+  assert.equal(observedPlayersByClub.size, 54);
+  assert.equal(
+    [...observedPlayersByClub.values()].every((players) => players.size > 11),
+    true,
   );
-  const {
-    clubFinanceState: _clubFinanceState,
-    seniorSquadState: _seniorSquadState,
-    ...careerWithoutFinanceLifecycle
-  } = generatedCareer;
-  let careerState: CliCareerState = careerWithoutFinanceLifecycle;
-  const observations: PlayerGenerationAnnualIntakeObservation[] = [];
-
-  for (let seasonIndex = 0; seasonIndex < 10; seasonIndex += 1) {
-    const annualIntake = createAnnualWorldIntakeCandidateProviders({
-      worldSeed,
-      seasonIndex,
-    });
-    const advanced = advanceCareerOneSeason({
-      careerState,
-      worldSeed,
-      mode: {
-        kind: "reportRefresh",
-        nextSeasonId:
-          `season:phase79d-intake-${seasonIndex + 1}` as typeof careerState.gameState.calendar.currentSeasonId,
-        nextSeasonStartDate: (
-          Number(careerState.gameState.calendar.currentDate) + 365
-        ) as typeof careerState.gameState.calendar.currentDate,
-      },
-      createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,
-      wagePolicy,
-      marketBehaviorPolicy,
-    });
-    if (advanced.status !== "advanced") {
-      throw new Error(`Season ${seasonIndex}: ${advanced.reason}`);
-    }
-    const diagnostics = annualIntake.diagnostics();
-    const acceptedIds = new Set(
-      advanced.facts.youthIntake.acceptedPlayerIds.map(String),
-    );
-    observations.push({
-      seasonIndex,
-      allocatedPotentialSixPlayerIds:
-        diagnostics.allocation.potentialSixPlayerKeys.map(String),
-      generatedPotentialSixPlayerIds:
-        diagnostics.generatedPotentialSixPlayerIds.map(String),
-      acceptedPlayerIds: [...acceptedIds],
-      activePotentialSixPlayerIds:
-        diagnostics.allocation.potentialSixPlayerKeys
-          .map(String)
-          .filter((id) => acceptedIds.has(id)),
-    });
-    careerState = advanced.careerState as CliCareerState;
-  }
-
-  const annualIntakeAudit =
-    createPlayerGenerationAnnualIntakeSummary(observations);
-  const closingExceptionalRatingStock =
-    summarizePhase79CYearTenRatingStock(careerState, valuationConfig);
+  assert.equal(positivePlayersByClub.size, 54);
+  const positivePlayerCounts = [...positivePlayersByClub.values()].map(
+    (players) => players.size,
+  );
+  assert.equal(
+    positivePlayerCounts.every((count) => count >= 11),
+    true,
+  );
+  assert.equal(
+    toISO(report.finalCareerState.gameState.calendar.currentDate),
+    "2028-08-01",
+  );
   assert.equal(annualIntakeAudit.evaluationStatus, "evaluated");
-  assert.equal(annualIntakeAudit.observationCount, 10);
+  assert.equal(annualIntakeAudit.observationCount, 2);
+  assert.equal(annualIntakeAudit.allocatedStoredCeilingSixCount, 1);
+  assert.equal(annualIntakeAudit.generatedStoredCeilingSixCount, 1);
+  assert.equal(annualIntakeAudit.acceptedStoredCeilingSixCount, 1);
+  assert.equal(annualIntakeAudit.activeStoredCeilingSixCount, 8);
   assert.equal(
-    annualIntakeAudit.allocatedPotentialSixCount >= 2
-      && annualIntakeAudit.allocatedPotentialSixCount <= 4,
+    annualIntakeAudit.allocatedStoredCeilingSixMissingGeneratedCount,
+    0,
+  );
+  assert.equal(
+    annualIntakeAudit.generatedStoredCeilingSixMissingAcceptedCount,
+    0,
+  );
+  assert.equal(stock.observationCount, 3);
+  assert.equal(stock.activePlayerObservationCount > 0, true);
+  assert.equal(stock.requiredReplacementObservationCount, 1);
+  assert.equal(stock.completedReplacementCount, 1);
+  assert.equal(stock.missingReplacementCount, 0);
+  assert.equal(stock.inflationArrivalCount, 0);
+  assert.equal(stock.stockEntryObservationCount > 0, true);
+  assert.equal(stock.stockEntryPlayerObservationCount > 0, true);
+  assert.equal(stock.stockEntryCategoryPlacementViolationCount, 0);
+  assert.equal(stock.stockEntryClubUniquenessViolationCount, 0);
+  assert.equal(
+    stock.stockEntries.some(({ entryKind }) => entryKind === "opening_allocation"),
     true,
   );
   assert.equal(
-    annualIntakeAudit.generatedPotentialSixCount,
-    annualIntakeAudit.allocatedPotentialSixCount,
-  );
-  assert.equal(
-    annualIntakeAudit.acceptedPotentialSixCount,
-    annualIntakeAudit.allocatedPotentialSixCount,
-  );
-  assert.equal(annualIntakeAudit.allocatedMissingGeneratedCount, 0);
-  assert.equal(annualIntakeAudit.generatedMissingAcceptedCount, 0);
-  assert.equal(annualIntakeAudit.maximumAcceptedPotentialSixPerSeason, 1);
-  assert.equal(closingExceptionalRatingStock.currentSixCount <= 4, true);
-  assert.equal(closingExceptionalRatingStock.potentialSixCount <= 8, true);
-  assert.equal(
-    closingExceptionalRatingStock.lowerDivisionPotentialSixCount <= 1,
+    stock.stockEntries.some(({ entryKind }) => entryKind === "stock_arrival"),
     true,
   );
-  assert.equal(closingExceptionalRatingStock.violationCount, 0);
+  for (const key of [
+    "young_stored_ceiling_six_active_stock",
+    "young_stored_ceiling_six_stock_arrival_category_placement",
+    "young_stored_ceiling_six_stock_arrival_club_uniqueness",
+    "young_stored_ceiling_six_vacancy_replacement",
+    "young_stored_ceiling_six_no_inflation",
+  ]) {
+    const gate = report.playerEconomyAudit.gates.find(
+      (candidate) => candidate.key === key,
+    );
+    assert.equal(gate?.status, "pass");
+    assert.equal((gate?.observationCount ?? 0) > 0, true);
+  }
 }, 90_000);
 
 test("multi-world gate partitions produce the same world summaries as the sequential runner", async () => {
@@ -494,8 +612,12 @@ test("resumable gate reuses complete deterministic shards without changing aggre
 
     assert.equal(firstExecution.mode, "sharded");
     assert.equal(firstExecution.resumedShardCount, 0);
+    assert.equal(firstExecution.resumedWorldCount, 0);
+    assert.equal(firstExecution.simulatedWorldCount, 2);
     assert.equal(resumedExecution.mode, "sharded");
     assert.equal(resumedExecution.resumedShardCount, 2);
+    assert.equal(resumedExecution.resumedWorldCount, 2);
+    assert.equal(resumedExecution.simulatedWorldCount, 0);
     assert.deepEqual(resumedExecution.partitionHashes, firstExecution.partitionHashes);
     assert.deepEqual(resumedAggregate, firstAggregate);
   } finally {
@@ -578,8 +700,48 @@ test("resumable gate rejects a corrupted shard instead of trusting partial evide
 
     const checkpointPath = join(checkpointDirectoryPath, checkpointFilename!);
     const checkpoint = JSON.parse(await readFile(checkpointPath, "utf8")) as Record<string, unknown>;
-    checkpoint.summaryHash = "corrupt";
+    checkpoint.schemaVersion = 1;
     await writeFile(checkpointPath, JSON.stringify(checkpoint), "utf8");
+
+    await assert.rejects(
+      createResumableLongRunGateReport(input),
+      /checkpoint metadata or world range is invalid/,
+    );
+
+    checkpoint.schemaVersion = 2;
+    await writeFile(checkpointPath, JSON.stringify(checkpoint), "utf8");
+
+    await assert.rejects(
+      createResumableLongRunGateReport(input),
+      /checkpoint metadata or world range is invalid/,
+    );
+
+    checkpoint.schemaVersion = 3;
+    await writeFile(checkpointPath, JSON.stringify(checkpoint), "utf8");
+
+    await assert.rejects(
+      createResumableLongRunGateReport(input),
+      /checkpoint metadata or world range is invalid/,
+    );
+
+    checkpoint.schemaVersion = 4;
+    const [checkpointWorld] = checkpoint.worlds as Record<string, unknown>[];
+    assert.notEqual(checkpointWorld, undefined);
+    checkpointWorld!.playerEconomyGates = [];
+    await writeFile(checkpointPath, JSON.stringify(checkpoint), "utf8");
+
+    await assert.rejects(
+      createResumableLongRunGateReport(input),
+      /checkpoint metadata or world range is invalid/,
+    );
+
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+    await createResumableLongRunGateReport(input);
+    const refreshedCheckpoint = JSON.parse(
+      await readFile(checkpointPath, "utf8"),
+    ) as Record<string, unknown>;
+    refreshedCheckpoint.summaryHash = "corrupt";
+    await writeFile(checkpointPath, JSON.stringify(refreshedCheckpoint), "utf8");
 
     await assert.rejects(
       createResumableLongRunGateReport(input),
@@ -589,6 +751,202 @@ test("resumable gate rejects a corrupted shard instead of trusting partial evide
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
 }, 60_000);
+
+test("development cohort checkpoints are compact, deterministic, resumable, and strict", async () => {
+  const checkpointDirectoryPath = await mkdtemp(
+    join(tmpdir(), "the-long-season-development-cohort-"),
+  );
+  const input = {
+    seedPrefix: "phase80a-development-checkpoint-test",
+    worldCount: 1,
+    seasonCount: 3 as const,
+    language: "en" as const,
+    checkpointDirectoryPath,
+    workerCount: 1,
+  };
+
+  try {
+    const fresh = await createResumablePlayerDevelopmentCohortReport(input);
+    const resumed = await createResumablePlayerDevelopmentCohortReport(input);
+    assert.equal(fresh.execution.resumedWorldCount, 0);
+    assert.equal(fresh.execution.simulatedWorldCount, 1);
+    assert.equal(resumed.execution.resumedWorldCount, 1);
+    assert.equal(resumed.execution.simulatedWorldCount, 0);
+    assert.deepEqual(
+      resumed.execution.partitionHashes,
+      fresh.execution.partitionHashes,
+    );
+    assert.equal(resumed.finalAggregateHash, fresh.finalAggregateHash);
+    assert.deepEqual(resumed.aggregate, fresh.aggregate);
+    assert.equal(fresh.aggregate.openingCheckpoint.observationCount > 0, true);
+    assert.equal(fresh.aggregate.closingCheckpoint.observationCount > 0, true);
+    assert.equal(
+      fresh.aggregate.gates.find(({ key }) =>
+        key === "positive_opportunity_evidence"
+      )?.observationCount! > 0,
+      true,
+    );
+    assert.equal(
+      fresh.aggregate.gates.find(({ key }) =>
+        key === "zero_minute_evidence"
+      )?.observationCount! > 0,
+      true,
+    );
+
+    const [checkpointFilename] = await readdir(checkpointDirectoryPath);
+    assert.notEqual(checkpointFilename, undefined);
+    const checkpointPath = join(
+      checkpointDirectoryPath,
+      checkpointFilename!,
+    );
+    const validCheckpoint = JSON.parse(
+      await readFile(checkpointPath, "utf8"),
+    ) as Record<string, unknown>;
+    assert.equal(validCheckpoint.startIndex, 1);
+    assert.equal(validCheckpoint.endIndex, 1);
+    const firstWorld = validCheckpoint.world as
+      PlayerDevelopmentCohortWorldSummary;
+    const secondWorld: PlayerDevelopmentCohortWorldSummary = {
+      ...structuredClone(firstWorld),
+      worldId: `${input.seedPrefix}-world-00002`,
+    };
+    const execution = {
+      ...fresh.execution,
+      shardCount: 2,
+      partitionHashes: ["first", "second"],
+    } as const;
+    const orderedReport = createPlayerDevelopmentCohortReportFromWorlds({
+      seedPrefix: input.seedPrefix,
+      worldCount: 2,
+      seasonCount: input.seasonCount,
+      execution,
+      worlds: [firstWorld, secondWorld],
+    });
+    const reversedReport = createPlayerDevelopmentCohortReportFromWorlds({
+      seedPrefix: input.seedPrefix,
+      worldCount: 2,
+      seasonCount: input.seasonCount,
+      execution,
+      worlds: [secondWorld, firstWorld],
+    });
+    assert.equal(
+      reversedReport.finalAggregateHash,
+      orderedReport.finalAggregateHash,
+    );
+    const foldedInput = {
+      seedPrefix: input.seedPrefix,
+      worldCount: 2,
+      seasonCount: input.seasonCount,
+      execution,
+      aggregate: orderedReport.aggregate,
+    } as const;
+    assert.throws(
+      () => createPlayerDevelopmentCohortReportFromAggregate({
+        ...foldedInput,
+        anomalyCheckCounts: orderedReport.anomalyCheckCounts.slice(1),
+      }),
+      /anomaly counts are incomplete/,
+    );
+    const duplicateAnomalyCounts = [...orderedReport.anomalyCheckCounts];
+    duplicateAnomalyCounts[duplicateAnomalyCounts.length - 1] =
+      duplicateAnomalyCounts[0]!;
+    assert.throws(
+      () => createPlayerDevelopmentCohortReportFromAggregate({
+        ...foldedInput,
+        anomalyCheckCounts: duplicateAnomalyCounts,
+      }),
+      /anomaly count is invalid/,
+    );
+    const zeroedAnomalyCounts = orderedReport.anomalyCheckCounts.map(
+      (row, index) => index === 0
+        ? {
+            ...row,
+            rawStatusCounts: { pass: 0, warn: 0, fail: 0 },
+          }
+        : row,
+    );
+    assert.throws(
+      () => createPlayerDevelopmentCohortReportFromAggregate({
+        ...foldedInput,
+        anomalyCheckCounts: zeroedAnomalyCounts,
+      }),
+      /anomaly count is invalid/,
+    );
+
+    const terminalOutput = formatPlayerDevelopmentCohortReportOutput(
+      fresh,
+      "artifacts/cohort.md",
+    );
+    const markdownOutput = formatPlayerDevelopmentCohortReportMarkdown(
+      fresh,
+      "artifacts/cohort.md",
+    );
+    assert.equal(
+      terminalOutput.includes(
+        `Final aggregate hash: ${fresh.finalAggregateHash}`,
+      ),
+      true,
+    );
+    assert.equal(
+      markdownOutput.includes(
+        `Final aggregate hash: \`${fresh.finalAggregateHash}\``,
+      ),
+      true,
+    );
+    const resumedTerminalOutput = formatPlayerDevelopmentCohortReportOutput(
+      resumed,
+      "artifacts/cohort-resumed.md",
+    );
+    assert.equal(
+      terminalOutput.find((line) => line.startsWith("Ordered shard hashes:")),
+      resumedTerminalOutput.find((line) =>
+        line.startsWith("Ordered shard hashes:")
+      ),
+    );
+    assert.match(markdownOutput, /--shards=1/);
+    assert.match(markdownOutput, /\| opening \|/);
+    assert.match(markdownOutput, /\| closing \|/);
+    assert.match(markdownOutput, /## New Entrants At Closing/);
+    assert.match(markdownOutput, /Failed worlds \| Not evaluated worlds/);
+    assert.equal(
+      terminalOutput.some((line) =>
+        line.startsWith("Development gate ")
+        && line.includes("failed_worlds=")
+        && line.includes("not_evaluated_worlds=")
+      ),
+      true,
+    );
+    assert.match(markdownOutput, /Below-one-star plateau/);
+    assert.match(markdownOutput, /Room realization buckets/);
+    assert.match(markdownOutput, /Exact stored-upper/);
+    assert.match(markdownOutput, /Stored-upper star gap/);
+    assert.match(markdownOutput, /## Structural Violation Examples/);
+    assert.match(markdownOutput, /not_evaluated/);
+    assert.doesNotMatch(
+      markdownOutput,
+      /omitted combinations remain explicitly `not_evaluated`/,
+    );
+    for (const [field, value, pattern] of [
+      ["schemaVersion", 3, /metadata or shape is invalid/],
+      ["reportKind", "long-run-gate", /metadata or shape is invalid/],
+      ["diagnosticContractVersion", "stale", /metadata or shape is invalid/],
+      ["unexpectedField", true, /metadata or shape is invalid/],
+      ["startIndex", 0, /metadata or shape is invalid/],
+      ["endIndex", 2, /metadata or shape is invalid/],
+      ["summaryHash", "corrupt", /checkpoint hash mismatch/],
+    ] as const) {
+      const corrupted = structuredClone(validCheckpoint);
+      corrupted[field] = value;
+      await writeFile(checkpointPath, JSON.stringify(corrupted), "utf8");
+      await assert.rejects(
+        createResumablePlayerDevelopmentCohortReport(input),
+        pattern,
+      );
+    }
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 180_000);
 
 test("ten-season-report wires an explicit worker limit into resumable gates", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-workers-"));
@@ -638,6 +996,27 @@ test("ten-season-report rejects an invalid worker count", async () => {
   assert.equal(io.stderrLines[0], "--workers requires a positive integer: 0");
 });
 
+test("player-development cohort CLI rejects every exploratory contract variant", async () => {
+  const cases = [
+    ["--report-kind=unknown"],
+    ["--report-kind=player-development-cohort"],
+    [
+      "--report-kind=player-development-cohort",
+      "--seed-prefix=phase80a-player-development-750x3-v1",
+      "--worlds=749",
+      "--seasons=3",
+    ],
+  ] as const;
+
+  for (const args of cases) {
+    const io = captureIo();
+    const exitCode = await runTenSeasonReportCommand(args, io);
+    assert.equal(exitCode, 1);
+    assert.equal(io.stdoutLines.length, 0);
+    assert.equal(io.stderrLines.length > 0, true);
+  }
+});
+
 test("ten-season-report requires checkpoints for an explicit worker limit", async () => {
   const io = captureIo();
   const exitCode = await runTenSeasonReportCommand(["--worlds=1", "--workers=1"], io);
@@ -655,6 +1034,170 @@ test("multi-world gates default to the repository seven-worker policy", () => {
     7,
   );
 });
+
+test("cohort prospect-share gates add world evidence before applying the frozen band", () => {
+  const passing = aggregatePlayerEconomyGateEvidence([
+    [prospectShareEvidenceGate(10, 1)],
+    [prospectShareEvidenceGate(10, 2)],
+  ])[0];
+  assert.equal(passing?.observationCount, 20);
+  assert.equal(passing?.matchingObservationCount, 3);
+  assert.equal(passing?.shareBasisPoints, 1_500);
+  assert.equal(passing?.violationCount, 0);
+  assert.equal(passing?.failedWorldCount, 0);
+
+  const mixedDenominators = aggregatePlayerEconomyGateEvidence([
+    [prospectShareEvidenceGate(0, 0)],
+    [prospectShareEvidenceGate(10, 2)],
+  ])[0];
+  assert.equal(mixedDenominators?.observationCount, 10);
+  assert.equal(mixedDenominators?.matchingObservationCount, 2);
+  assert.equal(mixedDenominators?.shareBasisPoints, 2_000);
+  assert.equal(mixedDenominators?.violationCount, 0);
+  assert.equal(mixedDenominators?.failedWorldCount, 0);
+  assert.equal(mixedDenominators?.notEvaluatedWorldCount, 1);
+
+  const failing = aggregatePlayerEconomyGateEvidence([
+    [prospectShareEvidenceGate(10, 1)],
+    [prospectShareEvidenceGate(10, 1)],
+  ])[0];
+  assert.equal(failing?.observationCount, 20);
+  assert.equal(failing?.matchingObservationCount, 2);
+  assert.equal(failing?.shareBasisPoints, 1_000);
+  assert.equal(failing?.violationCount, 1);
+  assert.equal(failing?.failedWorldCount, 0);
+
+  const empty = aggregatePlayerEconomyGateEvidence([
+    [prospectShareEvidenceGate(0, 0)],
+    [prospectShareEvidenceGate(0, 0)],
+  ])[0];
+  assert.equal(empty?.shareBasisPoints, undefined);
+  assert.equal(empty?.violationCount, 1);
+  assert.equal(empty?.failedWorldCount, 0);
+  assert.equal(empty?.notEvaluatedWorldCount, 2);
+});
+
+test("player-economy aggregation rejects partial gate sets across worlds", () => {
+  assert.throws(
+    () => aggregatePlayerEconomyGateEvidence([
+      [prospectShareEvidenceGate(10, 1)],
+      [prospectShareEvidenceGate(10, 1), hardCapEvidenceGate(1, 0, 0)],
+    ]),
+    /Player-economy gate key-set mismatch in world 2/,
+  );
+});
+
+test("global hard-cap rarity aggregates eligible evidence without hiding local collisions", () => {
+  const mixed = aggregatePlayerEconomyGateEvidence([
+    [hardCapEvidenceGate(1, 1, 0)],
+    [hardCapEvidenceGate(1, 0, 0)],
+  ])[0];
+  assert.equal(mixed?.observationCount, 2);
+  assert.equal(mixed?.matchingObservationCount, 1);
+  assert.equal(mixed?.shareBasisPoints, 5_000);
+  assert.equal(mixed?.violationCount, 0);
+
+  const saturated = aggregatePlayerEconomyGateEvidence([
+    [hardCapEvidenceGate(1, 1, 0)],
+    [hardCapEvidenceGate(1, 1, 0)],
+  ])[0];
+  assert.equal(saturated?.shareBasisPoints, 10_000);
+  assert.equal(saturated?.violationCount, 1);
+
+  const collision = aggregatePlayerEconomyGateEvidence([
+    [hardCapEvidenceGate(1, 0, 1)],
+    [hardCapEvidenceGate(1, 0, 0)],
+  ])[0];
+  assert.equal(collision?.shareBasisPoints, 0);
+  assert.equal(collision?.violationCount, 1);
+  assert.equal(collision?.failedWorldCount, 1);
+});
+
+test("cohort replacement evidence requires one real completed vacancy", () => {
+  const noVacancy = aggregatePlayerEconomyGateEvidence([
+    [replacementMinimumEvidenceGate(0)],
+    [replacementMinimumEvidenceGate(0)],
+  ])[0];
+  assert.equal(noVacancy?.observationCount, 2);
+  assert.equal(noVacancy?.cohortEvidenceObservationCount, 0);
+  assert.equal(noVacancy?.minimumCohortEvidenceObservationCount, 1);
+  assert.equal(noVacancy?.violationCount, 1);
+  assert.equal(noVacancy?.failedWorldCount, 0);
+
+  const mixed = aggregatePlayerEconomyGateEvidence([
+    [replacementMinimumEvidenceGate(0)],
+    [replacementMinimumEvidenceGate(1)],
+  ])[0];
+  assert.equal(mixed?.observationCount, 2);
+  assert.equal(mixed?.cohortEvidenceObservationCount, 1);
+  assert.equal(mixed?.minimumCohortEvidenceObservationCount, 1);
+  assert.equal(mixed?.violationCount, 0);
+  assert.equal(mixed?.failedWorldCount, 0);
+});
+
+/** Builds one additive world sample for the First Division prospect band. */
+function prospectShareEvidenceGate(
+  observationCount: number,
+  matchingObservationCount: number,
+): PlayerGenerationEconomyGate {
+  return {
+    key: "young_stored_ceiling_prospect_share_first_division",
+    status: observationCount === 0 ? "not_evaluated" : "pass",
+    observationCount,
+    violationCount: 0,
+    threshold:
+      "active senior age 15..20 with stored ceiling >=3.5: 1500..2500 basis points",
+    examples: [],
+    cohortShareEvidence: {
+      matchingObservationCount,
+      minimumBasisPoints: 1_500,
+      maximumBasisPoints: 2_500,
+    },
+  };
+}
+
+/** Builds one additive world sample for the global hard-cap gate. */
+function hardCapEvidenceGate(
+  eligibleObservationCount: number,
+  eligibleExactHardCapCount: number,
+  structuralViolationCount: number,
+): PlayerGenerationEconomyGate {
+  return {
+    key: "hard_cap_eligibility_and_display",
+    status: structuralViolationCount > 0
+      ? "fail"
+      : eligibleObservationCount === 0 ? "not_evaluated" : "pass",
+    observationCount: eligibleObservationCount,
+    violationCount: structuralViolationCount,
+    threshold:
+      "positive cohort eligible population; zero ineligible exact/display collisions; eligible exact cap share <10000 basis points",
+    examples: [],
+    cohortShareEvidence: {
+      matchingObservationCount: eligibleExactHardCapCount,
+      minimumBasisPoints: 0,
+      maximumBasisPoints: 9_999,
+    },
+  };
+}
+
+/** Builds one adjacent-transition sample for cohort-owned replacement evidence. */
+function replacementMinimumEvidenceGate(
+  completedReplacementCount: number,
+): PlayerGenerationEconomyGate {
+  return {
+    key: "young_stored_ceiling_six_vacancy_replacement",
+    status: "pass",
+    observationCount: 1,
+    violationCount: 0,
+    threshold:
+      "adjacent-season vacancies are replenished to the closing snapshot's deterministic target",
+    examples: [],
+    cohortMinimumEvidence: {
+      evidenceObservationCount: completedReplacementCount,
+      minimumObservationCount: 1,
+    },
+  };
+}
 
 /**
  * Creates an IO adapter that records written lines for assertions.

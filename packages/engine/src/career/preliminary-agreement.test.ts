@@ -39,50 +39,72 @@ import {
   submitPreliminaryAgreementOffer as submitPreliminaryAgreementOfferWithPolicy,
 } from "./preliminary-agreement.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
+const VALUATION_CONFIG = playerValuationConfigFixture();
 const WAGE_POLICY = playerWagePolicyConfigFixture();
 const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
 
 function deriveContractDemand(
-  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+  input: Omit<
+    Parameters<typeof deriveContractDemandWithPolicy>[0],
+    "wagePolicy" | "publicAssessment"
+  >,
 ) {
-  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+  const player = input.careerState.gameState.players[input.playerId]!;
+  return deriveContractDemandWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.evaluatedOn,
+      ratingScale: VALUATION_CONFIG.ratingScale,
+      potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+    }),
+  });
 }
 
 function advanceAiContractLifecycle(
   input: Omit<
     Parameters<typeof advanceAiContractLifecycleWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "valuationConfig"
   >,
 ) {
   return advanceAiContractLifecycleWithPolicy({
     ...input,
     wagePolicy: WAGE_POLICY,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+    valuationConfig: VALUATION_CONFIG,
   });
 }
 
 function advancePreliminaryAgreementLifecycle(
   input: Omit<
     Parameters<typeof advancePreliminaryAgreementLifecycleWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "valuationConfig"
   >,
 ) {
   return advancePreliminaryAgreementLifecycleWithPolicy({
     ...input,
     wagePolicy: WAGE_POLICY,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
+    valuationConfig: VALUATION_CONFIG,
   });
 }
 
 function submitPreliminaryAgreementOffer(
   input: Omit<
     Parameters<typeof submitPreliminaryAgreementOfferWithPolicy>[0],
-    "wagePolicy"
+    "wagePolicy" | "valuationConfig"
   >,
 ) {
-  return submitPreliminaryAgreementOfferWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+  return submitPreliminaryAgreementOfferWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    valuationConfig: VALUATION_CONFIG,
+  });
 }
 
 const SELLER = clubId("club:preliminary-seller");

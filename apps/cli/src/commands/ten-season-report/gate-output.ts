@@ -1,5 +1,10 @@
 import type { Translator } from "@game/i18n";
-import type { LongRunGateCheckCount, LongRunGateReport, LongRunGateWorldSummary } from "./report-data.ts";
+import type {
+  LongRunGateCheckCount,
+  LongRunGateReport,
+  LongRunGateWorldSummary,
+  PlayerDevelopmentCohortReport,
+} from "./report-data.ts";
 
 /**
  * Formats the batch gate report for concise CLI output.
@@ -16,15 +21,20 @@ export function formatLongRunGateReportOutput(
     `${text("balance.seasons")}: ${report.seasonCount}`,
     `${text("tenSeason.totalSeasons")}: ${report.totalSeasonCount}`,
     `Execution: ${formatExecutionSummary(report)}`,
-    `${text("balance.status")}: ${report.failedWorldCount === 0 ? text("common.pass") : text("common.fail")}`,
+    `${text("balance.status")}: ${report.status === "pass" ? text("common.pass") : text("common.fail")}`,
     `${text("tenSeason.failedWorlds")}: ${report.failedWorldCount}`,
     `${text("tenSeason.warningWorlds")}: ${report.warningWorldCount}`,
-    `Year-10 rating cap violations: ${report.ratingInflationViolationWorldCount}`,
+    `Player-economy gate violations: ${report.playerEconomyViolationCount}`,
+    `Closing division value fit: status=${report.closingPlayerMarketCalibration.fitStatus} season_start_year=${report.closingPlayerMarketCalibration.activeClosingCheckpointSeasonStartYear ?? "n/a"} observations=${report.closingPlayerMarketCalibration.divisionValueObservationCount} violations=${report.closingDivisionValueFitViolationCount}`,
+    ...report.closingPlayerMarketCalibration.divisions.map(
+      (division) =>
+        `Closing value ${division.division}: observations=${division.valueFit.observationCount} median=${division.valueDistribution.medianMinorUnits} p90=${division.valueDistribution.p90MinorUnits} p99=${division.valueDistribution.p99MinorUnits} max=${division.valueDistribution.maximumMinorUnits} status=${division.valueFit.status}`,
+    ),
     `Year-10 rating stock observations: ${report.yearTenRatingStockObservationCount}/${report.worldCount}`,
-    `Year-10 six-star max: current=${report.yearTenCurrentSixMaximumObserved} potential=${report.yearTenPotentialSixMaximumObserved} lower_tier_potential=${report.yearTenLowerDivisionPotentialSixMaximumObserved}`,
+    `Year-10 six-star max: current=${formatObservedCount(report.yearTenCurrentSixMaximumObserved)} stored_ceiling=${formatObservedCount(report.yearTenStoredCeilingSixMaximumObserved)} lower_tier_stored_ceiling=${formatObservedCount(report.yearTenLowerDivisionStoredCeilingSixMaximumObserved)}`,
     ...report.playerEconomyGates.map(
       (gate) =>
-        `Phase 79D ${gate.key}: observations=${gate.observationCount} violations=${gate.violationCount} failed_worlds=${gate.failedWorldCount} not_evaluated_worlds=${gate.notEvaluatedWorldCount} target=${gate.threshold}`,
+        `Player economy ${gate.key}: observations=${gate.observationCount} violations=${gate.violationCount} failed_worlds=${gate.failedWorldCount} not_evaluated_worlds=${gate.notEvaluatedWorldCount} ${formatPlayerEconomyCohortEvidence(gate)} target=${gate.threshold}`,
     ),
     `Calibration bundles: ${report.calibrationVersionBundles.map((bundle) => JSON.stringify(bundle)).join(" | ")}`,
     `Composition hashes: ${report.compositionHashes.map((row) => `${row.seed}:${row.hash}`).join(", ")}`,
@@ -75,25 +85,29 @@ export function formatLongRunGateReportOutput(
  */
 export function formatLongRunGateReportMarkdown(report: LongRunGateReport, reportOutputPath: string): string {
   const lines = [
-    "# Senior Squad, Contracts And Club Finance Long-Run Gates Report",
+    "# Phase 80A Prospect And Player-Economy Bounded Gates Report",
     "",
-    `Date: 2026-07-28`,
+    `Date: 2026-08-01`,
     `Seed prefix: \`${report.seedPrefix}\``,
     `Worlds: ${report.worldCount}`,
     `Seasons per world: ${report.seasonCount}`,
     `Total seasons: ${report.totalSeasonCount}`,
     `Execution: ${formatExecutionSummary(report)}`,
-    `Status: ${report.failedWorldCount === 0 ? "PASS" : "FAIL"}`,
+    `Status: ${report.status.toUpperCase()}`,
     "",
     "## Aggregate Metrics",
     "",
     `- Failed worlds: ${report.failedWorldCount}`,
     `- Warning worlds: ${report.warningWorldCount}`,
-    `- Year-10 rating-cap violation worlds: ${report.ratingInflationViolationWorldCount}`,
+    `- Player-economy gate violations: ${report.playerEconomyViolationCount}`,
+    `- Closing division-value fit: ${report.closingPlayerMarketCalibration.fitStatus.toUpperCase()}`,
+    `- Closing checkpoint season start year: ${report.closingPlayerMarketCalibration.activeClosingCheckpointSeasonStartYear ?? "n/a"}`,
+    `- Closing division-value observations: ${report.closingPlayerMarketCalibration.divisionValueObservationCount}`,
+    `- Closing division-value violations: ${report.closingDivisionValueFitViolationCount}`,
     `- Year-10 rating-stock observations: ${report.yearTenRatingStockObservationCount}/${report.worldCount}`,
-    `- Year-10 current-six maximum observed: ${report.yearTenCurrentSixMaximumObserved}`,
-    `- Year-10 potential-six maximum observed: ${report.yearTenPotentialSixMaximumObserved}`,
-    `- Year-10 lower-tier potential-six maximum observed: ${report.yearTenLowerDivisionPotentialSixMaximumObserved}`,
+    `- Year-10 current-six maximum observed: ${formatObservedCount(report.yearTenCurrentSixMaximumObserved)}`,
+    `- Year-10 stored-ceiling-six maximum observed: ${formatObservedCount(report.yearTenStoredCeilingSixMaximumObserved)}`,
+    `- Year-10 lower-tier stored-ceiling-six maximum observed: ${formatObservedCount(report.yearTenLowerDivisionStoredCeilingSixMaximumObserved)}`,
     `- Goals per match average: ${report.goalsPerMatchAverage.toFixed(3)}`,
     `- Goals per match p95: ${report.goalsPerMatchP95.toFixed(3)}`,
     `- Table spread average: ${report.tablePointsSpreadAverage.toFixed(2)}`,
@@ -135,13 +149,24 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
     `- Failing check counts: ${formatCheckCounts(report.failingCheckCounts)}`,
     "- Signal guide: story=healthy football variance, monitor=watch trend, structural=gameplay risk",
     "",
-    "## Phase 79D Non-Vacuous Player And Market Gates",
+    "## Player Economy Non-Vacuous Gates",
     "",
-    "| Gate | Observations | Violations | Failed worlds | Not evaluated worlds | Threshold |",
-    "|---|---:|---:|---:|---:|---|",
+    "| Gate | Observations | Violations | Failed worlds | Not evaluated worlds | Cohort proof | Threshold |",
+    "|---|---:|---:|---:|---:|---|---|",
     ...report.playerEconomyGates.map(
       (gate) =>
-        `| \`${gate.key}\` | ${gate.observationCount} | ${gate.violationCount} | ${gate.failedWorldCount} | ${gate.notEvaluatedWorldCount} | ${gate.threshold} |`,
+        `| \`${gate.key}\` | ${gate.observationCount} | ${gate.violationCount} | ${gate.failedWorldCount} | ${gate.notEvaluatedWorldCount} | ${formatPlayerEconomyCohortEvidence(gate)} | ${gate.threshold} |`,
+    ),
+    "",
+    "## Closing Checkpoint Division Public Values",
+    "",
+    "This cohort is the active senior stock at the explicitly named closing season checkpoint; it is not a year-ten proxy.",
+    "",
+    "| Division | Observations | Median | P90 | P99 | Maximum | Fit |",
+    "|---|---:|---:|---:|---:|---:|---|",
+    ...report.closingPlayerMarketCalibration.divisions.map(
+      (division) =>
+        `| ${division.division} | ${division.valueFit.observationCount} | ${division.valueDistribution.medianMinorUnits} | ${division.valueDistribution.p90MinorUnits} | ${division.valueDistribution.p99MinorUnits} | ${division.valueDistribution.maximumMinorUnits} | ${division.valueFit.status} |`,
     ),
     "",
     "## Phase 79C Version And Replay Evidence",
@@ -180,7 +205,7 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
       `| \`${row.seed}\` | ${row.sourceDivision} -> ${row.destinationDivision} | ${row.attemptCount} | ${row.completionCount} | ${row.publicValueP50} | ${row.askingPriceP50} | ${row.completedFeeP50} | ${formatReasonCounts(row.rejectionReasonCounts)} |`
     ),
     "",
-    "## Phase 79C Year-10 Exceptional Locations",
+    "## Year-10 Exceptional Stock Locations",
     "",
     ...report.yearTenExceptionalLocations.flatMap((world) => [
       `### ${world.seed}`,
@@ -260,6 +285,7 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
     "Run the same gate with:",
     "",
     "```bash",
+    "nvm use 24",
     formatReproductionCommand(report, reportOutputPath),
     "```",
     "",
@@ -268,14 +294,256 @@ export function formatLongRunGateReportMarkdown(report: LongRunGateReport, repor
   return `${lines.join("\n")}`;
 }
 
+/** Formats the compact Phase 80A development cohort for terminal inspection. */
+export function formatPlayerDevelopmentCohortReportOutput(
+  report: PlayerDevelopmentCohortReport,
+  reportOutputPath: string,
+): readonly string[] {
+  return [
+    "The Long Season player-development cohort report",
+    `Contract: ${report.diagnosticContractVersion}`,
+    `Seed prefix: ${report.seedPrefix}`,
+    `Worlds: ${report.worldCount}`,
+    `Seasons: ${report.seasonCount}`,
+    `Total seasons: ${report.totalSeasonCount}`,
+    `Execution: ${formatExecutionSummary(report)}`,
+    `Ordered shard hashes: ${report.execution.partitionHashes.join(",")}`,
+    `Final aggregate hash: ${report.finalAggregateHash}`,
+    `Status: ${report.status.toUpperCase()}`,
+    `Opening observations: ${report.aggregate.openingCheckpoint.observationCount}`,
+    `Opening populations: ${formatRecord(report.aggregate.openingCheckpoint.populationCounts)}; outside_target_age=${report.aggregate.openingCheckpoint.outsideTargetAgeBandCount}`,
+    `Closing observations: ${report.aggregate.closingCheckpoint.observationCount}`,
+    `Closing populations: ${formatRecord(report.aggregate.closingCheckpoint.populationCounts)}; outside_target_age=${report.aggregate.closingCheckpoint.outsideTargetAgeBandCount}`,
+    `New entrants: total=${report.aggregate.newEntrants.totalCount}; outside_target_age=${report.aggregate.newEntrants.outsideTargetAgeBandCount}`,
+    ...report.aggregate.newEntrants.ageBandPopulationCounts.map(
+      (row) =>
+        `New entrants ${row.ageBand}: ${formatRecord(row.populationCounts)}`,
+    ),
+    ...[report.aggregate.openingCheckpoint, report.aggregate.closingCheckpoint]
+      .flatMap((checkpoint) => checkpoint.ageBands.map((band) =>
+        `Checkpoint ${checkpoint.checkpoint}/${band.ageBand}: populations=${formatRecord(band.populationCounts)} p50_current=${formatExactGapSummary(band.publicP50FromCurrent)} upper_current=${formatExactGapSummary(band.publicUpperFromCurrent)} stored_upper=${formatExactGapSummary(band.storedCeilingFromUpper)} p50_star_gap=${formatRecord(band.publicP50FromCurrentRatingHistogram)} upper_star_gap=${formatRecord(band.publicUpperFromCurrentRatingHistogram)} stored_upper_star_gap=${formatRecord(band.storedCeilingFromUpperRatingHistogram)} stored_current_star_gap=${formatRecord(band.storedCeilingFromCurrentRatingHistogram)} quantized_public_room=${band.quantizedPublicRoomCount}`
+      )),
+    ...report.aggregate.gates.map(
+      (gate) =>
+        `Development gate ${gate.key}: status=${gate.status} observations=${gate.observationCount} violations=${gate.violationCount} failed_worlds=${gate.failedWorldCount} not_evaluated_worlds=${gate.notEvaluatedWorldCount}`,
+    ),
+    ...report.aggregate.trajectories.map(
+      (trajectory) =>
+        `Trajectory ${trajectory.ageBand}: opening=${trajectory.openingCount} matched=${trajectory.matchedClosingCount} attrition=${trajectory.attritionCount} growth=${formatNumericSummary(trajectory.currentAbilityDelta)} minutes=${trajectory.totalMinutes} rating_samples=${trajectory.ratingSamples} plateau=${trajectory.plateau.visibleEarlyPlateauCount}/${trajectory.plateau.genuineUpsideDenominator} below_one_star_plateau=${trajectory.plateau.belowOneStarVisiblePlateauCount}/${trajectory.plateau.belowOneStarRoomDenominator} below_one_star_non_growth=${trajectory.plateau.belowOneStarExactNonGrowthCount}/${trajectory.plateau.belowOneStarRoomDenominator} room_realization=${formatNumericSummary(trajectory.roomRealization)} room_realization_buckets=${formatRecord(trajectory.roomRealizationBuckets)}`,
+    ),
+    ...evaluatedYoungValueSlices(report).map(
+      (slice) =>
+        `Young ceiling-six value ${slice.checkpoint}/${slice.ageBand} current=${slice.currentRating} upper=${slice.publicUpperRating}: observations=${slice.observationCount} public=${formatNumericSummary(slice.publicValue)} asking=${formatNumericSummary(slice.askingFee)} cap_breaches=${slice.publicValueHardCapBreachCount}`,
+    ),
+    ...report.aggregate.growthCells.map(
+        (cell) =>
+          `Growth cell ${cell.ageBand}/${cell.opportunity}/${cell.performance}/${cell.environmentEffect}: status=${cell.evaluationStatus} association=${cell.associationKind} observations=${cell.observationCount} players=${cell.playerCount} minutes=${cell.minutes} growth=${formatNumericSummary(cell.currentAbilityGrowth)} exact_non_growth=${cell.exactNonGrowthCount}/${cell.exactNonGrowthDenominator}`,
+      ),
+    ...report.anomalyCheckCounts.map(
+      (check) =>
+        `Anomaly ${check.key}: class=${check.semanticClass} raw=${formatStatusCounts(check.rawStatusCounts)} world_gate=${formatStatusCounts(check.worldGateStatusCounts)}`,
+    ),
+    `Structural violation examples: ${report.aggregate.structuralViolationExamples.length}`,
+    ...report.aggregate.structuralViolationExamples.map(
+      (example) =>
+        `Structural example ${example.worldId}/${example.checkpoint}/${example.kind}: player=${example.playerId}`,
+    ),
+    `Report output: ${reportOutputPath}`,
+  ];
+}
+
+/** Creates the deterministic compact Markdown artifact for the 750x3 cohort. */
+export function formatPlayerDevelopmentCohortReportMarkdown(
+  report: PlayerDevelopmentCohortReport,
+  reportOutputPath: string,
+): string {
+  const lines = [
+    "# Phase 80A Player-Development 750x3 Cohort Report",
+    "",
+    "Date: 2026-08-01",
+    `Contract: \`${report.diagnosticContractVersion}\``,
+    `Seed prefix: \`${report.seedPrefix}\``,
+    `Worlds: ${report.worldCount}`,
+    `Seasons per world: ${report.seasonCount}`,
+    `Total seasons: ${report.totalSeasonCount}`,
+    `Execution: ${formatExecutionSummary(report)}`,
+    `Ordered shard hashes: \`${report.execution.partitionHashes.join(",")}\``,
+    `Final aggregate hash: \`${report.finalAggregateHash}\``,
+    `Status: ${report.status.toUpperCase()}`,
+    "",
+    "## Non-Vacuous Gates",
+    "",
+    "| Gate | Observations | Violations | Failed worlds | Not evaluated worlds | Status |",
+    "|---|---:|---:|---:|---:|---|",
+    ...report.aggregate.gates.map(
+      (gate) =>
+        `| \`${gate.key}\` | ${gate.observationCount} | ${gate.violationCount} | ${gate.failedWorldCount} | ${gate.notEvaluatedWorldCount} | ${gate.status} |`,
+    ),
+    "",
+    "## Opening And Closing Checkpoints",
+    "",
+    `Opening populations: ${formatRecord(report.aggregate.openingCheckpoint.populationCounts)}; outside target age: ${report.aggregate.openingCheckpoint.outsideTargetAgeBandCount}`,
+    "",
+    `Closing populations: ${formatRecord(report.aggregate.closingCheckpoint.populationCounts)}; outside target age: ${report.aggregate.closingCheckpoint.outsideTargetAgeBandCount}`,
+    "",
+    "| Checkpoint | Age band | Observations | Populations | Current ratings | P50 ratings | Upper ratings | Stored ceiling ratings | Exact P50-current | Exact upper-current | Exact stored-upper | Exact stored-current | P50-current star gap | Upper-current star gap | Stored-upper star gap | Stored-current star gap | Quantized public room |",
+    "|---|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---:|",
+    ...[report.aggregate.openingCheckpoint, report.aggregate.closingCheckpoint]
+      .flatMap((checkpoint) => checkpoint.ageBands.map((band) =>
+        `| ${checkpoint.checkpoint} | ${band.ageBand} | ${band.observationCount} | ${formatRecord(band.populationCounts)} | ${formatRecord(band.currentRatingHistogram)} | ${formatRecord(band.publicP50RatingHistogram)} | ${formatRecord(band.publicUpperRatingHistogram)} | ${formatRecord(band.storedCeilingRatingHistogram)} | ${formatExactGapSummary(band.publicP50FromCurrent)} | ${formatExactGapSummary(band.publicUpperFromCurrent)} | ${formatExactGapSummary(band.storedCeilingFromUpper)} | ${formatExactGapSummary(band.storedCeilingFromCurrent)} | ${formatRecord(band.publicP50FromCurrentRatingHistogram)} | ${formatRecord(band.publicUpperFromCurrentRatingHistogram)} | ${formatRecord(band.storedCeilingFromUpperRatingHistogram)} | ${formatRecord(band.storedCeilingFromCurrentRatingHistogram)} | ${band.quantizedPublicRoomCount} |`
+      )),
+    "",
+    "## New Entrants At Closing",
+    "",
+    `Total: ${report.aggregate.newEntrants.totalCount}; outside target age: ${report.aggregate.newEntrants.outsideTargetAgeBandCount}`,
+    "",
+    "| Age band | Population counts |",
+    "|---|---|",
+    ...report.aggregate.newEntrants.ageBandPopulationCounts.map(
+      (row) => `| ${row.ageBand} | ${formatRecord(row.populationCounts)} |`,
+    ),
+    "",
+    "## Matched Three-Season Trajectories",
+    "",
+    "| Age band | Opening | Matched | Attrition | Current ability delta | Minutes | Rating samples | Environment source minutes | Visible plateau | Exact non-growth | Below-one-star plateau | Below-one-star non-growth | Room realization | Room realization buckets |",
+    "|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|",
+    ...report.aggregate.trajectories.map(
+      (trajectory) =>
+        `| ${trajectory.ageBand} | ${trajectory.openingCount} | ${trajectory.matchedClosingCount} | ${trajectory.attritionCount} | ${formatNumericSummary(trajectory.currentAbilityDelta)} | ${trajectory.totalMinutes} | ${trajectory.ratingSamples} | ${trajectory.environmentSourceMinutes} | ${trajectory.plateau.visibleEarlyPlateauCount}/${trajectory.plateau.genuineUpsideDenominator} | ${trajectory.plateau.genuineUpsideExactNonGrowthCount}/${trajectory.plateau.genuineUpsideDenominator} | ${trajectory.plateau.belowOneStarVisiblePlateauCount}/${trajectory.plateau.belowOneStarRoomDenominator} | ${trajectory.plateau.belowOneStarExactNonGrowthCount}/${trajectory.plateau.belowOneStarRoomDenominator} | ${formatNumericSummary(trajectory.roomRealization)} | ${formatRecord(trajectory.roomRealizationBuckets)} |`,
+    ),
+    "",
+    "## Young Stored-Ceiling-Six Value Evidence",
+    "",
+    "Only observed sparse-positive slices are retained; absent combinations are not synthesized.",
+    "",
+    "| Checkpoint | Age band | Current | Public upper | Observations | Public value minor units | Asking fee minor units | Public buckets | Asking buckets | Hard-cap breaches |",
+    "|---|---|---:|---:|---:|---|---|---|---|---:|",
+    ...evaluatedYoungValueSlices(report).map(
+      (slice) =>
+        `| ${slice.checkpoint} | ${slice.ageBand} | ${slice.currentRating} | ${slice.publicUpperRating} | ${slice.observationCount} | ${formatNumericSummary(slice.publicValue)} | ${formatNumericSummary(slice.askingFee)} | ${formatRecord(slice.publicValueBuckets)} | ${formatRecord(slice.askingFeeBuckets)} | ${slice.publicValueHardCapBreachCount} |`,
+    ),
+    "",
+    "## Natural Conditioning Cells",
+    "",
+    "Cells are overlapping ever-exposed associations; they must not be summed as a partition.",
+    "",
+    "| Age | Opportunity | Performance | Environment | Status | Observations | Players | Minutes | Growth | Visible plateau | Exact non-growth |",
+    "|---|---|---|---|---|---:|---:|---:|---|---:|---:|",
+    ...report.aggregate.growthCells.map((cell) =>
+      `| ${cell.ageBand} | ${cell.opportunity} | ${cell.performance} | ${cell.environmentEffect} | ${cell.evaluationStatus} | ${cell.observationCount} | ${cell.playerCount} | ${cell.minutes} | ${formatNumericSummary(cell.currentAbilityGrowth)} | ${cell.visibleEarlyPlateauCount}/${cell.visibleEarlyPlateauDenominator} | ${cell.exactNonGrowthCount}/${cell.exactNonGrowthDenominator} |`
+    ),
+    "",
+    "## Anomaly Semantics",
+    "",
+    "Raw scorer results and their world-gate projection remain separate.",
+    "",
+    "| Check | Semantic class | Raw pass/warn/fail | World-gate pass/warn/fail |",
+    "|---|---|---|---|",
+    ...report.anomalyCheckCounts.map((check) =>
+      `| \`${check.key}\` | ${check.semanticClass} | ${formatStatusCounts(check.rawStatusCounts)} | ${formatStatusCounts(check.worldGateStatusCounts)} |`
+    ),
+    ...formatStructuralViolationMarkdown(report),
+    "",
+    "## Reproduction",
+    "",
+    "```bash",
+    "nvm use 24",
+    `pnpm cli ten-season-report --report-kind=player-development-cohort --seed-prefix=${report.seedPrefix} --worlds=${report.worldCount} --seasons=${report.seasonCount} --checkpoint-dir=<checkpoint-directory> --shards=${report.execution.shardCount ?? report.worldCount} --workers=${report.execution.workerCount} --report-output=${reportOutputPath}`,
+    "```",
+    "",
+  ];
+  return lines.join("\n");
+}
+
+function evaluatedYoungValueSlices(report: PlayerDevelopmentCohortReport) {
+  return [
+    ...report.aggregate.openingCheckpoint.youngStoredCeilingSixValueSlices.map(
+      (slice) => ({ ...slice, checkpoint: "opening" as const }),
+    ),
+    ...report.aggregate.closingCheckpoint.youngStoredCeilingSixValueSlices.map(
+      (slice) => ({ ...slice, checkpoint: "closing" as const }),
+    ),
+  ];
+}
+
+function formatNumericSummary(summary: {
+  readonly observationCount: number;
+  readonly minimum: number | null;
+  readonly maximum: number | null;
+  readonly sum: number;
+}): string {
+  return `n=${summary.observationCount};min=${summary.minimum ?? "n/a"};max=${summary.maximum ?? "n/a"};sum=${summary.sum}`;
+}
+
+function formatExactGapSummary(summary: {
+  readonly observationCount: number;
+  readonly minimum: number | null;
+  readonly maximum: number | null;
+  readonly sum: number;
+  readonly buckets: Readonly<Record<string, number>>;
+}): string {
+  return `${formatNumericSummary(summary)};buckets=${formatRecord(summary.buckets)}`;
+}
+
+function formatStructuralViolationMarkdown(
+  report: PlayerDevelopmentCohortReport,
+): readonly string[] {
+  if (report.aggregate.structuralViolationExamples.length === 0) {
+    return ["", "## Structural Violation Examples", "", "None."];
+  }
+  return [
+    "",
+    "## Structural Violation Examples",
+    "",
+    "| World | Checkpoint | Player | Kind |",
+    "|---|---|---|---|",
+    ...report.aggregate.structuralViolationExamples.map(
+      (example) =>
+        `| \`${example.worldId}\` | ${example.checkpoint} | \`${example.playerId}\` | ${example.kind} |`,
+    ),
+  ];
+}
+
+function formatRecord(record: Readonly<Record<string | number, number>>): string {
+  return Object.entries(record)
+    .filter(([, count]) => count > 0)
+    .map(([key, count]) => `${key}:${count}`)
+    .join(",") || "none";
+}
+
+function formatStatusCounts(
+  counts: Readonly<Record<"pass" | "warn" | "fail", number>>,
+): string {
+  return `${counts.pass}/${counts.warn}/${counts.fail}`;
+}
+
+/** Makes every additive cohort numerator and minimum visible in report output. */
+function formatPlayerEconomyCohortEvidence(
+  gate: LongRunGateReport["playerEconomyGates"][number],
+): string {
+  return [
+    `matching=${gate.matchingObservationCount ?? "n/a"}`,
+    `share_bps=${gate.shareBasisPoints ?? "n/a"}`,
+    `cohort_evidence=${gate.cohortEvidenceObservationCount ?? "n/a"}`,
+    `cohort_minimum=${gate.minimumCohortEvidenceObservationCount ?? "n/a"}`,
+  ].join(" ");
+}
+
 /**
  * Formats deterministic execution metadata for reproducible large gates.
  */
-function formatExecutionSummary(report: LongRunGateReport): string {
+function formatExecutionSummary(
+  report: Pick<LongRunGateReport, "execution">,
+): string {
   const shardSummary = report.execution.mode === "sharded"
     ? `; shards=${report.execution.shardCount ?? 0}; resumed=${report.execution.resumedShardCount ?? 0}`
     : "";
-  return `${report.execution.mode}; workers=${report.execution.workerCount}${shardSummary}; partition_hashes=${report.execution.partitionHashes.join(",")}`;
+  return `${report.execution.mode}; workers=${report.execution.workerCount}${shardSummary}; resumed_worlds=${report.execution.resumedWorldCount}; simulated_worlds=${report.execution.simulatedWorldCount}; partition_hashes=${report.execution.partitionHashes.join(",")}`;
+}
+
+/** Renders an absent checkpoint metric without inventing a numeric observation. */
+function formatObservedCount(value: number | null): string {
+  return value === null ? "n/a" : String(value);
 }
 
 /** Formats a command that preserves the execution strategy used by the report. */

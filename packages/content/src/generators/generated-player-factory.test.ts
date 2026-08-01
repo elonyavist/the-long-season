@@ -5,10 +5,12 @@ import {
   abilityValue,
   createPersonIdentity,
   gameDate,
+  PlayerConstructionError,
   playerId,
-  readPlayerAbility,
   type PlayerAbilities,
+  type PlayerConstructionErrorCode,
 } from "@game/domain";
+import { completedCivilYears, fromISO, toISO } from "@game/shared";
 
 import {
   assembleGeneratedPlayer,
@@ -23,25 +25,65 @@ test("assembleGeneratedPlayer creates complete role-aware identity and initial s
   assert.equal(created.player.id, input.id);
   assert.equal(created.player.firstName, "Ada");
   assert.equal(created.player.lastName, "Rossi");
-  assert.equal(Number(created.player.birthDate), 20_000 - 18 * 365 - 42);
+  assert.equal(toISO(Number(created.player.birthDate)), "2008-06-20");
+  assert.equal(completedCivilYears(created.player.birthDate, input.referenceDate), 18);
   assert.deepEqual(created.player.naturalPositions, ["cm"]);
   assert.equal(created.player.primaryRole, "central_midfielder");
   assert.equal(created.player.roleFamiliarity.central_midfielder, "natural");
   assert.deepEqual(created.dynamicState, { fitness: 100, form: 50, morale: 50 });
 });
 
-test("assembleGeneratedPlayer applies shared scale role-cap and potential invariants", () => {
+test("assembleGeneratedPlayer passes coherent producer abilities through without rewriting them", () => {
   const input = assemblyInput();
-  const created = assembleGeneratedPlayer({
-    ...input,
-    abilities: withGoalkeeping(input.abilities, 0, 0.5),
-    potential: withGoalkeeping(input.potential, 0, 0),
-  });
+  const created = assembleGeneratedPlayer(input);
 
-  assert.equal(Number(readPlayerAbility(created.player.abilities, "goalkeeping.reflexes")), 1);
-  assert.equal(Number(readPlayerAbility(created.player.abilities, "goalkeeping.footwork")), 1);
-  assert.equal(Number(readPlayerAbility(created.player.potential, "goalkeeping.reflexes")), 1);
-  assert.equal(Number(readPlayerAbility(created.player.potential, "goalkeeping.footwork")), 1);
+  assert.equal(created.player.abilities, input.abilities);
+  assert.equal(created.player.potential, input.potential);
+});
+
+test("assembleGeneratedPlayer propagates typed domain errors for ability ranges", () => {
+  const input = assemblyInput();
+
+  assertConstructionError(
+    {
+      ...input,
+      abilities: withGoalkeeping(input.abilities, 0, 1),
+    },
+    "invalid_current_ability",
+  );
+  assertConstructionError(
+    {
+      ...input,
+      potential: withGoalkeeping(input.potential, 0, 1),
+    },
+    "invalid_potential_ability",
+  );
+});
+
+test("assembleGeneratedPlayer rejects role-cap violations instead of capping producer facts", () => {
+  const input = assemblyInput();
+  const invalid = {
+    ...input,
+    abilities: withGoalkeeping(input.abilities, 5, 1),
+    potential: withGoalkeeping(input.potential, 5, 1),
+  };
+  const before = JSON.stringify(invalid);
+
+  assertConstructionError(invalid, "ability_exceeds_role_cap");
+  assert.equal(JSON.stringify(invalid), before);
+});
+
+test("assembleGeneratedPlayer rejects potential below current instead of raising the ceiling", () => {
+  const input = assemblyInput();
+  const invalid = {
+    ...input,
+    abilities: withGoalkeeping(input.abilities, 2, 1),
+    potential: withGoalkeeping(input.potential, 1, 1),
+  };
+  const before = JSON.stringify(invalid);
+
+  assertConstructionError(invalid, "potential_below_current");
+  assert.equal(JSON.stringify(invalid), before);
 });
 
 test("assembleGeneratedPlayer is deterministic and does not mutate producer facts", () => {
@@ -63,6 +105,46 @@ test("assembleGeneratedPlayer rejects malformed age policy facts with typed erro
   );
 });
 
+test("assembleGeneratedPlayer preserves every requested civil age across the full jitter range", () => {
+  for (const ageYears of [15, 16, 17, 18, 19, 20]) {
+    for (const birthDateJitterDays of [0, 4, 364]) {
+      const input = {
+        ...assemblyInput(),
+        ageYears,
+        birthDateJitterDays,
+      };
+      const created = assembleGeneratedPlayer(input);
+
+      assert.equal(
+        completedCivilYears(created.player.birthDate, input.referenceDate),
+        ageYears,
+        `age ${ageYears}, jitter ${birthDateJitterDays}`,
+      );
+    }
+  }
+});
+
+test("assembleGeneratedPlayer clamps a leap-day anniversary without changing completed age", () => {
+  const referenceDate = gameDate(fromISO("2024-02-29"));
+  const exactAnniversary = assembleGeneratedPlayer({
+    ...assemblyInput(),
+    referenceDate,
+    ageYears: 18,
+    birthDateJitterDays: 0,
+  }).player;
+  const endOfAgeYear = assembleGeneratedPlayer({
+    ...assemblyInput(),
+    referenceDate,
+    ageYears: 18,
+    birthDateJitterDays: 364,
+  }).player;
+
+  assert.equal(toISO(Number(exactAnniversary.birthDate)), "2006-02-28");
+  assert.equal(toISO(Number(endOfAgeYear.birthDate)), "2005-03-01");
+  assert.equal(completedCivilYears(exactAnniversary.birthDate, referenceDate), 18);
+  assert.equal(completedCivilYears(endOfAgeYear.birthDate, referenceDate), 18);
+});
+
 function assemblyInput(): GeneratedPlayerAssemblyInput {
   return {
     id: playerId("player:generated-test"),
@@ -73,12 +155,12 @@ function assemblyInput(): GeneratedPlayerAssemblyInput {
       birthCountry: "italian",
       nameCulture: "italian",
     }),
-    referenceDate: gameDate(20_000),
+    referenceDate: gameDate(fromISO("2026-08-01")),
     ageYears: 18,
     birthDateJitterDays: 42,
     position: "cm",
-    abilities: filledAbilities(5),
-    potential: filledAbilities(8),
+    abilities: withGoalkeeping(filledAbilities(5), 1, 1),
+    potential: withGoalkeeping(filledAbilities(8), 1, 1),
   };
 }
 
@@ -125,9 +207,22 @@ function withGoalkeeping(abilities: PlayerAbilities, reflexes: number, footwork:
   return {
     ...abilities,
     goalkeeping: {
-      ...abilities.goalkeeping,
+      handling: abilityValue(1),
+      rushingOut: abilityValue(1),
+      goalkeeperPositioning: abilityValue(1),
       reflexes: abilityValue(reflexes),
       footwork: abilityValue(footwork),
     },
   };
+}
+
+/** Proves content assembly preserves the domain's typed validation vocabulary. */
+function assertConstructionError(
+  input: GeneratedPlayerAssemblyInput,
+  expectedCode: PlayerConstructionErrorCode,
+): void {
+  assert.throws(
+    () => assembleGeneratedPlayer(input),
+    (error) => error instanceof PlayerConstructionError && error.code === expectedCode,
+  );
 }

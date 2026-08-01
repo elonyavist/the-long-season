@@ -1,5 +1,5 @@
 import {
-  accruePlayerFixtureParticipation,
+  accruePlayerFixtureParticipations,
   createEmptyPlayerParticipationLedger,
   createCareerState,
   isCanonicalPlayerRole,
@@ -57,6 +57,14 @@ export interface AccrueCommittedFixtureParticipationInput extends BuildFixturePa
   readonly careerState: CareerState;
 }
 
+/** Input for reducing already-derived fixture contributions into a career. */
+export interface AccrueFixtureParticipationContributionsInput {
+  /** Career state whose current-season ledger receives the contributions. */
+  readonly careerState: CareerState;
+  /** Canonical contributions emitted by the committed match owner. */
+  readonly contributions: readonly PlayerFixtureParticipationContribution[];
+}
+
 /**
  * Builds exact starter, substitute, and unused-bench participation rows.
  *
@@ -84,6 +92,7 @@ export function buildFixtureParticipationContributions(
       contributions.set(slot.playerId, createContribution({
         input,
         playerId: slot.playerId,
+        clubId: side.initialContext.clubId,
         monthKey,
         started: true,
         substituteAppearance: false,
@@ -100,6 +109,7 @@ export function buildFixtureParticipationContributions(
       contributions.set(substitution.incomingPlayerId, createContribution({
         input,
         playerId: substitution.incomingPlayerId,
+        clubId: side.initialContext.clubId,
         monthKey,
         started: false,
         substituteAppearance: true,
@@ -117,6 +127,7 @@ export function buildFixtureParticipationContributions(
       contributions.set(playerId, createContribution({
         input,
         playerId,
+        clubId: side.initialContext.clubId,
         monthKey,
         started: false,
         substituteAppearance: false,
@@ -136,11 +147,28 @@ export function buildFixtureParticipationContributions(
 export function accrueCommittedFixtureParticipation(
   input: AccrueCommittedFixtureParticipationInput,
 ): CareerState {
-  const baseLedger = input.careerState.playerParticipationLedger ?? createEmptyPlayerParticipationLedger();
   const { contributions } = buildFixtureParticipationContributions(input);
-  const playerParticipationLedger = contributions.reduce(
-    (ledger, contribution) => accruePlayerFixtureParticipation(ledger, contribution),
+  return accrueFixtureParticipationContributions({
+    careerState: input.careerState,
+    contributions,
+  });
+}
+
+/**
+ * Reduces canonical fixture contributions into the durable monthly ledger.
+ *
+ * Batch-season adapters use this after `simulateSeason` has already derived
+ * contributions from the exact match contexts. Keeping the reduction here
+ * preserves domain validation and fixture-idempotency for every caller.
+ */
+export function accrueFixtureParticipationContributions(
+  input: AccrueFixtureParticipationContributionsInput,
+): CareerState {
+  const baseLedger = input.careerState.playerParticipationLedger
+    ?? createEmptyPlayerParticipationLedger();
+  const playerParticipationLedger = accruePlayerFixtureParticipations(
     baseLedger,
+    input.contributions,
   );
 
   return createCareerState({
@@ -152,6 +180,7 @@ export function accrueCommittedFixtureParticipation(
 function createContribution(input: {
   readonly input: BuildFixtureParticipationContributionsInput;
   readonly playerId: PlayerId;
+  readonly clubId: MatchTeamContext["clubId"];
   readonly monthKey: string;
   readonly started: boolean;
   readonly substituteAppearance: boolean;
@@ -162,6 +191,7 @@ function createContribution(input: {
   return {
     fixtureId: input.input.fixtureId,
     playerId: input.playerId,
+    clubId: input.clubId,
     seasonId: input.input.seasonId,
     monthKey: input.monthKey,
     started: input.started,

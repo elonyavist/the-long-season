@@ -19,6 +19,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRole,
   type SelectedLineup,
   type TacticSetup,
 } from "@game/domain";
@@ -33,6 +34,7 @@ import {
   type SimulateSeasonTeamInput,
 } from "./simulate-season.ts";
 import type { PlayerStateMultiplierCurves, RoleWeightProfile } from "../match-engine/index.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
 
 /**
  * Season simulation tests prove the first full-season use-case without content,
@@ -220,6 +222,39 @@ test("season player summary stats match durable assist and save events", () => {
   assert.equal(result.playerSummaryStats.length, 36);
   assert.equal(totalSummaryAssists, countAssists(result.fixtures));
   assert.equal(totalSummarySaves, countSaves(result.fixtures));
+});
+
+test("season simulation exposes canonical participation from each exact match context", () => {
+  const result = simulateSeason(seasonInput("participation-seed"));
+
+  assert.equal(result.fixtureParticipation.length, result.fixtureIds.length);
+  assert.deepEqual(
+    result.fixtureParticipation.map(({ fixtureId }) => fixtureId),
+    result.fixtureIds,
+  );
+  assert.ok(
+    result.fixtureParticipation.every(
+      ({ fixtureId, contributions }) => {
+        const fixture = result.fixtures.find((candidate) => candidate.id === fixtureId);
+        const finalMinute = fixture?.result?.report?.finalMinute;
+        return (
+          finalMinute !== undefined
+          && contributions.length === 4
+          && contributions.every(
+            (contribution) =>
+              contribution.started
+              && !contribution.substituteAppearance
+              && contribution.minutes === finalMinute
+              && contribution.rating !== undefined,
+          )
+        );
+      },
+    ),
+  );
+  assert.deepEqual(
+    simulateSeason(seasonInput("participation-seed")).fixtureParticipation,
+    result.fixtureParticipation,
+  );
 });
 
 test("empty setup overrides preserve default output", () => {
@@ -550,6 +585,29 @@ test("AI squad selection can register full rosters for season simulations", () =
   assert.equal(result.finalPlayerStates[firstClubReserve]?.fitness !== undefined, true);
 });
 
+test("AI squad participation retains the exact selected bench as zero-minute evidence", () => {
+  const result = simulateSeason(
+    seasonInputWithAiSelection("ai-squad-participation-seed", 100),
+  );
+
+  assert.ok(result.fixtureParticipation.length > 0);
+  for (const fixture of result.fixtureParticipation) {
+    const starters = fixture.contributions.filter(
+      (contribution) => contribution.started,
+    );
+    const unusedBench = fixture.contributions.filter(
+      (contribution) =>
+        !contribution.started
+        && !contribution.substituteAppearance
+        && contribution.minutes === 0,
+    );
+
+    assert.equal(starters.length, 22);
+    assert.equal(unusedBench.length, 16);
+    assert.equal(fixture.contributions.length, 38);
+  }
+});
+
 /**
  * Builds deterministic season input with 18 synthetic team contexts.
  */
@@ -666,18 +724,22 @@ function fitnessReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, 
  */
 function aiSelectionReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, SimulateSeasonTeamInput>> {
   const teams: Record<ClubId, SimulateSeasonTeamInput> = {};
+  const valuationConfig = playerValuationConfigFixture();
 
   for (const clubId of input.clubIds) {
     const team = input.teamsByClubId[clubId];
     assert.ok(team !== undefined);
+    const players = aiSelectionPlayers(clubId, team.strength.overall);
 
     teams[clubId] = {
       ...team,
-      players: aiSelectionPlayers(clubId, team.strength.overall),
+      players,
       roleWeights: overrideRoleWeights(),
       stateMultiplierCurves: testFitnessCurves(),
       aiSelection: {
         formation: getFormation("4-4-2"),
+        potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+        ratingScale: valuationConfig.ratingScale,
         benchSize: 8,
       },
     };
@@ -1092,9 +1154,29 @@ function makePlayer(id: PlayerId, ability: number, positions: readonly PlayerPos
     lastName: String(id),
     birthDate: gameDate(10_000),
     naturalPositions: positions,
+    primaryRole: primaryRoleForPosition(positions[0]!),
     abilities,
     potential: abilities,
   };
+}
+
+/** Keeps synthetic player identity valid for canonical public assessment. */
+function primaryRoleForPosition(position: PlayerPosition): PlayerRole {
+  const roles: Readonly<Record<PlayerPosition, PlayerRole>> = {
+    gk: "goalkeeper",
+    rb: "full_back",
+    cb: "center_back",
+    lb: "full_back",
+    rwb: "wing_back",
+    lwb: "wing_back",
+    dm: "defensive_midfielder",
+    cm: "central_midfielder",
+    am: "attacking_midfielder",
+    rw: "winger",
+    lw: "winger",
+    st: "striker",
+  };
+  return roles[position];
 }
 
 /**

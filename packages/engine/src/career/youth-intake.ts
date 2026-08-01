@@ -68,7 +68,7 @@ export interface ApplySeasonalYouthIntakeResult {
 export type YouthIntakeErrorCode =
   | "candidate_target_club_not_found"
   | "duplicate_candidate_player"
-  | "candidate_player_already_active"
+  | "candidate_player_already_exists"
   | "academy_underfilled_after_refill";
 
 /** Error thrown when an annual youth intake candidate pool is unsafe. */
@@ -179,7 +179,6 @@ export function applySeasonalYouthIntake(input: ApplySeasonalYouthIntakeInput): 
 }
 
 function validateCandidatePool(careerState: CareerState, candidates: readonly YouthIntakeCandidate[]): void {
-  const activePlayerIds = new Set(careerState.gameState.playerIds);
   const seenCandidateIds = new Set<PlayerId>();
 
   for (const candidate of candidates) {
@@ -191,8 +190,11 @@ function validateCandidatePool(careerState: CareerState, candidates: readonly Yo
       throw new YouthIntakeError("duplicate_candidate_player", `duplicate youth intake player: ${candidate.player.id}`);
     }
 
-    if (activePlayerIds.has(candidate.player.id)) {
-      throw new YouthIntakeError("candidate_player_already_active", `youth intake player is already active: ${candidate.player.id}`);
+    if (careerState.gameState.players[candidate.player.id] !== undefined) {
+      throw new YouthIntakeError(
+        "candidate_player_already_exists",
+        `youth intake player already exists in career history: ${candidate.player.id}`,
+      );
     }
 
     seenCandidateIds.add(candidate.player.id);

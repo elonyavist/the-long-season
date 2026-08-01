@@ -4,6 +4,7 @@ import {
   advanceTransferPlayerNegotiations,
   createTransferNegotiationId,
   deriveContractDemand,
+  derivePublicPlayerAssessment,
   deriveTransferCommercialSnapshot,
   submitTransferOffer,
   submitTransferPlayerOffer,
@@ -31,11 +32,22 @@ export function applyCareerMarketDemo(input: {
   readonly marketBehaviorPolicy: SubmitTransferOfferInput["marketBehaviorPolicy"];
 }): ApplyCareerPermanentTransferResult {
   const submittedOn = input.careerState.gameState.calendar.currentDate;
+  const targetPlayer = input.careerState.gameState.players[input.intent.playerId];
+  if (targetPlayer === undefined) {
+    return rejected(input, "seller_contract_not_found");
+  }
+  const publicAssessment = derivePublicPlayerAssessment({
+    player: targetPlayer,
+    currentDate: submittedOn,
+    potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    ratingScale: input.valuationConfig.ratingScale,
+  });
   const commercial = deriveTransferCommercialSnapshot({
     careerState: input.careerState,
     sellingClubId: input.intent.sellingClubId,
     playerId: input.intent.playerId,
     asOf: submittedOn,
+    publicAssessment,
     valuationConfig: input.valuationConfig,
     askingPriceConfig: input.askingPriceConfig,
   });
@@ -99,6 +111,10 @@ export function applyCareerMarketDemo(input: {
   if (currentContract === undefined) {
     return rejected(input, "seller_contract_not_found", clubAgreement.agreedFee);
   }
+  const player = clubReply.careerState.gameState.players[input.intent.playerId];
+  if (player === undefined) {
+    return rejected(input, "seller_contract_not_found", clubAgreement.agreedFee);
+  }
   const preferredTerms = deriveContractDemand({
     careerState: clubReply.careerState,
     playerId: input.intent.playerId,
@@ -107,6 +123,12 @@ export function applyCareerMarketDemo(input: {
     currentContract,
     isFreeAgent: false,
     wagePolicy: input.wagePolicy,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: clubAgreement.acceptedOn,
+      potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+      ratingScale: input.valuationConfig.ratingScale,
+    }),
   }).preferredTerms;
   const minimumDurationYears = Math.max(
     1,
@@ -131,6 +153,7 @@ export function applyCareerMarketDemo(input: {
     terms,
     transferWindows: input.transferWindows,
     wagePolicy: input.wagePolicy,
+    valuationConfig: input.valuationConfig,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
   if (playerOffer.status === "rejected" || playerOffer.negotiation.status !== "player_offer_submitted") {
@@ -149,6 +172,7 @@ export function applyCareerMarketDemo(input: {
     throughDate: playerOffer.negotiation.clock.responseDueOn,
     transferWindows: input.transferWindows,
     wagePolicy: input.wagePolicy,
+    valuationConfig: input.valuationConfig,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
   let finalState = playerReply.careerState;
@@ -160,6 +184,7 @@ export function applyCareerMarketDemo(input: {
       decidedOn: finalNegotiation.counterIssuedOn,
       transferWindows: input.transferWindows,
       wagePolicy: input.wagePolicy,
+      valuationConfig: input.valuationConfig,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
     });
     if (acceptedCounter.status === "applied") {

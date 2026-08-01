@@ -1,4 +1,9 @@
-import { derivePlayerMarketAbility } from "@game/engine";
+import { selectPlayerValuationConfig } from "@game/content";
+import {
+  derivePublicPlayerAssessment,
+  type PlayerValuationConfig,
+  type PublicPlayerAssessment,
+} from "@game/engine";
 import type { Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 
@@ -33,10 +38,18 @@ export function formatCareerSquadOutput(input: {
   if (selectedClub === undefined || selectedClub.playerIds.length === 0) {
     return [...lines, `  ${input.text("common.none")}`];
   }
+  const valuationConfig = selectPlayerValuationConfig(
+    input.careerState.gameState.meta.calibrationVersions,
+  );
 
   return [
     ...lines,
-    ...selectedClub.playerIds.map((playerId) => formatCareerSquadPlayerLine(input.careerState, playerId, input.text)),
+    ...selectedClub.playerIds.map((playerId) => formatCareerSquadPlayerLine(
+      input.careerState,
+      playerId,
+      input.text,
+      valuationConfig,
+    )),
   ];
 }
 
@@ -74,14 +87,27 @@ export function formatCareerYouthAcademyOutput(input: {
   if (selectedYouthIds.length === 0) {
     return [...lines, `  ${input.text("common.none")}`];
   }
+  const valuationConfig = selectPlayerValuationConfig(
+    input.careerState.gameState.meta.calibrationVersions,
+  );
 
   return [
     ...lines,
-    ...selectedYouthIds.map((playerId) => formatCareerYouthPlayerLine(input.careerState, playerId, input.text)),
+    ...selectedYouthIds.map((playerId) => formatCareerYouthPlayerLine(
+      input.careerState,
+      playerId,
+      input.text,
+      valuationConfig,
+    )),
   ];
 }
 
-function formatCareerSquadPlayerLine(careerState: CliCareerState, playerId: PlayerId, text: Translator): string {
+function formatCareerSquadPlayerLine(
+  careerState: CliCareerState,
+  playerId: PlayerId,
+  text: Translator,
+  valuationConfig: PlayerValuationConfig,
+): string {
   const player = careerState.gameState.players[playerId];
   const playerState = careerState.gameState.playerStates[playerId];
 
@@ -89,18 +115,17 @@ function formatCareerSquadPlayerLine(careerState: CliCareerState, playerId: Play
     return `  ${String(playerId).padEnd(28)} ${text("common.unknown")}`;
   }
 
-  const age = Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / 365);
+  const assessment = assessmentFor(player, careerState, valuationConfig);
   const position = formatPrimaryPosition(player);
-  const roleAbility = roleRelevantCurrentAbility(player);
 
   return [
     "  ",
     playerLabel(playerId, careerState.gameState).padEnd(28),
-    String(age).padStart(3),
+    String(assessment.age).padStart(3),
     " ",
     position.padEnd(4),
     " ",
-    roleAbility.toFixed(1).padStart(4),
+    assessment.currentAbility.toFixed(1).padStart(4),
     " ",
     String(playerState?.fitness ?? "--").padStart(3),
     " ",
@@ -110,7 +135,12 @@ function formatCareerSquadPlayerLine(careerState: CliCareerState, playerId: Play
   ].join("");
 }
 
-function formatCareerYouthPlayerLine(careerState: CliCareerState, playerId: PlayerId, text: Translator): string {
+function formatCareerYouthPlayerLine(
+  careerState: CliCareerState,
+  playerId: PlayerId,
+  text: Translator,
+  valuationConfig: PlayerValuationConfig,
+): string {
   const player = careerState.gameState.players[playerId];
   const lifecycle = careerState.youthAcademyState?.playerLifecycle[playerId];
 
@@ -118,16 +148,16 @@ function formatCareerYouthPlayerLine(careerState: CliCareerState, playerId: Play
     return `  ${String(playerId).padEnd(24)} ${text("common.unknown")}`;
   }
 
-  const age = Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / 365);
+  const assessment = assessmentFor(player, careerState, valuationConfig);
   const position = formatPrimaryPosition(player);
-  const abilityBand = text(presentationMessageKey("career.youth.abilityBand", youthAbilityBand(player)));
-  const developmentCategory = text(presentationMessageKey("career.youth.developmentCategory", youthDevelopmentCategory(player)));
+  const abilityBand = text(presentationMessageKey("career.youth.abilityBand", youthAbilityBand(assessment)));
+  const developmentCategory = text(presentationMessageKey("career.youth.developmentCategory", youthDevelopmentCategory(assessment)));
   const status = lifecycle?.status ?? "academy";
 
   return [
     "  ",
     playerLabel(playerId, careerState.gameState).padEnd(24),
-    String(age).padStart(3),
+    String(assessment.age).padStart(3),
     " ",
     formatUnknownNationality(text).padEnd(14),
     " ",
@@ -145,8 +175,8 @@ function formatUnknownNationality(text: Translator): string {
   return text("common.unknown");
 }
 
-function youthAbilityBand(player: CliPlayer): string {
-  const roleAbility = roleRelevantCurrentAbility(player);
+function youthAbilityBand(assessment: PublicPlayerAssessment): string {
+  const roleAbility = assessment.currentAbility;
 
   if (roleAbility >= 11) {
     return "strong";
@@ -163,9 +193,9 @@ function youthAbilityBand(player: CliPlayer): string {
   return "raw";
 }
 
-function youthDevelopmentCategory(player: CliPlayer): string {
-  const roleAbility = roleRelevantCurrentAbility(player);
-  const potentialRoom = averagePotentialRoom(player);
+function youthDevelopmentCategory(assessment: PublicPlayerAssessment): string {
+  const roleAbility = assessment.currentAbility;
+  const potentialRoom = assessment.upperAbility - assessment.currentAbility;
 
   if (roleAbility >= 9) {
     return "seniorReady";
@@ -186,15 +216,20 @@ function youthDevelopmentCategory(player: CliPlayer): string {
   return "foundation";
 }
 
-function averagePotentialRoom(player: CliPlayer): number {
-  const ability = derivePlayerMarketAbility(player);
-  return ability.potentialAbility - ability.currentAbility;
-}
-
 function formatPrimaryPosition(player: CliPlayer): string {
   return (player.naturalPositions[0] ?? "n/a").toUpperCase();
 }
 
-function roleRelevantCurrentAbility(player: CliPlayer): number {
-  return derivePlayerMarketAbility(player).currentAbility;
+/** Derives the same dated public facts used by Market, Squad, value, and AI. */
+function assessmentFor(
+  player: CliPlayer,
+  careerState: CliCareerState,
+  valuationConfig: PlayerValuationConfig,
+): PublicPlayerAssessment {
+  return derivePublicPlayerAssessment({
+    player,
+    currentDate: careerState.gameState.calendar.currentDate,
+    potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+    ratingScale: valuationConfig.ratingScale,
+  });
 }

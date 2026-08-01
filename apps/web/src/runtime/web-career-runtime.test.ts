@@ -64,7 +64,7 @@ describe("WebCareerRuntime", () => {
       "competition:ita-2",
       "competition:ita-3",
     ]);
-    expect(canonicalCareerIdentityHash(state)).toBe("ac2f4c6c");
+    expect(canonicalCareerIdentityHash(state)).toBe("b12d5dd0");
   });
 
   it("publishes one completed three-division boundary atomically and deterministically", () => {

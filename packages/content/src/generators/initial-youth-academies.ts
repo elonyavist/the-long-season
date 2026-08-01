@@ -22,20 +22,28 @@ import { deriveRng } from "@game/shared";
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
-import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
-import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
+import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import type {
+  OpeningPlayerGenerationClubContext,
+  PlayerGenerationClubTier,
+} from "./player-generation-bands.ts";
 import {
   buildYouthPlayerRarityAllocation,
   playerRaritySlotKey,
 } from "./player-rarity-budget.ts";
 import { currentAbilityRarityLaneForYouthProspect } from "./player-potential-rarity.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
-import { buildRoleAwarePlayerAbilities } from "./player-role-templates.ts";
-import { allocateReachablePotential } from "./player-potential-allocation.ts";
 import {
+  buildContextualProspectJointProfile,
+  type ContextualProspectCeilingConstraint,
+  type ContextualProspectJointProfile,
+} from "./player-prospect-joint-profile.ts";
+import {
+  developmentEnvironmentForClubContext,
   deriveYouthDevelopmentLevel,
   youthDevelopmentCurrentBoost,
   youthDevelopmentInterestingChance,
+  youthDevelopmentSeriousProspectChance,
 } from "./youth-development-level.ts";
 import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 
@@ -60,12 +68,14 @@ export const YOUTH_ACADEMY_POSITION_PLAN: readonly PlayerPosition[] = [
   "rw",
 ];
 
-/** Club context used by initial youth academy generation. */
-export interface InitialYouthAcademyClubContext {
-  /** Broad division/category where the club currently plays. */
+/** Club facts consumed by seasonal youth-intake generation. */
+export interface SeasonalYouthIntakeClubContext {
+  /** Broad division/category where the receiving club currently plays. */
   readonly category: ClubCategory;
-  /** Club reputation used as a small proxy for intra-division strength. */
+  /** Current club reputation used by the existing intake policy. */
   readonly reputation: number;
+  /** Competitive level frozen for the season that owns this intake. */
+  readonly competitiveTier: PlayerGenerationClubTier;
 }
 
 /** Input for deterministic initial youth academy generation. */
@@ -79,13 +89,15 @@ export interface GenerateInitialYouthAcademiesInput {
   /** Clubs receiving initial youth rosters, in deterministic order. */
   readonly clubIds: readonly ClubId[];
   /** Sporting context for each generated club. */
-  readonly clubContexts: Readonly<Record<ClubId, InitialYouthAcademyClubContext>>;
+  readonly clubContexts: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>>;
   /** Optional count override for focused tests; production uses Phase 32 target. */
   readonly youthPlayersPerClub?: number;
   /** Optional league nation, defaulting to the current Italian demo world. */
   readonly leagueNation?: LeagueNationCode;
   /** Optional complete-world potential-six assignments for academy players. */
   readonly potentialSixPlayerIds?: readonly PlayerId[];
+  /** Natural six-star academy ceilings that the national budget caps below six. */
+  readonly reconstructedPotentialBelowSixPlayerIds?: readonly PlayerId[];
   /** Validated scale used only for assigned potential-six floors. */
   readonly ratingScale?: PlayerRatingScaleConfig;
 }
@@ -119,7 +131,7 @@ export interface GenerateSeasonalYouthIntakePlayersInput {
   /** Date used as age reference. */
   readonly referenceDate: GameDate;
   /** Sporting context for the receiving club. */
-  readonly clubContext: InitialYouthAcademyClubContext;
+  readonly clubContext: SeasonalYouthIntakeClubContext;
   /** Optional league nation, defaulting to the current Italian demo world. */
   readonly leagueNation?: LeagueNationCode;
   /** Exact positions missing from the active academy after lifecycle exits. */
@@ -188,17 +200,26 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
       division: clubContext.category,
       clubReputation: clubContext.reputation,
     });
+    const developmentEnvironment = developmentEnvironmentForClubContext(clubContext);
     clubYouthDevelopmentLevels[clubId] = youthDevelopmentLevel;
 
     for (let index = 0; index < youthPlayersPerClub; index += 1) {
       const id = initialYouthPlayerId(clubId, index + 1);
       const forcePotentialSix = input.potentialSixPlayerIds?.includes(id) === true;
-      const archetypeKey = forcePotentialSix ? "rare_prodigy" : rarityAssignments[id] ?? selectRoutineInitialYouthArchetype({
+      const reconstructPotentialBelowSix = input.reconstructedPotentialBelowSixPlayerIds?.includes(id) === true;
+      if (forcePotentialSix && reconstructPotentialBelowSix) {
+        throw new Error(`Academy player cannot be both six-star and reconstructed below six: ${id}`);
+      }
+      const archetypeKey = forcePotentialSix
+        ? "rare_prodigy"
+        : reconstructPotentialBelowSix
+          ? "normal_youth"
+          : rarityAssignments[id] ?? selectRoutineInitialYouthArchetype({
         worldSeed: input.worldSeed,
         seasonId: input.seasonId,
         clubId,
         playerId: id,
-        youthDevelopmentLevel,
+        developmentEnvironment,
       });
       const position = positionForInitialYouthSlot(input.worldSeed, input.seasonId, id, index);
       const identity = initialYouthIdentity({
@@ -210,7 +231,7 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
         clubContext,
         clubNameUsage,
       });
-      const generatedPlayer = youthAcademyPlayer({
+      const generatedPlayer = buildYouthPlayerFromJointProfile({
         id,
         identity,
         worldSeed: input.worldSeed,
@@ -220,10 +241,13 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
         archetypeKey,
         youthDevelopmentLevel,
         ageYears: initialYouthAge(input.worldSeed, input.seasonId, id),
-        clubContext,
-        ...(forcePotentialSix
-          ? { minimumRolePotentialAbility: minimumSixAbility(input.ratingScale ?? defaultPlayerRatingScale) }
-          : {}),
+        division: clubContext.category,
+        clubTier: clubContext.competitiveTier,
+        ratingScale: input.ratingScale ?? defaultPlayerRatingScale,
+        ceilingConstraint: youthCeilingConstraint({
+          forcePotentialSix,
+          reconstructPotentialBelowSix,
+        }),
       });
 
       players[id] = generatedPlayer.player;
@@ -280,13 +304,20 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
     division: input.clubContext.category,
     clubReputation: input.clubContext.reputation,
   });
+  const developmentEnvironment = developmentEnvironmentForClubContext(input.clubContext);
 
   for (let index = 0; index < targetPositions.length; index += 1) {
     const id = seasonalYouthPlayerId(input.clubId, input.seasonId, index + 1);
     const forcePotentialSix = input.potentialSixPlayerIds?.includes(id) === true;
     const archetypeKey = forcePotentialSix
       ? "rare_prodigy"
-      : selectSeasonalYouthArchetype(input.worldSeed, input.seasonId, input.clubId, id, youthDevelopmentLevel);
+      : selectSeasonalYouthArchetype(
+          input.worldSeed,
+          input.seasonId,
+          input.clubId,
+          id,
+          developmentEnvironment,
+        );
     const position = targetPositions[index] ?? "cm";
     const identity = initialYouthIdentity({
       worldSeed: input.worldSeed,
@@ -297,7 +328,7 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
       clubContext: input.clubContext,
       clubNameUsage,
     });
-    const generatedPlayer = youthAcademyPlayer({
+    const generatedPlayer = buildYouthPlayerFromJointProfile({
       id,
       identity,
       worldSeed: input.worldSeed,
@@ -307,10 +338,10 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
       archetypeKey,
       youthDevelopmentLevel,
       ageYears: seasonalYouthAge(input.worldSeed, input.seasonId, id),
-      clubContext: input.clubContext,
-      ...(forcePotentialSix
-        ? { minimumRolePotentialAbility: minimumSixAbility(input.ratingScale ?? defaultPlayerRatingScale) }
-        : {}),
+      division: input.clubContext.category,
+      clubTier: input.clubContext.competitiveTier,
+      ratingScale: input.ratingScale ?? defaultPlayerRatingScale,
+      ceilingConstraint: youthCeilingConstraint({ forcePotentialSix }),
     });
 
     generatedPlayers.push({
@@ -324,7 +355,7 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
   return { generatedPlayers, youthDevelopmentLevel };
 }
 
-function youthAcademyPlayer(input: {
+interface YouthPlayerGenerationFacts {
   readonly id: PlayerId;
   readonly identity: PersonIdentity;
   readonly worldSeed: string;
@@ -334,37 +365,74 @@ function youthAcademyPlayer(input: {
   readonly archetypeKey: GeneratedPlayerArchetypeKey;
   readonly youthDevelopmentLevel: YouthDevelopmentLevel;
   readonly ageYears: number;
-  readonly clubContext: InitialYouthAcademyClubContext;
-  readonly minimumRolePotentialAbility?: number;
-}): CreatedPlayer {
-  const archetype = getGeneratedPlayerArchetype(input.archetypeKey);
-  const clubTier = clubTierForReputation(input.clubContext.reputation);
-  const birthDateJitter = deriveRng(input.worldSeed, "initial-youth-birth-date", input.seasonId, input.id).nextInt(0, 365);
+  readonly division: ClubCategory;
+  readonly clubTier: PlayerGenerationClubTier;
+  /** Versioned rating scale that interprets contextual prospect bands. */
+  readonly ratingScale: PlayerRatingScaleConfig;
+  /** Absolute-ceiling constraint allocated before this root builds the profile. */
+  readonly ceilingConstraint: ContextualProspectCeilingConstraint;
+}
+
+/**
+ * Converts one national academy allocation into an absolute-ceiling contract.
+ *
+ * Future country compositions should reuse these semantic outcomes at their
+ * own root rather than exposing raw ability thresholds to player generation.
+ */
+function youthCeilingConstraint(input: {
+  readonly forcePotentialSix: boolean;
+  readonly reconstructPotentialBelowSix?: boolean;
+}): ContextualProspectCeilingConstraint {
+  if (input.forcePotentialSix) {
+    return { kind: "at_least_rating", rating: 6 };
+  }
+  if (input.reconstructPotentialBelowSix === true) {
+    return { kind: "below_rating", rating: 6 };
+  }
+  return { kind: "policy" };
+}
+
+/**
+ * Builds one opening or seasonal academy player through the shared joint owner.
+ *
+ * The two roots choose IDs, archetypes, ages, and ceiling constraints before
+ * this seam. Current ability and stored potential are deliberately composed
+ * only here so their policy cannot drift between opening and annual intake.
+ */
+function buildYouthPlayerFromJointProfile(
+  input: YouthPlayerGenerationFacts,
+): CreatedPlayer {
   const primaryRole = primaryRoleForPosition(input.position);
-  const abilities = buildRoleAwarePlayerAbilities({
+  const profile = buildContextualProspectJointProfile({
     seed: input.worldSeed,
     playerKey: String(input.id),
-    division: input.clubContext.category,
-    clubTier,
+    division: input.division,
+    clubTier: input.clubTier,
     role: primaryRole,
     ageYears: input.ageYears,
-    // Academy level gives only a bounded current-quality nudge.
-    rarityLane: currentAbilityRarityLaneForYouthProspect(input.archetypeKey, Number(input.youthDevelopmentLevel)),
+    archetypeKey: input.archetypeKey,
+    ratingScale: input.ratingScale,
+    requestedCurrentAbilityLane: currentAbilityRarityLaneForYouthProspect(
+      input.archetypeKey,
+      Number(input.youthDevelopmentLevel),
+    ),
+    ceilingConstraint: input.ceilingConstraint,
     slotDepthAdjustment: youthDevelopmentCurrentBoost(input.youthDevelopmentLevel),
   });
-  const proposedPotential = allocateReachablePotential({
-    seed: input.worldSeed,
-    playerKey: String(input.id),
-    abilities,
-    ageYears: input.ageYears,
-    role: primaryRole,
-    division: input.clubContext.category,
-    clubTier,
-    potentialClass: archetype.potentialClass,
-    ...(input.minimumRolePotentialAbility === undefined
-      ? {}
-      : { minimumRolePotentialAbility: input.minimumRolePotentialAbility }),
-  });
+
+  return assembleYouthPlayer(input, profile);
+}
+
+function assembleYouthPlayer(
+  input: YouthPlayerGenerationFacts,
+  profile: Pick<ContextualProspectJointProfile, "current" | "potential">,
+): CreatedPlayer {
+  const birthDateJitter = deriveRng(
+    input.worldSeed,
+    "initial-youth-birth-date",
+    input.seasonId,
+    input.id,
+  ).nextInt(0, 365);
 
   return assembleGeneratedPlayer({
     id: input.id,
@@ -373,17 +441,9 @@ function youthAcademyPlayer(input: {
     ageYears: input.ageYears,
     birthDateJitterDays: birthDateJitter,
     position: input.position,
-    abilities,
-    potential: proposedPotential,
+    abilities: profile.current,
+    potential: profile.potential,
   });
-}
-
-function minimumSixAbility(scale: PlayerRatingScaleConfig): number {
-  const threshold = scale.abilityThresholds.find((candidate) => candidate.rating === 6);
-  if (threshold === undefined) {
-    throw new Error("Validated rating scale is missing rating 6");
-  }
-  return threshold.minimumAbilityInclusive;
 }
 
 function initialYouthIdentity(input: {
@@ -392,7 +452,7 @@ function initialYouthIdentity(input: {
   readonly clubId: ClubId;
   readonly playerId: PlayerId;
   readonly leagueNation: LeagueNationCode;
-  readonly clubContext: InitialYouthAcademyClubContext;
+  readonly clubContext: SeasonalYouthIntakeClubContext;
   readonly clubNameUsage: ClubNameUsage;
 }): PersonIdentity {
   const nationality = selectNationality({
@@ -450,12 +510,12 @@ function selectRoutineInitialYouthArchetype(input: {
   readonly seasonId: SeasonId;
   readonly clubId: ClubId;
   readonly playerId: PlayerId;
-  readonly youthDevelopmentLevel: YouthDevelopmentLevel;
+  readonly developmentEnvironment: ReturnType<typeof developmentEnvironmentForClubContext>;
 }): GeneratedPlayerArchetypeKey {
   const rng = deriveRng(input.worldSeed, "initial-youth-archetype", input.seasonId, input.clubId, input.playerId);
   const roll = rng.nextFloat();
 
-  if (roll >= 0.06 && roll < 0.06 + youthDevelopmentInterestingChance(input.youthDevelopmentLevel)) {
+  if (roll < youthDevelopmentInterestingChance(input.developmentEnvironment)) {
     return "good_prospect";
   }
 
@@ -487,7 +547,10 @@ function initialYouthRarityAssignments(
       seasonKey: String(input.seasonId),
       clubCount: clubIds.length,
       playersPerClub: youthPlayersPerClub,
-      clubDevelopmentLevelsByClubNumber: youthDevelopmentLevelsByClubNumber(input.clubContexts, clubIds),
+      clubEnvironmentKeysByClubNumber: developmentEnvironmentKeysByClubNumber(
+        input.clubContexts,
+        clubIds,
+      ),
     });
 
     for (let clubIndex = 0; clubIndex < clubIds.length; clubIndex += 1) {
@@ -530,27 +593,32 @@ function selectSeasonalYouthArchetype(
   seasonId: SeasonId,
   clubId: ClubId,
   playerId: PlayerId,
-  youthDevelopmentLevel: YouthDevelopmentLevel,
+  developmentEnvironment: ReturnType<typeof developmentEnvironmentForClubContext>,
 ): GeneratedPlayerArchetypeKey {
   const rng = deriveRng(worldSeed, "seasonal-youth-archetype", seasonId, clubId, playerId);
   const roll = rng.nextFloat();
 
-  if (roll < 0.04) {
+  const seriousChance = youthDevelopmentSeriousProspectChance(
+    developmentEnvironment,
+  );
+  if (roll < seriousChance) {
     return "serious_prospect";
   }
 
-  if (roll < 0.04 + youthDevelopmentInterestingChance(youthDevelopmentLevel)) {
+  if (roll < seriousChance + youthDevelopmentInterestingChance(developmentEnvironment)) {
     return "good_prospect";
   }
 
   return "normal_youth";
 }
 
-function youthDevelopmentLevelsByClubNumber(
-  clubContexts: Readonly<Record<ClubId, InitialYouthAcademyClubContext>>,
+function developmentEnvironmentKeysByClubNumber(
+  clubContexts: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>>,
   clubIds: readonly ClubId[],
-): Readonly<Record<number, YouthDevelopmentLevel>> {
-  const levels: Record<number, YouthDevelopmentLevel> = {};
+): Readonly<Record<number, ReturnType<typeof developmentEnvironmentForClubContext>>> {
+  const environments: Partial<
+    Record<number, ReturnType<typeof developmentEnvironmentForClubContext>>
+  > = {};
 
   for (let index = 0; index < clubIds.length; index += 1) {
     const clubIdValue = clubIds[index];
@@ -563,13 +631,12 @@ function youthDevelopmentLevelsByClubNumber(
       throw new Error(`Missing initial youth academy club context: ${clubIdValue}`);
     }
 
-    levels[index + 1] = deriveYouthDevelopmentLevel({
-      division: context.category,
-      clubReputation: context.reputation,
-    });
+    environments[index + 1] = developmentEnvironmentForClubContext(context);
   }
 
-  return levels;
+  return environments as Readonly<
+    Record<number, ReturnType<typeof developmentEnvironmentForClubContext>>
+  >;
 }
 
 function positionForInitialYouthSlot(worldSeed: string, seasonId: SeasonId, id: PlayerId, index: number): PlayerPosition {
@@ -596,13 +663,6 @@ export function seasonalYouthPlayerId(
   const clubKey = String(clubId).replace("club:", "").replaceAll(":", "-");
   const seasonKey = String(seasonId).replace("season:", "").replaceAll(":", "-");
   return playerId(`player:youth-intake-${clubKey}-${seasonKey}-${String(sequence).padStart(2, "0")}`);
-}
-
-function clubTierForReputation(reputation: number): PlayerGenerationClubTier {
-  if (reputation >= 8) return "title_contender";
-  if (reputation >= 6) return "playoff_contender";
-  if (reputation >= 4) return "mid_table";
-  return "survival";
 }
 
 interface ClubNameUsage {

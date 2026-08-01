@@ -13,7 +13,7 @@ Not started.
 
 Prove incoming permanent offers, market postures, loans, wage sharing,
 development, return, persistence, and UI together before spending time on the
-deferred `50 x 20`, which Phase 80C Step 09 now owns.
+deferred `50 x 20`, which Phase 81 Step 12 now owns.
 
 ## What To Implement
 

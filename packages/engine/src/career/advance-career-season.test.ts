@@ -36,17 +36,25 @@ import {
 } from "./advance-career-season.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { playerDevelopmentEnvironmentConfigFixture } from "../test-fixtures/player-development-environment-config.ts";
 
 function advanceCareerOneSeason(
   input: Omit<
     Parameters<typeof advanceCareerOneSeasonWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    | "wagePolicy"
+    | "marketBehaviorPolicy"
+    | "valuationConfig"
+    | "playerDevelopmentEnvironmentConfig"
   >,
 ) {
   return advanceCareerOneSeasonWithPolicy({
     ...input,
     wagePolicy: playerWagePolicyConfigFixture(),
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+    playerDevelopmentEnvironmentConfig:
+      playerDevelopmentEnvironmentConfigFixture(),
   });
 }
 
@@ -86,6 +94,7 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
       "squad_maintenance",
       "post_transfer_squad_maintenance",
       "next_calendar_merge",
+      "club_competitive_tier_freeze",
       "player_state_rollover",
       "season_inbox_delivery",
     ]);
@@ -108,7 +117,12 @@ test("advanceCareerOneSeason advances a completed durable season through the doc
     assert.equal(result.facts.squadHealth.seniorPlayerCount, 8);
     assert.equal(result.facts.youthHealth.activePlayerCount, 8);
     assert.equal(result.facts.seasonArchive?.championClubId, "club:selected");
+    assert.equal(result.facts.clubCompetitiveTiers.length, 2);
+    assert.ok(result.facts.clubCompetitiveTiers.every(
+      (fact) => fact.calculation === "carried_forward",
+    ));
     assert.equal(result.careerState.gameState.calendar.currentSeasonId, "season:0002");
+    assert.equal(result.careerState.clubCompetitiveTierState.seasonId, "season:0002");
     assert.equal(result.careerState.gameState.calendar.currentDate, gameDate(addDays(gameDate(20_007), 70)));
     assert.equal(result.careerState.seasonHistory?.length, 1);
     assert.equal(result.careerState.matchPreparation, undefined);
@@ -160,6 +174,7 @@ test("advanceCareerOneSeason archives player statistics before participation res
     {
       fixtureId: playedFixtureId,
       playerId: scorerPlayerId,
+      clubId: clubId("club:selected"),
       seasonId: seasonId("season:0001"),
       monthKey: "2024-10",
       started: true,
@@ -211,6 +226,39 @@ test("advanceCareerOneSeason archives player statistics before participation res
       saves: 0,
     });
     assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 0);
+  }
+});
+
+test("advanceCareerOneSeason flushes residual youth participation through the canonical development owner", () => {
+  const youthId = playerId("player:selected-youth");
+  const state = careerStateWithYouthParticipation(youthId);
+  const finishingBefore = Number(
+    state.gameState.players[youthId]?.abilities.technical.finishing,
+  );
+
+  const result = advanceCareerOneSeason({
+    careerState: state,
+    worldSeed: "youth-residual-flush-world",
+    mode: { kind: "completedSeason", tableRules: TABLE_RULES },
+  });
+
+  assert.equal(result.status, "advanced");
+  if (result.status === "advanced") {
+    assert.equal(result.facts.playerDevelopment.changeCount, 1);
+    assert.equal(result.facts.youthLifecycle.recordCount, 0);
+    assert.equal(
+      Number(
+        result.careerState.gameState.players[youthId]?.abilities.technical
+          .finishing,
+      ) > finishingBefore,
+      true,
+    );
+    assert.equal(
+      result.careerState.youthAcademyState?.clubRosters[
+        clubId("club:selected")
+      ]?.playerIds.includes(youthId),
+      true,
+    );
   }
 });
 
@@ -315,6 +363,7 @@ test("advanceCareerOneSeason supports report refresh without completed-season ar
       kind: "reportRefresh",
       nextSeasonId: seasonId("season:report-0002"),
       nextSeasonStartDate: gameDate(20_365),
+      competitionResults: [],
     },
   });
 
@@ -328,13 +377,137 @@ test("advanceCareerOneSeason supports report refresh without completed-season ar
       "youth_promotion",
       "squad_maintenance",
       "post_transfer_squad_maintenance",
+      "club_competitive_tier_freeze",
       "player_state_rollover",
     ]);
     assert.equal(result.facts.seasonArchive, undefined);
     assert.equal(result.careerState.seasonHistory, undefined);
     assert.equal(result.careerState.gameState.calendar.currentSeasonId, "season:report-0002");
+    assert.equal(result.careerState.clubCompetitiveTierState.seasonId, "season:report-0002");
     assert.equal(result.careerState.gameState.calendar.currentDate, gameDate(20_365));
   }
+});
+
+test("report refresh rejects duplicate competition results before advancement", () => {
+  const state = incompleteCareerStateFixture(fixtureId("fixture:000002"));
+  const duplicateCompetitionId = competitionId("competition:duplicate");
+  const finalTable = [{
+    position: 1,
+    clubId: clubId("club:selected"),
+    played: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+    goalDifference: 0,
+    points: 0,
+  }];
+
+  assert.throws(
+    () => advanceCareerOneSeason({
+      careerState: state,
+      worldSeed: "duplicate-report-competition-world",
+      mode: {
+        kind: "reportRefresh",
+        nextSeasonId: seasonId("season:report-0002"),
+        nextSeasonStartDate: gameDate(20_365),
+        competitionResults: [
+          { competitionId: duplicateCompetitionId, finalTable },
+          { competitionId: duplicateCompetitionId, finalTable },
+        ],
+      },
+    }),
+    /duplicate competition evidence/,
+  );
+  assert.deepEqual(state, incompleteCareerStateFixture(fixtureId("fixture:000002")));
+});
+
+test("report refresh rejects partial, reordered, and mismatched competition evidence", () => {
+  const state = reportCompetitionCareerStateFixture();
+  const snapshot = structuredClone(state);
+  const firstCompetitionId = competitionId("competition:report:first");
+  const secondCompetitionId = competitionId("competition:report:second");
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const firstResult = {
+    competitionId: firstCompetitionId,
+    finalTable: [reportTableRow(selectedClubId)],
+  } as const;
+  const secondResult = {
+    competitionId: secondCompetitionId,
+    finalTable: [reportTableRow(otherClubId)],
+  } as const;
+
+  for (const [label, competitionResults, pattern] of [
+    [
+      "partial",
+      [firstResult],
+      /requires 2 competition results, received 1/,
+    ],
+    [
+      "reordered",
+      [secondResult, firstResult],
+      /competition order mismatch/,
+    ],
+    [
+      "mismatched membership",
+      [
+        { ...firstResult, finalTable: [reportTableRow(otherClubId)] },
+        secondResult,
+      ],
+      /final table does not match competition membership/,
+    ],
+  ] as const) {
+    assert.throws(
+      () => advanceCareerOneSeason({
+        careerState: state,
+        worldSeed: `invalid-report-evidence-${label}`,
+        mode: {
+          kind: "reportRefresh",
+          nextSeasonId: seasonId("season:report-0002"),
+          nextSeasonStartDate: gameDate(20_365),
+          competitionResults,
+        },
+      }),
+      pattern,
+    );
+    assert.deepEqual(state, snapshot);
+  }
+});
+
+test("annual candidate providers share the canonical incoming season start date", () => {
+  const nextSeasonStartDate = gameDate(20_365);
+  let youthIntakeDate: GameState["calendar"]["currentDate"] | undefined;
+  let seniorIntakeDate: GameState["calendar"]["currentDate"] | undefined;
+  let youthActiveStockSources: readonly string[] | undefined;
+
+  const result = advanceCareerOneSeason({
+    careerState: incompleteCareerStateFixture(fixtureId("fixture:000002")),
+    worldSeed: "incoming-intake-date-world",
+    mode: {
+      kind: "reportRefresh",
+      nextSeasonId: seasonId("season:report-0002"),
+      nextSeasonStartDate,
+      competitionResults: [],
+    },
+    createYouthIntakeCandidates: (context) => {
+      youthIntakeDate = context.intakeDate;
+      youthActiveStockSources = context.activePlayerStock.map(
+        ({ source }) => source,
+      );
+      return [];
+    },
+    createSeniorIntakeCandidates: (context) => {
+      seniorIntakeDate = context.intakeDate;
+      return [];
+    },
+  });
+
+  assert.equal(result.status, "advanced");
+  assert.equal(youthIntakeDate, nextSeasonStartDate);
+  assert.equal(seniorIntakeDate, nextSeasonStartDate);
+  assert.deepEqual(youthActiveStockSources, Array(8).fill("senior"));
 });
 
 function completedCareerStateFixture(): CareerState {
@@ -344,6 +517,66 @@ function completedCareerStateFixture(): CareerState {
       fixtureFixture(fixtureId("fixture:000001"), seasonId("season:0001"), clubId("club:selected"), clubId("club:other"), true, gameDate(20_000)),
       fixtureFixture(fixtureId("fixture:000002"), seasonId("season:0001"), clubId("club:other"), clubId("club:selected"), true, gameDate(20_007)),
     ],
+  });
+}
+
+function careerStateWithYouthParticipation(youthId: PlayerId): CareerState {
+  const baseState = completedCareerStateFixture();
+  const selectedClubId = clubId("club:selected");
+  const youth = playerFixture(youthId, "st", 17);
+  const playerParticipationLedger = [
+    fixtureId("fixture:000001"),
+    fixtureId("fixture:000002"),
+  ].reduce(
+    (ledger, playedFixtureId) => accruePlayerFixtureParticipation(ledger, {
+      fixtureId: playedFixtureId,
+      playerId: youthId,
+      clubId: selectedClubId,
+      seasonId: seasonId("season:0001"),
+      monthKey: "2024-10",
+      started: true,
+      substituteAppearance: false,
+      minutes: 90,
+      rating: 8,
+      playedRoleMinutes: { striker: 90 },
+    }),
+    createEmptyPlayerParticipationLedger(),
+  );
+
+  return createCareerState({
+    ...baseState,
+    gameState: {
+      ...baseState.gameState,
+      players: {
+        ...baseState.gameState.players,
+        [youthId]: youth,
+      },
+      playerIds: [...baseState.gameState.playerIds, youthId],
+      playerStates: {
+        ...baseState.gameState.playerStates,
+        [youthId]: playerStateFixture(),
+      },
+    },
+    youthAcademyState: {
+      clubRosters: {
+        [selectedClubId]: {
+          clubId: selectedClubId,
+          playerIds: [youthId],
+        },
+      },
+      clubRosterIds: [selectedClubId],
+      playerLifecycle: {
+        [youthId]: {
+          playerId: youthId,
+          clubId: selectedClubId,
+          status: "academy",
+          academyEntrySeasonId: seasonId("season:0001"),
+          academyEntryDate: gameDate(19_000),
+        },
+      },
+      playerLifecycleIds: [youthId],
+    },
+    playerParticipationLedger,
   });
 }
 
@@ -390,6 +623,77 @@ function incompleteCareerStateFixture(unplayedFixtureId: Fixture["id"]): CareerS
       fixtureFixture(unplayedFixtureId, seasonId("season:0001"), clubId("club:other"), clubId("club:selected"), false, gameDate(20_007)),
     ],
   });
+}
+
+/** Builds the smallest canonical registry that can prove report-table coverage. */
+function reportCompetitionCareerStateFixture(): CareerState {
+  const state = incompleteCareerStateFixture(fixtureId("fixture:000002"));
+  const firstCompetitionId = competitionId("competition:report:first");
+  const secondCompetitionId = competitionId("competition:report:second");
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+
+  return createCareerState({
+    ...state,
+    gameState: {
+      ...state.gameState,
+      // These tests stop at the report-evidence guard, so unrelated fixture
+      // topology would only obscure the registry contract being exercised.
+      fixtures: {},
+      fixtureIds: [],
+      domesticCompetitionWorld: {
+        competitionIds: [firstCompetitionId, secondCompetitionId],
+        competitions: {
+          [firstCompetitionId]: reportCompetitionFixture(
+            firstCompetitionId,
+            [selectedClubId],
+          ),
+          [secondCompetitionId]: reportCompetitionFixture(
+            secondCompetitionId,
+            [otherClubId],
+          ),
+        },
+        seasonHistory: [],
+      },
+    },
+  });
+}
+
+/** Creates one registered competition without adding unrelated season policy. */
+function reportCompetitionFixture(
+  id: ReturnType<typeof competitionId>,
+  clubIds: readonly ClubId[],
+) {
+  return {
+    id,
+    name: String(id),
+    clubIds,
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: null,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
+  } as const;
+}
+
+/** Produces one structurally valid table row for registry-validation tests. */
+function reportTableRow(tableClubId: ClubId) {
+  return {
+    position: 1,
+    clubId: tableClubId,
+    played: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+    goalDifference: 0,
+    points: 0,
+  } as const;
 }
 
 function careerStateFixture(input: {
@@ -464,6 +768,17 @@ function gameStateFixture(input: {
       seed: "canonical-advancement-test",
       rngAlgorithmVersion: "test",
       saveSchemaVersion: 1,
+      calibrationVersions: {
+        topologyDecisionId: "topology:test",
+        playerRatingScaleVersion: "rating:test",
+        playerMarketCalibrationVersion: "market:test",
+        valuationCurvesVersion: "valuation:test",
+        askingPriceCurvesVersion: "asking-price:test",
+        marketBehaviorCalibrationVersion: "market-behavior:test",
+        wageFinanceCalibrationVersion: "wage-finance:test",
+        playerDevelopmentEnvironmentVersion:
+          playerDevelopmentEnvironmentConfigFixture().version,
+      },
     },
     calendar: {
       currentDate: gameDate(20_000),

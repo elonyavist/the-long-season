@@ -36,6 +36,8 @@ import {
   type CareerFinanceRejectionReason,
 } from "./career-finance-lifecycle.ts";
 import { deriveContractDemand, evaluateContractOffer } from "./contract-negotiation-demand.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 const RESPONSE_DELAY_MIN_DAYS = 2;
 const RESPONSE_DELAY_MAX_DAYS = 6;
@@ -401,6 +403,7 @@ export function advanceContractNegotiations(
   careerState: CareerState,
   throughDate: GameDate,
   wagePolicy: PlayerWagePolicyConfig,
+  valuationConfig: PlayerValuationConfig,
   clubFilter?: ClubId | ReadonlySet<ClubId>,
 ): AdvanceContractNegotiationsResult {
   const initialState = careerState.contractNegotiationState;
@@ -529,12 +532,22 @@ export function advanceContractNegotiations(
     }
 
     const snapshot = careerSnapshot();
+    const player = snapshot.gameState.players[negotiation.playerId];
+    if (player === undefined) {
+      throw new Error(`contract negotiation player not found: ${negotiation.playerId}`);
+    }
     const demand = deriveContractDemand({
       careerState: snapshot,
       wagePolicy,
       playerId: negotiation.playerId,
       clubId: negotiation.clubId,
       evaluatedOn: responseDate,
+      publicAssessment: derivePublicPlayerAssessment({
+        player,
+        currentDate: responseDate,
+        ratingScale: valuationConfig.ratingScale,
+        potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+      }),
     });
     const evaluation = evaluateContractOffer({
       worldSeed: careerState.gameState.meta.seed,

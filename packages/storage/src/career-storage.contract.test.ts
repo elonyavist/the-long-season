@@ -145,6 +145,7 @@ function playerParticipationLedgerFixture(player: ReturnType<typeof playerId>) {
   const accrued = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
     fixtureId: fixtureId("fixture:contract-001"),
     playerId: player,
+    clubId: clubId("club:contract"),
     seasonId: season,
     monthKey,
     started: true,

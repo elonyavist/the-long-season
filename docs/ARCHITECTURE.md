@@ -1295,11 +1295,11 @@ must be implemented in the ordered 80A, 80B, and 80C steps.
 10. `simulation-execution-policy.ts` owns the host-independent default/maximum:
     `min(7, independent work items)`. Direct and checkpointed multi-world CLI
     adapters use it; explicit overrides can only reduce concurrency.
-11. The next user-requested `50 x 20` is reserved for Phase 80C Step 09, after
+11. The next user-requested `50 x 20` is reserved for Phase 81 Step 12, after
     the Phase 80 UI reworks, Phase 80A player-model work, Phase 80B market/loan
-    work, and Phase 80C competitive-race work. It uses `50` shards and `7`
-    workers. The interrupted Phase 79D direct run produced no report and is not
-    evidence.
+    work, Phase 80C competitive-race work, and Phase 81 match-engine work. It
+    uses `50` stable shards and `7` workers. The interrupted Phase 79D direct
+    run produced no report and is not evidence.
 
 ### Render Localized CLI Output
 

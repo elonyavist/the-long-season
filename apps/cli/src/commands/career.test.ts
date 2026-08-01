@@ -1,20 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
 import {
   createFakeDomesticWorld,
-  playerEconomyCalibration,
-  playerMarketCalibration,
   playerValuationConfig,
 } from "@game/content";
-import {
-  derivePlayerValuation,
-  derivePublicPlayerAssessments,
-} from "@game/engine";
-import { createPlayerMarketCalibrationReport } from "@game/simulation-tools";
 import { JsonCareerStorage, StorageError } from "@game/storage";
 
 import { runCareerCommand } from "./career.ts";
@@ -46,95 +39,19 @@ test("CLI builds the canonical three-division topology and shared identity hash"
     "competition:ita-2",
     "competition:ita-3",
   ]);
-  assert.equal(canonicalCareerIdentityHash(state), "ac2f4c6c");
-});
-
-test("canonical generated public values fit every versioned division target", () => {
-  const observations: Parameters<
-    typeof createPlayerMarketCalibrationReport
-  >[0]["observations"][number][] = [];
-  const clubSquadObservations: Parameters<
-    typeof createPlayerMarketCalibrationReport
-  >[0]["clubSquadObservations"][number][] = [];
-
-  for (let worldNumber = 1; worldNumber <= 3; worldNumber += 1) {
-    const sourceLabel = `valuation-fit-${String(worldNumber).padStart(3, "0")}`;
-    const world = createFakeDomesticWorld({ worldSeed: sourceLabel });
-    for (const division of [
-      "first_division",
-      "second_division",
-      "third_division",
-    ] as const) {
-      for (const clubId of world.divisionClubIds[division]) {
-        const club = world.clubsById[clubId];
-        if (club === undefined) continue;
-        const players = club.playerIds.flatMap((playerId) => {
-          const player = world.players[playerId];
-          return player === undefined ? [] : [player];
-        });
-        const assessments = new Map(
-          derivePublicPlayerAssessments({
-            ratingScale: playerValuationConfig.ratingScale,
-            players,
-          }).map((assessment) => [assessment.playerId, assessment]),
-        );
-        let publicSquadValueMinorUnits = 0;
-        for (const player of players) {
-          const assessment = assessments.get(player.id);
-          if (assessment === undefined) continue;
-          const valuation = derivePlayerValuation({
-            player,
-            currentDate: world.seasonStartDate,
-            config: playerValuationConfig,
-            marketContext: { kind: "contracted", division },
-          });
-          publicSquadValueMinorUnits += Number(valuation.value);
-          observations.push({
-            division,
-            currentRating: assessment.currentRating.stars,
-            potentialRating: assessment.potentialRating.stars,
-            publicValueMinorUnits: Number(valuation.value),
-            population: "initial_starter",
-            sourceLabel,
-          });
-        }
-        assert.equal(players.length, 22);
-        clubSquadObservations.push({
-          division,
-          activeSeniorCount: 22,
-          publicSquadValueMinorUnits,
-          sourceLabel,
-        });
-      }
-    }
-  }
-
-  const report = createPlayerMarketCalibrationReport({
-    versions: playerEconomyCalibration.versions,
-    metadata: {
-      seedPrefix: "valuation-fit-",
-      worldCount: 3,
-      projectionMethod: "canonical 22-active-senior generated clubs",
-    },
-    observations,
-    clubSquadObservations,
-    targets: playerMarketCalibration.gameDesignTargets,
-    divisionBaselines: playerMarketCalibration.divisionBaselines,
-  });
-
-  assert.equal(report.fitStatus, "pass");
-  assert.deepEqual(
-    report.divisions.map((division) => [
-      division.division,
-      division.valueFit.status,
-      division.normalized22SquadComparator.comparatorKind,
-    ]),
-    [
-      ["first_division", "pass", "normalized_22_active_seniors"],
-      ["second_division", "pass", "normalized_22_active_seniors"],
-      ["third_division", "pass", "normalized_22_active_seniors"],
-    ],
+  assert.equal(
+    state.clubCompetitiveTierState.seasonId,
+    state.gameState.calendar.currentSeasonId,
   );
+  assert.deepEqual(
+    ["title_contender", "playoff_contender", "mid_table", "survival"].map((tier) =>
+      state.gameState.clubIds.filter((clubId) =>
+        state.clubCompetitiveTierState.tierByClubId[clubId] === tier
+      ).length
+    ),
+    [12, 12, 18, 12],
+  );
+  assert.equal(canonicalCareerIdentityHash(state), "b12d5dd0");
 });
 
 test("CLI rejects a career with a mismatched immutable calibration version", () => {
@@ -207,6 +124,65 @@ test("CLI resets only the incompatible beta save through canonical storage", asy
     await assert.rejects(
       () => runCareerCommand(
         ["--save=cli-version-reset", "--inspect"],
+        captureIo(),
+        { storageDirectoryPath: directoryPath },
+      ),
+      (error: unknown) =>
+        error instanceof StorageError
+        && error.code === "unsupported_schema_version",
+    );
+    await assert.rejects(
+      () => storage.loadCareer(incompatibleId),
+      (error: unknown) =>
+        error instanceof StorageError && error.code === "save_not_found",
+    );
+    assert.equal((await storage.loadCareer(compatibleId)).saveId, compatibleId);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("CLI resets a beta save rejected by the storage schema before calibration validation", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const incompatibleId = "save:cli-storage-schema-reset" as CliSaveId;
+  const compatibleId = "save:cli-storage-schema-compatible" as CliSaveId;
+  const storage = new JsonCareerStorage({ directoryPath });
+  const incompatible = careerStateFromNewWorld(
+    incompatibleId,
+    createFakeDomesticWorld({ worldSeed: "cli-storage-schema-reset" }),
+    "cli-storage-schema-reset",
+  );
+  const compatible = careerStateFromNewWorld(
+    compatibleId,
+    createFakeDomesticWorld({ worldSeed: "cli-storage-schema-compatible" }),
+    "cli-storage-schema-compatible",
+  );
+  const incompatiblePath = join(
+    directoryPath,
+    `${encodeURIComponent(incompatibleId)}.career.json`,
+  );
+
+  try {
+    await storage.saveCareer({
+      saveId: incompatibleId,
+      name: "Incompatible storage schema",
+      state: incompatible,
+    });
+    await storage.saveCareer({
+      saveId: compatibleId,
+      name: "Compatible storage schema",
+      state: compatible,
+    });
+    const stored = JSON.parse(await readFile(incompatiblePath, "utf8")) as Record<string, unknown>;
+    await writeFile(
+      incompatiblePath,
+      `${JSON.stringify({ ...stored, saveSchemaVersion: 1 }, null, 2)}\n`,
+      "utf8",
+    );
+
+    await assert.rejects(
+      () => runCareerCommand(
+        ["--save=cli-storage-schema-reset", "--inspect"],
         captureIo(),
         { storageDirectoryPath: directoryPath },
       ),
@@ -392,7 +368,7 @@ test("career command creates and writes a new seeded career world", async () => 
       loaded.gameState.domesticCompetitionWorld?.competitionIds,
       ["competition:ita-1", "competition:ita-2", "competition:ita-3"],
     );
-    assert.equal(Object.keys(loaded.gameState.meta.calibrationVersions ?? {}).length, 7);
+    assert.equal(Object.keys(loaded.gameState.meta.calibrationVersions ?? {}).length, 8);
     const firstFixtureId = loaded.gameState.fixtureIds[0];
     if (firstFixtureId === undefined) {
       throw new Error("Expected a persisted first fixture ID");
@@ -473,6 +449,11 @@ test("career command prints a dashboard smoke view without mutating the save", a
     assert.equal(dashboardIo.stdoutLines.includes("World seed: world-a"), true);
     assert.equal(dashboardIo.stdoutLines.includes("Current date: 2026-08-01"), true);
     assert.equal(dashboardIo.stdoutLines.some((line) => new RegExp(`^Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
+    assert.equal(dashboardIo.stdoutLines.includes("Development environment: Adequate"), true);
+    assert.equal(
+      dashboardIo.stdoutLines.some((line) => /(?:0\.92|0\.95|0\.98|1\.00|1\.03|1\.06|1\.10)/.test(line)),
+      false,
+    );
     assert.equal(dashboardIo.stdoutLines.includes("Next selected-club fixture:"), true);
     assert.equal(
       dashboardIo.stdoutLines.some((line) => new RegExp(`^  fixture:ita-3:2026:[0-9]{6} 2026-08-01 round 1: ${CLUB_NAME_PATTERN} vs ${CLUB_NAME_PATTERN} \\((home|away)\\)$`).test(line)),
@@ -516,6 +497,7 @@ test("career command localizes dashboard smoke output in Italian", async () => {
     assert.equal(exitCode, 0);
     assert.equal(dashboardIo.stderrLines.length, 0);
     assert.equal(dashboardIo.stdoutLines[0], "The Long Season dashboard carriera");
+    assert.equal(dashboardIo.stdoutLines.includes("Ambiente di sviluppo: Adeguato"), true);
     assert.equal(dashboardIo.stdoutLines.includes("Preparazione partita:"), true);
     assert.equal(dashboardIo.stdoutLines.includes("  Formazione salvata: mancante"), true);
     assert.equal(dashboardIo.stdoutLines.includes("Azioni:"), true);
@@ -694,8 +676,14 @@ test("career command rolls all three competitions through one atomic boundary", 
     assert.equal(rolledOver.gameState.clubs[relegatedAiClubId]?.category, "second_division");
     assert.deepEqual(rolledOver.gameState.clubs[rolledOver.selectedClubId]?.playerIds, selectedPlayerIds);
     assert.deepEqual(rolledOver.gameState.clubs[relegatedAiClubId]?.playerIds, relegatedAiPlayerIds);
-    assert.equal(rolledOver.gameState.clubs[rolledOver.selectedClubId]?.reputation, selectedReputation);
-    assert.equal(rolledOver.gameState.clubs[relegatedAiClubId]?.reputation, relegatedAiReputation);
+    assert.equal(
+      rolledOver.gameState.clubs[rolledOver.selectedClubId]?.reputation,
+      selectedReputation + 2,
+    );
+    assert.equal(
+      rolledOver.gameState.clubs[relegatedAiClubId]?.reputation,
+      relegatedAiReputation - 2,
+    );
     assert.equal(currentSeasonFixturesForClub(rolledOver, rolledOver.selectedClubId).length, 34);
     assert.equal(currentSeasonFixturesForClub(rolledOver, relegatedAiClubId).length, 34);
   } finally {

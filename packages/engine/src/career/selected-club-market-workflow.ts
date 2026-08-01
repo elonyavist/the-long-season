@@ -157,6 +157,7 @@ export function advanceSelectedClubMarketLifecycles(input: {
     working = advanceTransferPlayerNegotiations({
       careerState: working,
       wagePolicy: input.wagePolicy,
+      valuationConfig: input.valuationConfig,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
       throughDate: input.throughDate,
       transferWindows: input.transferWindows,
@@ -166,6 +167,7 @@ export function advanceSelectedClubMarketLifecycles(input: {
     careerState: working,
     throughDate: input.throughDate,
     wagePolicy: input.wagePolicy,
+    valuationConfig: input.valuationConfig,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   }).careerState;
 }

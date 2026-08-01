@@ -18,7 +18,9 @@ import {
 } from "@game/domain";
 
 import { evaluateMarketActionEligibility } from "../market/market-eligibility.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 import { derivePlayerWillingness } from "../market/player-willingness.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import {
   applyCareerPermanentTransfer,
   type ApplyCareerPermanentTransferResult,
@@ -57,6 +59,7 @@ export type TransferPlayerNegotiationCommandResult =
 export interface SubmitTransferPlayerOfferInput {
   readonly careerState: CareerState;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly negotiationId: TransferNegotiationId;
   readonly submittedOn: GameDate;
@@ -91,6 +94,8 @@ export function submitTransferPlayerOffer(
     negotiation.sellingClubId,
   );
   if (currentContract === undefined) return rejected(input.negotiationId, "player_contract_not_found");
+  const player = input.careerState.gameState.players[negotiation.playerId];
+  if (player === undefined) return rejected(input.negotiationId, "player_contract_not_found");
 
   const demand = deriveContractDemand({
     careerState: input.careerState,
@@ -98,6 +103,12 @@ export function submitTransferPlayerOffer(
     playerId: negotiation.playerId,
     clubId: negotiation.buyingClubId,
     evaluatedOn: input.submittedOn,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.submittedOn,
+      ratingScale: input.valuationConfig.ratingScale,
+      potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    }),
     currentContract,
     isFreeAgent: false,
   });
@@ -122,6 +133,7 @@ export function submitTransferPlayerOffer(
 export interface AdvanceTransferPlayerNegotiationsInput {
   readonly careerState: CareerState;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly throughDate: GameDate;
   readonly transferWindows: SeasonTransferWindows;
@@ -215,6 +227,7 @@ export function advanceTransferPlayerNegotiations(
       input.protectSellerSquadDepth === true,
       input.wagePolicy,
       input.marketBehaviorPolicy,
+      input.valuationConfig,
     );
     careerState = resolution.careerState;
     resolved.push({ negotiationId, status: resolution.negotiation.status });
@@ -228,6 +241,7 @@ export function advanceTransferPlayerNegotiations(
 export interface ResolveTransferPlayerCounterInput {
   readonly careerState: CareerState;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly negotiationId: TransferNegotiationId;
   readonly decidedOn: GameDate;
@@ -253,6 +267,7 @@ export function acceptTransferPlayerCounter(
     completedOn: input.decidedOn,
     transferWindows: input.transferWindows,
     wagePolicy: input.wagePolicy,
+    valuationConfig: input.valuationConfig,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     protectSellerSquadDepth: input.protectSellerSquadDepth === true,
   });
@@ -280,6 +295,7 @@ function resolveSubmittedOffer(
   protectSellerSquadDepth: boolean,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
+  valuationConfig: PlayerValuationConfig,
 ): Extract<TransferPlayerNegotiationCommandResult, { readonly status: "applied" }> {
   const decidedOn = negotiation.clock.responseDueOn;
   const player = careerState.gameState.players[negotiation.playerId];
@@ -291,16 +307,19 @@ function resolveSubmittedOffer(
   }
 
   const willingness = derivePlayerWillingness({
-    player,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: decidedOn,
+      ratingScale: valuationConfig.ratingScale,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+    }),
     sellingClub,
     buyingClub,
     currentTier: sellingClub.category,
     destinationTier: buyingClub.category,
-    currentDate: decidedOn,
     currentContract,
     proposedTerms: negotiation.offeredTerms,
     marketBehaviorPolicy,
-    ratingScale: wagePolicy.ratingScale,
   });
   if (willingness.status === "rejected") {
     const playerRejected: TransferNegotiation = {
@@ -356,6 +375,7 @@ function resolveSubmittedOffer(
     transferWindows,
     protectSellerSquadDepth,
     wagePolicy,
+    valuationConfig,
     marketBehaviorPolicy,
   });
 }
@@ -373,6 +393,7 @@ function completeTransfer(input: {
   readonly transferWindows: SeasonTransferWindows;
   readonly protectSellerSquadDepth: boolean;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): Extract<TransferPlayerNegotiationCommandResult, { readonly status: "applied" }> {
   if (
@@ -396,6 +417,7 @@ function completeTransfer(input: {
     occurredOn: input.completedOn,
     transferWindows: input.transferWindows,
     wagePolicy: input.wagePolicy,
+    valuationConfig: input.valuationConfig,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     acceptedDeal: {
       publicValue: input.negotiation.publicValue,

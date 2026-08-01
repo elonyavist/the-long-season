@@ -278,7 +278,7 @@ function evaluationFixture(terms: ContractOfferTerms): ContractOfferEvaluation {
       evaluatedOn: gameDate(20_005),
       age: 27,
       currentAbility: 10,
-      reachablePotential: 11,
+      publicPotentialP50Ability: 11,
       role: "striker",
       expectedSquadStatus: "regular_starter",
       currentAnnualWage: nonNegativeMoney(60_000_00),

@@ -1,7 +1,23 @@
-import type { ClubCategory } from "@game/domain";
+import type { ClubCategory, ClubCompetitiveTier } from "@game/domain";
 
 /** Club-strength tiers used by deterministic player generation. */
-export type PlayerGenerationClubTier = "title_contender" | "playoff_contender" | "mid_table" | "survival";
+export type PlayerGenerationClubTier = ClubCompetitiveTier;
+
+/**
+ * Club facts shared by every opening-world player generator.
+ *
+ * `competitiveTier` is composed once from the canonical opening division rank
+ * so senior and academy players cannot infer different sporting contexts from
+ * the same club reputation.
+ */
+export interface OpeningPlayerGenerationClubContext {
+  /** Division where the club starts the career. */
+  readonly category: ClubCategory;
+  /** Opening reputation used by identity and academy-development policies. */
+  readonly reputation: number;
+  /** Canonical opening 4/4/6/4 competitive tier. */
+  readonly competitiveTier: PlayerGenerationClubTier;
+}
 
 /** Inclusive numeric band used by player-generation profiles. */
 export interface PlayerGenerationBandRange {
@@ -83,16 +99,22 @@ export function getPlayerGenerationBand(
  * authored content can provide tier metadata directly instead of using this
  * generated-order helper.
  */
-export function clubTierForGeneratedClubNumber(clubNumber: number): PlayerGenerationClubTier {
-  if (clubNumber <= 4) {
+export function openingCompetitiveTierForClubRank(
+  clubRank: number,
+): PlayerGenerationClubTier {
+  if (!Number.isSafeInteger(clubRank) || clubRank < 1 || clubRank > 18) {
+    throw new Error(`Opening club rank must be an integer from 1 to 18: ${clubRank}`);
+  }
+
+  if (clubRank <= 4) {
     return "title_contender";
   }
 
-  if (clubNumber <= 8) {
+  if (clubRank <= 8) {
     return "playoff_contender";
   }
 
-  if (clubNumber <= 14) {
+  if (clubRank <= 14) {
     return "mid_table";
   }
 

@@ -1,17 +1,26 @@
 import {
   abilityValue,
   hardCapForRoleAbility,
+  PLAYER_ABILITY_KEYS,
+  roleAttributeBucket,
   type ClubCategory,
   type PlayerAbilities,
   type PlayerAbilityKey,
   type PlayerRole,
 } from "@game/domain";
+import { deriveRng } from "@game/shared";
 
 import {
   resolveEffectiveCurrentAbilityBandForRoleAbility,
   sampleCurrentAbilityInBand,
   type CurrentAbilityRarityLane,
 } from "./player-current-ability-bands.ts";
+import {
+  resolveGeneratedCurrentAbilityRarityLane,
+  resolveGeneratedCurrentQualityProfile,
+  type GeneratedCurrentQualityProfile,
+  type GeneratedRoutinePlayerArchetypeKey,
+} from "./player-archetypes.ts";
 import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
 
 /** Minimum current physical floor for generated footballers. */
@@ -31,10 +40,28 @@ export interface BuildCurrentPlayerProfileInput {
   readonly role: PlayerRole;
   /** Player age in years. Youth ages use youth bands, senior ages use senior bands. */
   readonly ageYears: number;
-  /** Current ability rarity lane for this player. */
+  /** Current ability rarity lane selected by the caller's generation context. */
   readonly rarityLane: CurrentAbilityRarityLane;
+  /** Speaking current-quality role, kept independent from potential class. */
+  readonly currentQualityProfile: GeneratedCurrentQualityProfile;
   /** Small squad-depth adjustment applied inside the resolved band. */
   readonly slotDepthAdjustment?: number;
+}
+
+/** @internal Input for the joint owner's deterministic current-band construction. */
+export interface BuildCurrentPlayerProfileAtBandPositionInput
+  extends BuildCurrentPlayerProfileInput {
+  /** Closed `0..1` position shared by every role-template ability band. */
+  readonly bandPosition: number;
+  /** Whether explicit ceiling policy may open a raw role-defining lower edge. */
+  readonly minimumBandPolicy: "authored" | "ceiling_conditioned_raw";
+}
+
+/** Input for current generation when no explicit contextual ceiling exists. */
+export interface BuildRoutineCurrentPlayerProfileInput
+  extends Omit<BuildCurrentPlayerProfileInput, "currentQualityProfile"> {
+  /** Routine archetype whose current-quality semantics own the profile. */
+  readonly archetypeKey: GeneratedRoutinePlayerArchetypeKey;
 }
 
 /**
@@ -46,65 +73,206 @@ export interface BuildCurrentPlayerProfileInput {
  * below the minimum credible footballer floor.
  */
 export function buildCurrentPlayerProfile(input: BuildCurrentPlayerProfileInput): PlayerAbilities {
-  const sampled: PlayerAbilities = {
-    technical: {
-      finishing: currentRating(input, "technical.finishing"),
-      passing: currentRating(input, "technical.passing"),
-      longPassing: currentRating(input, "technical.longPassing"),
-      crossing: currentRating(input, "technical.crossing"),
-      dribbling: currentRating(input, "technical.dribbling"),
-      technique: currentRating(input, "technical.technique"),
-      tackling: currentRating(input, "technical.tackling"),
-      penalties: currentRating(input, "technical.penalties"),
-      freeKicks: currentRating(input, "technical.freeKicks"),
-    },
-    physical: {
-      pace: currentRating(input, "physical.pace"),
-      strength: currentRating(input, "physical.strength"),
-      stamina: currentRating(input, "physical.stamina"),
-      agility: currentRating(input, "physical.agility"),
-      heading: currentRating(input, "physical.heading"),
-    },
-    mental: {
-      positioning: currentRating(input, "mental.positioning"),
-      vision: currentRating(input, "mental.vision"),
-      anticipation: currentRating(input, "mental.anticipation"),
-      composure: currentRating(input, "mental.composure"),
-      determination: currentRating(input, "mental.determination"),
-      leadership: currentRating(input, "mental.leadership"),
-    },
-    goalkeeping: {
-      reflexes: currentRating(input, "goalkeeping.reflexes"),
-      handling: currentRating(input, "goalkeeping.handling"),
-      rushingOut: currentRating(input, "goalkeeping.rushingOut"),
-      goalkeeperPositioning: currentRating(input, "goalkeeping.goalkeeperPositioning"),
-      footwork: currentRating(input, "goalkeeping.footwork"),
-    },
-  };
-
-  return sampled;
+  return buildCurrentPlayerAbilities(input, (abilityKey) => sampledCurrentRating(input, abilityKey));
 }
 
-function currentRating(input: BuildCurrentPlayerProfileInput, abilityKey: PlayerAbilityKey) {
-  const range = resolveEffectiveCurrentAbilityBandForRoleAbility({
-    division: input.division,
-    clubTier: input.clubTier,
-    role: input.role,
-    abilityKey,
-    ageYears: input.ageYears,
-    rarityLane: input.rarityLane,
+/**
+ * Constructs a current profile at one explicit point inside every role band.
+ *
+ * The joint prospect owner uses this monotone construction seam to find the
+ * exact interval where a sampled ceiling is both reachable and still at least
+ * one public star above current ability. It is not a post-generation clamp:
+ * every ability is authored inside its resolved division/tier/role band.
+ *
+ * @internal The package barrel exposes only the joint-profile boundary.
+ */
+export function buildCurrentPlayerProfileAtBandPosition(
+  input: BuildCurrentPlayerProfileAtBandPositionInput,
+): PlayerAbilities {
+  if (!Number.isFinite(input.bandPosition) || input.bandPosition < 0 || input.bandPosition > 1) {
+    throw new RangeError(`Current-profile band position must be between 0 and 1: ${input.bandPosition}`);
+  }
+
+  const bandShapeOffsets = sampleBandShapeOffsets(input);
+  return buildCurrentPlayerAbilities(
+    input,
+    (abilityKey) => positionedCurrentRating(
+      input,
+      abilityKey,
+      bandShapeOffsets.get(abilityKey) ?? 0,
+    ),
+  );
+}
+
+function buildCurrentPlayerAbilities(
+  input: BuildCurrentPlayerProfileInput,
+  abilityForKey: (abilityKey: PlayerAbilityKey) => ReturnType<typeof abilityValue>,
+): PlayerAbilities {
+  return {
+    technical: {
+      finishing: abilityForKey("technical.finishing"),
+      passing: abilityForKey("technical.passing"),
+      longPassing: abilityForKey("technical.longPassing"),
+      crossing: abilityForKey("technical.crossing"),
+      dribbling: abilityForKey("technical.dribbling"),
+      technique: abilityForKey("technical.technique"),
+      tackling: abilityForKey("technical.tackling"),
+      penalties: abilityForKey("technical.penalties"),
+      freeKicks: abilityForKey("technical.freeKicks"),
+    },
+    physical: {
+      pace: abilityForKey("physical.pace"),
+      strength: abilityForKey("physical.strength"),
+      stamina: abilityForKey("physical.stamina"),
+      agility: abilityForKey("physical.agility"),
+      heading: abilityForKey("physical.heading"),
+    },
+    mental: {
+      positioning: abilityForKey("mental.positioning"),
+      vision: abilityForKey("mental.vision"),
+      anticipation: abilityForKey("mental.anticipation"),
+      composure: abilityForKey("mental.composure"),
+      determination: abilityForKey("mental.determination"),
+      leadership: abilityForKey("mental.leadership"),
+    },
+    goalkeeping: {
+      reflexes: abilityForKey("goalkeeping.reflexes"),
+      handling: abilityForKey("goalkeeping.handling"),
+      rushingOut: abilityForKey("goalkeeping.rushingOut"),
+      goalkeeperPositioning: abilityForKey("goalkeeping.goalkeeperPositioning"),
+      footwork: abilityForKey("goalkeeping.footwork"),
+    },
+  };
+}
+
+/**
+ * Builds one archetype-aware current profile without rejection sampling.
+ *
+ * The joint-profile owner is the composition boundary for generated players.
+ * This lower-level routine branch keeps archetype current semantics in one
+ * place while explicit prospects use the ceiling-conditioned construction
+ * seam below.
+ */
+export function buildRoutineCurrentPlayerProfile(
+  input: BuildRoutineCurrentPlayerProfileInput,
+): PlayerAbilities {
+  const effectiveRarityLane = resolveGeneratedCurrentAbilityRarityLane({
+    archetypeKey: input.archetypeKey,
+    requestedLane: input.rarityLane,
   });
+  return buildCurrentPlayerProfile({
+    ...input,
+    currentQualityProfile: resolveGeneratedCurrentQualityProfile({
+      archetypeKey: input.archetypeKey,
+      effectiveRarityLane,
+    }),
+    rarityLane: effectiveRarityLane,
+  });
+}
+
+function sampledCurrentRating(
+  input: BuildCurrentPlayerProfileInput,
+  abilityKey: PlayerAbilityKey,
+): ReturnType<typeof abilityValue> {
+  const range = resolvedCurrentAbilityRange(input, abilityKey);
   const sampled = sampleCurrentAbilityInBand({
     seed: input.seed,
     streamName: "player-role-aware-current-ability",
     playerKey: `${input.playerKey}:${abilityKey}`,
     range,
   });
-  const adjusted = sampled + (input.slotDepthAdjustment ?? 0);
-  const capped = capByRole(clamp(adjusted, range.minInclusive, range.maxInclusive), input.role, abilityKey);
-  const floored = isPhysicalAbility(abilityKey) ? Math.max(GENERATED_CURRENT_PHYSICAL_FLOOR, capped) : capped;
 
-  return abilityValue(clamp(floored, 0, 20));
+  return finalizeCurrentAbility(sampled, input, abilityKey, range);
+}
+
+function positionedCurrentRating(
+  input: BuildCurrentPlayerProfileAtBandPositionInput,
+  abilityKey: PlayerAbilityKey,
+  bandShapeOffset: number,
+): ReturnType<typeof abilityValue> {
+  const authoredRange = resolvedCurrentAbilityRange(input, abilityKey);
+  const bucket = roleAttributeBucket(input.role, abilityKey);
+  const range = input.minimumBandPolicy === "ceiling_conditioned_raw"
+      && (bucket === "coreForRole" || bucket === "secondaryForRole")
+    ? { minInclusive: 1, maxInclusive: authoredRange.maxInclusive }
+    : authoredRange;
+  const positionedBandPosition = shapedBandPosition(input, bandShapeOffset);
+  const positioned = range.minInclusive
+    + positionedBandPosition * (range.maxInclusive - range.minInclusive);
+
+  return finalizeCurrentAbility(positioned, input, abilityKey, range);
+}
+
+/**
+ * Adds stable per-ability shape without breaking the monotone envelope seam.
+ *
+ * The taper is zero at both endpoints, so position `0` and `1` remain the
+ * exact profile bounds used by feasibility checks. Inside the interval, the
+ * small fixed offset prevents every attribute in one bucket from collapsing
+ * to the same number. Its bounded derivative keeps every ability monotone as
+ * the shared profile position rises.
+ */
+function shapedBandPosition(
+  input: BuildCurrentPlayerProfileAtBandPositionInput,
+  bandShapeOffset: number,
+): number {
+  const endpointTaper = 4 * input.bandPosition * (1 - input.bandPosition);
+  return clamp(input.bandPosition + bandShapeOffset * endpointTaper, 0, 1);
+}
+
+/** Samples one order-explicit shape map so attribute construction order is irrelevant. */
+function sampleBandShapeOffsets(
+  input: BuildCurrentPlayerProfileAtBandPositionInput,
+): ReadonlyMap<PlayerAbilityKey, number> {
+  const rng = deriveRng(
+    input.seed,
+    "player-contextual-current-profile-shape",
+    input.playerKey,
+  );
+  const offsets = new Map<PlayerAbilityKey, number>();
+  for (const abilityKey of PLAYER_ABILITY_KEYS) {
+    offsets.set(
+      abilityKey,
+      (rng.nextFloat() * 2 - 1) * MAXIMUM_BAND_SHAPE_OFFSET,
+    );
+  }
+  return offsets;
+}
+
+function resolvedCurrentAbilityRange(
+  input: BuildCurrentPlayerProfileInput,
+  abilityKey: PlayerAbilityKey,
+) {
+  return resolveEffectiveCurrentAbilityBandForRoleAbility({
+    division: input.division,
+    clubTier: input.clubTier,
+    role: input.role,
+    abilityKey,
+    ageYears: input.ageYears,
+    rarityLane: input.rarityLane,
+    currentQualityProfile: input.currentQualityProfile,
+  });
+}
+
+function finalizeCurrentAbility(
+  sampled: number,
+  input: BuildCurrentPlayerProfileInput,
+  abilityKey: PlayerAbilityKey,
+  range: ReturnType<typeof resolvedCurrentAbilityRange>,
+): ReturnType<typeof abilityValue> {
+  const adjusted = clamp(
+    sampled + (input.slotDepthAdjustment ?? 0),
+    range.minInclusive,
+    range.maxInclusive,
+  );
+  const floored = isPhysicalAbility(abilityKey)
+    ? Math.max(GENERATED_CURRENT_PHYSICAL_FLOOR, adjusted)
+    : adjusted;
+  // Role incoherence is stricter than the generic footballer floor. For
+  // example, a goalkeeper's heading cap remains 6 instead of being raised to 7.
+  const capped = capByRole(floored, input.role, abilityKey);
+
+  return abilityValue(clamp(capped, 0, 20));
 }
 
 function capByRole(value: number, role: PlayerRole, abilityKey: PlayerAbilityKey): number {
@@ -119,3 +287,5 @@ function isPhysicalAbility(abilityKey: PlayerAbilityKey): boolean {
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
+
+const MAXIMUM_BAND_SHAPE_OFFSET = 0.08;

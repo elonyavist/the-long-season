@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Done.
 
 ## Goal
 
@@ -82,3 +82,24 @@ No long run belongs to this step.
   thresholds are named, and new source-backed thresholds are frozen before
   tuning.
 - Step 02 has exact owners and no unresolved product decision.
+
+## Completion Record
+
+- The historical Phase 80 observation (`11 / 1,710`) had no retained seed list,
+  world hashes, or executable reproduction owner. It remains labelled as
+  historical planning evidence and was not presented as reproducible.
+- A new canonical pre-change baseline now owns `20` stable seeds, one
+  composition hash per world, explicit current/P50/public-upper/stored-ceiling
+  distributions, and positive denominators. It observes `11 / 1,723` exact
+  age-17 players with at least `+1.0` public star of upside.
+- The audit records the complete pre-change generation, development,
+  projection, valuation, AI-information, category, and free-agent owners. It
+  also freezes the new calibration epoch and names the historical 79C/79D
+  evidence that cannot be compared after the accepted model replacement.
+- This pre-change diagnostic path deliberately records the live owner's
+  historical `365.2425`-day convention. Step 05 replaces the live canonical
+  definition with exact completed civil years and starts a non-comparable age
+  epoch rather than rewriting this baseline.
+- Verification on Node `24.16.0`: focused Vitest `26/26`, simulation-tools and
+  CLI typechecks, `git diff --check`, and `graphify update .` all pass. No
+  longitudinal cohort ran.

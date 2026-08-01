@@ -62,7 +62,8 @@ The governing contract is:
   code.
 - Race diagnostics live in their own Module and cannot pass on zero
   observations.
-- Step 09 alone owns the deferred checkpointed `50 x 20`.
+- Step 09 closes Phase 80C on bounded evidence and hands the deferred
+  checkpointed `50 x 20` to Phase 81 Step 12.
 
 ## Ordered Steps
 
@@ -74,7 +75,7 @@ The governing contract is:
 6. `06-free-agent-negotiation-and-race.md`
 7. `07-market-squad-and-posta-race-ui.md`
 8. `08-non-vacuous-transfer-race-diagnostics.md`
-9. `09-checkpointed-50x20-phase-report-and-phase-79-handoff.md`
+9. `09-bounded-phase-report-and-phase-81-handoff.md`
 
 ## Validation Ladder
 
@@ -89,8 +90,9 @@ The governing contract is:
   path while preserving the atomic signing commit.
 - Step 07 projects canonical race facts into Market, Squad, and Posta.
 - Step 08 adds dedicated non-vacuous race diagnostics.
-- Step 09 alone runs and replays the checkpointed `50 x 20`.
-- No earlier step runs a longitudinal cohort.
+- Step 09 reruns bounded race/repository/browser gates, writes the phase report,
+  and hands control to Phase 81.
+- No Phase 80C step runs a longitudinal cohort.
 
 ## Mandatory Per-Step Loop
 
@@ -118,7 +120,8 @@ git diff --check
 graphify update .
 ```
 
-The cohort command runs only in Step 09.
+The deferred cohort runs only in Phase 81 Step 12 after the accepted tactical
+match-engine rework.
 
 ## What NOT To Implement
 
@@ -132,7 +135,7 @@ The cohort command runs only in Step 09.
 - No durable bid history.
 - No agents, playing-time contracts, swaps, resale clauses, or loan fees.
 - No competitive loan race in this release.
-- No cohort before Step 09.
+- No longitudinal cohort in this phase.
 - No Phase 79 Step 14 or Step 15 implementation.
 
 ## Definition Of Done
@@ -155,6 +158,7 @@ The cohort command runs only in Step 09.
 - Race persistence round-trips losslessly and incompatible beta saves are
   deleted.
 - Every diagnostic has a positive denominator or `not_evaluated`.
-- Focused checks, browser QA, persistence, `pnpm check`, and a deterministic
-  replayed `50 x 20` pass.
-- Phase 79 Step 14 receives a truthful handoff and remains unrun and unclaimed.
+- Focused checks, browser QA, persistence, `pnpm check`, and bounded
+  positive-denominator race diagnostics pass.
+- Phase 81 Step 01 receives the handoff; Phase 79 Step 14 remains paused, unrun,
+  and unclaimed through Phase 81.

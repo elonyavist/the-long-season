@@ -6,6 +6,7 @@ import {
   type ClubCategory,
   type Player,
 } from "@game/domain";
+import { completedCivilYears } from "@game/shared";
 import { test } from "vitest";
 
 import { playerRatingScale } from "../balance/player-economy-calibration.ts";
@@ -16,7 +17,11 @@ import {
   createFakeDomesticWorld,
 } from "./domestic-world.ts";
 import { FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
-import { currentAbilityRarityLaneForGeneratedArchetype } from "./fake-players.ts";
+import {
+  currentAbilityRarityLaneForGeneratedArchetype,
+  resolveGeneratedCurrentAbilityRarityLane,
+  resolveGeneratedExceptionalProfile,
+} from "./player-archetypes.ts";
 import { currentAbilityRarityLaneForYouthProspect } from "./player-potential-rarity.ts";
 
 /** Complete-country tests lock topology, deterministic identity, and rarity. */
@@ -57,7 +62,7 @@ test("complete world owns registrations, contracts, youth, finance, and windows"
     );
   }
   assert.equal(world.calibrationVersions.topologyDecisionId, "fictional-three-tier-v1");
-  assert.equal(Object.keys(world.calibrationVersions).length, 7);
+  assert.equal(Object.keys(world.calibrationVersions).length, 8);
 });
 
 test("initial six-star budgets are exact and current champions are credible", () => {
@@ -68,37 +73,46 @@ test("initial six-star budgets are exact and current champions are credible", ()
   ];
   const currentSix = allPlayers.filter((player) => rating(player, "current") === 6);
   const potentialSix = allPlayers.filter((player) => rating(player, "potential") === 6);
-  const lowerPotentialSix = potentialSix.filter((player) => {
+  const youngPotentialSix = potentialSix.filter((player) =>
+    isYoungPlayer(player, world.seasonStartDate)
+  );
+  const lowerPotentialSix = youngPotentialSix.filter((player) => {
     const club = clubForPlayer(world, player.id);
     return club?.category !== "first_division";
   });
 
   assert.equal(
-    currentSix.length >= playerRatingScale.rarity.initialWorld.currentSixMinimum,
+    currentSix.length >= playerRatingScale.rarity.initialWorld.establishedCurrentSixMinimum,
     true,
   );
   assert.equal(
-    currentSix.length <= playerRatingScale.rarity.initialWorld.currentSixMaximum,
+    currentSix.length <= playerRatingScale.rarity.initialWorld.establishedCurrentSixMaximum,
     true,
   );
   assert.equal(
-    potentialSix.length >= playerRatingScale.rarity.initialWorld.potentialSixMinimum,
+    youngPotentialSix.length >= playerRatingScale.rarity.initialWorld.youngStoredCeilingSixMinimum,
     true,
   );
   assert.equal(
-    potentialSix.length <= playerRatingScale.rarity.initialWorld.potentialSixMaximum,
+    youngPotentialSix.length <= playerRatingScale.rarity.initialWorld.youngStoredCeilingSixMaximum,
     true,
   );
   assert.equal(
-    lowerPotentialSix.length <= playerRatingScale.rarity.initialWorld.lowerDivisionPotentialSixMaximum,
+    lowerPotentialSix.length <= playerRatingScale.rarity.initialWorld.lowerDivisionYoungStoredCeilingSixMaximum,
     true,
   );
   for (const player of currentSix) {
     const club = clubForPlayer(world, player.id);
     assert.equal(club?.category, "first_division");
+    assert.equal(completedCivilYears(player.birthDate, world.seasonStartDate) > 20, true);
     assert.equal((club?.reputation ?? 0) >= 14, true);
     assert.equal(world.lineupsByClubId[club!.id]?.some((slot) => slot.playerId === player.id), true);
   }
+  assert.equal(potentialSix.length, currentSix.length + youngPotentialSix.length);
+  assert.equal(
+    new Set(youngPotentialSix.map((player) => clubForPlayer(world, player.id)?.id)).size,
+    youngPotentialSix.length,
+  );
 });
 
 /**
@@ -126,8 +140,16 @@ test("one hundred initial worlds reconcile effective six-star stock with truthfu
       .filter((player) => rating(player, "potential") === 6)
       .map((player) => String(player.id))
       .toSorted();
+    const youngPotentialSixIds = allPlayers
+      .filter((player) =>
+        rating(player, "potential") === 6
+        && isYoungPlayer(player, world.seasonStartDate)
+      )
+      .map((player) => String(player.id))
+      .toSorted();
     const lowerPotentialSixCount = allPlayers.filter((player) =>
       rating(player, "potential") === 6
+      && isYoungPlayer(player, world.seasonStartDate)
       && clubForPlayer(world, player.id)?.category !== "first_division"
     ).length;
 
@@ -141,8 +163,14 @@ test("one hundred initial worlds reconcile effective six-star stock with truthfu
       [...world.exceptionalAllocation.potentialSixPlayerKeys].toSorted(),
       `potential truth ${seedIndex}`,
     );
-    assert.equal(currentSixIds.length >= 1 && currentSixIds.length <= 2, true);
-    assert.equal(potentialSixIds.length >= 2 && potentialSixIds.length <= 4, true);
+    assert.deepEqual(
+      youngPotentialSixIds,
+      [...world.exceptionalAllocation.youngPotentialSixPlayerKeys].toSorted(),
+      `young potential truth ${seedIndex}`,
+    );
+    assert.equal(currentSixIds.length >= 2 && currentSixIds.length <= 3, true);
+    assert.equal(youngPotentialSixIds.length >= 4 && youngPotentialSixIds.length <= 5, true);
+    assert.equal(potentialSixIds.length >= 6 && potentialSixIds.length <= 8, true);
     assert.equal(lowerPotentialSixCount <= 1, true);
 
     for (const assignment of Object.values(
@@ -154,20 +182,29 @@ test("one hundred initial worlds reconcile effective six-star stock with truthfu
       const actualArchetype = seniorArchetype ?? youthArchetype;
       assert.equal(actualArchetype, assignment.archetypeKey, assignment.playerKey);
 
-      const actualLane = assignment.source === "constructed"
-        ? assignment.currentSix
-          ? "exceptional"
-          : "normal"
-        : seniorArchetype !== undefined
-          ? currentAbilityRarityLaneForGeneratedArchetype(seniorArchetype)
-          : currentAbilityRarityLaneForYouthProspect(
-              requiredYouthArchetype(youthArchetype, assignment.playerKey),
-              Number(
-                world.initialYouthAcademies.clubYouthDevelopmentLevels[
-                  requiredClubForPlayer(world, id).id
-                ],
-              ),
-            );
+      const effectiveArchetype = requiredYouthArchetype(
+        actualArchetype,
+        assignment.playerKey,
+      );
+      const requestedLane = seniorArchetype !== undefined
+        ? assignment.source === "constructed"
+          ? resolveGeneratedExceptionalProfile({
+              currentSixAllocated: assignment.currentSix,
+              potentialSixAllocated: assignment.potentialSix,
+            }).currentAbilityLane
+          : currentAbilityRarityLaneForGeneratedArchetype(seniorArchetype)
+        : currentAbilityRarityLaneForYouthProspect(
+            effectiveArchetype,
+            Number(
+              world.initialYouthAcademies.clubYouthDevelopmentLevels[
+                requiredClubForPlayer(world, id).id
+              ],
+            ),
+          );
+      const actualLane = resolveGeneratedCurrentAbilityRarityLane({
+        archetypeKey: effectiveArchetype,
+        requestedLane,
+      });
       assert.equal(actualLane, assignment.currentAbilityLane, assignment.playerKey);
 
       if (assignment.source === "constructed" && seniorArchetype !== undefined) {
@@ -199,6 +236,14 @@ function rating(player: Player, kind: "current" | "potential"): number {
     result = threshold.rating;
   }
   return result;
+}
+
+function isYoungPlayer(
+  player: Player,
+  referenceDate: ReturnType<typeof createFakeDomesticWorld>["seasonStartDate"],
+): boolean {
+  const age = completedCivilYears(player.birthDate, referenceDate);
+  return age >= 15 && age <= 20;
 }
 
 function clubForPlayer(

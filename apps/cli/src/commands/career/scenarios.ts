@@ -4,6 +4,7 @@ import {
 } from "@game/content";
 import {
   combineDomesticCompetitionCalendars,
+  createFreshCareerState,
   generateRoundRobinCalendar,
 } from "@game/engine";
 
@@ -56,15 +57,14 @@ export interface CareerMarketScenario {
 
 /** Builds the durable career state used by profile-based market apply demos. */
 export function careerStateFromScenario(saveId: CliSaveId, scenario: CareerMarketScenario): CliCareerState {
-  return {
+  return createFreshCareerState({
     saveId,
-    schemaVersion: 1,
     selectedClubId: scenario.selectedClubId,
     gameState: scenario.gameState,
     seniorSquadState: scenario.seniorSquadState,
     clubFinanceState: scenario.clubFinanceState,
     transferHistory: [],
-  };
+  });
 }
 
 /** Builds and annotates a newly generated career world before persisting it. */
@@ -75,9 +75,8 @@ export function careerStateFromNewWorld(
 ): CliCareerState {
   const selectedClubId = world.defaultSelectedClubId;
   const gameState = gameStateFromWorld(world, worldSeed);
-  return {
+  return createFreshCareerState({
     saveId,
-    schemaVersion: 1,
     careerWorld: {
       worldSeed,
       generatorVersion: CLI_CAREER_WORLD_GENERATOR_VERSION,
@@ -85,7 +84,6 @@ export function careerStateFromNewWorld(
     },
     selectedClubId,
     gameState: {
-      ...gameState,
       ...gameState,
       players: { ...gameState.players, ...world.initialYouthAcademies.players },
       playerIds: [...gameState.playerIds, ...world.initialYouthAcademies.playerIds],
@@ -95,7 +93,7 @@ export function careerStateFromNewWorld(
     seniorSquadState: world.seniorSquadState,
     clubFinanceState: world.clubFinanceState,
     transferHistory: [],
-  };
+  });
 }
 
 /** Builds one supported deterministic market demo scenario from fake content. */

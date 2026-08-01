@@ -25,6 +25,7 @@ import {
   derivePlayerValuation,
   type PlayerValuationConfig,
 } from "../market/player-valuation.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Stable reason why a free-agent signing could not be committed. */
 export type CareerFreeAgentSigningRejectionReason =
@@ -116,11 +117,20 @@ export function applyCareerFreeAgentSigning(
   if (!selectFreeAgentPlayerIds(input.careerState).includes(input.playerId)) {
     return rejected(input, "player_not_free_agent");
   }
-  const publicValue = derivePlayerValuation({
+  const primaryPosition = player.naturalPositions[0];
+  if (primaryPosition === undefined) {
+    throw new Error(`Free-agent player has no primary position: ${String(player.id)}`);
+  }
+  const assessment = derivePublicPlayerAssessment({
     player,
     currentDate: input.occurredOn,
+    potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    ratingScale: input.valuationConfig.ratingScale,
+  });
+  const publicValue = derivePlayerValuation({
+    assessment,
+    primaryPosition,
     config: input.valuationConfig,
-    marketContext: { kind: "free_agent" },
   }).value;
   const completedFee = nonNegativeMoney(
     input.askingPriceConfig.freeAgentTransferFeeMinorUnits,

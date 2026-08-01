@@ -26,6 +26,7 @@ import { evaluateMarketActionEligibility } from "../market/market-eligibility.ts
 import { evaluatePermanentTransfer } from "../market/transfer-feasibility.ts";
 import type { PlayerValuation, PlayerValuationConfig } from "../market/player-valuation.ts";
 import type { PlayerWillingness } from "../market/player-willingness.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { applyContractActivationFinance } from "./career-finance-lifecycle.ts";
 import {
   evaluateCareerContractCapacity,
@@ -56,11 +57,8 @@ export interface ApplyCareerPermanentTransferInput {
   readonly careerState: CareerState;
   /** Manager-declared permanent transfer request. */
   readonly intent: PermanentTransferIntent;
-  /**
-   * Explicit versioned public-value content. Required for a derived-fee
-   * transfer; an already-accepted deal does not recalculate public value.
-   */
-  readonly valuationConfig?: PlayerValuationConfig;
+  /** Canonical public-assessment and valuation policy for every transfer path. */
+  readonly valuationConfig: PlayerValuationConfig;
   /** Effective football date for season-boundary transfers. */
   readonly occurredOn?: GameDate;
   /**
@@ -170,17 +168,19 @@ export function applyCareerPermanentTransfer(
   const acceptedTerms = input.acceptedDeal?.contractTerms ?? deriveTransferContractTerms({
     careerState: input.careerState,
     wagePolicy: input.wagePolicy,
-      playerId: input.intent.playerId,
-      buyingClubId: input.intent.buyingClubId,
-      evaluatedOn: occurredOn,
-      currentContract,
-    });
+    valuationConfig: input.valuationConfig,
+    playerId: input.intent.playerId,
+    buyingClubId: input.intent.buyingClubId,
+    evaluatedOn: occurredOn,
+    currentContract,
+  });
   const feasibility = evaluatePermanentTransfer({
     gameState: input.careerState.gameState,
     clubFinanceState: input.careerState.clubFinanceState,
     intent: input.intent,
     currentContract,
     proposedTerms: acceptedTerms,
+    valuationConfig: input.valuationConfig,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     ...(input.acceptedDeal === undefined
       ? {}
@@ -188,9 +188,6 @@ export function applyCareerPermanentTransfer(
           agreedTransferFee: input.acceptedDeal.agreedFee,
           playerAgreementConfirmed: input.acceptedDeal.playerAgreementConfirmed,
         }),
-    ...(input.valuationConfig === undefined
-      ? {}
-      : { valuationConfig: input.valuationConfig }),
   });
 
   if (feasibility.status === "rejected" || feasibility.transferFee === undefined) {
@@ -431,10 +428,22 @@ function deriveTransferContractTerms(input: {
   readonly evaluatedOn: GameState["calendar"]["currentDate"];
   readonly currentContract: PlayerContract;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
 }): ContractOfferTerms {
+  const player = input.careerState.gameState.players[input.playerId];
+  if (player === undefined) {
+    throw new Error(`Player not found while deriving transfer terms: ${String(input.playerId)}`);
+  }
+  const publicAssessment = derivePublicPlayerAssessment({
+    player,
+    currentDate: input.evaluatedOn,
+    potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    ratingScale: input.valuationConfig.ratingScale,
+  });
   const preferred = deriveContractDemand({
     careerState: input.careerState,
     wagePolicy: input.wagePolicy,
+    publicAssessment,
     playerId: input.playerId,
     clubId: input.buyingClubId,
     evaluatedOn: input.evaluatedOn,

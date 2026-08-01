@@ -1,3 +1,5 @@
+import type { ClubDevelopmentEnvironmentKey } from "@game/domain";
+
 import type { CareerDashboardActionAvailability, CareerDashboardBlockerKey } from "./career-dashboard-actions.ts";
 
 /** Stable status key for dashboard sections that may be unavailable. */
@@ -5,6 +7,10 @@ export type CareerDashboardAvailabilityStatus = "available" | "missing" | "none"
 
 /** Stable side key for a selected club in a fixture. */
 export type CareerDashboardFixtureSide = "home" | "away";
+
+/** Localized-label keys for the seven public club-development environments. */
+export type CareerClubDevelopmentEnvironmentLabelKey =
+  `career.clubDevelopmentEnvironment.state.${ClubDevelopmentEnvironmentKey}`;
 
 /** Save and world context shown at the top of the career dashboard. */
 export interface CareerDashboardContextView {
@@ -28,6 +34,8 @@ export interface CareerDashboardSelectedClubView {
   readonly name: string;
   /** Number of senior players currently attached to the club. */
   readonly rosterSize: number;
+  /** Localizable public environment label; the numeric policy stays private. */
+  readonly developmentEnvironmentLabelKey: CareerClubDevelopmentEnvironmentLabelKey;
 }
 
 /** Compact next-fixture data for the selected club. */

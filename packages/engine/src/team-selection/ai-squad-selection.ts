@@ -3,7 +3,6 @@ import {
   evaluatePositionSuitability,
   getPlayerRoleProfile,
   roleCurrentAbility,
-  rolePotentialAbility,
   type ClubId,
   type Formation,
   type FormationSlot,
@@ -25,6 +24,7 @@ import {
   type RoleWeightProfile,
 } from "../match-engine/index.ts";
 import { createMatchPlayerIncidentProfile } from "../match-engine/tactic-team-context.ts";
+import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Recent deterministic usage facts that can gently rotate an AI squad. */
 export interface AiRecentPlayerUse {
@@ -52,7 +52,7 @@ export interface AiSquadSelectionReason {
   readonly fitness: number;
   /** Recent minutes used for bounded rotation pressure. */
   readonly recentMinutes: number;
-  /** Small prospect boost applied when there is genuine role potential room. */
+  /** Small prospect boost applied when there is genuine public upside room. */
   readonly prospectOpportunity: number;
   /** Final deterministic ordering score. */
   readonly score: number;
@@ -68,14 +68,16 @@ export interface AiSquadSelectionInput {
   readonly playerIds: readonly PlayerId[];
   /** Player lookup for the roster. */
   readonly players: Readonly<Record<PlayerId, Player>>;
+  /** Dated public assessments used for age and prospect-upside decisions. */
+  readonly publicAssessments: Readonly<Record<PlayerId, PublicPlayerAssessment>>;
+  /** Exact fixture date that every supplied assessment must describe. */
+  readonly currentDate: GameDate;
   /** Match-engine role profiles available to the selected lineup. */
   readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
   /** Optional dynamic states for fitness-aware selection. */
   readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Optional recent usage facts supplied by the caller. */
   readonly recentUse?: Readonly<Partial<Record<PlayerId, AiRecentPlayerUse>>>;
-  /** Fixture date used only to identify prospect age bands. */
-  readonly currentDate?: GameDate;
   /** Maximum bench players to choose after the XI. */
   readonly benchSize?: number;
 }
@@ -110,6 +112,8 @@ export interface BuildAiSquadMatchTeamContextResult {
 export type AiSquadSelectionErrorCode =
   | "empty_formation"
   | "missing_player"
+  | "missing_public_assessment"
+  | "stale_public_assessment"
   | "missing_role_weight"
   | "not_enough_players"
   | "invalid_team_strength";
@@ -133,20 +137,34 @@ export function selectAiMatchSquad(input: AiSquadSelectionInput): AiSquadSelecti
     throw new AiSquadSelectionError("empty_formation", `AI formation has no slots for club: ${input.clubId}`);
   }
 
-  validateRosterPlayers(input);
+  const rosterPlayerIds = orderedUniquePlayerIds(input.playerIds);
+  validateRosterPlayers(input, rosterPlayerIds);
 
-  if (input.playerIds.length < input.formation.slots.length) {
+  if (rosterPlayerIds.length < input.formation.slots.length) {
     throw new AiSquadSelectionError(
       "not_enough_players",
-      `AI club ${input.clubId} has ${input.playerIds.length} players for ${input.formation.slots.length} slots`,
+      `AI club ${input.clubId} has ${rosterPlayerIds.length} unique players for ${input.formation.slots.length} slots`,
     );
   }
 
-  const usedPlayerIds = new Set<PlayerId>();
+  const selectedCandidates = selectFeasibleLineupCandidates(input, rosterPlayerIds);
+  if (selectedCandidates === undefined) {
+    throw new AiSquadSelectionError(
+      "not_enough_players",
+      `AI club ${input.clubId} cannot complete a usable XI for ${input.formation.key}`,
+    );
+  }
+
+  const usedPlayerIds = new Set(selectedCandidates.map((candidate) => candidate.playerId));
   const reasons: AiSquadSelectionReason[] = [];
-  const lineup = input.formation.slots.map((slot): LineupSlot => {
-    const candidate = bestCandidateForSlot(input, slot, usedPlayerIds);
-    usedPlayerIds.add(candidate.playerId);
+  const lineup = selectedCandidates.map((candidate, slotIndex): LineupSlot => {
+    const slot = input.formation.slots[slotIndex];
+    if (slot === undefined) {
+      throw new AiSquadSelectionError(
+        "empty_formation",
+        `AI formation ${input.formation.key} is missing selected slot ${slotIndex}`,
+      );
+    }
     reasons.push(reasonForCandidate("lineup", slot.slotKey, candidate));
 
     return {
@@ -156,7 +174,7 @@ export function selectAiMatchSquad(input: AiSquadSelectionInput): AiSquadSelecti
     };
   });
 
-  const benchCandidates = benchCandidatesForInput(input, usedPlayerIds);
+  const benchCandidates = benchCandidatesForInput(input, rosterPlayerIds, usedPlayerIds);
   const benchPlayerIds = chooseBenchPlayerIds(input, benchCandidates);
   for (const benchPlayerId of benchPlayerIds) {
     const player = input.players[benchPlayerId];
@@ -222,34 +240,120 @@ interface AiCandidateScore {
   readonly score: number;
 }
 
-function validateRosterPlayers(input: AiSquadSelectionInput): void {
-  for (const playerId of input.playerIds) {
+/** One pre-scored player edge in the private lineup-feasibility matrix. */
+interface AiSlotCandidate {
+  /** Candidate facts scored by the existing per-slot policy. */
+  readonly candidate: AiCandidateScore;
+  /** Stable roster bit used only to prevent duplicate assignments. */
+  readonly playerBit: bigint;
+}
+
+/** One unique roster player paired with its stable private assignment bit. */
+interface AiRosterPlayer {
+  /** Player identity preserved from the caller's first occurrence. */
+  readonly playerId: PlayerId;
+  /** Bit used only by the memoized feasibility search. */
+  readonly playerBit: bigint;
+}
+
+function validateRosterPlayers(
+  input: AiSquadSelectionInput,
+  rosterPlayerIds: readonly PlayerId[],
+): void {
+  for (const playerId of rosterPlayerIds) {
     if (input.players[playerId] === undefined) {
       throw new AiSquadSelectionError("missing_player", `Missing AI roster player ${playerId} for club ${input.clubId}`);
     }
+    requiredPublicAssessment(input, playerId);
   }
 }
 
-function bestCandidateForSlot(
+/**
+ * Finds the first complete XI in canonical slot order and existing score order.
+ *
+ * This is deliberately a feasibility-preserving greedy search, not a global
+ * score optimizer. In the usual case it visits each slot once. Memoized
+ * backtracking is used only when a locally preferred versatile player would
+ * leave a later slot without any usable player.
+ */
+function selectFeasibleLineupCandidates(
   input: AiSquadSelectionInput,
-  slot: FormationSlot,
-  usedPlayerIds: ReadonlySet<PlayerId>,
-): AiCandidateScore {
-  const candidates = input.playerIds
-    .filter((candidateId) => !usedPlayerIds.has(candidateId))
-    .map((candidateId) => candidateForSlot(input, candidateId, slot))
-    .filter((candidate) => candidate.suitability !== "invalid")
-    .sort(compareCandidateScores);
+  rosterPlayerIds: readonly PlayerId[],
+): readonly AiCandidateScore[] | undefined {
+  const rosterPlayers = rosterPlayerIds.map((playerId, rosterIndex): AiRosterPlayer => ({
+    playerId,
+    playerBit: 1n << BigInt(rosterIndex),
+  }));
+  const candidateCacheBySlot = input.formation.slots.map(() => new Map<PlayerId, AiCandidateScore>());
+  const failedMasksBySlot = input.formation.slots.map(() => new Set<bigint>());
+  const selectedCandidates: AiCandidateScore[] = [];
 
-  const best = candidates[0];
-  if (best === undefined) {
-    throw new AiSquadSelectionError(
-      "not_enough_players",
-      `AI club ${input.clubId} has no usable player for ${input.formation.key}.${slot.slotKey}`,
+  function completeSlot(slotIndex: number, usedPlayerMask: bigint): boolean {
+    if (slotIndex === input.formation.slots.length) {
+      return true;
+    }
+
+    const failedMasks = failedMasksBySlot[slotIndex];
+    if (failedMasks?.has(usedPlayerMask) === true) {
+      return false;
+    }
+
+    const slot = input.formation.slots[slotIndex];
+    const candidateCache = candidateCacheBySlot[slotIndex];
+    if (slot === undefined || candidateCache === undefined) {
+      return false;
+    }
+    const slotCandidates = rankedUnusedCandidatesForSlot(
+      input,
+      slot,
+      rosterPlayers,
+      usedPlayerMask,
+      candidateCache,
     );
+    for (const slotCandidate of slotCandidates) {
+      if ((usedPlayerMask & slotCandidate.playerBit) !== 0n) {
+        continue;
+      }
+
+      selectedCandidates[slotIndex] = slotCandidate.candidate;
+      if (completeSlot(slotIndex + 1, usedPlayerMask | slotCandidate.playerBit)) {
+        return true;
+      }
+    }
+
+    selectedCandidates.length = slotIndex;
+    failedMasks?.add(usedPlayerMask);
+    return false;
   }
 
-  return best;
+  return completeSlot(0, 0n) ? [...selectedCandidates] : undefined;
+}
+
+function rankedUnusedCandidatesForSlot(
+  input: AiSquadSelectionInput,
+  slot: FormationSlot,
+  rosterPlayers: readonly AiRosterPlayer[],
+  usedPlayerMask: bigint,
+  candidateCache: Map<PlayerId, AiCandidateScore>,
+): readonly AiSlotCandidate[] {
+  const candidates: AiSlotCandidate[] = [];
+
+  for (const rosterPlayer of rosterPlayers) {
+    if ((usedPlayerMask & rosterPlayer.playerBit) !== 0n) {
+      continue;
+    }
+
+    let candidate = candidateCache.get(rosterPlayer.playerId);
+    if (candidate === undefined) {
+      candidate = candidateForSlot(input, rosterPlayer.playerId, slot);
+      candidateCache.set(rosterPlayer.playerId, candidate);
+    }
+    if (isUsableSuitability(candidate.suitability)) {
+      candidates.push({ candidate, playerBit: rosterPlayer.playerBit });
+    }
+  }
+
+  return candidates.sort((left, right) => compareCandidateScores(left.candidate, right.candidate));
 }
 
 function candidateForSlot(input: AiSquadSelectionInput, playerId: PlayerId, slot: FormationSlot): AiCandidateScore {
@@ -261,10 +365,11 @@ function candidateForSlot(input: AiSquadSelectionInput, playerId: PlayerId, slot
   const roleKey = roleWeightKeyForSlot(input.roleWeights, slot);
   const suitability = evaluatePositionSuitability(player.naturalPositions, slot);
   const currentAbility = Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(playerRoleForSlot(slot))));
-  const potentialAbility = Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(playerRoleForSlot(slot))));
   const fitness = Number(input.playerStates?.[playerId]?.fitness ?? 100);
   const recent = input.recentUse?.[playerId] ?? { recentMinutes: 0, recentStarts: 0 };
-  const prospectOpportunity = prospectOpportunityForPlayer(input.currentDate, player, currentAbility, potentialAbility);
+  const prospectOpportunity = prospectOpportunityForAssessment(
+    requiredPublicAssessment(input, playerId),
+  );
   const score = roundScore(
     currentAbility
       + suitabilityBonus(suitability)
@@ -289,12 +394,18 @@ function candidateForSlot(input: AiSquadSelectionInput, playerId: PlayerId, slot
 
 function benchCandidatesForInput(
   input: AiSquadSelectionInput,
+  rosterPlayerIds: readonly PlayerId[],
   usedPlayerIds: ReadonlySet<PlayerId>,
 ): readonly AiCandidateScore[] {
-  return input.playerIds
+  return rosterPlayerIds
     .filter((candidateId) => !usedPlayerIds.has(candidateId))
     .map((candidateId) => benchCandidateForPlayer(input, requiredPlayer(input, candidateId)))
     .sort(compareCandidateScores);
+}
+
+/** Keeps the caller's first stable occurrence while preventing duplicate XI IDs. */
+function orderedUniquePlayerIds(playerIds: readonly PlayerId[]): readonly PlayerId[] {
+  return [...new Set(playerIds)];
 }
 
 function benchCandidateForPlayer(input: AiSquadSelectionInput, player: Player): AiCandidateScore {
@@ -407,6 +518,11 @@ function suitabilityBonus(suitability: PositionSuitability): number {
   }
 }
 
+/** Weak fits remain valid emergency coverage; only invalid fits are unusable. */
+function isUsableSuitability(suitability: PositionSuitability): boolean {
+  return suitability !== "invalid";
+}
+
 function sideBonus(player: Player, slot: FormationSlot): number {
   if (slot.side === undefined || slot.side === "center") {
     return 0;
@@ -439,21 +555,34 @@ function boundedRecentUseModifier(recent: AiRecentPlayerUse): number {
   return roundScore(-(minutePressure * 1.2 + startPressure * 0.45));
 }
 
-function prospectOpportunityForPlayer(
-  currentDate: GameDate | undefined,
-  player: Player,
-  currentAbility: number,
-  potentialAbility: number,
+function prospectOpportunityForAssessment(
+  assessment: PublicPlayerAssessment,
 ): number {
-  if (currentDate === undefined) {
-    return 0;
-  }
-
-  const age = Math.floor((Number(currentDate) - Number(player.birthDate)) / 365.25);
-  const potentialRoom = potentialAbility - currentAbility;
-  if (age <= 19 && potentialRoom >= 2.5) return 0.55;
-  if (age <= 21 && potentialRoom >= 2) return 0.35;
+  const publicUpsideRoom = assessment.upperAbility - assessment.currentAbility;
+  if (assessment.age <= 19 && publicUpsideRoom >= 2.5) return 0.55;
+  if (assessment.age <= 21 && publicUpsideRoom >= 2) return 0.35;
   return 0;
+}
+
+/** Returns the safe public fact required by every live AI candidate decision. */
+function requiredPublicAssessment(
+  input: AiSquadSelectionInput,
+  playerId: PlayerId,
+): PublicPlayerAssessment {
+  const assessment = input.publicAssessments[playerId];
+  if (assessment === undefined || assessment.playerId !== playerId) {
+    throw new AiSquadSelectionError(
+      "missing_public_assessment",
+      `Missing AI public assessment ${playerId} for club ${input.clubId}`,
+    );
+  }
+  if (assessment.assessedOn !== input.currentDate) {
+    throw new AiSquadSelectionError(
+      "stale_public_assessment",
+      `AI public assessment ${playerId} is not dated for the current fixture`,
+    );
+  }
+  return assessment;
 }
 
 function isGoalkeeperCandidate(input: AiSquadSelectionInput, playerId: PlayerId): boolean {

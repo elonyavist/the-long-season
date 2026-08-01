@@ -1,12 +1,8 @@
 import {
   createCareerState,
-  getPlayerRoleProfile,
-  rawDiagnosticAbilityAverage,
-  roleCurrentAbility,
-  rolePotentialAbility,
   type CareerState,
   type ClubId,
-  type Player,
+  type GameDate,
   type PlayerId,
   type SeasonId,
   type YouthAcademyClubRoster,
@@ -15,9 +11,21 @@ import {
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
-import { developPlayersForSeason, type PlayerDevelopmentChange } from "./player-development.ts";
+import { completedPlayerAge } from "../player-state/completed-player-age.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
 
-const DAYS_PER_YEAR = 365;
+/**
+ * Public-P50 equivalent of the legacy `4.5` stored-ceiling-room age-out gate.
+ *
+ * At age 20 the versioned 21.12–24.27% realization bands map that old room to
+ * roughly `0.95..1.09` expected ability. This stricter `1.0` lifecycle gate
+ * intentionally runs before the later `0.8` senior-promotion usefulness gate.
+ */
+const YOUTH_AGE_OUT_EXPECTED_ROOM_THRESHOLD = 1;
 
 /** Youth lifecycle outcome emitted when a player leaves the active academy. */
 export type YouthLifecycleOutcome = "promotion_candidate" | "external_move_candidate" | "released";
@@ -30,6 +38,10 @@ export interface YouthAcademyLifecycleInput {
   readonly worldSeed: string;
   /** Season ID being processed. */
   readonly seasonId: SeasonId;
+  /** Incoming-season date used for age-out decisions and lifecycle facts. */
+  readonly lifecycleDate: GameDate;
+  /** Canonical public-assessment policy used by every age-out decision. */
+  readonly valuationConfig: PlayerValuationConfig;
 }
 
 /** Factual youth lifecycle record for reports. */
@@ -38,7 +50,7 @@ export interface YouthLifecycleRecord {
   readonly clubId: ClubId;
   /** Player affected by this lifecycle decision. */
   readonly playerId: PlayerId;
-  /** Age in whole years at the career state's current date. */
+  /** Age in completed civil years on the incoming-season lifecycle date. */
   readonly age: number;
   /** Outcome applied at this lifecycle pass. */
   readonly outcome: YouthLifecycleOutcome;
@@ -46,56 +58,48 @@ export interface YouthLifecycleRecord {
 
 /** Result of one youth academy lifecycle pass. */
 export interface YouthAcademyLifecycleResult {
-  /** Copied career state after youth development and age-out decisions. */
+  /** Copied career state after age-out decisions. */
   readonly careerState: CareerState;
-  /** Development summaries for active youth players only. */
-  readonly developmentChanges: readonly PlayerDevelopmentChange[];
   /** Factual records for youth players removed from active academy rosters. */
   readonly records: readonly YouthLifecycleRecord[];
 }
 
 /**
- * Develops active youth players and resolves age-out decisions.
+ * Resolves academy age-out decisions after canonical development has run.
  *
+ * Quarterly and season-end player development belongs exclusively to the
+ * career checkpoint owner. This lifecycle only changes academy membership and
+ * lifecycle facts, preventing youth players from receiving a second pass.
  * Senior rosters are not changed. Every age-out player leaves the active
- * academy roster, but their immutable player and dynamic-state facts remain in
- * the world so promotion, external movement, or free agency can continue via a
- * later explicit ownership transition.
+ * academy roster, while their player and dynamic-state facts remain in the
+ * world for a later explicit ownership transition.
  */
 export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): YouthAcademyLifecycleResult {
   const youthState = input.careerState.youthAcademyState;
   if (youthState === undefined) {
     return {
       careerState: input.careerState,
-      developmentChanges: [],
       records: [],
     };
   }
 
-  const activeYouthPlayerIds = activeYouthIds(youthState);
-  const developed = developPlayersForSeason({
-    careerState: input.careerState,
-    worldSeed: input.worldSeed,
-    seasonId: input.seasonId,
-    playerIds: activeYouthPlayerIds,
-  });
   const clubRosters: Record<ClubId, YouthAcademyClubRoster> = {};
   const clubRosterIds: ClubId[] = [];
   const playerLifecycle: Record<PlayerId, YouthPlayerLifecycle> = {};
   const playerLifecycleIds: PlayerId[] = [];
   const records: YouthLifecycleRecord[] = [];
 
-  for (const clubId of developed.careerState.gameState.clubIds) {
+  for (const clubId of input.careerState.gameState.clubIds) {
     const roster = youthState.clubRosters[clubId];
     const nextRosterPlayerIds: PlayerId[] = [];
 
     for (const playerId of roster?.playerIds ?? []) {
-      const player = developed.careerState.gameState.players[playerId];
+      const player = input.careerState.gameState.players[playerId];
       if (player === undefined) {
         continue;
       }
 
-      const age = playerAgeYears(player, developed.careerState);
+      const age = completedPlayerAge(player.birthDate, input.lifecycleDate);
       if (age <= 19) {
         nextRosterPlayerIds.push(playerId);
         playerLifecycle[playerId] = {
@@ -106,11 +110,16 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
         continue;
       }
 
+      const publicAssessment = derivePublicPlayerAssessment({
+        player,
+        currentDate: input.lifecycleDate,
+        potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+        ratingScale: input.valuationConfig.ratingScale,
+      });
       const outcome = ageOutOutcome({
         worldSeed: input.worldSeed,
         seasonId: input.seasonId,
-        player,
-        age,
+        publicAssessment,
       });
       records.push({
         clubId,
@@ -122,7 +131,7 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
       playerLifecycle[playerId] = {
         ...requiredLifecycle(youthState, playerId),
         status: outcome,
-        statusChangedAt: developed.careerState.gameState.calendar.currentDate,
+        statusChangedAt: input.lifecycleDate,
       };
       playerLifecycleIds.push(playerId);
     }
@@ -136,7 +145,7 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
 
   preserveNonRosterLifecycleRows({
     youthState,
-    currentCareerState: developed.careerState,
+    currentCareerState: input.careerState,
     playerLifecycle,
     playerLifecycleIds,
   });
@@ -150,29 +159,11 @@ export function applyYouthAcademyLifecycle(input: YouthAcademyLifecycleInput): Y
 
   return {
     careerState: createCareerState({
-      ...developed.careerState,
+      ...input.careerState,
       youthAcademyState: nextYouthState,
     }),
-    developmentChanges: developed.changes,
     records,
   };
-}
-
-function activeYouthIds(youthState: YouthAcademyState): readonly PlayerId[] {
-  const playerIds: PlayerId[] = [];
-
-  for (const clubId of youthState.clubRosterIds) {
-    const roster = youthState.clubRosters[clubId];
-    if (roster === undefined) {
-      continue;
-    }
-
-    for (const playerId of roster.playerIds) {
-      playerIds.push(playerId);
-    }
-  }
-
-  return playerIds;
 }
 
 function preserveNonRosterLifecycleRows(input: {
@@ -211,40 +202,27 @@ function requiredLifecycle(youthState: YouthAcademyState, playerId: PlayerId): Y
 function ageOutOutcome(input: {
   readonly worldSeed: string;
   readonly seasonId: SeasonId;
-  readonly player: Player;
-  readonly age: number;
+  readonly publicAssessment: PublicPlayerAssessment;
 }): YouthLifecycleOutcome {
-  const rng = deriveRng(input.worldSeed, "youth-age-out", input.seasonId, input.player.id);
-  const ability = youthLifecycleAbility(input.player);
+  const rng = deriveRng(
+    input.worldSeed,
+    "youth-age-out",
+    input.seasonId,
+    input.publicAssessment.playerId,
+  );
+  const currentAbility = input.publicAssessment.currentAbility;
+  const expectedRoom = input.publicAssessment.p50Ability - currentAbility;
 
-  if (ability.current >= 8.8 || ability.potentialRoom >= 4.5) {
+  if (
+    currentAbility >= 8.8
+    || expectedRoom >= YOUTH_AGE_OUT_EXPECTED_ROOM_THRESHOLD
+  ) {
     return "promotion_candidate";
   }
 
-  if (ability.current >= 7.4 && rng.nextFloat() < 0.35) {
+  if (currentAbility >= 7.4 && rng.nextFloat() < 0.35) {
     return "external_move_candidate";
   }
 
   return "released";
-}
-
-function playerAgeYears(player: Player, careerState: CareerState): number {
-  return Math.floor((careerState.gameState.calendar.currentDate - player.birthDate) / DAYS_PER_YEAR);
-}
-
-/** Returns the football measures needed only by academy age-out decisions. */
-function youthLifecycleAbility(player: Player): {
-  readonly current: number;
-  readonly potentialRoom: number;
-} {
-  if (player.primaryRole === undefined) {
-    const current = Number(rawDiagnosticAbilityAverage(player.abilities));
-    const potential = Number(rawDiagnosticAbilityAverage(player.potential));
-    return { current, potentialRoom: potential - current };
-  }
-
-  const profile = getPlayerRoleProfile(player.primaryRole);
-  const current = Number(roleCurrentAbility(player.abilities, profile));
-  const potential = Number(rolePotentialAbility(player.potential, profile));
-  return { current, potentialRoom: potential - current };
 }

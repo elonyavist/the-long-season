@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "player-rating-scale-v3",
+  "version": "player-rating-scale-v7",
   "classification": "explicit_game_design_target",
   "supportedRatings": [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
   "abilityThresholds": [
@@ -38,70 +38,106 @@
   ],
   "rarity": {
     "initialWorld": {
-      "currentSixMinimum": 1,
-      "currentSixMaximum": 2,
-      "potentialSixMinimum": 2,
-      "potentialSixMaximum": 4,
-      "lowerDivisionPotentialSixMaximum": 1
+      "establishedCurrentSixMinimum": 2,
+      "establishedCurrentSixMaximum": 3,
+      "youngStoredCeilingSixMinimum": 4,
+      "youngStoredCeilingSixMaximum": 5,
+      "lowerDivisionYoungStoredCeilingSixMaximum": 1,
+      "youngStoredCeilingSixPerClubMaximum": 1
     },
     "annualIntake": {
-      "potentialSixPerWorldMinimum": 0,
-      "potentialSixPerWorldMaximum": 1,
-      "tenSeasonCohortMinimum": 2,
-      "tenSeasonCohortMaximum": 4
-    },
-    "yearTen": {
-      "activeCurrentSixMaximum": 4,
-      "activePotentialSixMaximum": 8,
-      "lowerDivisionPotentialSixMaximum": 1
+      "activeYoungStoredCeilingSixTargetMinimum": 4,
+      "activeYoungStoredCeilingSixTargetMaximum": 5
     }
   },
   "potentialProjectionPolicy": {
-    "schemaVersion": 1,
-    "version": "player-potential-projection-v2",
+    "schemaVersion": 2,
+    "version": "player-potential-projection-v4",
     "classification": "explicit_game_design_target",
     "ageBandsByRoleFamily": {
       "goalkeeper": [
         {
           "minimumAge": 0,
           "maximumAge": 17,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 1068,
-          "upperRealizationBasisPoints": 2496
+          "p50RealizationBasisPoints": 2215,
+          "upperRealizationBasisPoints": 10000
         },
         {
           "minimumAge": 18,
           "maximumAge": 20,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 951,
-          "upperRealizationBasisPoints": 2466
+          "p50RealizationBasisPoints": 2050,
+          "upperRealizationBasisPoints": 10000
         },
         {
           "minimumAge": 21,
+          "maximumAge": 21,
+          "p50RealizationBasisPoints": 1715,
+          "upperRealizationBasisPoints": 3713
+        },
+        {
+          "minimumAge": 22,
           "maximumAge": 22,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 761,
-          "upperRealizationBasisPoints": 1912
+          "p50RealizationBasisPoints": 1466,
+          "upperRealizationBasisPoints": 3272
         },
         {
           "minimumAge": 23,
+          "maximumAge": 23,
+          "p50RealizationBasisPoints": 1185,
+          "upperRealizationBasisPoints": 2553
+        },
+        {
+          "minimumAge": 24,
           "maximumAge": 24,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 367,
-          "upperRealizationBasisPoints": 1038
+          "p50RealizationBasisPoints": 810,
+          "upperRealizationBasisPoints": 1894
         },
         {
           "minimumAge": 25,
+          "maximumAge": 25,
+          "p50RealizationBasisPoints": 397,
+          "upperRealizationBasisPoints": 1100
+        },
+        {
+          "minimumAge": 26,
+          "maximumAge": 26,
+          "p50RealizationBasisPoints": 278,
+          "upperRealizationBasisPoints": 756
+        },
+        {
+          "minimumAge": 27,
           "maximumAge": 27,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 116,
-          "upperRealizationBasisPoints": 449
+          "p50RealizationBasisPoints": 149,
+          "upperRealizationBasisPoints": 372
         },
         {
           "minimumAge": 28,
+          "maximumAge": 28,
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
+        },
+        {
+          "minimumAge": 29,
+          "maximumAge": 29,
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
+        },
+        {
+          "minimumAge": 30,
+          "maximumAge": 30,
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
+        },
+        {
+          "minimumAge": 31,
+          "maximumAge": 31,
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
+        },
+        {
+          "minimumAge": 32,
           "maximumAge": 200,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 0,
+          "p50RealizationBasisPoints": 0,
           "upperRealizationBasisPoints": 0
         }
       ],
@@ -109,37 +145,62 @@
         {
           "minimumAge": 0,
           "maximumAge": 17,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 1667,
-          "upperRealizationBasisPoints": 3076
+          "p50RealizationBasisPoints": 3034,
+          "upperRealizationBasisPoints": 10000
         },
         {
           "minimumAge": 18,
           "maximumAge": 20,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 878,
-          "upperRealizationBasisPoints": 2346
+          "p50RealizationBasisPoints": 2200,
+          "upperRealizationBasisPoints": 10000
         },
         {
           "minimumAge": 21,
+          "maximumAge": 21,
+          "p50RealizationBasisPoints": 1196,
+          "upperRealizationBasisPoints": 2823
+        },
+        {
+          "minimumAge": 22,
           "maximumAge": 22,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 385,
-          "upperRealizationBasisPoints": 1095
+          "p50RealizationBasisPoints": 716,
+          "upperRealizationBasisPoints": 2111
         },
         {
           "minimumAge": 23,
+          "maximumAge": 23,
+          "p50RealizationBasisPoints": 483,
+          "upperRealizationBasisPoints": 1405
+        },
+        {
+          "minimumAge": 24,
           "maximumAge": 24,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 142,
-          "upperRealizationBasisPoints": 437
+          "p50RealizationBasisPoints": 219,
+          "upperRealizationBasisPoints": 653
         },
         {
           "minimumAge": 25,
+          "maximumAge": 25,
+          "p50RealizationBasisPoints": 71,
+          "upperRealizationBasisPoints": 249
+        },
+        {
+          "minimumAge": 26,
+          "maximumAge": 26,
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 55
+        },
+        {
+          "minimumAge": 27,
+          "maximumAge": 27,
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
+        },
+        {
+          "minimumAge": 28,
           "maximumAge": 200,
-          "conservativeRealizationBasisPoints": 0,
-          "expectedRealizationBasisPoints": 0,
-          "upperRealizationBasisPoints": 22
+          "p50RealizationBasisPoints": 0,
+          "upperRealizationBasisPoints": 0
         }
       ]
     }

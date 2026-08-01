@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "market-behavior-calibration-v3",
+  "version": "market-behavior-calibration-v5",
   "classification": "explicit_game_design_target",
-  "askingPriceCurvesVersion": "asking-price-curves-v3",
+  "askingPriceCurvesVersion": "asking-price-curves-v4",
   "wageFinanceCalibrationVersion": "wage-finance-calibration-reportcalcio-2025-v1",
   "openingFinanceRoundingMinorUnits": 1000000,
   "openingFinanceTargets": [
@@ -84,6 +84,14 @@
     "potential": 20,
     "roleNeed": 25,
     "affordability": 15
+  },
+  "aiRiskAppetite": {
+    "uncertaintyPenaltyWeight": 10,
+    "toleranceBasisPointsByCategory": {
+      "first_division": 8000,
+      "second_division": 6000,
+      "third_division": 4000
+    }
   },
   "aiLifecycle": {
     "maximumActiveTalks": 2,

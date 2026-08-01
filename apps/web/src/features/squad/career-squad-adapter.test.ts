@@ -53,9 +53,9 @@ describe("presentCareerSquad", () => {
     expect((player?.currentRating.stars ?? 0) * 2).toBe(Math.round(
       (player?.currentRating.stars ?? 0) * 2,
     ));
-    expect(player?.potentialRange.lowerStars).toBeGreaterThanOrEqual(1);
+    expect(player?.potentialRange.p50Stars).toBeGreaterThanOrEqual(1);
     expect(player?.potentialRange.upperStars).toBeLessThanOrEqual(6);
-    expect(player?.potentialRange.lowerStars).toBeLessThanOrEqual(
+    expect(player?.potentialRange.p50Stars).toBeLessThanOrEqual(
       player?.potentialRange.upperStars ?? 0,
     );
     expect(profile?.currentRating).toEqual(player?.currentRating);

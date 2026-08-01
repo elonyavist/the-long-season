@@ -7,19 +7,61 @@ import playerMarketCalibrationJson from "../balance/player-market-calibration.js
 import playerRatingScaleJson from "../balance/player-rating-scale.json" with { type: "json" };
 import valuationCurvesJson from "../balance/valuation-curves.json" with { type: "json" };
 import wageFinanceCalibrationJson from "../balance/wage-finance-calibration.json" with { type: "json" };
+import playerDevelopmentEnvironmentJson from "../balance/player-development-environment.json" with { type: "json" };
 import {
   PlayerEconomyCalibrationValidationError,
   parsePlayerEconomyCalibrationAssets,
   type RawPlayerEconomyCalibrationAssets,
 } from "./player-economy-calibration.schema.ts";
 
-test("accepts the six reviewed assets through one boundary", () => {
+test("accepts the seven reviewed assets through one boundary", () => {
   const result = parsePlayerEconomyCalibrationAssets(validAssets());
 
+  assert.equal(result.valuationCurves.version, "valuation-curves-v5");
+  assert.equal(
+    result.askingPriceCurves.valuationCurvesVersion,
+    result.valuationCurves.version,
+  );
+  assert.equal("marketContext" in result.valuationCurves, false);
+  assert.deepEqual(result.valuationCurves.prospectExpectation, {
+    version: "prospect-expectation-v3",
+    potentialProjectionPolicyVersion:
+      result.playerPotentialProjectionPolicy.version,
+    p50ParticipationBasisPoints: 5_000,
+    upperOptionParticipationBasisPoints: 1_000,
+  });
   assert.equal(result.playerRatingScale.supportedRatings.length, 11);
-  assert.equal(result.playerPotentialProjectionPolicy.ageBandsByRoleFamily.outfield.length, 5);
+  assert.equal(result.playerPotentialProjectionPolicy.ageBandsByRoleFamily.outfield.length, 10);
+  assert.equal(result.playerPotentialProjectionPolicy.ageBandsByRoleFamily.goalkeeper.length, 14);
   assert.equal(result.playerMarketCalibration.divisionBaselines.length, 3);
   assert.equal(result.wageFinanceCalibration.sourceBaselines.length, 3);
+  assert.equal(
+    result.playerDevelopmentEnvironment.environmentKeyByCategoryAndTier.first_division
+      .title_contender,
+    "excellent",
+  );
+});
+
+test("rejects incomplete and non-monotonic development-environment policies", () => {
+  const incompleteAssets = validAssets();
+  const incomplete = incompleteAssets.playerDevelopmentEnvironment as {
+    positiveGrowthMultiplierBasisPointsByKey: Record<string, number>;
+  };
+  delete incomplete.positiveGrowthMultiplierBasisPointsByKey.very_poor;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(incompleteAssets),
+    "schema validation failed",
+  );
+
+  const nonMonotonicAssets = validAssets();
+  const nonMonotonic = nonMonotonicAssets.playerDevelopmentEnvironment as {
+    positiveGrowthMultiplierBasisPointsByKey: Record<string, number>;
+  };
+  nonMonotonic.positiveGrowthMultiplierBasisPointsByKey.good = 9_900;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(nonMonotonicAssets),
+    "development-environment policy validation failed",
+  );
 });
 
 test("rejects malformed or widening potential-projection policy", () => {
@@ -33,10 +75,23 @@ test("rejects malformed or widening potential-projection policy", () => {
 
   const wideningAssets = validAssets();
   const wideningRating = wideningAssets.playerRatingScale as MutableRatingScale;
-  wideningRating.potentialProjectionPolicy
-    .ageBandsByRoleFamily.outfield[1]!.upperRealizationBasisPoints = 4_000;
+  const wideningBands = wideningRating.potentialProjectionPolicy
+    .ageBandsByRoleFamily.outfield;
+  wideningBands[3]!.upperRealizationBasisPoints =
+    wideningBands[2]!.upperRealizationBasisPoints + 1;
   assertValidationFailure(
     () => parsePlayerEconomyCalibrationAssets(wideningAssets),
+    "potential-projection policy validation failed",
+  );
+
+  const flatAssets = validAssets();
+  const flatRating = flatAssets.playerRatingScale as MutableRatingScale;
+  const flatBands = flatRating.potentialProjectionPolicy
+    .ageBandsByRoleFamily.outfield;
+  flatBands[3]!.upperRealizationBasisPoints =
+    flatBands[2]!.upperRealizationBasisPoints;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(flatAssets),
     "potential-projection policy validation failed",
   );
 });
@@ -49,6 +104,73 @@ test("rejects unknown keys", () => {
   };
 
   assertValidationFailure(() => parsePlayerEconomyCalibrationAssets(assets), "schema validation failed");
+});
+
+test("rejects the removed owner-market valuation context", () => {
+  const assets = validAssets();
+  const valuation = assets.valuationCurves as Record<string, unknown>;
+  valuation.marketContext = {
+    multiplierBasisPoints: { first_division: 10_000 },
+  };
+
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(assets),
+    "schema validation failed",
+  );
+});
+
+test("rejects removed uncertainty fields and invalid public-quality participation", () => {
+  const legacyAssets = validAssets();
+  const legacyExpectation = (
+    legacyAssets.valuationCurves as MutableValuationCurves
+  ).prospectExpectation as unknown as Record<string, unknown>;
+  legacyExpectation.uncertaintyDiscountBasisPointsPerHalfStar = 500;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(legacyAssets),
+    "schema validation failed",
+  );
+
+  const zeroOptionAssets = validAssets();
+  const zeroOptionExpectation = (
+    zeroOptionAssets.valuationCurves as MutableValuationCurves
+  ).prospectExpectation;
+  zeroOptionExpectation.upperOptionParticipationBasisPoints = 0;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(zeroOptionAssets),
+    "0 < upper option <= P50 < 10000",
+  );
+
+  const invertedAssets = validAssets();
+  const invertedExpectation = (
+    invertedAssets.valuationCurves as MutableValuationCurves
+  ).prospectExpectation;
+  invertedExpectation.upperOptionParticipationBasisPoints =
+    invertedExpectation.p50ParticipationBasisPoints + 1;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(invertedAssets),
+    "0 < upper option <= P50 < 10000",
+  );
+
+  const guaranteedP50Assets = validAssets();
+  const guaranteedP50Expectation = (
+    guaranteedP50Assets.valuationCurves as MutableValuationCurves
+  ).prospectExpectation;
+  guaranteedP50Expectation.p50ParticipationBasisPoints = 10_000;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(guaranteedP50Assets),
+    "0 < upper option <= P50 < 10000",
+  );
+});
+
+test("rejects exceptional-stock targets that drift between opening world and annual intake", () => {
+  const targetAssets = validAssets();
+  const rating = targetAssets.playerRatingScale as MutableRatingScale;
+  rating.rarity.annualIntake.activeYoungStoredCeilingSixTargetMinimum = 3;
+
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(targetAssets),
+    "annual young stored-ceiling-six target must match initial national stock",
+  );
 });
 
 test("rejects duplicate and non-monotonic thresholds", () => {
@@ -135,6 +257,14 @@ test("rejects malformed prospect evidence and AI offer spreads", () => {
     () => parsePlayerEconomyCalibrationAssets(counterAssets),
     "seller counter concession",
   );
+
+  const riskAssets = validAssets();
+  const riskBehavior = riskAssets.marketBehaviorCalibration as MutableMarketBehavior;
+  riskBehavior.aiRiskAppetite.toleranceBasisPointsByCategory.second_division = 9_000;
+  assertValidationFailure(
+    () => parsePlayerEconomyCalibrationAssets(riskAssets),
+    "AI risk tolerance must not increase in lower divisions",
+  );
 });
 
 test("locks the six-star anchor and hard cap to 150m EUR", () => {
@@ -181,6 +311,7 @@ function validAssets(): MutableCalibrationAssets {
     askingPriceCurves: askingPriceCurvesJson,
     marketBehaviorCalibration: marketBehaviorCalibrationJson,
     wageFinanceCalibration: wageFinanceCalibrationJson,
+    playerDevelopmentEnvironment: playerDevelopmentEnvironmentJson,
   });
 }
 
@@ -192,11 +323,16 @@ function assertValidationFailure(action: () => unknown, message: string): void {
 
 interface MutableRatingScale {
   abilityThresholds: Array<{ minimumAbilityInclusive: number }>;
+  rarity: {
+    annualIntake: {
+      activeYoungStoredCeilingSixTargetMinimum: number;
+    };
+  };
   potentialProjectionPolicy: {
     ageBandsByRoleFamily: {
       outfield: Array<{
         minimumAge: number;
-        expectedRealizationBasisPoints: number;
+        p50RealizationBasisPoints: number;
         upperRealizationBasisPoints: number;
       }>;
     };
@@ -236,12 +372,23 @@ interface MutableWageFinanceCalibration {
 interface MutableValuationCurves {
   ratingValueAnchors: Array<{ valueMinorUnits: number }>;
   upperTail: { hardCapMinorUnits: number };
-  prospectExpectation: { potentialProjectionPolicyVersion: string };
+  prospectExpectation: {
+    potentialProjectionPolicyVersion: string;
+    p50ParticipationBasisPoints: number;
+    upperOptionParticipationBasisPoints: number;
+  };
 }
 
 interface MutableMarketBehavior {
   aiTransferOffer: { askingBasisPointsStep: number };
   sellerNegotiation: { counterOfferConcessionBasisPoints: number };
+  aiRiskAppetite: {
+    toleranceBasisPointsByCategory: {
+      first_division: number;
+      second_division: number;
+      third_division: number;
+    };
+  };
 }
 
 type MutableCalibrationAssets = {

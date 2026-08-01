@@ -1,27 +1,21 @@
 import {
-  getPlayerRoleProfile,
   nonNegativeMoney,
-  rawDiagnosticAbilityAverage,
-  roleCurrentAbility,
-  rolePotentialAbility,
-  type ClubCategory,
-  type GameDate,
   type Money,
-  type Player,
   type PlayerMarketCalibrationConfig,
+  type PlayerPosition,
   type PlayerPotentialProjectionPolicyConfig,
   type PlayerRatingScaleConfig,
   type PlayerStarRating,
   type ValuationCurvesConfig,
 } from "@game/domain";
 
-import { derivePlayerPotentialProjection } from "../squad/player-potential-projection.ts";
+import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Explicit versioned inputs required by the canonical public-value model. */
 export interface PlayerValuationConfig {
   /** Closed global rating scale used for current and potential stars. */
   readonly ratingScale: PlayerRatingScaleConfig;
-  /** Canonical Step 05a policy used to derive one shared public range. */
+  /** Canonical Phase 80A Step 05 policy used by the public assessment. */
   readonly potentialProjectionPolicy: PlayerPotentialProjectionPolicyConfig;
   /** Dated market anchors and reviewed distribution tolerances. */
   readonly marketCalibration: PlayerMarketCalibrationConfig;
@@ -29,58 +23,46 @@ export interface PlayerValuationConfig {
   readonly valuationCurves: ValuationCurvesConfig;
 }
 
-/** Stable owner-market fact used by the public value model. */
-export type PlayerValuationMarketContext =
-  | Readonly<{ kind: "contracted"; division: ClubCategory }>
-  | Readonly<{ kind: "free_agent" }>;
-
 /** Inputs needed to derive one observer-independent public market value. */
 export interface DerivePlayerValuationInput {
-  /** Player being valued. */
-  readonly player: Player;
-  /** Current game date used to derive age. */
-  readonly currentDate: GameDate;
+  /** Canonical public facts already derived once by the caller. */
+  readonly assessment: PublicPlayerAssessment;
+  /** Intrinsic football position used only for bounded role scarcity. */
+  readonly primaryPosition: PlayerPosition;
   /** Explicit validated and cross-versioned valuation content. */
   readonly config: PlayerValuationConfig;
-  /**
-   * Current owner market, or an explicit neutral context when unattached.
-   * The observing/buying club is deliberately absent.
-   */
-  readonly marketContext: PlayerValuationMarketContext;
 }
 
 /** Safe structured components explaining one public value. */
 export interface PlayerValuationComponents {
   /** Public current rating used to choose the nonlinear value anchor. */
   readonly currentRating: PlayerStarRating;
-  /** Conservative public lower estimate used to measure uncertainty. */
-  readonly potentialLowerRating: PlayerStarRating;
-  /** Public expected estimate whose continuous anchor prices upside. */
-  readonly potentialExpectedRating: PlayerStarRating;
-  /** Public upper estimate; retained for range width, never priced directly. */
+  /** Public P50 estimate used to price the probable-development tranche. */
+  readonly potentialP50Rating: PlayerStarRating;
+  /** Public upper estimate used to price bounded, non-guaranteed option value. */
   readonly potentialUpperRating: PlayerStarRating;
   /** Anchor selected from the reviewed valuation curve. */
   readonly ratingAnchorMinorUnits: Money;
   /** Continuous value of proven current quality. */
   readonly currentQualityValueMinorUnits: Money;
-  /** Continuous value of the modeled upper outcome, never used unweighted. */
+  /** Continuous value of the public P50 outcome on the same nonlinear curve. */
+  readonly p50QualityValueMinorUnits: Money;
+  /** Continuous value of the public upper outcome on the same nonlinear curve. */
   readonly upperQualityValueMinorUnits: Money;
-  /** Probability-weighted money expectation from the Step 05a realization. */
-  readonly undiscountedPotentialExpectationMinorUnits: Money;
-  /** Range-width discount multiplier expressed in integer basis points. */
-  readonly uncertaintyMultiplierBasisPoints: number;
-  /** Discounted expected-realization value before the max-with-current rule. */
-  readonly discountedPotentialExpectationMinorUnits: Money;
-  /** Larger of current quality and discounted expected realization. */
-  readonly selectedQualityValueMinorUnits: Money;
+  /** Policy participation in the incremental current-to-P50 value. */
+  readonly p50ParticipationBasisPoints: number;
+  /** Policy participation in the incremental P50-to-upper option value. */
+  readonly upperOptionParticipationBasisPoints: number;
+  /** Weighted contribution of the incremental current-to-P50 value. */
+  readonly p50UpsideValueMinorUnits: Money;
+  /** Weighted contribution of the incremental P50-to-upper value. */
+  readonly upperOptionValueMinorUnits: Money;
+  /** Proven current value plus both bounded public-upside contributions. */
+  readonly expectedQualityValueMinorUnits: Money;
   /** Age multiplier expressed in integer basis points. */
   readonly ageMultiplierBasisPoints: number;
   /** Broad-position multiplier expressed in integer basis points. */
   readonly positionMultiplierBasisPoints: number;
-  /** Owning-market multiplier expressed in integer basis points. */
-  readonly marketContextMultiplierBasisPoints: number;
-  /** Owning-market ceiling applied before the global hard-cap contract. */
-  readonly marketContextMaximumMinorUnits: Money;
   /** Deterministically rounded value before upper-tail compression. */
   readonly valueBeforeTailCompressionMinorUnits: Money;
   /** Shared compressed value before whole-euro quantization and final caps. */
@@ -104,18 +86,10 @@ export interface PlayerValuation {
   readonly components: PlayerValuationComponents;
 }
 
-/** Canonical football-quality facts shared by market valuation and willingness. */
-export interface PlayerMarketAbility {
-  /** Current ability for the player's stable football role. */
-  readonly currentAbility: number;
-  /** Potential ability evaluated through the same role profile. */
-  readonly potentialAbility: number;
-}
-
 /** Error categories exposed by player valuation helpers. */
 export type PlayerValuationErrorCode =
   | "missing_primary_position"
-  | "missing_role_identity"
+  | "invalid_assessment"
   | "missing_age_band"
   | "invalid_config";
 
@@ -135,40 +109,28 @@ export class PlayerValuationError extends Error {
 /**
  * Derives one global, observer-independent public market value.
  *
- * Current quality and the Step 05a expected projection are valued on the same
- * continuous curve. The projected component is discounted by visible range
- * width, then the larger component receives the shared age, position, owner
- * context, upper-tail, whole-euro, and cap policies.
+ * Current, P50, and upper quality use the same nonlinear curve. Proven current
+ * quality is priced fully; only the two non-overlapping upside deltas receive
+ * bounded participation. Owner, employment, and seller facts cannot enter
+ * this API.
  */
 export function derivePlayerValuation(
   input: DerivePlayerValuationInput,
 ): PlayerValuation {
   validateConfig(input.config);
-  const primaryPosition = input.player.naturalPositions[0];
+  const primaryPosition = input.primaryPosition;
   if (primaryPosition === undefined) {
     throw new PlayerValuationError(
       "missing_primary_position",
-      `player has no primary position: ${input.player.id}`,
+      `player has no primary position: ${input.assessment.playerId}`,
     );
   }
-  if (input.player.primaryRole === undefined) {
-    throw new PlayerValuationError(
-      "missing_role_identity",
-      `player role identity is required for public value: ${input.player.id}`,
-    );
-  }
-
-  const projection = derivePlayerPotentialProjection({
-    player: input.player,
-    currentDate: input.currentDate,
-    policy: input.config.potentialProjectionPolicy,
-    ratingScale: input.config.ratingScale,
-  });
-  const age = projection.age;
-  const currentRating = projection.currentRating;
-  const potentialLowerRating = projection.conservativeLowerRating;
-  const potentialExpectedRating = projection.expectedRating;
-  const potentialUpperRating = projection.upperRating;
+  const assessment = input.assessment;
+  validateAssessment(assessment, input.config);
+  const age = assessment.age;
+  const currentRating = assessment.currentRating.stars;
+  const potentialP50Rating = assessment.p50Rating.stars;
+  const potentialUpperRating = assessment.upperRating.stars;
   const ratingAnchorIndex = input.config.valuationCurves.ratingValueAnchors.findIndex(
     (anchor) => anchor.rating === currentRating,
   );
@@ -180,32 +142,28 @@ export function derivePlayerValuation(
     );
   }
   const currentQualityValue = interpolateQualityCurveValue({
-    ability: projection.currentAbility,
+    ability: assessment.currentAbility,
+    config: input.config,
+  });
+  const p50QualityValue = interpolateQualityCurveValue({
+    ability: assessment.p50Ability,
     config: input.config,
   });
   const upperQualityValue = interpolateQualityCurveValue({
-    ability: projection.upperAbility,
+    ability: assessment.upperAbility,
     config: input.config,
   });
-  const undiscountedPotentialExpectation = interpolateExpectedOutcomeValue({
-    currentAbility: projection.currentAbility,
-    expectedAbility: projection.expectedAbility,
-    upperAbility: projection.upperAbility,
-    currentQualityValue,
-    upperQualityValue,
-  });
-  const uncertaintyMultiplierBasisPoints = uncertaintyMultiplier(
-    input.config.valuationCurves,
-    potentialLowerRating,
-    potentialUpperRating,
+  const participation = input.config.valuationCurves.prospectExpectation;
+  const p50UpsideValue = multiplyBasisPoints(
+    p50QualityValue - currentQualityValue,
+    participation.p50ParticipationBasisPoints,
   );
-  const discountedPotentialExpectation = multiplyBasisPoints(
-    undiscountedPotentialExpectation,
-    uncertaintyMultiplierBasisPoints,
+  const upperOptionValue = multiplyBasisPoints(
+    upperQualityValue - p50QualityValue,
+    participation.upperOptionParticipationBasisPoints,
   );
-  const selectedQualityValue = Math.max(
-    currentQualityValue,
-    discountedPotentialExpectation,
+  const expectedQualityValue = assertSafeInteger(
+    currentQualityValue + p50UpsideValue + upperOptionValue,
   );
   const ageMultiplierBasisPoints = findAgeMultiplier(
     input.config.valuationCurves,
@@ -215,26 +173,12 @@ export function derivePlayerValuation(
     input.config.valuationCurves.positionMultipliers[
       broadPosition(primaryPosition)
     ];
-  const marketContextKey = input.marketContext.kind === "free_agent"
-    ? "free_agent"
-    : input.marketContext.division;
-  const marketContextMultiplierBasisPoints =
-    input.config.valuationCurves.marketContext.multiplierBasisPoints[
-      marketContextKey
-    ];
-  const marketContextMaximumMinorUnits =
-    input.config.valuationCurves.marketContext.maximumMinorUnits[
-      marketContextKey
-    ];
   const valueBeforeTailCompression = multiplyBasisPoints(
     multiplyBasisPoints(
-      multiplyBasisPoints(
-        selectedQualityValue,
-        ageMultiplierBasisPoints,
-      ),
-      positionMultiplierBasisPoints,
+      expectedQualityValue,
+      ageMultiplierBasisPoints,
     ),
-    marketContextMultiplierBasisPoints,
+    positionMultiplierBasisPoints,
   );
   const upperTail = input.config.valuationCurves.upperTail;
   const hardCapEligible =
@@ -248,7 +192,6 @@ export function derivePlayerValuation(
   const wholeEuroValue = floorToWholeEuro(compressedValue);
   const cappedValue = Math.min(
     wholeEuroValue,
-    marketContextMaximumMinorUnits,
     hardCapEligible
       ? upperTail.hardCapMinorUnits
       : upperTail.hardCapMinorUnits - 100,
@@ -260,26 +203,20 @@ export function derivePlayerValuation(
     age,
     components: {
       currentRating,
-      potentialLowerRating,
-      potentialExpectedRating,
+      potentialP50Rating,
       potentialUpperRating,
       ratingAnchorMinorUnits: nonNegativeMoney(ratingAnchor.valueMinorUnits),
       currentQualityValueMinorUnits: nonNegativeMoney(currentQualityValue),
+      p50QualityValueMinorUnits: nonNegativeMoney(p50QualityValue),
       upperQualityValueMinorUnits: nonNegativeMoney(upperQualityValue),
-      undiscountedPotentialExpectationMinorUnits: nonNegativeMoney(
-        undiscountedPotentialExpectation,
-      ),
-      uncertaintyMultiplierBasisPoints,
-      discountedPotentialExpectationMinorUnits: nonNegativeMoney(
-        discountedPotentialExpectation,
-      ),
-      selectedQualityValueMinorUnits: nonNegativeMoney(selectedQualityValue),
+      p50ParticipationBasisPoints: participation.p50ParticipationBasisPoints,
+      upperOptionParticipationBasisPoints:
+        participation.upperOptionParticipationBasisPoints,
+      p50UpsideValueMinorUnits: nonNegativeMoney(p50UpsideValue),
+      upperOptionValueMinorUnits: nonNegativeMoney(upperOptionValue),
+      expectedQualityValueMinorUnits: nonNegativeMoney(expectedQualityValue),
       ageMultiplierBasisPoints,
       positionMultiplierBasisPoints,
-      marketContextMultiplierBasisPoints,
-      marketContextMaximumMinorUnits: nonNegativeMoney(
-        marketContextMaximumMinorUnits,
-      ),
       valueBeforeTailCompressionMinorUnits: nonNegativeMoney(
         valueBeforeTailCompression,
       ),
@@ -288,41 +225,6 @@ export function derivePlayerValuation(
       hardCapApplied: value === upperTail.hardCapMinorUnits,
     },
   };
-}
-
-/**
- * Converts the Step 05a expected ability into a money-space expectation.
- *
- * The stored upper ability contributes only through the calibrated realization
- * share. This is neither raw-ceiling pricing nor an unweighted midpoint.
- */
-function interpolateExpectedOutcomeValue(input: {
-  readonly currentAbility: number;
-  readonly expectedAbility: number;
-  readonly upperAbility: number;
-  readonly currentQualityValue: number;
-  readonly upperQualityValue: number;
-}): number {
-  const remainingRoom = input.upperAbility - input.currentAbility;
-  if (remainingRoom <= 0) return input.currentQualityValue;
-  const realizationBasisPoints = Math.max(
-    0,
-    Math.min(
-      10_000,
-      Math.round(
-        (
-          input.expectedAbility - input.currentAbility
-        ) * 10_000 / remainingRoom,
-      ),
-    ),
-  );
-  return assertSafeInteger(
-    input.currentQualityValue
-      + multiplyBasisPoints(
-        input.upperQualityValue - input.currentQualityValue,
-        realizationBasisPoints,
-      ),
-  );
 }
 
 function interpolateQualityCurveValue(input: {
@@ -393,25 +295,48 @@ function qualityAnchorIndex(
   return selectedIndex;
 }
 
-/**
- * Derives the role-aware ability facts used by market decisions.
- *
- * This true-data helper remains separate from the public-value output so exact
- * potential is never added to public valuation diagnostics.
- */
-export function derivePlayerMarketAbility(player: Player): PlayerMarketAbility {
-  if (player.primaryRole === undefined) {
-    return {
-      currentAbility: Number(rawDiagnosticAbilityAverage(player.abilities)),
-      potentialAbility: Number(rawDiagnosticAbilityAverage(player.potential)),
-    };
+/** Rejects malformed facts before they can influence the global money curve. */
+function validateAssessment(
+  assessment: PublicPlayerAssessment,
+  config: PlayerValuationConfig,
+): void {
+  const abilities = [
+    assessment.currentAbility,
+    assessment.p50Ability,
+    assessment.upperAbility,
+  ];
+  if (
+    !Number.isSafeInteger(assessment.age)
+    || assessment.age < 0
+    || abilities.some((ability) =>
+      !Number.isFinite(ability) || ability < 0 || ability > 20
+    )
+    || assessment.currentAbility > assessment.p50Ability
+    || assessment.p50Ability > assessment.upperAbility
+    || assessment.currentRating.stars > assessment.p50Rating.stars
+    || assessment.p50Rating.stars > assessment.upperRating.stars
+    || assessment.currentRating.stars
+      !== ratingForAbility(assessment.currentAbility, config)
+    || assessment.p50Rating.stars
+      !== ratingForAbility(assessment.p50Ability, config)
+    || assessment.upperRating.stars
+      !== ratingForAbility(assessment.upperAbility, config)
+  ) {
+    throw new PlayerValuationError(
+      "invalid_assessment",
+      `public assessment is invalid: ${assessment.playerId}`,
+    );
   }
+}
 
-  const profile = getPlayerRoleProfile(player.primaryRole);
-  return {
-    currentAbility: Number(roleCurrentAbility(player.abilities, profile)),
-    potentialAbility: Number(rolePotentialAbility(player.potential, profile)),
-  };
+/** Maps an exact public ability through the same closed scale as valuation. */
+function ratingForAbility(
+  ability: number,
+  config: PlayerValuationConfig,
+): PlayerStarRating | undefined {
+  return config.ratingScale.abilityThresholds[
+    qualityAnchorIndex(ability, config)
+  ]?.rating;
 }
 
 function validateConfig(config: PlayerValuationConfig): void {
@@ -437,26 +362,22 @@ function validateConfig(config: PlayerValuationConfig): void {
       "valuation hard-cap contract is invalid",
     );
   }
-  const marketKeys = [
-    "first_division",
-    "second_division",
-    "third_division",
-    "free_agent",
-  ] as const;
+  const p50Participation =
+    config.valuationCurves.prospectExpectation.p50ParticipationBasisPoints;
+  const upperOptionParticipation =
+    config.valuationCurves.prospectExpectation
+      .upperOptionParticipationBasisPoints;
   if (
     config.valuationCurves.qualityInterpolationExponentMilli <= 0
-    || config.valuationCurves.prospectExpectation
-      .uncertaintyDiscountBasisPointsPerHalfStar <= 0
-    || config.valuationCurves.prospectExpectation
-      .minimumUncertaintyMultiplierBasisPoints <= 0
-    || marketKeys.some((key) =>
-      config.valuationCurves.marketContext.multiplierBasisPoints[key] <= 0
-      || config.valuationCurves.marketContext.maximumMinorUnits[key] <= 0
-    )
+    || !Number.isSafeInteger(p50Participation)
+    || !Number.isSafeInteger(upperOptionParticipation)
+    || upperOptionParticipation <= 0
+    || upperOptionParticipation > p50Participation
+    || p50Participation >= 10_000
   ) {
     throw new PlayerValuationError(
       "invalid_config",
-      "valuation interpolation or market context is invalid",
+      "valuation interpolation or public-quality participation is invalid",
     );
   }
 }
@@ -486,25 +407,8 @@ function findAgeMultiplier(
   );
 }
 
-function uncertaintyMultiplier(
-  curves: ValuationCurvesConfig,
-  lowerRating: PlayerStarRating,
-  upperRating: PlayerStarRating,
-): number {
-  const halfStarWidth = Math.max(
-    0,
-    Math.round((upperRating - lowerRating) * 2),
-  );
-  return Math.max(
-    curves.prospectExpectation.minimumUncertaintyMultiplierBasisPoints,
-    10_000
-      - halfStarWidth
-        * curves.prospectExpectation.uncertaintyDiscountBasisPointsPerHalfStar,
-  );
-}
-
 function broadPosition(
-  position: Player["naturalPositions"][number],
+  position: PlayerPosition,
 ): keyof ValuationCurvesConfig["positionMultipliers"] {
   if (position === "gk") return "goalkeeper";
   if (

@@ -193,9 +193,9 @@ evidence, not retroactive Phase 79D evidence.
   `pnpm check` pass.
 - By explicit product decision, the interrupted `50 x 20` is deferred and
   unclaimed; Phase 79D closes without presenting partial output as evidence.
-- Phase 79 Step 14 remains paused through Phases 80, 80A, 80B, and 80C. Phase 80C
-  Step 09 owns one checkpointed `50 x 20` with exactly `7` workers before any
-  return to the parent release-scale gate.
+- Phase 79 Step 14 remains paused through Phases 80, 80A, 80B, 80C, and 81.
+  Phase 81 Step 12 owns one checkpointed `50 x 20` with exactly `7` workers
+  before any return to the parent release-scale gate.
 - The phase report explains that twenty seasons cover a representative
   age-15-to-35 arc and year-20 stocks while not proving equilibrium after year
   20.

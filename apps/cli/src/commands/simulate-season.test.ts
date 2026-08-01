@@ -163,9 +163,9 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.includes("Players: 396"), true);
   assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
   assert.equal(io.stdoutLines.includes("Current ability distribution:"), true);
-  assert.equal(io.stdoutLines.includes("  0-8: 113"), true);
-  assert.equal(io.stdoutLines.includes("  9-11: 255"), true);
-  assert.equal(io.stdoutLines.includes("  12-14: 28"), true);
+  assert.equal(io.stdoutLines.includes("  0-8: 124"), true);
+  assert.equal(io.stdoutLines.includes("  9-11: 254"), true);
+  assert.equal(io.stdoutLines.includes("  12-14: 18"), true);
   assert.equal(io.stdoutLines.includes("  15+: 0"), true);
   assert.equal(io.stdoutLines.some((line) => /^  15\+: [0-9]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Potential distribution:"), true);
@@ -174,6 +174,7 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.some((line) => /^  Age 26\+ high-room warnings: [0-9]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Rarity budget:"), true);
   assert.equal(io.stdoutLines.some((line) => /^  White-fly players: [0-9]+ \/ [0-9]+$/.test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => line.includes("Rare prodigies:")), false);
   assert.equal(io.stdoutLines.includes("Prospect coverage:"), true);
   assert.equal(io.stdoutLines.includes("  Clubs with prospects: 18 / 18"), true);
   assert.equal(io.stdoutLines.includes("Role-coherence warnings:"), true);

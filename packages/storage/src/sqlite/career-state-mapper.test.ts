@@ -16,6 +16,8 @@ test("career rows use explicit relational tables and scalar binds", () => {
   const insertedTables = new Set(database.statements.map(({ sql }) => insertedTable(sql)));
   assert.deepEqual(insertedTables, new Set([
     "career_world",
+    "club_competitive_tier_state",
+    "club_competitive_tier_assignments",
     "transfer_history",
     "senior_squad_registrations",
     "player_contracts",
@@ -37,6 +39,7 @@ test("career rows use explicit relational tables and scalar binds", () => {
     "player_participation_ledgers",
     "player_participation_rows",
     "player_participation_role_minutes",
+    "player_participation_club_minutes",
     "player_participation_applied_fixtures",
     "player_participation_closed_months",
     "youth_state",
@@ -55,6 +58,21 @@ test("career rows use explicit relational tables and scalar binds", () => {
   ]));
   assert.ok(database.statements.every(({ bind }) => bind.every(isSqliteScalar)));
   assert.ok(database.statements.every(({ sql }) => !/json/i.test(sql)));
+  const tierHeader = database.statements.find(({ sql }) =>
+    sql.includes("INSERT INTO club_competitive_tier_state")
+  );
+  const tierAssignments = database.statements
+    .filter(({ sql }) => sql.includes("INSERT INTO club_competitive_tier_assignments"))
+    .map(({ bind }) => bind);
+  assert.deepEqual(tierHeader?.bind, [
+    "save:mapper",
+    "club-competitive-tier-v1",
+    "season:2026",
+  ]);
+  assert.deepEqual(tierAssignments, [
+    ["save:mapper", 0, "club:home", "title_contender"],
+    ["save:mapper", 1, "club:away", "playoff_contender"],
+  ]);
   const inboxInsert = database.statements.find(({ sql }) => sql.includes("career_inbox_messages"));
   assert.equal(inboxInsert?.bind[3], 20_100);
   assert.equal(inboxInsert?.bind[7], "until_resolved");
@@ -83,6 +101,16 @@ test("career rows use explicit relational tables and scalar binds", () => {
     8,
     4,
     0,
+  ]);
+  const participationClubMinutes = database.statements.find(({ sql }) =>
+    sql.includes("INSERT INTO player_participation_club_minutes")
+  );
+  assert.deepEqual(participationClubMinutes?.bind, [
+    "save:mapper",
+    "season:2026|2026-08|player:one",
+    0,
+    "club:home",
+    90,
   ]);
 });
 
@@ -115,7 +143,7 @@ test("market clocks persist their exact response date instead of reseeding it fr
     evaluatedOn: 20_010,
     age: 25,
     currentAbility: 10,
-    reachablePotential: 12,
+    publicPotentialP50Ability: 12,
     role: "central_midfielder",
     expectedSquadStatus: "squad_player",
     currentAnnualWage: 100_000_00,
@@ -224,7 +252,7 @@ function isSqliteScalar(value: unknown): value is SqliteBindValue {
 function richCareerFixture(): CareerState {
   return {
     saveId: "save:mapper",
-    schemaVersion: 1,
+    schemaVersion: 2,
     selectedClubId: "club:home",
     gameState: {
       meta: { seed: "mapper", rngAlgorithmVersion: "sfc32-v1", saveSchemaVersion: 1 },
@@ -232,8 +260,25 @@ function richCareerFixture(): CareerState {
       players: {},
       playerIds: [],
       playerStates: {},
-      clubs: {},
-      clubIds: [],
+      clubs: {
+        "club:home": {
+          id: "club:home",
+          name: "Home",
+          shortName: "Home",
+          category: "third_division",
+          reputation: 5,
+          playerIds: [],
+        },
+        "club:away": {
+          id: "club:away",
+          name: "Away",
+          shortName: "Away",
+          category: "third_division",
+          reputation: 4,
+          playerIds: [],
+        },
+      },
+      clubIds: ["club:home", "club:away"],
       fixtures: {
         "fixture:played": {
           id: "fixture:played",
@@ -268,6 +313,14 @@ function richCareerFixture(): CareerState {
         },
       },
       fixtureIds: ["fixture:played"],
+    },
+    clubCompetitiveTierState: {
+      policyVersion: "club-competitive-tier-v1",
+      seasonId: "season:2026",
+      tierByClubId: {
+        "club:home": "title_contender",
+        "club:away": "playoff_contender",
+      },
     },
     careerWorld: { worldSeed: "mapper-world", generatorVersion: 1, creationSourceKey: "test" },
     seniorSquadState: {
@@ -409,7 +462,7 @@ function richCareerFixture(): CareerState {
                 evaluatedOn: 20_013,
                 age: 25,
                 currentAbility: 10,
-                reachablePotential: 12,
+                publicPotentialP50Ability: 12,
                 role: "central_midfielder",
                 expectedSquadStatus: "squad_player",
                 currentAnnualWage: 100_000_00,
@@ -489,6 +542,7 @@ function richCareerFixture(): CareerState {
           ratingTotal: 7.1,
           ratingSamples: 1,
           playedRoleMinutes: { striker: 90 },
+          clubMinutes: { "club:home": 90 },
           appliedFixtureIds: ["fixture:played"],
         },
       },

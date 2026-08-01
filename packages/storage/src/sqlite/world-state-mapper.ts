@@ -14,6 +14,7 @@ import {
   seasonId,
   stateValue,
   type CareerState,
+  type CreateCareerStateInput,
   type Competition,
   type CompetitionSeasonHistoryEntry,
   type CurrencyCode,
@@ -172,7 +173,8 @@ export function loadCareerWorld(database: SqliteWorldDatabase, requestedSaveId: 
     meta: requiredOnlyRow(database, `SELECT seed, rng_algorithm_version, save_schema_version,
       topology_decision_id, player_rating_scale_version, player_market_calibration_version,
       valuation_curves_version, asking_price_curves_version, market_behavior_calibration_version,
-      wage_finance_calibration_version FROM game_meta WHERE save_id = ?`, requestedSaveId),
+      wage_finance_calibration_version, player_development_environment_version
+      FROM game_meta WHERE save_id = ?`, requestedSaveId),
     calendar: requiredOnlyRow(database, 'SELECT "current_date", current_season_id FROM game_calendar WHERE save_id = ?', requestedSaveId),
     clubs: database.queryAll("SELECT club_id, name, short_name, category, reputation FROM clubs WHERE save_id = ?", [requestedSaveId]),
     clubOrder: database.queryAll("SELECT sort_order, club_id FROM club_order WHERE save_id = ? ORDER BY sort_order", [requestedSaveId]),
@@ -387,6 +389,8 @@ export function mapCareerWorldRows(input: SaveCareerInput, metadata: CareerSaveM
       asking_price_curves_version: calibrationVersions?.askingPriceCurvesVersion ?? null,
       market_behavior_calibration_version: calibrationVersions?.marketBehaviorCalibrationVersion ?? null,
       wage_finance_calibration_version: calibrationVersions?.wageFinanceCalibrationVersion ?? null,
+      player_development_environment_version:
+        calibrationVersions?.playerDevelopmentEnvironmentVersion ?? null,
     },
     calendar: { current_date: state.gameState.calendar.currentDate, current_season_id: state.gameState.calendar.currentSeasonId },
     clubs,
@@ -411,7 +415,7 @@ export function mapCareerWorldRows(input: SaveCareerInput, metadata: CareerSaveM
 }
 
 /** Reconstructs the domain world from explicit ordered relational rows. */
-export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
+export function reconstructCareerWorldRows(rows: WorldRows): CreateCareerStateInput {
   const orderedPlayerIds = rows.playerOrder.map((row) => playerId(requiredText(row, "player_id")));
   const playerRows = keyedRows(rows.players, "player_id");
   const positions = groupedRows(rows.positions, "player_id");
@@ -569,6 +573,10 @@ export function reconstructCareerWorldRows(rows: WorldRows): CareerState {
         askingPriceCurvesVersion: requiredText(rows.meta, "asking_price_curves_version"),
         marketBehaviorCalibrationVersion: requiredText(rows.meta, "market_behavior_calibration_version"),
         wageFinanceCalibrationVersion: requiredText(rows.meta, "wage_finance_calibration_version"),
+        playerDevelopmentEnvironmentVersion: requiredText(
+          rows.meta,
+          "player_development_environment_version",
+        ),
       };
 
   // Career systems are attached by `loadCareerStateRows` before the complete
@@ -615,6 +623,7 @@ function insertMappedRows(database: SqliteWorldDatabase, rows: WorldRows): void 
     "asking_price_curves_version",
     "market_behavior_calibration_version",
     "wage_finance_calibration_version",
+    "player_development_environment_version",
   ], rows.save, rows.meta);
   insertSaveRow(database, "game_calendar", ["current_date", "current_season_id"], rows.save, rows.calendar);
   insertRows(database, "players", ["player_id", "first_name", "last_name", "birth_date", "primary_role", "archetype", "has_natural_roles", "has_adapted_roles", "has_weak_roles", "has_role_familiarity"], rows.save, rows.players);

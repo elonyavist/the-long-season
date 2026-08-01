@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { createLongRunAnomalyReport, worstLongRunAnomalyStatus } from "./anomaly-scoring.ts";
+import {
+  createLongRunAnomalyReport,
+  LONG_RUN_ANOMALY_KEYS,
+  longRunAnomalySemanticClass,
+  projectLongRunAnomalyCheckForWorldGate,
+  worstLongRunAnomalyStatus,
+} from "./anomaly-scoring.ts";
 import type { LongRunClubStabilityReport } from "./club-stability.ts";
 import type { LongRunPlayerEvolutionReport } from "./player-evolution.ts";
 
@@ -9,6 +15,47 @@ test("worstLongRunAnomalyStatus combines independent report sections", () => {
   assert.equal(worstLongRunAnomalyStatus(["pass", "pass"]), "pass");
   assert.equal(worstLongRunAnomalyStatus(["pass", "warn"]), "warn");
   assert.equal(worstLongRunAnomalyStatus(["warn", "fail"]), "fail");
+});
+
+test("anomaly semantics are total and keep raw status separate from gate projection", () => {
+  assert.deepEqual(
+    LONG_RUN_ANOMALY_KEYS.map((key) => [key, longRunAnomalySemanticClass(key)]),
+    [
+      ["goals_per_match_avg", "monitor"],
+      ["table_points_spread_avg", "story"],
+      ["top_assist_max", "story"],
+      ["top_creator_goal_share_max", "monitor"],
+      ["top_three_creator_goal_share_max", "monitor"],
+      ["champion_streak", "story"],
+      ["useful_players_after_long_run", "monitor"],
+      ["age_30_plus_share", "monitor"],
+      ["transfer_turnover_available", "monitor"],
+      ["squad_turnover_available", "monitor"],
+      ["clubs_below_minimum_squad_size", "structural"],
+      ["clubs_without_natural_goalkeeper", "structural"],
+      ["role_coverage_warning_count", "monitor"],
+    ],
+  );
+
+  const story = projectLongRunAnomalyCheckForWorldGate({
+    key: "table_points_spread_avg",
+    status: "fail",
+    value: 28,
+    threshold: "unchanged raw threshold",
+  });
+  const structural = projectLongRunAnomalyCheckForWorldGate({
+    key: "clubs_below_minimum_squad_size",
+    status: "fail",
+    value: 1,
+    threshold: "unchanged raw threshold",
+  });
+
+  assert.equal(story.status, "fail");
+  assert.equal(story.semanticClass, "story");
+  assert.equal(story.worldGateStatus, "warn");
+  assert.equal(structural.status, "fail");
+  assert.equal(structural.semanticClass, "structural");
+  assert.equal(structural.worldGateStatus, "fail");
 });
 
 test("createLongRunAnomalyReport warns when only missing market metrics are unavailable", () => {

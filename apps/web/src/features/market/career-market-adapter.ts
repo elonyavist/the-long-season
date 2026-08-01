@@ -1,5 +1,4 @@
 import {
-  selectPlayerPotentialProjectionPolicy,
   selectMarketBehaviorCalibration,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
@@ -7,7 +6,7 @@ import {
   buildCareerMarketCatalog,
   deriveMarketPendingExposure,
   derivePlayerValuation,
-  derivePublicPlayerAssessments,
+  derivePublicPlayerAssessment,
   deriveTransferCommercialSnapshot,
   evaluateCareerContractCapacity,
   evaluateMarketActionEligibility,
@@ -132,16 +131,17 @@ function buildReadyMarketPresentation(
     }
     return player;
   });
-  // Every target is assessed in one call on the same global content scale.
+  // Every target is assessed through the same singular global Interface.
   const assessmentByPlayerId = new Map(
-    derivePublicPlayerAssessments({
-      ratingScale: valuationConfig.ratingScale,
-      potentialProjectionPolicy: selectPlayerPotentialProjectionPolicy(
-        career.gameState.meta.calibrationVersions,
-      ),
-      currentDate,
-      players: targetPlayers,
-    }).map((assessment) => [String(assessment.playerId), assessment]),
+    targetPlayers.map((player) => {
+      const assessment = derivePublicPlayerAssessment({
+        player,
+        ratingScale: valuationConfig.ratingScale,
+        potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+        currentDate,
+      });
+      return [String(assessment.playerId), assessment] as const;
+    }),
   );
   const tacticalPlayerById = new Map(
     buildTacticalBoardSquadPlayers(targetPlayers.map((player) => {
@@ -174,10 +174,12 @@ function buildReadyMarketPresentation(
     const dynamic = career.gameState.playerStates[player.id];
     const assessment = assessmentByPlayerId.get(playerId);
     const tacticalPlayer = tacticalPlayerById.get(playerId);
+    const primaryPosition = player.naturalPositions[0];
     if (
       dynamic === undefined
       || assessment === undefined
       || tacticalPlayer === undefined
+      || primaryPosition === undefined
       || (catalogTarget.employment.status === "contracted"
         && (owner === undefined || contract === undefined))
     ) {
@@ -185,12 +187,9 @@ function buildReadyMarketPresentation(
     }
 
     const valuation = derivePlayerValuation({
-      player,
-      currentDate,
+      assessment,
+      primaryPosition,
       config: valuationConfig,
-      marketContext: owner === undefined
-        ? { kind: "free_agent" }
-        : { kind: "contracted", division: owner.category },
     });
     const remainingDays = contract === undefined ? undefined : Math.max(0, contract.endsOn - currentDate);
     const commercial = owner === undefined
@@ -200,6 +199,7 @@ function buildReadyMarketPresentation(
           sellingClubId: owner.id,
           playerId: player.id,
           asOf: currentDate,
+          publicAssessment: assessment,
           valuationConfig,
           askingPriceConfig,
         });
@@ -216,8 +216,8 @@ function buildReadyMarketPresentation(
       morale: Number(dynamic.morale),
       currentRating: assessment.currentRating,
       potentialRange: {
-        lowerStars: assessment.potentialProjection.lowerRating.stars,
-        upperStars: assessment.potentialProjection.upperRating.stars,
+        p50Stars: assessment.p50Rating.stars,
+        upperStars: assessment.upperRating.stars,
       },
       publicValue: valuation.value,
       ...(commercial === undefined
@@ -318,12 +318,25 @@ export function previewMarketOffer(
     const target = buildCareerMarketCatalog(career).targets.find(
       (candidate) => String(candidate.playerId) === draft.playerId,
     );
+    const targetPlayer = target === undefined
+      ? undefined
+      : career.gameState.players[target.playerId];
+    const publicAssessment = targetPlayer === undefined
+      ? undefined
+      : derivePublicPlayerAssessment({
+          player: targetPlayer,
+          currentDate: career.gameState.calendar.currentDate,
+          potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+          ratingScale: valuationConfig.ratingScale,
+        });
     const commercial = target?.employment.status === "contracted"
+      && publicAssessment !== undefined
       ? deriveTransferCommercialSnapshot({
           careerState: career,
           sellingClubId: target.employment.clubId,
           playerId: target.playerId,
           asOf: career.gameState.calendar.currentDate,
+          publicAssessment,
           valuationConfig,
           askingPriceConfig,
         })
@@ -381,13 +394,19 @@ export function previewMarketOffer(
             const player = Object.values(career.gameState.players).find(
               (candidate) => String(candidate.id) === draft.playerId,
             );
-            if (player === undefined) return {};
+            const primaryPosition = player?.naturalPositions[0];
+            if (player === undefined || primaryPosition === undefined) return {};
+            const assessment = derivePublicPlayerAssessment({
+              player,
+              currentDate: career.gameState.calendar.currentDate,
+              potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+              ratingScale: valuationConfig.ratingScale,
+            });
             return {
               publicValue: derivePlayerValuation({
-                player,
-                currentDate: career.gameState.calendar.currentDate,
+                assessment,
+                primaryPosition,
                 config: valuationConfig,
-                marketContext: { kind: "free_agent" },
               }).value,
             };
           })()

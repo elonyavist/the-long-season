@@ -2,53 +2,40 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  abilityValue,
   clubId,
   gameDate,
-  getPlayerRoleProfile,
-  mapPlayerAbilities,
   nonNegativeMoney,
   playerContractId,
   playerId,
-  rawDiagnosticAbilityAverage,
   type Club,
-  type Player,
-  type PlayerAbilities,
-  type PlayerPosition,
-  type PlayerRole,
 } from "@game/domain";
 
-import { derivePlayerWillingness as derivePlayerWillingnessWithPolicy } from "./player-willingness.ts";
+import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
-import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { derivePlayerWillingness as derivePlayerWillingnessWithPolicy } from "./player-willingness.ts";
+
+const ASSESSED_ON = gameDate(20_000);
 
 function derivePlayerWillingness(
   input: Omit<
     Parameters<typeof derivePlayerWillingnessWithPolicy>[0],
-    "marketBehaviorPolicy" | "ratingScale"
+    "marketBehaviorPolicy"
   >,
 ) {
   return derivePlayerWillingnessWithPolicy({
     ...input,
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
-    ratingScale: playerValuationConfigFixture().ratingScale,
   });
 }
 
-/**
- * Player willingness tests lock only the early sporting-level behavior.
- *
- * Later career systems can add new inputs through documented phases without
- * changing these baseline guarantees.
- */
+/** Player willingness is based on the same public facts visible to the manager. */
 test("accepts a plausible same-level move", () => {
   const result = derivePlayerWillingness({
-    player: playerFixture("01", "st", 11, 25),
+    publicAssessment: assessmentFixture("01", 11, 25),
     sellingClub: clubFixture("pro08", "third_division", 5),
     buyingClub: clubFixture("pro01", "third_division", 6),
     currentTier: "third_division",
     destinationTier: "third_division",
-    currentDate: gameDate(20_000),
   });
 
   assert.equal(result.status, "accepted");
@@ -58,12 +45,11 @@ test("accepts a plausible same-level move", () => {
 
 test("rejects a strong first-division prime player moving to a third-division club", () => {
   const result = derivePlayerWillingness({
-    player: playerFixture("01", "st", 15, 27),
+    publicAssessment: assessmentFixture("01", 15, 27),
     sellingClub: clubFixture("elite01", "first_division", 10),
     buyingClub: clubFixture("pro01", "third_division", 5),
     currentTier: "first_division",
     destinationTier: "third_division",
-    currentDate: gameDate(20_000),
   });
 
   assert.equal(result.status, "rejected");
@@ -75,12 +61,11 @@ test("rejects a strong first-division prime player moving to a third-division cl
 
 test("rejects a high-reputation one-level downgrade for a strong player", () => {
   const result = derivePlayerWillingness({
-    player: playerFixture("01", "am", 13, 26),
+    publicAssessment: assessmentFixture("01", 13, 26),
     sellingClub: clubFixture("elite01", "first_division", 9),
     buyingClub: clubFixture("pro01", "second_division", 4),
     currentTier: "first_division",
     destinationTier: "second_division",
-    currentDate: gameDate(20_000),
   });
 
   assert.equal(result.status, "rejected");
@@ -92,12 +77,11 @@ test("rejects a high-reputation one-level downgrade for a strong player", () => 
 
 test("accepts a younger non-star one-level downgrade", () => {
   const result = derivePlayerWillingness({
-    player: playerFixture("01", "cm", 10.5, 20),
+    publicAssessment: assessmentFixture("01", 10.5, 20),
     sellingClub: clubFixture("elite01", "first_division", 7),
     buyingClub: clubFixture("pro01", "second_division", 5),
     currentTier: "first_division",
     destinationTier: "second_division",
-    currentDate: gameDate(20_000),
   });
 
   assert.equal(result.status, "accepted");
@@ -105,18 +89,13 @@ test("accepts a younger non-star one-level downgrade", () => {
   assert.equal(result.age, 20);
 });
 
-test("rejects a lower-tier move for a young six-star-potential prospect", () => {
-  const player = {
-    ...playerFixture("elite-prospect", "cm", 8, 18),
-    potential: abilitiesFixture(17),
-  };
+test("protects a young player whose public upper estimate reaches six stars", () => {
   const result = derivePlayerWillingness({
-    player,
+    publicAssessment: assessmentFixture("elite-prospect", 8, 18, 6),
     sellingClub: clubFixture("elite01", "first_division", 7),
     buyingClub: clubFixture("pro01", "second_division", 5),
     currentTier: "first_division",
     destinationTier: "second_division",
-    currentDate: gameDate(20_000),
   });
 
   assert.equal(result.status, "rejected");
@@ -128,42 +107,32 @@ test("rejects a lower-tier move for a young six-star-potential prospect", () => 
 
 test("returns structured category and reputation gaps", () => {
   const result = derivePlayerWillingness({
-    player: playerFixture("01", "st", 14, 28),
+    publicAssessment: assessmentFixture("01", 14, 28),
     sellingClub: clubFixture("elite01", "first_division", 9),
     buyingClub: clubFixture("pro01", "third_division", 4),
     currentTier: "first_division",
     destinationTier: "third_division",
-    currentDate: gameDate(20_000),
   });
 
   assert.equal(result.categoryDrop, 2);
   assert.equal(result.reputationDrop, 5);
-  assert.ok(Math.abs(result.currentAbilityAverage - 14) < 1e-9);
+  assert.ok(Math.abs(result.currentAbility - 14) < 1e-9);
 });
 
-test("rejects an excessive step down for a role specialist hidden by the old raw average", () => {
-  const abilities = roleShapedAbilities("goalkeeper", 20, 20, 1);
-  const player = {
-    ...playerFixture("specialist", "gk", 1, 27),
-    abilities,
-    potential: roleShapedAbilities("goalkeeper", 20, 20, 2),
-  };
+test("uses canonical public current ability without reopening player attributes", () => {
   const result = derivePlayerWillingness({
-    player,
+    publicAssessment: assessmentFixture("specialist", 13.5, 27),
     sellingClub: clubFixture("elite01", "first_division", 9),
     buyingClub: clubFixture("pro01", "second_division", 4),
     currentTier: "first_division",
     destinationTier: "second_division",
-    currentDate: gameDate(20_000),
   });
 
-  assert.ok(Number(rawDiagnosticAbilityAverage(abilities)) < 11.5);
-  assert.ok(result.currentAbilityAverage >= 13);
+  assert.equal(result.currentAbility, 13.5);
   assert.equal(result.status, "rejected");
   assert.deepEqual(
     result.reasons.map((reason) => reason.code),
     [
-      "sporting_level_too_low",
       "reputation_drop_too_large",
       "prime_player_downward_move",
     ],
@@ -171,24 +140,22 @@ test("rejects an excessive step down for a role specialist hidden by the old raw
 });
 
 test("rejects same-tier terms that regress wage, status, and contract security", () => {
-  const player = playerFixture("terms", "cm", 11, 25);
+  const publicAssessment = assessmentFixture("terms", 11, 25);
   const sellingClub = clubFixture("pro08", "third_division", 6);
   const buyingClub = clubFixture("pro01", "third_division", 6);
-  const currentDate = gameDate(20_000);
   const result = derivePlayerWillingness({
-    player,
+    publicAssessment,
     sellingClub,
     buyingClub,
     currentTier: "third_division",
     destinationTier: "third_division",
-    currentDate,
     currentContract: {
       id: playerContractId("contract:terms-current"),
-      playerId: player.id,
+      playerId: publicAssessment.playerId,
       clubId: sellingClub.id,
       type: "professional",
-      startsOn: gameDate(currentDate - 365),
-      endsOn: gameDate(currentDate + 3 * 365),
+      startsOn: gameDate(ASSESSED_ON - 365),
+      endsOn: gameDate(ASSESSED_ON + 3 * 365),
       annualWage: nonNegativeMoney(100_000_00),
       squadStatus: "regular_starter",
       bonuses: {
@@ -218,29 +185,24 @@ test("rejects same-tier terms that regress wage, status, and contract security",
   );
 });
 
-function playerFixture(suffix: string, primaryPosition: PlayerPosition, currentAbility: number, age: number): Player {
+function assessmentFixture(
+  suffix: string,
+  currentAbility: number,
+  age: number,
+  upperStars: PublicPlayerAssessment["upperRating"]["stars"] = 4,
+): PublicPlayerAssessment {
   return {
-    id: playerId(`player:test-${suffix}`),
-    firstName: "Test",
-    lastName: `Player${suffix}`,
-    birthDate: gameDate(20_000 - age * 365),
-    naturalPositions: [primaryPosition],
-    primaryRole: roleForPosition(primaryPosition),
-    abilities: abilitiesFixture(currentAbility),
-    potential: abilitiesFixture(currentAbility + 1),
+    playerId: playerId(`player:test-${suffix}`),
+    assessedOn: ASSESSED_ON,
+    age,
+    roleFamily: "outfield",
+    currentAbility,
+    p50Ability: currentAbility + 0.5,
+    upperAbility: currentAbility + 1,
+    currentRating: { stars: 3 },
+    p50Rating: { stars: 3.5 },
+    upperRating: { stars: upperStars },
   };
-}
-
-function roleForPosition(position: PlayerPosition): PlayerRole {
-  if (position === "gk") return "goalkeeper";
-  if (position === "cb") return "center_back";
-  if (position === "rb" || position === "lb") return "full_back";
-  if (position === "rwb" || position === "lwb") return "wing_back";
-  if (position === "dm") return "defensive_midfielder";
-  if (position === "cm") return "central_midfielder";
-  if (position === "am") return "attacking_midfielder";
-  if (position === "rw" || position === "lw") return "winger";
-  return "striker";
 }
 
 function clubFixture(suffix: string, category: Club["category"], reputation: number): Club {
@@ -252,59 +214,4 @@ function clubFixture(suffix: string, category: Club["category"], reputation: num
     reputation,
     playerIds: [],
   };
-}
-
-function abilitiesFixture(value: number): PlayerAbilities {
-  const ability = abilityValue(value);
-
-  return {
-    technical: {
-      finishing: ability,
-      passing: ability,
-      longPassing: ability,
-      crossing: ability,
-      dribbling: ability,
-      technique: ability,
-      tackling: ability,
-      penalties: ability,
-      freeKicks: ability,
-    },
-    physical: {
-      pace: ability,
-      strength: ability,
-      stamina: ability,
-      agility: ability,
-      heading: ability,
-    },
-    mental: {
-      positioning: ability,
-      vision: ability,
-      anticipation: ability,
-      composure: ability,
-      determination: ability,
-      leadership: ability,
-    },
-    goalkeeping: {
-      reflexes: ability,
-      handling: ability,
-      rushingOut: ability,
-      goalkeeperPositioning: ability,
-      footwork: ability,
-    },
-  };
-}
-
-function roleShapedAbilities(
-  role: PlayerRole,
-  coreValue: number,
-  secondaryValue: number,
-  fallbackValue: number,
-): PlayerAbilities {
-  const profile = getPlayerRoleProfile(role);
-  const core = new Set(profile.coreForRole);
-  const secondary = new Set(profile.secondaryForRole);
-
-  return mapPlayerAbilities(abilitiesFixture(fallbackValue), (_value, key) =>
-    abilityValue(core.has(key) ? coreValue : secondary.has(key) ? secondaryValue : fallbackValue),
-  );
 }

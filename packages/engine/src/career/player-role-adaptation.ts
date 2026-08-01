@@ -24,8 +24,10 @@ const ADAPTED_TO_NATURAL_MONTHS = 5;
 export interface PlayerRoleAdaptationInput {
   /** Durable career state whose players and participation ledger are inspected. */
   readonly careerState: CareerState;
-  /** Season whose open monthly rows can be consumed by this checkpoint. */
+  /** Season whose cumulative monthly rows provide exposure evidence. */
   readonly seasonId: SeasonId;
+  /** Latest monthly fact that the current development batch has consumed. */
+  readonly throughMonthKey: PlayerDevelopmentMonthKey;
   /** Optional player subset used by focused reports and tests. */
   readonly playerIds?: readonly PlayerId[];
 }
@@ -63,7 +65,11 @@ export interface PlayerRoleAdaptationResult {
  * player's primary role, archetype, abilities, potential, or match position.
  */
 export function adaptPlayerRolesFromParticipation(input: PlayerRoleAdaptationInput): PlayerRoleAdaptationResult {
-  const eligibleRows = openParticipationRows(input.careerState.playerParticipationLedger, input.seasonId);
+  const eligibleRows = participationRowsThroughMonth(
+    input.careerState.playerParticipationLedger,
+    input.seasonId,
+    input.throughMonthKey,
+  );
   if (eligibleRows.length === 0) {
     return { careerState: input.careerState, changes: [] };
   }
@@ -229,18 +235,29 @@ function playerRoleForCanonicalRole(role: CanonicalPlayerRole): PlayerRole {
   }
 }
 
-function openParticipationRows(
+/**
+ * Returns cumulative same-season exposure through the consumed batch boundary.
+ *
+ * Closed rows remain evidence for familiarity: otherwise a player could reach
+ * the three-month adapted threshold but never the five-month natural threshold
+ * once the first quarterly batch had been closed.
+ */
+function participationRowsThroughMonth(
   ledger: PlayerParticipationLedger | undefined,
   seasonId: SeasonId,
+  throughMonthKey: PlayerDevelopmentMonthKey,
 ): readonly PlayerParticipationRow[] {
   if (ledger === undefined) {
     return [];
   }
 
-  const closed = new Set(ledger.closedMonthKeys);
   return ledger.rowKeys
     .map((rowKey) => ledger.rows[rowKey])
-    .filter((row): row is PlayerParticipationRow => row !== undefined && row.seasonId === seasonId && !closed.has(`${row.seasonId}|${row.monthKey}`));
+    .filter((row): row is PlayerParticipationRow =>
+      row !== undefined
+      && row.seasonId === seasonId
+      && row.monthKey <= throughMonthKey,
+    );
 }
 
 function isRoleIdentified(player: Player): player is Player & Required<Pick<Player, "primaryRole" | "archetype" | "naturalRoles" | "adaptedRoles" | "weakRoles" | "roleFamiliarity">> {

@@ -21,13 +21,15 @@ export type PlayerMarketCalibrationPopulation =
   | "initial_reserve"
   | "initial_youth"
   | "annual_intake"
-  | "active_year_ten";
+  | "active_closing_checkpoint";
 
 /** One caller-supplied player observation used by the read-only diagnostic. */
 export interface PlayerMarketCalibrationObservation {
   readonly division: ClubCategory;
+  /** Civil identity of the season represented by this observation. */
+  readonly seasonStartYear: number;
   readonly currentRating: PlayerStarRating;
-  readonly potentialRating: PlayerStarRating;
+  readonly publicP50Rating: PlayerStarRating;
   readonly publicValueMinorUnits: number;
   readonly population: PlayerMarketCalibrationPopulation;
   readonly sourceLabel: string;
@@ -36,6 +38,8 @@ export interface PlayerMarketCalibrationObservation {
 /** One generated club value normalized to the source comparator's 22 seniors. */
 export interface PlayerMarketClubSquadObservation {
   readonly division: ClubCategory;
+  /** Civil identity of the season represented by this squad value. */
+  readonly seasonStartYear: number;
   readonly activeSeniorCount: 22;
   readonly publicSquadValueMinorUnits: number;
   readonly sourceLabel: string;
@@ -57,10 +61,10 @@ export interface PlayerMarketDivisionDiagnostic {
   readonly sampleSize: number;
   readonly valueDistribution: MoneyPercentileDistribution;
   readonly currentRatingHistogram: PlayerRatingHistogram;
-  readonly potentialRatingHistogram: PlayerRatingHistogram;
+  readonly publicP50RatingHistogram: PlayerRatingHistogram;
   readonly currentFiveAndHalfOrHigherCount: number;
   readonly currentSixCount: number;
-  readonly potentialSixCount: number;
+  readonly publicP50SixCount: number;
   readonly valueFit: PlayerMarketDivisionValueFit;
   readonly normalized22SquadComparator: PlayerMarketSquadComparator;
 }
@@ -96,9 +100,9 @@ export interface PlayerMarketPopulationDiagnostic {
   readonly population: PlayerMarketCalibrationPopulation;
   readonly sampleSize: number;
   readonly currentRatingHistogram: PlayerRatingHistogram;
-  readonly potentialRatingHistogram: PlayerRatingHistogram;
+  readonly publicP50RatingHistogram: PlayerRatingHistogram;
   readonly currentSixCount: number;
-  readonly potentialSixCount: number;
+  readonly publicP50SixCount: number;
 }
 
 /** Pure diagnostic output for one supplied population. */
@@ -106,6 +110,11 @@ export interface PlayerMarketCalibrationReport {
   readonly versions: PlayerEconomyCalibrationVersionBundle;
   readonly metadata: PlayerMarketCalibrationSampleMetadata;
   readonly sampleSize: number;
+  /** Population explicitly selected for the binding division value bands. */
+  readonly divisionValuePopulation: PlayerMarketCalibrationPopulation | "all_supplied";
+  readonly divisionValueObservationCount: number;
+  /** Null when no active closing checkpoint was supplied. */
+  readonly activeClosingCheckpointSeasonStartYear: number | null;
   readonly evaluationStatus: "evaluated" | "not_evaluated";
   readonly fitStatus: "pass" | "fail";
   readonly percentileMethod: "Hyndman-Fan type 7 linear interpolation, rounded to nearest minor unit";
@@ -119,6 +128,8 @@ export interface CreatePlayerMarketCalibrationReportInput {
   readonly versions: PlayerEconomyCalibrationVersionBundle;
   readonly metadata: PlayerMarketCalibrationSampleMetadata;
   readonly observations: readonly PlayerMarketCalibrationObservation[];
+  /** Prevents initial/intake values from being mixed into closing value bands. */
+  readonly divisionValuePopulation: PlayerMarketCalibrationPopulation | "all_supplied";
   readonly clubSquadObservations: readonly PlayerMarketClubSquadObservation[];
   readonly targets: readonly PlayerMarketDivisionTarget[];
   readonly divisionBaselines: readonly PlayerMarketDivisionBaseline[];
@@ -134,12 +145,32 @@ export function createPlayerMarketCalibrationReport(
   input: CreatePlayerMarketCalibrationReportInput,
 ): PlayerMarketCalibrationReport {
   validateInput(input);
+  const divisionValueObservations = input.divisionValuePopulation === "all_supplied"
+    ? input.observations
+    : input.observations.filter(
+        ({ population }) => population === input.divisionValuePopulation,
+      );
+  const activeClosingCheckpointSeasonStartYear = closingCheckpointSeasonStartYear(
+    input.observations,
+  );
+  const divisionSquadObservations =
+    input.divisionValuePopulation === "active_closing_checkpoint"
+    && activeClosingCheckpointSeasonStartYear !== null
+      ? input.clubSquadObservations.filter(
+          ({ seasonStartYear }) =>
+            seasonStartYear === activeClosingCheckpointSeasonStartYear,
+        )
+      : input.clubSquadObservations;
 
   const divisionDiagnostics = divisions.map((division) =>
     summarizeDivision(
       division,
-      input.observations.filter((observation) => observation.division === division),
-      input.clubSquadObservations.filter((observation) => observation.division === division),
+      divisionValueObservations.filter(
+        (observation) => observation.division === division,
+      ),
+      divisionSquadObservations.filter(
+        (observation) => observation.division === division,
+      ),
       requiredDivisionEntry(input.targets, division, "target"),
       requiredDivisionEntry(input.divisionBaselines, division, "baseline"),
     ),
@@ -148,8 +179,11 @@ export function createPlayerMarketCalibrationReport(
     versions: { ...input.versions },
     metadata: { ...input.metadata },
     sampleSize: input.observations.length,
+    divisionValuePopulation: input.divisionValuePopulation,
+    divisionValueObservationCount: divisionValueObservations.length,
+    activeClosingCheckpointSeasonStartYear,
     evaluationStatus:
-      input.observations.length === 0 ? "not_evaluated" : "evaluated",
+      divisionValueObservations.length === 0 ? "not_evaluated" : "evaluated",
     fitStatus: divisionDiagnostics.every(({ valueFit }) => valueFit.status === "pass")
       ? "pass"
       : "fail",
@@ -185,10 +219,14 @@ function summarizeDivision(
     sampleSize: observations.length,
     valueDistribution,
     currentRatingHistogram: ratingHistogram(observations.map((observation) => observation.currentRating)),
-    potentialRatingHistogram: ratingHistogram(observations.map((observation) => observation.potentialRating)),
+    publicP50RatingHistogram: ratingHistogram(
+      observations.map((observation) => observation.publicP50Rating),
+    ),
     currentFiveAndHalfOrHigherCount: observations.filter((observation) => observation.currentRating >= 5.5).length,
     currentSixCount: observations.filter((observation) => observation.currentRating === 6).length,
-    potentialSixCount: observations.filter((observation) => observation.potentialRating === 6).length,
+    publicP50SixCount: observations.filter(
+      (observation) => observation.publicP50Rating === 6,
+    ).length,
     valueFit: valueFit(valueDistribution, target, observations.length),
     normalized22SquadComparator: squadComparator(
       clubSquadObservations,
@@ -298,9 +336,13 @@ function summarizePopulation(
     population,
     sampleSize: observations.length,
     currentRatingHistogram: ratingHistogram(observations.map((observation) => observation.currentRating)),
-    potentialRatingHistogram: ratingHistogram(observations.map((observation) => observation.potentialRating)),
+    publicP50RatingHistogram: ratingHistogram(
+      observations.map((observation) => observation.publicP50Rating),
+    ),
     currentSixCount: observations.filter((observation) => observation.currentRating === 6).length,
-    potentialSixCount: observations.filter((observation) => observation.potentialRating === 6).length,
+    publicP50SixCount: observations.filter(
+      (observation) => observation.publicP50Rating === 6,
+    ).length,
   };
 }
 
@@ -312,7 +354,7 @@ function populationOrder(
     "initial_reserve",
     "initial_youth",
     "annual_intake",
-    "active_year_ten",
+    "active_closing_checkpoint",
   ];
   const observed = new Set(observations.map((observation) => observation.population));
   return all.filter((population) => observed.has(population));
@@ -367,12 +409,20 @@ function validateInput(input: CreatePlayerMarketCalibrationReportInput): void {
   ) {
     throw new Error("Player-market diagnostic metadata must be complete and use a positive world count");
   }
+  if (
+    input.divisionValuePopulation !== "all_supplied"
+    && !isPopulation(input.divisionValuePopulation)
+  ) {
+    throw new Error("Player-market diagnostic requires a valid division-value population");
+  }
 
   for (const observation of input.observations) {
     if (
       !divisions.includes(observation.division)
+      || !Number.isSafeInteger(observation.seasonStartYear)
+      || observation.seasonStartYear <= 0
       || !isPlayerStarRating(observation.currentRating)
-      || !isPlayerStarRating(observation.potentialRating)
+      || !isPlayerStarRating(observation.publicP50Rating)
       || !Number.isSafeInteger(observation.publicValueMinorUnits)
       || observation.publicValueMinorUnits < 0
       || !isPopulation(observation.population)
@@ -384,6 +434,8 @@ function validateInput(input: CreatePlayerMarketCalibrationReportInput): void {
   for (const observation of input.clubSquadObservations) {
     if (
       !divisions.includes(observation.division)
+      || !Number.isSafeInteger(observation.seasonStartYear)
+      || observation.seasonStartYear <= 0
       || observation.activeSeniorCount !== 22
       || !Number.isSafeInteger(observation.publicSquadValueMinorUnits)
       || observation.publicSquadValueMinorUnits < 0
@@ -396,6 +448,7 @@ function validateInput(input: CreatePlayerMarketCalibrationReportInput): void {
     requiredDivisionEntry(input.targets, division, "target");
     requiredDivisionEntry(input.divisionBaselines, division, "baseline");
   }
+  closingCheckpointSeasonStartYear(input.observations);
 }
 
 function isPopulation(value: string): value is PlayerMarketCalibrationPopulation {
@@ -403,5 +456,21 @@ function isPopulation(value: string): value is PlayerMarketCalibrationPopulation
     || value === "initial_reserve"
     || value === "initial_youth"
     || value === "annual_intake"
-    || value === "active_year_ten";
+    || value === "active_closing_checkpoint";
+}
+
+function closingCheckpointSeasonStartYear(
+  observations: readonly PlayerMarketCalibrationObservation[],
+): number | null {
+  const seasonStartYears = new Set(
+    observations
+      .filter(({ population }) => population === "active_closing_checkpoint")
+      .map(({ seasonStartYear }) => seasonStartYear),
+  );
+  if (seasonStartYears.size > 1) {
+    throw new Error(
+      "Player-market diagnostic requires one active closing checkpoint season",
+    );
+  }
+  return seasonStartYears.values().next().value ?? null;
 }

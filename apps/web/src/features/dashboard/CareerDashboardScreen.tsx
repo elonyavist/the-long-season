@@ -96,6 +96,17 @@ export function CareerDashboardScreen({
               />
             </button>
           )}
+          supporting={(
+            <dl
+              aria-label={text("career.clubDevelopmentEnvironment.label")}
+              className="tls-dashboard-club-environment"
+            >
+              <div>
+                <dt>{text("career.clubDevelopmentEnvironment.label")}</dt>
+                <dd>{text(view.selectedClub.developmentEnvironmentLabelKey as MessageKey)}</dd>
+              </div>
+            </dl>
+          )}
           title={text("career.shell.nav.dashboard")}
           titleId="career-dashboard-title"
         />

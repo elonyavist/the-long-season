@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { fixtureId, playerId, seasonId } from "../types/ids.ts";
+import { clubId, fixtureId, playerId, seasonId } from "../types/ids.ts";
 import {
   accruePlayerFixtureParticipation,
+  accruePlayerFixtureParticipations,
   closePlayerParticipationMonth,
   createEmptyPlayerParticipationLedger,
   createPlayerParticipationLedger,
@@ -11,6 +12,7 @@ import {
   playerParticipationRowKey,
   PlayerParticipationLedgerError,
   resetPlayerParticipationSeason,
+  selectNextPlayerParticipationDevelopmentBatch,
   type PlayerFixtureParticipationContribution,
   type PlayerParticipationRow,
 } from "./player-participation.ts";
@@ -31,6 +33,7 @@ test("accruePlayerFixtureParticipation creates ordered monthly player rows", () 
   assert.equal(row.ratingTotal, 7.2);
   assert.equal(row.ratingSamples, 1);
   assert.deepEqual(row.playedRoleMinutes, { striker: 90 });
+  assert.deepEqual(row.clubMinutes, { "club:home": 90 });
   assert.deepEqual(row.appliedFixtureIds, [fixtureId("fixture:000001")]);
   assert.equal(playerParticipationAverageRating(row), 7.2);
 });
@@ -59,7 +62,90 @@ test("accruePlayerFixtureParticipation merges role minutes and ratings", () => {
   assert.equal(row.ratingSamples, 2);
   assert.equal(playerParticipationAverageRating(row), 7);
   assert.deepEqual(row.playedRoleMinutes, { striker: 90, right_winger: 30 });
+  assert.deepEqual(row.clubMinutes, { "club:home": 120 });
   assert.deepEqual(row.appliedFixtureIds, [fixtureId("fixture:000001"), fixtureId("fixture:000002")]);
+});
+
+test("accruePlayerFixtureParticipations matches ordered single-contribution accrual", () => {
+  const contributions = [
+    contributionFixture(),
+    {
+      ...contributionFixture(),
+      fixtureId: fixtureId("fixture:000002"),
+      minutes: 30,
+      rating: 6.8,
+      playedRoleMinutes: { right_winger: 30 },
+    },
+    {
+      ...contributionFixture(),
+      fixtureId: fixtureId("fixture:000003"),
+      playerId: playerId("player:000002"),
+    },
+  ] satisfies readonly PlayerFixtureParticipationContribution[];
+  const sequential = contributions.reduce(
+    (ledger, contribution) => accruePlayerFixtureParticipation(ledger, contribution),
+    createEmptyPlayerParticipationLedger(),
+  );
+
+  const batched = accruePlayerFixtureParticipations(
+    createEmptyPlayerParticipationLedger(),
+    contributions,
+  );
+
+  assert.deepEqual(batched, sequential);
+  assert.deepEqual(batched.rowKeys, [
+    playerParticipationRowKey(seasonId("season:0001"), "2026-08", playerId("player:000001")),
+    playerParticipationRowKey(seasonId("season:0001"), "2026-08", playerId("player:000002")),
+  ]);
+});
+
+test("accruePlayerFixtureParticipations rejects an intra-batch duplicate atomically", () => {
+  const source = accruePlayerFixtureParticipation(
+    createEmptyPlayerParticipationLedger(),
+    {
+      ...contributionFixture(),
+      fixtureId: fixtureId("fixture:source"),
+    },
+  );
+  const sourceSnapshot = structuredClone(source);
+  const duplicate = {
+    ...contributionFixture(),
+    fixtureId: fixtureId("fixture:duplicate"),
+  };
+
+  assertParticipationError(
+    () => accruePlayerFixtureParticipations(source, [duplicate, duplicate]),
+    "duplicate_fixture_accrual",
+  );
+  assert.deepEqual(source, sourceSnapshot);
+});
+
+test("accruePlayerFixtureParticipations leaves the source untouched when a later contribution is invalid", () => {
+  const source = accruePlayerFixtureParticipation(
+    createEmptyPlayerParticipationLedger(),
+    {
+      ...contributionFixture(),
+      fixtureId: fixtureId("fixture:source"),
+    },
+  );
+  const sourceSnapshot = structuredClone(source);
+
+  assertParticipationError(
+    () => accruePlayerFixtureParticipations(source, [
+      {
+        ...contributionFixture(),
+        fixtureId: fixtureId("fixture:valid"),
+      },
+      {
+        ...contributionFixture(),
+        fixtureId: fixtureId("fixture:invalid"),
+        minutes: 30,
+        playedRoleMinutes: { striker: 29 },
+      },
+    ]),
+    "invalid_role_minutes",
+  );
+  assert.deepEqual(source, sourceSnapshot);
 });
 
 test("accruePlayerFixtureParticipation rejects duplicate fixture accrual", () => {
@@ -95,6 +181,118 @@ test("accruePlayerFixtureParticipation validates played role facts", () => {
     }),
     "unknown_played_role",
   );
+});
+
+test("accruePlayerFixtureParticipation preserves minutes for multiple represented clubs", () => {
+  const first = contributionFixture();
+  const second: PlayerFixtureParticipationContribution = {
+    ...first,
+    fixtureId: fixtureId("fixture:000002"),
+    clubId: clubId("club:away"),
+    minutes: 30,
+    playedRoleMinutes: { striker: 30 },
+  };
+  const ledger = accruePlayerFixtureParticipation(
+    accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), first),
+    second,
+  );
+  const row = ledger.rows[playerParticipationRowKey(first.seasonId, first.monthKey, first.playerId)];
+
+  assert.deepEqual(row?.clubMinutes, {
+    "club:home": 90,
+    "club:away": 30,
+  });
+});
+
+test("createPlayerParticipationLedger requires club minutes to equal total minutes", () => {
+  assertParticipationError(
+    () => createPlayerParticipationLedger({
+      rows: {
+        "season:0001|2026-08|player:000001": {
+          ...emptyRowFixture(),
+          clubMinutes: { [clubId("club:home")]: 9 },
+        },
+      },
+      rowKeys: ["season:0001|2026-08|player:000001"],
+      closedMonthKeys: [],
+    }),
+    "invalid_club_minutes",
+  );
+});
+
+test("selectNextPlayerParticipationDevelopmentBatch waits for three complete months", () => {
+  const ledger = ledgerWithMonths(["2026-08", "2026-09"]);
+
+  assert.equal(selectNextPlayerParticipationDevelopmentBatch({
+    ledger,
+    seasonId: seasonId("season:0001"),
+    beforeMonthKey: "2026-10",
+    mode: "complete_quarters",
+  }), undefined);
+});
+
+test("selectNextPlayerParticipationDevelopmentBatch selects at most three months in chronological ledger order", () => {
+  const ledger = ledgerWithMonths(["2026-10", "2026-08", "2026-09", "2026-11"]);
+  const selected = selectNextPlayerParticipationDevelopmentBatch({
+    ledger,
+    seasonId: seasonId("season:0001"),
+    beforeMonthKey: "2026-12",
+    mode: "complete_quarters",
+  });
+
+  assert.deepEqual(selected?.monthKeys, ["2026-08", "2026-09", "2026-10"]);
+  assert.deepEqual(selected?.rows.map((row) => row.monthKey), ["2026-08", "2026-09", "2026-10"]);
+  assert.equal(ledger.closedMonthKeys.length, 0);
+});
+
+test("selectNextPlayerParticipationDevelopmentBatch includes every row in stable intra-month order", () => {
+  const contributions = [
+    { monthKey: "2026-09", suffix: "september-first" },
+    { monthKey: "2026-08", suffix: "august-first" },
+    { monthKey: "2026-09", suffix: "september-second" },
+    { monthKey: "2026-08", suffix: "august-second" },
+    { monthKey: "2026-10", suffix: "october" },
+  ] as const;
+  const ledger = contributions.reduce(
+    (current, contribution, index) => accruePlayerFixtureParticipation(current, {
+      ...contributionFixture(),
+      fixtureId: fixtureId(`fixture:${contribution.suffix}`),
+      playerId: playerId(`player:${contribution.suffix}`),
+      monthKey: contribution.monthKey,
+      rating: 6 + index / 10,
+    }),
+    createEmptyPlayerParticipationLedger(),
+  );
+  const selected = selectNextPlayerParticipationDevelopmentBatch({
+    ledger,
+    seasonId: seasonId("season:0001"),
+    beforeMonthKey: "2026-11",
+    mode: "complete_quarters",
+  });
+
+  assert.deepEqual(selected?.rows.map((row) => row.playerId), [
+    playerId("player:august-first"),
+    playerId("player:august-second"),
+    playerId("player:september-first"),
+    playerId("player:september-second"),
+    playerId("player:october"),
+  ]);
+});
+
+test("selectNextPlayerParticipationDevelopmentBatch flushes one or two residual months", () => {
+  const ledger = closePlayerParticipationMonth(
+    ledgerWithMonths(["2026-08", "2026-09", "2026-10"]),
+    seasonId("season:0001"),
+    "2026-08",
+  );
+  const selected = selectNextPlayerParticipationDevelopmentBatch({
+    ledger,
+    seasonId: seasonId("season:0001"),
+    beforeMonthKey: "2026-11",
+    mode: "season_end_flush",
+  });
+
+  assert.deepEqual(selected?.monthKeys, ["2026-09", "2026-10"]);
 });
 
 test("closePlayerParticipationMonth prevents late accrual but keeps season facts", () => {
@@ -138,6 +336,7 @@ function contributionFixture(): PlayerFixtureParticipationContribution {
   return {
     fixtureId: fixtureId("fixture:000001"),
     playerId: playerId("player:000001"),
+    clubId: clubId("club:home"),
     seasonId: seasonId("season:0001"),
     monthKey: "2026-08",
     started: true,
@@ -161,8 +360,21 @@ function emptyRowFixture(): PlayerParticipationRow {
     ratingTotal: 0,
     ratingSamples: 0,
     playedRoleMinutes: { striker: 10 },
+    clubMinutes: { [contribution.clubId]: 10 },
     appliedFixtureIds: [],
   };
+}
+
+function ledgerWithMonths(monthKeys: readonly string[]) {
+  return monthKeys.reduce(
+    (ledger, monthKey, index) => accruePlayerFixtureParticipation(ledger, {
+      ...contributionFixture(),
+      fixtureId: fixtureId(`fixture:month-${index}`),
+      playerId: playerId(`player:month-${index}`),
+      monthKey,
+    }),
+    createEmptyPlayerParticipationLedger(),
+  );
 }
 
 function assertParticipationError(

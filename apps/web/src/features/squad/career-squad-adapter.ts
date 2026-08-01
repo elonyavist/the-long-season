@@ -1,11 +1,10 @@
 import {
-  selectPlayerPotentialProjectionPolicy,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
 import {
   checkContractOfferAffordability,
   derivePlayerValuation,
-  derivePublicPlayerAssessments,
+  derivePublicPlayerAssessment,
   findNextFixtureEligibilityBlockers,
   selectCareerPlayerStatistics,
   type CareerFinanceRejectionReason,
@@ -215,14 +214,15 @@ export function presentCareerSquad(
     }),
   );
   const assessmentById = new Map(
-    derivePublicPlayerAssessments({
-      ratingScale: valuationConfig.ratingScale,
-      potentialProjectionPolicy: selectPlayerPotentialProjectionPolicy(
-        career.gameState.meta.calibrationVersions,
-      ),
-      currentDate,
-      players,
-    }).map((assessment) => [String(assessment.playerId), assessment]),
+    players.map((player) => {
+      const assessment = derivePublicPlayerAssessment({
+        player,
+        ratingScale: valuationConfig.ratingScale,
+        potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+        currentDate,
+      });
+      return [String(assessment.playerId), assessment] as const;
+    }),
   );
   const registrationByPlayerId = new Map(
     seniorSquad.registrationIds.flatMap((registrationId) => {
@@ -286,24 +286,22 @@ export function presentCareerSquad(
     const contract = contractByPlayerId.get(playerId);
     const assessment = assessmentById.get(playerId);
     const tacticalPlayer = tacticalPlayerById.get(playerId);
+    const primaryPosition = player.naturalPositions[0];
     if (
       dynamic === undefined
       || registration === undefined
       || contract === undefined
       || assessment === undefined
       || tacticalPlayer === undefined
+      || primaryPosition === undefined
     ) {
       return missingData(club.name, currentDateIso);
     }
 
     const valuation = derivePlayerValuation({
-      player,
-      currentDate,
+      assessment,
+      primaryPosition,
       config: valuationConfig,
-      marketContext: {
-        kind: "contracted",
-        division: club.category,
-      },
     });
     const remainingDays = Math.max(0, contract.endsOn - currentDate);
     const selection = selectionFor(playerId, startingIds, substituteIds);
@@ -358,8 +356,8 @@ export function presentCareerSquad(
       currency: finance.currency,
       currentRating: assessment.currentRating,
       potentialRange: {
-        lowerStars: assessment.potentialProjection.lowerRating.stars,
-        upperStars: assessment.potentialProjection.upperRating.stars,
+        p50Stars: assessment.p50Rating.stars,
+        upperStars: assessment.upperRating.stars,
       },
       statistics,
       contract: {
@@ -409,8 +407,8 @@ export function presentCareerSquad(
       currency: finance.currency,
       currentRating: assessment.currentRating,
       potentialRange: {
-        lowerStars: assessment.potentialProjection.lowerRating.stars,
-        upperStars: assessment.potentialProjection.upperRating.stars,
+        p50Stars: assessment.p50Rating.stars,
+        upperStars: assessment.upperRating.stars,
       },
       hasExpiringContract: hasCareerContractExpiryAlert(remainingDays),
       lineupSlotChoices,

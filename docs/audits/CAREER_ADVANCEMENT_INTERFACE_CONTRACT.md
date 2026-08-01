@@ -42,7 +42,7 @@ export interface AdvanceCareerOneSeasonInput {
   readonly careerState: CareerState;
   readonly worldSeed: string;
   readonly mode: AdvanceCareerOneSeasonMode;
-  readonly seniorDevelopmentPlayerIds?: readonly PlayerId[];
+  readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
   readonly seniorIntakeCandidates?: readonly CareerIntakeCandidate[];
   readonly createSeniorIntakeCandidates?: (
     context: CareerSeniorIntakeCandidateProviderContext,
@@ -100,6 +100,10 @@ Allowed Adapter responsibilities:
 - run batch loops;
 - load/write saves;
 - render output.
+
+The engine consumes all eligible participation rows at the season boundary.
+Adapters must not pass a partial player list because development checkpoint
+keys close a whole season/month, not an arbitrary subset of its players.
 
 Forbidden Adapter responsibilities:
 

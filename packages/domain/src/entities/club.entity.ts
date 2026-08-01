@@ -8,6 +8,13 @@ import type { ClubId, PlayerId } from "../types/ids.ts";
  */
 export type ClubCategory = "first_division" | "second_division" | "third_division";
 
+/** Season-frozen competitive band inside one division. */
+export type ClubCompetitiveTier =
+  | "title_contender"
+  | "playoff_contender"
+  | "mid_table"
+  | "survival";
+
 /**
  * Stable club identity and roster ownership.
  *

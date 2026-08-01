@@ -3,6 +3,7 @@ import {
   clubId,
   competitionId,
   contractNegotiationId,
+  createClubCompetitiveTierState,
   createClubFinanceState,
   createCareerState,
   createCareerPlayerAvailabilityState,
@@ -35,7 +36,10 @@ import {
   type CareerPlayerStatisticsCoverage,
   type CareerSeasonArchiveEntry,
   type CareerState,
+  type CreateCareerStateInput,
   type CareerPlayerAvailabilityState,
+  type ClubCompetitiveTier,
+  type ClubCompetitiveTierState,
   type ClubFinanceLedgerDirection,
   type ClubFinanceLedgerEntry,
   type ClubFinanceLedgerEntryId,
@@ -88,6 +92,7 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
   if (state.careerWorld !== undefined) {
     database.run("INSERT INTO career_world (save_id, world_seed, generator_version, creation_source_key) VALUES (?, ?, ?, ?)", [save, state.careerWorld.worldSeed, state.careerWorld.generatorVersion, state.careerWorld.creationSourceKey]);
   }
+  insertClubCompetitiveTierState(database, state);
   insertSeniorSquadState(database, state);
   insertClubFinanceState(database, state);
   insertContractNegotiationState(database, state);
@@ -123,8 +128,18 @@ export function insertCareerStateRows(database: SqliteWorldDatabase, state: Care
 }
 
 /** Adds all current durable career systems to a reconstructed world snapshot. */
-export function loadCareerStateRows(database: SqliteWorldDatabase, requestedSaveId: SaveId, world: CareerState): CareerState {
+export function loadCareerStateRows(
+  database: SqliteWorldDatabase,
+  requestedSaveId: SaveId,
+  world: CreateCareerStateInput,
+): CareerState {
   const gameState = attachFixtureReports(database, requestedSaveId, world.gameState);
+  const clubCompetitiveTierState = loadClubCompetitiveTierState(
+    database,
+    requestedSaveId,
+    gameState.clubIds,
+    gameState.calendar.currentSeasonId,
+  );
   const seniorSquadState = loadSeniorSquadState(database, requestedSaveId, gameState);
   const clubFinanceState = loadClubFinanceState(database, requestedSaveId, gameState, seniorSquadState);
   const contractNegotiationState = loadContractNegotiationState(
@@ -146,6 +161,7 @@ export function loadCareerStateRows(database: SqliteWorldDatabase, requestedSave
   return createCareerState({
     ...world,
     gameState,
+    clubCompetitiveTierState,
     ...(loadCareerWorldMetadata(database, requestedSaveId) ?? {}),
     seniorSquadState,
     clubFinanceState,
@@ -160,6 +176,76 @@ export function loadCareerStateRows(database: SqliteWorldDatabase, requestedSave
     ...(loadSeasonHistory(database, requestedSaveId) ?? {}),
     ...(loadMatchPreparation(database, requestedSaveId) ?? {}),
   });
+}
+
+/** Writes the one current tier header and assignments in active-club order. */
+function insertClubCompetitiveTierState(
+  database: SqliteWorldDatabase,
+  state: CareerState,
+): void {
+  const snapshot = state.clubCompetitiveTierState;
+  database.run(
+    `INSERT INTO club_competitive_tier_state (save_id, policy_version, season_id)
+     VALUES (?, ?, ?)`,
+    [state.saveId, snapshot.policyVersion, snapshot.seasonId],
+  );
+
+  state.gameState.clubIds.forEach((orderedClubId, sortOrder) => {
+    const tier = snapshot.tierByClubId[orderedClubId];
+    if (tier === undefined) {
+      throw mappingFailure(`competitive tier is missing for active club ${orderedClubId}`);
+    }
+    database.run(
+      `INSERT INTO club_competitive_tier_assignments
+       (save_id, sort_order, club_id, tier) VALUES (?, ?, ?, ?)`,
+      [state.saveId, sortOrder, orderedClubId, tier],
+    );
+  });
+}
+
+/** Loads one required current tier snapshot without beta compatibility defaults. */
+function loadClubCompetitiveTierState(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  activeClubIds: readonly ClubId[],
+  activeSeasonId: ReturnType<typeof seasonId>,
+): ClubCompetitiveTierState {
+  const headers = database.queryAll(
+    `SELECT policy_version, season_id FROM club_competitive_tier_state
+     WHERE save_id = ?`,
+    [save],
+  );
+  if (headers.length !== 1) {
+    throw mappingFailure(`competitive-tier header is missing or duplicated for ${save}`);
+  }
+
+  const tierByClubId = {} as Record<ClubId, ClubCompetitiveTier>;
+  const assignments = database.queryAll(
+    `SELECT sort_order, club_id, tier FROM club_competitive_tier_assignments
+     WHERE save_id = ? ORDER BY sort_order`,
+    [save],
+  );
+  assignments.forEach((row, expectedSortOrder) => {
+    if (number(row, "sort_order") !== expectedSortOrder) {
+      throw mappingFailure(`competitive-tier assignment order is not contiguous for ${save}`);
+    }
+    const assignedClubId = clubId(text(row, "club_id"));
+    if (tierByClubId[assignedClubId] !== undefined) {
+      throw mappingFailure(`competitive tier is duplicated for club ${assignedClubId}`);
+    }
+    tierByClubId[assignedClubId] = text(row, "tier") as ClubCompetitiveTier;
+  });
+
+  const header = headers[0]!;
+  return createClubCompetitiveTierState(
+    {
+      policyVersion: text(header, "policy_version") as ClubCompetitiveTierState["policyVersion"],
+      seasonId: seasonId(text(header, "season_id")),
+      tierByClubId,
+    },
+    activeClubIds,
+    activeSeasonId,
+  );
 }
 
 /** Writes durable injuries, suspensions, and competition yellow-card totals. */
@@ -266,6 +352,15 @@ function insertPlayerParticipationLedger(database: SqliteWorldDatabase, state: C
         }
       },
     );
+    Object.entries(row.clubMinutes).sort(([left], [right]) => left.localeCompare(right)).forEach(
+      ([representedClubId, minutes], clubOrder) => {
+        if (minutes !== undefined) {
+          database.run(`INSERT INTO player_participation_club_minutes
+            (save_id, row_key, sort_order, club_id, minutes) VALUES (?, ?, ?, ?, ?)`,
+          [state.saveId, row.rowKey, clubOrder, representedClubId, minutes]);
+        }
+      },
+    );
     row.appliedFixtureIds.forEach((appliedFixtureId, fixtureOrder) => {
       database.run(`INSERT INTO player_participation_applied_fixtures
         (save_id, row_key, sort_order, fixture_id) VALUES (?, ?, ?, ?)`,
@@ -294,6 +389,12 @@ function loadPlayerParticipationLedger(database: SqliteWorldDatabase, save: Save
         [save, rowKey],
       ).map((roleRow) => [text(roleRow, "role_key"), number(roleRow, "minutes")]),
     ) as PlayerParticipationRow["playedRoleMinutes"];
+    const clubMinutes = Object.fromEntries(
+      database.queryAll(
+        "SELECT club_id, minutes FROM player_participation_club_minutes WHERE save_id = ? AND row_key = ? ORDER BY sort_order",
+        [save, rowKey],
+      ).map((clubRow) => [clubId(text(clubRow, "club_id")), number(clubRow, "minutes")]),
+    ) as PlayerParticipationRow["clubMinutes"];
     rows[rowKey] = {
       rowKey,
       playerId: playerId(text(row, "player_id")),
@@ -305,6 +406,7 @@ function loadPlayerParticipationLedger(database: SqliteWorldDatabase, save: Save
       ratingTotal: number(row, "rating_total"),
       ratingSamples: number(row, "rating_samples"),
       playedRoleMinutes,
+      clubMinutes,
       appliedFixtureIds: database.queryAll(
         "SELECT fixture_id FROM player_participation_applied_fixtures WHERE save_id = ? AND row_key = ? ORDER BY sort_order",
         [save, rowKey],
@@ -770,7 +872,7 @@ function insertContractDemandSnapshot(
 ): void {
   database.run(`INSERT INTO ${tableName}
     (save_id, ${ownerIdColumn}, decision, score_basis_points, evaluated_on, age, current_ability,
-     reachable_potential, role, expected_squad_status, current_annual_wage, remaining_contract_days,
+     public_potential_p50_ability, role, expected_squad_status, current_annual_wage, remaining_contract_days,
      club_reputation, club_category, free_agent_leverage_basis_points)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
     save,
@@ -780,7 +882,7 @@ function insertContractDemandSnapshot(
     demand.evaluatedOn,
     demand.age,
     demand.currentAbility,
-    demand.reachablePotential,
+    demand.publicPotentialP50Ability,
     demand.role,
     demand.expectedSquadStatus,
     demand.currentAnnualWage,
@@ -811,7 +913,7 @@ function loadContractDemandSnapshot(
     evaluatedOn: gameDate(number(row, "evaluated_on")),
     age: number(row, "age"),
     currentAbility: number(row, "current_ability"),
-    reachablePotential: number(row, "reachable_potential"),
+    publicPotentialP50Ability: number(row, "public_potential_p50_ability"),
     role: text(row, "role") as ContractDemandSnapshot["role"],
     expectedSquadStatus: text(row, "expected_squad_status") as AgreedSquadStatus,
     currentAnnualWage: nonNegativeMoney(number(row, "current_annual_wage")),
@@ -1396,7 +1498,7 @@ function loadNegotiationEvaluation(
       evaluatedOn: gameDate(number(row, "evaluated_on")),
       age: number(row, "age"),
       currentAbility: number(row, "current_ability"),
-      reachablePotential: number(row, "reachable_potential"),
+      publicPotentialP50Ability: number(row, "public_potential_p50_ability"),
       role: text(row, "role") as ContractOfferEvaluation["demand"]["role"],
       expectedSquadStatus: text(row, "expected_squad_status") as AgreedSquadStatus,
       currentAnnualWage: nonNegativeMoney(number(row, "current_annual_wage")),

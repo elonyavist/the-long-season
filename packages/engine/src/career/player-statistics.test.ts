@@ -345,6 +345,7 @@ function contribution(
   return {
     fixtureId: id,
     playerId: participantId,
+    clubId: clubId("club:selected"),
     seasonId: CURRENT_SEASON_ID,
     monthKey: "2026-08",
     started: input.started ?? false,

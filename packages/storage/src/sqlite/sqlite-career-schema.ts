@@ -1,11 +1,11 @@
 /** Current relational browser-career schema version. */
-export const SQLITE_CAREER_SCHEMA_VERSION = 17;
+export const SQLITE_CAREER_SCHEMA_VERSION = 22;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
 
-/** Immutable version-1 tables introduced by the OPFS bootstrap. */
-export const SQLITE_CAREER_SCHEMA_V1_STATEMENTS = [
+/** Core tables of the clean version-22 OPFS baseline. */
+const SQLITE_CAREER_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
     applied_at_iso TEXT NOT NULL
@@ -17,13 +17,23 @@ export const SQLITE_CAREER_SCHEMA_V1_STATEMENTS = [
     updated_at_iso TEXT NOT NULL,
     save_schema_version INTEGER NOT NULL,
     career_schema_version INTEGER NOT NULL,
-    selected_club_id TEXT NOT NULL
+    selected_club_id TEXT NOT NULL,
+    autosave_interval_days INTEGER DEFAULT 7
+      CHECK (autosave_interval_days IS NULL OR autosave_interval_days IN (7, 15))
   ) STRICT`,
   `CREATE TABLE IF NOT EXISTS game_meta (
     save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE,
     seed TEXT NOT NULL,
     rng_algorithm_version TEXT NOT NULL,
-    save_schema_version INTEGER NOT NULL
+    save_schema_version INTEGER NOT NULL,
+    topology_decision_id TEXT,
+    player_rating_scale_version TEXT,
+    player_market_calibration_version TEXT,
+    valuation_curves_version TEXT,
+    asking_price_curves_version TEXT,
+    market_behavior_calibration_version TEXT,
+    wage_finance_calibration_version TEXT,
+    player_development_environment_version TEXT
   ) STRICT`,
   `CREATE TABLE IF NOT EXISTS game_calendar (
     save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE,
@@ -48,14 +58,8 @@ export const SQLITE_CAREER_SCHEMA_V1_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Version-5 metadata column for per-career in-game autosave cadence. */
-export const SQLITE_CAREER_SCHEMA_V5_STATEMENTS = [
-  `ALTER TABLE career_saves ADD COLUMN autosave_interval_days INTEGER DEFAULT 7
-    CHECK (autosave_interval_days IS NULL OR autosave_interval_days IN (7, 15))`,
-] as const;
-
-/** Version-6 relational current-season Posta facts and lifecycle state. */
-export const SQLITE_CAREER_SCHEMA_V6_STATEMENTS = [
+/** Relational current-season Posta facts and lifecycle state. */
+const SQLITE_CAREER_INBOX_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS career_inbox_messages (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL,
@@ -100,8 +104,8 @@ export const SQLITE_CAREER_SCHEMA_V6_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Version-7 monthly player-development participation facts. */
-export const SQLITE_CAREER_SCHEMA_V7_STATEMENTS = [
+/** Monthly player-development participation facts. */
+const SQLITE_CAREER_PARTICIPATION_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS player_participation_ledgers (
     save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE
   ) STRICT`,
@@ -150,8 +154,8 @@ export const SQLITE_CAREER_SCHEMA_V7_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Version-8 durable match incidents and player availability facts. */
-export const SQLITE_CAREER_SCHEMA_V8_STATEMENTS = [
+/** Durable match incidents and player availability facts. */
+const SQLITE_CAREER_AVAILABILITY_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS career_player_injuries (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL,
@@ -188,23 +192,10 @@ export const SQLITE_CAREER_SCHEMA_V8_STATEMENTS = [
     UNIQUE (save_id, competition_id, player_id),
     FOREIGN KEY (save_id, player_id) REFERENCES players(save_id, player_id) ON DELETE CASCADE
   ) STRICT`,
-  `ALTER TABLE match_events ADD COLUMN committed_by_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN suffered_by_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN zone_danger REAL`,
-  `ALTER TABLE match_events ADD COLUMN card_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN fouled_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN penalty_taker_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN penalty_outcome TEXT`,
-  `ALTER TABLE match_events ADD COLUMN injury_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN injury_severity TEXT`,
-  `ALTER TABLE match_events ADD COLUMN outgoing_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN incoming_player_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN slot_id TEXT`,
-  `ALTER TABLE match_events ADD COLUMN substitution_reason_key TEXT`,
 ] as const;
 
-/** Version-2 tables that preserve the complete ordered game world. */
-export const SQLITE_CAREER_SCHEMA_V2_STATEMENTS = [
+/** Tables that preserve the complete ordered game world. */
+const SQLITE_CAREER_WORLD_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS players (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
     player_id TEXT NOT NULL,
@@ -312,8 +303,8 @@ export const SQLITE_CAREER_SCHEMA_V2_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Version-3 tables for every currently durable career system. */
-export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
+/** Tables for every currently durable career system. */
+const SQLITE_CAREER_STATE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS career_world (
     save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE,
     world_seed TEXT NOT NULL,
@@ -392,6 +383,10 @@ export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
     selected_goals_against INTEGER NOT NULL,
     selected_goal_difference INTEGER NOT NULL,
     selected_points INTEGER NOT NULL,
+    participation_coverage TEXT NOT NULL DEFAULT 'unavailable'
+      CHECK (participation_coverage IN ('complete', 'partial', 'unavailable')),
+    event_coverage TEXT NOT NULL DEFAULT 'unavailable'
+      CHECK (event_coverage IN ('complete', 'partial', 'unavailable')),
     PRIMARY KEY (save_id, sequence_number),
     FOREIGN KEY (save_id, champion_club_id) REFERENCES clubs(save_id, club_id),
     FOREIGN KEY (save_id, selected_club_id) REFERENCES clubs(save_id, club_id)
@@ -426,6 +421,7 @@ export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
     tactic_directness REAL,
     tactic_width REAL,
     tactic_risk REAL,
+    base_formation_id TEXT,
     FOREIGN KEY (save_id, selected_club_id) REFERENCES clubs(save_id, club_id),
     FOREIGN KEY (save_id, target_fixture_id) REFERENCES fixtures(save_id, fixture_id)
   ) STRICT`,
@@ -479,13 +475,25 @@ export const SQLITE_CAREER_SCHEMA_V3_STATEMENTS = [
     primary_defender_player_id TEXT,
     score_home INTEGER,
     score_away INTEGER,
+    committed_by_player_id TEXT,
+    suffered_by_player_id TEXT,
+    zone_danger REAL,
+    card_player_id TEXT,
+    fouled_player_id TEXT,
+    penalty_taker_player_id TEXT,
+    penalty_outcome TEXT,
+    injury_player_id TEXT,
+    injury_severity TEXT,
+    outgoing_player_id TEXT,
+    incoming_player_id TEXT,
+    slot_id TEXT,
+    substitution_reason_key TEXT,
     PRIMARY KEY (save_id, owner_kind, owner_id, sort_order)
   ) STRICT`,
 ] as const;
 
-/** Version-4 relational fields for complete tactical match preparation. */
-export const SQLITE_CAREER_SCHEMA_V4_STATEMENTS = [
-  `ALTER TABLE match_preparation ADD COLUMN base_formation_id TEXT`,
+/** Relational fields for complete tactical match preparation. */
+const SQLITE_CAREER_TACTICS_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS match_preparation_board_slots (
     save_id TEXT NOT NULL REFERENCES match_preparation(save_id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL,
@@ -508,8 +516,8 @@ export const SQLITE_CAREER_SCHEMA_V4_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Phase-78 senior-squad contracts and club-finance baseline. */
-export const SQLITE_CAREER_SCHEMA_V10_STATEMENTS = [
+/** Senior-squad contracts and club-finance facts. */
+const SQLITE_CAREER_SQUAD_FINANCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS senior_squad_registrations (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL,
@@ -612,8 +620,8 @@ export const SQLITE_CAREER_SCHEMA_V10_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Phase-78 durable contract negotiation and explicit Posta policy baseline. */
-export const SQLITE_CAREER_SCHEMA_V11_STATEMENTS = [
+/** Durable contract negotiation and explicit Posta policy facts. */
+const SQLITE_CAREER_CONTRACT_NEGOTIATION_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS contract_negotiation_states (
     save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE
   ) STRICT`,
@@ -675,7 +683,7 @@ export const SQLITE_CAREER_SCHEMA_V11_STATEMENTS = [
     evaluated_on INTEGER NOT NULL,
     age INTEGER NOT NULL CHECK (age >= 0),
     current_ability REAL NOT NULL,
-    reachable_potential REAL NOT NULL,
+    public_potential_p50_ability REAL NOT NULL,
     role TEXT NOT NULL,
     expected_squad_status TEXT NOT NULL CHECK (expected_squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
     current_annual_wage INTEGER NOT NULL CHECK (current_annual_wage >= 0),
@@ -698,8 +706,8 @@ export const SQLITE_CAREER_SCHEMA_V11_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Version-12 relational transfer-negotiation and preliminary-agreement state baseline. */
-export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
+/** Relational transfer-negotiation and preliminary-agreement state. */
+const SQLITE_CAREER_TRANSFER_NEGOTIATION_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS transfer_negotiation_states (
     save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE
   ) STRICT`,
@@ -778,7 +786,7 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
     evaluated_on INTEGER NOT NULL,
     age INTEGER NOT NULL CHECK (age >= 0),
     current_ability REAL NOT NULL,
-    reachable_potential REAL NOT NULL,
+    public_potential_p50_ability REAL NOT NULL,
     role TEXT NOT NULL,
     expected_squad_status TEXT NOT NULL CHECK (expected_squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
     current_annual_wage INTEGER NOT NULL CHECK (current_annual_wage >= 0),
@@ -871,7 +879,7 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
     evaluated_on INTEGER NOT NULL,
     age INTEGER NOT NULL CHECK (age >= 0),
     current_ability REAL NOT NULL,
-    reachable_potential REAL NOT NULL,
+    public_potential_p50_ability REAL NOT NULL,
     role TEXT NOT NULL,
     expected_squad_status TEXT NOT NULL CHECK (expected_squad_status IN ('key_player', 'regular_starter', 'squad_player', 'fringe_player', 'prospect')),
     current_annual_wage INTEGER NOT NULL CHECK (current_annual_wage >= 0),
@@ -895,17 +903,13 @@ export const SQLITE_CAREER_SCHEMA_V12_STATEMENTS = [
 ] as const;
 
 /**
- * Version-15 completed-season player statistics.
+ * Completed-season player statistics.
  *
  * Archived rows intentionally do not reference the current `players` table:
  * retired players can leave the active world while their career history must
  * remain available.
  */
-export const SQLITE_CAREER_SCHEMA_V15_STATEMENTS = [
-  `ALTER TABLE season_history ADD COLUMN participation_coverage TEXT NOT NULL DEFAULT 'unavailable'
-    CHECK (participation_coverage IN ('complete', 'partial', 'unavailable'))`,
-  `ALTER TABLE season_history ADD COLUMN event_coverage TEXT NOT NULL DEFAULT 'unavailable'
-    CHECK (event_coverage IN ('complete', 'partial', 'unavailable'))`,
+const SQLITE_CAREER_ARCHIVE_STATISTICS_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS season_player_statistics (
     save_id TEXT NOT NULL,
     history_sequence_number INTEGER NOT NULL,
@@ -927,20 +931,13 @@ export const SQLITE_CAREER_SCHEMA_V15_STATEMENTS = [
 ] as const;
 
 /**
- * Version-16 domestic competition topology and calibration-version facts.
+ * Domestic competition topology and calibration-version facts.
  *
  * Current membership is stored once in `domestic_competition_clubs`; the
  * ordered competition rows and historical tables remain relational and
  * language-agnostic.
  */
-export const SQLITE_CAREER_SCHEMA_V16_STATEMENTS = [
-  `ALTER TABLE game_meta ADD COLUMN topology_decision_id TEXT`,
-  `ALTER TABLE game_meta ADD COLUMN player_rating_scale_version TEXT`,
-  `ALTER TABLE game_meta ADD COLUMN player_market_calibration_version TEXT`,
-  `ALTER TABLE game_meta ADD COLUMN valuation_curves_version TEXT`,
-  `ALTER TABLE game_meta ADD COLUMN asking_price_curves_version TEXT`,
-  `ALTER TABLE game_meta ADD COLUMN market_behavior_calibration_version TEXT`,
-  `ALTER TABLE game_meta ADD COLUMN wage_finance_calibration_version TEXT`,
+const SQLITE_CAREER_DOMESTIC_COMPETITION_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS domestic_competitions (
     save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL,
@@ -1009,5 +1006,63 @@ export const SQLITE_CAREER_SCHEMA_V16_STATEMENTS = [
   ) STRICT`,
 ] as const;
 
-/** Bootstrap alias retained for opening databases that have no migration table. */
-export const SQLITE_CAREER_SCHEMA_STATEMENTS = SQLITE_CAREER_SCHEMA_V1_STATEMENTS;
+/** Season-frozen competitive-tier snapshot without history rows. */
+const SQLITE_CAREER_COMPETITIVE_TIER_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS club_competitive_tier_state (
+    save_id TEXT PRIMARY KEY REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    policy_version TEXT NOT NULL,
+    season_id TEXT NOT NULL
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS club_competitive_tier_assignments (
+    save_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    club_id TEXT NOT NULL,
+    tier TEXT NOT NULL CHECK (tier IN (
+      'title_contender', 'playoff_contender', 'mid_table', 'survival'
+    )),
+    PRIMARY KEY (save_id, sort_order),
+    UNIQUE (save_id, club_id),
+    FOREIGN KEY (save_id)
+      REFERENCES club_competitive_tier_state(save_id) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, club_id) REFERENCES clubs(save_id, club_id)
+  ) STRICT`,
+] as const;
+
+/** Club-at-fixture evidence for monthly player development. */
+const SQLITE_CAREER_PARTICIPATION_CLUB_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS player_participation_club_minutes (
+    save_id TEXT NOT NULL,
+    row_key TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    club_id TEXT NOT NULL,
+    minutes INTEGER NOT NULL CHECK (minutes > 0),
+    PRIMARY KEY (save_id, row_key, sort_order),
+    UNIQUE (save_id, row_key, club_id),
+    FOREIGN KEY (save_id, row_key)
+      REFERENCES player_participation_rows(save_id, row_key) ON DELETE CASCADE,
+    FOREIGN KEY (save_id, club_id) REFERENCES clubs(save_id, club_id)
+  ) STRICT`,
+] as const;
+
+/**
+ * Complete clean version-22 schema for a fresh browser career database.
+ *
+ * Beta databases from versions 1 through 21 are reset before this baseline is
+ * applied; none of these statements upgrades or reinterprets their data.
+ */
+export const SQLITE_CAREER_SCHEMA_STATEMENTS = [
+  ...SQLITE_CAREER_CORE_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_WORLD_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_STATE_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_TACTICS_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_INBOX_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_PARTICIPATION_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_AVAILABILITY_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_SQUAD_FINANCE_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_CONTRACT_NEGOTIATION_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_TRANSFER_NEGOTIATION_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_ARCHIVE_STATISTICS_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_DOMESTIC_COMPETITION_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_COMPETITIVE_TIER_SCHEMA_STATEMENTS,
+  ...SQLITE_CAREER_PARTICIPATION_CLUB_SCHEMA_STATEMENTS,
+] as const;

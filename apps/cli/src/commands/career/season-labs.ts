@@ -1,6 +1,8 @@
 import {
   createAnnualWorldIntakeCandidateProviders,
   selectMarketBehaviorCalibration,
+  selectPlayerDevelopmentEnvironmentConfig,
+  selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
 import {
@@ -85,11 +87,18 @@ export function buildCareerDevelopmentReport(careerState: CliCareerState): Caree
         kind: "reportRefresh",
         nextSeasonId: `${workingState.gameState.calendar.currentSeasonId}:development-${seasonIndex}` as AdvanceCareerReportRefreshMode["nextSeasonId"],
         nextSeasonStartDate: (workingState.gameState.calendar.currentDate + 365) as AdvanceCareerReportRefreshMode["nextSeasonStartDate"],
+        competitionResults: [],
       },
       wagePolicy: selectPlayerWagePolicyConfig(
         workingState.gameState.meta.calibrationVersions,
       ),
       marketBehaviorPolicy: selectMarketBehaviorCalibration(
+        workingState.gameState.meta.calibrationVersions,
+      ),
+      valuationConfig: selectPlayerValuationConfig(
+        workingState.gameState.meta.calibrationVersions,
+      ),
+      playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
         workingState.gameState.meta.calibrationVersions,
       ),
       createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,
@@ -181,6 +190,12 @@ export function rolloverCareerSeason(careerState: CliCareerState): CareerSeasonR
       careerState.gameState.meta.calibrationVersions,
     ),
     marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    valuationConfig: selectPlayerValuationConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       careerState.gameState.meta.calibrationVersions,
     ),
     createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,

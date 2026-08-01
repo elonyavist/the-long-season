@@ -19,6 +19,7 @@ import {
   type CareerState,
   type Club,
   type ContractOfferTerms,
+  type GameDate,
   type GameState,
   type Player,
   type PlayerAbilities,
@@ -35,6 +36,7 @@ import {
   withdrawTransferNegotiation,
 } from "./transfer-negotiation.ts";
 import { deriveContractDemand as deriveContractDemandWithPolicy } from "./contract-negotiation-demand.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import {
   advanceTransferPlayerNegotiations as advanceTransferPlayerNegotiationsWithPolicy,
   submitTransferPlayerOffer as submitTransferPlayerOfferWithPolicy,
@@ -54,6 +56,22 @@ const ASKING_PRICE_CONFIG = askingPriceConfigFixture();
 const WAGE_POLICY = playerWagePolicyConfigFixture();
 const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
 
+test("commercial snapshots reject a public assessment from another date", () => {
+  const state = careerFixture({ buyerBudget: 500_000_000_00 });
+  assert.throws(
+    () => deriveTransferCommercialSnapshot({
+      careerState: state,
+      sellingClubId: SELLER,
+      playerId: TARGET,
+      asOf: gameDate(SUBMITTED_ON + 1),
+      publicAssessment: publicAssessmentFor(state, SUBMITTED_ON),
+      valuationConfig: VALUATION_CONFIG,
+      askingPriceConfig: ASKING_PRICE_CONFIG,
+    }),
+    /does not match player\/date/,
+  );
+});
+
 function acceptTransferCounter(
   input: Omit<Parameters<typeof acceptTransferCounterWithPolicy>[0], "marketBehaviorPolicy">,
 ) {
@@ -64,19 +82,34 @@ function acceptTransferCounter(
 }
 
 function deriveContractDemand(
-  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+  input: Omit<
+    Parameters<typeof deriveContractDemandWithPolicy>[0],
+    "publicAssessment" | "wagePolicy"
+  >,
 ) {
-  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+  const player = input.careerState.gameState.players[input.playerId];
+  if (player === undefined) throw new Error("Demand test player is missing");
+  return deriveContractDemandWithPolicy({
+    ...input,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.evaluatedOn,
+      potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+      ratingScale: VALUATION_CONFIG.ratingScale,
+    }),
+    wagePolicy: WAGE_POLICY,
+  });
 }
 
 function submitTransferPlayerOffer(
   input: Omit<
     Parameters<typeof submitTransferPlayerOfferWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "valuationConfig" | "wagePolicy" | "marketBehaviorPolicy"
   >,
 ) {
   return submitTransferPlayerOfferWithPolicy({
     ...input,
+    valuationConfig: VALUATION_CONFIG,
     wagePolicy: WAGE_POLICY,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
   });
@@ -85,11 +118,12 @@ function submitTransferPlayerOffer(
 function advanceTransferPlayerNegotiations(
   input: Omit<
     Parameters<typeof advanceTransferPlayerNegotiationsWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "valuationConfig" | "wagePolicy" | "marketBehaviorPolicy"
   >,
 ) {
   return advanceTransferPlayerNegotiationsWithPolicy({
     ...input,
+    valuationConfig: VALUATION_CONFIG,
     wagePolicy: WAGE_POLICY,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
   });
@@ -721,10 +755,22 @@ function askingFeeFor(state: CareerState, offeredFee: ReturnType<typeof nonNegat
     sellingClubId: SELLER,
     playerId: TARGET,
     asOf: SUBMITTED_ON,
+    publicAssessment: publicAssessmentFor(state, SUBMITTED_ON),
     valuationConfig: VALUATION_CONFIG,
     askingPriceConfig: ASKING_PRICE_CONFIG,
   });
   return snapshot?.currentAskingPrice ?? 0;
+}
+
+function publicAssessmentFor(state: CareerState, assessedOn: GameDate) {
+  const player = state.gameState.players[TARGET];
+  if (player === undefined) throw new Error("Commercial snapshot test player is missing");
+  return derivePublicPlayerAssessment({
+    player,
+    currentDate: assessedOn,
+    potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+    ratingScale: VALUATION_CONFIG.ratingScale,
+  });
 }
 
 function careerFixture(input: { readonly buyerBudget?: number }): CareerState {

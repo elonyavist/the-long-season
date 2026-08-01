@@ -78,13 +78,14 @@ function offerContractRenewal(
 function replenishSeniorSquadsFromFreeAgents(
   input: Omit<
     Parameters<typeof replenishSeniorSquadsFromFreeAgentsWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "valuationConfig"
   >,
 ) {
   return replenishSeniorSquadsFromFreeAgentsWithPolicy({
     ...input,
     wagePolicy: playerWagePolicyConfigFixture(),
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    valuationConfig: playerValuationConfigFixture(),
   });
 }
 

@@ -126,7 +126,7 @@ function submittedAgreement(id: ReturnType<typeof preliminaryAgreementId>): Subm
       evaluatedOn: gameDate(20_000),
       age: 27,
       currentAbility: 10,
-      reachablePotential: 11,
+      publicPotentialP50Ability: 11,
       role: "striker",
       expectedSquadStatus: "regular_starter",
       currentAnnualWage: nonNegativeMoney(60_000_00),

@@ -8,21 +8,20 @@ import {
   SqliteCareerStorageError,
   type SqliteCareerWorkerPort,
 } from "./sqlite-career-storage.ts";
+import { SQLITE_CAREER_SCHEMA_VERSION } from "./sqlite-career-schema.ts";
 
 describe("SQLite career storage failure boundaries", () => {
-  it("uses the Phase 79 baseline plus the player-statistics increment for fresh databases", () => {
-    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([17]);
-    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([17]);
-    expect(() => planSqliteCareerMigrations(14)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(16)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(planSqliteCareerMigrations(17)).toEqual([]);
+  it("uses the clean Phase 80A baseline for fresh databases", () => {
+    expect(SQLITE_CAREER_SCHEMA_VERSION).toBe(22);
+    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([22]);
+    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([22]);
+    expect(planSqliteCareerMigrations(22)).toEqual([]);
+    expect(SQLITE_CAREER_MIGRATIONS[0]?.statements.some((statement) => (
+      /^ALTER TABLE/u.test(statement)
+    ))).toBe(false);
   });
 
-  it("upgrades the Phase 79 baseline with archived player statistics and no active-player foreign key", () => {
+  it("creates archived player statistics without an active-player foreign key", () => {
     const schema = SQLITE_CAREER_MIGRATIONS[0]?.statements.join("\n") ?? "";
 
     expect(schema).toContain("participation_coverage TEXT NOT NULL DEFAULT 'unavailable'");
@@ -43,6 +42,17 @@ describe("SQLite career storage failure boundaries", () => {
     expect(schema).toContain("CREATE TABLE IF NOT EXISTS domestic_competition_history_rows");
     expect(schema).toContain("topology_decision_id");
     expect(schema).toContain("wage_finance_calibration_version");
+    expect(schema).toContain("player_development_environment_version");
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS player_participation_club_minutes");
+  });
+
+  it("stores one current competitive-tier snapshot and no history", () => {
+    const schema = SQLITE_CAREER_MIGRATIONS[0]?.statements.join("\n") ?? "";
+
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS club_competitive_tier_state");
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS club_competitive_tier_assignments");
+    expect(schema).toContain("UNIQUE (save_id, club_id)");
+    expect(schema).not.toContain("competitive_tier_history");
   });
 
   it("persists every canonical contract-history event in the clean beta baseline", () => {
@@ -58,26 +68,15 @@ describe("SQLite career storage failure boundaries", () => {
   });
 
   it("rejects older beta, future, and invalid schema versions without destructive recovery", () => {
-    expect(() => planSqliteCareerMigrations(1)).toThrowError(expect.objectContaining({
+    for (let version = 1; version <= 21; version += 1) {
+      expect(() => planSqliteCareerMigrations(version)).toThrowError(expect.objectContaining({
+        code: "unsupported_schema_version",
+        relation: "obsolete_beta",
+      }));
+    }
+    expect(() => planSqliteCareerMigrations(23)).toThrowError(expect.objectContaining({
       code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(6)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(10)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(11)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(12)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(13)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
-    }));
-    expect(() => planSqliteCareerMigrations(18)).toThrowError(expect.objectContaining({
-      code: "unsupported_schema_version",
+      relation: "future",
     }));
     expect(() => planSqliteCareerMigrations(-1)).toThrowError(expect.objectContaining({
       code: "save_unreadable",
@@ -114,7 +113,7 @@ function workerPort(overrides: Partial<SqliteCareerWorkerPort> = {}): SqliteCare
     initialize: vi.fn().mockResolvedValue({
       databasePath: "test.sqlite3",
       sqliteVersion: "test",
-      schemaVersion: 16,
+      schemaVersion: 22,
       betaResetPerformed: false,
     }),
     saveCareer: vi.fn(),

@@ -11,9 +11,10 @@ report, and is not represented here as a pass.
 
 Phase 80 owns the additional graphical and structural reworks. Its Step 02
 documented the user's concrete scope without inference. A later accepted
-product decision added Phase 80A player-model work and Phase 80B market/loan
-work, so the sole checkpointed `50 x 20` moved to Phase 80C Step 09. It must
-use exactly `7` workers so the host remains usable.
+product decision added Phase 80A player-model work, Phase 80B market/loan work,
+Phase 80C competitive races, and Phase 81 match-engine work, so the sole
+checkpointed `50 x 20` moved to Phase 81 Step 12. It must use exactly `7`
+workers so the host remains usable.
 
 ## Delivered Model
 
@@ -76,6 +77,6 @@ equilibrium or behavior after season 20.
 ## Handoff
 
 Phase 79D is closed. Phase 79 Step 14 remains paused and its release-scale gate
-remains unrun and unclaimed. Phase 80 is the active bounded UI rework; Phase
-80A and Phase 80B are documented successors, and no final cohort runs before
-Phase 80C Step 09.
+remains unrun and unclaimed. Phase 80 is complete; Phases 80A, 80B, 80C, and
+81 are documented successors, and no final cohort runs before Phase 81 Step
+12.

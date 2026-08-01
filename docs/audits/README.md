@@ -16,6 +16,16 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_REPORT.md` - blocked
+  Step 09 closeout: all `32` player-model gates pass in the deterministic
+  `750 x 3` fresh/resume cohort, while `80` high-side
+  `goals_per_match_avg` monitor failures keep the phase report red and prevent
+  the Phase 80B handoff pending an explicit ownership decision.
+- `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_BASELINE.md` -
+  replayable 20-world pre-change joint profile, current generation/development/
+  projection/value/AI ownership inventory, canonical age semantics, superseded
+  calibration evidence, and thresholds frozen before Phase 80A behaviour
+  changes.
 - `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_DESIGN_CONTRACT.md` -
   accepted current/P50/upper, dynamic club environment, quarterly development,
   contextual prospect generation, national exceptional stock, annual intake,
@@ -30,8 +40,12 @@ Read these only when the current step asks for current long-run readiness contex
 - `PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md` - accepted durable
   race coordination, three-active-buyer cap, highest-fee qualification,
   stale-safe raises, fixed three-day stages, serial-loan scope, player choice,
-  free-agent negotiation, dedicated diagnostics, and final checkpointed-cohort
+  free-agent negotiation, dedicated diagnostics, and bounded Phase 81 handoff
   contract.
+- `PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`
+  - accepted typed tactical-context, intrinsic-shape, relational-matchup,
+  role-suitability, tactic-semantics, causal-actor, live-session, shared-AI,
+  non-vacuous diagnostic, clean-code, and final checkpointed-cohort contract.
 - `PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_INVENTORY.md` - accepted
   evidence, ownership, interaction defaults, non-goals, and ordered delivery
   for the five current Squad/Market reworks and their Phase 80A handoff.
@@ -45,7 +59,7 @@ Read these only when the current step asks for current long-run readiness contex
 - `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_REPORT.md` -
   completed Phase 79D implementation and bounded verification, explicit record
   that the stopped `50 x 20` produced no evidence, and the user decision to
-  defer a checkpointed cohort to Phase 80C Step 09.
+  defer a checkpointed cohort now owned by Phase 81 Step 12.
 - `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_SPEC.md` - accepted
   corrective contract for archetype-compatible exceptional generation,
   effective rarity budgets, derived public potential ranges, range-aware

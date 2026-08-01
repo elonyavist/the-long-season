@@ -43,7 +43,12 @@ const workerApi: SqliteCareerWorkerPort = {
       try {
         applyMigrations(database);
       } catch (error) {
-        if (!isUnsupportedSchemaVersion(error)) throw error;
+        if (!isObsoleteBetaSchemaVersion(error)) {
+          if (isUnsupportedSchemaVersion(error)) {
+            throw workerFailure("unsupported_schema_version", errorMessage(error));
+          }
+          throw error;
+        }
 
         database.close();
         database = undefined;
@@ -144,6 +149,14 @@ async function deleteBetaDatabase(): Promise<void> {
 
 function isUnsupportedSchemaVersion(error: unknown): boolean {
   return hasWorkerCode(error) && error.code === "unsupported_schema_version";
+}
+
+function isObsoleteBetaSchemaVersion(error: unknown): boolean {
+  return isUnsupportedSchemaVersion(error)
+    && typeof error === "object"
+    && error !== null
+    && "relation" in error
+    && error.relation === "obsolete_beta";
 }
 
 function applyMigrations(db: Database): void {

@@ -10,17 +10,29 @@ import {
   PLAYER_ABILITY_KEYS,
   playerId,
   readPlayerAbility,
+  roleCurrentAbility,
   rolePotentialAbility,
   saveId,
   seasonId,
+  type CareerState,
+  type Player,
+  type PlayerId,
 } from "@game/domain";
-import { fromISO } from "@game/shared";
+import { completedCivilYears, fromISO } from "@game/shared";
 
+import { playerRatingScale } from "../balance/player-economy-calibration.ts";
 import {
   createAnnualWorldIntakeCandidateProviders,
   generateCareerIntakePlayers,
+  type AnnualWorldActivePlayerStockEntry,
 } from "./career-intake-players.ts";
 import { createFakeDomesticWorld } from "./domestic-world.ts";
+import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import {
+  contextualProspectClassForArchetype,
+  type ContextualProspectClass,
+} from "./player-potential-rarity.ts";
+import { ContextualProspectJointProfileError } from "./player-prospect-joint-profile.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
@@ -44,6 +56,37 @@ test("generateCareerIntakePlayers creates young credible lower-division players"
     assert.equal(Number(generated.player.abilities.technical.finishing) <= 12, true);
     assert.equal(generated.archetypeKey === "rare_prodigy", false);
   }
+});
+
+test("career intake gives every explicit young prospect one stored star of room", () => {
+  let explicitYoungProspectCount = 0;
+
+  for (let seedIndex = 0; seedIndex < 100; seedIndex += 1) {
+    const result = generateCareerIntakePlayers(intakeInput(
+      `career-intake-joint-profile-${seedIndex}`,
+    ));
+    for (const generated of result.generatedPlayers) {
+      const age = completedCivilYears(
+        Number(generated.player.birthDate),
+        CAREER_START_EPOCH_DAY,
+      );
+      if (age > 20) continue;
+      const observation = prospectGapObservation(
+        generated.player,
+        generated.archetypeKey,
+      );
+      if (observation.prospectClass !== "routine") {
+        assert.equal(
+          observation.ratingGap >= 1,
+          true,
+          `${generated.player.id} ${observation.prospectClass} gap ${observation.ratingGap}`,
+        );
+        explicitYoungProspectCount += 1;
+      }
+    }
+  }
+
+  assert.equal(explicitYoungProspectCount > 0, true);
 });
 
 test("generateCareerIntakePlayers ages players relative to the supplied career date", () => {
@@ -103,21 +146,21 @@ test("generateCareerIntakePlayers keeps fixed-seed identity facts and uses curre
       {
         id: "player:intake-perugia-0002-001",
         name: "Davide Trevisan",
-        birthDate: 12_892,
+        birthDate: 12_887,
         position: "gk",
         archetypeKey: "normal_youth",
       },
       {
         id: "player:intake-perugia-0002-002",
         name: "Youssef Ziani",
-        birthDate: 12_752,
+        birthDate: 12_747,
         position: "cm",
         archetypeKey: "normal_youth",
       },
       {
         id: "player:intake-perugia-0002-003",
         name: "Luca Bonacina",
-        birthDate: 14_333,
+        birthDate: 14_329,
         position: "rw",
         archetypeKey: "normal_youth",
       },
@@ -169,15 +212,41 @@ test("generateCareerIntakePlayers applies only explicitly allocated potential-si
 
   assert.deepEqual(exceptional.map(({ player }) => player.id), [forcedId]);
   assert.equal(exceptional[0]?.archetypeKey, "rare_prodigy");
+  assert.equal(
+    prospectGapObservation(exceptional[0]!.player, exceptional[0]!.archetypeKey).ratingGap >= 1,
+    true,
+  );
 });
 
-test("shared annual providers allocate once and generate two to four accepted-ready exceptions per decade", () => {
+test("career intake propagates unsupported rare-prodigy placement as a typed failure", () => {
+  const forcedId = playerId("player:intake-perugia-0002-001");
+
+  assert.throws(
+    () => generateCareerIntakePlayers({
+      ...intakeInput("unsupported-career-intake-prodigy"),
+      clubContext: {
+        category: "first_division",
+        reputation: 1,
+        competitiveTier: "survival",
+      },
+      potentialSixPlayerIds: [forcedId],
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof ContextualProspectJointProfileError);
+      assert.equal(error.code, "unsupported_rare_prodigy_placement");
+      assert.equal(error.context.clubTier, "survival");
+      return true;
+    },
+  );
+});
+
+test("shared annual providers allocate once and do not inflate a full active stock", () => {
   const careerState = annualProviderCareerState();
   let allocatedExceptionalCount = 0;
 
   for (let seasonIndex = 0; seasonIndex < 10; seasonIndex += 1) {
     const providers = createAnnualWorldIntakeCandidateProviders({
-      worldSeed: "annual-provider-decade",
+      worldSeed: "annual-provider-career",
       seasonIndex,
       seniorCandidatesPerClub: 1,
     });
@@ -186,17 +255,24 @@ test("shared annual providers allocate once and generate two to four accepted-re
       careerState,
       seasonId: intakeSeasonId,
       intakeDate: careerState.gameState.calendar.currentDate,
+      activePlayerStock: activePlayerStockFixture(careerState),
     });
     const diagnostics = providers.diagnostics();
 
     assert.equal(diagnostics.allocationCallCount, 1);
     assert.equal(diagnostics.allocation.potentialSixPlayerKeys.length <= 1, true);
+    assert.equal(
+      diagnostics.allocation.activeYoungPotentialSixCount
+        >= diagnostics.allocation.targetActiveYoungPotentialSixCount,
+      true,
+    );
+    assert.equal(diagnostics.allocation.vacancyCount, 0);
     assert.deepEqual(
-      diagnostics.generatedPotentialSixPlayerIds.map(String),
+      diagnostics.generatedStoredCeilingSixPlayerIds.map(String),
       diagnostics.allocation.potentialSixPlayerKeys,
     );
     assert.equal(
-      diagnostics.generatedPotentialSixPlayerIds.every((id) =>
+      diagnostics.generatedStoredCeilingSixPlayerIds.every((id) =>
         candidates.some((candidate) => candidate.player.id === id)
       ),
       true,
@@ -206,6 +282,7 @@ test("shared annual providers allocate once and generate two to four accepted-re
         careerState,
         seasonId: intakeSeasonId,
         intakeDate: careerState.gameState.calendar.currentDate,
+        activePlayerStock: activePlayerStockFixture(careerState),
       }),
       /already composed/,
     );
@@ -217,15 +294,114 @@ test("shared annual providers allocate once and generate two to four accepted-re
         providers.createSeniorIntakeCandidates({
           careerState,
           seasonId: intakeSeasonId,
+          intakeDate: careerState.gameState.calendar.currentDate,
         }).length,
         careerState.gameState.clubIds.length,
       );
     }
   }
 
-  assert.equal(allocatedExceptionalCount >= 2, true);
-  assert.equal(allocatedExceptionalCount <= 4, true);
+  assert.equal(allocatedExceptionalCount, 0);
 });
+
+test("shared annual providers count a reserved ceiling-six promotion before intake", () => {
+  const careerState = annualProviderCareerStateWithExceptionalPromotion();
+  const activePlayerStock = activePlayerStockFixture(careerState);
+  const reservedPromotion = activePlayerStock.find(
+    (entry) => entry.source === "promotion_candidate",
+  );
+  assert.ok(reservedPromotion !== undefined);
+  const reservedPlayer =
+    careerState.gameState.players[reservedPromotion.playerId];
+  assert.ok(reservedPlayer !== undefined);
+  assert.equal(
+    storedPrimaryRolePotential(reservedPlayer) >= 17,
+    true,
+  );
+
+  const providers = createAnnualWorldIntakeCandidateProviders({
+    worldSeed: "annual-provider-career",
+    seasonIndex: 1,
+    seniorCandidatesPerClub: 1,
+  });
+  providers.createYouthIntakeCandidates({
+    careerState,
+    seasonId: seasonId("season:promotion-reservation"),
+    intakeDate: careerState.gameState.calendar.currentDate,
+    activePlayerStock,
+  });
+  const diagnostics = providers.diagnostics();
+
+  assert.equal(
+    diagnostics.allocation.activeYoungPotentialSixCount,
+    diagnostics.allocation.targetActiveYoungPotentialSixCount,
+  );
+  assert.equal(diagnostics.allocation.vacancyCount, 0);
+  assert.equal(diagnostics.allocation.unfilledVacancyCount, 0);
+  assert.deepEqual(diagnostics.allocation.potentialSixPlayerKeys, []);
+  assert.deepEqual(diagnostics.generatedStoredCeilingSixPlayerIds, []);
+});
+
+test("shared annual providers evaluate age and refill stock at the incoming season start", () => {
+  const careerState = annualProviderCareerState(true);
+  const incomingSeasonStartDate = gameDate(fromISO("2027-08-01"));
+  const providers = createAnnualWorldIntakeCandidateProviders({
+    worldSeed: "annual-provider-career",
+    seasonIndex: 1,
+    seniorCandidatesPerClub: 1,
+  });
+  const candidates = providers.createYouthIntakeCandidates({
+    careerState,
+    seasonId: seasonId("season:replacement-1"),
+    intakeDate: incomingSeasonStartDate,
+    activePlayerStock: activePlayerStockFixture(careerState),
+  });
+  const diagnostics = providers.diagnostics();
+
+  assert.equal(diagnostics.allocation.vacancyCount, 1);
+  assert.equal(diagnostics.allocation.potentialSixPlayerKeys.length, 1);
+  assert.equal(diagnostics.allocation.unfilledVacancyCount, 0);
+  assert.deepEqual(
+    diagnostics.generatedStoredCeilingSixPlayerIds.map(String),
+    diagnostics.allocation.potentialSixPlayerKeys,
+  );
+  assert.equal(
+    candidates.some((candidate) =>
+      diagnostics.generatedStoredCeilingSixPlayerIds.includes(candidate.player.id)
+    ),
+    true,
+  );
+});
+
+/** Returns the role-relative stored rating room for one generated intake player. */
+function prospectGapObservation(
+  player: Player,
+  archetypeKey: GeneratedPlayerArchetypeKey,
+): Readonly<{ prospectClass: ContextualProspectClass; ratingGap: number }> {
+  assert.ok(player.primaryRole !== undefined);
+  const roleProfile = getPlayerRoleProfile(player.primaryRole);
+  const currentRating = ratingForRoleAbility(Number(roleCurrentAbility(
+    player.abilities,
+    roleProfile,
+  )));
+  const potentialRating = ratingForRoleAbility(Number(rolePotentialAbility(
+    player.potential,
+    roleProfile,
+  )));
+  return {
+    prospectClass: contextualProspectClassForArchetype(archetypeKey),
+    ratingGap: potentialRating - currentRating,
+  };
+}
+
+/** Converts one exact role ability through the versioned global rating scale. */
+function ratingForRoleAbility(ability: number): number {
+  let rating = 1;
+  for (const threshold of playerRatingScale.abilityThresholds) {
+    if (ability >= threshold.minimumAbilityInclusive) rating = threshold.rating;
+  }
+  return rating;
+}
 
 function intakeInput(worldSeed: string): Parameters<typeof generateCareerIntakePlayers>[0] {
   return {
@@ -235,15 +411,33 @@ function intakeInput(worldSeed: string): Parameters<typeof generateCareerIntakeP
     clubContext: {
       category: "third_division",
       reputation: 5,
+      competitiveTier: "mid_table",
     },
     count: 6,
   };
 }
 
-function annualProviderCareerState() {
+function annualProviderCareerState(vacateOneYoungExceptional = false) {
   const world = createFakeDomesticWorld({
     worldSeed: "annual-provider-career",
   });
+  const allPlayers = {
+    ...world.players,
+    ...world.initialYouthAcademies.players,
+  };
+  if (vacateOneYoungExceptional) {
+    const exceptionalKey = world.exceptionalAllocation.youngPotentialSixPlayerKeys[0];
+    assert.ok(exceptionalKey !== undefined);
+    const exceptionalId = playerId(exceptionalKey);
+    const exceptional = allPlayers[exceptionalId];
+    assert.ok(exceptional !== undefined);
+    allPlayers[exceptionalId] = {
+      ...exceptional,
+      // The player stays active and retains the stored ceiling; only aging out
+      // of the 15..20 cohort opens a national-stock vacancy.
+      birthDate: gameDate(fromISO("2005-08-02")),
+    };
+  }
   const clubRosters = Object.fromEntries(
     world.initialYouthAcademies.youthAcademyState.clubRosterIds.map((id) => [
       id,
@@ -290,10 +484,7 @@ function annualProviderCareerState() {
         currentDate: world.seasonStartDate,
         currentSeasonId: world.seasonId,
       },
-      players: {
-        ...world.players,
-        ...world.initialYouthAcademies.players,
-      },
+      players: allPlayers,
       playerIds: [
         ...world.playerIds,
         ...world.initialYouthAcademies.playerIds,
@@ -316,5 +507,121 @@ function annualProviderCareerState() {
     seniorSquadState: world.seniorSquadState,
     clubFinanceState: world.clubFinanceState,
     transferHistory: [],
+  });
+}
+
+/**
+ * Moves one real exceptional academy player into the lifecycle interval that
+ * exists between age-out and senior-promotion resolution.
+ */
+function annualProviderCareerStateWithExceptionalPromotion(): CareerState {
+  const careerState = annualProviderCareerState();
+  const youthState = careerState.youthAcademyState;
+  assert.ok(youthState !== undefined);
+  const promotionPlayerId = youthState.playerLifecycleIds.find((id) => {
+    const lifecycle = youthState.playerLifecycle[id];
+    const player = careerState.gameState.players[id];
+    return lifecycle?.status === "academy"
+      && player !== undefined
+      && storedPrimaryRolePotential(player) >= 17;
+  });
+  assert.ok(promotionPlayerId !== undefined);
+  const lifecycle = youthState.playerLifecycle[promotionPlayerId];
+  assert.ok(lifecycle !== undefined);
+  const roster = youthState.clubRosters[lifecycle.clubId];
+  assert.ok(roster !== undefined);
+
+  return createCareerState({
+    ...careerState,
+    youthAcademyState: {
+      ...youthState,
+      clubRosters: {
+        ...youthState.clubRosters,
+        [lifecycle.clubId]: {
+          ...roster,
+          playerIds: roster.playerIds.filter((id) =>
+            id !== promotionPlayerId
+          ),
+        },
+      },
+      playerLifecycle: {
+        ...youthState.playerLifecycle,
+        [promotionPlayerId]: {
+          ...lifecycle,
+          status: "promotion_candidate",
+          statusChangedAt: careerState.gameState.calendar.currentDate,
+        },
+      },
+    },
+  });
+}
+
+function storedPrimaryRolePotential(player: Player): number {
+  const naturalPosition = player.naturalPositions[0];
+  assert.ok(naturalPosition !== undefined);
+  const primaryRole =
+    player.primaryRole ?? primaryRoleForPosition(naturalPosition);
+  return Number(
+    rolePotentialAbility(
+      player.potential,
+      getPlayerRoleProfile(primaryRole),
+    ),
+  );
+}
+
+/** Mirrors the engine boundary explicitly for direct content-provider tests. */
+function activePlayerStockFixture(
+  careerState: CareerState,
+): readonly AnnualWorldActivePlayerStockEntry[] {
+  const entryByPlayerId = new Map<PlayerId, AnnualWorldActivePlayerStockEntry>();
+  for (const clubIdValue of careerState.gameState.clubIds) {
+    for (
+      const activePlayerId
+      of careerState.gameState.clubs[clubIdValue]?.playerIds ?? []
+    ) {
+      entryByPlayerId.set(activePlayerId, {
+        playerId: activePlayerId,
+        source: "senior",
+        clubId: clubIdValue,
+      });
+    }
+  }
+  for (const clubIdValue of careerState.youthAcademyState?.clubRosterIds ?? []) {
+    for (
+      const activePlayerId
+      of careerState.youthAcademyState?.clubRosters[clubIdValue]?.playerIds ?? []
+    ) {
+      entryByPlayerId.set(activePlayerId, {
+        playerId: activePlayerId,
+        source: "academy",
+        clubId: clubIdValue,
+      });
+    }
+  }
+  for (
+    const activePlayerId
+    of careerState.youthAcademyState?.playerLifecycleIds ?? []
+  ) {
+    const lifecycle =
+      careerState.youthAcademyState?.playerLifecycle[activePlayerId];
+    if (lifecycle?.status !== "promotion_candidate") continue;
+    assert.equal(entryByPlayerId.has(activePlayerId), false);
+    entryByPlayerId.set(activePlayerId, {
+      playerId: activePlayerId,
+      source: "promotion_candidate",
+      clubId: lifecycle.clubId,
+    });
+  }
+  for (const activePlayerId of careerState.gameState.playerIds) {
+    if (!entryByPlayerId.has(activePlayerId)) {
+      entryByPlayerId.set(activePlayerId, {
+        playerId: activePlayerId,
+        source: "free_agent",
+      });
+    }
+  }
+  return careerState.gameState.playerIds.flatMap((activePlayerId) => {
+    const entry = entryByPlayerId.get(activePlayerId);
+    return entry === undefined ? [] : [entry];
   });
 }

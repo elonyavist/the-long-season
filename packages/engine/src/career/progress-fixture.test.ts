@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
+import { fromISO } from "@game/shared";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
@@ -27,6 +28,8 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type Player,
+  type PlayerPosition,
+  type PlayerRole,
 } from "@game/domain";
 
 import {
@@ -35,37 +38,51 @@ import {
   type MatchTeamContext,
 } from "../match-engine/index.ts";
 import { createMatchReport } from "../match-engine/create-match-report.ts";
-import { monthKeyForCareerDate } from "./advance-career-month.ts";
 import {
   commitCompletedCareerFixture as commitCompletedCareerFixtureWithPolicy,
   progressNextCareerFixture as progressNextCareerFixtureWithPolicy,
 } from "./progress-fixture.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import {
+  playerDevelopmentCalibrationVersionsFixture,
+  playerDevelopmentEnvironmentConfigFixture,
+} from "../test-fixtures/player-development-environment-config.ts";
 
 function progressNextCareerFixture(
   input: Omit<
     Parameters<typeof progressNextCareerFixtureWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    | "wagePolicy"
+    | "marketBehaviorPolicy"
+    | "valuationConfig"
+    | "playerDevelopmentEnvironmentConfig"
   >,
 ) {
   return progressNextCareerFixtureWithPolicy({
     ...input,
     wagePolicy: playerWagePolicyConfigFixture(),
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+    playerDevelopmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
   });
 }
 
 function commitCompletedCareerFixture(
   input: Omit<
     Parameters<typeof commitCompletedCareerFixtureWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    | "wagePolicy"
+    | "marketBehaviorPolicy"
+    | "valuationConfig"
+    | "playerDevelopmentEnvironmentConfig"
   >,
 ) {
   return commitCompletedCareerFixtureWithPolicy({
     ...input,
     wagePolicy: playerWagePolicyConfigFixture(),
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+    playerDevelopmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
   });
 }
 
@@ -141,25 +158,28 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
   }
 });
 
-test("progressNextCareerFixture closes crossed monthly lifecycle before accruing the fixture", () => {
+test("progressNextCareerFixture closes a complete quarter before accruing the fixture", () => {
   const selectedClubId = clubId("club:selected");
   const otherClubId = clubId("club:other");
   const selectedFixtureId = fixtureId("fixture:000001");
-  const currentDate = gameDate(20_000);
-  const fixtureDate = gameDate(Number(currentDate) + 70);
-  const monthKey = monthKeyForCareerDate(currentDate);
+  const currentDate = gameDate(fromISO("2026-08-01"));
+  const fixtureDate = gameDate(fromISO("2026-11-08"));
+  const monthKeys = ["2026-08", "2026-09", "2026-10"];
   let playerParticipationLedger = createEmptyPlayerParticipationLedger();
-  playerParticipationLedger = accruePlayerFixtureParticipation(playerParticipationLedger, {
-    fixtureId: fixtureId("fixture:previous-month"),
-    playerId: playerId("player:selected-01"),
-    seasonId: seasonId("season:test"),
-    monthKey,
-    started: true,
-    substituteAppearance: false,
-    minutes: 90,
-    rating: 7,
-    playedRoleMinutes: { goalkeeper: 90 },
-  });
+  for (const monthKey of monthKeys) {
+    playerParticipationLedger = accruePlayerFixtureParticipation(playerParticipationLedger, {
+      fixtureId: fixtureId(`fixture:previous-${monthKey}`),
+      playerId: playerId("player:selected-01"),
+      clubId: selectedClubId,
+      seasonId: seasonId("season:test"),
+      monthKey,
+      started: true,
+      substituteAppearance: false,
+      minutes: 90,
+      rating: 7,
+      playedRoleMinutes: { goalkeeper: 90 },
+    });
+  }
   const careerState = careerStateFixture({
     selectedClubId,
     clubs: [clubFixture(selectedClubId), clubFixture(otherClubId)],
@@ -180,9 +200,12 @@ test("progressNextCareerFixture closes crossed monthly lifecycle before accruing
 
   assert.equal(result.status, "advanced");
   if (result.status === "advanced") {
-    assert.deepEqual(result.monthlyLifecycle.map((summary) => summary.monthKey), [monthKey]);
-    assert.equal(result.careerState.playerParticipationLedger?.closedMonthKeys.includes(`season:test|${monthKey}`), true);
-    assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 5);
+    assert.deepEqual(result.monthlyLifecycle.map((summary) => summary.monthKey), monthKeys);
+    assert.deepEqual(
+      result.careerState.playerParticipationLedger?.closedMonthKeys,
+      monthKeys.map((monthKey) => `season:test|${monthKey}`),
+    );
+    assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 7);
   }
 });
 
@@ -699,6 +722,7 @@ function gameStateFixture(
       seed: "career-progress-test",
       rngAlgorithmVersion: "test",
       saveSchemaVersion: 1,
+      calibrationVersions: playerDevelopmentCalibrationVersionsFixture(),
     },
     calendar: {
       currentDate,
@@ -723,12 +747,16 @@ function playerFixture(id: PlayerId): Player {
     goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
   };
 
+  const naturalPositions: readonly PlayerPosition[] = [
+    String(id).endsWith("-01") ? "gk" : "cm",
+  ];
   return {
     id,
     firstName: "Test",
     lastName: String(id),
     birthDate: gameDate(10_000),
-    naturalPositions: [String(id).endsWith("-01") ? "gk" : "cm"],
+    naturalPositions,
+    primaryRole: primaryRoleForPosition(naturalPositions[0]!),
     abilities,
     potential: abilities,
   };
@@ -750,7 +778,27 @@ function playerFixtureWithPositions(id: PlayerId, naturalPositions: Player["natu
   return {
     ...playerFixture(id),
     naturalPositions,
+    primaryRole: primaryRoleForPosition(naturalPositions[0]!),
   };
+}
+
+/** Keeps synthetic role identity coherent with the fixture's natural slot. */
+function primaryRoleForPosition(position: PlayerPosition): PlayerRole {
+  const roles: Readonly<Record<PlayerPosition, PlayerRole>> = {
+    gk: "goalkeeper",
+    rb: "full_back",
+    cb: "center_back",
+    lb: "full_back",
+    rwb: "wing_back",
+    lwb: "wing_back",
+    dm: "defensive_midfielder",
+    cm: "central_midfielder",
+    am: "attacking_midfielder",
+    rw: "winger",
+    lw: "winger",
+    st: "striker",
+  };
+  return roles[position];
 }
 
 function clubFixture(id: ClubId): Club {

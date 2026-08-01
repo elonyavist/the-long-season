@@ -32,6 +32,7 @@ import {
 import { addDays } from "@game/shared";
 
 import { deriveContractDemand as deriveContractDemandWithPolicy } from "./contract-negotiation-demand.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { createMatchdayAttention } from "./continue-career.ts";
 import {
   acceptContractCounterOffer as acceptContractCounterOfferWithPolicy,
@@ -59,9 +60,22 @@ const WAGE_POLICY = playerWagePolicyConfigFixture();
 const MARKET_BEHAVIOR_POLICY = marketBehaviorConfigFixture();
 
 function deriveContractDemand(
-  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+  input: Omit<
+    Parameters<typeof deriveContractDemandWithPolicy>[0],
+    "wagePolicy" | "publicAssessment"
+  >,
 ) {
-  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+  const player = input.careerState.gameState.players[input.playerId]!;
+  return deriveContractDemandWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.evaluatedOn,
+      ratingScale: VALUATION_CONFIG.ratingScale,
+      potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+    }),
+  });
 }
 
 function submitContractOffer(
@@ -73,12 +87,13 @@ function submitContractOffer(
 function advanceContractNegotiations(
   careerState: Parameters<typeof advanceContractNegotiationsWithPolicy>[0],
   throughDate: Parameters<typeof advanceContractNegotiationsWithPolicy>[1],
-  clubFilter?: Parameters<typeof advanceContractNegotiationsWithPolicy>[3],
+  clubFilter?: Parameters<typeof advanceContractNegotiationsWithPolicy>[4],
 ) {
   return advanceContractNegotiationsWithPolicy(
     careerState,
     throughDate,
     WAGE_POLICY,
+    VALUATION_CONFIG,
     clubFilter,
   );
 }

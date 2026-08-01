@@ -3,7 +3,9 @@ import {
   deriveCalibratedContractBonuses,
   deriveContinuousPlayerWageRating,
   derivePreferredContractDurationYears,
+  getPlayerRoleProfile,
   nonNegativeMoney,
+  roleCurrentAbility,
   type AgreedSquadStatus,
   type CareerState,
   type ClubCategory,
@@ -21,10 +23,15 @@ import {
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
-import { derivePlayerMarketAbility } from "../market/player-valuation.ts";
+import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Missing fact that prevents a credible contract demand from being derived. */
-export type ContractDemandErrorCode = "player_not_found" | "club_not_found" | "player_role_missing";
+export type ContractDemandErrorCode =
+  | "player_not_found"
+  | "club_not_found"
+  | "player_role_missing"
+  | "public_assessment_player_mismatch"
+  | "public_assessment_date_mismatch";
 
 /** Typed error for invalid demand inputs. */
 export class ContractDemandError extends Error {
@@ -43,6 +50,8 @@ export interface DeriveContractDemandInput {
   readonly playerId: PlayerId;
   readonly clubId: ClubId;
   readonly evaluatedOn: GameDate;
+  /** Canonical public facts assessed for this player on `evaluatedOn`. */
+  readonly publicAssessment: PublicPlayerAssessment;
   /** Validated, version-linked wage and contract policy. */
   readonly wagePolicy: PlayerWagePolicyConfig;
   /** Existing agreement retained as leverage when the destination club differs. */
@@ -68,6 +77,18 @@ export interface EvaluateContractOfferInput {
  * has no personality roll, agent multiplier, or rendered explanation.
  */
 export function deriveContractDemand(input: DeriveContractDemandInput): ContractDemandSnapshot {
+  if (input.publicAssessment.playerId !== input.playerId) {
+    throw new ContractDemandError(
+      "public_assessment_player_mismatch",
+      `public assessment belongs to ${input.publicAssessment.playerId}, expected ${input.playerId}`,
+    );
+  }
+  if (input.publicAssessment.assessedOn !== input.evaluatedOn) {
+    throw new ContractDemandError(
+      "public_assessment_date_mismatch",
+      `public assessment date ${input.publicAssessment.assessedOn} does not match ${input.evaluatedOn}`,
+    );
+  }
   const player = input.careerState.gameState.players[input.playerId];
   if (player === undefined) throw new ContractDemandError("player_not_found", `player not found: ${input.playerId}`);
   const club = input.careerState.gameState.clubs[input.clubId];
@@ -78,15 +99,14 @@ export function deriveContractDemand(input: DeriveContractDemandInput): Contract
   const currentContract = input.currentContract
     ?? activeContractFor(input.careerState, input.playerId, input.clubId);
   const isFreeAgent = input.isFreeAgent ?? currentContract === undefined;
-  const ability = derivePlayerMarketAbility(player);
-  const age = Math.max(15, Math.floor((input.evaluatedOn - player.birthDate) / 365.2425));
+  const age = input.publicAssessment.age;
   const expectedSquadStatus = expectedStatus({
     careerState: input.careerState,
     playerId: input.playerId,
     clubId: input.clubId,
     age,
-    currentAbility: ability.currentAbility,
-    potentialRoom: ability.potentialAbility - ability.currentAbility,
+    currentAbility: input.publicAssessment.currentAbility,
+    publicP50Room: input.publicAssessment.p50Ability - input.publicAssessment.currentAbility,
   });
   const currentAnnualWage = isFreeAgent
     ? nonNegativeMoney(0)
@@ -96,8 +116,8 @@ export function deriveContractDemand(input: DeriveContractDemandInput): Contract
     : Math.max(0, currentContract.endsOn - input.evaluatedOn);
   const potentialGapStars = Math.max(
     0,
-    deriveContinuousPlayerWageRating(ability.potentialAbility, input.wagePolicy.ratingScale)
-      - deriveContinuousPlayerWageRating(ability.currentAbility, input.wagePolicy.ratingScale),
+    deriveContinuousPlayerWageRating(input.publicAssessment.p50Ability, input.wagePolicy.ratingScale)
+      - deriveContinuousPlayerWageRating(input.publicAssessment.currentAbility, input.wagePolicy.ratingScale),
   );
   const durationYears = derivePreferredContractDurationYears({
     policy: input.wagePolicy,
@@ -107,8 +127,8 @@ export function deriveContractDemand(input: DeriveContractDemandInput): Contract
   const preferredAnnualWage = deriveCalibratedAnnualWage({
     policy: input.wagePolicy,
     category: club.category,
-    currentAbility: ability.currentAbility,
-    potentialAbility: ability.potentialAbility,
+    currentAbility: input.publicAssessment.currentAbility,
+    potentialAbility: input.publicAssessment.p50Ability,
     age,
     status: expectedSquadStatus,
     currentAnnualWage,
@@ -139,8 +159,8 @@ export function deriveContractDemand(input: DeriveContractDemandInput): Contract
   return {
     evaluatedOn: input.evaluatedOn,
     age,
-    currentAbility: roundAbility(ability.currentAbility),
-    reachablePotential: roundAbility(ability.potentialAbility),
+    currentAbility: roundAbility(input.publicAssessment.currentAbility),
+    publicPotentialP50Ability: roundAbility(input.publicAssessment.p50Ability),
     role,
     expectedSquadStatus,
     currentAnnualWage,
@@ -204,7 +224,7 @@ function expectedStatus(input: {
   readonly clubId: ClubId;
   readonly age: number;
   readonly currentAbility: number;
-  readonly potentialRoom: number;
+  readonly publicP50Room: number;
 }): AgreedSquadStatus {
   const club = input.careerState.gameState.clubs[input.clubId];
   if (club === undefined) return "squad_player";
@@ -214,7 +234,7 @@ function expectedStatus(input: {
       order,
       ability: input.careerState.gameState.players[playerId] === undefined
         ? 0
-        : derivePlayerMarketAbility(input.careerState.gameState.players[playerId]!).currentAbility,
+        : squadPlayerCurrentAbility(input.careerState.gameState.players[playerId]!),
     }))
     .concat(club.playerIds.includes(input.playerId)
       ? []
@@ -222,10 +242,17 @@ function expectedStatus(input: {
     .sort((left, right) => right.ability - left.ability || left.order - right.order);
   const rank = Math.max(1, ranked.findIndex((candidate) => candidate.playerId === input.playerId) + 1);
   if (rank <= 3) return "key_player";
-  if (input.age <= 21 && input.potentialRoom >= 2 && rank > 8) return "prospect";
+  if (input.age <= 21 && input.publicP50Room >= 2 && rank > 8) return "prospect";
   if (rank <= 11) return "regular_starter";
   if (rank <= 17) return "squad_player";
   return "fringe_player";
+}
+
+function squadPlayerCurrentAbility(
+  player: CareerState["gameState"]["players"][PlayerId],
+): number {
+  if (player === undefined || player.primaryRole === undefined) return 0;
+  return Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(player.primaryRole)));
 }
 
 function termsFor(

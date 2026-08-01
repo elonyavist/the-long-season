@@ -129,6 +129,7 @@ test("GameState fixture keeps lookup records separate from ordered ID arrays", (
         askingPriceCurvesVersion: "asking-v1",
         marketBehaviorCalibrationVersion: "behavior-v1",
         wageFinanceCalibrationVersion: "wage-v1",
+        playerDevelopmentEnvironmentVersion: "development-environment-v1",
       },
     },
     calendar: {

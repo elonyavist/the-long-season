@@ -25,8 +25,8 @@ import {
 import {
   checkContractOfferAffordability,
   deriveMarketPendingExposure,
-  derivePlayerMarketAbility,
   derivePlayerValuation,
+  derivePublicPlayerAssessment,
   selectFreeAgentPlayerIds,
   type CareerSeasonMarketLifecycleFact,
   type CareerSquadMaintenanceFact,
@@ -586,6 +586,7 @@ export function createLongRunContractFinanceSeasonRow(
     previous,
     current,
     currentFreeAgentPlayerIds: freeAgentPlayerIds,
+    valuationConfig: input.valuationConfig,
     ...(input.marketLifecycle === undefined ? {} : { marketLifecycle: input.marketLifecycle }),
     ...(input.playerExits === undefined ? {} : { playerExits: input.playerExits }),
     ...(input.youthLifecycle === undefined ? {} : { youthLifecycle: input.youthLifecycle }),
@@ -1272,14 +1273,19 @@ function deriveFreeAgentSigningPublicValues(
 ): readonly number[] {
   return signings.flatMap(({ playerId }) => {
     const player = careerState.gameState.players[playerId];
-    return player === undefined
-      ? []
-      : [derivePlayerValuation({
-          player,
-          currentDate: careerState.gameState.calendar.currentDate,
-          config: valuationConfig,
-          marketContext: { kind: "free_agent" },
-        }).value];
+    const primaryPosition = player?.naturalPositions[0];
+    if (player === undefined || primaryPosition === undefined) return [];
+    const assessment = derivePublicPlayerAssessment({
+      player,
+      currentDate: careerState.gameState.calendar.currentDate,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+      ratingScale: valuationConfig.ratingScale,
+    });
+    return [derivePlayerValuation({
+      assessment,
+      primaryPosition,
+      config: valuationConfig,
+    }).value];
   });
 }
 
@@ -1433,16 +1439,19 @@ function sampledPlayerValues(
   for (const [playerId, clubId] of ownedPlayerClub) {
     const player = careerState.gameState.players[playerId];
     const club = careerState.gameState.clubs[clubId];
-    if (player === undefined || club === undefined) continue;
+    const primaryPosition = player?.naturalPositions[0];
+    if (player === undefined || club === undefined || primaryPosition === undefined) continue;
+    const assessment = derivePublicPlayerAssessment({
+      player,
+      currentDate: careerState.gameState.calendar.currentDate,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+      ratingScale: valuationConfig.ratingScale,
+    });
     values.push(
       derivePlayerValuation({
-        player,
-        currentDate: careerState.gameState.calendar.currentDate,
+        assessment,
+        primaryPosition,
         config: valuationConfig,
-        marketContext: {
-          kind: "contracted",
-          division: club.category,
-        },
       }).value,
     );
   }
@@ -1729,6 +1738,7 @@ function inspectFreeAgentFlow(input: {
   readonly previous: CareerState;
   readonly current: CareerState;
   readonly currentFreeAgentPlayerIds: readonly PlayerId[];
+  readonly valuationConfig: PlayerValuationConfig;
   readonly marketLifecycle?: CareerSeasonMarketLifecycleFact;
   readonly playerExits?: CareerPlayerExitFact;
   readonly youthLifecycle?: CareerYouthLifecycleFact;
@@ -1801,14 +1811,23 @@ function inspectFreeAgentFlow(input: {
     - releaseInflow
     - youthExternalMoveInflow
     - youthReleaseInflow;
-  const bands = freeAgentBands(input.current, input.currentFreeAgentPlayerIds);
+  const bands = freeAgentBands(
+    input.current,
+    input.currentFreeAgentPlayerIds,
+    input.valuationConfig,
+  );
   const usefulClosingStock = input.currentFreeAgentPlayerIds.filter((playerId) => {
     const player = input.current.gameState.players[playerId];
     if (player === undefined) return false;
-    const age = ageOn(player.birthDate, input.current.gameState.calendar.currentDate);
-    return age >= 23
-      && age <= 29
-      && derivePlayerMarketAbility(player).currentAbility >= 10;
+    const assessment = derivePublicPlayerAssessment({
+      player,
+      currentDate: input.current.gameState.calendar.currentDate,
+      potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+      ratingScale: input.valuationConfig.ratingScale,
+    });
+    return assessment.age >= 23
+      && assessment.age <= 29
+      && assessment.currentAbility >= 10;
   }).length;
   const expectedClosingStock =
     previousFreeAgents.size
@@ -1845,6 +1864,7 @@ function inspectFreeAgentFlow(input: {
 function freeAgentBands(
   careerState: CareerState,
   playerIds: readonly PlayerId[],
+  valuationConfig: PlayerValuationConfig,
 ): LongRunFreeAgentBands {
   const age: Record<keyof LongRunFreeAgentBands["age"], number> = {
     under_23: 0,
@@ -1866,13 +1886,19 @@ function freeAgentBands(
   for (const playerId of playerIds) {
     const player = careerState.gameState.players[playerId];
     if (player === undefined) continue;
-    const playerAge = ageOn(player.birthDate, careerState.gameState.calendar.currentDate);
+    const assessment = derivePublicPlayerAssessment({
+      player,
+      currentDate: careerState.gameState.calendar.currentDate,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+      ratingScale: valuationConfig.ratingScale,
+    });
+    const playerAge = assessment.age;
     if (playerAge < 23) age.under_23 += 1;
     else if (playerAge < 30) age.prime_23_29 += 1;
     else if (playerAge < 35) age.age_30_34 += 1;
     else age.age_35_plus += 1;
 
-    const ability = derivePlayerMarketAbility(player).currentAbility;
+    const ability = assessment.currentAbility;
     if (ability < 8) currentAbility.under_8 += 1;
     else if (ability < 10) currentAbility.ability_8_9 += 1;
     else if (ability < 12) currentAbility.ability_10_11 += 1;

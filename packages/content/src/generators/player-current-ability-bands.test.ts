@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  RARE_PRODIGY_CURRENT_RATING_GUARDRAILS,
   resolveEffectiveCurrentAbilityBandForRoleAbility,
+  resolveRareProdigyCurrentRatingGuardrail,
   resolveSeniorCurrentAbilityBand,
   resolveYouthCurrentAbilityBand,
   sampleCurrentAbilityInBand,
@@ -53,6 +55,7 @@ test("effective ranges apply role hard caps after division and tier", () => {
     role: "center_back",
     abilityKey: "technical.finishing",
     rarityLane: "rare",
+    currentQualityProfile: "category_star",
   });
   const strikerTackling = resolveEffectiveCurrentAbilityBandForRoleAbility({
     division: "first_division",
@@ -60,6 +63,7 @@ test("effective ranges apply role hard caps after division and tier", () => {
     role: "striker",
     abilityKey: "technical.tackling",
     rarityLane: "rare",
+    currentQualityProfile: "category_star",
   });
 
   assert.equal(centerBackFinishing.maxInclusive, 10);
@@ -81,9 +85,60 @@ test("older youth bands can sit closer to senior ability than younger youth", ()
   });
 
   assert.equal(youthCurrentAbilityAgeGroup(16), "age_15_17");
-  assert.equal(youthCurrentAbilityAgeGroup(19), "age_18_19");
+  assert.equal(youthCurrentAbilityAgeGroup(19), "age_18_20");
   assert.equal(older.minInclusive > younger.minInclusive, true);
   assert.equal(older.maxInclusive > younger.maxInclusive, true);
+});
+
+test("age 20 remains in the older youth current-ability group", () => {
+  const ageTwenty = resolveEffectiveCurrentAbilityBandForRoleAbility({
+    division: "first_division",
+    clubTier: "title_contender",
+    role: "striker",
+    abilityKey: "technical.finishing",
+    ageYears: 20,
+    rarityLane: "exceptional",
+    currentQualityProfile: "youth_prospect",
+  });
+
+  assert.equal(youthCurrentAbilityAgeGroup(20), "age_18_20");
+  assert.deepEqual(ageTwenty, { minInclusive: 16, maxInclusive: 16 });
+  assert.throws(() => youthCurrentAbilityAgeGroup(21), /15 to 20/);
+});
+
+test("rare-prodigy current-rating guardrails match the accepted category and age matrix", () => {
+  assert.deepEqual(RARE_PRODIGY_CURRENT_RATING_GUARDRAILS, {
+    third_division: {
+      age_15_17: { minimumRating: 2, maximumRating: 3 },
+      age_18_20: { minimumRating: 2.5, maximumRating: 3.5 },
+    },
+    second_division: {
+      age_15_17: { minimumRating: 2.5, maximumRating: 3 },
+      age_18_20: { minimumRating: 3, maximumRating: 4 },
+    },
+    first_division: {
+      age_15_17: { minimumRating: 2.5, maximumRating: 3.5 },
+      age_18_20: { minimumRating: 3.5, maximumRating: 4.5 },
+    },
+  });
+
+  assert.deepEqual(
+    resolveRareProdigyCurrentRatingGuardrail({
+      division: "first_division",
+      clubTier: "title_contender",
+      ageYears: 18,
+    }),
+    { minimumRating: 3.5, maximumRating: 4.5 },
+  );
+  assert.throws(
+    () =>
+      resolveRareProdigyCurrentRatingGuardrail({
+        division: "first_division",
+        clubTier: "survival",
+        ageYears: 18,
+      }),
+    /requires a strong club tier/,
+  );
 });
 
 test("sampling current ability inside a band is deterministic by seed and key", () => {

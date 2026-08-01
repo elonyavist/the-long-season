@@ -319,24 +319,18 @@ and race-only exclusion count separately. Rates from before and after this
 boundary are labelled non-comparable unless they are recomputed with the same
 eligibility definition.
 
-## Final Longitudinal Gate
+## Longitudinal Handoff
 
-Phase 80C Step 09 alone owns the deferred checkpointed cohort:
+Phase 80C Step 09 closes on bounded non-vacuous race evidence and does not run
+a longitudinal cohort. The accepted Phase 81 tactical match-engine rework
+changes AI selection, match outcomes, competition results, and therefore the
+long-run context in which transfer races occur. Phase 81 Step 12 is the sole
+owner of the deferred checkpointed `50 x 20`, after both market and match
+reworks are complete.
 
-```bash
-pnpm cli ten-season-report \
-  --seed-prefix=phase80c-transfer-race-50x20 \
-  --worlds=50 \
-  --seasons=20 \
-  --checkpoint-dir=saves/long-run-checkpoints/phase80c-transfer-race-50x20 \
-  --shards=50 \
-  --workers=7 \
-  --report-output=docs/audits/PHASE_80C_TRANSFER_RACE_50X20_REPORT.md
-```
-
-The identical command is replayed to prove checkpoint reuse and deterministic
-facts. It runs only after Phase 80, 80A, 80B, and Steps 01-08 of 80C pass. It
-does not claim Phase 79 Step 14's separate release-scale gate.
+Phase 80C Step 09 must bounded-exercise the stable shard, checkpoint, and
+seven-worker infrastructure so Phase 81 inherits a working runner. Phase 79
+Step 14 remains paused, unrun, and unclaimed.
 
 ## Accepted Product Decisions
 
@@ -372,4 +366,4 @@ does not claim Phase 79 Step 14's separate release-scale gate.
 - No generic ranking framework, strategy/plugin registry, event bus, or
   abstract market-participant hierarchy.
 - No durable bid history.
-- No cohort before Step 09.
+- No longitudinal cohort in Phase 80C.

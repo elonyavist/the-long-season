@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  CAREER_STATE_SCHEMA_VERSION,
   clubId,
   competitionId,
+  createCareerState,
   gameDate,
   playerContractId,
   playerId,
+  seasonId,
+  seniorSquadRegistrationId,
   type CareerState,
 } from "@game/domain";
 
@@ -93,10 +97,14 @@ function catalogCareerFixture(): CareerState {
   const contractIds = contractRows.map(([, , suffix]) =>
     playerContractId(`contract:${suffix}`)
   );
+  const registrationRows = contractRows.map(([targetPlayerId, targetClubId, suffix], index) => {
+    const id = seniorSquadRegistrationId(`registration:${suffix}`);
+    return [id, targetPlayerId, targetClubId, index + 1] as const;
+  });
 
-  return {
+  return createCareerState({
     saveId: "save:catalog" as CareerState["saveId"],
-    schemaVersion: 1,
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId,
     gameState: {
       meta: { seed: "catalog", rngAlgorithmVersion: "test", saveSchemaVersion: 1 },
@@ -145,8 +153,17 @@ function catalogCareerFixture(): CareerState {
     },
     transferHistory: [],
     seniorSquadState: {
-      registrations: {},
-      registrationIds: [],
+      registrations: Object.fromEntries(registrationRows.map(([id, targetPlayerId, targetClubId, shirtNumber]) => [
+        id,
+        {
+          id,
+          playerId: targetPlayerId,
+          clubId: targetClubId,
+          shirtNumber,
+          registeredOn: gameDate(19_000),
+        },
+      ])) as NonNullable<CareerState["seniorSquadState"]>["registrations"],
+      registrationIds: registrationRows.map(([id]) => id),
       contracts: Object.fromEntries(contractRows.map(([targetPlayerId, targetClubId, suffix]) => [
         playerContractId(`contract:${suffix}`),
         {
@@ -174,10 +191,18 @@ function catalogCareerFixture(): CareerState {
         },
       },
       clubRosterIds: [selectedClubId],
-      playerLifecycle: {},
-      playerLifecycleIds: [],
+      playerLifecycle: {
+        [youthPlayerId]: {
+          playerId: youthPlayerId,
+          clubId: selectedClubId,
+          status: "academy",
+          academyEntrySeasonId: seasonId("season:2026"),
+          academyEntryDate: gameDate(19_500),
+        },
+      },
+      playerLifecycleIds: [youthPlayerId],
     },
-  };
+  });
 }
 
 function club(

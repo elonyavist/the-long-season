@@ -1,6 +1,6 @@
 Read `requirements.md`, `docs/PROJECT_RULES.md`, `docs/PROJECT_STATUS.md`, `docs/steps/README.md`, and the phase README:
 
-PHASE_DIR_TO_EXECUTE: docs/steps/80-graphical-and-structural-rework
+PHASE_DIR_TO_EXECUTE: docs/steps/80a-prospect-generation-club-environment-and-quarterly-development
 
 If PHASE_DIR_TO_EXECUTE does not exist, stop and report the missing phase directory.
 If the phase README does not exist, stop and report the missing file.
@@ -23,6 +23,10 @@ Follow the mandatory phase execution loop:
    - update `docs/PROJECT_STATUS.md` if this step is now active;
    - implement only this step;
    - do not implement anything listed under “What NOT to implement”;
+   - if you find dead code or a necessary refactor inside the active step's
+     owned module, add every affected file to “Expected files” before editing,
+     then remove/refactor it and test the result; record unrelated cleanup for
+     its owning step instead of expanding scope silently;
    - do not create or modify files outside this step’s “Expected files”, except:
      - `docs/PROJECT_STATUS.md`
      - the next relevant step document, only if a lesson learned changes future work.

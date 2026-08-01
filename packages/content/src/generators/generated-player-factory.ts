@@ -1,9 +1,6 @@
 import {
-  abilityValue,
   createPlayer,
   gameDate,
-  mapPlayerAbilities,
-  potentialAtLeastCurrent,
   stateValue,
   type CreatedPlayer,
   type GameDate,
@@ -12,9 +9,9 @@ import {
   type PlayerId,
   type PlayerPosition,
 } from "@game/domain";
+import { addCivilYears } from "@game/shared";
 
 import { generatedRoleIdentityForPosition } from "./player-role-identity.ts";
-import { capPlayerAbilitiesForRole } from "./player-role-templates.ts";
 
 /** Explicit generated facts shared by senior, intake, and youth assemblers. */
 export interface GeneratedPlayerAssemblyInput {
@@ -56,32 +53,33 @@ export class GeneratedPlayerAssemblyError extends Error {
  * Assembles explicit generated facts through the validated domain constructor.
  *
  * Producer-specific RNG, division bands, archetypes, rarity, nationality, and
- * slot composition stay outside. This seam only applies shared construction
- * policy: generated attributes use 1..20, role-incoherent values obey canonical
- * caps, potential never trails current, role identity follows the natural
- * position, and initial state is 100/50/50.
+ * slot composition stay outside. This seam derives only shared identity, birth,
+ * and initial-state facts. It deliberately passes current and potential
+ * abilities through unchanged: `createPlayer` is the typed validation boundary
+ * for the 1..20 scale, canonical role caps, and potential-at-least-current
+ * invariant. A producer bug must therefore fail loudly instead of being repaired
+ * into a different player here.
  */
 export function assembleGeneratedPlayer(input: GeneratedPlayerAssemblyInput): CreatedPlayer {
   assertGeneratedAge(input.ageYears);
   assertBirthDateJitter(input.birthDateJitterDays);
 
   const roleIdentity = generatedRoleIdentityForPosition(input.position);
-  const abilities = capPlayerAbilitiesForRole(generatedScaleAbilities(input.abilities), roleIdentity.primaryRole);
-  const potential = potentialAtLeastCurrent(
-    abilities,
-    capPlayerAbilitiesForRole(generatedScaleAbilities(input.potential), roleIdentity.primaryRole),
-  );
 
   return createPlayer({
     id: input.id,
     firstName: input.identity.firstName,
     lastName: input.identity.lastName,
-    birthDate: gameDate(Number(input.referenceDate) - input.ageYears * 365 - input.birthDateJitterDays),
+    birthDate: generatedBirthDate(
+      input.referenceDate,
+      input.ageYears,
+      input.birthDateJitterDays,
+    ),
     referenceDate: input.referenceDate,
     naturalPositions: [input.position],
     ...roleIdentity,
-    abilities,
-    potential,
+    abilities: input.abilities,
+    potential: input.potential,
     dynamicState: {
       fitness: stateValue(100),
       form: stateValue(50),
@@ -90,8 +88,23 @@ export function assembleGeneratedPlayer(input: GeneratedPlayerAssemblyInput): Cr
   });
 }
 
-function generatedScaleAbilities(abilities: PlayerAbilities): PlayerAbilities {
-  return mapPlayerAbilities(abilities, (value) => abilityValue(Math.max(1, Number(value))));
+/**
+ * Builds a birthday whose completed civil age equals the generated age.
+ *
+ * The jitter walks backwards from the exact birthday anniversary but never
+ * leaves that completed-age year. This avoids the former `age * 365`
+ * approximation, which could place a nominal 17-year-old on the 16-year-old
+ * side of a Gregorian birthday after leap years accumulated. The shared civil
+ * calendar owner supplies the canonical leap-day clamp.
+ */
+function generatedBirthDate(
+  referenceDate: GameDate,
+  ageYears: number,
+  birthDateJitterDays: number,
+): GameDate {
+  return gameDate(
+    addCivilYears(Number(referenceDate), -ageYears) - birthDateJitterDays,
+  );
 }
 
 function assertGeneratedAge(ageYears: number): void {

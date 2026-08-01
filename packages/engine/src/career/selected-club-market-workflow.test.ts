@@ -36,6 +36,7 @@ import {
   advanceSelectedClubWorkflowsToAttention as advanceSelectedClubWorkflowsToAttentionWithConfig,
 } from "./selected-club-contract-workflow.ts";
 import { projectSelectedClubMarketAttention } from "./selected-club-market-workflow.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import {
   acceptTransferCounter as acceptTransferCounterWithPolicy,
   deriveTransferCommercialSnapshot,
@@ -69,20 +70,34 @@ function acceptTransferCounter(
 }
 
 function deriveContractDemand(
-  input: Omit<Parameters<typeof deriveContractDemandWithPolicy>[0], "wagePolicy">,
+  input: Omit<
+    Parameters<typeof deriveContractDemandWithPolicy>[0],
+    "wagePolicy" | "publicAssessment"
+  >,
 ) {
-  return deriveContractDemandWithPolicy({ ...input, wagePolicy: WAGE_POLICY });
+  const player = input.careerState.gameState.players[input.playerId]!;
+  return deriveContractDemandWithPolicy({
+    ...input,
+    wagePolicy: WAGE_POLICY,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.evaluatedOn,
+      ratingScale: VALUATION_CONFIG.ratingScale,
+      potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+    }),
+  });
 }
 
 function submitTransferPlayerOffer(
   input: Omit<
     Parameters<typeof submitTransferPlayerOfferWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "valuationConfig"
   >,
 ) {
   return submitTransferPlayerOfferWithPolicy({
     ...input,
     wagePolicy: WAGE_POLICY,
+    valuationConfig: VALUATION_CONFIG,
     marketBehaviorPolicy: MARKET_BEHAVIOR_POLICY,
   });
 }
@@ -90,12 +105,13 @@ function submitTransferPlayerOffer(
 function submitPreliminaryAgreementOffer(
   input: Omit<
     Parameters<typeof submitPreliminaryAgreementOfferWithPolicy>[0],
-    "wagePolicy"
+    "wagePolicy" | "valuationConfig"
   >,
 ) {
   return submitPreliminaryAgreementOfferWithPolicy({
     ...input,
     wagePolicy: WAGE_POLICY,
+    valuationConfig: VALUATION_CONFIG,
   });
 }
 
@@ -393,11 +409,19 @@ function responseDueOn(submitted: ReturnType<typeof submit>): GameDate {
 }
 
 function askingFeeFor(state: CareerState): number {
+  const player = state.gameState.players[TARGET];
+  if (player === undefined) throw new Error("Selected-club snapshot test player is missing");
   const snapshot = deriveTransferCommercialSnapshot({
     careerState: state,
     sellingClubId: SELLER,
     playerId: TARGET,
     asOf: SUBMITTED_ON,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: SUBMITTED_ON,
+      potentialProjectionPolicy: VALUATION_CONFIG.potentialProjectionPolicy,
+      ratingScale: VALUATION_CONFIG.ratingScale,
+    }),
     valuationConfig: VALUATION_CONFIG,
     askingPriceConfig: ASKING_PRICE_CONFIG,
   });

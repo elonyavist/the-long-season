@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  developmentEnvironmentForClubContext,
   deriveYouthDevelopmentLevel,
   youthDevelopmentCurrentBoost,
   youthDevelopmentInterestingChance,
-  youthDevelopmentRarityCandidateScoreModifier,
+  youthDevelopmentSeriousProspectChance,
 } from "./youth-development-level.ts";
 
 /** Tests protect division-first academy-level derivation and bounded modifiers. */
@@ -18,12 +19,35 @@ test("deriveYouthDevelopmentLevel uses division first and reputation second", ()
 });
 
 test("youth-development modifiers stay small and ordered", () => {
-  const low = deriveYouthDevelopmentLevel({ division: "third_division", clubReputation: 3 });
-  const mid = deriveYouthDevelopmentLevel({ division: "third_division", clubReputation: 5 });
-  const high = deriveYouthDevelopmentLevel({ division: "first_division", clubReputation: 9 });
+  const low = "very_poor";
+  const mid = "adequate";
+  const high = "excellent";
+  const highAcademyLevel = deriveYouthDevelopmentLevel({
+    division: "first_division",
+    clubReputation: 9,
+  });
 
   assert.equal(youthDevelopmentInterestingChance(low) < youthDevelopmentInterestingChance(mid), true);
   assert.equal(youthDevelopmentInterestingChance(mid) < youthDevelopmentInterestingChance(high), true);
-  assert.equal(Math.abs(youthDevelopmentCurrentBoost(high)) <= 0.05, true);
-  assert.equal(youthDevelopmentRarityCandidateScoreModifier(high) < youthDevelopmentRarityCandidateScoreModifier(low), true);
+  assert.equal(youthDevelopmentSeriousProspectChance(low) < youthDevelopmentSeriousProspectChance(mid), true);
+  assert.equal(youthDevelopmentSeriousProspectChance(mid) < youthDevelopmentSeriousProspectChance(high), true);
+  assert.equal(youthDevelopmentSeriousProspectChance(high) <= 0.03, true);
+  assert.equal(Math.abs(youthDevelopmentCurrentBoost(highAcademyLevel)) <= 0.05, true);
+});
+
+test("development environment resolves from category and frozen competitive tier", () => {
+  assert.equal(
+    developmentEnvironmentForClubContext({
+      category: "third_division",
+      competitiveTier: "survival",
+    }),
+    "very_poor",
+  );
+  assert.equal(
+    developmentEnvironmentForClubContext({
+      category: "first_division",
+      competitiveTier: "title_contender",
+    }),
+    "excellent",
+  );
 });

@@ -17,7 +17,7 @@ export {
 export {
   migrateCareerSave,
   type StoredCareerSave,
-  type StoredCareerSaveV8,
+  type StoredCareerSaveV13,
 } from "./career-save-envelope.ts";
 export { JsonCareerStorage, type JsonCareerStorageOptions } from "./json-career-storage.ts";
 export { JsonGameStorage, type JsonGameStorageOptions } from "./json-game-storage.ts";

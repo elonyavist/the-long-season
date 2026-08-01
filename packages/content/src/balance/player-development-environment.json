@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "version": "player-development-environment-v1",
+  "classification": "explicit_game_design_target",
+  "competitiveTierPolicyVersion": "club-competitive-tier-v1",
+  "positiveGrowthMultiplierBasisPointsByKey": {
+    "very_poor": 9200,
+    "poor": 9500,
+    "limited": 9800,
+    "adequate": 10000,
+    "good": 10300,
+    "very_good": 10600,
+    "excellent": 11000
+  },
+  "environmentKeyByCategoryAndTier": {
+    "third_division": {
+      "survival": "very_poor",
+      "mid_table": "poor",
+      "playoff_contender": "limited",
+      "title_contender": "adequate"
+    },
+    "second_division": {
+      "survival": "poor",
+      "mid_table": "limited",
+      "playoff_contender": "adequate",
+      "title_contender": "good"
+    },
+    "first_division": {
+      "survival": "adequate",
+      "mid_table": "very_good",
+      "playoff_contender": "excellent",
+      "title_contender": "excellent"
+    }
+  }
+}

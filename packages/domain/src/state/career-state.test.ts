@@ -25,6 +25,10 @@ import {
   createEmptyPlayerParticipationLedger,
 } from "../career/player-participation.ts";
 import { competitionIdForClub } from "../career/competition-world.ts";
+import {
+  CLUB_COMPETITIVE_TIER_POLICY_VERSION,
+  ClubCompetitiveTierStateError,
+} from "../career/club-competitive-tier.ts";
 
 /**
  * Career-state tests cover durable domain shape only.
@@ -75,9 +79,47 @@ test("createCareerState preserves a minimal durable career snapshot", () => {
   });
   assert.equal(career.transferHistory[0]?.playerId, player18);
   assert.equal(nextTransferHistorySequence(career), 2);
+  assert.deepEqual(career.clubCompetitiveTierState, {
+    policyVersion: CLUB_COMPETITIVE_TIER_POLICY_VERSION,
+    seasonId: seasonId("season:0001"),
+    tierByClubId: {
+      [pro01]: "title_contender",
+      [pro18]: "title_contender",
+    },
+  });
   assert.equal(
     competitionIdForClub(career.gameState.domesticCompetitionWorld!, career.selectedClubId),
     "competition:0001",
+  );
+});
+
+test("createCareerState rejects incomplete or stale competitive-tier snapshots", () => {
+  const state = careerStateFixture();
+  const pro01 = clubId("club:pro01");
+
+  assert.throws(
+    () => createCareerState({
+      ...state,
+      clubCompetitiveTierState: {
+        policyVersion: CLUB_COMPETITIVE_TIER_POLICY_VERSION,
+        seasonId: state.gameState.calendar.currentSeasonId,
+        tierByClubId: { [pro01]: "title_contender" },
+      },
+    }),
+    (error: unknown) => error instanceof ClubCompetitiveTierStateError
+      && error.code === "competitive_tier_club_missing",
+  );
+
+  assert.throws(
+    () => createCareerState({
+      ...state,
+      clubCompetitiveTierState: {
+        ...state.clubCompetitiveTierState,
+        seasonId: seasonId("season:stale"),
+      },
+    }),
+    (error: unknown) => error instanceof ClubCompetitiveTierStateError
+      && error.code === "competitive_tier_season_mismatch",
   );
 });
 
@@ -436,6 +478,7 @@ test("createCareerState preserves a valid player participation ledger", () => {
   const contribution = {
     fixtureId: fixtureId("fixture:000001"),
     playerId: playerId("player:010010"),
+    clubId: clubId("club:pro01"),
     seasonId: seasonId("season:0001"),
     monthKey: "2026-08",
     started: true,
@@ -455,6 +498,7 @@ test("createCareerState rejects participation rows for unknown players", () => {
   const ledger = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
     fixtureId: fixtureId("fixture:000001"),
     playerId: playerId("player:missing"),
+    clubId: clubId("club:pro01"),
     seasonId: seasonId("season:0001"),
     monthKey: "2026-08",
     started: true,
@@ -467,6 +511,26 @@ test("createCareerState rejects participation rows for unknown players", () => {
   assertCareerStateError(
     () => createCareerState({ ...careerStateFixture(), playerParticipationLedger: ledger }),
     "player_participation_player_not_found",
+  );
+});
+
+test("createCareerState rejects participation rows for unknown represented clubs", () => {
+  const ledger = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
+    fixtureId: fixtureId("fixture:000001"),
+    playerId: playerId("player:010010"),
+    clubId: clubId("club:missing"),
+    seasonId: seasonId("season:0001"),
+    monthKey: "2026-08",
+    started: true,
+    substituteAppearance: false,
+    minutes: 90,
+    rating: 7.4,
+    playedRoleMinutes: { striker: 90 },
+  });
+
+  assertCareerStateError(
+    () => createCareerState({ ...careerStateFixture(), playerParticipationLedger: ledger }),
+    "player_participation_club_not_found",
   );
 });
 
@@ -713,13 +777,13 @@ test("createCareerState rejects ambiguous lineup and invalid tactic values", () 
 
 /** Builds a valid career-state fixture for mutation inside tests. */
 function careerStateFixture(): CareerState {
-  return {
+  return createCareerState({
     saveId: saveId("save:career-demo"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: clubId("club:pro01"),
     gameState: gameStateFixture(),
     transferHistory: [],
-  };
+  });
 }
 
 /** Builds a valid history entry fixture. */
@@ -841,6 +905,7 @@ function calibrationVersionsFixture() {
     askingPriceCurvesVersion: "asking-v1",
     marketBehaviorCalibrationVersion: "behavior-v1",
     wageFinanceCalibrationVersion: "wage-v1",
+    playerDevelopmentEnvironmentVersion: "development-environment-v1",
   } as const;
 }
 

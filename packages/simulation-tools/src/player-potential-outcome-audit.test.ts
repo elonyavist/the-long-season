@@ -8,18 +8,25 @@ import {
   type PlayerPotentialOutcomeObservation,
 } from "./player-potential-outcome-audit.ts";
 
-const observations: readonly PlayerPotentialOutcomeObservation[] = [
+const outfieldObservations: readonly PlayerPotentialOutcomeObservation[] = [
   outcome("a", 15, "outfield", 4, 16, 13, 12, 4, 3, 4, 5),
   outcome("b", 15, "outfield", 4, 16, 10, 9, 7, 3, 4, 5),
   outcome("c", 16, "outfield", 4, 16, 11, 10, 6, 3.5, 4, 5),
   outcome("d", 16, "outfield", 4, 16, 12, 11, 5, 3.5, 4.5, 5),
+];
+const observations: readonly PlayerPotentialOutcomeObservation[] = [
+  ...outfieldObservations,
+  outcome("g-a", 15, "goalkeeper", 4, 16, 13, 12, 4, 3, 4, 5),
+  outcome("g-b", 15, "goalkeeper", 4, 16, 10, 9, 7, 3, 4, 5),
+  outcome("g-c", 16, "goalkeeper", 4, 16, 11, 10, 6, 3.5, 4, 5),
+  outcome("g-d", 16, "goalkeeper", 4, 16, 12, 11, 5, 3.5, 4.5, 5),
 ];
 
 const input: CreatePlayerPotentialOutcomeAuditInput = {
   observations,
   coverage: {
     startAges: [15, 16],
-    roleGroups: ["outfield"],
+    roleGroups: ["outfield", "goalkeeper"],
     roomBands: ["large"],
     participationBands: ["high"],
     observationsPerCell: 2,
@@ -32,25 +39,43 @@ const input: CreatePlayerPotentialOutcomeAuditInput = {
 
 test("creates complete non-vacuous cells and projection gates", () => {
   const report = createPlayerPotentialOutcomeAudit(input);
-  const youth = report.cells[0];
+  const youth = report.cells.find((cell) =>
+    cell.startAge === 15 && cell.roleGroup === "outfield"
+  );
 
-  assert.equal(report.observationCount, 4);
-  assert.equal(report.expectedCellCount, 2);
-  assert.equal(report.observedCellCount, 2);
+  assert.equal(report.observationCount, 8);
+  assert.equal(report.expectedCellCount, 4);
+  assert.equal(report.observedCellCount, 4);
   assert.equal(report.missingCellCount, 0);
   assert.equal(report.underObservedCellCount, 0);
   assert.equal(report.nonWideningAgeViolationCount, 0);
-  assert.equal(
-    report.gates.filter(({ key }) => key !== "public_upper_p90_calibration")
-      .every(({ status }) => status === "pass"),
-    true,
-  );
-  assert.equal(
-    report.gates.find(({ key }) => key === "public_upper_p90_calibration")
-      ?.status,
-    "warn",
-  );
+  assert.equal(report.gates.every(({ status }) => status === "pass"), true);
+  assert.equal(report.unobservedCalibrationBandCount, 0);
   assert.equal(youth?.observationCount, 2);
+  assert.deepEqual(youth?.currentRating, {
+    observationCount: 2,
+    p10Hundredths: 300,
+    p50Hundredths: 300,
+    p90Hundredths: 300,
+  });
+  assert.deepEqual(youth?.publicP50Rating, {
+    observationCount: 2,
+    p10Hundredths: 400,
+    p50Hundredths: 400,
+    p90Hundredths: 400,
+  });
+  assert.deepEqual(youth?.publicUpperRating, {
+    observationCount: 2,
+    p10Hundredths: 500,
+    p50Hundredths: 500,
+    p90Hundredths: 500,
+  });
+  assert.deepEqual(youth?.storedCeilingRating, {
+    observationCount: 2,
+    p10Hundredths: 600,
+    p50Hundredths: 600,
+    p90Hundredths: 600,
+  });
   assert.deepEqual(youth?.peakRoleAbility, {
     observationCount: 2,
     p10Hundredths: 1_030,
@@ -89,12 +114,12 @@ test("ordering and age-widening contradictions fail deterministically", () => {
   const report = createPlayerPotentialOutcomeAudit({
     ...input,
     observations: observations.map((observation) =>
-      observation.startAge === 16
+      observation.startAge === 16 && observation.roleGroup === "outfield"
         ? {
             ...observation,
-            publicLowerRating: 2,
-            publicExpectedRating: 1.5,
-            publicUpperRating: 5.5,
+            publicP50Rating: 3,
+            publicUpperRating: 6,
+            publicUpperRoleAbility: 13,
           }
         : observation
     ),
@@ -104,9 +129,9 @@ test("ordering and age-widening contradictions fail deterministically", () => {
   assert.equal(report.gates.some(({ status }) => status === "fail"), true);
 });
 
-test("pools P10/P50/P90 realization at policy age-band granularity", () => {
+test("pools P50/P90 realization at policy age-band granularity", () => {
   const calibration = createPotentialProjectionPolicyCalibration(
-    observations,
+    outfieldObservations,
     [
       { roleGroup: "goalkeeper", minimumAge: 0, maximumAge: 200 },
       { roleGroup: "outfield", minimumAge: 0, maximumAge: 15 },
@@ -121,13 +146,11 @@ test("pools P10/P50/P90 realization at policy age-band granularity", () => {
       maximumAge: 200,
       observationCount: 0,
       evaluationStatus: "not_evaluated",
-      conservativeRealizationBasisPoints: 0,
-      expectedRealizationBasisPoints: 0,
-      upperRealizationBasisPoints: 0,
+      p50RealizationBasisPoints: 0,
+      p90RealizationBasisPoints: 0,
       abovePublicUpperCount: 0,
       abovePublicUpperRateBasisPoints: null,
       storedCeilingViolationCount: 0,
-      calibrationStatus: "not_evaluated",
     },
     {
       roleGroup: "outfield",
@@ -135,13 +158,11 @@ test("pools P10/P50/P90 realization at policy age-band granularity", () => {
       maximumAge: 15,
       observationCount: 2,
       evaluationStatus: "evaluated",
-      conservativeRealizationBasisPoints: 5_250,
-      expectedRealizationBasisPoints: 6_250,
-      upperRealizationBasisPoints: 7_250,
+      p50RealizationBasisPoints: 6_250,
+      p90RealizationBasisPoints: 7_250,
       abovePublicUpperCount: 1,
       abovePublicUpperRateBasisPoints: 5_000,
       storedCeilingViolationCount: 0,
-      calibrationStatus: "warn",
     },
     {
       roleGroup: "outfield",
@@ -149,18 +170,16 @@ test("pools P10/P50/P90 realization at policy age-band granularity", () => {
       maximumAge: 200,
       observationCount: 2,
       evaluationStatus: "evaluated",
-      conservativeRealizationBasisPoints: 5_917,
-      expectedRealizationBasisPoints: 6_250,
-      upperRealizationBasisPoints: 6_583,
+      p50RealizationBasisPoints: 6_250,
+      p90RealizationBasisPoints: 6_583,
       abovePublicUpperCount: 0,
       abovePublicUpperRateBasisPoints: 0,
       storedCeilingViolationCount: 0,
-      calibrationStatus: "warn",
     },
   ]);
 });
 
-test("accepts the predeclared P90 tolerance and hard-fails stored-ceiling breaches", () => {
+test("reports upper exceedance neutrally and hard-fails stored-ceiling breaches", () => {
   const calibratedObservations = Array.from({ length: 10 }, (_, index) => ({
     ...outcome(
       `calibrated-${index}`,
@@ -191,11 +210,6 @@ test("accepts the predeclared P90 tolerance and hard-fails stored-ceiling breach
   });
 
   assert.equal(
-    calibrated.gates.find(({ key }) => key === "public_upper_p90_calibration")
-      ?.status,
-    "pass",
-  );
-  assert.equal(
     calibrated.projectionPolicyCalibration.find(
       ({ roleGroup }) => roleGroup === "outfield",
     )?.abovePublicUpperRateBasisPoints,
@@ -222,6 +236,27 @@ test("accepts the predeclared P90 tolerance and hard-fails stored-ceiling breach
   );
 });
 
+test("a missing policy band cannot pass calibration coverage", () => {
+  const report = createPlayerPotentialOutcomeAudit({
+    ...input,
+    observations,
+    projectionAgeBands: [
+      { roleGroup: "goalkeeper", minimumAge: 0, maximumAge: 200 },
+      { roleGroup: "outfield", minimumAge: 0, maximumAge: 15 },
+      { roleGroup: "outfield", minimumAge: 16, maximumAge: 17 },
+      { roleGroup: "outfield", minimumAge: 18, maximumAge: 200 },
+    ],
+  });
+
+  assert.equal(report.unobservedCalibrationBandCount, 1);
+  assert.equal(
+    report.gates.find(
+      ({ key }) => key === "projection_policy_calibration_coverage",
+    )?.status,
+    "fail",
+  );
+});
+
 test("is deterministic, mutation-free, and rejects duplicate IDs", () => {
   const before = structuredClone(input);
   assert.deepEqual(
@@ -242,13 +277,13 @@ function outcome(
   sourceId: string,
   startAge: number,
   roleGroup: PlayerPotentialOutcomeObservation["roleGroup"],
-  startingRoleAbility: number,
-  ceilingRoleAbility: number,
+  currentRoleAbility: number,
+  storedCeilingRoleAbility: number,
   peakRoleAbility: number,
   finalRoleAbility: number,
   remainingRoom: number,
-  publicLowerRating: number,
-  publicExpectedRating: number,
+  currentRating: number,
+  publicP50Rating: number,
   publicUpperRating: number,
 ): PlayerPotentialOutcomeObservation {
   return {
@@ -257,16 +292,16 @@ function outcome(
     roleGroup,
     roomBand: "large",
     participationBand: "high",
-    startingRoleAbility,
-    ceilingRoleAbility,
+    currentRoleAbility,
+    storedCeilingRoleAbility,
     peakRoleAbility,
     finalRoleAbility,
     remainingRoom,
-    publicLowerRoleAbility: startingRoleAbility,
-    publicExpectedRoleAbility: 8,
+    publicP50RoleAbility: 8,
     publicUpperRoleAbility: 12,
-    publicLowerRating,
-    publicExpectedRating,
+    currentRating,
+    publicP50Rating,
     publicUpperRating,
+    storedCeilingRating: 6,
   };
 }

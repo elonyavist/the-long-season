@@ -358,8 +358,8 @@ Bounded checks before the final cohort must report positive observations for:
 
 ## Final Longitudinal Gate
 
-Phase 80B does not own the deferred checkpointed cohort. It moved to the final
-step of Phase 80C.
+Phase 80B does not own the deferred checkpointed cohort. Phase 81 Step 12 owns
+it after the competitive-market and tactical match-engine reworks.
 
 Running it here would certify a market that is about to gain competitive
 resolution, repeating the mistake that invalidated Phase 79 Step 14 against the
@@ -367,8 +367,8 @@ Phase 79C economy. Phase 80B therefore closes on bounded diagnostics, browser,
 persistence, and repository gates only.
 
 Phase 80B must still leave the cohort runnable: shard, checkpoint, and worker
-wiring stay intact and exercised by bounded runs, so Phase 80C Step 09 starts
-from working infrastructure rather than rebuilding it.
+wiring stay intact and exercised by bounded runs, so Phase 80C and Phase 81
+start from working infrastructure rather than rebuilding it.
 
 ## Explicit Non-Goals
 
@@ -386,6 +386,5 @@ from working infrastructure rather than rebuilding it.
 - No simultaneous competing bids, competitive resolution, raise loop, or
   player-chooses-between-suitors behaviour; Phase 80C owns all of it.
 - No compatibility migration for beta saves.
-- No longitudinal cohort in Phase 80B; the deferred `50 x 20` moved to the
-  final step of Phase 80C so it validates the competitive market rather than a
-  market that is about to change.
+- No longitudinal cohort in Phase 80B; Phase 81 Step 12 owns the deferred
+  `50 x 20` after the competitive-market and tactical match-engine reworks.

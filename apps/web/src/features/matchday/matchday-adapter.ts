@@ -38,6 +38,8 @@ import {
 import {
   createFakeGameplayConfig,
   selectMarketBehaviorCalibration,
+  selectPlayerDevelopmentEnvironmentConfig,
+  selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
   type FakeGameplayConfig,
 } from "@game/content";
@@ -1391,6 +1393,12 @@ function commitProgressiveWebMatchday(
       session.careerState.gameState.meta.calibrationVersions,
     ),
     marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      session.careerState.gameState.meta.calibrationVersions,
+    ),
+    valuationConfig: selectPlayerValuationConfig(
+      session.careerState.gameState.meta.calibrationVersions,
+    ),
+    playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       session.careerState.gameState.meta.calibrationVersions,
     ),
   });

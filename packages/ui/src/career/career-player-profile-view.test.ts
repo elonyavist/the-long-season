@@ -39,7 +39,7 @@ test("serializes only the public potential range and copies half-star assessment
   const serialized = JSON.stringify(view);
 
   assert.deepEqual(view.currentRating, { stars: 3.5 });
-  assert.deepEqual(view.potentialRange, { lowerStars: 4, upperStars: 6 });
+  assert.deepEqual(view.potentialRange, { p50Stars: 4, upperStars: 6 });
   assert.notEqual(view.currentRating, input.currentRating);
   assert.notEqual(view.potentialRange, input.potentialRange);
   assert.equal(serialized.includes("potentialAbilities"), false);
@@ -80,7 +80,7 @@ function profileInput(): CareerPlayerProfileInput {
     value: nonNegativeMoney(3_500_000_00),
     currency: "EUR",
     currentRating: { stars: 3.5 },
-    potentialRange: { lowerStars: 4, upperStars: 6 },
+    potentialRange: { p50Stars: 4, upperStars: 6 },
     contract: {
       activeContract: {
         contractId: "contract:test",

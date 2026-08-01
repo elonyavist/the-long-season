@@ -6,6 +6,7 @@ import {
   type CareerSeasonArchiveEntry,
   type CareerState,
   type AskingPriceCurvesConfig,
+  type ClubCategory,
   type ClubId,
   type CompetitionId,
   type CompetitionSeasonHistoryEntry,
@@ -17,6 +18,7 @@ import {
   type LeagueTableRow,
   type LeagueTableRules,
   type MarketBehaviorCalibrationConfig,
+  type PlayerDevelopmentEnvironmentConfig,
   type PlayerId,
   type PlayerWagePolicyConfig,
   type SeasonTransferWindows,
@@ -30,7 +32,6 @@ import {
   deliverCareerInboxMessages,
 } from "./career-inbox-lifecycle.ts";
 import { advanceCareerMonths, type CareerMonthlyLifecycleSummary } from "./advance-career-month.ts";
-import type { PlayerDevelopmentChange } from "./player-development.ts";
 import {
   applyEndOfSeasonPlayerExits,
   type PlayerExitReason,
@@ -39,10 +40,20 @@ import {
 import { type CareerIntakeCandidate } from "./player-intake.ts";
 import { generateNextSeasonCalendar, type NextSeasonCalendarGenerated } from "./next-season-calendar.ts";
 import { rolloverPlayersForNextSeason } from "./player-season-rollover.ts";
+import {
+  CLUB_COMPETITIVE_TIER_DIVISION_SIZE,
+  deriveClubSeasonTierUpdate,
+  type ClubCompletedSeasonResult,
+  type ClubSeasonTierFact,
+} from "./club-season-tier.ts";
 import { maintainCareerSquadShape, MINIMUM_CAREER_SQUAD_SIZE } from "./squad-maintenance.ts";
 import { type YouthIntakeCandidate, applySeasonalYouthIntake } from "./youth-intake.ts";
 import { applyYouthAcademyLifecycle, type YouthLifecycleRecord } from "./youth-lifecycle.ts";
 import { promoteYouthCandidatesToSeniorSquads } from "./youth-promotion.ts";
+import {
+  selectCareerActivePlayerStock,
+  type CareerActivePlayerStockEntry,
+} from "./active-player-stock.ts";
 import {
   refreshAnnualTransferBudgetAvailability,
   settleAnnualPayroll,
@@ -73,6 +84,16 @@ export interface AdvanceCareerCompletedSeasonMode {
   readonly tableRules: LeagueTableRules;
 }
 
+/** One report-only competition result supplied without durable fixture history. */
+export interface AdvanceCareerReportCompetitionResult {
+  /** Competition whose simulated season produced this table. */
+  readonly competitionId: CompetitionId;
+  /** Complete deterministic final table for the competition. */
+  readonly finalTable: readonly LeagueTableRow[];
+  /** Optional competition-owned prize distribution paired with the table. */
+  readonly seasonDistribution?: CompetitionSeasonDistribution;
+}
+
 /** Mode used by reports that need a season refresh without persisted fixture history. */
 export interface AdvanceCareerReportRefreshMode {
   /** Discriminator for report-only season refresh. */
@@ -81,10 +102,8 @@ export interface AdvanceCareerReportRefreshMode {
   readonly nextSeasonId: SeasonId;
   /** Adapter-provided next season start date for report progression. */
   readonly nextSeasonStartDate: GameDate;
-  /** Competition-owned prize distribution used by finance-aware reports. */
-  readonly seasonDistribution?: CompetitionSeasonDistribution;
-  /** Simulated final table paired with `seasonDistribution`. */
-  readonly finalTable?: readonly LeagueTableRow[];
+  /** Ordered simulated competition results; an empty report has no table evidence. */
+  readonly competitionResults: readonly AdvanceCareerReportCompetitionResult[];
 }
 
 /** Explicit advancement modes supported by the canonical career-season use-case. */
@@ -100,6 +119,8 @@ export interface CareerYouthIntakeCandidateProviderContext {
   readonly seasonId: SeasonId;
   /** Date that should be used as the intake reference date. */
   readonly intakeDate: GameDate;
+  /** Canonical active population after exits and academy lifecycle decisions. */
+  readonly activePlayerStock: readonly CareerActivePlayerStockEntry[];
 }
 
 /** Context for Adapter-owned senior-intake candidate generation. */
@@ -108,6 +129,8 @@ export interface CareerSeniorIntakeCandidateProviderContext {
   readonly careerState: CareerState;
   /** Canonical advancement season id used by deterministic generators. */
   readonly seasonId: SeasonId;
+  /** Canonical start date of the season receiving these players. */
+  readonly intakeDate: GameDate;
 }
 
 /** Input for the canonical season advancement Module. */
@@ -122,8 +145,10 @@ export interface AdvanceCareerOneSeasonInput {
   readonly wagePolicy: PlayerWagePolicyConfig;
   /** Version-linked market policy used by every affordability and AI decision. */
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
-  /** Optional explicit senior player order for development. Defaults to senior club rosters. */
-  readonly seniorDevelopmentPlayerIds?: readonly PlayerId[];
+  /** Version-linked club-environment policy applied by quarterly development. */
+  readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
+  /** Canonical public-assessment policy used by every contract and market path. */
+  readonly valuationConfig: PlayerValuationConfig;
   /** Adapter-generated senior intake candidates used by squad maintenance. */
   readonly seniorIntakeCandidates?: readonly CareerIntakeCandidate[];
   /** Adapter-owned senior intake provider called at the canonical maintenance point. */
@@ -149,11 +174,6 @@ export interface AdvanceCareerOneSeasonInput {
    * never invents or guesses transfer dates.
    */
   readonly transferWindows?: SeasonTransferWindows;
-  /**
-   * Versioned public-value content required whenever transfer windows enable
-   * the AI market lifecycle during this season boundary.
-   */
-  readonly valuationConfig?: PlayerValuationConfig;
   /** Versioned asking-price content required with AI market windows. */
   readonly askingPriceConfig?: AskingPriceCurvesConfig;
 }
@@ -175,6 +195,7 @@ export type CareerSeasonAdvancementOperation =
   | "post_transfer_squad_maintenance"
   | "promotion_relegation"
   | "next_calendar_merge"
+  | "club_competitive_tier_freeze"
   | "player_state_rollover"
   | "season_inbox_delivery";
 
@@ -223,8 +244,6 @@ export interface CareerPlayerExitFact {
 
 /** Aggregate youth lifecycle facts emitted by one advancement. */
 export interface CareerYouthLifecycleFact {
-  /** Number of active-youth development rows. */
-  readonly developmentChangeCount: number;
   /** Number of youth lifecycle records. */
   readonly recordCount: number;
   /** Number of age-out records that became senior-promotion candidates. */
@@ -375,6 +394,8 @@ export interface CareerSeasonAdvancementFacts {
   readonly competitionSeasonArchives?: readonly CareerCompetitionSeasonArchiveFact[];
   /** Ordered promotion/relegation facts selected from pre-movement tables. */
   readonly competitionMovements?: readonly DomesticCompetitionMovement[];
+  /** Transparent next-season tier and reputation calculation rows. */
+  readonly clubCompetitiveTiers: readonly ClubSeasonTierFact[];
   /** Player development aggregate facts. */
   readonly playerDevelopment: CareerPlayerDevelopmentFact;
   /** Player exit aggregate facts. */
@@ -493,11 +514,13 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     fromDate: previousDate,
     toDate: seasonContext.nextSeasonStartDate,
     seasonId: previousSeasonId,
-    playerIds: input.seniorDevelopmentPlayerIds ?? seniorPlayerIds(workingCareerState),
+    developmentCheckpointMode: "season_end_flush",
+    playerDevelopmentEnvironmentConfig:
+      input.playerDevelopmentEnvironmentConfig,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
+    valuationConfig: input.valuationConfig,
     ...(input.transferWindows === undefined ? {} : { transferWindows: input.transferWindows }),
-    ...(input.valuationConfig === undefined ? {} : { valuationConfig: input.valuationConfig }),
     ...(input.askingPriceConfig === undefined ? {} : { askingPriceConfig: input.askingPriceConfig }),
   });
   if (monthlyLifecycle.marketLifecycle !== undefined) {
@@ -562,21 +585,27 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     careerState: exits.careerState,
     worldSeed: input.worldSeed,
     seasonId: advancementSeasonId,
+    lifecycleDate: seasonContext.nextSeasonStartDate,
+    valuationConfig: input.valuationConfig,
   });
 
   operationOrder.push("youth_intake");
+  const activePlayerStock = selectCareerActivePlayerStock(
+    youthLifecycle.careerState,
+  );
   const youthIntakeCandidates =
     input.createYouthIntakeCandidates?.({
       careerState: youthLifecycle.careerState,
       seasonId: advancementSeasonId,
-      intakeDate: previousDate,
+      intakeDate: seasonContext.nextSeasonStartDate,
+      activePlayerStock,
     }) ??
     input.youthIntakeCandidates ??
     [];
   const youthIntake = applyYouthIntakeIfCandidatesExist({
     careerState: youthLifecycle.careerState,
     seasonId: advancementSeasonId,
-    intakeDate: previousDate,
+    intakeDate: seasonContext.nextSeasonStartDate,
     candidates: youthIntakeCandidates,
   });
 
@@ -586,6 +615,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
         careerState: youthIntake.careerState,
         wagePolicy: input.wagePolicy,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
+        valuationConfig: input.valuationConfig,
         allowSelectedClubPromotion: input.allowSelectedClubYouthPromotion ?? false,
         occurredOn: seasonContext.nextSeasonStartDate,
       })
@@ -596,6 +626,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     input.createSeniorIntakeCandidates?.({
       careerState: youthPromotions.careerState,
       seasonId: advancementSeasonId,
+      intakeDate: seasonContext.nextSeasonStartDate,
     }) ??
     input.seniorIntakeCandidates ??
     [];
@@ -621,6 +652,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
         careerState: maintained.careerState,
         wagePolicy: input.wagePolicy,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
+        valuationConfig: input.valuationConfig,
         clubIds: replenishmentClubIds,
         occurredOn: seasonContext.nextSeasonStartDate,
         createIntakeCandidates: () => {
@@ -644,12 +676,19 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
   const structuralReleases = postTransferMaintained.structuralReleases;
 
   const stateBeforePlayerRollover = applyCompletedSeasonChangesIfNeeded(postTransferMaintained.careerState, seasonContext, operationOrder);
+  const clubSeasonTierUpdate = deriveClubSeasonTierUpdate({
+    careerState: stateBeforePlayerRollover,
+    nextSeasonId: seasonContext.nextSeasonId,
+    completedResultByClubId: completedClubResults(input, seasonContext),
+  });
+  operationOrder.push("club_competitive_tier_freeze");
 
   operationOrder.push("player_state_rollover");
   const rolledOver = rolloverPlayersForNextSeason({
     careerState: stateBeforePlayerRollover,
     nextSeasonId: seasonContext.nextSeasonId,
     nextSeasonStartDate: seasonContext.nextSeasonStartDate,
+    clubSeasonTierUpdate,
   });
   const careerStateBeforeFinanceCommit = seasonContext.archive === undefined
     ? rolledOver.careerState
@@ -693,9 +732,13 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
       ...(seasonContext.movements === undefined
         ? {}
         : { competitionMovements: seasonContext.movements }),
+      clubCompetitiveTiers: clubSeasonTierUpdate.facts,
       playerDevelopment: monthlyPlayerDevelopmentFact(monthlyLifecycle.summaries),
       playerExits: playerExitFact(exits.exits),
-      youthLifecycle: youthLifecycleFact(youthLifecycle.developmentChanges, youthLifecycle.records, input.careerState.selectedClubId),
+      youthLifecycle: youthLifecycleFact(
+        youthLifecycle.records,
+        input.careerState.selectedClubId,
+      ),
       youthIntake: {
         candidateCount: youthIntakeCandidates.length,
         acceptedPlayerCount: youthIntake.records.reduce((sum, record) => sum + record.acceptedPlayerIds.length, 0),
@@ -789,8 +832,74 @@ interface PreparedSeasonContextValid {
   readonly movements?: readonly DomesticCompetitionMovement[];
 }
 
+/**
+ * Rejects partial or reordered report tables before any career fact changes.
+ *
+ * A domestic report may deliberately supply no table evidence. Once it
+ * supplies results, however, every competition must appear exactly once in
+ * the registry's canonical order with the exact registered club membership.
+ * This prevents a bounded report from silently treating unsimulated clubs as
+ * completed-season evidence.
+ */
+function assertReportCompetitionResults(
+  careerState: CareerState,
+  results: readonly AdvanceCareerReportCompetitionResult[],
+): void {
+  if (results.length === 0) return;
+
+  const seenCompetitionIds = new Set<CompetitionId>();
+  for (const result of results) {
+    if (seenCompetitionIds.has(result.competitionId)) {
+      throw new Error(
+        `Report refresh contains duplicate competition evidence: ${result.competitionId}`,
+      );
+    }
+    seenCompetitionIds.add(result.competitionId);
+    if (result.finalTable.length === 0) {
+      throw new Error(
+        `Report refresh contains an empty final table: ${result.competitionId}`,
+      );
+    }
+  }
+
+  const world = careerState.gameState.domesticCompetitionWorld;
+  if (world === undefined) return;
+  if (results.length !== world.competitionIds.length) {
+    throw new Error(
+      `Report refresh requires ${world.competitionIds.length} competition results, received ${results.length}`,
+    );
+  }
+
+  for (const [index, expectedCompetitionId] of world.competitionIds.entries()) {
+    const result = results[index];
+    if (result?.competitionId !== expectedCompetitionId) {
+      throw new Error(
+        `Report refresh competition order mismatch at ${index}: expected ${expectedCompetitionId}, received ${String(result?.competitionId)}`,
+      );
+    }
+    const competition = world.competitions[expectedCompetitionId];
+    if (competition === undefined) {
+      throw new Error(
+        `Report refresh competition is missing from the registry: ${expectedCompetitionId}`,
+      );
+    }
+    const expectedClubIds = new Set(competition.clubIds);
+    const tableClubIds = result.finalTable.map(({ clubId }) => clubId);
+    if (
+      tableClubIds.length !== expectedClubIds.size
+      || new Set(tableClubIds).size !== tableClubIds.length
+      || tableClubIds.some((clubId) => !expectedClubIds.has(clubId))
+    ) {
+      throw new Error(
+        `Report refresh final table does not match competition membership: ${expectedCompetitionId}`,
+      );
+    }
+  }
+}
+
 function prepareSeasonContext(input: AdvanceCareerOneSeasonInput): PreparedSeasonContext {
   if (input.mode.kind === "reportRefresh") {
+    assertReportCompetitionResults(input.careerState, input.mode.competitionResults);
     return {
       status: "valid",
       nextSeasonId: input.mode.nextSeasonId,
@@ -1117,13 +1226,51 @@ function seasonDistributionInputs(
           : [{ distribution, finalTable: entry.finalTable }],
     );
   }
-  return mode.seasonDistribution === undefined
-      || mode.finalTable === undefined
-    ? []
-    : [{
-        distribution: mode.seasonDistribution,
-        finalTable: mode.finalTable,
-      }];
+  return mode.competitionResults.flatMap(({ seasonDistribution, finalTable }) =>
+    seasonDistribution === undefined
+      ? []
+      : [{ distribution: seasonDistribution, finalTable }]
+  );
+}
+
+/**
+ * Projects authoritative completed tables into one-shot tier inputs.
+ *
+ * The frozen policy is defined for the canonical 18-club pyramid. Smaller
+ * report fixtures deliberately emit no partial evidence, causing the owning
+ * division to carry forward rather than mixing observed and invented rows.
+ */
+function completedClubResults(
+  input: AdvanceCareerOneSeasonInput,
+  seasonContext: PreparedSeasonContextValid,
+): Readonly<Partial<Record<ClubId, ClubCompletedSeasonResult>>> {
+  const tables = input.mode.kind === "reportRefresh"
+    ? input.mode.competitionResults.map(({ finalTable }) => finalTable)
+    : seasonContext.competitionArchives?.map(({ entry }) => entry.finalTable)
+      ?? (seasonContext.archive === undefined ? [] : [seasonContext.archive.entry.finalTable]);
+  const movementByClubId = new Map(
+    (seasonContext.movements ?? []).map((movement) => [movement.clubId, movement] as const),
+  );
+  const completedResultByClubId: Partial<Record<ClubId, ClubCompletedSeasonResult>> = {};
+
+  for (const table of tables) {
+    if (table.length !== CLUB_COMPETITIVE_TIER_DIVISION_SIZE) continue;
+    for (const row of table) {
+      const previousCategory: ClubCategory | undefined =
+        input.careerState.gameState.clubs[row.clubId]?.category;
+      if (previousCategory === undefined) continue;
+      const movement = movementByClubId.get(row.clubId);
+      completedResultByClubId[row.clubId] = {
+        previousCategory,
+        finalPosition: row.position,
+        clubCount: table.length,
+        champion: row.position === 1,
+        ...(movement === undefined ? {} : { movement: movement.outcome }),
+      };
+    }
+  }
+
+  return completedResultByClubId;
 }
 
 function intakeCandidatesNotYetActive(
@@ -1261,23 +1408,6 @@ function nextSeasonSequenceNumber(careerState: CareerState): number {
   return maxSequenceNumber + 1;
 }
 
-function seniorPlayerIds(careerState: CareerState): readonly PlayerId[] {
-  const playerIds: PlayerId[] = [];
-
-  for (const clubId of careerState.gameState.clubIds) {
-    const club = careerState.gameState.clubs[clubId];
-    if (club === undefined) {
-      continue;
-    }
-
-    for (const playerId of club.playerIds) {
-      playerIds.push(playerId);
-    }
-  }
-
-  return playerIds;
-}
-
 function monthlyPlayerDevelopmentFact(summaries: readonly CareerMonthlyLifecycleSummary[]): CareerPlayerDevelopmentFact {
   return {
     changeCount: summaries.reduce((sum, summary) => sum + summary.developmentChangeCount, 0),
@@ -1305,12 +1435,10 @@ function playerExitFact(exits: readonly PlayerExitRecord[]): CareerPlayerExitFac
 }
 
 function youthLifecycleFact(
-  developmentChanges: readonly PlayerDevelopmentChange[],
   records: readonly YouthLifecycleRecord[],
   selectedClubId: ClubId,
 ): CareerYouthLifecycleFact {
   return {
-    developmentChangeCount: developmentChanges.length,
     recordCount: records.length,
     promotionCandidateCount: records.filter((record) => record.outcome === "promotion_candidate").length,
     externalMoveCandidateCount: records.filter((record) => record.outcome === "external_move_candidate").length,
@@ -1352,7 +1480,11 @@ function squadHealthFact(careerState: CareerState): CareerSquadHealthFact {
 
 function youthHealthFact(careerState: CareerState): CareerYouthHealthFact {
   const youthSizes = careerState.gameState.clubIds.map((clubId) => careerState.youthAcademyState?.clubRosters[clubId]?.playerIds.length ?? 0);
-  const seniorPlayerCount = seniorPlayerIds(careerState).length;
+  const seniorPlayerCount = careerState.gameState.clubIds.reduce(
+    (total, clubId) =>
+      total + (careerState.gameState.clubs[clubId]?.playerIds.length ?? 0),
+    0,
+  );
   const youthPlayerCount = youthSizes.reduce((sum, size) => sum + size, 0);
 
   return {

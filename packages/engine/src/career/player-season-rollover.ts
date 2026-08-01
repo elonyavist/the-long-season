@@ -9,6 +9,8 @@ import {
   type SeasonId,
 } from "@game/domain";
 
+import type { ClubSeasonTierUpdate } from "./club-season-tier.ts";
+
 const RESET_FITNESS = stateValue(100);
 const RESET_FORM = stateValue(50);
 const NEUTRAL_MORALE = 50;
@@ -22,6 +24,8 @@ export interface PlayerSeasonRolloverInput {
   readonly nextSeasonId: SeasonId;
   /** World date for the start of the next season. */
   readonly nextSeasonStartDate: GameDate;
+  /** Clubs, reputation, and frozen tiers that become active with the calendar. */
+  readonly clubSeasonTierUpdate: ClubSeasonTierUpdate;
 }
 
 /** Result of applying player season rollover. */
@@ -35,6 +39,8 @@ export interface PlayerSeasonRolloverResult {
  *
  * Player age is derived from `GameDate`, so this function advances the career
  * calendar to the next season start instead of mutating immutable birth dates.
+ * The next club snapshot is committed in the same validated state transition,
+ * so no caller can expose a new calendar with stale competitive tiers.
  * Abilities, potential, and role identity are intentionally unchanged because
  * their season development is owned by the dedicated development pass.
  */
@@ -60,6 +66,7 @@ export function rolloverPlayersForNextSeason(input: PlayerSeasonRolloverInput): 
       ...(playerParticipationLedger === undefined ? {} : { playerParticipationLedger }),
       gameState: {
         ...input.careerState.gameState,
+        clubs: input.clubSeasonTierUpdate.clubs,
         calendar: {
           ...input.careerState.gameState.calendar,
           currentDate: input.nextSeasonStartDate,
@@ -67,6 +74,7 @@ export function rolloverPlayersForNextSeason(input: PlayerSeasonRolloverInput): 
         },
         playerStates,
       },
+      clubCompetitiveTierState: input.clubSeasonTierUpdate.tierState,
     }),
   };
 }

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
+import { fromISO } from "@game/shared";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
@@ -29,24 +30,35 @@ import {
 } from "./advance-career-month.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import {
+  playerDevelopmentCalibrationVersionsFixture,
+  playerDevelopmentEnvironmentConfigFixture,
+} from "../test-fixtures/player-development-environment-config.ts";
 
 function advanceCareerMonths(
   input: Omit<
     Parameters<typeof advanceCareerMonthsWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
-  >,
+    | "wagePolicy"
+    | "marketBehaviorPolicy"
+    | "valuationConfig"
+    | "playerDevelopmentEnvironmentConfig"
+    | "developmentCheckpointMode"
+  > & Partial<Pick<Parameters<typeof advanceCareerMonthsWithPolicy>[0], "developmentCheckpointMode">>,
 ) {
   return advanceCareerMonthsWithPolicy({
     ...input,
     wagePolicy: playerWagePolicyConfigFixture(),
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+    playerDevelopmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
+    developmentCheckpointMode: input.developmentCheckpointMode ?? "complete_quarters",
   });
 }
 
 /**
- * Monthly career lifecycle tests protect the single calendar checkpoint that
- * closes participation, applies gradual development, and prevents duplicate
- * growth after reloads or alternate advancement routes.
+ * Quarterly career lifecycle tests protect canonical monthly evidence,
+ * residual rollover, and duplicate-safe development after reloads.
  */
 
 test("advanceCareerMonths is a no-op when no completed development month was crossed", () => {
@@ -70,66 +82,68 @@ test("advanceCareerMonths is a no-op when no completed development month was cro
   });
 });
 
-test("advanceCareerMonths closes eligible participation months exactly once", () => {
-  const player = playerId("player:monthly-growth");
-  const currentDate = gameDate(20_000);
-  const toDate = gameDate(Number(currentDate) + 70);
-  const monthKey = monthKeyForCareerDate(currentDate);
-  const state = careerStateWithParticipation({ currentDate, player, monthKey });
+test("advanceCareerMonths waits until three complete evidence months exist", () => {
+  const player = playerId("player:quarter-waits");
+  const currentDate = gameDate(fromISO("2026-08-01"));
+  const state = careerStateWithParticipation({
+    currentDate,
+    player,
+    monthKeys: ["2026-08", "2026-09"],
+  });
+
+  const result = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "quarter-waits-world",
+    toDate: gameDate(fromISO("2026-11-01")),
+  });
+
+  assert.deepEqual(result, { careerState: state, summaries: [] });
+});
+
+test("advanceCareerMonths consumes one three-month batch exactly once", () => {
+  const player = playerId("player:quarter-growth");
+  const currentDate = gameDate(fromISO("2026-08-01"));
+  const monthKeys = ["2026-08", "2026-09", "2026-10"];
+  const toDate = gameDate(fromISO("2026-11-01"));
+  const state = careerStateWithParticipation({
+    currentDate,
+    player,
+    monthKeys,
+  });
 
   const first = advanceCareerMonths({
     careerState: state,
-    worldSeed: "month-growth-world",
+    worldSeed: "quarter-growth-world",
     toDate,
   });
   const second = advanceCareerMonths({
     careerState: first.careerState,
-    worldSeed: "month-growth-world",
+    worldSeed: "quarter-growth-world",
     fromDate: currentDate,
     toDate,
   });
 
-  assert.equal(first.summaries.length, 1);
-  assert.equal(first.summaries[0]?.monthKey, monthKey);
-  assert.equal(first.summaries[0]?.checkpointKey, `season:0001|${monthKey}`);
-  assert.equal(first.careerState.playerParticipationLedger?.closedMonthKeys.includes(`season:0001|${monthKey}`), true);
+  assert.deepEqual(first.summaries.map((summary) => summary.monthKey), monthKeys);
+  assert.equal(first.summaries.every((summary) => summary.developmentChangeCount === 1), true);
+  assert.deepEqual(
+    first.careerState.playerParticipationLedger?.closedMonthKeys,
+    monthKeys.map((monthKey) => `season:0001|${monthKey}`),
+  );
   assert.equal(Number(first.careerState.gameState.players[player]?.abilities.technical.finishing) > 8, true);
   assert.deepEqual(second.summaries, []);
   assert.deepEqual(second.careerState, first.careerState);
 });
 
-test("advanceCareerMonths applies each crossed month as its own checkpoint", () => {
-  const player = playerId("player:multi-month");
-  const currentDate = gameDate(20_000);
-  const secondParticipationDate = gameDate(Number(currentDate) + 40);
-  const toDate = gameDate(Number(currentDate) + 100);
-  const firstMonthKey = monthKeyForCareerDate(currentDate);
-  const secondMonthKey = monthKeyForCareerDate(secondParticipationDate);
+test("advanceCareerMonths leaves current-month participation open for later fixtures", () => {
+  const player = playerId("player:current-month");
+  const currentDate = gameDate(fromISO("2026-08-01"));
+  const toDate = gameDate(fromISO("2026-11-01"));
+  const futureMonthKey = "2026-11";
   const state = careerStateWithParticipation({
     currentDate,
     player,
-    monthKeys: [firstMonthKey, secondMonthKey],
+    monthKeys: ["2026-08", "2026-09", futureMonthKey],
   });
-
-  const result = advanceCareerMonths({
-    careerState: state,
-    worldSeed: "month-growth-world",
-    toDate,
-  });
-
-  assert.deepEqual(result.summaries.map((summary) => summary.monthKey), [firstMonthKey, secondMonthKey]);
-  assert.equal(result.summaries.every((summary) => summary.developmentChangeCount === 1), true);
-  assert.equal(result.careerState.playerParticipationLedger?.closedMonthKeys.includes(`season:0001|${firstMonthKey}`), true);
-  assert.equal(result.careerState.playerParticipationLedger?.closedMonthKeys.includes(`season:0001|${secondMonthKey}`), true);
-  assert.equal(Number(result.careerState.gameState.players[player]?.abilities.technical.finishing) > 8, true);
-});
-
-test("advanceCareerMonths leaves current-month participation open for later fixtures", () => {
-  const player = playerId("player:current-month");
-  const currentDate = gameDate(20_000);
-  const toDate = gameDate(Number(currentDate) + 70);
-  const futureMonthKey = monthKeyForCareerDate(toDate);
-  const state = careerStateWithParticipation({ currentDate, player, monthKey: futureMonthKey });
 
   const result = advanceCareerMonths({
     careerState: state,
@@ -140,6 +154,41 @@ test("advanceCareerMonths leaves current-month participation open for later fixt
   assert.equal(result.summaries.length, 0);
   assert.equal(result.careerState.playerParticipationLedger?.closedMonthKeys.includes(`season:0001|${futureMonthKey}`), false);
   assert.equal(Number(result.careerState.gameState.players[player]?.abilities.technical.finishing), 8);
+});
+
+test("advanceCareerMonths flushes one or two residual months only at season end", () => {
+  const player = playerId("player:season-residual");
+  const currentDate = gameDate(fromISO("2027-03-01"));
+  const toDate = gameDate(fromISO("2027-06-01"));
+  const state = careerStateWithParticipation({
+    currentDate,
+    player,
+    monthKeys: ["2027-03", "2027-04"],
+  });
+
+  const normal = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "season-residual-world",
+    toDate,
+  });
+  const flushed = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "season-residual-world",
+    toDate,
+    developmentCheckpointMode: "season_end_flush",
+  });
+  const repeated = advanceCareerMonths({
+    careerState: flushed.careerState,
+    worldSeed: "season-residual-world",
+    fromDate: currentDate,
+    toDate,
+    developmentCheckpointMode: "season_end_flush",
+  });
+
+  assert.deepEqual(normal, { careerState: state, summaries: [] });
+  assert.deepEqual(flushed.summaries.map((summary) => summary.monthKey), ["2027-03", "2027-04"]);
+  assert.deepEqual(repeated.summaries, []);
+  assert.deepEqual(repeated.careerState, flushed.careerState);
 });
 
 function careerStateWithParticipation(input: {
@@ -155,6 +204,7 @@ function careerStateWithParticipation(input: {
     playerParticipationLedger = accruePlayerFixtureParticipation(playerParticipationLedger, {
       fixtureId: fixtureId(`fixture:${String(monthKey).replace("-", "")}`),
       playerId: input.player,
+      clubId: clubId("club:selected"),
       seasonId: seasonId("season:0001"),
       monthKey,
       started: true,
@@ -196,6 +246,7 @@ function gameStateFixture(currentDate: ReturnType<typeof gameDate>, players: rea
       seed: "advance-career-month-test",
       rngAlgorithmVersion: "test",
       saveSchemaVersion: 1,
+      calibrationVersions: playerDevelopmentCalibrationVersionsFixture(),
     },
     calendar: {
       currentDate,

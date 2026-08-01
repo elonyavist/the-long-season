@@ -1,4 +1,8 @@
-import { computeLeagueTable } from "@game/engine";
+import { selectPlayerDevelopmentEnvironmentConfig } from "@game/content";
+import {
+  computeLeagueTable,
+  deriveClubDevelopmentEnvironment,
+} from "@game/engine";
 import type { MessageKey, Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 import {
@@ -49,6 +53,9 @@ export function formatCareerDashboardOutput(input: FormatCareerDashboardOutputIn
     `${input.text("career.currentDate")}: ${view.context.currentDateIso}`,
     `${input.text("career.currentSeason")}: ${view.context.currentSeasonId}`,
     `${input.text("career.dashboard.selectedClub")}: ${view.selectedClub.name}`,
+    `${input.text("career.clubDevelopmentEnvironment.label")}: ${input.text(
+      view.selectedClub.developmentEnvironmentLabelKey as MessageKey,
+    )}`,
     `${input.text("career.selectedClubRosterSize")}: ${view.selectedClub.rosterSize}`,
     `${input.text("career.nextSelectedClubFixture")}:`,
     ...formatNextFixtureLines(view, input.text),
@@ -71,6 +78,13 @@ export function formatCareerDashboardOutput(input: FormatCareerDashboardOutputIn
 export function buildCareerDashboardViewFromCareerState(careerState: CliCareerState): CareerDashboardView {
   const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
   const nextFixture = findNextSelectedClubFixture(careerState);
+  const developmentEnvironment = deriveClubDevelopmentEnvironment({
+    careerState,
+    clubId: careerState.selectedClubId,
+    config: selectPlayerDevelopmentEnvironmentConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+  });
 
   return buildCareerDashboardView({
     saveId: careerState.saveId,
@@ -84,6 +98,7 @@ export function buildCareerDashboardViewFromCareerState(careerState: CliCareerSt
       clubId: careerState.selectedClubId,
       name: clubLabel(careerState.selectedClubId, careerState.gameState),
       rosterSize: selectedClub?.playerIds.length ?? 0,
+      developmentEnvironmentKey: developmentEnvironment.key,
     },
     ...optionalField("nextFixture", toDashboardFixture(careerState, nextFixture)),
     ...(careerState.matchPreparation === undefined

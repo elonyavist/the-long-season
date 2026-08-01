@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Done.
 
 ## Goal
 
@@ -46,15 +46,38 @@ and competitive tier, using the accepted seven-state matrix.
 - `packages/content/src/balance/player-economy-calibration.test.ts`
 - `packages/content/src/schemas/player-economy-calibration.schema.ts`
 - `packages/content/src/schemas/player-economy-calibration.schema.test.ts`
-- exact career calibration-version and composition owners identified by Step
-  01
+- `packages/content/src/generators/domestic-world.test.ts`
+- `packages/domain/src/state/career-state.test.ts`
+- `packages/domain/src/state/game-state.test.ts`
+- `packages/simulation-tools/src/player-market-calibration-report.test.ts`
 - `packages/engine/src/career/club-development-environment.ts`
 - `packages/engine/src/career/club-development-environment.test.ts`
-- existing club-summary `@game/ui` read model
-- existing web club-summary component
+- `packages/engine/src/index.ts`
+- `packages/storage/src/save-metadata.ts`
+- `packages/storage/src/career-save-envelope.ts`
+- `packages/storage/src/index.ts`
+- `packages/storage/src/json-career-storage.test.ts`
+- `packages/storage/src/sqlite/sqlite-career-schema.ts`
+- `packages/storage/src/sqlite/sqlite-career-migrations.ts`
+- `packages/storage/src/sqlite/sqlite-career-storage.test.ts`
+- `packages/storage/src/sqlite/world-state-mapper.ts`
+- `packages/storage/src/sqlite/world-state-mapper.test.ts`
+- `packages/ui/src/career/career-dashboard-view.ts`
+- `packages/ui/src/career/career-dashboard-view.test.ts`
+- `packages/ui/src/career/build-career-dashboard-view.ts`
+- `packages/ui/src/career/build-career-dashboard-view.test.ts`
+- `apps/cli/src/commands/career/dashboard-output.ts`
+- `apps/cli/src/commands/career.test.ts`
+- `apps/web/src/runtime/web-career-runtime.test.ts`
+- `apps/web/src/features/dashboard/build-career-dashboard.ts`
+- `apps/web/src/features/dashboard/build-career-dashboard.test.ts`
+- `apps/web/src/features/dashboard/CareerDashboardScreen.tsx`
+- `apps/web/src/features/dashboard/CareerDashboardScreen.test.tsx`
+- `apps/web/src/styles/components.css`
 - `packages/i18n/src/labels.ts`
 - `packages/i18n/src/labels.test.ts`
 - `apps/web/src/visual-qa/current-product.spec.ts`
+- `apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts`
 - `docs/PROJECT_STATUS.md`
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`
 - this step document

@@ -6,6 +6,8 @@ import {
   type CareerState,
   type AskingPriceCurvesConfig,
   type Club,
+  type ClubCategory,
+  type ClubFinanceAccount,
   type ClubId,
   type GameDate,
   type MarketBehaviorCalibrationConfig,
@@ -21,12 +23,12 @@ import {
   type TransferNegotiationId,
 } from "@game/domain";
 
-import {
-  derivePlayerMarketAbility,
-  derivePlayerValuation,
-  type PlayerValuationConfig,
-} from "../market/player-valuation.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 import { derivePlayerWillingness } from "../market/player-willingness.ts";
+import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
 import {
   evaluateCareerContractCapacity,
   evaluateTransferFeeCapacity,
@@ -170,6 +172,40 @@ export interface AdvanceAiMarketLifecycleResult {
 }
 
 /**
+ * Scores one public market target while applying the buying club's explicit
+ * tolerance for the visible P50-to-upper uncertainty range.
+ *
+ * P50 remains the expected-quality input. The upper estimate contributes only
+ * to a risk penalty, so AI clubs never need the player's stored ceiling.
+ */
+export function deriveAiMarketTargetScore(input: {
+  readonly assessment: PublicPlayerAssessment;
+  readonly roleNeedScore: number;
+  readonly affordabilityScore: number;
+  readonly buyingClubCategory: ClubCategory;
+  readonly policy: MarketBehaviorCalibrationConfig;
+}): number {
+  const weights = input.policy.aiTargetWeights;
+  const uncertaintyScore =
+    (input.assessment.upperAbility - input.assessment.p50Ability) / 20 * 100;
+  const toleranceBasisPoints =
+    input.policy.aiRiskAppetite.toleranceBasisPointsByCategory[
+      input.buyingClubCategory
+    ];
+  const uncertaintyPenalty =
+    uncertaintyScore
+    * input.policy.aiRiskAppetite.uncertaintyPenaltyWeight
+    * (10_000 - toleranceBasisPoints)
+    / 10_000;
+
+  return input.assessment.currentAbility / 20 * 100 * weights.quality
+    + input.assessment.p50Ability / 20 * 100 * weights.potential
+    + input.roleNeedScore * weights.roleNeed
+    + input.affordabilityScore * weights.affordability
+    - uncertaintyPenalty;
+}
+
+/**
  * Derives ordered AI recruitment needs without mutating the career.
  *
  * Structural depth dominates quality and age concerns. Wage pressure does not
@@ -179,6 +215,23 @@ export interface AdvanceAiMarketLifecycleResult {
 export function deriveAiMarketNeeds(input: {
   readonly careerState: CareerState;
   readonly asOf: GameDate;
+  readonly valuationConfig: PlayerValuationConfig;
+  readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+}): readonly AiMarketNeed[] {
+  return deriveAiMarketNeedsFromAssessments({
+    ...input,
+    assessmentByPlayerId: indexPublicAssessments(
+      input.careerState,
+      input.asOf,
+      input.valuationConfig,
+    ),
+  });
+}
+
+function deriveAiMarketNeedsFromAssessments(input: {
+  readonly careerState: CareerState;
+  readonly asOf: GameDate;
+  readonly assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): readonly AiMarketNeed[] {
   const contracts = activeContractsByPlayer(input.careerState);
@@ -192,8 +245,8 @@ export function deriveAiMarketNeeds(input: {
 
     const squadAbility = average(
       club.playerIds.flatMap((playerId) => {
-        const player = input.careerState.gameState.players[playerId];
-        return player === undefined ? [] : [derivePlayerMarketAbility(player).currentAbility];
+        const assessment = input.assessmentByPlayerId.get(playerId);
+        return assessment === undefined ? [] : [assessment.currentAbility];
       }),
     );
     const wageLoadRatio = account.annualWageBudget <= 0
@@ -212,9 +265,13 @@ export function deriveAiMarketNeeds(input: {
           && contract.endsOn - input.asOf
             <= input.marketBehaviorPolicy.aiLifecycle.expiringContractDays;
       }).length;
-      const averageAge = average(players.map((player) => playerAge(player, input.asOf)));
+      const averageAge = average(players.map(
+        (player) => requiredAssessment(input.assessmentByPlayerId, player.id).age,
+      ));
       const averageAbility = average(
-        players.map((player) => derivePlayerMarketAbility(player).currentAbility),
+        players.map(
+          (player) => requiredAssessment(input.assessmentByPlayerId, player.id).currentAbility,
+        ),
       );
       const reasons: AiMarketNeedReason[] = [];
       if (players.length < MINIMUM_CAREER_DEPARTMENT_DEPTH[department]) {
@@ -229,7 +286,9 @@ export function deriveAiMarketNeeds(input: {
         : input.marketBehaviorPolicy.aiLifecycle.outfieldAgingAge;
       if (players.length > 0 && averageAge >= agingThreshold) reasons.push("aging_department");
       const weakestAbility = Math.min(
-        ...players.map((player) => derivePlayerMarketAbility(player).currentAbility),
+        ...players.map(
+          (player) => requiredAssessment(input.assessmentByPlayerId, player.id).currentAbility,
+        ),
       );
       if (
         players.length > 0
@@ -314,6 +373,7 @@ export function advanceAiMarketLifecycle(input: {
       needs: deriveAiMarketNeeds({
         careerState: input.careerState,
         asOf: input.throughDate,
+        valuationConfig: input.valuationConfig,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
       }),
     };
@@ -374,6 +434,7 @@ export function advanceAiMarketLifecycle(input: {
     needs: deriveAiMarketNeeds({
       careerState,
       asOf: input.throughDate,
+      valuationConfig: input.valuationConfig,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
     }),
   };
@@ -412,6 +473,7 @@ function settleDueAiMarketTables(input: {
     careerState,
     input.throughDate,
     input.transferWindows,
+    input.valuationConfig,
     input.wagePolicy,
     input.marketBehaviorPolicy,
   );
@@ -420,6 +482,7 @@ function settleDueAiMarketTables(input: {
 
   const playerReplies = advanceTransferPlayerNegotiations({
     careerState,
+    valuationConfig: input.valuationConfig,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     throughDate: input.throughDate,
@@ -439,6 +502,7 @@ function settleDueAiMarketTables(input: {
     careerState,
     input.throughDate,
     input.transferWindows,
+    input.valuationConfig,
     input.wagePolicy,
     input.marketBehaviorPolicy,
   );
@@ -448,6 +512,7 @@ function settleDueAiMarketTables(input: {
   const preliminaryReplies = advancePreliminaryAgreementLifecycle({
     careerState,
     throughDate: input.throughDate,
+    valuationConfig: input.valuationConfig,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
@@ -481,6 +546,7 @@ function resolveAiClubTransferDecisions(
   inputState: CareerState,
   decidedOn: GameDate,
   transferWindows: SeasonTransferWindows,
+  valuationConfig: PlayerValuationConfig,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): { readonly careerState: CareerState; readonly facts: readonly AiMarketLifecycleFact[] } {
@@ -497,7 +563,13 @@ function resolveAiClubTransferDecisions(
     ) continue;
 
     if (negotiation.status === "countered") {
-      const demand = demandForTransfer(careerState, negotiation, decidedOn, wagePolicy);
+      const demand = demandForTransfer(
+        careerState,
+        negotiation,
+        decidedOn,
+        valuationConfig,
+        wagePolicy,
+      );
       const affordable = demand !== undefined
         && transferTermsAreAffordable(
           careerState,
@@ -528,10 +600,17 @@ function resolveAiClubTransferDecisions(
     }
 
     if (negotiation.status !== "accepted") continue;
-    const demand = demandForTransfer(careerState, negotiation, decidedOn, wagePolicy);
+    const demand = demandForTransfer(
+      careerState,
+      negotiation,
+      decidedOn,
+      valuationConfig,
+      wagePolicy,
+    );
     if (demand === undefined) continue;
     const submitted = submitTransferPlayerOffer({
       careerState,
+      valuationConfig,
       wagePolicy,
       marketBehaviorPolicy,
       negotiationId,
@@ -552,6 +631,7 @@ function resolveAiPlayerTransferCounters(
   inputState: CareerState,
   decidedOn: GameDate,
   transferWindows: SeasonTransferWindows,
+  valuationConfig: PlayerValuationConfig,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): { readonly careerState: CareerState; readonly facts: readonly AiMarketLifecycleFact[] } {
@@ -578,6 +658,7 @@ function resolveAiPlayerTransferCounters(
     const decision = affordable
       ? acceptTransferPlayerCounter({
           careerState,
+          valuationConfig,
           wagePolicy,
           marketBehaviorPolicy,
           negotiationId,
@@ -587,6 +668,7 @@ function resolveAiPlayerTransferCounters(
         })
       : rejectTransferPlayerCounter({
           careerState,
+          valuationConfig,
           wagePolicy,
           marketBehaviorPolicy,
           negotiationId,
@@ -668,15 +750,22 @@ function submitDueAiMarketTalks(input: {
   let careerState = input.careerState;
   const facts: AiMarketLifecycleFact[] = [];
   const diagnostics: AiMarketDiagnosticFact[] = [];
-  const ordinaryNeeds = deriveAiMarketNeeds({
+  const assessmentByPlayerId = indexPublicAssessments(
+    careerState,
+    input.submittedOn,
+    input.valuationConfig,
+  );
+  const ordinaryNeeds = deriveAiMarketNeedsFromAssessments({
     careerState,
     asOf: input.submittedOn,
+    assessmentByPlayerId,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
   const opportunityNeeds = deriveEliteProspectOpportunityNeeds({
     careerState,
     asOf: input.submittedOn,
     valuationConfig: input.valuationConfig,
+    assessmentByPlayerId,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
   const needs = [
@@ -755,6 +844,7 @@ function submitDueAiMarketTalks(input: {
         marketTargets,
         need,
         input.submittedOn,
+        assessmentByPlayerId,
         input.valuationConfig,
         input.askingPriceConfig,
         input.wagePolicy,
@@ -851,6 +941,7 @@ function submitDueAiMarketTalks(input: {
         marketTargets,
         need,
         input.submittedOn,
+        assessmentByPlayerId,
         input.wagePolicy,
         input.marketBehaviorPolicy,
       );
@@ -863,6 +954,7 @@ function submitDueAiMarketTalks(input: {
         const agreementId = nextPreliminaryAgreementId(careerState, target.player.id, need.clubId);
         const result = submitPreliminaryAgreementOffer({
           careerState,
+          valuationConfig: input.valuationConfig,
           wagePolicy: input.wagePolicy,
           agreementId,
           playerId: target.player.id,
@@ -921,6 +1013,51 @@ export interface DeriveAiTransferOfferFeeInput {
   readonly policy: MarketBehaviorCalibrationConfig["aiTransferOffer"];
 }
 
+/** Finance facts used by the same affordability snapshot in live AI and audits. */
+export interface DeriveAiTransferAffordabilitySnapshotInput {
+  readonly account: ClubFinanceAccount;
+  readonly policy: MarketBehaviorCalibrationConfig["affordability"];
+}
+
+/** Named transfer capacities used by live AI offer selection and scoring. */
+export interface AiTransferAffordabilitySnapshot {
+  readonly availableTransferCapacity: Money;
+  readonly availableCashCapacity: Money;
+  readonly maximumAffordableFee: Money;
+}
+
+/**
+ * Derives named live AI transfer capacities from budget and cash-reserve facts.
+ *
+ * Keeping this snapshot beside the offer selector prevents diagnostics and
+ * future callers from copying a subtly different affordability formula.
+ */
+export function deriveAiTransferAffordabilitySnapshot(
+  input: DeriveAiTransferAffordabilitySnapshotInput,
+): AiTransferAffordabilitySnapshot {
+  const availableTransferCapacity = percentageMoney(
+    input.account.availableTransferBudget,
+    input.policy.maximumTransferBudgetUseBasisPoints,
+  );
+  const availableCashCapacity = Math.max(
+    0,
+    input.account.cashBalance
+      - percentageMoney(
+        input.account.annualWageBudget,
+        input.policy.minimumCashReserveBasisPoints,
+      ),
+  ) as Money;
+  const maximumAffordableFee = Math.min(
+    availableTransferCapacity,
+    availableCashCapacity,
+  ) as Money;
+  return {
+    availableTransferCapacity,
+    availableCashCapacity,
+    maximumAffordableFee,
+  };
+}
+
 /**
  * Derives one stable AI offer below or at asking without unseeded randomness.
  *
@@ -960,6 +1097,7 @@ function selectPermanentTransferTarget(
   marketTargets: readonly CareerMarketCatalogTarget[],
   need: AiMarketNeed,
   submittedOn: GameDate,
+  assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>,
   valuationConfig: PlayerValuationConfig,
   askingPriceConfig: AskingPriceCurvesConfig,
   wagePolicy: PlayerWagePolicyConfig,
@@ -993,8 +1131,8 @@ function selectPermanentTransferTarget(
   const eliteProspectOpportunity = need.reasons.includes(
     "elite_prospect_opportunity",
   );
-  const elitePotentialMinimum = eliteProspectOpportunity
-    ? sixStarMinimumAbility(valuationConfig)
+  const elitePublicUpperMinimum = eliteProspectOpportunity
+    ? publicSixStarUpperMinimumAbility(valuationConfig)
     : undefined;
 
   for (const marketTarget of marketTargets) {
@@ -1020,26 +1158,24 @@ function selectPermanentTransferTarget(
     if (!sellerCanLosePlayer(careerState, sellingClub, player)) continue;
     sellerSafeTargetFound = true;
 
-    const ability = derivePlayerMarketAbility(player);
+    const assessment = requiredAssessment(assessmentByPlayerId, player.id);
     if (
       eliteProspectOpportunity
       && (
         sellingClub.id === careerState.selectedClubId
         || sellingClub.category === "first_division"
-        || ability.potentialAbility
-          < (elitePotentialMinimum ?? Number.POSITIVE_INFINITY)
+        || assessment.upperAbility
+          < (elitePublicUpperMinimum ?? Number.POSITIVE_INFINITY)
       )
     ) continue;
     const willingness = derivePlayerWillingness({
-      player,
+      publicAssessment: assessment,
       sellingClub,
       buyingClub: buyer,
       currentTier: sellingClub.category,
       destinationTier: buyer.category,
-      currentDate: submittedOn,
       currentContract: contract,
       marketBehaviorPolicy,
-      ratingScale: valuationConfig.ratingScale,
     });
     if (willingness.status === "rejected") continue;
     plausibleTargetFound = true;
@@ -1048,6 +1184,7 @@ function selectPermanentTransferTarget(
       sellingClubId: sellingClub.id,
       playerId: player.id,
       asOf: submittedOn,
+      publicAssessment: assessment,
       valuationConfig,
       askingPriceConfig,
     });
@@ -1055,24 +1192,13 @@ function selectPermanentTransferTarget(
     sellerWillingTargetFound = true;
     const account = careerState.clubFinanceState?.accounts[buyer.id];
     if (account === undefined) continue;
-    const availableTransferCapacity = percentageMoney(
-      account.availableTransferBudget,
-      marketBehaviorPolicy.affordability.maximumTransferBudgetUseBasisPoints,
-    );
-    const availableCashCapacity = Math.max(
-      0,
-      account.cashBalance
-        - percentageMoney(
-          account.annualWageBudget,
-          marketBehaviorPolicy.affordability.minimumCashReserveBasisPoints,
-        ),
-    ) as Money;
+    const affordability = deriveAiTransferAffordabilitySnapshot({
+      account,
+      policy: marketBehaviorPolicy.affordability,
+    });
     const offerFee = deriveAiTransferOfferFee({
       askingPrice: commercial.currentAskingPrice,
-      maximumAffordableFee: Math.min(
-        availableTransferCapacity,
-        availableCashCapacity,
-      ) as Money,
+      maximumAffordableFee: affordability.maximumAffordableFee,
       buyingClubId: buyer.id,
       playerId: player.id,
       submittedOn,
@@ -1085,6 +1211,7 @@ function selectPermanentTransferTarget(
       playerId: player.id,
       clubId: buyer.id,
       evaluatedOn: submittedOn,
+      publicAssessment: assessment,
       currentContract: contract,
       isFreeAgent: false,
     });
@@ -1097,25 +1224,27 @@ function selectPermanentTransferTarget(
       marketBehaviorPolicy,
     )) continue;
     termsAffordableTargetFound = true;
-    const weights = marketBehaviorPolicy.aiTargetWeights;
     const roleNeedScore = Math.min(100, Math.max(
       0,
       (need.targetDepth - need.currentDepth) / Math.max(1, need.targetDepth) * 100,
     ));
     const affordabilityScore = Math.max(
       0,
-      100 - Number(offerFee) / Math.max(1, Number(availableTransferCapacity)) * 100,
+      100 - Number(offerFee)
+        / Math.max(1, Number(affordability.availableTransferCapacity)) * 100,
     );
 
     candidates.push({
       player,
       sellingClub,
       offerFee,
-      score:
-        ability.currentAbility / 20 * 100 * weights.quality
-        + ability.potentialAbility / 20 * 100 * weights.potential
-        + roleNeedScore * weights.roleNeed
-        + affordabilityScore * weights.affordability,
+      score: deriveAiMarketTargetScore({
+        assessment,
+        roleNeedScore,
+        affordabilityScore,
+        buyingClubCategory: buyer.category,
+        policy: marketBehaviorPolicy,
+      }),
     });
   }
 
@@ -1147,10 +1276,13 @@ function deriveEliteProspectOpportunityNeeds(input: {
   readonly careerState: CareerState;
   readonly asOf: GameDate;
   readonly valuationConfig: PlayerValuationConfig;
+  readonly assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
 }): readonly AiMarketNeed[] {
   const contracts = activeContractsByPlayer(input.careerState);
-  const minimumPotentialAbility = sixStarMinimumAbility(input.valuationConfig);
+  const minimumPublicUpperAbility = publicSixStarUpperMinimumAbility(
+    input.valuationConfig,
+  );
   const opportunityCountByDepartment = new Map<PlayerSquadDepartment, number>();
 
   for (const clubId of input.careerState.gameState.clubIds) {
@@ -1165,8 +1297,8 @@ function deriveEliteProspectOpportunityNeeds(input: {
       if (
         player !== undefined
         && contracts.has(playerId)
-        && derivePlayerMarketAbility(player).potentialAbility
-          >= minimumPotentialAbility
+        && requiredAssessment(input.assessmentByPlayerId, playerId).upperAbility
+          >= minimumPublicUpperAbility
       ) {
         const department = playerSquadDepartment(player);
         opportunityCountByDepartment.set(
@@ -1188,8 +1320,8 @@ function deriveEliteProspectOpportunityNeeds(input: {
         : [];
     })
     .sort((left, right) =>
-      clubSquadAbility(input.careerState, right)
-        - clubSquadAbility(input.careerState, left)
+      clubSquadAbility(right, input.assessmentByPlayerId)
+        - clubSquadAbility(left, input.assessmentByPlayerId)
       || right.reputation - left.reputation
       || String(left.id).localeCompare(String(right.id))
     );
@@ -1231,11 +1363,16 @@ function deriveEliteProspectOpportunityNeeds(input: {
             department
           ],
         averageAge: round(average(
-          players.map((player) => playerAge(player, input.asOf)),
+          players.map(
+            (player) => requiredAssessment(input.assessmentByPlayerId, player.id).age,
+          ),
         )),
         averageAbility: round(average(
           players.map(
-            (player) => derivePlayerMarketAbility(player).currentAbility,
+            (player) => requiredAssessment(
+              input.assessmentByPlayerId,
+              player.id,
+            ).currentAbility,
           ),
         )),
         expiringContractCount: 0,
@@ -1254,19 +1391,19 @@ function deriveEliteProspectOpportunityNeeds(input: {
  * squad before a newly promoted but similarly reputable club.
  */
 function clubSquadAbility(
-  careerState: CareerState,
   club: Club,
+  assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>,
 ): number {
   return average(club.playerIds.flatMap((playerId): readonly number[] => {
-    const player = careerState.gameState.players[playerId];
-    return player === undefined
+    const assessment = assessmentByPlayerId.get(playerId);
+    return assessment === undefined
       ? []
-      : [derivePlayerMarketAbility(player).currentAbility];
+      : [assessment.currentAbility];
   }));
 }
 
-/** Resolves the six-star potential threshold from immutable rating content. */
-function sixStarMinimumAbility(
+/** Resolves the public six-star upper threshold from immutable rating content. */
+function publicSixStarUpperMinimumAbility(
   valuationConfig: PlayerValuationConfig,
 ): number {
   const threshold = valuationConfig.ratingScale.abilityThresholds.find(
@@ -1317,6 +1454,7 @@ function selectPreliminaryAgreementTarget(
   marketTargets: readonly CareerMarketCatalogTarget[],
   need: AiMarketNeed,
   submittedOn: GameDate,
+  assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): PreliminaryTarget | undefined {
@@ -1342,16 +1480,15 @@ function selectPreliminaryAgreementTarget(
       || remainingDays > marketBehaviorPolicy.aiLifecycle.preliminaryEligibilityDays
       || hasLivePreliminaryAgreement(careerState, player.id)
     ) continue;
+    const assessment = requiredAssessment(assessmentByPlayerId, player.id);
     const willingness = derivePlayerWillingness({
-      player,
+      publicAssessment: assessment,
       sellingClub: currentClub,
       buyingClub: buyer,
       currentTier: currentClub.category,
       destinationTier: buyer.category,
-      currentDate: submittedOn,
       currentContract: contract,
       marketBehaviorPolicy,
-      ratingScale: wagePolicy.ratingScale,
     });
     if (willingness.status === "rejected") continue;
 
@@ -1361,6 +1498,7 @@ function selectPreliminaryAgreementTarget(
       playerId: player.id,
       clubId: buyer.id,
       evaluatedOn: submittedOn,
+      publicAssessment: assessment,
       currentContract: contract,
       isFreeAgent: false,
     });
@@ -1371,8 +1509,6 @@ function selectPreliminaryAgreementTarget(
       wagePolicy,
       marketBehaviorPolicy,
     )) continue;
-    const ability = derivePlayerMarketAbility(player);
-    const weights = marketBehaviorPolicy.aiTargetWeights;
     const roleNeedScore = Math.min(100, Math.max(
       0,
       (need.targetDepth - need.currentDepth) / Math.max(1, need.targetDepth) * 100,
@@ -1394,11 +1530,13 @@ function selectPreliminaryAgreementTarget(
     candidates.push({
       player,
       terms: demand.preferredTerms,
-      score:
-        ability.currentAbility / 20 * 100 * weights.quality
-        + ability.potentialAbility / 20 * 100 * weights.potential
-        + roleNeedScore * weights.roleNeed
-        + affordabilityScore * weights.affordability,
+      score: deriveAiMarketTargetScore({
+        assessment,
+        roleNeedScore,
+        affordabilityScore,
+        buyingClubCategory: buyer.category,
+        policy: marketBehaviorPolicy,
+      }),
     });
   }
 
@@ -1412,16 +1550,25 @@ function demandForTransfer(
   careerState: CareerState,
   negotiation: TransferNegotiation,
   evaluatedOn: GameDate,
+  valuationConfig: PlayerValuationConfig,
   wagePolicy: PlayerWagePolicyConfig,
 ): ReturnType<typeof deriveContractDemand> | undefined {
   const currentContract = activeContractsByPlayer(careerState).get(negotiation.playerId);
-  if (currentContract === undefined) return undefined;
+  const player = careerState.gameState.players[negotiation.playerId];
+  if (currentContract === undefined || player === undefined) return undefined;
+  const publicAssessment = derivePublicPlayerAssessment({
+    player,
+    currentDate: evaluatedOn,
+    potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+    ratingScale: valuationConfig.ratingScale,
+  });
   return deriveContractDemand({
     careerState,
     wagePolicy,
     playerId: negotiation.playerId,
     clubId: negotiation.buyingClubId,
     evaluatedOn,
+    publicAssessment,
     currentContract,
     isFreeAgent: false,
   });
@@ -1757,8 +1904,35 @@ function isTransferWindowOpen(windows: SeasonTransferWindows, date: GameDate): b
   return windows.windows.some((window) => date >= window.opensOn && date <= window.closesOn);
 }
 
-function playerAge(player: Player, asOf: GameDate): number {
-  return Math.max(15, Math.floor((asOf - player.birthDate) / 365.2425));
+/** Derives each player's dated public facts once for one AI market checkpoint. */
+function indexPublicAssessments(
+  careerState: CareerState,
+  asOf: GameDate,
+  valuationConfig: PlayerValuationConfig,
+): ReadonlyMap<PlayerId, PublicPlayerAssessment> {
+  return new Map(careerState.gameState.playerIds.flatMap((playerId) => {
+    const player = careerState.gameState.players[playerId];
+    return player === undefined
+      ? []
+      : [[playerId, derivePublicPlayerAssessment({
+          player,
+          currentDate: asOf,
+          potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+          ratingScale: valuationConfig.ratingScale,
+        })] as const];
+  }));
+}
+
+/** Fails loudly if canonical AI assessment indexing missed an active player. */
+function requiredAssessment(
+  assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>,
+  playerId: PlayerId,
+): PublicPlayerAssessment {
+  const assessment = assessmentByPlayerId.get(playerId);
+  if (assessment === undefined) {
+    throw new Error(`AI market player assessment is missing: ${String(playerId)}`);
+  }
+  return assessment;
 }
 
 function departmentOrder(): readonly PlayerSquadDepartment[] {

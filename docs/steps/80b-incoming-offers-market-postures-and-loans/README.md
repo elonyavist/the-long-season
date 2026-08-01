@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned. Do not start until Phase 80A is complete.
+Planned and entry-gated. Phase 80A Step 09 is Blocked; do not start Phase 80B.
 
 ## Goal
 
@@ -17,12 +17,16 @@ The accepted product contract is:
 
 ## Entry Gate
 
-- Phase 80 and Phase 80A are Done.
+- Phase 80 is Done; Phase 80A is not Done because Step 09 is Blocked.
 - The public current/P50/upper assessment is canonical and shared with AI.
-- Quarterly development, dynamic environment, player supply, and value pass
-  bounded diagnostics.
+- Quarterly development, dynamic environment, player supply, and value exist,
+  and all `32` Phase-80A-owned cohort gates pass, but the Phase 80A bounded
+  report remains `FAIL` on a match-goal monitor.
 - Incompatible beta saves have been deleted.
 - Phase 79 Step 14 remains Reopened, paused, and unclaimed.
+
+This entry gate is not satisfied. Phase 80B may start only after Phase 80A
+records an authorized non-waived successful closeout and is marked Done.
 
 ## Locked Decisions
 
@@ -73,9 +77,9 @@ The accepted product contract is:
 - AI uses real squad need and plausible rotation value; only real minutes and
   ratings produce development.
 - Incompatible beta saves are deleted without migration.
-- Phase 80B runs no longitudinal cohort. The deferred `50 x 20` moved to the
-  final step of Phase 80C so it validates the competitive market instead of a
-  market that is about to change. Phase 80B still keeps shard/checkpoint/worker
+- Phase 80B runs no longitudinal cohort. The deferred `50 x 20` belongs to
+  Phase 81 Step 12 so it validates both the competitive market and the final
+  accepted tactical match engine. Phase 80B still keeps shard/checkpoint/worker
   wiring working and bounded-exercised.
 
 ## Ordered Steps
@@ -143,6 +147,6 @@ The accepted product contract is:
 - JSON and SQLite/OPFS persistence, repository checks, build, Playwright,
   accessibility, diff, and Graphify pass.
 - No longitudinal cohort is run or claimed; cohort infrastructure is proven
-  working by a bounded run and the `50 x 20` is handed to Phase 80C.
+  working by a bounded run and ultimately handed through Phase 80C to Phase 81.
 - Phase 80C is the only next phase, and Phase 79 Step 14 remains Reopened,
   paused, unrun, and unclaimed.

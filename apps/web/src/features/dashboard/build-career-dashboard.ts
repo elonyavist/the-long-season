@@ -1,4 +1,9 @@
-import { computeLeagueTable, findNextCareerFixture } from "@game/engine";
+import { selectPlayerDevelopmentEnvironmentConfig } from "@game/content";
+import {
+  computeLeagueTable,
+  deriveClubDevelopmentEnvironment,
+  findNextCareerFixture,
+} from "@game/engine";
 import { toISO } from "@game/shared";
 import {
   buildCareerDashboardView,
@@ -30,6 +35,13 @@ export function buildCareerDashboardInput(careerState: WebCareerState): BuildCar
   }
 
   const preparation = careerState.matchPreparation;
+  const developmentEnvironment = deriveClubDevelopmentEnvironment({
+    careerState,
+    clubId: selectedClub.id,
+    config: selectPlayerDevelopmentEnvironmentConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+  });
   const preparationTargetsNextFixture = nextFixture.status === "found"
     && preparation?.targetFixtureId === nextFixture.fixture.id;
   const leagueTableRows = buildCurrentLeagueTableRows(careerState);
@@ -64,6 +76,7 @@ export function buildCareerDashboardInput(careerState: WebCareerState): BuildCar
       clubId: selectedClub.id,
       name: selectedClub.name,
       rosterSize: selectedClub.playerIds.length,
+      developmentEnvironmentKey: developmentEnvironment.key,
     },
     ...(nextFixture.status === "found"
       ? { nextFixture: toDashboardFixture(careerState, nextFixture.fixture) }

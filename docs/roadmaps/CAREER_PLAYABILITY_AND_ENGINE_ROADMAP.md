@@ -3,15 +3,18 @@
 Date: 2026-06-25
 Baseline: Phase 61 complete; Claude Code full-project analysis reviewed.
 Scope: operational phase roadmap from Phase 62 onward.
-Current update: 2026-07-30. Phases 79A, 79B, 79C, and 79D are complete.
+Current update: 2026-08-01. Phases 79A, 79B, 79C, and 79D are complete.
 Phase 79D closed by explicit product decision after implementation, bounded
 diagnostics, repository checks, build, Playwright `29/29`, and manual browser
 QA passed. Its stopped direct `50 x 20` produced no report and is not claimed
-as evidence. Phase 80 graphical and structural rework is complete;
-all nine steps are Done and it handed off on 2026-07-31. Phase 80A, Phase 80B, and Phase 80C
-are documented planned successors; Phase 80C Step 09 alone owns the deferred
-checkpointed cohort. Phase 79 Step 14 remains Reopened and paused; its release
-gate is unrun.
+as evidence. Phase 80 graphical and structural rework is complete; all nine
+steps are Done and it handed off on 2026-07-31. Phase 80A Steps 01-08 are
+Done/reclosed; Step 09 is Blocked after the exact `750 x 3` fresh/resume
+reports produced identical evidence but retained an overall `FAIL`. Phases
+80B, 80C, and 81 remain planned and entry-gated; none has started. Phase 81
+Step 12 alone owns the deferred checkpointed cohort after the accepted match-
+engine rework. Phase 79 Step 14 remains Reopened and paused; its release gate
+is unrun.
 
 ## Goal
 
@@ -1899,8 +1902,8 @@ Minimum useful scope:
 - targeted Market/Squad/profile browser QA and a final corrective cohort
   obligation. Browser QA passed; the direct `50 worlds x 20 seasons` attempt
   was stopped, produced no report, and is explicitly unclaimed. The replacement
-  run is deferred to Phase 80C Step 09 with checkpoints and the
-  repository-wide `7` workers.
+  run is deferred to Phase 81 Step 12 with checkpoints and the repository-wide
+  `7` workers.
 
 What must not happen:
 
@@ -1923,7 +1926,7 @@ Definition of Done:
 - public value, asking price, fee, affordability, and AI remain coherent;
 - focused checks, browser QA, and `pnpm check` pass;
 - the explicit product closeout records that the direct `50 x 20` did not pass
-  or produce evidence and moves it to Phase 80C Step 09;
+  or produce evidence and moves it to Phase 81 Step 12;
 - Phase 79 Step 14 remains paused until that checkpointed `50 x 20`, using
   exactly `7` workers, is complete.
 
@@ -2000,7 +2003,11 @@ verified.
 
 Status:
 
-- Ready to start. Phase 80 has closed and its entry gate is satisfied.
+- Blocked. Steps 05, 06, and 08 were reopened by canonical Step 09 evidence and
+  product screenshots and are now reclosed. Step 09 completed the exact fresh/
+  resume execution but is not Done: all `32` cohort gates pass, while
+  `goals_per_match_avg` retains `80` monitor failures and therefore keeps the
+  report at `FAIL`.
 
 Purpose:
 
@@ -2016,19 +2023,27 @@ Minimum useful scope:
 - accepted seven-state development environment;
 - monthly participation facts applied quarterly plus a season-end residual
   flush;
-- role-aware upper contraction by age and one shared public assessment;
+- role-aware upper contraction by exact completed age after 20 and one shared
+  public assessment;
+- one ceiling-first joint profile that gives explicit age-`15..20` prospect
+  lanes at least one stored star of opportunity without promising realization;
 - division/club/age-aware prospect bands, national exceptional stock, and
   annual intake top-up;
-- public value based on expected outcome and uncertainty, with no
-  `marketContext`, owner-category/free-agent multiplier, or per-context cap;
+- public value based on monotonic current/P50/upper tranches, with no global
+  uncertainty haircut, `marketContext`, owner-category/free-agent multiplier,
+  or per-context cap;
 - one global `€150m` cap plus source-backed division population output bands
   frozen under a new calibration epoch;
-- bounded, positive-denominator diagnostics and incompatible beta-save reset.
+- bounded, positive-denominator diagnostics, a compact checkpointed
+  `750 x 3` audit with exactly `7` workers and deterministic resume proof, and
+  incompatible beta-save reset.
 
 What must not happen:
 
 - No incoming offers, market postures, or loans.
-- No permanent hidden realization trait or guaranteed potential floor.
+- No permanent hidden realization trait or guaranteed development outcome
+  floor; the stored-room invariant applies only to explicit young prospect
+  lanes.
 - No per-match ability mutation, scouting fog, or historical reputation
   ledger.
 - No beta-save compatibility debris and no `50 x 20`.
@@ -2037,7 +2052,8 @@ Definition of Done:
 
 - Generation, development, projection, value, and AI use one deterministic
   model with credible age/division/club distributions.
-- Bounded diagnostics and repository/browser gates pass.
+- The compact `750 x 3` diagnostic, bounded diagnostics, and
+  repository/browser gates pass.
 - Phase 80B is the only next phase and the deferred cohort remains unrun.
 
 Documentation:
@@ -2052,7 +2068,8 @@ development in production.
 
 Status:
 
-- Planned. Do not start before Phase 80A closes.
+- Planned; its entry gate is closed because Phase 80A Step 09 is Blocked and
+  Phase 80A is not Done.
 
 Purpose:
 
@@ -2141,28 +2158,115 @@ Minimum useful scope:
 - serial loans in the initial release, behind a discriminated future extension
   seam;
 - dedicated non-vacuous race diagnostics and beta-save reset;
-- one final checkpointed `50 x 20` in Step 09 with `50` shards and `7` workers.
+- bounded phase closeout in Step 09, with working shard/checkpoint/worker
+  infrastructure handed to Phase 81.
 
 What must not happen:
 
 - No optional-field super-aggregate, duplicate fee/terms/status/effective
   clock, durable bid history, rival contract-term disclosure, or deadline
   reset.
-- No generic ranking/plugin/event framework and no cohort before Step 09.
+- No generic ranking/plugin/event framework and no longitudinal cohort.
 
 Definition of Done:
 
 - One and several participants use one deterministic persisted path; only one
   accepted participant reaches an atomic commit.
-- Every structural race gate has positive observations and calibration evidence
-  is frozen before the final run.
-- The checkpointed cohort completes and replays without claiming Phase 79 Step
-  14's separate release gate.
+- Every structural race gate has positive observations and its bounded report
+  records the denominator and accepted calibration evidence.
+- The phase closes without claiming a longitudinal cohort and hands the
+  reusable runner to Phase 81.
 
 Documentation:
 
 - `docs/audits/PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md`
 - `docs/steps/80c-competitive-transfer-race-and-player-choice/`
+
+### Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine
+
+Primary dependency: Phase 80C Done with bounded market/race evidence and the
+shared deterministic career/match execution seams intact.
+
+Status:
+
+- Planned under an accepted design contract. Do not start before Phase 80C
+  closes.
+
+Purpose:
+
+- Make formation shape, role suitability, opponent matchup, tactical
+  instructions, and live manager changes materially affect deterministic match
+  outcomes without turning the game into a Football Manager clone or a
+  22-agent simulation.
+
+Minimum useful scope:
+
+- reproducible extreme-shape baselines led by the equal-quality `3-1-6` versus
+  `4-4-2` case, where the current four-department means are identical;
+- typed formation line, channel, side, canonical role, and suitability facts
+  carried through the match Adapter instead of collapsed into four open-string
+  role keys;
+- separate concepts for player quality, intrinsic shape capacity, and
+  relational opponent matchup;
+- configured diminishing returns and continuity/coverage effects, never
+  arbitrary named-formation penalties;
+- phase-aware buildup, progression, creation, box occupation, defensive
+  protection, transition, and width routes;
+- explicit semantics for mentality, directness, pressing, width, risk, and
+  tempo through one pre-match/live/AI/batch decision seam;
+- suitability-based coordination effects with an explicit guard against
+  double-penalising the destination-role attribute weighting already present;
+- a pre-coefficient quality-versus-structure hierarchy: coherent shape wins
+  materially at equal quality, severe incoherence may overturn only modest
+  quality gaps, and a generated First Division title contender remains the
+  aggregate favourite over a generated Third Division mid-table side under the
+  frozen extreme-shape handicap;
+- causal actor selection before outcome resolution and structured explanation
+  facts usable by UI and diagnostics;
+- deterministic AI whole-XI/tactical evaluation against the same model;
+- non-vacuous tactical diagnostics and metamorphic invariants;
+- one final checkpointed `50 x 20` in Step 12 with `50` stable shards,
+  exactly `7` workers, checkpoint reuse, and deterministic replay.
+
+Clean-code contract:
+
+- New and modified names must expose football meaning; no generic
+  `utils`, `helpers`, `manager`, `processor`, or boolean-flag orchestration
+  modules.
+- A step must remove obsolete local collapse/fallback paths once their typed
+  replacement is live.
+- If implementation exposes dead or structurally unclear code inside the
+  active responsibility, the step expands its Expected Files before editing
+  and completes the local refactor with tests. Unrelated cleanup is documented
+  for a later step rather than mixed into the current change.
+- No compatibility branch for beta saves; incompatible saves use the canonical
+  reset path.
+
+What must not happen:
+
+- No imitation of proprietary Football Manager internals or unsupported claim
+  about its algorithm.
+- No 22 autonomous agents, pass-by-pass physics model, named-formation lookup
+  table, random upset boost, web-owned match rule, or duplicated AI formula.
+- No shape multiplier folded into `TeamStrength`, no persisted derived shape
+  profile, and no public stringly typed tactical contract.
+
+Definition of Done:
+
+- Equal-quality extreme formations are no longer mechanically identical, while
+  coherent unusual shapes remain viable when their qualities and opponent
+  matchup support them.
+- Pre-match and live changes use the same deterministic model and expose
+  bounded qualitative consequences.
+- Focused unit, metamorphic, persistence, browser, dependency, and repository
+  gates pass with positive observations.
+- Step 12 completes and replays the final `50 x 20`, then hands its truthful
+  evidence to Phase 79 Step 14 without claiming that separate release gate.
+
+Documentation:
+
+- `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`
+- `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/`
 
 ### Deferred - Finances Expansion And Poverty Loop MVP
 
@@ -2171,7 +2275,7 @@ structural rework decision. Its intended manager-facing finance scope remains
 valid future backlog, but it has no active phase number and is not silently
 included in Phase 80.
 
-### Phase 81 - Advanced Pyramid Rules And La Scalata Expansion
+### Phase 82 - Advanced Pyramid Rules And La Scalata Expansion
 
 Primary dependency: Phase 79C's minimal canonical three-division world and any
 later accepted finance/infrastructure contract required by a concrete rule.
@@ -2181,7 +2285,7 @@ Supersession:
 - Phase 79C Steps 04-08 now own the first multi-division country,
   promotion/relegation, rollover, calendar regeneration, and cross-division
   history that this phase originally reserved.
-- Phase 81 must not rebuild those foundations or keep a second competition
+- Phase 82 must not rebuild those foundations or keep a second competition
   model.
 
 Purpose:
@@ -2210,7 +2314,7 @@ Definition of Done:
 - Advanced pyramid rules extend the Phase 79C canonical world without forking
   its state, calendars, history, market, or persistence owners.
 
-### Phase 82 - Youth, Staff, Facilities, And Archive Expansion Plan
+### Phase 83 - Youth, Staff, Facilities, And Archive Expansion Plan
 
 Primary dependency: Phases 69, 70, 74, 75, 76, and 77.
 
@@ -2240,7 +2344,7 @@ Definition of Done:
 
 - The next pillar is selected with evidence, not because it was next in a list.
 
-### Phase 83 - Narrative Content Factory And Corpus Foundation
+### Phase 84 - Narrative Content Factory And Corpus Foundation
 
 Primary dependency: a playable matchday loop, durable structured match/world
 events, and at least one surface where narrative variety would improve user
@@ -2338,24 +2442,34 @@ Current status:
 26. `Phase 80 - Graphical And Structural Rework`
     - complete; all nine steps Done, no longitudinal cohort run
 27. `Phase 80A - Prospect Generation, Club Environment And Quarterly Development`
-    - ready to start; Step 01 is the only next action
+    - blocked; Steps 01-08 Done/reclosed, Step 09 Blocked after completed
+      deterministic fresh/resume evidence
 28. `Phase 80B - Incoming Offers, Market Postures And Loans`
-    - planned; starts only after Phase 80A and closes on bounded evidence
+    - planned; entry gate closed until Phase 80A is Done; closes on bounded
+      evidence
 29. `Phase 80C - Competitive Transfer Race And Player Choice`
     - planned with accepted product contract; starts only after Phase 80B;
-      Step 09 owns the sole deferred `50 x 20`
+      closes on bounded evidence and hands checkpoint infrastructure to Phase
+      81
+30. `Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine`
+    - planned with accepted design contract; starts only after Phase 80C;
+      Step 12 owns the sole deferred `50 x 20`
 
 Next recommendation:
 
-1. Execute Phase 80A Step 01, then the remaining Phase 80A steps in documented
-   order.
-2. Execute Phase 80B and Phase 80C only after their predecessor entry gates
-   close, one documented step at a time.
-3. Run the resumable `50 x 20` only in Phase 80C Step 09 with its frozen
+1. Keep Phase 80A Step 09 Blocked and preserve both deterministic reports.
+   Resolve or explicitly reassign the `goals_per_match_avg` monitor failure
+   through an authorized owning step; do not weaken its threshold, status,
+   semantic class, seeds, or denominator.
+2. Do not start Phase 80B until Phase 80A is unblocked and Done. Then execute
+   Phase 80B and Phase 80C only after their predecessor entry gates close, one
+   documented step at a time.
+3. Execute Phase 81 only after Phase 80C closes, one documented step at a time.
+4. Run the resumable `50 x 20` only in Phase 81 Step 12 with its frozen
    checkpoint directory, `50` stable shards, and exactly `7` workers.
-4. Resume Phase 79 Step 14 only after Phase 80C and that cohort complete;
+5. Resume Phase 79 Step 14 only after Phase 81 and that cohort complete;
    its separate release-scale sequence remains unrun and unclaimed.
-5. Do not start Phase 79 Step 15, deferred finance work, or Phase 81 early.
+6. Do not start Phase 79 Step 15, deferred finance work, or Phase 82 early.
 
 Reason:
 
@@ -2366,10 +2480,10 @@ Reason:
   that its aggregate and potentially vacuous cap checks did not measure.
 - Phase 79D corrected those owned defects with bounded implementation and
   browser evidence. Its stopped direct cohort remains unclaimed; the
-  checkpointed replacement belongs to Phase 80C Step 09 after all accepted
-  reworks.
+  checkpointed replacement belongs to Phase 81 Step 12 after all accepted
+  player, market, and match-engine reworks.
 - Twenty seasons cover one representative age-15-to-35 player arc and the
-  required year-20 stock. The Phase 80B cohort uses `50` three-division worlds
+  required year-20 stock. The Phase 81 cohort uses `50` three-division worlds
   and does not claim equilibrium or evidence after year 20.
 
 ## Relationship To Web Section Roadmap

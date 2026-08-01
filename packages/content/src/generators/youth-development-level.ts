@@ -1,4 +1,12 @@
-import { youthDevelopmentLevel, type ClubCategory, type YouthDevelopmentLevel } from "@game/domain";
+import {
+  youthDevelopmentLevel,
+  type ClubCategory,
+  type ClubCompetitiveTier,
+  type ClubDevelopmentEnvironmentKey,
+  type YouthDevelopmentLevel,
+} from "@game/domain";
+
+import { playerDevelopmentEnvironment } from "../balance/player-economy-calibration.ts";
 
 /** Input for deriving one deterministic academy-development level. */
 export interface DeriveYouthDevelopmentLevelInput {
@@ -6,6 +14,21 @@ export interface DeriveYouthDevelopmentLevelInput {
   readonly division: ClubCategory;
   /** Club reputation on the existing generated-club scale. */
   readonly clubReputation: number;
+}
+
+/** Club facts that select one frozen seven-state development environment. */
+export interface ClubDevelopmentEnvironmentContext {
+  readonly category: ClubCategory;
+  readonly competitiveTier: ClubCompetitiveTier;
+}
+
+/** Resolves the versioned environment shared by youth-generation policies. */
+export function developmentEnvironmentForClubContext(
+  context: ClubDevelopmentEnvironmentContext,
+): ClubDevelopmentEnvironmentKey {
+  return playerDevelopmentEnvironment.environmentKeyByCategoryAndTier[
+    context.category
+  ][context.competitiveTier];
 }
 
 /**
@@ -38,26 +61,57 @@ export function youthDevelopmentCurrentBoost(level: YouthDevelopmentLevel): numb
 }
 
 /** Returns the routine interesting-prospect chance for one academy level. */
-export function youthDevelopmentInterestingChance(level: YouthDevelopmentLevel): number {
-  switch (Number(level)) {
-    case 1:
+export function youthDevelopmentInterestingChance(
+  environment: ClubDevelopmentEnvironmentKey,
+): number {
+  switch (environment) {
+    case "very_poor":
       return 0.12;
-    case 2:
-      return 0.16;
-    case 3:
-      return 0.2;
-    case 4:
-      return 0.25;
-    case 5:
+    case "poor":
+      return 0.15;
+    case "limited":
+      return 0.18;
+    case "adequate":
+      return 0.21;
+    case "good":
+      return 0.24;
+    case "very_good":
+      return 0.27;
+    case "excellent":
       return 0.3;
     default:
-      return 0.2;
+      return assertNeverEnvironment(environment);
   }
 }
 
-/** Score nudge used when allocating the scarce division-wide high/elite slots. */
-export function youthDevelopmentRarityCandidateScoreModifier(level: YouthDevelopmentLevel): number {
-  return (3 - Number(level)) * 0.08;
+/**
+ * Returns a bounded per-candidate chance of producing a serious prospect.
+ *
+ * This nudge can improve the frequency of meaningful academy stories, but it
+ * never grants a rating floor and never allocates the national exceptional
+ * ceiling-six outcome.
+ */
+export function youthDevelopmentSeriousProspectChance(
+  environment: ClubDevelopmentEnvironmentKey,
+): number {
+  switch (environment) {
+    case "very_poor":
+      return 0.01;
+    case "poor":
+      return 0.012;
+    case "limited":
+      return 0.015;
+    case "adequate":
+      return 0.018;
+    case "good":
+      return 0.022;
+    case "very_good":
+      return 0.026;
+    case "excellent":
+      return 0.03;
+    default:
+      return assertNeverEnvironment(environment);
+  }
 }
 
 function baseLevelForDivision(division: ClubCategory): number {
@@ -80,4 +134,8 @@ function reputationAdjustment(reputation: number): number {
 
 function clampInteger(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function assertNeverEnvironment(value: never): never {
+  throw new Error(`Unsupported youth-development environment: ${String(value)}`);
 }

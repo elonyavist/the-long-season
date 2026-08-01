@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { FAKE_CLUB_COUNT, FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
-import { deriveYouthDevelopmentLevel } from "./youth-development-level.ts";
 import { playerRatingScale } from "../balance/player-economy-calibration.ts";
+import { resolveGeneratedExceptionalProfile } from "./player-archetypes.ts";
 import {
   buildAnnualWorldIntakeExceptionalAllocation,
   buildInitialWorldExceptionalAllocation,
   buildPlayerRarityAllocation,
   buildYouthPlayerRarityAllocation,
-  isBudgetedArchetype,
+  isRoutineSelectionExcludedArchetype,
 } from "./player-rarity-budget.ts";
 
 /** Tests protect league-level rarity budgets for generated lower-division players. */
@@ -36,8 +36,6 @@ test("third-division rarity budgets stay inside configured limits", () => {
     assert.equal(allocation.budget.whiteFlyCount <= 4, true);
     assert.equal(allocation.budget.seriousProspectCount >= 2, true);
     assert.equal(allocation.budget.seriousProspectCount <= 5, true);
-    assert.equal(allocation.budget.rareProdigyCount >= 0, true);
-    assert.equal(allocation.budget.rareProdigyCount <= 1, true);
   }
 });
 
@@ -61,9 +59,15 @@ test("rarity assignments match the requested budget count", () => {
 
   assert.equal(
     assignments.length,
-    allocation.budget.whiteFlyCount + allocation.budget.seriousProspectCount + allocation.budget.rareProdigyCount,
+    allocation.budget.whiteFlyCount + allocation.budget.seriousProspectCount,
   );
-  assert.equal(assignments.every((assignment) => isBudgetedArchetype(assignment.archetypeKey)), true);
+  assert.equal(
+    assignments.every((assignment) =>
+      isRoutineSelectionExcludedArchetype(assignment.archetypeKey)
+    ),
+    true,
+  );
+  assert.equal(isRoutineSelectionExcludedArchetype("rare_prodigy"), true);
   assert.equal(
     assignments
       .filter((assignment) => assignment.rarityKind === "white_fly")
@@ -86,18 +90,21 @@ test("initial youth rarity allocation is deterministic and obeys division caps",
       seasonKey: "season:demo-001",
       clubCount: FAKE_CLUB_COUNT,
       playersPerClub: 11,
+      clubEnvironmentKeysByClubNumber: Object.fromEntries(
+        Array.from({ length: FAKE_CLUB_COUNT }, (_, clubIndex) => [
+          clubIndex + 1,
+          "adequate" as const,
+        ]),
+      ),
     };
     const allocation = buildYouthPlayerRarityAllocation(input);
     const assignments = Object.values(allocation.assignmentsBySlotKey);
 
     assert.deepEqual(allocation, buildYouthPlayerRarityAllocation(input));
-    assert.equal(allocation.budget.seriousProspectCount >= 2, true);
-    assert.equal(allocation.budget.seriousProspectCount <= 5, true);
-    assert.equal(allocation.budget.rareProdigyCount >= 0, true);
-    assert.equal(allocation.budget.rareProdigyCount <= 1, true);
+    assert.equal(allocation.budget.seriousProspectCount <= FAKE_CLUB_COUNT, true);
     assert.equal(
       assignments.length,
-      allocation.budget.seriousProspectCount + allocation.budget.rareProdigyCount,
+      allocation.budget.seriousProspectCount,
     );
     assert.equal(new Set(assignments.map((assignment) => assignment.slotKey)).size, assignments.length);
   }
@@ -114,9 +121,9 @@ test("initial youth rarity allocation mildly favors stronger academies without c
       seasonKey: "season:demo-001",
       clubCount: 2,
       playersPerClub: 11,
-      clubDevelopmentLevelsByClubNumber: {
-        1: deriveYouthDevelopmentLevel({ division: "third_division", clubReputation: 10 }),
-        2: deriveYouthDevelopmentLevel({ division: "third_division", clubReputation: 3 }),
+      clubEnvironmentKeysByClubNumber: {
+        1: "excellent",
+        2: "very_poor",
       },
     });
 
@@ -130,6 +137,7 @@ test("initial youth rarity allocation mildly favors stronger academies without c
 });
 
 test("initial world exceptional stock is exact, separate, and credibly located", () => {
+  let playoffChampionCount = 0;
   for (let seedIndex = 0; seedIndex < 20; seedIndex += 1) {
     const candidates = initialWorldCandidates();
     const allocation = buildInitialWorldExceptionalAllocation({
@@ -139,23 +147,49 @@ test("initial world exceptional stock is exact, separate, and credibly located",
     });
     const byKey = new Map(candidates.map((candidate) => [candidate.playerKey, candidate]));
 
-    assert.equal(allocation.currentSixPlayerKeys.length >= 1, true);
-    assert.equal(allocation.currentSixPlayerKeys.length <= 2, true);
-    assert.equal(allocation.potentialSixPlayerKeys.length >= 2, true);
-    assert.equal(allocation.potentialSixPlayerKeys.length <= 4, true);
+    assert.equal(allocation.currentSixPlayerKeys.length >= 2, true);
+    assert.equal(allocation.currentSixPlayerKeys.length <= 3, true);
+    assert.equal(allocation.youngPotentialSixPlayerKeys.length >= 4, true);
+    assert.equal(allocation.youngPotentialSixPlayerKeys.length <= 5, true);
+    assert.equal(allocation.potentialSixPlayerKeys.length >= 6, true);
+    assert.equal(allocation.potentialSixPlayerKeys.length <= 8, true);
     assert.equal(
       allocation.currentSixPlayerKeys.every((key) => {
         const candidate = byKey.get(key);
         return candidate?.division === "first_division"
-          && candidate.clubTier === "title_contender"
+          && (candidate.clubTier === "title_contender"
+            || candidate.clubTier === "playoff_contender")
           && candidate.isFirstTeam;
       }),
       true,
     );
+    playoffChampionCount += allocation.currentSixPlayerKeys.filter(
+      (key) => byKey.get(key)?.clubTier === "playoff_contender",
+    ).length;
     assert.equal(
-      allocation.potentialSixPlayerKeys.filter(
+      allocation.youngPotentialSixPlayerKeys.filter(
         (key) => byKey.get(key)?.division !== "first_division",
       ).length <= 1,
+      true,
+    );
+    assert.equal(
+      new Set(
+        allocation.youngPotentialSixPlayerKeys.map(
+          (key) => byKey.get(key)?.clubKey,
+        ),
+      ).size,
+      allocation.youngPotentialSixPlayerKeys.length,
+    );
+    assert.equal(
+      allocation.youngPotentialSixPlayerKeys.every((key) => {
+        const candidate = byKey.get(key);
+        return candidate !== undefined
+          && candidate.ageYears >= 15
+          && candidate.ageYears <= 20
+          && (candidate.division !== "first_division"
+            || candidate.clubTier === "title_contender"
+            || candidate.clubTier === "playoff_contender");
+      }),
       true,
     );
     assert.deepEqual(
@@ -167,6 +201,7 @@ test("initial world exceptional stock is exact, separate, and credibly located",
       }),
     );
   }
+  assert.equal(playoffChampionCount > 0, true);
 });
 
 test("initial world reconciles compatible natural six-star profiles before filling remaining slots", () => {
@@ -180,7 +215,7 @@ test("initial world reconciles compatible natural six-star profiles before filli
         naturalCurrentAbilityLane: "rare" as const,
       };
     }
-    if (index === 396) {
+    if (index === 11) {
       return {
         ...candidate,
         naturallyPotentialSix: true,
@@ -199,13 +234,13 @@ test("initial world reconciles compatible natural six-star profiles before filli
 
   assert.equal(allocation.currentSixPlayerKeys.includes(candidates[0]!.playerKey), true);
   assert.equal(allocation.potentialSixPlayerKeys.includes(candidates[0]!.playerKey), true);
-  assert.equal(allocation.potentialSixPlayerKeys.includes(candidates[396]!.playerKey), true);
+  assert.equal(allocation.youngPotentialSixPlayerKeys.includes(candidates[11]!.playerKey), true);
   assert.equal(
     allocation.assignmentsByPlayerKey[candidates[0]!.playerKey]?.source,
     "natural",
   );
   assert.equal(
-    allocation.assignmentsByPlayerKey[candidates[396]!.playerKey]?.archetypeKey,
+    allocation.assignmentsByPlayerKey[candidates[11]!.playerKey]?.archetypeKey,
     "serious_prospect",
   );
   assert.equal(
@@ -221,9 +256,10 @@ test("initial world reconciles compatible natural six-star profiles before filli
   );
 });
 
-test("initial world reconstructs only the deterministic surplus when natural ceilings exceed four", () => {
+test("initial world reconstructs only the deterministic surplus when natural young ceilings exceed five", () => {
+  const naturalIndexes = [11, 33, 55, 77, 99, 121];
   const candidates = initialWorldCandidates().map((candidate, index) =>
-    index < 5
+    naturalIndexes.includes(index)
       ? {
           ...candidate,
           naturallyPotentialSix: true,
@@ -237,12 +273,13 @@ test("initial world reconstructs only the deterministic surplus when natural cei
     ratingScale: playerRatingScale,
     candidates,
   });
-  const naturalKeys = candidates.slice(0, 5).map((candidate) => candidate.playerKey);
-  const retainedNaturalCount = allocation.potentialSixPlayerKeys.filter((key) =>
+  const naturalKeys = naturalIndexes.map((index) => candidates[index]!.playerKey);
+  const retainedNaturalCount = allocation.youngPotentialSixPlayerKeys.filter((key) =>
     naturalKeys.includes(key)
   ).length;
 
-  assert.equal(allocation.potentialSixPlayerKeys.length, 4);
+  assert.equal(allocation.youngPotentialSixPlayerKeys.length >= 4, true);
+  assert.equal(allocation.youngPotentialSixPlayerKeys.length <= 5, true);
   assert.equal(allocation.reconstructedPotentialBelowSixPlayerKeys.length > 0, true);
   assert.equal(
     retainedNaturalCount + allocation.reconstructedPotentialBelowSixPlayerKeys.length,
@@ -262,35 +299,97 @@ test("initial world reconstructs only the deterministic surplus when natural cei
   );
 });
 
-test("annual world intake schedules exactly two to four potential-six seasons per cohort", () => {
-  const candidates = Array.from({ length: 54 }, (_, index) => `intake-player-${index + 1}`);
-  const allocations = Array.from({ length: 10 }, (_, seasonIndex) =>
+test("annual world intake fills every eligible vacancy up to the active-stock target", () => {
+  const candidates = annualCandidates();
+  const empty = buildAnnualWorldIntakeExceptionalAllocation({
+    seed: "annual-world-rarity",
+    seasonIndex: 3,
+    ratingScale: playerRatingScale,
+    activeYoungPotentialSixPlayers: [],
+    candidates,
+  });
+  assert.equal(
+    empty.potentialSixPlayerKeys.length,
+    empty.targetActiveYoungPotentialSixCount,
+  );
+  assert.equal(empty.potentialSixPlayerKeys.length > 1, true);
+  assert.equal(empty.unfilledVacancyCount, 0);
+  const activeYoungPotentialSixPlayers = Array.from(
+    { length: empty.targetActiveYoungPotentialSixCount - 1 },
+    (_, index) => ({
+      playerKey: `active-${index + 1}`,
+      clubKey: `active-club-${index + 1}`,
+      division: "first_division" as const,
+    }),
+  );
+  const allocation = buildAnnualWorldIntakeExceptionalAllocation({
+    seed: "annual-world-rarity",
+    seasonIndex: 3,
+    ratingScale: playerRatingScale,
+    activeYoungPotentialSixPlayers,
+    candidates,
+  });
+
+  assert.equal(allocation.activeYoungPotentialSixCount, activeYoungPotentialSixPlayers.length);
+  assert.equal(allocation.vacancyCount, 1);
+  assert.equal(allocation.potentialSixPlayerKeys.length, 1);
+  assert.equal(allocation.unfilledVacancyCount, 0);
+  assert.deepEqual(
+    allocation,
     buildAnnualWorldIntakeExceptionalAllocation({
       seed: "annual-world-rarity",
-      cohortKey: "cohort-000",
-      seasonIndex,
+      seasonIndex: 3,
       ratingScale: playerRatingScale,
-      candidatePlayerKeys: candidates,
-    })
+      activeYoungPotentialSixPlayers: [...activeYoungPotentialSixPlayers].reverse(),
+      candidates: [...candidates].reverse(),
+    }),
   );
-  const scheduled = allocations[0]?.scheduledSeasonOffsets ?? [];
-  const assignedCount = allocations.reduce(
-    (total, allocation) => total + allocation.potentialSixPlayerKeys.length,
-    0,
-  );
+});
 
-  assert.equal(scheduled.length >= 2, true);
-  assert.equal(scheduled.length <= 4, true);
-  assert.equal(scheduled.includes(0), false);
-  assert.equal(assignedCount, scheduled.length);
-  assert.equal(
-    allocations.every((allocation) => allocation.potentialSixPlayerKeys.length <= 1),
-    true,
+test("annual world intake never tops up a full stock or bypasses the outside-Serie-A allowance", () => {
+  const baseline = buildAnnualWorldIntakeExceptionalAllocation({
+    seed: "annual-world-free-agent",
+    seasonIndex: 4,
+    ratingScale: playerRatingScale,
+    activeYoungPotentialSixPlayers: [],
+    candidates: annualCandidates(),
+  });
+  const fullStock = Array.from(
+    { length: baseline.targetActiveYoungPotentialSixCount },
+    (_, index) => ({
+      playerKey: `full-${index + 1}`,
+      clubKey: `full-club-${index + 1}`,
+      division: "first_division" as const,
+    }),
   );
-  assert.equal(
-    allocations.every((allocation) => JSON.stringify(allocation.scheduledSeasonOffsets) === JSON.stringify(scheduled)),
-    true,
-  );
+  const full = buildAnnualWorldIntakeExceptionalAllocation({
+    seed: "annual-world-free-agent",
+    seasonIndex: 4,
+    ratingScale: playerRatingScale,
+    activeYoungPotentialSixPlayers: fullStock,
+    candidates: annualCandidates(),
+  });
+  assert.equal(full.vacancyCount, 0);
+  assert.deepEqual(full.potentialSixPlayerKeys, []);
+
+  const oneVacancyWithFreeAgent = buildAnnualWorldIntakeExceptionalAllocation({
+    seed: "annual-world-free-agent",
+    seasonIndex: 4,
+    ratingScale: playerRatingScale,
+    activeYoungPotentialSixPlayers: [
+      { playerKey: "free-agent" },
+      ...fullStock.slice(0, baseline.targetActiveYoungPotentialSixCount - 2),
+    ],
+    candidates: [{
+      playerKey: "lower-only",
+      clubKey: "lower-club",
+      division: "second_division",
+      clubTier: "title_contender",
+    }],
+  });
+  assert.equal(oneVacancyWithFreeAgent.vacancyCount, 1);
+  assert.deepEqual(oneVacancyWithFreeAgent.potentialSixPlayerKeys, []);
+  assert.equal(oneVacancyWithFreeAgent.unfilledVacancyCount, 1);
 });
 
 function initialWorldCandidates() {
@@ -299,6 +398,7 @@ function initialWorldCandidates() {
       Array.from({ length: 18 }, (_, clubIndex) =>
         Array.from({ length: 22 }, (_, slotIndex) => ({
           playerKey: `${division}:${clubIndex + 1}:${slotIndex + 1}`,
+          clubKey: `${division}:${clubIndex + 1}`,
           division,
           clubTier: clubIndex < 4
             ? "title_contender" as const
@@ -308,7 +408,24 @@ function initialWorldCandidates() {
                 ? "mid_table" as const
                 : "survival" as const,
           isFirstTeam: slotIndex < 11,
+          ageYears: slotIndex < 11 ? 25 : 17,
+          constructedExceptionalCurrentAbilityLane:
+            resolveGeneratedExceptionalProfile({
+              currentSixAllocated: false,
+              potentialSixAllocated: true,
+            }).currentAbilityLane,
         })),
       ).flat(),
     );
+}
+
+function annualCandidates() {
+  return Array.from({ length: 8 }, (_, clubIndex) => ({
+    playerKey: `intake-player-${clubIndex + 1}`,
+    clubKey: `first-club-${clubIndex + 1}`,
+    division: "first_division" as const,
+    clubTier: clubIndex < 4
+      ? "title_contender" as const
+      : "playoff_contender" as const,
+  }));
 }

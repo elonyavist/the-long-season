@@ -1,9 +1,12 @@
 import {
   createPersonIdentity,
   gameDate,
+  getPlayerRoleProfile,
   playerId,
+  rolePotentialAbility,
   type CareerState,
   type ClubCategory,
+  type ClubCompetitiveTier,
   type ClubId,
   type GameDate,
   type PersonIdentity,
@@ -14,15 +17,17 @@ import {
   type RoleIdentifiedPlayer,
   type SeasonId,
 } from "@game/domain";
-import { deriveRng, fromISO } from "@game/shared";
+import { completedCivilYears, deriveRng, fromISO } from "@game/shared";
 
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
-import type { PlayerGenerationClubTier } from "./player-generation-bands.ts";
 import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
-import { buildCurrentPlayerProfile } from "./player-current-profile-policy.ts";
-import { allocateReachablePotential } from "./player-potential-allocation.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import { currentAbilityRarityLaneForYouthProspect } from "./player-potential-rarity.ts";
+import {
+  buildContextualProspectJointProfile,
+  type ContextualProspectCeilingConstraint,
+} from "./player-prospect-joint-profile.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 import {
@@ -33,7 +38,15 @@ import {
 import {
   buildAnnualWorldIntakeExceptionalAllocation,
   type AnnualWorldIntakeExceptionalAllocation,
+  type AnnualWorldIntakeExceptionalCandidate,
+  type AnnualWorldYoungExceptionalPlayer,
 } from "./player-rarity-budget.ts";
+import {
+  developmentEnvironmentForClubContext,
+  deriveYouthDevelopmentLevel,
+  youthDevelopmentInterestingChance,
+  youthDevelopmentSeriousProspectChance,
+} from "./youth-development-level.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -43,6 +56,8 @@ export interface CareerIntakeClubContext {
   readonly category: ClubCategory;
   /** Club reputation used as a small proxy for intra-division strength. */
   readonly reputation: number;
+  /** Competitive tier frozen for the season that owns this intake. */
+  readonly competitiveTier: ClubCompetitiveTier;
 }
 
 /** One generated intake player and report metadata. */
@@ -91,7 +106,7 @@ export interface GenerateCareerIntakePlayersResult {
  * The generator reuses the same content-owned division bands, role templates,
  * nationality distribution, and archetype data used by initial world
  * generation. Routine intake avoids `rare_prodigy`; exceptional youth can be
- * introduced later through an explicit league-level rarity budget step.
+ * introduced only through the national exceptional-stock allocation.
  */
 export function generateCareerIntakePlayers(input: GenerateCareerIntakePlayersInput): GenerateCareerIntakePlayersResult {
   const generatedPlayers: CareerIntakeGeneratedPlayer[] = [];
@@ -116,12 +131,46 @@ export interface AnnualWorldYouthIntakeProviderContext {
   readonly careerState: CareerState;
   readonly seasonId: SeasonId;
   readonly intakeDate: GameDate;
+  /** Canonical active population selected after exits and academy lifecycle. */
+  readonly activePlayerStock: readonly AnnualWorldActivePlayerStockEntry[];
 }
+
+/**
+ * One active-player association supplied by engine to content composition.
+ *
+ * This mirrors the current engine boundary structurally without importing
+ * engine into content. A promotion candidate has a transitional club
+ * association so annual intake cannot manufacture a vacancy before the same
+ * rollover resolves promotion. Loans remain a separate Phase 80B registration
+ * concern and are intentionally absent from the Phase 80A union.
+ */
+export type AnnualWorldActivePlayerStockEntry =
+  | {
+      readonly playerId: PlayerId;
+      readonly source: "senior";
+      readonly clubId: ClubId;
+    }
+  | {
+      readonly playerId: PlayerId;
+      readonly source: "academy";
+      readonly clubId: ClubId;
+    }
+  | {
+      readonly playerId: PlayerId;
+      readonly source: "promotion_candidate";
+      readonly clubId: ClubId;
+    }
+  | {
+      readonly playerId: PlayerId;
+      readonly source: "free_agent";
+    };
 
 /** Context supplied by engine when annual senior candidates are requested. */
 export interface AnnualWorldSeniorIntakeProviderContext {
   readonly careerState: CareerState;
   readonly seasonId: SeasonId;
+  /** Canonical start date of the season receiving these players. */
+  readonly intakeDate: GameDate;
 }
 
 /** Engine-compatible academy candidate without importing engine from content. */
@@ -143,7 +192,7 @@ export interface AnnualWorldIntakeProviderDiagnostics {
   readonly seasonIndex: number;
   readonly allocationCallCount: number;
   readonly allocation: AnnualWorldIntakeExceptionalAllocation;
-  readonly generatedPotentialSixPlayerIds: readonly PlayerId[];
+  readonly generatedStoredCeilingSixPlayerIds: readonly PlayerId[];
 }
 
 /** Shared content-side providers consumed by CLI, web, labs, and reports. */
@@ -198,21 +247,22 @@ export function createAnnualWorldIntakeCandidateProviders(
         youthRefillTargetPositions(context.careerState, clubId),
       ]),
     ) as Record<ClubId, readonly PlayerPosition[]>;
-    const candidatePlayerKeys = context.careerState.gameState.clubIds.flatMap(
-      (clubId) => {
-        const club = context.careerState.gameState.clubs[clubId];
-        if (club?.category !== "first_division") return [];
-        return targetPositionsByClubId[clubId]!.map((_, index) =>
-          String(seasonalYouthPlayerId(clubId, context.seasonId, index + 1))
-        );
-      },
+    const candidates = annualExceptionalCandidates(
+      context.careerState,
+      context.seasonId,
+      targetPositionsByClubId,
     );
     const allocation = buildAnnualWorldIntakeExceptionalAllocation({
       seed: input.worldSeed,
-      cohortKey: `career-intake-${Math.floor(input.seasonIndex / 10)}`,
       seasonIndex: input.seasonIndex,
       ratingScale,
-      candidatePlayerKeys,
+      activeYoungPotentialSixPlayers: activeYoungExceptionalPlayers(
+        context.careerState,
+        context.activePlayerStock,
+        ratingScale,
+        context.intakeDate,
+      ),
+      candidates,
     });
     const generated: AnnualWorldYouthIntakeCandidate[] = [];
 
@@ -228,6 +278,10 @@ export function createAnnualWorldIntakeCandidateProviders(
         clubContext: {
           category: club.category,
           reputation: club.reputation,
+          competitiveTier: requiredCompetitiveTier(
+            context.careerState,
+            clubId,
+          ),
         },
         referenceDate: context.intakeDate,
         targetPositions: targetPositionsByClubId[clubId]!,
@@ -249,7 +303,7 @@ export function createAnnualWorldIntakeCandidateProviders(
       seasonIndex: input.seasonIndex,
       allocationCallCount: 1,
       allocation,
-      generatedPotentialSixPlayerIds: generated
+      generatedStoredCeilingSixPlayerIds: generated
         .filter((candidate) =>
           allocation.potentialSixPlayerKeys.includes(String(candidate.player.id))
         )
@@ -278,9 +332,13 @@ export function createAnnualWorldIntakeCandidateProviders(
         clubContext: {
           category: club.category,
           reputation: club.reputation,
+          competitiveTier: requiredCompetitiveTier(
+            context.careerState,
+            clubId,
+          ),
         },
         count: seniorCandidatesPerClub,
-        referenceDate: context.careerState.gameState.calendar.currentDate,
+        referenceDate: context.intakeDate,
         ratingScale,
       });
       for (const candidate of batch.generatedPlayers) {
@@ -307,6 +365,120 @@ export function createAnnualWorldIntakeCandidateProviders(
   };
 }
 
+/**
+ * Catalogs real academy vacancies before the national allocator chooses any
+ * exceptional top-up. Per-club generation consumes only the returned IDs and
+ * therefore cannot roll a second ceiling-six outcome independently.
+ */
+function annualExceptionalCandidates(
+  careerState: CareerState,
+  intakeSeasonId: SeasonId,
+  targetPositionsByClubId: Readonly<Record<ClubId, readonly PlayerPosition[]>>,
+): readonly AnnualWorldIntakeExceptionalCandidate[] {
+  return careerState.gameState.clubIds.flatMap((clubId) => {
+    const club = careerState.gameState.clubs[clubId];
+    if (club === undefined) {
+      throw new Error(`Missing annual intake club: ${clubId}`);
+    }
+    const clubTier = requiredCompetitiveTier(careerState, clubId);
+    return (targetPositionsByClubId[clubId] ?? []).map((_, index) => ({
+      playerKey: String(seasonalYouthPlayerId(clubId, intakeSeasonId, index + 1)),
+      clubKey: String(clubId),
+      division: club.category,
+      clubTier,
+    }));
+  });
+}
+
+/**
+ * Counts the full active national `15..20` stored-ceiling-six population.
+ *
+ * Engine supplies the active universe after resolving senior ownership,
+ * academy membership, canonical free agency, and reserved promotions. Content
+ * consumes those facts without rebuilding a second population rule.
+ */
+function activeYoungExceptionalPlayers(
+  careerState: CareerState,
+  activePlayerStock: readonly AnnualWorldActivePlayerStockEntry[],
+  ratingScale: PlayerRatingScaleConfig,
+  referenceDate: GameDate,
+): readonly AnnualWorldYoungExceptionalPlayer[] {
+  const sixStarMinimum = minimumSixAbility(ratingScale);
+  const active: AnnualWorldYoungExceptionalPlayer[] = [];
+
+  for (const entry of activePlayerStock) {
+    const id = entry.playerId;
+    const player = careerState.gameState.players[id];
+    if (player === undefined) {
+      throw new Error(`Missing active annual-intake player: ${id}`);
+    }
+    const ageYears = completedCivilYears(player.birthDate, referenceDate);
+    if (ageYears < 15 || ageYears > 20) continue;
+    const naturalPosition = player.naturalPositions[0];
+    if (naturalPosition === undefined) {
+      throw new Error(`Active annual-intake player has no natural position: ${id}`);
+    }
+    const role = player.primaryRole ?? primaryRoleForPosition(naturalPosition);
+    const storedCeiling = Number(
+      rolePotentialAbility(
+        player.potential,
+        getPlayerRoleProfile(role),
+      ),
+    );
+    if (storedCeiling < sixStarMinimum) continue;
+    const clubIdValue = activeStockClubId(entry);
+    const club = clubIdValue === undefined
+      ? undefined
+      : careerState.gameState.clubs[clubIdValue];
+    if (clubIdValue !== undefined && club === undefined) {
+      throw new Error(`Missing active annual-intake club: ${clubIdValue}`);
+    }
+    active.push({
+      playerKey: String(id),
+      ...(clubIdValue === undefined ? {} : { clubKey: String(clubIdValue) }),
+      ...(club === undefined ? {} : { division: club.category }),
+    });
+  }
+
+  return active;
+}
+
+/**
+ * Resolves the allocation association without treating it as legal ownership.
+ *
+ * Keeping this mapping exhaustive forces Phase 80B loans to choose their own
+ * explicit registration semantics instead of inheriting the promotion rule.
+ */
+function activeStockClubId(
+  entry: AnnualWorldActivePlayerStockEntry,
+): ClubId | undefined {
+  switch (entry.source) {
+    case "senior":
+    case "academy":
+    case "promotion_candidate":
+      return entry.clubId;
+    case "free_agent":
+      return undefined;
+    default:
+      return unreachableActiveStockSource(entry);
+  }
+}
+
+function unreachableActiveStockSource(entry: never): never {
+  throw new Error(`Unsupported active-player stock source: ${String(entry)}`);
+}
+
+function requiredCompetitiveTier(
+  careerState: CareerState,
+  clubId: ClubId,
+): ClubCompetitiveTier {
+  const tier = careerState.clubCompetitiveTierState.tierByClubId[clubId];
+  if (tier === undefined) {
+    throw new Error(`Missing annual intake competitive tier: ${clubId}`);
+  }
+  return tier;
+}
+
 interface GenerateOneIntakePlayerInput extends GenerateCareerIntakePlayersInput {
   readonly leagueNation: LeagueNationCode;
   readonly index: number;
@@ -316,25 +488,44 @@ interface GenerateOneIntakePlayerInput extends GenerateCareerIntakePlayersInput 
 function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerIntakeGeneratedPlayer {
   const id = intakePlayerId(input.clubId, input.seasonId, input.index + 1);
   const forcePotentialSix = input.potentialSixPlayerIds?.includes(id) === true;
+  const youthDevelopmentLevel = deriveYouthDevelopmentLevel({
+    division: input.clubContext.category,
+    clubReputation: input.clubContext.reputation,
+  });
+  const developmentEnvironment = developmentEnvironmentForClubContext(
+    input.clubContext,
+  );
   const archetypeKey = forcePotentialSix
     ? "rare_prodigy"
-    : selectIntakeArchetype(input.worldSeed, input.seasonId, id);
+    : selectIntakeArchetype(
+        input.worldSeed,
+        input.seasonId,
+        id,
+        developmentEnvironment,
+      );
   const archetype = getGeneratedPlayerArchetype(archetypeKey);
   const position = positionForIntakeSlot(input.worldSeed, input.seasonId, id, input.index);
-  const clubTier = clubTierForReputation(input.clubContext.reputation);
+  const clubTier = input.clubContext.competitiveTier;
   const ageYears = numberInRange(archetype.ageYears, input.worldSeed, "career-intake-age", id);
   const birthDateJitter = deriveRng(input.worldSeed, "career-intake-birth-date", input.seasonId, id).nextInt(0, 365);
   const referenceDate = input.referenceDate ?? gameDate(CAREER_START_EPOCH_DAY);
   const identity = intakeIdentity(input, id);
   const primaryRole = primaryRoleForPosition(position);
-  const abilities = buildCurrentPlayerProfile({
+  const scale = input.ratingScale ?? defaultPlayerRatingScale;
+  const profile = buildContextualProspectJointProfile({
     seed: input.worldSeed,
     playerKey: String(id),
     division: input.clubContext.category,
     clubTier,
     role: primaryRole,
     ageYears,
-    rarityLane: rarityLaneForIntakeArchetype(archetypeKey),
+    archetypeKey,
+    ratingScale: scale,
+    requestedCurrentAbilityLane: currentAbilityRarityLaneForYouthProspect(
+      archetypeKey,
+      Number(youthDevelopmentLevel),
+    ),
+    ceilingConstraint: annualIntakeCeilingConstraint(forcePotentialSix),
   });
   const assembled = assembleGeneratedPlayer({
     id,
@@ -343,24 +534,8 @@ function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerInt
     ageYears,
     birthDateJitterDays: birthDateJitter,
     position,
-    abilities,
-    potential: allocateReachablePotential({
-      seed: input.worldSeed,
-      playerKey: String(id),
-      abilities,
-      ageYears,
-      role: primaryRole,
-      division: input.clubContext.category,
-      clubTier,
-      potentialClass: archetype.potentialClass,
-      ...(forcePotentialSix
-        ? {
-            minimumRolePotentialAbility: minimumSixAbility(
-              input.ratingScale ?? defaultPlayerRatingScale,
-            ),
-          }
-        : {}),
-    }),
+    abilities: profile.current,
+    potential: profile.potential,
   });
 
   return {
@@ -371,17 +546,26 @@ function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerInt
   };
 }
 
+/**
+ * Carries the national annual-allocation result into the shared joint owner.
+ *
+ * Future countries should make the same semantic choice at their own world
+ * composition root and must not recreate raw six-star ability thresholds.
+ */
+function annualIntakeCeilingConstraint(
+  forcePotentialSix: boolean,
+): ContextualProspectCeilingConstraint {
+  return forcePotentialSix
+    ? { kind: "at_least_rating", rating: 6 }
+    : { kind: "policy" };
+}
+
 function minimumSixAbility(scale: PlayerRatingScaleConfig): number {
   const threshold = scale.abilityThresholds.find((candidate) => candidate.rating === 6);
   if (threshold === undefined) {
     throw new Error("Validated rating scale is missing rating 6");
   }
   return threshold.minimumAbilityInclusive;
-}
-
-function rarityLaneForIntakeArchetype(archetypeKey: GeneratedPlayerArchetypeKey): "normal" | "rare" | "exceptional" {
-  if (archetypeKey === "serious_prospect") return "rare";
-  return "normal";
 }
 
 function intakeIdentity(input: GenerateOneIntakePlayerInput, id: PlayerId): PersonIdentity {
@@ -432,15 +616,22 @@ function selectIntakeArchetype(
   worldSeed: string,
   seasonId: SeasonId,
   playerIdValue: PlayerId,
+  developmentEnvironment: ReturnType<typeof developmentEnvironmentForClubContext>,
 ): Exclude<GeneratedPlayerArchetypeKey, "rare_prodigy" | "category_star" | "veteran_drop_down" | "senior_regular" | "category_starter"> {
   const rng = deriveRng(worldSeed, "career-intake-archetype", seasonId, playerIdValue);
   const roll = rng.nextFloat();
+  const seriousChance = youthDevelopmentSeriousProspectChance(
+    developmentEnvironment,
+  );
 
-  if (roll < 0.03) {
+  if (roll < seriousChance) {
     return "serious_prospect";
   }
 
-  if (roll < 0.23) {
+  if (
+    roll
+      < seriousChance + youthDevelopmentInterestingChance(developmentEnvironment)
+  ) {
     return "good_prospect";
   }
 
@@ -455,13 +646,6 @@ function positionForIntakeSlot(worldSeed: string, seasonId: SeasonId, id: Player
   const positions: readonly PlayerPosition[] = ["cb", "rb", "lb", "cm", "dm", "am", "rw", "lw", "st", "st"];
   const rng = deriveRng(worldSeed, "career-intake-position", seasonId, id);
   return positions[rng.nextInt(0, positions.length)] ?? "cm";
-}
-
-function clubTierForReputation(reputation: number): PlayerGenerationClubTier {
-  if (reputation >= 8) return "title_contender";
-  if (reputation >= 6) return "playoff_contender";
-  if (reputation >= 4) return "mid_table";
-  return "survival";
 }
 
 function youthRefillTargetPositions(

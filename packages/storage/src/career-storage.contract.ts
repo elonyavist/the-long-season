@@ -1,4 +1,9 @@
-import { createCareerState, type CareerState, type SaveId } from "@game/domain";
+import {
+  ClubCompetitiveTierStateError,
+  createCareerState,
+  type CareerState,
+  type SaveId,
+} from "@game/domain";
 
 import type { CareerStorage } from "./career-storage.interface.ts";
 import { StorageError, type StorageErrorCode } from "./game-storage.interface.ts";
@@ -24,9 +29,9 @@ export interface CareerStorageContractResult {
   readonly finalList: readonly SaveMetadata[];
 }
 
-/** Career snapshot whose Phase 78 persistence-owned slices are complete. */
+/** Career snapshot whose required persistence-owned slices are complete. */
 export type PersistableCareerState = CareerState & Required<
-  Pick<CareerState, "seniorSquadState" | "clubFinanceState">
+  Pick<CareerState, "seniorSquadState" | "clubFinanceState" | "clubCompetitiveTierState">
 >;
 
 /**
@@ -41,7 +46,25 @@ export function createPersistableCareerState(
   input: CareerState,
   failureCode: Extract<StorageErrorCode, "save_unreadable" | "save_unwritable" | "unsupported_schema_version">,
 ): PersistableCareerState {
-  const state = createCareerState(input);
+  if (input.clubCompetitiveTierState === undefined) {
+    throw new StorageError(
+      failureCode,
+      "Career save does not contain the Phase 80A season-frozen competitive-tier state",
+    );
+  }
+  let state: CareerState;
+  try {
+    state = createCareerState(input);
+  } catch (error) {
+    if (error instanceof ClubCompetitiveTierStateError) {
+      throw new StorageError(
+        failureCode,
+        `Career save contains an invalid season-frozen competitive-tier state: ${error.message}`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
   if (state.seniorSquadState === undefined || state.clubFinanceState === undefined) {
     throw new StorageError(
       failureCode,

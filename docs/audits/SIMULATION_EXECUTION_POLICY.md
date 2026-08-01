@@ -52,10 +52,10 @@ Worker count is execution metadata only:
 - thresholds and pass/warn/fail semantics do not change;
 - replay evidence records the actual execution strategy.
 
-## Phase 80B Closeout
+## Deferred Rework Cohort
 
-Phase 80 and Phase 80A run no longitudinal cohort. The sole deferred
-replacement `50 x 20` belongs to Phase 80C Step 09 and must use:
+Phases 80, 80A, 80B, and 80C run no longitudinal cohort. The sole deferred
+replacement `50 x 20` belongs to Phase 81 Step 12 and must use:
 
 - one explicit checkpoint directory;
 - `50` stable shards;

@@ -11,10 +11,8 @@ import {
   type PlayerRatingScaleConfig,
 } from "@game/domain";
 
-import {
-  derivePublicPlayerAssessments,
-  PublicPlayerAssessmentError,
-} from "./public-player-assessment.ts";
+import { PlayerPotentialProjectionError } from "./player-potential-projection.ts";
+import { derivePublicPlayerAssessment } from "./public-player-assessment.ts";
 
 const scale: PlayerRatingScaleConfig = {
   schemaVersion: 1,
@@ -41,48 +39,52 @@ const scale: PlayerRatingScaleConfig = {
   ],
   rarity: {
     initialWorld: {
-      currentSixMinimum: 1,
-      currentSixMaximum: 2,
-      potentialSixMinimum: 2,
-      potentialSixMaximum: 4,
-      lowerDivisionPotentialSixMaximum: 1,
+      establishedCurrentSixMinimum: 2,
+      establishedCurrentSixMaximum: 3,
+      youngStoredCeilingSixMinimum: 4,
+      youngStoredCeilingSixMaximum: 5,
+      lowerDivisionYoungStoredCeilingSixMaximum: 1,
+      youngStoredCeilingSixPerClubMaximum: 1,
     },
     annualIntake: {
-      potentialSixPerWorldMinimum: 0,
-      potentialSixPerWorldMaximum: 1,
-      tenSeasonCohortMinimum: 2,
-      tenSeasonCohortMaximum: 4,
-    },
-    yearTen: {
-      activeCurrentSixMaximum: 4,
-      activePotentialSixMaximum: 8,
-      lowerDivisionPotentialSixMaximum: 1,
+      activeYoungStoredCeilingSixTargetMinimum: 4,
+      activeYoungStoredCeilingSixTargetMaximum: 5,
     },
   },
 };
 
 const projectionPolicy: PlayerPotentialProjectionPolicyConfig = {
-  schemaVersion: 1,
-  version: "test-projection-v1",
+  schemaVersion: 2,
+  version: "test-projection-v2",
   classification: "explicit_game_design_target",
   ageBandsByRoleFamily: {
     goalkeeper: [
-      {
-        minimumAge: 0,
-        maximumAge: 200,
-        conservativeRealizationBasisPoints: 1_000,
-        expectedRealizationBasisPoints: 2_000,
-        upperRealizationBasisPoints: 4_000,
-      },
+      band(0, 17, 3_000, 10_000),
+      band(18, 20, 2_500, 10_000),
+      band(21, 21, 2_300, 8_000),
+      band(22, 22, 2_100, 7_500),
+      band(23, 23, 1_900, 7_000),
+      band(24, 24, 1_700, 6_500),
+      band(25, 25, 1_500, 6_000),
+      band(26, 26, 1_200, 5_500),
+      band(27, 27, 900, 5_000),
+      band(28, 28, 800, 4_000),
+      band(29, 29, 600, 3_500),
+      band(30, 30, 400, 3_000),
+      band(31, 31, 200, 2_000),
+      band(32, 200, 0, 0),
     ],
     outfield: [
-      {
-        minimumAge: 0,
-        maximumAge: 200,
-        conservativeRealizationBasisPoints: 1_000,
-        expectedRealizationBasisPoints: 2_000,
-        upperRealizationBasisPoints: 4_000,
-      },
+      band(0, 17, 4_000, 10_000),
+      band(18, 20, 3_000, 10_000),
+      band(21, 21, 2_000, 6_000),
+      band(22, 22, 1_700, 5_500),
+      band(23, 23, 1_400, 5_000),
+      band(24, 24, 1_100, 4_500),
+      band(25, 25, 800, 3_500),
+      band(26, 26, 500, 2_500),
+      band(27, 27, 200, 1_500),
+      band(28, 200, 0, 0),
     ],
   },
 };
@@ -105,71 +107,86 @@ test("implements every accepted half-open ability boundary", () => {
     [20, 6],
   ] as const;
 
-  const assessments = derivePublicPlayerAssessments({
-    ...projectedInput(boundaryValues.map(([ability], index) =>
-      playerFixture(index + 1, ability, ability))),
-  });
-
   assert.deepEqual(
-    assessments.map((assessment) => assessment.currentRating.stars),
+    boundaryValues.map(([ability], index) =>
+      derivePublicPlayerAssessment(projectedInput(
+        playerFixture(index + 1, ability, ability),
+      )).currentRating.stars),
     boundaryValues.map(([, rating]) => rating),
   );
 });
 
-test("keeps a stored six-star ceiling distinct from the public upper estimate", () => {
-  const [assessment] = derivePublicPlayerAssessments({
-    ...projectedInput([playerFixture(1, 10, 17)]),
-  });
+test("exposes current, P50, and upper facts without leaking stored ceiling", () => {
+  const assessment = derivePublicPlayerAssessment(
+    projectedInput(playerFixture(1, 10, 17)),
+  );
 
-  assert.deepEqual(assessment, {
+  const {
+    currentAbility,
+    p50Ability,
+    upperAbility,
+    ...publicShape
+  } = assessment;
+  assert.deepEqual(publicShape, {
     playerId: playerId("player:assessment-01"),
+    assessedOn: gameDate(15_844),
+    age: 16,
+    roleFamily: "outfield",
     currentRating: { stars: 3 },
-    potentialProjection: {
-      lowerRating: { stars: 3 },
-      expectedRating: { stars: 3 },
-      upperRating: { stars: 3.5 },
-    },
+    p50Rating: { stars: 3.5 },
+    upperRating: { stars: 6 },
   });
-  assert.equal(JSON.stringify(assessment).includes("Ability"), false);
-  assert.equal(JSON.stringify(assessment).includes("elite"), false);
+  assert.equal(Math.abs(currentAbility - 10) < 1e-9, true);
+  assert.equal(Math.abs(p50Ability - 12.8) < 1e-9, true);
+  assert.equal(Math.abs(upperAbility - 17) < 1e-9, true);
+  const serialized = JSON.stringify(assessment).toLowerCase();
+  assert.equal(serialized.includes("stored"), false);
+  assert.equal(serialized.includes("ceiling"), false);
+  assert.equal(serialized.includes("potential"), false);
 });
 
-test("the same player is independent of any selected club or caller grouping", () => {
+test("returns an immutable assessment independent of caller grouping", () => {
   const player = playerFixture(1, 16.5, 17);
-  const alone = derivePublicPlayerAssessments(projectedInput([player]))[0];
-  const withDifferentPeers = derivePublicPlayerAssessments({
-    ...projectedInput([playerFixture(2, 1, 1), player, playerFixture(3, 20, 20)]),
-  })[1];
+  const assessment = derivePublicPlayerAssessment(projectedInput(player));
 
-  assert.deepEqual(alone, withDifferentPeers);
-});
-
-test("preserves order, rejects duplicates, and rejects missing role identity", () => {
-  const first = playerFixture(1, 10, 12);
-  const second = playerFixture(2, 12, 14);
+  assert.equal(Object.isFrozen(assessment), true);
+  assert.equal(Object.isFrozen(assessment.currentRating), true);
   assert.deepEqual(
-    derivePublicPlayerAssessments(projectedInput([second, first]))
-      .map((assessment) => assessment.playerId),
-    [second.id, first.id],
-  );
-  assert.throws(
-    () => derivePublicPlayerAssessments(projectedInput([first, first])),
-    (error) => error instanceof PublicPlayerAssessmentError && error.code === "duplicate_player",
-  );
-  assert.throws(
-    () => derivePublicPlayerAssessments({
-      ...projectedInput([withoutPrimaryRole(first)]),
-    }),
-    (error) => error instanceof PublicPlayerAssessmentError && error.code === "missing_role_identity",
+    assessment,
+    derivePublicPlayerAssessment(projectedInput(player)),
   );
 });
 
-function projectedInput(players: readonly Player[]) {
+test("delegates incomplete role identity to the canonical projection error", () => {
+  assert.throws(
+    () => derivePublicPlayerAssessment(
+      projectedInput(withoutPrimaryRole(playerFixture(1, 10, 12))),
+    ),
+    (error) => error instanceof PlayerPotentialProjectionError
+      && error.code === "missing_role_identity",
+  );
+});
+
+function projectedInput(player: Player) {
   return {
     ratingScale: scale,
     potentialProjectionPolicy: projectionPolicy,
     currentDate: gameDate(15_844),
-    players,
+    player,
+  };
+}
+
+function band(
+  minimumAge: number,
+  maximumAge: number,
+  p50RealizationBasisPoints: number,
+  upperRealizationBasisPoints: number,
+) {
+  return {
+    minimumAge,
+    maximumAge,
+    p50RealizationBasisPoints,
+    upperRealizationBasisPoints,
   };
 }
 

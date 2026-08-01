@@ -15,8 +15,13 @@ import {
   type PlayerPosition,
 } from "@game/domain";
 
-import { buildAiSquadMatchTeamContext, selectAiMatchSquad } from "./ai-squad-selection.ts";
+import {
+  AiSquadSelectionError,
+  buildAiSquadMatchTeamContext,
+  selectAiMatchSquad,
+} from "./ai-squad-selection.ts";
 import type { RoleWeightProfile } from "../match-engine/index.ts";
+import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 test("selectAiMatchSquad builds a valid XI and bench without duplicate players", () => {
   const input = squadInput({
@@ -64,6 +69,98 @@ test("selectAiMatchSquad prefers a clearly stronger adapted player over a weak n
   assert.equal(selection.reasons[0]?.suitability, "adapted");
 });
 
+test("selectAiMatchSquad preserves a later-slot specialist when greedy selection would dead-end", () => {
+  const leftBackCoverId = playerId("player:a-left-back-cover");
+  const leftWingBackId = playerId("player:z-left-wing-back");
+  const firstCentralMidfielderId = playerId("player:cm-a");
+  const secondCentralMidfielderId = playerId("player:cm-b");
+  const selection = selectAiMatchSquad(squadInput({
+    formation: hallCounterexampleFormation(),
+    playerIds: [leftWingBackId, firstCentralMidfielderId, secondCentralMidfielderId, leftBackCoverId],
+    players: {
+      [leftBackCoverId]: makePlayer(leftBackCoverId, ["cb"], 8),
+      [leftWingBackId]: makePlayer(leftWingBackId, ["lwb"], 14),
+      [firstCentralMidfielderId]: makePlayer(firstCentralMidfielderId, ["cm"], 10),
+      [secondCentralMidfielderId]: makePlayer(secondCentralMidfielderId, ["cm"], 10),
+    },
+    benchSize: 0,
+  }));
+
+  assert.deepEqual(selection.lineup.map(({ playerId: selectedPlayerId }) => selectedPlayerId), [
+    leftBackCoverId,
+    firstCentralMidfielderId,
+    secondCentralMidfielderId,
+    leftWingBackId,
+  ]);
+  assert.deepEqual(selection.reasons.map(({ suitability }) => suitability), [
+    "weak",
+    "natural",
+    "natural",
+    "natural",
+  ]);
+});
+
+test("selectAiMatchSquad still rejects a roster with no complete usable assignment", () => {
+  const leftWingBackId = playerId("player:left-wing-back");
+  const firstCentralMidfielderId = playerId("player:cm-a");
+  const secondCentralMidfielderId = playerId("player:cm-b");
+  const invalidCoverId = playerId("player:striker");
+  const players = {
+    [leftWingBackId]: makePlayer(leftWingBackId, ["lwb"], 14),
+    [firstCentralMidfielderId]: makePlayer(firstCentralMidfielderId, ["cm"], 10),
+    [secondCentralMidfielderId]: makePlayer(secondCentralMidfielderId, ["cm"], 10),
+    [invalidCoverId]: makePlayer(invalidCoverId, ["st"], 10),
+  };
+
+  assert.throws(
+    () => selectAiMatchSquad(squadInput({
+      formation: hallCounterexampleFormation(),
+      playerIds: [leftWingBackId, firstCentralMidfielderId, secondCentralMidfielderId, invalidCoverId],
+      players,
+      benchSize: 0,
+    })),
+    (error) => error instanceof AiSquadSelectionError
+      && error.code === "not_enough_players",
+  );
+});
+
+test("selectAiMatchSquad cannot assign a duplicated roster ID to two slots", () => {
+  const duplicatedPlayerId = playerId("player:duplicated-striker");
+  const player = makePlayer(duplicatedPlayerId, ["st"], 10);
+  const formation: Formation = {
+    key: "4-4-2",
+    slots: [
+      {
+        slotKey: "st-right",
+        line: "forward_line",
+        department: "attack",
+        playerRole: "striker",
+        positionFamily: "striker",
+        side: "right_center",
+      },
+      {
+        slotKey: "st-left",
+        line: "forward_line",
+        department: "attack",
+        playerRole: "striker",
+        positionFamily: "striker",
+        side: "left_center",
+      },
+    ],
+  };
+
+  assert.throws(
+    () => selectAiMatchSquad(squadInput({
+      formation,
+      playerIds: [duplicatedPlayerId, duplicatedPlayerId],
+      players: { [duplicatedPlayerId]: player },
+      benchSize: 0,
+    })),
+    (error) => error instanceof AiSquadSelectionError
+      && error.code === "not_enough_players",
+  );
+});
+
 test("selectAiMatchSquad rotates from tired recent starters to credible alternatives", () => {
   const starterId = playerId("player:cm-01");
   const restedId = playerId("player:cm-03");
@@ -107,10 +204,60 @@ test("buildAiSquadMatchTeamContext derives strength from the selected AI lineup"
   assert.equal(result.teamContext.strength.overall > 0, true);
 });
 
+test("selectAiMatchSquad cannot prefer a hidden ceiling over equal public assessments", () => {
+  const lowerCeilingId = playerId("player:a-lower-ceiling");
+  const higherCeilingId = playerId("player:z-higher-ceiling");
+  const lowerCeilingPlayer = makePlayer(lowerCeilingId, ["st"], 10);
+  const higherCeilingPlayer = {
+    ...makePlayer(higherCeilingId, ["st"], 10),
+    potential: abilitySet(20),
+  };
+  const publicAssessments = {
+    [lowerCeilingId]: publicAssessment(lowerCeilingId, 24, 10, 13),
+    [higherCeilingId]: publicAssessment(higherCeilingId, 24, 10, 13),
+  };
+
+  const selection = selectAiMatchSquad(squadInput({
+    formation: oneSlotFormation("striker"),
+    playerIds: [higherCeilingId, lowerCeilingId],
+    players: {
+      [lowerCeilingId]: lowerCeilingPlayer,
+      [higherCeilingId]: higherCeilingPlayer,
+    },
+    publicAssessments,
+    benchSize: 0,
+  }));
+
+  assert.equal(selection.lineup[0]?.playerId, lowerCeilingId);
+  assert.deepEqual(selection.reasons.map(({ prospectOpportunity }) => prospectOpportunity), [0]);
+});
+
+test("selectAiMatchSquad rejects a public assessment from a different fixture date", () => {
+  const id = playerId("player:stale-assessment");
+  const player = makePlayer(id, ["st"], 10);
+  const staleAssessment = {
+    ...publicAssessment(id, 18, 10, 13),
+    assessedOn: gameDate(19_999),
+  };
+
+  assert.throws(
+    () => selectAiMatchSquad(squadInput({
+      formation: oneSlotFormation("striker"),
+      playerIds: [id],
+      players: { [id]: player },
+      publicAssessments: { [id]: staleAssessment },
+      benchSize: 0,
+    })),
+    (error) => error instanceof AiSquadSelectionError
+      && error.code === "stale_public_assessment",
+  );
+});
+
 function squadInput(input: {
   readonly formation?: Formation;
   readonly playerIds: readonly PlayerId[];
   readonly players: Readonly<Record<PlayerId, Player>>;
+  readonly publicAssessments?: Readonly<Record<PlayerId, PublicPlayerAssessment>>;
   readonly benchSize?: number;
   readonly playerStates?: Parameters<typeof selectAiMatchSquad>[0]["playerStates"];
   readonly recentUse?: Parameters<typeof selectAiMatchSquad>[0]["recentUse"];
@@ -120,11 +267,45 @@ function squadInput(input: {
     formation: input.formation ?? getFormation("4-4-2"),
     playerIds: input.playerIds,
     players: input.players,
-    roleWeights,
+    publicAssessments:
+      input.publicAssessments ?? publicAssessmentsForPlayers(input.players),
     currentDate: gameDate(20_000),
+    roleWeights,
     ...(input.benchSize === undefined ? {} : { benchSize: input.benchSize }),
     ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
     ...(input.recentUse === undefined ? {} : { recentUse: input.recentUse }),
+  };
+}
+
+/** Supplies safe public facts for selector tests that do not exercise upside. */
+function publicAssessmentsForPlayers(
+  players: Readonly<Record<PlayerId, Player>>,
+): Readonly<Record<PlayerId, PublicPlayerAssessment>> {
+  const assessments: Record<PlayerId, PublicPlayerAssessment> = {};
+  for (const playerIdValue of Object.keys(players).sort() as PlayerId[]) {
+    assessments[playerIdValue] = publicAssessment(playerIdValue, 24, 10, 10);
+  }
+  return assessments;
+}
+
+/** Builds one explicit dated assessment without consulting stored potential. */
+function publicAssessment(
+  id: PlayerId,
+  age: number,
+  currentAbility: number,
+  upperAbility: number,
+): PublicPlayerAssessment {
+  return {
+    playerId: id,
+    assessedOn: gameDate(20_000),
+    age,
+    roleFamily: "outfield",
+    currentAbility,
+    p50Ability: currentAbility,
+    upperAbility,
+    currentRating: { stars: 3 },
+    p50Rating: { stars: 3 },
+    upperRating: { stars: 4 },
   };
 }
 
@@ -139,6 +320,47 @@ function oneSlotFormation(role: Formation["slots"][number]["playerRole"]): Forma
         playerRole: role,
         positionFamily: role,
         side: "center",
+      },
+    ],
+  };
+}
+
+/** Reproduces the world-21 overlap where one LWB is needed after the LB slot. */
+function hallCounterexampleFormation(): Formation {
+  return {
+    key: "4-4-2",
+    slots: [
+      {
+        slotKey: "lb",
+        line: "defensive_line",
+        department: "defense",
+        playerRole: "left_full_back",
+        positionFamily: "left_full_back",
+        side: "left",
+      },
+      {
+        slotKey: "cm-right",
+        line: "midfield_line",
+        department: "midfield",
+        playerRole: "central_midfielder",
+        positionFamily: "central_midfielder",
+        side: "right_center",
+      },
+      {
+        slotKey: "cm-left",
+        line: "midfield_line",
+        department: "midfield",
+        playerRole: "central_midfielder",
+        positionFamily: "central_midfielder",
+        side: "left_center",
+      },
+      {
+        slotKey: "lm",
+        line: "midfield_line",
+        department: "midfield",
+        playerRole: "left_midfielder",
+        positionFamily: "left_midfielder",
+        side: "left",
       },
     ],
   };

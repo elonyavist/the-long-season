@@ -417,18 +417,36 @@ async function loadSupportedCareer(
   storage: JsonCareerStorage,
   saveId: CliSaveId,
 ): Promise<CliCareerState> {
-  const careerState = await storage.loadCareer(saveId);
+  let careerState: CliCareerState;
+  try {
+    careerState = await storage.loadCareer(saveId);
+  } catch (error) {
+    if (error instanceof StorageError && error.code === "unsupported_schema_version") {
+      return resetUnsupportedBetaCareer(storage, saveId, error);
+    }
+    throw error;
+  }
+
   try {
     assertSupportedCareerCalibrationVersions(careerState);
   } catch (error) {
-    await storage.deleteCareer(saveId);
-    throw new StorageError(
-      "unsupported_schema_version",
-      `Unsupported beta career was reset: ${saveId}`,
-      { cause: error },
-    );
+    return resetUnsupportedBetaCareer(storage, saveId, error);
   }
   return careerState;
+}
+
+/** Deletes exactly one incompatible beta save before surfacing the reset. */
+async function resetUnsupportedBetaCareer(
+  storage: JsonCareerStorage,
+  saveId: CliSaveId,
+  cause: unknown,
+): Promise<never> {
+  await storage.deleteCareer(saveId);
+  throw new StorageError(
+    "unsupported_schema_version",
+    `Unsupported beta career was reset: ${saveId}`,
+    { cause },
+  );
 }
 
 function defaultIo(): CareerCommandIo {

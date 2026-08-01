@@ -6,7 +6,14 @@
  * their documented step is implemented.
  */
 export { assertNonEmptyString, assertValue } from "./assert.ts";
-export { addDays, diffDays, fromISO, toISO } from "./date-utils.ts";
+export {
+  addCivilYears,
+  addDays,
+  completedCivilYears,
+  diffDays,
+  fromISO,
+  toISO,
+} from "./date-utils.ts";
 export { SharedValueError } from "./errors.ts";
 export {
   assertIntegerInRange,

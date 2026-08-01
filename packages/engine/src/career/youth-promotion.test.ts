@@ -47,17 +47,20 @@ import {
 } from "./senior-squad-transfer.ts";
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
+import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 function promoteYouthCandidatesToSeniorSquads(
   input: Omit<
     Parameters<typeof promoteYouthCandidatesToSeniorSquadsWithPolicy>[0],
-    "wagePolicy" | "marketBehaviorPolicy"
+    "wagePolicy" | "marketBehaviorPolicy" | "valuationConfig"
   >,
 ) {
   return promoteYouthCandidatesToSeniorSquadsWithPolicy({
     ...input,
     wagePolicy: playerWagePolicyConfigFixture(),
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
+    valuationConfig: playerValuationConfigFixture(),
   });
 }
 
@@ -257,10 +260,10 @@ test("promoteYouthCandidatesToSeniorSquads ignores inflated attributes outside t
   assert.equal(result.records[0]?.reason, "not_useful_enough");
 });
 
-test("promoteYouthCandidatesToSeniorSquads recognizes role-specific potential room", () => {
+test("promoteYouthCandidatesToSeniorSquads recognizes positive public-P50 room", () => {
   const candidate = playerId("player:role-potential-room");
   const current = roleShapedAbilities("central_midfielder", 4, 1);
-  const potential = roleShapedAbilities("central_midfielder", 10, 1);
+  const potential = roleShapedAbilities("central_midfielder", 14, 1);
   const careerState = careerStateFixture({
     selectedClubId: "club:pro01",
     candidateClubId: "club:pro02",
@@ -269,11 +272,75 @@ test("promoteYouthCandidatesToSeniorSquads recognizes role-specific potential ro
     candidatePotential: potential,
   });
 
-  assert.equal(Number(rawDiagnosticAbilityAverage(potential)) - Number(rawDiagnosticAbilityAverage(current)) < 3.5, true);
-
   const result = promoteYouthCandidatesToSeniorSquads({ careerState });
 
+  const player = careerState.gameState.players[candidate];
+  if (player === undefined) throw new Error("expected promotion candidate");
+  const valuationConfig = playerValuationConfigFixture();
+  const assessment = derivePublicPlayerAssessment({
+    player,
+    currentDate: careerState.gameState.calendar.currentDate,
+    potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+    ratingScale: valuationConfig.ratingScale,
+  });
+  assert.equal(assessment.currentAbility < 7.4, true);
+  assert.equal(assessment.p50Ability - assessment.currentAbility >= 0.8, true);
   assert.equal(result.records[0]?.reason, "promoted");
+});
+
+test("promotion decisions ignore stored ceiling differences outside the canonical public assessment", () => {
+  const candidate = playerId("player:public-assessment-parity");
+  const current = roleShapedAbilities("central_midfielder", 4, 1);
+  const sameRoleCeiling = roleShapedAbilities("central_midfielder", 5, 1);
+  const differentlyShapedEqualCeiling = mapPlayerAbilities(
+    sameRoleCeiling,
+    (value, key) => key === "technical.passing"
+      ? abilityValue(6)
+      : key === "technical.longPassing"
+        ? abilityValue(4)
+        : value,
+  );
+  const baseline = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+    candidateAbilities: current,
+    candidatePotential: sameRoleCeiling,
+  });
+  const differentStoredCeiling = careerStateFixture({
+    selectedClubId: "club:pro01",
+    candidateClubId: "club:pro02",
+    candidate,
+    candidateAbilities: current,
+    candidatePotential: differentlyShapedEqualCeiling,
+  });
+  const valuationConfig = playerValuationConfigFixture();
+  const assessedOn = baseline.gameState.calendar.currentDate;
+  const assess = (careerState: CareerState) => {
+    const player = careerState.gameState.players[candidate];
+    if (player === undefined) throw new Error("expected parity candidate");
+    return derivePublicPlayerAssessment({
+      player,
+      currentDate: assessedOn,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+      ratingScale: valuationConfig.ratingScale,
+    });
+  };
+
+  assert.notDeepEqual(sameRoleCeiling, differentlyShapedEqualCeiling);
+  assert.deepEqual(assess(baseline), assess(differentStoredCeiling));
+  assert.equal(
+    assess(baseline).p50Ability - assess(baseline).currentAbility < 0.8,
+    true,
+  );
+  assert.equal(
+    promoteYouthCandidatesToSeniorSquads({ careerState: baseline }).records[0]?.reason,
+    "not_useful_enough",
+  );
+  assert.equal(
+    promoteYouthCandidatesToSeniorSquads({ careerState: differentStoredCeiling }).records[0]?.reason,
+    "not_useful_enough",
+  );
 });
 
 test("promoteYouthCandidatesToSeniorSquads dates new terms at the explicit season boundary", () => {

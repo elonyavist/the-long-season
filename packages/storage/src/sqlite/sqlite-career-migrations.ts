@@ -1,19 +1,8 @@
-import {
-  SQLITE_CAREER_SCHEMA_V1_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V2_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V3_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V4_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V5_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V6_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V7_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V8_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V10_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V11_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V12_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V15_STATEMENTS,
-  SQLITE_CAREER_SCHEMA_V16_STATEMENTS,
-} from "./sqlite-career-schema.ts";
 import { StorageError } from "../game-storage.interface.ts";
+import {
+  SQLITE_CAREER_SCHEMA_STATEMENTS,
+  SQLITE_CAREER_SCHEMA_VERSION,
+} from "./sqlite-career-schema.ts";
 
 /** One ordered, immutable browser-career schema migration. */
 export interface SqliteCareerMigration {
@@ -21,27 +10,29 @@ export interface SqliteCareerMigration {
   readonly statements: readonly string[];
 }
 
-/** Ordered migrations applied atomically by the browser worker. */
+/** The only supported beta baseline, applied atomically to a fresh database. */
 export const SQLITE_CAREER_MIGRATIONS: readonly SqliteCareerMigration[] = [
   {
-    version: 17,
-    statements: [
-      ...SQLITE_CAREER_SCHEMA_V1_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V2_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V3_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V4_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V5_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V6_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V7_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V8_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V10_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V11_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V12_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V15_STATEMENTS,
-      ...SQLITE_CAREER_SCHEMA_V16_STATEMENTS,
-    ],
+    version: SQLITE_CAREER_SCHEMA_VERSION,
+    statements: SQLITE_CAREER_SCHEMA_STATEMENTS,
   },
 ];
+
+type SqliteCareerSchemaVersionRelation = "obsolete_beta" | "future";
+
+/**
+ * Distinguishes resettable beta databases from newer databases that must be
+ * preserved for a newer application build.
+ */
+class SqliteCareerSchemaVersionError extends StorageError {
+  public readonly relation: SqliteCareerSchemaVersionRelation;
+
+  public constructor(relation: SqliteCareerSchemaVersionRelation, message: string) {
+    super("unsupported_schema_version", message);
+    this.name = "SqliteCareerSchemaVersionError";
+    this.relation = relation;
+  }
+}
 
 /** Returns the ordered migrations required by an existing database version. */
 export function planSqliteCareerMigrations(currentVersion: number): readonly SqliteCareerMigration[] {
@@ -51,16 +42,16 @@ export function planSqliteCareerMigrations(currentVersion: number): readonly Sql
 
   const latestVersion = SQLITE_CAREER_MIGRATIONS.at(-1)?.version ?? 0;
   if (currentVersion > latestVersion) {
-    throw new StorageError(
-      "unsupported_schema_version",
+    throw new SqliteCareerSchemaVersionError(
+      "future",
       `SQLite schema version ${currentVersion} is newer than supported version ${latestVersion}`,
     );
   }
 
   const oldestIncrementalSourceVersion = SQLITE_CAREER_MIGRATIONS[0]?.version ?? latestVersion;
   if (currentVersion > 0 && currentVersion < oldestIncrementalSourceVersion) {
-    throw new StorageError(
-      "unsupported_schema_version",
+    throw new SqliteCareerSchemaVersionError(
+      "obsolete_beta",
       `SQLite beta schema version ${currentVersion} is no longer supported; reset browser career storage to continue.`,
     );
   }

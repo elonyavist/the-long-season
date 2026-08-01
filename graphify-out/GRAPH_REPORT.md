@@ -1,16 +1,16 @@
-# Graph Report - the-long-season  (2026-07-31)
+# Graph Report - the-long-season  (2026-08-01)
 
 ## Corpus Check
-- 2126 files · ~1,578,544 words
+- 2994 files · ~1,804,899 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 28870 nodes · 46492 edges · 1730 communities (1725 shown, 5 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 131 edges (avg confidence: 0.8)
+- 68115 nodes · 90720 edges · 2540 communities (2535 shown, 5 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 167 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bdbd2f56`
+- Built from commit: `fca60a2b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1176,6 +1176,7 @@
 - [[_COMMUNITY_Community 1161|Community 1161]]
 - [[_COMMUNITY_Community 1162|Community 1162]]
 - [[_COMMUNITY_Community 1163|Community 1163]]
+- [[_COMMUNITY_Community 1164|Community 1164]]
 - [[_COMMUNITY_Community 1165|Community 1165]]
 - [[_COMMUNITY_Community 1166|Community 1166]]
 - [[_COMMUNITY_Community 1167|Community 1167]]
@@ -1611,6 +1612,7 @@
 - [[_COMMUNITY_Community 1597|Community 1597]]
 - [[_COMMUNITY_Community 1598|Community 1598]]
 - [[_COMMUNITY_Community 1599|Community 1599]]
+- [[_COMMUNITY_Community 1600|Community 1600]]
 - [[_COMMUNITY_Community 1601|Community 1601]]
 - [[_COMMUNITY_Community 1602|Community 1602]]
 - [[_COMMUNITY_Community 1603|Community 1603]]
@@ -1620,6 +1622,7 @@
 - [[_COMMUNITY_Community 1607|Community 1607]]
 - [[_COMMUNITY_Community 1608|Community 1608]]
 - [[_COMMUNITY_Community 1609|Community 1609]]
+- [[_COMMUNITY_Community 1610|Community 1610]]
 - [[_COMMUNITY_Community 1611|Community 1611]]
 - [[_COMMUNITY_Community 1612|Community 1612]]
 - [[_COMMUNITY_Community 1613|Community 1613]]
@@ -1648,6 +1651,8 @@
 - [[_COMMUNITY_Community 1637|Community 1637]]
 - [[_COMMUNITY_Community 1638|Community 1638]]
 - [[_COMMUNITY_Community 1639|Community 1639]]
+- [[_COMMUNITY_Community 1640|Community 1640]]
+- [[_COMMUNITY_Community 1641|Community 1641]]
 - [[_COMMUNITY_Community 1642|Community 1642]]
 - [[_COMMUNITY_Community 1643|Community 1643]]
 - [[_COMMUNITY_Community 1644|Community 1644]]
@@ -1668,6 +1673,7 @@
 - [[_COMMUNITY_Community 1659|Community 1659]]
 - [[_COMMUNITY_Community 1660|Community 1660]]
 - [[_COMMUNITY_Community 1661|Community 1661]]
+- [[_COMMUNITY_Community 1662|Community 1662]]
 - [[_COMMUNITY_Community 1663|Community 1663]]
 - [[_COMMUNITY_Community 1664|Community 1664]]
 - [[_COMMUNITY_Community 1665|Community 1665]]
@@ -1722,17 +1728,51 @@
 - [[_COMMUNITY_Community 1714|Community 1714]]
 - [[_COMMUNITY_Community 1715|Community 1715]]
 - [[_COMMUNITY_Community 1716|Community 1716]]
+- [[_COMMUNITY_Community 1717|Community 1717]]
 - [[_COMMUNITY_Community 1718|Community 1718]]
+- [[_COMMUNITY_Community 1719|Community 1719]]
+- [[_COMMUNITY_Community 1720|Community 1720]]
 - [[_COMMUNITY_Community 1721|Community 1721]]
+- [[_COMMUNITY_Community 1722|Community 1722]]
 - [[_COMMUNITY_Community 1723|Community 1723]]
+- [[_COMMUNITY_Community 1724|Community 1724]]
 - [[_COMMUNITY_Community 1725|Community 1725]]
+- [[_COMMUNITY_Community 1726|Community 1726]]
+- [[_COMMUNITY_Community 1727|Community 1727]]
 - [[_COMMUNITY_Community 1728|Community 1728]]
 - [[_COMMUNITY_Community 1729|Community 1729]]
+- [[_COMMUNITY_Community 1730|Community 1730]]
 - [[_COMMUNITY_Community 1731|Community 1731]]
+- [[_COMMUNITY_Community 1732|Community 1732]]
+- [[_COMMUNITY_Community 1733|Community 1733]]
+- [[_COMMUNITY_Community 1734|Community 1734]]
+- [[_COMMUNITY_Community 1735|Community 1735]]
+- [[_COMMUNITY_Community 1736|Community 1736]]
+- [[_COMMUNITY_Community 1737|Community 1737]]
+- [[_COMMUNITY_Community 1738|Community 1738]]
+- [[_COMMUNITY_Community 1739|Community 1739]]
+- [[_COMMUNITY_Community 1740|Community 1740]]
+- [[_COMMUNITY_Community 1741|Community 1741]]
 - [[_COMMUNITY_Community 1742|Community 1742]]
+- [[_COMMUNITY_Community 1743|Community 1743]]
+- [[_COMMUNITY_Community 1744|Community 1744]]
 - [[_COMMUNITY_Community 1745|Community 1745]]
+- [[_COMMUNITY_Community 1746|Community 1746]]
+- [[_COMMUNITY_Community 1747|Community 1747]]
+- [[_COMMUNITY_Community 1748|Community 1748]]
+- [[_COMMUNITY_Community 1749|Community 1749]]
+- [[_COMMUNITY_Community 1750|Community 1750]]
+- [[_COMMUNITY_Community 1751|Community 1751]]
+- [[_COMMUNITY_Community 1752|Community 1752]]
+- [[_COMMUNITY_Community 1753|Community 1753]]
+- [[_COMMUNITY_Community 1754|Community 1754]]
+- [[_COMMUNITY_Community 1755|Community 1755]]
+- [[_COMMUNITY_Community 1756|Community 1756]]
 - [[_COMMUNITY_Community 1757|Community 1757]]
 - [[_COMMUNITY_Community 1758|Community 1758]]
+- [[_COMMUNITY_Community 1759|Community 1759]]
+- [[_COMMUNITY_Community 1760|Community 1760]]
+- [[_COMMUNITY_Community 1761|Community 1761]]
 - [[_COMMUNITY_Community 1762|Community 1762]]
 - [[_COMMUNITY_Community 1763|Community 1763]]
 - [[_COMMUNITY_Community 1764|Community 1764]]
@@ -1741,100 +1781,870 @@
 - [[_COMMUNITY_Community 1767|Community 1767]]
 - [[_COMMUNITY_Community 1768|Community 1768]]
 - [[_COMMUNITY_Community 1769|Community 1769]]
+- [[_COMMUNITY_Community 1770|Community 1770]]
+- [[_COMMUNITY_Community 1771|Community 1771]]
+- [[_COMMUNITY_Community 1772|Community 1772]]
+- [[_COMMUNITY_Community 1773|Community 1773]]
+- [[_COMMUNITY_Community 1774|Community 1774]]
+- [[_COMMUNITY_Community 1775|Community 1775]]
+- [[_COMMUNITY_Community 1776|Community 1776]]
+- [[_COMMUNITY_Community 1777|Community 1777]]
+- [[_COMMUNITY_Community 1778|Community 1778]]
+- [[_COMMUNITY_Community 1779|Community 1779]]
+- [[_COMMUNITY_Community 1780|Community 1780]]
+- [[_COMMUNITY_Community 1781|Community 1781]]
+- [[_COMMUNITY_Community 1782|Community 1782]]
+- [[_COMMUNITY_Community 1783|Community 1783]]
+- [[_COMMUNITY_Community 1784|Community 1784]]
+- [[_COMMUNITY_Community 1785|Community 1785]]
+- [[_COMMUNITY_Community 1786|Community 1786]]
+- [[_COMMUNITY_Community 1787|Community 1787]]
+- [[_COMMUNITY_Community 1788|Community 1788]]
+- [[_COMMUNITY_Community 1789|Community 1789]]
+- [[_COMMUNITY_Community 1790|Community 1790]]
+- [[_COMMUNITY_Community 1791|Community 1791]]
+- [[_COMMUNITY_Community 1792|Community 1792]]
+- [[_COMMUNITY_Community 1793|Community 1793]]
+- [[_COMMUNITY_Community 1794|Community 1794]]
+- [[_COMMUNITY_Community 1795|Community 1795]]
+- [[_COMMUNITY_Community 1796|Community 1796]]
+- [[_COMMUNITY_Community 1797|Community 1797]]
+- [[_COMMUNITY_Community 1798|Community 1798]]
+- [[_COMMUNITY_Community 1799|Community 1799]]
+- [[_COMMUNITY_Community 1800|Community 1800]]
+- [[_COMMUNITY_Community 1801|Community 1801]]
+- [[_COMMUNITY_Community 1802|Community 1802]]
+- [[_COMMUNITY_Community 1803|Community 1803]]
+- [[_COMMUNITY_Community 1804|Community 1804]]
+- [[_COMMUNITY_Community 1805|Community 1805]]
+- [[_COMMUNITY_Community 1806|Community 1806]]
+- [[_COMMUNITY_Community 1807|Community 1807]]
+- [[_COMMUNITY_Community 1808|Community 1808]]
+- [[_COMMUNITY_Community 1809|Community 1809]]
+- [[_COMMUNITY_Community 1810|Community 1810]]
+- [[_COMMUNITY_Community 1811|Community 1811]]
+- [[_COMMUNITY_Community 1812|Community 1812]]
+- [[_COMMUNITY_Community 1813|Community 1813]]
+- [[_COMMUNITY_Community 1814|Community 1814]]
+- [[_COMMUNITY_Community 1815|Community 1815]]
+- [[_COMMUNITY_Community 1816|Community 1816]]
+- [[_COMMUNITY_Community 1817|Community 1817]]
+- [[_COMMUNITY_Community 1818|Community 1818]]
+- [[_COMMUNITY_Community 1819|Community 1819]]
+- [[_COMMUNITY_Community 1820|Community 1820]]
+- [[_COMMUNITY_Community 1821|Community 1821]]
+- [[_COMMUNITY_Community 1822|Community 1822]]
+- [[_COMMUNITY_Community 1823|Community 1823]]
+- [[_COMMUNITY_Community 1824|Community 1824]]
+- [[_COMMUNITY_Community 1825|Community 1825]]
+- [[_COMMUNITY_Community 1826|Community 1826]]
+- [[_COMMUNITY_Community 1827|Community 1827]]
+- [[_COMMUNITY_Community 1828|Community 1828]]
+- [[_COMMUNITY_Community 1829|Community 1829]]
+- [[_COMMUNITY_Community 1830|Community 1830]]
+- [[_COMMUNITY_Community 1831|Community 1831]]
+- [[_COMMUNITY_Community 1832|Community 1832]]
+- [[_COMMUNITY_Community 1833|Community 1833]]
+- [[_COMMUNITY_Community 1834|Community 1834]]
+- [[_COMMUNITY_Community 1835|Community 1835]]
+- [[_COMMUNITY_Community 1836|Community 1836]]
+- [[_COMMUNITY_Community 1837|Community 1837]]
+- [[_COMMUNITY_Community 1838|Community 1838]]
+- [[_COMMUNITY_Community 1839|Community 1839]]
+- [[_COMMUNITY_Community 1840|Community 1840]]
+- [[_COMMUNITY_Community 1841|Community 1841]]
+- [[_COMMUNITY_Community 1842|Community 1842]]
+- [[_COMMUNITY_Community 1843|Community 1843]]
+- [[_COMMUNITY_Community 1844|Community 1844]]
+- [[_COMMUNITY_Community 1845|Community 1845]]
+- [[_COMMUNITY_Community 1846|Community 1846]]
+- [[_COMMUNITY_Community 1847|Community 1847]]
+- [[_COMMUNITY_Community 1848|Community 1848]]
+- [[_COMMUNITY_Community 1849|Community 1849]]
+- [[_COMMUNITY_Community 1850|Community 1850]]
+- [[_COMMUNITY_Community 1851|Community 1851]]
+- [[_COMMUNITY_Community 1852|Community 1852]]
+- [[_COMMUNITY_Community 1853|Community 1853]]
+- [[_COMMUNITY_Community 1854|Community 1854]]
+- [[_COMMUNITY_Community 1855|Community 1855]]
+- [[_COMMUNITY_Community 1856|Community 1856]]
+- [[_COMMUNITY_Community 1857|Community 1857]]
+- [[_COMMUNITY_Community 1858|Community 1858]]
+- [[_COMMUNITY_Community 1859|Community 1859]]
+- [[_COMMUNITY_Community 1860|Community 1860]]
+- [[_COMMUNITY_Community 1861|Community 1861]]
+- [[_COMMUNITY_Community 1862|Community 1862]]
+- [[_COMMUNITY_Community 1863|Community 1863]]
+- [[_COMMUNITY_Community 1864|Community 1864]]
+- [[_COMMUNITY_Community 1865|Community 1865]]
+- [[_COMMUNITY_Community 1866|Community 1866]]
+- [[_COMMUNITY_Community 1867|Community 1867]]
+- [[_COMMUNITY_Community 1868|Community 1868]]
+- [[_COMMUNITY_Community 1869|Community 1869]]
+- [[_COMMUNITY_Community 1870|Community 1870]]
+- [[_COMMUNITY_Community 1871|Community 1871]]
+- [[_COMMUNITY_Community 1872|Community 1872]]
+- [[_COMMUNITY_Community 1873|Community 1873]]
+- [[_COMMUNITY_Community 1874|Community 1874]]
+- [[_COMMUNITY_Community 1875|Community 1875]]
+- [[_COMMUNITY_Community 1876|Community 1876]]
+- [[_COMMUNITY_Community 1877|Community 1877]]
+- [[_COMMUNITY_Community 1878|Community 1878]]
+- [[_COMMUNITY_Community 1879|Community 1879]]
+- [[_COMMUNITY_Community 1880|Community 1880]]
+- [[_COMMUNITY_Community 1881|Community 1881]]
+- [[_COMMUNITY_Community 1882|Community 1882]]
+- [[_COMMUNITY_Community 1883|Community 1883]]
+- [[_COMMUNITY_Community 1884|Community 1884]]
+- [[_COMMUNITY_Community 1885|Community 1885]]
+- [[_COMMUNITY_Community 1886|Community 1886]]
+- [[_COMMUNITY_Community 1887|Community 1887]]
+- [[_COMMUNITY_Community 1888|Community 1888]]
+- [[_COMMUNITY_Community 1889|Community 1889]]
+- [[_COMMUNITY_Community 1890|Community 1890]]
+- [[_COMMUNITY_Community 1891|Community 1891]]
+- [[_COMMUNITY_Community 1892|Community 1892]]
+- [[_COMMUNITY_Community 1893|Community 1893]]
+- [[_COMMUNITY_Community 1894|Community 1894]]
+- [[_COMMUNITY_Community 1895|Community 1895]]
+- [[_COMMUNITY_Community 1896|Community 1896]]
+- [[_COMMUNITY_Community 1897|Community 1897]]
+- [[_COMMUNITY_Community 1898|Community 1898]]
+- [[_COMMUNITY_Community 1899|Community 1899]]
+- [[_COMMUNITY_Community 1900|Community 1900]]
+- [[_COMMUNITY_Community 1901|Community 1901]]
+- [[_COMMUNITY_Community 1902|Community 1902]]
+- [[_COMMUNITY_Community 1903|Community 1903]]
+- [[_COMMUNITY_Community 1904|Community 1904]]
+- [[_COMMUNITY_Community 1905|Community 1905]]
+- [[_COMMUNITY_Community 1906|Community 1906]]
+- [[_COMMUNITY_Community 1907|Community 1907]]
+- [[_COMMUNITY_Community 1908|Community 1908]]
+- [[_COMMUNITY_Community 1909|Community 1909]]
+- [[_COMMUNITY_Community 1910|Community 1910]]
+- [[_COMMUNITY_Community 1911|Community 1911]]
+- [[_COMMUNITY_Community 1912|Community 1912]]
+- [[_COMMUNITY_Community 1913|Community 1913]]
+- [[_COMMUNITY_Community 1914|Community 1914]]
+- [[_COMMUNITY_Community 1915|Community 1915]]
+- [[_COMMUNITY_Community 1916|Community 1916]]
+- [[_COMMUNITY_Community 1917|Community 1917]]
+- [[_COMMUNITY_Community 1918|Community 1918]]
+- [[_COMMUNITY_Community 1919|Community 1919]]
+- [[_COMMUNITY_Community 1920|Community 1920]]
+- [[_COMMUNITY_Community 1921|Community 1921]]
+- [[_COMMUNITY_Community 1922|Community 1922]]
+- [[_COMMUNITY_Community 1923|Community 1923]]
+- [[_COMMUNITY_Community 1924|Community 1924]]
+- [[_COMMUNITY_Community 1925|Community 1925]]
+- [[_COMMUNITY_Community 1926|Community 1926]]
+- [[_COMMUNITY_Community 1927|Community 1927]]
+- [[_COMMUNITY_Community 1928|Community 1928]]
+- [[_COMMUNITY_Community 1929|Community 1929]]
+- [[_COMMUNITY_Community 1930|Community 1930]]
+- [[_COMMUNITY_Community 1931|Community 1931]]
+- [[_COMMUNITY_Community 1932|Community 1932]]
+- [[_COMMUNITY_Community 1933|Community 1933]]
+- [[_COMMUNITY_Community 1934|Community 1934]]
+- [[_COMMUNITY_Community 1935|Community 1935]]
+- [[_COMMUNITY_Community 1936|Community 1936]]
+- [[_COMMUNITY_Community 1937|Community 1937]]
+- [[_COMMUNITY_Community 1938|Community 1938]]
+- [[_COMMUNITY_Community 1939|Community 1939]]
+- [[_COMMUNITY_Community 1940|Community 1940]]
+- [[_COMMUNITY_Community 1941|Community 1941]]
+- [[_COMMUNITY_Community 1942|Community 1942]]
+- [[_COMMUNITY_Community 1943|Community 1943]]
+- [[_COMMUNITY_Community 1944|Community 1944]]
+- [[_COMMUNITY_Community 1945|Community 1945]]
+- [[_COMMUNITY_Community 1946|Community 1946]]
+- [[_COMMUNITY_Community 1947|Community 1947]]
+- [[_COMMUNITY_Community 1948|Community 1948]]
+- [[_COMMUNITY_Community 1949|Community 1949]]
+- [[_COMMUNITY_Community 1950|Community 1950]]
+- [[_COMMUNITY_Community 1951|Community 1951]]
+- [[_COMMUNITY_Community 1952|Community 1952]]
+- [[_COMMUNITY_Community 1953|Community 1953]]
+- [[_COMMUNITY_Community 1954|Community 1954]]
+- [[_COMMUNITY_Community 1955|Community 1955]]
+- [[_COMMUNITY_Community 1956|Community 1956]]
+- [[_COMMUNITY_Community 1957|Community 1957]]
+- [[_COMMUNITY_Community 1958|Community 1958]]
+- [[_COMMUNITY_Community 1959|Community 1959]]
+- [[_COMMUNITY_Community 1960|Community 1960]]
+- [[_COMMUNITY_Community 1961|Community 1961]]
+- [[_COMMUNITY_Community 1962|Community 1962]]
+- [[_COMMUNITY_Community 1963|Community 1963]]
+- [[_COMMUNITY_Community 1964|Community 1964]]
+- [[_COMMUNITY_Community 1965|Community 1965]]
+- [[_COMMUNITY_Community 1966|Community 1966]]
+- [[_COMMUNITY_Community 1967|Community 1967]]
+- [[_COMMUNITY_Community 1968|Community 1968]]
+- [[_COMMUNITY_Community 1969|Community 1969]]
+- [[_COMMUNITY_Community 1970|Community 1970]]
+- [[_COMMUNITY_Community 1971|Community 1971]]
+- [[_COMMUNITY_Community 1972|Community 1972]]
+- [[_COMMUNITY_Community 1973|Community 1973]]
+- [[_COMMUNITY_Community 1974|Community 1974]]
+- [[_COMMUNITY_Community 1975|Community 1975]]
+- [[_COMMUNITY_Community 1976|Community 1976]]
+- [[_COMMUNITY_Community 1977|Community 1977]]
+- [[_COMMUNITY_Community 1978|Community 1978]]
+- [[_COMMUNITY_Community 1979|Community 1979]]
+- [[_COMMUNITY_Community 1980|Community 1980]]
+- [[_COMMUNITY_Community 1981|Community 1981]]
+- [[_COMMUNITY_Community 1982|Community 1982]]
+- [[_COMMUNITY_Community 1983|Community 1983]]
+- [[_COMMUNITY_Community 1984|Community 1984]]
+- [[_COMMUNITY_Community 1985|Community 1985]]
+- [[_COMMUNITY_Community 1986|Community 1986]]
+- [[_COMMUNITY_Community 1987|Community 1987]]
+- [[_COMMUNITY_Community 1988|Community 1988]]
+- [[_COMMUNITY_Community 1989|Community 1989]]
+- [[_COMMUNITY_Community 1990|Community 1990]]
+- [[_COMMUNITY_Community 1991|Community 1991]]
+- [[_COMMUNITY_Community 1992|Community 1992]]
+- [[_COMMUNITY_Community 1993|Community 1993]]
+- [[_COMMUNITY_Community 1994|Community 1994]]
+- [[_COMMUNITY_Community 1995|Community 1995]]
+- [[_COMMUNITY_Community 1996|Community 1996]]
+- [[_COMMUNITY_Community 1997|Community 1997]]
+- [[_COMMUNITY_Community 1998|Community 1998]]
+- [[_COMMUNITY_Community 1999|Community 1999]]
+- [[_COMMUNITY_Community 2000|Community 2000]]
+- [[_COMMUNITY_Community 2001|Community 2001]]
+- [[_COMMUNITY_Community 2002|Community 2002]]
+- [[_COMMUNITY_Community 2003|Community 2003]]
+- [[_COMMUNITY_Community 2004|Community 2004]]
+- [[_COMMUNITY_Community 2005|Community 2005]]
+- [[_COMMUNITY_Community 2006|Community 2006]]
+- [[_COMMUNITY_Community 2007|Community 2007]]
+- [[_COMMUNITY_Community 2008|Community 2008]]
+- [[_COMMUNITY_Community 2009|Community 2009]]
+- [[_COMMUNITY_Community 2010|Community 2010]]
+- [[_COMMUNITY_Community 2011|Community 2011]]
+- [[_COMMUNITY_Community 2012|Community 2012]]
+- [[_COMMUNITY_Community 2013|Community 2013]]
+- [[_COMMUNITY_Community 2014|Community 2014]]
+- [[_COMMUNITY_Community 2015|Community 2015]]
+- [[_COMMUNITY_Community 2016|Community 2016]]
+- [[_COMMUNITY_Community 2017|Community 2017]]
+- [[_COMMUNITY_Community 2018|Community 2018]]
+- [[_COMMUNITY_Community 2019|Community 2019]]
+- [[_COMMUNITY_Community 2020|Community 2020]]
+- [[_COMMUNITY_Community 2021|Community 2021]]
+- [[_COMMUNITY_Community 2022|Community 2022]]
+- [[_COMMUNITY_Community 2023|Community 2023]]
+- [[_COMMUNITY_Community 2024|Community 2024]]
+- [[_COMMUNITY_Community 2025|Community 2025]]
+- [[_COMMUNITY_Community 2026|Community 2026]]
+- [[_COMMUNITY_Community 2027|Community 2027]]
+- [[_COMMUNITY_Community 2028|Community 2028]]
+- [[_COMMUNITY_Community 2029|Community 2029]]
+- [[_COMMUNITY_Community 2030|Community 2030]]
+- [[_COMMUNITY_Community 2031|Community 2031]]
+- [[_COMMUNITY_Community 2032|Community 2032]]
+- [[_COMMUNITY_Community 2033|Community 2033]]
+- [[_COMMUNITY_Community 2034|Community 2034]]
+- [[_COMMUNITY_Community 2035|Community 2035]]
+- [[_COMMUNITY_Community 2036|Community 2036]]
+- [[_COMMUNITY_Community 2037|Community 2037]]
+- [[_COMMUNITY_Community 2038|Community 2038]]
+- [[_COMMUNITY_Community 2039|Community 2039]]
+- [[_COMMUNITY_Community 2040|Community 2040]]
+- [[_COMMUNITY_Community 2041|Community 2041]]
+- [[_COMMUNITY_Community 2042|Community 2042]]
+- [[_COMMUNITY_Community 2043|Community 2043]]
+- [[_COMMUNITY_Community 2044|Community 2044]]
+- [[_COMMUNITY_Community 2045|Community 2045]]
+- [[_COMMUNITY_Community 2046|Community 2046]]
+- [[_COMMUNITY_Community 2047|Community 2047]]
+- [[_COMMUNITY_Community 2048|Community 2048]]
+- [[_COMMUNITY_Community 2049|Community 2049]]
+- [[_COMMUNITY_Community 2050|Community 2050]]
+- [[_COMMUNITY_Community 2051|Community 2051]]
+- [[_COMMUNITY_Community 2052|Community 2052]]
+- [[_COMMUNITY_Community 2053|Community 2053]]
+- [[_COMMUNITY_Community 2054|Community 2054]]
+- [[_COMMUNITY_Community 2055|Community 2055]]
+- [[_COMMUNITY_Community 2056|Community 2056]]
+- [[_COMMUNITY_Community 2057|Community 2057]]
+- [[_COMMUNITY_Community 2058|Community 2058]]
+- [[_COMMUNITY_Community 2059|Community 2059]]
+- [[_COMMUNITY_Community 2060|Community 2060]]
+- [[_COMMUNITY_Community 2061|Community 2061]]
+- [[_COMMUNITY_Community 2062|Community 2062]]
+- [[_COMMUNITY_Community 2063|Community 2063]]
+- [[_COMMUNITY_Community 2064|Community 2064]]
+- [[_COMMUNITY_Community 2065|Community 2065]]
+- [[_COMMUNITY_Community 2066|Community 2066]]
+- [[_COMMUNITY_Community 2067|Community 2067]]
+- [[_COMMUNITY_Community 2068|Community 2068]]
+- [[_COMMUNITY_Community 2069|Community 2069]]
+- [[_COMMUNITY_Community 2070|Community 2070]]
+- [[_COMMUNITY_Community 2071|Community 2071]]
+- [[_COMMUNITY_Community 2072|Community 2072]]
+- [[_COMMUNITY_Community 2073|Community 2073]]
+- [[_COMMUNITY_Community 2074|Community 2074]]
+- [[_COMMUNITY_Community 2075|Community 2075]]
+- [[_COMMUNITY_Community 2076|Community 2076]]
+- [[_COMMUNITY_Community 2077|Community 2077]]
+- [[_COMMUNITY_Community 2078|Community 2078]]
+- [[_COMMUNITY_Community 2079|Community 2079]]
+- [[_COMMUNITY_Community 2080|Community 2080]]
+- [[_COMMUNITY_Community 2081|Community 2081]]
+- [[_COMMUNITY_Community 2082|Community 2082]]
+- [[_COMMUNITY_Community 2083|Community 2083]]
+- [[_COMMUNITY_Community 2084|Community 2084]]
+- [[_COMMUNITY_Community 2085|Community 2085]]
+- [[_COMMUNITY_Community 2086|Community 2086]]
+- [[_COMMUNITY_Community 2087|Community 2087]]
+- [[_COMMUNITY_Community 2088|Community 2088]]
+- [[_COMMUNITY_Community 2089|Community 2089]]
+- [[_COMMUNITY_Community 2090|Community 2090]]
+- [[_COMMUNITY_Community 2091|Community 2091]]
+- [[_COMMUNITY_Community 2092|Community 2092]]
+- [[_COMMUNITY_Community 2093|Community 2093]]
+- [[_COMMUNITY_Community 2094|Community 2094]]
+- [[_COMMUNITY_Community 2095|Community 2095]]
+- [[_COMMUNITY_Community 2096|Community 2096]]
+- [[_COMMUNITY_Community 2097|Community 2097]]
+- [[_COMMUNITY_Community 2098|Community 2098]]
+- [[_COMMUNITY_Community 2099|Community 2099]]
+- [[_COMMUNITY_Community 2100|Community 2100]]
+- [[_COMMUNITY_Community 2101|Community 2101]]
+- [[_COMMUNITY_Community 2102|Community 2102]]
+- [[_COMMUNITY_Community 2103|Community 2103]]
+- [[_COMMUNITY_Community 2104|Community 2104]]
+- [[_COMMUNITY_Community 2105|Community 2105]]
+- [[_COMMUNITY_Community 2106|Community 2106]]
+- [[_COMMUNITY_Community 2107|Community 2107]]
+- [[_COMMUNITY_Community 2108|Community 2108]]
+- [[_COMMUNITY_Community 2109|Community 2109]]
+- [[_COMMUNITY_Community 2110|Community 2110]]
+- [[_COMMUNITY_Community 2111|Community 2111]]
+- [[_COMMUNITY_Community 2112|Community 2112]]
+- [[_COMMUNITY_Community 2113|Community 2113]]
+- [[_COMMUNITY_Community 2114|Community 2114]]
+- [[_COMMUNITY_Community 2115|Community 2115]]
+- [[_COMMUNITY_Community 2116|Community 2116]]
+- [[_COMMUNITY_Community 2117|Community 2117]]
+- [[_COMMUNITY_Community 2118|Community 2118]]
+- [[_COMMUNITY_Community 2119|Community 2119]]
+- [[_COMMUNITY_Community 2120|Community 2120]]
+- [[_COMMUNITY_Community 2121|Community 2121]]
+- [[_COMMUNITY_Community 2122|Community 2122]]
+- [[_COMMUNITY_Community 2123|Community 2123]]
+- [[_COMMUNITY_Community 2124|Community 2124]]
+- [[_COMMUNITY_Community 2125|Community 2125]]
+- [[_COMMUNITY_Community 2126|Community 2126]]
+- [[_COMMUNITY_Community 2127|Community 2127]]
+- [[_COMMUNITY_Community 2128|Community 2128]]
+- [[_COMMUNITY_Community 2129|Community 2129]]
+- [[_COMMUNITY_Community 2130|Community 2130]]
+- [[_COMMUNITY_Community 2131|Community 2131]]
+- [[_COMMUNITY_Community 2132|Community 2132]]
+- [[_COMMUNITY_Community 2133|Community 2133]]
+- [[_COMMUNITY_Community 2134|Community 2134]]
+- [[_COMMUNITY_Community 2135|Community 2135]]
+- [[_COMMUNITY_Community 2136|Community 2136]]
+- [[_COMMUNITY_Community 2137|Community 2137]]
+- [[_COMMUNITY_Community 2138|Community 2138]]
+- [[_COMMUNITY_Community 2139|Community 2139]]
+- [[_COMMUNITY_Community 2140|Community 2140]]
+- [[_COMMUNITY_Community 2141|Community 2141]]
+- [[_COMMUNITY_Community 2142|Community 2142]]
+- [[_COMMUNITY_Community 2143|Community 2143]]
+- [[_COMMUNITY_Community 2144|Community 2144]]
+- [[_COMMUNITY_Community 2145|Community 2145]]
+- [[_COMMUNITY_Community 2146|Community 2146]]
+- [[_COMMUNITY_Community 2147|Community 2147]]
+- [[_COMMUNITY_Community 2148|Community 2148]]
+- [[_COMMUNITY_Community 2149|Community 2149]]
+- [[_COMMUNITY_Community 2150|Community 2150]]
+- [[_COMMUNITY_Community 2151|Community 2151]]
+- [[_COMMUNITY_Community 2152|Community 2152]]
+- [[_COMMUNITY_Community 2153|Community 2153]]
+- [[_COMMUNITY_Community 2154|Community 2154]]
+- [[_COMMUNITY_Community 2155|Community 2155]]
+- [[_COMMUNITY_Community 2156|Community 2156]]
+- [[_COMMUNITY_Community 2157|Community 2157]]
+- [[_COMMUNITY_Community 2158|Community 2158]]
+- [[_COMMUNITY_Community 2159|Community 2159]]
+- [[_COMMUNITY_Community 2160|Community 2160]]
+- [[_COMMUNITY_Community 2161|Community 2161]]
+- [[_COMMUNITY_Community 2162|Community 2162]]
+- [[_COMMUNITY_Community 2163|Community 2163]]
+- [[_COMMUNITY_Community 2164|Community 2164]]
+- [[_COMMUNITY_Community 2165|Community 2165]]
+- [[_COMMUNITY_Community 2166|Community 2166]]
+- [[_COMMUNITY_Community 2167|Community 2167]]
+- [[_COMMUNITY_Community 2168|Community 2168]]
+- [[_COMMUNITY_Community 2169|Community 2169]]
+- [[_COMMUNITY_Community 2170|Community 2170]]
+- [[_COMMUNITY_Community 2171|Community 2171]]
+- [[_COMMUNITY_Community 2172|Community 2172]]
+- [[_COMMUNITY_Community 2173|Community 2173]]
+- [[_COMMUNITY_Community 2174|Community 2174]]
+- [[_COMMUNITY_Community 2175|Community 2175]]
+- [[_COMMUNITY_Community 2176|Community 2176]]
+- [[_COMMUNITY_Community 2177|Community 2177]]
+- [[_COMMUNITY_Community 2178|Community 2178]]
+- [[_COMMUNITY_Community 2179|Community 2179]]
+- [[_COMMUNITY_Community 2180|Community 2180]]
+- [[_COMMUNITY_Community 2181|Community 2181]]
+- [[_COMMUNITY_Community 2182|Community 2182]]
+- [[_COMMUNITY_Community 2183|Community 2183]]
+- [[_COMMUNITY_Community 2184|Community 2184]]
+- [[_COMMUNITY_Community 2185|Community 2185]]
+- [[_COMMUNITY_Community 2186|Community 2186]]
+- [[_COMMUNITY_Community 2187|Community 2187]]
+- [[_COMMUNITY_Community 2188|Community 2188]]
+- [[_COMMUNITY_Community 2189|Community 2189]]
+- [[_COMMUNITY_Community 2190|Community 2190]]
+- [[_COMMUNITY_Community 2191|Community 2191]]
+- [[_COMMUNITY_Community 2192|Community 2192]]
+- [[_COMMUNITY_Community 2193|Community 2193]]
+- [[_COMMUNITY_Community 2194|Community 2194]]
+- [[_COMMUNITY_Community 2195|Community 2195]]
+- [[_COMMUNITY_Community 2196|Community 2196]]
+- [[_COMMUNITY_Community 2197|Community 2197]]
+- [[_COMMUNITY_Community 2198|Community 2198]]
+- [[_COMMUNITY_Community 2199|Community 2199]]
+- [[_COMMUNITY_Community 2200|Community 2200]]
+- [[_COMMUNITY_Community 2201|Community 2201]]
+- [[_COMMUNITY_Community 2202|Community 2202]]
+- [[_COMMUNITY_Community 2203|Community 2203]]
+- [[_COMMUNITY_Community 2204|Community 2204]]
+- [[_COMMUNITY_Community 2205|Community 2205]]
+- [[_COMMUNITY_Community 2206|Community 2206]]
+- [[_COMMUNITY_Community 2207|Community 2207]]
+- [[_COMMUNITY_Community 2208|Community 2208]]
+- [[_COMMUNITY_Community 2209|Community 2209]]
+- [[_COMMUNITY_Community 2210|Community 2210]]
+- [[_COMMUNITY_Community 2211|Community 2211]]
+- [[_COMMUNITY_Community 2212|Community 2212]]
+- [[_COMMUNITY_Community 2213|Community 2213]]
+- [[_COMMUNITY_Community 2214|Community 2214]]
+- [[_COMMUNITY_Community 2215|Community 2215]]
+- [[_COMMUNITY_Community 2216|Community 2216]]
+- [[_COMMUNITY_Community 2217|Community 2217]]
+- [[_COMMUNITY_Community 2218|Community 2218]]
+- [[_COMMUNITY_Community 2219|Community 2219]]
+- [[_COMMUNITY_Community 2220|Community 2220]]
+- [[_COMMUNITY_Community 2221|Community 2221]]
+- [[_COMMUNITY_Community 2222|Community 2222]]
+- [[_COMMUNITY_Community 2223|Community 2223]]
+- [[_COMMUNITY_Community 2224|Community 2224]]
+- [[_COMMUNITY_Community 2225|Community 2225]]
+- [[_COMMUNITY_Community 2226|Community 2226]]
+- [[_COMMUNITY_Community 2227|Community 2227]]
+- [[_COMMUNITY_Community 2228|Community 2228]]
+- [[_COMMUNITY_Community 2229|Community 2229]]
+- [[_COMMUNITY_Community 2230|Community 2230]]
+- [[_COMMUNITY_Community 2231|Community 2231]]
+- [[_COMMUNITY_Community 2232|Community 2232]]
+- [[_COMMUNITY_Community 2233|Community 2233]]
+- [[_COMMUNITY_Community 2234|Community 2234]]
+- [[_COMMUNITY_Community 2235|Community 2235]]
+- [[_COMMUNITY_Community 2236|Community 2236]]
+- [[_COMMUNITY_Community 2237|Community 2237]]
+- [[_COMMUNITY_Community 2238|Community 2238]]
+- [[_COMMUNITY_Community 2239|Community 2239]]
+- [[_COMMUNITY_Community 2240|Community 2240]]
+- [[_COMMUNITY_Community 2241|Community 2241]]
+- [[_COMMUNITY_Community 2242|Community 2242]]
+- [[_COMMUNITY_Community 2243|Community 2243]]
+- [[_COMMUNITY_Community 2244|Community 2244]]
+- [[_COMMUNITY_Community 2245|Community 2245]]
+- [[_COMMUNITY_Community 2246|Community 2246]]
+- [[_COMMUNITY_Community 2247|Community 2247]]
+- [[_COMMUNITY_Community 2248|Community 2248]]
+- [[_COMMUNITY_Community 2249|Community 2249]]
+- [[_COMMUNITY_Community 2250|Community 2250]]
+- [[_COMMUNITY_Community 2251|Community 2251]]
+- [[_COMMUNITY_Community 2252|Community 2252]]
+- [[_COMMUNITY_Community 2253|Community 2253]]
+- [[_COMMUNITY_Community 2254|Community 2254]]
+- [[_COMMUNITY_Community 2255|Community 2255]]
+- [[_COMMUNITY_Community 2256|Community 2256]]
+- [[_COMMUNITY_Community 2257|Community 2257]]
+- [[_COMMUNITY_Community 2258|Community 2258]]
+- [[_COMMUNITY_Community 2259|Community 2259]]
+- [[_COMMUNITY_Community 2260|Community 2260]]
+- [[_COMMUNITY_Community 2261|Community 2261]]
+- [[_COMMUNITY_Community 2262|Community 2262]]
+- [[_COMMUNITY_Community 2263|Community 2263]]
+- [[_COMMUNITY_Community 2264|Community 2264]]
+- [[_COMMUNITY_Community 2265|Community 2265]]
+- [[_COMMUNITY_Community 2266|Community 2266]]
+- [[_COMMUNITY_Community 2267|Community 2267]]
+- [[_COMMUNITY_Community 2268|Community 2268]]
+- [[_COMMUNITY_Community 2269|Community 2269]]
+- [[_COMMUNITY_Community 2270|Community 2270]]
+- [[_COMMUNITY_Community 2271|Community 2271]]
+- [[_COMMUNITY_Community 2272|Community 2272]]
+- [[_COMMUNITY_Community 2273|Community 2273]]
+- [[_COMMUNITY_Community 2274|Community 2274]]
+- [[_COMMUNITY_Community 2275|Community 2275]]
+- [[_COMMUNITY_Community 2276|Community 2276]]
+- [[_COMMUNITY_Community 2277|Community 2277]]
+- [[_COMMUNITY_Community 2278|Community 2278]]
+- [[_COMMUNITY_Community 2279|Community 2279]]
+- [[_COMMUNITY_Community 2280|Community 2280]]
+- [[_COMMUNITY_Community 2281|Community 2281]]
+- [[_COMMUNITY_Community 2282|Community 2282]]
+- [[_COMMUNITY_Community 2283|Community 2283]]
+- [[_COMMUNITY_Community 2284|Community 2284]]
+- [[_COMMUNITY_Community 2285|Community 2285]]
+- [[_COMMUNITY_Community 2286|Community 2286]]
+- [[_COMMUNITY_Community 2287|Community 2287]]
+- [[_COMMUNITY_Community 2288|Community 2288]]
+- [[_COMMUNITY_Community 2289|Community 2289]]
+- [[_COMMUNITY_Community 2290|Community 2290]]
+- [[_COMMUNITY_Community 2291|Community 2291]]
+- [[_COMMUNITY_Community 2292|Community 2292]]
+- [[_COMMUNITY_Community 2293|Community 2293]]
+- [[_COMMUNITY_Community 2294|Community 2294]]
+- [[_COMMUNITY_Community 2295|Community 2295]]
+- [[_COMMUNITY_Community 2296|Community 2296]]
+- [[_COMMUNITY_Community 2297|Community 2297]]
+- [[_COMMUNITY_Community 2298|Community 2298]]
+- [[_COMMUNITY_Community 2299|Community 2299]]
+- [[_COMMUNITY_Community 2300|Community 2300]]
+- [[_COMMUNITY_Community 2301|Community 2301]]
+- [[_COMMUNITY_Community 2302|Community 2302]]
+- [[_COMMUNITY_Community 2303|Community 2303]]
+- [[_COMMUNITY_Community 2304|Community 2304]]
+- [[_COMMUNITY_Community 2305|Community 2305]]
+- [[_COMMUNITY_Community 2306|Community 2306]]
+- [[_COMMUNITY_Community 2307|Community 2307]]
+- [[_COMMUNITY_Community 2308|Community 2308]]
+- [[_COMMUNITY_Community 2309|Community 2309]]
+- [[_COMMUNITY_Community 2310|Community 2310]]
+- [[_COMMUNITY_Community 2311|Community 2311]]
+- [[_COMMUNITY_Community 2312|Community 2312]]
+- [[_COMMUNITY_Community 2313|Community 2313]]
+- [[_COMMUNITY_Community 2314|Community 2314]]
+- [[_COMMUNITY_Community 2315|Community 2315]]
+- [[_COMMUNITY_Community 2316|Community 2316]]
+- [[_COMMUNITY_Community 2317|Community 2317]]
+- [[_COMMUNITY_Community 2318|Community 2318]]
+- [[_COMMUNITY_Community 2319|Community 2319]]
+- [[_COMMUNITY_Community 2320|Community 2320]]
+- [[_COMMUNITY_Community 2321|Community 2321]]
+- [[_COMMUNITY_Community 2322|Community 2322]]
+- [[_COMMUNITY_Community 2323|Community 2323]]
+- [[_COMMUNITY_Community 2324|Community 2324]]
+- [[_COMMUNITY_Community 2325|Community 2325]]
+- [[_COMMUNITY_Community 2326|Community 2326]]
+- [[_COMMUNITY_Community 2327|Community 2327]]
+- [[_COMMUNITY_Community 2328|Community 2328]]
+- [[_COMMUNITY_Community 2329|Community 2329]]
+- [[_COMMUNITY_Community 2330|Community 2330]]
+- [[_COMMUNITY_Community 2331|Community 2331]]
+- [[_COMMUNITY_Community 2332|Community 2332]]
+- [[_COMMUNITY_Community 2333|Community 2333]]
+- [[_COMMUNITY_Community 2334|Community 2334]]
+- [[_COMMUNITY_Community 2335|Community 2335]]
+- [[_COMMUNITY_Community 2336|Community 2336]]
+- [[_COMMUNITY_Community 2337|Community 2337]]
+- [[_COMMUNITY_Community 2338|Community 2338]]
+- [[_COMMUNITY_Community 2339|Community 2339]]
+- [[_COMMUNITY_Community 2340|Community 2340]]
+- [[_COMMUNITY_Community 2341|Community 2341]]
+- [[_COMMUNITY_Community 2342|Community 2342]]
+- [[_COMMUNITY_Community 2343|Community 2343]]
+- [[_COMMUNITY_Community 2344|Community 2344]]
+- [[_COMMUNITY_Community 2345|Community 2345]]
+- [[_COMMUNITY_Community 2346|Community 2346]]
+- [[_COMMUNITY_Community 2347|Community 2347]]
+- [[_COMMUNITY_Community 2348|Community 2348]]
+- [[_COMMUNITY_Community 2349|Community 2349]]
+- [[_COMMUNITY_Community 2350|Community 2350]]
+- [[_COMMUNITY_Community 2351|Community 2351]]
+- [[_COMMUNITY_Community 2352|Community 2352]]
+- [[_COMMUNITY_Community 2353|Community 2353]]
+- [[_COMMUNITY_Community 2354|Community 2354]]
+- [[_COMMUNITY_Community 2355|Community 2355]]
+- [[_COMMUNITY_Community 2356|Community 2356]]
+- [[_COMMUNITY_Community 2357|Community 2357]]
+- [[_COMMUNITY_Community 2358|Community 2358]]
+- [[_COMMUNITY_Community 2359|Community 2359]]
+- [[_COMMUNITY_Community 2360|Community 2360]]
+- [[_COMMUNITY_Community 2361|Community 2361]]
+- [[_COMMUNITY_Community 2362|Community 2362]]
+- [[_COMMUNITY_Community 2363|Community 2363]]
+- [[_COMMUNITY_Community 2364|Community 2364]]
+- [[_COMMUNITY_Community 2365|Community 2365]]
+- [[_COMMUNITY_Community 2366|Community 2366]]
+- [[_COMMUNITY_Community 2367|Community 2367]]
+- [[_COMMUNITY_Community 2368|Community 2368]]
+- [[_COMMUNITY_Community 2369|Community 2369]]
+- [[_COMMUNITY_Community 2370|Community 2370]]
+- [[_COMMUNITY_Community 2371|Community 2371]]
+- [[_COMMUNITY_Community 2372|Community 2372]]
+- [[_COMMUNITY_Community 2373|Community 2373]]
+- [[_COMMUNITY_Community 2374|Community 2374]]
+- [[_COMMUNITY_Community 2375|Community 2375]]
+- [[_COMMUNITY_Community 2376|Community 2376]]
+- [[_COMMUNITY_Community 2377|Community 2377]]
+- [[_COMMUNITY_Community 2378|Community 2378]]
+- [[_COMMUNITY_Community 2379|Community 2379]]
+- [[_COMMUNITY_Community 2380|Community 2380]]
+- [[_COMMUNITY_Community 2381|Community 2381]]
+- [[_COMMUNITY_Community 2382|Community 2382]]
+- [[_COMMUNITY_Community 2383|Community 2383]]
+- [[_COMMUNITY_Community 2384|Community 2384]]
+- [[_COMMUNITY_Community 2385|Community 2385]]
+- [[_COMMUNITY_Community 2386|Community 2386]]
+- [[_COMMUNITY_Community 2387|Community 2387]]
+- [[_COMMUNITY_Community 2388|Community 2388]]
+- [[_COMMUNITY_Community 2389|Community 2389]]
+- [[_COMMUNITY_Community 2390|Community 2390]]
+- [[_COMMUNITY_Community 2391|Community 2391]]
+- [[_COMMUNITY_Community 2392|Community 2392]]
+- [[_COMMUNITY_Community 2393|Community 2393]]
+- [[_COMMUNITY_Community 2394|Community 2394]]
+- [[_COMMUNITY_Community 2395|Community 2395]]
+- [[_COMMUNITY_Community 2396|Community 2396]]
+- [[_COMMUNITY_Community 2397|Community 2397]]
+- [[_COMMUNITY_Community 2398|Community 2398]]
+- [[_COMMUNITY_Community 2399|Community 2399]]
+- [[_COMMUNITY_Community 2400|Community 2400]]
+- [[_COMMUNITY_Community 2401|Community 2401]]
+- [[_COMMUNITY_Community 2402|Community 2402]]
+- [[_COMMUNITY_Community 2403|Community 2403]]
+- [[_COMMUNITY_Community 2404|Community 2404]]
+- [[_COMMUNITY_Community 2405|Community 2405]]
+- [[_COMMUNITY_Community 2406|Community 2406]]
+- [[_COMMUNITY_Community 2407|Community 2407]]
+- [[_COMMUNITY_Community 2408|Community 2408]]
+- [[_COMMUNITY_Community 2409|Community 2409]]
+- [[_COMMUNITY_Community 2410|Community 2410]]
+- [[_COMMUNITY_Community 2411|Community 2411]]
+- [[_COMMUNITY_Community 2412|Community 2412]]
+- [[_COMMUNITY_Community 2413|Community 2413]]
+- [[_COMMUNITY_Community 2414|Community 2414]]
+- [[_COMMUNITY_Community 2415|Community 2415]]
+- [[_COMMUNITY_Community 2416|Community 2416]]
+- [[_COMMUNITY_Community 2417|Community 2417]]
+- [[_COMMUNITY_Community 2418|Community 2418]]
+- [[_COMMUNITY_Community 2419|Community 2419]]
+- [[_COMMUNITY_Community 2420|Community 2420]]
+- [[_COMMUNITY_Community 2421|Community 2421]]
+- [[_COMMUNITY_Community 2422|Community 2422]]
+- [[_COMMUNITY_Community 2423|Community 2423]]
+- [[_COMMUNITY_Community 2424|Community 2424]]
+- [[_COMMUNITY_Community 2425|Community 2425]]
+- [[_COMMUNITY_Community 2426|Community 2426]]
+- [[_COMMUNITY_Community 2427|Community 2427]]
+- [[_COMMUNITY_Community 2428|Community 2428]]
+- [[_COMMUNITY_Community 2429|Community 2429]]
+- [[_COMMUNITY_Community 2430|Community 2430]]
+- [[_COMMUNITY_Community 2431|Community 2431]]
+- [[_COMMUNITY_Community 2432|Community 2432]]
+- [[_COMMUNITY_Community 2433|Community 2433]]
+- [[_COMMUNITY_Community 2434|Community 2434]]
+- [[_COMMUNITY_Community 2435|Community 2435]]
+- [[_COMMUNITY_Community 2436|Community 2436]]
+- [[_COMMUNITY_Community 2437|Community 2437]]
+- [[_COMMUNITY_Community 2438|Community 2438]]
+- [[_COMMUNITY_Community 2439|Community 2439]]
+- [[_COMMUNITY_Community 2440|Community 2440]]
+- [[_COMMUNITY_Community 2441|Community 2441]]
+- [[_COMMUNITY_Community 2442|Community 2442]]
+- [[_COMMUNITY_Community 2443|Community 2443]]
+- [[_COMMUNITY_Community 2444|Community 2444]]
+- [[_COMMUNITY_Community 2445|Community 2445]]
+- [[_COMMUNITY_Community 2446|Community 2446]]
+- [[_COMMUNITY_Community 2447|Community 2447]]
+- [[_COMMUNITY_Community 2448|Community 2448]]
+- [[_COMMUNITY_Community 2449|Community 2449]]
+- [[_COMMUNITY_Community 2450|Community 2450]]
+- [[_COMMUNITY_Community 2451|Community 2451]]
+- [[_COMMUNITY_Community 2452|Community 2452]]
+- [[_COMMUNITY_Community 2453|Community 2453]]
+- [[_COMMUNITY_Community 2454|Community 2454]]
+- [[_COMMUNITY_Community 2455|Community 2455]]
+- [[_COMMUNITY_Community 2456|Community 2456]]
+- [[_COMMUNITY_Community 2457|Community 2457]]
+- [[_COMMUNITY_Community 2458|Community 2458]]
+- [[_COMMUNITY_Community 2459|Community 2459]]
+- [[_COMMUNITY_Community 2460|Community 2460]]
+- [[_COMMUNITY_Community 2461|Community 2461]]
+- [[_COMMUNITY_Community 2462|Community 2462]]
+- [[_COMMUNITY_Community 2463|Community 2463]]
+- [[_COMMUNITY_Community 2464|Community 2464]]
+- [[_COMMUNITY_Community 2465|Community 2465]]
+- [[_COMMUNITY_Community 2466|Community 2466]]
+- [[_COMMUNITY_Community 2467|Community 2467]]
+- [[_COMMUNITY_Community 2468|Community 2468]]
+- [[_COMMUNITY_Community 2469|Community 2469]]
+- [[_COMMUNITY_Community 2470|Community 2470]]
+- [[_COMMUNITY_Community 2471|Community 2471]]
+- [[_COMMUNITY_Community 2472|Community 2472]]
+- [[_COMMUNITY_Community 2473|Community 2473]]
+- [[_COMMUNITY_Community 2474|Community 2474]]
+- [[_COMMUNITY_Community 2475|Community 2475]]
+- [[_COMMUNITY_Community 2476|Community 2476]]
+- [[_COMMUNITY_Community 2477|Community 2477]]
+- [[_COMMUNITY_Community 2478|Community 2478]]
+- [[_COMMUNITY_Community 2479|Community 2479]]
+- [[_COMMUNITY_Community 2480|Community 2480]]
+- [[_COMMUNITY_Community 2481|Community 2481]]
+- [[_COMMUNITY_Community 2482|Community 2482]]
+- [[_COMMUNITY_Community 2483|Community 2483]]
+- [[_COMMUNITY_Community 2484|Community 2484]]
+- [[_COMMUNITY_Community 2485|Community 2485]]
+- [[_COMMUNITY_Community 2486|Community 2486]]
+- [[_COMMUNITY_Community 2487|Community 2487]]
+- [[_COMMUNITY_Community 2488|Community 2488]]
+- [[_COMMUNITY_Community 2489|Community 2489]]
+- [[_COMMUNITY_Community 2490|Community 2490]]
+- [[_COMMUNITY_Community 2491|Community 2491]]
+- [[_COMMUNITY_Community 2492|Community 2492]]
+- [[_COMMUNITY_Community 2493|Community 2493]]
+- [[_COMMUNITY_Community 2494|Community 2494]]
+- [[_COMMUNITY_Community 2495|Community 2495]]
+- [[_COMMUNITY_Community 2496|Community 2496]]
+- [[_COMMUNITY_Community 2497|Community 2497]]
+- [[_COMMUNITY_Community 2498|Community 2498]]
+- [[_COMMUNITY_Community 2499|Community 2499]]
+- [[_COMMUNITY_Community 2500|Community 2500]]
+- [[_COMMUNITY_Community 2501|Community 2501]]
+- [[_COMMUNITY_Community 2502|Community 2502]]
+- [[_COMMUNITY_Community 2503|Community 2503]]
+- [[_COMMUNITY_Community 2504|Community 2504]]
+- [[_COMMUNITY_Community 2505|Community 2505]]
+- [[_COMMUNITY_Community 2506|Community 2506]]
+- [[_COMMUNITY_Community 2507|Community 2507]]
+- [[_COMMUNITY_Community 2508|Community 2508]]
+- [[_COMMUNITY_Community 2509|Community 2509]]
+- [[_COMMUNITY_Community 2510|Community 2510]]
+- [[_COMMUNITY_Community 2511|Community 2511]]
+- [[_COMMUNITY_Community 2512|Community 2512]]
+- [[_COMMUNITY_Community 2513|Community 2513]]
+- [[_COMMUNITY_Community 2514|Community 2514]]
+- [[_COMMUNITY_Community 2515|Community 2515]]
+- [[_COMMUNITY_Community 2516|Community 2516]]
+- [[_COMMUNITY_Community 2517|Community 2517]]
+- [[_COMMUNITY_Community 2518|Community 2518]]
+- [[_COMMUNITY_Community 2519|Community 2519]]
+- [[_COMMUNITY_Community 2520|Community 2520]]
+- [[_COMMUNITY_Community 2521|Community 2521]]
+- [[_COMMUNITY_Community 2522|Community 2522]]
+- [[_COMMUNITY_Community 2523|Community 2523]]
+- [[_COMMUNITY_Community 2524|Community 2524]]
+- [[_COMMUNITY_Community 2525|Community 2525]]
+- [[_COMMUNITY_Community 2526|Community 2526]]
+- [[_COMMUNITY_Community 2527|Community 2527]]
+- [[_COMMUNITY_Community 2528|Community 2528]]
+- [[_COMMUNITY_Community 2529|Community 2529]]
+- [[_COMMUNITY_Community 2530|Community 2530]]
+- [[_COMMUNITY_Community 2531|Community 2531]]
+- [[_COMMUNITY_Community 2532|Community 2532]]
+- [[_COMMUNITY_Community 2533|Community 2533]]
+- [[_COMMUNITY_Community 2534|Community 2534]]
+- [[_COMMUNITY_Community 2535|Community 2535]]
+- [[_COMMUNITY_Community 2536|Community 2536]]
+- [[_COMMUNITY_Community 2537|Community 2537]]
+- [[_COMMUNITY_Community 2538|Community 2538]]
+- [[_COMMUNITY_Community 2539|Community 2539]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `playerId` - 470 edges
-2. `gameDate` - 428 edges
-3. `Open Decisions And Follow-Up` - 376 edges
-4. `clubId` - 356 edges
-5. `CareerState` - 218 edges
-6. `seasonId` - 212 edges
+1. `playerId` - 486 edges
+2. `gameDate` - 458 edges
+3. `Open Decisions And Follow-Up` - 393 edges
+4. `clubId` - 389 edges
+5. `CareerState` - 236 edges
+6. `seasonId` - 235 edges
 7. `nonNegativeMoney()` - 205 edges
-8. `fixtureId` - 176 edges
-9. `createCareerState()` - 164 edges
-10. `abilityValue` - 131 edges
+8. `createCareerState()` - 187 edges
+9. `fixtureId` - 180 edges
+10. `number()` - 153 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `completeWebCareerSeason()` --calls--> `number()`  [INFERRED]
   apps/web/src/runtime/web-career-runtime.test.ts → packages/storage/src/sqlite/career-state-mapper.ts
-- `SaveDemoMatchPreparationResult` --references--> `CareerMatchPreparationView`  [EXTRACTED]
-  apps/web/src/career/match-preparation-demo.ts → packages/ui/src/career/career-match-preparation-view.ts
-- `WebLiveMatchdayFullTimeReview` --references--> `BuildCareerMatchdayPhaseViewInput`  [EXTRACTED]
-  apps/web/src/features/matchday/matchday-adapter.ts → packages/ui/src/career/career-matchday-phase-view.ts
+- `tacticalSlotNorm()` --calls--> `number()`  [INFERRED]
+  apps/web/src/visual-qa/current-product.spec.ts → packages/storage/src/sqlite/career-state-mapper.ts
+- `matchingMarketTargetCount()` --calls--> `number()`  [INFERRED]
+  apps/web/src/visual-qa/current-product.spec.ts → packages/storage/src/sqlite/career-state-mapper.ts
+- `buildPhase()` --calls--> `buildCareerMatchdayPhaseView()`  [EXTRACTED]
+  apps/web/src/features/matchday/MatchdayFullTimePhase.test.tsx → packages/ui/src/career/career-matchday-phase-view.ts
 - `createFakeLiveMatchControlWorld()` --calls--> `createFakeLeagueSystem()`  [EXTRACTED]
   apps/cli/src/commands/live-match-control-report-data.ts → packages/content/src/generators/league-system.ts
-- `parseCanonicalDate()` --calls--> `number()`  [INFERRED]
-  apps/web/src/features/inbox/calendar-advance-transition.ts → packages/storage/src/sqlite/career-state-mapper.ts
 
-## Communities (1730 total, 5 thin omitted)
+## Communities (2540 total, 5 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (376): 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`, 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`, 2026-06-15 — `docs/steps/00-foundation/02-shared-rng-and-date.md`, 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`, 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`, 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`, 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`, 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md` (+368 more)
+Nodes (393): 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`, 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`, 2026-06-15 — `docs/steps/00-foundation/02-shared-rng-and-date.md`, 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`, 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`, 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`, 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`, 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md` (+385 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.02
-Nodes (148): CareerMatchPreparationFormationId, CareerMatchPreparationView, TacticalBenchBoard(), TacticalBenchBoardCandidate, TacticalBenchBoardProps, TacticalBenchDragState, tacticalBenchSlotFacts(), BenchBoardTestOptions (+140 more)
+Cohesion: 0.01
+Nodes (274): CareerMatchPreparationFormationId, CareerMatchPreparationFormationInput, CareerMatchPreparationFormationSlotInput, CareerMatchPreparationPlayerOptionInput, CareerMatchPreparationView, DemoMatchPreparationState, SaveDemoMatchPreparationResult, TacticalBenchBoard() (+266 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.13
-Nodes (20): agingMultiplier(), applyPlayerAgingPolicy(), currentAbilityFloor(), goalkeeperAgingMultiplier(), goalkeeperRemainingRoom(), lateOutfieldSkillDeclineAge(), monthlyDeclineFor(), reachablePotentialCeiling() (+12 more)
+Cohesion: 0.02
+Nodes (188): action(), buildActions(), buildCareerMatchdayPhaseView(), BuildCareerMatchdayPhaseViewInput, CareerMatchdayHalfTimeSubstitutionInput, CareerMatchdayPhaseActionId, CareerMatchdayPhaseActionStatus, CareerMatchdayPhaseActionView (+180 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
 Nodes (44): 10. Pulizia tema (una sola identità premium), 11. Roadmap a micro-step (uno alla volta), 12. Fuori ambito, 13. Rischi e mitigazioni, 1.1 Decisioni di brainstorming (bloccate), 1. Obiettivo, 2.1 INVARIATO — logica di dominio (nessuna modifica funzionale), 2.2 RI-VESTITO — solo CSS chrome del campo (logica intatta) (+36 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.07
-Nodes (46): createCompetitionMatchRules(), AbilityGroup, AbilityScope, appendAbilityRows(), assertOrderedLookup(), groupedRows(), groupedRowsByNumber(), insertMappedRows() (+38 more)
+Cohesion: 0.05
+Nodes (56): assertValidContractOfferTerms(), ContractDemandSnapshot, ContractOfferEvaluation, counterResponseClock(), CreateNegotiationStageClockInput, isNegotiationStageDue(), NegotiationStageClock, NegotiationStageClockError (+48 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.02
-Nodes (200): advanceAiContractLifecycle(), AffordableAiTerms, AiContractDecisionReason, aiRenewalDecision(), clubPlayerKey(), contractNegotiationsForContract(), contractNegotiationsForPlayer(), createAiContractLifecycleIndex() (+192 more)
+Nodes (246): advanceAiContractLifecycle(), AffordableAiTerms, AiClubStructuralDepth, AiContractDecisionReason, AiContractLifecycleIndex, aiRenewalDecision(), clubPlayerKey(), contractNegotiationsForContract() (+238 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.07
-Nodes (36): action(), buildActions(), buildBlockerKeys(), buildCareerMatchdayView(), BuildCareerMatchdayViewInput, buildFixtureView(), buildMatchdayStatus(), buildNextStopView() (+28 more)
+Cohesion: 0.01
+Nodes (259): result, markup, markup, applyCareerWeeklyRecovery(), assertRecoverablePlayerIds(), containsSelectedClubInOrder(), findNextCareerFixture(), findNextFixtureEligibilityBlockers() (+251 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.07
-Nodes (47): benchSlotStatus(), BLOCKER_ORDER, buildBenchSlotView(), buildBenchView(), buildBlockerKeys(), buildCareerMatchPreparationView(), buildFormationView(), buildLineupSlotView() (+39 more)
+Cohesion: 0.04
+Nodes (63): benchSlotStatus(), BLOCKER_ORDER, buildBenchSlotView(), buildBenchView(), buildBlockerKeys(), buildCareerMatchPreparationView(), BuildCareerMatchPreparationViewInput, buildFormationView() (+55 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.02
-Nodes (118): ProgressCareerFixtureResult, buildPresenterPhaseView(), consequencesIndex, fixture, halfTimeState, invalid, markup, minuteForPresenterPhase() (+110 more)
+Cohesion: 0.03
+Nodes (84): progressStagedMatchToHalfTime(), AbilityValue, applyDemoHalfTimeSubstitutions(), asClubId(), asCompetitionId(), asFixtureId(), asGameDate(), asMoney() (+76 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.01
-Nodes (319): AskingPriceCurvesConfig, MarketBehaviorCalibrationConfig, PlayerPotentialProjectionPolicyConfig, AdvanceCareerMonthsResult, CareerMonthlyLifecycleSummary, AdvanceCareerCompletedSeasonMode, advanceCareerOneSeason(), AdvanceCareerOneSeasonAdvanced (+311 more)
+Nodes (303): CareerActivePlayerStockEntry, advanceCareerMonths(), AdvanceCareerMonthsResult, CareerMonthlyLifecycleSummary, civilDateFromEpochDay(), eligibleOpenParticipationRows(), ledgerForEligibleRows(), mergeClosedMonths() (+295 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.05
-Nodes (67): applyHalfTimeSubstitutions(), ApplyHalfTimeSubstitutionsInput, ApplyHalfTimeSubstitutionsResult, HalfTimeSubstitutionInvalidReason, HalfTimeSubstitutionsApplied, HalfTimeSubstitutionsInvalid, hasDuplicatePlayers(), invalid() (+59 more)
+Cohesion: 0.03
+Nodes (87): buildCareerPostaView(), BuildCareerPostaViewInput, buildPostaFactRows(), CareerInboxActionInput, CareerInboxMessageActionView, CareerInboxView, CareerInboxViewCategory, CareerPostaAttentionLevel (+79 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.03
-Nodes (109): CliPlayer, assertUniquePlayers(), derivePublicPlayerAssessments(), PlayerGenerationEconomyAudit, PlayerPotentialOutcomeAudit, PlayerPotentialOutcomeObservation, PotentialProjectionPolicyCalibrationBand, abilityValues() (+101 more)
+Cohesion: 0.02
+Nodes (205): selectAskingPriceCurves(), selectPlayerValuationConfig(), addUniqueEntry(), promotionCandidateStockEntry(), selectCareerActivePlayerStock(), unreachableYouthPlayerStatus(), formatCareerSquadOutput(), formatCareerYouthAcademyOutput() (+197 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.04
-Nodes (77): assertValidContractOfferTerms(), ContractDemandSnapshot, ContractOfferEvaluation, counterResponseClock(), createNegotiationStageClock(), CreateNegotiationStageClockInput, isNegotiationStageDue(), isNegotiationStageExpired() (+69 more)
+Nodes (49): createWebTranslator(), italian, translateWebLabel(), CareerInboxViewPriority, CareerInboxViewStatus, CareerInboxPanel(), CareerInboxPanelProps, button (+41 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.03
-Nodes (121): CareerMatchdayLiveControlInput, LiveMatchEvent, FixtureRunResult, LiveMatchControlFixtureSetup, addUnavailablePlayer(), advanceProgressiveMatchMinute(), AdvanceProgressiveMatchMinuteOptions, AppliedLiveMatchCommandFact (+113 more)
+Cohesion: 0.01
+Nodes (207): ClubCompetitiveTierState, ClubCompetitiveTierStateError, ClubCompetitiveTierStateErrorCode, createClubCompetitiveTierState(), createInitialClubCompetitiveTierState(), isClubCompetitiveTier(), CreateFreshCareerStateInput, createCareerPlayerAvailabilityState() (+199 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.03
-Nodes (90): broadcastLine(), CareerMatchdayScreen(), CareerMatchdayScreenProps, DemoTacticalBoardPlayer, eventKindLabelKey(), eventPlayerLine(), firstHalfViewFromHalfTime(), fixtureLine() (+82 more)
+Cohesion: 0.01
+Nodes (242): playerStateFixture(), ApplyCareerFixtureConditionConsequencesInput, ApplyCareerFixtureConditionConsequencesResult, before, first, firstResult, input, playerStateFixture() (+234 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.03
-Nodes (181): AiOfferReservations, applyCareerFreeAgentSigning(), AcceptedPermanentTransferDeal, activeContractFor(), applyCareerPermanentTransfer(), ApplyCareerPermanentTransferResult, applyPermanentTransferFeeFinance(), capacityTransferRejection() (+173 more)
+Cohesion: 0.02
+Nodes (230): PlayerRatingAbilityThreshold, PublicValueRatingAnchor, WageFinanceCalibrationConfig, RareProdigyCurrentRatingGuardrail, ContextualProspectCeilingCandidate, ContextualProspectCeilingAbilityInterval, ContextualProspectCurrentBand, LongRunAnomalyCheck (+222 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.04
-Nodes (57): buildCareerPostaView(), BuildCareerPostaViewInput, buildPostaFactRows(), CareerInboxActionInput, CareerInboxMessageActionView, CareerInboxView, CareerInboxViewCategory, CareerPostaAttentionLevel (+49 more)
+Cohesion: 0.02
+Nodes (170): CareerScreenPresentationInput, CareerScreenPresentations, fixture, HookProbe(), input, useCareerScreenPresentations(), copyMatchContext(), createStagedMatchCheckpoint() (+162 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.04
@@ -1850,51 +2660,51 @@ Nodes (44): Added Diagnostics, Adopted Rework, Adopted Solution, Aggregate Resul
 
 ### Community 20 - "Community 20"
 Cohesion: 0.03
-Nodes (55): advanceIo, afterInspectIo, applyIo, assessment, assessments, beforeInspectIo, budgetBeforeAdvance, CapturedIo (+47 more)
+Nodes (59): advanceIo, afterInspectIo, applyIo, assessment, assessments, beforeInspectIo, budgetBeforeAdvance, CapturedIo (+51 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.03
-Nodes (85): TacticalBoardMenuCandidate, TacticalBoardMenuCandidatePlayer, TacticalBoardMenuRoleOption, TacticalBoardSuitabilityLevel, TacticalBoardTokenPlayer, benchStatusLabelKey(), formatFitness(), formatFitnessPercent() (+77 more)
+Nodes (104): playerEconomyCalibration, playerValuationConfig, selectMarketBehaviorCalibration(), selectPlayerDevelopmentEnvironmentConfig(), selectPlayerPotentialProjectionPolicy(), selectPlayerWagePolicyConfig(), valuationCompatibleRatingScale, careerMoneyFromMinorUnits() (+96 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.04
-Nodes (86): createFakeDomesticWorld(), DOMESTIC_DIVISIONS, exceptionalCandidates(), FAKE_DOMESTIC_COMPETITION_IDS, FakeDomesticWorld, FakeDomesticWorldOptions, GeneratedDomesticDivision, GeneratedDomesticDivisionPlayers (+78 more)
+Cohesion: 0.06
+Nodes (52): matchRngKeyParts(), addUnavailablePlayer(), advanceProgressiveMatchMinute(), applyConfirmedProgressiveTeamChanges(), ApplyValidatedLiveMatchCommandResult, availabilityAfterIncidents(), continueInjuredPlayer(), copyAvailability() (+44 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.02
-Nodes (158): copyMatchContext(), createStagedMatchCheckpoint(), MATCH_PREPARATION_TACTIC_PROFILES, markup, state, view, advanceWebLiveMatchdayMinute(), AdvanceWebLiveMatchdayMinuteResult (+150 more)
+Cohesion: 0.03
+Nodes (98): LivePlayerMatchProjection, MATCH_PREPARATION_TACTIC_PROFILES, AdvanceWebLiveMatchdayMinuteResult, AppliedMatchSubstitution, applyOpponentAiInGameDecisions(), applyWebLiveMatchTeamChanges(), ApplyWebLiveMatchTeamChangesResult, balancedTactic() (+90 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.06
-Nodes (34): afterFirst, base, baseSession(), currentGoalkeeper, currentTeam, firstChange, initial, input (+26 more)
+Cohesion: 0.04
+Nodes (73): buildCurrentTeamContext(), createFakeLiveMatchControlWorld(), createFixtureSetup(), createLiveMatchControlReport(), CreateLiveMatchControlReportInput, createLiveTeam(), FakePlayerId, FakePlayerState (+65 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.07
-Nodes (37): CAREER_MATCH_PREPARATION_FORMATIONS, ActivePlayerContract, contractBonusFields(), ContractNegotiation, ContractNegotiationState, ContractOfferTerms, indexContractHistory(), indexLatestContractNegotiations() (+29 more)
+Cohesion: 0.02
+Nodes (99): action(), buildCareerDashboardView(), BuildCareerDashboardViewInput, buildConditionSummary(), buildContextView(), buildDashboardActions(), buildLeagueResultsView(), buildLeagueTableView() (+91 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.07
-Nodes (32): abilitiesFixture(), activated, activeContract(), advanceAiContractLifecycle(), advancePreliminaryAgreementLifecycle(), agreed, allowed, blocked (+24 more)
+Cohesion: 0.01
+Nodes (358): AnnualWagePolicy, AskingPriceCurvesConfig, CalibratedAnnualWageInput, ContractTermsPolicy, MarketBehaviorCalibrationConfig, PlayerDevelopmentEnvironmentConfig, AdvanceCareerMonthsInput, deriveContractDemand() (+350 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.05
 Nodes (38): Adopted Behavior, Adopted Contract, Career Matchday Condition Audit, code:bash (pnpm cli career --save=phase41-check --summary), code:text (S.S. Perugia: tracked effect=negative affected=11), Commands Reviewed, Existing Systems To Reuse, Explanation Output (+30 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.02
-Nodes (178): PlayerRatingScaleConfig, AdvanceCareerMonthsInput, AdvanceCareerReportRefreshMode, CareerCompetitionSeasonArchiveFact, CareerYouthIntakeCandidateProviderContext, PreparedSeasonContextValid, abilitySet(), adapterReport (+170 more)
+Cohesion: 0.03
+Nodes (123): CareerMatchdayLiveControlInput, LiveMatchEvent, MatchEventSide, TacticMentalityKey, LiveMatchControlFixtureSetup, PlayerMatchInvolvementSummary, AppliedLiveMatchCommandFact, applyValidatedLiveMatchCommand() (+115 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.01
-Nodes (294): AiClubStructuralDepth, deriveContractDemand(), accumulateDiagnosticFacts(), activeAiTalkCount(), activeContractsByPlayer(), advanceAiMarketLifecycle(), AiMarketDiagnosticReason, AiMarketNeed (+286 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.10
-Nodes (20): aggregateMatches(), context, equal, first, goalCounts, GOLDEN_MATCH_RESULT, MatchFlowAggregate, profiledContext() (+12 more)
+Cohesion: 0.01
+Nodes (460): AiOfferReservations, seniorSquadFixture(), AiTransferAffordabilitySnapshot, canonicalClubFinanceState(), canonicalSeniorSquadState(), applyCareerFreeAgentSigning(), ApplyCareerFreeAgentSigningResult, CareerFreeAgentSigningApplied (+452 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.04
-Nodes (78): AnnualWagePolicy, CurrentGameMarketCategoryBaseline, OpeningClubFinanceTarget, PlayerMarketProspectSample, WageFinanceDivisionSourceBaseline, WageFinanceDivisionTarget, ClubCategory, CareerIntakeClubContext (+70 more)
+Cohesion: 0.03
+Nodes (112): applyCareerFixtureConditionConsequences(), CareerFixtureConditionChange, SettleFixtureContractBonusesInput, createMatchConsequenceInboxMessages(), applyCareerMatchStateConsequences(), ApplyCareerMatchStateConsequencesResult, assertUniquePlayerId(), CareerMatchPlayerStateConsequence (+104 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.02
@@ -1913,20 +2723,20 @@ Cohesion: 0.10
 Nodes (19): Active match checkpoint, Audit Conclusion, Career systems, code:text (Cross-Origin-Opener-Policy: same-origin), code:text (initialize -> list summaries), Commit Points And Atomicity, Current Ownership Map, Decision Summary (+11 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.10
-Nodes (17): LegacyCeilingPlayerAssessment, PublicPlayerAssessment, PublicPlayerAssessmentError, PublicPlayerAssessmentErrorCode, PublicPlayerPotentialProjection, PublicPlayerStarAssessment, [assessment], assessments (+9 more)
+Cohesion: 0.06
+Nodes (45): CliPlayer, calibrationBandExample(), calibrationGate(), createCell(), createPlayerPotentialOutcomeAudit(), CreatePlayerPotentialOutcomeAuditInput, createPotentialProjectionPolicyCalibration(), distribution() (+37 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.06
 Nodes (31): Blocking Decision, Budget Boundary For Market MVP, Calendar And Season Transition Dependencies, Candidate Shared Modules, Career Systems Dependency Map, Current State, Current State, Current State (+23 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.09
-Nodes (44): abilityNumber, askingPriceCurvesSchema, assertCompleteDivisions(), assertExactOrder(), assertMinimumMaximum(), assertNonDecreasing(), assertPercentileOrder(), assertStrictlyIncreasing() (+36 more)
+Cohesion: 0.07
+Nodes (54): assertExactObjectKeys(), PlayerEconomyCalibrationBundle, validatePlayerDevelopmentEnvironmentConfig(), validatePlayerPotentialProjectionPolicyConfig(), CLUB_DEVELOPMENT_ENVIRONMENT_KEYS, abilityNumber, askingPriceCurvesSchema, assertCompleteDivisions() (+46 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.06
-Nodes (34): 10. Generazione lega top-down a fasce, 11. Stagione: calendario deterministico + classifica derivata + tie-breaker, 12. Verità statistica: calibration targets hand-authored, 13. `MatchEvent`: contratto strutturato, sparso, language-agnostic, 14. Save: snapshot autoritativo, ritenzione per rilevanza, migrazioni, 15. Logica di flusso in `use-cases` pure; CLI guscio; `GameRuntime` rinviato, 16. Scaffolding (Step 0.2): le regole architetturali diventano build, 17. Stati dinamici (fatica/forma/morale): separati, persistiti, moltiplicatori limitati (+26 more)
+Nodes (35): 10. Generazione lega top-down a fasce, 11. Stagione: calendario deterministico + classifica derivata + tie-breaker, 12. Verità statistica: calibration targets hand-authored, 13. `MatchEvent`: contratto strutturato, sparso, language-agnostic, 14. Save: snapshot autoritativo, ritenzione per rilevanza, migrazioni, 15. Logica di flusso in `use-cases` pure; CLI guscio; `GameRuntime` rinviato, 16. Scaffolding (Step 0.2): le regole architetturali diventano build, 17. Stati dinamici (fatica/forma/morale): separati, persistiti, moltiplicatori limitati (+27 more)
 
 ### Community 40 - "Community 40"
 Cohesion: 0.06
@@ -1934,63 +2744,63 @@ Nodes (33): Accepted Skin, Alerts, Status, Loading, And Recovery, Broken Token R
 
 ### Community 41 - "Community 41"
 Cohesion: 0.01
-Nodes (294): advanceCareerMonths(), civilDateFromEpochDay(), eligibleOpenParticipationRows(), ledgerForEligibleRows(), mergeClosedMonths(), monthKeyForCareerDate(), monthlySummary(), roundSummaryDelta() (+286 more)
+Nodes (285): careerStateFixture(), clubFixture(), invalidState, lifecycle(), promotionCandidate, selected, selectedIds, seniorId (+277 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.06
-Nodes (35): assistTeam(), before, blockEvents, context, expectedPlayerId, first, firstRunKickoff, firstRunNoEvent (+27 more)
+Cohesion: 0.04
+Nodes (54): assertKnobWithinCap(), assertNonEmptySeed(), assertTacticalDistributionWithinCaps(), assertValidFixtureId(), assertValidMatchContext(), assertValidTeamContext(), buildMatchRngKey(), incidentProfileValues() (+46 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.05
-Nodes (55): aggregatePlayerRows(), assertCount(), assertCoverage(), buildCareerPlayerSeasonStatistics(), BuildCareerPlayerSeasonStatisticsInput, CareerPlayerSeasonStatistics, CareerPlayerSeasonStatisticsRow, CareerPlayerStatisticsContractError (+47 more)
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.07
 Nodes (29): Attacking Midfielder, Attribute Classification, Center Back, Central Midfielder, code:text (Third division senior), code:text (Youth 15-17 in third division), Defensive Midfielder, Development Model Rule (+21 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.02
-Nodes (160): action(), buildActions(), buildCareerMatchdayPhaseView(), CareerMatchdayHalfTimeSubstitutionInput, CareerMatchdayPhaseActionId, CareerMatchdayPhaseActionStatus, CareerMatchdayPhaseActionView, CareerMatchdayPhaseEventInput (+152 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.06
-Nodes (44): compareNumbers(), comparePlayerOptionsByPosition(), DEPARTMENT_BY_POSITION, FALLBACK_CODE_BY_ROLE, FALLBACK_DEPARTMENT_BY_ROLE, FALLBACK_POSITION_BY_ROLE, playerDepartment(), playerPositionCode() (+36 more)
+Cohesion: 0.09
+Nodes (28): buildAttributeGroups(), buildCareerPlayerDetailView(), buildRoleViews(), CareerPlayerAttributeFamily, CareerPlayerAttributeGroupView, CareerPlayerAttributeView, CareerPlayerDetailInput, CareerPlayerDetailView (+20 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.06
 Nodes (34): Advance A Career Fixture, Canonical Player Lifecycle, CLI, code:text (apps/cli), code:text (content producer), code:text (structured engine/domain facts), Common Debugging Paths, Content (+26 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.09
-Nodes (39): playerEconomyCalibration, playerValuationConfig, selectAskingPriceCurves(), selectMarketBehaviorCalibration(), selectPlayerPotentialProjectionPolicy(), selectPlayerValuationConfig(), selectPlayerWagePolicyConfig(), valuationCompatibleRatingScale (+31 more)
+Cohesion: 0.02
+Nodes (140): applyBasisPoints(), AskingPriceFactorBand, CalibrationDataClassification, CalibrationSourceReference, CLUB_CATEGORIES, CurrentGameMarketBaseline, CurrentGameMarketCategoryBaseline, DEFENSIVE_WAGE_ROLES (+132 more)
 
 ### Community 49 - "Community 49"
 Cohesion: 0.06
-Nodes (67): activeContractsFor(), affordabilityTerms(), ageOn(), average(), clubDivision(), compareMarketLossSlice(), contractFinanceCheck(), countContractDateFacts() (+59 more)
+Nodes (68): ClubFinanceLedgerReason, activeContractsFor(), affordabilityTerms(), ageOn(), average(), clubDivision(), compareMarketLossSlice(), contractFinanceCheck() (+60 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.24
-Nodes (14): CURRENT_DIR, expectHoverAndBorderAlignment(), expectNoHorizontalOverflow(), expectPitchGrassStable(), expectSkinArtDirection(), expectStableSemanticColors(), expectThemeApplied(), inspectPalette() (+6 more)
+Cohesion: 0.04
+Nodes (61): GenerateSeasonalYouthIntakePlayersResult, GeneratedExceptionalProfile, GeneratedPlayerArchetypeKey, CurrentAbilityRarityLane, BuildContextualCurrentPlayerProfileInput, potentialRarityBudgetForDivision(), AnnualWorldIntakeExceptionalCandidate, AnnualWorldYoungExceptionalPlayer (+53 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.11
-Nodes (37): abilitiesFixture(), assertSupportedCareerCalibrationVersions(), buildAffordableScenario(), buildMarketDemoScenario(), buildStarRejectedScenario(), CareerMarketScenario, careerStateFromNewWorld(), CliFixture (+29 more)
+Cohesion: 0.05
+Nodes (46): age, archetype, assignedArchetypeCounts, assignments, bottomAverage, CAREER_START_EPOCH_DAY, civilDateParts(), clubContexts (+38 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.05
-Nodes (41): accepted, baseline, bench, career, carried, changedFormation, changedLineup, cleared (+33 more)
+Cohesion: 0.03
+Nodes (121): GeneratedPlayerPotentialClass, resolveGeneratedCurrentQualityProfile(), BuildCurrentPlayerProfileInput, buildRoutineCurrentPlayerProfile(), PlayerGenerationClubTier, allocateCappedReachablePotential(), AllocateCappedReachablePotentialInput, allocateContextualReachablePotential() (+113 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.07
-Nodes (26): CareerCurrentDate(), CareerCurrentDateProps, html, MatchdayTabellinoView, formatMatchdayEventPlayerLine(), incidentSymbol(), matchdayEventAccessibleLabel(), MatchdayTabellino() (+18 more)
+Cohesion: 0.04
+Nodes (45): AdvancedWebMatchdayMinute, carriedDraft, compatible, completed, completeWebCareerSeason(), contract, currentDate, entered (+37 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.08
-Nodes (37): careerMoneyFromMinorUnits(), ActiveContract, AskingPriceCurvesConfig, baseFinanceView(), buildNegotiationViews(), buildPendingExposure(), buildReadyMarketPresentation(), ClubId (+29 more)
+Cohesion: 0.03
+Nodes (81): acceptedIds, advanced, annualIntake, annualIntakeAudit, args, baseline, birthDate, cases (+73 more)
 
 ### Community 55 - "Community 55"
-Cohesion: 0.04
-Nodes (73): CareerMatchPreparationBenchSlotStatus, CareerMatchPreparationBlockerKey, CareerMatchPreparationLineupSlotStatus, DemoMatchPreparationPlayerFoot, getDemoMatchPreparationPlayerFact(), compareNumbers(), comparePlayerOptionsByPosition(), FALLBACK_POSITION_BY_ROLE (+65 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 56 - "Community 56"
 Cohesion: 0.07
@@ -2002,7 +2812,7 @@ Nodes (28): args, balanced, combined, defaultIo, defensive, demoIo, explanationI
 
 ### Community 58 - "Community 58"
 Cohesion: 0.03
-Nodes (145): markup, markup, CareerMatchPreparationBenchSlotInput, CareerMatchPreparationFormationInput, CareerMatchPreparationFormationSlotInput, CareerMatchPreparationPlayerOptionInput, CareerMatchPreparationTacticProfileInput, containsSelectedClubInOrder() (+137 more)
+Nodes (142): CareerState, GameDate, ContinuedWebCareer, CreatedWebCareer, PersistedWebMatchday, SavedWebMatchPreparation, planSqliteCareerMigrations(), SQLITE_CAREER_MIGRATIONS (+134 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.08
@@ -2010,15 +2820,15 @@ Nodes (23): Architecture Contract, code:bash (nvm use 24), Definition Of Done, E
 
 ### Community 60 - "Community 60"
 Cohesion: 0.02
-Nodes (86): Deferred - Finances Expansion And Poverty Loop MVP, Future Engine Backlog - Match Engine Feel And Tactical Input Effect Review, Future Phase - Web Career Persistence And Save Lifecycle Foundation, Future Web Backlog - Calendar, Fixtures, And Season Recap, Future Web Backlog - Inbox/Posta Decision Center, Future Web Backlog - Squad Screen And Player Memory Foundation, Operational Roadmap, Phase 62 - Engine Safety Net And Deterministic Regression Gates (+78 more)
+Nodes (90): Deferred - Finances Expansion And Poverty Loop MVP, Future Engine Backlog - Match Engine Feel And Tactical Input Effect Review, Future Phase - Web Career Persistence And Save Lifecycle Foundation, Future Web Backlog - Calendar, Fixtures, And Season Recap, Future Web Backlog - Inbox/Posta Decision Center, Future Web Backlog - Squad Screen And Player Memory Foundation, Operational Roadmap, Phase 62 - Engine Safety Net And Deterministic Regression Gates (+82 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.04
-Nodes (92): ShotChanceType, ShotType, AggregateOccasionResolver, clamp(), deriveOpportunityQuality(), resolveGoalProbability(), teamBySide(), ChanceActors (+84 more)
+Cohesion: 0.03
+Nodes (76): simulateFixtureAndCreateReport(), MatchEvent, copyStats(), createMatchReport(), blockEvents, goalCounts, goalEvents, report (+68 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.06
-Nodes (46): assertUniquePlayers(), benchPlacementValue(), buildActions(), buildCareerSquadView(), BuildCareerSquadViewInput, buildDetailedLineupChoices(), buildPlacement(), buildPlayerRow() (+38 more)
+Cohesion: 0.02
+Nodes (230): sideStats(), team(), validCheckpoint(), validContext(), validTeam(), DeriveAiTransferOfferFeeInput, abilitySet(), advanceAiMarketLifecycle() (+222 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.08
@@ -2037,8 +2847,8 @@ Cohesion: 0.10
 Nodes (20): `app/`, code:text (apps/web/src/), Current File Migration Map, Decision, `features/app-entry/`, `features/career-shell/`, `features/dashboard/`, `features/match-preparation/` (+12 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.03
-Nodes (97): emptyAbilities(), CareerPlayerAttributeView, CareerPlayerAttributeView, abilitySet(), abilitySet(), playerFixture(), primaryRoleForPosition(), roleShapedAbilities() (+89 more)
+Cohesion: 0.07
+Nodes (34): abilitiesFixture(), applied, ATTACKING_ROLES, attackingOption, awayBench(), awayXi(), baseHome, baseState (+26 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.18
@@ -2049,8 +2859,8 @@ Cohesion: 0.06
 Nodes (35): dependencies, comlink, @fontsource-variable/mulish, @fontsource-variable/rokkitt, @game/content, @game/engine, @game/i18n, @game/shared (+27 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.07
-Nodes (33): applyBasisPoints(), AskingPriceFactorBand, CalibrationDataClassification, CalibrationSourceReference, ContractTermsPolicy, CurrentGameMarketBaseline, DEFENSIVE_WAGE_ROLES, deriveCalibratedAnnualWage() (+25 more)
+Cohesion: 0.04
+Nodes (73): CareerDashboardRecentMatchInput, buildCareerDashboardViewFromCareerState(), buildRecentSelectedClubMatch(), buildSelectedClubTableRow(), CliFixture, CliFixtureId, formatActionLines(), formatBlockerKey() (+65 more)
 
 ### Community 71 - "Community 71"
 Cohesion: 0.09
@@ -2101,8 +2911,8 @@ Cohesion: 0.13
 Nodes (14): Accessibility Review, Architecture Review, Code Quality Review, Dependency Review, Football Identity Review, Fun And Agency Review, Improvement Decision, Known Non-Blocking Issues (+6 more)
 
 ### Community 83 - "Community 83"
-Cohesion: 0.13
-Nodes (28): summarizePlayerDevelopmentAbilities(), playerPotentialRoom(), currentRoleStrength(), addRoleCoherenceWarnings(), buildPlayerGenerationQualityReport(), buildYouthAcademyQualityReport(), ClubId, clubLabel() (+20 more)
+Cohesion: 0.14
+Nodes (27): summarizePlayerDevelopmentAbilities(), currentRoleStrength(), addRoleCoherenceWarnings(), buildPlayerGenerationQualityReport(), buildYouthAcademyQualityReport(), ClubId, clubLabel(), currentRolePeak() (+19 more)
 
 ### Community 84 - "Community 84"
 Cohesion: 0.10
@@ -2117,8 +2927,8 @@ Cohesion: 0.10
 Nodes (19): code:bash (pnpm cli simulate-season --seed=world-a --player-generation-), Complexity And Ownership, Diagnostic: 50 worlds x 10 seasons, Duplicate And Dead-Path Closeout, Executive Result, Fixed-Seed Comparison, Gate Classification, Lifecycle And Market Inspection (+11 more)
 
 ### Community 87 - "Community 87"
-Cohesion: 0.05
-Nodes (47): generateCompetitionSeasonDistribution(), accounts, cash, cashBalances, cashMedians, distribution, first, firstHalf (+39 more)
+Cohesion: 0.02
+Nodes (133): App(), PreparationNavigationIntent, CareerAppFrame(), CareerAppFrameProps, CareerExitDialogState, html, SaveLifecycleProbe(), shellView (+125 more)
 
 ### Community 88 - "Community 88"
 Cohesion: 0.11
@@ -2137,12 +2947,12 @@ Cohesion: 0.04
 Nodes (44): AI Participation Is Still Too Thin For Development, Baseline Commands, Career Development Baseline, CLI And Simulation Tools, code:bash (nvm use 24), code:bash (pnpm cli career --save=phase75-baseline-a --seed=phase75-bas), code:bash (pnpm cli ten-season-report --seed-prefix=phase75-baseline --), code:text (7f979b773a3d0d96eb6035f3096c5a2353100f57b9b99387b1a149b8bad3) (+36 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.12
-Nodes (33): ageDistributionCheck(), average(), championDominanceCheck(), championStreakFailThreshold(), championStreakWarnThreshold(), check(), createLongRunAnomalyReport(), CreateLongRunAnomalyReportInput (+25 more)
+Cohesion: 0.05
+Nodes (60): ageDistributionCheck(), average(), championDominanceCheck(), championStreakFailThreshold(), championStreakWarnThreshold(), check(), createLongRunAnomalyReport(), CreateLongRunAnomalyReportInput (+52 more)
 
 ### Community 93 - "Community 93"
-Cohesion: 0.05
-Nodes (59): FormatCareerDashboardOutputInput, collectCurrentSeasonDetails(), generateNextSeasonCalendar(), remapFixtureIds(), totalPlayerAbilityDelta(), applyLineupDemoProfile(), buildFirstTeamSelectedLineup(), buildRotatedLineup() (+51 more)
+Cohesion: 0.16
+Nodes (19): accumulateFixtureTotals(), accumulateSeasonTotals(), accumulateUpset(), assertValidBatchInput(), CalibrationMetricResult, CalibrationReport, CalibrationSeasonSummary, CalibrationTotals (+11 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.11
@@ -2157,28 +2967,28 @@ Cohesion: 0.11
 Nodes (17): Anomaly Aggregation And Warning Status Semantics, CLI Command Parsing, CLI Section Rendering, Current Shape, Files Reviewed, Localized Text, Long-Run Simulation Execution, Low-Risk Step 02 Boundary (+9 more)
 
 ### Community 97 - "Community 97"
-Cohesion: 0.03
-Nodes (77): action(), buildCareerDashboardView(), BuildCareerDashboardViewInput, buildConditionSummary(), buildContextView(), buildDashboardActions(), buildLeagueResultsView(), buildLeagueTableView() (+69 more)
+Cohesion: 0.02
+Nodes (199): ProgressCareerAiTeamSelectionInput, MatchTacticalDistributionInput, assertValidRequiredLineupSize(), buildTacticTeamContext(), createMatchPlayerIncidentProfile(), createSelectedLineupOrThrow(), createTacticSetupOrThrow(), mapDomainContractErrorCode() (+191 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.13
-Nodes (26): assertAbilities(), assertRolePositionMatch(), createPlayer(), CreatePlayerInput, fail(), PLAYER_POSITIONS, PlayerConstructionError, PlayerConstructionErrorCode (+18 more)
+Cohesion: 0.04
+Nodes (103): MatchScore, BlockMatchEvent, FoulMatchEvent, FullTimeMatchEvent, GoalMatchEvent, HalfTimeMatchEvent, InjuryMatchEvent, KickoffMatchEvent (+95 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.11
 Nodes (18): dependencies, @game/content, @game/engine, @game/i18n, @game/shared, @game/simulation-tools, @game/storage, @game/ui (+10 more)
 
 ### Community 100 - "Community 100"
-Cohesion: 0.24
-Nodes (16): buildFormationFitReportForCli(), ClubId, clubLabel(), firstGeneratedClubId(), formatFormationDepartment(), formatFormationFitNote(), formatFormationFitOutput(), formatFormationFitTarget() (+8 more)
+Cohesion: 0.03
+Nodes (86): generateDomesticSeniorPlayers(), openingPlayerGenerationClubContexts(), canUseName(), ClubNameUsage, createClubNameUsage(), createLeagueNameUsage(), currentAbilityRarityLaneForArchetype(), currentAbilityRarityLaneForGeneratedArchetype() (+78 more)
 
 ### Community 101 - "Community 101"
 Cohesion: 0.17
 Nodes (11): Accepted Skins, Accessibility And Visual QA, code:text (/tmp/the-long-season-phase61), Next Phase Recommendation, Non-Themeable Proof, Removed And Migrated Skins, Residual Risks, Token Taxonomy (+3 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.02
-Nodes (137): applyCareerFixtureConditionConsequences(), SettleFixtureContractBonusesInput, applyCareerMatchStateConsequences(), assertUniquePlayerId(), CareerMatchPlayerStateConsequence, CareerMatchStateConsequenceError, CareerMatchStateConsequenceErrorCode, CareerMatchStateConsequenceReasonKey (+129 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.15
@@ -2205,8 +3015,8 @@ Cohesion: 0.27
 Nodes (15): changeFormation(), completePreparation(), CURRENT_DIR, expectKeyboardPath(), expectNoHorizontalOverflow(), expectPitchSlotNoOverlap(), expectPitchSlotsInsidePitch(), expectSvgPitchBackground() (+7 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.09
-Nodes (24): assertUniqueTargets(), buildCareerMarketTargetCatalog(), CareerMarketTargetDetailInput, CareerMarketTargetSortKey, filterCareerMarketTargetRows(), paginateCareerMarketTargetRows(), sortCareerMarketTargetRows(), abilities() (+16 more)
+Cohesion: 0.11
+Nodes (30): isYoungPlayer(), buildDerivationKey(), hashStringToSeedWords(), RngKeyPart, first, sampleSequence(), second, seed (+22 more)
 
 ### Community 110 - "Community 110"
 Cohesion: 0.06
@@ -2225,8 +3035,8 @@ Cohesion: 0.10
 Nodes (19): Absolute Bans, Beta Save Compatibility Rules, code:sh (printf 'import "@game/engine";\nexport {};\n' > packages/sto), code:sh (printf '/** Temporary lint fixture. */\nexport function forb), Content Generation Quality Rules, Definition Of Done, Determinism Rules, Early Phase Scope Guard (+11 more)
 
 ### Community 114 - "Community 114"
-Cohesion: 0.17
-Nodes (11): 1. Visione e identità ✅, 21. Business e distribuzione ✅, 22. Architettura tecnica e analisi dello stack ✅, 2. Modalità e progressione ✅, A. Fondamenta, Appendice — Spunti emersi nel brainstorm (non vincolanti), Documento di design — "The Long Season" (nome di lavoro), F. Fuori dal gioco (+3 more)
+Cohesion: 0.12
+Nodes (15): 1. Visione e identità ✅, 21. Business e distribuzione ✅, 22. Architettura tecnica e analisi dello stack ✅, 2. Modalità e progressione ✅, 3. Giocatori ✅ (lista tratti di lancio: rimandata alla fase contenuti), 4. Club e leghe ✅ (dettaglio regole per paese: lavoro di config, fase contenuti), 5. IA del mondo ✅ (comportamento di mercato dei club IA: si definisce nell'Area 14), A. Fondamenta (+7 more)
 
 ### Community 115 - "Community 115"
 Cohesion: 0.05
@@ -2269,16 +3079,16 @@ Cohesion: 0.13
 Nodes (14): Career CLI Smoke, code:sh (pnpm cli career --save=<saveId> --rollover-season), code:sh (pnpm exec vitest run apps/cli/src/commands/career.test.ts -t), code:sh (pnpm cli career --save=phase27-manual --seed=world-a --new-w), Completion, Implemented Model, Next Calendar, Phase 28 Readiness (+6 more)
 
 ### Community 125 - "Community 125"
-Cohesion: 0.04
-Nodes (64): ActiveMatchCheckpoint, ActiveMatchCheckpointError, ActiveMatchCheckpointErrorCode, ActiveMatchCheckpointPhase, ActiveMatchConversionBand, ActiveMatchEngineConfig, ActiveMatchInitialContext, ActiveMatchLineupSlot (+56 more)
+Cohesion: 0.10
+Nodes (35): CareerContractFinanceInput, CareerContractView, CareerMarketRoleFitInput, CareerMarketTargetRowView, assertValidProfileInput(), ATTRIBUTE_FAMILY_ORDER, buildAttributeGroups(), buildCareerPlayerProfileView() (+27 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.20
 Nodes (9): Accessibility Notes, Browser Coverage, code:sh (node --experimental-strip-types apps/web/src/visual-qa/share), code:text (/tmp/the-long-season-phase58), Conclusion, Interaction Checks, Match Preparation Tactical Workspace Visual QA, Residual Risks (+1 more)
 
 ### Community 127 - "Community 127"
-Cohesion: 0.10
-Nodes (22): PlayerPotentialProjectionAgeBand, PlayerPotentialProjectionRoleFamily, validatePlayerPotentialProjectionPolicyConfig(), derivePlayerPotentialProjection(), PlayerPotentialProjection, PlayerPotentialProjectionError, PlayerPotentialProjectionErrorCode, projectionBand() (+14 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 128 - "Community 128"
 Cohesion: 0.14
@@ -2906,15 +3716,15 @@ Nodes (10): Lifecycle Rules, Non-Goals, Phase 31 Baseline, Population Targets, R
 
 ### Community 284 - "Community 284"
 Cohesion: 0.05
-Nodes (68): AdvanceCareerLongRunSeasonContext, AdvanceCareerLongRunSeasonResult, CareerLongRunAdvancedSeasonObservation, CareerLongRunRefreshSummary, CareerLongRunSimulationResult, CreateCareerLongRunSeasonInputContext, runCareerLongRunSimulation(), LongRunContractFinanceSeasonRow (+60 more)
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 285 - "Community 285"
 Cohesion: 0.09
 Nodes (21): Allowed dependencies, Claude Code task prompt, Completed Corrective Phase, Completed User-Requested Phase, Current Active Phase, Current Documented Phase, Current State, Definition of Done (+13 more)
 
 ### Community 286 - "Community 286"
-Cohesion: 0.04
-Nodes (42): AdvancedWebMatchdayMinute, carriedDraft, compatible, completed, completeWebCareerSeason(), contract, currentDate, entered (+34 more)
+Cohesion: 0.02
+Nodes (152): attentionLevelRank(), CareerAttentionBlockerKey, CareerAttentionCategory, CareerAttentionContinuePolicy, CareerAttentionEvent, careerAttentionEventId, CareerAttentionEventInput, CareerAttentionLevel (+144 more)
 
 ### Community 287 - "Community 287"
 Cohesion: 0.20
@@ -2961,8 +3771,8 @@ Cohesion: 0.20
 Nodes (9): Accessibility Target, code:text (top navigation), Decision, Out Of Scope, Phase 50 Behavior To Preserve, Product Rationale, Shell Layout Scope, Step 02 Implication (+1 more)
 
 ### Community 298 - "Community 298"
-Cohesion: 0.07
-Nodes (30): 2026-07-29 — Phase 79D documentation, 2026-07-29 — Phase 79D independent-review corrections, 2026-07-29 — Phase 79D Step 02, 2026-07-29 — Phase 79D Step 03, 2026-07-29 — Phase 79D Step 03 execution-budget re-verification, 2026-07-29 — Phase 79D Step 04, 2026-07-29 — Phase 79D Step 05a, 2026-07-29 — Phase 79D Step 05a rework (+22 more)
+Cohesion: 0.04
+Nodes (50): 2026-07-29 — Phase 79D documentation, 2026-07-29 — Phase 79D independent-review corrections, 2026-07-29 — Phase 79D Step 02, 2026-07-29 — Phase 79D Step 03, 2026-07-29 — Phase 79D Step 03 execution-budget re-verification, 2026-07-29 — Phase 79D Step 04, 2026-07-29 — Phase 79D Step 05a, 2026-07-29 — Phase 79D Step 05a rework (+42 more)
 
 ### Community 299 - "Community 299"
 Cohesion: 0.20
@@ -4345,8 +5155,8 @@ Cohesion: 0.20
 Nodes (9): Accessibility Notes, Blockers, code:sh (node --experimental-strip-types apps/web/src/visual-qa/tacti), Command, Findings, Manual Review Recommendation, Scope, Screenshots (+1 more)
 
 ### Community 647 - "Community 647"
-Cohesion: 0.05
-Nodes (64): appEntryActionAvailability, AppEntryActionAvailabilityStatus, AppEntryActionId, appEntryActionResult, AppEntryUnavailableReasonKey, UiActionDetailValue, UiActionResult, UiActionResultStatus (+56 more)
+Cohesion: 0.04
+Nodes (71): appEntryActionAvailability, AppEntryActionAvailabilityStatus, AppEntryActionId, appEntryActionResult, AppEntryUnavailableReasonKey, UiActionDetailValue, UiActionResult, UiActionResultStatus (+63 more)
 
 ### Community 650 - "Community 650"
 Cohesion: 0.25
@@ -4561,8 +5371,8 @@ Cohesion: 0.20
 Nodes (9): Accessibility Notes, Browser QA Coverage, Canonical Formation Role Visual QA, code:sh (node --experimental-strip-types apps/web/src/visual-qa/tacti), code:text (/tmp/the-long-season-phase54), Decision, Findings, Residual Risk (+1 more)
 
 ### Community 703 - "Community 703"
-Cohesion: 0.02
-Nodes (147): ProgressCareerAiTeamSelectionInput, CliSeasonResult, createSelectedLineup(), createTacticSetup(), isTacticMentalityKey(), SelectedLineup, SelectedLineupSlot, TacticContractError (+139 more)
+Cohesion: 0.03
+Nodes (139): emptyAbilities(), candidateForPlayer(), squadPlayerCurrentAbility(), agingMultiplier(), applyPlayerAgingPolicy(), currentAbilityFloor(), goalkeeperAgingMultiplier(), goalkeeperRemainingRoom() (+131 more)
 
 ### Community 704 - "Community 704"
 Cohesion: 0.13
@@ -4637,8 +5447,8 @@ Cohesion: 0.14
 Nodes (13): Canonical Role Adaptation, Coordinate And State Contract, Integration Decisions, Match-Preparation Replacement, Next Phase Decision, Persistence Shape, Real Squad Adapter, Remaining Non-Blocking Risks (+5 more)
 
 ### Community 722 - "Community 722"
-Cohesion: 0.03
-Nodes (90): createWebTranslator(), italian, translateWebLabel(), buildDemoCareerDashboard(), buildDemoCareerDashboardInput(), NEXT_OPPONENT, SELECTED_CLUB, first (+82 more)
+Cohesion: 0.02
+Nodes (128): PlayerPotentialProjectionPolicyConfig, PlayerPotentialProjectionRoleFamily, PlayerRatingScaleConfig, ApplyPlayerAgingPolicyResult, abilities, abilitySet(), agedOut, assessment (+120 more)
 
 ### Community 723 - "Community 723"
 Cohesion: 0.28
@@ -4682,7 +5492,7 @@ Nodes (8): 09 - Phase Report And Next Phase Decision, code:sh (nvm use 24), Defi
 
 ### Community 733 - "Community 733"
 Cohesion: 0.05
-Nodes (60): addFailure(), assertFixtureSetup(), assertInitialLiveTeams(), assertPlayableTeamAfterDecision(), assertValidInput(), collectFixtureFailures(), collectFixtureSamples(), countEventsBySide() (+52 more)
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 734 - "Community 734"
 Cohesion: 0.22
@@ -4705,12 +5515,12 @@ Cohesion: 0.22
 Nodes (8): code:sh (git diff --check), Definition of Done, Expected files, Goal, Required checks, Step 01 - Current Palette Failure Review And Target Lock, What NOT to implement, What to implement
 
 ### Community 739 - "Community 739"
-Cohesion: 0.02
-Nodes (106): competitionIdForClub(), createDomesticCompetitionWorld(), DomesticCompetitionWorldError, DomesticCompetitionWorldErrorCode, fail(), club(), competition(), created (+98 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 740 - "Community 740"
-Cohesion: 0.02
-Nodes (143): CareerAppFrame(), CareerAppFrameProps, CareerExitDialogState, html, SaveLifecycleProbe(), shellView, text, AppShell() (+135 more)
+Cohesion: 0.07
+Nodes (44): BLOCKED_FICTIONAL_CLUB_NAMES, CLUB_CITY_POOLS, CLUB_CITY_TIER_WEIGHTS, CLUB_NAMING_SOURCES, ClubCityPoolTier, ClubCitySource, ClubCityTierWeight, ClubCountryCode (+36 more)
 
 ### Community 741 - "Community 741"
 Cohesion: 0.22
@@ -4753,8 +5563,8 @@ Cohesion: 0.14
 Nodes (13): Architecture target, Binding persistence decisions, Canonical save scope, code:text (React screens), Definition of Done, Goal, No-dead-code contract, Ordered steps (+5 more)
 
 ### Community 751 - "Community 751"
-Cohesion: 0.12
-Nodes (19): average(), createLongRunPlayerEvolutionReport(), CreateLongRunPlayerEvolutionReportInput, createTrajectoryDiagnostics(), LongRunPlayerMovementRow, LongRunPlayerProductionRow, LongRunPlayerSnapshotRow, LongRunPlayerTrajectoryCheck (+11 more)
+Cohesion: 0.05
+Nodes (58): CareerPlayerStatisticsSummaryInput, aggregatePlayerRows(), assertCount(), assertCoverage(), buildCareerPlayerSeasonStatistics(), BuildCareerPlayerSeasonStatisticsInput, CareerPlayerSeasonStatistics, CareerPlayerSeasonStatisticsRow (+50 more)
 
 ### Community 752 - "Community 752"
 Cohesion: 0.15
@@ -4773,12 +5583,12 @@ Cohesion: 0.22
 Nodes (8): code:sh (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Step 03 - Palette Reduction And Preference Migration, What NOT to implement, What to implement
 
 ### Community 756 - "Community 756"
-Cohesion: 0.04
-Nodes (66): App(), PreparationNavigationIntent, result, useCareerCommandRunner(), CareerScreenPresentationInput, CareerScreenPresentations, fixture, HookProbe() (+58 more)
+Cohesion: 0.05
+Nodes (62): removeTempSaveDirectory(), ProjectedLongRunAnomalyCheck, removeTempSaveDirectory(), removeTempSaveDirectory(), removeTempSaveDirectory(), mergePlayerDevelopmentCohortWorldSummaries(), PLAYER_DEVELOPMENT_COHORT_CONTRACT_VERSION, PlayerDevelopmentCohortWorldSummary (+54 more)
 
 ### Community 757 - "Community 757"
-Cohesion: 0.07
-Nodes (34): abilitiesFixture(), applied, ATTACKING_ROLES, attackingOption, awayBench(), awayXi(), baseHome, baseState (+26 more)
+Cohesion: 0.11
+Nodes (23): hasCareerContractExpiryAlert(), actionsForNegotiation(), assertUniqueHistory(), buildCareerContractView(), BuildCareerContractViewInput, buildDraftFields(), camelCaseBonus(), CareerActiveContractView (+15 more)
 
 ### Community 758 - "Community 758"
 Cohesion: 0.13
@@ -4865,8 +5675,8 @@ Cohesion: 0.17
 Nodes (11): Current Engine State, Current UI Read-Model State, Current Web State, Expected Source Files For Later Steps, In-Memory Decision, Question, Recommendation, Risks For Later Steps (+3 more)
 
 ### Community 779 - "Community 779"
-Cohesion: 0.09
-Nodes (21): PLAYER_ARCHETYPES_BY_ROLE, PLAYER_ROLES, PlayerArchetype, PlayerRoleIdentityError, adapted, identity, natural, player (+13 more)
+Cohesion: 0.07
+Nodes (28): classification, competitiveTierPolicyVersion, environmentKeyByCategoryAndTier, first_division, second_division, third_division, mid_table, playoff_contender (+20 more)
 
 ### Community 780 - "Community 780"
 Cohesion: 0.08
@@ -4881,8 +5691,8 @@ Cohesion: 0.18
 Nodes (10): Dashboard And Inbox/Posta After Play, How The App Reaches Matchday, Key Entry Points For Junior Developers, Next Phase Recommendation, Quality Review, Real Engine Facts Used, Residual Risks, Roadmap Updates (+2 more)
 
 ### Community 783 - "Community 783"
-Cohesion: 0.11
-Nodes (23): hasCareerContractExpiryAlert(), actionsForNegotiation(), assertUniqueHistory(), buildCareerContractView(), buildDraftFields(), camelCaseBonus(), CareerActiveContractView, CareerContractActionId (+15 more)
+Cohesion: 0.10
+Nodes (27): CareerMarketTargetCatalogView, CareerMarketTargetFilters, CareerMarketTargetInput, CareerMarketTargetSort, assertFinance(), assertUniqueNegotiations(), buildCareerMarketView(), CareerMarketFinanceView (+19 more)
 
 ### Community 784 - "Community 784"
 Cohesion: 0.10
@@ -5070,7 +5880,7 @@ Nodes (8): 07 - Section Quality Review And Phase Report, code:bash (nvm use 24),
 
 ### Community 830 - "Community 830"
 Cohesion: 0.05
-Nodes (61): ContinuedWebCareer, CreatedWebCareer, PersistedWebMatchday, SavedWebMatchPreparation, isWorkerError(), normalizeSqliteError(), SqliteCareerStorage, workerErrorCode() (+53 more)
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 831 - "Community 831"
 Cohesion: 0.13
@@ -5109,8 +5919,8 @@ Cohesion: 0.22
 Nodes (8): 01 - Current Matchday Flow And UI Audit, code:bash (nvm use 24), Done when, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 840 - "Community 840"
-Cohesion: 0.12
-Nodes (15): before, first, firstResult, negative, playerIds, playerStateFixture(), playerStates, rested (+7 more)
+Cohesion: 0.06
+Nodes (32): Age-17 joint profile, Aggregate results, Canonical 20-World Pre-Change Baseline, Canonical Age Semantics, Club category, reputation, and tier, code:bash (source "$HOME/.nvm/nvm.sh"), code:text (floor((currentDate - birthDate) / 365.2425)), Current Development Inventory (+24 more)
 
 ### Community 841 - "Community 841"
 Cohesion: 0.07
@@ -5189,8 +5999,8 @@ Cohesion: 0.11
 Nodes (17): 0. Sommario esecutivo, 1. Mappa del flusso (ciò che l'utente tocca davvero), 2.1 Prima partita ("a freddo" — preparazione inclusa), 2.2 Partita successiva ("a caldo" — già preparata), 2.3 Lettura del dato, 2. Quanti click e quanti pulsanti — *dal cruscotto al risultato finale*, 3. Il match centre: ben strutturato, ma non si "vive", 4. Navigazione e azioni: porte chiuse e pulsanti morti (+9 more)
 
 ### Community 860 - "Community 860"
-Cohesion: 0.15
-Nodes (13): aiLifecycle, averageQualityGap, expiringContractDays, goalkeeperAgingAge, maximumActiveTalks, maximumPermanentStartsPerSeason, maximumPreliminaryStartsPerSeason, maximumSquadAboveTarget (+5 more)
+Cohesion: 0.08
+Nodes (24): aiLifecycle, averageQualityGap, expiringContractDays, goalkeeperAgingAge, maximumActiveTalks, maximumPermanentStartsPerSeason, maximumPreliminaryStartsPerSeason, maximumSquadAboveTarget (+16 more)
 
 ### Community 861 - "Community 861"
 Cohesion: 0.12
@@ -5438,7 +6248,7 @@ Nodes (9): 13 - Playwright Refresh QA Architecture And Phase Report, code:bash (
 
 ### Community 922 - "Community 922"
 Cohesion: 0.05
-Nodes (46): seasonStartYearFromDate(), presentCareerInbox(), career, careerWithMatchdayMessage(), contract, countered, counteredCareer, message (+38 more)
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 923 - "Community 923"
 Cohesion: 0.22
@@ -5461,16 +6271,16 @@ Cohesion: 0.22
 Nodes (8): 11 - Demo Runtime Removal And Production Path Cleanup, code:bash (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 928 - "Community 928"
-Cohesion: 0.03
-Nodes (156): BuildCareerMatchdayPhaseViewInput, assertScoreAgreement(), buildLiveMatchProjection(), BuildLiveMatchProjectionInput, LiveMatchProjection, LiveMatchProjectionError, LiveMatchProjectionErrorCode, LivePlayerMatchProjection (+148 more)
+Cohesion: 0.08
+Nodes (35): SqliteCareerMigration, SqliteCareerSchemaVersionError, SqliteCareerSchemaVersionRelation, SQLITE_CAREER_ARCHIVE_STATISTICS_SCHEMA_STATEMENTS, SQLITE_CAREER_AVAILABILITY_SCHEMA_STATEMENTS, SQLITE_CAREER_COMPETITIVE_TIER_SCHEMA_STATEMENTS, SQLITE_CAREER_CONTRACT_NEGOTIATION_SCHEMA_STATEMENTS, SQLITE_CAREER_CORE_SCHEMA_STATEMENTS (+27 more)
 
 ### Community 929 - "Community 929"
-Cohesion: 0.10
-Nodes (29): removeTempSaveDirectory(), FORMATIONS, removeTempSaveDirectory(), removeTempSaveDirectory(), removeTempSaveDirectory(), am(), backFive(), backFour() (+21 more)
+Cohesion: 0.05
+Nodes (51): FORMATIONS, am(), backFive(), backFour(), backThree(), cm(), dm(), FORMATION_CATALOG (+43 more)
 
 ### Community 930 - "Community 930"
-Cohesion: 0.14
-Nodes (29): CliLineupDemoPlayerChange, Club, clubFixtures(), ClubId, clubLabel(), DemoOutputSeasonResult, findFixtureByValue(), findTableRow() (+21 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 931 - "Community 931"
 Cohesion: 0.14
@@ -5482,7 +6292,7 @@ Nodes (17): Architecture target, Calendar transition, code:text (structured care
 
 ### Community 933 - "Community 933"
 Cohesion: 0.12
-Nodes (21): applyMigrations(), assertBootstrapCareer(), errorMessage(), hasWorkerCode(), inTransaction(), isUnsupportedSchemaVersion(), normalizeWorkerOperationError(), queryAll() (+13 more)
+Nodes (22): applyMigrations(), assertBootstrapCareer(), errorMessage(), hasWorkerCode(), inTransaction(), isObsoleteBetaSchemaVersion(), isUnsupportedSchemaVersion(), normalizeWorkerOperationError() (+14 more)
 
 ### Community 934 - "Community 934"
 Cohesion: 0.10
@@ -5493,8 +6303,8 @@ Cohesion: 0.07
 Nodes (27): 1. One Global Public Rating, 2. Sixth-Star Presentation, 3. Division Expectations, 4. Exact Current Attributes For Now, 5. A Canonical Three-Division Career World, 6. Public Market Value, 7. Asking Price And Final Fee, 8. Economy And AI Must Move Together (+19 more)
 
 ### Community 936 - "Community 936"
-Cohesion: 0.06
-Nodes (54): lifecycle(), lifecycle(), buildCareerDashboard(), buildCareerDashboardInput(), buildCurrentLeagueTableRows(), compareFixtureChronology(), findCurrentSeasonPlayedFixtures(), findLatestLeagueRoundFixtures() (+46 more)
+Cohesion: 0.03
+Nodes (89): ActiveMatchCheckpoint, ActiveMatchCheckpointError, ActiveMatchCheckpointErrorCode, ActiveMatchCheckpointPhase, ActiveMatchConversionBand, ActiveMatchEngineConfig, ActiveMatchInitialContext, ActiveMatchLineupSlot (+81 more)
 
 ### Community 937 - "Community 937"
 Cohesion: 0.10
@@ -5509,8 +6319,8 @@ Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 940 - "Community 940"
-Cohesion: 0.04
-Nodes (81): createFakeSeasonInput(), createFakeTeamsByClubId(), buildFixtureExplanationTrace(), buildManualTacticFixture(), buildSetupOverrideContextForCli(), CliManualTacticFixture, CliTeamContext, ClubId (+73 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 941 - "Community 941"
 Cohesion: 0.14
@@ -5605,8 +6415,8 @@ Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Completion criteria, Contract requirements, Expected files, Goal, Required checks, Scope, Status (+2 more)
 
 ### Community 964 - "Community 964"
-Cohesion: 0.07
-Nodes (35): calibrationBandExample(), calibrationGate(), createCell(), createPlayerPotentialOutcomeAudit(), CreatePlayerPotentialOutcomeAuditInput, createPotentialProjectionPolicyCalibration(), distribution(), expectedCellKeys() (+27 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 965 - "Community 965"
 Cohesion: 0.18
@@ -5701,8 +6511,8 @@ Cohesion: 0.12
 Nodes (16): Authoritative Inputs, code:bash (nvm use 24), Definition Of Done, Finding Coverage, Goal, Implementation Discipline, Locked Product Contract, Ordered Steps (+8 more)
 
 ### Community 989 - "Community 989"
-Cohesion: 0.22
-Nodes (10): advanceClockUntilPlaybackStage(), assertDashboardPrimaryCommand(), assertNoTechnicalDashboardCopy(), capture(), captureDashboardStates(), clearDashboardAttention(), openDashboardWithoutAttention(), prepareMatch() (+2 more)
+Cohesion: 0.18
+Nodes (12): advanceClockUntilPlaybackStage(), assertDashboardPrimaryCommand(), assertNoTechnicalDashboardCopy(), assertPublicDevelopmentEnvironment(), capture(), captureDashboardStates(), clearDashboardAttention(), foregroundContrast() (+4 more)
 
 ### Community 990 - "Community 990"
 Cohesion: 0.12
@@ -5753,16 +6563,16 @@ Cohesion: 0.11
 Nodes (17): Adopted Solution, Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expected Files, Findings Closed, Goal, Implementation Contract (+9 more)
 
 ### Community 1002 - "Community 1002"
-Cohesion: 0.04
-Nodes (59): createRenewalNegotiationId(), MatchPreparationDraft, createWebMatchdayState(), WebMatchdayState, assertMatchingSave(), CareerSession, CareerSessionSnapshot, CareerSessionStatus (+51 more)
+Cohesion: 0.05
+Nodes (90): PlayerRoleIdentity, activeClubIdByPlayerId(), activeStockClubId(), annualExceptionalCandidates(), annualIntakeCeilingConstraint(), AnnualWorldIntakeCandidateProviders, AnnualWorldIntakeProviderDiagnostics, BatchNameUsage (+82 more)
 
 ### Community 1003 - "Community 1003"
 Cohesion: 0.01
-Nodes (109): ages, annualWage, annualWageDraft, ascendingAges, askingPriceText, askingPriceUnits, attributesTab, availableMenu (+101 more)
+Nodes (111): ages, annualWage, annualWageDraft, ascendingAges, askingPriceText, askingPriceUnits, attributesTab, availableMenu (+103 more)
 
 ### Community 1004 - "Community 1004"
-Cohesion: 0.06
-Nodes (37): 1. Negotiations own commercial facts, 2. The race owns coordination only, 3. One and many participants use the same path, 4. Persistence lands before behaviour depends on it, 5. The AI lifecycle remains a stable Interface, Accepted Product Decisions, Architecture Ownership, Atomic Boundaries (+29 more)
+Cohesion: 0.05
+Nodes (38): 1. Negotiations own commercial facts, 2. The race owns coordination only, 3. One and many participants use the same path, 4. Persistence lands before behaviour depends on it, 5. The AI lifecycle remains a stable Interface, Accepted Product Decisions, Architecture Ownership, Atomic Boundaries (+30 more)
 
 ### Community 1005 - "Community 1005"
 Cohesion: 0.15
@@ -5797,8 +6607,8 @@ Cohesion: 0.17
 Nodes (11): code:bash (nvm use 24), Completion criteria, Expected files, Final report requirements, Goal, Manual inspection, Required checks, Scope (+3 more)
 
 ### Community 1013 - "Community 1013"
-Cohesion: 0.06
-Nodes (51): calibrationV1SeasonCalibrationTargets, ContentCalibrationMetricKey, ContentCalibrationTarget, defaultSeasonCalibrationTargets, strictFailureSmokeTargets, formatSupportedCareerLineupDemoProfiles(), formatSupportedCareerTacticDemoProfiles(), formatSupportedMarketDemoProfiles() (+43 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1014 - "Community 1014"
 Cohesion: 0.18
@@ -5817,8 +6627,8 @@ Cohesion: 0.20
 Nodes (9): code:text (01 safety gate + task-first shell + focus), Dependency Order, Explicitly Deferred, Non-Negotiable Constraints, Phase 73B Exit Gate, Purpose, Severity Coverage, Source Evidence (+1 more)
 
 ### Community 1018 - "Community 1018"
-Cohesion: 0.11
-Nodes (26): bestPlayerSuitability(), bestSuitability(), buildDepthByPositionFamily(), buildFormationSquadFitReport(), buildSlotFit(), buildSquadFitHints(), buildSurplusGroups(), compareCandidates() (+18 more)
+Cohesion: 0.03
+Nodes (159): FormatCareerDashboardOutputInput, CareerDevelopmentReportFormatResult, CareerDevelopmentReportPlayerExample, CareerDevelopmentTrajectorySample, formatCareerDevelopmentReportOutput(), formatDelta(), formatDevelopmentExample(), formatTrajectorySample() (+151 more)
 
 ### Community 1019 - "Community 1019"
 Cohesion: 0.22
@@ -5973,8 +6783,8 @@ Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1057 - "Community 1057"
-Cohesion: 0.07
-Nodes (40): GenerateSeasonalYouthIntakePlayersResult, assertNaturalProfileFacts(), assertUniqueCandidateKeys(), BudgetedPlayerRarityKind, buildAnnualWorldIntakeExceptionalAllocation(), BuildAnnualWorldIntakeExceptionalAllocationInput, buildInitialWorldExceptionalAllocation(), BuildInitialWorldExceptionalAllocationInput (+32 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1058 - "Community 1058"
 Cohesion: 0.18
@@ -6082,7 +6892,7 @@ Nodes (8): Aggregate Metrics, Career Squad Refresh Long-Run Gates Report, code:b
 
 ### Community 1084 - "Community 1084"
 Cohesion: 0.03
-Nodes (61): abilities(), abilitiesFixture(), age14, age15, age45, age46, baseConfig, club (+53 more)
+Nodes (75): abilities(), abilitiesFixture(), age14, age15, age45, age46, assessment, assessmentFor() (+67 more)
 
 ### Community 1085 - "Community 1085"
 Cohesion: 0.15
@@ -6141,8 +6951,8 @@ Cohesion: 0.15
 Nodes (12): code:bash (nvm use 24), Completion Criteria, Expected Files, Goal, Implementation Contract, Manual Inspection, Required Checks, Scope (+4 more)
 
 ### Community 1099 - "Community 1099"
-Cohesion: 0.03
-Nodes (94): baseCareer, before, career, careerState, changedStarter, checkpoint, clubFixture(), commitCompletedCareerFixture() (+86 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1100 - "Community 1100"
 Cohesion: 0.15
@@ -6161,8 +6971,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1104 - "Community 1104"
-Cohesion: 0.09
-Nodes (25): acceptedPlan, alpha, attention, before, career, changedSlot, committed, created (+17 more)
+Cohesion: 0.08
+Nodes (25): 10. Derived Shape Is Not Career Truth, 11. AI Uses The Same Truth, 12. Manager Explanation Is Structured And Non-Prescriptive, 1. Keep The Aggregate Per-Minute Engine, 2. Separate Quality, Intrinsic Shape, And Relational Matchup, 2a. Lock The Quality-Versus-Structure Hierarchy Before Coefficients, 3. Use Typed Domain Vocabulary, 4. Diminishing Returns, Not Named Formation Penalties (+17 more)
 
 ### Community 1105 - "Community 1105"
 Cohesion: 0.15
@@ -6173,16 +6983,16 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1107 - "Community 1107"
-Cohesion: 0.12
-Nodes (21): buildFixtureParticipationContributions(), BuildFixtureParticipationContributionsResult, canonicalRoleForRoleKey(), civilDateFromEpochDay(), createContribution(), monthKeyForFixtureDate(), PlayerFixtureParticipationContribution, replacementRoleKey() (+13 more)
+Cohesion: 0.03
+Nodes (111): PlayerArchetype, GeneratedRoutinePlayerArchetypeKey, applySeniorCurrentQualityProfile(), applyTierModifier(), bucketForRoleAbility(), clamp(), clubTierModifier(), CurrentAbilityBandRange (+103 more)
 
 ### Community 1108 - "Community 1108"
-Cohesion: 0.05
-Nodes (41): CareerSquadColumnKey, CareerSquadPlacementOptionView, CareerSquadPlayerActionView, CareerSquadSort, DebouncedValueScheduler, DEFAULT_SCHEDULER, scheduleDebouncedValue(), cancel (+33 more)
+Cohesion: 0.10
+Nodes (20): Aggregate Metrics, Broadest Wage Pressure, Cash, Transfer Room And Pending Exposure, Closing Checkpoint Division Public Values, code:bash (nvm use 24), Cross-Tier Permanent Transfers, Dynasty Warning Snapshots, Highest Useful Free-Agent Stock (+12 more)
 
 ### Community 1109 - "Community 1109"
-Cohesion: 0.13
-Nodes (18): alpha, beforeClubIds, beforeFixtureIds, beforeFixtures, bravo, charlie, clubIds, fixtureIds (+10 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1110 - "Community 1110"
 Cohesion: 0.17
@@ -6209,12 +7019,12 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1116 - "Community 1116"
-Cohesion: 0.10
-Nodes (28): accumulateFixtureTotals(), accumulateSeasonTotals(), accumulateUpset(), assertValidBatchInput(), CalibrationMetricKey, CalibrationSeasonSummary, CalibrationTarget, CalibrationTotals (+20 more)
+Cohesion: 0.04
+Nodes (102): calibrationV1SeasonCalibrationTargets, ContentCalibrationMetricKey, ContentCalibrationTarget, defaultSeasonCalibrationTargets, strictFailureSmokeTargets, formatSupportedCareerLineupDemoProfiles(), formatSupportedCareerTacticDemoProfiles(), formatSupportedMarketDemoProfiles() (+94 more)
 
 ### Community 1117 - "Community 1117"
-Cohesion: 0.10
-Nodes (26): CareerMarketTargetCatalogView, CareerMarketTargetFilters, CareerMarketTargetSort, assertFinance(), assertUniqueNegotiations(), buildCareerMarketView(), CareerMarketFinanceView, CareerMarketNegotiationInput (+18 more)
+Cohesion: 0.06
+Nodes (33): InitialYouthAcademyClubContext, adequate, age, archetypes, baseInput, CAREER_START_EPOCH_DAY, civilDateParts(), completedCivilAge() (+25 more)
 
 ### Community 1118 - "Community 1118"
 Cohesion: 0.05
@@ -6229,20 +7039,20 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1121 - "Community 1121"
-Cohesion: 0.04
-Nodes (87): AnnualWorldIntakeCandidateProviders, AnnualWorldIntakeProviderDiagnostics, BatchNameUsage, CAREER_START_EPOCH_DAY, clubTierForReputation(), CreateAnnualWorldIntakeCandidateProvidersInput, createBatchNameUsage(), generateCareerIntakePlayers() (+79 more)
+Cohesion: 0.13
+Nodes (24): bestPlayerSuitability(), bestSuitability(), buildDepthByPositionFamily(), buildFormationSquadFitReport(), buildSlotFit(), buildSquadFitHints(), buildSurplusGroups(), compareCandidates() (+16 more)
 
 ### Community 1122 - "Community 1122"
-Cohesion: 0.15
-Nodes (13): applied, AWAY_STARTER_ONE, fullTime, halfTime, HOME_BENCH_ONE, HOME_BENCH_TWO, HOME_STARTER_ONE, HOME_STARTER_TWO (+5 more)
+Cohesion: 0.06
+Nodes (47): assertUniquePlayers(), benchPlacementValue(), buildActions(), buildCareerSquadView(), BuildCareerSquadViewInput, buildDetailedLineupChoices(), buildPlacement(), buildPlayerRow() (+39 more)
 
 ### Community 1123 - "Community 1123"
 Cohesion: 0.10
 Nodes (20): code:bash (nvm use 24), Completion Evidence, Definition Of Done, Division And Rarity, Economy, AI And Presentation, Entry Gate, Global Rating, Goal (+12 more)
 
 ### Community 1125 - "Community 1125"
-Cohesion: 0.17
-Nodes (9): before, constraints, current, empty, emptyIntake, input, invalid, ordering (+1 more)
+Cohesion: 0.03
+Nodes (110): addByGroup(), createCareerSeasonInput(), createCareerTeamsByClubId(), createFakeSeasonInput(), createFakeTeamsByClubId(), FakeCliClubId, FakeCliTeamContext, genericLineupForClub() (+102 more)
 
 ### Community 1126 - "Community 1126"
 Cohesion: 0.22
@@ -6257,12 +7067,12 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1129 - "Community 1129"
-Cohesion: 0.09
-Nodes (18): archivedTableRow, counterTerms, CURRENT_DIR, firstRuntime, invalidReplacement, loadedCounterMessage, localCareerKeys, marketContractIds (+10 more)
+Cohesion: 0.07
+Nodes (22): archivedTableRow, counterTerms, CURRENT_DIR, firstRuntime, invalidReplacement, loadedCounterMessage, localCareerKeys, marketContractIds (+14 more)
 
 ### Community 1130 - "Community 1130"
-Cohesion: 0.27
-Nodes (8): average(), createLongRunClubStabilityReport(), longestChampionStreak(), LongRunClubSeasonRow, LongRunRefreshTotals, mostTitledClub(), roundMetric(), report
+Cohesion: 0.10
+Nodes (20): Aggregate Metrics, Broadest Wage Pressure, Cash, Transfer Room And Pending Exposure, Closing Checkpoint Division Public Values, code:bash (nvm use 24), Cross-Tier Permanent Transfers, Dynasty Warning Snapshots, Highest Useful Free-Agent Stock (+12 more)
 
 ### Community 1131 - "Community 1131"
 Cohesion: 0.17
@@ -6285,20 +7095,20 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1136 - "Community 1136"
-Cohesion: 0.33
-Nodes (9): addByGroup(), createCareerSeasonInput(), createCareerTeamsByClubId(), FakeCliClubId, FakeCliTeamContext, genericLineupForClub(), positionGroup(), positionGroupForPlayer() (+1 more)
+Cohesion: 0.05
+Nodes (59): completeStagedMatchCheckpoint(), copyStats(), requiredShooter(), restoreMatchContext(), restoreStagedMatchCheckpoint(), restoreTeamContext(), halfTime, restored (+51 more)
 
 ### Community 1137 - "Community 1137"
-Cohesion: 0.18
-Nodes (10): askingPriceCurvesVersion, classification, openingFinanceRoundingMinorUnits, openingFinanceTargets, schemaVersion, sellerNegotiation, counterOfferConcessionBasisPoints, counterOfferMinimumAskingBasisPoints (+2 more)
+Cohesion: 0.06
+Nodes (30): affordability, maximumTransferBudgetUseBasisPoints, maximumWageBudgetUseBasisPoints, minimumCashReserveBasisPoints, aiRiskAppetite, toleranceBasisPointsByCategory, uncertaintyPenaltyWeight, aiTargetWeights (+22 more)
 
 ### Community 1138 - "Community 1138"
 Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1139 - "Community 1139"
-Cohesion: 0.38
-Nodes (6): abilities(), input, profileInput(), serialized, statisticsInput(), view
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1140 - "Community 1140"
 Cohesion: 0.17
@@ -6317,8 +7127,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1144 - "Community 1144"
-Cohesion: 0.47
-Nodes (3): assertPositiveSafeInteger(), resolveSimulationWorkerCount(), ResolveSimulationWorkerCountInput
+Cohesion: 0.10
+Nodes (20): Aggregate Metrics, Broadest Wage Pressure, Cash, Transfer Room And Pending Exposure, Closing Checkpoint Division Public Values, code:bash (nvm use 24), Cross-Tier Permanent Transfers, Dynasty Warning Snapshots, Highest Useful Free-Agent Stock (+12 more)
 
 ### Community 1145 - "Community 1145"
 Cohesion: 0.17
@@ -6395,6 +7205,10 @@ Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCou
 ### Community 1163 - "Community 1163"
 Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1164 - "Community 1164"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1165 - "Community 1165"
 Cohesion: 0.22
@@ -6533,12 +7347,12 @@ Cohesion: 0.14
 Nodes (13): Aggregate Metrics, Broadest Wage Pressure, code:bash (pnpm cli ten-season-report --seed-prefix=phase79-market-smok), Dynasty Warning Snapshots, Highest Useful Free-Agent Stock, Market And Economy Diagnostic Worlds, Phase 79A Acceptance Interpretation, Production Warning Snapshots (+5 more)
 
 ### Community 1199 - "Community 1199"
-Cohesion: 0.10
-Nodes (25): FormationSide, FormationSlot, ADAPTED_FAMILIES_BY_POSITION, ADAPTED_ROLES_BY_POSITION, bestSideBonus(), evaluatePositionSuitability(), evaluateSinglePositionSuitability(), isCoveringSuitability() (+17 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1200 - "Community 1200"
-Cohesion: 0.13
-Nodes (14): abilityThresholds, goalkeeper, outfield, classification, divisionFirstTeamBands, potentialProjectionPolicy, ageBandsByRoleFamily, classification (+6 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1201 - "Community 1201"
 Cohesion: 0.17
@@ -7993,12 +8807,12 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1564 - "Community 1564"
-Cohesion: 0.04
-Nodes (42): PlayerEconomyCalibrationValidationError, ageAssets, ageWage, anchorAssets, anchorCurves, assets, behavior, capAssets (+34 more)
+Cohesion: 0.03
+Nodes (56): PlayerEconomyCalibrationValidationError, ageAssets, ageWage, anchorAssets, anchorCurves, assets, behavior, capAssets (+48 more)
 
 ### Community 1565 - "Community 1565"
 Cohesion: 0.02
-Nodes (162): CareerContractBonusField, CareerContractTermsInput, careerNonNegativeMoneyFromMinorUnits(), CareerMarketSourceTier, CareerMarketTargetAction, CareerMarketTargetBlockReason, CareerMarketTargetDetailView, MarketOfferDraft (+154 more)
+Nodes (169): CareerContractBonusField, CareerContractTermsInput, careerNonNegativeMoneyFromMinorUnits(), CareerMarketSourceTier, CareerMarketTargetAction, CareerMarketTargetBlockReason, CareerMarketTargetDetailView, CareerSquadColumnKey (+161 more)
 
 ### Community 1566 - "Community 1566"
 Cohesion: 0.22
@@ -8029,16 +8843,16 @@ Cohesion: 0.22
 Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
 
 ### Community 1573 - "Community 1573"
-Cohesion: 0.08
-Nodes (36): MoneyPercentileDistribution, PlayerEconomyCalibrationVersionBundle, PlayerMarketDivisionBaseline, PlayerMarketDivisionTarget, countSourceLabels(), createPlayerMarketCalibrationReport(), CreatePlayerMarketCalibrationReportInput, deviationBasisPoints() (+28 more)
+Cohesion: 0.24
+Nodes (16): buildFormationFitReportForCli(), ClubId, clubLabel(), firstGeneratedClubId(), formatFormationDepartment(), formatFormationFitNote(), formatFormationFitOutput(), formatFormationFitTarget() (+8 more)
 
 ### Community 1574 - "Community 1574"
 Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 02 - Archetype-Compatible Exceptional Profile Construction (+1 more)
 
 ### Community 1575 - "Community 1575"
-Cohesion: 0.06
-Nodes (38): advancePlayerMatchRatingLedger(), applyShotOutcome(), buildPlayerMatchRatings(), clamp(), compareAscending(), compareDescending(), compareMutableRowsByRating(), compareMutableRowsBySideOrder() (+30 more)
+Cohesion: 0.04
+Nodes (92): BuildLiveMatchProjectionInput, LiveMatchProjection, LiveMatchProjectionError, LiveMatchProjectionErrorCode, livePlayerRegistration(), conversionMarker(), createMatchExplanationTrace(), CreateMatchExplanationTraceInput (+84 more)
 
 ### Community 1576 - "Community 1576"
 Cohesion: 0.11
@@ -8049,16 +8863,16 @@ Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 03 - Effective Initial-World Rarity Budgets And Assignment Truth (+1 more)
 
 ### Community 1578 - "Community 1578"
-Cohesion: 0.11
-Nodes (30): buildCareerDashboardViewFromCareerState(), buildRecentSelectedClubMatch(), buildSelectedClubTableRow(), CliFixture, CliFixtureId, formatActionLines(), formatBlockerKey(), formatBlockerLines() (+22 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1579 - "Community 1579"
 Cohesion: 0.12
 Nodes (15): Bounded Validation, code:bash (nvm use 24), Definition Of Done, Entry Gate, Goal, Honest Population And Finance Semantics, Locked Decisions, Observe Before Tuning (+7 more)
 
 ### Community 1581 - "Community 1581"
-Cohesion: 0.08
-Nodes (41): BLOCKED_FICTIONAL_CLUB_NAMES, CLUB_CITY_POOLS, CLUB_CITY_TIER_WEIGHTS, CLUB_NAMING_SOURCES, ClubCityPoolTier, ClubCitySource, ClubCityTierWeight, ClubCountryCode (+33 more)
+Cohesion: 0.06
+Nodes (54): assertTarget(), assertUniqueTargets(), buildCareerMarketTargetCatalog(), buildCareerMarketTargetDetailView(), buildTargetDetail(), buildTargetRow(), CareerMarketAvailability, CareerMarketContractHorizon (+46 more)
 
 ### Community 1582 - "Community 1582"
 Cohesion: 0.14
@@ -8085,8 +8899,8 @@ Cohesion: 0.22
 Nodes (8): `competition:demo-third-division` (Italian professional third tier demo), Determinism And Boundary Behavior (tested), Explicitly Not Shipped, Ownership, Phase 79C confirmed topology coverage, Playable Competitions, Purpose, Transfer Window Source Audit
 
 ### Community 1588 - "Community 1588"
-Cohesion: 0.06
-Nodes (32): indexPublicAssessments(), asPublicStarValue(), assertUniquePlayers(), CanonicalRoleAssessment, ClubLevelThresholds, deriveClubLevelThresholds(), derivePublicClubPlayerAssessments(), DerivePublicClubPlayerAssessmentsInput (+24 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1589 - "Community 1589"
 Cohesion: 0.15
@@ -8113,16 +8927,16 @@ Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 04 - Production Annual Intake Allocation And Longitudinal Caps (+1 more)
 
 ### Community 1595 - "Community 1595"
-Cohesion: 0.06
-Nodes (37): GENERATED_PLAYER_ARCHETYPE_KEYS, GENERATED_PLAYER_ARCHETYPES, GeneratedExceptionalProfile, GeneratedExceptionalProfileKind, GeneratedPlayerArchetype, GeneratedPlayerDepthRole, GeneratedPlayerPotentialClass, GeneratedPlayerRange (+29 more)
+Cohesion: 0.10
+Nodes (20): Aggregate Metrics, Broadest Wage Pressure, Cash, Transfer Room And Pending Exposure, Closing Checkpoint Division Public Values, code:bash (nvm use 24), Cross-Tier Permanent Transfers, Dynasty Warning Snapshots, Highest Useful Free-Agent Stock (+12 more)
 
 ### Community 1596 - "Community 1596"
 Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Result, Status (+2 more)
 
 ### Community 1597 - "Community 1597"
-Cohesion: 0.02
-Nodes (160): attentionLevelRank(), CareerAttentionBlockerKey, CareerAttentionCategory, CareerAttentionContinuePolicy, CareerAttentionEvent, careerAttentionEventId, CareerAttentionEventInput, CareerAttentionLevel (+152 more)
+Cohesion: 0.01
+Nodes (234): PlayerEconomyCalibrationVersionBundle, abilitySet(), advanceCareerMonths(), careerStateWithParticipation(), clubFixture(), currentDate, first, firstMonthKey (+226 more)
 
 ### Community 1598 - "Community 1598"
 Cohesion: 0.20
@@ -8131,6 +8945,10 @@ Nodes (9): code:bash (test -f design.md), Definition Of Done, Expected Files, Go
 ### Community 1599 - "Community 1599"
 Cohesion: 0.20
 Nodes (9): Adopted Data Contract, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 02 - Durable Player Career Statistics Archive (+1 more)
+
+### Community 1600 - "Community 1600"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1601 - "Community 1601"
 Cohesion: 0.20
@@ -8157,16 +8975,20 @@ Cohesion: 0.25
 Nodes (7): code:block1 (Error: expect(locator).toBeVisible() failed), code:yaml (- main:), code:ts (1455 |       await assertTabellinoFactsNotClipped(page, "red), Error details, Instructions, Test info, Test source
 
 ### Community 1607 - "Community 1607"
-Cohesion: 0.07
-Nodes (28): TeamStrengthError, AbilityOverrides, abilitySet(), affected, attackerId, base, baseInput, defenderBoost (+20 more)
+Cohesion: 0.10
+Nodes (20): Aggregate Metrics, Broadest Wage Pressure, Cash, Transfer Room And Pending Exposure, Closing Checkpoint Division Public Values, code:bash (nvm use 24), Cross-Tier Permanent Transfers, Dynasty Warning Snapshots, Highest Useful Free-Agent Stock (+12 more)
 
 ### Community 1608 - "Community 1608"
 Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 05 - Discounted Prospect Value And Rare Upper Cap (+1 more)
 
 ### Community 1609 - "Community 1609"
-Cohesion: 0.12
-Nodes (16): potentialSixPerWorldMaximum, potentialSixPerWorldMinimum, tenSeasonCohortMaximum, tenSeasonCohortMinimum, currentSixMaximum, currentSixMinimum, lowerDivisionPotentialSixMaximum, potentialSixMaximum (+8 more)
+Cohesion: 0.08
+Nodes (25): activeYoungStoredCeilingSixTargetMaximum, activeYoungStoredCeilingSixTargetMinimum, potentialSixPerWorldMaximum, potentialSixPerWorldMinimum, tenSeasonCohortMaximum, tenSeasonCohortMinimum, youngStoredCeilingSixPerSeasonMaximum, currentSixMaximum (+17 more)
+
+### Community 1610 - "Community 1610"
+Cohesion: 0.27
+Nodes (9): average(), check(), createLongRunYouthStabilityReport(), CreateLongRunYouthStabilityReportOptions, LongRunYouthSeasonRow, roundMetric(), report, worstStatus() (+1 more)
 
 ### Community 1611 - "Community 1611"
 Cohesion: 0.33
@@ -8185,16 +9007,16 @@ Cohesion: 0.13
 Nodes (14): Absence Audit, Browser QA Checklist, code:bash (nvm use 24), Definition Of Done, Evidence To Record, Expected Files, Goal, Outcome (+6 more)
 
 ### Community 1616 - "Community 1616"
-Cohesion: 0.02
-Nodes (164): advanceCareerMonths(), advanceCareerOneSeason(), abilitySet(), advanceAiMarketLifecycle(), ASKING_PRICE_CONFIG, askingPrice, balancedSeniorSquad(), balancedSeniorSquadAtAbility() (+156 more)
+Cohesion: 0.06
+Nodes (55): assembleGeneratedPlayer(), assertBirthDateJitter(), assertGeneratedAge(), civilDateParts(), generatedBirthDate(), GeneratedPlayerAssemblyError, GeneratedPlayerAssemblyErrorCode, generatedScaleAbilities() (+47 more)
 
 ### Community 1617 - "Community 1617"
 Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Locked Design Inputs, Required Checks, Status (+2 more)
 
 ### Community 1618 - "Community 1618"
-Cohesion: 0.08
-Nodes (25): ageMultipliers, classification, playerMarketCalibrationVersion, playerRatingScaleVersion, positionMultipliers, defender, forward, goalkeeper (+17 more)
+Cohesion: 0.07
+Nodes (27): ageMultipliers, classification, playerMarketCalibrationVersion, playerRatingScaleVersion, positionMultipliers, defender, forward, goalkeeper (+19 more)
 
 ### Community 1619 - "Community 1619"
 Cohesion: 0.15
@@ -8257,16 +9079,16 @@ Cohesion: 0.22
 Nodes (8): Decision, Deterministic And Persistence Contract, Domestic Competition Topology Decision, Movement Rationale, Non-Goals, Real Italian Reference, User-Facing Reason, Why 18 Clubs
 
 ### Community 1634 - "Community 1634"
-Cohesion: 0.50
-Nodes (4): 3. Giocatori ✅ (lista tratti di lancio: rimandata alla fase contenuti), 4. Club e leghe ✅ (dettaglio regole per paese: lavoro di config, fase contenuti), 5. IA del mondo ✅ (comportamento di mercato dei club IA: si definisce nell'Area 14), B. Il mondo di gioco
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1635 - "Community 1635"
-Cohesion: 0.03
-Nodes (66): assertDisjointRoles(), assertRoleFamiliarity(), createPlayerRoleIdentity(), familiarityEntries(), PlayerRoleIdentity, age, candidates, CAREER_START_EPOCH_DAY (+58 more)
+Cohesion: 0.15
+Nodes (19): CareerSquadPlacementOperation, CareerSquadPlacementPlan, CareerSquadPlacementRejectionReason, CareerSquadPlacementSlot, CareerSquadPlacementTarget, CurrentPlacement, findCurrentPlacement(), NO_OPERATIONS (+11 more)
 
 ### Community 1636 - "Community 1636"
-Cohesion: 0.07
-Nodes (33): buildCareerMarketTargetDetailView(), buildAttributeGroups(), buildCareerPlayerDetailView(), buildRoleViews(), CareerPlayerAttributeFamily, CareerPlayerAttributeGroupView, CareerPlayerRoleView, CareerPlayerVisibleSuitability (+25 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1637 - "Community 1637"
 Cohesion: 0.14
@@ -8277,20 +9099,28 @@ Cohesion: 0.33
 Nodes (5): Explicit Game-Design Targets, Limitations And Refresh Policy, Reproduced Source Facts, Source, Wage And Club Finance Calibration Source Audit
 
 ### Community 1639 - "Community 1639"
-Cohesion: 0.18
-Nodes (11): marketContext, maximumMinorUnits, multiplierBasisPoints, first_division, free_agent, second_division, third_division, first_division (+3 more)
+Cohesion: 0.07
+Nodes (23): academy, academyProspect, ageSeventeenRange, before, constraints, current, diagnosticPlayer(), empty (+15 more)
+
+### Community 1640 - "Community 1640"
+Cohesion: 0.14
+Nodes (13): Clean-Code Gate, code:bash (nvm use 24), Definition Of Done, Entry Gate, Goal, Locked Decisions, Mandatory Per-Step Loop, Ordered Steps (+5 more)
+
+### Community 1641 - "Community 1641"
+Cohesion: 0.15
+Nodes (12): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Motion Classification, Required Checks, Status (+4 more)
 
 ### Community 1642 - "Community 1642"
-Cohesion: 0.14
-Nodes (32): BuildCareerContractViewInput, CareerContractView, CareerMarketRoleFitInput, CareerMarketTargetInput, CareerMarketTargetRowView, CareerPlayerDetailInput, CareerPlayerDetailView, assertValidProfileInput() (+24 more)
+Cohesion: 0.15
+Nodes (12): code:bash (pnpm cli ten-season-report \), code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Frozen Command, Goal, Required Checks (+4 more)
 
 ### Community 1643 - "Community 1643"
 Cohesion: 0.14
 Nodes (13): code:text (current ability), code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Headless Contract, Implementation Checklist, Required Checks (+5 more)
 
 ### Community 1644 - "Community 1644"
-Cohesion: 0.18
-Nodes (20): ClubAbilityHierarchySnapshot, ClubAbilityHierarchySummary, clubLabel(), drawRate(), goalsPerMatch(), LongRunSeasonResult, formatAbilityHierarchySnapshot(), formatAnomalyLines() (+12 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1645 - "Community 1645"
 Cohesion: 0.15
@@ -8301,12 +9131,12 @@ Cohesion: 0.18
 Nodes (10): Accepted Semantics, code:bash (pnpm exec vitest run \), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 04 - Market Pagination, Debounced Filters And Age Controls (+2 more)
 
 ### Community 1647 - "Community 1647"
-Cohesion: 0.15
-Nodes (23): Club, ClubId, clubLabel(), comparePlayerIdsAscending(), Fixture, FixtureId, formatAssistCount(), formatGoalCount() (+15 more)
+Cohesion: 0.07
+Nodes (26): annualWageByRating, classification, contractTermsPolicy, minimumBonusMultiplierBasisPoints, minimumWageMultiplierBasisPoints, preferredDuration, currency, gameDesignTargets (+18 more)
 
 ### Community 1648 - "Community 1648"
-Cohesion: 0.12
-Nodes (30): assertTarget(), buildTargetDetail(), buildTargetRow(), CareerMarketAvailability, CareerMarketContractHorizon, CareerMarketEmploymentInput, CareerMarketTargetEligibility, CareerMarketTargetPageView (+22 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1649 - "Community 1649"
 Cohesion: 0.18
@@ -8345,8 +9175,8 @@ Cohesion: 0.12
 Nodes (16): Accepted Product Decisions, code:bash (nvm use 24), Definition Of Done, Exhaustiveness Guard, Expected Files, Goal, Product Decision Gate, Race Contract (+8 more)
 
 ### Community 1658 - "Community 1658"
-Cohesion: 0.03
-Nodes (117): ApplyCareerFixtureConditionConsequencesInput, ApplyCareerFixtureConditionConsequencesResult, CareerFixtureConditionChange, before, first, firstResult, input, playerStateFixture() (+109 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1659 - "Community 1659"
 Cohesion: 0.15
@@ -8360,17 +9190,21 @@ Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Imp
 Cohesion: 0.13
 Nodes (14): Blocked Attempt - 2026-07-29, Blocker, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Implemented diagnostics (+6 more)
 
-### Community 1663 - "Community 1663"
+### Community 1662 - "Community 1662"
 Cohesion: 0.17
-Nodes (11): annualWageByRating, classification, currency, gameDesignTargets, openingBudgetRoundingMinorUnits, retrievedAt, schemaVersion, sourceBaselines (+3 more)
+Nodes (11): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 09 - Bounded Phase Report And Phase 81 Handoff (+3 more)
+
+### Community 1663 - "Community 1663"
+Cohesion: 0.02
+Nodes (102): CareerMatchdayPhasePlayerView, buildCareerMatchdayPresentationView(), buildMatchdayEventGroups(), buildMatchdayFullTimeReviewView(), buildMatchdayHalfTimeReviewView(), buildMatchdayLiveMoment(), buildMatchdayPhaseIndicators(), buildMatchdayScoreHeader() (+94 more)
 
 ### Community 1664 - "Community 1664"
 Cohesion: 0.25
 Nodes (7): Decision, Delivered Model, Deterministic Evidence, Handoff, Longitudinal Evidence Boundary, Phase 79D Exceptional Player Generation And Prospect Economy Report, Verification
 
 ### Community 1665 - "Community 1665"
-Cohesion: 0.10
-Nodes (51): attachFixtureReports(), boolean(), cap(), insertActiveMatch(), insertActiveTeam(), insertCareerStateRows(), insertClubFinanceState(), insertContractDemandSnapshot() (+43 more)
+Cohesion: 0.09
+Nodes (26): selectHasPendingMatchdayTeamChanges(), acceptedPlan, alpha, attention, before, career, changedSlot, committed (+18 more)
 
 ### Community 1666 - "Community 1666"
 Cohesion: 0.14
@@ -8381,12 +9215,12 @@ Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 03 - Club-Stage Clearing And Competitive Resolution (+2 more)
 
 ### Community 1668 - "Community 1668"
-Cohesion: 0.01
-Nodes (289): deriveCalibratedContractBonuses(), deriveContinuousPlayerWageRating(), derivePreferredContractDurationYears(), AiContractLifecycleIndex, DueAiContract, selectFreeAgentPlayerIds(), abilities(), acceptedId (+281 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1669 - "Community 1669"
 Cohesion: 0.09
-Nodes (21): Age-Aware Public Upper, AI Information Fairness, Annual Youth Intake, Architecture Ownership, Beta Save Policy, Calibration Epoch And Division Evidence, Current Defects Confirmed Before The Contract, Development Cadence And Inputs (+13 more)
+Nodes (22): Age-Aware Public Upper, AI Information Fairness, Annual Youth Intake, Architecture Ownership, Beta Save Policy, Calibration Epoch And Division Evidence, Current Defects Confirmed Before The Contract, Development Cadence And Inputs (+14 more)
 
 ### Community 1670 - "Community 1670"
 Cohesion: 0.14
@@ -8405,8 +9239,8 @@ Cohesion: 0.17
 Nodes (11): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 10 - Phase Report And Phase 80C Handoff (+3 more)
 
 ### Community 1674 - "Community 1674"
-Cohesion: 0.12
-Nodes (15): assessedPlayers, closest, expected, expectedByPlayerId, firstDetail, fixture, presentation, referencePlayers (+7 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1675 - "Community 1675"
 Cohesion: 0.20
@@ -8417,8 +9251,8 @@ Cohesion: 0.18
 Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 05 - Player Choice Between Qualified Suitors (+2 more)
 
 ### Community 1677 - "Community 1677"
-Cohesion: 0.25
-Nodes (7): Canonical Owner, Current Coverage, Decision, Determinism Contract, Phase 80 Closeout, Phase 80B Closeout, Simulation Execution Policy
+Cohesion: 0.22
+Nodes (8): Canonical Owner, Current Coverage, Decision, Deferred Rework Cohort, Determinism Contract, Phase 80 Closeout, Phase 80B Closeout, Simulation Execution Policy
 
 ### Community 1678 - "Community 1678"
 Cohesion: 0.18
@@ -8445,8 +9279,8 @@ Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 06 - Free-Agent Negotiation And Race (+1 more)
 
 ### Community 1684 - "Community 1684"
-Cohesion: 0.22
-Nodes (7): BuildCareerMatchPreparationViewInput, baseInput(), eligibilityBlocker, forwardSlots, input, slot(), view
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1685 - "Community 1685"
 Cohesion: 0.20
@@ -8465,8 +9299,8 @@ Cohesion: 0.15
 Nodes (12): code:bash (pnpm cli ten-season-report \), code:bash (pnpm cli ten-season-report \), Definition Of Done, Entry Gate, Expected Files, Frozen Command, Goal, Required Checks (+4 more)
 
 ### Community 1689 - "Community 1689"
-Cohesion: 0.17
-Nodes (11): assertNoDuplicatePlayers(), createSquadDepth(), SquadDepthError, SquadDepthErrorCode, duplicatedPlayerId, overlappingPlayerId, playerIds(), squadDepth (+3 more)
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1690 - "Community 1690"
 Cohesion: 0.20
@@ -8477,8 +9311,8 @@ Cohesion: 0.18
 Nodes (10): code:bash (pnpm check), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 09 - Phase Closeout And 80A Handoff (+2 more)
 
 ### Community 1692 - "Community 1692"
-Cohesion: 0.18
-Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 02 - Dynamic Club Tier, Reputation And Season Freeze (+2 more)
+Cohesion: 0.17
+Nodes (11): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Frozen Ranking And Reputation Policy, Goal, Required Checks, Status (+3 more)
 
 ### Community 1693 - "Community 1693"
 Cohesion: 0.18
@@ -8489,16 +9323,16 @@ Cohesion: 0.18
 Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 04 - Quarterly Development With Monthly Evidence (+2 more)
 
 ### Community 1695 - "Community 1695"
-Cohesion: 0.18
-Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 06 - Contextual Prospect Current And Ceiling Generation (+2 more)
+Cohesion: 0.14
+Nodes (13): Accepted Semantics, code:bash (nvm use 24), Completion Evidence, Definition Of Done, Expected Files, Goal, Historical Completion Evidence, Prior Completion Evidence (Superseded As Closeout) (+5 more)
 
 ### Community 1696 - "Community 1696"
-Cohesion: 0.18
-Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 07 - National Exceptional Stock And Annual Youth Intake (+2 more)
+Cohesion: 0.17
+Nodes (11): Accepted Semantics, code:bash (nvm use 24), Completion Record, Definition Of Done, Expected Files, Goal, Required Checks, Status (+3 more)
 
 ### Community 1697 - "Community 1697"
-Cohesion: 0.18
-Nodes (10): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 09 - Non-Vacuous Diagnostics, Beta Reset And Phase Closeout (+2 more)
+Cohesion: 0.09
+Nodes (23): Anomaly Semantic Ownership, Audit Population And Checkpoint Semantics, code:bash (nvm use 24), code:bash (nvm use 24), code:text (matched closing count + attrition count = opening count), code:bash (nvm use 24), code:bash (nvm use 24), Compact Checkpoints And Schema Boundary (+15 more)
 
 ### Community 1698 - "Community 1698"
 Cohesion: 0.18
@@ -8541,16 +9375,16 @@ Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 06 - Market, Squad And Posta Race UI (+1 more)
 
 ### Community 1708 - "Community 1708"
-Cohesion: 0.20
-Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 01 - Reproducible Baseline And Calibration Contract, What NOT To Implement (+1 more)
+Cohesion: 0.18
+Nodes (10): code:bash (nvm use 24), Completion Record, Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 01 - Reproducible Baseline And Calibration Contract (+2 more)
 
 ### Community 1709 - "Community 1709"
 Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 05 - Age-Aware P50, Upper And Shared Public Assessment, What NOT To Implement (+1 more)
 
 ### Community 1710 - "Community 1710"
-Cohesion: 0.20
-Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 08 - Expected-Outcome Value And AI Information Parity, What NOT To Implement (+1 more)
+Cohesion: 0.14
+Nodes (14): code:text (expectedQualityValue =), code:bash (nvm use 24), Completion Evidence, Completion Record, Definition Of Done, Expected Files, Goal, Historical Completion Record - Superseded By Reopen (+6 more)
 
 ### Community 1711 - "Community 1711"
 Cohesion: 0.20
@@ -8569,108 +9403,3324 @@ Cohesion: 0.20
 Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 07 - Non-Vacuous Race Diagnostics And Persistence (+1 more)
 
 ### Community 1715 - "Community 1715"
-Cohesion: 0.11
-Nodes (18): database, demand, historyEvents, inboxInsert, insertedTables, matchTeam(), negotiationTerms(), preliminaryInsert (+10 more)
+Cohesion: 0.09
+Nodes (21): database, demand, historyEvents, inboxInsert, insertedTables, matchTeam(), negotiationTerms(), participationClubMinutes (+13 more)
 
 ### Community 1716 - "Community 1716"
-Cohesion: 0.09
-Nodes (21): buildCurrentTeamContext(), createFakeLiveMatchControlWorld(), createFixtureSetup(), createLiveMatchControlReport(), CreateLiveMatchControlReportInput, createLiveTeam(), FakePlayerId, FakePlayerState (+13 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1717 - "Community 1717"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 01 - Reproducible Extreme-Shape Baseline And Frozen Contract (+3 more)
 
 ### Community 1718 - "Community 1718"
 Cohesion: 0.13
 Nodes (14): Absence Checks, Defects Found And Fixed During The Phase, Delivered Inventory, Gate Results, Handoff, Manual Inspection Targets, P80-R01 — Current Achievement Versus Potential Upside, P80-R02 — Market Pagination, Debounced Filters, And Age Selects (+6 more)
 
+### Community 1719 - "Community 1719"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 02 - Typed Tactical Slot Context And Collapse Removal (+3 more)
+
+### Community 1720 - "Community 1720"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 03 - Intrinsic Tactical Shape Profile And Diminishing Returns (+3 more)
+
 ### Community 1721 - "Community 1721"
-Cohesion: 0.06
-Nodes (74): CareerDevelopmentReportFormatResult, CareerDevelopmentReportPlayerExample, CareerDevelopmentTrajectorySample, formatCareerDevelopmentReportOutput(), formatDelta(), formatDevelopmentExample(), formatTrajectorySample(), affectedClubIds() (+66 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1722 - "Community 1722"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 04 - Relational Phase Matchup And Route Capacity (+3 more)
 
 ### Community 1723 - "Community 1723"
-Cohesion: 0.06
-Nodes (47): findWorkspaceRoot(), parseArgs(), ParsedArgs, parsePositiveSafeInteger(), parseSeasonCount(), resolveWorkspaceOutputPath(), runTenSeasonReportCommand(), TenSeasonReportCommandIo (+39 more)
+Cohesion: 0.13
+Nodes (14): abilityThresholds, goalkeeper, outfield, classification, divisionFirstTeamBands, potentialProjectionPolicy, ageBandsByRoleFamily, classification (+6 more)
+
+### Community 1724 - "Community 1724"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 05 - Position Suitability Coordination Without Double Penalty (+3 more)
 
 ### Community 1725 - "Community 1725"
 Cohesion: 0.17
-Nodes (12): preferredDuration, highPotentialMaximumAge, highPotentialMinimumGapStars, highPotentialYears, matureMaximumAge, matureYears, minimumDurationReductionYears, primeMaximumAge (+4 more)
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1726 - "Community 1726"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 06 - Phase-Aware Control, Opportunity Routes And Tactic Semantics (+3 more)
+
+### Community 1727 - "Community 1727"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 07 - Route Quality, Causal Actors And Explanation Facts (+3 more)
 
 ### Community 1728 - "Community 1728"
-Cohesion: 0.12
-Nodes (23): LongRunCrossTierTransferRow, LongRunDivisionMarketEconomyRow, LongRunDivisionWageEconomyRow, LongRunFreeAgentBands, LongRunPermanentTransferFunnel, LongRunPreliminaryAgreementFunnel, createShardCheckpoint(), GateWorldTask (+15 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1729 - "Community 1729"
-Cohesion: 0.06
-Nodes (57): CalibratedAnnualWageInput, AgreedSquadStatus, evaluateMarketActionEligibility(), evaluatePreliminaryAgreement(), evaluateWindowGatedAction(), MarketActionEligibility, MarketActionEligibilityInput, MarketActionKind (+49 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1730 - "Community 1730"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 08 - Live Session, Persistence, Event Schema And Beta Reset (+3 more)
 
 ### Community 1731 - "Community 1731"
-Cohesion: 0.11
-Nodes (25): planSqliteCareerMigrations(), SQLITE_CAREER_MIGRATIONS, SqliteCareerMigration, SQLITE_CAREER_SCHEMA_STATEMENTS, SQLITE_CAREER_SCHEMA_V10_STATEMENTS, SQLITE_CAREER_SCHEMA_V11_STATEMENTS, SQLITE_CAREER_SCHEMA_V12_STATEMENTS, SQLITE_CAREER_SCHEMA_V15_STATEMENTS (+17 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1732 - "Community 1732"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 09 - AI Whole-XI Selection And Shared Tactical Decisions (+3 more)
+
+### Community 1733 - "Community 1733"
+Cohesion: 0.17
+Nodes (11): Clean-Code Review, code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status (+3 more)
+
+### Community 1734 - "Community 1734"
+Cohesion: 0.18
+Nodes (11): marketContext, maximumMinorUnits, multiplierBasisPoints, first_division, free_agent, second_division, third_division, first_division (+3 more)
+
+### Community 1735 - "Community 1735"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1736 - "Community 1736"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1737 - "Community 1737"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1738 - "Community 1738"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1739 - "Community 1739"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1740 - "Community 1740"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1741 - "Community 1741"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1742 - "Community 1742"
-Cohesion: 0.18
-Nodes (14): LongRunAnomalyStatus, LongRunContractFinanceCheck, LongRunContractFinanceStabilityReport, average(), check(), createLongRunYouthStabilityReport(), CreateLongRunYouthStabilityReportOptions, LongRunYouthSeasonRow (+6 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1743 - "Community 1743"
+Cohesion: 0.11
+Nodes (19): annualWagePolicy, ageMultipliers, currentWageFloorAgeMultipliers, divisionMultipliers, freeAgentMultiplierBasisPoints, longContractMinimumDaysExclusive, longContractMultiplierBasisPoints, potentialGapPremiums (+11 more)
+
+### Community 1744 - "Community 1744"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1745 - "Community 1745"
-Cohesion: 0.05
-Nodes (54): FlagAssetCode, flagAssetForNationality(), NATIONALITY_FLAG_ASSET_CODES, NationalityFlagAsset, absolutePath, asset, assets, mappedNationalities (+46 more)
+Cohesion: 0.07
+Nodes (39): GenerateOneIntakePlayerInput, FlagAssetCode, flagAssetForNationality(), NATIONALITY_FLAG_ASSET_CODES, NationalityFlagAsset, absolutePath, asset, assets (+31 more)
+
+### Community 1746 - "Community 1746"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1747 - "Community 1747"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1748 - "Community 1748"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1749 - "Community 1749"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1750 - "Community 1750"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1751 - "Community 1751"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1752 - "Community 1752"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1753 - "Community 1753"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1754 - "Community 1754"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1755 - "Community 1755"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1756 - "Community 1756"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1757 - "Community 1757"
-Cohesion: 0.22
-Nodes (9): annualWagePolicy, ageMultipliers, currentWageFloorAgeMultipliers, freeAgentMultiplierBasisPoints, longContractMinimumDaysExclusive, longContractMultiplierBasisPoints, potentialGapPremiums, potentialPremiumMaximumAge (+1 more)
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1758 - "Community 1758"
-Cohesion: 0.22
-Nodes (9): annualAppearanceDivisor, defensiveCleanSheetMultiplierBasisPoints, goalBonusMultiplierBasisPoints, roundingMinorUnits, signingRoundingMinorUnits, contractTermsPolicy, bonuses, minimumBonusMultiplierBasisPoints (+1 more)
+Cohesion: 0.02
+Nodes (141): CareerDashboardPreparationInput, buildDemoCareerDashboard(), buildDemoCareerDashboardInput(), NEXT_OPPONENT, SELECTED_CLUB, first, input, second (+133 more)
+
+### Community 1759 - "Community 1759"
+Cohesion: 0.09
+Nodes (22): PlayerDevelopmentParticipationObservation, aggregate, alternateInput, alternateSummary, anomalyChecksForTest(), broken, checkpoint(), direct (+14 more)
+
+### Community 1760 - "Community 1760"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1761 - "Community 1761"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1762 - "Community 1762"
-Cohesion: 0.33
-Nodes (6): needPriorityWeights, agingDepartment, expiringContract, qualityGap, structuralDeficit, targetDeficit
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1763 - "Community 1763"
-Cohesion: 0.33
-Nodes (6): squadStatusMultipliers, fringe_player, key_player, prospect, regular_starter, squad_player
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1764 - "Community 1764"
-Cohesion: 0.33
-Nodes (6): signingBonusBasisPoints, fringe_player, key_player, prospect, regular_starter, squad_player
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1765 - "Community 1765"
-Cohesion: 0.40
-Nodes (5): targetDepartmentDepth, attacker, defender, goalkeeper, midfielder
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1766 - "Community 1766"
-Cohesion: 0.40
-Nodes (5): aiTargetWeights, affordability, potential, quality, roleNeed
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1767 - "Community 1767"
-Cohesion: 0.40
-Nodes (5): aiTransferOffer, askingBasisPointsStep, maximumAskingBasisPoints, minimumAskingBasisPoints, version
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1768 - "Community 1768"
-Cohesion: 0.50
-Nodes (4): affordability, maximumTransferBudgetUseBasisPoints, maximumWageBudgetUseBasisPoints, minimumCashReserveBasisPoints
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1769 - "Community 1769"
-Cohesion: 0.50
-Nodes (4): divisionMultipliers, first_division, second_division, third_division
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1770 - "Community 1770"
+Cohesion: 0.24
+Nodes (14): CURRENT_DIR, expectHoverAndBorderAlignment(), expectNoHorizontalOverflow(), expectPitchGrassStable(), expectSkinArtDirection(), expectStableSemanticColors(), expectThemeApplied(), inspectPalette() (+6 more)
+
+### Community 1771 - "Community 1771"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1772 - "Community 1772"
+Cohesion: 0.08
+Nodes (34): ChanceActors, chanceCreatorWeightForRole(), chanceShooterWeightForRole(), CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE, excludePlayerWhenPossible(), pickWeightedPlayer(), PRIMARY_DEFENDER_ROLE_WEIGHTS, primaryDefenderWeightForRole() (+26 more)
+
+### Community 1773 - "Community 1773"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1774 - "Community 1774"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1775 - "Community 1775"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1776 - "Community 1776"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1777 - "Community 1777"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1778 - "Community 1778"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1779 - "Community 1779"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1780 - "Community 1780"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1781 - "Community 1781"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1782 - "Community 1782"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1783 - "Community 1783"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1784 - "Community 1784"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1785 - "Community 1785"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1786 - "Community 1786"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1787 - "Community 1787"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1788 - "Community 1788"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1789 - "Community 1789"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1790 - "Community 1790"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1791 - "Community 1791"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1792 - "Community 1792"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1793 - "Community 1793"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1794 - "Community 1794"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1795 - "Community 1795"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1796 - "Community 1796"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1797 - "Community 1797"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1798 - "Community 1798"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1799 - "Community 1799"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1800 - "Community 1800"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1801 - "Community 1801"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1802 - "Community 1802"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1803 - "Community 1803"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1804 - "Community 1804"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1805 - "Community 1805"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1806 - "Community 1806"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1807 - "Community 1807"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1808 - "Community 1808"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1809 - "Community 1809"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1810 - "Community 1810"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1811 - "Community 1811"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1812 - "Community 1812"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1813 - "Community 1813"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1814 - "Community 1814"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1815 - "Community 1815"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1816 - "Community 1816"
+Cohesion: 0.17
+Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
+
+### Community 1817 - "Community 1817"
+Cohesion: 0.04
+Nodes (59): constructedSeniorExceptionalCurrentAbilityLane(), constructedYouthExceptionalCurrentAbilityLane(), createFakeDomesticWorld(), exceptionalCandidates(), FAKE_DOMESTIC_COMPETITION_IDS, generateDomesticDivisionClubs(), mergeRecords(), actualLane (+51 more)
+
+### Community 1818 - "Community 1818"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1819 - "Community 1819"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1820 - "Community 1820"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1821 - "Community 1821"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1822 - "Community 1822"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1823 - "Community 1823"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1824 - "Community 1824"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1825 - "Community 1825"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1826 - "Community 1826"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1827 - "Community 1827"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1828 - "Community 1828"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1829 - "Community 1829"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1830 - "Community 1830"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1831 - "Community 1831"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1832 - "Community 1832"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1833 - "Community 1833"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1834 - "Community 1834"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1835 - "Community 1835"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1836 - "Community 1836"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1837 - "Community 1837"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1838 - "Community 1838"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1839 - "Community 1839"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1840 - "Community 1840"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1841 - "Community 1841"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1842 - "Community 1842"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1843 - "Community 1843"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1844 - "Community 1844"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1845 - "Community 1845"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1846 - "Community 1846"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1847 - "Community 1847"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1848 - "Community 1848"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1849 - "Community 1849"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1850 - "Community 1850"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1851 - "Community 1851"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1852 - "Community 1852"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1853 - "Community 1853"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1854 - "Community 1854"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1855 - "Community 1855"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1856 - "Community 1856"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1857 - "Community 1857"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1858 - "Community 1858"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1859 - "Community 1859"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1860 - "Community 1860"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1861 - "Community 1861"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1862 - "Community 1862"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1863 - "Community 1863"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1864 - "Community 1864"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1865 - "Community 1865"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1866 - "Community 1866"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1867 - "Community 1867"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1868 - "Community 1868"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1869 - "Community 1869"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1870 - "Community 1870"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1871 - "Community 1871"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1872 - "Community 1872"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1873 - "Community 1873"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1874 - "Community 1874"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1875 - "Community 1875"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1876 - "Community 1876"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1877 - "Community 1877"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1878 - "Community 1878"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1879 - "Community 1879"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1880 - "Community 1880"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1881 - "Community 1881"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1882 - "Community 1882"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1883 - "Community 1883"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1884 - "Community 1884"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1885 - "Community 1885"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1886 - "Community 1886"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1887 - "Community 1887"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1888 - "Community 1888"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1889 - "Community 1889"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1890 - "Community 1890"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1891 - "Community 1891"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1892 - "Community 1892"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1893 - "Community 1893"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1894 - "Community 1894"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1895 - "Community 1895"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1896 - "Community 1896"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1897 - "Community 1897"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1898 - "Community 1898"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1899 - "Community 1899"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1900 - "Community 1900"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1901 - "Community 1901"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1902 - "Community 1902"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1903 - "Community 1903"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1904 - "Community 1904"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1905 - "Community 1905"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1906 - "Community 1906"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1907 - "Community 1907"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1908 - "Community 1908"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1909 - "Community 1909"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1910 - "Community 1910"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1911 - "Community 1911"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1912 - "Community 1912"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1913 - "Community 1913"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1914 - "Community 1914"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1915 - "Community 1915"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1916 - "Community 1916"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1917 - "Community 1917"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1918 - "Community 1918"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1919 - "Community 1919"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1920 - "Community 1920"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1921 - "Community 1921"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1922 - "Community 1922"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1923 - "Community 1923"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1924 - "Community 1924"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1925 - "Community 1925"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1926 - "Community 1926"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1927 - "Community 1927"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1928 - "Community 1928"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1929 - "Community 1929"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1930 - "Community 1930"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1931 - "Community 1931"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1932 - "Community 1932"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1933 - "Community 1933"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1934 - "Community 1934"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1935 - "Community 1935"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1936 - "Community 1936"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1937 - "Community 1937"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1938 - "Community 1938"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1939 - "Community 1939"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1940 - "Community 1940"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1941 - "Community 1941"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1942 - "Community 1942"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1943 - "Community 1943"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1944 - "Community 1944"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1945 - "Community 1945"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1946 - "Community 1946"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1947 - "Community 1947"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1948 - "Community 1948"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1949 - "Community 1949"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1950 - "Community 1950"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1951 - "Community 1951"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1952 - "Community 1952"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1953 - "Community 1953"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1954 - "Community 1954"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1955 - "Community 1955"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1956 - "Community 1956"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1957 - "Community 1957"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1958 - "Community 1958"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1959 - "Community 1959"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1960 - "Community 1960"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1961 - "Community 1961"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1962 - "Community 1962"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1963 - "Community 1963"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1964 - "Community 1964"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1965 - "Community 1965"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1966 - "Community 1966"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1967 - "Community 1967"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1968 - "Community 1968"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1969 - "Community 1969"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1970 - "Community 1970"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1971 - "Community 1971"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1972 - "Community 1972"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1973 - "Community 1973"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1974 - "Community 1974"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1975 - "Community 1975"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1976 - "Community 1976"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1977 - "Community 1977"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1978 - "Community 1978"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1979 - "Community 1979"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1980 - "Community 1980"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1981 - "Community 1981"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1982 - "Community 1982"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1983 - "Community 1983"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1984 - "Community 1984"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1985 - "Community 1985"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1986 - "Community 1986"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1987 - "Community 1987"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1988 - "Community 1988"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1989 - "Community 1989"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1990 - "Community 1990"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1991 - "Community 1991"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1992 - "Community 1992"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1993 - "Community 1993"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1994 - "Community 1994"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1995 - "Community 1995"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1996 - "Community 1996"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1997 - "Community 1997"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1998 - "Community 1998"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 1999 - "Community 1999"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2000 - "Community 2000"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2001 - "Community 2001"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2002 - "Community 2002"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2003 - "Community 2003"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2004 - "Community 2004"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2005 - "Community 2005"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2006 - "Community 2006"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2007 - "Community 2007"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2008 - "Community 2008"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2009 - "Community 2009"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2010 - "Community 2010"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2011 - "Community 2011"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2012 - "Community 2012"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2013 - "Community 2013"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2014 - "Community 2014"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2015 - "Community 2015"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2016 - "Community 2016"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2017 - "Community 2017"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2018 - "Community 2018"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2019 - "Community 2019"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2020 - "Community 2020"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2021 - "Community 2021"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2022 - "Community 2022"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2023 - "Community 2023"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2024 - "Community 2024"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2025 - "Community 2025"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2026 - "Community 2026"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2027 - "Community 2027"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2028 - "Community 2028"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2029 - "Community 2029"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2030 - "Community 2030"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2031 - "Community 2031"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2032 - "Community 2032"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2033 - "Community 2033"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2034 - "Community 2034"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2035 - "Community 2035"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2036 - "Community 2036"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2037 - "Community 2037"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2038 - "Community 2038"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2039 - "Community 2039"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2040 - "Community 2040"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2041 - "Community 2041"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2042 - "Community 2042"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2043 - "Community 2043"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2044 - "Community 2044"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2045 - "Community 2045"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2046 - "Community 2046"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2047 - "Community 2047"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2048 - "Community 2048"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2049 - "Community 2049"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2050 - "Community 2050"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2051 - "Community 2051"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2052 - "Community 2052"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2053 - "Community 2053"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2054 - "Community 2054"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2055 - "Community 2055"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2056 - "Community 2056"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2057 - "Community 2057"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2058 - "Community 2058"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2059 - "Community 2059"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2060 - "Community 2060"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2061 - "Community 2061"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2062 - "Community 2062"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2063 - "Community 2063"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2064 - "Community 2064"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2065 - "Community 2065"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2066 - "Community 2066"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2067 - "Community 2067"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2068 - "Community 2068"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2069 - "Community 2069"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2070 - "Community 2070"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2071 - "Community 2071"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2072 - "Community 2072"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2073 - "Community 2073"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2074 - "Community 2074"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2075 - "Community 2075"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2076 - "Community 2076"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2077 - "Community 2077"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2078 - "Community 2078"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2079 - "Community 2079"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2080 - "Community 2080"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2081 - "Community 2081"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2082 - "Community 2082"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2083 - "Community 2083"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2084 - "Community 2084"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2085 - "Community 2085"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2086 - "Community 2086"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2087 - "Community 2087"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2088 - "Community 2088"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2089 - "Community 2089"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2090 - "Community 2090"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2091 - "Community 2091"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2092 - "Community 2092"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2093 - "Community 2093"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2094 - "Community 2094"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2095 - "Community 2095"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2096 - "Community 2096"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2097 - "Community 2097"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2098 - "Community 2098"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2099 - "Community 2099"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2100 - "Community 2100"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2101 - "Community 2101"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2102 - "Community 2102"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2103 - "Community 2103"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2104 - "Community 2104"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2105 - "Community 2105"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2106 - "Community 2106"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2107 - "Community 2107"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2108 - "Community 2108"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2109 - "Community 2109"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2110 - "Community 2110"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2111 - "Community 2111"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2112 - "Community 2112"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2113 - "Community 2113"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2114 - "Community 2114"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2115 - "Community 2115"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2116 - "Community 2116"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2117 - "Community 2117"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2118 - "Community 2118"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2119 - "Community 2119"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2120 - "Community 2120"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2121 - "Community 2121"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2122 - "Community 2122"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2123 - "Community 2123"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2124 - "Community 2124"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2125 - "Community 2125"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2126 - "Community 2126"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2127 - "Community 2127"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2128 - "Community 2128"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2129 - "Community 2129"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2130 - "Community 2130"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2131 - "Community 2131"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2132 - "Community 2132"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2133 - "Community 2133"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2134 - "Community 2134"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2135 - "Community 2135"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2136 - "Community 2136"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2137 - "Community 2137"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2138 - "Community 2138"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2139 - "Community 2139"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2140 - "Community 2140"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2141 - "Community 2141"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2142 - "Community 2142"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2143 - "Community 2143"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2144 - "Community 2144"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2145 - "Community 2145"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2146 - "Community 2146"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2147 - "Community 2147"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2148 - "Community 2148"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2149 - "Community 2149"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2150 - "Community 2150"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2151 - "Community 2151"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2152 - "Community 2152"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2153 - "Community 2153"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2154 - "Community 2154"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2155 - "Community 2155"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2156 - "Community 2156"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2157 - "Community 2157"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2158 - "Community 2158"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2159 - "Community 2159"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2160 - "Community 2160"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2161 - "Community 2161"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2162 - "Community 2162"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2163 - "Community 2163"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2164 - "Community 2164"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2165 - "Community 2165"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2166 - "Community 2166"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2167 - "Community 2167"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2168 - "Community 2168"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2169 - "Community 2169"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2170 - "Community 2170"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2171 - "Community 2171"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2172 - "Community 2172"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2173 - "Community 2173"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2174 - "Community 2174"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2175 - "Community 2175"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2176 - "Community 2176"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2177 - "Community 2177"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2178 - "Community 2178"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2179 - "Community 2179"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2180 - "Community 2180"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2181 - "Community 2181"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2182 - "Community 2182"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2183 - "Community 2183"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2184 - "Community 2184"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2185 - "Community 2185"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2186 - "Community 2186"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2187 - "Community 2187"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2188 - "Community 2188"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2189 - "Community 2189"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2190 - "Community 2190"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2191 - "Community 2191"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2192 - "Community 2192"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2193 - "Community 2193"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2194 - "Community 2194"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2195 - "Community 2195"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2196 - "Community 2196"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2197 - "Community 2197"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2198 - "Community 2198"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2199 - "Community 2199"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2200 - "Community 2200"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2201 - "Community 2201"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2202 - "Community 2202"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2203 - "Community 2203"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2204 - "Community 2204"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2205 - "Community 2205"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2206 - "Community 2206"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2207 - "Community 2207"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2208 - "Community 2208"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2209 - "Community 2209"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2210 - "Community 2210"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2211 - "Community 2211"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2212 - "Community 2212"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2213 - "Community 2213"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2214 - "Community 2214"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2215 - "Community 2215"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2216 - "Community 2216"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2217 - "Community 2217"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2218 - "Community 2218"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2219 - "Community 2219"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2220 - "Community 2220"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2221 - "Community 2221"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2222 - "Community 2222"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2223 - "Community 2223"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2224 - "Community 2224"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2225 - "Community 2225"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2226 - "Community 2226"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2227 - "Community 2227"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2228 - "Community 2228"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2229 - "Community 2229"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2230 - "Community 2230"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2231 - "Community 2231"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2232 - "Community 2232"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2233 - "Community 2233"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2234 - "Community 2234"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2235 - "Community 2235"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2236 - "Community 2236"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2237 - "Community 2237"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2238 - "Community 2238"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2239 - "Community 2239"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2240 - "Community 2240"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2241 - "Community 2241"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2242 - "Community 2242"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2243 - "Community 2243"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2244 - "Community 2244"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2245 - "Community 2245"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2246 - "Community 2246"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2247 - "Community 2247"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2248 - "Community 2248"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2249 - "Community 2249"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2250 - "Community 2250"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2251 - "Community 2251"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2252 - "Community 2252"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2253 - "Community 2253"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2254 - "Community 2254"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2255 - "Community 2255"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2256 - "Community 2256"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2257 - "Community 2257"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2258 - "Community 2258"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2259 - "Community 2259"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2260 - "Community 2260"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2261 - "Community 2261"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2262 - "Community 2262"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2263 - "Community 2263"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2264 - "Community 2264"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2265 - "Community 2265"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2266 - "Community 2266"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2267 - "Community 2267"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2268 - "Community 2268"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2269 - "Community 2269"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2270 - "Community 2270"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2271 - "Community 2271"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2272 - "Community 2272"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2273 - "Community 2273"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2274 - "Community 2274"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2275 - "Community 2275"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2276 - "Community 2276"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2277 - "Community 2277"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2278 - "Community 2278"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2279 - "Community 2279"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2280 - "Community 2280"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2281 - "Community 2281"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2282 - "Community 2282"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2283 - "Community 2283"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2284 - "Community 2284"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2285 - "Community 2285"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2286 - "Community 2286"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2287 - "Community 2287"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2288 - "Community 2288"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2289 - "Community 2289"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2290 - "Community 2290"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2291 - "Community 2291"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2292 - "Community 2292"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2293 - "Community 2293"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2294 - "Community 2294"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2295 - "Community 2295"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2296 - "Community 2296"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2297 - "Community 2297"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2298 - "Community 2298"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2299 - "Community 2299"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2300 - "Community 2300"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2301 - "Community 2301"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2302 - "Community 2302"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2303 - "Community 2303"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2304 - "Community 2304"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2305 - "Community 2305"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2306 - "Community 2306"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2307 - "Community 2307"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2308 - "Community 2308"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2309 - "Community 2309"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2310 - "Community 2310"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2311 - "Community 2311"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2312 - "Community 2312"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2313 - "Community 2313"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2314 - "Community 2314"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2315 - "Community 2315"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2316 - "Community 2316"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2317 - "Community 2317"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2318 - "Community 2318"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2319 - "Community 2319"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2320 - "Community 2320"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2321 - "Community 2321"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2322 - "Community 2322"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2323 - "Community 2323"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2324 - "Community 2324"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2325 - "Community 2325"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2326 - "Community 2326"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2327 - "Community 2327"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2328 - "Community 2328"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2329 - "Community 2329"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2330 - "Community 2330"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2331 - "Community 2331"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2332 - "Community 2332"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2333 - "Community 2333"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2334 - "Community 2334"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2335 - "Community 2335"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2336 - "Community 2336"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2337 - "Community 2337"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2338 - "Community 2338"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2339 - "Community 2339"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2340 - "Community 2340"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2341 - "Community 2341"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2342 - "Community 2342"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2343 - "Community 2343"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2344 - "Community 2344"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2345 - "Community 2345"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2346 - "Community 2346"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2347 - "Community 2347"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2348 - "Community 2348"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2349 - "Community 2349"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2350 - "Community 2350"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2351 - "Community 2351"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2352 - "Community 2352"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2353 - "Community 2353"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2354 - "Community 2354"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2355 - "Community 2355"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2356 - "Community 2356"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2357 - "Community 2357"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2358 - "Community 2358"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2359 - "Community 2359"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2360 - "Community 2360"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2361 - "Community 2361"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2362 - "Community 2362"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2363 - "Community 2363"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2364 - "Community 2364"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2365 - "Community 2365"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2366 - "Community 2366"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2367 - "Community 2367"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2368 - "Community 2368"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2369 - "Community 2369"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2370 - "Community 2370"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2371 - "Community 2371"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2372 - "Community 2372"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2373 - "Community 2373"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2374 - "Community 2374"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2375 - "Community 2375"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2376 - "Community 2376"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2377 - "Community 2377"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2378 - "Community 2378"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2379 - "Community 2379"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2380 - "Community 2380"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2381 - "Community 2381"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2382 - "Community 2382"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2383 - "Community 2383"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2384 - "Community 2384"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2385 - "Community 2385"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2386 - "Community 2386"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2387 - "Community 2387"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2388 - "Community 2388"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2389 - "Community 2389"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2390 - "Community 2390"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2391 - "Community 2391"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2392 - "Community 2392"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2393 - "Community 2393"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2394 - "Community 2394"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2395 - "Community 2395"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2396 - "Community 2396"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2397 - "Community 2397"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2398 - "Community 2398"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2399 - "Community 2399"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2400 - "Community 2400"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2401 - "Community 2401"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2402 - "Community 2402"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2403 - "Community 2403"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2404 - "Community 2404"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2405 - "Community 2405"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2406 - "Community 2406"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2407 - "Community 2407"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2408 - "Community 2408"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2409 - "Community 2409"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2410 - "Community 2410"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2411 - "Community 2411"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2412 - "Community 2412"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2413 - "Community 2413"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2414 - "Community 2414"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2415 - "Community 2415"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2416 - "Community 2416"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2417 - "Community 2417"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2418 - "Community 2418"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2419 - "Community 2419"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2420 - "Community 2420"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2421 - "Community 2421"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2422 - "Community 2422"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2423 - "Community 2423"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2424 - "Community 2424"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2425 - "Community 2425"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2426 - "Community 2426"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2427 - "Community 2427"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2428 - "Community 2428"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2429 - "Community 2429"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2430 - "Community 2430"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2431 - "Community 2431"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2432 - "Community 2432"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2433 - "Community 2433"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2434 - "Community 2434"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2435 - "Community 2435"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2436 - "Community 2436"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2437 - "Community 2437"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2438 - "Community 2438"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2439 - "Community 2439"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2440 - "Community 2440"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2441 - "Community 2441"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2442 - "Community 2442"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2443 - "Community 2443"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2444 - "Community 2444"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2445 - "Community 2445"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2446 - "Community 2446"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2447 - "Community 2447"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2448 - "Community 2448"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2449 - "Community 2449"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2450 - "Community 2450"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2451 - "Community 2451"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2452 - "Community 2452"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2453 - "Community 2453"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2454 - "Community 2454"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2455 - "Community 2455"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2456 - "Community 2456"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2457 - "Community 2457"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2458 - "Community 2458"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2459 - "Community 2459"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2460 - "Community 2460"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2461 - "Community 2461"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2462 - "Community 2462"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2463 - "Community 2463"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2464 - "Community 2464"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2465 - "Community 2465"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2466 - "Community 2466"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2467 - "Community 2467"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2468 - "Community 2468"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2469 - "Community 2469"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2470 - "Community 2470"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2471 - "Community 2471"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2472 - "Community 2472"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2473 - "Community 2473"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2474 - "Community 2474"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2475 - "Community 2475"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2476 - "Community 2476"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2477 - "Community 2477"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2478 - "Community 2478"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2479 - "Community 2479"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2480 - "Community 2480"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2481 - "Community 2481"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2482 - "Community 2482"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2483 - "Community 2483"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2484 - "Community 2484"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2485 - "Community 2485"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2486 - "Community 2486"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2487 - "Community 2487"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2488 - "Community 2488"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2489 - "Community 2489"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2490 - "Community 2490"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2491 - "Community 2491"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2492 - "Community 2492"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2493 - "Community 2493"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2494 - "Community 2494"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2495 - "Community 2495"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2496 - "Community 2496"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2497 - "Community 2497"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2498 - "Community 2498"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2499 - "Community 2499"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2500 - "Community 2500"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2501 - "Community 2501"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2502 - "Community 2502"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2503 - "Community 2503"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2504 - "Community 2504"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2505 - "Community 2505"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2506 - "Community 2506"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2507 - "Community 2507"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2508 - "Community 2508"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2509 - "Community 2509"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2510 - "Community 2510"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2511 - "Community 2511"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2512 - "Community 2512"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2513 - "Community 2513"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2514 - "Community 2514"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2515 - "Community 2515"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2516 - "Community 2516"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2517 - "Community 2517"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2518 - "Community 2518"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2519 - "Community 2519"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2520 - "Community 2520"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2521 - "Community 2521"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2522 - "Community 2522"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2523 - "Community 2523"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2524 - "Community 2524"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2525 - "Community 2525"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2526 - "Community 2526"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2527 - "Community 2527"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2528 - "Community 2528"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2529 - "Community 2529"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2530 - "Community 2530"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2531 - "Community 2531"
+Cohesion: 0.05
+Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
+
+### Community 2532 - "Community 2532"
+Cohesion: 0.08
+Nodes (31): MoneyPercentileDistribution, closingCheckpointSeasonStartYear(), countSourceLabels(), createPlayerMarketCalibrationReport(), deviationBasisPoints(), divisions, isPopulation(), percentileTypeSeven() (+23 more)
+
+### Community 2533 - "Community 2533"
+Cohesion: 0.07
+Nodes (29): ContractDemandError, abilitySet(), base, careerState, CLUB, CONTRACT, currentOnlyWage, demand (+21 more)
+
+### Community 2534 - "Community 2534"
+Cohesion: 0.17
+Nodes (15): abilitySet(), baseCareerState, candidateBatch(), candidateFixture(), candidates, careerState, careerStateFixture(), careerStateWithHistoricalPlayer (+7 more)
+
+### Community 2535 - "Community 2535"
+Cohesion: 0.17
+Nodes (11): Anomaly Semantics, code:bash (nvm use 24), Matched Three-Season Trajectories, Natural Conditioning Cells, New Entrants At Closing, Non-Vacuous Gates, Opening And Closing Checkpoints, Phase 80A Player-Development 750x3 Cohort Report (+3 more)
+
+### Community 2536 - "Community 2536"
+Cohesion: 0.17
+Nodes (11): Anomaly Semantics, code:bash (nvm use 24), Matched Three-Season Trajectories, Natural Conditioning Cells, New Entrants At Closing, Non-Vacuous Gates, Opening And Closing Checkpoints, Phase 80A Player-Development 750x3 Cohort Report (+3 more)
+
+### Community 2537 - "Community 2537"
+Cohesion: 0.17
+Nodes (12): annualAppearanceDivisor, defensiveCleanSheetMultiplierBasisPoints, goalBonusMultiplierBasisPoints, roundingMinorUnits, signingBonusBasisPoints, signingRoundingMinorUnits, bonuses, fringe_player (+4 more)
+
+### Community 2538 - "Community 2538"
+Cohesion: 0.36
+Nodes (7): formatMachineStars(), formatStars(), fractionState(), PlayerPotentialRangeRating(), PotentialRangeStar(), slotFraction(), markup
+
+### Community 2539 - "Community 2539"
+Cohesion: 0.22
+Nodes (8): Blocking Finding, Delivered Scope, Evidence For The Reported Prospect Values, Frozen 750 x 3 Execution, Phase 80A Prospect Environment And Player Economy Report, Player-Model Gate Result, Potential Visibility And Development Evidence, Required Decision
 
 ## Knowledge Gaps
-- **18166 isolated node(s):** `target`, `module`, `moduleResolution`, `noEmit`, `strict` (+18161 more)
+- **47577 isolated node(s):** `target`, `module`, `moduleResolution`, `noEmit`, `strict` (+47572 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Translator` connect `Community 740` to `Community 1`, `Community 647`, `Community 11`, `Community 14`, `Community 21`, `Community 1048`, `Community 1565`, `Community 34`, `Community 930`, `Community 1578`, `Community 940`, `Community 45`, `Community 48`, `Community 53`, `Community 55`, `Community 1721`, `Community 1723`, `Community 722`, `Community 83`, `Community 1108`, `Community 93`, `Community 97`, `Community 100`, `Community 1642`, `Community 1644`, `Community 1647`, `Community 1013`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `playerId` connect `Community 1658` to `Community 1665`, `Community 2`, `Community 1668`, `Community 5`, `Community 4`, `Community 9`, `Community 10`, `Community 12`, `Community 13`, `Community 15`, `Community 22`, `Community 24`, `Community 1689`, `Community 26`, `Community 28`, `Community 29`, `Community 30`, `Community 928`, `Community 36`, `Community 1575`, `Community 41`, `Community 42`, `Community 43`, `Community 45`, `Community 1581`, `Community 49`, `Community 51`, `Community 1588`, `Community 1084`, `Community 1597`, `Community 61`, `Community 703`, `Community 67`, `Community 1607`, `Community 840`, `Community 1099`, `Community 1616`, `Community 1107`, `Community 1116`, `Community 733`, `Community 1121`, `Community 98`, `Community 739`, `Community 1635`, `Community 1122`, `Community 102`, `Community 757`, `Community 1018`, `Community 125`, `Community 127`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `number()` connect `Community 1665` to `Community 1668`, `Community 4`, `Community 5`, `Community 9`, `Community 10`, `Community 11`, `Community 15`, `Community 16`, `Community 20`, `Community 22`, `Community 25`, `Community 922`, `Community 29`, `Community 1565`, `Community 286`, `Community 928`, `Community 1057`, `Community 930`, `Community 933`, `Community 936`, `Community 41`, `Community 43`, `Community 940`, `Community 49`, `Community 1716`, `Community 54`, `Community 1723`, `Community 62`, `Community 703`, `Community 1729`, `Community 67`, `Community 83`, `Community 1107`, `Community 1117`, `Community 97`, `Community 1121`, `Community 1635`, `Community 98`, `Community 611`, `Community 102`, `Community 1002`, `Community 1648`, `Community 756`, `Community 1013`, `Community 1658`, `Community 127`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `playerId` connect `Community 62` to `Community 2`, `Community 4`, `Community 5`, `Community 9`, `Community 13`, `Community 14`, `Community 22`, `Community 24`, `Community 26`, `Community 28`, `Community 30`, `Community 286`, `Community 31`, `Community 1575`, `Community 936`, `Community 41`, `Community 42`, `Community 48`, `Community 49`, `Community 58`, `Community 1084`, `Community 1597`, `Community 61`, `Community 703`, `Community 67`, `Community 1616`, `Community 722`, `Community 97`, `Community 98`, `Community 1121`, `Community 100`, `Community 740`, `Community 2533`, `Community 2534`, `Community 1002`, `Community 1772`, `Community 751`, `Community 1136`, `Community 1018`, `Community 125`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
+- **Why does `clubId` connect `Community 62` to `Community 4`, `Community 5`, `Community 9`, `Community 13`, `Community 14`, `Community 22`, `Community 24`, `Community 26`, `Community 30`, `Community 286`, `Community 31`, `Community 1575`, `Community 936`, `Community 41`, `Community 42`, `Community 48`, `Community 49`, `Community 51`, `Community 58`, `Community 1084`, `Community 1597`, `Community 61`, `Community 703`, `Community 67`, `Community 722`, `Community 1117`, `Community 93`, `Community 97`, `Community 100`, `Community 740`, `Community 2533`, `Community 2534`, `Community 1002`, `Community 1772`, `Community 751`, `Community 1136`, `Community 1018`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `target`, `module`, `moduleResolution` to the rest of the system?**
-  _18166 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _47577 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.005319148936170213 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.005089058524173028 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.022795325026562348 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.01286873593176164 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.12648221343873517 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.015053994135736251 - nodes in this community are weakly interconnected._
+- **Should `Community 3` be split into smaller, more focused modules?**
+  _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._

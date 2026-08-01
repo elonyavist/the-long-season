@@ -26,12 +26,18 @@ export {
 export {
   advanceAiMarketLifecycle,
   deriveAiMarketNeeds,
+  deriveAiMarketTargetScore,
+  deriveAiTransferAffordabilitySnapshot,
+  deriveAiTransferOfferFee,
   type AdvanceAiMarketLifecycleResult,
   type AiMarketDiagnosticFact,
   type AiMarketDiagnosticReason,
   type AiMarketLifecycleFact,
   type AiMarketNeed,
   type AiMarketNeedReason,
+  type AiTransferAffordabilitySnapshot,
+  type DeriveAiTransferAffordabilitySnapshotInput,
+  type DeriveAiTransferOfferFeeInput,
 } from "./career/ai-market-lifecycle.ts";
 export {
   CareerMatchStateConsequenceError,
@@ -146,6 +152,10 @@ export {
   type SubmitPreliminaryAgreementOfferInput,
 } from "./career/preliminary-agreement.ts";
 export { selectFreeAgentPlayerIds } from "./career/free-agent-pool.ts";
+export {
+  selectCareerActivePlayerStock,
+  type CareerActivePlayerStockEntry,
+} from "./career/active-player-stock.ts";
 export {
   replenishSeniorSquadsFromFreeAgents,
   type ReplenishSeniorSquadsFromFreeAgentsInput,
@@ -275,20 +285,29 @@ export {
 } from "./career/senior-squad-transfer.ts";
 export {
   accrueCommittedFixtureParticipation,
+  accrueFixtureParticipationContributions,
   buildFixtureParticipationContributions,
   type AccrueCommittedFixtureParticipationInput,
+  type AccrueFixtureParticipationContributionsInput,
   type BuildFixtureParticipationContributionsInput,
   type BuildFixtureParticipationContributionsResult,
   type FixtureParticipationSideContext,
 } from "./career/player-participation.ts";
 export {
-  developPlayersForSeason,
+  derivePlayerDevelopmentEnvironmentEvidence,
+  developPlayersFromParticipationRows,
+  monthlyDevelopmentVariance,
+  PlayerDevelopmentError,
   summarizePlayerDevelopmentAbilities,
   totalPlayerAbilityDelta,
+  type DevelopPlayersFromParticipationRowsInput,
+  type DerivePlayerDevelopmentEnvironmentEvidenceInput,
   type PlayerDevelopmentAbilitySummary,
   type PlayerDevelopmentChange,
-  type PlayerDevelopmentInput,
+  type PlayerDevelopmentErrorCode,
+  type PlayerDevelopmentEnvironmentEvidence,
   type PlayerDevelopmentResult,
+  type PlayerMonthlyDevelopmentChange,
 } from "./career/player-development.ts";
 export {
   applyPlayerAgingPolicy,
@@ -298,6 +317,7 @@ export {
   type ApplyPlayerAgingPolicyResult,
 } from "./career/player-aging-policy.ts";
 export {
+  environmentMultiplierFromBasisPoints,
   monthlyDevelopmentPolicy,
   monthlyGrowthAgeMultiplier,
   monthlyOpportunityMultiplier,
@@ -363,6 +383,30 @@ export {
   type SquadMaintenanceWarning,
 } from "./career/squad-maintenance.ts";
 export {
+  CLUB_COMPETITIVE_TIER_DIVISION_SIZE,
+  ClubSeasonTierError,
+  completedResultPyramidCoordinate,
+  deriveClubReputationTarget,
+  deriveClubRosterStrength,
+  deriveClubSeasonTierUpdate,
+  moveReputationTowardTarget,
+  type ClubCompletedSeasonResult,
+  type ClubRosterStrength,
+  type ClubSeasonTierErrorCode,
+  type ClubSeasonTierFact,
+  type ClubSeasonTierUpdate,
+} from "./career/club-season-tier.ts";
+export {
+  ClubDevelopmentEnvironmentDerivationError,
+  deriveClubDevelopmentEnvironment,
+  type ClubDevelopmentEnvironmentDerivationErrorCode,
+  type DeriveClubDevelopmentEnvironmentInput,
+} from "./career/club-development-environment.ts";
+export {
+  createFreshCareerState,
+  type CreateFreshCareerStateInput,
+} from "./career/fresh-career-state.ts";
+export {
   rolloverPlayersForNextSeason,
   type PlayerSeasonRolloverInput,
   type PlayerSeasonRolloverResult,
@@ -384,6 +428,7 @@ export {
   type AdvanceCareerOneSeasonInvalidReason,
   type AdvanceCareerOneSeasonMode,
   type AdvanceCareerOneSeasonResult,
+  type AdvanceCareerReportCompetitionResult,
   type AdvanceCareerReportRefreshMode,
   type CareerPlayerDevelopmentFact,
   type CareerPlayerExitFact,

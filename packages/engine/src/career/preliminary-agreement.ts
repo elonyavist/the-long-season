@@ -23,7 +23,9 @@ import {
 } from "@game/domain";
 
 import { evaluateMarketActionEligibility } from "../market/market-eligibility.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 import { derivePlayerWillingness } from "../market/player-willingness.ts";
+import { derivePublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { applyContractActivationFinance } from "./career-finance-lifecycle.ts";
 import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import { reconcileClosedContractNegotiations } from "./contract-negotiation.ts";
@@ -62,6 +64,7 @@ export type PreliminaryAgreementCommandResult =
 export interface SubmitPreliminaryAgreementOfferInput {
   readonly careerState: CareerState;
   readonly wagePolicy: PlayerWagePolicyConfig;
+  readonly valuationConfig: PlayerValuationConfig;
   readonly agreementId: PreliminaryAgreementId;
   readonly playerId: PlayerContract["playerId"];
   readonly offeringClubId: PlayerContract["clubId"];
@@ -100,6 +103,8 @@ export function submitPreliminaryAgreementOffer(
   ) {
     return rejected(input.agreementId, "player_contract_not_found");
   }
+  const player = input.careerState.gameState.players[input.playerId];
+  if (player === undefined) return rejected(input.agreementId, "player_contract_not_found");
   const eligibility = evaluateMarketActionEligibility({
     action: "preliminary_agreement",
     windows: input.transferWindows,
@@ -116,6 +121,12 @@ export function submitPreliminaryAgreementOffer(
     playerId: input.playerId,
     clubId: input.offeringClubId,
     evaluatedOn: input.submittedOn,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: input.submittedOn,
+      ratingScale: input.valuationConfig.ratingScale,
+      potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+    }),
     currentContract,
     isFreeAgent: false,
   });
@@ -176,6 +187,7 @@ export function advancePreliminaryAgreementLifecycle(input: {
   readonly throughDate: GameDate;
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  readonly valuationConfig: PlayerValuationConfig;
 }): AdvancePreliminaryAgreementLifecycleResult {
   const state = input.careerState.preliminaryAgreementState;
   if (state === undefined) return { careerState: input.careerState, facts: [] };
@@ -232,6 +244,7 @@ export function advancePreliminaryAgreementLifecycle(input: {
         agreement,
         input.wagePolicy,
         input.marketBehaviorPolicy,
+        input.valuationConfig,
       );
       careerState = resolution.careerState;
       facts.push(resolution.fact);
@@ -342,6 +355,7 @@ function resolveSubmittedAgreement(
   agreement: Extract<PreliminaryAgreement, { readonly status: "offer_submitted" }>,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
+  valuationConfig: PlayerValuationConfig,
 ): {
   readonly careerState: CareerState;
   readonly fact: PreliminaryAgreementLifecycleFact;
@@ -363,16 +377,19 @@ function resolveSubmittedAgreement(
   }
 
   const willingness = derivePlayerWillingness({
-    player,
+    publicAssessment: derivePublicPlayerAssessment({
+      player,
+      currentDate: decidedOn,
+      ratingScale: valuationConfig.ratingScale,
+      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
+    }),
     sellingClub: currentClub,
     buyingClub: offeringClub,
     currentTier: currentClub.category,
     destinationTier: offeringClub.category,
-    currentDate: decidedOn,
     currentContract,
     proposedTerms: agreement.offeredTerms,
     marketBehaviorPolicy,
-    ratingScale: wagePolicy.ratingScale,
   });
   if (willingness.status === "rejected") {
     const rejectedAgreement: PreliminaryAgreement = {

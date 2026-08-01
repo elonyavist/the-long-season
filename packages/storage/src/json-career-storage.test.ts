@@ -9,6 +9,7 @@ import {
   accruePlayerFixtureParticipation,
   careerInboxMessageId,
   closePlayerParticipationMonth,
+  clubId,
   competitionId,
   createCareerState,
   createCareerInboxMessage,
@@ -316,7 +317,7 @@ test("save then load preserves a blocking selected-club counteroffer exactly", a
                 evaluatedOn: gameDate(19_998),
                 age: 27,
                 currentAbility: 10,
-                reachablePotential: 12,
+                publicPotentialP50Ability: 12,
                 role: "goalkeeper",
                 expectedSquadStatus: "squad_player",
                 currentAnnualWage: nonNegativeMoney(100_000_00),
@@ -383,7 +384,7 @@ test("loading malformed career saves fails clearly", async () => {
   const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
 
   try {
-    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 8, metadata: {}, state: {} }), "utf8");
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 13, metadata: {}, state: {} }), "utf8");
 
     await assert.rejects(
       () => storage.loadCareer(saveId("save:bad")),
@@ -411,7 +412,9 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 8);
+    assert.equal(raw.saveSchemaVersion, 13);
+    assert.equal(((raw.state as { readonly schemaVersion: number }).schemaVersion), 2);
+    assert.equal(CAREER_STATE_SCHEMA_VERSION, 2);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
     assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
   } finally {
@@ -426,7 +429,7 @@ test("old beta career envelopes fail with a typed reset boundary", async () => {
   const savePath = (id: ReturnType<typeof saveId>) => join(directoryPath, `${encodeURIComponent(id)}.career.json`);
 
   try {
-    for (const version of [1, 2, 3, 4, 5] as const) {
+    for (const version of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const) {
       const id = saveId(`save:old-beta-${version}`);
       await writeFile(savePath(id), JSON.stringify({
         saveSchemaVersion: version,
@@ -446,6 +449,57 @@ test("old beta career envelopes fail with a typed reset boundary", async () => {
         (error: unknown) => error instanceof StorageError && error.code === "unsupported_schema_version",
       );
     }
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+test("current beta envelopes reject missing or stale competitive-tier state", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-07-31T10:00:00.000Z"),
+  });
+  const state = minimalCareerState();
+  const storedPath = join(directoryPath, `${encodeURIComponent(state.saveId)}.career.json`);
+
+  try {
+    await storage.saveCareer({ saveId: state.saveId, name: "Tier boundary", state });
+    const envelope = JSON.parse(await readFile(storedPath, "utf8")) as {
+      readonly saveSchemaVersion: number;
+      readonly metadata: Readonly<Record<string, unknown>>;
+      readonly state: CareerState;
+    };
+    const { clubCompetitiveTierState: _missingTier, ...stateWithoutTier } = envelope.state;
+
+    await writeFile(
+      storedPath,
+      JSON.stringify({ ...envelope, state: stateWithoutTier }),
+      "utf8",
+    );
+    await assert.rejects(
+      () => storage.loadCareer(state.saveId),
+      (error: unknown) => error instanceof StorageError && error.code === "unsupported_schema_version",
+    );
+
+    await writeFile(
+      storedPath,
+      JSON.stringify({
+        ...envelope,
+        state: {
+          ...envelope.state,
+          clubCompetitiveTierState: {
+            ...envelope.state.clubCompetitiveTierState,
+            seasonId: seasonId("season:stale"),
+          },
+        },
+      }),
+      "utf8",
+    );
+    await assert.rejects(
+      () => storage.loadCareer(state.saveId),
+      (error: unknown) => error instanceof StorageError && error.code === "unsupported_schema_version",
+    );
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -494,6 +548,7 @@ function playerParticipationLedgerFixture(player: ReturnType<typeof playerId>) {
   const accrued = accruePlayerFixtureParticipation(createEmptyPlayerParticipationLedger(), {
     fixtureId: fixtureId("fixture:json-career-001"),
     playerId: player,
+    clubId: clubId("club:pro01"),
     seasonId: season,
     monthKey,
     started: true,
@@ -572,6 +627,7 @@ function minimalGameState(): GameState {
         askingPriceCurvesVersion: "asking-v1",
         marketBehaviorCalibrationVersion: "behavior-v1",
         wageFinanceCalibrationVersion: "wage-v1",
+        playerDevelopmentEnvironmentVersion: "development-environment-v1",
       },
     },
     calendar: {

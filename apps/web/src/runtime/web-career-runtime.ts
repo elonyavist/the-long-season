@@ -4,6 +4,7 @@ import {
   playerEconomyCalibration,
   selectAskingPriceCurves,
   selectMarketBehaviorCalibration,
+  selectPlayerDevelopmentEnvironmentConfig,
   selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
@@ -22,6 +23,7 @@ import {
   createRenewalNegotiationId,
   createTransferNegotiationId,
   combineDomesticCompetitionCalendars,
+  createFreshCareerState,
   findNextCareerFixture,
   offerSelectedClubRenewal,
   openCareerInboxMessage,
@@ -683,6 +685,9 @@ export class WebCareerRuntime {
     const marketBehaviorPolicy = selectMarketBehaviorCalibration(
       currentState.gameState.meta.calibrationVersions,
     );
+    const valuationConfig = selectPlayerValuationConfig(
+      currentState.gameState.meta.calibrationVersions,
+    );
 
     // Free-agent signing is an immediate apply with no negotiation stage, so
     // it does not fit the shared negotiation/agreement outcome shape below.
@@ -697,9 +702,7 @@ export class WebCareerRuntime {
         acceptedTerms: command.terms,
         wagePolicy,
         marketBehaviorPolicy,
-        valuationConfig: selectPlayerValuationConfig(
-          currentState.gameState.meta.calibrationVersions,
-        ),
+        valuationConfig,
         askingPriceConfig: selectAskingPriceCurves(
           currentState.gameState.meta.calibrationVersions,
         ),
@@ -742,9 +745,7 @@ export class WebCareerRuntime {
             offeredFee: command.offeredFee,
             submittedOn: decidedOn,
             transferWindows,
-            valuationConfig: selectPlayerValuationConfig(
-              currentState.gameState.meta.calibrationVersions,
-            ),
+            valuationConfig,
             askingPriceConfig: selectAskingPriceCurves(
               currentState.gameState.meta.calibrationVersions,
             ),
@@ -772,6 +773,7 @@ export class WebCareerRuntime {
             terms: command.terms,
             transferWindows,
             wagePolicy,
+            valuationConfig,
             marketBehaviorPolicy,
           });
         case "accept_transfer_player_counter":
@@ -781,6 +783,7 @@ export class WebCareerRuntime {
             decidedOn,
             transferWindows,
             wagePolicy,
+            valuationConfig,
             marketBehaviorPolicy,
           });
         case "reject_transfer_player_counter":
@@ -790,6 +793,7 @@ export class WebCareerRuntime {
             decidedOn,
             transferWindows,
             wagePolicy,
+            valuationConfig,
             marketBehaviorPolicy,
           });
         case "submit_preliminary_agreement": {
@@ -803,6 +807,7 @@ export class WebCareerRuntime {
             terms: command.terms,
             transferWindows,
             wagePolicy,
+            valuationConfig,
           });
         }
         case "accept_preliminary_agreement_counter":
@@ -1407,9 +1412,8 @@ export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState
     }),
   );
 
-  const state: WebCareerState = {
+  const state: WebCareerState = createFreshCareerState({
     saveId: identity.saveId,
-    schemaVersion: 1,
     careerWorld: {
       worldSeed: identity.worldSeed,
       generatorVersion: WEB_CAREER_WORLD_GENERATOR_VERSION,
@@ -1440,7 +1444,7 @@ export function buildWebCareerState(identity: WebCareerIdentity): WebCareerState
     seniorSquadState: world.seniorSquadState,
     clubFinanceState: world.clubFinanceState,
     transferHistory: [],
-  };
+  });
   return state;
 }
 
@@ -1472,6 +1476,12 @@ export function rolloverCompletedWebCareerSeason(
       careerState.gameState.meta.calibrationVersions,
     ),
     marketBehaviorPolicy: selectMarketBehaviorCalibration(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    valuationConfig: selectPlayerValuationConfig(
+      careerState.gameState.meta.calibrationVersions,
+    ),
+    playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       careerState.gameState.meta.calibrationVersions,
     ),
     createYouthIntakeCandidates: annualIntake.createYouthIntakeCandidates,

@@ -1,8 +1,4 @@
 import {
-  getPlayerRoleProfile,
-  rawDiagnosticAbilityAverage,
-  roleCurrentAbility,
-  rolePotentialAbility,
   createCareerState,
   type CareerState,
   type Club,
@@ -20,6 +16,20 @@ import { applyContractActivationFinance } from "./career-finance-lifecycle.ts";
 import { evaluateCareerContractCapacity } from "./career-contract-capacity.ts";
 import { deriveContractDemand } from "./contract-negotiation-demand.ts";
 import { prepareSeniorSquadSigning } from "./senior-squad-transfer.ts";
+import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import {
+  derivePublicPlayerAssessment,
+  type PublicPlayerAssessment,
+} from "../squad/public-player-assessment.ts";
+
+/**
+ * Public-P50 equivalent of the legacy `3.5` stored-ceiling-room usefulness gate.
+ *
+ * The age-20 realization bands map that historical room to `0.74..0.85`
+ * expected ability, so `0.8` preserves the intended signal without recovering
+ * the private ceiling. Academy age-out remains deliberately stricter at `1.0`.
+ */
+const YOUTH_PROMOTION_EXPECTED_ROOM_THRESHOLD = 0.8;
 
 /** Phase 32 senior squad target upper bound. */
 export const YOUTH_PROMOTION_SENIOR_TARGET_SIZE = 25;
@@ -32,6 +42,8 @@ export interface PromoteYouthCandidatesInput {
   readonly wagePolicy: PlayerWagePolicyConfig;
   /** Exact version-selected reserve and affordability policy. */
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Canonical public-assessment policy used to price promotion terms. */
+  readonly valuationConfig: PlayerValuationConfig;
   /** Whether the selected club can be automated by a lab/report command. */
   readonly allowSelectedClubPromotion?: boolean;
   /** Optional senior roster target. Defaults to Phase 32 target `25`. */
@@ -97,10 +109,17 @@ export function promoteYouthCandidatesToSeniorSquads(input: PromoteYouthCandidat
     for (const player of candidates) {
       const club = careerState.gameState.clubs[clubId];
       if (club === undefined) continue;
+      const occurredOn = input.occurredOn ?? careerState.gameState.calendar.currentDate;
+      const publicAssessment = derivePublicPlayerAssessment({
+        player,
+        currentDate: occurredOn,
+        potentialProjectionPolicy: input.valuationConfig.potentialProjectionPolicy,
+        ratingScale: input.valuationConfig.ratingScale,
+      });
       const reason = promotionReason({
         careerState,
         club,
-        player,
+        publicAssessment,
         seniorTargetSize,
         allowSelectedClubPromotion: input.allowSelectedClubPromotion ?? false,
       });
@@ -113,9 +132,10 @@ export function promoteYouthCandidatesToSeniorSquads(input: PromoteYouthCandidat
         careerState,
         clubId,
         player,
-        input.occurredOn ?? careerState.gameState.calendar.currentDate,
+        occurredOn,
         input.wagePolicy,
         input.marketBehaviorPolicy,
+        publicAssessment,
       );
       if (promoted === undefined) {
         records.push({
@@ -141,11 +161,13 @@ function promoteCandidate(
   occurredOn: GameDate,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
+  publicAssessment: PublicPlayerAssessment,
 ): CareerState | undefined {
   const seniorSquadState = requiredSeniorState(careerState);
   const demand = deriveContractDemand({
     careerState,
     wagePolicy,
+    publicAssessment,
     playerId: player.id,
     clubId,
     evaluatedOn: occurredOn,
@@ -242,7 +264,7 @@ function promotionCandidatesForClub(
 function promotionReason(input: {
   readonly careerState: CareerState;
   readonly club: Club;
-  readonly player: Player;
+  readonly publicAssessment: PublicPlayerAssessment;
   readonly seniorTargetSize: number;
   readonly allowSelectedClubPromotion: boolean;
 }): YouthPromotionReason {
@@ -250,26 +272,14 @@ function promotionReason(input: {
     return "selected_club_protected";
   }
   if (input.club.playerIds.length >= input.seniorTargetSize) return "senior_squad_full";
-  if (!isUsefulPromotionCandidate(input.player)) return "not_useful_enough";
+  if (!isUsefulPromotionCandidate(input.publicAssessment)) return "not_useful_enough";
   return "promoted";
 }
 
-function isUsefulPromotionCandidate(player: Player): boolean {
-  const ability = youthPromotionAbility(player);
-  return ability.current >= 7.4 || ability.potentialRoom >= 3.5;
-}
-
-/** Returns the football measures needed only by senior-promotion decisions. */
-function youthPromotionAbility(player: Player): { readonly current: number; readonly potentialRoom: number } {
-  if (player.primaryRole === undefined) {
-    const current = Number(rawDiagnosticAbilityAverage(player.abilities));
-    const potential = Number(rawDiagnosticAbilityAverage(player.potential));
-    return { current, potentialRoom: potential - current };
-  }
-  const profile = getPlayerRoleProfile(player.primaryRole);
-  const current = Number(roleCurrentAbility(player.abilities, profile));
-  const potential = Number(rolePotentialAbility(player.potential, profile));
-  return { current, potentialRoom: potential - current };
+function isUsefulPromotionCandidate(assessment: PublicPlayerAssessment): boolean {
+  return assessment.currentAbility >= 7.4
+    || assessment.p50Ability - assessment.currentAbility
+      >= YOUTH_PROMOTION_EXPECTED_ROOM_THRESHOLD;
 }
 
 function nextOwnershipTransitionSequence(state: SeniorSquadState): number {
