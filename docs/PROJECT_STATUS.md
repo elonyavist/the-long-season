@@ -419,6 +419,18 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   and a maximum of `0.2274` in Phase 79A. The code path is complete, so this is
   AI signing policy. Phase 81A Steps 02 and 03 are reported together: shortening
   contracts without a signing policy only enlarges the warehouse.
+- The pool is frozen as a cycle rather than a level, decided on 2026-08-02.
+  Peak `10-12%` of a competition's senior population at the season boundary,
+  trough near `3%` once the summer window closes, and the drain between them as
+  the gate. A pool whose peak equals its trough sits inside any level band while
+  being precisely the defect, so the level is description and the delta is the
+  test. The drain is additionally attributed between signings and exits: a
+  trough reached by players leaving football is a shrinking world, not a market.
+- A new career opens at that trough, roughly `30-40` leftover players in the
+  current `54`-club world, generated with a leftover composition rather than a
+  uniform sample. Careers begin after the summer window - generated contracts
+  start at `referenceDate - rng(30..540)` - so a small pool at day one is
+  correct; an empty pool that the world never returns to is not.
 - Phase 81A then resolves background fixtures for the selected club's division
   inside `advanceCareerMonths`, adds the simulate-match command on the same
   producer, and measures market density against bands frozen in its Step 01. Its

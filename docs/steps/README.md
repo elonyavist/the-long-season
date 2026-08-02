@@ -170,7 +170,12 @@ Provide an open, incremental, and iterative execution guide for the project: one
   offered term becomes months with a season-end floor and a `60` month ceiling,
   which is what FIFA's own minimum requires and what the `18-30` band needs; and
   the AI gets a free-agent signing policy, because the pool sits at a measured
-  `20-23%` share and does not drain.
+  `20-23%` share and does not drain. The pool is treated as cyclical: it is
+  frozen as a peak of `10-12%` of a competition's senior population at the
+  season boundary, a trough near `3%` once the window closes, and a drain
+  between them achieved mostly by signings. The delta is the gate; the level is
+  description, because a pool whose peak equals its trough sits inside any level
+  band while being exactly the defect.
 - Steps 02 and 03 are reported together. Shortening contracts without a signing
   policy produces a larger warehouse and would measure as a regression.
 - It then resolves background fixtures for the selected club's division inside

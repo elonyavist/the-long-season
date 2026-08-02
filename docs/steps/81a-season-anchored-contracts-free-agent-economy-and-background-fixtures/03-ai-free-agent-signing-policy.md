@@ -35,9 +35,12 @@ turns over every window.
 - Respect the existing market cadence rather than inventing a second one, and
   keep the manager's advantage in attention rather than in clock: the AI acts on
   its cadence, the manager may act at any time.
-- Make the policy season-aware. Signing pressure is highest when the pool has
-  just filled at the season boundary and when a squad sits below its floor, and
-  lowest mid-season for a club with no gap.
+- Make the policy season-aware, because the pool is cyclical and the policy is
+  what drives the cycle. Signing pressure is highest right after the season
+  boundary, when expiries have just filled the pool and squads are being
+  rebuilt, and lowest late in a window for a club with no gap. The pool must
+  visibly empty between the peak and the trough frozen in Step 01: that delta is
+  this step's gate, not the level it settles at.
 - Keep the existing `applyCareerFreeAgentSigning` commit path. This step decides
   who signs, not how a signing is applied.
 - Ensure a signed free agent receives a term through Step 02's month-precision
@@ -113,8 +116,10 @@ graphify update .
 
 - One named policy owns the free-agent signing decision and every AI path reads
   it.
-- The free-agent share sits inside its frozen band, with positive signings per
-  season recorded - a stable share with zero outflow does not pass.
+- The pool reaches its frozen peak after the season boundary and its frozen
+  trough once the window closes, and the delta between them is achieved mostly
+  by signings rather than by exits. A pool whose peak and trough coincide fails
+  this step regardless of the level it holds.
 - Structural squad floors and wage capacity are never violated by a signing.
 - Identical inputs produce identical decisions.
 - Steps 02 and 03 are reported together against the Step 01 bands, with the

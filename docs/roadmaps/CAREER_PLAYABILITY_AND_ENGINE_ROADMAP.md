@@ -2111,7 +2111,12 @@ Minimum useful scope:
 - offered contract terms in months, floor "to the end of the current season" and
   ceiling `60`, matching FIFA's own minimum and unblocking the `18-30` band;
 - an AI free-agent signing policy, because the pool is measured at a `20-23%`
-  share that does not drain;
+  share that does not drain. It is frozen as a cycle - peak `10-12%` of a
+  competition's senior population at the season boundary, trough near `3%` once
+  the window closes - and the gate is the drain between them, not the level;
+- a world that opens at that trough, roughly `30-40` leftover players in the
+  current `54`-club world, instead of the empty pool a new career opens with
+  today;
 - background fixtures for the selected club's division, resolved only inside
   `advanceCareerMonths`, idempotent and order-independent;
 - a simulate-match command sharing the background producer;
@@ -2128,8 +2133,9 @@ Definition of Done:
 
 - every expiry lands on a season boundary, and contracts and loans share one
   boundary definition;
-- the free-agent share is inside band with positive drain, reported together
-  with the contract change and not as a separate claim;
+- the free-agent pool reaches its frozen peak and trough, the drain between them
+  is achieved mostly by signings rather than by players leaving football, and it
+  is reported together with the contract change rather than as a separate claim;
 - the user's league table is complete at every point in the season;
 - density is measured against the frozen bands and the Phase 82A recommendation
   is stated with its reason.

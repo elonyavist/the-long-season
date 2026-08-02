@@ -26,10 +26,16 @@ numbers moved.
     single month. This is the direct evidence for the anniversary anchoring;
   - the offered-term distribution actually produced by
     `derivePreferredContractDurationYears`, in months;
-  - the free-agent share per season, its arrivals from expiry and release, and
-    its departures from signing. The share alone is not enough: a pool that is
-    stable because nothing enters and nothing leaves is a different defect from
-    one that is stable because inflow equals outflow;
+  - the free-agent pool at two named points in the season, not as an annual
+    average. The pool is cyclical: it peaks at the season boundary when
+    contracts expire together, and reaches its trough once the summer window
+    closes and clubs have signed. A single averaged number describes neither
+    state and hides the defect;
+  - the pool's inflow separated into contract expiry and release, and its
+    outflow separated into signings and exits. Signing and exit both remove a
+    player from the pool but mean opposite things: one is a market that works,
+    the other is a player leaving football. A drain satisfied entirely by exits
+    is not a market;
   - arrivals per club per season, split by permanent transfer, free-agent
     signing, youth promotion, and intake;
   - permanent transfer completions per season per club.
@@ -38,20 +44,33 @@ numbers moved.
   contract-expiry share `55-68%`; loans `10-14%`, recorded as `not_evaluated`
   in this phase because loans do not exist; fee-bearing share `14-22%`; mean
   contract duration `18-30` months; contracts under six months `10-20%`; season
-  boundary share `100%`; free-agent share `18-20%`.
-- Record explicitly that the free-agent band is a product decision rather than a
-  sourced measurement. It was set at `18-20%` on 2026-08-02 against a measured
-  `20-23%`, so it is deliberately close to today's level. The consequence must
-  be stated in the report: this band alone cannot detect the defect, because a
-  pool that never drains sits inside it. The drain requirement in Step 03, not
-  this band, is what proves the market moves.
-- Measure the steady-state gap at world generation. A new career starts with an
-  empty free-agent pool, because generation assigns every player to a club and a
-  free agent is by definition unowned; the pool only fills at the first expiry
-  or annual intake. Record the share at day one, at the first season boundary,
-  and at each subsequent boundary, so the number of seasons a new world needs to
-  reach its steady state is on record. Starting at `0%` and targeting `18-20%`
-  means a fresh save opens in a state it will never return to.
+  boundary share `100%`.
+- Freeze the free-agent contract as three numbers rather than one level, because
+  the pool is cyclical and a single band would average its peak with its
+  trough:
+  - **peak**, measured at the season boundary immediately after expiries:
+    `10-12%` of that competition's senior squad population. The denominator is
+    per competition, not world-wide, so a five-country world does not dilute it;
+  - **trough**, measured once the summer window closes: a leftover pool of
+    roughly `3%` of the same denominator, which in the current `54`-club world
+    is about `30-40` players. This is the state a career actually opens in;
+  - **drain**, the delta between them. This is the primary signal. A pool whose
+    peak and trough coincide does not drain, whatever its level; a band on the
+    level alone cannot detect that, which is why the level is not the gate.
+- Attribute the drain. A pool can empty because clubs sign players or because
+  players leave football through retirement and career step-down. Both remove a
+  player and mean opposite things, so the report separates them and states the
+  signing share explicitly. A trough reached mostly by exits is a shrinking
+  world, not a working market.
+- Record the peak and trough measured today, so Step 06 compares a cycle with a
+  cycle.
+- Measure what a new world actually opens with. Generation assigns every player
+  to a club and a free agent is by definition unowned, so the pool starts at
+  zero and fills only at the first expiry. Record the share at day one and at
+  each subsequent season boundary, and state how many seasons the current world
+  needs to reach its cycle. Opening at zero is close to the trough and therefore
+  nearly right; opening at zero and then never returning to zero is what makes
+  it wrong.
 - Record the current values against every band, so Step 06 compares like with
   like.
 - Inventory every owner of contract-expiry computation, offered-term
@@ -113,11 +132,13 @@ graphify update .
   explicitly, with the share of expiries on any single date recorded.
 - Free-agent inflow, outflow, and share are measured separately.
 - Every frozen band has a source and a current measured value beside it.
-- The free-agent band is marked as a product decision rather than a sourced
-  measurement, with an explicit note that it cannot detect a stagnant pool on
-  its own.
+- The free-agent contract is expressed as peak, trough, and drain, with the
+  denominator stated per competition, and the report says plainly that the drain
+  is the gate and the levels are description.
+- Pool outflow is attributed between signings and exits, with the signing share
+  stated.
 - The free-agent share at day one of a new world is recorded, together with the
-  number of season boundaries needed to reach steady state.
+  number of season boundaries needed to reach the cycle.
 - All owners of expiry, term, and season-boundary logic are inventoried.
 - No production behaviour changed.
 - Step 02 is the only next action.

@@ -62,6 +62,15 @@ pool, the market catalog exposes `status: "free_agent"`, and
 `applyCareerFreeAgentSigning` signs at zero fee - so this is AI signing policy,
 not a missing feature.
 
+The pool is cyclical, and that is how it is measured. It peaks at the season
+boundary when contracts expire together, and reaches its trough once the summer
+window closes and clubs have signed. The gate is the delta between those two
+points, not the level either of them holds: a pool whose peak equals its trough
+does not drain, and no band on the level can detect that. The frozen contract is
+therefore a peak of `10-12%` of a competition's senior population, a trough of
+roughly `3%`, and a drain achieved mostly by signings rather than by players
+leaving football.
+
 ## Locked Decisions
 
 - Contract expiry is anchored to the season boundary. Every contract ends on the
