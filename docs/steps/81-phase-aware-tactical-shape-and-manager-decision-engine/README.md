@@ -88,11 +88,11 @@ and come from the market work moving after this phase.
 - **A2 - XI selection covers every club** (Step 09). The canonical selection and
   typed formation hold for all clubs in the world, not only the user's
   opponents. Stated explicitly so the step cannot be narrowed in scope.
-- **A3 - per-component measurement** (Steps 01, 11). The measurement bench
-  reports cost per tick separated by component: match engine, context
-  construction, career application, market, development, persistence. A season
-  total is not the unit the player experiences, and an undivided number cannot
-  guide a later decision.
+- **A3 - per-component measurement.** Deferred to Phase 81A on 2026-08-02. The
+  bench that reports cost per tick by component exists to size the background
+  world, and that is Phase 81A's work; building the instrument here would
+  measure a cost this phase does not yet spend. Phase 81A Step 04 owns it.
+  Recorded so the requirement is not lost, not because this phase does it.
 - **A4 - quality bands are population-conditioned** (Step 01 and the contract).
   The frozen quality-versus-structure bands hold for a single-country
   population. With five countries, "first division" and "third division" stop
@@ -141,8 +141,7 @@ and come from the market work moving after this phase.
   and absence assertions without gameplay changes. It also accepts the carried
   `goals_per_match_avg` monitor as this phase's own (A7), records its inherited
   `36/634/80` distribution as the starting point rather than as an acceptable
-  one, and states the per-component measurement contract (A3) and the
-  single-country condition on the quality bands (A4).
+  one, and states the single-country condition on the quality bands (A4).
 - Step 02 carries typed football facts into the match and removes the web
   four-way collapse. It also names the background driver as a first-class
   consumer (A1) and introduces the single squad-depth accessor (A6).
@@ -171,8 +170,7 @@ and come from the market work moving after this phase.
 - Step 10 presents small qualitative consequences through `@game/ui` and web.
 - Step 11 runs bounded positive-denominator diagnostics, browser QA, absence
   checks, and the integrated repository gate. It is the deadline for the carried
-  `goals_per_match_avg` monitor (A7) and reports the per-component tick costs
-  (A3).
+  `goals_per_match_avg` monitor (A7).
 - Step 12 alone runs/replays the checkpointed `50 x 20`, confirms the carried
   monitor inside its band at cohort scale, writes the phase report, and hands
   control to Phase 81A. Phase 79 Step 14 stays Reopened, paused, and

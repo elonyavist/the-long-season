@@ -2,9 +2,14 @@
 
 ## Status
 
-Planned and entry-gated. Deferred behind Phase 81 and Phase 81A by
-the 2026-08-02 phase-order decision; this phase was previously numbered 80B.
-Do not start Phase 82A.
+**Draft.** Deferred behind Phase 81 and Phase 81A by the 2026-08-02 phase-order
+decision; this phase was previously numbered 80B. Do not start Phase 82A.
+
+The product contract was accepted before the phase order changed, and two phases
+now land in front of it. Treat the cross-phase requirements added on 2026-08-02
+- the shared season boundary, the free-agent cycle this phase must not close -
+as intent to re-verify rather than as frozen numbers. They will be revised
+against what Phase 81 and Phase 81A actually measure.
 
 ## Goal
 

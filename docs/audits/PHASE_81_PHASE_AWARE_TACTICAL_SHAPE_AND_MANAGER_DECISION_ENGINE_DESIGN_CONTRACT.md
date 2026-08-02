@@ -489,7 +489,6 @@ Phase 81 is complete only when:
 - squad depth is reached through one named accessor, the context constructor
   takes an explicit squad, and match facts attribute to the club a player was
   fielded by;
-- per-component tick costs are measured and reported;
 - the checkpointed `50 x 20` completes and replays with exactly seven workers,
   and its report states that it observed no loans and no races;
 - Phase 81A receives a truthful handoff naming the contract-duration

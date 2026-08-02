@@ -33,10 +33,6 @@ without weakening thresholds or starting the longitudinal cohort.
   Step 09 at `36/634/80` pass/warn/fail with every failure high; it must now be
   inside band on this step's population. Report the measured distribution
   whatever it shows.
-- Report per-component tick costs (A3) for match engine, context construction,
-  career application, market, development, and persistence, against the
-  pre-change values recorded in Step 01. The comparison is the deliverable; a
-  single total is not.
 - Run absence checks for the web four-role collapse, default roster-index
   opponent lineup, obsolete scalar/texture route inference, post-resolution
   actor attribution, duplicate shape/matchup calculations, direct
@@ -116,7 +112,6 @@ graphify update .
   dependency, diff, and Graphify gates pass.
 - The carried `goals_per_match_avg` monitor is inside its unchanged band, and
   the measured distribution is recorded next to the inherited `36/634/80`.
-- Per-component tick costs are reported against the Step 01 pre-change values.
 - All planned obsolete paths are absent, including every direct
   `club.playerIds` read in a lineup-composing path.
 - No known local dead code or duplicate owner remains.

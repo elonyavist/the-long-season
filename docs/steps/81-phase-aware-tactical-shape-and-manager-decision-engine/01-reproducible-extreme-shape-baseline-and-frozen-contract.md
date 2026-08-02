@@ -76,10 +76,6 @@ being mistaken for a structural fix.
   `monitor` severity class exactly as inherited, and name Step 06 as the first
   step able to move it and Step 11 as its deadline. The inherited distribution
   is recorded as a starting point, never as an accepted one.
-- State the per-component measurement contract (A3): the bench reports cost per
-  tick separated into match engine, context construction, career application,
-  market, development, and persistence. Record today's per-component values so
-  Step 11 has a comparison rather than an isolated number.
 - Record that the frozen quality-versus-structure bands are conditioned on a
   single-country population (A4). With five countries, division names stop
   denoting one quality scale and these bands must be re-derived by whoever

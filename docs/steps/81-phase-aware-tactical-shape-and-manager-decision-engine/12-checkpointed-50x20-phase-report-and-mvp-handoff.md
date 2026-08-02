@@ -72,9 +72,8 @@ pnpm cli ten-season-report \
   facts.
 - Run final `pnpm check`.
 - Write the Phase 81 report with delivered behaviour, code/refactor removals,
-  verification, manual inspection, warnings, residual monitors, per-component
-  tick costs, and an explicit statement that this cohort observed no loans and
-  no races.
+  verification, manual inspection, warnings, residual monitors, and an explicit
+  statement that this cohort observed no loans and no races.
 - Write the Phase 81A handoff. That phase is already scoped in
   `docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`,
   so the handoff confirms its entry gate rather than restating its scope:

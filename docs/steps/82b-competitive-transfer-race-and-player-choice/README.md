@@ -2,9 +2,15 @@
 
 ## Status
 
-Planned. The product contract is accepted. Deferred behind Phase 81 and
-Phase 81A by the 2026-08-02 phase-order decision; this phase was previously
-numbered 80C. Do not start until Phase 82A is complete.
+**Draft.** The product contract is accepted, but three phases now land in front
+of it. Deferred behind Phase 81 and Phase 81A by the 2026-08-02 phase-order
+decision; this phase was previously numbered 80C. Do not start until Phase 82A
+is complete.
+
+The cross-phase requirements added on 2026-08-02 - the shared season boundary,
+the free-agent cycle the three-day player stage must not close - are intent to
+re-verify, not frozen numbers. Revise them against the evidence the earlier
+phases produce.
 
 ## Goal
 

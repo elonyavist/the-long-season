@@ -2,9 +2,17 @@
 
 ## Status
 
-Planned. Created by the 2026-08-02 phase-order decision as the playable-MVP
+**Draft.** Created by the 2026-08-02 phase-order decision as the playable-MVP
 work between Phase 81 and the market phases. Do not start until Phase 81 is
 Done.
+
+This document is a draft, not an accepted contract. Its numeric decisions - the
+`5-7%` free-agent peak, the `2%` trough, the three-year contract ladder, the
+drain requirement - were made before anything was measured, and Phase 81 changes
+how matches are scored, which moves squad value, turnover, and market pressure.
+Expect to revise them against Phase 81's evidence rather than implementing them
+as written. The reasoning behind each number is recorded so the revision is an
+argument, not a restart; Step 01 freezes the final values after measuring.
 
 ## Goal
 
