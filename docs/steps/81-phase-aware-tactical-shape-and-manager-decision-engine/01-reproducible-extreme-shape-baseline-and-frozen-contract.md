@@ -22,6 +22,18 @@ being mistaken for a structural fix.
   report path.
 - Measure equal-quality `4-4-2`, `3-1-6`, `2-0-8`, and `8-0-2` contexts under
   identical tactics, state, home status, and seeds.
+- Record that the extreme shapes are diagnostic constructs, not selectable
+  formations. `FORMATION_KEYS` contains `23` entries and none of `3-1-6`,
+  `2-0-8`, or `8-0-2` is among them; they are built directly as lineup slots,
+  which `deriveTeamStrength` accepts because it reads role keys rather than a
+  formation name. This is why they can probe the engine without a named
+  formation ever reaching it.
+- Split the no-dominant-shape invariant accordingly, because the two
+  populations answer different questions. The full `23 x 23` matrix over
+  selectable formations is the exploit gate: those are the shapes a human can
+  actually choose, and a dominant row there is a defect a player will find. The
+  extreme shapes are measured separately as structural probes and are exempt
+  from the dominance rule, since nobody can select them.
 - Record raw `TeamStrength`, control, possession, opportunity rate, complete
   opportunity volume, quality, route/chance-type distribution, xG, shots, and
   results.
