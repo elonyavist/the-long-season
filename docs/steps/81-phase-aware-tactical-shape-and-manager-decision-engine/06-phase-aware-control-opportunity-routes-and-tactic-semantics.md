@@ -46,6 +46,13 @@ to play and what it exposes, not merely shift opaque scalar coefficients.
   - the generated First Division title contender remains the aggregate
     favourite over the generated Third Division mid-table side despite the
     accepted `3-1-6` versus coherent `4-4-2` handicap.
+- Prove the three structure-versus-quality invariants frozen in Step 01, because
+  this is the step whose coefficients decide them: the bounded swing against one
+  division tier of quality, the full shape-versus-shape matrix showing no
+  dominant shape, and the asymmetry that makes incoherence cost more than
+  coherence pays. Report the matrix in full. If any shape holds a positive
+  expected win share against the whole population, the coefficients are wrong
+  here; do not widen an invariant to accommodate them.
 - Tune only versioned policy coefficients needed to satisfy those frozen
   product bands. Do not change a scenario, seed, denominator, threshold, or
   hierarchy. Freeze the resulting policy version when this step closes.
@@ -130,6 +137,11 @@ graphify update .
   facts in predeclared directions.
 - The frozen quality-versus-structure matrix passes with positive paired-seed
   observations and all numeric opportunity, xG, and outcome-share bands.
+- The three structure-versus-quality invariants hold: the maximum structural
+  swing stays below one division tier of quality, no shape holds a positive
+  expected win share against the whole opponent population, and incoherence
+  costs more than coherence pays. The full shape-versus-shape matrix is
+  recorded.
 - The final policy version is frozen for Steps 07-12; later evidence may reopen
   this owning step but may not weaken the bands.
 - This is the first step allowed to claim the original gameplay defect fixed;

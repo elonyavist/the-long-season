@@ -36,9 +36,24 @@ could act on it.
   season", which may be fewer than twelve months; the ceiling is `60` months.
   Update the three `duration_years` `CHECK` constraints accordingly.
 - Convert `derivePreferredContractDurationYears` and its versioned
-  `contractTermsPolicy.preferredDuration` block to months, and retune the
-  preferred terms toward the frozen `18-30` month band. The retune is a content
-  change against the Step 01 bands; it is not licence to move a band.
+  `contractTermsPolicy.preferredDuration` block to months, and apply the accepted
+  age ladder: high-potential under `21` gets `60` months, under `24` gets `48`,
+  `24-27` gets `36`, `28-30` gets `36`, `31-33` gets `24`, and over `33` gets
+  `12`. The `28-30` and `31-33` tiers are new; today's policy collapses `28-31`
+  into a single two-year tier.
+- Do not shorten the average. The accepted target is about three years, which is
+  marginally longer than today's `2.75`. Contract length was originally named as
+  the main lever on market density and that was wrong: the current ladder
+  already sits where the product wants it. The channel is closed by the expiry
+  anchor and by an AI that does not sign, not by duration. Record this in the
+  step so nobody re-derives the abandoned conclusion.
+- Accept the consequence for density. With three-year terms, roughly a third of
+  each squad reaches expiry per season, against real football's `19.5` month
+  average. The game is therefore deliberately less churny than reality, and the
+  `55-68%` contract-expiry share and `8-13` arrivals-per-club bands frozen from
+  FIFA and CIES data are not reachable. Step 01 must re-decide those two bands
+  against this ladder before they are frozen, and record that they were lowered
+  by an explicit product choice rather than missed.
 - Remove the `rng.nextInt(0, 121)` expiry scatter from senior-squad world
   generation. It exists to spread expiry dates, and the anchor now owns that
   concern. Generated contracts land on season boundaries with a distribution of
@@ -48,7 +63,7 @@ could act on it.
   generated contracts start at `referenceDate - rng(30..540)` - so it begins
   after the summer window has closed. At that point in a real football year the
   available free agents are leftovers, not a tenth of the league. The trough is
-  roughly `3%` of senior population, about `30-40` players in the current
+  roughly `2%` of senior population, about `30-40` players in the current
   `54`-club world.
 - Give that opening pool the composition of leftovers rather than a uniform
   sample: players whose contract ran out and who nobody signed. Skewed old,

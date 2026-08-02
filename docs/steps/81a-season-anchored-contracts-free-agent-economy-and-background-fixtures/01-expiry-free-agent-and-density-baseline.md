@@ -40,19 +40,36 @@ numbers moved.
     signing, youth promotion, and intake;
   - permanent transfer completions per season per club.
 - Freeze the density bands from the consolidated analysis, section 12.1, with
-  their sources: arrivals per club `8-13`; permanent share `15-22%`;
-  contract-expiry share `55-68%`; loans `10-14%`, recorded as `not_evaluated`
-  in this phase because loans do not exist; fee-bearing share `14-22%`; mean
-  contract duration `18-30` months; contracts under six months `10-20%`; season
-  boundary share `100%`.
+  their sources: permanent share `15-22%`; loans `10-14%`, recorded as
+  `not_evaluated` in this phase because loans do not exist; fee-bearing share
+  `14-22%`; contracts under six months `10-20%`; season boundary share `100%`.
+- Re-decide two bands before freezing them, because the accepted three-year
+  contract ladder makes their sourced values unreachable: **arrivals per club**,
+  sourced from CIES at `8-13`, and **contract-expiry share**, sourced from FIFA
+  at `55-68%`. Both assume a real-football mean term of `19.5` months. With
+  three-year terms roughly a third of a squad reaches expiry per season instead
+  of well over half, so the game is deliberately less churny than reality.
+  Derive the reachable values from the ladder, freeze those, and record the
+  original sourced values beside them as the reality reference. A band the
+  product has chosen not to hit must be labelled a choice, never reported later
+  as a miss.
+- Freeze mean contract duration at about `36` months, replacing the `18-30`
+  month band inherited from FIFA. That band was proposed when contract length
+  was believed to be the main lever on market density; it is not, and today's
+  ladder already averages `2.75` years.
 - Freeze the free-agent contract as three numbers rather than one level, because
   the pool is cyclical and a single band would average its peak with its
   trough:
   - **peak**, measured at the season boundary immediately after expiries:
-    `10-12%` of that competition's senior squad population. The denominator is
-    per competition, not world-wide, so a five-country world does not dilute it;
+    `5-7%` of that competition's senior squad population. The denominator is per
+    competition, not world-wide, so a five-country world does not dilute it. The
+    peak is deliberately low: it is the single largest exploit surface in the
+    game, because at that moment the manager can study every available player at
+    leisure while the AI acts on a fixed cadence. A large pool of free talent
+    would let a human build a squad for nothing and would make paid transfers
+    pointless;
   - **trough**, measured once the summer window closes: a leftover pool of
-    roughly `3%` of the same denominator, which in the current `54`-club world
+    roughly `2%` of the same denominator, which in the current `54`-club world
     is about `30-40` players. This is the state a career actually opens in;
   - **drain**, the delta between them. This is the primary signal. A pool whose
     peak and trough coincide does not drain, whatever its level; a band on the

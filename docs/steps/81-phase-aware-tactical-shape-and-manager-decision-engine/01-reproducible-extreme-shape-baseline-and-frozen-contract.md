@@ -43,6 +43,26 @@ being mistaken for a structural fix.
   - individual deterministic upsets to remain possible.
 - Record numeric opportunity-volume, xG, and win/draw/loss bands for those
   scenarios before any match-tactics coefficient exists.
+- Freeze three invariants that bound how far structure may beat quality. The
+  accepted product rule is that squad building must stay the primary way to win;
+  a formation trick may not substitute for it. These are gates, not guidance:
+  - **Bounded swing.** The largest aggregate outcome swing any shape choice can
+    produce, at equal player quality, must be smaller than the swing produced by
+    one division tier of squad quality. Measure both in the same unit -
+    win-share over paired seeds - so the comparison is arithmetic rather than
+    rhetorical. Structure that outweighs a tier of quality means the manager can
+    skip the transfer market.
+  - **No dominant shape.** Run every supported shape against every other over
+    paired seeds and require that no shape holds a positive expected win share
+    against the whole opponent population. A shape that beats the field is an
+    exploit, and it is the single failure mode a human player will find fastest.
+    Record the full matrix, not a summary: dominance shows as a row, and a
+    summary hides it.
+  - **Asymmetric effect.** Incoherence must cost more than coherence pays.
+    A coherent ordinary shape is the baseline, not a bonus; the mechanism exists
+    to punish structural nonsense, not to reward a clever answer that quality
+    cannot match. State the intended ratio numerically before coefficients
+    exist.
 - Freeze post-change definitions, minimum observations, directional
   invariants, numeric tolerances where needed, exact seeds, and failure versus
   warning semantics before Step 02.
@@ -130,6 +150,9 @@ graphify update .
   threshold, denominator, severity class, inherited distribution, owning step,
   and deadline.
 - Per-component tick costs are measured and recorded as the pre-change baseline.
+- The three structure-versus-quality invariants are frozen with numeric values
+  and their measurement method, including the full shape-versus-shape matrix
+  that proves no dominant shape exists.
 - The single-country condition on the quality bands is written down.
 - All semantic owners and planned obsolete paths are inventoried, including
   every current lineup-composing reader of `club.playerIds`.

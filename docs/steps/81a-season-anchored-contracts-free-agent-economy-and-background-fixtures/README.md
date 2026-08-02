@@ -54,6 +54,14 @@ six months, which is why `16%` of real contracts are under six months. The
 stored contract is not the problem - `PlayerContract` already holds `startsOn`
 and `endsOn` as `GameDate` and is day-precise.
 
+This is a representation defect, not a length defect, and the distinction
+matters because an earlier version of the analysis got it wrong. Contract length
+was named as the main lever on market density; it is not. The current ladder
+averages `2.75` years and the accepted target is about three, so terms get
+marginally longer, not shorter. What is missing is the ability to offer a term
+that ends at the current season's end. The dead market comes from the expiry
+anchor and from an AI that never signs.
+
 **The free-agent pool fills and never drains.** Recorded cohorts show a
 free-agent share of `0.2124`, `0.2085`, and `0.2040` over ten seasons in Phase
 79C, and a maximum of `0.2274` across Phase 79A's `50 x 20`. One player in five
@@ -67,8 +75,8 @@ boundary when contracts expire together, and reaches its trough once the summer
 window closes and clubs have signed. The gate is the delta between those two
 points, not the level either of them holds: a pool whose peak equals its trough
 does not drain, and no band on the level can detect that. The frozen contract is
-therefore a peak of `10-12%` of a competition's senior population, a trough of
-roughly `3%`, and a drain achieved mostly by signings rather than by players
+therefore a peak of `5-7%` of a competition's senior population, a trough of
+roughly `2%`, and a drain achieved mostly by signings rather than by players
 leaving football.
 
 ## Locked Decisions
@@ -79,6 +87,24 @@ leaving football.
 - The offered term is expressed in months, with a floor of "to the end of the
   current season" and a ceiling of `60` months. Duration is the input; the
   anchor decides the stored `endsOn`.
+- The accepted age ladder targets a mean near three years: `60` months for a
+  high-potential player under `21`, `48` under `24`, `36` for `24-30`, `24` for
+  `31-33`, and `12` above `33`. Young players commit longer; the drop starts
+  after `30`. This is marginally longer than today's `2.75` year mean, and it is
+  a deliberate choice against the real-football mean of `19.5` months: squads
+  that turn over every eighteen months give a manager nothing to grow attached
+  to.
+- The consequence is accepted and declared. The `55-68%` contract-expiry share
+  and `8-13` arrivals-per-club bands taken from FIFA and CIES assume real
+  contract lengths and are unreachable with this ladder. Step 01 re-derives both
+  from the ladder and freezes the reachable values, recording the sourced ones
+  beside them. A band the product chose not to hit is labelled a choice, and is
+  never reported later as a miss.
+- The free-agent peak is held low, at `5-7%` of a competition's senior
+  population. It is the largest exploit surface in the game: at the peak the
+  manager studies every available player at leisure while the AI acts on a fixed
+  cadence, so a large pool of free talent lets a human assemble a squad for
+  nothing and makes paid transfers pointless.
 - `PlayerContract` keeps `startsOn` and `endsOn` as `GameDate`. This phase does
   not add a duration field to a signed contract, and does not change the
   contracts table.

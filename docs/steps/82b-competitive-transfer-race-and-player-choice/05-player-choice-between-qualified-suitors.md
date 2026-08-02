@@ -64,6 +64,19 @@ first-to-resolve, not player choice.
 - Compare wage, contract length, promised squad status, and club standing.
 - Exactly one accepted suitor wins; every other qualified negotiation closes
   atomically as `lost_to_rival` in the same transition.
+- Emit, with each `lost_to_rival` closure, a structured reason drawn from the
+  same facts the comparison used: the dimensions on which the winner was
+  preferred, ordered by how much they mattered. Losing a player you outbid is
+  realistic and is the most frustrating outcome in the phase; without a reason
+  it reads as arbitrary, and a manager who cannot see why he lost cannot play
+  better next time. The reason is football vocabulary - wage, contract length,
+  squad status offered, club standing - never a score or a weight.
+- The reason must be derived inside the comparison, not reconstructed
+  afterwards. A narrative assembled after the fact can disagree with the actual
+  decision, and that is worse than no explanation: it teaches the manager a rule
+  the game does not follow.
+- Do not disclose rival contract terms through the reason. Naming the dimension
+  that decided it is permitted; quoting the rival's wage is not.
 - Add `lost_to_rival` to the negotiation union and let the Step 01 guards force
   every required consumer to handle it. The additional Expected Files above
   may change only to add the exhaustive `lost_to_rival` case and its focused
@@ -126,6 +139,10 @@ git diff --check
   failed the highest-fee qualification rule.
 - Losers close as `lost_to_rival`; no loser reaches completion and fails on
   `stale_ownership`.
+- Every `lost_to_rival` closure carries a structured reason produced by the
+  comparison itself, expressed in football terms and naming the dimensions that
+  decided it without disclosing rival contract terms. A test asserts the reason
+  agrees with the decision on a case where the loser offered the higher fee.
 - Every Step 01 status boundary handles `lost_to_rival` explicitly, and the
   legacy Phase 79D spread collector excludes it before its narrowed total
   mapper.

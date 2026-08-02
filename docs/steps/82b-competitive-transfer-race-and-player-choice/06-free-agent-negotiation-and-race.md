@@ -15,8 +15,8 @@ winner.
 
 This step is the only one in the phase that changes the throughput of a channel
 an earlier phase already calibrated. Phase 81A tuned the AI free-agent signing
-policy against a frozen pool cycle: a peak of `10-12%` of a competition's senior
-population at the season boundary, a trough near `3%` once the window closes,
+policy against a frozen pool cycle: a peak of `5-7%` of a competition's senior
+population at the season boundary, a trough near `2%` once the window closes,
 and a drain between them achieved mostly by signings rather than by players
 leaving football.
 

@@ -52,8 +52,14 @@ is left, and what the manager can do about it.
   was submitted or queued.
 - Show `outbid` and `lost_to_rival` as distinct readable outcomes; the manager
   must know whether the fee lost or the player chose another club.
+- Present the Step 05 structured reason with every `lost_to_rival` message.
+  Being outbid explains itself; losing a player you outbid does not, and it is
+  the outcome most likely to read as arbitrary. Render the dimensions the
+  comparison actually used, in football language, so the manager learns what to
+  offer next time rather than concluding the game cheated.
 - Never expose rival wage, duration, bonus, or promised squad status. These
-  remain private inputs to player choice.
+  remain private inputs to player choice. Naming the dimension that decided the
+  choice is permitted; quoting the rival's number is not.
 - React renders `@game/ui` facts only. No ranking, increment, deadline, or
   eligibility rule is recomputed in the browser.
 - Race state must not be communicated by colour alone; shape and accessible

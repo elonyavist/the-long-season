@@ -420,8 +420,8 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   AI signing policy. Phase 81A Steps 02 and 03 are reported together: shortening
   contracts without a signing policy only enlarges the warehouse.
 - The pool is frozen as a cycle rather than a level, decided on 2026-08-02.
-  Peak `10-12%` of a competition's senior population at the season boundary,
-  trough near `3%` once the summer window closes, and the drain between them as
+  Peak `5-7%` of a competition's senior population at the season boundary,
+  trough near `2%` once the summer window closes, and the drain between them as
   the gate. A pool whose peak equals its trough sits inside any level band while
   being precisely the defect, so the level is description and the delta is the
   test. The drain is additionally attributed between signings and exits: a

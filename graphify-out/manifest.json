@@ -1425,8 +1425,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/PROJECT_STATUS.md": {
-    "mtime": 1785676344.8565288,
-    "ast_hash": "14d33ead3facb0301d1ba60e010f99bb",
+    "mtime": 1785677587.365374,
+    "ast_hash": "a2ebc697ca9cba95cca6b42897ccc426",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/ARCHITECTURE.md": {
@@ -1930,8 +1930,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/README.md": {
-    "mtime": 1785676329.768945,
-    "ast_hash": "380e6a9e3ed2e55631ddd887b17c8150",
+    "mtime": 1785677601.6895802,
+    "ast_hash": "35414d84abe82b52c1bd160534c72891",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/09-manual-tactical-changes-v1/03-manual-tactic-change-contract.md": {
@@ -6150,8 +6150,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md": {
-    "mtime": 1785676338.6893246,
-    "ast_hash": "545c1cefaec512f029e4f839eaf8dbaf",
+    "mtime": 1785677574.5684357,
+    "ast_hash": "aa8b9b6ea3261b208ea839a52abd18c4",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/ENGINE_SAFETY_NET_AUDIT.md": {
@@ -11960,8 +11960,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md": {
-    "mtime": 1785652142.0407398,
-    "ast_hash": "6b010ea35992930679d82f6a4094f44f",
+    "mtime": 1785677513.972817,
+    "ast_hash": "731d8eeccf9a6cc3686f36b6c840ffe6",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/02-typed-tactical-slot-context-and-collapse-removal.md": {
@@ -11990,8 +11990,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/01-reproducible-extreme-shape-baseline-and-frozen-contract.md": {
-    "mtime": 1785652074.8833632,
-    "ast_hash": "997142a0e313db506e839b776fa68948",
+    "mtime": 1785677502.115816,
+    "ast_hash": "6ecc0614203c945daecf39366afc292f",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/05-position-suitability-coordination-without-double-penalty.md": {
@@ -16285,8 +16285,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/audits/PHASE_82A_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md": {
-    "mtime": 1785676686.5809164,
-    "ast_hash": "b2b0973adf73f0329f739300e91eba3b",
+    "mtime": 1785677587.3625767,
+    "ast_hash": "46c3069559509b1d16bcb0e158b44b49",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/12-checkpointed-50x20-phase-report-and-mvp-handoff.md": {
@@ -16320,8 +16320,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/82b-competitive-transfer-race-and-player-choice/05-player-choice-between-qualified-suitors.md": {
-    "mtime": 1785651709.554257,
-    "ast_hash": "b234a6cd2b610638cb680711e5c6d0e1",
+    "mtime": 1785677548.6688156,
+    "ast_hash": "d7d960b58fb6f4a81f38d14450a9984b",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/82b-competitive-transfer-race-and-player-choice/README.md": {
@@ -16330,8 +16330,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/82b-competitive-transfer-race-and-player-choice/06-free-agent-negotiation-and-race.md": {
-    "mtime": 1785676611.0452483,
-    "ast_hash": "3867478f8a8b27973e0f54894a69d296",
+    "mtime": 1785677587.362029,
+    "ast_hash": "7754d767996c18dd151ebefe2f547751",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/82b-competitive-transfer-race-and-player-choice/01-race-contract-policy-and-exhaustiveness-guard.md": {
@@ -16340,8 +16340,8 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/82b-competitive-transfer-race-and-player-choice/07-market-squad-and-posta-race-ui.md": {
-    "mtime": 1785651709.5621028,
-    "ast_hash": "54bac6313c375f3bf9b4b749f0eca9b1",
+    "mtime": 1785677564.9306326,
+    "ast_hash": "781697898e8d73dceb8dcb2e996c14f1",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/82a-incoming-offers-market-postures-and-loans/09-bounded-diagnostics-browser-persistence-and-beta-reset.md": {
@@ -16400,18 +16400,18 @@
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/02-season-anchored-expiry-and-month-precision-terms.md": {
-    "mtime": 1785676281.3393884,
-    "ast_hash": "f71b188315ae1bc04cf85efa801032bc",
+    "mtime": 1785677594.2787676,
+    "ast_hash": "1f0a0591da73a58a6b0d5c69cd9638cb",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/01-expiry-free-agent-and-density-baseline.md": {
-    "mtime": 1785676261.1651187,
-    "ast_hash": "66f3f37078375f9c93385854f84517c1",
+    "mtime": 1785677484.2166998,
+    "ast_hash": "5744fdb690fc861258b591467d366a48",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/README.md": {
-    "mtime": 1785676304.2489738,
-    "ast_hash": "95908fff479fd1a1a794d1dc3ab3fdc8",
+    "mtime": 1785677620.542837,
+    "ast_hash": "0b23b8f9088041a77bfec37048ed8cdd",
     "semantic_hash": ""
   },
   "/Users/elianarducci/common-projects/the-long-season/docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/04-background-fixtures-in-the-selected-division.md": {

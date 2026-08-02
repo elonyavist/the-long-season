@@ -2111,8 +2111,8 @@ Minimum useful scope:
 - offered contract terms in months, floor "to the end of the current season" and
   ceiling `60`, matching FIFA's own minimum and unblocking the `18-30` band;
 - an AI free-agent signing policy, because the pool is measured at a `20-23%`
-  share that does not drain. It is frozen as a cycle - peak `10-12%` of a
-  competition's senior population at the season boundary, trough near `3%` once
+  share that does not drain. It is frozen as a cycle - peak `5-7%` of a
+  competition's senior population at the season boundary, trough near `2%` once
   the window closes - and the gate is the drain between them, not the level;
 - a world that opens at that trough, roughly `30-40` leftover players in the
   current `54`-club world, instead of the empty pool a new career opens with

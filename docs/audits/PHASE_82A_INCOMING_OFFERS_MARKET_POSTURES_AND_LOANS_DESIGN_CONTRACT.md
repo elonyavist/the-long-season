@@ -379,8 +379,8 @@ working infrastructure rather than rebuilding it.
 
 A loan and a free-agent signing solve the same squad gap, so this phase is the
 first real competitor to the channel Phase 81A calibrated. That phase froze the
-free-agent pool as a cycle - peak of `10-12%` of a competition's senior
-population at the season boundary, trough near `3%` once the window closes, and
+free-agent pool as a cycle - peak of `5-7%` of a competition's senior
+population at the season boundary, trough near `2%` once the window closes, and
 a drain between them attributed mostly to signings rather than to players
 leaving football.
 

@@ -57,19 +57,17 @@ Provide an open, incremental, and iterative execution guide for the project: one
 ## Current State
 
 - `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
-- Status: Blocked pending the recorded ownership decision. Steps 05, 06, and 08
-  are reclosed. Step 09 completed the exact `750 x 3` fresh/resume proof with
-  `750` one-world shards, exactly `7` workers, and an identical aggregate hash.
-  All `32` player-model gates pass; the report remains `FAIL` only because
-  `goals_per_match_avg` records `36/634/80` pass/warn/fail with every failure
-  high.
-- The 2026-08-02 decision resolves it: match scoring is outside this phase's
-  player-model scope, so the monitor transfers unchanged to Phase 81, which owns
-  the match engine. Threshold, denominator, and severity class all stay as they
-  are. Phase 80A closes on that transfer; it does not close by weakening the
-  gate.
-- Phase 81 is the next phase. The market work is deferred behind it and the
-  Phase 81A, and is renumbered Phase 82A and Phase 82B.
+- Status: Done as of 2026-08-02. Steps 05, 06, and 08 are reclosed. Step 09
+  completed the exact `750 x 3` fresh/resume proof with `750` one-world shards,
+  exactly `7` workers, and an identical aggregate hash, and all `32`
+  player-model gates pass. It closed with one gate red: `goals_per_match_avg` at
+  `36/634/80` with every failure high.
+- That gate closed by ownership, not by tuning: match scoring is outside this
+  phase's player-model scope, so the monitor transfers unchanged to Phase 81,
+  which owns the match engine. Threshold, denominator, and severity class all
+  stay as they are, and Phase 81 may not transfer it again.
+- Phase 81 is the next phase, then Phase 81A. The market work is deferred behind
+  both and is renumbered Phase 82A and Phase 82B.
 - `docs/steps/80-graphical-and-structural-rework/`
 - Status: Done. All nine steps are complete and the phase handed control to
   Phase 80A on 2026-07-31.
@@ -171,8 +169,8 @@ Provide an open, incremental, and iterative execution guide for the project: one
   which is what FIFA's own minimum requires and what the `18-30` band needs; and
   the AI gets a free-agent signing policy, because the pool sits at a measured
   `20-23%` share and does not drain. The pool is treated as cyclical: it is
-  frozen as a peak of `10-12%` of a competition's senior population at the
-  season boundary, a trough near `3%` once the window closes, and a drain
+  frozen as a peak of `5-7%` of a competition's senior population at the
+  season boundary, a trough near `2%` once the window closes, and a drain
   between them achieved mostly by signings. The delta is the gate; the level is
   description, because a pool whose peak equals its trough sits inside any level
   band while being exactly the defect.
