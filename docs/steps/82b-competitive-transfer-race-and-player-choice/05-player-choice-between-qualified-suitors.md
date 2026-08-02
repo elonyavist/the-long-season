@@ -48,7 +48,7 @@ first-to-resolve, not player choice.
 - `apps/cli/src/commands/career.test.ts`
 - `apps/cli/src/commands/ten-season-report/report-data.ts`
 - `apps/cli/src/commands/ten-season-report.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/05-player-choice-between-qualified-suitors.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/05-player-choice-between-qualified-suitors.md`
 - `docs/PROJECT_STATUS.md`
 
 ## Implementation Checklist

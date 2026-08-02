@@ -16,11 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
-- `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_REPORT.md` - blocked
-  Step 09 closeout: all `32` player-model gates pass in the deterministic
-  `750 x 3` fresh/resume cohort, while `80` high-side
-  `goals_per_match_avg` monitor failures keep the phase report red and prevent
-  the Phase 80B handoff pending an explicit ownership decision.
+- `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_REPORT.md` - Step 09
+  closeout: all `32` player-model gates pass in the deterministic `750 x 3`
+  fresh/resume cohort, while `80` high-side `goals_per_match_avg` monitor
+  failures keep the phase report red. The 2026-08-02 decision transfers that
+  monitor unchanged to Phase 81, which owns match scoring.
 - `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_BASELINE.md` -
   replayable 20-world pre-change joint profile, current generation/development/
   projection/value/AI ownership inventory, canonical age semantics, superseded
@@ -31,21 +31,26 @@ Read these only when the current step asks for current long-run readiness contex
   contextual prospect generation, national exceptional stock, annual intake,
   context-invariant global expected-value/calibration epoch, AI-parity,
   beta-reset, and diagnostic contract.
-- `PHASE_80B_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md` -
+- `PHASE_82A_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md` -
   accepted selected-club incoming-offer, market-posture, final-counter,
   bidirectional-loan, explicit ownership/selectability accessors,
   per-buyer/player negotiation invariants, outgoing-action versus
   seller-willingness semantics, wage-sharing, real-development, persistence,
   and bounded-closeout contract.
-- `PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md` - accepted durable
+- `PHASE_82B_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md` - accepted durable
   race coordination, three-active-buyer cap, highest-fee qualification,
   stale-safe raises, fixed three-day stages, serial-loan scope, player choice,
-  free-agent negotiation, dedicated diagnostics, and bounded Phase 81 handoff
-  contract.
+  free-agent negotiation, dedicated diagnostics, and the second checkpointed
+  market cohort.
 - `PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`
   - accepted typed tactical-context, intrinsic-shape, relational-matchup,
   role-suitability, tactic-semantics, causal-actor, live-session, shared-AI,
-  non-vacuous diagnostic, clean-code, and final checkpointed-cohort contract.
+  non-vacuous diagnostic, clean-code, and checkpointed-cohort contract, amended
+  2026-08-02 with the carried goal-rate monitor and the background-world seams.
+
+The two market contracts were numbered 80B and 80C before 2026-08-02. Reports
+written earlier keep the old numbers on purpose: they record what was true when
+they were written and are not retroactively renumbered.
 - `PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_INVENTORY.md` - accepted
   evidence, ownership, interaction defaults, non-goals, and ordered delivery
   for the five current Squad/Market reworks and their Phase 80A handoff.

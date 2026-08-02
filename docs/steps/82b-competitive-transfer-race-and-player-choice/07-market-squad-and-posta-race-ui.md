@@ -27,7 +27,7 @@ is left, and what the manager can do about it.
 - `apps/web/src/features/inbox/career-inbox-presenter.ts`
 - `apps/web/src/features/inbox/career-inbox-presenter.test.ts`
 - `apps/web/src/styles/components.css`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/07-market-squad-and-posta-race-ui.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/07-market-squad-and-posta-race-ui.md`
 - `docs/PROJECT_STATUS.md`
 
 ## Implementation Checklist

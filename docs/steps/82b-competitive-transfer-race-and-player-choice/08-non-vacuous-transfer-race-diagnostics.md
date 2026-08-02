@@ -17,7 +17,7 @@ distinct from calibration warnings.
 - `packages/simulation-tools/src/index.ts`
 - `apps/cli/src/commands/ten-season-report/report-data.ts`
 - `apps/cli/src/commands/ten-season-report.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/08-non-vacuous-transfer-race-diagnostics.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/08-non-vacuous-transfer-race-diagnostics.md`
 - `docs/PROJECT_STATUS.md`
 
 ## Implementation Checklist
@@ -41,7 +41,7 @@ distinct from calibration warnings.
   - `lost_to_rival` closures and their Posta delivery;
   - free-agent races and winners, including positive observations of
     one-suitor free agents waiting through the full shared three-day stage;
-  - zero competitive loan races in this release, while serial Phase 80B loan
+  - zero competitive loan races in this release, while serial Phase 82A loan
     negotiations remain observable through their existing owner;
   - zero stale-ownership completion failures caused by race losers.
 - Treat double completion, race-reference corruption, deadline mutation, or a
@@ -59,7 +59,7 @@ distinct from calibration warnings.
   `outbid` and `lost_to_rival`, while the dedicated race audit counts them.
   Report the total canonical permanent-negotiation count, the legacy-eligible
   observation count, and the race-only terminal exclusion count separately.
-  Pre-80C and post-80C legacy spread rates are therefore non-comparable unless
+  Pre-82B and post-82B legacy spread rates are therefore non-comparable unless
   recomputed over the same eligibility definition; do not present the smaller
   denominator as an improvement or regression.
 
@@ -93,7 +93,7 @@ git diff --check
 - Transfer-race diagnostics do not deepen the unrelated player-generation
   audit.
 - The report exposes positive, reconcilable canonical, legacy-eligible, and
-  race-only-excluded counts, and labels the pre/post-80C legacy spread
+  race-only-excluded counts, and labels the pre/post-82B legacy spread
   discontinuity.
 - Participant counts never exceed three, and the loan-race absence check has a
   positive underlying loan-negotiation observation rather than passing because

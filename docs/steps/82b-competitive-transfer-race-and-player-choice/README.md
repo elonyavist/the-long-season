@@ -1,9 +1,10 @@
-# Phase 80C - Competitive Transfer Race And Player Choice
+# Phase 82B - Competitive Transfer Race And Player Choice
 
 ## Status
 
-Planned. The product contract is accepted. Do not start until Phase 80B is
-complete.
+Planned. The product contract is accepted. Deferred behind Phase 81 and
+Phase 81A by the 2026-08-02 phase-order decision; this phase was previously
+numbered 80C. Do not start until Phase 82A is complete.
 
 ## Goal
 
@@ -14,15 +15,21 @@ chooses between qualified suitors.
 
 The governing contract is:
 
-- `docs/audits/PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md`
+- `docs/audits/PHASE_82B_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md`
 
 ## Entry Gate
 
-- Phase 80, Phase 80A, and Phase 80B are Done.
+- Phase 80, Phase 80A, Phase 81, Phase 81A, and Phase 82A are Done.
+- One season-boundary owner exists, introduced by Phase 81A. Race deadlines
+  capped by a registration-window close read the same boundary as contract
+  expiry and loan return.
 - The contract's six accepted product decisions remain unchanged.
+- Market cadence is staggered per club. Synchronized cadence would give every
+  race a full participant set on day zero, so the late-joiner observation
+  required by Step 08 could never occur.
 - Canonical uniqueness remains per `(acquiring club, player)` across
   negotiation kinds; different acquiring clubs may target the same player.
-- Phase 80B's temporary same-player scheduling restriction is in force.
+- Phase 82A's temporary same-player scheduling restriction is in force.
 - Owned/selectable accessors are in use by structural squad floors.
 - Public value is club-independent; UI, valuation, willingness, and AI share
   one current/`P50`/upper assessment.
@@ -53,7 +60,7 @@ The governing contract is:
 - The manager sees relevant rival transfer amounts, not rival contract terms.
 - Only a winner reaches an existing atomic transfer/signing commit.
 - Permanent transfers and free agents race in this release. Loans keep the
-  serial Phase 80B lifecycle behind the same discriminated extension seam.
+  serial Phase 82A lifecycle behind the same discriminated extension seam.
 - A free agent always waits through the full shared player-stage window, even
   with one suitor.
 - For a manager-owned player, accepting an offer records seller acceptability
@@ -62,8 +69,11 @@ The governing contract is:
   code.
 - Race diagnostics live in their own Module and cannot pass on zero
   observations.
-- Step 09 closes Phase 80C on bounded evidence and hands the deferred
-  checkpointed `50 x 20` to Phase 81 Step 12.
+- Step 09 closes Phase 82B and owns the second checkpointed `50 x 20`, run with
+  exactly seven workers over the completed competitive market. Phase 81 Step 12
+  already ran the first cohort against the accepted tactical match engine; that
+  run observed no loans and no races, so it proves the engine and cannot prove
+  the market. Two runs are an accepted cost of the 2026-08-02 phase order.
 
 ## Ordered Steps
 
@@ -75,7 +85,7 @@ The governing contract is:
 6. `06-free-agent-negotiation-and-race.md`
 7. `07-market-squad-and-posta-race-ui.md`
 8. `08-non-vacuous-transfer-race-diagnostics.md`
-9. `09-bounded-phase-report-and-phase-81-handoff.md`
+9. `09-bounded-phase-report-and-world-extension-handoff.md`
 
 ## Validation Ladder
 
@@ -90,9 +100,12 @@ The governing contract is:
   path while preserving the atomic signing commit.
 - Step 07 projects canonical race facts into Market, Squad, and Posta.
 - Step 08 adds dedicated non-vacuous race diagnostics.
-- Step 09 reruns bounded race/repository/browser gates, writes the phase report,
-  and hands control to Phase 81.
-- No Phase 80C step runs a longitudinal cohort.
+- Step 09 reruns bounded race/repository/browser gates, runs and replays the
+  second checkpointed `50 x 20`, measures market density against the frozen
+  bands, writes the phase report, and hands control to the world-extension work
+  (L2 national divisions, then the calibrated aggregate producer for foreign
+  countries).
+- Only Step 09 runs a longitudinal cohort. Steps 01-08 run none.
 
 ## Mandatory Per-Step Loop
 
@@ -120,8 +133,8 @@ git diff --check
 graphify update .
 ```
 
-The deferred cohort runs only in Phase 81 Step 12 after the accepted tactical
-match-engine rework.
+The second checkpointed `50 x 20` runs only in Step 09, with exactly seven
+workers, over the completed competitive market.
 
 ## What NOT To Implement
 
@@ -135,7 +148,9 @@ match-engine rework.
 - No durable bid history.
 - No agents, playing-time contracts, swaps, resale clauses, or loan fees.
 - No competitive loan race in this release.
-- No longitudinal cohort in this phase.
+- No longitudinal cohort before Step 09.
+- No reuse of the Phase 81 Step 12 cohort as market evidence: it observed no
+  loans and no races.
 - No Phase 79 Step 14 or Step 15 implementation.
 
 ## Definition Of Done
@@ -160,5 +175,8 @@ match-engine rework.
 - Every diagnostic has a positive denominator or `not_evaluated`.
 - Focused checks, browser QA, persistence, `pnpm check`, and bounded
   positive-denominator race diagnostics pass.
-- Phase 81 Step 01 receives the handoff; Phase 79 Step 14 remains paused, unrun,
-  and unclaimed through Phase 81.
+- The second checkpointed `50 x 20` completes and replays with 50 stable shards
+  and exactly seven workers, and measured market density is recorded against
+  the frozen bands whether or not it lands inside them.
+- The world-extension work receives the handoff; Phase 79 Step 14 remains
+  paused, unrun, and unclaimed.

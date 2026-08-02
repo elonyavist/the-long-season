@@ -13,7 +13,7 @@ Not started.
 
 Prove incoming permanent offers, market postures, loans, wage sharing,
 development, return, persistence, and UI together before spending time on the
-deferred `50 x 20`, which Phase 81 Step 12 now owns.
+market `50 x 20`, which Phase 82B Step 09 owns.
 
 ## What To Implement
 
@@ -54,14 +54,14 @@ deferred `50 x 20`, which Phase 81 Step 12 now owns.
 - `apps/web/src/visual-qa/current-product.spec.ts`
 - `apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts`
 - beta save/schema/version owners
-- `docs/audits/PHASE_80B_INCOMING_OFFERS_AND_LOANS_REPORT.md`
+- `docs/audits/PHASE_82A_INCOMING_OFFERS_AND_LOANS_REPORT.md`
 - `docs/audits/README.md`
 - `docs/ARCHITECTURE.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/roadmaps/CAREER_PLAYABILITY_AND_ENGINE_ROADMAP.md`
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`
 - `docs/steps/README.md`
-- Phase 80B README
+- Phase 82A README
 - this step document
 - Step 10 document only if evidence changes what the phase report must record
 

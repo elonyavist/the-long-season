@@ -16,7 +16,7 @@ state.
   appetite; stored ceiling is forbidden.
 - At most five unresolved incoming permanent/loan offers combined.
 - At most one unresolved negotiation per `(buying club, player)` pair.
-- Different buyers are valid in domain state, but the Phase 80B scheduler does
+- Different buyers are valid in domain state, but the Phase 82A scheduler does
   not create a second concurrent negotiation for the same player.
 - Same buyer/player cannot rebid after rejection in the same window.
 - Different buyers may compete in sequence.
@@ -29,7 +29,7 @@ state.
 - Add deterministic candidate ranking and offer construction.
 - Make `In vendita` a strong bounded weight/willingness signal.
 - Add combined unresolved-offer capacity and buyer/player/window cooldown.
-- Preserve buyer/player-pair uniqueness. Add only the Phase 80B scheduler guard
+- Preserve buyer/player-pair uniqueness. Add only the Phase 82A scheduler guard
   that defers a second buyer until the existing same-player negotiation closes;
   do not encode that temporary restriction in domain validation.
 - Reuse canonical money, window, negotiation clock, affordability, and atomic
@@ -37,7 +37,7 @@ state.
 - Emit structured lifecycle facts for later Posta and diagnostics.
 - Prove no live path reads stored ceiling.
 - Prove a domain fixture with different buyers for one player remains valid,
-  while the Phase 80B scheduler produces zero such concurrent cases.
+  while the Phase 82A scheduler produces zero such concurrent cases.
 
 ## What NOT To Implement
 

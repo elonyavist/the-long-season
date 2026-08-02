@@ -1,4 +1,4 @@
-# Phase 80C - Competitive Transfer Race Design Contract
+# Phase 82B - Competitive Transfer Race Design Contract
 
 ## Status
 
@@ -6,7 +6,7 @@ Accepted on 2026-07-31 after product review and a repository-level architecture
 audit. The architectural ownership, invariants, and six product decisions below
 are fixed before Step 01 becomes active.
 
-Product review rejected the Phase 80B proposal to allow only one unresolved
+Product review rejected the Phase 82A proposal to allow only one unresolved
 negotiation per player. Several clubs chasing the same player, the manager
 learning about a rival bid, and the player choosing where to sign are intended
 football behaviours, not edge cases.
@@ -23,11 +23,11 @@ targets feel contested and losing a signing is a real, explainable event.
 
 ## Entry Gate
 
-- Phase 80, Phase 80A, and Phase 80B are Done.
+- Phase 80, Phase 80A, and Phase 82A are Done.
 - Canonical per-`(acquiring club, player)` uniqueness permits different buyers
   to approach the same player.
-- Phase 80B's scheduler still avoids creating those parallel approaches; Phase
-  80C lifts that scheduling restriction only for explicitly supported kinds.
+- Phase 82A's scheduler still avoids creating those parallel approaches; Phase
+  82B lifts that scheduling restriction only for explicitly supported kinds.
 - Owned and selectable squad accessors exist and structural floors use the
   selectable Interface.
 - Public value is club-independent and UI, valuation, willingness, and AI use
@@ -54,7 +54,7 @@ Checked against the repository before this amendment:
    storage, UI, AI, CLI, and diagnostics contain other status consumers that
    must be inventoried before new terminal states are added.
 
-Facts 2 to 5 are behaviour owned by Phase 80C. Fact 6 is a compile-safety gate
+Facts 2 to 5 are behaviour owned by Phase 82B. Fact 6 is a compile-safety gate
 owned by Step 01.
 
 ## Architecture Ownership
@@ -112,7 +112,7 @@ migration, dual reader, or fallback default.
 
 `ai-market-lifecycle` remains the composition Interface but its Implementation
 is split by responsibility: targeting, scheduling, race coordination, and
-resolution. Phase 80C does not add another top-level lifecycle or a generic
+resolution. Phase 82B does not add another top-level lifecycle or a generic
 event bus.
 
 ## Cross-Flow Invariants
@@ -260,7 +260,7 @@ product decisions. They must not be disguised as arbitrary data fields or a
 generic strategy registry.
 
 The initial supported race kinds are permanent transfers and free-agent
-approaches. Loan negotiations remain on the serial Phase 80B lifecycle. Race
+approaches. Loan negotiations remain on the serial Phase 82A lifecycle. Race
 references stay discriminated so a later documented phase can add competitive
 loan races without changing permanent, loan, or free-agent aggregates.
 
@@ -287,7 +287,7 @@ a race loss cannot fall through to `seller_contract_not_found`. Legacy Phase
 `lost_to_rival` outcomes before invoking total mappers narrowed to the
 legacy-eligible union. The exclusion classifier is itself exhaustive over the
 full transfer-status union. Race-only outcomes are never relabelled; the
-dedicated Phase 80C race audit is their diagnostic owner.
+dedicated Phase 82B race audit is their diagnostic owner.
 
 ## Dedicated Diagnostics
 
@@ -319,25 +319,31 @@ and race-only exclusion count separately. Rates from before and after this
 boundary are labelled non-comparable unless they are recomputed with the same
 eligibility definition.
 
-## Longitudinal Handoff
+## Longitudinal Gate
 
-Phase 80C Step 09 closes on bounded non-vacuous race evidence and does not run
-a longitudinal cohort. The accepted Phase 81 tactical match-engine rework
-changes AI selection, match outcomes, competition results, and therefore the
-long-run context in which transfer races occur. Phase 81 Step 12 is the sole
-owner of the deferred checkpointed `50 x 20`, after both market and match
-reworks are complete.
+Phase 82B Step 09 closes on bounded non-vacuous race evidence and owns the
+checkpointed market `50 x 20`, run and replayed with exactly seven workers over
+50 stable shards.
 
-Phase 80C Step 09 must bounded-exercise the stable shard, checkpoint, and
-seven-worker infrastructure so Phase 81 inherits a working runner. Phase 79
-Step 14 remains paused, unrun, and unclaimed.
+This is the second such cohort, and the duplication is deliberate. Under the
+2026-08-02 phase order the accepted Phase 81 tactical match-engine rework lands
+first, so its Step 12 cohort ran against a world with no postures, no loans, and
+no races. That run is valid engine evidence and cannot serve as market evidence:
+the behaviour it would need to observe did not exist when it ran. Reusing it
+here would certify a competitive market the cohort never saw.
+
+Step 09 also measures market density against the frozen bands and records every
+measured value, inside band or not. The bands are frozen before the run; a miss
+is reported and assigned to a named owner, never absorbed by adjusting the band.
+
+Phase 79 Step 14 remains paused, unrun, and unclaimed.
 
 ## Accepted Product Decisions
 
 1. **Club-stage qualification:** only the highest seller-acceptable transfer
    fee qualifies, including every exact match at that amount. Lower acceptable
    offers close as `outbid`; a sole acceptable offer qualifies.
-2. **Loan competition:** loans stay serial in the initial Phase 80C release.
+2. **Loan competition:** loans stay serial in the initial Phase 82B release.
    Discriminated references preserve the later extension seam without adding
    unused loan-race behaviour now.
 3. **Maximum participants:** one race permits at most three active acquiring
@@ -361,9 +367,10 @@ Step 14 remains paused, unrun, and unclaimed.
   negotiation/race clock for the same coordinated stage.
 - No exact rival contract-term disclosure.
 - No agents, playing-time contracts, swaps, resale clauses, or loan fees.
-- No competitive loan race in the initial Phase 80C release.
+- No competitive loan race in the initial Phase 82B release.
 - No change to atomic transfer or free-agent signing commits.
 - No generic ranking framework, strategy/plugin registry, event bus, or
   abstract market-participant hierarchy.
 - No durable bid history.
-- No longitudinal cohort in Phase 80C.
+- No longitudinal cohort before Step 09, and no reuse of the Phase 81 Step 12
+  cohort as market evidence.

@@ -30,7 +30,7 @@ winner.
 - `packages/storage/src/sqlite/sqlite-career-storage.test.ts`
 - `packages/storage/src/career-save-envelope.ts`
 - `packages/storage/src/json-career-storage.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/06-free-agent-negotiation-and-race.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/06-free-agent-negotiation-and-race.md`
 - `docs/PROJECT_STATUS.md`
 
 ## Implementation Checklist

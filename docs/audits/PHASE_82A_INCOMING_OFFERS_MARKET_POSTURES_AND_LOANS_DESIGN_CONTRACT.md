@@ -1,4 +1,4 @@
-# Phase 80B Incoming Offers, Market Postures And Loans Design Contract
+# Phase 82A Incoming Offers, Market Postures And Loans Design Contract
 
 ## Status
 
@@ -6,7 +6,7 @@ Accepted on 2026-07-30 after direct product review. Amended the same day after
 the ownership audit to separate permanent ownership from selectable
 registration. Amended again after product review rejected a global
 one-negotiation-per-player rule: competing bids from different clubs are a
-wanted football behaviour and belong to Phase 80C, so Phase 80B keeps the
+wanted football behaviour and belong to Phase 82B, so Phase 82A keeps the
 canonical per-buyer uniqueness and simply does not schedule concurrent bids
 yet. Amended on 2026-07-31 to separate outgoing command eligibility from
 seller willingness after the Phase 80 browser closeout exposed that semantic
@@ -35,7 +35,7 @@ Complete the lower-division talent loop:
 
 ## Architecture Ownership
 
-Phase 80B adds three domain-specific Modules and one cross-flow query. It does
+Phase 82A adds three domain-specific Modules and one cross-flow query. It does
 not widen `TransferNegotiation` with optional loan fields.
 
 - `PlayerMarketPostureState` owns only the selected club's durable sale/loan
@@ -52,7 +52,7 @@ not widen `TransferNegotiation` with optional loan fields.
 The cross-flow invariant is one unresolved negotiation per
 `(acquiring club, player)` pair across permanent and loan kinds. Different
 clubs may hold unresolved negotiations for the same player in durable state.
-Phase 80B's scheduler temporarily declines to create that concurrency because
+Phase 82A's scheduler temporarily declines to create that concurrency because
 competitive resolution is not available yet; it does not reject a valid save
 merely because two different buyers target the same player.
 
@@ -76,7 +76,7 @@ does not promise that the selling club is willing to negotiate.
 - A refusal is delivered as the seller's explicit structured response. It is
   not converted into a disabled action by duplicating seller-willingness logic
   in React.
-- Phase 80B postures may influence seller resistance and AI interest, but do not
+- Phase 82A postures may influence seller resistance and AI interest, but do not
   collapse action eligibility and seller willingness into one Boolean.
 
 This preserves the realistic ability to approach a club for an unlisted player
@@ -116,22 +116,22 @@ state may pretend a player is listed without persisting the canonical fact.
   negotiations, not grouped players or future races; outgoing approaches and
   rival offers for an external target do not consume it.
 - The canonical domain uniqueness stays exactly as it is today: at most one
-  unresolved negotiation per `(buying club, player)` pair. Phase 80B must not
+  unresolved negotiation per `(buying club, player)` pair. Phase 82A must not
   tighten this to one negotiation per player. Two different clubs negotiating
-  for the same player is wanted football behaviour and is owned by Phase 80C.
+  for the same player is wanted football behaviour and is owned by Phase 82B.
 - The same pair rule covers permanent and loan negotiations together through
   discriminated references: one club may not run a permanent and a loan
   approach for the same player at once.
 - After rejection, the same AI club may not submit another offer for the same
   player in the same transfer window.
-- Phase 80B scheduling restriction: while the domain permits parallel bids, the
-  Phase 80B AI scheduler must not create a second concurrent negotiation for a
+- Phase 82A scheduling restriction: while the domain permits parallel bids, the
+  Phase 82A AI scheduler must not create a second concurrent negotiation for a
   player that already has an unresolved one. Permission and exercise are
   different. Today `advanceTransferNegotiations` resolves each due offer
   individually in ID order and `resolveSellerReply` evaluates only that offer
   through seller willingness. Parallel bids therefore are not compared as a
   set; one path can change ownership while a later path dies on
-  `stale_ownership` rather than on merit. Phase 80C adds the competitive
+  `stale_ownership` rather than on merit. Phase 82B adds the competitive
   resolution that makes parallel bids safe; only then is this restriction
   lifted.
 - Incoming permanent transfers remain two-stage: club fee first, player terms
@@ -180,7 +180,7 @@ Every loan:
   completed in winter;
 - returns automatically to the parent club before the next market opens;
 - has no automatic renewal;
-- has no early recall in Phase 80B;
+- has no early recall in Phase 82A;
 - has no purchase option, purchase obligation, resale share, bonus, or loan
   fee.
 
@@ -256,7 +256,7 @@ squad-health gates use selectable depth, not ownership length. This does not
 turn the AI protection into a new global rejection rule for a permanent
 transfer explicitly accepted by the selected-club manager.
 
-The archived pre-career loan roadmap is design history only. Phase 80B must
+The archived pre-career loan roadmap is design history only. Phase 82A must
 integrate the current canonical CareerState, contracts, Posta, transfer
 windows, finance, participation, and SQLite/OPFS owners rather than reviving a
 parallel legacy path.
@@ -277,13 +277,13 @@ Rules:
 - no second player contract is created;
 - both clubs' available wage room and committed wages reflect their share;
 - accounting is idempotent across monthly/season rollover and save reload;
-- the share is the only negotiable loan term in Phase 80B.
+- the share is the only negotiable loan term in Phase 82A.
 
 ## Real Sporting Need And Development
 
 - AI requests or accepts a loan only when it has a real departmental need.
 - The candidate must plausibly enter the receiving club's useful rotation.
-- There is no contractual playing-time promise in Phase 80B.
+- There is no contractual playing-time promise in Phase 82A.
 - There is no automatic loan-development bonus.
 - Real committed minutes and ratings at the borrowing club feed the same
   quarterly development system as every other player.
@@ -312,12 +312,12 @@ Posta:
 - preserves keyboard operation, focus, expiry, and final-counter semantics;
 - resolving a message executes one typed runtime command and persists once.
 
-No separate loan-only navigation section is added in Phase 80B.
+No separate loan-only navigation section is added in Phase 82A.
 
 ## Beta Save Policy
 
 Loan ownership, market postures, and incoming negotiations change durable
-career facts. Phase 80B therefore:
+career facts. Phase 82A therefore:
 
 - bumps the canonical beta save/schema version;
 - deletes incompatible beta saves;
@@ -339,7 +339,7 @@ Bounded checks before the final cohort must report positive observations for:
 - listed versus unsolicited offer frequency;
 - five-open-offer cap counted by individual incoming negotiation and per-buyer
   negotiation uniqueness across permanent and loan kinds;
-- zero concurrent negotiations scheduled for one player, proving the Phase 80B
+- zero concurrent negotiations scheduled for one player, proving the Phase 82A
   scheduling restriction holds while the domain still permits them;
 - same-buyer rejection cooldown;
 - outgoing and incoming loan creation;
@@ -358,17 +358,22 @@ Bounded checks before the final cohort must report positive observations for:
 
 ## Final Longitudinal Gate
 
-Phase 80B does not own the deferred checkpointed cohort. Phase 81 Step 12 owns
-it after the competitive-market and tactical match-engine reworks.
+Phase 82A does not own the checkpointed market cohort. Phase 82B Step 09 owns
+it, once loans and competitive races both exist.
 
 Running it here would certify a market that is about to gain competitive
 resolution, repeating the mistake that invalidated Phase 79 Step 14 against the
-Phase 79C economy. Phase 80B therefore closes on bounded diagnostics, browser,
+Phase 79C economy. Phase 82A therefore closes on bounded diagnostics, browser,
 persistence, and repository gates only.
 
-Phase 80B must still leave the cohort runnable: shard, checkpoint, and worker
-wiring stay intact and exercised by bounded runs, so Phase 80C and Phase 81
-start from working infrastructure rather than rebuilding it.
+The match engine is not part of this argument. Under the 2026-08-02 phase order
+Phase 81 is already Done, so the engine observed by any run in this phase is
+the accepted one. The Phase 81 Step 12 cohort remains valid engine evidence and
+is not market evidence: it observed no postures, no loans, and no races.
+
+Phase 82A must still leave the cohort runnable: shard, checkpoint, and worker
+wiring stay intact and exercised by bounded runs, so Phase 82B starts from
+working infrastructure rather than rebuilding it.
 
 ## Explicit Non-Goals
 
@@ -384,7 +389,7 @@ start from working infrastructure rather than rebuilding it.
   each lifecycle keeps its own discriminated state and shares only clocks,
   money/value objects, Posta grammar, and cross-kind queries.
 - No simultaneous competing bids, competitive resolution, raise loop, or
-  player-chooses-between-suitors behaviour; Phase 80C owns all of it.
+  player-chooses-between-suitors behaviour; Phase 82B owns all of it.
 - No compatibility migration for beta saves.
-- No longitudinal cohort in Phase 80B; Phase 81 Step 12 owns the deferred
-  `50 x 20` after the competitive-market and tactical match-engine reworks.
+- No longitudinal cohort in Phase 82A; Phase 82B Step 09 owns the market
+  `50 x 20` once loans and competitive races both exist.

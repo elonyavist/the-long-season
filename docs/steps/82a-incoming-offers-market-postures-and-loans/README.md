@@ -1,8 +1,10 @@
-# Phase 80B - Incoming Offers, Market Postures And Loans
+# Phase 82A - Incoming Offers, Market Postures And Loans
 
 ## Status
 
-Planned and entry-gated. Phase 80A Step 09 is Blocked; do not start Phase 80B.
+Planned and entry-gated. Deferred behind Phase 81 and Phase 81A by
+the 2026-08-02 phase-order decision; this phase was previously numbered 80B.
+Do not start Phase 82A.
 
 ## Goal
 
@@ -13,20 +15,32 @@ Posta decisions, bounded diagnostics, and a clean competitive-market handoff.
 
 The accepted product contract is:
 
-- `docs/audits/PHASE_80B_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md`
+- `docs/audits/PHASE_82A_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md`
 
 ## Entry Gate
 
-- Phase 80 is Done; Phase 80A is not Done because Step 09 is Blocked.
+- Phase 80 and Phase 80A are Done. Phase 80A closes by carrying its unchanged
+  `goals_per_match_avg` monitor failure to Phase 81, which owns match scoring.
+- Phase 81 is Done, including its named squad-depth accessor. No production
+  path composes a lineup by reading `club.playerIds` directly, so this phase
+  redefines squad depth in one owner rather than across every reader.
+- Phase 81A is Done and measured: contract expiry anchored to the season
+  boundary through one named owner, offered terms expressed in months inside the
+  accepted `18-30` band, an AI free-agent signing policy that drains the pool,
+  background fixtures resolved in the selected club's division through
+  `advanceCareerMonths`, and the simulate-match command sharing the L1 producer.
+- Market density has been measured against the frozen bands and the measurement
+  is recorded. This phase is authorized on evidence that loans are the missing
+  channel, not as an assumption.
 - The public current/P50/upper assessment is canonical and shared with AI.
-- Quarterly development, dynamic environment, player supply, and value exist,
-  and all `32` Phase-80A-owned cohort gates pass, but the Phase 80A bounded
-  report remains `FAIL` on a match-goal monitor.
+- Quarterly development, dynamic environment, player supply, and value exist.
 - Incompatible beta saves have been deleted.
 - Phase 79 Step 14 remains Reopened, paused, and unclaimed.
 
-This entry gate is not satisfied. Phase 80B may start only after Phase 80A
-records an authorized non-waived successful closeout and is marked Done.
+This entry gate is not satisfied while Phase 81 and Phase 81A are
+open. The market-density measurement is a required input, not a formality: if
+the measured density already sits inside the frozen bands, the loan channel is
+re-argued before this phase starts rather than assumed.
 
 ## Locked Decisions
 
@@ -38,14 +52,14 @@ records an authorized non-waived successful closeout and is marked Done.
   Grouping several bids around one player never turns them into one capacity
   slot.
 - The canonical per-`(buying club, player)` negotiation uniqueness stays
-  unchanged and covers permanent and loan kinds together. Phase 80B must not
+  unchanged and covers permanent and loan kinds together. Phase 82A must not
   tighten it into a global one-per-player rule: competing bids from different
-  clubs are wanted football behaviour owned by Phase 80C.
-- Phase 80B scheduling restriction: the AI scheduler must not create a second
+  clubs are wanted football behaviour owned by Phase 82B.
+- Phase 82A scheduling restriction: the AI scheduler must not create a second
   concurrent negotiation for a player who already has an unresolved one.
   Today's resolution evaluates negotiations independently, so parallel bids
   would be settled by processing order and losers could fail on
-  `stale_ownership`. The restriction lifts only when Phase 80C adds competitive
+  `stale_ownership`. The restriction lifts only when Phase 82B adds competitive
   resolution.
 - Same AI buyer cannot rebid for the rejected player in the same window.
 - Permanent and loan proposals keep separate canonical negotiation states.
@@ -58,7 +72,10 @@ records an authorized non-waived successful closeout and is marked Done.
   it does not guarantee seller willingness. A canonical
   `player_not_for_sale` reply remains valid and must be shown explicitly
   without recomputing willingness in React.
-- Loans work in both directions and end at the current season's end.
+- Loans work in both directions and end at the current season's end. That
+  boundary is the one named season-boundary owner introduced by Phase 81A, the
+  same one contract expiry uses. This phase adds a consumer, never a second
+  definition.
 - No recall, extension, option/obligation, loan fee, resale share, bonus, or
   promised minutes.
 - Borrowing-club wage share is exactly `0%`, `50%`, or `100%`.
@@ -77,10 +94,13 @@ records an authorized non-waived successful closeout and is marked Done.
 - AI uses real squad need and plausible rotation value; only real minutes and
   ratings produce development.
 - Incompatible beta saves are deleted without migration.
-- Phase 80B runs no longitudinal cohort. The deferred `50 x 20` belongs to
-  Phase 81 Step 12 so it validates both the competitive market and the final
-  accepted tactical match engine. Phase 80B still keeps shard/checkpoint/worker
-  wiring working and bounded-exercised.
+- Phase 82A runs no longitudinal cohort. Phase 81 Step 12 already ran the
+  checkpointed `50 x 20` against the accepted tactical match engine; that run
+  observed no competitive market and cannot be reused as market evidence. A
+  second checkpointed `50 x 20` therefore belongs to Phase 82B's closeout. This
+  second run is an accepted cost of the 2026-08-02 phase order, not an
+  oversight. Phase 82A still keeps shard/checkpoint/worker wiring working and
+  bounded-exercised.
 
 ## Ordered Steps
 
@@ -93,7 +113,7 @@ records an authorized non-waived successful closeout and is marked Done.
 7. `07-bidirectional-loan-market-ai-need-and-real-development.md`
 8. `08-squad-market-and-posta-loan-ui.md`
 9. `09-bounded-diagnostics-browser-persistence-and-beta-reset.md`
-10. `10-phase-report-and-phase-80c-handoff.md`
+10. `10-phase-report-and-phase-82b-handoff.md`
 
 ## Validation Ladder
 
@@ -107,8 +127,8 @@ records an authorized non-waived successful closeout and is marked Done.
   cross-kind open-negotiation queries, AI, and real development.
 - Step 08 exposes existing commands through Squad, Market, and Posta.
 - Step 09 runs bounded diagnostics, persistence, browser, and repository gates.
-- Step 10 closes the phase on bounded evidence and hands off to Phase 80C. No
-  Phase 80B step runs a longitudinal cohort.
+- Step 10 closes the phase on bounded evidence and hands off to Phase 82B. No
+  Phase 82A step runs a longitudinal cohort.
 
 ## Mandatory Per-Step Documentation
 
@@ -130,7 +150,7 @@ records an authorized non-waived successful closeout and is marked Done.
 - No separate loan navigation screen.
 - No beta compatibility migration.
 - No staff, scouting, facilities, advanced pyramid, or five-country topology.
-- No longitudinal run anywhere in Phase 80B.
+- No longitudinal run anywhere in Phase 82A.
 
 ## Definition Of Done
 
@@ -147,6 +167,7 @@ records an authorized non-waived successful closeout and is marked Done.
 - JSON and SQLite/OPFS persistence, repository checks, build, Playwright,
   accessibility, diff, and Graphify pass.
 - No longitudinal cohort is run or claimed; cohort infrastructure is proven
-  working by a bounded run and ultimately handed through Phase 80C to Phase 81.
-- Phase 80C is the only next phase, and Phase 79 Step 14 remains Reopened,
+  working by a bounded run and handed to Phase 82B, which owns the second
+  checkpointed `50 x 20` over the competitive market.
+- Phase 82B is the only next phase, and Phase 79 Step 14 remains Reopened,
   paused, unrun, and unclaimed.

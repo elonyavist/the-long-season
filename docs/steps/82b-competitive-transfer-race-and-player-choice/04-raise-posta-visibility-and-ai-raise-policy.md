@@ -23,7 +23,7 @@ within budget, so the race is a decision rather than a notification.
 - `packages/i18n/src/labels.test.ts`
 - `apps/web/src/runtime/web-career-runtime.ts`
 - `apps/web/src/runtime/web-career-runtime.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/04-raise-posta-visibility-and-ai-raise-policy.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/04-raise-posta-visibility-and-ai-raise-policy.md`
 - `docs/PROJECT_STATUS.md`
 
 ## Implementation Checklist

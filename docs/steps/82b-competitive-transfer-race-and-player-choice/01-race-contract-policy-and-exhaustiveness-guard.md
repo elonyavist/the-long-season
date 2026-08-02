@@ -73,7 +73,7 @@ at the asking price — out of a step that is already introducing new types.
 - `apps/cli/src/commands/career.test.ts`
 - `apps/cli/src/commands/ten-season-report/report-data.ts`
 - `apps/cli/src/commands/ten-season-report.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/01-race-contract-policy-and-exhaustiveness-guard.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/01-race-contract-policy-and-exhaustiveness-guard.md`
 - `docs/PROJECT_STATUS.md`
 - the next relevant step document only if a lesson changes future work
 
@@ -183,7 +183,7 @@ manager could be left without an explanation of why the race ended.
   mappers remain total over that narrowed union and use a `never` guard. The
   filter itself must be exhaustive over the complete transfer-status union, so
   a future status cannot disappear silently. Do not classify race-only
-  terminals as `accepted` or widen `PlayerGenerationSellerOutcome`. Phase 80C
+  terminals as `accepted` or widen `PlayerGenerationSellerOutcome`. Phase 82B
   Step 08's dedicated `transfer-race-audit` owns those outcomes.
 - Prefer the targeted guard over enabling `noImplicitReturns` repository-wide.
 - Add a test that documents the intent, so the guard is not removed as noise.
@@ -250,5 +250,5 @@ git diff --check
 - UI lifecycle, SQLite decoding, the canonical CLI market demo, and legacy
   diagnostic projection all handle each source status explicitly; race-only
   outcomes are filtered before the narrowed legacy mapper and remain owned by
-  the dedicated Phase 80C audit.
+  the dedicated Phase 82B audit.
 - No gameplay behaviour changed in this step.

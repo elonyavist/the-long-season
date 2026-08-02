@@ -38,7 +38,7 @@ move is financially, contractually, and sportingly plausible.
 - Add `selectOpenPlayerNegotiations(...)` over discriminated permanent/loan
   references. It rejects a permanent/loan collision only for the same
   `(acquiring club, player)` pair; different buyers remain valid domain state.
-- Keep loan scheduling serial by player in Phase 80B. Phase 80C may lift
+- Keep loan scheduling serial by player in Phase 82A. Phase 82B may lift
   concurrency only for negotiation kinds it explicitly supports.
 - Add direction, need, rotation, wage share, Posta, real minutes, bench
   zero-growth, and return tests.

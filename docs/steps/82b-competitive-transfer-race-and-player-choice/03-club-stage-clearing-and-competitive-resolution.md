@@ -47,7 +47,7 @@ still be decided by processing order rather than by competitive resolution.
 - `apps/cli/src/commands/career.test.ts`
 - `apps/cli/src/commands/ten-season-report/report-data.ts`
 - `apps/cli/src/commands/ten-season-report.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/03-club-stage-clearing-and-competitive-resolution.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/03-club-stage-clearing-and-competitive-resolution.md`
 - `docs/PROJECT_STATUS.md`
 
 ## Implementation Checklist
@@ -70,7 +70,7 @@ still be decided by processing order rather than by competitive resolution.
   accepted fee and exact matches qualify. Do not let AI decide for the manager.
 - Every permanent approach already enters a race through Step 02, including a
   one-participant case. Negotiation kinds explicitly excluded by the Step 01
-  product scope retain their Phase 80B lifecycle unchanged.
+  product scope retain their Phase 82A lifecycle unchanged.
 - Negotiations eliminated on price close as `outbid`; qualified negotiations
   remain open for the player stage.
 - Opening the player stage creates exactly one new shared player-stage clock;
@@ -90,7 +90,7 @@ still be decided by processing order rather than by competitive resolution.
   diagnostic behaviour.
 - In the legacy Phase 79D negotiation-spread projection, classify `outbid` as a
   race-only exclusion before the narrowed seller/counter mapper. Record it in
-  the Phase 80C race diagnostics later; never relabel it as a legacy
+  the Phase 82B race diagnostics later; never relabel it as a legacy
   `accepted`, `countered`, or `rejected` seller outcome.
 - Test, at minimum: no acceptable offer, one acceptable offer, several
   acceptable offers with one highest, an exact highest-fee tie, lower accepted

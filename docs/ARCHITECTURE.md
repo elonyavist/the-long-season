@@ -1230,10 +1230,10 @@ Simulation packages should not hardcode UI/CLI labels.
 6. Use `createFakeLeagueSystem` only for focused single-competition simulation
    fixtures that do not represent the production career bootstrap.
 
-### Planned Phase 80A-80C Deep Module Seams
+### Planned Phase 80A-82B Deep Module Seams
 
 These Interfaces are documented contracts, not current production claims. They
-must be implemented in the ordered 80A, 80B, and 80C steps.
+must be implemented in the ordered 80A, 82A, and 82B steps.
 
 1. `derivePublicPlayerAssessment(...)` is the only live-game Interface for
    current rating, public `P50`, and public upper. UI, sorting, valuation,
@@ -1267,7 +1267,7 @@ must be implemented in the ordered 80A, 80B, and 80C steps.
    into the unrelated player-generation economy audit merely because both feed
    the same CLI report.
 9. The initial race contract supports permanent transfers and free agents, with
-   at most three active acquiring clubs. Loans retain their serial Phase 80B
+   at most three active acquiring clubs. Loans retain their serial Phase 82A
    lifecycle while discriminated references preserve a future extension seam.
 10. Permanent qualification advances only the highest seller-acceptable fee and
    exact matches. Both shared stages last three in-game days; one-suitor free
@@ -1296,8 +1296,8 @@ must be implemented in the ordered 80A, 80B, and 80C steps.
     `min(7, independent work items)`. Direct and checkpointed multi-world CLI
     adapters use it; explicit overrides can only reduce concurrency.
 11. The next user-requested `50 x 20` is reserved for Phase 81 Step 12, after
-    the Phase 80 UI reworks, Phase 80A player-model work, Phase 80B market/loan
-    work, Phase 80C competitive-race work, and Phase 81 match-engine work. It
+    the Phase 80 UI reworks, Phase 80A player-model work, Phase 82A market/loan
+    work, Phase 82B competitive-race work, and Phase 81 match-engine work. It
     uses `50` stable shards and `7` workers. The interrupted Phase 79D direct
     run produced no report and is not evidence.
 

@@ -29,7 +29,7 @@ change who is participating or when the current shared stage clock expires.
 - `packages/storage/src/json-career-storage.test.ts`
 - `apps/web/src/runtime/web-career-runtime.ts`
 - `apps/web/src/runtime/web-career-runtime.test.ts`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/02-durable-race-state-persistence-and-beta-reset.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/02-durable-race-state-persistence-and-beta-reset.md`
 - `docs/PROJECT_STATUS.md`
 - the next relevant step document only if a lesson changes future work
 
@@ -56,7 +56,7 @@ change who is participating or when the current shared stage clock expires.
 - At this step, validate and persist the existing permanent-negotiation
   reference. Keep the reference discriminant total so Step 06 can add the
   canonical free-agent variant without changing the race shape or permanent
-  path. Loan negotiations remain serial under Phase 80B and must not be
+  path. Loan negotiations remain serial under Phase 82A and must not be
   admitted to an open race.
 - Persist races losslessly in JSON and SQLite/OPFS with one schema/save-version
   bump. Delete incompatible beta saves through the canonical runtime/storage
