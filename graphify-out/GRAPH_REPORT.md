@@ -1,16 +1,16 @@
 # Graph Report - the-long-season  (2026-08-02)
 
 ## Corpus Check
-- 2994 files · ~1,805,446 words
+- 3001 files · ~1,818,220 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 68119 nodes · 90735 edges · 2550 communities (2544 shown, 6 thin omitted)
+- 68519 nodes · 91114 edges · 2581 communities (2575 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 167 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `03d39485`
+- Built from commit: `693e10b1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -2561,11 +2561,42 @@
 - [[_COMMUNITY_Community 2547|Community 2547]]
 - [[_COMMUNITY_Community 2548|Community 2548]]
 - [[_COMMUNITY_Community 2549|Community 2549]]
+- [[_COMMUNITY_Community 2550|Community 2550]]
+- [[_COMMUNITY_Community 2551|Community 2551]]
+- [[_COMMUNITY_Community 2552|Community 2552]]
+- [[_COMMUNITY_Community 2553|Community 2553]]
+- [[_COMMUNITY_Community 2554|Community 2554]]
+- [[_COMMUNITY_Community 2555|Community 2555]]
+- [[_COMMUNITY_Community 2556|Community 2556]]
+- [[_COMMUNITY_Community 2557|Community 2557]]
+- [[_COMMUNITY_Community 2558|Community 2558]]
+- [[_COMMUNITY_Community 2559|Community 2559]]
+- [[_COMMUNITY_Community 2560|Community 2560]]
+- [[_COMMUNITY_Community 2561|Community 2561]]
+- [[_COMMUNITY_Community 2562|Community 2562]]
+- [[_COMMUNITY_Community 2563|Community 2563]]
+- [[_COMMUNITY_Community 2564|Community 2564]]
+- [[_COMMUNITY_Community 2565|Community 2565]]
+- [[_COMMUNITY_Community 2566|Community 2566]]
+- [[_COMMUNITY_Community 2567|Community 2567]]
+- [[_COMMUNITY_Community 2568|Community 2568]]
+- [[_COMMUNITY_Community 2569|Community 2569]]
+- [[_COMMUNITY_Community 2570|Community 2570]]
+- [[_COMMUNITY_Community 2571|Community 2571]]
+- [[_COMMUNITY_Community 2572|Community 2572]]
+- [[_COMMUNITY_Community 2573|Community 2573]]
+- [[_COMMUNITY_Community 2574|Community 2574]]
+- [[_COMMUNITY_Community 2575|Community 2575]]
+- [[_COMMUNITY_Community 2576|Community 2576]]
+- [[_COMMUNITY_Community 2577|Community 2577]]
+- [[_COMMUNITY_Community 2578|Community 2578]]
+- [[_COMMUNITY_Community 2579|Community 2579]]
+- [[_COMMUNITY_Community 2580|Community 2580]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `playerId` - 486 edges
 2. `gameDate` - 458 edges
-3. `Open Decisions And Follow-Up` - 394 edges
+3. `Open Decisions And Follow-Up` - 396 edges
 4. `clubId` - 389 edges
 5. `CareerState` - 236 edges
 6. `seasonId` - 235 edges
@@ -2583,78 +2614,78 @@
   apps/web/src/visual-qa/current-product.spec.ts → packages/storage/src/sqlite/career-state-mapper.ts
 - `SaveDemoMatchPreparationResult` --references--> `CareerMatchPreparationView`  [EXTRACTED]
   apps/web/src/features/match-preparation/match-preparation-demo.ts → packages/ui/src/career/career-match-preparation-view.ts
-- `SaveDemoMatchPreparationResult` --references--> `CareerMatchPreparationView`  [EXTRACTED]
-  apps/web/src/career/match-preparation-demo.ts → packages/ui/src/career/career-match-preparation-view.ts
+- `resolveInitialYoungProspectGuardrail()` --calls--> `resolveRareProdigyCurrentRatingGuardrail()`  [EXTRACTED]
+  apps/cli/src/commands/ten-season-report/report-data.ts → packages/content/src/generators/player-current-ability-bands.ts
 
-## Communities (2550 total, 6 thin omitted)
+## Communities (2581 total, 6 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (394): 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`, 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`, 2026-06-15 — `docs/steps/00-foundation/02-shared-rng-and-date.md`, 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`, 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`, 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`, 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`, 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md` (+386 more)
+Nodes (396): 2026-06-14 — `docs/steps/00-foundation/00-monorepo-skeleton.md`, 2026-06-15 — `docs/steps/00-foundation/01-domain-core-types.md`, 2026-06-15 — `docs/steps/00-foundation/02-shared-rng-and-date.md`, 2026-06-15 — `docs/steps/00-foundation/03-storage-json.md`, 2026-06-15 — `docs/steps/00-foundation/04-enforcement.md`, 2026-06-15 — `docs/steps/01-match-engine/01-team-strength.md`, 2026-06-15 — `docs/steps/01-match-engine/02-match-context.md`, 2026-06-15 — `docs/steps/01-match-engine/03-step-match.md` (+388 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.02
-Nodes (204): CareerPostaDetailView, CareerPostaListItemView, CareerMatchPreparationFormationId, CareerMatchPreparationFormationInput, CareerMatchPreparationFormationSlotInput, CareerMatchPreparationView, TacticalBenchBoard(), TacticalBenchBoardCandidate (+196 more)
+Cohesion: 0.01
+Nodes (228): CareerAppFrame(), CareerAppFrameProps, CareerExitDialogState, AppEntryScreenProps, AppShell(), AppShellContextItem, AppShellProps, AppShellStorageRecoveryProvider() (+220 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.01
-Nodes (192): action(), buildActions(), buildCareerMatchdayPhaseView(), BuildCareerMatchdayPhaseViewInput, CareerMatchdayHalfTimeSubstitutionInput, CareerMatchdayPhaseActionId, CareerMatchdayPhaseActionStatus, CareerMatchdayPhaseActionView (+184 more)
+Nodes (232): buildCareerMatchdayPhaseView(), CareerMatchdayPhaseActionId, CareerMatchdayPhaseActionView, CareerMatchdayPhaseEventView, CareerMatchdayPhasePlayerView, orderEvents(), orderPlayers(), selectedClubScoreState() (+224 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
 Nodes (44): 10. Pulizia tema (una sola identità premium), 11. Roadmap a micro-step (uno alla volta), 12. Fuori ambito, 13. Rischi e mitigazioni, 1.1 Decisioni di brainstorming (bloccate), 1. Obiettivo, 2.1 INVARIATO — logica di dominio (nessuna modifica funzionale), 2.2 RI-VESTITO — solo CSS chrome del campo (logica intatta) (+36 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.04
-Nodes (100): AskingPriceCurvesConfig, ApplyCareerPermanentTransferInput, ApplyCareerPermanentTransferResult, createPermanentTransferIntent(), findClubTransferBudget(), MarketState, PermanentTransferIntent, PermanentTransferPreview (+92 more)
+Cohesion: 0.03
+Nodes (98): aiDecisionKindOrder, aiInformationParitySummary(), allocationExamples(), allocationSummary(), allocationViolationCountByWorld(), allUnique(), capSummary(), clubCategories (+90 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.03
-Nodes (135): advanceAiContractLifecycle(), AffordableAiTerms, AiContractDecisionReason, aiRenewalDecision(), clubPlayerKey(), contractNegotiationsForContract(), contractNegotiationsForPlayer(), createAiContractLifecycleIndex() (+127 more)
+Cohesion: 0.02
+Nodes (213): advanceAiContractLifecycle(), AffordableAiTerms, AiContractDecisionReason, aiRenewalDecision(), clubPlayerKey(), contractNegotiationsForContract(), contractNegotiationsForPlayer(), createAiContractLifecycleIndex() (+205 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.01
-Nodes (262): CareerCommandRequest, CareerCommandRunner, CareerCommandRunnerDependencies, createCareerCommandRunner(), execute, exposeFailure, fail, first (+254 more)
+Nodes (344): result, CareerCommandRequest, CareerCommandRunner, CareerCommandRunnerDependencies, createCareerCommandRunner(), execute, exposeFailure, fail (+336 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.04
-Nodes (66): benchSlotStatus(), BLOCKER_ORDER, buildBenchSlotView(), buildBenchView(), buildBlockerKeys(), buildCareerMatchPreparationView(), BuildCareerMatchPreparationViewInput, buildFormationView() (+58 more)
+Cohesion: 0.03
+Nodes (89): benchSlotStatus(), BLOCKER_ORDER, buildBenchSlotView(), buildBenchView(), buildBlockerKeys(), buildCareerMatchPreparationView(), BuildCareerMatchPreparationViewInput, buildFormationView() (+81 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.03
-Nodes (97): AbilityValue, asClubId(), asCompetitionId(), asFixtureId(), asGameDate(), asMoney(), asSaveId(), asSeasonId() (+89 more)
+Nodes (101): applyCareerWeeklyRecovery(), assertRecoverablePlayerIds(), progressStagedMatchToHalfTime(), AbilityValue, applyDemoHalfTimeSubstitutions(), asClubId(), asCompetitionId(), asFixtureId() (+93 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.01
-Nodes (304): assertExactObjectKeys(), PlayerDevelopmentEnvironmentConfig, validatePlayerDevelopmentEnvironmentConfig(), addUniqueEntry(), CareerActivePlayerStockEntry, promotionCandidateStockEntry(), selectCareerActivePlayerStock(), unreachableYouthPlayerStatus() (+296 more)
+Cohesion: 0.02
+Nodes (295): AskingPriceCurvesConfig, MarketBehaviorCalibrationConfig, PlayerDevelopmentEnvironmentConfig, addUniqueEntry(), CareerActivePlayerStockEntry, promotionCandidateStockEntry(), selectCareerActivePlayerStock(), unreachableYouthPlayerStatus() (+287 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.02
-Nodes (142): App(), PreparationNavigationIntent, result, CareerAppFrame(), CareerAppFrameProps, CareerExitDialogState, SaveLifecycleProbe(), AppShell() (+134 more)
+Cohesion: 0.07
+Nodes (29): App(), PreparationNavigationIntent, AppEntryScreen(), storageFailureLabelKey(), focusCurrentCareerTask(), useCareerCommandRunner(), buildCalendarAdvanceTransition(), CalendarAdvanceFrame (+21 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.02
-Nodes (188): selectAskingPriceCurves(), createFreshCareerState(), careerStateFromScenario(), CliPlayer, boundaryIso(), resolveSeasonTransferWindows(), seasonStartYearFromDate(), LongRunAnomalyReport (+180 more)
+Nodes (163): selectAskingPriceCurves(), createFreshCareerState(), CliPlayer, longRunAnomalySemanticClass, derivePlayerPotentialProjection(), projectionBand(), ratingForAbility(), assertUniquePlayers() (+155 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.02
-Nodes (112): CareerMatchdayPhasePlayerView, buildCareerMatchdayPresentationView(), buildMatchdayEventGroups(), buildMatchdayFullTimeReviewView(), buildMatchdayHalfTimeReviewView(), buildMatchdayLiveMoment(), buildMatchdayPhaseIndicators(), buildMatchdayScoreHeader() (+104 more)
+Cohesion: 0.04
+Nodes (66): action(), buildActions(), BuildCareerMatchdayPhaseViewInput, CareerMatchdayHalfTimeSubstitutionInput, CareerMatchdayPhaseActionStatus, CareerMatchdayPhaseEventInput, CareerMatchdayPhasePlayerInput, CareerMatchdayPhaseScoreboardInput (+58 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.01
-Nodes (405): careerStateFixture(), clubFixture(), invalidState, lifecycle(), promotionCandidate, selected, selectedIds, seniorId (+397 more)
+Cohesion: 0.02
+Nodes (201): advanceCareerMonths(), CareerMonthlyLifecycleSummary, civilDateFromEpochDay(), eligibleOpenParticipationRows(), ledgerForEligibleRows(), mergeClosedMonths(), monthKeyForCareerDate(), monthlySummary() (+193 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.01
-Nodes (324): ActiveMatchCheckpoint, ActiveMatchCheckpointError, ActiveMatchCheckpointErrorCode, ActiveMatchCheckpointPhase, ActiveMatchConversionBand, ActiveMatchEngineConfig, ActiveMatchInitialContext, ActiveMatchLineupSlot (+316 more)
+Cohesion: 0.08
+Nodes (58): attachFixtureReports(), boolean(), cap(), insertActiveMatch(), insertActiveTeam(), insertCareerStateRows(), insertClubCompetitiveTierState(), insertClubFinanceState() (+50 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.02
-Nodes (232): DivisionFirstTeamRatingBand, PlayerRatingAbilityThreshold, PublicValueRatingAnchor, WageFinanceCalibrationConfig, RareProdigyCurrentRatingGuardrail, ContextualProspectCeilingCandidate, ContextualProspectCeilingAbilityInterval, ContextualProspectCurrentBand (+224 more)
+Nodes (178): LONG_RUN_ANOMALY_KEYS, LongRunAnomalyCheck, LongRunAnomalyReport, LongRunAnomalyStatus, ProjectedLongRunAnomalyCheck, projectLongRunAnomalyCheckForWorldGate(), worstLongRunAnomalyStatus(), AdvanceCareerLongRunSeasonResult (+170 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.02
-Nodes (109): createMatchdayAttention(), careerWithMatchdayMessage(), CareerInboxScreen(), career, careerWithMatchdayMessage(), html, presentation, readCareer (+101 more)
+Nodes (186): AdvanceCareerOneSeasonResult, createMatchdayAttention(), createNextCareerMatchdayAttention(), ContractNegotiationRejectionReason, containsSelectedClubInOrder(), findNextCareerFixture(), seasonStartYearFromDate(), presentCareerInbox() (+178 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.04
@@ -2673,36 +2704,36 @@ Cohesion: 0.03
 Nodes (59): advanceIo, afterInspectIo, applyIo, assessment, assessments, beforeInspectIo, budgetBeforeAdvance, CapturedIo (+51 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.05
-Nodes (57): playerValuationConfig, ActivePlayerContract, CareerSquadPresentation, contractBonusFields(), ContractNegotiation, ContractNegotiationState, ContractOfferTerms, indexContractHistory() (+49 more)
+Cohesion: 0.03
+Nodes (107): careerMoneyFromMinorUnits(), CareerMatchPreparationPlayerOptionInput, playerPositionFitTierForPositionKey(), positionSortIndex(), WebPlayerPositionFitTier, ActiveContract, AskingPriceCurvesConfig, baseFinanceView() (+99 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.05
-Nodes (61): CareerMatchdayLiveControlInput, addUnavailablePlayer(), advanceProgressiveMatchMinute(), applyConfirmedProgressiveTeamChanges(), ApplyValidatedLiveMatchCommandResult, applyValidatedTeamChanges(), availabilityAfterIncidents(), continueInjuredPlayer() (+53 more)
+Cohesion: 0.02
+Nodes (174): ActiveMatchCheckpoint, ActiveMatchCheckpointError, ActiveMatchCheckpointErrorCode, ActiveMatchCheckpointPhase, ActiveMatchConversionBand, ActiveMatchEngineConfig, ActiveMatchInitialContext, ActiveMatchLineupSlot (+166 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.02
-Nodes (185): createStagedMatchCheckpoint(), career, fixtures, result, selectedCompetitionId, windows, progressStagedMatchToHalfTime(), createMatchPreparationDraft() (+177 more)
+Cohesion: 0.03
+Nodes (99): LivePlayerMatchProjection, copyStats(), copyTeam(), createProgressiveMatchMinuteSnapshot(), ProgressiveMatchAvailability, MATCH_PREPARATION_TACTIC_PROFILES, AdvanceWebLiveMatchdayMinuteResult, AppliedMatchSubstitution (+91 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.05
-Nodes (62): addFailure(), assertFixtureSetup(), assertInitialLiveTeams(), assertPlayableTeamAfterDecision(), assertValidInput(), collectFixtureFailures(), collectFixtureSamples(), countEventsBySide() (+54 more)
+Cohesion: 0.06
+Nodes (55): addFailure(), assertFixtureSetup(), assertInitialLiveTeams(), assertPlayableTeamAfterDecision(), assertValidInput(), collectFixtureFailures(), collectFixtureSamples(), countEventsBySide() (+47 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.04
-Nodes (63): UiActionResult, action(), buildCareerDashboardView(), BuildCareerDashboardViewInput, buildConditionSummary(), buildContextView(), buildDashboardActions(), buildLeagueResultsView() (+55 more)
+Cohesion: 0.03
+Nodes (76): UiActionResult, action(), buildCareerDashboardView(), BuildCareerDashboardViewInput, buildConditionSummary(), buildContextView(), buildDashboardActions(), buildLeagueResultsView() (+68 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.01
-Nodes (302): deriveContractDemand(), accumulateDiagnosticFacts(), activeAiTalkCount(), activeContractsByPlayer(), advanceAiMarketLifecycle(), AiMarketDiagnosticReason, AiMarketNeedReason, average() (+294 more)
+Cohesion: 0.02
+Nodes (267): deriveContractDemand(), accumulateDiagnosticFacts(), activeAiTalkCount(), activeContractsByPlayer(), advanceAiMarketLifecycle(), AiMarketDiagnosticFact, AiMarketDiagnosticReason, AiMarketNeed (+259 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.05
 Nodes (38): Adopted Behavior, Adopted Contract, Career Matchday Condition Audit, code:bash (pnpm cli career --save=phase41-check --summary), code:text (S.S. Perugia: tracked effect=negative affected=11), Commands Reviewed, Existing Systems To Reuse, Explanation Output (+30 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.06
-Nodes (66): TacticMentalityKey, AppliedLiveMatchCommandFact, applyValidatedLiveMatchCommand(), pauseProgressiveMatchSession(), LiveMatchCommandRejectionCode, rejected(), validateLiveMatchCommand(), assertMinuteForPhase() (+58 more)
+Cohesion: 0.04
+Nodes (77): AppliedLiveMatchCommandFact, pauseProgressiveMatchSession(), LiveMatchCommandRejectionCode, addUnavailableInjury(), adjustTactic(), aiDecisionBoundaries(), AiInGameDecisionReason, applyAiInGameDecision() (+69 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.05
@@ -2710,11 +2741,11 @@ Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, p
 
 ### Community 30 - "Community 30"
 Cohesion: 0.02
-Nodes (264): AiOfferReservations, AiTransferAffordabilitySnapshot, canonicalClubFinanceState(), applyCareerFreeAgentSigning(), nextContractHistorySequence(), rejected(), AcceptedPermanentTransferDeal, activeContractFor() (+256 more)
+Nodes (278): AiOfferReservations, createAiOfferReservations(), reserveAiOffer(), AiTransferAffordabilitySnapshot, canonicalClubFinanceState(), activeContractFor(), applyCareerPermanentTransfer(), ApplyCareerPermanentTransferResult (+270 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.02
-Nodes (163): completeStagedMatchCheckpoint(), applyCareerFixtureConditionConsequences(), ApplyCareerFixtureConditionConsequencesInput, ApplyCareerFixtureConditionConsequencesResult, CareerFixtureConditionChange, before, first, firstResult (+155 more)
+Cohesion: 0.11
+Nodes (22): addSuspension(), applyMatchAvailabilityConsequences(), ApplyMatchAvailabilityConsequencesInput, ApplyMatchAvailabilityConsequencesResult, AvailabilityKey, comparePlayerEntry(), comparePlayerId(), INJURY_DURATION_RANGES (+14 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.02
@@ -2725,8 +2756,8 @@ Cohesion: 0.06
 Nodes (31): 0. Sommario esecutivo, 1.1 Struttura e impianto, 1.2 Punti di forza (reali, verificati), 1.3 Temi trasversali del codice (le radici, non i sintomi), 1.4 Valutazione per area, 1.5 Problemi puntuali per severità, 2.1 La verità centrale: **manca il motore delle conseguenze** — CRITICAL, 2.2 Il test di accensione dei 30 minuti (`requirements.md §I`) (+23 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.05
-Nodes (89): CliLineupDemoPlayerChange, CliManualTacticSwitch, Club, clubFixtures(), ClubId, clubLabel(), findFixtureByValue(), findTableRow() (+81 more)
+Cohesion: 0.03
+Nodes (144): addByGroup(), createCareerSeasonInput(), createCareerTeamsByClubId(), createFakeSeasonInput(), createFakeTeamsByClubId(), FakeCliClubId, FakeCliTeamContext, genericLineupForClub() (+136 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.10
@@ -2734,15 +2765,15 @@ Nodes (19): Active match checkpoint, Audit Conclusion, Career systems, code:text
 
 ### Community 36 - "Community 36"
 Cohesion: 0.06
-Nodes (38): calibrationBandExample(), calibrationGate(), createCell(), createPlayerPotentialOutcomeAudit(), CreatePlayerPotentialOutcomeAuditInput, createPotentialProjectionPolicyCalibration(), distribution(), expectedCellKeys() (+30 more)
+Nodes (37): calibrationBandExample(), calibrationGate(), createCell(), createPlayerPotentialOutcomeAudit(), CreatePlayerPotentialOutcomeAuditInput, createPotentialProjectionPolicyCalibration(), distribution(), expectedCellKeys() (+29 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.06
 Nodes (31): Blocking Decision, Budget Boundary For Market MVP, Calendar And Season Transition Dependencies, Candidate Shared Modules, Career Systems Dependency Map, Current State, Current State, Current State (+23 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.08
-Nodes (51): PlayerEconomyCalibrationBundle, CLUB_DEVELOPMENT_ENVIRONMENT_KEYS, abilityNumber, askingPriceCurvesSchema, assertCompleteDivisions(), assertExactOrder(), assertMinimumMaximum(), assertNonDecreasing() (+43 more)
+Cohesion: 0.07
+Nodes (54): assertExactObjectKeys(), PlayerEconomyCalibrationBundle, validatePlayerDevelopmentEnvironmentConfig(), validatePlayerPotentialProjectionPolicyConfig(), CLUB_DEVELOPMENT_ENVIRONMENT_KEYS, abilityNumber, askingPriceCurvesSchema, assertCompleteDivisions() (+46 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.06
@@ -2754,11 +2785,11 @@ Nodes (33): Accepted Skin, Alerts, Status, Loading, And Recovery, Broken Token R
 
 ### Community 41 - "Community 41"
 Cohesion: 0.01
-Nodes (319): AdvanceCareerMonthsInput, marketWindows(), abilities(), acceptedTerms(), AI_CLUB, careerFixture(), careerState, careerStateWithCover (+311 more)
+Nodes (476): careerStateFixture(), clubFixture(), invalidState, lifecycle(), promotionCandidate, selected, selectedIds, seniorId (+468 more)
 
 ### Community 42 - "Community 42"
 Cohesion: 0.06
-Nodes (36): matchRngKeyParts(), MatchShotOutcomeStepEvent, before, blockEvents, context, expectedPlayerId, first, firstRunKickoff (+28 more)
+Nodes (34): before, blockEvents, context, expectedPlayerId, first, firstRunKickoff, firstRunNoEvent, firstRunRng (+26 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.05
@@ -2773,40 +2804,40 @@ Cohesion: 0.05
 Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.09
-Nodes (29): buildCareerMarketTargetDetailView(), buildAttributeGroups(), buildCareerPlayerDetailView(), buildRoleViews(), CareerPlayerAttributeFamily, CareerPlayerAttributeGroupView, CareerPlayerAttributeView, CareerPlayerDetailInput (+21 more)
+Cohesion: 0.06
+Nodes (43): buildAttributeGroups(), buildCareerPlayerDetailView(), buildRoleViews(), CareerPlayerAttributeFamily, CareerPlayerAttributeGroupView, CareerPlayerAttributeView, CareerPlayerDetailInput, CareerPlayerDetailView (+35 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.06
-Nodes (34): Advance A Career Fixture, Canonical Player Lifecycle, CLI, code:text (apps/cli), code:text (content producer), code:text (structured engine/domain facts), Common Debugging Paths, Content (+26 more)
+Nodes (35): Advance A Career Fixture, Canonical Player Lifecycle, CLI, code:text (apps/cli), code:text (content producer), code:text (structured engine/domain facts), Common Debugging Paths, Content (+27 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.05
-Nodes (59): AnnualWagePolicy, applyBasisPoints(), AskingPriceFactorBand, CalibratedAnnualWageInput, CalibrationDataClassification, CalibrationSourceReference, CLUB_CATEGORIES, ContractTermsPolicy (+51 more)
+Cohesion: 0.02
+Nodes (190): AnnualWagePolicy, applyBasisPoints(), AskingPriceFactorBand, CalibratedAnnualWageInput, CalibrationDataClassification, CalibrationSourceReference, CLUB_CATEGORIES, ContractTermsPolicy (+182 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.06
-Nodes (65): activeContractsFor(), affordabilityTerms(), ageOn(), average(), clubDivision(), compareMarketLossSlice(), contractFinanceCheck(), countContractDateFacts() (+57 more)
+Cohesion: 0.07
+Nodes (64): createPreliminaryAgreementState(), isLivePreliminaryAgreement(), activeContractsFor(), affordabilityTerms(), ageOn(), average(), clubDivision(), compareMarketLossSlice() (+56 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.05
-Nodes (55): ClubDevelopmentEnvironmentKey, isYouthArchetype(), selectPlayerArchetype(), GenerateSeasonalYouthIntakePlayersResult, potentialRarityBudgetForDivision(), assertNaturalProfileFacts(), assertNeverArchetype(), assertUniqueCandidateKeys() (+47 more)
+Cohesion: 0.03
+Nodes (75): html, SaveLifecycleProbe(), shellView, text, useCareerSaveLifecycle(), createWebTranslator(), italian, translateWebLabel() (+67 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.04
-Nodes (47): age, archetype, assertGeneratedRoleIdentity(), assignedArchetypeCounts, assignments, bottomAverage, CAREER_START_EPOCH_DAY, civilDateParts() (+39 more)
+Cohesion: 0.07
+Nodes (26): afterFirst, base, baseSession(), currentGoalkeeper, currentTeam, firstChange, initial, input (+18 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.05
-Nodes (91): candidateForPlayer(), squadPlayerCurrentAbility(), aggregatePlayerChanges(), developOnePlayerMonth(), roleShapedAbilities(), turnoverCurrentAbility(), roleShapedAbilities(), youthLifecycleAbility() (+83 more)
+Cohesion: 0.07
+Nodes (27): 1. Negotiations own commercial facts, 2. The race owns coordination only, 3. One and many participants use the same path, 4. Persistence lands before behaviour depends on it, 5. The AI lifecycle remains a stable Interface, Accepted Product Decisions, Architecture Ownership, Atomic Boundaries (+19 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.05
-Nodes (69): applyTeamWorkload(), isGoalkeeperRole(), normalizeTactic(), progressOnPitchCondition(), roundTwoDecimals(), assertKnobWithinCap(), assertNonEmptySeed(), assertTacticalDistributionWithinCaps() (+61 more)
+Cohesion: 0.01
+Nodes (239): AiContractLifecycleIndex, DueAiContract, seniorSquadFixture(), canonicalSeniorSquadState(), abilities(), acceptedTerms(), AI_CLUB, careerFixture() (+231 more)
 
 ### Community 54 - "Community 54"
 Cohesion: 0.03
-Nodes (80): acceptedIds, advanced, annualIntake, annualIntakeAudit, args, baseline, birthDate, cases (+72 more)
+Nodes (62): acceptedIds, advanced, annualIntake, annualIntakeAudit, args, baseline, birthDate, cases (+54 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.05
@@ -2821,8 +2852,8 @@ Cohesion: 0.06
 Nodes (28): args, balanced, combined, defaultIo, defensive, demoIo, explanationIo, explanationStart (+20 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.09
-Nodes (46): CreatedWebCareer, metadata(), RecordingCareerStorage, isRecord(), migrateCareerSave(), normalizeCareerPlayerRoleMetadata(), ROLES_BY_POSITION, StoredCareerSaveV1 (+38 more)
+Cohesion: 0.12
+Nodes (35): CommittedWebCareerSession, ContinuedWebCareer, CreatedWebCareer, isRecord(), migrateCareerSave(), normalizeCareerPlayerRoleMetadata(), ROLES_BY_POSITION, StoredCareerSave (+27 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.08
@@ -2830,15 +2861,15 @@ Nodes (23): Architecture Contract, code:bash (nvm use 24), Definition Of Done, E
 
 ### Community 60 - "Community 60"
 Cohesion: 0.02
-Nodes (90): Deferred - Finances Expansion And Poverty Loop MVP, Future Engine Backlog - Match Engine Feel And Tactical Input Effect Review, Future Phase - Web Career Persistence And Save Lifecycle Foundation, Future Web Backlog - Calendar, Fixtures, And Season Recap, Future Web Backlog - Inbox/Posta Decision Center, Future Web Backlog - Squad Screen And Player Memory Foundation, Operational Roadmap, Phase 62 - Engine Safety Net And Deterministic Regression Gates (+82 more)
+Nodes (94): Deferred - Finances Expansion And Poverty Loop MVP, Execution Order After Phase 80A, Future Engine Backlog - Match Engine Feel And Tactical Input Effect Review, Future Phase - Web Career Persistence And Save Lifecycle Foundation, Future Web Backlog - Calendar, Fixtures, And Season Recap, Future Web Backlog - Inbox/Posta Decision Center, Future Web Backlog - Squad Screen And Player Memory Foundation, Operational Roadmap (+86 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.04
-Nodes (60): assertValidMinuteCount(), buildManualTacticChangeSchedule(), BuildManualTacticChangeScheduleInput, compareManualTacticChanges(), isValidManualTacticChangeSchedule(), ManualTacticChange, ManualTacticChangeError, ManualTacticChangeErrorCode (+52 more)
+Cohesion: 0.03
+Nodes (149): candidateForPlayer(), squadPlayerCurrentAbility(), aggregatePlayerChanges(), playerExitAbility(), roleForPosition(), turnoverCurrentAbility(), youthLifecycleAbility(), youthPromotionAbility() (+141 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.02
-Nodes (172): MarketBehaviorCalibrationConfig, PlayerMarketCalibrationConfig, DeriveAiTransferAffordabilitySnapshotInput, DeriveAiTransferOfferFeeInput, ApplyCareerFreeAgentSigningInput, EvaluateCareerContractCapacityInput, CompletedCalendarMonth, ContractActivationFinanceFact (+164 more)
+Cohesion: 0.01
+Nodes (259): sideStats(), team(), validCheckpoint(), AiClubStructuralDepth, playerStateFixture(), ApplyCareerFixtureConditionConsequencesResult, before, first (+251 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.08
@@ -2857,8 +2888,8 @@ Cohesion: 0.10
 Nodes (20): `app/`, code:text (apps/web/src/), Current File Migration Map, Decision, `features/app-entry/`, `features/career-shell/`, `features/dashboard/`, `features/match-preparation/` (+12 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.04
-Nodes (102): selectMarketBehaviorCalibration(), selectPlayerDevelopmentEnvironmentConfig(), selectPlayerValuationConfig(), selectPlayerWagePolicyConfig(), applyCareerWeeklyRecovery(), assertRecoverablePlayerIds(), buildCareerDashboardViewFromCareerState(), buildRecentSelectedClubMatch() (+94 more)
+Cohesion: 0.03
+Nodes (128): ClubDevelopmentEnvironmentKey, PlayerRoleIdentity, activeClubIdByPlayerId(), activeStockClubId(), activeYoungExceptionalPlayers(), annualExceptionalCandidates(), annualIntakeCeilingConstraint(), AnnualWorldIntakeCandidateProviders (+120 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.18
@@ -2869,7 +2900,7 @@ Cohesion: 0.06
 Nodes (35): dependencies, comlink, @fontsource-variable/mulish, @fontsource-variable/rokkitt, @game/content, @game/engine, @game/i18n, @game/shared (+27 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (32): AbilityGroup, AbilityScope, appendAbilityRows(), assertOrderedLookup(), groupedRows(), groupedRowsByNumber(), insertMappedRows(), insertRow() (+24 more)
 
 ### Community 71 - "Community 71"
@@ -2937,8 +2968,8 @@ Cohesion: 0.10
 Nodes (19): code:bash (pnpm cli simulate-season --seed=world-a --player-generation-), Complexity And Ownership, Diagnostic: 50 worlds x 10 seasons, Duplicate And Dead-Path Closeout, Executive Result, Fixed-Seed Comparison, Gate Classification, Lifecycle And Market Inspection (+11 more)
 
 ### Community 87 - "Community 87"
-Cohesion: 0.02
-Nodes (122): html, shellView, text, AppShellContextItem, AppShellProps, html, LABELS, renderShell() (+114 more)
+Cohesion: 0.03
+Nodes (76): html, LABELS, renderShell(), CareerDashboardAvailabilityStatus, buildCareerInboxView(), BuildCareerPostaViewInput, buildPostaFactRows(), CareerInboxActionInput (+68 more)
 
 ### Community 88 - "Community 88"
 Cohesion: 0.11
@@ -2958,11 +2989,11 @@ Nodes (44): AI Participation Is Still Too Thin For Development, Baseline Command
 
 ### Community 92 - "Community 92"
 Cohesion: 0.05
-Nodes (60): ageDistributionCheck(), average(), championDominanceCheck(), championStreakFailThreshold(), championStreakWarnThreshold(), check(), createLongRunAnomalyReport(), CreateLongRunAnomalyReportInput (+52 more)
+Nodes (58): ageDistributionCheck(), average(), championDominanceCheck(), championStreakFailThreshold(), championStreakWarnThreshold(), check(), createLongRunAnomalyReport(), CreateLongRunAnomalyReportInput (+50 more)
 
 ### Community 93 - "Community 93"
-Cohesion: 0.05
-Nodes (57): AdvanceCareerLongRunSeasonContext, AdvanceCareerLongRunSeasonResult, CareerLongRunAdvancedSeasonObservation, CareerLongRunRefreshSummary, CareerLongRunSeasonResult, CareerLongRunSimulationResult, CreateCareerLongRunSeasonInputContext, runCareerLongRunSimulation() (+49 more)
+Cohesion: 0.16
+Nodes (19): accumulateFixtureTotals(), accumulateSeasonTotals(), accumulateUpset(), assertValidBatchInput(), CalibrationMetricResult, CalibrationReport, CalibrationSeasonSummary, CalibrationTotals (+11 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.11
@@ -2977,12 +3008,12 @@ Cohesion: 0.11
 Nodes (17): Anomaly Aggregation And Warning Status Semantics, CLI Command Parsing, CLI Section Rendering, Current Shape, Files Reviewed, Localized Text, Long-Run Simulation Execution, Low-Risk Step 02 Boundary (+9 more)
 
 ### Community 97 - "Community 97"
-Cohesion: 0.01
-Nodes (285): PlayerPotentialProjectionAgeBand, PlayerPotentialProjectionPolicyConfig, PlayerPotentialProjectionRoleFamily, validatePlayerPotentialProjectionPolicyConfig(), DeriveContractDemandInput, ApplyPlayerAgingPolicyResult, ProgressCareerAiTeamSelectionInput, Player (+277 more)
+Cohesion: 0.03
+Nodes (108): applyCareerFixtureConditionConsequences(), ApplyCareerFixtureConditionConsequencesInput, CareerFixtureConditionChange, CareerMatchPlayerStateConsequence, CareerMatchStateConsequenceSummary, applyCareerFixtureReport(), commitCompletedCareerFixture(), commitStagedCareerFixture() (+100 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.08
-Nodes (52): ShotChanceType, ShotType, AggregateOccasionResolver, clamp(), deriveOpportunityQuality(), resolveGoalProbability(), teamBySide(), ChanceActors (+44 more)
+Cohesion: 0.03
+Nodes (137): FixtureParticipationSideContext, MatchScore, BlockMatchEvent, FoulMatchEvent, FullTimeMatchEvent, GoalMatchEvent, HalfTimeMatchEvent, InjuryMatchEvent (+129 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.11
@@ -2990,7 +3021,7 @@ Nodes (18): dependencies, @game/content, @game/engine, @game/i18n, @game/shared,
 
 ### Community 100 - "Community 100"
 Cohesion: 0.02
-Nodes (150): playerEconomyCalibration, PlayerEconomyCalibrationVersionBundle, valuationCompatibleRatingScale, ClubCategory, RoleIdentifiedPlayer, CareerIntakeClubContext, CareerIntakeGeneratedPlayer, constructedSeniorExceptionalCurrentAbilityLane() (+142 more)
+Nodes (165): ClubCategory, RoleIdentifiedPlayer, AnnualWorldSeniorIntakeCandidate, AnnualWorldYouthIntakeCandidate, CareerIntakeClubContext, CareerIntakeGeneratedPlayer, constructedSeniorExceptionalCurrentAbilityLane(), constructedYouthExceptionalCurrentAbilityLane() (+157 more)
 
 ### Community 101 - "Community 101"
 Cohesion: 0.17
@@ -3025,8 +3056,8 @@ Cohesion: 0.27
 Nodes (15): changeFormation(), completePreparation(), CURRENT_DIR, expectKeyboardPath(), expectNoHorizontalOverflow(), expectPitchSlotNoOverlap(), expectPitchSlotsInsidePitch(), expectSvgPitchBackground() (+7 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.06
-Nodes (55): monthEndEpochDay(), CompletedPlayerAgeError, birthDate, leapDayBirth, buildDerivationKey(), hashStringToSeedWords(), RngKeyPart, first (+47 more)
+Cohesion: 0.09
+Nodes (35): isYoungPlayer(), civilDateParts(), completedPlayerAge(), CompletedPlayerAgeError, birthDate, leapDayBirth, buildDerivationKey(), hashStringToSeedWords() (+27 more)
 
 ### Community 110 - "Community 110"
 Cohesion: 0.06
@@ -3089,8 +3120,8 @@ Cohesion: 0.13
 Nodes (14): Career CLI Smoke, code:sh (pnpm cli career --save=<saveId> --rollover-season), code:sh (pnpm exec vitest run apps/cli/src/commands/career.test.ts -t), code:sh (pnpm cli career --save=phase27-manual --seed=world-a --new-w), Completion, Implemented Model, Next Calendar, Phase 28 Readiness (+6 more)
 
 ### Community 125 - "Community 125"
-Cohesion: 0.09
-Nodes (36): BuildCareerContractViewInput, CareerContractView, CareerMarketRoleFitInput, CareerMarketTargetRowView, assertValidProfileInput(), ATTRIBUTE_FAMILY_ORDER, buildAttributeGroups(), buildCareerPlayerProfileView() (+28 more)
+Cohesion: 0.03
+Nodes (121): PLAYER_ARCHETYPES_BY_ROLE, PLAYER_ROLES, PlayerArchetype, PlayerRole, GeneratedCurrentQualityProfile, GeneratedRoutinePlayerArchetypeKey, resolveGeneratedCurrentQualityProfile(), applySeniorCurrentQualityProfile() (+113 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.20
@@ -3733,8 +3764,8 @@ Cohesion: 0.09
 Nodes (21): Allowed dependencies, Claude Code task prompt, Completed Corrective Phase, Completed User-Requested Phase, Current Active Phase, Current Documented Phase, Current State, Definition of Done (+13 more)
 
 ### Community 286 - "Community 286"
-Cohesion: 0.03
-Nodes (126): attentionLevelRank(), CareerAttentionBlockerKey, CareerAttentionCategory, CareerAttentionContinuePolicy, CareerAttentionEvent, careerAttentionEventId, CareerAttentionEventInput, CareerAttentionLevel (+118 more)
+Cohesion: 0.02
+Nodes (157): attentionLevelRank(), CareerAttentionBlockerKey, CareerAttentionCategory, CareerAttentionContinuePolicy, CareerAttentionEvent, careerAttentionEventId, CareerAttentionEventInput, CareerAttentionLevel (+149 more)
 
 ### Community 287 - "Community 287"
 Cohesion: 0.20
@@ -3782,7 +3813,7 @@ Nodes (9): Accessibility Target, code:text (top navigation), Decision, Out Of Sc
 
 ### Community 298 - "Community 298"
 Cohesion: 0.04
-Nodes (50): 2026-07-29 — Phase 79D documentation, 2026-07-29 — Phase 79D independent-review corrections, 2026-07-29 — Phase 79D Step 02, 2026-07-29 — Phase 79D Step 03, 2026-07-29 — Phase 79D Step 03 execution-budget re-verification, 2026-07-29 — Phase 79D Step 04, 2026-07-29 — Phase 79D Step 05a, 2026-07-29 — Phase 79D Step 05a rework (+42 more)
+Nodes (51): 2026-07-29 — Phase 79D documentation, 2026-07-29 — Phase 79D independent-review corrections, 2026-07-29 — Phase 79D Step 02, 2026-07-29 — Phase 79D Step 03, 2026-07-29 — Phase 79D Step 03 execution-budget re-verification, 2026-07-29 — Phase 79D Step 04, 2026-07-29 — Phase 79D Step 05a, 2026-07-29 — Phase 79D Step 05a rework (+43 more)
 
 ### Community 299 - "Community 299"
 Cohesion: 0.20
@@ -5165,8 +5196,8 @@ Cohesion: 0.20
 Nodes (9): Accessibility Notes, Blockers, code:sh (node --experimental-strip-types apps/web/src/visual-qa/tacti), Command, Findings, Manual Review Recommendation, Scope, Screenshots (+1 more)
 
 ### Community 647 - "Community 647"
-Cohesion: 0.02
-Nodes (136): appEntryActionAvailability, AppEntryActionAvailabilityStatus, AppEntryActionId, appEntryActionResult, AppEntryUnavailableReasonKey, UiActionDetailValue, UiActionResultStatus, AppEntryView (+128 more)
+Cohesion: 0.05
+Nodes (60): appEntryActionAvailability, AppEntryActionAvailabilityStatus, AppEntryActionId, appEntryActionResult, AppEntryUnavailableReasonKey, UiActionDetailValue, UiActionResultStatus, AppEntryView (+52 more)
 
 ### Community 650 - "Community 650"
 Cohesion: 0.25
@@ -5373,16 +5404,16 @@ Cohesion: 0.20
 Nodes (9): 06a - Pitch SVG Background Integration, code:sh (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Source Asset, What NOT To Implement (+1 more)
 
 ### Community 701 - "Community 701"
-Cohesion: 0.09
-Nodes (50): PitchMarkings(), PitchView(), PitchViewProps, EmptySlot(), EmptySlotProps, formArrow(), PlayerToken(), PlayerTokenProps (+42 more)
+Cohesion: 0.19
+Nodes (16): FORMATIONS, FormationPreset, SlotTemplate, clamp(), clampToZone(), PITCH, pointerToNorm(), toNorm() (+8 more)
 
 ### Community 702 - "Community 702"
 Cohesion: 0.20
 Nodes (9): Accessibility Notes, Browser QA Coverage, Canonical Formation Role Visual QA, code:sh (node --experimental-strip-types apps/web/src/visual-qa/tacti), code:text (/tmp/the-long-season-phase54), Decision, Findings, Residual Risk (+1 more)
 
 ### Community 703 - "Community 703"
-Cohesion: 0.03
-Nodes (113): emptyAbilities(), abilitySet(), abilitySet(), playerFixture(), primaryRoleForPosition(), assertDisjointRoles(), assertRoleFamiliarity(), createPlayerRoleIdentity() (+105 more)
+Cohesion: 0.11
+Nodes (18): Architecture Ownership, Beta Save Policy, Entry Gate, Explicit Non-Goals, Final Longitudinal Gate, Incoming Permanent Offers, Loan Directions And Duration, Market Postures (+10 more)
 
 ### Community 704 - "Community 704"
 Cohesion: 0.13
@@ -5457,8 +5488,8 @@ Cohesion: 0.14
 Nodes (13): Canonical Role Adaptation, Coordinate And State Contract, Integration Decisions, Match-Preparation Replacement, Next Phase Decision, Persistence Shape, Real Squad Adapter, Remaining Non-Blocking Risks (+5 more)
 
 ### Community 722 - "Community 722"
-Cohesion: 0.06
-Nodes (32): indexPublicAssessments(), asPublicStarValue(), assertUniquePlayers(), CanonicalRoleAssessment, ClubLevelThresholds, deriveClubLevelThresholds(), derivePublicClubPlayerAssessments(), DerivePublicClubPlayerAssessmentsInput (+24 more)
+Cohesion: 0.04
+Nodes (84): agingMultiplier(), applyPlayerAgingPolicy(), currentAbilityFloor(), goalkeeperAgingMultiplier(), goalkeeperRemainingRoom(), lateOutfieldSkillDeclineAge(), monthlyDeclineFor(), reachablePotentialCeiling() (+76 more)
 
 ### Community 723 - "Community 723"
 Cohesion: 0.28
@@ -5529,8 +5560,8 @@ Cohesion: 0.05
 Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 740 - "Community 740"
-Cohesion: 0.04
-Nodes (77): BLOCKED_FICTIONAL_CLUB_NAMES, CLUB_CITY_POOLS, CLUB_CITY_TIER_WEIGHTS, CLUB_NAMING_SOURCES, ClubCityPoolTier, ClubCitySource, ClubCityTierWeight, ClubCountryCode (+69 more)
+Cohesion: 0.07
+Nodes (44): BLOCKED_FICTIONAL_CLUB_NAMES, CLUB_CITY_POOLS, CLUB_CITY_TIER_WEIGHTS, CLUB_NAMING_SOURCES, ClubCityPoolTier, ClubCitySource, ClubCityTierWeight, ClubCountryCode (+36 more)
 
 ### Community 741 - "Community 741"
 Cohesion: 0.22
@@ -5574,7 +5605,7 @@ Nodes (13): Architecture target, Binding persistence decisions, Canonical save s
 
 ### Community 751 - "Community 751"
 Cohesion: 0.04
-Nodes (72): CareerPlayerStatisticsSummaryInput, aggregatePlayerRows(), assertCount(), assertCoverage(), buildCareerPlayerSeasonStatistics(), BuildCareerPlayerSeasonStatisticsInput, CareerPlayerSeasonStatistics, CareerPlayerSeasonStatisticsRow (+64 more)
+Nodes (68): aggregatePlayerRows(), assertCount(), assertCoverage(), buildCareerPlayerSeasonStatistics(), CareerPlayerSeasonStatistics, CareerPlayerSeasonStatisticsRow, CareerPlayerStatisticsContractError, CareerPlayerStatisticsContractErrorCode (+60 more)
 
 ### Community 752 - "Community 752"
 Cohesion: 0.15
@@ -5593,12 +5624,12 @@ Cohesion: 0.22
 Nodes (8): code:sh (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Step 03 - Palette Reduction And Preference Migration, What NOT to implement, What to implement
 
 ### Community 756 - "Community 756"
-Cohesion: 0.05
-Nodes (63): removeTempSaveDirectory(), removeTempSaveDirectory(), removeTempSaveDirectory(), removeTempSaveDirectory(), SupportedLanguage, mergePlayerDevelopmentCohortWorldSummaries(), PLAYER_DEVELOPMENT_COHORT_CONTRACT_VERSION, assertPositiveSafeInteger() (+55 more)
+Cohesion: 0.06
+Nodes (55): SupportedLanguage, assertPositiveSafeInteger(), resolveSimulationWorkerCount(), ResolveSimulationWorkerCountInput, createPlayerDevelopmentCohortCheckpoint(), createResumableLongRunGateReport(), CreateResumableLongRunGateReportInput, createResumablePlayerDevelopmentCohortReport() (+47 more)
 
 ### Community 757 - "Community 757"
-Cohesion: 0.11
-Nodes (22): hasCareerContractExpiryAlert(), actionsForNegotiation(), assertUniqueHistory(), buildCareerContractView(), buildDraftFields(), camelCaseBonus(), CareerActiveContractView, CareerContractActionId (+14 more)
+Cohesion: 0.05
+Nodes (63): assertValidContractOfferTerms(), ContractDemandSnapshot, ContractOfferEvaluation, counterResponseClock(), createNegotiationStageClock(), CreateNegotiationStageClockInput, isNegotiationStageDue(), isNegotiationStageExpired() (+55 more)
 
 ### Community 758 - "Community 758"
 Cohesion: 0.13
@@ -5701,8 +5732,8 @@ Cohesion: 0.18
 Nodes (10): Dashboard And Inbox/Posta After Play, How The App Reaches Matchday, Key Entry Points For Junior Developers, Next Phase Recommendation, Quality Review, Real Engine Facts Used, Residual Risks, Roadmap Updates (+2 more)
 
 ### Community 783 - "Community 783"
-Cohesion: 0.05
-Nodes (66): AiContractLifecycleIndex, ApplyContractActivationFinanceInput, ApplyContractActivationsFinanceInput, ReconcileActiveContractWageCommitmentsInput, ReconcileClosedContractNegotiationsInput, applyEndOfSeasonPlayerExits(), averageAbilities(), BroadPositionGroup (+58 more)
+Cohesion: 0.12
+Nodes (15): accounts, cash, cashBalances, cashMedians, distribution, first, firstHalf, league (+7 more)
 
 ### Community 784 - "Community 784"
 Cohesion: 0.10
@@ -6281,12 +6312,12 @@ Cohesion: 0.22
 Nodes (8): 11 - Demo Runtime Removal And Production Path Cleanup, code:bash (nvm use 24), Definition of Done, Expected files, Goal, Required checks, Scope, What NOT to implement
 
 ### Community 928 - "Community 928"
-Cohesion: 0.08
-Nodes (35): SqliteCareerMigration, SqliteCareerSchemaVersionError, SqliteCareerSchemaVersionRelation, SQLITE_CAREER_ARCHIVE_STATISTICS_SCHEMA_STATEMENTS, SQLITE_CAREER_AVAILABILITY_SCHEMA_STATEMENTS, SQLITE_CAREER_COMPETITIVE_TIER_SCHEMA_STATEMENTS, SQLITE_CAREER_CONTRACT_NEGOTIATION_SCHEMA_STATEMENTS, SQLITE_CAREER_CORE_SCHEMA_STATEMENTS (+27 more)
+Cohesion: 0.09
+Nodes (33): SqliteCareerSchemaVersionRelation, SQLITE_CAREER_ARCHIVE_STATISTICS_SCHEMA_STATEMENTS, SQLITE_CAREER_AVAILABILITY_SCHEMA_STATEMENTS, SQLITE_CAREER_COMPETITIVE_TIER_SCHEMA_STATEMENTS, SQLITE_CAREER_CONTRACT_NEGOTIATION_SCHEMA_STATEMENTS, SQLITE_CAREER_CORE_SCHEMA_STATEMENTS, SQLITE_CAREER_DOMESTIC_COMPETITION_SCHEMA_STATEMENTS, SQLITE_CAREER_INBOX_SCHEMA_STATEMENTS (+25 more)
 
 ### Community 929 - "Community 929"
-Cohesion: 0.10
-Nodes (29): FORMATIONS, am(), backFive(), backFour(), backThree(), cm(), dm(), FORMATION_CATALOG (+21 more)
+Cohesion: 0.15
+Nodes (22): removeTempSaveDirectory(), FORMATIONS, removeTempSaveDirectory(), removeTempSaveDirectory(), removeTempSaveDirectory(), am(), backFive(), backFour() (+14 more)
 
 ### Community 930 - "Community 930"
 Cohesion: 0.05
@@ -6301,8 +6332,8 @@ Cohesion: 0.11
 Nodes (17): Architecture target, Calendar transition, code:text (structured career facts), Definition of Done, Goal, Locked attention model, Locked daily advancement model, Locked initial message policy (+9 more)
 
 ### Community 933 - "Community 933"
-Cohesion: 0.12
-Nodes (22): applyMigrations(), assertBootstrapCareer(), errorMessage(), hasWorkerCode(), inTransaction(), isObsoleteBetaSchemaVersion(), isUnsupportedSchemaVersion(), normalizeWorkerOperationError() (+14 more)
+Cohesion: 0.11
+Nodes (23): applyMigrations(), assertBootstrapCareer(), errorMessage(), hasWorkerCode(), inTransaction(), isObsoleteBetaSchemaVersion(), isUnsupportedSchemaVersion(), normalizeWorkerOperationError() (+15 more)
 
 ### Community 934 - "Community 934"
 Cohesion: 0.10
@@ -6313,8 +6344,8 @@ Cohesion: 0.07
 Nodes (27): 1. One Global Public Rating, 2. Sixth-Star Presentation, 3. Division Expectations, 4. Exact Current Attributes For Now, 5. A Canonical Three-Division Career World, 6. Public Market Value, 7. Asking Price And Final Fee, 8. Economy And AI Must Move Together (+19 more)
 
 ### Community 936 - "Community 936"
-Cohesion: 0.09
-Nodes (37): applyHalfTimeSubstitutions(), ApplyHalfTimeSubstitutionsInput, ApplyHalfTimeSubstitutionsResult, HalfTimeSubstitutionInvalidReason, HalfTimeSubstitutionsApplied, HalfTimeSubstitutionsInvalid, hasDuplicatePlayers(), invalid() (+29 more)
+Cohesion: 0.15
+Nodes (13): applied, AWAY_STARTER_ONE, fullTime, halfTime, HOME_BENCH_ONE, HOME_BENCH_TWO, HOME_STARTER_ONE, HOME_STARTER_TWO (+5 more)
 
 ### Community 937 - "Community 937"
 Cohesion: 0.10
@@ -6573,8 +6604,8 @@ Cohesion: 0.11
 Nodes (17): Adopted Solution, Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expected Files, Findings Closed, Goal, Implementation Contract (+9 more)
 
 ### Community 1002 - "Community 1002"
-Cohesion: 0.06
-Nodes (82): monthlyDevelopmentVariance(), PlayerRoleIdentity, activeClubIdByPlayerId(), activeStockClubId(), activeYoungExceptionalPlayers(), annualExceptionalCandidates(), annualIntakeCeilingConstraint(), AnnualWorldIntakeCandidateProviders (+74 more)
+Cohesion: 0.05
+Nodes (58): assertDisjointRoles(), assertRoleFamiliarity(), createPlayerRoleIdentity(), familiarityEntries(), PlayerRoleIdentityError, adapted, identity, natural (+50 more)
 
 ### Community 1003 - "Community 1003"
 Cohesion: 0.01
@@ -6638,7 +6669,7 @@ Nodes (9): code:text (01 safety gate + task-first shell + focus), Dependency Ord
 
 ### Community 1018 - "Community 1018"
 Cohesion: 0.03
-Nodes (148): FormatCareerDashboardOutputInput, CareerDevelopmentReportFormatResult, CareerDevelopmentReportPlayerExample, CareerDevelopmentTrajectorySample, formatCareerDevelopmentReportOutput(), formatDelta(), formatDevelopmentExample(), formatTrajectorySample() (+140 more)
+Nodes (199): playerEconomyCalibration, playerValuationConfig, selectMarketBehaviorCalibration(), selectPlayerDevelopmentEnvironmentConfig(), selectPlayerPotentialProjectionPolicy(), selectPlayerValuationConfig(), selectPlayerWagePolicyConfig(), valuationCompatibleRatingScale (+191 more)
 
 ### Community 1019 - "Community 1019"
 Cohesion: 0.22
@@ -6758,7 +6789,7 @@ Nodes (12): Cleanup Boundary, code:bash (nvm use 24), Completion Criteria, Expec
 
 ### Community 1048 - "Community 1048"
 Cohesion: 0.12
-Nodes (29): abilitiesFixture(), buildAffordableScenario(), buildMarketDemoScenario(), buildStarRejectedScenario(), CliClubFinanceState, CliClubTransferBudget, CliGameState, CliIntent (+21 more)
+Nodes (30): withMarketDemoBudget(), abilitiesFixture(), buildAffordableScenario(), buildMarketDemoScenario(), buildStarRejectedScenario(), CliClubFinanceState, CliClubTransferBudget, CliGameState (+22 more)
 
 ### Community 1049 - "Community 1049"
 Cohesion: 0.15
@@ -6902,7 +6933,7 @@ Nodes (8): Aggregate Metrics, Career Squad Refresh Long-Run Gates Report, code:b
 
 ### Community 1084 - "Community 1084"
 Cohesion: 0.03
-Nodes (74): abilities(), abilitiesFixture(), age14, age15, age45, age46, assessment, assessmentFor() (+66 more)
+Nodes (75): abilities(), abilitiesFixture(), age14, age15, age45, age46, assessment, assessmentFor() (+67 more)
 
 ### Community 1085 - "Community 1085"
 Cohesion: 0.15
@@ -6981,8 +7012,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1104 - "Community 1104"
-Cohesion: 0.08
-Nodes (25): 10. Derived Shape Is Not Career Truth, 11. AI Uses The Same Truth, 12. Manager Explanation Is Structured And Non-Prescriptive, 1. Keep The Aggregate Per-Minute Engine, 2. Separate Quality, Intrinsic Shape, And Relational Matchup, 2a. Lock The Quality-Versus-Structure Hierarchy Before Coefficients, 3. Use Typed Domain Vocabulary, 4. Diminishing Returns, Not Named Formation Penalties (+17 more)
+Cohesion: 0.07
+Nodes (27): 10. Derived Shape Is Not Career Truth, 11. AI Uses The Same Truth, 12. Manager Explanation Is Structured And Non-Prescriptive, 1. Keep The Aggregate Per-Minute Engine, 2. Separate Quality, Intrinsic Shape, And Relational Matchup, 2a. Lock The Quality-Versus-Structure Hierarchy Before Coefficients, 3. Use Typed Domain Vocabulary, 4. Diminishing Returns, Not Named Formation Penalties (+19 more)
 
 ### Community 1105 - "Community 1105"
 Cohesion: 0.15
@@ -6993,8 +7024,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1107 - "Community 1107"
-Cohesion: 0.03
-Nodes (120): PlayerRatingScaleConfig, PlayerArchetype, PlayerRole, CreateAnnualWorldIntakeCandidateProvidersInput, OpeningYouthPlayerGenerationFacts, GeneratedCurrentQualityProfile, GeneratedRoutinePlayerArchetypeKey, applySeniorCurrentQualityProfile() (+112 more)
+Cohesion: 0.13
+Nodes (14): Accepted Product Decisions, code:bash (nvm use 24), Definition Of Done, Exhaustiveness Guard, Expected Files, Goal, Race Contract, Required Checks (+6 more)
 
 ### Community 1108 - "Community 1108"
 Cohesion: 0.10
@@ -7029,12 +7060,12 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1116 - "Community 1116"
-Cohesion: 0.02
-Nodes (150): calibrationV1SeasonCalibrationTargets, ContentCalibrationMetricKey, ContentCalibrationTarget, defaultSeasonCalibrationTargets, strictFailureSmokeTargets, formatSupportedCareerLineupDemoProfiles(), formatSupportedCareerTacticDemoProfiles(), formatSupportedMarketDemoProfiles() (+142 more)
+Cohesion: 0.04
+Nodes (91): calibrationV1SeasonCalibrationTargets, ContentCalibrationMetricKey, ContentCalibrationTarget, defaultSeasonCalibrationTargets, strictFailureSmokeTargets, formatSupportedCareerLineupDemoProfiles(), formatSupportedCareerTacticDemoProfiles(), formatSupportedMarketDemoProfiles() (+83 more)
 
 ### Community 1117 - "Community 1117"
-Cohesion: 0.06
-Nodes (33): adequate, age, archetypes, baseInput, CAREER_START_EPOCH_DAY, civilDateParts(), completedCivilAge(), configured (+25 more)
+Cohesion: 0.23
+Nodes (14): code:bash (pnpm cli ten-season-report \), code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Frozen Command, Goal, Required Checks (+6 more)
 
 ### Community 1118 - "Community 1118"
 Cohesion: 0.05
@@ -7049,20 +7080,20 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1121 - "Community 1121"
-Cohesion: 0.06
-Nodes (45): bestPlayerSuitability(), bestSuitability(), buildDepthByPositionFamily(), buildFormationSquadFitReport(), buildSlotFit(), buildSquadFitHints(), buildSurplusGroups(), compareCandidates() (+37 more)
+Cohesion: 0.04
+Nodes (82): CareerMarketRoleFitInput, CareerPlayerRoleView, CareerPlayerRoleView, CareerSquadSlotChoiceInput, LiveMatchLineupSlot, buildFormationFitReportForCli(), ClubId, clubLabel() (+74 more)
 
 ### Community 1122 - "Community 1122"
-Cohesion: 0.06
-Nodes (47): assertUniquePlayers(), benchPlacementValue(), buildActions(), buildCareerSquadView(), BuildCareerSquadViewInput, buildDetailedLineupChoices(), buildPlacement(), buildPlayerRow() (+39 more)
+Cohesion: 0.02
+Nodes (201): hasCareerContractExpiryAlert(), actionsForNegotiation(), assertUniqueHistory(), buildCareerContractView(), BuildCareerContractViewInput, buildDraftFields(), camelCaseBonus(), CareerActiveContractView (+193 more)
 
 ### Community 1123 - "Community 1123"
 Cohesion: 0.10
 Nodes (20): code:bash (nvm use 24), Completion Evidence, Definition Of Done, Division And Rarity, Economy, AI And Presentation, Entry Gate, Global Rating, Goal (+12 more)
 
 ### Community 1125 - "Community 1125"
-Cohesion: 0.05
-Nodes (46): ClubCompetitiveTierStateError, CareerStateContractError, abilitySet(), activeMatchCheckpointFixture(), activeMatchTeam(), base, calibrationVersionsFixture(), career (+38 more)
+Cohesion: 0.15
+Nodes (12): code:bash (nvm use 24), Definition Of Done, Entry Gate, Fixed Architecture, Goal, Mandatory Per-Step Loop, Ordered Steps, Phase 82B - Competitive Transfer Race And Player Choice (+4 more)
 
 ### Community 1126 - "Community 1126"
 Cohesion: 0.22
@@ -7105,8 +7136,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1136 - "Community 1136"
-Cohesion: 0.06
-Nodes (49): copyMatchContext(), copyStats(), requiredShooter(), restoreMatchContext(), restoreStagedMatchCheckpoint(), restoreTeamContext(), halfTime, restored (+41 more)
+Cohesion: 0.02
+Nodes (163): careerTeamsByClubId(), ApplyHalfTimeSubstitutionsResult, HalfTimeSubstitutionInvalidReason, assertValidMinuteCount(), buildManualTacticChangeSchedule(), BuildManualTacticChangeScheduleInput, compareManualTacticChanges(), isValidManualTacticChangeSchedule() (+155 more)
 
 ### Community 1137 - "Community 1137"
 Cohesion: 0.06
@@ -8821,8 +8852,8 @@ Cohesion: 0.03
 Nodes (56): PlayerEconomyCalibrationValidationError, ageAssets, ageWage, anchorAssets, anchorCurves, assets, behavior, capAssets (+48 more)
 
 ### Community 1565 - "Community 1565"
-Cohesion: 0.01
-Nodes (225): selectPlayerPotentialProjectionPolicy(), CareerContractBonusField, CareerContractTermsInput, careerMoneyFromMinorUnits(), careerNonNegativeMoneyFromMinorUnits(), CareerMarketTargetDetailView, CareerSquadColumnKey, CareerSquadPlayerActionView (+217 more)
+Cohesion: 0.02
+Nodes (160): WebPreferences, CareerContractTermsInput, careerNonNegativeMoneyFromMinorUnits(), CareerMarketTargetDetailView, CareerSquadColumnKey, CareerSquadPlacementOptionView, CareerSquadPlayerActionView, CareerSquadSort (+152 more)
 
 ### Community 1566 - "Community 1566"
 Cohesion: 0.22
@@ -8853,8 +8884,8 @@ Cohesion: 0.22
 Nodes (8): Aggregate Metrics, code:bash (pnpm cli ten-season-report --seed-prefix=phase78-contract-fi), Dynasty Warning Snapshots, Production Warning Snapshots, Reproduction, Senior Squad, Contracts And Club Finance Long-Run Gates Report, Table Spread Warning Snapshots, Worst Worlds
 
 ### Community 1573 - "Community 1573"
-Cohesion: 0.24
-Nodes (16): buildFormationFitReportForCli(), ClubId, clubLabel(), firstGeneratedClubId(), formatFormationDepartment(), formatFormationFitNote(), formatFormationFitOutput(), formatFormationFitTarget() (+8 more)
+Cohesion: 0.03
+Nodes (63): DivisionFirstTeamRatingBand, PlayerRatingAbilityThreshold, PlayerRatingScaleConfig, PublicValueRatingAnchor, WageFinanceCalibrationConfig, AnnualWorldActivePlayerStockEntry, CreateAnnualWorldIntakeCandidateProvidersInput, activePlayerStock (+55 more)
 
 ### Community 1574 - "Community 1574"
 Cohesion: 0.20
@@ -8862,7 +8893,7 @@ Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Imp
 
 ### Community 1575 - "Community 1575"
 Cohesion: 0.06
-Nodes (38): advancePlayerMatchRatingLedger(), applyShotOutcome(), buildPlayerMatchRatings(), BuildPlayerMatchRatingsInput, clamp(), compareAscending(), compareDescending(), compareMutableRowsByRating() (+30 more)
+Nodes (39): advancePlayerMatchRatingLedger(), applyShotOutcome(), buildPlayerMatchRatings(), BuildPlayerMatchRatingsInput, clamp(), compareAscending(), compareDescending(), compareMutableRowsByRating() (+31 more)
 
 ### Community 1576 - "Community 1576"
 Cohesion: 0.11
@@ -8882,7 +8913,7 @@ Nodes (15): Bounded Validation, code:bash (nvm use 24), Definition Of Done, Entr
 
 ### Community 1581 - "Community 1581"
 Cohesion: 0.05
-Nodes (55): assertTarget(), assertUniqueTargets(), buildCareerMarketTargetCatalog(), buildTargetDetail(), buildTargetRow(), CareerMarketAvailability, CareerMarketContractHorizon, CareerMarketEmploymentInput (+47 more)
+Nodes (54): getFormation(), SimulateSeasonError, abilitySet(), aiSelectionPlayers(), aiSelectionReadyTeams(), baseInput, clubsInRound, defaultResult (+46 more)
 
 ### Community 1582 - "Community 1582"
 Cohesion: 0.14
@@ -8946,7 +8977,7 @@ Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Im
 
 ### Community 1597 - "Community 1597"
 Cohesion: 0.01
-Nodes (221): abilitySet(), advanceCareerMonths(), clubFixture(), currentDate, first, firstMonthKey, flushed, futureMonthKey (+213 more)
+Nodes (235): PlayerEconomyCalibrationVersionBundle, abilitySet(), advanceCareerMonths(), clubFixture(), currentDate, first, firstMonthKey, flushed (+227 more)
 
 ### Community 1598 - "Community 1598"
 Cohesion: 0.20
@@ -8997,8 +9028,8 @@ Cohesion: 0.08
 Nodes (25): activeYoungStoredCeilingSixTargetMaximum, activeYoungStoredCeilingSixTargetMinimum, potentialSixPerWorldMaximum, potentialSixPerWorldMinimum, tenSeasonCohortMaximum, tenSeasonCohortMinimum, youngStoredCeilingSixPerSeasonMaximum, currentSixMaximum (+17 more)
 
 ### Community 1610 - "Community 1610"
-Cohesion: 0.27
-Nodes (9): average(), check(), createLongRunYouthStabilityReport(), CreateLongRunYouthStabilityReportOptions, LongRunYouthSeasonRow, roundMetric(), report, worstStatus() (+1 more)
+Cohesion: 0.17
+Nodes (11): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 10 - Phase Report And Phase 82B Handoff (+3 more)
 
 ### Community 1611 - "Community 1611"
 Cohesion: 0.33
@@ -9017,8 +9048,8 @@ Cohesion: 0.13
 Nodes (14): Absence Audit, Browser QA Checklist, code:bash (nvm use 24), Definition Of Done, Evidence To Record, Expected Files, Goal, Outcome (+6 more)
 
 ### Community 1616 - "Community 1616"
-Cohesion: 0.05
-Nodes (51): abilitySet(), advanceAiMarketLifecycle(), ASKING_PRICE_CONFIG, askingPrice, balancedSeniorSquad(), balancedSeniorSquadAtAbility(), baseCareerState, buyer (+43 more)
+Cohesion: 0.17
+Nodes (11): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 09 - Phase Report, Second Cohort And World-Extension Handoff (+3 more)
 
 ### Community 1617 - "Community 1617"
 Cohesion: 0.18
@@ -9093,8 +9124,8 @@ Cohesion: 0.05
 Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 1635 - "Community 1635"
-Cohesion: 0.09
-Nodes (21): buildCurrentTeamContext(), createFakeLiveMatchControlWorld(), createFixtureSetup(), createLiveMatchControlReport(), CreateLiveMatchControlReportInput, createLiveTeam(), FakePlayerId, FakePlayerState (+13 more)
+Cohesion: 0.08
+Nodes (23): buildCurrentTeamContext(), createFakeLiveMatchControlWorld(), createFixtureSetup(), createLiveMatchControlReport(), CreateLiveMatchControlReportInput, createLiveTeam(), FakePlayerId, FakePlayerState (+15 more)
 
 ### Community 1636 - "Community 1636"
 Cohesion: 0.05
@@ -9109,12 +9140,12 @@ Cohesion: 0.33
 Nodes (5): Explicit Game-Design Targets, Limitations And Refresh Policy, Reproduced Source Facts, Source, Wage And Club Finance Calibration Source Audit
 
 ### Community 1639 - "Community 1639"
-Cohesion: 0.07
-Nodes (23): academy, academyProspect, ageSeventeenRange, before, constraints, current, diagnosticPlayer(), empty (+15 more)
+Cohesion: 0.06
+Nodes (25): CreatePlayerGenerationEconomyAuditInput, PlayerGenerationEconomyObservation, academy, academyProspect, ageSeventeenRange, before, constraints, current (+17 more)
 
 ### Community 1640 - "Community 1640"
-Cohesion: 0.14
-Nodes (13): Clean-Code Gate, code:bash (nvm use 24), Definition Of Done, Entry Gate, Goal, Locked Decisions, Mandatory Per-Step Loop, Ordered Steps (+5 more)
+Cohesion: 0.13
+Nodes (14): Accepted Amendments, Clean-Code Gate, code:bash (nvm use 24), Definition Of Done, Entry Gate, Goal, Locked Decisions, Mandatory Per-Step Loop (+6 more)
 
 ### Community 1641 - "Community 1641"
 Cohesion: 0.15
@@ -9142,7 +9173,7 @@ Nodes (10): Accepted Semantics, code:bash (pnpm exec vitest run \), Definition O
 
 ### Community 1647 - "Community 1647"
 Cohesion: 0.07
-Nodes (26): annualWageByRating, annualAppearanceDivisor, defensiveCleanSheetMultiplierBasisPoints, goalBonusMultiplierBasisPoints, roundingMinorUnits, signingBonusBasisPoints, signingRoundingMinorUnits, classification (+18 more)
+Nodes (26): annualWageByRating, classification, contractTermsPolicy, minimumBonusMultiplierBasisPoints, minimumWageMultiplierBasisPoints, preferredDuration, currency, gameDesignTargets (+18 more)
 
 ### Community 1648 - "Community 1648"
 Cohesion: 0.05
@@ -9205,16 +9236,16 @@ Cohesion: 0.17
 Nodes (11): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 09 - Bounded Phase Report And Phase 81 Handoff (+3 more)
 
 ### Community 1663 - "Community 1663"
-Cohesion: 0.03
-Nodes (100): TacticalBoardWorkspace(), benchStatusLabelKey(), formatFitness(), formatFitnessPercent(), formatFoot(), formatOptionalNumber(), formatTacticalPlayerOption(), roleLabelKey() (+92 more)
+Cohesion: 0.05
+Nodes (61): formatFitness(), formatFitnessPercent(), formatFoot(), formatOptionalNumber(), roleLabelKey(), squadStatusLabelKey(), TacticalSquadStatus, compareNumbers() (+53 more)
 
 ### Community 1664 - "Community 1664"
 Cohesion: 0.25
 Nodes (7): Decision, Delivered Model, Deterministic Evidence, Handoff, Longitudinal Evidence Boundary, Phase 79D Exceptional Player Generation And Prospect Economy Report, Verification
 
 ### Community 1665 - "Community 1665"
-Cohesion: 0.07
-Nodes (34): abilitiesFixture(), applied, ATTACKING_ROLES, attackingOption, awayBench(), awayXi(), baseHome, baseState (+26 more)
+Cohesion: 0.06
+Nodes (49): ProgressCareerAiTeamSelectionInput, createSelectedLineup(), createTacticSetup(), isTacticMentalityKey(), SelectedLineup, SelectedLineupSlot, TacticContractError, TacticContractErrorCode (+41 more)
 
 ### Community 1666 - "Community 1666"
 Cohesion: 0.14
@@ -9534,7 +9565,7 @@ Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCou
 
 ### Community 1745 - "Community 1745"
 Cohesion: 0.05
-Nodes (55): GenerateOneIntakePlayerInput, FlagAssetCode, flagAssetForNationality(), NATIONALITY_FLAG_ASSET_CODES, NationalityFlagAsset, absolutePath, asset, assets (+47 more)
+Nodes (51): GenerateOneIntakePlayerInput, FlagAssetCode, flagAssetForNationality(), NATIONALITY_FLAG_ASSET_CODES, NationalityFlagAsset, absolutePath, asset, assets (+43 more)
 
 ### Community 1746 - "Community 1746"
 Cohesion: 0.17
@@ -9585,12 +9616,12 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1758 - "Community 1758"
-Cohesion: 0.04
-Nodes (70): CareerMatchPreparationBenchSlotStatus, CareerMatchPreparationBlockerKey, CareerMatchPreparationLineupSlotStatus, DemoMatchPreparationPlayerFoot, getDemoMatchPreparationPlayerFact(), compareNumbers(), comparePlayerOptionsByPosition(), FALLBACK_POSITION_BY_ROLE (+62 more)
+Cohesion: 0.02
+Nodes (135): CareerDashboardPreparationInput, buildDemoCareerDashboard(), buildDemoCareerDashboardInput(), NEXT_OPPONENT, SELECTED_CLUB, first, input, second (+127 more)
 
 ### Community 1759 - "Community 1759"
-Cohesion: 0.09
-Nodes (22): PlayerDevelopmentParticipationObservation, aggregate, alternateInput, alternateSummary, anomalyChecksForTest(), broken, checkpoint(), direct (+14 more)
+Cohesion: 0.18
+Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 02 - Durable Sale And Loan Availability Postures (+2 more)
 
 ### Community 1760 - "Community 1760"
 Cohesion: 0.05
@@ -9641,8 +9672,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1772 - "Community 1772"
-Cohesion: 0.13
-Nodes (22): chanceCreatorWeightForRole(), chanceShooterWeightForRole(), CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE, excludePlayerWhenPossible(), pickWeightedPlayer(), PRIMARY_DEFENDER_ROLE_WEIGHTS, primaryDefenderWeightForRole(), selectChanceActors() (+14 more)
+Cohesion: 0.05
+Nodes (46): age, archetype, assignedArchetypeCounts, assignments, bottomAverage, CAREER_START_EPOCH_DAY, civilDateParts(), clubContexts (+38 more)
 
 ### Community 1773 - "Community 1773"
 Cohesion: 0.17
@@ -9821,8 +9852,8 @@ Cohesion: 0.17
 Nodes (11): endIndex, language, schemaVersion, seasonCount, seedPrefix, shardCount, shardIndex, startIndex (+3 more)
 
 ### Community 1817 - "Community 1817"
-Cohesion: 0.03
-Nodes (124): AnnualWorldActivePlayerStockEntry, activePlayerStock, age, candidates, CAREER_START_EPOCH_DAY, careerState, diagnostics, exceptional (+116 more)
+Cohesion: 0.18
+Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 03 - AI-Initiated Selected-Club Permanent Offers (+2 more)
 
 ### Community 1818 - "Community 1818"
 Cohesion: 0.05
@@ -12681,16 +12712,16 @@ Cohesion: 0.05
 Nodes (48): ageBands, checkpoint, observationCount, outsideTargetAgeBandCount, populationCounts, youngStoredCeilingSixValueSlices, diagnosticContractVersion, endIndex (+40 more)
 
 ### Community 2532 - "Community 2532"
-Cohesion: 0.07
-Nodes (37): MoneyPercentileDistribution, PlayerMarketDivisionBaseline, PlayerMarketDivisionTarget, assertCareerPlayerRating(), closingCheckpointSeasonStartYear(), countSourceLabels(), createPlayerMarketCalibrationReport(), CreatePlayerMarketCalibrationReportInput (+29 more)
+Cohesion: 0.08
+Nodes (31): MoneyPercentileDistribution, closingCheckpointSeasonStartYear(), countSourceLabels(), createPlayerMarketCalibrationReport(), deviationBasisPoints(), divisions, isPopulation(), percentileTypeSeven() (+23 more)
 
 ### Community 2533 - "Community 2533"
 Cohesion: 0.07
 Nodes (29): ContractDemandError, abilitySet(), base, careerState, CLUB, CONTRACT, currentOnlyWage, demand (+21 more)
 
 ### Community 2534 - "Community 2534"
-Cohesion: 0.08
-Nodes (31): agingMultiplier(), applyPlayerAgingPolicy(), currentAbilityFloor(), goalkeeperAgingMultiplier(), goalkeeperRemainingRoom(), lateOutfieldSkillDeclineAge(), monthlyDeclineFor(), reachablePotentialCeiling() (+23 more)
+Cohesion: 0.18
+Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 04 - Posta Final-Counteroffer Workflow (+2 more)
 
 ### Community 2535 - "Community 2535"
 Cohesion: 0.17
@@ -12701,72 +12732,196 @@ Cohesion: 0.17
 Nodes (11): Anomaly Semantics, code:bash (nvm use 24), Matched Three-Season Trajectories, Natural Conditioning Cells, New Entrants At Closing, Non-Vacuous Gates, Opening And Closing Checkpoints, Phase 80A Player-Development 750x3 Cohort Report (+3 more)
 
 ### Community 2537 - "Community 2537"
-Cohesion: 0.09
-Nodes (30): playerRatingRegistrationsFromContext(), applyAiHalfTimeSubstitutions(), BenchUpgrade, bestBenchUpgrade(), CandidateForReason, isGoalkeeperRoleKey(), playerRoleForRoleKey(), ratingsByPlayer() (+22 more)
+Cohesion: 0.04
+Nodes (68): LineupSlot, AiHalfTimeSubstitutionReason, AiHalfTimeSubstitutionReasonKey, AiHalfTimeSubstitutionSelection, applyAiHalfTimeSubstitutions(), ApplyAiHalfTimeSubstitutionsResult, BenchUpgrade, bestBenchUpgrade() (+60 more)
 
 ### Community 2538 - "Community 2538"
-Cohesion: 0.11
-Nodes (25): CareerMarketTargetCatalogView, CareerMarketTargetInput, CareerMarketTargetSort, assertFinance(), assertUniqueNegotiations(), buildCareerMarketView(), CareerMarketNegotiationInput, CareerMarketNegotiationStage (+17 more)
+Cohesion: 0.18
+Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 05 - Canonical Loan Ownership, Registration And Return (+2 more)
 
 ### Community 2539 - "Community 2539"
 Cohesion: 0.22
 Nodes (8): Blocking Finding, Delivered Scope, Evidence For The Reported Prospect Values, Frozen 750 x 3 Execution, Phase 80A Prospect Environment And Player Economy Report, Player-Model Gate Result, Potential Visibility And Development Evidence, Required Decision
 
 ### Community 2540 - "Community 2540"
-Cohesion: 0.18
-Nodes (5): isNodeErrorWithCode(), JsonGameStorage, state, storage, StoredSave
+Cohesion: 0.19
+Nodes (9): GameStorage, SaveGameInput, isNodeErrorWithCode(), JsonGameStorage, JsonGameStorageOptions, isRecord(), migrateSave(), StoredSave (+1 more)
 
 ### Community 2541 - "Community 2541"
-Cohesion: 0.20
-Nodes (17): bookingProbability(), clamp(), incidentProfileFor(), inverseAbility(), MatchDisciplineEvent, MatchDisciplineResolution, normalizedTactic(), oppositeSide() (+9 more)
+Cohesion: 0.18
+Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 06 - Loan Wage Sharing And Finance Accounting (+2 more)
 
 ### Community 2542 - "Community 2542"
 Cohesion: 0.18
 Nodes (20): ClubAbilityHierarchySnapshot, ClubAbilityHierarchySummary, clubLabel(), drawRate(), goalsPerMatch(), LongRunSeasonResult, formatAbilityHierarchySnapshot(), formatAnomalyLines() (+12 more)
 
 ### Community 2543 - "Community 2543"
-Cohesion: 0.18
-Nodes (17): compareAscending(), compareDescending(), compareMutableRowsByContribution(), compareMutableRowsBySideOrder(), comparePlayerIdsAscending(), compareSides(), computePlayerMatchStats(), ComputePlayerMatchStatsInput (+9 more)
+Cohesion: 0.13
+Nodes (22): ShotContext, compareAscending(), compareDescending(), compareMutableRowsByContribution(), compareMutableRowsBySideOrder(), comparePlayerIdsAscending(), compareSides(), computePlayerMatchStats() (+14 more)
 
 ### Community 2544 - "Community 2544"
-Cohesion: 0.14
-Nodes (15): planSqliteCareerMigrations(), SQLITE_CAREER_MIGRATIONS, isWorkerError(), normalizeSqliteError(), SqliteCareerStorage, SqliteCareerStorageError, SqliteCareerStorageErrorCode, SqliteCareerWorkerInfo (+7 more)
-
-### Community 2545 - "Community 2545"
-Cohesion: 0.33
-Nodes (3): StoredCareerSave, isNodeErrorWithCode(), JsonCareerStorage
+Cohesion: 0.12
+Nodes (16): SQLITE_CAREER_MIGRATIONS, SqliteCareerMigration, SqliteCareerSchemaVersionError, isWorkerError(), normalizeSqliteError(), SqliteCareerStorage, SqliteCareerStorageError, SqliteCareerStorageErrorCode (+8 more)
 
 ### Community 2546 - "Community 2546"
-Cohesion: 0.17
-Nodes (12): preferredDuration, highPotentialMaximumAge, highPotentialMinimumGapStars, highPotentialYears, matureMaximumAge, matureYears, minimumDurationReductionYears, primeMaximumAge (+4 more)
+Cohesion: 0.06
+Nodes (43): AdvanceCareerCompletedSeasonMode, LeagueTableRules, FakeClubs, FakeAbilityWeightKey, FakeGameplayConfig, FakeMatchEngineConfig, FakePlayerStateMultiplierCurves, FakeRoleWeightProfile (+35 more)
 
 ### Community 2547 - "Community 2547"
-Cohesion: 0.17
-Nodes (8): blockEvents, goalCounts, goalEvents, report, result, resultWithFutureFields, saveEvents, shotEvents
+Cohesion: 0.05
+Nodes (34): adequate, age, archetypes, baseInput, CAREER_START_EPOCH_DAY, civilDateParts(), completedCivilAge(), configured (+26 more)
 
 ### Community 2548 - "Community 2548"
+Cohesion: 0.18
+Nodes (10): Accepted Semantics, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 07 - Bidirectional Loan Market, AI Need And Real Development (+2 more)
+
+### Community 2549 - "Community 2549"
+Cohesion: 0.09
+Nodes (21): isNodeErrorWithCode(), isRecord(), JsonCareerStorage, migrateCareerSave(), SaveCareerInput, StoredCareerSaveV1, abilitySet(), beforeSave (+13 more)
+
+### Community 2550 - "Community 2550"
+Cohesion: 0.18
+Nodes (10): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 09 - Bounded Diagnostics, Browser, Persistence And Beta Reset (+2 more)
+
+### Community 2551 - "Community 2551"
+Cohesion: 0.18
+Nodes (10): Definition Of Done, Entry Gate, Goal, Locked Decisions, Mandatory Per-Step Documentation, Ordered Steps, Phase 82A - Incoming Offers, Market Postures And Loans, Status (+2 more)
+
+### Community 2552 - "Community 2552"
+Cohesion: 0.18
+Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 03 - Club-Stage Clearing And Competitive Resolution (+2 more)
+
+### Community 2553 - "Community 2553"
+Cohesion: 0.18
+Nodes (10): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 05 - Player Choice Between Qualified Suitors (+2 more)
+
+### Community 2554 - "Community 2554"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 01 - Current Market Ownership Baseline And Loan Contract, What NOT To Implement (+1 more)
+
+### Community 2555 - "Community 2555"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 08 - Squad, Market And Posta Loan UI, What NOT To Implement (+1 more)
+
+### Community 2556 - "Community 2556"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 02 - Durable Race State, Persistence And Beta Reset (+1 more)
+
+### Community 2557 - "Community 2557"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 04 - Raise Command, Posta Visibility And AI Raise Policy (+1 more)
+
+### Community 2558 - "Community 2558"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 06 - Free-Agent Negotiation And Race (+1 more)
+
+### Community 2559 - "Community 2559"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 07 - Market, Squad And Posta Race UI (+1 more)
+
+### Community 2560 - "Community 2560"
+Cohesion: 0.20
+Nodes (9): code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Implementation Checklist, Required Checks, Status, Step 08 - Non-Vacuous Transfer-Race Diagnostics (+1 more)
+
+### Community 2561 - "Community 2561"
+Cohesion: 0.11
+Nodes (35): appendLineupRegistrations(), Club, ClubId, clubLabel(), Fixture, FixtureDetailLineupInspection, FixtureDetailOutputInput, fixturePlayerRegistrations() (+27 more)
+
+### Community 2562 - "Community 2562"
+Cohesion: 0.06
+Nodes (29): asPublicStarValue(), CanonicalRoleAssessment, ClubLevelThresholds, deriveClubLevelThresholds(), DerivePublicClubPlayerAssessmentsInput, InternalAssessment, percentileThreshold(), PublicClubPlayerAssessment (+21 more)
+
+### Community 2563 - "Community 2563"
+Cohesion: 0.07
+Nodes (27): AbilityOverrides, abilitySet(), affected, attackerId, base, baseInput, defenderBoost, defenderId (+19 more)
+
+### Community 2564 - "Community 2564"
 Cohesion: 0.15
-Nodes (13): applied, AWAY_STARTER_ONE, fullTime, halfTime, HOME_BENCH_ONE, HOME_BENCH_TWO, HOME_STARTER_ONE, HOME_STARTER_TWO (+5 more)
+Nodes (24): CareerDashboardRecentMatchInput, CareerDashboardTableRowInput, buildCareerDashboardViewFromCareerState(), buildRecentSelectedClubMatch(), buildSelectedClubTableRow(), CliFixture, CliFixtureId, formatActionLines() (+16 more)
+
+### Community 2565 - "Community 2565"
+Cohesion: 0.12
+Nodes (19): benchBoardElement(), DE_MESSAGES, EN_MESSAGES, EnglishMessageKey, ES_MESSAGES, FR_MESSAGES, hasConcreteTranslation(), interpolate() (+11 more)
+
+### Community 2566 - "Community 2566"
+Cohesion: 0.24
+Nodes (14): EmptySlotProps, PlayerTokenProps, SlotContextMenuProps, FORM_META, SUIT_COLOR, SUIT_LABEL, BAND_INDEX, channelDistance() (+6 more)
+
+### Community 2567 - "Community 2567"
+Cohesion: 0.14
+Nodes (12): FORMATION_KEYS, FORMATIONS, canonicalRoles, forbiddenRoles, formation, forwards, recognized, slotKeys (+4 more)
+
+### Community 2568 - "Community 2568"
+Cohesion: 0.13
+Nodes (14): Clean-Code Gate, code:bash (nvm use 24), Definition Of Done, Entry Gate, Goal, Locked Decisions, Mandatory Per-Step Loop, Ordered Steps (+6 more)
+
+### Community 2569 - "Community 2569"
+Cohesion: 0.19
+Nodes (10): PitchMarkings(), PitchView(), PitchViewProps, EmptySlot(), formArrow(), PlayerToken(), MenuAnchor, BAND_RGB (+2 more)
+
+### Community 2570 - "Community 2570"
+Cohesion: 0.16
+Nodes (12): StagedMatchProgressionError, applied, batch, context, first, fullTime, halfTime, second (+4 more)
+
+### Community 2571 - "Community 2571"
+Cohesion: 0.15
+Nodes (12): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status (+4 more)
+
+### Community 2572 - "Community 2572"
+Cohesion: 0.15
+Nodes (12): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status (+4 more)
+
+### Community 2573 - "Community 2573"
+Cohesion: 0.15
+Nodes (12): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status (+4 more)
+
+### Community 2574 - "Community 2574"
+Cohesion: 0.15
+Nodes (12): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status (+4 more)
+
+### Community 2575 - "Community 2575"
+Cohesion: 0.17
+Nodes (11): Clean-Code Requirements, code:bash (nvm use 24), Definition Of Done, Expected Files, Goal, Required Checks, Status, Step 01 - Expiry, Free-Agent And Density Baseline (+3 more)
+
+### Community 2576 - "Community 2576"
+Cohesion: 0.17
+Nodes (11): code:bash (nvm use 24), Definition Of Done, Entry Gate, Expected Files, Goal, Required Checks, Status, Step 06 - Market Density Measurement And Phase 82A Handoff (+3 more)
+
+### Community 2577 - "Community 2577"
+Cohesion: 0.17
+Nodes (12): annualAppearanceDivisor, defensiveCleanSheetMultiplierBasisPoints, goalBonusMultiplierBasisPoints, roundingMinorUnits, signingBonusBasisPoints, signingRoundingMinorUnits, bonuses, fringe_player (+4 more)
+
+### Community 2578 - "Community 2578"
+Cohesion: 0.27
+Nodes (9): average(), check(), createLongRunYouthStabilityReport(), CreateLongRunYouthStabilityReportOptions, LongRunYouthSeasonRow, roundMetric(), report, worstStatus() (+1 more)
+
+### Community 2579 - "Community 2579"
+Cohesion: 0.20
+Nodes (9): SlotContextMenu(), BAND_THRESHOLDS, cellOf(), CHANNEL_THRESHOLDS, roleOptionsForCell(), ROLES_BY_CELL, Cell, Channel (+1 more)
+
+### Community 2580 - "Community 2580"
+Cohesion: 0.29
+Nodes (5): crossTierTransfer, marketEconomy, pressure, report, thirdDivision
 
 ## Knowledge Gaps
-- **47580 isolated node(s):** `target`, `module`, `moduleResolution`, `noEmit`, `strict` (+47575 more)
+- **47874 isolated node(s):** `target`, `module`, `moduleResolution`, `noEmit`, `strict` (+47869 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `playerId` connect `Community 14` to `Community 1665`, `Community 2`, `Community 4`, `Community 5`, `Community 9`, `Community 13`, `Community 783`, `Community 22`, `Community 24`, `Community 1817`, `Community 26`, `Community 28`, `Community 30`, `Community 286`, `Community 31`, `Community 1575`, `Community 936`, `Community 41`, `Community 42`, `Community 49`, `Community 53`, `Community 1084`, `Community 1597`, `Community 62`, `Community 703`, `Community 61`, `Community 70`, `Community 1616`, `Community 722`, `Community 93`, `Community 97`, `Community 98`, `Community 1121`, `Community 100`, `Community 1125`, `Community 740`, `Community 2533`, `Community 2534`, `Community 2537`, `Community 1002`, `Community 1772`, `Community 2541`, `Community 109`, `Community 751`, `Community 2543`, `Community 1136`, `Community 2547`, `Community 2548`, `Community 1018`, `Community 125`?**
+- **Why does `playerId` connect `Community 62` to `Community 1665`, `Community 2562`, `Community 2563`, `Community 5`, `Community 9`, `Community 2570`, `Community 12`, `Community 13`, `Community 14`, `Community 22`, `Community 24`, `Community 26`, `Community 28`, `Community 30`, `Community 286`, `Community 31`, `Community 1573`, `Community 1575`, `Community 936`, `Community 41`, `Community 42`, `Community 1581`, `Community 48`, `Community 49`, `Community 51`, `Community 53`, `Community 1084`, `Community 1597`, `Community 67`, `Community 70`, `Community 722`, `Community 97`, `Community 98`, `Community 1121`, `Community 100`, `Community 740`, `Community 2533`, `Community 2537`, `Community 1002`, `Community 751`, `Community 2543`, `Community 1136`, `Community 757`, `Community 2549`, `Community 1018`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
-- **Why does `clubId` connect `Community 14` to `Community 1665`, `Community 4`, `Community 5`, `Community 9`, `Community 13`, `Community 783`, `Community 22`, `Community 24`, `Community 1817`, `Community 26`, `Community 30`, `Community 286`, `Community 31`, `Community 41`, `Community 42`, `Community 48`, `Community 49`, `Community 51`, `Community 53`, `Community 1084`, `Community 1597`, `Community 62`, `Community 61`, `Community 70`, `Community 1616`, `Community 93`, `Community 1117`, `Community 97`, `Community 100`, `Community 1125`, `Community 740`, `Community 2533`, `Community 2537`, `Community 1002`, `Community 1772`, `Community 751`, `Community 1136`, `Community 2548`, `Community 1018`?**
+- **Why does `clubId` connect `Community 41` to `Community 1665`, `Community 5`, `Community 9`, `Community 2570`, `Community 13`, `Community 14`, `Community 22`, `Community 24`, `Community 26`, `Community 28`, `Community 30`, `Community 286`, `Community 31`, `Community 1573`, `Community 936`, `Community 42`, `Community 1581`, `Community 48`, `Community 49`, `Community 53`, `Community 1084`, `Community 1597`, `Community 62`, `Community 67`, `Community 70`, `Community 93`, `Community 97`, `Community 98`, `Community 1121`, `Community 100`, `Community 740`, `Community 2533`, `Community 2537`, `Community 1772`, `Community 751`, `Community 1136`, `Community 2546`, `Community 2547`, `Community 757`, `Community 2549`, `Community 1018`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `target`, `module`, `moduleResolution` to the rest of the system?**
-  _47580 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _47874 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.005076142131979695 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.005050505050505051 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.0178437894845414 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.014831094831094831 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.014692378328741965 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.012015521997288326 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._

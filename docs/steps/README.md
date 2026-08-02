@@ -57,11 +57,19 @@ Provide an open, incremental, and iterative execution guide for the project: one
 ## Current State
 
 - `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
-- Status: Blocked. Steps 05, 06, and 08 are reclosed. Step 09 completed the
-  exact `750 x 3` fresh/resume proof with `750` one-world shards, exactly `7`
-  workers, and an identical aggregate hash, but it is not Done: both reports
-  remain `FAIL` because `goals_per_match_avg` has `80` monitor failures. No
-  Phase 80B handoff occurred, and the deferred `50 x 20` remains unrun.
+- Status: Blocked pending the recorded ownership decision. Steps 05, 06, and 08
+  are reclosed. Step 09 completed the exact `750 x 3` fresh/resume proof with
+  `750` one-world shards, exactly `7` workers, and an identical aggregate hash.
+  All `32` player-model gates pass; the report remains `FAIL` only because
+  `goals_per_match_avg` records `36/634/80` pass/warn/fail with every failure
+  high.
+- The 2026-08-02 decision resolves it: match scoring is outside this phase's
+  player-model scope, so the monitor transfers unchanged to Phase 81, which owns
+  the match engine. Threshold, denominator, and severity class all stay as they
+  are. Phase 80A closes on that transfer; it does not close by weakening the
+  gate.
+- Phase 81 is the next phase. The market work is deferred behind it and the
+  Phase 81A, and is renumbered Phase 82A and Phase 82B.
 - `docs/steps/80-graphical-and-structural-rework/`
 - Status: Done. All nine steps are complete and the phase handed control to
   Phase 80A on 2026-07-31.
@@ -92,21 +100,22 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - Focused checks, `pnpm check`, build, Playwright `29/29`, and manual browser
   QA pass. Its attempted direct `50 x 20` was stopped, wrote no report, and is
   not claimed as evidence.
-- Phases 80, 80A, 80B, and 80C must not run the deferred longitudinal cohort.
-  Phase 81 Step 12 alone owns one resumable `50 x 20` with `50` stable shards
-  and exactly `7` workers, after the accepted UI, player-model, market, loan,
-  competitive-race, and match-engine reworks. This keeps the final evidence
-  representative of the game that will actually be handed back to Phase 79.
+- Two longitudinal cohorts exist under the 2026-08-02 phase order, each with
+  `50` stable shards and exactly `7` workers. Phase 81 Step 12 runs the first
+  over the accepted match engine; because the market work now follows, that run
+  observes no loans and no races and is not market evidence. Phase 82B Step 09
+  runs the second over the completed competitive market. Neither substitutes for
+  the other, and no other step in Phases 80, 80A, 81, 82A, or 82B runs one.
 - The Phase 80A contract removes public-valuation `marketContext`, all
   owner-category/free-agent multipliers, and all per-context maximums in favor
   of one global model/cap and a new source-backed calibration epoch.
-- The Phase 80B contract keeps `Club.playerIds` as immutable-under-loan
+- The Phase 82A contract keeps `Club.playerIds` as immutable-under-loan
   ownership truth, derives selectable squads through named accessors, and
   protects `18` plus `2/6/6/3` floors. Product review rejected its proposed
   global one-negotiation-per-player rule: the canonical per-buyer uniqueness
-  stays, and Phase 80B only restricts its own scheduler from creating
+  stays, and Phase 82A only restricts its own scheduler from creating
   concurrent bids.
-- The Phase 80C contract owns competing bids as a wanted football behaviour:
+- The Phase 82B contract owns competing bids as a wanted football behaviour:
   durable `PlayerTransferRace`, one immutable shared clock per stage,
   club-stage qualification sets, exact rival-fee visibility with a versioned
   minimum raise increment, and player choice between qualified suitors.
@@ -126,7 +135,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
 
 - `docs/steps/79-transfer-market-windows-negotiations-and-market-workspace/`
 - Status: In progress. Steps 01-13 are Done, Step 14 is Reopened but paused
-  through Phases 80, 80A, 80B, 80C, and 81, and Step 15 is not started.
+  through Phases 80, 80A, 82A, 82B, and 81, and Step 15 is not started.
 - No Phase 79 staged cohort has been run or claimed against the post-79C
   economy.
 
@@ -152,9 +161,30 @@ Provide an open, incremental, and iterative execution guide for the project: one
   checkpointed `750 worlds x 3 seasons` player-development diagnostic with
   exactly `7` workers and a zero-new-world resume proof, but no `50 x 20`.
 
-- `docs/steps/80b-incoming-offers-market-postures-and-loans/`
-- Status: Planned and entry-gated. It starts only after blocked Phase 80A is
-  explicitly unblocked and marked Done.
+- `docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
+- Status: Planned. Created by the 2026-08-02 phase-order decision as the
+  playable-MVP work between Phase 81 and the market phases.
+- It owns three measured defects and two features. Contract expiry is anchored
+  to the season boundary through one named owner, replacing
+  `startsOn + durationYears * 365` and the `0..120` day generation scatter; the
+  offered term becomes months with a season-end floor and a `60` month ceiling,
+  which is what FIFA's own minimum requires and what the `18-30` band needs; and
+  the AI gets a free-agent signing policy, because the pool sits at a measured
+  `20-23%` share and does not drain.
+- Steps 02 and 03 are reported together. Shortening contracts without a signing
+  policy produces a larger warehouse and would measure as a regression.
+- It then resolves background fixtures for the selected club's division inside
+  `advanceCareerMonths`, adds the simulate-match command on the same producer,
+  and measures market density against bands frozen in its Step 01.
+- Its Step 06 decides whether Phase 82A is still justified. If density is
+  already inside band, the loan work is re-argued rather than started by
+  default.
+- It runs no longitudinal cohort and touches no market feature.
+
+- `docs/steps/82a-incoming-offers-market-postures-and-loans/`
+- Status: Planned and entry-gated, previously numbered 80B. It starts only after
+  Phase 80A is Done, Phase 81 is Done, Phase 81A is Done, and market
+  density has been measured against the frozen bands.
 - It owns durable sale/loan postures, selected-club incoming offers, one final
   counterproposal, bidirectional loans, three wage-share choices, real
   loan development, Posta UI, and persistence.
@@ -163,25 +193,25 @@ Provide an open, incremental, and iterative execution guide for the project: one
   that decision.
 - It keeps the canonical per-`(buying club, player)` negotiation uniqueness
   unchanged and only restricts its own scheduler from creating concurrent bids
-  until Phase 80C makes them safe.
+  until Phase 82B makes them safe.
 - It runs no longitudinal cohort.
 
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/`
-- Status: Planned under an accepted product contract. It starts only after
-  Phase 80B is Done.
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/`
+- Status: Planned under an accepted product contract, previously numbered 80C.
+  It starts only after Phase 82A is Done.
 - It owns a durable `PlayerTransferRace` over canonical negotiation references,
   explicit qualified/`outbid`/`lost_to_rival` outcomes, stale-safe raises,
   player choice, free-agent negotiation, and dedicated race diagnostics.
 - It permits at most three active buyers, qualifies only the highest
   seller-acceptable fee and exact matches, keeps loans serial, gives both
   stages fixed three-day clocks, and never closes early on manager acceptance.
-- Step 09 closes the phase on bounded, non-vacuous evidence and hands control
-  to Phase 81. It keeps the shared checkpoint/shard infrastructure working but
-  does not run or claim the deferred longitudinal cohort.
+- Step 09 closes the phase on non-vacuous evidence, runs the second
+  checkpointed `50 x 20` over the completed market, measures density against the
+  frozen bands, and hands control to the world-extension work.
 
 - `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/`
-- Status: Planned under an accepted design contract. It starts only after
-  Phase 80C is Done.
+- Status: Planned under an accepted design contract, and next in order. It
+  starts after Phase 80A closes by transferring its goal-rate monitor here.
 - It preserves the deterministic aggregate match engine while making
   formation shape, role suitability, opponent matchups, tactical instructions,
   and live manager decisions causally relevant.
@@ -192,9 +222,17 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - Every step must remove obsolete local paths and perform any necessary
   in-scope refactor instead of layering compatibility branches or generic
   helper modules over unclear code.
-- Step 12 is the sole owner of the deferred checkpointed `50 x 20`, with `50`
-  stable shards, exactly `7` workers, checkpoint reuse, and a repeated run that
-  proves deterministic reuse before handing evidence back to Phase 79.
+- It accepts the `goals_per_match_avg` monitor transferred from Phase 80A
+  unchanged. Step 06 owns the fix, Step 11 is the deadline, and the monitor may
+  not be transferred a second time.
+- It leaves four seams for the background world rather than building it: one
+  named squad-depth accessor, a context constructor taking an explicit squad, a
+  non-selected club as an ordinary caller, and a match RNG keyed by
+  `(worldSeed, fixtureId)`.
+- Step 12 runs this phase's checkpointed `50 x 20`, with `50` stable shards,
+  exactly `7` workers, and a repeated run proving deterministic checkpoint
+  reuse. It observes no loans and no races, so it is engine evidence only, and
+  hands control to Phase 81A.
 
 ## Completed User-Requested Phase
 

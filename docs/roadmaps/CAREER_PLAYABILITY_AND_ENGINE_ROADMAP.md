@@ -10,11 +10,20 @@ QA passed. Its stopped direct `50 x 20` produced no report and is not claimed
 as evidence. Phase 80 graphical and structural rework is complete; all nine
 steps are Done and it handed off on 2026-07-31. Phase 80A Steps 01-08 are
 Done/reclosed; Step 09 is Blocked after the exact `750 x 3` fresh/resume
-reports produced identical evidence but retained an overall `FAIL`. Phases
-80B, 80C, and 81 remain planned and entry-gated; none has started. Phase 81
-Step 12 alone owns the deferred checkpointed cohort after the accepted match-
-engine rework. Phase 79 Step 14 remains Reopened and paused; its release gate
-is unrun.
+reports produced identical evidence but retained an overall `FAIL` on the
+`goals_per_match_avg` monitor alone.
+
+The 2026-08-02 phase-order decision resolves that block and reorders the rest.
+Match scoring is outside Phase 80A's player-model scope, so the monitor
+transfers unchanged to Phase 81, which owns the match engine and whose Step 06
+replaces the opportunity generation that produces those goals. Phase 81 is
+therefore next. The market work follows Phase 81A and is renumbered
+Phase 82A and Phase 82B. Two checkpointed cohorts now exist: Phase 81 Step 12
+over the accepted engine, and Phase 82B Step 09 over the completed market.
+Phase 79 Step 14 remains Reopened and paused; its release gate is unrun.
+
+The rationale, measurements, and declared costs are in
+`docs/the-long-season-mondo-vivo.pdf`, section 11.
 
 ## Goal
 
@@ -2054,22 +2063,97 @@ Definition of Done:
   model with credible age/division/club distributions.
 - The compact `750 x 3` diagnostic, bounded diagnostics, and
   repository/browser gates pass.
-- Phase 80B is the only next phase and the deferred cohort remains unrun.
+- The `goals_per_match_avg` monitor is transferred unchanged to Phase 81 rather
+  than repaired here: match scoring is outside this phase's scope.
+- Phase 81 is the only next phase and no cohort has run beyond the `750 x 3`.
 
 Documentation:
 
 - `docs/audits/PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_DESIGN_CONTRACT.md`
 - `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
 
-### Phase 80B - Incoming Offers, Market Postures And Loans
+### Execution Order After Phase 80A
 
-Primary dependency: Phase 80A Done with shared public assessment and quarterly
-development in production.
+The three sections below appear in their original drafting order, which is no
+longer the execution order. Read them in this sequence instead:
+
+1. **Phase 81** - phase-aware tactical shape and manager decision engine. It
+   owns the goal-rate monitor carried out of Phase 80A and leaves the seams the
+   background world needs.
+2. **Phase 81A** - season-anchored contracts, free-agent economy and background
+   fixtures. Expiry anchored to the season boundary through one named owner,
+   offered terms in months inside the accepted `18-30` band, an AI free-agent
+   signing policy for a pool measured at `20-23%`, background fixtures inside
+   `advanceCareerMonths`, the simulate-match command on the L1 producer, and the
+   market-density measurement that authorizes the market work.
+3. **Phase 82A**, then **Phase 82B** - the market work, authorized by that
+   density measurement rather than assumed.
+
+### Phase 81A - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
+
+Primary dependency: Phase 81 Done, with its four background-world seams in
+place and its carried goal-rate monitor inside band.
 
 Status:
 
-- Planned; its entry gate is closed because Phase 80A Step 09 is Blocked and
-  Phase 80A is not Done.
+- Planned. Created by the 2026-08-02 phase-order decision as the playable-MVP
+  work between Phase 81 and the market phases.
+
+Purpose:
+
+- Make the world the manager already plays in feel alive without adding a single
+  market feature, then measure whether the market work is still justified.
+
+Minimum useful scope:
+
+- one named season-boundary owner, with contract expiry anchored to it and the
+  `0..120` day generation scatter removed;
+- offered contract terms in months, floor "to the end of the current season" and
+  ceiling `60`, matching FIFA's own minimum and unblocking the `18-30` band;
+- an AI free-agent signing policy, because the pool is measured at a `20-23%`
+  share that does not drain;
+- background fixtures for the selected club's division, resolved only inside
+  `advanceCareerMonths`, idempotent and order-independent;
+- a simulate-match command sharing the background producer;
+- a market-density measurement against bands frozen before any change.
+
+Explicit non-goals:
+
+- no loans, postures, incoming offers, or races;
+- no second clock, no lazy resolution, no divisions beyond the user's own;
+- no match-engine change;
+- no longitudinal cohort.
+
+Definition of Done:
+
+- every expiry lands on a season boundary, and contracts and loans share one
+  boundary definition;
+- the free-agent share is inside band with positive drain, reported together
+  with the contract change and not as a separate claim;
+- the user's league table is complete at every point in the season;
+- density is measured against the frozen bands and the Phase 82A recommendation
+  is stated with its reason.
+
+Documentation:
+
+- `docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
+- `docs/the-long-season-mondo-vivo.pdf`, sections 6.3 and 11
+
+### Phase 82A - Incoming Offers, Market Postures And Loans
+
+Previously numbered Phase 80B.
+
+Primary dependency: Phase 81 Done with its named squad-depth accessor, plus the
+Phase 81A Done and market density measured against the frozen bands.
+
+Status:
+
+- Planned; its entry gate is closed because Phase 81 and Phase 81A
+  have not started.
+- Deferred here because loans and races are not the missing market volume.
+  Contract expiry drives `62.5%` of real movements and permanent transfers
+  `18.5%`, both of which exist or are cheap to open; loans and returns are
+  `18.9%`, and competitive races add depth without adding movements.
 
 Purpose:
 
@@ -2091,7 +2175,7 @@ Minimum useful scope:
   separate ownership diagnostics without globally blocking manager-accepted
   permanent sales;
 - one unresolved negotiation per `(acquiring club, player)` across permanent
-  and loan kinds; different buyers remain valid domain state while Phase 80B's
+  and loan kinds; different buyers remain valid domain state while Phase 82A's
   scheduler temporarily avoids creating them concurrently;
 - outgoing command eligibility remains distinct from seller willingness:
   `Action available` permits submission, while canonical seller evaluation may
@@ -2099,7 +2183,7 @@ Minimum useful scope:
 - AI squad-need/rotation targeting using the same public assessment;
 - bounded persistence/browser/finance diagnostics and beta reset;
 - no longitudinal cohort; preserve and bounded-exercise shard/checkpoint/worker
-  infrastructure for Phase 80C.
+  infrastructure for Phase 82B.
 
 What must not happen:
 
@@ -2119,18 +2203,23 @@ Definition of Done:
 
 Documentation:
 
-- `docs/audits/PHASE_80B_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md`
-- `docs/steps/80b-incoming-offers-market-postures-and-loans/`
+- `docs/audits/PHASE_82A_INCOMING_OFFERS_MARKET_POSTURES_AND_LOANS_DESIGN_CONTRACT.md`
+- `docs/steps/82a-incoming-offers-market-postures-and-loans/`
 
-### Phase 80C - Competitive Transfer Race And Player Choice
+### Phase 82B - Competitive Transfer Race And Player Choice
 
-Primary dependency: Phase 80B Done with separate permanent/loan negotiation
+Previously numbered Phase 80C.
+
+Primary dependency: Phase 82A Done with separate permanent/loan negotiation
 state, ownership/selectability invariants, and bounded market evidence.
 
 Status:
 
-- Planned. Its product contract is accepted; do not start before Phase 80B
+- Planned. Its product contract is accepted; do not start before Phase 82A
   closes.
+- Its Step 09 owns the second checkpointed `50 x 20`, over the completed
+  competitive market, plus the market-density measurement against the frozen
+  bands.
 
 Purpose:
 
@@ -2166,7 +2255,8 @@ What must not happen:
 - No optional-field super-aggregate, duplicate fee/terms/status/effective
   clock, durable bid history, rival contract-term disclosure, or deadline
   reset.
-- No generic ranking/plugin/event framework and no longitudinal cohort.
+- No generic ranking/plugin/event framework, and no longitudinal cohort before
+  Step 09.
 
 Definition of Done:
 
@@ -2174,23 +2264,30 @@ Definition of Done:
   accepted participant reaches an atomic commit.
 - Every structural race gate has positive observations and its bounded report
   records the denominator and accepted calibration evidence.
-- The phase closes without claiming a longitudinal cohort and hands the
-  reusable runner to Phase 81.
+- The second checkpointed `50 x 20` completes and replays, market density is
+  measured against the frozen bands, and the phase hands control to the
+  world-extension work.
 
 Documentation:
 
-- `docs/audits/PHASE_80C_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md`
-- `docs/steps/80c-competitive-transfer-race-and-player-choice/`
+- `docs/audits/PHASE_82B_COMPETITIVE_TRANSFER_RACE_DESIGN_CONTRACT.md`
+- `docs/steps/82b-competitive-transfer-race-and-player-choice/`
 
 ### Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine
 
-Primary dependency: Phase 80C Done with bounded market/race evidence and the
-shared deterministic career/match execution seams intact.
+Primary dependency: Phase 80A Done, having transferred its `goals_per_match_avg`
+monitor here, with the shared deterministic career/match execution seams intact.
 
 Status:
 
-- Planned under an accepted design contract. Do not start before Phase 80C
-  closes.
+- Planned under an accepted design contract, amended 2026-08-02, and next in
+  order. It runs before the market phases.
+- It owns the carried goal-rate monitor: Step 06 fixes it, Step 11 is the
+  deadline, and it may not be transferred again.
+- It leaves four seams for the background world without building it: one named
+  squad-depth accessor, a context constructor taking an explicit squad, a
+  non-selected club as an ordinary caller, and a match RNG keyed by
+  `(worldSeed, fixtureId)`.
 
 Purpose:
 
@@ -2429,7 +2526,7 @@ Current status:
     - in progress; Steps 01-14 Done, Step 15 remains open
 21. `Phase 79 - Transfer Market Windows, Negotiations And Market Workspace`
     - in progress; Steps 01-13 Done, Step 14 Reopened and paused through Phase
-      80B
+      82A
 22. `Phase 79A - Transfer Market Activity, Free-Agent Economy And Long-Run Diagnostics`
     - complete; Steps 01-07 Done
 23. `Phase 79B - Squad And Market Player Workspace UI/UX And Career Statistics`
@@ -2444,15 +2541,15 @@ Current status:
 27. `Phase 80A - Prospect Generation, Club Environment And Quarterly Development`
     - blocked; Steps 01-08 Done/reclosed, Step 09 Blocked after completed
       deterministic fresh/resume evidence
-28. `Phase 80B - Incoming Offers, Market Postures And Loans`
+28. `Phase 82A - Incoming Offers, Market Postures And Loans`
     - planned; entry gate closed until Phase 80A is Done; closes on bounded
       evidence
-29. `Phase 80C - Competitive Transfer Race And Player Choice`
-    - planned with accepted product contract; starts only after Phase 80B;
+29. `Phase 82B - Competitive Transfer Race And Player Choice`
+    - planned with accepted product contract; starts only after Phase 82A;
       closes on bounded evidence and hands checkpoint infrastructure to Phase
       81
 30. `Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine`
-    - planned with accepted design contract; starts only after Phase 80C;
+    - planned with accepted design contract; starts only after Phase 82B;
       Step 12 owns the sole deferred `50 x 20`
 
 Next recommendation:
@@ -2461,10 +2558,10 @@ Next recommendation:
    Resolve or explicitly reassign the `goals_per_match_avg` monitor failure
    through an authorized owning step; do not weaken its threshold, status,
    semantic class, seeds, or denominator.
-2. Do not start Phase 80B until Phase 80A is unblocked and Done. Then execute
-   Phase 80B and Phase 80C only after their predecessor entry gates close, one
+2. Do not start Phase 82A until Phase 80A is unblocked and Done. Then execute
+   Phase 82A and Phase 82B only after their predecessor entry gates close, one
    documented step at a time.
-3. Execute Phase 81 only after Phase 80C closes, one documented step at a time.
+3. Execute Phase 81 only after Phase 82B closes, one documented step at a time.
 4. Run the resumable `50 x 20` only in Phase 81 Step 12 with its frozen
    checkpoint directory, `50` stable shards, and exactly `7` workers.
 5. Resume Phase 79 Step 14 only after Phase 81 and that cohort complete;
