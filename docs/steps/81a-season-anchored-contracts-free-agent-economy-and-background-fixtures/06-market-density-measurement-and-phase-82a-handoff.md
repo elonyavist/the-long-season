@@ -36,8 +36,15 @@ because it was next on a list.
 - Record every frozen band with its pre-change value from Step 01 and its
   post-change value, side by side: arrivals per club per season; permanent
   share; contract-expiry share; fee-bearing share; mean contract duration;
-  contracts under six months; season-boundary share; free-agent share. Loan
-  bands report `not_evaluated`, never `PASS`, because loans do not exist.
+  contracts under six months; season-boundary share. Loan bands report
+  `not_evaluated`, never `PASS`, because loans do not exist.
+- Report the free-agent pool as the cycle Step 01 froze, not as a level: peak at
+  the season boundary, trough once the window closes, and the drain between
+  them, with the drain attributed between signings and exits. The drain is the
+  gate. A report that shows both levels inside band while the delta is flat has
+  found the defect, not passed the phase.
+- Report the opening state of a freshly generated world beside the trough, so
+  the seeded pool is shown to match the cycle rather than being asserted to.
 - Report the per-component tick costs measured in Step 04 against the declared
   budget.
 - Write the phase report with delivered behaviour, removed code, verification,
@@ -93,6 +100,8 @@ graphify update .
 
 - Every frozen band has a pre-change and a post-change measured value recorded
   against it, on identical seeds and denominators.
+- The free-agent pool is reported as peak, trough, and attributed drain, and the
+  opening state of a fresh world is shown beside the trough.
 - Loan bands are `not_evaluated`, with the reason stated.
 - Per-component tick costs are reported against the budget.
 - The report states an explicit recommendation on Phase 82A and its reason.

@@ -62,7 +62,10 @@ The governing contract is:
 - Permanent transfers and free agents race in this release. Loans keep the
   serial Phase 82A lifecycle behind the same discriminated extension seam.
 - A free agent always waits through the full shared player-stage window, even
-  with one suitor.
+  with one suitor. That wait slows every signing on the channel Phase 81A
+  calibrated, so Step 06 re-measures that phase's free-agent cycle and repairs
+  any shortfall through approach frequency and concurrent-pursuit limits, never
+  by widening the frozen band.
 - For a manager-owned player, accepting an offer records seller acceptability
   but does not close the race before its shared deadline.
 - Tunable coefficients are versioned content; structural semantics remain typed

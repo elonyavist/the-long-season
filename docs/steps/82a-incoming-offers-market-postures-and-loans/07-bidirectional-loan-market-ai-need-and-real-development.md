@@ -42,6 +42,16 @@ move is financially, contractually, and sportingly plausible.
   concurrency only for negotiation kinds it explicitly supports.
 - Add direction, need, rotation, wage share, Posta, real minutes, bench
   zero-growth, and return tests.
+- Re-measure the Phase 81A free-agent cycle once loans exist, using that phase's
+  audit with unchanged seeds and denominators: peak, trough, and drain
+  attributed between signings and exits. A loan and a free-agent signing solve
+  the same squad gap, so this step introduces the first real competitor to the
+  channel that Phase 81A calibrated. Record the result whether or not it holds.
+- If the pool stops reaching its trough because clubs now borrow instead of
+  signing, correct the loan need policy here rather than the free-agent policy
+  or the frozen band. A borrowed player occupies a rotation slot temporarily;
+  preferring that over a permanent free signing for a structural gap is the
+  defect, not the measurement.
 
 ## What NOT To Implement
 
@@ -105,6 +115,9 @@ graphify update .
 
 - Both loan directions complete through one canonical lifecycle.
 - AI need/rotation/affordability prevent parking loans.
+- The Phase 81A free-agent cycle still reaches its frozen trough with loans in
+  the world, with measured peak, trough, and drain recorded beside the Phase 81A
+  values. Loans add a channel; they may not quietly close another.
 - Parent and borrower floor decisions use selectable rosters and retain
   `18` plus `2/6/6/3` after prospective moves.
 - Real borrower facts drive development; bench cases receive no invented

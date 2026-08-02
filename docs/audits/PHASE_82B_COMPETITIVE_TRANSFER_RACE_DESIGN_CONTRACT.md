@@ -336,6 +336,16 @@ Step 09 also measures market density against the frozen bands and records every
 measured value, inside band or not. The bands are frozen before the run; a miss
 is reported and assigned to a named owner, never absorbed by adjusting the band.
 
+It additionally re-measures the free-agent cycle calibrated in Phase 81A - peak
+at the season boundary, trough once the window closes, and the drain between
+them attributed between signings and exits. Two changes in this release act on
+that channel: the mandatory three-day player stage slows every free-agent
+signing, and loans introduced in Phase 82A compete for the same squad gaps.
+Contract expiry drives `62.5%` of real movements, so a channel that quietly
+stops draining would undo the largest gain of the earlier work while every gate
+here stayed green. The cycle is therefore reported beside its Phase 81A values,
+and a shortfall is repaired in the mechanism that caused it.
+
 Phase 79 Step 14 remains paused, unrun, and unclaimed.
 
 ## Accepted Product Decisions

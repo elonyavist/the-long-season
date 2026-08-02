@@ -375,6 +375,23 @@ Phase 82A must still leave the cohort runnable: shard, checkpoint, and worker
 wiring stay intact and exercised by bounded runs, so Phase 82B starts from
 working infrastructure rather than rebuilding it.
 
+## Effect On The Free-Agent Channel
+
+A loan and a free-agent signing solve the same squad gap, so this phase is the
+first real competitor to the channel Phase 81A calibrated. That phase froze the
+free-agent pool as a cycle - peak of `10-12%` of a competition's senior
+population at the season boundary, trough near `3%` once the window closes, and
+a drain between them attributed mostly to signings rather than to players
+leaving football.
+
+Step 07 re-measures that cycle once loans exist, with unchanged seeds and
+denominators, and records it beside the Phase 81A values. If clubs now borrow
+instead of signing and the pool stops reaching its trough, the correction
+belongs to the loan need policy: a borrowed player occupies a rotation slot
+temporarily, and preferring that over a permanent free signing for a structural
+gap is the defect. Neither the free-agent policy nor the frozen band is adjusted
+to accommodate it. Loans add a channel; they may not quietly close another.
+
 ## Explicit Non-Goals
 
 - No loan fee, purchase option/obligation, recall, renewal, or playing-time

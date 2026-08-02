@@ -83,6 +83,8 @@ graphify update .
 - Owned and selectable headcounts remain distinct, no loan mutates
   `Club.playerIds`, and no concurrent negotiation was scheduled for one player.
 - The report states plainly that no longitudinal cohort was run or claimed.
+- The Phase 81A free-agent cycle is reported beside its original values, showing
+  that adding loans did not close the contract-expiry channel.
 - Cohort infrastructure is proven working by a bounded run.
 - Warnings remain visible and truthfully classified.
 - Phase 82A is complete and Phase 82B is the only next phase.

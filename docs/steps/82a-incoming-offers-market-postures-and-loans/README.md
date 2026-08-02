@@ -93,6 +93,11 @@ re-argued before this phase starts rather than assumed.
 - A loaned player cannot be sold or loaned again.
 - AI uses real squad need and plausible rotation value; only real minutes and
   ratings produce development.
+- A loan and a free-agent signing solve the same squad gap, so this phase is the
+  first competitor to the channel Phase 81A calibrated. Step 07 re-measures that
+  phase's free-agent cycle - peak, trough, and attributed drain - and repairs a
+  shortfall in the loan need policy rather than in the free-agent policy or the
+  frozen band. Loans add a channel; they may not quietly close another.
 - Incompatible beta saves are deleted without migration.
 - Phase 82A runs no longitudinal cohort. Phase 81 Step 12 already ran the
   checkpointed `50 x 20` against the accepted tactical match engine; that run

@@ -42,6 +42,12 @@ cost of the phase order, not an oversight, and neither run replaces the other.
   consolidated world analysis: arrivals per club per season, permanent share,
   contract-expiry share, loan share, fee-bearing share, and mean contract
   duration. Record every measured value, inside band or not.
+- Re-measure the Phase 81A free-agent cycle at cohort scale - peak, trough, and
+  drain attributed between signings and exits - now that loans and races both
+  exist. Loans compete with free-agent signings for the same squad gaps, so this
+  is the first run where the channel is observed under full competition. Report
+  it beside the Phase 81A and Step 06 values so a slow erosion across three
+  phases is visible rather than inferred.
 - Run `pnpm check`, web build, Playwright, dependency, diff, and Graphify gates.
 - Write the Phase 82B report with delivered behaviour, verification, measured
   density, warnings, and cleanup.
@@ -94,6 +100,8 @@ graphify update .
   identical aggregate hash.
 - Every frozen market-density band has a measured value recorded against it,
   and any miss is stated plainly with a named owner.
+- The free-agent cycle still reaches its frozen trough under full competition,
+  reported beside its Phase 81A and Step 06 values.
 - Repository, browser, persistence, accessibility, dependency, diff, and
   Graphify gates pass.
 - Phase 82B is complete.

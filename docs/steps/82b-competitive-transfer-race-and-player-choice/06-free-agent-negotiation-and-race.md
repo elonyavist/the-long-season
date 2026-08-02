@@ -11,6 +11,23 @@ clubs compete for a free agent through the same race, and keep
 `applyCareerFreeAgentSigning` as the single atomic apply called only by the
 winner.
 
+## Interaction With Phase 81A
+
+This step is the only one in the phase that changes the throughput of a channel
+an earlier phase already calibrated. Phase 81A tuned the AI free-agent signing
+policy against a frozen pool cycle: a peak of `10-12%` of a competition's senior
+population at the season boundary, a trough near `3%` once the window closes,
+and a drain between them achieved mostly by signings rather than by players
+leaving football.
+
+Replacing instant signing with a mandatory three-day player stage - required
+even for a single suitor - slows every signing on that channel. Whether the pool
+still empties between peak and trough is therefore an open question this step
+must answer with a measurement, not an assumption. Contract expiry drives `62.5%`
+of real movements, so a free-agent channel that silently stops draining would
+undo the largest gain of the previous phase while every gate in this one stays
+green.
+
 ## Expected Files
 
 - `packages/domain/src/career/free-agent-negotiation.ts`
@@ -59,6 +76,14 @@ winner.
 - Persist the new negotiation variant losslessly in JSON and SQLite/OPFS.
   Delete incompatible beta saves through the canonical runtime/storage path;
   add no migration, dual reader, or fallback default.
+- Re-measure the Phase 81A free-agent cycle after the three-day stage exists,
+  using that phase's audit with its unchanged seeds and denominators: peak,
+  trough, and drain attributed between signings and exits. Record the result
+  whether or not it holds.
+- If the drain no longer reaches the frozen trough, fix it inside this step's
+  own scope - AI approach frequency and how many free agents a club may pursue
+  concurrently are the levers - and do not widen the Phase 81A band, because the
+  band did not become wrong when this step slowed the channel.
 
 ## What NOT To Implement
 
@@ -99,3 +124,8 @@ git diff --check
   winner, with a zero fee.
 - Free-agent negotiations and race references survive a lossless save/reload
   round trip.
+- The Phase 81A free-agent cycle is re-measured with the three-day stage in
+  place and still reaches its frozen trough, with the drain still attributed
+  mostly to signings. The measured peak, trough, and drain are recorded beside
+  the Phase 81A values, and any shortfall is repaired here rather than absorbed
+  by widening that band.
