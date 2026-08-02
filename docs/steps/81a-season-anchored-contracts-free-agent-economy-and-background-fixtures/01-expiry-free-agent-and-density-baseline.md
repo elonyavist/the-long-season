@@ -38,10 +38,20 @@ numbers moved.
   contract-expiry share `55-68%`; loans `10-14%`, recorded as `not_evaluated`
   in this phase because loans do not exist; fee-bearing share `14-22%`; mean
   contract duration `18-30` months; contracts under six months `10-20%`; season
-  boundary share `100%`; free-agent share `6-12%`.
-- Record explicitly that the free-agent band is reasoned rather than sourced,
-  and name it as the one band that may be revised before Step 06 - by argument
-  and evidence, never by looking at Step 06's output.
+  boundary share `100%`; free-agent share `18-20%`.
+- Record explicitly that the free-agent band is a product decision rather than a
+  sourced measurement. It was set at `18-20%` on 2026-08-02 against a measured
+  `20-23%`, so it is deliberately close to today's level. The consequence must
+  be stated in the report: this band alone cannot detect the defect, because a
+  pool that never drains sits inside it. The drain requirement in Step 03, not
+  this band, is what proves the market moves.
+- Measure the steady-state gap at world generation. A new career starts with an
+  empty free-agent pool, because generation assigns every player to a club and a
+  free agent is by definition unowned; the pool only fills at the first expiry
+  or annual intake. Record the share at day one, at the first season boundary,
+  and at each subsequent boundary, so the number of seasons a new world needs to
+  reach its steady state is on record. Starting at `0%` and targeting `18-20%`
+  means a fresh save opens in a state it will never return to.
 - Record the current values against every band, so Step 06 compares like with
   like.
 - Inventory every owner of contract-expiry computation, offered-term
@@ -103,7 +113,11 @@ graphify update .
   explicitly, with the share of expiries on any single date recorded.
 - Free-agent inflow, outflow, and share are measured separately.
 - Every frozen band has a source and a current measured value beside it.
-- The free-agent band is marked as reasoned rather than sourced.
+- The free-agent band is marked as a product decision rather than a sourced
+  measurement, with an explicit note that it cannot detect a stagnant pool on
+  its own.
+- The free-agent share at day one of a new world is recorded, together with the
+  number of season boundaries needed to reach steady state.
 - All owners of expiry, term, and season-boundary logic are inventoried.
 - No production behaviour changed.
 - Step 02 is the only next action.

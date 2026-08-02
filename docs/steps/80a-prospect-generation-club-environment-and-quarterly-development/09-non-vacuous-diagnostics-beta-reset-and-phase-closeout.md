@@ -2,19 +2,38 @@
 
 ## Status
 
-Blocked. Reopened owner repairs in Steps 05, 06, and 08 are Done. The exact
-compact cohort and its resume proof completed, and all `32` Phase-80A-owned
-non-vacuous player-model gates pass. The report nevertheless remains `FAIL`
-because `goals_per_match_avg`, preclassified as a `monitor`, records `80`
-high-side failing worlds (`36` pass / `634` warn / `80` fail). This step cannot
-change match scoring, weaken the frozen band, or suppress that raw result.
+Done, closed by an explicit ownership decision on 2026-08-02.
 
-The fresh execution simulated `750` worlds and resumed `0`; the identical
-second execution simulated `0` and resumed all `750`. Both use exactly `7`
-workers and have aggregate hash
+Reopened owner repairs in Steps 05, 06, and 08 are Done. The exact compact
+cohort and its resume proof completed, and all `32` Phase-80A-owned non-vacuous
+player-model gates pass. The fresh execution simulated `750` worlds and resumed
+`0`; the identical second execution simulated `0` and resumed all `750`. Both
+use exactly `7` workers and have aggregate hash
 `a09c10cb2b678140a2de7c4a226faac370c2a73b3e0d143dd9e35859f51f4a03`.
-The required repository/browser closeout and Phase 80B handoff are not claimed
-while this gate is red. The blocker is recorded in
+
+One gate stayed red: `goals_per_match_avg`, preclassified as a `monitor`,
+records `36` pass / `634` warn / `80` fail with every failure on the high side.
+This step could not repair it. Match scoring is outside the player model, and
+this step's own contract forbids changing the threshold, the denominator, or
+the reported severity.
+
+The decision recorded in `docs/PROJECT_STATUS.md` on 2026-08-02 resolves it by
+ownership rather than by tuning. The monitor transfers to Phase 81, which owns
+the match engine and whose Step 06 replaces the opportunity generation that
+produces those goals. Nothing about the monitor changed: same threshold, same
+denominator, same `monitor` severity class, and the `36/634/80` distribution
+stays on record as the inherited starting point. Phase 81 accepts it as
+amendment A7, fixes it in Step 06, and must have it inside band by Step 11. It
+may not be transferred a second time: if Step 11 still finds it out of band,
+Step 06 reopens.
+
+A narrow match-goal remediation here was the rejected alternative. It would have
+calibrated a formula that Phase 81 Step 06 removes, and would have had to be
+undone before that step could land.
+
+This step therefore closes with its player-model work complete and one named
+successor for the single gate it could not own. The evidence, including the
+unchanged failing distribution, is recorded in
 `docs/audits/PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_REPORT.md`.
 
 The existing canonical `20 x 2` artifacts remain bounded historical evidence:
@@ -587,4 +606,9 @@ Do not run the Phase 81 `50 x 20`.
   pass.
 - The Phase 80A report distinguishes structural passes from descriptive
   plateau evidence and historical failed `20 x 2` evidence.
-- Phase 80B Step 01 is the only next action and no Phase 81 cohort has run.
+- The `goals_per_match_avg` monitor is transferred to Phase 81 with its
+  threshold, denominator, severity class, and `36/634/80` distribution
+  unchanged, and the report states plainly that the phase closed with that gate
+  red under a named successor rather than by repairing or weakening it.
+- Phase 81 Step 01 is the only next action. Phase 81A, Phase 82A, and Phase 82B
+  are not started and no Phase 81 cohort has run.

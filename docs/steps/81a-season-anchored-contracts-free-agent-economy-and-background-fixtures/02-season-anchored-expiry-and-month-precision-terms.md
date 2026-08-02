@@ -43,6 +43,17 @@ could act on it.
   generation. It exists to spread expiry dates, and the anchor now owns that
   concern. Generated contracts land on season boundaries with a distribution of
   remaining seasons, not of remaining days.
+- Seed the free-agent pool at world generation, inside the band frozen in
+  Step 01. A new career currently opens with an empty pool, because generation
+  assigns every player to a club and a free agent is by definition unowned; the
+  pool only fills at the first expiry. A world that targets `18-20%` but starts
+  at `0%` opens in a state it will never return to, and the manager's first
+  season is played in a market that does not resemble any later one. Generate
+  the opening pool directly, with an age and quality distribution consistent
+  with players who reached the end of a contract rather than a uniform sample of
+  the population.
+- Add a test asserting the opening free-agent share is inside the frozen band,
+  so the steady-state gap cannot silently return.
 - Update every presentation of contract length to months, including the web
   renewal form default and the market player dialog, so no surface still offers
   whole years.
@@ -139,6 +150,9 @@ graphify update .
   month ceiling, and the three `CHECK` constraints match.
 - A winter signing can be offered a sub-twelve-month term.
 - The generation scatter is removed and no caller replaced it with its own.
+- A newly generated world opens with a free-agent share inside the frozen band,
+  proven by a test, so the manager's first season is played in the same market
+  the world will keep.
 - No whole-year term path, converter, or fixture remains.
 - Incompatible beta saves are deleted and fresh careers work.
 - Step 03 is the only next action, and this step makes no claim about market

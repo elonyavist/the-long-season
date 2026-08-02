@@ -331,14 +331,14 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   policy exposes only `30.76%` of remaining ceiling room. That is an upstream
   model finding, not an open Step 03 defect; Phase 80A now owns the documented
   generation/projection correction.
-- Phase 80A is blocked at Step 09 after Phase 80. The first canonical Step 09
-  `20 x 2` evidence plus product screenshots reopened Steps 05, 06, and 08;
-  all three owners are reclosed, and Step 07 was previously reclosed after
-  reserved promotion candidates became explicit active stock. The exact
-  `750 x 3` fresh/resume cohort is deterministic and all `32` Phase-80A-owned
-  player-model gates pass, but the report remains `FAIL` because the
-  `goals_per_match_avg` monitor has `80` high-side failing worlds. Its
-  nine ordered steps own
+- Phase 80A is Done as of 2026-08-02. The first canonical Step 09 `20 x 2`
+  evidence plus product screenshots reopened Steps 05, 06, and 08; all three
+  owners are reclosed, and Step 07 was previously reclosed after reserved
+  promotion candidates became explicit active stock. The exact `750 x 3`
+  fresh/resume cohort is deterministic and all `32` Phase-80A-owned player-model
+  gates pass. It closed with the `goals_per_match_avg` monitor still at
+  `36/634/80`, transferred unchanged to Phase 81 rather than repaired here:
+  match scoring is outside the player model. Its nine ordered steps own
   dynamic club tier/reputation/environment, quarterly development from monthly
   evidence,
   one current/P50/upper assessment, contextual prospect generation, national
@@ -433,18 +433,21 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
 ## Current Active Step
 
 - Step:
-  `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/09-non-vacuous-diagnostics-beta-reset-and-phase-closeout.md`.
-- Status: Blocked, with the resolving decision recorded and not yet applied.
-  Phase 80A Steps 05, 06, and 08 are Done after reopening. Step 09 completed the
-  exact fresh/resume cohort but cannot close while its frozen report is `FAIL`
-  on `goals_per_match_avg`.
-- The 2026-08-02 decision resolves it by ownership rather than by tuning: the
-  monitor transfers unchanged to Phase 81, which owns match scoring. Phase 80A
-  Step 09 closes by recording that transfer; it does not touch the threshold,
-  the denominator, or the severity class.
-- Next action: apply that closeout, then start Phase 81 Step 01. Do not start
-  Phase 81A, 82A, or 82B, and do not run a cohort outside Phase 81 Step 12 and
-  Phase 82B Step 09.
+  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/01-reproducible-extreme-shape-baseline-and-frozen-contract.md`.
+- Status: Not started. Phase 81 is the active phase.
+- Phase 80A is Done as of 2026-08-02. Steps 05, 06, and 08 were reclosed after
+  reopening, Step 09 completed the exact `750 x 3` fresh/resume cohort, and all
+  `32` player-model gates pass. It closed with one gate red - the match-engine
+  `goals_per_match_avg` monitor at `36/634/80` - transferred unchanged to
+  Phase 81 rather than repaired or weakened. Threshold, denominator, and
+  severity class are untouched; only the owner moved.
+- Next action: Phase 81 Step 01. It freezes the behaviour baseline, accepts the
+  carried monitor with its inherited distribution recorded as a starting point,
+  states the per-component measurement contract, notes the single-country
+  condition on the quality bands, and inventories every lineup-composing reader
+  of `club.playerIds`.
+- Do not start Phase 81A, 82A, or 82B, and do not run a cohort outside Phase 81
+  Step 12 and Phase 82B Step 09.
 - Phase 79 Step 14 remains Reopened and paused; no `50 x 20` has run.
 - Planned-phase architecture reviewed on 2026-07-30 after direct product review
   and an implementation audit. No production code changed; the Phase 80A/82A
@@ -589,6 +592,34 @@ This file is the project handoff snapshot for LLMs and junior developers. Update
   match-goal remediation before closeout, or formally carry the unchanged raw
   monitor failure to a named future match-engine owner. Do not start Phase
   80B/80C/81 or run the deferred `50 x 20` meanwhile.
+
+### 2026-08-02 — Phase 80A Step 09 closed by ownership transfer
+
+- Status: Done. Phase 80A is complete and Phase 81 is the active phase.
+- Adopted solution: close the step on its own completed scope and transfer the
+  one gate it could not own. All `32` player-model gates pass over the exact
+  `750 x 3` fresh/resume cohort, with `750` one-world shards, exactly `7`
+  workers, and aggregate hash
+  `a09c10cb2b678140a2de7c4a226faac370c2a73b3e0d143dd9e35859f51f4a03`. The
+  `goals_per_match_avg` monitor stays at `36/634/80` with every failure high and
+  moves to Phase 81, which owns the match engine.
+- What did not change: the monitor's threshold, denominator, `monitor` severity
+  class, and reported distribution. The owner moved, the result did not, and the
+  report says so plainly rather than presenting a green phase.
+- Rejected alternative: a narrow match-goal remediation inside Phase 80A. It
+  would have calibrated a formula that Phase 81 Step 06 removes, and would have
+  had to be undone before that step could land.
+- Guard against repetition: Phase 81 accepts the monitor as amendment A7, fixes
+  it in Step 06, and must have it inside band by Step 11. It may not be
+  transferred a second time; if Step 11 finds it still out of band, Step 06
+  reopens. A transfer that can be repeated indefinitely is a way of never fixing
+  a defect.
+- Lesson learned: a phase gate can fail for a reason the phase does not own. The
+  honest closeout names the successor and carries the raw result forward, rather
+  than either widening the band or holding the phase hostage to work outside its
+  scope. The mechanism only stays honest while the number of permitted transfers
+  is one.
+- Next action: Phase 81 Step 01.
 
 ### 2026-08-02 — Phase order decision: Phase 81 first, market work renumbered 82A/82B
 

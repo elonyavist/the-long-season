@@ -2,14 +2,25 @@
 
 ## Status
 
-Blocked at Step 09. The first canonical Step 09 `20 x 2` evidence and follow-up
-product screenshots reopened Steps 05, 06, and 08; all three owners are now
-reclosed. The exact `750 x 3` fresh and resume executions also completed on
-`750` one-world shards with exactly `7` workers and an identical aggregate
-hash. All `32` Phase-80A-owned player-model gates pass, but the frozen report
-remains `FAIL`: the match-engine `goals_per_match_avg` monitor records `80`
-high-side failing worlds. Step 09 cannot weaken that monitor or repair match
-scoring inside its documented scope, so Phase 80B is not ready to start.
+Done. Closed at Step 09 on 2026-08-02 by an explicit ownership decision.
+
+The first canonical Step 09 `20 x 2` evidence and follow-up product screenshots
+reopened Steps 05, 06, and 08; all three owners are now reclosed. The exact
+`750 x 3` fresh and resume executions completed on `750` one-world shards with
+exactly `7` workers and an identical aggregate hash, and all `32`
+Phase-80A-owned player-model gates pass.
+
+The frozen report closed `FAIL` on one gate only: the match-engine
+`goals_per_match_avg` monitor, at `36` pass / `634` warn / `80` fail with every
+failure high. Step 09 could not weaken that monitor or repair match scoring
+inside its documented scope, so the monitor was transferred unchanged to
+Phase 81, which owns the match engine and whose Step 06 replaces the
+opportunity generation behind those goals. Threshold, denominator, severity
+class, and distribution are all unchanged: the owner moved, the result did not.
+
+Phase 81 is the next phase, not Phase 82A. The market work is deferred behind
+Phase 81 and Phase 81A by the same 2026-08-02 decision.
+
 Phase 80 is complete and handed control here on 2026-07-31.
 Step 07 was first reopened and reclosed after reserved promotion candidates
 became explicit active stock. The full bounded cohort then exposed separate
