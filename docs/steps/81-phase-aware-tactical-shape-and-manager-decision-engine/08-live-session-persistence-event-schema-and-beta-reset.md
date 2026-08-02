@@ -24,8 +24,20 @@ that follows and must survive refresh without rerolling or changing meaning.
   affects minute `N + 1`.
 - Verify pre-match and live application of the same change produce the same
   structural delta.
+- Land the single context constructor taking an explicit squad rather than a
+  club to derive one from (A1, A8). The caller decides which players will play;
+  the constructor never reaches back into club ownership to find out. This is
+  the seam a background driver uses for a non-selected club, and the seam
+  Phase 82A later uses for a borrowed player.
 - Finalize active-match state, match-report, event route, telemetry, and
   explanation persistence after Steps 02-07.
+- Record match facts and statistics against the club a player was fielded by,
+  not the club holding his contract (A8). Today the two always coincide, so this
+  is a naming and sourcing decision with no behaviour change. It stops
+  coinciding with Phase 82A's first loan, and by then the recorded history
+  already exists: an appearance attributed to the parent club would have to be
+  rewritten rather than extended. Add a test that fixes the attribution rule
+  explicitly, so a later change to it fails loudly.
 - Advance the supported beta save/schema/event versions as required and delete
   incompatible saves/databases through the canonical reset flow.
 - Add JSON and SQLite/OPFS round-trip, resume, same-seed, no-reroll,
@@ -47,6 +59,10 @@ that follows and must survive refresh without rerolling or changing meaning.
 - No retroactive statistic/event mutation.
 - No separate live coefficient path.
 - No beta migration, dual schema, or legacy fallback.
+- No loan or registration model. A8 fixes where an appearance is attributed; it
+  does not introduce a second club relationship.
+- No context builder overload that still accepts a club and derives the squad
+  itself. One signature, one caller responsibility.
 
 ## Expected Files
 
@@ -107,7 +123,10 @@ graphify update .
 
 ## Definition Of Done
 
-- Pre-match, manual, and live changes use one tactical builder.
+- Pre-match, manual, and live changes use one tactical builder, and that builder
+  takes an explicit squad from its caller.
+- A test fixes the attribution rule: an appearance, goal, assist, and card
+  belong to the club the player was fielded by.
 - Minute `N + 1`, same-delta, reload, and deterministic replay invariants pass.
 - Final route/event/shape facts round-trip losslessly.
 - Incompatible beta saves are explicitly deleted and fresh careers work.

@@ -28,6 +28,18 @@ position family, and canonical role are discarded before simulation.
   mapping once callers use the typed builder.
 - Update manager, batch, manual-tactic, test-fixture, and current AI context
   builders to provide the same typed facts.
+- Name the background driver among the seam's consumers (A1): building a context
+  for a club the user has not selected is a first-class case of this builder,
+  not a later special case. No behaviour for it lands here; the contract records
+  that a non-selected club is an ordinary caller, so Step 08's single
+  constructor is not designed around the selected club alone.
+- Introduce one named squad-depth accessor and route every lineup-composing path
+  through it (A6). No production path in this phase reads `club.playerIds`
+  directly to decide who can be fielded. The accessor returns the club's
+  fieldable players and is the single definition Phase 82A later widens to
+  separate ownership from sporting registration. Step 01's inventory lists the
+  readers this step must convert; leaving one is a Step 02 failure, not a Phase
+  82A discovery.
 - Add total mappings and `never` guards for every formation line, position
   family, side, and canonical role consumer.
 - Preserve existing `TeamStrength` numbers for ordinary lineups in this step;
@@ -51,6 +63,10 @@ position family, and canonical role are discarded before simulation.
 - No open-string line/channel/role values.
 - No new formation catalog or UI controls.
 - No beta compatibility fallback.
+- No loan, registration, or ownership semantics inside the squad-depth accessor.
+  It returns the club's fieldable players under today's rules; Phase 82A owns
+  the distinction, and pre-building it here would ship an unused abstraction.
+- No background-world simulator. A1 names a consumer; it does not add one.
 
 ## Expected Files
 
@@ -107,5 +123,8 @@ graphify update .
 - Web owns no canonical-role-to-four-role gameplay mapping.
 - Existing ordinary team-strength and match determinism remain unchanged.
 - Adding a domain union member breaks exhaustive owners at typecheck.
+- One named accessor owns squad depth, and an absence assertion proves no
+  lineup-composing path reads `club.playerIds` directly.
+- The context seam documents the non-selected club as an ordinary caller.
 - No obsolete role-collapse helper or compatibility caller remains.
 - Step 03 is the only next action.

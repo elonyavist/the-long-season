@@ -50,6 +50,23 @@ being mistaken for a structural fix.
   match context, opportunity generation, chance actors, AI selection, live
   rebuild, persistence, diagnostics, and presentation.
 - Record exact obsolete-path absence assertions expected after later steps.
+- Accept the `goals_per_match_avg` monitor carried in from Phase 80A Step 09
+  (A7). Record its inherited `36/634/80` pass/warn/fail distribution over `750`
+  worlds as this phase's starting point, restate its threshold, denominator, and
+  `monitor` severity class exactly as inherited, and name Step 06 as the first
+  step able to move it and Step 11 as its deadline. The inherited distribution
+  is recorded as a starting point, never as an accepted one.
+- State the per-component measurement contract (A3): the bench reports cost per
+  tick separated into match engine, context construction, career application,
+  market, development, and persistence. Record today's per-component values so
+  Step 11 has a comparison rather than an isolated number.
+- Record that the frozen quality-versus-structure bands are conditioned on a
+  single-country population (A4). With five countries, division names stop
+  denoting one quality scale and these bands must be re-derived by whoever
+  introduces the wider world, not carried over.
+- Inventory every production path that reads `club.playerIds` to compose a
+  lineup, as the surface that Step 02's named squad-depth accessor replaces
+  (A6). The inventory is the absence assertion Step 09 must satisfy.
 - Change no production gameplay behaviour.
 
 ## Clean-Code Requirements
@@ -109,5 +126,11 @@ graphify update .
   before coefficient work.
 - Every future gate has a positive denominator or explicit `not_evaluated`.
 - Thresholds and exact scenarios are frozen before behaviour changes.
-- All semantic owners and planned obsolete paths are inventoried.
+- The carried `goals_per_match_avg` monitor is recorded with its unchanged
+  threshold, denominator, severity class, inherited distribution, owning step,
+  and deadline.
+- Per-component tick costs are measured and recorded as the pre-change baseline.
+- The single-country condition on the quality bands is written down.
+- All semantic owners and planned obsolete paths are inventoried, including
+  every current lineup-composing reader of `club.playerIds`.
 - Step 02 is the only next action.

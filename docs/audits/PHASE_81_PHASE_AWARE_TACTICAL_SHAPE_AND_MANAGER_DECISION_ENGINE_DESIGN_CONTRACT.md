@@ -1,8 +1,15 @@
 # Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine Design Contract
 
-Date: 2026-07-31  
-Status: Accepted for implementation after Phase 80C  
-Scope owner: Phase 81 only
+- Date: 2026-07-31, amended 2026-08-02
+- Status: Accepted for implementation after Phase 80A
+- Scope owner: Phase 81 only
+
+The 2026-08-02 phase-order amendment moves this phase ahead of the market work,
+renumbered Phase 82A and Phase 82B. Eight amendments (A1-A8) are recorded in the
+phase README; three sections below are updated by them: the longitudinal
+ownership, the carried goal-rate monitor, and the seams left for the
+background-world work. The rationale and declared costs are in
+`docs/the-long-season-mondo-vivo.pdf`, section 11.
 
 ## Product Intent
 
@@ -367,11 +374,28 @@ Every scenario must record positive observations. Required invariants include:
 
 Thresholds cannot be weakened after implementation output is observed.
 
+## Carried Goal-Rate Monitor
+
+Phase 80A Step 09 cannot close on its own. All `32` of its player-model gates
+pass over a deterministic `750 x 3` cohort, but its report stays `FAIL` on a
+single monitor: `goals_per_match_avg` records `36/634/80` pass/warn/fail with
+every failure on the high side. Match scoring is outside that phase's
+player-model scope, and its contract forbids repairing the result by moving a
+threshold or a denominator.
+
+Phase 81 accepts that monitor unchanged (A7). The threshold, denominator, and
+`monitor` severity class all stay exactly as inherited: the transfer changes the
+owner, not the severity. Step 06 is the first step able to move it, because it
+owns how many opportunities exist and how they convert; Step 11 is the deadline;
+Step 12 confirms it at cohort scale.
+
+The monitor may not be carried a second time. If Step 11 finds it still out of
+band, the fix is reopening Step 06, not naming a third owner - a transfer that
+can be repeated indefinitely is a way of never fixing the defect.
+
 ## Longitudinal Ownership
 
-Phase 80C closes on bounded race diagnostics and hands control to Phase 81.
-Phase 81 Step 12 becomes the sole owner of the deferred checkpointed `50 x 20`
-because it is the last accepted rework before that evidence:
+Phase 81 Step 12 owns this phase's checkpointed `50 x 20`:
 
 ```bash
 pnpm cli ten-season-report \
@@ -385,8 +409,37 @@ pnpm cli ten-season-report \
 ```
 
 The identical command runs twice. The second run must reuse valid checkpoints
-and reproduce report facts. Phase 79 Step 14 remains Reopened, paused, unrun,
-and unclaimed until Phase 81 closes.
+and reproduce report facts.
+
+This cohort is engine evidence only. It observes a world without postures,
+loans, or competitive races, because that behaviour arrives in Phases 82A and
+82B, which now follow this phase. Phase 82B Step 09 owns a second checkpointed
+`50 x 20` over the competitive market. Two runs are an accepted cost of the
+phase order, and neither substitutes for the other; the Phase 81 report must say
+so explicitly so the numbers are not later reused out of scope.
+
+Phase 79 Step 14 remains Reopened, paused, unrun, and unclaimed.
+
+## Seams Left For The Background World
+
+This phase does not build the background world, but it decides how expensive
+that world will be to build. Four seams are contract, not implementation
+detail, and each exists because the alternative is a second migration:
+
+- one named squad-depth accessor, so Phase 82A redefines fieldable-versus-owned
+  in a single place rather than across every current reader (A6);
+- a context constructor that accepts an explicit squad instead of deriving one
+  from a club, which is the same seam a borrowed player needs (A1, A8);
+- a non-selected club treated as an ordinary caller of that constructor, not a
+  special case bolted on afterwards (A1);
+- a match RNG keyed strictly by `(worldSeed, fixtureId)`, which makes order,
+  timing, and scheduling irrelevant to a result and is what later allows
+  background fixtures to be resolved in any order, in blocks, or on a worker
+  (A5).
+
+Match facts additionally attribute to the club a player was fielded by rather
+than the club holding his contract (A8). Today the two coincide; they stop
+coinciding at the first loan, and by then the history already exists.
 
 ## Explicit Non-Goals
 
@@ -402,6 +455,14 @@ and unclaimed until Phase 81 closes.
   speculative extension hierarchy.
 - No beta migration or legacy compatibility.
 - No long run before Step 12.
+- No loan, posture, competitive-race, or free-agent behaviour: Phases 82A and
+  82B own it and it does not exist yet.
+- No background-world simulator, multi-country topology, or aggregate result
+  producer. This phase builds the seams and stops.
+- No contract-duration or market-density change; that is Phase 81A
+  that follows.
+- No new direct reader of `club.playerIds` in a lineup-composing path.
+- No weakening or second transfer of the carried `goals_per_match_avg` monitor.
 - No Phase 79 Step 14/15 implementation.
 
 ## Phase Exit
@@ -423,6 +484,14 @@ Phase 81 is complete only when:
 - browser QA proves understandable pre-match and live consequences;
 - `pnpm check`, build, dependency, persistence, deterministic replay, diff,
   and Graphify gates pass;
-- the checkpointed `50 x 20` completes and replays with exactly seven workers;
-- Phase 79 receives a truthful handoff without claiming its separate
-  release-scale gate.
+- the carried `goals_per_match_avg` monitor is inside its unchanged band by
+  Step 11 and stays there at cohort scale;
+- squad depth is reached through one named accessor, the context constructor
+  takes an explicit squad, and match facts attribute to the club a player was
+  fielded by;
+- per-component tick costs are measured and reported;
+- the checkpointed `50 x 20` completes and replays with exactly seven workers,
+  and its report states that it observed no loans and no races;
+- Phase 81A receives a truthful handoff naming the contract-duration
+  representation change, the background-fixture resolution point, and the
+  simulate-match command, while Phase 79 Step 14 stays unrun and unclaimed.

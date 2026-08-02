@@ -29,6 +29,17 @@ rules.
   contribution facts; do not use stored hidden potential.
 - Make every simulated opponent use a canonical formation and typed lineup
   rather than the current roster-index/default-role fallback.
+- Hold that selection for every club in the world, not only the clubs the user
+  faces (A2). The step's value is a coherent world, and the background-world
+  work that follows this phase selects an XI for roughly 270 clubs per matchday
+  through this same Module. Narrowing the scope to the user's opponents would
+  leave a fallback path that the later work would then have to remove across
+  every remaining club.
+- Reach squad depth only through Step 02's named accessor (A6). This step is the
+  largest consumer of squad composition in the phase, so it is where a direct
+  `club.playerIds` read is most tempting and most expensive to undo: Phase 82A
+  must later distinguish the players a club owns from the players it may field,
+  and one accessor makes that one edit.
 - Make AI formation and live commands evaluate the same intrinsic/relational
   facts plus existing manager style, match state, substitutions, and command
   constraints.
@@ -62,6 +73,10 @@ rules.
 - No automatic manager recommendation or UI.
 - No new AI tactic control.
 - No transfer/squad-building rework.
+- No background-fixture resolution. This step makes every club selectable; the
+  work that follows decides when those clubs actually play.
+- No selection path that reads `club.playerIds` directly, and no per-club
+  special case that bypasses the canonical Module for non-opponents.
 
 ## Expected Files
 
@@ -104,7 +119,10 @@ graphify update .
 ## Definition Of Done
 
 - AI XI selection is globally coherent on counterexamples and deterministic.
-- Every opponent reaches the engine with a canonical typed formation.
+- Every club in the world reaches the engine with a canonical typed formation,
+  proven on a club the user neither faces nor competes with.
+- Squad depth is read through the named accessor everywhere, and the Step 01
+  inventory of direct `club.playerIds` lineup readers is empty.
 - AI and manager consume the same shape/matchup truth.
 - Live AI changes use the canonical command path and minute boundary.
 - The complete frozen quality-versus-structure matrix still passes with the

@@ -23,6 +23,12 @@ to play and what it exposes, not merely shift opaque scalar coefficients.
 - Preserve one bounded per-side opportunity decision per simulated minute.
 - Derive route choice from shape, opponent, score/minute state, tactics, and a
   dedicated deterministic RNG stream.
+- Fix the match RNG key as `(worldSeed, fixtureId)` and nothing else (A5). This
+  step already introduces a dedicated stream for routes, so it is the right
+  place to state the rule for the whole match. The consequence is required
+  later: with the key anchored to the fixture, order, timing, and scheduling
+  cannot affect a result, which is what makes background fixtures safe to
+  resolve in any order, in blocks, or on a worker.
 - Implement the locked semantics for directness, pressing, width, risk, and
   mentality. Every benefit has a cost or shape prerequisite.
 - Replace texture-only cross/counter inference where route truth now owns it.
@@ -43,6 +49,12 @@ to play and what it exposes, not merely shift opaque scalar coefficients.
 - Tune only versioned policy coefficients needed to satisfy those frozen
   product bands. Do not change a scenario, seed, denominator, threshold, or
   hierarchy. Freeze the resulting policy version when this step closes.
+- Measure `goals_per_match_avg` against the band carried in from Phase 80A
+  (A7). This step owns how many opportunities exist and how they convert, so it
+  is the first step whose coefficients can move the monitor. Record the measured
+  value here even though Step 11 is the deadline: an out-of-band reading at this
+  point is diagnosable, whereas the same reading discovered at Step 11 is a
+  regression across five intervening steps.
 
 ## Clean-Code Requirements
 
@@ -59,6 +71,11 @@ to play and what it exposes, not merely shift opaque scalar coefficients.
 - No complete pass chain or per-pass event.
 - No new tactic control or UI.
 - No result scripting or universal balance bonus.
+- No scoring-rate correction applied outside the route model. The carried
+  monitor is satisfied by the structure this step introduces, never by a
+  post-hoc goal multiplier.
+- No RNG input beyond `(worldSeed, fixtureId)`: not wall-clock time, not
+  iteration order, not a per-session counter.
 
 ## Expected Files
 
@@ -119,5 +136,8 @@ graphify update .
   later steps preserve rather than discover that balance.
 - Old texture-only chance-type and scalar-only opportunity owners are removed
   where superseded.
-- Deterministic replay and clamps pass.
+- Deterministic replay and clamps pass, and identical `(worldSeed, fixtureId)`
+  pairs reproduce identical results regardless of resolution order.
+- The measured `goals_per_match_avg` is recorded against the carried band, with
+  its distance from the inherited `36/634/80` starting point stated either way.
 - Step 07 is the only next action.

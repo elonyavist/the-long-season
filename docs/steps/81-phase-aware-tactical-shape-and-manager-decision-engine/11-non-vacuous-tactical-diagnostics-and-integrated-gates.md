@@ -28,10 +28,20 @@ without weakening thresholds or starting the longitudinal cohort.
 - Prove diminishing returns, suitability no-double-penalty, tactic trade-offs,
   stronger-player relevance, AI parity, actor causality, persistence, and
   deterministic replay.
+- Evaluate the carried `goals_per_match_avg` monitor against its unchanged
+  band (A7). This step is its deadline. The monitor arrived from Phase 80A
+  Step 09 at `36/634/80` pass/warn/fail with every failure high; it must now be
+  inside band on this step's population. Report the measured distribution
+  whatever it shows.
+- Report per-component tick costs (A3) for match engine, context construction,
+  career application, market, development, and persistence, against the
+  pre-change values recorded in Step 01. The comparison is the deliverable; a
+  single total is not.
 - Run absence checks for the web four-role collapse, default roster-index
   opponent lineup, obsolete scalar/texture route inference, post-resolution
-  actor attribution, duplicate shape/matchup calculations, compatibility
-  readers, and dead fixtures.
+  actor attribution, duplicate shape/matchup calculations, direct
+  `club.playerIds` reads in lineup-composing paths, compatibility readers, and
+  dead fixtures.
 - Run full repository, build, dependency, browser/accessibility, diff, and
   Graphify gates.
 - Write the bounded diagnostic report with failures/warnings/observation counts
@@ -48,6 +58,11 @@ without weakening thresholds or starting the longitudinal cohort.
   assignment itself remains correct, reopen Step 06 and retune only its
   versioned policy coefficients against the unchanged bands. If AI assignment
   is incorrect, reopen Step 09 instead. Step 11 performs neither fix.
+- If the carried `goals_per_match_avg` monitor is still out of band, reopen
+  Step 06, which owns opportunity volume and conversion, and fix it there. Do
+  not widen the band, do not reclassify the monitor's severity, and do not
+  transfer it to a third owner: it has already been carried once, and carrying
+  it again would make the transfer a way of never fixing it.
 - If a cleanup is truly outside scope, document its exact file/owner/reason and
   block phase completion when it threatens correctness or duplication.
 - Do not accept “used only by tests” as proof that a production compatibility
@@ -99,6 +114,10 @@ graphify update .
   numbers.
 - Repository, build, browser, accessibility, persistence, deterministic,
   dependency, diff, and Graphify gates pass.
-- All planned obsolete paths are absent.
+- The carried `goals_per_match_avg` monitor is inside its unchanged band, and
+  the measured distribution is recorded next to the inherited `36/634/80`.
+- Per-component tick costs are reported against the Step 01 pre-change values.
+- All planned obsolete paths are absent, including every direct
+  `club.playerIds` read in a lineup-composing path.
 - No known local dead code or duplicate owner remains.
 - Step 12 is the only next action; no longitudinal cohort has run.

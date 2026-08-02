@@ -2,9 +2,20 @@
 
 ## Status
 
-Planned under an accepted product/architecture contract. Do not start until
-Phase 80A, Phase 80B, and Phase 80C are complete. Phase 80C closes on bounded
-race evidence and hands the deferred longitudinal cohort here.
+Planned under an accepted product/architecture contract, and next in order.
+
+The 2026-08-02 phase-order decision moves this phase ahead of the market work,
+which is renumbered Phase 82A (incoming offers, postures, loans) and Phase 82B
+(competitive race). Two facts drove it. Phase 80A cannot close because
+`goals_per_match_avg` fails high on `80` of `750` worlds and match scoring is
+outside its player-model scope; this phase owns match scoring, and Step 06
+replaces the opportunity generation that produces those goals, so a narrow
+pre-fix would calibrate code Step 06 removes. Separately, Steps 02, 08, and 09
+build the seams a background-world simulator needs, and running the market work
+first would multiply their migration surface across 270 clubs.
+
+The rationale, the measured evidence, and the declared costs are recorded in
+`docs/the-long-season-mondo-vivo.pdf`, section 11.
 
 ## Goal
 
@@ -20,10 +31,14 @@ The governing contract is:
 
 ## Entry Gate
 
-- Phases 80A, 80B, and 80C are Done.
-- Phase 80C race state, player choice, free-agent race, UI, persistence, and
-  bounded non-vacuous diagnostics are green.
-- Phase 80C ran no longitudinal cohort.
+- Phase 80 is Done and Phase 80A is Done.
+- Phase 80A closed by carrying its unchanged `goals_per_match_avg` monitor
+  failure to this phase under an explicit ownership decision. The monitor was
+  not weakened, its denominator was not changed, and its result was not
+  suppressed; it changed owner, not severity.
+- Phases 82A and 82B are Planned and deliberately not started. Loans, postures,
+  and competitive races do not exist yet, and no step of this phase may assume
+  them.
 - The current match engine still reproduces the Step 01 baseline, including
   equal-quality `4-4-2` and `3-1-6` equivalence.
 - Phase 79 Step 14 remains Reopened, paused, unrun, and unclaimed.
@@ -55,8 +70,55 @@ The governing contract is:
   or compatibility branch remains.
 - UI shows qualitative structured consequences, not formulas or an optimal
   answer.
-- Phase 81 Step 12 alone owns the final checkpointed `50 x 20` with exactly
-  seven workers.
+- Phase 81 Step 12 alone owns this phase's checkpointed `50 x 20` with exactly
+  seven workers. It observes the accepted match engine and a world without
+  loans or races, so it is engine evidence only; Phase 82B Step 09 owns the
+  separate market cohort.
+
+## Accepted Amendments
+
+Eight amendments accepted on 2026-08-02 with the phase order. Five carry the
+background-world requirements forward so no seam is built twice; three are new
+and come from the market work moving after this phase.
+
+- **A1 - background driver is a first-class consumer** (Steps 02, 08). Building
+  a match context for a club the user has not selected is a named case of the
+  single constructor, not an afterthought. Naming it now costs one contract
+  line; discovering it later costs a second migration.
+- **A2 - XI selection covers every club** (Step 09). The canonical selection and
+  typed formation hold for all clubs in the world, not only the user's
+  opponents. Stated explicitly so the step cannot be narrowed in scope.
+- **A3 - per-component measurement** (Steps 01, 11). The measurement bench
+  reports cost per tick separated by component: match engine, context
+  construction, career application, market, development, persistence. A season
+  total is not the unit the player experiences, and an undivided number cannot
+  guide a later decision.
+- **A4 - quality bands are population-conditioned** (Step 01 and the contract).
+  The frozen quality-versus-structure bands hold for a single-country
+  population. With five countries, "first division" and "third division" stop
+  denoting one quality scale, and the bands must be re-derived rather than
+  carried over silently.
+- **A5 - match RNG derives from `(worldSeed, fixtureId)`** (Step 06). Step 06
+  already introduces a dedicated stream for routes, which is the right moment to
+  fix the key. Order, timing, and scheduling then cannot affect a result, which
+  is what later makes background fixtures safe to resolve in any order.
+- **A6 - one named squad-depth accessor** (Steps 02, 09). No production path in
+  this phase composes a lineup by reading `club.playerIds` directly. Step 09
+  selects an XI for every club in the world, and Phase 82A must later separate
+  ownership from selectability because a loaned player is fielded by a club that
+  does not own him. With one accessor that is one definition; without it, it is
+  33 current readers multiplied across 270 clubs.
+- **A7 - this phase owns `goals_per_match_avg`** (Steps 01, 11, 12, and the
+  Definition of Done). Step 01 freezes current behaviour as a regression
+  baseline, which would otherwise freeze the out-of-band goal rate along with
+  it. The monitor is carried in unchanged from Phase 80A and must be inside its
+  predeclared band by Step 11.
+- **A8 - contexts take an explicit squad; match facts record who played**
+  (Step 08). The context constructor accepts the players who will play rather
+  than deriving them from a club, and recorded match facts and statistics
+  attribute to the club a player was fielded by, not to the club that owns his
+  contract. Without this, Phase 82A's first loan corrupts the statistical
+  history rather than extending it.
 
 ## Ordered Steps
 
@@ -71,14 +133,19 @@ The governing contract is:
 9. `09-ai-whole-xi-selection-and-shared-tactical-decisions.md`
 10. `10-pre-match-and-live-tactical-consequence-ui.md`
 11. `11-non-vacuous-tactical-diagnostics-and-integrated-gates.md`
-12. `12-checkpointed-50x20-phase-report-and-phase-79-handoff.md`
+12. `12-checkpointed-50x20-phase-report-and-mvp-handoff.md`
 
 ## Validation Ladder
 
 - Step 01 freezes exact current behaviour, denominators, thresholds, ownership,
-  and absence assertions without gameplay changes.
+  and absence assertions without gameplay changes. It also accepts the carried
+  `goals_per_match_avg` monitor as this phase's own (A7), records its inherited
+  `36/634/80` distribution as the starting point rather than as an acceptable
+  one, and states the per-component measurement contract (A3) and the
+  single-country condition on the quality bands (A4).
 - Step 02 carries typed football facts into the match and removes the web
-  four-way collapse.
+  four-way collapse. It also names the background driver as a first-class
+  consumer (A1) and introduces the single squad-depth accessor (A6).
 - Step 03 derives intrinsic shape with diminishing returns. It is a headless
   structural milestone and makes no gameplay-fix claim.
 - Step 04 derives relational phase/channel matchups without final result logic.
@@ -88,18 +155,28 @@ The governing contract is:
 - Step 06 replaces scalar/texture-only opportunity generation with structured
   phase-aware routes, completes current tactic semantics, and is the first
   end-to-end gameplay gate for the frozen quality-versus-structure hierarchy.
+  It fixes the match RNG key as `(worldSeed, fixtureId)` (A5) and is the first
+  step that can move `goals_per_match_avg`, because it owns how many
+  opportunities exist and how they convert.
 - Step 07 makes route quality and actors causal while retaining an aggregate
   resolver.
 - Step 08 gives live changes the same path, persists final facts once, and
-  resets incompatible beta saves.
+  resets incompatible beta saves. It also lands the single context constructor
+  taking an explicit squad, and records match facts by the club a player was
+  fielded by (A8).
 - Step 09 migrates AI selection and decisions onto the same evaluator and
   immediately re-proves the frozen quality-versus-structure matrix with the
-  canonical AI-selected XIs.
+  canonical AI-selected XIs. Its selection covers every club in the world (A2)
+  and reaches squad depth only through the named accessor (A6).
 - Step 10 presents small qualitative consequences through `@game/ui` and web.
 - Step 11 runs bounded positive-denominator diagnostics, browser QA, absence
-  checks, and the integrated repository gate.
-- Step 12 alone runs/replays the checkpointed `50 x 20`, writes the phase
-  report, and hands control back to Phase 79.
+  checks, and the integrated repository gate. It is the deadline for the carried
+  `goals_per_match_avg` monitor (A7) and reports the per-component tick costs
+  (A3).
+- Step 12 alone runs/replays the checkpointed `50 x 20`, confirms the carried
+  monitor inside its band at cohort scale, writes the phase report, and hands
+  control to Phase 81A. Phase 79 Step 14 stays Reopened, paused, and
+  unclaimed.
 
 ## Mandatory Per-Step Loop
 
@@ -142,6 +219,14 @@ The longitudinal command runs only in Step 12.
 - The Interface stays smaller than its Implementation and is the test surface.
 - Refactors remain local to the active owner; unrelated cleanup is documented
   and scheduled rather than mixed silently into a step.
+- Nothing is orphaned by a change. When a step removes or replaces a behaviour,
+  the helpers, props, fixtures, translation keys, and tests that existed only to
+  serve it go with it in the same step. This gate has already caught real drift
+  in Phase 80: an unreachable navigation label kept in five locales, and a prop
+  that survived only to route one dead branch.
+- No fallback stands in for a missing case. Domain unions are handled by total
+  mappings with an exhaustiveness guard, so adding a case fails the build
+  instead of silently taking a default.
 
 ## What NOT To Implement
 
@@ -154,6 +239,15 @@ The longitudinal command runs only in Step 12.
 - No generic strategy/plugin registry or event bus.
 - No beta compatibility.
 - No cohort before Step 12.
+- No loan, posture, competitive-race, or free-agent-negotiation behaviour. Those
+  belong to Phases 82A and 82B and do not exist yet.
+- No background-world simulator, multi-country topology, or aggregate result
+  producer. This phase builds the seams they will use and stops there.
+- No contract-duration or market-density change: that is Phase 81A
+  that follows this phase.
+- No new direct reader of `club.playerIds` in a lineup-composing path (A6).
+- No weakening of the carried `goals_per_match_avg` monitor: its threshold,
+  denominator, and severity class stay exactly as inherited (A7).
 - No Phase 79 Step 14/15 implementation.
 
 ## Definition Of Done
@@ -175,7 +269,20 @@ The longitudinal command runs only in Step 12.
 - Bounded diagnostics cannot pass on zero observations.
 - Clean-code, repository, browser, persistence, determinism, dependency, diff,
   and Graphify gates pass.
-- The final `50 x 20` completes and replays with 50 stable shards and exactly
-  seven workers.
-- Phase 79 Step 14 receives a truthful handoff and remains separately unrun and
-  unclaimed.
+- The carried `goals_per_match_avg` monitor sits inside its unchanged
+  predeclared band by Step 11 and stays there at cohort scale in Step 12. If it
+  does not, the phase does not close: the failure is neither re-scoped again nor
+  absorbed by adjusting the band.
+- Per-component tick costs are measured and reported for match engine, context
+  construction, career application, market, development, and persistence.
+- Squad depth is reached through one named accessor, and no lineup-composing
+  path reads `club.playerIds` directly.
+- Match facts and statistics attribute to the club a player was fielded by, so
+  Phase 82A can introduce loans without rewriting recorded history.
+- This phase's `50 x 20` completes and replays with 50 stable shards and exactly
+  seven workers, and the report states plainly that it observed no loans and no
+  races and is therefore not market evidence.
+- Phase 81A receives a truthful handoff naming the contract-duration
+  representation change, the background-fixture resolution point, and the
+  simulate-match command.
+- Phase 79 Step 14 remains separately unrun and unclaimed.

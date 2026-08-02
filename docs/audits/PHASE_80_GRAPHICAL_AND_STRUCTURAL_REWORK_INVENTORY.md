@@ -265,7 +265,7 @@ match-engine steps. Its seed, checkpoint directory, `50` stable shards, `7`
 workers, and report path are frozen in:
 
 - `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`
-- `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/12-checkpointed-50x20-phase-report-and-phase-79-handoff.md`
+- `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/12-checkpointed-50x20-phase-report-and-mvp-handoff.md`
 
 That cohort validates the complete accepted rework chain and the deferred
 Phase 79D longitudinal evidence; it does not replace Phase 79 Step 14's
