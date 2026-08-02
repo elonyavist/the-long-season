@@ -10,6 +10,7 @@ import {
   type CareerSquadPlayerRowView,
   type CareerSquadSlotChoiceView,
   type CareerSquadSort,
+  type CareerShellSectionKey,
 } from "@game/ui";
 import {
   ChevronsUpDown,
@@ -54,6 +55,7 @@ export type CareerSquadScreenProps = Readonly<{
   contractCommandPending: boolean;
   text: Translator;
   onBackToMenu: () => void;
+  onNavigate: (sectionKey: CareerShellSectionKey) => void;
   onInboxActionClick: (actionId: string) => void;
   onLineupPlayerChange: (slotKey: string, playerId: string | undefined) => void;
   onBenchPlayerChange: (slotKey: string, playerId: string | undefined) => void;
@@ -74,6 +76,7 @@ export function CareerSquadScreen({
   contractCommandPending,
   text,
   onBackToMenu,
+  onNavigate,
   onInboxActionClick,
   onLineupPlayerChange,
   onBenchPlayerChange,
@@ -162,6 +165,7 @@ export function CareerSquadScreen({
       currentDateIso={presentation.currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
+      onNavigate={onNavigate}
       onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-squad-panel" aria-labelledby="career-squad-title">

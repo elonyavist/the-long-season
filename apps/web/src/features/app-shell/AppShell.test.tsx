@@ -41,10 +41,10 @@ const LABELS: Partial<Record<MessageKey, string>> = {
   "career.shell.nav.inbox": "Posta",
   "career.shell.nav.squad": "Squad",
   "career.shell.nav.tactics": "Tactics",
-  "career.shell.nav.calendar": "Calendar",
   "career.shell.nav.fixtures": "Fixtures",
   "career.shell.nav.market": "Market",
   "career.shell.nav.finances": "Finances",
+  "career.shell.nav.facilities": "Facilities",
   "career.shell.nav.youth": "Youth",
   "career.shell.nav.staff": "Staff",
   "career.shell.nav.archive": "Archive",
@@ -81,7 +81,7 @@ describe("AppShell", () => {
   it("renders the persistent MVP career sections without fake future navigation", () => {
     const html = renderShell();
 
-    for (const label of ["Dashboard", "Posta", "Squad", "Tactics", "Calendar", "Fixtures", "Market", "Finances", "Youth", "Staff", "Archive"]) {
+    for (const label of ["Dashboard", "Posta", "Squad", "Tactics", "Fixtures", "Market", "Finances", "Facilities", "Youth", "Staff", "Archive"]) {
       expect(html).toContain(label);
     }
 

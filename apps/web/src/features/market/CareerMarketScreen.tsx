@@ -13,6 +13,7 @@ import {
   type CareerMarketTargetSort,
   type CareerMarketTargetSortKey,
   type CareerMarketViewInput,
+  type CareerShellSectionKey,
 } from "@game/ui";
 import * as m from "motion/react-m";
 import {
@@ -59,6 +60,7 @@ export type CareerMarketScreenProps = Readonly<{
   marketCommandPending: boolean;
   text: Translator;
   onBackToMenu: () => void;
+  onNavigate: (sectionKey: CareerShellSectionKey) => void;
   onInboxActionClick: (actionId: string) => void;
   previewOffer: (draft: MarketOfferDraft) => CareerMarketOfferPreviewView;
   onMarketCommand: (
@@ -122,6 +124,7 @@ export function CareerMarketScreen({
   marketCommandPending,
   text,
   onBackToMenu,
+  onNavigate,
   onInboxActionClick,
   previewOffer,
   onMarketCommand,
@@ -198,6 +201,7 @@ export function CareerMarketScreen({
       currentDateIso={currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
+      onNavigate={onNavigate}
       onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-market-panel" aria-labelledby="career-market-title">

@@ -230,7 +230,7 @@ function parseArgs(args: readonly string[]): ParsedArgs {
     if (arg === "--report-kind") {
       return {
         ok: false,
-        message: "--report-kind requires a value",
+        message: createTranslator(language)("tenSeason.error.reportKindRequired"),
         language,
       };
     }
@@ -243,7 +243,7 @@ function parseArgs(args: readonly string[]): ParsedArgs {
       ) {
         return {
           ok: false,
-          message: `Unsupported report kind: ${value}`,
+          message: createTranslator(language)("tenSeason.error.reportKindUnsupported", { value }),
           language,
         };
       }

@@ -1,5 +1,7 @@
 import type { MessageKey, Translator } from "@game/i18n";
-import { buildCareerShellView, type CareerInboxView, type CareerPostaFilter, type CareerPostaView } from "@game/ui";
+import { buildCareerShellView, type CareerInboxView, type CareerPostaFilter, type CareerPostaView,
+  type CareerShellSectionKey,
+} from "@game/ui";
 import { useEffect, useRef, useState } from "react";
 import * as m from "motion/react-m";
 
@@ -21,7 +23,7 @@ export interface CareerInboxScreenProps {
   readonly arrivalMessageId?: string;
   readonly text: Translator;
   readonly onBackToMenu: () => void;
-  readonly onBackToDashboard: () => void;
+  readonly onNavigate: (sectionKey: CareerShellSectionKey) => void;
   readonly onContinueCareer: () => void;
   readonly onFilterChange: (filter: CareerPostaFilter) => void;
   readonly onMessageSelect: (messageId: string) => void;
@@ -39,7 +41,7 @@ export function CareerInboxScreen({
   arrivalMessageId,
   text,
   onBackToMenu,
-  onBackToDashboard,
+  onNavigate,
   onContinueCareer,
   onFilterChange,
   onMessageSelect,
@@ -73,9 +75,7 @@ export function CareerInboxScreen({
       currentDateIso={currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
-      onInboxActionClick={(actionId) => {
-        if (actionId === "open_dashboard") onBackToDashboard();
-      }}
+      onNavigate={onNavigate}
     >
       <section
         className="tls-screen tls-inbox-screen"

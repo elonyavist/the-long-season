@@ -5,6 +5,7 @@ import * as m from "motion/react-m";
 import {
   buildCareerInboxView,
   buildCareerShellView,
+  type CareerShellSectionKey,
 } from "@game/ui";
 import type {
   CareerMatchdayBlockerKey,
@@ -96,6 +97,7 @@ export type CareerMatchdayScreenProps = Readonly<{
   text: Translator;
   onBackToMenu: () => void;
   onBackToDashboard: () => void;
+  onNavigate: (sectionKey: CareerShellSectionKey) => void;
   onInboxActionClick: (actionId: string) => void;
   onPrepareMatch: () => void;
   onStartFirstHalf: () => void;
@@ -126,6 +128,7 @@ export function CareerMatchdayScreen({
   text,
   onBackToMenu,
   onBackToDashboard,
+  onNavigate,
   onInboxActionClick,
   onPrepareMatch,
   onStartFirstHalf,
@@ -176,6 +179,7 @@ export function CareerMatchdayScreen({
       currentDateIso={view.currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
+      onNavigate={onNavigate}
       onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-matchday-panel" aria-labelledby="career-matchday-title" aria-busy={commandPending}>

@@ -899,37 +899,13 @@ test("desktop Market presents window, budget, targets, and a public inspection p
     await expect(
       targetRows.locator(".tls-market-club-source small").first(),
     ).toContainText("First division");
-    await expect(
-      desktop.locator(".tls-market-table .tls-player-star-rating[data-rating='3.5']").first(),
-    ).toBeVisible();
-    const halfSixthRating = desktop.locator(
-      ".tls-market-table .tls-player-star-rating[data-rating='5.5']",
-    ).first();
-    const fullSixthRating = desktop.locator(
-      ".tls-market-table .tls-player-star-rating[data-rating='6']",
-    ).first();
-    await expect(halfSixthRating).toBeVisible();
-    await expect(fullSixthRating).toBeVisible();
-    await expect(halfSixthRating).toHaveAttribute(
-      "aria-label",
-      /5\.5 out of 6 stars$/,
-    );
-    await expect(fullSixthRating).toHaveAttribute(
-      "aria-label",
-      /6 out of 6 stars$/,
-    );
-    await expect(
-      halfSixthRating.locator(
-        ".tls-player-rating-star[data-sixth='true'][data-fill='half']",
-      ),
-    ).toBeVisible();
-    const fullSixthStar = fullSixthRating.locator(
-      ".tls-player-rating-star[data-sixth='true'][data-fill='full']",
-    );
-    await expect(fullSixthStar).toBeVisible();
-    expect(await fullSixthStar.locator(".tls-player-rating-star-fill").evaluate(
-      (element) => getComputedStyle(element).color,
-    )).toBe("rgb(195, 107, 44)");
+    // Every career allocates its own world seed, so no individual rating value
+    // is guaranteed to appear in the market. The browser owns the invariant
+    // that each rendered rating agrees with its own glyphs and label; the
+    // per-value glyph table is proven deterministically by the
+    // `PlayerStarRating` unit test instead.
+    await assertStarRatingGlyphInvariant(desktop, ".tls-market-table");
+    await assertSixthStarAccentColor(desktop);
     await assertNoPageOverflow(desktop, "desktop Market");
     await capture(desktop, "79a-market-desktop");
     await divisionFilter.selectOption("all");
@@ -1679,6 +1655,29 @@ test("desktop Posta owns one dense decision workspace across current message sta
     await expect(page.locator(".tls-storage-recovery[data-state='recovery']")).toBeVisible();
     await capture(page, "36-inbox-recovery-desktop");
     await assertNoPageOverflow(page, "desktop Posta state sequence");
+  } finally {
+    await page.close();
+  }
+});
+
+test("Posta navigates to every available section, not only the dashboard", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Inbox", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+
+    // The shell renders these as enabled controls, so they must actually route.
+    for (const section of ["Squad", "Market", "Tactics"] as const) {
+      await page.getByRole("button", { name: section, exact: true }).click();
+      await expect(page.getByRole("heading", { level: 1, name: section, exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Inbox", exact: true }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "Inbox", exact: true })).toBeVisible();
+    }
+
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Dashboard", exact: true })).toBeVisible();
   } finally {
     await page.close();
   }
@@ -3298,6 +3297,90 @@ async function matchingMarketTargetCount(page: Page): Promise<number> {
   const total = /of\s+([\d,]+)/.exec(summary)?.[1];
   if (total === undefined) throw new Error(`Unreadable Market pagination summary: ${summary}`);
   return Number(total.replace(/,/g, ""));
+}
+
+/**
+ * Proves every rendered star rating inside `scopeSelector` agrees with itself.
+ *
+ * The generated world decides which rating values exist, so this asserts the
+ * rendering contract over whatever is on screen: the glyph fills, the sixth
+ * exceptional slot, and the accessible label must all follow `data-rating`.
+ * The sweep is non-vacuous because it also requires at least one rating.
+ */
+async function assertStarRatingGlyphInvariant(
+  page: Page,
+  scopeSelector: string,
+): Promise<void> {
+  const audit = await page.evaluate((selector) => {
+    const ratings = Array.from(
+      document.querySelectorAll(`${selector} .tls-player-star-rating`),
+    );
+
+    const mismatches = ratings.flatMap((rating) => {
+      const declared = rating.getAttribute("data-rating") ?? "";
+      const stars = Number(declared);
+      const glyphs = Array.from(rating.querySelectorAll(".tls-player-rating-star"));
+      const fills = glyphs.map((glyph) => glyph.getAttribute("data-fill"));
+      const sixthFlags = glyphs.map((glyph) => glyph.getAttribute("data-sixth") === "true");
+      const expectedFills = Array.from(
+        { length: stars > 5 ? 6 : 5 },
+        (_, index) => {
+          const remaining = stars - index;
+          if (remaining >= 1) return "full";
+          if (remaining >= 0.5) return "half";
+          return "empty";
+        },
+      );
+      const expectedSixthFlags = expectedFills.map((_, index) => index === 5);
+      const label = rating.getAttribute("aria-label") ?? "";
+      const problems: string[] = [];
+
+      if (!Number.isFinite(stars) || stars < 1 || stars > 6 || (stars * 2) % 1 !== 0) {
+        problems.push(`unsupported data-rating "${declared}"`);
+      }
+      if (fills.join(",") !== expectedFills.join(",")) {
+        problems.push(`fills ${fills.join(",")} expected ${expectedFills.join(",")}`);
+      }
+      if (sixthFlags.join(",") !== expectedSixthFlags.join(",")) {
+        problems.push(`sixth flags ${sixthFlags.join(",")}`);
+      }
+      if (!label.endsWith(`${declared} out of 6 stars`)) {
+        problems.push(`label "${label}"`);
+      }
+
+      return problems.length === 0 ? [] : [`${declared}: ${problems.join("; ")}`];
+    });
+
+    return { count: ratings.length, mismatches };
+  }, scopeSelector);
+
+  expect(audit.mismatches, `Star rating mismatches in ${scopeSelector}`).toEqual([]);
+  expect(audit.count, `No star rating rendered in ${scopeSelector}`).toBeGreaterThan(0);
+}
+
+/**
+ * Proves the exceptional sixth slot resolves to the accepted dark-orange accent.
+ *
+ * A world is not guaranteed to contain a six-star player, so the assertion
+ * probes the loaded stylesheet with the real sixth-star markup instead of
+ * waiting for one to be generated.
+ */
+async function assertSixthStarAccentColor(page: Page): Promise<void> {
+  const color = await page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.className = "tls-player-rating-star";
+    probe.dataset.fill = "full";
+    probe.dataset.sixth = "true";
+    const fill = document.createElement("span");
+    fill.className = "tls-player-rating-star-fill";
+    probe.append(fill);
+    document.body.append(probe);
+    const resolved = getComputedStyle(fill).color;
+    probe.remove();
+    return resolved;
+  });
+
+  expect(color).toBe("rgb(195, 107, 44)");
 }
 
 /** Switches the running career to one supported language and settles a frame. */

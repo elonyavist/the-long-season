@@ -29,7 +29,7 @@ import {
 } from "@game/domain";
 import { test } from "vitest";
 
-import { openCareerInboxMessage } from "./career-inbox-lifecycle.ts";
+import { openCareerInboxMessage, acknowledgeImportantCareerInboxMessage } from "./career-inbox-lifecycle.ts";
 import { deriveContractDemand as deriveContractDemandWithPolicy } from "./contract-negotiation-demand.ts";
 import { submitPreliminaryAgreementOffer as submitPreliminaryAgreementOfferWithPolicy } from "./preliminary-agreement.ts";
 import {
@@ -243,6 +243,41 @@ test("a manager withdrawal stays informational and never stops Continue", () => 
   );
   assert.equal(message?.level, "informational");
   assert.equal(message?.lifecycle.resolved, true);
+});
+
+test("a rejected seller offer stops Continue once and allows advancement after acknowledgment", () => {
+  const state = careerFixture({});
+  const submitted = submit(state, 1);
+  const rejected = advanceSelectedClubWorkflowsToAttention({
+    careerState: submitted.careerState,
+    boundaryDate: gameDate(SUBMITTED_ON + 5),
+    transferWindows: windows(),
+  });
+
+  assert.equal(rejected.result.stopReason, "attention");
+  const rejectedMessageId = `inbox:market-club-rejected:${NEG_ID}`;
+  const message = rejected.careerState.currentSeasonInbox?.find(
+    (candidate) => String(candidate.id) === rejectedMessageId,
+  );
+  assert.equal(message?.category, "market_club_rejected");
+  assert.equal(message?.level, "important");
+  assert.equal(message?.continuePolicy, "until_acknowledged");
+  assert.equal(message?.lifecycle.acknowledged, false);
+
+  const opened = openCareerInboxMessage(rejected.careerState, message!.id);
+  const acknowledged = acknowledgeImportantCareerInboxMessage(opened, message!.id);
+  assert.equal(
+    acknowledged.currentSeasonInbox?.find((c) => String(c.id) === rejectedMessageId)?.lifecycle.acknowledged,
+    true,
+  );
+
+  const continued = advanceSelectedClubWorkflowsToAttention({
+    careerState: acknowledged,
+    boundaryDate: gameDate(SUBMITTED_ON + 5),
+    transferWindows: windows(),
+  });
+  assert.equal(continued.result.stopReason, "no_attention");
+  assert.equal(continued.result.stopDate, gameDate(SUBMITTED_ON + 5));
 });
 
 test("accepted player terms complete the transfer and stop Continue once, without duplicates", () => {

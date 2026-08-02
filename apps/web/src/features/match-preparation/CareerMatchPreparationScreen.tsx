@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import type React from "react";
 
 import type { MessageKey, Translator } from "@game/i18n";
-import { buildCareerInboxView, buildCareerShellView } from "@game/ui";
+import { buildCareerInboxView, buildCareerShellView,
+  type CareerShellSectionKey,
+} from "@game/ui";
 import type {
   CareerMatchPreparationBlockerKey,
   CareerMatchPreparationFormationId,
@@ -41,6 +43,7 @@ export type CareerMatchPreparationScreenProps = Readonly<{
   continueResult?: WebCareerContinueResult;
   text: Translator;
   onBackToMenu: () => void;
+  onNavigate: (sectionKey: CareerShellSectionKey) => void;
   onInboxActionClick: (actionId: string) => void;
   onFormationChange: (formationId: CareerMatchPreparationFormationId) => void;
   onLineupPlayerChange: (slotKey: string, playerId: string | undefined) => void;
@@ -77,6 +80,7 @@ export function CareerMatchPreparationScreen({
   continueResult,
   text,
   onBackToMenu,
+  onNavigate,
   onInboxActionClick,
   onFormationChange,
   onLineupPlayerChange,
@@ -166,6 +170,7 @@ export function CareerMatchPreparationScreen({
       currentDateIso={currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
+      onNavigate={onNavigate}
       onInboxActionClick={onInboxActionClick}
     >
       <section className="tls-shell-panel tls-preparation-panel" data-state={commandPending ? "pending" : "idle"} aria-labelledby="match-preparation-title" aria-busy={commandPending}>

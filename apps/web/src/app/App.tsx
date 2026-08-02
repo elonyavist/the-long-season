@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import type { CareerAutosaveIntervalDays, SaveMetadata } from "@game/storage";
 import { toISO } from "@game/shared";
-import type { CareerContractTermsInput } from "@game/ui";
+import type { CareerContractTermsInput, CareerShellSectionKey } from "@game/ui";
 import {
   selectAskingPriceCurves,
   selectPlayerValuationConfig,
@@ -384,27 +384,47 @@ export function App(): React.JSX.Element {
     performPreparationNavigation(intent);
   }, [performPreparationNavigation, preparationDraftDirty]);
 
+  /**
+   * Opens one career shell section.
+   *
+   * The switch is total over `CareerShellSectionKey`: a new section cannot be
+   * added to the shell without either routing it here or declaring it a
+   * future-phase placeholder, because the `never` guard fails typecheck.
+   * Sections that are not yet implemented are rendered as non-interactive by
+   * the read model, so this branch is unreachable in practice.
+   */
+  const handleShellNavigate = useCallback((sectionKey: CareerShellSectionKey) => {
+    switch (sectionKey) {
+      case "dashboard":
+        requestPreparationNavigation("career_dashboard");
+        return;
+      case "inbox":
+        requestPreparationNavigation("career_inbox");
+        return;
+      case "squad":
+        requestPreparationNavigation("career_squad");
+        return;
+      case "tactics":
+        requestPreparationNavigation("career_tactics");
+        return;
+      case "market":
+        requestPreparationNavigation("career_market");
+        return;
+      case "fixtures":
+      case "finances":
+      case "facilities":
+      case "youth":
+      case "staff":
+      case "archive":
+        return;
+      default: {
+        const unhandled: never = sectionKey;
+        throw new Error(`Unhandled career shell section: ${String(unhandled)}`);
+      }
+    }
+  }, [requestPreparationNavigation]);
+
   const handleShellNavigation = useCallback((actionId: string) => {
-    if (actionId === "open_inbox") {
-      requestPreparationNavigation("career_inbox");
-      return;
-    }
-    if (actionId === "open_dashboard") {
-      requestPreparationNavigation("career_dashboard");
-      return;
-    }
-    if (actionId === "open_squad") {
-      requestPreparationNavigation("career_squad");
-      return;
-    }
-    if (actionId === "open_tactics") {
-      requestPreparationNavigation("career_tactics");
-      return;
-    }
-    if (actionId === "open_market") {
-      requestPreparationNavigation("career_market");
-      return;
-    }
     if (actionId === "open_matchday") {
       requestPreparationNavigation("matchday");
       return;
@@ -870,6 +890,7 @@ export function App(): React.JSX.Element {
           onContinueCareer={continueLoadedCareer}
           onOpenMatchday={openPreparedMatchday}
           onOpenMatchPreparation={openMatchPreparation}
+          onNavigate={handleShellNavigate}
           onInboxActionClick={handleShellNavigation}
         />
       </CareerAppFrame>
@@ -901,7 +922,7 @@ export function App(): React.JSX.Element {
               })}
           text={text}
           onBackToMenu={requestBackToMenu}
-          onBackToDashboard={openDashboard}
+          onNavigate={handleShellNavigate}
           onContinueCareer={continueLoadedCareer}
           onFilterChange={setInboxFilter}
           onMessageSelect={selectInboxMessage}
@@ -927,6 +948,7 @@ export function App(): React.JSX.Element {
             && commandActivity.commandId === "contract_negotiation"}
           text={text}
           onBackToMenu={requestBackToMenu}
+          onNavigate={handleShellNavigate}
           onInboxActionClick={handleShellNavigation}
           onLineupPlayerChange={selectLineupPlayer}
           onBenchPlayerChange={selectBenchPlayer}
@@ -955,6 +977,7 @@ export function App(): React.JSX.Element {
           marketCommandPending={marketCommandPending}
           text={text}
           onBackToMenu={requestBackToMenu}
+          onNavigate={handleShellNavigate}
           onInboxActionClick={handleShellNavigation}
           previewOffer={previewSelectedClubMarketOffer}
           onMarketCommand={applySelectedClubMarketCommand}
@@ -983,6 +1006,7 @@ export function App(): React.JSX.Element {
           {...(continueResult === undefined ? {} : { continueResult })}
           text={text}
           onBackToMenu={requestBackToMenu}
+          onNavigate={handleShellNavigate}
           onInboxActionClick={handleShellNavigation}
           onFormationChange={selectFormation}
           onLineupPlayerChange={selectLineupPlayer}
@@ -1016,6 +1040,7 @@ export function App(): React.JSX.Element {
           text={text}
           onBackToMenu={requestBackToMenu}
           onBackToDashboard={finishMatchday}
+          onNavigate={handleShellNavigate}
           onInboxActionClick={handleShellNavigation}
           onPrepareMatch={openMatchPreparation}
           onStartFirstHalf={startFirstHalf}
@@ -1058,6 +1083,7 @@ export function App(): React.JSX.Element {
           {...(continueResult === undefined ? {} : { continueResult })}
           text={text}
           onBackToMenu={requestBackToMenu}
+          onNavigate={handleShellNavigate}
           onInboxActionClick={handleShellNavigation}
           onFormationChange={selectFormation}
           onLineupPlayerChange={selectLineupPlayer}

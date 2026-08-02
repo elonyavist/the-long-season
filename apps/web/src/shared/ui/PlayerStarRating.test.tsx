@@ -49,4 +49,39 @@ describe("PlayerStarRating", () => {
     expect(fullMarkup).toContain('data-rating="6"');
     expect(fullMarkup).toContain('data-fill="full" data-sixth="true"');
   });
+
+  // The generated world decides which ratings a screen actually shows, so the
+  // browser suite can only assert that rendered glyphs agree with their own
+  // `data-rating`. The complete per-value table is owned here instead.
+  it.each([
+    [1, ["full", "empty", "empty", "empty", "empty"]],
+    [1.5, ["full", "half", "empty", "empty", "empty"]],
+    [2, ["full", "full", "empty", "empty", "empty"]],
+    [2.5, ["full", "full", "half", "empty", "empty"]],
+    [3, ["full", "full", "full", "empty", "empty"]],
+    [3.5, ["full", "full", "full", "half", "empty"]],
+    [4, ["full", "full", "full", "full", "empty"]],
+    [4.5, ["full", "full", "full", "full", "half"]],
+    [5, ["full", "full", "full", "full", "full"]],
+    [5.5, ["full", "full", "full", "full", "full", "half"]],
+    [6, ["full", "full", "full", "full", "full", "full"]],
+  ] as const)("renders %s as its exact glyph sequence", (stars, expectedFills) => {
+    const markup = renderToStaticMarkup(
+      React.createElement(PlayerStarRating, {
+        rating: { stars },
+        label: "Current level",
+        text: createWebTranslator("en"),
+      }),
+    );
+
+    const fills = [...markup.matchAll(/data-fill="(empty|half|full)"/g)].map((match) => match[1]);
+    const sixthSlots = [...markup.matchAll(/data-sixth="true"/g)];
+
+    expect(fills).toEqual([...expectedFills]);
+    expect(sixthSlots).toHaveLength(stars > 5 ? 1 : 0);
+    expect(markup).toContain(`data-rating="${Number.isInteger(stars) ? stars : stars.toFixed(1)}"`);
+    expect(markup).toContain(
+      `aria-label="Current level: ${Number.isInteger(stars) ? stars : stars.toFixed(1)} out of 6 stars"`,
+    );
+  });
 });

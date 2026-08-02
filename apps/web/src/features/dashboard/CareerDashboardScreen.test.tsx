@@ -92,6 +92,7 @@ function renderDashboard(
       commandActivity={undefined}
       text={createWebTranslator("en")}
       onBackToMenu={() => undefined}
+      onNavigate={() => undefined}
       onContinueCareer={() => undefined}
       onOpenMatchday={() => undefined}
       onOpenMatchPreparation={() => undefined}

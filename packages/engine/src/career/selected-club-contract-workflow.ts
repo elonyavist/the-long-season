@@ -363,7 +363,20 @@ function mergeMessages(
 ): readonly CareerInboxMessage[] {
   const byId = new Map<CareerInboxMessageId, CareerInboxMessage>();
   for (const messages of collections) {
-    for (const message of messages) byId.set(message.id, message);
+    for (const message of messages) {
+      const existing = byId.get(message.id);
+      if (existing === undefined) {
+        byId.set(message.id, message);
+      } else {
+        byId.set(
+          message.id,
+          createCareerInboxMessage({
+            ...message,
+            lifecycle: existing.lifecycle,
+          }),
+        );
+      }
+    }
   }
   return [...byId.values()].sort(compareMessages);
 }

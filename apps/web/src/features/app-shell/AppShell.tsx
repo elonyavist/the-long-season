@@ -1,5 +1,9 @@
 import type { MessageKey, Translator } from "@game/i18n";
-import type { CareerShellNavigationItemView, CareerShellView } from "@game/ui";
+import type {
+  CareerShellNavigationItemView,
+  CareerShellSectionKey,
+  CareerShellView,
+} from "@game/ui";
 import * as m from "motion/react-m";
 import {
   createContext,
@@ -61,27 +65,45 @@ export type AppShellProps = Readonly<{
   currentDateIso: string;
   text: Translator;
   onBackToMenu: () => void;
+  /**
+   * Opens another career section.
+   *
+   * Navigation is its own typed command: the section key is a domain union, so
+   * adding a shell section without handling it fails typecheck instead of
+   * rendering an enabled control that silently does nothing.
+   */
+  onNavigate?: (sectionKey: CareerShellSectionKey) => void;
+  /** Resolves one Inbox/Posta message action. Never used for navigation. */
   onInboxActionClick?: (actionId: string) => void;
   children: ReactNode;
 }>;
 
 type SidebarItem = Readonly<{
-  key: string;
+  key: CareerShellSectionKey;
   labelKey: MessageKey;
   disabledReasonKey?: MessageKey;
   isCurrent: boolean;
   isInteractive: boolean;
 }>;
 
-const SIDEBAR_ORDER: readonly Readonly<{ key: string; labelKey: MessageKey }>[] = [
+/**
+ * Renderer order for the shell sections.
+ *
+ * Keys are canonical `CareerShellSectionKey` values, so this list cannot drift
+ * from the read model that decides which sections exist.
+ */
+const SIDEBAR_ORDER: readonly Readonly<{
+  key: CareerShellSectionKey;
+  labelKey: MessageKey;
+}>[] = [
   { key: "dashboard", labelKey: "career.shell.nav.dashboard" },
   { key: "inbox", labelKey: "career.shell.nav.inbox" },
   { key: "squad", labelKey: "career.shell.nav.squad" },
   { key: "tactics", labelKey: "career.shell.nav.tactics" },
-  { key: "calendar", labelKey: "career.shell.nav.calendar" },
   { key: "fixtures", labelKey: "career.shell.nav.fixtures" },
   { key: "market", labelKey: "career.shell.nav.market" },
   { key: "finances", labelKey: "career.shell.nav.finances" },
+  { key: "facilities", labelKey: "career.shell.nav.facilities" },
   { key: "youth", labelKey: "career.shell.nav.youth" },
   { key: "staff", labelKey: "career.shell.nav.staff" },
   { key: "archive", labelKey: "career.shell.nav.archive" },
@@ -100,6 +122,7 @@ export function AppShell({
   currentDateIso,
   text,
   onBackToMenu,
+  onNavigate,
   onInboxActionClick,
   children,
 }: AppShellProps): React.JSX.Element {
@@ -115,9 +138,11 @@ export function AppShell({
   const visibleDateIso = calendarAdvanceTransition?.visibleDateIso ?? currentDateIso;
 
   const handleCompactNavigation = (event: ChangeEvent<HTMLSelectElement>): void => {
-    const sectionKey = event.currentTarget.value;
-    if (sectionKey === shellView.activeSectionKey) return;
-    onInboxActionClick?.(`open_${sectionKey}`);
+    const sectionKey = sidebarItems.find(
+      (item) => item.key === event.currentTarget.value,
+    )?.key;
+    if (sectionKey === undefined || sectionKey === shellView.activeSectionKey) return;
+    onNavigate?.(sectionKey);
   };
 
   const handleSkipToContent = (event: ReactMouseEvent<HTMLAnchorElement>): void => {
@@ -171,7 +196,7 @@ export function AppShell({
               item={item}
               key={item.key}
               text={text}
-              onActivate={() => onInboxActionClick?.(`open_${item.key}`)}
+              onActivate={() => onNavigate?.(item.key)}
             />
           ))}
         </nav>
@@ -202,9 +227,9 @@ export function AppShell({
             <AppShellPostaRail
               inboxView={inboxView}
               text={text}
-              {...(onInboxActionClick === undefined
+              {...(onNavigate === undefined
                 ? {}
-                : { onOpen: () => onInboxActionClick("open_inbox") })}
+                : { onOpen: () => onNavigate("inbox") })}
             />
           </div>
         ) : null}

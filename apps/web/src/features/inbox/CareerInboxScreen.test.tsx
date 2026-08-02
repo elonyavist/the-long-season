@@ -24,7 +24,7 @@ describe("CareerInboxScreen", () => {
         railView={presentation.railView}
         text={createWebTranslator("en")}
         onBackToMenu={() => undefined}
-        onBackToDashboard={() => undefined}
+        onNavigate={() => undefined}
         onContinueCareer={() => undefined}
         onFilterChange={() => undefined}
         onMessageSelect={() => undefined}
@@ -62,7 +62,7 @@ describe("CareerInboxScreen", () => {
         }}
         text={createWebTranslator("en")}
         onBackToMenu={() => undefined}
-        onBackToDashboard={() => undefined}
+        onNavigate={() => undefined}
         onContinueCareer={() => undefined}
         onFilterChange={() => undefined}
         onMessageSelect={() => undefined}
@@ -94,7 +94,7 @@ describe("CareerInboxScreen", () => {
         arrivalMessageId={selectedMessageId}
         text={createWebTranslator("en")}
         onBackToMenu={() => undefined}
-        onBackToDashboard={() => undefined}
+        onNavigate={() => undefined}
         onContinueCareer={() => undefined}
         onFilterChange={() => undefined}
         onMessageSelect={() => undefined}
@@ -127,7 +127,7 @@ describe("CareerInboxScreen", () => {
         railView={presentation.railView}
         text={createWebTranslator("en")}
         onBackToMenu={() => undefined}
-        onBackToDashboard={() => undefined}
+        onNavigate={() => undefined}
         onContinueCareer={() => undefined}
         onFilterChange={() => undefined}
         onMessageSelect={() => undefined}

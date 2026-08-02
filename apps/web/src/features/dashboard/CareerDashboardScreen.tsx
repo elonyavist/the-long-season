@@ -1,5 +1,7 @@
 import type { MessageKey, Translator } from "@game/i18n";
-import { buildCareerInboxView, buildCareerShellView } from "@game/ui";
+import { buildCareerInboxView, buildCareerShellView,
+  type CareerShellSectionKey,
+} from "@game/ui";
 import type {
   CareerDashboardBlockerKey,
   CareerDashboardFixtureSide,
@@ -25,6 +27,7 @@ export type CareerDashboardScreenProps = Readonly<{
   onContinueCareer: () => void;
   onOpenMatchday: () => void;
   onOpenMatchPreparation: () => void;
+  onNavigate: (sectionKey: CareerShellSectionKey) => void;
   onInboxActionClick: (actionId: string) => void;
 }>;
 
@@ -37,6 +40,7 @@ export function CareerDashboardScreen({
   onContinueCareer,
   onOpenMatchday,
   onOpenMatchPreparation,
+  onNavigate,
   onInboxActionClick,
 }: CareerDashboardScreenProps): React.JSX.Element {
   const { view } = presentation;
@@ -70,6 +74,7 @@ export function CareerDashboardScreen({
       currentDateIso={view.context.currentDateIso}
       text={text}
       onBackToMenu={onBackToMenu}
+      onNavigate={onNavigate}
       onInboxActionClick={onInboxActionClick}
     >
       <section
