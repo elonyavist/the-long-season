@@ -4,6 +4,7 @@ import {
   type ClubId,
   type FixtureId,
   type MatchTacticsCalibrationConfig,
+  type TacticMentalityKey,
   type PlayerId,
   type TacticalRoute,
   type TacticalShapeCapacity,
@@ -80,6 +81,8 @@ export interface MatchExplanationTacticSnapshot {
   readonly width: number;
   /** Attacking risk tendency. */
   readonly risk: number;
+  /** Commitment ladder step chosen for this match. */
+  readonly mentality: TacticMentalityKey;
 }
 
 /**
@@ -303,6 +306,7 @@ function createTeamSnapshot(side: MatchSide, context: MatchContext): MatchExplan
       pressing: team.tacticalDistribution.pressing,
       width: team.tacticalDistribution.width,
       risk: team.tacticalDistribution.risk,
+      mentality: team.tacticalDistribution.mentality,
     },
     lineup: {
       slots: team.lineup.map((slot) => ({

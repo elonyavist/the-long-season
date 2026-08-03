@@ -4,6 +4,8 @@ import {
   CANONICAL_PLAYER_ROLES,
   MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
   POSITION_SUITABILITIES,
+  TACTIC_KNOBS,
+  TACTIC_MENTALITIES,
   TACTICAL_SHAPE_TASKS,
   validateMatchTacticsCalibration,
   type MatchTacticsCalibrationConfig,
@@ -69,12 +71,34 @@ const tacticalMatchupSchema = v.strictObject({
   pressingContestWeightBasisPoints: basisPoints,
 });
 
+const knobMagnitudesSchema = v.strictObject(
+  Object.fromEntries(TACTIC_KNOBS.map((knob) => [knob, basisPoints])) as Record<
+    (typeof TACTIC_KNOBS)[number],
+    typeof basisPoints
+  >,
+);
+
+const tacticalSemanticsSchema = v.strictObject({
+  routeAffinityBasisPointsByKnob: knobMagnitudesSchema,
+  volumeBasisPointsByKnob: knobMagnitudesSchema,
+  exposureBasisPointsByKnob: knobMagnitudesSchema,
+  commitmentBasisPointsByMentality: v.strictObject(
+    Object.fromEntries(TACTIC_MENTALITIES.map((mentality) => [mentality, positiveInteger])) as Record<
+      (typeof TACTIC_MENTALITIES)[number],
+      typeof positiveInteger
+    >,
+  ),
+  scoreStateCommitmentBasisPoints: basisPoints,
+  shapeControlShareBasisPoints: basisPoints,
+});
+
 const matchTacticsCalibrationSchema = v.strictObject({
   schemaVersion: v.literal(MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION),
   version: nonEmptyString,
   classification: v.literal("explicit_game_design_target"),
   tacticalShape: tacticalShapeSchema,
   tacticalMatchup: tacticalMatchupSchema,
+  tacticalSemantics: tacticalSemanticsSchema,
 });
 
 /**

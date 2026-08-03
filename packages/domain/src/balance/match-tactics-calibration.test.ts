@@ -17,6 +17,9 @@ import {
   TACTICAL_SHAPE_MAXIMUM_CONTRIBUTORS,
   TACTICAL_SHAPE_TASK_KIND,
   TACTICAL_SHAPE_TASKS,
+  TACTIC_KNOB_EXPOSED_ROUTE,
+  TACTIC_KNOB_FAVOURED_ROUTES,
+  TACTIC_KNOBS,
   validateMatchTacticsCalibration,
   type MatchTacticsCalibrationConfig,
   type MatchTacticsCalibrationErrorCode,
@@ -25,6 +28,7 @@ import {
   type TacticalShapeCapacity,
   type TacticalShapeCalibrationConfig,
   type TacticalShapeTask,
+  type TacticalSemanticsCalibrationConfig,
 } from "./match-tactics-calibration.ts";
 
 /**
@@ -315,6 +319,30 @@ function validCalibration(): MatchTacticsCalibrationConfig {
     classification: "explicit_game_design_target",
     tacticalShape: validShape(),
     tacticalMatchup: { chainBottleneckWeightBasisPoints: 6_500, pressingContestWeightBasisPoints: 5_000 },
+    tacticalSemantics: validSemantics(),
+  };
+}
+
+function withSemantics(
+  overrides: Partial<TacticalSemanticsCalibrationConfig>,
+): MatchTacticsCalibrationConfig {
+  return { ...validCalibration(), tacticalSemantics: { ...validSemantics(), ...overrides } };
+}
+
+function validSemantics(): TacticalSemanticsCalibrationConfig {
+  return {
+    routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_000, width: 3_500, risk: 0 },
+    volumeBasisPointsByKnob: { directness: 1_200, pressing: 800, width: 600, risk: 2_000 },
+    exposureBasisPointsByKnob: { directness: 1_500, pressing: 2_000, width: 1_200, risk: 2_500 },
+    commitmentBasisPointsByMentality: {
+      very_defensive: 8_400,
+      defensive: 9_200,
+      balanced: 10_000,
+      attacking: 10_900,
+      very_attacking: 11_900,
+    },
+    scoreStateCommitmentBasisPoints: 600,
+    shapeControlShareBasisPoints: 5_000,
   };
 }
 
@@ -349,3 +377,95 @@ function taskReferences(): Readonly<Record<TacticalShapeTask, number>> {
 function decreasingLadder(): number[] {
   return Array.from({ length: TACTICAL_SHAPE_MAXIMUM_CONTRIBUTORS }, (_, rank) => 10_000 - rank * 800);
 }
+
+/**
+ * The tactic-semantics rules that carry football rather than bounds.
+ *
+ * The two that matter are the ones a reviewer would otherwise have to notice by
+ * eye: a knob whose numbers disagree with the routes it is declared to be
+ * about, and a knob that costs nothing.
+ */
+
+test("a knob that favours routes must price that preference", () => {
+  assertRejects(
+    withSemantics({
+      routeAffinityBasisPointsByKnob: { directness: 0, pressing: 2_000, width: 3_500, risk: 0 },
+    }),
+    "invalid_route_affinity",
+  );
+});
+
+test("a knob that favours no route may not price a preference either", () => {
+  assertRejects(
+    withSemantics({
+      routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_000, width: 3_500, risk: 500 },
+    }),
+    "invalid_route_affinity",
+  );
+});
+
+test("no tactic input may be a free bonus", () => {
+  for (const knob of TACTIC_KNOBS) {
+    assertRejects(
+      withSemantics({
+        exposureBasisPointsByKnob: { ...validSemantics().exposureBasisPointsByKnob, [knob]: 0 },
+      }),
+      "knob_without_a_cost",
+    );
+  }
+});
+
+test("every knob is declared to hand the opponent exactly one route", () => {
+  for (const knob of TACTIC_KNOBS) {
+    assert.equal(
+      TACTICAL_ROUTES.includes(TACTIC_KNOB_EXPOSED_ROUTE[knob]),
+      true,
+      `${knob} exposes an unknown route`,
+    );
+  }
+});
+
+test("a knob never favours the route it exposes, or its cost would be its benefit", () => {
+  for (const knob of TACTIC_KNOBS) {
+    const favoured: readonly TacticalRoute[] = TACTIC_KNOB_FAVOURED_ROUTES[knob];
+    assert.equal(
+      favoured.includes(TACTIC_KNOB_EXPOSED_ROUTE[knob]),
+      false,
+      `${knob} both favours and exposes ${TACTIC_KNOB_EXPOSED_ROUTE[knob]}`,
+    );
+  }
+});
+
+test("the commitment ladder is strictly increasing along the mentality order", () => {
+  assertRejects(
+    withSemantics({
+      commitmentBasisPointsByMentality: {
+        very_defensive: 8_400,
+        defensive: 9_200,
+        balanced: 10_000,
+        attacking: 9_900,
+        very_attacking: 11_900,
+      },
+    }),
+    "invalid_commitment_ladder",
+  );
+});
+
+test("committing to neither is the neutral reference, never a bonus", () => {
+  assertRejects(
+    withSemantics({
+      commitmentBasisPointsByMentality: {
+        very_defensive: 8_400,
+        defensive: 9_200,
+        balanced: 10_400,
+        attacking: 10_900,
+        very_attacking: 11_900,
+      },
+    }),
+    "invalid_commitment_ladder",
+  );
+});
+
+test("shape must decide some of possession control", () => {
+  assertRejects(withSemantics({ shapeControlShareBasisPoints: 0 }), "invalid_shape_control_share");
+});

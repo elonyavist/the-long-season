@@ -1,16 +1,25 @@
-import type {
-  FixtureId,
-  FoulMatchEvent,
-  InjuryMatchEvent,
-  MatchEventSide,
-  PlayerId,
-  ShotChanceType,
-  ShotType,
-  SubstitutionMatchEvent,
+import {
+  TACTICAL_ROUTES,
+  type FixtureId,
+  type FoulMatchEvent,
+  type InjuryMatchEvent,
+  type MatchEventSide,
+  type PlayerId,
+  type ShotChanceType,
+  type ShotType,
+  type SubstitutionMatchEvent,
+  type TacticalRoute,
 } from "@game/domain";
 import { deriveRng, type Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
+import {
+  deriveOpportunityRoutePlan,
+  EVEN_CONTEST_ROUTE_CAPACITY,
+  OPPORTUNITY_ROUTE_CHANCE_TYPE,
+  selectOpportunityRoute,
+  type OpportunityRoutePlan,
+} from "./opportunity-route.ts";
 import { selectChanceActors, type ChanceActors } from "./chance-actors.ts";
 import { progressOnPitchCondition } from "./match-condition.ts";
 import { accumulateControlUnits, deriveMatchMinuteControl } from "./match-control.ts";
@@ -195,6 +204,10 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
 
   const currentMinute = input.simulation.minute + 1;
   const processedSides = deriveProcessingOrder(input.rng);
+  const routePlans = {
+    home: routePlanFor(input.simulation, "home"),
+    away: routePlanFor(input.simulation, "away"),
+  } as const;
   const events: MatchStepEvent[] = [];
   let nextScore = input.simulation.score;
   let nextStats = input.simulation.stats;
@@ -215,14 +228,26 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     if (
       !shouldGenerateOpportunity(
         input.simulation,
-        attackingSide,
-        defendingSide,
+        routePlans[attackingSide],
         minuteControl.chanceCreationMultiplier[attackingSide],
         input.rng,
       )
     ) {
       continue;
     }
+
+    const route = selectOpportunityRoute(
+      routePlans[attackingSide],
+      deriveRng(
+        input.simulation.context.seed,
+        OPPORTUNITY_ROUTE_STREAM,
+        input.simulation.context.fixtureId,
+        currentMinute,
+        attackingSide,
+        input.simulation.score.home,
+        input.simulation.score.away,
+      ),
+    );
 
     const resolution = resolver.resolveOccasion(
       {
@@ -237,7 +262,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
     nextTelemetry = applyOccasionToTelemetry(nextTelemetry, attackingSide, resolution);
     const scoreBeforeGoal = nextScore;
-    const shotContext = deriveShotContext(input.simulation, currentMinute, attackingSide, resolution.quality);
+    const shotContext = deriveShotContext(route, resolution.quality);
     const chanceActors = selectChanceActors({
       seed: input.simulation.context.seed,
       fixtureId: input.simulation.context.fixtureId,
@@ -406,42 +431,70 @@ function deriveProcessingOrder(rng: Rng): readonly [MatchSide, MatchSide] {
 }
 
 /**
+ * Builds one side's route plan for the minute about to be simulated.
+ *
+ * Both plans are built once per minute, before either side is processed, so the
+ * randomized home/away processing order cannot change what either side intends
+ * to do. Order decides who resolves first, never who plans against what.
+ */
+function routePlanFor(simulation: MatchSimulationState, side: MatchSide): OpportunityRoutePlan {
+  const own = teamBySide(simulation, side);
+  const opponent = teamBySide(simulation, otherSide(side));
+
+  return deriveOpportunityRoutePlan({
+    own: own.shape,
+    opponent: opponent.shape,
+    ownTactics: own.tacticalDistribution,
+    opponentTactics: opponent.tacticalDistribution,
+    caps: simulation.context.engineConfig.tacticalDistributionCaps,
+    calibration: simulation.context.matchTacticsCalibration,
+    goalDifference: goalDifferenceFor(simulation.score, side),
+  });
+}
+
+/** Goals scored minus goals conceded, from one side's point of view. */
+function goalDifferenceFor(score: MatchScore, side: MatchSide): number {
+  return side === "home" ? score.home - score.away : score.away - score.home;
+}
+
+/**
  * Decides whether a side generates one opportunity this minute.
  */
 function shouldGenerateOpportunity(
   simulation: MatchSimulationState,
-  attackingSide: MatchSide,
-  defendingSide: MatchSide,
+  plan: OpportunityRoutePlan,
   controlMultiplier: number,
   rng: Rng,
 ): boolean {
-  const rate = deriveOpportunityRate(simulation, attackingSide, defendingSide, controlMultiplier);
-  return rng.nextFloat() < rate;
+  return rng.nextFloat() < deriveOpportunityRate(simulation, plan, controlMultiplier);
 }
 
 /**
- * Derives a bounded per-minute Bernoulli opportunity rate from team strengths.
+ * Derives a bounded per-minute opportunity rate from the side's route plan.
+ *
+ * Volume used to come from a strength difference, which is why two elevens of
+ * equal players produced the same match whatever shape they took. It now comes
+ * from what the shapes can actually do to each other: `bestRouteCapacity` is
+ * the side's most promising way through, and the plan's own multiplier carries
+ * the tactic and commitment decisions.
+ *
+ * Player quality has not stopped mattering - it is inside every capacity,
+ * because capacities are built from per-slot quality - it has stopped being the
+ * *only* thing that matters.
  */
 function deriveOpportunityRate(
   simulation: MatchSimulationState,
-  attackingSide: MatchSide,
-  defendingSide: MatchSide,
+  plan: OpportunityRoutePlan,
   controlMultiplier: number,
 ): number {
-  const attackingTeam = teamBySide(simulation, attackingSide);
-  const defendingTeam = teamBySide(simulation, defendingSide);
-  const homeFactor = attackingSide === "home" ? simulation.context.engineConfig.homeAdvantageFactor : 1;
-  const attackingPressure = (attackingTeam.strength.attack * 0.65 + attackingTeam.strength.midfield * 0.35) * homeFactor;
-  const defensiveResistance = defendingTeam.strength.defense * 0.65 + defendingTeam.strength.midfield * 0.25 + defendingTeam.strength.goalkeeper * 0.1;
-  const strengthModifier = clamp(
-    (attackingPressure - defensiveResistance) / OPPORTUNITY_STRENGTH_SEPARATION_DIVISOR,
-    -0.6,
-    1.5,
+  const rates = simulation.context.engineConfig.rates;
+  const bestRouteCapacity = Math.max(
+    ...TACTICAL_ROUTES.map((route) => plan.capacityByRoute[route]),
   );
-  const baseRate = simulation.context.engineConfig.rates.baseOpportunityRatePerMinute;
-  const rate = baseRate * (1 + strengthModifier) * controlMultiplier;
+  const routePressure = 1 + (bestRouteCapacity - EVEN_CONTEST_ROUTE_CAPACITY) * ROUTE_CAPACITY_SEPARATION;
+  const rate = rates.baseOpportunityRatePerMinute * routePressure * plan.volumeMultiplier * controlMultiplier;
 
-  return clamp(rate, 0, simulation.context.engineConfig.rates.maxOpportunityRatePerMinute);
+  return clamp(rate, 0, rates.maxOpportunityRatePerMinute);
 }
 
 /** Adds one shot's causal facts to live telemetry exactly once. */
@@ -476,14 +529,18 @@ function applyOccasionToTelemetry(
 }
 
 /**
- * Converts aggregate team-strength delta into chance-volume separation.
+ * How hard route capacity moves chance volume.
  *
- * Lower-division player ratings sit in a compact range, so using a very large
- * divisor makes strong and weak teams generate nearly the same number of
- * chances. This value increases result separation without touching configured
- * shot-to-goal conversion probabilities.
+ * Owned here rather than in content because it is the unit conversion between
+ * a bounded share and a per-minute rate, not a football judgement. What the
+ * shapes do to each other is content's; how a share becomes a rate is the
+ * engine's.
  */
-const OPPORTUNITY_STRENGTH_SEPARATION_DIVISOR = 16;
+const ROUTE_CAPACITY_SEPARATION = 1.6;
+
+/** Stable RNG stream for choosing which route a side takes this minute. */
+const OPPORTUNITY_ROUTE_STREAM = "opportunity-route";
+
 const PENALTY_EXPECTED_GOALS = 0.76;
 
 /**
@@ -743,43 +800,23 @@ function assistProbabilityForShot(shotType: ShotType, chanceType: ShotChanceType
 }
 
 /**
- * Derives stable structured shot context from existing aggregate match inputs.
+ * Derives structured shot context from the route the chance actually came down.
+ *
+ * The chance type is now a fact about the attack rather than an inference from
+ * a minute number: a cross happened because the ball went down a flank. Only
+ * the execution type still reads quality, because whether a cross is met with a
+ * head depends on how good the delivery was.
  */
 function deriveShotContext(
-  simulation: MatchSimulationState,
-  minute: number,
-  side: MatchSide,
+  route: TacticalRoute,
   quality: number,
 ): { readonly shotType: ShotType; readonly chanceType: ShotChanceType } {
-  const chanceType = deriveChanceType(simulation, minute, side, quality);
+  const chanceType = OPPORTUNITY_ROUTE_CHANCE_TYPE[route];
 
   return {
     shotType: deriveShotType(chanceType, quality),
     chanceType,
   };
-}
-
-/**
- * Derives a stable chance type from existing aggregate match inputs.
- */
-function deriveChanceType(
-  simulation: MatchSimulationState,
-  minute: number,
-  side: MatchSide,
-  quality: number,
-): ShotChanceType {
-  const team = teamBySide(simulation, side);
-  const texture = deterministicShotTexture(minute, side, quality);
-
-  if (team.tacticalDistribution.width > 0.25 && texture % 3 === 0) {
-    return "cross";
-  }
-
-  if ((team.tacticalDistribution.directness > 0.35 || team.tacticalDistribution.risk > 0.35) && texture % 2 === 0) {
-    return "counter";
-  }
-
-  return "open_play";
 }
 
 /**
@@ -791,14 +828,6 @@ function deriveShotType(chanceType: ShotChanceType, quality: number): ShotType {
   }
 
   return "normal";
-}
-
-/**
- * Produces deterministic non-RNG texture for event context labels.
- */
-function deterministicShotTexture(minute: number, side: MatchSide, quality: number): number {
-  const sideOffset = side === "home" ? 7 : 13;
-  return (minute * 31 + Math.floor(quality * 1_000) + sideOffset) % 6;
 }
 
 /**

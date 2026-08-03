@@ -219,6 +219,15 @@ export {
 } from "./tactical-matchup.ts";
 
 export {
+  deriveOpportunityRoutePlan,
+  OPPORTUNITY_ROUTE_CHANCE_TYPE,
+  OpportunityRouteError,
+  selectOpportunityRoute,
+  type DeriveOpportunityRoutePlanInput,
+  type OpportunityRouteErrorCode,
+  type OpportunityRoutePlan,
+} from "./opportunity-route.ts";
+export {
   buildTacticTeamContext,
   createMatchPlayerIncidentProfile,
   deriveTeamShapeAndStrength,

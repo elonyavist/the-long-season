@@ -70,6 +70,7 @@ export function createFakeTeamsByClubId(
         pressing: 0.5,
         width: 0.5,
         risk: 0.5,
+        mentality: "balanced",
       },
     };
   }
@@ -128,6 +129,7 @@ function createCareerTeamsByClubId(
         pressing: 0.5,
         width: 0.5,
         risk: 0.5,
+        mentality: "balanced",
       },
     };
   }

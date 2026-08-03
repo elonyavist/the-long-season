@@ -208,6 +208,7 @@ function validTeam(side: "home" | "away"): MatchTeamContext {
       pressing: 0,
       width: 0,
       risk: 0,
+      mentality: "balanced",
     },
   };
 }

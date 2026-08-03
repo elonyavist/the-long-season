@@ -1,4 +1,11 @@
-import { abilityValue, gameDate, type Player, type PlayerAbilities, type PlayerId } from "@game/domain";
+import {
+  abilityValue,
+  gameDate,
+  NEUTRAL_TACTIC_MENTALITY,
+  type Player,
+  type PlayerAbilities,
+  type PlayerId,
+} from "@game/domain";
 import { createLineupSlot, type RoleWeightProfile, type SimulateSeasonTeamInput } from "@game/engine";
 
 /**
@@ -58,6 +65,7 @@ export function seasonTeamInputFixture(clubSlug: string, rating: number): Simula
       pressing: 0.5,
       width: 0.5,
       risk: 0.5,
+      mentality: NEUTRAL_TACTIC_MENTALITY,
     },
   };
 }

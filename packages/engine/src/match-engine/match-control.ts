@@ -50,6 +50,19 @@ export function accumulateControlUnits(
   };
 }
 
+/**
+ * How much of the ball one side earns this minute.
+ *
+ * Two things decide it and the split between them is content's: the midfield
+ * department's raw quality, and what the *shape* can do on the ball. Reading
+ * only the department was the defect - a side with eleven midfielders who
+ * cannot connect kept the ball as well as a side built to keep it, and a side
+ * with an empty midfield department was the engine's only way to say "this
+ * connection is broken".
+ *
+ * The shape term is contested by the opponent's press, so possession is a
+ * contest rather than two independent readings compared afterwards.
+ */
 function controlWeight(
   simulation: MatchSimulationState,
   telemetry: MatchSimulationTelemetry,
@@ -71,13 +84,35 @@ function controlWeight(
 
   return Math.max(
     0.01,
-    team.strength.midfield *
+    onTheBallQuality(simulation, side) *
       tacticalControl *
       scorePressure *
       homeFactor *
       clamp(lineupRatio, 0.65, 1.35) *
       clamp(condition / Math.max(1, opponentCondition), 0.8, 1.2),
   );
+}
+
+/**
+ * Blends department strength with what the shape does on the ball.
+ *
+ * The shape term is expressed on the department scale before blending, so the
+ * two halves are commensurable and the configured share means what it says: at
+ * `5000` basis points, exactly half of who keeps the ball is structure.
+ */
+function onTheBallQuality(simulation: MatchSimulationState, side: MatchSide): number {
+  const team = teamFor(simulation, side);
+  const opponent = teamFor(simulation, oppositeSide(side));
+  const shapeShare =
+    simulation.context.matchTacticsCalibration.tacticalSemantics.shapeControlShareBasisPoints / 10_000;
+
+  const press = team.shape.capacities.pressing_cohesion
+    * (0.5 + normalizedTactic(simulation, side, "pressing"));
+  const onTheBall = (team.shape.capacities.build_up + team.shape.capacities.central_progression + press) / 3;
+  const contested = onTheBall * (1 - shapeShare * opponent.shape.capacities.pressing_cohesion);
+  const shapeOnDepartmentScale = contested / NEUTRAL_SHAPE_CAPACITY;
+
+  return team.strength.midfield * ((1 - shapeShare) + shapeShare * shapeOnDepartmentScale);
 }
 
 function chanceCreationMultiplier(possessionShare: number, team: MatchTeamContext): number {
@@ -128,3 +163,12 @@ function clamp(value: number, min: number, max: number): number {
 
 const MIN_POSSESSION_SHARE = 0.18;
 const MAX_POSSESSION_SHARE = 0.82;
+
+/**
+ * Capacity an ordinary balanced eleven of ordinary players reaches.
+ *
+ * Dividing by it turns a bounded capacity into a multiplier around `1`, so a
+ * coherent shape neither inflates nor deflates the department scale it is
+ * blended with. Shipped calibrations put a reference `4-4-2` near this value.
+ */
+const NEUTRAL_SHAPE_CAPACITY = 0.5;

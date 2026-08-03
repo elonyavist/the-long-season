@@ -194,5 +194,6 @@ function tacticalDistributionFixture(): MatchTeamContext["tacticalDistribution"]
     pressing: 0,
     width: 0,
     risk: 0,
+    mentality: "balanced",
   };
 }

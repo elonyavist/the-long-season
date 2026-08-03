@@ -9,9 +9,11 @@ import {
   type CanonicalPlayerRole,
   type MatchTacticsCalibrationConfig,
   type Player,
+  type TacticMentalityKey,
   type PlayerAbilities,
   type PlayerId,
   type ShotChanceType,
+  NEUTRAL_TACTIC_MENTALITY,
 } from "@game/domain";
 import {
   createLineupSlot,
@@ -134,6 +136,14 @@ export interface TacticalShapeTacticProfile {
   readonly width: number;
   /** Risk knob, inside the engine config caps. */
   readonly risk: number;
+  /**
+   * Commitment ladder step shared by both sides of a scenario.
+   *
+   * Every frozen scenario holds it at the neutral step. The audit isolates
+   * shape from tactics, and a scenario whose two sides committed differently
+   * would be measuring commitment instead.
+   */
+  readonly mentality: TacticMentalityKey;
 }
 
 /** The neutral tactic used wherever a scenario isolates shape from tactics. */
@@ -143,6 +153,7 @@ export const TACTICAL_SHAPE_NEUTRAL_TACTIC: TacticalShapeTacticProfile = {
   pressing: 0.5,
   width: 0.5,
   risk: 0.5,
+  mentality: NEUTRAL_TACTIC_MENTALITY,
 };
 
 /** One complete side of a scenario: what shape, at what quality, with what tactic. */
@@ -375,6 +386,7 @@ export function buildTacticalShapeTeamContext(
       pressing: side.tactic.pressing,
       width: side.tactic.width,
       risk: side.tactic.risk,
+      mentality: side.tactic.mentality,
     },
     incidentProfiles: slots.map((slot) => createMatchPlayerIncidentProfile(players[slot.playerId] as Player)),
   };
@@ -1168,11 +1180,11 @@ const TACTICAL_SHAPE_EQUIVALENCE_PAIRS: readonly (readonly [
  */
 const TACTICAL_SHAPE_TACTIC_PROFILES: readonly TacticalShapeTacticProfile[] = [
   TACTICAL_SHAPE_NEUTRAL_TACTIC,
-  { tacticKey: "high_pressing", directness: 0.5, pressing: 0.95, width: 0.5, risk: 0.5 },
-  { tacticKey: "direct_play", directness: 0.95, pressing: 0.5, width: 0.5, risk: 0.5 },
-  { tacticKey: "flank_overload", directness: 0.5, pressing: 0.5, width: 0.95, risk: 0.5 },
-  { tacticKey: "high_risk", directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.95 },
-  { tacticKey: "low_block", directness: 0.05, pressing: 0.05, width: 0.05, risk: 0.05 },
+  { tacticKey: "high_pressing", directness: 0.5, pressing: 0.95, width: 0.5, risk: 0.5, mentality: NEUTRAL_TACTIC_MENTALITY },
+  { tacticKey: "direct_play", directness: 0.95, pressing: 0.5, width: 0.5, risk: 0.5, mentality: NEUTRAL_TACTIC_MENTALITY },
+  { tacticKey: "flank_overload", directness: 0.5, pressing: 0.5, width: 0.95, risk: 0.5, mentality: NEUTRAL_TACTIC_MENTALITY },
+  { tacticKey: "high_risk", directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.95, mentality: NEUTRAL_TACTIC_MENTALITY },
+  { tacticKey: "low_block", directness: 0.05, pressing: 0.05, width: 0.05, risk: 0.05, mentality: NEUTRAL_TACTIC_MENTALITY },
 ];
 
 interface TacticalShapeQualityScenario {

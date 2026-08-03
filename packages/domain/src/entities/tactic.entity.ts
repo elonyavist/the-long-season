@@ -16,6 +16,24 @@ export type TacticMentalityKey =
   | "very_attacking";
 
 /**
+ * The five mentalities from most protective to most committed.
+ *
+ * The order is meaningful, not alphabetical: anything that ranks, interpolates,
+ * or validates a mentality ladder walks this array rather than restating which
+ * step outranks which. `balanced` sits in the middle and is the neutral one.
+ */
+export const TACTIC_MENTALITIES = [
+  "very_defensive",
+  "defensive",
+  "balanced",
+  "attacking",
+  "very_attacking",
+] as const satisfies readonly TacticMentalityKey[];
+
+/** The mentality that commits to neither attack nor protection. */
+export const NEUTRAL_TACTIC_MENTALITY: TacticMentalityKey = "balanced";
+
+/**
  * Numeric tactic knob on the MVP 0-1 scale.
  *
  * `0` means the least intense version of the instruction, `1` means the most
@@ -197,13 +215,7 @@ export function createTacticSetup(input: TacticSetup): TacticSetup {
  * Checks whether an unknown value is a supported tactic mentality key.
  */
 export function isTacticMentalityKey(value: unknown): value is TacticMentalityKey {
-  return (
-    value === "very_defensive" ||
-    value === "defensive" ||
-    value === "balanced" ||
-    value === "attacking" ||
-    value === "very_attacking"
-  );
+  return TACTIC_MENTALITIES.some((mentality) => mentality === value);
 }
 
 /**

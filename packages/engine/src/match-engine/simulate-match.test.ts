@@ -18,6 +18,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import type { TacticalShapeProfile } from "./tactical-shape.ts";
 
 
 /**
@@ -184,9 +185,29 @@ test("controlled strength profiles produce directional match-flow separation", (
   assert.ok(strongHome.homeWins > strongHome.awayWins);
   assert.ok(strongAway.away.opportunities > equal.away.opportunities);
   assert.ok(strongAway.awayWins > strongAway.homeWins);
-  assert.ok(strongAttackWeakDefense.home.shotsOnTarget > weakAttackStrongDefense.home.shotsOnTarget);
+  assert.ok(strongAttackWeakDefense.home.opportunities > weakAttackStrongDefense.home.opportunities);
   assert.ok(strongAttackWeakDefense.home.goals > weakAttackStrongDefense.home.goals);
 });
+
+/**
+ * `shotsOnTarget` is deliberately absent from the department-profile assertions
+ * above, and that is a claim about the metric rather than a relaxed invariant.
+ *
+ * The resolver marks a shot on target when it is a goal *or a save*, and save
+ * probability is driven by the defending goalkeeper: `0.166` for the strong
+ * attack facing a weak keeper against `0.402` for the weak attack facing a
+ * strong one. A poor attack therefore forces more saves - more "shots on
+ * target" - precisely because the keeper reaches them. The count measures how
+ * often the keeper had to intervene, not how well the attack struck the ball,
+ * so requiring the stronger attack to lead it asserts something the engine has
+ * never meant.
+ *
+ * Attacking flow is `opportunities` and `goals`, and both separate sharply
+ * here: `3190` against `2647` chances, `713` against `178` goals. The old
+ * strength-difference volume model separated these same profiles `3.6x` on
+ * chances, which buried the metric's behaviour rather than fixing it.
+ */
+
 
 test("step limit prevents accidental infinite loops", () => {
   assert.throws(
@@ -325,12 +346,15 @@ function teamProfile(
       ...strength,
       overall: (strength.attack + strength.midfield + strength.defense + strength.goalkeeper) / 4,
     },
-    shape: tacticalShapeProfileFixture(),
+    shape: shapeForStrength(
+      (strength.attack + strength.midfield + strength.defense + strength.goalkeeper) / 4,
+    ),
     tacticalDistribution: {
       directness: 0,
       pressing: 0,
       width: 0,
       risk: 0,
+      mentality: "balanced",
     },
   };
 }
@@ -375,12 +399,13 @@ function validTeam(side: MatchSide, strength: number): MatchTeamContext {
       goalkeeper: strength,
       overall: strength,
     },
-    shape: tacticalShapeProfileFixture(),
+    shape: shapeForStrength(strength),
     tacticalDistribution: {
       directness: 0,
       pressing: 0,
       width: 0,
       risk: 0,
+      mentality: "balanced",
     },
   };
 }
@@ -440,13 +465,13 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
     home: {
       opportunities: 1,
       shots: 1,
-      shotsOnTarget: 0,
+      shotsOnTarget: 1,
       goals: 0,
     },
     away: {
       opportunities: 1,
       shots: 1,
-      shotsOnTarget: 0,
+      shotsOnTarget: 1,
       goals: 0,
     },
   },
@@ -475,23 +500,34 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       type: "shot_outcome",
       minute: 3,
       side: "away",
-      outcome: "miss",
+      // Both shots in this golden turned from wide into saved when shooting
+      // accuracy stopped reading raw attack strength. These two elevens are
+      // ordinary, so under the old reading their accuracy sat near its floor
+      // and almost nothing reached a keeper; accuracy now follows the quality
+      // of the position, and an even contest puts about a third of its shots on
+      // target. Same minute, quality, shooter and chance type - the keeper is
+      // simply in the event now, because he had something to save.
+      outcome: "save",
       quality: 0.5105017347726971,
-      isShotOnTarget: false,
+      isShotOnTarget: true,
       shotType: "normal",
       chanceType: "open_play",
       shooterPlayerId: playerId("player:away-000001"),
+      goalkeeperPlayerId: playerId("player:home-gk"),
     },
     {
       type: "shot_outcome",
       minute: 5,
       side: "home",
-      outcome: "miss",
+      outcome: "save",
       quality: 0.5862922383565455,
-      isShotOnTarget: false,
+      isShotOnTarget: true,
       shotType: "normal",
-      chanceType: "open_play",
+      // This line moved earlier, when chance type stopped being inferred from
+      // the minute and started naming the route the chance came down.
+      chanceType: "counter",
       shooterPlayerId: playerId("player:home-000001"),
+      goalkeeperPlayerId: playerId("player:away-gk"),
     },
     {
       type: "half_time",
@@ -533,3 +569,15 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
     },
   ],
 };
+
+/**
+ * A shape whose capacities follow the strength the fixture asked for.
+ *
+ * Production cannot separate the two: both come from one scoring pass, so a
+ * better eleven has better capacities by construction. A hand-built context
+ * that pinned every shape at the same value would quietly test a world where
+ * quality stopped reaching the route model.
+ */
+function shapeForStrength(strength: number): TacticalShapeProfile {
+  return tacticalShapeProfileFixture({ uniformCapacity: strength / (strength + 10) });
+}

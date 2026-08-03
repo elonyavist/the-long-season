@@ -138,11 +138,10 @@ export class TacticTeamContextError extends Error {
 /**
  * Builds one current engine `MatchTeamContext` from selected lineup and tactic data.
  *
- * The builder performs only interpretation needed by the existing match engine:
- * selected slots become ordered `LineupSlot` values, four tactic knobs become
- * `MatchTacticalDistributionInput`, and strength is derived with existing
- * role-weight logic. The domain `mentality` key is validated but intentionally
- * has no separate engine effect in this MVP.
+ * The builder performs only interpretation needed by the match engine: selected
+ * slots become ordered `LineupSlot` values, all five tactic inputs become
+ * `MatchTacticalDistributionInput`, and quality is derived with existing
+ * role-weight logic.
  *
  * Slots are scored exactly once. Department strength and intrinsic tactical
  * shape are two readings of the same per-slot quality, so deriving that quality
@@ -247,10 +246,11 @@ export function createMatchPlayerIncidentProfile(
 }
 
 /**
- * Converts the MVP tactic setup into current match tactical distribution inputs.
+ * Converts the tactic setup into match tactical distribution inputs.
  *
- * `mentality` is intentionally not mapped here. It remains validated setup data
- * for a later explicit step.
+ * All five inputs cross this seam. `mentality` keeps its own key rather than
+ * being folded into the four numeric knobs, because it is a ladder the engine
+ * reads against score and minute state.
  */
 export function tacticToMatchDistribution(tactic: TacticSetup): MatchTacticalDistributionInput {
   const validTactic = createTacticSetupOrThrow(tactic);
@@ -260,6 +260,7 @@ export function tacticToMatchDistribution(tactic: TacticSetup): MatchTacticalDis
     pressing: validTactic.pressing,
     width: validTactic.width,
     risk: validTactic.risk,
+    mentality: validTactic.mentality,
   };
 }
 

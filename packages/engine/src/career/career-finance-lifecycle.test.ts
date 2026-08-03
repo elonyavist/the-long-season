@@ -800,7 +800,7 @@ function teamContext(club: ClubId, player: PlayerId, canonicalRole: CanonicalPla
     lineup: [createLineupSlot({ slotId: `slot:${club}`, playerId: player, canonicalRole })],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape: tacticalShapeProfileFixture(),
-    tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 },
+    tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
   };
 }
 

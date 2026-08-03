@@ -1,9 +1,11 @@
 import {
   fixtureId,
+  isTacticMentalityKey,
   type ClubId,
   type FixtureId,
   type MatchTacticsCalibrationConfig,
   type PlayerId,
+  type TacticMentalityKey,
 } from "@game/domain";
 import type { RngKeyPart } from "@game/shared";
 
@@ -40,6 +42,14 @@ export interface MatchTacticalDistributionInput {
   readonly width: number;
   /** Attacking risk tendency. */
   readonly risk: number;
+  /**
+   * Commitment between presence and protection.
+   *
+   * A five-step ladder rather than a dial, and the only tactic input that reads
+   * score and minute state, so it is carried as its own key instead of being
+   * flattened onto the `0..1` scale the four knobs share.
+   */
+  readonly mentality: TacticMentalityKey;
 }
 
 /** Player attributes consumed by deterministic discipline and injury policies. */
@@ -335,6 +345,13 @@ function assertTacticalDistributionWithinCaps(
   assertKnobWithinCap(tactical.pressing, config.tacticalDistributionCaps.pressing, side, "pressing");
   assertKnobWithinCap(tactical.width, config.tacticalDistributionCaps.width, side, "width");
   assertKnobWithinCap(tactical.risk, config.tacticalDistributionCaps.risk, side, "risk");
+
+  if (!isTacticMentalityKey(tactical.mentality)) {
+    throw new MatchContextError(
+      "invalid_tactical_distribution",
+      `${side}.mentality must be a supported mentality: ${String(tactical.mentality)}`,
+    );
+  }
 }
 
 /**

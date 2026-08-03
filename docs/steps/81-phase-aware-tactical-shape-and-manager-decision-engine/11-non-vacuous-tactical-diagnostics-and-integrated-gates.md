@@ -59,6 +59,14 @@ without weakening thresholds or starting the longitudinal cohort.
   not widen the band, do not reclassify the monitor's severity, and do not
   transfer it to a third owner: it has already been carried once, and carrying
   it again would make the transfer a way of never fixing it.
+- Step 06 has already acted on it, so expect a different starting point than
+  Phase 80A's. On `pnpm cli ten-season-report` it moved `3.08` warn, to `2.97`
+  pass once a knob offset stopped inflating every match, to `2.98` pass after
+  the shot chain was reordered around the keeper, with `table_points_spread_avg`
+  at `41.0` and the whole anomaly score green. Nothing about any band,
+  denominator or severity changed. That is the ten-season report and not this
+  step's population, so it is evidence that the owner acted, never a substitute
+  for measuring it here.
 - If a cleanup is truly outside scope, document its exact file/owner/reason and
   block phase completion when it threatens correctness or duplication.
 - Do not accept “used only by tests” as proof that a production compatibility

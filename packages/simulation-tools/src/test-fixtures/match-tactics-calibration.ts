@@ -45,6 +45,20 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       chainBottleneckWeightBasisPoints: 6_500,
       pressingContestWeightBasisPoints: 5_000,
     },
+    tacticalSemantics: {
+      routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
+      volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
+      exposureBasisPointsByKnob: { directness: 1_600, pressing: 1_900, width: 1_300, risk: 2_200 },
+      commitmentBasisPointsByMentality: {
+        very_defensive: 8_600,
+        defensive: 9_300,
+        balanced: 10_000,
+        attacking: 10_800,
+        very_attacking: 11_700,
+      },
+      scoreStateCommitmentBasisPoints: 550,
+      shapeControlShareBasisPoints: 5_500,
+    },
   };
 }
 

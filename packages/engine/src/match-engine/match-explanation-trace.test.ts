@@ -126,7 +126,7 @@ function traceTeam(side: "home" | "away", shape: TacticalShapeProfile): MatchTea
     ],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape,
-    tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0 },
+    tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0, mentality: "balanced" },
   };
 }
 
@@ -201,6 +201,7 @@ function sampleTrace(): MatchExplanationTrace {
         pressing: 0.4,
         width: 0.3,
         risk: 0.2,
+        mentality: "balanced",
       },
       lineup: {
         slots: [{ slotId: "slot:01", playerId: playerId("player:home-000001"), canonicalRole: "striker" }],
@@ -227,6 +228,7 @@ function sampleTrace(): MatchExplanationTrace {
         pressing: 0.3,
         width: 0.4,
         risk: 0.5,
+        mentality: "balanced",
       },
       lineup: {
         slots: [{ slotId: "slot:01", playerId: playerId("player:away-000001"), canonicalRole: "goalkeeper" }],

@@ -179,7 +179,11 @@ describe("tactical shape paired series", () => {
 
     expect(series.matches).toBe(6);
     expect(series.firstWins + series.draws + series.secondWins).toBe(6);
-    expect(series.firstWinShare).toBeCloseTo((series.firstWins + series.draws / 2) / 6, 9);
+    // The report rounds this share to four decimals, so it can only equal the
+    // exact quotient when the quotient happens to land on four decimals - five
+    // of the thirteen results a six-match series can produce. Asserting to nine
+    // places was asserting which of those thirteen came out.
+    expect(series.firstWinShare).toBeCloseTo((series.firstWins + series.draws / 2) / 6, 3);
   });
 
   it("is reproducible for identical input", () => {
@@ -330,15 +334,23 @@ describe("tactical shape audit report", () => {
     }
   });
 
-  it("records the width and directness texture the current chance types come from", () => {
-    const wide = report.tacticProfiles.find((row) => row.tacticKey === "flank_overload");
-    const direct = report.tacticProfiles.find((row) => row.tacticKey === "direct_play");
-    const block = report.tacticProfiles.find((row) => row.tacticKey === "low_block");
-
-    expect(wide?.chanceTypes.cross).toBeGreaterThan(0);
-    expect(direct?.chanceTypes.counter).toBeGreaterThan(0);
-    expect(block?.chanceTypes.cross).toBe(0);
-    expect(block?.chanceTypes.counter).toBe(0);
+  it("leaves no chance type structurally impossible for a tactic", () => {
+    // This replaces an assertion that a low block produced exactly zero crosses
+    // and zero counters. That was true of the texture inference it recorded:
+    // chance type was read from width and directness against thresholds, so a
+    // side below them could never be credited with those chances at all.
+    //
+    // Chance type now names the route a chance came down, and routes are a
+    // weighted draw, so a deep block breaking down one flank is possible - it
+    // is simply rarer. Each profile plays too few matches here for the counts
+    // to rank profiles against each other; `opportunity-route.test.ts` owns
+    // that claim at model level, where it is not a sampling question. What this
+    // report can state is that no tactic is locked out of a chance type.
+    for (const row of report.tacticProfiles) {
+      expect(row.chanceTypes.cross).toBeGreaterThan(0);
+      expect(row.chanceTypes.counter).toBeGreaterThan(0);
+      expect(row.chanceTypes.open_play).toBeGreaterThan(0);
+    }
   });
 
   it("never reports the un-implemented shape distinction as a pass", () => {

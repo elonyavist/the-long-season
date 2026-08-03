@@ -39,17 +39,20 @@ measurement noise floor. Shape and tactics are decoration until Step 06.
 | 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
 | 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
 | 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
-| 06 - phase-aware control, opportunity routes, tactic semantics | In progress: block 1 of 3 done 2026-08-03, all gates green |
+| 06 - phase-aware control, opportunity routes, tactic semantics | In progress: blocks 1, 2 and 2b done 2026-08-03, all gates green |
 | 07-12 | Not started |
 
 ## Current Active Step
 
 - Step:
   `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md`
-- Next action: Step 06, block 2. Block 1 made the intrinsic shape and the
-  versioned calibration required everywhere and is green. Block 2 builds the
-  route model and the five tactic semantics; block 3 tunes against the frozen
-  bands. The step document holds the block table and what block 1 corrected.
+- Next action: Step 06, block 3. Block 1 made the intrinsic shape and the
+  versioned calibration required everywhere. Block 2 built the route model and
+  the five tactic semantics. Block 2b, which was not planned, reordered the shot
+  chain so each actor answers one question and the keeper decides goals against
+  saves rather than how many shots reach him. Block 3 calibrates against the
+  frozen bands. The step document holds the block table and what each block
+  found against the code.
 
 ## Live Constraints
 
@@ -85,6 +88,15 @@ Step 06 is the first step able to move it, because it owns how many
 opportunities exist and how they convert. Step 11 is the deadline. Step 12
 confirms it at cohort scale. It may not be carried a third time: if Step 11
 finds it still out of band, the fix is reopening Step 06.
+
+Step 06 moved it on `pnpm cli ten-season-report`: `3.08` warn, to `2.97` pass
+once a knob offset stopped inflating every match, to `2.98` pass after the shot
+chain was reordered so the keeper decides goals against saves instead of how
+many shots reach him. `table_points_spread_avg` came with it at `41.0` and the
+whole anomaly score is green. No threshold, denominator or severity was touched.
+
+That is the ten-season report and not the `750`-world distribution above, so the
+carried gate stands until block 3 measures it at that scale.
 
 ### Frozen Tactical Baseline (Step 01)
 

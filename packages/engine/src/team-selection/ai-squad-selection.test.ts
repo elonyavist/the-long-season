@@ -198,6 +198,7 @@ test("buildAiSquadMatchTeamContext derives strength from the selected AI lineup"
       pressing: 0.5,
       width: 0.5,
       risk: 0.5,
+      mentality: "balanced",
     },
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
   });

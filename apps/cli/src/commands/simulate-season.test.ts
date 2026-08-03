@@ -518,20 +518,25 @@ test("same seed and round produce same fixture detail output", async () => {
 });
 
 test("simulate-season can print one fixture's structured match detail", async () => {
+  // This fixture is chosen for containing one of every event line the detail
+  // view formats - a goal with an assist, a save, a blocked shot - because that
+  // is what the assertions below read. Which fixture happens to hold all four
+  // moves whenever the engine changes, so treat it as the sample that exercises
+  // the formatter and not as a result worth preserving.
   const io = captureIo();
-  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000002"], io);
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000004"], io);
 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines[0], "The Long Season fixture detail");
   assert.equal(io.stdoutLines.includes("Seed: demo-001"), true);
-  assert.equal(io.stdoutLines.includes("Fixture: fixture:demo-third-division:demo-001:000002"), true);
+  assert.equal(io.stdoutLines.includes("Fixture: fixture:demo-third-division:demo-001:000004"), true);
   assert.equal(io.stdoutLines.includes("Competition: Demo Third Division"), true);
   assert.equal(io.stdoutLines.includes("Final table:"), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top scorer: ")), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top assist: ")), false);
   assert.equal(io.stdoutLines.some((line) => line.startsWith("Top goalkeeper saves: ")), false);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:demo-third-division:demo-001:000002 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^fixture:demo-third-division:demo-001:000004 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("Events:"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(` GOAL ${CLUB_NAME_PATTERN} ${PERSON_NAME_PATTERN}.* shot=[a-z ]+ chance=[a-z ]+$`).test(line)), true);
   assert.equal(
@@ -758,8 +763,10 @@ test("same seed and manual tactic switch produce same fixture detail output", as
 });
 
 test("simulate-season fixture detail prints durable causal defender context for blocks", async () => {
+  // Same reasoning as the detail test above: this fixture is here because it
+  // contains a blocked shot to format, not because of how it finished.
   const io = captureIo();
-  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000001"], io);
+  const exitCode = await runSimulateSeasonCommand(["--seed=demo-001", "--fixture=fixture:demo-third-division:demo-001:000004"], io);
 
   assert.equal(exitCode, 0);
   assert.equal(io.stderrLines.length, 0);

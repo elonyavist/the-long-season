@@ -14,6 +14,49 @@ before aggregate quality and outcome are resolved.
 The manager should see events that follow from the selected players and route,
 not names attached after the engine has already decided the result.
 
+## Inherited From Step 06 - The Shot Chain Is Already Reordered
+
+Step 06 rebuilt `aggregate-occasion-resolver.ts`, which this step then makes
+consume the occasion context. Build on the chain that is there rather than the
+one the original plan assumed, and do not collapse it back.
+
+Each actor is asked exactly one question, in pitch order:
+
+1. **Blocked?** defence against attack.
+2. **On target?** the striker and the position he is shooting from. **The
+   keeper has no input here.** Whether a shot hits the target belongs to
+   whoever struck it.
+3. **Goal or save?** only now the keeper, deciding which side of the line a
+   shot already on target ends up.
+
+The version before it asked the keeper both how good the chance was - he carried
+`0.40` of the defending score - and how often shots were on target, since every
+save counts as on target. A world-class keeper therefore *raised* his opponent's
+shots on target while leaving goals unchanged, because two keepers nine points
+apart landed in one conversion band. A poor striker out-shot a great one and
+scored just as often. Measured after the fix, keeper quality moves goals into
+saves without touching the shot count:
+
+| striker 19, only the keeper changes | on target | goals | saves |
+|---|---|---|---|
+| keeper `19` | `44.4%` | `14.6%` | `29.7%` |
+| keeper `14` | `44.4%` | `18.0%` | `26.4%` |
+| keeper `10` | `44.4%` | `20.3%` | `24.1%` |
+
+Two constraints this step must preserve when the context arrives:
+
+- **A goal is a shot on target and a block never is.** `isShotOnTarget` is not
+  free to drift from the outcome.
+- **A keeper always saves some share of what reaches him.**
+  `MAX_GOAL_SHARE_OF_ON_TARGET` exists because a goal is one kind of shot on
+  target, so without a ceiling a large enough mismatch makes every shot on
+  target a goal and the keeper stops existing. It binds in `0.6%` of matchups;
+  median keeper save share is `61%`.
+
+`aggregate-occasion-resolver.test.ts` states all of this and must keep passing
+once actors are named. Named actors replace *who* is credited, never *whether*
+the chain asks each question once.
+
 ## What To Implement
 
 - Add one typed `OccasionContext` containing route, attacking/defending side,

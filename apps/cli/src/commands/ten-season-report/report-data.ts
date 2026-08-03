@@ -4080,6 +4080,7 @@ function createCompetitionCareerSeasonInput(
         pressing: 0.5,
         width: 0.5,
         risk: 0.5,
+        mentality: "balanced",
       },
       aiSelection: {
         formation: FORMATION_CATALOG["4-4-2"],

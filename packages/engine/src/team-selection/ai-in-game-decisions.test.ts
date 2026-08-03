@@ -566,6 +566,7 @@ function matchTeamContextFromLiveTeam(team: LiveMatchTeamState): MatchTeamContex
       pressing: team.tactic.pressing,
       width: team.tactic.width,
       risk: team.tactic.risk,
+      mentality: "balanced",
     },
   };
 }

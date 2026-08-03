@@ -2,7 +2,7 @@ import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, fixtureId, playerId } from "@game/domain";
+import { clubId, fixtureId, playerId, type ShotChanceType } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import type { MatchEngineConfig } from "./match-engine-config.ts";
@@ -20,6 +20,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import type { TacticalShapeProfile } from "./tactical-shape.ts";
 
 
 /**
@@ -168,8 +169,8 @@ test("lower-possession teams can still win through deterministic conversion", ()
       fixtureValue: `fixture:counter-sample-${String(index).padStart(6, "0")}`,
       homeStrength: 10,
       awayStrength: 10,
-      homeTacticalDistribution: { directness: -1, pressing: 1, width: 0.5, risk: 0.5 },
-      awayTacticalDistribution: { directness: 1, pressing: -1, width: 0, risk: 0 },
+      homeTacticalDistribution: { directness: -1, pressing: 1, width: 0.5, risk: 0.5, mentality: "balanced" },
+      awayTacticalDistribution: { directness: 1, pressing: -1, width: 0, risk: 0, mentality: "balanced" },
     }));
     const simulation = runSteps(context, 90);
     const telemetry = telemetryFor(simulation);
@@ -250,39 +251,50 @@ test("goal step events include a scorer from the scoring side lineup", () => {
   }
 });
 
-test("shot step events include deterministic structured shot context", () => {
+test("shot step events are deterministic for one seed", () => {
   const context = {
     ...validContext({
       baseOpportunityRatePerMinute: 1,
       maxOpportunityRatePerMinute: 1,
     }),
-    home: goalkeeperTeam("home", { directness: 0, pressing: 0, width: 1, risk: 0 }),
-    away: goalkeeperTeam("away", { directness: 1, pressing: 0, width: 0, risk: 1 }),
+    home: goalkeeperTeam("home", { directness: 0, pressing: 0, width: 1, risk: 0, mentality: "balanced" }),
+    away: goalkeeperTeam("away", { directness: 1, pressing: 0, width: 0, risk: 1, mentality: "balanced" }),
   };
+  const resolution = { outcome: "save", quality: 0.802, isShotOnTarget: true } as const;
+
   const first = stepMatch({
     simulation: createInitialMatchSimulationState(context),
     rng: rngFor(context),
-    occasionResolver: fixedResolver({ outcome: "save", quality: 0.802, isShotOnTarget: true }),
+    occasionResolver: fixedResolver(resolution),
   });
   const second = stepMatch({
     simulation: createInitialMatchSimulationState(context),
     rng: rngFor(context),
-    occasionResolver: fixedResolver({ outcome: "save", quality: 0.802, isShotOnTarget: true }),
+    occasionResolver: fixedResolver(resolution),
   });
-  const firstShotEvents = first.events.filter((event) => event.type === "shot_outcome");
-  const secondShotEvents = second.events.filter((event) => event.type === "shot_outcome");
 
-  assert.deepEqual(firstShotEvents, secondShotEvents);
-  assert.deepEqual(
-    firstShotEvents.map((event) => ({
-      side: event.side,
-      shotType: event.shotType,
-      chanceType: event.chanceType,
-    })),
-    [
-      { side: "home", shotType: "header", chanceType: "cross" },
-      { side: "away", shotType: "normal", chanceType: "counter" },
-    ],
+  const shots = first.events.filter((event) => event.type === "shot_outcome");
+  assert.deepEqual(shots, second.events.filter((event) => event.type === "shot_outcome"));
+  assert.equal(shots.length > 0, true, "the test needs at least one shot to be asserting anything");
+});
+
+test("the chance type a shot carries is decided by the route it came down", () => {
+  // Route choice is a draw against the plan's weights, so one minute proves
+  // nothing: a wide side can still be handed a counter. What must hold is that
+  // moving the knobs that own a route moves that route's chance type across
+  // many minutes. Asserting a single draw would pin the RNG, not the model.
+  const crossing = chanceTypeCounts({ directness: 0, pressing: 0, width: 1, risk: 0, mentality: "balanced" });
+  const counterPressing = chanceTypeCounts({ directness: 0, pressing: 1, width: 0, risk: 0, mentality: "balanced" });
+
+  assert.equal(
+    (crossing.cross ?? 0) > (counterPressing.cross ?? 0),
+    true,
+    "the side told to use the flanks must produce more crosses",
+  );
+  assert.equal(
+    (counterPressing.counter ?? 0) > (crossing.counter ?? 0),
+    true,
+    "the side told to press must produce more counters",
   );
 });
 
@@ -351,7 +363,13 @@ test("save step events fail clearly when the defending team has no goalkeeper", 
   );
 });
 
-test("goal step events can include deterministic assist attribution", () => {
+test("goal step events carry deterministic assist attribution", () => {
+  // Which team-mate is credited belongs to `chance-actors`, and moves whenever
+  // chance type does - it is now a fact about the route the goal came down.
+  // What the minute loop owns is the wiring: every goal reaches the event with
+  // exactly one credited team-mate, never the scorer, and identically for one
+  // seed. Pinning the names here would re-test actor selection through an RNG
+  // chain and would break on every route change that is working as intended.
   const context = {
     ...validContext({
       fixtureValue: "fixture:assist-step-000001",
@@ -361,35 +379,24 @@ test("goal step events can include deterministic assist attribution", () => {
     home: assistTeam("home"),
     away: assistTeam("away"),
   };
-  const result = stepMatch({
-    simulation: createInitialMatchSimulationState(context),
-    rng: rngFor(context),
-    occasionResolver: fixedResolver({ outcome: "goal", quality: 0.802, isShotOnTarget: true }),
-  });
-  const goalEvents = result.events.filter((event) => event.type === "shot_outcome" && event.outcome === "goal");
+  const goalsFor = () =>
+    stepMatch({
+      simulation: createInitialMatchSimulationState(context),
+      rng: rngFor(context),
+      occasionResolver: fixedResolver({ outcome: "goal", quality: 0.802, isShotOnTarget: true }),
+    }).events.filter((event) => event.type === "shot_outcome" && event.outcome === "goal");
 
-  assert.deepEqual(
-    goalEvents.map((event) => ({
-      side: event.side,
-      scorerPlayerId: event.scorerPlayerId,
-      assistPlayerId: event.assistPlayerId,
-      creatorPlayerId: event.creatorPlayerId,
-    })),
-    [
-      {
-        side: "away",
-        scorerPlayerId: playerId("player:away-mid"),
-        assistPlayerId: playerId("player:away-att"),
-        creatorPlayerId: undefined,
-      },
-      {
-        side: "home",
-        scorerPlayerId: playerId("player:home-att"),
-        assistPlayerId: undefined,
-        creatorPlayerId: playerId("player:home-mid"),
-      },
-    ],
-  );
+  const goalEvents = goalsFor();
+
+  assert.deepEqual(goalEvents, goalsFor());
+  assert.equal(goalEvents.length > 0, true, "the test needs at least one goal to be asserting anything");
+
+  for (const goal of goalEvents) {
+    const credited = [goal.assistPlayerId, goal.creatorPlayerId].filter((id) => id !== undefined);
+
+    assert.equal(credited.length, 1, `${goal.side} goal credited ${credited.length} team-mates`);
+    assert.equal(credited[0] === goal.scorerPlayerId, false, "a goal may never be assisted by its own scorer");
+  }
 });
 
 test("goal assists remain optional and never equal the scorer", () => {
@@ -509,6 +516,45 @@ function rngFor(context: MatchContext) {
 }
 
 /**
+ * Counts the chance types one tactic produces for the home side.
+ *
+ * Each draw is an opening minute of a different fixture, which is the cheapest
+ * way to sample many independent route choices without threading simulation
+ * state through the test.
+ */
+function chanceTypeCounts(
+  homeTactics: MatchTeamContext["tacticalDistribution"],
+  draws = 300,
+): Partial<Record<ShotChanceType, number>> {
+  const counts: Partial<Record<ShotChanceType, number>> = {};
+
+  for (let draw = 0; draw < draws; draw += 1) {
+    const context = {
+      ...validContext({
+        fixtureValue: `fixture:${String(draw).padStart(6, "0")}`,
+        baseOpportunityRatePerMinute: 1,
+        maxOpportunityRatePerMinute: 1,
+      }),
+      home: goalkeeperTeam("home", homeTactics),
+      away: goalkeeperTeam("away"),
+    };
+    const result = stepMatch({
+      simulation: createInitialMatchSimulationState(context),
+      rng: rngFor(context),
+      occasionResolver: fixedResolver({ outcome: "save", quality: 0.802, isShotOnTarget: true }),
+    });
+
+    for (const event of result.events) {
+      if (event.type === "shot_outcome" && event.side === "home") {
+        counts[event.chanceType] = (counts[event.chanceType] ?? 0) + 1;
+      }
+    }
+  }
+
+  return counts;
+}
+
+/**
  * Builds a valid context with optional strength and timing overrides.
  */
 function validContext(
@@ -548,6 +594,7 @@ function validTeam(
     pressing: 0,
     width: 0,
     risk: 0,
+    mentality: "balanced",
   },
 ): MatchTeamContext {
   return {
@@ -560,7 +607,7 @@ function validTeam(
       goalkeeper: strength,
       overall: strength,
     },
-    shape: tacticalShapeProfileFixture(),
+    shape: shapeForStrength(strength),
     tacticalDistribution,
   };
 }
@@ -586,6 +633,7 @@ function goalkeeperTeam(
     pressing: 0,
     width: 0,
     risk: 0,
+    mentality: "balanced",
   },
   strength = 10,
 ): MatchTeamContext {
@@ -606,7 +654,7 @@ function goalkeeperTeam(
       goalkeeper: strength,
       overall: strength,
     },
-    shape: tacticalShapeProfileFixture(),
+    shape: shapeForStrength(strength),
     tacticalDistribution,
   };
 }
@@ -658,12 +706,13 @@ function assistTeam(side: MatchSide): MatchTeamContext {
       goalkeeper: 10,
       overall: 10,
     },
-    shape: tacticalShapeProfileFixture(),
+    shape: shapeForStrength(10),
     tacticalDistribution: {
       directness: 1,
       pressing: 0,
       width: 0,
       risk: 1,
+      mentality: "balanced",
     },
   };
 }
@@ -730,4 +779,16 @@ function fixedResolver(
       return completeResolution;
     },
   };
+}
+
+/**
+ * A shape whose capacities follow the strength the fixture asked for.
+ *
+ * Production cannot separate the two: both come from one scoring pass, so a
+ * better eleven has better capacities by construction. A hand-built context
+ * that pinned every shape at the same value would quietly test a world where
+ * quality stopped reaching the route model.
+ */
+function shapeForStrength(strength: number): TacticalShapeProfile {
+  return tacticalShapeProfileFixture({ uniformCapacity: strength / (strength + 10) });
 }

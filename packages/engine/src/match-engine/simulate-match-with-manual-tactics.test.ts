@@ -205,6 +205,7 @@ function validTeam(side: MatchSide, strength: number, risk: number): MatchTeamCo
       pressing: risk,
       width: risk,
       risk,
+      mentality: "balanced",
     },
   };
 }

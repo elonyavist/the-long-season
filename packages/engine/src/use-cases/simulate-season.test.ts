@@ -75,11 +75,23 @@ test("stable season seed produces a compact golden sentinel", () => {
   // This sentinel catches accidental engine drift without freezing every event
   // in a full season. Update it only with an intentional gameplay rationale.
   //
-  // Last moved when season team input started carrying the squad instead of a
-  // precomputed strength, which let the fixture fill all four departments. Every
-  // table row, score, and shot count survived that change untouched: only who
-  // scored moved, because there are now four candidate actors per side instead
-  // of two.
+  // Last moved when the shot chain was reordered so the keeper decides goals
+  // against saves rather than deciding how many shots reach him, and shooting
+  // accuracy started following the quality of the position instead of raw
+  // attack strength.
+  //
+  // Two artefacts left the table across this step and the one before it. A
+  // champion once went unbeaten conceding nothing across 34 matches, and the
+  // opening fixture once finished goalless without a single shot, both because
+  // near-equal strengths drove the old chance rate towards zero. Neither is
+  // reachable now.
+  //
+  // The season kept its shape while individual results moved. It takes 47
+  // points to win rather than 48, 28 still props up the table, and the round
+  // count, fixture count and opening fixture are untouched. The leading scorer
+  // is the same player on seven instead of eight: keepers now save a share of
+  // what reaches them in every division, so the same chances produce slightly
+  // fewer goals across a season rather than different chances.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -110,51 +122,51 @@ test("stable season seed produces a compact golden sentinel", () => {
       fixtureCount: 306,
       champion: {
         position: 1,
-        clubId: clubId("club:test-05"),
+        clubId: clubId("club:test-07"),
         played: 34,
         wins: 8,
-        draws: 26,
-        losses: 0,
-        goalsFor: 10,
-        goalsAgainst: 0,
-        goalDifference: 10,
-        points: 50,
+        draws: 23,
+        losses: 3,
+        goalsFor: 8,
+        goalsAgainst: 3,
+        goalDifference: 5,
+        points: 47,
       },
       runnerUp: {
         position: 2,
         clubId: clubId("club:test-01"),
         played: 34,
-        wins: 9,
-        draws: 22,
-        losses: 3,
-        goalsFor: 12,
-        goalsAgainst: 4,
-        goalDifference: 8,
-        points: 49,
+        wins: 7,
+        draws: 25,
+        losses: 2,
+        goalsFor: 9,
+        goalsAgainst: 3,
+        goalDifference: 6,
+        points: 46,
       },
       bottom: {
         position: 18,
-        clubId: clubId("club:test-16"),
+        clubId: clubId("club:test-12"),
         played: 34,
-        wins: 2,
-        draws: 22,
-        losses: 10,
-        goalsFor: 2,
-        goalsAgainst: 10,
+        wins: 0,
+        draws: 28,
+        losses: 6,
+        goalsFor: 3,
+        goalsAgainst: 11,
         goalDifference: -8,
         points: 28,
       },
       firstFixture: {
         id: fixtureId("fixture:test-league:2026:000001"),
-        homeGoals: 0,
+        homeGoals: 1,
         awayGoals: 0,
-        eventCount: 10,
-        homeShots: 0,
+        eventCount: 11,
+        homeShots: 1,
         awayShots: 0,
       },
       lastFixture: {
         id: fixtureId("fixture:test-league:2026:000306"),
-        homeGoals: 1,
+        homeGoals: 0,
         awayGoals: 0,
         eventCount: 7,
         homeShots: 1,
@@ -164,17 +176,17 @@ test("stable season seed produces a compact golden sentinel", () => {
         {
           playerId: playerId("player:test-03-02"),
           clubId: clubId("club:test-03"),
-          goals: 8,
+          goals: 7,
         },
         {
-          playerId: playerId("player:test-01-02"),
+          playerId: playerId("player:test-02-04"),
+          clubId: clubId("club:test-02"),
+          goals: 6,
+        },
+        {
+          playerId: playerId("player:test-01-03"),
           clubId: clubId("club:test-01"),
-          goals: 7,
-        },
-        {
-          playerId: playerId("player:test-11-02"),
-          clubId: clubId("club:test-11"),
-          goals: 7,
+          goals: 5,
         },
       ],
     },
@@ -901,6 +913,7 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
         pressing: 0.5,
         width: 0.5,
         risk: 0.5,
+        mentality: "balanced",
       },
     };
   }

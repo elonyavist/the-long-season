@@ -54,6 +54,7 @@ test("buildTacticTeamContext builds a deterministic match team context", () => {
     pressing: 0.7,
     width: 0.8,
     risk: 0.4,
+    mentality: "balanced",
   });
 });
 
@@ -155,17 +156,23 @@ test("buildTacticTeamContext maps team-strength failures to builder errors", () 
   );
 });
 
-test("tacticToMatchDistribution maps only existing match-context knobs", () => {
-  const assertive = tacticFixture({ mentality: "very_attacking" });
-  const cautious = tacticFixture({ mentality: "very_defensive" });
-
-  assert.deepEqual(tacticToMatchDistribution(assertive), tacticToMatchDistribution(cautious));
-  assert.deepEqual(tacticToMatchDistribution(assertive), {
+test("tacticToMatchDistribution carries every knob the match reads, mentality included", () => {
+  // Mentality used to be dropped at this seam, so two opposite team talks
+  // reached the engine as the same instruction. It is now a knob of its own:
+  // the four numbers cross unchanged, and the ladder crosses as itself rather
+  // than being folded into them.
+  assert.deepEqual(tacticToMatchDistribution(tacticFixture({ mentality: "very_attacking" })), {
     directness: 0.6,
     pressing: 0.7,
     width: 0.8,
     risk: 0.4,
+    mentality: "very_attacking",
   });
+
+  assert.notDeepEqual(
+    tacticToMatchDistribution(tacticFixture({ mentality: "very_attacking" })),
+    tacticToMatchDistribution(tacticFixture({ mentality: "very_defensive" })),
+  );
 });
 
 test("tacticToMatchDistribution rejects invalid tactic setup", () => {

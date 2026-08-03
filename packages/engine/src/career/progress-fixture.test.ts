@@ -128,9 +128,13 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
     assert.equal(result.fixtureAfter.result?.played, true);
     assert.equal(result.careerState.gameState.fixtures[selectedFixtureId]?.result?.played, true);
     assert.equal(result.careerState.playerParticipationLedger?.rowKeys.length, 4);
+    // This fixture used to finish level, which left a starter with no personal
+    // contribution untouched. It is now a win to nil, so the starter carries the
+    // result while the unused substitute below still carries nothing - which is
+    // the distinction these three rows exist to make.
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.fitness, 92);
-    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.form, 50);
-    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.morale, 50);
+    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.form, 52);
+    assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-01")]?.morale, 53);
     assert.notEqual(result.careerState.gameState.playerStates[playerId("player:selected-02")]?.form, 50);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.fitness, 100);
     assert.equal(result.careerState.gameState.playerStates[playerId("player:selected-03")]?.form, 50);
@@ -354,6 +358,22 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
   if (result.status === "advanced") {
     // This sentinel protects the manager-facing fixture progression contract
     // before future phases change season advancement orchestration.
+    //
+    // Last moved when the shot chain was reordered so the keeper decides goals
+    // against saves rather than deciding how many shots reach him.
+    //
+    // Two strength points used to separate this fixture `15` chances to `7` and
+    // still finish level. They now separate it `11` to `8`, and the stronger
+    // side converts that edge: five of its eleven chances reach the goal and
+    // four beat the keeper, while the weaker side works one shot on target all
+    // match. Dominating a game better than two to one and drawing it was never
+    // the believable reading, and the one save is the keeper existing - an
+    // earlier draft let every shot on target go in.
+    //
+    // Everything downstream of the scoreline followed rather than drifted. Both
+    // starters carry `result_win` and `team_clean_sheet`, the scorer carries
+    // `player_goal` on top, and the summary is their sum. Condition changes are
+    // untouched, because minutes played do not depend on the result.
     assert.deepEqual(
       {
         fixtureId: result.fixtureId,
@@ -374,28 +394,28 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
       {
         fixtureId: selectedFixtureId,
         score: {
-          home: 2,
-          away: 2,
+          home: 4,
+          away: 0,
         },
-        eventCount: 49,
+        eventCount: 46,
         stats: {
           home: {
-            opportunities: 15,
-            shots: 15,
-            shotsOnTarget: 6,
-            goals: 2,
+            opportunities: 11,
+            shots: 11,
+            shotsOnTarget: 5,
+            goals: 4,
           },
           away: {
-            opportunities: 7,
-            shots: 7,
-            shotsOnTarget: 2,
-            goals: 2,
+            opportunities: 8,
+            shots: 8,
+            shotsOnTarget: 1,
+            goals: 0,
           },
         },
         fixtureAfterResult: {
           played: true,
-          homeGoals: 2,
-          awayGoals: 2,
+          homeGoals: 4,
+          awayGoals: 0,
         },
         currentDate: gameDate(20_000),
         conditionChanges: [
@@ -423,6 +443,17 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
         ],
         playerStateConsequences: [
           {
+            playerId: playerId("player:selected-01"),
+            participantRole: "starter",
+            beforeForm: 50,
+            afterForm: 52,
+            formDelta: 2,
+            beforeMorale: 50,
+            afterMorale: 53,
+            moraleDelta: 3,
+            reasonKeys: ["result_win", "team_clean_sheet"],
+          },
+          {
             playerId: playerId("player:selected-02"),
             participantRole: "starter",
             beforeForm: 50,
@@ -431,13 +462,13 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
             beforeMorale: 50,
             afterMorale: 54,
             moraleDelta: 4,
-            reasonKeys: ["result_draw", "player_goal"],
+            reasonKeys: ["result_win", "team_clean_sheet", "player_goal"],
           },
         ],
         playerStateConsequenceSummary: {
-          changedPlayerCount: 1,
-          totalFormDelta: 5,
-          totalMoraleDelta: 4,
+          changedPlayerCount: 2,
+          totalFormDelta: 7,
+          totalMoraleDelta: 7,
         },
         monthlyLifecycle: [],
       },
@@ -629,6 +660,7 @@ test("progressNextCareerFixture can build the non-selected opponent context with
           pressing: 0.5,
           width: 0.5,
           risk: 0.5,
+          mentality: "balanced",
         },
         benchSize: 8,
       },
@@ -670,6 +702,7 @@ test("progressNextCareerFixture never auto-builds the selected club lineup", () 
           pressing: 0.5,
           width: 0.5,
           risk: 0.5,
+          mentality: "balanced",
         },
       },
     },
@@ -911,6 +944,7 @@ function teamContextFixture(clubIdValue: ClubId, strength: number): MatchTeamCon
       pressing: 0.5,
       width: 0.5,
       risk: 0.5,
+      mentality: "balanced",
     },
   };
 }

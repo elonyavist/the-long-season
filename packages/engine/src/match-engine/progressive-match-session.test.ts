@@ -180,6 +180,7 @@ function validTeam(side: MatchSide, strength: number, risk: number, fieldPlayer?
       pressing: risk,
       width: risk,
       risk,
+      mentality: "balanced",
     },
   };
 }

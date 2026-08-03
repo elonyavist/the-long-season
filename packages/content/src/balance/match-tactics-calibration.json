@@ -149,7 +149,19 @@
         "rest_defence": 500
       }
     },
-    "marginalContributionBasisPointsByRank": [10000, 7000, 5000, 3600, 2600, 1900, 1400, 1000, 700, 500, 350],
+    "marginalContributionBasisPointsByRank": [
+      10000,
+      7000,
+      5000,
+      3600,
+      2600,
+      1900,
+      1400,
+      1000,
+      700,
+      500,
+      350
+    ],
     "channelPolicy": {
       "halfChannelOwnShareBasisPoints": 7500
     },
@@ -175,5 +187,34 @@
   "tacticalMatchup": {
     "chainBottleneckWeightBasisPoints": 6500,
     "pressingContestWeightBasisPoints": 5000
+  },
+  "tacticalSemantics": {
+    "routeAffinityBasisPointsByKnob": {
+      "directness": 3000,
+      "pressing": 2200,
+      "width": 3200,
+      "risk": 0
+    },
+    "volumeBasisPointsByKnob": {
+      "directness": 900,
+      "pressing": 700,
+      "width": 500,
+      "risk": 1800
+    },
+    "exposureBasisPointsByKnob": {
+      "directness": 1600,
+      "pressing": 1900,
+      "width": 1300,
+      "risk": 2200
+    },
+    "commitmentBasisPointsByMentality": {
+      "very_defensive": 8600,
+      "defensive": 9300,
+      "balanced": 10000,
+      "attacking": 10800,
+      "very_attacking": 11700
+    },
+    "scoreStateCommitmentBasisPoints": 550,
+    "shapeControlShareBasisPoints": 5500
   }
 }

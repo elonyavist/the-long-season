@@ -1,3 +1,8 @@
+import {
+  NEUTRAL_TACTIC_MENTALITY,
+  TACTIC_MENTALITIES,
+  type TacticMentalityKey,
+} from "../entities/tactic.entity.ts";
 import { CANONICAL_PLAYER_ROLES, type CanonicalPlayerRole } from "../tactics/player-roles.ts";
 import type { FormationSide } from "../tactics/formations.ts";
 import { POSITION_SUITABILITIES, type PositionSuitability } from "../tactics/position-suitability.ts";
@@ -254,6 +259,114 @@ export const TACTICAL_ROUTE_MIRROR = {
 } as const satisfies Readonly<Record<TacticalRoute, TacticalRoute>>;
 
 /**
+ * One numeric tactic instruction a manager sets on the `0..1` scale.
+ *
+ * `mentality` is deliberately absent: it is a five-step ladder rather than a
+ * dial, and it is the only input that reads score and minute state, so it is
+ * modelled separately below.
+ */
+export type TacticKnob = "directness" | "pressing" | "width" | "risk";
+
+/** Deterministic knob order used by reports, validation, and tie-breakers. */
+export const TACTIC_KNOBS = [
+  "directness",
+  "pressing",
+  "width",
+  "risk",
+] as const satisfies readonly TacticKnob[];
+
+/**
+ * The routes a knob at full intensity makes a side prefer.
+ *
+ * This is football vocabulary, so it is typed code rather than content, exactly
+ * as `TACTICAL_ROUTE_DEFINITION` is: content decides how strongly a preference
+ * bites, never which route a manager instruction is about.
+ *
+ * `risk` favours nothing. It is about how often a side commits to an attempt
+ * and what that costs, not about where the ball goes - so giving it a route
+ * would be inventing football the contract does not describe.
+ */
+export const TACTIC_KNOB_FAVOURED_ROUTES = {
+  directness: ["direct"],
+  pressing: ["transition"],
+  width: ["left", "right"],
+  risk: [],
+} as const satisfies Readonly<Record<TacticKnob, readonly TacticalRoute[]>>;
+
+/**
+ * The route a knob at full intensity hands the opponent.
+ *
+ * Every knob has one, and validation refuses a calibration that prices any of
+ * them at zero. That is the contract's "no tactic input is a universal bonus"
+ * turned into something a test can fail on.
+ *
+ * A knob may never expose a route it also favours: that would make its cost and
+ * its benefit the same thing, which is a free bonus wearing a disguise.
+ *
+ * Directness and pressing are deliberate mirror images. Playing long gives the
+ * ball back higher up, so it invites the counter; pressing pushes the line up,
+ * and the way a side beats a high line is to go over it. Each of them hands the
+ * opponent the other one's favourite route.
+ */
+export const TACTIC_KNOB_EXPOSED_ROUTE = {
+  directness: "transition",
+  pressing: "direct",
+  width: "central",
+  risk: "transition",
+} as const satisfies Readonly<Record<TacticKnob, TacticalRoute>>;
+
+/**
+ * Versioned magnitudes for what the five manager tactic inputs do.
+ *
+ * Content owns only how far each instruction may move things. Which route each
+ * instruction is about, and which route it hands over in exchange, are the two
+ * typed mappings above.
+ */
+export interface TacticalSemanticsCalibrationConfig {
+  /**
+   * How far a knob at its cap tilts the weight of the routes it favours.
+   *
+   * Must be zero for a knob that favours no route and positive for one that
+   * does, so the numbers cannot quietly disagree with the football.
+   */
+  readonly routeAffinityBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
+  /** How far a knob at its cap moves this side's own chance volume. */
+  readonly volumeBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
+  /**
+   * How far a knob at its cap raises the route it hands the opponent.
+   *
+   * Every knob must price this above zero. A knob that exposes nothing is a
+   * free bonus, which the design contract forbids outright.
+   */
+  readonly exposureBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
+  /**
+   * Commitment multiplier per mentality, on the ladder's own order.
+   *
+   * `balanced` is exactly `10000`: committing to neither is the neutral
+   * reference, never a bonus. The ladder must be strictly increasing, because a
+   * mentality that is not more committed than the one below it is not a step.
+   */
+  readonly commitmentBasisPointsByMentality: Readonly<Record<TacticMentalityKey, number>>;
+  /**
+   * How far one goal of deficit bends commitment, in basis points.
+   *
+   * A side that is losing pushes and a side that is ahead protects. This is the
+   * only place score state enters the tactic model, and its effect is capped so
+   * a rout cannot turn into an unbounded siege.
+   */
+  readonly scoreStateCommitmentBasisPoints: number;
+  /**
+   * How much of possession control comes from shape rather than department
+   * strength, in basis points.
+   *
+   * Must be positive. At zero, control is department strength alone, which is
+   * the defect this phase exists to remove: an empty midfield department would
+   * again be the only way to express a broken connection.
+   */
+  readonly shapeControlShareBasisPoints: number;
+}
+
+/**
  * Versioned coefficients for comparing two intrinsic profiles.
  *
  * Only two numbers, on purpose. The route definitions above carry the
@@ -373,6 +486,7 @@ export interface MatchTacticsCalibrationConfig {
   readonly classification: "explicit_game_design_target";
   readonly tacticalShape: TacticalShapeCalibrationConfig;
   readonly tacticalMatchup: TacticalMatchupCalibrationConfig;
+  readonly tacticalSemantics: TacticalSemanticsCalibrationConfig;
 }
 
 /** Stable validation failures for the match-tactics calibration asset. */
@@ -390,6 +504,14 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_saturation_reference"
   | "invalid_chain_bottleneck_weight"
   | "invalid_pressing_contest_weight"
+  | "incomplete_tactic_knob_magnitudes"
+  | "invalid_route_affinity"
+  | "knob_without_a_cost"
+  | "invalid_volume_magnitude"
+  | "incomplete_commitment_ladder"
+  | "invalid_commitment_ladder"
+  | "invalid_score_state_commitment"
+  | "invalid_shape_control_share"
   | "incomplete_coordination_multipliers"
   | "invalid_coordination_multipliers";
 
@@ -450,6 +572,109 @@ export function validateMatchTacticsCalibration(config: MatchTacticsCalibrationC
 
   validateTacticalShapeCalibration(config.tacticalShape);
   validateTacticalMatchupCalibration(config.tacticalMatchup);
+  validateTacticalSemanticsCalibration(config.tacticalSemantics);
+}
+
+/**
+ * Validates the tactic-semantics section on its own.
+ *
+ * Two rules carry the football and the rest are bounds:
+ *
+ * 1. **Route affinity must agree with the typed mapping.** A knob that favours
+ *    routes must price that preference above zero, and a knob that favours none
+ *    must price it at exactly zero. Otherwise the numbers and the football
+ *    could describe different games.
+ * 2. **Every knob must cost something.** The design contract says no tactic
+ *    input is a universal bonus, so a zero exposure is refused rather than
+ *    trusted to a reviewer noticing it.
+ *
+ * The commitment ladder is validated the way the suitability ladder is: it
+ * walks `TACTIC_MENTALITIES` instead of restating which mentality outranks
+ * which, and the neutral step is pinned to `10000` so it can never become a
+ * quiet bonus.
+ */
+export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCalibrationConfig): void {
+  for (const knob of TACTIC_KNOBS) {
+    const affinity = config.routeAffinityBasisPointsByKnob[knob];
+    const volume = config.volumeBasisPointsByKnob[knob];
+    const exposure = config.exposureBasisPointsByKnob[knob];
+
+    if (affinity === undefined || volume === undefined || exposure === undefined) {
+      throw new MatchTacticsCalibrationError(
+        "incomplete_tactic_knob_magnitudes",
+        `Tactic semantics must declare affinity, volume, and exposure for ${knob}`,
+      );
+    }
+
+    const favoursRoutes = TACTIC_KNOB_FAVOURED_ROUTES[knob].length > 0;
+    if (!isBasisPointShare(affinity) || (favoursRoutes ? affinity === 0 : affinity !== 0)) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_route_affinity",
+        favoursRoutes
+          ? `${knob} favours a route, so its affinity must be a positive share: ${affinity}`
+          : `${knob} favours no route, so its affinity must be exactly 0: ${affinity}`,
+      );
+    }
+
+    if (!isBasisPointShare(volume)) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_volume_magnitude",
+        `${knob} volume magnitude must be an integer between 0 and 10000 basis points: ${volume}`,
+      );
+    }
+
+    if (!isBasisPointShare(exposure) || exposure === 0) {
+      throw new MatchTacticsCalibrationError(
+        "knob_without_a_cost",
+        `${knob} must hand the opponent something: exposure cannot be ${exposure}`,
+      );
+    }
+  }
+
+  let previousCommitment = Number.NEGATIVE_INFINITY;
+  for (const mentality of TACTIC_MENTALITIES) {
+    const commitment = config.commitmentBasisPointsByMentality[mentality];
+    if (commitment === undefined) {
+      throw new MatchTacticsCalibrationError(
+        "incomplete_commitment_ladder",
+        `Tactic semantics must declare a commitment for ${mentality}`,
+      );
+    }
+    if (!Number.isSafeInteger(commitment) || commitment <= 0 || commitment <= previousCommitment) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_commitment_ladder",
+        `Commitment must be a positive integer strictly above the previous mentality: ${mentality} is ${commitment}`,
+      );
+    }
+    previousCommitment = commitment;
+  }
+
+  if (config.commitmentBasisPointsByMentality[NEUTRAL_TACTIC_MENTALITY] !== 10_000) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_commitment_ladder",
+      `${NEUTRAL_TACTIC_MENTALITY} must sit at exactly 10000 basis points, never at a bonus`,
+    );
+  }
+
+  if (!isBasisPointShare(config.scoreStateCommitmentBasisPoints)) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_score_state_commitment",
+      `Score-state commitment must be an integer between 0 and 10000 basis points: ${config.scoreStateCommitmentBasisPoints}`,
+    );
+  }
+
+  const shapeControlShare = config.shapeControlShareBasisPoints;
+  if (!isBasisPointShare(shapeControlShare) || shapeControlShare === 0) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_shape_control_share",
+      `Shape must decide some of possession control, or an empty department is again the only broken connection: ${shapeControlShare}`,
+    );
+  }
+}
+
+/** Whether a value is an integer share of the `0..10000` basis-point scale. */
+function isBasisPointShare(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0 && value <= 10_000;
 }
 
 /**

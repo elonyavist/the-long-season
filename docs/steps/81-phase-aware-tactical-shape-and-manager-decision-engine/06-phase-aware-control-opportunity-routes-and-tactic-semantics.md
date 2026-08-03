@@ -9,8 +9,14 @@ migration that touches four packages.
 | Block | What it delivers | State |
 |---|---|---|
 | 1 - context migration | `shape` and the calibration become required, every composition root supplies them | Done 2026-08-03, all gates green |
-| 2 - route model | `opportunity-route.ts`, route-driven chance volume and type, shape-driven possession, the five tactic semantics, telemetry | Not started |
-| 3 - calibration | frozen matrices, dominance gate, `goals_per_match_avg` | Not started |
+| 2 - route model | `opportunity-route.ts`, route-driven chance volume and type, shape-driven possession, the five tactic semantics, telemetry | Done 2026-08-03, all gates green |
+| 2b - shot chain | `aggregate-occasion-resolver.ts` reordered so each actor is asked one question and the keeper decides goals against saves | Done 2026-08-03, all gates green |
+| 3 - calibration | frozen matrices, dominance gate, `goals_per_match_avg`, `table_points_spread_avg` | Not started |
+
+Block 2b was not in the original plan. It was opened because block 2's
+measurements showed the conversion chain contradicting the football it was
+supposed to produce, and the contract gives this step "how many opportunities
+exist **and how they convert**". See *Block 2b* below.
 
 ### Block 1 - Adopted Solution
 
@@ -86,6 +92,111 @@ typecheck, all 10 workspaces                exit 0
 git diff --check                            clean
 ```
 
+### Block 2 - The Defect The Red Tests Were Hiding
+
+Nine expectations went red when the route model landed. Reading them one at a
+time before moving any of them found a real defect in the model, and finding it
+is what this block is worth.
+
+**Every knob effect was measured from zero intensity, but neutral play is `0.5`.**
+Route affinity, route exposure, and volume were all proportional to raw knob
+intensity, so a side asking for nothing still had every capacity and its volume
+multiplied upward. Two identical teams on perfectly neutral tactics measured:
+
+```text
+bestRouteCapacity 0.6653   (an even contest must give 0.5)
+routePressure     1.2645   (neutral must give 1.0)
+volumeMultiplier  1.1950   (neutral must give 1.0)
+combined          1.5111   -> +51% on the base rate, in every match, for both sides
+```
+
+That is a global shift wearing separation's clothes - precisely what the
+`EVEN_CONTEST_ROUTE_CAPACITY` comment says the design must avoid. Effects are
+now proportional to `lean`, the distance from neutral in `-0.5..0.5`. It is not
+a retune: `directness` spanned `x1.00..x1.30` before and spans `x0.85..x1.15`
+after, so the ratio between full commitment and full abandon is unchanged at
+about `1.3`. Only the offset went away. The knobs also became two-sided - a
+slider pulled left is now a decision to give something up rather than a missing
+bonus - and `a side that decides nothing is handed nothing` pins it.
+
+**The monitor this step owns moved on that fix alone, against `pnpm cli
+ten-season-report`:**
+
+| | block 1 | block 2 with the defect | block 2 fixed |
+|---|---|---|---|
+| `goals_per_match_avg` | `3.08` warn | `4.39` **fail** | `2.97` **pass** |
+| `top_assist_max` | `11` pass | `16` warn | `12` pass |
+| `table_points_spread_avg` | `43.1` pass | `40.7` pass | `38.6` pass |
+| anomaly scoring | warn | fail | **pass** |
+
+No threshold, denominator, or band was touched. This is the ten-season report,
+not the `750`-world gate that carries `36/634/80`; block 3 owns that
+measurement and this one does not pre-empt it.
+
+### Block 2 - What Each Red Test Turned Out To Be
+
+**Two were fixtures lying, not invariants breaking.** `stronger teams produce
+more shots or goals` failed at `1.24x` against a `1.3x` band because the fixture
+pinned every hand-built context at one flat shape whatever strength it declared,
+so quality never reached the route model. Production cannot do that - block 1
+made both readings come from one scoring pass - and the invariant passed once
+shape followed strength.
+
+**One was a metric that never meant what the assertion assumed.**
+`controlled strength profiles` failed only on
+`shotsOnTarget`. The resolver marks a shot on target when it is a goal *or a
+save*, and save probability is driven by the defending keeper: `0.166` for the
+strong attack facing a weak keeper against `0.402` for the weak attack facing a
+strong one. A poor attack forces more saves precisely because the keeper reaches
+them, so the count measures keeper intervention rather than attacking quality.
+The assertion now reads `opportunities`, which separates `3190` to `2647`, next
+to goals separating `713` to `178`. It surfaced now because the old model
+separated these profiles `3.6x` on chance volume and buried it.
+
+**Two were premises that genuinely changed.** `tacticToMatchDistribution maps
+only existing match-context knobs` asserted that mentality was dropped at the
+seam; it now crosses, so the test asserts the conservation instead of the loss.
+The `step-match` shot-context assertions pinned one RNG draw of a route choice,
+which a weighted draw cannot promise; they now assert that the knobs owning a
+route move that route's chance type across `300` draws, plus determinism for one
+seed separately.
+
+**Two more surfaced outside the engine package, in the tactical-shape audit, and
+both were the same kind of thing.** `low_block` was asserted to produce exactly
+zero crosses and zero counters, which the texture inference guaranteed by
+reading chance type from width and directness against thresholds. A route is a
+weighted draw, so a deep block can break down a flank - rarely. The profiles
+play too few matches there to rank against each other, so the audit now states
+only that no tactic is locked out of a chance type, and the ranking claim stays
+in `opportunity-route.test.ts` where it is not a sampling question. Measured at
+model level, every lever does move its own route:
+
+| profile | cross | counter | open play | volume |
+|---|---|---|---|---|
+| `neutral` | `0.392` | `0.219` | `0.390` | `1.000` |
+| `high_pressing` | `0.383` | **`0.236`** | `0.381` | `1.032` |
+| `flank_overload` | **`0.424`** | `0.207` | `0.369` | `1.022` |
+| `direct_play` | `0.382` | `0.213` | **`0.405`** | `1.040` |
+| `high_risk` | `0.392` | `0.219` | `0.390` | **`1.081`** |
+| `low_block` | `0.374` | `0.220` | `0.406` | **`0.825`** |
+
+`high_risk` leaves the weights untouched and buys attempts only, which is the
+contract's "how often, not where". The second audit failure was
+`firstWinShare` compared to nine decimal places against a value the report
+rounds to four: it could only pass on five of the thirteen results a six-match
+series can produce.
+
+**Four were golden or sentinel comparisons, and each delta is explained where it
+is pinned.** `simulate-match` moved exactly one field - a chance type from
+`open_play` to `counter`, same minute, quality, shooter and outcome. The season
+sentinel lost two artefacts worth naming: a champion unbeaten conceding nothing
+across 34 matches, and an opening fixture that finished goalless without a
+single shot, both products of near-equal strengths driving the old rate to zero.
+Its bottom row, last fixture, round and fixture counts and top scorer are
+untouched. `progress-fixture` went from `15`-to-`7` chances finishing level to
+`11`-to-`9` with the weaker side winning, and every downstream consequence
+followed the scoreline rather than drifting.
+
 ### Block 2 - Design Settled Before Writing It
 
 Recorded here so the shape of the model is a decision, not something rebuilt
@@ -98,10 +209,15 @@ route does pressing favour" is football vocabulary, not a tuned number:
 
 | knob | favours | exposes | why the cost is credible |
 |---|---|---|---|
-| `directness` | `direct`, `transition` | `transition` | skipping midfield gives the ball back higher up |
-| `pressing` | `transition` | `transition` | a line pushed up is a line that can be run behind |
+| `directness` | `direct` | `transition` | skipping midfield gives the ball back higher up |
+| `pressing` | `transition` | `direct` | a line pushed up is a line that can be played over |
 | `width` | `left`, `right` | `central` | stretching wide empties the middle |
 | `risk` | none | `transition` | more attempts, more turnovers, no route preference |
+
+The first draft of this table had `directness` favour *and* expose
+`transition`, which made its cost cancel its benefit - a bonus in disguise. The
+two aggressive knobs now expose each other's preferred route instead, which is
+both real football and an actual trade.
 
 `mentality` is not a route knob. It sets a commitment level on a five-step
 ladder that scales own chance volume and the `transition` the opponent is
@@ -129,6 +245,99 @@ number.
 **Pressing is multiplied exactly once.** Step 04 already contests build-up
 through `pressing_cohesion`. This step scales that capacity by the pressing
 knob before the matchup runs; it does not add a second pressing term afterwards.
+
+### Block 2b - The Shot Chain Asked The Keeper The Wrong Questions
+
+Block 2 fixed how many chances exist. Measuring what happened to them afterwards
+showed the conversion chain producing the opposite of the football it claims,
+and the contract gives this step conversion as well as volume.
+
+**The keeper was asked three questions and should only ever be asked one.** He
+carried `0.40` of the defending score inside opportunity quality, so a great
+keeper made the attack *build worse chances*. He then set the save branch, and
+because every save is a shot on target, a great keeper *increased* the shots on
+target against him. Meanwhile the three-step conversion bands are coarse enough
+that two keepers nine points apart land in the same one, so goals did not move
+at all. Measured before the fix:
+
+| striker 19, only the keeper changes | on target | goals |
+|---|---|---|
+| keeper `19` | `41.0%` | `13.0%` |
+| keeper `10` | `31.2%` | `13.0%` |
+
+| keeper 14, only the striker changes | on target | goals |
+|---|---|---|
+| striker `19` | `35.6%` | `13.0%` |
+| striker `8` | `42.4%` | `13.0%` |
+
+A poor striker out-shot a great one and scored exactly as often, and swapping
+Donnarumma for a relegation keeper changed nothing about goals.
+
+**Each actor now answers one question, in the order it happens on the pitch.**
+Blocked, by the defence. On target, by the striker and the position he shoots
+from, with the keeper having no say. Then goal or save, by the keeper alone.
+Opportunity quality is contested by outfield players only, because a keeper does
+not defend the build-up. After:
+
+| striker 19, only the keeper changes | on target | goals | saves |
+|---|---|---|---|
+| keeper `19` | `44.4%` | `14.6%` | `29.7%` |
+| keeper `14` | `44.4%` | `18.0%` | `26.4%` |
+| keeper `10` | `44.4%` | `20.3%` | `24.1%` |
+
+| keeper 14, only the striker changes | on target | goals | blocked |
+|---|---|---|---|
+| striker `19` | `44.4%` | `18.0%` | `4.5%` |
+| striker `13` | `32.3%` | `11.1%` | `8.2%` |
+| striker `8` | `21.4%` | `7.8%` | `12.0%` |
+
+Shots on target are identical across keepers and the goals a better one denies
+reappear as saves. An average striker converts `11.1/32.3`, which is the `34%`
+of shots on target real football converts.
+
+**One ceiling had to be added and it is not a tuned number.** A goal is a kind
+of shot on target, so nothing stopped the two collapsing into each other once
+the attack was good enough, at which point the keeper stopped existing.
+`MAX_GOAL_SHARE_OF_ON_TARGET` keeps some share of what reaches the goal out of
+it. It binds in `6` of `980` matchups (`0.6%`); the keeper save share runs
+`25%` at worst, `61%` median, `86%` at best.
+
+`aggregate-occasion-resolver.test.ts` is new. The resolver had no direct
+coverage at all, only incidental exercise through `step-match`, which is why a
+chain this wrong survived.
+
+**One more defect, and the full gate is what caught it.** The first version of
+this chain read raw attack strength for accuracy while conversion read
+opportunity quality, and those are not the same measurement. Quality is
+*relative*, so in a division where attack and defence are both poor an even
+contest still produces ordinary quality and its ordinary goal probability, while
+an absolute reading drove accuracy to its floor. Third-division keepers stopped
+saving anything at all: one demo fixture finished with `15` shots, `5` goals and
+zero saves. Accuracy now reads quality, like conversion does, and across twelve
+demo fixtures the outcomes are `27` goals, `22` saves, `7` blocks and `100`
+misses - `31.4%` of shots on target against the roughly `33%` real football
+produces, and `2.25` goals a match.
+
+**What block 3 inherits.** Both balance monitors ended inside band, and the
+whole anomaly score is green on `pnpm cli ten-season-report`:
+
+| | block 1 | block 2 | block 2b |
+|---|---|---|---|
+| `goals_per_match_avg` | `3.08` warn | `2.97` pass | `2.98` pass |
+| `table_points_spread_avg` | `43.1` pass | `38.6` pass | `41.0` pass |
+| anomaly scoring | warn | pass | **pass** |
+
+The spread recovering was not a target and is worth understanding, because the
+intermediate version of this chain had pushed it to `34.8`, below its `36`
+floor. Accuracy reading absolute strength was quietly helping bad teams: their
+shots on target collapsed, so the conversion ceiling bound and three quarters of
+the few that arrived went in. Tying accuracy to the quality of the position
+removed that subsidy, and the table separated again on its own.
+
+None of this is tuned. Block 3 still owns calibration and has the levers if the
+`750`-world population disagrees: `KEEPER_CONTEST_DIVISOR` and
+`ON_TARGET_QUALITY_WEIGHT` set how far keepers and positions separate, the
+conversion bands set the level.
 
 ## Inherited From Step 03
 
