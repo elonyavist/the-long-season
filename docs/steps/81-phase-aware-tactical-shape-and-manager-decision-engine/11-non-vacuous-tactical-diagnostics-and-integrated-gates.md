@@ -91,10 +91,25 @@ without weakening thresholds or starting the longitudinal cohort.
   not meaningful - almost all of the best shape's `0.6615` field average comes
   from beating broken shapes, and `3-5-2` against `4-4-2` stays about `0.01`.
   Do not widen the threshold, and do not report `not_evaluated` as a pass.
-- Step 06 also recorded that one tactic slider decides about three and a half
-  times what the formation decides, measured on the real formation population
-  the audit now reports. If that is to change it is Step 04's `TACTICAL_ROUTE_DEFINITION` that
+- Step 06 also recorded that one tactic slider decides about three times what the
+  formation decides, measured on the real formation population the audit now
+  reports. If that is to change it is Step 04's `TACTICAL_ROUTE_DEFINITION` that
   has to change, not a coefficient; this step reports it, it does not fix it.
+- **`no_dominant_tactic` is new and its downside is deliberately unbounded.**
+  Step 06 block 4 added it as the twin of `no_dominant_composition` - no profile
+  may average above `0.55` against the other five - and it passes at `0.5317`
+  over `12000` matches. It is one-sided on purpose: a knob pushed to an extreme
+  may cost a manager, it may never pay one, and a two-sided band would assert
+  that every setting is worth about the same, which is the decorative-slider
+  defect written as a rule. What the gate therefore does not bound, and this
+  step must report rather than quietly pass over: `high_risk` sits at `0.4642`
+  and `low_block` at `0.4487`, both below neutral by more than the `0.0477`
+  noise floor, and `low_block` never beats anybody - its best matchup is
+  `0.4625`. Both are every relevant knob at an extreme at once, which no manager
+  fields, and both improved from `0.4788` and `0.4106`. Bounding them needs a
+  claim nobody has made yet: what a deliberately conservative setup should be
+  worth against an equal side. Recommend, do not tune, and do not add a floor
+  threshold here.
 - If a cleanup is truly outside scope, document its exact file/owner/reason and
   block phase completion when it threatens correctness or duplication.
 - Do not accept “used only by tests” as proof that a production compatibility

@@ -2,10 +2,13 @@
 
 ## Status
 
-In progress. The step runs in internal blocks so the repository is compiling and
-tested at every pause, rather than broken half-way through a migration that
-touches four packages. Blocks 1 to 3 are done and gate-green. Block 4 was opened
-by block 3's own measurements and is not started.
+Done on 2026-08-03. The step ran in internal blocks so the repository was
+compiling and tested at every pause, rather than broken half-way through a
+migration that touches four packages. All four blocks are gate-green. One frozen
+invariant is still `not_evaluated` and is escalated to the phase contract with a
+written recommendation; Step 11 reports it.
+
+Next action: Step 07.
 
 | Block | What it delivers | State |
 |---|---|---|
@@ -13,7 +16,7 @@ by block 3's own measurements and is not started.
 | 2 - route model | `opportunity-route.ts`, route-driven chance volume and type, shape-driven possession, the five tactic semantics, telemetry | Done 2026-08-03, all gates green |
 | 2b - shot chain | `aggregate-occasion-resolver.ts` reordered so each actor is asked one question and the keeper decides goals against saves | Done 2026-08-03, all gates green |
 | 3 - calibration | frozen matrices, dominance gate, `goals_per_match_avg`, `table_points_spread_avg`, real shot volume | Done 2026-08-03, all gates green, one invariant still `not_evaluated` and escalated |
-| 4 - tactic dominance | no tactic profile may beat the field, and the exposures that make that true | Not started |
+| 4 - tactic dominance | `no_dominant_tactic`, the repriced exposures, and the volume seam that let a low block concede more than neutral | Done 2026-08-03, all gates green |
 
 Block 2b was not in the original plan. It was opened because block 2's
 measurements showed the conversion chain contradicting the football it was
@@ -499,7 +502,7 @@ change - so the flank capacity carries `0.35 / 3 = 11.7%` of the chain, and
 a route, and `TACTICAL_ROUTE_DEFINITION` is Step 04's frozen typed model. It is
 recorded here as an owner decision, not taken as a tuning.
 
-### Block 4 - Nothing Stops A Tactic From Being A Free Win
+### Block 4 - Nothing Stopped A Tactic From Being A Free Win
 
 Block 3 measured every tactic profile against the same shape playing neutral,
 and **three of the five knob extremes beat neutral**:
@@ -515,20 +518,162 @@ and **three of the five knob extremes beat neutral**:
 
 The contract says every tactic benefit has a cost, and the costs exist -
 `TACTIC_KNOB_EXPOSED_ROUTE` is total and validation refuses a knob priced at
-zero exposure. They are not biting. A slider that is simply better is not a
+zero exposure. They were not biting. A slider that is simply better is not a
 decision: a player finds it once and never touches it again, which is the same
 defect as a decorative slider wearing the opposite disguise.
 
-Nothing catches this today. `no_dominant_composition` protects shapes - no
-composition may stay above `0.55` against every opponent - and there is no twin
-for tactics, so the tactic table has always been reported and never gated.
+Nothing caught it. `no_dominant_composition` protects shapes - no composition
+may stay above `0.55` against every opponent - and there was no twin for
+tactics, so the tactic table had always been reported and never gated.
 
-Block 4 owes: a dominance gate over the tactic profiles built the same way as
-the shape one, and then only the `exposureBasisPointsByKnob` magnitudes moved
-until it holds. The gate is the deliverable; the tuning is whatever the gate
-demands. It is this step's own scope - contract section 6 gives it the tactic
-semantics, and "every benefit has a cost or shape prerequisite" is a claim this
-step made and did not verify.
+### Block 4 - The Gate, And What Measuring First Found Behind It
+
+`no_dominant_tactic` is the twin: every profile plays every other profile on
+the reference shape at identical quality, and **no profile may average above
+`0.55` against the other five**. Threshold declared before measuring, and the
+same `0.55` as the shape gate because it is the same claim.
+
+Two readings, and the difference between them is not a preference. The shape
+gate reads the *worst single matchup*, because `66` compositions are mostly
+self-destructive and a mean against that field measures how badly the broken
+shapes lose - `5-2-3` averages `0.6615` and is not dominant. The tactic gate
+reads the *mean*, because all six profiles are legal selections on the same
+eleven, so the mean is exactly the expected value of choosing one blind, while
+a minimum says nothing: sampling alone drops some cell of every row below any
+threshold. The self-cell is excluded and never played; a mirror match is `0.5`
+by construction and spending matches on it would only measure its noise.
+
+One pass now owns both the tactic table and the gate. Measuring the table
+against neutral and the gate against the field separately would run the same
+matchup twice on two seed streams and let the two disagree about what a profile
+is worth.
+
+**Running it before touching a coefficient found that the block's planned lever
+was half the cause.** The exposures are real, but two asymmetries were feeding
+the same defect, and only the first is content.
+
+**One. Exposure was priced in basis points and paid in effect, and the two are
+not the same size.** Solved numerically - the exposure that makes a knob's
+extreme worth exactly zero capacity edge against neutral:
+
+| knob | affinity | routes it lifts | shipped exposure | balanced exposure | verdict |
+|---|---|---|---|---|---|
+| `directness` | `3000` | 1 | `1600` | `1546` | already right |
+| `pressing` | `2200` | 1 | `1900` | `4744` | under-priced `2.5x` |
+| `width` | `3200` | **2** | `1300` | `5054`-`7095` | under-priced `4x` |
+| `risk` | none | 0 | `2200` | pure cost | over-priced |
+
+Two things compound. A knob's affinity lifts every route it favours and `width`
+favours two, while its exposure lifts exactly one for the opponent. Then
+`routeSelectionSharpness: 3` amplifies the benefit again, because a route that
+gets better also gets *chosen* more. `width` at `1300` bought `+0.0416`
+expected capacity and paid `+0.0043` - a cost one tenth of its benefit, sold as
+one third. And because `deriveOpportunityRate` reads the *difference* between
+the two plans, an under-priced cost is charged twice: it raises the mover's rate
+and lowers the opponent's.
+
+The solved value for `width` is shape-dependent (`7095` on the flankless
+department reference, `5054`-`5496` across real formations). `5300` is taken
+from the formation population, because that is the lineup a manager fields; the
+department figure is an artefact of an eleven with nobody wide.
+
+**Two. A defensive setting could not reduce what it conceded, and that is not a
+coefficient.** `volumeBasisPointsByKnob` scaled only the mover's own attempts,
+so `low_block` gave up a fifth of its own chances and took nothing off the
+opponent - measured at `13.96` chances conceded against neutral's `12.86`.
+Parking the bus made a side concede *more* than not parking it. No exposure
+value reaches this: the whole quantity was one-sided.
+
+`deriveVolumeMultiplier` now separates two ideas that were sharing one field.
+**A knob that changes where the ball goes changes the game both sides are
+playing**, so its volume magnitude reads both leans: a long, pressed, stretched
+match has more football in it for everybody. **A knob with no route preference
+is not shaping the game, only deciding how many players go forward**, so it
+stays one-sided - which is why `risk` belongs with mentality and score state
+rather than with the other three. The split is read from
+`TACTIC_KNOB_FAVOURED_ROUTES` instead of being declared a second time, because
+"does this instruction change where the ball goes" is already written there.
+
+### Block 4 - Measured Result
+
+| Coefficient | From | To | The test it was moved against |
+|---|---|---|---|
+| `exposureBasisPointsByKnob.pressing` | `1900` | `4700` | zero capacity edge for the extreme against neutral |
+| `exposureBasisPointsByKnob.width` | `1300` | `5300` | the same, solved on the real formation population |
+| `exposureBasisPointsByKnob.risk` | `2200` | `1400` | swept against win share; `risk` buys no route, so its cost is its whole price |
+| `exposureBasisPointsByKnob.directness` | `1600` | `1600` | already inside `4%` of the solved value |
+
+`800` matches per cell, `4000` behind every profile row:
+
+| profile | against field | against neutral | worst matchup | chances created | conceded |
+|---|---|---|---|---|---|
+| `flank_overload` | `0.5317` | `0.5350` | `0.4812` | `53832` | `50558` |
+| `direct_play` | `0.5215` | `0.4769` | `0.4769` | `55261` | `52512` |
+| `neutral` | `0.5179` | - | `0.4650` | `51255` | `50794` |
+| `high_pressing` | `0.5159` | `0.5000` | `0.4731` | `53637` | `51555` |
+| `high_risk` | `0.4642` | `0.4400` | `0.4400` | `54354` | `52286` |
+| `low_block` | `0.4487` | `0.4587` | `0.4294` | `39686` | `50320` |
+
+`no_dominant_tactic` **PASS at `0.5317`** over `12000` matches. The spread
+against neutral fell from `0.154` to `0.095`, and the best setting's edge over
+neutral fell from `+0.064` to `+0.014`.
+
+**The point is not that the numbers converged - it is that a best response
+appeared.** The matrix now contains a cycle: `flank_overload` beats `neutral`
+`0.5350`, `neutral` beats `direct_play` `0.5231`, `direct_play` beats
+`flank_overload` `0.5188`, and `direct_play` beats `high_pressing` `0.5269`
+because playing over a high line is how a high line is beaten. Each of those is
+two standard errors clear at this sample. Nothing is worth picking blind, and
+what to pick depends on what the opponent picked - which is the difference
+between a slider and a decision.
+
+`low_block` also now does what it is for: `9.92` chances created a match
+against `12.58` conceded, where before it was `9.52` against `13.96`. It
+concedes less than neutral does rather than more.
+
+Nothing else moved. Every other invariant is bit-identical - `0.1092`,
+`0.375`, `0.9281`, the possession clamp, and the shape distinction at `0` of
+`3` pairs - and both balance monitors are unchanged on `pnpm cli
+ten-season-report` at `goals_per_match_avg 2.74` pass and
+`table_points_spread_avg 42.0` pass, whole anomaly score green. The engine
+change only bites when a side's opponent has moved a knob off neutral, which is
+why no golden moved: every fixture that pins a result plays neutral tactics on
+both sides.
+
+New frozen identity: seed prefix `phase81-tactical-shape`, `8` dominance seed
+pairs, `400` per scenario, `35376` dominance matches plus `12000` tactic
+matches. Structured hash `0e14fa200717c4c5fbfea9d3f2fd9736`.
+
+### Block 4 - Verification
+
+```text
+pnpm check (lint, depcruise, localized text, squad depth, test, typecheck)
+  271 test files, 1954 tests passed
+  no dependency violations
+  10 of 10 workspace typechecks   exit 0
+pnpm cli tactical-shape-report     every invariant PASS except the escalated one
+pnpm cli ten-season-report         anomaly scoring PASS
+git diff --check                   clean
+```
+
+### Block 4 - What The Gate Deliberately Does Not Bound
+
+The gate is one-sided and that is a decision, not an oversight. **A knob pushed
+to an extreme is allowed to cost a manager; it is only forbidden to pay one.**
+An extreme that is worse than neutral is what makes neutral a real default, and
+a two-sided band would assert that every setting is worth about the same, which
+is the decorative-slider defect stated as a rule.
+
+What the one-sided gate leaves unmeasured is recorded here rather than left for
+a reader to notice: `high_risk` at `0.4642` and `low_block` at `0.4487` sit
+below neutral by more than the `0.0477` noise floor, and `low_block` never beats
+anybody - its best matchup is `0.4625`. Both are *every* relevant knob at an
+extreme simultaneously, which is not a setup a manager would actually field, and
+both are far better than the `0.4788` and `0.4106` they measured before this
+block. It is left as an observation because bounding it needs a claim nobody has
+made yet: how much a deliberately conservative setup should be worth against an
+equal side. Step 11 reports it; the phase contract decides whether it becomes a
+floor.
 
 ### Block 3 - The Invariant That Cannot Be Evaluated Here
 
@@ -803,6 +948,28 @@ Added during block 3, because the frozen matrix is what found them:
   cannot tell a working engine from the defect this phase removes.
 - `apps/cli/src/commands/tactical-shape-report.ts` and its test - the new
   formation section of the report.
+
+Added during block 4:
+
+- `packages/engine/src/match-engine/opportunity-route.ts` and its test - the
+  volume seam. A knob that shapes the game now moves both sides' attempt rate;
+  a knob that only commits players moves one. No exposure value could reach
+  this, because the whole quantity was one-sided.
+- `packages/content/src/balance/match-tactics-calibration.json` - the three
+  repriced exposures.
+- `packages/simulation-tools/src/tactical-shape/tactical-shape-audit.ts` and its
+  test - the tactic-versus-tactic matrix, `no_dominant_tactic`, and
+  `maxTacticMeanWinShareAgainstField`. `tacticProfiles` is gone: one pass now
+  owns both the table and the gate rather than measuring the same matchups
+  twice on two seed streams.
+- `packages/simulation-tools/src/index.ts` - exports the new matrix type.
+- `packages/simulation-tools/src/test-fixtures/match-tactics-calibration.ts` -
+  its knob magnitudes had drifted from the shipped ones, including a
+  `pressingContestWeightBasisPoints` block 3 had already moved. A fixture with
+  superseded exposures fails the new gate against a calibration nobody ships.
+- `apps/cli/src/commands/tactical-shape-report.ts` and its test - the tactic
+  section reports the full matrix, plus chances conceded, which is the half of
+  a tactic a win share hides.
 - `packages/engine/src/use-cases/simulate-season.test.ts`,
   `packages/engine/src/match-engine/simulate-match.test.ts`,
   `packages/engine/src/match-engine/step-match.test.ts`,

@@ -576,27 +576,62 @@ export interface TacticalShapeSideLabel {
 }
 
 /**
- * One tactic profile measured against the neutral one at identical shape.
+ * One tactic profile measured against every other tactic at identical shape.
  *
  * Shape and quality are held constant on both sides, so whatever moves is the
- * tactic. This is the pre-change record for the tactic semantics Step 06 gives
- * explicit football meaning.
+ * tactic. `winShare` is kept against the neutral profile because that is the
+ * question a manager asks - is changing anything better than changing nothing -
+ * while `meanWinShareAgainstField` is what the dominance gate reads.
  */
 export interface TacticalShapeTacticRow {
   /** Tactic profile key under test. */
   readonly tacticKey: string;
   /** Win share against the same shape playing the neutral tactic. */
   readonly winShare: number;
-  /** Matches behind that share. Never zero. */
+  /**
+   * Mean win share against every *other* profile.
+   *
+   * The self-cell is excluded because a profile always draws with itself by
+   * construction, and a mirror match cannot say anything about whether a
+   * setting is a free win.
+   */
+  readonly meanWinShareAgainstField: number;
+  /** Worst win share this profile held against any single other profile. */
+  readonly minimumWinShareAgainstField: number;
+  /** Matches behind that mean. Never zero. */
   readonly matches: number;
   /** Mean possession share this profile held. */
   readonly possessionShare: number;
-  /** Opportunities generated across the series. */
+  /** Opportunities generated across every series this profile played. */
   readonly opportunities: number;
+  /** Opportunities this profile's opponents generated against it. */
+  readonly opportunitiesConceded: number;
   /** Summed conversion probability across the series. */
   readonly expectedGoals: number;
   /** Structured chance types produced across the series. */
   readonly chanceTypes: Readonly<Record<ShotChanceType, number>>;
+}
+
+/**
+ * The full tactic-versus-tactic matrix at the reference shape, plus its rows.
+ *
+ * The shape population and the tactic population need different readings, and
+ * the difference is not a preference. `66` compositions are mostly
+ * self-destructive, so a mean against that field measures how badly the broken
+ * shapes lose and the honest reading is the worst single matchup. The six tactic
+ * profiles are all legal selections on the same eleven, so the mean *is* the
+ * expected value of choosing one blind - and a minimum there says nothing,
+ * because sampling alone drops some cell of every row below the threshold.
+ */
+export interface TacticalShapeTacticDominanceMatrix {
+  /** Row and column order. */
+  readonly tacticKeys: readonly string[];
+  /** `winShare[row][column]` is the row profile's win share against the column one. */
+  readonly winShare: readonly (readonly number[])[];
+  /** Aggregate standing plus texture per profile, ordered as `tacticKeys`. */
+  readonly rows: readonly TacticalShapeTacticRow[];
+  /** Total matches behind the matrix. Never zero. */
+  readonly matches: number;
 }
 
 /**
@@ -661,6 +696,7 @@ export type TacticalShapeInvariantKey =
   | "distinguishable_coherent_and_incoherent_shape"
   | "empty_department_possession_clamp"
   | "no_dominant_composition"
+  | "no_dominant_tactic"
   | "quality_hierarchy_survives_extreme_shape";
 
 /** Result of one frozen invariant, always carrying its own denominator. */
@@ -699,8 +735,8 @@ export interface TacticalShapeAuditReport {
   readonly equivalences: readonly TacticalShapeEquivalenceRow[];
   /** Every reachable composition measured against the coherent reference shape. */
   readonly versusReference: readonly TacticalShapeVersusReferenceRow[];
-  /** Each tactic profile measured against the neutral one at identical shape. */
-  readonly tacticProfiles: readonly TacticalShapeTacticRow[];
+  /** Full tactic-versus-tactic matrix at the reference shape, with its rows. */
+  readonly tacticDominance: TacticalShapeTacticDominanceMatrix;
   /** Each curated formation measured against the reference formation. */
   readonly formations: readonly TacticalShapeFormationRow[];
   /** What the formation decides against what one slider decides. */
@@ -790,7 +826,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
   const strengthRows = buildStrengthRows(input.bands.reference, input.matchTacticsCalibration);
   const equivalences = buildEquivalences(input);
   const versusReference = buildVersusReferenceRows(input);
-  const tacticProfiles = buildTacticProfileRows(input);
+  const tacticDominance = buildTacticDominance(input);
   const formations = buildFormationRows(input);
   const formationVersusSlider = buildFormationVersusSlider(input, formations);
   const dominance = buildDominanceMatrix(input);
@@ -801,6 +837,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     versusReference,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
     dominance,
+    tacticDominance,
     qualityVersusStructure,
   });
 
@@ -814,7 +851,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     distinctStrengthCount: new Set(strengthRows.map((row) => row.fingerprint)).size,
     equivalences,
     versusReference,
-    tacticProfiles,
+    tacticDominance,
     formations,
     formationVersusSlider,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
@@ -884,6 +921,16 @@ export const TACTICAL_SHAPE_THRESHOLDS = {
   maxStructuralSwingShareOfTierEdge: 0.75,
   /** No composition may beat the whole reachable population by more than this. */
   maxMeanWinShareAgainstField: 0.55,
+  /**
+   * No tactic profile may average more than this against the other profiles.
+   *
+   * Deliberately the same number as the shape gate, because it is the same
+   * claim: a setting a manager can pick must not be worth picking blind. A
+   * slider that is simply better is not a decision - it is found once and never
+   * touched again, which is the decorative-slider defect wearing the opposite
+   * disguise.
+   */
+  maxTacticMeanWinShareAgainstField: 0.55,
   /** Incoherence must cost at least twice what coherence pays. */
   minIncoherenceToCoherenceRatio: 2,
   /**
@@ -1278,34 +1325,109 @@ function crossShareOf(chanceTypes: Readonly<Record<ShotChanceType, number>>): nu
   return total === 0 ? 0 : chanceTypes.cross / total;
 }
 
-function buildTacticProfileRows(input: RunTacticalShapeAuditInput): readonly TacticalShapeTacticRow[] {
+/**
+ * Runs every tactic profile against every other one at the reference shape.
+ *
+ * One pass owns both the tactic table and the dominance gate. Measuring the
+ * table against neutral and the gate against the field separately would run the
+ * same matchup twice on two seed streams and let the two disagree about what a
+ * profile is worth.
+ *
+ * Only the upper triangle is played. The mirrored cell is `1 - share` because
+ * the series already swaps venues, and the diagonal is left at `0.5`: a profile
+ * against itself is a mirror match whose value is fixed by construction, so
+ * playing it would spend matches to measure the sampling noise of a known
+ * answer.
+ */
+function buildTacticDominance(input: RunTacticalShapeAuditInput): TacticalShapeTacticDominanceMatrix {
   const composition = compositionByKey(TACTICAL_SHAPE_REFERENCE_COMPOSITION_KEY);
-  const opponent: TacticalShapeSide = {
-    lineup: { kind: "composition", composition },
-    band: input.bands.reference,
-    tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
-  };
+  const lineup: TacticalShapeSideLineup = { kind: "composition", composition };
+  const size = TACTICAL_SHAPE_TACTIC_PROFILES.length;
+  const winShare: number[][] = TACTICAL_SHAPE_TACTIC_PROFILES.map(() => new Array<number>(size).fill(0.5));
+  const totals = TACTICAL_SHAPE_TACTIC_PROFILES.map(() => createMutableTacticTotals());
+  let matches = 0;
 
-  return TACTICAL_SHAPE_TACTIC_PROFILES.map((tactic) => {
-    const series = runTacticalShapeSeries({
-      first: { lineup: { kind: "composition", composition }, band: input.bands.reference, tactic },
-      second: opponent,
-      engineConfig: input.engineConfig,
-      matchTacticsCalibration: input.matchTacticsCalibration,
-      seedPrefix: `${input.seedPrefix}|tactic|${tactic.tacticKey}`,
-      pairedSeedCount: input.scenarioPairedSeedCount,
-    });
+  for (let row = 0; row < size; row += 1) {
+    for (let column = row + 1; column < size; column += 1) {
+      const first = TACTICAL_SHAPE_TACTIC_PROFILES[row] as TacticalShapeTacticProfile;
+      const second = TACTICAL_SHAPE_TACTIC_PROFILES[column] as TacticalShapeTacticProfile;
+      const series = runTacticalShapeSeries({
+        first: { lineup, band: input.bands.reference, tactic: first },
+        second: { lineup, band: input.bands.reference, tactic: second },
+        engineConfig: input.engineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
+        seedPrefix: `${input.seedPrefix}|tactic`,
+        pairedSeedCount: input.scenarioPairedSeedCount,
+        scenarioKeyOverride: `${first.tacticKey}|${second.tacticKey}`,
+      });
+
+      (winShare[row] as number[])[column] = series.firstWinShare;
+      (winShare[column] as number[])[row] = roundFour(1 - series.firstWinShare);
+      accumulateTacticTotals(totals[row] as MutableTacticTotals, series.first, series.second, series.matches);
+      accumulateTacticTotals(totals[column] as MutableTacticTotals, series.second, series.first, series.matches);
+      matches += series.matches;
+    }
+  }
+
+  const neutralIndex = TACTICAL_SHAPE_TACTIC_PROFILES.findIndex(
+    (profile) => profile.tacticKey === TACTICAL_SHAPE_NEUTRAL_TACTIC.tacticKey,
+  );
+
+  const rows = TACTICAL_SHAPE_TACTIC_PROFILES.map((profile, index) => {
+    const against = (winShare[index] as readonly number[]).filter((_, column) => column !== index);
+    const total = totals[index] as MutableTacticTotals;
 
     return {
-      tacticKey: tactic.tacticKey,
-      winShare: series.firstWinShare,
-      matches: series.matches,
-      possessionShare: series.first.possessionShare,
-      opportunities: series.first.opportunities,
-      expectedGoals: series.first.expectedGoals,
-      chanceTypes: series.first.chanceTypes,
+      tacticKey: profile.tacticKey,
+      winShare: index === neutralIndex ? 0.5 : ((winShare[index] as readonly number[])[neutralIndex] as number),
+      meanWinShareAgainstField: roundFour(against.reduce((sum, value) => sum + value, 0) / against.length),
+      minimumWinShareAgainstField: roundFour(Math.min(...against)),
+      matches: total.matches,
+      possessionShare: roundFour(total.possessionShare / against.length),
+      opportunities: total.opportunities,
+      opportunitiesConceded: total.opportunitiesConceded,
+      expectedGoals: roundFour(total.expectedGoals),
+      chanceTypes: total.chanceTypes,
     };
   });
+
+  return { tacticKeys: TACTICAL_SHAPE_TACTIC_PROFILES.map((profile) => profile.tacticKey), winShare, rows, matches };
+}
+
+interface MutableTacticTotals {
+  matches: number;
+  possessionShare: number;
+  opportunities: number;
+  opportunitiesConceded: number;
+  expectedGoals: number;
+  chanceTypes: Record<ShotChanceType, number>;
+}
+
+function createMutableTacticTotals(): MutableTacticTotals {
+  return {
+    matches: 0,
+    possessionShare: 0,
+    opportunities: 0,
+    opportunitiesConceded: 0,
+    expectedGoals: 0,
+    chanceTypes: { open_play: 0, counter: 0, cross: 0, dead_ball: 0 },
+  };
+}
+
+function accumulateTacticTotals(
+  totals: MutableTacticTotals,
+  own: TacticalShapeSeriesSideTotals,
+  opponent: TacticalShapeSeriesSideTotals,
+  matches: number,
+): void {
+  totals.matches += matches;
+  totals.possessionShare += own.possessionShare;
+  totals.opportunities += own.opportunities;
+  totals.opportunitiesConceded += opponent.opportunities;
+  totals.expectedGoals += own.expectedGoals;
+  for (const chanceType of Object.keys(totals.chanceTypes) as readonly ShotChanceType[]) {
+    totals.chanceTypes[chanceType] += own.chanceTypes[chanceType];
+  }
 }
 
 function buildDominanceMatrix(input: RunTacticalShapeAuditInput): TacticalShapeDominanceMatrix {
@@ -1499,6 +1621,7 @@ interface EvaluateInvariantsInput {
   readonly versusReference: readonly TacticalShapeVersusReferenceRow[];
   readonly versusReferenceNoiseFloor: number;
   readonly dominance: TacticalShapeDominanceMatrix;
+  readonly tacticDominance: TacticalShapeTacticDominanceMatrix;
   readonly qualityVersusStructure: readonly TacticalShapeQualityStructureRow[];
 }
 
@@ -1506,6 +1629,7 @@ function evaluateInvariants(context: EvaluateInvariantsInput): readonly Tactical
   return [
     evaluateBoundedStructuralSwing(context),
     evaluateNoDominantComposition(context),
+    evaluateNoDominantTactic(context),
     evaluateAsymmetricIncoherenceCost(context),
     evaluateQualityHierarchy(context),
     evaluatePossessionClamp(context),
@@ -1546,6 +1670,36 @@ function evaluateBoundedStructuralSwing(context: EvaluateInvariantsInput): Tacti
     detail:
       `The best shape against the reference is ${best.compositionKey} at ${best.winShare}, worth ${roundFour(structuralUpside)} win share, `
       + `against a division-tier edge of ${roundFour(tierEdge)}. Downside is deliberately unbounded: a manager who fields a self-destructive shape may lose as much as the engine says.`,
+  };
+}
+
+function evaluateNoDominantTactic(context: EvaluateInvariantsInput): TacticalShapeInvariantResult {
+  const threshold = `no tactic profile averages above ${TACTICAL_SHAPE_THRESHOLDS.maxTacticMeanWinShareAgainstField} against the other profiles`;
+  if (context.tacticDominance.matches === 0 || context.tacticDominance.rows.length < 2) {
+    return notEvaluated("no_dominant_tactic", threshold, "The tactic matrix produced fewer than two profiles");
+  }
+
+  const strongest = [...context.tacticDominance.rows].sort(
+    (left, right) => right.meanWinShareAgainstField - left.meanWinShareAgainstField,
+  )[0] as TacticalShapeTacticRow;
+  const weakest = [...context.tacticDominance.rows].sort(
+    (left, right) => left.meanWinShareAgainstField - right.meanWinShareAgainstField,
+  )[0] as TacticalShapeTacticRow;
+
+  return {
+    key: "no_dominant_tactic",
+    status:
+      strongest.meanWinShareAgainstField <= TACTICAL_SHAPE_THRESHOLDS.maxTacticMeanWinShareAgainstField
+        ? "pass"
+        : "fail",
+    observations: context.tacticDominance.matches,
+    observed: strongest.meanWinShareAgainstField,
+    threshold,
+    detail:
+      `The strongest setting is ${strongest.tacticKey} at ${strongest.meanWinShareAgainstField} against the field, `
+      + `dropping to ${strongest.minimumWinShareAgainstField} against its worst opponent. `
+      + `The weakest is ${weakest.tacticKey} at ${weakest.meanWinShareAgainstField}, which the gate does not bound: `
+      + `a knob pushed to an extreme is allowed to cost a manager, it is only forbidden to pay one.`,
   };
 }
 

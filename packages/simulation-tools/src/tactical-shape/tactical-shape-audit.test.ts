@@ -331,8 +331,9 @@ describe("tactical shape audit report", () => {
     }
   });
 
-  it("measures every tactic profile against the neutral one at the same shape", () => {
-    expect(report.tacticProfiles.map((row) => row.tacticKey)).toEqual([
+  it("measures every tactic profile against every other one at the same shape", () => {
+    const matrix = report.tacticDominance;
+    expect(matrix.tacticKeys).toEqual([
       "neutral",
       "high_pressing",
       "direct_play",
@@ -340,16 +341,57 @@ describe("tactical shape audit report", () => {
       "high_risk",
       "low_block",
     ]);
+    expect(matrix.rows.map((row) => row.tacticKey)).toEqual(matrix.tacticKeys);
+    expect(matrix.matches).toBeGreaterThan(0);
 
-    for (const row of report.tacticProfiles) {
+    for (const row of matrix.rows) {
       expect(row.matches).toBeGreaterThan(0);
       expect(row.opportunities).toBeGreaterThan(0);
+      expect(row.opportunitiesConceded).toBeGreaterThan(0);
       // A penalty counts as an opportunity but only emits a shot event when it is
       // scored, so the typed chances are a subset of the opportunity count.
       const chances = Object.values(row.chanceTypes).reduce((sum, value) => sum + value, 0);
       expect(chances).toBeGreaterThan(0);
       expect(chances).toBeLessThanOrEqual(row.opportunities);
     }
+  });
+
+  it("keeps the tactic matrix mirrored and never plays a profile against itself", () => {
+    const { tacticKeys, winShare } = report.tacticDominance;
+
+    for (const [row] of tacticKeys.entries()) {
+      expect(winShare[row]?.[row]).toBe(0.5);
+      for (let column = row + 1; column < tacticKeys.length; column += 1) {
+        const forward = winShare[row]?.[column] as number;
+        const mirrored = winShare[column]?.[row] as number;
+        expect(forward + mirrored).toBeCloseTo(1, 4);
+      }
+    }
+  });
+
+  it("gates tactics on the strongest profile against the field, never on a mirror match", () => {
+    // The twin of `no_dominant_composition`, and the reason the whole matrix is
+    // played rather than only each profile against neutral. A slider that beats
+    // the field is not a decision: it is found once and never touched again.
+    //
+    // Whether the *shipped* numbers satisfy it is not asked here and cannot be:
+    // this file runs a deliberately small engine config at `8` seed pairs, so a
+    // cell carries `16` matches and the field mean carries `80`. That is a
+    // standard error of `0.056` against a threshold `0.05` above even, which
+    // would make the assertion a reading of sampling noise. The shipped
+    // calibration is measured at the baseline sample count and recorded in the
+    // step document, exactly as the shape gate is. What is asserted here is
+    // that the gate reads the right number.
+    const invariant = report.invariants.find((row) => row.key === "no_dominant_tactic");
+    const means = report.tacticDominance.rows.map((row) => row.meanWinShareAgainstField);
+
+    expect(invariant?.status).not.toBe("not_evaluated");
+    expect(invariant?.observed).toBe(Math.max(...means));
+    expect(invariant?.observed).toBeGreaterThan(Math.min(...means));
+    expect(invariant?.observations).toBe(report.tacticDominance.matches);
+    expect(invariant?.threshold).toContain(
+      String(TACTICAL_SHAPE_THRESHOLDS.maxTacticMeanWinShareAgainstField),
+    );
   });
 
   it("leaves no chance type structurally impossible for a tactic", () => {
@@ -364,7 +406,7 @@ describe("tactical shape audit report", () => {
     // to rank profiles against each other; `opportunity-route.test.ts` owns
     // that claim at model level, where it is not a sampling question. What this
     // report can state is that no tactic is locked out of a chance type.
-    for (const row of report.tacticProfiles) {
+    for (const row of report.tacticDominance.rows) {
       expect(row.chanceTypes.cross).toBeGreaterThan(0);
       expect(row.chanceTypes.counter).toBeGreaterThan(0);
       expect(row.chanceTypes.open_play).toBeGreaterThan(0);

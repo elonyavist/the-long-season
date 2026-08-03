@@ -182,6 +182,37 @@ test("risk buys attempts rather than a route", () => {
   }
 });
 
+test("a side that shuts the game down takes the opponent's attempts with it", () => {
+  // The measured defect this replaced: a low block conceded *more* chances than
+  // playing neutral - `13.96` against `12.86` over the tactic matrix - because
+  // it surrendered a fifth of its own attempts and took nothing off the other
+  // side. Reading only the mover's own lean makes parking the bus strictly
+  // worse than not parking it, which is the opposite of what it is for.
+  const openGame = planFor({ own: knobAt("width", 1), opponent: knobAt("width", 1) });
+  const shutDown = planFor({ own: knobAt("width", 0), opponent: knobAt("width", 1) });
+
+  assert.equal(
+    shutDown.volumeMultiplier < openGame.volumeMultiplier,
+    true,
+    "one side going narrow must take attempts out of the match, not only out of its own half",
+  );
+});
+
+test("a knob with no route preference decides only its own side's attempts", () => {
+  // `risk` is a commitment instruction, not a shape-of-play one: it says how
+  // many players go forward, and the opponent never agreed to that. The split
+  // is read from the favoured-route mapping, so this is the assertion that the
+  // two halves of `deriveVolumeMultiplier` stay on the right sides of it.
+  const againstCalm = planFor({ own: neutralTactics(), opponent: knobAt("risk", 0) });
+  const againstCommitted = planFor({ own: neutralTactics(), opponent: knobAt("risk", 1) });
+
+  assert.equal(
+    againstCommitted.volumeMultiplier,
+    againstCalm.volumeMultiplier,
+    "the opponent's risk setting must not change how often this side attacks",
+  );
+});
+
 test("pressing pays only when the pressing side can actually press", () => {
   // Same instruction, two shapes. The incoherent side is told to press just as
   // hard and gets less for it, which is the contract's "only when shape is

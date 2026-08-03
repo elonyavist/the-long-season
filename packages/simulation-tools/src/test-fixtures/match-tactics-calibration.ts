@@ -23,6 +23,11 @@ import {
  * that distinguishes them: a defender is worth most where defenders are worth
  * most, and so on.
  *
+ * The knob magnitudes track the shipped ones for the same reason. They decide
+ * whether a tactic is a free win, and the audit gates that here: a fixture
+ * carrying superseded exposures would fail the gate against a calibration
+ * nobody ships, which says nothing about the game.
+ *
  * @example
  * runTacticalShapeSeries({ ..., matchTacticsCalibration: matchTacticsCalibrationFixture() });
  */
@@ -49,12 +54,12 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     },
     tacticalMatchup: {
       chainBottleneckWeightBasisPoints: 6_500,
-      pressingContestWeightBasisPoints: 5_000,
+      pressingContestWeightBasisPoints: 2_000,
     },
     tacticalSemantics: {
       routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
       volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
-      exposureBasisPointsByKnob: { directness: 1_600, pressing: 1_900, width: 1_300, risk: 2_200 },
+      exposureBasisPointsByKnob: { directness: 1_600, pressing: 4_700, width: 5_300, risk: 1_400 },
       commitmentBasisPointsByMentality: {
         very_defensive: 8_600,
         defensive: 9_300,

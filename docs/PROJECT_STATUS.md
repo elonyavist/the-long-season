@@ -3,10 +3,9 @@
 Handoff snapshot for whoever picks the project up next. Update it after every
 step attempt, completed step, and rework decision.
 
-**This file stays small on purpose.** It reached `5010` lines and `885 KB` on
-2026-08-03 - more than a context window holds - so "read this file first" had
-quietly stopped being followable. History was deleted rather than archived: it
-is all in `git log docs/PROJECT_STATUS.md` and in the per-phase reports under
+**This file stays small on purpose.** It reached `5010` lines on 2026-08-03,
+more than a context window holds, so "read this file first" had quietly stopped
+being followable. History lives in `git log docs/PROJECT_STATUS.md` and in
 `docs/audits/`. Keep this file under `300` lines: when a fact stops constraining
 future work, delete it.
 
@@ -32,10 +31,9 @@ equal-quality `4-4-2` and `3-1-6` produced byte-identical match results, and
 every tactic profile landed inside the measurement noise floor.
 
 Step 06 closed it. The `7` fingerprints are unchanged and intended - Step 03 put
-intrinsic shape *beside* department strength so neither shape nor suitability is
-charged into it twice - while all three equal-quality shape pairs now play
-different matches over `2400` of them. What each manager decision is now worth
-is measured below.
+intrinsic shape *beside* department strength - while all three equal-quality
+shape pairs now play different matches over `2400` of them. What each manager
+decision is now worth is measured below.
 
 | Phase 81 step | Status |
 |---|---|
@@ -44,20 +42,20 @@ is measured below.
 | 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
 | 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
 | 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
-| 06 - phase-aware control, opportunity routes, tactic semantics | In progress: blocks 1-3 done 2026-08-03, all gates green; block 4 open |
+| 06 - phase-aware control, opportunity routes, tactic semantics | Done 2026-08-03, all gates green; one invariant `not_evaluated` and escalated |
 | 07-12 | Not started |
 
 ## Current Active Step
 
 - Step:
-  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md`
-- Next action: Step 06, block 4 - a dominance gate over the tactic profiles, and
-  then only the knob exposure magnitudes moved until it holds. Block 3 measured
-  that three of the five knob extremes beat neutral, and nothing gates tactics
-  the way `no_dominant_composition` gates shapes. Blocks 1 to 3 delivered the
-  required context migration, the route model and tactic semantics, an unplanned
-  shot-chain reorder, and calibration; the step document holds what each found
-  against the code.
+  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/07-*.md`
+- Next action: start Step 07. Step 06 closed in four blocks - the required
+  context migration, the route model and tactic semantics, an unplanned
+  shot-chain reorder, calibration, and the tactic dominance gate; the step
+  document holds what each block found against the code.
+- Carried to the phase contract, not to Step 07: `asymmetric_incoherence_cost`
+  is still `not_evaluated`, with a written recommendation to split it. Step 11
+  reports and recommends; no step may move a frozen threshold alone.
 
 ## Live Constraints
 
@@ -87,23 +85,20 @@ Threshold, denominator, and `monitor` severity class are exactly as inherited -
 the owner moved, not the severity. The distribution is a starting point, never
 an accepted result.
 
-Step 06 is the first step able to move it, because it owns how many
-opportunities exist and how they convert. Step 11 is the deadline and Step 12
-confirms it at cohort scale. It may not be carried a third time: if Step 11
-finds it still out of band, the fix is reopening Step 06.
+Step 06 owned it, because it owns how many opportunities exist and how they
+convert. Step 11 is the deadline and Step 12 confirms it at cohort scale. It may
+not be carried a third time: if Step 11 finds it still out of band, the fix is
+reopening Step 06.
 
-Step 06 moved it on `pnpm cli ten-season-report`: `3.08` warn, to `2.97` pass
-once a knob offset stopped inflating every match, to `2.98` after the shot chain
-was reordered around the keeper, to `2.74` pass once the route reached the shot
-and the chain was recalibrated onto real football - `25.6` shots a match against
-`16.3`, `31.7%` of shots on target converted against `49.6%`.
-`table_points_spread_avg` came with it at `42.0`, the whole anomaly score is
-green, and no threshold, denominator or severity was touched.
+Step 06 took it from `3.08` warn to `2.74` pass on `pnpm cli ten-season-report`,
+and the last move was the chain being recalibrated onto real football - `25.6`
+shots a match against `16.3`, `31.7%` of shots on target converted against
+`49.6%`. `table_points_spread_avg` came with it at `42.0`, the whole anomaly
+score is green, and no threshold, denominator or severity was touched.
 
 That is the ten-season report, not the `750`-world distribution above. Nobody
 re-runs that population before Step 12 - `No cohort runs anywhere else` binds -
-and Step 11 evaluates the monitor on its own population, so the carried
-distribution stands as recorded until Step 12 confirms it.
+so the carried distribution stands as recorded until Step 11 measures its own.
 
 ### Which Manager Decisions Actually Count, Measured
 
@@ -112,18 +107,22 @@ real formation population the audit now also reports:
 
 | Decision | Moves win share by | Verdict |
 |---|---|---|
-| tactic sliders | `0.154` | counts, `3x` the noise |
+| tactic sliders | `0.095` | counts, `2x` the noise, and no setting wins on average |
 | formation | `0.030` | inside the noise |
 | department counts | `0.029` | inside the noise unless broken |
 | fielding a broken shape | `0.483` | counts enormously |
 
-The engine punishes an absurd setup hard and does not reward a good one, and
-three consequences bind future work.
+The engine punishes an absurd setup hard and does not reward a good one. Two
+things still bind future work, and one is already answered.
 
-**Nothing gates tactics.** Three of five knob extremes beat neutral -
-`flank_overload` `0.5644`, `direct_play` `0.5325`, `high_pressing` `0.52`. A
-slider that is simply better is not a decision, and `no_dominant_composition`
-has no twin for tactics. Step 06 block 4 owns this.
+**Tactics are gated and now have a best response.** `no_dominant_tactic` reads
+the *mean* against the other five profiles where the shape gate reads the worst
+matchup, because six legal settings are a peer population and `66` compositions
+are not. Step 06 block 4 took the best setting from `+0.064` over neutral to
+`+0.014` and left a cycle: `flank_overload` beats neutral, neutral beats
+`direct_play`, `direct_play` beats `flank_overload`. The gate is deliberately
+one-sided - an extreme may cost a manager, never pay one - so `low_block` at
+`0.4487` is reported and not bounded.
 
 **A route's defining phase carries `11.7%` of its own chain**, so a real `-12.8%`
 flank difference between formations arrives as `-1.5%`. Recorded as a reopen
@@ -146,8 +145,8 @@ In `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md`, regenerated by
 - One division tier of squad quality is worth `0.255` win share at identical
   shape. Every structure-versus-quality claim is measured against that number.
 - Structure may gain at most `0.75 x` that. No composition may stay above `0.55`
-  against every opponent. Incoherence must cost at least twice what coherence
-  pays.
+  against every opponent, and no tactic profile may average above `0.55` against
+  the other profiles. Incoherence must cost at least twice what coherence pays.
 - The dominance population is the `66` reachable department compositions, not
   the `23` named presets, which cover only `10` of them. The tactical board
   locks the goalkeeper slot only; every other slot reaches any outfield role by
@@ -155,10 +154,8 @@ In `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md`, regenerated by
   choices and no gate exempts them.
 - The bands are conditioned on a **single-country** population (A4). With five
   countries they must be re-derived, not carried over.
-- Two invariants are `not_evaluated`, never reported as passes:
-  `asymmetric_incoherence_cost` has no coherence reward to divide by, and
-  `distinguishable_coherent_and_incoherent_shape` is what the phase exists to
-  satisfy.
+- One invariant is still `not_evaluated`, never reported as a pass:
+  `asymmetric_incoherence_cost` has no coherence reward to divide by.
 
 ### Documentation Budget
 
@@ -219,11 +216,10 @@ second copy of any of them, and keep that separation.
 - A chain blends its weakest link with its average, so one dead phase collapses
   a route without deleting it. A route reaches exactly `0` only when the whole
   chain is `0`; that is the divide-by-zero guard, not a shape outcome.
-- Pressing acts in exactly one place - it contests build-up - so the routes
-  that skip build-up are the ones a pressed side falls back on. Step 06 must
-  not multiply pressing a second time.
-- The matchup reaches nothing but the explanation trace, and only when both
-  sides carry a shape and the caller supplies the calibration.
+- Pressing acts in exactly one place - it contests build-up - so the routes that
+  skip build-up are the ones a pressed side falls back on. The pressing knob
+  scales `pressing_cohesion` *before* the matchup runs and is never applied
+  again after it; a second term would price one instruction twice.
 
 ### Suitability Seam (Step 05)
 
@@ -241,6 +237,20 @@ second copy of any of them, and keep that separation.
   `ai-squad-selection.ts` and `position-suitability.ts`. Step 09 owns
   collapsing them; the execution ladder is a separate concept and is not a
   third candidate.
+
+### Tactic Semantics Seam (Step 06)
+
+- A knob's benefit and its cost are two typed mappings,
+  `TACTIC_KNOB_FAVOURED_ROUTES` and `TACTIC_KNOB_EXPOSED_ROUTE`. Content owns
+  only magnitudes, and validation refuses a knob priced at zero exposure.
+- **Basis points are not effect.** A knob lifting two routes, amplified again by
+  `routeSelectionSharpness`, costs far more than its number suggests, and
+  `deriveOpportunityRate` reads the *difference* between the two plans, so an
+  under-priced cost is charged twice. Solve exposures numerically against the
+  capacity edge; do not reason about them from the JSON.
+- A knob that changes where the ball goes moves **both** sides' attempt rate; a
+  knob with no route preference moves only its own. The split is read from
+  `TACTIC_KNOB_FAVOURED_ROUTES`, never declared twice.
 
 ### Superseded Evidence
 
@@ -262,16 +272,10 @@ second copy of any of them, and keep that separation.
 
 ## Update Protocol
 
-For every step attempt:
-
-1. Read this file.
-2. Choose the active step.
-3. Implement only that step.
-4. Run the required checks.
-5. If something is wrong, fix the current step or update the next relevant step
-   document.
-6. Update this file.
-7. Advance only when the step Definition of Done is satisfied.
+For every step attempt: read this file, choose the active step, implement only
+that step, run the required checks, and if something is wrong fix the current
+step or update the next relevant step document. Advance only when the step
+Definition of Done is satisfied.
 
 When updating this file:
 
@@ -279,10 +283,9 @@ When updating this file:
 2. Mark the step Done in its own step document, with adopted solution,
    verification output, blocker or lesson, and next action. **That document is
    where the detail lives**, not this one.
-3. Add to `Live Constraints` only what constrains *future* work.
-4. Delete anything in `Live Constraints` that has stopped constraining
-   anything.
-5. Keep this file under `300` lines.
+3. Add to `Live Constraints` only what constrains *future* work, and delete
+   anything there that has stopped constraining anything.
+4. Keep this file under `300` lines.
 
 ## Handoff Note Template
 

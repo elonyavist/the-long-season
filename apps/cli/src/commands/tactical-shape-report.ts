@@ -235,27 +235,45 @@ function versusReferenceSection(report: TacticalShapeAuditReport): readonly stri
 }
 
 function tacticSection(report: TacticalShapeAuditReport): readonly string[] {
-  const rows = report.tacticProfiles.map((row) => {
+  const matrix = report.tacticDominance;
+  const rows = matrix.rows.map((row) => {
     const types = row.chanceTypes;
     return (
-      `| \`${row.tacticKey}\` | ${row.winShare} | ${row.possessionShare} | ${row.opportunities} `
-      + `| ${row.expectedGoals} | ${types.open_play} | ${types.counter} | ${types.cross} `
-      + `| ${types.dead_ball} | ${row.matches} |`
+      `| \`${row.tacticKey}\` | ${row.meanWinShareAgainstField} | ${row.minimumWinShareAgainstField} `
+      + `| ${row.winShare} | ${row.possessionShare} | ${row.opportunities} | ${row.opportunitiesConceded} `
+      + `| ${row.expectedGoals} | ${types.open_play} | ${types.counter} | ${types.cross} | ${row.matches} |`
     );
   });
+
+  const header = `| vs | ${matrix.tacticKeys.map((key) => `\`${key}\``).join(" | ")} |`;
+  const grid = matrix.rows.map(
+    (row, index) =>
+      `| \`${row.tacticKey}\` | ${(matrix.winShare[index] as readonly number[]).join(" | ")} |`,
+  );
 
   return [
     "## Tactic Profiles At The Reference Shape",
     "",
-    "Each profile moves one knob to its extreme against the same shape playing the",
-    "neutral tactic, so whatever moves belongs to that knob. `neutral` plays itself",
-    "and its win share is the measurement's own noise reading.",
+    "Each profile moves one knob to its extreme, and every profile plays every",
+    "other one on the same shape at the same quality, so whatever moves belongs to",
+    "the tactic. `Against field` excludes the mirror match, which is `0.5` by",
+    "construction, and it is what the `no_dominant_tactic` gate reads.",
     "",
-    "Chance types name the route a chance came down.",
+    "`Conceded` is what the opponents produced. It is the half of a tactic that a",
+    "win share hides: a defensive setting is supposed to buy fewer chances against",
+    "it, not merely fewer of its own.",
     "",
-    "| Tactic | Win share | Possession | Opportunities | xG | Open play | Counter | Cross | Dead ball | Matches |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Tactic | Against field | Worst matchup | Against neutral | Possession | Created | Conceded | xG | Open play | Counter | Cross | Matches |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...rows,
+    "",
+    "### Tactic Versus Tactic",
+    "",
+    "Row against column. The diagonal is `0.5` by construction and is not played.",
+    "",
+    header,
+    `| --- | ${matrix.tacticKeys.map(() => "---").join(" | ")} |`,
+    ...grid,
   ];
 }
 

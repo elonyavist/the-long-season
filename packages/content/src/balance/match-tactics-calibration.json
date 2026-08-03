@@ -203,9 +203,9 @@
     },
     "exposureBasisPointsByKnob": {
       "directness": 1600,
-      "pressing": 1900,
-      "width": 1300,
-      "risk": 2200
+      "pressing": 4700,
+      "width": 5300,
+      "risk": 1400
     },
     "commitmentBasisPointsByMentality": {
       "very_defensive": 8600,

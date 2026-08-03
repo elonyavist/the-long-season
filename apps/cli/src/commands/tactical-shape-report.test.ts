@@ -81,17 +81,40 @@ function tinyBundle(overrides: Partial<TacticalShapeReportBundle["report"]> = {}
           goals: 2,
         },
       ],
-      tacticProfiles: [
-        {
-          tacticKey: "neutral",
-          winShare: 0.5,
-          matches: 2,
-          possessionShare: 0.5,
-          opportunities: 20,
-          expectedGoals: 2.5,
-          chanceTypes: { open_play: 12, counter: 4, cross: 3, dead_ball: 1 },
-        },
-      ],
+      tacticDominance: {
+        tacticKeys: ["neutral", "high_risk"],
+        winShare: [
+          [0.5, 0.62],
+          [0.38, 0.5],
+        ],
+        matches: 4,
+        rows: [
+          {
+            tacticKey: "neutral",
+            winShare: 0.5,
+            meanWinShareAgainstField: 0.62,
+            minimumWinShareAgainstField: 0.62,
+            matches: 2,
+            possessionShare: 0.5,
+            opportunities: 20,
+            opportunitiesConceded: 18,
+            expectedGoals: 2.5,
+            chanceTypes: { open_play: 12, counter: 4, cross: 3, dead_ball: 1 },
+          },
+          {
+            tacticKey: "high_risk",
+            winShare: 0.38,
+            meanWinShareAgainstField: 0.38,
+            minimumWinShareAgainstField: 0.38,
+            matches: 2,
+            possessionShare: 0.5,
+            opportunities: 18,
+            opportunitiesConceded: 20,
+            expectedGoals: 2.1,
+            chanceTypes: { open_play: 10, counter: 4, cross: 3, dead_ball: 1 },
+          },
+        ],
+      },
       formations: [
         {
           formationKey: "4-4-2",

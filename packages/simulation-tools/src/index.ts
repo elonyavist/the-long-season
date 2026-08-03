@@ -269,6 +269,7 @@ export {
   type TacticalShapeSide,
   type TacticalShapeSideLabel,
   type TacticalShapeStrengthRow,
+  type TacticalShapeTacticDominanceMatrix,
   type TacticalShapeTacticProfile,
   type TacticalShapeTacticRow,
   type TacticalShapeVersusReferenceRow,

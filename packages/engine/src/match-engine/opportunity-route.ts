@@ -239,10 +239,27 @@ function withPressingIntensity(shape: TacticalShapeProfile, pressingLean: number
 /**
  * Derives how often this side commits to an attempt, relative to the baseline.
  *
- * Three things move it and all three are bounded: the knobs that raise attempt
- * frequency, the mentality ladder, and how far behind the side is. Score state
- * is capped at a two-goal swing, so a rout bends commitment once and then stops
- * bending it.
+ * Two different ideas, deliberately kept apart:
+ *
+ * 1. **How open the match is, decided by both managers.** A knob that changes
+ *    where the ball goes changes the game both sides are playing, so its volume
+ *    magnitude reads both leans: a long, pressed, stretched match has more
+ *    football in it for everybody, and a deep, narrow, patient one has less.
+ *    Reading only the mover's own lean makes a low block concede *more* than
+ *    playing neutral - measured at `13.96` chances against `12.86` - because it
+ *    surrenders a fifth of its own attempts and takes nothing off the opponent.
+ *    That is the opposite of what parking the bus is for.
+ * 2. **How much this side commits, decided by this manager alone.** A knob with
+ *    no route preference is not shaping the game, only deciding how many
+ *    players go forward, so it is one-sided - which is why `risk` sits here and
+ *    not above, and why it is the same kind of instruction as mentality.
+ *    Mentality and score state join it: a team chasing a goal attacks more, and
+ *    that is not something its opponent agreed to. Score state is capped at a
+ *    two-goal swing, so a rout bends commitment once and stops.
+ *
+ * The split is read from `TACTIC_KNOB_FAVOURED_ROUTES` rather than declared a
+ * second time, because "does this instruction change where the ball goes" is
+ * already written there and two copies of it could disagree.
  */
 function deriveVolumeMultiplier(
   input: DeriveOpportunityRoutePlanInput,
@@ -250,7 +267,10 @@ function deriveVolumeMultiplier(
 ): number {
   let volume = 1;
   for (const knob of TACTIC_KNOBS) {
-    volume += share(semantics.volumeBasisPointsByKnob[knob]) * lean(input.ownTactics, input.caps, knob);
+    const magnitude = share(semantics.volumeBasisPointsByKnob[knob]);
+    const shapesTheGame = TACTIC_KNOB_FAVOURED_ROUTES[knob].length > 0;
+    volume += magnitude * lean(input.ownTactics, input.caps, knob);
+    if (shapesTheGame) volume += magnitude * lean(input.opponentTactics, input.caps, knob);
   }
 
   const commitment = share(semantics.commitmentBasisPointsByMentality[input.ownTactics.mentality]);
