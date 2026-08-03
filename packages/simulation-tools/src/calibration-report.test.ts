@@ -18,6 +18,9 @@ import {
   type CalibrationMetricKey,
   type CalibrationTarget,
 } from "./calibration-report.ts";
+import { matchTacticsCalibrationFixture } from "./test-fixtures/match-tactics-calibration.ts";
+import { seasonTeamInputFixture } from "./test-fixtures/season-team-input.ts";
+
 
 /**
  * Calibration report tests prove deterministic aggregate metrics without
@@ -103,6 +106,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
     clubIds,
     seasonStartDate: gameDate(fromISO("2026-08-01")),
     teamsByClubId: teamsByClubId(clubIds),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     matchEngineConfig: {
       minuteCount: 12,
       rates: {
@@ -163,29 +167,7 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
     assert.ok(id !== undefined);
 
     const rating = 8 + (clubIds.length - index) / 3;
-    teams[id] = {
-      lineup: [
-        createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-01`), canonicalRole: "goalkeeper" }),
-        createLineupSlot({
-          slotId: "slot:02",
-          playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-02`),
-          canonicalRole: "striker",
-        }),
-      ],
-      strength: {
-        attack: rating,
-        midfield: rating,
-        defense: rating,
-        goalkeeper: rating,
-        overall: rating,
-      },
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-      },
-    };
+    teams[id] = seasonTeamInputFixture(`balance-${String(index + 1).padStart(2, "0")}`, rating);
   }
 
   return teams;

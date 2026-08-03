@@ -18,6 +18,9 @@ import type { SimulateSeasonInput, SimulateSeasonTeamInput } from "@game/engine"
 
 import type { LongRunContractFinanceSeasonRow } from "./contract-finance-stability.ts";
 import { runCareerLongRunSimulation } from "./career-long-runner.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import { seasonTeamInputFixture } from "../test-fixtures/season-team-input.ts";
+
 
 test("runCareerLongRunSimulation sequences season simulation and refresh hooks", () => {
   const initialCareerState = careerStateFixture();
@@ -371,6 +374,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
     competitionId: competitionId("competition:test"),
     clubIds,
     seasonStartDate: gameDate(20_000),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     teamsByClubId: {
       [firstClubId]: teamInput(firstClubId, 12),
       [secondClubId]: teamInput(secondClubId, 10),
@@ -406,25 +410,5 @@ function seasonInput(seed: string): SimulateSeasonInput {
 }
 
 function teamInput(id: ClubId, rating: number): SimulateSeasonTeamInput {
-  const clubSlug = String(id).slice("club:".length);
-
-  return {
-    lineup: [
-      createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:${clubSlug}-01`), canonicalRole: "goalkeeper" }),
-      createLineupSlot({ slotId: "slot:02", playerId: playerId(`player:${clubSlug}-02`), canonicalRole: "striker" }),
-    ],
-    strength: {
-      attack: rating,
-      midfield: rating,
-      defense: rating,
-      goalkeeper: rating,
-      overall: rating,
-    },
-    tacticalDistribution: {
-      directness: 0.5,
-      pressing: 0.5,
-      width: 0.5,
-      risk: 0.5,
-    },
-  };
+  return seasonTeamInputFixture(String(id).slice("club:".length), rating);
 }

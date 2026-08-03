@@ -80,6 +80,7 @@ export function createTacticalShapeReport(
     measurement,
     report: runTacticalShapeAudit({
       engineConfig: world.matchEngineConfig,
+      matchTacticsCalibration: world.matchTacticsCalibration,
       bands: measurement.bands,
       seedPrefix: input.seedPrefix ?? DEFAULT_TACTICAL_SHAPE_SEED_PREFIX,
       pairedSeedCount: input.pairedSeedCount ?? DEFAULT_TACTICAL_SHAPE_PAIRED_SEEDS,
@@ -191,6 +192,7 @@ function measureClubStrength(world: FakeDomesticWorld, clubId: DomesticClubId): 
     requiredLineupSize: formation.slots.length,
     players: world.players,
     roleWeights: world.roleWeights,
+    matchTacticsCalibration: world.matchTacticsCalibration,
   }).strength;
 }
 

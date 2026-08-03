@@ -22,6 +22,8 @@ import {
 } from "./ai-squad-selection.ts";
 import type { RoleWeightProfile } from "../match-engine/index.ts";
 import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+
 
 test("selectAiMatchSquad builds a valid XI and bench without duplicate players", () => {
   const input = squadInput({
@@ -197,6 +199,7 @@ test("buildAiSquadMatchTeamContext derives strength from the selected AI lineup"
       width: 0.5,
       risk: 0.5,
     },
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   });
 
   assert.equal(result.teamContext.clubId, clubId("club:ai"));

@@ -2,7 +2,6 @@ import {
   fieldablePlayerIds, createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import type { FakeLeagueSystem } from "@game/content";
 import {
-  deriveTeamStrength,
   type LineupSlot,
   type RoleWeightProfile,
   type SimulateSeasonInput,
@@ -34,6 +33,7 @@ export function createFakeSeasonInput(league: FakeLeagueSystem, seed: string): S
     seasonStartDate: league.seasonStartDate,
     teamsByClubId: createFakeTeamsByClubId(league),
     matchEngineConfig: league.matchEngineConfig,
+    matchTacticsCalibration: league.matchTacticsCalibration,
     tableRules: league.tableRules,
   };
 }
@@ -63,14 +63,8 @@ export function createFakeTeamsByClubId(
       lineup: typedLineup,
       players: league.players,
       roleWeights,
+      playerStates: league.playerStates,
       stateMultiplierCurves: league.stateMultiplierCurves,
-      strength: deriveTeamStrength({
-        lineup: typedLineup,
-        players: league.players,
-        playerStates: league.playerStates,
-        roleWeights,
-        stateMultiplierCurves: league.stateMultiplierCurves,
-      }),
       tacticalDistribution: {
         directness: 0.5,
         pressing: 0.5,
@@ -103,6 +97,7 @@ export function createCareerSeasonInput(
     seasonStartDate: careerState.gameState.calendar.currentDate,
     teamsByClubId: createCareerTeamsByClubId(league, careerState),
     matchEngineConfig: league.matchEngineConfig,
+    matchTacticsCalibration: league.matchTacticsCalibration,
     tableRules: league.tableRules,
   };
 }
@@ -126,14 +121,8 @@ function createCareerTeamsByClubId(
       lineup,
       players: careerState.gameState.players,
       roleWeights,
+      playerStates: careerState.gameState.playerStates,
       stateMultiplierCurves: league.stateMultiplierCurves,
-      strength: deriveTeamStrength({
-        lineup,
-        players: careerState.gameState.players,
-        playerStates: careerState.gameState.playerStates,
-        roleWeights,
-        stateMultiplierCurves: league.stateMultiplierCurves,
-      }),
       tacticalDistribution: {
         directness: 0.5,
         pressing: 0.5,

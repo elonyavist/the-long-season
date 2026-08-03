@@ -24,6 +24,11 @@ import {
   accrueFixtureParticipationContributions,
   buildFixtureParticipationContributions,
 } from "./player-participation.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /** Tests for authoritative fixture participation accrual from committed facts. */
 
@@ -185,6 +190,7 @@ function initialHomeContext(): MatchTeamContext {
       createLineupSlot({ slotId: "slot:home:field", playerId: HOME_STARTER, canonicalRole: "center_back" }),
     ],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0 },
   };
 }

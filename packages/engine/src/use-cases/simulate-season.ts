@@ -6,6 +6,7 @@ import {
   type PlayerPotentialProjectionPolicyConfig,
   type PlayerRatingScaleConfig,
   type PlayerFixtureParticipationContribution,
+  type MatchTacticsCalibrationConfig,
   type SelectedLineup,
   type TacticSetup,
   type ClubId,
@@ -36,7 +37,7 @@ import {
   playerRatingRegistrationsFromContext,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
-  type TeamStrength,
+  deriveTeamShapeAndStrength,
   deriveTeamStrength,
   TeamStrengthError,
 } from "../match-engine/index.ts";
@@ -87,14 +88,28 @@ export interface SimulateSeasonAiSquadSelection {
 export interface SimulateSeasonTeamInput {
   /** Explicit ordered lineup used for every match in this first milestone. */
   readonly lineup: readonly LineupSlot[];
-  /** Precomputed aggregate strength for the lineup. */
-  readonly strength: TeamStrength;
+  /**
+   * Player lookup for the lineup.
+   *
+   * Required, together with `roleWeights`, because department strength and
+   * intrinsic tactical shape are both derived here from the same scoring pass.
+   * A caller-supplied precomputed strength used to live on this input; it was
+   * removed because it is derivable, and because a stored strength could end up
+   * describing a different lineup than the shape simulated beside it.
+   */
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  /** Role profiles for the lineup. */
+  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
   /** Tactical distribution input for every match in this first milestone. */
   readonly tacticalDistribution: MatchTacticalDistributionInput;
-  /** Optional player lookup used only when season fitness lifecycle is enabled. */
-  readonly players?: Readonly<Record<PlayerId, Player>>;
-  /** Optional role profiles used only when season fitness lifecycle is enabled. */
-  readonly roleWeights?: Readonly<Record<string, RoleWeightProfile>>;
+  /**
+   * Static player states used when no fitness lifecycle supplies live ones.
+   *
+   * A caller who wants condition reflected in a season without running the
+   * lifecycle supplies it here. `SimulateSeasonInput.fitnessLifecycle` always
+   * wins when both are present, because those states are the current ones.
+   */
+  readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Optional state curves used only when season fitness lifecycle is enabled. */
   readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
   /** Optional AI selector for fixture-by-fixture lineups. */
@@ -195,6 +210,8 @@ export interface SimulateSeasonInput {
   readonly fitnessLifecycle?: SimulateSeasonFitnessLifecycle;
   /** Match engine config reused for each fixture. */
   readonly matchEngineConfig: MatchEngineConfig;
+  /** Versioned match-tactics calibration reused for every team context. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Competition point rules for the final derived table. */
   readonly tableRules: LeagueTableRules;
 }
@@ -453,11 +470,12 @@ function matchSetupForFixture(
     home,
     away,
     matchContext: {
-    fixtureId: fixture.id,
-    seed: input.seed,
-    home: home.teamContext,
-    away: away.teamContext,
-    engineConfig: input.matchEngineConfig,
+      fixtureId: fixture.id,
+      seed: input.seed,
+      home: home.teamContext,
+      away: away.teamContext,
+      engineConfig: input.matchEngineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
     },
   };
 }
@@ -487,13 +505,18 @@ function fixtureTeamSetup(
   if (fixtureLineupOverride !== undefined) {
     const tacticalDistribution = setupOverride === undefined
       ? baseTeamInput(input, clubId).tacticalDistribution
-      : buildSetupOverrideContext(setupOverride, playerStates ?? setupOverride.playerStates).tacticalDistribution;
+      : buildSetupOverrideContext(
+          setupOverride,
+          input.matchTacticsCalibration,
+          playerStates ?? setupOverride.playerStates,
+        ).tacticalDistribution;
 
     return {
       teamContext: buildFixtureLineupOverrideContext(
         fixtureLineupOverride,
         clubId,
         tacticalDistribution,
+        input.matchTacticsCalibration,
         playerStates ?? fixtureLineupOverride.playerStates,
       ),
       benchPlayerIds: [],
@@ -504,6 +527,7 @@ function fixtureTeamSetup(
     return {
       teamContext: buildSetupOverrideContext(
         setupOverride,
+        input.matchTacticsCalibration,
         playerStates ?? setupOverride.playerStates,
       ),
       benchPlayerIds: [],
@@ -513,23 +537,11 @@ function fixtureTeamSetup(
   const team = baseTeamInput(input, clubId);
 
   if (team.aiSelection !== undefined) {
-    return aiSelectedMatchTeamContext(clubId, team, playerStates, fixture);
-  }
-
-  if (playerStates !== undefined) {
-    return {
-      teamContext: fitnessAwareMatchTeamContext(clubId, team, playerStates),
-      benchPlayerIds: [],
-    };
+    return aiSelectedMatchTeamContext(clubId, team, input.matchTacticsCalibration, playerStates, fixture);
   }
 
   return {
-    teamContext: {
-      clubId,
-      lineup: team.lineup,
-      strength: team.strength,
-      tacticalDistribution: team.tacticalDistribution,
-    },
+    teamContext: fixedLineupMatchTeamContext(clubId, team, input.matchTacticsCalibration, playerStates),
     benchPlayerIds: [],
   };
 }
@@ -578,11 +590,15 @@ function seasonPlayerIdsForRegistration(
   const setupOverride = setupOverrides[clubId];
 
   if (setupOverride !== undefined) {
-    return buildSetupOverrideContext(setupOverride, setupOverride.playerStates).lineup.map((slot) => slot.playerId);
+    return buildSetupOverrideContext(
+      setupOverride,
+      input.matchTacticsCalibration,
+      setupOverride.playerStates,
+    ).lineup.map((slot) => slot.playerId);
   }
 
   const team = baseTeamInput(input, clubId);
-  if (team.aiSelection !== undefined && team.players !== undefined) {
+  if (team.aiSelection !== undefined) {
     return Object.keys(team.players).sort() as PlayerId[];
   }
 
@@ -775,16 +791,18 @@ function buildFixtureLineupOverrideContext(
   override: SimulateSeasonFixtureLineupOverride,
   clubId: ClubId,
   tacticalDistribution: MatchTacticalDistributionInput,
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   try {
     return {
       clubId,
       lineup: override.lineup,
-      strength: deriveTeamStrength({
+      ...deriveTeamShapeAndStrength({
         lineup: override.lineup,
         players: override.players,
         roleWeights: override.roleWeights,
+        matchTacticsCalibration,
         ...(playerStates === undefined ? {} : { playerStates }),
         ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
       }),
@@ -820,6 +838,7 @@ function baseTeamInput(input: SimulateSeasonInput, clubId: ClubId): SimulateSeas
  */
 function buildSetupOverrideContext(
   override: SimulateSeasonSetupOverride,
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   const builderInput: BuildTacticTeamContextInput = {
@@ -828,6 +847,7 @@ function buildSetupOverrideContext(
     requiredLineupSize: override.requiredLineupSize,
     players: override.players,
     roleWeights: override.roleWeights,
+    matchTacticsCalibration,
     ...(playerStates === undefined ? {} : { playerStates }),
     ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
   };
@@ -847,17 +867,23 @@ function buildSetupOverrideContext(
 }
 
 /**
- * Builds a match-team context whose strength reflects the latest fitness state.
+ * Builds the fixed-lineup match-team context for one club.
+ *
+ * `livePlayerStates` is the fitness lifecycle's current view when the caller
+ * enabled it. Without a lifecycle the team's own static states are used, so a
+ * season that never recovers or spends fitness still starts from the condition
+ * the caller described rather than from an invented full-fitness squad.
  */
-function fitnessAwareMatchTeamContext(
+function fixedLineupMatchTeamContext(
   clubId: ClubId,
   team: SimulateSeasonTeamInput,
-  playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>,
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
+  livePlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
 ): MatchTeamContext {
-  if (team.players === undefined || team.roleWeights === undefined || team.stateMultiplierCurves === undefined) {
+  if (livePlayerStates !== undefined && team.stateMultiplierCurves === undefined) {
     throw new SimulateSeasonError(
       "invalid_fitness_lifecycle",
-      `Fitness lifecycle requires players, role weights, and state curves for team: ${clubId}`,
+      `Fitness lifecycle requires state multiplier curves for team: ${clubId}`,
     );
   }
 
@@ -865,12 +891,12 @@ function fitnessAwareMatchTeamContext(
     return {
       clubId,
       lineup: team.lineup,
-      strength: deriveTeamStrength({
+      ...deriveTeamShapeAndStrength({
         lineup: team.lineup,
         players: team.players,
-        playerStates,
         roleWeights: team.roleWeights,
-        stateMultiplierCurves: team.stateMultiplierCurves,
+        matchTacticsCalibration,
+        ...dynamicStateInputs(team, livePlayerStates),
       }),
       tacticalDistribution: team.tacticalDistribution,
     };
@@ -878,7 +904,7 @@ function fitnessAwareMatchTeamContext(
     if (error instanceof TeamStrengthError) {
       throw new SimulateSeasonError(
         "invalid_fitness_lifecycle",
-        `Invalid fitness lifecycle strength input for club ${clubId}: ${error.message}`,
+        `Invalid team strength input for club ${clubId}: ${error.message}`,
       );
     }
 
@@ -887,18 +913,43 @@ function fitnessAwareMatchTeamContext(
 }
 
 /**
+ * Selects the dynamic-state inputs a strength derivation may actually use.
+ *
+ * The multiplier curves are only meaningful alongside the states they read, so
+ * a team that carries curves but has no states at all contributes neither. That
+ * keeps "curves supplied, lifecycle not enabled" an inert configuration rather
+ * than a failure, which is what callers who pre-wire fitness data expect.
+ */
+function dynamicStateInputs(
+  team: SimulateSeasonTeamInput,
+  livePlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
+): {
+  readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
+} {
+  const playerStates = livePlayerStates ?? team.playerStates;
+  if (playerStates === undefined) return {};
+
+  return {
+    playerStates,
+    ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
+  };
+}
+
+/**
  * Builds a fixture-specific AI match context without mutating the base team.
  */
 function aiSelectedMatchTeamContext(
   clubId: ClubId,
   team: SimulateSeasonTeamInput,
-  playerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
+  livePlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
   fixture: Fixture,
 ): FixtureTeamSetup {
-  if (team.aiSelection === undefined || team.players === undefined || team.roleWeights === undefined) {
+  if (team.aiSelection === undefined) {
     throw new SimulateSeasonError(
       "invalid_ai_squad_selection",
-      `AI selection requires formation, players, and role weights for team: ${clubId}`,
+      `AI selection requires a formation for team: ${clubId}`,
     );
   }
 
@@ -918,8 +969,8 @@ function aiSelectedMatchTeamContext(
       currentDate: fixture.date,
       roleWeights: team.roleWeights,
       tacticalDistribution: team.tacticalDistribution,
-      ...(playerStates === undefined ? {} : { playerStates }),
-      ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
+      matchTacticsCalibration,
+      ...dynamicStateInputs(team, livePlayerStates),
       ...(team.aiSelection.benchSize === undefined ? {} : { benchSize: team.aiSelection.benchSize }),
     });
     return {

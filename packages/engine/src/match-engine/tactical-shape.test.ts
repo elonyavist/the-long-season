@@ -38,6 +38,7 @@ import {
   type LineupSlot,
   type RoleWeightProfile,
 } from "./team-strength.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
 
 /**
  * These tests prove the intrinsic-shape invariants on a fixture calibration
@@ -53,14 +54,14 @@ import {
 
 test("the fixture calibration is one the domain validator accepts", () => {
   assert.doesNotThrow(() => {
-    validateMatchTacticsCalibration(calibration());
+    validateMatchTacticsCalibration(matchTacticsCalibrationFixture());
   });
 });
 
 test("a profile is complete, bounded, and stamped with its policy", () => {
   const profile = profileFor(FOUR_FOUR_TWO);
 
-  assert.equal(profile.policyVersion, calibration().version);
+  assert.equal(profile.policyVersion, matchTacticsCalibrationFixture().version);
   for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
     const value = profile.capacities[capacity];
     assert.equal(Number.isFinite(value), true, `${capacity} must be finite`);
@@ -311,7 +312,7 @@ test("reordering equal contributors cannot change the result", () => {
 
 test("an empty lineup has no shape", () => {
   assert.throws(
-    () => deriveTacticalShapeProfile({ slotScores: [], calibration: calibration() }),
+    () => deriveTacticalShapeProfile({ slotScores: [], calibration: matchTacticsCalibrationFixture() }),
     (error: unknown) => error instanceof TacticalShapeError && error.code === "empty_lineup",
   );
 });
@@ -320,7 +321,7 @@ test("more contributors than the ladder covers is a deterministic failure", () =
   const tooMany = Array.from({ length: 12 }, (): PitchSlot => ["striker", "center"]);
 
   assert.throws(
-    () => deriveTacticalShapeProfile({ slotScores: slotScoresFor(tooMany), calibration: calibration() }),
+    () => deriveTacticalShapeProfile({ slotScores: slotScoresFor(tooMany), calibration: matchTacticsCalibrationFixture() }),
     (error: unknown) => error instanceof TacticalShapeError && error.code === "too_many_contributors",
   );
 });
@@ -466,7 +467,7 @@ const NATURAL_POSITION_FOR_ROLE = {
 } as const satisfies Readonly<Record<CanonicalPlayerRole, PlayerPosition>>;
 
 function profileFor(slots: readonly PitchSlot[], quality: QualityOptions = {}): TacticalShapeProfile {
-  return deriveTacticalShapeProfile({ slotScores: slotScoresFor(slots, quality), calibration: calibration() });
+  return deriveTacticalShapeProfile({ slotScores: slotScoresFor(slots, quality), calibration: matchTacticsCalibrationFixture() });
 }
 
 function slotScoresFor(slots: readonly PitchSlot[], quality: QualityOptions = {}) {
@@ -553,115 +554,6 @@ function makePlayer(id: PlayerId, ability: number, naturalPositions: readonly Pl
   } as unknown as Player;
 }
 
-/**
- * A fixture calibration with football character but no shipped numbers.
- *
- * Every outfield role keeps a positive floor on every task, which is what the
- * domain validator requires and what keeps a capacity from being structurally
- * unreachable.
- */
-function calibration(): MatchTacticsCalibrationConfig {
-  return {
-    schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
-    version: "match-tactics-fixture",
-    classification: "explicit_game_design_target",
-    tacticalShape: {
-      contributionWeightBasisPointsByRoleAndTask: {
-        goalkeeper: taskWeights({}, 0),
-        right_full_back: FULL_BACK_WEIGHTS,
-        center_back: taskWeights({
-          build_up: 7_000,
-          central_coverage: 6_000,
-          box_protection: 9_500,
-          rest_defence: 9_000,
-        }),
-        left_full_back: FULL_BACK_WEIGHTS,
-        defensive_midfielder: taskWeights({
-          build_up: 8_000,
-          central_progression: 6_000,
-          central_coverage: 9_000,
-          rest_defence: 8_000,
-        }),
-        central_midfielder: taskWeights({
-          build_up: 6_500,
-          central_progression: 8_000,
-          pressing_cohesion: 7_000,
-          central_coverage: 7_000,
-        }),
-        right_midfielder: WIDE_MIDFIELD_WEIGHTS,
-        left_midfielder: WIDE_MIDFIELD_WEIGHTS,
-        attacking_midfielder: taskWeights({
-          central_progression: 8_500,
-          final_third_presence: 6_000,
-          counter_threat: 7_000,
-        }),
-        right_winger: WINGER_WEIGHTS,
-        left_winger: WINGER_WEIGHTS,
-        striker: taskWeights({
-          final_third_presence: 9_500,
-          counter_threat: 8_500,
-          central_progression: 4_000,
-        }),
-      },
-      marginalContributionBasisPointsByRank: [10_000, 7_000, 5_000, 3_600, 2_600, 1_900, 1_400, 1_000, 700, 500, 350],
-      coordinationMultiplierBasisPointsBySuitability: {
-        natural: 10_000,
-        adapted: 9_200,
-        weak: 7_800,
-        invalid: 5_500,
-      },
-      channelPolicy: { halfChannelOwnShareBasisPoints: 7_500 },
-      saturationReferenceMilliByTask: {
-        build_up: 21_000,
-        central_progression: 19_000,
-        lateral_progression: 14_000,
-        final_third_presence: 19_500,
-        pressing_cohesion: 22_000,
-        central_coverage: 19_000,
-        lateral_coverage: 15_000,
-        box_protection: 22_500,
-        counter_threat: 21_500,
-        rest_defence: 23_000,
-      },
-    },
-    tacticalMatchup: {
-      chainBottleneckWeightBasisPoints: 6_500,
-      pressingContestWeightBasisPoints: 5_000,
-    },
-  };
-}
-
-const FULL_BACK_WEIGHTS = taskWeights({
-  build_up: 5_500,
-  lateral_progression: 6_500,
-  lateral_coverage: 8_000,
-  box_protection: 5_000,
-  rest_defence: 6_000,
-});
-
-const WIDE_MIDFIELD_WEIGHTS = taskWeights({
-  lateral_progression: 7_500,
-  lateral_coverage: 7_000,
-  pressing_cohesion: 7_000,
-  counter_threat: 5_000,
-});
-
-const WINGER_WEIGHTS = taskWeights({
-  lateral_progression: 8_000,
-  final_third_presence: 6_500,
-  counter_threat: 8_000,
-  lateral_coverage: 3_500,
-});
-
-function taskWeights(
-  overrides: Partial<Record<TacticalShapeTask, number>>,
-  floor = 1_500,
-): Readonly<Record<TacticalShapeTask, number>> {
-  return Object.fromEntries(
-    TACTICAL_SHAPE_TASKS.map((task) => [task, overrides[task] ?? floor]),
-  ) as Readonly<Record<TacticalShapeTask, number>>;
-}
-
 function assertProfileRejected(profile: TacticalShapeProfile, code: string): void {
   assert.throws(
     () => {
@@ -673,7 +565,7 @@ function assertProfileRejected(profile: TacticalShapeProfile, code: string): voi
 }
 
 test("every canonical role is covered by the fixture calibration", () => {
-  const weights = calibration().tacticalShape.contributionWeightBasisPointsByRoleAndTask;
+  const weights = matchTacticsCalibrationFixture().tacticalShape.contributionWeightBasisPointsByRoleAndTask;
 
   for (const role of CANONICAL_PLAYER_ROLES) {
     assert.notEqual(weights[role], undefined, `${role} has no fixture weights`);

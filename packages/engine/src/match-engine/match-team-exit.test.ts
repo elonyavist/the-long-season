@@ -6,6 +6,11 @@ import { clubId, fixtureId, playerId } from "@game/domain";
 
 import type { MatchContext, MatchPlayerIncidentProfile, MatchTeamContext } from "./match-context.ts";
 import { removeForcedOffPlayerFromMatchContext } from "./match-team-exit.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 test("a forced-off goalkeeper promotes the strongest remaining emergency option", () => {
   const context = matchContext();
@@ -43,6 +48,7 @@ function matchContext(): MatchContext {
         risk: { minInclusive: 0, maxInclusive: 1 },
       },
     },
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
 }
 
@@ -63,6 +69,7 @@ function team(side: "home" | "away"): MatchTeamContext {
       incidentProfile(emergency, 6, 7),
     ],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 },
   };
 }

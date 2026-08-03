@@ -221,8 +221,11 @@ export {
 export {
   buildTacticTeamContext,
   createMatchPlayerIncidentProfile,
+  deriveTeamShapeAndStrength,
   tacticToMatchDistribution,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
+  type DeriveTeamShapeAndStrengthInput,
   type TacticTeamContextErrorCode,
+  type TeamShapeAndStrength,
 } from "./tactic-team-context.ts";

@@ -17,6 +17,11 @@ import {
   resumeProgressiveMatchSession,
   type ProgressiveMatchSessionState,
 } from "./progressive-match-session.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 test("paused minute snapshots contain completed facts only", () => {
   const context = validContext("fixture:progressive-pause");
@@ -146,6 +151,7 @@ function validContext(fixtureValue: string): MatchContext {
     home: validTeam("home", 11, 0),
     away: validTeam("away", 10, 0),
     engineConfig: validConfig(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
 }
 
@@ -168,6 +174,7 @@ function validTeam(side: MatchSide, strength: number, risk: number, fieldPlayer?
       goalkeeper: strength,
       overall: strength,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: risk,
       pressing: risk,

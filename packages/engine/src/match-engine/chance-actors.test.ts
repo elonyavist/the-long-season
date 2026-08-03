@@ -11,6 +11,11 @@ import {
   selectChanceActors,
 } from "./chance-actors.ts";
 import type { MatchTeamContext } from "./match-context.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Chance-actor tests prove that the new causal building block is deterministic,
@@ -144,6 +149,7 @@ function homeTeamFixture(): MatchTeamContext {
       createLineupSlot({ slotId: "slot:home-att", playerId: playerId("player:home-att"), canonicalRole: "striker" }),
     ],
     strength: teamStrengthFixture(),
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
   };
 }
@@ -161,6 +167,7 @@ function awayTeamFixture(): MatchTeamContext {
       createLineupSlot({ slotId: "slot:away-att", playerId: playerId("player:away-att"), canonicalRole: "striker" }),
     ],
     strength: teamStrengthFixture(),
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
   };
 }

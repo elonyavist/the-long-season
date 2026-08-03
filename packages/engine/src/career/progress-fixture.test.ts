@@ -50,6 +50,11 @@ import {
   playerDevelopmentCalibrationVersionsFixture,
   playerDevelopmentEnvironmentConfigFixture,
 } from "../test-fixtures/player-development-environment-config.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 function progressNextCareerFixture(
   input: Omit<
@@ -110,6 +115,7 @@ test("progressNextCareerFixture simulates and applies the next selected-club fix
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -196,6 +202,7 @@ test("progressNextCareerFixture closes a complete quarter before accruing the fi
       [otherClubId]: teamContextFixture(otherClubId, 10),
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -225,6 +232,7 @@ test("progressNextCareerFixture is deterministic for the same state and team con
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   };
 
@@ -261,6 +269,7 @@ test("progressNextCareerFixture identifies every ineligible selected player with
       [otherClubId]: teamContextFixture(otherClubId, 10),
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -290,6 +299,7 @@ test("commitCompletedCareerFixture publishes the watched final state without rec
     home: selectedTeam,
     away: teamContextFixture(otherClubId, 10),
     engineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
   const completed = simulateMatch(initialContext);
   const report = createMatchReport(completed);
@@ -336,6 +346,7 @@ test("progressNextCareerFixture keeps a compact deterministic progression sentin
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -449,6 +460,7 @@ test("progressNextCareerFixture can include explanation trace without changing f
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   };
 
@@ -488,6 +500,7 @@ test("progressNextCareerFixture reports negative selected-club condition impact 
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
     includeExplanationTrace: true,
   });
@@ -520,6 +533,7 @@ test("progressNextCareerFixture treats caller-supplied recovered state as the pr
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -553,6 +567,7 @@ test("progressNextCareerFixture returns none when there is no fixture to advance
       [otherClubId]: teamContextFixture(otherClubId, 10),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -578,6 +593,7 @@ test("progressNextCareerFixture reports missing team context without simulating"
       [selectedClubId]: teamContextFixture(selectedClubId, 12),
     } as Record<ClubId, MatchTeamContext>,
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -618,6 +634,7 @@ test("progressNextCareerFixture can build the non-selected opponent context with
       },
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -657,6 +674,7 @@ test("progressNextCareerFixture never auto-builds the selected club lineup", () 
       },
     },
     matchEngineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     competitionMatchRules: competitionMatchRulesFixture(),
   });
 
@@ -887,6 +905,7 @@ function teamContextFixture(clubIdValue: ClubId, strength: number): MatchTeamCon
       goalkeeper: strength,
       overall: strength,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: 0.5,
       pressing: 0.5,

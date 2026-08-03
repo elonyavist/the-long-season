@@ -39,18 +39,17 @@ measurement noise floor. Shape and tactics are decoration until Step 06.
 | 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
 | 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
 | 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
-| 06-12 | Not started |
+| 06 - phase-aware control, opportunity routes, tactic semantics | In progress: block 1 of 3 done 2026-08-03, all gates green |
+| 07-12 | Not started |
 
 ## Current Active Step
 
 - Step:
   `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md`
-- Next action: Step 06. It is the first step that changes production match
-  behaviour, the first allowed to claim the gameplay defect fixed, and the
-  first able to move the carried `goals_per_match_avg` monitor. Read its
-  two `Inherited From` sections before starting: they carry the context
-  migration, the tactic-semantics ownership rule, and the measured route
-  baseline.
+- Next action: Step 06, block 2. Block 1 made the intrinsic shape and the
+  versioned calibration required everywhere and is green. Block 2 builds the
+  route model and the five tactic semantics; block 3 tunes against the frozen
+  bands. The step document holds the block table and what block 1 corrected.
 
 ## Live Constraints
 
@@ -147,11 +146,14 @@ read per step. Keep that separation.
 - The intrinsic profile carries **no tactic effect**. Every knob has a Step 06
   owner that reads the profile, so a tactic term added to `tactical-shape.ts`
   would be counted twice.
-- `MatchTeamContext.shape` and the builder's calibration input are optional
-  until Step 06, which consumes the profile, makes both required, and migrates
-  the eleven production context constructors listed in its document.
-- `deriveLineupSlotScores(...)` owns per-slot quality. Department strength and
-  intrinsic shape are two readings of it; nothing derives it a second time.
+- `MatchTeamContext.shape` and `MatchContext.matchTacticsCalibration` are both
+  required, and both team shapes must carry that calibration's exact version.
+  A context assembled from two policies is refused, not silently simulated.
+- `deriveTeamShapeAndStrength(...)` is the only way to produce the pair. It
+  scores the lineup once; department strength and intrinsic shape are two
+  readings of that one pass, so they can never describe different elevens.
+- Season team input carries the squad, never a precomputed strength. Anything
+  that wants a club's aggregate strength derives it from the lineup.
 - Step 03 declared the four admissible mathematical constraints - non-negative
   weights, strictly decreasing and strictly positive marginal contribution,
   bounded capacities, left/right mirror symmetry - because Step 01 froze only

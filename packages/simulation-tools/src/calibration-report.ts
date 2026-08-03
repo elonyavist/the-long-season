@@ -1,5 +1,10 @@
 import type { ClubId, Fixture, LeagueTableRow } from "@game/domain";
-import { simulateSeason, type SimulateSeasonInput, type SimulateSeasonResult } from "@game/engine";
+import {
+  deriveTeamStrength,
+  simulateSeason,
+  type SimulateSeasonInput,
+  type SimulateSeasonResult,
+} from "@game/engine";
 
 /**
  * Aggregate metric keys emitted by the first season calibration report.
@@ -197,15 +202,48 @@ function accumulateSeasonTotals(
   totals.lastPlacePointsTotal += lastPlace.points;
   totals.tablePointsSpreadTotal += firstPlace.points - lastPlace.points;
 
+  const overallStrengthByClubId = deriveOverallStrengthByClubId(input);
+
   for (const fixture of result.fixtures) {
-    accumulateFixtureTotals(totals, input, fixture);
+    accumulateFixtureTotals(totals, overallStrengthByClubId, fixture);
   }
+}
+
+/**
+ * Derives each club's aggregate strength once per season.
+ *
+ * The upset proxy only asks "was the weaker side the winner", so it needs one
+ * number per club rather than a per-fixture recomputation. Season input carries
+ * the lineup rather than a precomputed strength, because a stored strength can
+ * disagree with the lineup that was actually fielded.
+ */
+function deriveOverallStrengthByClubId(input: SimulateSeasonInput): Readonly<Partial<Record<ClubId, number>>> {
+  const overallByClubId: Partial<Record<ClubId, number>> = {};
+
+  for (const clubId of input.clubIds) {
+    const team = input.teamsByClubId[clubId];
+    if (team === undefined) continue;
+
+    overallByClubId[clubId] = deriveTeamStrength({
+      lineup: team.lineup,
+      players: team.players,
+      roleWeights: team.roleWeights,
+      ...(team.playerStates === undefined ? {} : { playerStates: team.playerStates }),
+      ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
+    }).overall;
+  }
+
+  return overallByClubId;
 }
 
 /**
  * Adds one played fixture to aggregate totals.
  */
-function accumulateFixtureTotals(totals: CalibrationTotals, input: SimulateSeasonInput, fixture: Fixture): void {
+function accumulateFixtureTotals(
+  totals: CalibrationTotals,
+  overallStrengthByClubId: Readonly<Partial<Record<ClubId, number>>>,
+  fixture: Fixture,
+): void {
   const result = fixture.result;
 
   if (result === undefined) {
@@ -217,13 +255,13 @@ function accumulateFixtureTotals(totals: CalibrationTotals, input: SimulateSeaso
 
   if (result.homeGoals > result.awayGoals) {
     totals.homeWins += 1;
-    accumulateUpset(totals, input, fixture.homeClubId, fixture.awayClubId, "home");
+    accumulateUpset(totals, overallStrengthByClubId, fixture.homeClubId, fixture.awayClubId, "home");
     return;
   }
 
   if (result.awayGoals > result.homeGoals) {
     totals.awayWins += 1;
-    accumulateUpset(totals, input, fixture.homeClubId, fixture.awayClubId, "away");
+    accumulateUpset(totals, overallStrengthByClubId, fixture.homeClubId, fixture.awayClubId, "away");
     return;
   }
 
@@ -235,13 +273,13 @@ function accumulateFixtureTotals(totals: CalibrationTotals, input: SimulateSeaso
  */
 function accumulateUpset(
   totals: CalibrationTotals,
-  input: SimulateSeasonInput,
+  overallStrengthByClubId: Readonly<Partial<Record<ClubId, number>>>,
   homeClubId: ClubId,
   awayClubId: ClubId,
   winner: "away" | "home",
 ): void {
-  const homeStrength = input.teamsByClubId[homeClubId]?.strength.overall;
-  const awayStrength = input.teamsByClubId[awayClubId]?.strength.overall;
+  const homeStrength = overallStrengthByClubId[homeClubId];
+  const awayStrength = overallStrengthByClubId[awayClubId];
 
   if (homeStrength === undefined || awayStrength === undefined || homeStrength === awayStrength) {
     return;

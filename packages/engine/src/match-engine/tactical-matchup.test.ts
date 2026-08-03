@@ -19,6 +19,7 @@ import {
   TacticalMatchupError,
   type TacticalMatchup,
 } from "./tactical-matchup.ts";
+import { flatMatchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
 import type { TacticalShapeProfile } from "./tactical-shape.ts";
 
 /**
@@ -328,47 +329,5 @@ const LEFT_OVERLOAD = profile({
 const NO_LEFT_SIDE = profile({ left_progression: 0, left_coverage: 0 });
 
 function calibration(): MatchTacticsCalibrationConfig {
-  const flatTasks = Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, 5_000])) as Readonly<
-    Record<TacticalShapeTask, number>
-  >;
-  const zeroTasks = Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, 0])) as Readonly<
-    Record<TacticalShapeTask, number>
-  >;
-
-  return {
-    schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
-    version: POLICY,
-    classification: "explicit_game_design_target",
-    tacticalShape: {
-      contributionWeightBasisPointsByRoleAndTask: {
-        goalkeeper: zeroTasks,
-        right_full_back: flatTasks,
-        center_back: flatTasks,
-        left_full_back: flatTasks,
-        defensive_midfielder: flatTasks,
-        central_midfielder: flatTasks,
-        right_midfielder: flatTasks,
-        left_midfielder: flatTasks,
-        attacking_midfielder: flatTasks,
-        right_winger: flatTasks,
-        left_winger: flatTasks,
-        striker: flatTasks,
-      } satisfies Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
-      marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),
-      coordinationMultiplierBasisPointsBySuitability: {
-        natural: 10_000,
-        adapted: 9_200,
-        weak: 7_800,
-        invalid: 5_500,
-      },
-      channelPolicy: { halfChannelOwnShareBasisPoints: 7_500 },
-      saturationReferenceMilliByTask: Object.fromEntries(
-        TACTICAL_SHAPE_TASKS.map((task) => [task, 20_000]),
-      ) as Readonly<Record<TacticalShapeTask, number>>,
-    },
-    tacticalMatchup: {
-      chainBottleneckWeightBasisPoints: 6_500,
-      pressingContestWeightBasisPoints: 5_000,
-    },
-  };
+  return flatMatchTacticsCalibrationFixture({ version: POLICY });
 }

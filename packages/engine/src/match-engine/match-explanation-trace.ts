@@ -177,8 +177,8 @@ export interface MatchExplanationVarianceSnapshot {
 /**
  * How one route looked for one side against this particular opponent.
  *
- * Diagnostic only. The trace never feeds simulation, and the step that owns
- * opportunity routes reads the matchup directly rather than through here.
+ * Diagnostic only. Simulation reads the matchup directly, so this row is a
+ * readout of the same derivation rather than a second copy of it.
  */
 export interface MatchExplanationRouteSnapshot {
   /** Route described by this row. */
@@ -205,15 +205,8 @@ export interface MatchExplanationTeamSnapshot {
   readonly lineup: MatchExplanationLineupSnapshot;
   /** Dynamic-state impact summary. */
   readonly conditionImpact: MatchExplanationConditionSnapshot;
-  /**
-   * Route facts against this specific opponent, in route order.
-   *
-   * Present only when both sides carried an intrinsic shape and the caller
-   * supplied the calibration. It is absent rather than zero-filled, because a
-   * row of zeroes would read as "every route is shut" instead of "nobody
-   * measured".
-   */
-  readonly routes?: readonly MatchExplanationRouteSnapshot[];
+  /** Route facts against this specific opponent, in route order. */
+  readonly routes: readonly MatchExplanationRouteSnapshot[];
 }
 
 /**
@@ -250,14 +243,6 @@ export interface CreateMatchExplanationTraceInput {
   readonly stats: MatchSimulationStats;
   /** Sparse events already produced by simulation. */
   readonly events: readonly MatchStepEvent[];
-  /**
-   * Calibration used to compare the two sides' intrinsic shapes.
-   *
-   * Supply it, and both sides get route diagnostics; omit it, and the trace is
-   * exactly what it was before. The engine imports no content, so this is how
-   * the numbers reach a diagnostic that is otherwise pure.
-   */
-  readonly matchTacticsCalibration?: MatchTacticsCalibrationConfig;
 }
 
 /**
@@ -278,8 +263,8 @@ export function createMatchExplanationTrace(input: CreateMatchExplanationTraceIn
       "opportunity_context",
       "variance",
     ],
-    home: createTeamSnapshot("home", input.context, input.matchTacticsCalibration),
-    away: createTeamSnapshot("away", input.context, input.matchTacticsCalibration),
+    home: createTeamSnapshot("home", input.context),
+    away: createTeamSnapshot("away", input.context),
     opportunitySummary: {
       home: createOpportunitySideSummary("home", input.stats, input.events),
       away: createOpportunitySideSummary("away", input.stats, input.events),
@@ -295,16 +280,15 @@ export function createMatchExplanationTrace(input: CreateMatchExplanationTraceIn
 /**
  * Builds one team snapshot from match context inputs.
  */
-function createTeamSnapshot(
-  side: MatchSide,
-  context: MatchContext,
-  calibration: MatchTacticsCalibrationConfig | undefined,
-): MatchExplanationTeamSnapshot {
+function createTeamSnapshot(side: MatchSide, context: MatchContext): MatchExplanationTeamSnapshot {
   const team = context[side];
-  const routes = createRouteSnapshots(team, context[side === "home" ? "away" : "home"], calibration);
 
   return {
-    ...(routes === undefined ? {} : { routes }),
+    routes: createRouteSnapshots(
+      team,
+      context[side === "home" ? "away" : "home"],
+      context.matchTacticsCalibration,
+    ),
     side,
     clubId: team.clubId,
     strength: {
@@ -336,20 +320,16 @@ function createTeamSnapshot(
 }
 
 /**
- * Builds one side's route diagnostics, or nothing when they cannot be measured.
+ * Builds one side's route diagnostics against the opponent it actually faced.
  *
- * Both sides need an intrinsic shape for a comparison to mean anything, so a
- * half-measured matchup is reported as no matchup at all.
+ * The same derivation runs inside the minute loop, so these rows explain the
+ * match that was played rather than describing a parallel model of it.
  */
 function createRouteSnapshots(
   team: MatchTeamContext,
   opponent: MatchTeamContext,
-  calibration: MatchTacticsCalibrationConfig | undefined,
-): readonly MatchExplanationRouteSnapshot[] | undefined {
-  if (calibration === undefined || team.shape === undefined || opponent.shape === undefined) {
-    return undefined;
-  }
-
+  calibration: MatchTacticsCalibrationConfig,
+): readonly MatchExplanationRouteSnapshot[] {
   const matchup = deriveTacticalMatchup({ own: team.shape, opponent: opponent.shape, calibration });
 
   return TACTICAL_ROUTES.map((route) => ({

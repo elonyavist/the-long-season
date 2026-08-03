@@ -36,6 +36,8 @@ import {
 } from "./simulate-season.ts";
 import type { PlayerStateMultiplierCurves, RoleWeightProfile } from "../match-engine/index.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Season simulation tests prove the first full-season use-case without content,
@@ -72,6 +74,12 @@ test("stable season seed produces a compact golden sentinel", () => {
 
   // This sentinel catches accidental engine drift without freezing every event
   // in a full season. Update it only with an intentional gameplay rationale.
+  //
+  // Last moved when season team input started carrying the squad instead of a
+  // precomputed strength, which let the fixture fill all four departments. Every
+  // table row, score, and shot count survived that change untouched: only who
+  // scored moved, because there are now four candidate actors per side instead
+  // of two.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -140,7 +148,7 @@ test("stable season seed produces a compact golden sentinel", () => {
         id: fixtureId("fixture:test-league:2026:000001"),
         homeGoals: 0,
         awayGoals: 0,
-        eventCount: 9,
+        eventCount: 10,
         homeShots: 0,
         awayShots: 0,
       },
@@ -154,19 +162,19 @@ test("stable season seed produces a compact golden sentinel", () => {
       },
       topScorers: [
         {
-          playerId: playerId("player:test-01-02"),
-          clubId: clubId("club:test-01"),
-          goals: 12,
-        },
-        {
           playerId: playerId("player:test-03-02"),
           clubId: clubId("club:test-03"),
-          goals: 12,
+          goals: 8,
         },
         {
-          playerId: playerId("player:test-02-02"),
-          clubId: clubId("club:test-02"),
-          goals: 10,
+          playerId: playerId("player:test-01-02"),
+          clubId: clubId("club:test-01"),
+          goals: 7,
+        },
+        {
+          playerId: playerId("player:test-11-02"),
+          clubId: clubId("club:test-11"),
+          goals: 7,
         },
       ],
     },
@@ -212,7 +220,7 @@ test("season player goal stats match table goals", () => {
   const totalPlayerGoals = result.playerGoalStats.reduce((total, row) => total + row.goals, 0);
 
   assert.equal(totalPlayerGoals, totalTableGoals);
-  assert.equal(result.playerGoalStats.length, 36);
+  assert.equal(result.playerGoalStats.length, seasonFixturePlayerCount());
 });
 
 test("season player summary stats match durable assist and save events", () => {
@@ -220,7 +228,7 @@ test("season player summary stats match durable assist and save events", () => {
   const totalSummaryAssists = result.playerSummaryStats.reduce((total, row) => total + row.assists, 0);
   const totalSummarySaves = result.playerSummaryStats.reduce((total, row) => total + row.saves, 0);
 
-  assert.equal(result.playerSummaryStats.length, 36);
+  assert.equal(result.playerSummaryStats.length, seasonFixturePlayerCount());
   assert.equal(totalSummaryAssists, countAssists(result.fixtures));
   assert.equal(totalSummarySaves, countSaves(result.fixtures));
 });
@@ -240,7 +248,7 @@ test("season simulation exposes canonical participation from each exact match co
         const finalMinute = fixture?.result?.report?.finalMinute;
         return (
           finalMinute !== undefined
-          && contributions.length === 4
+          && contributions.length === SEASON_FIXTURE_LINEUP_SIZE * 2
           && contributions.every(
             (contribution) =>
               contribution.started
@@ -622,6 +630,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
     clubIds,
     seasonStartDate: gameDate(fromISO("2026-08-01")),
     teamsByClubId: teamsByClubId(clubIds),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     matchEngineConfig: {
       minuteCount: 12,
       rates: {
@@ -706,7 +715,7 @@ function fitnessReadyTeams(input: SimulateSeasonInput): Readonly<Record<ClubId, 
 
     const players: Record<PlayerId, Player> = {};
     for (const slot of team.lineup) {
-      players[slot.playerId] = makePlayer(slot.playerId, team.strength.overall);
+      players[slot.playerId] = makePlayer(slot.playerId, clubRatingFor(input.clubIds, clubId));
     }
 
     teams[clubId] = {
@@ -730,7 +739,7 @@ function aiSelectionReadyTeams(input: SimulateSeasonInput): Readonly<Record<Club
   for (const clubId of input.clubIds) {
     const team = input.teamsByClubId[clubId];
     assert.ok(team !== undefined);
-    const players = aiSelectionPlayers(clubId, team.strength.overall);
+    const players = aiSelectionPlayers(clubId, clubRatingFor(input.clubIds, clubId));
 
     teams[clubId] = {
       ...team,
@@ -833,6 +842,35 @@ function demoClubIds(): readonly ClubId[] {
   return clubIds;
 }
 
+/** Slots per club in the fixture season: one per team-strength department. */
+const SEASON_FIXTURE_LINEUP_SIZE = 4;
+
+/** Every registered player across the fixture season. */
+function seasonFixturePlayerCount(): number {
+  return demoClubIds().length * SEASON_FIXTURE_LINEUP_SIZE;
+}
+
+/**
+ * The ability every player of one club has, decreasing down the club order.
+ *
+ * The season tests need a known strength ordering. Because team input now
+ * carries the squad rather than a precomputed strength, the ordering is
+ * expressed once here and every team's players are built at that ability, so
+ * the derived strength reproduces it exactly.
+ */
+function clubRatingFixture(clubIds: readonly ClubId[], index: number): number {
+  return 8 + (clubIds.length - index) / 3;
+}
+
+/**
+ * Reads back the ability one club's synthetic players were built at.
+ */
+function clubRatingFor(clubIds: readonly ClubId[], clubId: ClubId): number {
+  const index = clubIds.indexOf(clubId);
+  assert.ok(index >= 0, `club is not part of the fixture season: ${clubId}`);
+  return clubRatingFixture(clubIds, index);
+}
+
 /**
  * Builds team contexts keyed by club ID.
  */
@@ -843,23 +881,21 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
     const clubId = clubIds[index];
     assert.ok(clubId !== undefined);
 
-    const rating = 8 + (clubIds.length - index) / 3;
+    const clubSlug = `test-${String(index + 1).padStart(2, "0")}`;
+    // One slot per department, so the derived strength reproduces the intended
+    // club rating everywhere. A two-slot fixture would leave defence and
+    // midfield empty, and a season where nobody has either is not a season the
+    // match engine can be sensibly measured against.
+    const lineup = [
+      createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:${clubSlug}-01`), canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:02", playerId: playerId(`player:${clubSlug}-02`), canonicalRole: "striker" }),
+      createLineupSlot({ slotId: "slot:03", playerId: playerId(`player:${clubSlug}-03`), canonicalRole: "center_back" }),
+      createLineupSlot({ slotId: "slot:04", playerId: playerId(`player:${clubSlug}-04`), canonicalRole: "central_midfielder" }),
+    ];
     teams[clubId] = {
-      lineup: [
-        createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-01`), canonicalRole: "goalkeeper" }),
-        createLineupSlot({
-          slotId: "slot:02",
-          playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-02`),
-          canonicalRole: "striker",
-        }),
-      ],
-      strength: {
-        attack: rating,
-        midfield: rating,
-        defense: rating,
-        goalkeeper: rating,
-        overall: rating,
-      },
+      lineup,
+      players: playersForLineup(lineup, clubRatingFixture(clubIds, index)),
+      roleWeights: overrideRoleWeights(),
       tacticalDistribution: {
         directness: 0.5,
         pressing: 0.5,
@@ -952,7 +988,7 @@ function fixtureLineupOverride(
     clubId,
     lineup: team.lineup,
     requiredLineupSize: team.lineup.length,
-    players: playersForLineup(team.lineup, team.strength.overall),
+    players: playersForLineup(team.lineup, clubRatingFor(input.clubIds, clubId)),
     roleWeights: overrideRoleWeights(),
   };
 }

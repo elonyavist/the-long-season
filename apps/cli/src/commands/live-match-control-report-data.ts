@@ -89,6 +89,7 @@ function createFixtureSetup(
       home: buildCurrentTeamContext(league, fixture.homeClubId, home, {}),
       away: buildCurrentTeamContext(league, fixture.awayClubId, away, {}),
       engineConfig: league.matchEngineConfig,
+      matchTacticsCalibration: league.matchTacticsCalibration,
     },
     home,
     away,
@@ -182,6 +183,7 @@ function buildCurrentTeamContext(
     roleWeights: league.roleWeights,
     playerStates,
     stateMultiplierCurves: league.stateMultiplierCurves,
+    matchTacticsCalibration: league.matchTacticsCalibration,
   });
 }
 

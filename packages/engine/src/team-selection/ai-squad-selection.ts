@@ -7,6 +7,7 @@ import {
   type Formation,
   type FormationSlot,
   type GameDate,
+  type MatchTacticsCalibrationConfig,
   type Player,
   type PlayerDynamicState,
   type PlayerId,
@@ -16,7 +17,6 @@ import {
 
 import {
   createLineupSlot,
-  deriveTeamStrength,
   roleWeightKeyForCanonicalRole,
   TeamStrengthError,
   type LineupSlot,
@@ -25,7 +25,10 @@ import {
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
 } from "../match-engine/index.ts";
-import { createMatchPlayerIncidentProfile } from "../match-engine/tactic-team-context.ts";
+import {
+  createMatchPlayerIncidentProfile,
+  deriveTeamShapeAndStrength,
+} from "../match-engine/tactic-team-context.ts";
 import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Recent deterministic usage facts that can gently rotate an AI squad. */
@@ -98,6 +101,8 @@ export interface AiSquadSelectionResult {
 export interface BuildAiSquadMatchTeamContextInput extends AiSquadSelectionInput {
   /** Tactical distribution applied after squad selection. */
   readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /** Versioned match-tactics calibration, supplied by a composition root. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Optional state curves used when deriving strength from selected players. */
   readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
 }
@@ -201,18 +206,22 @@ export function buildAiSquadMatchTeamContext(
   const selection = selectAiMatchSquad(input);
 
   try {
+    const { strength, shape } = deriveTeamShapeAndStrength({
+      lineup: selection.lineup,
+      players: input.players,
+      roleWeights: input.roleWeights,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+      ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
+      ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
+    });
+
     return {
       selection,
       teamContext: {
         clubId: input.clubId,
         lineup: selection.lineup,
-        strength: deriveTeamStrength({
-          lineup: selection.lineup,
-          players: input.players,
-          roleWeights: input.roleWeights,
-          ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
-          ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
-        }),
+        strength,
+        shape,
         tacticalDistribution: input.tacticalDistribution,
         incidentProfiles: selection.lineup.map((slot) =>
           createMatchPlayerIncidentProfile(

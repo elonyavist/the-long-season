@@ -9,7 +9,7 @@ import {
 import {
   applyCareerWeeklyRecovery,
   buildTacticTeamContext,
-  deriveTeamStrength,
+  deriveTeamShapeAndStrength,
   findNextCareerFixture,
   progressNextCareerFixture,
   type ApplyCareerWeeklyRecoveryResult,
@@ -25,6 +25,9 @@ import type { CliCareerState, CliGameState, ClubId } from "./types.ts";
 import {
   competitionIdForClubInWorld,
 } from "./scenarios.ts";
+
+/** Versioned match-tactics calibration, read through content rather than domain. */
+type CliMatchTacticsCalibration = ReturnType<typeof createFakeGameplayConfig>["matchTacticsCalibration"];
 
 const CAREER_DEFAULT_LINEUP_SIZE = 11;
 
@@ -115,8 +118,10 @@ export function advanceCareerNextFixture(
       careerState: recoveredCareerState,
       roleWeights: contentConfig.roleWeights,
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
+      matchTacticsCalibration: contentConfig.matchTacticsCalibration,
     }),
     matchEngineConfig: contentConfig.matchEngineConfig,
+    matchTacticsCalibration: contentConfig.matchTacticsCalibration,
     competitionMatchRules: selectedCompetitionMatchRules(recoveredCareerState),
     wagePolicy: selectPlayerWagePolicyConfig(
       recoveredCareerState.gameState.meta.calibrationVersions,
@@ -154,6 +159,7 @@ function careerTeamsByClubId(input: {
   readonly careerState: CliCareerState;
   readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
   readonly stateMultiplierCurves: PlayerStateMultiplierCurves;
+  readonly matchTacticsCalibration: CliMatchTacticsCalibration;
 }): Readonly<Record<ClubId, MatchTeamContext>> {
   const teamsByClubId: Partial<Record<ClubId, MatchTeamContext>> = {};
 
@@ -173,6 +179,7 @@ function careerTeamsByClubId(input: {
         roleWeights: input.roleWeights,
         playerStates: input.careerState.gameState.playerStates,
         stateMultiplierCurves: input.stateMultiplierCurves,
+        matchTacticsCalibration: input.matchTacticsCalibration,
       });
       continue;
     }
@@ -181,12 +188,13 @@ function careerTeamsByClubId(input: {
     teamsByClubId[clubId] = {
       clubId,
       lineup,
-      strength: deriveTeamStrength({
+      ...deriveTeamShapeAndStrength({
         lineup,
         players: input.careerState.gameState.players,
         playerStates: input.careerState.gameState.playerStates,
         roleWeights: input.roleWeights,
         stateMultiplierCurves: input.stateMultiplierCurves,
+        matchTacticsCalibration: input.matchTacticsCalibration,
       }),
       tacticalDistribution: {
         directness: 0.5,

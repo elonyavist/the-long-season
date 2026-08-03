@@ -12,6 +12,11 @@ import type { MatchEngineConfig } from "./match-engine-config.ts";
 import type { MatchSide } from "./match-simulation-state.ts";
 import { simulateMatch } from "./simulate-match.ts";
 import { simulateMatchWithManualTactics } from "./simulate-match-with-manual-tactics.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Segmented simulation tests prove explicit manual changes can alter one match
@@ -169,6 +174,7 @@ function validContext(
     home: validTeam("home", 10, 0),
     away: validTeam("away", 10, 0),
     engineConfig: validConfig(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
 }
 
@@ -193,6 +199,7 @@ function validTeam(side: MatchSide, strength: number, risk: number): MatchTeamCo
       goalkeeper: strength,
       overall: strength,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: risk,
       pressing: risk,

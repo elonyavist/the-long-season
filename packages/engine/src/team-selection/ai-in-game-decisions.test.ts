@@ -36,6 +36,11 @@ import {
   selectAiInGameDecision,
   type SelectAiInGameDecisionInput,
 } from "./ai-in-game-decisions.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /** Tests for the deterministic opponent policy and shared command path. */
 
@@ -542,6 +547,7 @@ function matchContextFixture(): MatchContext {
     home: matchTeamContextFromLiveTeam(teamFixture("home")),
     away: matchTeamContextFromLiveTeam(teamFixture("away")),
     engineConfig: matchEngineConfigFixture(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
 }
 
@@ -554,6 +560,7 @@ function matchTeamContextFromLiveTeam(team: LiveMatchTeamState): MatchTeamContex
       canonicalRole: slot.role,
     })),
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: team.tactic.directness,
       pressing: team.tactic.pressing,

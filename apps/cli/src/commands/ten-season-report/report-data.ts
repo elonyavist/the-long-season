@@ -4073,14 +4073,8 @@ function createCompetitionCareerSeasonInput(
       lineup,
       players,
       roleWeights,
+      playerStates: careerState.gameState.playerStates,
       stateMultiplierCurves: world.stateMultiplierCurves,
-      strength: deriveTeamStrength({
-        lineup,
-        players,
-        playerStates: careerState.gameState.playerStates,
-        roleWeights,
-        stateMultiplierCurves: world.stateMultiplierCurves,
-      }),
       tacticalDistribution: {
         directness: 0.5,
         pressing: 0.5,
@@ -4114,6 +4108,7 @@ function createCompetitionCareerSeasonInput(
       }),
     },
     matchEngineConfig: world.matchEngineConfig,
+    matchTacticsCalibration: world.matchTacticsCalibration,
     tableRules: world.tableRules,
   };
 }

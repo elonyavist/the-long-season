@@ -6,7 +6,7 @@ import {
   createMatchReport,
   buildTacticTeamContext,
   DEFAULT_FITNESS_RULES,
-  deriveTeamStrength,
+  deriveTeamShapeAndStrength,
   simulateSeason,
   simulateMatchWithManualTactics,
   TacticTeamContextError,
@@ -467,6 +467,7 @@ function buildFixtureExplanationTrace(
         lineupFixtureInspection,
       ),
       engineConfig: league.matchEngineConfig,
+      matchTacticsCalibration: league.matchTacticsCalibration,
     },
     { includeExplanationTrace: true },
   );
@@ -485,8 +486,10 @@ function matchTeamContextForFixtureExplanation(
   setupDemo: CliSetupDemo | undefined,
   lineupFixtureInspection: CliLineupFixtureInspection | undefined,
 ): MatchTeamContext {
-  const baseTeam = matchTeamContextForCli(teamsByClubId, clubId);
-  const setupTeam = setupDemo?.clubId === clubId ? buildSetupOverrideContextForCli(setupDemo.override) : undefined;
+  const baseTeam = matchTeamContextForCli(league, teamsByClubId, clubId);
+  const setupTeam = setupDemo?.clubId === clubId
+    ? buildSetupOverrideContextForCli(league, setupDemo.override)
+    : undefined;
   const lineupOverride =
     lineupFixtureInspection?.appliesToFixture === true &&
     lineupFixtureInspection.clubId === clubId &&
@@ -501,10 +504,11 @@ function matchTeamContextForFixtureExplanation(
   return {
     clubId,
     lineup: lineupOverride.lineup,
-    strength: deriveTeamStrength({
+    ...deriveTeamShapeAndStrength({
       lineup: lineupOverride.lineup,
       players: lineupOverride.players,
       roleWeights: lineupOverride.roleWeights,
+      matchTacticsCalibration: league.matchTacticsCalibration,
       ...(lineupOverride.playerStates === undefined ? {} : { playerStates: lineupOverride.playerStates }),
       ...(lineupOverride.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: lineupOverride.stateMultiplierCurves }),
     }),
@@ -540,15 +544,20 @@ function buildManualTacticFixture(
   }
 
   const teamsByClubId = createFakeTeamsByClubId(league);
-  const initialTeam = buildSetupOverrideContextForCli(initialSetupDemo.override);
-  const targetTeam = buildSetupOverrideContextForCli(manualTacticSwitch.targetSetupDemo.override);
+  const initialTeam = buildSetupOverrideContextForCli(league, initialSetupDemo.override);
+  const targetTeam = buildSetupOverrideContextForCli(league, manualTacticSwitch.targetSetupDemo.override);
   const simulated = simulateMatchWithManualTactics(
     {
       fixtureId: fixture.id,
       seed,
-      home: fixture.homeClubId === initialSetupDemo.clubId ? initialTeam : matchTeamContextForCli(teamsByClubId, fixture.homeClubId),
-      away: fixture.awayClubId === initialSetupDemo.clubId ? initialTeam : matchTeamContextForCli(teamsByClubId, fixture.awayClubId),
+      home: fixture.homeClubId === initialSetupDemo.clubId
+        ? initialTeam
+        : matchTeamContextForCli(league, teamsByClubId, fixture.homeClubId),
+      away: fixture.awayClubId === initialSetupDemo.clubId
+        ? initialTeam
+        : matchTeamContextForCli(league, teamsByClubId, fixture.awayClubId),
       engineConfig: league.matchEngineConfig,
+      matchTacticsCalibration: league.matchTacticsCalibration,
     },
     {
       manualTacticChanges: [
@@ -581,13 +590,17 @@ function buildManualTacticFixture(
 /**
  * Converts one selected setup override into a match-team context for CLI inspection.
  */
-function buildSetupOverrideContextForCli(override: SimulateSeasonSetupOverride): MatchTeamContext {
+function buildSetupOverrideContextForCli(
+  league: FakeLeagueSystem,
+  override: SimulateSeasonSetupOverride,
+): MatchTeamContext {
   const builderInput: BuildTacticTeamContextInput = {
     lineup: override.lineup,
     tactic: override.tactic,
     requiredLineupSize: override.requiredLineupSize,
     players: override.players,
     roleWeights: override.roleWeights,
+    matchTacticsCalibration: league.matchTacticsCalibration,
     ...(override.playerStates === undefined ? {} : { playerStates: override.playerStates }),
     ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
   };
@@ -604,9 +617,14 @@ function buildSetupOverrideContextForCli(override: SimulateSeasonSetupOverride):
 }
 
 /**
- * Reads one already-built base team context for a club.
+ * Builds one base match-team context for a club from its season team input.
+ *
+ * Season team input describes the squad and the lineup; a match context needs
+ * the two derived readings of that lineup. Deriving here rather than storing a
+ * context keeps the CLI on the same single scoring pass the engine uses.
  */
 function matchTeamContextForCli(
+  league: FakeLeagueSystem,
   teamsByClubId: Readonly<Record<ClubId, CliTeamContext>>,
   clubId: ClubId,
 ): MatchTeamContext {
@@ -616,7 +634,19 @@ function matchTeamContextForCli(
     throw new Error(`Missing CLI team context: ${clubId}`);
   }
 
-  return team;
+  return {
+    clubId,
+    lineup: team.lineup,
+    ...deriveTeamShapeAndStrength({
+      lineup: team.lineup,
+      players: team.players,
+      roleWeights: team.roleWeights,
+      matchTacticsCalibration: league.matchTacticsCalibration,
+      ...(team.playerStates === undefined ? {} : { playerStates: team.playerStates }),
+      ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
+    }),
+    tacticalDistribution: team.tacticalDistribution,
+  };
 }
 
 /**

@@ -22,6 +22,11 @@ import {
   type MatchTeamContext,
   type TacticalShapeProfile,
 } from "../index.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Match-context tests prove one match can be described and validated without
@@ -98,25 +103,49 @@ test("context stays JSON serializable", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(context)), context);
 });
 
-test("an absent intrinsic shape is accepted; a broken one is not", () => {
-  assert.equal(isValidMatchContext(validContext()), true);
+test("a context without an intrinsic shape cannot be simulated", () => {
+  const context = validContext();
+  const { shape: _removed, ...homeWithoutShape } = context.home;
 
-  const withShape = withHomeShape({ policyVersion: "match-tactics-v1", capacities: completeCapacities(0.4) });
-  assert.equal(isValidMatchContext(withShape), true);
+  assertRejected(
+    { ...context, home: homeWithoutShape as MatchContext["home"] },
+    "invalid_tactical_shape",
+  );
+});
 
-  assertShapeRejected({ policyVersion: "  ", capacities: completeCapacities(0.4) });
-  assertShapeRejected({ policyVersion: "match-tactics-v1", capacities: completeCapacities(1) });
+test("a shape must be complete and bounded", () => {
+  assert.equal(isValidMatchContext(withHomeShape(shapeFor(0.4))), true);
+
+  assertShapeRejected({ ...shapeFor(0.4), policyVersion: "  " });
+  assertShapeRejected(shapeFor(1));
   assertShapeRejected({
-    policyVersion: "match-tactics-v1",
+    ...shapeFor(0.4),
     capacities: { ...completeCapacities(0.4), rest_defence: Number.NaN },
   });
 });
 
+test("a shape derived under another policy version is refused, not silently used", () => {
+  // Its numbers still look valid, so nothing downstream would notice. The stamp
+  // is the only evidence that context and shape came from the same calibration.
+  assertRejected(
+    withHomeShape({ ...shapeFor(0.4), policyVersion: "match-tactics-someone-else" }),
+    "mismatched_tactics_policy_version",
+  );
+});
+
 test("a context carrying an intrinsic shape stays JSON serializable", () => {
-  const context = withHomeShape({ policyVersion: "match-tactics-v1", capacities: completeCapacities(0.4) });
+  const context = withHomeShape(shapeFor(0.4));
 
   assert.deepEqual(JSON.parse(JSON.stringify(context)), context);
 });
+
+/** A complete flat shape stamped with the version this context's calibration uses. */
+function shapeFor(value: number): TacticalShapeProfile {
+  return {
+    policyVersion: matchTacticsCalibrationFixture().version,
+    capacities: completeCapacities(value),
+  };
+}
 
 function withHomeShape(shape: TacticalShapeProfile): MatchContext {
   const context = validContext();
@@ -125,11 +154,16 @@ function withHomeShape(shape: TacticalShapeProfile): MatchContext {
 }
 
 function assertShapeRejected(shape: TacticalShapeProfile): void {
+  assertRejected(withHomeShape(shape), "invalid_tactical_shape");
+}
+
+function assertRejected(context: MatchContext, code: string): void {
   assert.throws(
     () => {
-      assertValidMatchContext(withHomeShape(shape));
+      assertValidMatchContext(context);
     },
-    (error: unknown) => error instanceof MatchContextError && error.code === "invalid_tactical_shape",
+    (error: unknown) => error instanceof MatchContextError && error.code === code,
+    `expected ${code}`,
   );
 }
 
@@ -150,6 +184,7 @@ function validContext(): MatchContext {
     home: validTeam("home"),
     away: validTeam("away"),
     engineConfig: validConfig(),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
 }
 
@@ -167,6 +202,7 @@ function validTeam(side: "home" | "away"): MatchTeamContext {
       goalkeeper: 10,
       overall: 10,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: 0,
       pressing: 0,

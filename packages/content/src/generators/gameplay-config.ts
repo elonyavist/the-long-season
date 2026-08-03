@@ -1,3 +1,7 @@
+import type { MatchTacticsCalibrationConfig } from "@game/domain";
+
+import { matchTacticsCalibration } from "../balance/match-tactics-calibration.ts";
+
 /**
  * Ability weight keys mirrored as data so content does not import engine code.
  */
@@ -74,6 +78,15 @@ export interface FakeMatchEngineConfig {
 /** Reusable match, role, and state configuration for generated content. */
 export interface FakeGameplayConfig {
   readonly matchEngineConfig: FakeMatchEngineConfig;
+  /**
+   * Versioned match-tactics calibration that travels with this world.
+   *
+   * Unlike the mirrored shapes above, this is the real validated balance asset:
+   * its type lives in domain, so content can hand it over without importing the
+   * engine. It sits beside `matchEngineConfig` because a caller assembling a
+   * match needs both and must not be able to pick up one without the other.
+   */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   readonly roleWeights: Readonly<Record<string, FakeRoleWeightProfile>>;
   readonly stateMultiplierCurves: FakePlayerStateMultiplierCurves;
 }
@@ -120,6 +133,7 @@ export function createFakeGameplayConfig(): FakeGameplayConfig {
         risk: { minInclusive: 0, maxInclusive: 1 },
       },
     },
+    matchTacticsCalibration,
     roleWeights: {
       gk: {
         roleKey: "gk",

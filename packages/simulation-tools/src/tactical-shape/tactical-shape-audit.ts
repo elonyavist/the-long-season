@@ -7,6 +7,7 @@ import {
   playerId,
   type ClubId,
   type CanonicalPlayerRole,
+  type MatchTacticsCalibrationConfig,
   type Player,
   type PlayerAbilities,
   type PlayerId,
@@ -15,7 +16,7 @@ import {
 import {
   createLineupSlot,
   createMatchPlayerIncidentProfile,
-  deriveTeamStrength,
+  deriveTeamShapeAndStrength,
   simulateMatch,
   type MatchContext,
   type MatchEngineConfig,
@@ -31,7 +32,7 @@ import { hashStringToSeedWords } from "@game/shared";
  * The audit measures what the current match engine does with the *shape* a
  * manager selects, while holding player quality, tactics, venue, and seeds
  * fixed. It changes no gameplay: every number below comes from the production
- * `deriveTeamStrength` and `simulateMatch` paths.
+ * `deriveTeamShapeAndStrength` and `simulateMatch` paths.
  *
  * Two facts decide the whole design:
  *
@@ -208,6 +209,8 @@ export interface RunTacticalShapeSeriesInput {
   readonly second: TacticalShapeSide;
   /** Production match engine configuration supplied by the caller. */
   readonly engineConfig: MatchEngineConfig;
+  /** Production match-tactics calibration supplied by the caller. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Stable seed prefix; the series derives one seed per paired fixture. */
   readonly seedPrefix: string;
   /** Number of seed pairs. Each pair plays two matches with swapped venues. */
@@ -259,6 +262,7 @@ export function runTacticalShapeSeries(input: RunTacticalShapeSeriesInput): Tact
           home,
           away,
           engineConfig: input.engineConfig,
+          matchTacticsCalibration: input.matchTacticsCalibration,
           seed: `${input.seedPrefix}|${scenarioKey}`,
           scenarioKey,
         }),
@@ -308,6 +312,8 @@ export interface BuildTacticalShapeMatchContextInput {
   readonly away: TacticalShapeSide;
   /** Production match engine configuration supplied by the caller. */
   readonly engineConfig: MatchEngineConfig;
+  /** Production match-tactics calibration supplied by the caller. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Run seed for the match RNG stream. */
   readonly seed: string;
   /** Stable scenario key used to build the fixture identity. */
@@ -325,9 +331,10 @@ export function buildTacticalShapeMatchContext(input: BuildTacticalShapeMatchCon
   return {
     fixtureId: fixtureId(`fixture:tactical-shape:${stableToken(input.scenarioKey)}`),
     seed: input.seed,
-    home: buildTacticalShapeTeamContext(input.home, "home"),
-    away: buildTacticalShapeTeamContext(input.away, "away"),
+    home: buildTacticalShapeTeamContext(input.home, "home", input.matchTacticsCalibration),
+    away: buildTacticalShapeTeamContext(input.away, "away", input.matchTacticsCalibration),
     engineConfig: input.engineConfig,
+    matchTacticsCalibration: input.matchTacticsCalibration,
   };
 }
 
@@ -337,7 +344,11 @@ export function buildTacticalShapeMatchContext(input: BuildTacticalShapeMatchCon
  * Strength comes from the production `deriveTeamStrength`, so the department
  * collapse this phase exists to remove is measured rather than restated.
  */
-export function buildTacticalShapeTeamContext(side: TacticalShapeSide, sideKey: "home" | "away"): MatchTeamContext {
+export function buildTacticalShapeTeamContext(
+  side: TacticalShapeSide,
+  sideKey: "home" | "away",
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
+): MatchTeamContext {
   assertValidComposition(side.composition);
   assertValidBand(side.band);
 
@@ -353,10 +364,11 @@ export function buildTacticalShapeTeamContext(side: TacticalShapeSide, sideKey: 
   return {
     clubId: tacticalShapeClubId(sideKey),
     lineup,
-    strength: deriveTeamStrength({
+    ...deriveTeamShapeAndStrength({
       lineup,
       players,
       roleWeights: TACTICAL_SHAPE_ROLE_WEIGHTS,
+      matchTacticsCalibration,
     }),
     tacticalDistribution: {
       directness: side.tactic.directness,
@@ -372,10 +384,13 @@ export function buildTacticalShapeTeamContext(side: TacticalShapeSide, sideKey: 
  * Derives the production `TeamStrength` for one composed side.
  *
  * @example
- * const strength = deriveTacticalShapeStrength({ composition, band, tactic });
+ * const strength = deriveTacticalShapeStrength({ composition, band, tactic }, calibration);
  */
-export function deriveTacticalShapeStrength(side: TacticalShapeSide): TeamStrength {
-  return buildTacticalShapeTeamContext(side, "home").strength;
+export function deriveTacticalShapeStrength(
+  side: TacticalShapeSide,
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
+): TeamStrength {
+  return buildTacticalShapeTeamContext(side, "home", matchTacticsCalibration).strength;
 }
 
 /** One row of the strength-collapse table. */
@@ -596,6 +611,8 @@ export interface TacticalShapeQualityBands {
 export interface RunTacticalShapeAuditInput {
   /** Production match engine configuration supplied by the caller. */
   readonly engineConfig: MatchEngineConfig;
+  /** Production match-tactics calibration supplied by the caller. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Measured quality bands supplied by the caller. */
   readonly bands: TacticalShapeQualityBands;
   /** Stable seed prefix. */
@@ -638,7 +655,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
   const bandList = orderedBands(input.bands);
   for (const band of bandList) assertValidBand(band);
 
-  const strengthRows = buildStrengthRows(input.bands.reference);
+  const strengthRows = buildStrengthRows(input.bands.reference, input.matchTacticsCalibration);
   const equivalences = buildEquivalences(input);
   const versusReference = buildVersusReferenceRows(input);
   const tacticProfiles = buildTacticProfileRows(input);
@@ -915,15 +932,17 @@ function uniformAbilities(quality: number): PlayerAbilities {
 /* Report sections                                                            */
 /* -------------------------------------------------------------------------- */
 
-function buildStrengthRows(band: TacticalShapeQualityBand): readonly TacticalShapeStrengthRow[] {
+function buildStrengthRows(
+  band: TacticalShapeQualityBand,
+  matchTacticsCalibration: MatchTacticsCalibrationConfig,
+): readonly TacticalShapeStrengthRow[] {
   const presetKeys = new Set(TACTICAL_SHAPE_PRESET_COMPOSITION_KEYS);
 
   return TACTICAL_SHAPE_COMPOSITIONS.map((composition) => {
-    const strength = deriveTacticalShapeStrength({
-      composition,
-      band,
-      tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
-    });
+    const strength = deriveTacticalShapeStrength(
+      { composition, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
+      matchTacticsCalibration,
+    );
     const key = tacticalShapeCompositionKey(composition);
 
     return {
@@ -948,6 +967,7 @@ function buildEquivalences(input: RunTacticalShapeAuditInput): readonly Tactical
         first: side,
         second: opponent,
         engineConfig: input.engineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
         seedPrefix: `${input.seedPrefix}|equivalence`,
         pairedSeedCount: input.scenarioPairedSeedCount,
         scenarioKeyOverride: sharedIdentity,
@@ -960,8 +980,8 @@ function buildEquivalences(input: RunTacticalShapeAuditInput): readonly Tactical
       firstCompositionKey: firstKey,
       secondCompositionKey: secondKey,
       strengthIdentical:
-        strengthFingerprint(deriveTacticalShapeStrength(first))
-        === strengthFingerprint(deriveTacticalShapeStrength(second)),
+        strengthFingerprint(deriveTacticalShapeStrength(first, input.matchTacticsCalibration))
+        === strengthFingerprint(deriveTacticalShapeStrength(second, input.matchTacticsCalibration)),
       resultsIdentical: stableHash(firstSeries) === stableHash(secondSeries),
       matches: firstSeries.matches,
     };
@@ -979,6 +999,7 @@ function buildVersusReferenceRows(
       first: { composition, band: input.bands.reference, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
       second: opponent,
       engineConfig: input.engineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
       seedPrefix: `${input.seedPrefix}|versus-reference`,
       pairedSeedCount: input.scenarioPairedSeedCount,
     });
@@ -1009,6 +1030,7 @@ function buildTacticProfileRows(input: RunTacticalShapeAuditInput): readonly Tac
       first: { composition, band: input.bands.reference, tactic },
       second: opponent,
       engineConfig: input.engineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
       seedPrefix: `${input.seedPrefix}|tactic|${tactic.tacticKey}`,
       pairedSeedCount: input.scenarioPairedSeedCount,
     });
@@ -1040,6 +1062,7 @@ function buildDominanceMatrix(input: RunTacticalShapeAuditInput): TacticalShapeD
         first: sideFor(rowKey, input.bands.reference),
         second: sideFor(columnKey, input.bands.reference),
         engineConfig: input.engineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
         seedPrefix: `${input.seedPrefix}|dominance`,
         pairedSeedCount: input.pairedSeedCount,
       });
@@ -1088,6 +1111,7 @@ function buildQualityVersusStructure(
         first,
         second,
         engineConfig: input.engineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
         seedPrefix: `${input.seedPrefix}|quality|${scenario.scenarioKey}`,
         pairedSeedCount: input.scenarioPairedSeedCount,
       }),

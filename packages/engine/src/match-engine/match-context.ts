@@ -1,4 +1,10 @@
-import { fixtureId, type ClubId, type FixtureId, type PlayerId } from "@game/domain";
+import {
+  fixtureId,
+  type ClubId,
+  type FixtureId,
+  type MatchTacticsCalibrationConfig,
+  type PlayerId,
+} from "@game/domain";
 import type { RngKeyPart } from "@game/shared";
 
 import type { LineupSlot, TeamStrength } from "./team-strength.ts";
@@ -66,15 +72,16 @@ export interface MatchTeamContext {
   /** True player inputs used by incident policies when a full squad built this context. */
   readonly incidentProfiles?: readonly MatchPlayerIncidentProfile[];
   /**
-   * Intrinsic tactical shape, present when the caller supplied a calibration.
+   * Intrinsic tactical shape of this lineup.
    *
    * This is a derived fact recomputed from the lineup, never a second career
-   * ledger. It is absent rather than defaulted when no calibration was given:
-   * there is no implicit policy, and an invented profile would be a guess where
-   * a missing input belongs. Nothing in the match result reads it yet - the step
-   * that owns phase-aware opportunity routes makes it required and consumes it.
+   * ledger. It is required because the minute loop reads it: opportunity routes,
+   * possession, and chance type all come from it, so a context without a shape
+   * could not be simulated at all. Every producer therefore needs the versioned
+   * calibration, which is why the engine has no default one - a default would
+   * silently decide football balance that content owns.
    */
-  readonly shape?: TacticalShapeProfile;
+  readonly shape: TacticalShapeProfile;
 }
 
 /**
@@ -94,6 +101,16 @@ export interface MatchContext {
   readonly away: MatchTeamContext;
   /** Match engine tuning supplied by caller data. */
   readonly engineConfig: MatchEngineConfig;
+  /**
+   * Versioned match-tactics calibration for this match.
+   *
+   * The minute loop reads these numbers directly - how hard a bottleneck bites,
+   * how far each tactic knob may move a route - so they belong to the context
+   * for the same reason `engineConfig` does: a context must be enough to
+   * simulate a match without reaching for content. Both team shapes must carry
+   * this exact version, which is checked rather than assumed.
+   */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
 }
 
 /** Error categories exposed by match-context validation. */
@@ -108,7 +125,8 @@ export type MatchContextErrorCode =
   | "invalid_engine_config"
   | "invalid_tactical_distribution"
   | "invalid_incident_profile"
-  | "invalid_tactical_shape";
+  | "invalid_tactical_shape"
+  | "mismatched_tactics_policy_version";
 
 /**
  * Typed error thrown when a match context is incomplete or invalid.
@@ -158,8 +176,8 @@ export function assertValidMatchContext(context: MatchContext): void {
 
   assertValidFixtureId(context.fixtureId);
   assertNonEmptySeed(context.seed);
-  assertValidTeamContext(context.home, "home");
-  assertValidTeamContext(context.away, "away");
+  assertValidTeamContext(context.home, "home", context.matchTacticsCalibration);
+  assertValidTeamContext(context.away, "away", context.matchTacticsCalibration);
 
   if (!isValidMatchEngineConfig(context.engineConfig)) {
     throw new MatchContextError("invalid_engine_config", "MatchContext.engineConfig is invalid");
@@ -215,7 +233,11 @@ function assertNonEmptySeed(seed: string): void {
 /**
  * Validates one side of the match context.
  */
-function assertValidTeamContext(team: MatchTeamContext | undefined, side: "home" | "away"): void {
+function assertValidTeamContext(
+  team: MatchTeamContext | undefined,
+  side: "home" | "away",
+  calibration: MatchTacticsCalibrationConfig | undefined,
+): void {
   if (team === undefined) {
     throw new MatchContextError(side === "home" ? "missing_home_team" : "missing_away_team", `${side} team is required`);
   }
@@ -258,16 +280,31 @@ function assertValidTeamContext(team: MatchTeamContext | undefined, side: "home"
     }
   }
 
-  if (team.shape !== undefined) {
-    try {
-      assertValidTacticalShapeProfile(team.shape);
-    } catch (error) {
-      if (error instanceof TacticalShapeError) {
-        throw new MatchContextError("invalid_tactical_shape", `${side} tactical shape is invalid: ${error.message}`);
-      }
+  // A match context is serializable, so it can arrive rebuilt from persisted or
+  // foreign data where the type is no guarantee. An absent shape is reported as
+  // a typed context error rather than crashing inside the shape validator.
+  if (team.shape === undefined) {
+    throw new MatchContextError("invalid_tactical_shape", `${side} tactical shape is required`);
+  }
 
-      throw error;
+  try {
+    assertValidTacticalShapeProfile(team.shape);
+  } catch (error) {
+    if (error instanceof TacticalShapeError) {
+      throw new MatchContextError("invalid_tactical_shape", `${side} tactical shape is invalid: ${error.message}`);
     }
+
+    throw error;
+  }
+
+  // A shape derived under an older calibration is silently wrong rather than
+  // obviously broken: its numbers still look valid. Comparing the stamp is the
+  // only cheap way to catch a context assembled from two different policies.
+  if (calibration !== undefined && team.shape.policyVersion !== calibration.version) {
+    throw new MatchContextError(
+      "mismatched_tactics_policy_version",
+      `${side} tactical shape was derived under ${team.shape.policyVersion}, not ${calibration.version}`,
+    );
   }
 }
 

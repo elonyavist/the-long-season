@@ -22,11 +22,13 @@ import {
   roleWeightKeyForCanonicalRole,
   teamStrengthFromSlotScores,
   TeamStrengthError,
+  type DeriveTeamStrengthInput,
   type LineupSlot,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
+  type TeamStrength,
 } from "./team-strength.ts";
-import { deriveTacticalShapeProfile } from "./tactical-shape.ts";
+import { deriveTacticalShapeProfile, type TacticalShapeProfile } from "./tactical-shape.ts";
 
 /** Error categories exposed by selected tactic/team context building. */
 export type TacticTeamContextErrorCode =
@@ -65,12 +67,52 @@ export interface BuildTacticTeamContextInput {
   /**
    * Versioned match-tactics calibration, supplied by a composition root.
    *
-   * The engine imports no content, so the numbers arrive here. Supply it and
-   * the context carries an intrinsic tactical-shape profile; omit it and the
-   * context has none. There is no default calibration, because a default would
-   * silently decide football balance that content owns.
+   * The engine imports no content, so the numbers arrive here. It is required
+   * because the minute loop simulates from the intrinsic shape this produces.
+   * There is no default calibration, because a default would silently decide
+   * football balance that content owns.
    */
-  readonly matchTacticsCalibration?: MatchTacticsCalibrationConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}
+
+/** Input for deriving both readings of one lineup's per-slot quality. */
+export interface DeriveTeamShapeAndStrengthInput extends DeriveTeamStrengthInput {
+  /** Versioned match-tactics calibration, supplied by a composition root. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}
+
+/** Department strength and intrinsic shape for one lineup. */
+export interface TeamShapeAndStrength {
+  /** Aggregate department strength consumed by resolution policies. */
+  readonly strength: TeamStrength;
+  /** Intrinsic tactical shape consumed by the route model. */
+  readonly shape: TacticalShapeProfile;
+}
+
+/**
+ * Derives department strength and intrinsic shape from one scoring pass.
+ *
+ * Every producer of a `MatchTeamContext` needs both, and both are readings of
+ * the same per-slot quality. Scoring the lineup twice would be two places one
+ * number could drift - and worse, the two readings could end up describing
+ * different lineups. This helper exists so no caller can do that by accident.
+ *
+ * @example
+ * const { strength, shape } = deriveTeamShapeAndStrength({
+ *   lineup,
+ *   players,
+ *   roleWeights,
+ *   matchTacticsCalibration,
+ * });
+ */
+export function deriveTeamShapeAndStrength(input: DeriveTeamShapeAndStrengthInput): TeamShapeAndStrength {
+  const { matchTacticsCalibration, ...strengthInput } = input;
+  const slotScores = deriveLineupSlotScores(strengthInput);
+
+  return {
+    strength: teamStrengthFromSlotScores(slotScores),
+    shape: deriveTacticalShapeProfile({ slotScores, calibration: matchTacticsCalibration }),
+  };
 }
 
 /**
@@ -153,10 +195,11 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
   });
 
   try {
-    const slotScores = deriveLineupSlotScores({
+    const { strength, shape } = deriveTeamShapeAndStrength({
       lineup,
       players: input.players,
       roleWeights: input.roleWeights,
+      matchTacticsCalibration: input.matchTacticsCalibration,
       ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
       ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
     });
@@ -164,7 +207,8 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
     return {
       clubId: selectedLineup.clubId,
       lineup,
-      strength: teamStrengthFromSlotScores(slotScores),
+      strength,
+      shape,
       tacticalDistribution: tacticToMatchDistribution(tactic),
       incidentProfiles: lineup.map((slot) =>
         createMatchPlayerIncidentProfile(
@@ -172,14 +216,6 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
           input.playerStates?.[slot.playerId],
         ),
       ),
-      ...(input.matchTacticsCalibration === undefined
-        ? {}
-        : {
-            shape: deriveTacticalShapeProfile({
-              slotScores,
-              calibration: input.matchTacticsCalibration,
-            }),
-          }),
     };
   } catch (error) {
     if (error instanceof TeamStrengthError) {

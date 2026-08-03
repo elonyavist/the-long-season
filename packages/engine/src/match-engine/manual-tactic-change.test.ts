@@ -13,6 +13,11 @@ import {
   type ManualTacticChangeErrorCode,
 } from "./manual-tactic-change.ts";
 import type { MatchTeamContext } from "./match-context.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Manual tactic-change tests cover the contract only. They intentionally do not
@@ -176,6 +181,7 @@ function teamContext(teamClubId: string): MatchTeamContext {
       goalkeeper: 10,
       overall: 10,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: 0.5,
       pressing: 0.5,

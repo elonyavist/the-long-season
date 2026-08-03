@@ -18,6 +18,9 @@ import {
   longRunSeasonSeed,
   runLongRunSimulation,
 } from "./long-runner.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import { seasonTeamInputFixture } from "../test-fixtures/season-team-input.ts";
+
 
 test("runLongRunSimulation uses the default ten-season count", () => {
   const result = runLongRunSimulation({
@@ -86,6 +89,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
     competitionId: competitionId("competition:test"),
     clubIds,
     seasonStartDate: gameDate(fromISO("2026-08-01")),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     teamsByClubId: {
       [firstClubId]: teamInput(firstClubId, 12),
       [secondClubId]: teamInput(secondClubId, 10),
@@ -124,25 +128,5 @@ function seasonInput(seed: string): SimulateSeasonInput {
  * Builds a two-player team context with one goalkeeper and one outfield player.
  */
 function teamInput(id: ClubId, rating: number): SimulateSeasonTeamInput {
-  const clubSlug = String(id).slice("club:".length);
-
-  return {
-    lineup: [
-      createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:${clubSlug}-01`), canonicalRole: "goalkeeper" }),
-      createLineupSlot({ slotId: "slot:02", playerId: playerId(`player:${clubSlug}-02`), canonicalRole: "striker" }),
-    ],
-    strength: {
-      attack: rating,
-      midfield: rating,
-      defense: rating,
-      goalkeeper: rating,
-      overall: rating,
-    },
-    tacticalDistribution: {
-      directness: 0.5,
-      pressing: 0.5,
-      width: 0.5,
-      risk: 0.5,
-    },
-  };
+  return seasonTeamInputFixture(String(id).slice("club:".length), rating);
 }

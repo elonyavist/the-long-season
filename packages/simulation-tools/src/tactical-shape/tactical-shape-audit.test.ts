@@ -21,6 +21,10 @@ import {
   type TacticalShapeQualityBand,
   type TacticalShapeQualityBands,
 } from "../index.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+
+
+const CALIBRATION = matchTacticsCalibrationFixture();
 
 const ENGINE_CONFIG: MatchEngineConfig = {
   minuteCount: 90,
@@ -66,6 +70,7 @@ function sideFor(key: TacticalShapeCompositionKey, quality: TacticalShapeQuality
 
 const AUDIT_INPUT: RunTacticalShapeAuditInput = {
   engineConfig: ENGINE_CONFIG,
+  matchTacticsCalibration: CALIBRATION,
   bands: BANDS,
   seedPrefix: "tactical-shape-test",
   pairedSeedCount: 1,
@@ -109,13 +114,14 @@ describe("tactical shape composition space", () => {
       buildTacticalShapeTeamContext(
         { composition: { defenders: 4, midfielders: 4, attackers: 1 }, band: BANDS.reference, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
         "home",
+        CALIBRATION,
       ),
     ).toThrow(TacticalShapeAuditError);
   });
 
   it("rejects a quality band outside the ability scale", () => {
     expect(() =>
-      buildTacticalShapeTeamContext({ ...sideFor("4-4-2"), band: band("broken", 21) }, "home"),
+      buildTacticalShapeTeamContext({ ...sideFor("4-4-2"), band: band("broken", 21) }, "home", CALIBRATION),
     ).toThrow(TacticalShapeAuditError);
   });
 });
@@ -123,7 +129,7 @@ describe("tactical shape composition space", () => {
 describe("tactical shape team context", () => {
   it("always composes a complete eleven with one goalkeeper", () => {
     for (const key of ["4-4-2", "0-0-10", "10-0-0", "0-10-0"] as const) {
-      const team = buildTacticalShapeTeamContext(sideFor(key), "home");
+      const team = buildTacticalShapeTeamContext(sideFor(key), "home", CALIBRATION);
 
       expect(team.lineup).toHaveLength(TACTICAL_SHAPE_LINEUP_SLOT_COUNT);
       expect(team.lineup.filter((slot) => slot.canonicalRole === "goalkeeper")).toHaveLength(1);
@@ -132,7 +138,7 @@ describe("tactical shape team context", () => {
   });
 
   it("scores an empty department as zero and a populated one at the band value", () => {
-    const strength = deriveTacticalShapeStrength(sideFor("2-0-8"));
+    const strength = deriveTacticalShapeStrength(sideFor("2-0-8"), CALIBRATION);
 
     expect(strength.midfield).toBe(0);
     expect(strength.defense).toBeCloseTo(12, 9);
@@ -150,7 +156,7 @@ describe("tactical shape team context", () => {
           composition,
           band: BANDS.reference,
           tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
-        });
+        }, CALIBRATION);
         return [strength.goalkeeper, strength.defense, strength.midfield, strength.attack, strength.overall].join("/");
       }),
     );
@@ -166,6 +172,7 @@ describe("tactical shape paired series", () => {
       first: sideFor("4-4-2"),
       second: sideFor("3-1-6"),
       engineConfig: ENGINE_CONFIG,
+      matchTacticsCalibration: CALIBRATION,
       seedPrefix: "series-test",
       pairedSeedCount: 3,
     });
@@ -181,6 +188,7 @@ describe("tactical shape paired series", () => {
         first: sideFor("4-4-2"),
         second: sideFor("5-3-2"),
         engineConfig: ENGINE_CONFIG,
+        matchTacticsCalibration: CALIBRATION,
         seedPrefix: "series-test",
         pairedSeedCount: 2,
       });
@@ -194,6 +202,7 @@ describe("tactical shape paired series", () => {
         first: sideFor(key),
         second: sideFor("4-4-2"),
         engineConfig: ENGINE_CONFIG,
+        matchTacticsCalibration: CALIBRATION,
         seedPrefix: "series-test",
         pairedSeedCount: 2,
         scenarioKeyOverride: "shared-identity",
@@ -208,6 +217,7 @@ describe("tactical shape paired series", () => {
         first: sideFor(key),
         second: sideFor("4-4-2"),
         engineConfig: ENGINE_CONFIG,
+        matchTacticsCalibration: CALIBRATION,
         seedPrefix: "series-test",
         pairedSeedCount: 2,
       });
@@ -221,6 +231,7 @@ describe("tactical shape paired series", () => {
         first: sideFor("4-4-2"),
         second: sideFor("4-4-2"),
         engineConfig: ENGINE_CONFIG,
+        matchTacticsCalibration: CALIBRATION,
         seedPrefix: "series-test",
         pairedSeedCount: 0,
       }),

@@ -17,7 +17,7 @@ import {
   createProgressiveMatchMinuteSnapshot,
   createProgressiveMatchSession,
   computePlayerMatchStats,
-  deriveTeamStrength,
+  deriveTeamShapeAndStrength,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
   injuryForcesExit,
@@ -99,7 +99,7 @@ type LiveMatchPendingDecision = NonNullable<
 >;
 type MatchdayContentConfig = Pick<
   FakeGameplayConfig,
-  "matchEngineConfig" | "roleWeights" | "stateMultiplierCurves"
+  "matchEngineConfig" | "matchTacticsCalibration" | "roleWeights" | "stateMultiplierCurves"
 > & {
   readonly competitionMatchRules: CompetitionMatchRules;
 };
@@ -940,6 +940,7 @@ function prepareWebMatchdayKickoff(
   };
   const contentConfig = matchdayContentConfig(recoveredCareerState);
   const teamsByClubId = buildCareerTeamsByClubId(recoveredCareerState, {
+    matchTacticsCalibration: contentConfig.matchTacticsCalibration,
     roleWeights: contentConfig.roleWeights,
     stateMultiplierCurves: contentConfig.stateMultiplierCurves,
   });
@@ -968,6 +969,7 @@ function prepareWebMatchdayKickoff(
       home,
       away,
       engineConfig: contentConfig.matchEngineConfig,
+      matchTacticsCalibration: contentConfig.matchTacticsCalibration,
     },
   };
 }
@@ -1273,6 +1275,7 @@ function matchTeamContextFromLiveTeam(
     roleWeights: config.roleWeights,
     playerStates,
     stateMultiplierCurves: config.stateMultiplierCurves,
+    matchTacticsCalibration: config.matchTacticsCalibration,
   });
 }
 
@@ -1450,7 +1453,10 @@ function completeBenchCount(preparation: MatchPreparationDraft): number {
 
 function buildCareerTeamsByClubId(
   careerState: CareerState,
-  contentConfig: Pick<MatchdayContentConfig, "roleWeights" | "stateMultiplierCurves">,
+  contentConfig: Pick<
+    MatchdayContentConfig,
+    "matchTacticsCalibration" | "roleWeights" | "stateMultiplierCurves"
+  >,
 ): Readonly<Record<ClubId, MatchTeamContext>> {
   const teamsByClubId: Partial<Record<ClubId, MatchTeamContext>> = {};
 
@@ -1470,6 +1476,7 @@ function buildCareerTeamsByClubId(
         roleWeights: contentConfig.roleWeights,
         playerStates: careerState.gameState.playerStates,
         stateMultiplierCurves: contentConfig.stateMultiplierCurves,
+        matchTacticsCalibration: contentConfig.matchTacticsCalibration,
       });
       continue;
     }
@@ -1478,12 +1485,13 @@ function buildCareerTeamsByClubId(
     teamsByClubId[clubId] = {
       clubId,
       lineup,
-      strength: deriveTeamStrength({
+      ...deriveTeamShapeAndStrength({
         lineup,
         players: careerState.gameState.players,
         playerStates: careerState.gameState.playerStates,
         roleWeights: contentConfig.roleWeights,
         stateMultiplierCurves: contentConfig.stateMultiplierCurves,
+        matchTacticsCalibration: contentConfig.matchTacticsCalibration,
       }),
       tacticalDistribution: {
         directness: 0.5,

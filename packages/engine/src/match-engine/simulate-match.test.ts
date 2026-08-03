@@ -14,6 +14,11 @@ import {
   type MatchTeamContext,
   type SimulateMatchResult,
 } from "../index.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Simulate-match tests prove that the batch driver reuses `stepMatch` while
@@ -289,6 +294,7 @@ function profiledContext(input: { readonly home: MatchTeamContext; readonly away
     seed: "demo-001",
     home: input.home,
     away: input.away,
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     engineConfig: validConfig(90),
   };
 }
@@ -319,6 +325,7 @@ function teamProfile(
       ...strength,
       overall: (strength.attack + strength.midfield + strength.defense + strength.goalkeeper) / 4,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: 0,
       pressing: 0,
@@ -343,6 +350,7 @@ function validContext(
     home: validTeam("home", 12),
     away: validTeam("away", 10),
     engineConfig: validConfig(options.minuteCount ?? 12),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
 }
 
@@ -367,6 +375,7 @@ function validTeam(side: MatchSide, strength: number): MatchTeamContext {
       goalkeeper: strength,
       overall: strength,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: 0,
       pressing: 0,

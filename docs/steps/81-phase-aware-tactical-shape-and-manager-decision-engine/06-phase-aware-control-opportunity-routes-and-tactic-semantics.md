@@ -2,7 +2,133 @@
 
 ## Status
 
-Not started.
+In progress. The step runs in three internal blocks so the repository is
+compiling and tested at every pause, rather than broken half-way through a
+migration that touches four packages.
+
+| Block | What it delivers | State |
+|---|---|---|
+| 1 - context migration | `shape` and the calibration become required, every composition root supplies them | Done 2026-08-03, all gates green |
+| 2 - route model | `opportunity-route.ts`, route-driven chance volume and type, shape-driven possession, the five tactic semantics, telemetry | Not started |
+| 3 - calibration | frozen matrices, dominance gate, `goals_per_match_avg` | Not started |
+
+### Block 1 - Adopted Solution
+
+**One scoring pass produces both readings.** Six places built a
+`MatchTeamContext` and each called `deriveTeamStrength` separately. Adding a
+second call for intrinsic shape beside each of them would have been six chances
+for the two to describe different lineups, so `deriveTeamShapeAndStrength(...)`
+in `tactic-team-context.ts` now returns `{ strength, shape }` from one call to
+`deriveLineupSlotScores`, and every producer spreads it. This is Step 03's
+"nothing derives per-slot quality a second time" made structural.
+
+**The calibration travels on `MatchContext`, not only on the builders.** The
+minute loop reads the calibration numbers directly - how hard a bottleneck
+bites, how far a tactic knob may move a route - so a context that lacked them
+could not be simulated. It sits beside `engineConfig` for the same reason that
+field exists: a context must be enough to simulate a match without reaching for
+content.
+
+**A shape stamped with the wrong policy is refused.** Both team shapes must
+carry `context.matchTacticsCalibration.version`, checked in
+`assertValidMatchContext`. A shape derived under an older calibration is
+silently wrong rather than obviously broken - its numbers still look valid - so
+the stamp is the only cheap evidence that the context was assembled from one
+policy.
+
+**`SimulateSeasonTeamInput` now carries the squad instead of a precomputed
+strength.** `strength` was a stored derivable, which the project rules forbid,
+and every production caller already derived it from the lineup immediately
+before handing it over. Worse, once shape came from the lineup and strength came
+from the caller, the two could describe different elevens. `players` and
+`roleWeights` are now required and `strength` is gone; a new optional
+`playerStates` preserves the one thing the precomputed value carried that the
+lineup did not - a caller's static condition when no fitness lifecycle runs.
+
+### Block 1 - Scope Corrections Found Against The Code
+
+**The inherited eleven-file list was not the real one.** Some of those files
+never build a context; others that do were missing. The actual producers are
+`buildTacticTeamContext`, `buildAiSquadMatchTeamContext`, three private builders
+in `use-cases/simulate-season.ts`, `buildTacticalShapeTeamContext` in the audit
+tool, and the two default-opponent fallbacks in the web adapter and the CLI
+career command. `apps/cli/src/commands/tactical-shape-report-data.ts` was absent
+from the list and does build one.
+
+**`FakeLeagueSystem` restated three fields of `FakeGameplayConfig` instead of
+extending it**, so adding the calibration to the gameplay bundle would have left
+the league facade without it. It now extends the interface and the three copied
+fields are gone.
+
+**Curves without states used to be an accepted no-op and briefly stopped being
+one.** `SimulateSeasonTeamInput.stateMultiplierCurves` may be supplied by a
+caller who has not enabled the fitness lifecycle; `deriveTeamStrength` rejects
+curves with no states. `dynamicStateInputs(...)` now passes the curves only
+alongside the states they read, which is what the existing "inactive
+fitness-ready team data preserves default output" test demands.
+
+**The season fixture claimed a strength no lineup could produce.** Its clubs
+fielded a goalkeeper and a striker while asserting all four departments at the
+club rating. Derived honestly, that eleven has no defence and no midfield, and a
+season where nobody has either is not one the route model can be measured
+against. The fixture now fields one slot per department. Every table row, score,
+and shot count in the golden sentinel survived unchanged; only the scorer
+attribution and one event count moved, because there are now four candidate
+actors per side instead of two.
+
+### Block 1 - Verification
+
+```text
+pnpm exec vitest run (whole repository)     269 files, 1909 tests passed
+pnpm lint                                   exit 0
+pnpm depcruise                              no violations (805 modules, 3244 dependencies)
+typecheck, all 10 workspaces                exit 0
+git diff --check                            clean
+```
+
+### Block 2 - Design Settled Before Writing It
+
+Recorded here so the shape of the model is a decision, not something rebuilt
+from memory. Contract section 6 locks what each knob means; this is how those
+five sentences become code.
+
+**Every knob gets exactly one benefit and exactly one cost, both typed.** Two
+total mappings live in domain beside `TACTICAL_ROUTE_DEFINITION`, because "which
+route does pressing favour" is football vocabulary, not a tuned number:
+
+| knob | favours | exposes | why the cost is credible |
+|---|---|---|---|
+| `directness` | `direct`, `transition` | `transition` | skipping midfield gives the ball back higher up |
+| `pressing` | `transition` | `transition` | a line pushed up is a line that can be run behind |
+| `width` | `left`, `right` | `central` | stretching wide empties the middle |
+| `risk` | none | `transition` | more attempts, more turnovers, no route preference |
+
+`mentality` is not a route knob. It sets a commitment level on a five-step
+ladder that scales own chance volume and the `transition` the opponent is
+offered, and it is the one input that reads score and minute state.
+
+Content owns only magnitudes: how far a knob at its cap may tilt route
+preference, move own volume, and raise what it exposes, plus the commitment
+ladder and how far a goal of deficit bends it. Which route each knob touches
+stays typed code, exactly as Step 04 kept the route definitions out of content.
+
+**Routes replace both current inference paths.** `deriveOpportunityRate`'s
+strength Bernoulli and `deriveChanceType`'s `deterministicShotTexture` both go.
+A minute picks one route per side from bounded weights on a dedicated RNG
+stream; the chosen route decides whether a chance exists, its type, and the
+quality bias handed to the aggregate resolver. Route to chance type is a total
+typed mapping: flanks produce `cross`, `transition` produces `counter`, `central`
+and `direct` produce `open_play`. Set pieces stay with the discipline model.
+
+**Possession stops being `strength.midfield`.** Control blends department
+strength with the shape's own build-up, central progression, and pressing
+cohesion contested by the opponent, so an empty midfield department is no longer
+the only way to express a broken connection. The share content owns is one
+number.
+
+**Pressing is multiplied exactly once.** Step 04 already contests build-up
+through `pressing_cohesion`. This step scales that capacity by the pressing
+knob before the matchup runs; it does not add a second pressing term afterwards.
 
 ## Inherited From Step 03
 
@@ -175,6 +301,44 @@ to play and what it exposes, not merely shift opaque scalar coefficients.
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`
 - this step document
 - the next relevant step document only if a lesson changes future work
+
+Added during block 1, because making `shape` and the calibration required is
+this step's own obligation and every producer of a `MatchTeamContext` is inside
+that obligation:
+
+- `packages/engine/src/match-engine/match-context.ts` - owns the field that
+  becomes required and the policy-version invariant.
+- `packages/engine/src/match-engine/tactic-team-context.ts` - owns the builder
+  input that becomes required, and now owns the shared
+  `deriveTeamShapeAndStrength(...)`.
+- `packages/engine/src/team-selection/ai-squad-selection.ts` - builds a context
+  for every AI side.
+- `packages/engine/src/use-cases/simulate-season.ts` - builds three, and owned
+  the stored `strength` that had to go with them.
+- `packages/engine/src/career/progress-fixture.ts` - threads the calibration to
+  the AI builder and into the simulated context.
+- `packages/simulation-tools/src/calibration-report.ts` - read the stored season
+  strength that block 1 removed.
+- `packages/content/src/generators/gameplay-config.ts` and
+  `packages/content/src/generators/league-system.ts` - content is the
+  composition root that decides which calibration version travels with a world.
+- `apps/web/src/features/matchday/matchday-adapter.ts`,
+  `apps/cli/src/commands/simulate-season.ts`,
+  `apps/cli/src/commands/career/progression.ts`,
+  `apps/cli/src/commands/fake-season-input.ts`,
+  `apps/cli/src/commands/live-match-control-report-data.ts`,
+  `apps/cli/src/commands/tactical-shape-report-data.ts`,
+  `apps/cli/src/commands/ten-season-report/report-data.ts` - the composition
+  roots named by the inherited migration list, plus the report command that list
+  missed.
+- `packages/engine/src/test-fixtures/match-tactics-calibration.ts` and
+  `packages/simulation-tools/src/test-fixtures/{match-tactics-calibration,season-team-input}.ts`
+  - new shared test fixtures. Three engine tests already carried near-identical
+  private calibrations; they now share one. Simulation tools may not import
+  content, so that package needs its own copy - one per package boundary is what
+  the dependency rule forces, and the validation those numbers must satisfy
+  still lives once, in domain.
+- The test files of every module above.
 
 ## Required Checks
 

@@ -15,6 +15,7 @@ import {
   type MatchReport,
   type MarketBehaviorCalibrationConfig,
   type MatchPlayerConsequence,
+  type MatchTacticsCalibrationConfig,
   type AppliedMatchSubstitution,
   type PlayerId,
   type PlayerDevelopmentEnvironmentConfig,
@@ -102,6 +103,8 @@ export interface ProgressNextCareerFixtureInput {
   readonly aiTeamSelectionByClubId?: Readonly<Partial<Record<ClubId, ProgressCareerAiTeamSelectionInput>>>;
   /** Match-engine tuning supplied by caller content/config. */
   readonly matchEngineConfig: MatchEngineConfig;
+  /** Versioned match-tactics calibration used when this input builds an AI context. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Competition-owned discipline rules for the fixture being progressed. */
   readonly competitionMatchRules: CompetitionMatchRules;
   /** Whether to attach optional explanation data for the played fixture. */
@@ -610,6 +613,7 @@ function resolveTeamContext(
         playerStates: careerState.gameState.playerStates,
         roleWeights: aiSelection.roleWeights,
         tacticalDistribution: aiSelection.tacticalDistribution,
+        matchTacticsCalibration: input.matchTacticsCalibration,
         ...(aiSelection.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: aiSelection.stateMultiplierCurves }),
         ...(aiSelection.benchSize === undefined ? {} : { benchSize: aiSelection.benchSize }),
       }).teamContext,
@@ -668,6 +672,7 @@ function simulateFixtureAndCreateReport(
     home,
     away,
     engineConfig: input.matchEngineConfig,
+    matchTacticsCalibration: input.matchTacticsCalibration,
   }, {
     includeExplanationTrace: input.includeExplanationTrace === true,
   });
@@ -682,6 +687,7 @@ function simulateFixtureAndCreateReport(
         home,
         away,
         engineConfig: input.matchEngineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
       }),
     }),
     ...(simulatedMatch.explanationTrace === undefined ? {} : { explanationTrace: simulatedMatch.explanationTrace }),

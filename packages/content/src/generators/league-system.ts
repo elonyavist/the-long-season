@@ -28,12 +28,7 @@ import {
   generateCompetitionSeasonDistribution,
   generateInitialClubFinanceState,
 } from "./club-finance-world.ts";
-import {
-  createFakeGameplayConfig,
-  type FakeMatchEngineConfig,
-  type FakePlayerStateMultiplierCurves,
-  type FakeRoleWeightProfile,
-} from "./gameplay-config.ts";
+import { createFakeGameplayConfig, type FakeGameplayConfig } from "./gameplay-config.ts";
 
 export type {
   FakeAbilityWeightKey,
@@ -54,7 +49,7 @@ export type {
  * players, lineups, tuning config, and season metadata from lower-level
  * generators.
  */
-export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
+export interface FakeLeagueSystem extends FakeClubs, FakePlayers, FakeGameplayConfig {
   /** Initial senior registrations, contracts, and factual signing history. */
   readonly seniorSquadState: SeniorSquadState;
   /** Opening cash, annual budgets, and ordered ledgers for every club. */
@@ -69,12 +64,6 @@ export interface FakeLeagueSystem extends FakeClubs, FakePlayers {
   readonly seasonStartDate: GameDate;
   /** Basic three-points-for-a-win table rules. */
   readonly tableRules: LeagueTableRules;
-  /** Aggregate match-engine tuning for the fake season. */
-  readonly matchEngineConfig: FakeMatchEngineConfig;
-  /** Role weights consumed structurally by engine team-strength derivation. */
-  readonly roleWeights: Readonly<Record<string, FakeRoleWeightProfile>>;
-  /** Dynamic-state multiplier curves consumed structurally by engine strength derivation. */
-  readonly stateMultiplierCurves: FakePlayerStateMultiplierCurves;
 }
 
 /** Options for deterministic fake league creation. */

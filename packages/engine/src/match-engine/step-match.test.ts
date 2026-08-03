@@ -16,6 +16,11 @@ import {
 } from "./match-simulation-state.ts";
 import type { OccasionResolver, OccasionResolution, ResolveOccasionInput } from "./occasion-resolver.ts";
 import { stepMatch, type MatchShotOutcomeStepEvent } from "./step-match.ts";
+import {
+  matchTacticsCalibrationFixture,
+  tacticalShapeProfileFixture,
+} from "../test-fixtures/match-tactics-calibration.ts";
+
 
 /**
  * Step-match tests prove that the minute loop is deterministic, local, and
@@ -523,6 +528,7 @@ function validContext(
     seed: "demo-001",
     home: validTeam("home", options.homeStrength ?? 12, options.homeTacticalDistribution),
     away: validTeam("away", options.awayStrength ?? 10, options.awayTacticalDistribution),
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     engineConfig: validConfig({
       minuteCount: options.minuteCount ?? 90,
       baseOpportunityRatePerMinute: options.baseOpportunityRatePerMinute ?? 0.08,
@@ -554,6 +560,7 @@ function validTeam(
       goalkeeper: strength,
       overall: strength,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution,
   };
 }
@@ -599,6 +606,7 @@ function goalkeeperTeam(
       goalkeeper: strength,
       overall: strength,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution,
   };
 }
@@ -650,6 +658,7 @@ function assistTeam(side: MatchSide): MatchTeamContext {
       goalkeeper: 10,
       overall: 10,
     },
+    shape: tacticalShapeProfileFixture(),
     tacticalDistribution: {
       directness: 1,
       pressing: 0,
