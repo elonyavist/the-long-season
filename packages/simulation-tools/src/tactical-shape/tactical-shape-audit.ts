@@ -691,8 +691,8 @@ export type TacticalShapeGateStatus = "pass" | "fail" | "not_evaluated";
 
 /** Frozen invariants this step declares before any behaviour changes. */
 export type TacticalShapeInvariantKey =
-  | "asymmetric_incoherence_cost"
   | "bounded_structural_swing"
+  | "incoherence_costs_a_division_tier"
   | "distinguishable_coherent_and_incoherent_shape"
   | "empty_department_possession_clamp"
   | "no_dominant_composition"
@@ -931,8 +931,18 @@ export const TACTICAL_SHAPE_THRESHOLDS = {
    * disguise.
    */
   maxTacticMeanWinShareAgainstField: 0.55,
-  /** Incoherence must cost at least twice what coherence pays. */
-  minIncoherenceToCoherenceRatio: 2,
+  /**
+   * Incoherence must cost at least this many division tiers of squad quality.
+   *
+   * The pair with `maxStructuralSwingShareOfTierEdge` is the asymmetry: a good
+   * shape may gain at most `0.75` tiers, a broken one must lose at least `1`,
+   * so incoherence costs at least `1.33x` what coherence pays and both halves
+   * are measured against a quantity that exists.
+   *
+   * This replaced `minIncoherenceToCoherenceRatio: 2`, which divided the two
+   * halves by each other and could never be evaluated - see A9.
+   */
+  minIncoherenceCostShareOfTierEdge: 1,
   /**
    * A first-division title contender must stay the aggregate favourite over a
    * third-division mid-table side even while using an extreme shape.
@@ -1630,7 +1640,7 @@ function evaluateInvariants(context: EvaluateInvariantsInput): readonly Tactical
     evaluateBoundedStructuralSwing(context),
     evaluateNoDominantComposition(context),
     evaluateNoDominantTactic(context),
-    evaluateAsymmetricIncoherenceCost(context),
+    evaluateIncoherenceCost(context),
     evaluateQualityHierarchy(context),
     evaluatePossessionClamp(context),
     evaluateDistinguishableShape(context),
@@ -1728,35 +1738,56 @@ function evaluateNoDominantComposition(context: EvaluateInvariantsInput): Tactic
   };
 }
 
-function evaluateAsymmetricIncoherenceCost(context: EvaluateInvariantsInput): TacticalShapeInvariantResult {
-  const threshold = `worst-shape deficit / best-shape surplus >= ${TACTICAL_SHAPE_THRESHOLDS.minIncoherenceToCoherenceRatio}, both measured against the reference shape`;
-  const best = bestVersusReference(context.versusReference);
+/**
+ * Proves that setting a side up badly costs more than a division of quality.
+ *
+ * This is the surviving half of the retired `asymmetric_incoherence_cost` (A9).
+ * That one divided the worst shape's deficit by the best shape's surplus and
+ * demanded `>= 2`, which asserted two different things at once: *incoherence
+ * costs a lot*, which is a rule the engine must obey, and *coherence pays
+ * little*, which is not - it is a consequence of the reference `4-4-2` already
+ * being the optimum of a population of ten central clones. There is therefore
+ * no surplus to divide by, the ratio was undefined at every calibration ever
+ * measured, and satisfying it literally would have required asserting that some
+ * department count beats a balanced one at identical players.
+ *
+ * The asymmetry survives as a pair of one-sided bounds against the division-tier
+ * edge, which is a quantity that exists: coherence may gain at most `0.75` of a
+ * tier (`bounded_structural_swing`) and incoherence must cost at least `1`.
+ */
+function evaluateIncoherenceCost(context: EvaluateInvariantsInput): TacticalShapeInvariantResult {
+  const threshold = `worst shape's deficit against the reference >= ${TACTICAL_SHAPE_THRESHOLDS.minIncoherenceCostShareOfTierEdge} x the division-tier edge`;
+  const tierScenario = context.qualityVersusStructure.find((row) => row.scenarioKey === "division_tier_edge");
   const worst = worstVersusReference(context.versusReference);
-  if (best === undefined || worst === undefined) {
-    return notEvaluated("asymmetric_incoherence_cost", threshold, "The versus-reference column produced no rows");
-  }
-
-  const surplus = best.winShare - 0.5;
-  const deficit = 0.5 - worst.winShare;
-
-  if (surplus <= context.versusReferenceNoiseFloor) {
+  if (tierScenario === undefined || worst === undefined) {
     return notEvaluated(
-      "asymmetric_incoherence_cost",
+      "incoherence_costs_a_division_tier",
       threshold,
-      `The best shape gains ${roundFour(surplus)} over the reference, which is inside the measurement noise floor ${context.versusReferenceNoiseFloor}. `
-      + `There is no coherence reward to compare against, so the ratio is undefined rather than satisfied (largest deficit ${roundFour(deficit)} from ${worst.compositionKey}).`,
+      "The division-tier scenario or the versus-reference column produced no observations",
     );
   }
 
-  const ratio = roundFour(deficit / surplus);
+  const tierEdge = Math.abs(tierScenario.series.firstWinShare - 0.5);
+  if (tierEdge <= context.versusReferenceNoiseFloor) {
+    return notEvaluated(
+      "incoherence_costs_a_division_tier",
+      threshold,
+      `One division tier of squad quality moved win share by ${roundFour(tierEdge)}, which is inside the measurement noise floor ${context.versusReferenceNoiseFloor} and cannot bound anything`,
+    );
+  }
+
+  const deficit = 0.5 - worst.winShare;
+  const ratio = roundFour(deficit / tierEdge);
 
   return {
-    key: "asymmetric_incoherence_cost",
-    status: ratio >= TACTICAL_SHAPE_THRESHOLDS.minIncoherenceToCoherenceRatio ? "pass" : "fail",
-    observations: best.matches + worst.matches,
+    key: "incoherence_costs_a_division_tier",
+    status: ratio >= TACTICAL_SHAPE_THRESHOLDS.minIncoherenceCostShareOfTierEdge ? "pass" : "fail",
+    observations: worst.matches + tierScenario.series.matches,
     observed: ratio,
     threshold,
-    detail: `${worst.compositionKey} loses ${roundFour(deficit)} win share while ${best.compositionKey} gains ${roundFour(surplus)}`,
+    detail:
+      `${worst.compositionKey} loses ${roundFour(deficit)} win share against the reference shape, against a division-tier edge of ${roundFour(tierEdge)}. `
+      + `Paired with the bounded swing, coherence may gain at most ${TACTICAL_SHAPE_THRESHOLDS.maxStructuralSwingShareOfTierEdge} of a tier while incoherence must lose a whole one.`,
   };
 }
 

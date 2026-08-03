@@ -37,12 +37,12 @@ decision is now worth is measured below.
 
 | Phase 81 step | Status |
 |---|---|
-| 01 - reproducible baseline and frozen contract | Done 2026-08-02 |
+| 01 - reproducible baseline and frozen contract | Done 2026-08-02, reopened and re-closed 2026-08-03 for A9 |
 | 02 - typed tactical slot context and collapse removal | Done 2026-08-03, all gates green |
 | 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
 | 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
 | 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
-| 06 - phase-aware control, opportunity routes, tactic semantics | Done 2026-08-03, all gates green; one invariant `not_evaluated` and escalated |
+| 06 - phase-aware control, opportunity routes, tactic semantics | Done 2026-08-03, all gates green |
 | 07-12 | Not started |
 
 ## Current Active Step
@@ -53,9 +53,8 @@ decision is now worth is measured below.
   context migration, the route model and tactic semantics, an unplanned
   shot-chain reorder, calibration, and the tactic dominance gate; the step
   document holds what each block found against the code.
-- Carried to the phase contract, not to Step 07: `asymmetric_incoherence_cost`
-  is still `not_evaluated`, with a written recommendation to split it. Step 11
-  reports and recommends; no step may move a frozen threshold alone.
+- No invariant in this phase is `not_evaluated` any more. The last one was
+  closed by amendment A9 on 2026-08-03; Step 01 was reopened to carry it.
 
 ## Live Constraints
 
@@ -64,8 +63,7 @@ Facts that still bind future work. Everything else was deleted.
 ### Do Not Start
 
 - Phases 81A, 82A, and 82B are Planned or Draft. Their numeric decisions were
-  made before measurement and must be revised against Phase 81's evidence
-  rather than implemented as written.
+  made before measurement and must be revised against Phase 81's evidence.
 - Phase 79 Steps 14 and 15 stay Reopened/not started, unclaimed by any phase.
 
 ### Longitudinal Runs
@@ -103,7 +101,7 @@ so the carried distribution stands as recorded until Step 11 measures its own.
 ### Which Manager Decisions Actually Count, Measured
 
 Against a `0.0477` win-share noise floor, on the frozen population and on the
-real formation population the audit now also reports:
+real formation population:
 
 | Decision | Moves win share by | Verdict |
 |---|---|---|
@@ -112,61 +110,63 @@ real formation population the audit now also reports:
 | department counts | `0.029` | inside the noise unless broken |
 | fielding a broken shape | `0.483` | counts enormously |
 
-The engine punishes an absurd setup hard and does not reward a good one. Two
-things still bind future work, and one is already answered.
+The engine punishes an absurd setup hard and does not reward a good one. One
+thing still binds future work; two are answered and recorded so nobody reopens
+them.
 
-**Tactics are gated and now have a best response.** `no_dominant_tactic` reads
-the *mean* against the other five profiles where the shape gate reads the worst
-matchup, because six legal settings are a peer population and `66` compositions
-are not. Step 06 block 4 took the best setting from `+0.064` over neutral to
-`+0.014` and left a cycle: `flank_overload` beats neutral, neutral beats
-`direct_play`, `direct_play` beats `flank_overload`. The gate is deliberately
-one-sided - an extreme may cost a manager, never pay one - so `low_block` at
-`0.4487` is reported and not bounded.
+**Open - a route's defining phase carries `11.7%` of its own chain**, so a real
+`-12.8%` flank difference between formations arrives as `-1.5%`. That is why the
+formation row above is inside the noise. Recorded as a reopen candidate on
+Step 04, whose frozen `TACTICAL_ROUTE_DEFINITION` it is.
 
-**A route's defining phase carries `11.7%` of its own chain**, so a real `-12.8%`
-flank difference between formations arrives as `-1.5%`. Recorded as a reopen
-candidate on Step 04, whose frozen `TACTICAL_ROUTE_DEFINITION` it is.
+**Answered - tactics are gated and now have a best response.**
+`no_dominant_tactic` reads the *mean* against the other five profiles where the
+shape gate reads the worst matchup, because six legal settings are a peer
+population and `66` compositions are not. Step 06 took the best setting from
+`+0.064` over neutral to `+0.014` and left a cycle: `flank_overload` beats
+neutral, neutral beats `direct_play`, `direct_play` beats `flank_overload`. The
+gate is one-sided by design - an extreme may cost a manager, never pay one - so
+`low_block` at `0.4487` is reported and not bounded.
 
-**`asymmetric_incoherence_cost` cannot be evaluated here.** Its surplus is
-`0.0288` and has never left the noise floor at any setting, because in a
-population of ten central clones a balanced `4-4-2` *is* the optimum. Step 06
-recommends splitting it and asserting the half that is a design claim -
-incoherence costs at least one division tier, true today at `0.4831` against
-`0.2638`. Do not widen the threshold or report `not_evaluated` as a pass; the
-phase contract decides and Step 11 reports.
+**Answered - the asymmetry is two bounds, not a ratio (A9).**
+`asymmetric_incoherence_cost` divided the worst shape's deficit by the best
+shape's surplus, and that surplus never left the noise floor at any calibration,
+because in a population of ten central clones a balanced `4-4-2` *is* the
+optimum. `incoherence_costs_a_division_tier` at `1 x` the tier edge replaces it,
+PASS at `1.8313`. With `bounded_structural_swing` still at `0.75 x`, incoherence
+costs at least `1.33x` what coherence may pay, both halves against a quantity
+that exists. Nothing was widened.
 
 ### Frozen Tactical Baseline (Step 01)
 
-In `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md`, regenerated by
-`pnpm cli tactical-shape-report`. Thresholds live in code as
-`TACTICAL_SHAPE_THRESHOLDS` so no later step can quietly move one.
+`docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md` is the before-state and is not
+regenerated; `pnpm cli tactical-shape-report` writes a fresh one anywhere else.
+Thresholds live in code as `TACTICAL_SHAPE_THRESHOLDS` so no step moves one
+quietly - amending one takes a numbered contract amendment.
 
 - One division tier of squad quality is worth `0.255` win share at identical
   shape. Every structure-versus-quality claim is measured against that number.
-- Structure may gain at most `0.75 x` that. No composition may stay above `0.55`
-  against every opponent, and no tactic profile may average above `0.55` against
-  the other profiles. Incoherence must cost at least twice what coherence pays.
+- Structure may gain at most `0.75 x` that and incoherence must cost at least
+  `1 x` it. No composition may stay above `0.55` against every opponent, and no
+  tactic profile may average above `0.55` against the other profiles.
 - The dominance population is the `66` reachable department compositions, not
-  the `23` named presets, which cover only `10` of them. The tactical board
-  locks the goalkeeper slot only; every other slot reaches any outfield role by
-  drag and no validator caps a department, so extreme shapes are manager
-  choices and no gate exempts them.
+  the `23` named presets, which cover only `10` of them. The tactical board locks
+  the goalkeeper slot only; every other slot reaches any outfield role by drag
+  and no validator caps a department, so extreme shapes are manager choices and
+  no gate exempts them.
 - The bands are conditioned on a **single-country** population (A4). With five
   countries they must be re-derived, not carried over.
-- One invariant is still `not_evaluated`, never reported as a pass:
-  `asymmetric_incoherence_cost` has no coherence reward to divide by.
+- Every invariant passes. An invariant that *cannot* be evaluated is amended by
+  the phase contract, never relaxed by the step that trips over it (A9).
 
 ### Documentation Budget
 
 `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md` went from `3074` lines to under
-`200` on 2026-08-03, alongside this file.
-
-The always-active rules live in `AGENTS.md` at the repository root, which every
-session loads automatically; `docs/PROJECT_RULES.md` points there and keeps only
-the rules for specific kinds of work. `docs/step_prompt_to_use.md` separates
-what is read once per phase from what is read per step. Do not reintroduce a
-second copy of any of them, and keep that separation.
+`200` on 2026-08-03, alongside this file. The always-active rules live in
+`AGENTS.md`, which every session loads automatically; `docs/PROJECT_RULES.md`
+points there and keeps only the rules for specific kinds of work, and
+`docs/step_prompt_to_use.md` separates what is read once per phase from what is
+read per step. Do not reintroduce a second copy of any of them.
 
 ### Typed Tactical Slot Seam (Step 02)
 
@@ -254,10 +254,9 @@ second copy of any of them, and keep that separation.
 
 ### Superseded Evidence
 
-- Phase 79C's per-division distribution tolerances used an owner-category value
-  multiplier that no longer exists.
-- Phase 79D's baseline of `302` ceiling-six players across `100` worlds is
-  non-comparable: Phase 80A changed the population it measured.
+Phase 79C's per-division distribution tolerances used an owner-category value
+multiplier that no longer exists. Phase 79D's baseline of `302` ceiling-six
+players across `100` worlds is non-comparable: Phase 80A changed its population.
 
 ### Accepted Product Decisions Still In Force
 
@@ -265,8 +264,7 @@ second copy of any of them, and keep that separation.
   `EUR 150m` cap. A transfer, promotion, contract expiry, or free-agent
   transition alone cannot change public value.
 - Squad floors use selectable depth (`owned present + incoming loans - outgoing
-  loans`), which Phase 82A implements. `Club.playerIds` stays persisted
-  ownership.
+  loans`), which Phase 82A implements. `Club.playerIds` stays ownership.
 - Engine and domain emit structured facts only. LLM usage is authoring-time
   content work, never runtime gameplay logic.
 

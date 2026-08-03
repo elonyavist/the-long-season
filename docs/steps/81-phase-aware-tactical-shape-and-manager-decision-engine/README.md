@@ -119,6 +119,32 @@ and come from the market work moving after this phase.
   attribute to the club a player was fielded by, not to the club that owns his
   contract. Without this, Phase 82A's first loan corrupts the statistical
   history rather than extending it.
+- **A9 - the asymmetry is two bounds, not a ratio** (Steps 01, 06, 11, and the
+  contract's frozen-threshold table). Accepted 2026-08-03, after Step 06.
+  `asymmetric_incoherence_cost` divided the worst shape's deficit by the best
+  shape's surplus and demanded `>= 2`. It asserted two different things at once,
+  and only one of them is a rule the engine must obey. *Incoherence costs a lot*
+  is a rule. *Coherence pays little* is not: it is a consequence of the reference
+  `4-4-2` already being the optimum of a population of ten central clones, which
+  is exactly why the denominator does not exist. The surplus measured `0.0431`
+  at Step 01, `0.0288` before Step 06's calibration and `0.0156` after it -
+  always inside the `0.0477` noise floor, at every calibration anyone measured -
+  so the invariant reported `not_evaluated` from the day it was written and
+  would have done so forever. Satisfying it literally would have required
+  asserting that some department count beats a balanced one at identical
+  players, which is not true football.
+
+  It is replaced by `incoherence_costs_a_division_tier`: the worst shape's
+  deficit against the reference must be at least `1 x` the division-tier edge.
+  Paired with the unchanged `bounded_structural_swing` at `0.75 x`, the two
+  one-sided bounds carry the whole original claim - incoherence costs at least
+  `1.33x` what coherence may pay - while both halves are measured against a
+  quantity that exists. **Nothing is widened**: a ratio with no denominator is
+  replaced by a bound on a quantity that has one, and `not_evaluated` is still
+  never reported as a pass. Left standing, the hole would eventually have been
+  closed by relaxing something, which is the failure this amendment prevents.
+  `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md` keeps the retired invariant
+  as Step 01 recorded it; it is the before-state and is not regenerated.
 
 ## Ordered Steps
 

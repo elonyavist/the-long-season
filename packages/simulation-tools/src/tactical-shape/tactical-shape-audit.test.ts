@@ -413,6 +413,40 @@ describe("tactical shape audit report", () => {
     }
   });
 
+  it("prices incoherence against a yardstick that exists rather than against itself", () => {
+    // A9 retired `asymmetric_incoherence_cost`, which divided the worst shape's
+    // deficit by the best shape's surplus. The surplus is inside the noise floor
+    // at every calibration ever measured, because in a population of ten central
+    // clones the reference `4-4-2` is already the optimum - so the ratio had no
+    // denominator and could never be evaluated. The half that is a design claim
+    // survives against the division-tier edge, and its pair with the bounded
+    // swing is the asymmetry: gain at most `0.75` of a tier, lose at least `1`.
+    // Whether the shipped numbers clear it is measured at baseline scale and
+    // recorded in the step document, as for every other numeric invariant: this
+    // file's `8` seed pairs put a `0.3375` noise floor in front of a tier edge
+    // of about a quarter, so both tier-edge invariants report `not_evaluated`
+    // here and asserting a pass would be asserting noise.
+    const invariant = report.invariants.find((row) => row.key === "incoherence_costs_a_division_tier");
+    const swing = report.invariants.find((row) => row.key === "bounded_structural_swing");
+
+    // Both halves of the asymmetry read the same yardstick, so they must agree
+    // on whether it is measurable at all. Disagreement means one of them stopped
+    // reading the division-tier scenario.
+    expect(invariant?.status === "not_evaluated").toBe(swing?.status === "not_evaluated");
+    expect(invariant?.threshold).toContain("division-tier edge");
+    if (invariant?.status !== "not_evaluated") {
+      expect(invariant?.observed).toBeGreaterThanOrEqual(
+        TACTICAL_SHAPE_THRESHOLDS.minIncoherenceCostShareOfTierEdge,
+      );
+    }
+
+    // The asymmetry is now this ordering rather than a ratio: incoherence must
+    // cost more than coherence may pay, both against a quantity that exists.
+    expect(TACTICAL_SHAPE_THRESHOLDS.minIncoherenceCostShareOfTierEdge).toBeGreaterThan(
+      TACTICAL_SHAPE_THRESHOLDS.maxStructuralSwingShareOfTierEdge,
+    );
+  });
+
   it("reads the shape distinction from results rather than from strength", () => {
     const invariant = report.invariants.find(
       (row) => row.key === "distinguishable_coherent_and_incoherent_shape",

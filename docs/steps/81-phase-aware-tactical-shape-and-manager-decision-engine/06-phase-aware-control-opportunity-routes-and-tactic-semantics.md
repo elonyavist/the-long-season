@@ -446,7 +446,7 @@ per dominance cell, `400` per scenario, `35376` matches. Structured hash
 | `quality_hierarchy_survives_extreme_shape` | PASS `0.925` | PASS `0.9281` |
 | `empty_department_possession_clamp` | PASS | PASS |
 | `distinguishable_coherent_and_incoherent_shape` | `not_evaluated` | **PASS**, `0` of `3` pairs identical over `2400` matches |
-| `asymmetric_incoherence_cost` | `not_evaluated` | `not_evaluated`, escalated below |
+| `asymmetric_incoherence_cost` | `not_evaluated` | escalated, and **retired by A9** - see below |
 
 `distinguishable_coherent_and_incoherent_shape` is the one the phase exists to
 satisfy and it is now a real gate. Step 01 stated its threshold as "different
@@ -675,7 +675,14 @@ made yet: how much a deliberately conservative setup should be worth against an
 equal side. Step 11 reports it; the phase contract decides whether it becomes a
 floor.
 
-### Block 3 - The Invariant That Cannot Be Evaluated Here
+### Block 3 - The Invariant That Cannot Be Evaluated Here (Accepted As A9)
+
+**Outcome, 2026-08-03: the phase contract accepted the recommendation below
+verbatim as amendment A9, and Step 01 was reopened to carry it into code.**
+`asymmetric_incoherence_cost` is retired; `incoherence_costs_a_division_tier`
+replaces it and reports **PASS at `1.8313`**, so no invariant in this phase is
+`not_evaluated` any more. The reasoning that produced the recommendation is kept
+below as it was written, because it is the evidence the amendment rests on.
 
 `asymmetric_incoherence_cost` divides the worst shape's deficit by the best
 shape's surplus, both against the reference `4-4-2`, and refuses to report a
@@ -720,7 +727,12 @@ beating the broken shapes rather than from being better than a `4-4-2`: between
 
 Step 11 reports and recommends; the phase contract decides, because
 `TACTICAL_SHAPE_THRESHOLDS` exists so that no step can move a frozen threshold
-by itself.
+by itself. **It decided on 2026-08-03, without waiting for Step 11**, for a
+reason worth recording: Step 11 forbids itself both threshold changes and
+production fixes, so a decision arriving there would have had nowhere clean to
+land. The evidence was already complete - this step owns the coefficients and
+measured the surplus at every setting it tried - and nothing between Step 07 and
+Step 11 changes the population that makes the surplus unmeasurable.
 
 ## Inherited From Step 03
 

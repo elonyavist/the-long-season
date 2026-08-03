@@ -68,29 +68,16 @@ without weakening thresholds or starting the longitudinal cohort.
   anomaly score green. Nothing about any band, denominator or severity changed. That is the ten-season report
   and not this step's population, so it is evidence that the owner acted, never
   a substitute for measuring it here.
-- **This step reports `asymmetric_incoherence_cost` and recommends; the phase
-  contract decides.** `TACTICAL_SHAPE_THRESHOLDS` exists so no step can move a
-  frozen threshold by itself, and this step forbids itself threshold changes
-  besides. Step 06 ran the frozen matrix and it is still `not_evaluated`, with
-  the surplus at `0.0288` against a `0.0477` noise floor, having never left it at
-  any setting. The reason is structural: in a population of ten central clones a
-  balanced `4-4-2` is the optimum, so no composition can beat the reference by
-  more than noise, and making one do so would assert football that is not true.
-- Step 06's recommendation, carried here with its evidence: **split the
-  invariant and assert the half that is a design claim.** It states two things
-  at once - incoherence costs a lot, coherence pays little - and only the first
-  is a rule the engine must obey; the second is a consequence of the reference
-  shape already being optimal, which is why the denominator does not exist.
-  Assert instead that **incoherence costs at least one division tier of squad
-  quality**: true today at `0.4831` against a tier edge of `0.2638`, a `1.83x`
-  margin, and it protects the thing the product needs, which is that setting up
-  badly hurts. The `2` is not widened; a ratio with no denominator is replaced
-  by a one-sided bound on a quantity that exists. Leaving it `not_evaluated`
-  forever leaves a hole a later reader will close by relaxing something, and
-  re-expressing the surplus against the whole population makes it computable but
-  not meaningful - almost all of the best shape's `0.6615` field average comes
-  from beating broken shapes, and `3-5-2` against `4-4-2` stays about `0.01`.
-  Do not widen the threshold, and do not report `not_evaluated` as a pass.
+- **`asymmetric_incoherence_cost` no longer exists and this step must not look
+  for it.** Step 06 escalated it, the phase contract accepted the split as
+  amendment **A9** on 2026-08-03, and Step 01 - which froze it - was reopened to
+  carry it into code. It is replaced by `incoherence_costs_a_division_tier`:
+  the worst shape's deficit against the reference must be at least `1 x` the
+  division-tier edge, measured at `1.8313` PASS. Paired with the unchanged
+  `bounded_structural_swing` at `0.75 x`, the two one-sided bounds carry the
+  whole original claim against a yardstick that exists. Evaluate it here like
+  any other invariant, on this step's own population. Nothing was widened, so a
+  regression against these numbers is a real regression.
 - Step 06 also recorded that one tactic slider decides about three times what the
   formation decides, measured on the real formation population the audit now
   reports. If that is to change it is Step 04's `TACTICAL_ROUTE_DEFINITION` that

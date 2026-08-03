@@ -1,11 +1,11 @@
 # Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine Design Contract
 
-- Date: 2026-07-31, amended 2026-08-02
+- Date: 2026-07-31, amended 2026-08-02 and 2026-08-03
 - Status: Accepted for implementation after Phase 80A
 - Scope owner: Phase 81 only
 
 The 2026-08-02 phase-order amendment moves this phase ahead of the market work,
-renumbered Phase 82A and Phase 82B. Eight amendments (A1-A8) are recorded in the
+renumbered Phase 82A and Phase 82B. Nine amendments (A1-A9) are recorded in the
 phase README; three sections below are updated by them: the longitudinal
 ownership, the carried goal-rate monitor, and the seams left for the
 background-world work. The rationale and declared costs are in
@@ -456,18 +456,33 @@ in code as `TACTICAL_SHAPE_THRESHOLDS` so a later step cannot quietly move one.
 | --- | --- | --- |
 | `bounded_structural_swing` | best shape's gain over the reference shape `<= 0.75 x` the division-tier edge | `0.169` (PASS) |
 | `no_dominant_composition` | no composition stays above `0.55` against every single opponent | `0.375` (PASS) |
-| `asymmetric_incoherence_cost` | worst-shape deficit / best-shape surplus `>= 2` | `not_evaluated` |
+| `no_dominant_tactic` | no tactic profile averages above `0.55` against the other profiles | added by Step 06 |
+| `incoherence_costs_a_division_tier` | worst-shape deficit `>= 1 x` the division-tier edge | amended by A9 |
 | `quality_hierarchy_survives_extreme_shape` | contender win share `>= 0.55` with at least `1` upset | `0.925` with `30/800` upsets (PASS) |
 | `empty_department_possession_clamp` | every share inside `[0.18, 0.82]`, every empty-midfield shape on the floor | `0.18` across all `11` (PASS) |
 | `distinguishable_coherent_and_incoherent_shape` | equal-quality `4-4-2` and `3-1-6` must differ | `not_evaluated` |
 
-Two entries deserve their reason recorded rather than inferred.
+Three entries deserve their reason recorded rather than inferred.
 
-`asymmetric_incoherence_cost` is `not_evaluated`, not passed. The best shape
-gains `0.0431` win share over the reference, which sits inside the measurement
-noise floor of `0.0477`: there is no coherence reward to divide by, so the ratio
-is undefined. Reporting that as a pass would claim the asymmetry already holds
-when nothing has been measured.
+`incoherence_costs_a_division_tier` replaced `asymmetric_incoherence_cost`
+(worst-shape deficit / best-shape surplus `>= 2`) under **A9** on 2026-08-03.
+The original asserted two things at once and only *incoherence costs a lot* is a
+rule the engine must obey; *coherence pays little* is a consequence of the
+reference `4-4-2` already being the optimum of a population of ten central
+clones, which is why the denominator never existed. The surplus measured
+`0.0431` at Step 01 and `0.0156` after Step 06's calibration, always inside the
+`0.0477` noise floor, so the ratio was `not_evaluated` at every calibration ever
+run. The claim survives as two one-sided bounds against the division-tier edge:
+coherence may gain at most `0.75` of a tier, incoherence must cost at least `1`.
+Nothing was widened - a ratio with no denominator became a bound on a quantity
+that has one - and `not_evaluated` is still never reported as a pass.
+
+`no_dominant_tactic` was added by Step 06 as the twin of the shape gate. It
+reads the *mean* against the other profiles where the shape gate reads the worst
+single matchup, because six tactic profiles are all legal selections on one
+eleven - so the mean is the expected value of choosing blind - while the `66`
+compositions are mostly self-destructive and a mean there measures how badly the
+broken shapes lose.
 
 `distinguishable_coherent_and_incoherent_shape` is the invariant this whole
 phase exists to satisfy, so it cannot pass at Step 01 by construction. It

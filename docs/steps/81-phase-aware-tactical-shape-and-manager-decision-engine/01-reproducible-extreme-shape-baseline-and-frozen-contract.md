@@ -2,7 +2,64 @@
 
 ## Status
 
-Done on 2026-08-02.
+Done on 2026-08-02. Reopened and re-closed on 2026-08-03 to carry out
+amendment **A9**, because this step froze the invariant the amendment replaces
+and no later step may move a frozen threshold on its own authority.
+
+### Reopened 2026-08-03 - A9 Replaced The Asymmetry Ratio
+
+`asymmetric_incoherence_cost` demanded `worst-shape deficit / best-shape
+surplus >= 2`. This step wrote it, and this step is where its replacement
+lands. Step 06 escalated it and the phase contract accepted the recommendation;
+the rationale is recorded once, in A9 in the phase README, and is not restated
+here.
+
+What changed in code:
+
+- `TACTICAL_SHAPE_THRESHOLDS.minIncoherenceToCoherenceRatio: 2` became
+  `minIncoherenceCostShareOfTierEdge: 1`.
+- The invariant key `asymmetric_incoherence_cost` became
+  `incoherence_costs_a_division_tier`, and its evaluator now divides the worst
+  shape's deficit by the division-tier edge instead of by the best shape's
+  surplus. It keeps the same noise-floor guard `bounded_structural_swing` uses,
+  against the same scenario, so the two halves of the asymmetry can never
+  disagree about whether the yardstick is measurable.
+
+The threshold is the claim, not the measurement: `1` is what *one division
+tier* means, written before the run. Measured afterwards at `1.83`.
+
+**The invariant declaration below is superseded on this one bullet and is left
+standing.** It records what this step froze, which is the thing A9 amends;
+rewriting it would erase the evidence that the original was tried at three
+separate calibrations and never once evaluated. For the same reason
+`docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md` is not regenerated: it is the
+before-state, and its `not_evaluated` row is the record A9 rests on.
+
+Files touched by the reopen, added to Expected Files:
+
+- `packages/simulation-tools/src/tactical-shape/tactical-shape-audit.ts`
+- `packages/simulation-tools/src/tactical-shape/tactical-shape-audit.test.ts`
+- `docs/audits/PHASE_81_...DESIGN_CONTRACT.md` - the frozen-threshold table
+- this phase README - A9 itself
+- `docs/steps/81-.../06-*.md` and `11-*.md` - the escalation is resolved
+- `docs/PROJECT_STATUS.md`
+
+Verification of the reopen:
+
+```text
+pnpm check                     271 files, 1955 tests passed; 10/10 typechecks
+pnpm cli tactical-shape-report every invariant PASS, none not_evaluated
+                               incoherence_costs_a_division_tier  PASS 1.8313
+                               bounded_structural_swing           PASS 0.1092
+                               no_dominant_composition            PASS 0.375
+                               no_dominant_tactic                 PASS 0.5317
+                               quality_hierarchy...               PASS 0.9281
+                               empty_department_possession_clamp  PASS
+                               distinguishable_..._shape          PASS 0 of 3
+                               structured hash 27e40db7515f5e6630ad31ab4616627a
+pnpm lint / depcruise          exit 0 / no violations
+git diff --check               clean
+```
 
 ### Adopted Solution
 
