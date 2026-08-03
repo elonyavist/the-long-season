@@ -1,3 +1,4 @@
+import { isCanonicalPlayerRole } from "@game/domain";
 import {
   type Player,
   type PlayerDynamicState,
@@ -741,10 +742,10 @@ function validateFixtureLineupShape(override: SimulateSeasonFixtureLineupOverrid
       throw new SimulateSeasonError("invalid_fixture_lineup_override", "Fixture lineup override slot ID must not be empty");
     }
 
-    if (slot.roleKey.length === 0) {
+    if (!isCanonicalPlayerRole(slot.canonicalRole)) {
       throw new SimulateSeasonError(
         "invalid_fixture_lineup_override",
-        `Fixture lineup override role key must not be empty for slot ${slot.slotId}`,
+        `Fixture lineup override slot ${slot.slotId} must carry a canonical role: ${String(slot.canonicalRole)}`,
       );
     }
 

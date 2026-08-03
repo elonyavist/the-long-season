@@ -2,7 +2,164 @@
 
 ## Status
 
-Not started.
+Done on 2026-08-03.
+
+### Adopted Solution
+
+`SelectedLineupSlot` now carries `CanonicalPlayerRole` instead of a role-weight
+key, and `LineupSlot` carries the canonical role plus its derived line, position
+family, and channel. `createLineupSlot(...)` is the single constructor, so no
+caller can ship a slot whose facts disagree with its role.
+`ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE` in `team-strength.ts` is the one place that
+decides which ability weights a role uses, declared with `satisfies` so a new
+canonical role fails the build.
+
+`fieldablePlayerIds` / `fieldablePlayerIdsFor` in
+`packages/engine/src/squad/squad-depth.ts` own squad depth, and
+`scripts/check-squad-depth-accessor.ts` is the absence assertion over the seven
+lineup-composing files. It is wired into `pnpm check`.
+
+### Collapses Removed
+
+Six, not the one the step originally named. Each mapped a role onto a narrower
+vocabulary, and each had drifted differently:
+
+- `matchday-adapter.ts` - `engineRoleKeyForPersistedRole`;
+- `live-match-control-report-data.ts` - `engineRoleKey`;
+- `tactical-shape-report-data.ts` - `engineRoleKey`, added by Step 01;
+- `ai-squad-selection.ts` - `roleWeightKeyByDepartment`, plus a two-step fallback
+  chain that probed for a profile and silently degraded when it missed;
+- `player-participation.ts` - `canonicalRoleForRoleKey`, the *inverse* collapse:
+  it tried to reconstruct a canonical role from the weight key, with a `default`
+  branch that answered `central_midfielder` for anything it did not recognise;
+- three separate copies of `formatLineupRole` in the CLI, now one owner reading
+  the existing `career.player.role.*` labels.
+
+The `player-participation.ts` one was silently wrong before this step: a
+recorded participation could attribute minutes to a role the player never
+played, because the weight key had already thrown the information away.
+
+### Stored Versus Derived
+
+A standing project rule applies here and changed the design after the first
+pass: **information is never duplicated; at most it is shared.**
+
+The first version of this step carried `roleKey`, `line`, and `positionFamily`
+on every `LineupSlot`. All three follow from `canonicalRole`, so all three were
+copies, and copies are what produced the six collapses in the first place. They
+are gone. A slot now stores exactly two facts that cannot be derived:
+
+- `canonicalRole` - the manager's actual choice;
+- `side` - the formation's explicit channel, which distinguishes `cb-left` from
+  `cb-right` and is real input rather than a copy of anything.
+
+`canonicalRoleTacticalFacts(...)` and `roleWeightKeyForCanonicalRole(...)` are
+the shared derivations. Three further duplications were found and removed the
+same way:
+
+- `CANONICAL_ROLE_TACTICAL_FACTS` restated every role's department, which
+  `CANONICAL_PLAYER_ROLE_DEPARTMENT` already held, and restated the position
+  family as the role itself twelve times. The table now declares only line and
+  channel - the two facts genuinely independent of the department - and derives
+  the rest. The test that existed to prove the two department tables agreed was
+  the tell: a test whose job is to catch drift between two sources of truth
+  means there should be one.
+- The precomputed facts record was exported and used by nobody. Removed.
+- Seven type re-exports were added to `packages/engine/src/squad/index.ts` and
+  consumed by nobody. Only `CanonicalPlayerRole` survives, because web and CLI
+  use it.
+
+Two fallbacks went with them. `chance-actors.ts` looked up role weights with
+`?? DEFAULT_OUTFIELD_ROLE_WEIGHT`, and three modules re-derived "is this a
+goalkeeper" from a lowercased string with `["gk", "por", "goalkeeper"]`. The
+mapping is total now, so the weight tables are total and the goalkeeper check is
+`slot.canonicalRole === "goalkeeper"`.
+
+### Two Collapses Deliberately Kept
+
+`broadRole(...)` in `match-preparation-adapter.ts` and `roleKeyForDomainSlot(...)`
+in `packages/ui` still map onto four broad values, and that is on purpose. They
+are presentation, not gameplay: they group players for a compact squad table and
+they run over `PlayerRole`, a different union from `CanonicalPlayerRole`. No
+match calculation reads either.
+
+Removing them would mean deciding what a squad table shows, which is a UI
+question this step does not own. They are named here so a later reader does not
+mistake them for a missed migration. The Definition of Done is about the
+*gameplay* mapping, and web now owns none.
+
+### Verification
+
+```text
+pnpm typecheck                        exit 0, all packages
+domain + engine + simulation-tools + storage    131 files, 958 tests passed
+web + ui + i18n + content                       117 files, 657 tests passed
+apps/cli                                          6 files, 144 tests passed, exit 0
+pnpm lint                             clean
+pnpm depcruise                        no violations (791 modules, 3168 dependencies)
+pnpm check:localized-text             OK
+pnpm check:squad-depth                OK (7 lineup-composing files)
+git diff --check                      clean
+```
+
+The CLI suite failed six tests on the first full run and one on the second. All
+seven were assertions matching the old four-way role labels (`goalkeeper`,
+`attacker`) against output that now renders canonical ones (`Goalkeeper`,
+`Striker`, `Central midfielder`). No production behaviour was involved.
+
+### Blocker / Lesson
+
+Two scope corrections were found against the code and are recorded above the
+original text: the collapse lived in the domain lineup rather than only in the
+web Adapter, and persistence was in scope because `match_preparation_lineup`
+stores the role. The persisted column keeps its name and type; its values change
+meaning, so `persistedCanonicalRole(...)` rejects a pre-change beta save rather
+than reinterpreting it. That means the beta reset lands here, not at Step 08.
+
+One genuine mistake was made and corrected: the four `lineup.role.*` labels were
+deleted as dead once the CLI stopped using them, but the web still uses them for
+its broad squad-table vocabulary. They were restored. Broad presentation labels
+are a separate concept from engine role weights and legitimately survive.
+
+### Next Action
+
+Step 03.
+
+## Scope Corrections Found By Step 01
+
+Two facts were established while closing Step 01 and change this step's scope.
+They are recorded here so the step is planned against the code rather than
+against the plan.
+
+**The collapse is in the domain lineup, not only in the web Adapter.**
+`SelectedLineupSlot.roleKey` is already the *engine role-weight key*
+(`gk` / `defender` / `midfielder` / `attacker`), so the canonical role is
+discarded before the lineup ever crosses into domain. Removing
+`engineRoleKeyForPersistedRole` from `matchday-adapter.ts` therefore does not
+finish the job: `SelectedLineupSlot` must carry `CanonicalPlayerRole`, and the
+engine must derive the weight key from it. The same four-way mapping is
+duplicated three more times and all four go together:
+
+- `apps/web/src/features/matchday/matchday-adapter.ts` - `engineRoleKeyForPersistedRole`;
+- `apps/cli/src/commands/live-match-control-report-data.ts` - `engineRoleKey`;
+- `apps/cli/src/commands/tactical-shape-report-data.ts` - `engineRoleKey`;
+- `apps/web/src/features/match-preparation/match-preparation-adapter.ts` - `broadRole`,
+  which collapses over a different role vocabulary again.
+
+**Persistence is in scope, and so is a beta reset.** `SelectedLineup` is durable:
+`packages/storage/src/sqlite/career-state-mapper.ts` writes and reads
+`match_preparation_lineup.role_key`. The column is `TEXT NOT NULL`, so the
+schema itself needs no change - but its *values* change meaning from `attacker`
+to `striker`, and an existing beta save would then fail canonical-role
+validation. Add that mapper to Expected Files, and note that the beta reset this
+implies lands here rather than at Step 08, which currently claims it.
+
+The domain already provides half of what the typed seam needs:
+`CANONICAL_PLAYER_ROLES`, `CANONICAL_PLAYER_ROLE_DEPARTMENT`, `FormationLine`,
+`FormationPositionFamily`, and `FormationSide` all exist. What is missing is a
+total `CanonicalPlayerRole -> { line, positionFamily, implied side }` mapping in
+`formations.ts` and a total `CanonicalPlayerRole -> role-weight key` mapping in
+`team-strength.ts`, each with a `never` guard.
 
 ## Goal
 
@@ -90,6 +247,32 @@ position family, and canonical role are discarded before simulation.
 - `apps/web/src/features/match-preparation/match-preparation-adapter.test.ts`
 - `apps/web/src/features/matchday/matchday-adapter.ts`
 - `apps/web/src/features/matchday/matchday-adapter.test.ts`
+- `apps/cli/src/commands/live-match-control-report-data.ts`
+- `apps/cli/src/commands/tactical-shape-report-data.ts`
+- `packages/domain/src/entities/tactic.entity.ts`
+- `packages/domain/src/entities/tactic.entity.test.ts`
+- `packages/domain/src/state/career-state.test.ts`
+- `packages/storage/src/sqlite/career-state-mapper.ts`
+- `packages/engine/src/squad/squad-depth.ts`
+- `packages/engine/src/squad/squad-depth.test.ts`
+- `packages/engine/src/squad/index.ts`
+- `packages/engine/src/career/player-participation.ts`
+- `packages/engine/src/match-engine/match-explanation-trace.ts`
+- `packages/content/src/generators/fake-players.ts`
+- `packages/i18n/src/labels.ts`
+- `packages/simulation-tools/src/tactical-shape/tactical-shape-audit.ts`
+- `apps/cli/src/commands/career/format.ts`
+- `apps/cli/src/commands/career/preparation.ts`
+- `apps/cli/src/commands/career/preparation-output.ts`
+- `apps/cli/src/commands/career/matchday-output.ts`
+- `apps/cli/src/commands/career/progression.ts`
+- `apps/cli/src/commands/fake-season-input.ts`
+- `apps/cli/src/commands/ten-season-report/report-data.ts`
+- `apps/cli/src/commands/simulate-season/demo-builders.ts`
+- `apps/cli/src/commands/simulate-season/demo-output.ts`
+- `apps/cli/src/commands/simulate-season/fixture-detail-output.ts`
+- `scripts/check-squad-depth-accessor.ts`
+- `package.json`
 - `docs/PROJECT_STATUS.md`
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`
 - this step document

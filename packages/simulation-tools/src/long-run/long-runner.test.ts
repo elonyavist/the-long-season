@@ -1,3 +1,4 @@
+import { createLineupSlot } from "@game/engine";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -127,16 +128,8 @@ function teamInput(id: ClubId, rating: number): SimulateSeasonTeamInput {
 
   return {
     lineup: [
-      {
-        slotId: "slot:01",
-        playerId: playerId(`player:${clubSlug}-01`),
-        roleKey: "gk",
-      },
-      {
-        slotId: "slot:02",
-        playerId: playerId(`player:${clubSlug}-02`),
-        roleKey: "attacker",
-      },
+      createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:${clubSlug}-01`), canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:02", playerId: playerId(`player:${clubSlug}-02`), canonicalRole: "striker" }),
     ],
     strength: {
       attack: rating,

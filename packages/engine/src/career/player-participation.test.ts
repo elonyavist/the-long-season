@@ -1,3 +1,4 @@
+import { createLineupSlot } from "../match-engine/index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -66,7 +67,7 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
       substituteAppearance: false,
       minutes: 45,
       rating: 5.6,
-      playedRoleMinutes: { central_midfielder: 45 },
+      playedRoleMinutes: { center_back: 45 },
     },
     {
       playerId: HOME_SUB,
@@ -75,7 +76,7 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
       substituteAppearance: true,
       minutes: 45,
       rating: 6.8,
-      playedRoleMinutes: { central_midfielder: 45 },
+      playedRoleMinutes: { center_back: 45 },
     },
     {
       playerId: HOME_UNUSED,
@@ -180,8 +181,8 @@ function initialHomeContext(): MatchTeamContext {
   return {
     clubId: clubId("club:home"),
     lineup: [
-      { slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, roleKey: "gk" },
-      { slotId: "slot:home:field", playerId: HOME_STARTER, roleKey: "starter" },
+      createLineupSlot({ slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:home:field", playerId: HOME_STARTER, canonicalRole: "center_back" }),
     ],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0 },
@@ -192,8 +193,8 @@ function finalHomeContext(): MatchTeamContext {
   return {
     ...initialHomeContext(),
     lineup: [
-      { slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, roleKey: "gk" },
-      { slotId: "slot:home:field", playerId: HOME_SUB, roleKey: "starter" },
+      createLineupSlot({ slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:home:field", playerId: HOME_SUB, canonicalRole: "center_back" }),
     ],
   };
 }

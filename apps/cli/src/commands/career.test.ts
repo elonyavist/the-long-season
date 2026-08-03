@@ -874,7 +874,7 @@ test("career command saves selected lineup and exposes it after reload", async (
     );
     assert.equal(inspectIo.stdoutLines.includes("Match preparation:"), true);
     assert.equal(inspectIo.stdoutLines.includes("  Saved lineup:"), true);
-    assert.equal(inspectIo.stdoutLines.some((line) => /^    slot:01 .+ goalkeeper$/.test(line)), true);
+    assert.equal(inspectIo.stdoutLines.some((line) => /^    slot:01 .+ Goalkeeper$/.test(line)), true);
     assert.equal(inspectIo.stdoutLines.includes("  Saved tactic: none"), true);
   } finally {
     await removeTempSaveDirectory(directoryPath);

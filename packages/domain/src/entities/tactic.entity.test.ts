@@ -8,6 +8,7 @@ import {
   isTacticMentalityKey,
   TacticContractError,
   type SelectedLineup,
+  type SelectedLineupSlot,
   type TacticSetup,
 } from "./tactic.entity.ts";
 
@@ -21,9 +22,9 @@ test("createSelectedLineup preserves explicit slot order", () => {
   const lineup = createSelectedLineup({
     clubId: clubId("club:pro01"),
     slots: [
-      { slotKey: "gk", playerId: playerId("player:000001"), roleKey: "gk" },
-      { slotKey: "cb-left", playerId: playerId("player:000002"), roleKey: "defender" },
-      { slotKey: "st-right", playerId: playerId("player:000009"), roleKey: "attacker" },
+      { slotKey: "gk", playerId: playerId("player:000001"), canonicalRole: "goalkeeper" },
+      { slotKey: "cb-left", playerId: playerId("player:000002"), canonicalRole: "center_back" },
+      { slotKey: "st-right", playerId: playerId("player:000009"), canonicalRole: "striker" },
     ],
   });
 
@@ -52,8 +53,8 @@ test("createSelectedLineup rejects duplicate players", () => {
       createSelectedLineup({
         clubId: clubId("club:pro01"),
         slots: [
-          { slotKey: "cm-left", playerId: duplicatedPlayerId, roleKey: "midfielder" },
-          { slotKey: "cm-right", playerId: duplicatedPlayerId, roleKey: "midfielder" },
+          { slotKey: "cm-left", playerId: duplicatedPlayerId, canonicalRole: "central_midfielder" },
+          { slotKey: "cm-right", playerId: duplicatedPlayerId, canonicalRole: "central_midfielder" },
         ],
       }),
     "duplicate_player",
@@ -69,7 +70,7 @@ test("createSelectedLineup rejects missing players", () => {
           {
             slotKey: "gk",
             playerId: undefined as unknown as ReturnType<typeof playerId>,
-            roleKey: "gk",
+            canonicalRole: "goalkeeper",
           },
         ],
       }),
@@ -82,7 +83,7 @@ test("createSelectedLineup rejects ambiguous slot and role keys", () => {
     () =>
       createSelectedLineup({
         clubId: clubId("club:pro01"),
-        slots: [{ slotKey: "", playerId: playerId("player:000001"), roleKey: "gk" }],
+        slots: [{ slotKey: "", playerId: playerId("player:000001"), canonicalRole: "goalkeeper" }],
       }),
     "missing_slot_key",
   );
@@ -92,8 +93,8 @@ test("createSelectedLineup rejects ambiguous slot and role keys", () => {
       createSelectedLineup({
         clubId: clubId("club:pro01"),
         slots: [
-          { slotKey: "cm", playerId: playerId("player:000001"), roleKey: "midfielder" },
-          { slotKey: "cm", playerId: playerId("player:000002"), roleKey: "midfielder" },
+          { slotKey: "cm", playerId: playerId("player:000001"), canonicalRole: "central_midfielder" },
+          { slotKey: "cm", playerId: playerId("player:000002"), canonicalRole: "central_midfielder" },
         ],
       }),
     "duplicate_slot_key",
@@ -103,9 +104,13 @@ test("createSelectedLineup rejects ambiguous slot and role keys", () => {
     () =>
       createSelectedLineup({
         clubId: clubId("club:pro01"),
-        slots: [{ slotKey: "cm", playerId: playerId("player:000001"), roleKey: "" }],
+        slots: [{
+          slotKey: "cm",
+          playerId: playerId("player:000001"),
+          canonicalRole: "sweeper" as unknown as SelectedLineupSlot["canonicalRole"],
+        }],
       }),
-    "missing_role_key",
+    "invalid_canonical_role",
   );
 });
 
@@ -189,8 +194,8 @@ test("selected lineup and tactic contracts are plain serializable data", () => {
     lineup: {
       clubId: "club:pro01",
       slots: [
-        { slotKey: "gk", playerId: "player:000001", roleKey: "gk" },
-        { slotKey: "st", playerId: "player:000009", roleKey: "attacker" },
+        { slotKey: "gk", playerId: "player:000001", canonicalRole: "goalkeeper" },
+        { slotKey: "st", playerId: "player:000009", canonicalRole: "striker" },
       ],
     },
     tactic: {
@@ -210,8 +215,8 @@ function selectedLineupFixture(): SelectedLineup {
   return {
     clubId: clubId("club:pro01"),
     slots: [
-      { slotKey: "gk", playerId: playerId("player:000001"), roleKey: "gk" },
-      { slotKey: "st", playerId: playerId("player:000009"), roleKey: "attacker" },
+      { slotKey: "gk", playerId: playerId("player:000001"), canonicalRole: "goalkeeper" },
+      { slotKey: "st", playerId: playerId("player:000009"), canonicalRole: "striker" },
     ],
   };
 }

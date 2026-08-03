@@ -1,4 +1,8 @@
 import {
+  fieldablePlayerIds,
+  fieldablePlayerIdsFor,
+  roleWeightKeyForCanonicalRole,
+  createLineupSlot,
   advanceProgressiveMatchMinute,
   applyProgressiveAiInGameDecisions,
   applyConfirmedProgressiveTeamChanges,
@@ -34,6 +38,7 @@ import {
   type ProgressiveMatchMinuteSnapshot,
   type ProgressiveMatchSessionState,
   type ProgressCareerFixtureAdvanced,
+  type CanonicalPlayerRole,
 } from "@game/engine";
 import {
   createFakeGameplayConfig,
@@ -923,7 +928,7 @@ function prepareWebMatchdayKickoff(
   const selectedClub = preparedCareerState.gameState.clubs[preparedCareerState.selectedClubId];
   const preMatchRecovery = applyCareerWeeklyRecovery({
     playerStates: preparedCareerState.gameState.playerStates,
-    playerIds: selectedClub?.playerIds ?? [],
+    playerIds: fieldablePlayerIdsFor(selectedClub),
     dayCount: nextFixture.fixture.date - preparedCareerState.gameState.calendar.currentDate,
   });
   const recoveredCareerState: CareerState = {
@@ -1259,7 +1264,7 @@ function matchTeamContextFromLiveTeam(
       slots: team.lineup.map((slot) => ({
         slotKey: slot.slotId,
         playerId: slot.playerId,
-        roleKey: engineRoleKeyForPersistedRole(slot.role),
+        canonicalRole: slot.role,
       })),
     },
     tactic: team.tactic,
@@ -1343,7 +1348,7 @@ function buildProgressiveAvailability(
     const lineupIds = new Set(lineup.map((slot) => slot.playerId));
     const playerIds = side === selectedSide
       ? selectedBench
-      : (careerState.gameState.clubs[clubId]?.playerIds ?? [])
+      : fieldablePlayerIdsFor(careerState.gameState.clubs[clubId])
           .filter((playerId) => !lineupIds.has(playerId))
           .slice(0, REQUIRED_BENCH_SIZE);
 
@@ -1458,13 +1463,7 @@ function buildCareerTeamsByClubId(
 
     if (clubId === careerState.selectedClubId && careerState.matchPreparation?.selectedLineup !== undefined && careerState.matchPreparation.tactic !== undefined) {
       teamsByClubId[clubId] = buildTacticTeamContext({
-        lineup: {
-          ...careerState.matchPreparation.selectedLineup,
-          slots: careerState.matchPreparation.selectedLineup.slots.map((slot) => ({
-            ...slot,
-            roleKey: engineRoleKeyForPersistedRole(slot.roleKey),
-          })),
-        },
+        lineup: careerState.matchPreparation.selectedLineup,
         tactic: careerState.matchPreparation.tactic,
         requiredLineupSize: CAREER_DEFAULT_LINEUP_SIZE,
         players: careerState.gameState.players,
@@ -1475,7 +1474,7 @@ function buildCareerTeamsByClubId(
       continue;
     }
 
-    const lineup = defaultOpponentLineupFromRoster(club.playerIds);
+    const lineup = defaultOpponentLineupFromRoster(fieldablePlayerIds(club));
     teamsByClubId[clubId] = {
       clubId,
       lineup,
@@ -1498,14 +1497,13 @@ function buildCareerTeamsByClubId(
   return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
 }
 
-/** Maps detailed tactical-board roles to the four current engine departments. */
-function engineRoleKeyForPersistedRole(role: string): string {
-  if (role === "goalkeeper") return "gk";
-  if (role === "right_full_back" || role === "center_back" || role === "left_full_back") return "defender";
-  if (role === "right_winger" || role === "left_winger" || role === "striker") return "attacker";
-  return "midfielder";
-}
-
+/**
+ * Builds the fallback eleven for a club the manager has not prepared.
+ *
+ * This is the background driver's path (A1): a club the user has not selected
+ * is an ordinary caller of the same typed seam, not a special case with its own
+ * role vocabulary.
+ */
 function defaultOpponentLineupFromRoster(playerIds: readonly PlayerId[]): readonly LineupSlot[] {
   const lineup: LineupSlot[] = [];
 
@@ -1517,30 +1515,31 @@ function defaultOpponentLineupFromRoster(playerIds: readonly PlayerId[]): readon
     }
 
     const slotNumber = index + 1;
-    lineup.push({
+    lineup.push(createLineupSlot({
       slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
       playerId: rosterPlayerId,
-      roleKey: defaultRoleKeyForSlot(slotNumber),
-    });
+      canonicalRole: defaultCanonicalRoleForSlot(slotNumber),
+    }));
   }
 
   return lineup;
 }
 
-function defaultRoleKeyForSlot(slotNumber: number): string {
+/** Fixed 4-4-2 role order used when no manager selection exists for a club. */
+function defaultCanonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
   if (slotNumber === 1) {
-    return "gk";
+    return "goalkeeper";
   }
 
   if (slotNumber <= 5) {
-    return "defender";
+    return "center_back";
   }
 
   if (slotNumber <= 9) {
-    return "midfielder";
+    return "central_midfielder";
   }
 
-  return "attacker";
+  return "striker";
 }
 
 function engineRoleKeyForBoardRole(role: TacticalBoardRoleCode): string {
@@ -1765,7 +1764,7 @@ function phasePlayerInputs(
       playerId: rating.playerId,
       playerName: playerName(careerState, rating.playerId),
       club: clubInput(careerState, clubId),
-      ...(slot?.roleKey === undefined ? {} : { roleKey: slot.roleKey }),
+      ...(slot === undefined ? {} : { roleKey: roleWeightKeyForCanonicalRole(slot.canonicalRole) }),
       rating: rating.rating,
       ...(condition === undefined ? {} : { condition }),
       status: substitutedStatus(liveProgress, rating.playerId),
@@ -1868,16 +1867,16 @@ function finalPlayerRegistrations(result: WebMatchdayAdvancedResult): readonly R
   side: MatchSide;
   roleKey: string;
 }>[] {
-  const slotsForClub = (clubId: ClubId): readonly Readonly<{ playerId: PlayerId; roleKey: string }>[] => clubId === result.careerState.selectedClubId
+  const slotsForClub = (clubId: ClubId): readonly Readonly<{ playerId: PlayerId; canonicalRole: CanonicalPlayerRole }>[] => clubId === result.careerState.selectedClubId
     ? result.careerState.matchPreparation?.selectedLineup?.slots ?? []
-    : defaultOpponentLineupFromRoster(result.careerState.gameState.clubs[clubId]?.playerIds ?? []);
+    : defaultOpponentLineupFromRoster(fieldablePlayerIdsFor(result.careerState.gameState.clubs[clubId]));
 
   return (["home", "away"] as const).flatMap((side) => {
     const clubId = side === "home" ? result.fixtureAfter.homeClubId : result.fixtureAfter.awayClubId;
     return slotsForClub(clubId).map((slot) => ({
       playerId: slot.playerId,
       side,
-      roleKey: slot.roleKey,
+      roleKey: roleWeightKeyForCanonicalRole(slot.canonicalRole),
     }));
   });
 }

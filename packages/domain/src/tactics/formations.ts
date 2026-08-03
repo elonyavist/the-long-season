@@ -173,6 +173,79 @@ export function isFormationKey(value: unknown): value is FormationKey {
   return FORMATION_KEYS.includes(value as FormationKey);
 }
 
+/**
+ * Tactical facts every canonical role carries on its own.
+ *
+ * A formation slot may override the channel - two centre backs sit in
+ * `left_center` and `right_center` while the role itself is simply central -
+ * but line, department, and position family belong to the role and hold
+ * wherever a manager drops it.
+ */
+export interface CanonicalRoleTacticalFacts {
+  /** Coarse tactical depth band. */
+  readonly line: FormationLine;
+  /** Broad football department. */
+  readonly department: FormationDepartment;
+  /** Position family this role fills. */
+  readonly positionFamily: FormationPositionFamily;
+  /** Channel the role implies when a slot does not state one. */
+  readonly channel: FormationSide;
+}
+
+/**
+ * Where each canonical role sits on the pitch.
+ *
+ * This table declares only what cannot be derived from the role itself. The
+ * department already lives in `CANONICAL_PLAYER_ROLE_DEPARTMENT` and the
+ * position family *is* the role, so restating either here would create a second
+ * source of truth that could drift from the first.
+ *
+ * Line is genuinely independent: the midfield department alone spans defensive
+ * midfield, the midfield line, and attacking midfield. Channel is independent
+ * too, since a role carries its own side.
+ *
+ * Declared with `satisfies` so adding a canonical role fails the build here
+ * rather than silently taking a default somewhere downstream.
+ */
+const CANONICAL_ROLE_PLACEMENT = {
+  goalkeeper: { line: "goalkeeper", channel: "center" },
+  right_full_back: { line: "defensive_line", channel: "right" },
+  center_back: { line: "defensive_line", channel: "center" },
+  left_full_back: { line: "defensive_line", channel: "left" },
+  defensive_midfielder: { line: "defensive_midfield", channel: "center" },
+  central_midfielder: { line: "midfield_line", channel: "center" },
+  right_midfielder: { line: "midfield_line", channel: "right" },
+  left_midfielder: { line: "midfield_line", channel: "left" },
+  attacking_midfielder: { line: "attacking_midfield", channel: "center" },
+  right_winger: { line: "forward_line", channel: "right" },
+  left_winger: { line: "forward_line", channel: "left" },
+  striker: { line: "forward_line", channel: "center" },
+} as const satisfies Readonly<
+  Record<CanonicalPlayerRole, { readonly line: FormationLine; readonly channel: FormationSide }>
+>;
+
+/**
+ * Returns the tactical facts for one canonical role.
+ *
+ * Department and position family are derived, not stored, so this function has
+ * exactly one thing it can get wrong and the department map stays the only
+ * place a department is written down.
+ *
+ * @example
+ * const facts = canonicalRoleTacticalFacts("striker");
+ * // { line: "forward_line", department: "attack", positionFamily: "striker", channel: "center" }
+ */
+export function canonicalRoleTacticalFacts(role: CanonicalPlayerRole): CanonicalRoleTacticalFacts {
+  const placement = CANONICAL_ROLE_PLACEMENT[role];
+
+  return {
+    line: placement.line,
+    department: canonicalPlayerRoleDepartment(role),
+    positionFamily: role,
+    channel: placement.channel,
+  };
+}
+
 function formation(key: FormationKey, slots: readonly FormationSlot[]): Formation {
   return { key, slots };
 }
@@ -251,4 +324,4 @@ function lw(): FormationSlot {
 function striker(slotKey = "st", side: FormationSide = "center"): FormationSlot {
   return slot(slotKey, "forward_line", "attack", "striker", side);
 }
-import type { CanonicalPlayerRole } from "./player-roles.ts";
+import { canonicalPlayerRoleDepartment, type CanonicalPlayerRole } from "./player-roles.ts";

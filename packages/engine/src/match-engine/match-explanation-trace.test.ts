@@ -73,7 +73,7 @@ function sampleTrace(): MatchExplanationTrace {
         risk: 0.2,
       },
       lineup: {
-        slots: [{ slotId: "slot:01", playerId: playerId("player:home-000001"), roleKey: "striker" }],
+        slots: [{ slotId: "slot:01", playerId: playerId("player:home-000001"), canonicalRole: "striker" }],
       },
       conditionImpact: {
         tracking: "not_tracked",
@@ -98,7 +98,7 @@ function sampleTrace(): MatchExplanationTrace {
         risk: 0.5,
       },
       lineup: {
-        slots: [{ slotId: "slot:01", playerId: playerId("player:away-000001"), roleKey: "goalkeeper" }],
+        slots: [{ slotId: "slot:01", playerId: playerId("player:away-000001"), canonicalRole: "goalkeeper" }],
       },
       conditionImpact: {
         tracking: "tracked",

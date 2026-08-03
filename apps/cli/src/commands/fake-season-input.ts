@@ -1,3 +1,5 @@
+import {
+  fieldablePlayerIds, createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import type { FakeLeagueSystem } from "@game/content";
 import {
   deriveTeamStrength,
@@ -55,7 +57,7 @@ export function createFakeTeamsByClubId(
       throw new Error(`Missing fake lineup for club: ${clubId}`);
     }
 
-    const typedLineup: readonly LineupSlot[] = lineup;
+    const typedLineup: readonly LineupSlot[] = lineup.map((slot) => createLineupSlot(slot));
     teamsByClubId[clubId] = {
       clubId,
       lineup: typedLineup,
@@ -118,7 +120,7 @@ function createCareerTeamsByClubId(
       continue;
     }
 
-    const lineup = genericLineupForClub(club.playerIds, careerState);
+    const lineup = genericLineupForClub(fieldablePlayerIds(club), careerState);
     teamsByClubId[clubId as FakeCliClubId] = {
       clubId: clubId as FakeCliClubId,
       lineup,
@@ -164,10 +166,10 @@ function genericLineupForClub(
     }
   }
 
-  return selected.slice(0, 11).map((playerId, index) => ({
+  return selected.slice(0, 11).map((playerId, index) => createLineupSlot({
     slotId: `slot:${String(index + 1).padStart(2, "0")}`,
     playerId,
-    roleKey: roleKeyForPlayer(playerId, careerState),
+    canonicalRole: canonicalRoleForPlayer(playerId, careerState),
   }));
 }
 
@@ -189,8 +191,21 @@ function addByGroup(
   }
 }
 
-function roleKeyForPlayer(playerId: CliCareerState["gameState"]["playerIds"][number], careerState: CliCareerState): string {
-  return positionGroupForPlayer(playerId, careerState) === "goalkeeper" ? "gk" : positionGroupForPlayer(playerId, careerState);
+/** Maps one player's broad position group onto the canonical role he fills. */
+function canonicalRoleForPlayer(
+  playerId: CliCareerState["gameState"]["playerIds"][number],
+  careerState: CliCareerState,
+): CanonicalPlayerRole {
+  switch (positionGroupForPlayer(playerId, careerState)) {
+    case "goalkeeper":
+      return "goalkeeper";
+    case "defender":
+      return "center_back";
+    case "midfielder":
+      return "central_midfielder";
+    case "attacker":
+      return "striker";
+  }
 }
 
 function positionGroupForPlayer(

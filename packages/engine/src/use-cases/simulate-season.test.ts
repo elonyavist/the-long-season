@@ -1,3 +1,4 @@
+import { createLineupSlot } from "../match-engine/index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -845,16 +846,12 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
     const rating = 8 + (clubIds.length - index) / 3;
     teams[clubId] = {
       lineup: [
-        {
-          slotId: "slot:01",
-          playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-01`),
-          roleKey: "gk",
-        },
-        {
+        createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-01`), canonicalRole: "goalkeeper" }),
+        createLineupSlot({
           slotId: "slot:02",
           playerId: playerId(`player:test-${String(index + 1).padStart(2, "0")}-02`),
-          roleKey: "synthetic",
-        },
+          canonicalRole: "striker",
+        }),
       ],
       strength: {
         attack: rating,
@@ -1019,12 +1016,12 @@ function selectedLineupFixture(clubId: ClubId): SelectedLineup {
       {
         slotKey: "slot:override-gk",
         playerId: playerId("player:override-01"),
-        roleKey: "gk",
+        canonicalRole: "goalkeeper",
       },
       {
         slotKey: "slot:override-st",
         playerId: playerId("player:override-02"),
-        roleKey: "synthetic",
+        canonicalRole: "striker",
       },
     ],
   };

@@ -1,4 +1,5 @@
 import {
+  isCanonicalPlayerRole,
   clubFinanceLedgerEntryId,
   clubId,
   competitionId,
@@ -84,7 +85,8 @@ import {
   type YouthPlayerStatus,
 } from "@game/domain";
 
-import type { SqliteBindValue, SqliteWorldDatabase } from "./world-state-mapper.ts";
+import type { CanonicalPlayerRole } from "@game/domain";
+import { SqliteWorldStateError, type SqliteBindValue, type SqliteWorldDatabase } from "./world-state-mapper.ts";
 
 /** Writes every durable career slice after the ordered world rows exist. */
 export function insertCareerStateRows(database: SqliteWorldDatabase, state: CareerState): void {
@@ -1686,7 +1688,7 @@ function insertMatchPreparation(database: SqliteWorldDatabase, state: CareerStat
   preparation.selectedLineup?.slots.forEach((slot, sortOrder) => {
     database.run(`INSERT INTO match_preparation_lineup
       (save_id, sort_order, club_id, slot_key, player_id, role_key) VALUES (?, ?, ?, ?, ?, ?)`,
-    [state.saveId, sortOrder, preparation.selectedLineup?.clubId ?? preparation.selectedClubId, slot.slotKey, slot.playerId, slot.roleKey]);
+    [state.saveId, sortOrder, preparation.selectedLineup?.clubId ?? preparation.selectedClubId, slot.slotKey, slot.playerId, slot.canonicalRole]);
   });
   preparation.boardSlots?.forEach((slot, sortOrder) => {
     database.run(`INSERT INTO match_preparation_board_slots
@@ -2086,7 +2088,7 @@ function loadMatchPreparation(database: SqliteWorldDatabase, save: SaveId): Pick
     selectedClubId: clubId(text(row, "selected_club_id")),
     ...(targetFixture === undefined ? {} : { targetFixtureId: fixtureId(targetFixture) }),
     ...(hasLineup ? { selectedLineup: { clubId: clubId(text(database.queryAll("SELECT club_id FROM match_preparation_lineup WHERE save_id = ? ORDER BY sort_order", [save])[0]!, "club_id")),
-      slots: database.queryAll("SELECT slot_key, player_id, role_key FROM match_preparation_lineup WHERE save_id = ? ORDER BY sort_order", [save]).map((slot) => ({ slotKey: text(slot, "slot_key"), playerId: playerId(text(slot, "player_id")), roleKey: text(slot, "role_key") })) } } : {}),
+      slots: database.queryAll("SELECT slot_key, player_id, role_key FROM match_preparation_lineup WHERE save_id = ? ORDER BY sort_order", [save]).map((slot) => ({ slotKey: text(slot, "slot_key"), playerId: playerId(text(slot, "player_id")), canonicalRole: persistedCanonicalRole(text(slot, "role_key")) })) } } : {}),
     ...(hasTactic ? { tactic: { mentality: text(row, "tactic_mentality") as NonNullable<CareerMatchPreparation["tactic"]>["mentality"], pressing: number(row, "tactic_pressing"), directness: number(row, "tactic_directness"), width: number(row, "tactic_width"), risk: number(row, "tactic_risk") } } : {}),
     ...(baseFormationId === undefined ? {} : { baseFormationId }),
     ...(boardSlots.length === 0 ? {} : { boardSlots: boardSlots.map((slot) => ({ slotKey: text(slot, "slot_key"), nx: number(slot, "nx"), ny: number(slot, "ny"), roleKey: text(slot, "role_key") })) }),
@@ -2195,4 +2197,25 @@ function boolean(row: Record<string, unknown>, key: string): boolean {
 
 function mappingFailure(message: string): Error {
   return new Error(`relational career mapping failed: ${message}`);
+}
+
+/**
+ * Reads one persisted lineup role back as a canonical role.
+ *
+ * The column keeps its `role_key` name and its `TEXT` type, but its meaning
+ * changed with the typed tactical slot: it now stores the manager's canonical
+ * role rather than the four-way engine weight key. A save written before that
+ * change holds `defender` or `attacker`, which are not canonical roles, and is
+ * rejected here rather than silently reinterpreted. Beta saves are deleted, not
+ * migrated.
+ */
+function persistedCanonicalRole(value: string): CanonicalPlayerRole {
+  if (!isCanonicalPlayerRole(value)) {
+    throw new SqliteWorldStateError(
+      "unsupported_bootstrap_state",
+      `persisted lineup role is not a canonical role: ${value}`,
+    );
+  }
+
+  return value;
 }

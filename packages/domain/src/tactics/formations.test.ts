@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import { canonicalPlayerRoleDepartment } from "./player-roles.ts";
 import {
   CANONICAL_PLAYER_ROLES,
+  canonicalRoleTacticalFacts,
   FORMATION_CATALOG,
   FORMATION_KEYS,
   FORMATION_POSITION_FAMILIES,
@@ -114,5 +116,39 @@ test("three-forward formations use left winger, striker, and right winger", () =
       ["left_winger", "right_winger", "striker"],
       `${formationKey} should use two wingers and one central striker`,
     );
+  }
+});
+
+test("canonical role facts derive department and family rather than restating them", () => {
+  for (const role of CANONICAL_PLAYER_ROLES) {
+    const facts = canonicalRoleTacticalFacts(role);
+
+    assert.equal(facts.positionFamily, role, `${role} should fill its own position family`);
+    assert.equal(facts.department, canonicalPlayerRoleDepartment(role), `${role} department`);
+  }
+});
+
+test("canonical role facts place every role on exactly one line and channel", () => {
+  const lines = new Set(CANONICAL_PLAYER_ROLES.map((role) => canonicalRoleTacticalFacts(role).line));
+
+  assert.deepEqual(
+    [...lines].sort(),
+    ["attacking_midfield", "defensive_line", "defensive_midfield", "forward_line", "goalkeeper", "midfield_line"],
+    "every formation line should be reachable from a canonical role",
+  );
+  assert.equal(canonicalRoleTacticalFacts("right_winger").channel, "right");
+  assert.equal(canonicalRoleTacticalFacts("left_full_back").channel, "left");
+  assert.equal(canonicalRoleTacticalFacts("striker").channel, "center");
+});
+
+test("every formation slot agrees with the canonical facts of its own role", () => {
+  for (const formation of FORMATIONS) {
+    for (const slot of formation.slots) {
+      const facts = canonicalRoleTacticalFacts(slot.playerRole);
+
+      assert.equal(slot.line, facts.line, `${formation.key}:${slot.slotKey} line`);
+      assert.equal(slot.department, facts.department, `${formation.key}:${slot.slotKey} department`);
+      assert.equal(slot.positionFamily, facts.positionFamily, `${formation.key}:${slot.slotKey} family`);
+    }
   }
 });

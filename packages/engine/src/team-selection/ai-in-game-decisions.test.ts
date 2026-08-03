@@ -1,3 +1,4 @@
+import { createLineupSlot } from "../match-engine/index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -547,10 +548,10 @@ function matchContextFixture(): MatchContext {
 function matchTeamContextFromLiveTeam(team: LiveMatchTeamState): MatchTeamContext {
   return {
     clubId: clubId(`club:${team.side}`),
-    lineup: team.lineup.map((slot) => ({
+    lineup: team.lineup.map((slot) => createLineupSlot({
       slotId: slot.slotId,
       playerId: slot.playerId,
-      roleKey: slot.role === "goalkeeper" ? "gk" : "balanced",
+      canonicalRole: slot.role,
     })),
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     tacticalDistribution: {

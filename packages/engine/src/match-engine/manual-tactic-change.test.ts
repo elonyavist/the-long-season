@@ -1,3 +1,4 @@
+import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -167,7 +168,7 @@ function tacticChange(
 function teamContext(teamClubId: string): MatchTeamContext {
   return {
     clubId: clubId(teamClubId),
-    lineup: [{ slotId: "slot:01", playerId: playerId(`${teamClubId.replace("club:", "player:")}-01`), roleKey: "gk" }],
+    lineup: [createLineupSlot({ slotId: "slot:01", playerId: playerId(`${teamClubId.replace("club:", "player:")}-01`), canonicalRole: "goalkeeper" })],
     strength: {
       attack: 10,
       midfield: 10,

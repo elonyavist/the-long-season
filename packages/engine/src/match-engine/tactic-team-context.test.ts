@@ -37,8 +37,8 @@ test("buildTacticTeamContext builds a deterministic match team context", () => {
     first.lineup.map((slot) => slot.slotId),
     ["slot:gk", "slot:st"],
   );
-  assert.equal(first.lineup[0]?.roleKey, "gk");
-  assert.equal(first.lineup[1]?.roleKey, "attacker");
+  assert.equal(first.lineup[0]?.canonicalRole, "goalkeeper");
+  assert.equal(first.lineup[1]?.canonicalRole, "striker");
   assert.equal(first.strength.goalkeeper, 11);
   assert.equal(first.strength.attack, 14);
   assert.deepEqual(first.tacticalDistribution, {
@@ -105,8 +105,8 @@ test("buildTacticTeamContext rejects duplicate selected players", () => {
         lineup: {
           clubId: clubId("club:pro01"),
           slots: [
-            { slotKey: "slot:gk", playerId: ids.goalkeeper, roleKey: "gk" },
-            { slotKey: "slot:st", playerId: ids.goalkeeper, roleKey: "attacker" },
+            { slotKey: "slot:gk", playerId: ids.goalkeeper, canonicalRole: "goalkeeper" },
+            { slotKey: "slot:st", playerId: ids.goalkeeper, canonicalRole: "striker" },
           ],
         },
       }),
@@ -217,8 +217,8 @@ function lineupFixture(): SelectedLineup {
   return {
     clubId: clubId("club:pro01"),
     slots: [
-      { slotKey: "slot:gk", playerId: ids.goalkeeper, roleKey: "gk" },
-      { slotKey: "slot:st", playerId: ids.striker, roleKey: "attacker" },
+      { slotKey: "slot:gk", playerId: ids.goalkeeper, canonicalRole: "goalkeeper" },
+      { slotKey: "slot:st", playerId: ids.striker, canonicalRole: "striker" },
     ],
   };
 }

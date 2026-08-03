@@ -8,6 +8,7 @@ import { runDoctorCommand } from "./commands/doctor.ts";
 import { runBalanceReportCommand } from "./commands/balance-report.ts";
 import { runCareerCommand } from "./commands/career.ts";
 import { runSimulateSeasonCommand } from "./commands/simulate-season.ts";
+import { runTacticalShapeReportCommand } from "./commands/tactical-shape-report.ts";
 import { runTenSeasonReportCommand } from "./commands/ten-season-report.ts";
 import { createTranslator } from "@game/i18n";
 
@@ -49,6 +50,16 @@ export async function runCli(args: readonly string[]): Promise<void> {
 
   if (command === "ten-season-report") {
     const exitCode = await runTenSeasonReportCommand(commandArgs);
+
+    if (exitCode !== 0) {
+      process.exitCode = exitCode;
+    }
+
+    return;
+  }
+
+  if (command === "tactical-shape-report") {
+    const exitCode = await runTacticalShapeReportCommand(commandArgs);
 
     if (exitCode !== 0) {
       process.exitCode = exitCode;

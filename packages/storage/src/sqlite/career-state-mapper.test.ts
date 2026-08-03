@@ -583,7 +583,7 @@ function richCareerFixture(): CareerState {
       selectedClubId: "club:home",
       targetFixtureId: "fixture:future",
       updatedAt: 20_100,
-      selectedLineup: { clubId: "club:home", slots: [{ slotKey: "gk", playerId: "player:one", roleKey: "gk" }] },
+      selectedLineup: { clubId: "club:home", slots: [{ slotKey: "gk", playerId: "player:one", canonicalRole: "goalkeeper" }] },
       tactic: { mentality: "balanced", pressing: 0.5, directness: 0.5, width: 0.5, risk: 0.5 },
       baseFormationId: "4-4-2",
       boardSlots: [{ slotKey: "gk", nx: 0.5, ny: 0.92, roleKey: "POR" }],

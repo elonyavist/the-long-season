@@ -1,3 +1,4 @@
+import { fieldablePlayerIds, fieldablePlayerIdsFor } from "../squad/squad-depth.ts";
 import {
   EMPTY_PLAYER_AVAILABILITY,
   createCareerState,
@@ -377,7 +378,7 @@ function applyCareerFixtureReport(
   const conditionConsequences = applyCareerFixtureConditionConsequences({
     playerStates: gameStateWithResult.playerStates,
     selectedStarterIds: input.selectedStarterIds,
-    reportPlayerIds: selectedClub?.playerIds ?? input.selectedStarterIds,
+    reportPlayerIds: selectedClub === undefined ? input.selectedStarterIds : fieldablePlayerIds(selectedClub),
   });
   const matchStateConsequences = applyCareerMatchStateConsequences({
     playerStates: conditionConsequences.playerStates,
@@ -399,8 +400,8 @@ function applyCareerFixtureReport(
     rules: input.competitionMatchRules,
     worldSeed: input.careerState.gameState.meta.seed,
     participatingPlayerIds: [
-      ...(input.careerState.gameState.clubs[input.fixture.homeClubId]?.playerIds ?? []),
-      ...(input.careerState.gameState.clubs[input.fixture.awayClubId]?.playerIds ?? []),
+      ...fieldablePlayerIdsFor(input.careerState.gameState.clubs[input.fixture.homeClubId]),
+      ...fieldablePlayerIdsFor(input.careerState.gameState.clubs[input.fixture.awayClubId]),
     ],
   });
   const progressedCareerStateWithoutParticipation = createCareerState({
@@ -582,7 +583,7 @@ function resolveTeamContext(
     };
   }
 
-  const selectablePlayerIds = club.playerIds.filter((playerId) =>
+  const selectablePlayerIds = fieldablePlayerIds(club).filter((playerId) =>
     playerUnavailabilityReason(
       careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
       playerId,

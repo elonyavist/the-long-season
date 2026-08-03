@@ -97,7 +97,7 @@ export function buildFixtureParticipationContributions(
         started: true,
         substituteAppearance: false,
         minutes,
-        role: canonicalRoleForRoleKey(slot.roleKey),
+        role: slot.canonicalRole,
         rating: ratingByPlayer.get(slot.playerId),
       }));
     }
@@ -114,7 +114,7 @@ export function buildFixtureParticipationContributions(
         started: false,
         substituteAppearance: true,
         minutes,
-        role: canonicalRoleForRoleKey(slot?.roleKey ?? replacementRoleKey(side.finalContext, substitution.incomingPlayerId)),
+        role: slot?.canonicalRole ?? replacementCanonicalRole(side.finalContext, substitution.incomingPlayerId),
         rating: ratingByPlayer.get(substitution.incomingPlayerId),
       }));
     }
@@ -220,27 +220,14 @@ function civilDateFromEpochDay(epochDay: number): { readonly year: number; reado
   return { year, month };
 }
 
-function replacementRoleKey(context: MatchTeamContext, incomingPlayerId: PlayerId): string {
-  return context.lineup.find((slot) => slot.playerId === incomingPlayerId)?.roleKey ?? "central_midfielder";
-}
-
-function canonicalRoleForRoleKey(roleKey: string): CanonicalPlayerRole {
-  if (isCanonicalPlayerRole(roleKey)) {
-    return roleKey;
-  }
-
-  switch (roleKey) {
-    case "gk":
-    case "goalkeeper":
-      return "goalkeeper";
-    case "defender":
-      return "center_back";
-    case "attacker":
-      return "striker";
-    case "midfielder":
-    case "balanced":
-    case "starter":
-    default:
-      return "central_midfielder";
-  }
+/**
+ * Reads the canonical role of a substitute from the team that finished the match.
+ *
+ * A substitute has no slot in the starting lineup, so the role he actually
+ * played is only knowable from the final context. When even that has lost him -
+ * he came on and went straight back off - the participation record keeps a
+ * neutral central role rather than inventing a specialised one.
+ */
+function replacementCanonicalRole(context: MatchTeamContext, incomingPlayerId: PlayerId): CanonicalPlayerRole {
+  return context.lineup.find((slot) => slot.playerId === incomingPlayerId)?.canonicalRole ?? "central_midfielder";
 }

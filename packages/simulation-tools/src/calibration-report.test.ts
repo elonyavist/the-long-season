@@ -1,3 +1,4 @@
+import { createLineupSlot } from "@game/engine";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -164,16 +165,12 @@ function teamsByClubId(clubIds: readonly ClubId[]): Readonly<Record<ClubId, Simu
     const rating = 8 + (clubIds.length - index) / 3;
     teams[id] = {
       lineup: [
-        {
-          slotId: "slot:01",
-          playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-01`),
-          roleKey: "gk",
-        },
-        {
+        createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-01`), canonicalRole: "goalkeeper" }),
+        createLineupSlot({
           slotId: "slot:02",
           playerId: playerId(`player:balance-${String(index + 1).padStart(2, "0")}-02`),
-          roleKey: "synthetic",
-        },
+          canonicalRole: "striker",
+        }),
       ],
       strength: {
         attack: rating,

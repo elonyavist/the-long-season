@@ -15,7 +15,9 @@ import {
 } from "@game/domain";
 
 import {
+  createLineupSlot,
   deriveTeamStrength,
+  roleWeightKeyForCanonicalRole,
   TeamStrengthError,
   type LineupSlot,
   type MatchTacticalDistributionInput,
@@ -167,11 +169,12 @@ export function selectAiMatchSquad(input: AiSquadSelectionInput): AiSquadSelecti
     }
     reasons.push(reasonForCandidate("lineup", slot.slotKey, candidate));
 
-    return {
+    return createLineupSlot({
       slotId: `${input.formation.key}:${slot.slotKey}`,
       playerId: candidate.playerId,
-      roleKey: roleWeightKeyForSlot(input.roleWeights, slot),
-    };
+      canonicalRole: slot.playerRole,
+      ...(slot.side === undefined ? {} : { side: slot.side }),
+    });
   });
 
   const benchCandidates = benchCandidatesForInput(input, rosterPlayerIds, usedPlayerIds);
@@ -445,38 +448,27 @@ function chooseBenchPlayerIds(
   return selected;
 }
 
+/**
+ * Resolves the role-weight profile for one formation slot.
+ *
+ * The canonical-role-to-profile mapping is owned once by the match engine. This
+ * helper only proves the caller actually supplied that profile, and fails
+ * deterministically when it did not: a missing profile is a content defect, not
+ * a case to fall back from.
+ */
 function roleWeightKeyForSlot(
   roleWeights: Readonly<Record<string, RoleWeightProfile>>,
   slot: FormationSlot,
 ): string {
-  if (roleWeights[slot.playerRole] !== undefined) {
-    return slot.playerRole;
-  }
-
-  const fallback = roleWeightKeyByDepartment(slot);
-  if (roleWeights[fallback] !== undefined) {
-    return fallback;
+  const roleKey = roleWeightKeyForCanonicalRole(slot.playerRole);
+  if (roleWeights[roleKey] !== undefined) {
+    return roleKey;
   }
 
   throw new AiSquadSelectionError(
     "missing_role_weight",
-    `Missing role weight for AI slot ${slot.slotKey}: ${slot.playerRole} or ${fallback}`,
+    `Missing role weight for AI slot ${slot.slotKey}: ${slot.playerRole} resolves to ${roleKey}`,
   );
-}
-
-function roleWeightKeyByDepartment(slot: FormationSlot): string {
-  const department = canonicalPlayerRoleDepartment(slot.playerRole);
-
-  switch (department) {
-    case "goalkeeping":
-      return "gk";
-    case "defense":
-      return "defender";
-    case "midfield":
-      return "midfielder";
-    case "attack":
-      return "attacker";
-  }
 }
 
 function playerRoleForSlot(slot: FormationSlot): PlayerRole {

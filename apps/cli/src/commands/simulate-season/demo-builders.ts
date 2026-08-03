@@ -1,3 +1,4 @@
+import { createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import type { FakeLeagueSystem } from "@game/content";
 import type {
   LineupSlot,
@@ -115,8 +116,8 @@ export interface CliLineupDemoPlayerChange {
   readonly fromPlayerId: PlayerId;
   /** Selected replacement player occupying this slot. */
   readonly toPlayerId: PlayerId;
-  /** Role key preserved for the selected slot. */
-  readonly roleKey: string;
+  /** Canonical role preserved for the selected slot. */
+  readonly canonicalRole: CanonicalPlayerRole;
 }
 
 /**
@@ -127,10 +128,10 @@ export interface CliSetupDemoRoleChange {
   readonly slotKey: string;
   /** Player occupying the changed slot. */
   readonly playerId: PlayerId;
-  /** Original fake-content role key. */
-  readonly fromRoleKey: string;
-  /** Selected demo role key. */
-  readonly toRoleKey: string;
+  /** Original generated canonical role. */
+  readonly fromCanonicalRole: CanonicalPlayerRole;
+  /** Canonical role the demo profile selected. */
+  readonly toCanonicalRole: CanonicalPlayerRole;
 }
 
 /**
@@ -154,7 +155,7 @@ export function buildConditionDemo(league: FakeLeagueSystem, profileKey: Conditi
       return {
         profileKey,
         clubId,
-        lineup,
+        lineup: lineup.map((slot) => createLineupSlot(slot)),
       };
     }
   }
@@ -226,7 +227,7 @@ export function buildSetupDemo(league: FakeLeagueSystem, profileKey: SetupDemoPr
           width: 0.5,
           risk: 0.5,
         },
-        selectedRoleKey: pro01BalancedRoleKey,
+        selectedCanonicalRole: pro01BalancedCanonicalRole,
       });
 
     case DEMO_SETUP_PROFILE_PRO01_ATTACKING:
@@ -239,7 +240,7 @@ export function buildSetupDemo(league: FakeLeagueSystem, profileKey: SetupDemoPr
           width: 0.8,
           risk: 0.7,
         },
-        selectedRoleKey: pro01AttackingRoleKey,
+        selectedCanonicalRole: pro01AttackingCanonicalRole,
       });
 
     case DEMO_SETUP_PROFILE_PRO01_DEFENSIVE:
@@ -252,7 +253,7 @@ export function buildSetupDemo(league: FakeLeagueSystem, profileKey: SetupDemoPr
           width: 0.4,
           risk: 0.2,
         },
-        selectedRoleKey: pro01DefensiveRoleKey,
+        selectedCanonicalRole: pro01DefensiveCanonicalRole,
       });
   }
 }
@@ -281,7 +282,7 @@ interface CliSetupDemoDefinition {
   /** Tactic setup applied by this profile. */
   readonly tactic: SimulateSeasonSetupOverride["tactic"];
   /** Resolves the selected role key for a generated fake lineup slot. */
-  readonly selectedRoleKey: (slot: FakeLineupSlotForCli) => string;
+  readonly selectedCanonicalRole: (slot: LineupSlot) => CanonicalPlayerRole;
 }
 
 /**
@@ -330,7 +331,7 @@ function buildRotatedPro01LineupDemo(
       slotId: slot.slotId,
       fromPlayerId: slot.playerId,
       toPlayerId: replacementPlayerId,
-      roleKey: slot.roleKey,
+      canonicalRole: slot.canonicalRole,
     });
 
     return {
@@ -370,7 +371,7 @@ function firstGeneratedClubLineup(league: FakeLeagueSystem, clubId: ClubId, labe
     throw new Error(`Cannot build ${label} without a lineup for club: ${clubId}`);
   }
 
-  return lineup;
+  return lineup.map((slot) => createLineupSlot(slot));
 }
 
 /**
@@ -401,21 +402,21 @@ function buildPro01SetupDemo(league: FakeLeagueSystem, definition: CliSetupDemoD
 
   const roleChanges: CliSetupDemoRoleChange[] = [];
   const selectedSlots = baseLineup.map((slot) => {
-    const roleKey = definition.selectedRoleKey(slot);
+    const canonicalRole = definition.selectedCanonicalRole(slot);
 
-    if (slot.roleKey !== roleKey) {
+    if (slot.canonicalRole !== canonicalRole) {
       roleChanges.push({
         slotKey: slot.slotId,
         playerId: slot.playerId,
-        fromRoleKey: slot.roleKey,
-        toRoleKey: roleKey,
+        fromCanonicalRole: slot.canonicalRole,
+        toCanonicalRole: canonicalRole,
       });
     }
 
     return {
       slotKey: slot.slotId,
       playerId: slot.playerId,
-      roleKey,
+      canonicalRole,
     };
   });
 
@@ -443,30 +444,30 @@ function buildPro01SetupDemo(league: FakeLeagueSystem, definition: CliSetupDemoD
 /**
  * Keeps the generated PRO01 lineup roles unchanged for the balanced demo.
  */
-function pro01BalancedRoleKey(slot: FakeLineupSlotForCli): string {
-  return slot.roleKey;
+function pro01BalancedCanonicalRole(slot: LineupSlot): CanonicalPlayerRole {
+  return slot.canonicalRole;
 }
 
 /**
  * Pushes two wide midfield slots into attacking roles for the attacking demo.
  */
-function pro01AttackingRoleKey(slot: FakeLineupSlotForCli): string {
+function pro01AttackingCanonicalRole(slot: LineupSlot): CanonicalPlayerRole {
   if (slot.slotId === "slot:08" || slot.slotId === "slot:09") {
-    return "attacker";
+    return "striker";
   }
 
-  return slot.roleKey;
+  return slot.canonicalRole;
 }
 
 /**
  * Pulls both striker slots into midfield roles for the defensive demo.
  */
-function pro01DefensiveRoleKey(slot: FakeLineupSlotForCli): string {
+function pro01DefensiveCanonicalRole(slot: LineupSlot): CanonicalPlayerRole {
   if (slot.slotId === "slot:10" || slot.slotId === "slot:11") {
-    return "midfielder";
+    return "central_midfielder";
   }
 
-  return slot.roleKey;
+  return slot.canonicalRole;
 }
 
 /**

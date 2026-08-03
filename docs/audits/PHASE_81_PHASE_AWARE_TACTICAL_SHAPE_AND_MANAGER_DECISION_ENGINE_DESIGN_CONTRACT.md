@@ -69,6 +69,36 @@ Other verified facts:
 - opportunity and outcome are resolved before chance actors are selected;
 - confirmed live changes already replace the team context for minute `N + 1`.
 
+Step 01 measured all of this rather than restating it. The recorded numbers are
+in `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md`; the frozen contract they
+produce is in `Step 01 Frozen Baseline` below.
+
+### The Reachable Shape Population
+
+An earlier version of this contract treated `3-1-6`, `2-0-8`, and `8-0-2` as
+diagnostic constructs, on the grounds that `FORMATION_KEYS` contains `23` named
+presets and none of the three is among them. That was wrong, and Step 01
+corrected it against the code.
+
+The preset is only where a lineup starts. On the tactical board the goalkeeper
+is the one locked slot (`locked: role === "POR"` in
+`apps/web/src/features/tactics-board/tactical-board-formations.ts`); each of the
+other ten reaches every outfield role by drag, because
+`TACTICAL_BOARD_ROLE_DESTINATIONS` tiles the whole pitch with role zones. No
+validator caps how many slots share a department: the preparation blockers in
+`packages/ui/src/career/career-match-preparation-view.ts` cover empty slots,
+duplicates, unavailable players, and the bench goalkeeper only, while
+`createSelectedLineup` and `buildTacticTeamContext` add no shape rule at all.
+
+A manager can therefore field `3-1-6`, `2-0-8`, `8-0-2`, or `0-0-10`. These are
+manager choices, not probes, and none of them is exempt from any gate.
+
+Because the engine reads role keys rather than a formation name, the shape input
+it can observe is the triple `(defenders, midfielders, attackers)` over the ten
+outfield slots. The reachable population is exactly the `66` triples summing to
+ten. The `23` presets collapse onto only `10` of them, so the presets describe
+where managers start, never the population a gate runs over.
+
 ## Locked Architecture
 
 ### 1. Keep The Aggregate Per-Minute Engine
@@ -374,6 +404,103 @@ Every scenario must record positive observations. Required invariants include:
 
 Thresholds cannot be weakened after implementation output is observed.
 
+## Step 01 Frozen Baseline
+
+Measured on 2026-08-02 by `pnpm cli tactical-shape-report`, over quality bands
+taken from the generated three-division world seed
+`phase81-tactical-shape-baseline`. No gameplay behaviour changed.
+
+### What The Engine Currently Sees
+
+| Fact | Value |
+| --- | --- |
+| Reachable department compositions | `66` |
+| Distinct `TeamStrength` values across them | `7` |
+| Compositions that populate all four departments | `36`, all byte-identical |
+| Compositions reachable from a named preset | `10` |
+
+`4-4-2` and `3-1-6` are not merely close: run on the same seeds and the same
+fixture identities they produce byte-identical results. The only structural
+signal the engine has today is whether a department is *empty*, and every
+empty-midfield shape sits exactly on the `0.18` possession floor.
+
+The consequence is a cliff, not a curve. A manager can move slots freely among
+populated departments with no effect whatsoever, and falls off a cliff the
+moment a department empties. That is the defect Steps 02-06 remove.
+
+### Tactics Are In The Same State
+
+Step 01 measured the tactic knobs the same way, at the reference shape, against
+the same shape playing a neutral tactic. Over `800` paired-seed matches each,
+every profile landed between `0.4644` and `0.5156` win share - all of it inside
+the `0.0477` noise floor. High pressing, direct play, flank overload, high risk,
+and a full low block are, in outcome terms, the same tactic.
+
+Chance type is the exception, and it is worse than no effect: it is a knob
+threshold rather than a route. `deriveChanceType` returns `cross` only when
+`width > 0.25` and `counter` only when `directness > 0.35 || risk > 0.35`, so a
+low block produced `6247` open-play chances and exactly zero crosses and zero
+counters. A manager who lowers width past a hidden line does not shift a
+distribution, he deletes a category.
+
+This is recorded here because Step 06 owns both facts, and because a phase
+report that fixed shape while leaving tactics inert would be measuring half the
+manager's decision.
+
+### Frozen Thresholds
+
+Fixed before any behaviour change, and never re-derived from output. They live
+in code as `TACTICAL_SHAPE_THRESHOLDS` so a later step cannot quietly move one.
+
+| Invariant | Frozen threshold | Step 01 measurement |
+| --- | --- | --- |
+| `bounded_structural_swing` | best shape's gain over the reference shape `<= 0.75 x` the division-tier edge | `0.169` (PASS) |
+| `no_dominant_composition` | no composition stays above `0.55` against every single opponent | `0.375` (PASS) |
+| `asymmetric_incoherence_cost` | worst-shape deficit / best-shape surplus `>= 2` | `not_evaluated` |
+| `quality_hierarchy_survives_extreme_shape` | contender win share `>= 0.55` with at least `1` upset | `0.925` with `30/800` upsets (PASS) |
+| `empty_department_possession_clamp` | every share inside `[0.18, 0.82]`, every empty-midfield shape on the floor | `0.18` across all `11` (PASS) |
+| `distinguishable_coherent_and_incoherent_shape` | equal-quality `4-4-2` and `3-1-6` must differ | `not_evaluated` |
+
+Two entries deserve their reason recorded rather than inferred.
+
+`asymmetric_incoherence_cost` is `not_evaluated`, not passed. The best shape
+gains `0.0431` win share over the reference, which sits inside the measurement
+noise floor of `0.0477`: there is no coherence reward to divide by, so the ratio
+is undefined. Reporting that as a pass would claim the asymmetry already holds
+when nothing has been measured.
+
+`distinguishable_coherent_and_incoherent_shape` is the invariant this whole
+phase exists to satisfy, so it cannot pass at Step 01 by construction. It
+records the starting point - `7` distinct strengths across `66` compositions -
+and names Step 03 as the step that introduces intrinsic shape and Step 06 as
+the first step able to satisfy it.
+
+### The Yardstick
+
+One division tier of squad quality is worth `0.255` win share at identical
+shape (median first-division squad against median second-division squad, over
+`800` paired-seed matches). Every claim that structure must not outweigh quality
+is measured against that number and no other.
+
+### Population Condition (A4)
+
+The bands above are conditioned on a **single-country** population. With five
+countries, "first division" and "third division" stop denoting one quality
+scale, so the tier edge, the quality bands, and every threshold expressed as a
+fraction of the tier edge must be re-derived by whoever introduces the wider
+world. They may not be carried over silently.
+
+### Measurement Discipline
+
+The dominance matrix and the named scenarios use different denominators on
+purpose. The `66 x 66` matrix answers a shape question - is any composition a
+free win button - and reads a *minimum* across a whole row, so it needs breadth
+rather than precision inside one cell. The named scenarios and the
+versus-reference column feed numeric invariants, so they run at higher
+precision and the report records the resulting noise floor beside them. A later
+step that reports a structural effect smaller than that floor has measured
+nothing.
+
 ## Carried Goal-Rate Monitor
 
 Phase 80A Step 09 cannot close on its own. All `32` of its player-model gates
@@ -392,6 +519,55 @@ Step 12 confirms it at cohort scale.
 The monitor may not be carried a second time. If Step 11 finds it still out of
 band, the fix is reopening Step 06, not naming a third owner - a transfer that
 can be repeated indefinitely is a way of never fixing the defect.
+
+Step 01 accepted the transfer on 2026-08-02 and recorded `36/634/80` over `750`
+worlds as this phase's **starting point, not an accepted result**. Nothing about
+the monitor changed at Step 01: the threshold, the denominator, and the
+`monitor` severity class are byte-identical to the ones Phase 80A published, and
+Step 01 ran no cohort of its own. The tactical-shape baseline deliberately does
+not touch it either, because the baseline changes no behaviour and a monitor
+that moved during a no-op step would mean the step was not a no-op.
+
+## Lineup-Composing Readers Of `Club.playerIds` (A6)
+
+Step 02 introduces one named squad-depth accessor and Step 09 must satisfy an
+absence assertion against it, so Step 01 recorded what that accessor replaces.
+
+Across production code, excluding tests and fixtures, `115` sites in `45` files
+read a club roster off `Club.playerIds`. They fall into three groups, and only
+the first is A6's target.
+
+**Group 1 - composes a lineup or a bench that reaches the match engine.** These
+are the paths Step 02's accessor must own, and the ones Step 09 asserts are
+gone:
+
+- `packages/engine/src/career/progress-fixture.ts` - the selected club's
+  selectable set, and the home/away rosters registered for match ratings;
+- `apps/web/src/features/matchday/matchday-adapter.ts` - the selected club's
+  live roster and `defaultOpponentLineupFromRoster(club.playerIds)` for the
+  opponent XI;
+- `apps/web/src/features/match-preparation/match-preparation-adapter.ts` - the
+  squad offered to the tactical board;
+- `apps/cli/src/commands/career/preparation.ts` -
+  `buildFirstTeamSelectedLineup(...)`;
+- `apps/cli/src/commands/career/matchday-output.ts` - a raw `slice(0, 11)`;
+- `apps/cli/src/commands/fake-season-input.ts` - `genericLineupForClub(...)`;
+- `apps/cli/src/commands/live-match-control-report-data.ts` - the eight-player
+  bench.
+
+**Group 2 - measures squad depth for a market or structural decision.** Phase
+82A redefines these against selectable rather than owned depth, and that phase
+owns them, not this one: `ai-market-lifecycle.ts`, `senior-squad-replenishment.ts`,
+`squad-maintenance.ts`, `player-exits.ts`, `transfer-player-negotiation.ts`,
+`transfer-feasibility.ts`, `career-market-catalog.ts`, `ai-contract-lifecycle.ts`.
+
+**Group 3 - owns or persists the roster itself.** These are ownership truth and
+must keep reading the stored field: `senior-squad-transfer.ts`,
+`world-state-mapper.ts`, and the content generators.
+
+`packages/engine/src/team-selection/ai-squad-selection.ts` already takes
+`playerIds` as an input rather than reading a club, so it is at the seam
+Step 09 needs and requires no migration.
 
 ## Longitudinal Ownership
 

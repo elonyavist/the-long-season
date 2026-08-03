@@ -1,3 +1,4 @@
+import { fieldablePlayerIds, type CanonicalPlayerRole } from "@game/engine";
 import {
   DEMO_SETUP_PROFILE_PRO01_ATTACKING,
   DEMO_SETUP_PROFILE_PRO01_BALANCED,
@@ -23,8 +24,8 @@ export interface CareerLineupDemoPlayerChange {
   readonly fromPlayerId: PlayerId;
   /** Replacement selected by the demo profile. */
   readonly toPlayerId: PlayerId;
-  /** Role key preserved for this slot. */
-  readonly roleKey: string;
+  /** Canonical role preserved for this slot. */
+  readonly canonicalRole: CanonicalPlayerRole;
 }
 
 /** Result of saving one explicit lineup choice into a career state. */
@@ -74,9 +75,9 @@ export function saveCareerLineupDemo(
     throw new Error(`Cannot save lineup without selected club: ${careerState.selectedClubId}`);
   }
 
-  const firstTeamLineup = buildFirstTeamSelectedLineup(careerState.selectedClubId, selectedClub.playerIds);
+  const firstTeamLineup = buildFirstTeamSelectedLineup(careerState.selectedClubId, fieldablePlayerIds(selectedClub));
   const nextFixture = findNextSelectedClubFixture(careerState);
-  const { selectedLineup, playerChanges } = applyLineupDemoProfile(firstTeamLineup, selectedClub.playerIds, profileKey);
+  const { selectedLineup, playerChanges } = applyLineupDemoProfile(firstTeamLineup, fieldablePlayerIds(selectedClub), profileKey);
   const updatedCareerState = {
     ...careerState,
     matchPreparation: {
@@ -194,7 +195,7 @@ function buildFirstTeamSelectedLineup(clubId: ClubId, rosterPlayerIds: readonly 
     return {
       slotKey: slotKey(slotNumber),
       playerId,
-      roleKey: roleKeyForSlot(slotNumber),
+      canonicalRole: canonicalRoleForSlot(slotNumber),
     };
   });
 
@@ -229,7 +230,7 @@ function buildRotatedLineup(
       slotKey: slot.slotKey,
       fromPlayerId: slot.playerId,
       toPlayerId: replacementPlayerId,
-      roleKey: slot.roleKey,
+      canonicalRole: slot.canonicalRole,
     });
 
     return {
@@ -269,18 +270,19 @@ function slotKey(slotNumber: number): string {
   return `slot:${String(slotNumber).padStart(2, "0")}`;
 }
 
-function roleKeyForSlot(slotNumber: number): string {
+/** Fixed 4-4-2 role order used for the demo first-team lineup. */
+function canonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
   if (slotNumber === 1) {
-    return "gk";
+    return "goalkeeper";
   }
 
   if (slotNumber <= 5) {
-    return "defender";
+    return "center_back";
   }
 
   if (slotNumber <= 9) {
-    return "midfielder";
+    return "central_midfielder";
   }
 
-  return "attacker";
+  return "striker";
 }

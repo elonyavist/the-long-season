@@ -1,3 +1,4 @@
+import { fieldablePlayerIds } from "@game/engine";
 import {
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
@@ -423,7 +424,7 @@ export function buildDurableMatchPreparation(career: WebCareerState, draft: Matc
       slots: draft.tacticalBoardDraft.slots.map((slot) => ({
         slotKey: slot.slotId,
         playerId: requiredPlayerId(slot.slotId, slot.playerId),
-        roleKey: slot.canonicalRole,
+        canonicalRole: slot.canonicalRole,
       })),
     },
     tactic: { ...tacticProfile.values } as NonNullable<DurableMatchPreparation["tactic"]>,
@@ -442,10 +443,10 @@ export function matchPreparationBenchSlotKeys(): readonly string[] {
 function buildCareerPlayerOptions(career: WebCareerState): readonly CareerMatchPreparationPlayerOptionInput[] {
   const club = requiredSelectedClub(career);
   const unavailabilityByPlayerId = new Map(
-    findNextFixtureEligibilityBlockers(career, club.playerIds)
+    findNextFixtureEligibilityBlockers(career, fieldablePlayerIds(club))
       .map((blocker) => [blocker.playerId, blocker.reason] as const),
   );
-  return club.playerIds.flatMap((playerId, index) => {
+  return fieldablePlayerIds(club).flatMap((playerId, index) => {
     const player = career.gameState.players[playerId];
     if (player === undefined) return [];
     const dynamic = career.gameState.playerStates[playerId];

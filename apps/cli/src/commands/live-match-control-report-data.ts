@@ -1,5 +1,6 @@
 import { createFakeLeagueSystem, type FakeLeagueSystem } from "@game/content";
 import {
+  fieldablePlayerIds,
   FORMATION_CATALOG,
   buildTacticTeamContext,
   type MatchTeamContext,
@@ -109,7 +110,7 @@ function createLiveTeam(
   }
 
   const selectedPlayerIds = new Set(generatedLineup.map((slot) => slot.playerId));
-  const benchPlayerIds = club.playerIds.filter((playerId) => !selectedPlayerIds.has(playerId)).slice(0, 8);
+  const benchPlayerIds = fieldablePlayerIds(club).filter((playerId) => !selectedPlayerIds.has(playerId)).slice(0, 8);
   if (benchPlayerIds.length !== 8) {
     throw new Error(`Generated club must expose exactly eight live substitutes: ${String(clubId)}`);
   }
@@ -172,7 +173,7 @@ function buildCurrentTeamContext(
       slots: team.lineup.map((slot) => ({
         slotKey: slot.slotId,
         playerId: slot.playerId,
-        roleKey: engineRoleKey(slot.role),
+        canonicalRole: slot.role,
       })),
     },
     tactic: team.tactic,
@@ -182,13 +183,6 @@ function buildCurrentTeamContext(
     playerStates,
     stateMultiplierCurves: league.stateMultiplierCurves,
   });
-}
-
-function engineRoleKey(role: GateCanonicalRole): string {
-  if (role === "goalkeeper") return "gk";
-  if (role === "right_full_back" || role === "center_back" || role === "left_full_back") return "defender";
-  if (role === "right_winger" || role === "left_winger" || role === "striker") return "attacker";
-  return "midfielder";
 }
 
 function normalizedX(side: (typeof FORMATION_CATALOG)["4-4-2"]["slots"][number]["side"]): number {

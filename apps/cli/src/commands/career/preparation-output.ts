@@ -1,3 +1,4 @@
+import type { CanonicalPlayerRole } from "@game/engine";
 import type { Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 
@@ -86,11 +87,11 @@ export function formatCareerMatchPreparationLines(careerState: CliCareerState, t
 
 /** Formats selected lineup slots in the compact CLI table style. */
 function formatSavedLineupSlotLines(
-  slots: readonly { readonly slotKey: string; readonly playerId: PlayerId; readonly roleKey: string }[],
+  slots: readonly { readonly slotKey: string; readonly playerId: PlayerId; readonly canonicalRole: CanonicalPlayerRole }[],
   gameState: CliGameState,
   text: Translator,
 ): readonly string[] {
-  return slots.map((slot) => `  ${slot.slotKey} ${playerLabel(slot.playerId, gameState)} ${formatLineupRole(slot.roleKey, text)}`);
+  return slots.map((slot) => `  ${slot.slotKey} ${playerLabel(slot.playerId, gameState)} ${formatLineupRole(slot.canonicalRole, text)}`);
 }
 
 /** Formats first-team-to-selected-lineup player replacement lines. */

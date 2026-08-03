@@ -1,3 +1,4 @@
+import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -153,12 +154,12 @@ function validTeam(side: MatchSide, strength: number, risk: number, fieldPlayer?
   return {
     clubId: clubId(`club:${side}`),
     lineup: [
-      { slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), roleKey: "gk" },
-      {
+      createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
+      createLineupSlot({
         slotId: `slot:${side}:field`,
         playerId: playerId(fieldPlayer ?? `player:${side}-000001`),
-        roleKey: "balanced",
-      },
+        canonicalRole: "central_midfielder",
+      }),
     ],
     strength: {
       attack: strength,

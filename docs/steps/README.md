@@ -16,7 +16,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   3. Implement only that step.
   4. Run its required tests.
   5. If something is wrong, fix the current step or update the next relevant step document.
-  6. Update `docs/PROJECT_STATUS.md` in a short entry with result, adopted solution, verification, and next action.
+  6. Record result, adopted solution, verification, and next action in the step document. Update `docs/PROJECT_STATUS.md` only for the active step and live constraints; it has a `300` line budget.
   7. Move to the next documented step only when the Definition of Done is satisfied.
 - When the current sequence is complete, add the next numbered step group under `docs/steps/`.
 - Whenever a step creates or generates domain IDs, use the shared `type:value` namespace convention and the specific domain constructor for that ID type.
@@ -51,7 +51,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - The project has an explicit implement-test-learn-adjust loop.
 - The mandatory execution loop is documented and short enough to follow during every step.
 - Future steps know that domain IDs use the `type:value` namespace convention.
-- `docs/PROJECT_STATUS.md` explains the current active step and project state to a new LLM or junior developer.
+- `docs/PROJECT_STATUS.md` explains the current active step and the live constraints to a new LLM or junior developer. It stays short enough to actually be read; completed work is described by the phase reports in `docs/audits/`.
 - Future phases can start without changing `docs/PROJECT_RULES.md`.
 
 ## Current State

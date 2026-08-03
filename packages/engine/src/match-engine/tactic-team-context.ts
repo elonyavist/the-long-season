@@ -16,7 +16,9 @@ import type {
   MatchTeamContext,
 } from "./match-context.ts";
 import {
+  createLineupSlot,
   deriveTeamStrength,
+  roleWeightKeyForCanonicalRole,
   TeamStrengthError,
   type LineupSlot,
   type PlayerStateMultiplierCurves,
@@ -33,7 +35,7 @@ export type TacticTeamContextErrorCode =
   | "duplicate_player"
   | "missing_slot_key"
   | "duplicate_slot_key"
-  | "missing_role_key"
+  | "invalid_canonical_role"
   | "missing_role_weight"
   | "invalid_mentality"
   | "invalid_tactic_value"
@@ -115,15 +117,19 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
       throw new TacticTeamContextError("unknown_player", `Selected player is not available: ${slot.playerId}`);
     }
 
-    if (input.roleWeights[slot.roleKey] === undefined) {
-      throw new TacticTeamContextError("missing_role_weight", `Missing role weight profile: ${slot.roleKey}`);
+    const roleKey = roleWeightKeyForCanonicalRole(slot.canonicalRole);
+    if (input.roleWeights[roleKey] === undefined) {
+      throw new TacticTeamContextError(
+        "missing_role_weight",
+        `Missing role weight profile for ${slot.canonicalRole}: ${roleKey}`,
+      );
     }
 
-    return {
+    return createLineupSlot({
       slotId: slot.slotKey,
       playerId: slot.playerId,
-      roleKey: slot.roleKey,
-    };
+      canonicalRole: slot.canonicalRole,
+    });
   });
 
   try {
@@ -245,7 +251,7 @@ function mapDomainContractErrorCode(code: TacticContractErrorCode): TacticTeamCo
     case "duplicate_player":
     case "missing_slot_key":
     case "duplicate_slot_key":
-    case "missing_role_key":
+    case "invalid_canonical_role":
     case "invalid_mentality":
     case "invalid_tactic_value":
       return code;

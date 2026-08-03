@@ -1,3 +1,4 @@
+import { roleWeightKeyForCanonicalRole } from "./team-strength.ts";
 import type { FixtureId, PlayerId, ShotChanceType, ShotType } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
@@ -17,7 +18,7 @@ import type { LineupSlot } from "./team-strength.ts";
 const CHANCE_ACTORS_STREAM = "chance-actors";
 
 /** Role weights used when choosing the chance creator from the attacking lineup. */
-const CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE: Readonly<Record<ShotChanceType, Readonly<Record<string, number>>>> = {
+const CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE: Readonly<Record<ShotChanceType, ChanceActorRoleWeights>> = {
   open_play: {
     attacker: 3,
     midfielder: 4,
@@ -45,7 +46,7 @@ const CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE: Readonly<Record<ShotChanceType, Reado
 };
 
 /** Role weights used when choosing the shooter from the attacking lineup. */
-const SHOOTER_ROLE_WEIGHTS: Readonly<Record<string, number>> = {
+const SHOOTER_ROLE_WEIGHTS: ChanceActorRoleWeights = {
   attacker: 5,
   midfielder: 3,
   defender: 1,
@@ -53,15 +54,24 @@ const SHOOTER_ROLE_WEIGHTS: Readonly<Record<string, number>> = {
 };
 
 /** Role weights used when choosing the primary defender from the defending lineup. */
-const PRIMARY_DEFENDER_ROLE_WEIGHTS: Readonly<Record<string, number>> = {
+const PRIMARY_DEFENDER_ROLE_WEIGHTS: ChanceActorRoleWeights = {
   attacker: 1,
   midfielder: 3,
   defender: 5,
   gk: 0,
 };
 
-/** Default positive weight for custom outfield role keys unknown to this early engine step. */
-const DEFAULT_OUTFIELD_ROLE_WEIGHT = 1;
+/**
+ * Weight lookup over the total role-weight vocabulary.
+ *
+ * `roleWeightKeyForCanonicalRole` maps every canonical role onto exactly one of
+ * these four keys, so the tables above are total and no fallback is needed. A
+ * missing entry would be a build failure, not a value to guess at.
+ */
+type ChanceActorRoleWeights = Readonly<Record<ChanceActorRoleKey, number>>;
+
+/** The four role-weight profile keys chance selection distinguishes. */
+type ChanceActorRoleKey = "attacker" | "midfielder" | "defender" | "gk";
 
 /**
  * Input needed to select actors for one attacking opportunity.
@@ -171,7 +181,7 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
  * const weight = chanceCreatorWeightForRole("midfielder", "open_play");
  */
 export function chanceCreatorWeightForRole(roleKey: string, chanceType: ShotChanceType = "open_play"): number {
-  return CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE[chanceType][roleKey] ?? DEFAULT_OUTFIELD_ROLE_WEIGHT;
+  return CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE[chanceType][roleKey as ChanceActorRoleKey];
 }
 
 /**
@@ -184,7 +194,7 @@ export function chanceCreatorWeightForRole(roleKey: string, chanceType: ShotChan
  * const weight = chanceShooterWeightForRole("attacker");
  */
 export function chanceShooterWeightForRole(roleKey: string): number {
-  return SHOOTER_ROLE_WEIGHTS[roleKey] ?? DEFAULT_OUTFIELD_ROLE_WEIGHT;
+  return SHOOTER_ROLE_WEIGHTS[roleKey as ChanceActorRoleKey];
 }
 
 /**
@@ -197,7 +207,7 @@ export function chanceShooterWeightForRole(roleKey: string): number {
  * const weight = primaryDefenderWeightForRole("defender");
  */
 export function primaryDefenderWeightForRole(roleKey: string): number {
-  return PRIMARY_DEFENDER_ROLE_WEIGHTS[roleKey] ?? DEFAULT_OUTFIELD_ROLE_WEIGHT;
+  return PRIMARY_DEFENDER_ROLE_WEIGHTS[roleKey as ChanceActorRoleKey];
 }
 
 /**
@@ -210,7 +220,7 @@ function weightedCandidates(
   const candidates: LineupSlot[] = [];
 
   for (const slot of lineup) {
-    if (weightForRole(slot.roleKey) > 0) {
+    if (weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole)) > 0) {
       candidates.push(slot);
     }
   }
@@ -238,7 +248,7 @@ function excludePlayerWhenPossible(candidates: readonly LineupSlot[], playerId: 
  */
 function selectGoalkeeper(team: MatchTeamContext): PlayerId {
   for (const slot of team.lineup) {
-    if (slot.roleKey === "gk") {
+    if (slot.canonicalRole === "goalkeeper") {
       return slot.playerId;
     }
   }
@@ -254,12 +264,12 @@ function pickWeightedPlayer(
   weightForRole: (roleKey: string) => number,
   roll: number,
 ): PlayerId {
-  const totalWeight = candidates.reduce((total, slot) => total + weightForRole(slot.roleKey), 0);
+  const totalWeight = candidates.reduce((total, slot) => total + weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole)), 0);
   const scaledRoll = roll * totalWeight;
   let cumulativeWeight = 0;
 
   for (const slot of candidates) {
-    cumulativeWeight += weightForRole(slot.roleKey);
+    cumulativeWeight += weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole));
 
     if (scaledRoll < cumulativeWeight) {
       return slot.playerId;

@@ -1,45 +1,37 @@
 # Project Rules
 
-This file is binding for Claude Code and future developers. `requirements.md` is the source of truth.
+This file is binding for Claude Code and future developers. `requirements.md` is
+the source of truth.
 
-## Package Dependency Rules
+## Always-Active Rules Live In `AGENTS.md`
 
-- `domain -> nothing`
-- `shared -> nothing`
-- `engine -> domain, shared`
-- `content -> domain, shared`
-- `storage -> domain, shared`
-- `simulation-tools -> domain, engine, shared`
-- `i18n -> nothing`
-- `ui -> domain`
-- `apps/cli -> engine, content, storage, simulation-tools, i18n, ui, shared`
-- `apps/web -> engine, content, storage, i18n, ui, shared`
-- `apps/desktop -> web`
+Package boundaries, engine determinism, the no-duplication rule, the
+no-dead-code rule, localization, step discipline, and the local commands are in
+[`AGENTS.md`](../AGENTS.md) at the repository root. They are **not repeated
+here**: every agent session loads that file automatically, so keeping a second
+copy would create exactly the drift the no-duplication rule forbids.
 
-## Absolute Bans
+Read `AGENTS.md` first. This file adds the rules that apply to particular kinds
+of work.
 
-- Engine must not import React, SQLite, Tauri, browser APIs, filesystem APIs, UI code, storage implementations, or apps.
+## Additional Boundary Rules
+
+- Engine must not import React, SQLite, Tauri, browser APIs, filesystem APIs,
+  UI code, storage implementations, or apps.
 - Domain must not import engine, storage, content, shared, apps, or UI code.
-- Storage must never import engine.
-- Content must never import engine.
-- UI read models may import domain contracts/catalogs, but must not import engine, content, storage, i18n, apps, React, or browser APIs.
-- Packages must not import from `apps/*`.
+- UI read models may import domain contracts and catalogs, but must not import
+  engine, content, storage, i18n, apps, React, or browser APIs.
+- `apps/desktop -> web`.
 - Content packs must not contain executable scripts.
-- No `Math.random()` inside engine.
-- No real clock for game time inside engine.
-- No `Date.now()`, `new Date()`, `crypto.randomUUID()`, or `performance.now()` inside engine.
 
-## Determinism Rules
+## Additional Determinism Rules
 
-- Use seeded RNG from `shared`.
-- Use derived RNG streams by stable keys.
 - Persist seed and algorithm version, not global RNG state.
-- Use `GameDate` epoch-day for game time.
 - Use explicit ordered ID arrays for simulation order.
-- Do not use `Object.values()`, `Object.keys()`, or `Object.entries()` for order-sensitive simulation.
-- Every sort must have a deterministic final tie-breaker.
 - Generated IDs must be stable and non integer-like.
-- All domain IDs must use the `type:value` namespace convention and must be created through specific domain constructors (`playerId`, `clubId`, `competitionId`, `fixtureId`, `seasonId`, `saveId`).
+- All domain IDs must use the `type:value` namespace convention and must be
+  created through the domain constructors (`playerId`, `clubId`,
+  `competitionId`, `fixtureId`, `seasonId`, `saveId`).
 
 ## Beta Save Compatibility Rules
 
@@ -118,8 +110,7 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 
 ## Local Runtime And Visual QA Rules
 
-- Use Node `24.16.0` for local work. Before running project commands in a new
-  shell, run `nvm use 24` from the repository root.
+- Node `24.16.0` is the local runtime.
 - Before installing, upgrading, or removing dependencies, or before changing
   any `package.json`/`pnpm-lock.yaml` content, run `nvm use 24` from the
   repository root and perform the dependency change with pnpm.
@@ -218,27 +209,26 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 
 ## Step Discipline Rules
 
-- Work on exactly one documented step at a time.
+One step at a time, `Expected Files` only, and no residue: those are in
+`AGENTS.md`. What follows is the rest.
+
 - The active step is the smallest `docs/steps/**.md` file named by the task or by the next unfinished milestone.
-- A step may only create or modify files listed in its `Expected files`, unless the deviation is necessary and documented in the final summary.
 - `docs/PROJECT_STATUS.md` may always be modified for status updates, even when it is not listed in the active step's `Expected files`.
 - The next relevant step document may be modified to capture lessons learned before that step starts.
 - `What NOT to implement` is scoped to the active step, not a permanent project ban.
 - The workflow is incremental and iterative: implement the smallest useful slice, run its checks, fix what fails, update the next step if reality changed, then advance.
-- Do not knowingly leave dead code, obsolete helpers, duplicated logic, or clearly improvable local code behind after a step.
 - When a step makes an old helper, test fixture, branch, or abstraction redundant, either remove/refactor it in the same step if it is inside the step scope, or explicitly document the reason and the next cleanup step in `docs/PROJECT_STATUS.md` or the next relevant step document.
-- Compatibility is not a blanket excuse to keep unused code: preserved code must have an active caller, a tested migration reason, or a documented short-term removal path.
 - Mandatory execution loop:
   1. Read `docs/PROJECT_STATUS.md`.
   2. Choose the active step.
   3. Implement only that step.
   4. Run the required checks.
   5. If something is wrong, fix the current step or update the next step document before moving on.
-  6. Update `docs/PROJECT_STATUS.md` in a short entry.
+  6. Update the step document with the outcome, and `docs/PROJECT_STATUS.md` only if the active step or a live constraint changed.
   7. Advance to the next step.
 - Do not start the next step while the current step has failing checks, unresolved scope questions, or an unsatisfied Definition of Done.
 - A later step may refine or replace earlier implementation details, but only through a documented step with tests and a narrow migration path.
-- Update `docs/PROJECT_STATUS.md` after every step, including `Current Active Step`, `Step Ledger`, adopted solution, verification result, and next action.
+- After every step, record the adopted solution, verification result, blocker or lesson, and next action **in that step's own document**. Update `docs/PROJECT_STATUS.md` only with the active step, the phase progress table, and anything that constrains future work. It is a live snapshot, not a log: it has a hard `300` line budget, and history belongs in `git log` and the phase reports under `docs/audits/`.
 - Future systems are allowed when they become the active documented step and their phase gate is satisfied.
 - When the current documented sequence is complete, create the next numbered step document under `docs/steps/` before implementing the next feature.
 - Do not modify this rulebook just to move to the next phase.
@@ -261,7 +251,7 @@ This file is binding for Claude Code and future developers. `requirements.md` is
 - No known dead code, obsolete helper, unnecessary duplication, or obviously local cleanup is left undocumented.
 - Step-specific Definition of Done is satisfied.
 - Lessons learned that affect future work are captured in the next step document, not hidden in code or chat.
-- `docs/PROJECT_STATUS.md` reflects the current active step, step status, adopted solution, verification result, and next action.
+- `docs/PROJECT_STATUS.md` reflects the current active step, the phase progress table, and the constraints still binding future work. Per-step detail lives in the step document.
 
 ## Executable Enforcement
 

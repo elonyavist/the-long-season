@@ -406,7 +406,7 @@ test("selling a selected-club starter leaves the saved slot empty without choosi
       selectedClubId: seller,
       selectedLineup: {
         clubId: seller,
-        slots: [{ slotKey: "st", playerId: target, roleKey: "striker" }],
+        slots: [{ slotKey: "st", playerId: target, canonicalRole: "striker" }],
       },
       boardSlots: [{ slotKey: "st", nx: 0.5, ny: 0.18, roleKey: "ATT" }],
       benchSlots: [{ slotKey: "bench:01", playerId: substitute }],

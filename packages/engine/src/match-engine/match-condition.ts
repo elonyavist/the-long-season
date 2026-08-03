@@ -24,7 +24,7 @@ function applyTeamWorkload(
   const teamCost = BASE_MINUTE_COST + pressing * 0.025 + risk * 0.01;
 
   for (const slot of team.lineup) {
-    const roleMultiplier = isGoalkeeperRole(slot.roleKey) ? 0.45 : 1;
+    const roleMultiplier = slot.canonicalRole === "goalkeeper" ? 0.45 : 1;
     const current = condition[slot.playerId] ?? 100;
     const injury = simulation.stats.telemetry?.injuriesByPlayer[slot.playerId];
     const injuryCost = injury?.continued === true ? (injury.severity === "minor" ? 0.08 : 0.035) : 0;
@@ -42,11 +42,6 @@ function normalizeTactic(
   const cap = simulation.context.engineConfig.tacticalDistributionCaps[key];
   const range = cap.maxInclusive - cap.minInclusive;
   return range === 0 ? 0.5 : (value - cap.minInclusive) / range;
-}
-
-function isGoalkeeperRole(roleKey: string): boolean {
-  const normalized = roleKey.toLowerCase();
-  return normalized === "gk" || normalized === "por" || normalized === "goalkeeper";
 }
 
 function roundTwoDecimals(value: number): number {

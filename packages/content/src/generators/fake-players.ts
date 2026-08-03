@@ -11,6 +11,7 @@ import {
   type PlayerPosition,
   type PlayerRatingScaleConfig,
   type RoleIdentifiedPlayer,
+  type CanonicalPlayerRole,
 } from "@game/domain";
 import { deriveRng, fromISO } from "@game/shared";
 
@@ -57,8 +58,8 @@ export interface FakeLineupSlot {
   readonly slotId: string;
   /** Generated player assigned to this slot. */
   readonly playerId: PlayerId;
-  /** Role key consumed later by engine role-weight data. */
-  readonly roleKey: string;
+  /** Canonical football role the generated club fields this player in. */
+  readonly canonicalRole: CanonicalPlayerRole;
 }
 
 /**
@@ -208,7 +209,7 @@ export function generateFakePlayersForClubs(
         lineup.push({
           slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
           playerId: id,
-          roleKey: roleKeyForSlot(slotNumber),
+          canonicalRole: canonicalRoleForSlot(slotNumber),
         });
       }
     }
@@ -586,22 +587,25 @@ function defaultClubContext(clubNumber: number): OpeningPlayerGenerationClubCont
 }
 
 /**
- * Resolves the early fixed 4-4-2 role key for one lineup slot.
+ * Resolves the early fixed 4-4-2 canonical role for one lineup slot.
+ *
+ * Content states the football role. Which ability weights that role uses is a
+ * match-engine decision and is resolved there, not here.
  */
-function roleKeyForSlot(slotNumber: number): string {
+function canonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
   if (slotNumber === 1 || slotNumber === 12) {
-    return "gk";
+    return "goalkeeper";
   }
 
   if (slotNumber <= 5 || slotNumber === 13 || slotNumber === 14 || slotNumber === 17 || slotNumber === 18) {
-    return "defender";
+    return "center_back";
   }
 
   if (slotNumber <= 9 || slotNumber === 15 || slotNumber === 19 || slotNumber === 20) {
-    return "midfielder";
+    return "central_midfielder";
   }
 
-  return "attacker";
+  return "striker";
 }
 
 /**

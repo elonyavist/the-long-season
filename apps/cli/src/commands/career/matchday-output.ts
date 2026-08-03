@@ -1,3 +1,5 @@
+import { fieldablePlayerIdsFor } from "@game/engine";
+import type { CanonicalPlayerRole } from "@game/engine";
 import type { MatchExplanationTrace } from "@game/engine";
 import type { Translator } from "@game/i18n";
 
@@ -138,7 +140,7 @@ function restedFirstTeamConditionChanges(
   result: Extract<CareerAdvanceResult, { readonly status: "advanced" }>,
 ): readonly (typeof result.conditionChanges)[number][] {
   const selectedClub = result.careerState.gameState.clubs[result.careerState.selectedClubId];
-  const firstTeamIds = selectedClub?.playerIds.slice(0, 11) ?? [];
+  const firstTeamIds = fieldablePlayerIdsFor(selectedClub).slice(0, 11);
   const firstTeamIdSet = new Set(firstTeamIds);
 
   return result.conditionChanges.filter((change) => !change.started && firstTeamIdSet.has(change.playerId));
@@ -292,22 +294,22 @@ function formatChanceType(chanceType: string, text: Translator): string {
 
 /** Formats sorted role counts for one explanation snapshot. */
 function formatRoleCounts(team: MatchExplanationTrace["home"], text: Translator): string {
-  const counts: { readonly roleKey: string; readonly count: number }[] = [];
+  const counts: { readonly canonicalRole: CanonicalPlayerRole; readonly count: number }[] = [];
 
   for (const slot of team.lineup.slots) {
-    const existing = counts.find((candidate) => candidate.roleKey === slot.roleKey);
+    const existing = counts.find((candidate) => candidate.canonicalRole === slot.canonicalRole);
 
     if (existing === undefined) {
-      counts.push({ roleKey: slot.roleKey, count: 1 });
+      counts.push({ canonicalRole: slot.canonicalRole, count: 1 });
       continue;
     }
 
-    counts.splice(counts.indexOf(existing), 1, { roleKey: existing.roleKey, count: existing.count + 1 });
+    counts.splice(counts.indexOf(existing), 1, { canonicalRole: existing.canonicalRole, count: existing.count + 1 });
   }
 
   return counts
-    .sort((left, right) => compareAscii(left.roleKey, right.roleKey))
-    .map((entry) => `${formatLineupRole(entry.roleKey, text)}=${entry.count}`)
+    .sort((left, right) => compareAscii(left.canonicalRole, right.canonicalRole))
+    .map((entry) => `${formatLineupRole(entry.canonicalRole, text)}=${entry.count}`)
     .join(" ");
 }
 

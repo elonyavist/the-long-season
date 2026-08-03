@@ -1,3 +1,4 @@
+import { isCanonicalPlayerRole, type CanonicalPlayerRole } from "../tactics/player-roles.ts";
 import type { ClubId, PlayerId } from "../types/ids.ts";
 
 /**
@@ -26,24 +27,29 @@ export type TacticKnobValue = number;
 /**
  * One explicit selected-lineup slot.
  *
- * Slot order is meaningful and must be preserved by callers. `slotKey` is a
- * stable caller/content key such as `gk`, `cb-left`, or `st-right`; `roleKey`
- * points to the role profile that the engine builder will resolve later.
+ * Slot order is meaningful and must be preserved by callers.
+ *
+ * `slotKey` is identity only - a stable caller or content key such as `gk`,
+ * `cb-left`, or `st-right`. Nothing may read tactical meaning out of it.
+ * `canonicalRole` is where the tactical meaning lives, and it is the manager's
+ * actual choice: the tactical board lets any outfield slot take any canonical
+ * role, so the role is not implied by the slot key or by the formation preset
+ * the lineup started from.
  *
  * @example
  * const slot: SelectedLineupSlot = {
  *   slotKey: "st-right",
  *   playerId: playerId("player:000009"),
- *   roleKey: "attacker",
+ *   canonicalRole: "striker",
  * };
  */
 export interface SelectedLineupSlot {
-  /** Stable slot key inside this selected lineup. */
+  /** Stable slot key inside this selected lineup. Identity only. */
   readonly slotKey: string;
   /** Player selected for this slot. */
   readonly playerId: PlayerId;
-  /** Role key selected for this slot. */
-  readonly roleKey: string;
+  /** Canonical football role the manager assigned to this slot. */
+  readonly canonicalRole: CanonicalPlayerRole;
 }
 
 /**
@@ -86,7 +92,7 @@ export type TacticContractErrorCode =
   | "duplicate_player"
   | "missing_slot_key"
   | "duplicate_slot_key"
-  | "missing_role_key"
+  | "invalid_canonical_role"
   | "invalid_mentality"
   | "invalid_tactic_value";
 
@@ -114,15 +120,15 @@ export class TacticContractError extends Error {
  * Builds a validated selected lineup while preserving explicit slot order.
  *
  * This helper validates only the domain-level ambiguity rules: non-empty lineup,
- * non-empty slot/role keys, one player per slot, and no duplicate player or
- * slot keys. Ownership, availability, required lineup size, and role-weight
- * resolution remain engine-builder responsibilities.
+ * non-empty slot keys, a canonical role per slot, one player per slot, and no
+ * duplicate player or slot keys. Ownership, availability, required lineup size,
+ * and role-weight resolution remain engine-builder responsibilities.
  *
  * @example
  * const lineup = createSelectedLineup({
  *   clubId: clubId("club:pro01"),
  *   slots: [
- *     { slotKey: "gk", playerId: playerId("player:000001"), roleKey: "gk" },
+ *     { slotKey: "gk", playerId: playerId("player:000001"), canonicalRole: "goalkeeper" },
  *   ],
  * });
  */
@@ -142,7 +148,7 @@ export function createSelectedLineup(input: SelectedLineup): SelectedLineup {
     slots.push({
       slotKey: slot.slotKey,
       playerId: slot.playerId,
-      roleKey: slot.roleKey,
+      canonicalRole: slot.canonicalRole,
     });
   }
 
@@ -224,8 +230,11 @@ function validateLineupSlot(
     throw new TacticContractError("duplicate_slot_key", `Selected lineup slot key is duplicated: ${slot.slotKey}`);
   }
 
-  if (slot.roleKey.length === 0) {
-    throw new TacticContractError("missing_role_key", `Selected lineup role key must not be empty: ${slot.slotKey}`);
+  if (!isCanonicalPlayerRole(slot.canonicalRole)) {
+    throw new TacticContractError(
+      "invalid_canonical_role",
+      `Selected lineup slot must carry a canonical role: ${slot.slotKey} has ${String(slot.canonicalRole)}`,
+    );
   }
 }
 

@@ -7,10 +7,12 @@
 export * from "./formation-squad-fit.ts";
 export * from "./player-potential-projection.ts";
 export * from "./public-player-assessment.ts";
+export * from "./squad-depth.ts";
 export {
   FORMATION_CATALOG,
   FORMATION_KEYS,
   createSquadDepth,
   isFormationKey,
+  type CanonicalPlayerRole,
   type FormationKey,
 } from "@game/domain";

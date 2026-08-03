@@ -1,3 +1,4 @@
+import { formatLineupRole } from "../career/format.ts";
 import type { FakeLeagueSystem } from "@game/content";
 import {
   DEFAULT_FITNESS_RULES,
@@ -235,7 +236,7 @@ export function formatSetupDemoLines(league: FakeLeagueSystem, setupDemo: CliSet
 
   for (const change of setupDemo.roleChanges) {
     lines.push(
-      `  ${change.slotKey}: ${playerLabel(change.playerId, league.players)} ${formatLineupRole(change.fromRoleKey, text)} -> ${formatLineupRole(change.toRoleKey, text)}`,
+      `  ${change.slotKey}: ${playerLabel(change.playerId, league.players)} ${formatLineupRole(change.fromCanonicalRole, text)} -> ${formatLineupRole(change.toCanonicalRole, text)}`,
     );
   }
 
@@ -292,14 +293,14 @@ function formatLineupDemoChange(change: CliLineupDemoPlayerChange, league: FakeL
   return `  ${change.slotId}: ${playerLabel(change.fromPlayerId, league.players)} -> ${playerLabel(
     change.toPlayerId,
     league.players,
-  )} (${formatLineupRole(change.roleKey, text)})`;
+  )} (${formatLineupRole(change.canonicalRole, text)})`;
 }
 
 /**
  * Formats one selected starter row for the lineup-demo inspection block.
  */
 function formatLineupDemoStarter(slot: LineupSlot, league: FakeLeagueSystem, text: Translator): string {
-  return `  ${slot.slotId} ${playerLabel(slot.playerId, league.players)} ${formatLineupRole(slot.roleKey, text)}`;
+  return `  ${slot.slotId} ${playerLabel(slot.playerId, league.players)} ${formatLineupRole(slot.canonicalRole, text)}`;
 }
 
 /**
@@ -382,13 +383,6 @@ function findFixtureByValue(fixtures: readonly Fixture[], fixtureValue: string):
   }
 
   return undefined;
-}
-
-/**
- * Formats a stable lineup role key for presentation output.
- */
-function formatLineupRole(roleKey: string, text: Translator): string {
-  return text(presentationMessageKey("lineup.role", roleKey));
 }
 
 /**

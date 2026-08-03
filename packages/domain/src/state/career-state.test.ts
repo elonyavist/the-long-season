@@ -235,7 +235,7 @@ test("createCareerState preserves saved selected-club match preparation", () => 
       selectedLineup: {
         clubId: pro01,
         slots: [
-          { slotKey: "st", playerId: player01, roleKey: "attacker" },
+          { slotKey: "st", playerId: player01, canonicalRole: "striker" },
         ],
       },
       tactic: {
@@ -270,7 +270,7 @@ test("createCareerState preserves an unavailable owned player in the durable man
     targetFixtureId: fixture,
     selectedLineup: {
       clubId: base.selectedClubId,
-      slots: [{ slotKey: "st", playerId: selectedPlayer, roleKey: "attacker" }],
+      slots: [{ slotKey: "st", playerId: selectedPlayer, canonicalRole: "striker" }],
     },
     updatedAt: gameDate(20_000),
   } as const;
@@ -308,7 +308,7 @@ test("createCareerState preserves ordered substitutes and rejects XI overlap", (
     selectedClubId,
     selectedLineup: {
       clubId: selectedClubId,
-      slots: [{ slotKey: "st", playerId: playerId("player:010010"), roleKey: "striker" }],
+      slots: [{ slotKey: "st", playerId: playerId("player:010010"), canonicalRole: "striker" }],
     },
     benchSlots: [{ slotKey: "bench:01", playerId: substituteId }],
     updatedAt: gameDate(20_000),
@@ -338,7 +338,7 @@ test("createCareerState rejects invalid normalized tactical-board geometry", () 
         selectedClubId: clubId("club:pro01"),
         selectedLineup: {
           clubId: clubId("club:pro01"),
-          slots: [{ slotKey: "st", playerId: playerId("player:010010"), roleKey: "striker" }],
+          slots: [{ slotKey: "st", playerId: playerId("player:010010"), canonicalRole: "striker" }],
         },
         boardSlots: [{ slotKey: "st", nx: 1.1, ny: 0.2, roleKey: "ATT" }],
         updatedAt: gameDate(20_000),
@@ -707,7 +707,7 @@ test("createCareerState rejects invalid match-preparation references", () => {
           selectedLineup: {
             clubId: clubId("club:pro01"),
             slots: [
-              { slotKey: "st", playerId: playerId("player:missing"), roleKey: "attacker" },
+              { slotKey: "st", playerId: playerId("player:missing"), canonicalRole: "striker" },
             ],
           },
           updatedAt: gameDate(20_000),
@@ -725,7 +725,7 @@ test("createCareerState rejects invalid match-preparation references", () => {
           selectedLineup: {
             clubId: clubId("club:pro01"),
             slots: [
-              { slotKey: "st", playerId: playerId("player:180010"), roleKey: "attacker" },
+              { slotKey: "st", playerId: playerId("player:180010"), canonicalRole: "striker" },
             ],
           },
           updatedAt: gameDate(20_000),
@@ -745,8 +745,8 @@ test("createCareerState rejects ambiguous lineup and invalid tactic values", () 
           selectedLineup: {
             clubId: clubId("club:pro01"),
             slots: [
-              { slotKey: "st-left", playerId: playerId("player:010010"), roleKey: "attacker" },
-              { slotKey: "st-right", playerId: playerId("player:010010"), roleKey: "attacker" },
+              { slotKey: "st-left", playerId: playerId("player:010010"), canonicalRole: "striker" },
+              { slotKey: "st-right", playerId: playerId("player:010010"), canonicalRole: "striker" },
             ],
           },
           updatedAt: gameDate(20_000),

@@ -34,7 +34,7 @@ test("selectAiMatchSquad builds a valid XI and bench without duplicate players",
   assert.equal(selection.lineup.length, 11);
   assert.equal(selection.benchPlayerIds.length, 8);
   assert.equal(new Set(selectedIds).size, selectedIds.length);
-  assert.equal(selection.lineup[0]?.roleKey, "gk");
+  assert.equal(selection.lineup[0]?.canonicalRole, "goalkeeper");
   assert.equal(selection.benchPlayerIds.includes(playerId("player:gk-02")), true);
   assert.equal(selection.reasons.filter((reason) => reason.selection === "lineup").length, 11);
 });

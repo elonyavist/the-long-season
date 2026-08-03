@@ -1,7 +1,9 @@
+import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  CANONICAL_PLAYER_ROLES,
   abilityValue,
   gameDate,
   playerId,
@@ -14,6 +16,8 @@ import {
 
 import {
   deriveTeamStrength,
+  roleWeightKeyForCanonicalRole,
+  ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE,
   TeamStrengthError,
   type DeriveTeamStrengthInput,
   type LineupSlot,
@@ -37,23 +41,23 @@ test("department weights affect the correct department", () => {
   const defenderId = playerId("player:000002");
   const input: DeriveTeamStrengthInput = {
     lineup: [
-      { slotId: "slot:st", playerId: strikerId, roleKey: "striker" },
-      { slotId: "slot:cb", playerId: defenderId, roleKey: "centre-back" },
+      createLineupSlot({ slotId: "slot:st", playerId: strikerId, canonicalRole: "striker" }),
+      createLineupSlot({ slotId: "slot:cb", playerId: defenderId, canonicalRole: "center_back" }),
     ],
     players: {
       [strikerId]: makePlayer(strikerId, 12, { finishing: 18, tackling: 4 }),
       [defenderId]: makePlayer(defenderId, 12, { finishing: 4, tackling: 18 }),
     },
     roleWeights: {
-      striker: {
-        roleKey: "striker",
+      attacker: {
+        roleKey: "attacker",
         department: "attack",
         abilityWeights: {
           "technical.finishing": 1,
         },
       },
-      "centre-back": {
-        roleKey: "centre-back",
+      defender: {
+        roleKey: "defender",
         department: "defense",
         abilityWeights: {
           "technical.tackling": 1,
@@ -305,10 +309,12 @@ test("missing player state fails when multiplier curves are supplied", () => {
  * Builds the smallest valid one-player input for role-score tests.
  */
 function onePlayerInput(player: Player): DeriveTeamStrengthInput {
-  const lineup: readonly LineupSlot[] = [{ slotId: "slot:one", playerId: player.id, roleKey: "balanced" }];
+  const lineup: readonly LineupSlot[] = [
+    createLineupSlot({ slotId: "slot:one", playerId: player.id, canonicalRole: "central_midfielder" }),
+  ];
   const roleWeights: Readonly<Record<string, RoleWeightProfile>> = {
-    balanced: {
-      roleKey: "balanced",
+    midfielder: {
+      roleKey: "midfielder",
       department: "midfield",
       abilityWeights: {
         "technical.passing": 1,
@@ -369,10 +375,10 @@ function departmentInput(players: {
 }): DeriveTeamStrengthInput {
   return {
     lineup: [
-      { slotId: "slot:gk", playerId: players.goalkeeper.id, roleKey: "gk" },
-      { slotId: "slot:def", playerId: players.defender.id, roleKey: "defender" },
-      { slotId: "slot:mid", playerId: players.midfielder.id, roleKey: "midfielder" },
-      { slotId: "slot:att", playerId: players.attacker.id, roleKey: "attacker" },
+      createLineupSlot({ slotId: "slot:gk", playerId: players.goalkeeper.id, canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:def", playerId: players.defender.id, canonicalRole: "center_back" }),
+      createLineupSlot({ slotId: "slot:mid", playerId: players.midfielder.id, canonicalRole: "central_midfielder" }),
+      createLineupSlot({ slotId: "slot:att", playerId: players.attacker.id, canonicalRole: "striker" }),
     ],
     players: {
       [players.attacker.id]: players.attacker,
@@ -480,3 +486,67 @@ function abilitySet(
     },
   };
 }
+
+test("createLineupSlot derives every tactical fact from the canonical role", () => {
+  const slot = createLineupSlot({
+    slotId: "slot:anything",
+    playerId: playerId("player:000001"),
+    canonicalRole: "left_winger",
+  });
+
+  assert.equal(slot.side, "left", "the role decides the channel when the slot states none");
+  assert.equal(slot.slotId, "slot:anything", "slotId stays identity only");
+  assert.equal(roleWeightKeyForCanonicalRole(slot.canonicalRole), "attacker");
+  assert.deepEqual(Object.keys(slot).sort(), ["canonicalRole", "playerId", "side", "slotId"],
+    "the slot must store nothing that can be derived from the canonical role");
+});
+
+test("an explicit formation channel wins over the role's implied one", () => {
+  const slot = createLineupSlot({
+    slotId: "cb-left",
+    playerId: playerId("player:000002"),
+    canonicalRole: "center_back",
+    side: "left_center",
+  });
+
+  assert.equal(slot.side, "left_center");
+  assert.equal(slot.canonicalRole, "center_back", "an explicit channel must not change the role");
+});
+
+test("slotId carries no tactical meaning", () => {
+  const misleading = createLineupSlot({
+    slotId: "gk",
+    playerId: playerId("player:000003"),
+    canonicalRole: "striker",
+  });
+
+  assert.equal(misleading.canonicalRole, "striker");
+  assert.equal(roleWeightKeyForCanonicalRole(misleading.canonicalRole), "attacker");
+});
+
+test("every canonical role resolves to exactly one role-weight key", () => {
+  const keys = new Set(CANONICAL_PLAYER_ROLES.map((role) => roleWeightKeyForCanonicalRole(role)));
+
+  assert.deepEqual([...keys].sort(), ["attacker", "defender", "gk", "midfielder"]);
+  for (const role of CANONICAL_PLAYER_ROLES) {
+    assert.equal(
+      roleWeightKeyForCanonicalRole(role),
+      ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE[role],
+      `${role} must resolve through the single declared mapping`,
+    );
+  }
+});
+
+test("deriveTeamStrength fails deterministically when a resolved profile is missing", () => {
+  const player = makePlayer(playerId("player:000004"), 12, {});
+
+  assert.throws(
+    () =>
+      deriveTeamStrength({
+        lineup: [createLineupSlot({ slotId: "slot:one", playerId: player.id, canonicalRole: "striker" })],
+        players: { [player.id]: player },
+        roleWeights: {},
+      }),
+    (error: unknown) => error instanceof TeamStrengthError && error.code === "missing_role_weight",
+  );
+});

@@ -48,8 +48,8 @@ export function resolveMatchMinuteDiscipline(
   const attackingSide = oppositeSide(defendingSide);
   const defendingTeam = teamFor(simulation, defendingSide);
   const attackingTeam = teamFor(simulation, attackingSide);
-  const eligibleDefenders = defendingTeam.lineup.filter((slot) => !isGoalkeeperRole(slot.roleKey));
-  const eligibleAttackers = attackingTeam.lineup.filter((slot) => !isGoalkeeperRole(slot.roleKey));
+  const eligibleDefenders = defendingTeam.lineup.filter((slot) => slot.canonicalRole !== "goalkeeper");
+  const eligibleAttackers = attackingTeam.lineup.filter((slot) => slot.canonicalRole !== "goalkeeper");
   if (eligibleDefenders.length === 0 || eligibleAttackers.length === 0) return { events: [] };
 
   const rng = deriveRng(
@@ -140,13 +140,13 @@ function resolvePenalty(
   const attackingTeam = teamFor(simulation, attackingSide);
   const defendingTeam = teamFor(simulation, oppositeSide(attackingSide));
   const taker = [...attackingTeam.lineup]
-    .filter((slot) => !isGoalkeeperRole(slot.roleKey))
+    .filter((slot) => slot.canonicalRole !== "goalkeeper")
     .sort((left, right) => {
       const abilityDifference = incidentProfileFor(attackingTeam, right.playerId).penalties
         - incidentProfileFor(attackingTeam, left.playerId).penalties;
       return abilityDifference !== 0 ? abilityDifference : String(left.playerId).localeCompare(String(right.playerId));
     })[0];
-  const goalkeeper = defendingTeam.lineup.find((slot) => isGoalkeeperRole(slot.roleKey));
+  const goalkeeper = defendingTeam.lineup.find((slot) => slot.canonicalRole === "goalkeeper");
   if (taker === undefined || goalkeeper === undefined) return undefined;
 
   const takerProfile = incidentProfileFor(attackingTeam, taker.playerId);
@@ -229,10 +229,6 @@ function oppositeSide(side: MatchEventSide): MatchEventSide {
 
 function inverseAbility(value: number): number {
   return clamp((20 - value) / 19, 0, 1);
-}
-
-function isGoalkeeperRole(roleKey: string): boolean {
-  return ["gk", "por", "goalkeeper"].includes(roleKey.toLowerCase());
 }
 
 function roundThreeDecimals(value: number): number {

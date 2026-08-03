@@ -179,8 +179,12 @@ export {
 } from "./step-match.ts";
 
 export {
+  createLineupSlot,
   deriveTeamStrength,
+  roleWeightKeyForCanonicalRole,
+  ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE,
   TeamStrengthError,
+  type CreateLineupSlotInput,
   type AbilityWeightKey,
   type DeriveTeamStrengthInput,
   type LineupSlot,

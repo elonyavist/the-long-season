@@ -1,3 +1,5 @@
+import { createLineupSlot } from "../match-engine/index.ts";
+import type { CanonicalPlayerRole } from "@game/domain";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -787,10 +789,10 @@ function fixtureFact() {
   };
 }
 
-function teamContext(club: ClubId, player: PlayerId, roleKey: string): MatchTeamContext {
+function teamContext(club: ClubId, player: PlayerId, canonicalRole: CanonicalPlayerRole): MatchTeamContext {
   return {
     clubId: club,
-    lineup: [{ slotId: `slot:${club}`, playerId: player, roleKey }],
+    lineup: [createLineupSlot({ slotId: `slot:${club}`, playerId: player, canonicalRole })],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 },
   };

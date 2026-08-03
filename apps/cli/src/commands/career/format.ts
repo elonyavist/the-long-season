@@ -1,3 +1,4 @@
+import type { CanonicalPlayerRole } from "@game/engine";
 import type { MessageKey, Translator } from "@game/i18n";
 import { toISO } from "@game/shared";
 
@@ -15,9 +16,15 @@ import type {
 type CliFixtureId = CliGameState["fixtureIds"][number];
 type CliFixture = CliGameState["fixtures"][CliFixtureId];
 
-/** Formats a lineup role key for career match explanation and preparation output. */
-export function formatLineupRole(roleKey: string, text: Translator): string {
-  return text(presentationMessageKey("lineup.role", roleKey));
+/**
+ * Formats one canonical lineup role for CLI output.
+ *
+ * Lineup slots carry the manager's canonical role, so presentation reuses the
+ * canonical role labels rather than keeping a second four-way vocabulary of its
+ * own.
+ */
+export function formatLineupRole(canonicalRole: CanonicalPlayerRole, text: Translator): string {
+  return text(presentationMessageKey("career.player.role", canonicalRole));
 }
 
 /** Formats a tactic slider value with stable CLI precision. */

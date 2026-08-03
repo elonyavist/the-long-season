@@ -1,3 +1,4 @@
+import { createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import { createHash } from "node:crypto";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 import {
@@ -4157,11 +4158,11 @@ function reportLineup(
   }
   return selected.slice(0, 11).map((playerId, index) => {
     const group = reportPositionGroup(careerState.gameState.players[playerId]?.naturalPositions[0]);
-    return {
+    return createLineupSlot({
       slotId: `slot:${String(index + 1).padStart(2, "0")}`,
       playerId,
-      roleKey: group === "goalkeeper" ? "gk" : group,
-    };
+      canonicalRole: canonicalRoleForReportGroup(group),
+    });
   });
 }
 
@@ -4182,6 +4183,22 @@ function addReportPlayers(
     ) {
       selected.push(playerId);
     }
+  }
+}
+
+/** Maps one broad report position group onto the canonical role it stands for. */
+function canonicalRoleForReportGroup(
+  group: "goalkeeper" | "defender" | "midfielder" | "attacker",
+): CanonicalPlayerRole {
+  switch (group) {
+    case "goalkeeper":
+      return "goalkeeper";
+    case "defender":
+      return "center_back";
+    case "midfielder":
+      return "central_midfielder";
+    case "attacker":
+      return "striker";
   }
 }
 

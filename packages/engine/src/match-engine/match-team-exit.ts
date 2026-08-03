@@ -20,7 +20,7 @@ export function removeForcedOffPlayerFromMatchContext(
   if (removedSlot === undefined) return context;
 
   const remainingLineup = team.lineup.filter((slot) => slot.playerId !== playerId);
-  const lineup = removedSlot.roleKey === "gk"
+  const lineup = removedSlot.canonicalRole === "goalkeeper"
     ? promoteEmergencyGoalkeeper(remainingLineup, team.incidentProfiles)
     : remainingLineup;
   const updatedTeam: MatchTeamContext = {
@@ -47,7 +47,7 @@ function promoteEmergencyGoalkeeper(
   if (emergencyGoalkeeper === undefined) return lineup;
 
   return lineup.map((slot) => slot.playerId === emergencyGoalkeeper.playerId
-    ? { ...slot, roleKey: "gk" }
+    ? { ...slot, canonicalRole: "goalkeeper" as const }
     : slot);
 }
 

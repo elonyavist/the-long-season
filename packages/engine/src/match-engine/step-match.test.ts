@@ -1,3 +1,4 @@
+import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -545,7 +546,7 @@ function validTeam(
 ): MatchTeamContext {
   return {
     clubId: clubId(`club:${side}`),
-    lineup: [{ slotId: `slot:${side}:one`, playerId: playerId(`player:${side}-000001`), roleKey: "balanced" }],
+    lineup: [createLineupSlot({ slotId: `slot:${side}:one`, playerId: playerId(`player:${side}-000001`), canonicalRole: "central_midfielder" })],
     strength: {
       attack: strength,
       midfield: strength,
@@ -584,16 +585,12 @@ function goalkeeperTeam(
   return {
     clubId: clubId(`club:${side}`),
     lineup: [
-      {
-        slotId: `slot:${side}:gk`,
-        playerId: playerId(`player:${side}-gk`),
-        roleKey: "gk",
-      },
-      {
+      createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
+      createLineupSlot({
         slotId: `slot:${side}:field`,
         playerId: playerId(`player:${side}-field`),
-        roleKey: "balanced",
-      },
+        canonicalRole: "central_midfielder",
+      }),
     ],
     strength: {
       attack: strength,
@@ -641,26 +638,10 @@ function assistTeam(side: MatchSide): MatchTeamContext {
   return {
     clubId: clubId(`club:${side}`),
     lineup: [
-      {
-        slotId: `slot:${side}:gk`,
-        playerId: playerId(`player:${side}-gk`),
-        roleKey: "gk",
-      },
-      {
-        slotId: `slot:${side}:def`,
-        playerId: playerId(`player:${side}-def`),
-        roleKey: "defender",
-      },
-      {
-        slotId: `slot:${side}:mid`,
-        playerId: playerId(`player:${side}-mid`),
-        roleKey: "midfielder",
-      },
-      {
-        slotId: `slot:${side}:att`,
-        playerId: playerId(`player:${side}-att`),
-        roleKey: "attacker",
-      },
+      createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: `slot:${side}:def`, playerId: playerId(`player:${side}-def`), canonicalRole: "center_back" }),
+      createLineupSlot({ slotId: `slot:${side}:mid`, playerId: playerId(`player:${side}-mid`), canonicalRole: "central_midfielder" }),
+      createLineupSlot({ slotId: `slot:${side}:att`, playerId: playerId(`player:${side}-att`), canonicalRole: "striker" }),
     ],
     strength: {
       attack: 10,

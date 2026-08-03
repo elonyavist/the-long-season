@@ -1,3 +1,4 @@
+import { createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import {
   createFakeGameplayConfig,
   selectMarketBehaviorCalibration,
@@ -264,28 +265,29 @@ function defaultOpponentLineupFromRoster(playerIds: CliGameState["playerIds"]): 
     }
 
     const slotNumber = index + 1;
-    lineup.push({
+    lineup.push(createLineupSlot({
       slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
       playerId,
-      roleKey: defaultRoleKeyForSlot(slotNumber),
-    });
+      canonicalRole: defaultCanonicalRoleForSlot(slotNumber),
+    }));
   }
 
   return lineup;
 }
 
-function defaultRoleKeyForSlot(slotNumber: number): string {
+/** Fixed 4-4-2 role order used when no manager selection exists for a club. */
+function defaultCanonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
   if (slotNumber === 1) {
-    return "gk";
+    return "goalkeeper";
   }
 
   if (slotNumber <= 5) {
-    return "defender";
+    return "center_back";
   }
 
   if (slotNumber <= 9) {
-    return "midfielder";
+    return "central_midfielder";
   }
 
-  return "attacker";
+  return "striker";
 }

@@ -1,3 +1,4 @@
+import { createLineupSlot } from "../match-engine/index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import { fromISO } from "@game/shared";
@@ -876,16 +877,8 @@ function teamContextFixture(clubIdValue: ClubId, strength: number): MatchTeamCon
   return {
     clubId: clubIdValue,
     lineup: [
-      {
-        slotId: "slot:01",
-        playerId: playerId(`player:${playerPrefix}-01`),
-        roleKey: "gk",
-      },
-      {
-        slotId: "slot:02",
-        playerId: playerId(`player:${playerPrefix}-02`),
-        roleKey: "starter",
-      },
+      createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:${playerPrefix}-01`), canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:02", playerId: playerId(`player:${playerPrefix}-02`), canonicalRole: "center_back" }),
     ],
     strength: {
       attack: strength,

@@ -1,4 +1,4 @@
-import type { ClubId, FixtureId, PlayerId } from "@game/domain";
+import type { CanonicalPlayerRole, ClubId, FixtureId, PlayerId } from "@game/domain";
 
 import type { MatchContext } from "./match-context.ts";
 import type { MatchScore, MatchSide, MatchSimulationStats } from "./match-simulation-state.ts";
@@ -79,8 +79,8 @@ export interface MatchExplanationLineupSlotSnapshot {
   readonly slotId: string;
   /** Player assigned to the slot. */
   readonly playerId: PlayerId;
-  /** Role key used for the slot. */
-  readonly roleKey: string;
+  /** Canonical role the manager assigned to the slot. */
+  readonly canonicalRole: CanonicalPlayerRole;
 }
 
 /**
@@ -274,7 +274,7 @@ function createTeamSnapshot(side: MatchSide, context: MatchContext): MatchExplan
       slots: team.lineup.map((slot) => ({
         slotId: slot.slotId,
         playerId: slot.playerId,
-        roleKey: slot.roleKey,
+        canonicalRole: slot.canonicalRole,
       })),
     },
     conditionImpact: {

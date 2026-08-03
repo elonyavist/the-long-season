@@ -1,4 +1,11 @@
-import type { Player, PlayerDynamicState, PlayerId } from "@game/domain";
+import {
+  canonicalRoleTacticalFacts,
+  type CanonicalPlayerRole,
+  type FormationSide,
+  type Player,
+  type PlayerDynamicState,
+  type PlayerId,
+} from "@game/domain";
 
 /**
  * Ability paths accepted by role weight profiles.
@@ -74,14 +81,107 @@ export interface RoleWeightProfile {
  * One explicit ordered lineup slot.
  *
  * The array order is the only traversal order used by `deriveTeamStrength`.
+ *
+ * The slot stores only what cannot be derived from something else.
+ *
+ * `slotId` is identity and carries no tactical meaning - the manager can put any
+ * canonical role in any slot, so nothing about the key survives that choice.
+ * `canonicalRole` is the choice itself. `side` is the formation's explicit
+ * channel, which distinguishes `cb-left` from `cb-right` and is real input
+ * rather than a copy of anything.
+ *
+ * Line, position family, and the role-weight key are *not* stored. They follow
+ * from the canonical role, so `canonicalRoleTacticalFacts(...)` and
+ * `roleWeightKeyForCanonicalRole(...)` are the one place each is written down
+ * and there is no second copy that can drift.
  */
 export interface LineupSlot {
-  /** Stable slot identifier, useful in caller diagnostics. */
+  /** Stable slot identifier for caller diagnostics. Carries no tactical meaning. */
   readonly slotId: string;
   /** Player assigned to this slot. */
   readonly playerId: PlayerId;
-  /** Role profile key used for this slot. */
-  readonly roleKey: string;
+  /** Canonical football role the manager assigned to this slot. */
+  readonly canonicalRole: CanonicalPlayerRole;
+  /** Horizontal channel, from the formation slot when stated and the role otherwise. */
+  readonly side: FormationSide;
+}
+
+/**
+ * Total mapping from canonical role to the role-weight profile key.
+ *
+ * This is the four-way collapse that used to live in the web and CLI Adapters,
+ * duplicated four times with three different vocabularies. It lives here now
+ * because deciding which ability weights a role uses is a match-engine
+ * question, and `satisfies` makes adding a canonical role a build failure
+ * instead of a silent fall-through to `midfielder`.
+ *
+ * The keys name role-weight profiles the caller must supply; the engine still
+ * owns no weights of its own, and `deriveTeamStrength` fails deterministically
+ * when a profile is missing.
+ */
+export const ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE = {
+  goalkeeper: "gk",
+  right_full_back: "defender",
+  center_back: "defender",
+  left_full_back: "defender",
+  defensive_midfielder: "midfielder",
+  central_midfielder: "midfielder",
+  right_midfielder: "midfielder",
+  left_midfielder: "midfielder",
+  attacking_midfielder: "midfielder",
+  right_winger: "attacker",
+  left_winger: "attacker",
+  striker: "attacker",
+} as const satisfies Readonly<Record<CanonicalPlayerRole, string>>;
+
+/**
+ * Returns the role-weight profile key for one canonical role.
+ *
+ * @example
+ * const key = roleWeightKeyForCanonicalRole("left_winger"); // "attacker"
+ */
+export function roleWeightKeyForCanonicalRole(role: CanonicalPlayerRole): string {
+  return ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE[role];
+}
+
+/** Input for the single lineup-slot constructor. */
+export interface CreateLineupSlotInput {
+  /** Stable slot identifier. Identity only. */
+  readonly slotId: string;
+  /** Player assigned to this slot. */
+  readonly playerId: PlayerId;
+  /** Canonical football role the manager assigned. */
+  readonly canonicalRole: CanonicalPlayerRole;
+  /**
+   * Channel stated by the formation slot, when there is one.
+   *
+   * A formation distinguishes `cb-left` from `cb-right` while the role is
+   * simply `center_back`, so an explicit channel wins over the role's implied
+   * one. Omit it and the role decides.
+   */
+  readonly side?: FormationSide;
+}
+
+/**
+ * Builds one lineup slot, defaulting the channel to the role's own.
+ *
+ * This is the only supported way to make a `LineupSlot`.
+ *
+ * @example
+ * const slot = createLineupSlot({
+ *   slotId: "cb-left",
+ *   playerId,
+ *   canonicalRole: "center_back",
+ *   side: "left_center",
+ * });
+ */
+export function createLineupSlot(input: CreateLineupSlotInput): LineupSlot {
+  return {
+    slotId: input.slotId,
+    playerId: input.playerId,
+    canonicalRole: input.canonicalRole,
+    side: input.side ?? canonicalRoleTacticalFacts(input.canonicalRole).channel,
+  };
 }
 
 /**
@@ -177,9 +277,13 @@ export function deriveTeamStrength(input: DeriveTeamStrengthInput): TeamStrength
       throw new TeamStrengthError("missing_player", `Missing player for lineup slot ${slot.slotId}: ${slot.playerId}`);
     }
 
-    const roleWeight = input.roleWeights[slot.roleKey];
+    const roleKey = roleWeightKeyForCanonicalRole(slot.canonicalRole);
+    const roleWeight = input.roleWeights[roleKey];
     if (roleWeight === undefined) {
-      throw new TeamStrengthError("missing_role_weight", `Missing role weight profile: ${slot.roleKey}`);
+      throw new TeamStrengthError(
+        "missing_role_weight",
+        `Missing role weight profile for ${slot.canonicalRole}: ${roleKey}`,
+      );
     }
 
     const roleScore = deriveRoleScore(player, roleWeight);

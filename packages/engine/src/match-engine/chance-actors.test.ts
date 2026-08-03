@@ -1,3 +1,4 @@
+import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -60,7 +61,7 @@ test("missing defending goalkeeper fails clearly", () => {
         chanceInput({
           defendingTeam: {
             ...awayTeamFixture(),
-            lineup: awayTeamFixture().lineup.filter((slot) => slot.roleKey !== "gk"),
+            lineup: awayTeamFixture().lineup.filter((slot) => slot.canonicalRole !== "goalkeeper"),
           },
         }),
       ),
@@ -76,11 +77,7 @@ test("goalkeeper-only attacking lineups fail instead of selecting an attacking g
           attackingTeam: {
             ...homeTeamFixture(),
             lineup: [
-              {
-                slotId: "slot:home-gk",
-                playerId: playerId("player:home-gk"),
-                roleKey: "gk",
-              },
+              createLineupSlot({ slotId: "slot:home-gk", playerId: playerId("player:home-gk"), canonicalRole: "goalkeeper" }),
             ],
           },
         }),
@@ -141,26 +138,10 @@ function homeTeamFixture(): MatchTeamContext {
   return {
     clubId: clubId("club:home"),
     lineup: [
-      {
-        slotId: "slot:home-gk",
-        playerId: playerId("player:home-gk"),
-        roleKey: "gk",
-      },
-      {
-        slotId: "slot:home-def",
-        playerId: playerId("player:home-def"),
-        roleKey: "defender",
-      },
-      {
-        slotId: "slot:home-mid",
-        playerId: playerId("player:home-mid"),
-        roleKey: "midfielder",
-      },
-      {
-        slotId: "slot:home-att",
-        playerId: playerId("player:home-att"),
-        roleKey: "attacker",
-      },
+      createLineupSlot({ slotId: "slot:home-gk", playerId: playerId("player:home-gk"), canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:home-def", playerId: playerId("player:home-def"), canonicalRole: "center_back" }),
+      createLineupSlot({ slotId: "slot:home-mid", playerId: playerId("player:home-mid"), canonicalRole: "central_midfielder" }),
+      createLineupSlot({ slotId: "slot:home-att", playerId: playerId("player:home-att"), canonicalRole: "striker" }),
     ],
     strength: teamStrengthFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
@@ -174,26 +155,10 @@ function awayTeamFixture(): MatchTeamContext {
   return {
     clubId: clubId("club:away"),
     lineup: [
-      {
-        slotId: "slot:away-gk",
-        playerId: playerId("player:away-gk"),
-        roleKey: "gk",
-      },
-      {
-        slotId: "slot:away-def",
-        playerId: playerId("player:away-def"),
-        roleKey: "defender",
-      },
-      {
-        slotId: "slot:away-mid",
-        playerId: playerId("player:away-mid"),
-        roleKey: "midfielder",
-      },
-      {
-        slotId: "slot:away-att",
-        playerId: playerId("player:away-att"),
-        roleKey: "attacker",
-      },
+      createLineupSlot({ slotId: "slot:away-gk", playerId: playerId("player:away-gk"), canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:away-def", playerId: playerId("player:away-def"), canonicalRole: "center_back" }),
+      createLineupSlot({ slotId: "slot:away-mid", playerId: playerId("player:away-mid"), canonicalRole: "central_midfielder" }),
+      createLineupSlot({ slotId: "slot:away-att", playerId: playerId("player:away-att"), canonicalRole: "striker" }),
     ],
     strength: teamStrengthFixture(),
     tacticalDistribution: tacticalDistributionFixture(),

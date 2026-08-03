@@ -1,3 +1,6 @@
+import { formatLineupRole } from "../career/format.ts";
+import type { CanonicalPlayerRole } from "@game/engine";
+import { createLineupSlot } from "@game/engine";
 import type { FakeLeagueSystem } from "@game/content";
 import {
   computePlayerMatchStats,
@@ -242,8 +245,8 @@ function fixturePlayerRegistrations(
       ? overriddenLineup
       : league.lineupsByClubId[fixture.awayClubId];
 
-  appendLineupRegistrations(registrations, homeLineup, "home");
-  appendLineupRegistrations(registrations, awayLineup, "away");
+  appendLineupRegistrations(registrations, homeLineup?.map((slot) => createLineupSlot(slot)), "home");
+  appendLineupRegistrations(registrations, awayLineup?.map((slot) => createLineupSlot(slot)), "away");
 
   return registrations;
 }
@@ -404,22 +407,22 @@ function formatChanceType(chanceType: string, text: Translator): string {
  * Formats sorted role counts for one explanation snapshot.
  */
 function formatRoleCounts(team: MatchExplanationTrace["home"], text: Translator): string {
-  const counts: { readonly roleKey: string; readonly count: number }[] = [];
+  const counts: { readonly canonicalRole: CanonicalPlayerRole; readonly count: number }[] = [];
 
   for (const slot of team.lineup.slots) {
-    const existing = counts.find((candidate) => candidate.roleKey === slot.roleKey);
+    const existing = counts.find((candidate) => candidate.canonicalRole === slot.canonicalRole);
 
     if (existing === undefined) {
-      counts.push({ roleKey: slot.roleKey, count: 1 });
+      counts.push({ canonicalRole: slot.canonicalRole, count: 1 });
       continue;
     }
 
-    counts.splice(counts.indexOf(existing), 1, { roleKey: existing.roleKey, count: existing.count + 1 });
+    counts.splice(counts.indexOf(existing), 1, { canonicalRole: existing.canonicalRole, count: existing.count + 1 });
   }
 
   return counts
-    .sort((left, right) => compareAscii(left.roleKey, right.roleKey))
-    .map((entry) => `${formatLineupRole(entry.roleKey, text)}=${entry.count}`)
+    .sort((left, right) => compareAscii(left.canonicalRole, right.canonicalRole))
+    .map((entry) => `${formatLineupRole(entry.canonicalRole, text)}=${entry.count}`)
     .join(" ");
 }
 
@@ -463,13 +466,6 @@ function formatConditionEffect(
  */
 function formatVarianceMarker(marker: MatchExplanationTrace["variance"]["markers"][number], text: Translator): string {
   return text(presentationMessageKey("fixture.explanation.varianceMarker", marker));
-}
-
-/**
- * Formats a stable lineup role key for presentation output.
- */
-function formatLineupRole(roleKey: string, text: Translator): string {
-  return text(presentationMessageKey("lineup.role", roleKey));
 }
 
 /**

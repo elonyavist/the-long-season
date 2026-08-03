@@ -128,7 +128,7 @@ test("save then load preserves career match preparation", async () => {
       selectedLineup: {
         clubId: pro01,
         slots: [
-          { slotKey: "gk", playerId: player01, roleKey: "gk" },
+          { slotKey: "gk", playerId: player01, canonicalRole: "goalkeeper" },
         ],
       },
       tactic: {

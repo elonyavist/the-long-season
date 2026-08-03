@@ -1,3 +1,4 @@
+import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -13,7 +14,7 @@ test("a forced-off goalkeeper promotes the strongest remaining emergency option"
   assert.equal(updated.home.lineup.length, 2);
   assert.equal(updated.home.lineup.some((slot) => slot.playerId === playerId("player:home-gk")), false);
   assert.deepEqual(
-    updated.home.lineup.filter((slot) => slot.roleKey === "gk").map((slot) => slot.playerId),
+    updated.home.lineup.filter((slot) => slot.canonicalRole === "goalkeeper").map((slot) => slot.playerId),
     [playerId("player:home-emergency")],
   );
   assert.deepEqual(
@@ -52,9 +53,9 @@ function team(side: "home" | "away"): MatchTeamContext {
   return {
     clubId: clubId(`club:${side}`),
     lineup: [
-      { slotId: `${side}:gk`, playerId: goalkeeper, roleKey: "gk" },
-      { slotId: `${side}:field`, playerId: field, roleKey: "defender" },
-      { slotId: `${side}:emergency`, playerId: emergency, roleKey: "midfielder" },
+      createLineupSlot({ slotId: `${side}:gk`, playerId: goalkeeper, canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: `${side}:field`, playerId: field, canonicalRole: "center_back" }),
+      createLineupSlot({ slotId: `${side}:emergency`, playerId: emergency, canonicalRole: "central_midfielder" }),
     ],
     incidentProfiles: [
       incidentProfile(goalkeeper, 15, 15),
