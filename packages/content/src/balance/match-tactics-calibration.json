@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "version": "match-tactics-calibration-v1",
+  "classification": "explicit_game_design_target",
+  "tacticalShape": {
+    "contributionWeightBasisPointsByRoleAndTask": {
+      "goalkeeper": {
+        "build_up": 0,
+        "central_progression": 0,
+        "lateral_progression": 0,
+        "final_third_presence": 0,
+        "pressing_cohesion": 0,
+        "central_coverage": 0,
+        "lateral_coverage": 0,
+        "box_protection": 0,
+        "counter_threat": 0,
+        "rest_defence": 0
+      },
+      "right_full_back": {
+        "build_up": 5500,
+        "central_progression": 1500,
+        "lateral_progression": 6500,
+        "final_third_presence": 800,
+        "pressing_cohesion": 5500,
+        "central_coverage": 2500,
+        "lateral_coverage": 8000,
+        "box_protection": 5000,
+        "counter_threat": 3000,
+        "rest_defence": 6000
+      },
+      "center_back": {
+        "build_up": 7000,
+        "central_progression": 1000,
+        "lateral_progression": 500,
+        "final_third_presence": 500,
+        "pressing_cohesion": 3500,
+        "central_coverage": 6000,
+        "lateral_coverage": 1500,
+        "box_protection": 9500,
+        "counter_threat": 1000,
+        "rest_defence": 9000
+      },
+      "left_full_back": {
+        "build_up": 5500,
+        "central_progression": 1500,
+        "lateral_progression": 6500,
+        "final_third_presence": 800,
+        "pressing_cohesion": 5500,
+        "central_coverage": 2500,
+        "lateral_coverage": 8000,
+        "box_protection": 5000,
+        "counter_threat": 3000,
+        "rest_defence": 6000
+      },
+      "defensive_midfielder": {
+        "build_up": 8000,
+        "central_progression": 6000,
+        "lateral_progression": 2000,
+        "final_third_presence": 800,
+        "pressing_cohesion": 6500,
+        "central_coverage": 9000,
+        "lateral_coverage": 3000,
+        "box_protection": 6500,
+        "counter_threat": 2500,
+        "rest_defence": 8000
+      },
+      "central_midfielder": {
+        "build_up": 6500,
+        "central_progression": 8000,
+        "lateral_progression": 3000,
+        "final_third_presence": 2000,
+        "pressing_cohesion": 7000,
+        "central_coverage": 7000,
+        "lateral_coverage": 3000,
+        "box_protection": 3500,
+        "counter_threat": 4000,
+        "rest_defence": 4500
+      },
+      "right_midfielder": {
+        "build_up": 4000,
+        "central_progression": 3500,
+        "lateral_progression": 7500,
+        "final_third_presence": 2500,
+        "pressing_cohesion": 7000,
+        "central_coverage": 2500,
+        "lateral_coverage": 7000,
+        "box_protection": 2000,
+        "counter_threat": 5000,
+        "rest_defence": 3000
+      },
+      "left_midfielder": {
+        "build_up": 4000,
+        "central_progression": 3500,
+        "lateral_progression": 7500,
+        "final_third_presence": 2500,
+        "pressing_cohesion": 7000,
+        "central_coverage": 2500,
+        "lateral_coverage": 7000,
+        "box_protection": 2000,
+        "counter_threat": 5000,
+        "rest_defence": 3000
+      },
+      "attacking_midfielder": {
+        "build_up": 3000,
+        "central_progression": 8500,
+        "lateral_progression": 3000,
+        "final_third_presence": 6000,
+        "pressing_cohesion": 6500,
+        "central_coverage": 3000,
+        "lateral_coverage": 1500,
+        "box_protection": 800,
+        "counter_threat": 7000,
+        "rest_defence": 1500
+      },
+      "right_winger": {
+        "build_up": 2000,
+        "central_progression": 2500,
+        "lateral_progression": 8000,
+        "final_third_presence": 6500,
+        "pressing_cohesion": 6000,
+        "central_coverage": 1000,
+        "lateral_coverage": 3500,
+        "box_protection": 500,
+        "counter_threat": 8000,
+        "rest_defence": 800
+      },
+      "left_winger": {
+        "build_up": 2000,
+        "central_progression": 2500,
+        "lateral_progression": 8000,
+        "final_third_presence": 6500,
+        "pressing_cohesion": 6000,
+        "central_coverage": 1000,
+        "lateral_coverage": 3500,
+        "box_protection": 500,
+        "counter_threat": 8000,
+        "rest_defence": 800
+      },
+      "striker": {
+        "build_up": 1500,
+        "central_progression": 4000,
+        "lateral_progression": 1500,
+        "final_third_presence": 9500,
+        "pressing_cohesion": 6000,
+        "central_coverage": 800,
+        "lateral_coverage": 500,
+        "box_protection": 300,
+        "counter_threat": 8500,
+        "rest_defence": 500
+      }
+    },
+    "marginalContributionBasisPointsByRank": [10000, 7000, 5000, 3600, 2600, 1900, 1400, 1000, 700, 500, 350],
+    "channelPolicy": {
+      "halfChannelOwnShareBasisPoints": 7500
+    },
+    "coordinationMultiplierBasisPointsBySuitability": {
+      "natural": 10000,
+      "adapted": 9200,
+      "weak": 7800,
+      "invalid": 5500
+    },
+    "saturationReferenceMilliByTask": {
+      "build_up": 21000,
+      "central_progression": 19000,
+      "lateral_progression": 14000,
+      "final_third_presence": 19500,
+      "pressing_cohesion": 22000,
+      "central_coverage": 19000,
+      "lateral_coverage": 15000,
+      "box_protection": 22500,
+      "counter_threat": 21500,
+      "rest_defence": 23000
+    }
+  },
+  "tacticalMatchup": {
+    "chainBottleneckWeightBasisPoints": 6500,
+    "pressingContestWeightBasisPoints": 5000
+  }
+}

@@ -36,23 +36,21 @@ measurement noise floor. Shape and tactics are decoration until Step 06.
 |---|---|
 | 01 - reproducible baseline and frozen contract | Done 2026-08-02 |
 | 02 - typed tactical slot context and collapse removal | Done 2026-08-03, all gates green |
-| 03 - intrinsic shape profile and diminishing returns | Not started |
-| 04-12 | Not started |
+| 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
+| 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
+| 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
+| 06-12 | Not started |
 
 ## Current Active Step
 
 - Step:
-  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/03-intrinsic-tactical-shape-profile-and-diminishing-returns.md`
-- Next action: Step 03. It derives intrinsic tactical shape with diminishing
-  returns from the typed slot facts Step 02 landed. It is headless: `3-1-6` and
-  `4-4-2` must produce different shape *profiles* while production opportunity
-  and result behaviour stay unchanged until Step 06.
-- Gap to close inside Step 03: it claims Step 01 froze "admissible mathematical
-  constraints" for the calibration asset. Step 01 froze the product outcome
-  bands, not those constraints. Declare them - non-negative weights, strictly
-  decreasing marginal contribution, bounded capacities, left/right mirror
-  symmetry - before writing any coefficient, and record that they were declared
-  at Step 03 rather than inherited.
+  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md`
+- Next action: Step 06. It is the first step that changes production match
+  behaviour, the first allowed to claim the gameplay defect fixed, and the
+  first able to move the carried `goals_per_match_avg` monitor. Read its
+  two `Inherited From` sections before starting: they carry the context
+  migration, the tactic-semantics ownership rule, and the measured route
+  baseline.
 
 ## Live Constraints
 
@@ -140,6 +138,59 @@ read per step. Keep that separation.
 - `match_preparation_lineup.role_key` now stores a canonical role. A save
   written before 2026-08-03 is rejected, not migrated. The beta reset for this
   landed at Step 02, not Step 08.
+
+### Intrinsic Tactical Shape Seam (Step 03)
+
+- `match-tactics-calibration` is **one** versioned asset with one section per
+  concern. Steps 04 and 05 add sections to it; they do not create a second
+  balance asset, because one stamped version must travel with a career.
+- The intrinsic profile carries **no tactic effect**. Every knob has a Step 06
+  owner that reads the profile, so a tactic term added to `tactical-shape.ts`
+  would be counted twice.
+- `MatchTeamContext.shape` and the builder's calibration input are optional
+  until Step 06, which consumes the profile, makes both required, and migrates
+  the eleven production context constructors listed in its document.
+- `deriveLineupSlotScores(...)` owns per-slot quality. Department strength and
+  intrinsic shape are two readings of it; nothing derives it a second time.
+- Step 03 declared the four admissible mathematical constraints - non-negative
+  weights, strictly decreasing and strictly positive marginal contribution,
+  bounded capacities, left/right mirror symmetry - because Step 01 froze only
+  the product outcome bands. They are enforced in
+  `validateMatchTacticsCalibration(...)` and are subordinate to those bands.
+
+### Relational Matchup Seam (Step 04)
+
+- Five routes, frozen here because Step 01 froze none: `central`, `left`,
+  `right`, `direct`, `transition`. `TACTICAL_ROUTE_DEFINITION` is typed code,
+  not content: content owns how hard a bottleneck bites, never which capacity
+  resists which route.
+- `TACTICAL_SHAPE_CAPACITY_MIRROR` is the one place "your left is their right"
+  is written down. Both the mirror invariant and the flank matchup read it.
+- A chain blends its weakest link with its average, so one dead phase collapses
+  a route without deleting it. A route reaches exactly `0` only when the whole
+  chain is `0`; that is the divide-by-zero guard, not a shape outcome.
+- Pressing acts in exactly one place - it contests build-up - so the routes
+  that skip build-up are the ones a pressed side falls back on. Step 06 must
+  not multiply pressing a second time.
+- The matchup reaches nothing but the explanation trace, and only when both
+  sides carry a shape and the caller supplies the calibration.
+
+### Suitability Seam (Step 05)
+
+- Suitability is derived once, on `LineupSlotScore`, and lives *beside* the
+  score. `teamStrengthFromSlotScores(...)` ignores it: that is what makes the
+  absence of a double penalty structural instead of a promise.
+- `TACTICAL_SHAPE_TASK_KIND` decides where it acts. `coordination` tasks are
+  players working together and suitability scales them; `presence` tasks -
+  `final_third_presence` and `counter_threat` - are about being somewhere
+  dangerous and are never scaled, because the destination role's ability
+  weights already price the move.
+- `POSITION_SUITABILITIES` is the one canonical order. Anything ranking or
+  validating by suitability walks it rather than restating the order.
+- Two *selection*-ranking suitability scales still exist, in
+  `ai-squad-selection.ts` and `position-suitability.ts`. Step 09 owns
+  collapsing them; the execution ladder is a separate concept and is not a
+  third candidate.
 
 ### Superseded Evidence
 

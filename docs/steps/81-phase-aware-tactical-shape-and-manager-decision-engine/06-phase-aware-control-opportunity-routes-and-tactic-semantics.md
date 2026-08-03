@@ -4,6 +4,74 @@
 
 Not started.
 
+## Inherited From Step 03
+
+Two obligations were deliberately left here rather than done early. Both are
+recorded against the code as it stands after Step 03.
+
+**No tactic input touches the intrinsic shape profile, and none may be added
+there.** Step 03's text asked for "current tactics where intrinsically
+relevant". The answer, measured against the design contract, is *none of the
+five*. Contract section 6 gives each knob an owner in this step, and each of
+those owners reads the intrinsic profile: pressing changes advanced recovery
+pressure *only when shape is coherent*, so it multiplies `pressing_cohesion`
+here. Had Step 03 also folded pressing into `pressing_cohesion`, this step
+would square it. The same argument holds for width against the lateral
+capacities. The profile answers "what can this shape do"; this step answers
+"what does the manager do with it", and the multiplication happens exactly
+once, here.
+
+**`MatchTeamContext.shape` is optional and this step makes it required.**
+Step 03 derives the profile inside `buildTacticTeamContext` when the caller
+supplies `matchTacticsCalibration`, and omits it otherwise. That is not a
+fallback - there is no default calibration and no invented profile - but it is
+temporary. This step consumes the profile in the route model, so it must
+migrate every production context constructor to pass the calibration and then
+make both the input and the field required:
+
+- `packages/engine/src/use-cases/simulate-season.ts`
+- `packages/engine/src/career/progress-fixture.ts`
+- `packages/engine/src/team-selection/ai-squad-selection.ts`
+- `packages/engine/src/match-engine/progressive-match-session.ts`
+- `packages/simulation-tools/src/tactical-shape/tactical-shape-audit.ts`
+- `apps/web/src/features/matchday/matchday-adapter.ts`
+- `apps/cli/src/commands/simulate-season.ts`
+- `apps/cli/src/commands/career/progression.ts`
+- `apps/cli/src/commands/fake-season-input.ts`
+- `apps/cli/src/commands/ten-season-report/report-data.ts`
+- `apps/cli/src/commands/live-match-control-report-data.ts`
+
+Add them to this step's Expected Files when it starts. The engine imports no
+content, so each of these is a composition root that must select the
+calibration explicitly.
+
+## Inherited From Step 04
+
+**Pressing currently dominates the named bottleneck, and this step owns the
+number that decides it.** With the shipped
+`pressingContestWeightBasisPoints: 5000`, an ordinary shape's contested
+build-up lands near `0.39` while every other capacity sits near `0.52`, so
+`build_up` is the reported bottleneck on almost every route for almost every
+balanced shape. It correctly switches to the genuinely broken phase when one
+exists - `8-0-2` reports `central_progression` - so the diagnostic
+discriminates where it matters, and playing out under pressure being the
+hardest phase is defensible football. It was left alone at Step 04 because that
+step tunes nothing: this step tunes coefficients against the frozen bands, and
+the qualitative consequence surface reads the bottleneck. If "your build-up is
+the problem" is the answer for every shape, the number is too high, not the
+explanation.
+
+**Step 04's measured route matrix**, on the shipped calibration at equal
+quality, is the baseline this step must not regress:
+
+| attacker vs defender | central | left/right | direct | transition |
+| --- | --- | --- | --- | --- |
+| `4-4-2` vs `4-4-2` | `0.445` | `0.446` | `0.440` | `0.499` |
+| `4-4-2` vs `3-1-6` | `0.446` | `0.559` | `0.441` | `0.498` |
+| `3-1-6` vs `4-4-2` | `0.443` | `0.443` | `0.445` | `0.524` |
+| `4-4-2` vs `8-0-2` | `0.446` | `0.487` | `0.442` | `0.474` |
+| `8-0-2` vs `4-4-2` | `0.411` | `0.432` | `0.443` | `0.478` |
+
 ## Goal
 
 Use tactical matchup facts to derive possession/control and structured

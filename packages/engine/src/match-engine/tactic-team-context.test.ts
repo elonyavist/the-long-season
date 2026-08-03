@@ -3,13 +3,20 @@ import { test } from "vitest";
 
 import {
   abilityValue,
+  CANONICAL_PLAYER_ROLES,
   clubId,
   gameDate,
+  MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
   playerId,
+  TACTICAL_SHAPE_CAPACITIES,
+  TACTICAL_SHAPE_TASKS,
+  type CanonicalPlayerRole,
+  type MatchTacticsCalibrationConfig,
   type Player,
   type PlayerAbilities,
   type PlayerId,
   type SelectedLineup,
+  type TacticalShapeTask,
   type TacticSetup,
 } from "@game/domain";
 
@@ -183,6 +190,74 @@ test("tacticToMatchDistribution rejects invalid tactic setup", () => {
 /**
  * Builds a complete valid builder input with two selected players.
  */
+test("a context has no intrinsic shape when no calibration was supplied", () => {
+  assert.equal(buildTacticTeamContext(validInput()).shape, undefined);
+});
+
+test("supplying a calibration adds a stamped, complete, bounded shape profile", () => {
+  const context = buildTacticTeamContext({ ...validInput(), matchTacticsCalibration: seamCalibration() });
+
+  const shape = context.shape;
+  assert.notEqual(shape, undefined);
+  assert.equal(shape?.policyVersion, "match-tactics-seam-fixture");
+  for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
+    const value: number | undefined = shape?.capacities[capacity];
+    assert.equal(value !== undefined && Number.isFinite(value) && value >= 0 && value < 1, true, capacity);
+  }
+});
+
+test("deriving intrinsic shape does not move team strength", () => {
+  const withoutShape = buildTacticTeamContext(validInput());
+  const withShape = buildTacticTeamContext({ ...validInput(), matchTacticsCalibration: seamCalibration() });
+
+  assert.deepEqual(withShape.strength, withoutShape.strength);
+  assert.deepEqual(withShape.lineup, withoutShape.lineup);
+  assert.deepEqual(withShape.incidentProfiles, withoutShape.incidentProfiles);
+});
+
+/**
+ * A deliberately flat calibration: it proves the seam is wired, not what the
+ * football numbers should be. The intrinsic-shape tests own the invariants.
+ */
+function seamCalibration(): MatchTacticsCalibrationConfig {
+  const flatTasks = Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, 5_000])) as Readonly<
+    Record<TacticalShapeTask, number>
+  >;
+
+  return {
+    schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
+    version: "match-tactics-seam-fixture",
+    classification: "explicit_game_design_target",
+    tacticalShape: {
+      contributionWeightBasisPointsByRoleAndTask: Object.fromEntries(
+        CANONICAL_PLAYER_ROLES.map((role) => [
+          role,
+          role === "goalkeeper"
+            ? (Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, 0])) as Readonly<
+                Record<TacticalShapeTask, number>
+              >)
+            : flatTasks,
+        ]),
+      ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
+      marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),
+      coordinationMultiplierBasisPointsBySuitability: {
+        natural: 10_000,
+        adapted: 9_200,
+        weak: 7_800,
+        invalid: 5_500,
+      },
+      channelPolicy: { halfChannelOwnShareBasisPoints: 7_500 },
+      saturationReferenceMilliByTask: Object.fromEntries(
+        TACTICAL_SHAPE_TASKS.map((task) => [task, 10_000]),
+      ) as Readonly<Record<TacticalShapeTask, number>>,
+    },
+    tacticalMatchup: {
+      chainBottleneckWeightBasisPoints: 6_500,
+      pressingContestWeightBasisPoints: 5_000,
+    },
+  };
+}
+
 function validInput(): BuildTacticTeamContextInput {
   const ids = playerIds();
 

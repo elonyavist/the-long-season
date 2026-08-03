@@ -2,7 +2,14 @@ import { createLineupSlot } from "./index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, fixtureId, playerId, type FixtureId } from "@game/domain";
+import {
+  clubId,
+  fixtureId,
+  playerId,
+  TACTICAL_SHAPE_CAPACITIES,
+  type FixtureId,
+  type TacticalShapeCapacity,
+} from "@game/domain";
 
 import {
   assertValidMatchContext,
@@ -13,6 +20,7 @@ import {
   type MatchContext,
   type MatchEngineConfig,
   type MatchTeamContext,
+  type TacticalShapeProfile,
 } from "../index.ts";
 
 /**
@@ -89,6 +97,48 @@ test("context stays JSON serializable", () => {
 
   assert.deepEqual(JSON.parse(JSON.stringify(context)), context);
 });
+
+test("an absent intrinsic shape is accepted; a broken one is not", () => {
+  assert.equal(isValidMatchContext(validContext()), true);
+
+  const withShape = withHomeShape({ policyVersion: "match-tactics-v1", capacities: completeCapacities(0.4) });
+  assert.equal(isValidMatchContext(withShape), true);
+
+  assertShapeRejected({ policyVersion: "  ", capacities: completeCapacities(0.4) });
+  assertShapeRejected({ policyVersion: "match-tactics-v1", capacities: completeCapacities(1) });
+  assertShapeRejected({
+    policyVersion: "match-tactics-v1",
+    capacities: { ...completeCapacities(0.4), rest_defence: Number.NaN },
+  });
+});
+
+test("a context carrying an intrinsic shape stays JSON serializable", () => {
+  const context = withHomeShape({ policyVersion: "match-tactics-v1", capacities: completeCapacities(0.4) });
+
+  assert.deepEqual(JSON.parse(JSON.stringify(context)), context);
+});
+
+function withHomeShape(shape: TacticalShapeProfile): MatchContext {
+  const context = validContext();
+
+  return { ...context, home: { ...context.home, shape } };
+}
+
+function assertShapeRejected(shape: TacticalShapeProfile): void {
+  assert.throws(
+    () => {
+      assertValidMatchContext(withHomeShape(shape));
+    },
+    (error: unknown) => error instanceof MatchContextError && error.code === "invalid_tactical_shape",
+  );
+}
+
+function completeCapacities(value: number): Record<TacticalShapeCapacity, number> {
+  return Object.fromEntries(TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, value])) as Record<
+    TacticalShapeCapacity,
+    number
+  >;
+}
 
 /**
  * Builds a complete valid match context fixture.

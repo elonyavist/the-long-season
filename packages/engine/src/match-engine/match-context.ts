@@ -3,6 +3,7 @@ import type { RngKeyPart } from "@game/shared";
 
 import type { LineupSlot, TeamStrength } from "./team-strength.ts";
 import { isValidMatchEngineConfig, type MatchEngineConfig } from "./match-engine-config.ts";
+import { assertValidTacticalShapeProfile, TacticalShapeError, type TacticalShapeProfile } from "./tactical-shape.ts";
 
 /**
  * Stable RNG derivation key for one match.
@@ -64,6 +65,16 @@ export interface MatchTeamContext {
   readonly tacticalDistribution: MatchTacticalDistributionInput;
   /** True player inputs used by incident policies when a full squad built this context. */
   readonly incidentProfiles?: readonly MatchPlayerIncidentProfile[];
+  /**
+   * Intrinsic tactical shape, present when the caller supplied a calibration.
+   *
+   * This is a derived fact recomputed from the lineup, never a second career
+   * ledger. It is absent rather than defaulted when no calibration was given:
+   * there is no implicit policy, and an invented profile would be a guess where
+   * a missing input belongs. Nothing in the match result reads it yet - the step
+   * that owns phase-aware opportunity routes makes it required and consumes it.
+   */
+  readonly shape?: TacticalShapeProfile;
 }
 
 /**
@@ -96,7 +107,8 @@ export type MatchContextErrorCode =
   | "missing_lineup"
   | "invalid_engine_config"
   | "invalid_tactical_distribution"
-  | "invalid_incident_profile";
+  | "invalid_incident_profile"
+  | "invalid_tactical_shape";
 
 /**
  * Typed error thrown when a match context is incomplete or invalid.
@@ -243,6 +255,18 @@ function assertValidTeamContext(team: MatchTeamContext | undefined, side: "home"
         );
       }
       seenPlayerIds.add(profile.playerId);
+    }
+  }
+
+  if (team.shape !== undefined) {
+    try {
+      assertValidTacticalShapeProfile(team.shape);
+    } catch (error) {
+      if (error instanceof TacticalShapeError) {
+        throw new MatchContextError("invalid_tactical_shape", `${side} tactical shape is invalid: ${error.message}`);
+      }
+
+      throw error;
     }
   }
 }

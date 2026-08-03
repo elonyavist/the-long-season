@@ -30,4 +30,6 @@ export * from "./identity/nationality-distribution.ts";
 export * from "./identity/flag-assets.ts";
 export * from "./balance/calibration-targets.ts";
 export * from "./balance/player-economy-calibration.ts";
+export * from "./balance/match-tactics-calibration.ts";
 export * from "./schemas/player-economy-calibration.schema.ts";
+export * from "./schemas/match-tactics-calibration.schema.ts";

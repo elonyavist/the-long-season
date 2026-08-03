@@ -1,10 +1,12 @@
 import {
   canonicalRoleTacticalFacts,
+  evaluatePositionSuitability,
   type CanonicalPlayerRole,
   type FormationSide,
   type Player,
   type PlayerDynamicState,
   type PlayerId,
+  type PositionSuitability,
 } from "@game/domain";
 
 /**
@@ -258,20 +260,47 @@ export class TeamStrengthError extends Error {
 }
 
 /**
- * Calculates deterministic strength for one explicit lineup.
+ * What one lineup slot is worth, before anything aggregates it.
+ *
+ * Two different things need this number: department averages, which is
+ * `TeamStrength`, and intrinsic tactical shape, which weights the same score by
+ * football task instead. They must agree on how good the player in a slot is,
+ * so the score is derived once and shared rather than computed twice.
+ */
+export interface LineupSlotScore {
+  /** The slot this score belongs to, in lineup order. */
+  readonly slot: LineupSlot;
+  /** Department this slot's role feeds, from its role-weight profile. */
+  readonly department: TeamStrengthDepartment;
+  /** Role-weighted ability after dynamic-state multipliers. */
+  readonly score: number;
+  /**
+   * How well the player's natural positions fit the role he was given.
+   *
+   * Deliberately kept *beside* the score rather than folded into it.
+   * `score` already prices the move: it weights the player's real attributes
+   * with the destination role's weights, so a winger asked to play centre back
+   * is already scored on tackling and heading rather than on dribbling.
+   * Suitability is the separate, narrower fact that he will read the game there
+   * less well, and only intrinsic shape's coordination tasks may use it.
+   * Department strength must not, or the same decision is charged twice.
+   */
+  readonly suitability: PositionSuitability;
+}
+
+/**
+ * Scores every lineup slot once, in explicit lineup order.
  *
  * @example
- * const strength = deriveTeamStrength({ lineup, players, roleWeights });
+ * const slotScores = deriveLineupSlotScores({ lineup, players, roleWeights });
+ * const strength = teamStrengthFromSlotScores(slotScores);
  */
-export function deriveTeamStrength(input: DeriveTeamStrengthInput): TeamStrength {
+export function deriveLineupSlotScores(input: DeriveTeamStrengthInput): readonly LineupSlotScore[] {
   if (input.lineup.length === 0) {
     throw new TeamStrengthError("empty_lineup", "Lineup must include at least one slot");
   }
 
-  const totals = createDepartmentTotals();
-  let overallTotal = 0;
-
-  for (const slot of input.lineup) {
+  return input.lineup.map((slot): LineupSlotScore => {
     const player = input.players[slot.playerId];
     if (player === undefined) {
       throw new TeamStrengthError("missing_player", `Missing player for lineup slot ${slot.slotId}: ${slot.playerId}`);
@@ -288,11 +317,39 @@ export function deriveTeamStrength(input: DeriveTeamStrengthInput): TeamStrength
 
     const roleScore = deriveRoleScore(player, roleWeight);
     const multiplier = deriveStateMultiplier(slot.playerId, input.playerStates, input.stateMultiplierCurves);
-    const slotScore = roleScore * multiplier;
 
-    totals[roleWeight.department].total += slotScore;
-    totals[roleWeight.department].count += 1;
-    overallTotal += slotScore;
+    return {
+      slot,
+      department: roleWeight.department,
+      score: roleScore * multiplier,
+      suitability: evaluatePositionSuitability(player.naturalPositions, { playerRole: slot.canonicalRole }),
+    };
+  });
+}
+
+/**
+ * Averages already-scored slots into the four departments.
+ *
+ * Accumulation follows the given order, which is lineup order, so the floating
+ * point result is byte-identical to scoring and summing in one pass.
+ *
+ * It deliberately ignores `suitability`. Department strength is player quality
+ * in the chosen role, which the role weights already express; charging an
+ * out-of-position penalty here as well would be the double penalty the design
+ * contract forbids.
+ */
+export function teamStrengthFromSlotScores(slotScores: readonly LineupSlotScore[]): TeamStrength {
+  if (slotScores.length === 0) {
+    throw new TeamStrengthError("empty_lineup", "Lineup must include at least one slot");
+  }
+
+  const totals = createDepartmentTotals();
+  let overallTotal = 0;
+
+  for (const { department, score } of slotScores) {
+    totals[department].total += score;
+    totals[department].count += 1;
+    overallTotal += score;
   }
 
   return {
@@ -300,8 +357,18 @@ export function deriveTeamStrength(input: DeriveTeamStrengthInput): TeamStrength
     midfield: averageDepartment(totals.midfield),
     defense: averageDepartment(totals.defense),
     goalkeeper: averageDepartment(totals.goalkeeper),
-    overall: overallTotal / input.lineup.length,
+    overall: overallTotal / slotScores.length,
   };
+}
+
+/**
+ * Calculates deterministic strength for one explicit lineup.
+ *
+ * @example
+ * const strength = deriveTeamStrength({ lineup, players, roleWeights });
+ */
+export function deriveTeamStrength(input: DeriveTeamStrengthInput): TeamStrength {
+  return teamStrengthFromSlotScores(deriveLineupSlotScores(input));
 }
 
 /**

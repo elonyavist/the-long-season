@@ -2,6 +2,7 @@ import {
   createSelectedLineup,
   createTacticSetup,
   TacticContractError,
+  type MatchTacticsCalibrationConfig,
   type Player,
   type PlayerDynamicState,
   type PlayerId,
@@ -17,13 +18,15 @@ import type {
 } from "./match-context.ts";
 import {
   createLineupSlot,
-  deriveTeamStrength,
+  deriveLineupSlotScores,
   roleWeightKeyForCanonicalRole,
+  teamStrengthFromSlotScores,
   TeamStrengthError,
   type LineupSlot,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
 } from "./team-strength.ts";
+import { deriveTacticalShapeProfile } from "./tactical-shape.ts";
 
 /** Error categories exposed by selected tactic/team context building. */
 export type TacticTeamContextErrorCode =
@@ -59,6 +62,15 @@ export interface BuildTacticTeamContextInput {
   readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Optional caller-supplied dynamic state multiplier curves. */
   readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
+  /**
+   * Versioned match-tactics calibration, supplied by a composition root.
+   *
+   * The engine imports no content, so the numbers arrive here. Supply it and
+   * the context carries an intrinsic tactical-shape profile; omit it and the
+   * context has none. There is no default calibration, because a default would
+   * silently decide football balance that content owns.
+   */
+  readonly matchTacticsCalibration?: MatchTacticsCalibrationConfig;
 }
 
 /**
@@ -89,6 +101,14 @@ export class TacticTeamContextError extends Error {
  * `MatchTacticalDistributionInput`, and strength is derived with existing
  * role-weight logic. The domain `mentality` key is validated but intentionally
  * has no separate engine effect in this MVP.
+ *
+ * Slots are scored exactly once. Department strength and intrinsic tactical
+ * shape are two readings of the same per-slot quality, so deriving that quality
+ * twice would be two places one number could drift.
+ *
+ * A club the manager has not selected is an ordinary caller of this builder,
+ * not a special case: it supplies its own squad, lineup, and tactic and gets
+ * the same context back.
  *
  * @example
  * const team = buildTacticTeamContext({
@@ -133,18 +153,18 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
   });
 
   try {
-    const strengthInput = {
+    const slotScores = deriveLineupSlotScores({
       lineup,
       players: input.players,
       roleWeights: input.roleWeights,
       ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
       ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
-    };
+    });
 
     return {
       clubId: selectedLineup.clubId,
       lineup,
-      strength: deriveTeamStrength(strengthInput),
+      strength: teamStrengthFromSlotScores(slotScores),
       tacticalDistribution: tacticToMatchDistribution(tactic),
       incidentProfiles: lineup.map((slot) =>
         createMatchPlayerIncidentProfile(
@@ -152,6 +172,14 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
           input.playerStates?.[slot.playerId],
         ),
       ),
+      ...(input.matchTacticsCalibration === undefined
+        ? {}
+        : {
+            shape: deriveTacticalShapeProfile({
+              slotScores,
+              calibration: input.matchTacticsCalibration,
+            }),
+          }),
     };
   } catch (error) {
     if (error instanceof TeamStrengthError) {

@@ -4,6 +4,29 @@
 
 Not started.
 
+## Inherited From Step 05
+
+**Two selection-ranking suitability scales exist and this step owns collapsing
+them.** `suitabilityBonus(...)` in
+`packages/engine/src/team-selection/ai-squad-selection.ts` scores
+`2.4 / 1.2 / -3.5 / -1000`, while `SUITABILITY_SELECTION_BONUS` in
+`packages/domain/src/tactics/position-suitability.ts` scores
+`35 / 25 / 5 / -1000` for `scorePlayerForFormationSlot(...)`. They answer the
+same question - how much better is a natural fit when *picking* a player - on
+two different scales, so the AI and the manager-facing helper can rank the same
+two candidates differently.
+
+Step 05 did not touch them on purpose. It owns *execution*: the
+`coordinationMultiplierBasisPointsBySuitability` ladder that changes what a
+misplaced player contributes once he is on the pitch. That is a separate
+concept and it is now in one place. Selection ranking is this step's, because
+this step replaces AI selection behind one named Module. Whichever scale
+survives, only one may.
+
+Note that the execution ladder is *not* a third candidate: it is calibrated
+content about coordinated play, not a selection heuristic, and reusing it as a
+picking bonus would conflate the two again.
+
 ## Goal
 
 Make AI lineup, formation, and live decisions consume the same role fit,

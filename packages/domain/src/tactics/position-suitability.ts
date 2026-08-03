@@ -5,6 +5,20 @@ import type { CanonicalPlayerRole } from "./player-roles.ts";
 /** Suitability categories from best to worst. */
 export type PositionSuitability = "natural" | "adapted" | "weak" | "invalid";
 
+/**
+ * Suitability categories in their one canonical order, best fit first.
+ *
+ * Anything that ranks, compares, or tunes by suitability iterates this array.
+ * Keeping the order in one place is what lets calibration validation say
+ * "strictly decreasing" without restating which category outranks which.
+ */
+export const POSITION_SUITABILITIES = [
+  "natural",
+  "adapted",
+  "weak",
+  "invalid",
+] as const satisfies readonly PositionSuitability[];
+
 /** Minimal slot shape required by the suitability evaluator. */
 export type PositionSuitabilitySlot = Pick<FormationSlot, "playerRole"> | Pick<FormationSlot, "positionFamily">;
 
@@ -18,12 +32,15 @@ export interface PlayerSlotFitScoreInput {
   readonly playerStrength: number;
 }
 
-const SUITABILITY_SCORE: Readonly<Record<PositionSuitability, number>> = {
-  invalid: 0,
-  weak: 1,
-  adapted: 2,
-  natural: 3,
-};
+/**
+ * Comparable rank derived from the canonical order rather than restated.
+ *
+ * A second hand-written table here would be a place the two could disagree
+ * about whether `adapted` beats `weak`.
+ */
+const SUITABILITY_SCORE: Readonly<Record<PositionSuitability, number>> = Object.fromEntries(
+  POSITION_SUITABILITIES.map((suitability, index) => [suitability, POSITION_SUITABILITIES.length - 1 - index]),
+) as Readonly<Record<PositionSuitability, number>>;
 
 const SUITABILITY_SELECTION_BONUS: Readonly<Record<PositionSuitability, number>> = {
   natural: 35,

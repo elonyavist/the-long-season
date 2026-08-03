@@ -29,6 +29,7 @@ export {
   type MatchExplanationLineupSnapshot,
   type MatchExplanationOpportunitySideSummary,
   type MatchExplanationOpportunitySummary,
+  type MatchExplanationRouteSnapshot,
   type MatchExplanationSide,
   type MatchExplanationStrengthSnapshot,
   type MatchExplanationTacticSnapshot,
@@ -180,14 +181,17 @@ export {
 
 export {
   createLineupSlot,
+  deriveLineupSlotScores,
   deriveTeamStrength,
   roleWeightKeyForCanonicalRole,
   ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE,
+  teamStrengthFromSlotScores,
   TeamStrengthError,
   type CreateLineupSlotInput,
   type AbilityWeightKey,
   type DeriveTeamStrengthInput,
   type LineupSlot,
+  type LineupSlotScore,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
   type StateMultiplierCurve,
@@ -195,6 +199,24 @@ export {
   type TeamStrengthDepartment,
   type TeamStrengthErrorCode,
 } from "./team-strength.ts";
+
+export {
+  assertValidTacticalShapeProfile,
+  deriveTacticalShapeProfile,
+  TacticalShapeError,
+  type DeriveTacticalShapeProfileInput,
+  type TacticalShapeErrorCode,
+  type TacticalShapeProfile,
+} from "./tactical-shape.ts";
+
+export {
+  deriveTacticalMatchup,
+  TacticalMatchupError,
+  type DeriveTacticalMatchupInput,
+  type TacticalMatchup,
+  type TacticalMatchupErrorCode,
+  type TacticalRouteMatchup,
+} from "./tactical-matchup.ts";
 
 export {
   buildTacticTeamContext,

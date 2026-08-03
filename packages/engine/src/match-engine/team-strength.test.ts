@@ -15,9 +15,11 @@ import {
 } from "@game/domain";
 
 import {
+  deriveLineupSlotScores,
   deriveTeamStrength,
   roleWeightKeyForCanonicalRole,
   ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE,
+  teamStrengthFromSlotScores,
   TeamStrengthError,
   type DeriveTeamStrengthInput,
   type LineupSlot,
@@ -548,5 +550,48 @@ test("deriveTeamStrength fails deterministically when a resolved profile is miss
         roleWeights: {},
       }),
     (error: unknown) => error instanceof TeamStrengthError && error.code === "missing_role_weight",
+  );
+});
+
+test("slot scores are the shared source of department strength", () => {
+  const strikerId = playerId("player:000011");
+  const defenderId = playerId("player:000012");
+  const input: DeriveTeamStrengthInput = {
+    lineup: [
+      createLineupSlot({ slotId: "slot:st", playerId: strikerId, canonicalRole: "striker" }),
+      createLineupSlot({ slotId: "slot:cb", playerId: defenderId, canonicalRole: "center_back" }),
+    ],
+    players: {
+      [strikerId]: makePlayer(strikerId, 16, {}),
+      [defenderId]: makePlayer(defenderId, 8, {}),
+    },
+    roleWeights: {
+      attacker: { roleKey: "attacker", department: "attack", abilityWeights: { "mental.positioning": 1 } },
+      defender: { roleKey: "defender", department: "defense", abilityWeights: { "mental.positioning": 1 } },
+    },
+  };
+
+  const slotScores = deriveLineupSlotScores(input);
+
+  assert.deepEqual(
+    slotScores.map(({ slot, department, score }) => [slot.slotId, department, score]),
+    [
+      ["slot:st", "attack", 16],
+      ["slot:cb", "defense", 8],
+    ],
+  );
+  assert.deepEqual(teamStrengthFromSlotScores(slotScores), deriveTeamStrength(input));
+});
+
+test("scoring an empty lineup is a typed failure on both entry points", () => {
+  const empty: DeriveTeamStrengthInput = { lineup: [], players: {}, roleWeights: {} };
+
+  assert.throws(
+    () => deriveLineupSlotScores(empty),
+    (error: unknown) => error instanceof TeamStrengthError && error.code === "empty_lineup",
+  );
+  assert.throws(
+    () => teamStrengthFromSlotScores([]),
+    (error: unknown) => error instanceof TeamStrengthError && error.code === "empty_lineup",
   );
 });
