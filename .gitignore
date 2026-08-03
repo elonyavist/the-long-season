@@ -34,6 +34,10 @@ Thumbs.db
 .vite/
 .cache/
 
+# graphify derived cache - rebuilt from source by the post-commit hook.
+# graph.json and the report stay tracked so a fresh clone can query at once.
+graphify-out/cache/
+
 # Tauri/Rust future outputs
 target/
 
