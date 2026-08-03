@@ -75,10 +75,10 @@ test("stable season seed produces a compact golden sentinel", () => {
   // This sentinel catches accidental engine drift without freezing every event
   // in a full season. Update it only with an intentional gameplay rationale.
   //
-  // Last moved when the shot chain was reordered so the keeper decides goals
-  // against saves rather than deciding how many shots reach him, and shooting
-  // accuracy started following the quality of the position instead of raw
-  // attack strength.
+  // Last moved at block 3, when the route a chance came down started deciding
+  // how good that chance was, the per-minute rate started comparing the two
+  // sides' plans to each other instead of to a constant, and the conversion
+  // bands came down to hold the goal rate in band while all of that landed.
   //
   // Two artefacts left the table across this step and the one before it. A
   // champion once went unbeaten conceding nothing across 34 matches, and the
@@ -86,12 +86,15 @@ test("stable season seed produces a compact golden sentinel", () => {
   // near-equal strengths drove the old chance rate towards zero. Neither is
   // reachable now.
   //
-  // The season kept its shape while individual results moved. It takes 47
-  // points to win rather than 48, 28 still props up the table, and the round
-  // count, fixture count and opening fixture are untouched. The leading scorer
-  // is the same player on seven instead of eight: keepers now save a share of
-  // what reaches them in every division, so the same chances produce slightly
-  // fewer goals across a season rather than different chances.
+  // The season kept every structural fact and moved the results inside it. Same
+  // champion, same runner-up, same bottom club on the same 28 points, same 34
+  // rounds and 306 fixtures, same third-placed scorer on the same five goals.
+  // What moved is that it now takes 50 points to win rather than 47, and the
+  // golden boot changed hands: last season's seven-goal leader is second on
+  // six, behind a player from another club on seven. That is what a chance
+  // being worth slightly more or less than its neighbour does over 306
+  // fixtures. The opening fixture finished 0-0 rather than 1-0 for the same
+  // reason, one shot fewer rather than a different match.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -124,25 +127,25 @@ test("stable season seed produces a compact golden sentinel", () => {
         position: 1,
         clubId: clubId("club:test-07"),
         played: 34,
-        wins: 8,
+        wins: 9,
         draws: 23,
-        losses: 3,
-        goalsFor: 8,
-        goalsAgainst: 3,
-        goalDifference: 5,
-        points: 47,
+        losses: 2,
+        goalsFor: 9,
+        goalsAgainst: 2,
+        goalDifference: 7,
+        points: 50,
       },
       runnerUp: {
         position: 2,
         clubId: clubId("club:test-01"),
         played: 34,
         wins: 7,
-        draws: 25,
-        losses: 2,
-        goalsFor: 9,
-        goalsAgainst: 3,
-        goalDifference: 6,
-        points: 46,
+        draws: 26,
+        losses: 1,
+        goalsFor: 10,
+        goalsAgainst: 2,
+        goalDifference: 8,
+        points: 47,
       },
       bottom: {
         position: 18,
@@ -158,10 +161,10 @@ test("stable season seed produces a compact golden sentinel", () => {
       },
       firstFixture: {
         id: fixtureId("fixture:test-league:2026:000001"),
-        homeGoals: 1,
+        homeGoals: 0,
         awayGoals: 0,
-        eventCount: 11,
-        homeShots: 1,
+        eventCount: 10,
+        homeShots: 0,
         awayShots: 0,
       },
       lastFixture: {
@@ -174,13 +177,13 @@ test("stable season seed produces a compact golden sentinel", () => {
       },
       topScorers: [
         {
-          playerId: playerId("player:test-03-02"),
-          clubId: clubId("club:test-03"),
+          playerId: playerId("player:test-02-02"),
+          clubId: clubId("club:test-02"),
           goals: 7,
         },
         {
-          playerId: playerId("player:test-02-04"),
-          clubId: clubId("club:test-02"),
+          playerId: playerId("player:test-03-02"),
+          clubId: clubId("club:test-03"),
           goals: 6,
         },
         {

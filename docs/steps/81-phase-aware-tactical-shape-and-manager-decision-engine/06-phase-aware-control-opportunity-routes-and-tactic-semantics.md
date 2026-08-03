@@ -2,16 +2,18 @@
 
 ## Status
 
-In progress. The step runs in three internal blocks so the repository is
-compiling and tested at every pause, rather than broken half-way through a
-migration that touches four packages.
+In progress. The step runs in internal blocks so the repository is compiling and
+tested at every pause, rather than broken half-way through a migration that
+touches four packages. Blocks 1 to 3 are done and gate-green. Block 4 was opened
+by block 3's own measurements and is not started.
 
 | Block | What it delivers | State |
 |---|---|---|
 | 1 - context migration | `shape` and the calibration become required, every composition root supplies them | Done 2026-08-03, all gates green |
 | 2 - route model | `opportunity-route.ts`, route-driven chance volume and type, shape-driven possession, the five tactic semantics, telemetry | Done 2026-08-03, all gates green |
 | 2b - shot chain | `aggregate-occasion-resolver.ts` reordered so each actor is asked one question and the keeper decides goals against saves | Done 2026-08-03, all gates green |
-| 3 - calibration | frozen matrices, dominance gate, `goals_per_match_avg`, `table_points_spread_avg` | Not started |
+| 3 - calibration | frozen matrices, dominance gate, `goals_per_match_avg`, `table_points_spread_avg`, real shot volume | Done 2026-08-03, all gates green, one invariant still `not_evaluated` and escalated |
+| 4 - tactic dominance | no tactic profile may beat the field, and the exposures that make that true | Not started |
 
 Block 2b was not in the original plan. It was opened because block 2's
 measurements showed the conversion chain contradicting the football it was
@@ -339,6 +341,242 @@ None of this is tuned. Block 3 still owns calibration and has the levers if the
 `ON_TARGET_QUALITY_WEIGHT` set how far keepers and positions separate, the
 conversion bands set the level.
 
+### Block 3 - Two Defects The Frozen Matrix Found Before Any Tuning
+
+Running the frozen matrix first, before touching a coefficient, is what found
+these. Neither is a number that was set too high.
+
+**The route never reached the shot.** This step's own *What To Implement* says
+the chosen route decides "whether a chance exists, its type, **and the quality
+bias handed to the aggregate resolver**". The third clause was never written, so
+`deriveOpportunityQuality` read department strength alone. At equal squad
+quality every shape therefore produced chances of *identical* quality and could
+separate only on how many it produced. `ResolveOccasionInput.routeCapacity` now
+carries the route the chance actually came down, and content owns how far it
+bends quality through `routeQualityBiasBasisPoints`.
+
+**Chance volume read the best route instead of the real one.**
+`deriveOpportunityRate` took `Math.max` over the five capacities, so a side that
+was shut down on four routes and open on one drew the same volume as a side open
+on all five - the lopsided shape this phase exists to punish. It now reads the
+capacity weighted by how often the plan takes each route.
+
+That exposed a third thing. `EVEN_CONTEST_ROUTE_CAPACITY` documented `0.5` as
+"what two identical sides produce", and they do not: two identical `4-4-2`s
+expect `0.4576`, because a chain is contested by the opponent's press and a
+resistance is not, and because the chains blend three phases against the
+resistances' two. Anchoring the rate on that constant ran **every match `7%`
+below the base rate** before either side had decided anything - the block 2
+defect a third time, in a new place. The rate now compares the two sides' plans
+to each other, which is exactly zero for equal shapes whatever the capacities
+are, and the constant's doc comment says what it really is.
+
+### Block 3 - What Was Tuned, And Against What Test
+
+| Coefficient | From | To | The test it was moved against |
+|---|---|---|---|
+| `routeSelectionSharpness` | *(new)* | `3` | a side went down its worst route `18%` of the time and its best `23%`; now `14.7%` and `26%` |
+| `pressingContestWeightBasisPoints` | `5000` | `2000` | Step 04's own handed-over test, below |
+| `conversionBands` goal probabilities | `0.105/0.20/0.35` | `0.093/0.177/0.31` | `goals_per_match_avg` back to the middle of its band |
+
+**Step 04 handed this step a written test and the number failed it.** Step 04
+said: *"If 'your build-up is the problem' is the answer for every shape, the
+number is too high, not the explanation."* Measured across six real formations,
+what limits the left route:
+
+| `pressingContestWeight` | `4-4-2` | `4-3-2-1` | `4-2-4` | `3-4-3` | `4-5-1` | `5-4-1` |
+|---|---|---|---|---|---|---|
+| `5000` | build_up | build_up | build_up | build_up | build_up | build_up |
+| `3500` | build_up | build_up | build_up | build_up | build_up | build_up |
+| `2000` | build_up | **left_progression** | build_up | build_up | **final_third_presence** | **final_third_presence** |
+
+At the shipped value every formation blamed its build-up. At `2000` the
+diagnosis discriminates: the narrow shape blames its flank, the lone-striker
+shapes blame their presence in the box, and the balanced ones still blame
+build-up, which for them is true. A neutral opponent now removes `11.9%` of
+build-up rather than `29.8%`.
+
+`chainBottleneckWeightBasisPoints` was left at `6500`. The sweep says raising it
+makes structure separate *less*, not more - the `4-3-2-1` flank delta falls from
+`-1.7%` to `-0.1%` at `8500` - because the bottleneck it weights is the one link
+formations barely change.
+
+### Block 3 - The Goal Rate Was Right For Two Wrong Reasons
+
+`goals_per_match_avg` was the only shot-chain quantity anything measured, and it
+was inside its band. Measuring the rest of the chain against real football, over
+`918` fixtures of the demo league, showed why that was luck:
+
+| | before | after | real football |
+|---|---|---|---|
+| shots per match | `16.32` | `25.63` | ~`26` |
+| shots on target per match | `5.54` | `8.76` | ~`8.7` |
+| goals per match | `2.75` | `2.77` | ~`2.7` |
+| on target / shots | `33.9%` | `34.2%` | ~`33%` |
+| goals / shots | `16.8%` | `10.8%` | ~`10.4%` |
+| goals / shots on target | `49.6%` | `31.7%` | ~`31%` |
+
+Accuracy was already right. Volume was `37%` low and conversion of what reached
+the goal was `60%` too high - a keeper saved half of what he faced instead of
+two thirds - and the two errors cancelled into a believable scoreline. A match
+looked like a `2-1` built from eight shots and two saves rather than from
+twenty-six shots and six saves, so every derived surface that counts events
+rather than goals was wrong: shot counts, save counts, and the texture of a
+report.
+
+`baseOpportunityRatePerMinute` `0.085` to `0.135`, its ceiling `0.24` to `0.38`
+at exactly the same `2.82x` headroom, and the conversion bands divided by the
+same `1.59` the volume was multiplied by, which is what holds the goal rate
+still while the chain underneath it becomes the real one. `2.74` pass afterwards,
+`table_points_spread_avg` `42.0` pass, whole anomaly score green.
+
+### Block 3 - Measured Result
+
+Frozen identity, unchanged: seed prefix `phase81-tactical-shape`, `8` seed pairs
+per dominance cell, `400` per scenario, `35376` matches. Structured hash
+`dd2f5acff030c682279cc11a0a835d57`.
+
+| Invariant | Step 01 | Block 3 |
+|---|---|---|
+| `bounded_structural_swing` | PASS `0.169` | PASS `0.1092` |
+| `no_dominant_composition` | PASS `0.375` | PASS `0.375` |
+| `quality_hierarchy_survives_extreme_shape` | PASS `0.925` | PASS `0.9281` |
+| `empty_department_possession_clamp` | PASS | PASS |
+| `distinguishable_coherent_and_incoherent_shape` | `not_evaluated` | **PASS**, `0` of `3` pairs identical over `2400` matches |
+| `asymmetric_incoherence_cost` | `not_evaluated` | `not_evaluated`, escalated below |
+
+`distinguishable_coherent_and_incoherent_shape` is the one the phase exists to
+satisfy and it is now a real gate. Step 01 stated its threshold as "different
+team **strength**" and recorded it unevaluated, because strength was the only
+carrier that existed then. Step 03 then put intrinsic shape *beside* department
+strength precisely so shape and suitability are not charged into it twice, which
+makes identical strength the intended state. Identical strength with different
+results is the goal, and that is what is asserted; the `7` distinct strength
+fingerprints across `66` compositions stay in the invariant's detail so the
+original observation is not lost.
+
+Balance monitors on `pnpm cli ten-season-report`, no threshold, denominator or
+severity touched:
+
+| | block 2b | block 3 |
+|---|---|---|
+| `goals_per_match_avg` | `2.98` pass | `2.74` pass |
+| `table_points_spread_avg` | `41.0` pass | `42.0` pass |
+| anomaly scoring | pass | pass |
+
+### Block 3 - The Formation Population, And What It Says
+
+The frozen population is `66` department compositions built from centre backs,
+central midfielders and strikers **with no flank** - a deliberate Step 01 choice
+that isolates how many slots sit in a department. It therefore cannot see the
+decision the tactical board actually exposes, where a full back is a full back
+and a winger occupies a wing. The audit now measures that population too, in its
+own section, leaving the frozen one untouched.
+
+| Formation | Win share | Cross share |
+|---|---|---|
+| `4-4-2` | `0.5025` | `0.3628` |
+| `4-2-4` | `0.5025` | `0.3550` |
+| `5-4-1` | `0.5006` | `0.3824` |
+| `4-5-1` | `0.4925` | `0.3851` |
+| `3-5-2` | `0.4863` | `0.3358` |
+| `4-3-3` | `0.4756` | `0.3669` |
+| `3-4-3` | `0.4756` | `0.3596` |
+| `4-3-2-1` | `0.4725` | `0.3254` |
+
+**The formation moves the game less than a third as much as one slider does.**
+Cross share across every formation spans `0.3254` to `0.3851`; dragging `width`
+alone on a single formation spans `0.2562` to `0.4639`. The recorded ratio is
+`0.2876`. Win share across formations spans `0.030`, inside the `0.0477` noise
+floor, while the tactic profiles span `0.154`.
+
+The cause is measured and is not a coefficient. A real `4-3-2-1` has `12.8%`
+less lateral progression than a `4-4-2`, which is a genuine difference. The
+flank route is a three-link chain blending `65%` weakest link with `35%`
+average, and the weakest link is the contested build-up, which formations barely
+change - so the flank capacity carries `0.35 / 3 = 11.7%` of the chain, and
+`-12.8%` arrives as `-1.5%`. Moving that means changing which capacities compose
+a route, and `TACTICAL_ROUTE_DEFINITION` is Step 04's frozen typed model. It is
+recorded here as an owner decision, not taken as a tuning.
+
+### Block 4 - Nothing Stops A Tactic From Being A Free Win
+
+Block 3 measured every tactic profile against the same shape playing neutral,
+and **three of the five knob extremes beat neutral**:
+
+| profile | win share |
+|---|---|
+| `flank_overload` | `0.5644` |
+| `direct_play` | `0.5325` |
+| `high_pressing` | `0.5200` |
+| `neutral` | `0.5000` |
+| `high_risk` | `0.4788` |
+| `low_block` | `0.4106` |
+
+The contract says every tactic benefit has a cost, and the costs exist -
+`TACTIC_KNOB_EXPOSED_ROUTE` is total and validation refuses a knob priced at
+zero exposure. They are not biting. A slider that is simply better is not a
+decision: a player finds it once and never touches it again, which is the same
+defect as a decorative slider wearing the opposite disguise.
+
+Nothing catches this today. `no_dominant_composition` protects shapes - no
+composition may stay above `0.55` against every opponent - and there is no twin
+for tactics, so the tactic table has always been reported and never gated.
+
+Block 4 owes: a dominance gate over the tactic profiles built the same way as
+the shape one, and then only the `exposureBasisPointsByKnob` magnitudes moved
+until it holds. The gate is the deliverable; the tuning is whatever the gate
+demands. It is this step's own scope - contract section 6 gives it the tactic
+semantics, and "every benefit has a cost or shape prerequisite" is a claim this
+step made and did not verify.
+
+### Block 3 - The Invariant That Cannot Be Evaluated Here
+
+`asymmetric_incoherence_cost` divides the worst shape's deficit by the best
+shape's surplus, both against the reference `4-4-2`, and refuses to report a
+ratio when the surplus is inside the measurement noise floor of `0.0477`. The
+surplus measured `0.0431` at Step 01, `0.0288` before block 3 and `0.0156` after
+it. It is going *down*, and that is not a regression: the `4-4-2` row against
+itself moved from `0.5163` to `0.5019`, so most of what the earlier surplus
+measured was the systematic `7%` rate artefact that block 3 removed.
+
+The reason no shape beats the reference is structural. In a population of ten
+central clones, "four defenders, four midfielders, two strikers" **is** the
+balanced optimum, and the model punishes a weak link, so every deviation from it
+creates one. Satisfying the invariant literally would require asserting that
+some department count is materially better than a balanced one at identical
+players, which is not true football.
+
+The invariant's *intent* is satisfied in a stronger form than the formula asks:
+coherence pays nothing above noise while incoherence costs up to `0.4831`. But
+`not_evaluated` is never reported as a pass, and this step will not widen a
+frozen threshold on its own authority.
+
+**Recommended to the phase contract: split the invariant and keep the half that
+is a design claim.** It asserts two things at once and only one of them is a
+rule the engine must obey. *"Incoherence costs a lot"* is a rule. *"Coherence
+pays little"* is not - it is a consequence of the reference shape already being
+optimal, which is exactly why the denominator does not exist. Tying them into a
+ratio demands a reward the design deliberately refuses to hand out.
+
+Asserting the half that is real - **incoherence must cost at least one division
+tier of squad quality** - is true, checkable today at `0.4831` against a tier
+edge of `0.2638` (`1.83x`), and protects the thing that matters for the product:
+setting up badly has to hurt. The `2` is not widened, it is replaced by a
+one-sided bound on a quantity that exists.
+
+Two alternatives were measured and are worse. Leaving it `not_evaluated`
+forever leaves a permanent hole in a gate list that a later reader will
+eventually close by relaxing something. Re-expressing the surplus against the
+whole population makes the ratio computable - the best shape averages `0.6615`
+against the field - but not meaningful, because almost all of that comes from
+beating the broken shapes rather than from being better than a `4-4-2`: between
+`3-5-2` and `4-4-2` the gap stays about `0.01`.
+
+Step 11 reports and recommends; the phase contract decides, because
+`TACTICAL_SHAPE_THRESHOLDS` exists so that no step can move a frozen threshold
+by itself.
+
 ## Inherited From Step 03
 
 Two obligations were deliberately left here rather than done early. Both are
@@ -548,6 +786,28 @@ that obligation:
   the dependency rule forces, and the validation those numbers must satisfy
   still lives once, in domain.
 - The test files of every module above.
+
+Added during block 3, because the frozen matrix is what found them:
+
+- `packages/engine/src/match-engine/occasion-resolver.ts` and
+  `aggregate-occasion-resolver.ts` - the route the chance came down had to reach
+  the shot, which is this step's own unimplemented scope.
+- `packages/engine/src/match-engine/step-match.ts` - the opportunity rate reads
+  the plan a side will really use, and compares it to the opponent's rather than
+  to a constant.
+- `packages/content/src/generators/gameplay-config.ts` - the conversion bands
+  are the level, and block 2b named them as this block's lever.
+- `packages/simulation-tools/src/test-fixtures/match-tactics-calibration.ts` -
+  the fixture was flat, every outfield role worth the same on every task, which
+  makes every composition identical by construction. A test written against it
+  cannot tell a working engine from the defect this phase removes.
+- `apps/cli/src/commands/tactical-shape-report.ts` and its test - the new
+  formation section of the report.
+- `packages/engine/src/use-cases/simulate-season.test.ts`,
+  `packages/engine/src/match-engine/simulate-match.test.ts`,
+  `packages/engine/src/match-engine/step-match.test.ts`,
+  `apps/cli/src/commands/career.test.ts` - the sentinels and the two assertions
+  that pinned one weighted draw each.
 
 ## Required Checks
 

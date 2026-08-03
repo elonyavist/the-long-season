@@ -4,11 +4,11 @@ Handoff snapshot for whoever picks the project up next. Update it after every
 step attempt, completed step, and rework decision.
 
 **This file stays small on purpose.** It reached `5010` lines and `885 KB` on
-2026-08-03 - more than a context window holds - so the rule that says "read this
-file first" had quietly stopped being followable. History was deleted rather
-than archived: `git log docs/PROJECT_STATUS.md` still has all of it, and each
-phase has its own report in `docs/audits/`. Keep this file under `300` lines.
-When a fact stops constraining future work, delete it.
+2026-08-03 - more than a context window holds - so "read this file first" had
+quietly stopped being followable. History was deleted rather than archived: it
+is all in `git log docs/PROJECT_STATUS.md` and in the per-phase reports under
+`docs/audits/`. Keep this file under `300` lines: when a fact stops constraining
+future work, delete it.
 
 ## How To Read The Project
 
@@ -26,11 +26,16 @@ and by the per-phase reports in `docs/audits/`, not restated here.
 Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine - is active,
 under `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`.
 
-The problem it exists to fix, measured rather than asserted: the engine reduces
-the `66` department compositions a manager can actually build to `7` distinct
-team strengths. Equal-quality `4-4-2` and `3-1-6` produce byte-identical match
-results. Tactics are in the same state - every profile lands inside the
-measurement noise floor. Shape and tactics are decoration until Step 06.
+The problem it exists to fix, measured at Step 01: the engine reduced the `66`
+department compositions a manager can build to `7` distinct team strengths,
+equal-quality `4-4-2` and `3-1-6` produced byte-identical match results, and
+every tactic profile landed inside the measurement noise floor.
+
+Step 06 closed it. The `7` fingerprints are unchanged and intended - Step 03 put
+intrinsic shape *beside* department strength so neither shape nor suitability is
+charged into it twice - while all three equal-quality shape pairs now play
+different matches over `2400` of them. What each manager decision is now worth
+is measured below.
 
 | Phase 81 step | Status |
 |---|---|
@@ -39,20 +44,20 @@ measurement noise floor. Shape and tactics are decoration until Step 06.
 | 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
 | 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
 | 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
-| 06 - phase-aware control, opportunity routes, tactic semantics | In progress: blocks 1, 2 and 2b done 2026-08-03, all gates green |
+| 06 - phase-aware control, opportunity routes, tactic semantics | In progress: blocks 1-3 done 2026-08-03, all gates green; block 4 open |
 | 07-12 | Not started |
 
 ## Current Active Step
 
 - Step:
   `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/06-phase-aware-control-opportunity-routes-and-tactic-semantics.md`
-- Next action: Step 06, block 3. Block 1 made the intrinsic shape and the
-  versioned calibration required everywhere. Block 2 built the route model and
-  the five tactic semantics. Block 2b, which was not planned, reordered the shot
-  chain so each actor answers one question and the keeper decides goals against
-  saves rather than how many shots reach him. Block 3 calibrates against the
-  frozen bands. The step document holds the block table and what each block
-  found against the code.
+- Next action: Step 06, block 4 - a dominance gate over the tactic profiles, and
+  then only the knob exposure magnitudes moved until it holds. Block 3 measured
+  that three of the five knob extremes beat neutral, and nothing gates tactics
+  the way `no_dominant_composition` gates shapes. Blocks 1 to 3 delivered the
+  required context migration, the route model and tactic semantics, an unplanned
+  shot-chain reorder, and calibration; the step document holds what each found
+  against the code.
 
 ## Live Constraints
 
@@ -63,8 +68,7 @@ Facts that still bind future work. Everything else was deleted.
 - Phases 81A, 82A, and 82B are Planned or Draft. Their numeric decisions were
   made before measurement and must be revised against Phase 81's evidence
   rather than implemented as written.
-- Phase 79 Step 14 stays Reopened, paused, unrun, and unclaimed. Phase 79
-  Step 15 is not started. No later phase claims either.
+- Phase 79 Steps 14 and 15 stay Reopened/not started, unclaimed by any phase.
 
 ### Longitudinal Runs
 
@@ -73,8 +77,7 @@ Facts that still bind future work. Everything else was deleted.
   evidence only and may never be reused as market evidence.
 - Phase 82B Step 09 owns the second checkpointed `50 x 20`, over the completed
   competitive market. Two runs are an accepted cost of the 2026-08-02 phase
-  order, not an oversight.
-- No cohort runs anywhere else.
+  order. No cohort runs anywhere else.
 
 ### Carried `goals_per_match_avg` Monitor (A7)
 
@@ -85,18 +88,54 @@ the owner moved, not the severity. The distribution is a starting point, never
 an accepted result.
 
 Step 06 is the first step able to move it, because it owns how many
-opportunities exist and how they convert. Step 11 is the deadline. Step 12
+opportunities exist and how they convert. Step 11 is the deadline and Step 12
 confirms it at cohort scale. It may not be carried a third time: if Step 11
 finds it still out of band, the fix is reopening Step 06.
 
 Step 06 moved it on `pnpm cli ten-season-report`: `3.08` warn, to `2.97` pass
-once a knob offset stopped inflating every match, to `2.98` pass after the shot
-chain was reordered so the keeper decides goals against saves instead of how
-many shots reach him. `table_points_spread_avg` came with it at `41.0` and the
-whole anomaly score is green. No threshold, denominator or severity was touched.
+once a knob offset stopped inflating every match, to `2.98` after the shot chain
+was reordered around the keeper, to `2.74` pass once the route reached the shot
+and the chain was recalibrated onto real football - `25.6` shots a match against
+`16.3`, `31.7%` of shots on target converted against `49.6%`.
+`table_points_spread_avg` came with it at `42.0`, the whole anomaly score is
+green, and no threshold, denominator or severity was touched.
 
-That is the ten-season report and not the `750`-world distribution above, so the
-carried gate stands until block 3 measures it at that scale.
+That is the ten-season report, not the `750`-world distribution above. Nobody
+re-runs that population before Step 12 - `No cohort runs anywhere else` binds -
+and Step 11 evaluates the monitor on its own population, so the carried
+distribution stands as recorded until Step 12 confirms it.
+
+### Which Manager Decisions Actually Count, Measured
+
+Against a `0.0477` win-share noise floor, on the frozen population and on the
+real formation population the audit now also reports:
+
+| Decision | Moves win share by | Verdict |
+|---|---|---|
+| tactic sliders | `0.154` | counts, `3x` the noise |
+| formation | `0.030` | inside the noise |
+| department counts | `0.029` | inside the noise unless broken |
+| fielding a broken shape | `0.483` | counts enormously |
+
+The engine punishes an absurd setup hard and does not reward a good one, and
+three consequences bind future work.
+
+**Nothing gates tactics.** Three of five knob extremes beat neutral -
+`flank_overload` `0.5644`, `direct_play` `0.5325`, `high_pressing` `0.52`. A
+slider that is simply better is not a decision, and `no_dominant_composition`
+has no twin for tactics. Step 06 block 4 owns this.
+
+**A route's defining phase carries `11.7%` of its own chain**, so a real `-12.8%`
+flank difference between formations arrives as `-1.5%`. Recorded as a reopen
+candidate on Step 04, whose frozen `TACTICAL_ROUTE_DEFINITION` it is.
+
+**`asymmetric_incoherence_cost` cannot be evaluated here.** Its surplus is
+`0.0288` and has never left the noise floor at any setting, because in a
+population of ten central clones a balanced `4-4-2` *is* the optimum. Step 06
+recommends splitting it and asserting the half that is a design claim -
+incoherence costs at least one division tier, true today at `0.4831` against
+`0.2638`. Do not widen the threshold or report `not_evaluated` as a pass; the
+phase contract decides and Step 11 reports.
 
 ### Frozen Tactical Baseline (Step 01)
 
@@ -123,17 +162,14 @@ In `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md`, regenerated by
 
 ### Documentation Budget
 
-`docs/PROJECT_STATUS.md` went from `5010` lines to under `300` on 2026-08-03,
-and `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md` from `3074` to under `200`.
-History was deleted, not archived; it is in `git log` and in the phase reports.
+`docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md` went from `3074` lines to under
+`200` on 2026-08-03, alongside this file.
 
-The always-active rules now live in `AGENTS.md` at the repository root, which
-every session loads automatically. `docs/PROJECT_RULES.md` no longer repeats
-them - it points there and keeps only the rules for specific kinds of work.
-Do not reintroduce a second copy of either.
-
-`docs/step_prompt_to_use.md` separates what is read once per phase from what is
-read per step. Keep that separation.
+The always-active rules live in `AGENTS.md` at the repository root, which every
+session loads automatically; `docs/PROJECT_RULES.md` points there and keeps only
+the rules for specific kinds of work. `docs/step_prompt_to_use.md` separates
+what is read once per phase from what is read per step. Do not reintroduce a
+second copy of any of them, and keep that separation.
 
 ### Typed Tactical Slot Seam (Step 02)
 
@@ -208,10 +244,10 @@ read per step. Keep that separation.
 
 ### Superseded Evidence
 
-- The Phase 79C per-division distribution tolerances were built with an
-  owner-category value multiplier that no longer exists. Superseded.
-- The Phase 79D exceptional baseline of `302` ceiling-six players across `100`
-  worlds is non-comparable: Phase 80A changed the population it measured.
+- Phase 79C's per-division distribution tolerances used an owner-category value
+  multiplier that no longer exists.
+- Phase 79D's baseline of `302` ceiling-six players across `100` worlds is
+  non-comparable: Phase 80A changed the population it measured.
 
 ### Accepted Product Decisions Still In Force
 

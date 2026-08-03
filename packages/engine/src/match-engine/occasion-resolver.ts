@@ -19,6 +19,16 @@ export interface ResolveOccasionInput {
   readonly defendingSide: MatchSide;
   /** Simulated minute of the opportunity. */
   readonly minute: number;
+  /**
+   * Bounded capacity of the route this opportunity actually came down.
+   *
+   * A chance worked down a flank the attack owns is a better chance than the
+   * same chance forced down one it does not, so the way through has to reach
+   * the shot. Without it the route decides only whether a chance exists and
+   * what type it is, and two equal-quality elevens produce chances of identical
+   * quality whatever shape they take.
+   */
+  readonly routeCapacity: number;
 }
 
 /**

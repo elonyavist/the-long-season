@@ -98,6 +98,8 @@ export function formatTacticalShapeReport(bundle: TacticalShapeReportBundle): st
     "",
     ...tacticSection(report),
     "",
+    ...formationSection(report),
+    "",
     ...qualitySection(report),
     "",
     ...invariantSection(report),
@@ -249,13 +251,54 @@ function tacticSection(report: TacticalShapeAuditReport): readonly string[] {
     "neutral tactic, so whatever moves belongs to that knob. `neutral` plays itself",
     "and its win share is the measurement's own noise reading.",
     "",
-    "Chance types come from a deterministic texture rather than from a route today.",
-    "They are recorded as the thing Step 06 replaces, not as evidence that routes",
-    "already exist.",
+    "Chance types name the route a chance came down.",
     "",
     "| Tactic | Win share | Possession | Opportunities | xG | Open play | Counter | Cross | Dead ball | Matches |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...rows,
+  ];
+}
+
+function formationSection(report: TacticalShapeAuditReport): readonly string[] {
+  const rows = report.formations.map((row) => {
+    const types = row.chanceTypes;
+    const total = types.open_play + types.counter + types.cross;
+    const crossShare = total === 0 ? 0 : Math.round((types.cross / total) * 10_000) / 10_000;
+    return (
+      `| \`${row.formationKey}\` | ${row.winShare} | ${row.possessionShare} | ${row.opportunities} `
+      + `| ${row.expectedGoals} | ${row.goals} | ${types.open_play} | ${types.counter} | ${types.cross} `
+      + `| ${crossShare} | ${row.matches} |`
+    );
+  });
+  const slider = report.formationVersusSlider;
+
+  return [
+    "## Formations Against The Reference Formation",
+    "",
+    "The department population above cannot answer this. It builds every side from",
+    "centre backs, central midfielders and strikers with no flank, so `4-4-2` and",
+    "`4-3-2-1` differ there only by how many players sit in each department and not",
+    "at all by where they stand. This table is the decision the tactical board",
+    "actually exposes, and it is the only population in which a wing exists.",
+    "",
+    "| Formation | Win share | Possession | Opportunities | xG | Goals | Open play | Counter | Cross | Cross share | Matches |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...rows,
+    "",
+    "### What The Formation Decides Against What One Slider Decides",
+    "",
+    "Both numbers are the share of chances that came down a flank, so they compare",
+    "directly. Below `1` means dragging one dial moves the game more than choosing",
+    "where eleven players stand.",
+    "",
+    "| Measurement | Value |",
+    "| --- | --- |",
+    `| Reference formation cross share | ${slider.referenceCrossShare} |`,
+    `| Widest formation | ${slider.widestFormationCrossShare} |`,
+    `| Narrowest formation | ${slider.narrowestFormationCrossShare} |`,
+    `| \`width\` slider at its floor | ${slider.sliderFloorCrossShare} |`,
+    `| \`width\` slider at its cap | ${slider.sliderCapCrossShare} |`,
+    `| Formation span as a share of slider span | ${slider.formationShareOfSliderSpan} |`,
   ];
 }
 

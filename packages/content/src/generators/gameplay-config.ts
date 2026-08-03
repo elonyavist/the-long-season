@@ -102,27 +102,27 @@ export function createFakeGameplayConfig(): FakeGameplayConfig {
     matchEngineConfig: {
       minuteCount: 90,
       rates: {
-        baseOpportunityRatePerMinute: 0.085,
-        maxOpportunityRatePerMinute: 0.24,
+        baseOpportunityRatePerMinute: 0.135,
+        maxOpportunityRatePerMinute: 0.38,
       },
       conversionBands: [
         {
           bandKey: "low",
           minQualityInclusive: 0,
           maxQualityExclusive: 0.45,
-          goalProbability: 0.105,
+          goalProbability: 0.058,
         },
         {
           bandKey: "medium",
           minQualityInclusive: 0.45,
           maxQualityExclusive: 0.65,
-          goalProbability: 0.2,
+          goalProbability: 0.111,
         },
         {
           bandKey: "high",
           minQualityInclusive: 0.65,
           maxQualityExclusive: 1.01,
-          goalProbability: 0.35,
+          goalProbability: 0.195,
         },
       ],
       homeAdvantageFactor: 1.1,

@@ -92,6 +92,26 @@ function tinyBundle(overrides: Partial<TacticalShapeReportBundle["report"]> = {}
           chanceTypes: { open_play: 12, counter: 4, cross: 3, dead_ball: 1 },
         },
       ],
+      formations: [
+        {
+          formationKey: "4-4-2",
+          winShare: 0.5,
+          matches: 2,
+          possessionShare: 0.5,
+          opportunities: 20,
+          expectedGoals: 2.5,
+          goals: 2,
+          chanceTypes: { open_play: 12, counter: 4, cross: 3, dead_ball: 1 },
+        },
+      ],
+      formationVersusSlider: {
+        referenceCrossShare: 0.3,
+        widestFormationCrossShare: 0.32,
+        narrowestFormationCrossShare: 0.28,
+        sliderFloorCrossShare: 0.25,
+        sliderCapCrossShare: 0.35,
+        formationShareOfSliderSpan: 0.4,
+      },
       versusReferenceNoiseFloor: 0.1,
       dominance: {
         compositionKeys: ["4-4-2"],

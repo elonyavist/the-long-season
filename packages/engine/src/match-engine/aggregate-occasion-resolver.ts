@@ -1,5 +1,6 @@
 import type { MatchTeamContext } from "./match-context.ts";
 import type { MatchSide } from "./match-simulation-state.ts";
+import { EVEN_CONTEST_ROUTE_CAPACITY } from "./opportunity-route.ts";
 import type { OccasionResolution, OccasionResolver, ResolveOccasionInput } from "./occasion-resolver.ts";
 import type { Rng } from "@game/shared";
 
@@ -48,6 +49,8 @@ export class AggregateOccasionResolver implements OccasionResolver {
       defendingTeam,
       input.attackingSide,
       input.simulation.context.engineConfig.homeAdvantageFactor,
+      input.routeCapacity,
+      input.simulation.context.matchTacticsCalibration.tacticalSemantics.routeQualityBiasBasisPoints,
       rng,
     );
     const placementRoll = rng.nextFloat();
@@ -119,21 +122,37 @@ function teamBySide(simulation: ResolveOccasionInput["simulation"], side: MatchS
  * This is how good a position the attack worked itself into, which is contested
  * by the outfield players only. A keeper does not defend the build-up; he
  * defends the goal, and does it once, at the end of the chain.
+ *
+ * Two independent things decide it, and neither can stand in for the other.
+ * **Who has the better players** is the strength edge. **How they got there**
+ * is the route: a chance worked down a flank the attack owns is a better chance
+ * than the same chance forced down one the opponent owns. Without the second
+ * term, two elevens of equal quality produce chances of identical quality
+ * whatever shape they take, and structure can separate them on volume alone.
+ *
+ * The route term is measured from `EVEN_CONTEST_ROUTE_CAPACITY`, so a route the
+ * two shapes contest evenly adds exactly nothing. That is not a formality: a
+ * term proportional to raw capacity would shift every chance in every match
+ * upward and call a global inflation "separation".
  */
 function deriveOpportunityQuality(
   attackingTeam: MatchTeamContext,
   defendingTeam: MatchTeamContext,
   attackingSide: MatchSide,
   homeAdvantageFactor: number,
+  routeCapacity: number,
+  routeQualityBiasBasisPoints: number,
   rng: Rng,
 ): number {
   const homeFactor = attackingSide === "home" ? homeAdvantageFactor : 1;
   const attackingScore = (attackingTeam.strength.attack * 0.7 + attackingTeam.strength.midfield * 0.3) * homeFactor;
   const defendingScore = defendingTeam.strength.defense * 0.7 + defendingTeam.strength.midfield * 0.3;
   const strengthEdge = (attackingScore - defendingScore) / 40;
+  const routeEdge =
+    (routeCapacity - EVEN_CONTEST_ROUTE_CAPACITY) * (routeQualityBiasBasisPoints / 10_000);
   const randomTexture = (rng.nextFloat() - 0.5) * 0.3;
 
-  return clamp(0.5 + strengthEdge + randomTexture, 0, 1);
+  return clamp(0.5 + strengthEdge + routeEdge + randomTexture, 0, 1);
 }
 
 /**

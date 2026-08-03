@@ -186,7 +186,7 @@
   },
   "tacticalMatchup": {
     "chainBottleneckWeightBasisPoints": 6500,
-    "pressingContestWeightBasisPoints": 5000
+    "pressingContestWeightBasisPoints": 2000
   },
   "tacticalSemantics": {
     "routeAffinityBasisPointsByKnob": {
@@ -215,6 +215,8 @@
       "very_attacking": 11700
     },
     "scoreStateCommitmentBasisPoints": 550,
-    "shapeControlShareBasisPoints": 5500
+    "shapeControlShareBasisPoints": 5500,
+    "routeQualityBiasBasisPoints": 2500,
+    "routeSelectionSharpness": 3
   }
 }

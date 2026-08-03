@@ -461,22 +461,20 @@ test("block step events keep the selected primary defender engine-local", () => 
   });
   const blockEvents = result.events.filter(isBlockStepEvent);
 
-  assert.deepEqual(
-    blockEvents.map((event) => ({
-      side: event.side,
-      primaryDefenderPlayerId: event.primaryDefenderPlayerId,
-    })),
-    [
-      {
-        side: "home",
-        primaryDefenderPlayerId: playerId("player:away-mid"),
-      },
-      {
-        side: "away",
-        primaryDefenderPlayerId: playerId("player:home-def"),
-      },
-    ],
-  );
+  // The claim is that the engine names the blocker itself, and that the blocker
+  // is one of the players actually defending. Which of them it picks is a
+  // weighted draw on the actor stream, and that stream is seeded partly by the
+  // chance type - so pinning one name here would pin which route the minute
+  // took, which is a different test and a fragile one.
+  assert.deepEqual(blockEvents.map((event) => event.side), ["home", "away"]);
+  for (const event of blockEvents) {
+    const defendingLineup = event.side === "home" ? context.away.lineup : context.home.lineup;
+    assert.equal(
+      defendingLineup.some((slot) => slot.playerId === event.primaryDefenderPlayerId),
+      true,
+      `${event.primaryDefenderPlayerId} was not defending`,
+    );
+  }
 });
 
 test("stepMatch does not mutate the input simulation state", () => {

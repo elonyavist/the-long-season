@@ -8,19 +8,25 @@ import {
 } from "@game/domain";
 
 /**
- * A flat match-tactics calibration for simulation-tools tests.
+ * A match-tactics calibration for simulation-tools tests.
  *
  * Simulation tools may not import content, so a test that needs a calibration
- * has to build one. It is deliberately flat - every outfield role is worth the
- * same on every task - because these tests check that the tools thread a policy
- * through, never what the football numbers should be. The shipped numbers are
- * asserted in the content package that owns them.
+ * has to build one. It carries no claim about the shipped football numbers -
+ * those are asserted in the content package that owns them - but it is *not*
+ * flat, because a flat one cannot express the thing these tools measure.
+ *
+ * A calibration where every outfield role is worth the same on every task makes
+ * every composition produce identical capacities by construction, so `4-4-2`
+ * and `3-1-6` play byte-identical matches under it whatever the engine does.
+ * A test written against that fixture cannot tell a working engine from the
+ * defect this phase exists to remove. Three department profiles are the least
+ * that distinguishes them: a defender is worth most where defenders are worth
+ * most, and so on.
  *
  * @example
  * runTacticalShapeSeries({ ..., matchTacticsCalibration: matchTacticsCalibrationFixture() });
  */
 export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig {
-  const flatTasks = uniformTaskValues(5_000);
   const zeroTasks = uniformTaskValues(0);
 
   return {
@@ -29,7 +35,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     classification: "explicit_game_design_target",
     tacticalShape: {
       contributionWeightBasisPointsByRoleAndTask: Object.fromEntries(
-        CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? zeroTasks : flatTasks]),
+        CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? zeroTasks : taskValuesFor(role)]),
       ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
       marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),
       coordinationMultiplierBasisPointsBySuitability: {
@@ -58,6 +64,8 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       },
       scoreStateCommitmentBasisPoints: 550,
       shapeControlShareBasisPoints: 5_500,
+      routeQualityBiasBasisPoints: 2_500,
+      routeSelectionSharpness: 3,
     },
   };
 }
@@ -68,3 +76,81 @@ function uniformTaskValues(value: number): Readonly<Record<TacticalShapeTask, nu
     TACTICAL_SHAPE_TASKS.map((task) => [task, value]),
   ) as Readonly<Record<TacticalShapeTask, number>>;
 }
+
+/**
+ * What one outfield role is worth on each task.
+ *
+ * Three profiles, one per department, and every weight is strictly positive so
+ * no role leaves a task empty. The shape of the profile is the only claim: a
+ * defender is worth most where a defence works and least in the opposition box,
+ * an attacker the reverse, and a midfielder is the one who links them.
+ */
+function taskValuesFor(role: CanonicalPlayerRole): Readonly<Record<TacticalShapeTask, number>> {
+  const profile = DEPARTMENT_TASK_PROFILE[departmentOf(role)];
+
+  return Object.fromEntries(
+    TACTICAL_SHAPE_TASKS.map((task) => [task, profile[task]]),
+  ) as Readonly<Record<TacticalShapeTask, number>>;
+}
+
+/** Which of the three profiles an outfield role uses. */
+function departmentOf(role: CanonicalPlayerRole): "defence" | "midfield" | "attack" {
+  if (DEFENSIVE_ROLES.has(role)) return "defence";
+  if (ATTACKING_ROLES.has(role)) return "attack";
+  return "midfield";
+}
+
+const DEFENSIVE_ROLES = new Set<CanonicalPlayerRole>([
+  "center_back",
+  "right_full_back",
+  "left_full_back",
+  "defensive_midfielder",
+]);
+
+const ATTACKING_ROLES = new Set<CanonicalPlayerRole>([
+  "striker",
+  "right_winger",
+  "left_winger",
+  "attacking_midfielder",
+]);
+
+const DEPARTMENT_TASK_PROFILE: Readonly<
+  Record<"defence" | "midfield" | "attack", Readonly<Record<TacticalShapeTask, number>>>
+> = {
+  defence: {
+    build_up: 6_500,
+    central_progression: 2_000,
+    lateral_progression: 3_000,
+    final_third_presence: 800,
+    pressing_cohesion: 4_500,
+    central_coverage: 7_000,
+    lateral_coverage: 6_000,
+    box_protection: 8_500,
+    counter_threat: 1_500,
+    rest_defence: 8_500,
+  },
+  midfield: {
+    build_up: 6_000,
+    central_progression: 7_500,
+    lateral_progression: 6_000,
+    final_third_presence: 2_500,
+    pressing_cohesion: 7_000,
+    central_coverage: 5_500,
+    lateral_coverage: 5_000,
+    box_protection: 3_000,
+    counter_threat: 4_500,
+    rest_defence: 4_000,
+  },
+  attack: {
+    build_up: 2_000,
+    central_progression: 3_500,
+    lateral_progression: 4_000,
+    final_third_presence: 8_500,
+    pressing_cohesion: 5_500,
+    central_coverage: 1_200,
+    lateral_coverage: 1_500,
+    box_protection: 800,
+    counter_threat: 8_000,
+    rest_defence: 1_000,
+  },
+};

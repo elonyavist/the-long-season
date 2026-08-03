@@ -107,6 +107,8 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       },
       scoreStateCommitmentBasisPoints: 550,
       shapeControlShareBasisPoints: 5_500,
+      routeQualityBiasBasisPoints: 2_500,
+      routeSelectionSharpness: 3,
     },
   };
 }
@@ -224,6 +226,8 @@ export function flatMatchTacticsCalibrationFixture(input: {
       },
       scoreStateCommitmentBasisPoints: 550,
       shapeControlShareBasisPoints: 5_500,
+      routeQualityBiasBasisPoints: 2_500,
+      routeSelectionSharpness: 3,
     },
   };
 }

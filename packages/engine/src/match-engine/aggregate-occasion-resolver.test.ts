@@ -5,6 +5,7 @@ import { clubId, fixtureId, playerId } from "@game/domain";
 import { deriveRng, type Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
+import { EVEN_CONTEST_ROUTE_CAPACITY } from "./opportunity-route.ts";
 import { createInitialMatchSimulationState, type MatchSide } from "./match-simulation-state.ts";
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
 import type { MatchEngineConfig } from "./match-engine-config.ts";
@@ -92,6 +93,44 @@ test("even the worst mismatch leaves the keeper something to save", () => {
   );
 });
 
+test("the same players create better chances down a route they own", () => {
+  // The route model's whole point reaching the shot. Identical elevens: only
+  // the way through changes. Without this the shape decides how *many* chances
+  // a side gets and never how good they are, so two equal-quality sides in
+  // different shapes produce chances that are indistinguishable one by one.
+  const owned = outcomesOver({ routeCapacity: 0.65 });
+  const contested = outcomesOver({ routeCapacity: EVEN_CONTEST_ROUTE_CAPACITY });
+  const shut = outcomesOver({ routeCapacity: 0.35 });
+
+  assert.equal(
+    owned.goal > contested.goal && contested.goal > shut.goal,
+    true,
+    `goals down an owned/contested/shut route: ${owned.goal}/${contested.goal}/${shut.goal}`,
+  );
+  assert.equal(
+    owned.onTarget > shut.onTarget,
+    true,
+    "a better position is struck on target more often, whoever is shooting",
+  );
+});
+
+test("an evenly contested route is worth exactly nothing", () => {
+  // The block 2 lesson, restated where it can be broken again. A term
+  // proportional to raw capacity rather than to distance from an even contest
+  // would lift every chance in every match and read as separation.
+  const resolver = new AggregateOccasionResolver();
+  const qualityAt = (routeCapacity: number): number =>
+    resolver.resolveOccasion(occasionFor({ routeCapacity }), rngFor("even")).quality;
+
+  assert.equal(qualityAt(EVEN_CONTEST_ROUTE_CAPACITY), qualityAt(EVEN_CONTEST_ROUTE_CAPACITY));
+  assert.equal(
+    qualityAt(EVEN_CONTEST_ROUTE_CAPACITY) > qualityAt(0.4)
+      && qualityAt(EVEN_CONTEST_ROUTE_CAPACITY) < qualityAt(0.6),
+    true,
+    "the even contest must sit between a route given up and a route won",
+  );
+});
+
 test("a stronger defence blocks more of what it faces", () => {
   const stout = outcomesOver({ defense: 19 });
   const porous = outcomesOver({ defense: 8 });
@@ -119,12 +158,17 @@ test("the same occasion and seed always resolve identically", () => {
   assert.deepEqual(resolve(), resolve());
 });
 
-/** Departmental strengths a case varies; anything unset stays ordinary. */
-interface StrengthOptions {
-  readonly attack?: number;
-  readonly midfield?: number;
-  readonly defense?: number;
-  readonly goalkeeper?: number;
+/** The four departmental strengths one side fields. */
+interface DepartmentStrengths {
+  readonly attack: number;
+  readonly midfield: number;
+  readonly defense: number;
+  readonly goalkeeper: number;
+}
+
+/** What a case varies; anything unset stays ordinary or evenly contested. */
+interface StrengthOptions extends Partial<DepartmentStrengths> {
+  readonly routeCapacity?: number;
 }
 
 interface OutcomeCounts {
@@ -170,10 +214,11 @@ function occasionFor(options: StrengthOptions) {
     attackingSide: "home" as MatchSide,
     defendingSide: "away" as MatchSide,
     minute: 10,
+    routeCapacity: options.routeCapacity ?? EVEN_CONTEST_ROUTE_CAPACITY,
   };
 }
 
-function teamFor(side: MatchSide, strength: Required<StrengthOptions>): MatchTeamContext {
+function teamFor(side: MatchSide, strength: DepartmentStrengths): MatchTeamContext {
   return {
     clubId: clubId(`club:${side}`),
     lineup: [

@@ -2,11 +2,15 @@ import {
   abilityValue,
   clubId,
   fixtureId,
+  FORMATION_CATALOG,
   FORMATIONS,
   gameDate,
   playerId,
   type ClubId,
   type CanonicalPlayerRole,
+  type FormationDepartment,
+  type FormationKey,
+  type FormationSide,
   type MatchTacticsCalibrationConfig,
   type Player,
   type TacticMentalityKey,
@@ -103,6 +107,29 @@ export const TACTICAL_SHAPE_EXTREME_COMPOSITION_KEYS: readonly TacticalShapeComp
 /** The coherent ordinary shape used as the baseline in every comparison. */
 export const TACTICAL_SHAPE_REFERENCE_COMPOSITION_KEY: TacticalShapeCompositionKey = "4-4-2";
 
+/** The balanced formation every other formation is compared against. */
+export const TACTICAL_SHAPE_REFERENCE_FORMATION_KEY: FormationKey = "4-4-2";
+
+/**
+ * Curated formations measured against the reference formation.
+ *
+ * Not the whole catalog: every entry is here because it isolates one axis the
+ * department population cannot express. `4-3-2-1` is narrow, `4-2-4` and
+ * `3-4-3` are wide and forward, `4-5-1` and `5-4-1` are deep with a lone
+ * striker, `4-3-3` and `3-5-2` are the ordinary alternatives to the reference.
+ * Measuring all `23` would triple the run without adding an axis.
+ */
+export const TACTICAL_SHAPE_MEASURED_FORMATION_KEYS: readonly FormationKey[] = [
+  "4-4-2",
+  "4-3-3",
+  "3-5-2",
+  "4-3-2-1",
+  "4-2-4",
+  "3-4-3",
+  "4-5-1",
+  "5-4-1",
+];
+
 /**
  * Measured per-department slot quality for one squad population.
  *
@@ -156,14 +183,47 @@ export const TACTICAL_SHAPE_NEUTRAL_TACTIC: TacticalShapeTacticProfile = {
   mentality: NEUTRAL_TACTIC_MENTALITY,
 };
 
+/**
+ * How a side's eleven slots are described.
+ *
+ * Two populations answer two different questions and neither can answer the
+ * other's. A **department composition** is the reachable space of the tactical
+ * board - all `66` of it - built from centre backs, central midfielders and
+ * strikers with no flank, which is what isolates "how many slots sit in a
+ * department". A **formation** is what a manager actually picks, and it is the
+ * only population where a full back is a full back and a winger occupies a
+ * wing, so it is the only one that can say whether choosing `4-3-2-1` over
+ * `4-4-2` changes anything.
+ */
+export type TacticalShapeSideLineup =
+  | {
+      /** Discriminates the department-composition population. */
+      readonly kind: "composition";
+      /** Department composition of the ten outfield slots. */
+      readonly composition: TacticalShapeComposition;
+    }
+  | {
+      /** Discriminates the real-formation population. */
+      readonly kind: "formation";
+      /** Curated formation whose slots carry the flank they occupy. */
+      readonly formationKey: FormationKey;
+    };
+
 /** One complete side of a scenario: what shape, at what quality, with what tactic. */
 export interface TacticalShapeSide {
-  /** Department composition of the ten outfield slots. */
-  readonly composition: TacticalShapeComposition;
+  /** How this side's eleven slots are described. */
+  readonly lineup: TacticalShapeSideLineup;
   /** Measured squad quality applied to every slot. */
   readonly band: TacticalShapeQualityBand;
   /** Bounded tactic settings. */
   readonly tactic: TacticalShapeTacticProfile;
+}
+
+/** Stable text identity of one side's lineup, for seeds, labels and reports. */
+export function tacticalShapeLineupKey(lineup: TacticalShapeSideLineup): string {
+  return lineup.kind === "composition"
+    ? tacticalShapeCompositionKey(lineup.composition)
+    : lineup.formationKey;
 }
 
 /** Cumulative attacking output for one side across a paired-seed series. */
@@ -243,7 +303,7 @@ export interface RunTacticalShapeSeriesInput {
  * @example
  * const series = runTacticalShapeSeries({
  *   first: { composition, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
- *   second: { composition: other, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
+ *   second: { lineup: { kind: "composition", composition: other }, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
  *   engineConfig,
  *   seedPrefix: "phase81-baseline",
  *   pairedSeedCount: 8,
@@ -261,9 +321,9 @@ export function runTacticalShapeSeries(input: RunTacticalShapeSeriesInput): Tact
       const away = firstIsHome ? input.second : input.first;
       const venueKey = firstIsHome ? "a" : "b";
       const identity = input.scenarioKeyOverride ?? [
-        tacticalShapeCompositionKey(input.first.composition),
+        tacticalShapeLineupKey(input.first.lineup),
         input.first.band.bandKey,
-        tacticalShapeCompositionKey(input.second.composition),
+        tacticalShapeLineupKey(input.second.lineup),
         input.second.band.bandKey,
       ].join("|");
       const scenarioKey = `${identity}|${pairIndex}|${venueKey}`;
@@ -360,16 +420,20 @@ export function buildTacticalShapeTeamContext(
   sideKey: "home" | "away",
   matchTacticsCalibration: MatchTacticsCalibrationConfig,
 ): MatchTeamContext {
-  assertValidComposition(side.composition);
   assertValidBand(side.band);
 
-  const slots = composeSlots(side.composition, sideKey);
+  const slots = composeSlots(side.lineup, sideKey);
   const players = Object.fromEntries(
     slots.map((slot) => [slot.playerId, synthesizePlayer(slot.playerId, side.band[slot.department])] as const),
   ) as Record<PlayerId, Player>;
 
   const lineup = slots.map((slot) =>
-    createLineupSlot({ slotId: slot.slotId, playerId: slot.playerId, canonicalRole: slot.canonicalRole }),
+    createLineupSlot({
+      slotId: slot.slotId,
+      playerId: slot.playerId,
+      canonicalRole: slot.canonicalRole,
+      ...(slot.side === undefined ? {} : { side: slot.side }),
+    }),
   );
 
   return {
@@ -396,7 +460,7 @@ export function buildTacticalShapeTeamContext(
  * Derives the production `TeamStrength` for one composed side.
  *
  * @example
- * const strength = deriveTacticalShapeStrength({ composition, band, tactic }, calibration);
+ * const strength = deriveTacticalShapeStrength({ lineup, band, tactic }, calibration);
  */
 export function deriveTacticalShapeStrength(
   side: TacticalShapeSide,
@@ -535,6 +599,58 @@ export interface TacticalShapeTacticRow {
   readonly chanceTypes: Readonly<Record<ShotChanceType, number>>;
 }
 
+/**
+ * One curated formation measured against the reference formation.
+ *
+ * The department population cannot answer this question at all: it builds every
+ * side from central roles, so `4-4-2` and `4-3-2-1` differ there only by how
+ * many slots sit in each department and not at all by where those players
+ * stand. This row is the manager's actual decision - the one the tactical board
+ * exposes - and it is the only place a wing exists.
+ */
+export interface TacticalShapeFormationRow {
+  /** Curated formation key under test. */
+  readonly formationKey: FormationKey;
+  /** Win share against the reference formation at identical quality. */
+  readonly winShare: number;
+  /** Matches behind that share. Never zero. */
+  readonly matches: number;
+  /** Mean possession share this formation held. */
+  readonly possessionShare: number;
+  /** Opportunities generated across the series. */
+  readonly opportunities: number;
+  /** Summed conversion probability across the series. */
+  readonly expectedGoals: number;
+  /** Goals scored across the series. */
+  readonly goals: number;
+  /** Structured chance types produced across the series. */
+  readonly chanceTypes: Readonly<Record<ShotChanceType, number>>;
+}
+
+/**
+ * How much the formation decides against how much one slider decides.
+ *
+ * Both numbers are the share of chances that came down a flank, so they are
+ * directly comparable. If the widest and narrowest formations a manager can
+ * pick move that share less than dragging the `width` slider on a single
+ * formation does, then where players stand matters less than one dial, which
+ * is the wrong way round.
+ */
+export interface TacticalShapeFormationVersusSlider {
+  /** Cross share of the reference formation on neutral tactics. */
+  readonly referenceCrossShare: number;
+  /** Widest cross share any measured formation reached on neutral tactics. */
+  readonly widestFormationCrossShare: number;
+  /** Narrowest cross share any measured formation reached on neutral tactics. */
+  readonly narrowestFormationCrossShare: number;
+  /** Cross share of the reference formation with `width` at its floor. */
+  readonly sliderFloorCrossShare: number;
+  /** Cross share of the reference formation with `width` at its cap. */
+  readonly sliderCapCrossShare: number;
+  /** Formation span divided by slider span. Above `1` means shape wins. */
+  readonly formationShareOfSliderSpan: number;
+}
+
 /** Machine-readable status for one frozen invariant. */
 export type TacticalShapeGateStatus = "pass" | "fail" | "not_evaluated";
 
@@ -585,6 +701,10 @@ export interface TacticalShapeAuditReport {
   readonly versusReference: readonly TacticalShapeVersusReferenceRow[];
   /** Each tactic profile measured against the neutral one at identical shape. */
   readonly tacticProfiles: readonly TacticalShapeTacticRow[];
+  /** Each curated formation measured against the reference formation. */
+  readonly formations: readonly TacticalShapeFormationRow[];
+  /** What the formation decides against what one slider decides. */
+  readonly formationVersusSlider: TacticalShapeFormationVersusSlider;
   /**
    * Smallest win-share difference the versus-reference measurement can resolve.
    *
@@ -671,10 +791,13 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
   const equivalences = buildEquivalences(input);
   const versusReference = buildVersusReferenceRows(input);
   const tacticProfiles = buildTacticProfileRows(input);
+  const formations = buildFormationRows(input);
+  const formationVersusSlider = buildFormationVersusSlider(input, formations);
   const dominance = buildDominanceMatrix(input);
   const qualityVersusStructure = buildQualityVersusStructure(input);
   const invariants = evaluateInvariants({
     strengthRows,
+    equivalences,
     versusReference,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
     dominance,
@@ -692,6 +815,8 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     equivalences,
     versusReference,
     tacticProfiles,
+    formations,
+    formationVersusSlider,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
     dominance,
     qualityVersusStructure,
@@ -813,6 +938,8 @@ interface ComposedSlot {
   readonly playerId: PlayerId;
   readonly canonicalRole: CanonicalPlayerRole;
   readonly department: TacticalShapeDepartment;
+  /** Channel this slot occupies; absent for the flankless department population. */
+  readonly side?: FormationSide;
 }
 
 /**
@@ -845,7 +972,18 @@ const TACTICAL_SHAPE_ROLE_WEIGHTS: Readonly<Record<string, RoleWeightProfile>> =
   },
 };
 
-function composeSlots(composition: TacticalShapeComposition, sideKey: "home" | "away"): readonly ComposedSlot[] {
+function composeSlots(lineup: TacticalShapeSideLineup, sideKey: "home" | "away"): readonly ComposedSlot[] {
+  return lineup.kind === "composition"
+    ? composeDepartmentSlots(lineup.composition, sideKey)
+    : composeFormationSlots(lineup.formationKey, sideKey);
+}
+
+function composeDepartmentSlots(
+  composition: TacticalShapeComposition,
+  sideKey: "home" | "away",
+): readonly ComposedSlot[] {
+  assertValidComposition(composition);
+
   const slots: ComposedSlot[] = [createSlot(sideKey, 0, "goalkeeper", "goalkeeper")];
   let index = 1;
 
@@ -863,17 +1001,49 @@ function composeSlots(composition: TacticalShapeComposition, sideKey: "home" | "
 }
 
 /**
+ * Builds the slots of one curated formation, flanks included.
+ *
+ * The formation's own slots decide both the role and the channel, so a right
+ * midfielder covers the right and a second striker splits himself. That is the
+ * whole difference from the department population, where every outfield slot is
+ * central by construction: without a side on the slot, `4-4-2` and `4-3-2-1`
+ * differ only in how many players sit in each department, which is precisely
+ * the thing they are not about.
+ */
+function composeFormationSlots(formationKey: FormationKey, sideKey: "home" | "away"): readonly ComposedSlot[] {
+  return FORMATION_CATALOG[formationKey].slots.map((slot, index) =>
+    createSlot(sideKey, index, slot.playerRole, departmentOfFormationSlot(slot.department), slot.side),
+  );
+}
+
+/** Maps a formation slot's department onto the audit's quality bands. */
+function departmentOfFormationSlot(department: FormationDepartment): TacticalShapeDepartment {
+  switch (department) {
+    case "goalkeeping":
+      return "goalkeeper";
+    case "defense":
+      return "defense";
+    case "midfield":
+      return "midfield";
+    case "attack":
+      return "attack";
+  }
+}
+
+/**
  * Builds one composed slot at the most neutral role of its department.
  *
  * Centre back, central midfielder, and striker are the roles that carry no
- * channel of their own, which keeps the probe about how many slots sit in a
- * department rather than about which flank they occupy.
+ * channel of their own, which keeps the department probe about how many slots
+ * sit in a department rather than about which flank they occupy. A formation
+ * slot supplies its own role and channel instead.
  */
 function createSlot(
   sideKey: "home" | "away",
   index: number,
   canonicalRole: CanonicalPlayerRole,
   department: TacticalShapeDepartment,
+  side?: FormationSide,
 ): ComposedSlot {
   const suffix = String(index + 1).padStart(2, "0");
   return {
@@ -881,6 +1051,7 @@ function createSlot(
     playerId: playerId(`player:tactical-shape-${sideKey}-${suffix}`),
     canonicalRole,
     department,
+    ...(side === undefined ? {} : { side }),
   };
 }
 
@@ -952,7 +1123,7 @@ function buildStrengthRows(
 
   return TACTICAL_SHAPE_COMPOSITIONS.map((composition) => {
     const strength = deriveTacticalShapeStrength(
-      { composition, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
+      { lineup: { kind: "composition", composition }, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
       matchTacticsCalibration,
     );
     const key = tacticalShapeCompositionKey(composition);
@@ -1008,7 +1179,7 @@ function buildVersusReferenceRows(
   return TACTICAL_SHAPE_COMPOSITIONS.map((composition) => {
     const compositionKey = tacticalShapeCompositionKey(composition);
     const series = runTacticalShapeSeries({
-      first: { composition, band: input.bands.reference, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
+      first: { lineup: { kind: "composition", composition }, band: input.bands.reference, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
       second: opponent,
       engineConfig: input.engineConfig,
       matchTacticsCalibration: input.matchTacticsCalibration,
@@ -1029,17 +1200,95 @@ function buildVersusReferenceRows(
   });
 }
 
+/**
+ * Runs every measured formation against the reference formation.
+ *
+ * Same band, same neutral tactic, same paired seeds - so anything that moves is
+ * where the eleven players stand.
+ */
+function buildFormationRows(input: RunTacticalShapeAuditInput): readonly TacticalShapeFormationRow[] {
+  const opponent = formationSideFor(TACTICAL_SHAPE_REFERENCE_FORMATION_KEY, input.bands.reference);
+
+  return TACTICAL_SHAPE_MEASURED_FORMATION_KEYS.map((formationKey) => {
+    const series = runTacticalShapeSeries({
+      first: formationSideFor(formationKey, input.bands.reference),
+      second: opponent,
+      engineConfig: input.engineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+      seedPrefix: `${input.seedPrefix}|formation`,
+      pairedSeedCount: input.scenarioPairedSeedCount,
+    });
+
+    return {
+      formationKey,
+      winShare: series.firstWinShare,
+      matches: series.matches,
+      possessionShare: series.first.possessionShare,
+      opportunities: series.first.opportunities,
+      expectedGoals: series.first.expectedGoals,
+      goals: series.first.goals,
+      chanceTypes: series.first.chanceTypes,
+    };
+  });
+}
+
+/** Compares what the formation decides against what the width slider decides. */
+function buildFormationVersusSlider(
+  input: RunTacticalShapeAuditInput,
+  formationRows: readonly TacticalShapeFormationRow[],
+): TacticalShapeFormationVersusSlider {
+  const opponent = formationSideFor(TACTICAL_SHAPE_REFERENCE_FORMATION_KEY, input.bands.reference);
+  const sliderCrossShare = (width: number): number => {
+    const series = runTacticalShapeSeries({
+      first: {
+        ...formationSideFor(TACTICAL_SHAPE_REFERENCE_FORMATION_KEY, input.bands.reference),
+        tactic: { ...TACTICAL_SHAPE_NEUTRAL_TACTIC, tacticKey: `width_${width}`, width },
+      },
+      second: opponent,
+      engineConfig: input.engineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+      seedPrefix: `${input.seedPrefix}|formation-slider|${width}`,
+      pairedSeedCount: input.scenarioPairedSeedCount,
+    });
+
+    return crossShareOf(series.first.chanceTypes);
+  };
+
+  const caps = input.engineConfig.tacticalDistributionCaps.width;
+  const crossShares = formationRows.map((row) => crossShareOf(row.chanceTypes));
+  const reference = formationRows.find((row) => row.formationKey === TACTICAL_SHAPE_REFERENCE_FORMATION_KEY);
+  const sliderFloor = sliderCrossShare(caps.minInclusive);
+  const sliderCap = sliderCrossShare(caps.maxInclusive);
+  const sliderSpan = Math.abs(sliderCap - sliderFloor);
+  const formationSpan = Math.max(...crossShares) - Math.min(...crossShares);
+
+  return {
+    referenceCrossShare: roundFour(reference === undefined ? 0 : crossShareOf(reference.chanceTypes)),
+    widestFormationCrossShare: roundFour(Math.max(...crossShares)),
+    narrowestFormationCrossShare: roundFour(Math.min(...crossShares)),
+    sliderFloorCrossShare: roundFour(sliderFloor),
+    sliderCapCrossShare: roundFour(sliderCap),
+    formationShareOfSliderSpan: roundFour(sliderSpan === 0 ? 0 : formationSpan / sliderSpan),
+  };
+}
+
+/** Share of one side's chances that came down a flank. */
+function crossShareOf(chanceTypes: Readonly<Record<ShotChanceType, number>>): number {
+  const total = chanceTypes.cross + chanceTypes.counter + chanceTypes.open_play;
+  return total === 0 ? 0 : chanceTypes.cross / total;
+}
+
 function buildTacticProfileRows(input: RunTacticalShapeAuditInput): readonly TacticalShapeTacticRow[] {
   const composition = compositionByKey(TACTICAL_SHAPE_REFERENCE_COMPOSITION_KEY);
   const opponent: TacticalShapeSide = {
-    composition,
+    lineup: { kind: "composition", composition },
     band: input.bands.reference,
     tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
   };
 
   return TACTICAL_SHAPE_TACTIC_PROFILES.map((tactic) => {
     const series = runTacticalShapeSeries({
-      first: { composition, band: input.bands.reference, tactic },
+      first: { lineup: { kind: "composition", composition }, band: input.bands.reference, tactic },
       second: opponent,
       engineConfig: input.engineConfig,
       matchTacticsCalibration: input.matchTacticsCalibration,
@@ -1105,12 +1354,12 @@ function buildQualityVersusStructure(
 ): readonly TacticalShapeQualityStructureRow[] {
   return TACTICAL_SHAPE_QUALITY_SCENARIOS.map((scenario) => {
     const first: TacticalShapeSide = {
-      composition: compositionByKey(scenario.firstCompositionKey),
+      lineup: { kind: "composition", composition: compositionByKey(scenario.firstCompositionKey) },
       band: input.bands[scenario.firstBand],
       tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
     };
     const second: TacticalShapeSide = {
-      composition: compositionByKey(scenario.secondCompositionKey),
+      lineup: { kind: "composition", composition: compositionByKey(scenario.secondCompositionKey) },
       band: input.bands[scenario.secondBand],
       tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
     };
@@ -1246,6 +1495,7 @@ const TACTICAL_SHAPE_QUALITY_SCENARIOS: readonly TacticalShapeQualityScenario[] 
 
 interface EvaluateInvariantsInput {
   readonly strengthRows: readonly TacticalShapeStrengthRow[];
+  readonly equivalences: readonly TacticalShapeEquivalenceRow[];
   readonly versusReference: readonly TacticalShapeVersusReferenceRow[];
   readonly versusReferenceNoiseFloor: number;
   readonly dominance: TacticalShapeDominanceMatrix;
@@ -1423,21 +1673,46 @@ function midfieldersOf(compositionKey: TacticalShapeCompositionKey): number {
   return compositionByKey(compositionKey).midfielders;
 }
 
+/**
+ * Whether equal-quality coherent and incoherent shapes still play the same match.
+ *
+ * This is the defect the whole phase exists to remove, so it is measured on the
+ * outcome rather than on an intermediate: every declared equivalence pair runs
+ * the same seeds and the same fixture identities, so results that still match
+ * to the byte mean the shape reached nothing.
+ *
+ * Step 01 stated the threshold as "different team strength" and recorded it
+ * `not_evaluated`, because at that point strength was the only carrier there
+ * was. Step 03 then decided intrinsic shape lives *beside* department strength
+ * precisely so that shape and suitability are not charged into it twice, which
+ * makes identical strength the intended state rather than a failure. Identical
+ * strength with different results is the phase's goal, and is what is asserted
+ * here; the strength-collapse count stays in the detail so the original
+ * observation is not lost.
+ */
 function evaluateDistinguishableShape(context: EvaluateInvariantsInput): TacticalShapeInvariantResult {
   const threshold =
-    "equal-quality 4-4-2 and 3-1-6 must produce different team strength; owned by Step 03 and enforced from Step 06";
+    "every equal-quality shape pair must produce different match results; owned by Step 03 and enforced from Step 06";
   const distinct = new Set(context.strengthRows.map((row) => row.fingerprint)).size;
+  if (context.equivalences.length === 0) {
+    return notEvaluated("distinguishable_coherent_and_incoherent_shape", threshold, "No equivalence pair was measured");
+  }
+
+  const stillIdentical = context.equivalences.filter((row) => row.resultsIdentical);
+  const matches = context.equivalences.reduce((total, row) => total + row.matches, 0);
 
   return {
     key: "distinguishable_coherent_and_incoherent_shape",
-    status: "not_evaluated",
-    observations: context.strengthRows.length,
-    observed: distinct,
+    status: stillIdentical.length === 0 ? "pass" : "fail",
+    observations: matches,
+    observed: stillIdentical.length,
     threshold,
     detail:
-      `Step 01 changes no behaviour, so this invariant records the starting point instead of passing: `
-      + `${distinct} distinct strength fingerprints across ${context.strengthRows.length} reachable compositions. `
-      + `Step 03 introduces intrinsic shape and Step 06 is the first step that can satisfy this gate.`,
+      stillIdentical.length === 0
+        ? `All ${context.equivalences.length} equal-quality shape pairs produced different results over ${matches} matches, `
+          + `while still collapsing to ${distinct} distinct strength fingerprints across ${context.strengthRows.length} `
+          + `reachable compositions - which is the intended shape of the fix, not a leftover of the defect.`
+        : `Still bit-identical: ${stillIdentical.map((row) => `${row.firstCompositionKey} vs ${row.secondCompositionKey}`).join(", ")}`,
   };
 }
 
@@ -1456,12 +1731,20 @@ function notEvaluated(
 /* -------------------------------------------------------------------------- */
 
 function sideFor(key: TacticalShapeCompositionKey, band: TacticalShapeQualityBand): TacticalShapeSide {
-  return { composition: compositionByKey(key), band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC };
+  return {
+    lineup: { kind: "composition", composition: compositionByKey(key) },
+    band,
+    tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
+  };
+}
+
+function formationSideFor(formationKey: FormationKey, band: TacticalShapeQualityBand): TacticalShapeSide {
+  return { lineup: { kind: "formation", formationKey }, band, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC };
 }
 
 function sideLabel(side: TacticalShapeSide): TacticalShapeSideLabel {
   return {
-    compositionKey: tacticalShapeCompositionKey(side.composition),
+    compositionKey: tacticalShapeLineupKey(side.lineup),
     bandKey: side.band.bandKey,
     tacticKey: side.tactic.tacticKey,
   };

@@ -1,5 +1,4 @@
 import {
-  TACTICAL_ROUTES,
   type FixtureId,
   type FoulMatchEvent,
   type InjuryMatchEvent,
@@ -16,6 +15,7 @@ import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
 import {
   deriveOpportunityRoutePlan,
   EVEN_CONTEST_ROUTE_CAPACITY,
+  expectedRouteCapacity,
   OPPORTUNITY_ROUTE_CHANCE_TYPE,
   selectOpportunityRoute,
   type OpportunityRoutePlan,
@@ -229,6 +229,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
       !shouldGenerateOpportunity(
         input.simulation,
         routePlans[attackingSide],
+        routePlans[defendingSide],
         minuteControl.chanceCreationMultiplier[attackingSide],
         input.rng,
       )
@@ -255,6 +256,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
         attackingSide,
         defendingSide,
         minute: currentMinute,
+        routeCapacity: routePlans[attackingSide].capacityByRoute[route],
       },
       input.rng,
     );
@@ -463,10 +465,11 @@ function goalDifferenceFor(score: MatchScore, side: MatchSide): number {
 function shouldGenerateOpportunity(
   simulation: MatchSimulationState,
   plan: OpportunityRoutePlan,
+  opponentPlan: OpportunityRoutePlan,
   controlMultiplier: number,
   rng: Rng,
 ): boolean {
-  return rng.nextFloat() < deriveOpportunityRate(simulation, plan, controlMultiplier);
+  return rng.nextFloat() < deriveOpportunityRate(simulation, plan, opponentPlan, controlMultiplier);
 }
 
 /**
@@ -474,9 +477,16 @@ function shouldGenerateOpportunity(
  *
  * Volume used to come from a strength difference, which is why two elevens of
  * equal players produced the same match whatever shape they took. It now comes
- * from what the shapes can actually do to each other: `bestRouteCapacity` is
- * the side's most promising way through, and the plan's own multiplier carries
- * the tactic and commitment decisions.
+ * from what the shapes can actually do to each other: how much better this
+ * side's real way through is than the one it is conceding.
+ *
+ * It is a *difference between the two plans*, not this side's capacity against
+ * a constant, so two identical shapes produce exactly the base rate whatever
+ * that capacity happens to be. Measured against a constant it did not: two
+ * identical `4-4-2`s expect `0.4576`, so every match ran `7%` below the base
+ * rate before either side had decided anything. A constant can only be right
+ * for one population, and the two populations this engine is measured on -
+ * department compositions and real formations - do not agree on it.
  *
  * Player quality has not stopped mattering - it is inside every capacity,
  * because capacities are built from per-slot quality - it has stopped being the
@@ -485,13 +495,12 @@ function shouldGenerateOpportunity(
 function deriveOpportunityRate(
   simulation: MatchSimulationState,
   plan: OpportunityRoutePlan,
+  opponentPlan: OpportunityRoutePlan,
   controlMultiplier: number,
 ): number {
   const rates = simulation.context.engineConfig.rates;
-  const bestRouteCapacity = Math.max(
-    ...TACTICAL_ROUTES.map((route) => plan.capacityByRoute[route]),
-  );
-  const routePressure = 1 + (bestRouteCapacity - EVEN_CONTEST_ROUTE_CAPACITY) * ROUTE_CAPACITY_SEPARATION;
+  const routeAdvantage = expectedRouteCapacity(plan) - expectedRouteCapacity(opponentPlan);
+  const routePressure = 1 + routeAdvantage * ROUTE_CAPACITY_SEPARATION;
   const rate = rates.baseOpportunityRatePerMinute * routePressure * plan.volumeMultiplier * controlMultiplier;
 
   return clamp(rate, 0, rates.maxOpportunityRatePerMinute);

@@ -364,6 +364,35 @@ export interface TacticalSemanticsCalibrationConfig {
    * again be the only way to express a broken connection.
    */
   readonly shapeControlShareBasisPoints: number;
+  /**
+   * How far the route actually taken moves the quality of the chance it made,
+   * in basis points, measured from an even contest.
+   *
+   * Must be positive. At zero the route decides only *whether* a chance exists
+   * and what type it is, never how good it is - and then two equal-quality
+   * elevens produce chances of identical quality whatever shape they take, so
+   * structure can only ever separate them on volume. That is measurable: with
+   * this at zero the best composition beat a coherent `4-4-2` by `0.0288` win
+   * share, inside the `0.0477` measurement noise floor, and the frozen
+   * asymmetry invariant had nothing to divide by.
+   */
+  readonly routeQualityBiasBasisPoints: number;
+  /**
+   * How decisively a side goes to the routes it is strong on.
+   *
+   * Selection weights are capacity raised to this power. At `1` a side spreads
+   * itself in proportion to capacity, and because capacity is a bounded share
+   * that lands in a narrow band, that means attacking down its worst route
+   * almost as often as its best - `18%` against `23%` for a coherent shape.
+   * Above `1` the split widens and a specialised shape actually uses its
+   * specialty.
+   *
+   * A small positive integer, not a basis-point share: the engine applies it by
+   * repeated multiplication because a fractional exponent is a transcendental
+   * and the hot path may not use one. Bounded above because a side that ignores
+   * four of its five ways through is not playing football either.
+   */
+  readonly routeSelectionSharpness: number;
 }
 
 /**
@@ -512,6 +541,8 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_commitment_ladder"
   | "invalid_score_state_commitment"
   | "invalid_shape_control_share"
+  | "invalid_route_quality_bias"
+  | "invalid_route_selection_sharpness"
   | "incomplete_coordination_multipliers"
   | "invalid_coordination_multipliers";
 
@@ -670,7 +701,40 @@ export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCa
       `Shape must decide some of possession control, or an empty department is again the only broken connection: ${shapeControlShare}`,
     );
   }
+
+  const routeQualityBias = config.routeQualityBiasBasisPoints;
+  if (!isBasisPointShare(routeQualityBias) || routeQualityBias === 0) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_route_quality_bias",
+      `The route taken must change how good the chance is, or shape separates on volume alone: ${routeQualityBias}`,
+    );
+  }
+
+  const sharpness = config.routeSelectionSharpness;
+  if (
+    !Number.isSafeInteger(sharpness)
+    || sharpness < MINIMUM_ROUTE_SELECTION_SHARPNESS
+    || sharpness > MAXIMUM_ROUTE_SELECTION_SHARPNESS
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_route_selection_sharpness",
+      `Route selection sharpness must be an integer between ${MINIMUM_ROUTE_SELECTION_SHARPNESS} and ${MAXIMUM_ROUTE_SELECTION_SHARPNESS}: ${sharpness}`,
+    );
+  }
 }
+
+/** Proportional selection: a side spreads itself exactly by capacity. */
+const MINIMUM_ROUTE_SELECTION_SHARPNESS = 1;
+
+/**
+ * Hardest a side may commit to its best ways through.
+ *
+ * Above this, the two weakest routes stop being played at all, and a side that
+ * never tries four of its five options cannot be surprised, pressed off one
+ * route, or forced into a plan B - all of which the route model exists to
+ * express.
+ */
+const MAXIMUM_ROUTE_SELECTION_SHARPNESS = 4;
 
 /** Whether a value is an integer share of the `0..10000` basis-point scale. */
 function isBasisPointShare(value: number): boolean {

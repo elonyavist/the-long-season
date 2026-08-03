@@ -2,7 +2,39 @@
 
 ## Status
 
-Done on 2026-08-03.
+Done on 2026-08-03. One reopen candidate is recorded below, raised by Step 06's
+measurements and not acted on there because it changes this step's frozen model
+rather than a coefficient.
+
+### Reopen Candidate - A Route's Defining Phase Carries `11.7%` Of Its Chain
+
+Step 06 measured the real `FORMATION_CATALOG` population and found that the
+decision a manager actually makes - which formation to field - moves the game
+about a third as much as dragging one tactic slider does. Cross share spans
+`0.3254` to `0.3851` across every formation and `0.2562` to `0.4639` from the
+`width` slider alone on one of them. Win share across formations spans `0.030`,
+*inside* the `0.0477` measurement noise floor.
+
+The cause is this step's chain, and it is arithmetic rather than tuning.
+`chainCapacity` is `65%` weakest link plus `35%` average. On a flank route the
+weakest link is the contested build-up, which every formation shares and which
+therefore carries no formation identity at all, so the capacity that *defines*
+the route - `left_progression` - reaches the chain only through the average, as
+one of three links: `0.35 / 3 = 11.7%`. A real `4-3-2-1` has `12.8%` less
+lateral progression than a `4-4-2` and the route receives `1.5%` of it.
+
+Step 06 verified that no coefficient fixes this. Raising
+`chainBottleneckWeightBasisPoints` makes it *worse* - the `4-3-2-1` flank delta
+falls from `-1.7%` to `-0.1%` at `8500` - because the weight lands on the shared
+link. Lowering `pressingContestWeightBasisPoints` helps only where it flips
+which link is weakest, which is a discontinuity and not a mechanism to tune on.
+
+The shape of a fix, if this is reopened: give each route's defining phase a
+declared share of the non-bottleneck part instead of an equal third, so a flank
+route reads flank quality, a central route reads central progression, and
+`direct` and `transition` read what they are about. That is a change to
+`TACTICAL_ROUTE_DEFINITION`, which this step deliberately keeps as typed code -
+so it is a model decision for the phase contract, not content tuning.
 
 ### Adopted Solution
 

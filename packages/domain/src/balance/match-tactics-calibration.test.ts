@@ -343,6 +343,8 @@ function validSemantics(): TacticalSemanticsCalibrationConfig {
     },
     scoreStateCommitmentBasisPoints: 600,
     shapeControlShareBasisPoints: 5_000,
+    routeQualityBiasBasisPoints: 2_500,
+    routeSelectionSharpness: 3,
   };
 }
 
@@ -468,4 +470,20 @@ test("committing to neither is the neutral reference, never a bonus", () => {
 
 test("shape must decide some of possession control", () => {
   assertRejects(withSemantics({ shapeControlShareBasisPoints: 0 }), "invalid_shape_control_share");
+});
+
+test("the route taken must decide something about the chance it produced", () => {
+  // At zero the route says whether a chance exists and what type it is, never
+  // how good it is, and two equal-quality elevens produce identical chances
+  // whatever shape they take.
+  assertRejects(withSemantics({ routeQualityBiasBasisPoints: 0 }), "invalid_route_quality_bias");
+});
+
+test("route selection sharpness stays a small whole number of multiplications", () => {
+  // Fractional exponents are transcendental and the engine's hot path may not
+  // use one, so the calibration may not ask for a power the engine cannot
+  // legally compute.
+  assertRejects(withSemantics({ routeSelectionSharpness: 0 }), "invalid_route_selection_sharpness");
+  assertRejects(withSemantics({ routeSelectionSharpness: 2.5 }), "invalid_route_selection_sharpness");
+  assertRejects(withSemantics({ routeSelectionSharpness: 9 }), "invalid_route_selection_sharpness");
 });

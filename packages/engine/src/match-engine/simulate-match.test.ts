@@ -452,6 +452,14 @@ function validConfig(minuteCount: number): MatchEngineConfig {
 
 /**
  * Golden full-match output for the fixed reproducibility fixture.
+ *
+ * Re-declared at Step 06 block 3 with exactly two fields moved, both `quality`,
+ * and every minute, shooter, chance type, outcome and score untouched. That is
+ * the whole visible consequence of the route reaching the shot: the away chance
+ * came down a route its shape does not own and is worth `0.489` instead of
+ * `0.511`, the home counter came down one it does and is worth `0.592` instead
+ * of `0.586`. Before the change every shape produced chances of identical
+ * quality at identical squad quality, whatever the eleven were doing.
  */
 const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
   fixtureId: fixtureId("fixture:golden-000001"),
@@ -508,7 +516,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       // target. Same minute, quality, shooter and chance type - the keeper is
       // simply in the event now, because he had something to save.
       outcome: "save",
-      quality: 0.5105017347726971,
+      quality: 0.4893385191819542,
       isShotOnTarget: true,
       shotType: "normal",
       chanceType: "open_play",
@@ -520,7 +528,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       minute: 5,
       side: "home",
       outcome: "save",
-      quality: 0.5862922383565455,
+      quality: 0.5917270209652412,
       isShotOnTarget: true,
       shotType: "normal",
       // This line moved earlier, when chance type stopped being inferred from

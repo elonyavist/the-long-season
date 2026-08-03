@@ -90,6 +90,8 @@ const tacticalSemanticsSchema = v.strictObject({
   ),
   scoreStateCommitmentBasisPoints: basisPoints,
   shapeControlShareBasisPoints: basisPoints,
+  routeQualityBiasBasisPoints: basisPoints,
+  routeSelectionSharpness: positiveInteger,
 });
 
 const matchTacticsCalibrationSchema = v.strictObject({

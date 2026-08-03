@@ -16,6 +16,7 @@ import type { TacticalDistributionCaps } from "./match-engine-config.ts";
 import {
   deriveOpportunityRoutePlan,
   EVEN_CONTEST_ROUTE_CAPACITY,
+  expectedRouteCapacity,
   OPPORTUNITY_ROUTE_CHANCE_TYPE,
   OpportunityRouteError,
   selectOpportunityRoute,
@@ -60,6 +61,58 @@ test("a side that decides nothing is handed nothing", () => {
       `${route} was lifted by no decision`,
     );
   }
+});
+
+test("two identical shapes hand each other no route advantage at all", () => {
+  // What the opportunity rate measures its separation from. It compares the
+  // two plans to each other rather than to a constant precisely so this is
+  // exactly zero whatever the capacities happen to be: a chain is contested by
+  // the opponent's press and a resistance is not, so an even contest lands
+  // *below* the even-contest capacity, and anchoring on that constant deflated
+  // every match by about 7% before either side had decided anything.
+  const mirror = planFor({});
+
+  assert.equal(expectedRouteCapacity(mirror) - expectedRouteCapacity(mirror), 0);
+  assert.equal(
+    expectedRouteCapacity(mirror) < EVEN_CONTEST_ROUTE_CAPACITY,
+    true,
+    "an even contest is expected to sit below the point where chain equals resistance",
+  );
+});
+
+test("a shape that opens more of the pitch expects a better way through", () => {
+  const strong = planFor({
+    ownShape: tacticalShapeProfileFixture({ uniformCapacity: 0.7 }),
+    opponentShape: tacticalShapeProfileFixture({ uniformCapacity: 0.5 }),
+  });
+  const weak = planFor({
+    ownShape: tacticalShapeProfileFixture({ uniformCapacity: 0.5 }),
+    opponentShape: tacticalShapeProfileFixture({ uniformCapacity: 0.7 }),
+  });
+
+  assert.equal(
+    expectedRouteCapacity(strong) > expectedRouteCapacity(weak),
+    true,
+    `${expectedRouteCapacity(strong)} against ${expectedRouteCapacity(weak)}`,
+  );
+});
+
+test("a side goes to its best route far more often than to its worst", () => {
+  // Capacity is a bounded share and therefore sits in a narrow band, so weights
+  // taken straight from capacity would send a side down its worst way through
+  // almost as often as its best. Selection sharpness is what stops the plan
+  // being an even spread dressed up as a preference.
+  const plan = planFor({ own: knobAt("width", 1) as MatchTacticalDistributionInput });
+  const weights = TACTICAL_ROUTES.map((route) => plan.weightByRoute[route]);
+  const capacities = TACTICAL_ROUTES.map((route) => plan.capacityByRoute[route]);
+  const capacityRatio = Math.max(...capacities) / Math.min(...capacities);
+  const weightRatio = Math.max(...weights) / Math.min(...weights);
+
+  assert.equal(
+    weightRatio > capacityRatio,
+    true,
+    `weights spread ${weightRatio} against capacities ${capacityRatio}`,
+  );
 });
 
 test("giving a knob up costs what pushing it gains", () => {

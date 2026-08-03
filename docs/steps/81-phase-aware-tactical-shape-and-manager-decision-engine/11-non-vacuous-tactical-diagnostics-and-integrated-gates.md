@@ -61,12 +61,40 @@ without weakening thresholds or starting the longitudinal cohort.
   it again would make the transfer a way of never fixing it.
 - Step 06 has already acted on it, so expect a different starting point than
   Phase 80A's. On `pnpm cli ten-season-report` it moved `3.08` warn, to `2.97`
-  pass once a knob offset stopped inflating every match, to `2.98` pass after
-  the shot chain was reordered around the keeper, with `table_points_spread_avg`
-  at `41.0` and the whole anomaly score green. Nothing about any band,
-  denominator or severity changed. That is the ten-season report and not this
-  step's population, so it is evidence that the owner acted, never a substitute
-  for measuring it here.
+  pass once a knob offset stopped inflating every match, to `2.98` after the
+  shot chain was reordered around the keeper, to `2.74` pass once the route
+  reached the shot and the whole chain was recalibrated onto real shot volume
+  and real conversion, with `table_points_spread_avg` at `42.0` and the whole
+  anomaly score green. Nothing about any band, denominator or severity changed. That is the ten-season report
+  and not this step's population, so it is evidence that the owner acted, never
+  a substitute for measuring it here.
+- **This step reports `asymmetric_incoherence_cost` and recommends; the phase
+  contract decides.** `TACTICAL_SHAPE_THRESHOLDS` exists so no step can move a
+  frozen threshold by itself, and this step forbids itself threshold changes
+  besides. Step 06 ran the frozen matrix and it is still `not_evaluated`, with
+  the surplus at `0.0288` against a `0.0477` noise floor, having never left it at
+  any setting. The reason is structural: in a population of ten central clones a
+  balanced `4-4-2` is the optimum, so no composition can beat the reference by
+  more than noise, and making one do so would assert football that is not true.
+- Step 06's recommendation, carried here with its evidence: **split the
+  invariant and assert the half that is a design claim.** It states two things
+  at once - incoherence costs a lot, coherence pays little - and only the first
+  is a rule the engine must obey; the second is a consequence of the reference
+  shape already being optimal, which is why the denominator does not exist.
+  Assert instead that **incoherence costs at least one division tier of squad
+  quality**: true today at `0.4831` against a tier edge of `0.2638`, a `1.83x`
+  margin, and it protects the thing the product needs, which is that setting up
+  badly hurts. The `2` is not widened; a ratio with no denominator is replaced
+  by a one-sided bound on a quantity that exists. Leaving it `not_evaluated`
+  forever leaves a hole a later reader will close by relaxing something, and
+  re-expressing the surplus against the whole population makes it computable but
+  not meaningful - almost all of the best shape's `0.6615` field average comes
+  from beating broken shapes, and `3-5-2` against `4-4-2` stays about `0.01`.
+  Do not widen the threshold, and do not report `not_evaluated` as a pass.
+- Step 06 also recorded that one tactic slider decides about three and a half
+  times what the formation decides, measured on the real formation population
+  the audit now reports. If that is to change it is Step 04's `TACTICAL_ROUTE_DEFINITION` that
+  has to change, not a coefficient; this step reports it, it does not fix it.
 - If a cleanup is truly outside scope, document its exact file/owner/reason and
   block phase completion when it threatens correctness or duplication.
 - Do not accept “used only by tests” as proof that a production compatibility

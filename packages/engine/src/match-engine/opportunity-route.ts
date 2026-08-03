@@ -125,7 +125,7 @@ export class OpportunityRouteError extends Error {
  * plan.weightByRoute.left; // how much this side wants the left flank
  */
 export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInput): OpportunityRoutePlan {
-  const { own, opponent, ownTactics, opponentTactics, caps, calibration, goalDifference } = input;
+  const { own, opponent, ownTactics, opponentTactics, caps, calibration } = input;
 
   if (own.policyVersion !== opponent.policyVersion) {
     throw new OpportunityRouteError(
@@ -161,10 +161,36 @@ export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInpu
   return {
     policyVersion: own.policyVersion,
     capacityByRoute,
-    weightByRoute: normalizedWeights(capacityByRoute),
+    weightByRoute: normalizedWeights(capacityByRoute, semantics.routeSelectionSharpness),
     volumeMultiplier: deriveVolumeMultiplier(input, semantics),
     controlCapacity: deriveControlCapacity(own, opponent, ownTactics, caps, semantics),
   };
+}
+
+/**
+ * The route capacity this plan will produce on average.
+ *
+ * Every route is weighted by how often the plan actually takes it, so this is
+ * "how good the way through you will really use is" rather than "how good your
+ * single best idea is". Reading the maximum instead rewards a side for owning
+ * one open route while the other four are shut, which is exactly the lopsided
+ * shape the phase exists to punish - and it is not even neutral: two identical
+ * sides peak at `0.547` on their best route, so a maximum lifts every match by
+ * `7.5%` before any shape has decided anything, while this lands on `0.501`.
+ *
+ * Derived rather than stored on the plan, because it is a reading of the
+ * weights and capacities the plan already carries.
+ *
+ * @example
+ * const capacity = expectedRouteCapacity(plan);
+ */
+export function expectedRouteCapacity(plan: OpportunityRoutePlan): number {
+  let total = 0;
+  for (const route of TACTICAL_ROUTES) {
+    total += plan.capacityByRoute[route] * plan.weightByRoute[route];
+  }
+
+  return total;
 }
 
 /**
@@ -299,17 +325,38 @@ function lean(
 const NEUTRAL_KNOB_INTENSITY = 0.5;
 
 /**
- * Route capacity an even contest produces.
+ * Route capacity at which an attacking chain and the resistance it meets are
+ * worth exactly the same.
  *
- * A route is a bounded share of one contest, so two identical sides asking for
- * nothing land here on every route. Callers turning capacity into a rate must
- * measure separation from this point: a better matchup then reads as "more
- * chances" and a worse one as "fewer", instead of every match shifting together.
+ * This is a definition, not a measurement: capacity is `chain / (chain +
+ * resistance)`, so `0.5` is where the two are equal and above it is where the
+ * chain wins. It is deliberately *not* "what two identical sides produce" -
+ * they produce less, because a chain is contested by the opponent's press and
+ * a resistance is not, and because the chains blend three phases against the
+ * resistances' two. Two identical `4-4-2`s expect `0.4576`.
+ *
+ * So anything that must be neutral when nothing has been decided compares the
+ * two sides to each other rather than to this constant. What this constant is
+ * for is the opposite question - whether *this* route beat the resistance in
+ * front of it - which is exactly what decides how good a chance is.
  */
 export const EVEN_CONTEST_ROUTE_CAPACITY = 0.5;
 
 /**
  * Normalizes route capacities into selection weights.
+ *
+ * Weights are proportional to capacity *raised to the configured sharpness*,
+ * because a side does not spread itself evenly over five ways through in
+ * proportion to how good each one is. Capacities are a bounded share and
+ * therefore sit in a narrow band - a coherent shape against a coherent shape
+ * runs about `0.45` to `0.57` - so weighting by capacity alone sends a side
+ * down its *worst* route `18%` of the time and its best only `23%`. Nobody
+ * plays that way. Squaring or cubing that same band pushes the split towards
+ * `14%` and `30%`, which is a side actually going where it is strong.
+ *
+ * The sharpness is a small integer and is applied by repeated multiplication,
+ * because a fractional exponent is a transcendental and the engine's hot path
+ * may not use one (`requirements.md`).
  *
  * A side whose every route is shut still has to try something, so an all-zero
  * plan spreads evenly rather than dividing by zero. That case means the shape
@@ -318,15 +365,32 @@ export const EVEN_CONTEST_ROUTE_CAPACITY = 0.5;
  */
 function normalizedWeights(
   capacityByRoute: Readonly<Record<TacticalRoute, number>>,
+  sharpness: number,
 ): Readonly<Record<TacticalRoute, number>> {
-  const total = TACTICAL_ROUTES.reduce((sum, route) => sum + capacityByRoute[route], 0);
-  const weights = {} as Record<TacticalRoute, number>;
-
+  const emphasis = {} as Record<TacticalRoute, number>;
+  let total = 0;
   for (const route of TACTICAL_ROUTES) {
-    weights[route] = total === 0 ? 1 / TACTICAL_ROUTES.length : capacityByRoute[route] / total;
+    const value = raisedToSharpness(capacityByRoute[route], sharpness);
+    emphasis[route] = value;
+    total += value;
+  }
+
+  const weights = {} as Record<TacticalRoute, number>;
+  for (const route of TACTICAL_ROUTES) {
+    weights[route] = total === 0 ? 1 / TACTICAL_ROUTES.length : emphasis[route] / total;
   }
 
   return weights;
+}
+
+/** Raises a capacity to a small positive integer power, without `Math.pow`. */
+function raisedToSharpness(capacity: number, sharpness: number): number {
+  let value = capacity;
+  for (let power = 1; power < sharpness; power += 1) {
+    value *= capacity;
+  }
+
+  return value;
 }
 
 /** Converts a basis-point share into a plain multiplier fraction. */

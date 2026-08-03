@@ -65,7 +65,11 @@ function compositionFor(key: TacticalShapeCompositionKey): TacticalShapeComposit
 }
 
 function sideFor(key: TacticalShapeCompositionKey, quality: TacticalShapeQualityBand = BANDS.reference) {
-  return { composition: compositionFor(key), band: quality, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC };
+  return {
+    lineup: { kind: "composition" as const, composition: compositionFor(key) },
+    band: quality,
+    tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
+  };
 }
 
 const AUDIT_INPUT: RunTacticalShapeAuditInput = {
@@ -74,7 +78,7 @@ const AUDIT_INPUT: RunTacticalShapeAuditInput = {
   bands: BANDS,
   seedPrefix: "tactical-shape-test",
   pairedSeedCount: 1,
-  scenarioPairedSeedCount: 2,
+  scenarioPairedSeedCount: 8,
   dominanceCompositionKeys: ["4-4-2", "3-1-6", "2-0-8", "0-0-10"],
 };
 
@@ -112,7 +116,11 @@ describe("tactical shape composition space", () => {
   it("rejects a composition that does not fill the outfield", () => {
     expect(() =>
       buildTacticalShapeTeamContext(
-        { composition: { defenders: 4, midfielders: 4, attackers: 1 }, band: BANDS.reference, tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC },
+        {
+          lineup: { kind: "composition", composition: { defenders: 4, midfielders: 4, attackers: 1 } },
+          band: BANDS.reference,
+          tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
+        },
         "home",
         CALIBRATION,
       ),
@@ -153,7 +161,7 @@ describe("tactical shape team context", () => {
     const fingerprints = new Set(
       populated.map((composition) => {
         const strength = deriveTacticalShapeStrength({
-          composition,
+          lineup: { kind: "composition", composition },
           band: BANDS.reference,
           tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
         }, CALIBRATION);
@@ -200,19 +208,25 @@ describe("tactical shape paired series", () => {
     expect(run()).toEqual(run());
   });
 
-  it("produces identical results for two shapes with identical strength on a shared stream", () => {
-    const shared = (key: TacticalShapeCompositionKey) =>
+  it("puts a series on the overridden stream rather than on its own", () => {
+    // The override is what lets two different shapes be measured against the
+    // same random world. It used to be provable by two shapes producing
+    // identical results, which is exactly the defect the phase removed, so what
+    // is left to assert is the mechanism: the override decides the seed, and
+    // nothing else about the run changed.
+    const run = (scenarioKeyOverride?: string) =>
       runTacticalShapeSeries({
-        first: sideFor(key),
+        first: sideFor("3-1-6"),
         second: sideFor("4-4-2"),
         engineConfig: ENGINE_CONFIG,
         matchTacticsCalibration: CALIBRATION,
         seedPrefix: "series-test",
         pairedSeedCount: 2,
-        scenarioKeyOverride: "shared-identity",
+        ...(scenarioKeyOverride === undefined ? {} : { scenarioKeyOverride }),
       });
 
-    expect(shared("3-1-6")).toEqual(shared("5-4-1"));
+    expect(run("shared-identity")).toEqual(run("shared-identity"));
+    expect(run("shared-identity")).not.toEqual(run());
   });
 
   it("separates two shapes onto different streams when no override is given", () => {
@@ -255,13 +269,17 @@ describe("tactical shape audit report", () => {
     expect(report.distinctStrengthCount).toBe(7);
   });
 
-  it("proves that 4-4-2 and 3-1-6 are currently indistinguishable", () => {
+  it("proves that 4-4-2 and 3-1-6 play different matches at identical strength", () => {
+    // The defect the phase exists to remove, stated where it was first proved.
+    // Identical strength is now the *intended* state: Step 03 put intrinsic
+    // shape beside department strength so neither shape nor suitability is
+    // charged into it twice. What may no longer be identical is the football.
     const equivalence = report.equivalences.find(
       (row) => row.firstCompositionKey === "4-4-2" && row.secondCompositionKey === "3-1-6",
     );
 
     expect(equivalence?.strengthIdentical).toBe(true);
-    expect(equivalence?.resultsIdentical).toBe(true);
+    expect(equivalence?.resultsIdentical).toBe(false);
     expect(equivalence?.matches).toBeGreaterThan(0);
   });
 
@@ -353,12 +371,14 @@ describe("tactical shape audit report", () => {
     }
   });
 
-  it("never reports the un-implemented shape distinction as a pass", () => {
+  it("reads the shape distinction from results rather than from strength", () => {
     const invariant = report.invariants.find(
       (row) => row.key === "distinguishable_coherent_and_incoherent_shape",
     );
 
-    expect(invariant?.status).toBe("not_evaluated");
+    expect(invariant?.status).toBe("pass");
+    expect(invariant?.observed).toBe(0);
+    expect(invariant?.observations).toBeGreaterThan(0);
   });
 
   it("rejects a non-positive scenario seed pair count", () => {
