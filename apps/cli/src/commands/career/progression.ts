@@ -9,6 +9,7 @@ import {
 import {
   applyCareerWeeklyRecovery,
   buildTacticTeamContext,
+  matchPlayerIncidentProfilesForLineup,
   deriveTeamShapeAndStrength,
   findNextCareerFixture,
   progressNextCareerFixture,
@@ -196,6 +197,11 @@ function careerTeamsByClubId(input: {
         stateMultiplierCurves: input.stateMultiplierCurves,
         matchTacticsCalibration: input.matchTacticsCalibration,
       }),
+      incidentProfiles: matchPlayerIncidentProfilesForLineup(
+        lineup,
+        input.careerState.gameState.players,
+        input.careerState.gameState.playerStates,
+      ),
       tacticalDistribution: {
         directness: 0.5,
         pressing: 0.5,

@@ -28,6 +28,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /** Tests for authoritative fixture participation accrual from committed facts. */
@@ -183,7 +184,7 @@ const HOME_SUB = playerId("player:home-sub");
 const HOME_UNUSED = playerId("player:home-unused");
 
 function initialHomeContext(): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId("club:home"),
     lineup: [
       createLineupSlot({ slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, canonicalRole: "goalkeeper" }),
@@ -192,7 +193,7 @@ function initialHomeContext(): MatchTeamContext {
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0, mentality: "balanced" },
-  };
+  });
 }
 
 function finalHomeContext(): MatchTeamContext {

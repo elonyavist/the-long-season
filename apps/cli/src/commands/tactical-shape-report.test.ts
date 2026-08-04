@@ -125,6 +125,10 @@ function tinyBundle(overrides: Partial<TacticalShapeReportBundle["report"]> = {}
           expectedGoals: 2.5,
           goals: 2,
           chanceTypes: { open_play: 12, counter: 4, cross: 3, dead_ball: 1 },
+          // `cross: 3` split across the two flanks, which is the whole point of
+          // carrying routes beside chance types.
+          routes: { central: 8, left: 2, right: 1, direct: 4, transition: 4 },
+          flankAsymmetry: 0.3333,
         },
       ],
       formationVersusSlider: {

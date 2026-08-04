@@ -15,6 +15,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /**
@@ -139,7 +140,7 @@ function chanceInput(
  * Builds an attacking-side team fixture with ordered player roles.
  */
 function homeTeamFixture(): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId("club:home"),
     lineup: [
       createLineupSlot({ slotId: "slot:home-gk", playerId: playerId("player:home-gk"), canonicalRole: "goalkeeper" }),
@@ -150,14 +151,14 @@ function homeTeamFixture(): MatchTeamContext {
     strength: teamStrengthFixture(),
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
-  };
+  });
 }
 
 /**
  * Builds a defending-side team fixture with ordered player roles.
  */
 function awayTeamFixture(): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId("club:away"),
     lineup: [
       createLineupSlot({ slotId: "slot:away-gk", playerId: playerId("player:away-gk"), canonicalRole: "goalkeeper" }),
@@ -168,7 +169,7 @@ function awayTeamFixture(): MatchTeamContext {
     strength: teamStrengthFixture(),
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
-  };
+  });
 }
 
 /**

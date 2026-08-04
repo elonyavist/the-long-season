@@ -40,6 +40,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /** Tests for the deterministic opponent policy and shared command path. */
@@ -552,7 +553,7 @@ function matchContextFixture(): MatchContext {
 }
 
 function matchTeamContextFromLiveTeam(team: LiveMatchTeamState): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${team.side}`),
     lineup: team.lineup.map((slot) => createLineupSlot({
       slotId: slot.slotId,
@@ -568,7 +569,7 @@ function matchTeamContextFromLiveTeam(team: LiveMatchTeamState): MatchTeamContex
       risk: team.tactic.risk,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 function matchEngineConfigFixture(): MatchEngineConfig {

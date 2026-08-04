@@ -21,6 +21,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 test("paused minute snapshots contain completed facts only", () => {
@@ -157,7 +158,7 @@ function validContext(fixtureValue: string): MatchContext {
 
 /** Builds one side with an explicit goalkeeper and outfield slot. */
 function validTeam(side: MatchSide, strength: number, risk: number, fieldPlayer?: string): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -182,7 +183,7 @@ function validTeam(side: MatchSide, strength: number, risk: number, fieldPlayer?
       risk,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 /** Uses a short regulation match while retaining a real half-time boundary. */

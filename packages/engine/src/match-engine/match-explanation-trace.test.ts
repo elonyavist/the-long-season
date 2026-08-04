@@ -32,6 +32,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /**
@@ -216,7 +217,7 @@ function traceOverEvents(): MatchExplanationTrace {
 }
 
 function traceTeam(side: "home" | "away", shape: TacticalShapeProfile): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({
@@ -228,7 +229,7 @@ function traceTeam(side: "home" | "away", shape: TacticalShapeProfile): MatchTea
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape,
     tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0, mentality: "balanced" },
-  };
+  });
 }
 
 function traceConfig(): MatchEngineConfig {

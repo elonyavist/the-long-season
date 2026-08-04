@@ -142,11 +142,17 @@ test("only a cross is ever headed, and only when the shooter wins the air", () =
   assert.equal(occasionAt(strongAttack, 12, "central").shotType, "normal");
 });
 
-test("a context without player attributes gives every actor an edge of exactly zero", () => {
-  // The rule that keeps the edges safe rather than merely bounded. With no
-  // attributes there is nothing to separate an eleven from itself, so the
-  // aggregate chain must run exactly as it did before actors were named.
-  const occasion = occasionAt(simulationFixture({ withIncidentProfiles: false }), 55, "central");
+test("eleven identical players give every actor an edge of exactly zero", () => {
+  // The rule that keeps the edges safe rather than merely bounded: an edge is a
+  // distance from the pool, so a squad with no spread has nothing to separate
+  // itself from and the aggregate chain runs exactly as it did before actors
+  // were named.
+  //
+  // Until Step 07A this was stated as "a context with no attributes at all",
+  // because one could exist. It cannot now - `incidentProfiles` is required and
+  // must cover the lineup - so the case is written as what it always really
+  // measured.
+  const occasion = occasionAt(simulationFixture({ uniformAttributes: true }), 55, "central");
 
   assert.equal(occasion.shooterQualityEdge, 0);
   assert.equal(occasion.primaryDefenderBlockEdge, 0);
@@ -210,7 +216,8 @@ test("naming actors gives the population nothing", () => {
 
 /** What a case varies about the two elevens; anything unset is ordinary. */
 interface SimulationOptions {
-  readonly withIncidentProfiles?: boolean;
+  /** Gives every player the same attributes, so no actor can differ from his pool. */
+  readonly uniformAttributes?: boolean;
   readonly homeComposureFor?: (playerId: PlayerId) => number;
   readonly homeStrengthByIndex?: (index: number) => number;
   readonly awayStrengthByIndex?: (index: number) => number;
@@ -281,13 +288,9 @@ function teamFixture(
     strength: { attack: 13, midfield: 13, defense: 13, goalkeeper: 13, overall: 13 },
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
-    ...(options.withIncidentProfiles === false
-      ? {}
-      : {
-          incidentProfiles: lineup.map((slot, index) =>
-            incidentProfile(slot.playerId, index, side, options, strengthByIndex),
-          ),
-        }),
+    incidentProfiles: lineup.map((slot, index) =>
+      incidentProfile(slot.playerId, index, side, options, strengthByIndex),
+    ),
   };
 }
 
@@ -305,7 +308,7 @@ function incidentProfile(
   options: SimulationOptions,
   strengthByIndex: ((index: number) => number) | undefined,
 ): MatchPlayerIncidentProfile {
-  const spread = 6 + ((index * 3) % 11);
+  const spread = options.uniformAttributes === true ? 10 : 6 + ((index * 3) % 11);
 
   return {
     playerId: player,

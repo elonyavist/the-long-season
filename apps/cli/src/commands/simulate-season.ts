@@ -5,6 +5,7 @@ import {
 import {
   createMatchReport,
   buildTacticTeamContext,
+  matchPlayerIncidentProfilesForLineup,
   DEFAULT_FITNESS_RULES,
   deriveTeamShapeAndStrength,
   simulateSeason,
@@ -512,6 +513,11 @@ function matchTeamContextForFixtureExplanation(
       ...(lineupOverride.playerStates === undefined ? {} : { playerStates: lineupOverride.playerStates }),
       ...(lineupOverride.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: lineupOverride.stateMultiplierCurves }),
     }),
+    incidentProfiles: matchPlayerIncidentProfilesForLineup(
+      lineupOverride.lineup,
+      lineupOverride.players,
+      lineupOverride.playerStates,
+    ),
     tacticalDistribution: setupTeam?.tacticalDistribution ?? baseTeam.tacticalDistribution,
   };
 }
@@ -645,6 +651,7 @@ function matchTeamContextForCli(
       ...(team.playerStates === undefined ? {} : { playerStates: team.playerStates }),
       ...(team.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: team.stateMultiplierCurves }),
     }),
+    incidentProfiles: matchPlayerIncidentProfilesForLineup(team.lineup, team.players, team.playerStates),
     tacticalDistribution: team.tacticalDistribution,
   };
 }

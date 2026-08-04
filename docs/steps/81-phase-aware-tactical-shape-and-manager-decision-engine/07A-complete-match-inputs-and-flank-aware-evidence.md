@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Done 2026-08-04. See the handoff note at the end of this document.
 
 ## Goal
 
@@ -197,3 +197,185 @@ after Block 1 and record both readings.
 - Step 04 carries a measured flank difference instead of a remembered one.
 - Nothing was tuned to make a number look better.
 - Step 08 is the only next action.
+
+## What The Code Said That The Plan Did Not
+
+### The Required Field Found Four More Producers, Two Of Them In Career Play
+
+The plan named two profile-less producers, both in `simulate-season.ts`. Making
+the field required turned every other one into a compile error, and there were
+four:
+
+| Producer | What it feeds |
+|---|---|
+| `simulate-season.ts`, default team path | `balance-report`, the season golden |
+| `simulate-season.ts`, fixture lineup override | CLI lineup inspection |
+| `matchday-adapter.ts`, `buildCareerTeamsByClubId` | **every opponent in web career play** |
+| `apps/cli career/progression.ts` | **every opponent in CLI career play** |
+| `apps/cli simulate-season.ts`, two context builders | CLI season inspection |
+
+The two marked ones are the reason this block was worth a required field rather
+than two patches. In career play the manager's own club is built through
+`buildTacticTeamContext` and always had real attributes, while every side he
+faced was assembled by a different branch that omitted them. So the player's
+eleven tackled, tired and kept their nerve as themselves, and all twenty-odd
+opponent clubs did it at a flat `10`. Nothing failed, because the engine invented
+those numbers on the way past.
+
+Patching the two known sites would have left both of those exactly as they were,
+and nothing would have pointed at them.
+
+The five sites now share `matchPlayerIncidentProfilesForLineup(...)`, which walks
+the lineup rather than a player list so a producer cannot cover ten of eleven.
+
+### An Incomplete Label Table Is A Runtime Crash, Not A Build Failure
+
+With real attributes in the CLI season, a penalty was scored where none had been
+before, and the fixture detail formatter died on
+`Unknown localization key: event.shotType.set_piece`. Fixed, and it died again on
+`event.chanceType.dead_ball`.
+
+Both keys belong to **total domain unions** - `ShotType` has three members and
+`ShotChanceType` has four - and both were missing from all five languages, in
+every language, since those unions were introduced. They were unreachable in
+these fixtures rather than unused.
+
+The cause is that `presentationMessageKey(prefix, value)` builds the key by
+string concatenation, so an incomplete table cannot fail to compile the way
+`ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE` does. `pnpm check:localized-text` does not
+catch it either: it checks that presentation text is localized, not that a key
+family covers its union.
+
+The other three families this formatter builds the same way -
+`conditionTracking`, `effectDirection`, `varianceMarker` - were checked by hand
+and are complete. **Recorded, not fixed:** nothing structurally prevents the next
+union member from being a crash in a rarely-taken branch. A check that walks
+these key families against their unions is the fix, and it belongs to whichever
+step next owns presentation.
+
+### Team Strength Cannot Be Recomputed Where The Goalkeeper Changes
+
+As the plan suspected, and worse than it assumed. `MatchTeamContext` carries no
+`players` and no `roleWeights`, so `deriveTeamShapeAndStrength` is unreachable
+from `match-team-exit.ts` and nothing there can re-derive a department.
+
+The correction is a ratio between the two keepers' goalkeeping, taken from the
+same attribute off the same accessor, with a floor at `0.35` of the department
+because an outfield player in goal is far worse than a specialist and is still
+not an empty net. An equal replacement changes nothing, which is what makes it a
+comparison rather than a penalty for the shirt changing.
+
+### The Flank Instrument Works And The Population Cannot Exercise It
+
+Measured over the curated formations: asymmetries from `0.0588` to `0.2105`,
+mean `0.126`, against a sampling noise floor near `1 / sqrt(35)` = `0.17`. Every
+row sits inside it, and must: the calibration enforces left/right mirror symmetry
+and every curated formation fields the same shape on both flanks, so this
+population's *expected* asymmetry is exactly zero.
+
+The recorded `-12.8%` flank claim therefore cannot be checked here at all -
+there is no flank difference in this population to attenuate. Step 04's document
+now carries the table and what deciding its reopen would actually need: a
+deliberately lopsided side. Choosing that population is that step's call and was
+deliberately not made here.
+
+### Files Touched Beyond `Expected Files`
+
+- `packages/engine/src/match-engine/tactic-team-context.ts` - home of
+  `createMatchPlayerIncidentProfile`, so the plural belongs beside it.
+- `packages/engine/src/match-engine/index.ts` - exports it.
+- `packages/engine/src/test-fixtures/match-player-incident-profiles.ts` - new;
+  the neutral fixture the required field forced on eighteen call sites.
+- `apps/web/src/features/matchday/matchday-adapter.ts`,
+  `apps/cli/src/commands/career/progression.ts`,
+  `apps/cli/src/commands/simulate-season.ts` - the four unplanned producers.
+- `packages/i18n/src/labels.ts` - the two missing labels, in five languages.
+
+## Verification
+
+```text
+pnpm check                                    EXIT_REALE=0
+Test Files  273 passed (273)
+     Tests  1985 passed (1985)
+```
+
+### The Two Instruments, Re-Measured
+
+`pnpm cli balance-report`, taken before and after Block 1 in the same session:
+
+| Metric | Before | After | Status |
+|---|---|---|---|
+| Goals per match | `2.729` | `2.739` | PASS both |
+| Home win rate | `0.394` | `0.391` | PASS both |
+| Draw rate | `0.261` | `0.266` | PASS both |
+| Away win rate | `0.345` | `0.343` | PASS both |
+| First-place points | `68.200` | `69.200` | PASS both |
+| Last-place points | `27.000` | `28.200` | PASS both |
+| Table points spread | `41.200` | `41.000` | PASS both |
+| Upset proxy rate | `0.361` | `0.359` | PASS both |
+
+This is the report that was measuring attribute-neutral football, and the
+aggregate barely moved. That is worth stating precisely rather than as relief:
+the *population* changed completely - every player now tackles, tires and keeps
+his nerve as himself - and the league-level aggregates did not. Player attributes
+were already inside department strength through the role-weighted scoring pass;
+what was missing from this path was their effect on discipline, injury, fitness
+and the two Step 07 actor edges, and those are second-order at league scale.
+
+`pnpm cli ten-season-report`, the A7 monitor's instrument:
+
+| Metric | Step 06 recorded | Now | Status |
+|---|---|---|---|
+| `goals_per_match_avg` | `2.74` | `2.78` | PASS, band `2.0..3.2`, warn outside `2.3..3.0` |
+| `table_points_spread_avg` | `42.0` | `40.1` | PASS, band `36..60` |
+
+Whole anomaly block PASS. Nothing was tuned; no threshold, denominator or
+severity was touched.
+
+**That second table does not measure this step, and the row header says so.**
+`2.74` was recorded at Step 06's commit. Between it and this run sit **two**
+steps, 07 and 07A, so `+0.04` is their combined movement and none of it can be
+attributed to either alone.
+
+This is not a small caveat here, because of which step it hides. Step 07's own
+verification says every season aggregate stayed identical - measured on the
+*season golden*, which is on the profile-less path where both actor edges are
+structurally `0`. The ten-season path is not: it supplies `aiSelection`, so it
+has always carried attributes and Step 07's actor edges were live in it from the
+moment they landed. Nobody ran this report at Step 07. Its effect on the carried
+monitor is unmeasured, and this run cannot separate it from Block 1's.
+
+That matters more than the number does. A7's rule is that Step 11 is the deadline
+and, if the monitor is still out of band there, **the fix is reopening Step 06** -
+so knowing which step moves the goal rate is exactly what decides whether Step 06
+is the right thing to reopen. Attributing a combined `+0.04` to whichever step
+happened to measure last is how a phase reopens the wrong thing.
+
+Isolating them needs one run at `c1f3bda` (Step 07 committed, 07A not) for this
+step's own delta, and one at `a62ced4` for Step 07's. Both are cheap and neither
+was done here.
+
+The other WARN blocks in that report - youth population, contract funnel - are
+untouched by this step: nothing here feeds squad generation or wage negotiation.
+
+### 2026-08-04 - docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/07A-complete-match-inputs-and-flank-aware-evidence.md
+
+- Status: Done
+- Outcome: player attributes are required on every `MatchTeamContext` and covered
+  per lineup player; the neutral fallback is gone; six producers supply them
+  through one shared reader. A sent-off goalkeeper now costs the goalkeeper
+  department in proportion to the real gap. The audit counts routes and reports
+  `left` apart from `right`.
+- Adopted solution: make the field required rather than patch the two known
+  sites - which is what surfaced the four unplanned producers, two of them the
+  opponents in career play - and correct the goalkeeper department by a
+  same-scale ratio because this module cannot re-derive strength.
+- Verification: `pnpm check` green at `1985/1985`; both balance instruments
+  re-measured and recorded above; A7 `2.74` to `2.78`, still PASS.
+- Follow-up: two items recorded and unowned. An incomplete `presentationMessageKey`
+  family is a runtime crash rather than a build failure, and
+  `check:localized-text` does not cover it - a check that walks those families
+  against their domain unions is the structural fix. And Step 04's flank reopen
+  now has an instrument but needs a deliberately lopsided population before it
+  can be decided.
+- Next action: Step 08.

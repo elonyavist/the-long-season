@@ -17,6 +17,7 @@ import {
   type PlayerAbilities,
   type PlayerId,
   type ShotChanceType,
+  type TacticalRoute,
   NEUTRAL_TACTIC_MENTALITY,
 } from "@game/domain";
 import {
@@ -244,14 +245,25 @@ export interface TacticalShapeSeriesSideTotals {
    * How many chances of each structured type the side produced.
    *
    * Step 06 made this a fact about the attack: a cross is counted because the
-   * ball went down a flank, not because a minute number had a texture. Step 07
-   * then put the route itself on the event, which is the finer fact this row
-   * still cannot see - `cross` covers both flanks, so `crossShareOf` measures
-   * how wide a shape played and never which side it favoured. Splitting it is
-   * the instrument Step 04's frozen `TACTICAL_ROUTE_DEFINITION` would need if
-   * its flank reopen is ever taken up; it is not this row's job today.
+   * ball went down a flank, not because a minute number had a texture. It is
+   * the coarse vocabulary - `cross` covers both flanks - and `routes` below is
+   * the finer one.
    */
   readonly chanceTypes: Readonly<Record<ShotChanceType, number>>;
+  /**
+   * How many chances came down each route.
+   *
+   * The instrument the phase has been missing. `crossShareOf` can say how wide
+   * a shape played and never which side it favoured, so the open Step 04
+   * question - a route's defining phase carries `11.7%` of its own chain, so a
+   * real `-12.8%` flank difference between formations arrives as `-1.5%` -
+   * could only be argued from an older measurement. Left and right are separate
+   * counts here, so it can be measured instead.
+   *
+   * A scored penalty has no route and is in no bucket, so these need not sum to
+   * `shots`.
+   */
+  readonly routes: Readonly<Record<TacticalRoute, number>>;
 }
 
 /**
@@ -665,6 +677,18 @@ export interface TacticalShapeFormationRow {
   readonly goals: number;
   /** Structured chance types produced across the series. */
   readonly chanceTypes: Readonly<Record<ShotChanceType, number>>;
+  /** Chances produced down each route across the series. */
+  readonly routes: Readonly<Record<TacticalRoute, number>>;
+  /**
+   * How lopsided this formation's flank play actually was, in `0..1`.
+   *
+   * `|left - right| / (left + right)`: `0` is a side that used both flanks
+   * equally and `1` is a side that only ever went down one. `chanceTypes`
+   * cannot express it - `cross` covers both - which is why a formation that
+   * loads one flank has always looked, to this audit, exactly like one that
+   * spreads the same number of chances across two.
+   */
+  readonly flankAsymmetry: number;
 }
 
 /**
@@ -1290,6 +1314,8 @@ function buildFormationRows(input: RunTacticalShapeAuditInput): readonly Tactica
       expectedGoals: series.first.expectedGoals,
       goals: series.first.goals,
       chanceTypes: series.first.chanceTypes,
+      routes: series.first.routes,
+      flankAsymmetry: flankAsymmetryOf(series.first.routes),
     };
   });
 }
@@ -1338,6 +1364,19 @@ function buildFormationVersusSlider(
 function crossShareOf(chanceTypes: Readonly<Record<ShotChanceType, number>>): number {
   const total = chanceTypes.cross + chanceTypes.counter + chanceTypes.open_play;
   return total === 0 ? 0 : chanceTypes.cross / total;
+}
+
+/**
+ * How far one side's flank play leaned to a single side.
+ *
+ * The measurement Step 04's open flank question needs and has never had. A
+ * formation that genuinely loads its left produces a large number here while
+ * `crossShareOf` cannot tell it apart from one that spreads the same chances
+ * across both flanks.
+ */
+function flankAsymmetryOf(routes: Readonly<Record<TacticalRoute, number>>): number {
+  const flankTotal = routes.left + routes.right;
+  return flankTotal === 0 ? 0 : roundFour(Math.abs(routes.left - routes.right) / flankTotal);
 }
 
 /**
@@ -1979,6 +2018,7 @@ interface MutableSideTotals {
   expectedGoals: number;
   possessionTotal: number;
   readonly chanceTypes: Record<ShotChanceType, number>;
+  readonly routes: Record<TacticalRoute, number>;
 }
 
 interface MutableSeriesTotals {
@@ -2010,6 +2050,7 @@ function createMutableSideTotals(): MutableSideTotals {
     expectedGoals: 0,
     possessionTotal: 0,
     chanceTypes: { open_play: 0, counter: 0, cross: 0, dead_ball: 0 },
+    routes: { central: 0, left: 0, right: 0, direct: 0, transition: 0 },
   };
 }
 
@@ -2028,8 +2069,16 @@ function accumulateSide(
   totals.possessionTotal += possessionShare;
 
   for (const event of result.events) {
-    if (event.type === "shot_outcome" && event.side === side) {
-      totals.chanceTypes[event.chanceType] += 1;
+    if (event.type !== "shot_outcome" || event.side !== side) continue;
+
+    totals.chanceTypes[event.chanceType] += 1;
+
+    // A scored penalty is the one shot outcome the route model never produced,
+    // so it is in no route bucket and the two vocabularies do not have to sum
+    // to the same number.
+    const route: TacticalRoute | undefined = event.route;
+    if (route !== undefined) {
+      totals.routes[route] += 1;
     }
   }
 }
@@ -2043,6 +2092,7 @@ function finalizeSideTotals(totals: MutableSideTotals, matches: number): Tactica
     expectedGoals: roundFour(totals.expectedGoals),
     possessionShare: roundFour(totals.possessionTotal / matches),
     chanceTypes: { ...totals.chanceTypes },
+    routes: { ...totals.routes },
   };
 }
 

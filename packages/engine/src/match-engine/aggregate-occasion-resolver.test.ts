@@ -16,6 +16,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 /**
  * These tests state the football the shot chain claims, in the order the chain
@@ -235,7 +236,7 @@ function occasionFor(options: StrengthOptions): ResolveOccasionInput {
 }
 
 function teamFor(side: MatchSide, strength: DepartmentStrengths): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -249,7 +250,7 @@ function teamFor(side: MatchSide, strength: DepartmentStrengths): MatchTeamConte
     },
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
-  };
+  });
 }
 
 function engineConfig(): MatchEngineConfig {

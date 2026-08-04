@@ -19,6 +19,7 @@ import {
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
 import type { TacticalShapeProfile } from "./tactical-shape.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /**
@@ -332,7 +333,7 @@ function teamProfile(
     readonly goalkeeper: number;
   },
 ): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -356,7 +357,7 @@ function teamProfile(
       risk: 0,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 /**
@@ -382,7 +383,7 @@ function validContext(
  * Builds one side context fixture at a given aggregate strength.
  */
 function validTeam(side: MatchSide, strength: number): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -407,7 +408,7 @@ function validTeam(side: MatchSide, strength: number): MatchTeamContext {
       risk: 0,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 /**

@@ -225,6 +225,39 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
   }
 }
 
+/**
+ * Reads the real attributes of every player in one lineup, in lineup order.
+ *
+ * A match context must carry a profile for each player it fields, so this walks
+ * the lineup rather than a player list and cannot leave one of eleven out.
+ *
+ * It exists because every producer of a `MatchTeamContext` needs exactly this
+ * and five of them wrote it out by hand or, worse, forgot to. Two of those five
+ * were the opponents in career play, on the web and in the CLI, so a manager's
+ * own eleven had real attributes and every side he faced did not.
+ *
+ * @example
+ * const profiles = matchPlayerIncidentProfilesForLineup(lineup, players, playerStates);
+ */
+export function matchPlayerIncidentProfilesForLineup(
+  lineup: readonly LineupSlot[],
+  players: Readonly<Record<PlayerId, Player>>,
+  playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
+): readonly MatchPlayerIncidentProfile[] {
+  return lineup.map((slot) => {
+    const player = players[slot.playerId];
+
+    if (player === undefined) {
+      throw new TacticTeamContextError(
+        "team_strength_error",
+        `Missing player for lineup slot ${slot.slotId}: ${slot.playerId}`,
+      );
+    }
+
+    return createMatchPlayerIncidentProfile(player, playerStates?.[slot.playerId]);
+  });
+}
+
 /** Maps canonical player facts into the compact incident-policy input. */
 export function createMatchPlayerIncidentProfile(
   player: Player,

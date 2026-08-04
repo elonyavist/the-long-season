@@ -22,6 +22,7 @@ import {
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
 import type { TacticalShapeProfile } from "./tactical-shape.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /**
@@ -670,7 +671,7 @@ function validTeam(
     mentality: "balanced",
   },
 ): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [createLineupSlot({ slotId: `slot:${side}:one`, playerId: playerId(`player:${side}-000001`), canonicalRole: "central_midfielder" })],
     strength: {
@@ -682,7 +683,7 @@ function validTeam(
     },
     shape: shapeForStrength(strength),
     tacticalDistribution,
-  };
+  });
 }
 
 /**
@@ -710,7 +711,7 @@ function goalkeeperTeam(
   },
   strength = 10,
 ): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -729,7 +730,7 @@ function goalkeeperTeam(
     },
     shape: shapeForStrength(strength),
     tacticalDistribution,
-  };
+  });
 }
 
 /**
@@ -771,7 +772,7 @@ function isBlockStepEvent(event: unknown): event is MatchShotOutcomeStepEvent & 
  * Builds a multi-role team context used by causal actor integration tests.
  */
 function assistTeam(side: MatchSide): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -794,7 +795,7 @@ function assistTeam(side: MatchSide): MatchTeamContext {
       risk: 1,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 /**

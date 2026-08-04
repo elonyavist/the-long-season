@@ -52,7 +52,13 @@ export interface MatchTacticalDistributionInput {
   readonly mentality: TacticMentalityKey;
 }
 
-/** Player attributes consumed by deterministic discipline and injury policies. */
+/**
+ * The real attributes of one player on the pitch.
+ *
+ * Named for the discipline and injury policies that first needed it; the
+ * occasion seam reads it too, so it is now simply what the engine knows about a
+ * footballer. Renaming it is a wide mechanical change and is not this step's.
+ */
 export interface MatchPlayerIncidentProfile {
   readonly playerId: PlayerId;
   readonly tackling: number;
@@ -79,8 +85,21 @@ export interface MatchTeamContext {
   readonly strength: TeamStrength;
   /** Tactical distribution inputs for this team. */
   readonly tacticalDistribution: MatchTacticalDistributionInput;
-  /** True player inputs used by incident policies when a full squad built this context. */
-  readonly incidentProfiles?: readonly MatchPlayerIncidentProfile[];
+  /**
+   * The real attributes of every player in the lineup, one profile each.
+   *
+   * Required, and required *completely*: a context describes eleven named
+   * footballers, so there is no such thing as a lineup where some of them have
+   * attributes and the rest do not.
+   *
+   * It was optional until Step 07A, with `incidentProfileFor` returning a neutral
+   * profile of `10`s when it was absent. That fallback returned plausible numbers
+   * rather than failing, which is exactly how it stayed invisible that
+   * `pnpm cli balance-report` - the instrument this game's numbers are read from
+   * - was measuring football in which nobody tackled, tired, or kept his nerve
+   * any better than anybody else.
+   */
+  readonly incidentProfiles: readonly MatchPlayerIncidentProfile[];
   /**
    * Intrinsic tactical shape of this lineup.
    *
@@ -270,23 +289,38 @@ function assertValidTeamContext(
     throw new MatchContextError("missing_team_strength", `${side} team strength must contain finite numbers`);
   }
 
-  if (team.incidentProfiles !== undefined) {
-    const lineupPlayerIds = new Set(team.lineup.map((slot) => slot.playerId));
-    const seenPlayerIds = new Set<PlayerId>();
-    for (const profile of team.incidentProfiles) {
-      if (!lineupPlayerIds.has(profile.playerId) || seenPlayerIds.has(profile.playerId)) {
-        throw new MatchContextError(
-          "invalid_incident_profile",
-          `${side} incident profile must belong to one unique lineup player: ${profile.playerId}`,
-        );
-      }
-      if (!incidentProfileValues(profile).every((value) => Number.isFinite(value) && value >= 0 && value <= 100)) {
-        throw new MatchContextError(
-          "invalid_incident_profile",
-          `${side} incident profile values must be finite and inside 0..100: ${profile.playerId}`,
-        );
-      }
-      seenPlayerIds.add(profile.playerId);
+  if (team.incidentProfiles === undefined) {
+    throw new MatchContextError("invalid_incident_profile", `${side} player attributes are required`);
+  }
+
+  const lineupPlayerIds = new Set(team.lineup.map((slot) => slot.playerId));
+  const seenPlayerIds = new Set<PlayerId>();
+  for (const profile of team.incidentProfiles) {
+    if (!lineupPlayerIds.has(profile.playerId) || seenPlayerIds.has(profile.playerId)) {
+      throw new MatchContextError(
+        "invalid_incident_profile",
+        `${side} incident profile must belong to one unique lineup player: ${profile.playerId}`,
+      );
+    }
+    if (!incidentProfileValues(profile).every((value) => Number.isFinite(value) && value >= 0 && value <= 100)) {
+      throw new MatchContextError(
+        "invalid_incident_profile",
+        `${side} incident profile values must be finite and inside 0..100: ${profile.playerId}`,
+      );
+    }
+    seenPlayerIds.add(profile.playerId);
+  }
+
+  // Coverage, not just validity. One profile per player is what lets every
+  // reader take attributes without asking whether they happen to be there, and
+  // it is the half of the contract a merely-required field would still allow to
+  // be broken by passing an empty array.
+  for (const slot of team.lineup) {
+    if (!seenPlayerIds.has(slot.playerId)) {
+      throw new MatchContextError(
+        "invalid_incident_profile",
+        `${side} lineup player has no attributes: ${slot.playerId}`,
+      );
     }
   }
 

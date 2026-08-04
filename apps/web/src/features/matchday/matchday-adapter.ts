@@ -18,6 +18,7 @@ import {
   createProgressiveMatchSession,
   computePlayerMatchStats,
   deriveTeamShapeAndStrength,
+  matchPlayerIncidentProfilesForLineup,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
   injuryForcesExit,
@@ -1504,6 +1505,16 @@ function buildCareerTeamsByClubId(
         risk: 0.5,
         mentality: "balanced",
       },
+      // Opponents are real footballers too. Until Step 07A this branch omitted
+      // attributes while the manager's own club - built through
+      // `buildTacticTeamContext` above - always had them, so in web career play
+      // every opponent tackled, tired and kept his nerve at a flat `10` whoever
+      // he was. Nothing failed, because the engine invented those numbers.
+      incidentProfiles: matchPlayerIncidentProfilesForLineup(
+        lineup,
+        careerState.gameState.players,
+        careerState.gameState.playerStates,
+      ),
     };
   }
 

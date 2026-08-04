@@ -192,21 +192,25 @@ function resolvePenalty(
   };
 }
 
-/** Returns real match attributes, with a neutral aggregate-context fallback. */
+/**
+ * Returns one player's real match attributes.
+ *
+ * There is no fallback and there must not be one. This used to answer with a
+ * neutral profile of `10`s for a player it could not find, which is how two
+ * whole simulation paths - the balance report among them - ran for months on
+ * football where nobody tackled or tired any better than anybody else, without
+ * a single failure to notice. A context now carries a profile for every player
+ * in its lineup, checked by `assertValidMatchContext`, so a miss here is a bug
+ * upstream and says so.
+ */
 export function incidentProfileFor(team: MatchTeamContext, playerId: PlayerId): MatchPlayerIncidentProfile {
-  return team.incidentProfiles?.find((profile) => profile.playerId === playerId) ?? {
-    playerId,
-    tackling: 10,
-    composure: 10,
-    determination: 10,
-    stamina: 10,
-    agility: 10,
-    strength: 10,
-    penalties: 10,
-    goalkeeperReflexes: 10,
-    goalkeeperHandling: 10,
-    startingFitness: 100,
-  };
+  const profile = team.incidentProfiles.find((candidate) => candidate.playerId === playerId);
+
+  if (profile === undefined) {
+    throw new Error(`Missing match attributes for ${team.clubId} player ${playerId}`);
+  }
+
+  return profile;
 }
 
 function normalizedTactic(

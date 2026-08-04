@@ -241,3 +241,45 @@ graphify update .
 - Match results remain unchanged in this step.
 - No end-to-end gameplay-fix claim is made before Step 06 consumes the matchup.
 - Step 05 is the only next action.
+
+## 2026-08-04 - The Flank Reopen Now Has An Instrument, And A Surprise
+
+Step 07A built what this step's open question always needed. Step 07 put the
+route on the shot event, so the audit no longer has to read `chanceType: "cross"`
+- which covers both flanks - and can count `left` apart from `right`.
+`TacticalShapeFormationRow` carries `routes` and a `flankAsymmetry` of
+`|left - right| / (left + right)`.
+
+**The measurement does not say what this reopen assumed.** Over the curated
+formation population:
+
+| Formation | left | right | asymmetry |
+|---|---|---|---|
+| `4-4-2` | `19` | `23` | `0.0952` |
+| `4-3-3` | `18` | `13` | `0.1613` |
+| `3-5-2` | `23` | `15` | `0.2105` |
+| `4-3-2-1` | `19` | `15` | `0.1176` |
+| `4-2-4` | `21` | `25` | `0.0870` |
+| `3-4-3` | `12` | `18` | `0.2000` |
+| `4-5-1` | `16` | `18` | `0.0588` |
+| `5-4-1` | `22` | `19` | `0.0732` |
+
+Mean `0.126`, against a sampling noise floor near `1 / sqrt(35)` = `0.17` at the
+roughly `35` flank chances each row is built from. Every row sits inside it.
+
+And it must. This step's calibration enforces **left/right mirror symmetry**, and
+every curated formation fields the same shape on both flanks, so the *expected*
+asymmetry of this population is exactly zero. The numbers above are noise around
+a true zero, and no amount of extra seeds will turn them into a structural
+finding.
+
+**What that means for the reopen.** The recorded claim - a route's defining phase
+carries `11.7%` of its own chain, so a real `-12.8%` flank difference arrives as
+`-1.5%` - cannot be checked against this population at all, because this
+population has no flank difference to attenuate. Deciding the reopen needs a
+deliberately lopsided side first: a winger on one flank only, or one flank
+fielded at a higher quality band. Choosing that population is a decision for this
+step, not for the gate that measures it, and Step 07A deliberately did not make
+it.
+
+`tactical-shape-audit.test.ts` states all of this where it can be broken.

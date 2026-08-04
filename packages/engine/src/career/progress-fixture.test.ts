@@ -54,6 +54,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 function progressNextCareerFixture(
@@ -925,7 +926,7 @@ function fixtureFixture(
 function teamContextFixture(clubIdValue: ClubId, strength: number): MatchTeamContext {
   const playerPrefix = String(clubIdValue).slice("club:".length);
 
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubIdValue,
     lineup: [
       createLineupSlot({ slotId: "slot:01", playerId: playerId(`player:${playerPrefix}-01`), canonicalRole: "goalkeeper" }),
@@ -946,7 +947,7 @@ function teamContextFixture(clubIdValue: ClubId, strength: number): MatchTeamCon
       risk: 0.5,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 function matchEngineConfigFixture(): MatchEngineConfig {

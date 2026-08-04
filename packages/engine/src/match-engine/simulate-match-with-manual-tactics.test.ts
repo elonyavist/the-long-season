@@ -16,6 +16,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /**
@@ -182,7 +183,7 @@ function validContext(
  * Builds one side context fixture at a given aggregate strength and risk.
  */
 function validTeam(side: MatchSide, strength: number, risk: number): MatchTeamContext {
-  return {
+  return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
       createLineupSlot({ slotId: `slot:${side}:gk`, playerId: playerId(`player:${side}-gk`), canonicalRole: "goalkeeper" }),
@@ -207,7 +208,7 @@ function validTeam(side: MatchSide, strength: number, risk: number): MatchTeamCo
       risk,
       mentality: "balanced",
     },
-  };
+  });
 }
 
 /**

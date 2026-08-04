@@ -241,6 +241,7 @@ export {
   buildTacticTeamContext,
   createMatchPlayerIncidentProfile,
   deriveTeamShapeAndStrength,
+  matchPlayerIncidentProfilesForLineup,
   tacticToMatchDistribution,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,

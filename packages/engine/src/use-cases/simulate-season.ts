@@ -39,6 +39,7 @@ import {
   type RoleWeightProfile,
   deriveTeamShapeAndStrength,
   deriveTeamStrength,
+  matchPlayerIncidentProfilesForLineup,
   TeamStrengthError,
 } from "../match-engine/index.ts";
 import { simulateMatch } from "../match-engine/simulate-match.ts";
@@ -807,6 +808,7 @@ function buildFixtureLineupOverrideContext(
         ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
       }),
       tacticalDistribution,
+      incidentProfiles: matchPlayerIncidentProfilesForLineup(override.lineup, override.players, playerStates),
     };
   } catch (error) {
     if (error instanceof TeamStrengthError) {
@@ -899,6 +901,11 @@ function fixedLineupMatchTeamContext(
         ...dynamicStateInputs(team, livePlayerStates),
       }),
       tacticalDistribution: team.tacticalDistribution,
+      incidentProfiles: matchPlayerIncidentProfilesForLineup(
+        team.lineup,
+        team.players,
+        livePlayerStates ?? team.playerStates,
+      ),
     };
   } catch (error) {
     if (error instanceof TeamStrengthError) {

@@ -28,8 +28,54 @@ test("a forced-off goalkeeper promotes the strongest remaining emergency option"
   );
 });
 
-function matchContext(): MatchContext {
-  const home = team("home");
+test("losing the goalkeeper costs the goalkeeper department", () => {
+  // The whole point. Until Step 07A `strength` was left describing the keeper
+  // who had just been sent off, so a centre-back in goal saved like an
+  // international and a red card to the goalkeeper cost a manager nothing.
+  const context = matchContext();
+  const updated = removeForcedOffPlayerFromMatchContext(context, "home", playerId("player:home-gk"));
+
+  // The promoted midfielder is 6.5 at goalkeeping against the specialist's 15.
+  assert.equal(updated.home.strength.goalkeeper, 10 * (6.5 / 15));
+  assert.ok(updated.home.strength.goalkeeper < context.home.strength.goalkeeper);
+});
+
+test("only the goalkeeper department moves, and only for a goalkeeper exit", () => {
+  const context = matchContext();
+  const keeperGone = removeForcedOffPlayerFromMatchContext(context, "home", playerId("player:home-gk"));
+  const defenderGone = removeForcedOffPlayerFromMatchContext(context, "home", playerId("player:home-field"));
+
+  assert.equal(keeperGone.home.strength.attack, context.home.strength.attack);
+  assert.equal(keeperGone.home.strength.defense, context.home.strength.defense);
+  assert.deepEqual(defenderGone.home.strength, context.home.strength);
+  assert.deepEqual(keeperGone.away.strength, context.away.strength);
+});
+
+test("an equal replacement changes nothing", () => {
+  // A bench keeper of the same quality is not a punishment, so the correction
+  // has to be a comparison rather than a flat penalty for the shirt changing.
+  const context = matchContext({ emergencyGoalkeeping: [15, 15] });
+  const updated = removeForcedOffPlayerFromMatchContext(context, "home", playerId("player:home-gk"));
+
+  assert.equal(updated.home.strength.goalkeeper, context.home.strength.goalkeeper);
+});
+
+test("a player with no goalkeeping at all is still not an empty net", () => {
+  const context = matchContext({ emergencyGoalkeeping: [0, 0] });
+  const updated = removeForcedOffPlayerFromMatchContext(context, "home", playerId("player:home-gk"));
+
+  assert.equal(updated.home.strength.goalkeeper, 10 * 0.35);
+  assert.ok(updated.home.strength.goalkeeper > 0, "somebody is standing in the goal");
+});
+
+/** What a case varies about the fixture; anything unset is ordinary. */
+interface MatchContextOptions {
+  /** Reflexes and handling of the outfield player who takes the gloves. */
+  readonly emergencyGoalkeeping?: readonly [number, number];
+}
+
+function matchContext(options: MatchContextOptions = {}): MatchContext {
+  const home = team("home", options);
   const away = team("away");
   return {
     fixtureId: fixtureId("fixture:emergency-goalkeeper"),
@@ -52,7 +98,8 @@ function matchContext(): MatchContext {
   };
 }
 
-function team(side: "home" | "away"): MatchTeamContext {
+function team(side: "home" | "away", options: MatchContextOptions = {}): MatchTeamContext {
+  const [emergencyReflexes, emergencyHandling] = options.emergencyGoalkeeping ?? [6, 7];
   const goalkeeper = playerId(`player:${side}-gk`);
   const field = playerId(`player:${side}-field`);
   const emergency = playerId(`player:${side}-emergency`);
@@ -66,7 +113,7 @@ function team(side: "home" | "away"): MatchTeamContext {
     incidentProfiles: [
       incidentProfile(goalkeeper, 15, 15),
       incidentProfile(field, 3, 4),
-      incidentProfile(emergency, 6, 7),
+      incidentProfile(emergency, emergencyReflexes, emergencyHandling),
     ],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape: tacticalShapeProfileFixture(),

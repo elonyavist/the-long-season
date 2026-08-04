@@ -469,3 +469,48 @@ describe("tactical shape audit report", () => {
     );
   });
 });
+
+describe("flank instrumentation", () => {
+  const report = runTacticalShapeAudit(AUDIT_INPUT);
+
+  it("counts routes separately from chance types, and left apart from right", () => {
+    // `cross` covers both flanks, so a formation that loads one side and one
+    // that spreads the same chances across two were indistinguishable here. The
+    // two vocabularies must agree where they overlap, or the finer one is
+    // describing a different match than the coarse one.
+    for (const row of report.formations) {
+      expect(row.routes.left + row.routes.right).toBe(row.chanceTypes.cross);
+      expect(row.routes.central + row.routes.direct).toBe(row.chanceTypes.open_play);
+      expect(row.routes.transition).toBe(row.chanceTypes.counter);
+      expect(row.flankAsymmetry).toBeGreaterThanOrEqual(0);
+      expect(row.flankAsymmetry).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("finds no structural flank preference, because every measured formation is symmetric", () => {
+    // The measured answer to Step 04's open flank question, and it is not the
+    // one the question assumed. Measured here: `4-4-2` 19/23, `4-3-3` 18/13,
+    // `3-5-2` 23/15, `4-3-2-1` 19/15, `4-2-4` 21/25, `3-4-3` 12/18, `4-5-1`
+    // 16/18, `5-4-1` 22/19. Asymmetries run `0.059` to `0.211`, mean `0.126`.
+    //
+    // That is sampling noise, not structure. Around `35` flank chances per row
+    // put the noise floor near `1/sqrt(35)` = `0.17`, which every row sits
+    // inside. And it must be: the calibration enforces left/right mirror
+    // symmetry, and every curated formation fields the same shape on both
+    // flanks, so the *expected* asymmetry of this population is exactly zero.
+    //
+    // The instrument therefore works and the population cannot exercise it.
+    // Measuring a real flank difference needs a deliberately lopsided side -
+    // a winger on one flank only, or one flank fielded stronger - which is a
+    // population decision belonging to the Step 04 reopen, not to this gate.
+    const asymmetries = report.formations.map((row) => row.flankAsymmetry);
+    const mean = asymmetries.reduce((total, value) => total + value, 0) / asymmetries.length;
+    const flankChances = report.formations.map((row) => row.routes.left + row.routes.right);
+    const noiseFloor = 1 / Math.sqrt(Math.min(...flankChances));
+
+    expect(mean).toBeLessThan(noiseFloor);
+    for (const row of report.formations) {
+      expect(row.flankAsymmetry).toBeLessThan(3 * noiseFloor);
+    }
+  });
+});
