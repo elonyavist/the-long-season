@@ -16,7 +16,7 @@ constraining future work, not by being recent.
 ## Current Baseline
 
 Phases 0 through 80A are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - is active; Steps 01 and 02 are Done and Step 03 is
+Manager Decision Engine - is active; Steps 01 through 09 are Done and Step 10 is
 next. Live constraints are in `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
@@ -81,11 +81,23 @@ versions advanced without a migration - OPFS schema `22 -> 23`, career envelope
 
 Step 08 also removed the last place where a club the manager had not prepared
 was a special case: the web adapter and the CLI each built that context by hand,
-with their own copy of the fallback eleven. Both now call one constructor that
-takes an explicit squad. `finalPlayerRegistrations` still recomposes the
-opponent's eleven from the roster, which is correct only while every AI club
-fields the same fixed `4-4-2`; Step 09 must make the fielded lineup a carried
-fact of the played match instead.
+with their own copy of the fallback eleven.
+
+Step 09 removed the fallback eleven itself. Every club in the world - not only
+the ones the manager faces - now picks its own team through one selection Module
+and lines up in the catalog shape its squad is actually built for, instead of the
+fixed `4-4-2` composed from roster order that every AI club used to field. The
+selector chooses the best *eleven* rather than the best player for each slot in
+turn, which the step measured as `5.9` points of team quality on a two-slot
+counterexample, and the AI and the manager's own helper now rank footballers on
+one scale rather than two that disagreed. The eleven each side fielded is carried
+out of the played match, so nothing recomposes it afterwards.
+
+**Step 11B is unblocked**: there is now more than one shape for a counter-move to
+be measured against. Two things stay open for later steps - AI formation options
+have no production supplier and are still ranked alphabetically, and the
+opponent's eleven is not durable, so a reloaded reviewed result shows only the
+footballers its events name.
 
 Step 12 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.

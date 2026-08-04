@@ -1,8 +1,9 @@
 import {
-  canonicalPlayerRoleDepartment,
   evaluatePositionSuitability,
+  FORMATIONS,
   getPlayerRoleProfile,
   roleCurrentAbility,
+  scorePlayerForFormationSlot,
   type ClubId,
   type Formation,
   type FormationSlot,
@@ -25,10 +26,8 @@ import {
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
 } from "../match-engine/index.ts";
-import {
-  createMatchPlayerIncidentProfile,
-  deriveTeamShapeAndStrength,
-} from "../match-engine/tactic-team-context.ts";
+import { assembleMatchTeamContext } from "../match-engine/tactic-team-context.ts";
+import { assignFootballXi, type FootballXiSlotCandidate } from "./football-xi-assignment.ts";
 import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 
 /** Recent deterministic usage facts that can gently rotate an AI squad. */
@@ -67,8 +66,15 @@ export interface AiSquadSelectionReason {
 export interface AiSquadSelectionInput {
   /** Club whose squad is being selected. */
   readonly clubId: ClubId;
-  /** Base formation that supplies the required slots and role coverage. */
-  readonly formation: Formation;
+  /**
+   * Shape to field, or absent to let the squad choose its own.
+   *
+   * A caller that is measuring one shape supplies it, because holding the shape
+   * fixed is the whole point of that measurement. A caller simulating a club
+   * nobody prepared supplies nothing, and the club lines up in the catalog shape
+   * its footballers are actually built for.
+   */
+  readonly formation?: Formation;
   /** Explicit ordered roster IDs; this order is used only before stable ID tie-breaks. */
   readonly playerIds: readonly PlayerId[];
   /** Player lookup for the roster. */
@@ -89,7 +95,9 @@ export interface AiSquadSelectionInput {
 
 /** Deterministic AI squad selected for one match. */
 export interface AiSquadSelectionResult {
-  /** Ordered match-engine lineup built from the supplied formation. */
+  /** Shape actually fielded, whether supplied by the caller or chosen here. */
+  readonly formation: Formation;
+  /** Ordered match-engine lineup built from the fielded formation. */
   readonly lineup: readonly LineupSlot[];
   /** Ordered bench IDs with no duplicates from the XI. */
   readonly benchPlayerIds: readonly PlayerId[];
@@ -99,8 +107,15 @@ export interface AiSquadSelectionResult {
 
 /** Input for producing a match-ready team context from the AI selector. */
 export interface BuildAiSquadMatchTeamContextInput extends AiSquadSelectionInput {
-  /** Tactical distribution applied after squad selection. */
-  readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /**
+   * Tactical distribution, read from the shape the club ended up in.
+   *
+   * A function rather than a value because the shape is a *result* of selection,
+   * and a caller that wants a side's instructions to follow its shape can only
+   * decide them once that shape is known. A caller with a fixed setup - one
+   * measuring a single shape, for instance - ignores the argument.
+   */
+  readonly tacticalDistribution: (formation: Formation) => MatchTacticalDistributionInput;
   /** Versioned match-tactics calibration, supplied by a composition root. */
   readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Optional state curves used when deriving strength from selected players. */
@@ -138,61 +153,61 @@ export class AiSquadSelectionError extends Error {
   }
 }
 
-/** Selects a deterministic AI XI and bench for one formation. */
+/**
+ * Selects a deterministic AI XI and bench.
+ *
+ * Every club in the world reaches the match through this one function, whether
+ * the manager plays it this weekend or never meets it at all. There is no
+ * second, cheaper path for clubs nobody is watching: a world where the
+ * unwatched clubs pick their teams by a different rule is a world whose league
+ * table means something different from the matches the manager plays in it.
+ */
 export function selectAiMatchSquad(input: AiSquadSelectionInput): AiSquadSelectionResult {
-  if (input.formation.slots.length === 0) {
+  if (input.formation !== undefined && input.formation.slots.length === 0) {
     throw new AiSquadSelectionError("empty_formation", `AI formation has no slots for club: ${input.clubId}`);
   }
 
   const rosterPlayerIds = orderedUniquePlayerIds(input.playerIds);
   validateRosterPlayers(input, rosterPlayerIds);
 
-  if (rosterPlayerIds.length < input.formation.slots.length) {
+  const candidates = new SlotCandidateCache(input, rosterPlayerIds);
+  const fielded = bestFieldedShape(input, candidates);
+  if (fielded === undefined) {
     throw new AiSquadSelectionError(
       "not_enough_players",
-      `AI club ${input.clubId} has ${rosterPlayerIds.length} unique players for ${input.formation.slots.length} slots`,
+      `AI club ${input.clubId} has no complete usable XI from ${rosterPlayerIds.length} players`,
     );
   }
 
-  const selectedCandidates = selectFeasibleLineupCandidates(input, rosterPlayerIds);
-  if (selectedCandidates === undefined) {
-    throw new AiSquadSelectionError(
-      "not_enough_players",
-      `AI club ${input.clubId} cannot complete a usable XI for ${input.formation.key}`,
-    );
-  }
-
-  const usedPlayerIds = new Set(selectedCandidates.map((candidate) => candidate.playerId));
+  const usedPlayerIds = new Set(fielded.selected.map((candidate) => candidate.playerId));
   const reasons: AiSquadSelectionReason[] = [];
-  const lineup = selectedCandidates.map((candidate, slotIndex): LineupSlot => {
-    const slot = input.formation.slots[slotIndex];
-    if (slot === undefined) {
-      throw new AiSquadSelectionError(
-        "empty_formation",
-        `AI formation ${input.formation.key} is missing selected slot ${slotIndex}`,
-      );
-    }
+  const lineup = fielded.selected.map((candidate, slotIndex): LineupSlot => {
+    const slot = fielded.formation.slots[slotIndex] as FormationSlot;
     reasons.push(reasonForCandidate("lineup", slot.slotKey, candidate));
 
     return createLineupSlot({
-      slotId: `${input.formation.key}:${slot.slotKey}`,
+      slotId: `${fielded.formation.key}:${slot.slotKey}`,
       playerId: candidate.playerId,
       canonicalRole: slot.playerRole,
       ...(slot.side === undefined ? {} : { side: slot.side }),
     });
   });
 
-  const benchCandidates = benchCandidatesForInput(input, rosterPlayerIds, usedPlayerIds);
+  const benchCandidates = rosterPlayerIds
+    .filter((candidateId) => !usedPlayerIds.has(candidateId))
+    .map((candidateId) => bestSlotCandidateForPlayer(fielded.formation, candidates, candidateId))
+    .sort(compareCandidateScores);
   const benchPlayerIds = chooseBenchPlayerIds(input, benchCandidates);
   for (const benchPlayerId of benchPlayerIds) {
-    const player = input.players[benchPlayerId];
-    if (player === undefined) {
-      throw new AiSquadSelectionError("missing_player", `Missing AI bench player ${benchPlayerId}`);
-    }
-    reasons.push(reasonForCandidate("bench", "bench", benchCandidateForPlayer(input, player)));
+    reasons.push(reasonForCandidate(
+      "bench",
+      "bench",
+      bestSlotCandidateForPlayer(fielded.formation, candidates, benchPlayerId),
+    ));
   }
 
   return {
+    formation: fielded.formation,
     lineup,
     benchPlayerIds,
     reasons,
@@ -206,30 +221,18 @@ export function buildAiSquadMatchTeamContext(
   const selection = selectAiMatchSquad(input);
 
   try {
-    const { strength, shape } = deriveTeamShapeAndStrength({
-      lineup: selection.lineup,
-      players: input.players,
-      roleWeights: input.roleWeights,
-      matchTacticsCalibration: input.matchTacticsCalibration,
-      ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
-      ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
-    });
-
     return {
       selection,
-      teamContext: {
+      teamContext: assembleMatchTeamContext({
         clubId: input.clubId,
         lineup: selection.lineup,
-        strength,
-        shape,
-        tacticalDistribution: input.tacticalDistribution,
-        incidentProfiles: selection.lineup.map((slot) =>
-          createMatchPlayerIncidentProfile(
-            requiredPlayer(input, slot.playerId),
-            input.playerStates?.[slot.playerId],
-          ),
-        ),
-      },
+        tacticalDistribution: input.tacticalDistribution(selection.formation),
+        players: input.players,
+        roleWeights: input.roleWeights,
+        matchTacticsCalibration: input.matchTacticsCalibration,
+        ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
+        ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
+      }),
     };
   } catch (error) {
     if (error instanceof TeamStrengthError) {
@@ -249,23 +252,133 @@ interface AiCandidateScore {
   readonly recentMinutes: number;
   readonly recentStarts: number;
   readonly prospectOpportunity: number;
+  /**
+   * What this footballer is worth in this slot before today's circumstances.
+   *
+   * Ability and positional fit only. Choosing a club's *shape* from this rather
+   * than from `score` is what stops a tired centre back changing the side's
+   * formation for one week: a squad is built for a shape over a season, and
+   * fatigue is a fact about a Saturday.
+   */
+  readonly structuralScore: number;
+  /** Full ordering score, including fitness, recent workload and upside. */
   readonly score: number;
 }
 
-/** One pre-scored player edge in the private lineup-feasibility matrix. */
-interface AiSlotCandidate {
-  /** Candidate facts scored by the existing per-slot policy. */
-  readonly candidate: AiCandidateScore;
-  /** Stable roster bit used only to prevent duplicate assignments. */
-  readonly playerBit: bigint;
+/** One complete shape with the eleven it would actually field. */
+interface FieldedShape {
+  readonly formation: Formation;
+  readonly selected: readonly AiCandidateScore[];
+  readonly totalScore: number;
 }
 
-/** One unique roster player paired with its stable private assignment bit. */
-interface AiRosterPlayer {
-  /** Player identity preserved from the caller's first occurrence. */
-  readonly playerId: PlayerId;
-  /** Bit used only by the memoized feasibility search. */
-  readonly playerBit: bigint;
+/**
+ * Scores each footballer against each kind of slot exactly once.
+ *
+ * A candidate's score depends on the slot's canonical role and channel and on
+ * nothing else, so the twenty-three catalog shapes ask the same few questions
+ * over and over. Answering each one once is what makes choosing a club's shape
+ * affordable rather than twenty-three times the work.
+ */
+class SlotCandidateCache {
+  private readonly input: AiSquadSelectionInput;
+  private readonly rosterPlayerIds: readonly PlayerId[];
+  private readonly rankedBySlotKind = new Map<string, readonly AiCandidateScore[]>();
+
+  public constructor(input: AiSquadSelectionInput, rosterPlayerIds: readonly PlayerId[]) {
+    this.input = input;
+    this.rosterPlayerIds = rosterPlayerIds;
+  }
+
+  /** Returns every fieldable candidate for one slot, best first. */
+  public rankedFor(slot: FormationSlot): readonly AiCandidateScore[] {
+    const slotKind = `${slot.playerRole}|${slot.side ?? ""}`;
+    const cached = this.rankedBySlotKind.get(slotKind);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const usable = this.rosterPlayerIds
+      .map((playerId) => candidateForSlot(this.input, playerId, slot))
+      .filter((candidate) => isUsableSuitability(candidate.suitability))
+      .sort(compareCandidateScores);
+    const ranked = usable.length > 0 || slot.playerRole !== "goalkeeper"
+      ? usable
+      : emergencyGoalkeeperCandidates(this.input, this.rosterPlayerIds, slot);
+    this.rankedBySlotKind.set(slotKind, ranked);
+
+    return ranked;
+  }
+}
+
+/**
+ * Chooses the shape the squad is built for, then the eleven that fills it today.
+ *
+ * A caller-supplied shape is used as given. Otherwise every catalog shape is
+ * assigned and the strongest resulting eleven wins, so a club with three centre
+ * backs and no wingers lines up as a back three instead of leaving a winger slot
+ * to somebody who cannot play there. Shapes are compared in catalog order, so a
+ * squad that fits two shapes equally well fields the same one every time.
+ *
+ * The shape is chosen on `structuralScore` and the eleven on `score`. Choosing
+ * both on the full score let a tired defender change a club's formation for one
+ * week, which is not a thing football does: a squad is built for a shape over a
+ * season, and fatigue is a fact about a Saturday.
+ */
+function bestFieldedShape(
+  input: AiSquadSelectionInput,
+  candidates: SlotCandidateCache,
+): FieldedShape | undefined {
+  const formation = input.formation ?? strongestCatalogShape(candidates);
+  if (formation === undefined) {
+    return undefined;
+  }
+
+  const assignment = assignFootballXi({
+    candidatesBySlot: formation.slots.map((slot) =>
+      rankedXiCandidates(candidates.rankedFor(slot), (candidate) => candidate.score)),
+  });
+  if (assignment === undefined) {
+    return undefined;
+  }
+
+  return {
+    formation,
+    selected: assignment.candidateBySlot.map((candidate, slotIndex) =>
+      requiredCandidate(candidates.rankedFor(formation.slots[slotIndex] as FormationSlot), candidate.rank)),
+    totalScore: assignment.totalScore,
+  };
+}
+
+/** Finds the catalog shape this squad is built for, ignoring today's condition. */
+function strongestCatalogShape(candidates: SlotCandidateCache): Formation | undefined {
+  let best: { readonly formation: Formation; readonly totalScore: number } | undefined;
+
+  for (const formation of FORMATIONS) {
+    const assignment = assignFootballXi({
+      candidatesBySlot: formation.slots.map((slot) =>
+        rankedXiCandidates(candidates.rankedFor(slot), (candidate) => candidate.structuralScore)),
+    });
+    if (assignment === undefined) continue;
+
+    if (best === undefined || assignment.totalScore > best.totalScore) {
+      best = { formation, totalScore: assignment.totalScore };
+    }
+  }
+
+  return best?.formation;
+}
+
+/** Projects scored candidates onto the assignment Module's football-free view. */
+function rankedXiCandidates(
+  ranked: readonly AiCandidateScore[],
+  scoreOf: (candidate: AiCandidateScore) => number,
+): readonly FootballXiSlotCandidate[] {
+  return ranked.map((candidate, rank) => ({ playerId: candidate.playerId, score: scoreOf(candidate), rank }));
+}
+
+function requiredCandidate(ranked: readonly AiCandidateScore[], rank: number): AiCandidateScore {
+  return ranked[rank] as AiCandidateScore;
 }
 
 function validateRosterPlayers(
@@ -278,94 +391,6 @@ function validateRosterPlayers(
     }
     requiredPublicAssessment(input, playerId);
   }
-}
-
-/**
- * Finds the first complete XI in canonical slot order and existing score order.
- *
- * This is deliberately a feasibility-preserving greedy search, not a global
- * score optimizer. In the usual case it visits each slot once. Memoized
- * backtracking is used only when a locally preferred versatile player would
- * leave a later slot without any usable player.
- */
-function selectFeasibleLineupCandidates(
-  input: AiSquadSelectionInput,
-  rosterPlayerIds: readonly PlayerId[],
-): readonly AiCandidateScore[] | undefined {
-  const rosterPlayers = rosterPlayerIds.map((playerId, rosterIndex): AiRosterPlayer => ({
-    playerId,
-    playerBit: 1n << BigInt(rosterIndex),
-  }));
-  const candidateCacheBySlot = input.formation.slots.map(() => new Map<PlayerId, AiCandidateScore>());
-  const failedMasksBySlot = input.formation.slots.map(() => new Set<bigint>());
-  const selectedCandidates: AiCandidateScore[] = [];
-
-  function completeSlot(slotIndex: number, usedPlayerMask: bigint): boolean {
-    if (slotIndex === input.formation.slots.length) {
-      return true;
-    }
-
-    const failedMasks = failedMasksBySlot[slotIndex];
-    if (failedMasks?.has(usedPlayerMask) === true) {
-      return false;
-    }
-
-    const slot = input.formation.slots[slotIndex];
-    const candidateCache = candidateCacheBySlot[slotIndex];
-    if (slot === undefined || candidateCache === undefined) {
-      return false;
-    }
-    const slotCandidates = rankedUnusedCandidatesForSlot(
-      input,
-      slot,
-      rosterPlayers,
-      usedPlayerMask,
-      candidateCache,
-    );
-    for (const slotCandidate of slotCandidates) {
-      if ((usedPlayerMask & slotCandidate.playerBit) !== 0n) {
-        continue;
-      }
-
-      selectedCandidates[slotIndex] = slotCandidate.candidate;
-      if (completeSlot(slotIndex + 1, usedPlayerMask | slotCandidate.playerBit)) {
-        return true;
-      }
-    }
-
-    selectedCandidates.length = slotIndex;
-    failedMasks?.add(usedPlayerMask);
-    return false;
-  }
-
-  return completeSlot(0, 0n) ? [...selectedCandidates] : undefined;
-}
-
-function rankedUnusedCandidatesForSlot(
-  input: AiSquadSelectionInput,
-  slot: FormationSlot,
-  rosterPlayers: readonly AiRosterPlayer[],
-  usedPlayerMask: bigint,
-  candidateCache: Map<PlayerId, AiCandidateScore>,
-): readonly AiSlotCandidate[] {
-  const candidates: AiSlotCandidate[] = [];
-
-  for (const rosterPlayer of rosterPlayers) {
-    if ((usedPlayerMask & rosterPlayer.playerBit) !== 0n) {
-      continue;
-    }
-
-    let candidate = candidateCache.get(rosterPlayer.playerId);
-    if (candidate === undefined) {
-      candidate = candidateForSlot(input, rosterPlayer.playerId, slot);
-      candidateCache.set(rosterPlayer.playerId, candidate);
-    }
-    if (isUsableSuitability(candidate.suitability)) {
-      candidates.push({ candidate, playerBit: rosterPlayer.playerBit });
-    }
-  }
-
-  return candidates.sort((left, right) => compareCandidateScores(left.candidate, right.candidate));
 }
 
 function candidateForSlot(input: AiSquadSelectionInput, playerId: PlayerId, slot: FormationSlot): AiCandidateScore {
@@ -382,14 +407,11 @@ function candidateForSlot(input: AiSquadSelectionInput, playerId: PlayerId, slot
   const prospectOpportunity = prospectOpportunityForAssessment(
     requiredPublicAssessment(input, playerId),
   );
-  const score = roundScore(
-    currentAbility
-      + suitabilityBonus(suitability)
-      + sideBonus(player, slot)
-      + boundedFitnessModifier(fitness)
-      + boundedRecentUseModifier(recent)
-      + prospectOpportunity,
-  );
+  const structuralScore = roundScore(scorePlayerForFormationSlot({
+    naturalPositions: player.naturalPositions,
+    slot,
+    playerStrength: currentAbility,
+  }));
 
   return {
     playerId,
@@ -400,19 +422,60 @@ function candidateForSlot(input: AiSquadSelectionInput, playerId: PlayerId, slot
     recentMinutes: recent.recentMinutes,
     recentStarts: recent.recentStarts,
     prospectOpportunity,
-    score,
+    structuralScore,
+    score: roundScore(
+      structuralScore
+        + boundedFitnessModifier(fitness)
+        + boundedRecentUseModifier(recent)
+        + prospectOpportunity,
+    ),
   };
 }
 
-function benchCandidatesForInput(
+/**
+ * Names the footballer who takes the gloves when no goalkeeper is available.
+ *
+ * Nothing but a natural goalkeeper is even a weak fit for the role, so a club
+ * that loses both keepers to injury and suspension could otherwise field no
+ * eleven at all in any of the twenty-three shapes - and its fixture would simply
+ * fail to be played. Football's answer, and this engine's own answer when a
+ * keeper is sent off mid-match, is that somebody puts the gloves on.
+ *
+ * Ranked by the same two attributes `promoteEmergencyGoalkeeper` uses at match
+ * time, so the man the selector picks before kickoff is the man the minute loop
+ * would have picked after it. His suitability is still recorded as `invalid`,
+ * because it is: this is coverage, not a decision anybody is happy with.
+ */
+function emergencyGoalkeeperCandidates(
   input: AiSquadSelectionInput,
   rosterPlayerIds: readonly PlayerId[],
-  usedPlayerIds: ReadonlySet<PlayerId>,
+  slot: FormationSlot,
 ): readonly AiCandidateScore[] {
   return rosterPlayerIds
-    .filter((candidateId) => !usedPlayerIds.has(candidateId))
-    .map((candidateId) => benchCandidateForPlayer(input, requiredPlayer(input, candidateId)))
+    .map((playerId) => {
+      const candidate = candidateForSlot(input, playerId, slot);
+      const player = requiredPlayer(input, playerId);
+      const goalkeeping = (
+        Number(player.abilities.goalkeeping.reflexes) + Number(player.abilities.goalkeeping.handling)
+      ) / 2;
+
+      // Scored on the gloves rather than on the outfield role he is leaving, and
+      // without the fit bonus that does not apply to a man out of position. The
+      // level only ever ranks emergency options against each other: this list is
+      // built at all only when no real goalkeeper is left.
+      return { ...candidate, structuralScore: roundScore(goalkeeping), score: roundScore(goalkeeping) };
+    })
     .sort(compareCandidateScores);
+}
+
+/** Reads one player from the roster, failing loudly rather than guessing. */
+function requiredPlayer(input: AiSquadSelectionInput, playerId: PlayerId): Player {
+  const player = input.players[playerId];
+  if (player === undefined) {
+    throw new AiSquadSelectionError("missing_player", `Missing AI candidate player ${playerId}`);
+  }
+
+  return player;
 }
 
 /** Keeps the caller's first stable occurrence while preventing duplicate XI IDs. */
@@ -420,18 +483,37 @@ function orderedUniquePlayerIds(playerIds: readonly PlayerId[]): readonly Player
   return [...new Set(playerIds)];
 }
 
-function benchCandidateForPlayer(input: AiSquadSelectionInput, player: Player): AiCandidateScore {
-  const bestSlot = input.formation.slots
-    .map((slot) => candidateForSlot(input, player.id, slot))
+/** Describes a bench player by the fielded slot he would cover best. */
+function bestSlotCandidateForPlayer(
+  formation: Formation,
+  candidates: SlotCandidateCache,
+  playerId: PlayerId,
+): AiCandidateScore {
+  const best = formation.slots
+    .flatMap((slot) => candidates.rankedFor(slot).filter((candidate) => candidate.playerId === playerId))
     .sort(compareCandidateScores)[0];
 
-  if (bestSlot === undefined) {
-    throw new AiSquadSelectionError("empty_formation", `AI formation has no bench reference slots: ${input.formation.key}`);
+  if (best === undefined) {
+    throw new AiSquadSelectionError(
+      "not_enough_players",
+      `AI bench player ${playerId} cannot cover any slot of ${formation.key}`,
+    );
   }
 
-  return bestSlot;
+  return best;
 }
 
+/**
+ * Names the substitutes, and a goalkeeper among them whenever one exists.
+ *
+ * The reserve keeper takes the first bench place, ahead of every better
+ * footballer, because he is the only one who answers the question a sending-off
+ * or an injury in goal asks. A bench without him means an outfielder in goal for
+ * the rest of the match, and no other substitute can cover that.
+ *
+ * This is why the emergency-keeper path in selection should stay unreachable in
+ * a real career: a squad with a spare keeper always has him sitting there.
+ */
 function chooseBenchPlayerIds(
   input: AiSquadSelectionInput,
   benchCandidates: readonly AiCandidateScore[],
@@ -506,39 +588,9 @@ function playerRoleForSlot(slot: FormationSlot): PlayerRole {
   }
 }
 
-function suitabilityBonus(suitability: PositionSuitability): number {
-  switch (suitability) {
-    case "natural":
-      return 2.4;
-    case "adapted":
-      return 1.2;
-    case "weak":
-      return -3.5;
-    case "invalid":
-      return -1_000;
-  }
-}
-
 /** Weak fits remain valid emergency coverage; only invalid fits are unusable. */
 function isUsableSuitability(suitability: PositionSuitability): boolean {
   return suitability !== "invalid";
-}
-
-function sideBonus(player: Player, slot: FormationSlot): number {
-  if (slot.side === undefined || slot.side === "center") {
-    return 0;
-  }
-
-  const sideMap: Readonly<Record<string, string>> = {
-    rb: "right",
-    rwb: "right",
-    rw: "right",
-    lb: "left",
-    lwb: "left",
-    lw: "left",
-  };
-
-  return player.naturalPositions.some((position) => sideMap[position] === slot.side) ? 0.35 : 0;
 }
 
 function boundedFitnessModifier(fitness: number): number {
@@ -590,15 +642,6 @@ function isGoalkeeperCandidate(input: AiSquadSelectionInput, playerId: PlayerId)
   const player = input.players[playerId];
 
   return player !== undefined && evaluatePositionSuitability(player.naturalPositions, { playerRole: "goalkeeper" }) !== "invalid";
-}
-
-function requiredPlayer(input: AiSquadSelectionInput, playerId: PlayerId): Player {
-  const player = input.players[playerId];
-  if (player === undefined) {
-    throw new AiSquadSelectionError("missing_player", `Missing AI candidate player ${playerId}`);
-  }
-
-  return player;
 }
 
 function reasonForCandidate(

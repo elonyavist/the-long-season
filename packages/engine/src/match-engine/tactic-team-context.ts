@@ -2,7 +2,6 @@ import {
   createSelectedLineup,
   createTacticSetup,
   TacticContractError,
-  type CanonicalPlayerRole,
   type ClubId,
   type MatchTacticsCalibrationConfig,
   type Player,
@@ -46,11 +45,10 @@ export type TacticTeamContextErrorCode =
   | "missing_role_weight"
   | "invalid_mentality"
   | "invalid_tactic_value"
-  | "insufficient_squad"
   | "team_strength_error";
 
 /**
- * The eleven a club fields when nobody has prepared it.
+ * The eleven a club fields in a full-strength match.
  *
  * Both drivers wrote this number out for themselves, which is one number in two
  * places and therefore one number that can disagree with itself.
@@ -205,28 +203,16 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
   });
 
   try {
-    const { strength, shape } = deriveTeamShapeAndStrength({
+    return assembleMatchTeamContext({
+      clubId: selectedLineup.clubId,
       lineup,
+      tacticalDistribution: tacticToMatchDistribution(tactic),
       players: input.players,
       roleWeights: input.roleWeights,
       matchTacticsCalibration: input.matchTacticsCalibration,
       ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
       ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
     });
-
-    return {
-      clubId: selectedLineup.clubId,
-      lineup,
-      strength,
-      shape,
-      tacticalDistribution: tacticToMatchDistribution(tactic),
-      incidentProfiles: lineup.map((slot) =>
-        createMatchPlayerIncidentProfile(
-          input.players[slot.playerId] as Player,
-          input.playerStates?.[slot.playerId],
-        ),
-      ),
-    };
   } catch (error) {
     if (error instanceof TeamStrengthError) {
       throw new TacticTeamContextError("team_strength_error", error.message);
@@ -236,28 +222,18 @@ export function buildTacticTeamContext(input: BuildTacticTeamContextInput): Matc
   }
 }
 
-/**
- * Input for the context of a club the manager has not prepared.
- *
- * The squad arrives as an explicit list of players. The constructor never
- * reaches back into club ownership to work out who is available, because
- * ownership stops answering that question at Phase 82A's first loan: a borrowed
- * player is fielded by a club that does not own his contract. The caller decides
- * who will play and says so (A1, A8).
- */
-export interface BuildUnpreparedTeamContextInput {
+/** Input for turning one already-chosen eleven into a match-ready context. */
+export interface AssembleMatchTeamContextInput {
   /** Club fielding this eleven. */
   readonly clubId: ClubId;
-  /** Explicit squad this club may pick from, in caller-decided order. */
-  readonly squadPlayerIds: readonly PlayerId[];
-  /** Expected lineup size for this match or competition context. */
-  readonly requiredLineupSize: number;
-  /** Player lookup covering at least the selected squad. */
+  /** Eleven already chosen, in canonical slot order. */
+  readonly lineup: readonly LineupSlot[];
+  /** Tactical distribution this club sets up with. */
+  readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /** Player lookup covering at least the fielded eleven. */
   readonly players: Readonly<Record<PlayerId, Player>>;
-  /** Role profile lookup available to the composed lineup. */
+  /** Role profile lookup available to the fielded eleven. */
   readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
-  /** Tactic this club sets up with; a balanced setup when the caller has none. */
-  readonly tactic?: TacticSetup;
   /** Optional dynamic state lookup. */
   readonly playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Optional caller-supplied dynamic state multiplier curves. */
@@ -266,109 +242,49 @@ export interface BuildUnpreparedTeamContextInput {
   readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
 }
 
-/** The setup a club uses when nobody has chosen one for it. */
-const BALANCED_TACTIC: TacticSetup = {
-  mentality: "balanced",
-  pressing: 0.5,
-  directness: 0.5,
-  width: 0.5,
-  risk: 0.5,
-};
-
 /**
- * Builds the context for a club the manager has not prepared.
+ * Writes the one and only `MatchTeamContext` literal in the engine.
  *
- * This is the background driver's seam, and it is deliberately thin: it decides
- * only *which* players line up in *which* slots, then hands the result to
- * `buildTacticTeamContext` like any other caller. A club nobody selected is
- * therefore not a special kind of team context - it is the same one, reached
- * through the same validation, and it cannot drift away from a prepared club's
- * context because there is only one place a context is made (A1).
- *
- * Both drivers previously assembled this literal by hand. That is how the web
- * and the CLI came to hold their own copies of the same fallback eleven, and how
- * one of them could satisfy a new field of `MatchTeamContext` while the other
- * quietly did not.
+ * A manager's prepared team and an AI club's selected team differ in who chose
+ * the eleven, and in nothing after that. When each of them assembled its own
+ * context, a field added to `MatchTeamContext` could be satisfied by one and
+ * quietly skipped by the other - which is precisely how the balance report came
+ * to measure football in which nobody tackled. There is now one place to add a
+ * field to, and it serves both.
  *
  * @example
- * const team = buildUnpreparedTeamContext({
+ * const team = assembleMatchTeamContext({
  *   clubId,
- *   squadPlayerIds: fieldablePlayerIds(club),
- *   requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
+ *   lineup,
+ *   tacticalDistribution: tacticToMatchDistribution(tactic),
  *   players,
  *   roleWeights,
  *   matchTacticsCalibration,
  * });
  */
-export function buildUnpreparedTeamContext(input: BuildUnpreparedTeamContextInput): MatchTeamContext {
-  assertValidRequiredLineupSize(input.requiredLineupSize);
-
-  if (input.squadPlayerIds.length < input.requiredLineupSize) {
-    throw new TacticTeamContextError(
-      "insufficient_squad",
-      `Club ${input.clubId} cannot field ${input.requiredLineupSize} players: ${input.squadPlayerIds.length} available`,
-    );
-  }
-
-  return buildTacticTeamContext({
-    lineup: {
-      clubId: input.clubId,
-      slots: defaultLineupFromSquad(input.squadPlayerIds, input.requiredLineupSize),
-    },
-    tactic: input.tactic ?? BALANCED_TACTIC,
-    requiredLineupSize: input.requiredLineupSize,
+export function assembleMatchTeamContext(input: AssembleMatchTeamContextInput): MatchTeamContext {
+  const { strength, shape } = deriveTeamShapeAndStrength({
+    lineup: input.lineup,
     players: input.players,
     roleWeights: input.roleWeights,
     matchTacticsCalibration: input.matchTacticsCalibration,
     ...(input.playerStates === undefined ? {} : { playerStates: input.playerStates }),
     ...(input.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: input.stateMultiplierCurves }),
   });
-}
 
-/**
- * Composes the eleven a club fields when nobody has selected one.
- *
- * Exported because the fielded lineup is read in two places - to simulate the
- * match, and afterwards to register who played - and a second copy of this rule
- * is a second answer to "who lined up where". It is the same rule or it is a
- * bug; there is no useful middle.
- *
- * @example
- * const slots = defaultLineupFromSquad(fieldablePlayerIds(club), DEFAULT_MATCH_LINEUP_SIZE);
- */
-export function defaultLineupFromSquad(
-  squadPlayerIds: readonly PlayerId[],
-  requiredLineupSize: number,
-): readonly SelectedLineup["slots"][number][] {
-  return squadPlayerIds.slice(0, requiredLineupSize).map((playerId, index) => ({
-    slotKey: `slot:${String(index + 1).padStart(2, "0")}`,
-    playerId,
-    canonicalRole: defaultCanonicalRoleForSlot(index + 1),
-  }));
-}
-
-/**
- * The fixed `4-4-2` role order used when no manager selection exists.
- *
- * Every AI club in the shipped game fields this shape. That is a known
- * limitation rather than a design choice: Step 09 gives AI clubs real
- * selections, and Step 11B cannot start until it has, because a counter-move
- * reward measured against one fixed opponent would reward one fixed answer.
- */
-function defaultCanonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
-  if (slotNumber === 1) {
-    return "goalkeeper";
-  }
-
-  if (slotNumber <= 5) {
-    return "center_back";
-  }
-
-  if (slotNumber <= 9) {
-    return "central_midfielder";
-  }
-
-  return "striker";
+  return {
+    clubId: input.clubId,
+    lineup: input.lineup,
+    strength,
+    shape,
+    tacticalDistribution: input.tacticalDistribution,
+    incidentProfiles: input.lineup.map((slot) =>
+      createMatchPlayerIncidentProfile(
+        input.players[slot.playerId] as Player,
+        input.playerStates?.[slot.playerId],
+      ),
+    ),
+  };
 }
 
 /**

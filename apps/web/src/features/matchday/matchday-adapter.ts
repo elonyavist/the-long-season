@@ -1,5 +1,4 @@
 import {
-  fieldablePlayerIds,
   fieldablePlayerIdsFor,
   roleWeightKeyForCanonicalRole,
   advanceProgressiveMatchMinute,
@@ -11,14 +10,13 @@ import {
   buildMatchRngKey,
   buildPlayerMatchRatings,
   buildTacticTeamContext,
-  buildUnpreparedTeamContext,
   commitCompletedCareerFixture,
+  createLineupSlot,
   createMatchReport,
   createProgressiveMatchMinuteSnapshot,
   createProgressiveMatchSession,
   computePlayerMatchStats,
   DEFAULT_MATCH_LINEUP_SIZE,
-  defaultLineupFromSquad,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
   injuryForcesExit,
@@ -27,6 +25,8 @@ import {
   pauseProgressiveMatchSession,
   resolveProgressiveMatchIncidentDecision,
   resumeProgressiveMatchSession,
+  selectCareerAiTeam,
+  type FixtureFieldedLineups,
   type LivePlayerMatchProjection,
   type MatchContext,
   type MatchSide,
@@ -37,8 +37,8 @@ import {
   type ProgressiveMatchAvailability,
   type ProgressiveMatchMinuteSnapshot,
   type ProgressiveMatchSessionState,
+  type ProgressCareerAiTeamSelectionInput,
   type ProgressCareerFixtureAdvanced,
-  type CanonicalPlayerRole,
 } from "@game/engine";
 import {
   createFakeGameplayConfig,
@@ -372,6 +372,7 @@ function rehydrateReviewedResult(careerState: CareerState): WebMatchdayAdvancedR
     fixtureBefore,
     fixtureAfter,
     report,
+    fieldedLineups: rehydratedFieldedLineups(careerState, fixtureAfter),
     conditionChanges: [],
     playerAvailabilityConsequences: [],
     playerStateConsequences: [],
@@ -383,6 +384,35 @@ function rehydrateReviewedResult(careerState: CareerState): WebMatchdayAdvancedR
     financeLedgerEntryIds: [],
     monthlyLifecycle: [],
     careerState,
+  };
+}
+
+/**
+ * Recovers the elevens a reloaded page can still prove were fielded.
+ *
+ * The manager's own eleven is durable, so it comes back exactly. The opponent's
+ * is not: it was chosen from a squad whose fitness and availability the played
+ * match has already changed, so re-selecting it now would produce a different
+ * team and call it history. Its footballers still appear in the full-time table
+ * through the events they were part of, which is the only durable record there
+ * is of who played for them.
+ *
+ * This joins the fields `rehydrateReviewedResult` already returns empty. What is
+ * not saved is not recoverable, and guessing it is worse than leaving it out.
+ */
+function rehydratedFieldedLineups(careerState: CareerState, fixture: Fixture): FixtureFieldedLineups {
+  const selectedSlots = (careerState.matchPreparation?.selectedLineup?.slots ?? []).map((slot) =>
+    createLineupSlot({
+      slotId: slot.slotKey,
+      playerId: slot.playerId,
+      canonicalRole: slot.canonicalRole,
+    }),
+  );
+  const isSelectedHome = fixture.homeClubId === careerState.selectedClubId;
+
+  return {
+    home: isSelectedHome ? selectedSlots : [],
+    away: isSelectedHome ? [] : selectedSlots,
   };
 }
 
@@ -398,7 +428,12 @@ export function createWebLiveMatchdaySession(careerState: CareerState): CreateWe
     };
   }
   const selectedSide = kickoff.fixture.homeClubId === kickoff.recoveredCareerState.selectedClubId ? "home" : "away";
-  const availability = buildProgressiveAvailability(kickoff.recoveredCareerState, kickoff.fixture, selectedSide);
+  const availability = buildProgressiveAvailability(
+    kickoff.recoveredCareerState,
+    kickoff.fixture,
+    selectedSide,
+    kickoff.opponentBenchPlayerIds,
+  );
   const engineState = createProgressiveMatchSession(kickoff.matchContext, availability, {
     controlledSide: selectedSide,
   });
@@ -874,6 +909,8 @@ type WebMatchdayKickoffPrepared =
       readonly status: "ready";
       readonly fixture: Fixture;
       readonly recoveredCareerState: CareerState;
+      /** Substitutes the opponent's own selection chose, in its own order. */
+      readonly opponentBenchPlayerIds: readonly PlayerId[];
       readonly matchContext: MatchContext;
     }
   | {
@@ -942,15 +979,14 @@ function prepareWebMatchdayKickoff(
     },
   };
   const contentConfig = matchdayContentConfig(recoveredCareerState);
-  const teamsByClubId = buildCareerTeamsByClubId(recoveredCareerState, {
-    matchTacticsCalibration: contentConfig.matchTacticsCalibration,
-    roleWeights: contentConfig.roleWeights,
-    stateMultiplierCurves: contentConfig.stateMultiplierCurves,
-  });
-  const home = teamsByClubId[nextFixture.fixture.homeClubId];
-  const away = teamsByClubId[nextFixture.fixture.awayClubId];
+  const selectedTeam = buildSelectedClubTeam(recoveredCareerState, contentConfig)[
+    recoveredCareerState.selectedClubId
+  ];
+  const opponentClubId = nextFixture.fixture.homeClubId === recoveredCareerState.selectedClubId
+    ? nextFixture.fixture.awayClubId
+    : nextFixture.fixture.homeClubId;
 
-  if (home === undefined || away === undefined) {
+  if (selectedTeam === undefined) {
     return {
       status: "invalid",
       attempt: {
@@ -962,15 +998,29 @@ function prepareWebMatchdayKickoff(
     };
   }
 
+  // The opponent selects through the same engine function the committed
+  // fixture progression uses. When this path composed its own opponent it was
+  // free to disagree with the team the result was later committed against.
+  const opponent = selectCareerAiTeam({
+    careerState: recoveredCareerState,
+    clubId: opponentClubId,
+    fixture: nextFixture.fixture,
+    policy: aiTeamSelectionPolicy(contentConfig),
+    matchTacticsCalibration: contentConfig.matchTacticsCalibration,
+    valuationConfig: selectPlayerValuationConfig(recoveredCareerState.gameState.meta.calibrationVersions),
+  });
+  const isSelectedHome = nextFixture.fixture.homeClubId === recoveredCareerState.selectedClubId;
+
   return {
     status: "ready",
     fixture: nextFixture.fixture,
     recoveredCareerState,
+    opponentBenchPlayerIds: opponent.benchPlayerIds,
     matchContext: {
       fixtureId: nextFixture.fixtureId,
       seed: recoveredCareerState.gameState.meta.seed,
-      home,
-      away,
+      home: isSelectedHome ? selectedTeam : opponent.teamContext,
+      away: isSelectedHome ? opponent.teamContext : selectedTeam,
       engineConfig: contentConfig.matchEngineConfig,
       matchTacticsCalibration: contentConfig.matchTacticsCalibration,
     },
@@ -1338,25 +1388,26 @@ function withCompletionPreview(session: WebLiveMatchdaySession): WebLiveMatchday
     : { ...session, completionFailureReason: preview.reason };
 }
 
-/** Builds real selected/opponent benches without putting career data in the engine. */
+/**
+ * Builds real selected/opponent benches without putting career data in the engine.
+ *
+ * The opponent's substitutes are the ones its own selection chose, not the
+ * players left over after its eleven was removed from the roster. Those differ
+ * as soon as the selection is a real one: a squad's second goalkeeper is a
+ * substitute, and a third-choice striker in a shape with one striker is not.
+ */
 function buildProgressiveAvailability(
   careerState: CareerState,
   fixture: Fixture,
   selectedSide: MatchSide,
+  opponentBenchPlayerIds: readonly PlayerId[],
 ): ProgressiveMatchAvailability {
-  const contentConfig = matchdayContentConfig(careerState);
-  const teams = buildCareerTeamsByClubId(careerState, contentConfig);
   const selectedBench = selectedBenchPlayerIds(careerState);
 
   const forSide = (side: MatchSide) => {
-    const clubId = side === "home" ? fixture.homeClubId : fixture.awayClubId;
-    const lineup = teams[clubId]?.lineup ?? [];
-    const lineupIds = new Set(lineup.map((slot) => slot.playerId));
     const playerIds = side === selectedSide
       ? selectedBench
-      : fieldablePlayerIdsFor(careerState.gameState.clubs[clubId])
-          .filter((playerId) => !lineupIds.has(playerId))
-          .slice(0, REQUIRED_BENCH_SIZE);
+      : opponentBenchPlayerIds.slice(0, REQUIRED_BENCH_SIZE);
 
     return {
       bench: playerIds.map((playerId, index) => ({
@@ -1454,54 +1505,60 @@ function completeBenchCount(preparation: MatchPreparationDraft): number {
   return Object.values(preparation.selectedBenchPlayerIdsBySlot).filter((playerId) => playerId.length > 0).length;
 }
 
-function buildCareerTeamsByClubId(
+/**
+ * Supplies the one context this driver owns: the manager's prepared team.
+ *
+ * Every other club selects its own eleven through the AI policy below. Both
+ * drivers used to compose a context for every club in the world, each from its
+ * own copy of one fixed fallback eleven; that copy is gone from both.
+ */
+function buildSelectedClubTeam(
   careerState: CareerState,
   contentConfig: Pick<
     MatchdayContentConfig,
     "matchTacticsCalibration" | "roleWeights" | "stateMultiplierCurves"
   >,
 ): Readonly<Record<ClubId, MatchTeamContext>> {
-  const teamsByClubId: Partial<Record<ClubId, MatchTeamContext>> = {};
+  const { selectedClubId, matchPreparation } = careerState;
 
-  for (const clubId of careerState.gameState.clubIds) {
-    const club = careerState.gameState.clubs[clubId];
+  if (matchPreparation?.selectedLineup === undefined || matchPreparation.tactic === undefined) {
+    return {} as Readonly<Record<ClubId, MatchTeamContext>>;
+  }
 
-    if (club === undefined) {
-      continue;
-    }
-
-    if (clubId === careerState.selectedClubId && careerState.matchPreparation?.selectedLineup !== undefined && careerState.matchPreparation.tactic !== undefined) {
-      teamsByClubId[clubId] = buildTacticTeamContext({
-        lineup: careerState.matchPreparation.selectedLineup,
-        tactic: careerState.matchPreparation.tactic,
-        requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
-        players: careerState.gameState.players,
-        roleWeights: contentConfig.roleWeights,
-        playerStates: careerState.gameState.playerStates,
-        stateMultiplierCurves: contentConfig.stateMultiplierCurves,
-        matchTacticsCalibration: contentConfig.matchTacticsCalibration,
-      });
-      continue;
-    }
-
-    // A club nobody prepared reaches the same constructor as the manager's own,
-    // and supplies its squad explicitly rather than letting the constructor
-    // derive one from club ownership (A1, A8). This branch used to assemble the
-    // context literal by hand, which is how the web and the CLI came to hold
-    // two copies of one fallback eleven.
-    teamsByClubId[clubId] = buildUnpreparedTeamContext({
-      clubId,
-      squadPlayerIds: fieldablePlayerIds(club),
+  return {
+    [selectedClubId]: buildTacticTeamContext({
+      lineup: matchPreparation.selectedLineup,
+      tactic: matchPreparation.tactic,
       requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
       players: careerState.gameState.players,
       roleWeights: contentConfig.roleWeights,
       playerStates: careerState.gameState.playerStates,
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
       matchTacticsCalibration: contentConfig.matchTacticsCalibration,
-    });
-  }
+    }),
+  } as Readonly<Record<ClubId, MatchTeamContext>>;
+}
 
-  return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
+/**
+ * The one policy every club the manager has not prepared selects through.
+ *
+ * No formation and no per-club entry, so the clubs the manager faces cannot pick
+ * their teams by a different rule from the rest of the league (A2).
+ */
+function aiTeamSelectionPolicy(
+  contentConfig: Pick<MatchdayContentConfig, "roleWeights" | "stateMultiplierCurves">,
+): ProgressCareerAiTeamSelectionInput {
+  return {
+    roleWeights: contentConfig.roleWeights,
+    stateMultiplierCurves: contentConfig.stateMultiplierCurves,
+    tacticalDistribution: {
+      mentality: "balanced",
+      pressing: 0.5,
+      directness: 0.5,
+      width: 0.5,
+      risk: 0.5,
+    },
+  };
 }
 
 function engineRoleKeyForBoardRole(role: TacticalBoardRoleCode): string {
@@ -1823,32 +1880,23 @@ function playerStatInputs(
   }));
 }
 
-/** Rebuilds both starting lineups from durable preparation and club rosters. */
+/** Reads both starting lineups off the played match rather than guessing them. */
 function finalPlayerRegistrations(result: WebMatchdayAdvancedResult): readonly Readonly<{
   playerId: PlayerId;
   side: MatchSide;
   roleKey: string;
 }>[] {
-  // Recomposed from the same canonical inputs the match used, through the same
-  // seam, so the two answers cannot diverge. It stops being recomputable once
-  // Step 09 gives AI clubs real selections: from then on the lineup that was
-  // fielded is a fact of the played match, and `ProgressCareerFixtureAdvanced`
-  // has to carry it rather than let this side guess a default eleven.
-  const slotsForClub = (clubId: ClubId): readonly Readonly<{ playerId: PlayerId; canonicalRole: CanonicalPlayerRole }>[] => clubId === result.careerState.selectedClubId
-    ? result.careerState.matchPreparation?.selectedLineup?.slots ?? []
-    : defaultLineupFromSquad(
-      fieldablePlayerIdsFor(result.careerState.gameState.clubs[clubId]),
-      DEFAULT_MATCH_LINEUP_SIZE,
-    );
-
-  return (["home", "away"] as const).flatMap((side) => {
-    const clubId = side === "home" ? result.fixtureAfter.homeClubId : result.fixtureAfter.awayClubId;
-    return slotsForClub(clubId).map((slot) => ({
+  // Step 08 left this recomposing the opponent's eleven from its roster, which
+  // was correct only while every AI club fielded one fixed shape. A club now
+  // lines up in the shape its own squad is built for, so there is nothing left
+  // to recompute it from - only the match itself knows who played where.
+  return (["home", "away"] as const).flatMap((side) =>
+    result.fieldedLineups[side].map((slot) => ({
       playerId: slot.playerId,
       side,
       roleKey: roleWeightKeyForCanonicalRole(slot.canonicalRole),
-    }));
-  });
+    })),
+  );
 }
 
 function substitutedStatus(

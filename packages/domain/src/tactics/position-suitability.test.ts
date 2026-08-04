@@ -51,6 +51,27 @@ test("player strength can make a valid adapted player outrank a mediocre natural
   assert.equal(strongAdaptedScore > mediocreNaturalScore, true);
 });
 
+/**
+ * Holds the selection bonus on the ability scale it is added to (Step 09).
+ *
+ * Only a bonus small against the `0-20` ability range leaves ability able to
+ * decide anything. At the `35 / 25` this table once held, one suitability step
+ * was worth more than half the entire range, so positional fit alone settled
+ * every comparison and every threshold written in ability points - the AI
+ * substitution regressions among them - silently stopped binding.
+ */
+test("one suitability step is worth about one ability point, not half the scale", () => {
+  const slot = { playerRole: "attacking_midfielder" as const };
+  const natural = scorePlayerForFormationSlot({ naturalPositions: ["am"], playerStrength: 10, slot });
+  const adapted = scorePlayerForFormationSlot({ naturalPositions: ["cm"], playerStrength: 10, slot });
+
+  assert.equal(natural - adapted < 2, true);
+  assert.equal(
+    scorePlayerForFormationSlot({ naturalPositions: ["cm"], playerStrength: 12, slot }) > natural,
+    true,
+  );
+});
+
 test("side metadata gives a small deterministic bonus without changing role suitability", () => {
   const rightWideScore = scorePlayerForFormationSlot({
     naturalPositions: ["rw"],

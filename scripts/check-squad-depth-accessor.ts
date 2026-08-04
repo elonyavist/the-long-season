@@ -19,6 +19,7 @@ const ROOT = new URL("..", import.meta.url).pathname;
 
 /** Files that compose a lineup, a bench, or a matchday squad. */
 const LINEUP_COMPOSING_FILES = [
+  "packages/engine/src/career/career-ai-team-selection.ts",
   "packages/engine/src/career/progress-fixture.ts",
   "apps/web/src/features/matchday/matchday-adapter.ts",
   "apps/web/src/features/match-preparation/match-preparation-adapter.ts",

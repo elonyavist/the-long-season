@@ -8,15 +8,14 @@ import {
 import {
   applyCareerWeeklyRecovery,
   buildTacticTeamContext,
-  buildUnpreparedTeamContext,
   DEFAULT_MATCH_LINEUP_SIZE,
-  fieldablePlayerIds,
   fieldablePlayerIdsFor,
   findNextCareerFixture,
   progressNextCareerFixture,
   type ApplyCareerWeeklyRecoveryResult,
   type MatchTeamContext,
   type PlayerStateMultiplierCurves,
+  type ProgressCareerAiTeamSelectionInput,
   type ProgressCareerFixtureAdvanced,
   type ProgressCareerFixtureResult,
   type RoleWeightProfile,
@@ -113,11 +112,15 @@ export function advanceCareerNextFixture(
 
   return retargetPreparationAfterAdvance(withPreMatchRecovery(progressNextCareerFixture({
     careerState: recoveredCareerState,
-    teamsByClubId: careerTeamsByClubId({
+    teamsByClubId: selectedClubTeamOnly({
       careerState: recoveredCareerState,
       roleWeights: contentConfig.roleWeights,
       stateMultiplierCurves: contentConfig.stateMultiplierCurves,
       matchTacticsCalibration: contentConfig.matchTacticsCalibration,
+    }),
+    aiTeamSelection: aiTeamSelectionPolicy({
+      roleWeights: contentConfig.roleWeights,
+      stateMultiplierCurves: contentConfig.stateMultiplierCurves,
     }),
     matchEngineConfig: contentConfig.matchEngineConfig,
     matchTacticsCalibration: contentConfig.matchTacticsCalibration,
@@ -154,53 +157,66 @@ function validateSelectedClubPreparation(careerState: CliCareerState): CareerAdv
   return undefined;
 }
 
-function careerTeamsByClubId(input: {
+/**
+ * Supplies the one context this driver actually owns: the manager's own team.
+ *
+ * Every other club in the world picks its own eleven through the AI selection
+ * policy below. This driver used to hand the engine a context for all twenty
+ * clubs, each one a hand-composed eleven that took the roster in stored order,
+ * and it had a second copy of that rule in the web.
+ */
+function selectedClubTeamOnly(input: {
   readonly careerState: CliCareerState;
   readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
   readonly stateMultiplierCurves: PlayerStateMultiplierCurves;
   readonly matchTacticsCalibration: CliMatchTacticsCalibration;
 }): Readonly<Record<ClubId, MatchTeamContext>> {
-  const teamsByClubId: Partial<Record<ClubId, MatchTeamContext>> = {};
+  const { selectedClubId, matchPreparation } = input.careerState;
 
-  for (const clubId of input.careerState.gameState.clubIds) {
-    const club = input.careerState.gameState.clubs[clubId];
+  if (matchPreparation?.selectedLineup === undefined || matchPreparation.tactic === undefined) {
+    return {} as Readonly<Record<ClubId, MatchTeamContext>>;
+  }
 
-    if (club === undefined) {
-      continue;
-    }
-
-    if (clubId === input.careerState.selectedClubId && input.careerState.matchPreparation?.selectedLineup !== undefined && input.careerState.matchPreparation.tactic !== undefined) {
-      teamsByClubId[clubId] = buildTacticTeamContext({
-        lineup: input.careerState.matchPreparation.selectedLineup,
-        tactic: input.careerState.matchPreparation.tactic,
-        requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
-        players: input.careerState.gameState.players,
-        roleWeights: input.roleWeights,
-        playerStates: input.careerState.gameState.playerStates,
-        stateMultiplierCurves: input.stateMultiplierCurves,
-        matchTacticsCalibration: input.matchTacticsCalibration,
-      });
-      continue;
-    }
-
-    // The same constructor the manager's own club goes through, given this
-    // club's squad explicitly (A1, A8). The squad comes from the one named
-    // accessor rather than from stored ownership, because ownership stops
-    // answering "who can this club field" at Phase 82A's first loan (A6).
-    teamsByClubId[clubId] = buildUnpreparedTeamContext({
-      clubId,
-      squadPlayerIds: fieldablePlayerIds(club),
+  return {
+    [selectedClubId]: buildTacticTeamContext({
+      lineup: matchPreparation.selectedLineup,
+      tactic: matchPreparation.tactic,
       requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
       players: input.careerState.gameState.players,
       roleWeights: input.roleWeights,
       playerStates: input.careerState.gameState.playerStates,
       stateMultiplierCurves: input.stateMultiplierCurves,
       matchTacticsCalibration: input.matchTacticsCalibration,
-    });
-  }
-
-  return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
+    }),
+  } as Readonly<Record<ClubId, MatchTeamContext>>;
 }
+
+/**
+ * The one policy every club the manager has not prepared selects through.
+ *
+ * It carries no formation and no per-club entry, so there is nothing here that
+ * can hold a different answer for the clubs the manager happens to face this
+ * weekend than for the rest of the league (A2).
+ */
+function aiTeamSelectionPolicy(input: {
+  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
+  readonly stateMultiplierCurves: PlayerStateMultiplierCurves;
+}): ProgressCareerAiTeamSelectionInput {
+  return {
+    roleWeights: input.roleWeights,
+    stateMultiplierCurves: input.stateMultiplierCurves,
+    tacticalDistribution: BALANCED_AI_TACTICAL_DISTRIBUTION,
+  };
+}
+
+/** The setup a club uses when nobody has chosen one for it. */
+const BALANCED_AI_TACTICAL_DISTRIBUTION = {
+  mentality: "balanced",
+  pressing: 0.5,
+  directness: 0.5,
+  width: 0.5,
+  risk: 0.5,
+} as const;
 
 function retargetPreparationAfterAdvance(result: CareerAdvanceResult): CareerAdvanceResult {
   if (result.status !== "advanced" || result.careerState.matchPreparation === undefined) {

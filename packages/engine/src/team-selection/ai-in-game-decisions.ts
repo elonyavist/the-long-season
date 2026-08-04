@@ -187,15 +187,22 @@ export function selectAiInGameDecision(input: SelectAiInGameDecisionInput): AiIn
     ? undefined
     : selectFormationOption(input.formationOptions, tacticalIntent.optionIntent, currentTeam);
 
-  let nextTeam = removeDismissedPlayerForPendingDecision(formationOption ?? currentTeam, session.pendingDecision, side);
-  const substitutions = [];
+  const dismissal = reorganizeAfterDismissal(
+    formationOption ?? currentTeam,
+    session.pendingDecision,
+    side,
+    input.players,
+    rules,
+  );
+  let nextTeam = dismissal.team;
+  const substitutions = dismissal.substitution === undefined ? [] : [dismissal.substitution];
   const reasons: AiInGameDecisionReason[] = [];
 
   if (outgoing !== undefined) {
     if (incoming === undefined || currentTeam.substitutionsUsed >= rules.maximumSubstitutions) {
       reasons.push(reason("no_legal_substitute", session.currentMinute, scoreDelta, outgoing));
       if (outgoing.reasonKey === "forced_injury_replacement") {
-        nextTeam = removeUnavailablePlayer(nextTeam, outgoing.playerId, "injured");
+        nextTeam = removeUnavailablePlayer(nextTeam, outgoing.playerId, "injured", input.players);
       }
     } else {
       const forcedInjury = outgoing.reasonKey === "forced_injury_replacement";
@@ -658,27 +665,139 @@ function substitutePlayer(
   };
 }
 
-function removeDismissedPlayerForPendingDecision(
+/** One team reorganized after a dismissal, and the substitution it cost. */
+interface DismissalReorganization {
+  readonly team: LiveMatchTeamState;
+  readonly substitution?: ApplyLiveMatchTeamChangesCommand["substitutions"][number];
+}
+
+/**
+ * Reorganizes a team around a sending-off, keeping a real goalkeeper in goal.
+ *
+ * A dismissed outfielder is simply removed. A dismissed **goalkeeper** is what
+ * this exists for: football's answer is to take an outfielder off and send the
+ * substitute keeper on, and until Step 09 the policy did neither. It made no
+ * substitution at all and handed the gloves to whichever remaining player
+ * happened to sort last by slot name, while the reserve keeper watched from the
+ * bench for the rest of the match.
+ *
+ * The canonical command path already permitted this: a dismissed player removed
+ * without replacement and one ordinary substitution alongside it are separately
+ * legal, and substituting the dismissed player himself is the only thing barred.
+ *
+ * Promoting an outfielder is kept as the genuine last resort - no substitute
+ * keeper, or no substitutions left - and it now picks the best pair of hands
+ * rather than the last slot in the alphabet.
+ */
+function reorganizeAfterDismissal(
   team: LiveMatchTeamState,
   pendingDecision: LiveMatchPendingDecision | undefined,
   side: MatchEventSide,
-): LiveMatchTeamState {
-  return pendingDecision?.type === "red_card_reorganization" && pendingDecision.side === side
-    ? removeUnavailablePlayer(team, pendingDecision.playerId, "dismissed")
-    : team;
+  players: Readonly<Record<PlayerId, Player>>,
+  rules: CompetitionMatchRules,
+): DismissalReorganization {
+  if (pendingDecision?.type !== "red_card_reorganization" || pendingDecision.side !== side) {
+    return { team };
+  }
+
+  const dismissedSlot = team.lineup.find((slot) => slot.playerId === pendingDecision.playerId);
+  if (dismissedSlot === undefined || dismissedSlot.role !== "goalkeeper") {
+    return { team: removeUnavailablePlayer(team, pendingDecision.playerId, "dismissed", players) };
+  }
+
+  const substituteGoalkeeper = availableBenchGoalkeeper(team, players);
+  const sacrificed = outfielderToSacrifice(team, pendingDecision.playerId);
+  if (substituteGoalkeeper === undefined
+    || sacrificed === undefined
+    || team.substitutionsUsed >= rules.maximumSubstitutions) {
+    return { team: removeUnavailablePlayer(team, pendingDecision.playerId, "dismissed", players) };
+  }
+
+  return {
+    team: {
+      ...team,
+      lineup: team.lineup
+        .filter((slot) => slot.playerId !== pendingDecision.playerId)
+        .map((slot) => slot.playerId === sacrificed.playerId
+          ? { ...dismissedSlot, playerId: substituteGoalkeeper }
+          : slot),
+      bench: team.bench.map((slot) => slot.playerId === substituteGoalkeeper
+        ? { ...slot, playerId: sacrificed.playerId, status: "substituted_out" as const }
+        : slot),
+      unavailable: team.unavailable.some((entry) => entry.playerId === pendingDecision.playerId)
+        ? team.unavailable
+        : [...team.unavailable, { playerId: pendingDecision.playerId, reason: "dismissed" as const }],
+      substitutionsUsed: team.substitutionsUsed + 1,
+    },
+    substitution: {
+      outgoingPlayerId: sacrificed.playerId,
+      incomingPlayerId: substituteGoalkeeper,
+      reasonKey: "ai_decision",
+    },
+  };
+}
+
+/** Finds a real goalkeeper still available to come off this bench. */
+function availableBenchGoalkeeper(
+  team: LiveMatchTeamState,
+  players: Readonly<Record<PlayerId, Player>>,
+): PlayerId | undefined {
+  return team.bench
+    .filter((benchPlayer) => benchPlayer.status === "available")
+    .map((benchPlayer) => benchPlayer.playerId)
+    .filter((playerId) => {
+      const player = players[playerId];
+      return player !== undefined
+        && evaluatePositionSuitability(player.naturalPositions, { playerRole: "goalkeeper" }) !== "invalid";
+    })
+    .sort((left, right) => String(left).localeCompare(String(right)))[0];
+}
+
+/**
+ * Chooses who makes way for the substitute keeper.
+ *
+ * A side down to ten after a sending-off gives up an attacker before anything
+ * else, so the sacrifice is taken from the front of the pitch backwards. Slot
+ * key breaks any remaining tie, so the same dismissal always costs the same man.
+ */
+function outfielderToSacrifice(
+  team: LiveMatchTeamState,
+  dismissedPlayerId: PlayerId,
+): LiveMatchTeamState["lineup"][number] | undefined {
+  const sacrificeOrder: readonly CanonicalPlayerRole[] = [
+    "striker",
+    "right_winger",
+    "left_winger",
+    "attacking_midfielder",
+    "right_midfielder",
+    "left_midfielder",
+    "central_midfielder",
+    "defensive_midfielder",
+    "right_full_back",
+    "left_full_back",
+    "center_back",
+  ];
+
+  return [...team.lineup]
+    .filter((slot) => slot.playerId !== dismissedPlayerId && slot.role !== "goalkeeper")
+    .sort((left, right) => {
+      const order = sacrificeOrder.indexOf(left.role) - sacrificeOrder.indexOf(right.role);
+      return order !== 0 ? order : left.slotId.localeCompare(right.slotId);
+    })[0];
 }
 
 function removeUnavailablePlayer(
   team: LiveMatchTeamState,
   playerId: PlayerId,
   unavailableReason: LiveMatchUnavailableReason,
+  players: Readonly<Record<PlayerId, Player>>,
 ): LiveMatchTeamState {
   const unavailableSlot = team.lineup.find((slot) => slot.playerId === playerId);
   if (unavailableSlot === undefined) return team;
 
   const remainingLineup = team.lineup.filter((slot) => slot.playerId !== playerId);
   const lineup = unavailableSlot.role === "goalkeeper"
-    ? withEmergencyGoalkeeper(remainingLineup, unavailableSlot)
+    ? withEmergencyGoalkeeper(remainingLineup, unavailableSlot, players)
     : remainingLineup;
 
   return {
@@ -691,13 +810,32 @@ function removeUnavailablePlayer(
   };
 }
 
+/**
+ * Hands the gloves to the best pair of hands left on the pitch.
+ *
+ * This used to sort by `slotId` and take the last one, which named a footballer
+ * by where his slot fell in the alphabet. The batch path in `match-team-exit.ts`
+ * has always ranked the same decision by reflexes and handling; both now read
+ * the same football fact, so a match does not answer this question two ways.
+ *
+ * Reached only when no substitute goalkeeper can come on at all.
+ */
 function withEmergencyGoalkeeper(
   lineup: LiveMatchTeamState["lineup"],
   goalkeeperSlot: LiveMatchTeamState["lineup"][number],
+  players: Readonly<Record<PlayerId, Player>>,
 ): LiveMatchTeamState["lineup"] {
+  const handsOf = (playerId: PlayerId): number => {
+    const player = players[playerId];
+    return player === undefined
+      ? 0
+      : Number(player.abilities.goalkeeping.reflexes) + Number(player.abilities.goalkeeping.handling);
+  };
   const emergencyGoalkeeper = [...lineup]
-    .sort((left, right) => left.slotId.localeCompare(right.slotId))
-    .at(-1);
+    .sort((left, right) => {
+      const hands = handsOf(right.playerId) - handsOf(left.playerId);
+      return hands !== 0 ? hands : left.slotId.localeCompare(right.slotId);
+    })[0];
   if (emergencyGoalkeeper === undefined) return lineup;
 
   return [

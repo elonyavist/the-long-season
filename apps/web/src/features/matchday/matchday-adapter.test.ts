@@ -15,6 +15,7 @@ import {
   buildWebMatchdayPhaseView,
   commitWebLiveMatchday,
   createWebLiveMatchdaySession,
+  createWebMatchdayState,
   pauseWebLiveMatchday,
   resolveWebLiveMatchdayIncident,
   resumeWebLiveMatchday,
@@ -148,6 +149,44 @@ describe("progressive web matchday adapter", () => {
     expect(committed.fixtureAfter.result?.report).toEqual(committed.report);
     expect(completedView.conditionChanges).toEqual(completed.matchdayState.liveProgress?.fullTimeReview?.conditionChanges);
     expect(completedView.availabilityConsequences).toEqual(committed.playerAvailabilityConsequences);
+  });
+
+  /**
+   * Fixes that the opponent's eleven is a fact of the match, not a guess (Step 09).
+   *
+   * Until this step the web recomposed it from the roster in stored order and
+   * labelled all eleven `4-4-2`. That was only ever right while every AI club
+   * fielded that one shape; now a club lines up in the shape its own squad is
+   * built for, so the only correct answer is the one the match carries.
+   */
+  it("carries the opponent's real eleven out of the played match", () => {
+    const created = requireLiveSession(preparedCareer("adapter-fielded-lineups"));
+    const completed = advanceToPhase(created.session, "full_time");
+    const committed = commitWebLiveMatchday(completed.session);
+    if (committed.status !== "advanced") throw new Error(committed.reason);
+
+    const selectedSide = committed.fixtureAfter.homeClubId === committed.careerState.selectedClubId
+      ? "home"
+      : "away";
+    const opponentSide = selectedSide === "home" ? "away" : "home";
+    const opponent = committed.fieldedLineups[opponentSide];
+    const kickoffOpponent = completed.session.engineState.initialContext[opponentSide];
+
+    expect(opponent).toHaveLength(11);
+    expect(opponent.map((slot) => slot.playerId)).toEqual(
+      kickoffOpponent.lineup.map((slot) => slot.playerId),
+    );
+    expect(opponent[0]?.canonicalRole).toBe("goalkeeper");
+    expect(new Set(opponent.map((slot) => slot.canonicalRole)).size).toBeGreaterThan(4);
+
+    const view = buildWebMatchdayPhaseView(
+      createWebMatchdayState(committed.careerState, committed),
+    );
+    const opponentClubId = opponentSide === "home"
+      ? committed.fixtureAfter.homeClubId
+      : committed.fixtureAfter.awayClubId;
+    expect(view.playerRows.filter((row) => row.club.clubId === opponentClubId).length)
+      .toBeGreaterThan(0);
   });
 
   it("commits representative deterministic live matches without replaying the final minute", () => {

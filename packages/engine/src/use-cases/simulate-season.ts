@@ -37,7 +37,7 @@ import {
   playerRatingRegistrationsFromContext,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
-  deriveTeamShapeAndStrength,
+  assembleMatchTeamContext,
   deriveTeamStrength,
   matchPlayerIncidentProfilesForLineup,
   TeamStrengthError,
@@ -796,20 +796,16 @@ function buildFixtureLineupOverrideContext(
   playerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>,
 ): MatchTeamContext {
   try {
-    return {
+    return assembleMatchTeamContext({
       clubId,
       lineup: override.lineup,
-      ...deriveTeamShapeAndStrength({
-        lineup: override.lineup,
-        players: override.players,
-        roleWeights: override.roleWeights,
-        matchTacticsCalibration,
-        ...(playerStates === undefined ? {} : { playerStates }),
-        ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
-      }),
       tacticalDistribution,
-      incidentProfiles: matchPlayerIncidentProfilesForLineup(override.lineup, override.players, playerStates),
-    };
+      players: override.players,
+      roleWeights: override.roleWeights,
+      matchTacticsCalibration,
+      ...(playerStates === undefined ? {} : { playerStates }),
+      ...(override.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: override.stateMultiplierCurves }),
+    });
   } catch (error) {
     if (error instanceof TeamStrengthError) {
       throw new SimulateSeasonError(
@@ -890,23 +886,15 @@ function fixedLineupMatchTeamContext(
   }
 
   try {
-    return {
+    return assembleMatchTeamContext({
       clubId,
       lineup: team.lineup,
-      ...deriveTeamShapeAndStrength({
-        lineup: team.lineup,
-        players: team.players,
-        roleWeights: team.roleWeights,
-        matchTacticsCalibration,
-        ...dynamicStateInputs(team, livePlayerStates),
-      }),
       tacticalDistribution: team.tacticalDistribution,
-      incidentProfiles: matchPlayerIncidentProfilesForLineup(
-        team.lineup,
-        team.players,
-        livePlayerStates ?? team.playerStates,
-      ),
-    };
+      players: team.players,
+      roleWeights: team.roleWeights,
+      matchTacticsCalibration,
+      ...dynamicStateInputs(team, livePlayerStates),
+    });
   } catch (error) {
     if (error instanceof TeamStrengthError) {
       throw new SimulateSeasonError(
@@ -975,7 +963,10 @@ function aiSelectedMatchTeamContext(
       ),
       currentDate: fixture.date,
       roleWeights: team.roleWeights,
-      tacticalDistribution: team.tacticalDistribution,
+      // A fixed setup: this use case is the instrument that holds a shape and a
+      // tactic still in order to measure one of them, so the shape must not
+      // modulate the other.
+      tacticalDistribution: () => team.tacticalDistribution,
       matchTacticsCalibration,
       ...dynamicStateInputs(team, livePlayerStates),
       ...(team.aiSelection.benchSize === undefined ? {} : { benchSize: team.aiSelection.benchSize }),

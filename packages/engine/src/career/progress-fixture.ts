@@ -9,7 +9,6 @@ import {
   type ClubFinanceLedgerEntryId,
   type ClubId,
   type CompetitionMatchRules,
-  type Formation,
   type Fixture,
   type FixtureId,
   type MatchReport,
@@ -27,6 +26,8 @@ import type { MatchContext, MatchTeamContext } from "../match-engine/match-conte
 import { createMatchReport } from "../match-engine/create-match-report.ts";
 import type { MatchExplanationConditionSnapshot, MatchExplanationTrace } from "../match-engine/match-explanation-trace.ts";
 import type {
+  LineupSlot,
+  MatchSide,
   MatchTacticalDistributionInput,
   PlayerStateMultiplierCurves,
   RoleWeightProfile,
@@ -34,12 +35,9 @@ import type {
 import { buildPlayerMatchRatings, playerRatingRegistrationsFromContext, type PlayerMatchRatingRow } from "../match-engine/player-match-rating.ts";
 import { simulateMatch } from "../match-engine/simulate-match.ts";
 import type { PlayerValuationConfig } from "../market/player-valuation.ts";
-import {
-  derivePublicPlayerAssessment,
-  type PublicPlayerAssessment,
-} from "../squad/public-player-assessment.ts";
-import { AiSquadSelectionError, buildAiSquadMatchTeamContext } from "../team-selection/index.ts";
+import { AiSquadSelectionError } from "../team-selection/index.ts";
 import { applyMatchReportToFixture } from "../use-cases/apply-match-report-to-fixture.ts";
+import { selectCareerAiTeam, type CareerAiTeamSelectionPolicy } from "./career-ai-team-selection.ts";
 import { createMatchConsequenceInboxMessages, deliverCareerInboxMessages } from "./career-inbox-lifecycle.ts";
 import { applyCareerFixtureConditionConsequences, type CareerFixtureConditionChange } from "./career-condition-consequences.ts";
 import {
@@ -66,19 +64,8 @@ export type ProgressCareerFixtureInvalidReason =
   | "invalid_ai_team_selection"
   | "finance_lifecycle_rejected";
 
-/** Optional AI team-selection data for non-user fixture sides. */
-export interface ProgressCareerAiTeamSelectionInput {
-  /** Base formation used for the AI match XI. */
-  readonly formation: Formation;
-  /** Match-engine role profiles used to derive team strength. */
-  readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
-  /** Tactical distribution used for the AI side. */
-  readonly tacticalDistribution: MatchTacticalDistributionInput;
-  /** Optional state curves used when deriving strength from selected players. */
-  readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
-  /** Maximum substitutes to include in diagnostics. */
-  readonly benchSize?: number;
-}
+/** AI team-selection policy for every club the caller has not prepared. */
+export type ProgressCareerAiTeamSelectionInput = CareerAiTeamSelectionPolicy;
 
 /**
  * Input for simulating and applying exactly one next selected-club fixture.
@@ -99,8 +86,8 @@ export interface ProgressNextCareerFixtureInput {
   readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
   /** Match-ready team contexts keyed by club ID. The selected club must be supplied by the caller. */
   readonly teamsByClubId: Readonly<Partial<Record<ClubId, MatchTeamContext>>>;
-  /** Optional AI selector config used only for non-selected clubs when their context is missing. */
-  readonly aiTeamSelectionByClubId?: Readonly<Partial<Record<ClubId, ProgressCareerAiTeamSelectionInput>>>;
+  /** AI selector policy used for any non-selected club whose context is missing. */
+  readonly aiTeamSelection?: ProgressCareerAiTeamSelectionInput;
   /** Match-engine tuning supplied by caller content/config. */
   readonly matchEngineConfig: MatchEngineConfig;
   /** Versioned match-tactics calibration used when this input builds an AI context. */
@@ -109,6 +96,23 @@ export interface ProgressNextCareerFixtureInput {
   readonly competitionMatchRules: CompetitionMatchRules;
   /** Whether to attach optional explanation data for the played fixture. */
   readonly includeExplanationTrace?: boolean;
+}
+
+/**
+ * The eleven each side kicked off with, kept as a fact of the played match.
+ *
+ * Presentation needs to name who played and in which role, and until Step 09
+ * the web recomposed the opponent's eleven from its roster to find out. That
+ * was only ever correct while every AI club fielded one fixed shape. Now that a
+ * club lines up in the shape its squad is built for, a second answer to "who
+ * played where" would simply be a wrong one, so the played match carries the
+ * only answer there is.
+ */
+export interface FixtureFieldedLineups {
+  /** Home side's starting eleven in canonical slot order. */
+  readonly home: readonly LineupSlot[];
+  /** Away side's starting eleven in canonical slot order. */
+  readonly away: readonly LineupSlot[];
 }
 
 /** Result returned when one selected-club fixture was simulated and applied. */
@@ -123,6 +127,8 @@ export interface ProgressCareerFixtureAdvanced {
   readonly fixtureAfter: Fixture;
   /** Durable match report produced by the simulation. */
   readonly report: MatchReport;
+  /** Eleven each side actually kicked off with. */
+  readonly fieldedLineups: FixtureFieldedLineups;
   /** Optional language-agnostic explanation trace for the played fixture. */
   readonly explanationTrace?: MatchExplanationTrace;
   /** Selected-club condition changes caused by this played fixture. */
@@ -461,6 +467,7 @@ function applyCareerFixtureReport(
     fixtureBefore: input.fixture,
     fixtureAfter,
     report: input.report,
+    fieldedLineups: fieldedLineupsFromParticipation(input.participationSides),
     conditionChanges: conditionConsequences.changes,
     playerStateConsequences: matchStateConsequences.changes,
     playerStateConsequenceSummary: matchStateConsequences.summary,
@@ -570,7 +577,7 @@ function resolveTeamContext(
     };
   }
 
-  const aiSelection = input.aiTeamSelectionByClubId?.[clubId];
+  const aiSelection = input.aiTeamSelection;
   if (aiSelection === undefined) {
     return {
       status: "resolved",
@@ -578,44 +585,16 @@ function resolveTeamContext(
     };
   }
 
-  const club = careerState.gameState.clubs[clubId];
-  if (club === undefined) {
-    return {
-      status: "invalid",
-      result: invalidResult(careerState, "invalid_ai_team_selection", fixture.id),
-    };
-  }
-
-  const selectablePlayerIds = fieldablePlayerIds(club).filter((playerId) =>
-    playerUnavailabilityReason(
-      careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
-      playerId,
-      fixture.date,
-      fixture.competitionId,
-    ) === undefined
-  );
-
   try {
     return {
       status: "resolved",
-      context: buildAiSquadMatchTeamContext({
+      context: selectCareerAiTeam({
+        careerState,
         clubId,
-        formation: aiSelection.formation,
-        playerIds: selectablePlayerIds,
-        players: careerState.gameState.players,
-        publicAssessments: publicAssessmentsForPlayers(
-          careerState,
-          selectablePlayerIds,
-          fixture.date,
-          input.valuationConfig,
-        ),
-        currentDate: fixture.date,
-        playerStates: careerState.gameState.playerStates,
-        roleWeights: aiSelection.roleWeights,
-        tacticalDistribution: aiSelection.tacticalDistribution,
+        fixture,
+        policy: aiSelection,
         matchTacticsCalibration: input.matchTacticsCalibration,
-        ...(aiSelection.stateMultiplierCurves === undefined ? {} : { stateMultiplierCurves: aiSelection.stateMultiplierCurves }),
-        ...(aiSelection.benchSize === undefined ? {} : { benchSize: aiSelection.benchSize }),
+        valuationConfig: input.valuationConfig,
       }).teamContext,
     };
   } catch (error) {
@@ -628,27 +607,6 @@ function resolveTeamContext(
 
     throw error;
   }
-}
-
-/** Builds safe dated facts for the exact selectable AI roster. */
-function publicAssessmentsForPlayers(
-  careerState: CareerState,
-  playerIds: readonly PlayerId[],
-  currentDate: Fixture["date"],
-  valuationConfig: PlayerValuationConfig,
-): Readonly<Record<PlayerId, PublicPlayerAssessment>> {
-  const assessments: Record<PlayerId, PublicPlayerAssessment> = {};
-  for (const playerId of playerIds) {
-    const player = careerState.gameState.players[playerId];
-    if (player === undefined) continue;
-    assessments[playerId] = derivePublicPlayerAssessment({
-      player,
-      currentDate,
-      potentialProjectionPolicy: valuationConfig.potentialProjectionPolicy,
-      ratingScale: valuationConfig.ratingScale,
-    });
-  }
-  return assessments;
 }
 
 interface SimulatedFixtureProgression {
@@ -692,6 +650,21 @@ function simulateFixtureAndCreateReport(
     }),
     ...(simulatedMatch.explanationTrace === undefined ? {} : { explanationTrace: simulatedMatch.explanationTrace }),
   };
+}
+
+/** Reads both kickoff elevens off the participation facts already assembled. */
+function fieldedLineupsFromParticipation(
+  sides: readonly FixtureParticipationSideContext[],
+): FixtureFieldedLineups {
+  const lineupFor = (side: MatchSide): readonly LineupSlot[] => {
+    const context = sides.find((entry) => entry.side === side)?.initialContext;
+    if (context === undefined) {
+      throw new Error(`Committed fixture has no ${side} participation context`);
+    }
+    return context.lineup;
+  };
+
+  return { home: lineupFor("home"), away: lineupFor("away") };
 }
 
 function sideContextsFromCompletedMatch(

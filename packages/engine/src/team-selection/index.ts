@@ -15,6 +15,7 @@ export {
   type ProgressiveAiInGameDecision,
   type SelectAiInGameDecisionInput,
 } from "./ai-in-game-decisions.ts";
+export { deriveShapeTacticalDistribution } from "./shape-tactical-distribution.ts";
 export {
   AiSquadSelectionError,
   buildAiSquadMatchTeamContext,

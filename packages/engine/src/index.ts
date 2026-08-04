@@ -114,9 +114,16 @@ export {
   type NextSeasonCalendarResult,
 } from "./career/next-season-calendar.ts";
 export {
+  selectCareerAiTeam,
+  type CareerAiTeamSelection,
+  type CareerAiTeamSelectionPolicy,
+  type SelectCareerAiTeamInput,
+} from "./career/career-ai-team-selection.ts";
+export {
   commitCompletedCareerFixture,
   progressNextCareerFixture,
   type CommitCompletedCareerFixtureInput,
+  type FixtureFieldedLineups,
   type ProgressCareerFixtureAdvanced,
   type ProgressCareerFixtureInvalid,
   type ProgressCareerFixtureInvalidReason,

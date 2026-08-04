@@ -22,8 +22,8 @@ import {
 
 import type { MatchTeamContext } from "./match-context.ts";
 import {
+  assembleMatchTeamContext,
   buildTacticTeamContext,
-  buildUnpreparedTeamContext,
   tacticToMatchDistribution,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
@@ -253,54 +253,26 @@ test("pre-match and live application of one change produce the same structural d
 });
 
 /**
- * Fixes the seam a club nobody prepared reaches the engine through (A1).
+ * Fixes the one place a `MatchTeamContext` literal is written (A1).
  *
- * The squad arrives explicitly. Nothing here consults club ownership to find
- * out who is available, because ownership stops answering that question at
- * Phase 82A's first loan.
+ * The manager's prepared club and an AI-selected club differ only in who chose
+ * the eleven. When each assembled its own context, a field added to the context
+ * could be satisfied by one and quietly skipped by the other.
  */
-test("an unprepared club is an ordinary caller of the same builder", () => {
-  const ids = playerIds();
+test("a prepared club and a directly assembled club produce the same context", () => {
   const input = validInput();
+  const prepared = buildTacticTeamContext(input);
 
-  const unprepared = buildUnpreparedTeamContext({
-    clubId: clubId("club:pro01"),
-    squadPlayerIds: [ids.goalkeeper, ids.striker],
-    requiredLineupSize: 2,
+  const assembled = assembleMatchTeamContext({
+    clubId: prepared.clubId,
+    lineup: prepared.lineup,
+    tacticalDistribution: prepared.tacticalDistribution,
     players: input.players,
     roleWeights: input.roleWeights,
     matchTacticsCalibration: input.matchTacticsCalibration,
   });
 
-  assert.equal(unprepared.clubId, clubId("club:pro01"));
-  assert.deepEqual(unprepared.lineup.map((slot) => slot.slotId), ["slot:01", "slot:02"]);
-  assert.deepEqual(unprepared.lineup.map((slot) => slot.canonicalRole), ["goalkeeper", "center_back"]);
-  assert.equal(unprepared.incidentProfiles.length, 2);
-  assert.equal(unprepared.shape.policyVersion, input.matchTacticsCalibration.version);
-  assert.deepEqual(unprepared.tacticalDistribution, {
-    mentality: "balanced",
-    pressing: 0.5,
-    directness: 0.5,
-    width: 0.5,
-    risk: 0.5,
-  });
-});
-
-test("an unprepared club that cannot field the required eleven fails loudly", () => {
-  const ids = playerIds();
-  const input = validInput();
-
-  assertTacticTeamContextError(
-    () => buildUnpreparedTeamContext({
-      clubId: clubId("club:pro01"),
-      squadPlayerIds: [ids.goalkeeper],
-      requiredLineupSize: 2,
-      players: input.players,
-      roleWeights: input.roleWeights,
-      matchTacticsCalibration: input.matchTacticsCalibration,
-    }),
-    "insufficient_squad",
-  );
+  assert.deepEqual(assembled, prepared);
 });
 
 /** Reduces one change to the facts the match engine actually reads. */

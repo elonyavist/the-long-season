@@ -42,14 +42,34 @@ const SUITABILITY_SCORE: Readonly<Record<PositionSuitability, number>> = Object.
   POSITION_SUITABILITIES.map((suitability, index) => [suitability, POSITION_SUITABILITIES.length - 1 - index]),
 ) as Readonly<Record<PositionSuitability, number>>;
 
+/**
+ * What positional fit is worth when *picking* a player, in ability points.
+ *
+ * The scale is the `0-20` ability scale and nothing else, because the bonus is
+ * added straight onto a player's ability: a natural fit is worth `1.2` ability
+ * over an adapted one, and playing out of position costs `4.7` from there.
+ * Numbers on any other scale silently decide the comparison outright - at the
+ * `35 / 25 / 5` this table used to hold, one suitability step was worth half the
+ * entire ability range, so an average natural fit outranked the best adapted
+ * player in the squad no matter who he was.
+ *
+ * There is exactly one of these. A second selection scale existed inside the AI
+ * selector until Step 09, which meant the opponent's manager and the manager's
+ * own helper could rank the same two footballers differently for the same slot.
+ *
+ * This is not the Step 05 coordination ladder. That one says what a misplaced
+ * player *contributes* once he is on the pitch; this one says who gets picked.
+ * Reusing either as the other conflates two separate football questions.
+ */
 const SUITABILITY_SELECTION_BONUS: Readonly<Record<PositionSuitability, number>> = {
-  natural: 35,
-  adapted: 25,
-  weak: 5,
+  natural: 2.4,
+  adapted: 1.2,
+  weak: -3.5,
   invalid: -1_000,
 };
 
-const SIDE_SELECTION_BONUS = 3;
+/** Ability-scale credit for a footballer whose natural side matches the slot. */
+const SIDE_SELECTION_BONUS = 0.35;
 
 /**
  * Classifies how well a player's natural positions fit one formation slot.
@@ -86,6 +106,9 @@ export function evaluatePositionSuitability(
  * The score combines football quality with positional fit. This keeps the
  * explicit manager helper actions realistic: a strong adapted player can rank
  * above a mediocre natural player, while invalid fits remain unusable.
+ *
+ * `playerStrength` must be on the `0-20` ability scale, because the fit bonus is
+ * calibrated against it. Every caller reads it from `roleCurrentAbility`.
  */
 export function scorePlayerForFormationSlot(input: PlayerSlotFitScoreInput): number {
   const suitability = evaluatePositionSuitability(input.naturalPositions, input.slot);

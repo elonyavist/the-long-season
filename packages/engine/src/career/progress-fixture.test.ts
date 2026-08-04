@@ -39,6 +39,7 @@ import {
   type MatchTeamContext,
 } from "../match-engine/index.ts";
 import { createMatchReport } from "../match-engine/create-match-report.ts";
+import { selectCareerAiTeam } from "./career-ai-team-selection.ts";
 import {
   commitCompletedCareerFixture as commitCompletedCareerFixtureWithPolicy,
   progressNextCareerFixture as progressNextCareerFixtureWithPolicy,
@@ -637,6 +638,109 @@ test("progressNextCareerFixture reports missing team context without simulating"
   });
 });
 
+/**
+ * Fixes that AI selection holds for the whole world, not the manager's rivals (A2).
+ *
+ * The step's value is a coherent league, and the background-fixture work that
+ * follows selects an eleven for roughly `270` clubs a matchday through this same
+ * function. A club the manager neither faces nor shares a competition with is
+ * the case a narrower implementation would leave on a fallback path.
+ */
+test("a club the manager never meets still selects a typed eleven in a real shape", () => {
+  const selectedClubId = clubId("club:selected");
+  const strangerClubId = clubId("club:stranger");
+  const fixtureToPlayId = fixtureId("fixture:000001");
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), fullSquadClubFixture(strangerClubId)],
+    fixtures: [fixtureFixture(fixtureToPlayId, selectedClubId, clubId("club:other"))],
+  });
+
+  const stranger = selectCareerAiTeam({
+    careerState,
+    clubId: strangerClubId,
+    fixture: careerState.gameState.fixtures[fixtureToPlayId] as Fixture,
+    policy: {
+      roleWeights: roleWeightsFixture(),
+      tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
+    },
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+  });
+
+  assert.equal(stranger.teamContext.clubId, strangerClubId);
+  assert.equal(stranger.teamContext.lineup.length, 11);
+  assert.equal(stranger.teamContext.lineup[0]?.canonicalRole, "goalkeeper");
+  assert.equal(
+    stranger.teamContext.lineup.every((slot) => slot.slotId.includes(":")),
+    true,
+  );
+  assert.equal(new Set(stranger.teamContext.lineup.map((slot) => slot.playerId)).size, 11);
+  assert.equal(stranger.benchPlayerIds.length > 0, true);
+});
+
+/**
+ * Fixes that AI clubs actually rotate (Step 09).
+ *
+ * The selector has always had a rotation policy and nothing ever supplied it,
+ * so every AI club fielded the same eleven every week for as long as a career
+ * lasted. The durable participation ledger is where the minutes already are.
+ */
+test("an AI club rests the footballers it has been leaning on", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const fixtureToPlayId = fixtureId("fixture:000001");
+  const fixtureDate = gameDate(fromISO("2026-11-08"));
+  const workedIds = ["cb-01", "cb-02", "cm-01", "cm-02", "st-01", "st-02"]
+    .map((name) => playerId(`player:other-${name}`));
+
+  let ledger = createEmptyPlayerParticipationLedger();
+  for (const [index, workedId] of workedIds.entries()) {
+    for (let match = 0; match < 3; match += 1) {
+      ledger = accruePlayerFixtureParticipation(ledger, {
+        fixtureId: fixtureId(`fixture:worked-${index}-${match}`),
+        playerId: workedId,
+        clubId: otherClubId,
+        seasonId: seasonId("season:test"),
+        monthKey: "2026-11",
+        started: true,
+        substituteAppearance: false,
+        minutes: 90,
+        rating: 7,
+        playedRoleMinutes: { central_midfielder: 90 },
+      });
+    }
+  }
+
+  const selectionFor = (playerParticipationLedger: PlayerParticipationLedger) => selectCareerAiTeam({
+    careerState: careerStateFixture({
+      selectedClubId,
+      clubs: [clubFixture(selectedClubId), fullSquadClubFixture(otherClubId)],
+      fixtures: [fixtureFixture(fixtureToPlayId, selectedClubId, otherClubId, false, fixtureDate)],
+      playerParticipationLedger,
+    }),
+    clubId: otherClubId,
+    fixture: { ...fixtureFixture(fixtureToPlayId, selectedClubId, otherClubId, false, fixtureDate) },
+    policy: {
+      roleWeights: roleWeightsFixture(),
+      tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
+    },
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+  });
+
+  const rested = selectionFor(createEmptyPlayerParticipationLedger());
+  const worked = selectionFor(ledger);
+  const startedWhenWorked = new Set(worked.teamContext.lineup.map((slot) => slot.playerId));
+
+  assert.equal(worked.teamContext.lineup.length, 11);
+  assert.notDeepEqual(
+    worked.teamContext.lineup.map((slot) => slot.playerId),
+    rested.teamContext.lineup.map((slot) => slot.playerId),
+  );
+  assert.equal(workedIds.some((workedId) => !startedWhenWorked.has(workedId)), true);
+});
+
 test("progressNextCareerFixture can build the non-selected opponent context with AI selection", () => {
   const selectedClubId = clubId("club:selected");
   const otherClubId = clubId("club:other");
@@ -652,19 +756,16 @@ test("progressNextCareerFixture can build the non-selected opponent context with
     teamsByClubId: {
       [selectedClubId]: teamContextFixture(selectedClubId, 12),
     },
-    aiTeamSelectionByClubId: {
-      [otherClubId]: {
-        formation: getFormation("4-4-2"),
-        roleWeights: roleWeightsFixture(),
-        tacticalDistribution: {
-          directness: 0.5,
-          pressing: 0.5,
-          width: 0.5,
-          risk: 0.5,
-          mentality: "balanced",
-        },
-        benchSize: 8,
+    aiTeamSelection: {
+      roleWeights: roleWeightsFixture(),
+      tacticalDistribution: {
+        directness: 0.5,
+        pressing: 0.5,
+        width: 0.5,
+        risk: 0.5,
+        mentality: "balanced",
       },
+      benchSize: 8,
     },
     matchEngineConfig: matchEngineConfigFixture(),
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
@@ -694,17 +795,14 @@ test("progressNextCareerFixture never auto-builds the selected club lineup", () 
     teamsByClubId: {
       [otherClubId]: teamContextFixture(otherClubId, 10),
     },
-    aiTeamSelectionByClubId: {
-      [selectedClubId]: {
-        formation: getFormation("4-4-2"),
-        roleWeights: roleWeightsFixture(),
-        tacticalDistribution: {
-          directness: 0.5,
-          pressing: 0.5,
-          width: 0.5,
-          risk: 0.5,
-          mentality: "balanced",
-        },
+    aiTeamSelection: {
+      roleWeights: roleWeightsFixture(),
+      tacticalDistribution: {
+        directness: 0.5,
+        pressing: 0.5,
+        width: 0.5,
+        risk: 0.5,
+        mentality: "balanced",
       },
     },
     matchEngineConfig: matchEngineConfigFixture(),

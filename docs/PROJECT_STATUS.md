@@ -7,6 +7,9 @@ step attempt, completed step, and rework decision.
 context window holds - so "read this file first" had quietly stopped being
 followable. History lives in `git log docs/PROJECT_STATUS.md` and `docs/audits/`.
 Keep it under `300` lines: when a fact stops constraining future work, delete it.
+Always-active rules live in `AGENTS.md`, per-kind-of-work rules in
+`docs/PROJECT_RULES.md`, and `docs/step_prompt_to_use.md` splits per-phase reading
+from per-step. Never a second copy of any of them.
 
 ## How To Read The Project
 
@@ -31,26 +34,17 @@ equal-quality pairs now play different matches over `2400` of them.
 
 | Phase 81 step | Status |
 |---|---|
-| 01 - reproducible baseline and frozen contract | Done 2026-08-02, reopened and re-closed 2026-08-03 for A9 |
-| 02 - typed tactical slot context and collapse removal | Done 2026-08-03, all gates green |
-| 03 - intrinsic shape profile and diminishing returns | Done 2026-08-03, all gates green |
-| 04 - relational phase matchup and route capacity | Done 2026-08-03, all gates green |
-| 05 - suitability coordination without double penalty | Done 2026-08-03, all gates green |
-| 06 - phase-aware control, opportunity routes, tactic semantics | Done 2026-08-03, all gates green |
-| 07 - route quality, causal actors and explanation facts | Done 2026-08-04, all gates green |
-| 07A - complete match inputs and flank-aware evidence | Done 2026-08-04, all gates green |
-| 07B - resolvable evidence and declared populations | Done 2026-08-04, all gates green |
-| 08 - live session, persistence, event schema and beta reset | Done 2026-08-04, all gates green |
-| 09-12 | Not started |
-| 11B - formation as a counter-move | Not started, blocked on Step 09 |
+| 01 through 08 | Done 2026-08-02 to 2026-08-04, all gates green. Step 01 was reopened once for A9. The seams they left are below; the rest is in their step documents |
+| 09 - AI whole-XI selection and shared tactical decisions | Done 2026-08-04, all gates green |
+| 10-12 | Not started |
+| 11B - formation as a counter-move | Not started, unblocked by Step 09 |
 
 ## Current Active Step
 
 - Step:
-  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/09-*.md`
-- Next action: start Step 09. It unblocks Step 11B and must make the fielded
-  lineup a carried fact of a played match: `finalPlayerRegistrations` recomposes
-  the opponent's eleven, correct only while every AI club fields `4-4-2`.
+  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/10-*.md`
+- Next action: start Step 10. Nothing in the UI reads Step 07's `route`,
+  `routeCounts` or `shooterCounts` yet; Step 10 owns rendering them.
 - Two decisions left for the phase contract by Step 07B and still untaken: the
   A7 rule names the wrong owner, and the `1.5x` ratio below between setup and
   squad quality is emergent rather than chosen.
@@ -80,15 +74,13 @@ severity are as inherited, and the distribution is never an accepted result.
 Step 11 is the deadline, Step 12 confirms at cohort scale, and the rule was that
 it may not be carried a third time: if out of band there, reopen Step 06.
 
-Step 06 took it from `3.08` warn to `2.74` pass on `pnpm cli ten-season-report`.
-Step 07B measured that command at three commits - `a62ced4` `2.74`/`42.0`
-(reproducing Step 06 exactly), `c1f3bda` and `465013c` both `2.78`/`40.1`, all
-PASS, nothing tuned. **So Step 07 owns the whole movement through actor edges,
-Step 07A owns none, and the rule above names the wrong owner**: reopening Step 06
-would reopen the wrong thing. The phase contract decides; 07B changed no rule.
-
-That is the ten-season report, not the `750`-world distribution above. Nobody
-re-runs that population before Step 12 - `No cohort runs anywhere else` binds.
+Step 06 took `pnpm cli ten-season-report` from `3.08` warn to `2.74` pass; Step
+07B measured `2.78` at two later commits and Step 09 re-measured `2.78` with real
+AI selection and shape-derived AI tactics - all PASS, nothing tuned. **So Step 07
+owns that movement through actor edges and the rule above names the wrong
+owner** - reopening Step 06 would reopen the wrong thing. The phase contract
+decides. That is the ten-season report, not the `750`-world distribution above,
+which nobody re-runs before Step 12.
 
 ### Which Manager Decisions Actually Count, Measured
 
@@ -107,33 +99,22 @@ Re-measured by Step 07B at `1050` scenario pairs: `2100` matches a row, one
 | a standout attacker at equal squad quality | `0.0098`, unresolved |
 
 Formation is resolved, and the finding is its shape rather than its margin: seven
-of eight sit below the reference and none is meaningfully above it.
-
-Tactics and compositions are not flat: their best response gains `+0.0327` and
-`+0.0312`, above the floor, collapsing to `+0.0033` against its own counter -
-working rock-paper-scissors. **Formation is the outlier**, with a downside and no
-upside, and Step 11B owns raising it to `~0.047` as a *counter-move* reward.
-11B is **blocked on Step 09**: every AI club in the game fields a hardcoded
-`4-4-2`, so a counter reward built now would reward one fixed answer.
+of eight sit below the reference and none is meaningfully above it. Tactics and
+compositions are not flat - best responses gain `+0.0327` and `+0.0312` and
+collapse to `+0.0033` against their own counter, working rock-paper-scissors.
+**Formation is the outlier**, with a downside and no upside; Step 11B owns
+raising it to `~0.047` as a *counter-move* reward, and Step 09 unblocked that by
+ending the hardcoded `4-4-2` every AI club used to field.
 
 **Open - the flank claim has an instrument and no population.** Step 07A split
 `left` from `right` and found every curated formation inside sampling noise: the
-calibration enforces mirror symmetry and each fields the same shape on both
-flanks, so there is no flank difference here to attenuate. Step 04's reopen needs
-a deliberately lopsided side first; its document has the table.
+calibration enforces mirror symmetry and each fields the same shape on both flanks.
+Step 04's reopen needs a deliberately lopsided side first; its document has the table.
 
-**Answered - tactics are gated and have a best response.** `no_dominant_tactic`
-reads the *mean* against the other five profiles where the shape gate reads the
-worst matchup: six legal settings are a peer population, `66` compositions are
-not. The gate is one-sided by design - an extreme may cost a manager, never pay
-one - so `low_block` is reported and not bounded.
-
-**Answered - the asymmetry is two bounds, not a ratio (A9).** The old
-`asymmetric_incoherence_cost` divided by a surplus that never left the noise
-floor. `incoherence_costs_a_division_tier` at `1 x` the tier edge replaces it,
-PASS at `1.9246`, against `bounded_structural_swing` at `0.75 x`. An invariant
-that *cannot* be evaluated is amended by the phase contract, never relaxed by
-the step that trips over it.
+**Answered.** `no_dominant_tactic` reads the *mean* of six peer settings where the
+shape gate reads the worst of `66`; the gate is one-sided by design, so
+`low_block` is reported and not bounded. An invariant that cannot be evaluated is
+amended by the phase contract, never relaxed by the step that trips over it (A9).
 
 ### Frozen Tactical Baseline (Step 01)
 
@@ -145,29 +126,19 @@ Amending a `TACTICAL_SHAPE_THRESHOLDS` value takes a numbered amendment.
   shape. Every structure-versus-quality claim is measured against it.
 - Structure may gain at most `0.75 x` that and incoherence must cost `1 x` it.
   No composition or tactic profile may stay above `0.55` against its field.
-- The dominance population is the `66` reachable department compositions, not
-  the `23` named presets, which cover only `10` of them. The board locks the
-  goalkeeper slot only and no validator caps a department, so extreme shapes are
-  manager choices and no gate exempts them.
-- The bands are conditioned on a **single-country** population (A4).
-- Every invariant passes.
-
-### Documentation Budget
-
-Always-active rules live in `AGENTS.md`; `docs/PROJECT_RULES.md` keeps only the
-per-kind-of-work rules and `docs/step_prompt_to_use.md` splits per-phase reading
-from per-step. Never a second copy of any of them.
+- The dominance population is the `66` reachable department compositions, not the
+  `23` named presets, which cover only `10`. The board locks the goalkeeper slot
+  only and no validator caps a department, so extreme shapes are manager choices.
+- The bands are conditioned on a **single-country** population (A4). All pass.
 
 ### Typed Tactical Slot Seam (Step 02)
 
-- A lineup slot stores only `slotId`, `playerId`, `canonicalRole`, and `side`;
-  line, position family, and the role-weight key are derived through
-  `canonicalRoleTacticalFacts(...)` and `roleWeightKeyForCanonicalRole(...)`.
-  Do not put a derived field back on the slot, or on
-  `match_preparation_lineup.role_key`, which stores a canonical role.
-- `fieldablePlayerIds` / `fieldablePlayerIdsFor` own squad depth (A6), enforced
-  by `check:squad-depth` over eight lineup-composing files; only Phase 82A
-  widens the accessor.
+- A lineup slot stores only `slotId`, `playerId`, `canonicalRole` and `side`; line,
+  position family and the role-weight key are derived through
+  `canonicalRoleTacticalFacts(...)` and `roleWeightKeyForCanonicalRole(...)`. Do not
+  put a derived field back on the slot, or on `match_preparation_lineup.role_key`.
+- `fieldablePlayerIds` / `fieldablePlayerIdsFor` own squad depth (A6), enforced by
+  `check:squad-depth` over nine lineup-composing files; only Phase 82A widens it.
 
 ### Intrinsic Tactical Shape Seam (Step 03)
 
@@ -182,15 +153,14 @@ from per-step. Never a second copy of any of them.
   scoring pass, two readings, so they cannot describe different elevens.
 - Season team input carries the squad, never a precomputed strength.
 - The four admissible mathematical constraints - non-negative weights, strictly
-  decreasing and positive marginal contribution, bounded capacities, left/right
-  mirror symmetry - are enforced in `validateMatchTacticsCalibration(...)` and
-  are subordinate to Step 01's bands.
+  decreasing positive marginal contribution, bounded capacities, mirror symmetry -
+  live in `validateMatchTacticsCalibration(...)`, subordinate to Step 01's bands.
 
 ### Relational Matchup Seam (Step 04)
 
-- Five routes, frozen here because Step 01 froze none: `central`, `left`,
-  `right`, `direct`, `transition`. `TACTICAL_ROUTE_DEFINITION` is typed code:
-  content owns how hard a bottleneck bites, never which capacity resists what.
+- Five routes, frozen here because Step 01 froze none: `central`, `left`, `right`,
+  `direct`, `transition`. `TACTICAL_ROUTE_DEFINITION` is typed code: content owns
+  how hard a bottleneck bites, never which capacity resists what.
 - `TACTICAL_SHAPE_CAPACITY_MIRROR` is the one place "your left is their right" is
   written down; the mirror invariant and the flank matchup both read it.
 - A chain blends its weakest link with its average, so one dead phase collapses
@@ -209,22 +179,19 @@ from per-step. Never a second copy of any of them.
   do, because the destination role's ability weights already price the move.
 - `POSITION_SUITABILITIES` is the one canonical order; anything ranking by
   suitability walks it.
-- Two *selection*-ranking suitability scales still exist, in
-  `ai-squad-selection.ts` and `position-suitability.ts`. Step 09 collapses them;
-  the execution ladder is separate and is not a third candidate.
 
 ### Tactic Semantics Seam (Step 06)
 
 - A knob's benefit and its cost are two typed mappings,
-  `TACTIC_KNOB_FAVOURED_ROUTES` and `TACTIC_KNOB_EXPOSED_ROUTE`; content owns
-  only magnitudes and validation refuses a knob priced at zero exposure.
+  `TACTIC_KNOB_FAVOURED_ROUTES` and `TACTIC_KNOB_EXPOSED_ROUTE`; content owns only
+  magnitudes and validation refuses a knob priced at zero exposure.
 - **Basis points are not effect.** A knob lifting two routes, amplified by
   `routeSelectionSharpness`, costs far more than its number suggests, and
   `deriveOpportunityRate` reads the *difference* between the two plans, so an
   under-priced cost is charged twice. Solve exposures numerically, not from JSON.
 - A knob that changes where the ball goes moves **both** sides' attempt rate; one
-  with no route preference moves only its own, read from
-  `TACTIC_KNOB_FAVOURED_ROUTES` and never declared twice.
+  with no route preference moves only its own, read from the same mapping above
+  and never declared twice.
 
 ### Occasion And Persistence Seam (Steps 07-08)
 
@@ -233,15 +200,12 @@ from per-step. Never a second copy of any of them.
 - **An actor edge is a deviation from the pool the actor was drawn from**, in the
   same attribute off the same accessor. That is what makes an absent
   `incidentProfiles` give exactly `0` rather than a constant, and what stops the
-  term having a population mean. A department score is a different scale. The
-  goalkeeper has none - a pool of one; Step 07A scales his *department* by the
-  real gap when an emergency keeper is promoted, floored at `0.35`.
+  term having a population mean. The goalkeeper has no pool - Step 07A scales his
+  *department* by the real gap when an emergency keeper is promoted, floor `0.35`.
 - **Player attributes are required on every `MatchTeamContext`**, one per lineup
-  player, with no fallback. Every context comes from `buildTacticTeamContext`,
-  and a club nobody prepared from `buildUnpreparedTeamContext`, which takes an
-  **explicit squad** and never derives one from a club (A1, A8). Do not
-  hand-assemble the literal again: two drivers each holding their own copy is
-  what let career opponents play at a flat `10` while the manager's own did not.
+  player, with no fallback. Do not hand-assemble the literal: two producers each
+  holding their own copy is what let career opponents play at a flat `10` while
+  the manager's own did not.
 - A match fact belongs to the club that **fielded** the player, never the one
   holding his contract (A8). An event's own side decides; a registration names
   the club only for a player with no events. A card is not club-attributed at
@@ -249,16 +213,52 @@ from per-step. Never a second copy of any of them.
 - **Only a load can prove a save.** `route` was absent from `match_events` for a
   whole step because no test loaded a report back. Schema `23` / envelope `14`,
   no migration; the mapper validates the tactical unions rather than casting.
-- An incomplete `presentationMessageKey` family crashes at runtime rather than
-  failing to build, and `check:localized-text` does not cover it. Unowned.
-- Match-event schema `8` (`ShotContext.route`, absent for a penalty);
-  explanation-trace schema `2` (`routeCounts`, `shooterCounts`).
+- An incomplete `presentationMessageKey` family crashes at runtime rather than failing to build, and `check:localized-text` does not cover it. Unowned.
+- Match-event schema `8` (`ShotContext.route`, absent for a penalty); explanation-trace schema `2` (`routeCounts`, `shooterCounts`).
+
+### AI Selection Seam (Step 09)
+
+- **One selection scale**, `SUITABILITY_SELECTION_BONUS` at `2.4 / 1.2 / -3.5` on
+  the `0-20` ability it is added to. A larger bonus decides every comparison on fit
+  alone and unbinds every threshold written in ability points: at the old
+  `35 / 25 / 5` no adapted footballer could be a legal routine substitute. Not the
+  Step 05 execution ladder, which answers a different question.
+- `assembleMatchTeamContext(...)` writes the only `MatchTeamContext` literal;
+  `selectCareerAiTeam(...)` is the only door career AI selection goes through. The
+  live web session builds its own kickoff context, so a second path there would
+  disagree with the team the result is committed against.
+- The AI policy is **one policy, not a per-club map**, and carries no formation
+  (A2). A map invites answering only for the clubs the manager faces; a club lines
+  up in the catalog shape its own squad is built for.
+- Filling the shape is never tradeable against quality in `assignFootballXi(...)`;
+  greedy slot order cost `5.9` points on the measured counterexample. Choosing
+  among all `23` shapes costs `3.1x` a fixed one, not `23x`; Phase 81A's
+  background fixtures own the real tick budget (A3).
+- `ProgressCareerFixtureAdvanced.fieldedLineups` is the only answer to who played
+  where. A reloaded reviewed result cannot recover the opponent's eleven and leaves
+  it empty rather than re-selecting from an already-changed squad.
+- **Shape on `structuralScore`, eleven on `score`.** Only ability and fit choose a
+  club's system; fitness and workload choose who fills it. One score for both let
+  a tired defender change a formation for a week, leaving Step 11B nothing stable
+  to counter.
+- **A lost goalkeeper is replaced by the substitute keeper**, an outfielder going
+  off to make room, exactly as football does it. Promoting somebody already on
+  the pitch is the last resort - no reserve keeper, or no substitutions left -
+  and it ranks by reflexes and handling in both the live and batch paths, never
+  by slot name. The reserve keeper holds the first bench place ahead of every
+  better footballer, because no other substitute answers this question.
+- **Shape-derived tactics exceed this step's `No new AI tactic control` rule**,
+  added on explicit instruction. Width, directness and risk are deviations from
+  the *measured* catalog mean, so the `23` shapes average back to the caller's
+  setup and Step 06's balance point is unmoved; `pressing` and `mentality` stay
+  with their owners. `simulate-season` never modulates - it holds shape and tactic
+  still to measure one of them.
 
 ### Superseded Evidence
 
-Phase 79C's distribution tolerances used an owner-category value multiplier that
-no longer exists, and Phase 79D's `302` ceiling-six players across `100` worlds
-is non-comparable: Phase 80A changed its population. Do not reuse either.
+Phase 79C's distribution tolerances used an owner-category value multiplier that no
+longer exists, and Phase 79D's `302` ceiling-six players across `100` worlds is
+non-comparable: Phase 80A changed its population. Do not reuse either.
 
 ### Accepted Product Decisions Still In Force
 
@@ -271,10 +271,10 @@ is non-comparable: Phase 80A changed its population. Do not reuse either.
 
 ## Update Protocol
 
-For every step attempt: read this file, choose the active step, implement only
-that step, run the required checks, and if something is wrong fix the current
-step or update the next relevant step document. Advance only when the step
-Definition of Done is satisfied.
+For every step attempt: read this file, choose the active step, implement only that
+step, run the required checks, and if something is wrong fix the current step or
+update the next relevant step document. Advance only when the step Definition of
+Done is satisfied.
 
 When updating this file:
 

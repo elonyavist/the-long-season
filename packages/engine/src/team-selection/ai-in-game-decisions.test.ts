@@ -162,6 +162,90 @@ test("leading AI protects a late advantage with a bounded tactical command", () 
   assert.equal(selection.reasons[0]?.reasonKey, "protecting_lead");
 });
 
+/**
+ * Fixes what a side does when its goalkeeper is sent off (Step 09).
+ *
+ * Football takes an outfielder off and sends the substitute keeper on. The
+ * policy used to make no substitution at all and hand the gloves to whichever
+ * remaining player sorted last by slot name, while the reserve keeper watched
+ * from the bench for the rest of the match.
+ */
+test("a dismissed goalkeeper is replaced by the substitute keeper, not by whoever is nearest", () => {
+  const away = withReserveGoalkeeper(teamFixture("away"));
+  const dismissedId = awayXi(1);
+  const session = sessionFixture({
+    phase: "second_half",
+    minute: 55,
+    pauseReason: "selected_club_red_card",
+    away: away.team,
+    pendingDecision: { type: "red_card_reorganization", minute: 55, side: "away", playerId: dismissedId },
+  });
+
+  const selection = selectAiInGameDecision(policyInput(session, "away", [], undefined, away.players));
+  const nextTeam = selection.command?.nextTeam;
+  const inGoal = nextTeam?.lineup.find((slot) => slot.role === "goalkeeper");
+
+  assert.equal(selection.command?.substitutions.length, 1);
+  assert.equal(selection.command?.substitutions[0]?.incomingPlayerId, away.reserveGoalkeeperId);
+  assert.equal(inGoal?.playerId, away.reserveGoalkeeperId);
+  assert.equal(nextTeam?.lineup.length, 10);
+  assert.equal(nextTeam?.lineup.some((slot) => slot.playerId === dismissedId), false);
+  assert.equal(
+    nextTeam?.unavailable.some((entry) => entry.playerId === dismissedId && entry.reason === "dismissed"),
+    true,
+  );
+  // The command has to survive the canonical path, or the reorganization is
+  // only correct in this test.
+  const applied = applyAiInGameDecision(policyInput(session, "away", [], undefined, away.players));
+  assert.equal(applied.facts.some((fact) => fact.type === "substitution"), true);
+  assert.equal(applied.selection.reasons.some((entry) => entry.reasonKey === "command_rejected"), false);
+  assert.equal(applied.session.away.unavailable.some((entry) => entry.playerId === dismissedId), true);
+});
+
+test("the man who makes way for the substitute keeper is an attacker", () => {
+  const away = withReserveGoalkeeper(teamFixture("away"));
+  const session = sessionFixture({
+    phase: "second_half",
+    minute: 55,
+    pauseReason: "selected_club_red_card",
+    away: away.team,
+    pendingDecision: { type: "red_card_reorganization", minute: 55, side: "away", playerId: awayXi(1) },
+  });
+
+  const selection = selectAiInGameDecision(policyInput(session, "away", [], undefined, away.players));
+  const sacrificedId = selection.command?.substitutions[0]?.outgoingPlayerId;
+  const sacrificedRole = away.team.lineup.find((slot) => slot.playerId === sacrificedId)?.role;
+
+  assert.equal(sacrificedRole, "striker");
+});
+
+/**
+ * Holds the last resort to the same football fact the batch path uses.
+ *
+ * With no substitute keeper the gloves still have to go somewhere, and the man
+ * who gets them is the best pair of hands on the pitch - not the last slot in
+ * the alphabet, which is what this used to compute.
+ */
+test("with no substitute keeper the gloves go to the best hands left on the pitch", () => {
+  const handiestId = awayXi(4);
+  const players = {
+    ...playerLookup(),
+    [handiestId]: withGoalkeepingHands(playerLookup()[handiestId] as Player, 18),
+  };
+  const session = sessionFixture({
+    phase: "second_half",
+    minute: 55,
+    pauseReason: "selected_club_red_card",
+    pendingDecision: { type: "red_card_reorganization", minute: 55, side: "away", playerId: awayXi(1) },
+  });
+
+  const selection = selectAiInGameDecision(policyInput(session, "away", [], undefined, players));
+  const inGoal = selection.command?.nextTeam.lineup.find((slot) => slot.role === "goalkeeper");
+
+  assert.equal(selection.command?.substitutions.length, 0);
+  assert.equal(inGoal?.playerId, handiestId);
+});
+
 test("ordinary manual pause outside a decision boundary produces no cosmetic change", () => {
   const session = sessionFixture({ phase: "second_half", minute: 55, pauseReason: "manual" });
   const selection = selectAiInGameDecision(policyInput(session, "away"));
@@ -188,7 +272,15 @@ test("routine late-match workload can trigger one credible fresh-leg substitutio
 });
 
 test("routine policy tries the next tired player when the first has no legal replacement", () => {
-  const session = sessionFixture({ phase: "second_half", minute: 70, pauseReason: "manual" });
+  // Only the substitute striker is still available, so the tired right back
+  // genuinely cannot be covered and the policy must fall through to the tired
+  // striker rather than stop at the first candidate it considered.
+  const session = sessionFixture({
+    phase: "second_half",
+    minute: 70,
+    pauseReason: "manual",
+    away: onlyStrikerOnBench(teamFixture("away")),
+  });
   const selection = selectAiInGameDecision(policyInput(
     session,
     "away",
@@ -200,6 +292,28 @@ test("routine policy tries the next tired player when the first has no legal rep
 
   assert.equal(selection.command?.substitutions[0]?.outgoingPlayerId, awayXi(11));
   assert.equal(selection.reasons[0]?.reasonKey, "low_condition");
+});
+
+/**
+ * Fixes the one selection scale a routine substitution is judged on (Step 09).
+ *
+ * The permitted regressions are ability points, and until the AI selector and
+ * this policy shared one scale they were compared against scores where a single
+ * suitability step was worth `10`. No adapted footballer could clear a
+ * regression of `2`, so a squad's real cover never came on and the thresholds
+ * that read like football policy decided nothing at all.
+ */
+test("a right wing-back is legal cover for a tired right back", () => {
+  const session = sessionFixture({ phase: "second_half", minute: 70, pauseReason: "manual" });
+  const selection = selectAiInGameDecision(policyInput(
+    session,
+    "away",
+    [signal(awayXi(2), 6.4, 94)],
+  ));
+
+  assert.equal(selection.command?.substitutions[0]?.outgoingPlayerId, awayXi(2));
+  assert.equal(selection.command?.substitutions[0]?.incomingPlayerId, awayBench(5));
+  assert.equal(selection.reasons[0]?.suitability, "adapted");
 });
 
 test("routine decision boundary does not replace a player before meaningful workload", () => {
@@ -458,14 +572,46 @@ function policyInput(
   side: MatchEventSide,
   signals: SelectAiInGameDecisionInput["playerSignals"] = [],
   formationOptions?: SelectAiInGameDecisionInput["formationOptions"],
+  players: Record<PlayerId, Player> = playerLookup(),
 ): SelectAiInGameDecisionInput {
   return {
     session,
     side,
     rules: RULES,
-    players: playerLookup(),
+    players,
     playerSignals: signals,
     ...(formationOptions === undefined ? {} : { formationOptions }),
+  };
+}
+
+/** Gives one footballer real hands without touching the rest of him. */
+function withGoalkeepingHands(player: Player, value: number): Player {
+  const ability = abilityValue(value);
+
+  return {
+    ...player,
+    abilities: {
+      ...player.abilities,
+      goalkeeping: { ...player.abilities.goalkeeping, reflexes: ability, handling: ability },
+    },
+  };
+}
+
+/** Puts a real reserve goalkeeper in the last bench place, as a named bench has. */
+function withReserveGoalkeeper(team: LiveMatchTeamState): {
+  readonly team: LiveMatchTeamState;
+  readonly players: Record<PlayerId, Player>;
+  readonly reserveGoalkeeperId: PlayerId;
+} {
+  const reserveGoalkeeperId = playerId(`player:${team.side}-reserve-gk`);
+  const bench = team.bench.map((benchPlayer, index) => index === team.bench.length - 1
+    ? { ...benchPlayer, playerId: reserveGoalkeeperId }
+    : benchPlayer);
+
+  return {
+    team: { ...team, bench },
+    players: { ...playerLookup(), [reserveGoalkeeperId]: playerFixture(reserveGoalkeeperId, "goalkeeper", 11) },
+    reserveGoalkeeperId,
   };
 }
 
@@ -518,6 +664,17 @@ function teamFixture(side: MatchEventSide): LiveMatchTeamState {
     unavailable: [],
     substitutionsUsed: 0,
     tactic: createTacticSetup({ mentality: "balanced", pressing: 0.5, directness: 0.5, width: 0.5, risk: 0.5 }),
+  };
+}
+
+/** Leaves one substitute striker as the only footballer this team can bring on. */
+function onlyStrikerOnBench(team: LiveMatchTeamState): LiveMatchTeamState {
+  return {
+    ...team,
+    bench: team.bench.map((benchPlayer, index) => ({
+      ...benchPlayer,
+      status: index === 0 ? "available" as const : "substituted_out" as const,
+    })),
   };
 }
 
