@@ -260,9 +260,15 @@ describe("tactical shape paired series", () => {
 describe("tactical shape audit report", () => {
   const report = runTacticalShapeAudit(AUDIT_INPUT);
 
+  // A second full audit, not an assertion on a cached one: comparing two
+  // independent runs is what reproducibility means here. It measures 3301ms
+  // idle, so vitest's 5000ms default left too little headroom and the test
+  // failed under full-suite parallelism while passing in isolation. The budget
+  // is a harness limit, not a behaviour threshold - the input, the seeds and
+  // the compared hash are unchanged.
   it("is reproducible", () => {
     expect(runTacticalShapeAudit(AUDIT_INPUT).structuredHash).toBe(report.structuredHash);
-  });
+  }, 7_000);
 
   it("records the current department collapse over the whole reachable population", () => {
     expect(report.strengthRows).toHaveLength(66);

@@ -1,0 +1,20 @@
+# graphify-specific exclusions. Merged with .gitignore and evaluated last, so
+# these win on conflict. Only generated output belongs here: documents are
+# excluded per-run with --code-only, never from this file, so turning the
+# semantic pass on later stays a flag and not a rewrite.
+
+# Simulation dumps and profiles. These 398 JSON files once put 5001 nodes of
+# benchmark output into the graph.
+reports/**/*.json
+reports/**/*.cpuprofile
+reports/**/*.txt
+test-results/
+
+# 271 flag SVGs. No structure worth a node, and the semantic pass would read
+# each one as an image.
+assets/
+
+# graphify's own output must never feed back into the graph.
+graphify-out/
+
+**/.DS_Store

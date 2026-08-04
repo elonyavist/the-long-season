@@ -1,0 +1,5 @@
+# Every write under graphify-out/ invalidates Claude Code's prompt cache and
+# forces a full re-upload at cache-write rates on the next turn. The graph is
+# reached with `graphify query/explain/affected`, never by reading these files.
+graph.json
+graphify-out/

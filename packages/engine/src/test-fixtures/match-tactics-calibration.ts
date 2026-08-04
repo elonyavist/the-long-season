@@ -5,6 +5,8 @@ import {
   TACTICAL_SHAPE_TASKS,
   type CanonicalPlayerRole,
   type MatchTacticsCalibrationConfig,
+  type TacticalMatchupCalibrationConfig,
+  type TacticalSemanticsCalibrationConfig,
   type TacticalShapeCapacity,
   type TacticalShapeTask,
 } from "@game/domain";
@@ -90,28 +92,43 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
         rest_defence: 23_000,
       },
     },
-    tacticalMatchup: {
-      chainBottleneckWeightBasisPoints: 6_500,
-      pressingContestWeightBasisPoints: 5_000,
-    },
-    tacticalSemantics: {
-      routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
-      volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
-      exposureBasisPointsByKnob: { directness: 1_600, pressing: 1_900, width: 1_300, risk: 2_200 },
-      commitmentBasisPointsByMentality: {
-        very_defensive: 8_600,
-        defensive: 9_300,
-        balanced: 10_000,
-        attacking: 10_800,
-        very_attacking: 11_700,
-      },
-      scoreStateCommitmentBasisPoints: 550,
-      shapeControlShareBasisPoints: 5_500,
-      routeQualityBiasBasisPoints: 2_500,
-      routeSelectionSharpness: 3,
-    },
+    tacticalMatchup: FIXTURE_TACTICAL_MATCHUP,
+    tacticalSemantics: FIXTURE_TACTICAL_SEMANTICS,
   };
 }
+
+/**
+ * The matchup and semantics halves both fixtures in this file share.
+ *
+ * Only `tacticalShape` separates them: one gives roles football character, the
+ * other makes every outfield role interchangeable. Everything downstream of the
+ * shape - how two shapes contest, what a knob buys - is the same calibration in
+ * both, so it is declared once rather than kept in step by hand.
+ *
+ * These numbers deliberately do not track the shipped ones, for the reason on
+ * `matchTacticsCalibrationFixture`.
+ */
+const FIXTURE_TACTICAL_MATCHUP = {
+  chainBottleneckWeightBasisPoints: 6_500,
+  pressingContestWeightBasisPoints: 5_000,
+} as const satisfies TacticalMatchupCalibrationConfig;
+
+const FIXTURE_TACTICAL_SEMANTICS = {
+  routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
+  volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
+  exposureBasisPointsByKnob: { directness: 1_600, pressing: 1_900, width: 1_300, risk: 2_200 },
+  commitmentBasisPointsByMentality: {
+    very_defensive: 8_600,
+    defensive: 9_300,
+    balanced: 10_000,
+    attacking: 10_800,
+    very_attacking: 11_700,
+  },
+  scoreStateCommitmentBasisPoints: 550,
+  shapeControlShareBasisPoints: 5_500,
+  routeQualityBiasBasisPoints: 2_500,
+  routeSelectionSharpness: 3,
+} as const satisfies TacticalSemanticsCalibrationConfig;
 
 const FULL_BACK_WEIGHTS = taskWeights({
   build_up: 5_500,
@@ -209,26 +226,8 @@ export function flatMatchTacticsCalibrationFixture(input: {
       channelPolicy: { halfChannelOwnShareBasisPoints: 7_500 },
       saturationReferenceMilliByTask: uniformTaskWeights(input.saturationReferenceMilli ?? 20_000),
     },
-    tacticalMatchup: {
-      chainBottleneckWeightBasisPoints: 6_500,
-      pressingContestWeightBasisPoints: 5_000,
-    },
-    tacticalSemantics: {
-      routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
-      volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
-      exposureBasisPointsByKnob: { directness: 1_600, pressing: 1_900, width: 1_300, risk: 2_200 },
-      commitmentBasisPointsByMentality: {
-        very_defensive: 8_600,
-        defensive: 9_300,
-        balanced: 10_000,
-        attacking: 10_800,
-        very_attacking: 11_700,
-      },
-      scoreStateCommitmentBasisPoints: 550,
-      shapeControlShareBasisPoints: 5_500,
-      routeQualityBiasBasisPoints: 2_500,
-      routeSelectionSharpness: 3,
-    },
+    tacticalMatchup: FIXTURE_TACTICAL_MATCHUP,
+    tacticalSemantics: FIXTURE_TACTICAL_SEMANTICS,
   };
 }
 
