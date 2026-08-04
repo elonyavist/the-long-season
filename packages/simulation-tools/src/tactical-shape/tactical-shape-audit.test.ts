@@ -514,3 +514,32 @@ describe("flank instrumentation", () => {
     }
   });
 });
+
+describe("what fielding a differently-distributed eleven is worth", () => {
+  const report = runTacticalShapeAudit(AUDIT_INPUT);
+
+  it("compares distribution and not squad quality", () => {
+    // The premise the whole row rests on. The lift is paid for by the standout's
+    // team-mates exactly, so both sides field the same attack department and any
+    // win share between them is about *who* takes the chances rather than about
+    // one side simply being better.
+    const { flatAttackStrength, concentratedAttackStrength } = report.selectionConcentration;
+
+    expect(concentratedAttackStrength).toBe(flatAttackStrength);
+  });
+
+  it("carries its own noise floor, because this gate cannot resolve the effect", () => {
+    // This suite runs a handful of paired seeds, which puts the floor an order of
+    // magnitude above anything the row could show. That is the correct division
+    // of labour and worth stating: the gate proves the measurement is wired and
+    // isolates distribution, and `pnpm cli tactical-shape-report` at its shipped
+    // seed count is what produces a number anybody may act on.
+    const row = report.selectionConcentration;
+
+    expect(row.attackConcentration).toBe(4);
+    expect(row.matches).toBe(AUDIT_INPUT.scenarioPairedSeedCount * 2);
+    expect(row.concentratedWinShare).toBeGreaterThanOrEqual(0);
+    expect(row.concentratedWinShare).toBeLessThanOrEqual(1);
+    expect(Math.abs(row.concentratedWinShare - 0.5)).toBeLessThan(row.noiseFloor);
+  });
+});

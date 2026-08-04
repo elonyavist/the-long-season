@@ -99,6 +99,7 @@ export function formatTacticalShapeReport(bundle: TacticalShapeReportBundle): st
     ...tacticSection(report),
     "",
     ...formationSection(report),
+    ...selectionConcentrationSection(report),
     "",
     ...qualitySection(report),
     "",
@@ -274,6 +275,46 @@ function tacticSection(report: TacticalShapeAuditReport): readonly string[] {
     header,
     `| --- | ${matrix.tacticKeys.map(() => "---").join(" | ")} |`,
     ...grid,
+  ];
+}
+
+/**
+ * Reports what fielding a differently-distributed eleven is worth.
+ *
+ * The one manager decision every other table here is blind to. All of them are
+ * measured on clones - eleven identical players, which is what makes department
+ * composition the only variable - so nothing else in this report can see which
+ * players a manager picks. Both sides below field the same composition, the same
+ * tactics and the same attack department strength; only the distribution of that
+ * quality differs.
+ */
+function selectionConcentrationSection(report: TacticalShapeAuditReport): readonly string[] {
+  const row = report.selectionConcentration;
+  const edge = Math.round(Math.abs(row.concentratedWinShare - 0.5) * 10_000) / 10_000;
+  const resolved = edge > row.noiseFloor;
+
+  return [
+    "## What A Standout Player Is Worth, At Equal Squad Quality",
+    "",
+    "Every other table in this report is measured on identical players, which is",
+    "correct for isolating shape and blind to team selection. Here one attacker is",
+    `lifted by \`${row.attackConcentration}\` ability points and his fellow attackers pay for it`,
+    "exactly, so both sides carry the same attack department and any difference is",
+    "about who takes the chances rather than about who has the better squad.",
+    "",
+    "| Measurement | Value |",
+    "| --- | --- |",
+    `| Concentrated side win share | ${row.concentratedWinShare} |`,
+    `| Distance from an even contest | ${edge} |`,
+    `| Noise floor at this sample | ${row.noiseFloor} |`,
+    `| Resolved above the floor | ${resolved ? "yes" : "no"} |`,
+    `| Attack strength, flat side | ${row.flatAttackStrength} |`,
+    `| Attack strength, concentrated side | ${row.concentratedAttackStrength} |`,
+    `| Matches | ${row.matches} |`,
+    "",
+    "The two attack strengths must be equal. If they ever differ, this row has",
+    "stopped measuring distribution and become a squad-quality comparison.",
+    "",
   ];
 }
 

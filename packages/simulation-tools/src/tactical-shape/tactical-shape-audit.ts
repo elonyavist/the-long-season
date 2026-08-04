@@ -218,6 +218,22 @@ export interface TacticalShapeSide {
   readonly band: TacticalShapeQualityBand;
   /** Bounded tactic settings. */
   readonly tactic: TacticalShapeTacticProfile;
+  /**
+   * Ability points lifting one attacker above his team-mates, at constant mean.
+   *
+   * Absent or `0` gives the clone population every other measurement in this
+   * file uses, where an eleven is eleven identical players. That is deliberate
+   * and correct for isolating shape - and it is also why nothing here has ever
+   * been able to see *which players a manager fields*: Step 07's actor edges are
+   * a deviation from the pool an actor was drawn from, and a pool of clones has
+   * no deviation, so they are structurally `0`.
+   *
+   * A non-zero value lifts the first attacking slot by this much and lowers the
+   * remaining attackers by the amount that keeps the department mean exactly
+   * where it was. Same squad quality, same composition, same tactics: only the
+   * distribution differs. What that is worth is the question.
+   */
+  readonly attackConcentration?: number;
 }
 
 /** Stable text identity of one side's lineup, for seeds, labels and reports. */
@@ -440,8 +456,9 @@ export function buildTacticalShapeTeamContext(
   assertValidBand(side.band);
 
   const slots = composeSlots(side.lineup, sideKey);
+  const qualityBySlotId = concentratedQualities(slots, side);
   const players = Object.fromEntries(
-    slots.map((slot) => [slot.playerId, synthesizePlayer(slot.playerId, side.band[slot.department])] as const),
+    slots.map((slot) => [slot.playerId, synthesizePlayer(slot.playerId, qualityBySlotId.get(slot.slotId) ?? side.band[slot.department])] as const),
   ) as Record<PlayerId, Player>;
 
   const lineup = slots.map((slot) =>
@@ -770,6 +787,8 @@ export interface TacticalShapeAuditReport {
   readonly formations: readonly TacticalShapeFormationRow[];
   /** What the formation decides against what one slider decides. */
   readonly formationVersusSlider: TacticalShapeFormationVersusSlider;
+  /** What concentrating a squad's attacking quality is worth at constant mean. */
+  readonly selectionConcentration: TacticalShapeSelectionConcentration;
   /**
    * Smallest win-share difference the versus-reference measurement can resolve.
    *
@@ -858,6 +877,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
   const tacticDominance = buildTacticDominance(input);
   const formations = buildFormationRows(input);
   const formationVersusSlider = buildFormationVersusSlider(input, formations);
+  const selectionConcentration = buildSelectionConcentration(input);
   const dominance = buildDominanceMatrix(input);
   const qualityVersusStructure = buildQualityVersusStructure(input);
   const invariants = evaluateInvariants({
@@ -883,6 +903,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     tacticDominance,
     formations,
     formationVersusSlider,
+    selectionConcentration,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
     dominance,
     qualityVersusStructure,
@@ -891,6 +912,84 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
 
   return { ...report, structuredHash: stableHash(report) };
 }
+
+/**
+ * What fielding a differently-distributed eleven is worth, at constant quality.
+ *
+ * The one manager decision this audit could never see. Every other row is
+ * measured on clones - eleven identical players - which is correct for isolating
+ * shape and leaves *who you pick* outside the measurement entirely. Step 07 put
+ * actor edges on the shot chain, and an edge is a deviation from the pool an
+ * actor was drawn from, so in a pool of clones it is structurally `0`. Nothing
+ * in this phase had ever produced a number for what that machinery does.
+ *
+ * Both sides here field the same composition, the same tactics and the same
+ * department strengths. Only the *distribution* of attacking quality differs.
+ */
+export interface TacticalShapeSelectionConcentration {
+  /** Ability points the standout attacker was lifted by. */
+  readonly attackConcentration: number;
+  /** Win share of the concentrated side against the flat one. */
+  readonly concentratedWinShare: number;
+  /** Matches behind that share. Never zero. */
+  readonly matches: number;
+  /** Attack department strength of the flat side. */
+  readonly flatAttackStrength: number;
+  /**
+   * Attack department strength of the concentrated side.
+   *
+   * Recorded beside the flat one because the measurement is only about
+   * distribution if these agree. If they drift apart, the case has become a
+   * squad-quality comparison and its win share means something else.
+   */
+  readonly concentratedAttackStrength: number;
+  /** Smallest win-share difference this measurement can resolve. */
+  readonly noiseFloor: number;
+}
+
+/**
+ * Measures a standout attacker against an evenly-spread attack of equal quality.
+ */
+function buildSelectionConcentration(input: RunTacticalShapeAuditInput): TacticalShapeSelectionConcentration {
+  const composition = compositionByKey(TACTICAL_SHAPE_REFERENCE_COMPOSITION_KEY);
+  const flat: TacticalShapeSide = {
+    lineup: { kind: "composition", composition },
+    band: input.bands.reference,
+    tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
+  };
+  const concentrated: TacticalShapeSide = { ...flat, attackConcentration: SELECTION_CONCENTRATION_LIFT };
+  const series = runTacticalShapeSeries({
+    first: concentrated,
+    second: flat,
+    engineConfig: input.engineConfig,
+    matchTacticsCalibration: input.matchTacticsCalibration,
+    seedPrefix: `${input.seedPrefix}|selection-concentration`,
+    pairedSeedCount: input.scenarioPairedSeedCount,
+  });
+
+  return {
+    attackConcentration: SELECTION_CONCENTRATION_LIFT,
+    concentratedWinShare: series.firstWinShare,
+    matches: series.matches,
+    flatAttackStrength: roundFour(
+      deriveTacticalShapeStrength(flat, input.matchTacticsCalibration).attack,
+    ),
+    concentratedAttackStrength: roundFour(
+      deriveTacticalShapeStrength(concentrated, input.matchTacticsCalibration).attack,
+    ),
+    noiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
+  };
+}
+
+/**
+ * How far the standout attacker is lifted above his team-mates.
+ *
+ * Large enough that a real effect is visible against the noise floor, small
+ * enough to stay a squad a manager could actually field: with two attackers it
+ * is a `+4` striker beside a `-4` partner, which is an ordinary first-team gap
+ * rather than a thought experiment.
+ */
+const SELECTION_CONCENTRATION_LIFT = 4;
 
 /**
  * Largest win-share deviation pure sampling noise typically produces.
@@ -1146,10 +1245,45 @@ function tacticalShapeClubId(sideKey: "home" | "away"): ClubId {
 }
 
 /**
+ * Spreads one department's quality across its slots at a constant mean.
+ *
+ * The lift goes to the first attacking slot and the remaining attackers pay for
+ * it in equal shares, so the department mean is unchanged to the last decimal
+ * and `deriveTeamStrength` reports the same attack department either way. That
+ * is the whole design: if department strength moved, the measurement would be
+ * about squad quality again rather than about distribution.
+ *
+ * A side with fewer than two attackers cannot concentrate anything, and says so
+ * by returning the flat qualities rather than by silently inventing a lift.
+ */
+function concentratedQualities(
+  slots: readonly ComposedSlot[],
+  side: TacticalShapeSide,
+): ReadonlyMap<string, number> {
+  const qualities = new Map<string, number>();
+  const lift = side.attackConcentration ?? 0;
+  const attackers = slots.filter((slot) => slot.department === "attack");
+
+  if (lift === 0 || attackers.length < 2) {
+    return qualities;
+  }
+
+  const mean = side.band.attack;
+  const paidByEach = lift / (attackers.length - 1);
+
+  for (const [index, slot] of attackers.entries()) {
+    qualities.set(slot.slotId, index === 0 ? mean + lift : mean - paidByEach);
+  }
+
+  return qualities;
+}
+
+/**
  * Builds one synthetic player whose every ability equals the supplied quality.
  *
- * Uniform abilities are the point: they make department composition the only
- * remaining difference between two sides drawn from the same band.
+ * Uniform abilities are the point for the clone population: they make department
+ * composition the only remaining difference between two sides from one band.
+ * `TacticalShapeSide.attackConcentration` is the one way to leave it.
  */
 function synthesizePlayer(id: PlayerId, quality: number): Player {
   const abilities = uniformAbilities(quality);

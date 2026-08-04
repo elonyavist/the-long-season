@@ -131,6 +131,16 @@ function tinyBundle(overrides: Partial<TacticalShapeReportBundle["report"]> = {}
           flankAsymmetry: 0.3333,
         },
       ],
+      selectionConcentration: {
+        attackConcentration: 4,
+        concentratedWinShare: 0.53,
+        matches: 2100,
+        // Equal by construction: the standout's lift is paid for by his fellow
+        // attackers, so the row measures distribution and not squad quality.
+        flatAttackStrength: 12,
+        concentratedAttackStrength: 12,
+        noiseFloor: 0.0295,
+      },
       formationVersusSlider: {
         referenceCrossShare: 0.3,
         widestFormationCrossShare: 0.32,
@@ -190,6 +200,11 @@ function recorder(bundle: TacticalShapeReportBundle = tinyBundle()): Recorder {
 
 describe("tactical-shape-report command", () => {
   it("uses frozen defaults when no argument is given", async () => {
+    // `1050` scenario pairs is a resolution decision, not a taste one: it puts
+    // the win-share noise floor at `0.0295`, below the effects this report is
+    // read for. At `400` the floor was `0.0477` and the formation row sat under
+    // it, so the report could only say "unresolved" where it was read as saying
+    // "worth nothing". Lowering the floor makes every gate stricter.
     const io = recorder();
 
     expect(await runTacticalShapeReportCommand([], io.dependencies)).toBe(0);
@@ -198,7 +213,7 @@ describe("tactical-shape-report command", () => {
         worldSeed: "phase81-tactical-shape-baseline",
         seedPrefix: "phase81-tactical-shape",
         pairedSeedCount: 8,
-        scenarioPairedSeedCount: 400,
+        scenarioPairedSeedCount: 1_050,
       },
     ]);
   });

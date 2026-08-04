@@ -492,10 +492,68 @@ the first step able to satisfy it.
 
 ### The Yardstick
 
-One division tier of squad quality is worth `0.255` win share at identical
-shape (median first-division squad against median second-division squad, over
-`800` paired-seed matches). Every claim that structure must not outweigh quality
-is measured against that number and no other.
+One division tier of squad quality is worth `0.2521` win share at identical
+shape (median first-division squad against median second-division squad), and
+every claim that structure must not outweigh quality is measured against that
+number and no other. It read `0.255` over `800` paired-seed matches until
+Step 07B measured it over `2100`; the thresholds that depend on it are expressed
+as fractions of the tier edge and the audit reads the measured value in the same
+run, so nothing needed amending.
+
+### Open - What Should Setting Up Be Worth Against Having Better Players? (2026-08-04)
+
+Step 07B put every manager decision on one scale, at `2100` matches a row against
+one `0.0295` noise floor:
+
+| Decision | Edge over an even contest |
+|---|---|
+| fielding a broken shape (`0-0-10`) | `0.4852` |
+| one division tier of squad quality | `0.2521` |
+| a modest squad-quality gap | `0.1886` |
+| tactic sliders, best setting against worst | `0.0858` |
+| an adjacent squad-quality gap, two top clubs | `0.0467` |
+| best structural shape gain (`3-5-2`) | `0.0312` |
+| worst curated formation (`4-3-2-1`) | `0.0305` |
+| a standout attacker at equal squad quality | `0.0098`, unresolved |
+
+Two facts in that table are a product decision this contract has never taken.
+
+**The ratio.** Between two comparable top clubs, an adjacent squad-quality gap is
+worth `0.0467` and the formation decision is worth `0.0305`, so *how a manager
+sets up* is worth roughly two thirds of *having better players* - about `1.5x`,
+not `10x`. For a management game that may be exactly the intended promise. It is
+currently an emergent number rather than a chosen one, and nobody reading it
+today could say which.
+
+**The one-sidedness.** Seven of the eight curated formations sit below the
+reference and none is meaningfully above it, so the formation decision can cost a
+manager and cannot pay him. The tactic gate states the same asymmetry by design -
+"an extreme may cost a manager, never pay one" - so this is consistent rather
+than accidental. The open question is whether it is *complete*: a manager who
+sets up well is currently not rewarded, only spared. Whether a good decision
+should ever pay, and by how much, is the other half of the same decision.
+
+Neither is a coefficient to tune. Both are targets to choose, and the numbers to
+choose against now exist.
+
+**Answered for formation, and given a step (2026-08-04).** Step 11B takes the
+target at `~0.047` win share - about five league points a season, beside the
+`0.0467` adjacent squad gap - and states it as a *counter-move* reward rather
+than an absolute one, because a formation with the highest win share against the
+field is the answer and `no_dominant_composition` forbids the answer existing.
+
+It is blocked, and the blocker is not procedural. **Every AI-controlled club in
+the game fields a fixed `4-4-2`** - `matchday-adapter.ts`, `career/progression.ts`,
+`ten-season-report`, `live-match-control-report-data.ts` and
+`tactical-shape-report-data.ts` all hardcode it - so a counter-move reward built
+today would mean "countering `4-4-2` pays", which is a single right answer against
+the only opponent that exists. Step 09 owns giving opponents real formations.
+Nothing about this target may be implemented before it has.
+
+Tactics and compositions are **not** in the same position and need no equivalent
+step: their best response already gains `+0.0327` and `+0.0312` above an even
+contest, clears the noise floor, and collapses to `+0.0033` against its own
+counter. That is the rock-paper-scissors this contract wanted, working.
 
 ### Population Condition (A4)
 
@@ -542,6 +600,37 @@ the monitor changed at Step 01: the threshold, the denominator, and the
 Step 01 ran no cohort of its own. The tactical-shape baseline deliberately does
 not touch it either, because the baseline changes no behaviour and a monitor
 that moved during a no-op step would mean the step was not a no-op.
+
+### Open - The Mover Is Step 07, Not Step 06 (2026-08-04)
+
+Step 07B ran `pnpm cli ten-season-report` at three commits to find out which step
+had actually moved the monitor:
+
+| Commit | `goals_per_match_avg` | `table_points_spread_avg` |
+|---|---|---|
+| `a62ced4` - before Step 07 | `2.74` | `42.0` |
+| `c1f3bda` - Step 07 committed | `2.78` | `40.1` |
+| `465013c` - Step 07A committed | `2.78` | `40.1` |
+
+`a62ced4` reproduces Step 06's recorded numbers exactly, so the command, the
+seeds and the world are stable and a difference between rows is the engine
+changing rather than the measurement. **Step 07 owns the entire movement and
+Step 07A owns none of it.**
+
+That was not foreseeable when this section was written. The rule names Step 06
+"because it owns how many opportunities exist and how they convert", which was
+true and is still true - and Step 07 then put actor edges on the same chain, so
+it moves the goal rate too. There are now two steps that can, and the rule
+assumes one.
+
+**The anti-pattern the rule guards against is still right.** A monitor whose
+owner can be transferred again and again is never fixed, so "do not name a third
+owner" must not be read as loosened by this. The decision is narrower: if Step 11
+finds the monitor out of band, is Step 06 still the correct thing to reopen when
+the step that last moved it is Step 07?
+
+Step 07B recorded the measurement and deliberately changed no rule. This is for
+the contract to answer before Step 11.
 
 ## Lineup-Composing Readers Of `Club.playerIds` (A6)
 

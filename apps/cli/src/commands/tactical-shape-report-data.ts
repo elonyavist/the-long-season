@@ -16,8 +16,25 @@ export const DEFAULT_TACTICAL_SHAPE_SEED_PREFIX = "phase81-tactical-shape";
 /** Default seed pairs per dominance-matrix cell. */
 export const DEFAULT_TACTICAL_SHAPE_PAIRED_SEEDS = 8;
 
-/** Default seed pairs per named scenario and versus-reference row. */
-export const DEFAULT_TACTICAL_SHAPE_SCENARIO_PAIRED_SEEDS = 400;
+/**
+ * Default seed pairs per named scenario and versus-reference row.
+ *
+ * Chosen so the report can *resolve* the effects it reports rather than only
+ * bound them. The win-share noise floor is `2.7 * 0.5 / sqrt(matches)` and each
+ * row plays `2` matches per pair, so `400` pairs put the floor at `0.0477` -
+ * above the `0.030` the formation choice was measured at. That reads as
+ * "formation is inside the noise", which is not a finding: it is the absence of
+ * one, and it is indistinguishable from "formation is worth nothing".
+ *
+ * `1050` pairs put the floor at `0.0294`, below that effect, so the same
+ * measurement now answers the question either way. It costs roughly `2.5x` the
+ * runtime, which is the price of an answer instead of a shrug.
+ *
+ * A lower floor makes every gate **stricter**, never looser. An invariant that
+ * stops passing at this resolution was passing on resolution rather than on
+ * merit; that is a finding to record, never a reason to put this number back.
+ */
+export const DEFAULT_TACTICAL_SHAPE_SCENARIO_PAIRED_SEEDS = 1_050;
 
 /** Input accepted by the content-aware tactical-shape report bridge. */
 export interface CreateTacticalShapeReportInput {

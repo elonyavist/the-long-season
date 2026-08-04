@@ -42,16 +42,17 @@ over `2400` of them. What each manager decision is worth is measured below.
 | 06 - phase-aware control, opportunity routes, tactic semantics | Done 2026-08-03, all gates green |
 | 07 - route quality, causal actors and explanation facts | Done 2026-08-04, all gates green |
 | 07A - complete match inputs and flank-aware evidence | Done 2026-08-04, all gates green |
-| 07B - resolvable evidence and declared populations | Not started, created 2026-08-04 |
+| 07B - resolvable evidence and declared populations | Done 2026-08-04, all gates green |
 | 08-12 | Not started |
+| 11B - formation as a counter-move | Not started, blocked on Step 09 |
 
 ## Current Active Step
 
 - Step:
-  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/07B-*.md`
-- Next action: start Step 07B. Three measurements taken on 2026-08-04 passed
-  their gates while answering narrower questions than they were read as
-  answering. 07B attributes, resolves and declares them; it changes no model.
+  `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/08-*.md`
+- Next action: start Step 08. Step 07B left two decisions for the phase contract
+  and took neither: the A7 rule names the wrong owner, and the `1.5x` ratio below
+  between setup and squad quality is emergent rather than chosen.
 - No invariant in this phase is `not_evaluated` any more. The last one was
   closed by amendment A9 on 2026-08-03; Step 01 was reopened to carry it.
 
@@ -61,96 +62,96 @@ Facts that still bind future work. Everything else was deleted.
 
 ### Do Not Start
 
-- Phases 81A, 82A, and 82B are Planned or Draft. Their numeric decisions were
-  made before measurement and must be revised against Phase 81's evidence.
+- Phases 81A, 82A and 82B are Planned or Draft; their numeric decisions predate
+  measurement and are revised against Phase 81's evidence.
 - Phase 79 Steps 14 and 15 stay Reopened/not started, unclaimed by any phase.
 
 ### Longitudinal Runs
 
-- Phase 81 Step 12 owns this phase's checkpointed `50 x 20` with exactly seven
-  workers. No loans and no races, so it is engine evidence only, never market.
-- Phase 82B Step 09 owns the second checkpointed `50 x 20`, over the completed
-  market. Two runs are an accepted cost. No cohort runs anywhere else.
+- Step 12 owns the checkpointed `50 x 20`, seven workers: engine evidence only,
+  never market, and it runs after Step 11B changes the engine.
+- Phase 82B Step 09 owns the second, over the completed market. No cohort runs
+  anywhere else.
 
 ### Carried `goals_per_match_avg` Monitor (A7)
 
-Phase 80A closed with one gate red and transferred it to Phase 81 unchanged:
-`36/634/80` pass/warn/fail over `750` worlds, every failure on the high side.
-Threshold, denominator and severity are as inherited - the owner moved, not the
-severity - and the distribution is never an accepted result.
+Phase 80A closed with one gate red and transferred it unchanged: `36/634/80`
+pass/warn/fail over `750` worlds, every failure high. Threshold, denominator and
+severity are as inherited, and the distribution is never an accepted result.
+Step 11 is the deadline, Step 12 confirms at cohort scale, and the rule was that
+it may not be carried a third time: if out of band there, reopen Step 06.
 
-Step 06 owned it, because it owns how many opportunities exist and how they
-convert. Step 11 is the deadline, Step 12 confirms at cohort scale, and it may
-not be carried a third time: if Step 11 finds it out of band, reopen Step 06.
+Step 06 took it from `3.08` warn to `2.74` pass on `pnpm cli ten-season-report`.
+Step 07B then measured the same command at three commits: `a62ced4` `2.74`/`42.0`
+(reproducing Step 06 exactly), `c1f3bda` `2.78`/`40.1`, `465013c` `2.78`/`40.1`.
+All PASS, nothing tuned.
 
-Step 06 took it from `3.08` warn to `2.74` pass on `pnpm cli ten-season-report`
-by recalibrating the chain onto real football - `25.6` shots a match against
-`16.3`, `31.7%` of shots on target converted against `49.6%`.
-`table_points_spread_avg` came with it at `42.0` and no threshold was touched.
-Re-measured after Step 07A: `2.78` and `40.1`, both PASS, nothing tuned. **That
-`+0.04` is Steps 07 and 07A combined** - neither ran this report - and Step 07's
-actor edges were live on this path, so its own effect is unmeasured.
+**So Step 07 owns the whole movement and Step 07A owns none of it, and the rule
+above therefore names the wrong owner.** The step that last moved the goal rate
+is Step 07, through actor edges. Reopening Step 06 for that would reopen the
+wrong thing. The phase contract decides; 07B changed no rule.
 
 That is the ten-season report, not the `750`-world distribution above. Nobody
 re-runs that population before Step 12 - `No cohort runs anywhere else` binds.
 
 ### Which Manager Decisions Actually Count, Measured
 
-Against a `0.0477` win-share noise floor, on the frozen population and on the
-real formation population:
+Re-measured by Step 07B at `1050` scenario pairs: `2100` matches a row, one
+`0.0295` noise floor, uniform-ability clones except the last row.
 
-| Decision | Moves win share by | Verdict |
-|---|---|---|
-| tactic sliders | `0.095` | counts, `2x` the noise, and no setting wins on average |
-| formation | `0.030` | inside the noise |
-| department counts | `0.029` | inside the noise unless broken |
-| fielding a broken shape | `0.483` | counts enormously |
+| Decision | Edge over an even contest |
+|---|---|
+| fielding a broken shape (`0-0-10`) | `0.4852` |
+| one division tier of squad quality | `0.2521` |
+| a modest squad-quality gap | `0.1886` |
+| tactic sliders, best setting against worst | `0.0858` |
+| an adjacent squad-quality gap, two top clubs | `0.0467` |
+| best structural shape gain (`3-5-2`) | `0.0312` |
+| worst curated formation (`4-3-2-1`) | `0.0305` |
+| a standout attacker at equal squad quality | `0.0098`, unresolved |
 
-The engine punishes an absurd setup hard and does not reward a good one.
+Formation is resolved, and the finding is its shape rather than its margin: seven
+of eight sit below the reference and none is meaningfully above it.
 
-**Measured on uniform-ability clones** (`synthesizePlayer`), so this table is
-structurally silent about *which players* a manager fields. Step 07B adds that
-row. Step 07's actor edges are exactly `0` in this population.
+Tactics and compositions are not flat: their best response gains `+0.0327` and
+`+0.0312`, above the floor, collapsing to `+0.0033` against its own counter -
+working rock-paper-scissors. **Formation is the outlier**, with a downside and no
+upside, and Step 11B owns raising it to `~0.047` as a *counter-move* reward.
+11B is **blocked on Step 09**: every AI club in the game fields a hardcoded
+`4-4-2`, so a counter reward built now would reward one fixed answer.
 
 **Open - the flank claim has an instrument and no population.** Step 07A split
-`left` from `right` in the audit and found every curated formation inside
-sampling noise, because the calibration enforces mirror symmetry and each fields
-the same shape on both flanks. So `11.7%` of chain attenuating a `-12.8%` flank
-difference cannot be checked here: there is no difference to attenuate. Step 04's
-reopen needs a deliberately lopsided side first; its document has the table.
+`left` from `right` and found every curated formation inside sampling noise: the
+calibration enforces mirror symmetry and each fields the same shape on both
+flanks, so there is no flank difference here to attenuate. Step 04's reopen needs
+a deliberately lopsided side first; its document has the table.
 
-**Answered - tactics are gated and now have a best response.**
-`no_dominant_tactic` reads the *mean* against the other five profiles where the
-shape gate reads the worst matchup, because six legal settings are a peer
-population and `66` compositions are not. Step 06 took the best setting from
-`+0.064` over neutral to `+0.014` and left a cycle. The gate is one-sided by
-design - an extreme may cost a manager, never pay one - so `low_block` at
-`0.4487` is reported and not bounded.
+**Answered - tactics are gated and have a best response.** `no_dominant_tactic`
+reads the *mean* against the other five profiles where the shape gate reads the
+worst matchup: six legal settings are a peer population, `66` compositions are
+not. The gate is one-sided by design - an extreme may cost a manager, never pay
+one - so `low_block` is reported and not bounded.
 
 **Answered - the asymmetry is two bounds, not a ratio (A9).**
 `asymmetric_incoherence_cost` divided by a surplus that never left the noise
-floor, because among ten central clones a balanced `4-4-2` *is* the optimum.
-`incoherence_costs_a_division_tier` at `1 x` the tier edge replaces it, PASS at
-`1.8313`, against `bounded_structural_swing` at `0.75 x`.
+floor. `incoherence_costs_a_division_tier` at `1 x` the tier edge replaces it,
+PASS at `1.9246`, against `bounded_structural_swing` at `0.75 x`.
 
 ### Frozen Tactical Baseline (Step 01)
 
 `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md` is the before-state and is not
-regenerated; `pnpm cli tactical-shape-report` writes a fresh one anywhere else.
-Thresholds live in `TACTICAL_SHAPE_THRESHOLDS`; amending one takes a numbered
-contract amendment.
+regenerated; `pnpm cli tactical-shape-report` writes a fresh one elsewhere.
+Amending a `TACTICAL_SHAPE_THRESHOLDS` value takes a numbered amendment.
 
-- One division tier of squad quality is worth `0.255` win share at identical
-  shape. Every structure-versus-quality claim is measured against that number.
-- Structure may gain at most `0.75 x` that and incoherence must cost at least
-  `1 x` it. No composition may stay above `0.55` against every opponent, and no
-  tactic profile may average above `0.55` against the other profiles.
+- One division tier of squad quality is worth `0.2521` win share at identical
+  shape. Every structure-versus-quality claim is measured against it.
+- Structure may gain at most `0.75 x` that and incoherence must cost `1 x` it.
+  No composition or tactic profile may stay above `0.55` against its field.
 - The dominance population is the `66` reachable department compositions, not
   the `23` named presets, which cover only `10` of them. The board locks the
   goalkeeper slot only and no validator caps a department, so extreme shapes are
   manager choices and no gate exempts them.
-- The bands are conditioned on a **single-country** population (A4); with five
-  countries they are re-derived, never carried over.
+- The bands are conditioned on a **single-country** population (A4).
 - Every invariant passes. An invariant that *cannot* be evaluated is amended by
   the phase contract, never relaxed by the step that trips over it (A9).
 
@@ -166,13 +167,12 @@ from per-step. Never a second copy of any of them.
   Line, position family, and the role-weight key are derived through
   `canonicalRoleTacticalFacts(...)` and `roleWeightKeyForCanonicalRole(...)`.
   Do not put a derived field back on the slot.
-- `fieldablePlayerIds` / `fieldablePlayerIdsFor` own squad depth (A6), with
-  `pnpm check:squad-depth` as the absence assertion. Only Phase 82A widens it.
+- `fieldablePlayerIds` / `fieldablePlayerIdsFor` own squad depth (A6); only
+  Phase 82A widens the accessor.
 - A club the user has not selected is an ordinary caller of the same context
   builder (A1).
-- `match_preparation_lineup.role_key` now stores a canonical role. A save
-  written before 2026-08-03 is rejected, not migrated. The beta reset for this
-  landed at Step 02, not Step 08.
+- `match_preparation_lineup.role_key` stores a canonical role; a save written
+  before 2026-08-03 is rejected, not migrated. Its beta reset landed at Step 02.
 
 ### Intrinsic Tactical Shape Seam (Step 03)
 

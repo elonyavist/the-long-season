@@ -145,6 +145,28 @@ of work.
 - Vitest uses the same seven-worker maximum. Playwright retains its separate
   visual-QA worker policy.
 
+## Measurement Rules
+
+- **Every measured number records the population it was measured on and what
+  that population cannot see. A number whose population is not stated is not
+  evidence.** Three readings taken on 2026-08-04 passed their gates while
+  answering a narrower question than the one they were read as answering: a
+  balance report over players with no attributes, a monitor delta spanning two
+  steps and attributed to one, and a decision table measured on uniform-ability
+  clones that is therefore silent about which players a manager fields.
+- A correctly-measured number answering the wrong question does not announce
+  itself the way a wrong number does. That is why the population is written down
+  beside the number rather than inferred from the code that produced it.
+- Report an effect against the noise floor of its own sample. An effect below
+  that floor is **unresolved**, never "worth nothing" - those are different
+  findings and only one of them justifies changing a model.
+- Raising a sample size lowers the noise floor and therefore makes every gate
+  stricter. An invariant that stops passing at higher resolution was passing on
+  resolution rather than on merit: record it, and never restore the smaller
+  sample to make it pass again.
+- A measurement that spans more than one change attributes nothing. Take the
+  baseline before the change, from the same command on the same seeds.
+
 ## Web Accessibility Rules
 
 - Web UI work targets WCAG 2.2 AA unless a step documents a narrower temporary

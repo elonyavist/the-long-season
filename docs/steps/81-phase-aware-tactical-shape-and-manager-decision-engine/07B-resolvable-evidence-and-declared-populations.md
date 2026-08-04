@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Done 2026-08-04. See the handoff note at the end of this document.
 
 ## Goal
 
@@ -203,3 +203,150 @@ measurement rather than a formality.
 - Nothing was tuned, and any gate that turned red at higher resolution is
   recorded as a finding with its owner.
 - Step 08 is the only next action.
+
+## Verification
+
+```text
+pnpm check                                    EXIT_REALE=0
+Test Files  273 passed (273)
+     Tests  1987 passed (1987)
+```
+
+### Block 1 - The Monitor Movement Belongs Entirely To Step 07
+
+| Commit | `goals_per_match_avg` | `table_points_spread_avg` |
+|---|---|---|
+| `a62ced4` - before Step 07 | `2.74` | `42.0` |
+| `c1f3bda` - Step 07 committed | `2.78` | `40.1` |
+| `465013c` - Step 07A committed | `2.78` | `40.1` |
+
+`a62ced4` reproduces Step 06's recorded `2.74` and `42.0` exactly, which is what
+makes the other two rows trustworthy: the command, the seeds and the world are
+stable across three months of commits, so a difference between rows is a change
+in the engine rather than in the measurement.
+
+**Step 07 owns all of it. Step 07A moved the monitor by zero**, to two decimals -
+expected, because this path supplies `aiSelection` and therefore always carried
+player attributes, so Block 1 had nothing to add there, and an emergency
+goalkeeper is too rare to shift a ten-season aggregate.
+
+**This breaks a live rule and the fix is not this step's to make.**
+`docs/PROJECT_STATUS.md` says: *"if Step 11 finds it still out of band, the fix is
+reopening Step 06."* That was written because Step 06 owns opportunity volume and
+conversion, and it was right at the time. The step that actually last moved the
+goal rate is **Step 07**, through actor edges. Reopening Step 06 for a Step 07
+movement would reopen the wrong thing, which is precisely the failure the
+attribution existed to prevent. Recorded for the phase contract to decide; no
+rule was rewritten here.
+
+### Block 2 - Formation Is Resolved, And It Costs Without Paying
+
+At `1050` scenario pairs the win-share noise floor is `0.0295`, down from
+`0.0477`. Each row is `2100` matches.
+
+| Formation | Win share against `4-4-2` | Distance from even |
+|---|---|---|
+| `4-4-2` (the reference, playing itself) | `0.5002` | `0.0002` |
+| `4-5-1` | `0.5021` | `0.0021` |
+| `4-2-4` | `0.4926` | `0.0074` |
+| `5-4-1` | `0.4886` | `0.0114` |
+| `3-5-2` | `0.4874` | `0.0126` |
+| `3-4-3` | `0.4829` | `0.0171` |
+| `4-3-3` | `0.4729` | `0.0271` |
+| `4-3-2-1` | `0.4695` | **`0.0305`** |
+
+The largest effect clears the floor by `0.001`. That is resolved at the stated
+`2.7` standard errors and it is *barely* resolved; anyone acting on the margin
+rather than on the shape of the result should raise the sample again.
+
+The shape of the result is the finding. **Seven of eight curated formations sit
+below the reference and none is meaningfully above it**, so formation choice can
+cost a manager and cannot pay him - the same one-sided pattern this phase already
+documents for tactic settings. "Formation is inside the noise" was never the
+finding; it was the absence of one.
+
+**Every frozen invariant still passes at the lower floor**, so none of them was
+passing on resolution rather than on merit: `bounded_structural_swing` `0.1238`,
+`no_dominant_composition` `0.375`, `no_dominant_tactic` `0.5327`,
+`incoherence_costs_a_division_tier` `1.9246`,
+`quality_hierarchy_survives_extreme_shape` `0.926`.
+
+### Block 3 - A Standout Attacker Is Worth `0.0098`, Which Is Unresolved
+
+| Measurement | Value |
+|---|---|
+| Concentrated side win share | `0.5098` |
+| Distance from an even contest | `0.0098` |
+| Noise floor | `0.0295` |
+| Resolved above the floor | **no** |
+| Attack strength, flat / concentrated | `14.547` / `14.547` |
+| Matches | `2100` |
+
+The premise held exactly: both sides field the same attack department, so this
+measured distribution and not squad quality. Had those two numbers differed the
+row would have quietly become a quality comparison and its win share would mean
+something else.
+
+By this step's own rule, **below the floor is unresolved and not "worth
+nothing"**. The sign is positive and consistent; the magnitude is a third of what
+this sample can see. Resolving `0.0098` needs `1.35 / sqrt(n) < 0.0098`, so over
+`19000` matches - about `9500` pairs, nine times this run.
+
+**It is also the expected size**, which is why nothing was tuned. The shooter
+edge is capped at `0.10` of quality and the shooter is drawn from a weighted pool
+where attackers carry `5` against a midfielder's `3`, so a standout is on the end
+of only some of his side's chances and moves each of them a little.
+
+And it is the *residual*, not the phenomenon. A real star striker also raises
+`strength.attack`, which is priced separately and heavily; this experiment held
+that constant on purpose. "Does signing a better striker matter" is answered
+elsewhere and is large. "Does concentrating the same attacking quality in one man
+matter" is what `0.0098` answers.
+
+### What Every Manager Decision Is Worth, On One Scale
+
+The artefact this step exists to produce. Every row measured in the same run at
+`2100` matches against the same `0.0295` floor, on uniform-ability clones except
+where the row says otherwise.
+
+| Decision | Edge over an even contest |
+|---|---|
+| fielding a broken shape (`0-0-10`) | `0.4852` |
+| one division tier of squad quality | `0.2521` |
+| a modest squad-quality gap | `0.1886` |
+| the tactic sliders, best setting against worst | `0.0858` |
+| an adjacent squad-quality gap, two top clubs | `0.0467` |
+| the best structural shape gain (`3-5-2`) | `0.0312` |
+| the worst curated formation (`4-3-2-1`) | `0.0305` |
+| a standout attacker at equal squad quality | `0.0098`, unresolved |
+
+**One ratio in that table is a product decision nobody has taken.** An adjacent
+squad-quality gap is worth `0.0467` and the formation decision is worth `0.0305`,
+so between two comparable top clubs *how a manager sets up* is worth about
+two-thirds of *having better players*. For a management game that may be exactly
+right - it is the genre's promise - but it should be a decision on the record
+rather than a ratio that emerged. Raised for the phase contract.
+
+### 2026-08-04 - docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/07B-resolvable-evidence-and-declared-populations.md
+
+- Status: Done
+- Outcome: the carried monitor's movement is attributed to Step 07 alone; the
+  formation question is resolved and answered; what a standout player is worth at
+  equal squad quality has a number for the first time; and every manager decision
+  now sits on one scale against one noise floor.
+- Adopted solution: measure rather than argue - two worktree runs at past
+  commits, `1050` scenario pairs so the floor sits below the effects being read,
+  and a second audit population that varies attribute distribution at a mean the
+  test asserts is unchanged.
+- Verification: `pnpm check` green at `1987/1987`; every frozen invariant still
+  passes at the lower noise floor.
+- Follow-up: two decisions raised in the phase contract and neither taken here.
+  `## Carried Goal-Rate Monitor` now carries the three-commit attribution and
+  asks whether Step 06 is still the right thing to reopen when Step 07 is the
+  mover. `### The Yardstick` now carries the one-scale table and asks what
+  setting up should be worth against having better players, and whether a good
+  decision should ever pay rather than only be spared a cost. The yardstick
+  itself was refreshed from `0.255` to `0.2521` at the higher resolution; the
+  thresholds are fractions of it and the audit reads the measured value in the
+  same run, so nothing required an amendment.
+- Next action: Step 08.
