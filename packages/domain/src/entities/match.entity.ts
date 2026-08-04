@@ -3,8 +3,12 @@ import type { MatchEvent } from "./match-event.entity.ts";
 
 /**
  * Current persisted match-event schema version.
+ *
+ * `8` added `ShotContext.route`. A report written at `7` or below carries no
+ * route, which is why readers that want one gate on this number instead of
+ * treating an absent field as `central`.
  */
-export const MATCH_EVENT_SCHEMA_VERSION = 7;
+export const MATCH_EVENT_SCHEMA_VERSION = 8;
 
 /**
  * Score for one completed or in-progress match.

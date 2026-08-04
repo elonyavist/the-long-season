@@ -1,6 +1,7 @@
 import type { Rng } from "@game/shared";
 
-import type { MatchSimulationState, MatchSide } from "./match-simulation-state.ts";
+import type { OccasionContext } from "./occasion-context.ts";
+import type { MatchSimulationState } from "./match-simulation-state.ts";
 
 /**
  * Shot outcome emitted by the early aggregate opportunity resolver.
@@ -9,26 +10,18 @@ export type OccasionOutcome = "goal" | "save" | "miss" | "block";
 
 /**
  * Input passed to an opportunity resolver.
+ *
+ * Two values only. The occasion says what this chance is - the route it came
+ * down, the four players on it, and how far each of them tilts the one question
+ * he is asked - and the simulation supplies the team strengths and the
+ * calibrated bands everything is measured against. A resolver never chooses an
+ * actor, and nothing after it may change who was involved.
  */
 export interface ResolveOccasionInput {
   /** Match state before the current opportunity is applied. */
   readonly simulation: MatchSimulationState;
-  /** Team that generated the opportunity. */
-  readonly attackingSide: MatchSide;
-  /** Team defending the opportunity. */
-  readonly defendingSide: MatchSide;
-  /** Simulated minute of the opportunity. */
-  readonly minute: number;
-  /**
-   * Bounded capacity of the route this opportunity actually came down.
-   *
-   * A chance worked down a flank the attack owns is a better chance than the
-   * same chance forced down one it does not, so the way through has to reach
-   * the shot. Without it the route decides only whether a chance exists and
-   * what type it is, and two equal-quality elevens produce chances of identical
-   * quality whatever shape they take.
-   */
-  readonly routeCapacity: number;
+  /** Complete pre-resolution description of the chance being resolved. */
+  readonly occasion: OccasionContext;
 }
 
 /**

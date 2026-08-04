@@ -515,11 +515,16 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       // of the position, and an even contest puts about a third of its shots on
       // target. Same minute, quality, shooter and chance type - the keeper is
       // simply in the event now, because he had something to save.
+      //
+      // Step 07 added `route` and changed nothing else here. Both `central` and
+      // `direct` are `open_play`, so the chance type could never say which of
+      // them this was - which is the whole reason the finer fact is persisted.
       outcome: "save",
       quality: 0.4893385191819542,
       isShotOnTarget: true,
       shotType: "normal",
       chanceType: "open_play",
+      route: "direct",
       shooterPlayerId: playerId("player:away-000001"),
       goalkeeperPlayerId: playerId("player:home-gk"),
     },
@@ -534,6 +539,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       // This line moved earlier, when chance type stopped being inferred from
       // the minute and started naming the route the chance came down.
       chanceType: "counter",
+      route: "transition",
       shooterPlayerId: playerId("player:home-000001"),
       goalkeeperPlayerId: playerId("player:away-gk"),
     },

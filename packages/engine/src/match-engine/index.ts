@@ -129,6 +129,16 @@ export {
   type ResolveOccasionInput,
 } from "./occasion-resolver.ts";
 
+// The occasion is the one door into actor selection and route quality. Chance
+// actors are reached through `buildOccasionContext` and are deliberately not a
+// second public entry, so nothing outside can pick a shooter without the route
+// and the edges that go with him.
+export {
+  buildOccasionContext,
+  type BuildOccasionContextInput,
+  type OccasionContext,
+} from "./occasion-context.ts";
+
 export {
   simulateMatch,
   SimulateMatchError,

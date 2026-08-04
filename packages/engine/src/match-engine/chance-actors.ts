@@ -1,5 +1,5 @@
 import { roleWeightKeyForCanonicalRole } from "./team-strength.ts";
-import type { FixtureId, PlayerId, ShotChanceType, ShotType } from "@game/domain";
+import type { FixtureId, PlayerId, ShotChanceType } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import type { MatchTeamContext } from "./match-context.ts";
@@ -9,9 +9,11 @@ import type { LineupSlot } from "./team-strength.ts";
 /**
  * Engine-local deterministic actor selection for one attacking opportunity.
  *
- * This module chooses the nominal players involved in a chance before later
- * steps wire that data into match stepping and durable reports. It deliberately
- * does not decide whether the chance becomes a goal, save, miss, or block.
+ * It answers *who*, and only who. Whether the chance becomes a goal, save, miss
+ * or block is the resolver's question, and how much each of these players tilts
+ * it is `occasion-context.ts`'s - which is also the only caller. Reached through
+ * `buildOccasionContext` rather than exported from the package, so nothing can
+ * pick a shooter without the route and the edges that belong with him.
  */
 
 /** Stable RNG stream name used only for opportunity actor selection. */
@@ -91,9 +93,14 @@ export interface SelectChanceActorsInput {
   readonly attackingTeam: MatchTeamContext;
   /** Team context for the side defending the opportunity. */
   readonly defendingTeam: MatchTeamContext;
-  /** Structured execution type for the eventual shot. */
-  readonly shotType: ShotType;
-  /** Structured source type for the chance. */
+  /**
+   * Structured source type for the chance, derived from the route it came down.
+   *
+   * The execution type is deliberately absent. It is decided *from* the shooter
+   * this call returns - whether a cross is headed depends on who attacked it -
+   * so keying selection on it would make the actors depend on a fact that does
+   * not exist until they have been chosen.
+   */
   readonly chanceType: ShotChanceType;
 }
 
@@ -128,7 +135,6 @@ export interface ChanceActors {
  *   scoreBeforeChance: { home: 0, away: 0 },
  *   attackingTeam: context.home,
  *   defendingTeam: context.away,
- *   shotType: "normal",
  *   chanceType: "open_play",
  * });
  */
@@ -155,7 +161,6 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
     input.attackingSide,
     input.scoreBeforeChance.home,
     input.scoreBeforeChance.away,
-    input.shotType,
     input.chanceType,
   );
   const creatorPlayerId = pickWeightedPlayer(creatorCandidates, creatorWeightForRole, rng.nextFloat());

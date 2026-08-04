@@ -243,8 +243,13 @@ export interface TacticalShapeSeriesSideTotals {
   /**
    * How many chances of each structured type the side produced.
    *
-   * Today this is derived from a deterministic texture rather than from an
-   * actual route, so it is recorded as the thing Step 06 replaces.
+   * Step 06 made this a fact about the attack: a cross is counted because the
+   * ball went down a flank, not because a minute number had a texture. Step 07
+   * then put the route itself on the event, which is the finer fact this row
+   * still cannot see - `cross` covers both flanks, so `crossShareOf` measures
+   * how wide a shape played and never which side it favoured. Splitting it is
+   * the instrument Step 04's frozen `TACTICAL_ROUTE_DEFINITION` would need if
+   * its flank reopen is ever taken up; it is not this row's job today.
    */
   readonly chanceTypes: Readonly<Record<ShotChanceType, number>>;
 }

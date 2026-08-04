@@ -36,7 +36,28 @@ test("report contains event schema version", () => {
 });
 
 test("match event schema version is bumped for durable causal context", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 7);
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 8);
+});
+
+test("the route a chance came down survives into the durable report", () => {
+  // The point of bumping the contract. A cross down the left and one down the
+  // right are the same `chanceType`, so without the route a manager who moved
+  // his width could never see in the report that his chances moved with it.
+  const report = createMatchReport(simulatedResultWithGoals());
+  const shots = report.events.filter((event) => "shot" in event);
+
+  assert.ok(shots.length > 0, "the fixture must contain at least one shot to carry a route");
+  for (const shot of shots) {
+    assert.equal("shot" in shot && shot.shot.route !== undefined, true, `${shot.type} lost its route`);
+  }
+});
+
+test("a scored penalty carries no route, because it was awarded rather than worked", () => {
+  const report = createMatchReport(resultWithPenaltyGoal());
+  const penaltyGoal = report.events.find((event) => event.type === "goal" && event.shot.chanceType === "dead_ball");
+
+  assert.ok(penaltyGoal !== undefined, "the fixture must contain the scored penalty");
+  assert.equal(penaltyGoal.type === "goal" && penaltyGoal.shot.route, undefined);
 });
 
 test("report preserves goal scorer IDs", () => {
@@ -121,6 +142,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
+        route: "central",
       },
       {
         minute: 12,
@@ -129,6 +151,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "counter",
+        route: "transition",
       },
       {
         minute: 25,
@@ -137,6 +160,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         isShotOnTarget: false,
         shotType: "normal",
         chanceType: "open_play",
+        route: "central",
       },
       {
         minute: 52,
@@ -145,6 +169,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         isShotOnTarget: false,
         shotType: "header",
         chanceType: "cross",
+        route: "left",
       },
       {
         minute: 77,
@@ -153,6 +178,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
+        route: "central",
       },
     ],
   );
@@ -245,6 +271,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
+        route: "central",
         scorerPlayerId: playerId("player:home-scorer"),
         assistPlayerId: playerId("player:home-assist"),
       },
@@ -257,6 +284,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "counter",
+        route: "transition",
         shooterPlayerId: playerId("player:away-shooter"),
         goalkeeperPlayerId: playerId("player:home-gk"),
       },
@@ -269,6 +297,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: false,
         shotType: "normal",
         chanceType: "open_play",
+        route: "central",
         shooterPlayerId: playerId("player:home-shooter"),
       },
       {
@@ -288,6 +317,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: false,
         shotType: "header",
         chanceType: "cross",
+        route: "left",
         shooterPlayerId: playerId("player:home-blocked-shooter"),
         primaryDefenderPlayerId: playerId("player:away-blocker"),
       },
@@ -300,6 +330,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
+        route: "central",
         scorerPlayerId: playerId("player:away-scorer"),
         creatorPlayerId: playerId("player:away-creator"),
       },
@@ -311,6 +342,37 @@ function simulatedResultWithGoals(): SimulateMatchResult {
           away: 1,
         },
       },
+    ],
+  };
+}
+
+/**
+ * Builds a result whose only goal is the scored penalty the route model skips.
+ */
+function resultWithPenaltyGoal(): SimulateMatchResult {
+  return {
+    fixtureId: fixtureId("fixture:report-000002"),
+    finalMinute: 90,
+    isComplete: true,
+    score: { home: 1, away: 0 },
+    stats: {
+      home: { opportunities: 1, shots: 1, shotsOnTarget: 1, goals: 1 },
+      away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
+    },
+    events: [
+      { type: "kickoff", minute: 0 },
+      {
+        type: "shot_outcome",
+        minute: 61,
+        side: "home",
+        outcome: "goal",
+        quality: 0.76,
+        isShotOnTarget: true,
+        shotType: "set_piece",
+        chanceType: "dead_ball",
+        scorerPlayerId: playerId("player:home-taker"),
+      },
+      { type: "full_time", minute: 90, score: { home: 1, away: 0 } },
     ],
   };
 }

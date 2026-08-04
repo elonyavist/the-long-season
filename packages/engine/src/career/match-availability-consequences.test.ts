@@ -130,7 +130,7 @@ test("injury duration bands are bounded and preserve zero-day knocks", () => {
 
 function reportWithEvents(events: MatchReport["events"]): MatchReport {
   return {
-    eventSchemaVersion: 7,
+    eventSchemaVersion: 8,
     fixtureId: FIXTURE.id,
     finalMinute: 90,
     score: { home: 0, away: 0 },

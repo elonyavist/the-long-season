@@ -130,7 +130,6 @@ function chanceInput(
     },
     attackingTeam: homeTeamFixture(),
     defendingTeam: awayTeamFixture(),
-    shotType: "normal",
     chanceType: "open_play",
     ...overrides,
   };

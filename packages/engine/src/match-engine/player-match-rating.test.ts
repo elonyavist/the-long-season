@@ -164,6 +164,7 @@ function goalEvent(input: {
     isShotOnTarget: true,
     shotType: "normal",
     chanceType: "open_play",
+    route: "central",
     scorerPlayerId: input.scorerPlayerId,
     ...(input.assistPlayerId === undefined ? {} : { assistPlayerId: input.assistPlayerId }),
   };
@@ -179,6 +180,7 @@ function saveEvent(minute: number, shooterPlayerId: PlayerId, goalkeeperPlayerId
     isShotOnTarget: true,
     shotType: "normal",
     chanceType: "open_play",
+    route: "central",
     shooterPlayerId,
     goalkeeperPlayerId,
   };
@@ -194,6 +196,7 @@ function missEvent(minute: number, shooterPlayerId: PlayerId): MatchStepEvent {
     isShotOnTarget: false,
     shotType: "normal",
     chanceType: "open_play",
+    route: "central",
     shooterPlayerId,
   };
 }
@@ -208,6 +211,7 @@ function blockedEvent(minute: number, shooterPlayerId: PlayerId, primaryDefender
     isShotOnTarget: false,
     shotType: "normal",
     chanceType: "open_play",
+    route: "central",
     shooterPlayerId,
     primaryDefenderPlayerId,
   };

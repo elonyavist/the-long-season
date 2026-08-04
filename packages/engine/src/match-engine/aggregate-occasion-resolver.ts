@@ -30,33 +30,45 @@ import type { Rng } from "@game/shared";
  * and scored just as often. Keeper quality now moves goals into saves without
  * touching the shot count, which is the football everyone expects.
  *
+ * Each question is now also asked of the one player who answers it. The shooter
+ * moves the quality of the position, the man in the way moves the block, and the
+ * goalkeeper moves the save - each measured against the peers he was chosen
+ * from, so a named actor separates an eleven from itself without lifting every
+ * chance in the division.
+ *
  * @example
  * const resolver = new AggregateOccasionResolver();
  */
 export class AggregateOccasionResolver implements OccasionResolver {
   /**
-   * Resolves one opportunity from aggregate team strengths.
+   * Resolves one opportunity from aggregate team strengths and named actors.
    *
    * Exactly three floats are drawn in a fixed order whatever the outcome, so
    * one occasion always advances the stream by the same amount.
    */
   public resolveOccasion(input: ResolveOccasionInput, rng: Rng): OccasionResolution {
-    const attackingTeam = teamBySide(input.simulation, input.attackingSide);
-    const defendingTeam = teamBySide(input.simulation, input.defendingSide);
+    const { occasion } = input;
+    const attackingTeam = teamBySide(input.simulation, occasion.attackingSide);
+    const defendingTeam = teamBySide(input.simulation, occasion.defendingSide);
 
     const quality = deriveOpportunityQuality(
       attackingTeam,
       defendingTeam,
-      input.attackingSide,
+      occasion.attackingSide,
       input.simulation.context.engineConfig.homeAdvantageFactor,
-      input.routeCapacity,
+      occasion.routeCapacity,
       input.simulation.context.matchTacticsCalibration.tacticalSemantics.routeQualityBiasBasisPoints,
+      occasion.shooterQualityEdge,
       rng,
     );
     const placementRoll = rng.nextFloat();
     const keeperRoll = rng.nextFloat();
 
-    const blockProbability = deriveBlockProbability(attackingTeam, defendingTeam);
+    const blockProbability = deriveBlockProbability(
+      attackingTeam,
+      defendingTeam,
+      occasion.primaryDefenderBlockEdge,
+    );
     const onTargetProbability = deriveOnTargetProbability(quality, blockProbability);
     const goalProbability = deriveGoalProbability(
       input.simulation.context.engineConfig.conversionBands,
@@ -134,6 +146,11 @@ function teamBySide(simulation: ResolveOccasionInput["simulation"], side: MatchS
  * two shapes contest evenly adds exactly nothing. That is not a formality: a
  * term proportional to raw capacity would shift every chance in every match
  * upward and call a global inflation "separation".
+ *
+ * A third thing decides it now: **who hit it**. The shooter edge follows the
+ * same rule for the same reason - it is his distance from the players who could
+ * have been picked instead, so an ordinary striker in an ordinary side adds
+ * exactly nothing and only the choice between two teammates ever shows.
  */
 function deriveOpportunityQuality(
   attackingTeam: MatchTeamContext,
@@ -142,6 +159,7 @@ function deriveOpportunityQuality(
   homeAdvantageFactor: number,
   routeCapacity: number,
   routeQualityBiasBasisPoints: number,
+  shooterQualityEdge: number,
   rng: Rng,
 ): number {
   const homeFactor = attackingSide === "home" ? homeAdvantageFactor : 1;
@@ -152,15 +170,26 @@ function deriveOpportunityQuality(
     (routeCapacity - EVEN_CONTEST_ROUTE_CAPACITY) * (routeQualityBiasBasisPoints / 10_000);
   const randomTexture = (rng.nextFloat() - 0.5) * 0.3;
 
-  return clamp(0.5 + strengthEdge + routeEdge + randomTexture, 0, 1);
+  return clamp(0.5 + strengthEdge + routeEdge + shooterQualityEdge + randomTexture, 0, 1);
 }
 
 /**
  * Derives how often the defence gets a body in the way.
+ *
+ * The named defender is added to the departmental contest rather than replacing
+ * it: blocking a shot is one player throwing himself at it inside a defence that
+ * forced it into that position, and pricing only the individual would delete the
+ * ten around him.
  */
-function deriveBlockProbability(attackingTeam: MatchTeamContext, defendingTeam: MatchTeamContext): number {
+function deriveBlockProbability(
+  attackingTeam: MatchTeamContext,
+  defendingTeam: MatchTeamContext,
+  primaryDefenderBlockEdge: number,
+): number {
   return clamp(
-    BASE_BLOCK_PROBABILITY + (defendingTeam.strength.defense - attackingTeam.strength.attack) / BLOCK_STRENGTH_DIVISOR,
+    BASE_BLOCK_PROBABILITY
+      + (defendingTeam.strength.defense - attackingTeam.strength.attack) / BLOCK_STRENGTH_DIVISOR
+      + primaryDefenderBlockEdge,
     MIN_BLOCK_PROBABILITY,
     MAX_BLOCK_PROBABILITY,
   );
@@ -198,6 +227,13 @@ function deriveOnTargetProbability(quality: number, blockProbability: number): n
  * the keeper scales that outcome rather than the chance itself. Bounded above
  * by the on-target probability, because a goal is one kind of shot on target
  * and can never be more common than the set it belongs to.
+ *
+ * The keeper the occasion named is the one this term prices, through the
+ * department that was derived from him. He carries no separate actor edge:
+ * unlike the shooter and the blocker he is drawn from a pool of one, so there is
+ * no set of peers to measure a deviation against, and the only anchor available
+ * is a role-weighted department score on a different scale from a raw attribute.
+ * `occasion-context.ts` states what that leaves open.
  */
 function deriveGoalProbability(
   bands: ResolveOccasionInput["simulation"]["context"]["engineConfig"]["conversionBands"],

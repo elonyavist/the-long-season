@@ -1,5 +1,4 @@
 import {
-  type FixtureId,
   type FoulMatchEvent,
   type InjuryMatchEvent,
   type MatchEventSide,
@@ -16,11 +15,10 @@ import {
   deriveOpportunityRoutePlan,
   EVEN_CONTEST_ROUTE_CAPACITY,
   expectedRouteCapacity,
-  OPPORTUNITY_ROUTE_CHANCE_TYPE,
   selectOpportunityRoute,
   type OpportunityRoutePlan,
 } from "./opportunity-route.ts";
-import { selectChanceActors, type ChanceActors } from "./chance-actors.ts";
+import { buildOccasionContext, type OccasionContext } from "./occasion-context.ts";
 import { progressOnPitchCondition } from "./match-condition.ts";
 import { accumulateControlUnits, deriveMatchMinuteControl } from "./match-control.ts";
 import {
@@ -95,6 +93,8 @@ export interface MatchGoalStepEvent {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /** The way through the chance came down. Absent for a penalty, which had none. */
+  readonly route?: TacticalRoute;
   /** Player from the scoring side lineup credited with the goal. */
   readonly scorerPlayerId: PlayerId;
   /** Player from the scoring side lineup credited with the assist, when any. */
@@ -123,6 +123,21 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /**
+   * The way through the chance came down.
+   *
+   * Optional for the same two reasons the durable `ShotContext` field is, and
+   * this type mirrors that one exactly rather than claiming a stronger promise
+   * than its producers can keep. `stepMatch` is not the only one: the web
+   * rebuilds step events out of persisted reports to score player ratings, and a
+   * report written before match-event schema `8` carries no route at all.
+   *
+   * Every shot this minute loop emits does have one - a scored penalty is the
+   * only shot outcome that skips the route model, and it is a goal - but that is
+   * a fact about the loop, asserted in `step-match.test.ts`, not something the
+   * shared vocabulary can state on behalf of every producer.
+   */
+  readonly route?: TacticalRoute;
   /** Player from the attacking side lineup credited with taking this shot. */
   readonly shooterPlayerId: PlayerId;
   /** Defending goalkeeper credited with the save, only for save outcomes. */
@@ -250,79 +265,30 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
       ),
     );
 
-    const resolution = resolver.resolveOccasion(
-      {
-        simulation: input.simulation,
-        attackingSide,
-        defendingSide,
-        minute: currentMinute,
-        routeCapacity: routePlans[attackingSide].capacityByRoute[route],
-      },
-      input.rng,
-    );
+    // Everything about this chance that is true before it is resolved: the way
+    // through, the four players on it, and how far each of them tilts the one
+    // question he is asked. Building it here rather than after the outcome is
+    // the whole of Step 07: a striker cannot make a goal more likely if he is
+    // chosen once the engine has already decided there was one.
+    const occasion = buildOccasionContext({
+      simulation: input.simulation,
+      attackingSide,
+      defendingSide,
+      minute: currentMinute,
+      route,
+      routeCapacity: routePlans[attackingSide].capacityByRoute[route],
+      scoreBeforeOccasion: nextScore,
+    });
+    const resolution = resolver.resolveOccasion({ simulation: input.simulation, occasion }, input.rng);
 
     nextStats = applyOccasionToStats(nextStats, attackingSide, resolution);
     nextTelemetry = applyOccasionToTelemetry(nextTelemetry, attackingSide, resolution);
-    const scoreBeforeGoal = nextScore;
-    const shotContext = deriveShotContext(route, resolution.quality);
-    const chanceActors = selectChanceActors({
-      seed: input.simulation.context.seed,
-      fixtureId: input.simulation.context.fixtureId,
-      minute: currentMinute,
-      attackingSide,
-      scoreBeforeChance: scoreBeforeGoal,
-      attackingTeam: teamBySide(input.simulation, attackingSide),
-      defendingTeam: teamBySide(input.simulation, defendingSide),
-      shotType: shotContext.shotType,
-      chanceType: shotContext.chanceType,
-    });
-    let scorerPlayerId: PlayerId | undefined;
-    let assistPlayerId: PlayerId | undefined;
-    let creatorPlayerId: PlayerId | undefined;
-    let shooterPlayerId: PlayerId | undefined;
-    let goalkeeperPlayerId: PlayerId | undefined;
-    let primaryDefenderPlayerId: PlayerId | undefined;
 
     if (resolution.outcome === "goal") {
-      scorerPlayerId = chanceActors.shooterPlayerId;
-      assistPlayerId = selectAssistFromChanceActors({
-        seed: input.simulation.context.seed,
-        fixtureId: input.simulation.context.fixtureId,
-        minute: currentMinute,
-        attackingSide,
-        scoreBeforeChance: scoreBeforeGoal,
-        actors: chanceActors,
-        shotType: shotContext.shotType,
-        chanceType: shotContext.chanceType,
-      });
-      creatorPlayerId = selectDurableGoalCreator(chanceActors, assistPlayerId);
       nextScore = applyGoalToScore(nextScore, attackingSide);
-    } else {
-      shooterPlayerId = chanceActors.shooterPlayerId;
     }
 
-    if (resolution.outcome === "save") {
-      goalkeeperPlayerId = chanceActors.goalkeeperPlayerId;
-    }
-
-    if (resolution.outcome === "block") {
-      primaryDefenderPlayerId = chanceActors.primaryDefenderPlayerId;
-    }
-
-    events.push(
-      createShotOutcomeEvent(
-        currentMinute,
-        attackingSide,
-        resolution,
-        shotContext,
-        scorerPlayerId,
-        assistPlayerId,
-        creatorPlayerId,
-        shooterPlayerId,
-        goalkeeperPlayerId,
-        primaryDefenderPlayerId,
-      ),
-    );
+    events.push(createShotOutcomeEvent(occasion, resolution));
   }
 
   const foulEvents: FoulMatchEvent[] = [];
@@ -665,178 +631,64 @@ function oppositeEventSide(side: MatchEventSide): MatchEventSide {
 }
 
 /**
- * Builds a typed shot-outcome event from one aggregate resolution.
+ * Projects one resolved occasion into the sparse step event for it.
+ *
+ * Pure projection: everything it reads was already decided, so no player is
+ * chosen and no probability is drawn here. Which actors reach the event depends
+ * on the outcome only because a save has a goalkeeper and a block has a blocker,
+ * while a missed shot has neither.
  */
 function createShotOutcomeEvent(
-  minute: number,
-  side: MatchSide,
+  occasion: OccasionContext,
   resolution: OccasionResolution,
-  shotContext: { readonly shotType: ShotType; readonly chanceType: ShotChanceType },
-  scorerPlayerId: PlayerId | undefined,
-  assistPlayerId: PlayerId | undefined,
-  creatorPlayerId: PlayerId | undefined,
-  shooterPlayerId: PlayerId | undefined,
-  goalkeeperPlayerId: PlayerId | undefined,
-  primaryDefenderPlayerId: PlayerId | undefined,
 ): MatchShotOutcomeStepEvent {
+  const shot = {
+    minute: occasion.minute,
+    side: occasion.attackingSide,
+    quality: resolution.quality,
+    isShotOnTarget: resolution.isShotOnTarget,
+    shotType: occasion.shotType,
+    chanceType: occasion.chanceType,
+    route: occasion.route,
+  } as const;
+
   if (resolution.outcome === "goal") {
-    if (scorerPlayerId === undefined) {
-      throw new Error("Goal step event requires scorerPlayerId");
-    }
+    const assistPlayerId = occasion.creatorIsCreditedWithAssist ? occasion.creatorPlayerId : undefined;
+    const creatorPlayerId = durableGoalCreator(occasion);
 
     return {
       type: "shot_outcome",
-      minute,
-      side,
+      ...shot,
       outcome: "goal",
-      quality: resolution.quality,
-      isShotOnTarget: resolution.isShotOnTarget,
-      shotType: shotContext.shotType,
-      chanceType: shotContext.chanceType,
-      scorerPlayerId,
+      scorerPlayerId: occasion.shooterPlayerId,
       ...(assistPlayerId === undefined ? {} : { assistPlayerId }),
       ...(creatorPlayerId === undefined ? {} : { creatorPlayerId }),
     };
   }
 
-  if (shooterPlayerId === undefined) {
-    throw new Error("Non-goal shot step event requires shooterPlayerId");
-  }
-
   return {
     type: "shot_outcome",
-    minute,
-    side,
+    ...shot,
     outcome: resolution.outcome,
-    quality: resolution.quality,
-    isShotOnTarget: resolution.isShotOnTarget,
-    shotType: shotContext.shotType,
-    chanceType: shotContext.chanceType,
-    shooterPlayerId,
-    ...(goalkeeperPlayerId === undefined ? {} : { goalkeeperPlayerId }),
-    ...(primaryDefenderPlayerId === undefined ? {} : { primaryDefenderPlayerId }),
+    shooterPlayerId: occasion.shooterPlayerId,
+    ...(resolution.outcome === "save" ? { goalkeeperPlayerId: occasion.goalkeeperPlayerId } : {}),
+    ...(resolution.outcome === "block" ? { primaryDefenderPlayerId: occasion.primaryDefenderPlayerId } : {}),
   };
-}
-
-/**
- * Input needed to decide whether the selected creator receives assist credit.
- */
-interface SelectAssistFromChanceActorsInput {
-  /** Run seed used by the match context. */
-  readonly seed: string;
-  /** Stable fixture identifier for the match. */
-  readonly fixtureId: FixtureId;
-  /** Simulated minute of the chance. */
-  readonly minute: number;
-  /** Side that produced the chance. */
-  readonly attackingSide: MatchSide;
-  /** Score before resolving this chance. */
-  readonly scoreBeforeChance: MatchScore;
-  /** Coherent opportunity actors selected for this chance. */
-  readonly actors: ChanceActors;
-  /** Structured execution type for the shot. */
-  readonly shotType: ShotType;
-  /** Structured source type for the chance. */
-  readonly chanceType: ShotChanceType;
-}
-
-/** Stable RNG stream name used only for optional selected-creator assist credit. */
-const CHANCE_ACTOR_ASSIST_STREAM = "chance-actor-assist";
-
-/**
- * Credits the selected creator as assister when the chance is assist-eligible.
- */
-function selectAssistFromChanceActors(input: SelectAssistFromChanceActorsInput): PlayerId | undefined {
-  if (input.actors.creatorPlayerId === input.actors.shooterPlayerId) {
-    return undefined;
-  }
-
-  const rng = deriveRng(
-    input.seed,
-    CHANCE_ACTOR_ASSIST_STREAM,
-    input.fixtureId,
-    input.minute,
-    input.attackingSide,
-    input.scoreBeforeChance.home,
-    input.scoreBeforeChance.away,
-    input.actors.creatorPlayerId,
-    input.actors.shooterPlayerId,
-    input.shotType,
-    input.chanceType,
-  );
-
-  return rng.nextFloat() < assistProbabilityForShot(input.shotType, input.chanceType)
-    ? input.actors.creatorPlayerId
-    : undefined;
 }
 
 /**
  * Keeps only creator context that adds durable information beyond scorer/assist.
- */
-function selectDurableGoalCreator(actors: ChanceActors, assistPlayerId: PlayerId | undefined): PlayerId | undefined {
-  if (actors.creatorPlayerId === actors.shooterPlayerId) {
-    return undefined;
-  }
-
-  if (assistPlayerId === actors.creatorPlayerId) {
-    return undefined;
-  }
-
-  return actors.creatorPlayerId;
-}
-
-/**
- * Derives the probability that a goal credits the selected creator as assister.
- */
-function assistProbabilityForShot(shotType: ShotType, chanceType: ShotChanceType): number {
-  if (chanceType === "dead_ball" || shotType === "set_piece") {
-    return 0.25;
-  }
-
-  if (chanceType === "cross" && shotType === "header") {
-    return 0.85;
-  }
-
-  if (chanceType === "cross") {
-    return 0.75;
-  }
-
-  if (chanceType === "counter") {
-    return 0.6;
-  }
-
-  return 0.5;
-}
-
-/**
- * Derives structured shot context from the route the chance actually came down.
  *
- * The chance type is now a fact about the attack rather than an inference from
- * a minute number: a cross happened because the ball went down a flank. Only
- * the execution type still reads quality, because whether a cross is met with a
- * head depends on how good the delivery was.
+ * A player already named as scorer or assister is not named a third time. That
+ * is the same rule the durable event contract states by making the field
+ * optional, written once here rather than at each projection site.
  */
-function deriveShotContext(
-  route: TacticalRoute,
-  quality: number,
-): { readonly shotType: ShotType; readonly chanceType: ShotChanceType } {
-  const chanceType = OPPORTUNITY_ROUTE_CHANCE_TYPE[route];
-
-  return {
-    shotType: deriveShotType(chanceType, quality),
-    chanceType,
-  };
-}
-
-/**
- * Derives a stable shot type from the structured chance type.
- */
-function deriveShotType(chanceType: ShotChanceType, quality: number): ShotType {
-  if (chanceType === "cross" && quality >= 0.45) {
-    return "header";
+function durableGoalCreator(occasion: OccasionContext): PlayerId | undefined {
+  if (occasion.creatorPlayerId === occasion.shooterPlayerId) {
+    return undefined;
   }
 
-  return "normal";
+  return occasion.creatorIsCreditedWithAssist ? undefined : occasion.creatorPlayerId;
 }
 
 /**

@@ -62,6 +62,15 @@ manager's canonical role rather than a four-way weight key, and
 the compact squad table, which a later UI step may revisit without touching
 gameplay.
 
+Step 07 gave the web two facts it did not have. A saved shot event now carries
+the `route` it came down, at match-event schema `8`, so a match report can
+distinguish a chance worked down the left from one worked down the right where
+`chanceType: "cross"` covered both. The explanation trace, at schema `2`, adds
+per-side `routeCounts` and `shooterCounts` beside the existing route capacity
+rows - what the shape *opened* and what it actually *used*, which is the pair a
+tactical consequence screen needs. Step 10 owns rendering any of it; nothing in
+the UI reads either field yet.
+
 Step 12 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.
 

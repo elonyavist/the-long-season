@@ -811,6 +811,7 @@ function matchStepEventsFromReport(report: MatchReport): readonly MatchStepEvent
           isShotOnTarget: event.shot.isShotOnTarget,
           shotType: event.shot.shotType,
           chanceType: event.shot.chanceType,
+          ...(event.shot.route === undefined ? {} : { route: event.shot.route }),
           scorerPlayerId: event.scorerPlayerId,
           ...(event.assistPlayerId === undefined ? {} : { assistPlayerId: event.assistPlayerId }),
           ...(event.creatorPlayerId === undefined ? {} : { creatorPlayerId: event.creatorPlayerId }),
@@ -825,6 +826,7 @@ function matchStepEventsFromReport(report: MatchReport): readonly MatchStepEvent
           isShotOnTarget: event.shot.isShotOnTarget,
           shotType: event.shot.shotType,
           chanceType: event.shot.chanceType,
+          ...(event.shot.route === undefined ? {} : { route: event.shot.route }),
           shooterPlayerId: event.shooterPlayerId,
           goalkeeperPlayerId: event.goalkeeperPlayerId,
         }];
@@ -838,6 +840,7 @@ function matchStepEventsFromReport(report: MatchReport): readonly MatchStepEvent
           isShotOnTarget: event.shot.isShotOnTarget,
           shotType: event.shot.shotType,
           chanceType: event.shot.chanceType,
+          ...(event.shot.route === undefined ? {} : { route: event.shot.route }),
           shooterPlayerId: event.shooterPlayerId,
         }];
       case "block":
@@ -850,6 +853,7 @@ function matchStepEventsFromReport(report: MatchReport): readonly MatchStepEvent
           isShotOnTarget: event.shot.isShotOnTarget,
           shotType: event.shot.shotType,
           chanceType: event.shot.chanceType,
+          ...(event.shot.route === undefined ? {} : { route: event.shot.route }),
           shooterPlayerId: event.shooterPlayerId,
           ...(event.primaryDefenderPlayerId === undefined ? {} : { primaryDefenderPlayerId: event.primaryDefenderPlayerId }),
         }];

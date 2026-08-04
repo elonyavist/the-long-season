@@ -5,6 +5,8 @@ import { clubId, fixtureId, playerId } from "@game/domain";
 import { deriveRng, type Rng } from "@game/shared";
 
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
+import { buildOccasionContext } from "./occasion-context.ts";
+import type { ResolveOccasionInput } from "./occasion-resolver.ts";
 import { EVEN_CONTEST_ROUTE_CAPACITY } from "./opportunity-route.ts";
 import { createInitialMatchSimulationState, type MatchSide } from "./match-simulation-state.ts";
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
@@ -193,8 +195,16 @@ function outcomesOver(options: StrengthOptions, draws = 600): OutcomeCounts {
   return counts;
 }
 
-/** Builds one resolve input where `home` attacks with the requested strengths. */
-function occasionFor(options: StrengthOptions) {
+/**
+ * Builds one resolve input where `home` attacks with the requested strengths.
+ *
+ * The occasion is built through the real seam rather than hand-written, so these
+ * cases keep measuring the chain a match actually runs. None of these fixtures
+ * carries per-player attributes, which is exactly the point: every candidate is
+ * the same neutral profile, so both actor edges are `0` and each case still
+ * isolates the one department it varies.
+ */
+function occasionFor(options: StrengthOptions): ResolveOccasionInput {
   const context: MatchContext = {
     fixtureId: fixtureId("fixture:resolver-000001"),
     seed: "resolver-seed",
@@ -208,13 +218,19 @@ function occasionFor(options: StrengthOptions) {
     engineConfig: engineConfig(),
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
+  const simulation = createInitialMatchSimulationState(context);
 
   return {
-    simulation: createInitialMatchSimulationState(context),
-    attackingSide: "home" as MatchSide,
-    defendingSide: "away" as MatchSide,
-    minute: 10,
-    routeCapacity: options.routeCapacity ?? EVEN_CONTEST_ROUTE_CAPACITY,
+    simulation,
+    occasion: buildOccasionContext({
+      simulation,
+      attackingSide: "home",
+      defendingSide: "away",
+      minute: 10,
+      route: "central",
+      routeCapacity: options.routeCapacity ?? EVEN_CONTEST_ROUTE_CAPACITY,
+      scoreBeforeOccasion: simulation.score,
+    }),
   };
 }
 

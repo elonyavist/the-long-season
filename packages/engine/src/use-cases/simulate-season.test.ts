@@ -95,6 +95,19 @@ test("stable season seed produces a compact golden sentinel", () => {
   // being worth slightly more or less than its neighbour does over 306
   // fixtures. The opening fixture finished 0-0 rather than 1-0 for the same
   // reason, one shot fewer rather than a different match.
+  //
+  // Step 07 then moved the scorers and nothing else. Every structural number
+  // above is byte-identical - same champion on the same 50 points, same
+  // runner-up, same bottom club, same 306 fixtures, same shots and events in the
+  // first and last of them - while the golden boot changed hands within the same
+  // club and the second and third places swapped on five goals apiece.
+  //
+  // That is the exact signature this step should leave. Actors are now selected
+  // before the occasion is resolved and no longer keyed on a shot type that did
+  // not exist yet, so a different teammate is on the end of the same chances.
+  // These clubs are built without per-player attributes, so both actor edges are
+  // `0` here and the chances themselves are untouched: who scored moved, how
+  // many were created and how many went in did not.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -177,18 +190,18 @@ test("stable season seed produces a compact golden sentinel", () => {
       },
       topScorers: [
         {
-          playerId: playerId("player:test-02-02"),
+          playerId: playerId("player:test-02-04"),
           clubId: clubId("club:test-02"),
           goals: 7,
         },
         {
-          playerId: playerId("player:test-03-02"),
-          clubId: clubId("club:test-03"),
-          goals: 6,
+          playerId: playerId("player:test-01-04"),
+          clubId: clubId("club:test-01"),
+          goals: 5,
         },
         {
-          playerId: playerId("player:test-01-03"),
-          clubId: clubId("club:test-01"),
+          playerId: playerId("player:test-03-02"),
+          clubId: clubId("club:test-03"),
           goals: 5,
         },
       ],

@@ -68,6 +68,31 @@ test("every side reports one row per route, in the declared route order", () => 
   assert.deepEqual(builtTrace().away.routes.map((row) => row.route), [...TACTICAL_ROUTES]);
 });
 
+test("the trace counts which routes the chances actually came down, and who took them", () => {
+  // The route rows above say what this shape *could* open against this opponent.
+  // These say what it used. Without both, a manager who widened his team and saw
+  // nothing change could not tell whether the flank never opened or whether the
+  // side never went down it.
+  const summary = traceOverEvents().opportunitySummary.home;
+
+  assert.deepEqual(summary.routeCounts, [
+    { key: "central", count: 1 },
+    { key: "left", count: 2 },
+  ]);
+  assert.deepEqual(summary.shooterCounts, [
+    { key: "player:home-scorer", count: 1 },
+    { key: "player:home-winger", count: 2 },
+  ]);
+});
+
+test("a penalty is in no route bucket, so the buckets need not sum to the shots", () => {
+  const summary = traceOverEvents().opportunitySummary.away;
+
+  assert.deepEqual(summary.routeCounts, []);
+  assert.deepEqual(summary.shooterCounts, [{ key: "player:away-taker", count: 1 }]);
+  assert.deepEqual(summary.chanceTypeCounts, [{ key: "dead_ball", count: 1 }]);
+});
+
 test("route diagnostics are relational, so the two sides do not see the same routes", () => {
   const trace = builtTrace();
   const home = trace.home.routes.find((row) => row.route === "left");
@@ -111,6 +136,82 @@ function builtTrace(): MatchExplanationTrace {
       away: { opportunities: 4, shots: 3, shotsOnTarget: 1, goals: 0 },
     },
     events: [],
+  });
+}
+
+/**
+ * Builds a trace over concrete shot events rather than an empty event list.
+ *
+ * `home` works three chances down two different routes with two shooters, and
+ * `away` has only the scored penalty the route model never produced.
+ */
+function traceOverEvents(): MatchExplanationTrace {
+  const context: MatchContext = {
+    fixtureId: fixtureId("fixture:000002"),
+    seed: "trace-seed",
+    home: traceTeam("home", BALANCED_SHAPE),
+    away: traceTeam("away", FRONT_LOADED_SHAPE),
+    engineConfig: traceConfig(),
+    matchTacticsCalibration: traceCalibration(),
+  };
+
+  return createMatchExplanationTrace({
+    context,
+    score: { home: 1, away: 1 },
+    stats: {
+      home: { opportunities: 3, shots: 3, shotsOnTarget: 2, goals: 1 },
+      away: { opportunities: 1, shots: 1, shotsOnTarget: 1, goals: 1 },
+    },
+    events: [
+      {
+        type: "shot_outcome",
+        minute: 12,
+        side: "home",
+        outcome: "goal",
+        quality: 0.7,
+        isShotOnTarget: true,
+        shotType: "normal",
+        chanceType: "open_play",
+        route: "central",
+        scorerPlayerId: playerId("player:home-scorer"),
+      },
+      {
+        type: "shot_outcome",
+        minute: 31,
+        side: "home",
+        outcome: "save",
+        quality: 0.6,
+        isShotOnTarget: true,
+        shotType: "header",
+        chanceType: "cross",
+        route: "left",
+        shooterPlayerId: playerId("player:home-winger"),
+        goalkeeperPlayerId: playerId("player:away-000001"),
+      },
+      {
+        type: "shot_outcome",
+        minute: 58,
+        side: "home",
+        outcome: "miss",
+        quality: 0.4,
+        isShotOnTarget: false,
+        shotType: "normal",
+        chanceType: "cross",
+        route: "left",
+        shooterPlayerId: playerId("player:home-winger"),
+      },
+      {
+        type: "shot_outcome",
+        minute: 74,
+        side: "away",
+        outcome: "goal",
+        quality: 0.76,
+        isShotOnTarget: true,
+        shotType: "set_piece",
+        chanceType: "dead_ball",
+        scorerPlayerId: playerId("player:away-taker"),
+      },
+    ],
   });
 }
 
@@ -251,6 +352,8 @@ function sampleTrace(): MatchExplanationTrace {
         savedShots: 1,
         chanceTypeCounts: [{ key: "counter", count: 3 }],
         shotTypeCounts: [{ key: "normal", count: 5 }],
+        routeCounts: [{ key: "transition", count: 3 }],
+        shooterCounts: [{ key: "player:home-000001", count: 5 }],
       },
       away: {
         opportunities: 4,
@@ -261,6 +364,8 @@ function sampleTrace(): MatchExplanationTrace {
         savedShots: 1,
         chanceTypeCounts: [{ key: "cross", count: 2 }],
         shotTypeCounts: [{ key: "header", count: 1 }],
+        routeCounts: [{ key: "left", count: 2 }],
+        shooterCounts: [{ key: "player:away-000001", count: 3 }],
       },
     },
     variance: {

@@ -15,6 +15,7 @@ import {
   type MatchSimulationState,
 } from "./match-simulation-state.ts";
 import type { OccasionResolver, OccasionResolution, ResolveOccasionInput } from "./occasion-resolver.ts";
+import { OPPORTUNITY_ROUTE_CHANCE_TYPE } from "./opportunity-route.ts";
 import { stepMatch, type MatchShotOutcomeStepEvent } from "./step-match.ts";
 import {
   matchTacticsCalibrationFixture,
@@ -477,6 +478,80 @@ test("block step events keep the selected primary defender engine-local", () => 
   }
 });
 
+test("the outcome cannot change who was involved or how the chance was worked", () => {
+  // Causal ordering where the minute loop can break it. The same minute is run
+  // twice with the only difference being what the resolver decides, and the two
+  // shots must agree on every fact that existed before it decided: the route,
+  // the chance and shot type, and the attacking player on the end of it.
+  //
+  // Under the path this replaced they could not have: the shot type read the
+  // resolved quality, and the actor stream was seeded with that shot type, so
+  // forcing a different outcome quietly picked a different player.
+  const context = {
+    ...validContext({ baseOpportunityRatePerMinute: 1, maxOpportunityRatePerMinute: 1 }),
+    home: assistTeam("home"),
+    away: assistTeam("away"),
+  };
+  const shotsWhen = (resolver: OccasionResolver): readonly MatchShotOutcomeStepEvent[] =>
+    stepMatch({
+      simulation: createInitialMatchSimulationState(context),
+      rng: rngFor(context),
+      occasionResolver: resolver,
+    }).events.filter(isShotOutcomeStepEvent);
+
+  const scored = shotsWhen(fixedResolver({ outcome: "goal", quality: 0.8, isShotOnTarget: true }));
+  const blocked = shotsWhen(fixedResolver({ outcome: "block", quality: 0.2, isShotOnTarget: false }));
+
+  assert.equal(scored.length, 2);
+  assert.equal(blocked.length, scored.length);
+
+  for (const [index, goal] of scored.entries()) {
+    const block = blocked[index];
+    assert.ok(block !== undefined);
+    assert.equal(goal.side, block.side);
+    assert.equal(goal.route, block.route);
+    assert.equal(goal.chanceType, block.chanceType);
+    assert.equal(goal.shotType, block.shotType);
+    assert.equal(
+      goal.outcome === "goal" ? goal.scorerPlayerId : undefined,
+      block.outcome === "block" ? block.shooterPlayerId : undefined,
+      "the player who scored it and the player whose shot was blocked are the same man",
+    );
+  }
+});
+
+test("every shot event agrees with the route it says it came down", () => {
+  // Event coherence. `chanceType` is derived from `route`, so an event carrying
+  // a pair the route model cannot produce would mean the projection had invented
+  // one of them rather than read both off the same occasion.
+  const context = withGoalkeeperTeams(
+    validContext({ baseOpportunityRatePerMinute: 1, maxOpportunityRatePerMinute: 1 }),
+  );
+  let simulation = createInitialMatchSimulationState(context);
+  const rng = rngFor(context);
+  let shotCount = 0;
+
+  for (let step = 0; step < 90; step += 1) {
+    const result = stepMatch({ simulation, rng });
+    simulation = result.simulation;
+
+    for (const event of result.events.filter(isShotOutcomeStepEvent)) {
+      if (event.chanceType === "dead_ball") {
+        assert.equal(event.route, undefined, "a penalty was never worked down a route");
+        continue;
+      }
+
+      assert.ok(event.route !== undefined, "an open-play shot must say which way it came");
+      assert.equal(OPPORTUNITY_ROUTE_CHANCE_TYPE[event.route], event.chanceType);
+      shotCount += 1;
+    }
+
+    if (result.isComplete) break;
+  }
+
+  assert.ok(shotCount > 0, "the fixture must produce shots for this to prove anything");
+});
+
 test("stepMatch does not mutate the input simulation state", () => {
   const context = validContext();
   const simulation = createInitialMatchSimulationState(context);
@@ -655,6 +730,13 @@ function goalkeeperTeam(
     shape: shapeForStrength(strength),
     tacticalDistribution,
   };
+}
+
+/**
+ * Narrows a step event to any resolved shot outcome.
+ */
+function isShotOutcomeStepEvent(event: unknown): event is MatchShotOutcomeStepEvent {
+  return typeof event === "object" && event !== null && "type" in event && event.type === "shot_outcome";
 }
 
 /**

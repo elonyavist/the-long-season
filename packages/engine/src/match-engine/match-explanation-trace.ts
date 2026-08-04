@@ -20,8 +20,13 @@ import type { MatchStepEvent } from "./step-match.ts";
  *
  * The trace is diagnostic data for CLI/UI inspection. Match reports and match
  * results remain authoritative for saved gameplay outcomes.
+ *
+ * `2` added the per-side route and shooter counts, which is what makes the
+ * causal chain readable end to end: the route rows above say which way through
+ * this shape *could* open, and these say which one the chances actually came
+ * down and who was on the end of them.
  */
-export const MATCH_EXPLANATION_TRACE_SCHEMA_VERSION = 1;
+export const MATCH_EXPLANATION_TRACE_SCHEMA_VERSION = 2;
 
 /**
  * Stable high-level factors that can shape a match result.
@@ -153,6 +158,23 @@ export interface MatchExplanationOpportunitySideSummary {
   readonly chanceTypeCounts: readonly MatchExplanationCountBucket[];
   /** Count of shot types by stable key. */
   readonly shotTypeCounts: readonly MatchExplanationCountBucket[];
+  /**
+   * Count of shots by the route they came down.
+   *
+   * The route rows on the team snapshot say what this shape opened against this
+   * opponent; these say what it actually used. A manager who widened his team
+   * and saw nothing change can compare the two directly. A scored penalty has no
+   * route and is in no bucket, so these need not sum to `shots`.
+   */
+  readonly routeCounts: readonly MatchExplanationCountBucket[];
+  /**
+   * Count of shots by the player who took them, keyed by player ID.
+   *
+   * This is what makes the actors causal rather than decorative: if the same
+   * eleven produces the same shooter distribution whatever the manager does, the
+   * selection is not reading the lineup.
+   */
+  readonly shooterCounts: readonly MatchExplanationCountBucket[];
 }
 
 /**
@@ -353,6 +375,8 @@ function createOpportunitySideSummary(
 ): MatchExplanationOpportunitySideSummary {
   const chanceTypeCounts: MatchExplanationCountBucket[] = [];
   const shotTypeCounts: MatchExplanationCountBucket[] = [];
+  const routeCounts: MatchExplanationCountBucket[] = [];
+  const shooterCounts: MatchExplanationCountBucket[] = [];
   let blockedShots = 0;
   let savedShots = 0;
 
@@ -363,6 +387,11 @@ function createOpportunitySideSummary(
 
     incrementBucket(chanceTypeCounts, event.chanceType);
     incrementBucket(shotTypeCounts, event.shotType);
+    incrementBucket(shooterCounts, event.outcome === "goal" ? event.scorerPlayerId : event.shooterPlayerId);
+
+    if (event.route !== undefined) {
+      incrementBucket(routeCounts, event.route);
+    }
 
     if (event.outcome === "block") {
       blockedShots += 1;
@@ -382,6 +411,8 @@ function createOpportunitySideSummary(
     savedShots,
     chanceTypeCounts: sortBuckets(chanceTypeCounts),
     shotTypeCounts: sortBuckets(shotTypeCounts),
+    routeCounts: sortBuckets(routeCounts),
+    shooterCounts: sortBuckets(shooterCounts),
   };
 }
 

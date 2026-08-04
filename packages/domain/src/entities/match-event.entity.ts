@@ -1,6 +1,7 @@
 import type { MatchScore } from "./match.entity.ts";
 import type { PlayerId } from "../types/ids.ts";
 import type { MatchSubstitutionReasonKey } from "../match/substitution.ts";
+import type { TacticalRoute } from "../balance/match-tactics-calibration.ts";
 
 /**
  * Side marker used by persisted match events.
@@ -42,6 +43,21 @@ export interface ShotContext {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /**
+   * The way through the chance actually came down.
+   *
+   * `chanceType` is derived from this and stays because it is the vocabulary
+   * statistics and narration already speak. The route is the finer fact and the
+   * only one that answers *which* flank, which two crosses cannot be told apart
+   * by: a manager who moved his width wants to see that his chances moved with
+   * it. It is persisted rather than re-derived because the shape and tactics
+   * that produced it are gone by the time anyone reads the report.
+   *
+   * Absent for a penalty, which is awarded rather than worked: there is no way
+   * through a defence that conceded it at the spot. Absence is the fact, not a
+   * missing value to fill in with `central`.
+   */
+  readonly route?: TacticalRoute;
 }
 
 /**
