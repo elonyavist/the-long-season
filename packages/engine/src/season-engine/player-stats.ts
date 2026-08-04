@@ -168,6 +168,7 @@ function initialRows(registrations: readonly SeasonPlayerStatRegistration[]): Mu
       goals: 0,
       assists: 0,
       saves: 0,
+      clubIsRegistered: true,
     });
   }
 
@@ -176,6 +177,18 @@ function initialRows(registrations: readonly SeasonPlayerStatRegistration[]): Mu
 
 /**
  * Finds an existing row or creates one for an unregistered scorer.
+ *
+ * The club comes from the fixture side the event happened on, which is the club
+ * the player was actually fielded by (A8). A registration only names the club
+ * for a player who produced no events at all, and is overridden by his first
+ * event: two sources of truth for one attribution is one too many, and the
+ * caller-supplied one is the one that can be wrong. The two agree today, so
+ * nothing moves; they stop agreeing at Phase 82A's first loan, where a goal
+ * scored on loan must not be recorded against the parent club.
+ *
+ * A player fielded by two clubs in one season keeps his first club here. That
+ * is a real limitation of a per-season row and it belongs to Phase 82A with the
+ * rest of the registration model, not to a silent last-event-wins rule.
  */
 function findOrCreateRow(
   rows: MutableSeasonPlayerSummaryStatRow[],
@@ -185,6 +198,11 @@ function findOrCreateRow(
   const existing = findRow(rows, playerId);
 
   if (existing !== undefined) {
+    if (existing.clubIsRegistered) {
+      existing.clubId = clubId;
+      existing.clubIsRegistered = false;
+    }
+
     return existing;
   }
 
@@ -194,6 +212,7 @@ function findOrCreateRow(
     goals: 0,
     assists: 0,
     saves: 0,
+    clubIsRegistered: false,
   };
   rows.push(created);
 
@@ -294,7 +313,10 @@ function freezeSummaryRow(row: MutableSeasonPlayerSummaryStatRow): SeasonPlayerS
  * Mutable accumulator used internally while aggregating player season summaries.
  */
 interface MutableSeasonPlayerSummaryStatRow extends SeasonPlayerSummaryStatRow {
+  clubId: ClubId;
   goals: number;
   assists: number;
   saves: number;
+  /** Whether `clubId` still comes from a registration rather than an event. */
+  clubIsRegistered: boolean;
 }

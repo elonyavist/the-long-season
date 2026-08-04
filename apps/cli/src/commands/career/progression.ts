@@ -1,4 +1,3 @@
-import { createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import {
   createFakeGameplayConfig,
   selectMarketBehaviorCalibration,
@@ -9,12 +8,13 @@ import {
 import {
   applyCareerWeeklyRecovery,
   buildTacticTeamContext,
-  matchPlayerIncidentProfilesForLineup,
-  deriveTeamShapeAndStrength,
+  buildUnpreparedTeamContext,
+  DEFAULT_MATCH_LINEUP_SIZE,
+  fieldablePlayerIds,
+  fieldablePlayerIdsFor,
   findNextCareerFixture,
   progressNextCareerFixture,
   type ApplyCareerWeeklyRecoveryResult,
-  type LineupSlot,
   type MatchTeamContext,
   type PlayerStateMultiplierCurves,
   type ProgressCareerFixtureAdvanced,
@@ -29,8 +29,6 @@ import {
 
 /** Versioned match-tactics calibration, read through content rather than domain. */
 type CliMatchTacticsCalibration = ReturnType<typeof createFakeGameplayConfig>["matchTacticsCalibration"];
-
-const CAREER_DEFAULT_LINEUP_SIZE = 11;
 
 /** CLI-only invalid reasons that block selected-club career advancement. */
 export type CareerAdvancePreparationInvalidReason =
@@ -102,7 +100,7 @@ export function advanceCareerNextFixture(
   const selectedClub = careerState.gameState.clubs[careerState.selectedClubId];
   const preMatchRecovery = applyCareerWeeklyRecovery({
     playerStates: careerState.gameState.playerStates,
-    playerIds: selectedClub?.playerIds ?? [],
+    playerIds: fieldablePlayerIdsFor(selectedClub),
     dayCount: nextFixture.fixture.date - careerState.gameState.calendar.currentDate,
   });
   const recoveredCareerState: CliCareerState = {
@@ -175,7 +173,7 @@ function careerTeamsByClubId(input: {
       teamsByClubId[clubId] = buildTacticTeamContext({
         lineup: input.careerState.matchPreparation.selectedLineup,
         tactic: input.careerState.matchPreparation.tactic,
-        requiredLineupSize: CAREER_DEFAULT_LINEUP_SIZE,
+        requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
         players: input.careerState.gameState.players,
         roleWeights: input.roleWeights,
         playerStates: input.careerState.gameState.playerStates,
@@ -185,31 +183,20 @@ function careerTeamsByClubId(input: {
       continue;
     }
 
-    const lineup = defaultOpponentLineupFromRoster(club.playerIds);
-    teamsByClubId[clubId] = {
+    // The same constructor the manager's own club goes through, given this
+    // club's squad explicitly (A1, A8). The squad comes from the one named
+    // accessor rather than from stored ownership, because ownership stops
+    // answering "who can this club field" at Phase 82A's first loan (A6).
+    teamsByClubId[clubId] = buildUnpreparedTeamContext({
       clubId,
-      lineup,
-      ...deriveTeamShapeAndStrength({
-        lineup,
-        players: input.careerState.gameState.players,
-        playerStates: input.careerState.gameState.playerStates,
-        roleWeights: input.roleWeights,
-        stateMultiplierCurves: input.stateMultiplierCurves,
-        matchTacticsCalibration: input.matchTacticsCalibration,
-      }),
-      incidentProfiles: matchPlayerIncidentProfilesForLineup(
-        lineup,
-        input.careerState.gameState.players,
-        input.careerState.gameState.playerStates,
-      ),
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-        mentality: "balanced",
-      },
-    };
+      squadPlayerIds: fieldablePlayerIds(club),
+      requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
+      players: input.careerState.gameState.players,
+      roleWeights: input.roleWeights,
+      playerStates: input.careerState.gameState.playerStates,
+      stateMultiplierCurves: input.stateMultiplierCurves,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+    });
   }
 
   return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
@@ -267,42 +254,4 @@ function selectedCompetitionMatchRules(careerState: CliCareerState) {
     throw new Error("Selected club competition match rules are unavailable");
   }
   return rules;
-}
-
-function defaultOpponentLineupFromRoster(playerIds: CliGameState["playerIds"]): readonly LineupSlot[] {
-  const lineup: LineupSlot[] = [];
-
-  for (let index = 0; index < CAREER_DEFAULT_LINEUP_SIZE; index += 1) {
-    const playerId = playerIds[index];
-
-    if (playerId === undefined) {
-      continue;
-    }
-
-    const slotNumber = index + 1;
-    lineup.push(createLineupSlot({
-      slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
-      playerId,
-      canonicalRole: defaultCanonicalRoleForSlot(slotNumber),
-    }));
-  }
-
-  return lineup;
-}
-
-/** Fixed 4-4-2 role order used when no manager selection exists for a club. */
-function defaultCanonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
-  if (slotNumber === 1) {
-    return "goalkeeper";
-  }
-
-  if (slotNumber <= 5) {
-    return "center_back";
-  }
-
-  if (slotNumber <= 9) {
-    return "central_midfielder";
-  }
-
-  return "striker";
 }

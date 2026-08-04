@@ -1,10 +1,17 @@
-/** Current relational browser-career schema version. */
-export const SQLITE_CAREER_SCHEMA_VERSION = 22;
+/**
+ * Current relational browser-career schema version.
+ *
+ * `23` added `match_events.route`. A database written at `22` stored shots
+ * without the way they came down, so the fact is gone rather than absent and
+ * cannot be recovered by reading harder. Beta databases are therefore reset
+ * through the canonical flow instead of migrated.
+ */
+export const SQLITE_CAREER_SCHEMA_VERSION = 23;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
 
-/** Core tables of the clean version-22 OPFS baseline. */
+/** Core tables of the clean version-23 OPFS baseline. */
 const SQLITE_CAREER_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
@@ -467,6 +474,7 @@ const SQLITE_CAREER_STATE_SCHEMA_STATEMENTS = [
     is_shot_on_target INTEGER,
     shot_type TEXT,
     chance_type TEXT,
+    route TEXT,
     scorer_player_id TEXT,
     assist_player_id TEXT,
     creator_player_id TEXT,

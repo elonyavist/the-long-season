@@ -239,12 +239,16 @@ export {
 } from "./opportunity-route.ts";
 export {
   buildTacticTeamContext,
+  buildUnpreparedTeamContext,
   createMatchPlayerIncidentProfile,
+  DEFAULT_MATCH_LINEUP_SIZE,
+  defaultLineupFromSquad,
   deriveTeamShapeAndStrength,
   matchPlayerIncidentProfilesForLineup,
   tacticToMatchDistribution,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
+  type BuildUnpreparedTeamContextInput,
   type DeriveTeamShapeAndStrengthInput,
   type TacticTeamContextErrorCode,
   type TeamShapeAndStrength,

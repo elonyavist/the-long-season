@@ -18,6 +18,35 @@ export type ShotType = "normal" | "header" | "set_piece";
  */
 export type ShotChanceType = "open_play" | "counter" | "cross" | "dead_ball";
 
+const SHOT_TYPES = ["normal", "header", "set_piece"] as const satisfies readonly ShotType[];
+
+const SHOT_CHANCE_TYPES = [
+  "open_play",
+  "counter",
+  "cross",
+  "dead_ball",
+] as const satisfies readonly ShotChanceType[];
+
+/**
+ * Reports whether an unknown value is a supported shot execution type.
+ *
+ * Persisted events come back as open strings. Asserting the union with a cast
+ * would make a corrupt or foreign row simulate and display as a normal shot
+ * instead of failing, which is the quiet kind of wrong this project spends its
+ * time removing.
+ *
+ * @example
+ * if (!isShotType(value)) throw new Error(`unsupported shot type: ${value}`);
+ */
+export function isShotType(value: unknown): value is ShotType {
+  return typeof value === "string" && (SHOT_TYPES as readonly string[]).includes(value);
+}
+
+/** Reports whether an unknown value is a supported chance source. */
+export function isShotChanceType(value: unknown): value is ShotChanceType {
+  return typeof value === "string" && (SHOT_CHANCE_TYPES as readonly string[]).includes(value);
+}
+
 /** Injury severity emitted by the match and consumed by career consequences. */
 export type MatchInjurySeverity = "knock" | "minor" | "moderate" | "serious";
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Done 2026-08-04, all gates green.
 
 ## Goal
 
@@ -121,6 +121,112 @@ git diff --check
 graphify update .
 ```
 
+## What Was Found
+
+Three of the four planned areas were already correct and needed a test rather
+than a change. The fourth was broken in a way nothing could have noticed.
+
+### The route was never persisted (SQLite)
+
+`ShotContext.route` arrived in Step 07 and `match_events` had no column for it.
+Every shot played in a **web career** was written back without the way it came
+down, while `matchday-adapter.ts` went on reading `event.shot.route` to rebuild
+its step events and always found nothing there. The JSON path kept it for free,
+because it stores the whole state, so the two backends silently disagreed.
+
+Nothing caught it, and the reason is worth recording: the mapper fixture
+contained no shot event at all, and no test had ever *loaded* a report back. The
+insert-recorder test could not have caught it either - the column was simply
+absent from the statement, so there was nothing to record. **Only a load can
+prove a save.** `world-state-mapper.test.ts` now round-trips a played match
+through a real in-memory SQLite over the shipped schema.
+
+Both beta versions advanced and neither migrates: `SQLITE_CAREER_SCHEMA_VERSION`
+`22 -> 23`, `CURRENT_CAREER_SAVE_SCHEMA_VERSION` `13 -> 14`. A database written
+at `22` did not store the route, so the fact is *gone* rather than absent; there
+is nothing for a migration to read.
+
+The three tactical unions the mapper used to cast (`route`, `shotType`,
+`chanceType`) are validated on read, so a foreign or corrupt row fails at the
+boundary instead of travelling on into narration as a normal shot.
+
+### A non-selected club was not an ordinary caller (A1)
+
+The contract says a club the manager has not prepared reaches the engine through
+the same constructor as his own. It did not. Both drivers - `matchday-adapter.ts`
+and `apps/cli career/progression.ts` - assembled a `MatchTeamContext` **literal**
+by hand for every other club, each with its own copy of the fallback eleven and
+its own copy of `CAREER_DEFAULT_LINEUP_SIZE`.
+
+That duplication is exactly how Step 07A's defect happened: one driver can
+satisfy a new field of the context while the other quietly does not. Both now
+call `buildUnpreparedTeamContext`, which takes an **explicit squad** and hands it
+to `buildTacticTeamContext` like any other caller. The role order lives in one
+place, and it is the place Step 09 will change.
+
+One behaviour did change: a club that cannot field the required eleven now fails
+with `insufficient_squad` instead of silently lining up nine men and simulating
+anyway.
+
+### Attribution was already fielded-by, with one hole (A8)
+
+Participation sources the club from `side.initialContext.clubId`, and season
+events from the fixture side. Both are the club that *fielded* the player, and
+`simulateSeason` registers from the fielded lineup rather than from ownership.
+So the rule held - except that `computeSeasonPlayerSummaryStats` had **two**
+sources of truth for a row's club, and the wrong one won: a caller-supplied
+registration club silently overrode the event's own side. The event now decides,
+and a registration only names the club for a player with no events at all. The
+two agree today, so no shipped number moves.
+
+Two tests fix the rule where it can actually be broken, each using a player whose
+contract club differs from the club fielding him - the shape Phase 82A's first
+loan will make real.
+
+A card is **not** club-attributed at all: injuries, suspensions and yellow-card
+accumulation are keyed by `(player, competition)`. That is correct football - a
+suspension travels with the player through a loan - and it is recorded here so
+nobody later adds a parent-club card ledger believing one is missing.
+
+### A6 had a gap the check did not cover
+
+`apps/cli career/progression.ts` composed a lineup straight from `club.playerIds`
+and was not in `LINEUP_COMPOSING_FILES`. Adding it surfaced a second direct read
+in the same file's pre-match recovery. Both now use the accessor, and the check
+covers eight files.
+
+## Left For Step 09
+
+`finalPlayerRegistrations` in `matchday-adapter.ts` recomposes the opponent's
+eleven from the roster to register who played. It is correct today only because
+every AI club fields the same fixed `4-4-2`, so recomposing reproduces exactly
+what was fielded. **It stops being correct the moment Step 09 gives AI clubs real
+selections**: the lineup that was fielded becomes a fact of the played match, and
+`ProgressCareerFixtureAdvanced` has to carry it rather than let the adapter guess.
+Both sites now go through `defaultLineupFromSquad`, so there is one rule to
+replace rather than two.
+
+## Expected Files Deviation
+
+The list above was written before Steps 07, 07A and 07B and does not name where
+this work lives. Recorded rather than silently absorbed:
+
+- **Added**: `tactic-team-context.ts` + test and `match-engine/index.ts` (the one
+  constructor lives beside `buildTacticTeamContext`, not in `match-context.ts`);
+  `season-engine/player-stats.ts` + test and `career/player-participation.test.ts`
+  (where attribution actually is); `balance/match-tactics-calibration.ts`
+  (`isTacticalRoute` belongs with `TACTICAL_ROUTES`); `storage/save-metadata.ts`
+  (the envelope version); `sqlite/world-state-mapper.test.ts` (the only file with
+  a valid career fixture to load); `apps/cli career/progression.ts` and
+  `scripts/check-squad-depth-accessor.ts` (the A6 gap).
+- **Untouched**: `match.entity.ts`, `career-state.ts` + test, `match-context.ts` +
+  test, `progressive-match-session.ts` + test, `manual-tactic-change.ts` + test,
+  `simulate-match-with-manual-tactics.ts` + test, `create-match-report.ts` + test,
+  `career-save-envelope.ts`, `sqlite-career-migrations.ts`,
+  `career-storage.contract.test.ts`, `matchday-adapter.test.ts`. Each was already
+  correct; the minute `N + 1` invariant in particular was already proven by
+  `progressive-match-session.test.ts`, so it was verified rather than rewritten.
+
 ## Definition Of Done
 
 - Pre-match, manual, and live changes use one tactical builder, and that builder
@@ -133,3 +239,28 @@ graphify update .
 - No migration, legacy reader, duplicate ledger, or fallback reconstruction
   remains.
 - Step 09 is the only next action.
+
+### 2026-08-04 - docs/steps/81-.../08-live-session-persistence-event-schema-and-beta-reset.md
+- Status: Done
+- Outcome: One real defect, three confirmations. `ShotContext.route` had never
+  been persisted by SQLite, so the whole web career path lost it on every save
+  while the matchday adapter read it back and found nothing. A club the manager
+  had not prepared was still a hand-built context literal in both drivers, each
+  with its own copy of the fallback eleven. Attribution was already fielded-by
+  except for one hole where a caller-supplied registration club overrode the
+  event's own side. The `N + 1` invariant was already proven and was verified,
+  not rewritten.
+- Adopted solution: `match_events.route`, written and validated on read together
+  with `shotType` and `chanceType`; OPFS schema `22 -> 23` and career envelope
+  `13 -> 14`, both reset rather than migrated. `buildUnpreparedTeamContext` and
+  `defaultLineupFromSquad` in `tactic-team-context.ts` give both drivers one
+  constructor taking an explicit squad; a squad too small to field the required
+  eleven now fails with `insufficient_squad` instead of lining up nine men.
+  `apps/cli career/progression.ts` joined `check:squad-depth`, which found a
+  second direct roster read in the same file.
+- Verification: `pnpm check` green - lint, depcruise, localized text,
+  squad-depth over eight files, tests, typecheck across all packages.
+- Follow-up: Step 09 must make the fielded lineup a carried fact of a played
+  match. `finalPlayerRegistrations` recomposes the opponent's eleven and is
+  correct only while every AI club fields `4-4-2`; `ProgressCareerFixtureAdvanced`
+  has to carry what was actually fielded once that stops being true.

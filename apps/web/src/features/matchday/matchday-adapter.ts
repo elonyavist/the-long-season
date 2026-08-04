@@ -2,7 +2,6 @@ import {
   fieldablePlayerIds,
   fieldablePlayerIdsFor,
   roleWeightKeyForCanonicalRole,
-  createLineupSlot,
   advanceProgressiveMatchMinute,
   applyProgressiveAiInGameDecisions,
   applyConfirmedProgressiveTeamChanges,
@@ -12,13 +11,14 @@ import {
   buildMatchRngKey,
   buildPlayerMatchRatings,
   buildTacticTeamContext,
+  buildUnpreparedTeamContext,
   commitCompletedCareerFixture,
   createMatchReport,
   createProgressiveMatchMinuteSnapshot,
   createProgressiveMatchSession,
   computePlayerMatchStats,
-  deriveTeamShapeAndStrength,
-  matchPlayerIncidentProfilesForLineup,
+  DEFAULT_MATCH_LINEUP_SIZE,
+  defaultLineupFromSquad,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
   injuryForcesExit,
@@ -27,7 +27,6 @@ import {
   pauseProgressiveMatchSession,
   resolveProgressiveMatchIncidentDecision,
   resumeProgressiveMatchSession,
-  type LineupSlot,
   type LivePlayerMatchProjection,
   type MatchContext,
   type MatchSide,
@@ -105,7 +104,6 @@ type MatchdayContentConfig = Pick<
   readonly competitionMatchRules: CompetitionMatchRules;
 };
 
-const CAREER_DEFAULT_LINEUP_SIZE = 11;
 const REQUIRED_BENCH_SIZE = 8;
 
 /** Stable validation blockers for the persisted web matchday adapter. */
@@ -672,7 +670,7 @@ export function buildWebMatchdayInput(
     },
     ...(currentFixture === undefined ? {} : { fixture: fixtureInput(state.careerState, currentFixture) }),
     preparation: {
-      hasSavedLineup: preparation?.isSaved === true && completeLineupCount(preparation) === CAREER_DEFAULT_LINEUP_SIZE,
+      hasSavedLineup: preparation?.isSaved === true && completeLineupCount(preparation) === DEFAULT_MATCH_LINEUP_SIZE,
       hasSavedTactic: preparation?.isSaved === true && preparation.selectedTacticProfileId !== undefined,
       ...(currentFixture === undefined ? {} : { targetFixtureId: currentFixture.id }),
     },
@@ -1433,7 +1431,7 @@ function invalidSessionState(state: WebMatchdayState, invalidReason: string): We
 function validatePreparation(preparation: MatchPreparationDraft): readonly WebMatchdayBlockerKey[] {
   const blockers: WebMatchdayBlockerKey[] = [];
 
-  if (preparation.isSaved !== true || completeLineupCount(preparation) !== CAREER_DEFAULT_LINEUP_SIZE) {
+  if (preparation.isSaved !== true || completeLineupCount(preparation) !== DEFAULT_MATCH_LINEUP_SIZE) {
     blockers.push("missing_saved_lineup");
   }
 
@@ -1476,7 +1474,7 @@ function buildCareerTeamsByClubId(
       teamsByClubId[clubId] = buildTacticTeamContext({
         lineup: careerState.matchPreparation.selectedLineup,
         tactic: careerState.matchPreparation.tactic,
-        requiredLineupSize: CAREER_DEFAULT_LINEUP_SIZE,
+        requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
         players: careerState.gameState.players,
         roleWeights: contentConfig.roleWeights,
         playerStates: careerState.gameState.playerStates,
@@ -1486,84 +1484,24 @@ function buildCareerTeamsByClubId(
       continue;
     }
 
-    const lineup = defaultOpponentLineupFromRoster(fieldablePlayerIds(club));
-    teamsByClubId[clubId] = {
+    // A club nobody prepared reaches the same constructor as the manager's own,
+    // and supplies its squad explicitly rather than letting the constructor
+    // derive one from club ownership (A1, A8). This branch used to assemble the
+    // context literal by hand, which is how the web and the CLI came to hold
+    // two copies of one fallback eleven.
+    teamsByClubId[clubId] = buildUnpreparedTeamContext({
       clubId,
-      lineup,
-      ...deriveTeamShapeAndStrength({
-        lineup,
-        players: careerState.gameState.players,
-        playerStates: careerState.gameState.playerStates,
-        roleWeights: contentConfig.roleWeights,
-        stateMultiplierCurves: contentConfig.stateMultiplierCurves,
-        matchTacticsCalibration: contentConfig.matchTacticsCalibration,
-      }),
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-        mentality: "balanced",
-      },
-      // Opponents are real footballers too. Until Step 07A this branch omitted
-      // attributes while the manager's own club - built through
-      // `buildTacticTeamContext` above - always had them, so in web career play
-      // every opponent tackled, tired and kept his nerve at a flat `10` whoever
-      // he was. Nothing failed, because the engine invented those numbers.
-      incidentProfiles: matchPlayerIncidentProfilesForLineup(
-        lineup,
-        careerState.gameState.players,
-        careerState.gameState.playerStates,
-      ),
-    };
+      squadPlayerIds: fieldablePlayerIds(club),
+      requiredLineupSize: DEFAULT_MATCH_LINEUP_SIZE,
+      players: careerState.gameState.players,
+      roleWeights: contentConfig.roleWeights,
+      playerStates: careerState.gameState.playerStates,
+      stateMultiplierCurves: contentConfig.stateMultiplierCurves,
+      matchTacticsCalibration: contentConfig.matchTacticsCalibration,
+    });
   }
 
   return teamsByClubId as Readonly<Record<ClubId, MatchTeamContext>>;
-}
-
-/**
- * Builds the fallback eleven for a club the manager has not prepared.
- *
- * This is the background driver's path (A1): a club the user has not selected
- * is an ordinary caller of the same typed seam, not a special case with its own
- * role vocabulary.
- */
-function defaultOpponentLineupFromRoster(playerIds: readonly PlayerId[]): readonly LineupSlot[] {
-  const lineup: LineupSlot[] = [];
-
-  for (let index = 0; index < CAREER_DEFAULT_LINEUP_SIZE; index += 1) {
-    const rosterPlayerId = playerIds[index];
-
-    if (rosterPlayerId === undefined) {
-      continue;
-    }
-
-    const slotNumber = index + 1;
-    lineup.push(createLineupSlot({
-      slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
-      playerId: rosterPlayerId,
-      canonicalRole: defaultCanonicalRoleForSlot(slotNumber),
-    }));
-  }
-
-  return lineup;
-}
-
-/** Fixed 4-4-2 role order used when no manager selection exists for a club. */
-function defaultCanonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
-  if (slotNumber === 1) {
-    return "goalkeeper";
-  }
-
-  if (slotNumber <= 5) {
-    return "center_back";
-  }
-
-  if (slotNumber <= 9) {
-    return "central_midfielder";
-  }
-
-  return "striker";
 }
 
 function engineRoleKeyForBoardRole(role: TacticalBoardRoleCode): string {
@@ -1891,9 +1829,17 @@ function finalPlayerRegistrations(result: WebMatchdayAdvancedResult): readonly R
   side: MatchSide;
   roleKey: string;
 }>[] {
+  // Recomposed from the same canonical inputs the match used, through the same
+  // seam, so the two answers cannot diverge. It stops being recomputable once
+  // Step 09 gives AI clubs real selections: from then on the lineup that was
+  // fielded is a fact of the played match, and `ProgressCareerFixtureAdvanced`
+  // has to carry it rather than let this side guess a default eleven.
   const slotsForClub = (clubId: ClubId): readonly Readonly<{ playerId: PlayerId; canonicalRole: CanonicalPlayerRole }>[] => clubId === result.careerState.selectedClubId
     ? result.careerState.matchPreparation?.selectedLineup?.slots ?? []
-    : defaultOpponentLineupFromRoster(fieldablePlayerIdsFor(result.careerState.gameState.clubs[clubId]));
+    : defaultLineupFromSquad(
+      fieldablePlayerIdsFor(result.careerState.gameState.clubs[clubId]),
+      DEFAULT_MATCH_LINEUP_SIZE,
+    );
 
   return (["home", "away"] as const).flatMap((side) => {
     const clubId = side === "home" ? result.fixtureAfter.homeClubId : result.fixtureAfter.awayClubId;

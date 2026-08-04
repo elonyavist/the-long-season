@@ -20,8 +20,10 @@ import {
   type TacticSetup,
 } from "@game/domain";
 
+import type { MatchTeamContext } from "./match-context.ts";
 import {
   buildTacticTeamContext,
+  buildUnpreparedTeamContext,
   tacticToMatchDistribution,
   TacticTeamContextError,
   type BuildTacticTeamContextInput,
@@ -225,6 +227,94 @@ test("department strength is the same number the strength module derives alone",
  * A deliberately flat calibration: it proves the seam is wired, not what the
  * football numbers should be. The intrinsic-shape tests own the invariants.
  */
+/**
+ * Fixes the invariant that makes a live change trustworthy.
+ *
+ * The manager must get the same football from a change whether he made it on
+ * the preparation screen or at the touchline in the eightieth minute. That is
+ * only true while both routes reach one builder, and it stops being true the
+ * moment either driver rebuilds a context its own way - which is exactly what
+ * both of them used to do for every club the manager had not prepared.
+ *
+ * The delta is compared rather than the contexts, because it is the delta the
+ * manager experiences: what his decision changed.
+ */
+test("pre-match and live application of one change produce the same structural delta", () => {
+  const before = buildTacticTeamContext(validInput());
+  const change: Partial<BuildTacticTeamContextInput> = {
+    tactic: tacticFixture({ mentality: "attacking", width: 0.2, risk: 0.9 }),
+  };
+
+  const preMatch = buildTacticTeamContext({ ...validInput(), ...change });
+  const live = buildTacticTeamContext({ ...validInput(), ...change });
+
+  assert.deepEqual(delta(before, live), delta(before, preMatch));
+  assert.notDeepEqual(delta(before, preMatch), delta(before, before));
+});
+
+/**
+ * Fixes the seam a club nobody prepared reaches the engine through (A1).
+ *
+ * The squad arrives explicitly. Nothing here consults club ownership to find
+ * out who is available, because ownership stops answering that question at
+ * Phase 82A's first loan.
+ */
+test("an unprepared club is an ordinary caller of the same builder", () => {
+  const ids = playerIds();
+  const input = validInput();
+
+  const unprepared = buildUnpreparedTeamContext({
+    clubId: clubId("club:pro01"),
+    squadPlayerIds: [ids.goalkeeper, ids.striker],
+    requiredLineupSize: 2,
+    players: input.players,
+    roleWeights: input.roleWeights,
+    matchTacticsCalibration: input.matchTacticsCalibration,
+  });
+
+  assert.equal(unprepared.clubId, clubId("club:pro01"));
+  assert.deepEqual(unprepared.lineup.map((slot) => slot.slotId), ["slot:01", "slot:02"]);
+  assert.deepEqual(unprepared.lineup.map((slot) => slot.canonicalRole), ["goalkeeper", "center_back"]);
+  assert.equal(unprepared.incidentProfiles.length, 2);
+  assert.equal(unprepared.shape.policyVersion, input.matchTacticsCalibration.version);
+  assert.deepEqual(unprepared.tacticalDistribution, {
+    mentality: "balanced",
+    pressing: 0.5,
+    directness: 0.5,
+    width: 0.5,
+    risk: 0.5,
+  });
+});
+
+test("an unprepared club that cannot field the required eleven fails loudly", () => {
+  const ids = playerIds();
+  const input = validInput();
+
+  assertTacticTeamContextError(
+    () => buildUnpreparedTeamContext({
+      clubId: clubId("club:pro01"),
+      squadPlayerIds: [ids.goalkeeper],
+      requiredLineupSize: 2,
+      players: input.players,
+      roleWeights: input.roleWeights,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+    }),
+    "insufficient_squad",
+  );
+});
+
+/** Reduces one change to the facts the match engine actually reads. */
+function delta(before: MatchTeamContext, after: MatchTeamContext) {
+  return {
+    overall: after.strength.overall - before.strength.overall,
+    attack: after.strength.attack - before.strength.attack,
+    midfield: after.strength.midfield - before.strength.midfield,
+    defense: after.strength.defense - before.strength.defense,
+    tacticalDistribution: after.tacticalDistribution,
+    shape: after.shape,
+  };
+}
+
 function seamCalibration(): MatchTacticsCalibrationConfig {
   return flatMatchTacticsCalibrationFixture({
     version: "match-tactics-seam-fixture",
@@ -304,6 +394,15 @@ function roleWeights(): Readonly<Record<string, RoleWeightProfile>> {
       department: "attack",
       abilityWeights: {
         "technical.finishing": 1,
+      },
+    },
+    // Needed by the default eleven a club with no preparation fields, whose
+    // second slot is a centre-back.
+    defender: {
+      roleKey: "defender",
+      department: "defense",
+      abilityWeights: {
+        "technical.tackling": 1,
       },
     },
   };

@@ -1,5 +1,8 @@
 import {
   isCanonicalPlayerRole,
+  isShotChanceType,
+  isShotType,
+  isTacticalRoute,
   clubFinanceLedgerEntryId,
   clubId,
   competitionId,
@@ -75,6 +78,9 @@ import {
   type SeniorSquadRegistration,
   type SeniorSquadRegistrationId,
   type SeniorSquadState,
+  type ShotChanceType,
+  type ShotType,
+  type TacticalRoute,
   type TransferNegotiation,
   type TransferNegotiationState,
   type PreliminaryAgreement,
@@ -1728,14 +1734,18 @@ function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKin
     const minute = shot?.minute ?? ("minute" in event ? event.minute : 0);
     database.run(`INSERT INTO match_events
       (save_id, owner_kind, owner_id, sort_order, event_type, event_minute, side, quality, is_shot_on_target,
-       shot_type, chance_type, scorer_player_id, assist_player_id, creator_player_id, shooter_player_id,
+       shot_type, chance_type, route, scorer_player_id, assist_player_id, creator_player_id, shooter_player_id,
        goalkeeper_player_id, primary_defender_player_id, score_home, score_away,
        committed_by_player_id, suffered_by_player_id, zone_danger, card_player_id, fouled_player_id,
        penalty_taker_player_id, penalty_outcome, injury_player_id, injury_severity,
        outgoing_player_id, incoming_player_id, slot_id, substitution_reason_key)
-      VALUES (${placeholders(32)})`, [save, ownerKind, ownerId, sortOrder, event.type, minute,
+      VALUES (${placeholders(33)})`, [save, ownerKind, ownerId, sortOrder, event.type, minute,
       side ?? null, shot?.quality ?? null, shot === undefined ? null : shot.isShotOnTarget ? 1 : 0,
       shot?.shotType ?? null, shot?.chanceType ?? null,
+      // Null for a penalty, which is awarded rather than worked, and null for
+      // every non-shot event. Absence is the fact; it is never written as a
+      // default route.
+      shot?.route ?? null,
       "scorerPlayerId" in event ? event.scorerPlayerId : null,
       "assistPlayerId" in event ? event.assistPlayerId ?? null : null,
       "creatorPlayerId" in event ? event.creatorPlayerId ?? null : null,
@@ -2128,7 +2138,7 @@ function readMatchEvent(row: Record<string, unknown>): MatchEvent {
   if (type === "penalty_outcome") return { type, minute, side, takerPlayerId: playerId(text(row, "penalty_taker_player_id")), goalkeeperPlayerId: playerId(text(row, "goalkeeper_player_id")), outcome: text(row, "penalty_outcome") as PenaltyOutcome };
   if (type === "injury") return { type, minute, side, playerId: playerId(text(row, "injury_player_id")), severity: text(row, "injury_severity") as MatchInjurySeverity };
   if (type === "substitution") return { type, minute, side, outgoingPlayerId: playerId(text(row, "outgoing_player_id")), incomingPlayerId: playerId(text(row, "incoming_player_id")), slotId: text(row, "slot_id"), reasonKey: text(row, "substitution_reason_key") as MatchSubstitutionReasonKey };
-  const shot = { minute, side, quality: number(row, "quality"), isShotOnTarget: boolean(row, "is_shot_on_target"), shotType: text(row, "shot_type") as "normal" | "header" | "set_piece", chanceType: text(row, "chance_type") as "open_play" | "counter" | "cross" | "dead_ball" };
+  const shot = { minute, side, quality: number(row, "quality"), isShotOnTarget: boolean(row, "is_shot_on_target"), shotType: shotType(row), chanceType: shotChanceType(row), ...optionalRoute(row) };
   if (type === "goal") return { type, shot, scorerPlayerId: playerId(text(row, "scorer_player_id")), ...optionalPlayer(row, "assist_player_id", "assistPlayerId"), ...optionalPlayer(row, "creator_player_id", "creatorPlayerId") };
   if (type === "save") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId"), goalkeeperPlayerId: playerId(text(row, "goalkeeper_player_id")) };
   if (type === "miss") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId") };
@@ -2139,6 +2149,33 @@ function readMatchEvent(row: Record<string, unknown>): MatchEvent {
 function optionalPlayer(row: Record<string, unknown>, column: string, property: string): Record<string, PlayerId> {
   const value = optionalText(row, column);
   return value === undefined ? {} : { [property]: playerId(value) };
+}
+
+function shotType(row: Record<string, unknown>): ShotType {
+  const value = text(row, "shot_type");
+  if (!isShotType(value)) throw mappingFailure(`unsupported shot type: ${value}`);
+  return value;
+}
+
+function shotChanceType(row: Record<string, unknown>): ShotChanceType {
+  const value = text(row, "chance_type");
+  if (!isShotChanceType(value)) throw mappingFailure(`unsupported chance type: ${value}`);
+  return value;
+}
+
+/**
+ * Reads the route a shot came down, when the shot had one.
+ *
+ * A penalty is awarded rather than worked and carries no route, so an absent
+ * column is a fact rather than a gap to fill in with `central`. A present value
+ * is validated instead of cast: a row claiming a route the engine cannot produce
+ * must fail loudly here, not travel on into narration and diagnostics.
+ */
+function optionalRoute(row: Record<string, unknown>): { readonly route?: TacticalRoute } {
+  const value = optionalText(row, "route");
+  if (value === undefined) return {};
+  if (!isTacticalRoute(value)) throw mappingFailure(`unsupported shot route: ${value}`);
+  return { route: value };
 }
 
 function readStats(row: Record<string, unknown>): MatchReport["stats"] {

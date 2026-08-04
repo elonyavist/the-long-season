@@ -194,6 +194,20 @@ export const TACTICAL_ROUTES = [
   "transition",
 ] as const satisfies readonly TacticalRoute[];
 
+/**
+ * Reports whether an unknown value is a supported tactical route.
+ *
+ * A persisted shot carries its route as an open string. Casting that string
+ * into the union would let a corrupt row claim a route the engine never
+ * produced, and every reader downstream would believe it.
+ *
+ * @example
+ * if (!isTacticalRoute(value)) throw new Error(`unsupported route: ${value}`);
+ */
+export function isTacticalRoute(value: unknown): value is TacticalRoute {
+  return typeof value === "string" && (TACTICAL_ROUTES as readonly string[]).includes(value);
+}
+
 /** The phases a route needs from its own side, and what resists it. */
 export interface TacticalRouteDefinition {
   /**

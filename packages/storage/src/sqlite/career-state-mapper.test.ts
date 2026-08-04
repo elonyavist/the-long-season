@@ -114,6 +114,34 @@ test("career rows use explicit relational tables and scalar binds", () => {
   ]);
 });
 
+/**
+ * Fixes the shot columns a match event is written through.
+ *
+ * The fixture carried no shot event at all until this test, which is how
+ * `match_events` came to have no `route` column while `ShotContext` had the
+ * field: nothing ever wrote one. The load side is proved separately, against a
+ * real database, in `world-state-mapper.test.ts`.
+ */
+test("shot events write their route, and a penalty writes none", () => {
+  const database = new RecordingDatabase();
+
+  insertCareerStateRows(database, richCareerFixture());
+
+  const shotEventBinds = database.statements
+    .filter(({ sql }) => sql.includes("INSERT INTO match_events"))
+    .map(({ bind }) => [bind[4], bind[9], bind[10], bind[11]]);
+
+  assert.deepEqual(shotEventBinds.filter(([type]) => type === "goal"), [
+    ["goal", "header", "cross", "left"],
+  ]);
+  assert.deepEqual(shotEventBinds.filter(([type]) => type === "miss"), [
+    ["miss", "set_piece", "dead_ball", null],
+  ]);
+  assert.deepEqual(shotEventBinds.filter(([type]) => type === "kickoff"), [
+    ["kickoff", null, null, null],
+  ]);
+});
+
 test("season history without legacy player statistics writes explicit unavailable coverage", () => {
   const database = new RecordingDatabase();
   const state = richCareerFixture();
@@ -293,17 +321,24 @@ function richCareerFixture(): CareerState {
             homeGoals: 1,
             awayGoals: 0,
             report: {
-              eventSchemaVersion: 7,
+              eventSchemaVersion: 8,
               fixtureId: "fixture:played",
               finalMinute: 90,
               score: { home: 1, away: 0 },
               stats: { home: sideStats(1), away: sideStats(0) },
               events: [
                 { type: "kickoff", minute: 0 },
+                { type: "goal", shot: { minute: 12, side: "home", quality: 0.62, isShotOnTarget: true, shotType: "header", chanceType: "cross", route: "left" }, scorerPlayerId: "player:one", assistPlayerId: "player:bench", creatorPlayerId: "player:bench" },
                 { type: "foul", minute: 21, side: "home", committedByPlayerId: "player:one", sufferedByPlayerId: "player:bench", zoneDanger: 0.7 },
                 { type: "yellow_card", minute: 21, side: "home", playerId: "player:one" },
                 { type: "penalty_awarded", minute: 30, side: "away", fouledPlayerId: "player:bench", committedByPlayerId: "player:one" },
                 { type: "penalty_outcome", minute: 30, side: "away", takerPlayerId: "player:bench", goalkeeperPlayerId: "player:one", outcome: "saved" },
+                // A worked chance the goalkeeper saved: it has a route.
+                { type: "save", shot: { minute: 41, side: "away", quality: 0.4, isShotOnTarget: true, shotType: "normal", chanceType: "counter", route: "transition" }, shooterPlayerId: "player:bench", goalkeeperPlayerId: "player:one" },
+                // A penalty is awarded rather than worked, so it has no route at
+                // all. Absence is the fact and must survive as absence.
+                { type: "miss", shot: { minute: 47, side: "away", quality: 0.9, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: "player:bench" },
+                { type: "block", shot: { minute: 52, side: "home", quality: 0.31, isShotOnTarget: false, shotType: "normal", chanceType: "open_play", route: "central" }, shooterPlayerId: "player:one", primaryDefenderPlayerId: "player:bench" },
                 { type: "injury", minute: 55, side: "home", playerId: "player:one", severity: "minor" },
                 { type: "substitution", minute: 60, side: "home", outgoingPlayerId: "player:one", incomingPlayerId: "player:bench", slotId: "home-out", reasonKey: "injury" },
                 { type: "full_time", minute: 90, score: { home: 1, away: 0 } },

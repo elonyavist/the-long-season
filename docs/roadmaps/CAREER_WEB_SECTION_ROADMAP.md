@@ -71,6 +71,22 @@ rows - what the shape *opened* and what it actually *used*, which is the pair a
 tactical consequence screen needs. Step 10 owns rendering any of it; nothing in
 the UI reads either field yet.
 
+Step 08 made that route actually reach a saved career. `match_events` had no
+column for it, so every shot in a **web** career was written back without its
+route while the matchday adapter read `event.shot.route` and always found
+nothing; the JSON path kept it and the two backends silently disagreed. Both beta
+versions advanced without a migration - OPFS schema `22 -> 23`, career envelope
+`13 -> 14` - because a database written at `22` never stored the fact at all.
+**Existing browser careers are deleted through the canonical reset flow.**
+
+Step 08 also removed the last place where a club the manager had not prepared
+was a special case: the web adapter and the CLI each built that context by hand,
+with their own copy of the fallback eleven. Both now call one constructor that
+takes an explicit squad. `finalPlayerRegistrations` still recomposes the
+opponent's eleven from the roster, which is correct only while every AI club
+fields the same fixed `4-4-2`; Step 09 must make the fielded lineup a carried
+fact of the played match instead.
+
 Step 12 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.
 

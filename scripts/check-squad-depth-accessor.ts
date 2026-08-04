@@ -23,6 +23,7 @@ const LINEUP_COMPOSING_FILES = [
   "apps/web/src/features/matchday/matchday-adapter.ts",
   "apps/web/src/features/match-preparation/match-preparation-adapter.ts",
   "apps/cli/src/commands/career/preparation.ts",
+  "apps/cli/src/commands/career/progression.ts",
   "apps/cli/src/commands/career/matchday-output.ts",
   "apps/cli/src/commands/fake-season-input.ts",
   "apps/cli/src/commands/live-match-control-report-data.ts",

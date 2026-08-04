@@ -176,12 +176,56 @@ test("accrueFixtureParticipationContributions reuses domain ledger validation", 
   );
 });
 
+/**
+ * Fixes the attribution rule this phase committed to (A8).
+ *
+ * A match fact belongs to the club a player was *fielded by*, never to the club
+ * holding his contract. The two coincide today, so the rule can only be fixed by
+ * a case where they do not: here the borrowed player is on `club:parent`'s
+ * roster and lines up for `club:home`.
+ *
+ * This is deliberately not a loan model - Phase 82A owns that. It is the
+ * assertion that stops the sourcing from being quietly changed to ownership
+ * before then, because by the time the first loan exists the recorded history
+ * already does, and a wrong attribution would have to be rewritten rather than
+ * extended.
+ */
+test("participation credits the club a borrowed player was fielded by, not his contract club", () => {
+  const { contributions } = buildFixtureParticipationContributions({
+    fixtureId: FIXTURE_ID,
+    seasonId: SEASON_ID,
+    fixtureDate: gameDate(20_000),
+    finalMinute: 90,
+    sides: [{
+      side: "home",
+      initialContext: contextWithBorrowedPlayer(),
+      finalContext: contextWithBorrowedPlayer(),
+    }],
+  });
+  const borrowed = contributions.find((contribution) => contribution.playerId === BORROWED);
+
+  assert.equal(borrowed?.clubId, clubId("club:home"));
+
+  const accrued = accrueFixtureParticipationContributions({
+    careerState: careerStateWithParentClub(),
+    contributions,
+  });
+  const row = accrued.playerParticipationLedger?.rows[
+    `${SEASON_ID}|2024-10|${BORROWED}`
+  ];
+
+  assert.equal(row?.starts, 1);
+  assert.deepEqual(row?.clubMinutes, { [clubId("club:home")]: 90 });
+  assert.equal(row?.clubMinutes[clubId("club:parent")], undefined);
+});
+
 const FIXTURE_ID = fixtureId("fixture:participation-000001");
 const SEASON_ID = seasonId("season:participation");
 const HOME_GOALKEEPER = playerId("player:home-gk");
 const HOME_STARTER = playerId("player:home-starter");
 const HOME_SUB = playerId("player:home-sub");
 const HOME_UNUSED = playerId("player:home-unused");
+const BORROWED = playerId("player:borrowed");
 
 function initialHomeContext(): MatchTeamContext {
   return withNeutralIncidentProfiles({
@@ -193,6 +237,17 @@ function initialHomeContext(): MatchTeamContext {
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0, mentality: "balanced" },
+  });
+}
+
+/** One eleven containing a player another club holds the contract for. */
+function contextWithBorrowedPlayer(): MatchTeamContext {
+  return withNeutralIncidentProfiles({
+    ...initialHomeContext(),
+    lineup: [
+      createLineupSlot({ slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:home:field", playerId: BORROWED, canonicalRole: "center_back" }),
+    ],
   });
 }
 
@@ -274,6 +329,37 @@ function careerStateFixture(): CareerState {
       fixtureIds: [],
     },
     transferHistory: [],
+  });
+}
+
+/** A career where the borrowed player's contract sits at a second club. */
+function careerStateWithParentClub(): CareerState {
+  // The tier state is rebuilt rather than carried over, because it is derived
+  // from the club list this fixture is about to extend.
+  const { clubCompetitiveTierState: _tierState, ...base } = careerStateFixture();
+
+  return createCareerState({
+    ...base,
+    gameState: {
+      ...base.gameState,
+      players: {
+        ...base.gameState.players,
+        [BORROWED]: playerFixture(BORROWED),
+      } as CareerState["gameState"]["players"],
+      playerIds: [...base.gameState.playerIds, BORROWED],
+      clubs: {
+        ...base.gameState.clubs,
+        [clubId("club:parent")]: {
+          id: clubId("club:parent"),
+          name: "Parent",
+          shortName: "PRNT",
+          category: "third_division",
+          reputation: 5,
+          playerIds: [BORROWED],
+        },
+      },
+      clubIds: [...base.gameState.clubIds, clubId("club:parent")],
+    },
   });
 }
 

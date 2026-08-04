@@ -1,4 +1,5 @@
 import { deepStrictEqual, equal, throws } from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
 import { test } from "vitest";
 
 import {
@@ -7,6 +8,7 @@ import {
   createCareerState,
   fixtureId,
   gameDate,
+  MATCH_EVENT_SCHEMA_VERSION,
   nonNegativeMoney,
   playerId,
   saveId,
@@ -18,8 +20,17 @@ import {
 } from "@game/domain";
 
 import type { CareerSaveMetadata } from "../save-metadata.ts";
+import { withPersistableCareerFacts } from "../testing/persistable-career-fixture.ts";
 import { SQLITE_CAREER_MIGRATIONS } from "./sqlite-career-migrations.ts";
-import { mapCareerWorldRows, reconstructCareerWorldRows, SqliteWorldStateError } from "./world-state-mapper.ts";
+import {
+  loadCareerWorld,
+  mapCareerWorldRows,
+  reconstructCareerWorldRows,
+  saveCareerWorld,
+  SqliteWorldStateError,
+  type SqliteBindValue,
+  type SqliteWorldDatabase,
+} from "./world-state-mapper.ts";
 
 test("world rows round-trip ordered players, clubs, states, roles, abilities, and fixtures exactly", () => {
   const state = worldFixture("save:world-round-trip", "world-round-trip");
@@ -40,6 +51,48 @@ test("world rows round-trip ordered players, clubs, states, roles, abilities, an
   deepStrictEqual(restored.gameState.clubs[clubId("club:home")]?.playerIds, [playerId("player:home-01")]);
 });
 
+/**
+ * Round-trips a played match through a real database, not a recorder.
+ *
+ * `match_events` had no `route` column until Step 08, so every shot in a web
+ * career was written back without the way it came down while the matchday
+ * adapter went on reading `event.shot.route` to rebuild its step events and
+ * always found nothing. Recording the writes would not have caught it - the
+ * column was simply absent from the statement - and no test had ever loaded a
+ * report back. Only a load can prove a save.
+ */
+test("a played match report survives a real save and load, routes and all", () => {
+  const state = withPersistableCareerFacts(
+    withRoutedMatchReport(worldFixture("save:report-round-trip", "report-round-trip")),
+  );
+  const database = new InMemorySqliteDatabase();
+
+  saveCareerWorld(
+    database,
+    { saveId: state.saveId, name: "Report round trip", state },
+    "2026-08-04T00:00:00.000Z",
+  );
+
+  const loaded = loadCareerWorld(database, state.saveId);
+  const events = loaded.gameState.fixtures[fixtureId("fixture:played")]?.result?.report?.events ?? [];
+
+  deepStrictEqual(
+    events.flatMap((event) => ("shot" in event ? [[event.type, event.shot.route] as const] : [])),
+    [
+      ["goal", "left"],
+      ["save", "transition"],
+      // Awarded rather than worked: absence is the fact, and it survives as
+      // absence rather than coming back as `central`.
+      ["miss", undefined],
+      ["block", "central"],
+    ],
+  );
+  deepStrictEqual(
+    events,
+    state.gameState.fixtures[fixtureId("fixture:played")]?.result?.report?.events,
+  );
+});
+
 test("world mapping rejects duplicate deterministic order before any SQL write", () => {
   const state = worldFixture("save:duplicate-order", "duplicate-order");
   const invalid = {
@@ -54,7 +107,7 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
 });
 
 test("migration ledger exposes the clean Phase 80A persistence baseline", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [22]);
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [23]);
   const statements = SQLITE_CAREER_MIGRATIONS[0]?.statements ?? [];
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
@@ -85,6 +138,83 @@ test("migration ledger exposes the clean Phase 80A persistence baseline", () => 
   );
   equal(statements.some((statement) => statement.includes("competitive_tier_history")), false);
 });
+
+/**
+ * A real SQLite database over the shipped schema, held in memory.
+ *
+ * Small enough to be honest: it implements the three methods the mappers use
+ * and applies the same migration statements a fresh browser database gets.
+ */
+class InMemorySqliteDatabase implements SqliteWorldDatabase {
+  private readonly database = new DatabaseSync(":memory:");
+
+  public constructor() {
+    for (const statement of SQLITE_CAREER_MIGRATIONS[0]?.statements ?? []) {
+      this.database.exec(statement);
+    }
+  }
+
+  public run(sql: string, bind: readonly SqliteBindValue[] = []): void {
+    this.database.prepare(sql).run(...bind);
+  }
+
+  public queryAll(sql: string, bind: readonly SqliteBindValue[] = []): readonly Record<string, unknown>[] {
+    return this.database.prepare(sql).all(...bind) as readonly Record<string, unknown>[];
+  }
+
+  public transaction<T>(operation: () => T): T {
+    return operation();
+  }
+}
+
+/**
+ * Attaches a complete Phase 81 match report to the fixture's played match.
+ *
+ * The base fixture deliberately has none: the world round trip above compares
+ * reconstructed world rows, and reports live in career tables rather than world
+ * ones.
+ */
+function withRoutedMatchReport(state: CareerState): CareerState {
+  const played = fixtureId("fixture:played");
+  const fixture = state.gameState.fixtures[played];
+  const home = playerId("player:home-01");
+  const away = playerId("player:away-01");
+  if (fixture?.result === undefined) throw new Error("fixture fixture must be played");
+
+  return createCareerState({
+    ...state,
+    gameState: {
+      ...state.gameState,
+      fixtures: {
+        ...state.gameState.fixtures,
+        [played]: {
+          ...fixture,
+          result: {
+            ...fixture.result,
+            report: {
+              eventSchemaVersion: MATCH_EVENT_SCHEMA_VERSION,
+              fixtureId: played,
+              finalMinute: 90,
+              score: { home: 2, away: 1 },
+              stats: {
+                home: { opportunities: 3, shots: 3, shotsOnTarget: 2, goals: 2 },
+                away: { opportunities: 2, shots: 2, shotsOnTarget: 1, goals: 1 },
+              },
+              events: [
+                { type: "kickoff", minute: 0 },
+                { type: "goal", shot: { minute: 12, side: "home", quality: 0.62, isShotOnTarget: true, shotType: "header", chanceType: "cross", route: "left" }, scorerPlayerId: home, assistPlayerId: away, creatorPlayerId: away },
+                { type: "save", shot: { minute: 41, side: "away", quality: 0.4, isShotOnTarget: true, shotType: "normal", chanceType: "counter", route: "transition" }, shooterPlayerId: away, goalkeeperPlayerId: home },
+                { type: "miss", shot: { minute: 47, side: "away", quality: 0.9, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: away },
+                { type: "block", shot: { minute: 52, side: "home", quality: 0.31, isShotOnTarget: false, shotType: "normal", chanceType: "open_play", route: "central" }, shooterPlayerId: home, primaryDefenderPlayerId: away },
+                { type: "full_time", minute: 90, score: { home: 2, away: 1 } },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });
+}
 
 function worldFixture(rawSaveId: string, seed: string): CareerState {
   const homeId = clubId("club:home");

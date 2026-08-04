@@ -17,6 +17,7 @@ import {
   createEmptyPlayerParticipationLedger,
   fixtureId,
   gameDate,
+  MATCH_EVENT_SCHEMA_VERSION,
   nonNegativeMoney,
   playerId,
   saveId,
@@ -31,6 +32,7 @@ import {
 
 import { JsonCareerStorage } from "./json-career-storage.ts";
 import { StorageError } from "./game-storage.interface.ts";
+import { CURRENT_CAREER_SAVE_SCHEMA_VERSION } from "./save-metadata.ts";
 import { withPersistableCareerFacts } from "./testing/persistable-career-fixture.ts";
 
 /**
@@ -59,6 +61,36 @@ test("save then load returns the same CareerState snapshot", async () => {
     assert.equal(metadata.createdAtISO, "2026-06-21T10:00:00.000Z");
     assert.equal(metadata.updatedAtISO, "2026-06-21T10:00:00.000Z");
     assert.equal(metadata.autosaveIntervalDays, 7);
+  } finally {
+    await removeTempSaveDirectory(directoryPath);
+  }
+});
+
+/**
+ * The JSON half of the Phase 81 round trip; SQLite's is in the world mapper.
+ *
+ * A whole-state JSON envelope keeps a route for free, which is exactly why it
+ * needs a test: nothing here would break if the field were dropped upstream, so
+ * only an explicit assertion distinguishes "carried" from "never present".
+ */
+test("a match report's shot routes survive a JSON save and load", async () => {
+  const directoryPath = await createTempSaveDirectory();
+  const storage = new JsonCareerStorage({
+    directoryPath,
+    nowISO: fixedClock("2026-06-21T10:00:00.000Z"),
+  });
+  const state = careerStateWithRoutedMatchReport();
+
+  try {
+    await storage.saveCareer({ saveId: state.saveId, name: "Routed", state });
+    const loaded = await storage.loadCareer(state.saveId);
+    const events = loaded.gameState.fixtures[fixtureId("fixture:json-career-001")]?.result?.report?.events ?? [];
+
+    assert.deepEqual(
+      events.flatMap((event) => ("shot" in event ? [[event.type, event.shot.route] as const] : [])),
+      [["goal", "right"], ["miss", undefined]],
+    );
+    assert.deepEqual(loaded, state);
   } finally {
     await removeTempSaveDirectory(directoryPath);
   }
@@ -384,7 +416,7 @@ test("loading malformed career saves fails clearly", async () => {
   const malformedPath = join(directoryPath, `${encodeURIComponent(saveId("save:bad"))}.career.json`);
 
   try {
-    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: 13, metadata: {}, state: {} }), "utf8");
+    await writeFile(malformedPath, JSON.stringify({ saveSchemaVersion: CURRENT_CAREER_SAVE_SCHEMA_VERSION, metadata: {}, state: {} }), "utf8");
 
     await assert.rejects(
       () => storage.loadCareer(saveId("save:bad")),
@@ -412,7 +444,7 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 13);
+    assert.equal(raw.saveSchemaVersion, 14);
     assert.equal(((raw.state as { readonly schemaVersion: number }).schemaVersion), 2);
     assert.equal(CAREER_STATE_SCHEMA_VERSION, 2);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
@@ -539,6 +571,53 @@ function minimalCareerState(): CareerState {
     transferHistory: [],
     playerParticipationLedger: playerParticipationLedgerFixture(playerId("player:pro01-01")),
   }));
+}
+
+/** Builds a career whose one played fixture carries Phase 81 shot facts. */
+function careerStateWithRoutedMatchReport(): CareerState {
+  const base = minimalCareerState();
+  const played = fixtureId("fixture:json-career-001");
+  const player = playerId("player:pro01-01");
+
+  return createCareerState({
+    ...base,
+    gameState: {
+      ...base.gameState,
+      fixtures: {
+        [played]: {
+          id: played,
+          competitionId: competitionId("competition:demo-third"),
+          seasonId: seasonId("season:2026"),
+          roundNumber: 1,
+          date: gameDate(20_000),
+          homeClubId: base.selectedClubId,
+          awayClubId: base.selectedClubId,
+          result: {
+            played: true,
+            homeGoals: 1,
+            awayGoals: 1,
+            report: {
+              eventSchemaVersion: MATCH_EVENT_SCHEMA_VERSION,
+              fixtureId: played,
+              finalMinute: 90,
+              score: { home: 1, away: 1 },
+              stats: {
+                home: { opportunities: 1, shots: 1, shotsOnTarget: 1, goals: 1 },
+                away: { opportunities: 1, shots: 1, shotsOnTarget: 0, goals: 0 },
+              },
+              events: [
+                { type: "kickoff", minute: 0 },
+                { type: "goal", shot: { minute: 33, side: "home", quality: 0.71, isShotOnTarget: true, shotType: "normal", chanceType: "open_play", route: "right" }, scorerPlayerId: player },
+                { type: "miss", shot: { minute: 64, side: "away", quality: 0.88, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: player },
+                { type: "full_time", minute: 90, score: { home: 1, away: 1 } },
+              ],
+            },
+          },
+        },
+      },
+      fixtureIds: [played],
+    },
+  });
 }
 
 /** Builds a closed monthly ledger so JSON saves prove lifecycle persistence. */

@@ -46,6 +46,47 @@ test("aggregates player goals across multiple match reports", () => {
   ]);
 });
 
+/**
+ * Fixes the attribution rule this phase committed to (A8).
+ *
+ * A goal and its assist belong to the club the player was fielded by. Here the
+ * borrowed player is registered against `club:parent`, which holds his contract,
+ * and scores for `club:home`, which fielded him. The two sources disagree on
+ * purpose - that is the only way to prove which one the aggregator obeys - and
+ * they cannot disagree in the shipped game until Phase 82A's first loan, by
+ * which time this history already exists.
+ */
+test("a borrowed player's goal and assist belong to the club that fielded him", () => {
+  const borrowed = playerId("player:borrowed");
+  const assistant = playerId("player:borrowed-assistant");
+  const fixtures = fixturesById([
+    playedFixture({
+      fixtureValue: "fixture:stats-loan",
+      homeGoals: [borrowed],
+      homeGoalAssists: [assistant],
+      awayGoals: [],
+    }),
+  ]);
+  const rows = computeSeasonPlayerSummaryStats({
+    fixtures,
+    fixtureIds: [fixtureId("fixture:stats-loan")],
+    playerRegistrations: [
+      { playerId: borrowed, clubId: clubId("club:parent") },
+      { playerId: assistant, clubId: clubId("club:parent") },
+    ],
+  });
+
+  assert.deepEqual(findSummaryRow(rows, borrowed), {
+    playerId: borrowed,
+    clubId: clubId("club:home"),
+    goals: 1,
+    assists: 0,
+    saves: 0,
+  });
+  assert.equal(findSummaryRow(rows, assistant)?.clubId, clubId("club:home"));
+  assert.equal(findSummaryRow(rows, assistant)?.assists, 1);
+});
+
 test("registered players with no goals stay in the table", () => {
   const fixtures = fixturesById([
     playedFixture({

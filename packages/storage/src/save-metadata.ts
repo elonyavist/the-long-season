@@ -8,8 +8,15 @@ import type { SaveId } from "@game/domain";
  */
 export const CURRENT_SAVE_SCHEMA_VERSION = 1;
 
-/** Current persisted career-envelope version, independent from generic saves. */
-export const CURRENT_CAREER_SAVE_SCHEMA_VERSION = 13;
+/**
+ * Current persisted career-envelope version, independent from generic saves.
+ *
+ * `14` is the first envelope whose match reports carry the Phase 81 route facts
+ * (`MATCH_EVENT_SCHEMA_VERSION` `8`). An older save holds reports that can never
+ * gain a route, so it is rejected and reset rather than migrated: the project is
+ * in beta and a half-explained match is worse than a fresh career.
+ */
+export const CURRENT_CAREER_SAVE_SCHEMA_VERSION = 14;
 
 /** Supported in-game autosave intervals; `null` means manual-only saving. */
 export type CareerAutosaveIntervalDays = 7 | 15 | null;
