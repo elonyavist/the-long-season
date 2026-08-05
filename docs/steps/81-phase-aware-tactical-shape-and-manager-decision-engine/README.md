@@ -146,6 +146,25 @@ and come from the market work moving after this phase.
   `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md` keeps the retired invariant
   as Step 01 recorded it; it is the before-state and is not regenerated.
 
+- **A10 - one inspection run is permitted before Step 12, and it is never
+  evidence** (Steps 11C, 11D). `No cohort before Step 12` stays as written and
+  is not weakened: it exists so a smaller run cannot be cited as balance
+  measurement and then contradict the real cohort.
+
+  What it did not anticipate is that the phase would rebuild *who does what* on
+  the pitch and close without anyone ever looking at a league table. An
+  aggregate cannot show that: `goals_per_match_avg` reads the same whether
+  strikers or centre backs scored. A scorer chart with roles shows it in one
+  glance, and the cost of finding that out at Step 12 is the whole phase.
+
+  The amendment permits exactly one run of `5 x 20` under a hard condition: **no
+  calibration value may change because of it, no band may be widened by it, and
+  no document may cite its numbers as balance evidence.** A defect it makes
+  visible is investigated and handed to the step that owns the behaviour. Step
+  12 remains the only statistical cohort Phase 81 closes on, unchanged in seed,
+  scale, workers and command. If the condition cannot hold, the run does not
+  happen and the charts wait for Step 12.
+
 ## Ordered Steps
 
 1. `01-reproducible-extreme-shape-baseline-and-frozen-contract.md`
@@ -159,7 +178,16 @@ and come from the market work moving after this phase.
 9. `09-ai-whole-xi-selection-and-shared-tactical-decisions.md`
 10. `10-pre-match-and-live-tactical-consequence-ui.md`
 11. `11-non-vacuous-tactical-diagnostics-and-integrated-gates.md`
-12. `12-checkpointed-50x20-phase-report-and-mvp-handoff.md`
+12. `11C-season-recap-instrument-and-football-plausibility-gates.md`
+13. `11D-hundred-season-engine-inspection.md`
+14. `11B-formation-as-a-counter-move.md`
+15. `12-checkpointed-50x20-phase-report-and-mvp-handoff.md`
+
+`11C` and `11D` run **before** `11B` on purpose. `11B` has to raise formation
+from `0.0312` to `~0.047` as a counter-move reward, and it cannot judge whether
+it succeeded without a baseline showing which shapes clubs actually field and
+how those shapes finish. The recap is that baseline, and afterwards it is the
+instrument that says whether `11B` made the football better or only the number.
 
 ## Validation Ladder
 
@@ -197,6 +225,14 @@ and come from the market work moving after this phase.
 - Step 11 runs bounded positive-denominator diagnostics, browser QA, absence
   checks, and the integrated repository gate. It is the deadline for the carried
   `goals_per_match_avg` monitor (A7).
+- Step 11C turns the facts a season already produces into four football charts -
+  table, scorers with role, assists with role, shapes fielded - each with a band
+  declared in advance that it can fail. It adds no simulation.
+- Step 11D runs one hundred seasons through them under A10 and reads the result.
+  It is the first point in the phase where a person looks at a league table and
+  a scorer chart and recognises the sport, and it changes nothing.
+- Step 11B then owns formation as a counter-move, with 11D's shape usage and
+  finishing positions as its baseline.
 - Step 12 alone runs/replays the checkpointed `50 x 20`, confirms the carried
   monitor inside its band at cohort scale, writes the phase report, and hands
   control to Phase 81A. Phase 79 Step 14 stays Reopened, paused, and
@@ -262,7 +298,8 @@ The longitudinal command runs only in Step 12.
 - No full pass-chain or generic duel framework.
 - No generic strategy/plugin registry or event bus.
 - No beta compatibility.
-- No cohort before Step 12.
+- No cohort before Step 12. The single `5 x 20` inspection run A10 permits is
+  not one: it produces no evidence and may change nothing.
 - No loan, posture, competitive-race, or free-agent-negotiation behaviour. Those
   belong to Phases 82A and 82B and do not exist yet.
 - No background-world simulator, multi-country topology, or aggregate result

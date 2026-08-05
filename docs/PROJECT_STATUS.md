@@ -19,34 +19,32 @@ Rules live in `AGENTS.md` and `docs/PROJECT_RULES.md`, never a second time here.
 ## Current State
 
 Phases 0 through 80A are complete. What they delivered is described by the code
-and by the per-phase reports in `docs/audits/`, not restated here.
-
-Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine - is active,
-under `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`.
+and by the per-phase reports in `docs/audits/`, not restated here. Phase 81 -
+Phase-Aware Tactical Shape And Manager Decision Engine - is active, under
+`docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`.
 
 | Phase 81 step | Status |
 |---|---|
-| 01 through 08 | Done 2026-08-02 to 2026-08-04, all gates green. Step 01 was reopened once for A9. The seams they left are below; the rest is in their step documents |
+| 01 through 08 | Done 2026-08-02 to 2026-08-04, all gates green. Step 01 reopened once for A9. Their seams are below; the rest is in their step documents |
 | 09 - AI whole-XI selection | Done 2026-08-04, all gates green |
 | 10 - pre-match and live tactical consequence UI | Done 2026-08-05, all gates green |
-| 11-12 | Not started |
+| 11, 12 | Not started |
+| 11C, 11D - season recap instrument, then `5 x 20` inspection | Not started. New; they run **before** 11B, which needs their shape baseline. Design: `docs/audits/PHASE_81_SEASON_RECAP_DESIGN.md` |
 | 11B - formation as a counter-move | Not started. Step 09 met its first prerequisite; Step 10 added a second - a manager still cannot see what the opponent's shape is doing to him |
 
 ## Current Active Step
 
 - Step: `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/11-*.md`
 - Next action: Step 11, the deadline for the carried `goals_per_match_avg`
-  monitor (A7). Nothing in the UI reads Step 07's `route`, `routeCounts` or
-  `shooterCounts` yet; Step 10 rendered shape consequences, not shot
-  explanations.
+  monitor (A7), then `11C`, `11D`, `11B`, `12` in that order. Nothing in the UI
+  reads Step 07's `route`, `routeCounts` or `shooterCounts` yet.
 - Two decisions left for the phase contract by Step 07B, still untaken: the A7
   rule names the wrong owner, and the `1.5x` ratio below is emergent, not chosen.
 - Step 08 advanced both beta versions without migrating: OPFS schema `22 -> 23`,
   career envelope `13 -> 14`. **Existing careers are deleted, not upgraded.**
 - **Desktop match preparation overflows horizontally at `200%` text** once the
   squad is filled - `aside.tls-preparation-squad-panel` reaches `1708px` in a
-  `1441px` viewport. Pre-existing and untested; a WCAG 2.2 AA failure that stops
-  a low-vision manager picking a team. Step 11 owns it.
+  `1441px` viewport. Pre-existing, untested, a WCAG 2.2 AA failure. Step 11.
 
 ## Live Constraints
 
@@ -60,8 +58,11 @@ under `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGI
 
 - Step 12 owns the checkpointed `50 x 20`, seven workers: engine evidence only,
   never market, and it runs after Step 11B changes the engine.
-- Phase 82B Step 09 owns the second, over the completed market. No cohort
-  elsewhere.
+- Phase 82B Step 09 owns the second, over the completed market.
+- **A10 permits exactly one `5 x 20` inspection run before Step 12** (Step 11D),
+  on a hard condition: never evidence, changes no calibration, widens no band,
+  cited by nothing as measurement. It exists because an aggregate cannot show
+  whether strikers or centre backs scored the goals. No cohort anywhere else.
 
 ### Carried `goals_per_match_avg` Monitor (A7)
 
@@ -96,8 +97,8 @@ the margin: seven of eight sit below the reference and none is meaningfully abov
 it. Tactics and compositions are not flat - best responses gain `+0.0327` and
 `+0.0312` and collapse to `+0.0033` against their own counter, working
 rock-paper-scissors. **Formation is the outlier**, downside and no upside. Step
-11B owns raising it to `~0.047` as a *counter-move* reward, and a manager still
-cannot see what to counter - likely part of why tactics already beat it.
+11B owns raising it to `~0.047` as a *counter-move* reward, on the shape baseline
+11D measures, and a manager still cannot see what to counter.
 
 ### Frozen Tactical Baseline (Step 01)
 
@@ -159,8 +160,8 @@ regenerated. Amending a `TACTICAL_SHAPE_THRESHOLDS` value takes a numbered amend
   with it; `presence` tasks - `final_third_presence`, `counter_threat` - never
   do, because the destination role's ability weights already price the move.
   **Any synthesised eleven must therefore hold natural positions**, or every
-  coordination task is suppressed and both presence tasks are not - a silent,
-  uniform bias that cost Step 10 a whole reference.
+  coordination task is suppressed and both presence tasks are not - a uniform
+  bias that cost Step 10 a whole reference.
 - `POSITION_SUITABILITIES` is the one canonical order; anything ranking by it walks it.
 
 ### Tactic Semantics Seam (Step 06)
@@ -184,8 +185,8 @@ regenerated. Amending a `TACTICAL_SHAPE_THRESHOLDS` value takes a numbered amend
   actor selection. Nothing after resolution chooses a player.
 - **An actor edge is a deviation from the pool the actor was drawn from**, in the
   same attribute off the same accessor - which makes an absent `incidentProfiles`
-  give exactly `0` rather than a constant. The goalkeeper has no pool: Step 07A
-  scales his *department* by the real gap, floor `0.35`.
+  give `0` rather than a constant. The goalkeeper has no pool: Step 07A scales
+  his *department* by the real gap, floor `0.35`.
 - **Player attributes are required on every `MatchTeamContext`**, one per lineup
   player, with no fallback. Do not hand-assemble the literal: two producers each
   holding their own copy is what let career opponents play at a flat `10`.
@@ -227,7 +228,7 @@ regenerated. Amending a `TACTICAL_SHAPE_THRESHOLDS` value takes a numbered amend
   added on explicit instruction. Width, directness and risk deviate from the
   *measured* catalog mean, so the `23` shapes average back to the caller's setup
   and Step 06's balance point is unmoved; `pressing` and `mentality` stay with
-  their owners. `simulate-season` holds shape and tactic still.
+  their owners.
 
 ### Manager Explanation Seam (Step 10)
 
@@ -247,9 +248,8 @@ regenerated. Amending a `TACTICAL_SHAPE_THRESHOLDS` value takes a numbered amend
   sweeps in `match-preparation-adapter.test.ts` catch it.
 - **Reachability is a property of a rule, not of a capacity** (`AGENTS.md`).
   `loose_press` passed every gate this step wrote and could never have fired; a
-  guard against dividing by an empty flank silenced the overload rule at the most
-  one-sided eleven reachable. A per-rule sweep over every reachable board is now
-  a gate.
+  guard against an empty flank silenced the overload rule at the most one-sided
+  eleven reachable. A per-rule sweep over every reachable board is now a gate.
 - **A knob is reported through the route it concedes, never restated.**
   `press_without_cover` names `pressing` and reads `TACTIC_KNOB_EXPOSED_ROUTE` and
   `TACTICAL_ROUTE_DEFINITION` for the rest, so Steps 06 and 04 keep sole ownership
