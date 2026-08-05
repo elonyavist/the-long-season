@@ -6,6 +6,7 @@ import { createWebTranslator } from "../../app/translation";
 import { createHalfTimeTestFixture } from "../../test-fixtures/career-fixture";
 import { buildMatchPreparationView } from "../match-preparation/match-preparation-adapter";
 import { buildCareerMatchdayPresentationView } from "./career-matchday-presenter";
+import { liveMatchdayShapeReading } from "./matchday-adapter";
 import {
   buildMatchdayHalfTimeValidationIssues,
   MatchdayHalfTimePhase,
@@ -112,5 +113,36 @@ describe("MatchdayHalfTimePhase", () => {
     expect(markup).toContain("No urgent concerns.");
     expect(markup).toContain("No standout contribution yet.");
     expect(markup).toContain('aria-selected="true"');
+  });
+
+  it("hands the live tactical tab the engine-read shape rather than a second derivation", () => {
+    const fixture = createHalfTimeTestFixture("half-time-consequences");
+    const presentation = buildCareerMatchdayPresentationView(fixture.phaseView);
+    const review = presentation.halfTimeReview;
+
+    if (review === undefined) throw new Error("Expected a half-time review");
+
+    const reading = liveMatchdayShapeReading(fixture.matchday);
+    const preparationView = buildMatchPreparationView(fixture.career, fixture.draft, reading);
+
+    expect(reading).toBeDefined();
+    expect(preparationView.tacticalConsequences).toBeDefined();
+
+    // The Tactics panel mounts lazily, so the words themselves are asserted in
+    // `MatchdayTacticalWorkspace.test.tsx`. What matters here is that this
+    // phase forwards the view unchanged instead of building its own.
+    const markup = renderToStaticMarkup(
+      React.createElement(MatchdayHalfTimePhase, {
+        review,
+        text: createWebTranslator("en"),
+        validationIssues: [],
+        matchPreparationView: preparationView,
+        tacticalBoardDraft: fixture.draft.tacticalBoardDraft,
+        substitutionPanel: fixture.teamControlPanel,
+      }),
+    );
+
+    expect(markup).toContain("Tactics");
+    expect(markup).not.toContain("tls-tactical-consequences");
   });
 });

@@ -2,8 +2,11 @@
 
 ## Status
 
-Not started. **Blocked on Step 09** - see the prerequisite below, which is not a
-formality and cannot be worked around.
+Not started. Step 09 unblocked the first prerequisite below: AI clubs now field
+varied catalog shapes instead of one hardcoded `4-4-2`. The second prerequisite
+is new, recommended by Step 10 and not yet met - a manager still cannot see what
+the opponent's shape is doing to him, and a reward for countering blind measures
+luck.
 
 ## Goal
 
@@ -81,10 +84,11 @@ So the target is: **the right counter gains `~0.047`, the wrong one costs, and n
 formation averages above `0.55` against the field.** That is a goal a player can
 chase and an invariant this phase can keep at the same time.
 
-## Prerequisite - Every Opponent In The Game Plays `4-4-2`
+## First Prerequisite - Every Opponent In The Game Plays `4-4-2`
 
-**This step must not start before Step 09.** Not for tidiness: starting earlier
-produces the opposite of its goal.
+**Met by Step 09.** Recorded because the reasoning still binds: starting before
+it produced the opposite of this step's goal, and the same trap returns if AI
+shape variety ever regresses.
 
 Every AI-controlled club in the shipped game fields a fixed `4-4-2`:
 
@@ -113,6 +117,36 @@ Step 09 - AI whole-XI selection and shared tactical decisions - is where opponen
 get real formations. Until its work is done and AI clubs demonstrably field
 varied shapes, every number this step would produce describes a world that does
 not exist.
+
+## Second Prerequisite - A Manager Cannot Counter What He Cannot See
+
+Recommended by Step 10, which built the surface but deliberately did not do
+this.
+
+Step 10's consequence panel reads **only the manager's own shape**, at half time
+as well as before kick-off. Before kick-off that is correct: he must not see the
+opponent's team sheet. At half time it is not - he has watched them play for
+`45` minutes, and "they are loading my left" is what a real manager is thinking
+when he walks into the dressing room.
+
+Without it, this step's reward is unreachable in practice. Changing shape to
+counter something you cannot see is guessing, and a reward for guessing right
+measures luck rather than a decision. That is a likely part of why formation
+sits at `0.0312` while a tactic best-response already reaches `+0.0327`: tactics
+are chosen against something visible, formations against nothing.
+
+The engine already holds it. Step 04's relational matchup compares one side's
+phase chain against the opponent's complementary capacities, and Step 07's
+`routeCounts` record which routes an opponent actually used - what their shape
+*opened* and what they *took*. Neither reaches any screen.
+
+Constraints if this step takes it:
+
+- Half time and later only. Never pre-match, and never the opponent's XI - only
+  what their shape has done on the pitch, which the manager has already watched.
+- Through Step 10's existing read model and component. A second consequence
+  surface is the duplicate copy path the phase contract forbids.
+- Qualitative, like the rest: no capacity numbers, no recommended answer.
 
 ## What To Implement
 

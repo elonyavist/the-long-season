@@ -5,6 +5,7 @@ import type {
   CareerMatchPreparationView,
 } from "@game/ui";
 
+import { TacticalConsequenceList } from "../../shared/ui/TacticalConsequenceList";
 import type { TacticalBenchBoardCandidate } from "../tactics-board/components/TacticalBenchBoard";
 import {
   TacticalBoardOutsidePlayers,
@@ -222,6 +223,12 @@ export function MatchdayTacticalWorkspace({
           </button>
         )}
       </div>
+
+      <TacticalConsequenceList
+        {...(view.tacticalConsequences === undefined ? {} : { consequences: view.tacticalConsequences })}
+        headingId="matchday-tactical-consequences-title"
+        text={text}
+      />
 
       <TacticalBoardWorkspace
         bench={{

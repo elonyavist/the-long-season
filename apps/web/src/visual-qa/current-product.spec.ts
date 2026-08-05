@@ -1840,6 +1840,134 @@ test("narrow preparation keeps validation, board, and dirty dialog usable", asyn
   }
 });
 
+test("shape consequences stay qualitative, ordered, and capped in preparation", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Prepare match", exact: true }).click();
+
+    const panel = page.locator(".tls-tactical-consequences");
+    const rows = panel.locator(".tls-tactical-consequences-list li");
+
+    // Nothing is read while the board is incomplete, and the panel says so.
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("heading", { name: "Shape consequences", exact: true })).toBeVisible();
+    await expect(panel).toContainText("Complete the eleven to see what this shape does.");
+    await expect(rows).toHaveCount(0);
+    await capture(page, "84a-shape-consequences-incomplete-desktop");
+
+    // A curated formation filled by the squad's own best eleven is the
+    // no-warning state: the panel is present and deliberately quiet.
+    await page.getByRole("button", { name: "Auto", exact: true }).click();
+    await expect(page.locator(".tls-tactical-board-token")).toHaveCount(11);
+    await expect(panel).not.toContainText("Complete the eleven");
+    await expect(rows).toHaveCount(0);
+    await expect(panel).toContainText("Nothing stands out in this shape.");
+    await assertNoPageOverflow(page, "desktop shape consequences, ordinary");
+    await capture(page, "84b-shape-consequences-ordinary-desktop");
+
+    // Now build something extreme the way a manager actually can: push the
+    // whole back line into free attacking zones and accept each role
+    // adaptation, leaving nobody in front of the goalkeeper.
+    for (const [slotId, nx, ny] of [
+      ["cb-right", 0.8, 0.12],
+      ["cb-left", 0.2, 0.12],
+      ["rb", 0.5, 0.3],
+      ["lb", 0.5, 0.06],
+    ] as const) {
+      await dragTacticalSlotToNorm(page, slotId, nx, ny);
+      await expect(page.locator(".tls-tactical-board-adaptation")).toBeVisible();
+      await page.getByRole("button", { name: "Apply changes", exact: true }).click();
+    }
+
+    await expect(rows.first()).toBeVisible();
+    const extremeCount = await rows.count();
+    expect(extremeCount, "extreme shape observation count").toBeGreaterThan(0);
+    expect(extremeCount, "frozen observation cap").toBeLessThanOrEqual(3);
+
+    // Costs are always reported before concentrations, and every row states its
+    // kind as a word so nothing depends on colour.
+    const kinds = await rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-kind")));
+    const rank: Readonly<Record<string, number>> = { exposure: 0, overload: 1, emphasis: 2 };
+    expect(kinds.map((kind) => rank[kind ?? ""] ?? 9))
+      .toEqual([...kinds.map((kind) => rank[kind ?? ""] ?? 9)].sort((first, second) => first - second));
+
+    // A back line pushed into attack pays for something. The panel shows the
+    // trade rather than three scoldings, which is what makes it worth reading.
+    expect(kinds, "extreme shape shows what it bought").toContain("emphasis");
+    expect(kinds, "extreme shape shows what it cost").toContain("exposure");
+    for (const kindWord of await rows.locator(".tls-tactical-consequence-kind").allInnerTexts()) {
+      expect(kindWord.trim().length, "visible kind word").toBeGreaterThan(0);
+    }
+
+    // No formula, no capacity number, no best-formation command.
+    expect(await panel.innerText(), "qualitative consequence copy").not.toMatch(/[0-9]|%/u);
+    await assertNoPageOverflow(page, "desktop shape consequences, extreme");
+    await capture(page, "84c-shape-consequences-extreme-desktop");
+
+    // Reduced motion keeps the identical facts in the identical order.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(rows).toHaveCount(extremeCount);
+    expect(await rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-kind"))))
+      .toEqual(kinds);
+    await capture(page, "84d-shape-consequences-extreme-reduced-motion-desktop");
+
+    // Scoped rather than page-level on purpose. The desktop preparation squad
+    // panel already overflows horizontally at `200%` text with a filled squad,
+    // before this section exists and in a column it does not share; that is
+    // recorded for Step 11's browser QA rather than fixed here.
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await expect.poll(() => panel.evaluate((element) => element.scrollWidth - element.clientWidth))
+      .toBeLessThanOrEqual(1);
+    await expect(rows.first()).toBeVisible();
+    await capture(page, "84e-shape-consequences-text-zoom-desktop");
+  } finally {
+    await page.close();
+  }
+});
+
+test("shape consequences reflow narrow and follow the accepted live team", async ({ browser }) => {
+  const page = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  try {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Prepare match", exact: true }).click();
+    await page.getByRole("button", { name: "Auto", exact: true }).click();
+
+    const panel = page.locator(".tls-tactical-consequences");
+    await expect(panel).toBeVisible();
+    await panel.scrollIntoViewIfNeeded();
+    await assertNoPageOverflow(page, "narrow shape consequences");
+    await capture(page, "84f-shape-consequences-narrow");
+
+    await page.getByRole("tab", { name: "Tactic", exact: true }).click();
+    await page.getByRole("radio", { name: /^Balanced / }).check();
+    await page.getByRole("button", { name: "Confirm and go to match", exact: true }).click();
+    await page.getByRole("button", { name: "Start match", exact: true }).click();
+    await expect(page.locator("[data-motion-checkpoint]"))
+      .toHaveAttribute("data-motion-checkpoint", "first_half");
+    await advanceClockUntilPlaybackStage(page, "closing", "real");
+    await expect(page.getByRole("button", { name: "Start second half", exact: true })).toBeVisible();
+
+    // The live workspace shows the same section, read from the engine team
+    // rather than from the board the manager may still be editing.
+    const halfTimeTabs = page.locator(".tls-match-phase-tab-list");
+    await halfTimeTabs.getByRole("tab", { name: "Tactics", exact: true }).click();
+    const liveSection = page.locator(".tls-tactical-consequences");
+    await expect(liveSection).toBeVisible();
+    await expect(liveSection.getByRole("heading", { name: "Shape consequences", exact: true })).toBeVisible();
+    await liveSection.scrollIntoViewIfNeeded();
+    await assertNoPageOverflow(page, "narrow live shape consequences");
+    await capture(page, "84g-shape-consequences-live-narrow");
+  } finally {
+    await page.close();
+  }
+});
+
 test("approved tactical-board interactions remain intact inside the current preparation route", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {

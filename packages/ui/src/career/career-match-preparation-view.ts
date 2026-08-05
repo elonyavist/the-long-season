@@ -5,6 +5,12 @@ import {
   type FormationSlot,
 } from "@game/domain";
 
+import {
+  buildTacticalConsequenceView,
+  type TacticalConsequenceReading,
+  type TacticalConsequenceView,
+} from "./tactical-consequence-view.ts";
+
 /** Stable side key for the selected club in the next fixture. */
 export type CareerMatchPreparationFixtureSide = "home" | "away";
 
@@ -196,6 +202,15 @@ export interface BuildCareerMatchPreparationViewInput {
   readonly selectedTacticProfileId?: string;
   /** Fixture eligibility blockers derived outside the UI package. */
   readonly eligibilityBlockers?: readonly CareerMatchPreparationEligibilityBlockerInput[];
+  /**
+   * Engine-derived reading of the plan the eleven on the board would play.
+   *
+   * Absent means there is no eleven to read yet, or - during a live match -
+   * that the engine has not accepted the pending changes. That is a different
+   * state from "this shape has no consequences", so it stays absent rather than
+   * becoming an empty list.
+   */
+  readonly tacticalShapeReading?: TacticalConsequenceReading;
   /** Whether this preparation has already been saved. */
   readonly isSaved?: boolean;
 }
@@ -322,6 +337,8 @@ export interface CareerMatchPreparationView {
   readonly blockerKeys: readonly CareerMatchPreparationBlockerKey[];
   /** Exact selected players preventing match entry. */
   readonly eligibilityBlockers: readonly CareerMatchPreparationEligibilityBlockerInput[];
+  /** Qualitative consequences of the current shape, absent when there is none to read. */
+  readonly tacticalConsequences?: TacticalConsequenceView;
   /** Save action state. */
   readonly saveAction: CareerMatchPreparationActionView;
   /** Translation key for the primary section summary. */
@@ -368,6 +385,11 @@ export const CAREER_MATCH_PREPARATION_FORMATIONS: readonly CareerMatchPreparatio
  * derives visible UI status: missing players, duplicate players, missing
  * tactic, and save availability. It does not choose players, recommend tactics,
  * persist data, or run engine simulation.
+ *
+ * When the caller supplies a shape reading it is projected into qualitative
+ * consequences here rather than on a screen, so the preparation workspace and
+ * the live tactical workspace - which render this same view - cannot end up
+ * describing the same eleven differently.
  */
 export function buildCareerMatchPreparationView(
   input: BuildCareerMatchPreparationViewInput,
@@ -395,6 +417,9 @@ export function buildCareerMatchPreparationView(
     tactic,
     blockerKeys,
     eligibilityBlockers: input.eligibilityBlockers ?? [],
+    ...(input.tacticalShapeReading === undefined
+      ? {}
+      : { tacticalConsequences: buildTacticalConsequenceView(input.tacticalShapeReading) }),
     saveAction: {
       actionId: "save_preparation",
       status: blockerKeys.length === 0 ? "available" : "blocked",

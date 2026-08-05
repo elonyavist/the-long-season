@@ -18,3 +18,4 @@ export * from "./career-player-profile-view.ts";
 export * from "./career-shell-view.ts";
 export * from "./career-squad-view.ts";
 export * from "./career-contract-expiry.ts";
+export * from "./tactical-consequence-view.ts";

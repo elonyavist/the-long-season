@@ -6065,3 +6065,91 @@ html:has(.tls-full-screen-dialog[open]) {
 .tls-inbox-detail-header p {
   max-width: var(--tls-measure-prose);
 }
+
+/*
+ * Qualitative shape consequences, shown under the board in preparation and in
+ * the live tactical workspace.
+ *
+ * Meaning never rests on colour: every row carries its kind as a word, and the
+ * three kinds also differ by border weight and by that word's position. The
+ * surfaces below are the existing state tokens, so this panel follows the
+ * theme rather than introducing a fourth palette.
+ */
+.tls-tactical-consequences {
+  display: grid;
+  gap: var(--tls-space-2);
+  padding: var(--tls-space-3);
+  background: var(--tls-theme-panel-surface);
+  border: 1px solid var(--tls-color-line);
+  border-radius: var(--tls-radius-sm);
+}
+
+.tls-tactical-consequences-heading h3 {
+  margin: 0;
+  font-size: var(--tls-font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tls-tactical-consequences-heading p {
+  max-width: var(--tls-measure-prose);
+  margin: 0;
+  font-size: var(--tls-font-size-xs);
+  color: var(--tls-color-text-muted);
+}
+
+.tls-tactical-consequences-empty {
+  margin: 0;
+  font-size: var(--tls-font-size-xs);
+  color: var(--tls-color-text-muted);
+}
+
+.tls-tactical-consequences-list {
+  display: grid;
+  gap: var(--tls-space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tls-tactical-consequences-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tls-space-2);
+  align-items: baseline;
+  padding: var(--tls-space-2) var(--tls-space-3);
+  border: 1px solid var(--tls-color-line);
+  border-left-width: 4px;
+  border-radius: var(--tls-radius-sm);
+}
+
+.tls-tactical-consequences-list li[data-kind="exposure"] {
+  color: var(--tls-state-danger-foreground);
+  background: var(--tls-state-danger-surface);
+  border-color: var(--tls-state-danger-border);
+}
+
+.tls-tactical-consequences-list li[data-kind="overload"] {
+  color: var(--tls-state-warning-foreground);
+  background: var(--tls-state-warning-surface);
+  border-color: var(--tls-state-warning-border);
+}
+
+.tls-tactical-consequences-list li[data-kind="emphasis"] {
+  color: var(--tls-state-information-foreground);
+  background: var(--tls-state-information-surface);
+  border-color: var(--tls-state-information-border);
+}
+
+.tls-tactical-consequence-kind {
+  font-size: var(--tls-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.tls-tactical-consequence-label {
+  font-size: var(--tls-font-size-sm);
+  color: var(--tls-color-text);
+}

@@ -426,6 +426,57 @@ test("translates the bounded calendar advancement feedback", () => {
   assert.equal(translate("fr", "career.calendarAdvance.label"), "Avancement du calendrier");
 });
 
+test("translates every tactical consequence in every supported language", () => {
+  const observationKeys = [
+    "weak_build_up",
+    "weak_central_connection",
+    "no_attacking_width",
+    "thin_box_presence",
+    "press_without_cover",
+    "open_centre",
+    "open_left_flank",
+    "open_right_flank",
+    "unprotected_box",
+    "blunt_counter",
+    "exposed_transition",
+    "left_overload",
+    "right_overload",
+    "heavy_box_presence",
+    "sharp_counter",
+    "packed_centre",
+    "deep_rest_defence",
+  ] as const;
+  const languages = ["en", "it", "de", "es", "fr"] as const;
+
+  for (const language of languages) {
+    for (const observationKey of observationKeys) {
+      const key = `career.tacticalConsequence.observation.${observationKey}` as const;
+      assert.equal(hasConcreteTranslation(language, key), true, `${language}:${key}`);
+    }
+
+    for (const kind of ["exposure", "overload", "emphasis"] as const) {
+      assert.equal(
+        hasConcreteTranslation(language, `career.tacticalConsequence.kind.${kind}`),
+        true,
+        `${language}:${kind}`,
+      );
+    }
+  }
+});
+
+test("states a tactical consequence as football rather than as a number", () => {
+  assert.equal(translate("it", "career.tacticalConsequence.observation.open_left_flank"), "Fascia sinistra scoperta");
+  assert.equal(translate("en", "career.tacticalConsequence.observation.unprotected_box"), "Own box left unprotected");
+  assert.equal(translate("de", "career.tacticalConsequence.kind.exposure"), "Preis");
+  assert.equal(translate("es", "career.tacticalConsequence.summary.balanced"), "Nada destaca en este sistema.");
+  assert.equal(translate("fr", "career.tacticalConsequence.title"), "Consequences du dispositif");
+
+  // No capacity number, percentage, or formula may reach a manager's screen.
+  for (const language of ["en", "it", "de", "es", "fr"] as const) {
+    assert.match(translate(language, "career.tacticalConsequence.observation.open_centre"), /^[^0-9%]+$/u);
+  }
+});
+
 test("unknown keys fail clearly at runtime", () => {
   assert.throws(
     () => translate("en", "missing.key" as never),

@@ -11,6 +11,7 @@ import {
   buildCareerTacticalBoardPlayers,
   buildMatchPreparationView,
   matchPreparationBenchSlotKeys,
+  matchPreparationShapeReading,
   selectMatchPreparationBenchPlayer,
 } from "./match-preparation-adapter";
 import { CareerMatchPreparationScreen } from "./CareerMatchPreparationScreen";
@@ -111,4 +112,64 @@ describe("CareerMatchPreparationScreen", () => {
     expect(view.saveAction.status).toBe("blocked");
     expect(markup).toContain("bench needs a goalkeeper");
   });
+
+  it("asks for a complete eleven before saying anything about the shape", () => {
+    const { career, draft } = createTestCareerFixture("consequences-incomplete");
+    const markup = renderPreparationScreen(career, draft, buildMatchPreparationView(career, draft));
+
+    expect(markup).toContain("tls-tactical-consequences");
+    expect(markup).toContain("Complete the eleven to see what this shape does.");
+    expect(markup).not.toContain("tls-tactical-consequences-list");
+  });
+
+  it("names the consequences of a shape in words, never as numbers", () => {
+    const fixture = createPreparedTestCareerFixture("consequences-shape");
+    const reading = matchPreparationShapeReading(fixture.career, fixture.draft);
+    const view = buildMatchPreparationView(fixture.career, fixture.draft, reading);
+    const markup = renderPreparationScreen(fixture.career, fixture.draft, view);
+    const panel = markup.slice(markup.indexOf("tls-tactical-consequences"));
+
+    expect(reading).toBeDefined();
+    expect(markup).toContain("Shape consequences");
+    expect(markup).toContain("The choice stays yours.");
+
+    // Whatever this squad's shape produces, the panel states it as football and
+    // exposes no capacity number, percentage, or best-formation command.
+    for (const observation of view.tacticalConsequences?.observations ?? []) {
+      expect(panel).toContain(createWebTranslator("en")(observation.labelKey));
+      expect(panel).toContain(`data-kind="${observation.kind}"`);
+    }
+    expect(panel.slice(0, panel.indexOf("</section>"))).not.toMatch(/%/u);
+  });
 });
+
+/** Renders the screen with the same required callbacks every case needs. */
+function renderPreparationScreen(
+  career: Parameters<typeof buildCareerTacticalBoardPlayers>[0],
+  draft: Parameters<typeof buildMatchPreparationView>[1],
+  view: ReturnType<typeof buildMatchPreparationView>,
+): string {
+  return renderToStaticMarkup(
+    React.createElement(CareerMatchPreparationScreen, {
+      draftDirty: false,
+      currentDateIso: "2026-08-01",
+      tacticalBoardDraft: draft.tacticalBoardDraft,
+      tacticalBoardPlayers: buildCareerTacticalBoardPlayers(career),
+      playerFactsById: new Map(),
+      view,
+      text: createWebTranslator("en"),
+      onBackToMenu: () => undefined,
+      onNavigate: () => undefined,
+      onInboxActionClick: () => undefined,
+      onFormationChange: () => undefined,
+      onLineupPlayerChange: () => undefined,
+      onBenchPlayerChange: () => undefined,
+      onTacticProfileChange: () => undefined,
+      onSelectionAction: () => undefined,
+      onBoardSlotMove: () => undefined,
+      onBoardSlotRoleChange: () => undefined,
+      onBoardSlotClear: () => undefined,
+      onSavePreparation: () => undefined,
+    }),
+  );
+}

@@ -220,6 +220,16 @@ export {
 } from "./tactical-shape.ts";
 
 export {
+  deriveOrdinaryTacticalShapeReference,
+  deriveTacticalShapeEmphasis,
+  ORDINARY_SHAPE_REFERENCE_ABILITY,
+  OrdinaryTacticalShapeError,
+  type OrdinaryTacticalShapeErrorCode,
+  type OrdinaryTacticalShapeReferenceInput,
+  type TacticalShapeCapacityValues,
+} from "./ordinary-tactical-shape.ts";
+
+export {
   deriveTacticalMatchup,
   TacticalMatchupError,
   type DeriveTacticalMatchupInput,

@@ -16,7 +16,7 @@ constraining future work, not by being recent.
 ## Current Baseline
 
 Phases 0 through 80A are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - is active; Steps 01 through 09 are Done and Step 10 is
+Manager Decision Engine - is active; Steps 01 through 10 are Done and Step 11 is
 next. Live constraints are in `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
@@ -67,9 +67,9 @@ the `route` it came down, at match-event schema `8`, so a match report can
 distinguish a chance worked down the left from one worked down the right where
 `chanceType: "cross"` covered both. The explanation trace, at schema `2`, adds
 per-side `routeCounts` and `shooterCounts` beside the existing route capacity
-rows - what the shape *opened* and what it actually *used*, which is the pair a
-tactical consequence screen needs. Step 10 owns rendering any of it; nothing in
-the UI reads either field yet.
+rows - what the shape *opened* and what it actually *used*. Nothing in the UI
+reads either field yet; Step 10 rendered shape consequences instead, so an
+explanation surface for these two is still unclaimed.
 
 Step 08 made that route actually reach a saved career. `match_events` had no
 column for it, so every shot in a **web** career was written back without its
@@ -98,6 +98,64 @@ be measured against. Two things stay open for later steps - AI formation options
 have no production supplier and are still ranked alphabetically, and the
 opponent's eleven is not durable, so a reloaded reviewed result shows only the
 footballers its events name.
+
+Step 10 gave the board a consequence. Under the pitch, in match preparation and
+in the live half-time workspace, at most three qualitative observations name what
+this eleven gives up first, which flank it loads, and where it concentrates - in
+five languages, with no capacity number, no percentage, no formula and no
+recommended formation. A curated shape filled by the squad's own best eleven is
+deliberately silent, so anything the manager reads is something he built: pushing
+the whole back line forward reports an unprotected box and exposure in
+transition beside the heavy presence in the opposition box it bought.
+
+Three facts about that seam bind later web work. **The engine is the live
+authority and the board is only the pre-match one** - during a match the section
+follows the eleven the engine has accepted, so a refused change leaves it exactly
+where it was rather than describing an edit nobody is playing. The observation
+label keys are template literal types, so a new consequence without its five
+translations fails the build instead of throwing the first time a manager builds
+that shape; the remaining `presentationMessageKey` families still lack that and
+remain unowned. And **a threshold is only coverage if something can cross it**:
+a `loose_press` observation passed every check this step wrote and could never
+have fired, because press cohesion barely moves with shape. A sweep over every
+board a manager can build is now a gate, written per rule rather than per
+capacity - the capacity moved plenty, just never in the direction the rule read.
+
+**That defect also found the right place to look.** "Pressing cohesion" was on
+this step's coverage list, and the capacity of that name cannot move the way a
+warning needs. The engine already says where pressing actually costs you:
+`TACTIC_KNOB_EXPOSED_ROUTE` hands the `direct` route to the opponent - push the
+line up and the way to beat you is over it - and that route is resisted by box
+protection and central coverage. So the manager is told **"pressing high with
+little cover behind"**, and only when his own shape is thin there. A curated
+eleven under the attacking profile stays silent, which a gate asserts, because
+the observation is about the team he built rather than the tactic he picked. It
+reads both mappings instead of restating either, so Steps 06 and 04 keep sole
+ownership of what a tactic costs.
+
+**One of the three slots is reserved for what the shape bought.** Costs rank
+first, so a broken shape used to fill every slot with them - a tool that only
+ever says why an idea will fail, when half its reason to exist is saying why it
+might work. A back line pushed into attack now reads: own box unprotected,
+exposed in transition, heavy presence in the opposition box. That is the trade
+the manager made, which is the thing he can actually weigh.
+
+**Recommended to Step 11B, not built here.** At half time the manager has watched
+the opponent for `45` minutes, and this panel still reads only his own shape.
+Before kick-off that is right; after it, "they are loading my left" is what a real
+manager thinks. The engine already knows it - Step 04's relational matchup, Step
+07's `routeCounts` - and none of it reaches a screen. Changing shape to counter
+something you cannot see is guessing, which is likely part of why formation still
+measures `0.0312` while a tactic best-response reaches `+0.0327`.
+
+Left for Step 11: desktop match preparation overflows horizontally at `200%`
+text once the squad is filled, in `aside.tls-preparation-squad-panel`. It is
+pre-existing - no test covered that viewport at that zoom - and Step 10's own
+section is clear at the same setting.
+
+Step 10 did not claim Step 07's `route`, `routeCounts` or `shooterCounts`. It
+rendered shape consequences, not shot explanations, and nothing in the UI reads
+those fields yet.
 
 Step 12 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.

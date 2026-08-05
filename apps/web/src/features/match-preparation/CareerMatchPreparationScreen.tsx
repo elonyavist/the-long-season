@@ -15,6 +15,7 @@ import type { WebCareerContinueResult } from "../../runtime/web-career-runtime";
 import { AppShell } from "../app-shell/AppShell";
 import { PlayerFactPanel } from "../../shared/ui/PlayerFactPanel";
 import { SquadSelectionTable, type SquadSelectionRow } from "../../shared/ui/SquadSelectionTable";
+import { TacticalConsequenceList } from "../../shared/ui/TacticalConsequenceList";
 import type { TacticalBenchBoardCandidate } from "../tactics-board/components/TacticalBenchBoard";
 import { TacticalBoardWorkspace } from "../tactics-board/components/TacticalBoardWorkspace";
 import { selectCurrentTacticalBoardShape } from "../tactics-board/tactical-board-formations";
@@ -305,6 +306,12 @@ export function CareerMatchPreparationScreen({
                     if (playerId !== undefined && playerId !== null) focusPlayerDetail(playerId);
                   },
                 }}
+              />
+
+              <TacticalConsequenceList
+                {...(view.tacticalConsequences === undefined ? {} : { consequences: view.tacticalConsequences })}
+                headingId="match-preparation-consequences-title"
+                text={text}
               />
             </div>
 

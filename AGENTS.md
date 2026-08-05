@@ -62,8 +62,38 @@ language-agnostic keys, never rendered prose. Supported: `it`, `en`, `de`, `es`,
 - `docs/PROJECT_STATUS.md` is a live snapshot with a hard `300` line budget.
   Per-step detail belongs in the step document; history belongs in `git log`.
 
+## Reachability
+
+- Every threshold, band, or branch introduced must be proven **reachable on real
+  data** before the step closes, by a test that searches the actual input space -
+  not by a fixture built to satisfy it. A gate that cannot fail is not a gate.
+- Reachability is a property of the **rule**, not of the quantity it reads.
+  Asking "does this number ever move" does not answer it: it must move in the
+  direction the rule reads.
+- Precedents: `permittedRegression` (Step 09), `asymmetric_incoherence_cost`
+  (A9), `loose_press` (Step 10). Every one of them passed every check written
+  alongside it.
+
+## Gate Measurement
+
+- A gate runs **alone**. Never beside a build, a browser, or another gate: the
+  timeouts that come out of it are contention, not regressions, and they lie in
+  both directions.
+- Never read the result through a pipe. `cmd | tail` returns `tail`'s exit code.
+  Redirect to a file and capture `$?` from the real command.
+- **A timeout is a claim about a budget, not about correctness.** Re-run the file
+  alone before believing it names the guilty code. If it passes there, the budget
+  is wrong and it is fixed once, in the configuration that owns it - not by
+  editing the tests it happened to land on. Running the gate alone is not enough
+  on its own: `vitest.config.ts` set `maxWorkers` and no `testTimeout`, so the
+  default `5000` failed innocent files at random for as long as it stood.
+
 ## Local Commands
 
 - Run `nvm use 24` before project commands in a new shell.
 - `pnpm check` is the single local gate.
 - **Never commit unless explicitly asked.**
+- **Never reach for `git stash`, `checkout`, `reset` or `clean` to answer a
+  question.** Uncommitted work is the only copy there is. A comparison against
+  the previous state is worth nothing if the price of getting it is the current
+  one; measure another way, or ask.

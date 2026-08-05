@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { FORMATION_CATALOG, type CanonicalPlayerRole } from "@game/domain";
+import {
+  FORMATION_CATALOG,
+  TACTICAL_SHAPE_CAPACITIES,
+  type CanonicalPlayerRole,
+  type TacticalShapeCapacity,
+} from "@game/domain";
 
 import { CAREER_MATCH_PREPARATION_FORMATIONS, buildCareerMatchPreparationView } from "./career-match-preparation-view.ts";
 import type { BuildCareerMatchPreparationViewInput } from "./career-match-preparation-view.ts";
+import type { TacticalConsequenceReading } from "./tactical-consequence-view.ts";
 
 describe("buildCareerMatchPreparationView", () => {
   it("blocks saving when lineup slots and tactic are missing", () => {
@@ -295,7 +301,43 @@ describe("buildCareerMatchPreparationView", () => {
     expect(view.blockerKeys).toEqual(["no_next_fixture"]);
     expect(view.nextFixture).toBeUndefined();
   });
+
+  it("says nothing about shape when there is no eleven to read", () => {
+    const view = buildCareerMatchPreparationView(baseInput());
+
+    expect(view.tacticalConsequences).toBeUndefined();
+  });
+
+  it("projects a supplied shape reading into qualitative consequences", () => {
+    const view = buildCareerMatchPreparationView({
+      ...baseInput(),
+      tacticalShapeReading: shapeReading({ box_protection: 0.4, final_third_presence: 1.8 }),
+    });
+
+    expect(view.tacticalConsequences?.observations.map((observation) => observation.observationKey))
+      .toEqual(["unprotected_box", "heavy_box_presence"]);
+  });
+
+  it("keeps a balanced shape distinguishable from an unread one", () => {
+    const view = buildCareerMatchPreparationView({
+      ...baseInput(),
+      tacticalShapeReading: shapeReading({}),
+    });
+
+    expect(view.tacticalConsequences?.observations).toEqual([]);
+    expect(view.tacticalConsequences?.summaryKey).toBe("career.tacticalConsequence.summary.balanced");
+  });
 });
+
+function shapeReading(
+  overrides: Partial<Record<TacticalShapeCapacity, number>>,
+): TacticalConsequenceReading {
+  return {
+    shape: Object.fromEntries(
+      TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, overrides[capacity] ?? 1]),
+    ) as TacticalConsequenceReading["shape"],
+  };
+}
 
 function baseInput(): BuildCareerMatchPreparationViewInput {
   return {

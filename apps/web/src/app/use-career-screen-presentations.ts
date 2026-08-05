@@ -14,6 +14,7 @@ import {
   buildCareerTacticalBoardPlayers,
   buildMatchPreparationView,
   getCareerMatchPreparationPlayerFact,
+  matchPreparationShapeReading,
   type MatchPreparationDraft,
   type MatchPreparationPlayerFact,
 } from "../features/match-preparation/match-preparation-adapter";
@@ -21,6 +22,7 @@ import {
   buildWebMatchdayTeamControlPanel,
   buildWebMatchdayPhaseView,
   buildWebMatchdayView,
+  liveMatchdayShapeReading,
   type WebMatchdayTeamControlPanel,
   type WebMatchdayState,
 } from "../features/matchday/matchday-adapter";
@@ -92,10 +94,21 @@ export function useCareerScreenPresentations({
     [activeCareerState, inboxFilter, selectedInboxMessageId],
   );
   const matchPreparation = useMemo(
-    () => activeCareerState === undefined || matchPreparationState === undefined
-      ? undefined
-      : buildMatchPreparationView(activeCareerState, matchPreparationState),
-    [activeCareerState, matchPreparationState],
+    () => {
+      if (activeCareerState === undefined || matchPreparationState === undefined) return undefined;
+
+      // Two authorities, one read model. Before kick-off the board *is* the
+      // plan, so it is what gets read. Once a match is running the engine holds
+      // the eleven actually on the pitch, and it moves only when a command is
+      // accepted - so a rejected change leaves the observations exactly as they
+      // were, which is the truth.
+      const tacticalShapeReading = matchdayState?.liveProgress === undefined
+        ? matchPreparationShapeReading(activeCareerState, matchPreparationState)
+        : liveMatchdayShapeReading(matchdayState);
+
+      return buildMatchPreparationView(activeCareerState, matchPreparationState, tacticalShapeReading);
+    },
+    [activeCareerState, matchPreparationState, matchdayState],
   );
   const squad = useMemo(
     () => activeCareerState === undefined || matchPreparationState === undefined

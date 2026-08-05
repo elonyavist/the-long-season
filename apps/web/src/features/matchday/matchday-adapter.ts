@@ -17,6 +17,7 @@ import {
   createProgressiveMatchSession,
   computePlayerMatchStats,
   DEFAULT_MATCH_LINEUP_SIZE,
+  deriveTacticalShapeEmphasis,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
   injuryForcesExit,
@@ -56,11 +57,13 @@ import {
   type BuildCareerMatchdayViewInput,
   type CareerMatchdayPhaseView,
   type CareerMatchdayView,
+  type TacticalConsequenceReading,
 } from "@game/ui";
 
 import {
   MATCH_PREPARATION_TACTIC_PROFILES,
   createMatchPreparationDraft,
+  ordinaryTacticalShapeReference,
   selectedMatchPreparationPlayerIds,
   type MatchPreparationDraft,
 } from "../match-preparation/match-preparation-adapter";
@@ -607,6 +610,37 @@ export function buildWebMatchdayView(
 /** Builds the phase-aware `@game/ui` view for the durable matchday state. */
 export function buildWebMatchdayPhaseView(state: WebMatchdayState): CareerMatchdayPhaseView {
   return buildCareerMatchdayPhaseView(buildWebMatchdayPhaseInput(state));
+}
+
+/**
+ * Reads the shape of the eleven the engine currently has on the pitch.
+ *
+ * This is the live authority, and it moves only when a command is accepted:
+ * `applyConfirmedProgressiveTeamChanges` rebuilds the side's context, and a
+ * rejected command never reaches it. Reading the board draft instead would
+ * describe an edit that is not being played, which is worse than saying
+ * nothing.
+ */
+export function liveMatchdayShapeReading(state: WebMatchdayState): TacticalConsequenceReading | undefined {
+  const liveProgress = state.liveProgress;
+
+  if (liveProgress === undefined) return undefined;
+
+  const team = liveProgress.selectedSide === "home"
+    ? liveProgress.snapshot.home.team
+    : liveProgress.snapshot.away.team;
+
+  // Shape and tactic both come off the same accepted context, so they can never
+  // describe two different plans.
+  return {
+    shape: deriveTacticalShapeEmphasis(team.shape.capacities, ordinaryTacticalShapeReference()),
+    tactic: {
+      directness: team.tacticalDistribution.directness,
+      pressing: team.tacticalDistribution.pressing,
+      width: team.tacticalDistribution.width,
+      risk: team.tacticalDistribution.risk,
+    },
+  };
 }
 
 /** Builds shared paused/running team-control facts from the public live snapshot. */

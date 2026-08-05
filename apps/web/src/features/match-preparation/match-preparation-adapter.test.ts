@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { findNextCareerFixture } from "@game/engine";
+import {
+  CAREER_MATCH_PREPARATION_FORMATIONS,
+  TACTICAL_CONSEQUENCE_EMPHASIS_AT_LEAST,
+  TACTICAL_CONSEQUENCE_EXPOSURE_BELOW,
+  TACTICAL_CONSEQUENCE_KEYS,
+  TACTICAL_CONSEQUENCE_KNOB_ABOVE,
+  TACTICAL_CONSEQUENCE_OVERLOAD_RATIO,
+  TACTICAL_CONSEQUENCE_RULES,
+  tacticalConsequenceCapacities,
+} from "@game/ui";
 
 import {
   buildWebCareerState,
@@ -8,6 +18,8 @@ import {
   type WebCareerState,
 } from "../../runtime/web-career-runtime";
 import { orderPlayerOptionsForLineupSlot } from "../../shared/lib/player-position-ordering";
+import type { TacticalBoardRoleCode } from "../tactics-board/tactical-board-types";
+import { buildTestMatchPreparationView } from "../../test-fixtures/career-fixture";
 import {
   acceptLiveTeamPlan,
   adaptMatchPreparationBoardSlot,
@@ -15,10 +27,14 @@ import {
   buildCareerTacticalBoardPlayers,
   buildDurableMatchPreparation,
   buildMatchPreparationView,
+  changeMatchPreparationBoardSlotRole,
   createMatchPreparationDraft,
   exchangeMatchPreparationBoardPlayers,
   isMatchPreparationDraftDirty,
+  MATCH_PREPARATION_TACTIC_PROFILES,
+  matchPreparationShapeReading,
   moveMatchPreparationBoardSlot,
+  ordinaryTacticalShapeReference,
   selectMatchPreparationFormation,
   selectMatchPreparationBenchPlayer,
   selectMatchPreparationPlayer,
@@ -307,6 +323,169 @@ describe("loaded-career match-preparation adapter", () => {
     expect(isMatchPreparationDraftDirty(career, changedFormation)).toBe(true);
     expect(isMatchPreparationDraftDirty(career, restoredFormation)).toBe(false);
     expect(isMatchPreparationDraftDirty(career, selectMatchPreparationTactic(baseline, "tactic:balanced"))).toBe(true);
+  });
+});
+
+describe("match-preparation tactical consequences", () => {
+  it("says nothing while a slot is still empty", () => {
+    const career = careerState("shape-empty");
+
+    expect(matchPreparationShapeReading(career, createMatchPreparationDraft(career))).toBeUndefined();
+    expect(buildTestMatchPreparationView({ career, draft: createMatchPreparationDraft(career) }).tacticalConsequences)
+      .toBeUndefined();
+  });
+
+  it("reads the eleven as soon as the board is complete", () => {
+    const career = careerState("shape-complete");
+    const draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+    const reading = matchPreparationShapeReading(career, draft);
+
+    expect(reading).toBeDefined();
+    const view = buildMatchPreparationView(career, draft, reading);
+    expect(view.tacticalConsequences).toBeDefined();
+  });
+
+  it("keeps every selectable curated formation quiet with a real generated squad", () => {
+    // The shipped calibration, the shipped generator, and the same auto
+    // selection a manager gets from the button. A curated shape filled by a
+    // real squad is the no-warning state, and the frozen thresholds exist to
+    // leave it alone: anything the manager sees is then something he built.
+    const noisy: string[] = [];
+    // One squad, nine shapes: the comparison is then about the shape alone.
+    const career = careerState("shape-catalog");
+
+    for (const formation of CAREER_MATCH_PREPARATION_FORMATIONS) {
+      const chosen = selectMatchPreparationFormation(createMatchPreparationDraft(career), formation.formationId);
+      const draft = applyMatchPreparationSelectionAction(career, chosen, "auto");
+      const view = buildMatchPreparationView(career, draft, matchPreparationShapeReading(career, draft));
+      const observations = view.tacticalConsequences?.observations ?? [];
+
+      if (observations.length > 0) {
+        noisy.push(`${formation.formationId}: ${observations.map((row) => row.observationKey).join(",")}`);
+      }
+    }
+
+    expect(noisy).toStrictEqual([]);
+  });
+
+  it("reports the cost of an eleven with no defenders at all", () => {
+    const career = careerState("shape-no-defenders");
+    const attackers = Object.values(career.gameState.players)
+      .filter((player) => player.primaryRole === "striker")
+      .map((player) => player.id);
+    let draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+
+    for (const [index, slot] of draft.tacticalBoardDraft.slots.entries()) {
+      const replacement = attackers[index];
+      if (slot.canonicalRole === "goalkeeper" || replacement === undefined) continue;
+      draft = changeMatchPreparationBoardSlotRole(
+        selectMatchPreparationPlayer(draft, slot.slotId, replacement),
+        slot.slotId,
+        "ATT",
+      );
+    }
+
+    const view = buildMatchPreparationView(career, draft, matchPreparationShapeReading(career, draft));
+    const observationKeys = (view.tacticalConsequences?.observations ?? []).map((row) => row.observationKey);
+
+    expect(observationKeys.length).toBeGreaterThan(0);
+    expect(observationKeys).toContain("unprotected_box");
+    expect(view.tacticalConsequences?.summaryKey).toBe("career.tacticalConsequence.summary.some");
+  });
+
+  it("measures the ordinary reference once per calibration", () => {
+    expect(ordinaryTacticalShapeReference()).toBe(ordinaryTacticalShapeReference());
+  });
+
+  it("leaves no observation that a manager could never produce", () => {
+    // A threshold nothing can cross is the defect this project keeps finding:
+    // it reads as coverage and reports nothing forever. So the bands are
+    // measured against every eleven the board can actually build, and any
+    // capacity that stays inside them must be one this package has already
+    // declared it does not read.
+    const career = careerState("shape-reachability");
+    const roleCodes: readonly TacticalBoardRoleCode[] = [
+      "TD", "DC", "TS", "MED", "CC", "ED", "ES", "TRQ", "AD", "AS", "ATT",
+    ];
+    const bounds = new Map<string, { min: number; max: number }>();
+
+    for (const formation of CAREER_MATCH_PREPARATION_FORMATIONS) {
+      const chosen = selectMatchPreparationFormation(createMatchPreparationDraft(career), formation.formationId);
+      const auto = applyMatchPreparationSelectionAction(career, chosen, "auto");
+
+      for (const roleCode of roleCodes) {
+        let draft = auto;
+        for (const slot of auto.tacticalBoardDraft.slots) {
+          if (slot.canonicalRole === "goalkeeper") continue;
+          draft = changeMatchPreparationBoardSlotRole(draft, slot.slotId, roleCode);
+        }
+
+        const reading = matchPreparationShapeReading(career, draft);
+        if (reading === undefined) continue;
+
+        for (const [capacity, value] of Object.entries(reading.shape)) {
+          const seen = bounds.get(capacity);
+          if (seen === undefined) bounds.set(capacity, { min: value, max: value });
+          else bounds.set(capacity, { min: Math.min(seen.min, value), max: Math.max(seen.max, value) });
+        }
+      }
+    }
+
+    const floorAcross = (capacities: readonly string[]): number =>
+      capacities.reduce((total, capacity) => total + (bounds.get(capacity)?.min ?? 1), 0) / capacities.length;
+
+    // Reachability is a property of each *rule*, not of the capacity it reads:
+    // `pressing_cohesion` cannot fall below the exposure band but rises well
+    // past the emphasis one, so asking only "does this capacity ever move" would
+    // have called a dead exposure alive.
+    const dead = TACTICAL_CONSEQUENCE_KEYS.filter((key) => {
+      const rule = TACTICAL_CONSEQUENCE_RULES[key];
+
+      switch (rule.rule) {
+        case "below":
+          return floorAcross(rule.capacities) >= TACTICAL_CONSEQUENCE_EXPOSURE_BELOW;
+        case "above":
+          return (bounds.get(rule.capacity)?.max ?? 1) < TACTICAL_CONSEQUENCE_EMPHASIS_AT_LEAST;
+        case "dominates": {
+          const ceiling = bounds.get(rule.capacity)?.max ?? 1;
+          const other = bounds.get(rule.over)?.min ?? 1;
+          return ceiling / Math.max(other, 0.05) < TACTICAL_CONSEQUENCE_OVERLOAD_RATIO;
+        }
+        case "knobExposes": {
+          // Both halves have to be reachable: a shape thin where the knob
+          // concedes, *and* a shipped tactic profile that turns the knob up.
+          const settable = MATCH_PREPARATION_TACTIC_PROFILES.some(
+            (profile) => profile.values[rule.knob] > TACTICAL_CONSEQUENCE_KNOB_ABOVE,
+          );
+          return !settable
+            || floorAcross(tacticalConsequenceCapacities(key)) >= TACTICAL_CONSEQUENCE_EXPOSURE_BELOW;
+        }
+      }
+    });
+
+    expect(dead).toStrictEqual([]);
+  });
+
+  it("keeps a curated shape quiet even under the most aggressive tactic profile", () => {
+    // The press observation must be about the shape a manager built, not about
+    // his having picked Attacking. A curated eleven pressing hard is not a
+    // mistake and must not be reported as one.
+    const career = careerState("shape-press-quiet");
+    const noisy: string[] = [];
+
+    for (const formation of CAREER_MATCH_PREPARATION_FORMATIONS) {
+      const chosen = selectMatchPreparationFormation(createMatchPreparationDraft(career), formation.formationId);
+      const auto = applyMatchPreparationSelectionAction(career, chosen, "auto");
+      const draft = selectMatchPreparationTactic(auto, "tactic:attacking");
+      const view = buildMatchPreparationView(career, draft, matchPreparationShapeReading(career, draft));
+      const observations = view.tacticalConsequences?.observations ?? [];
+
+      if (observations.length > 0) {
+        noisy.push(`${formation.formationId}: ${observations.map((row) => row.observationKey).join(",")}`);
+      }
+    }
+
+    expect(noisy).toStrictEqual([]);
   });
 });
 

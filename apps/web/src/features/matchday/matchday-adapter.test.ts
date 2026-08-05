@@ -16,6 +16,7 @@ import {
   commitWebLiveMatchday,
   createWebLiveMatchdaySession,
   createWebMatchdayState,
+  liveMatchdayShapeReading,
   pauseWebLiveMatchday,
   resolveWebLiveMatchdayIncident,
   resumeWebLiveMatchday,
@@ -202,6 +203,33 @@ describe("progressive web matchday adapter", () => {
       }
     }
   }, 20_000);
+
+  it("reads the live shape from the engine, and only after an accepted command", () => {
+    const career = preparedCareer("adapter-live-shape");
+    const created = requireLiveSession(career);
+
+    // No live session, no reading: the durable career alone says nothing about
+    // who is on the pitch right now.
+    expect(liveMatchdayShapeReading(createWebMatchdayState(career))).toBeUndefined();
+
+    const halfTime = advanceToPhase(created.session, "half_time");
+    const before = liveMatchdayShapeReading(halfTime.matchdayState);
+    expect(before).toBeDefined();
+
+    // A command the engine refuses must leave the reading exactly where it was,
+    // because the eleven on the pitch has not moved either.
+    const rejected = applyWebLiveMatchTeamChanges(halfTime.session, {
+      ...createMatchPreparationDraft(halfTime.matchdayState.careerState),
+      tacticalBoardDraft: {
+        ...createMatchPreparationDraft(halfTime.matchdayState.careerState).tacticalBoardDraft,
+        slots: [],
+      },
+    });
+    expect(rejected.status).toBe("invalid");
+    expect(liveMatchdayShapeReading(
+      createWebMatchdayState(halfTime.session.careerState, undefined, rejected.session),
+    )).toStrictEqual(before);
+  });
 });
 
 function requireLiveSession(career: WebCareerState) {

@@ -1,8 +1,14 @@
+import { createFakeGameplayConfig } from "@game/content";
 import { fieldablePlayerIds } from "@game/engine";
 import {
+  createLineupSlot,
+  deriveOrdinaryTacticalShapeReference,
+  deriveTacticalShapeEmphasis,
+  deriveTeamShapeAndStrength,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
   summarizePlayerDevelopmentAbilities,
+  type TacticalShapeCapacityValues,
 } from "@game/engine";
 import { toISO } from "@game/shared";
 import {
@@ -15,6 +21,7 @@ import {
   type CareerMatchPreparationPlayerOptionInput,
   type CareerMatchPreparationTacticProfileInput,
   type CareerMatchPreparationView,
+  type TacticalConsequenceReading,
 } from "@game/ui";
 
 import type { WebCareerState } from "../../runtime/web-career-runtime";
@@ -135,8 +142,103 @@ function preparationTargetsCurrentTask(
   return nextFixture.status === "found" && nextFixture.fixture.id === targetFixtureId;
 }
 
-/** Builds the existing UI read model from a loaded career and its current draft. */
-export function buildMatchPreparationView(career: WebCareerState, draft: MatchPreparationDraft): CareerMatchPreparationView {
+/**
+ * Measures what an ordinary curated eleven's shape looks like, once per world.
+ *
+ * The reference belongs to the match-tactics calibration, and a career keeps
+ * one for its whole life, so it is remembered by that calibration's version
+ * rather than recomputed on every keystroke of team selection. Nothing here
+ * depends on the club, the squad, or the draft.
+ */
+const ORDINARY_SHAPE_REFERENCE_BY_VERSION = new Map<string, TacticalShapeCapacityValues>();
+
+/** Returns the ordinary-shape reference for the currently shipped calibration. */
+export function ordinaryTacticalShapeReference(): TacticalShapeCapacityValues {
+  const gameplay = createFakeGameplayConfig();
+  const remembered = ORDINARY_SHAPE_REFERENCE_BY_VERSION.get(gameplay.matchTacticsCalibration.version);
+
+  if (remembered !== undefined) return remembered;
+
+  const reference = deriveOrdinaryTacticalShapeReference({
+    roleWeights: gameplay.roleWeights,
+    matchTacticsCalibration: gameplay.matchTacticsCalibration,
+  });
+  ORDINARY_SHAPE_REFERENCE_BY_VERSION.set(gameplay.matchTacticsCalibration.version, reference);
+
+  return reference;
+}
+
+/**
+ * Reads the shape of the eleven currently on the board, before kick-off.
+ *
+ * Returns nothing while a slot is still empty. Ten players do have a shape, but
+ * it is not the shape of the team that will play, and telling a manager his
+ * midfield is thin because he has not picked it yet is noise.
+ *
+ * This is the pre-match source only. Once a match is running the engine holds
+ * the eleven that is actually on the pitch, and the board may be showing an
+ * edit it has not accepted.
+ */
+export function matchPreparationShapeReading(
+  career: WebCareerState,
+  draft: MatchPreparationDraft,
+): TacticalConsequenceReading | undefined {
+  const slots = draft.tacticalBoardDraft.slots;
+
+  if (slots.length === 0 || slots.some((slot) => slot.playerId === null)) return undefined;
+
+  const gameplay = createFakeGameplayConfig();
+  const { shape } = deriveTeamShapeAndStrength({
+    lineup: slots.map((slot) =>
+      createLineupSlot({
+        slotId: slot.slotId,
+        playerId: requiredPlayerId(slot.slotId, slot.playerId),
+        canonicalRole: slot.canonicalRole,
+      }),
+    ),
+    players: career.gameState.players,
+    playerStates: career.gameState.playerStates,
+    stateMultiplierCurves: gameplay.stateMultiplierCurves,
+    roleWeights: gameplay.roleWeights,
+    matchTacticsCalibration: gameplay.matchTacticsCalibration,
+  });
+
+  // The tactic is genuinely absent until the manager picks one, and the shape
+  // still has plenty to say without it.
+  const tactic = MATCH_PREPARATION_TACTIC_PROFILES
+    .find((profile) => profile.tacticProfileId === draft.selectedTacticProfileId)?.values;
+
+  return {
+    shape: deriveTacticalShapeEmphasis(shape.capacities, ordinaryTacticalShapeReference()),
+    ...(tactic === undefined ? {} : { tactic: tacticKnobs(tactic) }),
+  };
+}
+
+/** Narrows a tactic profile to the four numeric knobs the read model reads. */
+function tacticKnobs(
+  values: CareerMatchPreparationTacticProfileInput["values"],
+): NonNullable<TacticalConsequenceReading["tactic"]> {
+  return {
+    directness: values.directness,
+    pressing: values.pressing,
+    width: values.width,
+    risk: values.risk,
+  };
+}
+
+/**
+ * Builds the existing UI read model from a loaded career and its current draft.
+ *
+ * The shape reading is supplied rather than derived here because the same view
+ * serves the preparation screen and the live tactical workspace, and those two
+ * read different authorities: before kick-off the board is the plan, during a
+ * match the engine is.
+ */
+export function buildMatchPreparationView(
+  career: WebCareerState,
+  draft: MatchPreparationDraft,
+  tacticalShapeReading?: TacticalConsequenceReading,
+): CareerMatchPreparationView {
   const selectedClub = requiredSelectedClub(career);
   const nextFixtureResult = findNextCareerFixture(career);
   const nextFixture = nextFixtureResult.status === "found" ? nextFixtureResult.fixture : undefined;
@@ -187,6 +289,7 @@ export function buildMatchPreparationView(career: WebCareerState, draft: MatchPr
     tacticProfiles: MATCH_PREPARATION_TACTIC_PROFILES,
     ...(draft.selectedTacticProfileId === undefined ? {} : { selectedTacticProfileId: draft.selectedTacticProfileId }),
     eligibilityBlockers,
+    ...(tacticalShapeReading === undefined ? {} : { tacticalShapeReading }),
     isSaved: draft.isSaved,
   });
 }
