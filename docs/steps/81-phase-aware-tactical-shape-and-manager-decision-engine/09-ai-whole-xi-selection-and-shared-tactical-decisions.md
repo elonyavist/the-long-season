@@ -239,7 +239,7 @@ through their events - joining the fields that function already returns empty.
 `selectFormationOption` ranks caller-supplied alternatives alphabetically, but
 `formationOptions` is passed by tests only - nothing in the shipped game supplies
 one. Making it shape-aware would mean building for a caller that does not exist
-and inventing the tactical intent that chooses. That decision belongs to Step 11B,
+and inventing the tactical intent that chooses. That decision belongs to Step 14,
 which owns formation as a counter-move; the live policy's other half - one shared
 selection scale, the canonical command path, the minute `N+1` boundary - is done.
 
@@ -315,7 +315,7 @@ decides which club a match *fact* belongs to, but tiredness belongs to the legs.
 
 Shape and eleven were chosen by the same score, and that score carries fitness,
 recent workload and prospect upside. So a squad built for a back three could line
-up as a back four for one week because a centre back was tired - and Step 11B
+up as a back four for one week because a centre back was tired - and Step 14
 cannot reward a counter-move against a shape that moves for reasons that are not
 tactical. Shape is now chosen on a `structuralScore` of ability and positional
 fit only; the eleven that fills it is still chosen on the full score.
@@ -362,7 +362,7 @@ through it, so the claim holds.
 ## Left For Step 10
 
 - `selectFormationOption`'s alphabetical tie-break, once a real caller supplies
-  formation options. Step 11B owns the football decision behind them.
+  formation options. Step 14 owns the football decision behind them.
 - The opponent's fielded eleven is not durable, so a reloaded reviewed result
   shows only the footballers its events name. Persisting it is a save-schema
   change and no step owns it yet.
@@ -412,4 +412,4 @@ already was the canonical one.
   `assembleMatchTeamContext(...)` as the single context literal;
   `ProgressCareerFixtureAdvanced.fieldedLineups` as the carried fact.
 - Verification: full `pnpm check` green; frozen Step 01 matrix rerun and passing.
-- Follow-up: Step 11B is unblocked - AI clubs no longer field one fixed shape.
+- Follow-up: Step 14 is unblocked - AI clubs no longer field one fixed shape.

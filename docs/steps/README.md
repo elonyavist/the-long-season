@@ -99,7 +99,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   QA pass. Its attempted direct `50 x 20` was stopped, wrote no report, and is
   not claimed as evidence.
 - Two longitudinal cohorts exist under the 2026-08-02 phase order, each with
-  `50` stable shards and exactly `7` workers. Phase 81 Step 12 runs the first
+  `50` stable shards and exactly `7` workers. Phase 81 Step 15 runs the first
   over the accepted match engine; because the market work now follows, that run
   observes no loans and no races and is not market evidence. Phase 82B Step 09
   runs the second over the completed competitive market. Neither substitutes for
@@ -142,7 +142,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - `docs/steps/79d-exceptional-player-generation-prospect-economy-and-non-vacuous-diagnostics/`
 - Status: Done. All nine ordered documents are closed.
 - The stopped direct `50 x 20` remains explicitly unclaimed; the replacement
-  cohort belongs to Phase 81 Step 12 and must use checkpoints, `50` stable
+  cohort belongs to Phase 81 Step 15 and must use checkpoints, `50` stable
   shards, and exactly `7` workers.
 
 ## Planned Rework Continuation

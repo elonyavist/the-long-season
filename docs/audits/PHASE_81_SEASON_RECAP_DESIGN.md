@@ -27,13 +27,13 @@ It is an **inspection instrument**. It reads facts the season simulation already
 produces and prints them as football, then checks them against bands declared
 here in advance.
 
-It is **not** the phase cohort. Step 12 alone owns the checkpointed `50 x 20`
+It is **not** the phase cohort. Step 15 alone owns the checkpointed `50 x 20`
 and remains the only statistical evidence Phase 81 closes on. Nothing produced
 here is cited as balance evidence, and nothing here may be used to justify
 changing a calibration value. Its job is to make a defect *visible*, not to
 measure its size.
 
-Running it before Step 12 requires phase amendment **A10**, because the phase
+Running it before Step 15 requires phase amendment **A10**, because the phase
 README forbids any cohort before that step. That rule exists to stop premature
 statistical claims, which is exactly what the paragraph above forbids anyway.
 
@@ -63,7 +63,7 @@ Per simulated season, in a readable file per season:
 4. **Shapes fielded** - each formation used, by how many clubs, and the mean
    points of the clubs that used it.
 
-The fourth is not decoration. Step 11B has to raise formation from `0.0312` to
+The fourth is not decoration. Step 14 has to raise formation from `0.0312` to
 `~0.047` as a counter-move reward, and it cannot do that without first knowing
 that clubs actually field different shapes and how those shapes finish.
 
@@ -122,7 +122,7 @@ Stated because a measurement whose population is unstated is not evidence.
   a human manager's decisions matter, which is what the Step 07B decision table
   measures instead.
 - **Sample size.** A hundred seasons resolves gross defects, not small effects.
-  Anything near a band edge is unresolved and belongs to Step 12's cohort.
+  Anything near a band edge is unresolved and belongs to Step 15's cohort.
 
 ## Reading Order
 

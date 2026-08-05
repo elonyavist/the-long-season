@@ -259,13 +259,13 @@ Phase 80 runs no longitudinal cohort. The user accepted further player-model,
 market, and loan reworks after this inventory was frozen, so executing the
 cohort here would validate an intermediate product and be discarded.
 
-The one replacement `50 x 20` belongs only to Phase 81 Step 12, after Phases
+The one replacement `50 x 20` belongs only to Phase 81 Step 15, after Phases
 80A, 80B, and 80C close their bounded gates and Phase 81 completes its earlier
 match-engine steps. Its seed, checkpoint directory, `50` stable shards, `7`
 workers, and report path are frozen in:
 
 - `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_AND_MANAGER_DECISION_ENGINE_DESIGN_CONTRACT.md`
-- `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/12-checkpointed-50x20-phase-report-and-mvp-handoff.md`
+- `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/15-checkpointed-50x20-phase-report-and-mvp-handoff.md`
 
 That cohort validates the complete accepted rework chain and the deferred
 Phase 79D longitudinal evidence; it does not replace Phase 79 Step 14's

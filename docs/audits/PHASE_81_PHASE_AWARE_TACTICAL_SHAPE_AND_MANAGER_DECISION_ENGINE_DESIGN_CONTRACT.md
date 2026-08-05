@@ -168,7 +168,7 @@ coefficients. This is a product gate, not calibration to post-change output.
 
 Step 06 is the first step allowed to claim that the gameplay defect is fixed.
 It runs the frozen end-to-end hierarchy matrix immediately after the new route
-model becomes canonical. Step 12 only monitors that the already-passing
+model becomes canonical. Step 15 only monitors that the already-passing
 hierarchy survives twenty seasons; it is not the first balance evaluation.
 
 ### 3. Use Typed Domain Vocabulary
@@ -536,7 +536,7 @@ should ever pay, and by how much, is the other half of the same decision.
 Neither is a coefficient to tune. Both are targets to choose, and the numbers to
 choose against now exist.
 
-**Answered for formation, and given a step (2026-08-04).** Step 11B takes the
+**Answered for formation, and given a step (2026-08-04).** Step 14 takes the
 target at `~0.047` win share - about five league points a season, beside the
 `0.0467` adjacent squad gap - and states it as a *counter-move* reward rather
 than an absolute one, because a formation with the highest win share against the
@@ -586,10 +586,10 @@ threshold or a denominator.
 Phase 81 accepts that monitor unchanged (A7). The threshold, denominator, and
 `monitor` severity class all stay exactly as inherited: the transfer changes the
 owner, not the severity. Step 06 is the first step able to move it, because it
-owns how many opportunities exist and how they convert; Step 11 is the deadline;
-Step 12 confirms it at cohort scale.
+owns how many opportunities exist and how they convert; Step 13 is the deadline;
+Step 15 confirms it at cohort scale.
 
-The monitor may not be carried a second time. If Step 11 finds it still out of
+The monitor may not be carried a second time. If Step 13 finds it still out of
 band, the fix is reopening Step 06, not naming a third owner - a transfer that
 can be repeated indefinitely is a way of never fixing the defect.
 
@@ -625,12 +625,12 @@ assumes one.
 
 **The anti-pattern the rule guards against is still right.** A monitor whose
 owner can be transferred again and again is never fixed, so "do not name a third
-owner" must not be read as loosened by this. The decision is narrower: if Step 11
+owner" must not be read as loosened by this. The decision is narrower: if Step 13
 finds the monitor out of band, is Step 06 still the correct thing to reopen when
 the step that last moved it is Step 07?
 
 Step 07B recorded the measurement and deliberately changed no rule. This is for
-the contract to answer before Step 11.
+the contract to answer before Step 13.
 
 ## Lineup-Composing Readers Of `Club.playerIds` (A6)
 
@@ -675,7 +675,7 @@ Step 09 needs and requires no migration.
 
 ## Longitudinal Ownership
 
-Phase 81 Step 12 owns this phase's checkpointed `50 x 20`:
+Phase 81 Step 15 owns this phase's checkpointed `50 x 20`:
 
 ```bash
 pnpm cli ten-season-report \
@@ -734,7 +734,7 @@ coinciding at the first loan, and by then the history already exists.
 - No generic optimizer, event bus, strategy registry, plugin system, or
   speculative extension hierarchy.
 - No beta migration or legacy compatibility.
-- No long run before Step 12.
+- No long run before Step 15.
 - No loan, posture, competitive-race, or free-agent behaviour: Phases 82A and
   82B own it and it does not exist yet.
 - No background-world simulator, multi-country topology, or aggregate result
@@ -765,7 +765,7 @@ Phase 81 is complete only when:
 - `pnpm check`, build, dependency, persistence, deterministic replay, diff,
   and Graphify gates pass;
 - the carried `goals_per_match_avg` monitor is inside its unchanged band by
-  Step 11 and stays there at cohort scale;
+  Step 13 and stays there at cohort scale;
 - squad depth is reached through one named accessor, the context constructor
   takes an explicit squad, and match facts attribute to the club a player was
   fielded by;

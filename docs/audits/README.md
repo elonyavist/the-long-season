@@ -64,7 +64,7 @@ they were written and are not retroactively renumbered.
 - `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_REPORT.md` -
   completed Phase 79D implementation and bounded verification, explicit record
   that the stopped `50 x 20` produced no evidence, and the user decision to
-  defer a checkpointed cohort now owned by Phase 81 Step 12.
+  defer a checkpointed cohort now owned by Phase 81 Step 15.
 - `EXCEPTIONAL_PLAYER_GENERATION_AND_PROSPECT_ECONOMY_79D_SPEC.md` - accepted
   corrective contract for archetype-compatible exceptional generation,
   effective rarity budgets, derived public potential ranges, range-aware

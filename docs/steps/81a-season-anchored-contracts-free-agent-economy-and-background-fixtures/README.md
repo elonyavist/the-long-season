@@ -29,7 +29,7 @@ The analysis, the measured evidence, and the accepted work order are in
 
 - Phase 80 and Phase 80A are Done, the latter having transferred its
   `goals_per_match_avg` monitor to Phase 81.
-- Phase 81 is Done. Its Step 12 report records the four seams this phase
+- Phase 81 is Done. Its Step 15 report records the four seams this phase
   consumes: the named squad-depth accessor, the context constructor taking an
   explicit squad, the non-selected club as an ordinary caller, and the match RNG
   keyed by `(worldSeed, fixtureId)`.
@@ -138,7 +138,7 @@ leaving football.
 - Market-density bands are frozen in Step 01, before any behaviour changes, and
   are never adjusted to match what Step 06 measures.
 - Incompatible beta saves are deleted without migration.
-- This phase runs no longitudinal cohort. Phase 81 Step 12 ran the engine
+- This phase runs no longitudinal cohort. Phase 81 Step 15 ran the engine
   cohort; Phase 82B Step 09 owns the market cohort.
 
 ## Ordered Steps

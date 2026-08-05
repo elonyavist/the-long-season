@@ -1,4 +1,4 @@
-# Step 11B - Formation As A Counter-Move
+# Step 14 - Formation As A Counter-Move
 
 ## Status
 
@@ -161,7 +161,7 @@ Constraints if this step takes it:
   target, then re-measured. This is Step 04's frozen `TACTICAL_ROUTE_DEFINITION`
   and reopening it is this step's one model change.
 - A re-measured `goals_per_match_avg`, because this step moves goal-relevant
-  behaviour after Step 11's deadline for it.
+  behaviour after Step 13's deadline for it.
 
 ## The Mechanism, And What It Will Cost
 
@@ -195,7 +195,7 @@ Two frozen invariants will move with it and must be watched rather than adjusted
   `bounded_structural_swing`, the target was wrong.
 - No start before Step 09 has given AI clubs varied formations, verified by
   reading what they actually field rather than by intent.
-- No cohort run. Step 12 owns the `50 x 20` and must run *after* this step,
+- No cohort run. Step 15 owns the `50 x 20` and must run *after* this step,
   because this step changes the engine it measures.
 
 ## Expected Files
@@ -230,5 +230,5 @@ graphify update .
   measured above the noise floor, and choosing the wrong one costs.
 - No formation averages above `0.55` against the field.
 - `bounded_structural_swing` still passes, unmoved.
-- `goals_per_match_avg` is re-measured and handed to Step 12 with its reading.
-- Step 12 is the only next action.
+- `goals_per_match_avg` is re-measured and handed to Step 15 with its reading.
+- Step 15 is the only next action.

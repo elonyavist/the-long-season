@@ -16,7 +16,7 @@ constraining future work, not by being recent.
 ## Current Baseline
 
 Phases 0 through 80A are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - is active; Steps 01 through 10 are Done and Step 11 is
+Manager Decision Engine - is active; Steps 01 through 10 are Done and Step 13 is
 next. Live constraints are in `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
@@ -39,7 +39,7 @@ reports.
 - Phase 78 Step 15 remains open under an explicit documented entry-gate
   override that let Phase 79 proceed. That override is still the only reason
   Phase 79 could start.
-- No later phase claims Step 14 or Step 15. Phase 81 Step 12 and Phase 82B
+- No later phase claims Step 14 or Step 15. Phase 81 Step 15 and Phase 82B
   Step 09 own their own cohorts and are not substitutes.
 
 ### Phase 81 - Phase-Aware Tactical Shape And Manager Decision Engine
@@ -93,7 +93,7 @@ counterexample, and the AI and the manager's own helper now rank footballers on
 one scale rather than two that disagreed. The eleven each side fielded is carried
 out of the played match, so nothing recomposes it afterwards.
 
-**Step 11B is unblocked**: there is now more than one shape for a counter-move to
+**Step 14 is unblocked**: there is now more than one shape for a counter-move to
 be measured against. Two things stay open for later steps - AI formation options
 have no production supplier and are still ranked alphabetically, and the
 opponent's eleven is not durable, so a reloaded reviewed result shows only the
@@ -140,7 +140,7 @@ might work. A back line pushed into attack now reads: own box unprotected,
 exposed in transition, heavy presence in the opposition box. That is the trade
 the manager made, which is the thing he can actually weigh.
 
-**Recommended to Step 11B, not built here.** At half time the manager has watched
+**Recommended to Step 14, not built here.** At half time the manager has watched
 the opponent for `45` minutes, and this panel still reads only his own shape.
 Before kick-off that is right; after it, "they are loading my left" is what a real
 manager thinks. The engine already knows it - Step 04's relational matchup, Step
@@ -148,7 +148,7 @@ manager thinks. The engine already knows it - Step 04's relational matchup, Step
 something you cannot see is guessing, which is likely part of why formation still
 measures `0.0312` while a tactic best-response reaches `+0.0327`.
 
-Left for Step 11: desktop match preparation overflows horizontally at `200%`
+Left for Step 13: desktop match preparation overflows horizontally at `200%`
 text once the squad is filled, in `aside.tls-preparation-squad-panel`. It is
 pre-existing - no test covered that viewport at that zoom - and Step 10's own
 section is clear at the same setting.
@@ -157,7 +157,7 @@ Step 10 did not claim Step 07's `route`, `routeCounts` or `shooterCounts`. It
 rendered shape consequences, not shot explanations, and nothing in the UI reads
 those fields yet.
 
-Step 12 alone runs this phase's checkpointed `50 x 20` with exactly seven
+Step 15 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.
 
 ### Phase 81A - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures

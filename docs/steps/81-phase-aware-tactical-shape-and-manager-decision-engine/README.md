@@ -70,7 +70,7 @@ The governing contract is:
   or compatibility branch remains.
 - UI shows qualitative structured consequences, not formulas or an optimal
   answer.
-- Phase 81 Step 12 alone owns this phase's checkpointed `50 x 20` with exactly
+- Phase 81 Step 15 alone owns this phase's checkpointed `50 x 20` with exactly
   seven workers. It observes the accepted match engine and a world without
   loans or races, so it is engine evidence only; Phase 82B Step 09 owns the
   separate market cohort.
@@ -112,7 +112,7 @@ and come from the market work moving after this phase.
   Definition of Done). Step 01 freezes current behaviour as a regression
   baseline, which would otherwise freeze the out-of-band goal rate along with
   it. The monitor is carried in unchanged from Phase 80A and must be inside its
-  predeclared band by Step 11.
+  predeclared band by Step 13.
 - **A8 - contexts take an explicit squad; match facts record who played**
   (Step 08). The context constructor accepts the players who will play rather
   than deriving them from a club, and recorded match facts and statistics
@@ -146,8 +146,8 @@ and come from the market work moving after this phase.
   `docs/audits/PHASE_81_TACTICAL_SHAPE_BASELINE.md` keeps the retired invariant
   as Step 01 recorded it; it is the before-state and is not regenerated.
 
-- **A10 - one inspection run is permitted before Step 12, and it is never
-  evidence** (Steps 11C, 11D). `No cohort before Step 12` stays as written and
+- **A10 - one inspection run is permitted before Step 15, and it is never
+  evidence** (Step 11 and Step 12). `No cohort before Step 15` stays as written and
   is not weakened: it exists so a smaller run cannot be cited as balance
   measurement and then contradict the real cohort.
 
@@ -155,7 +155,7 @@ and come from the market work moving after this phase.
   the pitch and close without anyone ever looking at a league table. An
   aggregate cannot show that: `goals_per_match_avg` reads the same whether
   strikers or centre backs scored. A scorer chart with roles shows it in one
-  glance, and the cost of finding that out at Step 12 is the whole phase.
+  glance, and the cost of finding that out at Step 15 is the whole phase.
 
   The amendment permits exactly one run of `5 x 20` under a hard condition: **no
   calibration value may change because of it, no band may be widened by it, and
@@ -163,7 +163,7 @@ and come from the market work moving after this phase.
   visible is investigated and handed to the step that owns the behaviour. Step
   12 remains the only statistical cohort Phase 81 closes on, unchanged in seed,
   scale, workers and command. If the condition cannot hold, the run does not
-  happen and the charts wait for Step 12.
+  happen and the charts wait for Step 15.
 
 ## Ordered Steps
 
@@ -177,17 +177,27 @@ and come from the market work moving after this phase.
 8. `08-live-session-persistence-event-schema-and-beta-reset.md`
 9. `09-ai-whole-xi-selection-and-shared-tactical-decisions.md`
 10. `10-pre-match-and-live-tactical-consequence-ui.md`
-11. `11-non-vacuous-tactical-diagnostics-and-integrated-gates.md`
-12. `11C-season-recap-instrument-and-football-plausibility-gates.md`
-13. `11D-hundred-season-engine-inspection.md`
-14. `11B-formation-as-a-counter-move.md`
-15. `12-checkpointed-50x20-phase-report-and-mvp-handoff.md`
+11. `11-season-recap-instrument-and-football-plausibility-gates.md`
+12. `12-hundred-season-engine-inspection.md`
+13. `13-non-vacuous-tactical-diagnostics-and-integrated-gates.md`
+14. `14-formation-as-a-counter-move.md`
+15. `15-checkpointed-50x20-phase-report-and-mvp-handoff.md`
 
-`11C` and `11D` run **before** `11B` on purpose. `11B` has to raise formation
-from `0.0312` to `~0.047` as a counter-move reward, and it cannot judge whether
-it succeeded without a baseline showing which shapes clubs actually field and
-how those shapes finish. The recap is that baseline, and afterwards it is the
-instrument that says whether `11B` made the football better or only the number.
+File order is execution order. The two new steps sit at `11` and `12` for a
+reason, and it is not tidiness.
+
+**Step 13's entry gate requires that no known work remains**, so it cannot
+precede them. It is also the deadline for the carried `goals_per_match_avg`
+monitor, and its own review says that a monitor still out of band reopens Step
+06 - a decision nobody should take having never looked at a league table. Its
+gates read invariants, and invariants stay green while centre backs top the
+scoring chart.
+
+**Step 14** has to raise formation from `0.0312` to `~0.047` as a counter-move
+reward, and it cannot judge whether it succeeded without a baseline showing
+which shapes clubs actually field and how those shapes finish. Step 12 is that
+baseline, and afterwards it is the instrument that says whether Step 14 improved
+the football or only the number.
 
 ## Validation Ladder
 
@@ -222,20 +232,21 @@ instrument that says whether `11B` made the football better or only the number.
   canonical AI-selected XIs. Its selection covers every club in the world (A2)
   and reaches squad depth only through the named accessor (A6).
 - Step 10 presents small qualitative consequences through `@game/ui` and web.
-- Step 11 runs bounded positive-denominator diagnostics, browser QA, absence
-  checks, and the integrated repository gate. It is the deadline for the carried
-  `goals_per_match_avg` monitor (A7).
-- Step 11C turns the facts a season already produces into four football charts -
+- Step 11 turns the facts a season already produces into four football charts -
   table, scorers with role, assists with role, shapes fielded - each with a band
   declared in advance that it can fail. It adds no simulation.
-- Step 11D runs one hundred seasons through them under A10 and reads the result.
+- Step 12 runs one hundred seasons through them under A10 and reads the result.
   It is the first point in the phase where a person looks at a league table and
   a scorer chart and recognises the sport, and it changes nothing.
-- Step 11B then owns formation as a counter-move, with 11D's shape usage and
+- Step 13 runs bounded positive-denominator diagnostics, browser QA, absence
+  checks, and the integrated repository gate. It is the deadline for the carried
+  `goals_per_match_avg` monitor (A7), and it now judges an engine somebody has
+  already looked at.
+- Step 14 then owns formation as a counter-move, with Step 12's shape usage and
   finishing positions as its baseline.
-- Step 12 alone runs/replays the checkpointed `50 x 20`, confirms the carried
+- Step 15 alone runs/replays the checkpointed `50 x 20`, confirms the carried
   monitor inside its band at cohort scale, writes the phase report, and hands
-  control to Phase 81A. Phase 79 Step 14 stays Reopened, paused, and
+  control to Phase 81A. Phase 79's own Step 14 stays Reopened, paused, and
   unclaimed.
 
 ## Mandatory Per-Step Loop
@@ -267,7 +278,7 @@ git diff --check
 graphify update .
 ```
 
-The longitudinal command runs only in Step 12.
+The longitudinal command runs only in Step 15.
 
 ## Clean-Code Gate
 
@@ -298,7 +309,7 @@ The longitudinal command runs only in Step 12.
 - No full pass-chain or generic duel framework.
 - No generic strategy/plugin registry or event bus.
 - No beta compatibility.
-- No cohort before Step 12. The single `5 x 20` inspection run A10 permits is
+- No cohort before Step 15. The single `5 x 20` inspection run A10 permits is
   not one: it produces no evidence and may change nothing.
 - No loan, posture, competitive-race, or free-agent-negotiation behaviour. Those
   belong to Phases 82A and 82B and do not exist yet.
@@ -331,7 +342,7 @@ The longitudinal command runs only in Step 12.
 - Clean-code, repository, browser, persistence, determinism, dependency, diff,
   and Graphify gates pass.
 - The carried `goals_per_match_avg` monitor sits inside its unchanged
-  predeclared band by Step 11 and stays there at cohort scale in Step 12. If it
+  predeclared band by Step 13 and stays there at cohort scale in Step 15. If it
   does not, the phase does not close: the failure is neither re-scoped again nor
   absorbed by adjusting the band.
 - Per-component tick costs are measured and reported for match engine, context

@@ -1,4 +1,4 @@
-# Step 11 - Non-Vacuous Tactical Diagnostics And Integrated Gates
+# Step 13 - Non-Vacuous Tactical Diagnostics And Integrated Gates
 
 ## Status
 
@@ -6,7 +6,8 @@ Not started.
 
 ## Entry Gate
 
-- Phase 81 Steps 01-10 are Done.
+- Phase 81 Steps 01-12 are Done, so the recap has already shown what the engine
+  actually produces before this step judges it.
 - All behaviour thresholds were frozen in Step 01.
 - No known production, persistence, AI, UI, or cleanup work remains.
 
@@ -53,7 +54,7 @@ without weakening thresholds or starting the longitudinal cohort.
 - If the frozen quality-versus-structure hierarchy regresses while AI
   assignment itself remains correct, reopen Step 06 and retune only its
   versioned policy coefficients against the unchanged bands. If AI assignment
-  is incorrect, reopen Step 09 instead. Step 11 performs neither fix.
+  is incorrect, reopen Step 09 instead. Step 13 performs neither fix.
 - If the carried `goals_per_match_avg` monitor is still out of band, reopen
   Step 06, which owns opportunity volume and conversion, and fix it there. Do
   not widen the band, do not reclassify the monitor's severity, and do not
@@ -107,7 +108,7 @@ without weakening thresholds or starting the longitudinal cohort.
 - No production fix or coefficient tuning in this step.
 - No threshold relaxation, warning suppression, seed exception, or empty-gate
   pass.
-- No `50 x 20`; Step 12 alone owns it.
+- No `50 x 20`; Step 15 alone owns it.
 - No new product feature.
 
 ## Expected Files
@@ -153,4 +154,4 @@ graphify update .
 - All planned obsolete paths are absent, including every direct
   `club.playerIds` read in a lineup-composing path.
 - No known local dead code or duplicate owner remains.
-- Step 12 is the only next action; no longitudinal cohort has run.
+- Step 14 is the only next action; no longitudinal cohort has run.

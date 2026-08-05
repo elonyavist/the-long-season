@@ -1,4 +1,4 @@
-# Step 11C - Season Recap Instrument And Football Plausibility Gates
+# Step 11 - Season Recap Instrument And Football Plausibility Gates
 
 ## Status
 
@@ -80,7 +80,7 @@ provably crossable.
 
 - No new simulation, no new season logic, no change to any calibration.
 - No long run. This step proves the instrument on a small deterministic fixture;
-  Step 11D runs it at scale.
+  Step 12 runs it at scale.
 - No band chosen after looking at output. The design contract fixes them first.
 - No tuning of anything to make a band pass.
 - No web surface. This is a diagnostic instrument, not a screen.
@@ -114,4 +114,4 @@ graphify update .
 - Every band is frozen, named, owned once, and proven crossable by a test.
 - Role bands read the canonical player role and nothing else.
 - No simulation, calibration or gameplay behaviour changed.
-- Step 11D is the only next action.
+- Step 12 is the only next action.

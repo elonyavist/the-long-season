@@ -319,13 +319,13 @@ Added, with ownership:
 - `AGENTS.md`, for the two standing rules this step's defects earned -
   `Reachability` and `Gate Measurement`.
 
-## Left For Step 11
+## Left For Step 13
 
 - **Desktop match preparation overflows horizontally at `200%` text** once the
   squad has players: `aside.tls-preparation-squad-panel` and the squad table
   inside it reach `1708px` in a `1441px` viewport. Measured before this step's
   section exists, in a column it does not share, so it is pre-existing and
-  unowned - no test covered desktop preparation at `200%`. Step 11 owns browser
+  unowned - no test covered desktop preparation at `200%`. Step 13 owns browser
   QA and should either fix or formally accept it.
 - ~~A full `23`-shape by ability sweep against the shipped calibration.~~
   **Withdrawn on review.** A manager can select `9` of the `23`, so those `9` are
@@ -348,7 +348,7 @@ Added, with ownership:
 - Localization, keyboard, focus, narrow, `200%`, normal/reduced-motion, and
   screenshot checks pass.
 - React contains no tactical calculation or duplicate priority policy.
-- Step 11 is the only next action.
+- Step 13 is the only next action.
 
 ### 2026-08-04 - docs/steps/81-.../10-pre-match-and-live-tactical-consequence-ui.md
 
@@ -370,13 +370,13 @@ Added, with ownership:
   `playwright -g "shape consequences"` `2` passed, screenshots `84a` through
   `84g` covering incomplete, ordinary, extreme, reduced-motion, `200%` text,
   narrow and live; `git diff --check` clean; `graphify update .` run.
-- Follow-up: the items under `Left For Step 11` above. Nothing here blocks
-  Step 11.
-- Recommended for Step 11B, not done here: **at half time the manager has
+- Follow-up: the items under `Left For Step 13` above. Nothing here blocks
+  Step 13.
+- Recommended for Step 14, not done here: **at half time the manager has
   watched the opponent for 45 minutes and this panel still reads only his own
   shape.** Before kick-off that is right - he should not see their team. After
   it, "they are loading my left" is what a real manager thinks, the engine
   already knows it through Step 04's relational matchup, and it is precisely the
   information a counter-move needs. Changing shape to answer something you
   cannot see is guessing, which is the likeliest reason formation still measures
-  `0.0312` against the `~0.047` Step 11B owes.
+  `0.0312` against the `~0.047` Step 14 owes.

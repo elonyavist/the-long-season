@@ -1,13 +1,13 @@
-# Step 11D - Hundred-Season Engine Inspection
+# Step 12 - Hundred-Season Engine Inspection
 
 ## Status
 
 Not started. **Requires amendment A10**, because the phase README forbids any
-cohort before Step 12.
+cohort before Step 15.
 
 ## Goal
 
-Run a hundred simulated seasons through the Step 11C instrument, read the four
+Run a hundred simulated seasons through the Step 11 instrument, read the four
 charts, and answer one question with evidence a person can check by eye: does
 the football Phase 81 built look like football?
 
@@ -19,19 +19,19 @@ sport. No invariant substitutes for that.
 
 ## Why This Needs An Amendment
 
-`No cohort before Step 12` is a locked decision, and it is a good one: it stops
+`No cohort before Step 15` is a locked decision, and it is a good one: it stops
 a smaller run being cited as balance evidence and then contradicting the real
 cohort. This step does not weaken it.
 
-**A10 permits one inspection run before Step 12, on the condition that its
+**A10 permits one inspection run before Step 15, on the condition that its
 output is never evidence.** No calibration value may be changed because of it,
 no band may be widened by it, and no later document may cite its numbers as
-balance measurement. Step 12 remains the only statistical cohort Phase 81 closes
+balance measurement. Step 15 remains the only statistical cohort Phase 81 closes
 on. What this run produces is a *look*, and a defect it makes visible is
 investigated, not measured.
 
 If that condition cannot hold, this step does not run and the charts wait for
-Step 12.
+Step 15.
 
 ## Scale, And Why This Size
 
@@ -39,7 +39,7 @@ Step 12.
 
 Twenty seasons because a dynasty and a collapse both need time to appear; five
 worlds because the role and shape defects this is looking for are gross and show
-up immediately, while anything subtle is Step 12's job at ten times the size.
+up immediately, while anything subtle is Step 15's job at ten times the size.
 
 Recorded as a rate wherever the generated league system's club count could
 differ, per the design contract.
@@ -56,14 +56,14 @@ differ, per the design contract.
 - The report states its population in full: worlds, seasons, seed prefix, club
   count, one country, no market, no human manager - and that it is not evidence.
 - Distinct champions, distinct formations fielded, and the mean points of the
-  clubs using each shape, because Step 11B needs all three before it can reward
+  clubs using each shape, because Step 14 needs all three before it can reward
   a counter-move.
 
 ## Reading The Result
 
 - **Every band passing is not the goal.** The goal is knowing which ones do not
   and why. A run where everything passes on the first attempt deserves a check
-  that the gates can fail at all - Step 11C proves that, and this step confirms
+  that the gates can fail at all - Step 11 proves that, and this step confirms
   it held.
 - A failing band is a finding. Record it, name the likely owner, and hand it to
   the step that owns that behaviour. Do not fix it here and do not widen it.
@@ -75,7 +75,7 @@ differ, per the design contract.
   observes.
 - No band widened, no seed excepted, no season excluded, no warning suppressed.
 - No claim that this run is balance evidence, market evidence, or a substitute
-  for Step 12.
+  for Step 15.
 - No second run to get a nicer result.
 - No manager-facing surface.
 
@@ -125,4 +125,5 @@ determinism claim, and it costs one extra run to prove.
 - The report states its population and states plainly that it is not evidence.
 - Two identical runs produce identical reports.
 - Findings recorded with an owner; nothing tuned, widened or excluded.
-- Step 11B or Step 12 is the next action, depending on what the charts showed.
+- Step 13 is the next action, and it goes in knowing what the charts showed
+  rather than reading invariants blind.

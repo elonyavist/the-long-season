@@ -1,4 +1,4 @@
-# Step 12 - Checkpointed 50x20, Phase Report And Phase 81A Handoff
+# Step 15 - Checkpointed 50x20, Phase Report And Phase 81A Handoff
 
 ## Status
 
@@ -8,7 +8,7 @@ Not started.
 
 - Phase 80 and Phase 80A are Done, the latter having carried its
   `goals_per_match_avg` monitor into this phase.
-- Phase 81 Steps 01-11 are Done, and Step 11 recorded the carried monitor
+- Phase 81 Steps 01-14 are Done, and Step 13 recorded the carried monitor
   inside its unchanged band.
 - Phases 82A and 82B are Planned and not started: no loans, postures, or
   competitive races exist in the world this cohort observes.
