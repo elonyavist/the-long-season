@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Done 2026-08-05. All required checks green.
 
 ## Goal
 
@@ -108,6 +108,62 @@ git diff --check
 graphify update .
 ```
 
+## What Was Found
+
+### The batch path does not choose shapes, and the design contract said it did
+
+Reading the code before writing any produced the step's most valuable finding.
+An earlier draft of the design contract sourced the fourth chart from *"the
+formation each AI club selected (Step 09)"*. That is false for this path.
+
+`simulateSeason(...)` takes `aiSelection.formation` as a caller input and holds
+it still on purpose - its own comment calls itself *"the instrument that holds a
+shape and a tactic still in order to measure one of them"*. Step 09 gave real
+shape choice to `selectCareerAiTeam(...)`, which serves career play and the live
+web session, and never touched this one.
+
+`ten-season-report/report-data.ts:4086` then hands `FORMATION_CATALOG["4-4-2"]`
+to **every club**, with identical `0.5 / 0.5 / 0.5 / 0.5` tactics. So every club
+in every season of the long-run report plays the same shape with the same
+instructions.
+
+Three consequences, all recorded rather than worked around:
+
+- The instrument takes `formationByClubId` as an explicit input and reports what
+  it was told. It cannot discover a shape that was never chosen.
+- `distinct_formations >= 5` **fails today, correctly**. A league where everybody
+  plays `4-4-2` is the defect the band exists to catch.
+- **Step 14's first prerequisite was marked met and is not.** Two of its five
+  fixed-`4-4-2` sites closed with Step 09; the three report paths did not. Its
+  document now carries the corrected table. Supplying varied shapes is real work
+  for Step 12, not a projection.
+
+### Two questions need two total mappings
+
+`SEASON_RECAP_ROLE_GROUP` answers *who is supposed to score*; a first attempt
+derived *who is supposed to assist* from it. That swept the striker into the
+creator group, because wingers and attacking midfielders legitimately do both
+and share his group. A test caught it.
+
+They are now two `satisfies`-checked mappings over the same union.
+`SEASON_RECAP_CREATOR_ROLE` excludes `goalkeeper`, `center_back` and `striker`,
+and neither mapping is computed from the other.
+
+### The impossible-values check earned its place immediately
+
+It failed on the first run - against the *test fixture*, which was generating
+descending goal totals that went negative past the eighth row. The check is
+blunt by design and it caught a defect the football bands would have reported as
+merely unusual.
+
+### Reachability
+
+Fourteen bands, fourteen seasons that violate them, per `AGENTS.md`. The one
+that mattered most is `goalkeepers_in_top_scorers`: it reads `0` on every
+healthy season, so the only way to know it works is to put a keeper in the chart
+and watch it fail. A final test asserts the proven list equals the declared
+check list, so a band added without a failing season fails there.
+
 ## Definition Of Done
 
 - Four charts build deterministically from an existing season result.
@@ -115,3 +171,19 @@ graphify update .
 - Role bands read the canonical player role and nothing else.
 - No simulation, calibration or gameplay behaviour changed.
 - Step 12 is the only next action.
+
+### 2026-08-05 - docs/steps/81-.../11-season-recap-instrument-...md
+
+- Status: Done
+- Outcome: one season's facts now print as four football charts - table,
+  scorers with role, assists with role, shapes fielded - with fourteen bands
+  declared in advance and every one proven crossable.
+- Adopted solution: `packages/simulation-tools/src/season-recap/`, two files.
+  `season-recap.ts` projects an existing `SimulateSeasonResult` and computes no
+  football; `season-recap-gates.ts` owns every band and returns the observed
+  number beside each verdict. Two `satisfies` role mappings, not one.
+- Verification: `pnpm exec vitest run packages/simulation-tools/src/season-recap/`
+  `42/42`; `pnpm check` green; `git diff --check` clean; `graphify update .` run.
+- Follow-up: **Step 12 must supply varied formations per club.** Until it does,
+  `distinct_formations` fails and Step 14 has nothing to counter. That is the
+  finding this step contributes, and it is not a defect in the instrument.

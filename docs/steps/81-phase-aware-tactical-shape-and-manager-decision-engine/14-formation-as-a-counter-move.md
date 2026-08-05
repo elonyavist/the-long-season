@@ -86,22 +86,35 @@ chase and an invariant this phase can keep at the same time.
 
 ## First Prerequisite - Every Opponent In The Game Plays `4-4-2`
 
-**Met by Step 09.** Recorded because the reasoning still binds: starting before
-it produced the opposite of this step's goal, and the same trap returns if AI
-shape variety ever regresses.
+**Met on the career path only. NOT met on the measurement path.** An earlier
+edit of this document claimed Step 09 had closed it outright; that was wrong and
+Step 11 found it by reading the code.
 
-Every AI-controlled club in the shipped game fields a fixed `4-4-2`:
+Step 09 gave real shape choice to `selectCareerAiTeam(...)`, which serves career
+play and the live web session. It did not touch `simulateSeason(...)`, whose own
+comment says it deliberately *holds a shape and a tactic still in order to
+measure one of them*, and which therefore takes the formation as a caller input.
+Three report paths still hand it one fixed shape - the table below marks which.
 
-| Site | What it does |
-|---|---|
-| `matchday-adapter.ts` `defaultCanonicalRoleForSlot` | hardcoded `4-4-2` role order for every opponent |
-| `apps/cli career/progression.ts` | the same default opponent lineup |
-| `ten-season-report/report-data.ts` | `FORMATION_CATALOG["4-4-2"]` |
-| `live-match-control-report-data.ts` | `FORMATION_CATALOG["4-4-2"]` |
-| `tactical-shape-report-data.ts` | `FORMATION_CATALOG["4-4-2"]` |
+**This is the path this step measures on.** Until a run varies the formations,
+a counter-move reward would be tuned against a world where every opponent plays
+`4-4-2`, which is precisely the trap the section was written to prevent. Step 12
+owns supplying that variety.
 
-Formations vary in exactly two places: the human manager's own preparation
-screen, and the audit's measurement population.
+Where the fixed `4-4-2` stood when this section was written, and where it still
+stands after Step 09:
+
+| Site | Then | Now |
+|---|---|---|
+| `matchday-adapter.ts` `defaultCanonicalRoleForSlot` | hardcoded `4-4-2` role order for every opponent | **gone** - `selectCareerAiTeam` picks the shape |
+| `apps/cli career/progression.ts` | the same default opponent lineup | **gone**, same door |
+| `ten-season-report/report-data.ts` | `FORMATION_CATALOG["4-4-2"]` | **still there**, line `4086`, plus identical `0.5` tactics for every club |
+| `live-match-control-report-data.ts` | `FORMATION_CATALOG["4-4-2"]` | **still there** |
+| `tactical-shape-report-data.ts` | `FORMATION_CATALOG["4-4-2"]` | **still there**, and deliberately so - it composes its own sides to measure shape |
+
+Two of five closed. Formations vary in career play, on the manager's own
+preparation screen, and in the audit's composed population - **not in the
+long-run report this step and Step 15 both measure on.**
 
 So a counter-move reward built today would have nothing to counter. It would be
 tuned and measured as *"countering `4-4-2` is worth `0.047`"* - a single right
@@ -117,6 +130,27 @@ Step 09 - AI whole-XI selection and shared tactical decisions - is where opponen
 get real formations. Until its work is done and AI clubs demonstrably field
 varied shapes, every number this step would produce describes a world that does
 not exist.
+
+### What Step 12 closed, and the seam it opened
+
+Step 12 supplied the variety: `assignFormationsByClub(...)` gives each club a
+curated shape derived from `(worldSeed, clubId)`, so the long-run report now
+fields a full spread of formations instead of one. The prerequisite is met on the
+measurement path, through a setup choice rather than a selector.
+
+**It also found what forcing a shape costs, and this step inherits it.**
+`bestFieldedShape(...)` uses `input.formation` when the caller supplies one and
+never falls back; only when the formation is `undefined` does it search the
+catalog for a shape the roster can fill. So a forced shape a thin squad cannot
+fill throws `not_enough_players` and ends the fixture, where the career path
+would simply have chosen differently.
+
+This step is the one that intends to make formation a decision worth making. A
+decision that can crash the fixture it is made for is not one, and a manager who
+picks a shape his squad cannot fill deserves the answer football gives - somebody
+plays out of position - not an exception. Whether that belongs here or in a
+Phase 82A squad-depth rule is this step's call to make, but it may not be left
+unowned.
 
 ## Second Prerequisite - A Manager Cannot Counter What He Cannot See
 

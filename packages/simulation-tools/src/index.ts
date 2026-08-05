@@ -291,3 +291,39 @@ export {
   type LiveMatchControlWorldSummary,
   type RunLiveMatchControlGateInput,
 } from "./live-match/live-match-control-gate.ts";
+
+export {
+  buildSeasonRecap,
+  isCreatorRole,
+  SEASON_RECAP_CHART_SIZE,
+  SEASON_RECAP_CREATOR_ROLE,
+  SEASON_RECAP_ROLE_GROUP,
+  SeasonRecapError,
+  type BuildSeasonRecapInput,
+  type SeasonRecap,
+  type SeasonRecapErrorCode,
+  type SeasonRecapFacts,
+  type SeasonRecapPlayer,
+  type SeasonRecapPlayerRow,
+  type SeasonRecapRoleGroup,
+  type SeasonRecapShapeRow,
+  type SeasonRecapTableRow,
+} from "./season-recap/season-recap.ts";
+
+export {
+  evaluateSeasonRecapGates,
+  SEASON_RECAP_ANCHOR_ROLES,
+  SEASON_RECAP_BANDS,
+  SEASON_RECAP_CHECK_KEYS,
+  type SeasonRecapBand,
+  type SeasonRecapCheck,
+  type SeasonRecapCheckKey,
+  type SeasonRecapGateResult,
+} from "./season-recap/season-recap-gates.ts";
+
+export {
+  assignFormationsByClub,
+  FORMATION_ASSIGNMENT_STREAM,
+  formationForClub,
+  type AssignFormationsByClubInput,
+} from "./season-recap/formation-assignment.ts";

@@ -157,13 +157,28 @@ and come from the market work moving after this phase.
   strikers or centre backs scored. A scorer chart with roles shows it in one
   glance, and the cost of finding that out at Step 15 is the whole phase.
 
-  The amendment permits exactly one run of `5 x 20` under a hard condition: **no
+  The amendment permits exactly one run of `20 x 5` under a hard condition: **no
   calibration value may change because of it, no band may be widened by it, and
   no document may cite its numbers as balance evidence.** A defect it makes
   visible is investigated and handed to the step that owns the behaviour. Step
-  12 remains the only statistical cohort Phase 81 closes on, unchanged in seed,
-  scale, workers and command. If the condition cannot hold, the run does not
-  happen and the charts wait for Step 15.
+  **15** remains the only statistical cohort Phase 81 closes on, unchanged in
+  seed, scale, workers and command. If the condition cannot hold, the run does
+  not happen and the charts wait for Step 15.
+
+  Two clarifications the run itself forced, both recorded rather than worked
+  around:
+
+  - **`20 x 5`, not `5 x 20`.** Club ability spread falls from `6.04` to `2.92`
+    across twenty seasons, so a long horizon measures a world whose clubs have
+    stopped being unequal and reports it as a match-engine result. Twenty
+    independent squad generations read early beat five read late. The long
+    horizon is Step 15's question and Step 15 is powered for it.
+  - **A world that cannot be simulated to the end is excluded and declared.**
+    `no seed excepted, no season excluded` was written to stop an inconvenient
+    result being dropped, and it still forbids exactly that. It does not require
+    reporting nothing when a world *crashes*: those worlds are counted, named,
+    and their cause printed in the report, with the selection effect stated. A
+    silent drop remains forbidden.
 
 ## Ordered Steps
 
@@ -235,7 +250,8 @@ the football or only the number.
 - Step 11 turns the facts a season already produces into four football charts -
   table, scorers with role, assists with role, shapes fielded - each with a band
   declared in advance that it can fail. It adds no simulation.
-- Step 12 runs one hundred seasons through them under A10 and reads the result.
+- Step 12 runs one hundred seasons through them under A10 and reads the result,
+  `20` worlds by `5` seasons, with a per-club shape the report path never had.
   It is the first point in the phase where a person looks at a league table and
   a scorer chart and recognises the sport, and it changes nothing.
 - Step 13 runs bounded positive-denominator diagnostics, browser QA, absence
@@ -309,7 +325,7 @@ The longitudinal command runs only in Step 15.
 - No full pass-chain or generic duel framework.
 - No generic strategy/plugin registry or event bus.
 - No beta compatibility.
-- No cohort before Step 15. The single `5 x 20` inspection run A10 permits is
+- No cohort before Step 15. The single `20 x 5` inspection run A10 permits is
   not one: it produces no evidence and may change nothing.
 - No loan, posture, competitive-race, or free-agent-negotiation behaviour. Those
   belong to Phases 82A and 82B and do not exist yet.

@@ -36,6 +36,7 @@ import {
   summarizePlayerDevelopmentAbilities,
   type AdvanceCareerReportRefreshMode,
   type CareerActivePlayerStockEntry,
+  type FormationKey,
   type LineupSlot,
   type RoleWeightProfile,
   type SimulateSeasonInput,
@@ -183,6 +184,32 @@ export interface Phase80APotentialOutcomeCalibration {
 }
 
 /** Minimal deterministic season facts retained by the CLI long-run report. */
+/**
+ * Optional hooks that let one inspection run vary shapes and read seasons.
+ *
+ * Both are absent for every carried report. With no `formationForClub` the
+ * season input is byte-identical to what it always was, so the `goals_per_match`
+ * monitor and every other carried number stay comparable; with no
+ * `observeSeasonResult` nothing retains a full `SimulateSeasonResult`, which is
+ * what keeps the 750-world gate inside its memory budget.
+ *
+ * `observeSeasonResult` fires for the selected competition only, before the
+ * post-season career refresh, and must stay read-only.
+ */
+export interface SingleWorldInspection {
+  /** Shape a club fields, replacing the report's fixed `4-4-2`. */
+  readonly formationForClub?: (clubId: string) => FormationKey;
+  /** Receives each completed selected-competition season. */
+  readonly observeSeasonResult?: (context: {
+    readonly seasonNumber: number;
+    readonly seasonSeed: string;
+    readonly result: SimulateSeasonResult;
+    readonly careerState: CliCareerState;
+    /** Generated world, so an observer can resolve club display names. */
+    readonly league: FakeDomesticWorld;
+  }) => void;
+}
+
 export interface LongRunRetainedSeasonResult {
   /** Number of completed league fixtures. */
   readonly fixtureCount: number;
@@ -1226,6 +1253,7 @@ export function createSingleWorldReport(
     careerState: CliCareerState,
   ) => void,
   observeOpeningCareerState?: (careerState: CliCareerState) => void,
+  inspection?: SingleWorldInspection,
 ): SingleWorldLongRunReport {
   const league = createFakeDomesticWorld({ worldSeed: seed });
   const initialCareerState = careerStateFromNewWorld("save:ten-season-report" as CliSaveId, league, seed);
@@ -1253,7 +1281,7 @@ export function createSingleWorldReport(
     initialCareerState,
     retainSeasonResult: retainLongRunSeasonResult,
     createSeasonInput: ({ seasonSeed, careerState }) =>
-      createDomesticCareerSeasonInput(league, careerState as CliCareerState, seasonSeed),
+      createDomesticCareerSeasonInput(league, careerState as CliCareerState, seasonSeed, inspection),
     advanceCareerState: (context) =>
       advanceCareerForReport(
         league,
@@ -1263,6 +1291,7 @@ export function createSingleWorldReport(
         exceptionalStockSnapshots,
         canonicalFreeAgentSigningObservations,
         observeParticipationRows,
+        inspection,
       ),
     observeAdvancedSeason: ({ seasonNumber, careerState }) => {
       if (seasonNumber === 10) {
@@ -3542,8 +3571,12 @@ function summarizeClubAbilityHierarchy(
 
 /**
  * Computes the top-to-bottom average current-ability spread for senior squads.
+ *
+ * Exported so a per-season trace reads the same definition of "how strong a
+ * club is" that the initial/final hierarchy already reports. A second local
+ * average would let the two disagree while both looked right.
  */
-function summarizeClubAbilityHierarchySnapshot(
+export function summarizeClubAbilityHierarchySnapshot(
   league: FakeDomesticWorld,
   careerState: CliCareerState,
 ): ClubAbilityHierarchySnapshot {
@@ -4037,6 +4070,7 @@ function createDomesticCareerSeasonInput(
   world: FakeDomesticWorld,
   careerState: CliCareerState,
   seed: string,
+  inspection?: SingleWorldInspection,
 ): SimulateSeasonInput {
   const competition = selectedCompetition(world, careerState);
   return createCompetitionCareerSeasonInput(
@@ -4044,6 +4078,7 @@ function createDomesticCareerSeasonInput(
     careerState,
     competitionSeasonSeed(seed, competition.id),
     competition.id,
+    inspection,
   );
 }
 
@@ -4053,6 +4088,7 @@ function createCompetitionCareerSeasonInput(
   careerState: CliCareerState,
   seed: string,
   competitionId: FakeDomesticWorld["domesticCompetitionWorld"]["competitionIds"][number],
+  inspection?: SingleWorldInspection,
 ): SimulateSeasonInput {
   const competition =
     careerState.gameState.domesticCompetitionWorld?.competitions[competitionId];
@@ -4083,7 +4119,14 @@ function createCompetitionCareerSeasonInput(
         mentality: "balanced",
       },
       aiSelection: {
-        formation: FORMATION_CATALOG["4-4-2"],
+        // The report has always fielded one shape for every club, because
+        // `simulateSeason(...)` holds the formation still on purpose and Step 09
+        // gave real shape choice to the career path only. An inspection run may
+        // supply a per-club shape; with no policy this stays exactly the fixed
+        // `4-4-2` every carried report was measured against.
+        formation: FORMATION_CATALOG[
+          inspection?.formationForClub?.(clubId) ?? "4-4-2"
+        ],
         potentialProjectionPolicy:
           valuationConfig.potentialProjectionPolicy,
         ratingScale: valuationConfig.ratingScale,
@@ -4261,6 +4304,7 @@ function advanceCareerForReport(
     rows: readonly CliPlayerParticipationRow[],
     careerState: CliCareerState,
   ) => void,
+  inspection?: SingleWorldInspection,
 ): AdvanceCareerLongRunSeasonResult {
   const nextSeasonId =
     `${context.careerState.gameState.calendar.currentSeasonId}:long-run-${context.seasonNumber}` as AdvanceCareerReportRefreshMode["nextSeasonId"];
@@ -4285,8 +4329,18 @@ function advanceCareerForReport(
           reportCareerState,
           competitionSeasonSeed(context.seasonSeed, competitionId),
           competitionId,
+          inspection,
         )),
   );
+  // The selected competition is the one the charts read, and this is the last
+  // point at which its full result exists: the runner projects it away next.
+  inspection?.observeSeasonResult?.({
+    seasonNumber: context.seasonNumber,
+    seasonSeed: context.seasonSeed,
+    result: context.seasonResult,
+    careerState: reportCareerState,
+    league,
+  });
   const careerStateWithParticipation = accrueCompletedSeasonParticipation({
     careerState: reportCareerState,
     seasonResults,
@@ -5268,14 +5322,34 @@ function percentile(values: readonly number[], rank: number): number {
   return roundReportNumber(sorted[index] ?? 0);
 }
 
-if (!isMainThread) {
+/** Worker payload kinds this module is the entry point for. */
+const TEN_SEASON_REPORT_WORKER_KINDS: ReadonlySet<string> = new Set([
+  "long-run-gate",
+  "player-development-cohort",
+]);
+
+/**
+ * Whether a worker payload belongs to this module at all.
+ *
+ * This block runs on import, so it also runs inside *other* modules' workers
+ * that happen to import this one. Answering their payloads - even to reject
+ * them - posts a failure message their own entry point never sent, and the run
+ * dies with this module's error. Claim only what this module owns.
+ */
+function isTenSeasonReportWorkerPayload(value: unknown): boolean {
+  const kind = (value as { readonly reportKind?: string } | undefined)?.reportKind;
+
+  return kind !== undefined && TEN_SEASON_REPORT_WORKER_KINDS.has(kind);
+}
+
+if (!isMainThread && isTenSeasonReportWorkerPayload(workerData)) {
   try {
     if (isLongRunGateWorkerData(workerData)) {
       parentPort?.postMessage(runLongRunGatePartition(workerData));
     } else if (isPlayerDevelopmentCohortWorkerData(workerData)) {
       parentPort?.postMessage(runPlayerDevelopmentCohortWorker(workerData));
     } else {
-      throw new Error("Unsupported ten-season report worker payload");
+      throw new Error("Malformed ten-season report worker payload");
     }
   } catch (error) {
     parentPort?.postMessage({

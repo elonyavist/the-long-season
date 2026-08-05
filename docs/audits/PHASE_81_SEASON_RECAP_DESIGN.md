@@ -46,11 +46,61 @@ Nothing here simulates anything new. Every field already exists:
 | League table | `SimulateSeasonResult.table` (`LeagueTableRow[]`) |
 | Goals, assists | `SimulateSeasonResult.playerSummaryStats` (`SeasonPlayerSummaryStatRow`) |
 | Role | `Player.primaryRole`, joined by `playerId` |
-| Shape fielded | the formation each AI club selected (Step 09) |
+| Shape fielded | supplied per club by whoever ran the season - see below |
 
 `apps/cli/src/commands/ten-season-report/report-data.ts` already retains both
 `table` and `playerSummaryStats` per season and aggregates them away. The
 instrument keeps them and prints them instead.
+
+### Correction: the batch path does not choose shapes
+
+An earlier draft of this contract said the fourth chart would read *"the
+formation each AI club selected (Step 09)"*. **The code says otherwise, and the
+code wins.**
+
+`simulateSeason(...)` takes `aiSelection.formation` as an input and holds it
+still on purpose - its own comment says it is *"the instrument that holds a
+shape and a tactic still in order to measure one of them"*. Step 09 gave real
+shape choice to the **career** path (`selectCareerAiTeam`), not to this one.
+
+`report-data.ts:4086` then hands `FORMATION_CATALOG["4-4-2"]` to every club,
+with identical tactics `0.5 / 0.5 / 0.5 / 0.5`. So today **every club in every
+season of the long-run report plays the same shape with the same instructions.**
+
+Two consequences:
+
+- The instrument cannot *discover* the shape. It takes a per-club formation as
+  an explicit input and reports what it was told. That is the honest seam, and
+  it stays correct whatever the runner decides.
+- **Varying the shapes is real work for Step 12**, not a projection. Until a run
+  assigns different formations to different clubs, the fourth chart reports one
+  formation and the `>= 5` band below fails - correctly, because a league where
+  everybody plays `4-4-2` is the defect that band exists to catch.
+
+### How Step 12 supplied them, and what forcing a shape costs
+
+`assignFormationsByClub(...)` derives one curated shape per club from
+`(worldSeed, clubId)` and nothing else. Reading no ability and no table position
+is the whole guarantee that no shape can inherit the strength of the clubs
+fielding it, and it is structural: it is visible in the signature, which is worth
+more than a correlation measured on one population.
+
+Doing it exposed a real seam that the fixed `4-4-2` had hidden. `selectAiMatchSquad`
+takes the formation as a *fixed* input on this path: `bestFieldedShape(...)` uses
+`input.formation` when one is given and never falls back. When no formation is
+given - the career path Step 09 built - it searches all `23` shapes for one the
+roster can fill. So:
+
+- **Career path**: the club always fields something. An unfillable shape is never
+  chosen, because choosing is what that path does.
+- **Batch path with a forced shape**: an unfillable shape throws
+  `not_enough_players`, and the world ends mid-career.
+
+A thin roster cannot fill every curated shape, so the two paths diverge exactly
+where a manager would expect a compromise. Real football answers this by playing
+somebody out of position; the selector answers it by refusing. That is a finding
+for Step 14, which is the step that intends to make formation a decision worth
+making - and a decision that can crash the fixture it is made for is not one.
 
 ## The Four Charts
 
@@ -96,12 +146,25 @@ Role checks, which are the sharpest of the lot:
 | centre backs in the top ten scorers | `<= 1` |
 | top ten assists who are midfielders or wide players | `>= 0.55` |
 
+The two groups, over the canonical `PlayerRole` union, so neither is a judgement
+made at the call site:
+
+| Group | Roles |
+|---|---|
+| **finisher** | `striker`, `winger`, `attacking_midfielder` |
+| **creator** | every role except `goalkeeper`, `center_back` and `striker` - the midfielders and the wide defenders |
+
+`striker` is deliberately outside the creator group. Forwards do assist, but a
+top-ten assist chart *led* by them is not the football this engine is imitating,
+and a group generous enough to include everyone would only ever catch a
+goalkeeper - which the scorer checks already do.
+
 Across the whole inspection:
 
 | Check | Band | Why |
 |---|---|---|
 | distinct champions over `20` seasons | `>= 3` | no permanent dynasty |
-| distinct formations fielded in a season | `>= 5` | Step 09 gave clubs real shapes; this proves they use them |
+| distinct formations fielded in a season | `>= 5` | a league where everybody plays one shape is not a league. Fails today by design - see the correction above |
 | seasons with any `NaN`, negative or impossible value | `0` | absolute |
 
 **A band that fails is a finding, never a reason to widen the band.** The
