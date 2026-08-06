@@ -16,7 +16,7 @@ constraining future work, not by being recent.
 ## Current Baseline
 
 Phases 0 through 80A are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - is active; Steps 01 through 10 are Done and Step 13 is
+Manager Decision Engine - is active; Steps 01 through 13 are Done and Step 14 is
 next. Live constraints are in `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
@@ -148,10 +148,21 @@ manager thinks. The engine already knows it - Step 04's relational matchup, Step
 something you cannot see is guessing, which is likely part of why formation still
 measures `0.0312` while a tactic best-response reaches `+0.0327`.
 
-Left for Step 13: desktop match preparation overflows horizontally at `200%`
-text once the squad is filled, in `aside.tls-preparation-squad-panel`. It is
-pre-existing - no test covered that viewport at that zoom - and Step 10's own
-section is clear at the same setting.
+Left for Step 13, and **done there on 2026-08-06**: desktop match preparation
+overflowed horizontally at `200%` text once the squad was filled, in
+`aside.tls-preparation-squad-panel`. Pre-existing, and no test covered that
+viewport at that zoom, so Step 13 added the case before touching anything and
+measured the panel at `736px` starting `240px` past the right edge of a `1441px`
+viewport. `736px` is `23rem` at a doubled root: the grid track floors are `rem`
+and grow with text size while the one-column breakpoint is `px` and does not, so
+the two floors reached `1856px` and the breakpoint stayed silent. Both floors are
+now capped against the board's own width; the layout above `1180px` at ordinary
+text is unchanged, and the missing test is in the suite.
+
+Step 13 also found `pnpm web:visual:qa` red since Phase 81 Step 08, which had
+bumped the OPFS schema without moving the persistence spec's literal. **It
+appears in no per-step check block before Step 13**, only in the phase-level one,
+which is why five steps passed over it. Web steps should carry it themselves.
 
 Step 10 did not claim Step 07's `route`, `routeCounts` or `shooterCounts`. It
 rendered shape consequences, not shot explanations, and nothing in the UI reads

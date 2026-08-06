@@ -6,6 +6,7 @@ import {
   derivePlayerValuation,
   derivePublicPlayerAssessment,
   findNextFixtureEligibilityBlockers,
+  playerSquadDepartment,
   selectCareerPlayerStatistics,
   type CareerFinanceRejectionReason,
   type PlayerValuationConfig,
@@ -200,7 +201,7 @@ export function presentCareerSquad(
       return {
         playerId: String(player.id),
         name: `${player.firstName} ${player.lastName}`,
-        roleKey: broadRole(player.primaryRole),
+        roleKey: playerSquadDepartment(player),
         ...(positionKey === undefined ? {} : { positionKey }),
         ...(fitness === undefined ? {} : { fitness }),
       };
@@ -578,13 +579,6 @@ function selectionFor(
   if (startingIds.has(playerId)) return "starting_xi";
   if (substituteIds.has(playerId)) return "substitute";
   return "unselected";
-}
-
-function broadRole(role: string | undefined): "goalkeeper" | "defender" | "midfielder" | "attacker" {
-  if (role === "goalkeeper") return "goalkeeper";
-  if (role === "center_back" || role === "full_back") return "defender";
-  if (role === "striker" || role === "wide_forward") return "attacker";
-  return "midfielder";
 }
 
 function toPositionSuitability(suitability: TacticalBoardRoleSuitability): "natural" | "adapted" | "weak" {

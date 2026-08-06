@@ -113,6 +113,14 @@ and come from the market work moving after this phase.
   baseline, which would otherwise freeze the out-of-band goal rate along with
   it. The monitor is carried in unchanged from Phase 80A and must be inside its
   predeclared band by Step 13.
+
+  **Discharged at Step 13 on 2026-08-06**, `20/0/0` pass/warn/fail over twenty
+  worlds of ten seasons, mean `2.760`, against the inherited `36/634/80`.
+  Threshold, denominator and severity class are exactly as inherited and no owner
+  was reopened, so the recorded disagreement about whether Step 06 or Step 07
+  owns the movement is moot and stays unresolved on purpose. Step 15 still
+  confirms it at cohort scale; if it is out of band there, the question returns
+  with it.
 - **A8 - contexts take an explicit squad; match facts record who played**
   (Step 08). The context constructor accepts the players who will play rather
   than deriving them from a club, and recorded match facts and statistics
@@ -257,7 +265,12 @@ the football or only the number.
 - Step 13 runs bounded positive-denominator diagnostics, browser QA, absence
   checks, and the integrated repository gate. It is the deadline for the carried
   `goals_per_match_avg` monitor (A7), and it now judges an engine somebody has
-  already looked at.
+  already looked at. **Done 2026-08-06.** Every frozen invariant passes on three
+  populations; A7 is discharged at `20/0/0` and is not carried a third time; the
+  web four-role collapse was found live and fixed in Step 02, reopened; and the
+  step's own A6 Definition-of-Done line is recorded as not met rather than
+  claimed. Its main result is for Step 14: the structural shape gain is not
+  reproducible across seed populations.
 - Step 14 then owns formation as a counter-move, with Step 12's shape usage and
   finishing positions as its baseline.
 - Step 15 alone runs/replays the checkpointed `50 x 20`, confirms the carried

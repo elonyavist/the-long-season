@@ -2,7 +2,46 @@
 
 ## Status
 
-Done 2026-08-04, all gates green.
+Done 2026-08-04. Reopened and closed again on 2026-08-06 by Step 13's browser
+gate; see below.
+
+### Reopened 2026-08-06 - The Schema Bump Left Its Persistence QA Behind
+
+This step moved the OPFS schema `22 -> 23` and did not move
+`apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts`, which asserted the shipped
+version as a literal `22`. Step 13 is the first Phase 81 step whose Required
+Checks include `pnpm web:visual:qa`, so this is where it surfaced.
+
+**Nobody skipped a declared check.** No per-step check block in Steps 01-12 lists
+the browser suite; only the phase-level block and Step 13 do. This step's own
+checks were targeted vitest plus typecheck, and none of them reads that spec.
+That is the finding worth keeping: a gate that lives only in the phase-level
+block is a gate that runs once, at the end.
+
+The stale literal hid a second and worse problem. The spec seeds a *future*
+schema and requires the app to reject and preserve it. That fixture was version
+`23`, so after the bump the "future" database was the shipped one - the assertion
+would have been checking that the app rejects its own schema. Playwright stops a
+test at the first failed expectation, so the `22` mismatch masked it and those
+lines never ran.
+
+#### What Was Changed
+
+Only the spec. The schema, the migrations and the reset behaviour are as this
+step shipped them; nothing about persistence was re-decided.
+
+`SQLITE_CAREER_SCHEMA_VERSION` is already public through `@game/storage`, so the
+three versions are now derived from it - beta at `-2`, shipped, future at `+1`,
+with the marker string built from the future number - and passed into
+`page.evaluate` rather than written twice. The next bump moves all three
+together, and the future fixture cannot quietly stop being ahead of the app.
+
+#### Verification
+
+```text
+pnpm --filter @game/web run typecheck   exit 0
+pnpm web:visual:qa                      see Step 13's report
+```
 
 ## Goal
 
@@ -91,6 +130,7 @@ that follows and must survive refresh without rerolling or changing meaning.
 - `packages/storage/src/career-storage.contract.test.ts`
 - `apps/web/src/features/matchday/matchday-adapter.ts`
 - `apps/web/src/features/matchday/matchday-adapter.test.ts`
+- `apps/web/src/visual-qa/sqlite-opfs-storage.spec.ts` (2026-08-06 reopen)
 - `docs/PROJECT_STATUS.md`
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`
 - this step document

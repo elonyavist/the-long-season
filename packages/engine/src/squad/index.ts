@@ -13,6 +13,8 @@ export {
   FORMATION_KEYS,
   createSquadDepth,
   isFormationKey,
+  playerSquadDepartment,
   type CanonicalPlayerRole,
   type FormationKey,
+  type PlayerSquadDepartment,
 } from "@game/domain";

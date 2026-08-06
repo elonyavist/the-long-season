@@ -148,6 +148,39 @@ test("desktop journey owns screen focus and preserves same-screen interaction fo
   }
 });
 
+/**
+ * The viewport and zoom nothing covered, which is why the defect survived.
+ *
+ * `1441px` is a desktop width where the preparation board keeps two columns, and
+ * `200%` text is the WCAG 2.2 AA resize target. Every other zoom case in this
+ * file is narrow, so the one combination that fails - wide enough for the
+ * two-column layout, zoomed enough for its `rem` track minimums to exceed the
+ * viewport - had no test.
+ */
+test("desktop match preparation reflows at 200% text once the squad is filled", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1441, height: 900 } });
+  try {
+    await resetCareerStorage(page);
+    await page.getByRole("button", { name: "New career", exact: true }).click();
+    await page.getByRole("button", { name: "Inbox", exact: true }).click();
+    await page.getByRole("button", { name: "Prepare match", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Match preparation", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Auto", exact: true }).click();
+    await assertNoPageOverflow(page, "desktop Preparation at 1441px");
+
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await assertNoPageOverflow(page, "desktop Preparation at 1441px and 200% text");
+    await capture(page, "04a-preparation-desktop-text-zoom");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+  } finally {
+    await page.close();
+  }
+});
+
 test("wide journey keeps every current football decision surface coherent", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   try {

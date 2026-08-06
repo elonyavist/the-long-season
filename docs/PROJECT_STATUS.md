@@ -28,23 +28,28 @@ Manager Decision Engine - is active, under
 | 10 - pre-match and live tactical consequence UI | Done 2026-08-05, all gates green |
 | 11 - season recap instrument | Done 2026-08-05, all gates green. Design: `docs/audits/PHASE_81_SEASON_RECAP_DESIGN.md` |
 | 12 - `20 x 5` engine inspection | Done 2026-08-05 under A10, all gates green. Seven findings: `docs/audits/PHASE_81_HUNDRED_SEASON_INSPECTION.md` |
-| 13 - diagnostics and integrated gates | Not started. A7 deadline; owns F1, F4, F6, F7 |
-| 14 - formation as a counter-move | Not started. Shape variety now exists on the measurement path; a manager still cannot see the opponent's shape, and F3 is its to own |
+| 13 - diagnostics and integrated gates | Done 2026-08-06, all gates green. A7 discharged. Seven findings, two of them unowned: `docs/audits/PHASE_81_TACTICAL_SHAPE_BOUNDED_DIAGNOSTICS.md` |
+| 14 - formation as a counter-move | Not started. Shape variety exists on the measurement path, F3 is its to own, and Step 13 showed its `0.0312` baseline is population-specific: measure on two seed prefixes and report the smaller |
 | 15 - checkpointed `50 x 20`, phase report, handoff | Not started |
 
 ## Current Active Step
 
-- Step: `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/13-*.md`
-- Next action: Step 13, which now judges the engine on evidence rather than blind.
-- **The A10 inspection run is spent.** One was permitted before Step 15 and it
-  has been used. No further cohort of any size before Step 15.
-- Two decisions left for the phase contract by Step 07B, still untaken: the A7
-  rule names the wrong owner, and the `1.5x` ratio below is emergent, not chosen.
+- Step: `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/14-*.md`
+- Next action: Step 14, knowing its baseline moves with the seed prefix.
+- **The A10 inspection run is spent**, and no further cohort of any size runs
+  before Step 15.
+- One decision left for the phase contract by Step 07B: the `1.5x` ratio below is
+  emergent, not chosen.
+- **Steps 12-13 left two findings unowned**, both needing an owner before this
+  phase closes: the seven-of-ten role generation below, and the Phase 80A check
+  `young_stored_ceiling_six_stock_arrival_category_placement`, red on `13` of `20`
+  worlds on a Phase 81 prefix while Phase 80A's own `750 x 3` was green.
 - Step 08 advanced both beta versions without migrating (OPFS `22 -> 23`, career
   envelope `13 -> 14`). **Existing careers are deleted, not upgraded.**
-- **Desktop match preparation overflows horizontally at `200%` text** once the
-  squad is filled - `aside.tls-preparation-squad-panel` reaches `1708px` in a
-  `1441px` viewport. Pre-existing, untested, a WCAG 2.2 AA failure. Step 13.
+- **A gate written only in the phase-level block runs once, at the end.**
+  `pnpm web:visual:qa` is in no per-step block before Step 13, so it first ran
+  there and was already red from Step 08's bump. Put it in the per-step blocks
+  that touch web or persistence, or stop implying it runs every step.
 
 ## Live Constraints
 
@@ -58,23 +63,18 @@ Manager Decision Engine - is active, under
 
 - Phase 81 Step 15 owns the checkpointed `50 x 20`, seven workers: engine
   evidence only, never market, after Step 14 changes the engine. Phase 79's own
-  Steps 14 and 15 above are unrelated. Phase 82B Step 09 owns the second, over
-  the completed market.
-- **A10 permits exactly one `5 x 20` inspection run before it** (Step 12), on a
+  Steps 14-15 are unrelated; Phase 82B Step 09 owns the second, over the market.
+- **A10 permitted exactly one `20 x 5` inspection run before it** (Step 12), on a
   hard condition: never evidence, changes no calibration, widens no band, cited by
-  nothing as measurement. An aggregate cannot show whether strikers or centre backs
-  scored those goals. No cohort anywhere else.
+  nothing as measurement. No cohort anywhere else.
 
-### Carried `goals_per_match_avg` Monitor (A7)
+### Carried `goals_per_match_avg` Monitor (A7) - Discharged
 
-Phase 80A closed with one gate red and transferred it unchanged: `36/634/80`
-pass/warn/fail over `750` worlds, every failure high. Threshold, denominator and
-severity are as inherited, the distribution is never an accepted result, Step 13
-is the deadline, Step 15 confirms at cohort scale, and it may not be carried a
-third time: out of band there, the rule says reopen Step 06. The ten-season
-report meanwhile went `3.08` warn to `2.74` at Step 06 and `2.78` since, all PASS
-with nothing tuned - **so Step 07 owns that movement and the rule above names the
-wrong owner**; the phase contract decides. Nobody re-runs the `750` before Step 15.
+Inherited from Phase 80A at `36/634/80` over `750` worlds, every failure high.
+**Step 13 measured `20/0/0` on 2026-08-06**, twenty worlds of ten seasons, mean
+`2.760`, band pass `2.3..3.0`, nothing touched and no owner reopened. Step 15
+confirms at cohort scale and brings the unresolved Step 06-versus-07 ownership
+question back with it if it reddens.
 
 ### Which Manager Decisions Actually Count, Measured
 
@@ -87,16 +87,20 @@ Re-measured by Step 07B at `1050` scenario pairs: `2100` matches a row, one
 | one division tier of squad quality | `0.2521` |
 | tactic sliders, best setting against worst | `0.0858` |
 | an adjacent squad-quality gap, two top clubs | `0.0467` |
-| best structural shape gain (`3-5-2`) | `0.0312` |
+| best structural shape gain (`3-5-2`) | `0.0312`, **see below** |
 | worst curated formation (`4-3-2-1`) | `0.0305` |
 
 The full eight-row table is in Step 07B's document. The finding is the shape, not
-the margin: seven of eight sit below the reference and none is meaningfully above
-it. Tactics and compositions are not flat - best responses gain `+0.0327` and
-`+0.0312` and collapse to `+0.0033` against their own counter, working
-rock-paper-scissors. **Formation is the outlier**, downside and no upside. Step 14
-owns raising it to `~0.047` on Step 12's shape baseline; a manager still cannot
-see what to counter.
+the margin: seven of eight curated formations sit below the reference and none is
+meaningfully above it. **Formation is the outlier**, downside and no upside. Step
+14 owns raising it to `~0.047`; a manager still cannot see what to counter.
+
+**Step 13: the small rows are not the same kind of number as the large ones.**
+Same code, same `1050` pairs, prefix the only difference - the tier edge and the
+broken-shape cost reproduce to three decimals, the structural shape gain reads
+`0.0312` on one prefix and `0.0095` on the other, both under the `0.0295` floor,
+and every reading ever taken spans `0.0095..0.0431`. Treat a row below the floor
+as unmeasured; measure Step 14's reward on two prefixes and report the smaller.
 
 ### Frozen Baseline, Slots And Intrinsic Shape (Steps 01-03)
 
@@ -104,19 +108,24 @@ see what to counter.
   never regenerated; a `TACTICAL_SHAPE_THRESHOLDS` value takes an amendment.
 - One division tier of squad quality is worth `0.2521` win share at identical
   shape; every structure-versus-quality claim is measured against it.
-- Structure may gain at most `0.75 x` that and incoherence must cost `1 x` it.
-  No composition or tactic profile may stay above `0.55` against its field.
+- Structure may gain at most `0.75 x` that, incoherence must cost `1 x` it - Step
+  13 measured `1.92..1.95`, up from Step 06's `1.8313` by four times its own
+  population noise, so the engine moved and the margin grew - and no composition
+  or tactic profile may stay above `0.55` against its field.
 - The dominance population is the `66` reachable department compositions, not the
-  `23` named presets, which cover `10`: the board locks the goalkeeper slot only
-  and no validator caps a department, so extreme shapes are manager choices. The
-  bands are conditioned on a **single-country** population (A4). All pass.
-
+  `23` named presets, which cover `10`: the board locks only the goalkeeper slot
+  and no validator caps a department, so extreme shapes are manager choices. Bands
+  are conditioned on a **single-country** population (A4); all pass on three seed
+  populations (Step 13).
 - A lineup slot stores only `slotId`, `playerId`, `canonicalRole` and `side`; line,
   position family and role-weight key derive through `canonicalRoleTacticalFacts(...)`
   and `roleWeightKeyForCanonicalRole(...)`, and no derived field goes back.
-  `fieldablePlayerIds` / `fieldablePlayerIdsFor` own squad depth (A6), enforced by
-  `check:squad-depth` over nine lineup-composing files; only Phase 82A widens it.
-
+- `fieldablePlayerIds` owns squad depth (A6) and `playerSquadDepartment` owns a
+  player's department, each with an absence assertion in `pnpm check`. **The A6
+  one enumerates nine files so it cannot see a tenth**, and Step 13 found three
+  outside it (`career-squad-adapter.ts:245`, `formation-fit-output.ts:108`,
+  `report-data.ts:4106`). Nothing differs today; Phase 82A's loan change stops
+  being single-definition. Step 02 owns making it discover, not enumerate.
 - The intrinsic profile carries **no tactic effect**: every knob has a Step 06
   owner reading it, so a tactic term in `tactical-shape.ts` counts twice.
 - `match-tactics-calibration` is **one** versioned asset, one section per concern,
@@ -149,11 +158,10 @@ see what to counter.
   `teamStrengthFromSlotScores(...)` ignores it, so the absence of a double penalty
   is structural rather than a promise.
 - `TACTICAL_SHAPE_TASK_KIND` decides where it acts. `coordination` tasks scale
-  with it; `presence` tasks - `final_third_presence`, `counter_threat` - never do,
-  because the destination role's ability weights already price the move. **Any
-  synthesised eleven must therefore hold natural positions**, or coordination is
-  suppressed and presence is not - a uniform bias that cost Step 10 a whole
-  reference. `POSITION_SUITABILITIES` is the one canonical order.
+  with it; `presence` tasks never do, because the destination role's ability
+  weights already price the move. **Any synthesised eleven must therefore hold
+  natural positions**, or coordination is suppressed and presence is not - a bias
+  that cost Step 10 a whole reference. `POSITION_SUITABILITIES` is the order.
 
 ### Tactic Semantics Seam (Step 06)
 
@@ -164,8 +172,7 @@ see what to counter.
   `routeSelectionSharpness`, costs far more than its number suggests, and
   `deriveOpportunityRate` reads the *difference* between the two plans, so an
   under-priced cost is charged twice. Solve exposures numerically, not from JSON.
-  A knob that changes where the ball goes moves **both** sides' attempt rate; one
-  with no route preference moves only its own, read from the same mapping above.
+  A knob that changes where the ball goes moves **both** sides' attempt rate.
 - **`pressing` owns press cohesion, not shape.** Over `3294` reachable boards
   `pressing_cohesion` never falls below `0.90` of ordinary (Step 10): pressing
   costs the ball over the top, never a limp press.
@@ -173,13 +180,14 @@ see what to counter.
 ### Occasion And Persistence Seam (Steps 07-08)
 
 - `OccasionContext` is built before the resolver runs and is the only door into
-  actor selection; nothing after resolution chooses a player. **An actor edge is a
-  deviation from the pool the actor was drawn from**, in the same attribute off
-  the same accessor, so an absent `incidentProfiles` gives `0` not a constant. The
-  goalkeeper has no pool: Step 07A scales his *department*, floor `0.35`.
-- **Player attributes are required on every `MatchTeamContext`**, one per lineup
-  player, no fallback. Never hand-assemble the literal: two producers each with
-  their own copy is what let career opponents play at a flat `10`.
+  actor selection; nothing after resolution chooses a player (re-checked by Step
+  13). **An actor edge is a deviation from the pool the actor was drawn from**, in
+  the same attribute off the same accessor, so an absent `incidentProfiles` gives
+  `0` not a constant. The goalkeeper has no pool: Step 07A scales his
+  *department*, floor `0.35`.
+- **Player attributes are required on every `MatchTeamContext`**, no fallback.
+  Never hand-assemble the literal: two producers each with their own copy is what
+  let career opponents play at a flat `10`.
 - A match fact belongs to the club that **fielded** the player, never the one
   holding his contract (A8). An event's own side decides; a registration names the
   club only for a player with no events. Cards are not club-attributed at all.
@@ -199,22 +207,20 @@ see what to counter.
 - The AI policy is **one policy, not a per-club map**, and carries no formation
   (A2). A map invites answering only for the clubs the manager faces; a club lines
   up in the shape its own squad is built for.
-- Filling the shape is never tradeable against quality in `assignFootballXi(...)`.
-  All `23` shapes cost `3.1x` a fixed one, not `23x`; Phase 81A owns the real
-  tick budget (A3).
+- Filling the shape is never tradeable against quality in `assignFootballXi(...)`;
+  all `23` shapes cost `3.1x` a fixed one, not `23x`, and Phase 81A owns A3.
 - `ProgressCareerFixtureAdvanced.fieldedLineups` is the only answer to who played
-  where. A reloaded reviewed result leaves it empty rather than re-selecting the
-  opponent's eleven from a squad that has since changed.
+  where; a reloaded reviewed result leaves it empty rather than re-selecting from
+  a squad that has since changed.
 - **Shape on `structuralScore`, eleven on `score`.** Only ability and fit choose a
   club's system; fitness and workload choose who fills it. One score for both let
   a tired defender change a formation for a week.
 - **A lost goalkeeper is replaced by the substitute keeper**, an outfielder going
-  off to make room. Promoting somebody on the pitch is the last resort and ranks
-  by reflexes and handling in both paths, never by slot name.
-- **Shape-derived tactics exceed this step's `No new AI tactic control` rule**,
+  off to make room; promoting somebody on the pitch is the last resort and ranks
+  by reflexes and handling, never by slot name.
+- **Shape-derived tactics exceed Step 09's `No new AI tactic control` rule**,
   added on explicit instruction. Width, directness and risk deviate from the
-  *measured* catalog mean, so the `23` shapes average back to the caller's setup
-  and Step 06's balance point is unmoved; `pressing` and `mentality` keep theirs.
+  *measured* catalog mean, so the `23` shapes average back to the caller's setup.
 
 ### Manager Explanation Seam (Step 10)
 
@@ -222,49 +228,45 @@ see what to counter.
   one high in all twelve, so a raw reading describes the squad, not the shape just
   chosen. `deriveTacticalShapeEmphasis(...)` divides by what an ordinary curated
   eleven puts there, then by the side's own mean of those ratios: `1` is ordinary,
-  squad quality gone. `deriveOrdinaryTacticalShapeReference(...)` reads that eleven
-  from the live calibration; frozen numbers would answer for a retuned asset.
+  squad quality gone. `deriveOrdinaryTacticalShapeReference(...)` reads that
+  eleven from the live calibration, never from frozen numbers.
 - Frozen presentation policy, in `@game/ui` per the step contract: `0.75` / `1.25`
   bands, `1.25` flank ratio, `0.6` knob, `3` shown, measured on the `9`
-  **selectable** shapes (`[0.771, 1.133]`) - the whole displayed population. A
-  retune re-derives them, caught by `match-preparation-adapter.test.ts`.
-- Reachability is a rule's property, not a capacity's (`AGENTS.md`). A per-rule
-  sweep over every reachable board is a gate here.
+  **selectable** shapes (`[0.771, 1.133]`). A retune re-derives them, caught by
+  `match-preparation-adapter.test.ts`.
 - **A knob is reported through the route it concedes, never restated.**
   `press_without_cover` names `pressing` and reads `TACTIC_KNOB_EXPOSED_ROUTE` and
   `TACTICAL_ROUTE_DEFINITION` for the rest, so Steps 06 and 04 keep sole ownership
-  of what a tactic costs. The other three concede routes the shape side covers.
+  of what a tactic costs.
 - **The engine is the live authority, the board is the pre-match one**, chosen
   explicitly in `use-career-screen-presentations.ts` with no fallback. A rejected
   command leaves the observations put: it never reached
   `applyConfirmedProgressiveTeamChanges`. It reads the manager's own shape only;
   Step 14 owes the half-time opponent read.
 - **One of the three slots is held for what the shape bought.** Costs rank first,
-  so a broken shape filled every slot with them. Anything later that ranks
+  so a broken shape filled every slot with them; anything later that ranks
   manager-facing findings owes the same reservation.
-- Observation label keys are template literal types, so a consequence missing a
-  translation fails the build instead of throwing at a manager. **The other
-  `presentationMessageKey` families still need that** - incomplete ones crash at
-  runtime and `check:localized-text` misses them. Unowned.
+- Observation label keys are template literal types, so a missing translation
+  fails the build. **The other `presentationMessageKey` families still need
+  that** - incomplete ones crash at runtime and `check:localized-text` misses
+  them. Unowned.
 
 ### Season Recap And Inspection Seam (Steps 11-12)
 
 - **The world generates seven of the ten canonical roles.** No
   `attacking_midfielder`, `defensive_midfielder` or `wide_midfielder` is ever
-  created; `12` of the `23` curated shapes need the first. The catalog asks for
-  roles the world does not make - which crashed `5` of `20` inspection worlds
-  with `not_enough_players` and thins every assist chart. **Unowned, and upstream
-  of both.** `4-4-2` needs none of them, which is why nothing saw it before.
+  created, while `12` of the `23` curated shapes need the first - which crashed
+  `5` of `20` inspection worlds and thins every assist chart. **Unowned.**
+  `4-4-2` needs none of them, which is why nothing saw it before.
 - **A forced shape has no fallback.** `bestFieldedShape(...)` searches the catalog
   only when the formation is `undefined`. The career path chooses and is immune;
   a caller that fixes the shape gets an exception where football plays somebody
   out of position. Step 14 owns it.
 - `SEASON_RECAP_BANDS` owns fourteen bands, frozen before any output existed and
   expressed as rates per match. **A failing band is a finding, never a number to
-  widen.** They were declared from top-flight football and the observed
-  competitions are the generated second and third divisions, which really are
-  more compressed: the three failing table bands have two candidate owners, and
-  widening one would answer the question by assuming it.
+  widen.** They were declared from top-flight football while the observed
+  competitions are generated lower divisions, which really are more compressed:
+  the three failing table bands have two candidate owners.
 - Shape assignment is a **setup choice, not a selector**: `(worldSeed, clubId)`
   and nothing else, so no shape inherits its clubs' strength. Whether AI clubs
   should *choose* on this path changes what Step 15 measures - Step 14 decides.
@@ -281,8 +283,6 @@ see what to counter.
   and no transfer or contract event alone changes it.
 - Squad floors use selectable depth (`owned present + incoming loans - outgoing
   loans`), which Phase 82A implements. `Club.playerIds` stays ownership.
-- Engine and domain emit structured facts only; LLM usage is authoring-time
-  content work, never runtime gameplay logic.
 
 ## Update Protocol
 

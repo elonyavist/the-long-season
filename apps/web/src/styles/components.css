@@ -2137,9 +2137,23 @@
   font: inherit;
 }
 
+/*
+ * Neither column may floor the board wider than the space it has.
+ *
+ * The track minimums are in `rem` and grow with the reader's text size; the
+ * one-column breakpoint below is in `px` and does not. At 200% text those two
+ * floors reach `1856px` inside a `1441px` viewport, so the squad panel left the
+ * screen while the breakpoint stayed silent - a WCAG 2.2 AA resize failure that
+ * no test covered, because every other zoom case here is narrow.
+ *
+ * The percentages cap each floor against the board's own width, leaving room for
+ * the gap. Below `1180px` the breakpoint still owns the collapse and at ordinary
+ * text sizes both `min()` calls resolve to the `rem` value, so the layout above
+ * that width is unchanged.
+ */
 .tls-preparation-board {
   display: grid;
-  grid-template-columns: minmax(35rem, 1.42fr) minmax(23rem, 0.72fr);
+  grid-template-columns: minmax(min(35rem, 62%), 1.42fr) minmax(min(23rem, 34%), 0.72fr);
   gap: var(--tls-space-4);
   align-items: start;
 }

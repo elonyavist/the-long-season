@@ -2079,7 +2079,13 @@ longer the execution order. Read them in this sequence instead:
 
 1. **Phase 81** - phase-aware tactical shape and manager decision engine. It
    owns the goal-rate monitor carried out of Phase 80A and leaves the seams the
-   background world needs.
+   background world needs. **The monitor came inside band at Step 13 on
+   2026-08-06**, `20/0/0` over twenty worlds of ten seasons against the inherited
+   `36/634/80`, with threshold, denominator and severity untouched; Step 15
+   confirms it at cohort scale. Step 13 also left one Phase 80A check red on its
+   own population - `young_stored_ceiling_six_stock_arrival_category_placement`,
+   `13` of `20` worlds - which Phase 81 does not own and which needs one before
+   this phase closes.
 2. **Phase 81A** - season-anchored contracts, free-agent economy and background
    fixtures. Expiry anchored to the season boundary through one named owner,
    offered terms in months inside the accepted `18-30` band, an AI free-agent

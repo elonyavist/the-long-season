@@ -1,5 +1,6 @@
 import {
   fieldablePlayerIdsFor,
+  playerSquadDepartment,
   roleWeightKeyForCanonicalRole,
   advanceProgressiveMatchMinute,
   applyProgressiveAiInGameDecisions,
@@ -1873,24 +1874,7 @@ function compareIncomingSubstitutionOptions(
 }
 
 function playerBroadRoleKey(player: Player | undefined): string | undefined {
-  switch (player?.primaryRole) {
-    case "goalkeeper":
-      return "gk";
-    case "center_back":
-    case "full_back":
-    case "wing_back":
-      return "defender";
-    case "defensive_midfielder":
-    case "central_midfielder":
-    case "attacking_midfielder":
-    case "wide_midfielder":
-    case "winger":
-      return "midfielder";
-    case "striker":
-      return "attacker";
-    case undefined:
-      return undefined;
-  }
+  return player === undefined ? undefined : playerSquadDepartment(player);
 }
 
 function playerStatInputs(

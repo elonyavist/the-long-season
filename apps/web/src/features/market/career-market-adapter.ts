@@ -11,6 +11,7 @@ import {
   evaluateCareerContractCapacity,
   evaluateMarketActionEligibility,
   evaluateTransferFeeCapacity,
+  playerSquadDepartment,
   selectCareerPlayerStatistics,
   type PlayerValuationConfig,
   type SubmitTransferOfferInput,
@@ -150,7 +151,7 @@ function buildReadyMarketPresentation(
       return {
         playerId: String(player.id),
         name: `${player.firstName} ${player.lastName}`,
-        roleKey: broadRole(player.primaryRole),
+        roleKey: playerSquadDepartment(player),
         ...(positionKey === undefined ? {} : { positionKey }),
         ...(dynamic === undefined ? {} : { fitness: Number(dynamic.fitness) }),
       };
@@ -853,13 +854,6 @@ function toPositionSuitability(
   if (suitability === "natural") return "natural";
   if (suitability === "accomplished" || suitability === "competent") return "adapted";
   return "weak";
-}
-
-function broadRole(role: string | undefined): "goalkeeper" | "defender" | "midfielder" | "attacker" {
-  if (role === "goalkeeper") return "goalkeeper";
-  if (role === "center_back" || role === "full_back") return "defender";
-  if (role === "striker" || role === "wide_forward") return "attacker";
-  return "midfielder";
 }
 
 function competitionName(

@@ -4,10 +4,24 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SQLITE_CAREER_SCHEMA_VERSION } from "@game/storage";
 import { expect, test } from "playwright/test";
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(CURRENT_DIR, "../../../..");
+
+/**
+ * The three schema versions this spec needs, all derived from the one that ships.
+ *
+ * They were literals - `21`, `22`, `23` - until Step 08 moved the shipped schema
+ * to `23` and this spec kept asserting `22`. The bump was correct; the copy of
+ * the number was not. Deriving them means the next bump moves all three together
+ * and the "future" fixture stays genuinely ahead of what the app supports, which
+ * is the only thing that makes the rejection assertion mean anything.
+ */
+const BETA_SCHEMA_VERSION = SQLITE_CAREER_SCHEMA_VERSION - 2;
+const FUTURE_SCHEMA_VERSION = SQLITE_CAREER_SCHEMA_VERSION + 1;
+const FUTURE_SCHEMA_MARKER = `preserve-future-schema-v${FUTURE_SCHEMA_VERSION}`;
 const PORT = 5192;
 const URL = `http://127.0.0.1:${PORT}/`;
 let server: ChildProcess;
@@ -24,10 +38,10 @@ test.afterAll(() => {
   server.kill("SIGTERM");
 });
 
-test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and rolls back atomically", async ({ page }) => {
+test("SQLite OPFS resets an older beta, preserves a future schema, round-trips the shipped one, and rolls back atomically", async ({ page }) => {
   await page.goto(URL);
 
-  const result = await page.evaluate(async ({ repoRoot }) => {
+  const result = await page.evaluate(async ({ repoRoot, betaSchemaVersion, futureSchemaVersion, futureSchemaMarker }) => {
     const databaseFileName = "the-long-season-careers.sqlite3";
     const storageRoot = await navigator.storage.getDirectory();
     try {
@@ -96,8 +110,10 @@ test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and ro
       globalThis.URL.revokeObjectURL(workerUrl);
       return result;
     };
-    const seedResult = await runSqliteFixtureTask({ kind: "seed", version: 21 });
-    if (!seedResult.ok) throw new Error(`Unable to seed SQLite beta v21: ${seedResult.message ?? "unknown error"}`);
+    const seedResult = await runSqliteFixtureTask({ kind: "seed", version: betaSchemaVersion });
+    if (!seedResult.ok) {
+      throw new Error(`Unable to seed SQLite beta v${betaSchemaVersion}: ${seedResult.message ?? "unknown error"}`);
+    }
 
     const persistenceModulePath = "/src/infrastructure/persistence/create-web-career-storage.ts";
     const runtimeModulePath = "/src/runtime/web-career-runtime.ts";
@@ -429,9 +445,11 @@ test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and ro
     await secondHandle.storage.deleteCareer(secondSaveId as never);
     await secondHandle.close();
 
-    const futureMarker = "preserve-future-schema-v23";
-    const futureSeed = await runSqliteFixtureTask({ kind: "seed", version: 23, marker: futureMarker });
-    if (!futureSeed.ok) throw new Error(`Unable to seed SQLite future v23: ${futureSeed.message ?? "unknown error"}`);
+    const futureMarker = futureSchemaMarker;
+    const futureSeed = await runSqliteFixtureTask({ kind: "seed", version: futureSchemaVersion, marker: futureMarker });
+    if (!futureSeed.ok) {
+      throw new Error(`Unable to seed SQLite future v${futureSchemaVersion}: ${futureSeed.message ?? "unknown error"}`);
+    }
 
     let futureSchemaRejected = false;
     let futureSchemaErrorCode: string | undefined;
@@ -449,7 +467,7 @@ test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and ro
     }
     const futureInspection = await runSqliteFixtureTask({ kind: "inspect" });
     if (!futureInspection.ok) {
-      throw new Error(`Unable to inspect SQLite future v23: ${futureInspection.message ?? "unknown error"}`);
+      throw new Error(`Unable to inspect SQLite future v${futureSchemaVersion}: ${futureInspection.message ?? "unknown error"}`);
     }
     let futureDatabaseExists = false;
     try {
@@ -468,11 +486,19 @@ test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and ro
       futureSchemaMarker: futureInspection.marker,
       futureDatabaseExists,
     };
-  }, { repoRoot: REPO_ROOT });
+  }, {
+    repoRoot: REPO_ROOT,
+    betaSchemaVersion: BETA_SCHEMA_VERSION,
+    futureSchemaVersion: FUTURE_SCHEMA_VERSION,
+    futureSchemaMarker: FUTURE_SCHEMA_MARKER,
+  });
 
   expect(result.crossOriginIsolated).toBe(true);
   expect(result.metadata.name.length).toBeGreaterThan(0);
-  expect(result.storageInfo).toMatchObject({ schemaVersion: 22, betaResetPerformed: true });
+  expect(result.storageInfo).toMatchObject({
+    schemaVersion: SQLITE_CAREER_SCHEMA_VERSION,
+    betaResetPerformed: true,
+  });
   expect(result.worldRoundTripExact).toBe(true);
   expect(result.negotiationRoundTripExact).toBe(true);
   expect(result.archivedPlayerStatisticsRoundTripExact).toBe(true);
@@ -495,8 +521,8 @@ test("SQLite OPFS resets beta v21, preserves future v23, round-trips v22, and ro
   expect(result.localCareerKeys).toEqual([]);
   expect(result.futureSchemaRejected).toBe(true);
   expect(result.futureSchemaErrorCode).toBe("unsupported_schema_version");
-  expect(result.futureSchemaVersion).toBe(23);
-  expect(result.futureSchemaMarker).toBe("preserve-future-schema-v23");
+  expect(result.futureSchemaVersion).toBe(FUTURE_SCHEMA_VERSION);
+  expect(result.futureSchemaMarker).toBe(FUTURE_SCHEMA_MARKER);
   expect(result.futureDatabaseExists).toBe(true);
 });
 

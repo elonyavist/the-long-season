@@ -44,6 +44,41 @@ reference and none is meaningfully above it, so the decision can cost `~0.0305`
 and can gain nothing. It is the one manager decision with a downside and no
 upside, and it is the most visible decision in the game.
 
+### What Step 13 Found About This Table, 2026-08-06
+
+**The `+0.0312` row is not the same kind of number as the rows around it, and
+this step's verification has to account for that.**
+
+Step 13 ran the same instrument on two seed populations at the same `1050`
+scenario pairs, same code, prefix the only difference. The large effects agreed:
+the division-tier edge `0.2521` both times, the `0-0-10` deficit `0.4852` and
+`0.4860`, the quality hierarchy `0.926` and `0.9169`. The best structural shape
+gain read **`0.0312` on one prefix and `0.0095` on the other** - it lost two
+thirds of itself, and both readings sit at or under the `0.0295` floor.
+
+Every measurement ever taken of it, in order: `0.0431` at Step 01, `0.0288` and
+`0.0156` around Step 06's calibration, `0.0269`, `0.0095`, `0.0312` at Step 13.
+Range `0.0095..0.0431`, a factor of `4.5`, never convincingly outside its own
+noise floor. The shape identified as nearest-to-dominant also changes with the
+prefix, `7-1-2` to `5-2-3`.
+
+Two consequences for this step, neither of which changes the target:
+
+- **`~0.047` is still the right target and still verifiable.** It was chosen to
+  sit above the floor with margin precisely so a delivered reward could be
+  proved, and Step 13's result is the argument for that choice, not against it.
+  The `0.2521` tier and the `0.4852` deficit show that this instrument resolves
+  an effect of that size to three decimals.
+- **The measurement plan must change.** A single run cannot show that this step
+  delivered `+0.047` rather than drew a friendly seed. Measure the counter-move
+  reward on **at least two seed prefixes**, report both, and treat the smaller as
+  the result. The same applies to the `~0.0305` downside this step is expected to
+  produce, for the same reason.
+
+Nothing about the before-state is restated as improvement: `~0` for formation is
+a claim about a decision that has no mechanism yet, and Step 13 did not measure
+it a second time.
+
 ## The Target
 
 **Choosing the formation that counters the opponent's is worth `~0.047` win

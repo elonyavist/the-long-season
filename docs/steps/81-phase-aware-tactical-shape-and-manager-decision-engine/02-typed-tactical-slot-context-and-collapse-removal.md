@@ -2,7 +2,92 @@
 
 ## Status
 
-Done on 2026-08-03.
+Done on 2026-08-03. Reopened and closed again on 2026-08-06 by Step 13's absence
+check; see the section directly below.
+
+### Reopened 2026-08-06 - The Kept Collapse Was Four Copies, Not One
+
+Step 13 ran the absence check for the web four-role collapse and found it live.
+`Two Collapses Deliberately Kept` below is the decision under review, and it is
+kept as written because the before-state matters. Its reasoning was sound and
+its facts were not.
+
+It named **one** `broadRole(...)`, in `match-preparation-adapter.ts`. There were
+**four** classifications of a player's department keyed on `primaryRole`, and
+they had already drifted:
+
+| Site | `wing_back` | `winger` | Extra |
+| --- | --- | --- | --- |
+| `match-preparation-adapter.ts` | defender | midfielder | - |
+| `career-squad-adapter.ts` | midfielder | midfielder | dead `wide_forward` branch |
+| `career-market-adapter.ts` | midfielder | midfielder | dead `wide_forward` branch |
+| `matchday-adapter.ts` `playerBroadRoleKey` | defender | midfielder | returns `gk`, a third vocabulary |
+| `playerSquadDepartment` (domain owner) | **defender** | **attacker** | total `Record<PlayerRole, …>` |
+
+So a wing-back was a defender on the match-preparation screen and a midfielder
+on the squad screen, and a winger was a midfielder everywhere in web while the
+market, contract, replenishment and squad-maintenance code that shares the same
+question called him an attacker. The squad and market copies matched on
+`wide_forward`, which is not a member of `PlayerRole` at all, and both reached
+their answer through `string | undefined` with a catch-all `return "midfielder"` -
+the exact shape the phase Clean-Code Gate forbids, because adding a canonical
+role takes the default instead of failing the build.
+
+`playerSquadDepartment` in `packages/domain/src/player/player-squad-department.ts`
+already owned this question, with a total mapping and 38 recorded consumers
+across engine, simulation-tools and calibration. Step 02 did not mention it.
+
+The kept-collapse rationale said removing them "would mean deciding what a squad
+table shows, which is a UI question this step does not own". That is still true
+and this change does not do it: the four broad buckets stay exactly as they were,
+and the only thing that changes is which of the five disagreeing implementations
+answers. Making every screen agree with the owner it already had is a strictly
+smaller claim than choosing a vocabulary.
+
+`roleKeyForDomainSlot(...)` in `packages/ui` is untouched and the original
+decision on it stands. It maps a *formation slot's* department, not a player's
+role; same four words, different question, different key.
+
+#### What Was Changed
+
+- `playerSquadDepartment` / `PlayerSquadDepartment` re-exported through
+  `packages/engine/src/squad/index.ts`, which is where `apps/web` and `apps/cli`
+  already reach domain squad facts, because neither may import `@game/domain`.
+- All four web copies deleted; each call site now reads the owner.
+- `scripts/check-role-department-owner.ts` added and wired into `pnpm check`,
+  in the idiom of `check-squad-depth-accessor.ts`. It flags any production file
+  under `apps/web/src` or `packages/ui/src` that reads `primaryRole` and returns
+  three or more department words as literals. Keying it on `primaryRole` is what
+  keeps it from crying wolf on `roleKeyForDomainSlot` and on
+  `engineRoleKeyForBoardRole`, which answer different questions with the same
+  words; a check that flagged those would be switched off within a week.
+
+#### Severity, Stated Honestly
+
+No screen was observed rendering the wrong group, and the reason is that both
+consumers prefer `positionKey`: `playerDepartment(...)` in
+`player-position-ordering.ts` and `canonicalRoleForPlayerOption(...)` both fall
+back to `roleKey` only when the position is missing or unmapped, and
+`createPlayer` rejects a player with no natural position, so on generated data
+the collapsed value is shadowed. What it still decided directly is the
+`roleKey === "goalkeeper"` test used for bench validation, which every copy got
+right.
+
+So this was a wrong, duplicated, guard-less mapping that current data mostly
+hides - not a visibly broken screen. It is fixed because the next canonical role
+added, or the first player who reaches a screen without a mapped position, turns
+a latent disagreement into a visible one, and because four copies of a rule with
+one owner is the duplication this phase's gate exists to catch.
+
+#### Verification
+
+```text
+node scripts/check-role-department-owner.ts   before: 4 files flagged; after: OK (125 files)
+pnpm --filter @game/web run typecheck         exit 0
+```
+
+The before-state above is the check's reachability evidence: it was observed
+failing on the real tree, not argued to be capable of failing.
 
 ### Adopted Solution
 
@@ -247,6 +332,9 @@ position family, and canonical role are discarded before simulation.
 - `apps/web/src/features/match-preparation/match-preparation-adapter.test.ts`
 - `apps/web/src/features/matchday/matchday-adapter.ts`
 - `apps/web/src/features/matchday/matchday-adapter.test.ts`
+- `apps/web/src/features/squad/career-squad-adapter.ts` (2026-08-06 reopen)
+- `apps/web/src/features/market/career-market-adapter.ts` (2026-08-06 reopen)
+- `scripts/check-role-department-owner.ts` (2026-08-06 reopen)
 - `apps/cli/src/commands/live-match-control-report-data.ts`
 - `apps/cli/src/commands/tactical-shape-report-data.ts`
 - `packages/domain/src/entities/tactic.entity.ts`
@@ -308,6 +396,10 @@ graphify update .
 - Adding a domain union member breaks exhaustive owners at typecheck.
 - One named accessor owns squad depth, and an absence assertion proves no
   lineup-composing path reads `club.playerIds` directly.
+- One owner answers which department a player belongs to, and an absence
+  assertion proves web holds no second implementation of it. Added by the
+  2026-08-06 reopen; the presentation collapse survives as a vocabulary, not as
+  a rule web decides for itself.
 - The context seam documents the non-selected club as an ordinary caller.
 - No obsolete role-collapse helper or compatibility caller remains.
 - Step 03 is the only next action.

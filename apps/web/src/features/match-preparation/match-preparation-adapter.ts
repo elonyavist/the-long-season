@@ -7,6 +7,7 @@ import {
   deriveTeamShapeAndStrength,
   findNextCareerFixture,
   findNextFixtureEligibilityBlockers,
+  playerSquadDepartment,
   summarizePlayerDevelopmentAbilities,
   type TacticalShapeCapacityValues,
 } from "@game/engine";
@@ -558,7 +559,7 @@ function buildCareerPlayerOptions(career: WebCareerState): readonly CareerMatchP
     return [{
       playerId,
       name: `${player.firstName} ${player.lastName}`,
-      roleKey: broadRole(player.primaryRole),
+      roleKey: playerSquadDepartment(player),
       ...(positionKey === undefined ? {} : { positionKey }),
       ...(dynamic === undefined ? {} : { fitness: dynamic.fitness }),
       ...(unavailabilityReason === undefined ? {} : { unavailabilityReason }),
@@ -677,13 +678,6 @@ function isTacticalBoardRoleCode(value: string): value is TacticalBoardRoleCode 
 function requiredPlayerId(slotKey: string, playerId: string | null | undefined): NonNullable<DurableMatchPreparation["selectedLineup"]>["slots"][number]["playerId"] {
   if (playerId === undefined || playerId === null) throw new Error(`Complete preparation is missing player: ${slotKey}`);
   return playerId as NonNullable<DurableMatchPreparation["selectedLineup"]>["slots"][number]["playerId"];
-}
-
-function broadRole(role: string | undefined): string {
-  if (role === "goalkeeper") return "goalkeeper";
-  if (role === "center_back" || role === "full_back" || role === "wing_back") return "defender";
-  if (role === "striker") return "attacker";
-  return "midfielder";
 }
 
 /** Projects canonical role ability onto the existing `0..100` web strength scale. */

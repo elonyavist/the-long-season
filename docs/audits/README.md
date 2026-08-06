@@ -16,6 +16,20 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81_TACTICAL_SHAPE_BOUNDED_DIAGNOSTICS.md` - Step 13 closeout: every
+  frozen tactical invariant passes on three populations with positive
+  denominators; the carried `goals_per_match_avg` monitor is discharged at
+  `20/0/0` against the inherited `36/634/80`; the eight absence checks, three of
+  which found something; and the finding Step 14 needs, that the structural
+  shape gain it must raise is not reproducible across seed populations.
+- `PHASE_81_TACTICAL_SHAPE_BASELINE.md` - the Step 01 pre-change baseline. It
+  keeps the retired `asymmetric_incoherence_cost` as Step 01 recorded it and is
+  not regenerated.
+- `PHASE_81_HUNDRED_SEASON_INSPECTION.md` - Step 12's A10 inspection run.
+  **Not evidence by construction**: no calibration may change because of it, no
+  band may be widened by it, and no document may cite its numbers as balance
+  measurement.
+
 - `PHASE_80A_PROSPECT_ENVIRONMENT_AND_PLAYER_ECONOMY_REPORT.md` - Step 09
   closeout: all `32` player-model gates pass in the deterministic `750 x 3`
   fresh/resume cohort, while `80` high-side `goals_per_match_avg` monitor
