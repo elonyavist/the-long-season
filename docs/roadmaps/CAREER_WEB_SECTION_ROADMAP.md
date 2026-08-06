@@ -16,7 +16,7 @@ constraining future work, not by being recent.
 ## Current Baseline
 
 Phases 0 through 80A are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - is active; Steps 01 through 13 are Done and Step 14 is
+Manager Decision Engine - is active; Steps 01 through 14 are Done and Step 15 is
 next. Live constraints are in `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
@@ -140,13 +140,19 @@ might work. A back line pushed into attack now reads: own box unprotected,
 exposed in transition, heavy presence in the opposition box. That is the trade
 the manager made, which is the thing he can actually weigh.
 
-**Recommended to Step 14, not built here.** At half time the manager has watched
-the opponent for `45` minutes, and this panel still reads only his own shape.
-Before kick-off that is right; after it, "they are loading my left" is what a real
-manager thinks. The engine already knows it - Step 04's relational matchup, Step
-07's `routeCounts` - and none of it reaches a screen. Changing shape to counter
-something you cannot see is guessing, which is likely part of why formation still
-measures `0.0312` while a tactic best-response reaches `+0.0327`.
+**Recommended to Step 14, and deliberately not taken there either.** At half time
+the manager has watched the opponent for `45` minutes, and this panel still reads
+only his own shape. Before kick-off that is right; after it, "they are loading my
+left" is what a real manager thinks. The engine already knows it - Step 04's
+relational matchup, Step 07's `routeCounts` - and none of it reaches a screen.
+
+Step 14 measured why it can wait: there is nothing to counter. Choosing the right
+formation against the opponent you face is worth `0.0064` and `0.0117` win share
+on two seed prefixes against a `0.0295` noise floor, and no setting of any
+matchup coefficient makes the formation matrix non-transitive. The half-time read
+is the delivery mechanism for a reward that does not exist yet, so it goes to
+whoever makes the reward real - together with the lopsided population Step 04
+left open - rather than being built into an empty room.
 
 Left for Step 13, and **done there on 2026-08-06**: desktop match preparation
 overflowed horizontally at `200%` text once the squad was filled, in
@@ -167,6 +173,22 @@ which is why five steps passed over it. Web steps should carry it themselves.
 Step 10 did not claim Step 07's `route`, `routeCounts` or `shooterCounts`. It
 rendered shape consequences, not shot explanations, and nothing in the UI reads
 those fields yet.
+
+Step 14 added the formation-versus-formation matrix the audit never had, over the
+whole `23`-shape catalog rather than the eight the versus-reference table
+measures, and with it `no_dominant_formation` - the claim this phase already made
+about compositions and tactics, finally askable about the population the tactical
+board actually offers. It passes at `0.5184` and `0.5210` with `0 of 23` shapes
+uncountered. Its own target did not land, and the step document says so rather
+than moving a threshold.
+
+Two things there bind later web work. **A forced shape no longer ends a fixture**:
+a caller-supplied formation the squad cannot fill is now filled out of position,
+which is what football does and what the goalkeeper path already did. And
+**a best response chosen on a matrix may never be reported from that matrix** -
+the maximum over `23` candidates carries its own cell noise floor, larger here
+than the effect being claimed, so the reward is replayed on a separate seed
+stream before anybody reads it.
 
 Step 15 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.

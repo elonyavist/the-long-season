@@ -36,6 +36,24 @@ export const DEFAULT_TACTICAL_SHAPE_PAIRED_SEEDS = 8;
  */
 export const DEFAULT_TACTICAL_SHAPE_SCENARIO_PAIRED_SEEDS = 1_050;
 
+/**
+ * Default seed pairs per cell of the formation-versus-formation matrix.
+ *
+ * The matrix has `253` played cells - every unordered pair of the `23` curated
+ * formations - so the scenario precision above would cost more matches than the
+ * whole of the rest of the report, and the dominance breadth of `8` would leave
+ * a row mean unresolvable at `0.0719`.
+ *
+ * What the gate reads is a row *mean* over `22` opponents, whose noise floor is
+ * `2.7 * 0.5 / sqrt(cellMatches * 22)`. At `250` pairs that is `0.0129`, which
+ * separates the `0.55` dominance threshold from an even contest with room to
+ * spare, for about a quarter of the run.
+ *
+ * The counter-move replay does not use this number: it is measured at the
+ * scenario precision, because a single cell has no `22` opponents to average.
+ */
+export const DEFAULT_TACTICAL_SHAPE_FORMATION_PAIRED_SEEDS = 250;
+
 /** Input accepted by the content-aware tactical-shape report bridge. */
 export interface CreateTacticalShapeReportInput {
   /** World seed whose generated squads supply the measured quality bands. */
@@ -46,6 +64,8 @@ export interface CreateTacticalShapeReportInput {
   readonly pairedSeedCount?: number;
   /** Seed pairs per named scenario and versus-reference row. */
   readonly scenarioPairedSeedCount?: number;
+  /** Seed pairs per cell of the formation-versus-formation matrix. */
+  readonly formationPairedSeedCount?: number;
 }
 
 /** A measured band together with the generated club it was taken from. */
@@ -103,6 +123,8 @@ export function createTacticalShapeReport(
       pairedSeedCount: input.pairedSeedCount ?? DEFAULT_TACTICAL_SHAPE_PAIRED_SEEDS,
       scenarioPairedSeedCount:
         input.scenarioPairedSeedCount ?? DEFAULT_TACTICAL_SHAPE_SCENARIO_PAIRED_SEEDS,
+      formationPairedSeedCount:
+        input.formationPairedSeedCount ?? DEFAULT_TACTICAL_SHAPE_FORMATION_PAIRED_SEEDS,
     }),
   };
 }

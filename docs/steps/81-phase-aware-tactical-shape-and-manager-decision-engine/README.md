@@ -216,11 +216,18 @@ monitor, and its own review says that a monitor still out of band reopens Step
 gates read invariants, and invariants stay green while centre backs top the
 scoring chart.
 
-**Step 14** has to raise formation from `0.0312` to `~0.047` as a counter-move
+**Step 14** had to raise formation from `0.0312` to `~0.047` as a counter-move
 reward, and it cannot judge whether it succeeded without a baseline showing
 which shapes clubs actually field and how those shapes finish. Step 12 is that
 baseline, and afterwards it is the instrument that says whether Step 14 improved
 the football or only the number.
+
+**It did not raise it, and the reason is recorded rather than retried.** Step 14
+built the formation-versus-formation matrix, measured the counter-move reward on
+two seed prefixes at `0.0064` and `0.0117` against a `0.0295` floor, and swept
+the lever it was told to pull over `57` configurations without ever producing a
+non-transitive matrix. The target is withdrawn, not deferred; its successor needs
+a lopsided population and conserved capacities together.
 
 ## Validation Ladder
 
@@ -272,7 +279,13 @@ the football or only the number.
   claimed. Its main result is for Step 14: the structural shape gain is not
   reproducible across seed populations.
 - Step 14 then owns formation as a counter-move, with Step 12's shape usage and
-  finishing positions as its baseline.
+  finishing positions as its baseline. **Done 2026-08-06**, with its own central
+  target recorded as not met. It adds the formation-versus-formation matrix and
+  the `no_dominant_formation` gate - which reuses the existing `0.55` and passes
+  at `0.5184` and `0.5210` with `0 of 23` shapes uncountered - fixes the
+  forced-shape crash Step 12 handed it, and proves by sweep that the route
+  weighting it was permitted to change is the wrong lever. Nothing was
+  re-thresholded to make the target read as delivered.
 - Step 15 alone runs/replays the checkpointed `50 x 20`, confirms the carried
   monitor inside its band at cohort scale, writes the phase report, and hands
   control to Phase 81A. Phase 79's own Step 14 stays Reopened, paused, and

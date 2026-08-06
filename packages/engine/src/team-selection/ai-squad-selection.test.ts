@@ -103,7 +103,20 @@ test("selectAiMatchSquad preserves a later-slot specialist when greedy selection
   ]);
 });
 
-test("selectAiMatchSquad still rejects a roster with no complete usable assignment", () => {
+/**
+ * Fixes what a roster with no *usable* complete assignment does (Step 14).
+ *
+ * The four footballers here cover only three of the four slots between them -
+ * the striker is an invalid fit for every one of them - so no assignment exists
+ * that keeps everybody in a position he can play. That used to end the fixture.
+ * There are four players for four slots, so "not enough players" was never the
+ * truth about this roster: somebody is out of position, which is a different
+ * sentence and the one football says.
+ *
+ * The global-versus-greedy property this shape was built to prove is owned by
+ * `football-xi-assignment.test.ts`, which tests it on the Module directly.
+ */
+test("a roster that cannot cover every slot is fielded out of position", () => {
   const leftWingBackId = playerId("player:left-wing-back");
   const firstCentralMidfielderId = playerId("player:cm-a");
   const secondCentralMidfielderId = playerId("player:cm-b");
@@ -115,10 +128,36 @@ test("selectAiMatchSquad still rejects a roster with no complete usable assignme
     [invalidCoverId]: makePlayer(invalidCoverId, ["st"], 10),
   };
 
+  const selection = selectAiMatchSquad(squadInput({
+    formation: hallCounterexampleFormation(),
+    playerIds: [leftWingBackId, firstCentralMidfielderId, secondCentralMidfielderId, invalidCoverId],
+    players,
+    benchSize: 0,
+  }));
+
+  assert.equal(selection.lineup.length, 4);
+  assert.equal(new Set(selection.lineup.map((slot) => slot.playerId)).size, 4);
+  assert.equal(
+    selection.reasons.filter((reason) => reason.suitability === "invalid").length,
+    1,
+  );
+});
+
+/** `not_enough_players` keeps the one meaning its name has. */
+test("selectAiMatchSquad still rejects a roster with fewer players than slots", () => {
+  const leftWingBackId = playerId("player:left-wing-back");
+  const firstCentralMidfielderId = playerId("player:cm-a");
+  const secondCentralMidfielderId = playerId("player:cm-b");
+  const players = {
+    [leftWingBackId]: makePlayer(leftWingBackId, ["lwb"], 14),
+    [firstCentralMidfielderId]: makePlayer(firstCentralMidfielderId, ["cm"], 10),
+    [secondCentralMidfielderId]: makePlayer(secondCentralMidfielderId, ["cm"], 10),
+  };
+
   assert.throws(
     () => selectAiMatchSquad(squadInput({
       formation: hallCounterexampleFormation(),
-      playerIds: [leftWingBackId, firstCentralMidfielderId, secondCentralMidfielderId, invalidCoverId],
+      playerIds: [leftWingBackId, firstCentralMidfielderId, secondCentralMidfielderId],
       players,
       benchSize: 0,
     })),
@@ -349,6 +388,88 @@ test("a real goalkeeper is always preferred to an emergency one", () => {
 
   assert.equal(inGoal?.playerId, keeperId);
 });
+
+/**
+ * Fixes what a *given* shape does to a squad that cannot fill it (Step 14).
+ *
+ * A caller who supplies the formation has taken the choice away from the club,
+ * so "I have nobody for that" stops being an answer the club can act on. Before
+ * this it threw, and the fixture it was throwing inside simply ended - which is
+ * how the Step 12 inspection lost five of twenty worlds. Football plays somebody
+ * out of position instead, and records that it did.
+ */
+test("a shape the squad cannot fill is filled out of position, not refused", () => {
+  const { players, ids } = oneStrikerSquad();
+
+  const selection = selectAiMatchSquad(squadInput({
+    formation: getFormation("4-4-2"),
+    playerIds: ids,
+    players,
+    benchSize: 0,
+  }));
+  const forwards = selection.lineup.filter((slot) => slot.canonicalRole === "striker");
+
+  assert.equal(selection.formation.key, "4-4-2");
+  assert.equal(selection.lineup.length, 11);
+  assert.equal(new Set(selection.lineup.map((slot) => slot.playerId)).size, 11);
+  assert.equal(forwards.length, 2);
+  // Exactly one of them is a man out of position, which is the whole cost.
+  assert.equal(
+    selection.reasons.filter((reason) => reason.suitability === "invalid").length,
+    1,
+  );
+});
+
+/**
+ * The club's own choice is untouched: it picks a shape it can actually fill.
+ *
+ * `strongestCatalogShape` searches with the `invalid` filter still on, so a
+ * club that is free to choose never reaches the second attempt. The same squad
+ * that needs a man out of position to line up as `4-4-2` lines up with nobody
+ * out of position when nobody forces the shape.
+ */
+test("choosing a shape is unaffected: the same squad picks one it can fill", () => {
+  const { players, ids } = oneStrikerSquad();
+
+  const selection = selectAiMatchSquad(squadInput({ playerIds: ids, players, benchSize: 0 }));
+
+  assert.equal(selection.lineup.length, 11);
+  assert.notEqual(selection.formation.key, "4-4-2");
+  assert.equal(
+    selection.reasons.some((reason) => reason.suitability === "invalid"),
+    false,
+  );
+});
+
+/**
+ * Eleven footballers with exactly one striker.
+ *
+ * `4-4-2` needs two, and the only non-`invalid` cover for a striker slot is a
+ * natural striker or an attacking midfielder - a role this squad, like every
+ * generated world, does not have. So the shape is fillable only out of
+ * position, while a one-striker shape from the catalog is not.
+ */
+function oneStrikerSquad(): {
+  players: Record<PlayerId, Player>;
+  ids: readonly PlayerId[];
+} {
+  const players: Record<PlayerId, Player> = {};
+  const ids: PlayerId[] = [];
+  const specs: ReadonlyArray<readonly [string, PlayerPosition]> = [
+    ["gk", "gk"],
+    ["cb-1", "cb"], ["cb-2", "cb"], ["cb-3", "cb"], ["cb-4", "cb"],
+    ["rwb", "rwb"], ["lwb", "lwb"],
+    ["cm-1", "cm"], ["cm-2", "cm"], ["cm-3", "cm"],
+    ["st", "st"],
+  ];
+  for (const [name, position] of specs) {
+    const id = playerId(`player:${name}`);
+    ids.push(id);
+    players[id] = makePlayer(id, [position], 12);
+  }
+
+  return { players, ids };
+}
 
 /** Twelve outfielders who between them can fill any curated shape but the goal. */
 function keeperlessSquad(): {

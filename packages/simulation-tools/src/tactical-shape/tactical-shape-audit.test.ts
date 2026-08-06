@@ -10,6 +10,7 @@ import {
   TacticalShapeAuditError,
   TACTICAL_SHAPE_COMPOSITIONS,
   TACTICAL_SHAPE_EXTREME_COMPOSITION_KEYS,
+  TACTICAL_SHAPE_FORMATION_POPULATION,
   TACTICAL_SHAPE_LINEUP_SLOT_COUNT,
   TACTICAL_SHAPE_NEUTRAL_TACTIC,
   TACTICAL_SHAPE_OUTFIELD_SLOT_COUNT,
@@ -79,6 +80,7 @@ const AUDIT_INPUT: RunTacticalShapeAuditInput = {
   seedPrefix: "tactical-shape-test",
   pairedSeedCount: 1,
   scenarioPairedSeedCount: 8,
+  formationPairedSeedCount: 1,
   dominanceCompositionKeys: ["4-4-2", "3-1-6", "2-0-8", "0-0-10"],
 };
 
@@ -512,6 +514,90 @@ describe("flank instrumentation", () => {
     for (const row of report.formations) {
       expect(row.flankAsymmetry).toBeLessThan(3 * noiseFloor);
     }
+  });
+});
+
+describe("formation against formation", () => {
+  const report = runTacticalShapeAudit(AUDIT_INPUT);
+  const matrix = report.formationDominance;
+
+  it("measures the whole catalog, not the axis-isolating subset", () => {
+    // The subset above answers "is this shape better than the reference". It
+    // structurally cannot answer "does one shape beat another", and a shape that
+    // beats the field from outside a subset is invisible to that subset.
+    expect(matrix.formationKeys).toEqual(TACTICAL_SHAPE_FORMATION_POPULATION);
+    expect(matrix.formationKeys.length).toBeGreaterThan(report.formations.length);
+    expect(matrix.matches).toBeGreaterThan(0);
+  });
+
+  it("fills the matrix symmetrically and leaves the mirror match unplayed", () => {
+    const { formationKeys, winShare } = matrix;
+
+    expect(winShare).toHaveLength(formationKeys.length);
+    for (let row = 0; row < formationKeys.length; row += 1) {
+      expect((winShare[row] as readonly number[])[row]).toBe(0.5);
+      for (let column = row + 1; column < formationKeys.length; column += 1) {
+        const forward = (winShare[row] as readonly number[])[column] as number;
+        const mirrored = (winShare[column] as readonly number[])[row] as number;
+        expect(forward + mirrored).toBeCloseTo(1, 6);
+      }
+    }
+  });
+
+  it("excludes the mirror match from every row mean, exactly as the tactic gate does", () => {
+    for (const [index, row] of matrix.rows.entries()) {
+      const shares = (matrix.winShare[index] as readonly number[]).filter(
+        (_, column) => column !== index,
+      );
+      const mean = shares.reduce((total, value) => total + value, 0) / shares.length;
+
+      expect(row.meanWinShareAgainstField).toBeCloseTo(mean, 4);
+      expect(row.minimumWinShareAgainstField).toBeCloseTo(Math.min(...shares), 4);
+      expect(row.matches).toBe(shares.length * AUDIT_INPUT.formationPairedSeedCount * 2);
+    }
+  });
+
+  it("chooses each counter-move on the matrix and measures it somewhere else", () => {
+    // The reason the replay exists. A maximum taken over 23 candidates and then
+    // reported from the same sample is biased upward by roughly the noise floor,
+    // which would credit a counter-move reward to sampling alone. The response
+    // is the matrix argmax; the number beside it is a different measurement, at
+    // the scenario precision rather than the matrix breadth.
+    expect(matrix.counterMoves).toHaveLength(matrix.formationKeys.length);
+
+    for (const [column, counterMove] of matrix.counterMoves.entries()) {
+      const cells = matrix.formationKeys.map((_, row) =>
+        row === column ? Number.NEGATIVE_INFINITY : ((matrix.winShare[row] as readonly number[])[column] as number));
+      const bestShare = Math.max(...cells);
+      const chosenRow = matrix.formationKeys.indexOf(counterMove.responseKey);
+
+      expect(counterMove.opponentKey).toBe(matrix.formationKeys[column]);
+      expect(cells[chosenRow]).toBe(bestShare);
+      expect(counterMove.matches).toBe(AUDIT_INPUT.scenarioPairedSeedCount * 2);
+      expect(counterMove.gain).toBeCloseTo(counterMove.winShare - 0.5, 6);
+    }
+  });
+
+  it("carries both noise floors, because the two readings resolve differently", () => {
+    // A row mean averages 22 cells and therefore resolves far finer than one
+    // cell does. Reporting a single floor for both would let a counter-move gain
+    // be read against a resolution it was never measured at.
+    expect(matrix.matrixNoiseFloor).toBeGreaterThan(0);
+    expect(matrix.counterMoveNoiseFloor).toBeGreaterThan(0);
+    expect(matrix.distinctResponseCount).toBeGreaterThanOrEqual(1);
+    expect(matrix.distinctResponseCount).toBeLessThanOrEqual(matrix.formationKeys.length);
+    expect(matrix.worstCounterMoveGain).toBeLessThanOrEqual(matrix.meanCounterMoveGain);
+  });
+
+  it("reports no_dominant_formation with a real denominator", () => {
+    const invariant = report.invariants.find((row) => row.key === "no_dominant_formation");
+
+    expect(invariant).toBeDefined();
+    expect(invariant?.status).not.toBe("not_evaluated");
+    expect(invariant?.observations).toBe(matrix.matches);
+    expect(invariant?.observed).toBe(
+      Math.max(...matrix.rows.map((row) => row.meanWinShareAgainstField)),
+    );
   });
 });
 

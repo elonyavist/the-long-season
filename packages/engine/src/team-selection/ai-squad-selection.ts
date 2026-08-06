@@ -309,6 +309,33 @@ class SlotCandidateCache {
 
     return ranked;
   }
+
+  /**
+   * Returns every footballer on the roster for one slot, out of position or not.
+   *
+   * The ordinary list drops `invalid` fits, which is right when a shape is being
+   * *chosen*: a club should not line up in a system it has nobody for. It is
+   * wrong when a shape has been *given*, because then dropping them does not
+   * produce a better team, it produces no team at all.
+   *
+   * The scores are the same ones the ordinary list carries, so an out-of-position
+   * footballer arrives already priced at the `invalid` selection penalty and the
+   * assignment uses him only where nothing else reaches.
+   */
+  public everyCandidateFor(slot: FormationSlot): readonly AiCandidateScore[] {
+    const slotKind = `any|${slot.playerRole}|${slot.side ?? ""}`;
+    const cached = this.rankedBySlotKind.get(slotKind);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const ranked = this.rosterPlayerIds
+      .map((playerId) => candidateForSlot(this.input, playerId, slot))
+      .sort(compareCandidateScores);
+    this.rankedBySlotKind.set(slotKind, ranked);
+
+    return ranked;
+  }
 }
 
 /**
@@ -324,6 +351,19 @@ class SlotCandidateCache {
  * both on the full score let a tired defender change a club's formation for one
  * week, which is not a thing football does: a squad is built for a shape over a
  * season, and fatigue is a fact about a Saturday.
+ *
+ * **A given shape is filled out of position rather than refused.** A caller who
+ * supplies the formation has taken the choice away from the club, so the club
+ * can no longer answer "I have nobody for that" by picking something else, and
+ * before Phase 81 Step 14 it answered by throwing instead - which ended the
+ * fixture. Football's answer is the goalkeeper one this file already gives:
+ * somebody plays where he does not belong. The second attempt therefore drops
+ * the `invalid` filter and nothing else, so the eleven that comes back is the
+ * cheapest way to fill the shape rather than a different shape.
+ *
+ * It cannot fire on a shape the club chose: `strongestCatalogShape` only ever
+ * returns one it has already filled from the same lists, and swapping which
+ * score orders those lists cannot make a filled shape unfillable.
  */
 function bestFieldedShape(
   input: AiSquadSelectionInput,
@@ -334,9 +374,22 @@ function bestFieldedShape(
     return undefined;
   }
 
+  const slots = formation.slots;
+
+  return (
+    fillShape(formation, slots.map((slot) => candidates.rankedFor(slot)))
+    ?? fillShape(formation, slots.map((slot) => candidates.everyCandidateFor(slot)))
+  );
+}
+
+/** Fills one shape from one candidate list per slot, or reports it cannot be filled. */
+function fillShape(
+  formation: Formation,
+  rankedBySlot: readonly (readonly AiCandidateScore[])[],
+): FieldedShape | undefined {
   const assignment = assignFootballXi({
-    candidatesBySlot: formation.slots.map((slot) =>
-      rankedXiCandidates(candidates.rankedFor(slot), (candidate) => candidate.score)),
+    candidatesBySlot: rankedBySlot.map((ranked) =>
+      rankedXiCandidates(ranked, (candidate) => candidate.score)),
   });
   if (assignment === undefined) {
     return undefined;
@@ -345,7 +398,7 @@ function bestFieldedShape(
   return {
     formation,
     selected: assignment.candidateBySlot.map((candidate, slotIndex) =>
-      requiredCandidate(candidates.rankedFor(formation.slots[slotIndex] as FormationSlot), candidate.rank)),
+      requiredCandidate(rankedBySlot[slotIndex] as readonly AiCandidateScore[], candidate.rank)),
     totalScore: assignment.totalScore,
   };
 }

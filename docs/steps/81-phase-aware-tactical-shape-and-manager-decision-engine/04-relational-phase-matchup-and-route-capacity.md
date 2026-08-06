@@ -283,3 +283,51 @@ step, not for the gate that measures it, and Step 07A deliberately did not make
 it.
 
 `tactical-shape-audit.test.ts` states all of this where it can be broken.
+
+## 2026-08-06 - The Reopen Candidate Is Answered, And The Answer Is No
+
+Step 14 owns "make formation a counter-move", and the lever its own document
+named is this reopen: give each route's defining phase a declared share of the
+non-bottleneck part instead of an equal third. Step 14 built that fix as an
+analytic model over the production `deriveTacticalShapeProfile` capacities - the
+same arithmetic `chainCapacity` performs, with one added weight - and swept it
+rather than shipping it.
+
+**The fix works as described and does not produce a counter-move.** Weighting the
+defining phase by `emphasis` against `1` for the other links, normalised so
+`emphasis = 1` reproduces today exactly:
+
+| Population | knobs | pairwise spread | best-response gain | 3-cycles |
+|---|---|---|---|---|
+| 8 measured shapes | shipped | `0.0164` | `0.0061` | `0` |
+| 8 measured shapes | emphasis `3` | `0.0178` | `0.0069` | `0` |
+| 8 measured shapes | emphasis `12` | `0.0187` | `0.0074` | `0` |
+| 23 curated shapes | shipped | `0.0813` | `0.0166` | `0` |
+
+`57` configurations were swept - `chainBottleneckWeightBasisPoints` from `0` to
+`8000`, emphasis `1` to `8`, `routeSelectionSharpness` `1` to `6`, and the
+pressing contest weight from `0` to `7500`. **Every one of them produced a
+strictly transitive matrix.** Emphasis saturates because the bottleneck weight
+caps what the average part can ever be worth: at `6500` the defining phase
+cannot exceed `35%` of its chain however it is weighted inside that share.
+
+The reason is not the chain. It is that the capacities themselves are not
+conserved: over the `23` curated shapes the ranking by mean advantage tracks the
+ranking by *mean capacity*, `4-2-3-1` topping both and `3-3-3-1` bottoming both.
+A shape that is better at attacking centrally is also better at defending
+centrally, because both are built from the same eleven contributions through the
+same diminishing ladder, so there is no trade-off for a counter to exploit. A
+route model can only amplify a difference that exists; the difference here is one
+axis, and amplifying one axis widens a gap rather than creating a cycle.
+
+**So this reopen is closed as answered, not as done.** Nothing in
+`TACTICAL_ROUTE_DEFINITION` changed. The recorded `11.7%` arithmetic is still
+exactly right and still explains why formation is flat; what it does not support
+is the conclusion that fixing it would make formation a decision. The population
+question the 2026-08-04 note raised - a deliberately lopsided side - stays open
+and is now the *only* live candidate, because left against right is the one axis
+where this model's capacities genuinely trade off against each other.
+
+Whoever picks that up owns two things together: the lopsided population and the
+conservation question above. Fixing the second without the first would only make
+one formation win by more.

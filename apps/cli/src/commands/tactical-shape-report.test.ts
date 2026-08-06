@@ -49,6 +49,7 @@ function tinyBundle(overrides: Partial<TacticalShapeReportBundle["report"]> = {}
       seedPrefix: "test-prefix",
       pairedSeedCount: 1,
       scenarioPairedSeedCount: 1,
+      formationPairedSeedCount: 1,
       bands: [band("reference")],
       strengthRows: [
         {
@@ -141,6 +142,39 @@ function tinyBundle(overrides: Partial<TacticalShapeReportBundle["report"]> = {}
         concentratedAttackStrength: 12,
         noiseFloor: 0.0295,
       },
+      formationDominance: {
+        formationKeys: ["4-4-2", "4-3-3"],
+        winShare: [
+          [0.5, 0.58],
+          [0.42, 0.5],
+        ],
+        rows: [
+          {
+            formationKey: "4-4-2",
+            meanWinShareAgainstField: 0.58,
+            minimumWinShareAgainstField: 0.58,
+            worstAgainstKey: "4-3-3",
+            matches: 2,
+          },
+          {
+            formationKey: "4-3-3",
+            meanWinShareAgainstField: 0.42,
+            minimumWinShareAgainstField: 0.42,
+            worstAgainstKey: "4-4-2",
+            matches: 2,
+          },
+        ],
+        matches: 2,
+        counterMoves: [
+          { opponentKey: "4-4-2", responseKey: "4-3-3", winShare: 0.47, gain: -0.03, matches: 2 },
+          { opponentKey: "4-3-3", responseKey: "4-4-2", winShare: 0.55, gain: 0.05, matches: 2 },
+        ],
+        meanCounterMoveGain: 0.01,
+        worstCounterMoveGain: -0.03,
+        distinctResponseCount: 2,
+        matrixNoiseFloor: 0.1,
+        counterMoveNoiseFloor: 0.2,
+      },
       formationVersusSlider: {
         referenceCrossShare: 0.3,
         widestFormationCrossShare: 0.32,
@@ -214,6 +248,7 @@ describe("tactical-shape-report command", () => {
         seedPrefix: "phase81-tactical-shape",
         pairedSeedCount: 8,
         scenarioPairedSeedCount: 1_050,
+        formationPairedSeedCount: 250,
       },
     ]);
   });
@@ -227,6 +262,7 @@ describe("tactical-shape-report command", () => {
         "--seed-prefix=custom-prefix",
         "--paired-seeds=3",
         "--scenario-paired-seeds=5",
+        "--formation-paired-seeds=7",
       ],
       io.dependencies,
     );
@@ -237,6 +273,7 @@ describe("tactical-shape-report command", () => {
       seedPrefix: "custom-prefix",
       pairedSeedCount: 3,
       scenarioPairedSeedCount: 5,
+      formationPairedSeedCount: 7,
     });
   });
 
@@ -381,6 +418,7 @@ describe("tactical shape quality band measurement", () => {
         seedPrefix: "tactical-shape-bundle-test",
         pairedSeedCount: 1,
         scenarioPairedSeedCount: 1,
+        formationPairedSeedCount: 1,
       });
 
       expect(bundle.report.bands).toEqual([
@@ -394,6 +432,9 @@ describe("tactical shape quality band measurement", () => {
       expect(bundle.report.strengthRows).toHaveLength(66);
       expect(bundle.report.dominance.compositionKeys).toHaveLength(66);
       expect(bundle.report.dominance.matches).toBeGreaterThan(0);
+      // The formation matrix is the whole catalog, not the measured subset.
+      expect(bundle.report.formationDominance.formationKeys).toHaveLength(23);
+      expect(bundle.report.formationDominance.counterMoves).toHaveLength(23);
     },
     60_000,
   );

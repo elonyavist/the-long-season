@@ -9,6 +9,7 @@ import type {
 
 import {
   createTacticalShapeReport,
+  DEFAULT_TACTICAL_SHAPE_FORMATION_PAIRED_SEEDS,
   DEFAULT_TACTICAL_SHAPE_PAIRED_SEEDS,
   DEFAULT_TACTICAL_SHAPE_SCENARIO_PAIRED_SEEDS,
   DEFAULT_TACTICAL_SHAPE_SEED_PREFIX,
@@ -62,6 +63,7 @@ export async function runTacticalShapeReportCommand(
     seedPrefix: parsed.seedPrefix,
     pairedSeedCount: parsed.pairedSeedCount,
     scenarioPairedSeedCount: parsed.scenarioPairedSeedCount,
+    formationPairedSeedCount: parsed.formationPairedSeedCount,
   });
   const rendered = formatTacticalShapeReport(bundle);
 
@@ -99,6 +101,8 @@ export function formatTacticalShapeReport(bundle: TacticalShapeReportBundle): st
     ...tacticSection(report),
     "",
     ...formationSection(report),
+    "",
+    ...formationDominanceSection(report),
     ...selectionConcentrationSection(report),
     "",
     ...qualitySection(report),
@@ -124,6 +128,8 @@ function metadataSection(bundle: TacticalShapeReportBundle): readonly string[] {
     `| Seed prefix | \`${report.seedPrefix}\` |`,
     `| Seed pairs per dominance cell | ${report.pairedSeedCount} |`,
     `| Seed pairs per scenario | ${report.scenarioPairedSeedCount} |`,
+    `| Seed pairs per formation-matrix cell | ${report.formationPairedSeedCount} |`,
+    `| Formation-matrix row-mean noise floor | ${report.formationDominance.matrixNoiseFloor} |`,
     `| Matches behind the dominance matrix | ${report.dominance.matches} |`,
     `| Versus-reference noise floor | ${report.versusReferenceNoiseFloor} |`,
     `| Structured hash | \`${report.structuredHash}\` |`,
@@ -361,6 +367,80 @@ function formationSection(report: TacticalShapeAuditReport): readonly string[] {
   ];
 }
 
+/**
+ * Reports whether choosing a formation against the one you face is worth
+ * anything.
+ *
+ * The table above it is a *column*: every measured formation against `4-4-2`.
+ * It can say whether a shape is better than the reference and it structurally
+ * cannot say whether one shape answers another, which is the entire question.
+ * This is the matrix, over the whole catalog a manager picks from.
+ */
+function formationDominanceSection(report: TacticalShapeAuditReport): readonly string[] {
+  const matrix = report.formationDominance;
+  const aggregate = [...matrix.rows]
+    .sort((left, right) => right.meanWinShareAgainstField - left.meanWinShareAgainstField)
+    .map(
+      (row) =>
+        `| \`${row.formationKey}\` | ${row.meanWinShareAgainstField} | ${row.minimumWinShareAgainstField} `
+        + `| \`${row.worstAgainstKey}\` | ${row.matches} |`,
+    );
+  const counterMoves = matrix.counterMoves.map(
+    (row) =>
+      `| \`${row.opponentKey}\` | \`${row.responseKey}\` | ${row.winShare} | ${row.gain} | ${row.matches} |`,
+  );
+  const grid = matrix.winShare.map((row, index) =>
+    [matrix.formationKeys[index] ?? "?", ...row.map((value) => value.toFixed(3))].join("\t"),
+  );
+
+  return [
+    "## Formation Against Formation",
+    "",
+    "Every curated formation against every other one at equal quality on neutral",
+    "tactics. `Against field` excludes the mirror match, which is `0.5` by",
+    "construction, and it is what the `no_dominant_formation` gate reads: these are",
+    "all shapes a manager legitimately picks, so the mean *is* the expected value of",
+    "choosing one blind.",
+    "",
+    `Row means resolve to \`${matrix.matrixNoiseFloor}\`; one replayed counter-move cell resolves`,
+    `to \`${matrix.counterMoveNoiseFloor}\`.`,
+    "",
+    "| Formation | Against field | Worst matchup | Held there by | Matches |",
+    "| --- | --- | --- | --- | --- |",
+    ...aggregate,
+    "",
+    "### What Answering The Opponent Was Worth",
+    "",
+    "The best response to each opponent is **chosen on the matrix above and replayed",
+    "on its own seed stream**. A maximum taken over the same sample it was picked",
+    "from is biased upward by about the noise floor of a 23-way maximum, which would",
+    "manufacture a counter-move reward out of sampling alone.",
+    "",
+    "| Opponent | Best response | Win share | Gain | Matches |",
+    "| --- | --- | --- | --- | --- |",
+    ...counterMoves,
+    "",
+    "| Measurement | Value |",
+    "| --- | --- |",
+    `| Mean gain from countering | ${matrix.meanCounterMoveGain} |`,
+    `| Worst opponent's gain | ${matrix.worstCounterMoveGain} |`,
+    `| Distinct shapes used as an answer | ${matrix.distinctResponseCount} of ${matrix.formationKeys.length} |`,
+    `| Resolvable above the floor | ${Math.abs(matrix.meanCounterMoveGain) > matrix.counterMoveNoiseFloor ? "yes" : "no"} |`,
+    "",
+    "A single distinct answer is not a counter-move. It is one formation that beats",
+    "the field, and rewarding it would be the dominant strategy this phase forbids.",
+    "",
+    "### Formation Versus Formation",
+    "",
+    "Row against column. The diagonal is `0.5` by construction and is not played.",
+    "",
+    "```",
+    [".", ...matrix.formationKeys].join("\t"),
+    ...grid,
+    "```",
+  ];
+}
+
 function qualitySection(report: TacticalShapeAuditReport): readonly string[] {
   const rows = report.qualityVersusStructure.map((row) => {
     const series = row.series;
@@ -469,6 +549,7 @@ interface ParsedArgsOk {
   readonly seedPrefix: string;
   readonly pairedSeedCount: number;
   readonly scenarioPairedSeedCount: number;
+  readonly formationPairedSeedCount: number;
   readonly reportOutput: string | undefined;
 }
 
@@ -483,6 +564,7 @@ function parseArgs(args: readonly string[]): ParsedArgsInvalid | ParsedArgsOk {
   let seedPrefix = DEFAULT_TACTICAL_SHAPE_SEED_PREFIX;
   let pairedSeedCount = DEFAULT_TACTICAL_SHAPE_PAIRED_SEEDS;
   let scenarioPairedSeedCount = DEFAULT_TACTICAL_SHAPE_SCENARIO_PAIRED_SEEDS;
+  let formationPairedSeedCount = DEFAULT_TACTICAL_SHAPE_FORMATION_PAIRED_SEEDS;
   let reportOutput: string | undefined;
 
   for (const arg of args) {
@@ -520,6 +602,15 @@ function parseArgs(args: readonly string[]): ParsedArgsInvalid | ParsedArgsOk {
       continue;
     }
 
+    if (arg.startsWith("--formation-paired-seeds=")) {
+      const value = arg.slice("--formation-paired-seeds=".length);
+      formationPairedSeedCount = Number(value);
+      if (!Number.isSafeInteger(formationPairedSeedCount) || formationPairedSeedCount <= 0) {
+        return { ok: false, message: text("tacticalShape.error.pairedSeedsInvalid", { value }) };
+      }
+      continue;
+    }
+
     if (arg.startsWith("--report-output=")) {
       reportOutput = arg.slice("--report-output=".length);
       if (reportOutput.length === 0) {
@@ -531,7 +622,15 @@ function parseArgs(args: readonly string[]): ParsedArgsInvalid | ParsedArgsOk {
     return { ok: false, message: text("cli.error.unknownArgument", { arg }) };
   }
 
-  return { ok: true, worldSeed, seedPrefix, pairedSeedCount, scenarioPairedSeedCount, reportOutput };
+  return {
+    ok: true,
+    worldSeed,
+    seedPrefix,
+    pairedSeedCount,
+    scenarioPairedSeedCount,
+    formationPairedSeedCount,
+    reportOutput,
+  };
 }
 
 function defaultDependencies(): TacticalShapeReportCommandDependencies {

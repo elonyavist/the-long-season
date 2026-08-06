@@ -457,6 +457,7 @@ in code as `TACTICAL_SHAPE_THRESHOLDS` so a later step cannot quietly move one.
 | `bounded_structural_swing` | best shape's gain over the reference shape `<= 0.75 x` the division-tier edge | `0.169` (PASS) |
 | `no_dominant_composition` | no composition stays above `0.55` against every single opponent | `0.375` (PASS) |
 | `no_dominant_tactic` | no tactic profile averages above `0.55` against the other profiles | added by Step 06 |
+| `no_dominant_formation` | no curated formation averages above `0.55` against the other formations | added by Step 14 |
 | `incoherence_costs_a_division_tier` | worst-shape deficit `>= 1 x` the division-tier edge | amended by A9 |
 | `quality_hierarchy_survives_extreme_shape` | contender win share `>= 0.55` with at least `1` upset | `0.925` with `30/800` upsets (PASS) |
 | `empty_department_possession_clamp` | every share inside `[0.18, 0.82]`, every empty-midfield shape on the floor | `0.18` across all `11` (PASS) |
@@ -483,6 +484,15 @@ single matchup, because six tactic profiles are all legal selections on one
 eleven - so the mean is the expected value of choosing blind - while the `66`
 compositions are mostly self-destructive and a mean there measures how badly the
 broken shapes lose.
+
+`no_dominant_formation` was added by Step 14 and **reuses the same `0.55`**; no
+number was introduced. It reads the mean for the tactic gate's reason - all `23`
+curated shapes are legal selections - and it exists because until Step 14 the
+formation population had a versus-reference *column* and no matrix, so the one
+claim the phase makes about every other population was structurally unaskable
+about the one a manager picks from. The population is the whole catalog rather
+than the eight axis-isolating shapes the versus-reference table measures: a shape
+that beats the field from outside a subset is invisible to that subset.
 
 `distinguishable_coherent_and_incoherent_shape` is the invariant this whole
 phase exists to satisfy, so it cannot pass at Step 01 by construction. It
@@ -554,6 +564,36 @@ Tactics and compositions are **not** in the same position and need no equivalent
 step: their best response already gains `+0.0327` and `+0.0312` above an even
 contest, clears the noise floor, and collapses to `+0.0033` against its own
 counter. That is the rock-paper-scissors this contract wanted, working.
+
+**Measured and refused, 2026-08-06 (Step 14).** The target is not reachable and
+the contract now records why rather than carrying it forward a second time.
+
+Step 14 built the formation-versus-formation matrix the audit never had, over the
+whole `23`-shape catalog rather than the eight axis-isolating shapes, and
+measured it on two seed prefixes. The counter-move reward, with the best response
+*chosen* on the matrix and *replayed* on a separate seed stream so a `23`-way
+maximum cannot manufacture one, is **`0.0064`** and **`0.0117`** against a
+`0.0295` cell floor. Unresolvable on both.
+
+The lever this contract pointed at - Step 04's route chain weighting - was built
+analytically and swept over `57` configurations of every coefficient the matchup
+model has. **Every one produced a strictly transitive matrix.** The cause is not
+the routes: over the `23` shapes the ranking by route advantage tracks the
+ranking by *mean capacity*, so a shape better at attacking centrally is also
+better at defending centrally and there is no trade-off for a counter to exploit.
+A route model amplifies a difference; it cannot create a trade-off.
+
+So the one-sidedness above is now measured rather than inferred, and it is
+smaller than it looked: `4-2-3-1` averages `0.5184` and `0.5210` against the
+field on the two prefixes - reproducible, and outside the `0.0129` row-mean floor
+- so picking the best shape blind *is* worth about `0.02`, roughly `1.5` league
+points a season. That is an absolute reward, which is precisely what this
+contract forbids rewarding further.
+
+The two open questions at the top of this section are therefore still open, and
+the answer given on 2026-08-04 is withdrawn: `~0.047` as a counter-move is not a
+target this engine can be tuned to. Reaching it needs a lopsided population
+*and* conserved capacities, together. Step 14's handoff names both.
 
 ### Population Condition (A4)
 

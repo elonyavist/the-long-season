@@ -3,6 +3,7 @@ import {
   clubId,
   fixtureId,
   FORMATION_CATALOG,
+  FORMATION_KEYS,
   FORMATIONS,
   gameDate,
   playerId,
@@ -732,6 +733,87 @@ export interface TacticalShapeFormationVersusSlider {
   readonly formationShareOfSliderSpan: number;
 }
 
+/**
+ * One formation's standing against every other formation a manager may pick.
+ *
+ * The two numbers are the ones `no_dominant_tactic` already reports, and they
+ * are reported here for the same reason: a mean says what picking this shape
+ * blind is worth, and a worst matchup says whether anything punishes it. A
+ * shape that is above `0.5` on both has no counter, which is the definition of
+ * a dominant strategy rather than a decision.
+ */
+export interface TacticalShapeFormationDominanceRow {
+  /** Formation under test. */
+  readonly formationKey: FormationKey;
+  /** Mean win share against every *other* formation; the self-cell is excluded. */
+  readonly meanWinShareAgainstField: number;
+  /** Worst win share this formation held against any single other formation. */
+  readonly minimumWinShareAgainstField: number;
+  /** The formation that held it to that worst result. */
+  readonly worstAgainstKey: FormationKey;
+  /** Matches behind that mean. Never zero. */
+  readonly matches: number;
+}
+
+/**
+ * What answering one specific opponent shape was worth.
+ *
+ * The response is chosen on the matrix and then **replayed on its own seed
+ * stream**, because a maximum taken over a noisy population is biased upward by
+ * roughly the noise itself: with `23` candidates, picking the best cell and
+ * reporting that same cell would manufacture a reward out of sampling. Choosing
+ * on one sample and measuring on another removes it, so `gain` is the honest
+ * answer to "is countering worth anything".
+ */
+export interface TacticalShapeCounterMoveRow {
+  /** The shape being answered. */
+  readonly opponentKey: FormationKey;
+  /** The formation the matrix said answers it best. */
+  readonly responseKey: FormationKey;
+  /** Win share of the response against that opponent, replayed at scenario precision. */
+  readonly winShare: number;
+  /** `winShare - 0.5`: what choosing the right answer was worth. */
+  readonly gain: number;
+  /** Matches behind the replay. Never zero. */
+  readonly matches: number;
+}
+
+/**
+ * The formation-versus-formation matrix, which the audit never had.
+ *
+ * Formations previously had a versus-reference *column* only - each measured
+ * shape against `4-4-2` - which can say whether a formation is better than the
+ * reference and cannot say whether one formation answers another. That is the
+ * whole of the counter-move question, so a column could never decide it.
+ *
+ * The population is the complete curated catalog rather than the axis-isolating
+ * subset the versus-reference table uses. A manager picks from the catalog, so a
+ * shape that beats the field while sitting outside a measured subset is exactly
+ * the failure a subset cannot see.
+ */
+export interface TacticalShapeFormationDominanceMatrix {
+  /** Row and column order. */
+  readonly formationKeys: readonly FormationKey[];
+  /** `winShare[row][column]` is the row formation's win share against the column one. */
+  readonly winShare: readonly (readonly number[])[];
+  /** Aggregate standing per formation, ordered as `formationKeys`. */
+  readonly rows: readonly TacticalShapeFormationDominanceRow[];
+  /** Total matches behind the matrix. Never zero. */
+  readonly matches: number;
+  /** Best response per opponent, chosen on the matrix and replayed independently. */
+  readonly counterMoves: readonly TacticalShapeCounterMoveRow[];
+  /** Mean gain across every opponent: what countering is worth on average. */
+  readonly meanCounterMoveGain: number;
+  /** Smallest gain any opponent's best answer produced. */
+  readonly worstCounterMoveGain: number;
+  /** How many distinct formations appear as somebody's best response. */
+  readonly distinctResponseCount: number;
+  /** Smallest mean-against-field difference the matrix rows can resolve. */
+  readonly matrixNoiseFloor: number;
+  /** Smallest gain one replayed counter-move cell can resolve. */
+  readonly counterMoveNoiseFloor: number;
+}
+
 /** Machine-readable status for one frozen invariant. */
 export type TacticalShapeGateStatus = "pass" | "fail" | "not_evaluated";
 
@@ -742,6 +824,7 @@ export type TacticalShapeInvariantKey =
   | "distinguishable_coherent_and_incoherent_shape"
   | "empty_department_possession_clamp"
   | "no_dominant_composition"
+  | "no_dominant_formation"
   | "no_dominant_tactic"
   | "quality_hierarchy_survives_extreme_shape";
 
@@ -771,6 +854,8 @@ export interface TacticalShapeAuditReport {
   readonly pairedSeedCount: number;
   /** Seed pairs per named scenario and per versus-reference row. */
   readonly scenarioPairedSeedCount: number;
+  /** Seed pairs per formation-versus-formation cell. */
+  readonly formationPairedSeedCount: number;
   /** Bands supplied by the caller, in the order given. */
   readonly bands: readonly TacticalShapeQualityBand[];
   /** Strength collapse table over the reachable composition population. */
@@ -785,6 +870,8 @@ export interface TacticalShapeAuditReport {
   readonly tacticDominance: TacticalShapeTacticDominanceMatrix;
   /** Each curated formation measured against the reference formation. */
   readonly formations: readonly TacticalShapeFormationRow[];
+  /** Every curated formation against every other, with the counter-move reading. */
+  readonly formationDominance: TacticalShapeFormationDominanceMatrix;
   /** What the formation decides against what one slider decides. */
   readonly formationVersusSlider: TacticalShapeFormationVersusSlider;
   /** What concentrating a squad's attacking quality is worth at constant mean. */
@@ -849,6 +936,21 @@ export interface RunTacticalShapeAuditInput {
    */
   readonly scenarioPairedSeedCount: number;
   /**
+   * Seed pairs per cell of the formation-versus-formation matrix.
+   *
+   * Neither existing count fits this matrix, which is why it has its own. The
+   * dominance breadth is far too coarse: its gate reads a *minimum* across a
+   * row, where sampling only ever hurts a false positive, while this gate reads
+   * a *mean* that a coarse sample would leave unresolvable. The scenario
+   * precision is far too expensive: `23 x 23` upper-triangle cells at that count
+   * is more matches than the entire rest of the report.
+   *
+   * The number that matters is the resolution of a row mean over the whole
+   * field, which is `2.7 * 0.5 / sqrt(cellMatches * (formations - 1))` - about
+   * three times finer than one cell - and that is what the report records.
+   */
+  readonly formationPairedSeedCount: number;
+  /**
    * Optional restriction of the dominance population.
    *
    * Present so focused tests can run a small frozen subset. Omitting it runs the
@@ -866,6 +968,7 @@ export interface RunTacticalShapeAuditInput {
 export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): TacticalShapeAuditReport {
   assertPositiveSafeInteger(input.pairedSeedCount, "pairedSeedCount");
   assertPositiveSafeInteger(input.scenarioPairedSeedCount, "scenarioPairedSeedCount");
+  assertPositiveSafeInteger(input.formationPairedSeedCount, "formationPairedSeedCount");
   assertNonEmpty(input.seedPrefix, "seedPrefix");
 
   const bandList = orderedBands(input.bands);
@@ -876,6 +979,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
   const versusReference = buildVersusReferenceRows(input);
   const tacticDominance = buildTacticDominance(input);
   const formations = buildFormationRows(input);
+  const formationDominance = buildFormationDominance(input);
   const formationVersusSlider = buildFormationVersusSlider(input, formations);
   const selectionConcentration = buildSelectionConcentration(input);
   const dominance = buildDominanceMatrix(input);
@@ -886,6 +990,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     versusReference,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
     dominance,
+    formationDominance,
     tacticDominance,
     qualityVersusStructure,
   });
@@ -895,6 +1000,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     seedPrefix: input.seedPrefix,
     pairedSeedCount: input.pairedSeedCount,
     scenarioPairedSeedCount: input.scenarioPairedSeedCount,
+    formationPairedSeedCount: input.formationPairedSeedCount,
     bands: bandList,
     strengthRows,
     distinctStrengthCount: new Set(strengthRows.map((row) => row.fingerprint)).size,
@@ -902,6 +1008,7 @@ export function runTacticalShapeAudit(input: RunTacticalShapeAuditInput): Tactic
     versusReference,
     tacticDominance,
     formations,
+    formationDominance,
     formationVersusSlider,
     selectionConcentration,
     versusReferenceNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
@@ -1454,6 +1561,116 @@ function buildFormationRows(input: RunTacticalShapeAuditInput): readonly Tactica
   });
 }
 
+/**
+ * The complete population of formations a manager can actually pick.
+ *
+ * `TACTICAL_SHAPE_MEASURED_FORMATION_KEYS` is a deliberate subset chosen to
+ * isolate axes against the reference, and it is right for that job. It is the
+ * wrong population for a dominance question: a shape that beats the field while
+ * sitting outside the subset is invisible to a subset by construction, and the
+ * catalog is what the tactical board offers.
+ */
+export const TACTICAL_SHAPE_FORMATION_POPULATION: readonly FormationKey[] = FORMATION_KEYS;
+
+/**
+ * Runs every curated formation against every other, then replays the answers.
+ *
+ * Two stages, because they answer two questions at two precisions:
+ *
+ * 1. **The matrix**, at its own breadth. Every unordered pair plays once and the
+ *    mirrored cell is `1 - share`, exactly as the tactic matrix does, because
+ *    the series already swaps venues. The diagonal stays `0.5`: a shape against
+ *    itself is a mirror match whose value is fixed by construction.
+ * 2. **The replay**, at scenario precision on its own seed stream. The best
+ *    response to each opponent is *chosen* in stage one and *measured* in stage
+ *    two, so the reported gain is not the maximum of the sample it came from.
+ *    Reporting the stage-one cell instead would credit this step with roughly
+ *    the noise floor of a `23`-way maximum before any football happened.
+ */
+function buildFormationDominance(input: RunTacticalShapeAuditInput): TacticalShapeFormationDominanceMatrix {
+  const formationKeys = TACTICAL_SHAPE_FORMATION_POPULATION;
+  const size = formationKeys.length;
+  const winShare: number[][] = formationKeys.map(() => new Array<number>(size).fill(0.5));
+  let matches = 0;
+
+  for (let row = 0; row < size; row += 1) {
+    for (let column = row + 1; column < size; column += 1) {
+      const series = runTacticalShapeSeries({
+        first: formationSideFor(formationKeys[row] as FormationKey, input.bands.reference),
+        second: formationSideFor(formationKeys[column] as FormationKey, input.bands.reference),
+        engineConfig: input.engineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
+        seedPrefix: `${input.seedPrefix}|formation-dominance`,
+        pairedSeedCount: input.formationPairedSeedCount,
+      });
+
+      (winShare[row] as number[])[column] = series.firstWinShare;
+      (winShare[column] as number[])[row] = roundFour(1 - series.firstWinShare);
+      matches += series.matches;
+    }
+  }
+
+  const cellMatches = input.formationPairedSeedCount * 2;
+  const rows = formationKeys.map((formationKey, index): TacticalShapeFormationDominanceRow => {
+    const shares = winShare[index] as readonly number[];
+    const against = formationKeys
+      .map((opponentKey, column) => ({ opponentKey, share: shares[column] as number, column }))
+      .filter((cell) => cell.column !== index);
+    const worst = against.reduce((left, right) => (right.share < left.share ? right : left));
+
+    return {
+      formationKey,
+      meanWinShareAgainstField: roundFour(
+        against.reduce((sum, cell) => sum + cell.share, 0) / against.length,
+      ),
+      minimumWinShareAgainstField: roundFour(worst.share),
+      worstAgainstKey: worst.opponentKey,
+      matches: against.length * cellMatches,
+    };
+  });
+
+  const counterMoves = formationKeys.map((opponentKey, column): TacticalShapeCounterMoveRow => {
+    let best = { key: formationKeys[0] as FormationKey, share: Number.NEGATIVE_INFINITY };
+    for (const [row, candidateKey] of formationKeys.entries()) {
+      if (row === column) continue;
+      const share = (winShare[row] as readonly number[])[column] as number;
+      if (share > best.share) best = { key: candidateKey, share };
+    }
+
+    const replay = runTacticalShapeSeries({
+      first: formationSideFor(best.key, input.bands.reference),
+      second: formationSideFor(opponentKey, input.bands.reference),
+      engineConfig: input.engineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+      seedPrefix: `${input.seedPrefix}|counter-move`,
+      pairedSeedCount: input.scenarioPairedSeedCount,
+    });
+
+    return {
+      opponentKey,
+      responseKey: best.key,
+      winShare: replay.firstWinShare,
+      gain: roundFour(replay.firstWinShare - 0.5),
+      matches: replay.matches,
+    };
+  });
+
+  const gains = counterMoves.map((counterMove) => counterMove.gain);
+
+  return {
+    formationKeys,
+    winShare,
+    rows,
+    matches,
+    counterMoves,
+    meanCounterMoveGain: roundFour(gains.reduce((sum, gain) => sum + gain, 0) / gains.length),
+    worstCounterMoveGain: roundFour(Math.min(...gains)),
+    distinctResponseCount: new Set(counterMoves.map((counterMove) => counterMove.responseKey)).size,
+    matrixNoiseFloor: winShareNoiseFloor(cellMatches * (size - 1)),
+    counterMoveNoiseFloor: winShareNoiseFloor(input.scenarioPairedSeedCount * 2),
+  };
+}
+
 /** Compares what the formation decides against what the width slider decides. */
 function buildFormationVersusSlider(
   input: RunTacticalShapeAuditInput,
@@ -1809,6 +2026,7 @@ interface EvaluateInvariantsInput {
   readonly versusReference: readonly TacticalShapeVersusReferenceRow[];
   readonly versusReferenceNoiseFloor: number;
   readonly dominance: TacticalShapeDominanceMatrix;
+  readonly formationDominance: TacticalShapeFormationDominanceMatrix;
   readonly tacticDominance: TacticalShapeTacticDominanceMatrix;
   readonly qualityVersusStructure: readonly TacticalShapeQualityStructureRow[];
 }
@@ -1817,6 +2035,7 @@ function evaluateInvariants(context: EvaluateInvariantsInput): readonly Tactical
   return [
     evaluateBoundedStructuralSwing(context),
     evaluateNoDominantComposition(context),
+    evaluateNoDominantFormation(context),
     evaluateNoDominantTactic(context),
     evaluateIncoherenceCost(context),
     evaluateQualityHierarchy(context),
@@ -1913,6 +2132,51 @@ function evaluateNoDominantComposition(context: EvaluateInvariantsInput): Tactic
     detail:
       `The nearest thing to a dominant shape is ${strongest.compositionKey}, which still drops to ${strongest.minimumWinShare} `
       + `against its worst matchup while averaging ${strongest.meanWinShare} against the whole population.`,
+  };
+}
+
+/**
+ * Proves that no formation is simply the right answer.
+ *
+ * It reads the **mean** against the field rather than the minimum, which is the
+ * tactic gate's reading and not the composition gate's, and the difference is
+ * not a preference. The `66` compositions are mostly self-destructive, so a mean
+ * over them measures how badly a broken shape loses; the curated formations are
+ * all shapes a manager legitimately picks, so the mean *is* the expected value
+ * of choosing one blind - and that is exactly the quantity that must not have a
+ * single winner.
+ *
+ * A formation whose worst matchup is still above `0.5` has no counter at all,
+ * which is worse than a high mean and is reported in the detail rather than
+ * gated separately: the mean already fails in that case.
+ */
+function evaluateNoDominantFormation(context: EvaluateInvariantsInput): TacticalShapeInvariantResult {
+  const threshold = `no curated formation averages above ${TACTICAL_SHAPE_THRESHOLDS.maxMeanWinShareAgainstField} against the other formations`;
+  const matrix = context.formationDominance;
+  if (matrix.matches === 0 || matrix.rows.length < 2) {
+    return notEvaluated("no_dominant_formation", threshold, "The formation matrix produced fewer than two shapes");
+  }
+
+  const strongest = [...matrix.rows].sort(
+    (left, right) => right.meanWinShareAgainstField - left.meanWinShareAgainstField,
+  )[0] as TacticalShapeFormationDominanceRow;
+  const uncountered = matrix.rows.filter((row) => row.minimumWinShareAgainstField > 0.5);
+
+  return {
+    key: "no_dominant_formation",
+    status:
+      strongest.meanWinShareAgainstField <= TACTICAL_SHAPE_THRESHOLDS.maxMeanWinShareAgainstField
+        ? "pass"
+        : "fail",
+    observations: matrix.matches,
+    observed: strongest.meanWinShareAgainstField,
+    threshold,
+    detail:
+      `The strongest shape is ${strongest.formationKey} at ${strongest.meanWinShareAgainstField} against the field, `
+      + `dropping to ${strongest.minimumWinShareAgainstField} against ${strongest.worstAgainstKey}. `
+      + `${uncountered.length} of ${matrix.rows.length} formations never fall below an even contest against any opponent, `
+      + `and ${matrix.distinctResponseCount} distinct shapes appear as somebody's best answer. `
+      + `Row means resolve to ${matrix.matrixNoiseFloor}.`,
   };
 }
 
