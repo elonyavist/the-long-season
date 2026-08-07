@@ -7,6 +7,12 @@ decision, then renumbered Phase 81B on 2026-08-07 when contextual tactical
 agency became the immediate successor to Phase 81. Do not start until the new
 Phase 81A is Done.
 
+Phase implementation also requires the blocking findings in
+[`00-pre-implementation-analysis-prerequisite.md`](00-pre-implementation-analysis-prerequisite.md)
+to be resolved in their owning step contracts. That document is the mandatory
+analysis gate before Step 01; it is not an implementation step and may not be
+treated as satisfied merely because the phase remains Draft.
+
 This document is a draft, not an accepted contract. Its numeric decisions - the
 `5-7%` free-agent peak, the `2%` trough, the three-year contract ladder, the
 drain requirement - were made before anything was measured, and Phase 81 changes
@@ -28,6 +34,10 @@ The analysis, the measured evidence, and the accepted work order are in
 
 ## Entry Gate
 
+- The Phase 81B pre-implementation analysis prerequisite is closed: every
+  blocking finding is resolved in the owning step, intermediate checkpoint
+  decisions are explicit, and all simulation checkpoints require exactly `7`
+  actual workers.
 - Phase 80 and Phase 80A are Done, the latter having transferred its
   `goals_per_match_avg` monitor to Phase 81.
 - Phase 81 is Done. Its Step 15 report records the four seams this phase
@@ -153,6 +163,8 @@ leaving football.
   counted as a fail-closed source violation.
 
 ## Ordered Steps
+
+Prerequisite analysis: `00-pre-implementation-analysis-prerequisite.md`.
 
 1. `01-expiry-free-agent-and-density-baseline.md`
 2. `02-season-anchored-expiry-and-month-precision-terms.md`

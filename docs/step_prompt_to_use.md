@@ -1,4 +1,4 @@
-PHASE_DIR_TO_EXECUTE: docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine
+PHASE_DIR_TO_EXECUTE: docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop
 
 Execute the whole documented phase, one step at a time, without waiting for
 approval between steps.
