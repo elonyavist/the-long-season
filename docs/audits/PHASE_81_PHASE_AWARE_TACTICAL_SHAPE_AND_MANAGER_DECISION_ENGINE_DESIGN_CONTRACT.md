@@ -779,7 +779,7 @@ coinciding at the first loan, and by then the history already exists.
   82B own it and it does not exist yet.
 - No background-world simulator, multi-country topology, or aggregate result
   producer. This phase builds the seams and stops.
-- No contract-duration or market-density change; that is Phase 81A
+- No contract-duration or market-density change; that is Phase 81B
   that follows.
 - No new direct reader of `club.playerIds` in a lineup-composing path.
 - No weakening or second transfer of the carried `goals_per_match_avg` monitor.
@@ -811,6 +811,6 @@ Phase 81 is complete only when:
   fielded by;
 - the checkpointed `50 x 20` completes and replays with exactly seven workers,
   and its report states that it observed no loans and no races;
-- Phase 81A receives a truthful handoff naming the contract-duration
+- Phase 81B receives a truthful background-world handoff naming the contract-duration
   representation change, the background-fixture resolution point, and the
   simulate-match command, while Phase 79 Step 14 stays unrun and unclaimed.

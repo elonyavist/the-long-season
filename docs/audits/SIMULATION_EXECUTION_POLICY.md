@@ -52,14 +52,18 @@ Worker count is execution metadata only:
 - thresholds and pass/warn/fail semantics do not change;
 - replay evidence records the actual execution strategy.
 
-## Deferred Rework Cohort
+## Longitudinal Cohort Schedule
 
-Phases 80, 80A, 80B, and 80C run no longitudinal cohort. The sole deferred
-replacement `50 x 20` belongs to Phase 81 Step 12 and must use:
+The phase sequence has evolved since this policy was created; the worker
+contract has not. Phase 81 Step 15 completed its checkpointed `50 x 20` engine
+run. The remaining scheduled long runs are:
 
-- one explicit checkpoint directory;
-- `50` stable shards;
-- the canonical `7` workers;
-- a report path frozen before execution.
+- Phase 81B Step 07: world integrity, exactly `750 x 10`, `750` stable
+  one-world shards and exactly `7` workers;
+- Phase 82B Step 09: completed competitive market, `50 x 20`, `50` stable
+  shards and exactly `7` workers.
 
-It remains separate from Phase 79 Step 14's unrun release-scale gate.
+Phase 81A Step 16 owns bounded contextual-engine acceptance and Phase 82A runs
+no longitudinal cohort. Every long run uses an explicit checkpoint directory,
+a report path frozen before execution and a no-work resume proof. None replaces
+Phase 79 Step 14's separate unrun release-scale gate.

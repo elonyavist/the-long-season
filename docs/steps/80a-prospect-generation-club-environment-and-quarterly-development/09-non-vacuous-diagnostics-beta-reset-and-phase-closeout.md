@@ -610,5 +610,5 @@ Do not run the Phase 81 `50 x 20`.
   threshold, denominator, severity class, and `36/634/80` distribution
   unchanged, and the report states plainly that the phase closed with that gate
   red under a named successor rather than by repairing or weakening it.
-- Phase 81 Step 01 is the only next action. Phase 81A, Phase 82A, and Phase 82B
-  are not started and no Phase 81 cohort has run.
+- Phase 81 Step 01 is the only next action. Successor Phases 81A, 81B, 82A, and
+  82B are not started and no Phase 81 cohort has run.

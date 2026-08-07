@@ -2,10 +2,9 @@
 
 ## Status
 
-**Draft.** The product contract is accepted, but three phases now land in front
-of it. Deferred behind Phase 81 and Phase 81A by the 2026-08-02 phase-order
-decision; this phase was previously numbered 80C. Do not start until Phase 82A
-is complete.
+**Draft.** The product contract is accepted, but Phase 81A, Phase 81B and Phase
+82A now land in front of it. This phase was previously numbered 80C. Do not
+start until Phase 82A is complete.
 
 The cross-phase requirements added on 2026-08-02 - the shared season boundary,
 the free-agent cycle the three-day player stage must not close - are intent to
@@ -25,8 +24,8 @@ The governing contract is:
 
 ## Entry Gate
 
-- Phase 80, Phase 80A, Phase 81, Phase 81A, and Phase 82A are Done.
-- One season-boundary owner exists, introduced by Phase 81A. Race deadlines
+- Phase 80, Phase 80A, Phase 81, Phase 81A, Phase 81B, and Phase 82A are Done.
+- One season-boundary owner exists, introduced by Phase 81B. Race deadlines
   capped by a registration-window close read the same boundary as contract
   expiry and loan return.
 - The contract's six accepted product decisions remain unchanged.
@@ -68,7 +67,7 @@ The governing contract is:
 - Permanent transfers and free agents race in this release. Loans keep the
   serial Phase 82A lifecycle behind the same discriminated extension seam.
 - A free agent always waits through the full shared player-stage window, even
-  with one suitor. That wait slows every signing on the channel Phase 81A
+  with one suitor. That wait slows every signing on the channel Phase 81B
   calibrated, so Step 06 re-measures that phase's free-agent cycle and repairs
   any shortfall through approach frequency and concurrent-pursuit limits, never
   by widening the frozen band.
@@ -79,10 +78,12 @@ The governing contract is:
 - Race diagnostics live in their own Module and cannot pass on zero
   observations.
 - Step 09 closes Phase 82B and owns the second checkpointed `50 x 20`, run with
-  exactly seven workers over the completed competitive market. Phase 81 Step 12
-  already ran the first cohort against the accepted tactical match engine; that
-  run observed no loans and no races, so it proves the engine and cannot prove
-  the market. Two runs are an accepted cost of the 2026-08-02 phase order.
+  exactly seven workers over the completed competitive market. Phase 81 Step 15
+  ran the historical engine cohort, Phase 81A Step 16 closes the contextual
+  engine, and Phase 81B Step 07 runs `750 x 10` over complete
+  selected-division fixtures plus its free-agent foundation. None observes both
+  loans and races, so none can prove the completed market. The market run
+  remains an accepted cost of the phase order.
 
 ## Ordered Steps
 
@@ -158,8 +159,8 @@ workers, over the completed competitive market.
 - No agents, playing-time contracts, swaps, resale clauses, or loan fees.
 - No competitive loan race in this release.
 - No longitudinal cohort before Step 09.
-- No reuse of the Phase 81 Step 12 cohort as market evidence: it observed no
-  loans and no races.
+- No reuse of Phase 81 Step 15, Phase 81A Step 16 or Phase 81B Step 07 as
+  completed-market evidence: none observed both loans and races.
 - No Phase 79 Step 14 or Step 15 implementation.
 
 ## Definition Of Done

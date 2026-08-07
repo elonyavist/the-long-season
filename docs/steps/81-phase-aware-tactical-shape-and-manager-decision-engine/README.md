@@ -103,10 +103,11 @@ and come from the market work moving after this phase.
 - **A2 - XI selection covers every club** (Step 09). The canonical selection and
   typed formation hold for all clubs in the world, not only the user's
   opponents. Stated explicitly so the step cannot be narrowed in scope.
-- **A3 - per-component measurement.** Deferred to Phase 81A on 2026-08-02. The
+- **A3 - per-component measurement.** Deferred to the background-world phase on
+  2026-08-02, now numbered Phase 81B. The
   bench that reports cost per tick by component exists to size the background
-  world, and that is Phase 81A's work; building the instrument here would
-  measure a cost this phase does not yet spend. Phase 81A Step 04 owns it.
+  world, and that is Phase 81B's work; building the instrument here would
+  measure a cost this phase does not yet spend. Phase 81B Step 04 owns it.
   Recorded so the requirement is not lost, not because this phase does it.
 - **A4 - quality bands are population-conditioned** (Step 01 and the contract).
   The frozen quality-versus-structure bands hold for a single-country
@@ -372,7 +373,7 @@ The longitudinal command runs only in Step 15.
   belong to Phases 82A and 82B and do not exist yet.
 - No background-world simulator, multi-country topology, or aggregate result
   producer. This phase builds the seams they will use and stops there.
-- No contract-duration or market-density change: that is Phase 81A
+- No contract-duration or market-density change: that is Phase 81B
   that follows this phase.
 - No new direct reader of `club.playerIds` in a lineup-composing path (A6).
 - No weakening of the carried `goals_per_match_avg` monitor: its threshold,
@@ -411,7 +412,7 @@ The longitudinal command runs only in Step 15.
 - This phase's `50 x 20` completes and replays with 50 stable shards and exactly
   seven workers, and the report states plainly that it observed no loans and no
   races and is therefore not market evidence.
-- Phase 81A receives a truthful handoff naming the contract-duration
+- Phase 81B receives a truthful background-world handoff naming the contract-duration
   representation change, the background-fixture resolution point, and the
   simulate-match command.
 - Phase 79 Step 14 remains separately unrun and unclaimed.

@@ -66,8 +66,9 @@ Provide an open, incremental, and iterative execution guide for the project: one
   phase's player-model scope, so the monitor transfers unchanged to Phase 81,
   which owns the match engine. Threshold, denominator, and severity class all
   stay as they are, and Phase 81 may not transfer it again.
-- Phase 81 is the next phase, then Phase 81A. The market work is deferred behind
-  both and is renumbered Phase 82A and Phase 82B.
+- Phase 81 is Done. Phase 81A is now the contextual tactical-agency successor;
+  the former Phase 81A contract/free-agent/background-fixture work is
+  renumbered Phase 81B. Market work remains Phase 82A and Phase 82B.
 - `docs/steps/80-graphical-and-structural-rework/`
 - Status: Done. All nine steps are complete and the phase handed control to
   Phase 80A on 2026-07-31.
@@ -145,23 +146,32 @@ Provide an open, incremental, and iterative execution guide for the project: one
   cohort belongs to Phase 81 Step 15 and must use checkpoints, `50` stable
   shards, and exactly `7` workers.
 
-## Planned Rework Continuation
+## Active Rework Continuation
 
-- `docs/steps/80a-prospect-generation-club-environment-and-quarterly-development/`
-- Status: Blocked. Steps 01-08 are Done/reclosed; Step 09 completed its exact
-  deterministic fresh/resume execution but cannot close while the frozen
-  report-wide match-goal monitor remains `FAIL`.
-- It owns dynamic club tier/reputation/environment, quarterly development,
-  current/P50/upper projection, contextual prospect supply, national
-  exceptional stock, annual intake, expected-outcome value, and fair AI
-  information.
-- It deleted/rejected incompatible beta evidence and completed a compact
-  checkpointed `750 worlds x 3 seasons` player-development diagnostic with
-  exactly `7` workers and a zero-new-world resume proof, but no `50 x 20`.
+- `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`
+- Status: Accepted, not started. Step 01 is the only active step.
+- It first removes duplicate tactical ownership and establishes a reproducible
+  real-career before-state. Every two implementation steps are followed by a
+  mandatory checkpoint with a recorded `GO`, `REFINE`, or `STOP` decision.
+- It then introduces conserved tactical contribution budgets, contested routes,
+  `lateralFocus`, player-specific execution, generated-squad identity, one
+  shared `OpponentRead` for manager and AI, canonical tactical chapters and a
+  post-match preparation choice whose consequence begins with the next match.
+  Step 14 persists all four concerns under the phase's single beta reset.
+- The accepted effects are `+0.045` for reading the context correctly,
+  `-0.045` for committing to the wrong read and `0` for a neutral policy. No
+  formation or tactic owns an intrinsic advantage; value comes from players,
+  opponent and information actually available.
+- Checkpoint B is the structural investment gate. It must pass the complete
+  analytic signature space and a separately seeded, preregistered replay before
+  player, manager or AI layers may start.
+- Contract: `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`.
 
-- `docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
-- Status: Planned. Created by the 2026-08-02 phase-order decision as the
-  playable-MVP work between Phase 81 and the market phases.
+## Planned Continuation
+
+- `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
+- Status: Planned. Originally numbered Phase 81A; renumbered Phase 81B when the
+  tactical-agency successor was inserted ahead of it.
 - It owns three measured defects and two features. Contract expiry is anchored
   to the season boundary through one named owner, replacing
   `startsOn + durationYears * 365` and the `0..120` day generation scatter; the
@@ -179,15 +189,18 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - It then resolves background fixtures for the selected club's division inside
   `advanceCareerMonths`, adds the simulate-match command on the same producer,
   and measures market density against bands frozen in its Step 01.
-- Its Step 06 decides whether Phase 82A is still justified. If density is
-  already inside band, the loan work is re-argued rather than started by
-  default.
-- It runs no longitudinal cohort and touches no market feature.
+- Its Step 06 decides whether Phase 82A is still justified and freezes the
+  final evidence contract. Step 07 then runs and resumes a checkpointed
+  `750 x 10` with `750` one-world shards and exactly `7` workers, reporting
+  complete selected-division tables, scorers, assists, transfers and tactical
+  usage through one canonical report and a derived local diagnostic view.
+- The `750 x 10` observes the Phase 81B market foundation but no loans or races;
+  it therefore does not replace Phase 82B's completed-market cohort.
 
 - `docs/steps/82a-incoming-offers-market-postures-and-loans/`
 - Status: Planned and entry-gated, previously numbered 80B. It starts only after
-  Phase 80A is Done, Phase 81 is Done, Phase 81A is Done, and market
-  density has been measured against the frozen bands.
+  Phase 80A, Phase 81, Phase 81A and Phase 81B are Done, and market density has
+  been measured against the frozen bands.
 - It owns durable sale/loan postures, selected-club incoming offers, one final
   counterproposal, bidirectional loans, three wage-share choices, real
   loan development, Posta UI, and persistence.
@@ -242,7 +255,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   exactly `7` workers, and a repeated run proving deterministic checkpoint reuse
   - `resumed=50`, `simulated_worlds=0`, one differing line of `1493`. It observed
   no loans and no races, so it is engine evidence only, and it handed control to
-  Phase 81A.
+  Phase 81A. The background-world seams are consumed later by Phase 81B.
 
 ## Completed User-Requested Phase
 

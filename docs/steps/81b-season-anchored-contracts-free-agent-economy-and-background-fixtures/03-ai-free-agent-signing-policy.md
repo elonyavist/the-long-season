@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Not started. Phase 81B.
 
 ## Entry Gate
 
@@ -105,7 +105,7 @@ pnpm exec vitest run \
   packages/engine/src/career/senior-squad-replenishment.test.ts \
   packages/engine/src/career/apply-career-free-agent-signing.test.ts \
   packages/simulation-tools/src/market-economy/market-economy-audit.test.ts
-pnpm cli market-economy-report --seed-prefix=phase81a-steps-02-03
+pnpm cli market-economy-report --seed-prefix=phase81b-steps-02-03
 pnpm check
 pnpm depcruise
 git diff --check

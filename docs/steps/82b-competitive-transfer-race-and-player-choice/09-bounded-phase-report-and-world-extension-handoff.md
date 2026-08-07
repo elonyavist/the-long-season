@@ -26,8 +26,10 @@ evidence for the accepted tactical match engine and is not valid evidence for
 the market: the behaviour it would need to observe did not exist yet.
 
 Reusing it here would certify a competitive market that the cohort never saw.
-This phase therefore runs a second cohort. Two runs are an accepted, declared
-cost of the phase order, not an oversight, and neither run replaces the other.
+Phase 81B Step 07 later adds broad `750 x 10` evidence for complete
+selected-division fixtures and its free-agent foundation, but it likewise sees
+no loans or races. This phase therefore still runs the dedicated completed-
+market cohort. The runs answer different populations and none replaces another.
 
 ## What To Implement
 
@@ -42,11 +44,11 @@ cost of the phase order, not an oversight, and neither run replaces the other.
   consolidated world analysis: arrivals per club per season, permanent share,
   contract-expiry share, loan share, fee-bearing share, and mean contract
   duration. Record every measured value, inside band or not.
-- Re-measure the Phase 81A free-agent cycle at cohort scale - peak, trough, and
+- Re-measure the Phase 81B free-agent cycle at cohort scale - peak, trough, and
   drain attributed between signings and exits - now that loans and races both
   exist. Loans compete with free-agent signings for the same squad gaps, so this
   is the first run where the channel is observed under full competition. Report
-  it beside the Phase 81A and Step 06 values so a slow erosion across three
+  it beside the Phase 81B and Step 06 values so a slow erosion across three
   phases is visible rather than inferred.
 - Run `pnpm check`, web build, Playwright, dependency, diff, and Graphify gates.
 - Write the Phase 82B report with delivered behaviour, verification, measured
@@ -59,7 +61,8 @@ cost of the phase order, not an oversight, and neither run replaces the other.
 
 - No production fix, tuning, threshold relaxation, seed exception, warning
   suppression, or report fabrication.
-- No reuse of the Phase 81 Step 12 cohort as market evidence.
+- No reuse of Phase 81 Step 15, Phase 81A Step 16 or Phase 81B Step 07 as
+  completed-market evidence.
 - No band adjustment driven by the measured result. The bands are frozen before
   the run; a miss is reported as a miss and owned by a named successor.
 - No world-extension implementation.
@@ -101,7 +104,7 @@ graphify update .
 - Every frozen market-density band has a measured value recorded against it,
   and any miss is stated plainly with a named owner.
 - The free-agent cycle still reaches its frozen trough under full competition,
-  reported beside its Phase 81A and Step 06 values.
+  reported beside its Phase 81B and Step 06 values.
 - Repository, browser, persistence, accessibility, dependency, diff, and
   Graphify gates pass.
 - Phase 82B is complete.

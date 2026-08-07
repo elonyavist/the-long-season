@@ -191,8 +191,8 @@ pnpm cli ten-season-report \
 - Write the Phase 81 report with delivered behaviour, code/refactor removals,
   verification, manual inspection, warnings, residual monitors, and an explicit
   statement that this cohort observed no loans and no races.
-- Write the Phase 81A handoff. That phase is already scoped in
-  `docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`,
+- Write the background-world handoff, now owned by Phase 81B. It is scoped in
+  `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`,
   so the handoff confirms its entry gate rather than restating its scope:
   the carried monitor is inside band, the four seams below exist, and no loan,
   posture, or race behaviour was introduced.
@@ -211,7 +211,7 @@ pnpm cli ten-season-report \
 - No longer-than-20-season, duplicate, or release-scale Phase 79 cohort.
 - No market or race claim from this cohort: the behaviour did not exist when it
   ran.
-- No Phase 81A implementation. This step names the work and hands it over.
+- No successor-phase implementation. This step names the work and hands it over.
 - No Phase 79 Step 14/15 implementation.
 
 ## Expected Files
@@ -270,18 +270,19 @@ graphify update .
 | `goals_per_match_avg` inside its unchanged band at cohort scale, beside the inherited `36/634/80` | **met** - `2.670` mean, `2.740` p95, `0/50` failing; F1 |
 | The report states plainly that this cohort observed no loans and no races | **met** |
 | Phase 81 is complete | **met**, with the line above recorded as not met rather than claimed |
-| Phase 81A is the only next owner, entry gate confirmed, four seams named | **met** |
+| Phase 81A is the only next owner; Phase 81B background seams are named | **met** |
 | Phase 79 Step 14 remains unrun and unclaimed | **met** - and two of its checks are named in its own step document by this step |
 
 ## Handoff, 2026-08-07
 
-**Phase 81A inherits an engine this step did not touch.** No production file was
+**The successor phases inherit an engine this step did not touch.** No production file was
 modified here. The working tree carried no change between the run and the replay,
 which is what makes the one-line report diff a proof of determinism rather than of
 luck.
 
-Its entry gate is confirmed: the carried monitor is inside band at cohort scale,
-no loan, posture or race behaviour exists, and the four seams it consumes are in
+Phase 81B's background-world entry evidence is confirmed: the carried monitor
+is inside band at cohort scale, no loan, posture or race behaviour exists, and
+the four seams it consumes are in
 place - the named squad-depth accessor, the context constructor taking an explicit
 squad, the non-selected club as an ordinary caller, and the `(worldSeed,
 fixtureId)` match RNG key. Named for it also: the contract-duration representation

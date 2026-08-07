@@ -325,25 +325,26 @@ Phase 82B Step 09 closes on bounded non-vacuous race evidence and owns the
 checkpointed market `50 x 20`, run and replayed with exactly seven workers over
 50 stable shards.
 
-This is the second such cohort, and the duplication is deliberate. Under the
-2026-08-02 phase order the accepted Phase 81 tactical match-engine rework lands
-first, so its Step 12 cohort ran against a world with no postures, no loans, and
-no races. That run is valid engine evidence and cannot serve as market evidence:
-the behaviour it would need to observe did not exist when it ran. Reusing it
-here would certify a competitive market the cohort never saw.
+This is the second market-scale `50 x 20`, and the duplication is deliberate.
+Phase 81 Step 15 ran the first against a world with no postures, loans, or races.
+Phase 81A Step 16 later owns integrated acceptance of the contextual-agency
+engine. Phase 81B Step 07 then runs `750 x 10` over complete selected-division
+fixtures and its free-agent foundation. None sees both loans and races, so none
+can serve as completed-market evidence. Reusing any of them here would certify
+a competitive market no cohort saw.
 
 Step 09 also measures market density against the frozen bands and records every
 measured value, inside band or not. The bands are frozen before the run; a miss
 is reported and assigned to a named owner, never absorbed by adjusting the band.
 
-It additionally re-measures the free-agent cycle calibrated in Phase 81A - peak
+It additionally re-measures the free-agent cycle calibrated in Phase 81B - peak
 at the season boundary, trough once the window closes, and the drain between
 them attributed between signings and exits. Two changes in this release act on
 that channel: the mandatory three-day player stage slows every free-agent
 signing, and loans introduced in Phase 82A compete for the same squad gaps.
 Contract expiry drives `62.5%` of real movements, so a channel that quietly
 stops draining would undo the largest gain of the earlier work while every gate
-here stayed green. The cycle is therefore reported beside its Phase 81A values,
+here stayed green. The cycle is therefore reported beside its Phase 81B values,
 and a shortfall is repaired in the mechanism that caused it.
 
 Phase 79 Step 14 remains paused, unrun, and unclaimed.
@@ -382,5 +383,5 @@ Phase 79 Step 14 remains paused, unrun, and unclaimed.
 - No generic ranking framework, strategy/plugin registry, event bus, or
   abstract market-participant hierarchy.
 - No durable bid history.
-- No longitudinal cohort before Step 09, and no reuse of the Phase 81 Step 12
-  cohort as market evidence.
+- No longitudinal cohort before Step 09, and no reuse of Phase 81 Step 15 or
+  Phase 81A Step 16 engine evidence as market evidence.

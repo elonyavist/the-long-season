@@ -119,7 +119,7 @@ and are recorded as absent rather than quietly dropped:
 - **Fixed-minute live changes.** A confirmed live change rebuilds the same team
   context through the same builder, so at Step 01 it is bit-identical to the
   pre-match path by construction. Step 08 owns it.
-- **Per-component tick costs.** Deferred to Phase 81A Step 04 by amendment A3 on
+- **Per-component tick costs.** Deferred to Phase 81B Step 04 by amendment A3 on
   2026-08-02. Building the bench here would measure a cost this phase does not
   yet spend.
 

@@ -19,7 +19,8 @@ opportunity generation behind those goals. Threshold, denominator, severity
 class, and distribution are all unchanged: the owner moved, the result did not.
 
 Phase 81 is the next phase, not Phase 82A. The market work is deferred behind
-Phase 81 and Phase 81A by the same 2026-08-02 decision.
+Phase 81 and the background-world phase now numbered Phase 81B by the same
+2026-08-02 decision.
 
 Phase 80 is complete and handed control here on 2026-07-31.
 Step 07 was first reopened and reclosed after reserved promotion candidates

@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+Not started. Phase 81B.
 
 ## Goal
 
@@ -123,7 +123,7 @@ numbers moved.
 - `apps/cli/src/commands/market-economy-report.test.ts`
 - `apps/cli/src/index.ts`
 - `apps/cli/package.json`
-- `docs/audits/PHASE_81A_MARKET_ECONOMY_BASELINE.md`
+- `docs/audits/PHASE_81B_MARKET_ECONOMY_BASELINE.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`
 - this step document

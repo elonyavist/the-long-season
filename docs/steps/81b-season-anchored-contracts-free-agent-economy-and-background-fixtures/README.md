@@ -1,10 +1,11 @@
-# Phase 81A - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
+# Phase 81B - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
 
 ## Status
 
-**Draft.** Created by the 2026-08-02 phase-order decision as the playable-MVP
-work between Phase 81 and the market phases. Do not start until Phase 81 is
-Done.
+**Draft.** Originally numbered Phase 81A by the 2026-08-02 phase-order
+decision, then renumbered Phase 81B on 2026-08-07 when contextual tactical
+agency became the immediate successor to Phase 81. Do not start until the new
+Phase 81A is Done.
 
 This document is a draft, not an accepted contract. Its numeric decisions - the
 `5-7%` free-agent peak, the `2%` trough, the three-year contract ladder, the
@@ -33,6 +34,9 @@ The analysis, the measured evidence, and the accepted work order are in
   consumes: the named squad-depth accessor, the context constructor taking an
   explicit squad, the non-selected club as an ordinary caller, and the match RNG
   keyed by `(worldSeed, fixtureId)`.
+- Phase 81A is Done, including its integrated Checkpoint F. This phase must not
+  overlap tactical-engine calibration, manager/AI tactical information or the
+  post-match preparation loop.
 - Phase 81's carried goal-rate monitor is inside its band, so background
   fixtures will not multiply a known scoring defect across a division.
 - Phases 82A and 82B are Planned and not started. No loan, posture, or
@@ -138,8 +142,15 @@ leaving football.
 - Market-density bands are frozen in Step 01, before any behaviour changes, and
   are never adjusted to match what Step 06 measures.
 - Incompatible beta saves are deleted without migration.
-- This phase runs no longitudinal cohort. Phase 81 Step 15 ran the engine
-  cohort; Phase 82B Step 09 owns the market cohort.
+- Step 07 runs one checkpointed `750 x 10` world-integrity cohort with exactly
+  `7` workers after background fixtures and the free-agent cycle both exist.
+  It is the first long run that can show complete selected-division standings,
+  player charts and the Phase 81B market foundation together. It does not
+  observe loans or competitive races and therefore cannot replace Phase 82B
+  Step 09's market cohort.
+- Both Step 07 profiles use the canonical career fixture and club selector for
+  every side. The legacy report fallback to fixed `4-4-2` is forbidden and
+  counted as a fail-closed source violation.
 
 ## Ordered Steps
 
@@ -148,7 +159,8 @@ leaving football.
 3. `03-ai-free-agent-signing-policy.md`
 4. `04-background-fixtures-in-the-selected-division.md`
 5. `05-simulate-match-command-on-the-shared-producer.md`
-6. `06-market-density-measurement-and-phase-82a-handoff.md`
+6. `06-market-density-measurement-and-cohort-authorization.md`
+7. `07-checkpointed-750x10-world-integrity-cohort-and-diagnostic-view.md`
 
 ## Validation Ladder
 
@@ -167,9 +179,13 @@ leaving football.
   interval twice changes nothing.
 - Step 05 adds the simulate-match command on the same producer and proves
   neutrality against simulated results at paired seeds.
-- Step 06 measures density against the frozen bands, writes the phase report,
-  and hands off. If density is already inside band, that is a finding, and
-  Phase 82A is re-argued rather than started by default.
+- Step 06 measures density against the frozen bands, freezes the final cohort
+  contract and decides whether the expensive run is authorized. If density is
+  already inside band, that is a finding, and Phase 82A is re-argued rather
+  than started by default.
+- Step 07 runs and resumes the exact `750 x 10`, writes the canonical report,
+  derives a local diagnostic view from that same report, closes the phase and
+  hands off to Phase 82A only on a truthful `GO`.
 
 ## Mandatory Per-Step Loop
 
@@ -222,10 +238,11 @@ graphify update .
   simulation.
 - No background fixtures outside the selected club's division; no cups, no
   foreign countries, no aggregate producer.
-- No match-engine change. Phase 81 closed it.
+- No match-engine change. Phase 81A closed the current contextual engine before
+  this phase starts.
 - No contracts-table schema change: the signed contract already stores dates.
 - No band adjusted after seeing a measurement.
-- No longitudinal cohort.
+- No longitudinal cohort before Step 07 and no second simulation producer.
 - No Phase 79 Step 14/15 implementation.
 
 ## Definition Of Done
@@ -248,6 +265,15 @@ graphify update .
   paired-seed distributions show no systematic difference.
 - Market density is measured against the frozen bands and every value is
   recorded, inside band or not.
+- The checkpointed `750 x 10` completes with `750` stable one-world shards and
+  exactly `7` workers; a no-work resume reproduces every ordered shard hash and
+  the aggregate hash.
+- Complete tables, scorer and assist charts, goal/assist production, transfer
+  movements and tactical usage are reconciled from canonical facts, and the
+  generated diagnostic view contains no independent calculation.
+- Every world-integrity fixture reports the canonical selection source,
+  fixed-shape fallback count is `0`, and the observed formation distribution
+  evaluates the existing `distinct_formations >= 5` gate.
 - Repository, build, browser, accessibility, persistence, dependency, diff, and
   Graphify gates pass.
 - Phase 82A receives a handoff that states plainly whether the measured density

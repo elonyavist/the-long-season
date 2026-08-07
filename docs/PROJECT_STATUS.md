@@ -1,7 +1,6 @@
 # Project Status
 
 Handoff snapshot for whoever picks the project up next.
-
 **This file stays small on purpose.** It once reached `5010` lines - more than a
 context window holds - so "read this file first" had stopped being followable.
 History lives in `git log` and `docs/audits/`; rules live in `AGENTS.md` and
@@ -20,17 +19,21 @@ per-phase reports in `docs/audits/`. **Phase 81 closed 2026-08-07** on
 `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md`, with one
 Definition of Done line recorded as not met rather than claimed.
 
-Phase 81A - Season-Anchored Contracts, Free-Agent Economy And Background
-Fixtures - is the next owner, under
-`docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`.
-Its entry gate is confirmed satisfied by the Phase 81 report.
+**Phase 81A - Contextual Tactical Agency, Manager And AI Decision Loop - is accepted and active**, under
+`docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`. Its
+governing contract is
+`docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`.
+
+The former contract/free-agent/background-fixture plan is Phase 81B, Draft under
+`docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`;
+Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A, first step. Nothing in Phase 81 remains open.
-- One decision left by Step 07B: the `1.5x` ratio is emergent, not chosen.
-- Step 08 advanced both beta versions without migrating (OPFS `22 -> 23`,
-  envelope `13 -> 14`): **careers are deleted, not upgraded.**
+- Step: Phase 81A Step 01, contracts and tactical ownership. No later Phase 81A
+  step and no Phase 81B work may start before its Definition of Done.
+- Phase 81A checkpoints A-F run alone with exactly `7` workers. It owns one beta
+  reset in Step 14; Steps 05/10/13 do not advance versions, and the save survives E/F.
 - **A gate written only in the phase-level block runs once, at the end.** Put
   `pnpm web:visual:qa` in the per-step block of any step touching web or
   persistence. **Its `wide journey` full-time assertion is timing-sensitive** -
@@ -40,18 +43,13 @@ Its entry gate is confirmed satisfied by the Phase 81 report.
 - **`pnpm cli ten-season-report` resolves relative output from the workspace
   root**, not `apps/cli/`: `resolveWorkspaceOutputPath(...)` walks up to
   `pnpm-workspace.yaml` (`ten-season-report.ts:176`). The earlier warning here
-  was stale for this command. Other CLI commands were not checked.
+  was stale for this command.
 
 ## Unowned, Carried Forward
 
-Five findings have no owner. None was adopted by the step that found it, and none
+Four findings have no owner. None was adopted by the step that found it, and none
 is a licence to widen anything.
 
-- **The world generates seven of the ten canonical roles**: no
-  `attacking_midfielder`, `defensive_midfielder` or `wide_midfielder`, while `12`
-  of the `23` curated shapes need the first, including the strongest measured.
-  Sized at cohort scale: **`5579` role coverage warnings over `1000` seasons**,
-  p95 `119` per world. `4-4-2` needs none, which is why nothing saw it before.
 - **`player_economy_young_stored_ceiling_six_stock_arrival_category_placement`**,
   red in `50` of `50` worlds. Phase 80A's.
 - **`contract_finance_structural_integrity`** (`13/50`) and
@@ -70,9 +68,10 @@ is a licence to widen anything.
 
 ### Do Not Start
 
-- Phases 82A and 82B stay Planned or Draft; their numeric decisions predate
-  measurement and are revised against Phase 81's evidence. Phase 79 Steps 14-15
-  stay Reopened/not started, unclaimed. Phase 81A is now the active phase.
+- Phase 81B, Phase 82A and Phase 82B stay Planned or Draft. Their numeric
+  decisions predate their own measurement and remain entry-gated. Phase 79
+  Steps 14-15 stay Reopened/not started and unclaimed. Phase 81A is the only
+  active phase.
 
 ### Longitudinal Runs
 
@@ -109,7 +108,8 @@ Derivation is in the Phase 81 report; the binding facts are:
   of a role's task weights** (`match-tactics-calibration.ts:833`), so route
   advantage ranks identically to mean capacity and the matrix is transitive by
   construction. No downstream sweep can break that.
-- A successor owns **conservation and the lopsided population together**.
+- Phase 81A owns **conservation and the lopsided population together**. Its
+  accepted contract and checkpoint reports, not this snapshot, own the detail.
 - Two untested hypotheses to declare before measuring: conservation may only
   *relocate* the dominant strategy, since `saturate` is concave and a balanced
   allocation maximises the sum; and Step 14's sweep does **not** rule out
@@ -223,7 +223,7 @@ measured table is in the Phase 81 report; what binds here is how to read it.
 - The AI policy is **one policy, not a per-club map**, and carries no formation
   (A2): a club lines up in the shape its own squad is built for. Filling the shape
   is never tradeable against quality in `assignFootballXi(...)`; all `23` shapes
-  cost `3.1x` a fixed one, not `23x`, and Phase 81A owns A3.
+  cost `3.1x` a fixed one, not `23x`, and Phase 81B owns A3.
 - `ProgressCareerFixtureAdvanced.fieldedLineups` is the only answer to who played
   where; a reloaded reviewed result leaves it empty rather than re-selecting.
 - **Shape on `structuralScore`, eleven on `score`.** One score for both let

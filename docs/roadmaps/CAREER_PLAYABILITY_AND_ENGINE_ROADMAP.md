@@ -3,7 +3,7 @@
 Date: 2026-06-25
 Baseline: Phase 61 complete; Claude Code full-project analysis reviewed.
 Scope: operational phase roadmap from Phase 62 onward.
-Current update: 2026-08-01. Phases 79A, 79B, 79C, and 79D are complete.
+Current update: 2026-08-07. Phases 79A, 79B, 79C, and 79D are complete.
 Phase 79D closed by explicit product decision after implementation, bounded
 diagnostics, repository checks, build, Playwright `29/29`, and manual browser
 QA passed. Its stopped direct `50 x 20` produced no report and is not claimed
@@ -17,8 +17,9 @@ The 2026-08-02 phase-order decision resolves that block and reorders the rest.
 Match scoring is outside Phase 80A's player-model scope, so the monitor
 transfers unchanged to Phase 81, which owns the match engine and whose Step 06
 replaces the opportunity generation that produces those goals. **Phase 81 is now
-Done and that monitor is closed at cohort scale**; Phase 81A is next. The market
-work follows it and is renumbered Phase 82A and Phase 82B. Two checkpointed
+Done and that monitor is closed at cohort scale**; Phase 81A is now the active
+contextual tactical-agency successor. The former Phase 81A becomes Phase 81B;
+market work remains Phase 82A and Phase 82B. Two checkpointed
 cohorts were planned: Phase 81's over the accepted engine, **run by its Step 15
 and not re-run**, and Phase 82B Step 09 over the completed market. Phase 79 Step
 14 remains Reopened and paused; its release gate is unrun.
@@ -2092,24 +2093,51 @@ longer the execution order. Read them in this sequence instead:
    `young_stored_ceiling_six_stock_arrival_category_placement` (`50/50`),
    `contract_finance_structural_integrity` (`13/50`) and
    `preliminary_agreement_integrity` (`12/50`).
-2. **Phase 81A** - season-anchored contracts, free-agent economy and background
+2. **Phase 81A** - contextual tactical agency for manager and AI. It conserves
+   tactical contribution budgets, makes routes and flanks genuinely contested,
+   grounds execution in the players available, gives manager and AI the same
+   fallible opponent facts, and adds durable post-match consequence through one
+   Step 14 persistence integration and beta reset. Six
+   checkpoints after at most two implementation steps each decide `GO`,
+   `REFINE`, or `STOP` before more scope opens.
+3. **Phase 81B** - season-anchored contracts, free-agent economy and background
    fixtures. Expiry anchored to the season boundary through one named owner,
    offered terms in months inside the accepted `18-30` band, an AI free-agent
    signing policy for a pool measured at `20-23%`, background fixtures inside
    `advanceCareerMonths`, the simulate-match command on the L1 producer, and the
-   market-density measurement that authorizes the market work.
-3. **Phase 82A**, then **Phase 82B** - the market work, authorized by that
+   market-density measurement that authorizes the market work. It closes with a
+   checkpointed `750 x 10` world-integrity cohort and derived diagnostic view.
+4. **Phase 82A**, then **Phase 82B** - the market work, authorized by that
    density measurement rather than assumed.
 
-### Phase 81A - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
+### Phase 81A - Contextual Tactical Agency, Manager And AI Decision Loop
 
-Primary dependency: Phase 81 Done, with its four background-world seams in
-place and its carried goal-rate monitor inside band.
+Primary dependency: Phase 81 Done.
 
 Status:
 
-- Planned. Created by the 2026-08-02 phase-order decision as the playable-MVP
-  work between Phase 81 and the market phases.
+- Accepted and active. Step 01 is the only active step.
+
+Purpose:
+
+- Make tactical decisions create upside or downside from the actual players,
+  opponent and available information, never from a formation or tactic that is
+  intrinsically superior.
+
+Documentation:
+
+- `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`
+- `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`
+
+### Phase 81B - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
+
+Primary dependency: Phase 81A Done, with Phase 81's four background-world seams
+still in place and its carried goal-rate monitor inside band.
+
+Status:
+
+- Planned. Created by the 2026-08-02 phase-order decision and renumbered from
+  Phase 81A when the tactical-agency successor was inserted ahead of it.
 
 Purpose:
 
@@ -2132,14 +2160,17 @@ Minimum useful scope:
 - background fixtures for the selected club's division, resolved only inside
   `advanceCareerMonths`, idempotent and order-independent;
 - a simulate-match command sharing the background producer;
-- a market-density measurement against bands frozen before any change.
+- a market-density measurement against bands frozen before any change;
+- one checkpointed `750 x 10`, with `750` one-world shards and exactly `7`
+  workers, reporting complete selected-division tables, goals, assists, player
+  charts, transfer flow and tactical usage through a derived local view.
 
 Explicit non-goals:
 
 - no loans, postures, incoming offers, or races;
 - no second clock, no lazy resolution, no divisions beyond the user's own;
 - no match-engine change;
-- no longitudinal cohort.
+- no longitudinal cohort before Step 07 and no claim about loans or races.
 
 Definition of Done:
 
@@ -2150,24 +2181,26 @@ Definition of Done:
   is reported together with the contract change rather than as a separate claim;
 - the user's league table is complete at every point in the season;
 - density is measured against the frozen bands and the Phase 82A recommendation
-  is stated with its reason.
+  is stated with its reason;
+- the `750 x 10` completes and resumes with identical hashes, exact
+  reconciliations and a diagnostic view derived from the canonical report.
 
 Documentation:
 
-- `docs/steps/81a-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
+- `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
 - `docs/the-long-season-mondo-vivo.pdf`, sections 6.3 and 11
 
 ### Phase 82A - Incoming Offers, Market Postures And Loans
 
 Previously numbered Phase 80B.
 
-Primary dependency: Phase 81 Done with its named squad-depth accessor, plus the
-Phase 81A Done and market density measured against the frozen bands.
+Primary dependency: Phases 81, 81A and 81B Done, plus market density measured
+against the frozen bands.
 
 Status:
 
-- Planned; its entry gate is closed because Phase 81 and Phase 81A
-  have not started.
+- Planned; its entry gate is closed because Phase 81A and Phase 81B are not
+  Done.
 - Deferred here because loans and races are not the missing market volume.
   Contract expiry drives `62.5%` of real movements and permanent transfers
   `18.5%`, both of which exist or are cheap to open; loans and returns are

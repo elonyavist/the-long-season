@@ -349,7 +349,7 @@ tactics and the emergency keeper together moved the A7 monitor by nothing.
 
 That report also carries `clubs_without_natural_goalkeeper: PASS value=0` over
 ten seasons, so the emergency-keeper path is protection against a case current
-content does not yet produce, rather than cover for one it does. Phase 81A's
+content does not yet produce, rather than cover for one it does. Phase 81B's
 background fixtures widen the exposure by roughly two orders of magnitude.
 
 ### One more producer of a context literal, found while fixing the above

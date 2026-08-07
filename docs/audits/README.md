@@ -16,12 +16,17 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md` - **accepted Phase
+  81A contract and current execution authority.** It fixes the thesis, target
+  effects, information parity, analytic/Monte Carlo split, checkpoint protocol
+  and the ordered Step 01-16 plan before implementation starts.
+
 - `PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md` - **Phase 81 closeout.**
   What the phase delivered, the cohort that closed the carried
   `goals_per_match_avg` monitor at `2.670`/`2.740` with `0` of `50` worlds
   failing, the three unowned red checks and who owns them, the two Definition of
-  Done lines recorded as not met, the seams handed to Phase 81A, and the
-  structural reason formation is not a counter-move.
+  Done lines recorded as not met, the background-world seams handed to Phase
+  81B, and the structural reason formation is not a counter-move.
 - `PHASE_81_TACTICAL_SHAPE_50X20_REPORT.md` - the generated `50 x 20` cohort,
   `1000` seasons, `50` shards, seven workers, replayed with a one-line diff. Its
   own heading still reads "Phase 80A ..." because the long-run instrument is

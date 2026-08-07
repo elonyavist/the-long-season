@@ -1,6 +1,6 @@
 # Career Web Section Roadmap
 
-Date: 2026-08-03
+Date: 2026-08-07
 
 ## How This File Is Pruned
 
@@ -17,8 +17,9 @@ constraining future work, not by being recent.
 
 Phases 0 through 81 are complete. Phase 81 - Phase-Aware Tactical Shape And
 Manager Decision Engine - closed 2026-08-07 on
-`docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md`; Phase 81A is
-the next owner. Live constraints are in `docs/PROJECT_STATUS.md`.
+`docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md`; contextual
+tactical agency in Phase 81A is the next owner. Live constraints are in
+`docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
 experiment. Phase 80's nine steps established the global seven-worker
@@ -194,21 +195,35 @@ stream before anybody reads it.
 Step 15 alone runs this phase's checkpointed `50 x 20` with exactly seven
 workers.
 
-### Phase 81A - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
+### Phase 81A - Contextual Tactical Agency, Manager And AI Decision Loop
 
-Draft. Do not start until Phase 81 is Done. Its numeric decisions - the free
-agent peak band, the contract ladder, the drain requirement - were made before
-measurement and must be revised against Phase 81's evidence.
+Accepted and active. Step 01 is the only active step. The web work in this phase
+exposes the manager's opponent read, presents canonical tactical chapters and
+offers the same bounded post-match preparation choices that the AI may use.
+Step 14 persists their raw facts together under one beta reset. React never
+reconstructs tactical logic.
+
+The full execution and checkpoint contract is under
+`docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`.
+
+### Phase 81B - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
+
+Draft. Renumbered from Phase 81A. Do not start until the new Phase 81A is Done.
+Its numeric decisions - the free-agent peak band, the contract ladder, the
+drain requirement - were made before measurement and must be revised against
+the earlier phases' evidence.
 
 Owns: contract expiry anchored to the season boundary, offered terms in months,
 an AI free-agent signing policy, background fixtures inside
 `advanceCareerMonths` for the selected club's division, and the simulate-match
 command. It also owns the per-component tick-cost bench deferred from Phase 81
-by amendment A3.
+by amendment A3. Step 07 closes the phase with a checkpointed `750 x 10` using
+exactly `7` workers and a local diagnostic view derived from the canonical
+report; it is inspection tooling, not a new career route.
 
 ### Phase 82A - Incoming Offers, Market Postures And Loans
 
-Draft, deferred behind Phase 81 and 81A. Previously numbered 80B. Its entry
+Draft, deferred behind Phase 81A and 81B. Previously numbered 80B. Its entry
 gate requires a measured market density, not an assumption: if the measurement
 lands inside the frozen bands, the loan work is re-argued rather than started.
 
