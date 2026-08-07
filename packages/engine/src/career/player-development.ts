@@ -650,6 +650,8 @@ function broadPositionGroup(position: PlayerPosition | undefined): BroadPosition
     case "dm":
     case "cm":
     case "am":
+    case "rm":
+    case "lm":
       return "midfielder";
     case "rw":
     case "lw":
@@ -677,6 +679,9 @@ function developmentRoleForPosition(position: PlayerPosition | undefined): Playe
       return "central_midfielder";
     case "am":
       return "attacking_midfielder";
+    case "rm":
+    case "lm":
+      return "wide_midfielder";
     case "rw":
     case "lw":
       return "winger";

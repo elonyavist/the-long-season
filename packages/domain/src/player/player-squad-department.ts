@@ -46,6 +46,8 @@ function positionSquadDepartment(position: PlayerPosition | undefined): PlayerSq
     case "dm":
     case "cm":
     case "am":
+    case "rm":
+    case "lm":
       return "midfielder";
     case "rw":
     case "lw":

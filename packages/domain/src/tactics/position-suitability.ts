@@ -165,9 +165,11 @@ function bestSideBonus(naturalPositions: readonly PlayerPosition[], side: Format
 const POSITION_SIDE: Readonly<Partial<Record<PlayerPosition, FormationSide>>> = {
   rb: "right",
   rwb: "right",
+  rm: "right",
   rw: "right",
   lb: "left",
   lwb: "left",
+  lm: "left",
   lw: "left",
 };
 
@@ -181,6 +183,8 @@ const NATURAL_ROLES_BY_POSITION: Readonly<Record<PlayerPosition, ReadonlySet<Can
   dm: new Set(["defensive_midfielder"]),
   cm: new Set(["central_midfielder"]),
   am: new Set(["attacking_midfielder"]),
+  rm: new Set(["right_midfielder"]),
+  lm: new Set(["left_midfielder"]),
   rw: new Set(["right_winger"]),
   lw: new Set(["left_winger"]),
   st: new Set(["striker"]),
@@ -196,6 +200,8 @@ const ADAPTED_ROLES_BY_POSITION: Readonly<Record<PlayerPosition, ReadonlySet<Can
   dm: new Set(["central_midfielder", "center_back"]),
   cm: new Set(["defensive_midfielder", "attacking_midfielder"]),
   am: new Set(["central_midfielder", "striker"]),
+  rm: new Set(["right_winger", "central_midfielder"]),
+  lm: new Set(["left_winger", "central_midfielder"]),
   rw: new Set(["right_midfielder"]),
   lw: new Set(["left_midfielder"]),
   st: new Set(),
@@ -211,6 +217,8 @@ const WEAK_ROLES_BY_POSITION: Readonly<Record<PlayerPosition, ReadonlySet<Canoni
   dm: new Set(["attacking_midfielder"]),
   cm: new Set(["right_midfielder", "left_midfielder"]),
   am: new Set(["right_winger", "left_winger", "striker"]),
+  rm: new Set(["right_full_back", "left_midfielder", "attacking_midfielder"]),
+  lm: new Set(["left_full_back", "right_midfielder", "attacking_midfielder"]),
   rw: new Set(["attacking_midfielder", "left_winger", "striker"]),
   lw: new Set(["attacking_midfielder", "right_winger", "striker"]),
   st: new Set(["attacking_midfielder"]),

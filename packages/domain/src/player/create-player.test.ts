@@ -71,6 +71,43 @@ test("createPlayer rejects incomplete malformed and position-inconsistent role i
   );
 });
 
+test("a wide midfielder is constructible, and no longer validated as a winger", () => {
+  // Phase 81A Step 03A. `POSITION_BY_ROLE.wide_midfielder` was `["rw", "lw"]` -
+  // a placeholder from when no wide-midfield position existed, so the role was
+  // checked against a winger's positions. `rm`/`lm` now exist and own it.
+  //
+  // This is the tenth primary role becoming reachable at all: Checkpoint A
+  // measured `wide_midfielder` at exactly zero across `2772` seniors, and no
+  // amount of generation could have moved it while the position was missing.
+  const { player: wideMidfielder } = createPlayer({
+    ...validInput(),
+    primaryRole: "wide_midfielder",
+    archetype: "wide_midfielder_balanced",
+    naturalPositions: ["rm"],
+    naturalRoles: ["wide_midfielder"],
+    adaptedRoles: [],
+    weakRoles: [],
+    roleFamiliarity: { wide_midfielder: "natural" },
+  });
+
+  assert.equal(wideMidfielder.primaryRole, "wide_midfielder");
+  assert.deepEqual(wideMidfielder.naturalPositions, ["rm"]);
+
+  assertConstructionError(
+    {
+      ...validInput(),
+      primaryRole: "wide_midfielder",
+      archetype: "wide_midfielder_balanced",
+      naturalPositions: ["rw"],
+      naturalRoles: ["wide_midfielder"],
+      adaptedRoles: [],
+      weakRoles: [],
+      roleFamiliarity: { wide_midfielder: "natural" },
+    },
+    "role_position_mismatch",
+  );
+});
+
 test("createPlayer rejects invalid current and potential ability ranges", () => {
   assertConstructionError(
     { ...validInput(), abilities: withAbility(validInput().abilities, "technical.finishing", 0) },

@@ -2400,6 +2400,8 @@ function canonicalPlayedRoleForPosition(
     case "st": return "striker";
     case "rwb": return "right_full_back";
     case "lwb": return "left_full_back";
+    case "rm": return "right_midfielder";
+    case "lm": return "left_midfielder";
     default: return "central_midfielder";
   }
 }

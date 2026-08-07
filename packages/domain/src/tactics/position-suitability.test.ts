@@ -86,3 +86,26 @@ test("side metadata gives a small deterministic bonus without changing role suit
 
   assert.equal(rightWideScore > leftWideScore, true);
 });
+
+test("a wide midfielder is natural in the wide midfield slot, and mirrored exactly", () => {
+  // Before Phase 81A Step 03A no position produced `wide_midfielder` at all, so
+  // the wide midfield slot was only ever filled naturally by a wing-back. Both
+  // are football; the point is that the position now exists.
+  assert.equal(evaluatePositionSuitability(["rm"], { playerRole: "right_midfielder" }), "natural");
+  assert.equal(evaluatePositionSuitability(["lm"], { playerRole: "left_midfielder" }), "natural");
+
+  // Exact mirror, or the phase's left/right symmetry invariant is already broken
+  // at the population that feeds it.
+  assert.equal(
+    evaluatePositionSuitability(["rm"], { playerRole: "left_midfielder" }),
+    evaluatePositionSuitability(["lm"], { playerRole: "right_midfielder" }),
+  );
+  assert.equal(
+    evaluatePositionSuitability(["rm"], { playerRole: "right_winger" }),
+    evaluatePositionSuitability(["lm"], { playerRole: "left_winger" }),
+  );
+  assert.equal(
+    evaluatePositionSuitability(["rm"], { playerRole: "right_full_back" }),
+    evaluatePositionSuitability(["lm"], { playerRole: "left_full_back" }),
+  );
+});

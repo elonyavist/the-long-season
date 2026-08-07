@@ -16,7 +16,16 @@ import { stateValue } from "../value-objects/rating.ts";
 import { PLAYER_ABILITY_KEYS, readPlayerAbility } from "./player-abilities.ts";
 import { hardCapForRoleAbility } from "./player-role-profile.ts";
 
-const PLAYER_POSITIONS: readonly PlayerPosition[] = [
+/**
+ * Every position a new player may declare.
+ *
+ * `satisfies` rather than a bare annotation, and every member of
+ * `PlayerPosition` is required: this list is the *runtime* guard, so a position
+ * added to the type and forgotten here is a position the constructor silently
+ * refuses. Only a test caught that when `rm`/`lm` arrived, because an
+ * incomplete `readonly PlayerPosition[]` is a perfectly valid array.
+ */
+const PLAYER_POSITIONS = [
   "gk",
   "rb",
   "cb",
@@ -26,10 +35,20 @@ const PLAYER_POSITIONS: readonly PlayerPosition[] = [
   "dm",
   "cm",
   "am",
+  "rm",
+  "lm",
   "rw",
   "lw",
   "st",
-];
+] as const satisfies readonly PlayerPosition[];
+
+// A build failure the moment a position exists in the type but not in the list
+// above. The assignment runs that way round on purpose: `satisfies` already
+// proves every entry is a real position, and the gap that actually bites is the
+// opposite one - a position the type allows and the constructor rejects.
+const _everyPositionIsConstructible: (typeof PLAYER_POSITIONS)[number] =
+  null as unknown as PlayerPosition;
+void _everyPositionIsConstructible;
 
 const POSITION_BY_ROLE: Readonly<Record<PlayerRole, readonly PlayerPosition[]>> = {
   goalkeeper: ["gk"],
@@ -39,7 +58,7 @@ const POSITION_BY_ROLE: Readonly<Record<PlayerRole, readonly PlayerPosition[]>> 
   defensive_midfielder: ["dm"],
   central_midfielder: ["cm"],
   attacking_midfielder: ["am"],
-  wide_midfielder: ["rw", "lw"],
+  wide_midfielder: ["rm", "lm"],
   winger: ["rw", "lw"],
   striker: ["st"],
 };

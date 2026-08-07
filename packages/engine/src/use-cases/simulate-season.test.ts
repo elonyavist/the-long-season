@@ -1234,6 +1234,8 @@ function primaryRoleForPosition(position: PlayerPosition): PlayerRole {
     dm: "defensive_midfielder",
     cm: "central_midfielder",
     am: "attacking_midfielder",
+    rm: "wide_midfielder",
+    lm: "wide_midfielder",
     rw: "winger",
     lw: "winger",
     st: "striker",

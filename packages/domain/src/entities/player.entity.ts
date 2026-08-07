@@ -18,6 +18,8 @@ export type PlayerPosition =
   | "dm"
   | "cm"
   | "am"
+  | "rm"
+  | "lm"
   | "rw"
   | "lw"
   | "st";

@@ -22,3 +22,16 @@ test("playerSquadDepartment supports legacy players without role identity", () =
 
   assert.equal(playerSquadDepartment(legacyPlayer), "midfielder");
 });
+
+test("a wide midfielder counts against the midfield floor, from his position too", () => {
+  // `rm`/`lm` arrived with Phase 81A Step 03A, and the position switch had a
+  // `default` that would have quietly filed them as attackers - which is a squad
+  // floor (`2 gk / 6 def / 6 mid / 3 att`) being enforced against the wrong
+  // department. The role-level map already said `midfielder`; the two must agree.
+  assert.equal(playerSquadDepartment({ naturalPositions: ["rm"] } as never), "midfielder");
+  assert.equal(playerSquadDepartment({ naturalPositions: ["lm"] } as never), "midfielder");
+  assert.equal(
+    playerSquadDepartment({ primaryRole: "wide_midfielder", naturalPositions: ["rm"] }),
+    "midfielder",
+  );
+});

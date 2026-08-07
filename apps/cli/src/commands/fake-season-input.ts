@@ -220,6 +220,8 @@ function positionGroup(position: CliPlayer["naturalPositions"][number] | undefin
     case "dm":
     case "cm":
     case "am":
+    case "rm":
+    case "lm":
       return "midfielder";
     case "rw":
     case "lw":
