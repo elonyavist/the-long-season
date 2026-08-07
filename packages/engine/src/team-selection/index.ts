@@ -27,4 +27,5 @@ export {
   type AiSquadSelectionResult,
   type BuildAiSquadMatchTeamContextInput,
   type BuildAiSquadMatchTeamContextResult,
+  type CatalogShapeChoice,
 } from "./ai-squad-selection.ts";

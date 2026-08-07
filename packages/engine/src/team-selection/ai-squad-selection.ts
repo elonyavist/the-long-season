@@ -103,6 +103,20 @@ export interface AiSquadSelectionResult {
   readonly benchPlayerIds: readonly PlayerId[];
   /** Structured diagnostics explaining why players were chosen. */
   readonly reasons: readonly AiSquadSelectionReason[];
+  /**
+   * How close the club's own shape decision was.
+   *
+   * Absent when the caller imposed a formation: a club that was told what to
+   * play expressed no preference, and inventing one would read as a choice it
+   * never made.
+   *
+   * The gap to the runner-up and the number of shapes tied at the top are the
+   * two facts the chosen `Formation` cannot carry, and they are what say whether
+   * football or catalog order decided the shape. They come from the walk the
+   * selector already does, because a second walk would be free to disagree with
+   * the shape clubs actually line up in.
+   */
+  readonly catalogChoice?: CatalogShapeChoice;
 }
 
 /** Input for producing a match-ready team context from the AI selector. */
@@ -211,6 +225,7 @@ export function selectAiMatchSquad(input: AiSquadSelectionInput): AiSquadSelecti
     lineup,
     benchPlayerIds,
     reasons,
+    ...(fielded.catalogChoice === undefined ? {} : { catalogChoice: fielded.catalogChoice }),
   };
 }
 
@@ -270,6 +285,8 @@ interface FieldedShape {
   readonly formation: Formation;
   readonly selected: readonly AiCandidateScore[];
   readonly totalScore: number;
+  /** How close the shape decision was; absent when the caller imposed one. */
+  readonly catalogChoice?: CatalogShapeChoice;
 }
 
 /**
@@ -369,17 +386,20 @@ function bestFieldedShape(
   input: AiSquadSelectionInput,
   candidates: SlotCandidateCache,
 ): FieldedShape | undefined {
-  const formation = input.formation ?? strongestCatalogShape(candidates);
+  const chosen = input.formation === undefined ? strongestCatalogShape(candidates) : undefined;
+  const formation = input.formation ?? chosen?.formation;
   if (formation === undefined) {
     return undefined;
   }
 
   const slots = formation.slots;
-
-  return (
+  const filled =
     fillShape(formation, slots.map((slot) => candidates.rankedFor(slot)))
-    ?? fillShape(formation, slots.map((slot) => candidates.everyCandidateFor(slot)))
-  );
+    ?? fillShape(formation, slots.map((slot) => candidates.everyCandidateFor(slot)));
+
+  return filled === undefined || chosen === undefined
+    ? filled
+    : { ...filled, catalogChoice: chosen.choice };
 }
 
 /** Fills one shape from one candidate list per slot, or reports it cannot be filled. */
@@ -403,23 +423,91 @@ function fillShape(
   };
 }
 
-/** Finds the catalog shape this squad is built for, ignoring today's condition. */
-function strongestCatalogShape(candidates: SlotCandidateCache): Formation | undefined {
-  let best: { readonly formation: Formation; readonly totalScore: number } | undefined;
+/**
+ * How the squad's own shape ranking looked, without keeping the ranking.
+ *
+ * Four numbers rather than twenty-three rows, on purpose. This is produced for
+ * every club on every career fixture, so anything retained here is retained
+ * millions of times over a long run - and nobody needs the rows. These four
+ * facts are the whole of what the rows were wanted for.
+ *
+ * `secondStructuralScore` is absent when only one shape was fillable, which is
+ * a squad with no choice rather than a squad with an obvious one.
+ */
+export interface CatalogShapeChoice {
+  /** Catalog shapes this squad could fill at all. */
+  readonly fillableShapeCount: number;
+  /** Structural score of the shape that won. */
+  readonly bestStructuralScore: number;
+  /** Structural score of the best shape that did not win. */
+  readonly secondStructuralScore?: number;
+  /**
+   * Shapes scoring exactly the winning score, including the winner.
+   *
+   * Above `1` means the strictly-greater walk handed the shape to whichever
+   * entry `FORMATIONS` lists first. Reordering the catalog can change the
+   * outcome for exactly these squads and no others, so this number *is* the
+   * catalog-order sensitivity rather than a proxy for it.
+   */
+  readonly tiedAtBestCount: number;
+}
 
-  for (const formation of FORMATIONS) {
+/** The shape a squad is built for, and how close the decision was. */
+interface StrongestCatalogShape {
+  readonly formation: Formation;
+  readonly choice: CatalogShapeChoice;
+}
+
+/**
+ * Finds the catalog shape this squad is built for, ignoring today's condition.
+ *
+ * Strictly greater, walking `FORMATIONS` in its own order, so a squad that fits
+ * two shapes equally well fields the same one every time. That the tie is
+ * broken by catalog position rather than by football is a measured property of
+ * this population, not a design claim - which is why the walk reports how often
+ * it happened rather than leaving an audit to rebuild this comparison beside
+ * it, where a second copy would be free to disagree with the shape clubs
+ * actually line up in.
+ */
+function strongestCatalogShape(candidates: SlotCandidateCache): StrongestCatalogShape | undefined {
+  let formation: Formation | undefined;
+  let best = Number.NEGATIVE_INFINITY;
+  let second = Number.NEGATIVE_INFINITY;
+  let tiedAtBestCount = 0;
+  let fillableShapeCount = 0;
+
+  for (const candidateFormation of FORMATIONS) {
     const assignment = assignFootballXi({
-      candidatesBySlot: formation.slots.map((slot) =>
+      candidatesBySlot: candidateFormation.slots.map((slot) =>
         rankedXiCandidates(candidates.rankedFor(slot), (candidate) => candidate.structuralScore)),
     });
     if (assignment === undefined) continue;
 
-    if (best === undefined || assignment.totalScore > best.totalScore) {
-      best = { formation, totalScore: assignment.totalScore };
+    fillableShapeCount += 1;
+    const score = assignment.totalScore;
+    if (score > best) {
+      if (formation !== undefined) second = best;
+      best = score;
+      tiedAtBestCount = 1;
+      formation = candidateFormation;
+    } else if (score === best) {
+      tiedAtBestCount += 1;
+    } else if (score > second) {
+      second = score;
     }
   }
 
-  return best?.formation;
+  if (formation === undefined) return undefined;
+
+  return {
+    formation,
+    choice: {
+      fillableShapeCount,
+      bestStructuralScore: best,
+      ...(second === Number.NEGATIVE_INFINITY ? {} : { secondStructuralScore: second }),
+      tiedAtBestCount,
+    },
+  };
 }
 
 /** Projects scored candidates onto the assignment Module's football-free view. */

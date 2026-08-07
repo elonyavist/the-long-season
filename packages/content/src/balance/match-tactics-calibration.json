@@ -207,6 +207,12 @@
       "width": 5300,
       "risk": 1400
     },
+    "controlBasisPointsByKnob": {
+      "directness": 800,
+      "pressing": 1200,
+      "width": 300,
+      "risk": 400
+    },
     "commitmentBasisPointsByMentality": {
       "very_defensive": 8600,
       "defensive": 9300,

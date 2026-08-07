@@ -1,6 +1,6 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { writeWorkspaceTextFile } from "./workspace-output-path.ts";
 import { availableParallelism } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import {
   formatSupportedLanguages,
   parseLanguageCode,
@@ -99,7 +99,7 @@ export async function runSeasonRecapReportCommand(
     failures,
   });
 
-  await writeTextFile(parsed.reportOutputPath, formatSeasonRecapReportMarkdown(report));
+  await writeWorkspaceTextFile(parsed.reportOutputPath, formatSeasonRecapReportMarkdown(report));
 
   if (parsed.detailOutputPath !== undefined) {
     await writeSeasonDetail(parsed.detailOutputPath, worlds);
@@ -151,7 +151,7 @@ async function writeSeasonDetail(
   for (const world of worlds) {
     for (const season of world.seasons) {
       const name = `${world.seed}-season-${String(season.seasonNumber).padStart(3, "0")}.md`;
-      await writeTextFile(
+      await writeWorkspaceTextFile(
         join(directoryPath, name),
         formatSeasonRecapDetailMarkdown(world.seed, season),
       );
@@ -276,34 +276,4 @@ function defaultIo(): SeasonRecapReportCommandIo {
     stdout: (line) => console.log(line),
     stderr: (line) => console.error(line),
   };
-}
-
-/** Writes a UTF-8 text artifact, creating the parent folder when needed. */
-async function writeTextFile(path: string, contents: string): Promise<void> {
-  const resolvedPath = await resolveWorkspaceOutputPath(path);
-  await mkdir(dirname(resolvedPath), { recursive: true });
-  await writeFile(resolvedPath, contents, "utf8");
-}
-
-/** Resolves CLI output artifacts from the workspace root. */
-async function resolveWorkspaceOutputPath(path: string): Promise<string> {
-  if (isAbsolute(path)) return path;
-
-  return join(await findWorkspaceRoot(), path);
-}
-
-/** Walks upward until the monorepo workspace marker is found. */
-async function findWorkspaceRoot(): Promise<string> {
-  let current = process.cwd();
-
-  while (true) {
-    try {
-      await access(join(current, "pnpm-workspace.yaml"));
-      return current;
-    } catch {
-      const parent = dirname(current);
-      if (parent === current) return process.cwd();
-      current = parent;
-    }
-  }
 }

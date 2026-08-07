@@ -1,3 +1,10 @@
+import {
+  TACTIC_KNOB_CONTROL_DIRECTION,
+  TACTIC_KNOBS,
+  type MatchTacticsCalibrationConfig,
+  type TacticKnob,
+} from "@game/domain";
+
 import type { MatchTeamContext } from "./match-context.ts";
 import type {
   MatchControlUnits,
@@ -62,6 +69,11 @@ export function accumulateControlUnits(
  *
  * The shape term is contested by the opponent's press, so possession is a
  * contest rather than two independent readings compared afterwards.
+ *
+ * The four knob magnitudes are content's, read through the versioned
+ * calibration the rest of the tactic model already travels in. They used to be
+ * literals here, which meant one stamped version could not describe what a
+ * career's tactics actually did.
  */
 function controlWeight(
   simulation: MatchSimulationState,
@@ -75,12 +87,13 @@ function controlWeight(
   const lineupRatio = team.lineup.length / Math.max(1, opponent.lineup.length);
   const scorePressure = scoreStatePressure(simulation.score, side);
   const homeFactor = side === "home" ? Math.sqrt(simulation.context.engineConfig.homeAdvantageFactor) : 1;
+  const control = signedControlMagnitudes(simulation.context.matchTacticsCalibration);
   const tacticalControl =
     1 +
-    normalizedTactic(simulation, side, "pressing") * 0.12 +
-    normalizedTactic(simulation, side, "risk") * 0.04 +
-    normalizedTactic(simulation, side, "width") * 0.03 -
-    normalizedTactic(simulation, side, "directness") * 0.08;
+    normalizedTactic(simulation, side, "pressing") * control.pressing +
+    normalizedTactic(simulation, side, "risk") * control.risk +
+    normalizedTactic(simulation, side, "width") * control.width +
+    normalizedTactic(simulation, side, "directness") * control.directness;
 
   return Math.max(
     0.01,
@@ -91,6 +104,34 @@ function controlWeight(
       clamp(lineupRatio, 0.65, 1.35) *
       clamp(condition / Math.max(1, opponentCondition), 0.8, 1.2),
   );
+}
+
+/**
+ * Turns each knob's control magnitude into the signed factor the sum applies.
+ *
+ * Content stores an unsigned `0..10000` share so it passes the same validator
+ * every other tactic magnitude passes, and `TACTIC_KNOB_CONTROL_DIRECTION`
+ * owns which way it points. Walking `TACTIC_KNOBS` here is what makes the
+ * mapping total: a knob without a direction or a magnitude cannot reach the
+ * minute loop.
+ *
+ * The caller applies these in its own written order rather than in this one.
+ * That is deliberate and it is the whole reason this returns a record instead
+ * of a total: floating-point addition is not associative, so summing the four
+ * terms in a different order moves the result by an ulp, and the phase's
+ * before/after replay proof is bit-exact. The order the terms are added in is
+ * arithmetic, not football, so it belongs beside the arithmetic.
+ */
+function signedControlMagnitudes(
+  calibration: MatchTacticsCalibrationConfig,
+): Readonly<Record<TacticKnob, number>> {
+  const magnitudes = {} as Record<TacticKnob, number>;
+  for (const knob of TACTIC_KNOBS) {
+    const share = calibration.tacticalSemantics.controlBasisPointsByKnob[knob] / 10_000;
+    magnitudes[knob] = TACTIC_KNOB_CONTROL_DIRECTION[knob] === "increase" ? share : -share;
+  }
+
+  return magnitudes;
 }
 
 /**

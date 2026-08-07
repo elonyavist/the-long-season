@@ -1,5 +1,3 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join } from "node:path";
 import {
   createTranslator,
   formatSupportedLanguages,
@@ -22,6 +20,10 @@ import {
   createSingleWorldReport,
 } from "./ten-season-report/report-data.ts";
 import { formatTenSeasonReportOutput } from "./ten-season-report/single-world-output.ts";
+import {
+  resolveWorkspaceOutputPath,
+  writeWorkspaceTextFile,
+} from "./workspace-output-path.ts";
 
 /** Default seed used by the ten-season lab report. */
 export const DEFAULT_TEN_SEASON_REPORT_SEED = "world-a";
@@ -83,7 +85,7 @@ export async function runTenSeasonReportCommand(
           ? {}
           : { workerCount: parsed.workerCount }),
       });
-    await writeTextFile(
+    await writeWorkspaceTextFile(
       parsed.reportOutputPath,
       formatPlayerDevelopmentCohortReportMarkdown(
         cohortReport,
@@ -119,7 +121,7 @@ export async function runTenSeasonReportCommand(
         });
 
     if (parsed.reportOutputPath !== undefined) {
-      await writeTextFile(parsed.reportOutputPath, formatLongRunGateReportMarkdown(batchReport, parsed.reportOutputPath));
+      await writeWorkspaceTextFile(parsed.reportOutputPath, formatLongRunGateReportMarkdown(batchReport, parsed.reportOutputPath));
     }
 
     for (const line of formatLongRunGateReportOutput(batchReport, text, parsed.reportOutputPath)) {
@@ -160,48 +162,6 @@ function defaultIo(): TenSeasonReportCommandIo {
   };
 }
 
-/**
- * Writes a UTF-8 text artifact, creating the parent folder when needed.
- */
-async function writeTextFile(path: string, contents: string): Promise<void> {
-  const resolvedPath = await resolveWorkspaceOutputPath(path);
-  await mkdir(dirname(resolvedPath), { recursive: true });
-  await writeFile(resolvedPath, contents, "utf8");
-}
-
-/**
- * Resolves CLI output artifacts from the workspace root, even when pnpm runs
- * the filtered CLI package with `apps/cli` as the process working directory.
- */
-async function resolveWorkspaceOutputPath(path: string): Promise<string> {
-  if (isAbsolute(path)) {
-    return path;
-  }
-
-  return join(await findWorkspaceRoot(), path);
-}
-
-/**
- * Walks upward until the monorepo workspace marker is found.
- */
-async function findWorkspaceRoot(): Promise<string> {
-  let current = process.cwd();
-
-  while (true) {
-    try {
-      await access(join(current, "pnpm-workspace.yaml"));
-      return current;
-    } catch {
-      const parent = dirname(current);
-
-      if (parent === current) {
-        return process.cwd();
-      }
-
-      current = parent;
-    }
-  }
-}
 
 /**
  * Parses command-line arguments for the ten-season report.

@@ -12,6 +12,7 @@ import {
   TACTICAL_SHAPE_TASKS,
   type CanonicalPlayerRole,
   type MatchTacticsCalibrationConfig,
+  type TacticalRoute,
   type TacticalShapeCapacity,
   type TacticalShapeTask,
 } from "@game/domain";
@@ -102,6 +103,27 @@ test("route diagnostics are relational, so the two sides do not see the same rou
   assert.notEqual(home, undefined);
   assert.notEqual(home?.capacity, away?.capacity);
   assert.equal(home?.bottleneck !== undefined, true, "the limiting phase is always named");
+});
+
+test("the route rows describe the plan the minutes were played with, not a bare matchup", () => {
+  // The corrected defect. These rows used to come from `deriveTacticalMatchup`
+  // with no tactic applied at all, while its own JSDoc claimed the minute loop
+  // ran the same derivation. A manager who widened his team read back the flank
+  // capacity of a team that had been told nothing, and the explanation
+  // contradicted the football the minutes had actually resolved.
+  const neutral = tacticallyBuiltTrace({ width: 0 });
+  const stretched = tacticallyBuiltTrace({ width: 1 });
+
+  assert.equal(
+    capacityOf(stretched.home, "left") > capacityOf(neutral.home, "left"),
+    true,
+    "going wide must show up on the flank the instruction is about",
+  );
+  assert.equal(
+    capacityOf(stretched.away, "central") > capacityOf(neutral.away, "central"),
+    true,
+    "and the middle it hands over must show up on the other side's rows",
+  );
 });
 
 test("a built trace stays deterministic and JSON serializable with routes", () => {
@@ -216,7 +238,11 @@ function traceOverEvents(): MatchExplanationTrace {
   });
 }
 
-function traceTeam(side: "home" | "away", shape: TacticalShapeProfile): MatchTeamContext {
+function traceTeam(
+  side: "home" | "away",
+  shape: TacticalShapeProfile,
+  width = 0,
+): MatchTeamContext {
   return withNeutralIncidentProfiles({
     clubId: clubId(`club:${side}`),
     lineup: [
@@ -228,8 +254,43 @@ function traceTeam(side: "home" | "away", shape: TacticalShapeProfile): MatchTea
     ],
     strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
     shape,
-    tacticalDistribution: { directness: 0, pressing: 0, width: 0, risk: 0, mentality: "balanced" },
+    tacticalDistribution: { directness: 0, pressing: 0, width, risk: 0, mentality: "balanced" },
   });
+}
+
+/**
+ * Builds a trace where only the home side's width instruction varies.
+ *
+ * Everything else - shapes, elevens, calibration, caps - is the fixture's, so a
+ * difference between two of these can only have come through the tactic seam.
+ */
+function tacticallyBuiltTrace(options: { readonly width: number }): MatchExplanationTrace {
+  const context: MatchContext = {
+    fixtureId: fixtureId("fixture:000003"),
+    seed: "trace-seed",
+    home: traceTeam("home", BALANCED_SHAPE, options.width),
+    away: traceTeam("away", FRONT_LOADED_SHAPE),
+    engineConfig: traceConfig(),
+    matchTacticsCalibration: traceCalibration(),
+  };
+
+  return createMatchExplanationTrace({
+    context,
+    score: { home: 0, away: 0 },
+    stats: {
+      home: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
+      away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
+    },
+    events: [],
+  });
+}
+
+/** Reads one route's capacity out of a side's snapshot. */
+function capacityOf(side: MatchExplanationTrace["home"], route: TacticalRoute): number {
+  const row = side.routes.find((candidate) => candidate.route === route);
+  assert.notEqual(row, undefined, `no row for ${route}`);
+
+  return row?.capacity ?? Number.NaN;
 }
 
 function traceConfig(): MatchEngineConfig {

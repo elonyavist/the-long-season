@@ -25,6 +25,7 @@ import {
   buildAiSquadMatchTeamContext,
   deriveShapeTacticalDistribution,
   type AiRecentPlayerUse,
+  type CatalogShapeChoice,
 } from "../team-selection/index.ts";
 import { monthKeyForCareerDate } from "./advance-career-month.ts";
 
@@ -71,6 +72,15 @@ export interface CareerAiTeamSelection {
   readonly teamContext: MatchTeamContext;
   /** Substitutes the same selection chose, in the same order. */
   readonly benchPlayerIds: readonly PlayerId[];
+  /**
+   * How close this club's own shape decision was.
+   *
+   * Career AI never imposes a formation, so the club always chose, and this is
+   * always present. It is the only way to tell a shape chosen on football from
+   * one chosen by catalog position among equals, and it costs nothing: the
+   * selector does the walk to choose with.
+   */
+  readonly catalogChoice?: CatalogShapeChoice;
 }
 
 /**
@@ -136,6 +146,9 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
   return {
     teamContext: result.teamContext,
     benchPlayerIds: result.selection.benchPlayerIds,
+    ...(result.selection.catalogChoice === undefined
+      ? {}
+      : { catalogChoice: result.selection.catalogChoice }),
   };
 }
 

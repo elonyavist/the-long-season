@@ -82,6 +82,7 @@ const tacticalSemanticsSchema = v.strictObject({
   routeAffinityBasisPointsByKnob: knobMagnitudesSchema,
   volumeBasisPointsByKnob: knobMagnitudesSchema,
   exposureBasisPointsByKnob: knobMagnitudesSchema,
+  controlBasisPointsByKnob: knobMagnitudesSchema,
   commitmentBasisPointsByMentality: v.strictObject(
     Object.fromEntries(TACTIC_MENTALITIES.map((mentality) => [mentality, positiveInteger])) as Record<
       (typeof TACTIC_MENTALITIES)[number],

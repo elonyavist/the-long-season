@@ -96,7 +96,9 @@ contexts; it never owns the analytic diversity gate.
 |---|---|---:|---|
 | 01 | [contracts and tactical ownership](01-contracts-and-tactical-ownership.md) | no, except corrected trace | Step 02 |
 | 02 | [real-career before-state](02-real-career-before-state.md) | no | Step 03 |
-| 03 | [Checkpoint A](03-checkpoint-a-ownership-and-before-state.md) | no | GO authorizes 04 |
+| 03 | [Checkpoint A](03-checkpoint-a-ownership-and-before-state.md) | no | **STOP / RETHINK recorded** |
+| 03A | [squad archetypes and role reachability](03a-squad-archetypes-and-primary-role-reachability.md) | population | Step 03B |
+| 03B | [Checkpoint A2 squad identity](03b-checkpoint-a2-real-career-squad-identity.md) | no | GO authorizes 04 |
 | 04 | [conserved tactical contributions](04-conserved-tactical-contributions.md) | yes | Step 05 |
 | 05 | [contested routes and lateral focus](05-contested-routes-and-lateral-focus.md) | yes | Step 06 |
 | 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | GO authorizes 07 |
@@ -112,6 +114,16 @@ contexts; it never owns the analytic diversity gate.
 | 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Phase 81B handoff |
 
 No later step starts while its preceding checkpoint is unresolved.
+
+**Checkpoint A recorded `STOP / RETHINK` on 2026-08-07.** Its preregistered tie
+bias was falsified: `tieDecidedShare` is `0.0000` on `378` real career
+selections, and `4-2-4` wins `92.86%` by a mean structural margin of `0.7610`.
+The remedy direction survives and its mechanism does not - work scoped to
+**break ties** becomes work to **make the winning shape depend on the squad**.
+Steps 03A and 03B are inserted rather than renumbered so every `Step NN`
+reference in the design contract keeps its meaning. **Steps 04-16 are closed
+until Checkpoint A2 records a `GO`**, and the Checkpoint A before-state is frozen
+as the denominator of A2's deltas.
 
 ## Checkpoint Decisions
 

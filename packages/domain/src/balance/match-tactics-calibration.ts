@@ -329,6 +329,30 @@ export const TACTIC_KNOB_EXPOSED_ROUTE = {
   risk: "transition",
 } as const satisfies Readonly<Record<TacticKnob, TacticalRoute>>;
 
+/** Which way a knob moves the side's share of the possession contest. */
+export type TacticKnobControlDirection = "increase" | "decrease";
+
+/**
+ * Whether a knob helps or hurts a side's hold on the ball.
+ *
+ * Football vocabulary, so it is typed code for the same reason
+ * `TACTIC_KNOB_EXPOSED_ROUTE` is: content owns how hard an instruction bites,
+ * never which way it bites. Splitting the sign out is what keeps the magnitude a
+ * plain `0..10000` share, so it passes the same validator every other tactic
+ * magnitude passes instead of needing a signed field nothing else has.
+ *
+ * The football: winning the ball back high up, committing more players, and
+ * stretching the pitch all mean a side spends more of the match on the ball.
+ * Playing long is the one that gives it away - the ball is contested in the air
+ * or behind the defence rather than kept at the feet of the side that hit it.
+ */
+export const TACTIC_KNOB_CONTROL_DIRECTION = {
+  directness: "decrease",
+  pressing: "increase",
+  width: "increase",
+  risk: "increase",
+} as const satisfies Readonly<Record<TacticKnob, TacticKnobControlDirection>>;
+
 /**
  * Versioned magnitudes for what the five manager tactic inputs do.
  *
@@ -353,6 +377,16 @@ export interface TacticalSemanticsCalibrationConfig {
    * free bonus, which the design contract forbids outright.
    */
   readonly exposureBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
+  /**
+   * How far a knob at its cap moves this side's share of the possession
+   * contest, as an unsigned magnitude.
+   *
+   * `TACTIC_KNOB_CONTROL_DIRECTION` owns whether that movement is up or down,
+   * so content never writes a sign. Every knob must price this above zero: a
+   * knob declared to move control by nothing is a direction that describes no
+   * football, which is the same defect a zero exposure is.
+   */
+  readonly controlBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
   /**
    * Commitment multiplier per mentality, on the ladder's own order.
    *
@@ -551,6 +585,7 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_route_affinity"
   | "knob_without_a_cost"
   | "invalid_volume_magnitude"
+  | "invalid_control_magnitude"
   | "incomplete_commitment_ladder"
   | "invalid_commitment_ladder"
   | "invalid_score_state_commitment"
@@ -632,6 +667,11 @@ export function validateMatchTacticsCalibration(config: MatchTacticsCalibrationC
  * 2. **Every knob must cost something.** The design contract says no tactic
  *    input is a universal bonus, so a zero exposure is refused rather than
  *    trusted to a reviewer noticing it.
+ * 3. **Every knob must price the control direction it is declared to have.**
+ *    `TACTIC_KNOB_CONTROL_DIRECTION` says pressing wins the ball back and
+ *    playing long gives it away; a zero magnitude would leave that football
+ *    written down and never applied, which is the same disagreement rule 1
+ *    catches on the route side.
  *
  * The commitment ladder is validated the way the suitability ladder is: it
  * walks `TACTIC_MENTALITIES` instead of restating which mentality outranks
@@ -643,11 +683,17 @@ export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCa
     const affinity = config.routeAffinityBasisPointsByKnob[knob];
     const volume = config.volumeBasisPointsByKnob[knob];
     const exposure = config.exposureBasisPointsByKnob[knob];
+    const control = config.controlBasisPointsByKnob[knob];
 
-    if (affinity === undefined || volume === undefined || exposure === undefined) {
+    if (
+      affinity === undefined
+      || volume === undefined
+      || exposure === undefined
+      || control === undefined
+    ) {
       throw new MatchTacticsCalibrationError(
         "incomplete_tactic_knob_magnitudes",
-        `Tactic semantics must declare affinity, volume, and exposure for ${knob}`,
+        `Tactic semantics must declare affinity, volume, exposure, and control for ${knob}`,
       );
     }
 
@@ -672,6 +718,13 @@ export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCa
       throw new MatchTacticsCalibrationError(
         "knob_without_a_cost",
         `${knob} must hand the opponent something: exposure cannot be ${exposure}`,
+      );
+    }
+
+    if (!isBasisPointShare(control) || control === 0) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_control_magnitude",
+        `${knob} is declared to ${TACTIC_KNOB_CONTROL_DIRECTION[knob]} control, so it must price it: ${control}`,
       );
     }
   }

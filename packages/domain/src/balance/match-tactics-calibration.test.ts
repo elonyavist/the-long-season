@@ -17,6 +17,7 @@ import {
   TACTICAL_SHAPE_MAXIMUM_CONTRIBUTORS,
   TACTICAL_SHAPE_TASK_KIND,
   TACTICAL_SHAPE_TASKS,
+  TACTIC_KNOB_CONTROL_DIRECTION,
   TACTIC_KNOB_EXPOSED_ROUTE,
   TACTIC_KNOB_FAVOURED_ROUTES,
   TACTIC_KNOBS,
@@ -334,6 +335,7 @@ function validSemantics(): TacticalSemanticsCalibrationConfig {
     routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_000, width: 3_500, risk: 0 },
     volumeBasisPointsByKnob: { directness: 1_200, pressing: 800, width: 600, risk: 2_000 },
     exposureBasisPointsByKnob: { directness: 1_500, pressing: 2_000, width: 1_200, risk: 2_500 },
+    controlBasisPointsByKnob: { directness: 900, pressing: 1_100, width: 400, risk: 600 },
     commitmentBasisPointsByMentality: {
       very_defensive: 8_400,
       defensive: 9_200,
@@ -415,6 +417,31 @@ test("no tactic input may be a free bonus", () => {
       "knob_without_a_cost",
     );
   }
+});
+
+test("a knob declared to move control must price that movement", () => {
+  // The direction mapping says pressing wins the ball back and playing long
+  // gives it away. At zero basis points that football is written down and never
+  // applied, which is the same kind of silent disagreement as an unpriced route
+  // preference - and it used to be unfalsifiable, because the four magnitudes
+  // were literals inside the engine rather than part of the stamped asset.
+  for (const knob of TACTIC_KNOBS) {
+    assertRejects(
+      withSemantics({
+        controlBasisPointsByKnob: { ...validSemantics().controlBasisPointsByKnob, [knob]: 0 },
+      }),
+      "invalid_control_magnitude",
+    );
+  }
+});
+
+test("every knob is declared to move control in exactly one direction", () => {
+  // Both directions must be football somebody actually ships, or the signed
+  // branch in the engine has a side that no calibration can reach.
+  const directions = TACTIC_KNOBS.map((knob) => TACTIC_KNOB_CONTROL_DIRECTION[knob]);
+
+  assert.equal(directions.includes("increase"), true, "no knob helps a side keep the ball");
+  assert.equal(directions.includes("decrease"), true, "no knob costs a side the ball");
 });
 
 test("every knob is declared to hand the opponent exactly one route", () => {

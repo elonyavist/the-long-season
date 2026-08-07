@@ -7,6 +7,7 @@ import {
   type ShotChanceType,
   type TacticKnob,
   type TacticalRoute,
+  type TacticalShapeCapacity,
 } from "@game/domain";
 import type { Rng } from "@game/shared";
 
@@ -33,8 +34,15 @@ export interface OpportunityRoutePlan {
   readonly weightByRoute: Readonly<Record<TacticalRoute, number>>;
   /** Bounded multiplier on this side's per-minute opportunity rate. */
   readonly volumeMultiplier: number;
-  /** Bounded share of the possession contest this shape and press earn. */
-  readonly controlCapacity: number;
+  /**
+   * The own phase that limited each route, straight from the matchup chain.
+   *
+   * Kept because it cannot be recovered from the capacities: a route reports
+   * one bounded number, and which of its phases was the weak link is a fact
+   * only the chain that produced it knows. It is what lets the post-match
+   * explanation say *why* a way through was shut instead of only that it was.
+   */
+  readonly bottleneckByRoute: Readonly<Record<TacticalRoute, TacticalShapeCapacity>>;
 }
 
 /** Input for planning one side's minute. */
@@ -142,8 +150,10 @@ export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInpu
   });
 
   const capacityByRoute = {} as Record<TacticalRoute, number>;
+  const bottleneckByRoute = {} as Record<TacticalRoute, TacticalShapeCapacity>;
   for (const route of TACTICAL_ROUTES) {
     let capacity = matchup.routes[route].capacity;
+    bottleneckByRoute[route] = matchup.routes[route].bottleneck;
 
     for (const knob of TACTIC_KNOBS) {
       const favoured: readonly TacticalRoute[] = TACTIC_KNOB_FAVOURED_ROUTES[knob];
@@ -163,7 +173,7 @@ export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInpu
     capacityByRoute,
     weightByRoute: normalizedWeights(capacityByRoute, semantics.routeSelectionSharpness),
     volumeMultiplier: deriveVolumeMultiplier(input, semantics),
-    controlCapacity: deriveControlCapacity(own, opponent, ownTactics, caps, semantics),
+    bottleneckByRoute,
   };
 }
 
@@ -278,29 +288,6 @@ function deriveVolumeMultiplier(
   const scoreState = 1 + share(semantics.scoreStateCommitmentBasisPoints) * chase;
 
   return clamp(volume * commitment * scoreState, MIN_VOLUME_MULTIPLIER, MAX_VOLUME_MULTIPLIER);
-}
-
-/**
- * Derives how much of the possession contest this side's shape earns.
- *
- * Connection, central progression, and an active press are what keep a side on
- * the ball. Reading them from the shape is what stops an empty midfield
- * department from being the only way the engine can express a broken
- * connection: a side with midfielders who cannot link is now distinguishable
- * from a side with no midfielders at all.
- */
-function deriveControlCapacity(
-  own: TacticalShapeProfile,
-  opponent: TacticalShapeProfile,
-  ownTactics: MatchTacticalDistributionInput,
-  caps: TacticalDistributionCaps,
-  semantics: MatchTacticsCalibrationConfig["tacticalSemantics"],
-): number {
-  const press = own.capacities.pressing_cohesion * (1 + lean(ownTactics, caps, "pressing"));
-  const onTheBall = (own.capacities.build_up + own.capacities.central_progression + press) / 3;
-  const contested = onTheBall * (1 - share(semantics.shapeControlShareBasisPoints) * opponent.capacities.pressing_cohesion);
-
-  return clamp(contested, 0, 1);
 }
 
 /** Reads one knob as an intensity in `0..1` against its configured cap. */

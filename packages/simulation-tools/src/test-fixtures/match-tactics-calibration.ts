@@ -60,6 +60,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
       volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
       exposureBasisPointsByKnob: { directness: 1_600, pressing: 4_700, width: 5_300, risk: 1_400 },
+      controlBasisPointsByKnob: { directness: 800, pressing: 1_200, width: 300, risk: 400 },
       commitmentBasisPointsByMentality: {
         very_defensive: 8_600,
         defensive: 9_300,

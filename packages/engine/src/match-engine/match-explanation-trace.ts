@@ -3,7 +3,6 @@ import {
   type CanonicalPlayerRole,
   type ClubId,
   type FixtureId,
-  type MatchTacticsCalibrationConfig,
   type TacticMentalityKey,
   type PlayerId,
   type TacticalRoute,
@@ -11,7 +10,7 @@ import {
 } from "@game/domain";
 
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
-import { deriveTacticalMatchup } from "./tactical-matchup.ts";
+import { deriveOpportunityRoutePlan } from "./opportunity-route.ts";
 import type { MatchScore, MatchSide, MatchSimulationStats } from "./match-simulation-state.ts";
 import type { MatchStepEvent } from "./step-match.ts";
 
@@ -309,11 +308,7 @@ function createTeamSnapshot(side: MatchSide, context: MatchContext): MatchExplan
   const team = context[side];
 
   return {
-    routes: createRouteSnapshots(
-      team,
-      context[side === "home" ? "away" : "home"],
-      context.matchTacticsCalibration,
-    ),
+    routes: createRouteSnapshots(team, context[side === "home" ? "away" : "home"], context),
     side,
     clubId: team.clubId,
     strength: {
@@ -348,22 +343,43 @@ function createTeamSnapshot(side: MatchSide, context: MatchContext): MatchExplan
 /**
  * Builds one side's route diagnostics against the opponent it actually faced.
  *
- * The same derivation runs inside the minute loop, so these rows explain the
- * match that was played rather than describing a parallel model of it.
+ * These rows come from `deriveOpportunityRoutePlan(...)` - the same function
+ * the minute loop plans with - so they describe the match that was played
+ * rather than a parallel model of it. Reading the bare matchup instead was
+ * exactly that parallel model: it applied no tactic at all, so a side told to
+ * go wide reported the flank capacity of a side that had been told nothing, and
+ * the rows contradicted the football the minutes were resolving.
+ *
+ * The plan is built at kickoff state. That is not an approximation of the
+ * capacities: `goalDifference` only moves `volumeMultiplier`, and the tactic
+ * setup on the context is the one the side started with. What the rows cannot
+ * show is a mid-match tactic change - the trace receives one context, and
+ * chapters are Step 13's.
  */
 function createRouteSnapshots(
   team: MatchTeamContext,
   opponent: MatchTeamContext,
-  calibration: MatchTacticsCalibrationConfig,
+  context: MatchContext,
 ): readonly MatchExplanationRouteSnapshot[] {
-  const matchup = deriveTacticalMatchup({ own: team.shape, opponent: opponent.shape, calibration });
+  const plan = deriveOpportunityRoutePlan({
+    own: team.shape,
+    opponent: opponent.shape,
+    ownTactics: team.tacticalDistribution,
+    opponentTactics: opponent.tacticalDistribution,
+    caps: context.engineConfig.tacticalDistributionCaps,
+    calibration: context.matchTacticsCalibration,
+    goalDifference: KICKOFF_GOAL_DIFFERENCE,
+  });
 
   return TACTICAL_ROUTES.map((route) => ({
     route,
-    capacity: matchup.routes[route].capacity,
-    bottleneck: matchup.routes[route].bottleneck,
+    capacity: plan.capacityByRoute[route],
+    bottleneck: plan.bottleneckByRoute[route],
   }));
 }
+
+/** Score state the plan is read at: nobody has scored when a match is planned. */
+const KICKOFF_GOAL_DIFFERENCE = 0;
 
 /**
  * Builds one side's opportunity summary from final stats and shot events.

@@ -4,6 +4,18 @@
 
 Not started; requires Step 07 Done.
 
+## Rescoped By Checkpoint A
+
+**Squad generation left this step.** Checkpoint A falsified the mechanism this
+step was written for: there are no ties for squad identity to break
+(`tieDecidedShare` `0.0000`). Generating squad identities moved ahead to Step
+03A, because every checkpoint after it would otherwise take its before-state on
+a population already known to be broken.
+
+What stays here is lateral execution, which genuinely depends on Step 05's
+`lateralFocus` and Step 07's per-task execution and cannot move. **Do not
+re-implement squad generation here.**
+
 ## Goal
 
 Give generated clubs different football identities so AI formation follows

@@ -267,15 +267,21 @@ test("mentality decides how often, never where", () => {
   assert.deepEqual(attacking.capacityByRoute, defensive.capacityByRoute);
 });
 
-test("a shape that cannot keep the ball earns less of the possession contest", () => {
-  const connected = planFor({
-    ownShape: tacticalShapeProfileFixture({ overrides: { build_up: 0.8, central_progression: 0.8 } }),
-  });
-  const disconnected = planFor({
-    ownShape: tacticalShapeProfileFixture({ overrides: { build_up: 0.15, central_progression: 0.15 } }),
+test("the plan names the phase that limited each route", () => {
+  // The one fact the capacities cannot carry: a route reports a single bounded
+  // number, and which of its phases was the weak link is only knowable inside
+  // the chain that produced it. The post-match explanation reads this rather
+  // than rebuilding a matchup of its own, so it is the plan's to keep.
+  const plan = planFor({
+    ownShape: tacticalShapeProfileFixture({ overrides: { left_progression: 0.05 } }),
   });
 
-  assert.equal(connected.controlCapacity > disconnected.controlCapacity, true);
+  assert.deepEqual(Object.keys(plan.bottleneckByRoute).sort(), [...TACTICAL_ROUTES].sort());
+  assert.equal(
+    plan.bottleneckByRoute.left,
+    "left_progression",
+    "the phase that was starved must be the one named",
+  );
 });
 
 test("a flank overload is felt as a flank preference, mirrored", () => {
