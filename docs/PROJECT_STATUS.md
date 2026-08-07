@@ -25,17 +25,18 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A Step 03A, squad archetypes. **Implemented, `pnpm check` red.**
-  The Phase 80A matrix was measuring squad order, not just age/role/room/
-  participation; with its five streams declared by role the controlled value is
-  `3005` against a shipped `3034`. **Adopted: `wide_midfielder` stays in the
-  sample and `3005` is the new calibration** - it could not be sampled before
-  this phase, so `3034` was fitted to an incomplete population. Delivery is a
-  typed total version -> bundle catalog, never a `??` fallback: existing careers
-  read the stamped `v7`, new careers are born on `v8`, and **Step 14 stays the
-  only reset** and removes the legacy bundle. Not yet implemented.
-  **Checkpoint A recorded `STOP / RETHINK`**; Steps 01-03 Done, **Steps 04-16
-  closed** until A2 (03B).
+- Step: Phase 81A Step 03A, squad archetypes. **Done, `pnpm check` green**
+  (`291` files, `2250` tests). The Phase 80A matrix was measuring squad order,
+  not just age/role/room/participation; with its five streams declared by role
+  the controlled value is `3005` against a shipped `3034`. **Adopted:
+  `wide_midfielder` stays and `3005` is the new calibration** - it could not be
+  sampled before this phase, so `3034` was fitted to an incomplete population.
+  Delivery is a typed total version -> bundle catalog, never a `??` fallback:
+  existing careers read `v7`, new careers are born on `v8`, **Step 14 stays the
+  only reset**. Not implemented yet; held behind
+  `PHASE_81A_PENDING_OUTFIELD_PROJECTION`, deleted after A2's `GO`. Hard-cap
+  probe: **`FOUND`**, `210` world-seasons, `21/21` reconciled. **Checkpoint A
+  recorded `STOP / RETHINK`**; 01-03 Done, **04-16 closed** until A2 (03B).
 - **Each club draws one of eight squad identities** from
   `deriveRng(seed, "squad-identity", clubNumber)`. An identity names footballers,
   never a shape, and none may become reachable from selection.

@@ -1,6 +1,5 @@
 import { createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
 import { longRunGateStatus } from "./gate-status.ts";
-import type { PlayerRole } from "@game/domain";
 import { createHash } from "node:crypto";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 import {
@@ -115,6 +114,16 @@ import {
   competitionIdForClubInWorld,
 } from "../career/scenarios.ts";
 import type { CliCareerState, CliPlayer, CliSaveId } from "../career/types.ts";
+
+/**
+ * The footballer-identity role, read off the player the CLI already has.
+ *
+ * Taken from `CliPlayer` rather than imported from `@game/domain`, which the
+ * CLI is not allowed to reach into directly. It is also the tighter type: the
+ * template roles below are matched against this exact field, so deriving it
+ * from the field makes a mismatch impossible to write.
+ */
+type PlayerRole = CliPlayer["primaryRole"];
 
 type Phase79CCalibrationVersions = FakeDomesticWorld["calibrationVersions"];
 type Phase80AValuationConfig = ReturnType<typeof selectPlayerValuationConfig>;
@@ -262,6 +271,32 @@ export interface LongRunGateCrossTierTransferSnapshot extends LongRunCrossTierTr
   readonly seed: string;
 }
 
+/**
+ * The two canonical observation snapshots one world's economy audit is built
+ * from, kept apart instead of pre-merged.
+ *
+ * The audit is handed a single flat list and returns only aggregates, so a
+ * caller that wants per-snapshot facts - "did the opening population already
+ * hold this, or did ten seasons of growth produce it?" - cannot recover them
+ * from the audit afterwards. Splitting the aggregate back in two is impossible,
+ * and rebuilding one half independently would measure a second derivation
+ * rather than the one the audit actually counted.
+ *
+ * `hardCapMinorUnits` travels with the observations for the same reason. Any
+ * consumer banding values against the cap must use the exact number the audit
+ * counted with; re-deriving it from the career state would agree today and
+ * could silently stop agreeing the moment the report changes which config it
+ * reads.
+ */
+export interface PlayerEconomyObservationSnapshots {
+  /** Observations taken on the freshly generated world, before any season. */
+  readonly opening: readonly PlayerGenerationEconomyObservation[];
+  /** Observations taken on the closing career state, after every season. */
+  readonly closing: readonly PlayerGenerationEconomyObservation[];
+  /** Exact public-value hard cap both snapshots were measured against. */
+  readonly hardCapMinorUnits: number;
+}
+
 /** Complete report bundle for one deterministic career world. */
 export interface SingleWorldLongRunReport {
   /** Seed used to generate this world. */
@@ -286,6 +321,8 @@ export interface SingleWorldLongRunReport {
   readonly annualIntakeAudit: PlayerGenerationAnnualIntakeSummary;
   /** Joint player/range/value/cap/negotiation facts for current economy gates. */
   readonly playerEconomyAudit: PlayerGenerationEconomyAudit;
+  /** The exact two snapshots `playerEconomyAudit` above was computed from. */
+  readonly playerEconomyObservationSnapshots: PlayerEconomyObservationSnapshots;
   /** Closing senior population retained for one cohort-level value fit. */
   readonly closingPlayerMarketObservations:
     readonly PlayerMarketCalibrationObservation[];
@@ -1243,6 +1280,19 @@ function incrementAnomalyStatus(
 }
 
 /**
+ * The exact observation list the economy audit is fed, in the exact order.
+ *
+ * One definition of "what the audit saw", so that anything counting the two
+ * snapshots separately adds up to the audit's totals by construction rather
+ * than by a coincidence that has to be re-checked whenever either side moves.
+ */
+export function auditedPlayerEconomyObservations(
+  snapshots: PlayerEconomyObservationSnapshots,
+): readonly PlayerGenerationEconomyObservation[] {
+  return [...snapshots.opening, ...snapshots.closing];
+}
+
+/**
  * Builds the full single-world report bundle used by both normal output and
  * long-run batch gates. Keeping one path avoids report drift.
  */
@@ -1346,15 +1396,25 @@ export function createSingleWorldReport(
     finalCareerState,
     finalObservations,
   );
+  // Built here rather than by a factory: the two sets are produced at opposite
+  // ends of this function, so anything that derived both would rebuild the
+  // opening set the exceptional-stock snapshot already used.
+  const playerEconomyObservationSnapshots: PlayerEconomyObservationSnapshots = {
+    opening: initialObservations,
+    closing: finalObservations,
+    hardCapMinorUnits:
+      valuationConfig.valuationCurves.upperTail.hardCapMinorUnits,
+  };
   const playerEconomyAudit = createPlayerGenerationEconomyAudit({
-    observations: [...initialObservations, ...finalObservations],
+    observations: auditedPlayerEconomyObservations(
+      playerEconomyObservationSnapshots,
+    ),
     negotiationObservations: phase80ANegotiationObservations({
       seed,
       seasonStartDate: league.seasonStartDate,
       careerState: finalCareerState,
     }),
-    hardCapMinorUnits:
-      valuationConfig.valuationCurves.upperTail.hardCapMinorUnits,
+    hardCapMinorUnits: playerEconomyObservationSnapshots.hardCapMinorUnits,
     initialRarityConstraints: initialRarityAuditConstraints(
       valuationConfig.ratingScale.rarity.initialWorld,
     ),
@@ -1394,6 +1454,7 @@ export function createSingleWorldReport(
       annualIntakeObservations,
     ),
     playerEconomyAudit,
+    playerEconomyObservationSnapshots,
     closingPlayerMarketObservations:
       closingPlayerMarketEvidence.observations,
     closingPlayerMarketClubSquadObservations:
@@ -2421,7 +2482,15 @@ function canonicalPlayedRoleForPosition(
   }
 }
 
-function phase80AInitialWorldObservations(
+/**
+ * Opening-world economy observations for one generated world.
+ *
+ * Exported so the hard-cap reachability proof reads the same opening
+ * observations the audit is fed, for the same reason the snapshot pair is
+ * returned on the report: a proof built on its own second derivation proves
+ * something about that derivation, not about the population the gates read.
+ */
+export function phase80AInitialWorldObservations(
   seed: string,
   world: FakeDomesticWorld,
 ): readonly PlayerGenerationEconomyObservation[] {

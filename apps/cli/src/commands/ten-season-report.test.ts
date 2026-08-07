@@ -121,18 +121,29 @@ test("ten-season-report keeps role-weighted player quality diagnostics determini
   const io = captureIo();
 
   assert.equal(await runTenSeasonReportCommand(["--seed=world-a", "--seasons=1"], io), 0);
+  // RE-RECORDED for Phase 81A squad identities. Continuity records of one
+  // seed's club hierarchy, not thresholds. `Current ability avg` did not move
+  // at all, which is the useful part: the squads were redistributed, not made
+  // better. The spreads moved because position now varies by club and ability
+  // is generated per position.
+  //
+  // One thing worth naming rather than burying in the numbers: the closing top
+  // club used to be a *different* club from the opening one (`Virtus Palermo`
+  // after `Virtus Turin`) and the spread narrowed over the season; now the same
+  // club stays top and the spread widens slightly. The hierarchy got more
+  // stable across a season, not less.
   assert.equal(io.stdoutLines.includes("  Current ability avg: 9.28 -> 9.21"), true);
   assert.equal(
-    io.stdoutLines.includes("  Initial ability spread: spread=5.57 top=Virtus Turin:13.30 bottom=U.S. Ravenna:7.73"),
+    io.stdoutLines.includes("  Initial ability spread: spread=5.64 top=Virtus Turin:13.32 bottom=U.S. Ravenna:7.68"),
     true,
   );
   assert.equal(
-    io.stdoutLines.includes("  Final ability spread: spread=5.21 top=Virtus Palermo:12.94 bottom=U.S. Ravenna:7.73"),
+    io.stdoutLines.includes("  Final ability spread: spread=5.71 top=Virtus Turin:13.34 bottom=U.S. Ravenna:7.63"),
     true,
   );
 }, 30_000);
 
-test("ten-season-report writes deterministic non-vacuous reports for an underpowered multi-world sample", async () => {
+test("ten-season-report writes deterministic non-vacuous reports for a small multi-world sample", async () => {
   const directoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-"));
 
   try {
@@ -179,30 +190,35 @@ test("ten-season-report writes deterministic non-vacuous reports for an underpow
     // No second hard-coded `Status: FAIL` here either: the status is checked
     // against the violations printed beside it, above.
     //
-    // DELIBERATELY NOT RE-RECORDED. This still asserts `matching=1`/
-    // `share_bps=5000` and therefore still fails, and that is the current
-    // decision rather than an oversight.
+    // RE-RECORDED from `matching=1`/`share_bps=5000` to `0`/`0`, with an
+    // account rather than because the old numbers had stopped matching.
     //
-    // The gate itself is fine: `hardCapCohortGate(...)` bands the eligible
+    // The gate itself never moved: `hardCapCohortGate(...)` bands the eligible
     // exact-cap share at `0..9999` with an explicit minimum of `0`, so it limits
     // how often a value lands on the cap and never requires that it happen, and
-    // its non-vacuity term - `observations=2` - still holds. What these two
-    // numbers were quietly carrying is that they are the suite's only
-    // observation of a *generated* population producing an exact cap hit; the
-    // other coverage builds `hardCapEligible: true` by hand in a fixture, which
-    // proves the counter increments and not that the branch is reachable.
+    // its non-vacuity term - `observations=2` - is unchanged here. What the old
+    // pair was quietly carrying is that it was the suite's only observation of a
+    // *generated* population producing an exact cap hit; the other coverage
+    // builds `hardCapEligible: true` by hand in a fixture, which proves the
+    // counter increments and not that the branch is reachable.
     //
-    // Re-recording to `0`/`0` would retire that evidence. It moves only after
-    // the probe preregistered in
-    // `docs/audits/PHASE_81A_HARD_CAP_REACHABILITY_PREREGISTRATION.md` reports
-    // FOUND, or after an explicit decision on NOT_FOUND.
+    // That evidence was replaced before this line moved. The preregistered probe
+    // in `docs/audits/PHASE_81A_HARD_CAP_REACHABILITY_PREREGISTRATION.md`
+    // reported FOUND over 210 world-seasons, and the two real hits it located -
+    // `phase81a-hardcap-a-world-00004` and `-00007` - are now asserted directly
+    // in `hard-cap-reachability-report/probe-data.test.ts`.
+    //
+    // Why this seed lost its hit: `phase31-test` still contributes the same two
+    // eligible observations, but Phase 81A's squad identities changed which
+    // footballer occupies the top club's six-star slot. A population fact, not
+    // an instrument fault.
     assert.equal(
       first.stdoutLines.some((line) =>
         line.startsWith("Player economy hard_cap_eligibility_and_display:")
         && line.includes("observations=2")
         && line.includes("violations=0")
-        && line.includes("matching=1")
-        && line.includes("share_bps=5000")
+        && line.includes("matching=0")
+        && line.includes("share_bps=0")
       ),
       true,
     );
@@ -1330,14 +1346,14 @@ function countSeasonSummaryRows(lines: readonly string[]): number {
 }
 
 /**
- * Checks whether any output line starts with a prefix.
- */
-/**
  * Checks the printed status against the violations printed beside it.
  *
- * This is the invariant the underpowered-sample test can actually promise: not
- * that a small run fails, but that the run never *reports* clean numbers and
- * then calls itself failed, or reports violations and calls itself passed. The
+ * This is the invariant a small multi-world run can actually promise. It is not
+ * that a small run fails - `longRunGateStatus(...)` has no minimum world count,
+ * so nothing makes a small sample fail and nothing should. It is that the run
+ * never *reports* clean numbers and then calls itself failed, or reports
+ * violations and calls itself passed. Whether a real violation fails the run is
+ * proved separately in `gate-status.test.ts`, on facts rather than on a seed. The
  * three numbers below are exactly the terms in `longRunGateStatus(...)`, read
  * back out of the rendered output rather than out of the object that produced
  * it, so a formatting bug that hides a violation is caught here too.
@@ -1368,6 +1384,9 @@ function assertGateStatusAgreesWithReportedViolations(
   assert.equal(exitCode, anythingFailed ? 1 : 0);
 }
 
+/**
+ * Checks whether any output line starts with a prefix.
+ */
 function hasLineStartingWith(lines: readonly string[], prefix: string): boolean {
   for (const line of lines) {
     if (line.startsWith(prefix)) {

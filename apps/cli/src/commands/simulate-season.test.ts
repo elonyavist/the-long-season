@@ -20,6 +20,14 @@ import {
  */
 const PERSON_NAME_PATTERN = "[A-Za-z][A-Za-z']*(?: [A-Za-z][A-Za-z']*)*";
 const CLUB_NAME_PATTERN = "[A-Za-z.]+(?: [A-Za-z0-9.]+)*";
+/**
+ * Any rendered role label, e.g. `Goalkeeper`, `Right-back`, `Central midfielder`.
+ *
+ * Deliberately open. Phase 81A gives each club its own depth chart, so which
+ * role stands in a given slot is a property of that club and not of the slot
+ * number. A closed list here would be asserting the monoculture it replaced.
+ */
+const ROLE_LABEL_PATTERN = "[A-Z][A-Za-z]*(?:[- ][A-Za-z]+)*";
 
 test("simulate-season accepts --seed with equals syntax", async () => {
   const io = captureIo();
@@ -95,13 +103,21 @@ test("simulate-season can inspect formation fit without printing the season tabl
   assert.equal(io.stdoutLines.includes("Fit warnings:"), true);
   assert.equal(io.stdoutLines.includes("Squad fit notes:"), true);
   assert.equal(io.stdoutLines.includes("Final table:"), false);
-  assert.equal(io.stdoutLines.includes("  rb right full back best=natural natural=1 adapted=1 weak=8"), true);
-  assert.equal(io.stdoutLines.includes("  am attacking midfielder best=adapted natural=0 adapted=3 weak=7"), true);
-  assert.equal(io.stdoutLines.includes("  weak depth: defensive midfielder"), true);
+  // RE-RECORDED for Phase 81A squad identities. These are continuity records of
+  // one club's depth, not thresholds, and what moved is the point of the step:
+  // this squad now holds two natural right backs where it held one, and its
+  // defensive-midfielder hole is gone - both the `weak depth` and the
+  // `natural cover missing` warnings for that role disappeared, and with them
+  // the `extra depth group: center backs` that the old 4-2-4 chart produced.
+  // The attacking-midfielder hole is still there, which is football: one club
+  // is allowed to lack a role, and `03b` is what checks the *world* does not.
+  assert.equal(io.stdoutLines.includes("  rb right full back best=natural natural=2 adapted=0 weak=5"), true);
+  assert.equal(io.stdoutLines.includes("  am attacking midfielder best=adapted natural=0 adapted=4 weak=9"), true);
   assert.equal(io.stdoutLines.includes("  weak depth: attacking midfielder"), true);
+  assert.equal(io.stdoutLines.includes("  weak depth: defensive midfielder"), false);
   assert.equal(
     io.stdoutLines.includes(
-      "  natural cover missing: defensive midfielder, natural cover missing: attacking midfielder, extra depth group: wide players, extra depth group: center backs",
+      "  natural cover missing: attacking midfielder, extra depth group: wide players",
     ),
     true,
   );
@@ -163,9 +179,13 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.includes("Players: 396"), true);
   assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
   assert.equal(io.stdoutLines.includes("Current ability distribution:"), true);
-  assert.equal(io.stdoutLines.includes("  0-8: 124"), true);
-  assert.equal(io.stdoutLines.includes("  9-11: 254"), true);
-  assert.equal(io.stdoutLines.includes("  12-14: 18"), true);
+  // RE-RECORDED for Phase 81A squad identities: `124/254/18` -> `121/256/19`.
+  // Ability is generated per position, so changing which positions a squad
+  // contains moves the histogram. The invariant beside it did not move: the
+  // three buckets plus `15+` still sum to the asserted `396` players.
+  assert.equal(io.stdoutLines.includes("  0-8: 121"), true);
+  assert.equal(io.stdoutLines.includes("  9-11: 256"), true);
+  assert.equal(io.stdoutLines.includes("  12-14: 19"), true);
   assert.equal(io.stdoutLines.includes("  15+: 0"), true);
   assert.equal(io.stdoutLines.some((line) => /^  15\+: [0-9]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Potential distribution:"), true);
@@ -404,13 +424,19 @@ test("simulate-season can inspect the deterministic rotated lineup demo", async 
   assert.equal(io.stderrLines.length, 0);
   assert.equal(io.stdoutLines.includes(`Lineup demo: ${LINEUP_DEMO_PROFILE_PRO01_ROTATED}`), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
+  // Slot numbers stay pinned - the profile names exactly these four - but the
+  // role in each slot is now the club's own, so it is matched as any label
+  // rather than re-recorded. Re-pinning `slot:05 Centre-back` as
+  // `slot:05 Left-back` would look like a fix and would restate the same false
+  // invariant: that a slot number implies a role. Slot 1 keeps `Goalkeeper`,
+  // which every chart guarantees.
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:01: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(Goalkeeper\\)$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(Centre-back\\)$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:08: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(Central midfielder\\)$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:11: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(Striker\\)$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(${ROLE_LABEL_PATTERN}\\)$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:08: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(${ROLE_LABEL_PATTERN}\\)$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:11: ${PERSON_NAME_PATTERN} -> ${PERSON_NAME_PATTERN} \\(${ROLE_LABEL_PATTERN}\\)$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:01 ${PERSON_NAME_PATTERN} Goalkeeper$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05 ${PERSON_NAME_PATTERN} Centre-back$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:08 ${PERSON_NAME_PATTERN} Central midfielder$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05 ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN}$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:08 ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:11 ${PERSON_NAME_PATTERN} Striker$`).test(line)), true);
   assert.equal(lineupStarterRows(io.stdoutLines).length, 11);
 });
@@ -430,7 +456,7 @@ test("simulate-season fixture detail can apply a selected lineup demo", async ()
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Fixture: fixture:demo-third-division:demo-001:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Applies to fixture: yes"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:01 ${PERSON_NAME_PATTERN} Goalkeeper$`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05 ${PERSON_NAME_PATTERN} Centre-back$`).test(line)), true);
+  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  slot:05 ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN} replaced by ${PERSON_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Selected starters spend 8 fitness"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN} expected fitness 92$`).test(line)), true);
@@ -629,8 +655,13 @@ test("simulate-season applies the deterministic tactic and lineup setup demo", a
     true,
   );
   assert.equal(demoIo.stdoutLines.includes("Lineup role changes:"), true);
-  assert.equal(demoIo.stdoutLines.some((line) => new RegExp(`^  slot:08: ${PERSON_NAME_PATTERN} Central midfielder -> Striker$`).test(line)), true);
-  assert.equal(demoIo.stdoutLines.some((line) => new RegExp(`^  slot:09: ${PERSON_NAME_PATTERN} Central midfielder -> Striker$`).test(line)), true);
+  // What the attacking setup demo promises is the *destination*: slots 8 and 9
+  // become strikers. The role they start from is the club's own chart - here
+  // two wingers rather than the old chart's two central midfielders - so it is
+  // matched as any label. Pinning the source would make this test fail whenever
+  // the demo club draws a different identity, for no gain.
+  assert.equal(demoIo.stdoutLines.some((line) => new RegExp(`^  slot:08: ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN} -> Striker$`).test(line)), true);
+  assert.equal(demoIo.stdoutLines.some((line) => new RegExp(`^  slot:09: ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN} -> Striker$`).test(line)), true);
   assert.equal(demoIo.stdoutLines.includes("Final table:"), true);
   assert.notDeepEqual(demoIo.stdoutLines, defaultIo.stdoutLines);
 });
@@ -1055,8 +1086,17 @@ function conditionPlayerRows(lines: readonly string[]): readonly string[] {
 /**
  * Extracts rendered starter rows from lineup-demo command output.
  */
+/**
+ * Extracts the rendered starter rows from a lineup demo.
+ *
+ * This used to match only `Goalkeeper|Centre-back|Central midfielder|Striker`,
+ * and counted `7` of `11` once clubs stopped all fielding the same chart. The
+ * command was printing all eleven rows the whole time: the helper was asserting
+ * that a squad contains none of the eight other roles the game can generate.
+ * Matching any role label counts the eleven and still rejects a malformed row.
+ */
 function lineupStarterRows(lines: readonly string[]): readonly string[] {
-  return lines.filter((line) => new RegExp(`^  slot:[0-9]{2} ${PERSON_NAME_PATTERN} (Goalkeeper|Centre-back|Central midfielder|Striker)$`).test(line));
+  return lines.filter((line) => new RegExp(`^  slot:[0-9]{2} ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN}$`).test(line));
 }
 
 /** Extracts rendered identity player rows from identity-review command output. */

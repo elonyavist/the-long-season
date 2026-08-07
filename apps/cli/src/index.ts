@@ -12,6 +12,7 @@ import { runTacticalShapeReportCommand } from "./commands/tactical-shape-report.
 import { runTacticalAgencyReportCommand } from "./commands/tactical-agency-report.ts";
 import { runSeasonRecapReportCommand } from "./commands/season-recap-report.ts";
 import { runTenSeasonReportCommand } from "./commands/ten-season-report.ts";
+import { runHardCapReachabilityReportCommand } from "./commands/hard-cap-reachability-report.ts";
 import { createTranslator } from "@game/i18n";
 
 /**
@@ -82,6 +83,16 @@ export async function runCli(args: readonly string[]): Promise<void> {
 
   if (command === "tactical-agency-report") {
     const exitCode = await runTacticalAgencyReportCommand(commandArgs);
+
+    if (exitCode !== 0) {
+      process.exitCode = exitCode;
+    }
+
+    return;
+  }
+
+  if (command === "hard-cap-reachability-report") {
+    const exitCode = await runHardCapReachabilityReportCommand(commandArgs);
 
     if (exitCode !== 0) {
       process.exitCode = exitCode;

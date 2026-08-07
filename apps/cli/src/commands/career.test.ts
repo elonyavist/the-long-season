@@ -51,7 +51,14 @@ test("CLI builds the canonical three-division topology and shared identity hash"
     ),
     [12, 12, 18, 12],
   );
-  assert.equal(canonicalCareerIdentityHash(state), "b12d5dd0");
+  // RE-RECORDED for Phase 81A squad identities: `b12d5dd0` -> `620ad19b`. This
+  // is a continuity record - it pins that CLI and web build the *same* world,
+  // not that the world has a particular shape - and giving each club its own
+  // depth chart changes every generated player's position, so the hash was
+  // always going to move. The same value is asserted in
+  // `apps/web/src/runtime/web-career-runtime.test.ts`; the pair only means
+  // something while both say the same thing, so they move together or not at all.
+  assert.equal(canonicalCareerIdentityHash(state), "620ad19b");
 });
 
 test("CLI rejects a career with a mismatched immutable calibration version", () => {

@@ -141,15 +141,38 @@ that rebuilt only the closing observations for itself would silently drop the
 `21` opening rows and would have no way to split the audit's one aggregate back
 into the two observed seasons.
 
-The reader therefore requires one extraction first:
+The reader therefore requires one seam first:
 
 ```text
-createPlayerEconomyObservationSnapshots(...) -> { opening, closing }
+PlayerEconomyObservationSnapshots { opening, closing, hardCapMinorUnits }
+auditedPlayerEconomyObservations(snapshots) -> the audit's exact input
 ```
 
-`createSingleWorldReport(...)` uses it to feed the audit, and the probe uses the
-**same two sets** to produce its `42` rows. One derivation, two consumers,
+`createSingleWorldReport(...)` builds the pair, feeds the audit through that one
+derivation, and returns the pair on `SingleWorldLongRunReport`. The probe reads
+the **same two sets** to produce its `42` rows. One derivation, two consumers,
 neither reconstructing what the other saw.
+
+### Correction Made Before Execution: The Pair Is Built, Not Manufactured
+
+Written while implementing the seam, **before any probe output existed**.
+
+An earlier plan gave the pair a `createPlayerEconomyObservationSnapshots(...)`
+factory. There is nothing for it to do: the two sets are produced at opposite
+ends of `createSingleWorldReport(...)` - the opening set exists before the first
+season and is already consumed by the exceptional-stock snapshot, the closing
+set cannot exist until the last season has been played - so a factory that
+*derived* both would build a second, equal-but-separate copy of the opening set,
+the precise thing the seam exists to prevent, and one that merely returned its
+own arguments would be a public function with no work and no external caller.
+The pair is therefore a typed object built in place, and the only function is
+the one that owns the audit's input order.
+
+The pair also carries `hardCapMinorUnits`. Every band in this document is
+defined against the cap, and a probe that re-derived the cap from the career
+state would agree with the audit today and could stop agreeing the moment the
+report changes which config it reads. Carrying it makes that divergence
+impossible rather than unlikely.
 
 **The probe then reconciles, and fails if it cannot.** Aggregating its own
 `opening + closing` rows must reproduce the audit's cap facts exactly -
