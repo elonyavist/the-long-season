@@ -32,10 +32,16 @@ display-safe upper-cap, asking/offer/counter/completed-fee spread, and
 zero-observation defects. Its focused checks, repository verification, build,
 and browser QA pass. Its direct `50 x 20` was stopped, produced no report, and
 is not claimed as evidence. Step 14 remains paused through the accepted Phase
-80 UI, Phase 80A player-model, Phase 80B market/loan, Phase 80C
-competitive-race, and Phase 81 match-engine reworks. Phase 81 Step 12 alone
-must run one resumable `50 x 20` with `50` stable shards and exactly `7`
-workers. The later release-scale evidence remains unrun and unclaimed.
+80 UI, Phase 80A player-model, Phase 80B market/loan, and Phase 80C
+competitive-race reworks. **Phase 81 is Done as of 2026-08-07** and its Step 15
+ran the one resumable `50 x 20` with `50` stable shards and exactly `7` workers.
+The later release-scale evidence remains unrun and unclaimed.
+
+That cohort left **two of this phase's structural checks red** -
+`contract_finance_structural_integrity` at `13` of `50` worlds and
+`preliminary_agreement_integrity` at `12` of `50`, the second new to the record.
+Phase 81 named them and did not adopt them; they are detailed in the Step 14
+document. Step 14 remains Reopened, paused, unrun and unclaimed.
 
 ## Goal
 

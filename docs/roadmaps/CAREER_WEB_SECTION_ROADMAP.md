@@ -15,9 +15,10 @@ constraining future work, not by being recent.
 
 ## Current Baseline
 
-Phases 0 through 80A are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - is active; Steps 01 through 14 are Done and Step 15 is
-next. Live constraints are in `docs/PROJECT_STATUS.md`.
+Phases 0 through 81 are complete. Phase 81 - Phase-Aware Tactical Shape And
+Manager Decision Engine - closed 2026-08-07 on
+`docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md`; Phase 81A is
+the next owner. Live constraints are in `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
 experiment. Phase 80's nine steps established the global seven-worker

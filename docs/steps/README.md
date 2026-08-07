@@ -213,8 +213,14 @@ Provide an open, incremental, and iterative execution guide for the project: one
   frozen bands, and hands control to the world-extension work.
 
 - `docs/steps/81-phase-aware-tactical-shape-and-manager-decision-engine/`
-- Status: Planned under an accepted design contract, and next in order. It
-  starts after Phase 80A closes by transferring its goal-rate monitor here.
+- Status: **Done 2026-08-07.** All fifteen steps complete;
+  `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md` is the
+  closeout and Phase 81A is the only next owner. The carried
+  `goals_per_match_avg` monitor closed at cohort scale (`2.670` mean, `2.740`
+  p95, `0` of `50` worlds failing) and is not transferred again. Two Definition
+  of Done lines are recorded as not met rather than claimed: Step 14's formation
+  counter-move target, withdrawn on measurement, and Step 15's tactical
+  structural observation line, vacuous on a one-formation population.
 - It preserves the deterministic aggregate match engine while making
   formation shape, role suitability, opponent matchups, tactical instructions,
   and live manager decisions causally relevant.
@@ -232,10 +238,11 @@ Provide an open, incremental, and iterative execution guide for the project: one
   named squad-depth accessor, a context constructor taking an explicit squad, a
   non-selected club as an ordinary caller, and a match RNG keyed by
   `(worldSeed, fixtureId)`.
-- Step 12 runs this phase's checkpointed `50 x 20`, with `50` stable shards,
-  exactly `7` workers, and a repeated run proving deterministic checkpoint
-  reuse. It observes no loans and no races, so it is engine evidence only, and
-  hands control to Phase 81A.
+- Step 15 ran this phase's checkpointed `50 x 20`, with `50` stable shards,
+  exactly `7` workers, and a repeated run proving deterministic checkpoint reuse
+  - `resumed=50`, `simulated_worlds=0`, one differing line of `1493`. It observed
+  no loans and no races, so it is engine evidence only, and it handed control to
+  Phase 81A.
 
 ## Completed User-Requested Phase
 

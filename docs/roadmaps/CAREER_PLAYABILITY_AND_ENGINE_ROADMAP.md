@@ -16,11 +16,12 @@ reports produced identical evidence but retained an overall `FAIL` on the
 The 2026-08-02 phase-order decision resolves that block and reorders the rest.
 Match scoring is outside Phase 80A's player-model scope, so the monitor
 transfers unchanged to Phase 81, which owns the match engine and whose Step 06
-replaces the opportunity generation that produces those goals. Phase 81 is
-therefore next. The market work follows Phase 81A and is renumbered
-Phase 82A and Phase 82B. Two checkpointed cohorts now exist: Phase 81 Step 12
-over the accepted engine, and Phase 82B Step 09 over the completed market.
-Phase 79 Step 14 remains Reopened and paused; its release gate is unrun.
+replaces the opportunity generation that produces those goals. **Phase 81 is now
+Done and that monitor is closed at cohort scale**; Phase 81A is next. The market
+work follows it and is renumbered Phase 82A and Phase 82B. Two checkpointed
+cohorts were planned: Phase 81's over the accepted engine, **run by its Step 15
+and not re-run**, and Phase 82B Step 09 over the completed market. Phase 79 Step
+14 remains Reopened and paused; its release gate is unrun.
 
 The rationale, measurements, and declared costs are in
 `docs/the-long-season-mondo-vivo.pdf`, section 11.
@@ -2077,15 +2078,20 @@ Documentation:
 The three sections below appear in their original drafting order, which is no
 longer the execution order. Read them in this sequence instead:
 
-1. **Phase 81** - phase-aware tactical shape and manager decision engine. It
-   owns the goal-rate monitor carried out of Phase 80A and leaves the seams the
-   background world needs. **The monitor came inside band at Step 13 on
-   2026-08-06**, `20/0/0` over twenty worlds of ten seasons against the inherited
-   `36/634/80`, with threshold, denominator and severity untouched; Step 15
-   confirms it at cohort scale. Step 13 also left one Phase 80A check red on its
-   own population - `young_stored_ceiling_six_stock_arrival_category_placement`,
-   `13` of `20` worlds - which Phase 81 does not own and which needs one before
-   this phase closes.
+1. **Phase 81** - phase-aware tactical shape and manager decision engine.
+   **Done 2026-08-07**, closing report
+   `docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md`. It owned
+   the goal-rate monitor carried out of Phase 80A and **closed it at cohort
+   scale**: mean `2.670`, p95 `2.740`, `0` of `50` worlds failing over `1000`
+   seasons, against the inherited `36/634/80`, with threshold, denominator and
+   severity untouched. It left the four seams the background world needs. Two
+   Definition of Done lines are recorded as not met rather than claimed - Step
+   14's formation counter-move target, withdrawn on measurement, and Step 15's
+   tactical structural observation line, vacuous on a one-formation population.
+   Three checks stay red and unowned, all belonging to Phase 80A and Phase 79:
+   `young_stored_ceiling_six_stock_arrival_category_placement` (`50/50`),
+   `contract_finance_structural_integrity` (`13/50`) and
+   `preliminary_agreement_integrity` (`12/50`).
 2. **Phase 81A** - season-anchored contracts, free-agent economy and background
    fixtures. Expiry anchored to the season boundary through one named owner,
    offered terms in months inside the accepted `18-30` band, an AI free-agent

@@ -68,6 +68,32 @@ this step resumes. Phase 81 Step 12 must run one checkpointed `50x20` with
 player, market, and match model rather than one about to change. This step's
 own release gate remains separate, unrun, and unclaimed.
 
+### Two Red Checks Handed Here By Phase 81 Step 15, 2026-08-07
+
+Phase 81's closing `50 x 20` - `50` worlds, `20` seasons, engine evidence only -
+leaves two of this step's structural checks red. **Phase 81 named them and did not
+adopt them**, because it may make no market change; they are recorded here so this
+step's release gate does not meet them for the first time.
+
+| Check | Worlds | Rule |
+|---|---:|---|
+| `contract_finance_structural_integrity` | `13/50` | `structure`, `pass 0; fail >0` |
+| `preliminary_agreement_integrity` | `12/50` | `structure`, `pass 0; fail >0` |
+
+Both live in `packages/simulation-tools/src/long-run/contract-finance-stability.ts`
+(the second at `:742`, reading `preliminaryAgreementViolationCount`). Aggregate
+contract/finance structural violations were `14` across those `13` worlds.
+
+`preliminary_agreement_integrity` is **new to the record**: no earlier run
+reported it. The likely reason is horizon rather than new breakage - the Phase 81
+cohort runs twenty seasons where the preceding checks ran ten, and
+`contract_finance_structural_integrity` moved from `1` of `20` worlds at ten
+seasons to `13` of `50` at twenty over the same change. That is a hypothesis Phase
+81 stated and deliberately did not test, because testing it is this step's work.
+
+Neither check is a match-engine or tactical check, and neither was affected by any
+Phase 81 production change: Phase 81 Step 15 modified no production file at all.
+
 Twenty seasons cover a representative age-15-to-35 player arc, the year-10 and
 year-20 stock checks, and twice the project's `10+`-season long-horizon
 minimum. With `54` clubs and `918` opening league fixtures per world, the

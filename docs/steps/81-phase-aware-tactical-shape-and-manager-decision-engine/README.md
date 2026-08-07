@@ -2,7 +2,22 @@
 
 ## Status
 
-Planned under an accepted product/architecture contract, and next in order.
+**Done 2026-08-07.** All fifteen steps are complete. The closing report is
+`docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md` and Phase 81A
+is the only next owner.
+
+Two things closed as recorded rather than as claimed, and both are in that report:
+Step 14's formation counter-move target, withdrawn on measurement, and Step 15's
+tactical structural observation line, not met because the long-run report fields
+one formation for every club. Nothing was re-thresholded to make either read as
+delivered.
+
+The carried `goals_per_match_avg` monitor is **closed at cohort scale** - mean
+`2.670`, p95 `2.740`, band `2.3 .. 3.0` unchanged, failing in `0` of `50` worlds
+over `1000` seasons - against the `36/634/80` inherited from Phase 80A.
+
+The phase was originally planned under an accepted product/architecture contract,
+and next in order.
 
 The 2026-08-02 phase-order decision moves this phase ahead of the market work,
 which is renumbered Phase 82A (incoming offers, postures, loans) and Phase 82B
