@@ -1,4 +1,5 @@
 import {
+  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   isLivePreliminaryAgreement,
   isOpenTransferNegotiation,
   playerSquadDepartment,
@@ -46,7 +47,6 @@ import {
   submitPreliminaryAgreementOffer,
 } from "./preliminary-agreement.ts";
 import {
-  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   MINIMUM_CAREER_SQUAD_SIZE,
   TARGET_CAREER_SQUAD_SIZE,
 } from "./squad-maintenance.ts";

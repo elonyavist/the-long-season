@@ -127,6 +127,37 @@ export function isCoveringSuitability(suitability: PositionSuitability): boolean
   return suitability === "natural" || suitability === "adapted";
 }
 
+/**
+ * The one canonical slot a position is natural in.
+ *
+ * A squad generator has to build an opening eleven out of the footballers it
+ * just produced, and without this it has to keep a second position-to-role
+ * table of its own. Two tables are two places to disagree, and they disagree
+ * silently: the generated eleven fielded its right winger in a central
+ * midfield slot for eight phases, and nothing said so except a suitability
+ * penalty nobody was reading.
+ *
+ * Every position is natural in exactly one role, and the throw is what keeps
+ * that true. If a position ever becomes natural in two, the answer is not to
+ * pick one arbitrarily here - it is that the caller now has to say which slot
+ * it means, and the throw is what makes it say so.
+ *
+ * @example
+ * naturalCanonicalRoleForPosition("lwb"); // => "left_midfielder"
+ */
+export function naturalCanonicalRoleForPosition(position: PlayerPosition): CanonicalPlayerRole {
+  const roles = [...NATURAL_ROLES_BY_POSITION[position]];
+  const role = roles[0];
+
+  if (roles.length !== 1 || role === undefined) {
+    throw new Error(
+      `Position ${position} is natural in ${roles.length} roles, so the caller must choose one`,
+    );
+  }
+
+  return role;
+}
+
 function evaluateSinglePositionSuitability(
   playerPosition: PlayerPosition,
   requiredRole: CanonicalPlayerRole,

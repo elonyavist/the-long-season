@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { evaluatePositionSuitability, isCoveringSuitability, scorePlayerForFormationSlot } from "./position-suitability.ts";
+import { PLAYER_POSITIONS } from "../player/create-player.ts";
+import {
+  evaluatePositionSuitability,
+  isCoveringSuitability,
+  naturalCanonicalRoleForPosition,
+  scorePlayerForFormationSlot,
+} from "./position-suitability.ts";
 
 /**
  * Position-suitability tests preserve strict football meaning. Broadly making
@@ -85,6 +91,26 @@ test("side metadata gives a small deterministic bonus without changing role suit
   });
 
   assert.equal(rightWideScore > leftWideScore, true);
+});
+
+test("every position names one natural slot, and it is the slot it is natural in", () => {
+  for (const position of PLAYER_POSITIONS) {
+    const role = naturalCanonicalRoleForPosition(position);
+
+    assert.equal(evaluatePositionSuitability([position], { playerRole: role }), "natural", position);
+  }
+});
+
+test("the natural slot is the only one a position is natural in", () => {
+  // The single-answer promise is what lets a squad generator build an eleven
+  // without a position-to-role table of its own. If a position ever becomes
+  // natural in two slots this fails here rather than silently picking one.
+  const roles = PLAYER_POSITIONS.map((position) => naturalCanonicalRoleForPosition(position));
+
+  assert.equal(roles.length, PLAYER_POSITIONS.length);
+  assert.equal(naturalCanonicalRoleForPosition("rwb"), "right_midfielder");
+  assert.equal(naturalCanonicalRoleForPosition("rm"), "right_midfielder");
+  assert.equal(naturalCanonicalRoleForPosition("gk"), "goalkeeper");
 });
 
 test("a wide midfielder is natural in the wide midfield slot, and mirrored exactly", () => {

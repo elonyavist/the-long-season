@@ -1,5 +1,6 @@
 import {
   createCareerState,
+  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   playerSquadDepartment,
   type CareerState,
   type Club,
@@ -17,14 +18,6 @@ export const MINIMUM_CAREER_SQUAD_SIZE = 18;
 
 /** Default target active squad size after maintenance. */
 export const TARGET_CAREER_SQUAD_SIZE = 22;
-
-/** Minimum role-defined department depth protected by career lifecycle moves. */
-export const MINIMUM_CAREER_DEPARTMENT_DEPTH: Readonly<Record<PlayerSquadDepartment, number>> = {
-  goalkeeper: 2,
-  defender: 6,
-  midfielder: 6,
-  attacker: 3,
-};
 
 /** Factual role-balance warning emitted by squad maintenance. */
 export type SquadMaintenanceWarning =

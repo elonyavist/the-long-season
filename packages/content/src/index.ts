@@ -20,6 +20,7 @@ export * from "./generators/player-role-identity.ts";
 export * from "./generators/player-archetypes.ts";
 export * from "./generators/player-current-ability-bands.ts";
 export * from "./generators/senior-squad-world.ts";
+export * from "./generators/squad-identity.ts";
 export * from "./generators/transfer-window-catalog.ts";
 export * from "./generators/club-finance-world.ts";
 export * from "./generators/opening-wage-budget.ts";

@@ -5,6 +5,7 @@ import {
   type SupportedLanguage,
 } from "@game/i18n";
 import { DEFAULT_LONG_RUN_SEASON_COUNT } from "@game/simulation-tools";
+import { longRunGateExitCode } from "./ten-season-report/gate-status.ts";
 import {
   createResumableLongRunGateReport,
   createResumablePlayerDevelopmentCohortReport,
@@ -128,7 +129,7 @@ export async function runTenSeasonReportCommand(
       io.stdout(line);
     }
 
-    return batchReport.status === "pass" ? 0 : 1;
+    return longRunGateExitCode(batchReport.status);
   }
 
   const singleReport = createSingleWorldReport(parsed.seed, parsed.seasonCount, text);

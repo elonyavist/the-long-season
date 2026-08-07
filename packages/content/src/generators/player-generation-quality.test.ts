@@ -304,8 +304,14 @@ test("canonical Phase 80A worlds keep prospect shares and senior quality continu
     assert.equal(share >= minimumShare, true, `${category} lower share ${share}`);
     assert.equal(share <= maximumShare, true, `${category} upper share ${share}`);
   }
+  // A continuity record, not a gate: the gate is `acceptedShares` above, and it
+  // has never moved. Phase 81A Step 03A gave each generated club its own squad
+  // identity, so a player's role - which both generates his potential and
+  // weights the reading of it - now varies by club. First division moved by one
+  // youngster of 2144; the other two divisions and all three denominators came
+  // through unchanged. Re-record it only with that kind of account.
   assert.deepEqual(observations, {
-    first_division: { eligible: 2_144, atLeastThreeAndHalf: 421 },
+    first_division: { eligible: 2_144, atLeastThreeAndHalf: 422 },
     second_division: { eligible: 2_176, atLeastThreeAndHalf: 252 },
     third_division: { eligible: 2_095, atLeastThreeAndHalf: 130 },
   });

@@ -1,4 +1,5 @@
 import {
+  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   createContractNegotiationState,
   createEmptyContractNegotiationState,
   nonNegativeMoney,
@@ -41,7 +42,6 @@ import {
 import { prepareSeniorSquadDepartures } from "./senior-squad-transfer.ts";
 import { reconcileSelectedClubDeparturesFromMatchPreparation } from "./selected-match-preparation.ts";
 import {
-  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   MINIMUM_CAREER_SQUAD_SIZE,
 } from "./squad-maintenance.ts";
 import type { PlayerValuationConfig } from "../market/player-valuation.ts";

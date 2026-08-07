@@ -24,8 +24,12 @@ import { hardCapForRoleAbility } from "./player-role-profile.ts";
  * added to the type and forgotten here is a position the constructor silently
  * refuses. Only a test caught that when `rm`/`lm` arrived, because an
  * incomplete `readonly PlayerPosition[]` is a perfectly valid array.
+ *
+ * Exported because anything that has to visit every position - a suitability
+ * sweep, a squad generator, a report - would otherwise hand-write the list, and
+ * a hand-written copy is one that stops at `lw` after `rm`/`lm` arrive.
  */
-const PLAYER_POSITIONS = [
+export const PLAYER_POSITIONS = [
   "gk",
   "rb",
   "cb",

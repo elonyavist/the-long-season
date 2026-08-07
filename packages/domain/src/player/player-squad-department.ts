@@ -3,6 +3,27 @@ import type { Player, PlayerPosition, PlayerRole } from "../entities/player.enti
 /** Broad senior-squad department used by roster lifecycle decisions. */
 export type PlayerSquadDepartment = "goalkeeper" | "defender" | "midfielder" | "attacker";
 
+/**
+ * How deep each department must be for a squad to be a playable football club.
+ *
+ * Two sides of the project need this and neither may import the other. Career
+ * lifecycle *enforces* it - `maintainCareerSquadShape(...)` signs players and
+ * raises `weak_*_depth` when a club falls under. World generation must *clear*
+ * it, or every club it builds is born asking for a signing on its first day,
+ * which is exactly what the single pre-81A squad chart did: it held `3`
+ * midfielders against the `6` below.
+ *
+ * It sits in domain because that is the only place both can read it from. When
+ * it lived in the engine, content could only restate the numbers in a comment,
+ * and a restated number is one that drifts silently.
+ */
+export const MINIMUM_CAREER_DEPARTMENT_DEPTH: Readonly<Record<PlayerSquadDepartment, number>> = {
+  goalkeeper: 2,
+  defender: 6,
+  midfielder: 6,
+  attacker: 3,
+};
+
 const DEPARTMENT_BY_ROLE: Readonly<Record<PlayerRole, PlayerSquadDepartment>> = {
   goalkeeper: "goalkeeper",
   center_back: "defender",

@@ -146,12 +146,20 @@ test("ten-season-report writes deterministic non-vacuous reports for an underpow
     const secondExitCode = await runTenSeasonReportCommand(args, second);
     const secondReport = await readFile(reportPath, "utf8");
 
-    // Two worlds deliberately cannot prove the cohort-level economy bands.
-    // The command must stay deterministic and fail honestly instead of turning
-    // a small denominator into a false green gate.
-    assert.equal(firstExitCode, 1);
-    assert.equal(secondExitCode, 1);
+    // This used to assert `1`, under a comment saying two worlds cannot prove
+    // the cohort bands. They cannot - but nothing in `longRunGateStatus(...)`
+    // counts worlds, so the exit code only ever tracked whether this seed's
+    // population held a division-value outlier. Phase 81A's squad identities
+    // changed the population and the "gate" went green on its own.
+    //
+    // What this test can honestly promise is asserted instead: the run is
+    // reproducible, the report is not vacuous, and the printed status agrees
+    // with the violations actually printed beside it. Whether a *real*
+    // violation fails the run is proved by `gate-status.test.ts`, on facts
+    // rather than on a seed.
+    assert.equal(firstExitCode, secondExitCode);
     assert.deepEqual(first.stdoutLines, second.stdoutLines);
+    assertGateStatusAgreesWithReportedViolations(first.stdoutLines, firstExitCode);
     assert.equal(firstReport, secondReport);
     assert.equal(first.stdoutLines.includes("The Long Season long-run gate report"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Worlds: 2"), true);
@@ -168,7 +176,26 @@ test("ten-season-report writes deterministic non-vacuous reports for an underpow
     assert.equal(hasLineStartingWith(first.stdoutLines, "Execution:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Warning check counts:"), true);
     assert.equal(hasLineStartingWith(first.stdoutLines, "Player-economy gate violations:"), true);
-    assert.equal(first.stdoutLines.includes("Status: FAIL"), true);
+    // No second hard-coded `Status: FAIL` here either: the status is checked
+    // against the violations printed beside it, above.
+    //
+    // DELIBERATELY NOT RE-RECORDED. This still asserts `matching=1`/
+    // `share_bps=5000` and therefore still fails, and that is the current
+    // decision rather than an oversight.
+    //
+    // The gate itself is fine: `hardCapCohortGate(...)` bands the eligible
+    // exact-cap share at `0..9999` with an explicit minimum of `0`, so it limits
+    // how often a value lands on the cap and never requires that it happen, and
+    // its non-vacuity term - `observations=2` - still holds. What these two
+    // numbers were quietly carrying is that they are the suite's only
+    // observation of a *generated* population producing an exact cap hit; the
+    // other coverage builds `hardCapEligible: true` by hand in a fixture, which
+    // proves the counter increments and not that the branch is reachable.
+    //
+    // Re-recording to `0`/`0` would retire that evidence. It moves only after
+    // the probe preregistered in
+    // `docs/audits/PHASE_81A_HARD_CAP_REACHABILITY_PREREGISTRATION.md` reports
+    // FOUND, or after an explicit decision on NOT_FOUND.
     assert.equal(
       first.stdoutLines.some((line) =>
         line.startsWith("Player economy hard_cap_eligibility_and_display:")
@@ -247,7 +274,13 @@ test("ten-season-report writes deterministic non-vacuous reports for an underpow
       true,
     );
     assert.equal(firstReport.includes("Worlds: 2"), true);
-    assert.equal(firstReport.includes("Status: FAIL"), true);
+    // The written report must not disagree with what the process returned. This
+    // is the file-side twin of the stdout status check, and it replaces a third
+    // hard-coded `Status: FAIL` that recorded one seed's outlier as a rule.
+    assert.equal(
+      firstReport.includes(firstExitCode === 0 ? "Status: PASS" : "Status: FAIL"),
+      true,
+    );
     assert.equal(firstReport.includes("Table spread average:"), true);
     assert.equal(firstReport.includes("Draw rate average:"), true);
     assert.equal(firstReport.includes("Champion streak max observed:"), true);
@@ -343,6 +376,54 @@ test("Phase 80A potential-outcome cycles follow the August career year", () => {
   );
 });
 
+/**
+ * Every outfield projection band Phase 81A knowingly left out of date.
+ *
+ * Step 03A found this matrix was measuring squad order: it took the n-th player
+ * found per macro department, so which footballer stood in for "the second
+ * midfielder" was decided by generation rather than declared. The five outfield
+ * streams are now named by role - `center_back`, `full_back`,
+ * `central_midfielder`, `wide_midfielder`, `striker` - and selected by exact
+ * `primaryRole`.
+ *
+ * The result is not a drift. **Every non-zero outfield band moved and every
+ * goalkeeper band is byte-identical**, which is what a mis-specified outfield
+ * sample and a sound goalkeeper one look like. The shipped column was fitted
+ * while `wide_midfielder` could not be generated at all, so it was fitted on an
+ * incomplete population.
+ *
+ * The measured column is the adopted calibration. It is **not** written into
+ * `player-rating-scale.json` yet: a career stamps `playerRatingScaleVersion`
+ * and the projection policy travels inside that asset, so changing it in place
+ * would hand new numbers to every existing career. It ships as a `v8` bundle
+ * beside the frozen `v7`, and Step 14 stays the only reset. The bundle is
+ * minted **after Checkpoint A2 records `GO`**, because the template is still a
+ * real footballer drawn from a generated world - pinning the role fixed the
+ * dominant factor, not the last one - so until the identity table is frozen
+ * these numbers can still move.
+ *
+ * Both sides of every pair are pinned, so these seven bands are guarded *more*
+ * tightly than the seventeen that match: either column moving fails the test.
+ * Bands absent from this table - the zero bands and every goalkeeper band -
+ * keep plain equality.
+ *
+ * Owner: Phase 81A Step 03A. Removal: delete this table and restore the plain
+ * equality when the `v8` bundle lands, after Checkpoint A2.
+ */
+const PHASE_81A_PENDING_OUTFIELD_PROJECTION: Readonly<Record<string, {
+  readonly p50?: { readonly shipped: number; readonly measured: number };
+  readonly upper?: { readonly shipped: number; readonly measured: number };
+}>> = {
+  "0-17": { p50: { shipped: 3_034, measured: 3_005 } },
+  "18-20": { p50: { shipped: 2_200, measured: 2_257 } },
+  "21-21": { p50: { shipped: 1_196, measured: 1_200 }, upper: { shipped: 2_823, measured: 2_722 } },
+  "22-22": { p50: { shipped: 716, measured: 706 }, upper: { shipped: 2_111, measured: 2_137 } },
+  "23-23": { p50: { shipped: 483, measured: 495 }, upper: { shipped: 1_405, measured: 1_358 } },
+  "24-24": { p50: { shipped: 219, measured: 212 }, upper: { shipped: 653, measured: 642 } },
+  "25-25": { p50: { shipped: 71, measured: 72 }, upper: { shipped: 249, measured: 238 } },
+  "26-26": { upper: { shipped: 55, measured: 36 } },
+};
+
 test("Phase 80A potential-outcome matrix composes engine owners across every locked cell", () => {
   const baseline = createPhase80APotentialOutcomeCalibration();
   const replay = createPhase80APotentialOutcomeCalibration();
@@ -403,10 +484,21 @@ test("Phase 80A potential-outcome matrix composes engine owners across every loc
       && maximumAge === calibrationBand.maximumAge
     );
     assert.notEqual(configuredBand, undefined);
-    assert.equal(
-      configuredBand?.p50RealizationBasisPoints,
-      calibrationBand.p50RealizationBasisPoints,
-    );
+    const bandKey = `${String(calibrationBand.minimumAge)}-${String(calibrationBand.maximumAge)}`;
+    const pending = calibrationBand.roleGroup === "outfield"
+      ? PHASE_81A_PENDING_OUTFIELD_PROJECTION[bandKey]
+      : undefined;
+    if (pending?.p50 !== undefined) {
+      // Both sides pinned, so this band is asserted *harder* than the rest:
+      // shipped and measured must each stay exactly where they are recorded.
+      assert.equal(configuredBand?.p50RealizationBasisPoints, pending.p50.shipped, bandKey);
+      assert.equal(calibrationBand.p50RealizationBasisPoints, pending.p50.measured, bandKey);
+    } else {
+      assert.equal(
+        configuredBand?.p50RealizationBasisPoints,
+        calibrationBand.p50RealizationBasisPoints,
+      );
+    }
     let contractUpper = calibrationBand.p90RealizationBasisPoints;
     if (calibrationBand.maximumAge <= 20) {
       contractUpper = 10_000;
@@ -417,14 +509,26 @@ test("Phase 80A potential-outcome matrix composes engine owners across every loc
     if (isTerminalBand) {
       contractUpper = 0;
     }
-    assert.equal(
-      configuredBand?.upperRealizationBasisPoints,
-      contractUpper,
-    );
+    if (pending?.upper !== undefined) {
+      assert.equal(
+        configuredBand?.upperRealizationBasisPoints,
+        pending.upper.shipped,
+        bandKey,
+      );
+      assert.equal(contractUpper, pending.upper.measured, bandKey);
+    } else {
+      assert.equal(
+        configuredBand?.upperRealizationBasisPoints,
+        contractUpper,
+      );
+    }
   }
   assert.equal(baseline.audit.unobservedCalibrationBandCount, 0);
-  assert.equal(baseline.audit.abovePublicUpperCount, 65);
-  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 401);
+  // Two counters that follow the re-derived outfield column; see
+  // `PHASE_81A_PENDING_OUTFIELD_PROJECTION`. Both were `65`/`401` on the shipped
+  // calibration and are restored with it.
+  assert.equal(baseline.audit.abovePublicUpperCount, 62);
+  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 383);
   assert.equal(baseline.audit.storedCeilingViolationCount, 0);
   assert.equal(
     baseline.audit.gates.find(({ key }) =>
@@ -1228,6 +1332,42 @@ function countSeasonSummaryRows(lines: readonly string[]): number {
 /**
  * Checks whether any output line starts with a prefix.
  */
+/**
+ * Checks the printed status against the violations printed beside it.
+ *
+ * This is the invariant the underpowered-sample test can actually promise: not
+ * that a small run fails, but that the run never *reports* clean numbers and
+ * then calls itself failed, or reports violations and calls itself passed. The
+ * three numbers below are exactly the terms in `longRunGateStatus(...)`, read
+ * back out of the rendered output rather than out of the object that produced
+ * it, so a formatting bug that hides a violation is caught here too.
+ */
+function assertGateStatusAgreesWithReportedViolations(
+  lines: readonly string[],
+  exitCode: number,
+): void {
+  const readCount = (prefix: string): number => {
+    const line = lines.find((candidate) => candidate.startsWith(prefix));
+    assert.ok(line !== undefined, `missing line: ${prefix}`);
+    const value = Number(line.slice(prefix.length).trim());
+    assert.equal(Number.isInteger(value), true, line);
+    return value;
+  };
+  const statusLine = lines.find((line) => line.startsWith("Status: "));
+  assert.ok(statusLine !== undefined, "missing status line");
+
+  const closingFitLine = lines.find((line) => line.startsWith("Closing division value fit: "));
+  assert.ok(closingFitLine !== undefined, "missing closing division value fit line");
+  const closingFitFailed = closingFitLine.includes("status=fail");
+
+  const anythingFailed = readCount("Failed worlds:") > 0
+    || readCount("Player-economy gate violations:") > 0
+    || closingFitFailed;
+
+  assert.equal(statusLine, anythingFailed ? "Status: FAIL" : "Status: PASS");
+  assert.equal(exitCode, anythingFailed ? 1 : 0);
+}
+
 function hasLineStartingWith(lines: readonly string[], prefix: string): boolean {
   for (const line of lines) {
     if (line.startsWith(prefix)) {

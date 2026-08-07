@@ -2,14 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  evaluatePositionSuitability,
   getPlayerRoleProfile,
   isPotentialAtLeastCurrent,
   PLAYER_ABILITY_KEYS,
+  PLAYER_ROLES,
   readPlayerAbility,
   roleCurrentAbility,
   rolePotentialAbility,
   type ClubId,
   type Player,
+  type PlayerRole,
 } from "@game/domain";
 import { completedCivilYears, fromISO } from "@game/shared";
 
@@ -327,6 +330,54 @@ test("fake player generation keeps ordinary role attributes coherent", () => {
       assert.equal(Number(player.abilities.goalkeeping.reflexes) <= 4, true, playerId);
     }
   }
+});
+
+test("one generated division reaches every primary role", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "role-reachability" });
+  const reached = new Set<PlayerRole>();
+
+  for (const playerId of generated.playerIds) {
+    const player = requiredPlayer(generated.players[playerId]);
+    const primaryRole = player.primaryRole;
+    assert.ok(primaryRole !== undefined, playerId);
+    reached.add(primaryRole);
+  }
+
+  assert.deepEqual([...reached].toSorted(), [...PLAYER_ROLES].toSorted());
+});
+
+test("generated clubs field their footballers in their own natural roles", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "natural-lineup" });
+
+  for (const clubId of clubs.clubIds) {
+    const lineup = generated.lineupsByClubId[clubId];
+    assert.ok(lineup !== undefined, clubId);
+
+    for (const slot of lineup) {
+      const player = requiredPlayer(generated.players[slot.playerId]);
+      const suitability = evaluatePositionSuitability(player.naturalPositions, {
+        playerRole: slot.canonicalRole,
+      });
+
+      assert.equal(suitability, "natural", `${clubId} ${slot.slotId}`);
+    }
+  }
+});
+
+test("different clubs in one division line up in different football shapes", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "shape-variety" });
+  const roleMultisets = new Set<string>();
+
+  for (const clubId of clubs.clubIds) {
+    const lineup = generated.lineupsByClubId[clubId];
+    assert.ok(lineup !== undefined, clubId);
+    roleMultisets.add(lineup.map((slot) => slot.canonicalRole).toSorted().join(","));
+  }
+
+  assert.equal(roleMultisets.size >= 4, true, `one division fielded ${String(roleMultisets.size)} shapes`);
 });
 
 test("fake player generation writes explicit role identity fields", () => {

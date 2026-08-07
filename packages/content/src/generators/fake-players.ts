@@ -1,6 +1,7 @@
 import {
   createPersonIdentity,
   gameDate,
+  naturalCanonicalRoleForPosition,
   playerId,
   type ClubId,
   type ClubCategory,
@@ -43,6 +44,7 @@ import {
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
+import { generatedSquadIdentity, squadIdentityPositionForSlot } from "./squad-identity.ts";
 import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 
 const FAKE_CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
@@ -106,7 +108,12 @@ export interface FakePlayerGenerationOptions {
 }
 
 /**
- * Generates fictional first-team players and stable 4-4-2 lineups.
+ * Generates fictional first-team players and each club's opening eleven.
+ *
+ * Every club draws one squad identity, so the depth chart - and therefore the
+ * eleven that comes out of it - is a property of the club rather than of the
+ * slot number. The eleven is not a formation: it is each footballer in the slot
+ * he is natural in, and which shape suits the squad is the selector's answer.
  *
  * @example
  * const players = generateFakePlayersForClubs(clubIds);
@@ -155,9 +162,11 @@ export function generateFakePlayersForClubs(
     const lineup: FakeLineupSlot[] = [];
     const clubContext = options.clubContexts?.[clubId] ?? defaultClubContext(clubNumber);
     const clubNameUsage = createClubNameUsage();
+    const squadIdentity = generatedSquadIdentity(seed, clubNumber);
 
     for (let slotNumber = 1; slotNumber <= FAKE_PLAYERS_PER_CLUB; slotNumber += 1) {
       const id = generatedFakePlayerId(clubNumber, slotNumber, options.playerIdNamespace);
+      const position = squadIdentityPositionForSlot(squadIdentity, slotNumber);
       const identity = fakePlayerIdentity({
         id,
         clubNumber,
@@ -181,17 +190,18 @@ export function generateFakePlayersForClubs(
         : rarityAssignment === undefined
           ? selectPlayerArchetype(seed, id, clubNumber, slotNumber, slotNumber <= FAKE_LINEUP_SIZE)
           : getGeneratedPlayerArchetype(rarityAssignment.archetypeKey);
-      const created = fakePlayer(
+      const created = fakePlayer({
         id,
         slotNumber,
+        position,
         identity,
         seed,
         archetype,
         clubContext,
         ratingScale,
         exceptionalProfile,
-        reconstructBelowSix,
-      );
+        reconstructPotentialBelowSix: reconstructBelowSix,
+      });
 
       players[id] = created.player;
       playerIds.push(id);
@@ -209,7 +219,7 @@ export function generateFakePlayersForClubs(
         lineup.push({
           slotId: `slot:${String(slotNumber).padStart(2, "0")}`,
           playerId: id,
-          canonicalRole: canonicalRoleForSlot(slotNumber),
+          canonicalRole: naturalCanonicalRoleForPosition(position),
         });
       }
     }
@@ -242,25 +252,44 @@ export function generatedFakePlayerId(
   );
 }
 
+/** Everything one generated player is built from. */
+interface FakePlayerInput {
+  /** Stable generated player ID. */
+  readonly id: PlayerId;
+  /** One-based squad slot, which states depth and nothing else. */
+  readonly slotNumber: number;
+  /** Pitch position this slot holds under the club's squad identity. */
+  readonly position: PlayerPosition;
+  /** Fictional person this footballer is. */
+  readonly identity: PersonIdentity;
+  /** Content seed every derived stream hangs off. */
+  readonly seed: string;
+  /** Ability archetype chosen for this slot. */
+  readonly archetype: GeneratedPlayerArchetype;
+  /** Division, reputation and competitive tier of the owning club. */
+  readonly clubContext: OpeningPlayerGenerationClubContext;
+  /** Validated global scale, used only by explicitly budgeted six-star floors. */
+  readonly ratingScale: PlayerRatingScaleConfig;
+  /** World-level exceptional decision for this player. */
+  readonly exceptionalProfile: GeneratedExceptionalProfile;
+  /** Whether this player is a ceiling outlier rebuilt below six stars. */
+  readonly reconstructPotentialBelowSix: boolean;
+}
+
 /**
  * Builds one generated player with a deterministic ability profile.
+ *
+ * `position` arrives from the club's squad identity rather than being derived
+ * from `slotNumber` here: two clubs field different footballers at the same
+ * depth, and a slot number cannot say which. `slotNumber` still decides depth,
+ * and only depth.
  */
-function fakePlayer(
-  id: PlayerId,
-  slotNumber: number,
-  identity: PersonIdentity,
-  seed: string,
-  archetype: GeneratedPlayerArchetype,
-  clubContext: OpeningPlayerGenerationClubContext,
-  ratingScale: PlayerRatingScaleConfig,
-  exceptionalProfile: GeneratedExceptionalProfile,
-  reconstructPotentialBelowSix: boolean,
-): CreatedPlayer {
+function fakePlayer(input: FakePlayerInput): CreatedPlayer {
+  const { id, seed, archetype, clubContext, exceptionalProfile } = input;
   const clubTier = clubContext.competitiveTier;
-  const position = positionForSlot(slotNumber);
   const ageYears = numberInRange(archetype.ageYears, seed, "player-age", id);
   const birthDateJitter = deriveRng(seed, "player-birth-date", id).nextInt(0, 365);
-  const primaryRole = primaryRoleForPosition(position);
+  const primaryRole = primaryRoleForPosition(input.position);
   const profile = buildContextualProspectJointProfile({
     seed,
     playerKey: String(id),
@@ -269,23 +298,23 @@ function fakePlayer(
     role: primaryRole,
     ageYears,
     archetypeKey: archetype.key,
-    ratingScale,
+    ratingScale: input.ratingScale,
     requestedCurrentAbilityLane:
-      reconstructPotentialBelowSix ? "normal" : exceptionalProfile.currentAbilityLane,
+      input.reconstructPotentialBelowSix ? "normal" : exceptionalProfile.currentAbilityLane,
     ceilingConstraint: seniorCeilingConstraint(
       exceptionalProfile,
-      reconstructPotentialBelowSix,
+      input.reconstructPotentialBelowSix,
     ),
-    slotDepthAdjustment: slotDepthOffset(slotNumber),
+    slotDepthAdjustment: slotDepthOffset(input.slotNumber),
   });
 
   return assembleGeneratedPlayer({
     id,
-    identity,
+    identity: input.identity,
     referenceDate: gameDate(FAKE_CAREER_START_EPOCH_DAY),
     ageYears,
     birthDateJitterDays: birthDateJitter,
-    position,
+    position: input.position,
     abilities: profile.current,
     potential: profile.potential,
   });
@@ -584,62 +613,4 @@ function defaultClubContext(clubNumber: number): OpeningPlayerGenerationClubCont
     reputation: 4 + ((clubNumber - 1) % 6),
     competitiveTier: openingCompetitiveTierForClubRank(clubNumber),
   };
-}
-
-/**
- * Resolves the early fixed 4-4-2 canonical role for one lineup slot.
- *
- * Content states the football role. Which ability weights that role uses is a
- * match-engine decision and is resolved there, not here.
- */
-function canonicalRoleForSlot(slotNumber: number): CanonicalPlayerRole {
-  if (slotNumber === 1 || slotNumber === 12) {
-    return "goalkeeper";
-  }
-
-  if (slotNumber <= 5 || slotNumber === 13 || slotNumber === 14 || slotNumber === 17 || slotNumber === 18) {
-    return "center_back";
-  }
-
-  if (slotNumber <= 9 || slotNumber === 15 || slotNumber === 19 || slotNumber === 20) {
-    return "central_midfielder";
-  }
-
-  return "striker";
-}
-
-/**
- * Resolves the natural domain position for one lineup slot.
- */
-function positionForSlot(slotNumber: number): PlayerPosition {
-  switch (slotNumber) {
-    case 1:
-    case 12:
-      return "gk";
-    case 2:
-      return "rb";
-    case 3:
-    case 4:
-    case 13:
-    case 14:
-    case 17:
-    case 18:
-      return "cb";
-    case 5:
-      return "lb";
-    case 6:
-    case 7:
-    case 15:
-      return "cm";
-    case 8:
-      return "rw";
-    case 9:
-      return "lw";
-    case 19:
-      return "rwb";
-    case 20:
-      return "lwb";
-    default:
-      return "st";
-  }
 }

@@ -1,4 +1,6 @@
 import { createLineupSlot, type CanonicalPlayerRole } from "@game/engine";
+import { longRunGateStatus } from "./gate-status.ts";
+import type { PlayerRole } from "@game/domain";
 import { createHash } from "node:crypto";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 import {
@@ -169,9 +171,10 @@ export interface Phase80APotentialOutcomeCalibration {
   readonly startAgeMinimum: 15;
   readonly startAgeMaximum: 32;
   readonly finalAge: 35;
-  /** Actual distinct source templates selected for the 4-4-2-style mix. */
+  /** Distinct source templates selected for the declared 4-4-2-style mix. */
   readonly outfieldTemplateSelections: readonly {
     readonly playerId: string;
+    readonly primaryRole: PlayerRole;
     readonly department: Phase80AOutfieldTemplateDepartment;
   }[];
   readonly participationMinutesPerMonth: Readonly<Record<
@@ -1948,18 +1951,11 @@ export function createPhase80APotentialOutcomeCalibration(): Phase80APotentialOu
     sourceWorld,
     `${seedPrefix}-templates`,
   );
-  const outfieldTemplateDepartments = [
-    "defender",
-    "defender",
-    "midfielder",
-    "midfielder",
-    "attacker",
-  ] as const;
   const outfieldTemplates = selectPhase80AOutfieldTemplates(
     sourceWorld,
-    outfieldTemplateDepartments,
+    PHASE_80A_OUTFIELD_TEMPLATE_ROLES,
   );
-  const outfieldTemplateSelections = outfieldTemplates.map((player) => {
+  const outfieldTemplateSelections = outfieldTemplates.map((player, index) => {
     const department = phase80AOutfieldTemplateDepartment(player);
     if (department === "goalkeeper") {
       throw new Error(
@@ -1968,6 +1964,7 @@ export function createPhase80APotentialOutcomeCalibration(): Phase80APotentialOu
     }
     return {
       playerId: String(player.id),
+      primaryRole: PHASE_80A_OUTFIELD_TEMPLATE_ROLES[index] as PlayerRole,
       department,
     };
   });
@@ -2070,41 +2067,59 @@ export function createPhase80APotentialOutcomeCalibration(): Phase80APotentialOu
 }
 
 /**
- * Selects the five outfield templates declared by the calibration contract.
+ * The five outfield roles the calibration matrix measures, named explicitly.
  *
- * Two defenders, two midfielders, and one attacker mirror a conventional
- * 4-4-2 outfield split. Distinct templates are required within each department
- * so one arbitrarily ordered player cannot stand in for a whole role family.
+ * Two defenders, two midfielders and one attacker sample a conventional 4-4-2
+ * outfield: a centre-back and a full-back behind a central and a wide
+ * midfielder, in front of a striker.
+ *
+ * **Naming the roles is what makes the matrix a controlled measurement.** The
+ * matrix declares four dimensions - age, role family, remaining room and
+ * participation - and it flattens every template's abilities to a constant
+ * before running it (`currentAbility = 7`, potential `7 + room`). So the *only*
+ * thing a template still contributes is its role identity, and until Phase 81A
+ * that role was whatever the n-th player of a macro-department happened to be
+ * in world order. That made squad composition an undeclared fifth dimension:
+ * give clubs different depth charts and "the second midfielder found" stops
+ * being the same footballer, so the measurement moves without the thing being
+ * measured moving.
+ *
+ * These roles are chosen from the football the matrix says it samples, not from
+ * any output. Changing one changes what the calibration means.
+ */
+const PHASE_80A_OUTFIELD_TEMPLATE_ROLES = [
+  "center_back",
+  "full_back",
+  "central_midfielder",
+  "wide_midfielder",
+  "striker",
+] as const satisfies readonly PlayerRole[];
+
+/**
+ * Selects one template per declared role, in deterministic world order.
+ *
+ * Selection is by exact `primaryRole`, never by macro-department, so which
+ * footballer stands in for "the wide midfielder" cannot change because a club
+ * was generated with a different depth chart. A missing role is a throw and not
+ * a substitution: silently standing a central midfielder in for a wide one is
+ * the failure this function exists to prevent.
  */
 function selectPhase80AOutfieldTemplates(
   world: FakeDomesticWorld,
-  departments: readonly Phase80AOutfieldTemplateDepartment[],
+  roles: readonly PlayerRole[],
 ): readonly CliPlayer[] {
   const players = world.playerIds.flatMap((playerId) => {
     const player = world.players[playerId];
     return player === undefined ? [] : [player];
   });
-  const selectedCountByDepartment: Record<
-    Phase80AOutfieldTemplateDepartment,
-    number
-  > = {
-    attacker: 0,
-    defender: 0,
-    midfielder: 0,
-  };
 
-  return departments.map((department) => {
-    const departmentPlayers = players.filter(
-      (player) => phase80AOutfieldTemplateDepartment(player) === department,
-    );
-    const selectedIndex = selectedCountByDepartment[department];
-    const template = departmentPlayers[selectedIndex];
+  return roles.map((role) => {
+    const template = players.find((player) => player.primaryRole === role);
     if (template === undefined) {
       throw new Error(
-        `Phase 80A development matrix requires template ${selectedIndex + 1} for ${department}`,
+        `Phase 80A development matrix requires a ${role} template and the source world has none`,
       );
     }
-    selectedCountByDepartment[department] += 1;
     return template;
   });
 }
@@ -3726,12 +3741,11 @@ export function createLongRunGateReportFromWorlds(
     seasonCount: input.seasonCount,
     execution: input.execution,
     totalSeasonCount: input.worldCount * input.seasonCount,
-    status:
-      failedWorldCount > 0
-        || playerEconomyViolationCount > 0
-        || closingPlayerMarketCalibration.fitStatus === "fail"
-        ? "fail"
-        : "pass",
+    status: longRunGateStatus({
+      failedWorldCount,
+      playerEconomyViolationCount,
+      closingPlayerMarketFitStatus: closingPlayerMarketCalibration.fitStatus,
+    }),
     playerEconomyViolationCount,
     closingPlayerMarketCalibration,
     closingDivisionValueFitViolationCount,

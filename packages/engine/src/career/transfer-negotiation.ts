@@ -1,4 +1,5 @@
 import {
+  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   createNegotiationStageClock,
   createTransferNegotiationState,
   isNegotiationStageExpired,
@@ -39,7 +40,6 @@ import {
 import { deriveNegotiationStageResponseDelayDays } from "./negotiation-response-delay.ts";
 import { evaluateTransferFeeCapacity } from "./career-contract-capacity.ts";
 import {
-  MINIMUM_CAREER_DEPARTMENT_DEPTH,
   MINIMUM_CAREER_SQUAD_SIZE,
 } from "./squad-maintenance.ts";
 
