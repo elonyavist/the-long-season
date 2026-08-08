@@ -25,30 +25,38 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A Step 03A, squad archetypes. **Done, `pnpm check` green**
-  (`291` files, `2250` tests). The Phase 80A matrix was measuring squad order,
-  not just age/role/room/participation; with its five streams declared by role
-  the controlled value is `3005` against a shipped `3034`. **Adopted:
-  `wide_midfielder` stays and `3005` is the new calibration** - it could not be
-  sampled before this phase, so `3034` was fitted to an incomplete population.
+- Step: Phase 81A **A2 (03B) recorded a conditional `GO` on 2026-08-08: 04-05
+  open; 06-16 closed behind Step 05's both-set low-block gate**; next is 04.
+  `topFormationShare` `0.9286` -> `0.2063`/`0.2222`, shapes `3` -> `12`/`11`, all
+  ten roles generable, `8`/`8` identities observed, reorder invariance `1.0000`.
+  The counterfactual moved `6`/`6` clubs at constant quality. Report:
+  `docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md`.
+- **Owed to Step 05: `ownLossPerConcededReduction` is `2.8051` vs `<= 2.0`
+  out-of-sample.** The legacy chart on the same 81A ability vectors fails at
+  `3.0411`, excluding an adverse chart effect without
+  reconstructing or absolving the full legacy population. The old one-world
+  reader hid the violation; it now pools seven. **Not cleared: Step 05 must
+  restore both seed sets before Step 06 opens.**
+- Step 03A Done, `pnpm check` green (`291` files, `2250` tests). **Adopted:
+  `wide_midfielder` stays in the Phase 80A sample and `3005` replaces the
+  shipped `3034`**, which was fitted to a population that could not generate it.
   Delivery is a typed total version -> bundle catalog, never a `??` fallback:
-  existing careers read `v7`, new careers are born on `v8`, **Step 14 stays the
-  only reset**. Not implemented yet; held behind
-  `PHASE_81A_PENDING_OUTFIELD_PROJECTION`, deleted after A2's `GO`. Hard-cap
-  probe: **`FOUND`**, `210` world-seasons, `21/21` reconciled. **Checkpoint A
-  recorded `STOP / RETHINK`**; 01-03 Done, **04-16 closed** until A2 (03B).
+  `v7` for existing careers, `v8` for new, **Step 14 the only reset**. Not
+  implemented; held behind `PHASE_81A_PENDING_OUTFIELD_PROJECTION`, **now
+  deletable since A2 recorded `GO`**. Hard-cap probe **`FOUND`**, `21/21`
+  reconciled. Checkpoint A's `STOP / RETHINK` and frozen before-state stand.
 - **Each club draws one of eight squad identities** from
-  `deriveRng(seed, "squad-identity", clubNumber)`. An identity names footballers,
-  never a shape, and none may become reachable from selection.
-  `naturalCanonicalRoleForPosition(...)` is the one position-to-role mapping.
+  `deriveRng(seed, "squad-identity", clubNumber)` - a *within-division* index.
+  An identity names footballers, never a shape, and none may become reachable
+  from selection. `naturalCanonicalRoleForPosition(...)` is the one mapping.
 - **`AiSquadSelectionResult.catalogChoice` says how close the shape decision was**,
   absent when a caller imposed one. Four ephemeral facts from the canonical walk -
-  never a second ranking, never persisted, never rebuilt.
+  never a second ranking, never persisted, never rebuilt. **`tiedAtBestCount === 1`
+  proves catalog-reorder invariance**; no replay can add to it.
 - **A gate written only in the phase-level block runs once, at the end.** Put
   `pnpm web:visual:qa` in the per-step block of any step touching web or
-  persistence. **Its `wide journey` full-time assertion is timing-sensitive** and
-  flaked once on an idle machine; Playwright stops at the first failure, so one
-  flake hides `33` tests. Unowned.
+  persistence. Its `wide journey` assertion is timing-sensitive; one flake hides
+  `33` tests. Unowned.
 - **`pnpm cli ten-season-report` resolves relative output from the workspace
   root** via `resolveWorkspaceOutputPath(...)`, never from `apps/cli/`.
 
@@ -79,31 +87,23 @@ Five findings have no owner. None is a licence to widen anything.
 
 ### Checkpoint A: STOP / RETHINK, And What It Falsified (81A Step 03)
 
-`7` worlds, `378` third-division selections, `297.81`/s on `7` workers. Report:
+**Resolved by Checkpoint A2's `GO`.** Kept because A2's deltas are measured
+against it and it stays frozen, never regenerated to pass a later gate. `7`
+worlds, `378` selections, `297.81`/s on `7` workers. Report:
 `docs/audits/PHASE_81A_CHECKPOINT_A_BEFORE_STATE.md`. **Falsified: catalog order
-breaks ties.** The remedy survives, its mechanism does not - breaking ties becomes
-making the winning shape depend on the squad. The STOP clause's literal wording
-anticipated the *opposite* population; the outcome is adopted on its purpose.
-Frozen, never regenerated to pass a later gate:
+breaks ties** - the remedy survived, its mechanism did not.
 
-- `4-2-4` takes `0.9286` of selections, `3` of `23` shapes appear, and
-  **`tieDecidedShare` is `0.0000`** - the winner beats the runner-up by a mean
-  structural `0.7610`. **Catalog order decides nothing on real squads**; the
-  contract's seven-way tie is an artefact of uniform ability. Step 08 was scoped
-  to break ties and there are none. Step 03 owns that.
-- `defensive_midfielder`, `attacking_midfielder` and `wide_midfielder` are
-  generated **exactly zero** times in `2772` seniors; `center_back` `0.2727`,
-  `striker` `0.2273`.
-- **The low block already clears both Step 05 gates in xG**: conceded `-22.5%`
-  against `>= 8%`, exchange rate `1.4940` against `<= 2.0`. They are therefore
-  **non-regression guardrails and may never be cited as evidence Step 05
-  improved anything**. The historical `13.3` occasion ratio may not be quoted as
-  its cost again - it cannot tell fewer chances from worse ones.
+- `4-2-4` took `0.9286` of selections, `3` of `23` shapes appeared, and
+  **`tieDecidedShare` was `0.0000`** - the winner beat the runner-up by a mean
+  structural `0.7610`. **Catalog order decides nothing on real squads.** Step 08
+  was scoped to break ties and there are none.
+- `defensive_midfielder`, `attacking_midfielder` and `wide_midfielder` were
+  generated **exactly zero** times in `2772` seniors. All ten are generable now.
+- Both low-block numbers stay **non-regression guardrails, never evidence that
+  Step 05 improved anything**; the historical `13.3` occasion ratio may not be
+  quoted as its cost - it cannot tell fewer chances from worse ones.
 - **Step 01 changed no match**, proven not sampled: the migrated control term is
-  bit-identical over the complete knob space (`390625` points, `0` differing),
-  and the other four changes cannot reach a match.
-- **That the absent roles cause the monoculture is an inference.** Checkpoint A2
-  owes the counterfactual.
+  bit-identical over the complete knob space (`390625` points, `0` differing).
 
 ### Longitudinal Runs
 

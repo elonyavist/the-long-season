@@ -2,7 +2,10 @@
 
 ## Status
 
-Not started; requires Steps 04-05 Done.
+**Closed.** Requires Steps 04-05 Done **and** the Step 05 exit run to restore
+`concededExpectedGoalsReduction >= 0.08` and
+`ownLossPerConcededReduction <= 2.0` on both A2 seed sets. Checkpoint A2's
+conditional `GO` does not authorize this step by itself.
 
 ## Goal
 

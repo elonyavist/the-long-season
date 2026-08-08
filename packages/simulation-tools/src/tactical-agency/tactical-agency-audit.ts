@@ -78,6 +78,18 @@ export interface TacticalAgencySelectionWorkItem {
   readonly clubId: ClubId;
   /** Fixture being selected for, which dates assessments and suspensions. */
   readonly fixture: Fixture;
+  /**
+   * Which squad identity generated this club, when the caller knows.
+   *
+   * Supplied rather than derived: squad identities are content's, and this
+   * package may not import content. The composition root that generated the
+   * world is the only place that can say which chart a club was built from
+   * without a second copy of the draw that would be free to disagree with it.
+   *
+   * Absent for the Step 02 before-state, which was measured before identities
+   * existed. An absent key is never counted as an identity.
+   */
+  readonly squadIdentityKey?: string;
 }
 
 /** Everything one selection series needs from its composition root. */
@@ -135,6 +147,8 @@ export interface TacticalAgencySelectionRow {
   readonly outOfPositionSlotCount: number;
   /** Instructions the club ended up with, derived from the shape it chose. */
   readonly tactic: TacticalAgencyTacticRow;
+  /** Squad identity this club was generated from, when the caller supplied one. */
+  readonly squadIdentityKey?: string;
 }
 
 /** One selection series with the cost of producing it. */
@@ -207,6 +221,9 @@ function observeSelection(
     tiedAtBestCount: choice.tiedAtBestCount,
     outOfPositionSlotCount: outOfPositionSlotCount(input.careerState, selection.teamContext),
     tactic: { ...selection.teamContext.tacticalDistribution },
+    ...(workItem.squadIdentityKey === undefined
+      ? {}
+      : { squadIdentityKey: workItem.squadIdentityKey }),
   };
 }
 
@@ -312,6 +329,126 @@ export function summarizeTacticalAgencySelections(
   };
 }
 
+/**
+ * Share of selections whose shape survives any reordering of the catalog.
+ *
+ * Derived rather than stored, and derived rather than replayed. The selector
+ * keeps the **first strict maximum** while walking `FORMATIONS`, so:
+ *
+ * - `tiedAtBestCount === 1` - the maximum is unique and no permutation can
+ *   change which shape wins. Invariant, provably.
+ * - `tiedAtBestCount >= 2` - the winner is whichever tied shape the catalog
+ *   lists first, and reversing the catalog makes it the last one instead, which
+ *   is a different shape whenever two or more are tied. Not invariant, provably.
+ *
+ * So invariance holds exactly on the untied selections, and selecting every
+ * squad a second time against a reversed catalog would spend a full extra pass
+ * to recompute a number the first pass already determines. It would also need a
+ * catalog seam in the selector, and a checkpoint may not edit the thing it is
+ * measuring.
+ *
+ * @example
+ * tacticalAgencyReorderInvariantShare(summary); // 1 means no shape hung on catalog order
+ */
+export function tacticalAgencyReorderInvariantShare(
+  summary: Pick<TacticalAgencySelectionSummary, "tieDecidedShare">,
+): number {
+  return 1 - summary.tieDecidedShare;
+}
+
+/** One squad identity and the shape its clubs actually lined up in. */
+export interface TacticalAgencySquadIdentityRow {
+  /** Declared identity key, present whether or not any club drew it. */
+  readonly squadIdentityKey: string;
+  /** Selections made by clubs built from this identity. */
+  readonly selectionCount: number;
+  /**
+   * Most frequent shape among those selections, ties broken by key.
+   *
+   * `not_evaluated` when no club drew this identity. A modal shape computed
+   * from zero clubs is not a weak result, it is an absent one, and writing it
+   * as a shape would let an unobserved row clear a distinctness gate.
+   */
+  readonly modalFormationKey: string | "not_evaluated";
+  /** Selections that landed on the modal shape, so the row carries its own weight. */
+  readonly modalFormationCount: number;
+}
+
+/** How the eight identities distributed across shapes, and which were unobserved. */
+export interface TacticalAgencySquadIdentitySummary {
+  /** One row per declared identity, in the caller's declared order. */
+  readonly rows: readonly TacticalAgencySquadIdentityRow[];
+  /** Distinct modal shapes across the identities that were actually observed. */
+  readonly distinctModalFormationCount: number;
+  /** Identities no club drew. Never empty-and-ignored: it blocks the checkpoint. */
+  readonly unevaluatedIdentityKeys: readonly string[];
+  /** Selections carrying no identity at all, counted rather than dropped. */
+  readonly unattributedSelectionCount: number;
+}
+
+/**
+ * Groups one selection population by the squad identity that generated it.
+ *
+ * `declaredIdentityKeys` is passed in rather than discovered from the rows,
+ * because the question this answers is "did every identity appear?" - and a
+ * table built only from what appeared can never say no.
+ */
+export function summarizeTacticalAgencySquadIdentities(
+  rows: readonly TacticalAgencySelectionRow[],
+  declaredIdentityKeys: readonly string[],
+): TacticalAgencySquadIdentitySummary {
+  if (declaredIdentityKeys.length === 0) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      "An identity summary needs the declared identity keys to check coverage against",
+    );
+  }
+
+  const byIdentity = new Map<string, Map<string, number>>(
+    declaredIdentityKeys.map((key) => [key, new Map<string, number>()]),
+  );
+  let unattributedSelectionCount = 0;
+
+  for (const row of rows) {
+    const key = row.squadIdentityKey;
+    const shapes = key === undefined ? undefined : byIdentity.get(key);
+    if (shapes === undefined) {
+      unattributedSelectionCount += 1;
+      continue;
+    }
+    shapes.set(row.formationKey, (shapes.get(row.formationKey) ?? 0) + 1);
+  }
+
+  const identityRows = declaredIdentityKeys.map((squadIdentityKey) => {
+    const shapes = byIdentity.get(squadIdentityKey) ?? new Map<string, number>();
+    const selectionCount = [...shapes.values()].reduce((sum, count) => sum + count, 0);
+    const modal = [...shapes.entries()].sort(
+      ([leftKey, leftCount], [rightKey, rightCount]) =>
+        rightCount - leftCount || leftKey.localeCompare(rightKey),
+    )[0];
+
+    return {
+      squadIdentityKey,
+      selectionCount,
+      modalFormationKey: modal === undefined ? ("not_evaluated" as const) : modal[0],
+      modalFormationCount: modal?.[1] ?? 0,
+    };
+  });
+
+  return {
+    rows: identityRows,
+    distinctModalFormationCount: new Set(
+      identityRows
+        .filter((row) => row.modalFormationKey !== "not_evaluated")
+        .map((row) => row.modalFormationKey),
+    ).size,
+    unevaluatedIdentityKeys: identityRows
+      .filter((row) => row.modalFormationKey === "not_evaluated")
+      .map((row) => row.squadIdentityKey),
+    unattributedSelectionCount,
+  };
+}
+
 /** One primary role and how much of the generated population carries it. */
 export interface TacticalAgencyRoleShareRow {
   readonly role: PlayerRole;
@@ -403,6 +540,52 @@ export interface TacticalAgencyLowBlockResult {
    * report written to disk loses the finding it was written to record.
    */
   readonly ownLossPerConcededReduction: number | "no_reduction";
+}
+
+/**
+ * Pools several worlds' low-block readings into one.
+ *
+ * The expected goals are added and the two ratios are then re-derived from the
+ * pooled totals, using the same formulas `runTacticalAgencyLowBlockSeries(...)`
+ * uses on a single world. **The ratios are never averaged.**
+ * `ownLossPerConcededReduction` is a quotient whose denominator can be near
+ * zero, so a world that saved almost nothing produces an enormous ratio and
+ * would dominate a mean of ratios while contributing almost no football to it.
+ * Pooling the numerators and denominators first gives each world exactly the
+ * weight of the xG it actually produced.
+ *
+ * @example
+ * poolTacticalAgencyLowBlockResults(perWorld); // one reading over every world
+ */
+export function poolTacticalAgencyLowBlockResults(
+  results: readonly TacticalAgencyLowBlockResult[],
+): TacticalAgencyLowBlockResult {
+  const first = results[0];
+  if (first === undefined) {
+    throw new TacticalAgencyAuditError("empty_work_items", "Pooling needs at least one low-block reading");
+  }
+
+  const add = (
+    pick: (result: TacticalAgencyLowBlockResult) => TacticalAgencyExpectedGoalsRow,
+  ): TacticalAgencyExpectedGoalsRow => ({
+    created: results.reduce((sum, result) => sum + pick(result).created, 0),
+    conceded: results.reduce((sum, result) => sum + pick(result).conceded, 0),
+    opportunities: results.reduce((sum, result) => sum + pick(result).opportunities, 0),
+  });
+
+  const neutral = add((result) => result.neutral);
+  const lowBlock = add((result) => result.lowBlock);
+  const concededSaved = neutral.conceded - lowBlock.conceded;
+  const ownLoss = Math.max(0, neutral.created - lowBlock.created);
+
+  return {
+    matchesPerArm: results.reduce((sum, result) => sum + result.matchesPerArm, 0),
+    neutral,
+    lowBlock,
+    concededExpectedGoalsReduction:
+      neutral.conceded === 0 ? 0 : concededSaved / neutral.conceded,
+    ownLossPerConcededReduction: concededSaved <= 0 ? "no_reduction" : ownLoss / concededSaved,
+  };
 }
 
 /** Everything the low-block reading needs from its composition root. */

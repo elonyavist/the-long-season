@@ -7,10 +7,13 @@ import {
   buildTacticalAgencyAuditReport,
   isValidTacticalAgencyCheckpointWorkerCount,
   legacyPhase81ControlWeightReference,
+  poolTacticalAgencyLowBlockResults,
   runTacticalAgencyOwnershipReplay,
   runTacticalAgencySelectionSeries,
   summarizeTacticalAgencyPrimaryRoles,
   summarizeTacticalAgencySelections,
+  summarizeTacticalAgencySquadIdentities,
+  tacticalAgencyReorderInvariantShare,
   TACTICAL_AGENCY_AUDIT_CONTRACT_VERSION,
   TACTICAL_AGENCY_CHECKPOINT_WORKER_COUNT,
   TacticalAgencyAuditError,
@@ -173,6 +176,117 @@ function selectionRow(
 
 function neutralTactics(): TacticalAgencySelectionRow["tactic"] {
   return { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" };
+}
+
+test("reorder invariance is the untied share, because a unique maximum cannot be reordered", () => {
+  // `strongestCatalogShape(...)` keeps the first strict maximum. A unique
+  // maximum wins under every catalog order; two tied shapes hand the decision
+  // to whichever the catalog lists first, and reversing it picks the other.
+  // So invariance is exactly the untied share - no second selection pass can
+  // discover anything this does not already determine.
+  assert.equal(tacticalAgencyReorderInvariantShare({ tieDecidedShare: 0 }), 1);
+  assert.equal(tacticalAgencyReorderInvariantShare({ tieDecidedShare: 0.25 }), 0.75);
+  assert.equal(tacticalAgencyReorderInvariantShare({ tieDecidedShare: 1 }), 0);
+});
+
+test("an identity no club drew is not_evaluated, and never clears the distinctness gate", () => {
+  const summary = summarizeTacticalAgencySquadIdentities(
+    [
+      selectionRow({ formationKey: "4-4-2", squadIdentityKey: "alpha" }),
+      selectionRow({ formationKey: "4-4-2", squadIdentityKey: "alpha" }),
+      selectionRow({ formationKey: "4-2-4", squadIdentityKey: "beta" }),
+    ],
+    ["alpha", "beta", "gamma"],
+  );
+
+  assert.deepEqual(summary.unevaluatedIdentityKeys, ["gamma"]);
+  assert.equal(summary.rows[2]?.modalFormationKey, "not_evaluated");
+  // Two observed identities produced two shapes. `gamma` contributes nothing,
+  // rather than contributing an absent row that could be read as a third.
+  assert.equal(summary.distinctModalFormationCount, 2);
+});
+
+test("the modal shape is the most frequent one, and it carries its own count", () => {
+  const summary = summarizeTacticalAgencySquadIdentities(
+    [
+      selectionRow({ formationKey: "4-4-2", squadIdentityKey: "alpha" }),
+      selectionRow({ formationKey: "4-4-2", squadIdentityKey: "alpha" }),
+      selectionRow({ formationKey: "3-5-2", squadIdentityKey: "alpha" }),
+    ],
+    ["alpha"],
+  );
+
+  assert.equal(summary.rows[0]?.modalFormationKey, "4-4-2");
+  assert.equal(summary.rows[0]?.modalFormationCount, 2);
+  assert.equal(summary.rows[0]?.selectionCount, 3);
+});
+
+test("selections with no identity are counted rather than dropped", () => {
+  // A row silently discarded would shrink every denominator below it without
+  // saying so, which is how a coverage table starts describing a population it
+  // never measured.
+  const summary = summarizeTacticalAgencySquadIdentities(
+    [
+      selectionRow({ squadIdentityKey: "alpha" }),
+      selectionRow({}),
+      selectionRow({ squadIdentityKey: "not-declared" }),
+    ],
+    ["alpha"],
+  );
+
+  assert.equal(summary.unattributedSelectionCount, 2);
+  assert.equal(summary.rows[0]?.selectionCount, 1);
+});
+
+test("pooling low-block readings adds the goals instead of averaging the ratios", () => {
+  // The failure this exists for. One world that saved almost nothing produces a
+  // huge exchange rate on a tiny denominator. Averaging the ratios would let it
+  // dominate a reading it contributed almost no football to; pooling gives each
+  // world the weight of the expected goals it actually produced.
+  const bulk = pooledArm({ neutralCreated: 100, neutralConceded: 100, blockCreated: 90, blockConceded: 80 });
+  const sliver = pooledArm({ neutralCreated: 10, neutralConceded: 10, blockCreated: 1, blockConceded: 9.9 });
+
+  const pooled = poolTacticalAgencyLowBlockResults([bulk, sliver]);
+
+  // Pooled: own loss 19, conceded saved 20.1 -> 0.945. The mean of the two
+  // ratios would be (0.5 + 90) / 2 = 45.25, which is the sliver's arithmetic
+  // rather than the population's football.
+  assert.equal(bulk.ownLossPerConcededReduction, 0.5);
+  // Around `90`, and asserted as "enormous" rather than pinned: the exact float
+  // is an artefact of the fixture's arithmetic, and this test is about the
+  // weighting, not about rounding.
+  assert.ok((sliver.ownLossPerConcededReduction as number) > 50);
+  assert.ok(typeof pooled.ownLossPerConcededReduction === "number");
+  assert.ok((pooled.ownLossPerConcededReduction as number) < 1);
+  assert.equal(pooled.matchesPerArm, bulk.matchesPerArm + sliver.matchesPerArm);
+});
+
+test("pooled readings that saved nothing report no_reduction rather than a free block", () => {
+  const pooled = poolTacticalAgencyLowBlockResults([
+    pooledArm({ neutralCreated: 10, neutralConceded: 10, blockCreated: 5, blockConceded: 10 }),
+  ]);
+
+  assert.equal(pooled.ownLossPerConcededReduction, "no_reduction");
+  assert.equal(pooled.concededExpectedGoalsReduction, 0);
+});
+
+function pooledArm(input: {
+  readonly neutralCreated: number;
+  readonly neutralConceded: number;
+  readonly blockCreated: number;
+  readonly blockConceded: number;
+}): TacticalAgencyLowBlockResult {
+  const concededSaved = input.neutralConceded - input.blockConceded;
+  const ownLoss = Math.max(0, input.neutralCreated - input.blockCreated);
+
+  return {
+    matchesPerArm: 80,
+    neutral: { created: input.neutralCreated, conceded: input.neutralConceded, opportunities: 0 },
+    lowBlock: { created: input.blockCreated, conceded: input.blockConceded, opportunities: 0 },
+    concededExpectedGoalsReduction:
+      input.neutralConceded === 0 ? 0 : concededSaved / input.neutralConceded,
+    ownLossPerConcededReduction: concededSaved <= 0 ? "no_reduction" : ownLoss / concededSaved,
+  };
 }
 
 function manifest(): TacticalAgencyPopulationManifest {

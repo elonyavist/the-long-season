@@ -2,6 +2,7 @@ import { createTranslator } from "@game/i18n";
 import {
   buildTacticalAgencyAuditReport,
   isValidTacticalAgencyCheckpointWorkerCount,
+  poolTacticalAgencyLowBlockResults,
   runTacticalAgencyLowBlockSeries,
   TACTICAL_AGENCY_CHECKPOINT_WORKER_COUNT,
   type TacticalAgencyAuditReport,
@@ -9,12 +10,28 @@ import {
   type TacticalAgencySelectionRow,
 } from "@game/simulation-tools";
 
+import { GENERATED_SQUAD_IDENTITY_KEYS } from "@game/content";
+
 import {
   buildTacticalAgencyLowBlockInput,
+  PRE_PHASE_81A_SQUAD_SKELETON,
+  runTacticalAgencyArchetypeCounterfactual,
   runTacticalAgencyWorld,
   runTacticalAgencyWorldInWorker,
+  type TacticalAgencySquadChart,
   type TacticalAgencyWorldResult,
 } from "./tactical-agency-report/agency-world.ts";
+import {
+  counterfactualMovesShape,
+  decideCheckpointA2,
+  evaluateCheckpointA2Set,
+  formatCheckpointA2Report,
+  type CheckpointA21Arm,
+  type CheckpointA21Attribution,
+  type CheckpointA21Report,
+  type CheckpointA2Report,
+  type CheckpointA2SetEvaluation,
+} from "./tactical-agency-report/checkpoint-a2.ts";
 import { writeWorkspaceTextFile } from "./workspace-output-path.ts";
 
 /**
@@ -43,6 +60,156 @@ export const DEFAULT_TACTICAL_AGENCY_ROUND_COUNT = 4;
 /** Default paired seeds per low-block arm. */
 export const DEFAULT_TACTICAL_AGENCY_PAIRED_SEEDS = 40;
 
+/**
+ * The out-of-sample world seed prefix for Checkpoint A2.
+ *
+ * Declared here, before the checkpoint is read, and **never used for selection,
+ * tuning or inspection**. A gate that passes only on the seeds the before-state
+ * was measured on is a gate that measured the seeds.
+ */
+export const TACTICAL_AGENCY_A2_OUT_OF_SAMPLE_WORLD_SEED = "phase81a-agency-a2-out-of-sample";
+
+/** Clubs per world put through the archetype-mix counterfactual. */
+export const TACTICAL_AGENCY_A2_COUNTERFACTUAL_CLUB_COUNT = 6;
+
+/** Where the checkpoint writes its decision document. */
+export const DEFAULT_CHECKPOINT_A2_OUTPUT =
+  "docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md";
+
+/** Where the low-block attribution sub-checkpoint writes its result. */
+export const DEFAULT_CHECKPOINT_A21_OUTPUT =
+  "docs/audits/PHASE_81A_CHECKPOINT_A2_1_LOW_BLOCK_ATTRIBUTION.md";
+
+/**
+ * Runs the low-block guardrail on the legacy chart and reuses the current arm.
+ *
+ * The current arm is the exact low-block result A2 already produced for its
+ * primary gates. Only the legacy-chart arm is simulated here, so the command
+ * cannot retain or rerun a second copy of the same current population.
+ */
+export function runCheckpointA21(input: {
+  readonly setName: string;
+  readonly worldSeed: string;
+  readonly worldCount: number;
+  readonly seedPrefix: string;
+  readonly pairedSeedCount: number;
+  readonly currentLowBlock: TacticalAgencyAuditReport["lowBlock"];
+}): CheckpointA21Report {
+  const worldSeeds = Array.from(
+    { length: input.worldCount },
+    (_unused, index) => `${input.worldSeed}-${String(index + 1).padStart(3, "0")}`,
+  );
+
+  const controlLowBlock = pooledLowBlockForChart(input, worldSeeds, PRE_PHASE_81A_SQUAD_SKELETON);
+  const control = checkpointA21Arm(
+    "legacy chart on Phase 81A-generated footballers (control)",
+    worldSeeds,
+    controlLowBlock,
+  );
+  const current = checkpointA21Arm("Phase 81A squad identities", worldSeeds, input.currentLowBlock);
+  const arms = [control, current] as const;
+
+  return {
+    setName: input.setName,
+    arms,
+    attribution: current.guardrailHeld
+      ? "not_reproduced"
+      : control.guardrailHeld
+        ? "step_03a_chart"
+        : "legacy_chart_also_fails",
+  };
+}
+
+/** Pools the one additional chart arm A2.1 needs. */
+function pooledLowBlockForChart(
+  input: Pick<Parameters<typeof runCheckpointA21>[0], "seedPrefix" | "pairedSeedCount">,
+  worldSeeds: readonly string[],
+  chart: TacticalAgencySquadChart,
+): TacticalAgencyAuditReport["lowBlock"] {
+  return poolTacticalAgencyLowBlockResults(
+    worldSeeds.map((worldSeed) =>
+      runTacticalAgencyLowBlockSeries(
+        buildTacticalAgencyLowBlockInput({
+          worldSeed,
+          seedPrefix: input.seedPrefix,
+          pairedSeedCount: input.pairedSeedCount,
+          reRoleAllClubsTo: chart,
+        }),
+      ),
+    ),
+  );
+}
+
+/** Turns one canonical low-block aggregate into its A2.1 row. */
+function checkpointA21Arm(
+  armName: string,
+  worldSeeds: readonly string[],
+  lowBlock: TacticalAgencyAuditReport["lowBlock"],
+): CheckpointA21Arm {
+  const exchangeRate = lowBlock.ownLossPerConcededReduction;
+
+  return {
+    armName,
+    worldSeeds,
+    concededExpectedGoalsReduction: lowBlock.concededExpectedGoalsReduction,
+    ownLossPerConcededReduction: exchangeRate,
+    guardrailHeld:
+      lowBlock.concededExpectedGoalsReduction >= 0.08
+      && typeof exchangeRate === "number"
+      && exchangeRate <= 2,
+  };
+}
+
+/** Renders the attribution sub-checkpoint. */
+export function formatCheckpointA21Report(reports: readonly CheckpointA21Report[]): string {
+  return [
+    "# Phase 81A - Checkpoint A2.1: Low-Block Guardrail Attribution",
+    "",
+    "Checkpoint A2 recorded `ownLossPerConcededReduction` above its `<= 2.0`",
+    "guardrail on the out-of-sample seeds. This asks one narrow question:",
+    "**did Step 03A's chart assignment cause that failure?**",
+    "",
+    "Coupled comparison. Same seeds, same clubs, same footballers with the same",
+    "abilities, ages and contracts. The arms differ only in which chart the squad",
+    "is roled onto. Those abilities were generated from the Phase 81A roles, so",
+    "this isolates the chart component and does **not** recreate the full pre-81A",
+    "role-conditioned ability population.",
+    "",
+    "The control chart is the pre-Phase-81A `positionForSlot(...)` recovered from",
+    "`f850ccc^`: a `4-2-4` shared by every club.",
+    "",
+    ...reports.flatMap((report) => [
+      `## ${report.setName}`,
+      "",
+      `- attribution: **${report.attribution}**`,
+      "",
+      "| arm | concededExpectedGoalsReduction | ownLossPerConcededReduction | guardrail held |",
+      "|---|---:|---:|---|",
+      ...report.arms.map((armRow) =>
+        `| ${armRow.armName} | ${armRow.concededExpectedGoalsReduction.toFixed(4)} `
+          + `| ${typeof armRow.ownLossPerConcededReduction === "number"
+            ? armRow.ownLossPerConcededReduction.toFixed(4)
+            : armRow.ownLossPerConcededReduction} `
+          + `| ${armRow.guardrailHeld ? "yes" : "**no**"} |`),
+      "",
+    ]),
+    "## Reading",
+    "",
+    "- `legacy_chart_also_fails` - applying the legacy chart to the same Phase",
+    "  81A-generated abilities does not restore the guardrail. The chart component",
+    "  is not the demonstrated cause; the whole generation change is not absolved.",
+    "- `step_03a_chart` - the legacy chart held and the current chart did not. Step",
+    "  03A reopens.",
+    "- `not_reproduced` - the current arm held here, so the A2 reading was not",
+    "  reproduced under this instrument and neither conclusion is available.",
+    "",
+    "A `legacy_chart_also_fails` result permits the primary A2 result to proceed",
+    "only through Steps 04-05. Step 05 must restore the live low-block band on",
+    "both seed sets before Checkpoint B or any later step opens.",
+    "",
+  ].join("\n");
+}
+
 /** Everything the command reaches outside itself. */
 export interface TacticalAgencyReportCommandDependencies {
   /** Writes normal command output. */
@@ -59,6 +226,10 @@ export interface TacticalAgencyReportCommandDependencies {
    * argument parsing, the worker rule, rendering and exit codes on their own.
    */
   readonly createReport: (input: CreateTacticalAgencyReportInput) => Promise<TacticalAgencyAuditReport>;
+  /** Produces the checkpoint once; command tests inject a small canonical result. */
+  readonly createCheckpointReport: (
+    input: CreateTacticalAgencyReportInput,
+  ) => Promise<CheckpointA2Report>;
 }
 
 /** Parsed run configuration handed to the report producer. */
@@ -91,6 +262,57 @@ export async function runTacticalAgencyReportCommand(
     return 1;
   }
 
+  // A checkpoint records a decision; the Step 02 before-state only measures.
+  // Exiting `0` on `STOP_RETHINK` would make this a gate that cannot fail.
+  if (parsed.input.checkpointMode) {
+    const a2 = await dependencies.createCheckpointReport(parsed.input);
+    await dependencies.writeReport(
+      parsed.input.reportOutput ?? DEFAULT_CHECKPOINT_A2_OUTPUT,
+      formatCheckpointA2Report(a2),
+    );
+    dependencies.stdout(`Checkpoint A2 decision: ${a2.decision}`);
+    for (const set of a2.sets) {
+      for (const gate of set.gates) {
+        dependencies.stdout(
+          `  [${gate.passed ? "pass" : "FAIL"}] ${set.setName} ${gate.gate}: `
+            + `${gate.observed} (target ${gate.target})`,
+        );
+      }
+    }
+    for (const set of a2.sets) {
+      for (const guardrail of set.guardrails) {
+        dependencies.stdout(
+          `  [${guardrail.passed ? "held" : "BROKEN"}] ${set.setName} ${guardrail.gate}: `
+            + `${guardrail.observed} (target ${guardrail.target})`,
+        );
+      }
+    }
+    dependencies.stdout(
+      `  counterfactual moves shape: ${String(a2.counterfactualMovesShape)} `
+        + `(${a2.counterfactual.clubsWhoseShapeMoved}/${a2.counterfactual.clubCount} clubs)`,
+    );
+
+    await dependencies.writeReport(
+      DEFAULT_CHECKPOINT_A21_OUTPUT,
+      formatCheckpointA21Report(a2.lowBlockAttributionReports),
+    );
+    for (const report of a2.lowBlockAttributionReports) {
+      dependencies.stdout(`  A2.1 ${report.setName}: attribution=${report.attribution}`);
+      for (const armRow of report.arms) {
+        dependencies.stdout(
+          `    ${armRow.armName}: exchange=`
+            + `${typeof armRow.ownLossPerConcededReduction === "number"
+              ? armRow.ownLossPerConcededReduction.toFixed(4)
+              : armRow.ownLossPerConcededReduction}`
+            + ` conceded=${armRow.concededExpectedGoalsReduction.toFixed(4)}`
+            + ` held=${String(armRow.guardrailHeld)}`,
+        );
+      }
+    }
+
+    return a2.decision === "GO" ? 0 : 1;
+  }
+
   const report = await dependencies.createReport(parsed.input);
   const rendered = formatTacticalAgencyReport(report, text);
 
@@ -114,6 +336,23 @@ export async function runTacticalAgencyReportCommand(
 export async function createTacticalAgencyReport(
   input: CreateTacticalAgencyReportInput,
 ): Promise<TacticalAgencyAuditReport> {
+  return (await createTacticalAgencyReportWithRows(input)).report;
+}
+
+/**
+ * The same run, with the selection rows kept.
+ *
+ * Checkpoint A2 groups selections by the squad identity that generated them,
+ * and `TacticalAgencyAuditReport` deliberately carries only aggregates. Handing
+ * the rows back beside the report is how A2 reads the same selections the
+ * before-state summarised, instead of running the population twice.
+ */
+export async function createTacticalAgencyReportWithRows(
+  input: CreateTacticalAgencyReportInput,
+): Promise<{
+  readonly report: TacticalAgencyAuditReport;
+  readonly rows: readonly TacticalAgencySelectionRow[];
+}> {
   const worldSeeds = Array.from(
     { length: input.worldCount },
     (_unused, index) => `${input.worldSeed}-${String(index + 1).padStart(3, "0")}`,
@@ -126,7 +365,7 @@ export async function createTacticalAgencyReport(
   const rows: TacticalAgencySelectionRow[] = [];
   for (const result of results) rows.push(...result.rows);
 
-  return buildTacticalAgencyAuditReport({
+  const report = buildTacticalAgencyAuditReport({
     manifest: {
       worldSeeds,
       lowBlockSeedPrefix: input.seedPrefix,
@@ -136,14 +375,95 @@ export async function createTacticalAgencyReport(
     },
     selectionSeries: { rows, elapsedMilliseconds },
     roles: mergeRoleSummaries(results),
-    lowBlock: runTacticalAgencyLowBlockSeries(
-      buildTacticalAgencyLowBlockInput({
-        worldSeed: worldSeeds[0] as string,
-        seedPrefix: input.seedPrefix,
-        pairedSeedCount: input.pairedSeedCount,
-      }),
+    // Every world, not just the first. Read on one world this is a two-club,
+    // one-seed sample whose exchange rate swung 1.59 to 3.70 between two seed
+    // sets - a spread one world cannot distinguish from the population moving.
+    // The band is untouched; only the denominator under it grew.
+    lowBlock: poolTacticalAgencyLowBlockResults(
+      worldSeeds.map((worldSeed) =>
+        runTacticalAgencyLowBlockSeries(
+          buildTacticalAgencyLowBlockInput({
+            worldSeed,
+            seedPrefix: input.seedPrefix,
+            pairedSeedCount: input.pairedSeedCount,
+          }),
+        ),
+      ),
     ),
   });
+
+  return { report, rows };
+}
+
+/**
+ * Runs Checkpoint A2: both seed sets, then the archetype-mix counterfactual.
+ *
+ * The out-of-sample set uses the same world count, round count and worker count
+ * as the in-sample one. A second set measured at a different resolution would
+ * not be an out-of-sample check, it would be a different experiment.
+ */
+export async function createCheckpointA2Report(
+  input: CreateTacticalAgencyReportInput,
+): Promise<CheckpointA2Report> {
+  const sets: CheckpointA2SetEvaluation[] = [];
+  const lowBlockAttributionReports: CheckpointA21Report[] = [];
+
+  for (const [setName, worldSeed] of [
+    ["in-sample (Checkpoint A before-state seeds)", input.worldSeed],
+    ["out-of-sample (never used for selection or tuning)", TACTICAL_AGENCY_A2_OUT_OF_SAMPLE_WORLD_SEED],
+  ] as const) {
+    const produced = await createTacticalAgencyReportWithRows({ ...input, worldSeed });
+    sets.push(evaluateCheckpointA2Set({ setName, report: produced.report, rows: produced.rows }));
+    lowBlockAttributionReports.push(
+      runCheckpointA21({
+        setName,
+        worldSeed,
+        worldCount: input.worldCount,
+        seedPrefix: input.seedPrefix,
+        pairedSeedCount: input.pairedSeedCount,
+        currentLowBlock: produced.report.lowBlock,
+      }),
+    );
+  }
+
+  const counterfactual = runTacticalAgencyArchetypeCounterfactual({
+    worldSeed: `${input.worldSeed}-001`,
+    clubCount: TACTICAL_AGENCY_A2_COUNTERFACTUAL_CLUB_COUNT,
+    identityKeys: [...GENERATED_SQUAD_IDENTITY_KEYS],
+  });
+  const movesShape = counterfactualMovesShape(counterfactual);
+
+  const lowBlockAttribution = aggregateCheckpointA21Attribution(lowBlockAttributionReports);
+
+  return {
+    sets,
+    counterfactual,
+    counterfactualMovesShape: movesShape,
+    lowBlockAttributionReports,
+    lowBlockAttribution,
+    decision: decideCheckpointA2({
+      sets,
+      counterfactualMovesShape: movesShape,
+      lowBlockAttribution,
+    }),
+    workerCount: input.workerCount,
+  };
+}
+
+/** Collapses per-set chart evidence without letting a passing set hide a failure. */
+function aggregateCheckpointA21Attribution(
+  reports: readonly CheckpointA21Report[],
+): CheckpointA21Attribution {
+  const reproducedFailures = reports.filter((report) => {
+    const current = report.arms[1];
+    return current !== undefined && !current.guardrailHeld;
+  });
+  if (reproducedFailures.length === 0) return "not_reproduced";
+  if (reproducedFailures.some((report) => report.attribution === "step_03a_chart")) {
+    return "step_03a_chart";
+  }
+
+  return "legacy_chart_also_fails";
 }
 
 /** Runs every world, at most `workerCount` at a time, in stable seed order. */
@@ -383,5 +703,6 @@ function defaultDependencies(): TacticalAgencyReportCommandDependencies {
     stderr: (line) => process.stderr.write(`${line}\n`),
     writeReport: writeWorkspaceTextFile,
     createReport: createTacticalAgencyReport,
+    createCheckpointReport: createCheckpointA2Report,
   };
 }

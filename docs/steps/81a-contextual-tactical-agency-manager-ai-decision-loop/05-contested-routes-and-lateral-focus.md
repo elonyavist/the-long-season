@@ -2,7 +2,9 @@
 
 ## Status
 
-Not started; requires Step 04 Done.
+Not started; requires Step 04 Done. This step is the condition on Checkpoint
+A2's downstream authorization: Step 06 remains closed until the low-block xG
+contract holds on both A2 seed sets.
 
 ## Goal
 
@@ -52,14 +54,19 @@ reward a concentration and exploit its connected cost.
 nvm use 24
 pnpm exec vitest run packages/engine/src/match-engine/tactical-matchup.test.ts
 pnpm exec vitest run packages/engine/src/match-engine/opportunity-route.test.ts
+pnpm cli tactical-agency-report --checkpoint --workers=7
 pnpm check
 git diff --check
 graphify update .
 ```
 
+The checkpoint command and `pnpm check` run separately, each alone. The
+checkpoint uses exactly `7` workers.
+
 ## Definition Of Done
 
 One minute-plan owner exists, lateral focus is deterministic, every benefit has
 a connected cost, low block meets its frozen xG contract, persistence remains
-unchanged for the single Step 14 integration, and Step 06 is the only next
-action.
+unchanged for the single Step 14 integration, and the checkpoint report shows
+the low-block guardrail holding on **both** A2 seed sets. Only then is Step 06
+the next action; otherwise Step 05 remains open with targets unchanged.

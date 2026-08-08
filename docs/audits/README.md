@@ -21,6 +21,23 @@ Read these only when the current step asks for current long-run readiness contex
   effects, information parity, analytic/Monte Carlo split, checkpoint protocol
   and the ordered Step 01-16 plan before implementation starts.
 
+- `PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md` - **Checkpoint A2, conditional
+  `GO`.** The
+  post-correction checkpoint after Checkpoint A's `STOP / RETHINK`. All seven
+  frozen gates on both seed sets: `topFormationShare` `0.9286` -> `0.2063` /
+  `0.2222`, distinct shapes `3` -> `12` / `11`, all ten primary roles generable,
+  eight of eight squad identities observed, reorder invariance `1.0000`. The
+  archetype-mix counterfactual moved `6` of `6` clubs at constant squad quality,
+  which discharges the causality claim Checkpoint A had left as an inference.
+  Authorizes Steps 04-05; Step 06-16 remain closed behind Step 05's both-set
+  low-block gate.
+- `PHASE_81A_CHECKPOINT_A2_1_LOW_BLOCK_ATTRIBUTION.md` - **A2's one broken
+  guardrail, chart component isolated.** `ownLossPerConcededReduction` reads
+  `2.8051` against `<= 2.0` out-of-sample. Applying the legacy chart to the same
+  Phase 81A-generated ability vectors fails at `3.0411`, excluding the chart as
+  the demonstrated cause without recreating the complete pre-81A population.
+  **The band remains broken and Step 05 owns its repair.** It read as a pass
+  before only because the old instrument sampled one world.
 - `PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md` - **Phase 81 closeout.**
   What the phase delivered, the cohort that closed the carried
   `goals_per_match_avg` monitor at `2.670`/`2.740` with `0` of `50` worlds

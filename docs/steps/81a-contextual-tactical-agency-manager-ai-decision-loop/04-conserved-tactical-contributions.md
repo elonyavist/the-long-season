@@ -2,7 +2,24 @@
 
 ## Status
 
-Not started; requires Checkpoint A GO.
+**Not started; unblocked.** Checkpoint A's `STOP / RETHINK` was resolved by
+**Checkpoint A2 (`03B`), which recorded a conditional `GO` on 2026-08-08** and
+opened Steps 04-05. Step 06 and everything after it remain closed until Step 05
+restores the low-block band on both seed sets. Report:
+`docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md`.
+
+Two things carried in from A2 that this step should know:
+
+- **Clubs no longer share one shape.** `topFormationShare` is `0.2063`/`0.2222`
+  across `12`/`11` distinct shapes, and all ten primary roles are generable. A
+  role-budget change is now measured against a population with real variety,
+  so a regression that would once have hidden inside a `4-2-4` monoculture has
+  somewhere to show.
+- **The low block's exchange rate is already outside its band** -
+  `ownLossPerConcededReduction` `2.8051` against `<= 2.0` out-of-sample, on
+  both the current chart and the legacy chart applied to Phase 81A-generated
+  ability vectors (A2.1). **Step 05 owns the repair.** This step must not be
+  credited with moving it, and must not be blamed for it either.
 
 ## Goal
 

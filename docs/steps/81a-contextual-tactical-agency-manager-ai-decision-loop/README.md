@@ -98,10 +98,10 @@ contexts; it never owns the analytic diversity gate.
 | 02 | [real-career before-state](02-real-career-before-state.md) | no | Step 03 |
 | 03 | [Checkpoint A](03-checkpoint-a-ownership-and-before-state.md) | no | **STOP / RETHINK recorded** |
 | 03A | [squad archetypes and role reachability](03a-squad-archetypes-and-primary-role-reachability.md) | population | Step 03B |
-| 03B | [Checkpoint A2 squad identity](03b-checkpoint-a2-real-career-squad-identity.md) | no | GO authorizes 04 |
+| 03B | [Checkpoint A2 squad identity](03b-checkpoint-a2-real-career-squad-identity.md) | no | **conditional `GO`; 04-05 authorized** |
 | 04 | [conserved tactical contributions](04-conserved-tactical-contributions.md) | yes | Step 05 |
-| 05 | [contested routes and lateral focus](05-contested-routes-and-lateral-focus.md) | yes | Step 06 |
-| 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | GO authorizes 07 |
+| 05 | [contested routes and lateral focus](05-contested-routes-and-lateral-focus.md) | yes | both-set low-block gate opens 06 |
+| 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | closed until Step 05 gate; GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
@@ -115,15 +115,26 @@ contexts; it never owns the analytic diversity gate.
 
 No later step starts while its preceding checkpoint is unresolved.
 
+**Checkpoint A2 recorded a conditional `GO` on 2026-08-08; Steps 04-05 are
+open.** All seven frozen gates passed on both seed sets - `topFormationShare` `0.9286` ->
+`0.2063`/`0.2222`, `3` -> `12`/`11` distinct shapes, all ten roles generable -
+and the archetype-mix counterfactual moved `6`/`6` clubs at constant squad
+quality. One guardrail, the low block's `ownLossPerConcededReduction`, reads
+`2.8051` against `<= 2.0` out-of-sample. Checkpoint A2.1 showed that applying
+the legacy chart to the same Phase 81A-generated ability vectors also fails; it
+therefore excludes the chart component as the demonstrated cause without
+recreating or absolving the full pre-81A population. **Step 05 owns the repair,
+and Step 06-16 remain closed until the band holds on both seed sets.**
+
 **Checkpoint A recorded `STOP / RETHINK` on 2026-08-07.** Its preregistered tie
 bias was falsified: `tieDecidedShare` is `0.0000` on `378` real career
 selections, and `4-2-4` wins `92.86%` by a mean structural margin of `0.7610`.
 The remedy direction survives and its mechanism does not - work scoped to
 **break ties** becomes work to **make the winning shape depend on the squad**.
 Steps 03A and 03B are inserted rather than renumbered so every `Step NN`
-reference in the design contract keeps its meaning. **Steps 04-16 are closed
-until Checkpoint A2 records a `GO`**, and the Checkpoint A before-state is frozen
-as the denominator of A2's deltas.
+reference in the design contract keeps its meaning. Checkpoint A2 has now
+opened 04-05 conditionally; the Checkpoint A before-state remains frozen as the
+denominator of A2's deltas.
 
 ## Checkpoint Decisions
 

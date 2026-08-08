@@ -4,10 +4,12 @@ import { test } from "vitest";
 import type { TacticalAgencyAuditReport } from "@game/simulation-tools";
 
 import {
+  formatCheckpointA21Report,
   runTacticalAgencyReportCommand,
   type CreateTacticalAgencyReportInput,
   type TacticalAgencyReportCommandDependencies,
 } from "./tactical-agency-report.ts";
+import type { CheckpointA2Report } from "./tactical-agency-report/checkpoint-a2.ts";
 
 /**
  * These tests own argument parsing, the checkpoint worker rule, rendering and
@@ -34,8 +36,9 @@ test("a checkpoint run at seven workers is accepted and records the count", asyn
   const run = await commandRun(["--checkpoint", "--workers=7"]);
 
   assert.equal(run.exitCode, 0);
-  assert.equal(run.createReportCalls[0]?.workerCount, 7);
-  assert.equal(run.createReportCalls[0]?.checkpointMode, true);
+  assert.equal(run.createCheckpointReportCalls[0]?.workerCount, 7);
+  assert.equal(run.createCheckpointReportCalls[0]?.checkpointMode, true);
+  assert.equal(run.written.length, 2, "A2 and A2.1 come from one checkpoint result");
 });
 
 test("an ordinary run may use any worker count, because it budgets nothing", async () => {
@@ -114,6 +117,33 @@ test("a report output path is written rather than printed", async () => {
   assert.equal(run.stdout[0]?.includes("docs/audits/agency.md"), true);
 });
 
+test("the A2.1 artifact renders its measured arms instead of pinned run values", () => {
+  const rendered = formatCheckpointA21Report([{
+    setName: "derived-values",
+    arms: [
+      {
+        armName: "legacy chart",
+        worldSeeds: ["world-1"],
+        concededExpectedGoalsReduction: 0.12345,
+        ownLossPerConcededReduction: 2.98765,
+        guardrailHeld: false,
+      },
+      {
+        armName: "current chart",
+        worldSeeds: ["world-1"],
+        concededExpectedGoalsReduction: 0.23456,
+        ownLossPerConcededReduction: 2.87654,
+        guardrailHeld: false,
+      },
+    ],
+    attribution: "legacy_chart_also_fails",
+  }]);
+
+  for (const measured of [0.12345, 2.98765, 0.23456, 2.87654].map((value) => value.toFixed(4))) {
+    assert.equal(rendered.includes(measured), true, measured);
+  }
+});
+
 /** One command run with every side effect captured. */
 async function commandRun(args: readonly string[]): Promise<{
   readonly exitCode: number;
@@ -121,11 +151,13 @@ async function commandRun(args: readonly string[]): Promise<{
   readonly stderr: readonly string[];
   readonly written: readonly { readonly path: string; readonly contents: string }[];
   readonly createReportCalls: readonly CreateTacticalAgencyReportInput[];
+  readonly createCheckpointReportCalls: readonly CreateTacticalAgencyReportInput[];
 }> {
   const stdout: string[] = [];
   const stderr: string[] = [];
   const written: { path: string; contents: string }[] = [];
   const createReportCalls: CreateTacticalAgencyReportInput[] = [];
+  const createCheckpointReportCalls: CreateTacticalAgencyReportInput[] = [];
 
   const dependencies: TacticalAgencyReportCommandDependencies = {
     stdout: (line) => stdout.push(line),
@@ -137,11 +169,73 @@ async function commandRun(args: readonly string[]): Promise<{
       createReportCalls.push(input);
       return sampleReport(input);
     },
+    createCheckpointReport: async (input) => {
+      createCheckpointReportCalls.push(input);
+      return sampleCheckpointReport(input);
+    },
   };
 
   const exitCode = await runTacticalAgencyReportCommand(args, dependencies);
 
-  return { exitCode, stdout, stderr, written, createReportCalls };
+  return {
+    exitCode,
+    stdout,
+    stderr,
+    written,
+    createReportCalls,
+    createCheckpointReportCalls,
+  };
+}
+
+/** A completed checkpoint small enough to test command wiring without a world run. */
+function sampleCheckpointReport(input: CreateTacticalAgencyReportInput): CheckpointA2Report {
+  const set = {
+    setName: "sample",
+    worldSeeds: [input.worldSeed],
+    selectionCount: 1,
+    topFormationShare: 0.2,
+    distinctFormationCount: 6,
+    positiveRoleCount: 10,
+    reorderInvariantShare: 1,
+    meanOutOfPositionSlots: 0,
+    identities: {
+      rows: [],
+      distinctModalFormationCount: 3,
+      unevaluatedIdentityKeys: [],
+      unattributedSelectionCount: 0,
+    },
+    gates: [{ gate: "sample", observed: "1", target: "= 1", passed: true }],
+    guardrails: [{ gate: "sample", observed: "1", target: "= 1", passed: true }],
+    passed: true,
+    guardrailsHeld: true,
+  } as const;
+  const arm = {
+    armName: "sample",
+    worldSeeds: [input.worldSeed],
+    concededExpectedGoalsReduction: 0.1,
+    ownLossPerConcededReduction: 1,
+    guardrailHeld: true,
+  } as const;
+
+  return {
+    sets: [set],
+    counterfactual: {
+      worldSeed: input.worldSeed,
+      rows: [],
+      clubCount: 1,
+      clubsWhoseShapeMoved: 1,
+      distinctShapeCountByClub: [2],
+    },
+    counterfactualMovesShape: true,
+    lowBlockAttributionReports: [{
+      setName: "sample",
+      arms: [arm, arm],
+      attribution: "not_reproduced",
+    }],
+    lowBlockAttribution: "not_reproduced",
+    decision: "GO",
+    workerCount: input.workerCount,
+  };
 }
 
 /** A before-state small enough to assert on, shaped exactly like a real one. */
