@@ -34,38 +34,39 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     version: "match-tactics-fixture",
     classification: "explicit_game_design_target",
     tacticalShape: {
-      contributionWeightBasisPointsByRoleAndTask: {
-        goalkeeper: taskWeights({}, 0),
-        right_full_back: FULL_BACK_WEIGHTS,
-        center_back: taskWeights({
+      outfieldRoleBudgetBasisPoints: FIXTURE_OUTFIELD_ROLE_BUDGET,
+      taskAllocationBasisPointsByRole: {
+        goalkeeper: uniformTaskWeights(0),
+        right_full_back: FULL_BACK_ALLOCATIONS,
+        center_back: taskAllocations({
           build_up: 7_000,
           central_coverage: 6_000,
           box_protection: 9_500,
           rest_defence: 9_000,
         }),
-        left_full_back: FULL_BACK_WEIGHTS,
-        defensive_midfielder: taskWeights({
+        left_full_back: FULL_BACK_ALLOCATIONS,
+        defensive_midfielder: taskAllocations({
           build_up: 8_000,
           central_progression: 6_000,
           central_coverage: 9_000,
           rest_defence: 8_000,
         }),
-        central_midfielder: taskWeights({
+        central_midfielder: taskAllocations({
           build_up: 6_500,
           central_progression: 8_000,
           pressing_cohesion: 7_000,
           central_coverage: 7_000,
         }),
-        right_midfielder: WIDE_MIDFIELD_WEIGHTS,
-        left_midfielder: WIDE_MIDFIELD_WEIGHTS,
-        attacking_midfielder: taskWeights({
+        right_midfielder: WIDE_MIDFIELD_ALLOCATIONS,
+        left_midfielder: WIDE_MIDFIELD_ALLOCATIONS,
+        attacking_midfielder: taskAllocations({
           central_progression: 8_500,
           final_third_presence: 6_000,
           counter_threat: 7_000,
         }),
-        right_winger: WINGER_WEIGHTS,
-        left_winger: WINGER_WEIGHTS,
-        striker: taskWeights({
+        right_winger: WINGER_ALLOCATIONS,
+        left_winger: WINGER_ALLOCATIONS,
+        striker: taskAllocations({
           final_third_presence: 9_500,
           counter_threat: 8_500,
           central_progression: 4_000,
@@ -131,7 +132,9 @@ const FIXTURE_TACTICAL_SEMANTICS = {
   routeSelectionSharpness: 3,
 } as const satisfies TacticalSemanticsCalibrationConfig;
 
-const FULL_BACK_WEIGHTS = taskWeights({
+const FIXTURE_OUTFIELD_ROLE_BUDGET = 42_000;
+
+const FULL_BACK_ALLOCATIONS = taskAllocations({
   build_up: 5_500,
   lateral_progression: 6_500,
   lateral_coverage: 8_000,
@@ -139,27 +142,52 @@ const FULL_BACK_WEIGHTS = taskWeights({
   rest_defence: 6_000,
 });
 
-const WIDE_MIDFIELD_WEIGHTS = taskWeights({
+const WIDE_MIDFIELD_ALLOCATIONS = taskAllocations({
   lateral_progression: 7_500,
   lateral_coverage: 7_000,
   pressing_cohesion: 7_000,
   counter_threat: 5_000,
 });
 
-const WINGER_WEIGHTS = taskWeights({
+const WINGER_ALLOCATIONS = taskAllocations({
   lateral_progression: 8_000,
   final_third_presence: 6_500,
   counter_threat: 8_000,
   lateral_coverage: 3_500,
 });
 
-function taskWeights(
+function taskAllocations(
   overrides: Partial<Record<TacticalShapeTask, number>>,
   floor = 1_500,
 ): Readonly<Record<TacticalShapeTask, number>> {
-  return Object.fromEntries(
-    TACTICAL_SHAPE_TASKS.map((task) => [task, overrides[task] ?? floor]),
-  ) as Readonly<Record<TacticalShapeTask, number>>;
+  const relative = TACTICAL_SHAPE_TASKS.map((task, index) => ({
+    task,
+    index,
+    value: overrides[task] ?? floor,
+  }));
+  const relativeTotal = relative.reduce((sum, row) => sum + row.value, 0);
+  const scaled = relative.map((row) => ({
+    ...row,
+    exact: row.value * FIXTURE_OUTFIELD_ROLE_BUDGET / relativeTotal,
+  }));
+  const allocations = Object.fromEntries(
+    scaled.map((row) => [row.task, Math.floor(row.exact)]),
+  ) as Record<TacticalShapeTask, number>;
+  let remainder = FIXTURE_OUTFIELD_ROLE_BUDGET
+    - TACTICAL_SHAPE_TASKS.reduce((sum, task) => sum + allocations[task], 0);
+
+  const remainderOrder = [...scaled].sort(
+    (left, right) =>
+      (right.exact - Math.floor(right.exact)) - (left.exact - Math.floor(left.exact))
+      || left.index - right.index,
+  );
+  for (const row of remainderOrder) {
+    if (remainder === 0) break;
+    allocations[row.task] = allocations[row.task] + 1;
+    remainder -= 1;
+  }
+
+  return allocations;
 }
 
 /**
@@ -214,7 +242,8 @@ export function flatMatchTacticsCalibrationFixture(input: {
     version: input.version ?? "match-tactics-flat-fixture",
     classification: "explicit_game_design_target",
     tacticalShape: {
-      contributionWeightBasisPointsByRoleAndTask: Object.fromEntries(
+      outfieldRoleBudgetBasisPoints: 50_000,
+      taskAllocationBasisPointsByRole: Object.fromEntries(
         CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? zeroTasks : flatTasks]),
       ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
       marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),

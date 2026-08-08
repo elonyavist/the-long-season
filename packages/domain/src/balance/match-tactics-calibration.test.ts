@@ -21,6 +21,7 @@ import {
   TACTIC_KNOB_EXPOSED_ROUTE,
   TACTIC_KNOB_FAVOURED_ROUTES,
   TACTIC_KNOBS,
+  tacticalRoleAllocationTotal,
   validateMatchTacticsCalibration,
   type MatchTacticsCalibrationConfig,
   type MatchTacticsCalibrationErrorCode,
@@ -94,8 +95,8 @@ test("a well-formed calibration validates", () => {
 test("the goalkeeper may not contribute to intrinsic shape", () => {
   assertRejects(
     withShape({
-      contributionWeightBasisPointsByRoleAndTask: {
-        ...validShape().contributionWeightBasisPointsByRoleAndTask,
+      taskAllocationBasisPointsByRole: {
+        ...validShape().taskAllocationBasisPointsByRole,
         goalkeeper: taskWeights(1),
       },
     }),
@@ -106,8 +107,8 @@ test("the goalkeeper may not contribute to intrinsic shape", () => {
 test("an outfield role may not leave a task empty", () => {
   assertRejects(
     withShape({
-      contributionWeightBasisPointsByRoleAndTask: {
-        ...validShape().contributionWeightBasisPointsByRoleAndTask,
+      taskAllocationBasisPointsByRole: {
+        ...validShape().taskAllocationBasisPointsByRole,
         striker: { ...taskWeights(2_000), box_protection: 0 },
       },
     }),
@@ -118,12 +119,62 @@ test("an outfield role may not leave a task empty", () => {
 test("contribution weights may not be negative", () => {
   assertRejects(
     withShape({
-      contributionWeightBasisPointsByRoleAndTask: {
-        ...validShape().contributionWeightBasisPointsByRoleAndTask,
+      taskAllocationBasisPointsByRole: {
+        ...validShape().taskAllocationBasisPointsByRole,
         striker: { ...taskWeights(2_000), counter_threat: -1 },
       },
     }),
     "negative_contribution_weight",
+  );
+});
+
+test("every outfield role must spend the one declared tactical budget", () => {
+  const shape = validShape();
+
+  for (const role of CANONICAL_PLAYER_ROLES) {
+    const allocated = tacticalRoleAllocationTotal(shape.taskAllocationBasisPointsByRole[role]);
+    assert.equal(allocated, role === "goalkeeper" ? 0 : shape.outfieldRoleBudgetBasisPoints, role);
+  }
+
+  assertRejects(
+    withShape({
+      taskAllocationBasisPointsByRole: {
+        ...shape.taskAllocationBasisPointsByRole,
+        striker: {
+          ...shape.taskAllocationBasisPointsByRole.striker,
+          counter_threat: shape.taskAllocationBasisPointsByRole.striker.counter_threat + 1,
+        },
+      },
+    }),
+    "outfield_role_budget_not_conserved",
+  );
+});
+
+test("an increase is legal only when another task gives up the same allocation", () => {
+  const shape = validShape();
+  const striker = shape.taskAllocationBasisPointsByRole.striker;
+
+  assert.doesNotThrow(() => {
+    validateMatchTacticsCalibration(
+      withShape({
+        taskAllocationBasisPointsByRole: {
+          ...shape.taskAllocationBasisPointsByRole,
+          striker: {
+            ...striker,
+            final_third_presence: striker.final_third_presence + 250,
+            build_up: striker.build_up - 250,
+          },
+        },
+      }),
+    );
+  });
+});
+
+test("the common role budget is positive and exact", () => {
+  assertRejects(withShape({ outfieldRoleBudgetBasisPoints: 0 }), "invalid_outfield_role_budget");
+  assertRejects(
+    withShape({ outfieldRoleBudgetBasisPoints: Number.MAX_SAFE_INTEGER + 1 }),
+    "invalid_outfield_role_budget",
   );
 });
 
@@ -352,7 +403,8 @@ function validSemantics(): TacticalSemanticsCalibrationConfig {
 
 function validShape(): TacticalShapeCalibrationConfig {
   return {
-    contributionWeightBasisPointsByRoleAndTask: Object.fromEntries(
+    outfieldRoleBudgetBasisPoints: 20_000,
+    taskAllocationBasisPointsByRole: Object.fromEntries(
       CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? taskWeights(0) : taskWeights(2_000)]),
     ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
     marginalContributionBasisPointsByRank: decreasingLadder(),

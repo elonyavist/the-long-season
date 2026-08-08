@@ -39,7 +39,8 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     version: "match-tactics-simulation-tools-fixture",
     classification: "explicit_game_design_target",
     tacticalShape: {
-      contributionWeightBasisPointsByRoleAndTask: Object.fromEntries(
+      outfieldRoleBudgetBasisPoints: FIXTURE_OUTFIELD_ROLE_BUDGET,
+      taskAllocationBasisPointsByRole: Object.fromEntries(
         CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? zeroTasks : taskValuesFor(role)]),
       ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
       marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),
@@ -92,11 +93,7 @@ function uniformTaskValues(value: number): Readonly<Record<TacticalShapeTask, nu
  * an attacker the reverse, and a midfielder is the one who links them.
  */
 function taskValuesFor(role: CanonicalPlayerRole): Readonly<Record<TacticalShapeTask, number>> {
-  const profile = DEPARTMENT_TASK_PROFILE[departmentOf(role)];
-
-  return Object.fromEntries(
-    TACTICAL_SHAPE_TASKS.map((task) => [task, profile[task]]),
-  ) as Readonly<Record<TacticalShapeTask, number>>;
+  return DEPARTMENT_TASK_PROFILE[departmentOf(role)];
 }
 
 /** Which of the three profiles an outfield role uses. */
@@ -120,43 +117,45 @@ const ATTACKING_ROLES = new Set<CanonicalPlayerRole>([
   "attacking_midfielder",
 ]);
 
+const FIXTURE_OUTFIELD_ROLE_BUDGET = 42_000;
+
 const DEPARTMENT_TASK_PROFILE: Readonly<
   Record<"defence" | "midfield" | "attack", Readonly<Record<TacticalShapeTask, number>>>
 > = {
   defence: {
-    build_up: 6_500,
-    central_progression: 2_000,
-    lateral_progression: 3_000,
-    final_third_presence: 800,
-    pressing_cohesion: 4_500,
-    central_coverage: 7_000,
-    lateral_coverage: 6_000,
-    box_protection: 8_500,
-    counter_threat: 1_500,
-    rest_defence: 8_500,
+    build_up: 5_652,
+    central_progression: 1_739,
+    lateral_progression: 2_609,
+    final_third_presence: 696,
+    pressing_cohesion: 3_913,
+    central_coverage: 6_087,
+    lateral_coverage: 5_218,
+    box_protection: 7_391,
+    counter_threat: 1_304,
+    rest_defence: 7_391,
   },
   midfield: {
-    build_up: 6_000,
-    central_progression: 7_500,
-    lateral_progression: 6_000,
-    final_third_presence: 2_500,
-    pressing_cohesion: 7_000,
-    central_coverage: 5_500,
-    lateral_coverage: 5_000,
-    box_protection: 3_000,
-    counter_threat: 4_500,
-    rest_defence: 4_000,
+    build_up: 4_941,
+    central_progression: 6_176,
+    lateral_progression: 4_941,
+    final_third_presence: 2_059,
+    pressing_cohesion: 5_765,
+    central_coverage: 4_529,
+    lateral_coverage: 4_118,
+    box_protection: 2_471,
+    counter_threat: 3_706,
+    rest_defence: 3_294,
   },
   attack: {
-    build_up: 2_000,
-    central_progression: 3_500,
-    lateral_progression: 4_000,
-    final_third_presence: 8_500,
-    pressing_cohesion: 5_500,
-    central_coverage: 1_200,
-    lateral_coverage: 1_500,
-    box_protection: 800,
-    counter_threat: 8_000,
-    rest_defence: 1_000,
+    build_up: 2_333,
+    central_progression: 4_083,
+    lateral_progression: 4_667,
+    final_third_presence: 9_917,
+    pressing_cohesion: 6_417,
+    central_coverage: 1_400,
+    lateral_coverage: 1_750,
+    box_protection: 933,
+    counter_threat: 9_333,
+    rest_defence: 1_167,
   },
 };

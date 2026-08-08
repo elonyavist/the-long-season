@@ -32,20 +32,22 @@ export class MatchTacticsCalibrationValidationError extends Error {
 const nonEmptyString = v.pipe(v.string(), v.minLength(1));
 const safeInteger = v.pipe(v.number(), v.safeInteger());
 const basisPoints = v.pipe(safeInteger, v.minValue(0), v.maxValue(10_000));
+const nonNegativeInteger = v.pipe(safeInteger, v.minValue(0));
 const positiveInteger = v.pipe(safeInteger, v.minValue(1));
 
-const taskWeightsSchema = v.strictObject(
-  Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, basisPoints])) as Record<
+const taskAllocationsSchema = v.strictObject(
+  Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, nonNegativeInteger])) as Record<
     (typeof TACTICAL_SHAPE_TASKS)[number],
-    typeof basisPoints
+    typeof nonNegativeInteger
   >,
 );
 
 const tacticalShapeSchema = v.strictObject({
-  contributionWeightBasisPointsByRoleAndTask: v.strictObject(
-    Object.fromEntries(CANONICAL_PLAYER_ROLES.map((role) => [role, taskWeightsSchema])) as Record<
+  outfieldRoleBudgetBasisPoints: positiveInteger,
+  taskAllocationBasisPointsByRole: v.strictObject(
+    Object.fromEntries(CANONICAL_PLAYER_ROLES.map((role) => [role, taskAllocationsSchema])) as Record<
       (typeof CANONICAL_PLAYER_ROLES)[number],
-      typeof taskWeightsSchema
+      typeof taskAllocationsSchema
     >,
   ),
   marginalContributionBasisPointsByRank: v.array(basisPoints),
@@ -115,7 +117,9 @@ const matchTacticsCalibrationSchema = v.strictObject({
  *
  * Anything that passes both is safe for the match engine to consume without
  * re-checking, which is why the engine derivation contains no validation of
- * its own beyond lineup size.
+ * its own beyond lineup size. Task allocations are not individually capped at
+ * `10000`: one task may receive more than one full unit, while the domain owns
+ * the exact common row total that makes the allocation finite.
  *
  * @example
  * const calibration = parseMatchTacticsCalibrationAsset(rawJson);

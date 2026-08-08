@@ -70,12 +70,12 @@ export class TacticalShapeError extends Error {
 /**
  * Derives one side's intrinsic tactical shape from its lineup.
  *
- * Three football ideas, in order:
+ * Four football ideas, in order:
  *
- * 1. **Every player contributes to every task**, weighted by his canonical role
- *    and by how good he is. A striker helps build-up a little; a centre back
- *    helps final-third presence a little. Nobody contributes nothing, which is
- *    what stops an extreme shape from producing a structurally empty capacity.
+ * 1. **Every player contributes to every task**, allocating the same finite
+ *    role budget according to his canonical role and quality. A striker helps
+ *    build-up a little; a centre back helps final-third presence a little.
+ *    Nobody contributes nothing and no role creates a larger total budget.
  * 2. **Lateral work lands on the flank the player occupies.** A left-sided
  *    player covers the left; a central player splits himself. This is where
  *    left/right overload becomes visible instead of averaging away.
@@ -119,14 +119,14 @@ export function deriveTacticalShapeProfile(input: DeriveTacticalShapeProfileInpu
     const { task, flank } = TACTICAL_SHAPE_CAPACITY_SOURCE[capacity];
     const isCoordination = TACTICAL_SHAPE_TASK_KIND[task] === "coordination";
     const contributions = slotScores.map(({ slot, score, suitability }, index): RankedContribution => {
-      const weight = shape.contributionWeightBasisPointsByRoleAndTask[slot.canonicalRole][task] / 10_000;
+      const allocation = shape.taskAllocationBasisPointsByRole[slot.canonicalRole][task] / 10_000;
       const channelShare =
         flank === "none" ? 1 : lateralChannelShares(slot.side, shape.channelPolicy)[flank];
       const coordination = isCoordination
         ? shape.coordinationMultiplierBasisPointsBySuitability[suitability] / 10_000
         : 1;
 
-      return { index, value: score * weight * channelShare * coordination };
+      return { index, value: score * allocation * channelShare * coordination };
     });
 
     capacities[capacity] = saturate(

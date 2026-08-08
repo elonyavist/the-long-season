@@ -108,6 +108,14 @@ test("stable season seed produces a compact golden sentinel", () => {
   // These clubs are built without per-player attributes, so both actor edges are
   // `0` here and the chances themselves are untouched: who scored moved, how
   // many were created and how many went in did not.
+  //
+  // Phase 81A Step 04 then conserved the tactical allocation every outfield
+  // role can spend. That is an intentional match-engine change, not actor
+  // drift: over the same 306 fixtures the champion, runner-up, endpoints and
+  // table membership stay fixed, while the bottom club turns one draw into a
+  // loss (28 -> 27 points) and the leading scorer finishes on six rather than
+  // seven. The sentinel keeps those two consequences visible so a later edit
+  // cannot claim the conservation migration was result-neutral.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -165,12 +173,12 @@ test("stable season seed produces a compact golden sentinel", () => {
         clubId: clubId("club:test-12"),
         played: 34,
         wins: 0,
-        draws: 28,
-        losses: 6,
+        draws: 27,
+        losses: 7,
         goalsFor: 3,
-        goalsAgainst: 11,
-        goalDifference: -8,
-        points: 28,
+        goalsAgainst: 12,
+        goalDifference: -9,
+        points: 27,
       },
       firstFixture: {
         id: fixtureId("fixture:test-league:2026:000001"),
@@ -192,7 +200,7 @@ test("stable season seed produces a compact golden sentinel", () => {
         {
           playerId: playerId("player:test-02-04"),
           clubId: clubId("club:test-02"),
-          goals: 7,
+          goals: 6,
         },
         {
           playerId: playerId("player:test-01-04"),

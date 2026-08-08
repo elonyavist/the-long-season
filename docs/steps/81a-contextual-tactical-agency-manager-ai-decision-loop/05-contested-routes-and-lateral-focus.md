@@ -6,6 +6,13 @@ Not started; requires Step 04 Done. This step is the condition on Checkpoint
 A2's downstream authorization: Step 06 remains closed until the low-block xG
 contract holds on both A2 seed sets.
 
+Step 04 is Done. Its input contract is exact: every outfield role allocates
+`42_000` basis points across ten positive tasks, the goalkeeper allocates `0`,
+and `tacticalRoleAllocationTotal(...)` is the only total derivation. This step
+may reallocate that finite resource through routes and lateral focus; it may not
+retune the common budget, add a second normalized table, or restore unequal
+role totals to make the matchup pass.
+
 ## Goal
 
 Make formation and tactics spend a finite budget differently so opponents can

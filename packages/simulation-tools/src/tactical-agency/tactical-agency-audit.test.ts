@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clubId, fixtureId, playerId, PLAYER_ROLES, type CareerState, type PlayerId } from "@game/domain";
+import {
+  clubId,
+  fixtureId,
+  playerId,
+  PLAYER_ROLES,
+  TACTICAL_SHAPE_TASKS,
+  type CareerState,
+  type PlayerId,
+} from "@game/domain";
 
 import {
   buildTacticalAgencyAuditReport,
@@ -10,6 +18,7 @@ import {
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyOwnershipReplay,
   runTacticalAgencySelectionSeries,
+  summarizeTacticalContributionConservation,
   summarizeTacticalAgencyPrimaryRoles,
   summarizeTacticalAgencySelections,
   summarizeTacticalAgencySquadIdentities,
@@ -21,6 +30,7 @@ import {
   type TacticalAgencyPopulationManifest,
   type TacticalAgencySelectionRow,
 } from "./tactical-agency-audit.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
 
 /**
  * These tests own the audit's arithmetic and its refusals. The traversal of a
@@ -107,6 +117,21 @@ test("a checkpoint pins its worker count rather than capping it", () => {
   assert.equal(isValidTacticalAgencyCheckpointWorkerCount(7), true);
   assert.equal(isValidTacticalAgencyCheckpointWorkerCount(1), false);
   assert.equal(isValidTacticalAgencyCheckpointWorkerCount(8), false);
+});
+
+test("the conservation diagnostic reports one exact budget and goalkeeper isolation", () => {
+  const summary = summarizeTacticalContributionConservation(matchTacticsCalibrationFixture());
+
+  assert.equal(summary.calibrationVersion, "match-tactics-simulation-tools-fixture");
+  assert.equal(summary.rows.length, 12);
+  for (const row of summary.rows) {
+    assert.equal(row.budgetDeltaBasisPoints, 0, row.role);
+    assert.equal(
+      row.positiveTaskCount,
+      row.role === "goalkeeper" ? 0 : TACTICAL_SHAPE_TASKS.length,
+      row.role,
+    );
+  }
 });
 
 test("an empty population is refused rather than summarized into zeros", () => {

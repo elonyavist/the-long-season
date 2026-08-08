@@ -3,9 +3,11 @@ import { test } from "vitest";
 
 import {
   CANONICAL_PLAYER_ROLES,
+  MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
   TACTICAL_SHAPE_MAXIMUM_CONTRIBUTORS,
   TACTICAL_SHAPE_TASK_KIND,
   TACTICAL_SHAPE_TASKS,
+  tacticalRoleAllocationTotal,
 } from "@game/domain";
 
 import { matchTacticsCalibration } from "./match-tactics-calibration.ts";
@@ -17,13 +19,14 @@ import { matchTacticsCalibration } from "./match-tactics-calibration.ts";
  */
 
 test("the shipped calibration exposes one stable version and schema", () => {
-  assert.equal(matchTacticsCalibration.schemaVersion, 1);
+  assert.equal(matchTacticsCalibration.schemaVersion, MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION);
+  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v2");
   assert.equal(matchTacticsCalibration.classification, "explicit_game_design_target");
   assert.equal(matchTacticsCalibration.version.length > 0, true);
 });
 
 test("mirrored roles are given identical weights", () => {
-  const weights = matchTacticsCalibration.tacticalShape.contributionWeightBasisPointsByRoleAndTask;
+  const weights = matchTacticsCalibration.tacticalShape.taskAllocationBasisPointsByRole;
 
   assert.deepEqual(weights.right_full_back, weights.left_full_back);
   assert.deepEqual(weights.right_midfielder, weights.left_midfielder);
@@ -38,7 +41,7 @@ test("the marginal ladder covers every rank a lineup can fill", () => {
 });
 
 test("each task's best specialist is a role that owns it in football", () => {
-  const weights = matchTacticsCalibration.tacticalShape.contributionWeightBasisPointsByRoleAndTask;
+  const weights = matchTacticsCalibration.tacticalShape.taskAllocationBasisPointsByRole;
   const expectedOwners: Readonly<Record<(typeof TACTICAL_SHAPE_TASKS)[number], readonly string[]>> = {
     build_up: ["defensive_midfielder"],
     central_progression: ["attacking_midfielder"],
@@ -106,9 +109,24 @@ test("the shipped fit ladder charges a real but survivable cost", () => {
 });
 
 test("the goalkeeper is isolated from every shape task", () => {
-  const goalkeeper = matchTacticsCalibration.tacticalShape.contributionWeightBasisPointsByRoleAndTask.goalkeeper;
+  const goalkeeper = matchTacticsCalibration.tacticalShape.taskAllocationBasisPointsByRole.goalkeeper;
 
   for (const task of TACTICAL_SHAPE_TASKS) {
     assert.equal(goalkeeper[task], 0, `goalkeeper must not contribute to ${task}`);
+  }
+});
+
+test("every shipped outfield role allocates the same finite tactical budget", () => {
+  const shape = matchTacticsCalibration.tacticalShape;
+
+  assert.equal(shape.outfieldRoleBudgetBasisPoints, 42_000);
+  for (const role of CANONICAL_PLAYER_ROLES) {
+    const allocations = shape.taskAllocationBasisPointsByRole[role];
+    const total = tacticalRoleAllocationTotal(allocations);
+
+    assert.equal(total, role === "goalkeeper" ? 0 : shape.outfieldRoleBudgetBasisPoints, role);
+    for (const task of TACTICAL_SHAPE_TASKS) {
+      assert.equal(role === "goalkeeper" ? allocations[task] === 0 : allocations[task] > 0, true, `${role}.${task}`);
+    }
   }
 });

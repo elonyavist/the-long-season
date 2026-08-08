@@ -23,13 +23,12 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **04 conserved tactical contributions is next.** Steps 03C/03D
-  are Done with U1/U2 `GO`: one report command, eight career modules, locked
-  profiles and four adapters. Gate: `293` files, `2218` tests, exit `0`. Then 05;
-  06-16 await Step 05's both-set low-block gate.
-  `topFormationShare` `0.9286` -> `0.2063`/`0.2222`, shapes `3` -> `12`/`11`, all
-  ten roles generable, `8`/`8` identities observed, reorder invariance `1.0000`.
-  The counterfactual moved `6`/`6` clubs at constant quality; see the A2 audit.
+- Step: Phase 81A **04 conserved tactical contributions is Done; 05 contested
+  routes and lateral focus is next.** All eleven outfield roles now allocate the
+  same `42_000` budget across ten positive tasks; goalkeeper `0`. Calibration
+  schema/content are `2`/`match-tactics-calibration-v2`, with no persistence
+  reset. Gate: `293` files, `2225` tests, `855` modules, exit `0`. Steps 06-16
+  await Step 05's both-set low-block gate.
 - **Owed to Step 05: `ownLossPerConcededReduction` is `2.8051` vs `<= 2.0`
   out-of-sample.** The legacy chart on the same 81A ability vectors fails at
   `3.0411`, excluding an adverse chart effect without

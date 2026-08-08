@@ -2,13 +2,10 @@
 
 ## Status
 
-**Not started; authorized after Step 03D's U2 `GO` on 2026-08-08.** Checkpoint A's
-`STOP / RETHINK` was resolved by **Checkpoint A2 (`03B`), which recorded a
-conditional `GO` on 2026-08-08**. The engine work in 04-05 is authorized, but
-the canonical modular-report migration is Done, so later checkpoints extend the
-one Interface instead of creating isolated CLI/report paths. Step 06 and everything after it remain
-closed until Step 05 restores the low-block band on both seed sets. Report:
-`docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md`.
+**Done on 2026-08-08.** Every outfield role now allocates one exact common
+budget; the goalkeeper remains isolated and the scalar executor is otherwise
+unchanged. Step 05 is the only next action. Step 06 and everything after it
+remain closed until Step 05 restores the low-block band on both seed sets.
 
 Two things carried in from A2 that this step should know:
 
@@ -44,13 +41,30 @@ creating more football because its weights sum higher.
 - `packages/domain/src/balance/match-tactics-calibration.ts`
 - `packages/domain/src/balance/match-tactics-calibration.test.ts`
 - `packages/content/src/balance/match-tactics-calibration.json`
+- `packages/content/src/balance/match-tactics-calibration.test.ts`
+- `packages/content/src/schemas/match-tactics-calibration.schema.ts`
+- `packages/content/src/schemas/match-tactics-calibration.schema.test.ts`
 - `packages/engine/src/match-engine/tactical-shape.ts`
 - `packages/engine/src/match-engine/tactical-shape.test.ts`
+- `packages/engine/src/test-fixtures/match-tactics-calibration.ts`
+- `packages/engine/src/use-cases/simulate-season.test.ts`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.test.ts`
+- `packages/simulation-tools/src/test-fixtures/match-tactics-calibration.ts`
 - `docs/PROJECT_STATUS.md`
 - this step document
 - `05-contested-routes-and-lateral-focus.md`
+
+The content schema and its tests are owned here because the common budget is a
+new required field of the versioned asset; leaving the parser on the old shape
+would make the contract impossible to load. The engine and simulation-tools
+fixture owners are also included because every calibration accepted by the
+domain validator must now obey conservation. They remain fixtures rather than
+copies of shipped tuning.
+`simulate-season.test.ts` owns the compact deterministic season sentinel. The
+conserved allocations intentionally changed one result and one scorer over its
+306 fixtures; the sentinel is re-recorded with that gameplay cause rather than
+left as an unexplained golden drift.
 
 ## Required Checks
 
@@ -73,3 +87,42 @@ simulation-based excuse for a failed algebraic invariant.
 
 Conservation is exact and canonical, no derived duplicate exists, every new
 branch is reachable on real roles, and Step 05 is the only next action.
+
+## Outcome
+
+- Adopted one `outfieldRoleBudgetBasisPoints = 42_000`. The historical coherent
+  `4-4-2` spent `41_980` per outfield player on average, so this budget isolates
+  conservation without intentionally adding a new global level.
+- Replaced the old contribution table with
+  `taskAllocationBasisPointsByRole`. The shipped ratios were used only as the
+  migration starting point and are not retained beside the allocations.
+  Blind proportional normalization made a centre back the best builder and a
+  striker the best presser; the final content explicitly restores football
+  ownership while preserving every row sum.
+- Advanced the calibration asset contract to schema `2` and content version
+  `match-tactics-calibration-v2`. This changes no storage schema, envelope or
+  persisted field, so Step 14 remains the only beta persistence reset.
+- `tacticalRoleAllocationTotal(...)` is the single ordered sum used by domain
+  validation and diagnostics. A `+1` overspend fails; a paired increase and
+  decrease passes. All eleven outfield roles allocate `42_000`, all ten tasks
+  remain positive for each, and the goalkeeper allocates `0`.
+- `summarizeTacticalContributionConservation(...)` exposes those algebraic
+  facts without simulating a match or storing derived totals.
+- The deterministic 306-fixture season sentinel moved by one result and one
+  goal: the bottom club has `27` rather than `28` points and the leading scorer
+  has `6` rather than `7` goals. Champion, runner-up, fixture count and endpoint
+  fixtures remain unchanged; the intentional consequence is pinned.
+
+Verification:
+
+- domain calibration: `39/39`;
+- content calibration/schema: `16/16`;
+- tactical shape: `25/25`;
+- tactical-agency audit: `19/19`;
+- season sentinel: `30/30`;
+- `pnpm check`: `293` files, `2225` tests, `855` modules, exit `0`;
+- `git diff --check`: clean before documentation closeout.
+
+Next action: Step 05 deepens the minute plan, adds the single lateral-focus
+owner and must restore the frozen low-block xG band on both A2 seed sets before
+Checkpoint B can open.

@@ -1,7 +1,11 @@
 import {
+  CANONICAL_PLAYER_ROLES,
   PLAYER_ROLES,
+  TACTICAL_SHAPE_TASKS,
   evaluatePositionSuitability,
+  tacticalRoleAllocationTotal,
   type CareerState,
+  type CanonicalPlayerRole,
   type ClubId,
   type Fixture,
   type FixtureId,
@@ -70,6 +74,65 @@ export class TacticalAgencyAuditError extends Error {
     this.name = "TacticalAgencyAuditError";
     this.code = code;
   }
+}
+
+/** One canonical role's derived use of the common tactical budget. */
+export interface TacticalContributionConservationRoleRow {
+  /** Role whose authored allocation is being inspected. */
+  readonly role: CanonicalPlayerRole;
+  /** Sum derived in the domain's canonical task order. */
+  readonly allocatedBasisPoints: number;
+  /** Difference from the required budget; goalkeeper is compared with zero. */
+  readonly budgetDeltaBasisPoints: number;
+  /** Tasks receiving a reachable positive allocation. */
+  readonly positiveTaskCount: number;
+}
+
+/** Algebraic conservation reading for one versioned tactical calibration. */
+export interface TacticalContributionConservationSummary {
+  /** Calibration whose allocation table was read. */
+  readonly calibrationVersion: string;
+  /** One common budget authored for every outfield role. */
+  readonly outfieldRoleBudgetBasisPoints: number;
+  /** Every canonical role in domain order, including the isolated goalkeeper. */
+  readonly rows: readonly TacticalContributionConservationRoleRow[];
+}
+
+/**
+ * Derives the conservation evidence without simulating a match.
+ *
+ * Step 04 is an algebraic contract, so a Monte Carlo result cannot excuse a
+ * row that creates or destroys budget. This diagnostic reuses the domain's
+ * total derivation and records every canonical role, including zero-valued
+ * goalkeeper isolation and positive reachability on all outfield tasks.
+ */
+export function summarizeTacticalContributionConservation(
+  calibration: MatchTacticsCalibrationConfig,
+): TacticalContributionConservationSummary {
+  const shape = calibration.tacticalShape;
+  const rows = CANONICAL_PLAYER_ROLES.map((role): TacticalContributionConservationRoleRow => {
+    const allocations = shape.taskAllocationBasisPointsByRole[role];
+    let positiveTaskCount = 0;
+    for (const task of TACTICAL_SHAPE_TASKS) {
+      if (allocations[task] > 0) positiveTaskCount += 1;
+    }
+
+    const allocatedBasisPoints = tacticalRoleAllocationTotal(allocations);
+    const requiredBudget = role === "goalkeeper" ? 0 : shape.outfieldRoleBudgetBasisPoints;
+
+    return {
+      role,
+      allocatedBasisPoints,
+      budgetDeltaBasisPoints: allocatedBasisPoints - requiredBudget,
+      positiveTaskCount,
+    };
+  });
+
+  return {
+    calibrationVersion: calibration.version,
+    outfieldRoleBudgetBasisPoints: shape.outfieldRoleBudgetBasisPoints,
+    rows,
+  };
 }
 
 /** One club selecting for one fixture, in the caller's deterministic order. */

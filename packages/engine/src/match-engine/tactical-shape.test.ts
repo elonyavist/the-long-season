@@ -126,6 +126,38 @@ test("an extra contributor to a task strictly increases that capacity", () => {
   }
 });
 
+test("a role can buy one task only by giving the same allocation up elsewhere", () => {
+  const calibration = matchTacticsCalibrationFixture();
+  const centerBack = calibration.tacticalShape.taskAllocationBasisPointsByRole.center_back;
+  const reallocated: MatchTacticsCalibrationConfig = {
+    ...calibration,
+    tacticalShape: {
+      ...calibration.tacticalShape,
+      taskAllocationBasisPointsByRole: {
+        ...calibration.tacticalShape.taskAllocationBasisPointsByRole,
+        center_back: {
+          ...centerBack,
+          box_protection: centerBack.box_protection + 500,
+          build_up: centerBack.build_up - 500,
+        },
+      },
+    },
+  };
+  validateMatchTacticsCalibration(reallocated);
+
+  const slotScores = slotScoresFor([["center_back", "center"]]);
+  const before = deriveTacticalShapeProfile({ slotScores, calibration }).capacities;
+  const after = deriveTacticalShapeProfile({ slotScores, calibration: reallocated }).capacities;
+
+  assert.equal(after.box_protection > before.box_protection, true);
+  assert.equal(after.build_up < before.build_up, true);
+  for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
+    if (capacity !== "box_protection" && capacity !== "build_up") {
+      assert.equal(after[capacity], before[capacity], capacity);
+    }
+  }
+});
+
 test("each additional identical contributor adds strictly less than the one before", () => {
   const totals = Array.from({ length: 6 }, (_, count) =>
     profileFor(Array.from({ length: count + 1 }, (): PitchSlot => ["striker", "center"])).capacities
@@ -565,9 +597,9 @@ function assertProfileRejected(profile: TacticalShapeProfile, code: string): voi
 }
 
 test("every canonical role is covered by the fixture calibration", () => {
-  const weights = matchTacticsCalibrationFixture().tacticalShape.contributionWeightBasisPointsByRoleAndTask;
+  const allocations = matchTacticsCalibrationFixture().tacticalShape.taskAllocationBasisPointsByRole;
 
   for (const role of CANONICAL_PLAYER_ROLES) {
-    assert.notEqual(weights[role], undefined, `${role} has no fixture weights`);
+    assert.notEqual(allocations[role], undefined, `${role} has no fixture allocations`);
   }
 });

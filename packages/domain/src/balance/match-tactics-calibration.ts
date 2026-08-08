@@ -503,13 +503,21 @@ export interface TacticalShapeChannelPolicy {
  */
 export interface TacticalShapeCalibrationConfig {
   /**
-   * Contribution of one full-quality player in one role to one task, in basis
+   * Tactical budget every outfield role must allocate across the ten tasks.
+   *
+   * The budget is authored once and every outfield row must sum to it exactly.
+   * A formation may therefore move football between tasks, but a role cannot
+   * create more total football merely by having a larger row.
+   */
+  readonly outfieldRoleBudgetBasisPoints: number;
+  /**
+   * Allocation of one full-quality player in one role to one task, in basis
    * points. `10000` means "a whole unit of this task per point of role score".
    *
    * The goalkeeper row is all zeros: shape is a property of the outfield ten,
    * and goalkeeper quality already has its own owner in `TeamStrength`.
    */
-  readonly contributionWeightBasisPointsByRoleAndTask: Readonly<
+  readonly taskAllocationBasisPointsByRole: Readonly<
     Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>
   >;
   /**
@@ -573,6 +581,8 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_classification"
   | "incomplete_contribution_weights"
   | "negative_contribution_weight"
+  | "invalid_outfield_role_budget"
+  | "outfield_role_budget_not_conserved"
   | "goalkeeper_is_not_isolated"
   | "outfield_role_leaves_task_empty"
   | "invalid_marginal_contribution_ladder"
@@ -611,20 +621,21 @@ export class MatchTacticsCalibrationError extends Error {
 /**
  * The mathematical constraints every intrinsic-shape calibration must satisfy.
  *
- * These were declared here, at Step 03, before any coefficient was written.
- * Step 01 froze the *product outcome* bands - what structure may be worth
- * against squad quality - and deliberately did not constrain the internal
- * mathematics, so nothing about this list is inherited.
+ * The first four were declared in Phase 81 before any coefficient was written;
+ * conservation was added by Phase 81A Step 04 after the real-career audit
+ * measured role totals ranging from `33100` to `52300`.
  *
- * 1. **Non-negative weights.** A player never makes his own team worse at a
- *    task by being on the pitch.
- * 2. **Strictly decreasing marginal contribution.** The nth contributor to one
+ * 1. **Conserved outfield budget.** Every outfield role allocates the same
+ *    exact total, so buying one task necessarily spends less elsewhere.
+ * 2. **Non-negative allocations.** A player never makes his own team worse at
+ *    a task by being on the pitch.
+ * 3. **Strictly decreasing marginal contribution.** The nth contributor to one
  *    task is worth strictly less than the (n-1)th, and still strictly more
  *    than nothing. Strictly positive is what makes an extra body always a
  *    small gain rather than a silent loss.
- * 3. **Bounded capacities.** Every capacity lands in `[0, 1)` for every legal
+ * 4. **Bounded capacities.** Every capacity lands in `[0, 1)` for every legal
  *    lineup, with no clamp that can be hit and no unbounded multiplier.
- * 4. **Left/right mirror symmetry.** Mirroring a lineup mirrors its profile
+ * 5. **Left/right mirror symmetry.** Mirroring a lineup mirrors its profile
  *    exactly. Weights are declared per task rather than per flank and the five
  *    channels derive from one number, so this holds by construction; the
  *    engine tests prove it end to end.
@@ -841,7 +852,10 @@ export function validateTacticalMatchupCalibration(config: TacticalMatchupCalibr
  * without building a whole asset around it.
  */
 export function validateTacticalShapeCalibration(config: TacticalShapeCalibrationConfig): void {
-  validateContributionWeights(config.contributionWeightBasisPointsByRoleAndTask);
+  validateContributionAllocations(
+    config.outfieldRoleBudgetBasisPoints,
+    config.taskAllocationBasisPointsByRole,
+  );
   validateMarginalContributionLadder(config.marginalContributionBasisPointsByRank);
   validateChannelPolicy(config.channelPolicy);
   validateCoordinationMultipliers(config.coordinationMultiplierBasisPointsBySuitability);
@@ -881,46 +895,87 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 1;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 2;
 
-function validateContributionWeights(
-  weights: Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
+/**
+ * Derives the exact budget allocated by one role row.
+ *
+ * The total is never stored beside the row. Validation, diagnostics and tests
+ * share this ordered derivation so a second summation cannot drift from the
+ * rule that accepts the asset.
+ */
+export function tacticalRoleAllocationTotal(
+  allocations: Readonly<Record<TacticalShapeTask, number>>,
+): number {
+  let total = 0;
+  for (const task of TACTICAL_SHAPE_TASKS) {
+    total += allocations[task];
+  }
+  return total;
+}
+
+function validateContributionAllocations(
+  outfieldRoleBudgetBasisPoints: number,
+  allocationsByRole: Readonly<
+    Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>
+  >,
 ): void {
+  if (!Number.isSafeInteger(outfieldRoleBudgetBasisPoints) || outfieldRoleBudgetBasisPoints <= 0) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_outfield_role_budget",
+      `Outfield tactical budget must be a positive safe integer: ${outfieldRoleBudgetBasisPoints}`,
+    );
+  }
+
   for (const role of CANONICAL_PLAYER_ROLES) {
-    const taskWeights = weights[role];
-    if (taskWeights === undefined) {
+    const taskAllocations = allocationsByRole[role];
+    if (taskAllocations === undefined) {
       throw new MatchTacticsCalibrationError(
         "incomplete_contribution_weights",
-        `Match-tactics calibration has no contribution weights for ${role}`,
+        `Match-tactics calibration has no task allocations for ${role}`,
       );
     }
 
     for (const task of TACTICAL_SHAPE_TASKS) {
-      const weight = taskWeights[task];
-      if (weight === undefined) {
+      const allocation = taskAllocations[task];
+      if (allocation === undefined) {
         throw new MatchTacticsCalibrationError(
           "incomplete_contribution_weights",
-          `Match-tactics calibration has no ${task} weight for ${role}`,
+          `Match-tactics calibration has no ${task} allocation for ${role}`,
         );
       }
-      if (!Number.isSafeInteger(weight) || weight < 0) {
+      if (!Number.isSafeInteger(allocation) || allocation < 0) {
         throw new MatchTacticsCalibrationError(
           "negative_contribution_weight",
-          `Contribution weight must be a non-negative integer for ${role}.${task}: ${weight}`,
+          `Task allocation must be a non-negative integer for ${role}.${task}: ${allocation}`,
         );
       }
-      if (role === "goalkeeper" && weight !== 0) {
+      if (role === "goalkeeper" && allocation !== 0) {
         throw new MatchTacticsCalibrationError(
           "goalkeeper_is_not_isolated",
-          `Goalkeeper must not contribute to intrinsic shape: ${task} is ${weight}`,
+          `Goalkeeper must not contribute to intrinsic shape: ${task} is ${allocation}`,
         );
       }
-      if (role !== "goalkeeper" && weight === 0) {
+      if (role !== "goalkeeper" && allocation === 0) {
         throw new MatchTacticsCalibrationError(
           "outfield_role_leaves_task_empty",
           `Every outfield role must contribute to every task, so no legal lineup empties one: ${role}.${task}`,
         );
       }
+    }
+
+    const allocated = tacticalRoleAllocationTotal(taskAllocations);
+    if (!Number.isSafeInteger(allocated)) {
+      throw new MatchTacticsCalibrationError(
+        "outfield_role_budget_not_conserved",
+        `Task allocations overflow the safe integer range for ${role}: ${allocated}`,
+      );
+    }
+    if (role !== "goalkeeper" && allocated !== outfieldRoleBudgetBasisPoints) {
+      throw new MatchTacticsCalibrationError(
+        "outfield_role_budget_not_conserved",
+        `Outfield role ${role} allocates ${allocated}, expected ${outfieldRoleBudgetBasisPoints}`,
+      );
     }
   }
 }
