@@ -44,13 +44,14 @@ test("two identical shapes contest every route evenly", () => {
   for (const route of TACTICAL_ROUTES) {
     assert.equal(matchup.routes[route].ownChain, matchupOf(BALANCED, BALANCED).routes[route].ownChain);
     assert.equal(
-      matchup.routes[route].capacity,
-      matchupOf(BALANCED, BALANCED).routes[route].capacity,
+      matchup.routes[route].opponentResistance,
+      matchupOf(BALANCED, BALANCED).routes[route].opponentResistance,
       `${route} must be identical for identical shapes`,
     );
   }
 
-  assert.equal(matchup.routes.left.capacity, matchup.routes.right.capacity);
+  assert.equal(matchup.routes.left.ownChain, matchup.routes.right.ownChain);
+  assert.equal(matchup.routes.left.opponentResistance, matchup.routes.right.opponentResistance);
 });
 
 test("swapping which side attacks is stable, not order dependent", () => {
@@ -68,9 +69,14 @@ test("mirroring both shapes mirrors every route", () => {
 
   for (const route of TACTICAL_ROUTES) {
     assert.equal(
-      mirrored.routes[TACTICAL_ROUTE_MIRROR[route]].capacity,
-      original.routes[route].capacity,
+      mirrored.routes[TACTICAL_ROUTE_MIRROR[route]].ownChain,
+      original.routes[route].ownChain,
       `${route} must mirror onto ${TACTICAL_ROUTE_MIRROR[route]}`,
+    );
+    assert.equal(
+      mirrored.routes[TACTICAL_ROUTE_MIRROR[route]].opponentResistance,
+      original.routes[route].opponentResistance,
+      `${route} resistance must mirror onto ${TACTICAL_ROUTE_MIRROR[route]}`,
     );
   }
 });
@@ -90,8 +96,7 @@ test("no shape pairing produces NaN, a negative value, or an unclamped one", () 
     for (const opponent of shapes) {
       const matchup = matchupOf(own, opponent);
       for (const route of TACTICAL_ROUTES) {
-        const { capacity, ownChain, opponentResistance } = matchup.routes[route];
-        assert.equal(Number.isFinite(capacity) && capacity >= 0 && capacity <= 1, true, `${route} capacity ${capacity}`);
+        const { ownChain, opponentResistance } = matchup.routes[route];
         assert.equal(Number.isFinite(ownChain) && ownChain >= 0, true, `${route} chain ${ownChain}`);
         assert.equal(
           Number.isFinite(opponentResistance) && opponentResistance >= 0,
@@ -107,16 +112,16 @@ test("a flank with nobody on it is nearly shut, but the ball can still go long",
   const matchup = matchupOf(NO_LEFT_SIDE, BALANCED);
 
   assert.equal(matchup.routes.left.bottleneck, "left_progression");
-  assert.equal(matchup.routes.left.capacity < matchup.routes.right.capacity * 0.6, true, "the dead flank must collapse");
-  assert.equal(matchup.routes.left.capacity > 0, true, "without deleting the route: a long ball still exists");
+  assert.equal(matchup.routes.left.ownChain < matchup.routes.right.ownChain * 0.6, true, "the dead flank must collapse");
+  assert.equal(matchup.routes.left.ownChain > 0, true, "without deleting the route: a long ball still exists");
   assert.equal(
-    matchup.routes.direct.capacity,
-    matchupOf(BALANCED, BALANCED).routes.direct.capacity,
+    matchup.routes.direct.ownChain,
+    matchupOf(BALANCED, BALANCED).routes.direct.ownChain,
     "and the direct route is untouched by it",
   );
 });
 
-test("a shape with no capacity anywhere produces zeroes rather than NaN", () => {
+test("a shape with no capacity anywhere produces zero chains rather than NaN", () => {
   const nothing = Object.fromEntries(TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, 0]));
   const empty: TacticalShapeProfile = {
     policyVersion: POLICY,
@@ -124,7 +129,7 @@ test("a shape with no capacity anywhere produces zeroes rather than NaN", () => 
   };
 
   for (const route of TACTICAL_ROUTES) {
-    assert.equal(matchupOf(empty, empty).routes[route].capacity, 0, `${route} must be zero, not NaN`);
+    assert.equal(matchupOf(empty, empty).routes[route].ownChain, 0, `${route} must be zero, not NaN`);
   }
 });
 
@@ -149,26 +154,26 @@ test("a route is limited by its weakest phase, and says which one", () => {
 
   assert.equal(matchupOf(brokenMiddle, BALANCED).routes.central.bottleneck, "central_progression");
   assert.equal(
-    matchupOf(brokenMiddle, BALANCED).routes.central.capacity < matchupOf(BALANCED, BALANCED).routes.central.capacity,
+    matchupOf(brokenMiddle, BALANCED).routes.central.ownChain < matchupOf(BALANCED, BALANCED).routes.central.ownChain,
     true,
     "a broken middle must cost the central route",
   );
   assert.equal(
-    matchupOf(brokenMiddle, BALANCED).routes.direct.capacity,
-    matchupOf(BALANCED, BALANCED).routes.direct.capacity,
+    matchupOf(brokenMiddle, BALANCED).routes.direct.ownChain,
+    matchupOf(BALANCED, BALANCED).routes.direct.ownChain,
     "going direct skips the broken phase entirely",
   );
 });
 
 test("repairing the bottleneck helps more than improving what already works", () => {
   const broken = profile({ central_progression: 0.15 });
-  const base = matchupOf(broken, BALANCED).routes.central.capacity;
+  const base = matchupOf(broken, BALANCED).routes.central.ownChain;
 
-  const repaired = matchupOf(profile({ central_progression: 0.35 }), BALANCED).routes.central.capacity;
+  const repaired = matchupOf(profile({ central_progression: 0.35 }), BALANCED).routes.central.ownChain;
   const polished = matchupOf(
     profile({ central_progression: 0.15, final_third_presence: 0.72 }),
     BALANCED,
-  ).routes.central.capacity;
+  ).routes.central.ownChain;
 
   assert.equal(repaired > base, true, "fixing the bottleneck must help");
   assert.equal(polished > base, true, "a stronger front line still counts for something");
@@ -182,9 +187,9 @@ test("a coherent press bites into build-up and only into build-up", () => {
   const loose = matchupOf(BALANCED, looseOpponent).routes;
   const fierce = matchupOf(BALANCED, fierceOpponent).routes;
 
-  assert.equal(fierce.central.capacity < loose.central.capacity, true, "pressing must hurt the built-up routes");
-  assert.equal(fierce.direct.capacity < loose.direct.capacity, true, "direct play still starts from the back");
-  assert.equal(fierce.transition.capacity, loose.transition.capacity, "a counter does not wait for build-up");
+  assert.equal(fierce.central.ownChain < loose.central.ownChain, true, "pressing must hurt the built-up routes");
+  assert.equal(fierce.direct.ownChain < loose.direct.ownChain, true, "direct play still starts from the back");
+  assert.equal(fierce.transition.ownChain, loose.transition.ownChain, "a counter does not wait for build-up");
   assert.equal(fierce.central.bottleneck, "build_up", "and the press is named as the reason");
 });
 
@@ -193,7 +198,7 @@ test("an incoherent press is a weak press", () => {
   const incoherent = profile({ pressing_cohesion: 0.20 });
 
   assert.equal(
-    matchupOf(BALANCED, coherent).routes.central.capacity < matchupOf(BALANCED, incoherent).routes.central.capacity,
+    matchupOf(BALANCED, coherent).routes.central.ownChain < matchupOf(BALANCED, incoherent).routes.central.ownChain,
     true,
   );
 });
@@ -204,27 +209,43 @@ test("a flank overload is punished by whoever is weak on the opposite flank", ()
   const versusWeak = matchupOf(LEFT_OVERLOAD, weakOnItsRight).routes;
   const versusBalanced = matchupOf(LEFT_OVERLOAD, BALANCED).routes;
 
-  assert.equal(versusWeak.left.capacity > versusBalanced.left.capacity, true, "the overloaded flank must open up");
-  assert.equal(versusWeak.right.capacity, versusBalanced.right.capacity, "the other flank is untouched");
+  assert.equal(
+    versusWeak.left.opponentResistance < versusBalanced.left.opponentResistance,
+    true,
+    "the overloaded flank must meet less resistance",
+  );
+  assert.equal(versusWeak.right.opponentResistance, versusBalanced.right.opponentResistance, "the other flank is untouched");
 });
 
-test("a front-loaded shape trades its flanks for the counter", () => {
+test("a front-loaded shape buys the counter and concedes its flanks", () => {
   const extremeAttacks = matchupOf(EXTREME_ATTACK, BALANCED).routes;
+  const ordinaryAttacks = matchupOf(BALANCED, BALANCED).routes;
   const balancedAttacks = matchupOf(BALANCED, EXTREME_ATTACK).routes;
 
-  assert.equal(extremeAttacks.transition.capacity > balancedAttacks.transition.capacity, true, "it counters better");
-  assert.equal(extremeAttacks.left.capacity < balancedAttacks.left.capacity, true, "and is worse down the flanks");
-  assert.equal(balancedAttacks.left.capacity > 0.5, true, "which the balanced side can exploit");
+  assert.equal(extremeAttacks.transition.ownChain > ordinaryAttacks.transition.ownChain, true, "it counters better");
+  assert.equal(
+    balancedAttacks.left.opponentResistance < matchupOf(BALANCED, BALANCED).routes.left.opponentResistance,
+    true,
+    "which the balanced side can exploit",
+  );
 });
 
 test("a defence-loaded shape is hard to break down and cannot get out", () => {
   const deepBlockAttacks = matchupOf(EXTREME_DEFENCE, BALANCED).routes;
   const balancedAttacks = matchupOf(BALANCED, EXTREME_DEFENCE).routes;
 
-  assert.equal(balancedAttacks.central.capacity < 0.5, true, "attacking it must be hard");
-  assert.equal(deepBlockAttacks.central.capacity < 0.5, true, "but it cannot progress either");
   assert.equal(
-    deepBlockAttacks.direct.capacity > deepBlockAttacks.central.capacity,
+    balancedAttacks.central.opponentResistance > matchupOf(BALANCED, BALANCED).routes.central.opponentResistance,
+    true,
+    "attacking it must be hard",
+  );
+  assert.equal(
+    deepBlockAttacks.central.ownChain < matchupOf(BALANCED, BALANCED).routes.central.ownChain,
+    true,
+    "but it cannot progress either",
+  );
+  assert.equal(
+    deepBlockAttacks.direct.ownChain > deepBlockAttacks.central.ownChain,
     true,
     "so its best way out is direct",
   );
@@ -235,7 +256,7 @@ test("stronger players in the same shape improve every route", () => {
 
   for (const route of TACTICAL_ROUTES) {
     assert.equal(
-      matchupOf(better, BALANCED).routes[route].capacity > matchupOf(BALANCED, BALANCED).routes[route].capacity,
+      matchupOf(better, BALANCED).routes[route].ownChain > matchupOf(BALANCED, BALANCED).routes[route].ownChain,
       true,
       `${route} must reward quality`,
     );

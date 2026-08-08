@@ -7,7 +7,6 @@ import { deriveRng, type Rng } from "@game/shared";
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
 import { buildOccasionContext } from "./occasion-context.ts";
 import type { ResolveOccasionInput } from "./occasion-resolver.ts";
-import { EVEN_CONTEST_ROUTE_CAPACITY } from "./opportunity-route.ts";
 import { createInitialMatchSimulationState, type MatchSide } from "./match-simulation-state.ts";
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
 import type { MatchEngineConfig } from "./match-engine-config.ts";
@@ -101,9 +100,9 @@ test("the same players create better chances down a route they own", () => {
   // the way through changes. Without this the shape decides how *many* chances
   // a side gets and never how good they are, so two equal-quality sides in
   // different shapes produce chances that are indistinguishable one by one.
-  const owned = outcomesOver({ routeCapacity: 0.65 });
-  const contested = outcomesOver({ routeCapacity: EVEN_CONTEST_ROUTE_CAPACITY });
-  const shut = outcomesOver({ routeCapacity: 0.35 });
+  const owned = outcomesOver({ routeQualityEdge: 0.0375 });
+  const contested = outcomesOver({ routeQualityEdge: 0 });
+  const shut = outcomesOver({ routeQualityEdge: -0.0375 });
 
   assert.equal(
     owned.goal > contested.goal && contested.goal > shut.goal,
@@ -122,13 +121,13 @@ test("an evenly contested route is worth exactly nothing", () => {
   // proportional to raw capacity rather than to distance from an even contest
   // would lift every chance in every match and read as separation.
   const resolver = new AggregateOccasionResolver();
-  const qualityAt = (routeCapacity: number): number =>
-    resolver.resolveOccasion(occasionFor({ routeCapacity }), rngFor("even")).quality;
+  const qualityAt = (routeQualityEdge: number): number =>
+    resolver.resolveOccasion(occasionFor({ routeQualityEdge }), rngFor("even")).quality;
 
-  assert.equal(qualityAt(EVEN_CONTEST_ROUTE_CAPACITY), qualityAt(EVEN_CONTEST_ROUTE_CAPACITY));
+  assert.equal(qualityAt(0), qualityAt(0));
   assert.equal(
-    qualityAt(EVEN_CONTEST_ROUTE_CAPACITY) > qualityAt(0.4)
-      && qualityAt(EVEN_CONTEST_ROUTE_CAPACITY) < qualityAt(0.6),
+    qualityAt(0) > qualityAt(-0.025)
+      && qualityAt(0) < qualityAt(0.025),
     true,
     "the even contest must sit between a route given up and a route won",
   );
@@ -171,7 +170,7 @@ interface DepartmentStrengths {
 
 /** What a case varies; anything unset stays ordinary or evenly contested. */
 interface StrengthOptions extends Partial<DepartmentStrengths> {
-  readonly routeCapacity?: number;
+  readonly routeQualityEdge?: number;
 }
 
 interface OutcomeCounts {
@@ -229,7 +228,7 @@ function occasionFor(options: StrengthOptions): ResolveOccasionInput {
       defendingSide: "away",
       minute: 10,
       route: "central",
-      routeCapacity: options.routeCapacity ?? EVEN_CONTEST_ROUTE_CAPACITY,
+      routeQualityEdge: options.routeQualityEdge ?? 0,
       scoreBeforeOccasion: simulation.score,
     }),
   };

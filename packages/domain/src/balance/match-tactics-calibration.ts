@@ -1,6 +1,7 @@
 import {
   NEUTRAL_TACTIC_MENTALITY,
   TACTIC_MENTALITIES,
+  type LateralFocus,
   type TacticMentalityKey,
 } from "../entities/tactic.entity.ts";
 import { CANONICAL_PLAYER_ROLES, type CanonicalPlayerRole } from "../tactics/player-roles.ts";
@@ -271,6 +272,27 @@ export const TACTICAL_ROUTE_MIRROR = {
   direct: "direct",
   transition: "transition",
 } as const satisfies Readonly<Record<TacticalRoute, TacticalRoute>>;
+
+/** The attacking route a lateral commitment reallocates budget towards. */
+export const LATERAL_FOCUS_ROUTE = {
+  balanced: null,
+  left: "left",
+  right: "right",
+} as const satisfies Readonly<Record<LateralFocus, TacticalRoute | null>>;
+
+/**
+ * The route a lateral commitment opens for the opponent.
+ *
+ * The labels are from the attacking side's point of view. Committing players
+ * down your left leaves space behind them on that side; an opponent facing you
+ * reaches that space down *its* right. This opposite label is therefore the
+ * connected cost, not an arbitrary second flank decision.
+ */
+export const LATERAL_FOCUS_EXPOSED_ROUTE = {
+  balanced: null,
+  left: "right",
+  right: "left",
+} as const satisfies Readonly<Record<LateralFocus, TacticalRoute | null>>;
 
 /**
  * One numeric tactic instruction a manager sets on the `0..1` scale.

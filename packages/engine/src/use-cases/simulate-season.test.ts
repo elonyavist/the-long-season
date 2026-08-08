@@ -116,6 +116,14 @@ test("stable season seed produces a compact golden sentinel", () => {
   // loss (28 -> 27 points) and the leading scorer finishes on six rather than
   // seven. The sentinel keeps those two consequences visible so a later edit
   // cannot claim the conservation migration was result-neutral.
+  //
+  // Phase 81A Step 05 then made the conserved route plan the only tactical
+  // owner of chance quality and control. The same 306 fixtures keep their
+  // champion, bottom club, endpoints and leading scorer; the runner-up scores
+  // one fewer goal, turning one win into a draw (47 -> 45 points), and the two
+  // five-goal tie places therefore belong to different players. This is the
+  // narrow result change expected when routes are contested before the minute
+  // loop instead of control reconstructing a second tactical model.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -160,13 +168,13 @@ test("stable season seed produces a compact golden sentinel", () => {
         position: 2,
         clubId: clubId("club:test-01"),
         played: 34,
-        wins: 7,
-        draws: 26,
+        wins: 6,
+        draws: 27,
         losses: 1,
-        goalsFor: 10,
+        goalsFor: 9,
         goalsAgainst: 2,
-        goalDifference: 8,
-        points: 47,
+        goalDifference: 7,
+        points: 45,
       },
       bottom: {
         position: 18,
@@ -203,13 +211,13 @@ test("stable season seed produces a compact golden sentinel", () => {
           goals: 6,
         },
         {
-          playerId: playerId("player:test-01-04"),
-          clubId: clubId("club:test-01"),
+          playerId: playerId("player:test-03-02"),
+          clubId: clubId("club:test-03"),
           goals: 5,
         },
         {
-          playerId: playerId("player:test-03-02"),
-          clubId: clubId("club:test-03"),
+          playerId: playerId("player:test-04-02"),
+          clubId: clubId("club:test-04"),
           goals: 5,
         },
       ],

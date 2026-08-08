@@ -8,7 +8,6 @@ import { buildOccasionContext, type OccasionContext } from "./occasion-context.t
 import type { MatchContext, MatchPlayerIncidentProfile, MatchTeamContext } from "./match-context.ts";
 import type { MatchEngineConfig } from "./match-engine-config.ts";
 import { createInitialMatchSimulationState, type MatchSimulationState } from "./match-simulation-state.ts";
-import { EVEN_CONTEST_ROUTE_CAPACITY } from "./opportunity-route.ts";
 import { createLineupSlot } from "./team-strength.ts";
 import {
   matchTacticsCalibrationFixture,
@@ -233,7 +232,7 @@ function occasionAt(simulation: MatchSimulationState, minute: number, route: Tac
     defendingSide: "away",
     minute,
     route,
-    routeCapacity: EVEN_CONTEST_ROUTE_CAPACITY,
+    routeQualityEdge: 0,
     scoreBeforeOccasion: simulation.score,
   });
 }

@@ -10,7 +10,7 @@ import {
 } from "@game/domain";
 
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
-import { deriveOpportunityRoutePlan } from "./opportunity-route.ts";
+import { deriveOpportunityRoutePlan, opportunityRouteSaturation } from "./opportunity-route.ts";
 import type { MatchScore, MatchSide, MatchSimulationStats } from "./match-simulation-state.ts";
 import type { MatchStepEvent } from "./step-match.ts";
 
@@ -366,6 +366,8 @@ function createRouteSnapshots(
     opponent: opponent.shape,
     ownTactics: team.tacticalDistribution,
     opponentTactics: opponent.tacticalDistribution,
+    lateralFocus: "balanced",
+    opponentLateralFocus: "balanced",
     caps: context.engineConfig.tacticalDistributionCaps,
     calibration: context.matchTacticsCalibration,
     goalDifference: KICKOFF_GOAL_DIFFERENCE,
@@ -373,8 +375,8 @@ function createRouteSnapshots(
 
   return TACTICAL_ROUTES.map((route) => ({
     route,
-    capacity: plan.capacityByRoute[route],
-    bottleneck: plan.bottleneckByRoute[route],
+    capacity: opportunityRouteSaturation(plan, route),
+    bottleneck: plan.contestByRoute[route].bottleneck,
   }));
 }
 

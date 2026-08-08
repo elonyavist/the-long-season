@@ -43,6 +43,27 @@ export const NEUTRAL_TACTIC_MENTALITY: TacticMentalityKey = "balanced";
 export type TacticKnobValue = number;
 
 /**
+ * One side's deliberate lateral commitment for the current match plan.
+ *
+ * Formation remains geometry: it says where the selected players stand.
+ * Lateral focus says which flank the plan commits to *now*. Keeping this as a
+ * separate closed vocabulary prevents the formation catalog from acquiring
+ * mirrored duplicates whose only difference is an instruction.
+ *
+ * The key is in-memory until Phase 81A Step 14 integrates every durable phase
+ * fact in one beta reset. It is deliberately not a field of `TacticSetup` yet.
+ */
+export type LateralFocus = "balanced" | "left" | "right";
+
+/** Deterministic order used by analytic action enumeration and reports. */
+export const LATERAL_FOCUSES = ["balanced", "left", "right"] as const satisfies readonly LateralFocus[];
+
+/** Narrows an unknown value to the complete lateral-focus vocabulary. */
+export function isLateralFocus(value: unknown): value is LateralFocus {
+  return typeof value === "string" && (LATERAL_FOCUSES as readonly string[]).includes(value);
+}
+
+/**
  * One explicit selected-lineup slot.
  *
  * Slot order is meaningful and must be preserved by callers.

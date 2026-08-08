@@ -1,9 +1,13 @@
 import {
+  LATERAL_FOCUS_EXPOSED_ROUTE,
+  LATERAL_FOCUS_ROUTE,
+  TACTIC_KNOB_CONTROL_DIRECTION,
   TACTIC_KNOB_EXPOSED_ROUTE,
   TACTIC_KNOB_FAVOURED_ROUTES,
   TACTIC_KNOBS,
   TACTICAL_ROUTES,
   type MatchTacticsCalibrationConfig,
+  type LateralFocus,
   type ShotChanceType,
   type TacticKnob,
   type TacticalRoute,
@@ -17,32 +21,51 @@ import { deriveTacticalMatchup } from "./tactical-matchup.ts";
 import type { TacticalShapeProfile } from "./tactical-shape.ts";
 
 /**
+ * Irreducible facts for one route before saturation and selection are derived.
+ *
+ * Allocation and resistance must remain separate: their ratio is derivable,
+ * while the two inputs say whether a route failed because the side starved it
+ * or because the opponent genuinely closed it.
+ */
+export interface OpportunityRouteContest {
+  /** Conserved amount of the side's available route-chain budget. */
+  readonly allocation: number;
+  /** Opponent chain standing in the way before connected exposure acts. */
+  readonly resistance: number;
+  /** Signed space handed over by the opponent's commitments. */
+  readonly exposure: number;
+  /** Own phase that limited the route before allocation. */
+  readonly bottleneck: TacticalShapeCapacity;
+}
+
+/**
  * How one side intends to attack this minute, and what that costs it.
  *
- * A plan is a pure function of the two shapes, the two tactic setups, and the
- * score. It is rebuilt each minute rather than carried in state, because every
- * one of those inputs can change at a minute boundary - a substitution, a
- * tactic change, a goal - and a cached plan would quietly describe the match as
- * it was rather than as it is.
+ * A plan is a pure function of the two shapes, the two tactic setups, both
+ * lateral instructions and the score. It is rebuilt each minute rather than
+ * carried in state, because any one of those inputs can change at a minute
+ * boundary and a cached plan would quietly describe football that is gone.
  */
 export interface OpportunityRoutePlan {
   /** Calibration version both shapes were derived under. */
   readonly policyVersion: string;
-  /** Bounded capacity per route after both sides' tactics have acted. */
-  readonly capacityByRoute: Readonly<Record<TacticalRoute, number>>;
-  /** Selection weight per route. Sums to `1`. */
-  readonly weightByRoute: Readonly<Record<TacticalRoute, number>>;
+  /** Match-time lateral instruction; durable ownership arrives in Step 14. */
+  readonly lateralFocus: LateralFocus;
+  /** Irreducible allocation, resistance and exposure facts per route. */
+  readonly contestByRoute: Readonly<Record<TacticalRoute, OpportunityRouteContest>>;
   /** Bounded multiplier on this side's per-minute opportunity rate. */
   readonly volumeMultiplier: number;
   /**
-   * The own phase that limited each route, straight from the matchup chain.
-   *
-   * Kept because it cannot be recovered from the capacities: a route reports
-   * one bounded number, and which of its phases was the weak link is a fact
-   * only the chain that produced it knows. It is what lets the post-match
-   * explanation say *why* a way through was shut instead of only that it was.
+   * Tactical/shape multiplier applied to the midfield's possession claim.
+   * Match state still owns condition, venue, score pressure and dismissals.
    */
-  readonly bottleneckByRoute: Readonly<Record<TacticalRoute, TacticalShapeCapacity>>;
+  readonly controlMultiplier: number;
+  /** Relief direct play receives when this side has less of the ball. */
+  readonly counterOpportunityRelief: number;
+  /** Integer power used when derived route saturations become selection weights. */
+  readonly routeSelectionSharpness: number;
+  /** Magnitude that turns route saturation into a chance-quality edge. */
+  readonly routeQualityBias: number;
 }
 
 /** Input for planning one side's minute. */
@@ -55,6 +78,10 @@ export interface DeriveOpportunityRoutePlanInput {
   readonly ownTactics: MatchTacticalDistributionInput;
   /** Tactic setup of the opponent, which decides what this side is handed. */
   readonly opponentTactics: MatchTacticalDistributionInput;
+  /** Which flank this side commits to for this minute. */
+  readonly lateralFocus: LateralFocus;
+  /** Opponent's commitment, which decides the connected flank exposed here. */
+  readonly opponentLateralFocus: LateralFocus;
   /** Caps used to read each knob as an intensity in `0..1`. */
   readonly caps: TacticalDistributionCaps;
   /** Versioned calibration supplied by the caller. */
@@ -112,9 +139,10 @@ export class OpportunityRouteError extends Error {
  *    matchup is the only place that capacity contests build-up. Pressing is
  *    never multiplied a second time afterwards, which is what keeps a press
  *    from paying twice for one instruction.
- * 2. **A knob lifts the routes it is about.** Directness lifts the long ball,
- *    width lifts both flanks, pressing lifts the counter it wins high up. Risk
- *    lifts nothing: it is about how often you commit, not about where you go.
+ * 2. **A knob reallocates towards the routes it is about.** Directness buys the
+ *    long ball, width buys both flanks, pressing buys transition - and the one
+ *    common scale takes the same amount out of the other routes. Risk favours
+ *    none: it is about how often a side commits, not where it goes.
  * 3. **A knob hands the opponent exactly one route.** Playing long invites the
  *    counter; pressing invites the ball over the top; going wide opens the
  *    middle. This is the same magnitude arriving from the *other* side's
@@ -124,16 +152,27 @@ export class OpportunityRouteError extends Error {
  *    scale volume alone. A side chasing a goal attacks more often; it does not
  *    suddenly discover a flank it did not have.
  *
- * Weights are the resulting capacities normalized, so a side with one open
+ * Lateral focus uses width's authored magnitude to move budget from one flank
+ * to the other; it does not introduce a second coefficient for the same idea.
+ * Weights derive from the resulting saturations, so a side with one open
  * route uses it and a side with five equal routes spreads across them. Nothing
  * here consumes randomness: selection is a separate, explicit step.
  *
  * @example
- * const plan = deriveOpportunityRoutePlan({ own, opponent, ownTactics, opponentTactics, caps, calibration, goalDifference: 0 });
- * plan.weightByRoute.left; // how much this side wants the left flank
+ * const plan = deriveOpportunityRoutePlan({ own, opponent, ownTactics, opponentTactics, lateralFocus: "left", opponentLateralFocus: "balanced", caps, calibration, goalDifference: 0 });
+ * opportunityRouteWeights(plan).left; // how much this side wants the left flank
  */
 export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInput): OpportunityRoutePlan {
-  const { own, opponent, ownTactics, opponentTactics, caps, calibration } = input;
+  const {
+    own,
+    opponent,
+    ownTactics,
+    opponentTactics,
+    lateralFocus,
+    opponentLateralFocus,
+    caps,
+    calibration,
+  } = input;
 
   if (own.policyVersion !== opponent.policyVersion) {
     throw new OpportunityRouteError(
@@ -149,55 +188,142 @@ export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInpu
     calibration,
   });
 
-  const capacityByRoute = {} as Record<TacticalRoute, number>;
-  const bottleneckByRoute = {} as Record<TacticalRoute, TacticalShapeCapacity>;
+  const routeBias = {} as Record<TacticalRoute, number>;
+  const baseAllocation = {} as Record<TacticalRoute, number>;
   for (const route of TACTICAL_ROUTES) {
-    let capacity = matchup.routes[route].capacity;
-    bottleneckByRoute[route] = matchup.routes[route].bottleneck;
+    baseAllocation[route] = matchup.routes[route].ownChain;
+    let bias = 0;
 
     for (const knob of TACTIC_KNOBS) {
       const favoured: readonly TacticalRoute[] = TACTIC_KNOB_FAVOURED_ROUTES[knob];
       if (favoured.includes(route)) {
-        capacity *= 1 + share(semantics.routeAffinityBasisPointsByKnob[knob]) * lean(ownTactics, caps, knob);
-      }
-      if (TACTIC_KNOB_EXPOSED_ROUTE[knob] === route) {
-        capacity *= 1 + share(semantics.exposureBasisPointsByKnob[knob]) * lean(opponentTactics, caps, knob);
+        bias += share(semantics.routeAffinityBasisPointsByKnob[knob]) * lean(ownTactics, caps, knob);
       }
     }
 
-    capacityByRoute[route] = clamp(capacity, 0, 1);
+    const focusRoute = LATERAL_FOCUS_ROUTE[lateralFocus];
+    const abandonedRoute = LATERAL_FOCUS_EXPOSED_ROUTE[lateralFocus];
+    const focusMagnitude = share(semantics.routeAffinityBasisPointsByKnob.width);
+    if (focusRoute === route) bias += focusMagnitude;
+    if (abandonedRoute === route) bias -= focusMagnitude;
+    routeBias[route] = bias;
+  }
+
+  const allocationByRoute = conserveRouteBudget(baseAllocation, routeBias);
+  const contestByRoute = {} as Record<TacticalRoute, OpportunityRouteContest>;
+  for (const route of TACTICAL_ROUTES) {
+    let exposure = 0;
+    for (const knob of TACTIC_KNOBS) {
+      if (TACTIC_KNOB_EXPOSED_ROUTE[knob] === route) {
+        exposure += share(semantics.exposureBasisPointsByKnob[knob]) * lean(opponentTactics, caps, knob);
+      }
+    }
+
+    if (LATERAL_FOCUS_EXPOSED_ROUTE[opponentLateralFocus] === route) {
+      exposure += share(semantics.exposureBasisPointsByKnob.width);
+    }
+
+    contestByRoute[route] = {
+      allocation: allocationByRoute[route],
+      resistance: matchup.routes[route].opponentResistance,
+      exposure,
+      bottleneck: matchup.routes[route].bottleneck,
+    };
   }
 
   return {
     policyVersion: own.policyVersion,
-    capacityByRoute,
-    weightByRoute: normalizedWeights(capacityByRoute, semantics.routeSelectionSharpness),
+    lateralFocus,
+    contestByRoute,
     volumeMultiplier: deriveVolumeMultiplier(input, semantics),
-    bottleneckByRoute,
+    controlMultiplier: derivePlanControlMultiplier(input, allocationByRoute),
+    counterOpportunityRelief: knobIntensity(ownTactics, caps, "directness") * COUNTER_RELIEF_AT_FULL_DIRECTNESS,
+    routeSelectionSharpness: semantics.routeSelectionSharpness,
+    routeQualityBias: share(semantics.routeQualityBiasBasisPoints),
   };
 }
 
+/** Derives how much of one route's allocation survives its resistance. */
+export function opportunityRouteSaturation(plan: OpportunityRoutePlan, route: TacticalRoute): number {
+  const contest = plan.contestByRoute[route];
+  const exposedAllocation = Math.max(0, contest.allocation * (1 + contest.exposure));
+  const total = exposedAllocation + contest.resistance;
+
+  return total === 0 ? 0 : exposedAllocation / total;
+}
+
+/** Derives the complete route-selection distribution without storing a copy. */
+export function opportunityRouteWeights(
+  plan: OpportunityRoutePlan,
+): Readonly<Record<TacticalRoute, number>> {
+  const saturationByRoute = {} as Record<TacticalRoute, number>;
+  for (const route of TACTICAL_ROUTES) {
+    saturationByRoute[route] = opportunityRouteSaturation(plan, route);
+  }
+
+  return normalizedWeights(saturationByRoute, plan.routeSelectionSharpness);
+}
+
+/** Tactical quality edge already settled before an occasion chooses actors. */
+export function opportunityRouteQualityEdge(plan: OpportunityRoutePlan, route: TacticalRoute): number {
+  return (opportunityRouteSaturation(plan, route) - EVEN_CONTEST_ROUTE_CAPACITY) * plan.routeQualityBias;
+}
+
+/** Exact route-chain budget available before opponent exposure acts. */
+export function opportunityRouteBudget(plan: OpportunityRoutePlan): number {
+  let total = 0;
+  for (const route of TACTICAL_ROUTES) total += plan.contestByRoute[route].allocation;
+  return total;
+}
+
 /**
- * The route capacity this plan will produce on average.
+ * Complete basis-point signature consumed by structural analysis.
+ *
+ * The encoding is ordered, versioned and outcome-blind. Every dimensionless
+ * numeric fact is rounded once to one basis point; categorical bottlenecks use
+ * their stable keys. It deliberately does not read a win share, response ID or
+ * catalog order, so equivalent grouping cannot become post-output tuning.
+ */
+export function opportunityRouteStrategicSignature(plan: OpportunityRoutePlan): string {
+  const weights = opportunityRouteWeights(plan);
+  const fields: string[] = [STRATEGIC_SIGNATURE_VERSION, plan.policyVersion];
+  for (const route of TACTICAL_ROUTES) {
+    const contest = plan.contestByRoute[route];
+    fields.push(
+      route,
+      fixedPointBasisPoints(contest.allocation),
+      fixedPointBasisPoints(contest.resistance),
+      fixedPointBasisPoints(contest.exposure),
+      fixedPointBasisPoints(opportunityRouteSaturation(plan, route)),
+      fixedPointBasisPoints(weights[route]),
+      fixedPointBasisPoints(opportunityRouteQualityEdge(plan, route)),
+      contest.bottleneck,
+    );
+  }
+  fields.push(
+    fixedPointBasisPoints(opportunityRouteBudget(plan)),
+    fixedPointBasisPoints(plan.volumeMultiplier),
+    fixedPointBasisPoints(plan.controlMultiplier),
+    fixedPointBasisPoints(plan.counterOpportunityRelief),
+    String(plan.routeSelectionSharpness),
+    fixedPointBasisPoints(plan.routeQualityBias),
+  );
+
+  return fields.join("|");
+}
+
+/**
+ * The route saturation this plan will produce on average.
  *
  * Every route is weighted by how often the plan actually takes it, so this is
- * "how good the way through you will really use is" rather than "how good your
- * single best idea is". Reading the maximum instead rewards a side for owning
- * one open route while the other four are shut, which is exactly the lopsided
- * shape the phase exists to punish - and it is not even neutral: two identical
- * sides peak at `0.547` on their best route, so a maximum lifts every match by
- * `7.5%` before any shape has decided anything, while this lands on `0.501`.
- *
- * Derived rather than stored on the plan, because it is a reading of the
- * weights and capacities the plan already carries.
- *
- * @example
- * const capacity = expectedRouteCapacity(plan);
+ * "how good the way through you will really use is" rather than the maximum
+ * route a lopsided shape happens to own.
  */
-export function expectedRouteCapacity(plan: OpportunityRoutePlan): number {
+export function expectedRouteSaturation(plan: OpportunityRoutePlan): number {
+  const weights = opportunityRouteWeights(plan);
   let total = 0;
   for (const route of TACTICAL_ROUTES) {
-    total += plan.capacityByRoute[route] * plan.weightByRoute[route];
+    total += opportunityRouteSaturation(plan, route) * weights[route];
   }
 
   return total;
@@ -215,10 +341,11 @@ export function expectedRouteCapacity(plan: OpportunityRoutePlan): number {
  */
 export function selectOpportunityRoute(plan: OpportunityRoutePlan, rng: Rng): TacticalRoute {
   const roll = rng.nextFloat();
+  const weights = opportunityRouteWeights(plan);
   let cumulative = 0;
 
   for (const route of TACTICAL_ROUTES) {
-    cumulative += plan.weightByRoute[route];
+    cumulative += weights[route];
     if (roll < cumulative) return route;
   }
 
@@ -288,6 +415,84 @@ function deriveVolumeMultiplier(
   const scoreState = 1 + share(semantics.scoreStateCommitmentBasisPoints) * chase;
 
   return clamp(volume * commitment * scoreState, MIN_VOLUME_MULTIPLIER, MAX_VOLUME_MULTIPLIER);
+}
+
+/**
+ * Reallocates an existing route-chain budget without creating any new one.
+ *
+ * Bias changes relative emphasis first; one common scale then returns the sum
+ * to the incoming budget. The final declared route receives the floating-point
+ * remainder, which makes conservation exact in the arithmetic the engine
+ * actually executes. `transition` is its own mirror, so this remainder owner
+ * cannot introduce a left/right preference.
+ */
+function conserveRouteBudget(
+  baseAllocation: Readonly<Record<TacticalRoute, number>>,
+  biasByRoute: Readonly<Record<TacticalRoute, number>>,
+): Readonly<Record<TacticalRoute, number>> {
+  let budget = 0;
+  let biasedTotal = 0;
+  const biased = {} as Record<TacticalRoute, number>;
+  for (const route of TACTICAL_ROUTES) {
+    const allocation = baseAllocation[route];
+    const candidate = Math.max(0, allocation * (1 + biasByRoute[route]));
+    budget += allocation;
+    biased[route] = candidate;
+    biasedTotal += candidate;
+  }
+
+  const allocated = {} as Record<TacticalRoute, number>;
+  if (budget === 0 || biasedTotal === 0) {
+    for (const route of TACTICAL_ROUTES) allocated[route] = 0;
+    return allocated;
+  }
+
+  let assigned = 0;
+  const finalRoute = TACTICAL_ROUTES[TACTICAL_ROUTES.length - 1] as TacticalRoute;
+  for (const route of TACTICAL_ROUTES) {
+    const value = route === finalRoute ? budget - assigned : biased[route] * (budget / biasedTotal);
+    allocated[route] = value;
+    assigned += value;
+  }
+
+  return allocated;
+}
+
+/** Tactical and structural share of control, before match-state effects. */
+function derivePlanControlMultiplier(
+  input: DeriveOpportunityRoutePlanInput,
+  allocationByRoute: Readonly<Record<TacticalRoute, number>>,
+): number {
+  const semantics = input.calibration.tacticalSemantics;
+  const builtRouteCapacity = (
+    allocationByRoute.central
+    + allocationByRoute.left
+    + allocationByRoute.right
+    + allocationByRoute.direct
+  ) / BUILT_ROUTE_COUNT;
+  const shapeShare = share(semantics.shapeControlShareBasisPoints);
+  const shapeControl = (1 - shapeShare) + shapeShare * (builtRouteCapacity / NEUTRAL_CONTROL_ALLOCATION);
+  const control = signedControlMagnitudes(semantics);
+  const tacticalControl =
+    1
+    + lean(input.ownTactics, input.caps, "pressing") * control.pressing
+    + lean(input.ownTactics, input.caps, "risk") * control.risk
+    + lean(input.ownTactics, input.caps, "width") * control.width
+    + lean(input.ownTactics, input.caps, "directness") * control.directness;
+
+  return Math.max(MIN_PLAN_CONTROL_MULTIPLIER, shapeControl * tacticalControl);
+}
+
+/** Signed control magnitudes derived from the one typed direction mapping. */
+function signedControlMagnitudes(
+  semantics: MatchTacticsCalibrationConfig["tacticalSemantics"],
+): Readonly<Record<TacticKnob, number>> {
+  const magnitudes = {} as Record<TacticKnob, number>;
+  for (const knob of TACTIC_KNOBS) {
+    const magnitude = share(semantics.controlBasisPointsByKnob[knob]);
+    magnitudes[knob] = TACTIC_KNOB_CONTROL_DIRECTION[knob] === "increase" ? magnitude : -magnitude;
+  }
+  return magnitudes;
 }
 
 /** Reads one knob as an intensity in `0..1` against its configured cap. */
@@ -405,6 +610,11 @@ function share(basisPoints: number): number {
   return basisPoints / 10_000;
 }
 
+/** Stable signed basis-point encoding for one dimensionless analytic fact. */
+function fixedPointBasisPoints(value: number): string {
+  return String(Math.round(value * 10_000));
+}
+
 function clamp(value: number, minInclusive: number, maxInclusive: number): number {
   return Math.min(maxInclusive, Math.max(minInclusive, value));
 }
@@ -422,3 +632,18 @@ const SCORE_STATE_GOAL_CAP = 2;
 /** Bounds on the per-minute volume multiplier, so no setup can run away. */
 const MIN_VOLUME_MULTIPLIER = 0.6;
 const MAX_VOLUME_MULTIPLIER = 1.7;
+
+/** Encoding contract for complete analytic minute-plan signatures. */
+const STRATEGIC_SIGNATURE_VERSION = "opportunity-route-plan-bps-v1";
+
+/** Four routes retain settled possession; transition starts after possession changes. */
+const BUILT_ROUTE_COUNT = 4;
+
+/** Ordinary chain allocation on the intrinsic tactical-capacity scale. */
+const NEUTRAL_CONTROL_ALLOCATION = 0.5;
+
+/** Keeps a pathological legal plan from deleting its control claim entirely. */
+const MIN_PLAN_CONTROL_MULTIPLIER = 0.01;
+
+/** Existing direct-play relief, moved under the minute plan's single ownership. */
+const COUNTER_RELIEF_AT_FULL_DIRECTNESS = 0.18;

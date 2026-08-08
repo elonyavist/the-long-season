@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "match-tactics-calibration-v2",
+  "version": "match-tactics-calibration-v3",
   "classification": "explicit_game_design_target",
   "tacticalShape": {
     "outfieldRoleBudgetBasisPoints": 42000,

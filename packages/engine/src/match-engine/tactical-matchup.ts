@@ -10,13 +10,6 @@ import type { TacticalShapeProfile } from "./tactical-shape.ts";
 
 /** How one side's route fares against this particular opponent. */
 export interface TacticalRouteMatchup {
-  /**
-   * Bounded share of the contest on this route, in `[0, 1]`.
-   *
-   * `0.5` means the attacking chain and the opposing resistance are evenly
-   * matched. It is a comparison, never a probability and never a goal.
-   */
-  readonly capacity: number;
   /** The attacking chain after the opponent's press has bitten into build-up. */
   readonly ownChain: number;
   /** What the opponent puts in the way, read from its own capacities. */
@@ -124,7 +117,6 @@ export function deriveTacticalMatchup(input: DeriveTacticalMatchupInput): Tactic
     const opponentResistance = chainCapacity(resistances, bottleneckWeight);
 
     routes[route] = {
-      capacity: ownChain === 0 ? 0 : ownChain / (ownChain + opponentResistance),
       ownChain,
       opponentResistance,
       bottleneck: definition.ownChain[weakestLinkIndex(links)] as TacticalShapeCapacity,

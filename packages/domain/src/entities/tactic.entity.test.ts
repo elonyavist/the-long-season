@@ -5,7 +5,9 @@ import { clubId, playerId } from "../types/ids.ts";
 import {
   createSelectedLineup,
   createTacticSetup,
+  isLateralFocus,
   isTacticMentalityKey,
+  LATERAL_FOCUSES,
   TacticContractError,
   type SelectedLineup,
   type SelectedLineupSlot,
@@ -176,6 +178,14 @@ test("isTacticMentalityKey narrows only supported keys", () => {
   assert.equal(isTacticMentalityKey("very_defensive"), true);
   assert.equal(isTacticMentalityKey("balanced"), true);
   assert.equal(isTacticMentalityKey("reckless"), false);
+});
+
+test("lateral focus is one closed deterministic instruction vocabulary", () => {
+  assert.deepEqual(LATERAL_FOCUSES, ["balanced", "left", "right"]);
+  assert.equal(isLateralFocus("balanced"), true);
+  assert.equal(isLateralFocus("left"), true);
+  assert.equal(isLateralFocus("right"), true);
+  assert.equal(isLateralFocus("both"), false);
 });
 
 test("selected lineup and tactic contracts are plain serializable data", () => {

@@ -13,6 +13,7 @@ import {
 } from "@game/domain";
 
 import { deriveMatchMinuteControl } from "./match-control.ts";
+import { deriveOpportunityRoutePlan, type OpportunityRoutePlan } from "./opportunity-route.ts";
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
 import type { MatchEngineConfig } from "./match-engine-config.ts";
 import { createLineupSlot } from "./team-strength.ts";
@@ -149,7 +150,27 @@ function possessionWith(options: ControlOptions): number {
 function controlFor(options: ControlOptions): ReturnType<typeof deriveMatchMinuteControl> {
   const simulation = simulationFor(options);
 
-  return deriveMatchMinuteControl(simulation, telemetryFor(simulation));
+  return deriveMatchMinuteControl(simulation, telemetryFor(simulation), {
+    home: planFor(simulation, "home"),
+    away: planFor(simulation, "away"),
+  });
+}
+
+/** Builds the exact plan whose tactical control the minute consumes. */
+function planFor(simulation: MatchSimulationState, side: "home" | "away"): OpportunityRoutePlan {
+  const own = side === "home" ? simulation.context.home : simulation.context.away;
+  const opponent = side === "home" ? simulation.context.away : simulation.context.home;
+  return deriveOpportunityRoutePlan({
+    own: own.shape,
+    opponent: opponent.shape,
+    ownTactics: own.tacticalDistribution,
+    opponentTactics: opponent.tacticalDistribution,
+    lateralFocus: "balanced",
+    opponentLateralFocus: "balanced",
+    caps: simulation.context.engineConfig.tacticalDistributionCaps,
+    calibration: simulation.context.matchTacticsCalibration,
+    goalDifference: 0,
+  });
 }
 
 /**

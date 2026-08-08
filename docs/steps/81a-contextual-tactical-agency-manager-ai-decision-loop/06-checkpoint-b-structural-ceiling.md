@@ -2,10 +2,16 @@
 
 ## Status
 
-**Closed.** Requires Steps 04-05 Done **and** the Step 05 exit run to restore
-`concededExpectedGoalsReduction >= 0.08` and
-`ownLossPerConcededReduction <= 2.0` on both A2 seed sets. Checkpoint A2's
-conditional `GO` does not authorize this step by itself.
+**Open; next action.** Steps 04-05 are Done. The isolated Step 05 exit run held
+`concededExpectedGoalsReduction` at `0.2088`/`0.2287` and
+`ownLossPerConcededReduction` at `1.1659`/`1.6721` on the in-sample and
+out-of-sample A2 sets, respectively, with exactly seven workers.
+
+The checkpoint consumes `opportunity-route-plan-bps-v1` through
+`opportunityRouteStrategicSignature(...)`. Do not create a second signature,
+reconstruct stored capacities, or add `lateralFocus` to the formation catalog.
+The signature already includes allocation, resistance, exposure, saturation,
+weights, quality, budget, volume and control in deterministic route order.
 
 ## Goal
 

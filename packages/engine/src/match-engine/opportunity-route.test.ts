@@ -16,7 +16,12 @@ import type { TacticalDistributionCaps } from "./match-engine-config.ts";
 import {
   deriveOpportunityRoutePlan,
   EVEN_CONTEST_ROUTE_CAPACITY,
-  expectedRouteCapacity,
+  expectedRouteSaturation,
+  opportunityRouteBudget,
+  opportunityRouteQualityEdge,
+  opportunityRouteSaturation,
+  opportunityRouteStrategicSignature,
+  opportunityRouteWeights,
   OPPORTUNITY_ROUTE_CHANCE_TYPE,
   OpportunityRouteError,
   selectOpportunityRoute,
@@ -38,10 +43,11 @@ import {
 test("weights always describe a complete distribution over the declared routes", () => {
   const plan = planFor({});
 
-  assert.deepEqual(Object.keys(plan.weightByRoute).sort(), [...TACTICAL_ROUTES].sort());
+  assert.deepEqual(Object.keys(opportunityRouteWeights(plan)).sort(), [...TACTICAL_ROUTES].sort());
   assert.equal(Math.abs(sumOfWeights(plan) - 1) < 1e-9, true);
   for (const route of TACTICAL_ROUTES) {
-    assert.equal(plan.capacityByRoute[route] >= 0 && plan.capacityByRoute[route] <= 1, true, route);
+    const saturation = opportunityRouteSaturation(plan, route);
+    assert.equal(saturation >= 0 && saturation <= 1, true, route);
   }
 });
 
@@ -56,7 +62,7 @@ test("a side that decides nothing is handed nothing", () => {
   assert.equal(plan.volumeMultiplier, 1);
   for (const route of TACTICAL_ROUTES) {
     assert.equal(
-      plan.capacityByRoute[route] <= EVEN_CONTEST_ROUTE_CAPACITY,
+      opportunityRouteSaturation(plan, route) <= EVEN_CONTEST_ROUTE_CAPACITY,
       true,
       `${route} was lifted by no decision`,
     );
@@ -72,9 +78,9 @@ test("two identical shapes hand each other no route advantage at all", () => {
   // every match by about 7% before either side had decided anything.
   const mirror = planFor({});
 
-  assert.equal(expectedRouteCapacity(mirror) - expectedRouteCapacity(mirror), 0);
+  assert.equal(expectedRouteSaturation(mirror) - expectedRouteSaturation(mirror), 0);
   assert.equal(
-    expectedRouteCapacity(mirror) < EVEN_CONTEST_ROUTE_CAPACITY,
+    expectedRouteSaturation(mirror) < EVEN_CONTEST_ROUTE_CAPACITY,
     true,
     "an even contest is expected to sit below the point where chain equals resistance",
   );
@@ -91,9 +97,9 @@ test("a shape that opens more of the pitch expects a better way through", () => 
   });
 
   assert.equal(
-    expectedRouteCapacity(strong) > expectedRouteCapacity(weak),
+    expectedRouteSaturation(strong) > expectedRouteSaturation(weak),
     true,
-    `${expectedRouteCapacity(strong)} against ${expectedRouteCapacity(weak)}`,
+    `${expectedRouteSaturation(strong)} against ${expectedRouteSaturation(weak)}`,
   );
 });
 
@@ -103,8 +109,9 @@ test("a side goes to its best route far more often than to its worst", () => {
   // almost as often as its best. Selection sharpness is what stops the plan
   // being an even spread dressed up as a preference.
   const plan = planFor({ own: knobAt("width", 1) as MatchTacticalDistributionInput });
-  const weights = TACTICAL_ROUTES.map((route) => plan.weightByRoute[route]);
-  const capacities = TACTICAL_ROUTES.map((route) => plan.capacityByRoute[route]);
+  const routeWeights = opportunityRouteWeights(plan);
+  const weights = TACTICAL_ROUTES.map((route) => routeWeights[route]);
+  const capacities = TACTICAL_ROUTES.map((route) => opportunityRouteSaturation(plan, route));
   const capacityRatio = Math.max(...capacities) / Math.min(...capacities);
   const weightRatio = Math.max(...weights) / Math.min(...weights);
 
@@ -128,12 +135,22 @@ test("giving a knob up costs what pushing it gains", () => {
 
     for (const route of favoured) {
       assert.equal(
-        abandoned.capacityByRoute[route] < neutral.capacityByRoute[route],
+        opportunityRouteSaturation(abandoned, route) < opportunityRouteSaturation(neutral, route),
         true,
         `${knob} at zero did not give up ${route}`,
       );
     }
   }
+});
+
+test("every tactic preference preserves the same finite route budget", () => {
+  const neutralBudget = opportunityRouteBudget(planFor({}));
+  for (const knob of TACTIC_KNOBS) {
+    assert.equal(opportunityRouteBudget(planFor({ own: knobAt(knob, 0) })), neutralBudget, `${knob} at zero`);
+    assert.equal(opportunityRouteBudget(planFor({ own: knobAt(knob, 1) })), neutralBudget, `${knob} at one`);
+  }
+  assert.equal(opportunityRouteBudget(planFor({ lateralFocus: "left" })), neutralBudget);
+  assert.equal(opportunityRouteBudget(planFor({ lateralFocus: "right" })), neutralBudget);
 });
 
 test("every knob lifts the routes it is declared to be about", () => {
@@ -146,7 +163,7 @@ test("every knob lifts the routes it is declared to be about", () => {
 
     for (const route of favoured) {
       assert.equal(
-        committed.capacityByRoute[route] > calm.capacityByRoute[route],
+        opportunityRouteSaturation(committed, route) > opportunityRouteSaturation(calm, route),
         true,
         `${knob} did not lift ${route}`,
       );
@@ -161,9 +178,9 @@ test("every knob hands the opponent the route it is declared to expose", () => {
     const committed = planFor({ opponent: knobAt(knob, 1) });
 
     assert.equal(
-      committed.capacityByRoute[exposed] > calm.capacityByRoute[exposed],
+      committed.contestByRoute[exposed].exposure > calm.contestByRoute[exposed].exposure,
       true,
-      `${knob} did not open ${exposed} for the other side`,
+      `${knob} did not hand ${exposed} to the other side`,
     );
   }
 });
@@ -175,8 +192,8 @@ test("risk buys attempts rather than a route", () => {
   assert.equal(committed.volumeMultiplier > calm.volumeMultiplier, true, "risk must raise attempt frequency");
   for (const route of TACTICAL_ROUTES) {
     assert.equal(
-      committed.capacityByRoute[route],
-      calm.capacityByRoute[route],
+      opportunityRouteSaturation(committed, route),
+      opportunityRouteSaturation(calm, route),
       `risk moved ${route}, which is not a route instruction`,
     );
   }
@@ -227,7 +244,7 @@ test("pressing pays only when the pressing side can actually press", () => {
   });
 
   assert.equal(
-    coherentPress.capacityByRoute.central < brokenPress.capacityByRoute.central,
+    opportunityRouteSaturation(coherentPress, "central") < opportunityRouteSaturation(brokenPress, "central"),
     true,
     "a coherent press must suppress the attacker more than a broken one",
   );
@@ -264,7 +281,9 @@ test("mentality decides how often, never where", () => {
   const defensive = planFor({ own: { ...neutralTactics(), mentality: "very_defensive" } });
   const attacking = planFor({ own: { ...neutralTactics(), mentality: "very_attacking" } });
 
-  assert.deepEqual(attacking.capacityByRoute, defensive.capacityByRoute);
+  for (const route of TACTICAL_ROUTES) {
+    assert.equal(opportunityRouteSaturation(attacking, route), opportunityRouteSaturation(defensive, route));
+  }
 });
 
 test("the plan names the phase that limited each route", () => {
@@ -276,9 +295,9 @@ test("the plan names the phase that limited each route", () => {
     ownShape: tacticalShapeProfileFixture({ overrides: { left_progression: 0.05 } }),
   });
 
-  assert.deepEqual(Object.keys(plan.bottleneckByRoute).sort(), [...TACTICAL_ROUTES].sort());
+  assert.deepEqual(Object.keys(plan.contestByRoute).sort(), [...TACTICAL_ROUTES].sort());
   assert.equal(
-    plan.bottleneckByRoute.left,
+    plan.contestByRoute.left.bottleneck,
     "left_progression",
     "the phase that was starved must be the one named",
   );
@@ -296,14 +315,72 @@ test("a flank overload is felt as a flank preference, mirrored", () => {
     }),
   });
 
-  assert.equal(leftHeavy.weightByRoute.left > leftHeavy.weightByRoute.right, true);
+  const leftWeights = opportunityRouteWeights(leftHeavy);
+  const rightWeights = opportunityRouteWeights(rightHeavy);
+  assert.equal(leftWeights.left > leftWeights.right, true);
 
   // Mirror symmetry is exact in the model but not bit-exact in floating point:
   // normalizing accumulates the five capacities in a different order for each
   // side. Asserting equality to the last bit would be asserting the addition
   // order, which is not the football claim.
-  assertMirrored(rightHeavy.weightByRoute.right, leftHeavy.weightByRoute.left);
-  assertMirrored(rightHeavy.weightByRoute.left, leftHeavy.weightByRoute.right);
+  assertMirrored(rightWeights.right, leftWeights.left);
+  assertMirrored(rightWeights.left, leftWeights.right);
+});
+
+test("lateral focus reallocates one finite route budget and opens the connected opposite route", () => {
+  const balanced = planFor({});
+  const focused = planFor({ lateralFocus: "left" });
+  const againstFocused = planFor({ opponentLateralFocus: "left" });
+
+  assert.equal(opportunityRouteBudget(focused), opportunityRouteBudget(balanced));
+  assert.equal(focused.contestByRoute.left.allocation > balanced.contestByRoute.left.allocation, true);
+  assert.equal(focused.contestByRoute.right.allocation < balanced.contestByRoute.right.allocation, true);
+  assert.equal(
+    opportunityRouteSaturation(againstFocused, "right") > opportunityRouteSaturation(balanced, "right"),
+    true,
+    "committing your left must open the opponent's right into the space behind it",
+  );
+  assert.equal(againstFocused.contestByRoute.left.exposure, balanced.contestByRoute.left.exposure);
+});
+
+test("left and right focus are exact mirrors over every causal route fact", () => {
+  const left = planFor({ lateralFocus: "left", opponentLateralFocus: "right" });
+  const right = planFor({ lateralFocus: "right", opponentLateralFocus: "left" });
+  const leftWeights = opportunityRouteWeights(left);
+  const rightWeights = opportunityRouteWeights(right);
+
+  for (const [leftRoute, rightRoute] of [
+    ["central", "central"],
+    ["left", "right"],
+    ["right", "left"],
+    ["direct", "direct"],
+    ["transition", "transition"],
+  ] as const) {
+    assertMirrored(left.contestByRoute[leftRoute].allocation, right.contestByRoute[rightRoute].allocation);
+    assertMirrored(left.contestByRoute[leftRoute].resistance, right.contestByRoute[rightRoute].resistance);
+    assertMirrored(left.contestByRoute[leftRoute].exposure, right.contestByRoute[rightRoute].exposure);
+    assertMirrored(opportunityRouteSaturation(left, leftRoute), opportunityRouteSaturation(right, rightRoute));
+    assertMirrored(leftWeights[leftRoute], rightWeights[rightRoute]);
+    assertMirrored(
+      opportunityRouteQualityEdge(left, leftRoute),
+      opportunityRouteQualityEdge(right, rightRoute),
+    );
+  }
+});
+
+test("the strategic signature is deterministic, basis-point fixed and sensitive to a real reallocation", () => {
+  const balanced = planFor({});
+  const repeated = planFor({});
+  const focused = planFor({ lateralFocus: "left" });
+  const exact = { ...balanced, volumeMultiplier: 1 };
+  const belowOneBasisPoint = { ...balanced, volumeMultiplier: 1.00004 };
+  const aboveHalfBasisPoint = { ...balanced, volumeMultiplier: 1.00006 };
+
+  assert.equal(opportunityRouteStrategicSignature(balanced), opportunityRouteStrategicSignature(repeated));
+  assert.notEqual(opportunityRouteStrategicSignature(focused), opportunityRouteStrategicSignature(balanced));
+  assert.equal(opportunityRouteStrategicSignature(exact), opportunityRouteStrategicSignature(belowOneBasisPoint));
+  assert.notEqual(opportunityRouteStrategicSignature(exact), opportunityRouteStrategicSignature(aboveHalfBasisPoint));
+  assert.equal(opportunityRouteStrategicSignature(balanced).includes("opportunity-route-plan-bps-v1"), true);
 });
 
 test("selection is deterministic for one seed and follows the weights", () => {
@@ -358,6 +435,8 @@ interface PlanOptions {
   readonly ownShape?: TacticalShapeProfile;
   readonly opponentShape?: TacticalShapeProfile;
   readonly goalDifference?: number;
+  readonly lateralFocus?: DeriveOpportunityRoutePlanInput["lateralFocus"];
+  readonly opponentLateralFocus?: DeriveOpportunityRoutePlanInput["opponentLateralFocus"];
 }
 
 function planFor(options: PlanOptions): OpportunityRoutePlan {
@@ -370,6 +449,8 @@ function planFor(options: PlanOptions): OpportunityRoutePlan {
     ...(options.own === undefined ? {} : { ownTactics: options.own }),
     ...(options.opponent === undefined ? {} : { opponentTactics: options.opponent }),
     ...(options.goalDifference === undefined ? {} : { goalDifference: options.goalDifference }),
+    ...(options.lateralFocus === undefined ? {} : { lateralFocus: options.lateralFocus }),
+    ...(options.opponentLateralFocus === undefined ? {} : { opponentLateralFocus: options.opponentLateralFocus }),
   });
 }
 
@@ -379,6 +460,8 @@ function baseInput(): DeriveOpportunityRoutePlanInput {
     opponent: tacticalShapeProfileFixture(),
     ownTactics: neutralTactics(),
     opponentTactics: neutralTactics(),
+    lateralFocus: "balanced",
+    opponentLateralFocus: "balanced",
     caps: caps(),
     calibration: matchTacticsCalibrationFixture(),
     goalDifference: 0,
@@ -400,7 +483,8 @@ function caps(): TacticalDistributionCaps {
 }
 
 function sumOfWeights(plan: OpportunityRoutePlan): number {
-  return TACTICAL_ROUTES.reduce((sum, route) => sum + plan.weightByRoute[route], 0);
+  const weights = opportunityRouteWeights(plan);
+  return TACTICAL_ROUTES.reduce((sum, route) => sum + weights[route], 0);
 }
 
 function rngFor(key: string): ReturnType<typeof deriveRng> {

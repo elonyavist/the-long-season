@@ -23,18 +23,11 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **04 conserved tactical contributions is Done; 05 contested
-  routes and lateral focus is next.** All eleven outfield roles now allocate the
-  same `42_000` budget across ten positive tasks; goalkeeper `0`. Calibration
-  schema/content are `2`/`match-tactics-calibration-v2`, with no persistence
-  reset. Gate: `293` files, `2225` tests, `855` modules, exit `0`. Steps 06-16
-  await Step 05's both-set low-block gate.
-- **Owed to Step 05: `ownLossPerConcededReduction` is `2.8051` vs `<= 2.0`
-  out-of-sample.** The legacy chart on the same 81A ability vectors fails at
-  `3.0411`, excluding an adverse chart effect without
-  reconstructing or absolving the full legacy population. The old one-world
-  reader hid the violation; it now pools seven. **Not cleared: Step 05 must
-  restore both seed sets before Step 06 opens.**
+- Step: Phase 81A **05 is Done; Checkpoint B / Step 06 is next.** The minute plan owns allocation, resistance, exposure, saturation, volume, quality and control;
+  `left/right` mirror; one signature owns every strategic fact. Calibration:
+  schema `2`, content `v3`, no reset. Seven-worker A2 exit: reduction
+  `0.2088`/`0.2287`, exchange `1.1659`/`1.6721`, both green. Gate: `294` files,
+  `2231` tests, `856` modules, exit `0`; Steps 07-16 await B.
 - Step 03A Done, `pnpm check` green (`291` files, `2250` tests). **Adopted:
   `wide_midfielder` stays in the Phase 80A sample and `3005` replaces the
   shipped `3034`**, which was fitted to a population that could not generate it.
@@ -177,8 +170,16 @@ silent about which players a manager fields.**
 - **`OpportunityRoutePlan` is the only owner of the minute's tactical
   derivation** (81A Step 01); the explanation trace reads that plan instead of
   rebuilding a matchup that applied no tactic at all. It carries
-  `bottleneckByRoute` - a limiting phase is not recoverable from a capacity -
-  and no `controlCapacity`, which was a dead copy of the live possession formula.
+  `contestByRoute[].bottleneck` - not recoverable from saturation - and no dead
+  `controlCapacity` copy.
+- **Step 05 deepened that owner rather than restoring the copy.** Match control
+  receives both plans and reads no tactic/shape/calibration; occasion resolution
+  receives the plan's centred quality edge. Knobs and lateral focus reallocate
+  one route budget, exposure is a separate opponent fact, and derived
+  saturation/weights/quality/budget are never stored beside their inputs.
+- `opportunity-route-plan-bps-v1` is the sole complete strategic signature for
+  Checkpoint B. It quantizes ordered plan facts at one basis point and reads no
+  outcome, response identity or catalog order.
 
 ### Suitability Seam (Step 05)
 

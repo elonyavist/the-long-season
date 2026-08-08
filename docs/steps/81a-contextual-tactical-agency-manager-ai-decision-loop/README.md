@@ -2,8 +2,9 @@
 
 ## Status
 
-**Active.** Steps 01-03C are Done; Checkpoint U1 recorded `GO`. Step 03D is the
-only next action. Phase 81 is Done and Phase 81A remains the only active phase.
+**Active.** Steps 01-05 are Done; Checkpoints A2/U1/U2 and the Step 05 low-block
+exit recorded `GO`. Checkpoint B / Step 06 is the only next action. Phase 81 is
+Done and Phase 81A remains the only active phase.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -117,8 +118,8 @@ contexts; it never owns the analytic diversity gate.
 
 No later step starts while its preceding checkpoint is unresolved.
 
-**Checkpoint A2 recorded a conditional `GO` on 2026-08-08. Steps 03C-03D are
-Done with U1/U2 `GO`; Step 04 is next.** All seven frozen gates
+**Checkpoint A2 recorded a conditional `GO` on 2026-08-08. Steps 03C-05 are
+Done with U1/U2 `GO`; Checkpoint B / Step 06 is next.** All seven frozen gates
 passed on both seed sets - `topFormationShare` `0.9286` ->
 `0.2063`/`0.2222`, `3` -> `12`/`11` distinct shapes, all ten roles generable -
 and the archetype-mix counterfactual moved `6`/`6` clubs at constant squad
@@ -126,8 +127,9 @@ quality. One guardrail, the low block's `ownLossPerConcededReduction`, reads
 `2.8051` against `<= 2.0` out-of-sample. Checkpoint A2.1 showed that applying
 the legacy chart to the same Phase 81A-generated ability vectors also fails; it
 therefore excludes the chart component as the demonstrated cause without
-recreating or absolving the full pre-81A population. **Step 05 owns the repair,
-and Step 06-16 remain closed until the band holds on both seed sets.**
+recreating or absolving the full pre-81A population. Step 05 restored the band
+on both sets: conceded-xG reduction `0.2088`/`0.2287`, exchange
+`1.1659`/`1.6721`. **Step 06 is open; Steps 07-16 remain checkpoint-closed.**
 
 **Checkpoint A recorded `STOP / RETHINK` on 2026-08-07.** Its preregistered tie
 bias was falsified: `tieDecidedShare` is `0.0000` on `378` real career

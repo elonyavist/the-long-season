@@ -13,8 +13,8 @@ import { deriveRng, type Rng } from "@game/shared";
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
 import {
   deriveOpportunityRoutePlan,
-  EVEN_CONTEST_ROUTE_CAPACITY,
-  expectedRouteCapacity,
+  expectedRouteSaturation,
+  opportunityRouteQualityEdge,
   selectOpportunityRoute,
   type OpportunityRoutePlan,
 } from "./opportunity-route.ts";
@@ -228,7 +228,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
   let nextStats = input.simulation.stats;
   let nextTelemetry = telemetryFor(input.simulation);
   let nextContext = input.simulation.context;
-  const minuteControl = deriveMatchMinuteControl(input.simulation, nextTelemetry);
+  const minuteControl = deriveMatchMinuteControl(input.simulation, nextTelemetry, routePlans);
   nextTelemetry = {
     ...nextTelemetry,
     controlUnits: accumulateControlUnits(nextTelemetry.controlUnits, minuteControl),
@@ -276,7 +276,7 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
       defendingSide,
       minute: currentMinute,
       route,
-      routeCapacity: routePlans[attackingSide].capacityByRoute[route],
+      routeQualityEdge: opportunityRouteQualityEdge(routePlans[attackingSide], route),
       scoreBeforeOccasion: nextScore,
     });
     const resolution = resolver.resolveOccasion({ simulation: input.simulation, occasion }, input.rng);
@@ -414,6 +414,8 @@ function routePlanFor(simulation: MatchSimulationState, side: MatchSide): Opport
     opponent: opponent.shape,
     ownTactics: own.tacticalDistribution,
     opponentTactics: opponent.tacticalDistribution,
+    lateralFocus: "balanced",
+    opponentLateralFocus: "balanced",
     caps: simulation.context.engineConfig.tacticalDistributionCaps,
     calibration: simulation.context.matchTacticsCalibration,
     goalDifference: goalDifferenceFor(simulation.score, side),
@@ -465,7 +467,7 @@ function deriveOpportunityRate(
   controlMultiplier: number,
 ): number {
   const rates = simulation.context.engineConfig.rates;
-  const routeAdvantage = expectedRouteCapacity(plan) - expectedRouteCapacity(opponentPlan);
+  const routeAdvantage = expectedRouteSaturation(plan) - expectedRouteSaturation(opponentPlan);
   const routePressure = 1 + routeAdvantage * ROUTE_CAPACITY_SEPARATION;
   const rate = rates.baseOpportunityRatePerMinute * routePressure * plan.volumeMultiplier * controlMultiplier;
 

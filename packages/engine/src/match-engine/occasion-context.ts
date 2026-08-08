@@ -35,8 +35,8 @@ export interface OccasionContext {
   readonly defendingSide: MatchSide;
   /** The way through the chance came down. */
   readonly route: TacticalRoute;
-  /** Bounded capacity of that route after both sides' tactics have acted. */
-  readonly routeCapacity: number;
+  /** Signed chance-quality edge already settled by the minute plan. */
+  readonly routeQualityEdge: number;
   /** Structured source type, derived from the route alone. */
   readonly chanceType: ShotChanceType;
   /** Structured execution type, derived from the route and the two players contesting it. */
@@ -83,8 +83,8 @@ export interface BuildOccasionContextInput {
   readonly minute: number;
   /** Route already selected for this chance. */
   readonly route: TacticalRoute;
-  /** Bounded capacity of that route. */
-  readonly routeCapacity: number;
+  /** Signed quality edge already derived from the selected route. */
+  readonly routeQualityEdge: number;
   /** Score before this occasion, which distinguishes two chances in one minute. */
   readonly scoreBeforeOccasion: MatchScore;
 }
@@ -103,7 +103,7 @@ export interface BuildOccasionContextInput {
  *   defendingSide: "away",
  *   minute: 18,
  *   route: "left",
- *   routeCapacity: 0.55,
+ *   routeQualityEdge: 0.0125,
  *   scoreBeforeOccasion: simulation.score,
  * });
  * occasion.shooterPlayerId; // decided before the shot is resolved
@@ -133,7 +133,7 @@ export function buildOccasionContext(input: BuildOccasionContextInput): Occasion
     attackingSide: input.attackingSide,
     defendingSide: input.defendingSide,
     route: input.route,
-    routeCapacity: input.routeCapacity,
+    routeQualityEdge: input.routeQualityEdge,
     chanceType,
     shotType,
     creatorPlayerId: actors.creatorPlayerId,

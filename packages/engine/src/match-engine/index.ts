@@ -240,12 +240,19 @@ export {
 
 export {
   deriveOpportunityRoutePlan,
+  expectedRouteSaturation,
   OPPORTUNITY_ROUTE_CHANCE_TYPE,
+  opportunityRouteBudget,
+  opportunityRouteQualityEdge,
+  opportunityRouteSaturation,
+  opportunityRouteStrategicSignature,
+  opportunityRouteWeights,
   OpportunityRouteError,
   selectOpportunityRoute,
   type DeriveOpportunityRoutePlanInput,
   type OpportunityRouteErrorCode,
   type OpportunityRoutePlan,
+  type OpportunityRouteContest,
 } from "./opportunity-route.ts";
 export {
   assembleMatchTeamContext,

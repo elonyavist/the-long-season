@@ -1,6 +1,5 @@
 import type { MatchTeamContext } from "./match-context.ts";
 import type { MatchSide } from "./match-simulation-state.ts";
-import { EVEN_CONTEST_ROUTE_CAPACITY } from "./opportunity-route.ts";
 import type { OccasionResolution, OccasionResolver, ResolveOccasionInput } from "./occasion-resolver.ts";
 import type { Rng } from "@game/shared";
 
@@ -56,8 +55,7 @@ export class AggregateOccasionResolver implements OccasionResolver {
       defendingTeam,
       occasion.attackingSide,
       input.simulation.context.engineConfig.homeAdvantageFactor,
-      occasion.routeCapacity,
-      input.simulation.context.matchTacticsCalibration.tacticalSemantics.routeQualityBiasBasisPoints,
+      occasion.routeQualityEdge,
       occasion.shooterQualityEdge,
       rng,
     );
@@ -142,10 +140,9 @@ function teamBySide(simulation: ResolveOccasionInput["simulation"], side: MatchS
  * term, two elevens of equal quality produce chances of identical quality
  * whatever shape they take, and structure can separate them on volume alone.
  *
- * The route term is measured from `EVEN_CONTEST_ROUTE_CAPACITY`, so a route the
- * two shapes contest evenly adds exactly nothing. That is not a formality: a
- * term proportional to raw capacity would shift every chance in every match
- * upward and call a global inflation "separation".
+ * The minute plan has already centred the route term on an even contest, so a
+ * route the two shapes contest evenly arrives as exactly `0`. The resolver does
+ * not reread tactical calibration or repeat that centring formula.
  *
  * A third thing decides it now: **who hit it**. The shooter edge follows the
  * same rule for the same reason - it is his distance from the players who could
@@ -157,8 +154,7 @@ function deriveOpportunityQuality(
   defendingTeam: MatchTeamContext,
   attackingSide: MatchSide,
   homeAdvantageFactor: number,
-  routeCapacity: number,
-  routeQualityBiasBasisPoints: number,
+  routeQualityEdge: number,
   shooterQualityEdge: number,
   rng: Rng,
 ): number {
@@ -166,11 +162,9 @@ function deriveOpportunityQuality(
   const attackingScore = (attackingTeam.strength.attack * 0.7 + attackingTeam.strength.midfield * 0.3) * homeFactor;
   const defendingScore = defendingTeam.strength.defense * 0.7 + defendingTeam.strength.midfield * 0.3;
   const strengthEdge = (attackingScore - defendingScore) / 40;
-  const routeEdge =
-    (routeCapacity - EVEN_CONTEST_ROUTE_CAPACITY) * (routeQualityBiasBasisPoints / 10_000);
   const randomTexture = (rng.nextFloat() - 0.5) * 0.3;
 
-  return clamp(0.5 + strengthEdge + routeEdge + shooterQualityEdge + randomTexture, 0, 1);
+  return clamp(0.5 + strengthEdge + routeQualityEdge + shooterQualityEdge + randomTexture, 0, 1);
 }
 
 /**
