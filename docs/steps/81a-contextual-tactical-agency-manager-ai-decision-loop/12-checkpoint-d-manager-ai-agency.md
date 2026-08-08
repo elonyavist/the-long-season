@@ -2,7 +2,10 @@
 
 ## Status
 
-Not started; requires Steps 10-11 Done.
+Superseded by Design Contract Amendment A1; do not run this historical
+shared-opponent-read checkpoint. After Checkpoint B2 `GO`, preregister a new D
+that measures manager agency and the bounded MVP AI policy without pretending
+the AI consumes opponent information it does not receive.
 
 ## Goal
 

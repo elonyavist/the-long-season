@@ -2,7 +2,10 @@
 
 ## Status
 
-Not started; requires Step 10 Done.
+Superseded by Design Contract Amendment A1; do not implement this historical
+opponent-aware AI plan. After Checkpoint B2 `GO`, rewrite this step around the
+active own-squad pre-match policy and current-state live policy. A future
+opponent-aware policy remains an extension seam, not MVP scope.
 
 ## Goal
 

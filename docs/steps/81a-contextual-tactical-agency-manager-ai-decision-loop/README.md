@@ -2,9 +2,11 @@
 
 ## Status
 
-**Active.** Steps 01-05 are Done; Checkpoints A2/U1/U2 and the Step 05 low-block
-exit recorded `GO`. Checkpoint B / Step 06 is the only next action. Phase 81 is
-Done and Phase 81A remains the only active phase.
+**Structural redesign authorized after Checkpoint B.** Steps 01-06 are Done;
+Checkpoints A2/U1/U2 and the Step 05 low-block exit recorded `GO`, but
+Checkpoint B recorded `STOP / RETHINK` on 2026-08-08. Design Contract Amendment
+A1 inserts Steps 06A-06C. Step 06A is Done; Step 06B is now the only active
+checkpoint. Steps 07-16 remain closed until Checkpoints L1 and B2 record `GO`.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -20,10 +22,11 @@ into this phase.
 ## User-Facing Goal
 
 Make tactical decisions capable of helping or hurting because they fit the
-available players and exploit or expose something in the opponent. The manager
-and AI must be able to read the same evidence, choose correctly or incorrectly,
-and understand the consequence without any formation or tactic being best by
-definition.
+available players and exploit or expose something in the opponent. In the MVP,
+the manager may use opponent evidence while the AI chooses from its own squad
+and current match state. Both must make explainable decisions without any
+formation or tactic being best by definition; a future opponent-aware AI must
+consume the manager's same evidence rather than hidden facts.
 
 ## Entry Gate
 
@@ -45,10 +48,16 @@ definition.
   operational tolerance `|delta| <= 0.015`.
 - Phase 81A first proves `counter_move_ceiling` with an analysis oracle, then
   separately proves `realized_manager_agency` through observable information.
-- AI formation remains selected from its own squad. Opponent context changes the
-  tactical plan first; this temporary policy asymmetry receives an exploit gate.
-- Manager and AI consume the same `OpponentRead` Interface with the same facts
-  and latency. AI has no future or hidden match-state access.
+- AI formation remains selected from its own squad. In the MVP its pre-match
+  tactical prior also starts from its own squad and selected shape; opponent-
+  aware AI is deferred. The structural oracle may still measure contextual
+  tactic/focus ceiling, but never enters production.
+- Every generated competition receives a deterministic balanced deck of squad
+  identities. Identities name player roles, never formations; AI remains free
+  to select the shape that fits those players.
+- `OpponentRead` remains manager-visible structured evidence. The MVP AI does
+  not consume it. If opponent-aware AI is added later, it must consume that same
+  Interface with the same facts and latency and no future or hidden state.
 - `lateralFocus = balanced | left | right` is the single owner of lateral
   commitment. Formation remains geometry; players own execution.
 - Post-match choice affects only the next match: marginal recovery, plan
@@ -104,13 +113,16 @@ contexts; it never owns the analytic diversity gate.
 | 03D | [report module migration and single CLI entrypoint](03d-report-module-migration-and-single-cli-entrypoint.md) | report/tooling | **U2 `GO`; 04 authorized** |
 | 04 | [conserved tactical contributions](04-conserved-tactical-contributions.md) | yes | Step 05 |
 | 05 | [contested routes and lateral focus](05-contested-routes-and-lateral-focus.md) | yes | both-set low-block gate opens 06 |
-| 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | closed until Step 05 gate; GO authorizes 07 |
+| 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | **`STOP / RETHINK`; 07 remains closed** |
+| 06A | [league squad diversity and MVP AI boundaries](06a-league-squad-diversity-and-mvp-ai-boundaries.md) | population | **Done; Step 06B** |
+| 06B | [Checkpoint L1: 100 worlds x 10 seasons](06b-checkpoint-l1-league-diversity-100x10.md) | no | GO authorizes 06C |
+| 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
-| 10 | [manager opponent read](10-manager-opponent-read.md) | information | Step 11 |
-| 11 | [AI shared opponent read](11-ai-shared-opponent-read.md) | yes | Step 12 |
-| 12 | [Checkpoint D realized agency](12-checkpoint-d-manager-ai-agency.md) | no | GO authorizes 13 |
+| 10 | [manager opponent read](10-manager-opponent-read.md) | information | A1 rescope required before start |
+| 11 | [MVP AI policy - historical opponent-read plan superseded](11-ai-shared-opponent-read.md) | yes | A1 rescope required after B2 |
+| 12 | [Checkpoint D - historical shared-read plan superseded](12-checkpoint-d-manager-ai-agency.md) | no | A1 rescope required after B2 |
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Step 14 |
 | 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |
@@ -118,8 +130,23 @@ contexts; it never owns the analytic diversity gate.
 
 No later step starts while its preceding checkpoint is unresolved.
 
+**Checkpoint B recorded `STOP / RETHINK` on 2026-08-08.** The `207` raw actions
+formed `198` signatures, but only `2` appeared as best responses, ubiquity was
+`121` against `<= 4`, no material cycle existed, and
+`4-2-3-1|high_pressing|balanced` was strictly dominant. The analytic protocol
+therefore did not open Monte Carlo Phase 2. Steps 07-16 remain closed.
+
+**Amendment A1 preserves that result and changes the retry question rather than
+its targets.** Step 06A guarantees balanced identity coverage within each
+competition and freezes the active MVP AI seams without speculative code. L1
+then verifies `100 x 10` longitudinal worlds and produces canonical JSON plus a
+consultable English desktop HTML. Checkpoint B2 holds the squad-selected
+formation fixed and enumerates only `tactic profile + lateralFocus`. The old
+combined-space report remains the before-state; L1 and B2 `GO` are both required
+before Step 07.
+
 **Checkpoint A2 recorded a conditional `GO` on 2026-08-08. Steps 03C-05 are
-Done with U1/U2 `GO`; Checkpoint B / Step 06 is next.** All seven frozen gates
+Done with U1/U2 `GO`; B has now stopped the sequence.** All seven frozen gates
 passed on both seed sets - `topFormationShare` `0.9286` ->
 `0.2063`/`0.2222`, `3` -> `12`/`11` distinct shapes, all ten roles generable -
 and the archetype-mix counterfactual moved `6`/`6` clubs at constant squad
@@ -129,7 +156,9 @@ the legacy chart to the same Phase 81A-generated ability vectors also fails; it
 therefore excludes the chart component as the demonstrated cause without
 recreating or absolving the full pre-81A population. Step 05 restored the band
 on both sets: conceded-xG reduction `0.2088`/`0.2287`, exchange
-`1.1659`/`1.6721`. **Step 06 is open; Steps 07-16 remain checkpoint-closed.**
+`1.1659`/`1.6721`. Step 06 subsequently recorded `STOP / RETHINK`; Step 06A is
+Done with one balanced identity deck per competition. Step 06B is the
+authorized next action and Steps 07-16 remain checkpoint-closed.
 
 **Checkpoint A recorded `STOP / RETHINK` on 2026-08-07.** Its preregistered tie
 bias was falsified: `tieDecidedShare` is `0.0000` on `378` real career
@@ -202,10 +231,13 @@ graphify update .
 - Checkpoints A-E and final F are all GO.
 - Structural oracle ceiling and exposure meet `+0.045/-0.045`; context-free
   expected delta remains zero.
-- Manager and AI realize D agency from the same five observable components;
-  after Step 14 the complete six-component read retains the target.
-- `formation_history` changes a real decision, helps stable sufficient-history
-  clusters by at least `+0.015`, and remains ignored within `0.015` otherwise.
+- Manager agency realizes the structural ceiling from observable information.
+  Amendment A1 requires the exact D population and MVP AI acceptance gate to be
+  preregistered after B2 and before Step 10; the historical shared-read D is not
+  an exit criterion.
+- The contribution of `formation_history` is re-preregistered with that revised
+  D/E design before implementation; its historical AI-parity wording is
+  superseded.
 - Player profiles and squad identity can reverse the preferred choice.
 - Catalog order cannot choose a formation.
 - `low_block` reduces conceded xG by at least `8%` with own-loss/defensive-gain

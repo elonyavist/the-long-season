@@ -1954,7 +1954,7 @@ const TACTICAL_SHAPE_EQUIVALENCE_PAIRS: readonly (readonly [
  * recorded effect belongs to that knob. `neutral` is included deliberately: it
  * plays itself, and its win share is the measurement's own noise reading.
  */
-const TACTICAL_SHAPE_TACTIC_PROFILES: readonly TacticalShapeTacticProfile[] = [
+export const TACTICAL_SHAPE_TACTIC_PROFILES: readonly TacticalShapeTacticProfile[] = [
   TACTICAL_SHAPE_NEUTRAL_TACTIC,
   { tacticKey: "high_pressing", directness: 0.5, pressing: 0.95, width: 0.5, risk: 0.5, mentality: NEUTRAL_TACTIC_MENTALITY },
   { tacticKey: "direct_play", directness: 0.95, pressing: 0.5, width: 0.5, risk: 0.5, mentality: NEUTRAL_TACTIC_MENTALITY },

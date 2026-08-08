@@ -1,6 +1,9 @@
 import {
   CANONICAL_PLAYER_ROLES,
+  FORMATION_KEYS,
+  LATERAL_FOCUSES,
   PLAYER_ROLES,
+  TACTICAL_ROUTES,
   TACTICAL_SHAPE_TASKS,
   evaluatePositionSuitability,
   tacticalRoleAllocationTotal,
@@ -9,6 +12,8 @@ import {
   type ClubId,
   type Fixture,
   type FixtureId,
+  type FormationKey,
+  type LateralFocus,
   type MatchTacticsCalibrationConfig,
   type PlayerId,
   type PlayerRole,
@@ -16,6 +21,12 @@ import {
 } from "@game/domain";
 import {
   selectCareerAiTeam,
+  deriveOpportunityRoutePlan,
+  expectedRouteSaturation,
+  opportunityRouteBudget,
+  opportunityRouteQualityEdge,
+  opportunityRouteStrategicSignature,
+  opportunityRouteWeights,
   simulateMatch,
   type CareerAiTeamSelectionPolicy,
   type MatchContext,
@@ -23,7 +34,16 @@ import {
   type MatchTacticalDistributionInput,
   type MatchTeamContext,
   type PlayerValuationConfig,
+  type TacticalShapeProfile,
 } from "@game/engine";
+
+import {
+  buildTacticalShapeTeamContext,
+  TACTICAL_SHAPE_NEUTRAL_TACTIC,
+  TACTICAL_SHAPE_TACTIC_PROFILES,
+  type TacticalShapeQualityBand,
+  type TacticalShapeTacticProfile,
+} from "../tactical-shape/tactical-shape-audit.ts";
 
 /**
  * Deterministic before-state audit of contextual tactical agency, Phase 81A
@@ -810,6 +830,411 @@ export function buildTacticalAgencyAuditReport(input: {
     selectionsPerSecond: elapsed <= 0 ? 0 : (input.selectionSeries.rows.length * 1_000) / elapsed,
     selectionElapsedMilliseconds: elapsed,
   };
+}
+
+/** Versioned analytic interpretation of the Step 05 minute-plan facts. */
+export const TACTICAL_AGENCY_B_ANALYTIC_CONTRACT_VERSION = "phase81a-b-analytic-threat-v1";
+
+/** Material advantage required for one directed structural arc. */
+export const TACTICAL_AGENCY_B_MATERIAL_ARC_BASIS_POINTS = 100;
+
+/** Existing tactic rows admitted to the complete Checkpoint B action space. */
+export const TACTICAL_AGENCY_B_TACTIC_KEYS = [
+  "high_pressing",
+  "direct_play",
+  "low_block",
+] as const;
+export type TacticalAgencyBTacticKey = typeof TACTICAL_AGENCY_B_TACTIC_KEYS[number];
+
+/** One formation, tactic profile and lateral instruction in the analytic space. */
+export interface TacticalAgencyStructuralAction {
+  readonly actionId: string;
+  readonly formationKey: FormationKey;
+  readonly tacticKey: TacticalAgencyBTacticKey;
+  readonly tactic: MatchTacticalDistributionInput;
+  readonly lateralFocus: LateralFocus;
+  readonly shape: TacticalShapeProfile;
+}
+
+/** Builds the declared `23 x 3 x 3` action space from shared authored facts. */
+export function buildTacticalAgencyStructuralActions(input: {
+  readonly referenceBand: TacticalShapeQualityBand;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}): readonly TacticalAgencyStructuralAction[] {
+  const profiles = TACTICAL_AGENCY_B_TACTIC_KEYS.map((tacticKey) => {
+    const profile = TACTICAL_SHAPE_TACTIC_PROFILES.find((row) => row.tacticKey === tacticKey);
+    if (profile === undefined) {
+      throw new TacticalAgencyAuditError(
+        "empty_work_items",
+        `The shared tactic population has no ${tacticKey} row`,
+      );
+    }
+    return profile;
+  });
+
+  const actions: TacticalAgencyStructuralAction[] = [];
+  for (const formationKey of FORMATION_KEYS) {
+    const shape = buildTacticalShapeTeamContext(
+      {
+        lineup: { kind: "formation", formationKey },
+        band: input.referenceBand,
+        tactic: TACTICAL_SHAPE_NEUTRAL_TACTIC,
+      },
+      "home",
+      input.matchTacticsCalibration,
+    ).shape;
+
+    for (const profile of profiles) {
+      for (const lateralFocus of LATERAL_FOCUSES) {
+        actions.push(structuralAction(formationKey, profile, lateralFocus, shape));
+      }
+    }
+  }
+
+  return actions;
+}
+
+function structuralAction(
+  formationKey: FormationKey,
+  profile: TacticalShapeTacticProfile,
+  lateralFocus: LateralFocus,
+  shape: TacticalShapeProfile,
+): TacticalAgencyStructuralAction {
+  const tacticKey = profile.tacticKey as TacticalAgencyBTacticKey;
+  return {
+    actionId: `${formationKey}|${tacticKey}|${lateralFocus}`,
+    formationKey,
+    tacticKey,
+    lateralFocus,
+    shape,
+    tactic: {
+      directness: profile.directness,
+      pressing: profile.pressing,
+      width: profile.width,
+      risk: profile.risk,
+      mentality: profile.mentality,
+    },
+  };
+}
+
+/** One candidate response measured analytically against one opponent action. */
+export interface TacticalAgencyStructuralCandidateRow {
+  readonly actionId: string;
+  readonly planSignature: string;
+  readonly routeBudget: number;
+  readonly payoffBasisPoints: number;
+}
+
+/** One opponent column of the complete analytic matrix. */
+export interface TacticalAgencyStructuralContextRow {
+  readonly opponentIndex: number;
+  readonly opponentActionId: string;
+  readonly candidates: readonly TacticalAgencyStructuralCandidateRow[];
+}
+
+/** Runs independent opponent columns; callers may shard the index list. */
+export function runTacticalAgencyStructuralAnalyticPartition(input: {
+  readonly actions: readonly TacticalAgencyStructuralAction[];
+  readonly opponentIndexes: readonly number[];
+  readonly engineConfig: MatchEngineConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}): readonly TacticalAgencyStructuralContextRow[] {
+  return input.opponentIndexes.map((opponentIndex) => {
+    const opponent = input.actions[opponentIndex];
+    if (opponent === undefined) {
+      throw new TacticalAgencyAuditError(
+        "empty_work_items",
+        `Analytic opponent index is outside the action space: ${opponentIndex}`,
+      );
+    }
+
+    const candidates = input.actions.map((candidate): TacticalAgencyStructuralCandidateRow => {
+      const ownPlan = deriveOpportunityRoutePlan({
+        own: candidate.shape,
+        opponent: opponent.shape,
+        ownTactics: candidate.tactic,
+        opponentTactics: opponent.tactic,
+        lateralFocus: candidate.lateralFocus,
+        opponentLateralFocus: opponent.lateralFocus,
+        caps: input.engineConfig.tacticalDistributionCaps,
+        calibration: input.matchTacticsCalibration,
+        goalDifference: 0,
+      });
+      const opponentPlan = deriveOpportunityRoutePlan({
+        own: opponent.shape,
+        opponent: candidate.shape,
+        ownTactics: opponent.tactic,
+        opponentTactics: candidate.tactic,
+        lateralFocus: opponent.lateralFocus,
+        opponentLateralFocus: candidate.lateralFocus,
+        caps: input.engineConfig.tacticalDistributionCaps,
+        calibration: input.matchTacticsCalibration,
+        goalDifference: 0,
+      });
+
+      return {
+        actionId: candidate.actionId,
+        planSignature: opportunityRouteStrategicSignature(ownPlan),
+        routeBudget: opportunityRouteBudget(ownPlan),
+        payoffBasisPoints: analyticPayoffBasisPoints(ownPlan, opponentPlan),
+      };
+    });
+
+    return { opponentIndex, opponentActionId: opponent.actionId, candidates };
+  });
+}
+
+function analyticPayoffBasisPoints(
+  ownPlan: ReturnType<typeof deriveOpportunityRoutePlan>,
+  opponentPlan: ReturnType<typeof deriveOpportunityRoutePlan>,
+): number {
+  const ownThreat = analyticThreat(ownPlan, opponentPlan);
+  const opponentThreat = analyticThreat(opponentPlan, ownPlan);
+  const total = ownThreat + opponentThreat;
+  return Math.round((total === 0 ? 0.5 : ownThreat / total) * 10_000);
+}
+
+/** Outcome-blind threat implied by facts the minute loop already consumes. */
+function analyticThreat(
+  plan: ReturnType<typeof deriveOpportunityRoutePlan>,
+  opponentPlan: ReturnType<typeof deriveOpportunityRoutePlan>,
+): number {
+  const controlTotal = plan.controlMultiplier + opponentPlan.controlMultiplier;
+  const possessionClaim = controlTotal === 0 ? 0.5 : plan.controlMultiplier / controlTotal;
+  const effectiveControl = possessionClaim
+    + (1 - possessionClaim) * plan.counterOpportunityRelief;
+  const weights = opportunityRouteWeights(plan);
+  let expectedQuality = 0;
+  for (const route of TACTICAL_ROUTES) {
+    expectedQuality += weights[route] * clampShare(0.5 + opportunityRouteQualityEdge(plan, route));
+  }
+
+  return Math.max(
+    0,
+    plan.volumeMultiplier
+      * effectiveControl
+      * expectedRouteSaturation(plan)
+      * expectedQuality,
+  );
+}
+
+function clampShare(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+/** One material three-cycle, reported by canonical action ID. */
+export interface TacticalAgencyStructuralCycle {
+  readonly tacticKey: TacticalAgencyBTacticKey;
+  readonly actionIds: readonly [string, string, string];
+  readonly arcBasisPoints: readonly [number, number, number];
+}
+
+/** How many uniform opponent signatures choose one canonical response. */
+export interface TacticalAgencyStructuralResponseCoverage {
+  readonly actionId: string;
+  readonly contextCount: number;
+}
+
+/** Complete-field standing of one effective action under the analytic score. */
+export interface TacticalAgencyStructuralStanding {
+  readonly actionId: string;
+  readonly meanPayoffBasisPoints: number;
+  readonly minimumPayoffBasisPoints: number;
+}
+
+/** Complete Phase-1 evidence and its protocol decision. */
+export interface TacticalAgencyStructuralAnalysis {
+  readonly contractVersion: typeof TACTICAL_AGENCY_B_ANALYTIC_CONTRACT_VERSION;
+  readonly rawActionCount: number;
+  readonly effectiveSignatureCount: number;
+  readonly responseSignatureCount: number;
+  readonly responseDiversityShare: number;
+  readonly maximumResponseContextCount: number;
+  readonly bestResponseUbiquityMultiple: number;
+  readonly responseCoverage: readonly TacticalAgencyStructuralResponseCoverage[];
+  readonly conservationMismatchCount: number;
+  readonly dominantActionIds: readonly string[];
+  readonly strongestStanding: TacticalAgencyStructuralStanding | null;
+  readonly materialCycles: readonly TacticalAgencyStructuralCycle[];
+  readonly materialArcBasisPoints: number;
+  readonly phaseTwoStatus: "required" | "not_run_by_protocol";
+  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+}
+
+/** Merges all analytic columns and applies the frozen complete-space gates. */
+export function summarizeTacticalAgencyStructuralAnalysis(input: {
+  readonly actions: readonly TacticalAgencyStructuralAction[];
+  readonly contexts: readonly TacticalAgencyStructuralContextRow[];
+}): TacticalAgencyStructuralAnalysis {
+  const contexts = [...input.contexts].sort((left, right) => left.opponentIndex - right.opponentIndex);
+  if (contexts.length !== input.actions.length) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      `Analytic matrix has ${contexts.length} columns for ${input.actions.length} actions`,
+    );
+  }
+  for (const [index, context] of contexts.entries()) {
+    if (context.opponentIndex !== index || context.candidates.length !== input.actions.length) {
+      throw new TacticalAgencyAuditError(
+        "empty_work_items",
+        `Analytic column ${index} is incomplete or out of order`,
+      );
+    }
+  }
+
+  const signatureVectors = input.actions.map((action, actionIndex) => ({
+    action,
+    values: contexts.map((context) => context.candidates[actionIndex]?.planSignature ?? ""),
+  }));
+  const groups: { representative: TacticalAgencyStructuralAction; indexes: number[]; values: readonly string[] }[] = [];
+  for (const [actionIndex, vector] of signatureVectors.entries()) {
+    const group = groups.find((candidate) => equalStringVectors(candidate.values, vector.values));
+    if (group === undefined) {
+      groups.push({ representative: vector.action, indexes: [actionIndex], values: vector.values });
+    } else {
+      group.indexes.push(actionIndex);
+      if (vector.action.actionId < group.representative.actionId) group.representative = vector.action;
+    }
+  }
+  groups.sort((left, right) => left.representative.actionId.localeCompare(right.representative.actionId));
+
+  const representativeIndexes = groups.map((group) => input.actions.findIndex(
+    (action) => action.actionId === group.representative.actionId,
+  ));
+  const payoff = representativeIndexes.map((candidateIndex) =>
+    representativeIndexes.map((contextIndex) =>
+      contexts[contextIndex]?.candidates[candidateIndex]?.payoffBasisPoints ?? 5_000));
+
+  const bestResponseCounts = new Map<number, number>();
+  for (const column of payoff[0]?.map((_, index) => index) ?? []) {
+    let bestRow = 0;
+    for (let row = 1; row < payoff.length; row += 1) {
+      const current = payoff[row]?.[column] ?? 0;
+      const best = payoff[bestRow]?.[column] ?? 0;
+      if (current > best) bestRow = row;
+    }
+    bestResponseCounts.set(bestRow, (bestResponseCounts.get(bestRow) ?? 0) + 1);
+  }
+
+  const materialCycles = TACTICAL_AGENCY_B_TACTIC_KEYS.flatMap((tacticKey) => {
+    const cycle = firstMaterialCycle(groups.map((group) => group.representative), payoff, tacticKey);
+    return cycle === undefined ? [] : [cycle];
+  });
+  const dominantActionIds = groups.flatMap((group, row) => {
+    const dominates = groups.every((_, column) =>
+      row === column || (payoff[row]?.[column] ?? 0) > 5_000);
+    return dominates ? [group.representative.actionId] : [];
+  });
+  const standings = groups.map((group, row): TacticalAgencyStructuralStanding => {
+    const against = (payoff[row] ?? []).filter((_, column) => column !== row);
+    return {
+      actionId: group.representative.actionId,
+      meanPayoffBasisPoints: against.length === 0
+        ? 5_000
+        : Math.round(against.reduce((sum, value) => sum + value, 0) / against.length),
+      minimumPayoffBasisPoints: against.length === 0 ? 5_000 : Math.min(...against),
+    };
+  });
+  const strongestStanding = [...standings].sort(
+    (left, right) => right.minimumPayoffBasisPoints - left.minimumPayoffBasisPoints
+      || right.meanPayoffBasisPoints - left.meanPayoffBasisPoints
+      || left.actionId.localeCompare(right.actionId),
+  )[0] ?? null;
+  const conservationMismatchCount = conservationMismatches(input.actions, contexts);
+  const effectiveSignatureCount = groups.length;
+  const responseSignatureCount = bestResponseCounts.size;
+  const maximumResponseContextCount = Math.max(0, ...bestResponseCounts.values());
+  const responseCoverage = [...bestResponseCounts.entries()]
+    .map(([row, contextCount]) => ({
+      actionId: (groups[row] as typeof groups[number]).representative.actionId,
+      contextCount,
+    }))
+    .sort((left, right) => right.contextCount - left.contextCount
+      || left.actionId.localeCompare(right.actionId));
+  const responseDiversityShare = effectiveSignatureCount === 0
+    ? 0
+    : responseSignatureCount / effectiveSignatureCount;
+  const phaseOnePassed = conservationMismatchCount === 0
+    && responseDiversityShare >= 0.25
+    && maximumResponseContextCount <= 4
+    && materialCycles.length === TACTICAL_AGENCY_B_TACTIC_KEYS.length
+    && dominantActionIds.length === 0;
+  const hasAnyMaterialCycle = materialCycles.length > 0;
+
+  return {
+    contractVersion: TACTICAL_AGENCY_B_ANALYTIC_CONTRACT_VERSION,
+    rawActionCount: input.actions.length,
+    effectiveSignatureCount,
+    responseSignatureCount,
+    responseDiversityShare,
+    maximumResponseContextCount,
+    bestResponseUbiquityMultiple: maximumResponseContextCount,
+    responseCoverage,
+    conservationMismatchCount,
+    dominantActionIds,
+    strongestStanding,
+    materialCycles,
+    materialArcBasisPoints: TACTICAL_AGENCY_B_MATERIAL_ARC_BASIS_POINTS,
+    phaseTwoStatus: phaseOnePassed ? "required" : "not_run_by_protocol",
+    decision: phaseOnePassed ? "PASS_PHASE_1" : hasAnyMaterialCycle ? "REFINE" : "STOP_RETHINK",
+  };
+}
+
+function equalStringVectors(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function firstMaterialCycle(
+  actions: readonly TacticalAgencyStructuralAction[],
+  payoff: readonly (readonly number[])[],
+  tacticKey: TacticalAgencyBTacticKey,
+): TacticalAgencyStructuralCycle | undefined {
+  const indexes = actions.flatMap((action, index) => action.tacticKey === tacticKey ? [index] : []);
+  const material = 5_000 + TACTICAL_AGENCY_B_MATERIAL_ARC_BASIS_POINTS;
+  for (const first of indexes) {
+    for (const second of indexes) {
+      if (first === second || (payoff[first]?.[second] ?? 0) < material) continue;
+      for (const third of indexes) {
+        if (
+          third === first
+          || third === second
+          || (payoff[second]?.[third] ?? 0) < material
+          || (payoff[third]?.[first] ?? 0) < material
+        ) continue;
+        return {
+          tacticKey,
+          actionIds: [
+            (actions[first] as TacticalAgencyStructuralAction).actionId,
+            (actions[second] as TacticalAgencyStructuralAction).actionId,
+            (actions[third] as TacticalAgencyStructuralAction).actionId,
+          ],
+          arcBasisPoints: [
+            payoff[first]?.[second] ?? 0,
+            payoff[second]?.[third] ?? 0,
+            payoff[third]?.[first] ?? 0,
+          ],
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+function conservationMismatches(
+  actions: readonly TacticalAgencyStructuralAction[],
+  contexts: readonly TacticalAgencyStructuralContextRow[],
+): number {
+  let mismatches = 0;
+  for (const context of contexts) {
+    for (const formationKey of FORMATION_KEYS) {
+      const indexes = actions.flatMap((action, index) => action.formationKey === formationKey ? [index] : []);
+      const expected = context.candidates[indexes[0] as number]?.routeBudget;
+      for (const index of indexes) {
+        if (context.candidates[index]?.routeBudget !== expected) mismatches += 1;
+      }
+    }
+  }
+  return mismatches;
 }
 
 /**

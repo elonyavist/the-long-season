@@ -16,7 +16,9 @@ import {
   DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
   DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
   createTacticalAgencyA2ProfileFacts,
+  createTacticalAgencyBProfileFacts,
   createTacticalAgencySectionFacts,
+  TACTICAL_AGENCY_B_WORLD_SEED,
 } from "./tactical-agency-section.ts";
 import {
   DEFAULT_TACTICAL_SHAPE_FORMATION_PAIRED_SEEDS,
@@ -56,6 +58,7 @@ export type SimulationReportModuleId = typeof SIMULATION_REPORT_MODULE_IDS[numbe
 /** Locked profiles preserve scientific populations independently of rendering. */
 export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-a2",
+  "phase81a-b",
   "phase81-tactical-shape",
   ...LOCKED_MIGRATION_PROFILE_IDS,
 ] as const;
@@ -176,6 +179,21 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
       seedPrefix: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
+      workerCount: 7,
+    },
+  },
+  "phase81a-b": {
+    id: "phase81a-b",
+    titleKey: "simulationReport.profile.phase81aB.title",
+    descriptionKey: "simulationReport.profile.phase81aB.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-b",
+      worldCount: 1,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: TACTICAL_AGENCY_B_WORLD_SEED,
       workerCount: 7,
     },
   },
@@ -364,6 +382,22 @@ export async function executeSimulationReportModule(
           tacticalAgencyModule: "custom-v1-round4-paired40",
         },
         worldSeeds: facts.report.manifest.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-b") {
+      const facts = await createTacticalAgencyBProfileFacts({ workerCount: request.workerCount });
+      return {
+        data: toSimulationReportJsonValue({
+          ...facts.analysis,
+          execution: {
+            workerCount: facts.workerCount,
+            partitionCount: facts.workerCount,
+            elapsedMilliseconds: facts.elapsedMilliseconds,
+          },
+        }),
+        decision: facts.analysis.decision === "PASS_PHASE_1" ? "NOT_EVALUATED" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
       };
     }
     assertProfile(request, "phase81a-a2");

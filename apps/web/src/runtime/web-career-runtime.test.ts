@@ -64,11 +64,12 @@ describe("WebCareerRuntime", () => {
       "competition:ita-2",
       "competition:ita-3",
     ]);
-    // RE-RECORDED for Phase 81A squad identities: `b12d5dd0` -> `620ad19b`.
+    // RE-RECORDED for Phase 81A squad identities and Step 06A's competition-
+    // balanced assignment: `b12d5dd0` -> `620ad19b` -> `f1527230`.
     // The other half of this record lives in `apps/cli/src/commands/career.test.ts`
     // and carries the account. Both were changed in the same edit: a pair that
     // proves CLI and web agree proves nothing if one side is updated alone.
-    expect(canonicalCareerIdentityHash(state)).toBe("620ad19b");
+    expect(canonicalCareerIdentityHash(state)).toBe("f1527230");
   });
 
   it("publishes one completed three-division boundary atomically and deterministically", () => {

@@ -2,7 +2,10 @@
 
 ## Status
 
-Not started; requires Checkpoint C GO.
+Closed; requires Checkpoint C `GO` and an Amendment A1 rewrite before start.
+The manager-facing opponent read remains a valid product direction, but every
+clause that exists only to feed the same read into the AI is superseded for the
+MVP. Do not implement this historical wording as-is.
 
 ## Goal
 

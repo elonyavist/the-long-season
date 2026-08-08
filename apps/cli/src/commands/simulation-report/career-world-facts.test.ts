@@ -127,21 +127,22 @@ test("Phase 80A potential-outcome cycles follow the August career year", () => {
  * Bands absent from this table - the zero bands and every goalkeeper band -
  * keep plain equality.
  *
- * Owner: Phase 81A Step 03A. Removal: delete this table and restore the plain
- * equality when the `v8` bundle lands, after Checkpoint A2.
+ * Owner: Phase 81A Step 03A, re-derived in Step 06A after the competition-
+ * balanced identity deck changed the generated population. Removal: delete
+ * this table and restore the plain equality when Step 14 ships the `v8` bundle.
  */
 const PHASE_81A_PENDING_OUTFIELD_PROJECTION: Readonly<Record<string, {
   readonly p50?: { readonly shipped: number; readonly measured: number };
   readonly upper?: { readonly shipped: number; readonly measured: number };
 }>> = {
-  "0-17": { p50: { shipped: 3_034, measured: 3_005 } },
-  "18-20": { p50: { shipped: 2_200, measured: 2_257 } },
-  "21-21": { p50: { shipped: 1_196, measured: 1_200 }, upper: { shipped: 2_823, measured: 2_722 } },
-  "22-22": { p50: { shipped: 716, measured: 706 }, upper: { shipped: 2_111, measured: 2_137 } },
-  "23-23": { p50: { shipped: 483, measured: 495 }, upper: { shipped: 1_405, measured: 1_358 } },
-  "24-24": { p50: { shipped: 219, measured: 212 }, upper: { shipped: 653, measured: 642 } },
+  "0-17": { p50: { shipped: 3_034, measured: 3_004 } },
+  "18-20": { p50: { shipped: 2_200, measured: 2_285 } },
+  "21-21": { p50: { shipped: 1_196, measured: 1_200 }, upper: { shipped: 2_823, measured: 2_697 } },
+  "22-22": { p50: { shipped: 716, measured: 725 }, upper: { shipped: 2_111, measured: 2_137 } },
+  "23-23": { p50: { shipped: 483, measured: 495 }, upper: { shipped: 1_405, measured: 1_359 } },
+  "24-24": { p50: { shipped: 219, measured: 229 }, upper: { shipped: 653, measured: 631 } },
   "25-25": { p50: { shipped: 71, measured: 72 }, upper: { shipped: 249, measured: 238 } },
-  "26-26": { upper: { shipped: 55, measured: 36 } },
+  "26-26": { upper: { shipped: 55, measured: 44 } },
 };
 
 test("Phase 80A potential-outcome matrix composes engine owners across every locked cell", () => {
@@ -247,8 +248,8 @@ test("Phase 80A potential-outcome matrix composes engine owners across every loc
   // Two counters that follow the re-derived outfield column; see
   // `PHASE_81A_PENDING_OUTFIELD_PROJECTION`. Both were `65`/`401` on the shipped
   // calibration and are restored with it.
-  assert.equal(baseline.audit.abovePublicUpperCount, 62);
-  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 383);
+  assert.equal(baseline.audit.abovePublicUpperCount, 60);
+  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 370);
   assert.equal(baseline.audit.storedCeilingViolationCount, 0);
   assert.equal(
     baseline.audit.gates.find(({ key }) =>

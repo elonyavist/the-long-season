@@ -238,17 +238,18 @@ test("a world that fails reconciliation withholds the outcome instead of reporti
   assert.equal(report.outcome, "RECONCILIATION_FAILED");
 });
 
-test("the hard-cap branch is reachable on a real generated population", () => {
+test("the hard-cap branch remains reachable on a real generated population", () => {
   // The reachability proof the probe was run to obtain. Until this existed the
   // only evidence that an eligible player can be valued exactly at the cap was
   // `player-generation-economy-audit.test.ts`, whose observations are built by
   // a fixture that sets `hardCapEligible: true` by hand: it proves the counter
   // increments, not that generation can reach the branch.
   //
-  // This world came out of the preregistered corpus recorded in
-  // `docs/audits/PHASE_81A_HARD_CAP_REACHABILITY_REPORT.md`. It is an *opening*
-  // observation, so no season has to be simulated to reproduce it.
-  const worldSeed = "phase81a-hardcap-a-world-00004";
+  // Step 06A re-scanned the same 21-world preregistered opening corpus after
+  // balancing identities per competition. World 00004 moved below the cap;
+  // world 00007 remains an exact hit. No new seed was chosen after reading the
+  // result. This is an *opening* observation, so no season is simulated.
+  const worldSeed = "phase81a-hardcap-a-world-00007";
   const world = createFakeDomesticWorld({ worldSeed });
   const cap = selectPlayerValuationConfig(world.calibrationVersions)
     .valuationCurves.upperTail.hardCapMinorUnits;
@@ -263,20 +264,6 @@ test("the hard-cap branch is reachable on a real generated population", () => {
   assert.equal(exactHits.length, 1);
   // Non-vacuity: a proof that passed with nobody eligible would prove nothing.
   assert.ok(cap > 0);
-});
-
-test("a second generated world reaches the cap, so the proof is not one seed", () => {
-  const worldSeed = "phase81a-hardcap-a-world-00007";
-  const world = createFakeDomesticWorld({ worldSeed });
-  const cap = selectPlayerValuationConfig(world.calibrationVersions)
-    .valuationCurves.upperTail.hardCapMinorUnits;
-
-  const exactHits = phase80AInitialWorldObservations(worldSeed, world).filter(
-    ({ hardCapEligible, publicValueMinorUnits }) =>
-      hardCapEligible && publicValueMinorUnits === cap,
-  );
-
-  assert.equal(exactHits.length, 1);
 });
 
 test("the declared corpus is 21 worlds spread evenly over exactly 7 workers", () => {

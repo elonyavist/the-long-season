@@ -103,24 +103,17 @@ test("simulate-season can inspect formation fit without printing the season tabl
   assert.equal(io.stdoutLines.includes("Fit warnings:"), true);
   assert.equal(io.stdoutLines.includes("Squad fit notes:"), true);
   assert.equal(io.stdoutLines.includes("Final table:"), false);
-  // RE-RECORDED for Phase 81A squad identities. These are continuity records of
-  // one club's depth, not thresholds, and what moved is the point of the step:
-  // this squad now holds two natural right backs where it held one, and its
-  // defensive-midfielder hole is gone - both the `weak depth` and the
-  // `natural cover missing` warnings for that role disappeared, and with them
-  // the `extra depth group: center backs` that the old 4-2-4 chart produced.
-  // The attacking-midfielder hole is still there, which is football: one club
-  // is allowed to lack a role, and `03b` is what checks the *world* does not.
+  // RE-RECORDED for Phase 81A Step 06A's competition-balanced assignment.
+  // These are continuity records of one club's depth, not thresholds. The
+  // selected club now draws a chart that naturally covers both holding and
+  // attacking midfield; the fit inspection must report that fact rather than
+  // preserve either warning from the previous population.
   assert.equal(io.stdoutLines.includes("  rb right full back best=natural natural=2 adapted=0 weak=5"), true);
-  assert.equal(io.stdoutLines.includes("  am attacking midfielder best=adapted natural=0 adapted=4 weak=9"), true);
-  assert.equal(io.stdoutLines.includes("  weak depth: attacking midfielder"), true);
+  assert.equal(io.stdoutLines.includes("  am attacking midfielder best=natural natural=2 adapted=3 weak=8"), true);
+  assert.equal(io.stdoutLines.includes("  weak depth: attacking midfielder"), false);
   assert.equal(io.stdoutLines.includes("  weak depth: defensive midfielder"), false);
-  assert.equal(
-    io.stdoutLines.includes(
-      "  natural cover missing: attacking midfielder, extra depth group: wide players",
-    ),
-    true,
-  );
+  assert.equal(io.stdoutLines.includes("  none"), true);
+  assert.equal(io.stdoutLines.includes("  extra depth group: wide players"), true);
 });
 
 test("simulate-season can review generated player identities without printing the season table", async () => {
@@ -179,13 +172,13 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.includes("Players: 396"), true);
   assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
   assert.equal(io.stdoutLines.includes("Current ability distribution:"), true);
-  // RE-RECORDED for Phase 81A squad identities: `124/254/18` -> `121/256/19`.
-  // Ability is generated per position, so changing which positions a squad
-  // contains moves the histogram. The invariant beside it did not move: the
-  // three buckets plus `15+` still sum to the asserted `396` players.
-  assert.equal(io.stdoutLines.includes("  0-8: 121"), true);
-  assert.equal(io.stdoutLines.includes("  9-11: 256"), true);
-  assert.equal(io.stdoutLines.includes("  12-14: 19"), true);
+  // RE-RECORDED for Phase 81A Step 06A's balanced identity deck:
+  // `121/256/19` -> `119/260/17`. Ability is generated per position, so the
+  // competition's changed position mix moves the histogram. Its invariant did
+  // not move: these buckets plus `15+` still sum to all `396` players.
+  assert.equal(io.stdoutLines.includes("  0-8: 119"), true);
+  assert.equal(io.stdoutLines.includes("  9-11: 260"), true);
+  assert.equal(io.stdoutLines.includes("  12-14: 17"), true);
   assert.equal(io.stdoutLines.includes("  15+: 0"), true);
   assert.equal(io.stdoutLines.some((line) => /^  15\+: [0-9]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Potential distribution:"), true);
@@ -693,8 +686,10 @@ test("simulate-season supports balanced and defensive setup demo profiles", asyn
     defensive.stdoutLines.includes("Tactic: mentality=defensive pressing=0.35 directness=0.30 width=0.40 risk=0.20"),
     true,
   );
-  assert.equal(defensive.stdoutLines.some((line) => new RegExp(`^  slot:10: ${PERSON_NAME_PATTERN} Striker -> Central midfielder$`).test(line)), true);
-  assert.equal(defensive.stdoutLines.some((line) => new RegExp(`^  slot:11: ${PERSON_NAME_PATTERN} Striker -> Central midfielder$`).test(line)), true);
+  // The defensive profile owns the destination, not the source role. The
+  // source comes from the club's generated chart and must remain free to vary.
+  assert.equal(defensive.stdoutLines.some((line) => new RegExp(`^  slot:10: ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN} -> Central midfielder$`).test(line)), true);
+  assert.equal(defensive.stdoutLines.some((line) => new RegExp(`^  slot:11: ${PERSON_NAME_PATTERN} ${ROLE_LABEL_PATTERN} -> Central midfielder$`).test(line)), true);
 });
 
 test("same seed and setup demo produce same tactic inspection output", async () => {

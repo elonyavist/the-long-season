@@ -401,6 +401,7 @@ function generateDomesticSeniorPlayers(input: {
     players: generateFakePlayersForClubs(divisionClubs.clubIds, {
       seed: input.worldSeed,
       playerIdNamespace: spec.namespace,
+      squadIdentityCompetitionKey: spec.competitionId,
       clubContexts: input.clubContexts,
       ratingScale: playerRatingScale,
       ...(input.exceptionalAllocation === undefined

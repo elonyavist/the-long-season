@@ -44,11 +44,15 @@ import {
 import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
-import { generatedSquadIdentity, squadIdentityPositionForSlot } from "./squad-identity.ts";
+import {
+  assignGeneratedSquadIdentities,
+  squadIdentityPositionForSlot,
+} from "./squad-identity.ts";
 import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 
 const FAKE_CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 const MAX_LEAGUE_LAST_NAME_USES = 2;
+const DEFAULT_SQUAD_IDENTITY_COMPETITION_KEY = "competition:demo-third-division";
 
 /**
  * Lineup slot shape emitted by content without importing engine contracts.
@@ -105,15 +109,18 @@ export interface FakePlayerGenerationOptions {
   };
   /** Optional namespace that keeps independently generated divisions globally unique. */
   readonly playerIdNamespace?: string;
+  /** Stable competition scope for the balanced squad-identity assignment. */
+  readonly squadIdentityCompetitionKey?: string;
 }
 
 /**
  * Generates fictional first-team players and each club's opening eleven.
  *
- * Every club draws one squad identity, so the depth chart - and therefore the
- * eleven that comes out of it - is a property of the club rather than of the
- * slot number. The eleven is not a formation: it is each footballer in the slot
- * he is natural in, and which shape suits the squad is the selector's answer.
+ * Every club receives one identity from the competition's balanced deck, so
+ * the depth chart - and therefore the eleven that comes out of it - is a
+ * property of the club rather than of the slot number. The eleven is not a
+ * formation: it is each footballer in the slot he is natural in, and which
+ * shape suits the squad is the selector's answer.
  *
  * @example
  * const players = generateFakePlayersForClubs(clubIds);
@@ -144,6 +151,12 @@ export function generateFakePlayersForClubs(
   }
   const leagueNameUsage = createLeagueNameUsage();
   const division = divisionForGeneratedLeague(clubIds, options.clubContexts);
+  const squadIdentitiesByClubId = assignGeneratedSquadIdentities({
+    seed,
+    competitionIdentityKey:
+      options.squadIdentityCompetitionKey ?? DEFAULT_SQUAD_IDENTITY_COMPETITION_KEY,
+    orderedClubIds: clubIds,
+  });
   const rarityAllocation = buildPlayerRarityAllocation({
     seed,
     division,
@@ -162,7 +175,10 @@ export function generateFakePlayersForClubs(
     const lineup: FakeLineupSlot[] = [];
     const clubContext = options.clubContexts?.[clubId] ?? defaultClubContext(clubNumber);
     const clubNameUsage = createClubNameUsage();
-    const squadIdentity = generatedSquadIdentity(seed, clubNumber);
+    const squadIdentity = squadIdentitiesByClubId.get(clubId);
+    if (squadIdentity === undefined) {
+      throw new Error(`Generated squad identity assignment omitted club ${clubId}`);
+    }
 
     for (let slotNumber = 1; slotNumber <= FAKE_PLAYERS_PER_CLUB; slotNumber += 1) {
       const id = generatedFakePlayerId(clubNumber, slotNumber, options.playerIdNamespace);

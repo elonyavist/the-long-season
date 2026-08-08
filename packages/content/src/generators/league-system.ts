@@ -30,6 +30,8 @@ import {
 } from "./club-finance-world.ts";
 import { createFakeGameplayConfig, type FakeGameplayConfig } from "./gameplay-config.ts";
 
+const FAKE_LEAGUE_COMPETITION_ID = competitionId("competition:demo-third-division");
+
 export type {
   FakeAbilityWeightKey,
   FakeGameplayConfig,
@@ -88,7 +90,10 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
   const clubs = generateFakeClubs(options.worldSeed === undefined ? {} : { seed: options.worldSeed });
   const players = generateFakePlayersForClubs(
     clubs.clubIds,
-    options.worldSeed === undefined ? {} : { seed: options.worldSeed },
+    {
+      ...(options.worldSeed === undefined ? {} : { seed: options.worldSeed }),
+      squadIdentityCompetitionKey: FAKE_LEAGUE_COMPETITION_ID,
+    },
   );
   const seniorSquadState = generateInitialSeniorSquadState({
     worldSeed: options.worldSeed ?? "demo-001",
@@ -109,7 +114,7 @@ export function createFakeLeagueSystem(options: FakeLeagueSystemOptions = {}): F
   });
   const season = seasonId("season:demo-001");
   const competition: Competition = {
-    id: competitionId("competition:demo-third-division"),
+    id: FAKE_LEAGUE_COMPETITION_ID,
     name: "Demo Third Division",
     clubIds: clubs.clubIds,
     matchRules: createCompetitionMatchRules({

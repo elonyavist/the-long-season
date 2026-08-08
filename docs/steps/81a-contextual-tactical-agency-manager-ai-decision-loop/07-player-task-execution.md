@@ -2,7 +2,13 @@
 
 ## Status
 
-Not started; requires Checkpoint B GO.
+Closed; Checkpoint B recorded `STOP / RETHINK` on 2026-08-08. The complete
+combined action space produced only `2 / 198` effective best responses,
+ubiquity `121`, no material cycle and one dominant row. Design Contract
+Amendment A1 assigns league-level population ownership to Step 06A, the
+longitudinal `100 x 10` to Checkpoint L1 / Step 06B, and the conditioned tactical
+retry to Checkpoint B2 / Step 06C. This step must not start unless L1 and B2
+record `GO` without moving the frozen targets.
 
 ## Goal
 

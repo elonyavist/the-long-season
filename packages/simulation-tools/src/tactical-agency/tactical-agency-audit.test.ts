@@ -12,16 +12,19 @@ import {
 } from "@game/domain";
 
 import {
+  buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   isValidTacticalAgencyCheckpointWorkerCount,
   legacyPhase81ControlWeightReference,
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyOwnershipReplay,
   runTacticalAgencySelectionSeries,
+  runTacticalAgencyStructuralAnalyticPartition,
   summarizeTacticalContributionConservation,
   summarizeTacticalAgencyPrimaryRoles,
   summarizeTacticalAgencySelections,
   summarizeTacticalAgencySquadIdentities,
+  summarizeTacticalAgencyStructuralAnalysis,
   tacticalAgencyReorderInvariantShare,
   TACTICAL_AGENCY_AUDIT_CONTRACT_VERSION,
   TACTICAL_AGENCY_CHECKPOINT_WORKER_COUNT,
@@ -31,6 +34,7 @@ import {
   type TacticalAgencySelectionRow,
 } from "./tactical-agency-audit.ts";
 import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import type { MatchEngineConfig } from "@game/engine";
 
 /**
  * These tests own the audit's arithmetic and its refusals. The traversal of a
@@ -417,6 +421,65 @@ test("the legacy reference keeps the literals it exists to preserve", () => {
     legacyPhase81ControlWeightReference({ directness: 0, pressing: 1, width: 0, risk: 0 }),
     1.12,
   );
+});
+
+test("Checkpoint B enumerates the declared complete space and conserves every route budget", () => {
+  const calibration = matchTacticsCalibrationFixture();
+  const actions = buildTacticalAgencyStructuralActions({
+    referenceBand: {
+      bandKey: "checkpoint_b_uniform",
+      goalkeeper: 10,
+      defense: 10,
+      midfield: 10,
+      attack: 10,
+    },
+    matchTacticsCalibration: calibration,
+  });
+  assert.equal(actions.length, 23 * 3 * 3);
+  assert.equal(new Set(actions.map((action) => action.actionId)).size, actions.length);
+  assert.deepEqual(new Set(actions.map((action) => action.tacticKey)), new Set([
+    "high_pressing",
+    "direct_play",
+    "low_block",
+  ]));
+  assert.deepEqual(new Set(actions.map((action) => action.lateralFocus)), new Set([
+    "balanced",
+    "left",
+    "right",
+  ]));
+
+  const engineConfig = {
+    tacticalDistributionCaps: {
+      directness: { minInclusive: 0, maxInclusive: 1 },
+      pressing: { minInclusive: 0, maxInclusive: 1 },
+      width: { minInclusive: 0, maxInclusive: 1 },
+      risk: { minInclusive: 0, maxInclusive: 1 },
+    },
+  } as MatchEngineConfig;
+  const contexts = runTacticalAgencyStructuralAnalyticPartition({
+    actions,
+    opponentIndexes: actions.map((_, index) => index),
+    engineConfig,
+    matchTacticsCalibration: calibration,
+  });
+  const analysis = summarizeTacticalAgencyStructuralAnalysis({ actions, contexts });
+
+  for (let first = 0; first < actions.length; first += 1) {
+    for (let second = 0; second < actions.length; second += 1) {
+      assert.equal(
+        (contexts[second]?.candidates[first]?.payoffBasisPoints ?? 0)
+          + (contexts[first]?.candidates[second]?.payoffBasisPoints ?? 0),
+        10_000,
+        "swapping the two complete actions must complement the analytic share",
+      );
+    }
+  }
+
+  assert.equal(analysis.rawActionCount, 207);
+  assert.equal(analysis.conservationMismatchCount, 0);
+  assert.equal(analysis.effectiveSignatureCount > 0, true);
+  assert.equal(analysis.effectiveSignatureCount <= analysis.rawActionCount, true);
+  assert.equal(Number.isFinite(analysis.bestResponseUbiquityMultiple), true);
 });
 
 function neutralIntensity(): Parameters<typeof legacyPhase81ControlWeightReference>[0] {

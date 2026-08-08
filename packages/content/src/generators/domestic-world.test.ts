@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  PLAYER_ROLES,
   getPlayerRoleProfile,
   roleCurrentAbility,
   rolePotentialAbility,
@@ -17,6 +18,12 @@ import {
   createFakeDomesticWorld,
 } from "./domestic-world.ts";
 import { FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
+import {
+  GENERATED_SQUAD_IDENTITY_KEYS,
+  assignGeneratedSquadIdentities,
+  squadIdentityPositionForSlot,
+} from "./squad-identity.ts";
 import {
   currentAbilityRarityLaneForGeneratedArchetype,
   resolveGeneratedCurrentAbilityRarityLane,
@@ -43,6 +50,56 @@ test("creates three ordered 18-club tiers with 22 active seniors per club", () =
     world.clubsById[world.defaultSelectedClubId]?.category,
     "third_division",
   );
+});
+
+test("every domestic division realizes its own balanced club-role identity deck", () => {
+  const worldSeed = "three-tier-squad-identities";
+  const world = createFakeDomesticWorld({ worldSeed });
+  const assignmentVectors: string[] = [];
+
+  for (const [divisionIndex, category] of categories().entries()) {
+    const orderedClubIds = world.divisionClubIds[category];
+    const competitionIdentityKey = FAKE_DOMESTIC_COMPETITION_IDS[divisionIndex];
+    assert.ok(competitionIdentityKey !== undefined);
+    const assignments = assignGeneratedSquadIdentities({
+      seed: worldSeed,
+      competitionIdentityKey,
+      orderedClubIds,
+    });
+    const counts = new Map(GENERATED_SQUAD_IDENTITY_KEYS.map((key) => [key, 0]));
+    const roles = new Set<string>();
+
+    for (const clubId of orderedClubIds) {
+      const identity = assignments.get(clubId);
+      const club = world.clubsById[clubId];
+      assert.ok(identity !== undefined);
+      assert.ok(club !== undefined);
+      const currentCount = counts.get(identity.key);
+      assert.ok(currentCount !== undefined);
+      counts.set(identity.key, currentCount + 1);
+
+      for (const [slotIndex, playerId] of club.playerIds.entries()) {
+        const player = world.players[playerId];
+        const expectedPosition = squadIdentityPositionForSlot(identity, slotIndex + 1);
+        assert.ok(player !== undefined);
+        assert.equal(player.naturalPositions[0], expectedPosition, `${clubId} slot ${String(slotIndex + 1)}`);
+        roles.add(primaryRoleForPosition(expectedPosition));
+      }
+    }
+
+    assert.deepEqual(
+      [...counts.values()].toSorted((left, right) => left - right),
+      [2, 2, 2, 2, 2, 2, 3, 3],
+    );
+    assert.deepEqual([...roles].toSorted(), [...PLAYER_ROLES].toSorted());
+    assignmentVectors.push(orderedClubIds.map((clubId) => {
+      const identity = assignments.get(clubId);
+      assert.ok(identity !== undefined);
+      return identity.key;
+    }).join("|"));
+  }
+
+  assert.equal(new Set(assignmentVectors).size >= 2, true, "all divisions repeated one assignment vector");
 });
 
 test("complete world owns registrations, contracts, youth, finance, and windows", () => {

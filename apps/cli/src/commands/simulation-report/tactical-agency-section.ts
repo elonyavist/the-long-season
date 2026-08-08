@@ -1,13 +1,17 @@
 import {
+  buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyLowBlockSeries,
+  summarizeTacticalAgencyStructuralAnalysis,
   type TacticalAgencyAuditReport,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
+  type TacticalAgencyStructuralAnalysis,
+  type TacticalAgencyStructuralContextRow,
 } from "@game/simulation-tools";
 
-import { GENERATED_SQUAD_IDENTITY_KEYS } from "@game/content";
+import { createFakeDomesticWorld, GENERATED_SQUAD_IDENTITY_KEYS } from "@game/content";
 
 import {
   buildTacticalAgencyLowBlockInput,
@@ -28,6 +32,8 @@ import {
   type CheckpointA2Facts,
   type CheckpointA2SetEvaluation,
 } from "./tactical-agency-checkpoint-a2.ts";
+import { measureTacticalShapeQualityBands } from "./tactical-shape-section.ts";
+import { runTacticalAgencyStructuralWorker } from "./tactical-agency-structural-worker.ts";
 
 /**
  * Phase 81A Step 02 before-state command.
@@ -66,6 +72,9 @@ export const TACTICAL_AGENCY_A2_OUT_OF_SAMPLE_WORLD_SEED = "phase81a-agency-a2-o
 
 /** Clubs per world put through the archetype-mix counterfactual. */
 export const TACTICAL_AGENCY_A2_COUNTERFACTUAL_CLUB_COUNT = 6;
+
+/** World supplying the equal-quality band and versioned engine configuration. */
+export const TACTICAL_AGENCY_B_WORLD_SEED = "phase81a-b-structural-world-v1";
 
 /**
  * Runs the low-block guardrail on the legacy chart and reuses the current arm.
@@ -162,6 +171,66 @@ export interface CreateTacticalAgencySectionInput {
 export interface TacticalAgencyA2ProfileFacts {
   readonly checkpoint: CheckpointA2Facts;
   readonly calibrationVersions: Readonly<Record<string, string>>;
+}
+
+/** Phase-1 structural evidence plus the calibration that produced it. */
+export interface TacticalAgencyBProfileFacts {
+  readonly analysis: TacticalAgencyStructuralAnalysis;
+  readonly elapsedMilliseconds: number;
+  readonly workerCount: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly [string];
+}
+
+/**
+ * Runs Checkpoint B Phase 1 across seven real worker threads.
+ *
+ * Opponent columns are the independent shard. Results are restored to their
+ * canonical index before the audit groups signatures, so thread completion
+ * order cannot move equivalence, tie-breaks, or the decision.
+ */
+export async function createTacticalAgencyBProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyBProfileFacts> {
+  if (input.workerCount !== 7) {
+    throw new Error(`Checkpoint B requires exactly 7 workers: ${input.workerCount}`);
+  }
+
+  const startedAt = performance.now();
+  const world = createFakeDomesticWorld({ worldSeed: TACTICAL_AGENCY_B_WORLD_SEED });
+  const measured = measureTacticalShapeQualityBands(TACTICAL_AGENCY_B_WORLD_SEED);
+  const actions = buildTacticalAgencyStructuralActions({
+    referenceBand: measured.bands.reference,
+    matchTacticsCalibration: world.matchTacticsCalibration,
+  });
+  const partitions = Array.from({ length: input.workerCount }, () => [] as number[]);
+  for (let opponentIndex = 0; opponentIndex < actions.length; opponentIndex += 1) {
+    (partitions[opponentIndex % input.workerCount] as number[]).push(opponentIndex);
+  }
+
+  const completed = await Promise.all(partitions.map((opponentIndexes, partitionIndex) =>
+    runTacticalAgencyStructuralWorker({
+      partitionIndex,
+      actions,
+      opponentIndexes,
+      engineConfig: world.matchEngineConfig,
+      matchTacticsCalibration: world.matchTacticsCalibration,
+    })));
+  const contexts: TacticalAgencyStructuralContextRow[] = [];
+  for (const partition of completed.sort((left, right) => left.partitionIndex - right.partitionIndex)) {
+    contexts.push(...partition.contexts);
+  }
+
+  return {
+    analysis: summarizeTacticalAgencyStructuralAnalysis({ actions, contexts }),
+    elapsedMilliseconds: performance.now() - startedAt,
+    workerCount: input.workerCount,
+    calibrationVersions: {
+      matchTactics: world.matchTacticsCalibration.version,
+      tacticalAgencyStructural: "phase81a-b-phase1-v1",
+    },
+    worldSeeds: [TACTICAL_AGENCY_B_WORLD_SEED],
+  };
 }
 
 /**

@@ -4,6 +4,12 @@
 
 **Accettato come contratto della Fase 81A il 7 agosto 2026.**
 
+**Emendamento A1 accettato l'8 agosto 2026 dopo lo `STOP / RETHINK` del
+Checkpoint B.** Lo Step 06 resta la misura storica corretta dello spazio
+congiunto `formazione + tattica + lateralFocus`, ma quello spazio era più ampio
+della policy di prodotto già fissata da questo contratto: nell'MVP la formazione
+non è una contromossa libera contro l'avversario.
+
 La Fase 81 è chiusa e la Fase 81A è il solo owner attivo. Questo documento
 registra la tesi, i target e il protocollo vincolante per rendere le scelte
 tattiche più divertenti, contestuali e spiegabili. Non riapre la Fase 81: ne
@@ -20,6 +26,46 @@ Il before-state vincolante rimane:
 Ogni modifica parte soltanto quando il relativo step diventa attivo e resta
 confinata ai suoi `Expected Files`. La Fase 81B conserva il successivo lavoro su
 contratti, free agent e background fixtures.
+
+## Emendamento A1 - Varietà per campionato e confini AI dell'MVP
+
+Il risultato dello Step 06 non viene cancellato né reinterpretato: dimostra che
+lasciare un oracolo libero di scegliere contemporaneamente formazione, profilo
+tattico e lato produce una matrice quasi transitiva. Due firme soltanto coprono
+tutti i `198` contesti effettivi e una riga è dominante. Questa è evidenza contro
+quell'action space, non contro la varietà di rose ottenuta al Checkpoint A2.
+
+La correzione autorizzata separa quattro responsabilità:
+
+1. la generazione assegna a **ogni club** una composizione deterministica di
+   ruoli; il campionato distribuisce in modo bilanciato queste identità, così in
+   una lega da `20` club e con `8` identità ciascuna compare `2` o `3` volte,
+   senza assegnare direttamente una formazione;
+2. formazione e XI pre-partita continuano a essere scelti sui giocatori
+   disponibili, sulla loro suitability e sul loro stato corrente;
+3. nell'MVP il piano tattico AI parte dalla propria rosa e dalla forma scelta;
+   non cambia formazione e non riceve ancora una lettura dell'avversario;
+4. l'AI live reagisce soltanto a fatti già osservabili nello stato corrente -
+   minuto, risultato, espulsioni, infortuni e sostituzioni disponibili - tramite
+   il percorso canonico dei comandi live.
+
+Questa semplificazione non autorizza un'architettura chiusa. Formazione, piano
+pre-partita e aggiustamento live restano decisioni separate con output
+strutturati. Una futura policy opponent-aware potrà sostituire il decisore
+pre-partita senza cambiare generazione, match engine o formato dei comandi live.
+Non si introducono però oggi input avversari ignorati, registry generici,
+Implementation dormienti o export senza un consumer reale: l'estendibilità
+deriva da Seam attive e testate, non da codice speculativo.
+
+Lo Step 06A implementa la distribuzione per campionato e congela questi confini.
+Il Checkpoint L1 / Step 06B verifica che la varietà regga su `100` mondi per
+`10` stagioni e produce la vista HTML consultabile. Il Checkpoint B2 / Step 06C
+ripete poi la domanda strutturale corretta: la formazione
+selezionata dalla rosa è **contesto**, mentre `piano tattico + lateralFocus` è la
+risposta enumerata. I target `+0.045 / -0.045 / 0`, `R / N_eff >= 0.25`,
+ubiquità `<= 4`, il limite `0.55` e il protocollo a sette worker non cambiano.
+Il precedente Step 06 resta consultabile come before-state e non viene
+rigenerato per passare B2.
 
 ---
 
@@ -452,6 +498,12 @@ Non sostituisce né riassume nessuna delle tre gate congelate.
 
 ## Protocollo informativo condiviso
 
+**Emendamento A1:** il protocollo sottostante resta il design della futura
+policy opponent-aware e il manager può ancora riceverne i fatti, ma il suo
+consumo da parte dell'AI è fuori dall'MVP. Gli Step 10-12 devono essere
+riscritti dopo un eventuale `GO` di B2 prima di poter iniziare; il testo storico
+non autorizza più input avversari nella policy AI di questa fase.
+
 Prima di costruire il valutatore AI deve esistere un Module di lettura
 dell'avversario. La sua Interface restituisce fatti strutturati, non una
 soluzione ottima:
@@ -486,7 +538,7 @@ storiche senza duplicarle.
 | Giocatori e popolazione | 07 esecuzione per compito | sì | |
 | Giocatori e popolazione | 08 identità rosa ed esecuzione laterale | sì | 09 / C - contesto giocatori reale |
 | Decisione | 10 il manager legge l'avversario | sì, come informazione | |
-| Decisione | 11 l'AI risponde con gli stessi fatti | sì | 12 / D - ciclo manager/AI |
+| Decisione | 11 policy AI MVP, da riscrivere dopo B2 | sì | 12 / D - da riscrivere dopo B2 |
 | Carriera | 13 capitoli tattici canonici | report e spiegazione | |
 | Carriera | 14 preparazione e persistenza unica | sì, dalla gara seguente | 15 / E - conseguenza multi-partita |
 | Chiusura | 16 coorte integrata | no | 16 / F - accettazione finale |
@@ -1540,8 +1592,10 @@ isolato. Il comando fallisce se il conteggio effettivo non è sette.
 - **lateralità:** mirroring inverte lato e conserva il risultato accoppiato;
 - **low block:** riduzione dell'xG concesso `>= 8%` dal neutrale e rapporto fra
   perdita xG propria e riduzione concessa `<= 2.0`;
-- **parità informativa:** AI e manager hanno stessi fatti e latenza;
-- **policy AI:** formazione scelta sulla rosa e nessun exploit universale;
+- **Emendamento A1 su D/AI:** i target del manager sopra restano; la storica
+  parità informativa AI/manager è superseded per l'MVP. Dopo B2 e prima dello
+  Step 10, D deve preregistrare separatamente il gate della policy AI basata su
+  rosa e stato corrente, senza `OpponentRead` e senza exploit universale;
 - **live:** diagnosi e conseguenza appartengono allo stesso capitolo;
 - **post-partita:** ogni preparazione è utile e dannosa in contesti reali;
 - **spiegazione:** trace e minuto condividono la stessa derivazione;
@@ -1595,7 +1649,7 @@ La prima tranche da autorizzare è soltanto:
 Step 01 -> Step 02 -> Checkpoint A / Step 03
 ```
 
-Dopo A, la seconda tranche è:
+Dopo A, la seconda tranche originaria era:
 
 ```text
 Step 04 -> Step 05 -> Checkpoint B / Step 06
@@ -1608,6 +1662,17 @@ tetto-oracolo `counter_move_ceiling / counter_move_exposure / context-free`
 fuori campione, il progetto non deve iniziare Step 07. Questo non è ancora un
 claim di agenzia: il target del manager informato resta posseduto dal
 Checkpoint D / Step 12.
+
+Lo `STOP / RETHINK` di B ha chiuso quella tranche. L'Emendamento A1 autorizza
+ora soltanto:
+
+```text
+Step 06A -> Checkpoint L1 / Step 06B -> Checkpoint B2 / Step 06C
+```
+
+L1 verifica prima la salute longitudinale della popolazione. B2 mantiene i
+target tattici ma condiziona la formazione sulla rosa. Soltanto il `GO` di
+entrambi può aprire Step 07.
 
 Soltanto con `GO` si autorizzano, una tranche alla volta:
 

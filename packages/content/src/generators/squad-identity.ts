@@ -1,4 +1,4 @@
-import type { PlayerPosition } from "@game/domain";
+import type { ClubId, PlayerPosition } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import { FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
@@ -170,28 +170,69 @@ export const GENERATED_SQUAD_IDENTITIES: Readonly<
 };
 
 /**
- * Picks the squad identity one generated club is built from.
+ * Assigns a balanced deck of squad identities to one ordered competition.
  *
- * Keyed by `clubNumber` because every other generated fact about a club
- * already is: its player IDs, its rarity slots and its default reputation all
- * come from its ordinal in the club list, so an identity keyed on anything
- * else would be stable under a reordering that moves the players themselves.
+ * The club is the football unit: each receives one complete depth chart. The
+ * competition owns only distribution, so twenty clubs over eight identities
+ * receive two or three of each instead of twenty independent draws that may
+ * converge by chance.
  *
- * The draw is uniform. A weighting would be a claim about how common each kind
- * of squad is in this football world, and nothing has measured that yet.
+ * `competitionIdentityKey` is part of the derived RNG stream because domestic
+ * divisions restart their club ordinal at one. Without the key, three leagues
+ * in the same world silently receive the same identity sequence.
  *
  * @example
- * generatedSquadIdentity("demo-001", 3).key; // stable for that seed and club
+ * const assignments = assignGeneratedSquadIdentities({
+ *   seed: "demo-001",
+ *   competitionIdentityKey: "competition:ita-3",
+ *   orderedClubIds,
+ * });
  */
-export function generatedSquadIdentity(seed: string, clubNumber: number): GeneratedSquadIdentity {
-  const rng = deriveRng(seed, "squad-identity", clubNumber);
-  const key = GENERATED_SQUAD_IDENTITY_KEYS[rng.nextInt(0, GENERATED_SQUAD_IDENTITY_KEYS.length)];
-
-  if (key === undefined) {
-    throw new Error(`Squad identity draw fell outside the identity list for club ${clubNumber}`);
+export function assignGeneratedSquadIdentities(input: {
+  readonly seed: string;
+  readonly competitionIdentityKey: string;
+  readonly orderedClubIds: readonly ClubId[];
+}): ReadonlyMap<ClubId, GeneratedSquadIdentity> {
+  if (input.competitionIdentityKey.length === 0) {
+    throw new Error("Generated squad identity assignment requires a competition identity key");
   }
 
-  return GENERATED_SQUAD_IDENTITIES[key];
+  const seenClubIds = new Set<ClubId>();
+  for (const clubId of input.orderedClubIds) {
+    if (seenClubIds.has(clubId)) {
+      throw new Error(`Generated squad identity assignment contains duplicate club ${clubId}`);
+    }
+    seenClubIds.add(clubId);
+  }
+
+  const rng = deriveRng(
+    input.seed,
+    "squad-identity-assignment",
+    input.competitionIdentityKey,
+  );
+  const identityOrder = [...GENERATED_SQUAD_IDENTITY_KEYS];
+  shuffleInPlace(identityOrder, rng);
+
+  const deck = input.orderedClubIds.map((_, index) => {
+    const key = identityOrder[index % identityOrder.length];
+    if (key === undefined) {
+      throw new Error(`Generated squad identity deck has no key at index ${index}`);
+    }
+    return key;
+  });
+  shuffleInPlace(deck, rng);
+
+  const assignments = new Map<ClubId, GeneratedSquadIdentity>();
+  for (let index = 0; index < input.orderedClubIds.length; index += 1) {
+    const clubId = input.orderedClubIds[index];
+    const key = deck[index];
+    if (clubId === undefined || key === undefined) {
+      throw new Error(`Generated squad identity assignment is incomplete at index ${index}`);
+    }
+    assignments.set(clubId, GENERATED_SQUAD_IDENTITIES[key]);
+  }
+
+  return assignments;
 }
 
 /**
@@ -214,4 +255,18 @@ export function squadIdentityPositionForSlot(
   }
 
   return position;
+}
+
+/** Fisher-Yates shuffle over one local array and one derived deterministic RNG. */
+function shuffleInPlace<T>(values: T[], rng: ReturnType<typeof deriveRng>): void {
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const otherIndex = rng.nextInt(0, index + 1);
+    const value = values[index];
+    const otherValue = values[otherIndex];
+    if (value === undefined || otherValue === undefined) {
+      throw new Error(`Generated squad identity shuffle fell outside index ${index}`);
+    }
+    values[index] = otherValue;
+    values[otherIndex] = value;
+  }
 }

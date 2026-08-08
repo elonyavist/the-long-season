@@ -1,9 +1,10 @@
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 
 import {
+  assignGeneratedSquadIdentities,
   createFakeDomesticWorld,
+  FAKE_DOMESTIC_COMPETITION_IDS,
   generatedRoleIdentityForPosition,
-  generatedSquadIdentity,
   GENERATED_SQUAD_IDENTITIES,
   selectPlayerValuationConfig,
   squadIdentityPositionForSlot,
@@ -164,11 +165,10 @@ function observedCompetitionId(world: FakeDomesticWorld): CliCompetitionId {
 /**
  * Which squad identity generated each club of the observed division.
  *
- * Content assigns identities with `generatedSquadIdentity(seed, clubNumber)`,
- * and `clubNumber` is the club's index **within its own division** - the
- * generator is called once per division (`domestic-world.ts:401`), so the
- * counter restarts each time. `divisionClubIds` is that same list in that same
- * order, which is the only reason this can be re-derived at all.
+ * Content assigns identities from one competition-scoped balanced deck.
+ * `divisionClubIds` is the exact generation order, and the competition ID is
+ * part of the canonical RNG key, so restarting club ordinals in another tier
+ * cannot silently repeat the same sequence.
  *
  * Re-derived and then **checked against the squad it claims to describe**. A
  * re-derivation that drifted would mislabel every row while still producing a
@@ -182,15 +182,26 @@ function squadIdentityKeyByClubId(
   clubIds: readonly ClubId[],
 ): ReadonlyMap<ClubId, string> {
   const generationOrder = world.divisionClubIds["third_division"] ?? [];
+  const competitionId = FAKE_DOMESTIC_COMPETITION_IDS[2];
+  if (competitionId === undefined) {
+    throw new Error("The observed domestic third division has no competition identity");
+  }
+  const assignments = assignGeneratedSquadIdentities({
+    seed: worldSeed,
+    competitionIdentityKey: competitionId,
+    orderedClubIds: generationOrder,
+  });
   const keyByClubId = new Map<ClubId, string>();
 
   for (const clubId of clubIds) {
-    const clubNumber = generationOrder.indexOf(clubId) + 1;
-    if (clubNumber === 0) {
+    if (!generationOrder.includes(clubId)) {
       throw new Error(`Club ${clubId} is not in the observed division's generation order`);
     }
 
-    const identity = generatedSquadIdentity(worldSeed, clubNumber);
+    const identity = assignments.get(clubId);
+    if (identity === undefined) {
+      throw new Error(`The canonical squad identity assignment omitted club ${clubId}`);
+    }
     const squadPlayerIds = world.clubsById[clubId]?.playerIds ?? [];
     for (const [slotIndex, playerId] of squadPlayerIds.entries()) {
       const expected = squadIdentityPositionForSlot(identity, slotIndex + 1);

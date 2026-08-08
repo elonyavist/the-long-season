@@ -20,6 +20,12 @@ Read these only when the current step asks for current long-run readiness contex
   81A contract and current execution authority.** It fixes the thesis, target
   effects, information parity, analytic/Monte Carlo split, checkpoint protocol
   and the ordered Step 01-16 plan before implementation starts.
+- `PHASE_81A_CHECKPOINT_B_STRUCTURAL_CEILING.md` - **Checkpoint B, `STOP /
+  RETHINK`.** The complete `207`-action analytic matrix collapses to `198`
+  effective signatures, but only `2` ever appear as best responses, the most
+  common covers `121` contexts, no material cycle exists, and
+  `4-2-3-1|high_pressing|balanced` is strictly dominant. Phase 2 was not run by
+  preregistered protocol; Steps 07-16 remain closed.
 
 - `PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md` - **Checkpoint A2, conditional
   `GO`.** The

@@ -4,7 +4,9 @@ import { test } from "vitest";
 import {
   MINIMUM_CAREER_DEPARTMENT_DEPTH,
   PLAYER_ROLES,
+  clubId,
   playerSquadDepartment,
+  type ClubId,
   type PlayerPosition,
   type PlayerRole,
   type PlayerSquadDepartment,
@@ -13,9 +15,9 @@ import {
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 import {
+  assignGeneratedSquadIdentities,
   GENERATED_SQUAD_IDENTITIES,
   GENERATED_SQUAD_IDENTITY_KEYS,
-  generatedSquadIdentity,
   squadIdentityPositionForSlot,
   type GeneratedSquadIdentity,
 } from "./squad-identity.ts";
@@ -97,38 +99,79 @@ test("no role is stocked by every identity, so abundance varies between clubs", 
   }
 });
 
-test("squad identity is deterministic for a seed and club number", () => {
-  const first = generatedSquadIdentity("identity-world", 7);
-  const second = generatedSquadIdentity("identity-world", 7);
+test("competition assignment is deterministic and balanced for twenty clubs", () => {
+  const orderedClubIds = generatedClubIds(20);
+  const input = {
+    seed: "identity-world",
+    competitionIdentityKey: "competition:test-20",
+    orderedClubIds,
+  } as const;
+  const first = assignGeneratedSquadIdentities(input);
+  const second = assignGeneratedSquadIdentities(input);
 
-  assert.equal(first.key, second.key);
-  assert.deepEqual(first.positions, second.positions);
+  assert.deepEqual(assignmentVector(first, orderedClubIds), assignmentVector(second, orderedClubIds));
+  const counts = identityCounts(first);
+  assert.deepEqual([...counts.values()].toSorted((left, right) => left - right), [2, 2, 2, 2, 3, 3, 3, 3]);
 });
 
-test("a generated division draws several different squad identities", () => {
-  const drawn = new Set<string>();
+test("every competition size uses only floor or ceiling counts without early repeats", () => {
+  for (let clubCount = 1; clubCount <= 32; clubCount += 1) {
+    const orderedClubIds = generatedClubIds(clubCount);
+    const assignments = assignGeneratedSquadIdentities({
+      seed: `balanced-${String(clubCount)}`,
+      competitionIdentityKey: `competition:test-${String(clubCount)}`,
+      orderedClubIds,
+    });
+    const counts = identityCounts(assignments);
+    const floor = Math.floor(clubCount / GENERATED_SQUAD_IDENTITY_KEYS.length);
+    const ceiling = Math.ceil(clubCount / GENERATED_SQUAD_IDENTITY_KEYS.length);
 
-  for (let clubNumber = 1; clubNumber <= 18; clubNumber += 1) {
-    drawn.add(generatedSquadIdentity("demo-001", clubNumber).key);
-  }
-
-  assert.equal(drawn.size >= 4, true, `one division drew only ${String(drawn.size)} identities`);
-});
-
-test("every identity is reachable across seeds", () => {
-  const drawn = new Set<string>();
-
-  for (let seedNumber = 0; seedNumber < 40; seedNumber += 1) {
-    for (let clubNumber = 1; clubNumber <= 18; clubNumber += 1) {
-      drawn.add(generatedSquadIdentity(`reach-${String(seedNumber)}`, clubNumber).key);
+    assert.equal(assignments.size, clubCount);
+    for (const count of counts.values()) {
+      assert.equal(count === floor || count === ceiling, true, `${String(clubCount)} clubs produced ${String(count)}`);
+    }
+    if (clubCount <= GENERATED_SQUAD_IDENTITY_KEYS.length) {
+      assert.equal(new Set(assignmentVector(assignments, orderedClubIds)).size, clubCount);
     }
   }
+});
 
-  assert.deepEqual([...drawn].toSorted(), [...GENERATED_SQUAD_IDENTITY_KEYS].toSorted());
+test("competition identity participates in assignment and duplicate clubs are refused", () => {
+  const orderedClubIds = generatedClubIds(18);
+  const vectors = ["competition:one", "competition:two", "competition:three"].map(
+    (competitionIdentityKey) => assignmentVector(
+      assignGeneratedSquadIdentities({
+        seed: "scoped-world",
+        competitionIdentityKey,
+        orderedClubIds,
+      }),
+      orderedClubIds,
+    ).join("|"),
+  );
+
+  assert.equal(new Set(vectors).size >= 2, true, "competition scope did not change a real assignment");
+  assert.throws(
+    () => assignGeneratedSquadIdentities({
+      seed: "duplicate-world",
+      competitionIdentityKey: "competition:duplicate",
+      orderedClubIds: [orderedClubIds[0]!, orderedClubIds[0]!],
+    }),
+    /duplicate club/,
+  );
+  assert.throws(
+    () => assignGeneratedSquadIdentities({
+      seed: "empty-scope-world",
+      competitionIdentityKey: "",
+      orderedClubIds,
+    }),
+    /requires a competition identity key/,
+  );
 });
 
 test("a slot outside the squad is refused rather than answered", () => {
-  const identity = generatedSquadIdentity("demo-001", 1);
+  const firstKey = GENERATED_SQUAD_IDENTITY_KEYS[0];
+  assert.ok(firstKey !== undefined);
+  const identity = GENERATED_SQUAD_IDENTITIES[firstKey];
 
   assert.throws(() => squadIdentityPositionForSlot(identity, 0), /has no slot 0/);
   assert.throws(
@@ -139,6 +182,37 @@ test("a slot outside the squad is refused rather than answered", () => {
 
 function allIdentities(): readonly GeneratedSquadIdentity[] {
   return GENERATED_SQUAD_IDENTITY_KEYS.map((key) => GENERATED_SQUAD_IDENTITIES[key]);
+}
+
+function generatedClubIds(count: number): readonly ClubId[] {
+  return Array.from({ length: count }, (_, index) =>
+    clubId(`club:identity-test-${String(index + 1).padStart(2, "0")}`)
+  );
+}
+
+function assignmentVector(
+  assignments: ReadonlyMap<ClubId, GeneratedSquadIdentity>,
+  orderedClubIds: readonly ClubId[],
+): readonly string[] {
+  return orderedClubIds.map((id) => {
+    const identity = assignments.get(id);
+    assert.ok(identity !== undefined, `assignment omitted ${id}`);
+    return identity.key;
+  });
+}
+
+function identityCounts(
+  assignments: ReadonlyMap<ClubId, GeneratedSquadIdentity>,
+): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>(
+    GENERATED_SQUAD_IDENTITY_KEYS.map((key) => [key, 0]),
+  );
+  for (const identity of assignments.values()) {
+    const currentCount = counts.get(identity.key);
+    assert.ok(currentCount !== undefined);
+    counts.set(identity.key, currentCount + 1);
+  }
+  return counts;
 }
 
 /**

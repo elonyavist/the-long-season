@@ -23,11 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **05 is Done; Checkpoint B / Step 06 is next.** The minute plan owns allocation, resistance, exposure, saturation, volume, quality and control;
-  `left/right` mirror; one signature owns every strategic fact. Calibration:
-  schema `2`, content `v3`, no reset. Seven-worker A2 exit: reduction
-  `0.2088`/`0.2287`, exchange `1.1659`/`1.6721`, both green. Gate: `294` files,
-  `2231` tests, `856` modules, exit `0`; Steps 07-16 await B.
+- Step: Phase 81A **06A is Done; Checkpoint L1 / Step 06B is active.**
+  The full `207`-action matrix produced `N_eff=198`, only `R=2`, ubiquity `121`,
+  zero material cycles and one dominant row. Amendment A1 preserves that result,
+  adds balanced club role identities per competition, then runs L1 `100 x 10` plus HTML before B2 retries with formation squad-fixed. Steps 07-16 await both `GO` results.
 - Step 03A Done, `pnpm check` green (`291` files, `2250` tests). **Adopted:
   `wide_midfielder` stays in the Phase 80A sample and `3005` replaces the
   shipped `3034`**, which was fitted to a population that could not generate it.
@@ -36,10 +35,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
   implemented; held behind `PHASE_81A_PENDING_OUTFIELD_PROJECTION`, **now
   deletable since A2 recorded `GO`**. Hard-cap probe **`FOUND`**, `21/21`
   reconciled. Checkpoint A's `STOP / RETHINK` and frozen before-state stand.
-- **Each club draws one of eight squad identities** from
-  `deriveRng(seed, "squad-identity", clubNumber)` - a *within-division* index.
-  An identity names footballers, never a shape, and none may become reachable
-  from selection. `naturalCanonicalRoleForPosition(...)` is the one mapping.
+- **Step 06A replaced the independent draw with one balanced deck per
+  competition.** Real `18`-club leagues read `2/3` of every identity, all ten
+  roles remain reachable, and AI still selects from own-squad/current-match
+  facts. `pnpm check`: `294` files, `2233` tests; Step 06B owns `100 x 10` + HTML.
 - **`AiSquadSelectionResult.catalogChoice` says how close the shape decision was**,
   absent when a caller imposed one. Four ephemeral facts from the canonical walk -
   never a second ranking, never persisted, never rebuilt. **`tiedAtBestCount === 1`
@@ -177,9 +176,10 @@ silent about which players a manager fields.**
   receives the plan's centred quality edge. Knobs and lateral focus reallocate
   one route budget, exposure is a separate opponent fact, and derived
   saturation/weights/quality/budget are never stored beside their inputs.
-- `opportunity-route-plan-bps-v1` is the sole complete strategic signature for
-  Checkpoint B. It quantizes ordered plan facts at one basis point and reads no
-  outcome, response identity or catalog order.
+- `opportunity-route-plan-bps-v1` remains the sole strategic signature. B groups
+  only complete signature vectors; no result enters identity. `simulateMatch`
+  still forces focus to balanced: an in-memory replay seam is required only
+  after a redesigned model first passes B's analytic phase.
 
 ### Suitability Seam (Step 05)
 

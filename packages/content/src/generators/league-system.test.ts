@@ -4,6 +4,10 @@ import { toISO } from "@game/shared";
 
 import { createFakeLeagueSystem } from "./league-system.ts";
 import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
+import {
+  GENERATED_SQUAD_IDENTITY_KEYS,
+  assignGeneratedSquadIdentities,
+} from "./squad-identity.ts";
 
 /**
  * Fake league-system tests lock content-owned configuration without importing
@@ -41,6 +45,28 @@ test("fake league passes the world seed into generated squads", () => {
   assert.ok(firstPlayerId !== undefined);
   assert.equal(second.playerIds[0], firstPlayerId);
   assert.notDeepEqual(first.players[firstPlayerId], second.players[firstPlayerId]);
+});
+
+test("fake league assigns every squad identity two or three times", () => {
+  const worldSeed = "career-balanced-identities";
+  const league = createFakeLeagueSystem({ worldSeed });
+  const assignments = assignGeneratedSquadIdentities({
+    seed: worldSeed,
+    competitionIdentityKey: league.competition.id,
+    orderedClubIds: league.clubIds,
+  });
+  const counts = new Map(GENERATED_SQUAD_IDENTITY_KEYS.map((key) => [key, 0]));
+
+  for (const identity of assignments.values()) {
+    const currentCount = counts.get(identity.key);
+    assert.ok(currentCount !== undefined);
+    counts.set(identity.key, currentCount + 1);
+  }
+
+  assert.deepEqual(
+    [...counts.values()].toSorted((left, right) => left - right),
+    [2, 2, 2, 2, 2, 2, 3, 3],
+  );
 });
 
 test("fake league facade exposes a coherent generated world bundle", () => {
