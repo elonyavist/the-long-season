@@ -381,6 +381,7 @@ export {
   type YouthPromotionRecord,
 } from "./career/youth-promotion.ts";
 export {
+  assessCareerSquadStructure,
   maintainCareerSquadShape,
   MINIMUM_CAREER_SQUAD_SIZE,
   TARGET_CAREER_SQUAD_SIZE,

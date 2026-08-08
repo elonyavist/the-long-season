@@ -58,7 +58,11 @@ import {
   type SeasonPlayerSummaryStatRow,
   type SeasonPlayerStatRegistration,
 } from "../season-engine/player-stats.ts";
-import { AiSquadSelectionError, buildAiSquadMatchTeamContext } from "../team-selection/index.ts";
+import {
+  AiSquadSelectionError,
+  buildAiSquadMatchTeamContext,
+  type CatalogShapeChoice,
+} from "../team-selection/index.ts";
 import {
   derivePublicPlayerAssessment,
   type PublicPlayerAssessment,
@@ -275,6 +279,10 @@ export interface SimulateSeasonFixtureFieldedTeam {
   /** Absent only when a caller supplied a lineup without a catalog shape. */
   readonly formationKey?: FormationKey;
   readonly selectionSource: SimulateSeasonFormationSelectionSource;
+  /** Exact instructions present in the match context consumed at kickoff. */
+  readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /** Catalog diagnostics from the same selector walk; absent for imposed shapes. */
+  readonly catalogChoice?: CatalogShapeChoice;
 }
 
 /** Both selections actually consumed by one simulated fixture. */
@@ -472,6 +480,8 @@ interface FixtureTeamSetup {
   readonly formationKey?: FormationKey;
   /** Selection path used to build this exact kickoff context. */
   readonly selectionSource: SimulateSeasonFormationSelectionSource;
+  /** Diagnostics retained only when the catalog selector made the choice. */
+  readonly catalogChoice?: CatalogShapeChoice;
 }
 
 interface FixtureMatchSetup {
@@ -599,7 +609,9 @@ function fieldedTeamForFixture(
     clubId,
     lineup: setup.teamContext.lineup,
     selectionSource: setup.selectionSource,
+    tacticalDistribution: { ...setup.teamContext.tacticalDistribution },
     ...(setup.formationKey === undefined ? {} : { formationKey: setup.formationKey }),
+    ...(setup.catalogChoice === undefined ? {} : { catalogChoice: setup.catalogChoice }),
   };
 }
 
@@ -1035,6 +1047,9 @@ function aiSelectedMatchTeamContext(
       formationKey: result.selection.formation.key,
       selectionSource:
         team.aiSelection.formation === undefined ? "catalog_ai" : "imposed_ai",
+      ...(result.selection.catalogChoice === undefined
+        ? {}
+        : { catalogChoice: result.selection.catalogChoice }),
     };
   } catch (error) {
     if (error instanceof AiSquadSelectionError) {

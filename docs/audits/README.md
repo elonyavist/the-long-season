@@ -26,6 +26,12 @@ Read these only when the current step asks for current long-run readiness contex
   common covers `121` contexts, no material cycle exists, and
   `4-2-3-1|high_pressing|balanced` is strictly dominant. Phase 2 was not run by
   preregistered protocol; Steps 07-16 remain closed.
+- `PHASE_81A_CHECKPOINT_L1_LEAGUE_DIVERSITY_100X10.md` - **Checkpoint L1,
+  canary `REFINE`; main cohort stopped.** The `7 x 10` exposes both a red
+  formation-replication gate and a separate player-lifecycle defect: by season
+  ten, `86.4%` of retained leading scorers are `33+`, and every retained `33+`
+  leader plays all `34` matches. The report attributes the missing availability
+  seam before any aging coefficient may move.
 
 - `PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md` - **Checkpoint A2, conditional
   `GO`.** The

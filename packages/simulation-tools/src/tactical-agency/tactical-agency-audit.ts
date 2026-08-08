@@ -302,7 +302,10 @@ function observeSelection(
       ? {}
       : { secondStructuralScore: choice.secondStructuralScore }),
     tiedAtBestCount: choice.tiedAtBestCount,
-    outOfPositionSlotCount: outOfPositionSlotCount(input.careerState, selection.teamContext),
+    outOfPositionSlotCount: countTacticalAgencyOutOfPositionSlots({
+      careerState: input.careerState,
+      lineup: selection.teamContext.lineup,
+    }),
     tactic: { ...selection.teamContext.tacticalDistribution },
     ...(workItem.squadIdentityKey === undefined
       ? {}
@@ -320,12 +323,21 @@ function formationKeyOf(teamContext: MatchTeamContext): string {
   return separatorIndex === -1 ? firstSlot.slotId : firstSlot.slotId.slice(0, separatorIndex);
 }
 
-/** Counts lineup slots the domain calls `weak` or `invalid` for their occupant. */
-function outOfPositionSlotCount(careerState: CareerState, teamContext: MatchTeamContext): number {
+/**
+ * Counts lineup slots the domain calls `weak` or `invalid` for their occupant.
+ *
+ * A2 and the longitudinal L1 report both need the same definition. Keeping the
+ * suitability read here prevents the CLI from growing a second interpretation
+ * of what "out of position" means.
+ */
+export function countTacticalAgencyOutOfPositionSlots(input: {
+  readonly careerState: CareerState;
+  readonly lineup: MatchTeamContext["lineup"];
+}): number {
   let count = 0;
 
-  for (const slot of teamContext.lineup) {
-    const player = careerState.gameState.players[slot.playerId];
+  for (const slot of input.lineup) {
+    const player = input.careerState.gameState.players[slot.playerId];
     if (player === undefined) continue;
 
     const suitability: PositionSuitability = evaluatePositionSuitability(player.naturalPositions, {

@@ -5,8 +5,10 @@
 **Structural redesign authorized after Checkpoint B.** Steps 01-06 are Done;
 Checkpoints A2/U1/U2 and the Step 05 low-block exit recorded `GO`, but
 Checkpoint B recorded `STOP / RETHINK` on 2026-08-08. Design Contract Amendment
-A1 inserts Steps 06A-06C. Step 06A is Done; Step 06B is now the only active
-checkpoint. Steps 07-16 remain closed until Checkpoints L1 and B2 record `GO`.
+A1 inserts Steps 06A-06C. Step 06A is Done; Step 06B's `7 x 10` canary recorded
+`REFINE` and the `100 x 10` main run was stopped. Step 06B1 is active and owns
+the availability/workload finding; the separate formation-diversity failure
+remains recorded. Steps 07-16 remain closed until L1 and B2 record `GO`.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -115,7 +117,8 @@ contexts; it never owns the analytic diversity gate.
 | 05 | [contested routes and lateral focus](05-contested-routes-and-lateral-focus.md) | yes | both-set low-block gate opens 06 |
 | 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | **`STOP / RETHINK`; 07 remains closed** |
 | 06A | [league squad diversity and MVP AI boundaries](06a-league-squad-diversity-and-mvp-ai-boundaries.md) | population | **Done; Step 06B** |
-| 06B | [Checkpoint L1: 100 worlds x 10 seasons](06b-checkpoint-l1-league-diversity-100x10.md) | no | GO authorizes 06C |
+| 06B | [Checkpoint L1: 100 worlds x 10 seasons](06b-checkpoint-l1-league-diversity-100x10.md) | no | **canary `REFINE`; main stopped** |
+| 06B1 | [canonical season availability and workload](06b1-canonical-season-availability-and-workload.md) | yes | prepared; repeat L1 canary |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
@@ -157,8 +160,10 @@ therefore excludes the chart component as the demonstrated cause without
 recreating or absolving the full pre-81A population. Step 05 restored the band
 on both sets: conceded-xG reduction `0.2088`/`0.2287`, exchange
 `1.1659`/`1.6721`. Step 06 subsequently recorded `STOP / RETHINK`; Step 06A is
-Done with one balanced identity deck per competition. Step 06B is the
-authorized next action and Steps 07-16 remain checkpoint-closed.
+Done with one balanced identity deck per competition. Step 06B's canary then
+recorded `REFINE`: the replicated-formation retention gate is red and the human
+view found a separate post-season-three availability/age drift. The main
+`100 x 10` is stopped; Steps 07-16 remain checkpoint-closed.
 
 **Checkpoint A recorded `STOP / RETHINK` on 2026-08-07.** Its preregistered tie
 bias was falsified: `tieDecidedShare` is `0.0000` on `378` real career

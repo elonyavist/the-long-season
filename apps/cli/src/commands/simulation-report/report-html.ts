@@ -67,7 +67,11 @@ function renderKnownSection(id: string, data: SimulationReportJsonValue): string
   if (worlds !== undefined) {
     const seasonCount = worlds.reduce<number>((count, world) =>
       count + seasonsForWorld(id, record(world)).length, 0);
-    return `${renderDimensionOverview(id, worlds, seasonCount)}${worlds.map((world, index) =>
+    const checkpoint = record(root?.checkpoint);
+    const checkpointView = checkpoint === undefined
+      ? ""
+      : `<div class="world"><h4>${escapeHtml(english("simulationReport.html.checkpoint"))}</h4>${cardsFrom(checkpoint, ["decision"])}${rawDetails(checkpoint)}</div>`;
+    return `${checkpointView}${renderDimensionOverview(id, worlds, seasonCount)}${worlds.map((world, index) =>
       renderWorld(id, record(world), index + 1)).join("")}`;
   }
   return rawDetails(data);
@@ -78,7 +82,7 @@ function renderWorld(sectionId: string, world: Readonly<Record<string, Simulatio
   const seed = stringValue(world.seed) ?? `${english("simulationReport.html.world")} ${index}`;
   const seasons = seasonsForWorld(sectionId, world);
   if (seasons.length > 0) {
-    return `<details class="world" data-world-index="${index - 1}"${index === 1 ? " open" : ""}><summary>${escapeHtml(seed)}</summary>${seasons.map((season, seasonIndex) =>
+    return `<details class="world" data-world-index="${index - 1}"${index === 1 ? " open" : ""}><summary>${escapeHtml(seed)}</summary>${renderWorldPreamble(sectionId, world)}${seasons.map((season, seasonIndex) =>
       renderSeason(sectionId, season, seasonIndex)).join("")}</details>`;
   }
   return `<details class="world" data-world-index="${index - 1}"${index === 1 ? " open" : ""}><summary>${escapeHtml(seed)}</summary>${rawDetails(world)}</details>`;
@@ -100,17 +104,50 @@ function renderSeasonBody(
   sectionId: string,
   season: Readonly<Record<string, SimulationReportJsonValue>>,
 ): string {
+  const competitions = array(season.competitions)?.map(record).filter(isDefined);
+  if (competitions !== undefined) {
+    return competitions.map((competition) => {
+      const name = stringValue(competition.competitionName)
+        ?? stringValue(competition.competitionId)
+        ?? english("simulationReport.html.notObserved");
+      return `<div class="competition"><h4>${escapeHtml(name)}</h4>${renderFlatSeasonBody(sectionId, competition)}</div>`;
+    }).join("");
+  }
+  return renderFlatSeasonBody(sectionId, season);
+}
+
+function renderFlatSeasonBody(
+  sectionId: string,
+  season: Readonly<Record<string, SimulationReportJsonValue>>,
+): string {
   if (sectionId === "standings" || sectionId === "transfers") return tableFrom(array(season.rows));
   if (sectionId === "players") {
     return `<h4>${escapeHtml(english("simulationReport.html.topScorers"))}</h4>${tableFrom(array(season.topScorers))}<h4>${escapeHtml(english("simulationReport.html.topAssists"))}</h4>${tableFrom(array(season.topAssists))}`;
   }
   if (sectionId === "formations") {
-    return `${cardsFrom(season, ["distinctFormationCount", "fallbackSelectionCount"])}${tableFrom(array(season.rows))}`;
+    const primaryRoles = record(season.primaryRoles);
+    return `${cardsFrom(season, ["distinctFormationCount", "replicatedFormationCount", "topFormationShare", "fallbackSelectionCount"])}<h4>${escapeHtml(english("simulationReport.html.clubModalFormations"))}</h4>${tableFrom(array(season.clubModalRows))}<h4>${escapeHtml(english("simulationReport.html.primaryRolePopulation"))}</h4>${tableFrom(array(primaryRoles?.roleShares))}<h4>${escapeHtml(english("simulationReport.html.roleDepthWarnings"))}</h4>${tableFrom(array(season.roleDepthWarnings))}${rawDetails(season.rows)}`;
   }
   if (sectionId === "season") {
     return cardsFrom(season, ["championClubId", "championPoints", "lastClubId", "lastPoints", "fixtureCount", "drawCount", "transferTurnoverCount"]);
   }
   return rawDetails(season);
+}
+
+function renderWorldPreamble(
+  sectionId: string,
+  world: Readonly<Record<string, SimulationReportJsonValue>>,
+): string {
+  if (sectionId !== "formations") return "";
+  const opening = record(world.openingPopulation);
+  const competitions = array(opening?.competitions)?.map(record).filter(isDefined);
+  if (competitions === undefined) return "";
+  return `<div class="season-body"><h4>${escapeHtml(english("simulationReport.html.openingPopulation"))}</h4>${competitions.map((competition) => {
+    const name = stringValue(competition.competitionName)
+      ?? stringValue(competition.competitionId)
+      ?? english("simulationReport.html.notObserved");
+    return `<div class="competition"><h4>${escapeHtml(name)}</h4>${cardsFrom(competition, ["clubCount", "identityMismatchCount"])}${tableFrom(array(competition.rows))}</div>`;
+  }).join("")}</div>`;
 }
 
 function seasonsForWorld(
@@ -151,7 +188,7 @@ function tableFrom(rows: readonly SimulationReportJsonValue[] | undefined): stri
   const first = records[0];
   if (first === undefined) return rawDetails(rows);
   const columns = Object.keys(first);
-  return `<div class="table-wrap"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(humanize(column))}</th>`).join("")}</tr></thead><tbody>${records.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(display(row[column]))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(columnLabel(column))}</th>`).join("")}</tr></thead><tbody>${records.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(displayColumnValue(column, row[column]))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
 function cardsFrom(row: Readonly<Record<string, SimulationReportJsonValue>>, keys: readonly string[]): string {
@@ -186,6 +223,30 @@ function titleFor(id: string): string {
 
 function humanize(value: string): string {
   return value.replaceAll("_", " ").replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+/** Removes storage-unit language from money columns in the private HTML view. */
+function columnLabel(column: string): string {
+  return humanize(column.endsWith("MinorUnits") ? column.slice(0, -"MinorUnits".length) : column);
+}
+
+/** Presents canonical EUR minor units without changing the embedded JSON fact. */
+function displayColumnValue(
+  column: string,
+  value: SimulationReportJsonValue | undefined,
+): string {
+  if (column.endsWith("MinorUnits") && typeof value === "number" && Number.isSafeInteger(value)) {
+    return formatEuroMinorUnits(value);
+  }
+  return display(value);
+}
+
+/** Formats integer euro cents with deterministic English separators. */
+function formatEuroMinorUnits(value: number): string {
+  const absolute = Math.abs(value);
+  const euros = Math.floor(absolute / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const cents = String(absolute % 100).padStart(2, "0");
+  return `${value < 0 ? "-" : ""}€${euros}.${cents}`;
 }
 
 function display(value: SimulationReportJsonValue | undefined): string {

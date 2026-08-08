@@ -23,10 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06A is Done; Checkpoint L1 / Step 06B is active.**
-  The full `207`-action matrix produced `N_eff=198`, only `R=2`, ubiquity `121`,
-  zero material cycles and one dominant row. Amendment A1 preserves that result,
-  adds balanced club role identities per competition, then runs L1 `100 x 10` plus HTML before B2 retries with formation squad-fixed. Steps 07-16 await both `GO` results.
+- Step: Phase 81A **Step 06B1 is active after L1 `REFINE`; main stopped.**
+  Canary: replicated formations `0.8667 < 0.95`; season-ten scorers are `86.4%`
+  aged `33+`, all `34/34`. The main stopped at `35` non-evidence shards; 06C-16 closed.
 - Step 03A Done, `pnpm check` green (`291` files, `2250` tests). **Adopted:
   `wide_midfielder` stays in the Phase 80A sample and `3005` replaces the
   shipped `3034`**, which was fitted to a population that could not generate it.

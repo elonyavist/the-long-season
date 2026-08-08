@@ -39,6 +39,7 @@ import {
   LOCKED_PROFILE_MEASUREMENTS,
   type LockedMigrationProfileId,
 } from "./locked-profile-sections.ts";
+import { resolveWorkspaceOutputPath } from "../workspace-output-path.ts";
 
 /** The three executable modules present at the Step 03C boundary. */
 export const SIMULATION_REPORT_MODULE_IDS = [
@@ -59,6 +60,8 @@ export type SimulationReportModuleId = typeof SIMULATION_REPORT_MODULE_IDS[numbe
 export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-a2",
   "phase81a-b",
+  "phase81a-league-diversity-canary-7x10",
+  "phase81a-league-diversity-100x10",
   "phase81-tactical-shape",
   ...LOCKED_MIGRATION_PROFILE_IDS,
 ] as const;
@@ -197,6 +200,36 @@ export const SIMULATION_REPORT_PROFILES = {
       workerCount: 7,
     },
   },
+  "phase81a-league-diversity-canary-7x10": {
+    id: "phase81a-league-diversity-canary-7x10",
+    titleKey: "simulationReport.profile.phase81aLeagueDiversityCanary.title",
+    descriptionKey: "simulationReport.profile.phase81aLeagueDiversityCanary.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-league-diversity-canary-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-league-diversity-100x10": {
+    id: "phase81a-league-diversity-100x10",
+    titleKey: "simulationReport.profile.phase81aLeagueDiversity.title",
+    descriptionKey: "simulationReport.profile.phase81aLeagueDiversity.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-league-diversity-100x10",
+      worldCount: 100,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-league-diversity",
+      workerCount: 7,
+    },
+  },
   "phase81-tactical-shape": {
     id: "phase81-tactical-shape",
     titleKey: "simulationReport.profile.phase81Shape.title",
@@ -262,13 +295,14 @@ export async function createSimulationReportFromPlan(input: {
       workerCount: input.measurementRequest.workerCount,
       detail: input.measurementRequest.detail,
       sectionIds: requestedCareerSections,
+      ...(await leagueDiversityExecution(input.measurementRequest.profileId)),
     });
     for (const moduleId of requestedCareerSections) {
       const data = facts.sections[moduleId];
       if (data === undefined) throw new Error(`Career execution omitted ${moduleId}`);
       executions.set(moduleId, {
         data,
-        decision: "PASS",
+        decision: facts.decision,
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       });
@@ -352,12 +386,13 @@ export async function executeSimulationReportModule(
       workerCount: request.workerCount,
       detail: request.detail,
       sectionIds: [moduleId],
+      ...(await leagueDiversityExecution(request.profileId)),
     });
     const data = facts.sections[moduleId];
     if (data === undefined) throw new Error(`Career execution omitted ${moduleId}`);
     return {
       data,
-      decision: "PASS",
+      decision: facts.decision,
       calibrationVersions: facts.calibrationVersions,
       worldSeeds: facts.worldSeeds,
     };
@@ -495,6 +530,28 @@ function lockedProfileIdFor(value: string | null): LockedMigrationProfileId | un
   return LOCKED_MIGRATION_PROFILE_IDS.includes(value as LockedMigrationProfileId)
     ? value as LockedMigrationProfileId
     : undefined;
+}
+
+async function leagueDiversityExecution(
+  profileId: string | null,
+): Promise<{
+  readonly leagueDiversityProfile?: {
+    readonly profileId: string;
+    readonly checkpointDirectoryPath: string;
+  };
+}> {
+  if (
+    profileId !== "phase81a-league-diversity-canary-7x10"
+    && profileId !== "phase81a-league-diversity-100x10"
+  ) return {};
+  return {
+    leagueDiversityProfile: {
+      profileId,
+      checkpointDirectoryPath: await resolveWorkspaceOutputPath(
+        `saves/long-run-checkpoints/${profileId}`,
+      ),
+    },
+  };
 }
 
 function assertModuleId(value: string): SimulationReportModuleId {

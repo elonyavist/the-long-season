@@ -689,6 +689,12 @@ test("AI squad selection records the catalog shape actually fielded when none is
   assert.ok(fielded.length > 0);
   assert.equal(fielded.every((team) => team.selectionSource === "catalog_ai"), true);
   assert.equal(fielded.every((team) => team.formationKey !== undefined), true);
+  assert.equal(fielded.every((team) => team.catalogChoice?.fillableShapeCount === 23), true);
+  assert.equal(fielded.every((team) => (team.catalogChoice?.tiedAtBestCount ?? 0) >= 1), true);
+  assert.equal(
+    fielded.every((team) => team.tacticalDistribution.mentality === "balanced"),
+    true,
+  );
 });
 
 /**

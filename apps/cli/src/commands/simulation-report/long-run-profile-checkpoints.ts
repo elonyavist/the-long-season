@@ -5,7 +5,10 @@ import {
   mergePlayerDevelopmentCohortAggregates,
   mergePlayerDevelopmentCohortWorldSummaries,
   PLAYER_DEVELOPMENT_COHORT_CONTRACT_VERSION,
+  stableSimulationReportHash,
   validatePlayerDevelopmentCohortWorldSummary,
+  type SimulationReportDetail,
+  type SimulationReportJsonValue,
   type PlayerDevelopmentCohortWorldSummary,
 } from "@game/simulation-tools";
 
@@ -35,6 +38,24 @@ const LONG_RUN_GATE_REPORT_KIND = "long-run-gate";
 
 /** Schema-4 identity for the retained legacy report payload. */
 const LONG_RUN_GATE_DIAGNOSTIC_CONTRACT_VERSION = "long-run-gate-v1";
+
+/** On-disk contract for one complete modular-report career world. */
+const CAREER_SECTION_WORLD_CHECKPOINT_VERSION = 1;
+
+/** Exact fields retained in one world-sized modular-report checkpoint. */
+const CAREER_SECTION_WORLD_CHECKPOINT_KEYS = [
+  "schemaVersion",
+  "reportKind",
+  "profileId",
+  "worldSeed",
+  "worldIndex",
+  "worldCount",
+  "seasonCount",
+  "detail",
+  "sectionIds",
+  "projectionHash",
+  "projection",
+] as const;
 
 /** Exact schema-4 envelope keys for the dedicated development checkpoint. */
 const PLAYER_DEVELOPMENT_COHORT_CHECKPOINT_KEYS = [
@@ -118,6 +139,93 @@ interface PlayerDevelopmentCohortShardCheckpoint {
   readonly worldId: string;
   readonly summaryHash: string;
   readonly world: PlayerDevelopmentCohortWorldSummary;
+}
+
+/** Stable identity needed to read or publish one complete career-world shard. */
+export interface CareerSectionWorldCheckpointIdentity {
+  readonly profileId: string;
+  readonly worldSeed: string;
+  /** One-based canonical position in the locked profile. */
+  readonly worldIndex: number;
+  readonly worldCount: number;
+  readonly seasonCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly string[];
+  readonly checkpointDirectoryPath: string;
+}
+
+interface CareerSectionWorldCheckpoint {
+  readonly schemaVersion: typeof CAREER_SECTION_WORLD_CHECKPOINT_VERSION;
+  readonly reportKind: "simulation-report-career-world";
+  readonly profileId: string;
+  readonly worldSeed: string;
+  readonly worldIndex: number;
+  readonly worldCount: number;
+  readonly seasonCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly string[];
+  readonly projectionHash: string;
+  readonly projection: SimulationReportJsonValue;
+}
+
+/**
+ * Reads one complete career-world projection or reports that it does not exist.
+ *
+ * Metadata mismatches and corrupt hashes fail closed. Treating either as a
+ * cache miss would silently mix populations after a profile or section change.
+ */
+export async function readCareerSectionWorldCheckpoint(
+  identity: CareerSectionWorldCheckpointIdentity,
+): Promise<SimulationReportJsonValue | undefined> {
+  const path = careerSectionWorldCheckpointPath(identity);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(path, "utf8"));
+  } catch (error) {
+    if (isMissingFileError(error)) return undefined;
+    if (error instanceof SyntaxError) {
+      throw new Error(`Career-section checkpoint is not valid JSON: ${path}`);
+    }
+    throw error;
+  }
+
+  if (!isMatchingCareerSectionWorldCheckpoint(parsed, identity)) {
+    throw new Error(`Career-section checkpoint metadata or shape is invalid: ${path}`);
+  }
+  if (stableSimulationReportHash(parsed.projection) !== parsed.projectionHash) {
+    throw new Error(`Career-section checkpoint hash mismatch: ${path}`);
+  }
+  return parsed.projection;
+}
+
+/** Publishes one complete career-world projection through an atomic rename. */
+export async function writeCareerSectionWorldCheckpoint(
+  identity: CareerSectionWorldCheckpointIdentity,
+  projection: SimulationReportJsonValue,
+): Promise<void> {
+  await mkdir(identity.checkpointDirectoryPath, { recursive: true });
+  const checkpoint: CareerSectionWorldCheckpoint = {
+    schemaVersion: CAREER_SECTION_WORLD_CHECKPOINT_VERSION,
+    reportKind: "simulation-report-career-world",
+    profileId: identity.profileId,
+    worldSeed: identity.worldSeed,
+    worldIndex: identity.worldIndex,
+    worldCount: identity.worldCount,
+    seasonCount: identity.seasonCount,
+    detail: identity.detail,
+    sectionIds: identity.sectionIds,
+    projectionHash: stableSimulationReportHash(projection),
+    projection,
+  };
+  const path = careerSectionWorldCheckpointPath(identity);
+  const temporaryPath = `${path}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporaryPath, JSON.stringify(checkpoint), "utf8");
+    await rename(temporaryPath, path);
+  } catch (error) {
+    await rm(temporaryPath, { force: true });
+    throw error;
+  }
 }
 
 /** One shard together with its stable one-based index. */
@@ -782,6 +890,50 @@ function shardCheckpointPath(directoryPath: string, shardIndex: number, shardCou
     directoryPath,
     `shard-${String(shardIndex).padStart(width, "0")}-of-${String(shardCount).padStart(width, "0")}.json`,
   );
+}
+
+/** Returns one world-sized filename whose identity is independent from workers. */
+function careerSectionWorldCheckpointPath(
+  identity: CareerSectionWorldCheckpointIdentity,
+): string {
+  const width = Math.max(5, String(identity.worldCount).length);
+  return join(
+    identity.checkpointDirectoryPath,
+    `world-${String(identity.worldIndex).padStart(width, "0")}-of-${String(identity.worldCount).padStart(width, "0")}.json`,
+  );
+}
+
+/** Refuses stale profile metadata, reordered sections and partial projections. */
+function isMatchingCareerSectionWorldCheckpoint(
+  value: unknown,
+  identity: CareerSectionWorldCheckpointIdentity,
+): value is CareerSectionWorldCheckpoint {
+  return hasExactRecordKeys(value, CAREER_SECTION_WORLD_CHECKPOINT_KEYS)
+    && value.schemaVersion === CAREER_SECTION_WORLD_CHECKPOINT_VERSION
+    && value.reportKind === "simulation-report-career-world"
+    && value.profileId === identity.profileId
+    && value.worldSeed === identity.worldSeed
+    && value.worldIndex === identity.worldIndex
+    && value.worldCount === identity.worldCount
+    && value.seasonCount === identity.seasonCount
+    && value.detail === identity.detail
+    && Array.isArray(value.sectionIds)
+    && value.sectionIds.length === identity.sectionIds.length
+    && value.sectionIds.every((sectionId, index) => sectionId === identity.sectionIds[index])
+    && typeof value.projectionHash === "string"
+    && isSimulationReportJsonValue(value.projection);
+}
+
+/** Validates a parsed checkpoint payload before its hash or consumer reads it. */
+function isSimulationReportJsonValue(value: unknown): value is SimulationReportJsonValue {
+  if (
+    value === null
+    || typeof value === "string"
+    || typeof value === "boolean"
+    || (typeof value === "number" && Number.isFinite(value))
+  ) return true;
+  if (Array.isArray(value)) return value.every(isSimulationReportJsonValue);
+  return isRecord(value) && Object.values(value).every(isSimulationReportJsonValue);
 }
 
 /** Narrows parsed JSON objects without trusting their prototype. */

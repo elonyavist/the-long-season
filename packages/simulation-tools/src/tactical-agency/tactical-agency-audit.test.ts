@@ -14,6 +14,7 @@ import {
 import {
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
+  countTacticalAgencyOutOfPositionSlots,
   isValidTacticalAgencyCheckpointWorkerCount,
   legacyPhase81ControlWeightReference,
   poolTacticalAgencyLowBlockResults,
@@ -60,6 +61,27 @@ test("a tie at the top is what catalog order decides, and it is counted separate
   assert.equal(summary.topFormationShare, 2 / 3);
   assert.equal(summary.distinctFormationCount, 2);
   assert.deepEqual(summary.formationShares.map((row) => row.formationKey), ["4-4-2", "4-3-3"]);
+});
+
+test("the shared out-of-position reader counts weak slots and ignores natural ones", () => {
+  const natural = playerId("player:natural");
+  const weak = playerId("player:weak");
+  const careerState = {
+    gameState: {
+      players: {
+        [natural]: { naturalPositions: ["cb"] },
+        [weak]: { naturalPositions: ["st"] },
+      },
+    },
+  } as unknown as CareerState;
+
+  assert.equal(countTacticalAgencyOutOfPositionSlots({
+    careerState,
+    lineup: [
+      { slotId: "slot:natural", playerId: natural, canonicalRole: "center_back", side: "center" },
+      { slotId: "slot:weak", playerId: weak, canonicalRole: "center_back", side: "center" },
+    ],
+  }), 1);
 });
 
 test("a squad with one fillable shape is a squad with no choice, not an obvious one", () => {

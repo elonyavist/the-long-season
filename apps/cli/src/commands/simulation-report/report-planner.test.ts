@@ -63,6 +63,52 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("freezes both league-diversity populations and keeps their seeds disjoint", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-league-diversity-canary-7x10",
+      workerCount: 7,
+    });
+    const main = createSimulationReportPlan({
+      profileId: "phase81a-league-diversity-100x10",
+      workerCount: 7,
+    });
+
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+    });
+    expect(main.measurementRequest).toMatchObject({
+      worldCount: 100,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity",
+    });
+    expect(new Set(canary.measurementRequest.includedSectionIds)).toEqual(new Set([
+      "season",
+      "standings",
+      "players",
+      "transfers",
+      "formations",
+      "economy",
+      "development",
+      "anomalies",
+    ]));
+    expect(canary.measurementRequest.seedPrefix).not.toBe(main.measurementRequest.seedPrefix);
+  });
+
+  it("refuses every league-diversity measurement override", () => {
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-league-diversity-100x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-league-diversity-100x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({
       includedSectionIds: ["tactical_shape"],

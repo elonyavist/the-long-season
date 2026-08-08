@@ -354,6 +354,7 @@ export {
 export {
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
+  countTacticalAgencyOutOfPositionSlots,
   isValidTacticalAgencyCheckpointWorkerCount,
   legacyPhase81ControlWeightReference,
   poolTacticalAgencyLowBlockResults,

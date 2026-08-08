@@ -222,6 +222,25 @@ export interface CareerWorldInspection {
     /** Generated world, so an observer can resolve club display names. */
     readonly league: FakeDomesticWorld;
   }) => void;
+  /**
+   * Reads every domestic competition result before the career runner projects
+   * them down to tables for rollover.
+   *
+   * This is the only point where all played fixtures, player summaries and
+   * fielded selections still coexist. A longitudinal report that simulated the
+   * background competitions again would change the RNG path and measure a
+   * second world instead of the career being advanced.
+   */
+  readonly observeCompetitionSeasonResults?: (context: {
+    readonly seasonNumber: number;
+    readonly careerState: CliCareerState;
+    readonly league: FakeDomesticWorld;
+    readonly competitions: readonly {
+      readonly competitionId: FakeDomesticWorld["domesticCompetitionWorld"]["competitionIds"][number];
+      readonly seasonSeed: string;
+      readonly result: SimulateSeasonResult;
+    }[];
+  }) => void;
   /** Reads durable post-rollover facts at the boundary where they were written. */
   readonly observeSeasonBoundary?: (context: {
     readonly seasonNumber: number;
@@ -4418,17 +4437,30 @@ function advanceCareerForReport(
     league,
     reportCareerState,
   ).id;
-  const seasonResults = registry.competitionIds.map((competitionId) =>
-    competitionId === selectedCompetitionId
-      ? context.seasonResult
-      : simulateSeason(createCompetitionCareerSeasonInput(
-          league,
-          reportCareerState,
-          competitionSeasonSeed(context.seasonSeed, competitionId),
-          competitionId,
-          inspection,
-        )),
-  );
+  const competitionSeasons = registry.competitionIds.map((competitionId) => {
+    const seasonSeed = competitionId === selectedCompetitionId
+      ? context.seasonSeed
+      : competitionSeasonSeed(context.seasonSeed, competitionId);
+    return {
+      competitionId,
+      seasonSeed,
+      result: competitionId === selectedCompetitionId
+        ? context.seasonResult
+        : simulateSeason(createCompetitionCareerSeasonInput(
+            league,
+            reportCareerState,
+            seasonSeed,
+            competitionId,
+            inspection,
+          )),
+    };
+  });
+  inspection?.observeCompetitionSeasonResults?.({
+    seasonNumber: context.seasonNumber,
+    careerState: reportCareerState,
+    league,
+    competitions: competitionSeasons,
+  });
   // The selected competition is the one the charts read, and this is the last
   // point at which its full result exists: the runner projects it away next.
   inspection?.observeSeasonResult?.({
@@ -4440,7 +4472,7 @@ function advanceCareerForReport(
   });
   const careerStateWithParticipation = accrueCompletedSeasonParticipation({
     careerState: reportCareerState,
-    seasonResults,
+    seasonResults: competitionSeasons.map(({ result }) => result),
   });
   const participationLedger = careerStateWithParticipation.playerParticipationLedger;
   const participationRows = participationLedger?.rowKeys.flatMap((rowKey) => {
@@ -4486,7 +4518,7 @@ function advanceCareerForReport(
       nextSeasonStartDate,
       competitionResults: registry.competitionIds.map(
         (competitionId, index) => {
-          const competitionResult = seasonResults[index];
+          const competitionResult = competitionSeasons[index]?.result;
           const registeredCompetition = registry.competitions[competitionId];
           if (competitionResult === undefined || registeredCompetition === undefined) {
             throw new Error(`Report competition result is missing: ${competitionId}`);

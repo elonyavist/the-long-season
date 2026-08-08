@@ -72,12 +72,26 @@ function baseInput(overrides: Partial<BuildSeasonRecapInput> = {}): BuildSeasonR
               lineup: [],
               formationKey: "4-4-2" as FormationKey,
               selectionSource: "fixed_lineup",
+              tacticalDistribution: {
+                directness: 0.5,
+                pressing: 0.5,
+                width: 0.5,
+                risk: 0.5,
+                mentality: "balanced",
+              },
             },
             away: {
               clubId: CLUBS[1] as ClubId,
               lineup: [],
               formationKey: "4-3-3" as FormationKey,
               selectionSource: "fixed_lineup",
+              tacticalDistribution: {
+                directness: 0.5,
+                pressing: 0.5,
+                width: 0.5,
+                risk: 0.5,
+                mentality: "balanced",
+              },
             },
           },
           contributions: [
