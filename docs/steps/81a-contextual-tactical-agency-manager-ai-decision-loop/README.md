@@ -2,8 +2,8 @@
 
 ## Status
 
-**Accepted. Not started.** Phase 81 is Done. Phase 81A is the only active phase
-and Step 01 is the only next action.
+**Active.** Steps 01-03C are Done; Checkpoint U1 recorded `GO`. Step 03D is the
+only next action. Phase 81 is Done and Phase 81A remains the only active phase.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -98,7 +98,9 @@ contexts; it never owns the analytic diversity gate.
 | 02 | [real-career before-state](02-real-career-before-state.md) | no | Step 03 |
 | 03 | [Checkpoint A](03-checkpoint-a-ownership-and-before-state.md) | no | **STOP / RETHINK recorded** |
 | 03A | [squad archetypes and role reachability](03a-squad-archetypes-and-primary-role-reachability.md) | population | Step 03B |
-| 03B | [Checkpoint A2 squad identity](03b-checkpoint-a2-real-career-squad-identity.md) | no | **conditional `GO`; 04-05 authorized** |
+| 03B | [Checkpoint A2 squad identity](03b-checkpoint-a2-real-career-squad-identity.md) | no | **conditional `GO`; 03C authorized** |
+| 03C | [canonical modular simulation report foundation](03c-canonical-modular-simulation-report-foundation.md) | report/tooling | **U1 `GO`; 03D authorized** |
+| 03D | [report module migration and single CLI entrypoint](03d-report-module-migration-and-single-cli-entrypoint.md) | report/tooling | **U2 `GO`; 04 authorized** |
 | 04 | [conserved tactical contributions](04-conserved-tactical-contributions.md) | yes | Step 05 |
 | 05 | [contested routes and lateral focus](05-contested-routes-and-lateral-focus.md) | yes | both-set low-block gate opens 06 |
 | 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | closed until Step 05 gate; GO authorizes 07 |
@@ -115,8 +117,9 @@ contexts; it never owns the analytic diversity gate.
 
 No later step starts while its preceding checkpoint is unresolved.
 
-**Checkpoint A2 recorded a conditional `GO` on 2026-08-08; Steps 04-05 are
-open.** All seven frozen gates passed on both seed sets - `topFormationShare` `0.9286` ->
+**Checkpoint A2 recorded a conditional `GO` on 2026-08-08. Steps 03C-03D are
+Done with U1/U2 `GO`; Step 04 is next.** All seven frozen gates
+passed on both seed sets - `topFormationShare` `0.9286` ->
 `0.2063`/`0.2222`, `3` -> `12`/`11` distinct shapes, all ten roles generable -
 and the archetype-mix counterfactual moved `6`/`6` clubs at constant squad
 quality. One guardrail, the low block's `ownLossPerConcededReduction`, reads
@@ -133,8 +136,8 @@ The remedy direction survives and its mechanism does not - work scoped to
 **break ties** becomes work to **make the winning shape depend on the squad**.
 Steps 03A and 03B are inserted rather than renumbered so every `Step NN`
 reference in the design contract keeps its meaning. Checkpoint A2 has now
-opened 04-05 conditionally; the Checkpoint A before-state remains frozen as the
-denominator of A2's deltas.
+opened 03C-03D and conditionally authorized 04-05; the Checkpoint A before-state
+remains frozen as the denominator of A2's deltas.
 
 ## Checkpoint Decisions
 

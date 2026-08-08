@@ -31,7 +31,7 @@ reproduce out of sample.
 - `docs/audits/README.md`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.test.ts`
-- `apps/cli/src/commands/tactical-agency-report.ts`
+- `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`
 - `docs/PROJECT_STATUS.md`
 - this step document
 - `10-manager-opponent-read.md`
@@ -40,7 +40,7 @@ reproduce out of sample.
 
 ```bash
 nvm use 24
-pnpm cli tactical-agency-report --checkpoint=c --workers=7
+pnpm cli simulation-report --profile=phase81a-c --workers=7
 pnpm check
 git diff --check
 ```

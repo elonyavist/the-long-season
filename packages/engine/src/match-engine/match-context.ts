@@ -95,7 +95,7 @@ export interface MatchTeamContext {
    * It was optional until Step 07A, with `incidentProfileFor` returning a neutral
    * profile of `10`s when it was absent. That fallback returned plausible numbers
    * rather than failing, which is exactly how it stayed invisible that
-   * `pnpm cli balance-report` - the instrument this game's numbers are read from
+   * `pnpm cli simulation-report --profile=balance-calibration-v1` - the instrument this game's numbers are read from
    * - was measuring football in which nobody tackled, tired, or kept his nerve
    * any better than anybody else.
    */

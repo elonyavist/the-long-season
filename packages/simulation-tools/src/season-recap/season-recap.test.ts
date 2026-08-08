@@ -66,6 +66,20 @@ function baseInput(overrides: Partial<BuildSeasonRecapInput> = {}): BuildSeasonR
       fixtureParticipation: [
         {
           fixtureId: "fixture:001" as never,
+          fieldedTeams: {
+            home: {
+              clubId: CLUBS[0] as ClubId,
+              lineup: [],
+              formationKey: "4-4-2" as FormationKey,
+              selectionSource: "fixed_lineup",
+            },
+            away: {
+              clubId: CLUBS[1] as ClubId,
+              lineup: [],
+              formationKey: "4-3-3" as FormationKey,
+              selectionSource: "fixed_lineup",
+            },
+          },
           contributions: [
             {
               fixtureId: "fixture:001" as never,

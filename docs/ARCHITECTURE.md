@@ -87,7 +87,7 @@ Why this matters:
 | CLI doctor | `apps/cli/src/commands/doctor.ts` |
 | Simulate one season | `apps/cli/src/commands/simulate-season.ts` |
 | Career command | `apps/cli/src/commands/career.ts` |
-| Long-run report command | `apps/cli/src/commands/ten-season-report.ts` |
+| Modular simulation report | `apps/cli/src/commands/simulation-report.ts` |
 | Canonical career world | `packages/content/src/generators/domestic-world.ts` via `createFakeDomesticWorld` |
 | Focused single-competition fixture | `packages/content/src/generators/league-system.ts` via `createFakeLeagueSystem` |
 | Validated player construction | `packages/domain/src/player/create-player.ts` via `createPlayer` |
@@ -1137,21 +1137,21 @@ in read-only mode with the same slot/player facts and omit mutation callbacks.
   Permanent-transfer apply output.
 - `apps/cli/src/commands/career/season-rollover-output.ts`
   Season rollover output.
-- `apps/cli/src/commands/ten-season-report.ts`
-  Long-run report command adapter. It parses arguments, chooses single-world or
-  multi-world mode, creates the translator, writes optional report artifacts,
-  and delegates report facts/rendering to `commands/ten-season-report/`.
-- `apps/cli/src/commands/ten-season-report/report-data.ts`
-  CLI-local long-run report facts boundary. It creates generated worlds,
-  report-only career state, career long-run runs, post-season refresh snapshots,
-  single-world report bundles, multi-world gate summaries, warning-key counts,
-  and signal-kind grouping.
-- `apps/cli/src/commands/ten-season-report/single-world-output.ts`
-  Single-world ten-season report output: season summaries, player evolution,
-  strength hierarchy, club stability, youth stability, and anomaly rows.
-- `apps/cli/src/commands/ten-season-report/gate-output.ts`
-  Multi-world gate output: terminal summary, worst-world compact rows, signal
-  guide, and Markdown report artifact.
+- `apps/cli/src/commands/simulation-report.ts`
+  The only report command adapter. It parses custom module requests or locked
+  profiles, supports discovery and render-only conversion, and selects console,
+  JSON, Markdown or desktop HTML without changing measurement identity.
+- `apps/cli/src/commands/simulation-report/report-registry.ts`
+  One typed registry for modules, locked profiles, help recipes and execution.
+- `apps/cli/src/commands/simulation-report/career-world-facts.ts`
+  CLI-local long-run facts boundary. It creates generated worlds, career runs,
+  post-season snapshots, gate summaries and anomaly facts without presentation.
+- `apps/cli/src/commands/simulation-report/career-sections.ts`
+  Projects requested season, standings, player, transfer, formation, economy,
+  development and anomaly facts from one career execution per world.
+- `apps/cli/src/commands/simulation-report/report-renderers.ts`
+  Presentation adapters over the canonical artifact; the HTML implementation is
+  in `report-html.ts`. Neither owns simulation or report formulas.
 - `apps/cli/src/commands/fake-season-input.ts`
   Converts `FakeLeagueSystem` into engine `simulateSeason` input.
 
@@ -1276,9 +1276,10 @@ must be implemented in the ordered 80A, 82A, and 82B steps.
 
 ### Run Long-Run Diagnostics
 
-1. CLI enters `ten-season-report.ts`.
-2. `ten-season-report.ts` parses args and creates the translator.
-3. `ten-season-report/report-data.ts` builds the same
+1. CLI enters `simulation-report.ts`.
+2. The planner resolves custom modules or one immutable locked profile and
+   records the shared execution DAG.
+3. `simulation-report/career-world-facts.ts` builds the same
    `createFakeDomesticWorld` content and exact version-selected policies used
    by CLI/web, plus in-memory career state and report refresh callbacks.
 4. Those callbacks call `advanceCareerOneSeason` in `reportRefresh` mode.
@@ -1287,9 +1288,10 @@ must be implemented in the ordered 80A, 82A, and 82B steps.
    cross-tier market, squad-floor, and anomaly report models. Season-scoped
    replenishment facts make free-agent values and zero fees non-vacuous without
    creating duplicate transfer history.
-7. `report-data.ts` summarizes single-world or multi-world report facts.
-8. `single-world-output.ts` or `gate-output.ts` renders localized console
-   output. `gate-output.ts` also renders optional Markdown.
+7. `career-sections.ts` projects only the requested canonical module facts.
+8. `report-renderers.ts` renders console, canonical JSON, Markdown or a
+   self-contained English desktop HTML view from the same artifact. A JSON
+   artifact can be rebuilt with `--from-report` without simulation.
 9. Resumable multi-worker runs require an explicit checkpoint directory and
    stable shards.
 10. `simulation-execution-policy.ts` owns the host-independent default/maximum:
@@ -1319,7 +1321,7 @@ must be implemented in the ordered 80A, 82A, and 82B steps.
 | Generated players look unrealistic | `fake-players.ts`, role template/classification files, player-generation tests, and the player-generation report CLI. |
 | Public potential or prospect value looks wrong | `player-potential-projection.ts`, `public-player-assessment.ts`, `player-valuation.ts`, then `player-potential-outcome-audit.ts` and `player-generation-economy-audit.ts`. |
 | Club names look repetitive | `fake-clubs.ts` and `clubs/club-identity-source-data.ts`. |
-| Long-run warnings are unclear | Start with `apps/cli/src/commands/ten-season-report/gate-output.ts`, then `ten-season-report/report-data.ts` signal grouping, then `simulation-tools/src/long-run/anomaly-scoring.ts` and `youth-stability.ts`. |
+| Long-run warnings are unclear | Start with `apps/cli/src/commands/simulation-report/locked-profile-sections.ts`, then `career-world-facts.ts` signal grouping, then `simulation-tools/src/long-run/anomaly-scoring.ts` and `youth-stability.ts`. |
 | Save cannot be read | `JsonCareerStorage`, save schema in domain, and storage tests. |
 | Translation is missing | `packages/i18n/src/labels.ts` and localized presentation text check. |
 
@@ -1331,11 +1333,11 @@ These files are known and intentionally not fully split in Phase 43:
   Improved in Phase 44. It is still the command adapter for many inspection
   modes, but season, fixture, demo, generated-inspection, formation-fit, and
   market output now live in dedicated modules.
-- `apps/cli/src/commands/ten-season-report.ts`
-  Improved in Phase 46. The command adapter is now narrow; the remaining large
-  file is `apps/cli/src/commands/ten-season-report/report-data.ts`, which still
-  owns report-only career refresh, row builders, gate aggregation, and signal
-  grouping. Split only around real concept boundaries.
+- `apps/cli/src/commands/simulation-report/career-world-facts.ts`
+  The remaining large report-only career producer. It owns career refresh, row
+  builders, gate aggregation and signal grouping; the CLI shell, registry,
+  section projections and renderers are already separate. Split only around
+  real concept boundaries.
 - `apps/cli/src/commands/career/format.ts`
   Large but presentation-only. Split by output family when adding UI-facing
   presentation contracts.

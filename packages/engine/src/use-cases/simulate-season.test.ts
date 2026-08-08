@@ -271,12 +271,16 @@ test("season simulation exposes canonical participation from each exact match co
   );
   assert.ok(
     result.fixtureParticipation.every(
-      ({ fixtureId, contributions }) => {
+      ({ fixtureId, contributions, fieldedTeams }) => {
         const fixture = result.fixtures.find((candidate) => candidate.id === fixtureId);
         const finalMinute = fixture?.result?.report?.finalMinute;
         return (
           finalMinute !== undefined
           && contributions.length === SEASON_FIXTURE_LINEUP_SIZE * 2
+          && fieldedTeams.home.lineup.length === SEASON_FIXTURE_LINEUP_SIZE
+          && fieldedTeams.away.lineup.length === SEASON_FIXTURE_LINEUP_SIZE
+          && fieldedTeams.home.selectionSource === "fixed_lineup"
+          && fieldedTeams.away.selectionSource === "fixed_lineup"
           && contributions.every(
             (contribution) =>
               contribution.started
@@ -642,7 +646,33 @@ test("AI squad participation retains the exact selected bench as zero-minute evi
     assert.equal(starters.length, 22);
     assert.equal(unusedBench.length, 16);
     assert.equal(fixture.contributions.length, 38);
+    assert.equal(fixture.fieldedTeams.home.formationKey, "4-4-2");
+    assert.equal(fixture.fieldedTeams.away.formationKey, "4-4-2");
+    assert.equal(fixture.fieldedTeams.home.selectionSource, "imposed_ai");
+    assert.equal(fixture.fieldedTeams.away.selectionSource, "imposed_ai");
   }
+});
+
+test("AI squad selection records the catalog shape actually fielded when none is imposed", () => {
+  const input = seasonInputWithAiSelection("catalog-ai-selection-seed", 100);
+  const teamsByClubId: Record<ClubId, SimulateSeasonTeamInput> = {};
+
+  for (const clubId of input.clubIds) {
+    const team = input.teamsByClubId[clubId];
+    assert.ok(team?.aiSelection !== undefined);
+    const { formation: _imposedFormation, ...catalogSelection } = team.aiSelection;
+    teamsByClubId[clubId] = { ...team, aiSelection: catalogSelection };
+  }
+
+  const result = simulateSeason({ ...input, teamsByClubId });
+  const fielded = result.fixtureParticipation.flatMap(({ fieldedTeams }) => [
+    fieldedTeams.home,
+    fieldedTeams.away,
+  ]);
+
+  assert.ok(fielded.length > 0);
+  assert.equal(fielded.every((team) => team.selectionSource === "catalog_ai"), true);
+  assert.equal(fielded.every((team) => team.formationKey !== undefined), true);
 });
 
 /**

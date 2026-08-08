@@ -149,7 +149,9 @@ Provide an open, incremental, and iterative execution guide for the project: one
 ## Active Rework Continuation
 
 - `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`
-- Status: Accepted, not started. Step 01 is the only active step.
+- Status: Active. Checkpoint A2 recorded a conditional `GO`; Step 03C is next,
+  followed by Step 03D. They consolidate every simulation report behind one
+  modular `simulation-report` CLI entrypoint before engine Step 04 resumes.
 - It first removes duplicate tactical ownership and establishes a reproducible
   real-career before-state. Every two implementation steps are followed by a
   mandatory checkpoint with a recorded `GO`, `REFINE`, or `STOP` decision.

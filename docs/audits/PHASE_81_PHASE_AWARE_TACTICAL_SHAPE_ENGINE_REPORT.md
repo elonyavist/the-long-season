@@ -181,7 +181,7 @@ must be reported beside, at the exact moment the monitor is being closed. The
 monitor is why this cohort exists.
 
 **The phase's tactical evidence is therefore the bounded scenario audit, not this
-cohort** - `tactical-shape-report` and the Step 13/14 diagnostics, where every
+cohort** - the `phase81-tactical-shape` simulation-report profile and the Step 13/14 diagnostics, where every
 frozen invariant passes on multiple seed populations with positive denominators.
 That evidence is not weakened by this line; it is simply where it lives.
 

@@ -1,14 +1,12 @@
 # Project Status
 
-Handoff snapshot for whoever picks the project up next. **It stays small on
-purpose**: it once reached `5010` lines, more than a context window holds, so
+Handoff snapshot for whoever picks the project up next. **It stays small on purpose**: it once reached `5010` lines, more than a context window holds, so
 "read this file first" had stopped being followable. History lives in `git log`
 and `docs/audits/`, rules in `AGENTS.md` and `docs/PROJECT_RULES.md`.
 
 ## How To Read The Project
 
-In order: `requirements.md`, `docs/PROJECT_RULES.md`, this file for current state
-and live constraints, then `docs/steps/README.md`, the active phase README and the
+In order: `requirements.md`, `docs/PROJECT_RULES.md`, this file for current state and live constraints, then `docs/steps/README.md`, the active phase README and the
 active step. Nothing else.
 
 ## Current State
@@ -25,12 +23,13 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **A2 (03B) recorded a conditional `GO` on 2026-08-08: 04-05
-  open; 06-16 closed behind Step 05's both-set low-block gate**; next is 04.
+- Step: Phase 81A **04 conserved tactical contributions is next.** Steps 03C/03D
+  are Done with U1/U2 `GO`: one report command, eight career modules, locked
+  profiles and four adapters. Gate: `293` files, `2218` tests, exit `0`. Then 05;
+  06-16 await Step 05's both-set low-block gate.
   `topFormationShare` `0.9286` -> `0.2063`/`0.2222`, shapes `3` -> `12`/`11`, all
   ten roles generable, `8`/`8` identities observed, reorder invariance `1.0000`.
-  The counterfactual moved `6`/`6` clubs at constant quality. Report:
-  `docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md`.
+  The counterfactual moved `6`/`6` clubs at constant quality; see the A2 audit.
 - **Owed to Step 05: `ownLossPerConcededReduction` is `2.8051` vs `<= 2.0`
   out-of-sample.** The legacy chart on the same 81A ability vectors fails at
   `3.0411`, excluding an adverse chart effect without
@@ -57,8 +56,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
   `pnpm web:visual:qa` in the per-step block of any step touching web or
   persistence. Its `wide journey` assertion is timing-sensitive; one flake hides
   `33` tests. Unowned.
-- **`pnpm cli ten-season-report` resolves relative output from the workspace
-  root** via `resolveWorkspaceOutputPath(...)`, never from `apps/cli/`.
+- **`pnpm cli simulation-report` is the only report entrypoint.** Use
+  `--list-modules`, `--list-profiles`, `--help`, or `--from-report=<json>`;
+  relative output resolves from the workspace root.
 
 ## Unowned, Carried Forward
 
@@ -71,7 +71,7 @@ Five findings have no owner. None is a licence to widen anything.
   `structure`-class `pass 0; fail >0` in `contract-finance-stability.ts`.
 - **The A6 absence assertion enumerates nine files and cannot see a tenth**; three
   readers sit outside it (`career-squad-adapter.ts:245`, `formation-fit-output.ts:108`,
-  `report-data.ts:4106`).
+  `career-world-facts.ts:4199`).
 - **Incomplete `presentationMessageKey` families** crash at runtime; `check:localized-text` misses them.
 - **`check:role-department` misses four production copies of the position ->
   department map** (domain, `player-development.ts`, `player-exits.ts`,
@@ -112,8 +112,8 @@ breaks ties** - the remedy survived, its mechanism did not.
   cohort; Phase 79's Steps 14-15 are unclaimed.
 - The A10 `20 x 5` inspection (Step 12) is **never evidence**: it changes no
   calibration and nothing may cite it as balance measurement.
-- **`pnpm cli ten-season-report`'s exit code follows `Closing division value fit`,
-  not sample size.** Read the failing-check counts, never the exit code.
+- **The locked `phase81-long-run-50x20` profile's exit code follows its
+  canonical gate facts, not sample size.** Read failing-check counts too.
 
 ### Why Formation Is Not A Counter-Move
 

@@ -315,7 +315,7 @@ test("canonical Phase 80A worlds keep prospect shares and senior quality continu
     second_division: { eligible: 2_176, atLeastThreeAndHalf: 252 },
     third_division: { eligible: 2_095, atLeastThreeAndHalf: 130 },
   });
-}, 30_000);
+});
 
 function generatedLeague(seed: string): FakePlayers {
   const clubs = generateFakeClubs();

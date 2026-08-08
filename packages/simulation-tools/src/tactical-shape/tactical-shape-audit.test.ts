@@ -616,7 +616,8 @@ describe("what fielding a differently-distributed eleven is worth", () => {
     // This suite runs a handful of paired seeds, which puts the floor an order of
     // magnitude above anything the row could show. That is the correct division
     // of labour and worth stating: the gate proves the measurement is wired and
-    // isolates distribution, and `pnpm cli tactical-shape-report` at its shipped
+    // isolates distribution, and `pnpm cli simulation-report
+    // --profile=phase81-tactical-shape` at its shipped
     // seed count is what produces a number anybody may act on.
     const row = report.selectionConcentration;
 

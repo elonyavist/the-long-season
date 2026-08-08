@@ -16,6 +16,24 @@ export {
 } from "./calibration-report.ts";
 
 export {
+  SIMULATION_REPORT_CONTRACT_VERSION,
+  canonicalSimulationReportJson,
+  createSimulationReportArtifact,
+  parseSimulationReportArtifact,
+  stableSimulationReportHash,
+  toSimulationReportJsonValue,
+  type CreateSimulationReportArtifactInput,
+  type SimulationReportArtifact,
+  type SimulationReportDetail,
+  type SimulationReportExecutionNode,
+  type SimulationReportJsonValue,
+  type SimulationReportManifest,
+  type SimulationReportMeasurementRequest,
+  type SimulationReportSection,
+  type SimulationReportSectionStatus,
+} from "./modular-report/report-contract.ts";
+
+export {
   createPlayerMarketCalibrationReport,
   type CreatePlayerMarketCalibrationReportInput,
   type PlayerMarketCalibrationObservation,

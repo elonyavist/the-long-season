@@ -406,7 +406,7 @@ Thresholds cannot be weakened after implementation output is observed.
 
 ## Step 01 Frozen Baseline
 
-Measured on 2026-08-02 by `pnpm cli tactical-shape-report`, over quality bands
+Measured on 2026-08-02 by `pnpm cli simulation-report --profile=phase81-tactical-shape`, over quality bands
 taken from the generated three-division world seed
 `phase81-tactical-shape-baseline`. No gameplay behaviour changed.
 
@@ -555,7 +555,7 @@ field is the answer and `no_dominant_composition` forbids the answer existing.
 It is blocked, and the blocker is not procedural. **Every AI-controlled club in
 the game fields a fixed `4-4-2`** - `matchday-adapter.ts`, `career/progression.ts`,
 `ten-season-report`, `live-match-control-report-data.ts` and
-`tactical-shape-report-data.ts` all hardcode it - so a counter-move reward built
+the `tactical-shape-section.ts` audit bridge all hardcode it - so a counter-move reward built
 today would mean "countering `4-4-2` pays", which is a single right answer against
 the only opponent that exists. Step 09 owns giving opponents real formations.
 Nothing about this target may be implemented before it has.

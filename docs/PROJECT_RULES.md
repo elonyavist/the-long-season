@@ -145,6 +145,32 @@ of work.
 - Vitest uses the same seven-worker maximum. Playwright retains its separate
   visual-QA worker policy.
 
+## Single Simulation Report Rules
+
+- `pnpm cli simulation-report` is the repository's only CLI report entrypoint.
+  Do not add another `*-report` command, compatibility alias, standalone report
+  parser, or parallel report shell. `simulate-season`, `career`, and `doctor`
+  are workflows rather than report entrypoints and remain separate.
+- A reusable diagnostic or presentation view is a registered module owned by
+  `apps/cli/src/commands/simulation-report/report-registry.ts`. A checkpoint
+  whose population and settings must not be changed is a locked, versioned
+  profile in that same registry; it is configuration of `simulation-report`,
+  never a second command.
+- Extend reports through the canonical request dimensions: `--include`,
+  `--worlds`, `--seasons`, `--detail`, `--format`, or `--profile`. Rendering an
+  existing canonical artifact uses `--from-report`; renderers must not simulate,
+  recompute facts, or evaluate gates.
+- Report modules and profiles must reuse canonical simulation producers and
+  recorded facts. They must not introduce a second simulator, duplicate an
+  engine formula, reconstruct match facts after the event, or retain a legacy
+  producer alongside its replacement.
+- A reporting migration removes the superseded command, parser, formatter,
+  fixture, localization key, and export in the same step. No compatibility
+  residue or dead report code is permitted.
+- `pnpm check:single-report-entrypoint` mechanically enforces the single
+  entrypoint and report-code ownership and must remain green in every reporting
+  change.
+
 ## Measurement Rules
 
 - **Every measured number records the population it was measured on and what

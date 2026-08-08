@@ -2,10 +2,12 @@
 
 ## Status
 
-**Not started; unblocked.** Checkpoint A's `STOP / RETHINK` was resolved by
-**Checkpoint A2 (`03B`), which recorded a conditional `GO` on 2026-08-08** and
-opened Steps 04-05. Step 06 and everything after it remain closed until Step 05
-restores the low-block band on both seed sets. Report:
+**Not started; authorized after Step 03D's U2 `GO` on 2026-08-08.** Checkpoint A's
+`STOP / RETHINK` was resolved by **Checkpoint A2 (`03B`), which recorded a
+conditional `GO` on 2026-08-08**. The engine work in 04-05 is authorized, but
+the canonical modular-report migration is Done, so later checkpoints extend the
+one Interface instead of creating isolated CLI/report paths. Step 06 and everything after it remain
+closed until Step 05 restores the low-block band on both seed sets. Report:
 `docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md`.
 
 Two things carried in from A2 that this step should know:

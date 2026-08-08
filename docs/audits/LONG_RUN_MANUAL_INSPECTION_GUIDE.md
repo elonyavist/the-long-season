@@ -1,8 +1,7 @@
 # Long-Run Manual Inspection Guide
 
 Date: 2026-06-23
-Phase: `46-ten-season-report-decomposition-and-long-run-presentation-boundaries`
-Step: `05-long-run-manual-inspection-command-review`
+Current Interface: Phase 81A Step 03D modular `simulation-report`
 
 ## Purpose
 
@@ -23,13 +22,16 @@ The long-run report is not only a math gate. It should answer product questions:
 Use this when checking a recent source change:
 
 ```bash
-pnpm cli ten-season-report --seed-prefix=manual-smoke --worlds=10 --seasons=10
+pnpm cli simulation-report \
+  --seed-prefix=manual-smoke --worlds=10 --seasons=10 --workers=7 \
+  --include=season,standings,players,transfers,formations,economy,development,anomalies \
+  --detail=summary --format=console
 ```
 
 Review:
 
-- `Status` should be `PASS`;
-- `Failed worlds` should be `0`;
+- every requested section should be `observed`;
+- structural anomaly rows should not report collapsed worlds;
 - structural rows such as minimum squad size, goalkeeper coverage, and youth
   roster bounds should not fail;
 - warning rows can exist, but their signal mix should make sense.
@@ -43,12 +45,20 @@ Use this before closing a phase that touches career, squad, player, market,
 youth, match, or long-run reporting behavior:
 
 ```bash
-pnpm cli ten-season-report --seed-prefix=manual-medium --worlds=50 --seasons=10
+pnpm cli simulation-report \
+  --seed-prefix=manual-medium --worlds=50 --seasons=10 --workers=7 \
+  --include=season,standings,players,transfers,formations,economy,development,anomalies \
+  --detail=standard --format=json \
+  --report-output=simulation-out/manual-medium.json
+
+pnpm cli simulation-report \
+  --from-report=simulation-out/manual-medium.json --format=html \
+  --report-output=simulation-out/manual-medium.html
 ```
 
 Review:
 
-- `Failed worlds`: should remain `0`;
+- all 50 worlds should be present in the manifest and module rows;
 - `Warning worlds`: acceptable only if warning families are explainable;
 - `Signal check counts`: use the legend:
   - `story` means football variance worth reviewing, not automatic failure;
@@ -57,19 +67,38 @@ Review:
 
 This is the default manual review size for normal implementation work.
 
+When a change requires the frozen Phase 81 long-run decision rather than an
+exploratory population, run its immutable profile instead of interpreting a
+custom report as a gate:
+
+```bash
+pnpm cli simulation-report \
+  --profile=phase81-long-run-50x20 --format=json \
+  --report-output=simulation-out/phase81-long-run-50x20.json
+```
+
 ## Deeper Gate-Style Inspection
 
 Use this when a phase changes long-run structure or when medium samples show
 recurring warning patterns:
 
 ```bash
-pnpm cli ten-season-report --seed-prefix=manual-deep --worlds=250 --seasons=30 --report-output=docs/audits/MANUAL_LONG_RUN_REVIEW.md
+pnpm cli simulation-report \
+  --seed-prefix=manual-deep --worlds=250 --seasons=30 --workers=7 \
+  --include=season,standings,players,transfers,formations,economy,development,anomalies \
+  --detail=diagnostic --format=json \
+  --report-output=simulation-out/manual-deep.json
 ```
 
-Review the terminal summary first, then open the Markdown artifact:
+Build the personal desktop view from the same canonical artifact, without
+running the simulation again:
 
 ```bash
-open docs/audits/MANUAL_LONG_RUN_REVIEW.md
+pnpm cli simulation-report \
+  --from-report=simulation-out/manual-deep.json --format=html \
+  --report-output=simulation-out/manual-deep.html
+
+open simulation-out/manual-deep.html
 ```
 
 The 250x30 run is more meaningful for career stability because it gives enough
@@ -208,15 +237,10 @@ Fun interpretation:
 
 ## Single-World Follow-Up
 
-When a batch world looks suspicious, inspect that world directly:
-
-```bash
-pnpm cli ten-season-report --seed=manual-medium-world-00017 --seasons=10
-```
-
-Replace the seed with the exact world seed from the batch output. Use this to
-read season-by-season summaries, player evolution, club stability, youth
-stability, and anomaly checks in one world.
+When a batch world looks suspicious, open the diagnostic HTML rebuilt from the
+same JSON and choose its exact stable seed with the world selector. This reads
+the already measured season-by-season facts without inventing a similar seed or
+running the world again.
 
 ## Source Change Decision
 

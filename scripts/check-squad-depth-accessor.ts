@@ -27,7 +27,7 @@ const LINEUP_COMPOSING_FILES = [
   "apps/cli/src/commands/career/progression.ts",
   "apps/cli/src/commands/career/matchday-output.ts",
   "apps/cli/src/commands/fake-season-input.ts",
-  "apps/cli/src/commands/live-match-control-report-data.ts",
+  "apps/cli/src/commands/simulation-report/live-match-control-profile.ts",
 ] as const;
 
 /** Direct reads of a club roster, in the shapes this codebase actually uses. */

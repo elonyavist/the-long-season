@@ -14,17 +14,16 @@ export default defineConfig({
      * matches, and the default `5000` is not a budget those tests were ever
      * measured against.
      *
-     * The heaviest of them cost `1.1` to `1.4` seconds alone and roughly four
-     * times that while `maxWorkers` of their peers run beside them, so the
-     * default failed them at random: five different files timed out across two
-     * runs of `pnpm check` here, every one of them passing on its own. A gate
-     * whose result depends on how busy the machine was is not a gate, and the
-     * failures it produced pointed at innocent files.
+     * The Phase 81A report migration measured real-world files at up to `21.79`
+     * seconds alone and `34.3` seconds while `maxWorkers` peers ran beside
+     * them. The previous `30_000` therefore failed three innocent files in one
+     * full gate even though all three passed alone. A gate whose result depends
+     * on how busy the machine was is not a gate.
      *
-     * `30_000` clears the worst observed run by a wide margin while still
-     * catching a genuine hang in seconds rather than minutes. A test that needs
-     * more than this states its own budget at the call site.
+     * `60_000` gives the measured contended maximum a declared margin while
+     * still catching a genuine hang within one minute. A test that intentionally
+     * needs more than this states its own budget at the call site.
      */
-    testTimeout: 30_000,
+    testTimeout: 60_000,
   },
 });

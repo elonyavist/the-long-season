@@ -52,7 +52,7 @@ The oracle measures model ceiling, never manager agency.
 - `docs/audits/README.md`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.test.ts`
-- `apps/cli/src/commands/tactical-agency-report.ts`
+- `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`
 - `docs/PROJECT_STATUS.md`
 - this step document
 - `07-player-task-execution.md`
@@ -61,7 +61,7 @@ The oracle measures model ceiling, never manager agency.
 
 ```bash
 nvm use 24
-pnpm cli tactical-agency-report --checkpoint=b --workers=7
+pnpm cli simulation-report --profile=phase81a-b --workers=7
 pnpm check
 git diff --check
 ```

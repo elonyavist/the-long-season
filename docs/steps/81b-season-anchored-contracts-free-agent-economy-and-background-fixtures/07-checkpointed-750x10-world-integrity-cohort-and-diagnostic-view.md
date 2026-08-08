@@ -53,7 +53,7 @@ records that boundary beside its value.
 
 Step 06 freezes this block before the first acceptance seed is simulated:
 
-- report kind: `world-integrity-cohort`;
+- locked profile family: `phase81b-world-integrity-*-v1`;
 - seed prefix: `phase81b-world-integrity-750x10-v1`;
 - exactly `750` worlds and exactly `10` seasons per world;
 - exactly `750` stable one-world shards;
@@ -101,7 +101,7 @@ simulator, second report model or alternate balance policy.
 
 `validateWorldIntegrityCohortContract(...)` accepts only two total profiles:
 the exact `7 x 10` canary and the exact `750 x 10` acceptance run. Both require
-the same `world-integrity-cohort` report kind, contextual career producer,
+the same locked world-integrity profile family, contextual career producer,
 Markdown formatter, HTML formatter and exactly `7` workers. The canary is not an
 arbitrary smaller balance mode.
 
@@ -113,7 +113,7 @@ arbitrary smaller balance mode.
   existing shard/checkpoint policy remains the sole execution owner.
 - Deepen `createSingleWorldReport(...)` with an explicit typed execution policy.
   Legacy report kinds may retain their frozen `4-4-2` comparability path;
-  `world-integrity-cohort` must use the Phase 81A/81B career-fixture progression,
+  the world-integrity profile must use the Phase 81A/81B career-fixture progression,
   including `selectCareerAiTeam(...)`, and must reject the legacy
   `formationForClub ?? "4-4-2"` path. A worker never computes a result through a
   diagnostic-only engine or a seeded `assignFormationsByClub(...)` substitute.
@@ -311,7 +311,7 @@ Decision outcomes:
 
 ## What To Implement
 
-- The `world-integrity-cohort` report kind and its exact contract validation.
+- The two locked world-integrity profiles and their exact contract validation.
 - Exactly two accepted command profiles, `7 x 10` canary and `750 x 10`
   acceptance, both exercising the same report and view formatters.
 - Canonical per-fixture formation, tactic and lateral-focus selection from the
@@ -347,13 +347,15 @@ Decision outcomes:
 
 ## Expected Files
 
-- `apps/cli/src/commands/ten-season-report.ts`
-- `apps/cli/src/commands/ten-season-report.test.ts`
-- `apps/cli/src/commands/ten-season-report/gate-checkpoint.ts`
-- `apps/cli/src/commands/ten-season-report/gate-output.ts`
-- `apps/cli/src/commands/ten-season-report/report-data.ts`
-- `apps/cli/src/commands/ten-season-report/world-integrity-view.ts`
-- `apps/cli/src/commands/ten-season-report/world-integrity-view.test.ts`
+- `apps/cli/src/commands/simulation-report.ts`
+- `apps/cli/src/commands/simulation-report.test.ts`
+- `apps/cli/src/commands/simulation-report/report-registry.ts`
+- `apps/cli/src/commands/simulation-report/career-world-facts.ts`
+- `apps/cli/src/commands/simulation-report/locked-profile-sections.ts`
+- `apps/cli/src/commands/simulation-report/world-integrity-profile.ts`
+- `apps/cli/src/commands/simulation-report/world-integrity-profile.test.ts`
+- `apps/cli/src/commands/simulation-report/report-html.ts`
+- `apps/cli/src/commands/simulation-report/report-html.test.ts`
 - `packages/simulation-tools/src/season-recap/season-recap.ts`
 - `packages/simulation-tools/src/season-recap/season-recap.test.ts`
 - `packages/simulation-tools/src/index.ts`
@@ -388,41 +390,35 @@ workers before its output can count as evidence.
 nvm use 24
 pnpm exec vitest run \
   packages/simulation-tools/src/season-recap/season-recap.test.ts \
-  apps/cli/src/commands/ten-season-report.test.ts \
-  apps/cli/src/commands/ten-season-report/world-integrity-view.test.ts
+  apps/cli/src/commands/simulation-report.test.ts \
+  apps/cli/src/commands/simulation-report/world-integrity-profile.test.ts \
+  apps/cli/src/commands/simulation-report/report-html.test.ts
 
-pnpm cli ten-season-report \
-  --report-kind=world-integrity-cohort \
-  --seed-prefix=phase81b-world-integrity-canary-v1 \
-  --worlds=7 \
-  --seasons=10 \
-  --checkpoint-dir=saves/long-run-checkpoints/phase81b-world-integrity-canary-v1 \
-  --shards=7 \
-  --workers=7 \
-  --report-output=simulation-out/phase81b-world-integrity-canary-v1/report.md \
-  --view-output=simulation-out/phase81b-world-integrity-canary-v1/index.html
+pnpm cli simulation-report \
+  --profile=phase81b-world-integrity-canary-7x10-v1 \
+  --format=json \
+  --report-output=simulation-out/phase81b-world-integrity-canary-v1/report.json
 
-pnpm cli ten-season-report \
-  --report-kind=world-integrity-cohort \
-  --seed-prefix=phase81b-world-integrity-750x10-v1 \
-  --worlds=750 \
-  --seasons=10 \
-  --checkpoint-dir=saves/long-run-checkpoints/phase81b-world-integrity-750x10-v1 \
-  --shards=750 \
-  --workers=7 \
-  --report-output=docs/audits/PHASE_81B_750X10_WORLD_INTEGRITY_REPORT.md \
-  --view-output=simulation-out/phase81b-world-integrity-750x10-v1/index.html
+pnpm cli simulation-report \
+  --from-report=simulation-out/phase81b-world-integrity-canary-v1/report.json \
+  --format=html \
+  --report-output=simulation-out/phase81b-world-integrity-canary-v1/index.html
 
-pnpm cli ten-season-report \
-  --report-kind=world-integrity-cohort \
-  --seed-prefix=phase81b-world-integrity-750x10-v1 \
-  --worlds=750 \
-  --seasons=10 \
-  --checkpoint-dir=saves/long-run-checkpoints/phase81b-world-integrity-750x10-v1 \
-  --shards=750 \
-  --workers=7 \
-  --report-output=docs/audits/PHASE_81B_750X10_WORLD_INTEGRITY_REPORT.md \
-  --view-output=simulation-out/phase81b-world-integrity-750x10-v1/index.html
+pnpm cli simulation-report \
+  --profile=phase81b-world-integrity-750x10-v1 \
+  --format=json \
+  --report-output=simulation-out/phase81b-world-integrity-750x10-v1/report.json
+
+pnpm cli simulation-report \
+  --from-report=simulation-out/phase81b-world-integrity-750x10-v1/report.json \
+  --format=html \
+  --report-output=simulation-out/phase81b-world-integrity-750x10-v1/index.html
+
+# Repeat the acceptance profile unchanged to prove checkpoint resume/rebuild.
+pnpm cli simulation-report \
+  --profile=phase81b-world-integrity-750x10-v1 \
+  --format=json \
+  --report-output=simulation-out/phase81b-world-integrity-750x10-v1/report.json
 
 pnpm check
 pnpm --filter @game/web run build
@@ -441,7 +437,8 @@ but must not turn the local artifact into an application route.
 
 - Step 06 froze the complete contract and examples before acceptance output.
 - The `7 x 10` canary is recorded as operational evidence only.
-- Canary and acceptance both use `world-integrity-cohort`, the canonical career
+- Canary and acceptance both use locked profiles from the same world-integrity
+  family, the canonical career
   selector and both output formatters; neither records a fixed-shape fallback.
 - The fresh `750 x 10` finishes with exactly `750` one-world shards and exactly
   `7` workers.

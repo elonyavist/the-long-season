@@ -48,7 +48,7 @@ Nothing here simulates anything new. Every field already exists:
 | Role | `Player.primaryRole`, joined by `playerId` |
 | Shape fielded | supplied per club by whoever ran the season - see below |
 
-`apps/cli/src/commands/ten-season-report/report-data.ts` already retains both
+`apps/cli/src/commands/simulation-report/career-world-facts.ts` already retains both
 `table` and `playerSummaryStats` per season and aggregates them away. The
 instrument keeps them and prints them instead.
 

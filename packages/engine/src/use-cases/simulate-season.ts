@@ -12,6 +12,7 @@ import {
   type ClubId,
   type CompetitionId,
   type Formation,
+  type FormationKey,
   type Fixture,
   type FixtureId,
   type GameDate,
@@ -73,8 +74,14 @@ import { applyMatchReportToFixture } from "./apply-match-report-to-fixture.ts";
  * from the current roster, formation, and dynamic player states.
  */
 export interface SimulateSeasonAiSquadSelection {
-  /** Base formation used to select a valid match XI. */
-  readonly formation: Formation;
+  /**
+   * Optional imposed formation.
+   *
+   * Locked analysis profiles pass one to preserve their population. Ordinary
+   * career reports omit it so the canonical selector chooses the best catalog
+   * shape for the footballers available on that fixture date.
+   */
+  readonly formation?: Formation;
   /** Public projection policy used to assess candidates on each fixture date. */
   readonly potentialProjectionPolicy: PlayerPotentialProjectionPolicyConfig;
   /** Global rating scale paired with the projection policy. */
@@ -249,6 +256,31 @@ export interface SimulateSeasonFixtureParticipation {
   readonly fixtureId: FixtureId;
   /** Exact contributions ready for the career participation ledger. */
   readonly contributions: readonly PlayerFixtureParticipationContribution[];
+  /** Exact kickoff selections consumed by the match engine. */
+  readonly fieldedTeams: SimulateSeasonFixtureFieldedTeams;
+}
+
+/** Why one kickoff XI used its recorded shape. */
+export type SimulateSeasonFormationSelectionSource =
+  | "catalog_ai"
+  | "imposed_ai"
+  | "fixed_lineup"
+  | "setup_override"
+  | "fixture_lineup_override";
+
+/** One side's actual kickoff selection, retained without reconstruction. */
+export interface SimulateSeasonFixtureFieldedTeam {
+  readonly clubId: ClubId;
+  readonly lineup: readonly LineupSlot[];
+  /** Absent only when a caller supplied a lineup without a catalog shape. */
+  readonly formationKey?: FormationKey;
+  readonly selectionSource: SimulateSeasonFormationSelectionSource;
+}
+
+/** Both selections actually consumed by one simulated fixture. */
+export interface SimulateSeasonFixtureFieldedTeams {
+  readonly home: SimulateSeasonFixtureFieldedTeam;
+  readonly away: SimulateSeasonFixtureFieldedTeam;
 }
 
 /** Error categories exposed by season simulation. */
@@ -333,6 +365,10 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     const report = createMatchReport(simulatedMatch);
     fixtureParticipation.push({
       fixtureId,
+      fieldedTeams: {
+        home: fieldedTeamForFixture(fixture.homeClubId, matchSetup.home),
+        away: fieldedTeamForFixture(fixture.awayClubId, matchSetup.away),
+      },
       contributions: buildFixtureParticipationContributions({
         fixtureId,
         seasonId: input.seasonId,
@@ -432,6 +468,10 @@ interface FixtureTeamSetup {
   readonly teamContext: MatchTeamContext;
   /** Exact bench selected alongside the XI, empty for fixed-lineup callers. */
   readonly benchPlayerIds: readonly PlayerId[];
+  /** Exact catalog shape consumed by the match, when the caller supplied one. */
+  readonly formationKey?: FormationKey;
+  /** Selection path used to build this exact kickoff context. */
+  readonly selectionSource: SimulateSeasonFormationSelectionSource;
 }
 
 interface FixtureMatchSetup {
@@ -521,6 +561,7 @@ function fixtureTeamSetup(
         playerStates ?? fixtureLineupOverride.playerStates,
       ),
       benchPlayerIds: [],
+      selectionSource: "fixture_lineup_override",
     };
   }
 
@@ -532,6 +573,7 @@ function fixtureTeamSetup(
         playerStates ?? setupOverride.playerStates,
       ),
       benchPlayerIds: [],
+      selectionSource: "setup_override",
     };
   }
 
@@ -544,6 +586,20 @@ function fixtureTeamSetup(
   return {
     teamContext: fixedLineupMatchTeamContext(clubId, team, input.matchTacticsCalibration, playerStates),
     benchPlayerIds: [],
+    selectionSource: "fixed_lineup",
+  };
+}
+
+/** Copies the exact kickoff selection into the durable season result. */
+function fieldedTeamForFixture(
+  clubId: ClubId,
+  setup: FixtureTeamSetup,
+): SimulateSeasonFixtureFieldedTeam {
+  return {
+    clubId,
+    lineup: setup.teamContext.lineup,
+    selectionSource: setup.selectionSource,
+    ...(setup.formationKey === undefined ? {} : { formationKey: setup.formationKey }),
   };
 }
 
@@ -952,7 +1008,9 @@ function aiSelectedMatchTeamContext(
     const playerIds = Object.keys(team.players).sort() as PlayerId[];
     const result = buildAiSquadMatchTeamContext({
       clubId,
-      formation: team.aiSelection.formation,
+      ...(team.aiSelection.formation === undefined
+        ? {}
+        : { formation: team.aiSelection.formation }),
       playerIds,
       players: team.players,
       publicAssessments: publicAssessmentsForAiSelection(
@@ -974,6 +1032,9 @@ function aiSelectedMatchTeamContext(
     return {
       teamContext: result.teamContext,
       benchPlayerIds: result.selection.benchPlayerIds,
+      formationKey: result.selection.formation.key,
+      selectionSource:
+        team.aiSelection.formation === undefined ? "catalog_ai" : "imposed_ai",
     };
   } catch (error) {
     if (error instanceof AiSquadSelectionError) {

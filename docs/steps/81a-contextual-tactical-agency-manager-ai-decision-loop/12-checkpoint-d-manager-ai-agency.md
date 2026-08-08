@@ -38,7 +38,7 @@ Targets:
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.test.ts`
 - `packages/simulation-tools/src/live-match/live-match-control-gate.ts`
-- `apps/cli/src/commands/tactical-agency-report.ts`
+- `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`
 - `apps/web/src/visual-qa/current-product.spec.ts`
 - `docs/PROJECT_STATUS.md`
 - this step document
@@ -48,7 +48,7 @@ Targets:
 
 ```bash
 nvm use 24
-pnpm cli tactical-agency-report --checkpoint=d --workers=7
+pnpm cli simulation-report --profile=phase81a-d --workers=7
 pnpm web:visual:qa
 pnpm check
 git diff --check

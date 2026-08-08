@@ -64,7 +64,7 @@ report must fail closed if its effective worker count is not seven.
 - this step document
 - `../81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/README.md`
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts`
-- `apps/cli/src/commands/tactical-agency-report.ts`
+- `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`
 
 ## Required Checks
 
@@ -72,7 +72,7 @@ Run the cohort alone, then each repository/browser gate alone:
 
 ```bash
 nvm use 24
-pnpm cli tactical-agency-report --checkpoint=f --workers=7
+pnpm cli simulation-report --profile=phase81a-f --workers=7
 pnpm check
 pnpm --filter @game/web run build
 pnpm web:visual:qa

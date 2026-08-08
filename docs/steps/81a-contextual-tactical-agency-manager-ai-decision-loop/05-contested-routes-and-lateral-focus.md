@@ -54,7 +54,7 @@ reward a concentration and exploit its connected cost.
 nvm use 24
 pnpm exec vitest run packages/engine/src/match-engine/tactical-matchup.test.ts
 pnpm exec vitest run packages/engine/src/match-engine/opportunity-route.test.ts
-pnpm cli tactical-agency-report --checkpoint --workers=7
+pnpm cli simulation-report --profile=phase81a-a2 --workers=7
 pnpm check
 git diff --check
 graphify update .

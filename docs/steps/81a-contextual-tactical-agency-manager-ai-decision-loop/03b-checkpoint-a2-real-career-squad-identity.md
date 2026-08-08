@@ -2,9 +2,10 @@
 
 ## Status
 
-**Done - conditional `GO` recorded 2026-08-08.** Steps 04-05 open; Step 06 and
-everything after it remain closed until Step 05 restores the low-block band on
-both seed sets. Report:
+**Done - conditional `GO` recorded 2026-08-08.** Steps 03C-03D are inserted next
+to consolidate report tooling before more checkpoint entrypoints exist. The
+engine sequence then opens 04-05; Step 06 and everything after it remain closed
+until Step 05 restores the low-block band on both seed sets. Report:
 `docs/audits/PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md`.
 
 All seven frozen gates passed on **both** seed sets, the guardrails were
@@ -144,7 +145,8 @@ same claim and does not discharge it.
 
 ## Experiment
 
-Re-run the Step 02 instrument unchanged: `pnpm cli tactical-agency-report`,
+Re-run the Step 02 population through its locked migrated Interface:
+`pnpm cli simulation-report --profile=phase81a-a2`,
 exactly `7` workers, same rounds, same denominators, both seed sets. The
 instrument is not modified for this checkpoint; an instrument changed alongside
 the thing it measures attributes nothing.
@@ -230,8 +232,9 @@ without being called noise: two aggregate ratios do not estimate a noise floor.
 
 The primary A2 result remains `GO`, but its authorization is conditional. A
 `step_03a_chart` attribution still forces `REFINE`; `legacy_chart_also_fails`
-opens only Steps 04-05. It does not encode `pre_existing`, because that would
-claim a population the experiment did not reproduce.
+opens tooling Steps 03C-03D and then engine Steps 04-05. It does not encode
+`pre_existing`, because that would claim a population the experiment did not
+reproduce.
 
 **The band is still violated by both chart arms, and that is escalated to Step
 05** - which exists to repair the low block's trade-offs. Step 06 and everything
@@ -270,6 +273,12 @@ thirteen steps". The value is a real finding; only its ownership was in doubt.
 - `docs/PROJECT_STATUS.md`
 - this step document
 - `README.md` - records the conditional authorization in the phase sequence.
+- `../README.md` - points the global step index at active Step 03C rather than
+  the long-completed Step 01.
+- `03c-canonical-modular-simulation-report-foundation.md` **(new)** - the next
+  tooling step, inserted before more checkpoint entrypoints are added.
+- `03d-report-module-migration-and-single-cli-entrypoint.md` **(new)** - closes
+  the migration and deletes every superseded report command surface.
 - `04-conserved-tactical-contributions.md`
 - `05-contested-routes-and-lateral-focus.md` - owns the live low-block repair
   that conditions A2's downstream authorization.
@@ -280,7 +289,7 @@ thirteen steps". The value is a real finding; only its ownership was in doubt.
 
 ```bash
 nvm use 24
-pnpm cli tactical-agency-report --checkpoint --workers=7
+pnpm cli simulation-report --profile=phase81a-a2
 pnpm check
 git diff --check
 ```
@@ -290,9 +299,10 @@ The cohort and `pnpm check` run separately, each alone.
 ## Decision
 
 - **GO:** every primary gate passes on both seed sets and the archetype-mix
-  counterfactual moves the chosen shape. All guardrails holding opens Steps
-  04-16; `legacy_chart_also_fails` preserves the primary GO but opens only
-  Steps 04-05 until Step 05 restores the low-block band on both seed sets.
+  counterfactual moves the chosen shape. Steps 03C-03D consolidate the report
+  tooling first. All guardrails holding then opens Steps 04-16;
+  `legacy_chart_also_fails` opens only 04-05 until Step 05 restores the
+  low-block band on both seed sets.
 - **REFINE:** reopen only Step 03A. Targets do not move; the checkpoint repeats.
 - **STOP / RETHINK:** squad identity does not change the chosen shape, or variety
   arrives only through a quota, a formation hint, or degraded squads. Record the
@@ -372,5 +382,6 @@ would re-freeze the before-state this checkpoint exists to measure against.
 
 The report records both seed sets, both evaluations, the frozen targets as
 written here, the causality result, the guardrails, exactly `7` workers, cost,
-and the decision. This `GO` authorizes Steps 04-05; Step 06 remains closed until
-Step 05 restores the low-block guardrail on both seed sets.
+and the decision. This `GO` authorizes tooling Steps 03C-03D, then engine Steps
+04-05; Step 06 remains closed until Step 05 restores the low-block guardrail on
+both seed sets.
