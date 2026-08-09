@@ -107,6 +107,15 @@ function seasonInput(seed: string): SimulateSeasonInput {
     seasonStartDate: gameDate(fromISO("2026-08-01")),
     teamsByClubId: teamsByClubId(clubIds),
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: 3,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
     matchEngineConfig: {
       minuteCount: 12,
       rates: {

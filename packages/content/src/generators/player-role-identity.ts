@@ -1,4 +1,12 @@
-import { createPlayerRoleIdentity, type PlayerArchetype, type PlayerPosition, type PlayerRole, type PlayerRoleIdentity } from "@game/domain";
+import {
+  createPlayerRoleIdentity,
+  playerRoleSquadDepartment,
+  type PlayerArchetype,
+  type PlayerPosition,
+  type PlayerRole,
+  type PlayerRoleIdentity,
+  type PlayerSquadDepartment,
+} from "@game/domain";
 
 /**
  * Maps an existing tactical position to the Phase 33 primary role identity.
@@ -33,6 +41,18 @@ export function primaryRoleForPosition(position: PlayerPosition): PlayerRole {
     case "st":
       return "striker";
   }
+}
+
+/**
+ * Resolves a generated position's squad department through the role owner.
+ *
+ * Diagnostics that only hold a position can use this seam without copying the
+ * role or department switches that generation and squad maintenance enforce.
+ */
+export function generatedPlayerDepartmentForPosition(
+  position: PlayerPosition,
+): PlayerSquadDepartment {
+  return playerRoleSquadDepartment(primaryRoleForPosition(position));
 }
 
 /**

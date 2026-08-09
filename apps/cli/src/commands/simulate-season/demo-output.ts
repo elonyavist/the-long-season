@@ -1,7 +1,8 @@
 import { formatLineupRole } from "../career/format.ts";
-import type { FakeLeagueSystem } from "@game/content";
+import { selectPlayerStateCurvesConfig, type FakeLeagueSystem } from "@game/content";
 import {
   DEFAULT_FITNESS_RULES,
+  recoverFitnessForPlayers,
   type LineupSlot,
   type simulateSeason,
 } from "@game/engine";
@@ -73,19 +74,35 @@ export function formatConditionDemoOutput(
     ? undefined
     : Number(secondFixture.date) - Number(firstFixture.date);
   const firstMatchFitness = DEFAULT_FITNESS_RULES.maxFitness - DEFAULT_FITNESS_RULES.matchFitnessCost;
-  const recoveredFitness = recoveryDays === undefined
+  const recoveryPolicy = selectPlayerStateCurvesConfig();
+  const firstMatchStates = { ...league.playerStates };
+  for (const { playerId } of conditionDemo.lineup) {
+    const current = firstMatchStates[playerId];
+    if (current !== undefined) firstMatchStates[playerId] = { ...current, fitness: firstMatchFitness as typeof current.fitness };
+  }
+  const recoveredStates = recoveryDays === undefined || secondFixture === undefined
     ? undefined
-    : Math.min(
-        DEFAULT_FITNESS_RULES.maxFitness,
-        firstMatchFitness + DEFAULT_FITNESS_RULES.dailyRecovery * recoveryDays,
-      );
+    : recoverFitnessForPlayers({
+        playerStates: firstMatchStates,
+        playerIds: conditionDemo.lineup.map(({ playerId }) => playerId),
+        players: league.players,
+        currentDate: secondFixture.date,
+        recoveryPolicy,
+        dayCount: recoveryDays,
+      });
+  const recoveredFitness = recoveredStates === undefined || conditionDemo.lineup.length === 0
+    ? undefined
+    : conditionDemo.lineup.reduce(
+        (sum, { playerId }) => sum + Number(recoveredStates[playerId]?.fitness ?? 0),
+        0,
+      ) / conditionDemo.lineup.length;
   const tableRow = findTableRow(result.table, conditionDemo.clubId);
   const lines = [
     "",
     `${text("condition.demo")}: ${conditionDemo.profileKey}`,
     `  ${text("setup.selectedClub")}: ${clubLabel(conditionDemo.clubId, league.clubsById)}`,
     `  ${text("condition.lifecycle")}: ${text("common.enabled")}`,
-    `  ${text("condition.rules")}: ${text("condition.matchCost")}=${DEFAULT_FITNESS_RULES.matchFitnessCost} ${text("condition.dailyRecovery")}=${DEFAULT_FITNESS_RULES.dailyRecovery} ${text("condition.clamp")}=${DEFAULT_FITNESS_RULES.minFitness}..${DEFAULT_FITNESS_RULES.maxFitness}`,
+    `  ${text("condition.rules")}: ${text("condition.matchCost")}=${DEFAULT_FITNESS_RULES.matchFitnessCost} ${text("condition.recoveryCurve")}=${recoveryPolicy.version} ${text("condition.clamp")}=${DEFAULT_FITNESS_RULES.minFitness}..${DEFAULT_FITNESS_RULES.maxFitness}`,
     `  ${text("condition.firstFixture")}: ${firstFixtureLabel}`,
     `  ${text("condition.afterFirstMatch")}: ${firstMatchFitness}`,
     `  ${text("condition.beforeNextFixture", { days: recoveryDays ?? text("common.unknown") })}: ${recoveredFitness ?? text("common.unavailable")}`,

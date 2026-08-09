@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   CAREER_STATE_SCHEMA_VERSION,
+  PLAYER_ROLES,
   clubId,
   createCareerState,
   gameDate,
@@ -17,6 +18,7 @@ import {
   type CareerState,
   type Player,
   type PlayerId,
+  type PlayerPosition,
 } from "@game/domain";
 import { completedCivilYears, fromISO } from "@game/shared";
 
@@ -25,6 +27,7 @@ import {
   createAnnualWorldIntakeCandidateProviders,
   generateCareerIntakePlayers,
   type AnnualWorldActivePlayerStockEntry,
+  type AnnualWorldSeniorIntakeCandidate,
 } from "./career-intake-players.ts";
 import { createFakeDomesticWorld } from "./domestic-world.ts";
 import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
@@ -131,7 +134,7 @@ test("generateCareerIntakePlayers keeps role templates coherent", () => {
 test("generateCareerIntakePlayers keeps fixed-seed identity facts and uses current-profile policy", () => {
   const result = generateCareerIntakePlayers({
     ...intakeInput("phase74-intake-lock"),
-    count: 3,
+    targetPositions: ["gk", "cm", "rw"],
   });
 
   assert.deepEqual(
@@ -342,6 +345,62 @@ test("shared annual providers count a reserved ceiling-six promotion before inta
   assert.deepEqual(diagnostics.generatedStoredCeilingSixPlayerIds, []);
 });
 
+test("real annual senior candidate populations sustain all roles in every competition", () => {
+  const careerState = annualProviderCareerState();
+  const providers = createAnnualWorldIntakeCandidateProviders({
+    worldSeed: "annual-role-continuity-world",
+    seasonIndex: 1,
+    seniorCandidatesPerClub: 8,
+  });
+  const intakeSeasonId = seasonId("season:annual-role-continuity");
+  providers.createYouthIntakeCandidates({
+    careerState,
+    seasonId: intakeSeasonId,
+    intakeDate: careerState.gameState.calendar.currentDate,
+    activePlayerStock: activePlayerStockFixture(careerState),
+  });
+  const candidates = providers.createSeniorIntakeCandidates({
+    careerState,
+    seasonId: intakeSeasonId,
+    intakeDate: careerState.gameState.calendar.currentDate,
+  });
+  const competitionWorld = careerState.gameState.domesticCompetitionWorld;
+  assert.ok(competitionWorld !== undefined);
+  const roleDiagnostics = providers.roleContinuityDiagnostics();
+  assert.equal(roleDiagnostics.academyRefill.reconciliationFailureCount, 0);
+  assert.equal(roleDiagnostics.seniorCandidate.status, "generated");
+  if (roleDiagnostics.seniorCandidate.status !== "generated") {
+    throw new Error("Senior candidates were generated but diagnostics omitted them");
+  }
+  assert.equal(roleDiagnostics.seniorCandidate.population.reconciliationFailureCount, 0);
+  assert.equal(
+    roleDiagnostics.seniorCandidate.population.plannedCount,
+    roleDiagnostics.seniorCandidate.population.candidates.length,
+  );
+
+  for (const competitionIdValue of competitionWorld.competitionIds) {
+    const competitionClubIds: readonly ReturnType<typeof clubId>[] | undefined =
+      competitionWorld.competitions[competitionIdValue]?.clubIds;
+    assert.ok(competitionClubIds !== undefined);
+    const population: readonly AnnualWorldSeniorIntakeCandidate[] = candidates.filter((candidate) =>
+      competitionClubIds.includes(candidate.targetClubId)
+    );
+    assert.deepEqual(
+      new Set(population.map((candidate) => candidate.player.primaryRole)),
+      new Set(PLAYER_ROLES),
+      String(competitionIdValue),
+    );
+    const positions: readonly PlayerPosition[] = population.flatMap((candidate) => candidate.player.naturalPositions);
+    for (const [right, left] of [["rb", "lb"], ["rwb", "lwb"], ["rm", "lm"], ["rw", "lw"]] as const) {
+      assert.equal(
+        Math.abs(positions.filter((position) => position === right).length - positions.filter((position) => position === left).length) <= 1,
+        true,
+        `${competitionIdValue}:${right}/${left}`,
+      );
+    }
+  }
+});
+
 test("shared annual providers evaluate age and refill stock at the incoming season start", () => {
   const careerState = annualProviderCareerState(true);
   const incomingSeasonStartDate = gameDate(fromISO("2027-08-01"));
@@ -364,6 +423,21 @@ test("shared annual providers evaluate age and refill stock at the incoming seas
   assert.deepEqual(
     diagnostics.generatedStoredCeilingSixPlayerIds.map(String),
     diagnostics.allocation.potentialSixPlayerKeys,
+  );
+  assert.deepEqual(
+    diagnostics.allocatedStoredCeilingSixPlacements.map(({ playerKey }) =>
+      playerKey
+    ),
+    diagnostics.allocation.potentialSixPlayerKeys,
+  );
+  assert.equal(
+    diagnostics.allocatedStoredCeilingSixPlacements.every(
+      ({ division, clubTier }) =>
+        division !== "first_division"
+        || clubTier === "title_contender"
+        || clubTier === "playoff_contender",
+    ),
+    true,
   );
   assert.equal(
     candidates.some((candidate) =>
@@ -413,7 +487,7 @@ function intakeInput(worldSeed: string): Parameters<typeof generateCareerIntakeP
       reputation: 5,
       competitiveTier: "mid_table",
     },
-    count: 6,
+    targetPositions: ["gk", "cb", "dm", "am", "rw", "st"],
   };
 }
 

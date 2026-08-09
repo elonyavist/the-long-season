@@ -379,6 +379,15 @@ function seasonInput(seed: string): SimulateSeasonInput {
       [firstClubId]: teamInput(firstClubId, 12),
       [secondClubId]: teamInput(secondClubId, 10),
     },
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: 3,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
     matchEngineConfig: {
       minuteCount: 3,
       rates: {

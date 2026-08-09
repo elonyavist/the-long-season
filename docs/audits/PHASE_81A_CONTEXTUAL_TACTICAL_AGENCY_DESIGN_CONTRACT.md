@@ -475,10 +475,12 @@ progetto.
 12. AI e manager dispongono delle stesse opzioni post-partita.
 13. Fatti grezzi durevoli vengono persistiti una volta; riepiloghi, consigli e
     spiegazioni restano derivati.
-14. La fase prende **un solo beta reset incompatibile**, nello Step 14, quando
-    focus laterale, osservazione dell'avversario, capitoli e preparazione hanno
-    tutti un consumer reale. Gli Step 05, 10 e 13 non avanzano versioni
-    durevoli separatamente.
+14. I salvataggi beta sono sacrificabili. Lo Step 06B7F1 può avanzare il bundle
+    di calibrazione direttamente a `v8`, senza lettore legacy o migrazione. Lo
+    Step 14 resta l'unico proprietario dell'integrazione di **schema storage ed
+    event envelope** della fase, quando focus laterale, osservazione
+    dell'avversario, capitoli e preparazione hanno tutti un consumer reale. Gli
+    Step 05, 10 e 13 non avanzano tali versioni durevoli separatamente.
 15. Determinismo, ordinamenti stabili, tie-break completi, reachability su dati
     reali e package boundaries restano obbligatori.
 
@@ -820,7 +822,8 @@ seconda decisione laterale duplicata nel catalogo.
 
 In questo step `lateralFocus` appartiene all'Interface del piano del minuto e
 alla simulazione. Non cambia schema o envelope: lo Step 14 lo rende durevole
-insieme agli altri fatti della fase, con l'unico beta reset.
+insieme agli altri fatti della fase, con l'unico avanzamento coordinato dello
+schema storage e dell'event envelope.
 
 [`deriveTacticalMatchup(...)`](../../packages/engine/src/match-engine/tactical-matchup.ts)
 deve produrre confronti relativi utilizzabili da
@@ -1687,3 +1690,60 @@ Questo ritmo soddisfa il vincolo di sviluppo incrementale: ogni due step esiste
 una simulazione coerente con ciò che è davvero disponibile, una decisione
 esplicita e la possibilità concreta di affinare o abbandonare la direzione prima
 che il costo si propaghi.
+
+---
+
+## Emendamento A2 - Disponibilità, invecchiamento e ricambio generazionale
+
+Il `REFINE` di L1 resta immutato. L'analisi successiva ha separato due difetti
+che il precedente Step 06B1 trattava come uno solo:
+
+- la stagione automatica non esercita la sessione progressiva e le sostituzioni
+  AI canoniche, quindi perde minuti reali, carico e conseguenze;
+- alla stagione dieci `395/420` posizioni delle classifiche marcatori/assist
+  appartengono ancora alla popolazione iniziale.
+
+Decisioni di prodotto accettate il 2026-08-08:
+
+1. nei report e nelle simulazioni automatiche l'AI gestisce entrambe le
+   squadre; nella partita giocata la squadra del manager resta manuale;
+2. l'età modifica morbidamente recupero e resilienza, mai direttamente gol,
+   assist o selezione dell'attore;
+3. il ricambio generazionale entra ora nello scope;
+4. gli infortuni di allenamento restano fuori dall'MVP;
+5. nessun nuovo report: tutti i checkpoint passano da
+   `pnpm cli simulation-report` con esattamente sette worker.
+
+La tranche autorizzata diventa:
+
+```text
+06B1 progressione automatica canonica e sostituzioni
+06B2 L2 - verità di sostituzioni e minuti
+06B3 disponibilità canonica e carico per minuto
+06B4 recupero e resilienza morbidi per età
+06B5 L3 - disponibilità, età e infortuni da partita
+06B6 L4 - attribuzione del ricambio generazionale
+06B7 correzione dell'owner dimostrato da L4
+06B8 L5 - canary integrata 7 x 10 e HTML
+L1 main 100 x 10 solo dopo GO di L5
+```
+
+Target congelati principali:
+
+- L2: media sostituzioni per squadra-partita `3.5..4.9`, mediana prima
+  sostituzione `50..70`, minuti e limiti riconciliati esattamente;
+- L3: zero indisponibili schierati; infortuni con assenza `20..50` per `1000`
+  ore-giocatore di partita; curva controllata continua e raggiungibile;
+- L5: quota `33+` nelle classifiche delle stagioni `8-10` `<= 0.25`, quota
+  `34/34` fra i leader `33+` `<= 0.50`, deriva dell'età media fra inizio e fine
+  `<= 2.0` anni;
+- L5: alla stagione dieci quota della popolazione iniziale `<= 0.50`, quota
+  generata durante la carriera `>= 0.30`, almeno un leader generato durante la
+  carriera in ogni mondo;
+- tutti i gate tattici, di rarità, abilità, valore, identità, riconciliazione e
+  determinismo restano verdi.
+
+L4 non cambia comportamento: misura il funnel generazione -> sviluppo ->
+promozione -> selezione -> minuti -> produzione e completa lo scope di 06B7
+prima che quel codice inizi. Se non isola un owner, dà `STOP / RETHINK`; non
+autorizza una correzione trasversale né una taratura diretta delle classifiche.

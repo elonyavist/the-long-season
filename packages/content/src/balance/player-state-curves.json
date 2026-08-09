@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "version": "player-state-curves-v2",
+  "baseRecoveryHalfLifeDaysBasisPoints": 7500,
+  "ageHalfLifeDaysPerYearBasisPoints": 5000,
+  "agePenaltyStartsAtYears": 30,
+  "ageMatchLoadPerYearBasisPoints": 3000,
+  "maximumAgeMatchLoadMultiplierBasisPoints": 25000,
+  "resilienceWeightsBasisPoints": {
+    "stamina": 6000,
+    "agility": 2500,
+    "strength": 1500
+  },
+  "lowResilienceHalfLifeMultiplierBasisPoints": 18000,
+  "highResilienceHalfLifeMultiplierBasisPoints": 14000
+}

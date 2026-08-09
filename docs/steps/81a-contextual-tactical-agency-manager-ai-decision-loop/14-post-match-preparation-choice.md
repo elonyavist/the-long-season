@@ -33,6 +33,11 @@ versions exactly once here; delete incompatible careers without migration,
 dual readers, optional legacy fields, or defaults. A save produced after this
 reset remains loadable through Checkpoints E and F.
 
+This is the phase's single coordinated **storage schema/event-envelope**
+advance. It is separate from Step 06B7F1's already-completed content bundle
+`v8` invalidation. Beta saves may be discarded at either boundary; no
+compatibility reader is retained.
+
 After the reset, `formation_history` becomes the sixth `OpponentRead` component.
 It is usable only with a positive sample and its own confidence; volatile or
 insufficient history remains `not_observed`, never a reconstructed default.
@@ -97,7 +102,8 @@ graphify update .
 ## Definition Of Done
 
 All three options are reachable, targeted, exclusive, expiring, save-safe, and
-best/worst in at least one real context; the phase has exactly one beta reset;
+best/worst in at least one real context; the phase has exactly one coordinated
+storage schema/event-envelope advance, owned here;
 the four durable concerns round-trip together; a career created at the reset
 survives every later save/load path; formation history is reachable on real
 reports and absent honestly when insufficient; no past match changes; manager

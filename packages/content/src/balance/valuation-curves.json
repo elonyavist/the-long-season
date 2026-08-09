@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "valuation-curves-v5",
+  "version": "valuation-curves-v7",
   "classification": "explicit_game_design_target",
-  "playerRatingScaleVersion": "player-rating-scale-v7",
+  "playerRatingScaleVersion": "player-rating-scale-v9",
   "playerMarketCalibrationVersion": "player-market-calibration-transfermarkt-it-2026-07-28-v2",
   "qualityInterpolationExponentMilli": 2000,
   "ratingValueAnchors": [
@@ -29,7 +29,7 @@
   ],
   "prospectExpectation": {
     "version": "prospect-expectation-v3",
-    "potentialProjectionPolicyVersion": "player-potential-projection-v4",
+    "potentialProjectionPolicyVersion": "player-potential-projection-v6",
     "p50ParticipationBasisPoints": 5000,
     "upperOptionParticipationBasisPoints": 1000
   },

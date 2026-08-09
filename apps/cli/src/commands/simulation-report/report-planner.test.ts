@@ -109,6 +109,139 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes the L3 availability-aging population and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-availability-aging-l3-7x2",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 2,
+      workerCount: 7,
+      seedPrefix: "phase81a-availability-aging-l3-v1",
+      includedSectionIds: ["formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-availability-aging-l3-7x2",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L4 to the canary worlds, ten seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-generational-succession-l4-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-generational-succession-l4-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L4.1 to the paired canary worlds, ten seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-youth-minute-pathway-l4-1-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-youth-minute-pathway-l4-1-7x10",
+      worldCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L4.2 to the paired canary worlds, ten seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-career-exit-renewal-l4-2-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-career-exit-renewal-l4-2-7x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L4.3 to the paired canary worlds, ten seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-generated-ceiling-l4-3-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-generated-ceiling-l4-3-7x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L4.4 to the paired canary worlds, ten seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-development-renewal-l4-4-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-development-renewal-l4-4-7x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L4.5 to the paired canary worlds, two seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-annual-role-continuity-l4-5-7x2",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 2,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["formations", "development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-annual-role-continuity-l4-5-7x2",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({
       includedSectionIds: ["tactical_shape"],

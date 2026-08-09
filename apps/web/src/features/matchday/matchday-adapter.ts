@@ -46,6 +46,7 @@ import {
   createFakeGameplayConfig,
   selectMarketBehaviorCalibration,
   selectPlayerDevelopmentEnvironmentConfig,
+  selectPlayerStateCurvesConfig,
   selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
   type FakeGameplayConfig,
@@ -1004,6 +1005,9 @@ function prepareWebMatchdayKickoff(
   const preMatchRecovery = applyCareerWeeklyRecovery({
     playerStates: preparedCareerState.gameState.playerStates,
     playerIds: fieldablePlayerIdsFor(selectedClub),
+    players: preparedCareerState.gameState.players,
+    currentDate: nextFixture.fixture.date,
+    recoveryPolicy: selectPlayerStateCurvesConfig(),
     dayCount: nextFixture.fixture.date - preparedCareerState.gameState.calendar.currentDate,
   });
   const recoveredCareerState: CareerState = {
@@ -1498,6 +1502,7 @@ function commitProgressiveWebMatchday(
     playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       session.careerState.gameState.meta.calibrationVersions,
     ),
+    playerStateCurvesConfig: selectPlayerStateCurvesConfig(),
   });
 }
 

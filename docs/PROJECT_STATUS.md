@@ -23,17 +23,18 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **Step 06B1 is active after L1 `REFINE`; main stopped.**
-  Canary: replicated formations `0.8667 < 0.95`; season-ten scorers are `86.4%`
-  aged `33+`, all `34/34`. The main stopped at `35` non-evidence shards; 06C-16 closed.
-- Step 03A Done, `pnpm check` green (`291` files, `2250` tests). **Adopted:
-  `wide_midfielder` stays in the Phase 80A sample and `3005` replaces the
-  shipped `3034`**, which was fitted to a population that could not generate it.
-  Delivery is a typed total version -> bundle catalog, never a `??` fallback:
-  `v7` for existing careers, `v8` for new, **Step 14 the only reset**. Not
-  implemented; held behind `PHASE_81A_PENDING_OUTFIELD_PROJECTION`, **now
-  deletable since A2 recorded `GO`**. Hard-cap probe **`FOUND`**, `21/21`
-  reconciled. Checkpoint A's `STOP / RETHINK` and frozen before-state stand.
+- Step: Phase 81A **06B8 Done, decision `REFINE`; fresh `7 x 10` JSON and
+  desktop HTML produced.** Rotation is green: zero identical-XI club-seasons,
+  only `2.40%` of `33+` leaders play all 34, substitutions/availability/injuries
+  pass. Renewal is red: generated leaders `22.62%`, opening leaders `77.38%`,
+  late `33+` shares `42.22%` scorers / `37.30%` assists. Four-replicated-shape
+  retention is `89.05%`. The `100 x 10`, B2 and Steps 07-16 remain closed.
+- L4.5 retry `GO`: `3,234` academy call-ups, zero catalog-sensitive ties,
+  fallback, avoidable invalids or reconciliation. Fresh v9 L4.3 moves the owner
+  downstream in `5/7`; L5 reaches development parity `5/7`, CLI/web aligned.
+- Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
+  projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
+  frozen before-state stand.
 - **Step 06A replaced the independent draw with one balanced deck per
   competition.** Real `18`-club leagues read `2/3` of every identity, all ten
   roles remain reachable, and AI still selects from own-squad/current-match

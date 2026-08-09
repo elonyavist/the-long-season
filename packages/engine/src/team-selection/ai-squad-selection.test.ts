@@ -442,6 +442,27 @@ test("choosing a shape is unaffected: the same squad picks one it can fill", () 
 });
 
 /**
+ * A depleted club may still have eleven available footballers without having a
+ * forward. The catalog must choose the least-bad emergency shape rather than
+ * ending the fixture or reaching back into the unavailable squad.
+ */
+test("a free selector fields and records a least-bad emergency shape when no catalog XI is usable", () => {
+  const { players, ids } = forwardlessEmergencySquad();
+
+  const selection = selectAiMatchSquad(squadInput({ playerIds: ids, players, benchSize: 4 }));
+  const invalidLineupReasons = selection.reasons.filter(
+    (reason) => reason.selection === "lineup" && reason.suitability === "invalid",
+  );
+
+  assert.equal(selection.lineup.length, 11);
+  assert.equal(new Set(selection.lineup.map((slot) => slot.playerId)).size, 11);
+  assert.equal(selection.catalogChoice?.fillableShapeCount, 0);
+  assert.equal(invalidLineupReasons.length > 0, true);
+  assert.equal(selection.benchPlayerIds.length, 4);
+  assert.equal(selection.reasons.filter((reason) => reason.selection === "bench").length, 4);
+});
+
+/**
  * Eleven footballers with exactly one striker.
  *
  * `4-4-2` needs two, and the only non-`invalid` cover for a striker slot is a
@@ -461,6 +482,29 @@ function oneStrikerSquad(): {
     ["rwb", "rwb"], ["lwb", "lwb"],
     ["cm-1", "cm"], ["cm-2", "cm"], ["cm-3", "cm"],
     ["st", "st"],
+  ];
+  for (const [name, position] of specs) {
+    const id = playerId(`player:${name}`);
+    ids.push(id);
+    players[id] = makePlayer(id, [position], 12);
+  }
+
+  return { players, ids };
+}
+
+/** The exact role coverage that stopped the first two 06B5 refinement runs. */
+function forwardlessEmergencySquad(): {
+  players: Record<PlayerId, Player>;
+  ids: readonly PlayerId[];
+} {
+  const players: Record<PlayerId, Player> = {};
+  const ids: PlayerId[] = [];
+  const specs: ReadonlyArray<readonly [string, PlayerPosition]> = [
+    ["gk-1", "gk"], ["gk-2", "gk"],
+    ["cb-1", "cb"], ["cb-2", "cb"], ["cb-3", "cb"], ["cb-4", "cb"],
+    ["rb-1", "rb"], ["rb-2", "rb"], ["lb", "lb"],
+    ["dm-1", "dm"], ["dm-2", "dm"], ["cm-1", "cm"], ["cm-2", "cm"],
+    ["lm", "lm"], ["rm", "rm"],
   ];
   for (const [name, position] of specs) {
     const id = playerId(`player:${name}`);
@@ -532,6 +576,47 @@ test("fatigue changes who plays, never the shape the squad is built for", () => 
     exhausted.lineup.map((slot) => slot.playerId),
     fresh.lineup.map((slot) => slot.playerId),
   );
+});
+
+test("live XI quality resolves an otherwise catalog-sensitive structural tie", () => {
+  const players = fullSquadPlayers();
+  const allPlayerIds = fullSquadIds();
+  let reachable:
+    | { readonly fresh: ReturnType<typeof selectAiMatchSquad>; readonly resolved: ReturnType<typeof selectAiMatchSquad> }
+    | undefined;
+
+  // Search a stable slice of the real selector input space instead of pinning
+  // one synthetic catalog accident. Removing up to two squad players reaches
+  // the same depleted-roster ties that long careers create through availability.
+  const rosters = [
+    allPlayerIds,
+    ...allPlayerIds.map((removed) => allPlayerIds.filter((id) => id !== removed)),
+    ...allPlayerIds.flatMap((left, leftIndex) =>
+      allPlayerIds.slice(leftIndex + 1).map((right) =>
+        allPlayerIds.filter((id) => id !== left && id !== right)
+      )
+    ),
+  ];
+  for (const playerIds of rosters) {
+    const fresh = selectAiMatchSquad(squadInput({ playerIds, players, benchSize: 0 }));
+    for (const tiredPlayerId of playerIds) {
+      const resolved = selectAiMatchSquad(squadInput({
+        playerIds,
+        players,
+        benchSize: 0,
+        playerStates: { [tiredPlayerId]: playerState(45) },
+      }));
+      if (resolved.formation.key !== fresh.formation.key) {
+        reachable = { fresh, resolved };
+        break;
+      }
+    }
+    if (reachable !== undefined) break;
+  }
+
+  assert.notEqual(reachable, undefined);
+  assert.equal(reachable?.fresh.catalogChoice?.tiedAtBestCount, 1);
+  assert.equal(reachable?.resolved.catalogChoice?.tiedAtBestCount, 1);
 });
 
 test("a stronger squad selects a stronger eleven from the same shape", () => {

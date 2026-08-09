@@ -33,7 +33,6 @@ import {
   transferNegotiationEventDate,
 } from "./career-world-facts.ts";
 
-/** Canonical career facts and resumable profile checkpoints retain their frozen contracts. */
 test("transfer diagnostics use counter time and exact civil age/season boundaries", () => {
   type DiagnosticDate = Parameters<typeof transferNegotiationEventDate>[1];
   const submittedOn = fromISO("2026-07-31") as DiagnosticDate;
@@ -96,55 +95,6 @@ test("Phase 80A potential-outcome cycles follow the August career year", () => {
   );
 });
 
-/**
- * Every outfield projection band Phase 81A knowingly left out of date.
- *
- * Step 03A found this matrix was measuring squad order: it took the n-th player
- * found per macro department, so which footballer stood in for "the second
- * midfielder" was decided by generation rather than declared. The five outfield
- * streams are now named by role - `center_back`, `full_back`,
- * `central_midfielder`, `wide_midfielder`, `striker` - and selected by exact
- * `primaryRole`.
- *
- * The result is not a drift. **Every non-zero outfield band moved and every
- * goalkeeper band is byte-identical**, which is what a mis-specified outfield
- * sample and a sound goalkeeper one look like. The shipped column was fitted
- * while `wide_midfielder` could not be generated at all, so it was fitted on an
- * incomplete population.
- *
- * The measured column is the adopted calibration. It is **not** written into
- * `player-rating-scale.json` yet: a career stamps `playerRatingScaleVersion`
- * and the projection policy travels inside that asset, so changing it in place
- * would hand new numbers to every existing career. It ships as a `v8` bundle
- * beside the frozen `v7`, and Step 14 stays the only reset. The bundle is
- * minted **after Checkpoint A2 records `GO`**, because the template is still a
- * real footballer drawn from a generated world - pinning the role fixed the
- * dominant factor, not the last one - so until the identity table is frozen
- * these numbers can still move.
- *
- * Both sides of every pair are pinned, so these seven bands are guarded *more*
- * tightly than the seventeen that match: either column moving fails the test.
- * Bands absent from this table - the zero bands and every goalkeeper band -
- * keep plain equality.
- *
- * Owner: Phase 81A Step 03A, re-derived in Step 06A after the competition-
- * balanced identity deck changed the generated population. Removal: delete
- * this table and restore the plain equality when Step 14 ships the `v8` bundle.
- */
-const PHASE_81A_PENDING_OUTFIELD_PROJECTION: Readonly<Record<string, {
-  readonly p50?: { readonly shipped: number; readonly measured: number };
-  readonly upper?: { readonly shipped: number; readonly measured: number };
-}>> = {
-  "0-17": { p50: { shipped: 3_034, measured: 3_004 } },
-  "18-20": { p50: { shipped: 2_200, measured: 2_285 } },
-  "21-21": { p50: { shipped: 1_196, measured: 1_200 }, upper: { shipped: 2_823, measured: 2_697 } },
-  "22-22": { p50: { shipped: 716, measured: 725 }, upper: { shipped: 2_111, measured: 2_137 } },
-  "23-23": { p50: { shipped: 483, measured: 495 }, upper: { shipped: 1_405, measured: 1_359 } },
-  "24-24": { p50: { shipped: 219, measured: 229 }, upper: { shipped: 653, measured: 631 } },
-  "25-25": { p50: { shipped: 71, measured: 72 }, upper: { shipped: 249, measured: 238 } },
-  "26-26": { upper: { shipped: 55, measured: 44 } },
-};
-
 test("Phase 80A potential-outcome matrix composes engine owners across every locked cell", () => {
   const baseline = createPhase80APotentialOutcomeCalibration();
   const replay = createPhase80APotentialOutcomeCalibration();
@@ -205,21 +155,10 @@ test("Phase 80A potential-outcome matrix composes engine owners across every loc
       && maximumAge === calibrationBand.maximumAge
     );
     assert.notEqual(configuredBand, undefined);
-    const bandKey = `${String(calibrationBand.minimumAge)}-${String(calibrationBand.maximumAge)}`;
-    const pending = calibrationBand.roleGroup === "outfield"
-      ? PHASE_81A_PENDING_OUTFIELD_PROJECTION[bandKey]
-      : undefined;
-    if (pending?.p50 !== undefined) {
-      // Both sides pinned, so this band is asserted *harder* than the rest:
-      // shipped and measured must each stay exactly where they are recorded.
-      assert.equal(configuredBand?.p50RealizationBasisPoints, pending.p50.shipped, bandKey);
-      assert.equal(calibrationBand.p50RealizationBasisPoints, pending.p50.measured, bandKey);
-    } else {
-      assert.equal(
-        configuredBand?.p50RealizationBasisPoints,
-        calibrationBand.p50RealizationBasisPoints,
-      );
-    }
+    assert.equal(
+      configuredBand?.p50RealizationBasisPoints,
+      calibrationBand.p50RealizationBasisPoints,
+    );
     let contractUpper = calibrationBand.p90RealizationBasisPoints;
     if (calibrationBand.maximumAge <= 20) {
       contractUpper = 10_000;
@@ -230,26 +169,16 @@ test("Phase 80A potential-outcome matrix composes engine owners across every loc
     if (isTerminalBand) {
       contractUpper = 0;
     }
-    if (pending?.upper !== undefined) {
-      assert.equal(
-        configuredBand?.upperRealizationBasisPoints,
-        pending.upper.shipped,
-        bandKey,
-      );
-      assert.equal(contractUpper, pending.upper.measured, bandKey);
-    } else {
-      assert.equal(
-        configuredBand?.upperRealizationBasisPoints,
-        contractUpper,
-      );
-    }
+    assert.equal(
+      configuredBand?.upperRealizationBasisPoints,
+      contractUpper,
+    );
   }
   assert.equal(baseline.audit.unobservedCalibrationBandCount, 0);
-  // Two counters that follow the re-derived outfield column; see
-  // `PHASE_81A_PENDING_OUTFIELD_PROJECTION`. Both were `65`/`401` on the shipped
-  // calibration and are restored with it.
-  assert.equal(baseline.audit.abovePublicUpperCount, 60);
-  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 370);
+  // Descriptive reachability counters under the exact v8 projection. The
+  // structural gates below, not these goldens, own acceptance.
+  assert.equal(baseline.audit.abovePublicUpperCount, 65);
+  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 401);
   assert.equal(baseline.audit.storedCeilingViolationCount, 0);
   assert.equal(
     baseline.audit.gates.find(({ key }) =>
@@ -288,13 +217,14 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
     createTranslator("en"),
     (seasonNumber, rows, careerState) => {
       if (seasonNumber !== 1) return;
-      const ownerClubIdByPlayerId = new Map(
-        careerState.gameState.clubIds.flatMap((clubId) => {
-          const club = careerState.gameState.clubs[clubId];
-          return club?.playerIds.map((playerId) => [playerId, clubId] as const)
-            ?? [];
-        }),
-      );
+      const ownedPlayersByClub = new Map(careerState.gameState.clubIds.map((clubId) => {
+        const seniorPlayerIds = careerState.gameState.clubs[clubId]?.playerIds.map(String) ?? [];
+        const academyPlayerIds = careerState.youthAcademyState?.clubRosters[clubId]?.playerIds.map(String) ?? [];
+        return [String(clubId), new Set([...seniorPlayerIds, ...academyPlayerIds])] as const;
+      }));
+      const ownerClubIdByPlayerId = new Map([...ownedPlayersByClub].flatMap(
+        ([clubId, playerIds]) => [...playerIds].map((playerId) => [playerId, clubId] as const),
+      ));
       for (const row of rows) {
         const ownerClubId = ownerClubIdByPlayerId.get(row.playerId);
         assert.notEqual(ownerClubId, undefined);
@@ -304,13 +234,7 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
         observedPlayersByClub.set(String(ownerClubId), observedPlayers);
         for (const [clubId, minutes] of Object.entries(row.clubMinutes)) {
           representedClubs.add(clubId);
-          const canonicalClubId = careerState.gameState.clubIds.find(
-            (candidate) => String(candidate) === clubId,
-          );
-          const representedClub = canonicalClubId === undefined
-            ? undefined
-            : careerState.gameState.clubs[canonicalClubId];
-          assert.equal(representedClub?.playerIds.includes(row.playerId), true);
+          assert.equal(ownedPlayersByClub.get(clubId)?.has(String(row.playerId)), true);
           if ((minutes ?? 0) > 0) {
             const positivePlayers = positivePlayersByClub.get(clubId)
               ?? new Set<string>();
@@ -343,9 +267,14 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
   );
   assert.equal(annualIntakeAudit.evaluationStatus, "evaluated");
   assert.equal(annualIntakeAudit.observationCount, 2);
-  assert.equal(annualIntakeAudit.allocatedStoredCeilingSixCount, 1);
-  assert.equal(annualIntakeAudit.generatedStoredCeilingSixCount, 1);
-  assert.equal(annualIntakeAudit.acceptedStoredCeilingSixCount, 1);
+  // Canonical academy participation now lets aging compress the stored
+  // ceiling of academy players too. Across these two transitions the annual
+  // role-continuous academy generation changes which opening prospects age
+  // out on this seed: intake replaces three departures and then two more. The
+  // stock remains exactly four per snapshot and the audit still rejects inflation.
+  assert.equal(annualIntakeAudit.allocatedStoredCeilingSixCount, 5);
+  assert.equal(annualIntakeAudit.generatedStoredCeilingSixCount, 5);
+  assert.equal(annualIntakeAudit.acceptedStoredCeilingSixCount, 5);
   assert.equal(annualIntakeAudit.activeStoredCeilingSixCount, 8);
   assert.equal(
     annualIntakeAudit.allocatedStoredCeilingSixMissingGeneratedCount,
@@ -357,8 +286,8 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
   );
   assert.equal(stock.observationCount, 3);
   assert.equal(stock.activePlayerObservationCount > 0, true);
-  assert.equal(stock.requiredReplacementObservationCount, 1);
-  assert.equal(stock.completedReplacementCount, 1);
+  assert.equal(stock.requiredReplacementObservationCount, 2);
+  assert.equal(stock.completedReplacementCount, 5);
   assert.equal(stock.missingReplacementCount, 0);
   assert.equal(stock.inflationArrivalCount, 0);
   assert.equal(stock.stockEntryObservationCount > 0, true);
@@ -386,7 +315,11 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
     assert.equal(gate?.status, "pass");
     assert.equal((gate?.observationCount ?? 0) > 0, true);
   }
-}, 90_000);
+// Measured at 39.9s alone and 110.2s under the full seven-worker suite after
+// canonical development became materially active. The old 90s budget failed
+// only under contention; 180s preserves a finite hang detector with margin on
+// the measured contended path.
+}, 180_000);
 
 test("multi-world gate partitions produce the same world summaries as the sequential runner", async () => {
   const text = createTranslator("en");

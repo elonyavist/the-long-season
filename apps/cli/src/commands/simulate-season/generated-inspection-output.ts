@@ -1,5 +1,6 @@
 import {
   generateInitialYouthAcademies,
+  generatedPlayerDepartmentForPosition,
   getGeneratedPlayerArchetype,
   openingCompetitiveTierForClubRank,
   type FakeLeagueSystem,
@@ -430,6 +431,9 @@ function buildYouthAcademyQualityReport(
     referenceDate: league.seasonStartDate,
     clubIds: league.clubIds,
     clubContexts: youthReportClubContexts(league),
+    competitionKeyByClubId: Object.fromEntries(
+      league.clubIds.map((clubId) => [clubId, String(league.competition.id)]),
+    ),
   });
   const rosterSizes = league.clubIds.map((clubId) => generated.youthAcademyState.clubRosters[clubId]?.playerIds.length ?? 0);
   const departments = {
@@ -546,11 +550,11 @@ function addRoleCoherenceWarnings(
   }
 }
 
-function positionDepartment(position: string | undefined): "goalkeeper" | "defender" | "midfielder" | "attacker" {
-  if (position === "gk") return "goalkeeper";
-  if (isDefensivePosition(position ?? "")) return "defender";
-  if (position === "dm" || position === "cm" || position === "am") return "midfielder";
-  return "attacker";
+function positionDepartment(
+  position: FakeLeagueSystem["players"][PlayerId]["naturalPositions"][number] | undefined,
+): "goalkeeper" | "defender" | "midfielder" | "attacker" {
+  if (position === undefined) throw new Error("Generated player has no natural position");
+  return generatedPlayerDepartmentForPosition(position);
 }
 
 function playerGenerationAgeBand(age: number): keyof PlayerGenerationQualityReport["potentialRoomByAge"] {

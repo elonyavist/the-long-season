@@ -23,6 +23,7 @@ import {
   accrueCommittedFixtureParticipation,
   accrueFixtureParticipationContributions,
   buildFixtureParticipationContributions,
+  recentPlayerUseForFixture,
 } from "./player-participation.ts";
 import {
   matchTacticsCalibrationFixture,
@@ -94,6 +95,91 @@ test("buildFixtureParticipationContributions records starters, substitutes, and 
       playedRoleMinutes: {},
     },
   ]);
+});
+
+test("recentPlayerUseForFixture projects the canonical month row", () => {
+  const built = buildFixtureParticipationContributions({
+    fixtureId: FIXTURE_ID,
+    seasonId: SEASON_ID,
+    fixtureDate: gameDate(20_000),
+    finalMinute: 90,
+    sides: [{
+      side: "home",
+      initialContext: initialHomeContext(),
+      finalContext: finalHomeContext(),
+    }],
+    appliedSubstitutions: [{
+      side: "home",
+      slotId: "slot:home:field",
+      outgoingPlayerId: HOME_STARTER,
+      incomingPlayerId: HOME_SUB,
+      minute: 60,
+      reasonKey: "half_time_manager_decision",
+    }],
+  });
+  const careerState = accrueFixtureParticipationContributions({
+    careerState: careerStateFixture(),
+    contributions: built.contributions,
+  });
+
+  assert.deepEqual(recentPlayerUseForFixture({
+    ledger: careerState.playerParticipationLedger,
+    seasonId: SEASON_ID,
+    fixtureDate: gameDate(20_000),
+    playerIds: [HOME_STARTER, HOME_SUB],
+  }), {
+    [HOME_STARTER]: { recentMinutes: 60, recentStarts: 1 },
+    [HOME_SUB]: { recentMinutes: 30, recentStarts: 0 },
+  });
+});
+
+test("participation minutes end at chained substitutions and incident exits", () => {
+  const finalContext: MatchTeamContext = {
+    ...initialHomeContext(),
+    lineup: [
+      createLineupSlot({ slotId: "slot:home:gk", playerId: HOME_GOALKEEPER, canonicalRole: "goalkeeper" }),
+      createLineupSlot({ slotId: "slot:home:field", playerId: HOME_UNUSED, canonicalRole: "center_back" }),
+    ],
+  };
+  const result = buildFixtureParticipationContributions({
+    fixtureId: FIXTURE_ID,
+    seasonId: SEASON_ID,
+    fixtureDate: gameDate(20_000),
+    finalMinute: 90,
+    sides: [{
+      side: "home",
+      initialContext: initialHomeContext(),
+      finalContext,
+      benchPlayerIds: [HOME_SUB, HOME_UNUSED],
+    }],
+    appliedSubstitutions: [
+      {
+        side: "home",
+        minute: 60,
+        outgoingPlayerId: HOME_STARTER,
+        incomingPlayerId: HOME_SUB,
+        slotId: "slot:home:field",
+        reasonKey: "manager_decision",
+      },
+      {
+        side: "home",
+        minute: 80,
+        outgoingPlayerId: HOME_SUB,
+        incomingPlayerId: HOME_UNUSED,
+        slotId: "slot:home:field",
+        reasonKey: "manager_decision",
+      },
+    ],
+    playerExits: [{ side: "home", playerId: HOME_GOALKEEPER, minute: 75 }],
+  });
+  const minutes = Object.fromEntries(
+    result.contributions.map(({ playerId, minutes: played }) => [playerId, played]),
+  );
+
+  assert.equal(minutes[HOME_GOALKEEPER], 75);
+  assert.equal(minutes[HOME_STARTER], 60);
+  assert.equal(minutes[HOME_SUB], 20);
+  assert.equal(minutes[HOME_UNUSED], 10);
 });
 
 test("accrueCommittedFixtureParticipation writes committed fixture facts once", () => {

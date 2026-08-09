@@ -5,6 +5,7 @@ import {
   createPlayerGenerationEconomyAudit,
   type CreatePlayerGenerationEconomyAuditInput,
   type PlayerGenerationEconomyObservation,
+  type PlayerGenerationExceptionalStockPlayerObservation,
 } from "./player-generation-economy-audit.ts";
 
 const constraints = {
@@ -1007,6 +1008,56 @@ test("fails when a new stock arrival introduces weak placement and club concentr
   );
 });
 
+test("judges a new arrival by its allocation-time association without rewriting current stock", () => {
+  const openingPlayers = stockPlayers("entry-time", 4);
+  const currentArrival = stockPlayer(
+    "entry-time:new",
+    "academy",
+    "entry-time:club:new",
+    "first_division",
+    5.5,
+    6,
+    "mid_table",
+  );
+  const report = createPlayerGenerationEconomyAudit({
+    hardCapMinorUnits: input.hardCapMinorUnits,
+    initialRarityConstraints: constraints,
+    observations: [],
+    exceptionalStockSnapshots: [
+      stockSnapshot("entry-time", 0, 4, openingPlayers),
+      stockSnapshot("entry-time", 1, 4, [
+        openingPlayers[0]!,
+        openingPlayers[1]!,
+        openingPlayers[2]!,
+        {
+          ...currentArrival,
+          entryClubAssociation: {
+            kind: "club" as const,
+            clubId: "entry-time:club:new",
+            category: "first_division" as const,
+            competitiveTier: "title_contender" as const,
+          },
+        },
+      ]),
+    ],
+  });
+
+  assert.equal(
+    report.youngExceptionalStock.snapshots[1]
+      ?.firstDivisionOutsideStrongClubCount,
+    1,
+  );
+  assert.equal(
+    report.youngExceptionalStock.stockEntryCategoryPlacementViolationCount,
+    0,
+  );
+  assert.equal(
+    report.youngExceptionalStock.stockEntries[1]
+      ?.firstDivisionOutsideStrongClubCount,
+    0,
+  );
+});
+
 test("fails when a target-five stock snapshot closes with only four players", () => {
   const report = createPlayerGenerationEconomyAudit({
     hardCapMinorUnits: input.hardCapMinorUnits,
@@ -1229,7 +1280,7 @@ function stockSnapshot(
   worldId: string,
   seasonIndex: number,
   targetYoungStoredCeilingSixCount: number,
-  players: ReturnType<typeof stockPlayer>[],
+  players: PlayerGenerationExceptionalStockPlayerObservation[],
 ) {
   return {
     observationId: `${worldId}|stock|${seasonIndex}`,

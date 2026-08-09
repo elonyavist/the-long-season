@@ -18,6 +18,7 @@ import {
   type AppliedMatchSubstitution,
   type PlayerId,
   type PlayerDevelopmentEnvironmentConfig,
+  type PlayerStateCurvesConfig,
   type PlayerWagePolicyConfig,
 } from "@game/domain";
 
@@ -47,7 +48,11 @@ import {
 } from "./career-match-state-consequences.ts";
 import { advanceCareerMonths, type CareerMonthlyLifecycleSummary } from "./advance-career-month.ts";
 import { findNextCareerFixture, type NextCareerFixtureInvalidReason } from "./next-fixture.ts";
-import { accrueCommittedFixtureParticipation, type FixtureParticipationSideContext } from "./player-participation.ts";
+import {
+  accrueFixtureParticipationContributions,
+  buildFixtureParticipationContributions,
+  type FixtureParticipationSideContext,
+} from "./player-participation.ts";
 import { applyMatchAvailabilityConsequences } from "./match-availability-consequences.ts";
 import { settleFixtureContractBonuses } from "./career-finance-lifecycle.ts";
 
@@ -84,6 +89,7 @@ export interface ProgressNextCareerFixtureInput {
   readonly valuationConfig: PlayerValuationConfig;
   /** Version-linked club-environment policy used by quarterly development. */
   readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
+  readonly playerStateCurvesConfig: PlayerStateCurvesConfig;
   /** Match-ready team contexts keyed by club ID. The selected club must be supplied by the caller. */
   readonly teamsByClubId: Readonly<Partial<Record<ClubId, MatchTeamContext>>>;
   /** AI selector policy used for any non-selected club whose context is missing. */
@@ -186,6 +192,7 @@ export interface CommitCompletedCareerFixtureInput {
   readonly valuationConfig: PlayerValuationConfig;
   /** Version-linked club-environment policy used by quarterly development. */
   readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
+  readonly playerStateCurvesConfig: PlayerStateCurvesConfig;
   /** Final structured report produced by the completed live match. */
   readonly report: MatchReport;
   /** Frozen kickoff context used to identify starters and participation. */
@@ -242,6 +249,7 @@ export function commitCompletedCareerFixture(
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     valuationConfig: input.valuationConfig,
     playerDevelopmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
+    playerStateCurvesConfig: input.playerStateCurvesConfig,
     fixture,
     report: input.report,
     selectedStarterIds: selectedInitialTeam.lineup.map((slot) => slot.playerId),
@@ -310,6 +318,7 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     valuationConfig: input.valuationConfig,
     playerDevelopmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
+    playerStateCurvesConfig: input.playerStateCurvesConfig,
     fixture: nextFixture.fixture,
     report: simulatedFixture.report,
     selectedStarterIds,
@@ -353,6 +362,7 @@ interface ApplyCareerFixtureReportInput {
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly valuationConfig: PlayerValuationConfig;
   readonly playerDevelopmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
+  readonly playerStateCurvesConfig: PlayerStateCurvesConfig;
   readonly fixture: Fixture;
   readonly report: MatchReport;
   readonly selectedStarterIds: readonly PlayerId[];
@@ -383,10 +393,23 @@ function applyCareerFixtureReport(
     fixtureId: input.fixture.id,
     report: input.report,
   });
+  const participation = buildFixtureParticipationContributions({
+    fixtureId: input.fixture.id,
+    seasonId: input.fixture.seasonId,
+    fixtureDate: input.fixture.date,
+    finalMinute: input.report.finalMinute,
+    sides: input.participationSides,
+    ...(input.appliedSubstitutions === undefined ? {} : { appliedSubstitutions: input.appliedSubstitutions }),
+    playerExits: incidentPlayerExits(input.report, input.participationSides),
+    ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
+  });
   const selectedClub = gameStateWithResult.clubs[monthlyLifecycle.careerState.selectedClubId];
   const conditionConsequences = applyCareerFixtureConditionConsequences({
     playerStates: gameStateWithResult.playerStates,
-    selectedStarterIds: input.selectedStarterIds,
+    contributions: participation.contributions,
+    players: gameStateWithResult.players,
+    fixtureDate: input.fixture.date,
+    playerStateCurves: input.playerStateCurvesConfig,
     reportPlayerIds: selectedClub === undefined ? input.selectedStarterIds : fieldablePlayerIds(selectedClub),
   });
   const matchStateConsequences = applyCareerMatchStateConsequences({
@@ -426,15 +449,9 @@ function applyCareerFixtureReport(
     },
     playerAvailability: availabilityConsequences.availability,
   });
-  const progressedCareerStateWithParticipation = accrueCommittedFixtureParticipation({
+  const progressedCareerStateWithParticipation = accrueFixtureParticipationContributions({
     careerState: progressedCareerStateWithoutParticipation,
-    fixtureId: input.fixture.id,
-    seasonId: input.fixture.seasonId,
-    fixtureDate: input.fixture.date,
-    finalMinute: input.report.finalMinute,
-    sides: input.participationSides,
-    ...(input.appliedSubstitutions === undefined ? {} : { appliedSubstitutions: input.appliedSubstitutions }),
-    ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
+    contributions: participation.contributions,
   });
   const fixtureBonuses = progressedCareerStateWithParticipation.clubFinanceState === undefined
     && progressedCareerStateWithParticipation.seniorSquadState === undefined
@@ -665,6 +682,25 @@ function fieldedLineupsFromParticipation(
   };
 
   return { home: lineupFor("home"), away: lineupFor("away") };
+}
+
+/** Reads only incident exits confirmed by the committed final team contexts. */
+function incidentPlayerExits(
+  report: MatchReport,
+  sides: readonly FixtureParticipationSideContext[],
+): readonly { readonly side: MatchSide; readonly playerId: PlayerId; readonly minute: number }[] {
+  return report.events.flatMap((event) => {
+    if (
+      event.type !== "red_card"
+      && event.type !== "second_yellow_card"
+      && event.type !== "injury"
+    ) return [];
+    const side = sides.find((candidate) => candidate.side === event.side);
+    if (side === undefined || side.finalContext.lineup.some(({ playerId }) => playerId === event.playerId)) {
+      return [];
+    }
+    return [{ side: event.side, playerId: event.playerId, minute: event.minute }];
+  });
 }
 
 function sideContextsFromCompletedMatch(

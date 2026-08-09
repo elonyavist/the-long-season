@@ -1,6 +1,6 @@
 import {
-  evaluatePositionSuitability,
   createLiveMatchSession,
+  evaluatePositionSuitability,
   getPlayerRoleProfile,
   roleCurrentAbility,
   scorePlayerForFormationSlot,
@@ -21,16 +21,28 @@ import {
   type TacticMentalityKey,
   type TacticSetup,
 } from "@game/domain";
+import { deriveRng } from "@game/shared";
 
 import {
+  advanceProgressiveMatchMinute,
   applyConfirmedProgressiveTeamChanges,
   applyValidatedLiveMatchCommand,
+  createProgressiveMatchSession,
   pauseProgressiveMatchSession,
   resumeProgressiveMatchSession,
   type AppliedLiveMatchCommandFact,
+  type ProgressiveMatchAvailability,
   type ProgressiveMatchSessionState,
 } from "../match-engine/progressive-match-session.ts";
-import type { MatchTeamContext } from "../match-engine/match-context.ts";
+import {
+  buildMatchRngKey,
+  matchRngKeyParts,
+  type MatchContext,
+  type MatchTeamContext,
+} from "../match-engine/match-context.ts";
+import { buildLiveMatchProjection } from "../match-engine/live-match-projection.ts";
+import { telemetryFor } from "../match-engine/match-simulation-state.ts";
+import type { PlayerMatchRatingRegistration } from "../match-engine/player-match-rating.ts";
 
 /** Stable football reason behind one opponent decision. */
 export type AiInGameDecisionReasonKey =
@@ -43,6 +55,13 @@ export type AiInGameDecisionReasonKey =
   | "no_legal_substitute"
   | "no_material_change"
   | "command_rejected";
+
+/** Why an outgoing candidate could not become a legal substitution. */
+export type AiInGameReplacementFailureKey =
+  | "substitution_limit"
+  | "no_available_bench"
+  | "no_positionally_credible_bench"
+  | "quality_floor";
 
 /** Current engine-derived signal used by the policy for one player. */
 export interface AiInGamePlayerSignal {
@@ -77,6 +96,8 @@ export interface AiInGameDecisionReason {
   readonly rejectionCodes?: readonly LiveMatchCommandRejectionCode[];
   /** Players implicated by the rejected snapshot, when validation can identify them. */
   readonly rejectedPlayerIds?: readonly PlayerId[];
+  /** Exact replacement funnel break, present only with `no_legal_substitute`. */
+  readonly replacementFailureKey?: AiInGameReplacementFailureKey;
 }
 
 /** Inputs required to evaluate one opponent decision boundary. */
@@ -135,6 +156,35 @@ export interface ApplyProgressiveAiInGameDecisionsResult {
   readonly decisions: readonly ProgressiveAiInGameDecision[];
 }
 
+/** One completed decision owned by the automatic progressive runner. */
+export interface AutomatedProgressiveAiDecision extends ProgressiveAiInGameDecision {
+  readonly side: MatchEventSide;
+}
+
+/** Input for one full regulation match whose controlled sides are explicit. */
+export interface RunAutomatedProgressiveMatchInput {
+  readonly context: MatchContext;
+  readonly rules: CompetitionMatchRules;
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  readonly home: LiveMatchTeamState;
+  readonly away: LiveMatchTeamState;
+  /** Stable caller order; automatic career matches pass home then away. */
+  readonly aiControlledSides: readonly MatchEventSide[];
+  /** Rebuilds current engine quality from an accepted live-team command. */
+  readonly buildMatchTeamContext: (
+    team: LiveMatchTeamState,
+    playerCondition: Readonly<Partial<Record<PlayerId, number>>>,
+  ) => MatchTeamContext;
+}
+
+/** Final facts from the single automated progressive minute loop. */
+export interface RunAutomatedProgressiveMatchResult {
+  readonly state: ProgressiveMatchSessionState;
+  readonly home: LiveMatchTeamState;
+  readonly away: LiveMatchTeamState;
+  readonly decisions: readonly AutomatedProgressiveAiDecision[];
+}
+
 interface OutgoingCandidate {
   readonly playerId: PlayerId;
   readonly slotId: string;
@@ -154,6 +204,10 @@ interface IncomingCandidate {
   readonly roleAbility: number;
   readonly score: number;
 }
+
+type IncomingCandidateSearch =
+  | { readonly candidate: IncomingCandidate }
+  | { readonly failureKey: AiInGameReplacementFailureKey };
 
 interface TacticalIntent {
   readonly reasonKey: Extract<AiInGameDecisionReasonKey, "dismissal_reorganization" | "trailing_response" | "protecting_lead">;
@@ -179,9 +233,9 @@ export function selectAiInGameDecision(input: SelectAiInGameDecisionInput): AiIn
 
   const signalByPlayer = new Map(input.playerSignals.map((signal) => [signal.playerId, signal]));
   const outgoingCandidates = selectOutgoingCandidates(session, side, currentTeam, signalByPlayer, scoreDelta);
-  const replacement = selectReplacementPair(currentTeam, outgoingCandidates, input.players, signalByPlayer);
-  const outgoing = replacement?.outgoing ?? outgoingCandidates[0];
-  const incoming = replacement?.incoming;
+  const replacementSearch = selectReplacementPair(currentTeam, outgoingCandidates, input.players, signalByPlayer);
+  const outgoing = replacementSearch.replacement?.outgoing ?? outgoingCandidates[0];
+  const incoming = replacementSearch.replacement?.incoming;
   const tacticalIntent = selectTacticalIntent(session, side, currentTeam.tactic, scoreDelta);
   const formationOption = tacticalIntent === undefined
     ? undefined
@@ -200,7 +254,12 @@ export function selectAiInGameDecision(input: SelectAiInGameDecisionInput): AiIn
 
   if (outgoing !== undefined) {
     if (incoming === undefined || currentTeam.substitutionsUsed >= rules.maximumSubstitutions) {
-      reasons.push(reason("no_legal_substitute", session.currentMinute, scoreDelta, outgoing));
+      reasons.push({
+        ...reason("no_legal_substitute", session.currentMinute, scoreDelta, outgoing),
+        replacementFailureKey: currentTeam.substitutionsUsed >= rules.maximumSubstitutions
+          ? "substitution_limit"
+          : replacementSearch.failureKey ?? "no_available_bench",
+      });
       if (outgoing.reasonKey === "forced_injury_replacement") {
         nextTeam = removeUnavailablePlayer(nextTeam, outgoing.playerId, "injured", input.players);
       }
@@ -366,6 +425,145 @@ export function applyProgressiveAiInGameDecisions(
   };
 }
 
+/**
+ * Runs one automatic match through the same minute and command path as Matchday.
+ *
+ * The caller declares ownership instead of choosing a different simulator. A
+ * background fixture passes both sides; interactive Matchday keeps calling the
+ * one-side bridge directly so its manager-owned side remains manual.
+ */
+export function runAutomatedProgressiveMatch(
+  input: RunAutomatedProgressiveMatchInput,
+): RunAutomatedProgressiveMatchResult {
+  const aiControlledSides = orderedUniqueSides(input.aiControlledSides);
+  let home = input.home;
+  let away = input.away;
+  const availability: ProgressiveMatchAvailability = {
+    home: { bench: home.bench, unavailable: home.unavailable },
+    away: { bench: away.bench, unavailable: away.unavailable },
+  };
+  let state = resumeProgressiveMatchSession(
+    createProgressiveMatchSession(input.context, availability),
+  );
+  const registrations = playerRatingRegistrations(home, away);
+  const rngKey = buildMatchRngKey(input.context);
+  const rng = deriveRng(rngKey.seed, rngKey.streamName, ...matchRngKeyParts(rngKey));
+  const decisions: AutomatedProgressiveAiDecision[] = [];
+
+  while (state.phase !== "full_time") {
+    if (state.runState === "paused") state = resumeProgressiveMatchSession(state);
+    state = advanceProgressiveMatchMinute(state, rng);
+
+    for (const side of aiControlledSides) {
+      if (!hasProgressiveAiInGameDecisionBoundary(state, side)) continue;
+      // Tiny deterministic test matches can place half time before regulation
+      // minute 45, which the domain live-session contract intentionally does
+      // not represent. They still use this minute loop, but have no live AI
+      // decision boundary until a regulation-valid minute exists.
+      if (state.phase === "half_time" && state.simulation.minute !== 45) continue;
+      const projection = buildLiveMatchProjection({
+        simulation: state.simulation,
+        events: state.events,
+        playerRegistrations: registrations,
+      });
+      const applied = applyProgressiveAiInGameDecisions({
+        state,
+        session: liveSessionForAutomatedDecision(
+          state,
+          side,
+          home,
+          away,
+          projection.statistics,
+          input.rules,
+        ),
+        side,
+        rules: input.rules,
+        players: input.players,
+        playerSignals: projection.players
+          .filter((player) => player.side === side)
+          .map((player) => ({
+            playerId: player.playerId,
+            rating: player.rating,
+            condition: player.condition,
+          })),
+        buildMatchTeamContext: (team) => input.buildMatchTeamContext(
+          team,
+          telemetryFor(state.simulation).playerCondition,
+        ),
+      });
+      state = applied.state;
+      if (side === "home") home = applied.team;
+      else away = applied.team;
+      decisions.push(...applied.decisions.map((decision) => ({ side, ...decision })));
+    }
+  }
+
+  return { state, home, away, decisions };
+}
+
+/** Rejects duplicate ownership rather than evaluating one side twice. */
+function orderedUniqueSides(sides: readonly MatchEventSide[]): readonly MatchEventSide[] {
+  const seen = new Set<MatchEventSide>();
+  const ordered: MatchEventSide[] = [];
+  for (const side of sides) {
+    if (seen.has(side)) {
+      throw new Error(`Automated progressive side is duplicated: ${side}`);
+    }
+    seen.add(side);
+    ordered.push(side);
+  }
+  return ordered;
+}
+
+/** Builds the validated command snapshot from the current progressive facts. */
+function liveSessionForAutomatedDecision(
+  state: ProgressiveMatchSessionState,
+  controlledSide: MatchEventSide,
+  home: LiveMatchTeamState,
+  away: LiveMatchTeamState,
+  statistics: LiveMatchSession["statistics"],
+  rules: CompetitionMatchRules,
+): LiveMatchSession {
+  return createLiveMatchSession({
+    fixtureId: state.initialContext.fixtureId,
+    controlledSide,
+    phase: state.phase,
+    currentMinute: state.simulation.minute,
+    runState: state.runState,
+    ...(state.runState === "paused" ? { pauseReason: "manual" as const } : {}),
+    score: { ...state.simulation.score },
+    statistics,
+    home,
+    away,
+    events: [],
+    substitutions: state.appliedSubstitutions,
+  }, rules);
+}
+
+/** Registers starters and bench once so substituted players retain ratings. */
+function playerRatingRegistrations(
+  home: LiveMatchTeamState,
+  away: LiveMatchTeamState,
+): readonly PlayerMatchRatingRegistration[] {
+  return [
+    ...playerRatingRegistrationsForTeam(home),
+    ...playerRatingRegistrationsForTeam(away),
+  ];
+}
+
+function playerRatingRegistrationsForTeam(
+  team: LiveMatchTeamState,
+): readonly PlayerMatchRatingRegistration[] {
+  const seen = new Set<PlayerId>();
+  return [...team.lineup, ...team.bench]
+    .filter(({ playerId }) => {
+      if (seen.has(playerId)) return false;
+      seen.add(playerId);
+      return true;
+    })
+    .map(({ playerId }) => ({ playerId, side: team.side }));
+}
+
 /** Reports whether the latest completed minute owns real AI work. */
 export function hasProgressiveAiInGameDecisionBoundary(
   state: ProgressiveMatchSessionState,
@@ -411,7 +609,16 @@ function aiDecisionBoundaries(
   if (state.phase === "half_time") {
     return [{ type: "half_time", minute: state.simulation.minute, side }];
   }
-  if (state.simulation.minute === 60 || state.simulation.minute === 70 || state.simulation.minute === 80) {
+  if (state.simulation.minute === 60) {
+    // A single stoppage can legally carry more than one change. Evaluating the
+    // second command against the already-updated team avoids a batch-only
+    // shortcut while allowing routine rotation to reach realistic volumes.
+    return [undefined, undefined];
+  }
+  if (state.simulation.minute === 70) {
+    return [undefined, undefined];
+  }
+  if (state.simulation.minute === 80) {
     return [undefined];
   }
   return [];
@@ -528,20 +735,22 @@ function selectIncomingCandidate(
   outgoing: OutgoingCandidate,
   players: Readonly<Record<PlayerId, Player>>,
   signalByPlayer: ReadonlyMap<PlayerId, AiInGamePlayerSignal>,
-): IncomingCandidate | undefined {
+): IncomingCandidateSearch {
   const outgoingPlayer = players[outgoing.playerId];
-  if (outgoingPlayer === undefined) return undefined;
+  if (outgoingPlayer === undefined) return { failureKey: "no_available_bench" };
   const outgoingScore = playerScoreForRole(outgoingPlayer, outgoing.role, outgoing.condition);
   const permittedRegression = outgoing.reasonKey === "forced_injury_replacement"
     ? Number.POSITIVE_INFINITY
     : outgoing.condition < 68
       ? 3
       : outgoing.reasonKey === "low_condition"
-        ? 2
+        ? 3
         : 0.75;
 
-  return team.bench
-    .filter((benchPlayer) => benchPlayer.status === "available")
+  const available = team.bench.filter((benchPlayer) => benchPlayer.status === "available");
+  if (available.length === 0) return { failureKey: "no_available_bench" };
+
+  const credible = available
     .map((benchPlayer): IncomingCandidate | undefined => {
       const player = players[benchPlayer.playerId];
       if (player === undefined) return undefined;
@@ -556,9 +765,13 @@ function selectIncomingCandidate(
         score: roundOneDecimal(score),
       };
     })
-    .filter((value): value is IncomingCandidate => value !== undefined)
+    .filter((value): value is IncomingCandidate => value !== undefined);
+  if (credible.length === 0) return { failureKey: "no_positionally_credible_bench" };
+
+  const candidate = credible
     .filter((value) => value.score >= outgoingScore - permittedRegression)
     .sort((left, right) => right.score - left.score || String(left.playerId).localeCompare(String(right.playerId)))[0];
+  return candidate === undefined ? { failureKey: "quality_floor" } : { candidate };
 }
 
 function selectReplacementPair(
@@ -566,17 +779,37 @@ function selectReplacementPair(
   outgoingCandidates: readonly OutgoingCandidate[],
   players: Readonly<Record<PlayerId, Player>>,
   signalByPlayer: ReadonlyMap<PlayerId, AiInGamePlayerSignal>,
-): { readonly outgoing: OutgoingCandidate; readonly incoming: IncomingCandidate } | undefined {
+): {
+  readonly replacement?: { readonly outgoing: OutgoingCandidate; readonly incoming: IncomingCandidate };
+  readonly failureKey?: AiInGameReplacementFailureKey;
+} {
+  let strongestFailure: AiInGameReplacementFailureKey | undefined;
   for (const outgoing of outgoingCandidates) {
-    const incoming = selectIncomingCandidate(team, outgoing, players, signalByPlayer);
-    if (incoming !== undefined) return { outgoing, incoming };
+    const search = selectIncomingCandidate(team, outgoing, players, signalByPlayer);
+    if ("candidate" in search) return { replacement: { outgoing, incoming: search.candidate } };
+    strongestFailure = strongerReplacementFailure(strongestFailure, search.failureKey);
 
     // A forced exit cannot be replaced by choosing a different outgoing
     // player. The caller must remove the injured player if the bench has no
     // legal replacement.
-    if (outgoing.reasonKey === "forced_injury_replacement") return undefined;
+    if (outgoing.reasonKey === "forced_injury_replacement") return { failureKey: search.failureKey };
   }
-  return undefined;
+  return strongestFailure === undefined ? {} : { failureKey: strongestFailure };
+}
+
+/** Keeps the deepest reached replacement-funnel break across outgoing candidates. */
+function strongerReplacementFailure(
+  current: AiInGameReplacementFailureKey | undefined,
+  candidate: AiInGameReplacementFailureKey | undefined,
+): AiInGameReplacementFailureKey | undefined {
+  if (candidate === undefined) return current;
+  const priority = {
+    substitution_limit: 4,
+    quality_floor: 3,
+    no_positionally_credible_bench: 2,
+    no_available_bench: 1,
+  } satisfies Record<AiInGameReplacementFailureKey, number>;
+  return current === undefined || priority[candidate] > priority[current] ? candidate : current;
 }
 
 function playerScoreForRole(player: Player, role: CanonicalPlayerRole, condition: number): number {

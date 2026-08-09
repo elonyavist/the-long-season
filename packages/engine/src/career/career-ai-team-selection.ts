@@ -1,6 +1,5 @@
 import {
   EMPTY_PLAYER_AVAILABILITY,
-  playerParticipationRowKey,
   playerUnavailabilityReason,
   type CareerState,
   type ClubId,
@@ -24,10 +23,9 @@ import {
 import {
   buildAiSquadMatchTeamContext,
   deriveShapeTacticalDistribution,
-  type AiRecentPlayerUse,
   type CatalogShapeChoice,
 } from "../team-selection/index.ts";
-import { monthKeyForCareerDate } from "./advance-career-month.ts";
+import { recentPlayerUseForFixture } from "./player-participation.ts";
 
 /**
  * AI team-selection policy for every club the caller has not prepared.
@@ -108,7 +106,7 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
 
   // Squad depth through the one named accessor, never stored ownership: a
   // borrowed player is fielded by a club that does not hold his contract (A6).
-  const selectablePlayerIds = fieldablePlayerIds(club).filter((playerId) =>
+  const seniorPlayerIds = fieldablePlayerIds(club).filter((playerId) =>
     playerUnavailabilityReason(
       input.careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
       playerId,
@@ -116,20 +114,44 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
       input.fixture.competitionId,
     ) === undefined
   );
+  const availableAcademyPlayerIds = (
+    input.careerState.youthAcademyState?.clubRosters[input.clubId]?.playerIds ?? []
+  ).filter((playerId) =>
+    !seniorPlayerIds.includes(playerId)
+      && input.careerState.gameState.players[playerId] !== undefined
+      && playerUnavailabilityReason(
+        input.careerState.playerAvailability ?? EMPTY_PLAYER_AVAILABILITY,
+        playerId,
+        input.fixture.date,
+        input.fixture.competitionId,
+      ) === undefined
+  );
+  const candidatePlayerIds = [...seniorPlayerIds, ...availableAcademyPlayerIds];
+  const publicAssessments = publicAssessmentsForPlayers(
+    input.careerState,
+    candidatePlayerIds,
+    input.fixture.date,
+    input.valuationConfig,
+  );
+  const academyCallUpPlayerIds = selectAcademyCallUpPlayerIds(
+    availableAcademyPlayerIds,
+    publicAssessments,
+  );
+  const selectablePlayerIds = [...seniorPlayerIds, ...academyCallUpPlayerIds];
 
   const result = buildAiSquadMatchTeamContext({
     clubId: input.clubId,
     playerIds: selectablePlayerIds,
     players: input.careerState.gameState.players,
-    publicAssessments: publicAssessmentsForPlayers(
-      input.careerState,
-      selectablePlayerIds,
-      input.fixture.date,
-      input.valuationConfig,
-    ),
+    publicAssessments,
     currentDate: input.fixture.date,
     playerStates: input.careerState.gameState.playerStates,
-    recentUse: recentUseForFixture(input.careerState, input.fixture, selectablePlayerIds),
+    recentUse: recentPlayerUseForFixture({
+      ledger: input.careerState.playerParticipationLedger,
+      seasonId: input.fixture.seasonId,
+      fixtureDate: input.fixture.date,
+      playerIds: selectablePlayerIds,
+    }),
     roleWeights: input.policy.roleWeights,
     // The club's instructions follow the shape it just chose, so a back three
     // with two strikers is not told to play the same football as a back five
@@ -153,40 +175,28 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
 }
 
 /**
- * Reads how hard each footballer has been worked lately, so AI clubs rotate.
+ * Adds only the best three available academy footballers to a match-day pool.
  *
- * The selector has always had a rotation policy and nothing ever supplied it,
- * so `boundedRecentUseModifier` saw zero for every player and every AI club
- * fielded the same eleven every week for as long as a career lasted.
- *
- * The window is the current development month, because that is the granularity
- * the durable ledger actually stores - it buckets by month, so "the last three
- * matches" is not a question it can answer. Within a month this discriminates
- * exactly as the selector's caps expect, and it resets at the month boundary.
- *
- * Minutes are counted whoever they were played for. A8 decides which club a
- * match *fact* belongs to; tiredness belongs to the man's legs, and a borrowed
- * player arrives as tired as he left.
+ * They remain academy members: the returned IDs are a dated selection input,
+ * not a second roster or an implicit promotion. Public current level comes
+ * first because the AI is trying to field today's side; public P50 breaks an
+ * equal-current-level choice in favour of useful development minutes. The ID
+ * is the deterministic final tie-breaker required by the engine contract.
  */
-function recentUseForFixture(
-  careerState: CareerState,
-  fixture: Fixture,
+export function selectAcademyCallUpPlayerIds(
   playerIds: readonly PlayerId[],
-): Readonly<Partial<Record<PlayerId, AiRecentPlayerUse>>> {
-  const ledger = careerState.playerParticipationLedger;
-  if (ledger === undefined) {
-    return {};
-  }
-
-  const monthKey = monthKeyForCareerDate(fixture.date);
-  const recentUse: Partial<Record<PlayerId, AiRecentPlayerUse>> = {};
-  for (const playerId of playerIds) {
-    const row = ledger.rows[playerParticipationRowKey(fixture.seasonId, monthKey, playerId)];
-    if (row === undefined) continue;
-    recentUse[playerId] = { recentMinutes: row.minutes, recentStarts: row.starts };
-  }
-
-  return recentUse;
+  publicAssessments: Readonly<Record<PlayerId, PublicPlayerAssessment>>,
+): readonly PlayerId[] {
+  return playerIds.toSorted((leftId, rightId) => {
+    const left = publicAssessments[leftId];
+    const right = publicAssessments[rightId];
+    if (left === undefined || right === undefined) {
+      throw new Error("Career AI academy call-up is missing a public assessment");
+    }
+    return right.currentAbility - left.currentAbility
+      || right.p50Ability - left.p50Ability
+      || String(leftId).localeCompare(String(rightId));
+  }).slice(0, 3);
 }
 
 /** Builds safe dated facts for the exact selectable AI roster. */

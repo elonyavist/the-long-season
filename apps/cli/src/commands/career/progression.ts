@@ -2,6 +2,7 @@ import {
   createFakeGameplayConfig,
   selectMarketBehaviorCalibration,
   selectPlayerDevelopmentEnvironmentConfig,
+  selectPlayerStateCurvesConfig,
   selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
@@ -100,6 +101,9 @@ export function advanceCareerNextFixture(
   const preMatchRecovery = applyCareerWeeklyRecovery({
     playerStates: careerState.gameState.playerStates,
     playerIds: fieldablePlayerIdsFor(selectedClub),
+    players: careerState.gameState.players,
+    currentDate: nextFixture.fixture.date,
+    recoveryPolicy: selectPlayerStateCurvesConfig(),
     dayCount: nextFixture.fixture.date - careerState.gameState.calendar.currentDate,
   });
   const recoveredCareerState: CliCareerState = {
@@ -137,6 +141,7 @@ export function advanceCareerNextFixture(
     playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       recoveredCareerState.gameState.meta.calibrationVersions,
     ),
+    playerStateCurvesConfig: selectPlayerStateCurvesConfig(),
     includeExplanationTrace: options.includeExplanationTrace === true,
   }), preMatchRecovery));
 }

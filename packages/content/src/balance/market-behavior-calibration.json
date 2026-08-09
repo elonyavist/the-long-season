@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "market-behavior-calibration-v5",
+  "version": "market-behavior-calibration-v7",
   "classification": "explicit_game_design_target",
-  "askingPriceCurvesVersion": "asking-price-curves-v4",
+  "askingPriceCurvesVersion": "asking-price-curves-v6",
   "wageFinanceCalibrationVersion": "wage-finance-calibration-reportcalcio-2025-v1",
   "openingFinanceRoundingMinorUnits": 1000000,
   "openingFinanceTargets": [

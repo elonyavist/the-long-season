@@ -132,7 +132,7 @@ test("developFixturePlayers stalls cleanly when every attribute has no potential
   assert.deepEqual(requiredPlayer(result.careerState, player).abilities, requiredPlayer(careerState, player).abilities);
 });
 
-test("developFixturePlayers gives bigger growth to the same young player with more potential room", () => {
+test("potential room is a ceiling rather than a second monthly-rate multiplier", () => {
   const player = playerId("player:room-test");
   const ordinary = developFixturePlayers({
     careerState: careerStateFixture([playerFixture(player, "cm", 18, abilitySet(8), abilitySet(11))]),
@@ -145,7 +145,7 @@ test("developFixturePlayers gives bigger growth to the same young player with mo
     seasonId: seasonId("season:0001"),
   });
 
-  assert.equal((seriousProspect.changes[0]?.totalGrowth ?? 0) > (ordinary.changes[0]?.totalGrowth ?? 0), true);
+  assert.equal(seriousProspect.changes[0]?.totalGrowth, ordinary.changes[0]?.totalGrowth);
 });
 
 test("developFixturePlayers gives a rare prodigy upside without exceeding potential", () => {
@@ -724,6 +724,68 @@ test("developFixturePlayers never lets long-run growth exceed true potential", (
   assert.equal(player.abilities.physical.pace <= 11, true);
 });
 
+test("canonical academy minutes realize high room by age 24 without inflating ordinary room", () => {
+  const highRoom = playerId("player:academy-high-room");
+  const ordinaryRoom = playerId("player:academy-ordinary-room");
+  let careerState = careerStateFixture([
+    playerFixture(highRoom, "st", 17, abilitySet(8), abilitySet(15)),
+    playerFixture(ordinaryRoom, "st", 17, abilitySet(8), abilitySet(9)),
+  ]);
+  let maximumMonthlyAbilityGrowth = 0;
+
+  for (let monthIndex = 0; monthIndex < 80; monthIndex += 1) {
+    const seasonNumber = Math.floor(monthIndex / 10) + 1;
+    const currentSeasonId = seasonId(`season:${String(seasonNumber).padStart(4, "0")}`);
+    const monthKey = developmentMonthKey(monthIndex);
+    const before = requiredPlayer(careerState, highRoom);
+    careerState = careerStateWithParticipationMonth({
+      careerState,
+      targetSeasonId: currentSeasonId,
+      monthKey,
+      fixturesPerPlayer: 3,
+      minutesPerFixture: 90,
+    });
+    const rowKeys = careerState.playerParticipationLedger?.rowKeys ?? [];
+    const rows = rowKeys.flatMap((rowKey) => {
+      const row = careerState.playerParticipationLedger?.rows[rowKey];
+      return row?.seasonId === currentSeasonId && row.monthKey === monthKey ? [row] : [];
+    });
+    const developed = developPlayersFromParticipationRows({
+      careerState,
+      worldSeed: "academy-realization-world",
+      seasonId: currentSeasonId,
+      participationRows: rows,
+      developmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
+    });
+    careerState = developed.careerState;
+
+    {
+      const after = requiredPlayer(careerState, highRoom);
+      maximumMonthlyAbilityGrowth = Math.max(
+        maximumMonthlyAbilityGrowth,
+        ...PLAYER_ABILITY_KEYS.map((key) =>
+        Number(readPlayerAbility(after.abilities, key))
+          - Number(readPlayerAbility(before.abilities, key))),
+      );
+    }
+  }
+
+  const high = summarizePlayerDevelopmentAbilities(
+    requiredPlayer(careerState, highRoom),
+    "striker",
+  );
+  const ordinary = summarizePlayerDevelopmentAbilities(
+    requiredPlayer(careerState, ordinaryRoom),
+    "striker",
+  );
+
+  assert.equal(maximumMonthlyAbilityGrowth > 0.08, true);
+  assert.equal(Number(high.currentAbility.toFixed(3)), 12.99);
+  assert.equal(high.currentAbility <= high.potentialAbility, true);
+  assert.equal(ordinary.currentAbility <= 9, true, JSON.stringify(ordinary));
+  assert.equal(high.currentAbility - 8 > ordinary.currentAbility - 8, true);
+});
+
 test("developFixturePlayers does not turn every high-upside youth into a star", () => {
   let careerState = careerStateFixture([
     playerFixture(playerId("player:sample-01"), "st", 17, abilitySet(6), abilitySet(18)),
@@ -872,6 +934,13 @@ function careerStateWithMonthlyParticipation(careerState: CareerState, targetSea
     fixturesPerPlayer: 5,
     minutesPerFixture: 90,
   });
+}
+
+function developmentMonthKey(monthIndex: number): string {
+  const absoluteMonth = 7 + monthIndex;
+  const year = 2024 + Math.floor(absoluteMonth / 12);
+  const month = absoluteMonth % 12 + 1;
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 function careerStateWithParticipationMonth(input: {

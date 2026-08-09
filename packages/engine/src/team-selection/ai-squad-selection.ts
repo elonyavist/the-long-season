@@ -369,24 +369,21 @@ class SlotCandidateCache {
  * week, which is not a thing football does: a squad is built for a shape over a
  * season, and fatigue is a fact about a Saturday.
  *
- * **A given shape is filled out of position rather than refused.** A caller who
- * supplies the formation has taken the choice away from the club, so the club
- * can no longer answer "I have nobody for that" by picking something else, and
- * before Phase 81 Step 14 it answered by throwing instead - which ended the
- * fixture. Football's answer is the goalkeeper one this file already gives:
- * somebody plays where he does not belong. The second attempt therefore drops
- * the `invalid` filter and nothing else, so the eleven that comes back is the
- * cheapest way to fill the shape rather than a different shape.
- *
- * It cannot fire on a shape the club chose: `strongestCatalogShape` only ever
- * returns one it has already filled from the same lists, and swapping which
- * score orders those lists cannot make a filled shape unfillable.
+ * **An emergency shape is filled out of position rather than refused.** A
+ * caller-supplied formation keeps that formation. A club choosing freely first
+ * searches only credible fits; only when no catalog shape can field eleven does
+ * it rank the same catalog with the existing `invalid` penalty included. That
+ * keeps the fixture alive without selecting an unavailable footballer or
+ * inventing a fixed fallback shape. The selected reasons retain every invalid
+ * slot, so reports can distinguish emergency coverage from ordinary football.
  */
 function bestFieldedShape(
   input: AiSquadSelectionInput,
   candidates: SlotCandidateCache,
 ): FieldedShape | undefined {
-  const chosen = input.formation === undefined ? strongestCatalogShape(candidates) : undefined;
+  const chosen = input.formation === undefined
+    ? strongestCatalogShape(candidates) ?? strongestEmergencyCatalogShape(candidates)
+    : undefined;
   const formation = input.formation ?? chosen?.formation;
   if (formation === undefined) {
     return undefined;
@@ -442,12 +439,12 @@ export interface CatalogShapeChoice {
   /** Structural score of the best shape that did not win. */
   readonly secondStructuralScore?: number;
   /**
-   * Shapes scoring exactly the winning score, including the winner.
+   * Shapes still tied after every declared decision rule, including the winner.
    *
-   * Above `1` means the strictly-greater walk handed the shape to whichever
-   * entry `FORMATIONS` lists first. Reordering the catalog can change the
-   * outcome for exactly these squads and no others, so this number *is* the
-   * catalog-order sensitivity rather than a proxy for it.
+   * Structural fit, live XI quality, weakest-link quality and finally the
+   * stable formation key normally leave exactly one. Above `1` would mean the
+   * catalog walk still owns the decision, so the value remains a direct
+   * catalog-order sensitivity assertion rather than a rebuilt proxy.
    */
   readonly tiedAtBestCount: number;
 }
@@ -459,28 +456,53 @@ interface StrongestCatalogShape {
 }
 
 /**
- * Finds the catalog shape this squad is built for, ignoring today's condition.
+ * Finds the catalog shape this squad is built for.
  *
- * Strictly greater, walking `FORMATIONS` in its own order, so a squad that fits
- * two shapes equally well fields the same one every time. That the tie is
- * broken by catalog position rather than by football is a measured property of
- * this population, not a design claim - which is why the walk reports how often
- * it happened rather than leaving an audit to rebuild this comparison beside
- * it, where a second copy would be free to disagree with the shape clubs
- * actually line up in.
+ * Structural fit remains primary. Only an exact structural tie pays for a
+ * second assignment using the live score already owned by selection (condition,
+ * recent load and public prospect opportunity). The weakest starter then
+ * breaks an equal total, and the stable formation key resolves exact football
+ * equality independently of catalog traversal. `tiedAtBestCount` asserts that
+ * no traversal-owned tie survived.
  */
 function strongestCatalogShape(candidates: SlotCandidateCache): StrongestCatalogShape | undefined {
+  return strongestShapeFromCatalog((slot) => candidates.rankedFor(slot));
+}
+
+/**
+ * Finds the least-bad catalog shape when injuries leave no ordinary complete XI.
+ *
+ * This is an emergency continuation of the canonical catalog decision, not a
+ * second selector: the same structural score, assignment and stable catalog
+ * order are used, with invalid fits admitted at their existing penalty. A zero
+ * `fillableShapeCount` records the fact that the ordinary walk found nothing;
+ * exact invalid-slot counts remain derived from the selected reason rows.
+ */
+function strongestEmergencyCatalogShape(candidates: SlotCandidateCache): StrongestCatalogShape | undefined {
+  const emergency = strongestShapeFromCatalog((slot) => candidates.everyCandidateFor(slot));
+  if (emergency === undefined) return undefined;
+
+  return {
+    ...emergency,
+    choice: { ...emergency.choice, fillableShapeCount: 0 },
+  };
+}
+
+/** Walks the formation catalog once with one declared source of slot candidates. */
+function strongestShapeFromCatalog(
+  candidatesForSlot: (slot: FormationSlot) => readonly AiCandidateScore[],
+): StrongestCatalogShape | undefined {
   let formation: Formation | undefined;
   let best = Number.NEGATIVE_INFINITY;
   let second = Number.NEGATIVE_INFINITY;
   let tiedAtBestCount = 0;
   let fillableShapeCount = 0;
+  let winningCandidatesBySlot: readonly (readonly AiCandidateScore[])[] | undefined;
+  let winningLiveRank: LiveAssignmentRank | undefined;
 
   for (const candidateFormation of FORMATIONS) {
-    const assignment = assignFootballXi({
-      candidatesBySlot: candidateFormation.slots.map((slot) =>
-        rankedXiCandidates(candidates.rankedFor(slot), (candidate) => candidate.structuralScore)),
-    });
+    const candidatesBySlot = candidateFormation.slots.map((slot) => candidatesForSlot(slot));
+    const assignment = structuralAssignment(candidatesBySlot);
     if (assignment === undefined) continue;
 
     fillableShapeCount += 1;
@@ -490,8 +512,36 @@ function strongestCatalogShape(candidates: SlotCandidateCache): StrongestCatalog
       best = score;
       tiedAtBestCount = 1;
       formation = candidateFormation;
+      winningCandidatesBySlot = candidatesBySlot;
+      winningLiveRank = undefined;
     } else if (score === best) {
-      tiedAtBestCount += 1;
+      second = best;
+      if (winningCandidatesBySlot === undefined) {
+        throw new Error("Catalog shape tie has no incumbent candidates");
+      }
+      const candidateLiveRank = requiredAssignmentRank(candidatesBySlot, (candidate) => candidate.score);
+      winningLiveRank ??= requiredAssignmentRank(
+        winningCandidatesBySlot,
+        (candidate) => candidate.score,
+      );
+      const liveComparison = compareLiveAssignmentRank(candidateLiveRank, winningLiveRank);
+      if (liveComparison > 0) {
+        formation = candidateFormation;
+        winningCandidatesBySlot = candidatesBySlot;
+        winningLiveRank = candidateLiveRank;
+        tiedAtBestCount = 1;
+      } else if (
+        liveComparison === 0
+          && formation !== undefined
+          && candidateFormation.key.localeCompare(formation.key) < 0
+      ) {
+        // Exact football equality has no better sporting answer. The stable
+        // formation key makes the choice independent from catalog traversal;
+        // it therefore does not increase catalog-order sensitivity.
+        formation = candidateFormation;
+        winningCandidatesBySlot = candidatesBySlot;
+        winningLiveRank = candidateLiveRank;
+      }
     } else if (score > second) {
       second = score;
     }
@@ -508,6 +558,50 @@ function strongestCatalogShape(candidates: SlotCandidateCache): StrongestCatalog
       tiedAtBestCount,
     },
   };
+}
+
+/** Assigns one structurally ranked XI without reading transient match-day state. */
+function structuralAssignment(
+  candidatesBySlot: readonly (readonly AiCandidateScore[])[],
+): ReturnType<typeof assignFootballXi> {
+  return assignFootballXi({
+    candidatesBySlot: candidatesBySlot.map((ranked) =>
+      rankedXiCandidates(ranked, (candidate) => candidate.structuralScore)),
+  });
+}
+
+interface LiveAssignmentRank {
+  readonly totalScore: number;
+  readonly weakestFirstScores: readonly number[];
+}
+
+/** Ranks an assignment by total XI quality, then by its weakest footballer. */
+function requiredAssignmentRank(
+  candidatesBySlot: readonly (readonly AiCandidateScore[])[],
+  scoreOf: (candidate: AiCandidateScore) => number,
+): LiveAssignmentRank {
+  const assignment = assignFootballXi({
+    candidatesBySlot: candidatesBySlot.map((ranked) => rankedXiCandidates(ranked, scoreOf)),
+  });
+  if (assignment === undefined) {
+    throw new Error("Structurally fillable catalog shape has no live assignment");
+  }
+  return {
+    totalScore: assignment.totalScore,
+    weakestFirstScores: assignment.candidateBySlot.map((candidate, slotIndex) =>
+      scoreOf(requiredCandidate(candidatesBySlot[slotIndex] ?? [], candidate.rank))
+    ).toSorted((left, right) => left - right),
+  };
+}
+
+/** Prefers the stronger whole XI, then raises the weakest link lexicographically. */
+function compareLiveAssignmentRank(left: LiveAssignmentRank, right: LiveAssignmentRank): number {
+  if (left.totalScore !== right.totalScore) return left.totalScore - right.totalScore;
+  for (let index = 0; index < left.weakestFirstScores.length; index += 1) {
+    const difference = (left.weakestFirstScores[index] ?? 0) - (right.weakestFirstScores[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
 }
 
 /** Projects scored candidates onto the assignment Module's football-free view. */
@@ -630,8 +724,11 @@ function bestSlotCandidateForPlayer(
   candidates: SlotCandidateCache,
   playerId: PlayerId,
 ): AiCandidateScore {
-  const best = formation.slots
+  const usable = formation.slots
     .flatMap((slot) => candidates.rankedFor(slot).filter((candidate) => candidate.playerId === playerId))
+    .sort(compareCandidateScores)[0];
+  const best = usable ?? formation.slots
+    .flatMap((slot) => candidates.everyCandidateFor(slot).filter((candidate) => candidate.playerId === playerId))
     .sort(compareCandidateScores)[0];
 
   if (best === undefined) {

@@ -5,8 +5,9 @@
 `REFINE` recorded on `2026-08-08`; the main cohort is deliberately stopped.
 Step 06A is Done and the checkpoint implementation is green. This checkpoint
 is observational: it adds report facts and a locked profile but changes no
-gameplay behaviour. Step 06B1 now owns the availability/workload correction;
-Checkpoint B2 remains closed until the repeated L1 records `GO`.
+gameplay behaviour. Amendment A2 now splits remediation across Steps 06B1-06B8;
+L5 completed with `REFINE`, so the repeated `100 x 10` and Checkpoint B2 remain
+closed.
 
 ## Goal
 
@@ -140,8 +141,16 @@ The complete outcome, real-football reference and code attribution are in
 
 Verification on the stopped-main code state: `pnpm check` exit `0`, `295` test
 files / `2245` tests, `858` modules with no dependency violation, all four
-custom checks green; `git diff --check` clean. The next action is Step 06B1,
-then the exact locked canary is rerun and a fresh HTML is delivered for review.
+custom checks green; `git diff --check` clean. Accepted Amendment A2 inserts
+Steps 06B1-06B8 before this checkpoint can repeat. The exact locked canary and
+fresh HTML belong to Step 06B8; only its `GO` authorizes a fresh main run.
+
+The 2026-08-09 integrated L5 retry confirms that the all-34-appearances defect
+is fixed: zero club-seasons use one identical XI and only `2.11%` of retained
+`33+` leaders make all 34 appearances. It nevertheless records `REFINE` because
+career-generated season-ten leaders reach only `20.71%`, late-season `33+`
+leader shares remain above `42%`, and four-replicated-formation retention is
+`90.48%`. The new HTML is consultable, but the main cohort stays closed.
 
 ## Frozen Longitudinal Gates
 
@@ -270,10 +279,10 @@ artifact enters version control.
   though the explicitly private HTML artifact is English.
 - `docs/PROJECT_STATUS.md`
 - this step document
-- `06b1-canonical-season-availability-and-workload.md` **(new)**. The canary's
-  player-lifecycle finding needs a named remediation owner before any gameplay
-  file may change; this next-step contract is written from the inspected code
-  and frozen canary evidence, not invented during implementation.
+- `06b1-canonical-automated-match-progression-and-substitutions.md` through
+  `06b8-checkpoint-l5-integrated-7x10-html.md`. Amendment A2 separates exact
+  minutes, availability/aging and generational renewal so no one correction can
+  claim another's result.
 - `06c-checkpoint-b2-conditioned-tactical-ceiling.md`
 - `README.md`
 

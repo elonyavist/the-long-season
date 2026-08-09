@@ -1,8 +1,26 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { Player } from "../entities/player.entity.ts";
-import { playerSquadDepartment } from "./player-squad-department.ts";
+import { PLAYER_ROLES, type Player } from "../entities/player.entity.ts";
+import { playerRoleSquadDepartment, playerSquadDepartment } from "./player-squad-department.ts";
+
+test("playerRoleSquadDepartment classifies every official role", () => {
+  assert.deepEqual(
+    PLAYER_ROLES.map((role) => [role, playerRoleSquadDepartment(role)]),
+    [
+      ["goalkeeper", "goalkeeper"],
+      ["center_back", "defender"],
+      ["full_back", "defender"],
+      ["wing_back", "defender"],
+      ["defensive_midfielder", "midfielder"],
+      ["central_midfielder", "midfielder"],
+      ["attacking_midfielder", "midfielder"],
+      ["wide_midfielder", "midfielder"],
+      ["winger", "attacker"],
+      ["striker", "attacker"],
+    ],
+  );
+});
 
 test("playerSquadDepartment uses explicit football role before legacy position", () => {
   assert.equal(

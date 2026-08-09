@@ -3,17 +3,75 @@ import {
   createEmptyPlayerParticipationLedger,
   createCareerState,
   isCanonicalPlayerRole,
+  playerParticipationRowKey,
   type AppliedMatchSubstitution,
   type CanonicalPlayerRole,
   type CareerState,
   type FixtureId,
   type GameDate,
   type PlayerFixtureParticipationContribution,
+  type PlayerParticipationLedger,
   type PlayerId,
   type SeasonId,
 } from "@game/domain";
 
 import type { MatchSide, MatchTeamContext, PlayerMatchRatingRow } from "../match-engine/index.ts";
+import { monthKeyForCareerDate } from "./advance-career-month.ts";
+
+/** Exact recent-use facts consumed by the AI squad selector. */
+export interface RecentPlayerUse {
+  readonly recentMinutes: number;
+  readonly recentStarts: number;
+}
+
+/** Input for projecting one fixture's recent use from the canonical ledger. */
+export interface RecentPlayerUseForFixtureInput {
+  readonly ledger: PlayerParticipationLedger | undefined;
+  /** Ordered current-competition facts not consolidated into the ledger yet. */
+  readonly pendingContributions?: readonly PlayerFixtureParticipationContribution[];
+  readonly seasonId: SeasonId;
+  readonly fixtureDate: GameDate;
+  readonly playerIds: readonly PlayerId[];
+}
+
+/**
+ * Projects month-to-date load without inventing a second rolling counter.
+ *
+ * The durable ledger owns monthly resolution, so both played careers and batch
+ * seasons ask this function the same question and receive stable player-ID
+ * traversal in the explicit input order.
+ */
+export function recentPlayerUseForFixture(
+  input: RecentPlayerUseForFixtureInput,
+): Readonly<Partial<Record<PlayerId, RecentPlayerUse>>> {
+  const monthKey = monthKeyForCareerDate(input.fixtureDate);
+  const recentUse: Partial<Record<PlayerId, RecentPlayerUse>> = {};
+  const requestedPlayers = new Set(input.playerIds);
+  const pendingByPlayer = new Map<PlayerId, RecentPlayerUse>();
+  for (const contribution of input.pendingContributions ?? []) {
+    if (
+      !requestedPlayers.has(contribution.playerId)
+      || contribution.seasonId !== input.seasonId
+      || contribution.monthKey !== monthKey
+    ) continue;
+    const previous = pendingByPlayer.get(contribution.playerId) ?? { recentMinutes: 0, recentStarts: 0 };
+    pendingByPlayer.set(contribution.playerId, {
+      recentMinutes: previous.recentMinutes + contribution.minutes,
+      recentStarts: previous.recentStarts + (contribution.started ? 1 : 0),
+    });
+  }
+
+  for (const playerId of input.playerIds) {
+    const row = input.ledger?.rows[playerParticipationRowKey(input.seasonId, monthKey, playerId)];
+    const pending = pendingByPlayer.get(playerId);
+    const recentMinutes = (row?.minutes ?? 0) + (pending?.recentMinutes ?? 0);
+    const recentStarts = (row?.starts ?? 0) + (pending?.recentStarts ?? 0);
+    if (recentMinutes === 0 && recentStarts === 0) continue;
+    recentUse[playerId] = { recentMinutes, recentStarts };
+  }
+
+  return recentUse;
+}
 
 /** One match side plus the bench facts needed to build participation rows. */
 export interface FixtureParticipationSideContext {
@@ -41,6 +99,12 @@ export interface BuildFixtureParticipationContributionsInput {
   readonly sides: readonly FixtureParticipationSideContext[];
   /** Accepted substitution facts emitted by staged match progression. */
   readonly appliedSubstitutions?: readonly AppliedMatchSubstitution[];
+  /** Dismissal or time-loss injury exits that ended a player's minutes. */
+  readonly playerExits?: readonly {
+    readonly side: MatchSide;
+    readonly playerId: PlayerId;
+    readonly minute: number;
+  }[];
   /** Event-derived ratings from the final staged match snapshot. */
   readonly playerRatings?: readonly PlayerMatchRatingRow[];
 }
@@ -77,17 +141,24 @@ export function buildFixtureParticipationContributions(
 ): BuildFixtureParticipationContributionsResult {
   const ratingByPlayer = new Map((input.playerRatings ?? []).map((row) => [row.playerId, row.rating]));
   const substitutions = input.appliedSubstitutions ?? [];
+  const playerExits = input.playerExits ?? [];
   const monthKey = monthKeyForFixtureDate(input.fixtureDate);
   const contributions = new Map<PlayerId, PlayerFixtureParticipationContribution>();
 
   for (const side of input.sides) {
     const sideSubstitutions = substitutions.filter((substitution) => substitution.side === side.side);
+    const sideExits = playerExits.filter((exit) => exit.side === side.side);
     const incomingIds = new Set(sideSubstitutions.map((substitution) => substitution.incomingPlayerId));
     const starterIds = new Set(side.initialContext.lineup.map((slot) => slot.playerId));
 
     for (const slot of side.initialContext.lineup) {
-      const substitution = sideSubstitutions.find((candidate) => candidate.outgoingPlayerId === slot.playerId);
-      const minutes = substitution?.minute ?? input.finalMinute;
+      const minutes = playedMinutes({
+        playerId: slot.playerId,
+        enteredAt: 0,
+        finalMinute: input.finalMinute,
+        substitutions: sideSubstitutions,
+        exits: sideExits,
+      });
 
       contributions.set(slot.playerId, createContribution({
         input,
@@ -104,7 +175,13 @@ export function buildFixtureParticipationContributions(
 
     for (const substitution of sideSubstitutions) {
       const slot = side.initialContext.lineup.find((candidate) => candidate.slotId === substitution.slotId);
-      const minutes = Math.max(0, input.finalMinute - substitution.minute);
+      const minutes = playedMinutes({
+        playerId: substitution.incomingPlayerId,
+        enteredAt: substitution.minute,
+        finalMinute: input.finalMinute,
+        substitutions: sideSubstitutions,
+        exits: sideExits,
+      });
 
       contributions.set(substitution.incomingPlayerId, createContribution({
         input,
@@ -139,6 +216,28 @@ export function buildFixtureParticipationContributions(
   }
 
   return { contributions: [...contributions.values()] };
+}
+
+/** Calculates one continuous appearance interval, including substitute chains. */
+function playedMinutes(input: {
+  readonly playerId: PlayerId;
+  readonly enteredAt: number;
+  readonly finalMinute: number;
+  readonly substitutions: readonly AppliedMatchSubstitution[];
+  readonly exits: readonly { readonly playerId: PlayerId; readonly minute: number }[];
+}): number {
+  const substitutionExit = input.substitutions.find(
+    ({ outgoingPlayerId, minute }) => outgoingPlayerId === input.playerId && minute >= input.enteredAt,
+  )?.minute;
+  const incidentExit = input.exits.find(
+    ({ playerId, minute }) => playerId === input.playerId && minute >= input.enteredAt,
+  )?.minute;
+  const exitMinute = Math.min(
+    substitutionExit ?? input.finalMinute,
+    incidentExit ?? input.finalMinute,
+    input.finalMinute,
+  );
+  return Math.max(0, exitMinute - input.enteredAt);
 }
 
 /**

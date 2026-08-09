@@ -1,5 +1,6 @@
 import {
   createFakeLeagueSystem,
+  selectPlayerStateCurvesConfig,
   type FakeLeagueSystem,
 } from "@game/content";
 import {
@@ -355,6 +356,8 @@ function simulateSeasonForCli(
           fitnessLifecycle: {
             playerStates: league.playerStates,
             playerIds: league.playerIds,
+            players: league.players,
+            recoveryPolicy: selectPlayerStateCurvesConfig(),
             rules: DEFAULT_FITNESS_RULES,
           },
         }),

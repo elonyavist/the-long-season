@@ -5,10 +5,25 @@
 **Structural redesign authorized after Checkpoint B.** Steps 01-06 are Done;
 Checkpoints A2/U1/U2 and the Step 05 low-block exit recorded `GO`, but
 Checkpoint B recorded `STOP / RETHINK` on 2026-08-08. Design Contract Amendment
-A1 inserts Steps 06A-06C. Step 06A is Done; Step 06B's `7 x 10` canary recorded
-`REFINE` and the `100 x 10` main run was stopped. Step 06B1 is active and owns
-the availability/workload finding; the separate formation-diversity failure
-remains recorded. Steps 07-16 remain closed until L1 and B2 record `GO`.
+A1 inserted Steps 06A-06C. Step 06A is Done; Step 06B's `7 x 10` canary recorded
+`REFINE` and the `100 x 10` main run was stopped. Accepted Amendment A2 splits
+the remediation into Steps 06B1-06B8: match progression, substitutions,
+availability, soft aging and generational renewal receive separate checkpoints.
+Steps 06B1-06B7 are Done and L3 recorded `GO`. Step 06B7 corrected the proven
+emergency-selection boundary, but its two narrow renewal ablations failed and
+were removed; it recorded `STOP / RETHINK`. The owner's Amendment A3 authorizes
+06B7A low-detail academy participation and 06B7B L4.1. L4.1 recorded `STOP /
+RETHINK`; 06B7C's exit owner improved but did not repair renewal. Historical
+L4.3 attributed development realization in `7/7`; 06B7F and beta-v8 then
+repaired it, and the v9 rerun moves the residual owner downstream in `5/7`.
+L4.4 recorded `REFINE` on
+renewal and `8/10` annual-intake roles. Step 06B7G1 restored role continuity;
+06B7G2A then removed match-day depth/tie failures and L4.5 recorded `GO`. L4.6
+reached development parity in `7/7` but retained a leaderboard-renewal
+`REFINE`; age-conditioned match load fixed the all-34-appearances anomaly.
+Integrated L5 is now Done with `REFINE`: renewal/leader age and one formation-
+replication gate remain red. The new JSON and desktop HTML are consultable;
+the `100 x 10`, B2 and Steps 07-16 remain closed.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -65,9 +80,12 @@ consume the manager's same evidence rather than hidden facts.
 - Post-match choice affects only the next match: marginal recovery, plan
   rehearsal, or opponent study, with one priority excluding the other two.
 - Facts are persisted once; summaries, advice, and prose are derived.
-- Phase 81A takes exactly one incompatible beta reset, in Step 14 after every
-  persisted consumer exists. Steps 05, 10, and 13 build canonical in-memory and
-  `MatchReport` facts but do not advance storage versions independently.
+- Beta saves are disposable. Step 06B7F1 advanced the content-calibration
+  bundle to `v8`; Step 06B7G4 re-derived the linked bundle as v9 after raising
+  the reachable growth cap, without a legacy reader or migration. Step 14 still
+  owns the phase's single **storage schema/event-envelope** integration after
+  every persisted consumer exists; Steps 05, 10, and 13 do not advance those
+  storage versions independently.
 - No runtime LLM, autonomous per-player agent, direct formation bonus, generic
   strategy registry, or second match engine.
 
@@ -118,7 +136,30 @@ contexts; it never owns the analytic diversity gate.
 | 06 | [Checkpoint B structural ceiling](06-checkpoint-b-structural-ceiling.md) | no | **`STOP / RETHINK`; 07 remains closed** |
 | 06A | [league squad diversity and MVP AI boundaries](06a-league-squad-diversity-and-mvp-ai-boundaries.md) | population | **Done; Step 06B** |
 | 06B | [Checkpoint L1: 100 worlds x 10 seasons](06b-checkpoint-l1-league-diversity-100x10.md) | no | **canary `REFINE`; main stopped** |
-| 06B1 | [canonical season availability and workload](06b1-canonical-season-availability-and-workload.md) | yes | prepared; repeat L1 canary |
+| 06B1 | [canonical automated match progression and substitutions](06b1-canonical-automated-match-progression-and-substitutions.md) | yes | Step 06B2 |
+| 06B2 | [Checkpoint L2: substitution and minute truth](06b2-checkpoint-l2-substitution-and-minute-truth.md) | no | GO opens 06B3 |
+| 06B3 | [canonical availability and minute-weighted workload](06b3-canonical-availability-and-minute-weighted-workload.md) | yes | Step 06B4 |
+| 06B4 | [soft age resilience and recovery](06b4-soft-age-resilience-and-recovery.md) | yes | Step 06B5 |
+| 06B5 | [Checkpoint L3: availability, aging and injury](06b5-checkpoint-l3-availability-aging-and-injury.md) | no | GO opens 06B6 |
+| 06B5A | [match-injury exposure refinement](06b5a-match-injury-exposure-refinement.md) | yes, only after L3 REFINE | repeat 06B5 |
+| 06B5B | [carried substitution restoration](06b5b-carried-substitution-restoration.md) | yes, only after post-injury L3 REFINE | repeat 06B5 |
+| 06B6 | [Checkpoint L4: generational-succession attribution](06b6-checkpoint-l4-generational-succession-attribution.md) | no | **owner identified; 06B7 executed** |
+| 06B7 | [generational-renewal owner correction](06b7-generational-renewal-owner-correction.md) | yes | **`STOP / RETHINK`; 06B8 closed** |
+| 06B7A | [canonical low-detail academy participation](06b7a-canonical-low-detail-academy-participation.md) | yes | **Done; L4.1 open** |
+| 06B7B | [Checkpoint L4.1: youth-minute pathway](06b7b-checkpoint-l4-1-youth-minute-pathway.md) | no | **`STOP / RETHINK`** |
+| 06B7C | [soft outfield career-exit hazard](06b7c-soft-outfield-career-exit-hazard.md) | yes | **Done; retained** |
+| 06B7D | [Checkpoint L4.2: career exit and renewal](06b7d-checkpoint-l4-2-career-exit-and-renewal.md) | no | **`STOP / RETHINK`** |
+| 06B7E | [Checkpoint L4.3: generated-ceiling attribution](06b7e-checkpoint-l4-3-generated-ceiling-attribution.md) | no | **v9: downstream `5/7`** |
+| 06B7F | [potential-room development realization](06b7f-potential-room-development-realization.md) | yes | **Done; 06B7F1** |
+| 06B7F1 | [beta v8 development/economy re-baseline](06b7f1-beta-v8-development-economy-rebaseline.md) | content | **Done; L4.4** |
+| 06B7G | [Checkpoint L4.4: development and renewal](06b7g-checkpoint-l4-4-development-and-renewal.md) | no | **`REFINE`; generation owner mismatch** |
+| 06B7G1 | [competition-balanced annual role continuity](06b7g1-competition-balanced-annual-role-continuity.md) | population | L4.5 |
+| 06B7G2 | [Checkpoint L4.5: annual role continuity](06b7g2-checkpoint-l4-5-annual-role-continuity.md) | no | **retry `GO`** |
+| 06B7G3 | [Checkpoint L4.6: development funnel retry](06b7g3-checkpoint-l4-6-development-funnel-retry.md) | no | **`REFINE`; dated load owner** |
+| 06B7G4 | [potential-room realization curve](06b7g4-potential-room-realization-curve.md) | development | **Done; parity `7/7`** |
+| 06B7G5 | [age-conditioned match load](06b7g5-age-conditioned-match-load.md) | condition | **Done; rotation green** |
+| 06B7G2A | [academy call-up depth and live shape tie-break](06b7g2a-academy-call-up-and-live-shape-tie-break.md) | yes | **Done; L4.5 `GO`** |
+| 06B8 | [Checkpoint L5: integrated 7 x 10 HTML](06b8-checkpoint-l5-integrated-7x10-html.md) | no | **`REFINE`; HTML produced** |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
@@ -147,6 +188,18 @@ consultable English desktop HTML. Checkpoint B2 holds the squad-selected
 formation fixed and enumerates only `tactic profile + lateralFocus`. The old
 combined-space report remains the before-state; L1 and B2 `GO` are both required
 before Step 07.
+
+**Amendment A2 preserves L1's `REFINE` and separates its two player-world
+owners.** The committed canary has `395/420` season-ten scorer/assist rows still
+occupied by the opening population, while automatic matches bypass canonical
+AI substitutions and exact minutes. Steps 06B1-06B5 repair and verify the match
+lifecycle without tuning development. Step 06B6 found a real emergency-
+selection boundary and a downstream renewal failure. The later academy,
+career-exit, development, role-continuity and match-load slices now make senior-
+level generated players reachable and fix automatic rotation. Integrated L5
+still measures only `20.71%` career-generated leaders, `42.54..47.78%` late
+`33+` leaders and `90.48%` four-shape replication retention. Its replacement
+HTML exists, but the stopped `35` main shards are never resumed as evidence.
 
 **Checkpoint A2 recorded a conditional `GO` on 2026-08-08. Steps 03C-05 are
 Done with U1/U2 `GO`; B has now stopped the sequence.** All seven frozen gates

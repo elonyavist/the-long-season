@@ -180,6 +180,11 @@ export function createFakeDomesticWorld(
   const clubs = divisions.flatMap((division) => division.clubs.clubs);
   const clubIds = divisions.flatMap((division) => division.clubs.clubIds);
   const clubsById = mergeRecords(divisions.map((division) => division.clubs.clubsById));
+  const competitionKeyByClubId = Object.fromEntries(
+    divisions.flatMap(({ spec, clubs: divisionClubs }) =>
+      divisionClubs.clubIds.map((clubId) => [clubId, String(spec.competitionId)])
+    ),
+  ) as Readonly<Record<ClubId, string>>;
   const divisionClubIds = Object.fromEntries(
     divisions.map((division) => [division.spec.category, division.clubs.clubIds]),
   ) as Record<ClubCategory, readonly ClubId[]>;
@@ -195,6 +200,7 @@ export function createFakeDomesticWorld(
     referenceDate: seasonStartDate,
     clubIds,
     clubContexts: openingClubContexts,
+    competitionKeyByClubId,
     ratingScale: playerRatingScale,
   });
   const exceptionalAllocation = buildInitialWorldExceptionalAllocation({
@@ -289,6 +295,7 @@ export function createFakeDomesticWorld(
     referenceDate: seasonStartDate,
     clubIds,
     clubContexts: openingClubContexts,
+    competitionKeyByClubId,
     potentialSixPlayerIds: exceptionalAllocation.potentialSixPlayerKeys
       .filter((key) =>
         exceptionalAllocation.assignmentsByPlayerKey[key]?.source === "constructed"

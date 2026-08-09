@@ -446,9 +446,9 @@ something this step fixed.** They are re-recorded deliberately, not pasted:
 
 ### Blockers
 
-Two were raised. **Blocker 2 is resolved** (below). Blocker 1 stands and is owned
-by Step 14, because closing it would mean changing something this step was told
-not to touch.
+Two were raised. **Both are now resolved** (below). The first remained a
+measured hold during this step and was later closed by Step 06B7F1, after A2
+gave `GO` and the development model itself changed.
 
 **1. The Phase 80A matrix was measuring squad composition, and now that it is
 not, the shipped policy is `29` basis points out - not `2`.**
@@ -513,69 +513,22 @@ running both and keeping the friendlier number.
 
 **Nothing in `player-rating-scale.json` was touched.**
 
-### What A `v7`/`v8` Bundle Catalog Actually Costs
+### Resolution: One Current Beta Bundle, No Catalog
 
-Adopted: keep `wide_midfielder`, `3005` is the new calibration, delivered as a
-typed total version-to-bundle map - never a `??` fallback - with existing
-careers reading their stamped `v7` and new careers born on `v8`. Step 14 stays
-the only reset and removes the legacy bundle.
+Step 06B7F later increased the monthly positive-growth input from `0.08` to
+`0.18`, invalidating this step's temporary measured column. Step 06B7F1
+re-derived all `24` bands from the changed engine and shipped the resulting
+`player-rating-scale-v8` chain atomically. Step 06B7G4 later raised the
+reachable growth cap and re-derived the single current chain as
+`player-rating-scale-v9`. The temporary
+`PHASE_81A_PENDING_OUTFIELD_PROJECTION` table was deleted and every configured
+band returned to plain equality with the independent matrix.
 
-Two facts found while sizing it, both of which change the shape of the work.
-
-**A career stamps no projection-policy version.**
-`PlayerEconomyCalibrationVersionBundle` carries `playerRatingScaleVersion` and
-six siblings, and *not* a projection-policy version - even though
-`potentialProjectionPolicy` has its own `player-potential-projection-v4` stamp
-inside the rating-scale asset. So the policy travels implicitly inside the
-rating scale, and editing `3034` under `player-rating-scale-v7` would silently
-hand new numbers to every existing `v7` career. The rating-scale version is the
-carrier, exactly as the directive assumed.
-
-**One number cascades to four assets**, because each pins its upstream neighbour
-by version string:
-
-```text
-player-rating-scale-v7          208 lines   holds potentialProjectionPolicy v4 = 3034
-  ^ playerRatingScaleVersion, potentialProjectionPolicyVersion
-valuation-curves-v5              49 lines
-  ^ valuationCurvesVersion
-asking-price-curves-v4           40 lines
-  ^ askingPriceCurvesVersion
-market-behavior-calibration-v5  123 lines
-```
-
-A `v8` bundle is therefore **four near-identical JSON assets, about `420`
-lines**, differing in one number and seven version strings. That is honest
-duplication with a written removal owner, and it is what the one-reset
-constraint buys.
-
-There is a cheaper shape, and it is worth ruling on before the `420` lines are
-written: **stamp `playerPotentialProjectionPolicyVersion` in the bundle** and the
-policy versions independently - no cascade, because each downstream asset would
-pin the *policy* rather than the rating scale, and both policies coexist inside
-one rating-scale asset. It costs a new stamped field, which is a storage column
-and therefore a persistence change - the kind of thing Step 14's reset already
-absorbs. It is not free of that constraint, only differently placed.
-
-**Not started. The `420` lines are the directive as written; the alternative is
-offered because its cost was only visible after mapping the chain.**
-
-### Interim: The Gap Is Recorded, Not Ignored
-
-`ten-season-report.test.ts` now carries
-`PHASE_81A_PENDING_OUTFIELD_PROJECTION`, a table of the seven `p50` and six
-`upper` bands with **both** the shipped and the measured value pinned, plus the
-two audit counters. Every other band - all `28` goalkeeper entries and the zero
-bands - keeps plain equality.
-
-This is tighter than the assertion it replaces, not looser: the original checked
-that shipped equals measured and would pass if both moved together; this one
-fails if *either* column moves. It exists so the rest of the suite stays
-meaningful while Checkpoint A2 runs, because a suite left red for a whole
-checkpoint hides the regressions the checkpoint is there to catch.
-
-**Restore condition:** delete the table and the two counter comments, and put
-back the plain equality, when the `v8` bundle lands after A2's `GO`.
+The owner explicitly removed beta save compatibility as a constraint. Keeping
+`v7` beside `v8` would therefore be dead compatibility code, so there is no
+catalog, fallback, migration or legacy asset. Old stamps fail closed. Step 14
+continues to own storage-schema and event-envelope integration, not the
+already-completed content-calibration invalidation.
 
 **2. RESOLVED - `ten-season-report` on a two-world sample now exits `0`, and the
 test required `1`.** `ten-season-report.test.ts:152` asserted

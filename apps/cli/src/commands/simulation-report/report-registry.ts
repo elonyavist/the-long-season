@@ -31,6 +31,7 @@ import {
 import {
   CAREER_SECTION_IDS,
   createCareerSectionsFacts,
+  type CareerCheckpointKind,
   type CareerSectionId,
 } from "./career-sections.ts";
 import {
@@ -60,12 +61,46 @@ export type SimulationReportModuleId = typeof SIMULATION_REPORT_MODULE_IDS[numbe
 export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-a2",
   "phase81a-b",
+  "phase81a-substitution-minute-l2-7x1",
+  "phase81a-availability-aging-l3-7x2",
+  "phase81a-generational-succession-l4-7x10",
+  "phase81a-youth-minute-pathway-l4-1-7x10",
+  "phase81a-career-exit-renewal-l4-2-7x10",
+  "phase81a-generated-ceiling-l4-3-7x10",
+  "phase81a-development-renewal-l4-4-7x10",
+  "phase81a-annual-role-continuity-l4-5-7x2",
   "phase81a-league-diversity-canary-7x10",
   "phase81a-league-diversity-100x10",
   "phase81-tactical-shape",
   ...LOCKED_MIGRATION_PROFILE_IDS,
 ] as const;
 export type SimulationReportProfileId = typeof SIMULATION_REPORT_PROFILE_IDS[number];
+
+const CAREER_PROFILE_CHECKPOINT_KIND = {
+  "phase81a-league-diversity-canary-7x10": "integrated_player_world_l5",
+  "phase81a-league-diversity-100x10": "league_diversity_l1",
+  "phase81a-substitution-minute-l2-7x1": "substitution_minutes_l2",
+  "phase81a-availability-aging-l3-7x2": "availability_aging_l3",
+  "phase81a-generational-succession-l4-7x10": "generational_succession_l4",
+  "phase81a-youth-minute-pathway-l4-1-7x10": "youth_minute_pathway_l4_1",
+  "phase81a-career-exit-renewal-l4-2-7x10": "career_exit_renewal_l4_2",
+  "phase81a-generated-ceiling-l4-3-7x10": "generated_ceiling_l4_3",
+  "phase81a-development-renewal-l4-4-7x10": "development_renewal_l4_4",
+  "phase81a-annual-role-continuity-l4-5-7x2": "annual_role_continuity_l4_5",
+} as const satisfies Partial<Readonly<Record<SimulationReportProfileId, CareerCheckpointKind>>>;
+
+const CAREER_PROFILE_CACHE_SUFFIX = {
+  "phase81a-league-diversity-canary-7x10": "-facts-v5",
+  "phase81a-league-diversity-100x10": "",
+  "phase81a-substitution-minute-l2-7x1": "-facts-v4",
+  "phase81a-availability-aging-l3-7x2": "-facts-v8",
+  "phase81a-generational-succession-l4-7x10": "-facts-v9",
+  "phase81a-youth-minute-pathway-l4-1-7x10": "-facts-v1",
+  "phase81a-career-exit-renewal-l4-2-7x10": "-facts-v1",
+  "phase81a-generated-ceiling-l4-3-7x10": "-facts-v2",
+  "phase81a-development-renewal-l4-4-7x10": "-facts-v4",
+  "phase81a-annual-role-continuity-l4-5-7x2": "-facts-v5",
+} as const satisfies Readonly<Record<keyof typeof CAREER_PROFILE_CHECKPOINT_KIND, string>>;
 
 /** Copy-pasteable commands rendered by help and parsed by command tests. */
 export const SIMULATION_REPORT_RECIPES = [
@@ -211,6 +246,126 @@ export const SIMULATION_REPORT_PROFILES = {
       seasonCount: 10,
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "standard",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-substitution-minute-l2-7x1": {
+    id: "phase81a-substitution-minute-l2-7x1",
+    titleKey: "simulationReport.profile.phase81aSubstitutionMinuteL2.title",
+    descriptionKey: "simulationReport.profile.phase81aSubstitutionMinuteL2.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-substitution-minute-l2-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: ["formations"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-substitution-minute-l2-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-availability-aging-l3-7x2": {
+    id: "phase81a-availability-aging-l3-7x2",
+    titleKey: "simulationReport.profile.phase81aAvailabilityAgingL3.title",
+    descriptionKey: "simulationReport.profile.phase81aAvailabilityAgingL3.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-availability-aging-l3-7x2",
+      worldCount: 7,
+      seasonCount: 2,
+      includedSectionIds: ["formations"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-availability-aging-l3-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-generational-succession-l4-7x10": {
+    id: "phase81a-generational-succession-l4-7x10",
+    titleKey: "simulationReport.profile.phase81aGenerationalSuccessionL4.title",
+    descriptionKey: "simulationReport.profile.phase81aGenerationalSuccessionL4.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-generational-succession-l4-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: ["development"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-youth-minute-pathway-l4-1-7x10": {
+    id: "phase81a-youth-minute-pathway-l4-1-7x10",
+    titleKey: "simulationReport.profile.phase81aYouthMinutePathwayL4_1.title",
+    descriptionKey: "simulationReport.profile.phase81aYouthMinutePathwayL4_1.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-youth-minute-pathway-l4-1-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: ["development"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-career-exit-renewal-l4-2-7x10": {
+    id: "phase81a-career-exit-renewal-l4-2-7x10",
+    titleKey: "simulationReport.profile.phase81aCareerExitRenewalL4_2.title",
+    descriptionKey: "simulationReport.profile.phase81aCareerExitRenewalL4_2.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-career-exit-renewal-l4-2-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: ["development"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-generated-ceiling-l4-3-7x10": {
+    id: "phase81a-generated-ceiling-l4-3-7x10",
+    titleKey: "simulationReport.profile.phase81aGeneratedCeilingL4_3.title",
+    descriptionKey: "simulationReport.profile.phase81aGeneratedCeilingL4_3.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-generated-ceiling-l4-3-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: ["development"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-development-renewal-l4-4-7x10": {
+    id: "phase81a-development-renewal-l4-4-7x10",
+    titleKey: "simulationReport.profile.phase81aDevelopmentRenewalL4_4.title",
+    descriptionKey: "simulationReport.profile.phase81aDevelopmentRenewalL4_4.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-development-renewal-l4-4-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: ["development"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-league-diversity-canary",
+      workerCount: 7,
+    },
+  },
+  "phase81a-annual-role-continuity-l4-5-7x2": {
+    id: "phase81a-annual-role-continuity-l4-5-7x2",
+    titleKey: "simulationReport.profile.phase81aAnnualRoleContinuityL4_5.title",
+    descriptionKey: "simulationReport.profile.phase81aAnnualRoleContinuityL4_5.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-annual-role-continuity-l4-5-7x2",
+      worldCount: 7,
+      seasonCount: 2,
+      includedSectionIds: ["formations", "development"],
+      detail: "diagnostic",
       seedPrefix: "phase81a-league-diversity-canary",
       workerCount: 7,
     },
@@ -538,17 +693,17 @@ async function leagueDiversityExecution(
   readonly leagueDiversityProfile?: {
     readonly profileId: string;
     readonly checkpointDirectoryPath: string;
+    readonly checkpointKind: CareerCheckpointKind;
   };
 }> {
-  if (
-    profileId !== "phase81a-league-diversity-canary-7x10"
-    && profileId !== "phase81a-league-diversity-100x10"
-  ) return {};
+  if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
+  const careerProfileId = profileId as keyof typeof CAREER_PROFILE_CHECKPOINT_KIND;
   return {
     leagueDiversityProfile: {
-      profileId,
+      profileId: careerProfileId,
+      checkpointKind: CAREER_PROFILE_CHECKPOINT_KIND[careerProfileId],
       checkpointDirectoryPath: await resolveWorkspaceOutputPath(
-        `saves/long-run-checkpoints/${profileId}`,
+        `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`,
       ),
     },
   };

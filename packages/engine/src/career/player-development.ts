@@ -42,7 +42,11 @@ import {
 } from "./player-role-adaptation.ts";
 
 const MINIMUM_GROWTH_ROOM = 0.05;
-const MAX_SINGLE_MONTH_GROWTH = 0.08;
+// Three complete academy fixtures yield 270 monthly minutes, so opportunity
+// (0.75) and the core youth age band (0.85) turn this input into at most 0.172
+// for a fully relevant high-room attribute before environment and variance.
+// It is an upper input, never a flat award, and true potential remains final.
+const MAX_SINGLE_MONTH_GROWTH = 0.27;
 const MINIMUM_MONTH_VARIANCE = 0.65;
 const MONTH_VARIANCE_SPAN = 0.7;
 const NEUTRAL_ENVIRONMENT_BASIS_POINTS = 10_000;
@@ -379,12 +383,14 @@ function developOnePlayerMonth(input: DevelopOnePlayerMonthInput): {
       }
 
       const relevance = roleRelevance(input.developmentRole, abilityPath);
-      const roomMultiplier = Math.min(1, room / 5);
+      // `room` already owns the ceiling through Math.min below. Multiplying the
+      // monthly rate by that same room would charge the distance to potential
+      // twice and make the last credible step asymptotic before the dated age
+      // policy closes the growth window.
       const dynamicDelta =
         MAX_SINGLE_MONTH_GROWTH
         * policy.growthMultiplier
         * relevance
-        * roomMultiplier
         * developmentVariance;
       const delta = Math.min(room, roundDelta(dynamicDelta));
       if (delta <= 0) {

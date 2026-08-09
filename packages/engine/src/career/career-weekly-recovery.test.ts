@@ -1,9 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { playerId, stateValue, type PlayerDynamicState, type PlayerId } from "@game/domain";
+import {
+  abilityValue,
+  gameDate,
+  playerId,
+  stateValue,
+  type Player,
+  type PlayerDynamicState,
+  type PlayerId,
+} from "@game/domain";
 
 import { applyCareerWeeklyRecovery } from "./career-weekly-recovery.ts";
+import { playerStateCurvesConfigFixture } from "../test-fixtures/player-state-curves-config.ts";
 
 test("applyCareerWeeklyRecovery recovers explicit players by calendar days", () => {
   const selected = playerId("player:selected");
@@ -13,29 +22,29 @@ test("applyCareerWeeklyRecovery recovers explicit players by calendar days", () 
     [rested]: playerStateFixture(100),
   });
 
-  const result = applyCareerWeeklyRecovery({
+  const result = applyRecovery({
     playerStates,
     playerIds: [selected],
     dayCount: 2,
   });
 
   assert.equal(result.dayCount, 2);
-  assert.equal(result.playerStates[selected]?.fitness, 86);
+  assert.equal(result.playerStates[selected]?.fitness, 76 + 24 * 2 / 3.2);
   assert.equal(result.playerStates[rested]?.fitness, 100);
   assert.deepEqual(result.changes, [
     {
       playerId: selected,
       beforeFitness: 76,
-      afterFitness: 86,
-      delta: 10,
+      afterFitness: 76 + 24 * 2 / 3.2,
+      delta: (76 + 24 * 2 / 3.2) - 76,
       recovered: true,
     },
   ]);
 });
 
-test("applyCareerWeeklyRecovery caps fitness at the rule maximum", () => {
+test("applyCareerWeeklyRecovery approaches the rule maximum without overshoot", () => {
   const selected = playerId("player:selected");
-  const result = applyCareerWeeklyRecovery({
+  const result = applyRecovery({
     playerStates: playerStatesFixture({
       [selected]: playerStateFixture(96),
     }),
@@ -43,13 +52,13 @@ test("applyCareerWeeklyRecovery caps fitness at the rule maximum", () => {
     dayCount: 2,
   });
 
-  assert.equal(result.playerStates[selected]?.fitness, 100);
+  assert.equal(result.playerStates[selected]?.fitness, 96 + 4 * 2 / 3.2);
   assert.deepEqual(result.changes, [
     {
       playerId: selected,
       beforeFitness: 96,
-      afterFitness: 100,
-      delta: 4,
+      afterFitness: 96 + 4 * 2 / 3.2,
+      delta: (96 + 4 * 2 / 3.2) - 96,
       recovered: true,
     },
   ]);
@@ -61,8 +70,8 @@ test("applyCareerWeeklyRecovery treats zero or negative days as a no-op summary"
     [selected]: playerStateFixture(84),
   });
 
-  const zero = applyCareerWeeklyRecovery({ playerStates, playerIds: [selected], dayCount: 0 });
-  const negative = applyCareerWeeklyRecovery({ playerStates, playerIds: [selected], dayCount: -3 });
+  const zero = applyRecovery({ playerStates, playerIds: [selected], dayCount: 0 });
+  const negative = applyRecovery({ playerStates, playerIds: [selected], dayCount: -3 });
 
   assert.equal(zero.dayCount, 0);
   assert.equal(negative.dayCount, 0);
@@ -88,8 +97,8 @@ test("applyCareerWeeklyRecovery does not mutate input and is deterministic", () 
   });
   const before = JSON.stringify({ playerIds, playerStates });
 
-  const firstResult = applyCareerWeeklyRecovery({ playerStates, playerIds, dayCount: 3 });
-  const secondResult = applyCareerWeeklyRecovery({ playerStates, playerIds, dayCount: 3 });
+  const firstResult = applyRecovery({ playerStates, playerIds, dayCount: 3 });
+  const secondResult = applyRecovery({ playerStates, playerIds, dayCount: 3 });
 
   assert.equal(JSON.stringify({ playerIds, playerStates }), before);
   assert.deepEqual(firstResult, secondResult);
@@ -106,7 +115,7 @@ test("applyCareerWeeklyRecovery preserves unrelated player state references", ()
     [unrelated]: unrelatedState,
   });
 
-  const result = applyCareerWeeklyRecovery({ playerStates, playerIds: [selected], dayCount: 1 });
+  const result = applyRecovery({ playerStates, playerIds: [selected], dayCount: 1 });
 
   assert.equal(result.playerStates[unrelated], unrelatedState);
   assert.equal(result.changes.length, 1);
@@ -124,3 +133,39 @@ function playerStateFixture(fitness: number): PlayerDynamicState {
   };
 }
 
+const RECOVERY_POLICY = playerStateCurvesConfigFixture();
+
+function applyRecovery(input: {
+  readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
+  readonly playerIds: readonly PlayerId[];
+  readonly dayCount: number;
+}) {
+  const currentDate = gameDate(30_000);
+  const players: Record<PlayerId, Player> = {};
+  for (const id of input.playerIds) players[id] = playerFixture(id, currentDate);
+  return applyCareerWeeklyRecovery({
+    ...input,
+    players,
+    currentDate,
+    recoveryPolicy: RECOVERY_POLICY,
+  });
+}
+
+function playerFixture(id: PlayerId, currentDate: ReturnType<typeof gameDate>): Player {
+  const value = abilityValue(10);
+  const abilities: Player["abilities"] = {
+    technical: { finishing: value, passing: value, longPassing: value, crossing: value, dribbling: value, technique: value, tackling: value, penalties: value, freeKicks: value },
+    physical: { pace: value, strength: value, stamina: value, agility: value, heading: value },
+    mental: { positioning: value, vision: value, anticipation: value, composure: value, determination: value, leadership: value },
+    goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
+  };
+  return {
+    id,
+    firstName: "Weekly",
+    lastName: String(id),
+    birthDate: gameDate(Number(currentDate) - Math.round(24 * 365.2425)),
+    naturalPositions: ["cm"],
+    abilities,
+    potential: abilities,
+  };
+}

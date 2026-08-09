@@ -237,6 +237,12 @@ export interface PlayerGenerationExceptionalStockPlayerObservation {
   /** Public estimate retained only to prove it does not redefine the stock. */
   readonly publicPotentialUpperRating: PlayerStarRating;
   readonly clubAssociation: PlayerGenerationExceptionalStockClubAssociation;
+  /**
+   * Association at allocation, present only when it differs in time from this
+   * snapshot. Entry gates consume this non-derivable fact; current-stock
+   * summaries continue to consume `clubAssociation`.
+   */
+  readonly entryClubAssociation?: PlayerGenerationExceptionalStockClubAssociation;
 }
 
 /**
@@ -898,16 +904,22 @@ function exceptionalStockEntrySummaries(
     const entryPlayers = previousPlayers === undefined
       ? currentPlayers
       : currentPlayers.filter(({ playerId }) => !previousPlayerIds.has(playerId));
+    const entryPolicyPlayers = entryPlayers.map((player) =>
+      player.entryClubAssociation === undefined
+        ? player
+        : { ...player, clubAssociation: player.entryClubAssociation }
+    );
 
     if (previousPlayers === undefined || entryPlayers.length > 0) {
       const retainedPlacementViolationCount =
         exceptionalStockCategoryPlacementViolationCount(retainedPlayers);
+      const policyPlayers = [...retainedPlayers, ...entryPolicyPlayers];
       const currentPlacementViolationCount =
-        exceptionalStockCategoryPlacementViolationCount(currentPlayers);
+        exceptionalStockCategoryPlacementViolationCount(policyPlayers);
       const retainedClubUniquenessViolationCount =
         exceptionalStockClubUniquenessViolationCount(retainedPlayers);
       const currentClubUniquenessViolationCount =
-        exceptionalStockClubUniquenessViolationCount(currentPlayers);
+        exceptionalStockClubUniquenessViolationCount(policyPlayers);
 
       entries.push({
         worldId: observation.worldId,
@@ -918,13 +930,13 @@ function exceptionalStockEntrySummaries(
         retainedPlayerObservationCount: retainedPlayers.length,
         entryPlayerObservationCount: entryPlayers.length,
         entryPlayerIds: entryPlayers.map(({ playerId }) => playerId).sort(),
-        placementCounts: exceptionalStockPlacementCounts(entryPlayers),
-        outsideFirstDivisionCount: entryPlayers.filter(
+        placementCounts: exceptionalStockPlacementCounts(entryPolicyPlayers),
+        outsideFirstDivisionCount: entryPolicyPlayers.filter(
           ({ clubAssociation }) =>
             clubAssociation.kind !== "club"
             || clubAssociation.category !== "first_division",
         ).length,
-        firstDivisionOutsideStrongClubCount: entryPlayers.filter(
+        firstDivisionOutsideStrongClubCount: entryPolicyPlayers.filter(
           ({ clubAssociation }) =>
             clubAssociation.kind === "club"
             && clubAssociation.category === "first_division"

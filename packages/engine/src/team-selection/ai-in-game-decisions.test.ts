@@ -33,6 +33,7 @@ import {
 import {
   applyAiInGameDecision,
   applyProgressiveAiInGameDecisions,
+  runAutomatedProgressiveMatch,
   selectAiInGameDecision,
   type SelectAiInGameDecisionInput,
 } from "./ai-in-game-decisions.ts";
@@ -271,6 +272,27 @@ test("routine late-match workload can trigger one credible fresh-leg substitutio
   assert.equal(applied.selection.reasons.some((entry) => entry.reasonKey === "command_rejected"), false);
 });
 
+test("low condition can open a measured three-point opportunity to the reserve", () => {
+  const session = sessionFixture({ phase: "second_half", minute: 70, pauseReason: "manual" });
+  const tiredPlayerId = awayXi(11);
+  const reservePlayerId = awayBench(1);
+  const players = playerLookup();
+  players[tiredPlayerId] = playerFixture(tiredPlayerId, "striker", 12);
+  players[reservePlayerId] = playerFixture(reservePlayerId, "striker", 9);
+
+  const selection = selectAiInGameDecision(policyInput(
+    session,
+    "away",
+    [signal(tiredPlayerId, 6.4, 94.4)],
+    undefined,
+    players,
+  ));
+
+  assert.equal(selection.command?.substitutions[0]?.outgoingPlayerId, tiredPlayerId);
+  assert.equal(selection.command?.substitutions[0]?.incomingPlayerId, reservePlayerId);
+  assert.equal(selection.reasons[0]?.reasonKey, "low_condition");
+});
+
 test("routine policy tries the next tired player when the first has no legal replacement", () => {
   // Only the substitute striker is still available, so the tired right back
   // genuinely cannot be covered and the policy must fall through to the tired
@@ -351,6 +373,7 @@ test("forced injury without a legal replacement leaves ten players without bypas
   assert.equal(selection.command?.nextTeam.lineup.length, 10);
   assert.equal(selection.command?.nextTeam.unavailable.some((entry) => entry.playerId === homeXi(4)), true);
   assert.equal(selection.reasons[0]?.reasonKey, "no_legal_substitute");
+  assert.equal(selection.reasons[0]?.replacementFailureKey, "substitution_limit");
   assert.deepEqual(validateLiveMatchCommand(session, selection.command!, RULES), { accepted: true });
 });
 
@@ -377,7 +400,7 @@ test("progressive AI uses the canonical command path and resumes an internally p
   assert.equal(applied.state.appliedSubstitutions.length, 1);
   assert.equal(applied.state.events.at(-1)?.type, "substitution");
   assert.equal(applied.team.substitutionsUsed, 1);
-  assert.equal(applied.decisions.length, 1);
+  assert.equal(applied.decisions.length, 2);
 });
 
 test("progressive AI resolves a forced injury before a routine boundary in the same minute", () => {
@@ -527,6 +550,45 @@ test("progressive AI does no projection or command work on an ordinary minute", 
   assert.equal(applied.state, state);
   assert.equal(applied.decisions.length, 0);
   assert.equal(contextBuildCount, 0);
+});
+
+test("the automated progressive runner applies the same AI to both declared sides", () => {
+  const completed = runAutomatedProgressiveMatch({
+    context: matchContextFixture(),
+    rules: RULES,
+    players: playerLookup(),
+    home: teamFixture("home"),
+    away: teamFixture("away"),
+    aiControlledSides: ["home", "away"],
+    buildMatchTeamContext: (team) => matchTeamContextFromLiveTeam(team),
+  });
+
+  assert.equal(completed.state.phase, "full_time");
+  assert.equal(completed.state.simulation.minute, 90);
+  assert.equal(completed.decisions.some(({ side }) => side === "home"), true);
+  assert.equal(completed.decisions.some(({ side }) => side === "away"), true);
+  assert.equal(completed.state.appliedSubstitutions.some(({ side }) => side === "home"), true);
+  assert.equal(completed.state.appliedSubstitutions.some(({ side }) => side === "away"), true);
+  assert.equal(
+    completed.state.events.filter(({ type }) => type === "substitution").length,
+    completed.state.appliedSubstitutions.length,
+  );
+});
+
+test("the automated progressive runner never commands an undeclared manager side", () => {
+  const completed = runAutomatedProgressiveMatch({
+    context: matchContextFixture(),
+    rules: RULES,
+    players: playerLookup(),
+    home: teamFixture("home"),
+    away: teamFixture("away"),
+    aiControlledSides: ["away"],
+    buildMatchTeamContext: (team) => matchTeamContextFromLiveTeam(team),
+  });
+
+  assert.equal(completed.decisions.some(({ side }) => side === "home"), false);
+  assert.equal(completed.state.appliedSubstitutions.some(({ side }) => side === "home"), false);
+  assert.equal(completed.state.appliedSubstitutions.some(({ side }) => side === "away"), true);
 });
 
 const RULES: CompetitionMatchRules = {

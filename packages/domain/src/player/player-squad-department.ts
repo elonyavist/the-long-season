@@ -38,6 +38,19 @@ const DEPARTMENT_BY_ROLE: Readonly<Record<PlayerRole, PlayerSquadDepartment>> = 
 };
 
 /**
+ * Resolves the senior-squad department owned by one explicit player role.
+ *
+ * Generation uses this when distributing role tokens inside a required
+ * academy department. Keeping the lookup here prevents content from copying
+ * the same football classification used by contracts and squad maintenance.
+ */
+export function playerRoleSquadDepartment(
+  role: PlayerRole,
+): PlayerSquadDepartment {
+  return DEPARTMENT_BY_ROLE[role];
+}
+
+/**
  * Resolves the football department that one player contributes to.
  *
  * Modern players use their explicit role identity. The position fallback keeps
@@ -48,7 +61,7 @@ export function playerSquadDepartment(
   player: Pick<Player, "primaryRole" | "naturalPositions">,
 ): PlayerSquadDepartment {
   if (player.primaryRole !== undefined) {
-    return DEPARTMENT_BY_ROLE[player.primaryRole];
+    return playerRoleSquadDepartment(player.primaryRole);
   }
 
   return positionSquadDepartment(player.naturalPositions[0]);

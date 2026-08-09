@@ -129,6 +129,21 @@ function baseInput(overrides: Partial<BuildSeasonRecapInput> = {}): BuildSeasonR
               playedRoleMinutes: {},
             },
           ],
+          progression: {
+            controlledSides: [],
+            aiDecisionCount: { home: 0, away: 0 },
+            aiCommandCount: { home: 0, away: 0 },
+            aiReasonCounts: {
+              home: zeroAiReasonCounts(),
+              away: zeroAiReasonCounts(),
+            },
+            aiReplacementFailureCounts: {
+              home: zeroAiReplacementFailureCounts(),
+              away: zeroAiReplacementFailureCounts(),
+            },
+            appliedSubstitutions: [],
+            finalLineups: { home: [], away: [] },
+          },
         },
       ],
       fixtures: [fixture("fixture:001", 2, 1), fixture("fixture:002", 1, 1)],
@@ -150,6 +165,29 @@ function baseInput(overrides: Partial<BuildSeasonRecapInput> = {}): BuildSeasonR
     },
     ...overrides,
   };
+}
+
+function zeroAiReasonCounts() {
+  return {
+    forced_injury_replacement: 0,
+    dismissal_reorganization: 0,
+    low_condition: 0,
+    poor_performance: 0,
+    trailing_response: 0,
+    protecting_lead: 0,
+    no_legal_substitute: 0,
+    no_material_change: 0,
+    command_rejected: 0,
+  } as const;
+}
+
+function zeroAiReplacementFailureCounts() {
+  return {
+    substitution_limit: 0,
+    no_available_bench: 0,
+    no_positionally_credible_bench: 0,
+    quality_floor: 0,
+  } as const;
 }
 
 describe("buildSeasonRecap", () => {

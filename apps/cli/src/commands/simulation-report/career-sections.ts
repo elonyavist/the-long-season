@@ -2,22 +2,29 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 
 import {
   assignGeneratedSquadIdentities,
+  createFakeDomesticWorld,
   GENERATED_SQUAD_IDENTITY_KEYS,
+  selectPlayerStateCurvesConfig,
   squadIdentityPositionForSlot,
   type FakeDomesticWorld,
   type GeneratedSquadIdentityKey,
 } from "@game/content";
 import { createTranslator } from "@game/i18n";
 import {
+  MATCH_INJURY_RISK_POLICY,
   assessCareerSquadStructure,
   completedPlayerAge,
   fieldablePlayerIdsFor,
+  recoverFitnessForPlayers,
+  recoveryHalfLifeDays,
+  spendFitnessForMinutes,
+  type AiInGameDecisionReasonKey,
+  type AiInGameReplacementFailureKey,
   type FormationKey,
   type SimulateSeasonResult,
 } from "@game/engine";
 import { toISO } from "@game/shared";
 import {
-  countTacticalAgencyOutOfPositionSlots,
   summarizeTacticalAgencyPrimaryRoles,
   toSimulationReportJsonValue,
   type SimulationReportDetail,
@@ -35,6 +42,16 @@ import {
   writeCareerSectionWorldCheckpoint,
   type CareerSectionWorldCheckpointIdentity,
 } from "./long-run-profile-checkpoints.ts";
+import {
+  GenerationalSuccessionObserver,
+  evaluateAnnualRoleContinuityCheckpoint,
+  evaluateCareerExitRenewalCheckpoint,
+  evaluateDevelopmentRenewalCheckpoint,
+  evaluateGeneratedCeilingAttributionCheckpoint,
+  evaluateGenerationalSuccessionCheckpoint,
+  evaluateYouthMinutePathwayCheckpoint,
+  type GenerationalSuccessionWorldFacts,
+} from "./generational-succession.ts";
 
 /** Career modules sharing one world execution. */
 export const CAREER_SECTION_IDS = [
@@ -49,6 +66,41 @@ export const CAREER_SECTION_IDS = [
 ] as const;
 export type CareerSectionId = typeof CAREER_SECTION_IDS[number];
 
+/** Every locked checkpoint that can evaluate one canonical career population. */
+export type CareerCheckpointKind =
+  | "league_diversity_l1"
+  | "substitution_minutes_l2"
+  | "availability_aging_l3"
+  | "generational_succession_l4"
+  | "youth_minute_pathway_l4_1"
+  | "career_exit_renewal_l4_2"
+  | "generated_ceiling_l4_3"
+  | "development_renewal_l4_4"
+  | "annual_role_continuity_l4_5"
+  | "integrated_player_world_l5";
+
+const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
+  league_diversity_l1: false,
+  substitution_minutes_l2: false,
+  availability_aging_l3: false,
+  generational_succession_l4: true,
+  youth_minute_pathway_l4_1: true,
+  career_exit_renewal_l4_2: true,
+  generated_ceiling_l4_3: true,
+  development_renewal_l4_4: true,
+  annual_role_continuity_l4_5: true,
+  integrated_player_world_l5: true,
+} as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
+
+/** Keeps observer and checkpoint-section routing on one exhaustive policy. */
+function observesGenerationalSuccession(kind: CareerCheckpointKind | undefined): boolean {
+  return kind !== undefined && CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION[kind];
+}
+
+function checkpointSectionId(kind: CareerCheckpointKind): "formations" | "development" {
+  return observesGenerationalSuccession(kind) ? "development" : "formations";
+}
+
 export interface CareerSectionsExecutionFacts {
   readonly sections: Readonly<Partial<Record<CareerSectionId, SimulationReportJsonValue>>>;
   readonly calibrationVersions: Readonly<Record<string, string>>;
@@ -61,6 +113,8 @@ interface CareerWorldProjection {
   readonly sections: Readonly<Partial<Record<CareerSectionId, unknown>>>;
   readonly calibrationVersions: Readonly<Record<string, string>>;
   readonly leagueDiversity?: LeagueDiversityWorldFacts;
+  readonly substitutionMinutes?: SubstitutionMinuteWorldFacts;
+  readonly availabilityAging?: AvailabilityAgingWorldFacts;
 }
 
 interface ObservedSeason {
@@ -91,6 +145,8 @@ interface ObservedCompetitionSeason {
   readonly standings?: unknown;
   readonly players?: unknown;
   readonly formations?: LeagueFormationSeasonProjection;
+  readonly substitutionMinutes?: SubstitutionMinuteSeasonProjection;
+  readonly availabilityAging?: AvailabilityAgingSeasonProjection;
 }
 
 interface ObservedDomesticSeason {
@@ -110,6 +166,10 @@ export interface LeagueDiversityOpeningCompetitionFact {
   readonly topFormationShare: number;
   readonly distinctIdentityModalFormationCount: number;
   readonly catalogOrderSensitiveSelectionCount: number;
+  readonly emergencyCatalogSelectionCount: number;
+  readonly forcedOutOfPositionSlotCount: number;
+  readonly avoidableOutOfPositionSlotCount: number;
+  readonly academyCallUpAppearanceCount: number;
   readonly meanOutOfPositionSlots: number;
 }
 
@@ -126,12 +186,127 @@ export interface LeagueDiversityCompetitionSeasonFact {
   readonly missingSelectionSourceCount: number;
   readonly missingStableIdCount: number;
   readonly reconciliationFailureCount: number;
+  readonly identicalStartingXiAllFixturesClubCount: number;
 }
 
 export interface LeagueDiversityWorldFacts {
   readonly worldSeed: string;
   readonly opening: readonly LeagueDiversityOpeningCompetitionFact[];
   readonly seasons: readonly LeagueDiversityCompetitionSeasonFact[];
+}
+
+export interface SubstitutionMinuteTeamMatchFact {
+  readonly worldSeed: string;
+  readonly competitionId: string;
+  readonly seasonNumber: number;
+  readonly fixtureId: string;
+  readonly side: "home" | "away";
+  readonly finalMinute: number;
+  readonly substitutionCount: number;
+  readonly firstSubstitutionMinute: number | "not_observed";
+  readonly substitutionWindowCount: number;
+  readonly maximumSubstitutions: number;
+  readonly substitutionWindowLimit: number | null;
+  readonly automaticDecisionCount: number;
+  readonly automaticCommandCount: number;
+  readonly automaticDecisionReasonCounts: Readonly<Record<AiInGameDecisionReasonKey, number>>;
+  readonly automaticReplacementFailureCounts: Readonly<Record<AiInGameReplacementFailureKey, number>>;
+  readonly reconciliationFailureCount: number;
+  readonly invalidMinuteCount: number;
+}
+
+export interface SubstitutionMinuteWorldFacts {
+  readonly worldSeed: string;
+  readonly teamMatches: readonly SubstitutionMinuteTeamMatchFact[];
+}
+
+export const AVAILABILITY_AGE_GROUPS = ["under_24", "24_29", "30_32", "33_plus"] as const;
+export type AvailabilityAgeGroup = typeof AVAILABILITY_AGE_GROUPS[number];
+
+export interface AvailabilityAgingTeamMatchFact {
+  readonly worldSeed: string;
+  readonly competitionId: string;
+  readonly seasonNumber: number;
+  readonly fixtureId: string;
+  readonly side: "home" | "away";
+  readonly recentUsePlayerCount: number;
+  readonly unavailableSelectedPlayerCount: number;
+  readonly lifecycleDiagnosticMissingCount: number;
+  readonly consequenceMismatchCount: number;
+  readonly playerMatchMinutes: number;
+  readonly timeLossInjuryCount: number;
+  readonly ageGroups: Readonly<Record<AvailabilityAgeGroup, {
+    readonly positiveMinuteAppearanceCount: number;
+    readonly playerMatchMinutes: number;
+    readonly timeLossInjuryCount: number;
+  }>>;
+}
+
+export interface AvailabilityAgingWorldFacts {
+  readonly worldSeed: string;
+  readonly teamMatches: readonly AvailabilityAgingTeamMatchFact[];
+}
+
+export interface RecoveryMatrixWorldFact {
+  readonly cohort: "curve_selection" | "fresh_validation";
+  readonly worldSeed: string;
+  readonly age24To34DeficitDeltaAfterThreeDays: number;
+  readonly maximumAdjacentAgeReadinessDelta: number;
+  readonly age18To29PenaltyCount: number;
+  readonly highResilienceAge40ReadinessAfterSevenDays: number;
+  readonly shortRestReadiness: number;
+  readonly weeklyRestReadiness: number;
+  readonly controlledBoundsHeld: boolean;
+  readonly bestVeteranHalfLifeDays: number | "not_observed";
+  readonly worstVeteranHalfLifeDays: number | "not_observed";
+}
+
+export interface AvailabilityAgingCheckpointDecision {
+  readonly decision: "GO" | "REFINE";
+  readonly teamMatchCount: number;
+  readonly playerMatchHours: number;
+  readonly timeLossInjuryCount: number;
+  readonly timeLossInjuriesPerThousandPlayerMatchHours: number;
+  readonly worldsWithRecentUseCount: number;
+  readonly worldsWithTimeLossInjuryCount: number;
+  readonly unavailableSelectedPlayerCount: number;
+  readonly lifecycleDiagnosticMissingCount: number;
+  readonly consequenceMismatchCount: number;
+  readonly ageGroups: Readonly<Record<AvailabilityAgeGroup, {
+    readonly positiveMinuteAppearanceCount: number;
+    readonly playerMatchHours: number;
+    readonly timeLossInjuryCount: number;
+  }>>;
+  readonly recoveryMatrix: {
+    readonly worlds: readonly RecoveryMatrixWorldFact[];
+    readonly controlledBoundsHeld: boolean;
+    readonly generatedVeteranResilienceSpreadHeld: boolean;
+  };
+  readonly carriedSubstitutionMinuteDecision: SubstitutionMinuteCheckpointDecision;
+  readonly carriedLeagueDiversityDecision: LeagueDiversityCheckpointDecision;
+  readonly substitutionBySeason: readonly {
+    readonly seasonNumber: number;
+    readonly teamMatchCount: number;
+    readonly meanSubstitutionsPerTeamMatch: number;
+  }[];
+  readonly failed: readonly string[];
+}
+
+export interface SubstitutionMinuteCheckpointDecision {
+  readonly decision: "GO" | "REFINE";
+  readonly teamMatchCount: number;
+  readonly meanSubstitutionsPerTeamMatch: number;
+  readonly medianFirstSubstitutionMinute: number | "not_observed";
+  readonly minimumSubstitutionCount: number;
+  readonly maximumSubstitutionCount: number;
+  readonly reconciliationFailureCount: number;
+  readonly limitViolationCount: number;
+  readonly controlledSideFailureCount: number;
+  readonly invalidMinuteCount: number;
+  readonly automaticDecisionReasonCounts: Readonly<Record<AiInGameDecisionReasonKey, number>>;
+  readonly automaticReplacementFailureCounts: Readonly<Record<AiInGameReplacementFailureKey, number>>;
+  readonly carriedLeagueDiversityDecision: "GO" | "REFINE";
+  readonly failed: readonly string[];
 }
 
 export interface LeagueDiversityCheckpointDecision {
@@ -156,6 +331,38 @@ export interface LeagueDiversityCheckpointDecision {
   };
 }
 
+export interface IntegratedPlayerWorldCheckpointDecision {
+  readonly decision: "GO" | "REFINE";
+  readonly failedGateKeys: readonly string[];
+  readonly leagueDiversity: LeagueDiversityCheckpointDecision;
+  readonly availabilityAging: AvailabilityAgingCheckpointDecision;
+  readonly developmentRenewal: ReturnType<typeof evaluateDevelopmentRenewalCheckpoint>;
+  readonly identicalStartingXiAllFixturesClubCount: number;
+  readonly scorer33PlusShareSeasons8To10: number | "not_observed";
+  readonly assist33PlusShareSeasons8To10: number | "not_observed";
+  readonly scorerMeanAgeDrift: number | "not_observed";
+  readonly assistMeanAgeDrift: number | "not_observed";
+  readonly retained33PlusLeaderFullSeasonShare: number | "not_observed";
+  readonly exceptional33PlusLeaderObservationCount: number;
+}
+
+export interface IntegratedLeaderboardAgeFact {
+  readonly seasonNumber: number;
+  readonly table: "scorers" | "assists";
+  readonly age: number;
+  readonly appearances: number;
+}
+
+export interface IntegratedLeaderboardAgeDecision {
+  readonly scorer33PlusShareSeasons8To10: number | "not_observed";
+  readonly assist33PlusShareSeasons8To10: number | "not_observed";
+  readonly scorerMeanAgeDrift: number | "not_observed";
+  readonly assistMeanAgeDrift: number | "not_observed";
+  readonly retained33PlusLeaderFullSeasonShare: number | "not_observed";
+  readonly exceptional33PlusLeaderObservationCount: number;
+  readonly failedGateKeys: readonly string[];
+}
+
 interface LeagueFormationSeasonProjection {
   readonly seasonNumber: number;
   readonly seasonSeed: string;
@@ -167,7 +374,13 @@ interface LeagueFormationSeasonProjection {
   readonly catalogOrderSensitiveSelectionCount: number;
   readonly catalogChoiceMissingCount: number;
   readonly outOfPositionSlotCount: number;
+  readonly weakOutOfPositionSlotCount: number;
+  readonly emergencyCatalogSelectionCount: number;
+  readonly forcedOutOfPositionSlotCount: number;
+  readonly avoidableOutOfPositionSlotCount: number;
+  readonly academyCallUpAppearanceCount: number;
   readonly meanOutOfPositionSlots: number;
+  readonly identicalStartingXiAllFixturesClubCount: number;
   readonly distinctFormationCount: number;
   readonly replicatedFormationCount: number;
   readonly topFormationShare: number;
@@ -184,6 +397,24 @@ interface LeagueFormationSeasonProjection {
   readonly rows: readonly unknown[];
 }
 
+interface SubstitutionMinuteSeasonProjection {
+  readonly rows: readonly Omit<
+    SubstitutionMinuteTeamMatchFact,
+    "worldSeed" | "competitionId" | "seasonNumber"
+  >[];
+}
+
+interface AvailabilityAgingSeasonProjection {
+  readonly rows: readonly Omit<
+    AvailabilityAgingTeamMatchFact,
+    "worldSeed" | "competitionId" | "seasonNumber"
+  >[];
+}
+
+type SimulatedMatchEvent = NonNullable<
+  NonNullable<SimulateSeasonResult["fixtures"][number]["result"]>["report"]
+>["events"][number];
+
 /**
  * Executes each requested world exactly once and appends only requested facts.
  *
@@ -199,6 +430,7 @@ export async function createCareerSectionsFacts(input: {
   readonly leagueDiversityProfile?: {
     readonly profileId: string;
     readonly checkpointDirectoryPath: string;
+    readonly checkpointKind: CareerCheckpointKind;
   };
 }): Promise<CareerSectionsExecutionFacts> {
   const worlds: CareerWorldProjection[] = [];
@@ -220,6 +452,9 @@ export async function createCareerSectionsFacts(input: {
           detail: input.detail,
           sectionIds: input.sectionIds,
           leagueDiversity: input.leagueDiversityProfile !== undefined,
+          generationalSuccession: observesGenerationalSuccession(
+            input.leagueDiversityProfile?.checkpointKind,
+          ),
         } as const;
         const projection = input.workerCount === 1
           ? createCareerWorldProjection(projectionInput)
@@ -244,17 +479,75 @@ export async function createCareerSectionsFacts(input: {
 
   const checkpoint = input.leagueDiversityProfile === undefined
     ? undefined
-    : evaluateLeagueDiversityCheckpoint(worlds.map((world) => {
-        if (world.leagueDiversity === undefined) {
-          throw new Error(`Career world ${world.seed} omitted league-diversity facts`);
-        }
-        return world.leagueDiversity;
-      }));
+    : input.leagueDiversityProfile.checkpointKind === "integrated_player_world_l5"
+      ? evaluateIntegratedPlayerWorldCheckpoint(worlds)
+    : input.leagueDiversityProfile.checkpointKind === "league_diversity_l1"
+      ? evaluateLeagueDiversityCheckpoint(worlds.map((world) => {
+          if (world.leagueDiversity === undefined) {
+            throw new Error(`Career world ${world.seed} omitted league-diversity facts`);
+          }
+          return world.leagueDiversity;
+        }))
+      : input.leagueDiversityProfile.checkpointKind === "substitution_minutes_l2"
+        ? evaluateSubstitutionMinuteCheckpoint(worlds.map(requiredSubstitutionMinuteFacts), worlds.map((world) => {
+            if (world.leagueDiversity === undefined) {
+              throw new Error(`Career world ${world.seed} omitted carried league-diversity facts`);
+            }
+            return world.leagueDiversity;
+          }))
+        : input.leagueDiversityProfile.checkpointKind === "availability_aging_l3"
+          ? evaluateAvailabilityAgingCheckpoint(
+            worlds.map((world) => {
+              if (world.availabilityAging === undefined) {
+                throw new Error(`Career world ${world.seed} omitted availability-aging facts`);
+              }
+              return world.availabilityAging;
+            }),
+            worlds.map(requiredSubstitutionMinuteFacts),
+            worlds.map((world) => {
+              if (world.leagueDiversity === undefined) {
+                throw new Error(`Career world ${world.seed} omitted carried league-diversity facts`);
+              }
+              return world.leagueDiversity;
+            }),
+              createRecoveryMatrixFacts(),
+            )
+          : input.leagueDiversityProfile.checkpointKind === "career_exit_renewal_l4_2"
+            ? evaluateCareerExitRenewalCheckpoint(
+                worlds.map(requiredGenerationalSuccessionFacts),
+              )
+          : input.leagueDiversityProfile.checkpointKind === "generated_ceiling_l4_3"
+            ? evaluateGeneratedCeilingAttributionCheckpoint(
+                worlds.map(requiredGenerationalSuccessionFacts),
+              )
+          : input.leagueDiversityProfile.checkpointKind === "development_renewal_l4_4"
+            ? evaluateDevelopmentRenewalCheckpoint(
+                worlds.map(requiredGenerationalSuccessionFacts),
+              )
+          : input.leagueDiversityProfile.checkpointKind === "annual_role_continuity_l4_5"
+            ? evaluateAnnualRoleContinuityCheckpoint(
+                worlds.map(requiredGenerationalSuccessionFacts),
+                worlds.map((world) => {
+                  if (world.leagueDiversity === undefined) {
+                    throw new Error(`Career world ${world.seed} omitted carried formation facts`);
+                  }
+                  return world.leagueDiversity;
+                }),
+              )
+          : input.leagueDiversityProfile.checkpointKind === "youth_minute_pathway_l4_1"
+            ? evaluateYouthMinutePathwayCheckpoint(
+                worlds.map(requiredGenerationalSuccessionFacts),
+              )
+            : evaluateGenerationalSuccessionCheckpoint(
+                worlds.map(requiredGenerationalSuccessionFacts),
+              );
 
   const sections: Partial<Record<CareerSectionId, SimulationReportJsonValue>> = {};
   for (const sectionId of input.sectionIds) {
     sections[sectionId] = asJsonValue({
-      ...(sectionId === "formations" && checkpoint !== undefined ? { checkpoint } : {}),
+      ...(input.leagueDiversityProfile !== undefined
+        && sectionId === checkpointSectionId(input.leagueDiversityProfile.checkpointKind)
+        && checkpoint !== undefined ? { checkpoint } : {}),
       worlds: worlds.map((world) => {
         const section = world.sections[sectionId];
         if (section === undefined) {
@@ -269,7 +562,11 @@ export async function createCareerSectionsFacts(input: {
     sections,
     calibrationVersions: first.calibrationVersions,
     worldSeeds: worlds.map(({ seed }) => seed),
-    decision: checkpoint?.decision === "REFINE" ? "FAIL" : "PASS",
+    decision: checkpoint === undefined
+      || checkpoint.decision === "GO"
+      || checkpoint.decision === "OWNER_IDENTIFIED"
+      ? "PASS"
+      : "FAIL",
   };
 }
 
@@ -279,19 +576,26 @@ function createCareerWorldProjection(input: {
   readonly detail: SimulationReportDetail;
   readonly sectionIds: readonly CareerSectionId[];
   readonly leagueDiversity: boolean;
+  readonly generationalSuccession: boolean;
 }): CareerWorldProjection {
   const requested = new Set(input.sectionIds);
   const observedSeasons: ObservedSeason[] = [];
   const observedDomesticSeasons: ObservedDomesticSeason[] = [];
   const names = new Map<string, string>();
   const transfers: ObservedTransfer[] = [];
+  const generationalObserver = input.generationalSuccession
+    ? new GenerationalSuccessionObserver(input.seed)
+    : undefined;
 
   const report = createCareerWorldFacts(
     input.seed,
     input.seasonCount,
     createTranslator("en"),
     undefined,
-    (careerState) => rememberPlayerNames(careerState, names),
+    (careerState) => {
+      rememberPlayerNames(careerState, names);
+      generationalObserver?.observeOpening(careerState);
+    },
     {
       selectCatalogFormation: true,
       ...(input.leagueDiversity
@@ -303,6 +607,17 @@ function createCareerWorldProjection(input: {
               league,
             }: Parameters<NonNullable<CareerWorldInspection["observeCompetitionSeasonResults"]>>[0]) => {
               rememberPlayerNames(careerState, names);
+              for (const { competitionId, result } of competitions) {
+                const competition = league.domesticCompetitionWorld.competitions[competitionId];
+                if (competition === undefined) throw new Error(`Career report lost competition ${competitionId}`);
+                generationalObserver?.observeCompetitionSeason({
+                  seasonNumber,
+                  competitionId: String(competitionId),
+                  competitionName: competition.name,
+                  result,
+                  careerState,
+                });
+              }
               observedDomesticSeasons.push({
                 seasonNumber,
                 competitions: competitions.map(({ competitionId, seasonSeed, result }) => {
@@ -333,7 +648,15 @@ function createCareerWorldProjection(input: {
                         }
                       : {}),
                     ...(requested.has("formations")
-                      ? { formations: formationProjection(result, careerState, seasonNumber, seasonSeed) }
+                      ? {
+                          formations: formationProjection(result, careerState, seasonNumber, seasonSeed),
+                          substitutionMinutes: substitutionMinuteProjection(
+                            result,
+                            competition.matchRules.maximumSubstitutions,
+                            competition.matchRules.substitutionWindowLimit,
+                          ),
+                          availabilityAging: availabilityAgingProjection(result, careerState),
+                        }
                       : {}),
                   };
                 }),
@@ -372,6 +695,21 @@ function createCareerWorldProjection(input: {
             transfers.push(observeTransferAtBoundary(seasonNumber, entry, previousCareerState));
           }
         }
+      },
+      observeSeasonAdvancement: ({ seasonNumber, previousCareerState, careerState, facts }) => {
+        generationalObserver?.observeAdvancement({
+          seasonNumber,
+          previousCareerState,
+          careerState,
+          facts,
+        });
+      },
+      observeGeneratedIntakeRoles: ({ seasonNumber, careerState, diagnostics }) => {
+        generationalObserver?.observeGeneratedIntakeRoles({
+          seasonNumber,
+          careerState,
+          diagnostics,
+        });
       },
     },
   );
@@ -423,7 +761,7 @@ function createCareerWorldProjection(input: {
     );
   }
   if (requested.has("development")) {
-    sections.development = developmentProjection(
+    sections.development = generationalObserver?.facts() ?? developmentProjection(
       report,
       input.leagueDiversity ? "summary" : input.detail,
     );
@@ -432,16 +770,29 @@ function createCareerWorldProjection(input: {
     sections.anomalies = { seed: input.seed, ...report.anomalyReport };
   }
 
-  const leagueDiversity = input.leagueDiversity
+  const leagueDiversity = input.leagueDiversity && requested.has("formations")
     ? leagueDiversityWorldFacts(input.seed, report.league, observedDomesticSeasons)
+    : undefined;
+  const observesAvailability = input.leagueDiversity && requested.has("formations");
+  const substitutionMinutes = observesAvailability
+    ? substitutionMinuteWorldFacts(input.seed, observedDomesticSeasons)
+    : undefined;
+  const availabilityAging = observesAvailability
+    ? availabilityAgingWorldFacts(input.seed, observedDomesticSeasons)
     : undefined;
   return {
     seed: input.seed,
     sections,
-    calibrationVersions: stringCalibrationVersions(
-      report.league.calibrationVersions as unknown as Readonly<Record<string, unknown>>,
-    ),
+    calibrationVersions: {
+      ...stringCalibrationVersions(
+        report.league.calibrationVersions as unknown as Readonly<Record<string, unknown>>,
+      ),
+      playerStateCurves: selectPlayerStateCurvesConfig().version,
+      matchInjuryRisk: MATCH_INJURY_RISK_POLICY.version,
+    },
     ...(leagueDiversity === undefined ? {} : { leagueDiversity }),
+    ...(substitutionMinutes === undefined ? {} : { substitutionMinutes }),
+    ...(availabilityAging === undefined ? {} : { availabilityAging }),
   };
 }
 
@@ -636,23 +987,52 @@ function formationProjection(
     matches: number;
   }>();
   const clubFormationCounts = new Map<string, Map<FormationKey, number>>();
+  const clubStartingXiSignatures = new Map<string, Set<string>>();
+  const clubTeamMatchCounts = new Map<string, number>();
   let fallbackSelectionCount = 0;
   let selectionCount = 0;
   let missingSelectionSourceCount = 0;
   let missingStableIdCount = 0;
   let catalogOrderSensitiveSelectionCount = 0;
   let catalogChoiceMissingCount = 0;
+  let selectionDiagnosticsMissingCount = 0;
   let outOfPositionSlotCount = 0;
+  let weakOutOfPositionSlotCount = 0;
+  let emergencyCatalogSelectionCount = 0;
+  let forcedOutOfPositionSlotCount = 0;
+  let avoidableOutOfPositionSlotCount = 0;
+  let academyCallUpAppearanceCount = 0;
   for (const fixture of result.fixtureParticipation) {
     for (const team of [fixture.fieldedTeams.home, fixture.fieldedTeams.away]) {
       selectionCount += 1;
+      const clubId = String(team.clubId);
+      const lineupSignature = team.lineup.map(({ playerId }) => String(playerId)).sort().join("|");
+      const signatures = clubStartingXiSignatures.get(clubId) ?? new Set<string>();
+      signatures.add(lineupSignature);
+      clubStartingXiSignatures.set(clubId, signatures);
+      clubTeamMatchCounts.set(clubId, (clubTeamMatchCounts.get(clubId) ?? 0) + 1);
       if (String(team.clubId).length === 0) missingStableIdCount += 1;
       if (team.selectionSource.length === 0) missingSelectionSourceCount += 1;
       missingStableIdCount += team.lineup.filter(({ playerId }) => String(playerId).length === 0).length;
-      outOfPositionSlotCount += countTacticalAgencyOutOfPositionSlots({
-        careerState,
-        lineup: team.lineup,
-      });
+      const teamOutOfPositionSlotCount = team.outOfPositionSlotCount ?? 0;
+      const invalidLineupSlotCount = team.invalidLineupSlotCount ?? 0;
+      outOfPositionSlotCount += teamOutOfPositionSlotCount;
+      weakOutOfPositionSlotCount += teamOutOfPositionSlotCount - invalidLineupSlotCount;
+      if (team.catalogChoice?.fillableShapeCount === 0) {
+        emergencyCatalogSelectionCount += 1;
+      }
+      if (team.selectionSource === "catalog_ai") {
+        // Catalog AI admits an invalid fit only after its ordinary credible
+        // lists cannot fill the relevant slot (including emergency goalkeeper).
+        // An invalid catalog-AI slot is therefore forced by construction.
+        forcedOutOfPositionSlotCount += invalidLineupSlotCount;
+      } else {
+        avoidableOutOfPositionSlotCount += invalidLineupSlotCount;
+      }
+      const lineupPlayerIds = new Set(team.lineup.map(({ playerId }) => playerId));
+      academyCallUpAppearanceCount += team.callUpPlayerIds?.filter((playerId) =>
+        lineupPlayerIds.has(playerId)
+      ).length ?? 0;
       if (team.formationKey === undefined) {
         fallbackSelectionCount += 1;
         continue;
@@ -660,6 +1040,12 @@ function formationProjection(
       if (team.selectionSource !== "catalog_ai") fallbackSelectionCount += 1;
       if (team.selectionSource === "catalog_ai" && team.catalogChoice === undefined) {
         catalogChoiceMissingCount += 1;
+      }
+      if (team.selectionSource === "catalog_ai" && team.outOfPositionSlotCount === undefined) {
+        selectionDiagnosticsMissingCount += 1;
+      }
+      if (team.selectionSource === "catalog_ai" && team.invalidLineupSlotCount === undefined) {
+        selectionDiagnosticsMissingCount += 1;
       }
       if ((team.catalogChoice?.tiedAtBestCount ?? 1) > 1) {
         catalogOrderSensitiveSelectionCount += 1;
@@ -743,8 +1129,12 @@ function formationProjection(
     ).filter(({ formationKey }) => formationKey === undefined).length !== selectionCount)
     + Number(clubModalRows.length !== result.table.length)
     + Number(primaryRoles.playerCount !== primaryRolePlayerIds.length)
-    + Number(catalogChoiceMissingCount > 0);
+    + Number(catalogChoiceMissingCount > 0)
+    + Number(selectionDiagnosticsMissingCount > 0);
   const highestModalClubCount = Math.max(0, ...modalClubCountByFormation.values());
+  const identicalStartingXiAllFixturesClubCount = [...clubStartingXiSignatures].filter(
+    ([clubId, signatures]) => clubTeamMatchCounts.get(clubId) === 34 && signatures.size === 1,
+  ).length;
   return {
     seasonNumber,
     seasonSeed,
@@ -756,7 +1146,13 @@ function formationProjection(
     catalogOrderSensitiveSelectionCount,
     catalogChoiceMissingCount,
     outOfPositionSlotCount,
+    weakOutOfPositionSlotCount,
+    emergencyCatalogSelectionCount,
+    forcedOutOfPositionSlotCount,
+    avoidableOutOfPositionSlotCount,
+    academyCallUpAppearanceCount,
     meanOutOfPositionSlots: selectionCount === 0 ? 0 : outOfPositionSlotCount / selectionCount,
+    identicalStartingXiAllFixturesClubCount,
     distinctFormationCount: modalClubCountByFormation.size,
     replicatedFormationCount: [...modalClubCountByFormation.values()].filter((count) => count >= 2).length,
     topFormationShare: clubModalRows.length === 0 ? 0 : highestModalClubCount / clubModalRows.length,
@@ -767,6 +1163,907 @@ function formationProjection(
     clubModalRows,
     rows,
   };
+}
+
+/** Reads automatic control and minute truth without rebuilding a match. */
+function substitutionMinuteProjection(
+  result: SimulateSeasonResult,
+  maximumSubstitutions: number,
+  substitutionWindowLimit: number | null,
+): SubstitutionMinuteSeasonProjection {
+  const fixtures = new Map(result.fixtures.map((fixture) => [fixture.id, fixture]));
+  const rows: SubstitutionMinuteSeasonProjection["rows"][number][] = [];
+  for (const fixture of result.fixtureParticipation) {
+    const report = fixtures.get(fixture.fixtureId)?.result?.report;
+    if (report === undefined) {
+      throw new Error(`Substitution checkpoint fixture omitted its report: ${fixture.fixtureId}`);
+    }
+    for (const side of ["home", "away"] as const) {
+      const kickoff = fixture.fieldedTeams[side];
+      const applied = fixture.progression.appliedSubstitutions.filter((entry) => entry.side === side);
+      const events = report.events.filter((event) => event.type === "substitution" && event.side === side);
+      const finalLineup = fixture.progression.finalLineups[side];
+      const contributions = fixture.contributions.filter(({ clubId }) => clubId === kickoff.clubId);
+      const first = applied[0];
+      const substitutionWindowCount = new Set(
+        applied.filter(({ minute }) => minute !== 45).map(({ minute }) => minute),
+      ).size;
+      const eventMismatch = Number(applied.length !== events.length || applied.some((entry, index) => {
+        const event = events[index];
+        return event?.type !== "substitution"
+          || event.minute !== entry.minute
+          || event.outgoingPlayerId !== entry.outgoingPlayerId
+          || event.incomingPlayerId !== entry.incomingPlayerId
+          || event.slotId !== entry.slotId
+          || event.reasonKey !== entry.reasonKey;
+      }));
+      const finalIds = new Set(finalLineup.map(({ playerId }) => playerId));
+      const expectedFinalIds = new Set(kickoff.lineup.map(({ playerId }) => playerId));
+      const playerExits = report.events.flatMap((event) =>
+        (event.type === "red_card" || event.type === "second_yellow_card" || event.type === "injury")
+        && event.side === side
+        && !finalIds.has(event.playerId)
+          ? [{ playerId: event.playerId, minute: event.minute }]
+          : []
+      );
+      for (const action of [
+        ...playerExits.map((exit, order) => ({ ...exit, type: "exit" as const, order })),
+        ...applied.map((substitution, order) => ({
+          ...substitution,
+          type: "substitution" as const,
+          order,
+        })),
+      ].sort((left, right) => left.minute - right.minute
+        || left.type.localeCompare(right.type)
+        || left.order - right.order)) {
+        if (action.type === "exit") expectedFinalIds.delete(action.playerId);
+        else {
+          expectedFinalIds.delete(action.outgoingPlayerId);
+          expectedFinalIds.add(action.incomingPlayerId);
+        }
+      }
+      const finalLineupMismatch = Number(
+        finalIds.size !== finalLineup.length
+        || finalIds.size !== expectedFinalIds.size
+        || [...finalIds].some((playerId) => !expectedFinalIds.has(playerId)),
+      );
+      const minuteMismatch = Number(contributions.some((contribution) => {
+        if (!contribution.started && !contribution.substituteAppearance) {
+          return contribution.minutes !== 0;
+        }
+        const entryMinute = contribution.started
+          ? 0
+          : applied.find(({ incomingPlayerId }) => incomingPlayerId === contribution.playerId)?.minute;
+        if (entryMinute === undefined) return true;
+        const substitutionExit = applied.find(({ outgoingPlayerId, minute }) =>
+          outgoingPlayerId === contribution.playerId && minute >= entryMinute)?.minute;
+        const incidentExit = playerExits.find(({ playerId, minute }) =>
+          playerId === contribution.playerId && minute >= entryMinute)?.minute;
+        const exitMinute = Math.min(
+          substitutionExit ?? report.finalMinute,
+          incidentExit ?? report.finalMinute,
+          report.finalMinute,
+        );
+        return contribution.minutes !== Math.max(0, exitMinute - entryMinute);
+      }));
+      const invalidMinuteCount = contributions.filter(({ minutes }) =>
+        !Number.isFinite(minutes) || minutes < 0 || minutes > report.finalMinute).length;
+      rows.push({
+        fixtureId: String(fixture.fixtureId),
+        side,
+        finalMinute: report.finalMinute,
+        substitutionCount: applied.length,
+        firstSubstitutionMinute: first?.minute ?? "not_observed",
+        substitutionWindowCount,
+        maximumSubstitutions,
+        substitutionWindowLimit,
+        automaticDecisionCount: fixture.progression.aiDecisionCount[side],
+        automaticCommandCount: fixture.progression.aiCommandCount[side],
+        automaticDecisionReasonCounts: fixture.progression.aiReasonCounts[side],
+        automaticReplacementFailureCounts: fixture.progression.aiReplacementFailureCounts[side],
+        reconciliationFailureCount: eventMismatch + finalLineupMismatch + minuteMismatch,
+        invalidMinuteCount,
+      });
+    }
+  }
+  return { rows };
+}
+
+function substitutionMinuteWorldFacts(
+  worldSeed: string,
+  seasons: readonly ObservedDomesticSeason[],
+): SubstitutionMinuteWorldFacts {
+  return {
+    worldSeed,
+    teamMatches: seasons.flatMap(({ seasonNumber, competitions }) =>
+      competitions.flatMap((competition) => {
+        if (competition.substitutionMinutes === undefined) {
+          throw new Error(`Competition omitted substitution-minute facts: ${competition.competitionId}`);
+        }
+        return competition.substitutionMinutes.rows.map((row) => ({
+          worldSeed,
+          competitionId: competition.competitionId,
+          seasonNumber,
+          ...row,
+        }));
+      })),
+  };
+}
+
+/** Reads availability, injury and age exposure from committed season facts. */
+function availabilityAgingProjection(
+  result: SimulateSeasonResult,
+  careerState: CliCareerState,
+): AvailabilityAgingSeasonProjection {
+  const fixtures = new Map(result.fixtures.map((fixture) => [fixture.id, fixture]));
+  const rows: AvailabilityAgingSeasonProjection["rows"][number][] = [];
+  for (const participation of result.fixtureParticipation) {
+    const fixture = fixtures.get(participation.fixtureId);
+    const report = fixture?.result?.report;
+    if (fixture === undefined || report === undefined) {
+      throw new Error(`Availability checkpoint fixture omitted committed facts: ${participation.fixtureId}`);
+    }
+    const fixtureConsequences = (result.playerAvailabilityConsequences ?? []).filter(
+      (consequence) => consequence.fixtureId === participation.fixtureId,
+    );
+    for (const side of ["home", "away"] as const) {
+      const fielded = participation.fieldedTeams[side];
+      const contributions = participation.contributions.filter(({ clubId }) => clubId === fielded.clubId);
+      const playerIds = new Set(contributions.map(({ playerId }) => playerId));
+      const consequences = fixtureConsequences.filter(({ playerId }) => playerIds.has(playerId));
+      const timeLossInjuries = consequences.flatMap((consequence) =>
+        consequence.type === "injury" && consequence.unavailableUntil > consequence.occurredOn
+          ? [consequence]
+          : []
+      );
+      const ageGroups = emptyAvailabilityAgeGroups();
+      for (const contribution of contributions) {
+        if (contribution.minutes <= 0) continue;
+        const player = careerState.gameState.players[contribution.playerId];
+        if (player === undefined) {
+          throw new Error(`Availability checkpoint lost player ${contribution.playerId}`);
+        }
+        const group = availabilityAgeGroup(completedPlayerAge(player.birthDate, fixture.date));
+        const current = ageGroups[group];
+        ageGroups[group] = {
+          ...current,
+          positiveMinuteAppearanceCount: current.positiveMinuteAppearanceCount + 1,
+          playerMatchMinutes: current.playerMatchMinutes + contribution.minutes,
+        };
+      }
+      for (const consequence of timeLossInjuries) {
+        const player = careerState.gameState.players[consequence.playerId];
+        if (player === undefined) {
+          throw new Error(`Availability checkpoint lost injured player ${consequence.playerId}`);
+        }
+        const group = availabilityAgeGroup(completedPlayerAge(player.birthDate, consequence.occurredOn));
+        ageGroups[group] = {
+          ...ageGroups[group],
+          timeLossInjuryCount: ageGroups[group].timeLossInjuryCount + 1,
+        };
+      }
+      rows.push({
+        fixtureId: String(participation.fixtureId),
+        side,
+        recentUsePlayerCount: fielded.lifecycleDiagnostics?.recentUsePlayerCount ?? 0,
+        unavailableSelectedPlayerCount:
+          fielded.lifecycleDiagnostics?.unavailableSelectedPlayerCount ?? 0,
+        lifecycleDiagnosticMissingCount: Number(fielded.lifecycleDiagnostics === undefined),
+        consequenceMismatchCount: availabilityConsequenceMismatchCount(
+          consequences,
+          report.events.filter((event) => "side" in event && event.side === side),
+          playerIds,
+        ),
+        playerMatchMinutes: contributions.reduce((total, { minutes }) => total + minutes, 0),
+        timeLossInjuryCount: timeLossInjuries.length,
+        ageGroups,
+      });
+    }
+  }
+  return { rows };
+}
+
+function availabilityAgingWorldFacts(
+  worldSeed: string,
+  seasons: readonly ObservedDomesticSeason[],
+): AvailabilityAgingWorldFacts {
+  return {
+    worldSeed,
+    teamMatches: seasons.flatMap(({ seasonNumber, competitions }) =>
+      competitions.flatMap((competition) => {
+        if (competition.availabilityAging === undefined) {
+          throw new Error(`Competition omitted availability-aging facts: ${competition.competitionId}`);
+        }
+        return competition.availabilityAging.rows.map((row) => ({
+          worldSeed,
+          competitionId: competition.competitionId,
+          seasonNumber,
+          ...row,
+        }));
+      })),
+  };
+}
+
+function emptyAvailabilityAgeGroups(): Record<AvailabilityAgeGroup, {
+  positiveMinuteAppearanceCount: number;
+  playerMatchMinutes: number;
+  timeLossInjuryCount: number;
+}> {
+  return {
+    under_24: { positiveMinuteAppearanceCount: 0, playerMatchMinutes: 0, timeLossInjuryCount: 0 },
+    "24_29": { positiveMinuteAppearanceCount: 0, playerMatchMinutes: 0, timeLossInjuryCount: 0 },
+    "30_32": { positiveMinuteAppearanceCount: 0, playerMatchMinutes: 0, timeLossInjuryCount: 0 },
+    "33_plus": { positiveMinuteAppearanceCount: 0, playerMatchMinutes: 0, timeLossInjuryCount: 0 },
+  };
+}
+
+function availabilityAgeGroup(age: number): AvailabilityAgeGroup {
+  if (age < 24) return "under_24";
+  if (age < 30) return "24_29";
+  if (age < 33) return "30_32";
+  return "33_plus";
+}
+
+function availabilityConsequenceMismatchCount(
+  consequences: readonly NonNullable<SimulateSeasonResult["playerAvailabilityConsequences"]>[number][],
+  events: readonly SimulatedMatchEvent[],
+  playerIds: ReadonlySet<string>,
+): number {
+  const incidentEvents = events.filter((event) =>
+    event.type === "injury"
+    || event.type === "red_card"
+    || event.type === "second_yellow_card"
+    || event.type === "yellow_card"
+  );
+  const consequenceMatchesEvent = (consequence: typeof consequences[number]): boolean => {
+    if (!playerIds.has(consequence.playerId)) return false;
+    if (consequence.type === "injury") {
+      return incidentEvents.some((event) => event.type === "injury" && event.playerId === consequence.playerId);
+    }
+    const expectedEvent = consequence.reason === "straight_red"
+      ? "red_card"
+      : consequence.reason === "second_yellow"
+        ? "second_yellow_card"
+        : "yellow_card";
+    return incidentEvents.some((event) => event.type === expectedEvent && event.playerId === consequence.playerId);
+  };
+  const missingInjuryConsequences = new Set(
+    incidentEvents.filter((event) => event.type === "injury").map((event) => event.playerId),
+  );
+  const missingDismissalConsequences = incidentEvents.filter((event) =>
+    (event.type === "red_card" || event.type === "second_yellow_card")
+    && !consequences.some((consequence) => consequence.type === "suspension"
+      && consequence.playerId === event.playerId
+      && consequence.reason === (event.type === "red_card" ? "straight_red" : "second_yellow"))
+  ).length;
+  for (const consequence of consequences) {
+    if (consequence.type === "injury") missingInjuryConsequences.delete(consequence.playerId);
+  }
+  return consequences.filter((consequence) => !consequenceMatchesEvent(consequence)).length
+    + missingInjuryConsequences.size
+    + missingDismissalConsequences;
+}
+
+function requiredSubstitutionMinuteFacts(world: CareerWorldProjection): SubstitutionMinuteWorldFacts {
+  if (world.substitutionMinutes === undefined) {
+    throw new Error(`Career world ${world.seed} omitted substitution-minute facts`);
+  }
+  return world.substitutionMinutes;
+}
+
+function requiredAvailabilityAgingFacts(world: CareerWorldProjection): AvailabilityAgingWorldFacts {
+  if (world.availabilityAging === undefined) {
+    throw new Error(`Career world ${world.seed} omitted availability-aging facts`);
+  }
+  return world.availabilityAging;
+}
+
+function requiredGenerationalSuccessionFacts(
+  world: CareerWorldProjection,
+): GenerationalSuccessionWorldFacts {
+  const value = world.sections.development as GenerationalSuccessionWorldFacts | undefined;
+  if (value === undefined || value.worldSeed !== world.seed || !Array.isArray(value.rows)) {
+    throw new Error(`Career world ${world.seed} omitted generational-succession facts`);
+  }
+  return value;
+}
+
+/** Applies every L5 owner to the same already-played career worlds. */
+function evaluateIntegratedPlayerWorldCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+): IntegratedPlayerWorldCheckpointDecision {
+  const leagueWorlds = worlds.map((world) => {
+    if (world.leagueDiversity === undefined) {
+      throw new Error(`Career world ${world.seed} omitted league-diversity facts`);
+    }
+    return world.leagueDiversity;
+  });
+  const substitutionWorlds = worlds.map(requiredSubstitutionMinuteFacts);
+  const availabilityWorlds = worlds.map(requiredAvailabilityAgingFacts);
+  const generationalWorlds = worlds.map(requiredGenerationalSuccessionFacts);
+  const leagueDiversity = evaluateLeagueDiversityCheckpoint(leagueWorlds);
+  const availabilityAging = evaluateAvailabilityAgingCheckpoint(
+    availabilityWorlds,
+    substitutionWorlds,
+    leagueWorlds,
+    createRecoveryMatrixFacts(),
+  );
+  const developmentRenewal = evaluateDevelopmentRenewalCheckpoint(generationalWorlds);
+  const age = evaluateIntegratedLeaderboardAgeGates(
+    worlds.flatMap(playerLeaderboardAgeFacts),
+  );
+  const identicalStartingXiAllFixturesClubCount = leagueWorlds.reduce(
+    (sum, world) => sum + world.seasons.reduce(
+      (worldSum, season) => worldSum + season.identicalStartingXiAllFixturesClubCount,
+      0,
+    ),
+    0,
+  );
+  const developmentFailures = developmentRenewal.failedGateKeys.filter(
+    (key) => key !== "generation_input_signature",
+  );
+  const failedGateKeys = [
+    ...leagueDiversity.opening.failed.map((key) => `formation_opening:${key}`),
+    ...leagueDiversity.longitudinal.failed.map((key) => `formation:${key}`),
+    ...availabilityAging.failed
+      .filter((key) => key !== "carried_formation")
+      .map((key) => `availability:${key}`),
+    ...developmentFailures.map((key) => `development:${key}`),
+    ...age.failedGateKeys,
+    ...(identicalStartingXiAllFixturesClubCount > 0 ? ["minutes:identical_starting_xi"] : []),
+  ];
+
+  return {
+    decision: failedGateKeys.length === 0 ? "GO" : "REFINE",
+    failedGateKeys,
+    leagueDiversity,
+    availabilityAging,
+    developmentRenewal,
+    identicalStartingXiAllFixturesClubCount,
+    scorer33PlusShareSeasons8To10: age.scorer33PlusShareSeasons8To10,
+    assist33PlusShareSeasons8To10: age.assist33PlusShareSeasons8To10,
+    scorerMeanAgeDrift: age.scorerMeanAgeDrift,
+    assistMeanAgeDrift: age.assistMeanAgeDrift,
+    retained33PlusLeaderFullSeasonShare: age.retained33PlusLeaderFullSeasonShare,
+    exceptional33PlusLeaderObservationCount: age.exceptional33PlusLeaderObservationCount,
+  };
+}
+
+/** Evaluates only preregistered age/minute bands over canonical top-ten rows. */
+export function evaluateIntegratedLeaderboardAgeGates(
+  rows: readonly IntegratedLeaderboardAgeFact[],
+): IntegratedLeaderboardAgeDecision {
+  const late = rows.filter(({ seasonNumber }) => seasonNumber >= 8 && seasonNumber <= 10);
+  const scorerLate = late.filter(({ table }) => table === "scorers");
+  const assistLate = late.filter(({ table }) => table === "assists");
+  const scorer33PlusShareSeasons8To10 = observedRatio(
+    scorerLate.filter(({ age }) => age >= 33).length,
+    scorerLate.length,
+  );
+  const assist33PlusShareSeasons8To10 = observedRatio(
+    assistLate.filter(({ age }) => age >= 33).length,
+    assistLate.length,
+  );
+  const scorerMeanAgeDrift = meanAgeDrift(rows, "scorers");
+  const assistMeanAgeDrift = meanAgeDrift(rows, "assists");
+  const retained33Plus = late.filter(({ age }) => age >= 33);
+  const retained33PlusLeaderFullSeasonShare = observedRatio(
+    retained33Plus.filter(({ appearances }) => appearances === 34).length,
+    retained33Plus.length,
+  );
+  const exceptional33PlusLeaderObservationCount = retained33Plus.length;
+  const failedGateKeys = [
+    ...(!atMostObserved(scorer33PlusShareSeasons8To10, 0.25)
+      ? ["age:scorer_33_plus_share"] : []),
+    ...(!atMostObserved(assist33PlusShareSeasons8To10, 0.25)
+      ? ["age:assist_33_plus_share"] : []),
+    ...(!atMostObserved(scorerMeanAgeDrift, 2) ? ["age:scorer_mean_age_drift"] : []),
+    ...(!atMostObserved(assistMeanAgeDrift, 2) ? ["age:assist_mean_age_drift"] : []),
+    ...(!atMostObserved(retained33PlusLeaderFullSeasonShare, 0.5)
+      ? ["minutes:retained_33_plus_full_season_share"] : []),
+  ];
+  return {
+    scorer33PlusShareSeasons8To10,
+    assist33PlusShareSeasons8To10,
+    scorerMeanAgeDrift,
+    assistMeanAgeDrift,
+    retained33PlusLeaderFullSeasonShare,
+    exceptional33PlusLeaderObservationCount,
+    failedGateKeys,
+  };
+}
+
+function playerLeaderboardAgeFacts(world: CareerWorldProjection): readonly IntegratedLeaderboardAgeFact[] {
+  const root = unknownRecord(world.sections.players);
+  const seasons = root === undefined ? undefined : unknownArray(root.seasons);
+  if (seasons === undefined) throw new Error(`Career world ${world.seed} omitted player seasons`);
+  return seasons.flatMap((seasonValue) => {
+    const season = unknownRecord(seasonValue);
+    const seasonNumber = season?.seasonNumber;
+    const competitions = season === undefined ? undefined : unknownArray(season.competitions);
+    if (typeof seasonNumber !== "number" || competitions === undefined) {
+      throw new Error(`Career world ${world.seed} has malformed player season`);
+    }
+    return competitions.flatMap((competitionValue) => {
+      const competition = unknownRecord(competitionValue);
+      if (competition === undefined) {
+        throw new Error(`Career world ${world.seed} has malformed player competition`);
+      }
+      return [
+        ...leaderboardAgeFacts(world.seed, seasonNumber, "scorers", competition.topScorers),
+        ...leaderboardAgeFacts(world.seed, seasonNumber, "assists", competition.topAssists),
+      ];
+    });
+  });
+}
+
+function leaderboardAgeFacts(
+  worldSeed: string,
+  seasonNumber: number,
+  table: IntegratedLeaderboardAgeFact["table"],
+  value: unknown,
+): readonly IntegratedLeaderboardAgeFact[] {
+  const rows = unknownArray(value);
+  if (rows === undefined || rows.length === 0) {
+    throw new Error(`Career world ${worldSeed} omitted ${table} leaderboard rows`);
+  }
+  return rows.map((rowValue) => {
+    const row = unknownRecord(rowValue);
+    if (typeof row?.age !== "number" || typeof row.appearances !== "number") {
+      throw new Error(`Career world ${worldSeed} has malformed ${table} leaderboard row`);
+    }
+    return { seasonNumber, table, age: row.age, appearances: row.appearances };
+  });
+}
+
+function meanAgeDrift(
+  rows: readonly IntegratedLeaderboardAgeFact[],
+  table: IntegratedLeaderboardAgeFact["table"],
+): number | "not_observed" {
+  const early = rows.filter((row) => row.table === table && row.seasonNumber <= 2);
+  const late = rows.filter((row) => row.table === table && row.seasonNumber >= 9);
+  if (early.length === 0 || late.length === 0) return "not_observed";
+  return Math.abs(
+    late.reduce((sum, { age }) => sum + age, 0) / late.length
+      - early.reduce((sum, { age }) => sum + age, 0) / early.length,
+  );
+}
+
+function observedRatio(numerator: number, denominator: number): number | "not_observed" {
+  return denominator === 0 ? "not_observed" : numerator / denominator;
+}
+
+function atMostObserved(value: number | "not_observed", maximum: number): boolean {
+  return value !== "not_observed" && value <= maximum;
+}
+
+/** Applies the frozen L2 structural and descriptive bands. */
+export function evaluateSubstitutionMinuteCheckpoint(
+  worlds: readonly SubstitutionMinuteWorldFacts[],
+  carriedWorlds: readonly LeagueDiversityWorldFacts[],
+): SubstitutionMinuteCheckpointDecision {
+  const rows = worlds.flatMap(({ teamMatches }) => teamMatches);
+  if (rows.length === 0) throw new Error("Substitution-minute checkpoint has no team-match rows");
+  const firstMinutes = rows.flatMap(({ firstSubstitutionMinute }) =>
+    firstSubstitutionMinute === "not_observed" ? [] : [firstSubstitutionMinute]
+  ).sort((left, right) => left - right);
+  const meanSubstitutionsPerTeamMatch = rows.reduce(
+    (total, { substitutionCount }) => total + substitutionCount,
+    0,
+  ) / rows.length;
+  const medianFirstSubstitutionMinute = median(firstMinutes);
+  let minimumSubstitutionCount = Number.POSITIVE_INFINITY;
+  let maximumSubstitutionCount = Number.NEGATIVE_INFINITY;
+  for (const { substitutionCount } of rows) {
+    minimumSubstitutionCount = Math.min(minimumSubstitutionCount, substitutionCount);
+    maximumSubstitutionCount = Math.max(maximumSubstitutionCount, substitutionCount);
+  }
+  const reconciliationFailureCount = rows.reduce(
+    (total, row) => total + row.reconciliationFailureCount,
+    0,
+  );
+  const limitViolationCount = rows.filter((row) =>
+    row.substitutionCount > row.maximumSubstitutions
+    || (row.substitutionWindowLimit !== null
+      && row.substitutionWindowCount > row.substitutionWindowLimit)
+  ).length;
+  const controlledSideFailureCount = rows.filter((row) =>
+    row.automaticDecisionCount === 0).length;
+  const invalidMinuteCount = rows.reduce((total, row) => total + row.invalidMinuteCount, 0);
+  const automaticDecisionReasonCounts = sumAiDecisionReasonCounts(
+    rows.map(({ automaticDecisionReasonCounts }) => automaticDecisionReasonCounts),
+  );
+  const automaticReplacementFailureCounts = sumAiReplacementFailureCounts(
+    rows.map(({ automaticReplacementFailureCounts }) => automaticReplacementFailureCounts),
+  );
+  const carriedLeagueDiversityDecision = evaluateLeagueDiversityCheckpoint(carriedWorlds).decision;
+  const failed = [
+    ...(reconciliationFailureCount > 0 ? ["reconciliation"] : []),
+    ...(limitViolationCount > 0 ? ["competition_limits"] : []),
+    ...(controlledSideFailureCount > 0 ? ["both_automatic_sides"] : []),
+    ...(meanSubstitutionsPerTeamMatch < 3.5 || meanSubstitutionsPerTeamMatch > 4.9
+      ? ["mean_substitutions_per_team_match"]
+      : []),
+    ...(medianFirstSubstitutionMinute === "not_observed"
+      || medianFirstSubstitutionMinute < 50
+      || medianFirstSubstitutionMinute > 70
+      ? ["median_first_substitution_minute"]
+      : []),
+    ...(!(minimumSubstitutionCount < 5 && maximumSubstitutionCount === 5)
+      ? ["substitution_policy_non_mechanical"]
+      : []),
+    ...(invalidMinuteCount > 0 ? ["minute_bounds"] : []),
+    ...(carriedLeagueDiversityDecision === "REFINE" ? ["carried_league_diversity"] : []),
+  ];
+  return {
+    decision: failed.length === 0 ? "GO" : "REFINE",
+    teamMatchCount: rows.length,
+    meanSubstitutionsPerTeamMatch,
+    medianFirstSubstitutionMinute,
+    minimumSubstitutionCount,
+    maximumSubstitutionCount,
+    reconciliationFailureCount,
+    limitViolationCount,
+    controlledSideFailureCount,
+    invalidMinuteCount,
+    automaticDecisionReasonCounts,
+    automaticReplacementFailureCounts,
+    carriedLeagueDiversityDecision,
+    failed,
+  };
+}
+
+/** Sums the exact reason maps emitted by automatic progression. */
+function sumAiDecisionReasonCounts(
+  rows: readonly Readonly<Record<AiInGameDecisionReasonKey, number>>[],
+): Readonly<Record<AiInGameDecisionReasonKey, number>> {
+  const totals = {
+    forced_injury_replacement: 0,
+    dismissal_reorganization: 0,
+    low_condition: 0,
+    poor_performance: 0,
+    trailing_response: 0,
+    protecting_lead: 0,
+    no_legal_substitute: 0,
+    no_material_change: 0,
+    command_rejected: 0,
+  } satisfies Record<AiInGameDecisionReasonKey, number>;
+  for (const row of rows) {
+    for (const reasonKey of Object.keys(totals) as AiInGameDecisionReasonKey[]) {
+      totals[reasonKey] += row[reasonKey];
+    }
+  }
+  return totals;
+}
+
+/** Sums replacement-funnel failures without reconstructing them from final lineups. */
+function sumAiReplacementFailureCounts(
+  rows: readonly Readonly<Record<AiInGameReplacementFailureKey, number>>[],
+): Readonly<Record<AiInGameReplacementFailureKey, number>> {
+  const totals = {
+    substitution_limit: 0,
+    no_available_bench: 0,
+    no_positionally_credible_bench: 0,
+    quality_floor: 0,
+  } satisfies Record<AiInGameReplacementFailureKey, number>;
+  for (const row of rows) {
+    for (const failureKey of Object.keys(totals) as AiInGameReplacementFailureKey[]) {
+      totals[failureKey] += row[failureKey];
+    }
+  }
+  return totals;
+}
+
+/** Applies the frozen L3 recovery, availability, injury and carried L2 gates. */
+export function evaluateAvailabilityAgingCheckpoint(
+  worlds: readonly AvailabilityAgingWorldFacts[],
+  substitutionWorlds: readonly SubstitutionMinuteWorldFacts[],
+  carriedWorlds: readonly LeagueDiversityWorldFacts[],
+  recoveryMatrixWorlds: readonly RecoveryMatrixWorldFact[],
+): AvailabilityAgingCheckpointDecision {
+  const rows = worlds.flatMap(({ teamMatches }) => teamMatches);
+  if (rows.length === 0) throw new Error("Availability-aging checkpoint has no team-match rows");
+  const playerMatchMinutes = rows.reduce((total, row) => total + row.playerMatchMinutes, 0);
+  const playerMatchHours = playerMatchMinutes / 60;
+  const timeLossInjuryCount = rows.reduce((total, row) => total + row.timeLossInjuryCount, 0);
+  const injuryRate = timeLossInjuryCount / playerMatchHours * 1_000;
+  const unavailableSelectedPlayerCount = rows.reduce(
+    (total, row) => total + row.unavailableSelectedPlayerCount,
+    0,
+  );
+  const lifecycleDiagnosticMissingCount = rows.reduce(
+    (total, row) => total + row.lifecycleDiagnosticMissingCount,
+    0,
+  );
+  const consequenceMismatchCount = rows.reduce(
+    (total, row) => total + row.consequenceMismatchCount,
+    0,
+  );
+  const ageGroups = Object.fromEntries(AVAILABILITY_AGE_GROUPS.map((group) => {
+    const facts = rows.map((row) => row.ageGroups[group]);
+    const minutes = facts.reduce((total, fact) => total + fact.playerMatchMinutes, 0);
+    return [group, {
+      positiveMinuteAppearanceCount: facts.reduce(
+        (total, fact) => total + fact.positiveMinuteAppearanceCount,
+        0,
+      ),
+      playerMatchHours: minutes / 60,
+      timeLossInjuryCount: facts.reduce((total, fact) => total + fact.timeLossInjuryCount, 0),
+    }];
+  })) as Record<AvailabilityAgeGroup, {
+    positiveMinuteAppearanceCount: number;
+    playerMatchHours: number;
+    timeLossInjuryCount: number;
+  }>;
+  const worldsWithRecentUseCount = worlds.filter((world) =>
+    world.teamMatches.some(({ recentUsePlayerCount }) => recentUsePlayerCount > 0)).length;
+  const worldsWithTimeLossInjuryCount = worlds.filter((world) =>
+    world.teamMatches.some(({ timeLossInjuryCount: count }) => count > 0)).length;
+  const controlledBoundsHeld = recoveryMatrixWorlds.length === 14
+    && recoveryMatrixWorlds.filter(({ cohort }) => cohort === "curve_selection").length === 7
+    && recoveryMatrixWorlds.filter(({ cohort }) => cohort === "fresh_validation").length === 7
+    && recoveryMatrixWorlds.every(({ controlledBoundsHeld: held }) => held);
+  const veteranHalfLives = recoveryMatrixWorlds.flatMap(({ bestVeteranHalfLifeDays }) =>
+    bestVeteranHalfLifeDays === "not_observed" ? [] : [bestVeteranHalfLifeDays]
+  );
+  const worstVeteranHalfLives = recoveryMatrixWorlds.flatMap(({ worstVeteranHalfLifeDays }) =>
+    worstVeteranHalfLifeDays === "not_observed" ? [] : [worstVeteranHalfLifeDays]
+  );
+  const generatedVeteranResilienceSpreadHeld = veteranHalfLives.length > 0
+    && worstVeteranHalfLives.length > 0
+    && Math.min(...veteranHalfLives) < Math.max(...worstVeteranHalfLives);
+  const carriedSubstitutionMinuteDecision = evaluateSubstitutionMinuteCheckpoint(
+    substitutionWorlds,
+    carriedWorlds,
+  );
+  const carriedLeagueDiversityDecision = evaluateLeagueDiversityCheckpoint(carriedWorlds);
+  const carriedSubstitutionFailures = carriedSubstitutionMinuteDecision.failed.filter(
+    (failure) => failure !== "carried_league_diversity",
+  );
+  const substitutionRows = substitutionWorlds.flatMap(({ teamMatches }) => teamMatches);
+  const substitutionSeasonNumbers = [...new Set(substitutionRows.map(({ seasonNumber }) => seasonNumber))]
+    .sort((left, right) => left - right);
+  const substitutionBySeason = substitutionSeasonNumbers.map((seasonNumber) => {
+    const seasonRows = substitutionRows.filter((row) => row.seasonNumber === seasonNumber);
+    return {
+      seasonNumber,
+      teamMatchCount: seasonRows.length,
+      meanSubstitutionsPerTeamMatch: seasonRows.reduce(
+        (total, { substitutionCount }) => total + substitutionCount,
+        0,
+      ) / seasonRows.length,
+    };
+  });
+  const failed = [
+    ...(worlds.length !== 7 ? ["world_population"] : []),
+    ...(unavailableSelectedPlayerCount > 0 ? ["unavailable_selected_players"] : []),
+    ...(lifecycleDiagnosticMissingCount > 0 ? ["lifecycle_diagnostics"] : []),
+    ...(consequenceMismatchCount > 0 ? ["availability_consequence_reconciliation"] : []),
+    ...(worldsWithRecentUseCount !== 7 ? ["recent_use_reachability"] : []),
+    ...(worldsWithTimeLossInjuryCount !== 7 ? ["time_loss_injury_world_reachability"] : []),
+    ...(injuryRate < 20 || injuryRate > 50 ? ["time_loss_injury_rate"] : []),
+    ...AVAILABILITY_AGE_GROUPS.flatMap((group) => {
+      const facts = ageGroups[group];
+      return facts.timeLossInjuryCount === 0
+        || facts.timeLossInjuryCount >= facts.positiveMinuteAppearanceCount
+        ? [`age_group_injury_reachability:${group}`]
+        : [];
+    }),
+    ...(!controlledBoundsHeld ? ["recovery_controlled_bounds"] : []),
+    ...(!generatedVeteranResilienceSpreadHeld ? ["generated_veteran_resilience_spread"] : []),
+    ...(carriedSubstitutionFailures.length > 0 ? ["carried_substitution_minutes"] : []),
+    ...(carriedLeagueDiversityDecision.longitudinal.failed.length > 0 ? ["carried_formation"] : []),
+  ];
+  return {
+    decision: failed.length === 0 ? "GO" : "REFINE",
+    teamMatchCount: rows.length,
+    playerMatchHours,
+    timeLossInjuryCount,
+    timeLossInjuriesPerThousandPlayerMatchHours: injuryRate,
+    worldsWithRecentUseCount,
+    worldsWithTimeLossInjuryCount,
+    unavailableSelectedPlayerCount,
+    lifecycleDiagnosticMissingCount,
+    consequenceMismatchCount,
+    ageGroups,
+    recoveryMatrix: {
+      worlds: recoveryMatrixWorlds,
+      controlledBoundsHeld,
+      generatedVeteranResilienceSpreadHeld,
+    },
+    carriedSubstitutionMinuteDecision,
+    carriedLeagueDiversityDecision,
+    substitutionBySeason,
+    failed,
+  };
+}
+
+/** Builds both preregistered generated-player recovery matrix populations. */
+export function createRecoveryMatrixFacts(): readonly RecoveryMatrixWorldFact[] {
+  return [
+    ...recoveryMatrixCohort("curve_selection", "phase81a-recovery-reachability"),
+    ...recoveryMatrixCohort("fresh_validation", "phase81a-recovery-validation"),
+  ];
+}
+
+function recoveryMatrixCohort(
+  cohort: RecoveryMatrixWorldFact["cohort"],
+  seedPrefix: string,
+): readonly RecoveryMatrixWorldFact[] {
+  return Array.from({ length: 7 }, (_unused, index) => {
+    const worldSeed = `${seedPrefix}-${String(index + 1).padStart(2, "0")}`;
+    const world = createFakeDomesticWorld({ worldSeed });
+    const policy = selectPlayerStateCurvesConfig();
+    const outfieldPlayers = world.playerIds.flatMap((playerId) => {
+      const player = world.players[playerId];
+      return player === undefined || player.naturalPositions.includes("gk") ? [] : [player];
+    });
+    const neutralTemplate = [...outfieldPlayers].sort((left, right) =>
+      Math.abs(recoveryResilience(left, policy) - 10) - Math.abs(recoveryResilience(right, policy) - 10)
+      || String(left.id).localeCompare(String(right.id)))[0];
+    const highResilienceTemplate = [...outfieldPlayers].sort((left, right) =>
+      recoveryResilience(right, policy) - recoveryResilience(left, policy)
+      || String(left.id).localeCompare(String(right.id)))[0];
+    if (neutralTemplate === undefined || highResilienceTemplate === undefined) {
+      throw new Error(`Recovery matrix world has no outfield players: ${worldSeed}`);
+    }
+    const readiness = (age: number, days: number, highResilience = false): number =>
+      recoveredGeneratedPlayerFitness(
+        highResilience ? highResilienceTemplate : neutralTemplate,
+        age,
+        days,
+        world.seasonStartDate,
+        policy,
+      );
+    const age24To34DeficitDeltaAfterThreeDays = (100 - readiness(34, 3)) - (100 - readiness(24, 3));
+    const ageReadiness = Array.from({ length: 23 }, (_entry, ageIndex) => readiness(18 + ageIndex, 3));
+    const maximumAdjacentAgeReadinessDelta = Math.max(...ageReadiness.slice(1).map((value, ageIndex) =>
+      Math.abs(value - (ageReadiness[ageIndex] ?? value))));
+    const neutralAge24 = readiness(24, 3);
+    const age18To29PenaltyCount = Array.from({ length: 12 }, (_entry, ageIndex) => 18 + ageIndex)
+      .filter((age) => Math.abs(readiness(age, 3) - neutralAge24) > 1e-9).length;
+    const highResilienceAge40ReadinessAfterSevenDays = readiness(40, 7, true);
+    const shortRestReadiness = repeatedGeneratedPlayerReadiness(
+      neutralTemplate,
+      24,
+      2,
+      world.seasonStartDate,
+      policy,
+    );
+    const weeklyRestReadiness = repeatedGeneratedPlayerReadiness(
+      neutralTemplate,
+      24,
+      7,
+      world.seasonStartDate,
+      policy,
+    );
+    const veteranHalfLives = outfieldPlayers.flatMap((player) => {
+      const age = completedPlayerAge(player.birthDate, world.seasonStartDate);
+      return age >= 33
+        ? [recoveryHalfLifeDays(player, world.seasonStartDate, policy)]
+        : [];
+    });
+    return {
+      cohort,
+      worldSeed,
+      age24To34DeficitDeltaAfterThreeDays,
+      maximumAdjacentAgeReadinessDelta,
+      age18To29PenaltyCount,
+      highResilienceAge40ReadinessAfterSevenDays,
+      shortRestReadiness,
+      weeklyRestReadiness,
+      // The old 2..8 deficit and <=1 adjacent-age bands measured recovery
+      // alone. Dated match load now deliberately adds an independently tested
+      // continuous age cost, so those two values remain diagnostics rather
+      // than silently constraining the sum of two policies.
+      controlledBoundsHeld: age18To29PenaltyCount === 0
+        && highResilienceAge40ReadinessAfterSevenDays >= 88
+        && highResilienceAge40ReadinessAfterSevenDays < 95
+        && weeklyRestReadiness >= 95
+        && shortRestReadiness < weeklyRestReadiness,
+      bestVeteranHalfLifeDays: veteranHalfLives.length === 0
+        ? "not_observed"
+        : Math.min(...veteranHalfLives),
+      worstVeteranHalfLifeDays: veteranHalfLives.length === 0
+        ? "not_observed"
+        : Math.max(...veteranHalfLives),
+    };
+  });
+}
+
+type GeneratedRecoveryPlayer = FakeDomesticWorld["players"][keyof FakeDomesticWorld["players"]];
+
+function recoveredGeneratedPlayerFitness(
+  template: GeneratedRecoveryPlayer,
+  age: number,
+  dayCount: number,
+  currentDate: FakeDomesticWorld["seasonStartDate"],
+  policy: ReturnType<typeof selectPlayerStateCurvesConfig>,
+): number {
+  const player = generatedPlayerAtAge(template, age, currentDate);
+  const playerStates = {
+    [player.id]: { fitness: 100, form: 50, morale: 50 },
+  } as unknown as CliCareerState["gameState"]["playerStates"];
+  const spent = spendFitnessForMinutes({
+    playerStates,
+    loads: [{ playerId: player.id, minutes: 90 }],
+    players: { [player.id]: player },
+    currentDate,
+    loadPolicy: policy,
+  });
+  const recovered = recoverFitnessForPlayers({
+    playerStates: spent,
+    playerIds: [player.id],
+    players: { [player.id]: player },
+    currentDate,
+    recoveryPolicy: policy,
+    dayCount,
+  });
+  return Number(recovered[player.id]?.fitness);
+}
+
+function repeatedGeneratedPlayerReadiness(
+  template: GeneratedRecoveryPlayer,
+  age: number,
+  restDays: number,
+  currentDate: FakeDomesticWorld["seasonStartDate"],
+  policy: ReturnType<typeof selectPlayerStateCurvesConfig>,
+): number {
+  const player = generatedPlayerAtAge(template, age, currentDate);
+  let playerStates = {
+    [player.id]: { fitness: 100, form: 50, morale: 50 },
+  } as unknown as CliCareerState["gameState"]["playerStates"];
+  for (let match = 0; match < 2; match += 1) {
+    playerStates = spendFitnessForMinutes({
+      playerStates,
+      loads: [{ playerId: player.id, minutes: 90 }],
+      players: { [player.id]: player },
+      currentDate,
+      loadPolicy: policy,
+    });
+    playerStates = recoverFitnessForPlayers({
+      playerStates,
+      playerIds: [player.id],
+      players: { [player.id]: player },
+      currentDate,
+      recoveryPolicy: policy,
+      dayCount: restDays,
+    });
+  }
+  return Number(playerStates[player.id]?.fitness);
+}
+
+function generatedPlayerAtAge(
+  player: GeneratedRecoveryPlayer,
+  age: number,
+  currentDate: FakeDomesticWorld["seasonStartDate"],
+): GeneratedRecoveryPlayer {
+  return {
+    ...player,
+    birthDate: (Number(currentDate) - Math.ceil(age * 365.2425)) as GeneratedRecoveryPlayer["birthDate"],
+  };
+}
+
+function recoveryResilience(
+  player: GeneratedRecoveryPlayer,
+  policy: ReturnType<typeof selectPlayerStateCurvesConfig>,
+): number {
+  const weights = policy.resilienceWeightsBasisPoints;
+  return (
+    Number(player.abilities.physical.stamina) * weights.stamina
+    + Number(player.abilities.physical.agility) * weights.agility
+    + Number(player.abilities.physical.strength) * weights.strength
+  ) / 10_000;
+}
+
+function median(values: readonly number[]): number | "not_observed" {
+  if (values.length === 0) return "not_observed";
+  const middle = Math.floor(values.length / 2);
+  const upper = values[middle];
+  if (upper === undefined) return "not_observed";
+  if (values.length % 2 === 1) return upper;
+  const lower = values[middle - 1];
+  return lower === undefined ? "not_observed" : (lower + upper) / 2;
 }
 
 interface OpeningPopulationProjection {
@@ -882,6 +2179,10 @@ function leagueDiversityWorldFacts(
       distinctIdentityModalFormationCount: new Set(identityModalFormations).size,
       catalogOrderSensitiveSelectionCount:
         formations.catalogOrderSensitiveSelectionCount + formations.catalogChoiceMissingCount,
+      emergencyCatalogSelectionCount: formations.emergencyCatalogSelectionCount,
+      forcedOutOfPositionSlotCount: formations.forcedOutOfPositionSlotCount,
+      avoidableOutOfPositionSlotCount: formations.avoidableOutOfPositionSlotCount,
+      academyCallUpAppearanceCount: formations.academyCallUpAppearanceCount,
       meanOutOfPositionSlots: formations.meanOutOfPositionSlots,
     };
   });
@@ -904,6 +2205,8 @@ function leagueDiversityWorldFacts(
         missingSelectionSourceCount: formations.missingSelectionSourceCount,
         missingStableIdCount: formations.missingStableIdCount,
         reconciliationFailureCount: formations.reconciliationFailureCount,
+        identicalStartingXiAllFixturesClubCount:
+          formations.identicalStartingXiAllFixturesClubCount,
       };
     })
   );
@@ -931,7 +2234,7 @@ export function evaluateLeagueDiversityCheckpoint(
       && row.topFormationShare <= 0.30
       && row.distinctIdentityModalFormationCount >= 6
       && row.catalogOrderSensitiveSelectionCount === 0
-      && row.meanOutOfPositionSlots === 0
+      && row.avoidableOutOfPositionSlotCount === 0
     );
     if (held) passingCompetitionCount += 1;
     else openingFailed.push(`${row.worldSeed}|${row.competitionId}`);
@@ -1110,6 +2413,7 @@ function careerSectionCheckpointIdentity(
     readonly leagueDiversityProfile?: {
       readonly profileId: string;
       readonly checkpointDirectoryPath: string;
+      readonly checkpointKind: CareerCheckpointKind;
     };
   },
   worldSeed: string,
@@ -1200,6 +2504,16 @@ function jsonRecord(
     : undefined;
 }
 
+function unknownRecord(value: unknown): Readonly<Record<string, unknown>> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Readonly<Record<string, unknown>>
+    : undefined;
+}
+
+function unknownArray(value: unknown): readonly unknown[] | undefined {
+  return Array.isArray(value) ? value : undefined;
+}
+
 function rememberPlayerNames(careerState: CliCareerState, names: Map<string, string>): void {
   for (const playerId of careerState.gameState.playerIds) {
     const player = careerState.gameState.players[playerId];
@@ -1235,6 +2549,7 @@ function runCareerSectionsWorker(input: {
   readonly detail: SimulationReportDetail;
   readonly sectionIds: readonly CareerSectionId[];
   readonly leagueDiversity: boolean;
+  readonly generationalSuccession: boolean;
 }): Promise<CareerWorldProjection> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./career-sections.ts", import.meta.url), {

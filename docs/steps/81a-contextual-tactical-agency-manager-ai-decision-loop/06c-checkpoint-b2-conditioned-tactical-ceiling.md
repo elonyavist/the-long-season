@@ -2,9 +2,10 @@
 
 ## Status
 
-Not started. Requires Step 06B `GO` and green. This is an observational locked
-checkpoint: it writes no gameplay code and moves no target. Step 07 remains
-closed until this checkpoint records `GO`.
+Not started. Requires Step 06B/L5 `GO`; integrated L5 recorded `REFINE` on
+2026-08-09. This is an observational locked checkpoint: it writes no gameplay
+code and moves no target. Step 07 remains closed until this checkpoint records
+`GO`.
 
 ## Why B2 Exists
 

@@ -230,6 +230,18 @@ export interface CareerPlayerDevelopmentFact {
   readonly totalGrowth: number;
   /** Rounded total decline across rows. */
   readonly totalDecline: number;
+  /** Canonical low-detail academy activity included in development rows. */
+  readonly academyParticipation?: {
+    readonly fixtureCount: number;
+    readonly appearanceCount: number;
+    readonly playerCount: number;
+    readonly minutes: number;
+    readonly fullProgrammePlayerMonthCount: number;
+    readonly reducedProgrammePlayerMonthCount: number;
+    readonly fullyReplacedPlayerMonthCount: number;
+    readonly missingPlayerMonthCount: number;
+    readonly invalidMinuteCount: number;
+  };
 }
 
 /** Aggregate player exit facts emitted by one advancement. */
@@ -1409,12 +1421,44 @@ function nextSeasonSequenceNumber(careerState: CareerState): number {
 }
 
 function monthlyPlayerDevelopmentFact(summaries: readonly CareerMonthlyLifecycleSummary[]): CareerPlayerDevelopmentFact {
+  const academy = summaries.flatMap((summary) =>
+    summary.academyParticipation === undefined ? [] : [summary.academyParticipation]);
   return {
     changeCount: summaries.reduce((sum, summary) => sum + summary.developmentChangeCount, 0),
     playersImproved: summaries.reduce((sum, summary) => sum + summary.playersImproved, 0),
     playersDeclined: summaries.reduce((sum, summary) => sum + summary.playersDeclined, 0),
     totalGrowth: roundFactNumber(summaries.reduce((sum, summary) => sum + summary.totalGrowth, 0)),
     totalDecline: roundFactNumber(summaries.reduce((sum, summary) => sum + summary.totalDecline, 0)),
+    ...(academy.length === 0
+      ? {}
+      : {
+          academyParticipation: {
+            fixtureCount: academy.reduce((sum, row) => sum + row.fixtureCount, 0),
+            appearanceCount: academy.reduce((sum, row) => sum + row.appearanceCount, 0),
+            playerCount: academy.reduce((sum, row) => sum + row.playerCount, 0),
+            minutes: academy.reduce((sum, row) => sum + row.minutes, 0),
+            fullProgrammePlayerMonthCount: academy.reduce(
+              (sum, row) => sum + row.fullProgrammePlayerMonthCount,
+              0,
+            ),
+            reducedProgrammePlayerMonthCount: academy.reduce(
+              (sum, row) => sum + row.reducedProgrammePlayerMonthCount,
+              0,
+            ),
+            fullyReplacedPlayerMonthCount: academy.reduce(
+              (sum, row) => sum + row.fullyReplacedPlayerMonthCount,
+              0,
+            ),
+            missingPlayerMonthCount: academy.reduce(
+              (sum, row) => sum + row.missingPlayerMonthCount,
+              0,
+            ),
+            invalidMinuteCount: academy.reduce(
+              (sum, row) => sum + row.invalidMinuteCount,
+              0,
+            ),
+          },
+        }),
   };
 }
 

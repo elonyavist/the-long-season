@@ -376,10 +376,14 @@ test("simulate-season can print a deterministic condition demo", async () => {
   assert.equal(io.stdoutLines.includes(`Condition demo: ${CONDITION_DEMO_PROFILE_PRO01_SEASON}`), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club: ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Season fitness lifecycle: enabled"), true);
-  assert.equal(io.stdoutLines.includes("  Rules: match cost=8 daily recovery=5 clamp=0..100"), true);
+  assert.equal(io.stdoutLines.includes("  Rules: match cost=8 recovery curve=player-state-curves-v2 clamp=0..100"), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  First selected club fixture: fixture:demo-third-division:demo-001:000006 ${CLUB_NAME_PATTERN} [0-9]+-[0-9]+ ${CLUB_NAME_PATTERN}$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  After first match selected starters fitness: 92"), true);
-  assert.equal(io.stdoutLines.includes("  Before next selected fixture fitness after 7 days recovery: 100"), true);
+  const recoveredFitnessLine = io.stdoutLines.find((line) =>
+    line.startsWith("  Before next selected fixture fitness after 7 days recovery: ")
+  );
+  const recoveredFitness = Number(recoveredFitnessLine?.split(": ").at(-1));
+  assert.equal(recoveredFitness >= 95 && recoveredFitness < 100, true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  Selected club final table: ${CLUB_NAME_PATTERN} position [0-9]+, [0-9]+ pts, GD [+-][0-9]+$`).test(line)), true);
   assert.equal(io.stdoutLines.includes("  Final selected club condition:"), true);
   assert.equal(io.stdoutLines.includes("  Player              Start Final Delta"), true);
@@ -1073,9 +1077,16 @@ function fixturePlayerStatLines(lines: readonly string[]): readonly string[] {
 
 /**
  * Extracts rendered condition rows from condition-demo command output.
+ *
+ * Values are deliberately not pinned to the retired flat `100 -> 92 -> -8`
+ * lifecycle. The row shape remains stable while canonical non-linear recovery
+ * gives each generated player a different final deficit.
  */
 function conditionPlayerRows(lines: readonly string[]): readonly string[] {
-  return lines.filter((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+100\\s+92\\s+-8$`).test(line));
+  const value = "[0-9]+(?:\\.[0-9]+)?";
+  return lines.filter((line) =>
+    new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${value}\\s+${value}\\s+[+-]${value}$`).test(line)
+  );
 }
 
 /**

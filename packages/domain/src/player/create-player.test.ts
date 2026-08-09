@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { PlayerAbilities, PlayerDynamicState, RoleIdentifiedPlayer } from "../entities/player.entity.ts";
+import { PLAYER_ROLES, type PlayerAbilities, type PlayerDynamicState, type RoleIdentifiedPlayer } from "../entities/player.entity.ts";
 import { playerId } from "../types/ids.ts";
 import { gameDate } from "../value-objects/game-date.ts";
 import { abilityValue, stateValue, type AbilityValue } from "../value-objects/rating.ts";
 import {
   createPlayer,
+  naturalPositionsForPlayerRole,
   PlayerConstructionError,
   type CreatePlayerInput,
   type PlayerConstructionErrorCode,
@@ -106,6 +107,19 @@ test("a wide midfielder is constructible, and no longer validated as a winger", 
     },
     "role_position_mismatch",
   );
+});
+
+test("naturalPositionsForPlayerRole exposes the constructor's complete role mapping", () => {
+  for (const role of PLAYER_ROLES) {
+    const positions = naturalPositionsForPlayerRole(role);
+    assert.equal(positions.length > 0, true, role);
+    for (const position of positions) {
+      assert.equal(typeof position, "string", `${role}:${position}`);
+    }
+  }
+
+  assert.deepEqual(naturalPositionsForPlayerRole("wing_back"), ["rwb", "lwb"]);
+  assert.deepEqual(naturalPositionsForPlayerRole("wide_midfielder"), ["rm", "lm"]);
 });
 
 test("createPlayer rejects invalid current and potential ability ranges", () => {

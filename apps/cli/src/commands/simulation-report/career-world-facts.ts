@@ -11,13 +11,15 @@ import {
   selectAskingPriceCurves,
   selectMarketBehaviorCalibration,
   selectPlayerDevelopmentEnvironmentConfig,
+  selectPlayerStateCurvesConfig,
   selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
+  type AnnualWorldIntakeExceptionalCandidate,
+  type AnnualWorldRoleContinuityDiagnostics,
   type FakeDomesticWorld,
 } from "@game/content";
 import {
   FORMATION_CATALOG,
-  accrueFixtureParticipationContributions,
   advanceCareerOneSeason,
   completedPlayerAge,
   createFreshCareerState,
@@ -33,9 +35,11 @@ import {
   deriveTeamStrength,
   deriveTransferCommercialSnapshot,
   selectCareerActivePlayerStock,
+  SimulateSeasonError,
   simulateSeason,
   summarizePlayerDevelopmentAbilities,
   type AdvanceCareerReportRefreshMode,
+  type CareerSeasonAdvancementFacts,
   type CareerActivePlayerStockEntry,
   type FormationKey,
   type LineupSlot,
@@ -246,6 +250,19 @@ export interface CareerWorldInspection {
     readonly seasonNumber: number;
     readonly previousCareerState: CliCareerState;
     readonly careerState: CliCareerState;
+  }) => void;
+  /** Reads the exact canonical rollover facts before the long-run adapter reduces them. */
+  readonly observeSeasonAdvancement?: (context: {
+    readonly seasonNumber: number;
+    readonly previousCareerState: CliCareerState;
+    readonly careerState: CliCareerState;
+    readonly facts: CareerSeasonAdvancementFacts;
+  }) => void;
+  /** Reads candidate roles from the content provider before accepted-player filtering. */
+  readonly observeGeneratedIntakeRoles?: (context: {
+    readonly seasonNumber: number;
+    readonly careerState: CliCareerState;
+    readonly diagnostics: AnnualWorldRoleContinuityDiagnostics;
   }) => void;
 }
 
@@ -1355,30 +1372,43 @@ export function createCareerWorldFacts(
   let yearTenCareerState: CliCareerState | undefined;
   const usefulLowerDivisionAbilityThreshold =
     lowerDivisionUsefulAbilityThreshold(initialCareerState);
-  const report = runCareerLongRunSimulation({
-    seed,
-    seasonCount,
-    initialCareerState,
-    retainSeasonResult: retainLongRunSeasonResult,
-    createSeasonInput: ({ seasonSeed, careerState }) =>
-      createDomesticCareerSeasonInput(league, careerState as CliCareerState, seasonSeed, inspection),
-    advanceCareerState: (context) =>
-      advanceCareerForReport(
-        league,
-        seed,
-        context,
-        annualIntakeObservations,
-        exceptionalStockSnapshots,
-        canonicalFreeAgentSigningObservations,
-        observeParticipationRows,
-        inspection,
-      ),
-    observeAdvancedSeason: ({ seasonNumber, careerState }) => {
-      if (seasonNumber === 10) {
-        yearTenCareerState = careerState as CliCareerState;
-      }
-    },
-  });
+  let activeSeasonContext: { readonly seasonNumber: number; readonly careerState: CliCareerState } | undefined;
+  let report: ReturnType<typeof runCareerLongRunSimulation<LongRunRetainedSeasonResult>>;
+  try {
+    report = runCareerLongRunSimulation({
+      seed,
+      seasonCount,
+      initialCareerState,
+      retainSeasonResult: retainLongRunSeasonResult,
+      createSeasonInput: ({ seasonNumber, seasonSeed, careerState }) => {
+        activeSeasonContext = { seasonNumber, careerState: careerState as CliCareerState };
+        return createDomesticCareerSeasonInput(league, careerState as CliCareerState, seasonSeed, inspection);
+      },
+      advanceCareerState: (context) =>
+        advanceCareerForReport(
+          league,
+          seed,
+          context,
+          annualIntakeObservations,
+          exceptionalStockSnapshots,
+          canonicalFreeAgentSigningObservations,
+          observeParticipationRows,
+          inspection,
+        ),
+      observeAdvancedSeason: ({ seasonNumber, careerState }) => {
+        if (seasonNumber === 10) {
+          yearTenCareerState = careerState as CliCareerState;
+        }
+      },
+    });
+  } catch (error) {
+    if (activeSeasonContext === undefined) throw error;
+    throw selectionErrorWithLifecycleContext(error, {
+      careerState: activeSeasonContext.careerState,
+      worldSeed: seed,
+      seasonNumber: activeSeasonContext.seasonNumber,
+    });
+  }
   const rawPlayerEvolutionReport = createLongRunPlayerEvolutionReport({
     initialPlayers: snapshotPlayers(initialCareerState),
     finalPlayers: snapshotPlayers(report.finalCareerState as CliCareerState),
@@ -3226,6 +3256,12 @@ function phase80AExceptionalStockSnapshot(input: {
   readonly targetYoungStoredCeilingSixCount: number;
   readonly careerState: CliCareerState;
   readonly observations: readonly PlayerGenerationEconomyObservation[];
+  readonly entryClubAssociationByPlayerId?: ReadonlyMap<string, {
+    readonly kind: "club";
+    readonly clubId: string;
+    readonly category: AnnualWorldIntakeExceptionalCandidate["division"];
+    readonly competitiveTier: AnnualWorldIntakeExceptionalCandidate["clubTier"];
+  }>;
 }): Phase80AExceptionalStockSnapshotObservation {
   const activeStockByPlayerId = new Map(
     selectCareerActivePlayerStock(input.careerState).map((entry) => [
@@ -3245,6 +3281,8 @@ function phase80AExceptionalStockSnapshot(input: {
       input.targetYoungStoredCeilingSixCount,
     players: input.observations.map((observation) => {
       const stockEntry = activeStockByPlayerId.get(observation.playerId);
+      const entryClubAssociation =
+        input.entryClubAssociationByPlayerId?.get(observation.playerId);
       if (stockEntry === undefined || stockEntry.source !== observation.population) {
         throw new Error(
           `Exceptional-stock association is inconsistent: ${observation.playerId}`,
@@ -3259,6 +3297,9 @@ function phase80AExceptionalStockSnapshot(input: {
             observation.storedPotentialCeilingRating,
           publicPotentialUpperRating: observation.publicPotentialUpperRating,
           clubAssociation: { kind: "unattached" as const },
+          ...(entryClubAssociation === undefined
+            ? {}
+            : { entryClubAssociation }),
         };
       }
       const club = input.careerState.gameState.clubs[stockEntry.clubId];
@@ -3282,6 +3323,9 @@ function phase80AExceptionalStockSnapshot(input: {
           category: club.category,
           competitiveTier,
         },
+        ...(entryClubAssociation === undefined
+          ? {}
+          : { entryClubAssociation }),
       };
     }),
   };
@@ -4215,8 +4259,9 @@ function createCompetitionCareerSeasonInput(
   for (const clubId of competition.clubIds) {
     const club = careerState.gameState.clubs[clubId];
     if (club === undefined) throw new Error(`Missing report club: ${clubId}`);
+    const callUpPlayerIds = activeAcademyPlayerIds(clubId, careerState);
     const lineup = reportLineup(club.playerIds, careerState);
-    const players = reportClubPlayers(club.playerIds, careerState);
+    const players = reportClubPlayers([...club.playerIds, ...callUpPlayerIds], careerState);
     teamsByClubId[clubId] = {
       lineup,
       players,
@@ -4247,6 +4292,8 @@ function createCompetitionCareerSeasonInput(
           valuationConfig.potentialProjectionPolicy,
         ratingScale: valuationConfig.ratingScale,
         benchSize: 8,
+        rosterPlayerIds: club.playerIds,
+        callUpPlayerIds,
       },
     };
   }
@@ -4259,17 +4306,60 @@ function createCompetitionCareerSeasonInput(
     teamsByClubId,
     fitnessLifecycle: {
       playerStates: careerState.gameState.playerStates,
+      players: careerState.gameState.players,
+      recoveryPolicy: selectPlayerStateCurvesConfig(),
       playerIds: competition.clubIds.flatMap((clubId) => {
         const club = careerState.gameState.clubs[clubId];
         if (club === undefined) {
           throw new Error(`Missing report fitness club: ${clubId}`);
         }
-        return club.playerIds;
+        return [...club.playerIds, ...activeAcademyPlayerIds(clubId, careerState)];
       }),
     },
+    availabilityLifecycle: {
+      worldSeed: careerState.gameState.meta.seed,
+      ...(careerState.playerAvailability === undefined
+        ? {}
+        : { availability: careerState.playerAvailability }),
+      ...(careerState.playerParticipationLedger === undefined
+        ? {}
+        : { participationLedger: careerState.playerParticipationLedger }),
+    },
+    matchRules: competition.matchRules,
     matchEngineConfig: world.matchEngineConfig,
     matchTacticsCalibration: world.matchTacticsCalibration,
     tableRules: world.tableRules,
+  };
+}
+
+/** Carries canonical season lifecycles into the next competition or season. */
+function careerStateWithSeasonLifecycle(
+  careerState: CliCareerState,
+  result: SimulateSeasonResult,
+): CliCareerState {
+  const fixtures = { ...careerState.gameState.fixtures };
+  const fixtureIds = [...careerState.gameState.fixtureIds];
+  const knownFixtureIds = new Set(fixtureIds);
+  for (const fixture of result.fixtures) {
+    fixtures[fixture.id] = fixture;
+    if (knownFixtureIds.has(fixture.id)) continue;
+    knownFixtureIds.add(fixture.id);
+    fixtureIds.push(fixture.id);
+  }
+  return {
+    ...careerState,
+    gameState: {
+      ...careerState.gameState,
+      fixtures,
+      fixtureIds,
+      playerStates: result.finalPlayerStates ?? careerState.gameState.playerStates,
+    },
+    ...(result.finalPlayerAvailability === undefined
+      ? {}
+      : { playerAvailability: result.finalPlayerAvailability }),
+    ...(result.finalPlayerParticipationLedger === undefined
+      ? {}
+      : { playerParticipationLedger: result.finalPlayerParticipationLedger }),
   };
 }
 
@@ -4287,6 +4377,14 @@ function reportClubPlayers(
     players[playerId] = player;
   }
   return players as Readonly<Record<Phase79CPlayerId, CliPlayer>>;
+}
+
+/** Active same-club academy candidates available for dated match-day call-up. */
+function activeAcademyPlayerIds(
+  clubId: Phase79CClubId,
+  careerState: CliCareerState,
+): readonly Phase79CPlayerId[] {
+  return careerState.youthAcademyState?.clubRosters[clubId]?.playerIds ?? [];
 }
 
 /** Stable report-only match seed for one non-selected competition. */
@@ -4388,22 +4486,6 @@ function selectedCompetition(
   return competition;
 }
 
-/** Accrues season-owned fixture contributions before rollover clears the ledger. */
-function accrueCompletedSeasonParticipation(input: {
-  readonly careerState: CliCareerState;
-  readonly seasonResults: readonly SimulateSeasonResult[];
-}): CliCareerState {
-  return accrueFixtureParticipationContributions({
-    careerState: input.careerState,
-    contributions: input.seasonResults.flatMap((seasonResult) =>
-      seasonResult.fixtureParticipation.flatMap(
-        ({ contributions }) => contributions,
-      ),
-    ),
-  }) as CliCareerState;
-}
-
-
 /**
  * Applies deterministic post-season career refresh in memory for the report.
  */
@@ -4437,22 +4519,34 @@ function advanceCareerForReport(
     league,
     reportCareerState,
   ).id;
+  let lifecycleCareerState = careerStateWithSeasonLifecycle(
+    reportCareerState,
+    context.seasonResult,
+  );
   const competitionSeasons = registry.competitionIds.map((competitionId) => {
     const seasonSeed = competitionId === selectedCompetitionId
       ? context.seasonSeed
       : competitionSeasonSeed(context.seasonSeed, competitionId);
+    if (competitionId === selectedCompetitionId) {
+      return { competitionId, seasonSeed, result: context.seasonResult };
+    }
+    const result = simulateCompetitionSeasonWithLifecycleContext({
+      input: createCompetitionCareerSeasonInput(
+        league,
+        lifecycleCareerState,
+        seasonSeed,
+        competitionId,
+        inspection,
+      ),
+      careerState: lifecycleCareerState,
+      worldSeed,
+      seasonNumber: context.seasonNumber,
+    });
+    lifecycleCareerState = careerStateWithSeasonLifecycle(lifecycleCareerState, result);
     return {
       competitionId,
       seasonSeed,
-      result: competitionId === selectedCompetitionId
-        ? context.seasonResult
-        : simulateSeason(createCompetitionCareerSeasonInput(
-            league,
-            reportCareerState,
-            seasonSeed,
-            competitionId,
-            inspection,
-          )),
+      result,
     };
   });
   inspection?.observeCompetitionSeasonResults?.({
@@ -4470,10 +4564,7 @@ function advanceCareerForReport(
     careerState: reportCareerState,
     league,
   });
-  const careerStateWithParticipation = accrueCompletedSeasonParticipation({
-    careerState: reportCareerState,
-    seasonResults: competitionSeasons.map(({ result }) => result),
-  });
+  const careerStateWithParticipation = lifecycleCareerState;
   const participationLedger = careerStateWithParticipation.playerParticipationLedger;
   const participationRows = participationLedger?.rowKeys.flatMap((rowKey) => {
     const row = participationLedger.rows[rowKey];
@@ -4586,6 +4677,11 @@ function advanceCareerForReport(
     });
   }
   const annualIntakeDiagnostics = annualIntake.diagnostics();
+  inspection?.observeGeneratedIntakeRoles?.({
+    seasonNumber: context.seasonNumber,
+    careerState: careerStateWithParticipation,
+    diagnostics: annualIntake.roleContinuityDiagnostics(),
+  });
   const acceptedYouthIds = new Set(
     advanced.facts.youthIntake.acceptedPlayerIds.map(String),
   );
@@ -4618,6 +4714,19 @@ function advanceCareerForReport(
       annualIntakeDiagnostics.allocation.targetActiveYoungPotentialSixCount,
     careerState: advanced.careerState,
     observations: postRolloverObservations,
+    entryClubAssociationByPlayerId: new Map(
+      annualIntakeDiagnostics.allocatedStoredCeilingSixPlacements.map(
+        ({ playerKey, clubKey, division, clubTier }) => [
+          playerKey,
+          {
+            kind: "club" as const,
+            clubId: clubKey,
+            category: division,
+            competitiveTier: clubTier,
+          },
+        ],
+      ),
+    ),
   });
   exceptionalStockSnapshots.push(stockSnapshot);
   const activeStoredCeilingSixPlayerIds = stockSnapshot.players
@@ -4642,6 +4751,12 @@ function advanceCareerForReport(
     seasonNumber: context.seasonNumber,
     previousCareerState: reportCareerState,
     careerState: advanced.careerState,
+  });
+  inspection?.observeSeasonAdvancement?.({
+    seasonNumber: context.seasonNumber,
+    previousCareerState: reportCareerState,
+    careerState: advanced.careerState as CliCareerState,
+    facts: advanced.facts,
   });
 
   return {
@@ -4690,6 +4805,59 @@ function advanceCareerForReport(
       clubsBelowYouthMinimum: advanced.facts.youthHealth.clubsBelowYouthMinimum,
     },
   };
+}
+
+/**
+ * Adds canonical club-lifecycle facts to an invalid-selection failure.
+ *
+ * The engine owns the typed club ID; this report adapter owns the academy join.
+ * No selection input is changed here.
+ */
+function simulateCompetitionSeasonWithLifecycleContext(input: {
+  readonly input: SimulateSeasonInput;
+  readonly careerState: CliCareerState;
+  readonly worldSeed: string;
+  readonly seasonNumber: number;
+}): SimulateSeasonResult {
+  try {
+    return simulateSeason(input.input);
+  } catch (error) {
+    throw selectionErrorWithLifecycleContext(error, input);
+  }
+}
+
+/** Joins one typed selection failure to the owning club's lifecycle facts. */
+function selectionErrorWithLifecycleContext(
+  error: unknown,
+  input: {
+    readonly careerState: CliCareerState;
+    readonly worldSeed: string;
+    readonly seasonNumber: number;
+  },
+): unknown {
+  if (
+    !(error instanceof SimulateSeasonError)
+    || error.code !== "invalid_ai_squad_selection"
+    || error.clubId === undefined
+  ) {
+    return error;
+  }
+
+  const academyState = input.careerState.youthAcademyState;
+  const activeAcademyIds = academyState?.clubRosters[error.clubId]?.playerIds ?? [];
+  const promotionCandidateIds = (academyState?.playerLifecycleIds ?? []).filter((playerId) => {
+    const lifecycle = academyState?.playerLifecycle[playerId];
+    return lifecycle?.clubId === error.clubId && lifecycle?.status === "promotion_candidate";
+  });
+  const academyPositions = activeAcademyIds.flatMap((playerId) =>
+    input.careerState.gameState.players[playerId]?.naturalPositions.map(String) ?? []
+  ).sort();
+
+  return new Error(
+    `${error.message}; L4 lifecycle context: world=${input.worldSeed}, season=${input.seasonNumber}, `
+      + `activeAcademyPlayers=${activeAcademyIds.length}, promotionCandidates=${promotionCandidateIds.length}, `
+      + `academyPositions=${academyPositions.join(",") || "none"}`,
+  );
 }
 
 /**

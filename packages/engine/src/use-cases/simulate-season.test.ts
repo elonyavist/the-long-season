@@ -37,12 +37,15 @@ import {
 import type { PlayerStateMultiplierCurves, RoleWeightProfile } from "../match-engine/index.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
 import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import { playerStateCurvesConfigFixture } from "../test-fixtures/player-state-curves-config.ts";
 
 
 /**
  * Season simulation tests prove the first full-season use-case without content,
  * CLI formatting, persistence, or future management systems.
  */
+
+const TEST_RECOVERY_POLICY = playerStateCurvesConfigFixture();
 
 test("simulateSeason completes one 18-team, 34-round season", () => {
   const result = simulateSeason(seasonInput("season-seed"));
@@ -558,7 +561,7 @@ test("inactive fitness-ready team data preserves default output", () => {
   assert.deepEqual(simulateSeason({ ...input, teamsByClubId: fitnessReadyTeams(input) }), simulateSeason(input));
 });
 
-test("fitness lifecycle spends match fitness and recovers between fixture dates", () => {
+test("fitness lifecycle spends exact simulated minutes and recovers between fixture dates", () => {
   const input = seasonInputWithFitnessLifecycle("fitness-lifecycle-seed", 100);
   const result = simulateSeason(input);
   const lifecycle = input.fitnessLifecycle;
@@ -569,7 +572,8 @@ test("fitness lifecycle spends match fitness and recovers between fixture dates"
   for (const playerId of lifecycle.playerIds) {
     const playerState = finalPlayerStates[playerId];
     assert.ok(playerState !== undefined);
-    assert.equal(Number(playerState.fitness), 92);
+    assert.ok(Number(playerState.fitness) > 92);
+    assert.ok(Number(playerState.fitness) < 100);
     assert.equal(Number(playerState.form), 50);
     assert.equal(Number(playerState.morale), 50);
   }
@@ -586,7 +590,8 @@ test("fitness lifecycle can recover tired starters over a season", () => {
   for (const playerId of lifecycle.playerIds) {
     const playerState = finalPlayerStates[playerId];
     assert.ok(playerState !== undefined);
-    assert.equal(Number(playerState.fitness), 92);
+    assert.ok(Number(playerState.fitness) > 92);
+    assert.ok(Number(playerState.fitness) < 100);
   }
 });
 
@@ -609,14 +614,60 @@ test("fixture lineup override spends fitness for selected reserve and rests repl
   });
 
   assert.ok(result.finalPlayerStates !== undefined);
-  assert.equal(Number(result.finalPlayerStates[reservePlayerId]?.fitness), 92);
-  assert.equal(Number(result.finalPlayerStates[restedPlayerId]?.fitness), 100);
-  assert.equal(Number(result.finalPlayerStates[unchangedStarterId]?.fitness), 92);
+  const reserveFitness = Number(result.finalPlayerStates[reservePlayerId]?.fitness);
+  const restedFitness = Number(result.finalPlayerStates[restedPlayerId]?.fitness);
+  const unchangedFitness = Number(result.finalPlayerStates[unchangedStarterId]?.fitness);
+  assert.ok(reserveFitness > 92 && reserveFitness < 100);
+  assert.ok(unchangedFitness > 92 && unchangedFitness < 100);
+  assert.ok(restedFitness > unchangedFitness && restedFitness < 100);
+});
+
+test("availability lifecycle excludes an injured player and carries participation", () => {
+  const input = seasonInputWithAiSelection("availability-lifecycle-seed", 100);
+  const firstClubId = input.clubIds[0];
+  assert.ok(firstClubId !== undefined);
+  const firstTeam = input.teamsByClubId[firstClubId];
+  assert.ok(firstTeam !== undefined);
+  const injuredPlayerId = (Object.keys(firstTeam.players).sort() as PlayerId[])[0];
+  assert.ok(injuredPlayerId !== undefined);
+
+  const result = simulateSeason({
+    ...input,
+    availabilityLifecycle: {
+      worldSeed: "availability-lifecycle-world",
+      availability: {
+        injuries: [{
+          fixtureId: fixtureId("fixture:prior-injury"),
+          playerId: injuredPlayerId,
+          severity: "serious",
+          occurredOn: gameDate(fromISO("2026-07-01")),
+          unavailableUntil: gameDate(fromISO("2027-07-01")),
+        }],
+        suspensions: [],
+        yellowCards: [],
+      },
+    },
+  });
+
+  const firstClubSelections = result.fixtureParticipation.flatMap(({ fieldedTeams }) =>
+    [fieldedTeams.home, fieldedTeams.away].filter(({ clubId }) => clubId === firstClubId));
+  assert.ok(firstClubSelections.length > 0);
+  assert.equal(
+    firstClubSelections.some(({ lineup }) => lineup.some(({ playerId }) => playerId === injuredPlayerId)),
+    false,
+  );
+  assert.equal(firstClubSelections.every((selection) =>
+    selection.lifecycleDiagnostics?.unavailableSelectedPlayerCount === 0), true);
+  assert.equal(firstClubSelections.some((selection) =>
+    (selection.lifecycleDiagnostics?.recentUsePlayerCount ?? 0) > 0), true);
+  assert.ok(result.finalPlayerParticipationLedger !== undefined);
+  assert.ok(result.finalPlayerParticipationLedger.rowKeys.length > 0);
+  assert.ok(result.finalPlayerAvailability !== undefined);
 });
 
 test("fitness lifecycle fails clearly when team data cannot rebuild strength", () => {
   const input = seasonInput("missing-fitness-team-data-seed");
-  const { playerStates, playerIds } = initialPlayerStates(input, 100);
+  const { playerStates, playerIds, players } = initialPlayerStates(input, 100);
 
   assertSimulateSeasonError(
     () =>
@@ -625,6 +676,8 @@ test("fitness lifecycle fails clearly when team data cannot rebuild strength", (
         fitnessLifecycle: {
           playerStates,
           playerIds,
+          players,
+          recoveryPolicy: TEST_RECOVERY_POLICY,
         },
       }),
     "invalid_fitness_lifecycle",
@@ -640,6 +693,134 @@ test("AI squad selection can register full rosters for season simulations", () =
   assert.equal(result.playerSummaryStats.some((row) => row.playerId === firstClubReserve), true);
   assert.ok(result.finalPlayerStates !== undefined);
   assert.equal(result.finalPlayerStates[firstClubReserve]?.fitness !== undefined, true);
+});
+
+test("invalid AI selection exposes the owning club without parsing its message", () => {
+  const input = seasonInputWithAiSelection("invalid-ai-selection-club-seed", 100);
+  const owningClubId = input.clubIds[0];
+  assert.ok(owningClubId !== undefined);
+  const team = input.teamsByClubId[owningClubId];
+  assert.ok(team?.players !== undefined);
+  const retainedPlayerIds = (Object.keys(team.players) as PlayerId[]).sort().slice(0, 10);
+  const players = Object.fromEntries(retainedPlayerIds.map((playerId) => [playerId, team.players?.[playerId]]));
+
+  assert.throws(
+    () => simulateSeason({
+      ...input,
+      teamsByClubId: {
+        ...input.teamsByClubId,
+        [owningClubId]: { ...team, players },
+      },
+    }),
+    (error: unknown) => error instanceof SimulateSeasonError
+      && error.code === "invalid_ai_squad_selection"
+      && error.clubId === owningClubId,
+  );
+});
+
+test("AI selection uses same-club emergency candidates only after the ordinary roster fails", () => {
+  const input = seasonInputWithAiSelection("emergency-ai-selection-seed", 100);
+  const owningClubId = input.clubIds[0];
+  assert.ok(owningClubId !== undefined);
+  const team = input.teamsByClubId[owningClubId];
+  assert.ok(team?.aiSelection !== undefined);
+  const completeXi = completeAiSelectionXi(owningClubId);
+  const emergencyPlayerId = completeXi.at(-1);
+  assert.ok(emergencyPlayerId !== undefined);
+
+  const result = simulateSeason({
+    ...input,
+    teamsByClubId: {
+      ...input.teamsByClubId,
+      [owningClubId]: {
+        ...team,
+        aiSelection: {
+          ...team.aiSelection,
+          rosterPlayerIds: completeXi.slice(0, -1),
+          emergencyPlayerIds: [emergencyPlayerId],
+        },
+      },
+    },
+  });
+  const selections = result.fixtureParticipation.flatMap(({ fieldedTeams }) =>
+    [fieldedTeams.home, fieldedTeams.away].filter(({ clubId }) => clubId === owningClubId));
+
+  assert.ok(selections.length > 0);
+  assert.equal(selections.every(({ emergencyPlayerIds }) =>
+    emergencyPlayerIds?.includes(emergencyPlayerId) === true), true);
+});
+
+test("AI selection leaves emergency candidates untouched when the ordinary roster succeeds", () => {
+  const input = seasonInputWithAiSelection("ordinary-ai-selection-seed", 100);
+  const owningClubId = input.clubIds[0];
+  assert.ok(owningClubId !== undefined);
+  const team = input.teamsByClubId[owningClubId];
+  assert.ok(team?.aiSelection !== undefined);
+  const ordinaryPlayerIds = completeAiSelectionXi(owningClubId);
+  const emergencyPlayerId = playerId(`player:${String(owningClubId).slice("club:".length)}-st-03`);
+
+  const result = simulateSeason({
+    ...input,
+    teamsByClubId: {
+      ...input.teamsByClubId,
+      [owningClubId]: {
+        ...team,
+        aiSelection: {
+          ...team.aiSelection,
+          rosterPlayerIds: ordinaryPlayerIds,
+          emergencyPlayerIds: [emergencyPlayerId],
+        },
+      },
+    },
+  });
+  const selections = result.fixtureParticipation.flatMap(({ fieldedTeams }) =>
+    [fieldedTeams.home, fieldedTeams.away].filter(({ clubId }) => clubId === owningClubId));
+
+  assert.ok(selections.length > 0);
+  assert.equal(selections.every(({ emergencyPlayerIds }) => emergencyPlayerIds === undefined), true);
+});
+
+test("AI selection considers a strong academy call-up before the ordinary roster fails", () => {
+  const input = seasonInputWithAiSelection("academy-call-up-selection-seed", 100);
+  const owningClubId = input.clubIds[0];
+  assert.ok(owningClubId !== undefined);
+  const team = input.teamsByClubId[owningClubId];
+  assert.ok(team?.aiSelection !== undefined);
+  const callUpPlayerId = playerId(`player:${String(owningClubId).slice("club:".length)}-st-03`);
+  const players = {
+    ...team.players,
+    [callUpPlayerId]: makePlayer(callUpPlayerId, 20, ["st"]),
+  };
+  const fitnessLifecycle = input.fitnessLifecycle;
+  assert.ok(fitnessLifecycle !== undefined);
+
+  const result = simulateSeason({
+    ...input,
+    teamsByClubId: {
+      ...input.teamsByClubId,
+      [owningClubId]: {
+        ...team,
+        players,
+        aiSelection: {
+          ...team.aiSelection,
+          rosterPlayerIds: completeAiSelectionXi(owningClubId),
+          callUpPlayerIds: [callUpPlayerId],
+        },
+      },
+    },
+    fitnessLifecycle: {
+      ...fitnessLifecycle,
+      players: { ...fitnessLifecycle.players, ...players },
+    },
+  });
+  const selections = result.fixtureParticipation.flatMap(({ fieldedTeams }) =>
+    [fieldedTeams.home, fieldedTeams.away].filter(({ clubId }) => clubId === owningClubId));
+
+  assert.ok(selections.length > 0);
+  assert.equal(selections.every(({ callUpPlayerIds }) =>
+    callUpPlayerIds?.includes(callUpPlayerId) === true), true);
+  assert.equal(selections.every(({ lineup }) =>
+    lineup.some(({ playerId: selectedId }) => selectedId === callUpPlayerId)), true);
 });
 
 test("AI squad participation retains the exact selected bench as zero-minute evidence", () => {
@@ -666,6 +847,44 @@ test("AI squad participation retains the exact selected bench as zero-minute evi
     assert.equal(fixture.fieldedTeams.away.formationKey, "4-4-2");
     assert.equal(fixture.fieldedTeams.home.selectionSource, "imposed_ai");
     assert.equal(fixture.fieldedTeams.away.selectionSource, "imposed_ai");
+  }
+});
+
+test("automatic season fixtures retain accepted substitutions and exact minutes for both AI teams", () => {
+  const base = seasonInputWithAiSelection("progressive-ai-season-seed", 100);
+  const { fitnessLifecycle: _fitnessLifecycle, ...withoutFitnessLifecycle } = base;
+  const clubIds = base.clubIds.slice(0, 2);
+  const firstClub = clubIds[0];
+  const secondClub = clubIds[1];
+  assert.ok(firstClub !== undefined && secondClub !== undefined);
+  const firstTeam = base.teamsByClubId[firstClub];
+  const secondTeam = base.teamsByClubId[secondClub];
+  assert.ok(firstTeam !== undefined && secondTeam !== undefined);
+  const result = simulateSeason({
+    ...withoutFitnessLifecycle,
+    clubIds,
+    teamsByClubId: {
+      [firstClub]: firstTeam,
+      [secondClub]: secondTeam,
+    },
+    matchEngineConfig: { ...base.matchEngineConfig, minuteCount: 90 },
+  });
+
+  assert.equal(result.fixtureParticipation.length, 2);
+  for (const fixture of result.fixtureParticipation) {
+    const substitutes = fixture.contributions.filter(({ substituteAppearance }) =>
+      substituteAppearance);
+    assert.equal(substitutes.length > 0, true);
+    assert.equal(fixture.contributions.some(({ started, minutes }) => started && minutes < 90), true);
+    const totalMinutes = fixture.contributions.reduce((sum, { minutes }) => sum + minutes, 0);
+    assert.equal(totalMinutes <= 22 * 90, true);
+    assert.equal(totalMinutes > 20 * 90, true);
+    assert.deepEqual(fixture.progression.controlledSides, ["home", "away"]);
+    assert.equal(fixture.progression.aiDecisionCount.home > 0, true);
+    assert.equal(fixture.progression.aiDecisionCount.away > 0, true);
+    assert.equal(fixture.progression.appliedSubstitutions.length, substitutes.length);
+    assert.equal(fixture.progression.finalLineups.home.length, 11);
+    assert.equal(fixture.progression.finalLineups.away.length, 11);
   }
 });
 
@@ -711,6 +930,15 @@ function seasonInput(seed: string): SimulateSeasonInput {
     seasonStartDate: gameDate(fromISO("2026-08-01")),
     teamsByClubId: teamsByClubId(clubIds),
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    matchRules: {
+      maximumSubstitutions: 5,
+      substitutionWindowLimit: 3,
+      allowsPlayerReentry: false,
+      yellowCardAccumulationThreshold: 5,
+      straightRedSuspensionMatches: 3,
+      secondYellowSuspensionMatches: 1,
+      yellowAccumulationSuspensionMatches: 1,
+    },
     matchEngineConfig: {
       minuteCount: 12,
       rates: {
@@ -752,7 +980,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
  */
 function seasonInputWithFitnessLifecycle(seed: string, initialFitness: number): SimulateSeasonInput {
   const input = seasonInput(seed);
-  const { playerStates, playerIds } = initialPlayerStates(input, initialFitness);
+  const { playerStates, playerIds, players } = initialPlayerStates(input, initialFitness);
 
   return {
     ...input,
@@ -760,6 +988,8 @@ function seasonInputWithFitnessLifecycle(seed: string, initialFitness: number): 
     fitnessLifecycle: {
       playerStates,
       playerIds,
+      players,
+      recoveryPolicy: TEST_RECOVERY_POLICY,
     },
   };
 }
@@ -772,13 +1002,15 @@ function seasonInputWithAiSelection(seed: string, initialFitness: number): Simul
     ...seasonInput(seed),
     teamsByClubId: aiSelectionReadyTeams(seasonInput(seed)),
   };
-  const { playerStates, playerIds } = initialPlayerStates(input, initialFitness);
+  const { playerStates, playerIds, players } = initialPlayerStates(input, initialFitness);
 
   return {
     ...input,
     fitnessLifecycle: {
       playerStates,
       playerIds,
+      players,
+      recoveryPolicy: TEST_RECOVERY_POLICY,
     },
   };
 }
@@ -847,9 +1079,11 @@ function initialPlayerStates(
 ): {
   readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
   readonly playerIds: readonly PlayerId[];
+  readonly players: Readonly<Record<PlayerId, Player>>;
 } {
   const playerStates: Record<PlayerId, PlayerDynamicState> = {};
   const playerIds: PlayerId[] = [];
+  const players: Record<PlayerId, Player> = {};
 
   for (const clubId of input.clubIds) {
     const team = input.teamsByClubId[clubId];
@@ -865,10 +1099,12 @@ function initialPlayerStates(
         form: stateValue(50),
         morale: stateValue(50),
       };
+      const player = team.players[trackedPlayerId];
+      if (player !== undefined) players[trackedPlayerId] = player;
     }
   }
 
-  return { playerStates, playerIds };
+  return { playerStates, playerIds, players };
 }
 
 /**
@@ -878,6 +1114,7 @@ function addLifecyclePlayers(input: SimulateSeasonInput, playerIds: readonly Pla
   const lifecycle = input.fitnessLifecycle;
   assert.ok(lifecycle !== undefined);
   const playerStates: Record<PlayerId, PlayerDynamicState> = { ...lifecycle.playerStates };
+  const players: Record<PlayerId, Player> = { ...lifecycle.players };
 
   for (const playerId of playerIds) {
     playerStates[playerId] = {
@@ -885,6 +1122,7 @@ function addLifecyclePlayers(input: SimulateSeasonInput, playerIds: readonly Pla
       form: stateValue(50),
       morale: stateValue(50),
     };
+    players[playerId] = makePlayer(playerId, 10);
   }
 
   return {
@@ -892,6 +1130,7 @@ function addLifecyclePlayers(input: SimulateSeasonInput, playerIds: readonly Pla
     fitnessLifecycle: {
       ...lifecycle,
       playerStates,
+      players,
       playerIds: [...lifecycle.playerIds, ...playerIds],
     },
   };
@@ -1254,6 +1493,24 @@ function aiSelectionPlayers(clubId: ClubId, ability: number): Readonly<Record<Pl
   }
 
   return players;
+}
+
+/** Exact natural-position skeleton that can fill the imposed test 4-4-2. */
+function completeAiSelectionXi(clubId: ClubId): readonly PlayerId[] {
+  const clubKey = String(clubId).slice("club:".length);
+  return [
+    "gk-01",
+    "rb-01",
+    "cb-01",
+    "cb-02",
+    "lb-01",
+    "rm-01",
+    "cm-01",
+    "cm-02",
+    "lm-01",
+    "st-01",
+    "st-02",
+  ].map((suffix) => playerId(`player:${clubKey}-${suffix}`));
 }
 
 /**

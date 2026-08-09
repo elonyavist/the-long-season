@@ -1,5 +1,7 @@
 import {
+  accruePlayerFixtureParticipations,
   createCareerState,
+  createEmptyPlayerParticipationLedger,
   closePlayerParticipationMonth,
   selectNextPlayerParticipationDevelopmentBatch,
   type CareerState,
@@ -27,6 +29,11 @@ import {
   type AdvanceAiContractLifecycleResult,
 } from "./ai-contract-lifecycle.ts";
 import type { PlayerValuationConfig } from "../market/player-valuation.ts";
+import {
+  buildLowDetailAcademyParticipation,
+  isLowDetailAcademyFixtureId,
+  LOW_DETAIL_ACADEMY_FIXTURE_MINUTES,
+} from "./academy-participation.ts";
 
 /** Input for the canonical monthly career player lifecycle checkpoint. */
 export interface AdvanceCareerMonthsInput {
@@ -83,6 +90,21 @@ export interface CareerMonthlyLifecycleSummary {
   readonly totalDecline: number;
   /** Durable checkpoint key stored in the player participation ledger. */
   readonly checkpointKey: string;
+  /** Low-detail academy activity derived from the rows closed this month. */
+  readonly academyParticipation?: CareerAcademyParticipationSummary;
+}
+
+/** Structured academy activity read from canonical participation fixture IDs. */
+export interface CareerAcademyParticipationSummary {
+  readonly fixtureCount: number;
+  readonly appearanceCount: number;
+  readonly playerCount: number;
+  readonly minutes: number;
+  readonly fullProgrammePlayerMonthCount: number;
+  readonly reducedProgrammePlayerMonthCount: number;
+  readonly fullyReplacedPlayerMonthCount: number;
+  readonly missingPlayerMonthCount: number;
+  readonly invalidMinuteCount: number;
 }
 
 /** Result of a pure monthly lifecycle advancement. */
@@ -148,7 +170,22 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
     };
   }
 
-  let careerState = careerStateAfterMarket;
+  const academyContributions = buildLowDetailAcademyParticipation({
+    careerState: careerStateAfterMarket,
+    seasonId,
+    beforeMonthKey: monthKeyForCareerDate(input.toDate),
+  });
+  const careerStateWithAcademyParticipation = academyContributions.length === 0
+    ? careerStateAfterMarket
+    : createCareerState({
+        ...careerStateAfterMarket,
+        playerParticipationLedger: accruePlayerFixtureParticipations(
+          careerStateAfterMarket.playerParticipationLedger
+            ?? createEmptyPlayerParticipationLedger(),
+          academyContributions,
+        ),
+      });
+  let careerState = careerStateWithAcademyParticipation;
   const summaries: CareerMonthlyLifecycleSummary[] = [];
 
   while (true) {
@@ -193,6 +230,10 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         rows: batch.rows.filter((row) => row.monthKey === monthKey),
         changes: developed.monthlyChanges.filter((change) => change.monthKey === monthKey),
         closedMonthKeys: playerParticipationLedger.closedMonthKeys,
+        academyPlayerIds:
+          careerState.youthAcademyState?.clubRosterIds.flatMap((clubId) =>
+            careerState.youthAcademyState?.clubRosters[clubId]?.playerIds ?? [])
+          ?? [],
       }));
     }
   }
@@ -217,10 +258,15 @@ function monthlySummary(input: {
   readonly rows: readonly PlayerParticipationRow[];
   readonly changes: readonly PlayerMonthlyDevelopmentChange[];
   readonly closedMonthKeys: readonly string[];
+  readonly academyPlayerIds: readonly PlayerParticipationRow["playerId"][];
 }): CareerMonthlyLifecycleSummary {
   const rowPlayers = new Set(input.rows.map((row) => row.playerId));
   const changes = input.changes.filter((change) => rowPlayers.has(change.playerId));
 
+  const academyParticipation = academyParticipationSummary(
+    input.rows,
+    new Set(input.academyPlayerIds),
+  );
   return {
     seasonId: input.seasonId,
     monthKey: input.monthKey,
@@ -232,6 +278,64 @@ function monthlySummary(input: {
     totalGrowth: roundSummaryDelta(changes.reduce((sum, change) => sum + change.totalGrowth, 0)),
     totalDecline: roundSummaryDelta(changes.reduce((sum, change) => sum + change.totalDecline, 0)),
     checkpointKey: input.closedMonthKeys.find((key) => key === `${input.seasonId}|${input.monthKey}`) ?? `${input.seasonId}|${input.monthKey}`,
+    ...(academyParticipation === undefined ? {} : { academyParticipation }),
+  };
+}
+
+function academyParticipationSummary(
+  rows: readonly PlayerParticipationRow[],
+  activeAcademyPlayerIds: ReadonlySet<PlayerParticipationRow["playerId"]>,
+): CareerAcademyParticipationSummary | undefined {
+  if (activeAcademyPlayerIds.size === 0) return undefined;
+  const fixtureIds = new Set<string>();
+  const playerIds = new Set<PlayerParticipationRow["playerId"]>();
+  let appearanceCount = 0;
+  let fullProgrammePlayerMonthCount = 0;
+  let reducedProgrammePlayerMonthCount = 0;
+  let fullyReplacedPlayerMonthCount = 0;
+  let missingPlayerMonthCount = 0;
+  let invalidMinuteCount = 0;
+
+  for (const playerId of activeAcademyPlayerIds) {
+    const row = rows.find((candidate) => candidate.playerId === playerId);
+    const academyFixtureIds = row?.appliedFixtureIds.filter(
+      isLowDetailAcademyFixtureId,
+    ) ?? [];
+    const academyMinutes =
+      academyFixtureIds.length * LOW_DETAIL_ACADEMY_FIXTURE_MINUTES;
+    const nonAcademyMinutes = (row?.minutes ?? 0) - academyMinutes;
+    for (const academyFixtureId of academyFixtureIds) {
+      fixtureIds.add(String(academyFixtureId));
+    }
+    if (academyFixtureIds.length > 0) {
+      playerIds.add(playerId);
+      appearanceCount += academyFixtureIds.length;
+    }
+    if (academyFixtureIds.length === 3) fullProgrammePlayerMonthCount += 1;
+    else if (academyFixtureIds.length > 0 && nonAcademyMinutes >= 90) {
+      reducedProgrammePlayerMonthCount += 1;
+    } else if (academyFixtureIds.length === 0 && nonAcademyMinutes >= 270) {
+      fullyReplacedPlayerMonthCount += 1;
+    } else {
+      missingPlayerMonthCount += 1;
+    }
+    if (
+      academyMinutes < 0
+      || academyMinutes > 270
+      || academyMinutes % LOW_DETAIL_ACADEMY_FIXTURE_MINUTES !== 0
+    ) invalidMinuteCount += 1;
+  }
+
+  return {
+    fixtureCount: fixtureIds.size,
+    appearanceCount,
+    playerCount: playerIds.size,
+    minutes: appearanceCount * LOW_DETAIL_ACADEMY_FIXTURE_MINUTES,
+    fullProgrammePlayerMonthCount,
+    reducedProgrammePlayerMonthCount,
+    fullyReplacedPlayerMonthCount,
+    missingPlayerMonthCount,
+    invalidMinuteCount,
   };
 }
 

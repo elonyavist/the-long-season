@@ -254,6 +254,30 @@ test("applyEndOfSeasonPlayerExits is deterministic for same seed and season", ()
   assert.deepEqual(second, first);
 });
 
+test("soft outfield retirement is reachable at 33 while exceptional longevity remains reachable", () => {
+  const regular = playerId("player:soft-retirement-regular");
+  const exceptional = playerId("player:soft-retirement-exceptional");
+  const cover = playerId("player:soft-retirement-cover");
+  const careerState = careerStateFixture([
+    playerFixture(regular, "st", 33, abilitySet(11), abilitySet(11)),
+    playerFixture(exceptional, "st", 33, abilitySet(14), abilitySet(14)),
+    playerFixture(cover, "st", 24, abilitySet(9), abilitySet(9)),
+  ]);
+
+  const observed = Array.from({ length: 2_000 }, (_, index) =>
+    applyEndOfSeasonPlayerExits({
+      careerState,
+      worldSeed: `soft-retirement-reachability-${index}`,
+      seasonId: seasonId("season:0001"),
+    }).exits.map(({ playerId: exitedPlayerId }) => exitedPlayerId)
+  );
+
+  assert.equal(observed.some((ids) => ids.includes(regular)), true);
+  assert.equal(observed.some((ids) => !ids.includes(regular)), true);
+  assert.equal(observed.some((ids) => ids.includes(exceptional)), true);
+  assert.equal(observed.some((ids) => !ids.includes(exceptional)), true);
+});
+
 test("applyEndOfSeasonPlayerExits preserves explicit active player order", () => {
   const active = playerId("player:active");
   const retiring = playerId("player:retiring");

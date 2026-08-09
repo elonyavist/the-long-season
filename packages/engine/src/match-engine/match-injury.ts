@@ -4,6 +4,24 @@ import { deriveRng } from "@game/shared";
 import { incidentProfileFor } from "./match-discipline.ts";
 import type { MatchSimulationState, MatchSimulationTelemetry } from "./match-simulation-state.ts";
 
+/** Versioned magnitudes for the one canonical match-injury occurrence model. */
+export const MATCH_INJURY_RISK_POLICY = Object.freeze({
+  version: "match-injury-risk-v3",
+  baseProbabilityPartsPerMillion: 2_275,
+  resilienceGapPartsPerMillion: 4_550,
+  workloadPartsPerMillion: 7_700,
+  contactDangerPartsPerMillion: 31_500,
+  aggravationPartsPerMillion: 49_000,
+});
+
+/** Inputs already owned by match telemetry when an injury roll is evaluated. */
+export interface MatchInjuryProbabilityInput {
+  readonly resilience: number;
+  readonly workload: number;
+  readonly contactDanger: number;
+  readonly aggravation: boolean;
+}
+
 /** Resolves at most one new injury for one team during a completed minute. */
 export function resolveMatchMinuteInjury(
   simulation: MatchSimulationState,
@@ -35,19 +53,28 @@ export function resolveMatchMinuteInjury(
     .reduce((highest, foul) => Math.max(highest, foul.zoneDanger), 0);
   const resilience = (profile.stamina * 0.38 + profile.agility * 0.34 + profile.strength * 0.28) / 20;
   const workload = clamp((100 - condition) / 100, 0, 1);
-  const probability = clamp(
-    0.00065
-      + (1 - resilience) * 0.0013
-      + workload * 0.0022
-      + contactDanger * 0.009
-      + (existingInjury?.continued === true ? 0.014 : 0),
-    0.0004,
-    0.028,
-  );
+  const probability = matchInjuryProbability({
+    resilience,
+    workload,
+    contactDanger,
+    aggravation: existingInjury?.continued === true,
+  });
   if (rng.nextFloat() >= probability) return undefined;
 
   const severity = severityForRoll(rng.nextFloat(), contactDanger, workload, existingInjury?.continued === true);
   return { type: "injury", minute, side, playerId: selected.playerId, severity };
+}
+
+/** Evaluates the versioned occurrence policy without changing candidate selection or severity. */
+export function matchInjuryProbability(input: MatchInjuryProbabilityInput): number {
+  const policy = MATCH_INJURY_RISK_POLICY;
+  return (
+    policy.baseProbabilityPartsPerMillion
+    + (1 - clamp(input.resilience, 0, 1)) * policy.resilienceGapPartsPerMillion
+    + clamp(input.workload, 0, 1) * policy.workloadPartsPerMillion
+    + clamp(input.contactDanger, 0, 1) * policy.contactDangerPartsPerMillion
+    + (input.aggravation ? policy.aggravationPartsPerMillion : 0)
+  ) / 1_000_000;
 }
 
 /** Maps deterministic risk context to the four domain injury severities. */

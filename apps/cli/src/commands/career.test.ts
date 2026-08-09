@@ -7,7 +7,9 @@ import { test } from "vitest";
 import {
   createFakeDomesticWorld,
   playerValuationConfig,
+  selectPlayerStateCurvesConfig,
 } from "@game/content";
+import { matchFitnessCostForPlayer } from "@game/engine";
 import { JsonCareerStorage, StorageError } from "@game/storage";
 
 import { runCareerCommand } from "./career.ts";
@@ -52,14 +54,15 @@ test("CLI builds the canonical three-division topology and shared identity hash"
     [12, 12, 18, 12],
   );
   // RE-RECORDED for Phase 81A squad identities and Step 06A's competition-
-  // balanced assignment: `b12d5dd0` -> `620ad19b` -> `f1527230`. This
+  // balanced assignment and the linked v9 projection bundle:
+  // `b12d5dd0` -> `620ad19b` -> `f1527230` -> `958f692d`. This
   // is a continuity record - it pins that CLI and web build the *same* world,
   // not that the world has a particular shape - and giving each club its own
   // depth chart changes every generated player's position, so the hash was
   // always going to move. The same value is asserted in
   // `apps/web/src/runtime/web-career-runtime.test.ts`; the pair only means
   // something while both say the same thing, so they move together or not at all.
-  assert.equal(canonicalCareerIdentityHash(state), "f1527230");
+  assert.equal(canonicalCareerIdentityHash(state), "958f692d");
 });
 
 test("CLI rejects a career with a mismatched immutable calibration version", () => {
@@ -1016,7 +1019,10 @@ test("career command advances and persists the next selected-club fixture", asyn
     if (firstStarterId === undefined) {
       throw new Error("Expected selected club first starter");
     }
-    assert.equal(loaded.gameState.playerStates[firstStarterId]?.fitness, 92);
+    assert.equal(
+      loaded.gameState.playerStates[firstStarterId]?.fitness,
+      expectedFullMatchFitness(loaded, firstStarterId),
+    );
     // Form and morale follow the match rating, and an ordinary performance is
     // entitled to move neither. What has to survive the save/load round trip is
     // that the match moved *somebody*, which is the persistence claim; pinning
@@ -1038,10 +1044,18 @@ test("career command advances and persists the next selected-club fixture", asyn
     );
     assert.equal(secondAdvanceIo.stdoutLines.includes("  Recovery days: 7"), true);
     assert.equal(secondAdvanceIo.stdoutLines.includes("  Players improved: 11"), true);
-    assert.equal(secondAdvanceIo.stdoutLines.includes("  Fitness range: 92..100 -> 100..100"), true);
+    const weeklyRecoveryRange = recoveryFitnessRange(secondAdvanceIo.stdoutLines);
+    assert.deepEqual(weeklyRecoveryRange?.before, [
+      expectedFullMatchFitness(loaded, firstStarterId),
+      100,
+    ]);
+    assert.equal((weeklyRecoveryRange?.after[0] ?? 0) > 98, true);
+    assert.equal((weeklyRecoveryRange?.after[0] ?? 100) < 100, true);
+    assert.equal(weeklyRecoveryRange?.after[1], 100);
     const loadedAfterSecondAdvance = await storage.loadCareer("save:career-advance" as Parameters<typeof storage.loadCareer>[0]);
     assert.equal(countPlayedSelectedClubFixtures(loadedAfterSecondAdvance), 2);
-    assert.equal(loadedAfterSecondAdvance.gameState.playerStates[firstStarterId]?.fitness, 92);
+    const weeklyFinalFitness = Number(loadedAfterSecondAdvance.gameState.playerStates[firstStarterId]?.fitness);
+    assert.equal(weeklyFinalFitness > 90 && weeklyFinalFitness < 92, true);
     assert.deepEqual(loadedAfterSecondAdvance.matchPreparation?.selectedLineup, savedLineupAfterFirstAdvance);
 
     assert.equal(
@@ -1097,7 +1111,10 @@ test("career command applies partial recovery for short gaps before spending mat
     if (firstStarterId === undefined) {
       throw new Error("Expected selected club first starter");
     }
-    assert.equal(afterFirstAdvance.gameState.playerStates[firstStarterId]?.fitness, 92);
+    assert.equal(
+      afterFirstAdvance.gameState.playerStates[firstStarterId]?.fitness,
+      expectedFullMatchFitness(afterFirstAdvance, firstStarterId),
+    );
 
     const shortGapCareerState = moveNextSelectedClubFixtureToDate(
       afterFirstAdvance,
@@ -1117,11 +1134,23 @@ test("career command applies partial recovery for short gaps before spending mat
     );
     assert.equal(shortGapAdvanceIo.stdoutLines.includes("  Recovery days: 1"), true);
     assert.equal(shortGapAdvanceIo.stdoutLines.includes("  Players improved: 11"), true);
-    assert.equal(shortGapAdvanceIo.stdoutLines.includes("  Fitness range: 92..100 -> 97..100"), true);
+    const shortGapRecoveryRange = recoveryFitnessRange(shortGapAdvanceIo.stdoutLines);
+    const firstMatchFitness = expectedFullMatchFitness(
+      afterFirstAdvance,
+      firstStarterId,
+    );
+    assert.deepEqual(shortGapRecoveryRange?.before, [firstMatchFitness, 100]);
+    assert.equal((shortGapRecoveryRange?.after[0] ?? 0) > firstMatchFitness, true);
+    assert.equal((shortGapRecoveryRange?.after[0] ?? 100) < 97, true);
+    assert.equal(shortGapRecoveryRange?.after[1], 100);
     const afterShortGapAdvance = await storage.loadCareer("save:career-short-gap" as Parameters<typeof storage.loadCareer>[0]);
 
     assert.equal(countPlayedSelectedClubFixtures(afterShortGapAdvance), 2);
-    assert.equal(afterShortGapAdvance.gameState.playerStates[firstStarterId]?.fitness, 89);
+    const shortGapFinalFitness = Number(afterShortGapAdvance.gameState.playerStates[firstStarterId]?.fitness);
+    // The exact second-match spend is minute- and age-conditioned. The
+    // structured range above proves recovery happened first; the final state
+    // must still prove that a one-day gap did not erase the next match load.
+    assert.equal(shortGapFinalFitness > 0 && shortGapFinalFitness < firstMatchFitness, true);
     assert.deepEqual(afterShortGapAdvance.matchPreparation?.selectedLineup, shortGapCareerState.matchPreparation?.selectedLineup);
   } finally {
     await removeTempSaveDirectory(directoryPath);
@@ -1608,6 +1637,36 @@ function countPlayedSelectedClubFixtures(
   }
 
   return count;
+}
+
+/** Reads the same dated content policy as career progression instead of copying its cost. */
+function expectedFullMatchFitness(
+  careerState: Awaited<ReturnType<JsonCareerStorage["loadCareer"]>>,
+  playerId: Awaited<ReturnType<JsonCareerStorage["loadCareer"]>>["gameState"]["playerIds"][number],
+): number {
+  const player = careerState.gameState.players[playerId];
+  if (player === undefined) throw new Error(`Expected loaded player ${playerId}`);
+  return 100 - matchFitnessCostForPlayer(
+    player,
+    careerState.gameState.calendar.currentDate,
+    selectPlayerStateCurvesConfig(),
+  );
+}
+
+/** Parses the recovery range emitted by the English advance diagnostics. */
+function recoveryFitnessRange(lines: readonly string[]): {
+  readonly before: readonly [number, number];
+  readonly after: readonly [number, number];
+} | undefined {
+  const line = lines.find((candidate) => candidate.startsWith("  Fitness range: "));
+  const match = /^  Fitness range: ([0-9.]+)\.\.([0-9.]+) -> ([0-9.]+)\.\.([0-9.]+)$/.exec(line ?? "");
+
+  if (match === null) return undefined;
+
+  return {
+    before: [Number(match[1]), Number(match[2])],
+    after: [Number(match[3]), Number(match[4])],
+  };
 }
 
 function moveNextSelectedClubFixtureToDate(

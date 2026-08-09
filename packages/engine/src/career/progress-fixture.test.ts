@@ -56,6 +56,7 @@ import {
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
 import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
+import { playerStateCurvesConfigFixture } from "../test-fixtures/player-state-curves-config.ts";
 
 
 function progressNextCareerFixture(
@@ -65,6 +66,7 @@ function progressNextCareerFixture(
     | "marketBehaviorPolicy"
     | "valuationConfig"
     | "playerDevelopmentEnvironmentConfig"
+    | "playerStateCurvesConfig"
   >,
 ) {
   return progressNextCareerFixtureWithPolicy({
@@ -73,6 +75,7 @@ function progressNextCareerFixture(
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
     valuationConfig: playerValuationConfigFixture(),
     playerDevelopmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
+    playerStateCurvesConfig: playerStateCurvesConfigFixture(),
   });
 }
 
@@ -83,6 +86,7 @@ function commitCompletedCareerFixture(
     | "marketBehaviorPolicy"
     | "valuationConfig"
     | "playerDevelopmentEnvironmentConfig"
+    | "playerStateCurvesConfig"
   >,
 ) {
   return commitCompletedCareerFixtureWithPolicy({
@@ -91,6 +95,7 @@ function commitCompletedCareerFixture(
     marketBehaviorPolicy: marketBehaviorConfigFixture(),
     valuationConfig: playerValuationConfigFixture(),
     playerDevelopmentEnvironmentConfig: playerDevelopmentEnvironmentConfigFixture(),
+    playerStateCurvesConfig: playerStateCurvesConfigFixture(),
   });
 }
 
@@ -679,6 +684,45 @@ test("a club the manager never meets still selects a typed eleven in a real shap
   assert.equal(stranger.benchPlayerIds.length > 0, true);
 });
 
+test("career AI can field a strong academy player without adding him to the senior roster", () => {
+  const selectedClubId = clubId("club:selected");
+  const otherClubId = clubId("club:other");
+  const academyPlayerId = playerId("player:other-academy-st-01");
+  const seniorClub = fullSquadClubFixture(otherClubId);
+  const academyPlayer = {
+    ...playerFixtureWithPositions(academyPlayerId, ["st"]),
+    abilities: abilitySetFixture(20),
+    potential: abilitySetFixture(20),
+  } satisfies Player;
+  const fixture = fixtureFixture(fixtureId("fixture:academy-call-up"), selectedClubId, otherClubId);
+  const careerState = careerStateFixture({
+    selectedClubId,
+    clubs: [clubFixture(selectedClubId), seniorClub],
+    fixtures: [fixture],
+    academyPlayers: [{ clubId: otherClubId, player: academyPlayer }],
+  });
+
+  const selection = selectCareerAiTeam({
+    careerState,
+    clubId: otherClubId,
+    fixture,
+    policy: {
+      roleWeights: roleWeightsFixture(),
+      tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
+    },
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+  });
+
+  assert.equal(seniorClub.playerIds.length, 15);
+  assert.equal(seniorClub.playerIds.includes(academyPlayerId), false);
+  assert.equal(
+    selection.teamContext.lineup.some(({ playerId: selectedId }) => selectedId === academyPlayerId),
+    true,
+  );
+  assert.deepEqual(careerState.youthAcademyState?.clubRosters[otherClubId]?.playerIds, [academyPlayerId]);
+});
+
 /**
  * Fixes that AI clubs actually rotate (Step 09).
  *
@@ -826,15 +870,44 @@ function careerStateFixture(input: {
   readonly currentDate?: ReturnType<typeof gameDate>;
   readonly playerParticipationLedger?: PlayerParticipationLedger;
   readonly playerAvailability?: CareerPlayerAvailabilityState;
+  readonly academyPlayers?: readonly { readonly clubId: ClubId; readonly player: Player }[];
 }): CareerState {
+  const academyPlayers = input.academyPlayers ?? [];
+  const gameState = gameStateFixture(
+    input.clubs,
+    input.fixtures,
+    input.playerStateOverrides ?? {},
+    input.currentDate ?? gameDate(20_000),
+    academyPlayers.map(({ player }) => player),
+  );
+  const academyClubIds = [...new Set(academyPlayers.map(({ clubId }) => clubId))];
   return createCareerState({
     saveId: saveId("save:career-progress-fixture"),
     schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: input.selectedClubId,
-    gameState: gameStateFixture(input.clubs, input.fixtures, input.playerStateOverrides ?? {}, input.currentDate ?? gameDate(20_000)),
+    gameState,
     transferHistory: [],
     ...(input.playerParticipationLedger === undefined ? {} : { playerParticipationLedger: input.playerParticipationLedger }),
     ...(input.playerAvailability === undefined ? {} : { playerAvailability: input.playerAvailability }),
+    ...(academyPlayers.length === 0 ? {} : {
+      youthAcademyState: {
+        clubRosterIds: academyClubIds,
+        clubRosters: Object.fromEntries(academyClubIds.map((academyClubId) => [academyClubId, {
+          clubId: academyClubId,
+          playerIds: academyPlayers
+            .filter(({ clubId: playerClubId }) => playerClubId === academyClubId)
+            .map(({ player }) => player.id),
+        }])) as NonNullable<CareerState["youthAcademyState"]>["clubRosters"],
+        playerLifecycleIds: academyPlayers.map(({ player }) => player.id),
+        playerLifecycle: Object.fromEntries(academyPlayers.map(({ clubId: academyClubId, player }) => [player.id, {
+          playerId: player.id,
+          clubId: academyClubId,
+          status: "academy" as const,
+          academyEntrySeasonId: seasonId("season:test"),
+          academyEntryDate: gameDate(20_000),
+        }])) as NonNullable<CareerState["youthAcademyState"]>["playerLifecycle"],
+      },
+    }),
   });
 }
 
@@ -843,6 +916,7 @@ function gameStateFixture(
   fixtures: readonly Fixture[],
   playerStateOverrides: Partial<Record<PlayerId, PlayerDynamicState>>,
   currentDate: ReturnType<typeof gameDate>,
+  additionalPlayers: readonly Player[] = [],
 ): GameState {
   const clubsById: Partial<Record<ClubId, Club>> = {};
   const clubIds: ClubId[] = [];
@@ -868,6 +942,12 @@ function gameStateFixture(
     fixtureIds.push(fixture.id);
   }
 
+  for (const player of additionalPlayers) {
+    players[player.id] = player;
+    playerIds.push(player.id);
+    playerStates[player.id] = playerStateOverrides[player.id] ?? playerStateFixture(100);
+  }
+
   return {
     meta: {
       seed: "career-progress-test",
@@ -890,13 +970,7 @@ function gameStateFixture(
 }
 
 function playerFixture(id: PlayerId): Player {
-  const value = abilityValue(10);
-  const abilities: Player["abilities"] = {
-    technical: { finishing: value, passing: value, longPassing: value, crossing: value, dribbling: value, technique: value, tackling: value, penalties: value, freeKicks: value },
-    physical: { pace: value, strength: value, stamina: value, agility: value, heading: value },
-    mental: { positioning: value, vision: value, anticipation: value, composure: value, determination: value, leadership: value },
-    goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
-  };
+  const abilities = abilitySetFixture(10);
 
   const naturalPositions: readonly PlayerPosition[] = [
     String(id).endsWith("-01") ? "gk" : "cm",
@@ -910,6 +984,16 @@ function playerFixture(id: PlayerId): Player {
     primaryRole: primaryRoleForPosition(naturalPositions[0]!),
     abilities,
     potential: abilities,
+  };
+}
+
+function abilitySetFixture(rawValue: number): Player["abilities"] {
+  const value = abilityValue(rawValue);
+  return {
+    technical: { finishing: value, passing: value, longPassing: value, crossing: value, dribbling: value, technique: value, tackling: value, penalties: value, freeKicks: value },
+    physical: { pace: value, strength: value, stamina: value, agility: value, heading: value },
+    mental: { positioning: value, vision: value, anticipation: value, composure: value, determination: value, leadership: value },
+    goalkeeping: { reflexes: value, handling: value, rushingOut: value, goalkeeperPositioning: value, footwork: value },
   };
 }
 

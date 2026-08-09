@@ -12,6 +12,7 @@ import {
   type PlayerRatingScaleConfig,
   type RoleIdentifiedPlayer,
   type SeasonId,
+  type PlayerSquadDepartment,
   type YouthDevelopmentLevel,
   type YouthAcademyClubRoster,
   type YouthAcademyState,
@@ -46,6 +47,10 @@ import {
   youthDevelopmentSeriousProspectChance,
 } from "./youth-development-level.ts";
 import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
+import {
+  planCompetitionAnnualIntakePositions,
+  type AnnualIntakeRoleSlotKind,
+} from "./annual-intake-role-plan.ts";
 
 /** Exact academy size chosen by Phase 33. */
 export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
@@ -53,20 +58,13 @@ export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
 /** Exact academy refill target chosen by Phase 33. */
 export const YOUTH_ACADEMY_REFILL_TARGET_PLAYERS_PER_CLUB = 11;
 
-/** Department-balanced youth position plan: 1 GK, 4 DEF, 4 MID, 2 ATT. */
-export const YOUTH_ACADEMY_POSITION_PLAN: readonly PlayerPosition[] = [
-  "gk",
-  "cb",
-  "cb",
-  "rb",
-  "lb",
-  "dm",
-  "cm",
-  "cm",
-  "am",
-  "st",
-  "rw",
-];
+/** Department shape of one academy; exact roles come from the competition deck. */
+export const YOUTH_ACADEMY_DEPARTMENT_PLAN = [
+  "goalkeeper",
+  "defender", "defender", "defender", "defender",
+  "midfielder", "midfielder", "midfielder", "midfielder",
+  "attacker", "attacker",
+] as const satisfies readonly PlayerSquadDepartment[];
 
 /** Club facts consumed by seasonal youth-intake generation. */
 export interface SeasonalYouthIntakeClubContext {
@@ -90,6 +88,8 @@ export interface GenerateInitialYouthAcademiesInput {
   readonly clubIds: readonly ClubId[];
   /** Sporting context for each generated club. */
   readonly clubContexts: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>>;
+  /** Competition scope for each club; role balancing never infers it from tier. */
+  readonly competitionKeyByClubId: Readonly<Record<ClubId, string>>;
   /** Optional count override for focused tests; production uses Phase 32 target. */
   readonly youthPlayersPerClub?: number;
   /** Optional league nation, defaulting to the current Italian demo world. */
@@ -134,8 +134,8 @@ export interface GenerateSeasonalYouthIntakePlayersInput {
   readonly clubContext: SeasonalYouthIntakeClubContext;
   /** Optional league nation, defaulting to the current Italian demo world. */
   readonly leagueNation?: LeagueNationCode;
-  /** Exact positions missing from the active academy after lifecycle exits. */
-  readonly targetPositions?: readonly PlayerPosition[];
+  /** Exact positions assigned by the competition-scoped refill planner. */
+  readonly targetPositions: readonly PlayerPosition[];
   /** World-level assignments selected before per-club intake generation. */
   readonly potentialSixPlayerIds?: readonly PlayerId[];
   /** Validated scale used only for assigned potential-six floors. */
@@ -182,6 +182,7 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
   const leagueNation = input.leagueNation ?? "italian";
   const youthPlayersPerClub = input.youthPlayersPerClub ?? INITIAL_YOUTH_PLAYERS_PER_CLUB;
   const rarityAssignments = initialYouthRarityAssignments(input, youthPlayersPerClub);
+  const positionsByClubId = initialAcademyPositionsByClubId(input, youthPlayersPerClub);
 
   for (let clubIndex = 0; clubIndex < input.clubIds.length; clubIndex += 1) {
     const clubId = input.clubIds[clubIndex];
@@ -221,7 +222,10 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
         playerId: id,
         developmentEnvironment,
       });
-      const position = positionForInitialYouthSlot(input.worldSeed, input.seasonId, id, index);
+      const position = positionsByClubId.get(clubId)?.[index];
+      if (position === undefined) {
+        throw new Error(`Initial academy role plan omitted ${clubId}:${index}`);
+      }
       const identity = initialYouthIdentity({
         worldSeed: input.worldSeed,
         seasonId: input.seasonId,
@@ -298,7 +302,7 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
 export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthIntakePlayersInput): GenerateSeasonalYouthIntakePlayersResult {
   const generatedPlayers: SeasonalYouthIntakeGeneratedPlayer[] = [];
   const clubNameUsage = createClubNameUsage();
-  const targetPositions = input.targetPositions ?? YOUTH_ACADEMY_POSITION_PLAN;
+  const targetPositions = input.targetPositions;
   const leagueNation = input.leagueNation ?? "italian";
   const youthDevelopmentLevel = deriveYouthDevelopmentLevel({
     division: input.clubContext.category,
@@ -318,7 +322,10 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
           id,
           developmentEnvironment,
         );
-    const position = targetPositions[index] ?? "cm";
+    const position = targetPositions[index];
+    if (position === undefined) {
+      throw new Error(`Seasonal academy role plan omitted ${input.clubId}:${index}`);
+    }
     const identity = initialYouthIdentity({
       worldSeed: input.worldSeed,
       seasonId: input.seasonId,
@@ -639,13 +646,55 @@ function developmentEnvironmentKeysByClubNumber(
   >;
 }
 
-function positionForInitialYouthSlot(worldSeed: string, seasonId: SeasonId, id: PlayerId, index: number): PlayerPosition {
-  const planned = YOUTH_ACADEMY_POSITION_PLAN[index % YOUTH_ACADEMY_POSITION_PLAN.length];
-  if (planned === "rw") {
-    return deriveRng(worldSeed, "initial-youth-wide-side", seasonId, id).nextFloat() < 0.5 ? "rw" : "lw";
+function initialAcademyPositionsByClubId(
+  input: GenerateInitialYouthAcademiesInput,
+  youthPlayersPerClub: number,
+): ReadonlyMap<ClubId, readonly PlayerPosition[]> {
+  const competitionOrder: string[] = [];
+  const clubIdsByCompetition = new Map<string, ClubId[]>();
+  for (const clubId of input.clubIds) {
+    const competitionKey = input.competitionKeyByClubId[clubId];
+    if (competitionKey === undefined || competitionKey.length === 0) {
+      throw new Error(`Missing initial academy competition key: ${clubId}`);
+    }
+    if (!clubIdsByCompetition.has(competitionKey)) competitionOrder.push(competitionKey);
+    const clubs = clubIdsByCompetition.get(competitionKey) ?? [];
+    clubs.push(clubId);
+    clubIdsByCompetition.set(competitionKey, clubs);
   }
 
-  return planned ?? "cm";
+  const positions = new Map<ClubId, readonly PlayerPosition[]>();
+  for (const competitionKey of competitionOrder) {
+    const clubIds = clubIdsByCompetition.get(competitionKey);
+    if (clubIds === undefined) {
+      throw new Error(`Initial academy competition has no clubs: ${competitionKey}`);
+    }
+    const planned = planCompetitionAnnualIntakePositions({
+      seed: input.worldSeed,
+      seasonKey: String(input.seasonId),
+      competitionKey,
+      clubs: clubIds.map((clubId) => ({
+        clubId,
+        slotKinds: Array.from(
+          { length: youthPlayersPerClub },
+          (_, index) => academyDepartmentForSlot(index),
+        ),
+        currentRoles: [],
+      })),
+    });
+    for (const [clubId, clubPositions] of planned) positions.set(clubId, clubPositions);
+  }
+  return positions;
+}
+
+function academyDepartmentForSlot(index: number): AnnualIntakeRoleSlotKind {
+  const department = YOUTH_ACADEMY_DEPARTMENT_PLAN[
+    index % YOUTH_ACADEMY_DEPARTMENT_PLAN.length
+  ];
+  if (department === undefined) {
+    throw new Error(`Academy department plan omitted slot ${index}`);
+  }
+  return department;
 }
 
 /** Builds the stable initial-academy player ID for one club and slot. */

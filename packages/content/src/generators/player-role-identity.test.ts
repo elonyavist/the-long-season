@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { generatedRoleIdentityForPosition, primaryRoleForPosition } from "./player-role-identity.ts";
+import { generatedPlayerDepartmentForPosition, generatedRoleIdentityForPosition, primaryRoleForPosition } from "./player-role-identity.ts";
 
 test("maps generated positions to Phase 33 primary roles", () => {
   assert.equal(primaryRoleForPosition("gk"), "goalkeeper");
@@ -13,6 +13,12 @@ test("maps generated positions to Phase 33 primary roles", () => {
   assert.equal(primaryRoleForPosition("am"), "attacking_midfielder");
   assert.equal(primaryRoleForPosition("lw"), "winger");
   assert.equal(primaryRoleForPosition("st"), "striker");
+});
+
+test("generated position departments include both wide-midfield sides", () => {
+  assert.equal(generatedPlayerDepartmentForPosition("rm"), "midfielder");
+  assert.equal(generatedPlayerDepartmentForPosition("lm"), "midfielder");
+  assert.equal(generatedPlayerDepartmentForPosition("rw"), "attacker");
 });
 
 test("builds deterministic role identity without duplicate natural adapted or weak roles", () => {

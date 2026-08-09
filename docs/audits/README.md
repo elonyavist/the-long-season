@@ -30,8 +30,59 @@ Read these only when the current step asks for current long-run readiness contex
   canary `REFINE`; main cohort stopped.** The `7 x 10` exposes both a red
   formation-replication gate and a separate player-lifecycle defect: by season
   ten, `86.4%` of retained leading scorers are `33+`, and every retained `33+`
-  leader plays all `34` matches. The report attributes the missing availability
-  seam before any aging coefficient may move.
+  leader plays all `34` matches. Its accepted post-review amendment also records
+  that `395/420` season-ten leaderboard rows remain from the opening population.
+- `PHASE_81A_AVAILABILITY_AGING_AND_GENERATIONAL_RENEWAL_PREREQUISITE.md` -
+  **accepted Amendment A2 research and execution prerequisite.** It freezes the
+  real-football references, automatic-versus-played AI boundary, soft aging,
+  the `94.0%` opening-population finding, rejected shortcuts and separately
+  gated Steps 06B1-06B8.
+- `PHASE_81A_CHECKPOINT_L2_SUBSTITUTION_AND_MINUTES.md` - **Checkpoint L2,
+  `GO`.** Across `7 x 1`, `12,852` automatic team-match observations average
+  `3.766729` substitutions with median first change at minute `60`; every
+  appearance interval reconciles and no competition limit is violated.
+- `PHASE_81A_CHECKPOINT_L3_AVAILABILITY_AGING_INJURY.md` - **Checkpoint L3,
+  `GO`.** The final `7 x 2` records `21.6347` time-loss match injuries per
+  `1000h`, `3.827381` substitutions per team-match, controlled recovery and
+  generated-veteran inversion held, with zero lifecycle or rule failures.
+- `PHASE_81A_CHECKPOINT_L4_GENERATIONAL_SUCCESSION.md` - **Checkpoint L4 owner
+  attribution and Step 06B7 `STOP / RETHINK`.** The final adopted-code `7 x 10`
+  reconciles and proves the academy emergency-selection path reachable, but
+  career-generated players occupy only `6/420` season-ten leader positions.
+  Stronger aging and real-minute opportunity ablations both worsened the
+  target and were removed; this checkpoint handed off to the later youth-minute path.
+- `PHASE_81A_CHECKPOINT_L4_1_YOUTH_MINUTE_PATHWAY.md` - **Checkpoint L4.1,
+  `STOP / RETHINK`.** Nearly one million canonical academy appearances fully
+  reconcile and all competition-worlds promote players, but generated leaders
+  reach only `12/420`. The cohort exposes the still-untested outfield exit owner;
+  Step 06B7C owned the next retry; the later L5 record supersedes this stop.
+- `PHASE_81A_CHECKPOINT_L4_2_CAREER_EXIT_AND_RENEWAL.md` - **Checkpoint L4.2,
+  `STOP / RETHINK`.** The soft exit branch is reached `403` times and improves
+  generated leaders `12 -> 22`, but renewal remains at `5.24%`; L4.3 now
+  distinguishes generated ceiling from development realization.
+- `PHASE_81A_CHECKPOINT_L4_3_GENERATED_CEILING_ATTRIBUTION.md` - **Checkpoint
+  L4.3, v9 owner identified.** The fresh independent rerun matches all `21` L5
+  generation rows and moves the residual owner to downstream selection/outcome
+  in `5/7` worlds; generation quality remains absolved.
+- `PHASE_81A_CHECKPOINT_L4_4_DEVELOPMENT_AND_RENEWAL.md` - **Checkpoint L4.4,
+  `REFINE`.** Ability invariants and veteran reachability hold, but renewal
+  remains far below target. The checkpoint also proves annual intake covers
+  only `8/10` roles in all `21` division rows, missing wing-backs and wide
+  midfielders; the later L4.5/L4.6/L5 records supersede this local closure.
+- `PHASE_81A_CHECKPOINT_L4_5_ANNUAL_ROLE_CONTINUITY.md` - **Checkpoint L4.5,
+  retry `GO`.** Annual role plans reconcile with complete reachable coverage;
+  the targeted retry observes `3,234` academy call-ups with zero catalog-order
+  ties, fallback, avoidable invalid slot or reconciliation failure.
+- `PHASE_81A_CHECKPOINT_L4_6_DEVELOPMENT_FUNNEL.md` - **Checkpoint L4.6,
+  `REFINE`.** Development parity reaches `7/7` and opening-senior survival falls
+  below `0.60`, but career-generated leaders remain `20.71%`; the exact ledger
+  assigns dated match load before integrated L5.
+- `PHASE_81A_CHECKPOINT_L5_INTEGRATED_PLAYER_WORLD.md` - **Checkpoint L5,
+  `REFINE`.** One canonical `7 x 10` run proves rotation, substitutions,
+  availability and injuries healthy, while late `33+` leader shares,
+  career-generated leader replacement and four-shape replication remain red;
+  the v9 rerun raises generated leader share to `22.62%` but not its target.
+  Owns the consultable JSON/HTML pair and keeps the `100 x 10` closed.
 
 - `PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md` - **Checkpoint A2, conditional
   `GO`.** The

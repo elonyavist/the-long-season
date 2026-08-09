@@ -1,15 +1,21 @@
-import { stateValue, type PlayerDynamicState, type PlayerId } from "@game/domain";
+import {
+  stateValue,
+  type GameDate,
+  type Player,
+  type PlayerDynamicState,
+  type PlayerId,
+  type PlayerStateCurvesConfig,
+} from "@game/domain";
 
 /** Default deterministic fitness rules for the first fatigue prototype. */
 export const DEFAULT_FITNESS_RULES: FitnessRules = {
   matchFitnessCost: 8,
-  dailyRecovery: 5,
   minFitness: 0,
   maxFitness: 100,
 };
 
 /**
- * Tunable deterministic rules for player fitness spend and recovery.
+ * Tunable deterministic rules for player fitness spend and clamps.
  *
  * Values use the existing domain `StateValue` scale, where `100` means fully
  * fit and `0` means completely exhausted.
@@ -17,8 +23,6 @@ export const DEFAULT_FITNESS_RULES: FitnessRules = {
 export interface FitnessRules {
   /** Fitness points spent by a player who appears in one full match. */
   readonly matchFitnessCost: number;
-  /** Fitness points recovered for each calendar day of rest. */
-  readonly dailyRecovery: number;
   /** Lower clamp for fitness values, normally `0`. */
   readonly minFitness: number;
   /** Upper clamp for fitness values, normally `100`. */
@@ -28,11 +32,25 @@ export interface FitnessRules {
 /**
  * Input for spending fitness on explicitly ordered players.
  */
-export interface SpendFitnessInput {
+export interface PlayerMinuteLoad {
+  /** Player whose exact appearance interval creates the load. */
+  readonly playerId: PlayerId;
+  /** Exact regulation minutes played, including zero-minute bench records. */
+  readonly minutes: number;
+}
+
+/** Input for spending fitness from exact, explicitly ordered minute facts. */
+export interface SpendFitnessForMinutesInput {
   /** Current player-state lookup. The helper never mutates this object. */
   readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
-  /** Explicit ordered player IDs that spent fitness. */
-  readonly playerIds: readonly PlayerId[];
+  /** Explicit ordered player loads derived from canonical participation. */
+  readonly loads: readonly PlayerMinuteLoad[];
+  /** Player facts used when the versioned age-load policy is active. */
+  readonly players?: Readonly<Record<PlayerId, Player>>;
+  /** Fixture date used for continuous age-conditioned match load. */
+  readonly currentDate?: GameDate;
+  /** Versioned policy; supplied together with players and currentDate. */
+  readonly loadPolicy?: PlayerStateCurvesConfig;
   /** Fitness rules to apply. */
   readonly rules?: FitnessRules;
 }
@@ -45,6 +63,12 @@ export interface RecoverFitnessInput {
   readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Explicit ordered player IDs that recover fitness. */
   readonly playerIds: readonly PlayerId[];
+  /** Player facts used for continuous age and physical resilience. */
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  /** Date at which recovery is evaluated. */
+  readonly currentDate: GameDate;
+  /** Versioned content policy controlling recovery magnitudes. */
+  readonly recoveryPolicy: PlayerStateCurvesConfig;
   /** Positive number of calendar days to recover. */
   readonly dayCount: number;
   /** Fitness rules to apply. */
@@ -55,7 +79,9 @@ export interface RecoverFitnessInput {
 export type FitnessStateErrorCode =
   | "duplicate_player_id"
   | "invalid_day_count"
+  | "invalid_minutes"
   | "invalid_rules"
+  | "missing_player"
   | "missing_player_state";
 
 /**
@@ -76,38 +102,106 @@ export class FitnessStateError extends Error {
 }
 
 /**
- * Spends one match of fitness for each explicitly ordered player.
+ * Spends fitness in direct proportion to exact regulation minutes.
  *
  * @example
- * const nextStates = spendFitnessForPlayers({ playerStates, playerIds: lineupIds });
+ * const nextStates = spendFitnessForMinutes({ playerStates, loads });
  */
-export function spendFitnessForPlayers(input: SpendFitnessInput): Readonly<Record<PlayerId, PlayerDynamicState>> {
+export function spendFitnessForMinutes(
+  input: SpendFitnessForMinutesInput,
+): Readonly<Record<PlayerId, PlayerDynamicState>> {
   const rules = validateFitnessRules(input.rules ?? DEFAULT_FITNESS_RULES);
   const nextStates: Record<PlayerId, PlayerDynamicState> = { ...input.playerStates };
   const seen = new Set<PlayerId>();
 
-  for (const playerId of input.playerIds) {
+  for (const { playerId, minutes } of input.loads) {
     assertUniquePlayerId(playerId, seen);
+    if (!Number.isFinite(minutes) || minutes < 0 || minutes > 90) {
+      throw new FitnessStateError("invalid_minutes", `Fitness minutes must be within 0..90: ${minutes}`);
+    }
     const playerState = input.playerStates[playerId];
 
     if (playerState === undefined) {
       throw new FitnessStateError("missing_player_state", `Missing player state for fitness spend: ${playerId}`);
     }
 
+    const matchFitnessCost = ageConditionedMatchFitnessCost({
+      playerId,
+      rules,
+      players: input.players,
+      currentDate: input.currentDate,
+      loadPolicy: input.loadPolicy,
+    });
     nextStates[playerId] = {
       ...playerState,
-      fitness: stateValue(clamp(Number(playerState.fitness) - rules.matchFitnessCost, rules)),
+      fitness: stateValue(clamp(Number(playerState.fitness) - matchFitnessCost * minutes / 90, rules)),
     };
   }
 
   return nextStates;
 }
 
+/** Returns the continuous full-match fitness cost for one dated player. */
+export function matchFitnessCostForPlayer(
+  player: Player,
+  currentDate: GameDate,
+  policy: PlayerStateCurvesConfig,
+  rules: FitnessRules = DEFAULT_FITNESS_RULES,
+): number {
+  const validatedRules = validateFitnessRules(rules);
+  const ageYears = Math.max(0, (Number(currentDate) - Number(player.birthDate)) / 365.2425);
+  const yearsAboveThreshold = Math.max(0, ageYears - policy.agePenaltyStartsAtYears);
+  const multiplierBasisPoints = Math.min(
+    policy.maximumAgeMatchLoadMultiplierBasisPoints,
+    10_000 + yearsAboveThreshold * policy.ageMatchLoadPerYearBasisPoints,
+  );
+  return validatedRules.matchFitnessCost * multiplierBasisPoints / 10_000;
+}
+
+function ageConditionedMatchFitnessCost(input: {
+  readonly playerId: PlayerId;
+  readonly rules: FitnessRules;
+  readonly players: Readonly<Record<PlayerId, Player>> | undefined;
+  readonly currentDate: GameDate | undefined;
+  readonly loadPolicy: PlayerStateCurvesConfig | undefined;
+}): number {
+  const suppliedCount = Number(input.players !== undefined)
+    + Number(input.currentDate !== undefined)
+    + Number(input.loadPolicy !== undefined);
+  if (suppliedCount === 0) return input.rules.matchFitnessCost;
+  if (suppliedCount !== 3) {
+    throw new FitnessStateError(
+      "invalid_rules",
+      "Age-conditioned fitness spend requires players, currentDate and loadPolicy together",
+    );
+  }
+  if (input.players === undefined || input.currentDate === undefined || input.loadPolicy === undefined) {
+    throw new FitnessStateError("invalid_rules", "Incomplete age-conditioned fitness policy");
+  }
+  const player = input.players[input.playerId];
+  if (player === undefined) {
+    throw new FitnessStateError("missing_player", `Missing player for fitness spend: ${input.playerId}`);
+  }
+  return matchFitnessCostForPlayer(
+    player,
+    input.currentDate,
+    input.loadPolicy,
+    input.rules,
+  );
+}
+
 /**
  * Recovers fitness for each explicitly ordered player over calendar days.
  *
  * @example
- * const nextStates = recoverFitnessForPlayers({ playerStates, playerIds, dayCount: 3 });
+ * const nextStates = recoverFitnessForPlayers({
+ *   playerStates,
+ *   playerIds,
+ *   players,
+ *   currentDate,
+ *   recoveryPolicy,
+ *   dayCount: 3,
+ * });
  */
 export function recoverFitnessForPlayers(input: RecoverFitnessInput): Readonly<Record<PlayerId, PlayerDynamicState>> {
   const rules = validateFitnessRules(input.rules ?? DEFAULT_FITNESS_RULES);
@@ -121,14 +215,22 @@ export function recoverFitnessForPlayers(input: RecoverFitnessInput): Readonly<R
   for (const playerId of input.playerIds) {
     assertUniquePlayerId(playerId, seen);
     const playerState = input.playerStates[playerId];
+    const player = input.players[playerId];
 
     if (playerState === undefined) {
       throw new FitnessStateError("missing_player_state", `Missing player state for fitness recovery: ${playerId}`);
     }
+    if (player === undefined) {
+      throw new FitnessStateError("missing_player", `Missing player for fitness recovery: ${playerId}`);
+    }
 
+    const deficit = rules.maxFitness - Number(playerState.fitness);
+    const recoveryFraction = input.dayCount / (
+      input.dayCount + recoveryHalfLifeDays(player, input.currentDate, input.recoveryPolicy)
+    );
     nextStates[playerId] = {
       ...playerState,
-      fitness: stateValue(clamp(Number(playerState.fitness) + rules.dailyRecovery * input.dayCount, rules)),
+      fitness: stateValue(clamp(Number(playerState.fitness) + deficit * recoveryFraction, rules)),
     };
   }
 
@@ -141,7 +243,6 @@ export function recoverFitnessForPlayers(input: RecoverFitnessInput): Readonly<R
 function validateFitnessRules(rules: FitnessRules): FitnessRules {
   const entries = [
     ["matchFitnessCost", rules.matchFitnessCost],
-    ["dailyRecovery", rules.dailyRecovery],
     ["minFitness", rules.minFitness],
     ["maxFitness", rules.maxFitness],
   ] as const;
@@ -156,10 +257,6 @@ function validateFitnessRules(rules: FitnessRules): FitnessRules {
     throw new FitnessStateError("invalid_rules", `Match fitness cost must be non-negative: ${rules.matchFitnessCost}`);
   }
 
-  if (rules.dailyRecovery < 0) {
-    throw new FitnessStateError("invalid_rules", `Daily recovery must be non-negative: ${rules.dailyRecovery}`);
-  }
-
   if (rules.minFitness < 0 || rules.maxFitness > 100 || rules.minFitness > rules.maxFitness) {
     throw new FitnessStateError(
       "invalid_rules",
@@ -168,6 +265,40 @@ function validateFitnessRules(rules: FitnessRules): FitnessRules {
   }
 
   return rules;
+}
+
+/** Derives the days required to recover half the current deficit. */
+export function recoveryHalfLifeDays(
+  player: Player,
+  currentDate: GameDate,
+  policy: PlayerStateCurvesConfig,
+): number {
+  const ageYears = Math.max(0, (Number(currentDate) - Number(player.birthDate)) / 365.2425);
+  const ageYearsAboveThreshold = Math.max(0, ageYears - policy.agePenaltyStartsAtYears);
+  const baseHalfLife = (
+    policy.baseRecoveryHalfLifeDaysBasisPoints
+    + ageYearsAboveThreshold * policy.ageHalfLifeDaysPerYearBasisPoints
+  ) / 10_000;
+  const weights = policy.resilienceWeightsBasisPoints;
+  const resilience = (
+    Number(player.abilities.physical.stamina) * weights.stamina
+    + Number(player.abilities.physical.agility) * weights.agility
+    + Number(player.abilities.physical.strength) * weights.strength
+  ) / (20 * 10_000);
+  // Smootherstep preserves the neutral midpoint and both endpoints while
+  // making genuinely exceptional/fragile generated physical profiles matter.
+  // Its continuous first and second derivatives avoid a hidden trait band.
+  const shapedResilience = resilience * resilience * resilience * (
+    resilience * (resilience * 6 - 15) + 10
+  );
+  const multiplier = (
+    policy.lowResilienceHalfLifeMultiplierBasisPoints
+    + shapedResilience * (
+      policy.highResilienceHalfLifeMultiplierBasisPoints
+      - policy.lowResilienceHalfLifeMultiplierBasisPoints
+    )
+  ) / 10_000;
+  return baseHalfLife * multiplier;
 }
 
 /**

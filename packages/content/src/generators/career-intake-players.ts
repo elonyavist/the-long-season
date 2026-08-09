@@ -2,6 +2,7 @@ import {
   createPersonIdentity,
   gameDate,
   getPlayerRoleProfile,
+  playerSquadDepartment,
   playerId,
   rolePotentialAbility,
   type CareerState,
@@ -33,8 +34,12 @@ import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player
 import {
   generateSeasonalYouthIntakePlayers,
   seasonalYouthPlayerId,
-  YOUTH_ACADEMY_POSITION_PLAN,
+  YOUTH_ACADEMY_DEPARTMENT_PLAN,
 } from "./initial-youth-academies.ts";
+import {
+  planCompetitionAnnualIntakePositions,
+  type AnnualIntakeRoleSlotKind,
+} from "./annual-intake-role-plan.ts";
 import {
   buildAnnualWorldIntakeExceptionalAllocation,
   type AnnualWorldIntakeExceptionalAllocation,
@@ -82,8 +87,8 @@ export interface GenerateCareerIntakePlayersInput {
   readonly clubId: ClubId;
   /** Club sporting context for credible division/tier generation. */
   readonly clubContext: CareerIntakeClubContext;
-  /** Number of intake players to generate. */
-  readonly count: number;
+  /** Positions assigned by the competition-scoped annual role planner. */
+  readonly targetPositions: readonly PlayerPosition[];
   /** Game date used as age reference. Defaults to the first demo career date. */
   readonly referenceDate?: GameDate;
   /** Optional league nation, defaulting to the current Italian demo world. */
@@ -113,7 +118,7 @@ export function generateCareerIntakePlayers(input: GenerateCareerIntakePlayersIn
   const nameUsage = createBatchNameUsage();
   const leagueNation = input.leagueNation ?? "italian";
 
-  for (let index = 0; index < input.count; index += 1) {
+  for (let index = 0; index < input.targetPositions.length; index += 1) {
     const generatedPlayer = generateOneIntakePlayer({
       ...input,
       leagueNation,
@@ -192,7 +197,37 @@ export interface AnnualWorldIntakeProviderDiagnostics {
   readonly seasonIndex: number;
   readonly allocationCallCount: number;
   readonly allocation: AnnualWorldIntakeExceptionalAllocation;
+  /** Allocation-time placements; later tier freezes cannot reconstruct them. */
+  readonly allocatedStoredCeilingSixPlacements:
+    readonly AnnualWorldIntakeExceptionalCandidate[];
   readonly generatedStoredCeilingSixPlayerIds: readonly PlayerId[];
+}
+
+/** One generated candidate at the content boundary, before engine acceptance. */
+export interface AnnualWorldGeneratedRoleCandidateFact {
+  readonly targetClubId: ClubId;
+  readonly position: PlayerPosition;
+}
+
+/** Planned/generated reconciliation for one annual candidate source. */
+export interface AnnualWorldGeneratedRolePopulationFacts {
+  readonly plannedCount: number;
+  readonly candidates: readonly AnnualWorldGeneratedRoleCandidateFact[];
+  readonly reconciliationFailureCount: number;
+}
+
+/** Whether canonical maintenance actually asked content for senior candidates. */
+export type AnnualWorldSeniorRolePopulationDiagnostics =
+  | {
+      readonly status: "generated";
+      readonly population: AnnualWorldGeneratedRolePopulationFacts;
+    }
+  | { readonly status: "not_requested" };
+
+/** Exact generation-boundary role facts for one world-season. */
+export interface AnnualWorldRoleContinuityDiagnostics {
+  readonly academyRefill: AnnualWorldGeneratedRolePopulationFacts;
+  readonly seniorCandidate: AnnualWorldSeniorRolePopulationDiagnostics;
 }
 
 /** Shared content-side providers consumed by CLI, web, labs, and reports. */
@@ -204,6 +239,8 @@ export interface AnnualWorldIntakeCandidateProviders {
     context: AnnualWorldSeniorIntakeProviderContext,
   ) => readonly AnnualWorldSeniorIntakeCandidate[];
   readonly diagnostics: () => AnnualWorldIntakeProviderDiagnostics;
+  /** Reads actual generated positions without reconstructing accepted players. */
+  readonly roleContinuityDiagnostics: () => AnnualWorldRoleContinuityDiagnostics;
 }
 
 /** Inputs that identify one deterministic world-season intake composition. */
@@ -234,6 +271,9 @@ export function createAnnualWorldIntakeCandidateProviders(
   let seniorCandidates: readonly AnnualWorldSeniorIntakeCandidate[] | undefined;
   let diagnosticFacts: AnnualWorldIntakeProviderDiagnostics | undefined;
   let composedSeasonId: SeasonId | undefined;
+  let youthPlannedPositions: Readonly<Record<ClubId, readonly PlayerPosition[]>> | undefined;
+  let seniorPlannedPositions: Readonly<Record<ClubId, readonly PlayerPosition[]>> | undefined;
+  let composedClubIds: readonly ClubId[] | undefined;
 
   const createYouthIntakeCandidates = (
     context: AnnualWorldYouthIntakeProviderContext,
@@ -241,12 +281,11 @@ export function createAnnualWorldIntakeCandidateProviders(
     if (youthCandidates !== undefined) {
       throw new Error(`Annual world intake already composed for ${context.seasonId}`);
     }
-    const targetPositionsByClubId = Object.fromEntries(
-      context.careerState.gameState.clubIds.map((clubId) => [
-        clubId,
-        youthRefillTargetPositions(context.careerState, clubId),
-      ]),
-    ) as Record<ClubId, readonly PlayerPosition[]>;
+    const targetPositionsByClubId = academyRefillPositionsByClubId({
+      careerState: context.careerState,
+      seed: input.worldSeed,
+      seasonId: context.seasonId,
+    });
     const candidates = annualExceptionalCandidates(
       context.careerState,
       context.seasonId,
@@ -298,11 +337,16 @@ export function createAnnualWorldIntakeCandidateProviders(
     }
 
     youthCandidates = generated;
+    youthPlannedPositions = targetPositionsByClubId;
+    composedClubIds = [...context.careerState.gameState.clubIds];
     composedSeasonId = context.seasonId;
     diagnosticFacts = {
       seasonIndex: input.seasonIndex,
       allocationCallCount: 1,
       allocation,
+      allocatedStoredCeilingSixPlacements: candidates.filter(({ playerKey }) =>
+        allocation.potentialSixPlayerKeys.includes(playerKey)
+      ),
       generatedStoredCeilingSixPlayerIds: generated
         .filter((candidate) =>
           allocation.potentialSixPlayerKeys.includes(String(candidate.player.id))
@@ -320,6 +364,12 @@ export function createAnnualWorldIntakeCandidateProviders(
     }
     if (seniorCandidates !== undefined) return seniorCandidates;
     const generated: AnnualWorldSeniorIntakeCandidate[] = [];
+    const targetPositionsByClubId = seniorIntakePositionsByClubId({
+      careerState: context.careerState,
+      seed: input.worldSeed,
+      seasonId: context.seasonId,
+      candidatesPerClub: seniorCandidatesPerClub,
+    });
     for (const clubId of context.careerState.gameState.clubIds) {
       const club = context.careerState.gameState.clubs[clubId];
       if (club === undefined) {
@@ -337,7 +387,7 @@ export function createAnnualWorldIntakeCandidateProviders(
             clubId,
           ),
         },
-        count: seniorCandidatesPerClub,
+        targetPositions: requiredClubPositions(targetPositionsByClubId, clubId),
         referenceDate: context.intakeDate,
         ratingScale,
       });
@@ -350,6 +400,7 @@ export function createAnnualWorldIntakeCandidateProviders(
       }
     }
     seniorCandidates = generated;
+    seniorPlannedPositions = targetPositionsByClubId;
     return seniorCandidates;
   };
 
@@ -362,6 +413,69 @@ export function createAnnualWorldIntakeCandidateProviders(
       }
       return diagnosticFacts;
     },
+    roleContinuityDiagnostics: () => ({
+      academyRefill: generatedRolePopulationFacts(
+        "academy refill",
+        composedClubIds,
+        youthPlannedPositions,
+        youthCandidates,
+      ),
+      seniorCandidate: seniorCandidates === undefined
+        ? { status: "not_requested" }
+        : {
+            status: "generated",
+            population: generatedRolePopulationFacts(
+              "senior candidate",
+              composedClubIds,
+              seniorPlannedPositions,
+              seniorCandidates,
+            ),
+          },
+    }),
+  };
+}
+
+function generatedRolePopulationFacts(
+  label: string,
+  orderedClubIds: readonly ClubId[] | undefined,
+  plannedPositions: Readonly<Record<ClubId, readonly PlayerPosition[]>> | undefined,
+  candidates: readonly {
+    readonly targetClubId: ClubId;
+    readonly player: RoleIdentifiedPlayer;
+  }[] | undefined,
+): AnnualWorldGeneratedRolePopulationFacts {
+  if (orderedClubIds === undefined || plannedPositions === undefined || candidates === undefined) {
+    throw new Error(`Annual ${label} role diagnostics requested before generation`);
+  }
+  const rows = candidates.map((candidate) => {
+    const position = candidate.player.naturalPositions[0];
+    if (position === undefined) {
+      throw new Error(`Annual ${label} candidate has no natural position: ${candidate.player.id}`);
+    }
+    return { targetClubId: candidate.targetClubId, position };
+  });
+  let reconciliationFailureCount = 0;
+  const plannedCount = orderedClubIds.reduce(
+    (sum, clubId) => {
+      const planned = plannedPositions[clubId];
+      if (planned === undefined) {
+        reconciliationFailureCount += 1;
+        return sum;
+      }
+      const actual = rows.filter((row) => row.targetClubId === clubId);
+      if (
+        actual.length !== planned.length
+        || planned.some((position, index) => actual[index]?.position !== position)
+      ) reconciliationFailureCount += 1;
+      return sum + planned.length;
+    },
+    0,
+  );
+  return {
+    plannedCount,
+    candidates: rows,
+    reconciliationFailureCount:
+      reconciliationFailureCount + (plannedCount === rows.length ? 0 : 1),
   };
 }
 
@@ -504,7 +618,10 @@ function generateOneIntakePlayer(input: GenerateOneIntakePlayerInput): CareerInt
         developmentEnvironment,
       );
   const archetype = getGeneratedPlayerArchetype(archetypeKey);
-  const position = positionForIntakeSlot(input.worldSeed, input.seasonId, id, input.index);
+  const position = input.targetPositions[input.index];
+  if (position === undefined) {
+    throw new Error(`Annual senior role plan omitted ${input.clubId}:${input.index}`);
+  }
   const clubTier = input.clubContext.competitiveTier;
   const ageYears = numberInRange(archetype.ageYears, input.worldSeed, "career-intake-age", id);
   const birthDateJitter = deriveRng(input.worldSeed, "career-intake-birth-date", input.seasonId, id).nextInt(0, 365);
@@ -638,61 +755,128 @@ function selectIntakeArchetype(
   return "normal_youth";
 }
 
-function positionForIntakeSlot(worldSeed: string, seasonId: SeasonId, id: PlayerId, index: number): PlayerPosition {
-  if (index === 0) {
-    return "gk";
-  }
-
-  const positions: readonly PlayerPosition[] = ["cb", "rb", "lb", "cm", "dm", "am", "rw", "lw", "st", "st"];
-  const rng = deriveRng(worldSeed, "career-intake-position", seasonId, id);
-  return positions[rng.nextInt(0, positions.length)] ?? "cm";
+function academyRefillPositionsByClubId(input: {
+  readonly careerState: CareerState;
+  readonly seed: string;
+  readonly seasonId: SeasonId;
+}): Readonly<Record<ClubId, readonly PlayerPosition[]>> {
+  return competitionRolePositions(input.careerState, (competitionKey, clubIds) =>
+    planCompetitionAnnualIntakePositions({
+      seed: input.seed,
+      seasonKey: String(input.seasonId),
+      competitionKey: `${competitionKey}:academy-refill`,
+      clubs: clubIds.map((clubId) => ({
+        clubId,
+        slotKinds: academyVacancyDepartments(input.careerState, clubId),
+        currentRoles: academyRoles(input.careerState, clubId),
+      })),
+    })
+  );
 }
 
-function youthRefillTargetPositions(
+function seniorIntakePositionsByClubId(input: {
+  readonly careerState: CareerState;
+  readonly seed: string;
+  readonly seasonId: SeasonId;
+  readonly candidatesPerClub: number;
+}): Readonly<Record<ClubId, readonly PlayerPosition[]>> {
+  if (!Number.isSafeInteger(input.candidatesPerClub) || input.candidatesPerClub <= 0) {
+    throw new RangeError(`Invalid senior intake candidate count: ${input.candidatesPerClub}`);
+  }
+  return competitionRolePositions(input.careerState, (competitionKey, clubIds) =>
+    planCompetitionAnnualIntakePositions({
+      seed: input.seed,
+      seasonKey: String(input.seasonId),
+      competitionKey: `${competitionKey}:senior-intake`,
+      clubs: clubIds.map((clubId) => ({
+        clubId,
+        slotKinds: Array.from(
+          { length: input.candidatesPerClub },
+          (_, index): AnnualIntakeRoleSlotKind => index === 0 ? "goalkeeper" : "outfield",
+        ),
+        currentRoles: seniorRoles(input.careerState, clubId),
+      })),
+    })
+  );
+}
+
+function competitionRolePositions(
+  careerState: CareerState,
+  plan: (
+    competitionKey: string,
+    clubIds: readonly ClubId[],
+  ) => ReadonlyMap<ClubId, readonly PlayerPosition[]>,
+): Readonly<Record<ClubId, readonly PlayerPosition[]>> {
+  const world = careerState.gameState.domesticCompetitionWorld;
+  if (world === undefined) {
+    throw new Error("Annual intake role planning requires the domestic competition world");
+  }
+  const positions: Partial<Record<ClubId, readonly PlayerPosition[]>> = {};
+  for (const competitionId of world.competitionIds) {
+    const competition = world.competitions[competitionId];
+    if (competition === undefined) {
+      throw new Error(`Annual intake role planning omitted competition ${competitionId}`);
+    }
+    for (const [clubId, clubPositions] of plan(String(competitionId), competition.clubIds)) {
+      positions[clubId] = clubPositions;
+    }
+  }
+  for (const clubId of careerState.gameState.clubIds) {
+    if (positions[clubId] === undefined) {
+      throw new Error(`Annual intake role planning omitted club ${clubId}`);
+    }
+  }
+  return positions as Readonly<Record<ClubId, readonly PlayerPosition[]>>;
+}
+
+function academyVacancyDepartments(
   careerState: CareerState,
   clubId: ClubId,
-): readonly PlayerPosition[] {
-  const missing = [...YOUTH_ACADEMY_POSITION_PLAN];
+): readonly AnnualIntakeRoleSlotKind[] {
+  const missing: AnnualIntakeRoleSlotKind[] = [...YOUTH_ACADEMY_DEPARTMENT_PLAN];
   const roster = careerState.youthAcademyState?.clubRosters[clubId];
-
-  for (const existingPlayerId of roster?.playerIds ?? []) {
-    const position =
-      careerState.gameState.players[existingPlayerId]?.naturalPositions[0];
-    if (position === undefined) continue;
-    const exactIndex = missing.findIndex((candidate) => candidate === position);
-    if (exactIndex >= 0) {
-      missing.splice(exactIndex, 1);
-      continue;
+  for (const playerIdValue of roster?.playerIds ?? []) {
+    const player = careerState.gameState.players[playerIdValue];
+    if (player === undefined) {
+      throw new Error(`Academy refill role planning omitted player ${playerIdValue}`);
     }
-    const departmentIndex = missing.findIndex(
-      (candidate) => youthDepartment(candidate) === youthDepartment(position),
-    );
-    if (departmentIndex >= 0) missing.splice(departmentIndex, 1);
+    const index = missing.indexOf(playerSquadDepartment(player));
+    if (index >= 0) missing.splice(index, 1);
   }
   return missing;
 }
 
-function youthDepartment(
-  position: PlayerPosition,
-): "attacker" | "defender" | "goalkeeper" | "midfielder" {
-  if (position === "gk") return "goalkeeper";
-  if (
-    position === "cb"
-    || position === "rb"
-    || position === "lb"
-    || position === "rwb"
-    || position === "lwb"
-  ) {
-    return "defender";
-  }
-  if (
-    position === "dm"
-    || position === "cm"
-    || position === "am"
-  ) {
-    return "midfielder";
-  }
-  return "attacker";
+function academyRoles(careerState: CareerState, clubId: ClubId): readonly ReturnType<typeof primaryRoleForPosition>[] {
+  return (careerState.youthAcademyState?.clubRosters[clubId]?.playerIds ?? []).map(
+    (playerIdValue) => requiredPlayerRole(careerState, playerIdValue),
+  );
+}
+
+function seniorRoles(careerState: CareerState, clubId: ClubId): readonly ReturnType<typeof primaryRoleForPosition>[] {
+  const club = careerState.gameState.clubs[clubId];
+  if (club === undefined) throw new Error(`Senior intake role planning omitted club ${clubId}`);
+  return club.playerIds.map((playerIdValue) => requiredPlayerRole(careerState, playerIdValue));
+}
+
+function requiredPlayerRole(
+  careerState: CareerState,
+  playerIdValue: PlayerId,
+): ReturnType<typeof primaryRoleForPosition> {
+  const player = careerState.gameState.players[playerIdValue];
+  if (player === undefined) throw new Error(`Annual intake role planning omitted player ${playerIdValue}`);
+  if (player.primaryRole !== undefined) return player.primaryRole;
+  const position = player.naturalPositions[0];
+  if (position === undefined) throw new Error(`Annual intake role planning found no position: ${playerIdValue}`);
+  return primaryRoleForPosition(position);
+}
+
+function requiredClubPositions(
+  positionsByClubId: Readonly<Record<ClubId, readonly PlayerPosition[]>>,
+  clubId: ClubId,
+): readonly PlayerPosition[] {
+  const positions = positionsByClubId[clubId];
+  if (positions === undefined) throw new Error(`Annual intake role planning omitted club ${clubId}`);
+  return positions;
 }
 
 function numberInRange(

@@ -91,7 +91,14 @@ export {
   type MatchDisciplineResolution,
   type MatchPenaltyResolution,
 } from "./match-discipline.ts";
-export { injuryForcesExit, resolveMatchMinuteInjury, severityForRoll } from "./match-injury.ts";
+export {
+  MATCH_INJURY_RISK_POLICY,
+  injuryForcesExit,
+  matchInjuryProbability,
+  resolveMatchMinuteInjury,
+  severityForRoll,
+  type MatchInjuryProbabilityInput,
+} from "./match-injury.ts";
 
 export {
   advanceProgressiveMatchMinute,

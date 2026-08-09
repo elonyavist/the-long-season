@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   PLAYER_ABILITY_KEYS,
+  PLAYER_ROLES,
   clubId,
   gameDate,
   getPlayerRoleProfile,
@@ -23,7 +24,7 @@ import {
   generateSeasonalYouthIntakePlayers,
   initialYouthPlayerId,
   INITIAL_YOUTH_PLAYERS_PER_CLUB,
-  YOUTH_ACADEMY_POSITION_PLAN,
+  YOUTH_ACADEMY_DEPARTMENT_PLAN,
 } from "./initial-youth-academies.ts";
 import {
   openingCompetitiveTierForClubRank,
@@ -65,6 +66,21 @@ test("generateInitialYouthAcademies creates the exact department structure", () 
       midfielder: 4,
       attacker: 2,
     });
+  }
+});
+
+test("a real generated division reaches all roles and balances every flank", () => {
+  const result = generateInitialYouthAcademies(divisionInput("academy-role-continuity"));
+  const players = result.playerIds.map((id) => result.players[id]).filter((player) => player !== undefined);
+
+  assert.deepEqual(new Set(players.map((player) => player.primaryRole)), new Set(PLAYER_ROLES));
+  const positions = players.flatMap((player) => player.naturalPositions);
+  for (const [right, left] of [["rb", "lb"], ["rwb", "lwb"], ["rm", "lm"], ["rw", "lw"]] as const) {
+    assert.equal(
+      Math.abs(positions.filter((position) => position === right).length - positions.filter((position) => position === left).length) <= 1,
+      true,
+      `${right}/${left}`,
+    );
   }
 });
 
@@ -225,7 +241,7 @@ test("initial youth serious prospects stay environment-bounded and routine gener
   assert.equal(seriousProspectCount > 0, true);
   assert.equal(explicitYoungProspectCount > 0, true);
   assert.equal(routineYoungPlateauCount > 0, true);
-}, 15_000);
+});
 
 test("better academies create more interesting routine prospects without extra high or elite slots", () => {
   let strongAcademyInterestingPlayers = 0;
@@ -378,7 +394,7 @@ test("seasonal youth intake responds to the seven-state development environment 
 test("default seasonal youth intake candidate pool can refill a whole academy", () => {
   const result = generateSeasonalYouthIntakePlayers(seasonalInput("full-refill-candidates"));
 
-  assert.equal(result.generatedPlayers.length, YOUTH_ACADEMY_POSITION_PLAN.length);
+  assert.equal(result.generatedPlayers.length, YOUTH_ACADEMY_DEPARTMENT_PLAN.length);
 });
 
 test("generateSeasonalYouthIntakePlayers writes explicit role identity fields", () => {
@@ -523,6 +539,10 @@ function input(worldSeed: string): Parameters<typeof generateInitialYouthAcademi
     referenceDate: gameDate(CAREER_START_EPOCH_DAY),
     clubIds: [firstClub, secondClub],
     clubContexts: clubContexts([firstClub, secondClub]),
+    competitionKeyByClubId: {
+      [firstClub]: "competition:test-third",
+      [secondClub]: "competition:test-third",
+    },
   };
 }
 
@@ -537,6 +557,9 @@ function divisionInput(worldSeed: string): Parameters<typeof generateInitialYout
     referenceDate: gameDate(CAREER_START_EPOCH_DAY),
     clubIds,
     clubContexts: clubContexts(clubIds),
+    competitionKeyByClubId: Object.fromEntries(
+      clubIds.map((clubIdValue) => [clubIdValue, "competition:test-third"]),
+    ) as Readonly<Record<ClubId, string>>,
   };
 }
 
@@ -567,6 +590,7 @@ function seasonalInput(worldSeed: string): Parameters<typeof generateSeasonalYou
       reputation: 8,
       competitiveTier: "title_contender",
     },
+    targetPositions: ["gk", "cb", "rb", "rwb", "dm", "cm", "am", "rm", "rw", "st", "lw"],
   };
 }
 
@@ -581,7 +605,7 @@ function departmentCounts(positions: readonly (string | undefined)[]): Record<st
   for (const position of positions) {
     if (position === "gk") counts.goalkeeper += 1;
     else if (position === "cb" || position === "rb" || position === "lb" || position === "rwb" || position === "lwb") counts.defender += 1;
-    else if (position === "dm" || position === "cm" || position === "am") counts.midfielder += 1;
+    else if (position === "dm" || position === "cm" || position === "am" || position === "rm" || position === "lm") counts.midfielder += 1;
     else counts.attacker += 1;
   }
 

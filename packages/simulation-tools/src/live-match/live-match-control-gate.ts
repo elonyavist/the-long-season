@@ -18,26 +18,19 @@ import {
   type SeasonId,
 } from "@game/domain";
 import {
-  advanceProgressiveMatchMinute,
   applyMatchReportToFixture,
-  applyProgressiveAiInGameDecisions,
   buildLiveMatchProjection,
-  buildMatchRngKey,
   computeLeagueTable,
   createMatchReport,
-  createProgressiveMatchSession,
   generateRoundRobinCalendar,
-  hasProgressiveAiInGameDecisionBoundary,
-  matchRngKeyParts,
-  resumeProgressiveMatchSession,
-  telemetryFor,
+  runAutomatedProgressiveMatch,
   type MatchContext,
   type MatchTeamContext,
   type PlayerMatchRatingRegistration,
   type ProgressiveMatchSessionState,
   type SimulateMatchResult,
 } from "@game/engine";
-import { deriveRng, hashStringToSeedWords, RNG_ALGORITHM_VERSION } from "@game/shared";
+import { hashStringToSeedWords, RNG_ALGORITHM_VERSION } from "@game/shared";
 
 /** Numeric distributions emitted by the long-run live-match gate. */
 export type LiveMatchControlDistributionKey =
@@ -355,57 +348,35 @@ function runFixture(
   setup: LiveMatchControlFixtureSetup,
   failures: LiveMatchControlFailure[],
 ): FixtureRunResult {
-  let home = setup.home;
-  let away = setup.away;
-  assertInitialLiveTeams(fixture, world.matchRules, home, away);
-  let state = resumeProgressiveMatchSession(createProgressiveMatchSession(setup.context, {
-    home: { bench: home.bench, unavailable: home.unavailable },
-    away: { bench: away.bench, unavailable: away.unavailable },
-  }));
-  const registrations = ratingRegistrations(home, away);
-  const rngKey = buildMatchRngKey(setup.context);
-  const rng = deriveRng(rngKey.seed, rngKey.streamName, ...matchRngKeyParts(rngKey));
+  assertInitialLiveTeams(fixture, world.matchRules, setup.home, setup.away);
+  const registrations = ratingRegistrations(setup.home, setup.away);
   const aiDecisionCount: Record<MatchEventSide, number> = { home: 0, away: 0 };
   const aiChangeCount: Record<MatchEventSide, number> = { home: 0, away: 0 };
+  const completed = runAutomatedProgressiveMatch({
+    context: setup.context,
+    rules: world.matchRules,
+    players: world.players,
+    home: setup.home,
+    away: setup.away,
+    aiControlledSides: ["home", "away"],
+    buildMatchTeamContext: setup.buildMatchTeamContext,
+  });
+  const { state, home, away } = completed;
 
-  while (state.phase !== "full_time") {
-    state = advanceProgressiveMatchMinute(state, rng);
-
-    for (const side of ["home", "away"] as const) {
-      if (!hasProgressiveAiInGameDecisionBoundary(state, side)) continue;
-      const projection = buildLiveMatchProjection({
-        simulation: state.simulation,
-        events: state.events,
-        playerRegistrations: registrations,
-      });
-      const session = liveSessionForAi(fixture, state, home, away, projection.statistics, side, world.matchRules);
-      const playerCondition = telemetryFor(state.simulation).playerCondition;
-      const applied = applyProgressiveAiInGameDecisions({
-        state,
-        session,
-        side,
-        rules: world.matchRules,
-        players: world.players,
-        playerSignals: projection.players
-          .filter((player) => player.side === side)
-          .map((player) => ({ playerId: player.playerId, rating: player.rating, condition: player.condition })),
-        buildMatchTeamContext: (team) => setup.buildMatchTeamContext(team, playerCondition),
-      });
-      state = applied.state;
-      if (side === "home") home = applied.team;
-      else away = applied.team;
-      aiDecisionCount[side] += applied.decisions.length;
-      aiChangeCount[side] += applied.decisions.filter((decision) => decision.facts.length > 0).length;
-      const rejectionCodes = applied.decisions.flatMap((decision) => decision.selection.reasons.flatMap((reason) =>
+  for (const side of ["home", "away"] as const) {
+      const sideDecisions = completed.decisions.filter((decision) => decision.side === side);
+      aiDecisionCount[side] = sideDecisions.length;
+      aiChangeCount[side] = sideDecisions.filter((decision) => decision.facts.length > 0).length;
+      const rejectionCodes = sideDecisions.flatMap((decision) => decision.selection.reasons.flatMap((reason) =>
         reason.reasonKey === "command_rejected" ? reason.rejectionCodes ?? [] : []
       ));
-      const rejectedPlayers = applied.decisions.flatMap((decision) => decision.selection.reasons.flatMap((reason) =>
+      const rejectedPlayers = sideDecisions.flatMap((decision) => decision.selection.reasons.flatMap((reason) =>
         reason.reasonKey === "command_rejected" ? reason.rejectedPlayerIds ?? [] : []
       ));
-      const rejectionMinutes = applied.decisions.flatMap((decision) => decision.selection.reasons.flatMap((reason) =>
+      const rejectionMinutes = sideDecisions.flatMap((decision) => decision.selection.reasons.flatMap((reason) =>
         reason.reasonKey === "command_rejected" ? [reason.minute] : []
       ));
-      const rejectedDecisionContext = applied.decisions.flatMap((decision) => {
+      const rejectedDecisionContext = sideDecisions.flatMap((decision) => {
         const rejected = decision.selection.reasons.some((reason) => reason.reasonKey === "command_rejected");
         if (!rejected) return [];
         return decision.selection.reasons.flatMap((reason) =>
@@ -434,9 +405,6 @@ function runFixture(
         );
       }
       assertPlayableTeamAfterDecision(world.seed, fixture, state, home, away, world.matchRules, failures);
-    }
-
-    if (state.phase === "half_time") state = resumeProgressiveMatchSession(state);
   }
 
   return {

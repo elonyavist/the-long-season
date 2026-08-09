@@ -67,6 +67,19 @@ const POSITION_BY_ROLE: Readonly<Record<PlayerRole, readonly PlayerPosition[]>> 
   striker: ["st"],
 };
 
+/**
+ * Returns every pitch position that naturally represents one generation role.
+ *
+ * Player construction already owns this mapping to reject mismatched role
+ * identities. Exposing the same immutable positions lets content plan a role
+ * before constructing the player without maintaining a second reverse table.
+ */
+export function naturalPositionsForPlayerRole(
+  role: PlayerRole,
+): readonly PlayerPosition[] {
+  return POSITION_BY_ROLE[role];
+}
+
 const ROLE_FAMILIARITY_LEVELS: readonly PlayerRoleFamiliarityLevel[] = ["natural", "adapted", "weak"];
 
 /** Complete generated player facts plus the date and volatile state used for validation. */

@@ -1,4 +1,10 @@
-import { type PlayerDynamicState, type PlayerId } from "@game/domain";
+import {
+  type GameDate,
+  type Player,
+  type PlayerDynamicState,
+  type PlayerId,
+  type PlayerStateCurvesConfig,
+} from "@game/domain";
 
 import { DEFAULT_FITNESS_RULES, FitnessStateError, recoverFitnessForPlayers, type FitnessRules } from "../player-state/fitness.ts";
 
@@ -22,6 +28,9 @@ export interface ApplyCareerWeeklyRecoveryInput {
   readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Explicit ordered player IDs that should be considered for recovery. */
   readonly playerIds: readonly PlayerId[];
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  readonly currentDate: GameDate;
+  readonly recoveryPolicy: PlayerStateCurvesConfig;
   /** Calendar-day gap before the fixture. Non-positive values are a no-op. */
   readonly dayCount: number;
   /** Fitness rules to apply; defaults match the existing fitness prototype. */
@@ -55,6 +64,9 @@ export function applyCareerWeeklyRecovery(input: ApplyCareerWeeklyRecoveryInput)
       : recoverFitnessForPlayers({
           playerStates: input.playerStates,
           playerIds: input.playerIds,
+          players: input.players,
+          currentDate: input.currentDate,
+          recoveryPolicy: input.recoveryPolicy,
           dayCount,
           rules: input.rules ?? DEFAULT_FITNESS_RULES,
         });
@@ -108,4 +120,3 @@ function assertRecoverablePlayerIds(
     seen.add(playerId);
   }
 }
-

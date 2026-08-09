@@ -29,7 +29,8 @@ Targets:
 - no duplicate fitness/morale/use/preparation truth;
 - no permanent accumulation or RNG realignment;
 - reload reproduces output;
-- the Step 14 post-reset career remains loadable with no second version change;
+- the Step 14 post-reset career remains loadable with no second storage version
+  change;
 - full six-component realized agency/exposure/non-commit still meet
   `+0.045 / -0.045 / |delta| <= 0.015`;
 - historical formation changes confidence or the chosen plan in at least one

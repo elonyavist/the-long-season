@@ -143,3 +143,20 @@ development, retirement or transfer replacement policy.
 Transfer presentation is corrected independently: canonical JSON retains
 integer EUR minor units; HTML formats them as euros and shows the buyer and
 seller divisions captured at the transfer boundary.
+
+## Accepted Post-Review Amendment: Two Independent Owners
+
+Further analysis requested by the project owner does not rewrite the L1
+decision. It deepens the owner attribution before remediation begins.
+
+The `420` scorer/assist leaderboard positions retained per season are still
+`395/420` (`94.0%`) opening-population players in season ten; only `25/420`
+belong to academy/youth intake and none to senior intake. Therefore
+availability and recent use can correct perfect `34/34` schedules but cannot by
+themselves establish generational renewal.
+
+The accepted plan now has two separately gated streams: canonical progressive
+match/substitution/availability/load behaviour, followed by an attribution of
+generation, development, promotion, AI selection and market replacement. The
+full research, product decisions and rejected shortcuts are in
+[`PHASE_81A_AVAILABILITY_AGING_AND_GENERATIONAL_RENEWAL_PREREQUISITE.md`](PHASE_81A_AVAILABILITY_AGING_AND_GENERATIONAL_RENEWAL_PREREQUISITE.md).

@@ -54,7 +54,7 @@ test("loads one cross-versioned immutable economy bundle from the seven JSON ass
     valuationCurves.prospectExpectation.potentialProjectionPolicyVersion,
     playerPotentialProjectionPolicy.version,
   );
-  assert.equal(valuationCurves.version, "valuation-curves-v5");
+  assert.equal(valuationCurves.version, "valuation-curves-v7");
   assert.deepEqual(valuationCurves.prospectExpectation, {
     version: "prospect-expectation-v3",
     potentialProjectionPolicyVersion: playerPotentialProjectionPolicy.version,
@@ -62,11 +62,11 @@ test("loads one cross-versioned immutable economy bundle from the seven JSON ass
     upperOptionParticipationBasisPoints: 1_000,
   });
   assert.equal(askingPriceCurves.valuationCurvesVersion, valuationCurves.version);
-  assert.equal(askingPriceCurves.version, "asking-price-curves-v4");
+  assert.equal(askingPriceCurves.version, "asking-price-curves-v6");
   assert.equal("marketContext" in valuationCurves, false);
   assert.equal("uncertaintyDiscountBasisPointsPerHalfStar" in valuationCurves.prospectExpectation, false);
   assert.equal("minimumUncertaintyMultiplierBasisPoints" in valuationCurves.prospectExpectation, false);
-  assert.equal(marketBehaviorCalibration.version, "market-behavior-calibration-v5");
+  assert.equal(marketBehaviorCalibration.version, "market-behavior-calibration-v7");
   assert.equal(
     marketBehaviorCalibration.askingPriceCurvesVersion,
     askingPriceCurves.version,
@@ -117,7 +117,7 @@ test("selects the derived potential policy only for the current beta bundle", ()
     selectPlayerPotentialProjectionPolicy(playerEconomyCalibration.versions),
     playerPotentialProjectionPolicy,
   );
-  assert.equal(playerRatingScale.version, "player-rating-scale-v7");
+  assert.equal(playerRatingScale.version, "player-rating-scale-v9");
   assert.deepEqual(playerRatingScale.rarity.initialWorld, {
     establishedCurrentSixMinimum: 2,
     establishedCurrentSixMaximum: 3,
@@ -126,7 +126,7 @@ test("selects the derived potential policy only for the current beta bundle", ()
     lowerDivisionYoungStoredCeilingSixMaximum: 1,
     youngStoredCeilingSixPerClubMaximum: 1,
   });
-  assert.equal(playerPotentialProjectionPolicy.version, "player-potential-projection-v4");
+  assert.equal(playerPotentialProjectionPolicy.version, "player-potential-projection-v6");
   assert.deepEqual(
     playerPotentialProjectionPolicy.ageBandsByRoleFamily.outfield.map(
       ({
@@ -142,14 +142,14 @@ test("selects the derived potential policy only for the current beta bundle", ()
       ],
     ),
     [
-      [0, 17, 3_034, 10_000],
-      [18, 20, 2_200, 10_000],
-      [21, 21, 1_196, 2_823],
-      [22, 22, 716, 2_111],
-      [23, 23, 483, 1_405],
-      [24, 24, 219, 653],
-      [25, 25, 71, 249],
-      [26, 26, 0, 55],
+      [0, 17, 7_670, 10_000],
+      [18, 20, 7_256, 10_000],
+      [21, 21, 4_794, 9_326],
+      [22, 22, 3_671, 9_190],
+      [23, 23, 2_773, 8_365],
+      [24, 24, 1_698, 7_083],
+      [25, 25, 1_040, 3_678],
+      [26, 26, 0, 939],
       [27, 27, 0, 0],
       [28, 200, 0, 0],
     ],
@@ -169,15 +169,15 @@ test("selects the derived potential policy only for the current beta bundle", ()
       ],
     ),
     [
-      [0, 17, 2_215, 10_000],
-      [18, 20, 2_050, 10_000],
-      [21, 21, 1_715, 3_713],
-      [22, 22, 1_466, 3_272],
-      [23, 23, 1_185, 2_553],
-      [24, 24, 810, 1_894],
-      [25, 25, 397, 1_100],
-      [26, 26, 278, 756],
-      [27, 27, 149, 372],
+      [0, 17, 7_336, 10_000],
+      [18, 20, 7_205, 10_000],
+      [21, 21, 6_736, 9_450],
+      [22, 22, 5_836, 9_396],
+      [23, 23, 4_566, 9_324],
+      [24, 24, 3_598, 8_921],
+      [25, 25, 2_337, 7_470],
+      [26, 26, 1_925, 7_177],
+      [27, 27, 900, 4_246],
       [28, 28, 0, 0],
       [29, 29, 0, 0],
       [30, 30, 0, 0],
@@ -188,7 +188,7 @@ test("selects the derived potential policy only for the current beta bundle", ()
   assert.throws(
     () => selectPlayerPotentialProjectionPolicy({
       ...playerEconomyCalibration.versions,
-      playerRatingScaleVersion: "player-rating-scale-v1",
+      playerRatingScaleVersion: "player-rating-scale-v8",
     }),
     /unsupported/,
   );

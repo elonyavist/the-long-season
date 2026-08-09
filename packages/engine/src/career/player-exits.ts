@@ -23,6 +23,23 @@ import {
 type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
 const MINIMUM_POST_EXIT_SQUAD_SIZE = 18;
 
+/**
+ * Origin-blind annual retirement pressure for established outfield players.
+ *
+ * Low-quality release/step-down rules below keep precedence. These basis-point
+ * probabilities fill the former gap where every stronger outfielder survived
+ * untouched until the hard age-37 retirement.
+ */
+const OUTFIELD_RETIREMENT_HAZARD_BASIS_POINTS = {
+  33: 1_000,
+  34: 2_500,
+  35: 5_000,
+  36: 8_000,
+} as const satisfies Readonly<Record<33 | 34 | 35 | 36, number>>;
+
+const EXCEPTIONAL_LONGEVITY_ABILITY = 13;
+const EXCEPTIONAL_LONGEVITY_MULTIPLIER_BASIS_POINTS = 5_000;
+
 /** Stable machine-readable reason for one end-of-season player exit. */
 export type PlayerExitReason = "retirement" | "released" | "career_step_down";
 
@@ -316,7 +333,27 @@ function exitCandidateFor(
   if (age >= 35 && currentAbilityAverage <= 8.5) return { reason: "retirement", probability: 0.8 };
   if (age >= 33 && currentAbilityAverage <= 7.5) return { reason: "career_step_down", probability: 0.6 };
   if (age >= 32 && currentAbilityAverage <= 6.5) return { reason: "released", probability: 0.45 };
-  return undefined;
+
+  const hazardBasisPoints = outfieldRetirementHazardBasisPoints(age);
+  if (hazardBasisPoints === 0) return undefined;
+  const longevityMultiplierBasisPoints = currentAbilityAverage >= EXCEPTIONAL_LONGEVITY_ABILITY
+    ? EXCEPTIONAL_LONGEVITY_MULTIPLIER_BASIS_POINTS
+    : 10_000;
+  return {
+    reason: "retirement",
+    probability: hazardBasisPoints * longevityMultiplierBasisPoints / 100_000_000,
+  };
+}
+
+/** Returns the complete soft-hazard table without an age fallback. */
+function outfieldRetirementHazardBasisPoints(age: number): number {
+  switch (age) {
+    case 33: return OUTFIELD_RETIREMENT_HAZARD_BASIS_POINTS[33];
+    case 34: return OUTFIELD_RETIREMENT_HAZARD_BASIS_POINTS[34];
+    case 35: return OUTFIELD_RETIREMENT_HAZARD_BASIS_POINTS[35];
+    case 36: return OUTFIELD_RETIREMENT_HAZARD_BASIS_POINTS[36];
+    default: return 0;
+  }
 }
 
 /** Returns the role-shaped active quality used for exit decisions. */

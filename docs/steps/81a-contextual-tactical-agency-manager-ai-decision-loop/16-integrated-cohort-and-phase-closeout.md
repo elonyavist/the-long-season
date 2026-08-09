@@ -46,8 +46,9 @@ report must fail closed if its effective worker count is not seven.
 - low-block xG `>= 8%` and ratio `<= 2.0`;
 - AI/manager information parity and no fixed-formation exploit;
 - chapter reconciliation and save/load identity;
-- exactly one Phase 81A beta reset, owned by Step 14, with its post-reset career
-  still loadable at F;
+- exactly one Phase 81A storage schema/event-envelope advance, owned by Step 14,
+  with its post-reset career still loadable at F; Step 06B7F1's content bundle
+  `v8` invalidation is separate and retains no beta compatibility path;
 - contextual post-match preparation;
 - determinism, localization, accessibility, package, and regression gates.
 
