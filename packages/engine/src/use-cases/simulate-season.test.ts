@@ -1,4 +1,4 @@
-import { createLineupSlot } from "../match-engine/index.ts";
+import { createLineupSlot, deriveTeamStrength } from "../match-engine/index.ts";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -64,6 +64,35 @@ test("same seed produces same final table", () => {
   const second = simulateSeason(seasonInput("repeatable-seed"));
 
   assert.deepEqual(first.table, second.table);
+});
+
+test("analysis strength replay leaves the canonical season byte-identical", () => {
+  const input = seasonInput("analysis-strength-control-seed");
+  const control = simulateSeason(input);
+  const withReplay = simulateSeason({ ...input, analysisStrengthGapScale: 1.5 });
+  const { analysisStrengthReplay, ...canonicalResult } = withReplay;
+
+  assert.ok(analysisStrengthReplay !== undefined);
+  assert.equal(analysisStrengthReplay.scale, 1.5);
+  assert.deepEqual(canonicalResult, control);
+  assert.deepEqual(
+    simulateSeason({ ...input, analysisStrengthGapScale: 1.5 }).analysisStrengthReplay,
+    analysisStrengthReplay,
+  );
+  assert.notDeepEqual(analysisStrengthReplay.table, control.table);
+});
+
+test("analysis strength replay rejects scales outside its frozen oracle domain", () => {
+  const input = seasonInput("analysis-strength-invalid-seed");
+
+  assertSimulateSeasonError(
+    () => simulateSeason({ ...input, analysisStrengthGapScale: 0.99 }),
+    "invalid_analysis_strength_gap_scale",
+  );
+  assertSimulateSeasonError(
+    () => simulateSeason({ ...input, analysisStrengthGapScale: 2.01 }),
+    "invalid_analysis_strength_gap_scale",
+  );
 });
 
 test("stable season seed produces a compact golden sentinel", () => {
@@ -209,19 +238,19 @@ test("stable season seed produces a compact golden sentinel", () => {
       },
       topScorers: [
         {
+          playerId: playerId("player:test-03-02"),
+          clubId: clubId("club:test-03"),
+          goals: 8,
+        },
+        {
           playerId: playerId("player:test-02-04"),
           clubId: clubId("club:test-02"),
           goals: 6,
         },
         {
-          playerId: playerId("player:test-03-02"),
-          clubId: clubId("club:test-03"),
-          goals: 5,
-        },
-        {
-          playerId: playerId("player:test-04-02"),
-          clubId: clubId("club:test-04"),
-          goals: 5,
+          playerId: playerId("player:test-18-02"),
+          clubId: clubId("club:test-18"),
+          goals: 6,
         },
       ],
     },
@@ -280,6 +309,30 @@ test("season player summary stats match durable assist and save events", () => {
   assert.equal(totalSummarySaves, countSaves(result.fixtures));
 });
 
+test("season opportunity rows retain creator nominations without changing durable reports", () => {
+  const result = simulateSeason(seasonInput("player-opportunity-seed"));
+  const shotCount = result.fixtures.reduce(
+    (total, fixture) => total
+      + (fixture.result?.report?.stats.home.shots ?? 0)
+      + (fixture.result?.report?.stats.away.shots ?? 0),
+    0,
+  );
+  const onTargetCount = result.fixtures.reduce(
+    (total, fixture) => total
+      + (fixture.result?.report?.stats.home.shotsOnTarget ?? 0)
+      + (fixture.result?.report?.stats.away.shotsOnTarget ?? 0),
+    0,
+  );
+
+  assert.equal(result.playerOpportunityStats.length, seasonFixturePlayerCount());
+  assert.equal(result.playerOpportunityStats.reduce((sum, row) => sum + row.shots, 0), shotCount);
+  assert.equal(result.playerOpportunityStats.reduce((sum, row) => sum + row.shotsOnTarget, 0), onTargetCount);
+  assert.equal(result.playerOpportunityStats.some(({ creatorNominations }) => creatorNominations > 0), true);
+  assert.equal(result.fixtures.every((fixture) => fixture.result?.report?.events.every(
+    (event) => !("selectedCreatorPlayerId" in event),
+  )), true);
+});
+
 test("season simulation exposes canonical participation from each exact match context", () => {
   const result = simulateSeason(seasonInput("participation-seed"));
 
@@ -315,6 +368,15 @@ test("season simulation exposes canonical participation from each exact match co
     simulateSeason(seasonInput("participation-seed")).fixtureParticipation,
     result.fixtureParticipation,
   );
+  const first = result.fixtureParticipation[0]?.fieldedTeams.home;
+  assert.ok(first !== undefined);
+  const team = seasonInput("participation-seed").teamsByClubId[first.clubId];
+  assert.ok(team !== undefined);
+  assert.deepEqual(first.kickoffStrength, deriveTeamStrength({
+    lineup: team.lineup,
+    players: team.players,
+    roleWeights: team.roleWeights,
+  }));
 });
 
 test("empty setup overrides preserve default output", () => {
@@ -848,6 +910,52 @@ test("AI squad participation retains the exact selected bench as zero-minute evi
     assert.equal(fixture.fieldedTeams.home.selectionSource, "imposed_ai");
     assert.equal(fixture.fieldedTeams.away.selectionSource, "imposed_ai");
   }
+});
+
+test("selection-load diagnostics observe a real available younger alternative only when requested", () => {
+  const base = seasonInputWithAiSelection("selection-load-diagnostic-seed", 100);
+  const clubIds = base.clubIds.slice(0, 2);
+  const teamsByClubId: Record<ClubId, SimulateSeasonTeamInput> = {};
+  const fitnessLifecycle = base.fitnessLifecycle;
+  assert.ok(fitnessLifecycle !== undefined);
+  const lifecyclePlayers: Record<PlayerId, Player> = { ...fitnessLifecycle.players };
+  for (const selectedClubId of clubIds) {
+    const team = base.teamsByClubId[selectedClubId];
+    assert.ok(team !== undefined);
+    const veteranId = playerId(`player:${String(selectedClubId).slice("club:".length)}-cm-01`);
+    const veteran = team.players[veteranId];
+    assert.ok(veteran !== undefined);
+    const players: Record<PlayerId, Player> = {
+      ...team.players,
+      [veteranId]: { ...veteran, birthDate: gameDate(fromISO("1990-01-01")) },
+    };
+    teamsByClubId[selectedClubId] = { ...team, players };
+    lifecyclePlayers[veteranId] = players[veteranId]!;
+  }
+  const input: SimulateSeasonInput = {
+    ...base,
+    clubIds,
+    teamsByClubId,
+    fitnessLifecycle: { ...fitnessLifecycle, players: lifecyclePlayers },
+  };
+  const ordinary = simulateSeason(input);
+  const observed = simulateSeason({ ...input, collectSelectionLoadDiagnostics: true });
+  const diagnostics = observed.fixtureParticipation.flatMap(({ fieldedTeams }) =>
+    [fieldedTeams.home.selectionLoadDiagnostics, fieldedTeams.away.selectionLoadDiagnostics]);
+
+  assert.equal(ordinary.fixtureParticipation.every(({ fieldedTeams }) =>
+    fieldedTeams.home.selectionLoadDiagnostics === undefined
+      && fieldedTeams.away.selectionLoadDiagnostics === undefined), true);
+  assert.equal(diagnostics.every((row) => row !== undefined), true);
+  assert.equal(diagnostics.reduce((sum, row) => sum + (row?.veteranStarterCount ?? 0), 0) > 0, true);
+  assert.equal(diagnostics.reduce(
+    (sum, row) => sum + (row?.qualityMatchedYoungerAlternativeCount ?? 0),
+    0,
+  ) > 0, true);
+  assert.equal(diagnostics.reduce(
+    (sum, row) => sum + (row?.fresherQualityMatchedYoungerAlternativeCount ?? 0),
+    0,
+  ) > 0, true);
 });
 
 test("automatic season fixtures retain accepted substitutions and exact minutes for both AI teams", () => {

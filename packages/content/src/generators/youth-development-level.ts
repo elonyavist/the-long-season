@@ -96,19 +96,19 @@ export function youthDevelopmentSeriousProspectChance(
 ): number {
   switch (environment) {
     case "very_poor":
-      return 0.01;
-    case "poor":
-      return 0.012;
-    case "limited":
-      return 0.015;
-    case "adequate":
-      return 0.018;
-    case "good":
-      return 0.022;
-    case "very_good":
-      return 0.026;
-    case "excellent":
       return 0.03;
+    case "poor":
+      return 0.04;
+    case "limited":
+      return 0.05;
+    case "adequate":
+      return 0.06;
+    case "good":
+      return 0.08;
+    case "very_good":
+      return 0.1;
+    case "excellent":
+      return 0.12;
     default:
       return assertNeverEnvironment(environment);
   }

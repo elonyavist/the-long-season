@@ -1,7 +1,8 @@
-import type { ClubId, PlayerPosition } from "@game/domain";
+import type { ClubId, PlayerPosition, PlayerRole } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import { FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
+import { primaryRoleForPosition } from "./player-role-identity.ts";
 
 /**
  * The depth chart one generated club is built from, deepest slot last.
@@ -233,6 +234,26 @@ export function assignGeneratedSquadIdentities(input: {
   }
 
   return assignments;
+}
+
+/**
+ * Derives the soft role blueprint for every assigned generated-club identity.
+ *
+ * The role vector is deliberately a view over the sole position chart above,
+ * never stored content beside it. Annual intake can therefore retain the same
+ * football identity without persisting a formation or a second role table.
+ */
+export function assignGeneratedSquadIdentityRoles(input: {
+  readonly seed: string;
+  readonly competitionIdentityKey: string;
+  readonly orderedClubIds: readonly ClubId[];
+}): ReadonlyMap<ClubId, readonly PlayerRole[]> {
+  return new Map(
+    [...assignGeneratedSquadIdentities(input)].map(([clubId, identity]) => [
+      clubId,
+      identity.positions.map(primaryRoleForPosition),
+    ] as const),
+  );
 }
 
 /**

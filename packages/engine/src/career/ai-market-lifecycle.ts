@@ -1,7 +1,9 @@
 import {
   MINIMUM_CAREER_DEPARTMENT_DEPTH,
+  PLAYER_ROLES,
   isLivePreliminaryAgreement,
   isOpenTransferNegotiation,
+  playerRoleSquadDepartment,
   playerSquadDepartment,
   transferNegotiationId,
   type CareerState,
@@ -16,6 +18,7 @@ import {
   type Player,
   type PlayerContract,
   type PlayerId,
+  type PlayerRole,
   type PlayerWagePolicyConfig,
   type PlayerSquadDepartment,
   type PreliminaryAgreement,
@@ -69,13 +72,28 @@ export type AiMarketNeedReason =
   | "structural_depth"
   | "expiring_contracts"
   | "aging_department"
+  | "role_succession"
   | "quality_gap"
   | "elite_prospect_opportunity";
+
+/** Exact football population one AI need and its diagnostics refer to. */
+export type AiMarketNeedTarget =
+  | { readonly kind: "department"; readonly department: PlayerSquadDepartment }
+  | { readonly kind: "role"; readonly role: PlayerRole };
+
+/** Derives the broad squad floor owned by one total market target. */
+export function aiMarketTargetDepartment(
+  target: AiMarketNeedTarget,
+): PlayerSquadDepartment {
+  return target.kind === "department"
+    ? target.department
+    : playerRoleSquadDepartment(target.role);
+}
 
 /** Deterministic recruitment need derived from current squad and finance facts. */
 export interface AiMarketNeed {
   readonly clubId: ClubId;
-  readonly department: PlayerSquadDepartment;
+  readonly target: AiMarketNeedTarget;
   readonly reasons: readonly AiMarketNeedReason[];
   readonly priority: number;
   readonly currentDepth: number;
@@ -131,6 +149,7 @@ export type AiMarketDiagnosticReason =
   | "permanent_target_unavailable"
   | "seller_squad_floor"
   | "department_target_unavailable"
+  | "role_target_unavailable"
   | "target_has_live_market_talk"
   | "seller_department_floor"
   | "implausible_downward_move"
@@ -146,7 +165,7 @@ export type AiMarketDiagnosticReason =
 export interface AiMarketDiagnosticFact {
   readonly occurredOn: GameDate;
   readonly clubId: ClubId;
-  readonly department: PlayerSquadDepartment;
+  readonly target: AiMarketNeedTarget;
   readonly event:
     | "need_evaluated"
     | "need_recruitable"
@@ -315,7 +334,7 @@ function deriveAiMarketNeedsFromAssessments(input: {
         + (reasons.includes("quality_gap") ? priorityWeights.qualityGap : 0);
       needs.push({
         clubId,
-        department,
+        target: { kind: "department", department },
         reasons,
         priority,
         currentDepth: players.length,
@@ -331,12 +350,61 @@ function deriveAiMarketNeedsFromAssessments(input: {
         ),
       });
     }
+
+    for (const role of PLAYER_ROLES) {
+      const players = club.playerIds.flatMap((playerId): readonly Player[] => {
+        const player = input.careerState.gameState.players[playerId];
+        return player?.primaryRole === role ? [player] : [];
+      });
+      if (players.length === 0) continue;
+      const department = playerRoleSquadDepartment(role);
+      const agingThreshold = department === "goalkeeper"
+        ? input.marketBehaviorPolicy.aiLifecycle.goalkeeperAgingAge
+        : input.marketBehaviorPolicy.aiLifecycle.outfieldAgingAge;
+      const agingIncumbents = players.filter((player) =>
+        requiredAssessment(input.assessmentByPlayerId, player.id).age >= agingThreshold
+      );
+      if (agingIncumbents.length === 0) continue;
+      const incumbentAbility = Math.max(...agingIncumbents.map((player) =>
+        requiredAssessment(input.assessmentByPlayerId, player.id).currentAbility
+      ));
+      const hasPrimeSuccessor = players.some((player) => {
+        const assessment = requiredAssessment(input.assessmentByPlayerId, player.id);
+        return assessment.age >= 21
+          && assessment.age <= 29
+          && assessment.currentAbility
+            >= incumbentAbility
+              - input.marketBehaviorPolicy.aiLifecycle.successionQualityTolerance;
+      });
+      if (hasPrimeSuccessor) continue;
+
+      const assessments = players.map((player) =>
+        requiredAssessment(input.assessmentByPlayerId, player.id)
+      );
+      needs.push({
+        clubId,
+        target: { kind: "role", role },
+        reasons: ["role_succession"],
+        priority: input.marketBehaviorPolicy.aiLifecycle.needPriorityWeights.roleSuccession,
+        currentDepth: players.length,
+        targetDepth: players.length + 1,
+        averageAge: round(average(assessments.map(({ age }) => age))),
+        averageAbility: round(average(assessments.map(({ currentAbility }) => currentAbility))),
+        expiringContractCount: 0,
+        wageLoadRatio: round(wageLoadRatio),
+        canRecruit: clubCanRecruit(
+          input.careerState,
+          clubId,
+          input.marketBehaviorPolicy,
+        ),
+      });
+    }
   }
 
   return needs.sort((left, right) =>
     right.priority - left.priority
     || String(left.clubId).localeCompare(String(right.clubId))
-    || departmentOrder().indexOf(left.department) - departmentOrder().indexOf(right.department),
+    || compareAiMarketTargets(left.target, right.target),
   );
 }
 
@@ -856,6 +924,8 @@ function submitDueAiMarketTalks(input: {
           need,
           input.submittedOn,
           "permanent_target_found",
+          undefined,
+          target.player.id,
         ));
         const negotiationId = nextAiTransferNegotiationId(
           careerState,
@@ -950,6 +1020,8 @@ function submitDueAiMarketTalks(input: {
           need,
           input.submittedOn,
           "preliminary_candidate_found",
+          undefined,
+          target.player.id,
         ));
         const agreementId = nextPreliminaryAgreementId(careerState, target.player.id, need.clubId);
         const result = submitPreliminaryAgreementOffer({
@@ -1109,6 +1181,7 @@ function selectPermanentTransferTarget(
     | "permanent_target_unavailable"
     | "seller_squad_floor"
     | "department_target_unavailable"
+    | "role_target_unavailable"
     | "target_has_live_market_talk"
     | "seller_department_floor"
     | "implausible_downward_move"
@@ -1122,7 +1195,7 @@ function selectPermanentTransferTarget(
   const contracts = activeContractsByPlayer(careerState);
   const candidates: TransferTarget[] = [];
   let sellerAboveSquadFloor = false;
-  let departmentTargetFound = false;
+  let marketTargetFound = false;
   let talkFreeTargetFound = false;
   let sellerSafeTargetFound = false;
   let plausibleTargetFound = false;
@@ -1150,9 +1223,9 @@ function selectPermanentTransferTarget(
     if (
       player === undefined
       || contract === undefined
-      || playerSquadDepartment(player) !== need.department
+      || !playerMatchesMarketTarget(player, need.target)
     ) continue;
-    departmentTargetFound = true;
+    marketTargetFound = true;
     if (hasAnyLiveMarketTalk(careerState, player.id)) continue;
     talkFreeTargetFound = true;
     if (!sellerCanLosePlayer(careerState, sellingClub, player)) continue;
@@ -1254,7 +1327,13 @@ function selectPermanentTransferTarget(
   )[0];
   if (target !== undefined) return { target, reason: "permanent_target_unavailable" };
   if (!sellerAboveSquadFloor) return { reason: "seller_squad_floor" };
-  if (!departmentTargetFound) return { reason: "department_target_unavailable" };
+  if (!marketTargetFound) {
+    return {
+      reason: need.target.kind === "role"
+        ? "role_target_unavailable"
+        : "department_target_unavailable",
+    };
+  }
   if (!talkFreeTargetFound) return { reason: "target_has_live_market_talk" };
   if (!sellerSafeTargetFound) return { reason: "seller_department_floor" };
   if (!plausibleTargetFound) return { reason: "implausible_downward_move" };
@@ -1354,7 +1433,7 @@ function deriveEliteProspectOpportunityNeeds(input: {
       });
       opportunities.push({
         clubId: buyer.id,
-        department,
+        target: { kind: "department", department },
         reasons: ["elite_prospect_opportunity"],
         priority: 0,
         currentDepth: players.length,
@@ -1475,7 +1554,7 @@ function selectPreliminaryAgreementTarget(
       || currentClub === undefined
       || currentClub.id === buyer.id
       || currentClub.id === careerState.selectedClubId
-      || playerSquadDepartment(player) !== need.department
+      || !playerMatchesMarketTarget(player, need.target)
       || remainingDays <= 0
       || remainingDays > marketBehaviorPolicy.aiLifecycle.preliminaryEligibilityDays
       || hasLivePreliminaryAgreement(careerState, player.id)
@@ -1872,7 +1951,7 @@ function diagnosticFact(
   return {
     occurredOn,
     clubId: need.clubId,
-    department: need.department,
+    target: need.target,
     event,
     ...(reason === undefined ? {} : { reason }),
     ...(playerId === undefined ? {} : { playerId }),
@@ -1887,7 +1966,7 @@ function accumulateDiagnosticFacts(
   for (const fact of facts) {
     const key = [
       fact.clubId,
-      fact.department,
+      marketTargetKey(fact.target),
       fact.event,
       fact.reason ?? "",
       fact.playerId ?? "",
@@ -1937,6 +2016,36 @@ function requiredAssessment(
 
 function departmentOrder(): readonly PlayerSquadDepartment[] {
   return ["goalkeeper", "defender", "midfielder", "attacker"];
+}
+
+function compareAiMarketTargets(
+  left: AiMarketNeedTarget,
+  right: AiMarketNeedTarget,
+): number {
+  if (left.kind !== right.kind) return left.kind === "department" ? -1 : 1;
+  if (left.kind === "department" && right.kind === "department") {
+    return departmentOrder().indexOf(left.department)
+      - departmentOrder().indexOf(right.department);
+  }
+  if (left.kind === "role" && right.kind === "role") {
+    return PLAYER_ROLES.indexOf(left.role) - PLAYER_ROLES.indexOf(right.role);
+  }
+  return 0;
+}
+
+function marketTargetKey(target: AiMarketNeedTarget): string {
+  return target.kind === "department"
+    ? `department:${target.department}`
+    : `role:${target.role}`;
+}
+
+function playerMatchesMarketTarget(
+  player: Player,
+  target: AiMarketNeedTarget,
+): boolean {
+  return target.kind === "department"
+    ? playerSquadDepartment(player) === target.department
+    : player.primaryRole === target.role;
 }
 
 function safeId(id: string): string {

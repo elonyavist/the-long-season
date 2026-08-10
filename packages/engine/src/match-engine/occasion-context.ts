@@ -2,6 +2,7 @@ import type { PlayerId, ShotChanceType, ShotType, TacticalRoute } from "@game/do
 import { deriveRng } from "@game/shared";
 
 import {
+  type ChanceActorSelectionWeight,
   chanceShooterWeightForRole,
   primaryDefenderWeightForRole,
   selectChanceActors,
@@ -151,7 +152,12 @@ export function buildOccasionContext(input: BuildOccasionContextInput): Occasion
       shotType,
       chanceType,
     }),
-    shooterQualityEdge: shooterQualityEdgeFor(attackingTeam, shooter, shooterAttribute),
+    shooterQualityEdge: shooterQualityEdgeFor(
+      attackingTeam,
+      shooter,
+      shooterAttribute,
+      actors.shooterSelectionPool,
+    ),
     primaryDefenderBlockEdge: primaryDefenderBlockEdgeFor(defendingTeam, primaryDefender),
   };
 }
@@ -234,10 +240,11 @@ function shooterQualityEdgeFor(
   attackingTeam: MatchTeamContext,
   shooter: MatchPlayerIncidentProfile,
   attribute: OccasionAttributeKey,
+  shooterSelectionPool: readonly ChanceActorSelectionWeight[],
 ): number {
-  const poolMean = weightedLineupMean(
+  const poolMean = weightedSelectionPoolMean(
     attackingTeam,
-    chanceShooterWeightForRole,
+    shooterSelectionPool,
     (profile) => profile[attribute],
   );
 
@@ -246,6 +253,26 @@ function shooterQualityEdgeFor(
     -MAX_SHOOTER_QUALITY_EDGE,
     MAX_SHOOTER_QUALITY_EDGE,
   );
+}
+
+/**
+ * Centres execution on the exact pool that selected the shooter.
+ *
+ * Actor task quality is already present in these weights. Rebuilding the pool
+ * from role weights here would give good shooters both more nominations and a
+ * positive expected conversion edge.
+ */
+function weightedSelectionPoolMean(
+  team: MatchTeamContext,
+  pool: readonly ChanceActorSelectionWeight[],
+  valueOf: (profile: MatchPlayerIncidentProfile) => number,
+): number {
+  const totalWeight = pool.reduce((sum, { weight }) => sum + weight, 0);
+  return totalWeight === 0
+    ? 0
+    : pool.reduce((sum, { playerId, weight }) =>
+        sum + weight * valueOf(incidentProfileFor(team, playerId)), 0)
+      / totalWeight;
 }
 
 /**

@@ -526,6 +526,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       shotType: "normal",
       chanceType: "open_play",
       route: "direct",
+      selectedCreatorPlayerId: playerId("player:away-000001"),
       shooterPlayerId: playerId("player:away-000001"),
       goalkeeperPlayerId: playerId("player:home-gk"),
     },
@@ -541,6 +542,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       // the minute and started naming the route the chance came down.
       chanceType: "counter",
       route: "transition",
+      selectedCreatorPlayerId: playerId("player:home-000001"),
       shooterPlayerId: playerId("player:home-000001"),
       goalkeeperPlayerId: playerId("player:away-gk"),
     },

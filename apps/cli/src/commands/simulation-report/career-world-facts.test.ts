@@ -6,7 +6,7 @@ import {
   createFakeDomesticWorld,
   selectPlayerValuationConfig,
 } from "@game/content";
-import { completedPlayerAge } from "@game/engine";
+import { completedPlayerAge, monthlyOpportunityMultiplier } from "@game/engine";
 import { createTranslator } from "@game/i18n";
 import { fromISO, toISO } from "@game/shared";
 import {
@@ -175,10 +175,10 @@ test("Phase 80A potential-outcome matrix composes engine owners across every loc
     );
   }
   assert.equal(baseline.audit.unobservedCalibrationBandCount, 0);
-  // Descriptive reachability counters under the exact v8 projection. The
+  // Descriptive reachability counters under the exact v10 bundle. The
   // structural gates below, not these goldens, own acceptance.
-  assert.equal(baseline.audit.abovePublicUpperCount, 65);
-  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 401);
+  assert.equal(baseline.audit.abovePublicUpperCount, 66);
+  assert.equal(baseline.audit.abovePublicUpperRateBasisPoints, 407);
   assert.equal(baseline.audit.storedCeilingViolationCount, 0);
   assert.equal(
     baseline.audit.gates.find(({ key }) =>
@@ -211,12 +211,16 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
   const representedClubs = new Set<string>();
   const observedPlayersByClub = new Map<string, Set<string>>();
   const positivePlayersByClub = new Map<string, Set<string>>();
+  let reachedFullOpportunityAtCanonicalAcademyLoad = false;
   const report = createCareerWorldFacts(
     "phase80a-replacement-29",
     2,
     createTranslator("en"),
     (seasonNumber, rows, careerState) => {
       if (seasonNumber !== 1) return;
+      reachedFullOpportunityAtCanonicalAcademyLoad ||= rows.some(
+        (row) => row.minutes === 270 && monthlyOpportunityMultiplier(row.minutes) === 1,
+      );
       const ownedPlayersByClub = new Map(careerState.gameState.clubIds.map((clubId) => {
         const seniorPlayerIds = careerState.gameState.clubs[clubId]?.playerIds.map(String) ?? [];
         const academyPlayerIds = careerState.youthAcademyState?.clubRosters[clubId]?.playerIds.map(String) ?? [];
@@ -254,6 +258,7 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
     true,
   );
   assert.equal(positivePlayersByClub.size, 54);
+  assert.equal(reachedFullOpportunityAtCanonicalAcademyLoad, true);
   const positivePlayerCounts = [...positivePlayersByClub.values()].map(
     (players) => players.size,
   );
@@ -270,11 +275,12 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
   // Canonical academy participation now lets aging compress the stored
   // ceiling of academy players too. Across these two transitions the annual
   // role-continuous academy generation changes which opening prospects age
-  // out on this seed: intake replaces three departures and then two more. The
+  // out on this seed: the soft club blueprint now replaces seven departures.
+  // The
   // stock remains exactly four per snapshot and the audit still rejects inflation.
-  assert.equal(annualIntakeAudit.allocatedStoredCeilingSixCount, 5);
-  assert.equal(annualIntakeAudit.generatedStoredCeilingSixCount, 5);
-  assert.equal(annualIntakeAudit.acceptedStoredCeilingSixCount, 5);
+  assert.equal(annualIntakeAudit.allocatedStoredCeilingSixCount, 7);
+  assert.equal(annualIntakeAudit.generatedStoredCeilingSixCount, 7);
+  assert.equal(annualIntakeAudit.acceptedStoredCeilingSixCount, 7);
   assert.equal(annualIntakeAudit.activeStoredCeilingSixCount, 8);
   assert.equal(
     annualIntakeAudit.allocatedStoredCeilingSixMissingGeneratedCount,
@@ -287,7 +293,7 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
   assert.equal(stock.observationCount, 3);
   assert.equal(stock.activePlayerObservationCount > 0, true);
   assert.equal(stock.requiredReplacementObservationCount, 2);
-  assert.equal(stock.completedReplacementCount, 5);
+  assert.equal(stock.completedReplacementCount, 7);
   assert.equal(stock.missingReplacementCount, 0);
   assert.equal(stock.inflationArrivalCount, 0);
   assert.equal(stock.stockEntryObservationCount > 0, true);

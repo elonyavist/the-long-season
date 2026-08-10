@@ -217,6 +217,10 @@ export interface CareerWorldInspection {
   readonly selectCatalogFormation?: boolean;
   /** Shape a club fields, replacing the report's fixed `4-4-2`. */
   readonly formationForClub?: (clubId: string) => FormationKey;
+  /** Phase 81A analysis oracle; ordinary reports never set it. */
+  readonly analysisStrengthGapScale?: number;
+  /** Phase 81A fixture-dated selector contrast; ordinary reports never set it. */
+  readonly collectSelectionLoadDiagnostics?: boolean;
   /** Receives each completed selected-competition season. */
   readonly observeSeasonResult?: (context: {
     readonly seasonNumber: number;
@@ -4329,6 +4333,12 @@ function createCompetitionCareerSeasonInput(
     matchEngineConfig: world.matchEngineConfig,
     matchTacticsCalibration: world.matchTacticsCalibration,
     tableRules: world.tableRules,
+    ...(inspection?.analysisStrengthGapScale === undefined
+      ? {}
+      : { analysisStrengthGapScale: inspection.analysisStrengthGapScale }),
+    ...(inspection?.collectSelectionLoadDiagnostics === true
+      ? { collectSelectionLoadDiagnostics: true }
+      : {}),
   };
 }
 

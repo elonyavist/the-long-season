@@ -1747,3 +1747,79 @@ L4 non cambia comportamento: misura il funnel generazione -> sviluppo ->
 promozione -> selezione -> minuti -> produzione e completa lo scope di 06B7
 prima che quel codice inizi. Se non isola un owner, dà `STOP / RETHINK`; non
 autorizza una correzione trasversale né una taratura diretta delle classifiche.
+
+---
+
+## Emendamento A4 - Verità statistica, gerarchia e leader di carriera
+
+Il `REFINE` di L5 resta immutato. L'ispezione umana ha identificato tre
+famiglie rosse - ricambio/età dei leader, produzione individuale e identità di
+forma - e il confronto esterno ha aggiunto una quarta famiglia: la classifica
+della prima divisione è troppo compressa anche quando il totale dei gol è
+credibile.
+
+Il denominator esterno, congelato prima di qualunque correzione, è
+[`PHASE_81A_BIG_FIVE_STATISTICAL_BASELINE.md`](./PHASE_81A_BIG_FIVE_STATISTICAL_BASELINE.md).
+Usa `100` campionati Big Five dal 2005/06 al 2024/25 per risultati e punti e
+`22,065` stagioni-giocatore dal 2017/18 al 2024/25 per utilizzo, età e
+produzione. Solo la prima divisione fittizia riceve questi target; seconda e
+terza richiedono popolazioni lower-league separate.
+
+Decisioni di prodotto accettate il 2026-08-09:
+
+1. su `34` partite il campione di prima divisione deve normalmente stare nella
+   fascia `72..88`, senza obbligare ogni singola stagione a rientrarvi;
+2. gol per partita e pareggi sono guardrail: un totale sano non può essere
+   spostato per costruire artificialmente una gerarchia;
+3. gli over `33` possono restare leader eccezionali, ma non devono occupare
+   sistematicamente le classifiche; non esistono hard cap individuali;
+4. l'età non assegna direttamente tiri, gol, assist o identità degli attori;
+5. la forma AI continua a emergere dalla rosa corrente; un'eventuale memoria
+   del club è un blueprint morbido di ruoli per l'intake, mai una formazione
+   protetta;
+6. una deviazione esterna non nomina da sola il suo owner. Prima di cambiare il
+   motore, L5.1 deve separare popolazione, selezione, sviluppo, attori,
+   risoluzione della partita e intake;
+7. tutti i checkpoint usano il solo `simulation-report`, esattamente sette
+   worker e fatti prodotti dal simulatore canonico.
+
+La tranche autorizzata è:
+
+```text
+06B9 baseline Big Five e target preregistrati
+06B10 L5.1 - attribuzione table/player/identity su 7 x 10
+06B11 correzione del solo owner della gerarchia
+06B12 L5.2 - gerarchia 7 x 2
+06B13 correzione del solo owner di carico/ricambio
+06B14 esecuzione degli attori, solo se attribuita
+06B15 L5.3 - utilizzo, età e leader 7 x 10
+06B16 blueprint morbido dei ruoli, solo se attribuito
+06B17 L5.4 - canary integrata 7 x 10 e HTML
+L1 main 100 x 10 solo dopo GO di L5.4
+```
+
+I target numerici completi vivono nel baseline esterno e non vengono copiati
+qui. Ogni step owner ha un entry gate: se L5.1 restituisce `not_attributed` per
+una famiglia, quella famiglia resta chiusa. Nessuna correzione trasversale può
+essere giustificata dal desiderio di rendere verde la canary finale.
+
+---
+
+## Emendamento A5 - Tranche correttiva post-L5
+
+Il primo run L5.1 è `REFINE`, nonostante l'exit di processo `0`: tre famiglie
+rosse sono rimaste `not_attributed`, mentre il gate dichiarava
+`OWNER_IDENTIFIED` dalla sola riconciliazione. Il report canonico e i numeri
+restano evidence; la sua decisione top-level è rifiutata.
+
+La tesi e il piano operativo vincolante vivono in
+[`PHASE_81A_POST_L5_CORRECTION_TRANCHE.md`](./PHASE_81A_POST_L5_CORRECTION_TRANCHE.md).
+La sequenza 06B10A-06B10H separa: benchmark lower-league, integrità del gate,
+attribuzione della classifica, carico anziani, allocazione/esecuzione dei
+leader, ricambio e identità tattica. Solo il retry L5.1 può aprire 06B11-06B16;
+06B17 resta la canary finale `7 x 10` JSON/HTML.
+
+Restano congelate le decisioni di prodotto: Prima Divisione sui Big Five,
+campione normalmente `72..88` sulla distribuzione della coorte, benchmark
+separati per Seconda/Terza, over `33` eccezionali permessi ma non dominanti e
+nessun malus diretto di età o bonus diretto di divisione al risultato.

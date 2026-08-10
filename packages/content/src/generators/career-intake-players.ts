@@ -40,6 +40,7 @@ import {
   planCompetitionAnnualIntakePositions,
   type AnnualIntakeRoleSlotKind,
 } from "./annual-intake-role-plan.ts";
+import { assignGeneratedSquadIdentityRoles } from "./squad-identity.ts";
 import {
   buildAnnualWorldIntakeExceptionalAllocation,
   type AnnualWorldIntakeExceptionalAllocation,
@@ -760,8 +761,13 @@ function academyRefillPositionsByClubId(input: {
   readonly seed: string;
   readonly seasonId: SeasonId;
 }): Readonly<Record<ClubId, readonly PlayerPosition[]>> {
-  return competitionRolePositions(input.careerState, (competitionKey, clubIds) =>
-    planCompetitionAnnualIntakePositions({
+  return competitionRolePositions(input.careerState, (competitionKey, clubIds) => {
+    const targetRolesByClubId = assignGeneratedSquadIdentityRoles({
+      seed: input.seed,
+      competitionIdentityKey: competitionKey,
+      orderedClubIds: clubIds,
+    });
+    return planCompetitionAnnualIntakePositions({
       seed: input.seed,
       seasonKey: String(input.seasonId),
       competitionKey: `${competitionKey}:academy-refill`,
@@ -769,9 +775,10 @@ function academyRefillPositionsByClubId(input: {
         clubId,
         slotKinds: academyVacancyDepartments(input.careerState, clubId),
         currentRoles: academyRoles(input.careerState, clubId),
+        targetRoles: targetRolesByClubId.get(clubId) ?? [],
       })),
-    })
-  );
+    });
+  });
 }
 
 function seniorIntakePositionsByClubId(input: {
@@ -783,8 +790,13 @@ function seniorIntakePositionsByClubId(input: {
   if (!Number.isSafeInteger(input.candidatesPerClub) || input.candidatesPerClub <= 0) {
     throw new RangeError(`Invalid senior intake candidate count: ${input.candidatesPerClub}`);
   }
-  return competitionRolePositions(input.careerState, (competitionKey, clubIds) =>
-    planCompetitionAnnualIntakePositions({
+  return competitionRolePositions(input.careerState, (competitionKey, clubIds) => {
+    const targetRolesByClubId = assignGeneratedSquadIdentityRoles({
+      seed: input.seed,
+      competitionIdentityKey: competitionKey,
+      orderedClubIds: clubIds,
+    });
+    return planCompetitionAnnualIntakePositions({
       seed: input.seed,
       seasonKey: String(input.seasonId),
       competitionKey: `${competitionKey}:senior-intake`,
@@ -795,9 +807,10 @@ function seniorIntakePositionsByClubId(input: {
           (_, index): AnnualIntakeRoleSlotKind => index === 0 ? "goalkeeper" : "outfield",
         ),
         currentRoles: seniorRoles(input.careerState, clubId),
+        targetRoles: targetRolesByClubId.get(clubId) ?? [],
       })),
-    })
-  );
+    });
+  });
 }
 
 function competitionRolePositions(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createSimulationReportPlan } from "./report-planner.ts";
 import { createSimulationReportFromPlan } from "./report-registry.ts";
+import { CAREER_SECTION_IDS } from "./career-sections.ts";
 
 describe("simulation-report planner", () => {
   it("canonicalizes include order and caps custom workers at seven", () => {
@@ -106,6 +107,120 @@ describe("simulation-report planner", () => {
     expect(() => createSimulationReportPlan({
       profileId: "phase81a-league-diversity-100x10",
       workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes integrated L5.4 to fresh seven-world ten-season facts", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-integrated-l5-4-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-integrated-l5-4-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-integrated-l5-4-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L5.2 to seven worlds, two seasons and three-division table facts", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2-7x2",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 2,
+      workerCount: 7,
+      seedPrefix: "phase81a-standings-hierarchy-l5-2-v1",
+      includedSectionIds: ["season", "standings", "formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2-7x2",
+      seasonCount: 3,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes the powered L5.2A retry to seven worlds and ten seasons", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2a-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-standings-hierarchy-l5-2a-v1",
+      includedSectionIds: ["season", "standings", "formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2a-7x10",
+      worldCount: 8,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L5.2B validation to fresh seven-world ten-season facts", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2b-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-standings-hierarchy-l5-2b-v1",
+      includedSectionIds: ["season", "standings", "formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2b-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes hierarchy-only L5.2C validation to a third seed population", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2c-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-standings-hierarchy-l5-2c-v1",
+      includedSectionIds: ["season", "standings", "formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2c-7x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes final L5.2D validation with no measurement overrides", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2d-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-standings-hierarchy-l5-2d-v1",
+      includedSectionIds: ["season", "standings", "formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-standings-hierarchy-l5-2d-7x10",
+      worldCount: 6,
     })).toThrow(/refuses measurement overrides/);
   });
 
@@ -238,6 +353,82 @@ describe("simulation-report planner", () => {
     });
     expect(() => createSimulationReportPlan({
       profileId: "phase81a-annual-role-continuity-l4-5-7x2",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L5.1 to the paired canary worlds, ten seasons and exactly seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-l5-1-owner-attribution-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-league-diversity-canary",
+      includedSectionIds: ["formations", "development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-l5-1-owner-attribution-7x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes fresh L5.3A renewal validation to seven new worlds and ten seasons", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-player-renewal-leaders-l5-3a-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-player-renewal-leaders-l5-3a-v1",
+      includedSectionIds: ["players", "formations", "development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-player-renewal-leaders-l5-3a-7x10",
+      workerCount: 6,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes final L5.3B renewal validation to another fresh population", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-player-renewal-leaders-l5-3b-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-player-renewal-leaders-l5-3b-v1",
+      includedSectionIds: ["players", "formations", "development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-player-renewal-leaders-l5-3b-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L5.3C architecture attribution to seven fresh ten-season worlds", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-renewal-architecture-l5-3c-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-renewal-architecture-l5-3c-v1",
+      includedSectionIds: ["players", "formations", "development"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-renewal-architecture-l5-3c-7x10",
       workerCount: 6,
     })).toThrow(/refuses measurement overrides/);
   });

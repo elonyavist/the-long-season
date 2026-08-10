@@ -31,6 +31,7 @@ import {
 } from "./career-intake-players.ts";
 import { createFakeDomesticWorld } from "./domestic-world.ts";
 import type { GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
+import { openingCompetitiveTierForClubRank } from "./player-generation-bands.ts";
 import {
   contextualProspectClassForArchetype,
   type ContextualProspectClass,
@@ -90,6 +91,68 @@ test("career intake gives every explicit young prospect one stored star of room"
   }
 
   assert.equal(explicitYoungProspectCount > 0, true);
+});
+
+test("real first-division annual pools reach the authored high-potential budget", () => {
+  const seriousCounts: number[] = [];
+  const interestingPotentialRatings: number[] = [];
+
+  for (let seedIndex = 0; seedIndex < 7; seedIndex += 1) {
+    const worldSeed = `phase81a-serious-prospect-reachability-${seedIndex}`;
+    const world = createFakeDomesticWorld({ worldSeed });
+    const firstDivisionId = world.domesticCompetitionWorld.competitionIds[0];
+    const firstDivision = firstDivisionId === undefined
+      ? undefined
+      : world.domesticCompetitionWorld.competitions[firstDivisionId];
+    assert.ok(firstDivision !== undefined);
+    let seriousCount = 0;
+
+    for (let clubIndex = 0; clubIndex < firstDivision.clubIds.length; clubIndex += 1) {
+      const currentClubId = firstDivision.clubIds[clubIndex];
+      assert.ok(currentClubId !== undefined);
+      const club = world.clubsById[currentClubId];
+      const tier = openingCompetitiveTierForClubRank(clubIndex + 1);
+      const academy = world.initialYouthAcademies.youthAcademyState.clubRosters[currentClubId];
+      assert.ok(club !== undefined && tier !== undefined && academy !== undefined);
+      const targetPositions = academy.playerIds.slice(0, 3).map((academyPlayerId) => {
+        const position = world.initialYouthAcademies.players[academyPlayerId]?.naturalPositions[0];
+        assert.ok(position !== undefined);
+        return position;
+      });
+      const generated = generateCareerIntakePlayers({
+        worldSeed,
+        seasonId: seasonId("season:serious-prospect-reachability"),
+        clubId: currentClubId,
+        clubContext: {
+          category: club.category,
+          reputation: club.reputation,
+          competitiveTier: tier,
+        },
+        targetPositions,
+      });
+      seriousCount += generated.generatedPlayers.filter(
+        ({ archetypeKey }) => archetypeKey === "serious_prospect",
+      ).length;
+      for (const candidate of generated.generatedPlayers) {
+        if (candidate.archetypeKey !== "good_prospect") continue;
+        interestingPotentialRatings.push(ratingForRoleAbility(Number(rolePotentialAbility(
+          candidate.player.potential,
+          getPlayerRoleProfile(candidate.player.primaryRole),
+        ))));
+      }
+    }
+    seriousCounts.push(seriousCount);
+  }
+
+  const meanSeriousCount = seriousCounts.reduce((sum, count) => sum + count, 0)
+    / seriousCounts.length;
+  assert.equal(seriousCounts.some((count) => count >= 4 && count <= 8), true);
+  assert.equal(meanSeriousCount >= 4 && meanSeriousCount <= 8, true, seriousCounts.join(","));
+  assert.equal(interestingPotentialRatings.length > 0, true);
+  assert.equal(
+    interestingPotentialRatings.every((rating) => rating >= 4 && rating <= 4.5),
+    true,
+  );
 });
 
 test("generateCareerIntakePlayers ages players relative to the supplied career date", () => {

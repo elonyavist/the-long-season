@@ -20,6 +20,7 @@ import {
   spendFitnessForMinutes,
   type AiInGameDecisionReasonKey,
   type AiInGameReplacementFailureKey,
+  type AiMarketDiagnosticFact,
   type FormationKey,
   type SimulateSeasonResult,
 } from "@game/engine";
@@ -50,8 +51,17 @@ import {
   evaluateGeneratedCeilingAttributionCheckpoint,
   evaluateGenerationalSuccessionCheckpoint,
   evaluateYouthMinutePathwayCheckpoint,
+  type GenerationalRenewalArchitectureFacts,
   type GenerationalSuccessionWorldFacts,
 } from "./generational-succession.ts";
+import {
+  OwnerAttributionObserver,
+  evaluateOwnerAttributionCheckpoint,
+  evaluatePlayerRenewalLeadersCheckpoint,
+  type OwnerAttributionWorldFacts,
+} from "./owner-attribution.ts";
+import { evaluateRenewalArchitectureCheckpoint } from "./renewal-architecture-attribution.ts";
+import { HISTORICAL_DIVISION_TABLE_TARGETS } from "./historical-simulation-targets.ts";
 
 /** Career modules sharing one world execution. */
 export const CAREER_SECTION_IDS = [
@@ -77,7 +87,12 @@ export type CareerCheckpointKind =
   | "generated_ceiling_l4_3"
   | "development_renewal_l4_4"
   | "annual_role_continuity_l4_5"
-  | "integrated_player_world_l5";
+  | "integrated_player_world_l5"
+  | "integrated_player_world_l5_4"
+  | "owner_attribution_l5_1"
+  | "standings_hierarchy_l5_2"
+  | "player_renewal_leaders_l5_3"
+  | "renewal_architecture_l5_3c";
 
 const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   league_diversity_l1: false,
@@ -90,6 +105,11 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   development_renewal_l4_4: true,
   annual_role_continuity_l4_5: true,
   integrated_player_world_l5: true,
+  integrated_player_world_l5_4: true,
+  owner_attribution_l5_1: true,
+  standings_hierarchy_l5_2: false,
+  player_renewal_leaders_l5_3: true,
+  renewal_architecture_l5_3c: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -97,7 +117,8 @@ function observesGenerationalSuccession(kind: CareerCheckpointKind | undefined):
   return kind !== undefined && CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION[kind];
 }
 
-function checkpointSectionId(kind: CareerCheckpointKind): "formations" | "development" {
+function checkpointSectionId(kind: CareerCheckpointKind): "formations" | "development" | "standings" {
+  if (kind === "standings_hierarchy_l5_2") return "standings";
   return observesGenerationalSuccession(kind) ? "development" : "formations";
 }
 
@@ -115,6 +136,70 @@ interface CareerWorldProjection {
   readonly leagueDiversity?: LeagueDiversityWorldFacts;
   readonly substitutionMinutes?: SubstitutionMinuteWorldFacts;
   readonly availabilityAging?: AvailabilityAgingWorldFacts;
+  readonly ownerAttribution?: OwnerAttributionWorldFacts;
+  readonly renewalArchitecture?: GenerationalRenewalArchitectureFacts;
+  readonly standingsHierarchy?: StandingsHierarchyWorldFacts;
+  readonly marketTargeting?: RoleAwareMarketWorldFacts;
+}
+
+interface RoleAwareMarketWorldFacts {
+  readonly worldSeed: string;
+  readonly departmentNeedEvaluatedCount: number;
+  readonly roleNeedEvaluatedCount: number;
+  readonly roleNeedRecruitableCount: number;
+  readonly roleTargetFoundCount: number;
+  readonly roleTargetMismatchCount: number;
+  readonly targetPlayerMissingCount: number;
+}
+
+interface MutableRoleAwareMarketWorldFacts {
+  worldSeed: string;
+  departmentNeedEvaluatedCount: number;
+  roleNeedEvaluatedCount: number;
+  roleNeedRecruitableCount: number;
+  roleTargetFoundCount: number;
+  roleTargetMismatchCount: number;
+  targetPlayerMissingCount: number;
+}
+
+export interface StandingsHierarchySeasonFact {
+  readonly worldSeed: string;
+  readonly divisionLevel: 1 | 2 | 3;
+  readonly competitionId: string;
+  readonly seasonNumber: number;
+  readonly championPoints: number;
+  readonly lastClubPoints: number;
+  readonly pointsSpread: number;
+  readonly ppgStandardDeviation: number;
+  readonly goalsPerMatch: number;
+  readonly drawShare: number;
+  readonly reconciliationFailureCount: number;
+}
+
+export interface StandingsHierarchyWorldFacts {
+  readonly worldSeed: string;
+  readonly seasons: readonly StandingsHierarchySeasonFact[];
+}
+
+export interface StandingsHierarchyDivisionEvaluation {
+  readonly divisionLevel: 1 | 2 | 3;
+  readonly competitionSeasonCount: number;
+  readonly championPoints: number;
+  readonly lastClubPoints: number;
+  readonly pointsSpread: number;
+  readonly ppgStandardDeviation: number;
+  readonly goalsPerMatch: number;
+  readonly drawShare: number;
+  readonly failed: readonly string[];
+}
+
+export interface StandingsHierarchyCheckpointDecision {
+  readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
+  readonly divisions: readonly StandingsHierarchyDivisionEvaluation[];
+  readonly competitionSeasonCount: number;
+  readonly reconciliationFailureCount: number;
+  readonly fallbackSelectionCount: number;
+  readonly unavailableSelectedPlayerCount: number;
 }
 
 interface ObservedSeason {
@@ -455,6 +540,23 @@ export async function createCareerSectionsFacts(input: {
           generationalSuccession: observesGenerationalSuccession(
             input.leagueDiversityProfile?.checkpointKind,
           ),
+          ownerAttribution:
+            input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
+            || input.leagueDiversityProfile?.checkpointKind === "player_renewal_leaders_l5_3"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+          renewalArchitecture:
+            input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+          standingsHierarchy:
+            input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+          marketTargeting:
+            input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+          useOwnerAttributionStrengthOracle:
+            input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
+            || input.leagueDiversityProfile?.checkpointKind === "player_renewal_leaders_l5_3"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c",
         } as const;
         const projection = input.workerCount === 1
           ? createCareerWorldProjection(projectionInput)
@@ -479,6 +581,38 @@ export async function createCareerSectionsFacts(input: {
 
   const checkpoint = input.leagueDiversityProfile === undefined
     ? undefined
+    : input.leagueDiversityProfile.checkpointKind === "renewal_architecture_l5_3c"
+      ? evaluateRenewalArchitectureCheckpoint({
+          ownerWorlds: worlds.map(requiredOwnerAttributionFacts),
+          generationalWorlds: worlds.map(requiredGenerationalSuccessionFacts),
+          architectureWorlds: worlds.map(requiredRenewalArchitectureFacts),
+        })
+    : input.leagueDiversityProfile.checkpointKind === "owner_attribution_l5_1"
+      ? evaluateOwnerAttributionCheckpoint({
+          worlds: worlds.map(requiredOwnerAttributionFacts),
+          generationalWorlds: worlds.map(requiredGenerationalSuccessionFacts),
+          tableAttribution: "required",
+          replicatedFormationRetentionShare: evaluateLeagueDiversityCheckpoint(
+            worlds.map(requiredLeagueDiversityFacts),
+          ).longitudinal.fourReplicatedFormationRetentionShare,
+        })
+    : input.leagueDiversityProfile.checkpointKind === "player_renewal_leaders_l5_3"
+      ? evaluatePlayerRenewalLeadersCheckpoint({
+          worlds: worlds.map(requiredOwnerAttributionFacts),
+          generationalWorlds: worlds.map(requiredGenerationalSuccessionFacts),
+          replicatedFormationRetentionShare: evaluateLeagueDiversityCheckpoint(
+            worlds.map(requiredLeagueDiversityFacts),
+          ).longitudinal.fourReplicatedFormationRetentionShare,
+        })
+    : input.leagueDiversityProfile.checkpointKind === "standings_hierarchy_l5_2"
+      ? evaluateStandingsHierarchyCheckpoint(
+          worlds.map(requiredStandingsHierarchyFacts),
+          worlds.map(requiredLeagueDiversityFacts),
+          worlds.map(requiredAvailabilityAgingFacts),
+          input.seasonCount,
+        )
+    : input.leagueDiversityProfile.checkpointKind === "integrated_player_world_l5_4"
+      ? evaluateIntegratedPlayerWorldL5_4Checkpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "integrated_player_world_l5"
       ? evaluateIntegratedPlayerWorldCheckpoint(worlds)
     : input.leagueDiversityProfile.checkpointKind === "league_diversity_l1"
@@ -577,14 +711,28 @@ function createCareerWorldProjection(input: {
   readonly sectionIds: readonly CareerSectionId[];
   readonly leagueDiversity: boolean;
   readonly generationalSuccession: boolean;
+  readonly ownerAttribution: boolean;
+  readonly renewalArchitecture: boolean;
+  readonly standingsHierarchy: boolean;
+  readonly marketTargeting: boolean;
+  readonly useOwnerAttributionStrengthOracle: boolean;
 }): CareerWorldProjection {
   const requested = new Set(input.sectionIds);
   const observedSeasons: ObservedSeason[] = [];
   const observedDomesticSeasons: ObservedDomesticSeason[] = [];
   const names = new Map<string, string>();
   const transfers: ObservedTransfer[] = [];
+  const standingsHierarchySeasons: StandingsHierarchySeasonFact[] = [];
   const generationalObserver = input.generationalSuccession
     ? new GenerationalSuccessionObserver(input.seed)
+    : undefined;
+  const ownerAttributionObserver = input.ownerAttribution
+    ? new OwnerAttributionObserver(input.seed, {
+        includeTableAttribution: input.useOwnerAttributionStrengthOracle,
+      })
+    : undefined;
+  const marketTargeting = input.marketTargeting
+    ? mutableRoleAwareMarketWorldFacts(input.seed)
     : undefined;
 
   const report = createCareerWorldFacts(
@@ -595,9 +743,12 @@ function createCareerWorldProjection(input: {
     (careerState) => {
       rememberPlayerNames(careerState, names);
       generationalObserver?.observeOpening(careerState);
+      ownerAttributionObserver?.observeOpening(careerState);
     },
     {
       selectCatalogFormation: true,
+      ...(input.useOwnerAttributionStrengthOracle ? { analysisStrengthGapScale: 1.5 } : {}),
+      ...(input.ownerAttribution ? { collectSelectionLoadDiagnostics: true } : {}),
       ...(input.leagueDiversity
         ? {
             observeCompetitionSeasonResults: ({
@@ -617,6 +768,24 @@ function createCareerWorldProjection(input: {
                   result,
                   careerState,
                 });
+                ownerAttributionObserver?.observeCompetitionSeason({
+                  seasonNumber,
+                  competitionId: String(competitionId),
+                  result,
+                  careerState,
+                });
+                if (input.standingsHierarchy) {
+                  standingsHierarchySeasons.push(standingsHierarchySeasonFact({
+                    worldSeed: input.seed,
+                    competitionId: String(competitionId),
+                    divisionLevel: divisionLevelForCompetition(
+                      league.domesticCompetitionWorld.competitionIds,
+                      competitionId,
+                    ),
+                    seasonNumber,
+                    result,
+                  }));
+                }
               }
               observedDomesticSeasons.push({
                 seasonNumber,
@@ -703,6 +872,13 @@ function createCareerWorldProjection(input: {
           careerState,
           facts,
         });
+        if (marketTargeting !== undefined) {
+          observeRoleAwareMarketFacts(
+            marketTargeting,
+            previousCareerState,
+            facts.marketLifecycle?.diagnostics ?? [],
+          );
+        }
       },
       observeGeneratedIntakeRoles: ({ seasonNumber, careerState, diagnostics }) => {
         generationalObserver?.observeGeneratedIntakeRoles({
@@ -710,6 +886,7 @@ function createCareerWorldProjection(input: {
           careerState,
           diagnostics,
         });
+        ownerAttributionObserver?.observeGeneratedIntakeRoles({ seasonNumber, diagnostics });
       },
     },
   );
@@ -780,6 +957,13 @@ function createCareerWorldProjection(input: {
   const availabilityAging = observesAvailability
     ? availabilityAgingWorldFacts(input.seed, observedDomesticSeasons)
     : undefined;
+  const ownerAttribution = ownerAttributionObserver?.facts();
+  const renewalArchitecture = input.renewalArchitecture
+    ? generationalObserver?.renewalArchitectureFacts()
+    : undefined;
+  const standingsHierarchy = input.standingsHierarchy
+    ? { worldSeed: input.seed, seasons: standingsHierarchySeasons }
+    : undefined;
   return {
     seed: input.seed,
     sections,
@@ -793,6 +977,10 @@ function createCareerWorldProjection(input: {
     ...(leagueDiversity === undefined ? {} : { leagueDiversity }),
     ...(substitutionMinutes === undefined ? {} : { substitutionMinutes }),
     ...(availabilityAging === undefined ? {} : { availabilityAging }),
+    ...(ownerAttribution === undefined ? {} : { ownerAttribution }),
+    ...(renewalArchitecture === undefined ? {} : { renewalArchitecture }),
+    ...(standingsHierarchy === undefined ? {} : { standingsHierarchy }),
+    ...(marketTargeting === undefined ? {} : { marketTargeting }),
   };
 }
 
@@ -1451,11 +1639,97 @@ function requiredSubstitutionMinuteFacts(world: CareerWorldProjection): Substitu
   return world.substitutionMinutes;
 }
 
+function mutableRoleAwareMarketWorldFacts(
+  worldSeed: string,
+): MutableRoleAwareMarketWorldFacts {
+  return {
+    worldSeed,
+    departmentNeedEvaluatedCount: 0,
+    roleNeedEvaluatedCount: 0,
+    roleNeedRecruitableCount: 0,
+    roleTargetFoundCount: 0,
+    roleTargetMismatchCount: 0,
+    targetPlayerMissingCount: 0,
+  };
+}
+
+function observeRoleAwareMarketFacts(
+  facts: MutableRoleAwareMarketWorldFacts,
+  careerState: CliCareerState,
+  diagnostics: readonly AiMarketDiagnosticFact[],
+): void {
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.event === "need_evaluated") {
+      if (diagnostic.target.kind === "department") {
+        facts.departmentNeedEvaluatedCount += diagnostic.count;
+      } else {
+        facts.roleNeedEvaluatedCount += diagnostic.count;
+      }
+    }
+    if (
+      diagnostic.target.kind === "role"
+      && diagnostic.event === "need_recruitable"
+    ) facts.roleNeedRecruitableCount += diagnostic.count;
+    if (
+      diagnostic.target.kind !== "role"
+      || diagnostic.event !== "permanent_target_found"
+    ) continue;
+    facts.roleTargetFoundCount += diagnostic.count;
+    if (diagnostic.playerId === undefined) {
+      facts.targetPlayerMissingCount += diagnostic.count;
+      continue;
+    }
+    const player = careerState.gameState.players[diagnostic.playerId];
+    if (player === undefined) {
+      facts.targetPlayerMissingCount += diagnostic.count;
+    } else if (player.primaryRole !== diagnostic.target.role) {
+      facts.roleTargetMismatchCount += diagnostic.count;
+    }
+  }
+}
+
+function requiredRoleAwareMarketFacts(world: CareerWorldProjection): RoleAwareMarketWorldFacts {
+  if (world.marketTargeting === undefined) {
+    throw new Error(`Career world ${world.seed} omitted role-aware market facts`);
+  }
+  return world.marketTargeting;
+}
+
 function requiredAvailabilityAgingFacts(world: CareerWorldProjection): AvailabilityAgingWorldFacts {
   if (world.availabilityAging === undefined) {
     throw new Error(`Career world ${world.seed} omitted availability-aging facts`);
   }
   return world.availabilityAging;
+}
+
+function requiredStandingsHierarchyFacts(world: CareerWorldProjection): StandingsHierarchyWorldFacts {
+  if (world.standingsHierarchy === undefined) {
+    throw new Error(`Career world ${world.seed} omitted standings-hierarchy facts`);
+  }
+  return world.standingsHierarchy;
+}
+
+function requiredOwnerAttributionFacts(world: CareerWorldProjection): OwnerAttributionWorldFacts {
+  if (world.ownerAttribution === undefined) {
+    throw new Error(`Career world ${world.seed} omitted owner-attribution facts`);
+  }
+  return world.ownerAttribution;
+}
+
+function requiredRenewalArchitectureFacts(
+  world: CareerWorldProjection,
+): GenerationalRenewalArchitectureFacts {
+  if (world.renewalArchitecture === undefined) {
+    throw new Error(`Career world ${world.seed} omitted renewal-architecture facts`);
+  }
+  return world.renewalArchitecture;
+}
+
+function requiredLeagueDiversityFacts(world: CareerWorldProjection): LeagueDiversityWorldFacts {
+  if (world.leagueDiversity === undefined) {
+    throw new Error(`Career world ${world.seed} omitted league-diversity facts`);
+  }
+  return world.leagueDiversity;
 }
 
 function requiredGenerationalSuccessionFacts(
@@ -1526,6 +1800,102 @@ function evaluateIntegratedPlayerWorldCheckpoint(
     assistMeanAgeDrift: age.assistMeanAgeDrift,
     retained33PlusLeaderFullSeasonShare: age.retained33PlusLeaderFullSeasonShare,
     exceptional33PlusLeaderObservationCount: age.exceptional33PlusLeaderObservationCount,
+  };
+}
+
+/** Applies the frozen L5.4 owner responses to one canonical fresh population. */
+function evaluateIntegratedPlayerWorldL5_4Checkpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  const leagueWorlds = worlds.map(requiredLeagueDiversityFacts);
+  const availabilityWorlds = worlds.map(requiredAvailabilityAgingFacts);
+  const generationalWorlds = worlds.map(requiredGenerationalSuccessionFacts);
+  const ownerWorlds = worlds.map(requiredOwnerAttributionFacts);
+  const integrated = evaluateIntegratedPlayerWorldCheckpoint(worlds);
+  const leagueDiversity = integrated.leagueDiversity;
+  const playerRenewal = evaluatePlayerRenewalLeadersCheckpoint({
+    worlds: ownerWorlds,
+    generationalWorlds,
+    replicatedFormationRetentionShare:
+      leagueDiversity.longitudinal.fourReplicatedFormationRetentionShare,
+  });
+  const renewalArchitecture = evaluateRenewalArchitectureCheckpoint({
+    ownerWorlds,
+    generationalWorlds,
+    architectureWorlds: worlds.map(requiredRenewalArchitectureFacts),
+  });
+  const standingsHierarchy = evaluateStandingsHierarchyCheckpoint(
+    worlds.map(requiredStandingsHierarchyFacts),
+    leagueWorlds,
+    availabilityWorlds,
+    seasonCount,
+  );
+  const marketTargeting = worlds.map(requiredRoleAwareMarketFacts).reduce(
+    (sum, world) => ({
+      departmentNeedEvaluatedCount:
+        sum.departmentNeedEvaluatedCount + world.departmentNeedEvaluatedCount,
+      roleNeedEvaluatedCount: sum.roleNeedEvaluatedCount + world.roleNeedEvaluatedCount,
+      roleNeedRecruitableCount:
+        sum.roleNeedRecruitableCount + world.roleNeedRecruitableCount,
+      roleTargetFoundCount: sum.roleTargetFoundCount + world.roleTargetFoundCount,
+      roleTargetMismatchCount:
+        sum.roleTargetMismatchCount + world.roleTargetMismatchCount,
+      targetPlayerMissingCount:
+        sum.targetPlayerMissingCount + world.targetPlayerMissingCount,
+    }),
+    {
+      departmentNeedEvaluatedCount: 0,
+      roleNeedEvaluatedCount: 0,
+      roleNeedRecruitableCount: 0,
+      roleTargetFoundCount: 0,
+      roleTargetMismatchCount: 0,
+      targetPlayerMissingCount: 0,
+    },
+  );
+  const architectureFailures = [
+    ...(!atLeastObserved(renewalArchitecture.localReplacementCapacity, 0.20)
+      ? ["architecture:local_replacement_capacity"] : []),
+    ...(!atLeastObserved(renewalArchitecture.divisionReplacementCapacity, 0.50)
+      ? ["architecture:division_replacement_capacity"] : []),
+    ...(renewalArchitecture.worldsMeetingMatureAcademyParity < 6
+      ? ["architecture:academy_parity"] : []),
+    ...(!atLeastObserved(renewalArchitecture.annualAcademyMaterialMinuteShare, 0.75)
+      ? ["architecture:academy_material_minutes"] : []),
+    ...(renewalArchitecture.reconciliationFailureCount > 0
+      ? ["architecture:reconciliation"] : []),
+  ];
+  const marketFailures = [
+    ...(marketTargeting.departmentNeedEvaluatedCount <= 0
+      ? ["market:department_need_reachability"] : []),
+    ...(marketTargeting.roleNeedEvaluatedCount <= 0
+      ? ["market:role_need_reachability"] : []),
+    ...(marketTargeting.roleNeedRecruitableCount <= 0
+      ? ["market:role_recruitable_reachability"] : []),
+    ...(marketTargeting.roleTargetFoundCount <= 0
+      ? ["market:exact_role_target_reachability"] : []),
+    ...(marketTargeting.roleTargetMismatchCount > 0
+      ? ["market:role_target_mismatch"] : []),
+    ...(marketTargeting.targetPlayerMissingCount > 0
+      ? ["market:target_player_reconciliation"] : []),
+  ];
+  const failedGateKeys = [
+    ...integrated.failedGateKeys.map((key) => `integrated:${key}`),
+    ...playerRenewal.failedGateKeys.map((key) => `players:${key}`),
+    ...architectureFailures,
+    ...marketFailures,
+    ...(standingsHierarchy.decision === "GO"
+      ? []
+      : [`standings:${standingsHierarchy.decision.toLowerCase()}`]),
+  ];
+  return {
+    decision: failedGateKeys.length === 0 ? "GO" as const : "REFINE" as const,
+    failedGateKeys,
+    integrated,
+    playerRenewal,
+    renewalArchitecture,
+    standingsHierarchy,
+    marketTargeting,
   };
 }
 
@@ -1635,6 +2005,10 @@ function observedRatio(numerator: number, denominator: number): number | "not_ob
 
 function atMostObserved(value: number | "not_observed", maximum: number): boolean {
   return value !== "not_observed" && value <= maximum;
+}
+
+function atLeastObserved(value: number | "not_observed", minimum: number): boolean {
+  return value !== "not_observed" && value >= minimum;
 }
 
 /** Applies the frozen L2 structural and descriptive bands. */
@@ -2294,6 +2668,176 @@ export function evaluateLeagueDiversityCheckpoint(
   };
 }
 
+/**
+ * Evaluates all three league levels against their own frozen history.
+ *
+ * The function reads completed tables only. It cannot influence a match and it
+ * refuses to use first-division evidence as a fallback for a lower league.
+ */
+export function evaluateStandingsHierarchyCheckpoint(
+  worlds: readonly StandingsHierarchyWorldFacts[],
+  formationWorlds: readonly LeagueDiversityWorldFacts[],
+  availabilityWorlds: readonly AvailabilityAgingWorldFacts[],
+  expectedSeasonCount: number,
+): StandingsHierarchyCheckpointDecision {
+  const rows = worlds.flatMap((world) => world.seasons);
+  const reconciliationFailureCount = rows.reduce(
+    (total, row) => total + row.reconciliationFailureCount,
+    0,
+  );
+  const formationRows = formationWorlds.flatMap((world) => world.seasons);
+  const fallbackSelectionCount = formationRows.reduce(
+    (total, row) => total + row.fallbackSelectionCount + row.missingSelectionSourceCount,
+    0,
+  );
+  const unavailableSelectedPlayerCount = availabilityWorlds.flatMap(
+    (world) => world.teamMatches,
+  ).reduce((total, row) => total + row.unavailableSelectedPlayerCount, 0);
+  const divisions = ([1, 2, 3] as const).map((divisionLevel) => {
+    const divisionRows = rows.filter((row) => row.divisionLevel === divisionLevel);
+    const targets = HISTORICAL_DIVISION_TABLE_TARGETS[divisionLevel];
+    const values = {
+      championPoints: reportMean(divisionRows.map((row) => row.championPoints)),
+      lastClubPoints: reportMean(divisionRows.map((row) => row.lastClubPoints)),
+      pointsSpread: reportMean(divisionRows.map((row) => row.pointsSpread)),
+      ppgStandardDeviation: reportMean(
+        divisionRows.map((row) => row.ppgStandardDeviation),
+      ),
+      goalsPerMatch: reportMean(divisionRows.map((row) => row.goalsPerMatch)),
+      drawShare: reportMean(divisionRows.map((row) => row.drawShare)),
+    };
+    const expectedCompetitionSeasonCount = worlds.length * expectedSeasonCount;
+    const failed = [
+      ...(divisionRows.length !== expectedCompetitionSeasonCount
+        ? ["competition_season_count"]
+        : []),
+      ...historicalMetricFailures(values, targets),
+    ];
+    return {
+      divisionLevel,
+      competitionSeasonCount: divisionRows.length,
+      ...values,
+      failed,
+    };
+  });
+  const structuralFailure = reconciliationFailureCount > 0
+    || fallbackSelectionCount > 0
+    || unavailableSelectedPlayerCount > 0
+    || divisions.some(
+      (division) => division.competitionSeasonCount !== worlds.length * expectedSeasonCount,
+    );
+  const firstDivision = divisions[0];
+  const firstGuardrailFailure = firstDivision?.failed.some(
+    (key) => key === "goalsPerMatch" || key === "drawShare",
+  ) ?? true;
+  const lowerDivisionFailure = divisions.slice(1).some((division) => division.failed.length > 0);
+  const decision = structuralFailure || firstGuardrailFailure || lowerDivisionFailure
+    ? "STOP_RETHINK" as const
+    : (firstDivision?.failed.length ?? 1) > 0
+      ? "REFINE" as const
+      : "GO" as const;
+
+  return {
+    decision,
+    divisions,
+    competitionSeasonCount: rows.length,
+    reconciliationFailureCount,
+    fallbackSelectionCount,
+    unavailableSelectedPlayerCount,
+  };
+}
+
+function historicalMetricFailures(
+  values: Omit<StandingsHierarchyDivisionEvaluation, "divisionLevel" | "competitionSeasonCount" | "failed">,
+  targets: typeof HISTORICAL_DIVISION_TABLE_TARGETS[1 | 2 | 3],
+): readonly string[] {
+  return (Object.keys(targets) as readonly (keyof typeof targets)[]).flatMap((key) => {
+    const value = values[key];
+    const band = targets[key];
+    return value >= band.min && value <= band.max ? [] : [key];
+  });
+}
+
+function standingsHierarchySeasonFact(input: {
+  readonly worldSeed: string;
+  readonly divisionLevel: 1 | 2 | 3;
+  readonly competitionId: string;
+  readonly seasonNumber: number;
+  readonly result: SimulateSeasonResult;
+}): StandingsHierarchySeasonFact {
+  const champion = input.result.table[0];
+  const last = input.result.table.at(-1);
+  if (champion === undefined || last === undefined || input.result.table.length === 0) {
+    throw new Error(`Standings hierarchy received an empty table: ${input.competitionId}`);
+  }
+  const drawCount = input.result.fixtures.reduce((count, fixture) =>
+    fixture.result !== undefined && fixture.result.homeGoals === fixture.result.awayGoals
+      ? count + 1
+      : count, 0);
+  const totalGoals = input.result.table.reduce((total, row) => total + row.goalsFor, 0);
+  const pointsPerGame = input.result.table.map((row) => {
+    const played = row.wins + row.draws + row.losses;
+    return played === 0 ? 0 : row.points / played;
+  });
+  return {
+    worldSeed: input.worldSeed,
+    divisionLevel: input.divisionLevel,
+    competitionId: input.competitionId,
+    seasonNumber: input.seasonNumber,
+    championPoints: champion.points,
+    lastClubPoints: last.points,
+    pointsSpread: champion.points - last.points,
+    ppgStandardDeviation: populationStandardDeviation(pointsPerGame),
+    goalsPerMatch: totalGoals / input.result.fixtures.length,
+    drawShare: drawCount / input.result.fixtures.length,
+    reconciliationFailureCount: standingsReconciliationFailureCount(input.result, drawCount),
+  };
+}
+
+function standingsReconciliationFailureCount(
+  result: SimulateSeasonResult,
+  drawCount: number,
+): number {
+  const rows = result.table;
+  const fixtureCount = result.fixtures.length;
+  const totalPlayed = rows.reduce(
+    (total, row) => total + row.wins + row.draws + row.losses,
+    0,
+  );
+  const totalWins = rows.reduce((total, row) => total + row.wins, 0);
+  const totalDraws = rows.reduce((total, row) => total + row.draws, 0);
+  const totalLosses = rows.reduce((total, row) => total + row.losses, 0);
+  const totalGoalsFor = rows.reduce((total, row) => total + row.goalsFor, 0);
+  const totalGoalsAgainst = rows.reduce((total, row) => total + row.goalsAgainst, 0);
+  return Number(totalPlayed !== fixtureCount * 2)
+    + Number(totalWins !== totalLosses)
+    + Number(totalDraws !== drawCount * 2)
+    + Number(totalGoalsFor !== totalGoalsAgainst)
+    + rows.reduce(
+      (total, row) => total + Number(row.points !== row.wins * 3 + row.draws),
+      0,
+    );
+}
+
+function divisionLevelForCompetition(
+  orderedCompetitionIds: readonly string[],
+  competitionId: string,
+): 1 | 2 | 3 {
+  const index = orderedCompetitionIds.indexOf(competitionId);
+  if (index === 0 || index === 1 || index === 2) return (index + 1) as 1 | 2 | 3;
+  throw new Error(`Competition is outside the canonical three-level order: ${competitionId}`);
+}
+
+function populationStandardDeviation(values: readonly number[]): number {
+  const mean = reportMean(values);
+  return Math.sqrt(reportMean(values.map((value) => (value - mean) ** 2)));
+}
+
+function reportMean(values: readonly number[]): number {
+  if (values.length === 0) return Number.NaN;
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
 function transferProjection(
   report: CareerWorldFacts,
   observed: readonly ObservedTransfer[],
@@ -2550,6 +3094,9 @@ function runCareerSectionsWorker(input: {
   readonly sectionIds: readonly CareerSectionId[];
   readonly leagueDiversity: boolean;
   readonly generationalSuccession: boolean;
+  readonly ownerAttribution: boolean;
+  readonly renewalArchitecture: boolean;
+  readonly standingsHierarchy: boolean;
 }): Promise<CareerWorldProjection> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./career-sections.ts", import.meta.url), {

@@ -65,7 +65,7 @@ function row(
     snapshot,
     observations,
     hardCapMinorUnits: HARD_CAP,
-    calibrationVersionBundle: "valuationCurvesVersion=v7",
+    calibrationVersionBundle: "valuationCurvesVersion=v8",
   });
 }
 

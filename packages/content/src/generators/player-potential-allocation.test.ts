@@ -175,7 +175,7 @@ test("the ceiling-first selector implements every accepted division prospect cei
     prospectCase("second_division", "interesting", 3, 3.5),
     prospectCase("second_division", "serious", 3.5, 4.5),
     prospectCase("second_division", "rare", 5, 6),
-    prospectCase("first_division", "interesting", 3.5, 4),
+    prospectCase("first_division", "interesting", 4, 4.5),
     prospectCase("first_division", "serious", 4, 5),
     prospectCase("first_division", "rare", 5.5, 6),
   ];

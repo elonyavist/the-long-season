@@ -17,7 +17,7 @@ import {
 test("accepts the seven reviewed assets through one boundary", () => {
   const result = parsePlayerEconomyCalibrationAssets(validAssets());
 
-  assert.equal(result.valuationCurves.version, "valuation-curves-v7");
+  assert.equal(result.valuationCurves.version, "valuation-curves-v8");
   assert.equal(
     result.askingPriceCurves.valuationCurvesVersion,
     result.valuationCurves.version,

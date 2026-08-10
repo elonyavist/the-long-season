@@ -3,6 +3,7 @@ import type { FixtureId, PlayerId, ShotChanceType } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import type { MatchTeamContext } from "./match-context.ts";
+import { incidentProfileFor } from "./match-discipline.ts";
 import type { MatchScore, MatchSide } from "./match-simulation-state.ts";
 import type { LineupSlot } from "./team-strength.ts";
 
@@ -116,6 +117,21 @@ export interface ChanceActors {
   readonly primaryDefenderPlayerId: PlayerId;
   /** Defending goalkeeper for this opportunity. */
   readonly goalkeeperPlayerId: PlayerId;
+  /**
+   * Exact shooter pool used by this opportunity.
+   *
+   * The conversion owner consumes these ephemeral weights to centre the
+   * selected shooter's execution edge on the distribution that actually chose
+   * him. Keeping the pool here avoids a second task table or a reconstructed
+   * selection after the actor is known.
+   */
+  readonly shooterSelectionPool: readonly ChanceActorSelectionWeight[];
+}
+
+/** One ephemeral actor-selection weight carried into occasion construction. */
+export interface ChanceActorSelectionWeight {
+  readonly playerId: PlayerId;
+  readonly weight: number;
 }
 
 /**
@@ -140,9 +156,22 @@ export interface ChanceActors {
  */
 export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors {
   const creatorWeightForRole = (roleKey: string): number => chanceCreatorWeightForRole(roleKey, input.chanceType);
-  const creatorCandidates = weightedCandidates(input.attackingTeam.lineup, creatorWeightForRole);
-  const shooterCandidates = weightedCandidates(input.attackingTeam.lineup, chanceShooterWeightForRole);
-  const defenderCandidates = weightedCandidates(input.defendingTeam.lineup, primaryDefenderWeightForRole);
+  const creatorCandidates = taskWeightedCandidates(
+    input.attackingTeam,
+    creatorWeightForRole,
+    (profile) => creatorTaskQuality(profile, input.chanceType),
+    CREATOR_TASK_WEIGHT_POLICY,
+  );
+  const shooterCandidates = taskWeightedCandidates(
+    input.attackingTeam,
+    chanceShooterWeightForRole,
+    (profile) => shooterTaskQuality(profile, input.chanceType),
+    SHOOTER_TASK_WEIGHT_POLICY,
+  );
+  const defenderCandidates = roleWeightedCandidates(
+    input.defendingTeam.lineup,
+    primaryDefenderWeightForRole,
+  );
   const goalkeeperPlayerId = selectGoalkeeper(input.defendingTeam);
 
   if (creatorCandidates.length === 0 || shooterCandidates.length === 0) {
@@ -163,14 +192,18 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
     input.scoreBeforeChance.away,
     input.chanceType,
   );
-  const creatorPlayerId = pickWeightedPlayer(creatorCandidates, creatorWeightForRole, rng.nextFloat());
-  const shooterPool = excludePlayerWhenPossible(shooterCandidates, creatorPlayerId);
+  const creatorPlayerId = pickWeightedPlayer(creatorCandidates, rng.nextFloat());
+  const shooterPool = shooterCandidates;
 
   return {
     creatorPlayerId,
-    shooterPlayerId: pickWeightedPlayer(shooterPool, chanceShooterWeightForRole, rng.nextFloat()),
-    primaryDefenderPlayerId: pickWeightedPlayer(defenderCandidates, primaryDefenderWeightForRole, rng.nextFloat()),
+    shooterPlayerId: pickWeightedPlayer(shooterPool, rng.nextFloat()),
+    primaryDefenderPlayerId: pickWeightedPlayer(defenderCandidates, rng.nextFloat()),
     goalkeeperPlayerId,
+    shooterSelectionPool: shooterPool.map(({ slot, weight }) => ({
+      playerId: slot.playerId,
+      weight,
+    })),
   };
 }
 
@@ -218,34 +251,56 @@ export function primaryDefenderWeightForRole(roleKey: string): number {
 /**
  * Builds an ordered weighted candidate list from lineup slots.
  */
-function weightedCandidates(
+interface WeightedChanceActorCandidate {
+  readonly slot: LineupSlot;
+  readonly weight: number;
+}
+
+/** Builds role-only candidates for actors whose task quality is owned elsewhere. */
+function roleWeightedCandidates(
   lineup: readonly LineupSlot[],
   weightForRole: (roleKey: string) => number,
-): readonly LineupSlot[] {
-  const candidates: LineupSlot[] = [];
+): readonly WeightedChanceActorCandidate[] {
+  const candidates: WeightedChanceActorCandidate[] = [];
 
   for (const slot of lineup) {
-    if (weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole)) > 0) {
-      candidates.push(slot);
-    }
+    const weight = weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole));
+    if (weight > 0) candidates.push({ slot, weight });
   }
 
   return candidates;
 }
 
 /**
- * Removes a player from a candidate list when at least one alternative exists.
+ * Adds a centred within-pool skill multiplier to the existing role weight.
+ *
+ * Centring against the role-weighted pool keeps an ordinary player at `1` and
+ * prevents raw squad quality from inflating every actor in a strong team. The
+ * bounds keep role responsibility meaningful: skill distinguishes two players
+ * asked to do the same job, but cannot turn a centre-back into the default
+ * finisher merely because his attributes are unusual.
  */
-function excludePlayerWhenPossible(candidates: readonly LineupSlot[], playerId: PlayerId): readonly LineupSlot[] {
-  const alternatives: LineupSlot[] = [];
+function taskWeightedCandidates(
+  team: MatchTeamContext,
+  weightForRole: (roleKey: string) => number,
+  taskQualityFor: (profile: MatchTeamContext["incidentProfiles"][number]) => number,
+  policy: TaskWeightPolicy,
+): readonly WeightedChanceActorCandidate[] {
+  const roleCandidates = roleWeightedCandidates(team.lineup, weightForRole);
+  const weightedQualityTotal = roleCandidates.reduce((total, candidate) =>
+    total + candidate.weight * taskQualityFor(incidentProfileFor(team, candidate.slot.playerId)), 0);
+  const roleWeightTotal = roleCandidates.reduce((total, candidate) => total + candidate.weight, 0);
+  const poolMean = roleWeightTotal === 0 ? 0 : weightedQualityTotal / roleWeightTotal;
 
-  for (const candidate of candidates) {
-    if (candidate.playerId !== playerId) {
-      alternatives.push(candidate);
-    }
-  }
-
-  return alternatives.length > 0 ? alternatives : candidates;
+  return roleCandidates.map((candidate) => {
+    const quality = taskQualityFor(incidentProfileFor(team, candidate.slot.playerId));
+    const multiplier = clamp(
+      1 + (quality - poolMean) / policy.divisor,
+      policy.minimumMultiplier,
+      policy.maximumMultiplier,
+    );
+    return { slot: candidate.slot, weight: candidate.weight * multiplier };
+  });
 }
 
 /**
@@ -265,19 +320,18 @@ function selectGoalkeeper(team: MatchTeamContext): PlayerId {
  * Picks one candidate by cumulative weight and lineup order.
  */
 function pickWeightedPlayer(
-  candidates: readonly LineupSlot[],
-  weightForRole: (roleKey: string) => number,
+  candidates: readonly WeightedChanceActorCandidate[],
   roll: number,
 ): PlayerId {
-  const totalWeight = candidates.reduce((total, slot) => total + weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole)), 0);
+  const totalWeight = candidates.reduce((total, candidate) => total + candidate.weight, 0);
   const scaledRoll = roll * totalWeight;
   let cumulativeWeight = 0;
 
-  for (const slot of candidates) {
-    cumulativeWeight += weightForRole(roleWeightKeyForCanonicalRole(slot.canonicalRole));
+  for (const candidate of candidates) {
+    cumulativeWeight += candidate.weight;
 
     if (scaledRoll < cumulativeWeight) {
-      return slot.playerId;
+      return candidate.slot.playerId;
     }
   }
 
@@ -286,5 +340,93 @@ function pickWeightedPlayer(
     throw new Error("Cannot pick chance actor from an empty candidate list");
   }
 
-  return fallbackSlot.playerId;
+  return fallbackSlot.slot.playerId;
 }
+
+/** Task quality of the player working the chance, on the canonical 0..20 scale. */
+function creatorTaskQuality(
+  profile: MatchTeamContext["incidentProfiles"][number],
+  chanceType: ShotChanceType,
+): number {
+  switch (chanceType) {
+    case "open_play":
+      return weightedMean([
+        [profile.passing, 3], [profile.vision, 3], [profile.technique, 2],
+        [profile.dribbling, 1], [profile.anticipation, 1],
+      ]);
+    case "counter":
+      return weightedMean([
+        [profile.passing, 2], [profile.vision, 2], [profile.technique, 1],
+        [profile.pace, 2], [profile.dribbling, 2], [profile.anticipation, 1],
+      ]);
+    case "cross":
+      return weightedMean([
+        [profile.crossing, 4], [profile.vision, 2], [profile.technique, 2],
+        [profile.passing, 1],
+      ]);
+    case "dead_ball":
+      return weightedMean([
+        [profile.freeKicks, 3], [profile.crossing, 2], [profile.passing, 2],
+        [profile.vision, 2], [profile.technique, 1],
+      ]);
+  }
+}
+
+/** Task quality of the player finishing the chance, on the canonical 0..20 scale. */
+function shooterTaskQuality(
+  profile: MatchTeamContext["incidentProfiles"][number],
+  chanceType: ShotChanceType,
+): number {
+  switch (chanceType) {
+    case "open_play":
+      return weightedMean([
+        [profile.finishing, 3], [profile.composure, 2], [profile.technique, 1],
+        [profile.anticipation, 1],
+      ]);
+    case "counter":
+      return weightedMean([
+        [profile.finishing, 3], [profile.composure, 2], [profile.pace, 2],
+        [profile.anticipation, 1], [profile.technique, 1],
+      ]);
+    case "cross":
+      return weightedMean([
+        [profile.heading, 3], [profile.finishing, 2], [profile.anticipation, 1],
+        [profile.composure, 1], [profile.strength, 1],
+      ]);
+    case "dead_ball":
+      return weightedMean([
+        [profile.freeKicks, 3], [profile.penalties, 2], [profile.technique, 2],
+        [profile.composure, 2], [profile.finishing, 1],
+      ]);
+  }
+}
+
+/** Computes one explicit weighted mean without storing a derived player score. */
+function weightedMean(entries: readonly (readonly [value: number, weight: number])[]): number {
+  const totalWeight = entries.reduce((total, [, weight]) => total + weight, 0);
+  return entries.reduce((total, [value, weight]) => total + value * weight, 0) / totalWeight;
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+interface TaskWeightPolicy {
+  readonly divisor: number;
+  readonly minimumMultiplier: number;
+  readonly maximumMultiplier: number;
+}
+
+/** Creators own the chance without a second conversion-quality path. */
+const CREATOR_TASK_WEIGHT_POLICY = {
+  divisor: 10,
+  minimumMultiplier: 0.625,
+  maximumMultiplier: 1.375,
+} as const satisfies TaskWeightPolicy;
+
+/** Shooters already matter again when their named execution edge is resolved. */
+const SHOOTER_TASK_WEIGHT_POLICY = {
+  divisor: 70,
+  minimumMultiplier: 0.95,
+  maximumMultiplier: 1.05,
+} as const satisfies TaskWeightPolicy;

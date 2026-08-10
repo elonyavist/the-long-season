@@ -14,9 +14,9 @@ import {
 test("monthlyOpportunityMultiplier rewards credible minutes without making tiny cameos equal starts", () => {
   assert.equal(monthlyOpportunityMultiplier(0), 0);
   assert.equal(monthlyOpportunityMultiplier(20), 0.15);
-  assert.equal(monthlyOpportunityMultiplier(180), 0.45);
-  assert.equal(monthlyOpportunityMultiplier(360), 0.75);
-  assert.equal(monthlyOpportunityMultiplier(450), 1);
+  assert.equal(monthlyOpportunityMultiplier(90), 0.45);
+  assert.equal(monthlyOpportunityMultiplier(180), 0.75);
+  assert.equal(monthlyOpportunityMultiplier(270), 1);
 });
 
 test("monthlyPerformanceModifier is bounded to roughly fifteen percent", () => {
@@ -55,10 +55,10 @@ test("monthlyDevelopmentPolicy combines age, minutes, and bounded performance", 
   });
 
   assert.equal(policy.ageMultiplier, 0.85);
-  assert.equal(policy.opportunityMultiplier, 0.75);
+  assert.equal(policy.opportunityMultiplier, 1);
   assert.equal(policy.performanceModifier, 1.15);
   assert.equal(policy.environmentMultiplier, 1.1);
-  assert.equal(Number(policy.growthMultiplier.toFixed(4)), 0.8064);
+  assert.equal(Number(policy.growthMultiplier.toFixed(4)), 1.0753);
 });
 
 test("environmentMultiplierFromBasisPoints keeps club context bounded and explicit", () => {

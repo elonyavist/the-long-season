@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "player-rating-scale-v9",
+  "version": "player-rating-scale-v10",
   "classification": "explicit_game_design_target",
   "supportedRatings": [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
   "abilityThresholds": [
@@ -52,14 +52,14 @@
   },
   "potentialProjectionPolicy": {
     "schemaVersion": 2,
-    "version": "player-potential-projection-v6",
+    "version": "player-potential-projection-v7",
     "classification": "explicit_game_design_target",
     "ageBandsByRoleFamily": {
       "goalkeeper": [
         {
           "minimumAge": 0,
           "maximumAge": 17,
-          "p50RealizationBasisPoints": 7336,
+          "p50RealizationBasisPoints": 7384,
           "upperRealizationBasisPoints": 10000
         },
         {
@@ -72,43 +72,43 @@
           "minimumAge": 21,
           "maximumAge": 21,
           "p50RealizationBasisPoints": 6736,
-          "upperRealizationBasisPoints": 9450
+          "upperRealizationBasisPoints": 9481
         },
         {
           "minimumAge": 22,
           "maximumAge": 22,
           "p50RealizationBasisPoints": 5836,
-          "upperRealizationBasisPoints": 9396
+          "upperRealizationBasisPoints": 9422
         },
         {
           "minimumAge": 23,
           "maximumAge": 23,
           "p50RealizationBasisPoints": 4566,
-          "upperRealizationBasisPoints": 9324
+          "upperRealizationBasisPoints": 9355
         },
         {
           "minimumAge": 24,
           "maximumAge": 24,
-          "p50RealizationBasisPoints": 3598,
-          "upperRealizationBasisPoints": 8921
+          "p50RealizationBasisPoints": 3600,
+          "upperRealizationBasisPoints": 9090
         },
         {
           "minimumAge": 25,
           "maximumAge": 25,
           "p50RealizationBasisPoints": 2337,
-          "upperRealizationBasisPoints": 7470
+          "upperRealizationBasisPoints": 7530
         },
         {
           "minimumAge": 26,
           "maximumAge": 26,
-          "p50RealizationBasisPoints": 1925,
-          "upperRealizationBasisPoints": 7177
+          "p50RealizationBasisPoints": 2016,
+          "upperRealizationBasisPoints": 7336
         },
         {
           "minimumAge": 27,
           "maximumAge": 27,
-          "p50RealizationBasisPoints": 900,
-          "upperRealizationBasisPoints": 4246
+          "p50RealizationBasisPoints": 1014,
+          "upperRealizationBasisPoints": 4707
         },
         {
           "minimumAge": 28,
@@ -158,37 +158,37 @@
           "minimumAge": 21,
           "maximumAge": 21,
           "p50RealizationBasisPoints": 4794,
-          "upperRealizationBasisPoints": 9326
+          "upperRealizationBasisPoints": 9411
         },
         {
           "minimumAge": 22,
           "maximumAge": 22,
           "p50RealizationBasisPoints": 3671,
-          "upperRealizationBasisPoints": 9190
+          "upperRealizationBasisPoints": 9308
         },
         {
           "minimumAge": 23,
           "maximumAge": 23,
-          "p50RealizationBasisPoints": 2773,
-          "upperRealizationBasisPoints": 8365
+          "p50RealizationBasisPoints": 2812,
+          "upperRealizationBasisPoints": 8582
         },
         {
           "minimumAge": 24,
           "maximumAge": 24,
-          "p50RealizationBasisPoints": 1698,
-          "upperRealizationBasisPoints": 7083
+          "p50RealizationBasisPoints": 1730,
+          "upperRealizationBasisPoints": 7307
         },
         {
           "minimumAge": 25,
           "maximumAge": 25,
-          "p50RealizationBasisPoints": 1040,
-          "upperRealizationBasisPoints": 3678
+          "p50RealizationBasisPoints": 1082,
+          "upperRealizationBasisPoints": 3921
         },
         {
           "minimumAge": 26,
           "maximumAge": 26,
           "p50RealizationBasisPoints": 0,
-          "upperRealizationBasisPoints": 939
+          "upperRealizationBasisPoints": 984
         },
         {
           "minimumAge": 27,

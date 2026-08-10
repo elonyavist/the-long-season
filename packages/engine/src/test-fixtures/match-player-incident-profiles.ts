@@ -18,7 +18,17 @@ import type { LineupSlot } from "../match-engine/team-strength.ts";
  * explicitly instead, or the test will pass without measuring anything.
  */
 export const NEUTRAL_INCIDENT_ATTRIBUTES = {
+  finishing: 10,
+  passing: 10,
+  crossing: 10,
+  dribbling: 10,
+  technique: 10,
   tackling: 10,
+  freeKicks: 10,
+  pace: 10,
+  heading: 10,
+  vision: 10,
+  anticipation: 10,
   composure: 10,
   determination: 10,
   stamina: 10,

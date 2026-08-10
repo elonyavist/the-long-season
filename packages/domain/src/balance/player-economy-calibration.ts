@@ -688,6 +688,8 @@ export interface MarketBehaviorCalibrationConfig {
     readonly targetDepartmentDepth: Readonly<Record<PlayerSquadDepartment, number>>;
     readonly goalkeeperAgingAge: number;
     readonly outfieldAgingAge: number;
+    /** Public-current-ability tolerance for a prime-age same-role successor. */
+    readonly successionQualityTolerance: number;
     readonly averageQualityGap: number;
     readonly weakestQualityGap: number;
     readonly maximumSquadAboveTarget: number;
@@ -696,6 +698,7 @@ export interface MarketBehaviorCalibrationConfig {
       readonly targetDeficit: number;
       readonly expiringContract: number;
       readonly agingDepartment: number;
+      readonly roleSuccession: number;
       readonly qualityGap: number;
     };
   };

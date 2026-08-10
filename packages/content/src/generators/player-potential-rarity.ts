@@ -60,7 +60,7 @@ export const CONTEXTUAL_PROSPECT_CEILING_RATING_BANDS: Readonly<
     rare: ceilingBand(5, 6),
   },
   first_division: {
-    interesting: ceilingBand(3.5, 4),
+    interesting: ceilingBand(4, 4.5),
     serious: ceilingBand(4, 5),
     rare: ceilingBand(5.5, 6),
   },

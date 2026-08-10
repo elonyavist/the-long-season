@@ -16,6 +16,27 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L5_4_INTEGRATED.md` - **Checkpoint L5.4, `REFINE`.**
+  The locked fresh `7 x 10` produced reconciled JSON and byte-stable desktop
+  HTML. Exact-role market targeting is reachable with zero mismatches, but
+  replacement supply, veteran/leader ages, four-formation retention and the
+  First-Division champion-points gate remain red; the `100 x 10` stays closed.
+
+- `PHASE_81A_CHECKPOINT_L5_3C_RENEWAL_ARCHITECTURE.md` - **Checkpoint L5.3C,
+  `OWNER_IDENTIFIED: market_distribution`.** A fresh `7 x 10` finds comparable
+  replacements at only `6.41%` of incumbent clubs but `52.56%` division-wide,
+  with healthy academy realization and zero reconciliation failures.
+
+- `PHASE_81A_CHECKPOINT_L5_3_PLAYER_RENEWAL_LEADERS.md` - **Checkpoint L5.3,
+  `STOP / RETHINK`.** Three fresh `7 x 10` populations prove player-task actor
+  improvements but fail veteran load, generational replacement, scorer
+  concentration and leader-age gates. No unique residual owner existed there;
+  its later L5.3C and L5.4 reports supersede the former 06B16-17 entry lock.
+
+- `PHASE_81A_CHECKPOINT_L5_2D_FINAL_STANDINGS.md` - **Checkpoint L5.2D `GO`.**
+  All three separately calibrated divisions pass all six table metrics over
+  `210` competition-seasons with zero structural failures.
+
 - `PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md` - **accepted Phase
   81A contract and current execution authority.** It fixes the thesis, target
   effects, information parity, analytic/Monte Carlo split, checkpoint protocol
@@ -83,6 +104,22 @@ Read these only when the current step asks for current long-run readiness contex
   career-generated leader replacement and four-shape replication remain red;
   the v9 rerun raises generated leader share to `22.62%` but not its target.
   Owns the consultable JSON/HTML pair and keeps the `100 x 10` closed.
+- `PHASE_81A_BIG_FIVE_STATISTICAL_BASELINE.md` - **frozen Amendment A4
+  denominator.** It compares `100` Big Five league-seasons and `22,065`
+  player-seasons with the L5 first division, freezes the accepted `72..88`
+  champion band, player-use and leader targets, and explicitly attributes
+  nothing before Checkpoint L5.1.
+- `PHASE_81A_CHECKPOINT_L5_1_OWNER_ATTRIBUTION.md` - **Checkpoint L5.1,
+  `REFINE`.** The `7 x 10` facts reconcile, but only renewal quality is
+  attributed; three `not_attributed` owners expose a fail-open PASS.
+- `PHASE_81A_POST_L5_CORRECTION_TRANCHE.md` - **Amendment A5 thesis and
+  operational plan.** Freezes the fail-closed attribution sequence, independent
+  lower-league calibration and conditional owner corrections through the final
+  `7 x 10` HTML.
+- `PHASE_81A_LOWER_DIVISION_STATISTICAL_BASELINE.md` - **frozen Amendment A5
+  lower-tier denominator.** Independent p10..p90 targets over `100` second-
+  division and `31` national third-division league-seasons, normalized to 34
+  matches; Big Five bands never fall through to lower levels.
 
 - `PHASE_81A_CHECKPOINT_A2_SQUAD_IDENTITY.md` - **Checkpoint A2, conditional
   `GO`.** The

@@ -80,22 +80,26 @@ test("the goalkeeper on the occasion is the man in the goalkeeper slot", () => {
   }
 });
 
-test("the creator and the shooter are never the same player", () => {
-  // Two names on one chance or one name once. A chance credited to the same
-  // player twice would read as a pass to himself.
+test("ordinary lineups reach self-created chances without self-assists", () => {
   const simulation = simulationFixture();
+  let selfCreatedCount = 0;
+  let twoPlayerCount = 0;
 
-  for (let minute = 1; minute <= 90; minute += 1) {
+  for (let minute = 1; minute <= 2_000; minute += 1) {
     const occasion = occasionAt(simulation, minute, "central");
-
-    assert.notEqual(occasion.creatorPlayerId, occasion.shooterPlayerId);
+    if (occasion.creatorPlayerId === occasion.shooterPlayerId) {
+      selfCreatedCount += 1;
+      assert.equal(occasion.creatorIsCreditedWithAssist, false);
+    } else {
+      twoPlayerCount += 1;
+    }
   }
+
+  assert.ok(selfCreatedCount > 0);
+  assert.ok(twoPlayerCount > 0);
 });
 
-test("a player who works his own chance is never credited with assisting it", () => {
-  // The one lineup where the pool leaves no alternative. Assist credit is
-  // decided here rather than after a goal, so it has to answer this before it
-  // knows whether there was one.
+test("a one-outfielder lineup still resolves a self-created chance", () => {
   const simulation = simulationFixture({ homeLineupSize: 2 });
   const occasion = occasionAt(simulation, 14, "central");
 
@@ -158,44 +162,50 @@ test("eleven identical players give every actor an edge of exactly zero", () => 
 });
 
 test("a better striker in the same eleven produces a better chance", () => {
-  const ordinary = occasionAt(simulationFixture(), 7, "central");
-  const withOneStandout = occasionAt(
-    simulationFixture({ homeComposureFor: (id) => (id === ordinary.shooterPlayerId ? 20 : 8) }),
-    7,
-    "central",
-  );
-
-  assert.equal(withOneStandout.shooterPlayerId, ordinary.shooterPlayerId);
-  assert.ok(
-    withOneStandout.shooterQualityEdge > 0,
-    `the standout shooter carried ${withOneStandout.shooterQualityEdge}`,
-  );
+  let comparedSameShooter = false;
+  for (let minute = 1; minute <= 90 && !comparedSameShooter; minute += 1) {
+    const ordinary = occasionAt(simulationFixture(), minute, "central");
+    const withOneStandout = occasionAt(
+      simulationFixture({ homeComposureFor: (id) => (id === ordinary.shooterPlayerId ? 20 : 8) }),
+      minute,
+      "central",
+    );
+    if (withOneStandout.shooterPlayerId !== ordinary.shooterPlayerId) continue;
+    comparedSameShooter = true;
+    assert.ok(
+      withOneStandout.shooterQualityEdge > ordinary.shooterQualityEdge,
+      `${ordinary.shooterQualityEdge} -> ${withOneStandout.shooterQualityEdge}`,
+    );
+  }
+  assert.equal(comparedSameShooter, true, "the same named shooter must be reachable in both arms");
 });
 
 test("no shooter may be worth more than a tenth of a chance", () => {
   // Quality has no bound of its own the way block probability and the keeper
   // factor do, so the cap is the only thing standing between one extreme
   // attribute and a chance worth more than the whole gap between the two teams.
-  const shooter = occasionAt(simulationFixture(), 9, "central").shooterPlayerId;
-  const absurd = occasionAt(
-    simulationFixture({ homeComposureFor: (id) => (id === shooter ? 100 : 1) }),
-    9,
-    "central",
-  );
-
-  assert.equal(absurd.shooterPlayerId, shooter);
-  assert.equal(absurd.shooterQualityEdge, 0.1, "an uncapped edge would have been above one whole quality point");
+  let reachedCap = false;
+  for (let minute = 1; minute <= 90 && !reachedCap; minute += 1) {
+    const shooter = occasionAt(simulationFixture(), minute, "central").shooterPlayerId;
+    const absurd = occasionAt(
+      simulationFixture({ homeComposureFor: (id) => (id === shooter ? 100 : 1) }),
+      minute,
+      "central",
+    );
+    if (absurd.shooterPlayerId !== shooter) continue;
+    reachedCap = absurd.shooterQualityEdge === 0.1;
+  }
+  assert.equal(reachedCap, true, "the real selection path must reach the shooter-quality cap");
 });
 
-test("naming actors gives the population nothing", () => {
-  // The measured version of the discipline the route term already follows. An
-  // edge is a distance from the pool the actor was drawn from, so across many
-  // chances it has no mean to give away - otherwise every match in every
-  // division would quietly convert better and the separation would be inflation.
+test("task-weighted shooter and role-weighted defender execution stay centred", () => {
+  // Better task players receive more chances, but the conversion edge is
+  // centred on those exact selection weights. Selection therefore changes who
+  // acts without inflating how many team chances become goals.
   const simulation = simulationFixture();
   let shooterTotal = 0;
   let defenderTotal = 0;
-  const minutes = 90;
+  const minutes = 2_000;
 
   for (let minute = 1; minute <= minutes; minute += 1) {
     const occasion = occasionAt(simulation, minute, "central");
@@ -205,7 +215,7 @@ test("naming actors gives the population nothing", () => {
 
   assert.ok(
     Math.abs(shooterTotal / minutes) < 0.01,
-    `mean shooter edge was ${shooterTotal / minutes} of a quality point`,
+    `mean shooter edge was ${shooterTotal / minutes}`,
   );
   assert.ok(
     Math.abs(defenderTotal / minutes) < 0.01,
@@ -311,7 +321,17 @@ function incidentProfile(
 
   return {
     playerId: player,
+    finishing: 10,
+    passing: 10,
+    crossing: 10,
+    dribbling: 10,
+    technique: 10,
     tackling: spread,
+    freeKicks: 10,
+    pace: 10,
+    heading: 10,
+    vision: 10,
+    anticipation: 10,
     composure: side === "home" && options.homeComposureFor !== undefined
       ? options.homeComposureFor(player)
       : spread,

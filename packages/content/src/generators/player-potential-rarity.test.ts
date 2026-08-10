@@ -44,7 +44,7 @@ test("contextual prospect ceiling bands match the accepted three-division matrix
       rare: { minimumRating: 5, maximumRating: 6, selection: { kind: "uniform" } },
     },
     first_division: {
-      interesting: { minimumRating: 3.5, maximumRating: 4, selection: { kind: "uniform" } },
+      interesting: { minimumRating: 4, maximumRating: 4.5, selection: { kind: "uniform" } },
       serious: { minimumRating: 4, maximumRating: 5, selection: { kind: "uniform" } },
       rare: { minimumRating: 5.5, maximumRating: 6, selection: { kind: "uniform" } },
     },

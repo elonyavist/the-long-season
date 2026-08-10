@@ -3,7 +3,8 @@ import type { PlayerParticipationRow } from "@game/domain";
 /** Broad position bucket used by the development lifecycle. */
 export type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
 
-const REALISTIC_MONTHLY_MINUTES = 450;
+const REALISTIC_MONTHLY_MINUTES = 270;
+const REGULAR_MONTHLY_MINUTES = 180;
 const PERFORMANCE_MODIFIER_LIMIT = 0.15;
 const NEUTRAL_RATING = 6.5;
 const STRONG_RATING_DISTANCE = 1.5;
@@ -71,7 +72,7 @@ export function environmentMultiplierFromBasisPoints(basisPoints: number): numbe
 export function monthlyOpportunityMultiplier(minutes: number): number {
   if (minutes <= 0) return 0;
   if (minutes < 90) return 0.15;
-  if (minutes < 270) return 0.45;
+  if (minutes < REGULAR_MONTHLY_MINUTES) return 0.45;
   if (minutes < REALISTIC_MONTHLY_MINUTES) return 0.75;
   return 1;
 }

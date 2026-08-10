@@ -301,6 +301,50 @@ test("fake player generation gives top clubs a visible starting-lineup ability e
   assert.equal(topAverage - bottomAverage >= 1.5, true);
 });
 
+test("a real first-division population reaches the widened contender-survival hierarchy", () => {
+  const clubs = generateFakeClubs();
+  const clubContexts = Object.fromEntries(
+    clubs.clubIds.map((clubId, index) => [
+      clubId,
+      {
+        category: "first_division",
+        reputation: 9,
+        competitiveTier: openingCompetitiveTierForClubRank(index + 1),
+      },
+    ]),
+  ) as Record<ClubId, OpeningPlayerGenerationClubContext>;
+  const generated = generateFakePlayersForClubs(clubs.clubIds, {
+    seed: "phase81a-table-hierarchy-reachability",
+    clubContexts,
+  });
+
+  const lineupAbilityEdge = lineupRoleCurrentAbilityAverage(generated, 1)
+    - lineupRoleCurrentAbilityAverage(generated, 18);
+  assert.equal(lineupAbilityEdge >= 2.5, true, String(lineupAbilityEdge));
+});
+
+test("a real third-division population reaches its soft contender-survival hierarchy", () => {
+  const clubs = generateFakeClubs();
+  const clubContexts = Object.fromEntries(
+    clubs.clubIds.map((clubId, index) => [
+      clubId,
+      {
+        category: "third_division",
+        reputation: 4,
+        competitiveTier: openingCompetitiveTierForClubRank(index + 1),
+      },
+    ]),
+  ) as Record<ClubId, OpeningPlayerGenerationClubContext>;
+  const generated = generateFakePlayersForClubs(clubs.clubIds, {
+    seed: "phase81a-third-division-hierarchy-reachability",
+    clubContexts,
+  });
+
+  const lineupAbilityEdge = lineupRoleCurrentAbilityAverage(generated, 1)
+    - lineupRoleCurrentAbilityAverage(generated, 18);
+  assert.equal(lineupAbilityEdge >= 2, true, String(lineupAbilityEdge));
+});
+
 test("third-division generated bands keep title contenders below first-division quality", () => {
   const clubs = generateFakeClubs();
   const generated = generateFakePlayersForClubs(clubs.clubIds, { seed: "band-world" });
@@ -450,6 +494,23 @@ function lineupCurrentAbilityAverage(generated: ReturnType<typeof generateFakePl
 
   for (let slotNumber = 1; slotNumber <= 11; slotNumber += 1) {
     total += playerCurrentAbilityAverage(requiredPlayer(generated.players[fakePlayerId(clubNumber, slotNumber)]));
+  }
+
+  return total / 11;
+}
+
+/** Returns the canonical role-current average for one generated starting XI. */
+function lineupRoleCurrentAbilityAverage(
+  generated: ReturnType<typeof generateFakePlayersForClubs>,
+  clubNumber: number,
+): number {
+  let total = 0;
+
+  for (let slotNumber = 1; slotNumber <= 11; slotNumber += 1) {
+    const player = requiredPlayer(generated.players[fakePlayerId(clubNumber, slotNumber)]);
+    const role = player.primaryRole;
+    assert.ok(role !== undefined);
+    total += Number(roleCurrentAbility(player.abilities, getPlayerRoleProfile(role)));
   }
 
   return total / 11;

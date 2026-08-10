@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "market-behavior-calibration-v7",
+  "version": "market-behavior-calibration-v9",
   "classification": "explicit_game_design_target",
-  "askingPriceCurvesVersion": "asking-price-curves-v6",
+  "askingPriceCurvesVersion": "asking-price-curves-v7",
   "wageFinanceCalibrationVersion": "wage-finance-calibration-reportcalcio-2025-v1",
   "openingFinanceRoundingMinorUnits": 1000000,
   "openingFinanceTargets": [
@@ -109,6 +109,7 @@
     },
     "goalkeeperAgingAge": 33,
     "outfieldAgingAge": 30,
+    "successionQualityTolerance": 0.5,
     "averageQualityGap": 0.75,
     "weakestQualityGap": 2,
     "maximumSquadAboveTarget": 3,
@@ -117,6 +118,7 @@
       "targetDeficit": 12,
       "expiringContract": 20,
       "agingDepartment": 8,
+      "roleSuccession": 32,
       "qualityGap": 6
     }
   }

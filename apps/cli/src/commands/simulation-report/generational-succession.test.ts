@@ -7,6 +7,7 @@ import {
   evaluateDevelopmentRenewalCheckpoint,
   evaluateGeneratedCeilingAttributionCheckpoint,
   evaluateGenerationalSuccessionCheckpoint,
+  evaluateGenerationalRenewalAttribution,
   evaluateYouthMinutePathwayCheckpoint,
   l4GenerationInputSignature,
   type AcademyParticipationCheckpointFacts,
@@ -35,6 +36,44 @@ test("the first material funnel break owns attribution and unknown origin blocks
   assert.equal(developmentBreak.owner, "development_conversion");
   assert.equal(unknown.decision, "REFINE");
   assert.equal(unknown.owner, "not_identified");
+});
+
+test("renewal attribution reads quality and material-minute intersections instead of selected over registered", () => {
+  const base = worldFacts({
+    openingPopulationCount: 100,
+    careerGeneratedCount: 60,
+    matureAcademyIntakeCount: 20,
+    promotionCandidateCount: 10,
+    completedPromotionCount: 6,
+    seasonTenActiveOpeningSeniorCount: 40,
+    generatedActivePopulationCount: 20,
+    generatedSeniorQualityPlayerCount: 10,
+    generatedSeniorQualityMaterialMinutePlayerCount: 6,
+  });
+  assert.equal(evaluateGenerationalRenewalAttribution({
+    worlds: [{ ...base, careerGeneratedCount: 40 }],
+    actorAllocationOwnsResidual: true,
+  }).owner, "intake_quality_or_quantity");
+  assert.equal(evaluateGenerationalRenewalAttribution({
+    worlds: [worldFacts({ ...base, generatedSeniorQualityPlayerCount: 4 })],
+    actorAllocationOwnsResidual: true,
+  }).owner, "development_realization");
+  assert.equal(evaluateGenerationalRenewalAttribution({
+    worlds: [worldFacts({ ...base, completedPromotionCount: 4 })],
+    actorAllocationOwnsResidual: true,
+  }).owner, "promotion_opportunity");
+  assert.equal(evaluateGenerationalRenewalAttribution({
+    worlds: [worldFacts({ ...base, generatedSeniorQualityMaterialMinutePlayerCount: 4 })],
+    actorAllocationOwnsResidual: true,
+  }).owner, "selection_opportunity");
+  assert.equal(evaluateGenerationalRenewalAttribution({
+    worlds: [worldFacts({ ...base, seasonTenActiveOpeningSeniorCount: 60 })],
+    actorAllocationOwnsResidual: true,
+  }).owner, "exit_retention_balance");
+  assert.equal(evaluateGenerationalRenewalAttribution({
+    worlds: [base],
+    actorAllocationOwnsResidual: true,
+  }).owner, "downstream_actor_allocation");
 });
 
 test("the frozen ordered rule reaches promotion, selection and exit owners", () => {
@@ -251,6 +290,9 @@ interface WorldOverrides {
   academyParticipation?: AcademyParticipationCheckpointFacts;
   generatedCeilingRows?: readonly GeneratedCeilingAttributionRow[];
   annualRoleContinuity?: AnnualRoleContinuityWorldFacts;
+  generatedActivePopulationCount?: number;
+  generatedSeniorQualityPlayerCount?: number;
+  generatedSeniorQualityMaterialMinutePlayerCount?: number;
 }
 
 function worldFacts(overrides: WorldOverrides): GenerationalSuccessionWorldFacts {
@@ -262,6 +304,10 @@ function worldFacts(overrides: WorldOverrides): GenerationalSuccessionWorldFacts
       selectedPlayerCount: overrides.seasonTenSelectedCareerGeneratedCount ?? 6,
       transferAcquisitionCount: overrides.careerGeneratedAcquisitionCount ?? 6,
       scorerLeaderboardCount: overrides.seasonTenCareerGeneratedLeaderboardCount ?? 10,
+      activePopulationCount: overrides.generatedActivePopulationCount ?? 20,
+      seniorQualityPlayerCount: overrides.generatedSeniorQualityPlayerCount ?? 10,
+      seniorQualityMaterialMinutePlayerCount:
+        overrides.generatedSeniorQualityMaterialMinutePlayerCount ?? 6,
     }),
     row("opening_senior", {
       ageBand: "33_plus",
@@ -430,6 +476,8 @@ function row(
     completedPromotionCount: 0,
     registeredSeniorCount: 0,
     selectedPlayerCount: 0,
+    seniorQualityPlayerCount: 0,
+    seniorQualityMaterialMinutePlayerCount: 0,
     emergencySelectionCount: 0,
     starts: 0,
     minutes: 0,

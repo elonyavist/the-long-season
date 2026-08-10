@@ -345,6 +345,7 @@ test("non-goal step events include a shooter from the attacking side lineup", ()
   for (const event of shotEvents) {
     const expectedShooterId = event.side === "home" ? playerId("player:home-field") : playerId("player:away-field");
     assert.equal(event.shooterPlayerId, expectedShooterId);
+    assert.equal(typeof event.selectedCreatorPlayerId, "string");
   }
 });
 
@@ -396,6 +397,7 @@ test("goal step events carry deterministic assist attribution", () => {
   for (const goal of goalEvents) {
     const credited = [goal.assistPlayerId, goal.creatorPlayerId].filter((id) => id !== undefined);
 
+    assert.equal(typeof goal.selectedCreatorPlayerId, "string");
     assert.equal(credited.length, 1, `${goal.side} goal credited ${credited.length} team-mates`);
     assert.equal(credited[0] === goal.scorerPlayerId, false, "a goal may never be assisted by its own scorer");
   }
@@ -506,19 +508,21 @@ test("the outcome cannot change who was involved or how the chance was worked", 
   assert.equal(scored.length, 2);
   assert.equal(blocked.length, scored.length);
 
-  for (const [index, goal] of scored.entries()) {
-    const block = blocked[index];
-    assert.ok(block !== undefined);
-    assert.equal(goal.side, block.side);
-    assert.equal(goal.route, block.route);
-    assert.equal(goal.chanceType, block.chanceType);
-    assert.equal(goal.shotType, block.shotType);
-    assert.equal(
-      goal.outcome === "goal" ? goal.scorerPlayerId : undefined,
-      block.outcome === "block" ? block.shooterPlayerId : undefined,
-      "the player who scored it and the player whose shot was blocked are the same man",
-    );
-  }
+  // The first opportunity has the same pre-resolution context in both arms.
+  // Its outcome then changes the score seen by the second side, so comparing a
+  // later opportunity would incorrectly require actors to ignore real state.
+  const goal = scored[0];
+  const block = blocked[0];
+  assert.ok(goal !== undefined && block !== undefined);
+  assert.equal(goal.side, block.side);
+  assert.equal(goal.route, block.route);
+  assert.equal(goal.chanceType, block.chanceType);
+  assert.equal(goal.shotType, block.shotType);
+  assert.equal(
+    goal.outcome === "goal" ? goal.scorerPlayerId : undefined,
+    block.outcome === "block" ? block.shooterPlayerId : undefined,
+    "the player who scored it and the player whose shot was blocked are the same man",
+  );
 });
 
 test("every shot event agrees with the route it says it came down", () => {

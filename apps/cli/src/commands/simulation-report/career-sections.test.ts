@@ -12,11 +12,13 @@ import {
   evaluateAvailabilityAgingCheckpoint,
   evaluateIntegratedLeaderboardAgeGates,
   evaluateLeagueDiversityCheckpoint,
+  evaluateStandingsHierarchyCheckpoint,
   evaluateSubstitutionMinuteCheckpoint,
   type LeagueDiversityCompetitionSeasonFact,
   type LeagueDiversityOpeningCompetitionFact,
   type AvailabilityAgingWorldFacts,
   type SubstitutionMinuteWorldFacts,
+  type StandingsHierarchyWorldFacts,
 } from "./career-sections.ts";
 
 test("one real career execution feeds every reusable module and fields contextual AI shapes", async () => {
@@ -336,6 +338,63 @@ test("availability-aging checkpoint proves generated recovery reachability and r
   assert.ok(failing.failed.includes("unavailable_selected_players"));
 });
 
+test("L5.2 applies separate division targets and fails closed by owner class", () => {
+  const standingsWorlds = Array.from({ length: 7 }, (_, worldIndex) => {
+    const worldSeed = `l5-2-world-${worldIndex + 1}`;
+    return {
+      worldSeed,
+      seasons: ([1, 2, 3] as const).flatMap((divisionLevel) => [1, 2].map(
+        (seasonNumber) => healthyStandingsSeason(worldSeed, divisionLevel, seasonNumber),
+      )),
+    } satisfies StandingsHierarchyWorldFacts;
+  });
+  const formationWorlds = standingsWorlds.map(({ worldSeed }) => ({
+    worldSeed,
+    opening: [{ ...healthyOpening(), worldSeed }],
+    seasons: [1, 2, 3].flatMap((divisionLevel) => [1, 2].map((seasonNumber) => ({
+      ...healthySeason(seasonNumber),
+      worldSeed,
+      competitionId: `competition:${divisionLevel}`,
+    }))),
+  }));
+  const availabilityWorlds = standingsWorlds.map(({ worldSeed }) =>
+    healthyAvailabilityWorld(worldSeed));
+  const passing = evaluateStandingsHierarchyCheckpoint(
+    standingsWorlds,
+    formationWorlds,
+    availabilityWorlds,
+    2,
+  );
+  const firstDivisionStillCompressed = evaluateStandingsHierarchyCheckpoint(
+    standingsWorlds.map((world) => ({
+      ...world,
+      seasons: world.seasons.map((row) => row.divisionLevel === 1
+        ? { ...row, championPoints: 50 }
+        : row),
+    })),
+    formationWorlds,
+    availabilityWorlds,
+    2,
+  );
+  const lowerDivisionRegression = evaluateStandingsHierarchyCheckpoint(
+    standingsWorlds.map((world, index) => index === 0 ? {
+      ...world,
+      seasons: world.seasons.map((row) => row.divisionLevel === 2
+        ? { ...row, goalsPerMatch: 20 }
+        : row),
+    } : world),
+    formationWorlds,
+    availabilityWorlds,
+    2,
+  );
+
+  assert.equal(passing.competitionSeasonCount, 42);
+  assert.equal(passing.decision, "GO");
+  assert.deepEqual(passing.divisions.map((division) => division.competitionSeasonCount), [14, 14, 14]);
+  assert.equal(firstDivisionStillCompressed.decision, "REFINE");
+  assert.equal(lowerDivisionRegression.decision, "STOP_RETHINK");
+});
+
 function healthyOpening(): LeagueDiversityOpeningCompetitionFact {
   return {
     worldSeed: "checkpoint-world",
@@ -356,6 +415,26 @@ function healthyOpening(): LeagueDiversityOpeningCompetitionFact {
     avoidableOutOfPositionSlotCount: 0,
     academyCallUpAppearanceCount: 1,
     meanOutOfPositionSlots: 0,
+  };
+}
+
+function healthyStandingsSeason(
+  worldSeed: string,
+  divisionLevel: 1 | 2 | 3,
+  seasonNumber: number,
+): StandingsHierarchyWorldFacts["seasons"][number] {
+  const values = {
+    1: { championPoints: 80, lastClubPoints: 22, pointsSpread: 58, ppgStandardDeviation: 0.43, goalsPerMatch: 2.75, drawShare: 0.25 },
+    2: { championPoints: 67, lastClubPoints: 26, pointsSpread: 41, ppgStandardDeviation: 0.30, goalsPerMatch: 2.5, drawShare: 0.28 },
+    3: { championPoints: 69, lastClubPoints: 25, pointsSpread: 44, ppgStandardDeviation: 0.34, goalsPerMatch: 2.65, drawShare: 0.26 },
+  } as const;
+  return {
+    worldSeed,
+    divisionLevel,
+    competitionId: `competition:${divisionLevel}`,
+    seasonNumber,
+    ...values[divisionLevel],
+    reconciliationFailureCount: 0,
   };
 }
 

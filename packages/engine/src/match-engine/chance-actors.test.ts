@@ -15,7 +15,10 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
-import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
+import {
+  neutralIncidentProfilesFor,
+  withNeutralIncidentProfiles,
+} from "../test-fixtures/match-player-incident-profiles.ts";
 
 
 /**
@@ -92,10 +95,18 @@ test("goalkeeper-only attacking lineups fail instead of selecting an attacking g
   );
 });
 
-test("creator and shooter use separate players when an alternative exists", () => {
-  const result = selectChanceActors(chanceInput());
+test("self-created and two-player chances are both reachable", () => {
+  let selfCreatedCount = 0;
+  let twoPlayerCount = 0;
 
-  assert.notEqual(result.creatorPlayerId, result.shooterPlayerId);
+  for (let minute = 1; minute <= 2_000; minute += 1) {
+    const result = selectChanceActors(chanceInput({ minute }));
+    if (result.creatorPlayerId === result.shooterPlayerId) selfCreatedCount += 1;
+    else twoPlayerCount += 1;
+  }
+
+  assert.ok(selfCreatedCount > 0);
+  assert.ok(twoPlayerCount > 0);
 });
 
 test("role weights favor expected outfield responsibilities and exclude goalkeepers", () => {
@@ -112,6 +123,36 @@ test("creator weights vary by chance type to avoid one fixed creator pool", () =
   assert.ok(chanceCreatorWeightForRole("defender", "cross") > chanceCreatorWeightForRole("midfielder", "cross"));
   assert.ok(chanceCreatorWeightForRole("midfielder", "open_play") > chanceCreatorWeightForRole("defender", "open_play"));
   assert.equal(chanceCreatorWeightForRole("gk", "dead_ball"), 0);
+});
+
+test("task quality separates two shooters with the same role without deleting either", () => {
+  const team = sameRoleQualityTeam("shooter");
+  const counts = new Map<string, number>();
+
+  for (let minute = 1; minute <= 20_000; minute += 1) {
+    const selected = selectChanceActors(chanceInput({ attackingTeam: team, minute }));
+    counts.set(selected.shooterPlayerId, (counts.get(selected.shooterPlayerId) ?? 0) + 1);
+  }
+
+  const strong = counts.get("player:home-strong") ?? 0;
+  const weak = counts.get("player:home-weak") ?? 0;
+  assert.ok(strong > weak, `strong=${strong}; weak=${weak}`);
+  assert.ok(weak > 0, "a weak but eligible striker must remain reachable");
+});
+
+test("task quality separates two creators with the same role without deleting either", () => {
+  const team = sameRoleQualityTeam("creator");
+  const counts = new Map<string, number>();
+
+  for (let minute = 1; minute <= 2_000; minute += 1) {
+    const selected = selectChanceActors(chanceInput({ attackingTeam: team, minute }));
+    counts.set(selected.creatorPlayerId, (counts.get(selected.creatorPlayerId) ?? 0) + 1);
+  }
+
+  const strong = counts.get("player:home-strong") ?? 0;
+  const weak = counts.get("player:home-weak") ?? 0;
+  assert.ok(strong > weak * 1.5, `strong=${strong}; weak=${weak}`);
+  assert.ok(weak > 0, "a weak but eligible creator must remain reachable");
 });
 
 /**
@@ -170,6 +211,40 @@ function awayTeamFixture(): MatchTeamContext {
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
   });
+}
+
+/** Builds two same-role candidates whose only difference is task ability. */
+function sameRoleQualityTeam(task: "shooter" | "creator"): MatchTeamContext {
+  const canonicalRole = task === "shooter" ? "striker" : "central_midfielder";
+  const base = homeTeamFixture();
+  const strongPlayerId = playerId("player:home-strong");
+  const weakPlayerId = playerId("player:home-weak");
+  const lineup = [
+    ...base.lineup,
+    createLineupSlot({ slotId: "slot:home-strong", playerId: strongPlayerId, canonicalRole }),
+    createLineupSlot({ slotId: "slot:home-weak", playerId: weakPlayerId, canonicalRole }),
+  ];
+  const profiles = neutralIncidentProfilesFor(lineup).map((profile) => {
+    if (profile.playerId !== strongPlayerId && profile.playerId !== weakPlayerId) return profile;
+    const quality = profile.playerId === strongPlayerId ? 20 : 1;
+    return task === "shooter"
+      ? {
+        ...profile,
+        finishing: quality,
+        composure: quality,
+        technique: quality,
+        anticipation: quality,
+      }
+      : {
+        ...profile,
+        passing: quality,
+        vision: quality,
+        technique: quality,
+        dribbling: quality,
+        anticipation: quality,
+      };
+  });
+  return { ...base, lineup, incidentProfiles: profiles };
 }
 
 /**

@@ -189,7 +189,11 @@ export function resolveSeniorCurrentAbilityBand(input: {
     throw new Error(`Missing senior current ability band: ${input.division} ${input.bucket} ${rarityLane}`);
   }
 
-  return applyTierModifier(laneBand, input.clubTier);
+  return applyTierModifier(
+    laneBand,
+    input.clubTier,
+    SENIOR_HIERARCHY_SCALE_BY_DIVISION[input.division],
+  );
 }
 
 /** Resolves a youth current-ability band after applying a bounded club-tier modifier. */
@@ -208,7 +212,7 @@ export function resolveYouthCurrentAbilityBand(input: {
     throw new Error(`Missing youth current ability band: ${input.division} ${ageGroup} ${input.bucket} ${rarityLane}`);
   }
 
-  return applyTierModifier(laneBand, input.clubTier);
+  return applyTierModifier(laneBand, input.clubTier, 1);
 }
 
 function resolveLaneBand(
@@ -381,8 +385,12 @@ function bucketForRoleAbility(role: PlayerRole, abilityKey: PlayerAbilityKey): R
   return "cappedOutOfRole";
 }
 
-function applyTierModifier(range: CurrentAbilityBandRange, clubTier: PlayerGenerationClubTier): CurrentAbilityBandRange {
-  const modifier = clubTierModifier(clubTier);
+function applyTierModifier(
+  range: CurrentAbilityBandRange,
+  clubTier: PlayerGenerationClubTier,
+  hierarchyScale: number,
+): CurrentAbilityBandRange {
+  const modifier = clubTierModifier(clubTier) * hierarchyScale;
   const min = clamp(range.minInclusive + modifier, range.minInclusive, range.maxInclusive);
   const max = clamp(range.maxInclusive + modifier, range.minInclusive, range.maxInclusive);
 
@@ -404,6 +412,20 @@ function clubTierModifier(clubTier: PlayerGenerationClubTier): number {
       return -2;
   }
 }
+
+/**
+ * Within-lane senior hierarchy by competition level.
+ *
+ * The scale changes the distance between real players at differently resourced
+ * clubs, never a match result. Second Division already matches its historical
+ * hierarchy and therefore stays at the authored `1`; First and Third need more
+ * separation so strong and weak clubs do not become interchangeable.
+ */
+const SENIOR_HIERARCHY_SCALE_BY_DIVISION = {
+  first_division: 2.25,
+  second_division: 1,
+  third_division: 1.3,
+} as const satisfies Readonly<Record<ClubCategory, number>>;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));

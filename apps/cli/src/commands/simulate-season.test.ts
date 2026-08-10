@@ -172,13 +172,15 @@ test("simulate-season can print a generated player quality report without printi
   assert.equal(io.stdoutLines.includes("Players: 396"), true);
   assert.equal(io.stdoutLines.includes("Inspection only: no career save is written."), true);
   assert.equal(io.stdoutLines.includes("Current ability distribution:"), true);
-  // RE-RECORDED for Phase 81A Step 06A's balanced identity deck:
-  // `121/256/19` -> `119/260/17`. Ability is generated per position, so the
-  // competition's changed position mix moves the histogram. Its invariant did
-  // not move: these buckets plus `15+` still sum to all `396` players.
-  assert.equal(io.stdoutLines.includes("  0-8: 119"), true);
-  assert.equal(io.stdoutLines.includes("  9-11: 260"), true);
-  assert.equal(io.stdoutLines.includes("  12-14: 17"), true);
+  // RE-RECORDED for Phase 81A Step 06B12B's soft Third-Division hierarchy:
+  // `119/260/17` -> `126/228/42` -> `127/223/46`. Strong-club seniors occupy
+  // more of the
+  // same authored rarity lane while survival players move toward its lower
+  // side. No player crosses into `15+`, and all four buckets still sum to the
+  // complete `396`-player population.
+  assert.equal(io.stdoutLines.includes("  0-8: 127"), true);
+  assert.equal(io.stdoutLines.includes("  9-11: 223"), true);
+  assert.equal(io.stdoutLines.includes("  12-14: 46"), true);
   assert.equal(io.stdoutLines.includes("  15+: 0"), true);
   assert.equal(io.stdoutLines.some((line) => /^  15\+: [0-9]+$/.test(line)), true);
   assert.equal(io.stdoutLines.includes("Potential distribution:"), true);

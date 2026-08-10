@@ -327,7 +327,17 @@ export function createMatchPlayerIncidentProfile(
 ): MatchPlayerIncidentProfile {
   return {
     playerId: player.id,
+    finishing: Number(player.abilities.technical.finishing),
+    passing: Number(player.abilities.technical.passing),
+    crossing: Number(player.abilities.technical.crossing),
+    dribbling: Number(player.abilities.technical.dribbling),
+    technique: Number(player.abilities.technical.technique),
     tackling: Number(player.abilities.technical.tackling),
+    freeKicks: Number(player.abilities.technical.freeKicks),
+    pace: Number(player.abilities.physical.pace),
+    heading: Number(player.abilities.physical.heading),
+    vision: Number(player.abilities.mental.vision),
+    anticipation: Number(player.abilities.mental.anticipation),
     composure: Number(player.abilities.mental.composure),
     determination: Number(player.abilities.mental.determination),
     stamina: Number(player.abilities.physical.stamina),

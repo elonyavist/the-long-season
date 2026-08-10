@@ -23,22 +23,22 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06B8 Done, decision `REFINE`; fresh `7 x 10` JSON and
-  desktop HTML produced.** Rotation is green: zero identical-XI club-seasons,
-  only `2.40%` of `33+` leaders play all 34, substitutions/availability/injuries
-  pass. Renewal is red: generated leaders `22.62%`, opening leaders `77.38%`,
-  late `33+` shares `42.22%` scorers / `37.30%` assists. Four-replicated-shape
-  retention is `89.05%`. The `100 x 10`, B2 and Steps 07-16 remain closed.
+- Step: Phase 81A **06B17 L5.4 is Done: `REFINE`.** Reconciled `7 x 10` JSON and
+  byte-stable HTML exist. Exact-role targeting is clean, but local/division
+  replacement capacity is `10.11%/47.19%` against `20%/50%`.
+- L5.1 retry is `GO`, with zero reconciliation failures. Exact owners:
+  `population_strength`, `renewal_quality`, `development_realization`,
+  `actor_allocation`, `annual_intake_identity_erosion`. Steps 06B11-06B16
+  changed only those owners; the locked L5.4 result below closes this tranche.
+- L5.4 remains `REFINE`: generated/opening leaders `27.86%/72.14%`, age-33+
+  scorer/assist shares `20%/20%`, four-shape retention `88.10%`. First-Division
+  champion points are `72.2571`; the `100 x 10`, B2 and Steps 07-16 stay closed.
 - L4.5 retry `GO`: `3,234` academy call-ups, zero catalog-sensitive ties,
   fallback, avoidable invalids or reconciliation. Fresh v9 L4.3 moves the owner
   downstream in `5/7`; L5 reaches development parity `5/7`, CLI/web aligned.
 - Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
   projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
   frozen before-state stand.
-- **Step 06A replaced the independent draw with one balanced deck per
-  competition.** Real `18`-club leagues read `2/3` of every identity, all ten
-  roles remain reachable, and AI still selects from own-squad/current-match
-  facts. `pnpm check`: `294` files, `2233` tests; Step 06B owns `100 x 10` + HTML.
 - **`AiSquadSelectionResult.catalogChoice` says how close the shape decision was**,
   absent when a caller imposed one. Four ephemeral facts from the canonical walk -
   never a second ranking, never persisted, never rebuilt. **`tiedAtBestCount === 1`

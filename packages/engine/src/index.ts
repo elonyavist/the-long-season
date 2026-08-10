@@ -25,6 +25,7 @@ export {
 } from "./career/career-market-catalog.ts";
 export {
   advanceAiMarketLifecycle,
+  aiMarketTargetDepartment,
   deriveAiMarketNeeds,
   deriveAiMarketTargetScore,
   deriveAiTransferAffordabilitySnapshot,
@@ -35,6 +36,7 @@ export {
   type AiMarketLifecycleFact,
   type AiMarketNeed,
   type AiMarketNeedReason,
+  type AiMarketNeedTarget,
   type AiTransferAffordabilitySnapshot,
   type DeriveAiTransferAffordabilitySnapshotInput,
   type DeriveAiTransferOfferFeeInput,
@@ -478,6 +480,7 @@ export {
   type SimulateSeasonFitnessLifecycle,
   type SimulateSeasonFixtureLineupOverride,
   type SimulateSeasonFixtureProgression,
+  type SeasonPlayerOpportunityStatRow,
   type SimulateSeasonInput,
   type SimulateSeasonResult,
   type SimulateSeasonSetupOverride,

@@ -3,6 +3,7 @@ import {
   derivePublicPlayerAssessment,
   summarizePlayerDevelopmentAbilities,
   type CareerSeasonAdvancementFacts,
+  type PlayerExitReason,
   type SimulateSeasonResult,
 } from "@game/engine";
 import {
@@ -46,6 +47,10 @@ export interface GenerationalSuccessionRow {
   readonly completedPromotionCount: number;
   readonly registeredSeniorCount: number;
   readonly selectedPlayerCount: number;
+  /** Active players at or above this competition's opening-senior median. */
+  readonly seniorQualityPlayerCount: number;
+  /** Distinct active players who reached the frozen 900-minute material season. */
+  readonly seniorQualityMaterialMinutePlayerCount: number;
   readonly emergencySelectionCount: number;
   readonly starts: number;
   readonly minutes: number;
@@ -232,6 +237,28 @@ export interface GenerationalSuccessionCheckpointDecision {
   };
 }
 
+export type GenerationalRenewalOwner =
+  | "intake_quality_or_quantity"
+  | "development_realization"
+  | "promotion_opportunity"
+  | "selection_opportunity"
+  | "exit_retention_balance"
+  | "downstream_actor_allocation"
+  | "not_attributed";
+
+/** Immediate season-ten owner of a failed generated-leadership share. */
+export interface GenerationalRenewalAttributionDecision {
+  readonly owner: GenerationalRenewalOwner;
+  readonly generatedToOpening: number | "not_observed";
+  readonly generatedSeniorQualityShare: number | "not_observed";
+  readonly matureAcademyToCandidate: number | "not_observed";
+  readonly candidateToPromotion: number | "not_observed";
+  readonly seniorQualityToMaterialMinutes: number | "not_observed";
+  readonly openingSeniorSurvivalShare: number | "not_observed";
+  readonly generatedLeaderShare: number | "not_observed";
+  readonly reconciliationFailureCount: number;
+}
+
 export interface YouthMinutePathwayCheckpointDecision {
   readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
   readonly academyParticipation: AcademyParticipationCheckpointFacts;
@@ -268,9 +295,34 @@ export interface DevelopmentRenewalCheckpointDecision
   readonly incompleteAcceptedRoleCoverageRowCount: number;
 }
 
+/** Stable per-player origin needed by paired renewal attribution only. */
+export interface GenerationalPlayerOriginFact {
+  readonly playerId: string;
+  readonly origin: GenerationalOrigin;
+  readonly generatedSeasonNumber: number;
+  readonly openingAge?: number;
+  readonly openingCurrentAbility?: number;
+}
+
+/** Exit flow keeps the origin visible after the player leaves the active world. */
+export interface GenerationalOriginExitFact {
+  readonly origin: GenerationalOrigin;
+  readonly reason: PlayerExitReason;
+  readonly count: number;
+}
+
+/** Analysis-only facts projected for the L5.3C architecture checkpoint. */
+export interface GenerationalRenewalArchitectureFacts {
+  readonly worldSeed: string;
+  readonly playerOrigins: readonly GenerationalPlayerOriginFact[];
+  readonly exits: readonly GenerationalOriginExitFact[];
+}
+
 interface PlayerOriginFact {
   readonly origin: GenerationalOrigin;
   readonly generatedSeasonNumber: number;
+  readonly openingAge?: number;
+  readonly openingCurrentAbility?: number;
 }
 
 type MutableRow = {
@@ -292,6 +344,7 @@ type MutableRow = {
 export class GenerationalSuccessionObserver {
   private readonly worldSeed: string;
   private readonly origins = new Map<string, PlayerOriginFact>();
+  private readonly originExitCounts = new Map<string, number>();
   private readonly rows = new Map<string, MutableRow>();
   private readonly unknownOriginIds = new Set<string>();
   private openingPopulationCount = 0;
@@ -340,6 +393,13 @@ export class GenerationalSuccessionObserver {
       this.origins.set(String(playerId), {
         origin: isAcademy ? "opening_academy" : "opening_senior",
         generatedSeasonNumber: 0,
+        ...(player === undefined ? {} : {
+          openingAge: completedPlayerAge(
+            player.birthDate,
+            careerState.gameState.calendar.currentDate,
+          ),
+          openingCurrentAbility: summarizePlayerDevelopmentAbilities(player).currentAbility,
+        }),
       });
       if (!isAcademy) this.openingSeniorPopulationCount += 1;
       if (!isAcademy) {
@@ -433,6 +493,13 @@ export class GenerationalSuccessionObserver {
     const participation = participationForCompetition(input.result);
     const seniorIds = registeredPlayersForClubs(input.careerState, clubIdSet);
     const academyIds = academyPlayersForClubs(input.careerState, clubIdSet);
+    const openingSeniorMedian = nearestRank(
+      this.openingSeniorCurrent.get(input.competitionId) ?? [],
+      0.5,
+    );
+    if (openingSeniorMedian === "not_observed") {
+      throw new Error(`Generational observer lost opening senior median: ${input.competitionId}`);
+    }
 
     for (const playerId of [...seniorIds, ...academyIds]) {
       const player = input.careerState.gameState.players[playerId as keyof typeof input.careerState.gameState.players];
@@ -453,6 +520,9 @@ export class GenerationalSuccessionObserver {
       row.currentAbilityTotal += assessment.currentAbility;
       row.potentialRoomTotal += Math.max(0, assessment.p50Ability - assessment.currentAbility);
       row.abilityObservationCount += 1;
+      if (assessment.currentAbility >= openingSeniorMedian) {
+        row.seniorQualityPlayerCount += 1;
+      }
       if (
         input.seasonNumber === 10
         && originFact?.origin === "annual_academy_intake"
@@ -469,6 +539,9 @@ export class GenerationalSuccessionObserver {
         row.selectedPlayerIds.add(String(player.id));
         row.starts += played.starts;
         row.minutes += played.minutes;
+        if (assessment.currentAbility >= openingSeniorMedian && played.minutes >= 900) {
+          row.seniorQualityMaterialMinutePlayerCount += 1;
+        }
       }
     }
 
@@ -580,6 +653,13 @@ export class GenerationalSuccessionObserver {
       }
       this.flowRow(input, String(playerId), input.previousCareerState).retirementExitCount += 1;
     }
+    for (const reason of ["retirement", "released", "career_step_down"] as const) {
+      for (const playerId of input.facts.playerExits.playerIdsByReason[reason]) {
+        const origin = this.originFor(String(playerId));
+        const key = `${origin}|${reason}`;
+        this.originExitCounts.set(key, (this.originExitCounts.get(key) ?? 0) + 1);
+      }
+    }
     for (const signing of input.facts.squadMaintenance.freeAgentSignings) {
       this.flowRow(input, String(signing.playerId), input.careerState, String(signing.clubId))
         .freeAgentAcquisitionCount += 1;
@@ -630,6 +710,26 @@ export class GenerationalSuccessionObserver {
       rows: [...this.rows.values()]
         .map(finalizeRow)
         .sort(compareRows),
+    };
+  }
+
+  /**
+   * Exposes the observer's canonical origin ledger without copying it into the
+   * historical succession report. Only the L5.3C profile asks for this payload.
+   */
+  public renewalArchitectureFacts(): GenerationalRenewalArchitectureFacts {
+    return {
+      worldSeed: this.worldSeed,
+      playerOrigins: [...this.origins.entries()]
+        .map(([playerId, fact]) => ({ playerId, ...fact }))
+        .sort((left, right) => left.playerId.localeCompare(right.playerId)),
+      exits: [...this.originExitCounts.entries()]
+        .map(([key, count]) => {
+          const [origin, reason] = key.split("|") as [GenerationalOrigin, PlayerExitReason];
+          return { origin, reason, count };
+        })
+        .sort((left, right) => left.origin.localeCompare(right.origin)
+          || left.reason.localeCompare(right.reason)),
     };
   }
 
@@ -725,6 +825,8 @@ export class GenerationalSuccessionObserver {
       completedPromotionCount: 0,
       registeredSeniorCount: 0,
       selectedPlayerIds: new Set(),
+      seniorQualityPlayerCount: 0,
+      seniorQualityMaterialMinutePlayerCount: 0,
       emergencySelectionCount: 0,
       starts: 0,
       minutes: 0,
@@ -838,6 +940,108 @@ export function evaluateGenerationalSuccessionCheckpoint(
     unknownOriginCount,
     ratios,
   };
+}
+
+/**
+ * Locates the first broken stage of the season-ten renewal funnel.
+ *
+ * Academy call-ups make selected players and registered seniors overlapping,
+ * not nested, populations. This evaluator therefore uses the two explicit
+ * quality/minute intersection counts captured while individual players still
+ * exist and never resurrects the invalid selected/registered ratio.
+ */
+export function evaluateGenerationalRenewalAttribution(input: {
+  readonly worlds: readonly GenerationalSuccessionWorldFacts[];
+  readonly actorAllocationOwnsResidual: boolean;
+}): GenerationalRenewalAttributionDecision {
+  const seasonTen = input.worlds.flatMap(({ rows }) => rows).filter(
+    ({ seasonNumber }) => seasonNumber === 10,
+  );
+  const generatedRows = seasonTen.filter(({ origin }) => isCareerGenerated(origin));
+  const openingSeniorRows = seasonTen.filter(({ origin }) => origin === "opening_senior");
+  const openingPopulationCount = input.worlds.reduce(
+    (sum, world) => sum + world.openingPopulationCount,
+    0,
+  );
+  const openingSeniorPopulationCount = input.worlds.reduce(
+    (sum, world) => sum + world.openingSeniorPopulationCount,
+    0,
+  );
+  const careerGeneratedCount = input.worlds.reduce(
+    (sum, world) => sum + world.careerGeneratedCount,
+    0,
+  );
+  const matureAcademyIntakeCount = input.worlds.reduce(
+    (sum, world) => sum + world.matureAcademyIntakeCount,
+    0,
+  );
+  const promotionCandidateCount = input.worlds.reduce(
+    (sum, world) => sum + world.matureAcademyPromotionCandidateCount,
+    0,
+  );
+  const completedPromotionCount = input.worlds.reduce(
+    (sum, world) => sum + world.matureAcademyCompletedPromotionCount,
+    0,
+  );
+  const generatedActiveCount = generatedRows.reduce(
+    (sum, row) => sum + row.activePopulationCount,
+    0,
+  );
+  const generatedSeniorQualityCount = generatedRows.reduce(
+    (sum, row) => sum + row.seniorQualityPlayerCount,
+    0,
+  );
+  const generatedMaterialMinuteCount = generatedRows.reduce(
+    (sum, row) => sum + row.seniorQualityMaterialMinutePlayerCount,
+    0,
+  );
+  const openingActiveCount = openingSeniorRows.reduce(
+    (sum, row) => sum + row.activePopulationCount,
+    0,
+  );
+  const generatedLeaderCount = sumLeaderboard(generatedRows);
+  const openingLeaderCount = sumLeaderboard(
+    seasonTen.filter(({ origin }) => !isCareerGenerated(origin)),
+  );
+  const facts = {
+    generatedToOpening: ratio(careerGeneratedCount, openingPopulationCount),
+    generatedSeniorQualityShare: ratio(generatedSeniorQualityCount, generatedActiveCount),
+    matureAcademyToCandidate: ratio(promotionCandidateCount, matureAcademyIntakeCount),
+    candidateToPromotion: ratio(completedPromotionCount, promotionCandidateCount),
+    seniorQualityToMaterialMinutes: ratio(
+      generatedMaterialMinuteCount,
+      generatedSeniorQualityCount,
+    ),
+    openingSeniorSurvivalShare: ratio(openingActiveCount, openingSeniorPopulationCount),
+    generatedLeaderShare: ratio(
+      generatedLeaderCount,
+      generatedLeaderCount + openingLeaderCount,
+    ),
+  } as const;
+  const reconciliationFailureCount = input.worlds.reduce(
+    (sum, world) => sum + world.unknownOriginCount,
+    0,
+  ) + Number(input.worlds.length === 0);
+  const observed = Object.values(facts).every((value) => value !== "not_observed");
+  const owner: GenerationalRenewalOwner = reconciliationFailureCount > 0 || !observed
+    ? "not_attributed"
+    : below(facts.generatedToOpening, 0.5)
+      ? "intake_quality_or_quantity"
+      : below(facts.generatedSeniorQualityShare, 0.25)
+        ? "development_realization"
+        : below(facts.matureAcademyToCandidate, 0.25)
+            || below(facts.candidateToPromotion, 0.5)
+          ? "promotion_opportunity"
+          : below(facts.seniorQualityToMaterialMinutes, 0.5)
+            ? "selection_opportunity"
+            : facts.openingSeniorSurvivalShare !== "not_observed"
+                && facts.openingSeniorSurvivalShare > 0.6
+              ? "exit_retention_balance"
+              : input.actorAllocationOwnsResidual
+                ? "downstream_actor_allocation"
+                : "not_attributed";
+
+  return { owner, ...facts, reconciliationFailureCount };
 }
 
 /** Applies the frozen L4.1 academy-participation and renewal gates. */

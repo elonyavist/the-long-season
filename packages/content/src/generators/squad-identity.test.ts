@@ -16,6 +16,7 @@ import { FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake-clubs.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 import {
   assignGeneratedSquadIdentities,
+  assignGeneratedSquadIdentityRoles,
   GENERATED_SQUAD_IDENTITIES,
   GENERATED_SQUAD_IDENTITY_KEYS,
   squadIdentityPositionForSlot,
@@ -112,6 +113,25 @@ test("competition assignment is deterministic and balanced for twenty clubs", ()
   assert.deepEqual(assignmentVector(first, orderedClubIds), assignmentVector(second, orderedClubIds));
   const counts = identityCounts(first);
   assert.deepEqual([...counts.values()].toSorted((left, right) => left - right), [2, 2, 2, 2, 3, 3, 3, 3]);
+});
+
+test("the annual-intake role blueprint is derived from the assigned position chart", () => {
+  const orderedClubIds = generatedClubIds(20);
+  const input = {
+    seed: "identity-role-view",
+    competitionIdentityKey: "competition:role-view",
+    orderedClubIds,
+  } as const;
+  const identities = assignGeneratedSquadIdentities(input);
+  const roles = assignGeneratedSquadIdentityRoles(input);
+
+  for (const clubIdValue of orderedClubIds) {
+    const identity = identities.get(clubIdValue);
+    const roleVector = roles.get(clubIdValue);
+    assert.ok(identity !== undefined);
+    assert.ok(roleVector !== undefined);
+    assert.deepEqual(roleVector, identity.positions.map(primaryRoleForPosition));
+  }
 });
 
 test("every competition size uses only floor or ceiling counts without early repeats", () => {

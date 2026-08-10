@@ -23,6 +23,7 @@ import {
   type SeniorSquadRegistration,
 } from "@game/domain";
 import {
+  aiMarketTargetDepartment,
   checkContractOfferAffordability,
   deriveMarketPendingExposure,
   derivePlayerValuation,
@@ -2038,11 +2039,12 @@ function marketLossSlices(
   for (const fact of diagnostics) {
     if (fact.event !== "permanent_target_unavailable" || fact.reason === undefined) continue;
     const transferWindowOpen = fact.transferWindowOpen === true;
-    const key = `${fact.clubId}|${fact.department}|${fact.reason}|${transferWindowOpen}`;
+    const department = aiMarketTargetDepartment(fact.target);
+    const key = `${fact.clubId}|${department}|${fact.reason}|${transferWindowOpen}`;
     const previous = counts.get(key);
     counts.set(key, {
       clubId: String(fact.clubId),
-      department: fact.department,
+      department,
       reason: fact.reason,
       transferWindowOpen,
       count: (previous?.count ?? 0) + fact.count,

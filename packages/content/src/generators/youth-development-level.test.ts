@@ -31,7 +31,12 @@ test("youth-development modifiers stay small and ordered", () => {
   assert.equal(youthDevelopmentInterestingChance(mid) < youthDevelopmentInterestingChance(high), true);
   assert.equal(youthDevelopmentSeriousProspectChance(low) < youthDevelopmentSeriousProspectChance(mid), true);
   assert.equal(youthDevelopmentSeriousProspectChance(mid) < youthDevelopmentSeriousProspectChance(high), true);
-  assert.equal(youthDevelopmentSeriousProspectChance(high) <= 0.03, true);
+  assert.equal(youthDevelopmentSeriousProspectChance(high), 0.12);
+  assert.equal(
+    youthDevelopmentSeriousProspectChance(high)
+      + youthDevelopmentInterestingChance(high) < 0.5,
+    true,
+  );
   assert.equal(Math.abs(youthDevelopmentCurrentBoost(highAcademyLevel)) <= 0.05, true);
 });
 

@@ -51,6 +51,7 @@ import {
   planCompetitionAnnualIntakePositions,
   type AnnualIntakeRoleSlotKind,
 } from "./annual-intake-role-plan.ts";
+import { assignGeneratedSquadIdentityRoles } from "./squad-identity.ts";
 
 /** Exact academy size chosen by Phase 33. */
 export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
@@ -669,6 +670,11 @@ function initialAcademyPositionsByClubId(
     if (clubIds === undefined) {
       throw new Error(`Initial academy competition has no clubs: ${competitionKey}`);
     }
+    const targetRolesByClubId = assignGeneratedSquadIdentityRoles({
+      seed: input.worldSeed,
+      competitionIdentityKey: competitionKey,
+      orderedClubIds: clubIds,
+    });
     const planned = planCompetitionAnnualIntakePositions({
       seed: input.worldSeed,
       seasonKey: String(input.seasonId),
@@ -680,6 +686,7 @@ function initialAcademyPositionsByClubId(
           (_, index) => academyDepartmentForSlot(index),
         ),
         currentRoles: [],
+        targetRoles: targetRolesByClubId.get(clubId) ?? [],
       })),
     });
     for (const [clubId, clubPositions] of planned) positions.set(clubId, clubPositions);

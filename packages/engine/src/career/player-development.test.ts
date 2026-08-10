@@ -780,7 +780,10 @@ test("canonical academy minutes realize high room by age 24 without inflating or
   );
 
   assert.equal(maximumMonthlyAbilityGrowth > 0.08, true);
-  assert.equal(Number(high.currentAbility.toFixed(3)), 12.99);
+  // Three complete matches now constitute the full monthly opportunity. The
+  // same high-room path therefore closes more of its real potential before the
+  // age curve ends, while the ordinary player remains capped at exactly `9`.
+  assert.equal(Number(high.currentAbility.toFixed(3)), 13.299);
   assert.equal(high.currentAbility <= high.potentialAbility, true);
   assert.equal(ordinary.currentAbility <= 9, true, JSON.stringify(ordinary));
   assert.equal(high.currentAbility - 8 > ordinary.currentAbility - 8, true);

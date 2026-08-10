@@ -7,6 +7,7 @@ import {
   PLAYER_GENERATION_CLUB_TIERS,
   PLAYER_GENERATION_DIVISIONS,
 } from "./player-generation-bands.ts";
+import { resolveSeniorCurrentAbilityBand } from "./player-current-ability-bands.ts";
 
 /** Tests keep division/tier ability bands ordered before role templates use them. */
 
@@ -55,3 +56,58 @@ test("opening club rank maps to the exact 4/4/6/4 tier shape", () => {
   assert.throws(() => openingCompetitiveTierForClubRank(0), /1 to 18/);
   assert.throws(() => openingCompetitiveTierForClubRank(19), /1 to 18/);
 });
+
+test("senior hierarchy scales remain inside authored first-division lanes", () => {
+  const title = resolveSeniorCurrentAbilityBand({
+    division: "first_division",
+    clubTier: "title_contender",
+    bucket: "coreForRole",
+  });
+  const playoff = resolveSeniorCurrentAbilityBand({
+    division: "first_division",
+    clubTier: "playoff_contender",
+    bucket: "coreForRole",
+  });
+  const midTable = resolveSeniorCurrentAbilityBand({
+    division: "first_division",
+    clubTier: "mid_table",
+    bucket: "coreForRole",
+  });
+  const survival = resolveSeniorCurrentAbilityBand({
+    division: "first_division",
+    clubTier: "survival",
+    bucket: "coreForRole",
+  });
+
+  assert.deepEqual(title, { minInclusive: 17, maxInclusive: 17 });
+  assert.deepEqual(playoff, { minInclusive: 13.8, maxInclusive: 17 });
+  assert.deepEqual(midTable, { minInclusive: 12, maxInclusive: 15.2 });
+  assert.deepEqual(survival, { minInclusive: 12, maxInclusive: 12.5 });
+  assert.equal(mean(title) - mean(survival), 4.75);
+});
+
+test("third-division seniors gain soft hierarchy while Second Division stays authored", () => {
+  const thirdTitle = resolveSeniorCurrentAbilityBand({
+    division: "third_division",
+    clubTier: "title_contender",
+    bucket: "coreForRole",
+  });
+  const thirdSurvival = resolveSeniorCurrentAbilityBand({
+    division: "third_division",
+    clubTier: "survival",
+    bucket: "coreForRole",
+  });
+  const secondTitle = resolveSeniorCurrentAbilityBand({
+    division: "second_division",
+    clubTier: "title_contender",
+    bucket: "coreForRole",
+  });
+
+  assert.deepEqual(thirdTitle, { minInclusive: 11.25, maxInclusive: 13 });
+  assert.deepEqual(thirdSurvival, { minInclusive: 8, maxInclusive: 10.4 });
+  assert.deepEqual(secondTitle, { minInclusive: 12.5, maxInclusive: 15 });
+});
+
+function mean(range: { readonly minInclusive: number; readonly maxInclusive: number }): number {
+  return (range.minInclusive + range.maxInclusive) / 2;
+}

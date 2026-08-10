@@ -95,6 +95,8 @@ export interface MatchGoalStepEvent {
   readonly chanceType: ShotChanceType;
   /** The way through the chance came down. Absent for a penalty, which had none. */
   readonly route?: TacticalRoute;
+  /** Exact creator selected before resolution; absent only for penalties. */
+  readonly selectedCreatorPlayerId?: PlayerId;
   /** Player from the scoring side lineup credited with the goal. */
   readonly scorerPlayerId: PlayerId;
   /** Player from the scoring side lineup credited with the assist, when any. */
@@ -138,6 +140,8 @@ export interface MatchNonGoalShotOutcomeStepEvent {
    * shared vocabulary can state on behalf of every producer.
    */
   readonly route?: TacticalRoute;
+  /** Exact creator selected before resolution; never persisted to the durable report. */
+  readonly selectedCreatorPlayerId?: PlayerId;
   /** Player from the attacking side lineup credited with taking this shot. */
   readonly shooterPlayerId: PlayerId;
   /** Defending goalkeeper credited with the save, only for save outcomes. */
@@ -662,6 +666,7 @@ function createShotOutcomeEvent(
       type: "shot_outcome",
       ...shot,
       outcome: "goal",
+      selectedCreatorPlayerId: occasion.creatorPlayerId,
       scorerPlayerId: occasion.shooterPlayerId,
       ...(assistPlayerId === undefined ? {} : { assistPlayerId }),
       ...(creatorPlayerId === undefined ? {} : { creatorPlayerId }),
@@ -672,6 +677,7 @@ function createShotOutcomeEvent(
     type: "shot_outcome",
     ...shot,
     outcome: resolution.outcome,
+    selectedCreatorPlayerId: occasion.creatorPlayerId,
     shooterPlayerId: occasion.shooterPlayerId,
     ...(resolution.outcome === "save" ? { goalkeeperPlayerId: occasion.goalkeeperPlayerId } : {}),
     ...(resolution.outcome === "block" ? { primaryDefenderPlayerId: occasion.primaryDefenderPlayerId } : {}),

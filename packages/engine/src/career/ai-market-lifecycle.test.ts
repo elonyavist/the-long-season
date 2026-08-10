@@ -37,6 +37,7 @@ import {
 
 import {
   advanceAiMarketLifecycle as advanceAiMarketLifecycleWithConfig,
+  aiMarketTargetDepartment,
   deriveAiMarketTargetScore,
   deriveAiTransferAffordabilitySnapshot,
   deriveAiTransferOfferFee,
@@ -238,7 +239,9 @@ test("deriveAiMarketNeeds orders structural department gaps before softer needs"
   assert.equal(needs[0]?.reasons[0], "structural_depth");
   assert.equal(needs.filter((need) => need.clubId === buyer).length, 3);
   assert.deepEqual(
-    needs.filter((need) => need.clubId === buyer).map((need) => need.department),
+    needs.filter((need) => need.clubId === buyer).map((need) =>
+      aiMarketTargetDepartment(need.target)
+    ),
     ["defender", "midfielder", "attacker"],
   );
 });
@@ -352,7 +355,9 @@ test("advanceAiMarketLifecycle lets the strongest first-division squad prioritiz
     asOf: gameDate(20_000),
   }).filter((need) => need.clubId === strongestBuyer);
   assert.equal(
-    ordinaryBuyerNeeds.some((need) => need.department === "midfielder"),
+    ordinaryBuyerNeeds.some((need) =>
+      need.target.kind === "department" && need.target.department === "midfielder"
+    ),
     true,
   );
 
@@ -449,13 +454,73 @@ test("deriveAiMarketNeeds identifies a weak depth outlier as a current squad upg
   const defenderNeed = needs.find(
     (need) =>
       need.clubId === clubId("club:buyer")
-      && need.department === "defender",
+      && need.target.kind === "department"
+      && need.target.department === "defender",
   );
 
   assert.notEqual(defenderNeed, undefined);
   assert.equal(defenderNeed?.currentDepth, 10);
   assert.equal(defenderNeed?.targetDepth, 7);
   assert.deepEqual(defenderNeed?.reasons, ["quality_gap"]);
+});
+
+test("role succession recruits the exact role through the canonical transfer path", () => {
+  const buyer = clubId("club:succession-buyer");
+  const seller = clubId("club:succession-seller");
+  const buyerPlayers = balancedSeniorSquad("succession-buyer").map((id) => {
+    const player = playerLookup.get(id);
+    assert.ok(player !== undefined);
+    if (player.primaryRole !== "striker") return id;
+    const aging = { ...player, birthDate: gameDate(20_000 - 34 * 365) };
+    playerLookup.set(id, aging);
+    return id;
+  });
+  const movableStriker = playerFixture(
+    playerId("player:succession-striker"),
+    "st",
+    12,
+  );
+  const careerState = careerStateFixture([
+    clubFixture(buyer, 6, buyerPlayers),
+    clubFixture(seller, 5, [
+      movableStriker.id,
+      ...balancedSeniorSquad("succession-seller"),
+    ]),
+  ]);
+  const needs = deriveAiMarketNeeds({ careerState, asOf: gameDate(20_000) });
+  const need = needs.find(({ clubId: needClubId, target }) =>
+    needClubId === buyer && target.kind === "role" && target.role === "striker"
+  );
+
+  assert.notEqual(need, undefined);
+  assert.deepEqual(need?.reasons, ["role_succession"]);
+  const result = advanceAiMarketLifecycle({
+    careerState,
+    fromDate: gameDate(20_000),
+    throughDate: gameDate(20_030),
+    transferWindows: marketWindows({
+      summer: [19_990, 20_050],
+      winter: [20_200, 20_220],
+    }),
+  });
+
+  assert.equal(
+    result.diagnostics.some((fact) =>
+      fact.clubId === buyer
+      && fact.target.kind === "role"
+      && fact.target.role === "striker"
+      && fact.event === "permanent_target_found"
+    ),
+    true,
+  );
+  assert.equal(
+    result.facts.some((fact) =>
+      fact.buyingClubId === buyer
+      && fact.playerId === movableStriker.id
+      && fact.event === "transfer_completed"
+    ),
+    true,
+  );
 });
 
 test("a financially constrained club may still make no permanent offer in an open window", () => {
@@ -521,7 +586,8 @@ test("an in-window preliminary fallback waits until every permanent department n
     result.diagnostics.some(
       (fact) =>
         fact.clubId === clubId("club:buyer")
-        && fact.department === "goalkeeper"
+        && fact.target.kind === "department"
+        && fact.target.department === "goalkeeper"
         && fact.reason === "seller_department_floor",
     ),
     true,

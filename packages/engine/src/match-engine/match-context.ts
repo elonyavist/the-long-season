@@ -61,7 +61,17 @@ export interface MatchTacticalDistributionInput {
  */
 export interface MatchPlayerIncidentProfile {
   readonly playerId: PlayerId;
+  readonly finishing: number;
+  readonly passing: number;
+  readonly crossing: number;
+  readonly dribbling: number;
+  readonly technique: number;
   readonly tackling: number;
+  readonly freeKicks: number;
+  readonly pace: number;
+  readonly heading: number;
+  readonly vision: number;
+  readonly anticipation: number;
   readonly composure: number;
   readonly determination: number;
   readonly stamina: number;
@@ -354,7 +364,17 @@ function assertValidTeamContext(
 
 function incidentProfileValues(profile: MatchPlayerIncidentProfile): readonly number[] {
   return [
+    profile.finishing,
+    profile.passing,
+    profile.crossing,
+    profile.dribbling,
+    profile.technique,
     profile.tackling,
+    profile.freeKicks,
+    profile.pace,
+    profile.heading,
+    profile.vision,
+    profile.anticipation,
     profile.composure,
     profile.determination,
     profile.stamina,

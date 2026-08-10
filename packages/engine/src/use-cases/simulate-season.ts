@@ -47,6 +47,7 @@ import {
   type LineupSlot,
   type MatchContext,
   type MatchEngineConfig,
+  type MatchStepEvent,
   type MatchTacticalDistributionInput,
   type MatchTeamContext,
   playerRatingRegistrationsFromContext,
@@ -55,6 +56,7 @@ import {
   assembleMatchTeamContext,
   deriveTeamStrength,
   matchPlayerIncidentProfilesForLineup,
+  type TeamStrength,
   TeamStrengthError,
 } from "../match-engine/index.ts";
 import {
@@ -281,6 +283,16 @@ export interface SimulateSeasonInput {
   readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
   /** Competition point rules for the final derived table. */
   readonly tableRules: LeagueTableRules;
+  /**
+   * Analysis-only paired replay that amplifies centred kickoff-strength gaps.
+   *
+   * The canonical season remains untouched. The replay shares its selected
+   * players, seed and policy and contributes only a second table for causal
+   * diagnostics. Phase 81A closeout owns removal of this oracle seam.
+   */
+  readonly analysisStrengthGapScale?: number;
+  /** Retains compact fixture-dated age/load alternatives for the locked Phase 81A owner audit. */
+  readonly collectSelectionLoadDiagnostics?: boolean;
 }
 
 /**
@@ -305,6 +317,8 @@ export interface SimulateSeasonResult {
   readonly playerGoalStats: readonly SeasonPlayerGoalStatRow[];
   /** Derived player summary statistics for currently supported season facts. */
   readonly playerSummaryStats: readonly SeasonPlayerSummaryStatRow[];
+  /** Compact opportunity facts whose creator nomination is not durable after the match. */
+  readonly playerOpportunityStats: readonly SeasonPlayerOpportunityStatRow[];
   /** Final dynamic player states when a fitness lifecycle was supplied. */
   readonly finalPlayerStates?: Readonly<Record<PlayerId, PlayerDynamicState>>;
   /** Final availability when its lifecycle was supplied. */
@@ -313,6 +327,11 @@ export interface SimulateSeasonResult {
   readonly playerAvailabilityConsequences?: readonly MatchPlayerConsequence[];
   /** Final participation ledger when its lifecycle was supplied. */
   readonly finalPlayerParticipationLedger?: PlayerParticipationLedger;
+  /** Paired analysis table, absent from every ordinary product caller. */
+  readonly analysisStrengthReplay?: {
+    readonly scale: number;
+    readonly table: readonly LeagueTableRow[];
+  };
 }
 
 /** Canonical player-participation contributions produced by one batch fixture. */
@@ -358,6 +377,8 @@ export type SimulateSeasonFormationSelectionSource =
 export interface SimulateSeasonFixtureFieldedTeam {
   readonly clubId: ClubId;
   readonly lineup: readonly LineupSlot[];
+  /** Exact lineup strength consumed by the match context at kickoff. */
+  readonly kickoffStrength?: TeamStrength;
   /** Absent only when a caller supplied a lineup without a catalog shape. */
   readonly formationKey?: FormationKey;
   readonly selectionSource: SimulateSeasonFormationSelectionSource;
@@ -378,6 +399,32 @@ export interface SimulateSeasonFixtureFieldedTeam {
     readonly unavailableSelectedPlayerCount: number;
     readonly recentUsePlayerCount: number;
   };
+  /** Analysis-only exact alternatives from the candidate pool consumed at kickoff. */
+  readonly selectionLoadDiagnostics?: {
+    readonly veteranStarterCount: number;
+    readonly qualityMatchedYoungerAlternativeCount: number;
+    readonly fresherQualityMatchedYoungerAlternativeCount: number;
+  };
+}
+
+/** One player's compact season opportunity facts retained before match reports discard creator nominations. */
+export interface SeasonPlayerOpportunityStatRow {
+  readonly playerId: PlayerId;
+  readonly clubId: ClubId;
+  /** Shot outcomes; this is also the shooter-nomination count by construction. */
+  readonly shots: number;
+  readonly shotsOnTarget: number;
+  /** Pre-resolution creator selections; penalties deliberately have no creator. */
+  readonly creatorNominations: number;
+}
+
+interface MutableSeasonPlayerOpportunityStatRow {
+  readonly playerId: PlayerId;
+  clubId: ClubId;
+  shots: number;
+  shotsOnTarget: number;
+  creatorNominations: number;
+  clubIsRegistrationOnly: boolean;
 }
 
 /** Both selections actually consumed by one simulated fixture. */
@@ -395,6 +442,7 @@ export type SimulateSeasonErrorCode =
   | "invalid_setup_override"
   | "invalid_fixture_lineup_override"
   | "invalid_fitness_lifecycle"
+  | "invalid_analysis_strength_gap_scale"
   | "invalid_ai_squad_selection";
 
 /**
@@ -449,7 +497,12 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
   let fitnessRuntime = initialFitnessRuntime(input);
   let availabilityRuntime = initialAvailabilityRuntime(input);
   let state = createFixtureState(input, fixturesById(calendar.fixtures), calendar.fixtureIds);
+  let analysisState = input.analysisStrengthGapScale === undefined
+    ? undefined
+    : createFixtureState(input, fixturesById(calendar.fixtures), calendar.fixtureIds);
+  validateAnalysisStrengthGapScale(input.analysisStrengthGapScale);
   const fixtureParticipation: SimulateSeasonFixtureParticipation[] = [];
+  const opportunityStats = new Map<PlayerId, MutableSeasonPlayerOpportunityStatRow>();
 
   for (const fixtureId of calendar.fixtureIds) {
     const fixture = state.fixtures[fixtureId];
@@ -475,6 +528,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       fitnessRuntime?.playerStates,
     );
     const simulatedMatch = completed.result;
+    collectPlayerOpportunityStats(opportunityStats, simulatedMatch.events, matchContext);
     const report = createMatchReport(simulatedMatch);
     const contributions = buildFixtureParticipationContributions({
       fixtureId,
@@ -512,6 +566,19 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       contributions,
     });
     state = applyMatchReportToFixture({ state, fixtureId, report });
+    if (analysisState !== undefined && input.analysisStrengthGapScale !== undefined) {
+      const analysisCompleted = completeSeasonFixture(
+        input,
+        matchSetup,
+        fitnessRuntime?.playerStates,
+        input.analysisStrengthGapScale,
+      );
+      analysisState = applyMatchReportToFixture({
+        state: analysisState,
+        fixtureId,
+        report: createMatchReport(analysisCompleted.result),
+      });
+    }
     fitnessRuntime = spendFitnessAfterFixture(input, fixture, contributions, fitnessRuntime);
     availabilityRuntime = advanceAvailabilityAfterFixture(
       input,
@@ -549,6 +616,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       fixtureIds: state.fixtureIds,
       playerRegistrations: registeredPlayers,
     }),
+    playerOpportunityStats: seasonPlayerOpportunityStats(opportunityStats, registeredPlayers),
     ...(fitnessRuntime === undefined ? {} : { finalPlayerStates: fitnessRuntime.playerStates }),
     ...(availabilityRuntime === undefined
       ? {}
@@ -556,6 +624,19 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
           finalPlayerAvailability: availabilityRuntime.availability,
           playerAvailabilityConsequences: availabilityRuntime.consequences,
           finalPlayerParticipationLedger: consolidatedParticipationLedger(availabilityRuntime),
+        }),
+    ...(analysisState === undefined || input.analysisStrengthGapScale === undefined
+      ? {}
+      : {
+          analysisStrengthReplay: {
+            scale: input.analysisStrengthGapScale,
+            table: computeLeagueTable({
+              clubIds: input.clubIds,
+              fixtures: analysisState.fixtures,
+              fixtureIds: analysisState.fixtureIds,
+              rules: input.tableRules,
+            }),
+          },
         }),
   };
 }
@@ -614,6 +695,8 @@ interface FixtureTeamSetup {
   readonly emergencyPlayerIds?: readonly PlayerId[];
   /** Non-reconstructible lifecycle inputs consumed by the automatic selector. */
   readonly lifecycleDiagnostics?: SimulateSeasonFixtureFieldedTeam["lifecycleDiagnostics"];
+  /** Analysis-only compact age/load contrast from the exact selector input. */
+  readonly selectionLoadDiagnostics?: SimulateSeasonFixtureFieldedTeam["selectionLoadDiagnostics"];
 }
 
 interface FixtureMatchSetup {
@@ -672,19 +755,60 @@ interface CompletedSeasonFixture {
   readonly progression: SimulateSeasonFixtureProgression;
 }
 
+function validateAnalysisStrengthGapScale(scale: number | undefined): void {
+  if (scale === undefined) return;
+  if (!Number.isFinite(scale) || scale < 1 || scale > 2) {
+    throw new SimulateSeasonError(
+      "invalid_analysis_strength_gap_scale",
+      `Analysis strength-gap scale must be inside 1..2: ${scale}`,
+    );
+  }
+}
+
+function scaledStrengthMatchContext(context: MatchContext, scale: number): MatchContext {
+  return {
+    ...context,
+    home: scaledStrengthTeamContext(context.home, context.away.strength, scale),
+    away: scaledStrengthTeamContext(context.away, context.home.strength, scale),
+  };
+}
+
+function scaledStrengthTeamContext(
+  team: MatchTeamContext,
+  opponentStrength: TeamStrength,
+  scale: number,
+): MatchTeamContext {
+  const centred = (value: number, opponent: number): number =>
+    (value + opponent) / 2 + (value - opponent) * scale / 2;
+  return {
+    ...team,
+    strength: {
+      attack: centred(team.strength.attack, opponentStrength.attack),
+      midfield: centred(team.strength.midfield, opponentStrength.midfield),
+      defense: centred(team.strength.defense, opponentStrength.defense),
+      goalkeeper: centred(team.strength.goalkeeper, opponentStrength.goalkeeper),
+      overall: centred(team.strength.overall, opponentStrength.overall),
+    },
+  };
+}
+
 /** Uses AI progression when both selected squads expose a real bench. */
 function completeSeasonFixture(
   input: SimulateSeasonInput,
   setup: FixtureMatchSetup,
   livePlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
+  analysisStrengthGapScale?: number,
 ): CompletedSeasonFixture {
+  const matchContext = analysisStrengthGapScale === undefined
+    ? setup.matchContext
+    : scaledStrengthMatchContext(setup.matchContext, analysisStrengthGapScale);
   const home = setup.home.liveTeam;
   const away = setup.away.liveTeam;
   if (home === undefined || away === undefined) {
-    const result = runMatchSimulation({ context: setup.matchContext });
+    const result = runMatchSimulation({ context: matchContext });
     return {
       result,
-      finalContext: setup.matchContext,
+      finalContext: matchContext,
       progression: {
         controlledSides: [],
         aiDecisionCount: { home: 0, away: 0 },
@@ -699,15 +823,15 @@ function completeSeasonFixture(
         },
         appliedSubstitutions: [],
         finalLineups: {
-          home: setup.matchContext.home.lineup,
-          away: setup.matchContext.away.lineup,
+          home: matchContext.home.lineup,
+          away: matchContext.away.lineup,
         },
       },
     };
   }
 
   const completed = runAutomatedProgressiveMatch({
-    context: setup.matchContext,
+    context: matchContext,
     rules: input.matchRules,
     players: playersForFixture(input, setup.matchContext),
     home,
@@ -715,13 +839,18 @@ function completeSeasonFixture(
     aiControlledSides: input.matchEngineConfig.minuteCount === 90
       ? ["home", "away"]
       : [],
-    buildMatchTeamContext: (team, playerCondition) => rebuildLiveTeamContext(
-      input,
-      setup.matchContext,
-      team,
-      livePlayerStates,
-      playerCondition,
-    ),
+    buildMatchTeamContext: (team, playerCondition) => {
+      const rebuilt = rebuildLiveTeamContext(
+        input,
+        setup.matchContext,
+        team,
+        livePlayerStates,
+        playerCondition,
+      );
+      if (analysisStrengthGapScale === undefined) return rebuilt;
+      const opponent = team.side === "home" ? setup.matchContext.away : setup.matchContext.home;
+      return scaledStrengthTeamContext(rebuilt, opponent.strength, analysisStrengthGapScale);
+    },
   });
   const state = completed.state;
   const aiDecisionCount = {
@@ -742,7 +871,7 @@ function completeSeasonFixture(
   };
   return {
     result: {
-      fixtureId: setup.matchContext.fixtureId,
+      fixtureId: matchContext.fixtureId,
       finalMinute: state.simulation.minute,
       isComplete: state.phase === "full_time",
       score: state.simulation.score,
@@ -971,6 +1100,7 @@ function fixtureTeamSetup(
       playerStates,
       fixture,
       availabilityRuntime,
+      input.collectSelectionLoadDiagnostics === true,
     );
   }
 
@@ -989,6 +1119,7 @@ function fieldedTeamForFixture(
   return {
     clubId,
     lineup: setup.teamContext.lineup,
+    kickoffStrength: { ...setup.teamContext.strength },
     selectionSource: setup.selectionSource,
     tacticalDistribution: { ...setup.teamContext.tacticalDistribution },
     ...(setup.formationKey === undefined ? {} : { formationKey: setup.formationKey }),
@@ -1002,7 +1133,86 @@ function fieldedTeamForFixture(
     ...(setup.callUpPlayerIds === undefined ? {} : { callUpPlayerIds: setup.callUpPlayerIds }),
     ...(setup.emergencyPlayerIds === undefined ? {} : { emergencyPlayerIds: setup.emergencyPlayerIds }),
     ...(setup.lifecycleDiagnostics === undefined ? {} : { lifecycleDiagnostics: setup.lifecycleDiagnostics }),
+    ...(setup.selectionLoadDiagnostics === undefined
+      ? {}
+      : { selectionLoadDiagnostics: setup.selectionLoadDiagnostics }),
   };
+}
+
+/** Captures the one player fact durable reports intentionally cannot reconstruct. */
+function collectPlayerOpportunityStats(
+  rows: Map<PlayerId, MutableSeasonPlayerOpportunityStatRow>,
+  events: readonly MatchStepEvent[],
+  context: MatchContext,
+): void {
+  for (const event of events) {
+    if (event.type === "penalty_outcome" && event.outcome !== "scored") {
+      const clubId = event.side === "home" ? context.home.clubId : context.away.clubId;
+      const taker = opportunityStatRow(rows, event.takerPlayerId, clubId, false);
+      taker.shots += 1;
+      taker.shotsOnTarget += event.outcome === "saved" ? 1 : 0;
+      continue;
+    }
+    if (event.type !== "shot_outcome") continue;
+    const clubId = event.side === "home" ? context.home.clubId : context.away.clubId;
+    const shooterPlayerId = event.outcome === "goal"
+      ? event.scorerPlayerId
+      : event.shooterPlayerId;
+    const shooter = opportunityStatRow(rows, shooterPlayerId, clubId, false);
+    shooter.shots += 1;
+    shooter.shotsOnTarget += event.isShotOnTarget ? 1 : 0;
+    if (event.selectedCreatorPlayerId !== undefined) {
+      opportunityStatRow(rows, event.selectedCreatorPlayerId, clubId, false).creatorNominations += 1;
+    }
+  }
+}
+
+/** Adds registered zero rows and freezes one deterministic season table. */
+function seasonPlayerOpportunityStats(
+  rows: Map<PlayerId, MutableSeasonPlayerOpportunityStatRow>,
+  registrations: readonly SeasonPlayerStatRegistration[],
+): readonly SeasonPlayerOpportunityStatRow[] {
+  for (const registration of registrations) {
+    opportunityStatRow(rows, registration.playerId, registration.clubId, true);
+  }
+  return [...rows.values()]
+    .sort((left, right) =>
+      String(left.clubId).localeCompare(String(right.clubId))
+      || String(left.playerId).localeCompare(String(right.playerId)))
+    .map(({ playerId, clubId, shots, shotsOnTarget, creatorNominations }) => ({
+      playerId,
+      clubId,
+      shots,
+      shotsOnTarget,
+      creatorNominations,
+    }));
+}
+
+/** Finds or creates one row while preferring the club observed in a real event. */
+function opportunityStatRow(
+  rows: Map<PlayerId, MutableSeasonPlayerOpportunityStatRow>,
+  playerId: PlayerId,
+  clubId: ClubId,
+  registrationOnly: boolean,
+): MutableSeasonPlayerOpportunityStatRow {
+  const existing = rows.get(playerId);
+  if (existing !== undefined) {
+    if (!registrationOnly && existing.clubIsRegistrationOnly) {
+      existing.clubId = clubId;
+      existing.clubIsRegistrationOnly = false;
+    }
+    return existing;
+  }
+  const created: MutableSeasonPlayerOpportunityStatRow = {
+    playerId,
+    clubId,
+    shots: 0,
+    shotsOnTarget: 0,
+    creatorNominations: 0,
+    clubIsRegistrationOnly: registrationOnly,
+  };
+  rows.set(playerId, created);
+  return created;
 }
 
 /**
@@ -1399,6 +1609,7 @@ function aiSelectedMatchTeamContext(
   livePlayerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined,
   fixture: Fixture,
   availabilityRuntime: SeasonAvailabilityRuntime | undefined,
+  collectSelectionLoadDiagnostics: boolean,
 ): FixtureTeamSetup {
   if (team.aiSelection === undefined) {
     throw new SimulateSeasonError(
@@ -1464,8 +1675,15 @@ function aiSelectedMatchTeamContext(
         fixtureDate: fixture.date,
         playerIds,
       });
+      const publicAssessments = publicAssessmentsForAiSelection(
+        team.players,
+        playerIds,
+        fixture.date,
+        selectionPolicy,
+      );
       return {
         recentUse,
+        publicAssessments,
         result: buildAiSquadMatchTeamContext({
           clubId,
           ...(selectionPolicy.formation === undefined
@@ -1473,12 +1691,7 @@ function aiSelectedMatchTeamContext(
             : { formation: selectionPolicy.formation }),
           playerIds,
           players: team.players,
-          publicAssessments: publicAssessmentsForAiSelection(
-            team.players,
-            playerIds,
-            fixture.date,
-            selectionPolicy,
-          ),
+          publicAssessments,
           currentDate: fixture.date,
           recentUse,
           roleWeights: team.roleWeights,
@@ -1500,7 +1713,7 @@ function aiSelectedMatchTeamContext(
       attemptedPlayerIds = distinctPlayerIds([...availableRosterPlayerIds, ...availableEmergencyPlayerIds]);
       built = buildSelection(attemptedPlayerIds);
     }
-    const { recentUse, result } = built;
+    const { recentUse, publicAssessments, result } = built;
     const selectedPlayerIds = [
       ...result.teamContext.lineup.map(({ playerId }) => playerId),
       ...result.selection.benchPlayerIds,
@@ -1554,6 +1767,18 @@ function aiSelectedMatchTeamContext(
               recentUsePlayerCount: attemptedPlayerIds.filter((playerId) => recentUse[playerId] !== undefined).length,
             },
           }),
+      ...(collectSelectionLoadDiagnostics
+        ? {
+            selectionLoadDiagnostics: selectionLoadDiagnostics({
+              lineup: result.teamContext.lineup,
+              availablePlayerIds: attemptedPlayerIds,
+              players: team.players,
+              publicAssessments,
+              recentUse,
+              playerStates: livePlayerStates ?? team.playerStates,
+            }),
+          }
+        : {}),
     };
   } catch (error) {
     if (error instanceof AiSquadSelectionError) {
@@ -1569,6 +1794,67 @@ function aiSelectedMatchTeamContext(
 
     throw error;
   }
+}
+
+/**
+ * Counts exact younger alternatives without retaining or rerunning a ranking.
+ *
+ * The candidate pool has already passed fixture-dated unavailability filtering.
+ * A second selector walk would be both slower and free to drift from the team
+ * actually fielded, so the locked audit keeps only these three non-derived
+ * counts while the pool still exists.
+ */
+function selectionLoadDiagnostics(input: {
+  readonly lineup: readonly LineupSlot[];
+  readonly availablePlayerIds: readonly PlayerId[];
+  readonly players: Readonly<Record<PlayerId, Player>>;
+  readonly publicAssessments: Readonly<Record<PlayerId, PublicPlayerAssessment>>;
+  readonly recentUse: Readonly<Partial<Record<PlayerId, {
+    readonly recentMinutes: number;
+    readonly recentStarts: number;
+  }>>>;
+  readonly playerStates: Readonly<Record<PlayerId, PlayerDynamicState>> | undefined;
+}): NonNullable<SimulateSeasonFixtureFieldedTeam["selectionLoadDiagnostics"]> {
+  const lineupPlayerIds = new Set(input.lineup.map(({ playerId }) => playerId));
+  let veteranStarterCount = 0;
+  let qualityMatchedYoungerAlternativeCount = 0;
+  let fresherQualityMatchedYoungerAlternativeCount = 0;
+
+  for (const { playerId: veteranId } of input.lineup) {
+    const veteran = input.players[veteranId];
+    const veteranAssessment = input.publicAssessments[veteranId];
+    if (
+      veteran === undefined
+      || veteran.primaryRole === undefined
+      || veteranAssessment === undefined
+      || veteranAssessment.age < 33
+    ) continue;
+    veteranStarterCount += 1;
+    const veteranRecentMinutes = input.recentUse[veteranId]?.recentMinutes ?? 0;
+    const veteranFitness = Number(input.playerStates?.[veteranId]?.fitness ?? 100);
+    const alternatives = input.availablePlayerIds.filter((candidateId) => {
+      if (lineupPlayerIds.has(candidateId)) return false;
+      const candidate = input.players[candidateId];
+      const assessment = input.publicAssessments[candidateId];
+      return candidate?.primaryRole === veteran.primaryRole
+        && assessment !== undefined
+        && assessment.age >= 24
+        && assessment.age <= 29
+        && assessment.currentAbility >= veteranAssessment.currentAbility - 0.5;
+    });
+    if (alternatives.length === 0) continue;
+    qualityMatchedYoungerAlternativeCount += 1;
+    if (alternatives.some((candidateId) =>
+      (input.recentUse[candidateId]?.recentMinutes ?? 0) <= veteranRecentMinutes
+      && Number(input.playerStates?.[candidateId]?.fitness ?? 100) >= veteranFitness
+    )) fresherQualityMatchedYoungerAlternativeCount += 1;
+  }
+
+  return {
+    veteranStarterCount,
+    qualityMatchedYoungerAlternativeCount,
+    fresherQualityMatchedYoungerAlternativeCount,
+  };
 }
 
 /** Exact AI candidates registered for possible season statistics. */

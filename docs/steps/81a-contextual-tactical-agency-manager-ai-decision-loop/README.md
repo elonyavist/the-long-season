@@ -23,7 +23,15 @@ reached development parity in `7/7` but retained a leaderboard-renewal
 `REFINE`; age-conditioned match load fixed the all-34-appearances anomaly.
 Integrated L5 is now Done with `REFINE`: renewal/leader age and one formation-
 replication gate remain red. The new JSON and desktop HTML are consultable;
-the `100 x 10`, B2 and Steps 07-16 remain closed.
+the `100 x 10`, B2 and Steps 07-16 remain closed. Amendment A4 freezes an
+external Big Five baseline and inserts Steps 06B9-06B17. L5.1 then recorded
+`REFINE`: only renewal quality was attributed and its fail-open process PASS is
+invalid. Amendment A5 inserts Steps 06B10A-06B10H to calibrate lower divisions,
+repair the gate and attribute every red family before any owner changes.
+Steps 06B16-06B17 are now Done. L5.4 recorded `REFINE`: exact-role market
+targeting is healthy, but renewal supply, veteran/leader ages, soft formation
+identity and the First-Division champion-points gate remain red. Its reconciled
+JSON and byte-stable desktop HTML are the current evidence; L1 remains closed.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -79,6 +87,11 @@ consume the manager's same evidence rather than hidden facts.
   commitment. Formation remains geometry; players own execution.
 - Post-match choice affects only the next match: marginal recovery, plan
   rehearsal, or opponent study, with one priority excluding the other two.
+- The fictional first division uses the frozen Big Five baseline: champion
+  cohort mean `72..88` on `34` matches, with total goals/draws retained as
+  guardrails. Lower divisions do not inherit those bands.
+- Over-33 leaders remain possible without a direct age/output rule; pooled
+  leader age and share are population gates, never individual hard caps.
 - Facts are persisted once; summaries, advice, and prose are derived.
 - Beta saves are disposable. Step 06B7F1 advanced the content-calibration
   bundle to `v8`; Step 06B7G4 re-derived the linked bundle as v9 after raising
@@ -160,6 +173,35 @@ contexts; it never owns the analytic diversity gate.
 | 06B7G5 | [age-conditioned match load](06b7g5-age-conditioned-match-load.md) | condition | **Done; rotation green** |
 | 06B7G2A | [academy call-up depth and live shape tie-break](06b7g2a-academy-call-up-and-live-shape-tie-break.md) | yes | **Done; L4.5 `GO`** |
 | 06B8 | [Checkpoint L5: integrated 7 x 10 HTML](06b8-checkpoint-l5-integrated-7x10-html.md) | no | **`REFINE`; HTML produced** |
+| 06B9 | [Big Five baseline and preregistration](06b9-big-five-statistical-baseline-and-preregistration.md) | no | **Done; L5.1 authorized** |
+| 06B10 | [Checkpoint L5.1: owner attribution](06b10-checkpoint-l5-1-owner-attribution.md) | no | **`REFINE`; fail-open PASS rejected** |
+| 06B10A | [lower-division baselines and target register](06b10a-lower-division-baselines-and-target-register.md) | no | **Done; frozen targets** |
+| 06B10B | [owner gate and metric alignment](06b10b-owner-gate-and-metric-alignment.md) | no | **Done; fail-closed seams** |
+| 06B10C | [paired table-hierarchy attribution](06b10c-paired-table-hierarchy-attribution.md) | no | **Done; `population_strength`** |
+| 06B10D | [age-load attribution](06b10d-age-load-attribution.md) | no | **Done; `renewal_quality`** |
+| 06B10E | [player-task production attribution](06b10e-player-task-production-attribution.md) | no | **Done; `actor_allocation`** |
+| 06B10F | [generational-renewal attribution](06b10f-generational-renewal-attribution.md) | no | **Done; `development_realization`** |
+| 06B10G | [club-identity attribution](06b10g-club-identity-attribution.md) | no | **Done; `annual_intake_identity_erosion`** |
+| 06B10H | [Checkpoint L5.1 attribution retry](06b10h-checkpoint-l5-1-attribution-retry.md) | no | **`GO`; owner steps open** |
+| 06B11 | [table-hierarchy population-strength correction](06b11-table-hierarchy-population-strength-correction.md) | yes | L5.2 |
+| 06B12 | [Checkpoint L5.2: standings hierarchy 7 x 2](06b12-checkpoint-l5-2-standings-hierarchy-7x2.md) | no | opens player owners |
+| 06B12A | [Checkpoint L5.2A: powered standings retry 7 x 10](06b12a-checkpoint-l5-2-powered-standings-retry-7x10.md) | no | assigns the persistent metric owner |
+| 06B12B | [cross-division table owner correction](06b12b-cross-division-table-owner-correction.md) | yes | fresh L5.2B validation |
+| 06B12C | [Checkpoint L5.2B: fresh standings validation 7 x 10](06b12c-checkpoint-l5-2b-fresh-standings-validation-7x10.md) | no | opens player owners |
+| 06B12D | [Checkpoint L5.2C: hierarchy-only validation 7 x 10](06b12d-checkpoint-l5-2c-hierarchy-only-validation-7x10.md) | no | opens player owners |
+| 06B12E | [final table owner correction](06b12e-final-table-owner-correction.md) | yes | final fresh validation |
+| 06B12F | [Checkpoint L5.2D: final standings validation 7 x 10](06b12f-checkpoint-l5-2d-final-standings-validation-7x10.md) | no | opens player owners or records debt |
+| 06B13 | [renewal development-opportunity correction](06b13-renewal-development-opportunity-correction.md) | yes | Step 06B14 |
+| 06B14 | [player-task actor allocation](06b14-player-task-actor-allocation-correction.md) | yes | L5.3 |
+| 06B15 | [Checkpoint L5.3: player renewal and leaders 7 x 10](06b15-checkpoint-l5-3-player-renewal-leaders-7x10.md) | no | **REFINE; 06B15A** |
+| 06B15A | [renewal and actor residual attribution](06b15a-renewal-and-actor-residual-attribution.md) | no | **GO; 06B15B** |
+| 06B15B | [renewal and actor residual correction](06b15b-renewal-and-actor-residual-correction.md) | yes | fresh L5.3 retry |
+| 06B15C | [Checkpoint L5.3A: player renewal and leaders retry](06b15c-checkpoint-l5-3a-player-renewal-leaders-retry.md) | no | Step 06B16 or REFINE |
+| 06B15D | [interesting ceiling and shooter response correction](06b15d-interesting-ceiling-and-shooter-response-correction.md) | yes | L5.3B |
+| 06B15E | [Checkpoint L5.3B: final player renewal and leaders retry](06b15e-checkpoint-l5-3b-player-renewal-leaders-final-retry.md) | no | **STOP / RETHINK; 06B16-17 closed** |
+| 06B15F | [Checkpoint L5.3C: renewal architecture attribution](06b15f-checkpoint-l5-3c-renewal-architecture-attribution.md) | no | **OWNER_IDENTIFIED: `market_distribution`** |
+| 06B16 | [role-aware domestic market and soft club blueprint](06b16-role-aware-market-and-soft-club-blueprint.md) | yes | **Done; L5.4** |
+| 06B17 | [Checkpoint L5.4: integrated `7 x 10` JSON/HTML](06b17-checkpoint-l5-4-integrated-7x10-html.md) | no | **Done: `REFINE`; HTML produced, L1 closed** |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
@@ -227,6 +269,23 @@ Steps 03A and 03B are inserted rather than renumbered so every `Step NN`
 reference in the design contract keeps its meaning. Checkpoint A2 has now
 opened 03C-03D and conditionally authorized 04-05; the Checkpoint A before-state
 remains frozen as the denominator of A2's deltas.
+
+**Amendment A4 preserves L5's `REFINE` and refuses to tune from the HTML.** The
+external baseline finds first-division goals credible (`2.8276` per match) but
+table spread compressed (`40.81` against historical `47..68`), late `33+`
+leaders overrepresented and individual goals/assists too diffuse. Step 06B9
+freezes sources, populations and product targets. L5.1 must distinguish
+population strength, match translation, draw resolution, selection load,
+renewal quality, actor allocation, occasion execution and annual-intake
+identity erosion. A `not_attributed` family stays closed.
+
+**Amendment A5 rejects L5.1's printed PASS and repairs attribution before
+behaviour.** The `7 x 10` reconciled, but table hierarchy, leader production and
+club identity remained `not_attributed`; only renewal quality was identified.
+The correction tranche freezes separate lower-league targets, aligns the exact
+red metrics, applies paired owner tests and retries L5.1 fail-closed. Its thesis
+and operational contract are in
+[`PHASE_81A_POST_L5_CORRECTION_TRANCHE.md`](../../audits/PHASE_81A_POST_L5_CORRECTION_TRANCHE.md).
 
 ## Checkpoint Decisions
 

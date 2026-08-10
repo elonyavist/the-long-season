@@ -65,12 +65,13 @@ describe("WebCareerRuntime", () => {
       "competition:ita-3",
     ]);
     // RE-RECORDED for Phase 81A squad identities and Step 06A's competition-
-    // balanced assignment and v9 projection bundle:
-    // `b12d5dd0` -> `620ad19b` -> `f1527230` -> `958f692d`.
+    // balanced assignment and v10 projection bundle:
+    // `b12d5dd0` -> `620ad19b` -> `f1527230` -> `958f692d` -> `0268597d` -> `aca4502a` -> `ee653cba` -> `cf92db55` -> `da43409b`.
+    // The last move is Step 06B16's v9 market policy and soft academy blueprint.
     // The other half of this record lives in `apps/cli/src/commands/career.test.ts`
     // and carries the account. Both were changed in the same edit: a pair that
     // proves CLI and web agree proves nothing if one side is updated alone.
-    expect(canonicalCareerIdentityHash(state)).toBe("958f692d");
+    expect(canonicalCareerIdentityHash(state)).toBe("da43409b");
   });
 
   it("publishes one completed three-division boundary atomically and deterministically", () => {

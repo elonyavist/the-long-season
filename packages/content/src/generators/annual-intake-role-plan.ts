@@ -19,6 +19,8 @@ export interface AnnualIntakeRolePlanClub {
   readonly clubId: ClubId;
   readonly slotKinds: readonly AnnualIntakeRoleSlotKind[];
   readonly currentRoles: readonly PlayerRole[];
+  /** Derivable opening identity vector; a preference, never an exclusion. */
+  readonly targetRoles: readonly PlayerRole[];
 }
 
 /** Input for one competition-scoped role composition. */
@@ -83,12 +85,12 @@ export function annualIntakeRoleCoverageFacts(
 /**
  * Assigns a balanced role deck to one competition's ordered candidate slots.
  *
- * The competition owns how often each role appears; current club role counts
- * decide only which club receives the next token. That distinction preserves
- * league-wide role continuity without giving any club a formation, a preferred
- * shape, or a hidden permanent identity. Two-sided roles are resolved by one
- * alternating competition sequence so a run of independent coin flips cannot
- * erase a flank.
+ * The competition owns how often each role appears. Each club's derivable soft
+ * blueprint and its current-plus-planned counts decide which club receives the
+ * next token; after positive blueprint demand is exhausted, generic balancing
+ * keeps every role reachable. No formation or persistent identity is stored.
+ * Two-sided roles are resolved by one alternating competition sequence so a
+ * run of independent coin flips cannot erase a flank.
  */
 export function planCompetitionAnnualIntakePositions(
   input: PlanCompetitionAnnualIntakeRolesInput,
@@ -97,11 +99,13 @@ export function planCompetitionAnnualIntakePositions(
   const positionsByClubId = new Map<ClubId, Array<PlayerPosition | undefined>>();
   const currentCountsByClubId = new Map<ClubId, Map<PlayerRole, number>>();
   const plannedCountsByClubId = new Map<ClubId, Map<PlayerRole, number>>();
+  const targetCountsByClubId = new Map<ClubId, Map<PlayerRole, number>>();
 
   for (const club of input.clubs) {
     positionsByClubId.set(club.clubId, Array.from({ length: club.slotKinds.length }));
     currentCountsByClubId.set(club.clubId, roleCounts(club.currentRoles));
     plannedCountsByClubId.set(club.clubId, roleCounts([]));
+    targetCountsByClubId.set(club.clubId, roleCounts(club.targetRoles));
   }
 
   for (const slotKind of slotKindOrder()) {
@@ -133,6 +137,7 @@ export function planCompetitionAnnualIntakePositions(
           right,
           currentCountsByClubId,
           plannedCountsByClubId,
+          targetCountsByClubId,
         )
       )[0];
       if (chosen === undefined) {
@@ -228,10 +233,22 @@ function compareSlotDemand(
   right: { readonly clubId: ClubId; readonly clubIndex: number; readonly slotIndex: number },
   current: ReadonlyMap<ClubId, ReadonlyMap<PlayerRole, number>>,
   planned: ReadonlyMap<ClubId, ReadonlyMap<PlayerRole, number>>,
+  target: ReadonlyMap<ClubId, ReadonlyMap<PlayerRole, number>>,
 ): number {
   const leftCount = roleCount(current, left.clubId, role) + roleCount(planned, left.clubId, role);
   const rightCount = roleCount(current, right.clubId, role) + roleCount(planned, right.clubId, role);
-  if (leftCount !== rightCount) return leftCount - rightCount;
+  const leftTarget = roleCount(target, left.clubId, role);
+  const rightTarget = roleCount(target, right.clubId, role);
+  if (leftTarget > 0 && rightTarget === 0) return -1;
+  if (leftTarget === 0 && rightTarget > 0) return 1;
+  if (leftTarget > 0 && rightTarget > 0) {
+    const proportionalFillDifference = leftCount * rightTarget - rightCount * leftTarget;
+    if (proportionalFillDifference !== 0) return proportionalFillDifference;
+  } else if (leftCount !== rightCount) {
+    // Once every positive blueprint lane is unavailable, keep the old generic
+    // balancing rule so an absent role remains possible rather than forbidden.
+    return leftCount - rightCount;
+  }
   const leftRank = allocationRank(input, role, left);
   const rightRank = allocationRank(input, role, right);
   if (leftRank !== rightRank) return leftRank - rightRank;
