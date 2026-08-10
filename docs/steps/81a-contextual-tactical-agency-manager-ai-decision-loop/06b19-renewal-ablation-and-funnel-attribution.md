@@ -2,13 +2,39 @@
 
 ## Status
 
-**Active; 06B18 completed verdict-neutral hardening on 2026-08-10.** Authorized
-by Design Contract Amendment A6 and revised the same day after cross-review. This
-checkpoint changes no gameplay. It discharges the 06B16 confounding debt with
-a preregistered factorial `2 x 2` ablation, locates the renewal funnel's
-bottleneck per unique need, and settles the First-Division champion-points
-miss with a frozen truth table. Its verdict alone decides which conditional
-correction steps (06B20A-C) may be written.
+**Done on 2026-08-10: `REFINE`; 06B20A-C remain closed.** Authorized by Design
+Contract Amendment A6 and revised the same day after cross-review. This
+checkpoint changed no gameplay. Its preregistered factorial `2 x 2` found
+three material interactions but no complete single-owner model: local
+replacement capacity and champion points are `not_reproduced`. The unique-need
+funnel is reconciled and names the active-talk cap as the upper-division
+bottleneck, while the first A6 use reading exposes a separate red rotation
+family. The complete account is
+`docs/audits/PHASE_81A_CHECKPOINT_L6_1_RENEWAL_ABLATION.md`.
+
+## Outcome
+
+All four fresh arms completed on the same seven seeds for ten seasons with
+exactly seven workers and zero reconciliation failures. The valid arm values
+and frozen evaluator return:
+
+- local replacement capacity: `not_reproduced`; all four conditional effects
+  are below the `0.03` floor;
+- division replacement capacity, four-formation retention and generated-leader
+  share: `shared_interaction`;
+- champion points: `not_reproduced`; only one conditional contrast crosses the
+  `0.5` floor and per-world coherence fails;
+- market funnel: `16,089` / `16,280` unique episodes in market / combined,
+  dominated by `active_talk_limit_reached` in Divisions 1 and 2 and by
+  `fulfilled` in Division 3;
+- A6 player use: appearance share `0.6456..0.6496` against `0.48..0.58`, and
+  distinct users `23.0278..23.1238` against `26..31`, red in all four arms.
+
+The combined replay remains L5.4 `REFINE`. All eight visible world sections are
+byte-identical; after excluding only the three declared new observation fields,
+the canonical projections are also byte-identical `7/7`. The rejected first
+control and its world-boundary reader correction are recorded below and in the
+audit. No coefficient, floor, target or gameplay policy moved.
 
 ## Questions This Checkpoint Answers
 
@@ -60,6 +86,16 @@ department-only `AiMarketNeed` without role succession; generic-balancing
 annual intake without the identity blueprint - pinned by unit tests on the
 exact decision functions, bit-exact where possible. An "off" arm that only
 approximates pre-06B16 behaviour is `REFINE`.
+
+**Pre-valid-run instrumentation correction.** The first control execution was
+rejected before any factorial arm was interpreted: the fresh
+`distinctUsersPerClubSeason` reader grouped identical club IDs from all seven
+worlds into one club-season and reported `161.8667`, an impossible value. The
+canonical player-club-season facts were correct; only their cohort reader had
+lost the world boundary. The reader now computes club-season counts inside
+each world before pooling them, a two-world same-ID test pins the boundary,
+and all four cache suffixes advance from `facts-v1` to `facts-v2`. The rejected
+control artifact is diagnostic residue, never L6.1 evidence.
 
 **Coupling asymmetry, declared before the run:** the market axis shares the
 generation RNG stream with control (market decisions happen after
@@ -170,12 +206,25 @@ The L5.4 reading is neither rounded nor re-measured in isolation.
 - `apps/cli/src/commands/simulation-report/renewal-architecture-attribution.ts`
   (unique-need funnel and reconciliation)
 - `apps/cli/src/commands/simulation-report/renewal-architecture-attribution.test.ts`
+- `apps/cli/src/commands/simulation-report/owner-attribution.ts` and
+  `owner-attribution.test.ts` (06B18 deliberately registered appearance share
+  and distinct users as `not_evaluated`; L6.1 is their first owner and must
+  read canonical fixture participation by player-club-season, without changing
+  or duplicating the existing leader-production rows)
 - `apps/cli/src/commands/simulation-report/report-registry.ts` (four locked
   arm profiles)
 - `apps/cli/src/commands/simulation-report/report-planner.test.ts`
-- `packages/engine/src/use-cases/simulate-season.ts` (analysis policy seam at
-  the orchestration boundary, removal owner Phase 81A closeout)
-- `packages/engine/src/use-cases/simulate-season.test.ts`
+- `apps/cli/src/commands/simulation-report/career-world-facts.ts` (the real
+  career orchestration boundary: it creates the opening world, annual intake
+  providers and the season rollover that invokes the market; the match-season
+  use-case owns none of those three facts)
+- `apps/cli/src/commands/simulation-report/career-world-facts.test.ts`
+- `packages/engine/src/career/advance-career-season.ts` and
+  `advance-career-season.test.ts` (transient analysis switch propagation into
+  the canonical monthly market boundary; never persisted or player-visible)
+- `packages/engine/src/career/advance-career-month.ts` and
+  `advance-career-month.test.ts` (same propagation, with removal owned by Phase
+  81A closeout)
 - `packages/engine/src/career/ai-market-lifecycle.ts` (market-off semantics
   and diagnostic-state enumeration for the funnel taxonomy)
 - `packages/engine/src/career/ai-market-lifecycle.test.ts`
@@ -184,13 +233,27 @@ The L5.4 reading is neither rounded nor re-measured in isolation.
 - `packages/content/src/generators/annual-intake-role-plan.test.ts`
 - `packages/content/src/generators/career-intake-players.ts` (blueprint-off
   path, if the toggle propagates here)
+- `packages/content/src/generators/career-intake-players.test.ts` (proves the
+  ordinary annual provider is byte-identical to explicit blueprint-on and the
+  blueprint-off provider is deterministic on real generated candidates)
 - `packages/content/src/generators/initial-youth-academies.ts` (blueprint-off
   path, if the toggle propagates here)
+- `packages/content/src/generators/initial-youth-academies.test.ts`
+- `packages/content/src/generators/domestic-world.ts` and
+  `domestic-world.test.ts` (the opening academy is created here, so a true
+  pre-06B16 blueprint-off arm must enter before world generation rather than
+  rewrite generated players afterwards)
 - `packages/i18n/src/labels.ts` (arm profile titles/descriptions, five
   languages)
 - `docs/PROJECT_STATUS.md`
+- `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/README.md`
+  (replaces the stale 06B18-active handoff with L6.1 `REFINE` and keeps all
+  correction steps closed)
 - this step document
-- the audit document recording the L6.1 verdict
+- `docs/audits/PHASE_81A_CHECKPOINT_L6_1_RENEWAL_ABLATION.md` **(new)** - the
+  generated-fact reading, purity proof, frozen factorial result and `REFINE`
+  handoff; no gameplay decision may cite an arm without this account
+- `docs/audits/README.md` (indexes the active `REFINE` result)
 
 Files discovered to need refactoring inside this scope are added here with an
 ownership note before they change.

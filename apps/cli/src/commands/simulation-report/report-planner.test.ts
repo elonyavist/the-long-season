@@ -458,6 +458,26 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes all four L6.1 arms to the same seven L5.4 worlds and seven workers", () => {
+    for (const arm of ["control", "market", "blueprint", "combined"] as const) {
+      const profileId = `phase81a-renewal-ablation-l6-1-${arm}-7x10` as const;
+      const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+      expect(plan.measurementRequest).toMatchObject({
+        profileId,
+        worldCount: 7,
+        seasonCount: 10,
+        workerCount: 7,
+        seedPrefix: "phase81a-integrated-l5-4-v1",
+        includedSectionIds: [
+          "season", "standings", "players", "transfers",
+          "formations", "economy", "development", "anomalies",
+        ],
+      });
+      expect(() => createSimulationReportPlan({ profileId, workerCount: 6 }))
+        .toThrow(/refuses measurement overrides/);
+    }
+  });
+
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({
       includedSectionIds: ["tactical_shape"],

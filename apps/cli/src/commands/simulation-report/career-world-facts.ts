@@ -221,6 +221,14 @@ export interface CareerWorldInspection {
   readonly analysisStrengthGapScale?: number;
   /** Phase 81A fixture-dated selector contrast; ordinary reports never set it. */
   readonly collectSelectionLoadDiagnostics?: boolean;
+  /**
+   * Analysis-only 06B19 factorial arm. This is orchestration metadata, never
+   * saved game state; Phase 81A closeout owns removal of both switches.
+   */
+  readonly renewalAblationPolicy?: {
+    readonly roleAwareMarket: boolean;
+    readonly squadIdentityBlueprint: boolean;
+  };
   /** Receives each completed selected-competition season. */
   readonly observeSeasonResult?: (context: {
     readonly seasonNumber: number;
@@ -1356,7 +1364,15 @@ export function createCareerWorldFacts(
   observeOpeningCareerState?: (careerState: CliCareerState) => void,
   inspection?: CareerWorldInspection,
 ): CareerWorldFacts {
-  const league = createFakeDomesticWorld({ worldSeed: seed });
+  const league = createFakeDomesticWorld({
+    worldSeed: seed,
+    ...(inspection?.renewalAblationPolicy === undefined
+      ? {}
+      : {
+          useSquadIdentityRoleBlueprint:
+            inspection.renewalAblationPolicy.squadIdentityBlueprint,
+        }),
+  });
   const initialCareerState = careerStateFromNewWorld("save:simulation-report" as CliSaveId, league, seed);
   observeOpeningCareerState?.(initialCareerState);
   const annualIntakeObservations: PlayerGenerationAnnualIntakeObservation[] = [];
@@ -4609,6 +4625,12 @@ function advanceCareerForReport(
     worldSeed,
     seasonIndex: context.seasonNumber - 1,
     seniorCandidatesPerClub: LONG_RUN_INTAKE_CANDIDATES_PER_CLUB,
+    ...(inspection?.renewalAblationPolicy === undefined
+      ? {}
+      : {
+          useSquadIdentityRoleBlueprint:
+            inspection.renewalAblationPolicy.squadIdentityBlueprint,
+        }),
   });
   const advanced = advanceCareerOneSeason({
     careerState: careerStateWithParticipation,
@@ -4643,6 +4665,12 @@ function advanceCareerForReport(
     askingPriceConfig,
     wagePolicy,
     marketBehaviorPolicy,
+    ...(inspection?.renewalAblationPolicy === undefined
+      ? {}
+      : {
+          useRoleSuccessionMarketNeeds:
+            inspection.renewalAblationPolicy.roleAwareMarket,
+        }),
     playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       careerStateWithParticipation.gameState.meta.calibrationVersions,
     ),

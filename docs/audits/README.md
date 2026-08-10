@@ -16,6 +16,13 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_1_RENEWAL_ABLATION.md` - **Checkpoint L6.1,
+  `REFINE`.** Four fresh same-seed `7 x 10` arms reconcile and preserve L5.4
+  gameplay facts. Three target metrics have a material market/blueprint
+  interaction; local capacity and champion points are `not_reproduced`.
+  Upper-division role needs bottleneck at the active-talk cap, while both first
+  player-use gates fail across every arm. No 06B20 correction is authorized.
+
 - `PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md` - **Amendment A6
   thesis and operational contract.** One leader gate (`>= 0.50` effective),
   one band definition, `superseded` representation, then a same-seed `2 x 2`

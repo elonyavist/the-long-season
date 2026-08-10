@@ -1,3 +1,11 @@
+import type {
+  AiMarketDiagnosticFact,
+  AiMarketDiagnosticReason,
+  AiMarketLifecycleFact,
+} from "@game/engine";
+
+import type { CliPlayer } from "../career/types.ts";
+import { HISTORICAL_DIVISION_TABLE_TARGETS } from "./historical-simulation-targets.ts";
 import {
   GENERATIONAL_ORIGINS,
   type GenerationalOrigin,
@@ -10,6 +18,453 @@ import {
   type OwnerAttributionPlayerSeasonFact,
   type OwnerAttributionWorldFacts,
 } from "./owner-attribution.ts";
+
+type RenewalNeedRole = NonNullable<CliPlayer["primaryRole"]>;
+
+export const RENEWAL_NEED_STAGES = [
+  "observed",
+  "recruitable",
+  "target_found",
+  "talk_started",
+  "fulfilled",
+] as const;
+export type RenewalNeedStage = typeof RENEWAL_NEED_STAGES[number];
+
+export type RenewalNeedTerminalOutcome =
+  | AiMarketDiagnosticReason
+  | "fulfilled"
+  | "negotiation_still_open"
+  | "completion_failed"
+  | "recruitment_impossible";
+
+/** One non-overlapping role-need episode inside a club season. */
+export interface RenewalNeedEpisodeFact {
+  readonly worldSeed: string;
+  readonly divisionLevel: 1 | 2 | 3;
+  readonly clubId: string;
+  readonly seasonNumber: number;
+  readonly role: RenewalNeedRole;
+  readonly needEpisodeOrdinal: number;
+  readonly firstAppearanceDate: number;
+  readonly maximumStage: RenewalNeedStage;
+  readonly terminalOutcome: RenewalNeedTerminalOutcome;
+}
+
+export interface RenewalNeedFunnelEvaluation {
+  readonly episodeCount: number;
+  readonly maximumStageCounts: Readonly<Record<RenewalNeedStage, number>>;
+  readonly terminalOutcomeCounts: Readonly<Record<RenewalNeedTerminalOutcome, number>>;
+  readonly dominantTerminalOutcomeByDivision: Readonly<Record<1 | 2 | 3, RenewalNeedTerminalOutcome | "not_observed">>;
+  readonly reconciliationFailureCount: number;
+}
+
+export const RENEWAL_ABLATION_METRICS = [
+  "localReplacementCapacity",
+  "divisionReplacementCapacity",
+  "fourReplicatedFormationRetentionShare",
+  "careerGeneratedLeaderShareSeasonTen",
+  "championPoints",
+] as const;
+export type RenewalAblationMetric = typeof RENEWAL_ABLATION_METRICS[number];
+export type RenewalAblationArmKey = "control" | "market" | "blueprint" | "combined";
+
+export interface RenewalAblationMetricRow {
+  readonly worldSeed: string;
+  readonly values: Readonly<Record<RenewalAblationMetric, number>>;
+}
+
+export interface RenewalPopulationSeasonSignature {
+  readonly seasonNumber: number;
+  readonly playerCount: number;
+  readonly sha256: string;
+}
+
+export interface RenewalPopulationWorldSignatures {
+  readonly worldSeed: string;
+  readonly seasons: readonly RenewalPopulationSeasonSignature[];
+}
+
+export interface RenewalAblationArmFacts {
+  readonly arm: RenewalAblationArmKey;
+  readonly values: Readonly<Record<RenewalAblationMetric, number>>;
+  readonly worlds: readonly RenewalAblationMetricRow[];
+  readonly populationSignatures: readonly RenewalPopulationWorldSignatures[];
+}
+
+export type RenewalAblationOwner =
+  | "market"
+  | "blueprint"
+  | "shared_interaction"
+  | "population_strength"
+  | "not_reproduced";
+
+export interface RenewalAblationMetricDecision {
+  readonly metric: RenewalAblationMetric;
+  readonly owner: RenewalAblationOwner;
+  readonly marketWithoutBlueprint: number;
+  readonly marketWithBlueprint: number;
+  readonly blueprintWithoutMarket: number;
+  readonly blueprintWithMarket: number;
+  readonly interaction: number;
+  readonly marketCoherence: readonly [number, number];
+  readonly blueprintCoherence: readonly [number, number];
+}
+
+export interface RenewalAblationDecision {
+  readonly decision: "OWNERS_IDENTIFIED" | "REFINE";
+  readonly metrics: readonly RenewalAblationMetricDecision[];
+  readonly firstPopulationDivergenceSeasonByArm: Readonly<Record<
+    Exclude<RenewalAblationArmKey, "control">,
+    Readonly<Record<string, number | "not_observed">>
+  >>;
+}
+
+interface MutableRenewalNeedEpisode {
+  readonly worldSeed: string;
+  readonly divisionLevel: 1 | 2 | 3;
+  readonly clubId: string;
+  readonly seasonNumber: number;
+  readonly role: RenewalNeedRole;
+  readonly needEpisodeOrdinal: number;
+  readonly firstAppearanceDate: number;
+  maximumStage: RenewalNeedStage;
+  lastReason?: AiMarketDiagnosticReason;
+  terminalOutcome?: RenewalNeedTerminalOutcome;
+}
+
+/**
+ * Replays only structured diagnostics to form unique role-need episodes.
+ * Gameplay state is never read or changed; transfer facts merely close the
+ * matching open episode, and a later observation receives a new ordinal.
+ */
+export function renewalNeedEpisodesForSeason(input: {
+  readonly worldSeed: string;
+  readonly seasonNumber: number;
+  readonly divisionByClubId: Readonly<Record<string, 1 | 2 | 3>>;
+  readonly playerRoleById: Readonly<Record<string, RenewalNeedRole>>;
+  readonly diagnostics: readonly AiMarketDiagnosticFact[];
+  readonly lifecycleFacts: readonly AiMarketLifecycleFact[];
+}): readonly RenewalNeedEpisodeFact[] {
+  const timeline = [
+    ...input.diagnostics
+      .filter(({ target }) => target.kind === "role")
+      .map((fact) => ({ kind: "diagnostic" as const, date: Number(fact.occurredOn), fact })),
+    ...input.lifecycleFacts.map((fact) => ({
+      kind: "lifecycle" as const,
+      date: Number(fact.occurredOn),
+      fact,
+    })),
+  ].sort((left, right) =>
+    left.date - right.date
+    || (left.kind === right.kind ? 0 : left.kind === "diagnostic" ? -1 : 1));
+  const open = new Map<string, MutableRenewalNeedEpisode>();
+  const ordinals = new Map<string, number>();
+  const completed: MutableRenewalNeedEpisode[] = [];
+
+  const episodeFor = (
+    clubId: string,
+    role: RenewalNeedRole,
+    date: number,
+  ): MutableRenewalNeedEpisode | undefined => {
+    const key = `${clubId}|${role}`;
+    const existing = open.get(key);
+    if (existing !== undefined) return existing;
+    const divisionLevel = input.divisionByClubId[clubId];
+    if (divisionLevel === undefined) return undefined;
+    const ordinal = (ordinals.get(key) ?? 0) + 1;
+    ordinals.set(key, ordinal);
+    const created: MutableRenewalNeedEpisode = {
+      worldSeed: input.worldSeed,
+      divisionLevel,
+      clubId,
+      seasonNumber: input.seasonNumber,
+      role,
+      needEpisodeOrdinal: ordinal,
+      firstAppearanceDate: date,
+      maximumStage: "observed",
+    };
+    open.set(key, created);
+    return created;
+  };
+
+  for (const event of timeline) {
+    if (event.kind === "diagnostic") {
+      const target = event.fact.target;
+      if (target.kind !== "role") continue;
+      const episode = episodeFor(String(event.fact.clubId), target.role, event.date);
+      if (episode === undefined) continue;
+      episode.maximumStage = laterRenewalNeedStage(
+        episode.maximumStage,
+        diagnosticStage(event.fact),
+      );
+      if (event.fact.reason !== undefined) episode.lastReason = event.fact.reason;
+      continue;
+    }
+    const role = input.playerRoleById[String(event.fact.playerId)];
+    if (role === undefined) continue;
+    const clubId = String(event.fact.buyingClubId);
+    const key = `${clubId}|${role}`;
+    const episode = open.get(key);
+    if (episode === undefined) continue;
+    if (
+      event.fact.event === "club_offer_submitted"
+      || event.fact.event === "preliminary_offer_submitted"
+    ) {
+      episode.maximumStage = laterRenewalNeedStage(episode.maximumStage, "talk_started");
+    } else if (
+      event.fact.event === "transfer_completed"
+      || event.fact.event === "preliminary_activated"
+    ) {
+      episode.maximumStage = "fulfilled";
+      episode.terminalOutcome = "fulfilled";
+      completed.push(episode);
+      open.delete(key);
+    } else if (
+      event.fact.event === "transfer_failed"
+      || event.fact.event === "preliminary_activation_cancelled"
+    ) {
+      episode.terminalOutcome = "completion_failed";
+      completed.push(episode);
+      open.delete(key);
+    }
+  }
+
+  for (const episode of open.values()) {
+    episode.terminalOutcome = episode.lastReason
+      ?? (episode.maximumStage === "target_found" || episode.maximumStage === "talk_started"
+        ? "negotiation_still_open"
+        : "recruitment_impossible");
+    completed.push(episode);
+  }
+  return completed
+    .sort((left, right) =>
+      left.divisionLevel - right.divisionLevel
+      || left.clubId.localeCompare(right.clubId)
+      || left.role.localeCompare(right.role)
+      || left.needEpisodeOrdinal - right.needEpisodeOrdinal)
+    .map(({ lastReason: _lastReason, terminalOutcome, ...episode }) => ({
+      ...episode,
+      terminalOutcome: terminalOutcome ?? "recruitment_impossible",
+    }));
+}
+
+/** Aggregates the episode table and proves both stage and terminal totals reconcile. */
+export function evaluateRenewalNeedFunnel(
+  episodes: readonly RenewalNeedEpisodeFact[],
+): RenewalNeedFunnelEvaluation {
+  const maximumStageCounts = Object.fromEntries(
+    RENEWAL_NEED_STAGES.map((stage) => [stage, 0]),
+  ) as Record<RenewalNeedStage, number>;
+  const terminalOutcomeCounts = emptyRenewalTerminalCounts();
+  for (const episode of episodes) {
+    maximumStageCounts[episode.maximumStage] += 1;
+    terminalOutcomeCounts[episode.terminalOutcome] += 1;
+  }
+  const dominantTerminalOutcomeByDivision = Object.fromEntries(
+    ([1, 2, 3] as const).map((divisionLevel) => {
+      const rows = episodes.filter((episode) => episode.divisionLevel === divisionLevel);
+      const counts = new Map<RenewalNeedTerminalOutcome, number>();
+      for (const row of rows) counts.set(row.terminalOutcome, (counts.get(row.terminalOutcome) ?? 0) + 1);
+      const dominant = [...counts].sort(([left, leftCount], [right, rightCount]) =>
+        rightCount - leftCount || left.localeCompare(right))[0]?.[0] ?? "not_observed";
+      return [divisionLevel, dominant];
+    }),
+  ) as Readonly<Record<1 | 2 | 3, RenewalNeedTerminalOutcome | "not_observed">>;
+  const stageTotal = Object.values(maximumStageCounts).reduce((sum, count) => sum + count, 0);
+  const terminalTotal = Object.values(terminalOutcomeCounts).reduce((sum, count) => sum + count, 0);
+  return {
+    episodeCount: episodes.length,
+    maximumStageCounts,
+    terminalOutcomeCounts,
+    dominantTerminalOutcomeByDivision,
+    reconciliationFailureCount:
+      Number(stageTotal !== episodes.length) + Number(terminalTotal !== episodes.length),
+  };
+}
+
+function diagnosticStage(fact: AiMarketDiagnosticFact): RenewalNeedStage {
+  if (fact.event === "need_recruitable") return "recruitable";
+  if (fact.event === "permanent_target_found" || fact.event === "preliminary_candidate_found") {
+    return "target_found";
+  }
+  return "observed";
+}
+
+function laterRenewalNeedStage(
+  left: RenewalNeedStage,
+  right: RenewalNeedStage,
+): RenewalNeedStage {
+  return RENEWAL_NEED_STAGES.indexOf(left) >= RENEWAL_NEED_STAGES.indexOf(right) ? left : right;
+}
+
+function emptyRenewalTerminalCounts(): Record<RenewalNeedTerminalOutcome, number> {
+  return {
+    selected_club_protected: 0,
+    club_already_handled: 0,
+    club_cannot_recruit: 0,
+    active_talk_limit_reached: 0,
+    transfer_window_closed: 0,
+    permanent_start_limit_reached: 0,
+    permanent_target_unavailable: 0,
+    seller_squad_floor: 0,
+    department_target_unavailable: 0,
+    role_target_unavailable: 0,
+    target_has_live_market_talk: 0,
+    seller_department_floor: 0,
+    implausible_downward_move: 0,
+    seller_not_for_sale: 0,
+    transfer_terms_unaffordable: 0,
+    transfer_budget_insufficient: 0,
+    permanent_offer_rejected: 0,
+    preliminary_start_limit_reached: 0,
+    preliminary_target_unavailable: 0,
+    preliminary_offer_rejected: 0,
+    fulfilled: 0,
+    negotiation_still_open: 0,
+    completion_failed: 0,
+    recruitment_impossible: 0,
+  } satisfies Record<RenewalNeedTerminalOutcome, number>;
+}
+
+const RENEWAL_ABLATION_MATERIAL_FLOORS = {
+  localReplacementCapacity: 0.03,
+  divisionReplacementCapacity: 0.03,
+  fourReplicatedFormationRetentionShare: 0.02,
+  careerGeneratedLeaderShareSeasonTen: 0.02,
+  championPoints: 0.5,
+} as const satisfies Readonly<Record<RenewalAblationMetric, number>>;
+
+/** Applies the frozen 2x2 contrast, coherence and interaction rules. */
+export function evaluateRenewalAblation(
+  arms: Readonly<Record<RenewalAblationArmKey, RenewalAblationArmFacts>>,
+): RenewalAblationDecision {
+  const metrics = RENEWAL_ABLATION_METRICS.map((metric): RenewalAblationMetricDecision => {
+    const floor = RENEWAL_ABLATION_MATERIAL_FLOORS[metric];
+    const marketWithoutBlueprint = arms.market.values[metric] - arms.control.values[metric];
+    const marketWithBlueprint = arms.combined.values[metric] - arms.blueprint.values[metric];
+    const blueprintWithoutMarket = arms.blueprint.values[metric] - arms.control.values[metric];
+    const blueprintWithMarket = arms.combined.values[metric] - arms.market.values[metric];
+    const interaction = arms.combined.values[metric] - arms.market.values[metric]
+      - arms.blueprint.values[metric] + arms.control.values[metric];
+    const marketCoherence: readonly [number, number] = [
+      coherentWorldCount(arms.market, arms.control, metric, marketWithoutBlueprint, floor),
+      coherentWorldCount(arms.combined, arms.blueprint, metric, marketWithBlueprint, floor),
+    ];
+    const blueprintCoherence: readonly [number, number] = [
+      coherentWorldCount(arms.blueprint, arms.control, metric, blueprintWithoutMarket, floor),
+      coherentWorldCount(arms.combined, arms.market, metric, blueprintWithMarket, floor),
+    ];
+    const marketOwns = conditionalAxisOwns(
+      marketWithoutBlueprint,
+      marketWithBlueprint,
+      marketCoherence,
+      floor,
+    );
+    const blueprintOwns = conditionalAxisOwns(
+      blueprintWithoutMarket,
+      blueprintWithMarket,
+      blueprintCoherence,
+      floor,
+    );
+    const materialInteraction = Math.abs(interaction) > floor;
+    let owner: RenewalAblationOwner = materialInteraction || (marketOwns && blueprintOwns)
+      ? "shared_interaction"
+      : marketOwns
+        ? "market"
+        : blueprintOwns
+          ? "blueprint"
+          : "not_reproduced";
+    if (
+      metric === "championPoints"
+      && owner === "not_reproduced"
+      && !insideChampionBand(arms.control.values[metric])
+      && !insideChampionBand(arms.market.values[metric])
+      && !insideChampionBand(arms.blueprint.values[metric])
+      && !insideChampionBand(arms.combined.values[metric])
+      && [marketWithoutBlueprint, marketWithBlueprint, blueprintWithoutMarket, blueprintWithMarket]
+        .every((delta) => Math.abs(delta) < floor)
+    ) owner = "population_strength";
+    return {
+      metric,
+      owner,
+      marketWithoutBlueprint,
+      marketWithBlueprint,
+      blueprintWithoutMarket,
+      blueprintWithMarket,
+      interaction,
+      marketCoherence,
+      blueprintCoherence,
+    };
+  });
+  return {
+    decision: metrics.every(({ owner }) => owner !== "not_reproduced")
+      ? "OWNERS_IDENTIFIED"
+      : "REFINE",
+    metrics,
+    firstPopulationDivergenceSeasonByArm: {
+      market: firstPopulationDivergenceByWorld(arms.control, arms.market),
+      blueprint: firstPopulationDivergenceByWorld(arms.control, arms.blueprint),
+      combined: firstPopulationDivergenceByWorld(arms.control, arms.combined),
+    },
+  };
+}
+
+function firstPopulationDivergenceByWorld(
+  control: RenewalAblationArmFacts,
+  changed: RenewalAblationArmFacts,
+): Readonly<Record<string, number | "not_observed">> {
+  const changedBySeed = new Map(
+    changed.populationSignatures.map((world) => [world.worldSeed, world]),
+  );
+  return Object.fromEntries(control.populationSignatures.map((controlWorld) => {
+    const changedWorld = changedBySeed.get(controlWorld.worldSeed);
+    if (changedWorld === undefined) return [controlWorld.worldSeed, "not_observed"];
+    const changedBySeason = new Map(
+      changedWorld.seasons.map((season) => [season.seasonNumber, season]),
+    );
+    const first = controlWorld.seasons.find((controlSeason) => {
+      const changedSeason = changedBySeason.get(controlSeason.seasonNumber);
+      return changedSeason === undefined
+        || changedSeason.playerCount !== controlSeason.playerCount
+        || changedSeason.sha256 !== controlSeason.sha256;
+    });
+    return [controlWorld.worldSeed, first?.seasonNumber ?? "not_observed"];
+  }));
+}
+
+function conditionalAxisOwns(
+  withoutOther: number,
+  withOther: number,
+  coherence: readonly [number, number],
+  floor: number,
+): boolean {
+  return Math.abs(withoutOther) >= floor
+    && Math.abs(withOther) >= floor
+    && Math.sign(withoutOther) === Math.sign(withOther)
+    && coherence[0] >= 5
+    && coherence[1] >= 5;
+}
+
+function coherentWorldCount(
+  changed: RenewalAblationArmFacts,
+  baseline: RenewalAblationArmFacts,
+  metric: RenewalAblationMetric,
+  aggregateDelta: number,
+  floor: number,
+): number {
+  const baselineBySeed = new Map(baseline.worlds.map((world) => [world.worldSeed, world]));
+  return changed.worlds.filter((world) => {
+    const paired = baselineBySeed.get(world.worldSeed);
+    if (paired === undefined) return false;
+    const delta = world.values[metric] - paired.values[metric];
+    return Math.abs(delta) >= floor && Math.sign(delta) === Math.sign(aggregateDelta);
+  }).length;
+}
+
+function insideChampionBand(value: number): boolean {
+  const band = HISTORICAL_DIVISION_TABLE_TARGETS[1].championPoints;
+  return value >= band.min && value <= band.max;
+}
 
 export type RenewalArchitectureOwner =
   | "selection_retention"

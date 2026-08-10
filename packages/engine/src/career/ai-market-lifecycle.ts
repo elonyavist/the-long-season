@@ -236,6 +236,8 @@ export function deriveAiMarketNeeds(input: {
   readonly asOf: GameDate;
   readonly valuationConfig: PlayerValuationConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Analysis-only pre-06B16 market semantics; Phase 81A closeout removes it. */
+  readonly useRoleSuccessionNeeds?: boolean;
 }): readonly AiMarketNeed[] {
   return deriveAiMarketNeedsFromAssessments({
     ...input,
@@ -244,6 +246,7 @@ export function deriveAiMarketNeeds(input: {
       input.asOf,
       input.valuationConfig,
     ),
+    useRoleSuccessionNeeds: input.useRoleSuccessionNeeds !== false,
   });
 }
 
@@ -252,6 +255,7 @@ function deriveAiMarketNeedsFromAssessments(input: {
   readonly asOf: GameDate;
   readonly assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  readonly useRoleSuccessionNeeds: boolean;
 }): readonly AiMarketNeed[] {
   const contracts = activeContractsByPlayer(input.careerState);
   const needs: AiMarketNeed[] = [];
@@ -351,7 +355,7 @@ function deriveAiMarketNeedsFromAssessments(input: {
       });
     }
 
-    for (const role of PLAYER_ROLES) {
+    for (const role of input.useRoleSuccessionNeeds ? PLAYER_ROLES : []) {
       const players = club.playerIds.flatMap((playerId): readonly Player[] => {
         const player = input.careerState.gameState.players[playerId];
         return player?.primaryRole === role ? [player] : [];
@@ -428,6 +432,8 @@ export function advanceAiMarketLifecycle(input: {
   readonly wagePolicy: PlayerWagePolicyConfig;
   /** Exact version-selected seller, willingness, affordability, and AI policy. */
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  /** Analysis-only pre-06B16 market semantics; Phase 81A closeout removes it. */
+  readonly useRoleSuccessionNeeds?: boolean;
 }): AdvanceAiMarketLifecycleResult {
   if (
     input.throughDate <= input.fromDate
@@ -443,6 +449,9 @@ export function advanceAiMarketLifecycle(input: {
         asOf: input.throughDate,
         valuationConfig: input.valuationConfig,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
+        ...(input.useRoleSuccessionNeeds === undefined
+          ? {}
+          : { useRoleSuccessionNeeds: input.useRoleSuccessionNeeds }),
       }),
     };
   }
@@ -471,6 +480,7 @@ export function advanceAiMarketLifecycle(input: {
       askingPriceConfig: input.askingPriceConfig,
       wagePolicy: input.wagePolicy,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
+      useRoleSuccessionNeeds: input.useRoleSuccessionNeeds !== false,
     });
     careerState = submitted.careerState;
     facts.push(...submitted.facts);
@@ -504,6 +514,9 @@ export function advanceAiMarketLifecycle(input: {
       asOf: input.throughDate,
       valuationConfig: input.valuationConfig,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
+      ...(input.useRoleSuccessionNeeds === undefined
+        ? {}
+        : { useRoleSuccessionNeeds: input.useRoleSuccessionNeeds }),
     }),
   };
 }
@@ -810,6 +823,7 @@ function submitDueAiMarketTalks(input: {
   readonly askingPriceConfig: AskingPriceCurvesConfig;
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
+  readonly useRoleSuccessionNeeds: boolean;
 }): {
   readonly careerState: CareerState;
   readonly facts: readonly AiMarketLifecycleFact[];
@@ -828,6 +842,7 @@ function submitDueAiMarketTalks(input: {
     asOf: input.submittedOn,
     assessmentByPlayerId,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
+    useRoleSuccessionNeeds: input.useRoleSuccessionNeeds,
   });
   const opportunityNeeds = deriveEliteProspectOpportunityNeeds({
     careerState,
@@ -1965,6 +1980,7 @@ function accumulateDiagnosticFacts(
 ): void {
   for (const fact of facts) {
     const key = [
+      fact.occurredOn,
       fact.clubId,
       marketTargetKey(fact.target),
       fact.event,

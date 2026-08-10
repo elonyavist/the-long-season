@@ -102,6 +102,15 @@ export interface OwnerAttributionSelectionLoadSeasonFact {
   readonly fresherQualityMatchedYoungerAlternativeCount: number;
 }
 
+/** Canonical per-club player use derived from fixture participation, including transfers. */
+export interface OwnerAttributionPlayerUseSeasonFact {
+  readonly competitionId: string;
+  readonly seasonNumber: number;
+  readonly clubId: string;
+  readonly playerId: string;
+  readonly appearances: number;
+}
+
 export interface OwnerAttributionClubIdentitySeasonFact {
   readonly competitionId: string;
   readonly seasonNumber: number;
@@ -123,6 +132,8 @@ export interface OwnerAttributionWorldFacts {
   readonly tableSeasons: readonly OwnerAttributionTableSeasonFact[];
   readonly playerSeasons: readonly OwnerAttributionPlayerSeasonFact[];
   readonly selectionLoadSeasons: readonly OwnerAttributionSelectionLoadSeasonFact[];
+  /** Absent only in superseded cached cohorts created before Amendment A6. */
+  readonly playerUseSeasons?: readonly OwnerAttributionPlayerUseSeasonFact[];
   readonly clubIdentitySeasons: readonly OwnerAttributionClubIdentitySeasonFact[];
   readonly annualRolePlanReconciliationFailureCount: number;
   readonly annualRolePlanPositiveRoleCounts: readonly number[];
@@ -179,9 +190,9 @@ export interface OwnerAttributionDecision {
     readonly leaderOriginCounts: SeasonTenLeaderOriginCounts;
     readonly careerGeneratedLeaderShareSeasonTen: number | "not_observed";
     /** Frozen in A6; canonical fixture participation first supplies it in L6.1. */
-    readonly appearanceShare: number | "not_evaluated";
+    readonly appearanceShare: number | "not_observed" | "not_evaluated";
     /** Frozen in A6; canonical per-club participation first supplies it in L6.1. */
-    readonly distinctUsersPerClubSeason: number | "not_evaluated";
+    readonly distinctUsersPerClubSeason: number | "not_observed" | "not_evaluated";
   };
   readonly identity: {
     readonly clubSeasonCount: number;
@@ -215,6 +226,7 @@ export class OwnerAttributionObserver {
   private readonly tableSeasons: OwnerAttributionTableSeasonFact[] = [];
   private readonly playerSeasons: OwnerAttributionPlayerSeasonFact[] = [];
   private readonly selectionLoadSeasons: OwnerAttributionSelectionLoadSeasonFact[] = [];
+  private readonly playerUseSeasons: OwnerAttributionPlayerUseSeasonFact[] = [];
   private readonly clubIdentitySeasons: OwnerAttributionClubIdentitySeasonFact[] = [];
   private readonly annualRolePlanPositiveRoleCounts: number[] = [];
   private annualRolePlanReconciliationFailureCount = 0;
@@ -267,6 +279,7 @@ export class OwnerAttributionObserver {
     }
     this.reconciliationFailureCount += opportunityReconciliationFailureCount(input.result);
     this.playerSeasons.push(...playerSeasonFacts(input));
+    this.playerUseSeasons.push(...playerUseSeasonFacts(input));
     this.selectionLoadSeasons.push(selectionLoadSeasonFact(input));
     this.clubIdentitySeasons.push(...this.identitySeasonFacts(input));
   }
@@ -302,6 +315,7 @@ export class OwnerAttributionObserver {
       tableSeasons: this.tableSeasons,
       playerSeasons: this.playerSeasons,
       selectionLoadSeasons: this.selectionLoadSeasons,
+      playerUseSeasons: this.playerUseSeasons,
       clubIdentitySeasons: this.clubIdentitySeasons,
       annualRolePlanReconciliationFailureCount: this.annualRolePlanReconciliationFailureCount,
       annualRolePlanPositiveRoleCounts: this.annualRolePlanPositiveRoleCounts,
@@ -382,6 +396,14 @@ export function evaluateOwnerAttributionCheckpoint(input: {
     .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
   const firstDivisionSelectionLoad = input.worlds.flatMap(({ selectionLoadSeasons }) => selectionLoadSeasons)
     .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
+  const firstDivisionPlayerUseByWorld = input.worlds.map(({ playerUseSeasons }) =>
+    (playerUseSeasons ?? []).filter(
+      ({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID,
+    ));
+  const firstDivisionPlayerUse = firstDivisionPlayerUseByWorld.flat();
+  const playerUseEvaluated = input.worlds.every(
+    ({ playerUseSeasons }) => playerUseSeasons !== undefined,
+  );
   const firstDivisionIdentity = input.worlds.flatMap(({ clubIdentitySeasons }) => clubIdentitySeasons)
     .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
   const largestGap = sumGapBuckets(firstDivisionTables, "1_plus");
@@ -449,8 +471,12 @@ export function evaluateOwnerAttributionCheckpoint(input: {
     creatorAbilityNominationCorrelation: withinRoleAbilityCorrelation(firstDivisionPlayers, "creatorNominations"),
     ...leaderProductionFacts(firstDivisionPlayers),
     ...generation,
-    appearanceShare: "not_evaluated" as const,
-    distinctUsersPerClubSeason: "not_evaluated" as const,
+    appearanceShare: playerUseEvaluated
+      ? appearanceShare(firstDivisionPlayerUse)
+      : "not_evaluated" as const,
+    distinctUsersPerClubSeason: playerUseEvaluated
+      ? observedMean(firstDivisionPlayerUseByWorld.flatMap(distinctUserCountsPerClubSeason))
+      : "not_evaluated" as const,
   } as const;
   const replicatedFormationRetentionShare = input.replicatedFormationRetentionShare;
   const changed = firstDivisionIdentity.filter(({ shapeChangedFromSeasonOne }) => shapeChangedFromSeasonOne);
@@ -577,10 +603,11 @@ function inside(
 
 /** A6 registers these gates now but deliberately defers their first reading to L6.1. */
 function insideWhenEvaluated(
-  value: number | "not_evaluated",
+  value: number | "not_observed" | "not_evaluated",
   band: { readonly min: number; readonly max: number },
 ): boolean {
-  return value === "not_evaluated" || value >= band.min && value <= band.max;
+  return value === "not_evaluated"
+    || value !== "not_observed" && value >= band.min && value <= band.max;
 }
 
 /**
@@ -778,6 +805,51 @@ function playerSeasonFacts(input: {
       };
     });
   });
+}
+
+/**
+ * Keeps one row per player-club-season from the played fixtures themselves.
+ * A transferred player therefore belongs to both club seasons without
+ * duplicating the single player-season row used by scorer/assist leaders.
+ */
+function playerUseSeasonFacts(input: {
+  readonly seasonNumber: number;
+  readonly competitionId: string;
+  readonly result: SimulateSeasonResult;
+}): readonly OwnerAttributionPlayerUseSeasonFact[] {
+  const appearances = new Map<string, OwnerAttributionPlayerUseSeasonFact>();
+  for (const fixture of input.result.fixtureParticipation) {
+    for (const row of fixture.contributions) {
+      if (!row.started && !row.substituteAppearance) continue;
+      const key = `${row.clubId}|${row.playerId}`;
+      const previous = appearances.get(key);
+      appearances.set(key, {
+        competitionId: input.competitionId,
+        seasonNumber: input.seasonNumber,
+        clubId: String(row.clubId),
+        playerId: String(row.playerId),
+        appearances: (previous?.appearances ?? 0) + 1,
+      });
+    }
+  }
+  return [...appearances.values()].sort((left, right) =>
+    left.clubId.localeCompare(right.clubId) || left.playerId.localeCompare(right.playerId));
+}
+
+function appearanceShare(rows: readonly OwnerAttributionPlayerUseSeasonFact[]): number {
+  if (rows.length === 0) return 0;
+  return rows.reduce((sum, row) => sum + row.appearances, 0) / (34 * rows.length);
+}
+
+function distinctUserCountsPerClubSeason(
+  rows: readonly OwnerAttributionPlayerUseSeasonFact[],
+): readonly number[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = `${row.competitionId}|${row.seasonNumber}|${row.clubId}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.values()];
 }
 
 function selectionLoadSeasonFact(input: {

@@ -9,6 +9,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRole,
   type PlayerRatingScaleConfig,
   type RoleIdentifiedPlayer,
   type SeasonId,
@@ -91,6 +92,11 @@ export interface GenerateInitialYouthAcademiesInput {
   readonly clubContexts: Readonly<Record<ClubId, OpeningPlayerGenerationClubContext>>;
   /** Competition scope for each club; role balancing never infers it from tier. */
   readonly competitionKeyByClubId: Readonly<Record<ClubId, string>>;
+  /**
+   * Analysis-only Phase 81A ablation seam; ordinary generation keeps the
+   * identity blueprint enabled. Phase 81A closeout owns its removal.
+   */
+  readonly useSquadIdentityRoleBlueprint?: boolean;
   /** Optional count override for focused tests; production uses Phase 32 target. */
   readonly youthPlayersPerClub?: number;
   /** Optional league nation, defaulting to the current Italian demo world. */
@@ -670,11 +676,13 @@ function initialAcademyPositionsByClubId(
     if (clubIds === undefined) {
       throw new Error(`Initial academy competition has no clubs: ${competitionKey}`);
     }
-    const targetRolesByClubId = assignGeneratedSquadIdentityRoles({
-      seed: input.worldSeed,
-      competitionIdentityKey: competitionKey,
-      orderedClubIds: clubIds,
-    });
+    const targetRolesByClubId = input.useSquadIdentityRoleBlueprint === false
+      ? new Map<ClubId, readonly PlayerRole[]>()
+      : assignGeneratedSquadIdentityRoles({
+          seed: input.worldSeed,
+          competitionIdentityKey: competitionKey,
+          orderedClubIds: clubIds,
+        });
     const planned = planCompetitionAnnualIntakePositions({
       seed: input.worldSeed,
       seasonKey: String(input.seasonId),

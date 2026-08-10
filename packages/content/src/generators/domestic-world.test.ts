@@ -122,6 +122,35 @@ test("complete world owns registrations, contracts, youth, finance, and windows"
   assert.equal(Object.keys(world.calibrationVersions).length, 8);
 });
 
+test("the blueprint-off analysis seam is deterministic and leaves ordinary worlds exact", () => {
+  const ordinary = createFakeDomesticWorld({ worldSeed: "blueprint-ablation" });
+  const explicitOrdinary = createFakeDomesticWorld({
+    worldSeed: "blueprint-ablation",
+    useSquadIdentityRoleBlueprint: true,
+  });
+  const legacy = createFakeDomesticWorld({
+    worldSeed: "blueprint-ablation",
+    useSquadIdentityRoleBlueprint: false,
+  });
+  const repeatedLegacy = createFakeDomesticWorld({
+    worldSeed: "blueprint-ablation",
+    useSquadIdentityRoleBlueprint: false,
+  });
+
+  assert.deepEqual(explicitOrdinary, ordinary);
+  assert.deepEqual(repeatedLegacy, legacy);
+  assert.notDeepEqual(
+    legacy.initialYouthAcademies.playerIds.map((id) =>
+      legacy.initialYouthAcademies.players[id]?.naturalPositions[0]),
+    ordinary.initialYouthAcademies.playerIds.map((id) =>
+      ordinary.initialYouthAcademies.players[id]?.naturalPositions[0]),
+  );
+  assert.deepEqual(
+    legacy.playerIds.map((id) => legacy.players[id]?.naturalPositions),
+    ordinary.playerIds.map((id) => ordinary.players[id]?.naturalPositions),
+  );
+});
+
 test("initial six-star budgets are exact and current champions are credible", () => {
   const world = createFakeDomesticWorld({ worldSeed: "three-tier-rarity" });
   const allPlayers = [

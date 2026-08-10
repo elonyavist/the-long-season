@@ -66,6 +66,8 @@ export interface AdvanceCareerMonthsInput {
   readonly transferWindows?: SeasonTransferWindows;
   /** Versioned asking-price content paired with `valuationConfig`. */
   readonly askingPriceConfig?: AskingPriceCurvesConfig;
+  /** Analysis-only Phase 81A ablation seam; closeout owns removal. */
+  readonly useRoleSuccessionMarketNeeds?: boolean;
 }
 
 /** Structured diagnostic for one applied season/month checkpoint. */
@@ -159,6 +161,9 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         askingPriceConfig: input.askingPriceConfig!,
         wagePolicy: input.wagePolicy,
         marketBehaviorPolicy: input.marketBehaviorPolicy,
+        ...(input.useRoleSuccessionMarketNeeds === undefined
+          ? {}
+          : { useRoleSuccessionNeeds: input.useRoleSuccessionMarketNeeds }),
       });
   const careerStateAfterMarket = marketLifecycle?.careerState ?? careerStateAfterContracts;
   if (input.toDate <= fromDate) {

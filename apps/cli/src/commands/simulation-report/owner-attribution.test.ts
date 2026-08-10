@@ -57,6 +57,33 @@ test("player renewal does not require the explicitly omitted paired-table lane",
   assert.equal(result.failedGateKeys.includes("reconciliation"), false);
 });
 
+test("fresh A6 use gates isolate worlds and count a transferred player twice", () => {
+  const world: OwnerAttributionWorldFacts = {
+    ...emptyOwnerWorld(),
+    playerUseSeasons: [
+      { competitionId: "competition:ita-1", seasonNumber: 1, clubId: "club:a", playerId: "p:1", appearances: 20 },
+      { competitionId: "competition:ita-1", seasonNumber: 1, clubId: "club:b", playerId: "p:1", appearances: 10 },
+      { competitionId: "competition:ita-1", seasonNumber: 1, clubId: "club:b", playerId: "p:2", appearances: 4 },
+    ],
+  };
+  const secondWorld: OwnerAttributionWorldFacts = {
+    ...world,
+    worldSeed: "owner-world:2",
+  };
+  const players = evaluateOwnerAttributionCheckpoint({
+    worlds: [world, secondWorld],
+    generationalWorlds: [
+      emptyGenerationalWorld(),
+      { ...emptyGenerationalWorld(), worldSeed: "owner-world:2" },
+    ],
+    replicatedFormationRetentionShare: 1,
+    tableAttribution: "not_requested",
+  }).players;
+
+  assert.equal(players.appearanceShare, 34 / (34 * 3));
+  assert.equal(players.distinctUsersPerClubSeason, 1.5);
+});
+
 test("zero reconciliation cannot hide one unattributed red family", () => {
   assert.equal(ownerAttributionDecision({
     tableHierarchy: "population_strength",

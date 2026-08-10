@@ -602,6 +602,22 @@ test("an in-window preliminary fallback waits until every permanent department n
   );
 });
 
+test("the market-off analysis seam is exactly the pre-06B16 department decision set", () => {
+  const careerState = upgradeNeedFixture();
+  const input = {
+    careerState,
+    asOf: gameDate(20_000),
+  } as const;
+  const current = deriveAiMarketNeeds(input);
+  const legacy = deriveAiMarketNeeds({ ...input, useRoleSuccessionNeeds: false });
+
+  assert.deepEqual(
+    legacy,
+    current.filter(({ target }) => target.kind === "department"),
+  );
+  assert.equal(legacy.every(({ target }) => target.kind === "department"), true);
+});
+
 function marketFixture(): CareerState {
   const buyer = clubId("club:buyer");
   const seller = clubId("club:seller");

@@ -158,6 +158,11 @@ export interface FakeDomesticWorld extends FakeGameplayConfig {
 /** Options for deterministic complete-country generation. */
 export interface FakeDomesticWorldOptions {
   readonly worldSeed?: string;
+  /**
+   * Analysis-only Phase 81A ablation seam for the opening academy. Ordinary
+   * worlds keep the blueprint enabled; Phase 81A closeout owns removal.
+   */
+  readonly useSquadIdentityRoleBlueprint?: boolean;
 }
 
 /**
@@ -201,6 +206,8 @@ export function createFakeDomesticWorld(
     clubIds,
     clubContexts: openingClubContexts,
     competitionKeyByClubId,
+    useSquadIdentityRoleBlueprint:
+      options.useSquadIdentityRoleBlueprint !== false,
     ratingScale: playerRatingScale,
   });
   const exceptionalAllocation = buildInitialWorldExceptionalAllocation({
@@ -296,6 +303,8 @@ export function createFakeDomesticWorld(
     clubIds,
     clubContexts: openingClubContexts,
     competitionKeyByClubId,
+    useSquadIdentityRoleBlueprint:
+      options.useSquadIdentityRoleBlueprint !== false,
     potentialSixPlayerIds: exceptionalAllocation.potentialSixPlayerKeys
       .filter((key) =>
         exceptionalAllocation.assignmentsByPlayerKey[key]?.source === "constructed"

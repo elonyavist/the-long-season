@@ -1,4 +1,5 @@
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
+import { createHash } from "node:crypto";
 
 import {
   assignGeneratedSquadIdentities,
@@ -17,6 +18,7 @@ import {
   fieldablePlayerIdsFor,
   recoverFitnessForPlayers,
   recoveryHalfLifeDays,
+  summarizePlayerDevelopmentAbilities,
   spendFitnessForMinutes,
   type AiInGameDecisionReasonKey,
   type AiInGameReplacementFailureKey,
@@ -32,7 +34,7 @@ import {
   type SimulationReportJsonValue,
 } from "@game/simulation-tools";
 
-import type { CliCareerState } from "../career/types.ts";
+import type { CliCareerState, CliPlayer } from "../career/types.ts";
 import {
   createCareerWorldFacts,
   type CareerWorldInspection,
@@ -61,7 +63,16 @@ import {
   evaluatePlayerRenewalLeadersCheckpoint,
   type OwnerAttributionWorldFacts,
 } from "./owner-attribution.ts";
-import { evaluateRenewalArchitectureCheckpoint } from "./renewal-architecture-attribution.ts";
+import {
+  evaluateRenewalNeedFunnel,
+  evaluateRenewalArchitectureCheckpoint,
+  renewalNeedEpisodesForSeason,
+  type RenewalAblationArmFacts,
+  type RenewalAblationMetric,
+  type RenewalAblationMetricRow,
+  type RenewalNeedEpisodeFact,
+  type RenewalPopulationSeasonSignature,
+} from "./renewal-architecture-attribution.ts";
 import {
   HISTORICAL_DIVISION_TABLE_TARGETS,
   INTEGRATED_LEADER_AGE_DRIFT_TARGET,
@@ -96,7 +107,11 @@ export type CareerCheckpointKind =
   | "owner_attribution_l5_1"
   | "standings_hierarchy_l5_2"
   | "player_renewal_leaders_l5_3"
-  | "renewal_architecture_l5_3c";
+  | "renewal_architecture_l5_3c"
+  | "renewal_ablation_l6_1";
+
+export const RENEWAL_ABLATION_ARMS = ["control", "market", "blueprint", "combined"] as const;
+export type RenewalAblationArm = typeof RENEWAL_ABLATION_ARMS[number];
 
 const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   league_diversity_l1: false,
@@ -114,6 +129,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   standings_hierarchy_l5_2: false,
   player_renewal_leaders_l5_3: true,
   renewal_architecture_l5_3c: true,
+  renewal_ablation_l6_1: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -144,6 +160,19 @@ interface CareerWorldProjection {
   readonly renewalArchitecture?: GenerationalRenewalArchitectureFacts;
   readonly standingsHierarchy?: StandingsHierarchyWorldFacts;
   readonly marketTargeting?: RoleAwareMarketWorldFacts;
+  readonly renewalNeedEpisodes?: readonly RenewalNeedEpisodeFact[];
+  readonly renewalPopulationSignatures?: readonly RenewalPopulationSeasonSignature[];
+}
+
+interface RenewalPopulationSnapshot {
+  readonly seasonNumber: number;
+  readonly rows: readonly {
+    readonly playerId: string;
+    readonly clubId: string;
+    readonly role: NonNullable<CliPlayer["primaryRole"]>;
+    readonly currentAbility: number;
+    readonly potentialAbility: number;
+  }[];
 }
 
 interface RoleAwareMarketWorldFacts {
@@ -524,6 +553,7 @@ export async function createCareerSectionsFacts(input: {
     readonly checkpointKind: CareerCheckpointKind;
     /** Analysis replays fail closed instead of replacing missing cached facts. */
     readonly readOnly?: boolean;
+    readonly renewalAblationArm?: RenewalAblationArm;
   };
 }): Promise<CareerSectionsExecutionFacts> {
   const worlds: CareerWorldProjection[] = [];
@@ -555,19 +585,26 @@ export async function createCareerSectionsFacts(input: {
             input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
             || input.leagueDiversityProfile?.checkpointKind === "player_renewal_leaders_l5_3"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
-            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1",
           renewalArchitecture:
             input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
-            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1",
           standingsHierarchy:
             input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
-            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1",
           marketTargeting:
-            input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4",
+            input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1",
           useOwnerAttributionStrengthOracle:
             input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
             || input.leagueDiversityProfile?.checkpointKind === "player_renewal_leaders_l5_3"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c",
+          ...(input.leagueDiversityProfile?.renewalAblationArm === undefined
+            ? {}
+            : { renewalAblationArm: input.leagueDiversityProfile.renewalAblationArm }),
         } as const;
         const projection = input.workerCount === 1
           ? createCareerWorldProjection(projectionInput)
@@ -592,6 +629,12 @@ export async function createCareerSectionsFacts(input: {
 
   const checkpoint = input.leagueDiversityProfile === undefined
     ? undefined
+    : input.leagueDiversityProfile.checkpointKind === "renewal_ablation_l6_1"
+      ? evaluateRenewalAblationArmCheckpoint(
+          worlds,
+          input.seasonCount,
+          requiredRenewalAblationArm(input.leagueDiversityProfile.renewalAblationArm),
+        )
     : input.leagueDiversityProfile.checkpointKind === "renewal_architecture_l5_3c"
       ? evaluateRenewalArchitectureCheckpoint({
           ownerWorlds: worlds.map(requiredOwnerAttributionFacts),
@@ -715,6 +758,13 @@ export async function createCareerSectionsFacts(input: {
   };
 }
 
+function requiredRenewalAblationArm(
+  arm: RenewalAblationArm | undefined,
+): RenewalAblationArm {
+  if (arm === undefined) throw new Error("L6.1 checkpoint omitted its ablation arm");
+  return arm;
+}
+
 function createCareerWorldProjection(input: {
   readonly seed: string;
   readonly seasonCount: number;
@@ -727,6 +777,7 @@ function createCareerWorldProjection(input: {
   readonly standingsHierarchy: boolean;
   readonly marketTargeting: boolean;
   readonly useOwnerAttributionStrengthOracle: boolean;
+  readonly renewalAblationArm?: RenewalAblationArm;
 }): CareerWorldProjection {
   const requested = new Set(input.sectionIds);
   const observedSeasons: ObservedSeason[] = [];
@@ -734,6 +785,8 @@ function createCareerWorldProjection(input: {
   const names = new Map<string, string>();
   const transfers: ObservedTransfer[] = [];
   const standingsHierarchySeasons: StandingsHierarchySeasonFact[] = [];
+  const renewalNeedEpisodes: RenewalNeedEpisodeFact[] = [];
+  const renewalPopulationSnapshots: RenewalPopulationSnapshot[] = [];
   const generationalObserver = input.generationalSuccession
     ? new GenerationalSuccessionObserver(input.seed)
     : undefined;
@@ -760,6 +813,16 @@ function createCareerWorldProjection(input: {
       selectCatalogFormation: true,
       ...(input.useOwnerAttributionStrengthOracle ? { analysisStrengthGapScale: 1.5 } : {}),
       ...(input.ownerAttribution ? { collectSelectionLoadDiagnostics: true } : {}),
+      ...(input.renewalAblationArm === undefined
+        ? {}
+        : {
+            renewalAblationPolicy: {
+              roleAwareMarket:
+                input.renewalAblationArm === "market" || input.renewalAblationArm === "combined",
+              squadIdentityBlueprint:
+                input.renewalAblationArm === "blueprint" || input.renewalAblationArm === "combined",
+            },
+          }),
       ...(input.leagueDiversity
         ? {
             observeCompetitionSeasonResults: ({
@@ -875,6 +938,9 @@ function createCareerWorldProjection(input: {
             transfers.push(observeTransferAtBoundary(seasonNumber, entry, previousCareerState));
           }
         }
+        if (input.renewalAblationArm !== undefined) {
+          renewalPopulationSnapshots.push(renewalPopulationSnapshot(seasonNumber, careerState));
+        }
       },
       observeSeasonAdvancement: ({ seasonNumber, previousCareerState, careerState, facts }) => {
         generationalObserver?.observeAdvancement({
@@ -889,6 +955,16 @@ function createCareerWorldProjection(input: {
             previousCareerState,
             facts.marketLifecycle?.diagnostics ?? [],
           );
+        }
+        if (input.renewalAblationArm !== undefined) {
+          renewalNeedEpisodes.push(...renewalNeedEpisodesForSeason({
+            worldSeed: input.seed,
+            seasonNumber,
+            divisionByClubId: divisionByClubId(previousCareerState),
+            playerRoleById: playerRoleById(previousCareerState, careerState),
+            diagnostics: facts.marketLifecycle?.diagnostics ?? [],
+            lifecycleFacts: facts.marketLifecycle?.facts ?? [],
+          }));
         }
       },
       observeGeneratedIntakeRoles: ({ seasonNumber, careerState, diagnostics }) => {
@@ -972,6 +1048,13 @@ function createCareerWorldProjection(input: {
   const renewalArchitecture = input.renewalArchitecture
     ? generationalObserver?.renewalArchitectureFacts()
     : undefined;
+  const renewalPopulationSignatures = input.renewalAblationArm === undefined
+    || renewalArchitecture === undefined
+    ? undefined
+    : renewalPopulationSnapshots.map((snapshot) => renewalPopulationSignature(
+        snapshot,
+        renewalArchitecture,
+      ));
   const standingsHierarchy = input.standingsHierarchy
     ? { worldSeed: input.seed, seasons: standingsHierarchySeasons }
     : undefined;
@@ -992,6 +1075,8 @@ function createCareerWorldProjection(input: {
     ...(renewalArchitecture === undefined ? {} : { renewalArchitecture }),
     ...(standingsHierarchy === undefined ? {} : { standingsHierarchy }),
     ...(marketTargeting === undefined ? {} : { marketTargeting }),
+    ...(input.renewalAblationArm === undefined ? {} : { renewalNeedEpisodes }),
+    ...(renewalPopulationSignatures === undefined ? {} : { renewalPopulationSignatures }),
   };
 }
 
@@ -1650,6 +1735,80 @@ function requiredSubstitutionMinuteFacts(world: CareerWorldProjection): Substitu
   return world.substitutionMinutes;
 }
 
+function divisionByClubId(careerState: CliCareerState): Readonly<Record<string, 1 | 2 | 3>> {
+  return Object.fromEntries(careerState.gameState.clubIds.map((clubId) => {
+    const category = careerState.gameState.clubs[clubId]?.category;
+    if (category === undefined) throw new Error(`Renewal funnel club is missing: ${clubId}`);
+    return [String(clubId), category === "first_division" ? 1 : category === "second_division" ? 2 : 3];
+  }));
+}
+
+function renewalPopulationSnapshot(
+  seasonNumber: number,
+  careerState: CliCareerState,
+): RenewalPopulationSnapshot {
+  const rows = careerState.gameState.clubIds.flatMap((clubId) => {
+    const club = careerState.gameState.clubs[clubId];
+    if (club === undefined) throw new Error(`Renewal signature club is missing: ${clubId}`);
+    return club.playerIds.map((playerId) => {
+      const player = careerState.gameState.players[playerId];
+      if (player?.primaryRole === undefined) {
+        throw new Error(`Renewal signature player role is missing: ${playerId}`);
+      }
+      const ability = summarizePlayerDevelopmentAbilities(player);
+      return {
+        playerId: String(playerId),
+        clubId: String(clubId),
+        role: player.primaryRole,
+        currentAbility: ability.currentAbility,
+        potentialAbility: ability.potentialAbility,
+      };
+    });
+  }).sort((left, right) =>
+    left.playerId.localeCompare(right.playerId) || left.clubId.localeCompare(right.clubId));
+  return { seasonNumber, rows };
+}
+
+function renewalPopulationSignature(
+  snapshot: RenewalPopulationSnapshot,
+  architecture: GenerationalRenewalArchitectureFacts,
+): RenewalPopulationSeasonSignature {
+  const originByPlayerId = new Map(
+    architecture.playerOrigins.map(({ playerId, origin }) => [playerId, origin]),
+  );
+  const payload = snapshot.rows.map((row) => {
+    const origin = originByPlayerId.get(row.playerId);
+    if (origin === undefined) throw new Error(`Renewal signature origin is missing: ${row.playerId}`);
+    return [
+      row.playerId,
+      row.clubId,
+      origin,
+      row.role,
+      row.currentAbility,
+      row.potentialAbility,
+    ];
+  });
+  return {
+    seasonNumber: snapshot.seasonNumber,
+    playerCount: payload.length,
+    sha256: createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+  };
+}
+
+function playerRoleById(
+  before: CliCareerState,
+  after: CliCareerState,
+): Readonly<Record<string, NonNullable<CliPlayer["primaryRole"]>>> {
+  return Object.fromEntries([...new Set([
+    ...before.gameState.playerIds,
+    ...after.gameState.playerIds,
+  ])].flatMap((playerId) => {
+    const role = after.gameState.players[playerId]?.primaryRole
+      ?? before.gameState.players[playerId]?.primaryRole;
+    return role === undefined ? [] : [[String(playerId), role]];
+  }));
+}
+
 function mutableRoleAwareMarketWorldFacts(
   worldSeed: string,
 ): MutableRoleAwareMarketWorldFacts {
@@ -1919,6 +2078,115 @@ function evaluateIntegratedPlayerWorldL5_4Checkpoint(
     standingsHierarchy,
     marketTargeting,
   };
+}
+
+/** Produces one fresh L6.1 arm without interpreting contrasts it cannot see. */
+function evaluateRenewalAblationArmCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+  arm: RenewalAblationArm,
+) {
+  const armFacts: RenewalAblationArmFacts = {
+    arm,
+    values: renewalAblationMetricValues(worlds, seasonCount),
+    worlds: worlds.map((world): RenewalAblationMetricRow => ({
+      worldSeed: world.seed,
+      values: renewalAblationMetricValues([world], seasonCount),
+    })),
+    populationSignatures: worlds.map((world) => ({
+      worldSeed: world.seed,
+      seasons: world.renewalPopulationSignatures ?? [],
+    })),
+  };
+  const episodes = worlds.flatMap((world) => {
+    if (world.renewalNeedEpisodes === undefined) {
+      throw new Error(`L6.1 world omitted renewal-need episodes: ${world.seed}`);
+    }
+    return world.renewalNeedEpisodes;
+  });
+  const funnel = evaluateRenewalNeedFunnel(episodes);
+  const leagueDiversity = evaluateLeagueDiversityCheckpoint(
+    worlds.map(requiredLeagueDiversityFacts),
+  );
+  const playerUse = evaluatePlayerRenewalLeadersCheckpoint({
+    worlds: worlds.map(requiredOwnerAttributionFacts),
+    generationalWorlds: worlds.map(requiredGenerationalSuccessionFacts),
+    replicatedFormationRetentionShare:
+      leagueDiversity.longitudinal.fourReplicatedFormationRetentionShare,
+  }).players;
+  const combinedReplay = arm === "combined"
+    ? evaluateIntegratedPlayerWorldL5_4Checkpoint(worlds, seasonCount)
+    : undefined;
+  const reconciliationFailureCount = funnel.reconciliationFailureCount
+    + worlds.reduce(
+      (sum, world) => sum + requiredOwnerAttributionFacts(world).reconciliationFailureCount,
+      0,
+    );
+  return {
+    decision: reconciliationFailureCount === 0 ? "GO" as const : "REFINE" as const,
+    armFacts,
+    funnel,
+    playerUse: {
+      appearanceShare: playerUse.appearanceShare,
+      distinctUsersPerClubSeason: playerUse.distinctUsersPerClubSeason,
+    },
+    reconciliationFailureCount,
+    ...(combinedReplay === undefined ? {} : { combinedReplay }),
+  };
+}
+
+function renewalAblationMetricValues(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+): Readonly<Record<RenewalAblationMetric, number>> {
+  const leagueWorlds = worlds.map(requiredLeagueDiversityFacts);
+  const ownerWorlds = worlds.map(requiredOwnerAttributionFacts);
+  const generationalWorlds = worlds.map(requiredGenerationalSuccessionFacts);
+  const renewal = evaluateRenewalArchitectureCheckpoint({
+    ownerWorlds,
+    generationalWorlds,
+    architectureWorlds: worlds.map(requiredRenewalArchitectureFacts),
+  });
+  const league = evaluateLeagueDiversityCheckpoint(leagueWorlds);
+  const players = evaluatePlayerRenewalLeadersCheckpoint({
+    worlds: ownerWorlds,
+    generationalWorlds,
+    replicatedFormationRetentionShare:
+      league.longitudinal.fourReplicatedFormationRetentionShare,
+  });
+  const standings = evaluateStandingsHierarchyCheckpoint(
+    worlds.map(requiredStandingsHierarchyFacts),
+    leagueWorlds,
+    worlds.map(requiredAvailabilityAgingFacts),
+    seasonCount,
+  );
+  const firstDivision = standings.divisions.find(({ divisionLevel }) => divisionLevel === 1);
+  if (firstDivision === undefined) throw new Error("L6.1 omitted First-Division standings");
+  return {
+    localReplacementCapacity: requiredObservedMetric(
+      renewal.localReplacementCapacity,
+      "localReplacementCapacity",
+    ),
+    divisionReplacementCapacity: requiredObservedMetric(
+      renewal.divisionReplacementCapacity,
+      "divisionReplacementCapacity",
+    ),
+    fourReplicatedFormationRetentionShare:
+      league.longitudinal.fourReplicatedFormationRetentionShare,
+    careerGeneratedLeaderShareSeasonTen: requiredObservedMetric(
+      players.players.careerGeneratedLeaderShareSeasonTen,
+      "careerGeneratedLeaderShareSeasonTen",
+    ),
+    championPoints: firstDivision.championPoints,
+  };
+}
+
+function requiredObservedMetric(
+  value: number | "not_observed",
+  key: RenewalAblationMetric,
+): number {
+  if (value === "not_observed") throw new Error(`L6.1 metric is not observed: ${key}`);
+  return value;
 }
 
 /** Evaluates only preregistered age/minute bands over canonical top-ten rows. */

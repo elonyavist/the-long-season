@@ -176,6 +176,8 @@ export interface AdvanceCareerOneSeasonInput {
   readonly transferWindows?: SeasonTransferWindows;
   /** Versioned asking-price content required with AI market windows. */
   readonly askingPriceConfig?: AskingPriceCurvesConfig;
+  /** Analysis-only Phase 81A ablation seam; never persisted or player-visible. */
+  readonly useRoleSuccessionMarketNeeds?: boolean;
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
@@ -534,6 +536,9 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     valuationConfig: input.valuationConfig,
     ...(input.transferWindows === undefined ? {} : { transferWindows: input.transferWindows }),
     ...(input.askingPriceConfig === undefined ? {} : { askingPriceConfig: input.askingPriceConfig }),
+    ...(input.useRoleSuccessionMarketNeeds === undefined
+      ? {}
+      : { useRoleSuccessionMarketNeeds: input.useRoleSuccessionMarketNeeds }),
   });
   if (monthlyLifecycle.marketLifecycle !== undefined) {
     operationOrder.push("ai_market_lifecycle");

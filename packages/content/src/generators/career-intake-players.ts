@@ -14,6 +14,7 @@ import {
   type PlayerDynamicState,
   type PlayerId,
   type PlayerPosition,
+  type PlayerRole,
   type PlayerRatingScaleConfig,
   type RoleIdentifiedPlayer,
   type SeasonId,
@@ -250,6 +251,11 @@ export interface CreateAnnualWorldIntakeCandidateProvidersInput {
   readonly seasonIndex: number;
   readonly seniorCandidatesPerClub?: number;
   readonly ratingScale?: PlayerRatingScaleConfig;
+  /**
+   * Analysis-only Phase 81A ablation seam. `false` restores the exact generic
+   * role balancing used before Step 06B16; closeout owns removal.
+   */
+  readonly useSquadIdentityRoleBlueprint?: boolean;
 }
 
 /**
@@ -286,6 +292,8 @@ export function createAnnualWorldIntakeCandidateProviders(
       careerState: context.careerState,
       seed: input.worldSeed,
       seasonId: context.seasonId,
+      useSquadIdentityRoleBlueprint:
+        input.useSquadIdentityRoleBlueprint !== false,
     });
     const candidates = annualExceptionalCandidates(
       context.careerState,
@@ -370,6 +378,8 @@ export function createAnnualWorldIntakeCandidateProviders(
       seed: input.worldSeed,
       seasonId: context.seasonId,
       candidatesPerClub: seniorCandidatesPerClub,
+      useSquadIdentityRoleBlueprint:
+        input.useSquadIdentityRoleBlueprint !== false,
     });
     for (const clubId of context.careerState.gameState.clubIds) {
       const club = context.careerState.gameState.clubs[clubId];
@@ -760,13 +770,16 @@ function academyRefillPositionsByClubId(input: {
   readonly careerState: CareerState;
   readonly seed: string;
   readonly seasonId: SeasonId;
+  readonly useSquadIdentityRoleBlueprint: boolean;
 }): Readonly<Record<ClubId, readonly PlayerPosition[]>> {
   return competitionRolePositions(input.careerState, (competitionKey, clubIds) => {
-    const targetRolesByClubId = assignGeneratedSquadIdentityRoles({
-      seed: input.seed,
-      competitionIdentityKey: competitionKey,
-      orderedClubIds: clubIds,
-    });
+    const targetRolesByClubId = input.useSquadIdentityRoleBlueprint
+      ? assignGeneratedSquadIdentityRoles({
+          seed: input.seed,
+          competitionIdentityKey: competitionKey,
+          orderedClubIds: clubIds,
+        })
+      : new Map<ClubId, readonly PlayerRole[]>();
     return planCompetitionAnnualIntakePositions({
       seed: input.seed,
       seasonKey: String(input.seasonId),
@@ -786,16 +799,19 @@ function seniorIntakePositionsByClubId(input: {
   readonly seed: string;
   readonly seasonId: SeasonId;
   readonly candidatesPerClub: number;
+  readonly useSquadIdentityRoleBlueprint: boolean;
 }): Readonly<Record<ClubId, readonly PlayerPosition[]>> {
   if (!Number.isSafeInteger(input.candidatesPerClub) || input.candidatesPerClub <= 0) {
     throw new RangeError(`Invalid senior intake candidate count: ${input.candidatesPerClub}`);
   }
   return competitionRolePositions(input.careerState, (competitionKey, clubIds) => {
-    const targetRolesByClubId = assignGeneratedSquadIdentityRoles({
-      seed: input.seed,
-      competitionIdentityKey: competitionKey,
-      orderedClubIds: clubIds,
-    });
+    const targetRolesByClubId = input.useSquadIdentityRoleBlueprint
+      ? assignGeneratedSquadIdentityRoles({
+          seed: input.seed,
+          competitionIdentityKey: competitionKey,
+          orderedClubIds: clubIds,
+        })
+      : new Map<ClubId, readonly PlayerRole[]>();
     return planCompetitionAnnualIntakePositions({
       seed: input.seed,
       seasonKey: String(input.seasonId),

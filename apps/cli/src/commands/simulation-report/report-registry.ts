@@ -33,6 +33,7 @@ import {
   createCareerSectionsFacts,
   type CareerCheckpointKind,
   type CareerSectionId,
+  type RenewalAblationArm,
 } from "./career-sections.ts";
 import {
   createLockedProfileFacts,
@@ -81,6 +82,10 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-renewal-architecture-l5-3c-7x10",
   "phase81a-integrated-l5-4-7x10",
   "phase81a-integrated-l5-4h-reeval-7x10",
+  "phase81a-renewal-ablation-l6-1-control-7x10",
+  "phase81a-renewal-ablation-l6-1-market-7x10",
+  "phase81a-renewal-ablation-l6-1-blueprint-7x10",
+  "phase81a-renewal-ablation-l6-1-combined-7x10",
   "phase81a-league-diversity-canary-7x10",
   "phase81a-league-diversity-100x10",
   "phase81-tactical-shape",
@@ -111,6 +116,10 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-renewal-architecture-l5-3c-7x10": "renewal_architecture_l5_3c",
   "phase81a-integrated-l5-4-7x10": "integrated_player_world_l5_4",
   "phase81a-integrated-l5-4h-reeval-7x10": "integrated_player_world_l5_4",
+  "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
+  "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
+  "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
+  "phase81a-renewal-ablation-l6-1-combined-7x10": "renewal_ablation_l6_1",
 } as const satisfies Partial<Readonly<Record<SimulationReportProfileId, CareerCheckpointKind>>>;
 
 const CAREER_PROFILE_CACHE_SUFFIX = {
@@ -136,6 +145,10 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-renewal-architecture-l5-3c-7x10": "-facts-v1",
   "phase81a-integrated-l5-4-7x10": "-facts-v1",
   "phase81a-integrated-l5-4h-reeval-7x10": "-facts-v1-copy",
+  "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
+  "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
+  "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
+  "phase81a-renewal-ablation-l6-1-combined-7x10": "-facts-v2",
 } as const satisfies Readonly<Record<keyof typeof CAREER_PROFILE_CHECKPOINT_KIND, string>>;
 
 /** Copy-pasteable commands rendered by help and parsed by command tests. */
@@ -193,6 +206,38 @@ export interface SimulationReportProfileDefinition {
   readonly titleKey: MessageKey;
   readonly descriptionKey: MessageKey;
   readonly measurementRequest: SimulationReportMeasurementRequest;
+}
+
+const RENEWAL_ABLATION_PROFILE_ID = {
+  control: "phase81a-renewal-ablation-l6-1-control-7x10",
+  market: "phase81a-renewal-ablation-l6-1-market-7x10",
+  blueprint: "phase81a-renewal-ablation-l6-1-blueprint-7x10",
+  combined: "phase81a-renewal-ablation-l6-1-combined-7x10",
+} as const satisfies Readonly<Record<RenewalAblationArm, SimulationReportProfileId>>;
+
+function renewalAblationProfile(
+  arm: RenewalAblationArm,
+  titleKey: MessageKey,
+  descriptionKey: MessageKey,
+): SimulationReportProfileDefinition {
+  const id = RENEWAL_ABLATION_PROFILE_ID[arm];
+  return {
+    id,
+    titleKey,
+    descriptionKey,
+    measurementRequest: {
+      mode: "profile",
+      profileId: id,
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      // Exact L5.4 seeds make the fresh combined arm a contamination replay,
+      // while all four arms remain pairwise coupled.
+      seedPrefix: "phase81a-integrated-l5-4-v1",
+      workerCount: 7,
+    },
+  };
 }
 
 /** One source of truth for planning, help and reachability. */
@@ -316,6 +361,26 @@ export const SIMULATION_REPORT_PROFILES = {
       workerCount: 7,
     },
   },
+  "phase81a-renewal-ablation-l6-1-control-7x10": renewalAblationProfile(
+    "control",
+    "simulationReport.profile.phase81aRenewalAblationControl.title",
+    "simulationReport.profile.phase81aRenewalAblationControl.description",
+  ),
+  "phase81a-renewal-ablation-l6-1-market-7x10": renewalAblationProfile(
+    "market",
+    "simulationReport.profile.phase81aRenewalAblationMarket.title",
+    "simulationReport.profile.phase81aRenewalAblationMarket.description",
+  ),
+  "phase81a-renewal-ablation-l6-1-blueprint-7x10": renewalAblationProfile(
+    "blueprint",
+    "simulationReport.profile.phase81aRenewalAblationBlueprint.title",
+    "simulationReport.profile.phase81aRenewalAblationBlueprint.description",
+  ),
+  "phase81a-renewal-ablation-l6-1-combined-7x10": renewalAblationProfile(
+    "combined",
+    "simulationReport.profile.phase81aRenewalAblationCombined.title",
+    "simulationReport.profile.phase81aRenewalAblationCombined.description",
+  ),
   "phase81a-substitution-minute-l2-7x1": {
     id: "phase81a-substitution-minute-l2-7x1",
     titleKey: "simulationReport.profile.phase81aSubstitutionMinuteL2.title",
@@ -911,6 +976,7 @@ async function leagueDiversityExecution(
     readonly checkpointDirectoryPath: string;
     readonly checkpointKind: CareerCheckpointKind;
     readonly readOnly?: boolean;
+    readonly renewalAblationArm?: RenewalAblationArm;
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
@@ -918,6 +984,7 @@ async function leagueDiversityExecution(
   const cacheIdentityProfileId = careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10"
     ? "phase81a-integrated-l5-4-7x10"
     : careerProfileId;
+  const renewalAblationArm = renewalAblationArmForProfile(careerProfileId);
   return {
     leagueDiversityProfile: {
       profileId: cacheIdentityProfileId,
@@ -926,8 +993,18 @@ async function leagueDiversityExecution(
         `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`,
       ),
       readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10",
+      ...(renewalAblationArm === undefined ? {} : { renewalAblationArm }),
     },
   };
+}
+
+function renewalAblationArmForProfile(
+  profileId: keyof typeof CAREER_PROFILE_CHECKPOINT_KIND,
+): RenewalAblationArm | undefined {
+  return (Object.entries(RENEWAL_ABLATION_PROFILE_ID) as readonly [
+    RenewalAblationArm,
+    SimulationReportProfileId,
+  ][]).find(([, id]) => id === profileId)?.[0];
 }
 
 function assertModuleId(value: string): SimulationReportModuleId {

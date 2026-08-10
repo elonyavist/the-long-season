@@ -370,6 +370,45 @@ test("shared annual providers allocate once and do not inflate a full active sto
   assert.equal(allocatedExceptionalCount, 0);
 });
 
+test("the annual blueprint seam preserves ordinary output and deterministically restores generic balance", () => {
+  const careerState = annualProviderCareerState();
+  const providerOutput = (useSquadIdentityRoleBlueprint: boolean | undefined) => {
+    const providers = createAnnualWorldIntakeCandidateProviders({
+      worldSeed: "annual-blueprint-ablation",
+      seasonIndex: 1,
+      seniorCandidatesPerClub: 8,
+      ...(useSquadIdentityRoleBlueprint === undefined
+        ? {}
+        : { useSquadIdentityRoleBlueprint }),
+    });
+    const context = {
+      careerState,
+      seasonId: seasonId("season:annual-blueprint-ablation"),
+      intakeDate: careerState.gameState.calendar.currentDate,
+    } as const;
+    const academy = providers.createYouthIntakeCandidates({
+      ...context,
+      activePlayerStock: activePlayerStockFixture(careerState),
+    });
+    const senior = providers.createSeniorIntakeCandidates(context);
+    return {
+      academyRoles: academy.map(({ player }) => player.primaryRole),
+      seniorRoles: senior.map(({ player }) => player.primaryRole),
+      diagnostics: providers.roleContinuityDiagnostics(),
+    };
+  };
+
+  const ordinary = providerOutput(undefined);
+  const explicitOrdinary = providerOutput(true);
+  const legacy = providerOutput(false);
+  const repeatedLegacy = providerOutput(false);
+
+  assert.deepEqual(explicitOrdinary, ordinary);
+  assert.deepEqual(repeatedLegacy, legacy);
+  assert.notDeepEqual(legacy.academyRoles, ordinary.academyRoles);
+  assert.notDeepEqual(legacy.seniorRoles, ordinary.seniorRoles);
+});
+
 test("shared annual providers count a reserved ceiling-six promotion before intake", () => {
   const careerState = annualProviderCareerStateWithExceptionalPromotion();
   const activePlayerStock = activePlayerStockFixture(careerState);
