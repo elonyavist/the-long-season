@@ -16,6 +16,12 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md` - **Amendment A6
+  thesis and operational contract.** One leader gate (`>= 0.50` effective),
+  one band definition, `superseded` representation, then a same-seed `2 x 2`
+  market/blueprint ablation (L6.1) before any further correction; steps
+  06B18-06B25.
+
 - `PHASE_81A_CHECKPOINT_L5_4_INTEGRATED.md` - **Checkpoint L5.4, `REFINE`.**
   The locked fresh `7 x 10` produced reconciled JSON and byte-stable desktop
   HTML. Exact-role market targeting is reachable with zero mismatches, but

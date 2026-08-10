@@ -23,19 +23,19 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06B17 L5.4 is Done: `REFINE`.** Reconciled `7 x 10` JSON and
-  byte-stable HTML exist. Exact-role targeting is clean, but local/division
-  replacement capacity is `10.11%/47.19%` against `20%/50%`.
-- L5.1 retry is `GO`, with zero reconciliation failures. Exact owners:
-  `population_strength`, `renewal_quality`, `development_realization`,
-  `actor_allocation`, `annual_intake_identity_erosion`. Steps 06B11-06B16
-  changed only those owners; the locked L5.4 result below closes this tranche.
-- L5.4 remains `REFINE`: generated/opening leaders `27.86%/72.14%`, age-33+
-  scorer/assist shares `20%/20%`, four-shape retention `88.10%`. First-Division
-  champion points are `72.2571`; the `100 x 10`, B2 and Steps 07-16 stay closed.
-- L4.5 retry `GO`: `3,234` academy call-ups, zero catalog-sensitive ties,
-  fallback, avoidable invalids or reconciliation. Fresh v9 L4.3 moves the owner
-  downstream in `5/7`; L5 reaches development parity `5/7`, CLI/web aligned.
+- Step: Phase 81A **06B18 A6 hardening is the active step.** Amendment A6
+  authorizes 06B18-06B25: register/evaluator hardening first, then the L6.1
+  market/blueprint `2 x 2` ablation; corrections stay closed until L6.1 owners.
+- 06B17 L5.4 is Done: `REFINE`, reconciled `7 x 10` JSON and byte-stable HTML.
+  Exact-role targeting is clean; local/division replacement capacity is
+  `10.11%/47.19%` against `20%/50%`. The leader-share pair is one gate with an
+  effective `generated >= 50%` threshold, measured `27.86%`; `0.30` never binds.
+- L5.1 retry is `GO`, zero reconciliation failures. Owners: `population_strength`,
+  `renewal_quality`, `development_realization`, `actor_allocation`,
+  `annual_intake_identity_erosion`. The whole L5 tranche is one commit.
+- L5.4 residual reds: age-33+ scorer/assist shares `20%/20%`, four-shape
+  retention `88.10%`, First-Division champion points `72.2571` vs register
+  `72.3842` (prose `72..88` is presentation); `100 x 10`, B2, 07-16 closed.
 - Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
   projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
   frozen before-state stand.

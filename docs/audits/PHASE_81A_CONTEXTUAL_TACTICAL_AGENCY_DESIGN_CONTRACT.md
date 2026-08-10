@@ -1823,3 +1823,101 @@ Restano congelate le decisioni di prodotto: Prima Divisione sui Big Five,
 campione normalmente `72..88` sulla distribuzione della coorte, benchmark
 separati per Seconda/Terza, over `33` eccezionali permessi ma non dominanti e
 nessun malus diretto di età o bonus diretto di divisione al risultato.
+
+---
+
+## Emendamento A6 - Hardening del registro e ablazione post-L5.4
+
+Il `REFINE` di L5.4 resta immutato e l'intera tranche L5 è committata in un
+solo stato verificato. La revisione incrociata post-L5.4 ha accettato quattro
+fatti:
+
+1. le quote leader `generated` e `opening` sommano a uno per costruzione: la
+   coppia congelata `>= 0.30` / `<= 0.50` è un solo gate con soglia effettiva
+   `generated >= 0.50`. Il gap reale a L5.4 è `22.14` punti percentuali, non
+   `2.14`; contarla come due famiglie rosse duplica un unico fallimento;
+2. la fascia campione esiste in due definizioni - prosa `72..88`, registro
+   `72.3842..87.7158` - e il `72.2571` misurato passa la prima e fallisce la
+   seconda. La stessa deriva di arrotondamento tocca ogni fascia di Prima
+   tranne `lastClubPoints`;
+3. 06B16 ha unito due correzioni owner (mercato role-aware e blueprint
+   dell'intake) senza la validazione accoppiata prescritta da L5.3C: 06B15G e
+   la coorte L5.3D non sono mai stati aperti. Il movimento della capacità
+   locale `0.0641 -> 0.1011` non è quindi attribuibile a nessuna delle due; i
+   confronti con `0.5256` e `0.8905` sono fra coorti fresche non accoppiate -
+   i nuovi valori sono più bassi e rossi, non causalmente regrediti;
+4. i divisori attori `10` e `70` furono derivati invertendo output misurato.
+   Sono debito tecnico da sostituire strutturalmente, non base per altra
+   taratura.
+
+La firma `generation_input_signature` **non** è un fail-open: la supersessione
+`L4.3 -> L4.5` è preregistrata in L4.6 (06B7G3). Ma il filtro nel valutatore è
+privo di commento e il JSON la mostra come fallimento annidato mentre il
+roll-up la ignora: la rappresentazione va sanata come `superseded`, mai
+reinserita nel gate e mai lasciata come fallimento ordinario.
+
+Decisioni di prodotto accettate il 2026-08-10:
+
+1. un solo gate leader versionato, `careerGeneratedLeaderShareSeasonTen
+   >= 0.50`; quota opening e quattro origini restano diagnostiche;
+2. i gate numerici sono soltanto i `p10..p90` esatti del registro; ogni fascia
+   in prosa è presentazione arrotondata, mai seconda definizione;
+3. `appearance share 0.48..0.58` e `distinct users 26..31` diventano gate
+   versionati; `age drift <= 2.0` migra dal valutatore al registro; leading
+   scorer e creator restano diagnostiche dichiarate;
+4. una sola derivazione condivisa delle origini, con `unknown` fuori dal
+   denominatore e causa immediata di `REFINE`;
+5. nessun coefficiente scelto invertendo l'output misurato, in nessuno step
+   futuro della fase;
+6. gli switch di ablazione vivono in una policy di analisi al confine di
+   orchestrazione, mai persistita né esposta al gioco, con owner di rimozione
+   alla chiusura della fase, come l'oracolo di 06B10C;
+7. l'asse blueprint dell'ablazione è accoppiato solo a livello di seed e il
+   suo potere statistico inferiore è dichiarato prima del run; il report
+   registra la stagione di prima divergenza per braccio.
+
+La sequenza 06B15A-06B15F, eseguita sotto la sola clausola locale di riapertura
+di 06B15E, è ratificata retroattivamente qui: la deviazione - nessun 06B15G,
+nessuna coorte L5.3D, bundle a due owner in 06B16 - è registrata come debito di
+protocollo che l'ablazione di 06B19 scarica.
+
+La tranche autorizzata è:
+
+```text
+06B18  hardening A6: registro, valutatore, rappresentazione superseded
+06B19  L6.1 - ablazione fattoriale 2 x 2 a quattro bracci freschi, funnel
+       per bisogno unico, truth table della classifica
+06B20A correzione mercato, solo se attribuita, checkpoint immediato
+06B20B correzione blueprint/identità, solo se attribuita, checkpoint immediato
+06B20C correzione gerarchia, solo se attribuita, checkpoint immediato
+06B21  L6.2 - checkpoint 7 x 10 sul registro completo
+06B22  sostituzione strutturale dell'allocazione attori
+06B23  L6.3 - checkpoint minuti, età e concentrazione 7 x 10
+06B24  riservato a un eventuale owner nuovo dimostrato da L6.3, mai una
+       correzione preordinata
+06B25  L6.4 - canary integrata 7 x 10, JSON canonico e HTML
+L1 main 100 x 10 solo dopo GO di L6.4
+```
+
+Ogni correzione condizionale ha il proprio checkpoint immediato prima dello
+step successivo, così L6.2 non può ereditare un rosso già attribuito e
+lasciato indietro.
+
+La tesi e il piano operativo vincolante vivono in
+[`PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md`](./PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md).
+06B18 non tocca gameplay e dimostra, rivalutando le proiezioni L5.4 in cache
+con comando, profilo e output separati, che ogni consolidamento è
+verdict-neutral. I due gate nuovi non sono derivabili dalla cache: i fatti
+player-season enumerano solo i giocatori fieldable a fine stagione, quindi le
+apparizioni dei partiti mancano e un trasferito conta in un solo club. 06B18
+ne congela le formule e li dichiara `not_evaluated`; la prima lettura avviene
+nel braccio combinato fresco di L6.1 e non conta mai come regressione. Il
+braccio combinato risimulato è verificato da un confronto a quattro parti:
+fatti canonici e metriche condivise identici bit per bit, decisione ancora
+`REFINE`, chiavi consolidate via mapping dichiarata, gate nuovi esclusi dal
+confronto storico. Una deviazione nei fatti condivisi dimostra che la
+strumentazione ha toccato il gameplay ed è `STOP`; una differenza di schema
+da sola non lo è mai. Solo 06B18 e 06B19 hanno documenti di step: 06B20A-C e 06B24 non
+possono essere scritti prima del verdetto del checkpoint che li apre, perché
+nominare la correzione prima dell'attribuzione è l'errore che questa tranche
+chiude.

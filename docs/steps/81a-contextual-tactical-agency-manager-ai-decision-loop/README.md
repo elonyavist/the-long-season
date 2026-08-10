@@ -32,6 +32,10 @@ Steps 06B16-06B17 are now Done. L5.4 recorded `REFINE`: exact-role market
 targeting is healthy, but renewal supply, veteran/leader ages, soft formation
 identity and the First-Division champion-points gate remain red. Its reconciled
 JSON and byte-stable desktop HTML are the current evidence; L1 remains closed.
+Amendment A6 authorizes the post-L5.4 tranche 06B18-06B25: register and
+evaluator hardening first, then the L6.1 market/blueprint `2 x 2` ablation;
+corrections stay closed until L6.1 demonstrates owners. 06B18 is the active
+step.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -202,6 +206,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B15F | [Checkpoint L5.3C: renewal architecture attribution](06b15f-checkpoint-l5-3c-renewal-architecture-attribution.md) | no | **OWNER_IDENTIFIED: `market_distribution`** |
 | 06B16 | [role-aware domestic market and soft club blueprint](06b16-role-aware-market-and-soft-club-blueprint.md) | yes | **Done; L5.4** |
 | 06B17 | [Checkpoint L5.4: integrated `7 x 10` JSON/HTML](06b17-checkpoint-l5-4-integrated-7x10-html.md) | no | **Done: `REFINE`; HTML produced, L1 closed** |
+| 06B18 | [A6 register and evaluator hardening](06b18-a6-register-and-evaluator-hardening.md) | no | verdict-neutral on cached L5.4; opens 06B19 |
+| 06B19 | [Checkpoint L6.1: renewal ablation and funnel attribution](06b19-renewal-ablation-and-funnel-attribution.md) | no | opens only demonstrated owners (06B20A-C) |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
@@ -286,6 +292,18 @@ The correction tranche freezes separate lower-league targets, aligns the exact
 red metrics, applies paired owner tests and retries L5.1 fail-closed. Its thesis
 and operational contract are in
 [`PHASE_81A_POST_L5_CORRECTION_TRANCHE.md`](../../audits/PHASE_81A_POST_L5_CORRECTION_TRANCHE.md).
+
+**Amendment A6 hardens the instrument before any further correction.** The
+leader-share pair is one gate with an effective `>= 0.50` threshold; the
+champion band had two definitions; 06B16 bundled two owner corrections without
+the paired validation L5.3C prescribed; and the actor divisors `10`/`70` were
+derived from output. 06B18 removes every dual definition and hidden literal
+and proves verdict-neutrality on the cached L5.4 projections; L6.1 (06B19)
+then separates market and blueprint with a same-seed `2 x 2` ablation, locates
+the renewal funnel's first-failure stage per `club-season-role` need, and
+settles the champion-points miss with a paired reading. Corrections open only
+for demonstrated owners. Thesis and operational contract:
+[`PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md`](../../audits/PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md).
 
 ## Checkpoint Decisions
 
