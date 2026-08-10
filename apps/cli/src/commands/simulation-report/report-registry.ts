@@ -80,6 +80,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-player-renewal-leaders-l5-3b-7x10",
   "phase81a-renewal-architecture-l5-3c-7x10",
   "phase81a-integrated-l5-4-7x10",
+  "phase81a-integrated-l5-4h-reeval-7x10",
   "phase81a-league-diversity-canary-7x10",
   "phase81a-league-diversity-100x10",
   "phase81-tactical-shape",
@@ -109,6 +110,7 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-player-renewal-leaders-l5-3b-7x10": "player_renewal_leaders_l5_3",
   "phase81a-renewal-architecture-l5-3c-7x10": "renewal_architecture_l5_3c",
   "phase81a-integrated-l5-4-7x10": "integrated_player_world_l5_4",
+  "phase81a-integrated-l5-4h-reeval-7x10": "integrated_player_world_l5_4",
 } as const satisfies Partial<Readonly<Record<SimulationReportProfileId, CareerCheckpointKind>>>;
 
 const CAREER_PROFILE_CACHE_SUFFIX = {
@@ -133,6 +135,7 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-player-renewal-leaders-l5-3b-7x10": "-facts-v1",
   "phase81a-renewal-architecture-l5-3c-7x10": "-facts-v1",
   "phase81a-integrated-l5-4-7x10": "-facts-v1",
+  "phase81a-integrated-l5-4h-reeval-7x10": "-facts-v1-copy",
 } as const satisfies Readonly<Record<keyof typeof CAREER_PROFILE_CHECKPOINT_KIND, string>>;
 
 /** Copy-pasteable commands rendered by help and parsed by command tests. */
@@ -290,6 +293,21 @@ export const SIMULATION_REPORT_PROFILES = {
     measurementRequest: {
       mode: "profile",
       profileId: "phase81a-integrated-l5-4-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-integrated-l5-4-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-integrated-l5-4h-reeval-7x10": {
+    id: "phase81a-integrated-l5-4h-reeval-7x10",
+    titleKey: "simulationReport.profile.phase81aIntegratedL5_4H.title",
+    descriptionKey: "simulationReport.profile.phase81aIntegratedL5_4H.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-integrated-l5-4h-reeval-7x10",
       worldCount: 7,
       seasonCount: 10,
       includedSectionIds: CAREER_SECTION_IDS,
@@ -892,17 +910,22 @@ async function leagueDiversityExecution(
     readonly profileId: string;
     readonly checkpointDirectoryPath: string;
     readonly checkpointKind: CareerCheckpointKind;
+    readonly readOnly?: boolean;
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
   const careerProfileId = profileId as keyof typeof CAREER_PROFILE_CHECKPOINT_KIND;
+  const cacheIdentityProfileId = careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10"
+    ? "phase81a-integrated-l5-4-7x10"
+    : careerProfileId;
   return {
     leagueDiversityProfile: {
-      profileId: careerProfileId,
+      profileId: cacheIdentityProfileId,
       checkpointKind: CAREER_PROFILE_CHECKPOINT_KIND[careerProfileId],
       checkpointDirectoryPath: await resolveWorkspaceOutputPath(
         `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`,
       ),
+      readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10",
     },
   };
 }

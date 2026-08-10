@@ -16,9 +16,12 @@ import {
 
 import type { CliCareerState, CliPlayer } from "../career/types.ts";
 import {
+  careerGeneratedLeaderShare,
   evaluateGenerationalRenewalAttribution,
+  seasonTenLeaderOriginCounts,
   type GenerationalRenewalOwner,
   type GenerationalSuccessionWorldFacts,
+  type SeasonTenLeaderOriginCounts,
 } from "./generational-succession.ts";
 import {
   HISTORICAL_DIVISION_TABLE_TARGETS,
@@ -173,8 +176,12 @@ export interface OwnerAttributionDecision {
     readonly age33PlusScorerShare: number | "not_observed";
     readonly age33PlusAssistShare: number | "not_observed";
     readonly exceptional33PlusLeaderObservationCount: number;
-    readonly generatedLeaderShareSeasonTen: number | "not_observed";
-    readonly openingLeaderShareSeasonTen: number | "not_observed";
+    readonly leaderOriginCounts: SeasonTenLeaderOriginCounts;
+    readonly careerGeneratedLeaderShareSeasonTen: number | "not_observed";
+    /** Frozen in A6; canonical fixture participation first supplies it in L6.1. */
+    readonly appearanceShare: number | "not_evaluated";
+    /** Frozen in A6; canonical per-club participation first supplies it in L6.1. */
+    readonly distinctUsersPerClubSeason: number | "not_evaluated";
   };
   readonly identity: {
     readonly clubSeasonCount: number;
@@ -442,6 +449,8 @@ export function evaluateOwnerAttributionCheckpoint(input: {
     creatorAbilityNominationCorrelation: withinRoleAbilityCorrelation(firstDivisionPlayers, "creatorNominations"),
     ...leaderProductionFacts(firstDivisionPlayers),
     ...generation,
+    appearanceShare: "not_evaluated" as const,
+    distinctUsersPerClubSeason: "not_evaluated" as const,
   } as const;
   const replicatedFormationRetentionShare = input.replicatedFormationRetentionShare;
   const changed = firstDivisionIdentity.filter(({ shapeChangedFromSeasonOne }) => shapeChangedFromSeasonOne);
@@ -535,10 +544,12 @@ export function playerRenewalLeadersFailedGateKeys(
       ? ["age33_plus_starts"] : []),
     ...(!inside(players.age33PlusMinutesMean, targets.age33PlusMinutes)
       ? ["age33_plus_minutes"] : []),
-    ...(!inside(players.generatedLeaderShareSeasonTen, targets.generatedLeaderShareSeasonTen)
-      ? ["generated_leader_share_season_ten"] : []),
-    ...(!inside(players.openingLeaderShareSeasonTen, targets.openingLeaderShareSeasonTen)
-      ? ["opening_leader_share_season_ten"] : []),
+    ...(!inside(players.careerGeneratedLeaderShareSeasonTen, targets.careerGeneratedLeaderShareSeasonTen)
+      ? ["career_generated_leader_share_season_ten"] : []),
+    ...(!insideWhenEvaluated(players.appearanceShare, targets.appearanceShare)
+      ? ["appearance_share"] : []),
+    ...(!insideWhenEvaluated(players.distinctUsersPerClubSeason, targets.distinctUsersPerClubSeason)
+      ? ["distinct_users_per_club_season"] : []),
     ...(!inside(players.topTenScorerMean, targets.topTenScorerMean)
       ? ["top_ten_scorer_mean"] : []),
     ...(!inside(players.topTenAssistMean, targets.topTenAssistMean)
@@ -562,6 +573,14 @@ function inside(
   band: { readonly min: number; readonly max: number },
 ): boolean {
   return value !== "not_observed" && value >= band.min && value <= band.max;
+}
+
+/** A6 registers these gates now but deliberately defers their first reading to L6.1. */
+function insideWhenEvaluated(
+  value: number | "not_evaluated",
+  band: { readonly min: number; readonly max: number },
+): boolean {
+  return value === "not_evaluated" || value >= band.min && value <= band.max;
 }
 
 /**
@@ -829,10 +848,9 @@ export function playerLoadAttributionOwner(
     && players.age33PlusStartsMean > HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.age33PlusStarts.max
     && players.fresherQualityMatchedYoungerAlternativeShare !== "not_observed"
     && players.fresherQualityMatchedYoungerAlternativeShare <= 0.1
-    && players.generatedLeaderShareSeasonTen !== "not_observed"
-    && players.generatedLeaderShareSeasonTen < HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.generatedLeaderShareSeasonTen.min
-    && players.openingLeaderShareSeasonTen !== "not_observed"
-    && players.openingLeaderShareSeasonTen > HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.openingLeaderShareSeasonTen.max
+    && players.careerGeneratedLeaderShareSeasonTen !== "not_observed"
+    && players.careerGeneratedLeaderShareSeasonTen
+      < HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.careerGeneratedLeaderShareSeasonTen.min
   ) return "renewal_quality";
   return "not_attributed";
 }
@@ -879,17 +897,13 @@ function identityOwner(identity: OwnerAttributionDecision["identity"]): ClubIden
 }
 
 function generationalLeaderShares(worlds: readonly GenerationalSuccessionWorldFacts[]): {
-  readonly generatedLeaderShareSeasonTen: number | "not_observed";
-  readonly openingLeaderShareSeasonTen: number | "not_observed";
+  readonly leaderOriginCounts: SeasonTenLeaderOriginCounts;
+  readonly careerGeneratedLeaderShareSeasonTen: number | "not_observed";
 } {
-  const rows = worlds.flatMap(({ rows }) => rows).filter(({ seasonNumber }) => seasonNumber === 10);
-  const generated = rows.filter(({ origin }) => origin === "annual_academy_intake" || origin === "annual_senior_intake")
-    .reduce((sum, row) => sum + row.scorerLeaderboardCount + row.assistLeaderboardCount, 0);
-  const opening = rows.filter(({ origin }) => origin === "opening_senior" || origin === "opening_academy")
-    .reduce((sum, row) => sum + row.scorerLeaderboardCount + row.assistLeaderboardCount, 0);
+  const counts = seasonTenLeaderOriginCounts(worlds.flatMap(({ rows }) => rows));
   return {
-    generatedLeaderShareSeasonTen: ratio(generated, generated + opening),
-    openingLeaderShareSeasonTen: ratio(opening, generated + opening),
+    leaderOriginCounts: counts,
+    careerGeneratedLeaderShareSeasonTen: careerGeneratedLeaderShare(counts),
   };
 }
 

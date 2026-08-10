@@ -2,8 +2,9 @@
 
 ## Status
 
-**Planned.** Authorized by Design Contract Amendment A6 on 2026-08-10 and
-revised the same day after cross-review. This step changes no gameplay, no
+**Done - verdict-neutral hardening proven (2026-08-10).** Authorized by Design
+Contract Amendment A6 and revised the same day after cross-review. This step
+changes no gameplay, no
 coefficient and no target value derived from game output. It makes the
 register and the evaluator say one unambiguous thing each, then proves on the
 cached L5.4 projections that every consolidation is verdict-neutral.
@@ -86,6 +87,14 @@ measures against an instrument with exactly one reading.
 - `apps/cli/src/commands/simulation-report/generational-succession.test.ts`
 - `apps/cli/src/commands/simulation-report/career-sections.ts`
 - `apps/cli/src/commands/simulation-report/career-sections.test.ts`
+- `apps/cli/src/commands/simulation-report/report-registry.ts` (a distinct,
+  read-only hardening profile reads a copied L5.4 cache and cannot silently
+  simulate a missing shard)
+- `apps/cli/src/commands/simulation-report/report-planner.test.ts` (freezes the
+  hardening profile independently from the original L5.4 profile)
+- `packages/i18n/src/labels.ts` (the developer-visible hardening profile is
+  listed by the localized canonical report help; all five languages remain
+  complete)
 - `docs/audits/PHASE_81A_BIG_FIVE_STATISTICAL_BASELINE.md` (diagnostic-only
   annotations)
 - `docs/audits/PHASE_81A_LOWER_DIVISION_STATISTICAL_BASELINE.md` (3. Liga
@@ -126,3 +135,74 @@ living outside it; every nested failure is either rolled up or explicitly
 `superseded`; the isolated cached L5.4 re-evaluation reproduces `REFINE` with
 the declared key mapping and the two new gates at `not_evaluated`; 06B19 is
 the only next action.
+
+## Outcome
+
+The register, all three generational checkpoint readers and the L5 player
+reader now consume one season-ten leader gate:
+`careerGeneratedLeaderShareSeasonTen {min: 0.50, max: 1}`. The four source
+counts are the stored diagnostic facts; `unknown` enters neither cohort and
+still forces reconciliation failure. A direct test covers all four origins,
+unknown exclusion, row-order invariance and the zero-denominator
+`not_observed` case. The two new A6 use gates are present in the report as
+`not_evaluated`, never approximated from end-of-season fieldable players.
+
+The first partial replay exposed a second copy of the old leader pair inside
+the L4.1/L4.2/L4.4 evaluator chain. It produced both
+`development:opening_leaderboard_share` and
+`development:generated_leaderboard_share` beside the consolidated L5 key.
+That was not accepted as Done: the chain now imports the same register band
+and emits only `career_generated_leader_share_season_ten`. The historical
+L4.4 nested decision consequently reads `STOP_RETHINK` rather than `REFINE`:
+the superseded signature no longer decides it, while the genuine renewal miss
+keeps its original stop semantics. The active integrated L5.4 decision remains
+`REFINE`.
+
+### Isolated cached replay
+
+The original cache was copied without mutation from
+`saves/long-run-checkpoints/phase81a-integrated-l5-4-7x10-facts-v1/` to
+`saves/long-run-checkpoints/phase81a-integrated-l5-4h-reeval-7x10-facts-v1-copy/`.
+The distinct locked profile
+`phase81a-integrated-l5-4h-reeval-7x10` is read-only: a missing shard throws
+instead of starting a simulation. Command and output:
+
+```bash
+test ! -e saves/long-run-checkpoints/phase81a-integrated-l5-4h-reeval-7x10-facts-v1-copy
+cp -R \
+  saves/long-run-checkpoints/phase81a-integrated-l5-4-7x10-facts-v1 \
+  saves/long-run-checkpoints/phase81a-integrated-l5-4h-reeval-7x10-facts-v1-copy
+pnpm cli simulation-report \
+  --profile=phase81a-integrated-l5-4h-reeval-7x10 \
+  --workers=7 --format=json \
+  --report-output=simulation-out/phase81a-integrated-l5-4h-reeval-7x10.json
+```
+
+The command exited `1` only because the truthful report decision is `FAIL`;
+the checkpoint decision is the expected `REFINE`. Removing only the profile
+ID, report hash and hardened checkpoint projection from both artifacts leaves
+byte-identical shared facts: SHA-256
+`9900db4bcd3d707772d1fd66410f2a267545f5cf8e689a69ab2c145d21c92363`.
+The hardened report hash is `a1e62cc173cb57b5120897f8c025ec8c`.
+
+Declared mapping:
+
+| L5.4 keys | Hardened key/status |
+|---|---|
+| generated leader share + opening leader share, in both integrated-development and player lanes | `career_generated_leader_share_season_ten` |
+| nested `generation_input_signature` failure | `superseded` by `annual_role_continuity_l4_5` |
+| `appearanceShare`, `distinctUsersPerClubSeason` | `not_evaluated` |
+| every other failed family | unchanged |
+
+No original L5.4 JSON or cache shard was overwritten. 06B19 is the sole next
+action.
+
+### Verification
+
+- required focused suites: green, including direct four-origin derivation,
+  fail-closed read-only cache and locked-profile tests;
+- `pnpm check` on Node `24.16.0`: exit `0` captured in a filesystem sentinel; `305` test files,
+  `2,350` tests, `878` modules with zero dependency violations, all custom
+  checks and every workspace typecheck green;
+- `git diff --check`: clean;
+- Graphify rebuilt after the final code changes.

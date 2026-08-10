@@ -15,6 +15,7 @@ import {
 import { stableSimulationReportHash } from "@game/simulation-tools";
 
 import type { CliCareerState } from "../career/types.ts";
+import { HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS } from "./historical-simulation-targets.ts";
 
 export const GENERATIONAL_ORIGINS = [
   "opening_senior",
@@ -218,10 +219,8 @@ export interface GenerationalSuccessionCheckpointDecision {
   readonly completedPromotionCount: number;
   readonly seasonTenRegisteredCareerGeneratedCount: number;
   readonly seasonTenSelectedCareerGeneratedCount: number;
-  readonly seasonTenOpeningLeaderboardCount: number;
-  readonly seasonTenCareerGeneratedLeaderboardCount: number;
-  readonly seasonTenOpeningLeaderboardShare: number | "not_observed";
-  readonly seasonTenCareerGeneratedLeaderboardShare: number | "not_observed";
+  readonly leaderOriginCounts: SeasonTenLeaderOriginCounts;
+  readonly careerGeneratedLeaderShareSeasonTen: number | "not_observed";
   readonly worldsWithCareerGeneratedLeaderCount: number;
   readonly competitionWorldsWithoutPromotionCount: number;
   readonly careerGeneratedAcquisitionCount: number;
@@ -262,10 +261,8 @@ export interface GenerationalRenewalAttributionDecision {
 export interface YouthMinutePathwayCheckpointDecision {
   readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
   readonly academyParticipation: AcademyParticipationCheckpointFacts;
-  readonly seasonTenOpeningLeaderboardCount: number;
-  readonly seasonTenCareerGeneratedLeaderboardCount: number;
-  readonly seasonTenOpeningLeaderboardShare: number | "not_observed";
-  readonly seasonTenCareerGeneratedLeaderboardShare: number | "not_observed";
+  readonly leaderOriginCounts: SeasonTenLeaderOriginCounts;
+  readonly careerGeneratedLeaderShareSeasonTen: number | "not_observed";
   readonly worldsWithCareerGeneratedLeaderCount: number;
   readonly competitionWorldsWithoutPromotionCount: number;
   readonly unknownOriginCount: number;
@@ -282,8 +279,21 @@ export interface CareerExitRenewalCheckpointDecision
   readonly seasonTen33PlusLeaderboardCount: number;
 }
 
+/**
+ * A nested gate replaced by a later checkpoint: exposed, never failed.
+ *
+ * A superseded gate must not appear in any `failedGateKeys` and must not be
+ * silently dropped by a roll-up filter either - both readings lie. It carries
+ * the checkpoint that replaced it so a report reader can follow the account.
+ */
+export interface SupersededGateFact {
+  readonly key: string;
+  readonly supersededBy: string;
+}
+
 export interface DevelopmentRenewalCheckpointDecision
   extends CareerExitRenewalCheckpointDecision {
+  readonly supersededGateKeys: readonly SupersededGateFact[];
   readonly generationInputSignature: string;
   readonly expectedGenerationInputSignature: string;
   readonly generationInputMatchesL4_3: boolean;
@@ -681,7 +691,7 @@ export class GenerationalSuccessionObserver {
       worldSeed: this.worldSeed,
       openingPopulationCount: this.openingPopulationCount,
       openingSeniorPopulationCount: this.openingSeniorPopulationCount,
-      careerGeneratedCount: [...this.origins.values()].filter(({ origin }) => isCareerGenerated(origin)).length,
+      careerGeneratedCount: [...this.origins.values()].filter(({ origin }) => isCareerGeneratedOrigin(origin)).length,
       matureAcademyIntakeCount: [...this.origins.values()].filter(({ origin, generatedSeasonNumber }) =>
         origin === "annual_academy_intake" && generatedSeasonNumber <= 6).length,
       matureAcademyPromotionCandidateCount: this.matureAcademyPromotionCandidateCount,
@@ -874,12 +884,15 @@ export function evaluateGenerationalSuccessionCheckpoint(
   );
   const seasonTenRegisteredCareerGeneratedCount = sumCareerGenerated(seasonTen, "registeredSeniorCount");
   const seasonTenSelectedCareerGeneratedCount = sumCareerGenerated(seasonTen, "selectedPlayerCount");
-  const seasonTenOpeningLeaderboardCount = sumLeaderboard(seasonTen.filter(({ origin }) => !isCareerGenerated(origin)));
-  const seasonTenCareerGeneratedLeaderboardCount = sumLeaderboard(seasonTen.filter(({ origin }) => isCareerGenerated(origin)));
-  const leaderboardTotal = seasonTenOpeningLeaderboardCount + seasonTenCareerGeneratedLeaderboardCount;
+  const leaderOriginCounts = seasonTenLeaderOriginCounts(rows);
+  const seasonTenOpeningLeaderboardCount = leaderOriginCounts.openingSenior
+    + leaderOriginCounts.openingAcademy;
+  const seasonTenCareerGeneratedLeaderboardCount = leaderOriginCounts.annualAcademyIntake
+    + leaderOriginCounts.annualSeniorIntake;
+  const careerGeneratedLeaderShareSeasonTen = careerGeneratedLeaderShare(leaderOriginCounts);
   const totalAcquisitionCount = rows.reduce((sum, row) =>
     sum + row.transferAcquisitionCount + row.freeAgentAcquisitionCount, 0);
-  const careerGeneratedAcquisitionCount = rows.filter(({ origin }) => isCareerGenerated(origin)).reduce((sum, row) =>
+  const careerGeneratedAcquisitionCount = rows.filter(({ origin }) => isCareerGeneratedOrigin(origin)).reduce((sum, row) =>
     sum + row.transferAcquisitionCount + row.freeAgentAcquisitionCount, 0);
   const openingRetirementExitCount = rows.filter(({ origin }) => origin === "opening_senior").reduce(
     (sum, row) => sum + row.retirementExitCount,
@@ -887,7 +900,7 @@ export function evaluateGenerationalSuccessionCheckpoint(
   );
   const unknownOriginCount = worlds.reduce((sum, world) => sum + world.unknownOriginCount, 0);
   const worldsWithCareerGeneratedLeaderCount = worlds.filter((world) =>
-    world.rows.some((row) => row.seasonNumber === 10 && isCareerGenerated(row.origin)
+    world.rows.some((row) => row.seasonNumber === 10 && isCareerGeneratedOrigin(row.origin)
       && row.scorerLeaderboardCount + row.assistLeaderboardCount > 0)).length;
   const competitionWorldsWithoutPromotionCount = worlds.reduce((total, world) => {
     const competitionIds = [...new Set(world.rows
@@ -928,10 +941,8 @@ export function evaluateGenerationalSuccessionCheckpoint(
     completedPromotionCount,
     seasonTenRegisteredCareerGeneratedCount,
     seasonTenSelectedCareerGeneratedCount,
-    seasonTenOpeningLeaderboardCount,
-    seasonTenCareerGeneratedLeaderboardCount,
-    seasonTenOpeningLeaderboardShare: ratio(seasonTenOpeningLeaderboardCount, leaderboardTotal),
-    seasonTenCareerGeneratedLeaderboardShare: ratio(seasonTenCareerGeneratedLeaderboardCount, leaderboardTotal),
+    leaderOriginCounts,
+    careerGeneratedLeaderShareSeasonTen,
     worldsWithCareerGeneratedLeaderCount,
     competitionWorldsWithoutPromotionCount,
     careerGeneratedAcquisitionCount,
@@ -957,7 +968,7 @@ export function evaluateGenerationalRenewalAttribution(input: {
   const seasonTen = input.worlds.flatMap(({ rows }) => rows).filter(
     ({ seasonNumber }) => seasonNumber === 10,
   );
-  const generatedRows = seasonTen.filter(({ origin }) => isCareerGenerated(origin));
+  const generatedRows = seasonTen.filter(({ origin }) => isCareerGeneratedOrigin(origin));
   const openingSeniorRows = seasonTen.filter(({ origin }) => origin === "opening_senior");
   const openingPopulationCount = input.worlds.reduce(
     (sum, world) => sum + world.openingPopulationCount,
@@ -1001,7 +1012,7 @@ export function evaluateGenerationalRenewalAttribution(input: {
   );
   const generatedLeaderCount = sumLeaderboard(generatedRows);
   const openingLeaderCount = sumLeaderboard(
-    seasonTen.filter(({ origin }) => !isCareerGenerated(origin)),
+    seasonTen.filter(({ origin }) => isOpeningOrigin(origin)),
   );
   const facts = {
     generatedToOpening: ratio(careerGeneratedCount, openingPopulationCount),
@@ -1071,11 +1082,12 @@ export function evaluateYouthMinutePathwayCheckpoint(
     failedGateKeys.push("academy_minute_reconciliation");
   }
   if (base.unknownOriginCount !== 0) failedGateKeys.push("origin_reconciliation");
-  if (!atMost(base.seasonTenOpeningLeaderboardShare, 0.5)) {
-    failedGateKeys.push("opening_leaderboard_share");
-  }
-  if (!atLeast(base.seasonTenCareerGeneratedLeaderboardShare, 0.3)) {
-    failedGateKeys.push("generated_leaderboard_share");
+  const leaderTarget = HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.careerGeneratedLeaderShareSeasonTen;
+  if (
+    !atLeast(base.careerGeneratedLeaderShareSeasonTen, leaderTarget.min)
+      || !atMost(base.careerGeneratedLeaderShareSeasonTen, leaderTarget.max)
+  ) {
+    failedGateKeys.push("career_generated_leader_share_season_ten");
   }
   if (base.worldsWithCareerGeneratedLeaderCount !== worlds.length) {
     failedGateKeys.push("generated_leader_every_world");
@@ -1100,12 +1112,8 @@ export function evaluateYouthMinutePathwayCheckpoint(
         ? "REFINE"
         : "STOP_RETHINK",
     academyParticipation,
-    seasonTenOpeningLeaderboardCount: base.seasonTenOpeningLeaderboardCount,
-    seasonTenCareerGeneratedLeaderboardCount:
-      base.seasonTenCareerGeneratedLeaderboardCount,
-    seasonTenOpeningLeaderboardShare: base.seasonTenOpeningLeaderboardShare,
-    seasonTenCareerGeneratedLeaderboardShare:
-      base.seasonTenCareerGeneratedLeaderboardShare,
+    leaderOriginCounts: base.leaderOriginCounts,
+    careerGeneratedLeaderShareSeasonTen: base.careerGeneratedLeaderShareSeasonTen,
     worldsWithCareerGeneratedLeaderCount: base.worldsWithCareerGeneratedLeaderCount,
     competitionWorldsWithoutPromotionCount:
       base.competitionWorldsWithoutPromotionCount,
@@ -1156,11 +1164,12 @@ export function evaluateCareerExitRenewalCheckpoint(
   if (!atMost(seasonTenActiveOpeningSeniorShare, 0.6)) {
     failedGateKeys.push("opening_senior_survival_share");
   }
-  if (!atMost(pathway.seasonTenOpeningLeaderboardShare, 0.5)) {
-    failedGateKeys.push("opening_leaderboard_share");
-  }
-  if (!atLeast(pathway.seasonTenCareerGeneratedLeaderboardShare, 0.3)) {
-    failedGateKeys.push("generated_leaderboard_share");
+  const leaderTarget = HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.careerGeneratedLeaderShareSeasonTen;
+  if (
+    !atLeast(pathway.careerGeneratedLeaderShareSeasonTen, leaderTarget.min)
+      || !atMost(pathway.careerGeneratedLeaderShareSeasonTen, leaderTarget.max)
+  ) {
+    failedGateKeys.push("career_generated_leader_share_season_ten");
   }
   if (pathway.worldsWithCareerGeneratedLeaderCount !== worlds.length) {
     failedGateKeys.push("generated_leader_every_world");
@@ -1297,7 +1306,13 @@ export function evaluateDevelopmentRenewalCheckpoint(
       || key === "soft_outfield_retirement_reachability"
   );
 
-  if (!generationInputMatchesL4_3) failedGateKeys.push("generation_input_signature");
+  // The L4.3 signature was deliberately superseded by the L4.5 structural
+  // population gate (see 06b7g3, L4.6): the changed role-plan input is
+  // recorded, never compared as a failure. It is exposed as superseded so no
+  // roll-up has to filter it silently and no reader mistakes it for a red gate.
+  const supersededGateKeys: readonly SupersededGateFact[] = generationInputMatchesL4_3
+    ? []
+    : [{ key: "generation_input_signature", supersededBy: "annual_role_continuity_l4_5" }];
   if (incompleteGeneratedCeilingWorldCount > 0) {
     failedGateKeys.push("generated_ceiling_denominator_reconciliation");
   }
@@ -1319,13 +1334,11 @@ export function evaluateDevelopmentRenewalCheckpoint(
   if (!atMost(exit.seasonTenActiveOpeningSeniorShare, 0.6)) {
     failedGateKeys.push("opening_senior_survival_share");
   }
-  if (!atMost(exit.seasonTenOpeningLeaderboardShare, 0.5)) {
-    failedGateKeys.push("opening_leaderboard_share");
-  }
+  const leaderTarget = HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.careerGeneratedLeaderShareSeasonTen;
   if (
-    !atLeast(exit.seasonTenCareerGeneratedLeaderboardShare, 0.3)
-      || !atMost(exit.seasonTenCareerGeneratedLeaderboardShare, 0.6)
-  ) failedGateKeys.push("generated_leaderboard_share");
+    !atLeast(exit.careerGeneratedLeaderShareSeasonTen, leaderTarget.min)
+      || !atMost(exit.careerGeneratedLeaderShareSeasonTen, leaderTarget.max)
+  ) failedGateKeys.push("career_generated_leader_share_season_ten");
   if (exit.worldsWithCareerGeneratedLeaderCount !== worlds.length) {
     failedGateKeys.push("generated_leader_every_world");
   }
@@ -1338,7 +1351,6 @@ export function evaluateDevelopmentRenewalCheckpoint(
 
   const refinementFailure = failedGateKeys.some((key) =>
     key.endsWith("reconciliation")
-      || key === "generation_input_signature"
       || key === "accepted_intake_role_coverage"
       || key === "ability_invariant_reachability"
       || key === "current_above_potential"
@@ -1355,6 +1367,7 @@ export function evaluateDevelopmentRenewalCheckpoint(
         ? "REFINE"
         : "STOP_RETHINK",
     failedGateKeys,
+    supersededGateKeys,
     generationInputSignature,
     expectedGenerationInputSignature: L4_3_GENERATION_INPUT_SIGNATURE,
     generationInputMatchesL4_3,
@@ -1758,15 +1771,75 @@ function compareRows(left: GenerationalSuccessionRow, right: GenerationalSuccess
     || left.ageBand.localeCompare(right.ageBand);
 }
 
-function isCareerGenerated(origin: GenerationalOrigin): boolean {
+/**
+ * One owner for the leader-origin cohort split.
+ *
+ * `opening` is exactly `opening_senior + opening_academy` and `generated` is
+ * exactly `annual_academy_intake + annual_senior_intake`; `unknown` belongs
+ * to neither cohort and never enters a denominator. Readers must not classify
+ * `unknown` for themselves - a run containing it is already forced to
+ * `REFINE` by the origin-reconciliation gates, so deriving `opening` as
+ * "not generated" would only disagree in runs that are invalid anyway.
+ */
+export function isOpeningOrigin(origin: GenerationalOrigin): boolean {
+  return origin === "opening_senior" || origin === "opening_academy";
+}
+
+/** See {@link isOpeningOrigin}: the generated side of the same single split. */
+export function isCareerGeneratedOrigin(origin: GenerationalOrigin): boolean {
   return origin === "annual_academy_intake" || origin === "annual_senior_intake";
+}
+
+/** Season-ten leaderboard appearances counted per known origin. */
+export interface SeasonTenLeaderOriginCounts {
+  readonly openingSenior: number;
+  readonly openingAcademy: number;
+  readonly annualAcademyIntake: number;
+  readonly annualSeniorIntake: number;
+}
+
+/**
+ * Derives the four origin counts every leader reader shares.
+ *
+ * Reports store these counts and derive shares from them, never the reverse:
+ * storing two shares that always sum to one is duplication, and it is what
+ * let one arithmetic failure read as two independent red gates.
+ */
+export function seasonTenLeaderOriginCounts(
+  rows: readonly GenerationalSuccessionRow[],
+): SeasonTenLeaderOriginCounts {
+  const count = (origin: GenerationalOrigin): number => rows
+    .filter((row) => row.seasonNumber === 10 && row.origin === origin)
+    .reduce((sum, row) => sum + row.scorerLeaderboardCount + row.assistLeaderboardCount, 0);
+  return {
+    openingSenior: count("opening_senior"),
+    openingAcademy: count("opening_academy"),
+    annualAcademyIntake: count("annual_academy_intake"),
+    annualSeniorIntake: count("annual_senior_intake"),
+  };
+}
+
+/**
+ * The one season-ten leader gate value: generated over generated plus opening.
+ *
+ * The former generated/opening pair divided the same denominator, so its
+ * `>= 0.30` and `<= 0.50` bands were one `>= 0.50` gate wearing two numbers.
+ * `unknown` stays out of the denominator; the origin-reconciliation gates own
+ * it.
+ */
+export function careerGeneratedLeaderShare(
+  counts: SeasonTenLeaderOriginCounts,
+): number | "not_observed" {
+  const generated = counts.annualAcademyIntake + counts.annualSeniorIntake;
+  const opening = counts.openingSenior + counts.openingAcademy;
+  return ratio(generated, generated + opening);
 }
 
 function sumCareerGenerated(
   rows: readonly GenerationalSuccessionRow[],
   key: "registeredSeniorCount" | "selectedPlayerCount",
 ): number {
-  return rows.filter(({ origin }) => isCareerGenerated(origin)).reduce((sum, row) => sum + row[key], 0);
+  return rows.filter(({ origin }) => isCareerGeneratedOrigin(origin)).reduce((sum, row) => sum + row[key], 0);
 }
 
 function sumLeaderboard(rows: readonly GenerationalSuccessionRow[]): number {

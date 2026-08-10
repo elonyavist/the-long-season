@@ -141,6 +141,30 @@ test("league-diversity resume rebuilds byte-identical facts from one complete-wo
   }
 }, 60_000);
 
+test("a read-only hardening replay refuses a missing cached world instead of simulating it", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-l5-4h-read-only-"));
+  try {
+    await assert.rejects(
+      createCareerSectionsFacts({
+        worldSeeds: ["phase81a-integrated-l5-4-v1-world-00001"],
+        seasonCount: 10,
+        workerCount: 1,
+        detail: "standard",
+        sectionIds: ["development"],
+        leagueDiversityProfile: {
+          profileId: "phase81a-integrated-l5-4-7x10",
+          checkpointDirectoryPath,
+          checkpointKind: "integrated_player_world_l5_4",
+          readOnly: true,
+        },
+      }),
+      /Read-only career checkpoint is missing/,
+    );
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+});
+
 test("league-diversity retention accepts exactly nineteen of twenty healthy rows", () => {
   const decision = evaluateLeagueDiversityCheckpoint([{
     worldSeed: "retention-boundary",

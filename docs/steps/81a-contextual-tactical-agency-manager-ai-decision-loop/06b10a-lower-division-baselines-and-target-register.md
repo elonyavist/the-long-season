@@ -62,7 +62,11 @@ normalization quality. No gameplay step opens.
 - Second Division: `100` league-seasons, `42,453` matches; champion p10..p90
   `60.8293..73.6913` on 34 matches.
 - Third Division: `31` league-seasons, `14,723` matches; champion p10..p90
-  `62.0870..76.0526`.
+  `62.0870..76.0526`. The contract's expected denominator was `35` with
+  3. Liga from `2010/11`; the source carries no 3. Liga file before `2014-15`,
+  so availability validation reduced the corpus to `31`. That cause went
+  unrecorded at freeze time; 06B18 recorded it in the baseline document
+  (source unavailability, data unchanged).
 - All six table/result metrics have independent level-one, level-two and
   level-three bands in `historical-simulation-targets.ts`.
 - The existing L5.1 reader consumes that register, so no dead calibration

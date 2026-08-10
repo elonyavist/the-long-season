@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  careerGeneratedLeaderShare,
   evaluateCareerExitRenewalCheckpoint,
   evaluateAnnualRoleContinuityCheckpoint,
   evaluateDevelopmentRenewalCheckpoint,
@@ -10,6 +11,7 @@ import {
   evaluateGenerationalRenewalAttribution,
   evaluateYouthMinutePathwayCheckpoint,
   l4GenerationInputSignature,
+  seasonTenLeaderOriginCounts,
   type AcademyParticipationCheckpointFacts,
   type AnnualRoleContinuityWorldFacts,
   type AnnualRoleFormationHealthWorldFacts,
@@ -17,6 +19,32 @@ import {
   type GenerationalSuccessionRow,
   type GenerationalSuccessionWorldFacts,
 } from "./generational-succession.ts";
+
+test("the shared season-ten leader derivation owns four origins and excludes unknown", () => {
+  const rows = [
+    row("opening_senior", { scorerLeaderboardCount: 8, assistLeaderboardCount: 2 }),
+    row("opening_academy", { scorerLeaderboardCount: 3, assistLeaderboardCount: 2 }),
+    row("annual_academy_intake", { scorerLeaderboardCount: 12, assistLeaderboardCount: 8 }),
+    row("annual_senior_intake", { scorerLeaderboardCount: 10, assistLeaderboardCount: 5 }),
+    row("unknown", { scorerLeaderboardCount: 100, assistLeaderboardCount: 100 }),
+    { ...row("opening_senior", { scorerLeaderboardCount: 99 }), seasonNumber: 9 },
+  ];
+  const counts = seasonTenLeaderOriginCounts([...rows].reverse());
+
+  assert.deepEqual(counts, {
+    openingSenior: 10,
+    openingAcademy: 5,
+    annualAcademyIntake: 20,
+    annualSeniorIntake: 15,
+  });
+  assert.equal(careerGeneratedLeaderShare(counts), 0.7);
+  assert.equal(careerGeneratedLeaderShare({
+    openingSenior: 0,
+    openingAcademy: 0,
+    annualAcademyIntake: 0,
+    annualSeniorIntake: 0,
+  }), "not_observed");
+});
 
 test("the first material funnel break owns attribution and unknown origin blocks it", () => {
   const generationBreak = evaluateGenerationalSuccessionCheckpoint([worldFacts({
@@ -126,7 +154,9 @@ test("L4.1 distinguishes pathway defects from a correctly exercised renewal fail
 
   assert.equal(evaluateYouthMinutePathwayCheckpoint([passing]).decision, "GO");
   assert.equal(evaluateYouthMinutePathwayCheckpoint([reconciliationFailure]).decision, "REFINE");
-  assert.equal(evaluateYouthMinutePathwayCheckpoint([renewalFailure]).decision, "STOP_RETHINK");
+  const renewalDecision = evaluateYouthMinutePathwayCheckpoint([renewalFailure]);
+  assert.equal(renewalDecision.decision, "STOP_RETHINK");
+  assert.deepEqual(renewalDecision.failedGateKeys, ["career_generated_leader_share_season_ten"]);
 });
 
 test("L4.2 distinguishes exit reachability from a correctly exercised renewal failure", () => {
@@ -203,7 +233,7 @@ test("L4.3 refuses missing divisions and a heterogeneous cohort", () => {
   assert.equal(heterogeneous.owner, "not_identified");
 });
 
-test("L4.4 refuses a generation input that differs from the frozen L4.3 artifact", () => {
+test("L4.4 records the superseded L4.3 signature as superseded, never as a failure", () => {
   const worlds = Array.from({ length: 7 }, (_, index) => worldFacts({
     worldSeed: `l4-4-input-mismatch-${index}`,
     seasonTenOpeningLeaderboardCount: 10,
@@ -211,9 +241,11 @@ test("L4.4 refuses a generation input that differs from the frozen L4.3 artifact
   }));
   const decision = evaluateDevelopmentRenewalCheckpoint(worlds);
 
-  assert.equal(decision.decision, "REFINE");
   assert.equal(decision.generationInputMatchesL4_3, false);
-  assert.equal(decision.failedGateKeys.includes("generation_input_signature"), true);
+  assert.deepEqual(decision.supersededGateKeys, [
+    { key: "generation_input_signature", supersededBy: "annual_role_continuity_l4_5" },
+  ]);
+  assert.equal(decision.failedGateKeys.includes("generation_input_signature"), false);
   assert.equal(decision.abilityPairObservationCount > 0, true);
 });
 

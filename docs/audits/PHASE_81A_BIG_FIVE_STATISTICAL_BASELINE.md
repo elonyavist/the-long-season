@@ -169,14 +169,18 @@ implementation.
 
 ### Player use and renewal
 
-- mean appearance share among players with a positive appearance: `0.48..0.58`;
+- mean appearance share among players with a positive appearance: `0.48..0.58`
+  (an Amendment A6 versioned gate since 06B18, `not_evaluated` until the L6.1
+  fresh combined arm takes its first reading);
 - distinct users per club-season: `26..31` in the current MVP, a deliberately
-  conservative band below the real lower-bound mean `28.29`;
+  conservative band below the real lower-bound mean `28.29` (an Amendment A6
+  versioned gate since 06B18, `not_evaluated` until L6.1);
 - pooled first-division `33+` starts per selected player: `12..17`;
 - pooled first-division `33+` minutes per selected player: `1100..1500`;
-- existing L5 renewal gates remain: season-ten career-generated leader share
-  `>= 0.30`, opening-origin share `<= 0.50`, and at least one generated leader
-  per world.
+- the season-ten leader gate is one register band since Amendment A6:
+  career-generated leader share `>= 0.50`. The former `>= 0.30` / `<= 0.50`
+  pair divided the same denominator, so it always encoded this single
+  threshold; at least one generated leader per world remains.
 
 ### Leader age and production
 
@@ -185,10 +189,14 @@ implementation.
 - pooled `33+` share `<= 0.12` in each table;
 - at least one real-data `33+` leader remains reachable in the checkpoint
   corpus; no individual season is forced to contain one;
-- mean leading scorer: `20.5..32.3` goals per `34` matches;
-- mean leading creator: `9.0..18.0` assists per `34` matches;
+- mean leading scorer: `20.5..32.3` goals per `34` matches - a declared
+  diagnostic, never a gate: the top-ten bands below describe concentration
+  better and are the decision-bearing measures (Amendment A6);
+- mean leading creator: `9.0..18.0` assists per `34` matches - a declared
+  diagnostic on the same Amendment A6 terms;
 - top-ten means: scorers `14.5..18.5`, creators `8.0..10.5`;
-- existing early/late mean-age drift `<= 2.0` remains;
+- existing early/late mean-age drift `<= 2.0` remains, versioned since 06B18
+  as `INTEGRATED_LEADER_AGE_DRIFT_TARGET` rather than an evaluator literal;
 - no rule may read age to assign goals, assists, shooter identity or creator
   identity directly.
 

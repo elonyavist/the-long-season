@@ -53,6 +53,7 @@ import {
   evaluateYouthMinutePathwayCheckpoint,
   type GenerationalRenewalArchitectureFacts,
   type GenerationalSuccessionWorldFacts,
+  type SupersededGateFact,
 } from "./generational-succession.ts";
 import {
   OwnerAttributionObserver,
@@ -61,7 +62,10 @@ import {
   type OwnerAttributionWorldFacts,
 } from "./owner-attribution.ts";
 import { evaluateRenewalArchitectureCheckpoint } from "./renewal-architecture-attribution.ts";
-import { HISTORICAL_DIVISION_TABLE_TARGETS } from "./historical-simulation-targets.ts";
+import {
+  HISTORICAL_DIVISION_TABLE_TARGETS,
+  INTEGRATED_LEADER_AGE_DRIFT_TARGET,
+} from "./historical-simulation-targets.ts";
 
 /** Career modules sharing one world execution. */
 export const CAREER_SECTION_IDS = [
@@ -419,6 +423,8 @@ export interface LeagueDiversityCheckpointDecision {
 export interface IntegratedPlayerWorldCheckpointDecision {
   readonly decision: "GO" | "REFINE";
   readonly failedGateKeys: readonly string[];
+  /** Nested gates a later checkpoint replaced: reported, never failed or hidden. */
+  readonly supersededGateKeys: readonly SupersededGateFact[];
   readonly leagueDiversity: LeagueDiversityCheckpointDecision;
   readonly availabilityAging: AvailabilityAgingCheckpointDecision;
   readonly developmentRenewal: ReturnType<typeof evaluateDevelopmentRenewalCheckpoint>;
@@ -516,6 +522,8 @@ export async function createCareerSectionsFacts(input: {
     readonly profileId: string;
     readonly checkpointDirectoryPath: string;
     readonly checkpointKind: CareerCheckpointKind;
+    /** Analysis replays fail closed instead of replacing missing cached facts. */
+    readonly readOnly?: boolean;
   };
 }): Promise<CareerSectionsExecutionFacts> {
   const worlds: CareerWorldProjection[] = [];
@@ -529,6 +537,9 @@ export async function createCareerSectionsFacts(input: {
         if (checkpointIdentity !== undefined) {
           const checkpoint = await readCareerSectionWorldCheckpoint(checkpointIdentity);
           if (checkpoint !== undefined) return careerWorldProjectionFromCheckpoint(checkpoint, seed);
+          if (input.leagueDiversityProfile?.readOnly === true) {
+            throw new Error(`Read-only career checkpoint is missing: ${seed}`);
+          }
         }
 
         const projectionInput = {
@@ -1773,16 +1784,19 @@ function evaluateIntegratedPlayerWorldCheckpoint(
     ),
     0,
   );
-  const developmentFailures = developmentRenewal.failedGateKeys.filter(
-    (key) => key !== "generation_input_signature",
-  );
   const failedGateKeys = [
     ...leagueDiversity.opening.failed.map((key) => `formation_opening:${key}`),
     ...leagueDiversity.longitudinal.failed.map((key) => `formation:${key}`),
+    // `carried_formation` is the same fact the two formation lanes above
+    // already roll up; keeping the availability copy would double-count one
+    // failure. This is dedup, not suppression: the gate still fires above.
     ...availabilityAging.failed
       .filter((key) => key !== "carried_formation")
       .map((key) => `availability:${key}`),
-    ...developmentFailures.map((key) => `development:${key}`),
+    // Every nested development failure rolls up unfiltered: superseded gates
+    // never enter `failedGateKeys` at their source, so a key that reaches this
+    // point is a real failure by construction.
+    ...developmentRenewal.failedGateKeys.map((key) => `development:${key}`),
     ...age.failedGateKeys,
     ...(identicalStartingXiAllFixturesClubCount > 0 ? ["minutes:identical_starting_xi"] : []),
   ];
@@ -1790,6 +1804,10 @@ function evaluateIntegratedPlayerWorldCheckpoint(
   return {
     decision: failedGateKeys.length === 0 ? "GO" : "REFINE",
     failedGateKeys,
+    supersededGateKeys: developmentRenewal.supersededGateKeys.map(({ key, supersededBy }) => ({
+      key: `development:${key}`,
+      supersededBy,
+    })),
     leagueDiversity,
     availabilityAging,
     developmentRenewal,
@@ -1891,6 +1909,10 @@ function evaluateIntegratedPlayerWorldL5_4Checkpoint(
   return {
     decision: failedGateKeys.length === 0 ? "GO" as const : "REFINE" as const,
     failedGateKeys,
+    supersededGateKeys: integrated.supersededGateKeys.map(({ key, supersededBy }) => ({
+      key: `integrated:${key}`,
+      supersededBy,
+    })),
     integrated,
     playerRenewal,
     renewalArchitecture,
@@ -1927,8 +1949,10 @@ export function evaluateIntegratedLeaderboardAgeGates(
       ? ["age:scorer_33_plus_share"] : []),
     ...(!atMostObserved(assist33PlusShareSeasons8To10, 0.25)
       ? ["age:assist_33_plus_share"] : []),
-    ...(!atMostObserved(scorerMeanAgeDrift, 2) ? ["age:scorer_mean_age_drift"] : []),
-    ...(!atMostObserved(assistMeanAgeDrift, 2) ? ["age:assist_mean_age_drift"] : []),
+    ...(!atMostObserved(scorerMeanAgeDrift, INTEGRATED_LEADER_AGE_DRIFT_TARGET.max)
+      ? ["age:scorer_mean_age_drift"] : []),
+    ...(!atMostObserved(assistMeanAgeDrift, INTEGRATED_LEADER_AGE_DRIFT_TARGET.max)
+      ? ["age:assist_mean_age_drift"] : []),
     ...(!atMostObserved(retained33PlusLeaderFullSeasonShare, 0.5)
       ? ["minutes:retained_33_plus_full_season_share"] : []),
   ];
@@ -2958,6 +2982,7 @@ function careerSectionCheckpointIdentity(
       readonly profileId: string;
       readonly checkpointDirectoryPath: string;
       readonly checkpointKind: CareerCheckpointKind;
+      readonly readOnly?: boolean;
     };
   },
   worldSeed: string,

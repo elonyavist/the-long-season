@@ -2,8 +2,8 @@
 
 ## Status
 
-**Planned; opens only after 06B18 is Done.** Authorized by Design Contract
-Amendment A6 on 2026-08-10 and revised the same day after cross-review. This
+**Active; 06B18 completed verdict-neutral hardening on 2026-08-10.** Authorized
+by Design Contract Amendment A6 and revised the same day after cross-review. This
 checkpoint changes no gameplay. It discharges the 06B16 confounding debt with
 a preregistered factorial `2 x 2` ablation, locates the renewal funnel's
 bottleneck per unique need, and settles the First-Division champion-points

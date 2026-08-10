@@ -23,16 +23,16 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06B18 A6 hardening is the active step.** Amendment A6
-  authorizes 06B18-06B25: register/evaluator hardening first, then the L6.1
-  market/blueprint `2 x 2` ablation; corrections stay closed until L6.1 owners.
+- Step: Phase 81A **06B18 A6 hardening is Done; 06B19 L6.1 is active.** The
+  cached L5.4 replay retained `REFINE` with shared facts bit-identical, one leader
+  gate, two use gates `not_evaluated` and the old signature `superseded`.
 - 06B17 L5.4 is Done: `REFINE`, reconciled `7 x 10` JSON and byte-stable HTML.
   Exact-role targeting is clean; local/division replacement capacity is
   `10.11%/47.19%` against `20%/50%`. The leader-share pair is one gate with an
   effective `generated >= 50%` threshold, measured `27.86%`; `0.30` never binds.
 - L5.1 retry is `GO`, zero reconciliation failures. Owners: `population_strength`,
   `renewal_quality`, `development_realization`, `actor_allocation`,
-  `annual_intake_identity_erosion`. The whole L5 tranche is one commit.
+  `annual_intake_identity_erosion`.
 - L5.4 residual reds: age-33+ scorer/assist shares `20%/20%`, four-shape
   retention `88.10%`, First-Division champion points `72.2571` vs register
   `72.3842` (prose `72..88` is presentation); `100 x 10`, B2, 07-16 closed.

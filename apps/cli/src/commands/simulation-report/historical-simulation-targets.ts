@@ -20,6 +20,10 @@ export interface HistoricalDivisionTableTargets {
  * Keeping all three levels here prevents a Big Five band from becoming an
  * implicit fallback for lower divisions. Values change only after a new
  * preregistered historical audit, never after a game report.
+ *
+ * The exact `p10..p90` values below are the only gates. Rounded bands quoted
+ * in documents (for example champion `72..88`) are presentation and must never
+ * be used as a second threshold.
  */
 export const HISTORICAL_DIVISION_TABLE_TARGETS = {
   1: {
@@ -48,12 +52,33 @@ export const HISTORICAL_DIVISION_TABLE_TARGETS = {
   },
 } as const satisfies Readonly<Record<1 | 2 | 3, HistoricalDivisionTableTargets>>;
 
-/** Frozen Big Five player-use, renewal and leader targets for level one only. */
+/**
+ * Frozen Big Five player-use, renewal and leader targets for level one only.
+ *
+ * The season-ten leader gate is a single band on the career-generated share.
+ * The former `generated >= 0.30` / `opening <= 0.50` pair summed to one by
+ * construction (both shares divide the same generated-plus-opening
+ * denominator), so `opening <= 0.50` was equivalent to `generated >= 0.50`
+ * and the `0.30` bound could never bind. Consolidating to `>= 0.50` encodes
+ * the identical accept/reject region with one number; the opening share and
+ * the per-origin split remain derivable diagnostics, never gates.
+ *
+ * The Big Five leading-scorer (`20.5..32.3`) and leading-creator (`9..18`)
+ * means are deliberately absent: they are declared diagnostics, because the
+ * top-ten bands below describe concentration better. They never gate.
+ *
+ * `appearanceShare` and `distinctUsersPerClubSeason` are new Amendment A6
+ * gates with frozen formulas: total appearances over `34 x` player-seasons
+ * with at least one appearance, and the mean over First-Division club-seasons
+ * of distinct players actually fielded (a mid-season transfer belongs to both
+ * club-seasons). Cached L5.4 fact rows enumerate only end-of-season fieldable
+ * players, so both gates stay `not_evaluated` until the L6.1 fresh combined
+ * arm takes their first reading; that first reading is never a regression.
+ */
 export const HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS = {
   age33PlusStarts: { min: 12, max: 17 },
   age33PlusMinutes: { min: 1_100, max: 1_500 },
-  generatedLeaderShareSeasonTen: { min: 0.3, max: 1 },
-  openingLeaderShareSeasonTen: { min: 0, max: 0.5 },
+  careerGeneratedLeaderShareSeasonTen: { min: 0.5, max: 1 },
   topTenScorerMean: { min: 14.5, max: 18.5 },
   topTenAssistMean: { min: 8, max: 10.5 },
   scorerMeanAge: { min: 25.5, max: 28.5 },
@@ -61,4 +86,21 @@ export const HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS = {
   age33PlusScorerShare: { min: 0, max: 0.12 },
   age33PlusAssistShare: { min: 0, max: 0.12 },
   replicatedFormationRetentionShare: { min: 0.95, max: 1 },
+  appearanceShare: { min: 0.48, max: 0.58 },
+  distinctUsersPerClubSeason: { min: 26, max: 31 },
 } as const satisfies Readonly<Record<string, HistoricalTargetBand>>;
+
+/**
+ * Frozen bound on early-to-late mean leader age drift, in years.
+ *
+ * Lives here rather than as an evaluator literal so the register owns every
+ * historical player threshold. Its population differs from the Big Five
+ * register above: it is measured on the integrated top-ten leaderboards of
+ * all three fictional divisions, per the Amendment A4 L5 target that froze
+ * the same `2.0` bound the Big Five baseline records for first-division
+ * drift. Keeping it a separate export records that population difference.
+ */
+export const INTEGRATED_LEADER_AGE_DRIFT_TARGET = {
+  min: 0,
+  max: 2,
+} as const satisfies HistoricalTargetBand;

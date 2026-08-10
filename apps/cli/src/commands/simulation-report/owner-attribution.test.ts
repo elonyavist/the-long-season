@@ -142,13 +142,29 @@ test("L5.3 passes a reachable real-football band and one changed fact fails clos
     age33PlusScorerShare: 0.08,
     age33PlusAssistShare: 0.08,
     exceptional33PlusLeaderObservationCount: 4,
-    generatedLeaderShareSeasonTen: 0.4,
-    openingLeaderShareSeasonTen: 0.4,
+    leaderOriginCounts: {
+      openingSenior: 40, openingAcademy: 5, annualAcademyIntake: 40, annualSeniorIntake: 15,
+    },
+    careerGeneratedLeaderShareSeasonTen: 0.55,
+    appearanceShare: "not_evaluated",
+    distinctUsersPerClubSeason: "not_evaluated",
   });
   assert.deepEqual(playerRenewalLeadersFailedGateKeys(passing, 0), []);
   assert.deepEqual(
     playerRenewalLeadersFailedGateKeys({ ...passing, age33PlusScorerShare: 0.121 }, 0),
     ["age33_plus_scorer_share"],
+  );
+  assert.deepEqual(
+    playerRenewalLeadersFailedGateKeys({ ...passing, careerGeneratedLeaderShareSeasonTen: 0.49 }, 0),
+    ["career_generated_leader_share_season_ten"],
+  );
+  assert.deepEqual(
+    playerRenewalLeadersFailedGateKeys({ ...passing, appearanceShare: 0.47 }, 0),
+    ["appearance_share"],
+  );
+  assert.deepEqual(
+    playerRenewalLeadersFailedGateKeys({ ...passing, distinctUsersPerClubSeason: 32 }, 0),
+    ["distinct_users_per_club_season"],
   );
   assert.deepEqual(
     playerRenewalLeadersFailedGateKeys(passing, 1),
@@ -247,8 +263,12 @@ function playerFacts(
     age33PlusScorerShare: 0.2,
     age33PlusAssistShare: 0.2,
     exceptional33PlusLeaderObservationCount: 40,
-    generatedLeaderShareSeasonTen: 0.22,
-    openingLeaderShareSeasonTen: 0.78,
+    leaderOriginCounts: {
+      openingSenior: 70, openingAcademy: 8, annualAcademyIntake: 15, annualSeniorIntake: 7,
+    },
+    careerGeneratedLeaderShareSeasonTen: 0.22,
+    appearanceShare: "not_evaluated",
+    distinctUsersPerClubSeason: "not_evaluated",
     ...overrides,
   };
 }

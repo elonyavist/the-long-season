@@ -129,6 +129,31 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes the L5.4 hardening replay as a distinct profile on the same population", () => {
+    const original = createSimulationReportPlan({
+      profileId: "phase81a-integrated-l5-4-7x10",
+      workerCount: 7,
+    });
+    const hardened = createSimulationReportPlan({
+      profileId: "phase81a-integrated-l5-4h-reeval-7x10",
+      workerCount: 7,
+    });
+
+    expect(hardened.measurementRequest).toMatchObject({
+      profileId: "phase81a-integrated-l5-4h-reeval-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-integrated-l5-4-v1",
+    });
+    expect(hardened.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(hardened.measurementRequest.profileId).not.toBe(original.measurementRequest.profileId);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-integrated-l5-4h-reeval-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("freezes L5.2 to seven worlds, two seasons and three-division table facts", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-standings-hierarchy-l5-2-7x2",

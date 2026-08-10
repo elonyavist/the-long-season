@@ -21,6 +21,14 @@ All points are normalized to `34` matches. Bands are historical `p10..p90`.
   competitions are not comparable with the game's single national division.
   French National is excluded because no same-format source was in the
   preregistered corpus. No league was added or removed after reading its result.
+- **Corpus account, recorded by 06B18:** the 06B10A contract preregistered
+  3. Liga `2010/11..2024/25` (expected denominator `35`), but this baseline
+  froze `2014/15..2024/25` (`31`) without recording why. The cause is source
+  unavailability, not extraction error: the openfootball Germany archive's
+  season folders carry no 3. Liga file before `2014-15` (`2013-14` holds only
+  `1-bundesliga.txt` and `2-bundesliga2.txt`; `3-liga3.txt` first appears in
+  `2014-15`). The frozen `31`-season corpus is the binding one; extending it
+  would require a new preregistered source audit, never a retroactive edit.
 
 ## Frozen Table Targets
 

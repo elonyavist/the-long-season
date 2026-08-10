@@ -92,6 +92,12 @@ the selector now applies a centred task-quality multiplier bounded to
 counters, crosses and dead-ball task functions read different explicit
 ability mixes. No age, origin, reputation or output fact enters them.
 
+> **Superseded (recorded by 06B18):** these bounds no longer match shipped
+> code. 06B15B moved the creator response to divisor `10`, bounds
+> `0.625..1.375`, and 06B15D moved the shooter response to divisor `70`,
+> bounds `0.95..1.05`. Amendment A6 records all output-derived divisors as
+> technical debt owned by the structural replacement step (06B22).
+
 `MatchPlayerIncidentProfile` now carries the real technical, physical and
 mental inputs used by these tasks. `assembleMatchTeamContext(...)` remains the
 single producer; neutral fixtures state their neutrality once through the
